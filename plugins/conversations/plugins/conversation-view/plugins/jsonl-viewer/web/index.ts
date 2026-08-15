@@ -11,7 +11,7 @@ export { EventLine } from "./components/event-line";
 export { useRowMarkdown } from "./components/row-markdown-context";
 export { useLastAssistantEvent } from "./components/last-assistant-context";
 export { useJsonlConversationId } from "./components/conversation-id-context";
-export { formatTime } from "./utils";
+export { formatTime, formatTokenCount } from "./utils";
 export { Timestamp } from "./components/timestamp";
 export { useSectionExpand } from "./components/section-sticky-context";
 export type { SectionExpand } from "./components/section-sticky-context";

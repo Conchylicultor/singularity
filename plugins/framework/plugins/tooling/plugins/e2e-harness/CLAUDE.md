@@ -49,6 +49,7 @@ rule keeps the broken shape from coming back.
     - `conversations/conversation-view/jsonl-viewer`
     - `conversations/conversation-view/jsonl-viewer/investigate-event`
     - `conversations/conversation-view/jsonl-viewer/message-toc`
+    - `conversations/conversation-view/jsonl-viewer/transcript-stats`
     - `conversations/conversation-view/prompt-templates`
     - `conversations/conversations-view/data-view/queue`
     - `debug/live-state-churn/emit`

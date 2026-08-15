@@ -40,6 +40,7 @@ export const reorderableSlots: ReorderableSlot[] = [
   { slotId: "conversation.jsonl-viewer.overlay", pluginId: "conversations.conversation-view.jsonl-viewer" },
   { slotId: "conversation.jsonl-viewer.pending-prompt-action", pluginId: "conversations.conversation-view.jsonl-viewer" },
   { slotId: "conversation.jsonl-viewer.row-action", pluginId: "conversations.conversation-view.jsonl-viewer.row-actions" },
+  { slotId: "conversation.jsonl-viewer.transcript-stat", pluginId: "conversations.conversation-view.jsonl-viewer.transcript-stats" },
   { slotId: "conversation.prompt-bar", pluginId: "conversations.conversation-view" },
   { slotId: "conversation.prompt-input", pluginId: "conversations.conversation-view" },
   { slotId: "conversations-sidebar-history-actions", pluginId: "conversations.conversations-view.data-view.history" },

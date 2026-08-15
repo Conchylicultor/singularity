@@ -96,9 +96,9 @@ offsets expressible on the semantic ramp.
     - `build`
     - `build/build-logs`
     - `config_v2/settings`
-    - `conversations/conversation-view/jsonl-viewer`
     - `conversations/conversation-view/jsonl-viewer/assistant-text`
     - `conversations/conversation-view/jsonl-viewer/tool-call/task-tools`
+    - `conversations/conversation-view/jsonl-viewer/transcript-stats`
     - `conversations/conversation-view/jsonl-viewer/user-image`
     - `conversations/conversation-view/jsonl-viewer/user-text`
     - `conversations/conversation-view/notes`

@@ -74,7 +74,6 @@ same threshold and can't desync in a row.
     - `conversations/conversation-ui/item`
     - `conversations/conversation-view/allow-monitor`
     - `conversations/conversation-view/dependent-count`
-    - `conversations/conversation-view/jsonl-viewer`
     - `conversations/conversation-view/jsonl-viewer/tool-call`
     - `conversations/conversation-view/jsonl-viewer/tool-call/add-task`
     - `conversations/conversation-view/jsonl-viewer/tool-call/agent`
@@ -82,6 +81,7 @@ same threshold and can't desync in a row.
     - `conversations/conversation-view/jsonl-viewer/tool-call/read`
     - `conversations/conversation-view/jsonl-viewer/tool-call/task-tools`
     - `conversations/conversation-view/jsonl-viewer/tool-call/workflow`
+    - `conversations/conversation-view/jsonl-viewer/transcript-stats`
     - `conversations/conversation-view/launch-prompts`
     - `conversations/conversation-view/model`
     - `conversations/conversation-view/status`

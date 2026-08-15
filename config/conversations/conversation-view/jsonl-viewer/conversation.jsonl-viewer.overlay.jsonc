@@ -1,10 +1,15 @@
-// @hash 200a587262d8
+// @hash 366a2159a16a
 {
   // Hide: { "item": "<key>", "hidden": true }
   // Spacer (gap): { "type": "spacer", "id": "<unique-id>" }
   // Group: { "type": "header", "label": "<title>", "collapsed": false, "items": [ "<key>", … ] }
+  //
+  // Overlays float over the transcript at their own corners and never overlap,
+  // so this order is paint order, read top-of-pane downwards: the table of
+  // contents and the task progress sit at the top, the stats strip at the foot.
   "items": [
     "conversations.conversation-view.jsonl-viewer.message-toc:message-toc",
-    "conversations.conversation-view.jsonl-viewer.tool-call.task-tools:task-progress"
+    "conversations.conversation-view.jsonl-viewer.tool-call.task-tools:task-progress",
+    "conversations.conversation-view.jsonl-viewer.transcript-stats:transcript-stats"
   ]
 }

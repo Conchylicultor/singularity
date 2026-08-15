@@ -76,8 +76,8 @@ back.
   - Slots:
     - `JsonlViewer.EventRenderer` ← `conversations.conversation-view.jsonl-viewer.assistant-text`, `conversations.conversation-view.jsonl-viewer.assistant-thinking`, `conversations.conversation-view.jsonl-viewer.attachment`, `conversations.conversation-view.jsonl-viewer.meta-prompt`, `conversations.conversation-view.jsonl-viewer.preprompt`, `conversations.conversation-view.jsonl-viewer.queue-operation`, `conversations.conversation-view.jsonl-viewer.summary`, `conversations.conversation-view.jsonl-viewer.system`, `conversations.conversation-view.jsonl-viewer.task-notification`, `conversations.conversation-view.jsonl-viewer.teammate-message`, `conversations.conversation-view.jsonl-viewer.tool-call`, `conversations.conversation-view.jsonl-viewer.user-image`, `conversations.conversation-view.jsonl-viewer.user-text`
     - `JsonlViewer.PendingPrompt` ← `conversations.conversation-view.jsonl-viewer.tool-call.ask-user-question`
-    - `JsonlViewer.EventFilter` ← `conversations.conversation-view.jsonl-viewer.tool-call.ask-user-question`
-    - `JsonlViewer.Overlay` ← `conversations.conversation-view.jsonl-viewer.message-toc`, `conversations.conversation-view.jsonl-viewer.tool-call.task-tools`
+    - `JsonlViewer.EventFilter` ← `conversations.conversation-view.jsonl-viewer.tool-call.ask-user-question`, `conversations.conversation-view.jsonl-viewer.transcript-stats.token-budget`
+    - `JsonlViewer.Overlay` ← `conversations.conversation-view.jsonl-viewer.message-toc`, `conversations.conversation-view.jsonl-viewer.tool-call.task-tools`, `conversations.conversation-view.jsonl-viewer.transcript-stats`
     - `JsonlViewer.PendingPromptAction` ← `conversations.conversation-view.terminal-pane`
   - Contributes:
     - `JsonlRowActions.Item` "timestamp" → `TimestampAction`
@@ -93,9 +93,7 @@ back.
     - `conversations/conversation-view/pending-turn.usePendingTurns`
     - `primitives/auto-scroll.JumpToBottomButton`
     - `primitives/auto-scroll.useStickyScroll`
-    - `primitives/css/badge.Badge`
     - `primitives/css/bouncing-dots.BouncingDots`
-    - `primitives/css/pin.Pin`
     - `primitives/css/scroll.Scroll`
     - `primitives/css/spacing.Stack`
     - `primitives/css/sticky.Sticky`
@@ -117,6 +115,7 @@ back.
   - Exports (values):
     - `EventLine`
     - `formatTime`
+    - `formatTokenCount`
     - `JsonlPane`
     - `JsonlViewer`
     - `Timestamp`
@@ -163,6 +162,9 @@ back.
     - `conversations/conversation-view/jsonl-viewer/tool-call`
     - `conversations/conversation-view/jsonl-viewer/tool-call/ask-user-question`
     - `conversations/conversation-view/jsonl-viewer/tool-call/task-tools`
+    - `conversations/conversation-view/jsonl-viewer/transcript-stats`
+    - `conversations/conversation-view/jsonl-viewer/transcript-stats/token-budget`
+    - `conversations/conversation-view/jsonl-viewer/transcript-stats/usage`
     - `conversations/conversation-view/jsonl-viewer/user-image`
     - `conversations/conversation-view/jsonl-viewer/user-text`
     - `conversations/conversation-view/terminal-pane`
@@ -187,6 +189,7 @@ back.
   - **`task-notification`** — Renders background task completion notifications in the JSONL viewer.
   - **`teammate-message`** — Renders messages relayed from other Claude sessions (<teammate-message> blocks) distinctly from human user messages.
   - **`tool-call`** — Renders paired tool-call events with exact/pattern/fallback dispatch to per-tool renderer plugins.
+  - **`transcript-stats`** — The transcript's status strip: the readings pinned at the foot of the conversation, and the TranscriptStats.Item slot they come from. Owns the reading position — the strip reports the transcript as far as the reader has scrolled, so scrolling back through history walks the numbers back with it.
   - **`user-image`** — Renders inline image thumbnails for user-image events.
   - **`user-text`** — Renders user text events in the JSONL viewer.
 

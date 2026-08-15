@@ -258,6 +258,7 @@ Edit mode inflates every item with chrome (ring, ×-badge, empty-item placeholde
     - `ConfigV2.WebRegister`
     - `ConfigV2.WebRegister`
     - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
   - Uses:
     - `config_v2.ConfigV2`
     - `config_v2.useConfig`
@@ -314,6 +315,7 @@ Edit mode inflates every item with chrome (ring, ×-badge, empty-item placeholde
     - `ConfigV2.Register` "conversation.jsonl-viewer.overlay"
     - `ConfigV2.Register` "conversation.jsonl-viewer.pending-prompt-action"
     - `ConfigV2.Register` "conversation.jsonl-viewer.row-action"
+    - `ConfigV2.Register` "conversation.jsonl-viewer.transcript-stat"
     - `ConfigV2.Register` "conversation.prompt-bar"
     - `ConfigV2.Register` "conversation.prompt-input"
     - `ConfigV2.Register` "conversations-sidebar-history-actions"

@@ -1,5 +1,16 @@
-import { Fragment, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { useResource, ResourceView } from "@plugins/primitives/plugins/live-state/web";
+import {
+  Fragment,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
+import {
+  useResource,
+  ResourceView,
+} from "@plugins/primitives/plugins/live-state/web";
 import {
   JumpToBottomButton,
   useStickyScroll,
@@ -8,17 +19,14 @@ import {
 import type { Conversation } from "@plugins/tasks/plugins/tasks-core/core";
 import { jsonlEventsResource } from "../../core";
 import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-watcher/core";
-import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { BouncingDots } from "@plugins/primitives/plugins/css/plugins/bouncing-dots/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { Sticky } from "@plugins/primitives/plugins/css/plugins/sticky/web";
-import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
 import { revealElement } from "@plugins/primitives/plugins/scroll-reveal/web";
 import { useSurfaceTabId } from "@plugins/primitives/plugins/surface-id/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
-import { formatTokenCount } from "../utils";
 import { EventRow } from "./event-row";
 import { LastAssistantProvider } from "./last-assistant-context";
 import { ConversationIdProvider } from "./conversation-id-context";
@@ -30,29 +38,6 @@ import {
 import { SectionExpandProvider } from "./section-sticky-context";
 import { JsonlViewer } from "../slots";
 import { useVisibleEvents } from "../use-visible-events";
-
-interface UsageTotals {
-  output: number;
-  latestContext: number;
-}
-
-function aggregateUsage(events: JsonlEvent[]): UsageTotals | null {
-  if (events.length === 0) return null;
-  let output = 0;
-  let latestContext = 0;
-  let sawAny = false;
-  for (const event of events) {
-    if (event.kind !== "assistant-text" && event.kind !== "tool-call") continue;
-    if (!event.usage) continue;
-    sawAny = true;
-    output += event.usage.output;
-    // Latest context (last message that produced output) reflects the most
-    // recent prompt size — useful as a "current context window" gauge.
-    latestContext =
-      event.usage.input + event.usage.cacheRead + event.usage.cacheCreation;
-  }
-  return sawAny ? { output, latestContext } : null;
-}
 
 function formatElapsed(seconds: number): string {
   const m = Math.floor(seconds / 60);
@@ -75,7 +60,11 @@ function WorkingIndicator({ startAt }: { startAt: number }) {
   return (
     <Stack direction="row" align="center" gap="sm" className="px-xs py-xs">
       <BouncingDots />
-      <Text as="span" variant="caption" className="tabular-nums text-muted-foreground/60">
+      <Text
+        as="span"
+        variant="caption"
+        className="tabular-nums text-muted-foreground/60"
+      >
         Working for {formatElapsed(elapsed)}
       </Text>
     </Stack>
@@ -93,7 +82,8 @@ function StickyUserHeader({ children }: { children: ReactNode }) {
   // the `active` prop on a single stable element (never by swapping element
   // types), so the subtree never remounts.
   useLayoutEffect(() => {
-    if (expanded) revealElement(ref.current, { behavior: "smooth", block: "start" });
+    if (expanded)
+      revealElement(ref.current, { behavior: "smooth", block: "start" });
   }, [expanded]);
   return (
     <SectionExpandProvider value={value}>
@@ -110,7 +100,13 @@ function StickyUserHeader({ children }: { children: ReactNode }) {
   );
 }
 
-function EventSections({ events, children }: { events: JsonlEvent[]; children?: ReactNode }) {
+function EventSections({
+  events,
+  children,
+}: {
+  events: JsonlEvent[];
+  children?: ReactNode;
+}) {
   const sections = useMemo(() => {
     const result: { start: number; end: number }[] = [];
     let sectionStart = 0;
@@ -152,9 +148,7 @@ function EventSections({ events, children }: { events: JsonlEvent[]; children?: 
         }
         return (
           <Stack key={section.start} gap="sm">
-            <StickyUserHeader>
-              {renderEvent(section.start)}
-            </StickyUserHeader>
+            <StickyUserHeader>{renderEvent(section.start)}</StickyUserHeader>
             {Array.from({ length: section.end - section.start - 1 }, (_, j) =>
               renderEvent(section.start + 1 + j),
             )}
@@ -173,8 +167,10 @@ function JsonlPaneInner({
   conversation: Conversation;
   events: JsonlEvent[];
 }) {
-  const isWorking = conversation.status === "working" || conversation.status === "starting";
-  const isGone = conversation.status === "gone" || conversation.status === "done";
+  const isWorking =
+    conversation.status === "working" || conversation.status === "starting";
+  const isGone =
+    conversation.status === "gone" || conversation.status === "done";
   const surfaceTabId = useSurfaceTabId();
 
   // Pending-turn feedback: the store owns the send lifecycle; this pane owns
@@ -187,7 +183,6 @@ function JsonlPaneInner({
     reconcilePendingTurns(conversation.id, events);
   }, [conversation.id, events, pendingTurns]);
 
-  const totals = useMemo(() => aggregateUsage(events), [events]);
   // Plugin-contributed hide predicates, via the shared owner — every surface
   // that enumerates the transcript must agree on which events exist.
   const visibleEvents = useVisibleEvents(events);
@@ -250,17 +245,27 @@ function JsonlPaneInner({
         {events.length === 0 ? (
           <Text as="div" variant="caption" className="text-muted-foreground">
             <Stack gap="none" className="px-md py-sm">
-              <span>No transcript yet. Claude may not have written its session log.</span>
-              {isWorking && workingStartAt != null && <WorkingIndicator startAt={workingStartAt} />}
+              <span>
+                No transcript yet. Claude may not have written its session log.
+              </span>
+              {isWorking && workingStartAt != null && (
+                <WorkingIndicator startAt={workingStartAt} />
+              )}
               {pendingTurns.map((r) => (
-                <PendingTurnCard key={r.id} conversationId={conversation.id} record={r} />
+                <PendingTurnCard
+                  key={r.id}
+                  conversationId={conversation.id}
+                  record={r}
+                />
               ))}
             </Stack>
           </Text>
         ) : (
           <LastAssistantProvider event={lastAssistantEvent}>
             <EventSections events={visibleEvents}>
-              {isWorking && workingStartAt != null && <WorkingIndicator startAt={workingStartAt} />}
+              {isWorking && workingStartAt != null && (
+                <WorkingIndicator startAt={workingStartAt} />
+              )}
               {!isWorking && !!conversation.waitingFor && (
                 <JsonlViewer.PendingPrompt.Dispatch
                   conversationId={conversation.id}
@@ -268,7 +273,11 @@ function JsonlPaneInner({
                 />
               )}
               {pendingTurns.map((r) => (
-                <PendingTurnCard key={r.id} conversationId={conversation.id} record={r} />
+                <PendingTurnCard
+                  key={r.id}
+                  conversationId={conversation.id}
+                  record={r}
+                />
               ))}
             </EventSections>
           </LastAssistantProvider>
@@ -276,19 +285,10 @@ function JsonlPaneInner({
         {/* Must stay the last child: it marks the true end of the content. */}
         {bottomSentinel}
       </Scroll>
-      {totals && (
-        <Pin to="bottom" stretch offset="sm" layer="raised" decorative>
-          <Stack direction="row" justify="end" gap="none" className="mx-auto max-w-reading px-md">
-            <Badge
-              colorClass="bg-background/80 text-muted-foreground/60 backdrop-blur-sm"
-              className="pointer-events-auto"
-              title={`Latest context: ${totals.latestContext.toLocaleString()} tokens\nTotal output: ${totals.output.toLocaleString()} tokens`}
-            >
-              {formatTokenCount(totals.latestContext)} ctx · {formatTokenCount(totals.output)} out
-            </Badge>
-          </Stack>
-        </Pin>
-      )}
+      {/* The readings pinned at the foot of the pane (context/output usage, the
+          token budget, …) are Overlay contributions now — see the
+          `transcript-stats` sub-plugin, which owns the strip AND the reading
+          position it reports as of. */}
       <JsonlViewer.Overlay.Render />
       <JumpToBottomButton
         handle={{ isFollowing, jumpToBottom }}
@@ -327,7 +327,11 @@ export function JsonlPane({
             // eslint-disable-next-line layout/no-adhoc-layout -- relative+isolate positioning host that is also the flex-fill child of the transcript column (mirrors JsonlPaneInner)
             <div className="relative min-h-0 flex-1 isolate">
               <Scroll axis="both" data-pane-scroll className="h-full">
-                <Text as="div" variant="caption" className="px-md py-sm text-destructive">
+                <Text
+                  as="div"
+                  variant="caption"
+                  className="px-md py-sm text-destructive"
+                >
                   {err.message}
                 </Text>
               </Scroll>
@@ -335,10 +339,7 @@ export function JsonlPane({
           )}
         >
           {(events) => (
-            <JsonlPaneInner
-              conversation={conversation}
-              events={events}
-            />
+            <JsonlPaneInner conversation={conversation} events={events} />
           )}
         </ResourceView>
         {children}

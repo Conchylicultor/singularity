@@ -8777,8 +8777,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Slots:
               - `JsonlViewer.EventRenderer` ← `conversations.conversation-view.jsonl-viewer.assistant-text`, `conversations.conversation-view.jsonl-viewer.assistant-thinking`, `conversations.conversation-view.jsonl-viewer.attachment`, `conversations.conversation-view.jsonl-viewer.meta-prompt`, `conversations.conversation-view.jsonl-viewer.preprompt`, `conversations.conversation-view.jsonl-viewer.queue-operation`, `conversations.conversation-view.jsonl-viewer.summary`, `conversations.conversation-view.jsonl-viewer.system`, `conversations.conversation-view.jsonl-viewer.task-notification`, `conversations.conversation-view.jsonl-viewer.teammate-message`, `conversations.conversation-view.jsonl-viewer.tool-call`, `conversations.conversation-view.jsonl-viewer.user-image`, `conversations.conversation-view.jsonl-viewer.user-text`
               - `JsonlViewer.PendingPrompt` ← `conversations.conversation-view.jsonl-viewer.tool-call.ask-user-question`
-              - `JsonlViewer.EventFilter` ← `conversations.conversation-view.jsonl-viewer.tool-call.ask-user-question`
-              - `JsonlViewer.Overlay` ← `conversations.conversation-view.jsonl-viewer.message-toc`, `conversations.conversation-view.jsonl-viewer.tool-call.task-tools`
+              - `JsonlViewer.EventFilter` ← `conversations.conversation-view.jsonl-viewer.tool-call.ask-user-question`, `conversations.conversation-view.jsonl-viewer.transcript-stats.token-budget`
+              - `JsonlViewer.Overlay` ← `conversations.conversation-view.jsonl-viewer.message-toc`, `conversations.conversation-view.jsonl-viewer.tool-call.task-tools`, `conversations.conversation-view.jsonl-viewer.transcript-stats`
               - `JsonlViewer.PendingPromptAction` ← `conversations.conversation-view.terminal-pane`
             - Contributes:
               - `JsonlRowActions.Item` "timestamp" → `TimestampAction`
@@ -8794,9 +8794,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `conversations/conversation-view/pending-turn.usePendingTurns`
               - `primitives/auto-scroll.JumpToBottomButton`
               - `primitives/auto-scroll.useStickyScroll`
-              - `primitives/css/badge.Badge`
               - `primitives/css/bouncing-dots.BouncingDots`
-              - `primitives/css/pin.Pin`
               - `primitives/css/scroll.Scroll`
               - `primitives/css/spacing.Stack`
               - `primitives/css/sticky.Sticky`
@@ -8818,6 +8816,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Exports (values):
               - `EventLine`
               - `formatTime`
+              - `formatTokenCount`
               - `JsonlPane`
               - `JsonlViewer`
               - `Timestamp`
@@ -8864,6 +8863,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `conversations/conversation-view/jsonl-viewer/tool-call`
               - `conversations/conversation-view/jsonl-viewer/tool-call/ask-user-question`
               - `conversations/conversation-view/jsonl-viewer/tool-call/task-tools`
+              - `conversations/conversation-view/jsonl-viewer/transcript-stats`
+              - `conversations/conversation-view/jsonl-viewer/transcript-stats/token-budget`
+              - `conversations/conversation-view/jsonl-viewer/transcript-stats/usage`
               - `conversations/conversation-view/jsonl-viewer/user-image`
               - `conversations/conversation-view/jsonl-viewer/user-text`
               - `conversations/conversation-view/terminal-pane`
@@ -9471,6 +9473,53 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                       - `primitives/css/text.Text`
                       - `primitives/syntax-highlight.HighlightedCode`
                       - `primitives/syntax-highlight.languageForPath`
+            - **`transcript-stats`** — The transcript's status strip: the readings pinned at the foot of the conversation, and the TranscriptStats.Item slot they come from. Owns the reading position — the strip reports the transcript as far as the reader has scrolled, so scrolling back through history walks the numbers back with it.
+              - Web:
+                - Slots: `TranscriptStats.Item` ← `conversations.conversation-view.jsonl-viewer.transcript-stats.token-budget`, `conversations.conversation-view.jsonl-viewer.transcript-stats.usage`
+                - Contributes: `JsonlViewer.Overlay` "transcript-stats" → `TranscriptStatsStrip`
+                - Uses:
+                  - `conversations/conversation-view/jsonl-viewer.JsonlViewer`
+                  - `conversations/conversation-view/jsonl-viewer.useJsonlConversationId`
+                  - `conversations/conversation-view/jsonl-viewer.useVisibleEvents`
+                  - `primitives/css/badge.Badge`
+                  - `primitives/css/pin.Pin`
+                  - `primitives/css/spacing.Stack`
+                  - `primitives/latest-ref.useLatestRef`
+                  - `primitives/live-state.useResource`
+                  - `primitives/slot-render.defineRenderSlot`
+                - Exports (types):
+                  - `StatTone`
+                  - `TranscriptRead`
+                  - `TranscriptStatContribution`
+                - Exports (values):
+                  - `StatBadge`
+                  - `TranscriptStats`
+                  - `useTranscriptRead`
+              - Cross-plugin:
+                - Imported by:
+                  - `conversations/conversation-view/jsonl-viewer/transcript-stats/token-budget`
+                  - `conversations/conversation-view/jsonl-viewer/transcript-stats/usage`
+              - Plugins:
+                - **`token-budget`** — The session's token budget as a transcript stat: how much of the harness's total_tokens budget is left as of the reading position, louder as it drains. Owns both halves of the move — the stat, and the filter that takes the harness's repeated reminder rows out of the transcript flow they were cluttering.
+                  - Web:
+                    - Contributes:
+                      - `TranscriptStats.Item` "token-budget" → `TokenBudgetStat`
+                      - `JsonlViewer.EventFilter` "total-tokens-reminder"
+                    - Uses:
+                      - `conversations/conversation-view/jsonl-viewer.formatTokenCount`
+                      - `conversations/conversation-view/jsonl-viewer.JsonlViewer`
+                      - `conversations/conversation-view/jsonl-viewer/transcript-stats.StatBadge`
+                      - `conversations/conversation-view/jsonl-viewer/transcript-stats.StatTone`
+                      - `conversations/conversation-view/jsonl-viewer/transcript-stats.TranscriptStats`
+                      - `conversations/conversation-view/jsonl-viewer/transcript-stats.useTranscriptRead`
+                - **`usage`** — Context and output token usage as a transcript stat: the current context window and the output produced, folded from each message's own usage record up to the reading position.
+                  - Web:
+                    - Contributes: `TranscriptStats.Item` "usage" → `UsageStat`
+                    - Uses:
+                      - `conversations/conversation-view/jsonl-viewer.formatTokenCount`
+                      - `conversations/conversation-view/jsonl-viewer/transcript-stats.StatBadge`
+                      - `conversations/conversation-view/jsonl-viewer/transcript-stats.TranscriptStats`
+                      - `conversations/conversation-view/jsonl-viewer/transcript-stats.useTranscriptRead`
             - **`user-image`** — Renders inline image thumbnails for user-image events.
               - Web:
                 - Contributes: `JsonlViewer.EventRenderer` "user-image" → `UserImageRow`
@@ -14464,6 +14513,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `conversations/conversation-view/jsonl-viewer`
               - `conversations/conversation-view/jsonl-viewer/investigate-event`
               - `conversations/conversation-view/jsonl-viewer/message-toc`
+              - `conversations/conversation-view/jsonl-viewer/transcript-stats`
               - `conversations/conversation-view/prompt-templates`
               - `conversations/conversations-view/data-view/queue`
               - `debug/live-state-churn/emit`
@@ -19709,7 +19759,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `conversations/conversation-ui/item`
               - `conversations/conversation-view/allow-monitor`
               - `conversations/conversation-view/dependent-count`
-              - `conversations/conversation-view/jsonl-viewer`
               - `conversations/conversation-view/jsonl-viewer/tool-call`
               - `conversations/conversation-view/jsonl-viewer/tool-call/add-task`
               - `conversations/conversation-view/jsonl-viewer/tool-call/agent`
@@ -19717,6 +19766,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `conversations/conversation-view/jsonl-viewer/tool-call/read`
               - `conversations/conversation-view/jsonl-viewer/tool-call/task-tools`
               - `conversations/conversation-view/jsonl-viewer/tool-call/workflow`
+              - `conversations/conversation-view/jsonl-viewer/transcript-stats`
               - `conversations/conversation-view/launch-prompts`
               - `conversations/conversation-view/model`
               - `conversations/conversation-view/status`
@@ -20430,9 +20480,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `build`
               - `build/build-logs`
               - `config_v2/settings`
-              - `conversations/conversation-view/jsonl-viewer`
               - `conversations/conversation-view/jsonl-viewer/assistant-text`
               - `conversations/conversation-view/jsonl-viewer/tool-call/task-tools`
+              - `conversations/conversation-view/jsonl-viewer/transcript-stats`
               - `conversations/conversation-view/jsonl-viewer/user-image`
               - `conversations/conversation-view/jsonl-viewer/user-text`
               - `conversations/conversation-view/notes`
@@ -20902,6 +20952,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `conversations/conversation-view/jsonl-viewer/tool-call/skill`
               - `conversations/conversation-view/jsonl-viewer/tool-call/task-tools`
               - `conversations/conversation-view/jsonl-viewer/tool-call/workflow`
+              - `conversations/conversation-view/jsonl-viewer/transcript-stats`
               - `conversations/conversation-view/jsonl-viewer/user-image`
               - `conversations/conversation-view/pending-turn`
               - `conversations/conversation-view/prompt-templates`
@@ -23504,6 +23555,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/sonata/shell`
           - `apps/website/demos/app-gallery`
           - `apps/workflows/editor`
+          - `conversations/conversation-view/jsonl-viewer/transcript-stats`
           - `conversations/conversation-view/prompt-input`
           - `conversations/conversation-view/push-and-exit`
           - `debug/slow-ops`
@@ -23770,6 +23822,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conversations/conversation-view/jsonl-viewer/tool-call/ask-user-question`
           - `conversations/conversation-view/jsonl-viewer/tool-call/task-tools`
           - `conversations/conversation-view/jsonl-viewer/tool-call/workflow`
+          - `conversations/conversation-view/jsonl-viewer/transcript-stats`
           - `conversations/conversation-view/notes`
           - `conversations/conversation-view/op-status`
           - `conversations/conversation-view/push-and-exit`
@@ -25054,6 +25107,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conversations/conversation-view/jsonl-viewer/investigate-event`
           - `conversations/conversation-view/jsonl-viewer/row-actions`
           - `conversations/conversation-view/jsonl-viewer/tool-call`
+          - `conversations/conversation-view/jsonl-viewer/transcript-stats`
           - `debug/profiling`
           - `debug/trace/engine`
           - `improve/element-picker`
@@ -25874,6 +25928,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `ConfigV2.WebRegister`
       - `ConfigV2.WebRegister`
       - `ConfigV2.WebRegister`
+      - `ConfigV2.WebRegister`
     - Uses:
       - `config_v2.ConfigV2`
       - `config_v2.useConfig`
@@ -25930,6 +25985,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `ConfigV2.Register` "conversation.jsonl-viewer.overlay"
       - `ConfigV2.Register` "conversation.jsonl-viewer.pending-prompt-action"
       - `ConfigV2.Register` "conversation.jsonl-viewer.row-action"
+      - `ConfigV2.Register` "conversation.jsonl-viewer.transcript-stat"
       - `ConfigV2.Register` "conversation.prompt-bar"
       - `ConfigV2.Register` "conversation.prompt-input"
       - `ConfigV2.Register` "conversations-sidebar-history-actions"

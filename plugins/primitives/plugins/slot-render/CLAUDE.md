@@ -194,6 +194,7 @@ the outcome too, with no separate code path.
     - `conversations/conversation-view/jsonl-viewer/investigate-event`
     - `conversations/conversation-view/jsonl-viewer/row-actions`
     - `conversations/conversation-view/jsonl-viewer/tool-call`
+    - `conversations/conversation-view/jsonl-viewer/transcript-stats`
     - `debug/profiling`
     - `debug/trace/engine`
     - `improve/element-picker`

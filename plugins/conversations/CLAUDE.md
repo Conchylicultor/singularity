@@ -285,6 +285,10 @@
           - **`task-notification`** — Renders background task completion notifications in the JSONL viewer.
           - **`teammate-message`** — Renders messages relayed from other Claude sessions (<teammate-message> blocks) distinctly from human user messages.
           - **`tool-call`** [11 sub-plugins] — Renders paired tool-call events with exact/pattern/fallback dispatch to per-tool renderer plugins.
+          - **`transcript-stats`** — The transcript's status strip: the readings pinned at the foot of the conversation, and the TranscriptStats.Item slot they come from. Owns the reading position — the strip reports the transcript as far as the reader has scrolled, so scrolling back through history walks the numbers back with it.
+            - Plugins:
+              - **`token-budget`** — The session's token budget as a transcript stat: how much of the harness's total_tokens budget is left as of the reading position, louder as it drains. Owns both halves of the move — the stat, and the filter that takes the harness's repeated reminder rows out of the transcript flow they were cluttering.
+              - **`usage`** — Context and output token usage as a transcript stat: the current context window and the output produced, folded from each message's own usage record up to the reading position.
           - **`user-image`** — Renders inline image thumbnails for user-image events.
           - **`user-text`** — Renders user text events in the JSONL viewer.
       - **`launch-prompts`** — Pre-configured prompts that launch a new background conversation in the same worktree. Pre-configured prompts that launch a new background conversation in the same worktree.

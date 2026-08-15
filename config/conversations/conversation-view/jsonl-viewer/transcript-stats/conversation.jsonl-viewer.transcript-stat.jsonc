@@ -1,0 +1,15 @@
+// @hash 3d7c484c9e91
+{
+  // Hide: { "item": "<key>", "hidden": true }
+  // Spacer (gap): { "type": "spacer", "id": "<unique-id>" }
+  // Group: { "type": "header", "label": "<title>", "collapsed": false, "items": [ "<key>", … ] }
+  //
+  // Left-to-right order of the strip pinned at the foot of the transcript,
+  // widest scope first: the session's whole token budget, then this
+  // conversation's own context and output. The usage chip stays rightmost,
+  // where it has always sat.
+  "items": [
+    "conversations.conversation-view.jsonl-viewer.transcript-stats.token-budget:token-budget",
+    "conversations.conversation-view.jsonl-viewer.transcript-stats.usage:usage"
+  ]
+}
