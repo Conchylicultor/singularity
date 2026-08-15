@@ -68,6 +68,7 @@ import { Editor, useFramedBlockTypes } from "../slots";
 import { computeFrameSpans, type FlatBlock } from "../internal/block-frames";
 import { flattenVisible } from "../internal/flatten-blocks";
 import { resolveRailSeats } from "../internal/rail-seat";
+import { resolveSelectionBands } from "../internal/selection-bands";
 import { useAnchorTypes, useBlockHandles } from "../internal/block-handles";
 import { serializeForest } from "../serialize-blocks";
 import { SelectionControlProvider } from "../selection-control";
@@ -76,6 +77,7 @@ import {
   type BlockSelectionActions,
 } from "../internal/use-block-selection";
 import { BlockRow } from "./block-row";
+import { SelectionBands } from "./selection-bands";
 import { BLOCK_GUTTER, blockContentLeft } from "../internal/page-column";
 import { FileDropOverlay } from "./file-drop-overlay";
 import {
@@ -1236,6 +1238,14 @@ function SelectionLayer({
     [flat, frameSpans, handleOf],
   );
 
+  // The selection highlight, as runs of consecutive selected LINES rather than
+  // one box per row — see `internal/selection-bands.ts` for why that is the
+  // shape, and `components/selection-bands.tsx` for the look.
+  const selectionBands = useMemo(
+    () => resolveSelectionBands(flat, frameSpans, selectedIds),
+    [flat, frameSpans, selectedIds],
+  );
+
   return (
     <SelectionControlProvider value={selectionControl}>
       <DndContext
@@ -1354,24 +1364,12 @@ function SelectionLayer({
               style={{ paddingLeft: 0, paddingRight: BLOCK_GUTTER }}
             >
               {/* Frames first in DOM order so they paint BEHIND the rows they
-                  span (equal stacking level → document order decides).
-
-                  A container ANCHOR's block-selection highlight rides on THIS
-                  wrapper rather than on its row: the row is zero height, so a
-                  ring on it is invisible and one ArrowDown in selection mode
-                  reads as a dead keypress. Ringing the whole box is also simply
-                  the right visual — selecting a callout selects the callout. The
-                  wrapper stays `pointer-events-none`. */}
+                  span (equal stacking level → document order decides). */}
               {frameSpans.map((span) => (
                 <div
                   key={`frame:${span.block.id}`}
                   // eslint-disable-next-line layout/no-adhoc-layout -- grid-row span placement is the point of this element; `relative` gives the frame a positioned box to paint into
-                  className={cn(
-                    "pointer-events-none relative col-start-1",
-                    handleOf(span.block.type)?.anchor === true &&
-                      selectedIds.has(span.block.id) &&
-                      "bg-primary/10 ring-primary/30 rounded-md ring-1",
-                  )}
+                  className="pointer-events-none relative col-start-1"
                   style={{ gridRow: `${span.start + 1} / ${span.end + 2}` }}
                 >
                   <Editor.BlockFrame.Dispatch
@@ -1382,6 +1380,15 @@ function SelectionLayer({
                   />
                 </div>
               ))}
+              {/* The block-selection highlight, over the frames and under the
+                  rows. It is resolved here — with the whole flatten in view —
+                  rather than per row, because "is the line above me selected
+                  too" is not knowable from a row alone, and it is the answer to
+                  that question that turns N selected blocks into ONE highlighted
+                  passage. A selected CONTAINER needs no special case either: it
+                  paints over its frame span, which is what covers a zero-height
+                  anchor row's box. */}
+              <SelectionBands bands={selectionBands} />
               {flat.map((f, i) => (
                 <div
                   key={f.block.id}
@@ -1409,8 +1416,11 @@ function SelectionLayer({
               ))}
               {marquee && (
                 <div
+                  // The lasso is drawn OVER the blocks it is sweeping, so its
+                  // fill stays fainter than the selection band underneath it —
+                  // it reads as the gesture, not as a second highlight.
                   // eslint-disable-next-line layout/no-adhoc-layout -- marquee rectangle positioned via JS-computed top/height coords (inset-x-2 insets its sides within the content box); not a ramp-expressible anchor
-                  className="bg-primary/10 border-primary/40 pointer-events-none absolute inset-x-2 z-base rounded-md border"
+                  className="bg-primary/5 border-primary/25 pointer-events-none absolute inset-x-2 z-base rounded-sm border"
                   style={{ top: marquee.top, height: marquee.height }}
                 />
               )}

@@ -15,6 +15,25 @@ import type { Report } from "@plugins/framework/plugins/tooling/plugins/e2e-harn
 import type { Page } from "playwright";
 import { editableBlocks } from "./blank-page";
 
+/**
+ * How many visible LINES the block-selection highlight covers.
+ *
+ * The highlight is ONE element per run of consecutive selected lines, not one
+ * per row (`web/components/selection-bands.tsx`), so counting elements
+ * under-reports a multi-block selection. Each band publishes the number of lines
+ * it spans on `data-selection-band`; sum them. Deliberately not a CSS-class
+ * match: the scripts used to count `.bg-primary\/10`, which any restyle of the
+ * highlight silently broke.
+ */
+export async function highlightedLines(page: Page): Promise<number> {
+  return page.evaluate(() =>
+    [...document.querySelectorAll("[data-selection-band]")].reduce(
+      (total, el) => total + Number(el.getAttribute("data-selection-band")),
+      0,
+    ),
+  );
+}
+
 export interface BlockSelectionDriver {
   /** Assert the selection container — not a block's editor — holds focus. */
   checkSelectionOwnsFocus(label: string): Promise<void>;
@@ -42,7 +61,10 @@ export interface BlockSelectionDriver {
   ): Promise<void>;
 }
 
-export function blockSelectionDriver(page: Page, r: Report): BlockSelectionDriver {
+export function blockSelectionDriver(
+  page: Page,
+  r: Report,
+): BlockSelectionDriver {
   const block = (i: number) => editableBlocks(page).nth(i);
 
   // Entering block-selection mode is RACY, and losing the race silently swaps the

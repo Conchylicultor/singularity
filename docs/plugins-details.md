@@ -17272,7 +17272,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/multi-select.MultiSelectProvider`
           - `primitives/multi-select.SelectionBar`
           - `primitives/multi-select.useMultiSelect`
-          - `primitives/multi-select.useMultiSelectItem`
           - `primitives/networking.subscribeWsStatus`
           - `primitives/optimistic-mutation.enqueueResourceWrite`
           - `primitives/optimistic-mutation.OpNoLongerApplies`

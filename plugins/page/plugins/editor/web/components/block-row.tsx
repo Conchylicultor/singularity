@@ -2,7 +2,6 @@ import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useMemo, type CSSProperties } from "react";
 import { useDroppable } from "@dnd-kit/core";
 import type { DropZone } from "@plugins/primitives/plugins/tree/core";
-import { useMultiSelectItem } from "@plugins/primitives/plugins/multi-select/web";
 import type { Block } from "../../core";
 import { useBlockEditor } from "../block-editor-context";
 import { useSelectionControl } from "../selection-control";
@@ -14,6 +13,13 @@ import "./block-document-scale.css";
 
 /** One empty body line plus the standard row padding — the childless-anchor box. */
 const ONE_EMPTY_LINE = "calc(var(--space-xs) * 2 + var(--doc-lh-body))";
+
+// The anchor decoration's own column. Hoisted out of the JSX so its lint
+// suppression sits on a line prettier cannot reflow — a positional
+// `eslint-disable-next-line` inside a JSX attribute is one format pass away from
+// suppressing different code (`format-clean` fails the build on exactly that).
+// eslint-disable-next-line layout/no-adhoc-layout -- positioned via JS coords (style left/width at the use site); `.block-anchor` owns the borrowed-first-line vertical seat
+const ANCHOR_COLUMN = "block-anchor absolute z-raised";
 
 // The column geometry (rail width, per-depth indent, content inset) lives in
 // `../internal/page-column` — see its module doc for the invariant. Hosts align
@@ -53,7 +59,6 @@ export function BlockRow({
   const { focusedBlockId, makeBlockAPI } = useBlockEditor();
   const api = useMemo(() => makeBlockAPI(block.id), [makeBlockAPI, block.id]);
   const isFocused = focusedBlockId === block.id;
-  const { isSelected } = useMultiSelectItem(block.id);
   const selection = useSelectionControl();
 
   const contributions = Editor.Block.useContributions();
@@ -74,7 +79,8 @@ export function BlockRow({
   // this row's. A drop lands as a sibling of this row, so the line sits at this
   // row's depth.
   const contentLeft = blockContentLeft(depth);
-  const firstLineCenter = seat.borrowedFirstLineCenter ?? gutterFirstLineCenter(handle);
+  const firstLineCenter =
+    seat.borrowedFirstLineCenter ?? gutterFirstLineCenter(handle);
 
   const dropIndicator = (zone: DropZone) => (
     <div
@@ -126,13 +132,17 @@ export function BlockRow({
             rows' rail no longer occupies (they seat theirs at the frame's edge).
             `z-raised` puts it above the frame it decorates. */}
         <div
-          // eslint-disable-next-line layout/no-adhoc-layout -- anchor column positioned via JS coords (style left/width below); `.block-anchor` owns the borrowed-first-line vertical seat
-          className={cn("block-anchor absolute z-raised", isDragging && "opacity-40")}
+          className={cn(ANCHOR_COLUMN, isDragging && "opacity-40")}
           style={{ left: contentLeft, width: BLOCK_INDENT }}
         >
           {Anchor ? (
             // eslint-disable-next-line react-hooks/static-components -- not a component CREATED during render: `Anchor` is a registry LOOKUP into the memoized `useBlockAnchors()` map, whose values are module-level slot contributions. Its identity is stable across renders, so no state can reset.
-            <Anchor type={block.type} data={block.data} blockId={block.id} editor={api} />
+            <Anchor
+              type={block.type}
+              data={block.data}
+              blockId={block.id}
+              editor={api}
+            />
           ) : null}
         </div>
         {/* Childless fallback: one empty body line so the frame has a real box
@@ -152,18 +162,23 @@ export function BlockRow({
       ref={setDropRef}
       data-block-id={block.id}
       className="group/row relative"
-      style={{ paddingLeft: contentLeft, "--gutter-first-line-center": firstLineCenter } as CSSProperties}
+      style={
+        {
+          paddingLeft: contentLeft,
+          "--gutter-first-line-center": firstLineCenter,
+        } as CSSProperties
+      }
     >
       <BlockRail seat={seat} />
       {/* Shift+click anywhere on the row extends the block selection instead of
           placing a caret. mousedown + preventDefault stops the text selection /
-          focus that a click would otherwise start. */}
+          focus that a click would otherwise start.
+
+          A row paints NO selection highlight of its own: the highlight belongs
+          to the RUN of selected lines, not to one row, so it is a sibling
+          decoration over the list's grid (`components/selection-bands.tsx`). */}
       <div
-        className={cn(
-          "rounded-md",
-          isDragging && "opacity-40",
-          isSelected && "bg-primary/10 ring-primary/30 ring-1",
-        )}
+        className={cn(isDragging && "opacity-40")}
         onMouseDownCapture={(e) => {
           if (e.shiftKey && selection) {
             e.preventDefault();
@@ -171,7 +186,12 @@ export function BlockRow({
           }
         }}
       >
-        <Editor.Block.Dispatch block={block} isFocused={isFocused} editor={api} ordinal={ordinal} />
+        <Editor.Block.Dispatch
+          block={block}
+          isFocused={isFocused}
+          editor={api}
+          ordinal={ordinal}
+        />
       </div>
       {dropZone && dropIndicator(dropZone)}
     </div>

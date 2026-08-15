@@ -16,6 +16,7 @@ import {
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 import { editableBlocks, openBlankPage } from "./support/blank-page";
+import { highlightedLines } from "./support/block-selection";
 import { typeLines } from "./support/type-lines";
 
 const base = baseUrl();
@@ -42,15 +43,10 @@ await withBrowser(async (h) => {
       return count === undefined ? null : Number(count);
     });
 
-  /** Rows painted with the block-selection highlight. */
-  const highlightedRows = (): Promise<number> =>
-    page.evaluate(
-      () => document.querySelectorAll("[data-block-id] .bg-primary\\/10").length,
-    );
-
   const containerFocused = (): Promise<boolean> =>
     page.evaluate(
-      () => document.activeElement?.getAttribute("aria-label") === "Page blocks",
+      () =>
+        document.activeElement?.getAttribute("aria-label") === "Page blocks",
     );
 
   const block = (i: number) => editableBlocks(page).nth(i);
@@ -72,14 +68,18 @@ await withBrowser(async (h) => {
   await page.keyboard.press("Escape");
   await page.waitForTimeout(400);
   r.eq("Escape in a block selects it", await selectedCount(), 1);
-  r.eq("Escape highlights exactly one row", await highlightedRows(), 1);
-  r.eq("Escape focuses the selection container", await containerFocused(), true);
+  r.eq("Escape highlights exactly one row", await highlightedLines(page), 1);
+  r.eq(
+    "Escape focuses the selection container",
+    await containerFocused(),
+    true,
+  );
 
   // 2. Escape in selection mode clears it (the branch the origin guard must keep).
   await page.keyboard.press("Escape");
   await page.waitForTimeout(400);
   r.eq("Escape again clears the selection", await selectedCount(), 0);
-  r.eq("no row stays highlighted", await highlightedRows(), 0);
+  r.eq("no row stays highlighted", await highlightedLines(page), 0);
 
   // 3. Shift+ArrowUp at a block's first line extends by exactly one block.
   await block(2).click();
@@ -87,7 +87,11 @@ await withBrowser(async (h) => {
   await page.waitForTimeout(200);
   await page.keyboard.press("Shift+ArrowUp");
   await page.waitForTimeout(400);
-  r.eq("Shift+ArrowUp at the edge selects two blocks", await selectedCount(), 2);
+  r.eq(
+    "Shift+ArrowUp at the edge selects two blocks",
+    await selectedCount(),
+    2,
+  );
 
   // 4. Tab in selection mode indents the selection — the affordance the bug hid.
   await page.keyboard.press("Escape");

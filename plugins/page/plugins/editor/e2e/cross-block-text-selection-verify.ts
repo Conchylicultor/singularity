@@ -22,6 +22,7 @@ import {
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 import { editableBlocks, openBlankPage } from "./support/blank-page";
+import { highlightedLines } from "./support/block-selection";
 import { typeLines } from "./support/type-lines";
 
 const base = baseUrl();
@@ -52,7 +53,9 @@ await withBrowser(async (h) => {
       const s = window.getSelection();
       const blockOf = (n: Node | null): string | null => {
         const el = n instanceof Element ? n : (n?.parentElement ?? null);
-        return el?.closest("[data-block-id]")?.getAttribute("data-block-id") ?? null;
+        return (
+          el?.closest("[data-block-id]")?.getAttribute("data-block-id") ?? null
+        );
       };
       return {
         collapsed: s?.isCollapsed ?? true,
@@ -71,11 +74,6 @@ await withBrowser(async (h) => {
       return n === undefined ? null : Number(n);
     });
 
-  const highlightedRows = (): Promise<number> =>
-    page.evaluate(
-      () => document.querySelectorAll("[data-block-id] .bg-primary\\/10").length,
-    );
-
   const a = await block(0).boundingBox();
   const c = await block(2).boundingBox();
   if (!a || !c) throw new Error("no bounding boxes for the fixture blocks");
@@ -89,8 +87,16 @@ await withBrowser(async (h) => {
   await page.waitForTimeout(300);
   const control = await readSelection();
   r.eq("intra-block drag still selects text", control.text.length > 0, true);
-  r.eq("intra-block drag stays in ONE block", control.anchorBlock, control.focusBlock);
-  r.eq("intra-block drag does NOT enter block-selection", (await selectedCount()) ?? 0, 0);
+  r.eq(
+    "intra-block drag stays in ONE block",
+    control.anchorBlock,
+    control.focusBlock,
+  );
+  r.eq(
+    "intra-block drag does NOT enter block-selection",
+    (await selectedCount()) ?? 0,
+    0,
+  );
 
   // 2. Crossing a block boundary promotes to a full block range.
   await page.mouse.move(a.x + a.width * 0.4, a.y + a.height / 2);
@@ -101,7 +107,7 @@ await withBrowser(async (h) => {
   await page.waitForTimeout(500);
 
   r.eq("crossing blocks selects all three", await selectedCount(), 3);
-  r.eq("all three rows are highlighted", await highlightedRows(), 3);
+  r.eq("all three rows are highlighted", await highlightedLines(page), 3);
   const promoted = await readSelection();
   r.eq("no text caret is left parked in a block", promoted.text, "");
 
@@ -112,11 +118,23 @@ await withBrowser(async (h) => {
   const clip = await page.evaluate(() => navigator.clipboard.readText());
   console.log("clipboard text/plain:\n---\n" + clip + "\n---");
   r.eq("clipboard is non-empty", clip.trim().length > 0, true);
-  r.eq("clipboard kept the heading prefix", /(^|\n)#\s+Alpha heading/.test(clip), true);
+  r.eq(
+    "clipboard kept the heading prefix",
+    /(^|\n)#\s+Alpha heading/.test(clip),
+    true,
+  );
   // `bulleted-list.markdownPrefixes` is ["* ", "- ", "+ "]; the serializer emits the
   // FIRST entry and the rest are parse-only aliases, so the round-trip is "* ".
-  r.eq("clipboard kept the bullet prefix", /(^|\n)\*\s+Bravo bullet/.test(clip), true);
-  r.eq("clipboard kept the nesting indent", /\n\s{2,}\*\s+Charlie nested/.test(clip), true);
+  r.eq(
+    "clipboard kept the bullet prefix",
+    /(^|\n)\*\s+Bravo bullet/.test(clip),
+    true,
+  );
+  r.eq(
+    "clipboard kept the nesting indent",
+    /\n\s{2,}\*\s+Charlie nested/.test(clip),
+    true,
+  );
 
   // 4. An upward drag promotes the same way (setRange slices either direction).
   await page.mouse.move(c.x + c.width * 0.5, c.y + c.height / 2);
@@ -124,7 +142,11 @@ await withBrowser(async (h) => {
   await page.mouse.move(a.x + a.width * 0.4, a.y + a.height / 2, { steps: 20 });
   await page.mouse.up();
   await page.waitForTimeout(500);
-  r.eq("an upward cross-block drag selects all three", await selectedCount(), 3);
+  r.eq(
+    "an upward cross-block drag selects all three",
+    await selectedCount(),
+    3,
+  );
 
   r.finish();
 });

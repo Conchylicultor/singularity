@@ -899,6 +899,29 @@ still caught by the strict `parseBlockData` at the write boundary.
 adopted children — the same documented under-approximation as merge's
 rewritten target: less cascade-confirmation coverage, but never a wrong drop.
 
+## The selection highlight belongs to the RUN, not to the row
+
+> A row paints **no** selection highlight of its own. The highlight is a sibling
+> decoration spanning the grid lines of a maximal run of selected visible lines
+> — the same shape as a container frame, resolved the same way.
+
+Don't "simplify" it back to a class per row. N selected blocks are ONE region and
+the user reads them as one; N boxes restate them as N, and every internal
+boundary then draws two rounded corners and two hairlines meeting — a
+three-paragraph selection renders as three stacked cards. Those seams are
+structural, so they are removed structurally: a run is one element and has no
+internal edges to draw.
+
+`internal/selection-bands.ts` resolves the runs, `components/selection-bands.tsx`
+paints them, `block-editor.tsx` calls it (like `RailSeat`: "is the line above me
+selected too" is unknowable from a row alone). Rounding is a property of the run,
+not the row. A run splits into TOUCHING bands wherever the decoration edge steps
+(a selected block deeper than the line above it) — a notch in one region, not two
+boxes. A selected container paints over its frame span, so `handle.anchor`'s
+zero-height row needs no branch. The band spans `C` → the content box's right
+edge, the box `ContainerBackdrop` fills, so a selected callout's tint and its
+band are concentric.
+
 ## Block-selection mode: the container handles only keys it originated
 
 Block selection lives on `internal/use-block-selection.ts` (range state + the
@@ -2050,7 +2073,6 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
     - `primitives/multi-select.MultiSelectProvider`
     - `primitives/multi-select.SelectionBar`
     - `primitives/multi-select.useMultiSelect`
-    - `primitives/multi-select.useMultiSelectItem`
     - `primitives/networking.subscribeWsStatus`
     - `primitives/optimistic-mutation.enqueueResourceWrite`
     - `primitives/optimistic-mutation.OpNoLongerApplies`
