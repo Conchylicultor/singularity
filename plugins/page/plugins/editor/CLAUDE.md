@@ -732,10 +732,37 @@ for the first reason.
 
 ### Known bounds
 
-- **The feature is currently invisible.** Nothing reflects a collapsed caret's
-  pending marks (`FormatToolbarPlugin` is gated on a non-collapsed selection), so
-  depth 0 and depth 1 are pixel-identical and ArrowRight paints nothing. Filed as
-  a follow-up, not an oversight.
+- **A collapsed caret says what it will TYPE with, and only that.**
+  `FormatToolbarPlugin` is the selection format surface in two
+  mutually-exclusive presentations; the second is the cue — a chip under the
+  caret reading its pending set (`plain`, `code`, `bold code`) *while the caret
+  stands at a mark BOUNDARY (either of its two states), or while that set
+  DIFFERS from the marks of the text it stands in*. The boundary arm is what
+  makes a boundary's two states mutually distinguishable — `` `zz|` `` reads
+  `code` and `` `zz`| `` reads `plain`, at one pixel and one linear offset —
+  since "the two sides agree, so there is nothing remarkable to say" is the
+  wrong test at exactly the position the feature exists to disambiguate. Its
+  cost is the self-extinguishing half: typing INSIDE a marked run at a block
+  edge KEEPS a chip on screen (the run's right neighbour is the empty unmarked
+  void, so the caret is still on a seam). Typing plain text, and typing after
+  stepping out, show nothing. Derived from `selection.format`, which does
+  **not** contradict *Depth is STORED* above — **the store decides what a KEY
+  does; `selection.format` decides what the SCREEN says.** Nothing here touches
+  the store, so a chip for Cmd+E or an autoformat landing is the *point*, not a
+  false positive. It says nothing about **Backspace** deliberately, and a step
+  that changes neither arm stays invisible: right after `` `zz` `` autoformats
+  (`preFormat` already left the caret at `{}`) the chip reads `plain` both
+  before and after the ArrowRight out, and it is the ArrowLeft back INSIDE that
+  reads `code` — `e2e/pending-marks-cue-verify.ts` phase 3 is that pair. Design:
+  [`research/2026-08-09-page-collapsed-caret-pending-marks-cue.md`](../../../../research/2026-08-09-page-collapsed-caret-pending-marks-cue.md).
+- **The inline-code chip cannot carry it instead** — settled, so it is not
+  re-asked. Both caret states are the SAME DOM position (the code `TextNode`'s
+  end), so the browser paints the caret at one x either way; restyling that one
+  span needs a class on a node Lexical owns, i.e. a content write, which the
+  virtual-delimiter design rejects for the reasons it rejects real seams; and the
+  only route left is a fake caret (`caret-color: transparent` plus our own
+  blinking bar), rejected because a missed state change leaves the user with no
+  visible caret at all, and it fights IME, forced-colors mode and caret blink.
 - **The second component is not restorable.** It lives outside the document, so
   undo, reload and any remote edit lose it — all degrading to depth 0, the safe
   side. There is no address to restore it *to*; see the citations in

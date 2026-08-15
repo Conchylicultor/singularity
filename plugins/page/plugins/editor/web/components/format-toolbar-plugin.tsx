@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   $getSelection,
   $isRangeSelection,
+  $isTextNode,
   SELECTION_CHANGE_COMMAND,
   COMMAND_PRIORITY_LOW,
 } from "lexical";
@@ -11,9 +12,21 @@ import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext
 import { ViewportOverlay } from "@plugins/primitives/plugins/css/plugins/viewport-overlay/web";
 import { Surface } from "@plugins/primitives/plugins/css/plugins/surface/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { MARK_ORDER, type ColorToken, type Mark } from "../../core";
+import {
+  MARK_ORDER,
+  marksOfTextNode,
+  type ColorToken,
+  type Mark,
+} from "../../core";
 import { Editor } from "../slots";
-import { FormatToolbarProvider, type FormatToolbarValue } from "../internal/format-toolbar-context";
+import {
+  FormatToolbarProvider,
+  type FormatToolbarValue,
+} from "../internal/format-toolbar-context";
+import { caretFormatCue } from "../internal/caret-format-cue";
+import { $readMarkBoundary } from "../internal/caret-geometry";
+import { virtualStop } from "../internal/mark-boundary";
+import { CaretFormatChip } from "./caret-format-chip";
 
 /** Empty (all-false) mark snapshot, used as the closed default. */
 function emptyActive(): Record<Mark, boolean> {
@@ -55,50 +68,165 @@ function selectionColor(): ColorToken | null {
   return match ? (match[1] as ColorToken) : null;
 }
 
-/** On-screen position of the floating bar (viewport coordinates). */
-interface BarPosition {
+/** On-screen position of a floating surface (viewport coordinates). */
+interface SurfacePosition {
   /** Left edge in px (already clamped to the viewport). */
   left: number;
   /**
-   * Vertical anchor in px. When `placement` is `"above"` this is the bar's
+   * Vertical anchor in px. When `placement` is `"above"` this is the surface's
    * BOTTOM edge (it is pulled up its own height via `translateY(-100%)`); when
-   * `"below"` it is the bar's top edge.
+   * `"below"` it is its top edge.
    */
   top: number;
   /**
-   * Side of the selection the bar sits on. Anchoring the bottom edge for
-   * `"above"` (via the CSS translate) means the bar never overlaps the selected
-   * text regardless of its measured height — the height is needed only to decide
-   * whether it fits above, never to keep it clear of the selection.
+   * Side of the anchor rect the surface sits on. Anchoring the bottom edge for
+   * `"above"` (via the CSS translate) means the surface never overlaps what it
+   * points at regardless of its measured height — the height is needed only to
+   * decide whether it fits, never to keep it clear.
    */
   placement: "above" | "below";
 }
 
-/** Vertical gap between the selection rect and the nearest bar edge. */
-const BAR_GAP = 8;
-/** Horizontal viewport inset the bar is clamped to. */
+/** Natural size of a floating surface, measured or estimated. */
+interface SurfaceSize {
+  width: number;
+  height: number;
+}
+
+/** Vertical gap between the anchor rect and the nearest surface edge. */
+const SURFACE_GAP = 8;
+/** Horizontal viewport inset a surface is clamped to. */
 const VIEWPORT_INSET = 8;
-/** Estimated bar width used for initial horizontal clamping before measure. */
-const BAR_EST_WIDTH = 200;
-/** Estimated bar height used for the above/below flip decision before measure. */
-const BAR_EST_HEIGHT = 44;
+/** Estimated bar size, used before the bar has been measured. */
+const BAR_ESTIMATE: SurfaceSize = { width: 200, height: 44 };
+/** Estimated cue-chip size, used before the chip has been measured. */
+const CUE_ESTIMATE: SurfaceSize = { width: 72, height: 20 };
 
 /**
- * Floating selection format toolbar host. Mounted inside every block composer.
+ * Where to put a floating surface beside `rect`, in viewport coordinates.
+ *
+ * `prefer` is the side the surface WANTS; it flips to the other one only when
+ * its own height would not clear the viewport edge on the preferred side. The
+ * bar prefers `"above"` (it must never cover the selected text); the cue chip
+ * prefers `"below"` (there is no selected text under a caret to hide, and the
+ * line ABOVE is what the user is reading). Horizontal placement is the same for
+ * both: centred on `rect`, clamped into view.
+ *
+ * `measured` is the rendered element when there is one; otherwise `estimate`
+ * stands in so the FIRST frame is already clamped (no one-frame jump
+ * off-screen). On a fresh selection nothing is mounted yet, and the estimate
+ * only ever has to be close enough for the flip decision — the
+ * `translateY(-100%)` anchor keeps an `"above"` surface clear of the rect
+ * whatever its real height turns out to be.
+ */
+function fitSurface(
+  rect: DOMRect,
+  measured: HTMLElement | null,
+  estimate: SurfaceSize,
+  prefer: "above" | "below",
+): SurfacePosition {
+  const width = measured?.offsetWidth || estimate.width;
+  const height = measured?.offsetHeight || estimate.height;
+  const centeredLeft = rect.left + rect.width / 2 - width / 2;
+  const maxLeft = window.innerWidth - width - VIEWPORT_INSET;
+  const left = Math.max(VIEWPORT_INSET, Math.min(centeredLeft, maxLeft));
+  const fitsAbove = rect.top - height - SURFACE_GAP >= VIEWPORT_INSET;
+  const fitsBelow =
+    rect.bottom + height + SURFACE_GAP <= window.innerHeight - VIEWPORT_INSET;
+  const placement: SurfacePosition["placement"] =
+    prefer === "above"
+      ? fitsAbove
+        ? "above"
+        : "below"
+      : fitsBelow
+        ? "below"
+        : "above";
+  const top =
+    placement === "above" ? rect.top - SURFACE_GAP : rect.bottom + SURFACE_GAP;
+  return { left, top, placement };
+}
+
+/**
+ * The CSS transform pinning an `"above"` surface's BOTTOM edge to its `top`
+ * coordinate. `"below"` needs none — `top` is already its top edge.
+ */
+function placementTransform(
+  placement: SurfacePosition["placement"],
+): string | undefined {
+  return placement === "above" ? "translateY(-100%)" : undefined;
+}
+
+/**
+ * A rect carrying no box at all. A collapsed caret's range rect has `width ===
+ * 0` but a real height, so it is NOT empty by this test and measures fine; an
+ * EMPTY block has no text to measure and yields an all-zero rect.
+ */
+function isEmptyRect(rect: DOMRect): boolean {
+  return rect.width === 0 && rect.height === 0;
+}
+
+/**
+ * Which of the two presentations the current selection calls for, or `null` for
+ * neither. Mutually exclusive by construction: `selection.isCollapsed()` picks
+ * one, so there is no state in which both could be on screen.
+ */
+type Presentation =
+  /** A non-collapsed selection: the format toolbar. */
+  | { kind: "bar" }
+  /** A collapsed caret at a mark boundary, or divergent from its surroundings. */
+  | { kind: "cue"; marks: Mark[] };
+
+/**
+ * The selection format surface, in TWO mutually-exclusive presentations.
+ * Mounted inside every block composer.
+ *
+ * - **A non-collapsed selection → the floating format toolbar.** Controls for
+ *   the marks, the link and the color of the selected text.
+ * - **A collapsed caret standing at a mark boundary, or one whose pending marks
+ *   differ from the text it stands in → the cue chip.** A small word under the
+ *   caret (`plain`, `code`, `bold code`) saying what the NEXT typed character
+ *   will carry. The boundary arm is what makes a boundary's two states — one
+ *   pixel, one linear offset — mutually distinguishable: `` `zz|` `` reads
+ *   `code` and `` `zz`| `` reads `plain`. The rule itself is
+ *   `internal/caret-format-cue.ts`'s, including what it costs.
+ *
+ * One mount, one selection-listener set, one positioning routine. A per-block
+ * plugin for the cue would have duplicated the containment gate, the rect read,
+ * the clamp/flip placement, the blur hide and the document `selectionchange`
+ * re-evaluation — and added a second selection listener to every block — to
+ * arrive at a snapshot this one already computes: for a collapsed caret,
+ * `selection.hasFormat(mark)` per mark IS the pending set.
+ *
+ * **The cue derives from `selection.format`, and that does not contradict
+ * `internal/mark-depth.ts`.** Its header is emphatic that DEPTH must never be
+ * derived that way, because three shipped mechanisms alias the divergence and a
+ * derived depth would make Backspace strip a whole span. That rule is about edit
+ * SEMANTICS; this is presentation. Stated as one line, because the two look
+ * alike: **the mark-depth store decides what a KEY does; `selection.format`
+ * decides what the SCREEN says.** Nothing here reads or writes the store, and
+ * the cue firing for a collapsed-caret Cmd+E or for an autoformat landing is
+ * intended — those are exactly the two invisible cases it exists to show, not
+ * false positives.
+ *
+ * The cue also renders WORDS, not controls, so the `Editor.FormatAction` slot is
+ * not involved in it and no `formatting/*` sub-plugin has anything to say here.
  *
  * Selection tracking: a single update + SELECTION_CHANGE listener owns the
- * snapshot — when THIS editor holds a non-collapsed `RangeSelection`, it computes
- * `active` via `selection.hasFormat(mark)` for the closed Mark set and the bar's
- * screen position from the DOM range's bounding rect. The bar hides when the
- * selection collapses, lands in another editor, or the editor blurs.
+ * snapshot, gated on the LIVE document selection sitting inside THIS editor's
+ * root. Either presentation hides when the selection lands in another editor or
+ * the editor blurs; the bar also hides when the selection collapses (the cue
+ * takes over), and the cue when the caret is at no boundary and its two mark
+ * sets agree.
  *
- * Positioning: the bar is portaled through `ViewportOverlay` (so `fixed` resolves
- * against the real viewport, never a transformed ancestor) above the selection —
- * flipping below it when there's no room above — and horizontally clamped into
- * view. When above, its bottom edge is anchored to the selection via a CSS
- * `translateY(-100%)` so it never covers the selected text regardless of its
- * height. The overlay root is `pointer-events-none` so it never blocks clicks
- * elsewhere; only the bar itself is interactive.
+ * Positioning: both surfaces are portaled through `ViewportOverlay` (so `fixed`
+ * resolves against the real viewport, never a transformed ancestor) and
+ * horizontally clamped into view. The bar prefers to sit ABOVE the selection —
+ * never covering the selected text — and the cue BELOW the caret, so it never
+ * covers the line above; each flips when its preferred side has no room. When
+ * above, the bottom edge is anchored via a CSS `translateY(-100%)`, so the
+ * surface clears its anchor regardless of its measured height. The overlay root
+ * is `pointer-events-none` so it never blocks clicks elsewhere; only the bar
+ * itself is interactive, and the cue never is.
  *
  * No flicker / no focus steal: position+visibility update synchronously on
  * selection change (no async layout), and the bar's pointer-events are isolated
@@ -107,16 +235,20 @@ const BAR_EST_HEIGHT = 44;
  */
 export function FormatToolbarPlugin() {
   const [editor] = useLexicalComposerContext();
-  const [visible, setVisible] = useState(false);
+  const [presentation, setPresentation] = useState<Presentation | null>(null);
   const [active, setActive] = useState<Record<Mark, boolean>>(emptyActive);
   const [link, setLink] = useState<string | null>(null);
   const [color, setColor] = useState<ColorToken | null>(null);
-  const [position, setPosition] = useState<BarPosition>({
+  const [position, setPosition] = useState<SurfacePosition>({
     left: 0,
     top: 0,
     placement: "above",
   });
   const barRef = useRef<HTMLElement>(null);
+  // Separate refs, not one shared `surfaceRef`: only one presentation is mounted
+  // at a time, but `update` runs BEFORE the swap renders — so a shared ref would
+  // hand the outgoing surface's measurements to the incoming one for a frame.
+  const cueRef = useRef<HTMLDivElement>(null);
   // While a control's popover is open it pins the bar visible so blurring the
   // editor into the popover input doesn't collapse the selection and tear the
   // bar down. Held in a ref (read by listeners) mirrored to state (gates render).
@@ -127,29 +259,92 @@ export function FormatToolbarPlugin() {
     // Pinned: a popover owns the bar; freeze the snapshot until it closes.
     if (pinnedRef.current) return;
     const selection = $getSelection();
-    // Only a non-collapsed range selection in THIS editor shows the bar.
-    if (!$isRangeSelection(selection) || selection.isCollapsed()) {
-      setVisible(false);
+    if (!$isRangeSelection(selection)) {
+      setPresentation(null);
       return;
     }
     // Derive visibility from the LIVE document selection, not just the model: the
-    // bar is this editor's only when the native selection is non-collapsed AND its
-    // anchor sits inside this editor's root. Without this containment gate a stale
-    // model selection (left behind when focus/selection moved elsewhere without a
-    // Lexical event reaching us) would strand the bar on screen.
+    // surface is this editor's only when the native selection's anchor sits
+    // inside this editor's root. Without this containment gate a stale model
+    // selection (left behind when focus/selection moved elsewhere without a
+    // Lexical event reaching us) would strand it on screen.
     const domSelection = window.getSelection();
-    if (!domSelection || domSelection.rangeCount === 0 || domSelection.isCollapsed) {
-      setVisible(false);
+    if (!domSelection || domSelection.rangeCount === 0) {
+      setPresentation(null);
       return;
     }
     const root = editor.getRootElement();
     if (!root || !root.contains(domSelection.anchorNode)) {
-      setVisible(false);
+      setPresentation(null);
       return;
     }
     const rect = domSelection.getRangeAt(0).getBoundingClientRect();
-    if (rect.width === 0 && rect.height === 0) {
-      setVisible(false);
+
+    if (selection.isCollapsed()) {
+      // ---- the CUE: a caret, and what it will type with ----
+      // The DOM must agree it is a caret. The rect below is read off the DOM
+      // range, so a native selection that has not collapsed with the model would
+      // hand us a whole selection's box rather than a caret's.
+      if (!domSelection.isCollapsed) {
+        setPresentation(null);
+        return;
+      }
+      // `pending` is the same `selection.hasFormat` scan the bar makes — for a
+      // collapsed caret that snapshot IS the pending mark set. The other two
+      // inputs come from ONE read of the caret's mark boundary: `surrounding` is
+      // that boundary's own `natural` field, and `atBoundary` is whether it holds
+      // a virtual stop. Deriving them separately — the boundary here and
+      // `marksOfTextNode(anchor.getNode())` there — would let the cue's idea of
+      // what the caret stands in disagree with the caret model's, which is the
+      // one thing the cue exists to report on.
+      const anchorNode = selection.anchor.getNode();
+      const pending = MARK_ORDER.filter((mark) => selection.hasFormat(mark));
+      const boundary = $readMarkBoundary(selection);
+      const cue = caretFormatCue({
+        pending,
+        // No boundary at all is the ordinary mid-run caret (or an anchor the
+        // strip cannot resolve): the caret stands in its own leaf's bits, which
+        // is the same `marksOfTextNode` derivation `$boundaryAtTextAnchor` would
+        // have handed back as `natural`. A non-text anchor (an element point at
+        // an empty paragraph, a `<br>`, a decorator) carries no marks — `[]`,
+        // exactly as the boundary strip models a void neighbour.
+        surrounding:
+          boundary?.natural ??
+          ($isTextNode(anchorNode) ? marksOfTextNode(anchorNode) : []),
+        atBoundary: boundary !== null && virtualStop(boundary) !== null,
+      });
+      if (cue.kind === "silent") {
+        setPresentation(null);
+        return;
+      }
+      // A collapsed caret's range rect has width 0 but a real height, so it
+      // anchors fine — except in an EMPTY block, which has no text to measure and
+      // yields an all-zero rect. Cmd+B on an empty line is a common flow, so fall
+      // back to the editor root's own box. (`caret-trigger`'s `caretAnchor` makes
+      // the same fallback for its empty-block case; it is written out here rather
+      // than imported because reaching into that barrel for it is a lint error —
+      // `no-adhoc-caret-trigger` — and this is not a trigger menu.)
+      const anchorRect = isEmptyRect(rect)
+        ? root.getBoundingClientRect()
+        : rect;
+      if (isEmptyRect(anchorRect)) {
+        setPresentation(null);
+        return;
+      }
+      setPosition(
+        fitSurface(anchorRect, cueRef.current, CUE_ESTIMATE, "below"),
+      );
+      setPresentation({ kind: "cue", marks: cue.marks });
+      return;
+    }
+
+    // ---- the BAR: a non-collapsed selection, and what is applied to it ----
+    if (domSelection.isCollapsed) {
+      setPresentation(null);
+      return;
+    }
+    if (isEmptyRect(rect)) {
+      setPresentation(null);
       return;
     }
 
@@ -159,23 +354,8 @@ export function FormatToolbarPlugin() {
     setLink(selectionLink());
     setColor(selectionColor());
 
-    // Measure the rendered bar if present; otherwise estimate so the first frame
-    // is already clamped (avoids a one-frame jump off-screen). On a fresh
-    // selection the bar isn't mounted yet, so its real height is unknown — the
-    // `translateY(-100%)` anchor below keeps it clear of the selection regardless,
-    // and the estimate only needs to be close enough for the flip decision.
-    const barWidth = barRef.current?.offsetWidth || BAR_EST_WIDTH;
-    const barHeight = barRef.current?.offsetHeight || BAR_EST_HEIGHT;
-    const centeredLeft = rect.left + rect.width / 2 - barWidth / 2;
-    const maxLeft = window.innerWidth - barWidth - VIEWPORT_INSET;
-    const left = Math.max(VIEWPORT_INSET, Math.min(centeredLeft, maxLeft));
-    // Prefer sitting above the selection; flip below when the bar wouldn't clear
-    // the top of the viewport.
-    const fitsAbove = rect.top - barHeight - BAR_GAP >= VIEWPORT_INSET;
-    const placement: BarPosition["placement"] = fitsAbove ? "above" : "below";
-    const top = fitsAbove ? rect.top - BAR_GAP : rect.bottom + BAR_GAP;
-    setPosition({ left, top, placement });
-    setVisible(true);
+    setPosition(fitSurface(rect, barRef.current, BAR_ESTIMATE, "above"));
+    setPresentation({ kind: "bar" });
   }, [editor]);
 
   const setPinned = useCallback(
@@ -210,7 +390,7 @@ export function FormatToolbarPlugin() {
     const root = editor.getRootElement();
     // Don't hide while a popover pins the bar (focus moved into its input).
     const onBlur = () => {
-      if (!pinnedRef.current) setVisible(false);
+      if (!pinnedRef.current) setPresentation(null);
     };
     root?.addEventListener("blur", onBlur);
     // The native, document-wide selection signal. Lexical's SELECTION_CHANGE only
@@ -234,7 +414,28 @@ export function FormatToolbarPlugin() {
     [editor, active, link, color, setPinned],
   );
 
-  if (!visible && !pinned) return null;
+  if (!presentation && !pinned) return null;
+
+  // A pin is only reachable from a bar control, and it freezes `update`, so a
+  // pinned surface is always the bar — the cue can never be the pinned one.
+  if (presentation?.kind === "cue") {
+    return (
+      <ViewportOverlay layer="popover" className="pointer-events-none">
+        <div
+          ref={cueRef}
+          // eslint-disable-next-line layout/no-adhoc-layout -- floating cue placed at a JS-computed viewport coordinate (left/top/transform below), inside the fixed-inset-0 overlay; not a ramp-expressible anchor
+          className="absolute"
+          style={{
+            left: position.left,
+            top: position.top,
+            transform: placementTransform(position.placement),
+          }}
+        >
+          <CaretFormatChip marks={presentation.marks} />
+        </div>
+      </ViewportOverlay>
+    );
+  }
 
   return (
     <ViewportOverlay layer="popover" className="pointer-events-none">
@@ -249,8 +450,7 @@ export function FormatToolbarPlugin() {
             top: position.top,
             // "above": anchor the bar's bottom edge at `top` by lifting it its
             // own height, so it always clears the selection without measuring.
-            transform:
-              position.placement === "above" ? "translateY(-100%)" : undefined,
+            transform: placementTransform(position.placement),
           }}
         >
           <Stack direction="row" gap="2xs" align="center">
