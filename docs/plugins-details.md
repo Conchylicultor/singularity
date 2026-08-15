@@ -14553,6 +14553,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `findPluginDirs`
               - `lintCollectedDir`
           - Plugins:
+            - **`aria-safety`** — aria-safety lint rule: no-orphan-composite-role
             - **`bun-safety`** — bun-safety lint rule: no-declare-identifier
             - **`button-safety`** — button-safety lint rule: no-async-raw-button
             - **`caret-trigger-safety`** — caret-trigger-safety lint rule: no-adhoc-caret-trigger
@@ -14656,7 +14657,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`web-sdk`** — Web plugin runtime: slots, contributions, loader
       - Web:
         - Slots:
-          - `Core.Root` ← `apps-core.layout`, `apps.mail.sync.auto-resume`, `conversations.model-provider`, `debug.live-state-churn.emit`, `debug.render-profiler`, `debug.slow-ops`, `infra.health`, `primitives.command-palette`, `primitives.imperative-dialog`, `primitives.overscroll-hint`, `primitives.shortcuts`, `reports.caret-flight`, `reports.collab-hydration`, `reports.crash`, `reports.endpoint-errors`, `reports.live-state-stale-drop`, `reports.mutation-errors`, `reports.optimistic-divergence`, `reports.plugin-load-errors`, `reports.render-loop`, `shell.global-action-bar`, `shell.toast`, `ui.theme-engine`, `ui.tokens.font-family.google-fonts`
+          - `Core.Root` ← `apps-core.layout`, `apps.mail.sync.auto-resume`, `conversations.model-provider`, `debug.live-state-churn.emit`, `debug.render-profiler`, `debug.slow-ops`, `infra.health`, `primitives.announce`, `primitives.command-palette`, `primitives.imperative-dialog`, `primitives.overscroll-hint`, `primitives.shortcuts`, `reports.caret-flight`, `reports.collab-hydration`, `reports.crash`, `reports.endpoint-errors`, `reports.live-state-stale-drop`, `reports.mutation-errors`, `reports.optimistic-divergence`, `reports.plugin-load-errors`, `reports.render-loop`, `shell.global-action-bar`, `shell.toast`, `ui.theme-engine`, `ui.tokens.font-family.google-fonts`
           - `Core.Boot` ← `config_v2`, `infra.boot-snapshot`, `ui.tweakcn`
       - Core:
         - Uses:
@@ -17245,6 +17246,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses:
           - `infra/endpoints.EndpointError`
           - `infra/endpoints.fetchEndpoint`
+          - `primitives/announce.announce`
           - `primitives/auto-scroll.useEdgeAutoScroll`
           - `primitives/copy-to-clipboard.useCopyToClipboard`
           - `primitives/css/badge.Badge`
@@ -19255,6 +19257,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Imported by:
           - `primitives/icon-button`
           - `reorder/node-types/overflow`
+    - **`announce`** — Screen-reader announcement primitive: a plain announce(message, { assertive }) writing into the page's two Core.Root-mounted live regions (polite status + assertive alert). Re-announcing an identical string re-fires without any timer. Degrades to a silent no-op when no host is mounted.
+      - Web:
+        - Contributes: `Core.Root` → `AnnouncerHost`
+        - Exports (types): `Announcement`
+        - Exports (values): `announce`
+      - Cross-plugin:
+        - Imported by: `page/editor`
     - **`app-instance`** — Per-app-instance generation id: which running SPA state a document belongs to, and the storage-key grammar scoped to it.
       - Web:
         - Uses: `primitives/tab-id.getTabId`

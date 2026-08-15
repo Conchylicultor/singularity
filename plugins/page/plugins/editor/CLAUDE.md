@@ -922,6 +922,60 @@ zero-height row needs no branch. The band spans `C` → the content box's right
 edge, the box `ContainerBackdrop` fills, so a selected callout's tint and its
 band are concentric.
 
+## The block list is a document, not a listbox
+
+> The block list's container is a **named group of editable blocks**
+> (`role="group" aria-label="Page blocks"`). No composite ARIA role is honest
+> here, so it claims none.
+
+Every row holds a `contenteditable` editing host. A composite role is a contract
+about its children — a `listbox` promises options, a `tree` promises treeitems —
+and there is no child role a rich-text editing host can wear. The container used
+to say `role="listbox" aria-multiselectable`, which was **worse for a screen
+reader than no role at all**: it announced an empty list (nothing below it was an
+option), and it flattened the subtree, hiding the headings, lists and quotes that
+are the entire point of a page.
+
+- **Do not add `role="option"` to a row.** It is the first fix everyone reaches
+  for, and it is the trap: an option's accessible name is its text content, so
+  stamping it on a row collapses the editing host into a label and takes the
+  editing semantics with it. The lint rule
+  `aria-safety/no-orphan-composite-role` fails a re-added `listbox` here; nothing
+  mechanical stops the `option` half, so this paragraph is the guard.
+- **`aria-selected` is unreachable, not merely unused.** It is supported only on
+  `option`, `row`, `gridcell`, `tab`, `treeitem`, `columnheader` and
+  `rowheader` — and none of those may host a `contenteditable`. So the state has
+  no attribute to live in.
+- **Switching roles for the duration of selection is not available either.** It
+  would mean `contentEditable={false}` on the rows while selecting, which
+  deadlocks the caret authority's landing (see *The caret authority*): the
+  authority parks the keyboard on the container and waits for an editing host
+  that a role swap has just removed.
+
+Two channels replace the missing attribute, and neither is decoration:
+
+- **The selection is spoken on every range change.** The range moves in exactly
+  three places — `applyRange`, the Cmd+A branch, and `clearSelection`, all in
+  `internal/use-block-selection.ts` — and each announces through
+  `primitives/announce`. `"Heading 2: Container frames, block 3 of 12, selected"`,
+  `"…, 4 blocks selected"`, `"All 12 blocks selected"`, `"Selection cleared"`.
+  A block is named by the host's `describeBlock` (type label + a short text
+  preview), so the hook stays domain-free. Two guards keep it honest: an
+  unchanged range is silent (a marquee drag re-applies the same range every
+  pointermove), and a clear over an empty selection is silent.
+- **A selected row says so, in words.** `BlockRow` renders
+  `<span className="sr-only">{isSelected ? "Selected. " : ""}</span>` as its
+  constant first child, in both branches. Always mounted, empty when unselected —
+  the row's children list must keep a constant length, and `sr-only` is
+  `position: absolute`, so it perturbs no rect drag/drop/marquee measures. The
+  flag arrives as a prop from the editor (which already recomputes every row on a
+  selection change), never as a per-row subscription to the selection store.
+
+**Known bound:** heading blocks still expose no `role="heading"` / `aria-level`.
+Now that the listbox no longer flattens the subtree this is the next-largest gap
+for a screen reader, but it belongs to the block-type presentation API
+(`BlockChrome`), not to the selection surface. A follow-up, not an oversight.
+
 ## Block-selection mode: the container handles only keys it originated
 
 Block selection lives on `internal/use-block-selection.ts` (range state + the
@@ -2045,6 +2099,7 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
   - Uses:
     - `infra/endpoints.EndpointError`
     - `infra/endpoints.fetchEndpoint`
+    - `primitives/announce.announce`
     - `primitives/auto-scroll.useEdgeAutoScroll`
     - `primitives/copy-to-clipboard.useCopyToClipboard`
     - `primitives/css/badge.Badge`

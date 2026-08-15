@@ -1,19 +1,41 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render } from "@testing-library/react";
 import { useEffect, useMemo, useRef } from "react";
 import {
   MultiSelectProvider,
   useMultiSelect,
 } from "@plugins/primitives/plugins/multi-select/web";
-import { SelectionControlProvider, useSelectionControl } from "../selection-control";
+import { announce } from "@plugins/primitives/plugins/announce/web";
+import {
+  SelectionControlProvider,
+  useSelectionControl,
+} from "../selection-control";
 import {
   useBlockSelection,
+  BLOCK_LIST_ARIA,
   type BlockSelectionActions,
 } from "../internal/use-block-selection";
 
+// The announcement channel is a module-level writer into a page-global live
+// region, so the way to observe it from a hook test is to own the module — the
+// same isolation idiom the editor's collab tests use for their side-effecting
+// modules. Mounting the real host would test the announcer, not this hook.
+vi.mock("@plugins/primitives/plugins/announce/web", () => ({
+  announce: vi.fn(),
+}));
+
+const announced = vi.mocked(announce);
+
 afterEach(cleanup);
+beforeEach(() => announced.mockClear());
 
 const IDS = ["b1", "b2", "b3", "b4"] as const;
+
+/** What the harness's blocks are called when the selection speaks their name. */
+const describeBlock = (id: string) => `Text: ${id} body`;
+
+/** Every announcement made since the last reset, in order. */
+const spoken = () => announced.mock.calls.map(([message]) => message);
 
 /**
  * Stands in for a block's Lexical text editor. The fidelity that matters is the
@@ -63,21 +85,31 @@ function Surface({ actions }: { actions: BlockSelectionActions }) {
   // so every selected block is its own root.
   const roots = useMemo(() => [...selectedIds], [selectedIds]);
 
-  const { containerRef, control, onKeyDown, onFocusCapture } = useBlockSelection({
-    orderedIds: IDS,
-    roots,
-    focusedBlockId: null,
-    actions,
-  });
+  const { containerRef, control, clearSelection, onKeyDown, onFocusCapture } =
+    useBlockSelection({
+      orderedIds: IDS,
+      roots,
+      focusedBlockId: null,
+      describeBlock,
+      actions,
+    });
 
   return (
     <>
       <div data-testid="count">{selectedCount}</div>
       <div data-testid="selected">{roots.join(",")}</div>
+      {/* The editor clears imperatively too (the selection bar's Delete, the
+          caret going back into a block), so a clear that reaches the hook while
+          nothing is selected is a real path, not a contrived one. */}
+      <button data-testid="clear" type="button" onClick={clearSelection} />
+      {/* The editor's own container ARIA, from the one value the real surface
+          spreads too — so the role assertions below test what the block list
+          actually claims to be, not what this harness happened to type. */}
       <div
         data-testid="container"
         ref={containerRef}
         tabIndex={-1}
+        {...BLOCK_LIST_ARIA}
         onKeyDown={onKeyDown}
         onFocusCapture={onFocusCapture}
       >
@@ -107,8 +139,10 @@ function setup() {
   );
   const el = (id: string) => view.getByTestId(id);
   return {
+    view,
     actions,
     container: el("container"),
+    clear: el("clear"),
     block: (id: string) => el(`block-${id}`),
     count: () => Number(el("count").textContent),
     selected: () => el("selected").textContent,
@@ -230,7 +264,11 @@ describe("block-selection mode keyboard", () => {
   it("Alt+Shift+Arrow nudges the selection instead of extending it", () => {
     const t = inSelectionMode("b2");
 
-    fireEvent.keyDown(t.container, { key: "ArrowDown", altKey: true, shiftKey: true });
+    fireEvent.keyDown(t.container, {
+      key: "ArrowDown",
+      altKey: true,
+      shiftKey: true,
+    });
 
     expect(t.actions.moveSelection).toHaveBeenCalledWith("down");
     expect(t.selected()).toBe("b2");
@@ -262,5 +300,93 @@ describe("block-selection mode keyboard", () => {
 
     fireEvent.keyDown(t.container, { key: "d", metaKey: true });
     expect(t.actions.duplicate).toHaveBeenCalledWith([...IDS]);
+  });
+});
+
+// The block list is a group of editing hosts, not a listbox of options — so the
+// selection has no `aria-selected` to live in and is SPOKEN instead. These are
+// the two halves of that: what the container claims to be, and what it says.
+describe("the block list is a document, not a listbox", () => {
+  it("is a named group, and nothing in it is a listbox", () => {
+    const t = setup();
+
+    expect(t.view.getByRole("group", { name: "Page blocks" })).toBe(
+      t.container,
+    );
+    expect(t.view.queryAllByRole("listbox")).toHaveLength(0);
+    expect(t.view.queryAllByRole("option")).toHaveLength(0);
+  });
+
+  it("entering selection mode names the block and its position", () => {
+    inSelectionMode("b2");
+
+    expect(spoken()).toEqual(["Text: b2 body, block 2 of 4, selected"]);
+  });
+
+  it("extending the range says how many blocks it now covers", () => {
+    const t = inSelectionMode("b2");
+    announced.mockClear();
+
+    fireEvent.keyDown(t.container, { key: "ArrowDown", shiftKey: true });
+    fireEvent.keyDown(t.container, { key: "ArrowDown", shiftKey: true });
+
+    expect(spoken()).toEqual([
+      "Text: b3 body, block 3 of 4, 2 blocks selected",
+      "Text: b4 body, block 4 of 4, 3 blocks selected",
+    ]);
+  });
+
+  it("moving the single selection re-announces the new block alone", () => {
+    const t = inSelectionMode("b2");
+    announced.mockClear();
+
+    fireEvent.keyDown(t.container, { key: "ArrowDown" });
+
+    expect(spoken()).toEqual(["Text: b3 body, block 3 of 4, selected"]);
+  });
+
+  // A marquee drag re-applies the same range once per pointermove; the reducer
+  // already bails on that, and so must the speech.
+  it("re-applying the same range says nothing a second time", () => {
+    const t = inSelectionMode("b2");
+    announced.mockClear();
+
+    fireEvent.keyDown(t.block("b2"), { key: "Escape" });
+
+    expect(spoken()).toEqual([]);
+  });
+
+  it("Cmd+A announces the whole document instead of one block", () => {
+    const t = inSelectionMode("b2");
+    announced.mockClear();
+
+    fireEvent.keyDown(t.container, { key: "a", metaKey: true });
+
+    expect(spoken()).toEqual(["All 4 blocks selected"]);
+  });
+
+  it("Escape on the container announces the clear", () => {
+    const t = inSelectionMode("b2");
+    announced.mockClear();
+
+    fireEvent.keyDown(t.container, { key: "Escape" });
+
+    expect(spoken()).toEqual(["Selection cleared"]);
+  });
+
+  // The focus-out clear and the post-delete clear both land on an already-empty
+  // selection. "Selection cleared" over nothing is a sentence about nothing.
+  it("clearing an empty selection announces nothing", () => {
+    const t = setup();
+
+    fireEvent.click(t.clear);
+    expect(spoken()).toEqual([]);
+
+    fireEvent.keyDown(t.block("b2"), { key: "Escape" });
+    announced.mockClear();
+
+    fireEvent.click(t.clear);
+    fireEvent.click(t.clear);
+    expect(spoken()).toEqual(["Selection cleared"]);
   });
 });

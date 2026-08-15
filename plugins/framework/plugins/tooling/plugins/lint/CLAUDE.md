@@ -61,6 +61,7 @@ naming the one sanctioned home of an idiom — e.g. `scroll-safety` exempts the
     - `findPluginDirs`
     - `lintCollectedDir`
 - Sub-plugins:
+  - **`aria-safety`** — aria-safety lint rule: no-orphan-composite-role
   - **`bun-safety`** — bun-safety lint rule: no-declare-identifier
   - **`button-safety`** — button-safety lint rule: no-async-raw-button
   - **`caret-trigger-safety`** — caret-trigger-safety lint rule: no-adhoc-caret-trigger

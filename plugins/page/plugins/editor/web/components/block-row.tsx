@@ -21,6 +21,24 @@ const ONE_EMPTY_LINE = "calc(var(--space-xs) * 2 + var(--doc-lh-body))";
 // eslint-disable-next-line layout/no-adhoc-layout -- positioned via JS coords (style left/width at the use site); `.block-anchor` owns the borrowed-first-line vertical seat
 const ANCHOR_COLUMN = "block-anchor absolute z-raised";
 
+// The selection marker: a selected block SAYS "Selected." to a screen reader,
+// because it has no attribute with which to be selected.
+//
+// `aria-selected` is supported only on `option`, `row`, `gridcell`, `tab`,
+// `treeitem`, `columnheader` and `rowheader` — and none of those may host a
+// `contenteditable`, which every row here does. So the state has no native
+// carrier and becomes a word instead. `sr-only` is `position: absolute`, so it
+// perturbs no rect that drag, drop or the marquee measures.
+//
+// Rendered ALWAYS, empty when unselected, never mounted conditionally: the row's
+// children list must keep a constant length (the fiber-index pairing hazard
+// `text-block-layout.tsx` documents). The full rationale — and why `role="option"`
+// must not be re-added — is in this plugin's `CLAUDE.md`, under
+// *The block list is a document, not a listbox*.
+function SelectionMarker({ isSelected }: { isSelected: boolean }) {
+  return <span className="sr-only">{isSelected ? "Selected. " : ""}</span>;
+}
+
 // The column geometry (rail width, per-depth indent, content inset) lives in
 // `../internal/page-column` — see its module doc for the invariant. Hosts align
 // their own chrome onto the block content edge via `PageContentColumn`, never by
@@ -32,6 +50,7 @@ export function BlockRow({
   hasVisibleChildren,
   ordinal,
   isDragging,
+  isSelected,
   dropZone,
   seat,
 }: {
@@ -42,6 +61,17 @@ export function BlockRow({
   /** 1-based position within the consecutive run of same-type siblings (ordinal-marker blocks). */
   ordinal: number;
   isDragging: boolean;
+  /**
+   * Whether this block is in the current block selection. Handed down by the
+   * editor, which already holds `selectedIds` — NOT read from the selection store
+   * here, which would newly subscribe every row to it. The editor re-renders every
+   * row on a selection change anyway (it recomputes the selection bands), so the
+   * prop is free and the subscription would not be.
+   *
+   * The row paints nothing for it. Selection is a decoration over the RUN of
+   * selected lines, and the only thing this adds is the `sr-only` word below.
+   */
+  isSelected: boolean;
   /** Where the dragged block would land relative to this row, or null. */
   dropZone: DropZone | null;
   /**
@@ -127,6 +157,7 @@ export function BlockRow({
           } as CSSProperties
         }
       >
+        <SelectionMarker isSelected={isSelected} />
         {/* The decoration column: exactly one BLOCK_INDENT wide, flush at the
             container's content edge `C`, so it sits in the gap the enclosed
             rows' rail no longer occupies (they seat theirs at the frame's edge).
@@ -169,6 +200,7 @@ export function BlockRow({
         } as CSSProperties
       }
     >
+      <SelectionMarker isSelected={isSelected} />
       <BlockRail seat={seat} />
       {/* Shift+click anywhere on the row extends the block selection instead of
           placing a caret. mousedown + preventDefault stops the text selection /

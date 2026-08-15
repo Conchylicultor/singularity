@@ -58,6 +58,8 @@ import {
   serializeForestToMarkdown,
   parseMarkdownToForest,
   defaultTextHandle,
+  plainOf,
+  runsOfNode,
   type Block,
   type SerializedBlock,
 } from "../../core";
@@ -74,6 +76,7 @@ import { serializeForest } from "../serialize-blocks";
 import { SelectionControlProvider } from "../selection-control";
 import {
   useBlockSelection,
+  BLOCK_LIST_ARIA,
   type BlockSelectionActions,
 } from "../internal/use-block-selection";
 import { BlockRow } from "./block-row";
@@ -87,6 +90,13 @@ import {
 } from "../internal/block-paste-handlers";
 import { BLOCKS_MIME } from "../internal/clipboard";
 import { blockTextProtectedSpans } from "../internal/block-text-extensions";
+
+/**
+ * How much of a block's text the spoken selection announcement quotes. Long
+ * enough to tell two blocks apart, short enough that arrowing down a page is not
+ * a reading of the page.
+ */
+const PREVIEW_CHARS = 80;
 
 /** The editor drops *between* rows only — it has no tree `child` reparent zone. */
 type SiblingZone = Extract<DropZone, "before" | "after">;
@@ -519,6 +529,33 @@ function SelectionLayer({
     ],
   );
 
+  // How a block reads aloud when the selection moves onto it: its type label
+  // plus a short preview of its text ("Heading 2: Container frames"), or the
+  // label alone for a type that carries none ("Divider"). The block list is a
+  // plain group of editing hosts — no role here can carry selection natively —
+  // so this is the only place a screen-reader user learns WHICH block they are on.
+  //
+  // Identity churns whenever the flatten does, which the ~1s `data.text`
+  // projection makes about once per typing burst. That is fine and deliberate:
+  // `useBlockSelection` calls it only from event handlers, through an event
+  // callback, so nothing downstream re-renders because the preview text moved.
+  const describeBlock = useCallback(
+    (id: string): string => {
+      const block = flat.find((f) => f.block.id === id)?.block;
+      if (!block) return "Block";
+      const label = handleMap.get(block.type)?.label ?? "Block";
+      // One line, collapsed whitespace, and short — a screen reader reads this
+      // verbatim on every arrow keypress, so it is an identifier, not the content.
+      const preview = plainOf(runsOfNode(block))
+        .replace(/\s+/g, " ")
+        .trim()
+        .slice(0, PREVIEW_CHARS)
+        .trim();
+      return preview === "" ? label : `${label}: ${preview}`;
+    },
+    [flat, handleMap],
+  );
+
   const {
     containerRef,
     control: selectionControl,
@@ -531,6 +568,7 @@ function SelectionLayer({
     orderedIds,
     roots,
     focusedBlockId,
+    describeBlock,
     actions: selectionActions,
   });
 
@@ -1318,9 +1356,20 @@ function SelectionLayer({
             as="div"
             ref={containerRef}
             tabIndex={-1}
-            role="listbox"
-            aria-multiselectable
-            aria-label="Page blocks"
+            // A NAMED GROUP, and nothing more specific — because nothing more
+            // specific would be true. Every row here holds a `contenteditable`
+            // editing host, so the rows are not options, and no composite role
+            // (listbox, tree, grid) can honestly describe them.
+            //
+            // This used to say `role="listbox" aria-multiselectable`, which was
+            // worse than no role at all: a listbox promises options, so it both
+            // announced an empty list AND hid the document's own structure — the
+            // headings, lists and quotes that are the whole point of the page.
+            // Selection is spoken instead (see `use-block-selection.ts`) and each
+            // selected row says "Selected." in `sr-only` text. Do not re-add
+            // `role="option"`: see this plugin's `CLAUDE.md`, *The block list is a
+            // document, not a listbox*.
+            {...BLOCK_LIST_ARIA}
             onKeyDown={onKeyDown}
             onCopy={onCopy}
             onCut={onCut}
@@ -1402,6 +1451,7 @@ function SelectionLayer({
                     hasVisibleChildren={f.firstVisibleChildType !== null}
                     ordinal={f.ordinal}
                     seat={railSeats[i]!}
+                    isSelected={selectedIds.has(f.block.id)}
                     isDragging={
                       activeId === f.block.id ||
                       (bulkDrag?.subtree.has(f.block.id) ?? false)

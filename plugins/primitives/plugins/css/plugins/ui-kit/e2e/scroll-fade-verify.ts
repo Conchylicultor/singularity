@@ -70,7 +70,9 @@ interface Probe {
  */
 async function probe(page: Page): Promise<Probe | null> {
   return page.evaluate(() => {
-    const el = [...document.querySelectorAll<HTMLElement>(".scroll-fade")].at(-1);
+    const el = [...document.querySelectorAll<HTMLElement>(".scroll-fade")].at(
+      -1,
+    );
     if (!el) return null;
     const paintTop = getComputedStyle(el, "::before").opacity;
     const paintBottom = getComputedStyle(el, "::after").opacity;
@@ -106,7 +108,11 @@ function expect(label: string, p: Probe, top: boolean, bottom: boolean): void {
   // makes a menu that FITS arm a fade over content that does not exist. Asserted
   // in every state, because the failure only shows on panels shorter than the
   // strip — the states that look least worth checking.
-  r.eq(`${label}: the fade adds no scrollable extent`, p.scrollHeight, p.scrollHeightBare);
+  r.eq(
+    `${label}: the fade adds no scrollable extent`,
+    p.scrollHeight,
+    p.scrollHeightBare,
+  );
   r.eq(`${label}: content above?`, p.moreAbove, top);
   r.eq(`${label}: content below?`, p.moreBelow, bottom);
   r.eq(`${label}: data-fade-top`, p.attrTop, top);
@@ -177,7 +183,8 @@ async function panelGeometry(
     // value reads 2.5 and NaN respectively — an 18px band that never reaches
     // past the solid plateau, and assertions that then measure nothing.
     const probe = document.createElement("div");
-    probe.style.cssText = "position:fixed;top:-9999px;left:-9999px;visibility:hidden;width:0";
+    probe.style.cssText =
+      "position:fixed;top:-9999px;left:-9999px;visibility:hidden;width:0";
     el.appendChild(probe);
     const lengthOf = (name: string) => {
       probe.style.height = `var(${name})`;
@@ -231,7 +238,10 @@ async function panelGeometry(
 
   /** How far the strip's paint reaches in from one edge. */
   const readEdge = (edge: "top" | "bottom"): EdgeGeometry => {
-    const depth = Math.min(faded.height, Math.round(css.ramp + 2 * css.pad + 16));
+    const depth = Math.min(
+      faded.height,
+      Math.round(css.ramp + 2 * css.pad + 16),
+    );
     const rows = Array.from({ length: depth }, (_, i) => {
       const y = edge === "top" ? i : faded.height - 1 - i;
       let bareDev = 0;
@@ -246,7 +256,9 @@ async function panelGeometry(
     // Only a row with something under it can say anything about coverage — the
     // leading between glyph rows is background either way.
     const coverage = rows.map((v) =>
-      v.bareDev > contrast * 0.25 ? Math.min(1, Math.max(0, 1 - v.fadedDev / v.bareDev)) : null,
+      v.bareDev > contrast * 0.25
+        ? Math.min(1, Math.max(0, 1 - v.fadedDev / v.bareDev))
+        : null,
     );
     // Only content rows carry a verdict, so both numbers are indexed over THEM.
     // Asking "how deep does full coverage reach" instead would answer with the
@@ -279,7 +291,11 @@ async function panelGeometry(
       // Every row near the edge, every fourth after: a sliver is a one-pixel
       // event, so a coarse profile shows a failure without showing its shape.
       profile: coverage
-        .map((c, i) => ((i < 14 || i % 4 === 0) && c !== null ? `${i}:${Math.round(c * 100)}` : null))
+        .map((c, i) =>
+          (i < 14 || i % 4 === 0) && c !== null
+            ? `${i}:${Math.round(c * 100)}`
+            : null,
+        )
         .filter(Boolean)
         .join(" "),
     };
@@ -300,7 +316,9 @@ async function panelBackground(page: Page): Promise<Rgba> {
   const panel = page.locator(".scroll-fade").last();
   const box = await panel.boundingBox();
   if (!box) throw new Error("panelBackground: panel has no box");
-  const border = await panel.evaluate((el) => parseFloat(getComputedStyle(el).borderTopWidth) || 0);
+  const border = await panel.evaluate(
+    (el) => parseFloat(getComputedStyle(el).borderTopWidth) || 0,
+  );
   const grid = await samplePixels(page, {
     x: box.x + 16,
     y: box.y + border + 1,
@@ -404,11 +422,14 @@ async function settleFade(page: Page, gate: FadeGate = {}): Promise<void> {
   });
   await page.waitForFunction(
     (g: FadeGate) => {
-      const el = [...document.querySelectorAll<HTMLElement>(".scroll-fade")].at(-1);
+      const el = [...document.querySelectorAll<HTMLElement>(".scroll-fade")].at(
+        -1,
+      );
       if (!el) return false;
       const scrollTop = Math.round(el.scrollTop);
       const { clientHeight, scrollHeight } = el;
-      if (g.movedFrom !== undefined && scrollTop === Math.round(g.movedFrom)) return false;
+      if (g.movedFrom !== undefined && scrollTop === Math.round(g.movedFrom))
+        return false;
       if (g.scrollable === true && scrollHeight <= clientHeight) return false;
       if (g.fits === true && scrollHeight > clientHeight + 1) return false;
 
@@ -440,7 +461,9 @@ async function settleFade(page: Page, gate: FadeGate = {}): Promise<void> {
 }
 
 await withBrowser(async (h) => {
-  const { page, captured } = await h.session({ viewport: { width: 1280, height: 700 } });
+  const { page, captured } = await h.session({
+    viewport: { width: 1280, height: 700 },
+  });
 
   const doc = await openBlankPage(page, base, { settleMs: 500 });
   r.note(`throwaway page: ${doc.pageUrl}`);
@@ -466,7 +489,10 @@ await withBrowser(async (h) => {
   // here, while the panel is unscrolled and its top edge is provably unmasked.
   const bg = await panelBackground(page);
   r.note(`panel background: ${JSON.stringify(bg)}`);
-  expectGeometry("turn-into rest bottom", (await panelGeometry(page, bg)).bottom);
+  expectGeometry(
+    "turn-into rest bottom",
+    (await panelGeometry(page, bg)).bottom,
+  );
 
   await wheelPanel(page, 120);
   const mid = await probe(page);
@@ -542,23 +568,33 @@ await withBrowser(async (h) => {
   // ATTACHED (opacity-0 still counts as visible to Playwright, so "visible"
   // would say nothing), then hover the block to arm it — `click()`'s own
   // actionability retry does the rest.
-  const codeBlock = page.locator('[data-block-id]:has(button[aria-label="Code language"])').first();
-  const langTrigger = codeBlock.locator('button[aria-label="Code language"]').first();
+  const codeBlock = page
+    .locator('[data-block-id]:has(button[aria-label="Code language"])')
+    .first();
+  const langTrigger = codeBlock
+    .locator('button[aria-label="Code language"]')
+    .first();
   await langTrigger.waitFor({ state: "attached", timeout: 10_000 });
   await codeBlock.hover();
   await langTrigger.click();
-  // Scoped to the popup, NOT a bare `[role="listbox"]`: the page block editor is
-  // itself a multi-selectable `role="listbox"` (block-editor.tsx), and it comes
-  // first in document order — so the bare selector resolved to the PAGE, made
-  // this wait vacuous, and measured the document instead of the list.
-  const listbox = page.locator('[data-slot="select-content"] [role="listbox"]').first();
+  // Scoped to the popup, NOT a bare `[role="listbox"]`. The page block editor used
+  // to declare that role itself (it is a `role="group"` now), and it comes first in
+  // document order — so the bare selector resolved to the PAGE, made this wait
+  // vacuous, and measured the document instead of the list. Stay scoped anyway: a
+  // bare role selector on a page full of widgets is a coincidence away from the
+  // same bug.
+  const listbox = page
+    .locator('[data-slot="select-content"] [role="listbox"]')
+    .first();
   await listbox.waitFor({ state: "visible", timeout: 10_000 });
   await settleFade(page);
 
   const select = await probe(page);
   await snap(page, out, "select-open");
   const list = await page.evaluate(() => {
-    const el = document.querySelector<HTMLElement>('[data-slot="select-content"] [role="listbox"]');
+    const el = document.querySelector<HTMLElement>(
+      '[data-slot="select-content"] [role="listbox"]',
+    );
     if (!el) return null;
     return {
       clientHeight: Math.round(el.clientHeight),
@@ -566,7 +602,9 @@ await withBrowser(async (h) => {
       arrows: document.querySelectorAll("[data-slot^=select-scroll]").length,
     };
   });
-  r.note(`select panel: ${JSON.stringify(select)} / list: ${JSON.stringify(list)}`);
+  r.note(
+    `select panel: ${JSON.stringify(select)} / list: ${JSON.stringify(list)}`,
+  );
   if (!select || !list) return r.fail("select: panel + listbox found");
   r.ok(
     "select: the LIST is the scroller (many languages)",
@@ -576,7 +614,11 @@ await withBrowser(async (h) => {
   expect("select panel", select, false, false);
 
   await page.keyboard.press("Escape");
-  r.ok("no page errors", captured.pageErrors.length === 0, captured.pageErrors.join(" | "));
+  r.ok(
+    "no page errors",
+    captured.pageErrors.length === 0,
+    captured.pageErrors.join(" | "),
+  );
 });
 
 r.finish();

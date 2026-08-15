@@ -132,7 +132,12 @@ export function Calendar({
           ))}
         </Grid>
 
-        <Grid cols={7} gap="none" role="grid">
+        {/* No `role="grid"`: a grid promises `row` children, and these day cells
+            are a flat 7-column CSS grid with none. Claiming it would make AT
+            announce an empty grid and drop the day buttons — worse than the
+            plain buttons, which each announce their own label and pressed state.
+            (aria-safety/no-orphan-composite-role) */}
+        <Grid cols={7} gap="none">
           {weeks.flat().map((day) => {
             const selected = value != null && isSameDay(day, value);
             const time = day.getTime();

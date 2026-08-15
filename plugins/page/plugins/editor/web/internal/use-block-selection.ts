@@ -1,15 +1,31 @@
 import { useCallback, useMemo, useRef, type RefObject } from "react";
 import { useMultiSelect } from "@plugins/primitives/plugins/multi-select/web";
 import { useEventCallback } from "@plugins/primitives/plugins/latest-ref/web";
+import { announce } from "@plugins/primitives/plugins/announce/web";
 import type { SelectionControl } from "../selection-control";
 import { releaseCaret } from "./caret-authority";
 
 /**
+ * The block list container's ARIA identity, spread onto the element that carries
+ * `containerRef`. One value, so the surface and its jsdom spec cannot disagree
+ * about what the list claims to be.
+ *
+ * A NAMED GROUP and nothing more specific, because nothing more specific is true:
+ * the rows are `contenteditable` editing hosts, not options. See the editor's
+ * `CLAUDE.md`, *The block list is a document, not a listbox*.
+ */
+export const BLOCK_LIST_ARIA = {
+  role: "group",
+  "aria-label": "Page blocks",
+} as const;
+
+/**
  * The structural surface block-selection mode drives. Passed in rather than read
- * from `useBlockEditor()`, so this machine depends on nothing but React and the
- * multi-select reducer — no live state, no optimistic pipeline, no Lexical. That
- * is what makes it mountable (and the focus/keyboard policy below testable) in
- * jsdom.
+ * from `useBlockEditor()`, so this machine depends on nothing but React, the
+ * multi-select reducer and the `announce` writer — no live state, no optimistic
+ * pipeline, no Lexical. That is what makes it mountable (and the focus/keyboard
+ * policy below testable) in jsdom. Keep it that way: `announce` qualifies because
+ * it is a plain module-level function with no host, no network and no timer.
  */
 export interface BlockSelectionActions {
   /** Indent the selection's subtree roots one level. */
@@ -33,6 +49,22 @@ export interface BlockSelectionOptions {
   roots: string[];
   /** The block whose text editor currently holds the caret, if any. */
   focusedBlockId: string | null;
+  /**
+   * How one block reads aloud, e.g. `Heading 2: Container frames` — its type
+   * label plus a short preview of its text, degrading to the label alone for a
+   * text-less type (divider, image). Used only for the spoken announcements
+   * below, never for anything the eye sees.
+   *
+   * The block list is a `role="group"` of `contenteditable` editing hosts, not a
+   * listbox of options, so there is no `aria-selected` to carry the selection —
+   * see the editor's `CLAUDE.md`, *The block list is a document, not a listbox*.
+   * The three announcement sites below are the replacement channel, and this is
+   * how they name a block.
+   *
+   * Called only from event handlers, so a caller may rebuild it as often as it
+   * likes: nothing here holds it in a dependency array.
+   */
+  describeBlock: (id: string) => string;
   actions: BlockSelectionActions;
 }
 
@@ -94,9 +126,11 @@ export function useBlockSelection({
   orderedIds,
   roots,
   focusedBlockId,
+  describeBlock,
   actions,
 }: BlockSelectionOptions): BlockSelection {
-  const { selectedIds, isActive, setRange, clearAll, selectAll } = useMultiSelect();
+  const { selectedIds, isActive, setRange, clearAll, selectAll } =
+    useMultiSelect();
 
   const containerRef = useRef<HTMLDivElement>(null);
   const anchorRef = useRef<string | null>(null);
@@ -118,20 +152,55 @@ export function useBlockSelection({
     releaseCaret(container);
   }, []);
 
-  const applyRange = useCallback(
-    (anchor: string, head: string) => {
-      anchorRef.current = anchor;
-      headRef.current = head;
-      setRange(anchor, head);
-    },
-    [setRange],
-  );
+  // ---- The announcement funnel ----------------------------------------------
+  //
+  // The range changes in exactly THREE places — here, the Cmd+A branch, and
+  // `clearSelection` — so those three are where the selection is spoken. Nothing
+  // observes a state to speak it: each site announces the change it just made, so
+  // the announcement is exact, push-based, and costs no render.
+  //
+  // `enterSelectionMode` and `extendTo` deliberately do NOT announce: they route
+  // through `applyRange`, and a second call there would speak every entry twice.
 
-  const clearSelection = useCallback(() => {
+  // An event callback, so a `describeBlock` rebuilt on every keystroke (the
+  // editor derives it from the flatten, which the ~1s `data.text` projection
+  // re-mints) leaves this function's identity — and therefore `control`'s, and
+  // therefore every `BlockRow`'s memoized props — untouched.
+  const applyRange = useEventCallback((anchor: string, head: string) => {
+    // Only a real range CHANGE is spoken. A marquee drag re-applies the same
+    // range once per pointermove and once per animation frame while the pointer
+    // sits parked at a scrolling edge; the reducer already bails on that, and
+    // announcing it would be the same sentence dozens of times a second.
+    const changed = anchorRef.current !== anchor || headRef.current !== head;
+    anchorRef.current = anchor;
+    headRef.current = head;
+    setRange(anchor, head);
+    if (!changed) return;
+
+    // The same arithmetic `SET_RANGE` does: the selection IS the inclusive index
+    // span between the two ends. An id the ordered list does not carry is the
+    // reducer's own no-op case, so there is nothing true to say about it —
+    // better silent than a wrong count.
+    const anchorIdx = orderedIds.indexOf(anchor);
+    const headIdx = orderedIds.indexOf(head);
+    if (anchorIdx === -1 || headIdx === -1) return;
+    const count = Math.abs(anchorIdx - headIdx) + 1;
+    const position = `block ${headIdx + 1} of ${orderedIds.length}`;
+    const extent = count > 1 ? `, ${count} blocks selected` : ", selected";
+    announce(`${describeBlock(head)}, ${position}${extent}`);
+  });
+
+  const clearSelection = useEventCallback(() => {
+    // Speak only a clear that cleared something. Focus leaving the block list and
+    // the post-delete tidy-up both land here with nothing selected, and "Selection
+    // cleared" over an empty selection is a sentence about nothing. The anchor is
+    // read BEFORE it is nulled, because nulling it is what makes it false.
+    const hadSelection = anchorRef.current !== null;
     anchorRef.current = null;
     headRef.current = null;
     clearAll();
-  }, [clearAll]);
+    if (hadSelection) announce("Selection cleared");
+  });
 
   const neighbor = useEventCallback(
     (id: string, dir: "up" | "down"): string | null => {
@@ -196,6 +265,9 @@ export function useBlockSelection({
       selectAll();
       anchorRef.current = orderedIds[0] ?? null;
       headRef.current = orderedIds[orderedIds.length - 1] ?? null;
+      // The third range-change site (see the funnel note above). Naming one block
+      // here would be misleading — select-all has no head the user aimed at.
+      announce(`All ${orderedIds.length} blocks selected`);
       return;
     }
     if (mod && e.key.toLowerCase() === "d") {

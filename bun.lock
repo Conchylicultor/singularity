@@ -2622,6 +2622,10 @@
       "name": "@singularity/plugin-framework-tooling-lint",
       "version": "0.0.1",
     },
+    "plugins/framework/plugins/tooling/plugins/lint/plugins/aria-safety": {
+      "name": "@singularity/plugin-framework-tooling-lint-aria-safety",
+      "version": "0.0.1",
+    },
     "plugins/framework/plugins/tooling/plugins/lint/plugins/bun-safety": {
       "name": "@singularity/plugin-framework-tooling-lint-bun-safety",
       "version": "0.0.1",
@@ -3503,6 +3507,10 @@
     },
     "plugins/primitives/plugins/action-presentation": {
       "name": "@singularity/plugin-primitives-action-presentation",
+      "version": "0.0.1",
+    },
+    "plugins/primitives/plugins/announce": {
+      "name": "@singularity/plugin-primitives-announce",
       "version": "0.0.1",
     },
     "plugins/primitives/plugins/app-instance": {
@@ -6631,6 +6639,8 @@
 
     "@singularity/plugin-framework-tooling-lint": ["@singularity/plugin-framework-tooling-lint@workspace:plugins/framework/plugins/tooling/plugins/lint"],
 
+    "@singularity/plugin-framework-tooling-lint-aria-safety": ["@singularity/plugin-framework-tooling-lint-aria-safety@workspace:plugins/framework/plugins/tooling/plugins/lint/plugins/aria-safety"],
+
     "@singularity/plugin-framework-tooling-lint-bun-safety": ["@singularity/plugin-framework-tooling-lint-bun-safety@workspace:plugins/framework/plugins/tooling/plugins/lint/plugins/bun-safety"],
 
     "@singularity/plugin-framework-tooling-lint-button-safety": ["@singularity/plugin-framework-tooling-lint-button-safety@workspace:plugins/framework/plugins/tooling/plugins/lint/plugins/button-safety"],
@@ -7028,6 +7038,8 @@
     "@singularity/plugin-primitives": ["@singularity/plugin-primitives@workspace:plugins/primitives"],
 
     "@singularity/plugin-primitives-action-presentation": ["@singularity/plugin-primitives-action-presentation@workspace:plugins/primitives/plugins/action-presentation"],
+
+    "@singularity/plugin-primitives-announce": ["@singularity/plugin-primitives-announce@workspace:plugins/primitives/plugins/announce"],
 
     "@singularity/plugin-primitives-app-instance": ["@singularity/plugin-primitives-app-instance@workspace:plugins/primitives/plugins/app-instance"],
 

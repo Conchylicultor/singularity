@@ -45,6 +45,7 @@ export function RadioGroup({
 }: RadioGroupProps) {
   const name = useId();
   return (
+    // eslint-disable-next-line aria-safety/no-orphan-composite-role -- the required `radio` children are the native <input type="radio"> elements below, whose implicit role a syntactic lint rule cannot see.
     <Stack gap="xs" role="radiogroup" className={className}>
       {options.map((opt) => (
         <Stack

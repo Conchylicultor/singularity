@@ -28,7 +28,7 @@ await withBrowser(async (h) => {
   await page.waitForTimeout(1500);
 
   // 2. Land the caret in the (empty) body, then convert via the inline `/` menu.
-  await page.getByRole("listbox", { name: "Page blocks" }).click();
+  await page.getByRole("group", { name: "Page blocks" }).click();
   await page.waitForTimeout(500);
   await page.keyboard.type("/image");
   await page.waitForTimeout(400);
@@ -64,15 +64,24 @@ await withBrowser(async (h) => {
   const wrapper = page.locator('[aria-label="Resize image"]').first();
   const box = await wrapper.boundingBox();
   if (!box) throw new Error("resize handle has no bounding box");
-  const startW = await img.first().evaluate((el) => el.getBoundingClientRect().width);
+  const startW = await img
+    .first()
+    .evaluate((el) => el.getBoundingClientRect().width);
   await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
   await page.mouse.down();
   await page.mouse.move(box.x - 80, box.y + box.height / 2, { steps: 8 });
   await page.mouse.up();
   await page.waitForTimeout(1000);
-  const endW = await img.first().evaluate((el) => el.getBoundingClientRect().width);
+  const endW = await img
+    .first()
+    .evaluate((el) => el.getBoundingClientRect().width);
   await snap(page, OUT, "resized");
-  console.log("width before resize:", Math.round(startW), "after:", Math.round(endW));
+  console.log(
+    "width before resize:",
+    Math.round(startW),
+    "after:",
+    Math.round(endW),
+  );
 
   console.log(
     JSON.stringify({
