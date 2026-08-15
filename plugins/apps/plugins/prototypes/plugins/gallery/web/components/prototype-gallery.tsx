@@ -4,7 +4,10 @@ import {
   defineDataView,
   type FieldDef,
 } from "@plugins/primitives/plugins/data-view/web";
-import { matchResource, useResource } from "@plugins/primitives/plugins/live-state/web";
+import {
+  matchResource,
+  useResource,
+} from "@plugins/primitives/plugins/live-state/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { LaunchAgentPopover } from "@plugins/primitives/plugins/launch/web";
@@ -19,15 +22,15 @@ import { prototypeDetailPane } from "../panes";
 
 const PROTOTYPES_VIEW = defineDataView("prototypes.gallery");
 
-/** Deterministic hue from the theme (or name) string, for the cover swatch. */
+/** Deterministic hue from the directory slug, for the cover swatch. */
 function hueFor(seed: string): number {
   let h = 0;
   for (let i = 0; i < seed.length; i++) h = (h * 31 + seed.charCodeAt(i)) % 360;
   return h;
 }
 
-function ThemeSwatch({ meta }: { meta: PrototypeMeta }) {
-  const hue = hueFor(meta.theme || meta.name);
+function CoverSwatch({ meta }: { meta: PrototypeMeta }) {
+  const hue = hueFor(meta.name);
   return (
     <div
       className="h-full w-full"
@@ -38,30 +41,49 @@ function ThemeSwatch({ meta }: { meta: PrototypeMeta }) {
   );
 }
 
+// The prompt every "New prototype" agent starts from. It is the one instruction
+// that always reaches such an agent, so it carries the two rules that decide
+// whether the result is an original design: start from the blank template, and
+// never open a sibling. The rest is a pointer to `prototypes/CLAUDE.md` — this
+// is a prompt, not the contract.
 const NEW_PROTOTYPE_TEXT = [
-  "Create a new throwaway UI prototype.",
+  "Create a new throwaway UI prototype under `prototypes/<slug>/`.",
   "",
-  "Add it under `prototypes/<slug>/` following the shape of the existing mocks and",
-  "`prototypes/_shared` (a `meta.json` + an `app.jsx` that defines `window.App` +",
-  "optional `styles.css`). Use the shared harness, tokens, and fixtures — do not",
-  "re-add CDN tags or a Stage/Compare scaffold.",
+  "Read `prototypes/CLAUDE.md` first — it is the full contract.",
+  "",
+  "Design from a blank page: copy `prototypes/_template/` and go from there. Do",
+  "NOT open any other prototype's folder, and do not read `plugins/` — the app's",
+  "own components and tokens are not a starting point here.",
+  "",
+  "Keep the folder self-contained and flat: one `index.html` plus whatever flat",
+  "files it needs, referenced relatively. It must render when you double-click it",
+  "straight off disk (`file://`), so write your JSX inline in `index.html` —",
+  "Babel fetches an external `src` over XHR, which the browser blocks on `file://`.",
 ].join("\n");
 
 /**
  * Gallery surface: a `DataView` gallery over the live prototype list. Each card
- * shows the name + blurb over a theme-tinted cover. Activating a card opens the
- * Focus/Compare detail pane. A "New prototype" button opens the launch-agent
- * popover that fires a background agent to scaffold a new mock.
+ * shows the prototype's `<title>` + blurb over a slug-tinted cover. Activating a
+ * card opens the Focus/Compare detail pane. A "New prototype" button opens the
+ * launch-agent popover that fires a background agent to scaffold a new mock.
  */
 export function PrototypeGallery() {
   const result = useResource(prototypesResource);
   const openPane = useOpenPane();
   const selectedName = prototypeDetailPane.useRouteEntry()?.params.name;
 
+  // `title` is what the author named the prototype (its `<title>`), so it is the
+  // display field; `name` is the directory slug the URL and the row key use.
   const fields: FieldDef<PrototypeMeta>[] = [
-    { id: "name", label: "Name", type: "text", primary: true, value: (p) => p.name },
+    {
+      id: "title",
+      label: "Title",
+      type: "text",
+      primary: true,
+      value: (p) => p.title,
+    },
     { id: "blurb", label: "Blurb", type: "text", value: (p) => p.blurb },
-    { id: "theme", label: "Theme", type: "text", value: (p) => p.theme },
+    { id: "name", label: "Folder", type: "text", value: (p) => p.name },
   ];
 
   const newButton = (
@@ -80,14 +102,16 @@ export function PrototypeGallery() {
         toast({
           type: "prototype",
           title: "Creating prototype",
-          description: "Agent launched in the background — open it from here or the bell.",
+          description:
+            "Agent launched in the background — open it from here or the bell.",
           variant: "info",
           linkTo: conversationRoute.link(agentManagerApp, { convId: conv.id }),
         });
       }}
       getRequest={(userText) => {
         const parts = [NEW_PROTOTYPE_TEXT];
-        if (userText.trim()) parts.push(`Additional context: ${userText.trim()}`);
+        if (userText.trim())
+          parts.push(`Additional context: ${userText.trim()}`);
         return { prompt: parts.join("\n\n") };
       }}
     />
@@ -113,7 +137,7 @@ export function PrototypeGallery() {
           minCardWidth: 224,
           cover: (p: PrototypeMeta) => ({
             kind: "node",
-            node: <ThemeSwatch meta={p} />,
+            node: <CoverSwatch meta={p} />,
           }),
         },
       }}

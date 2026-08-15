@@ -1,8 +1,45 @@
 /* ============================================================
    Mist panes — friendly dark redesign.
    One structure, three pane surfaces (flush / floating / soft tray).
-   Design tokens live in _shared/tokens.css (meta.theme = "theme-mist").
    ============================================================ */
+
+:root {
+  --font: 'Plus Jakarta Sans', system-ui, sans-serif;
+  --mono: 'JetBrains Mono', ui-monospace, monospace;
+}
+
+/* ---------- PALETTE: cool lifted slate, teal/periwinkle, airy + clean ---------- */
+.theme-mist {
+  --bg-0: oklch(0.195 0.012 248);
+  --bg-1: oklch(0.225 0.013 246);
+  --bg-2: oklch(0.265 0.015 244);
+  --bg-3: oklch(0.305 0.017 242);
+  --line: oklch(0.35 0.02 244 / 0.7);
+  --line-soft: oklch(0.33 0.018 244 / 0.45);
+  --text: oklch(0.95 0.008 240);
+  --text-2: oklch(0.80 0.012 238);
+  --muted: oklch(0.66 0.014 238);
+  --faint: oklch(0.52 0.014 240);
+  --accent: oklch(0.78 0.10 208);
+  --accent-ink: oklch(0.28 0.05 220);
+  --accent-soft: oklch(0.78 0.10 208 / 0.14);
+  --coral: oklch(0.74 0.11 28);
+  --green: oklch(0.80 0.11 158);
+  --blue: oklch(0.76 0.10 244);
+  --amber: oklch(0.82 0.12 82);
+  --violet: oklch(0.76 0.11 286);
+  --radius: 12px;
+  --radius-sm: 9px;
+  --radius-pill: 999px;
+  --glow: none;
+  --avatar-tint: 0.12;
+
+  background: #0d0d0f;
+  color: #fff;
+  font-family: var(--font);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
 
 button { font-family: inherit; }
 

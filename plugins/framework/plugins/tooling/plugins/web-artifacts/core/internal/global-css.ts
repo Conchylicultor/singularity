@@ -1,6 +1,6 @@
 // Global CSS stays global (v1): ONE Tailwind v4 pass over app.css's own
-// `@source "plugins/" + "prototypes/"` directives, emitting the single global
-// stylesheet plus its font assets. app.css imports Tailwind with
+// `@source` directives, emitting the single global stylesheet plus its font
+// assets. app.css imports Tailwind with
 // `source(none)`, so the pass scans EXACTLY the declared @source dirs — never
 // automatic source detection, whose base is the vite root (the REPO ROOT
 // here): on the main checkout that walked `.claude/worktrees/` (~90 agent
@@ -14,8 +14,8 @@
 //     (tracked ∪ untracked-not-ignored) — a superset of the scanned dirs, so
 //     the key can never under-cover them;
 //   - every `@source` directory declared in app.css (parsed, not hardcoded —
-//     today `plugins/` + `prototypes/`, both inside the repo, but an explicit
-//     walk covers them even if one were gitignored or moved outside);
+//     today just `plugins/`, inside the repo, but an explicit walk covers a
+//     declared dir even if it were gitignored or moved outside);
 //   - every `@import`ed stylesheet input (parsed from app.css): package
 //     imports contribute their resolved package VERSION, relative imports
 //     their content hash;
@@ -54,7 +54,10 @@ const CSS_ROOT = join(WEB_ARTIFACTS_DIR, "css");
 
 /** Path of the global stylesheet source (the monolith's `main.tsx` import). */
 export function globalCssSource(pluginsRoot: string): string {
-  return join(pluginsRoot, "primitives/plugins/css/plugins/ui-kit/web/theme/app.css");
+  return join(
+    pluginsRoot,
+    "primitives/plugins/css/plugins/ui-kit/web/theme/app.css",
+  );
 }
 
 /** The `@source` dirs and `@import` specifiers declared in a Tailwind css file. */
@@ -64,10 +67,14 @@ export function parseCssInputs(cssSource: string): {
 } {
   const sourceDirs: string[] = [];
   const importSpecs: string[] = [];
-  for (const m of cssSource.matchAll(/@source\s+(?:not\s+)?["']([^"']+)["']/g)) {
+  for (const m of cssSource.matchAll(
+    /@source\s+(?:not\s+)?["']([^"']+)["']/g,
+  )) {
     sourceDirs.push(m[1]!);
   }
-  for (const m of cssSource.matchAll(/@import\s+(?:url\(\s*)?["']([^"']+)["']/g)) {
+  for (const m of cssSource.matchAll(
+    /@import\s+(?:url\(\s*)?["']([^"']+)["']/g,
+  )) {
     importSpecs.push(m[1]!);
   }
   return { sourceDirs, importSpecs };
@@ -91,7 +98,12 @@ function walkAllFiles(dir: string, out: string[]): void {
     const p = join(dir, e.name);
     if (e.isSymbolicLink()) continue;
     if (e.isDirectory()) {
-      if (WALK_SKIP.has(e.name) || e.name === "dist" || e.name.startsWith("dist.")) continue;
+      if (
+        WALK_SKIP.has(e.name) ||
+        e.name === "dist" ||
+        e.name.startsWith("dist.")
+      )
+        continue;
       walkAllFiles(p, out);
     } else if (e.isFile()) {
       out.push(p);
@@ -144,11 +156,16 @@ export function computeGlobalCssKey(opts: {
   };
   for (const spec of importSpecs) {
     if (spec.startsWith(".")) {
-      record[`import:${spec}`] = sha256Hex(readFileSync(resolve(dirname(appCssFile), spec)));
+      record[`import:${spec}`] = sha256Hex(
+        readFileSync(resolve(dirname(appCssFile), spec)),
+      );
     } else {
       // A package stylesheet (`tailwindcss`, `shadcn/tailwind.css`, fontsource
       // families): its resolved version pins the content.
-      record[`import:${spec}`] = packageVersion(packageNameOf(spec), dirname(appCssFile));
+      record[`import:${spec}`] = packageVersion(
+        packageNameOf(spec),
+        dirname(appCssFile),
+      );
     }
   }
 
@@ -227,7 +244,10 @@ export async function ensureGlobalCss(opts: {
   const outDir = join(workDir, "out");
   try {
     const entry = join(workDir, "entry.js");
-    writeFileSync(entry, `import ${JSON.stringify(globalCssSource(opts.pluginsRoot))};\n`);
+    writeFileSync(
+      entry,
+      `import ${JSON.stringify(globalCssSource(opts.pluginsRoot))};\n`,
+    );
 
     await viteBuild({
       configFile: false,
@@ -248,7 +268,10 @@ export async function ensureGlobalCss(opts: {
     // then install into staging from the emitted output.
     const assetsSrc = join(outDir, "assets");
     mkdirSync(CSS_ROOT, { recursive: true });
-    const tmpDest = join(CSS_ROOT, `.tmp.${opts.key.slice(0, 16)}.${process.pid}`);
+    const tmpDest = join(
+      CSS_ROOT,
+      `.tmp.${opts.key.slice(0, 16)}.${process.pid}`,
+    );
     rmSync(tmpDest, { recursive: true, force: true });
     mkdirSync(tmpDest, { recursive: true });
     let cssName: string | null = null;
@@ -257,7 +280,9 @@ export async function ensureGlobalCss(opts: {
       cpSync(join(assetsSrc, name), join(tmpDest, name));
       if (name.endsWith(".css")) {
         if (cssName !== null) {
-          throw new Error(`global CSS pass emitted more than one stylesheet: ${cssName}, ${name}`);
+          throw new Error(
+            `global CSS pass emitted more than one stylesheet: ${cssName}, ${name}`,
+          );
         }
         cssName = name;
       }
@@ -271,7 +296,8 @@ export async function ensureGlobalCss(opts: {
       renameSync(tmpDest, cacheDir);
     } catch (err) {
       const code = (err as NodeJS.ErrnoException).code;
-      if (code !== "EEXIST" && code !== "ENOTEMPTY" && code !== "EPERM") throw err;
+      if (code !== "EEXIST" && code !== "ENOTEMPTY" && code !== "EPERM")
+        throw err;
       rmSync(tmpDest, { recursive: true, force: true }); // concurrent identical build won
     }
     installAssets(cacheDir, opts.stagingDir);

@@ -28,7 +28,23 @@ export async function startPrototypesWatcher(): Promise<void> {
 
   watcher = await createFileWatcher({
     dirs: [PROTOTYPES_DIR],
-    extensions: [".jsx", ".css", ".html", ".json"],
+    // Everything a self-contained prototype can ship. No `.jsx`: JSX lives
+    // inline in index.html, because Babel fetches an external `src` with XHR
+    // and Chrome blocks that over file:// (the `prototypes:self-contained`
+    // check rejects such a script tag, so an external .jsx cannot exist).
+    extensions: [
+      ".html",
+      ".css",
+      ".js",
+      ".json",
+      ".svg",
+      ".png",
+      ".jpg",
+      ".jpeg",
+      ".webp",
+      ".gif",
+      ".woff2",
+    ],
     onChange: () => {
       bumpPrototypesVersion();
       prototypesResource.notify();

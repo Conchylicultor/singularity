@@ -24,6 +24,10 @@ assumption (all classes live under `plugins/`). This catches the *effect* —
 whatever the cause: a relocated stylesheet, a second narrower `@source`, or a
 `className` authored in a new top-level dir all surface as an unscanned file.
 
+`prototypes/` is exempt (neither an `@source` nor an offender): a prototype is a
+self-contained document served raw into an iframe, so its classes are its own
+and scanning it would only invalidate the cached CSS pass on every edit.
+
 The check also requires `@import "tailwindcss" source(none);` — automatic
 source detection must stay OFF. Auto-detection scans from the **vite root**,
 and the artifact-mode global-css pass builds with the *repo root* as vite root:

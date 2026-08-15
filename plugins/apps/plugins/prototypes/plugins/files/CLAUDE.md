@@ -3,20 +3,47 @@
 Server-side file serving for the Prototypes app, plus the live-state resources
 that drive gallery refresh and iframe auto-reload.
 
+## The contract this serves
+
+A prototype is one folder holding a **self-contained `index.html`** plus
+whatever flat files it references. Nothing is shared: there is no
+`prototypes/_shared/`, no harness, and no `meta.json`. The invariant that
+defines it — double-clicking `prototypes/<name>/index.html` in Finder opens and
+renders it. If it only works through this API, it isn't self-contained.
+
+Metadata is therefore read out of the HTML, not a sidecar file:
+
+- `<title>` → `title` (default: the directory name)
+- `<meta name="description">` → `blurb` (default: `""`)
+- `<meta name="prototype-viewport" content="WxH">` → `viewport` (default: 1280x800)
+
+Parsed with `HTMLRewriter`; every value it yields is decoded once via
+`@plugins/infra/plugins/html-decode/core` — the rewriter decodes nothing.
+
+Design: `research/2026-08-15-global-prototypes-self-contained.md`.
+
 ## Routes
 
-- `GET /api/prototypes` → `PrototypeMeta[]` (every `prototypes/*/meta.json`,
-  skipping `_shared` and dot-dirs; the dir name is injected as `name`). JSON, so
-  it goes through `implement()`.
-- `GET /api/prototypes/:name` (no `path`) → `prototypes/_shared/harness.html`
-  verbatim as `text/html`. The harness derives the prototype name from its URL.
-- `GET /api/prototypes/:name?path=<rel>` → `prototypes/<name>/<rel>` (pseudo-name
-  `_shared` → `prototypes/_shared/<rel>`), Content-Type by extension. Raw handler
-  (custom Content-Type, per-file bytes). Path-traversal-guarded to stay under
+- `GET /api/prototypes` → `PrototypeMeta[]` (every `prototypes/<name>/index.html`,
+  skipping `_`-prefixed and dot-dirs; the dir name is the `name`). JSON, so it
+  goes through `implement()`.
+- `GET /api/prototypes/:name` → **302** to `…/:name/index.html`, carrying the
+  query across. Only for hand-typed URLs; nothing in the app links here.
+- `GET /api/prototypes/:name/:file` → `prototypes/<name>/<file>` verbatim,
+  Content-Type by extension, `Cache-Control: no-store`. Raw handler (custom
+  Content-Type, per-file bytes). Path-traversal-guarded to stay under
   `prototypes/`; 400 on escape, 404 on missing.
 
-Sub-paths ride the `?path=` query because the router matches `:name` as one
-exact segment (no wildcard/splat), like code-api's `getFileContent`.
+**Why the extra path segment.** Serving the document at `<name>/index.html`
+rather than at `<name>` is what makes a relative `href="styles.css"` inside it
+resolve to `/api/prototypes/<name>/styles.css` — the same relative reference
+that works off `file://`.
+
+**Why `no-store`.** The version query cache-busts only the document; without it
+the browser keeps the old `styles.css` and an edit looks like it didn't land.
+
+Each `:param` matches exactly one segment and the router has no wildcard, so a
+prototype folder is flat by construction — `<name>/assets/x.svg` is unserveable.
 
 ## Live state
 
@@ -24,9 +51,26 @@ exact segment (no wildcard/splat), like code-api's `getFileContent`.
 - `prototypes.version` — a timestamp bumped on every file change; iframes append
   it to their `src` so an agent's edit reloads them automatically.
 
-`onReady` starts a `createFileWatcher` over `prototypes/` (`.jsx/.css/.html/.json`);
-each change notifies both resources and bumps the version. `onShutdown` stops it.
-No polling.
+`onReady` starts a `createFileWatcher` over `prototypes/`, watching every
+extension a prototype can ship (`.html/.css/.js/.json` plus images and
+`.woff2`); each change notifies both resources and bumps the version.
+`onShutdown` stops it. No polling.
+
+## The check
+
+`check/index.ts` contributes `prototypes:self-contained` — the machine-checkable
+half. Fails on: no `index.html`, no non-empty `<title>`, a subdirectory, a
+leftover `meta.json`, a file referencing `_shared`, `../`, or another
+prototype's folder, and `<script type="text/babel" src="…">`.
+
+That last one is the trap worth knowing: Babel-standalone fetches a `src` with
+XHR, Chrome blocks file→file XHR, so an external `.jsx` works perfectly through
+this server and renders nothing on double-click. JSX goes inline. (A plain
+`<script src="fixtures.js">` is an ordinary script load and is fine.)
+
+`_template/` is checked the same way (the seed must itself be self-contained)
+but its name is not a forbidden reference target. The check catches copied
+*files*, never copied *design*.
 
 The `core` barrel exports the shared contracts the web consumes: `PrototypeMeta`,
 `prototypesResource` / `prototypesVersionResource` (descriptors), `prototypeUrl()`,
@@ -57,6 +101,7 @@ and the `listPrototypes` endpoint.
   - Exports (types): `PrototypeMeta`
   - Exports (values):
     - `listPrototypes`
+    - `PROTOTYPE_ASSET_ROUTE`
     - `PROTOTYPE_FILE_ROUTE`
     - `PrototypeMetaSchema`
     - `PROTOTYPES_API_BASE`

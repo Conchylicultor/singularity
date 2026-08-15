@@ -3,19 +3,24 @@ import { resourceDescriptor } from "@plugins/primitives/plugins/live-state/core"
 import { defineEndpoint } from "@plugins/infra/plugins/endpoints/core";
 
 /**
- * Metadata for a single prototype, read from `prototypes/<name>/meta.json`.
- * `name` is the directory name (injected by the server; not stored in the file).
+ * Metadata for a single prototype, parsed out of `prototypes/<name>/index.html`.
+ * There is no `meta.json`: a prototype is one self-contained HTML file, so its
+ * metadata is expressed the way HTML already expresses metadata.
+ *
+ * - `name` — the directory slug (injected by the server; what URLs address)
+ * - `title` — `<title>`, the display name (falls back to `name`)
+ * - `blurb` — `<meta name="description">` (defaults to `""`)
+ * - `viewport` — `<meta name="prototype-viewport" content="1320x868">`
+ *   (defaults to 1280x800)
  */
 // All fields required: this is the wire/output shape (the resource + endpoint
-// broadcast fully-populated metas). `list.ts` fills defaults for keys a
-// half-authored `meta.json` omits before parsing, so input === output here.
+// broadcast fully-populated metas). `list.ts` supplies a default for every key
+// the HTML omits before constructing one, so input === output here.
 export const PrototypeMetaSchema = z.object({
   name: z.string(),
+  title: z.string(),
   blurb: z.string(),
-  theme: z.string(),
   viewport: z.object({ w: z.number(), h: z.number() }),
-  scripts: z.array(z.string()),
-  styles: z.array(z.string()),
 });
 export type PrototypeMeta = z.infer<typeof PrototypeMetaSchema>;
 
@@ -44,12 +49,25 @@ export const prototypesVersionResource = resourceDescriptor<number>(
 export const PROTOTYPES_API_BASE = "/api/prototypes";
 
 /**
- * Route key for the raw per-prototype file handler. Kept as a named const (not a
- * string literal in `httpRoutes`) because the response is raw bytes/html with a
- * per-file Content-Type — it can't go through `defineEndpoint`/`implement()`
- * (JSON-only). Same pattern as asset-mirror's `MIRROR_ROUTE_KEY`.
+ * Route key for the bare per-prototype route. Kept as a named const (not a
+ * string literal in `httpRoutes`) because the response is a redirect, not JSON —
+ * it can't go through `defineEndpoint`/`implement()`. Same pattern as
+ * asset-mirror's `MIRROR_ROUTE_KEY`.
  */
 export const PROTOTYPE_FILE_ROUTE = "GET /api/prototypes/:name";
+
+/**
+ * Route key for one file inside a prototype folder. The trailing segment is what
+ * makes a prototype self-contained: because the document is served at
+ * `/api/prototypes/<name>/index.html`, a relative `href="styles.css"` inside it
+ * resolves to `/api/prototypes/<name>/styles.css` — the same relative reference
+ * that works when the file is opened straight off disk with `file://`.
+ *
+ * The router matches each `:param` as exactly one segment and has no wildcard,
+ * so a prototype folder is flat by construction (`<name>/assets/x.svg` is
+ * unserveable — the `prototypes:self-contained` check enforces that).
+ */
+export const PROTOTYPE_ASSET_ROUTE = "GET /api/prototypes/:name/:file";
 
 /**
  * Typed list endpoint. JSON, so it goes through `implement()` (raw JSON
@@ -63,17 +81,12 @@ export const listPrototypes = defineEndpoint({
 });
 
 /**
- * Build the URL the iframe loads. With no `path`, the server serves the shared
- * harness (`_shared/harness.html`) which derives the prototype name from the
- * URL. `v` cache-busts on edit.
+ * Build the URL the iframe loads: the prototype's own `index.html`, addressed
+ * through the folder so its relative sub-resources resolve. `v` cache-busts on
+ * edit.
  */
-export function prototypeUrl(
-  name: string,
-  opts: { path?: string; v?: number } = {},
-): string {
-  const params = new URLSearchParams();
-  if (opts.path !== undefined) params.set("path", opts.path);
-  if (opts.v !== undefined) params.set("v", String(opts.v));
-  const qs = params.toString();
-  return `${PROTOTYPES_API_BASE}/${encodeURIComponent(name)}${qs ? `?${qs}` : ""}`;
+export function prototypeUrl(name: string, opts: { v?: number } = {}): string {
+  const qs =
+    opts.v === undefined ? "" : `?v=${encodeURIComponent(String(opts.v))}`;
+  return `${PROTOTYPES_API_BASE}/${encodeURIComponent(name)}/index.html${qs}`;
 }

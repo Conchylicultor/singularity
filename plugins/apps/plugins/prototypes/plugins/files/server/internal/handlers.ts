@@ -1,53 +1,54 @@
-import { join } from "node:path";
 import { implement } from "@plugins/infra/plugins/endpoints/server";
-import { listPrototypes } from "../../core";
+import { PROTOTYPES_API_BASE, listPrototypes } from "../../core";
 import { listPrototypeMetas } from "./list";
-import {
-  PROTOTYPES_DIR,
-  contentTypeForPath,
-  resolvePrototypeFile,
-} from "./paths";
+import { contentTypeForPath, resolvePrototypeFile } from "./paths";
 
 /** `GET /api/prototypes` → the prototype list (JSON, via implement()). */
 export const handleList = implement(listPrototypes, async () => {
   return listPrototypeMetas();
 });
 
-const HARNESS_PATH = join(PROTOTYPES_DIR, "_shared", "harness.html");
-
 /**
- * `GET /api/prototypes/:name` — serves prototype files.
+ * `GET /api/prototypes/:name` → 302 to `…/:name/index.html`, carrying the query
+ * (`?v=`) across.
  *
- * - No `path` query → the shared harness (`_shared/harness.html`), verbatim, as
- *   text/html. The harness derives the prototype name from its own URL.
- * - `?path=<rel>` → `prototypes/<name>/<rel>` (pseudo-name `_shared` →
- *   `prototypes/_shared/<rel>`), Content-Type by extension.
- *
- * Path-traversal guard: the resolved absolute path must stay under
- * `prototypes/`; otherwise 400. Missing files → 404.
- *
- * The router has no wildcard/splat support and matches `:name` as an exact
- * single segment, which is why sub-paths come through the `?path=` query.
+ * The folder-shaped URL is the real one — it is what makes a relative
+ * `href="styles.css"` inside the document resolve to that prototype's own file.
+ * This bare form exists only so a hand-typed or older URL still lands somewhere
+ * sensible.
  */
-export async function handlePrototypeFile(
+export function handlePrototypeFile(
   req: Request,
   params: Record<string, string>,
-): Promise<Response> {
+): Response {
   const name = params.name;
   if (!name) return new Response("missing name", { status: 400 });
 
-  const path = new URL(req.url).searchParams.get("path");
+  const { search } = new URL(req.url);
+  const location = `${PROTOTYPES_API_BASE}/${encodeURIComponent(name)}/index.html${search}`;
+  return new Response(null, { status: 302, headers: { location } });
+}
 
-  if (path === null) {
-    // Serve the shared harness verbatim.
-    const file = Bun.file(HARNESS_PATH);
-    if (!(await file.exists())) {
-      return new Response("harness not found", { status: 404 });
-    }
-    return new Response(file, { headers: { "content-type": "text/html" } });
-  }
+/**
+ * `GET /api/prototypes/:name/:file` → `prototypes/<name>/<file>` verbatim, with
+ * a Content-Type by extension.
+ *
+ * `Cache-Control: no-store` is load-bearing: the version query only cache-busts
+ * the document, so without it the browser would keep serving the previously
+ * fetched `styles.css` and an agent's edit would appear not to have landed.
+ *
+ * Path-traversal guard: the resolved absolute path must stay under
+ * `prototypes/`; otherwise 400. Missing files → 404.
+ */
+export async function handlePrototypeAsset(
+  _req: Request,
+  params: Record<string, string>,
+): Promise<Response> {
+  const name = params.name;
+  const fileName = params.file;
+  if (!name || !fileName) return new Response("missing name", { status: 400 });
 
-  const abs = resolvePrototypeFile(name, path);
+  const abs = resolvePrototypeFile(name, fileName);
   if (abs === null) {
     return new Response("invalid path", { status: 400 });
   }
@@ -58,6 +59,9 @@ export async function handlePrototypeFile(
   }
 
   return new Response(file, {
-    headers: { "content-type": contentTypeForPath(path) },
+    headers: {
+      "content-type": contentTypeForPath(fileName),
+      "cache-control": "no-store",
+    },
   });
 }

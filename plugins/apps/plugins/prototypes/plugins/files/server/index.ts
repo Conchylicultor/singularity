@@ -1,7 +1,15 @@
 import { Resource } from "@plugins/framework/plugins/server-core/core";
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
-import { listPrototypes, PROTOTYPE_FILE_ROUTE } from "../core";
-import { handleList, handlePrototypeFile } from "./internal/handlers";
+import {
+  listPrototypes,
+  PROTOTYPE_ASSET_ROUTE,
+  PROTOTYPE_FILE_ROUTE,
+} from "../core";
+import {
+  handleList,
+  handlePrototypeAsset,
+  handlePrototypeFile,
+} from "./internal/handlers";
 import {
   prototypesResource,
   prototypesVersionResource,
@@ -17,6 +25,7 @@ export default {
   httpRoutes: {
     [listPrototypes.route]: handleList,
     [PROTOTYPE_FILE_ROUTE]: handlePrototypeFile,
+    [PROTOTYPE_ASSET_ROUTE]: handlePrototypeAsset,
   },
   contributions: [
     Resource.Declare(prototypesResource),

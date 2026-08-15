@@ -2479,6 +2479,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Exports (types): `PrototypeMeta`
             - Exports (values):
               - `listPrototypes`
+              - `PROTOTYPE_ASSET_ROUTE`
               - `PROTOTYPE_FILE_ROUTE`
               - `PrototypeMetaSchema`
               - `PROTOTYPES_API_BASE`

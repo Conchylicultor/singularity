@@ -29,12 +29,20 @@ const MODE_OPTIONS = [
   { id: "compare" as const, label: "Compare" },
 ];
 
+// The prompt every "Improve this prototype" agent starts from. It names exactly
+// one folder: an iterating agent has no more reason to read a sibling prototype
+// than a fresh one does, and this is the only instruction guaranteed to reach it.
 function improveText(name: string): string {
   return [
     `Iterate on the \`${name}\` UI prototype.`,
     "",
-    `Edit the files under \`prototypes/${name}/\` (\`app.jsx\` / \`styles.css\` /`,
-    "`meta.json`). The open iframe auto-reloads on save.",
+    `Edit the files under \`prototypes/${name}/\` — that folder and nothing else.`,
+    "Do not open any other prototype's folder. Saving reloads the open iframe",
+    "automatically.",
+    "",
+    "Keep it self-contained: flat files referenced relatively, JSX inline, and it",
+    "must still render when double-clicked straight off disk (`file://`).",
+    "`prototypes/CLAUDE.md` is the full contract.",
   ].join("\n");
 }
 
@@ -67,14 +75,16 @@ export function PrototypeDetail() {
         toast({
           type: "prototype",
           title: "Improving prototype",
-          description: "Agent launched in the background — open it from here or the bell.",
+          description:
+            "Agent launched in the background — open it from here or the bell.",
           variant: "info",
           linkTo: conversationRoute.link(agentManagerApp, { convId: conv.id }),
         });
       }}
       getRequest={(userText) => {
         const parts = [improveText(name)];
-        if (userText.trim()) parts.push(`Additional context: ${userText.trim()}`);
+        if (userText.trim())
+          parts.push(`Additional context: ${userText.trim()}`);
         return { prompt: parts.join("\n\n") };
       }}
     />
@@ -157,7 +167,12 @@ function CompareGrid({
   return (
     <div
       className="h-full w-full"
-      style={{ display: "flex", gap: "1rem", overflowX: "auto", padding: "1rem" }}
+      style={{
+        display: "flex",
+        gap: "1rem",
+        overflowX: "auto",
+        padding: "1rem",
+      }}
     >
       {rows.map((meta) => (
         <div
@@ -179,7 +194,7 @@ function CompareGrid({
             <ScaledIframe meta={meta} version={version} />
           </button>
           <Text as="div" variant="caption" tone="muted" className="pt-xs">
-            {meta.name}
+            {meta.title}
           </Text>
         </div>
       ))}

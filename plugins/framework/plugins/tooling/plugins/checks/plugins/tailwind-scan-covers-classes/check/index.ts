@@ -1,6 +1,9 @@
 import { readFileSync } from "node:fs";
 import { dirname, isAbsolute, join, relative, resolve } from "node:path";
-import { getWorktreeRoot, spawnCaptured } from "@plugins/infra/plugins/spawn/core";
+import {
+  getWorktreeRoot,
+  spawnCaptured,
+} from "@plugins/infra/plugins/spawn/core";
 
 type CheckResult = { ok: true } | { ok: false; message: string; hint?: string };
 type Check = { id: string; description: string; run(): Promise<CheckResult> };
@@ -10,13 +13,21 @@ async function git(args: string[], cwd?: string): Promise<string> {
   return result.stdout;
 }
 
-const APP_CSS = "plugins/primitives/plugins/css/plugins/ui-kit/web/theme/app.css";
+const APP_CSS =
+  "plugins/primitives/plugins/css/plugins/ui-kit/web/theme/app.css";
 
 // Extensions Tailwind extracts class candidates from. (No .md/.mdx: our prose
 // docs quote `className` in examples and must not force the scan to cover docs/.)
 const SCANNABLE = /\.(tsx?|jsx?|css|html)$/;
 // A file "authors utility classes" if it references them in any of these forms.
 const AUTHORS = /className|class=|\bcn\(|@apply/;
+// Trees that ship their own stylesheet and never load app.css. A `class=` there
+// names a class the file itself defines, not a Tailwind utility, so it must not
+// drag the tree into the scan scope. `prototypes/` is the only one: each
+// prototype is a self-contained document served raw into an iframe (see
+// `plugins/apps/plugins/prototypes`), and scanning it would also invalidate the
+// cached global-CSS pass on every prototype edit.
+const SELF_STYLED = /^prototypes\//;
 
 /**
  * Extract every `@source "<glob>"` path from app.css. CSS block comments are
@@ -80,7 +91,10 @@ const check: Check = {
     // it the crawl comes back silently, so its absence is a check failure.
     const code = css.replace(/\/\*[\s\S]*?\*\//g, "");
     const tailwindImport = code.match(/@import\s+["']tailwindcss["']([^;]*);/);
-    if (!tailwindImport || !/\bsource\(\s*none\s*\)/.test(tailwindImport[1] ?? "")) {
+    if (
+      !tailwindImport ||
+      !/\bsource\(\s*none\s*\)/.test(tailwindImport[1] ?? "")
+    ) {
       return {
         ok: false,
         message:
@@ -96,17 +110,21 @@ const check: Check = {
     if (sources.length === 0) {
       return {
         ok: false,
-        message: "app.css declares no @source — Tailwind has nothing to scan for class names.",
+        message:
+          "app.css declares no @source — Tailwind has nothing to scan for class names.",
         hint: `Add @source "${relative(cssDir, join(root, "plugins"))}/"; to ${APP_CSS}.`,
       };
     }
     const scopes = sources.map((g) => sourceBaseDir(cssDir, g));
 
     // Only files OUTSIDE every scope can be offenders, so read just those.
-    const tracked = (await git(["ls-files", "-z"], root)).split("\0").filter(Boolean);
+    const tracked = (await git(["ls-files", "-z"], root))
+      .split("\0")
+      .filter(Boolean);
     const offenders: string[] = [];
     for (const relPath of tracked) {
       if (!SCANNABLE.test(relPath)) continue;
+      if (SELF_STYLED.test(relPath)) continue; // styles itself → app.css is irrelevant
       const abs = join(root, relPath);
       if (scopes.some((s) => within(s, abs))) continue; // in scope → emitted, skip
       let text: string;

@@ -1,6 +1,9 @@
 import { useMemo } from "react";
 import { useElementSize } from "@plugins/primitives/plugins/element-size/web";
-import { prototypeUrl, type PrototypeMeta } from "@plugins/apps/plugins/prototypes/plugins/files/core";
+import {
+  prototypeUrl,
+  type PrototypeMeta,
+} from "@plugins/apps/plugins/prototypes/plugins/files/core";
 
 /**
  * A prototype mounted in a sandboxed iframe, scaled to fit its container.
@@ -61,9 +64,10 @@ export function ScaledIframe({
         <iframe
           title={title ?? meta.name}
           src={src}
-          // allow-same-origin is required for the harness to fetch() the
-          // prototype's meta.json + source files from our own /api/prototypes
-          // origin (without it the frame is a null origin and fetch is blocked).
+          // allow-same-origin keeps the frame on our own origin, so a prototype
+          // that fetch()es one of its own flat files (a `data.json`, say) works
+          // here exactly as it does when the file is opened off disk — without
+          // it the frame is a null origin and every such fetch is blocked.
           // Safe here: prototypes are first-party files served from our repo.
           sandbox="allow-scripts allow-same-origin"
           width={meta.viewport.w}
