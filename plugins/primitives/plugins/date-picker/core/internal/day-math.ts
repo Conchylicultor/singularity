@@ -142,6 +142,28 @@ export function normalizeWeekStart(weekStartsOn: number): number {
 }
 
 /**
+ * The `weekStartsOn`-aligned first day of `d`'s week — `d` itself when it
+ * already falls on that weekday, else up to 6 days back.
+ *
+ * Time-of-day is preserved (`addDays` does the walking), matching the rest of
+ * this module: truncating to midnight is `startOfDay`'s job, and folding the
+ * two together would make "the Monday of this week, same hour" unexpressible.
+ */
+export function startOfWeek(d: Date, weekStartsOn: number): Date {
+  const start = normalizeWeekStart(weekStartsOn);
+  return addDays(d, -((d.getDay() - start + 7) % 7));
+}
+
+/**
+ * The `weekStartsOn`-aligned last day of `d`'s week — six days after
+ * `startOfWeek`, so the two edges can never disagree about where the week
+ * breaks. Time-of-day is preserved, as in `startOfWeek`.
+ */
+export function endOfWeek(d: Date, weekStartsOn: number): Date {
+  return addDays(startOfWeek(d, weekStartsOn), 6);
+}
+
+/**
  * The month grid for `month`'s calendar month: **always exactly 6 rows × 7
  * days**, each a local-midnight `Date`. Row 0 starts on the `weekStartsOn`
  * weekday at or before the 1st, so leading/trailing cells are real days from
@@ -151,12 +173,14 @@ export function normalizeWeekStart(weekStartsOn: number): number {
  * length and start weekday, and a variable row count makes the picker change
  * height as you page through months — a reflow that moves everything below it.
  * Padding to 6 rows unconditionally keeps the surface a stable size.
+ *
+ * The origin goes through `startOfWeek` rather than re-deriving the lead here,
+ * so the grid's row alignment and the calendar's `Home`/`End` week edges are
+ * one definition — a divergence would put `Home` on a day that is not the row's
+ * first cell.
  */
 export function buildMonthGrid(month: Date, weekStartsOn: number): Date[][] {
-  const start = normalizeWeekStart(weekStartsOn);
-  const first = startOfMonth(month);
-  const lead = (first.getDay() - start + 7) % 7;
-  const origin = addDays(first, -lead);
+  const origin = startOfWeek(startOfMonth(month), weekStartsOn);
 
   return Array.from({ length: 6 }, (_, week) =>
     Array.from({ length: 7 }, (_, day) => addDays(origin, week * 7 + day)),

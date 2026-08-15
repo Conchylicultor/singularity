@@ -1,7 +1,12 @@
 import { describe, expect, test } from "bun:test";
 
 import { addDays, startOfDay } from "./day-math";
-import { monthTitle, relativeDayLabel, weekdayLabels } from "./labels";
+import {
+  dayLabel,
+  monthTitle,
+  relativeDayLabel,
+  weekdayLabels,
+} from "./labels";
 
 describe("relativeDayLabel", () => {
   const now = new Date(2026, 7, 3, 14, 30); // Mon Aug 3 2026, mid-afternoon
@@ -20,7 +25,9 @@ describe("relativeDayLabel", () => {
 
   test("compares by calendar day, not by elapsed hours", () => {
     // 23h58m apart, but a different calendar day → Tomorrow, not Today.
-    expect(relativeDayLabel(new Date(2026, 7, 4, 14, 28), now)).toBe("Tomorrow");
+    expect(relativeDayLabel(new Date(2026, 7, 4, 14, 28), now)).toBe(
+      "Tomorrow",
+    );
     // 30 minutes apart, same day.
     expect(relativeDayLabel(new Date(2026, 7, 3, 15, 0), now)).toBe("Today");
   });
@@ -51,7 +58,9 @@ describe("relativeDayLabel", () => {
 
   test("crosses month and year boundaries", () => {
     const newYearsEve = new Date(2026, 11, 31, 23, 0);
-    expect(relativeDayLabel(new Date(2027, 0, 1), newYearsEve)).toBe("Tomorrow");
+    expect(relativeDayLabel(new Date(2027, 0, 1), newYearsEve)).toBe(
+      "Tomorrow",
+    );
     expect(relativeDayLabel(new Date(2026, 11, 30), newYearsEve)).toBe(
       "Yesterday",
     );
@@ -70,8 +79,8 @@ describe("relativeDayLabel", () => {
 });
 
 describe("weekdayLabels", () => {
-  test("returns 7 labels starting at weekStartsOn", () => {
-    expect(weekdayLabels(0, "en-US")).toEqual([
+  test("returns 7 abbreviations starting at weekStartsOn", () => {
+    expect(weekdayLabels(0, "en-US").map((l) => l.short)).toEqual([
       "Sun",
       "Mon",
       "Tue",
@@ -80,7 +89,7 @@ describe("weekdayLabels", () => {
       "Fri",
       "Sat",
     ]);
-    expect(weekdayLabels(1, "en-US")).toEqual([
+    expect(weekdayLabels(1, "en-US").map((l) => l.short)).toEqual([
       "Mon",
       "Tue",
       "Wed",
@@ -89,7 +98,27 @@ describe("weekdayLabels", () => {
       "Sat",
       "Sun",
     ]);
-    expect(weekdayLabels(6, "en-US")[0]).toBe("Sat");
+    expect(weekdayLabels(6, "en-US")[0]!.short).toBe("Sat");
+  });
+
+  test("carries the full name alongside each abbreviation", () => {
+    expect(weekdayLabels(1, "en-US").map((l) => l.long)).toEqual([
+      "Monday",
+      "Tuesday",
+      "Wednesday",
+      "Thursday",
+      "Friday",
+      "Saturday",
+      "Sunday",
+    ]);
+  });
+
+  test("the two forms describe the same weekday, in the same order", () => {
+    // The point of returning both from one walk: the header cannot print "Mon"
+    // while announcing "Tuesday".
+    for (const label of weekdayLabels(3, "en-US")) {
+      expect(label.long.startsWith(label.short)).toBe(true);
+    }
   });
 
   test("wraps an out-of-range week start", () => {
@@ -99,6 +128,29 @@ describe("weekdayLabels", () => {
   test("is locale-driven", () => {
     expect(weekdayLabels(1, "fr-FR")).toHaveLength(7);
     expect(weekdayLabels(1, "fr-FR")).not.toEqual(weekdayLabels(1, "en-US"));
+  });
+});
+
+describe("dayLabel", () => {
+  test("names the weekday, month, day and year", () => {
+    expect(dayLabel(new Date(2026, 7, 21), "en-US")).toBe(
+      "Friday, August 21, 2026",
+    );
+    expect(dayLabel(new Date(2026, 0, 1), "en-US")).toBe(
+      "Thursday, January 1, 2026",
+    );
+  });
+
+  test("ignores the time-of-day", () => {
+    expect(dayLabel(new Date(2026, 7, 21, 23, 59), "en-US")).toBe(
+      dayLabel(new Date(2026, 7, 21, 0, 0), "en-US"),
+    );
+  });
+
+  test("is locale-driven", () => {
+    expect(dayLabel(new Date(2026, 7, 21), "fr-FR")).not.toBe(
+      dayLabel(new Date(2026, 7, 21), "en-US"),
+    );
   });
 });
 

@@ -14536,6 +14536,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/radio-group`
               - `primitives/css/ui-kit`
               - `primitives/data-view`
+              - `primitives/date-picker`
               - `primitives/networking`
               - `primitives/overscroll-hint`
               - `primitives/pane`
@@ -17684,6 +17685,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `page/url-paste`
           - `page/video`
           - `primitives/css/ui-kit`
+          - `primitives/date-picker`
           - `reports/caret-flight`
           - `reports/collab-hydration`
         - Extended by:
@@ -19313,7 +19315,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports (types): `Announcement`
         - Exports (values): `announce`
       - Cross-plugin:
-        - Imported by: `page/editor`
+        - Imported by:
+          - `page/editor`
+          - `primitives/date-picker`
     - **`app-instance`** — Per-app-instance generation id: which running SPA state a document belongs to, and the storage-key grammar scoped to it.
       - Web:
         - Uses: `primitives/tab-id.getTabId`
@@ -22948,6 +22952,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`date-picker`** — Themed date-picker primitive: <Calendar> month grid, <TimeField> native clock input, <DatePickerPanel> (presets + calendar + time + clear), and <DatePickerPopover>. Day math lives in core/ and is local-calendar, never UTC.
       - Web:
         - Uses:
+          - `primitives/announce.announce`
           - `primitives/css/center.Center`
           - `primitives/css/cluster.Cluster`
           - `primitives/css/fill.Fill`
@@ -22978,19 +22983,28 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `fields/date/inline`
           - `page/inline-date`
       - Core:
-        - Exports (types): `RelativeDayLabel`
+        - Exports (types):
+          - `DayNavIntent`
+          - `RelativeDayLabel`
+          - `WeekdayLabel`
         - Exports (values):
           - `addDays`
           - `addMonths`
           - `buildMonthGrid`
+          - `dayLabel`
+          - `endOfWeek`
           - `fromISODay`
+          - `isDayInBounds`
           - `isSameDay`
           - `isSameMonth`
           - `monthTitle`
           - `normalizeWeekStart`
+          - `pickFocusDay`
           - `relativeDayLabel`
+          - `resolveDayNavigation`
           - `startOfDay`
           - `startOfMonth`
+          - `startOfWeek`
           - `toISODay`
           - `weekdayLabels`
     - **`detail-sections`** — Factory for extensible detail-view section slots with built-in Reorder DnD.

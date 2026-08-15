@@ -4,12 +4,14 @@ import {
   addDays,
   addMonths,
   buildMonthGrid,
+  endOfWeek,
   fromISODay,
   isSameDay,
   isSameMonth,
   normalizeWeekStart,
   startOfDay,
   startOfMonth,
+  startOfWeek,
   toISODay,
 } from "./day-math";
 
@@ -245,6 +247,70 @@ describe("normalizeWeekStart", () => {
   });
 });
 
+describe("startOfWeek / endOfWeek", () => {
+  // Aug 14 2026 is a Friday.
+  const friday = new Date(2026, 7, 14);
+
+  test("walks back to the configured week start", () => {
+    expect(toISODay(startOfWeek(friday, 0))).toBe("2026-08-09"); // Sunday
+    expect(toISODay(startOfWeek(friday, 1))).toBe("2026-08-10"); // Monday
+    expect(toISODay(startOfWeek(friday, 6))).toBe("2026-08-08"); // Saturday
+  });
+
+  test("a day already on the week start is its own start", () => {
+    expect(toISODay(startOfWeek(new Date(2026, 7, 9), 0))).toBe("2026-08-09");
+    expect(toISODay(startOfWeek(friday, 5))).toBe("2026-08-14");
+  });
+
+  test("endOfWeek is always six days after startOfWeek", () => {
+    for (const weekStartsOn of [0, 1, 3, 6]) {
+      const start = startOfWeek(friday, weekStartsOn);
+      expect(toISODay(endOfWeek(friday, weekStartsOn))).toBe(
+        toISODay(addDays(start, 6)),
+      );
+      expect(endOfWeek(friday, weekStartsOn).getDay()).toBe(
+        (weekStartsOn + 6) % 7,
+      );
+    }
+  });
+
+  test("the edges cross month and year boundaries", () => {
+    expect(toISODay(startOfWeek(new Date(2026, 7, 1), 0))).toBe("2026-07-26");
+    expect(toISODay(endOfWeek(new Date(2026, 7, 31), 0))).toBe("2026-09-05");
+    expect(toISODay(startOfWeek(new Date(2027, 0, 1), 0))).toBe("2026-12-27");
+  });
+
+  test("wraps an out-of-range week start", () => {
+    expect(toISODay(startOfWeek(friday, 7))).toBe(
+      toISODay(startOfWeek(friday, 0)),
+    );
+    expect(toISODay(startOfWeek(friday, -1))).toBe(
+      toISODay(startOfWeek(friday, 6)),
+    );
+  });
+
+  test("throws on a non-integer week start rather than rounding", () => {
+    expect(() => startOfWeek(friday, 1.5)).toThrow();
+    expect(() => endOfWeek(friday, NaN)).toThrow();
+  });
+
+  test("preserves the time-of-day — truncation is startOfDay's job", () => {
+    const out = startOfWeek(new Date(2026, 7, 14, 17, 42), 1);
+    expect(toISODay(out)).toBe("2026-08-10");
+    expect(out.getHours()).toBe(17);
+    expect(out.getMinutes()).toBe(42);
+  });
+
+  test("spans a DST transition without losing a day", () => {
+    // Spring-forward Sunday is March 8 2026; the week Mar 8–14 is 167 hours.
+    expect(toISODay(startOfWeek(new Date(2026, 2, 11), 0))).toBe("2026-03-08");
+    expect(toISODay(endOfWeek(new Date(2026, 2, 11), 0))).toBe("2026-03-14");
+    // Fall-back Sunday is November 1 2026; that week is 169 hours.
+    expect(toISODay(startOfWeek(new Date(2026, 10, 4), 0))).toBe("2026-11-01");
+    expect(toISODay(endOfWeek(new Date(2026, 10, 4), 0))).toBe("2026-11-07");
+  });
+});
+
 describe("buildMonthGrid", () => {
   const MONTHS = [
     new Date(2026, 0, 15), // Jan 2026 — starts Thu
@@ -261,6 +327,20 @@ describe("buildMonthGrid", () => {
         const grid = buildMonthGrid(month, weekStartsOn);
         expect(grid.length).toBe(6);
         for (const week of grid) expect(week.length).toBe(7);
+      }
+    }
+  });
+
+  test("each row starts on that row's own startOfWeek", () => {
+    // The grid's alignment and the calendar's Home/End edges are one
+    // definition; if they diverged, Home would land off the row's first cell.
+    for (const month of MONTHS) {
+      for (const weekStartsOn of [0, 1, 3, 6]) {
+        for (const week of buildMonthGrid(month, weekStartsOn)) {
+          expect(toISODay(week[0]!)).toBe(
+            toISODay(startOfWeek(week[3]!, weekStartsOn)),
+          );
+        }
       }
     }
   });
@@ -321,7 +401,9 @@ describe("buildMonthGrid", () => {
   });
 
   test("the displayed month is independent of the seed day's time-of-day", () => {
-    const a = buildMonthGrid(new Date(2026, 7, 1, 0, 0), 1).flat().map(toISODay);
+    const a = buildMonthGrid(new Date(2026, 7, 1, 0, 0), 1)
+      .flat()
+      .map(toISODay);
     const b = buildMonthGrid(new Date(2026, 7, 31, 23, 59), 1)
       .flat()
       .map(toISODay);

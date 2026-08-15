@@ -72,6 +72,7 @@ rule keeps the broken shape from coming back.
     - `primitives/css/radio-group`
     - `primitives/css/ui-kit`
     - `primitives/data-view`
+    - `primitives/date-picker`
     - `primitives/networking`
     - `primitives/overscroll-hint`
     - `primitives/pane`

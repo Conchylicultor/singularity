@@ -2514,6 +2514,7 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
     - `page/url-paste`
     - `page/video`
     - `primitives/css/ui-kit`
+    - `primitives/date-picker`
     - `reports/caret-flight`
     - `reports/collab-hydration`
   - Extended by:

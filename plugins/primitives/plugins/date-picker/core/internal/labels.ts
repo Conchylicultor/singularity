@@ -28,7 +28,10 @@ export type RelativeDayLabel = "Today" | "Tomorrow" | "Yesterday";
  * already has the "now" its surface is rendering against, and an implicit clock
  * read is exactly what makes this kind of function untestable.
  */
-export function relativeDayLabel(date: Date, now: Date): RelativeDayLabel | null {
+export function relativeDayLabel(
+  date: Date,
+  now: Date,
+): RelativeDayLabel | null {
   const today = startOfDay(now);
   if (isSameDay(date, today)) return "Today";
   if (isSameDay(date, addDays(today, 1))) return "Tomorrow";
@@ -36,20 +39,55 @@ export function relativeDayLabel(date: Date, now: Date): RelativeDayLabel | null
   return null;
 }
 
+/** A weekday column header, in both the forms the grid needs at once. */
+export interface WeekdayLabel {
+  /** The abbreviation printed in the header cell, e.g. "Mon". */
+  short: string;
+  /** The full name the header cell announces, e.g. "Monday". */
+  long: string;
+}
+
 /**
- * The seven weekday abbreviations in column order, starting at `weekStartsOn`
- * (0 = Sunday). E.g. `weekdayLabels(1, "en-US")` → Mon…Sun.
+ * The seven weekday labels in column order, starting at `weekStartsOn`
+ * (0 = Sunday). E.g. `weekdayLabels(1, "en-US")[0]` → `{short:"Mon", long:"Monday"}`.
+ *
+ * Both forms come out of ONE walk over the same seven days, because the column
+ * header shows the abbreviation and announces the full name — two renderings of
+ * the same weekday, which must not be able to drift apart (a header reading
+ * "Mon" while announcing "Tuesday" is worse than either alone).
  */
-export function weekdayLabels(weekStartsOn: number, locale?: string): string[] {
+export function weekdayLabels(
+  weekStartsOn: number,
+  locale?: string,
+): WeekdayLabel[] {
   const start = normalizeWeekStart(weekStartsOn);
-  const format = new Intl.DateTimeFormat(locale, { weekday: "short" });
+  const short = new Intl.DateTimeFormat(locale, { weekday: "short" });
+  const long = new Intl.DateTimeFormat(locale, { weekday: "long" });
   // Any date, walked back to its own week's Sunday — so the anchor is correct
   // by construction rather than by a hand-verified "this date was a Sunday".
   const anchor = new Date(2021, 0, 3);
   const sunday = addDays(anchor, -anchor.getDay());
-  return Array.from({ length: 7 }, (_, i) =>
-    format.format(addDays(sunday, (start + i) % 7)),
-  );
+  return Array.from({ length: 7 }, (_, i) => {
+    const day = addDays(sunday, (start + i) % 7);
+    return { short: short.format(day), long: long.format(day) };
+  });
+}
+
+/**
+ * The full accessible name of a day cell, e.g. "Friday, August 21, 2026".
+ *
+ * The visible label of a day button is the bare number ("21"), which on its own
+ * answers neither "which weekday?" nor "which month?" — both of which a grid
+ * cell must carry, because a screen-reader user arrives at it by arrow key with
+ * no view of the surrounding month.
+ */
+export function dayLabel(day: Date, locale?: string): string {
+  return new Intl.DateTimeFormat(locale, {
+    weekday: "long",
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  }).format(day);
 }
 
 /** The calendar header title for `month`, e.g. "August 2026". */
