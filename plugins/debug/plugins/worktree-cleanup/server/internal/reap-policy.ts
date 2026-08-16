@@ -1,5 +1,8 @@
 import { readdir } from "node:fs/promises";
-import { listAttempts, listTasks } from "@plugins/tasks/plugins/tasks-core/server";
+import {
+  listAttempts,
+  listTasks,
+} from "@plugins/tasks/plugins/tasks-core/server";
 import { listDatabases } from "@plugins/database/plugins/admin/server";
 import {
   ensureMainWorktreeRoot,
@@ -8,7 +11,12 @@ import {
   worktreesDir,
 } from "@plugins/infra/plugins/worktree/server";
 import { dirExists } from "./reap";
-import { canClassifyOrphans, dirAgeMs, readWorktreeDirs, WORKTREE_NAME_RE } from "./dirs";
+import {
+  canClassifyOrphans,
+  dirAgeMs,
+  readWorktreeDirs,
+  WORKTREE_NAME_RE,
+} from "./dirs";
 import { getGitHygiene, isSafeToReap, isTaskDeletable } from "./safety";
 
 // Abandonment backstop. Deliberately status-agnostic: it fires even for a task
@@ -42,7 +50,11 @@ export interface ReapTarget {
 }
 
 // Run `fn` over `items` with at most `limit` concurrent executions.
-async function pMap<T, R>(items: T[], limit: number, fn: (item: T) => Promise<R>): Promise<R[]> {
+async function pMap<T, R>(
+  items: T[],
+  limit: number,
+  fn: (item: T) => Promise<R>,
+): Promise<R[]> {
   const results: R[] = new Array(items.length);
   let index = 0;
   async function worker() {
@@ -51,7 +63,9 @@ async function pMap<T, R>(items: T[], limit: number, fn: (item: T) => Promise<R>
       results[i] = await fn(items[i]!);
     }
   }
-  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, worker));
+  await Promise.all(
+    Array.from({ length: Math.min(limit, items.length) }, worker),
+  );
   return results;
 }
 
@@ -64,9 +78,19 @@ async function pMap<T, R>(items: T[], limit: number, fn: (item: T) => Promise<R>
 //   - HARD FLOOR (≥90d): abandonment backstop — drop even dirty/unpushed dirs,
 //     and even held tasks, which the clean path deliberately never reaps.
 //   - DB-ONLY ORPHAN: an att-* fork DB with no attempt row and no worktree dir.
-// Active attempts are NEVER reaped. A worktreePath that is not a canonical child
-// of `<root>/.claude/worktrees/` (the main repo root, /tmp, a hand-edited path)
-// is never treated as a removable dir — only its fork DB is reaped.
+// RETAINED attempts are NEVER reaped, by any branch including the hard floor. A
+// worktreePath that is not a canonical child of `<root>/.claude/worktrees/` (the
+// main repo root, /tmp, a hand-edited path) is never treated as a removable dir —
+// only its fork DB is reaped.
+//
+// "Retained" is USER INTENT (attempts_v.retained — no conversation left un-closed),
+// NOT process liveness. This guard used to read `attempt.active`, which is the
+// progress notion: a conversation whose tmux pane was killed to reclaim resources
+// was written `gone`, flipping `active` false and handing this reaper the
+// checkouts of 22 conversations the user could still resume. `gone` is not
+// terminal — it is the exact status `resumeConversation` requires. Only an
+// explicit close (`exit_clean` / the UI Exit actions) writes the terminal `done`,
+// and only that clears `retained`.
 export async function collectReapable(now: number): Promise<ReapTarget[]> {
   const root = await ensureMainWorktreeRoot();
   const [attempts, tasks, databases] = await Promise.all([
@@ -76,7 +100,9 @@ export async function collectReapable(now: number): Promise<ReapTarget[]> {
   ]);
 
   const taskMap = new Map(tasks.map((t) => [t.id, t]));
-  const dbSet = new Set(databases.filter((name) => WORKTREE_NAME_RE.test(name)));
+  const dbSet = new Set(
+    databases.filter((name) => WORKTREE_NAME_RE.test(name)),
+  );
   // A worktree's gateway spec file is an artifact to reclaim just like its fork
   // DB, so the on-disk registry set joins dbSet as a signal that an inactive
   // attempt whose dir is gone still has something to clean (its registry entry
@@ -89,41 +115,53 @@ export async function collectReapable(now: number): Promise<ReapTarget[]> {
 
   // getGitHygiene spawns git, so classify attempts with bounded concurrency.
   // Hygiene only runs for inactive canonical-dir candidates.
-  const classified = await pMap(attempts, 24, async (attempt): Promise<ReapTarget | null> => {
-    if (attempt.active) return null; // NEVER reap an active attempt
+  const classified = await pMap(
+    attempts,
+    24,
+    async (attempt): Promise<ReapTarget | null> => {
+      // NEVER reap an attempt the user has not finished with. Checked first and
+      // outside every other branch — including the age-free orphan branch and the
+      // 90-day hard floor — because none of those represent user intent either.
+      if (attempt.retained) return null;
 
-    const hasDir =
-      isCanonicalWorktreePath(attempt.worktreePath, root) &&
-      (await dirExists(attempt.worktreePath));
-    const hasDB = dbSet.has(attempt.id);
-    const hasRegistry = registrySet.has(attempt.id);
-    // Nothing left to reclaim — dir, fork DB, and registry entry all gone (a
-    // fully-cleaned or malformed row). Skipping avoids perpetual no-op reaps.
-    if (!hasDir && !hasDB && !hasRegistry) return null;
+      const hasDir =
+        isCanonicalWorktreePath(attempt.worktreePath, root) &&
+        (await dirExists(attempt.worktreePath));
+      const hasDB = dbSet.has(attempt.id);
+      const hasRegistry = registrySet.has(attempt.id);
+      // Nothing left to reclaim — dir, fork DB, and registry entry all gone (a
+      // fully-cleaned or malformed row). Skipping avoids perpetual no-op reaps.
+      if (!hasDir && !hasDB && !hasRegistry) return null;
 
-    const age = now - attempt.createdAt.getTime();
+      const age = now - attempt.createdAt.getTime();
 
-    if (!hasDir) {
-      // Orphan: dir gone, but a fork DB and/or a gateway registry entry linger.
-      return { id: attempt.id, worktreePath: attempt.worktreePath };
-    }
+      if (!hasDir) {
+        // Orphan: dir gone, but a fork DB and/or a gateway registry entry linger.
+        return { id: attempt.id, worktreePath: attempt.worktreePath };
+      }
 
-    const { unpushedCount, isDirty } = await getGitHygiene(attempt.worktreePath);
-    const taskDeletable = isTaskDeletable(taskMap.get(attempt.taskId)?.status);
-    const safe = isSafeToReap({
-      dirExists: true,
-      dbPresent: hasDB,
-      unpushedCount,
-      isDirty,
-      taskDeletable,
-      ageMs: age,
-    });
-    const hardFloor = age >= AUTO_REAP_AGE_MS; // abandonment backstop
-    if (safe || hardFloor) {
-      return { id: attempt.id, worktreePath: attempt.worktreePath };
-    }
-    return null;
-  });
+      const { unpushedCount, isDirty } = await getGitHygiene(
+        attempt.worktreePath,
+      );
+      const taskDeletable = isTaskDeletable(
+        taskMap.get(attempt.taskId)?.status,
+      );
+      const safe = isSafeToReap({
+        dirExists: true,
+        dbPresent: hasDB,
+        unpushedCount,
+        isDirty,
+        taskDeletable,
+        ageMs: age,
+        retained: false, // proven above — a retained attempt already returned null
+      });
+      const hardFloor = age >= AUTO_REAP_AGE_MS; // abandonment backstop
+      if (safe || hardFloor) {
+        return { id: attempt.id, worktreePath: attempt.worktreePath };
+      }
+      return null;
+    },
+  );
 
   for (const target of classified) {
     if (target) targets.set(target.id, target);

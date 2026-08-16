@@ -23,6 +23,7 @@
     - `apps/pages/page-tree`
     - `build/serve-composition`
     - `config_v2/settings`
+    - `conversations/conversation-view`
     - `debug/profiling/ops`
     - `infra/health`
     - `page/editor`

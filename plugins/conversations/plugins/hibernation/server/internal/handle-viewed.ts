@@ -5,8 +5,11 @@ import { markViewed } from "../../shared/endpoints";
 
 // The user opened the conversation: stamp lastViewedAt (resets the idle timer)
 // and transparently resume it if it was hibernated (no-op otherwise).
+//
+// `ensureResumed`'s outcome is returned verbatim, including its `blocked` arm.
+// A conversation that cannot be resumed keeps its status and its hibernation
+// flag — the user's list is unchanged and the client renders the reason.
 export const handleViewed = implement(markViewed, async ({ params }) => {
   await touchConversationViewed(params.id);
-  await ensureResumed(params.id);
-  return { ok: true as const };
+  return ensureResumed(params.id);
 });

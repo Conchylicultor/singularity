@@ -115,6 +115,7 @@
     - `isActiveStatus`
     - `maybeLaunchTaskJob`
     - `readConversationTurns`
+    - `ResumeBlockedError`
     - `resumeConversation`
     - `Runtime`
     - `sendTurn`
@@ -154,6 +155,9 @@
     - `ListGoneQuery`
     - `ListTurnsQuery`
     - `PostTurnBody`
+    - `ResumeBlocked`
+    - `ResumeBlockedReason`
+    - `ResumeOutcome`
   - Exports (values):
     - `closeConversation`
     - `conversationRoute`
@@ -172,6 +176,8 @@
     - `ListTurnsQuerySchema`
     - `postConversationTurn`
     - `PostTurnBodySchema`
+    - `ResumeBlockedReasonSchema`
+    - `ResumeOutcomeSchema`
     - `stopConversation`
 - Cross-plugin:
   - Imported by:

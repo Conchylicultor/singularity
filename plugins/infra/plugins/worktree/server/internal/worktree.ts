@@ -4,6 +4,12 @@ import { dirname, join } from "node:path";
 import { GIT } from "@plugins/infra/plugins/paths/server";
 import { backgroundArgv } from "@plugins/packages/plugins/spawn-priority/server";
 import { withWorktreeMutateSlot } from "./mutate-gate";
+import {
+  beginInAppRemoval,
+  finishInAppRemoval,
+  setRemovalBranch,
+  type InAppRemovalRecord,
+} from "./removal-seam";
 
 let cachedRepoRoot: string | null = null;
 
@@ -38,7 +44,12 @@ async function worktreeListPaths(argv: string[]): Promise<string[]> {
 // when the server runs inside a worktree.
 export async function ensureMainWorktreeRoot(): Promise<string> {
   if (cachedRepoRoot) return cachedRepoRoot;
-  const [mainPath] = await worktreeListPaths([GIT, "worktree", "list", "--porcelain"]);
+  const [mainPath] = await worktreeListPaths([
+    GIT,
+    "worktree",
+    "list",
+    "--porcelain",
+  ]);
   if (!mainPath) throw new Error("Could not determine main worktree root");
   cachedRepoRoot = mainPath;
   return cachedRepoRoot;
@@ -62,7 +73,10 @@ export async function worktreePathFor(id: string): Promise<string> {
 // root, /tmp, a hand-edited path) is non-canonical — it is not a worktree this
 // system created, so it must never be adopted as an attempt nor handed to
 // `git worktree remove`.
-export function isCanonicalWorktreePath(path: string, repoRoot: string): boolean {
+export function isCanonicalWorktreePath(
+  path: string,
+  repoRoot: string,
+): boolean {
   return dirname(path) === gitWorktreesDir(repoRoot);
 }
 
@@ -82,7 +96,17 @@ export async function setupWorktree(id: string, wtPath: string): Promise<void> {
     // Demoted (darwinbg): the checkout runs in the deferred spawn job — always
     // background work relative to the interactive backends.
     const proc = Bun.spawn(
-      backgroundArgv([GIT, "-C", repoRoot, "worktree", "add", "-b", branch, wtPath, "main"]),
+      backgroundArgv([
+        GIT,
+        "-C",
+        repoRoot,
+        "worktree",
+        "add",
+        "-b",
+        branch,
+        wtPath,
+        "main",
+      ]),
       { stdout: "pipe", stderr: "pipe" },
     );
     const [stderr, exit] = await Promise.all([
@@ -107,12 +131,36 @@ export async function setupWorktree(id: string, wtPath: string): Promise<void> {
       stdout: "pipe",
       stderr: "pipe",
     }).exited;
-  // eslint-disable-next-line promise-safety/no-bare-catch
+    // eslint-disable-next-line promise-safety/no-bare-catch
   } catch {}
 }
 
 export async function removeWorktree(wtPath: string): Promise<void> {
   const repoRoot = await ensureMainWorktreeRoot();
+  // Attribution, recorded BEFORE anything destructive runs and before we queue
+  // on the mutate gate. Two reasons for the ordering: a removal that dies
+  // mid-flight is still attributable, and the audit watcher can observe the
+  // directory vanishing while this call is still in progress — a record written
+  // afterwards would lose that race and read as an external deletion.
+  //
+  // Deliberately unconditional: the whole point is that EVERY in-app removal
+  // leaves a line, so a disappearance with no line is proof of an outside actor
+  // rather than something to reconstruct from timestamps later.
+  const removal = beginInAppRemoval(wtPath);
+  try {
+    await removeWorktreeUnlogged(wtPath, repoRoot, removal);
+  } catch (err) {
+    finishInAppRemoval(removal, { ok: false, error: String(err) });
+    throw err;
+  }
+  finishInAppRemoval(removal, { ok: true });
+}
+
+async function removeWorktreeUnlogged(
+  wtPath: string,
+  repoRoot: string,
+  removal: InAppRemovalRecord,
+): Promise<void> {
   // Gate the heavy full-tree `rm` host-wide (~1.2 s / 77 MB), the same disk offender
   // as `add` — one shared budget bounds add+remove contention across all callers.
   await withWorktreeMutateSlot(async () => {
@@ -126,7 +174,14 @@ export async function removeWorktree(wtPath: string): Promise<void> {
     // add/remove mutates, so checking it outside would race a holder of the slot
     // and pick a strategy for a repo state that no longer holds.
     const registered = (
-      await worktreeListPaths([GIT, "-C", repoRoot, "worktree", "list", "--porcelain"])
+      await worktreeListPaths([
+        GIT,
+        "-C",
+        repoRoot,
+        "worktree",
+        "list",
+        "--porcelain",
+      ])
     ).includes(wtPath);
     if (!registered) {
       // Unregistered leftover: git will not touch it, so the dir itself is the
@@ -138,17 +193,30 @@ export async function removeWorktree(wtPath: string): Promise<void> {
           `refusing to remove non-canonical worktree path ${wtPath} (not a direct child of ${gitWorktreesDir(repoRoot)})`,
         );
       }
+      setRemovalBranch(removal, "rm-and-prune");
       await rm(wtPath, { recursive: true, force: true });
       // Drop any stale administrative entry left behind in .git/worktrees.
-      await Bun.spawn(backgroundArgv([GIT, "-C", repoRoot, "worktree", "prune"]), {
-        stdout: "pipe",
-        stderr: "pipe",
-      }).exited;
+      await Bun.spawn(
+        backgroundArgv([GIT, "-C", repoRoot, "worktree", "prune"]),
+        {
+          stdout: "pipe",
+          stderr: "pipe",
+        },
+      ).exited;
       return;
     }
+    setRemovalBranch(removal, "git-worktree-remove");
     // Demoted (darwinbg): removal is cleanup/reap work, never interactive.
     const proc = Bun.spawn(
-      backgroundArgv([GIT, "-C", repoRoot, "worktree", "remove", wtPath, "--force"]),
+      backgroundArgv([
+        GIT,
+        "-C",
+        repoRoot,
+        "worktree",
+        "remove",
+        wtPath,
+        "--force",
+      ]),
       { stdout: "pipe", stderr: "pipe" },
     );
     await proc.exited;

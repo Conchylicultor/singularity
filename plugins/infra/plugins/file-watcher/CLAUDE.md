@@ -16,6 +16,7 @@
     - `conversations/transcript-watcher`
     - `infra/corpus-index`
     - `infra/git-watcher`
+    - `infra/worktree/removal-audit`
     - `plugin-meta/plugin-tree`
 - Server:
   - Exports (types):

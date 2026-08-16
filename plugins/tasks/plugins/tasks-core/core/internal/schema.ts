@@ -70,7 +70,15 @@ export type TaskListItem = z.infer<typeof TaskListItemSchema>;
 
 export const AttemptSchema = fieldsToZodObject(attemptFields).extend({
   status: AttemptStatusSchema,
+  // PROGRESS vs RETENTION — two deliberately separate notions; see the column
+  // comments in server/internal/views.ts before reading either.
+  //   active   — an agent is expected to be running (conversation not gone/done).
+  //              Display only; NEVER gate a destructive action on it.
+  //   retained — the user has not explicitly finished with this attempt
+  //              (conversation not done), so its worktree + fork DB are still
+  //              theirs. This is the one destructive consumers must read.
   active: z.boolean(),
+  retained: z.boolean(),
   finishedAt: z.coerce.date().nullable(),
 });
 export type Attempt = z.infer<typeof AttemptSchema>;

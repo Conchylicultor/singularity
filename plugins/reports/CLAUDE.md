@@ -90,6 +90,7 @@
     - `debug/stall-monitor`
     - `debug/trace/engine`
     - `infra/boot-snapshot`
+    - `infra/worktree/removal-audit`
     - `reports/caret-flight`
     - `reports/collab-hydration`
     - `reports/crash`

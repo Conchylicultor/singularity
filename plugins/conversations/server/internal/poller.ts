@@ -16,7 +16,6 @@ import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";
 import { getConfig } from "@plugins/config_v2/server";
 import { Runtime, flushInteractivePrompt, type RuntimeInfo } from "./runtime";
 import { autoAnswerConfig } from "../../shared/config";
-import { hibernationConfig } from "../../core/hibernation-config";
 import { decideMissingProcessAction } from "./hibernation-decision";
 import {
   findTranscriptPath,
@@ -53,13 +52,19 @@ async function collectLive(): Promise<{
     try {
       entries = await runtime.list();
     } catch (err) {
-      console.error(`[conversations.poller] runtime "${runtime.id}" list failed`, err);
+      console.error(
+        `[conversations.poller] runtime "${runtime.id}" list failed`,
+        err,
+      );
       // eslint-disable-next-line promise-safety/no-bare-catch
       await recordReport({
         kind: "crash",
         source: "server-caught",
         message: `Runtime "${runtime.id}" list failed: ${err instanceof Error ? err.message : String(err)}`,
-        data: { errorType: "RuntimeListError", label: "conversations.poller.runtimeList" },
+        data: {
+          errorType: "RuntimeListError",
+          label: "conversations.poller.runtimeList",
+        },
       }).catch((e) => {
         console.error("[conversations.poller] recordReport failed", e);
       });
@@ -78,7 +83,11 @@ async function collectLive(): Promise<{
   return { next: merged, failedRuntimes };
 }
 
-const UNINFORMATIVE_TITLES = ["Untitled", "Untitled conversation", "Claude Code"];
+const UNINFORMATIVE_TITLES = [
+  "Untitled",
+  "Untitled conversation",
+  "Claude Code",
+];
 
 async function tick(): Promise<void> {
   const [{ next, failedRuntimes }, rows] = await Promise.all([
@@ -126,13 +135,19 @@ async function tick(): Promise<void> {
             }
           }
         } catch (err) {
-          console.error(`[conversations.poller] adopt orphan "${id}" failed`, err);
+          console.error(
+            `[conversations.poller] adopt orphan "${id}" failed`,
+            err,
+          );
           // eslint-disable-next-line promise-safety/no-bare-catch
           await recordReport({
             kind: "crash",
             source: "server-caught",
             message: `Failed to adopt orphan conversation ${id}: ${err instanceof Error ? err.message : String(err)}`,
-            data: { errorType: "OrphanAdoptionError", label: "conversations.poller.adoptOrphan" },
+            data: {
+              errorType: "OrphanAdoptionError",
+              label: "conversations.poller.adoptOrphan",
+            },
           }).catch((e) => {
             console.error("[conversations.poller] recordReport failed", e);
           });
@@ -162,7 +177,8 @@ async function tick(): Promise<void> {
     // Treat uninformative pane titles (e.g. the literal "Claude Code" the CLI
     // sets right after resume) as "no info" so we don't overwrite a previously
     // synthesised, meaningful title.
-    const informativeNew = info.title && !UNINFORMATIVE_TITLES.includes(info.title);
+    const informativeNew =
+      info.title && !UNINFORMATIVE_TITLES.includes(info.title);
     const desiredTitle = informativeNew ? info.title : dbRow.title;
     const desiredStatus = liveStatusFor(info);
     const titleChanged = desiredTitle !== dbRow.title;
@@ -178,9 +194,17 @@ async function tick(): Promise<void> {
         : dbRow.claudeSessionId;
     const sessionChanged = sessionCandidate !== dbRow.claudeSessionId;
     const statusChanged = desiredStatus !== dbRow.status;
-    const desiredWaitingFor = desiredStatus === "waiting" ? (info.waitingFor ?? null) : null;
-    const waitingForChanged = (desiredWaitingFor ?? null) !== (dbRow.waitingFor ?? null);
-    if (!titleChanged && !sessionChanged && !statusChanged && !waitingForChanged) continue;
+    const desiredWaitingFor =
+      desiredStatus === "waiting" ? (info.waitingFor ?? null) : null;
+    const waitingForChanged =
+      (desiredWaitingFor ?? null) !== (dbRow.waitingFor ?? null);
+    if (
+      !titleChanged &&
+      !sessionChanged &&
+      !statusChanged &&
+      !waitingForChanged
+    )
+      continue;
 
     const resurrecting = dbRow.status === "gone" && desiredStatus !== "gone";
     const patch: Parameters<typeof updateConversation>[1] = {};
@@ -208,7 +232,11 @@ async function tick(): Promise<void> {
       await refreshConversationChain(id);
     }
 
-    if (titleChanged && desiredTitle && !UNINFORMATIVE_TITLES.includes(desiredTitle)) {
+    if (
+      titleChanged &&
+      desiredTitle &&
+      !UNINFORMATIVE_TITLES.includes(desiredTitle)
+    ) {
       await updateTaskTitle(dbRow.taskId, desiredTitle, UNINFORMATIVE_TITLES);
     }
 
@@ -231,7 +259,10 @@ async function tick(): Promise<void> {
             kind: "crash",
             source: "server-caught",
             message: `Auto-open question prompt for ${id} failed: ${err instanceof Error ? err.message : String(err)}`,
-            data: { errorType: "AutoAnswerFlushError", label: "conversations.poller.autoAnswerFlush" },
+            data: {
+              errorType: "AutoAnswerFlushError",
+              label: "conversations.poller.autoAnswerFlush",
+            },
           });
         }),
       );
@@ -247,47 +278,67 @@ async function tick(): Promise<void> {
     // wait for a tick where the runtime answers — better than declaring
     // every working/waiting conversation gone on a transient hiccup.
     if (failedRuntimes.has(dbRow.runtime)) continue;
-    if (dbRow.status === "starting") {
-      const ageMs = now - dbRow.createdAt.getTime();
-      if (ageMs < STARTING_TIMEOUT_MS) continue;
-      // Stuck-in-"starting" past the grace window means runtime.create's
-      // error path didn't run (server killed mid-create, runtime succeeded
-      // but the pane vanished before the first tick, future code path that
-      // bypassed handle-create's wrapper). The originating exception — if
-      // any — was already reported by process-hooks; this is a separate
-      // signal that the safety net actually fired. Dedup keeps repeats
-      // collapsed into one task with a growing count.
-      // eslint-disable-next-line promise-safety/no-bare-catch
-      await recordReport({
-        kind: "crash",
-        source: "server-caught",
-        message: `Conversation ${id} stuck in "starting" for ${Math.round(ageMs / 1000)}s with no live session — sweeping to gone`,
-        data: { errorType: "StuckStartingError", label: "conversations.poller.startingTimeout" },
-      }).catch((e) => {
-        console.error("[conversations.poller] recordReport failed", e);
-      });
-    }
+    // A "starting" row inside the grace window is normal (worktree checkout, DB
+    // fork, claude warmup) — the pane simply isn't visible to `list-panes` yet.
+    const startingAgeMs =
+      dbRow.status === "starting" ? now - dbRow.createdAt.getTime() : null;
+    if (startingAgeMs !== null && startingAgeMs < STARTING_TIMEOUT_MS) continue;
+
     if (dbRow.closeRequested) {
       await markConversationClosed(id);
       continue;
     }
 
-    // Suspend-instead-of-gone: a waiting, resumable conversation whose process
-    // is missing (idle-killed or lost to a reboot) becomes hibernated rather
-    // than gone — it keeps showing as a normal Waiting conversation and is
-    // silently resumed on open. Close still wins (handled above). The poller
-    // NEVER clears `hibernatedAt` — only `ensureResumed` does. See
-    // `decideMissingProcessAction` for the eligibility-vs-re-stamp split.
-    const action = decideMissingProcessAction(dbRow, {
-      onMain: isMain(),
-      hibernationEnabled: getConfig(hibernationConfig).enabled,
-    });
-    if (action === "hibernate") {
-      await setConversationHibernated(id, new Date());
-      continue;
+    // Suspend-instead-of-gone: a resumable conversation whose process is missing
+    // (idle-killed, lost to a reboot, or a resume that never came up) becomes
+    // hibernated rather than gone — it keeps showing as a normal conversation
+    // and is silently resumed on open. A missing pane NEVER moves status; only
+    // an explicit close does (handled above). The poller NEVER clears
+    // `hibernatedAt` — only `ensureResumed` does. See `decideMissingProcessAction`
+    // for why coupling status to process absence deleted users' worktrees.
+    const action = decideMissingProcessAction(dbRow, { onMain: isMain() });
+    switch (action) {
+      case "hibernate":
+        await setConversationHibernated(id, new Date());
+        continue;
+      case "leave-hibernated":
+      case "leave-unowned":
+        continue;
+      case "gone":
+        break;
+      // A future action must not silently inherit the `gone` fall-through below —
+      // that is exactly how process absence became a status write in the first
+      // place. Unhandled arms are a compile error here, and loud at runtime.
+      default: {
+        const unhandled: never = action;
+        throw new Error(
+          `unhandled missing-process action: ${String(unhandled)}`,
+        );
+      }
     }
-    if (action === "leave-hibernated") continue;
-    // action === "gone"
+
+    // Only an unresumable row reaches here. A "starting" row that got this far
+    // never came up AND has no session to resume, so runtime.create's error path
+    // didn't run (server killed mid-create, the pane vanished before the first
+    // tick, a future path that bypassed handle-create's wrapper). The originating
+    // exception — if any — was already reported by process-hooks; this is a
+    // separate signal that the safety net actually fired. Dedup keeps repeats
+    // collapsed into one task with a growing count. A starting row WITH a session
+    // id (a resume whose pane died) hibernates above instead, and is not a crash.
+    if (startingAgeMs !== null) {
+      // eslint-disable-next-line promise-safety/no-bare-catch
+      await recordReport({
+        kind: "crash",
+        source: "server-caught",
+        message: `Conversation ${id} stuck in "starting" for ${Math.round(startingAgeMs / 1000)}s with no live session and nothing to resume — sweeping to gone`,
+        data: {
+          errorType: "StuckStartingError",
+          label: "conversations.poller.startingTimeout",
+        },
+      }).catch((e) => {
+        console.error("[conversations.poller] recordReport failed", e);
+      });
+    }
     await markConversationGone(id);
   }
 }

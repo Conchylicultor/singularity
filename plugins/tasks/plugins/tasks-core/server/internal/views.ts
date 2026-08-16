@@ -1,6 +1,12 @@
 import { eq, getTableColumns, sql, type SQL } from "drizzle-orm";
 import { boolean, pgView, text } from "drizzle-orm/pg-core";
-import { _attempts, _conversations, _taskDependencies, _tasks, pushes } from "./tables";
+import {
+  _attempts,
+  _conversations,
+  _taskDependencies,
+  _tasks,
+  pushes,
+} from "./tables";
 import { _attemptConvAgg, _attemptPushAgg } from "./rollup-table";
 
 // Derived (plain, non-materialized) views. These live in `views.ts` — NOT
@@ -40,7 +46,9 @@ export const attempts = pgView("attempts_v").as((qb) => {
   return qb
     .select({
       ...getTableColumns(_attempts),
-      status: sql<"pending" | "in_progress" | "pushed" | "completed" | "abandoned">`
+      status: sql<
+        "pending" | "in_progress" | "pushed" | "completed" | "abandoned"
+      >`
         CASE
           WHEN ${_attemptConvAgg.hasConv} IS NULL                              THEN 'pending'
           WHEN ${_attemptConvAgg.hasLiveConv} AND ${_attemptPushAgg.hasPush} IS NULL    THEN 'in_progress'
@@ -49,9 +57,38 @@ export const attempts = pgView("attempts_v").as((qb) => {
           ELSE                                                               'abandoned'
         END
       `.as("status"),
-      active: sql<boolean>`(${_attemptConvAgg.hasConv} IS NULL OR ${_attemptConvAgg.hasLiveConv})`.as(
-        "active",
-      ),
+      // PROGRESS: "an agent is expected to be running on this attempt". Reads the
+      // has_live_conv rollup (`status NOT IN ('gone','done')`), so a conversation
+      // whose process vanished reads inactive — which is the right answer for the
+      // task list's in_progress / need_action / blocked badges (tasks_v.hasActive
+      // below is the only other consumer).
+      //
+      // NOT A RETENTION SIGNAL. Never gate a destructive action on this: a `gone`
+      // conversation is dormant, not finished — `gone` is exactly the status
+      // `resumeConversation` requires in order to resume. Use `retained` instead.
+      active:
+        sql<boolean>`(${_attemptConvAgg.hasConv} IS NULL OR ${_attemptConvAgg.hasLiveConv})`.as(
+          "active",
+        ),
+      // RETENTION: "the user has not finished with this attempt, so its worktree
+      // and fork DB are still theirs". Reads the has_open_conv rollup
+      // (`status <> 'done'`), matching `isActiveStatus()` and
+      // `conversations_v.active` — `done` is the only terminal status, written
+      // solely by an explicit close (exit_clean / the UI Exit actions).
+      //
+      // An attempt with NO conversations yet (hasConv IS NULL — a spawn that has
+      // not landed) is retained, mirroring `active`: there is nothing to prove it
+      // is finished, so it is protected.
+      //
+      // THIS is the guard every destructive consumer must read (worktree-cleanup's
+      // reaper does). Gating deletion on `active` instead is what deleted the
+      // checkouts of 22 live conversations: hibernation kills an idle pane to
+      // reclaim resources, the poller wrote `gone`, and the worktrees became
+      // collectable while the conversations were still resumable.
+      retained:
+        sql<boolean>`(${_attemptConvAgg.hasConv} IS NULL OR ${_attemptConvAgg.hasOpenConv})`.as(
+          "retained",
+        ),
       finishedAt: sql<Date | null>`
         CASE
           WHEN ${_attemptPushAgg.hasPush} AND NOT COALESCE(${_attemptConvAgg.hasLiveConv}, false)   THEN ${_attemptPushAgg.minPushAt}
@@ -165,7 +202,15 @@ export const tasks = pgView("tasks_v").as((qb) => {
       .select({
         taskId: attempts.taskId,
         hasAttempt: sql<boolean>`true`.as("has_attempt"),
-        hasCompleted: sql<boolean>`bool_or(${attempts.status} = 'completed')`.as("has_completed"),
+        hasCompleted:
+          sql<boolean>`bool_or(${attempts.status} = 'completed')`.as(
+            "has_completed",
+          ),
+        // Deliberately the PROGRESS notion (attempts_v.active), not `retained`:
+        // this drives the in_progress / need_action / blocked badges, which must
+        // report whether an agent is actually running — a task whose agent died
+        // is not "in progress". `retained` is the retention notion and belongs
+        // only to destructive consumers. See attempts_v above.
         hasActive: sql<boolean>`bool_or(${attempts.active})`.as("has_active"),
       })
       .from(attempts)
@@ -188,7 +233,9 @@ export const tasks = pgView("tasks_v").as((qb) => {
     qb
       .select({
         taskId: _attempts.taskId,
-        minCompletedPushAt: sql<Date | null>`min(${pushes.createdAt})`.as("min_completed_push_at"),
+        minCompletedPushAt: sql<Date | null>`min(${pushes.createdAt})`.as(
+          "min_completed_push_at",
+        ),
       })
       .from(pushes)
       .innerJoin(_attempts, eq(_attempts.id, pushes.attemptId))
@@ -228,7 +275,16 @@ export const tasks = pgView("tasks_v").as((qb) => {
       // running reports the live truth (`in_progress`), not the intent. This is
       // not a hole in the hold-and-exit path: that handler closes the
       // conversation, so by the time the hold is observable the task is inactive.
-      status: sql<"new" | "in_progress" | "need_action" | "attempted" | "done" | "held" | "dropped" | "blocked">`
+      status: sql<
+        | "new"
+        | "in_progress"
+        | "need_action"
+        | "attempted"
+        | "done"
+        | "held"
+        | "dropped"
+        | "blocked"
+      >`
         CASE
           WHEN ${_tasks.heldAt} IS NULL AND COALESCE(${attemptAgg.hasCompleted}, false)
                                                                             THEN 'done'
@@ -259,7 +315,9 @@ export const tasks = pgView("tasks_v").as((qb) => {
           ELSE                                                    NULL
         END
       `.as("finished_at"),
-      dependencies: sql<string[]>`COALESCE(${deps.dependencies}, ARRAY[]::text[])`.as("dependencies"),
+      dependencies: sql<
+        string[]
+      >`COALESCE(${deps.dependencies}, ARRAY[]::text[])`.as("dependencies"),
     })
     .from(_tasks)
     .leftJoin(attemptAgg, eq(attemptAgg.taskId, _tasks.id))

@@ -1,0 +1,144 @@
+# removal-audit
+
+Answers "what deleted this worktree checkout?" — the question that had no answer
+when twenty-two checkouts were deleted out from under live conversations and
+nothing in the system had recorded it.
+
+## Why it is a sub-plugin and not part of `infra/worktree`
+
+The parent owns `removeWorktree` and the `<repo>/.claude/worktrees` directory, so
+ownership belongs in this subtree rather than under `debug/` — the `debug/`
+sub-plugins are overwhelmingly *viewers* over data other plugins produce, and
+this produces data and has no UI.
+
+But it must not live *inside* `infra/worktree`. That plugin is a load-bearing
+library imported by sixteen others, and most of them only want `worktreePathFor`
+or `isCanonicalWorktreePath`. A recursive filesystem watcher, a `ps` snapshot and
+a boot hook have no business loading for those callers. Splitting it out keeps
+the parent a pure library and makes the watcher opt-in by composition.
+
+## The two halves
+
+Detection needs both, and only together do they prove anything:
+
+- **`in-app`** lines, written by `removeWorktree` in the parent plugin. Every
+  removal this backend performs, with path, id, pid, caller frames, which of the
+  two strategies ran (`git worktree remove` vs `rm` + prune), and the outcome.
+- **`disappeared`** lines, written by the watcher here. Every checkout observed
+  to vanish, whether we did it or not.
+
+The `in-app` half is cheap and its real value is *negative* evidence: once every
+removal we perform leaves a line, a `disappeared` line with no matching `in-app`
+line **proves** an external actor instead of leaving it to be inferred from
+gateway unregistration timestamps and Postgres directory ctimes.
+
+Both write to one channel (`worktree-removal`), declared **here** rather than in
+the parent. Two reasons, and the second is a hard constraint:
+
+1. Dependency inversion — a CRUD primitive must not name the observability
+   stack, the same rule the durable-signals accounting states for report and
+   timeline consumers.
+2. `infra/worktree` is reached from the `tools` tsconfig target (via
+   `infra/launcher/bin`), whose `lib` is ES2023 with no DOM. Declaring a durable
+   channel there pulls `log-channels` → `endpoints` → `endpoints/core/codec.ts`,
+   which references `BodyInit` and `FormData` — breaking type-check for every
+   tooling entry point that only wanted `worktreePathFor`.
+
+So the parent announces removals on a `defineReportSink` seam (pure memory, zero
+imports) and this plugin registers the handler that writes them to the channel.
+
+## The signal reaches the user, not just a file
+
+A durable line in a JSONL nobody opens is exactly how 22 deleted checkouts went
+unnoticed for a week. So the `external` arm also files a
+**`worktree-removed-externally`** report through the reports engine — Debug →
+Reports plus the notification bell — deduped per worktree name so a burst
+collapses onto one task whose `count` grows, with a 1h notification re-arm.
+Variant `error`, not `warning`: this is uncommitted work made unreachable.
+
+The report carries the recovery command (`git worktree add <path>
+claude-web/<name>`), since the branch normally survives even when the checkout
+does not. The `in-app` lines stay pure forensic detail on the channel.
+
+## How detection works
+
+The watcher subscribes to the worktrees parent dir and, on any event, re-reads
+the top-level directory set and diffs it. The filesystem events are only a
+**trigger**; the diff is the evidence. That is why the ignore list can be
+aggressive — a recursive delete arrives as thousands of per-file events, but what
+we actually depend on is the final `rmdir` of the checkout dir itself, which is a
+direct child of the watched root and matches no ignore glob.
+
+Two failure rules, both load-bearing:
+
+- A failed `readdir` **skips the sweep**. Degrading to an empty set would report
+  every checkout on the box as vanished — the same rule `worktreeListPaths`
+  states for a failed `git worktree list`.
+- `captureCandidateProcesses` returns a discriminated `ProcessProbe`, not a
+  nullable array. An empty candidate list is a *legitimate* finding (the deleter
+  already exited), so it must stay distinct from "the probe could not run" — the
+  report renders the two differently.
+
+## What it still cannot attribute
+
+The process snapshot is best-effort and racy: a `git worktree remove` that has
+already exited leaves nothing to see. It narrows the field (it will catch a
+long-running shell or a parent process still alive) but does not guarantee a
+name. The guarantee it *does* give is the in-app/external split, which is the
+part that took hours to establish by hand.
+
+## Plugin reference
+
+- Server:
+  - Uses:
+    - `infra/file-watcher.createFileWatcher`
+    - `infra/paths.isMain`
+    - `infra/paths.PS`
+    - `infra/spawn.spawnCaptured`
+    - `infra/worktree.ensureMainWorktreeRoot`
+    - `infra/worktree.gitWorktreesDir`
+    - `infra/worktree.publishDisappearance`
+    - `infra/worktree.recentInAppRemovals`
+  - Exports (types):
+    - `Attribution`
+    - `DisappearanceVerdict`
+  - Exports (values):
+    - `classifyDisappearance`
+    - `CORRELATION_WINDOW_MS`
+    - `diffVanished`
+    - `startWorktreeRemovalAudit`
+    - `stopWorktreeRemovalAudit`
+
+<!-- AUTOGENERATED:BEGIN — do not edit; regenerated by `./singularity build` -->
+
+## Plugin reference
+
+- Description: Worktree checkout disappearance audit: a main-only watcher over <repo>/.claude/worktrees that diffs the top-level checkout set on every filesystem event and records each vanished checkout to the worktree-removal channel — attributed to an in-app removeWorktree call when one claims it, or filed as a worktree-removed-externally report (Debug → Reports + bell) with a process snapshot when none does.
+- Server:
+  - Contributes: `report-kind` "worktree-removed-externally"
+  - Uses:
+    - `infra/file-watcher.createFileWatcher`
+    - `infra/file-watcher.FileWatcher`
+    - `infra/paths.isMain`
+    - `infra/paths.PS`
+    - `infra/worktree.ensureMainWorktreeRoot`
+    - `infra/worktree.gitWorktreesDir`
+    - `infra/worktree.recentInAppRemovals`
+    - `infra/worktree.WorktreeRemovalEvent`
+    - `infra/worktree.worktreeRemovalSink`
+    - `primitives/log-channels.defineLogSink`
+    - `reports.recordReport`
+    - `reports.ReportKind`
+  - Exports (types):
+    - `Attribution`
+    - `DisappearanceVerdict`
+    - `ExternalRemovalPayload`
+  - Exports (values):
+    - `classifyDisappearance`
+    - `CORRELATION_WINDOW_MS`
+    - `diffVanished`
+    - `ExternalRemovalPayloadSchema`
+    - `startWorktreeRemovalAudit`
+    - `stopWorktreeRemovalAudit`
+
+<!-- AUTOGENERATED:END -->

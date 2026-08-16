@@ -35,6 +35,7 @@
     - `primitives/slot-render.defineRenderSlot`
     - `primitives/surface-id.useSurfaceTabId`
     - `primitives/text-editor/paste-images.ATTACHMENT_MARKDOWN_RE`
+    - `shell/toast.showToast`
     - `tasks/task-draft-form.setActiveRelateContext`
   - Exports (values):
     - `Conversation`

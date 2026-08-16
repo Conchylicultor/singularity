@@ -41,7 +41,13 @@ import { handleQuery } from "@plugins/conversations/plugins/all-conversations/se
 export { maybeLaunchTaskJob } from "./internal/auto-start-jobs";
 
 export { isActiveStatus, hasLiveProcess } from "./status";
-export { createConversation, deleteConversation, resumeConversation, ensureResumed } from "./internal/lifecycle";
+export {
+  createConversation,
+  deleteConversation,
+  resumeConversation,
+  ensureResumed,
+  ResumeBlockedError,
+} from "./internal/lifecycle";
 export type { Turn } from "./internal/claude-transcript";
 export {
   Runtime,
@@ -80,12 +86,30 @@ export default {
   // The conversations live resources (active/system/gone/gone-stats) are mounted on tasks-core.
   contributions: [
     ConfigV2.Register({ descriptor: autoAnswerConfig }),
-    Trigger({ on: taskStatusChanged, do: maybeLaunchDependentsJob, with: {}, oneShot: false }),
-    Trigger({ on: conversationCreated, do: notifyConversationCreatedJob, with: {}, oneShot: false }),
+    Trigger({
+      on: taskStatusChanged,
+      do: maybeLaunchDependentsJob,
+      with: {},
+      oneShot: false,
+    }),
+    Trigger({
+      on: conversationCreated,
+      do: notifyConversationCreatedJob,
+      with: {},
+      oneShot: false,
+    }),
     TaskCategory({ id: "conversations", label: "Conversations", order: 0 }),
     TaskCategory({ id: "system", label: "System", order: 1 }),
   ],
-  register: [maybeLaunchTaskJob, maybeLaunchDependentsJob, notifyConversationCreatedJob, spawnConversationJob, conversationCreated, conversationTurnCompleted, userTurnSent],
+  register: [
+    maybeLaunchTaskJob,
+    maybeLaunchDependentsJob,
+    notifyConversationCreatedJob,
+    spawnConversationJob,
+    conversationCreated,
+    conversationTurnCompleted,
+    userTurnSent,
+  ],
   onReady: () => {
     startPoller();
     startTurnEmitter();

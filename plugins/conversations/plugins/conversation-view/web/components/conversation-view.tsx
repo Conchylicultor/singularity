@@ -1,6 +1,8 @@
 import { useEffect } from "react";
 import { PaneChrome } from "@plugins/primitives/plugins/pane/web";
 import { markConversationViewed } from "@plugins/conversations/plugins/hibernation/web";
+import { showToast } from "@plugins/shell/plugins/toast/web";
+import type { ResumeOutcome } from "@plugins/conversations/core";
 import { ActionBarView } from "@plugins/conversations/plugins/conversation-view/plugins/action-bar/web";
 import { HeaderView } from "@plugins/conversations/plugins/conversation-view/plugins/header/web";
 import { useConversationById } from "@plugins/conversations/web";
@@ -14,6 +16,17 @@ import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Clip } from "@plugins/primitives/plugins/css/plugins/clip/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 
+// Surface a refused transparent resume. Every other arm ("resumed", "nothing to
+// resume") is the silent success this is supposed to be.
+function reportBlockedResume(outcome: ResumeOutcome): void {
+  if (outcome.kind !== "blocked") return;
+  showToast({
+    title: "Can't resume conversation",
+    description: outcome.message,
+    variant: "error",
+  });
+}
+
 export function ConversationView() {
   const { convId } = conversationPane.useParams();
   const conversation = useConversationById(convId);
@@ -22,13 +35,20 @@ export function ConversationView() {
   // conversation resets its idle timer and transparently resumes it if it was
   // hibernated. Fire-and-forget — failure here must not block rendering the
   // transcript (which renders from disk, independent of the live process).
+  //
+  // But it must not be SILENT either: when the resume is refused (its worktree
+  // checkout was reclaimed while it slept) the transcript still renders
+  // perfectly, so without this toast the only clue would be an agent that never
+  // answers. The conversation's status is deliberately left alone by the server,
+  // so it stays in the list and can be recovered.
   useEffect(() => {
-    void markConversationViewed(convId);
+    void markConversationViewed(convId).then(reportBlockedResume);
   }, [convId]);
 
   const promptBarItems = Conversation.PromptBar.useContributions();
   const promptInputItems = Conversation.PromptInput.useContributions();
-  const abovePromptInputItems = Conversation.AbovePromptInput.useContributions();
+  const abovePromptInputItems =
+    Conversation.AbovePromptInput.useContributions();
 
   const showBottomBar =
     promptInputItems.length > 0 ||
@@ -45,50 +65,64 @@ export function ConversationView() {
 
   return (
     <>
-    <ActiveRelateSync />
-    <PaneChrome
-      pane={conversationPane}
-      title={<HeaderView />}
-      hideRightActions
-      headerSpill
-    >
-      <Clip fill as={Stack} className="h-full">
-        <Stack direction="row" gap="none" align="center" className="border-b px-sm py-xs">
-          <ActionBarView />
-        </Stack>
-        <Clip fill>
-          <JsonlPane conversation={conversation}>
-            {showBottomBar && (
-              <PromptInsertProvider>
-                {/* eslint-disable-next-line layout/no-adhoc-layout -- rigid bottom bar: must not shrink under the scrolling transcript above; lone shrink-0 block has no container primitive */}
-                <div className="shrink-0">
-                <Stack gap="sm" className="mx-auto max-w-reading px-md pt-xs pb-sm">
-                  <Conversation.AbovePromptInput.Render>
-                    {(item) => <item.component conversation={conversation} />}
-                  </Conversation.AbovePromptInput.Render>
-                  <Conversation.PromptInput.Render>
-                    {(item) => <item.component conversation={conversation} />}
-                  </Conversation.PromptInput.Render>
-                  {promptBarItems.length > 0 && (
-                    <Stack direction="row" gap="none" justify="end">
-                      <Stack direction="row" gap="xs" align="center">
-                        <Conversation.PromptBar.Render>
-                          {(item) => {
-                            const Component = item.component;
-                            return <Component conversation={conversation} />;
-                          }}
-                        </Conversation.PromptBar.Render>
-                      </Stack>
+      <ActiveRelateSync />
+      <PaneChrome
+        pane={conversationPane}
+        title={<HeaderView />}
+        hideRightActions
+        headerSpill
+      >
+        <Clip fill as={Stack} className="h-full">
+          <Stack
+            direction="row"
+            gap="none"
+            align="center"
+            className="border-b px-sm py-xs"
+          >
+            <ActionBarView />
+          </Stack>
+          <Clip fill>
+            <JsonlPane conversation={conversation}>
+              {showBottomBar && (
+                <PromptInsertProvider>
+                  {/* eslint-disable-next-line layout/no-adhoc-layout -- rigid bottom bar: must not shrink under the scrolling transcript above; lone shrink-0 block has no container primitive */}
+                  <div className="shrink-0">
+                    <Stack
+                      gap="sm"
+                      className="mx-auto max-w-reading px-md pt-xs pb-sm"
+                    >
+                      <Conversation.AbovePromptInput.Render>
+                        {(item) => (
+                          <item.component conversation={conversation} />
+                        )}
+                      </Conversation.AbovePromptInput.Render>
+                      <Conversation.PromptInput.Render>
+                        {(item) => (
+                          <item.component conversation={conversation} />
+                        )}
+                      </Conversation.PromptInput.Render>
+                      {promptBarItems.length > 0 && (
+                        <Stack direction="row" gap="none" justify="end">
+                          <Stack direction="row" gap="xs" align="center">
+                            <Conversation.PromptBar.Render>
+                              {(item) => {
+                                const Component = item.component;
+                                return (
+                                  <Component conversation={conversation} />
+                                );
+                              }}
+                            </Conversation.PromptBar.Render>
+                          </Stack>
+                        </Stack>
+                      )}
                     </Stack>
-                  )}
-                </Stack>
-                </div>
-              </PromptInsertProvider>
-            )}
-          </JsonlPane>
+                  </div>
+                </PromptInsertProvider>
+              )}
+            </JsonlPane>
+          </Clip>
         </Clip>
-      </Clip>
-    </PaneChrome>
+      </PaneChrome>
     </>
   );
 }

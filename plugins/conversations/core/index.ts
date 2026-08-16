@@ -3,6 +3,15 @@ export { conversationRoute } from "./routes";
 export { type ConversationEntry } from "./resources";
 export { hibernationConfig } from "./hibernation-config";
 export {
+  ResumeOutcomeSchema,
+  ResumeBlockedReasonSchema,
+} from "./resume-outcome";
+export type {
+  ResumeOutcome,
+  ResumeBlockedReason,
+  ResumeBlocked,
+} from "./resume-outcome";
+export {
   listConversations,
   listGoneConversations,
   getConversation,

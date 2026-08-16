@@ -7638,6 +7638,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `isActiveStatus`
       - `maybeLaunchTaskJob`
       - `readConversationTurns`
+      - `ResumeBlockedError`
       - `resumeConversation`
       - `Runtime`
       - `sendTurn`
@@ -7677,6 +7678,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `ListGoneQuery`
       - `ListTurnsQuery`
       - `PostTurnBody`
+      - `ResumeBlocked`
+      - `ResumeBlockedReason`
+      - `ResumeOutcome`
     - Exports (values):
       - `closeConversation`
       - `conversationRoute`
@@ -7695,6 +7699,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `ListTurnsQuerySchema`
       - `postConversationTurn`
       - `PostTurnBodySchema`
+      - `ResumeBlockedReasonSchema`
+      - `ResumeOutcomeSchema`
       - `stopConversation`
   - Cross-plugin:
     - Imported by:
@@ -8264,6 +8270,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/slot-render.defineRenderSlot`
           - `primitives/surface-id.useSurfaceTabId`
           - `primitives/text-editor/paste-images.ATTACHMENT_MARKDOWN_RE`
+          - `shell/toast.showToast`
           - `tasks/task-draft-form.setActiveRelateContext`
         - Exports (values):
           - `Conversation`
@@ -15658,6 +15665,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conversations/transcript-watcher`
           - `infra/corpus-index`
           - `infra/git-watcher`
+          - `infra/worktree/removal-audit`
           - `plugin-meta/plugin-tree`
       - Server:
         - Exports (types):
@@ -16078,6 +16086,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `infra/launcher`
           - `infra/warmup`
           - `infra/worktree`
+          - `infra/worktree/removal-audit`
           - `packages/host-semaphore`
           - `packages/signal-origin/sink`
           - `plugin-meta/plugin-health`
@@ -16541,11 +16550,14 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports (types):
           - `CompositionMarker`
           - `DerivePushDeps`
+          - `InAppRemovalRecord`
           - `NamespaceProbe`
           - `PushHolder`
+          - `RemovalBranch`
           - `WorktreeOp`
           - `WorktreeOpInfo`
           - `WorktreeOpPhase`
+          - `WorktreeRemovalEvent`
           - `WorktreeSpec`
           - `ZeroCacheSpec`
         - Exports (values):
@@ -16566,6 +16578,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `pushLockHeld`
           - `readCompositionMarker`
           - `readPushHolder`
+          - `recentInAppRemovals`
           - `removeWorktree`
           - `removeWorktreeSpec`
           - `resolveActiveWorktreeOps`
@@ -16573,6 +16586,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `setWorktreeOpPhase`
           - `withWorktreeMutateSlot`
           - `worktreePathFor`
+          - `worktreeRemovalSink`
           - `worktreesDir`
           - `writePushHolder`
           - `writeWorktreeSpec`
@@ -16589,11 +16603,40 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `debug/worktree-cleanup`
           - `infra/git-watcher`
           - `infra/launcher`
+          - `infra/worktree/removal-audit`
           - `plugin-meta/plugin-health`
           - `stats/commits`
           - `stats/cost`
           - `tasks`
           - `tasks/tasks-core`
+      - Plugins:
+        - **`removal-audit`** — Worktree checkout disappearance audit: a main-only watcher over <repo>/.claude/worktrees that diffs the top-level checkout set on every filesystem event and records each vanished checkout to the worktree-removal channel — attributed to an in-app removeWorktree call when one claims it, or filed as a worktree-removed-externally report (Debug → Reports + bell) with a process snapshot when none does.
+          - Server:
+            - Contributes: `report-kind` "worktree-removed-externally"
+            - Uses:
+              - `infra/file-watcher.createFileWatcher`
+              - `infra/file-watcher.FileWatcher`
+              - `infra/paths.isMain`
+              - `infra/paths.PS`
+              - `infra/worktree.ensureMainWorktreeRoot`
+              - `infra/worktree.gitWorktreesDir`
+              - `infra/worktree.recentInAppRemovals`
+              - `infra/worktree.WorktreeRemovalEvent`
+              - `infra/worktree.worktreeRemovalSink`
+              - `primitives/log-channels.defineLogSink`
+              - `reports.recordReport`
+              - `reports.ReportKind`
+            - Exports (types):
+              - `Attribution`
+              - `DisappearanceVerdict`
+              - `ExternalRemovalPayload`
+            - Exports (values):
+              - `classifyDisappearance`
+              - `CORRELATION_WINDOW_MS`
+              - `diffVanished`
+              - `ExternalRemovalPayloadSchema`
+              - `startWorktreeRemovalAudit`
+              - `stopWorktreeRemovalAudit`
 
 - **`integrations`** — Umbrella for third-party service integrations that consume an auth connection (Gmail, …).
   - Plugins:
@@ -24135,6 +24178,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `debug/worktree-cleanup`
           - `infra/attachments`
           - `infra/duress`
+          - `infra/worktree/removal-audit`
           - `primitives/live-state`
           - `release`
           - `reports/render-loop`
@@ -26278,6 +26322,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `debug/stall-monitor`
       - `debug/trace/engine`
       - `infra/boot-snapshot`
+      - `infra/worktree/removal-audit`
       - `reports/caret-flight`
       - `reports/collab-hydration`
       - `reports/crash`
@@ -26930,6 +26975,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/pages/page-tree`
           - `build/serve-composition`
           - `config_v2/settings`
+          - `conversations/conversation-view`
           - `debug/profiling/ops`
           - `infra/health`
           - `page/editor`

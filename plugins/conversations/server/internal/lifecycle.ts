@@ -1,3 +1,4 @@
+import { existsSync } from "node:fs";
 import {
   createTask,
   createAttempt,
@@ -11,8 +12,15 @@ import {
   setConversationHibernated,
 } from "@plugins/tasks/plugins/tasks-core/server";
 import { Runtime } from "./runtime";
-import { DEFAULT_MODEL, normalizeModel, type ConversationModel } from "@plugins/conversations/plugins/model-provider/core";
-import type { Conversation, ConversationKind } from "@plugins/tasks/plugins/tasks-core/core";
+import {
+  DEFAULT_MODEL,
+  normalizeModel,
+  type ConversationModel,
+} from "@plugins/conversations/plugins/model-provider/core";
+import type {
+  Conversation,
+  ConversationKind,
+} from "@plugins/tasks/plugins/tasks-core/core";
 import { databaseForkJob } from "@plugins/database/plugins/fork/server";
 import { forkConfig } from "@plugins/config_v2/server";
 import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";
@@ -26,13 +34,20 @@ import { getTaskEffort } from "@plugins/tasks/plugins/task-effort/server";
 import type { EffortLevel } from "@plugins/conversations/plugins/effort-provider/core";
 import { setTaskCategory } from "@plugins/tasks/plugins/task-category/server";
 import { wrapPreprompt } from "@plugins/conversations/plugins/transcript-watcher/core";
+import type {
+  ResumeBlocked,
+  ResumeBlockedReason,
+  ResumeOutcome,
+} from "../../core/resume-outcome";
 
 const DEFAULT_RUNTIME = "tmux";
 
 // The per-task thinking mode (effort), applied to Claude Code at launch and on
 // resume. Read live from the task side-table (no per-conversation snapshot), so
 // changing a task's mode re-applies on the next launch/resume under it.
-async function resolveTaskEffort(taskId: string | undefined): Promise<EffortLevel | undefined> {
+async function resolveTaskEffort(
+  taskId: string | undefined,
+): Promise<EffortLevel | undefined> {
   if (!taskId) return undefined;
   return (await getTaskEffort(taskId))?.level;
 }
@@ -73,7 +88,9 @@ export async function createConversation(
   if (opts.forkFromConversationId) {
     const source = await getConversation(opts.forkFromConversationId);
     if (!source) {
-      throw new Error(`Source conversation ${opts.forkFromConversationId} not found`);
+      throw new Error(
+        `Source conversation ${opts.forkFromConversationId} not found`,
+      );
     }
     if (!source.claudeSessionId) {
       throw new Error(
@@ -96,7 +113,9 @@ export async function createConversation(
 
   const spawnedBy = opts.spawnedBy ?? Bun.env.SINGULARITY_WORKTREE;
   if (!spawnedBy) {
-    throw new Error("createConversation requires spawnedBy (or SINGULARITY_WORKTREE)");
+    throw new Error(
+      "createConversation requires spawnedBy (or SINGULARITY_WORKTREE)",
+    );
   }
 
   let worktreePath: string;
@@ -121,7 +140,10 @@ export async function createConversation(
         title: "Untitled",
         author: spawnedBy,
       });
-      await setTaskCategory(task.id, opts.kind === "system" ? "system" : "conversations");
+      await setTaskCategory(
+        task.id,
+        opts.kind === "system" ? "system" : "conversations",
+      );
       taskId = task.id;
     }
     effectiveTaskId = taskId;
@@ -135,14 +157,19 @@ export async function createConversation(
     // interactive response — and `createAttempt` inserts a row that carries the
     // not-yet-existent path (it is never existence-checked at write time).
     worktreePath = await worktreePathFor(thisAttemptId);
-    void runTracked("conversations:fork-config", () => forkConfig(thisAttemptId));
+    void runTracked("conversations:fork-config", () =>
+      forkConfig(thisAttemptId),
+    );
     await createAttempt({ id: thisAttemptId, taskId, worktreePath });
     // Durable fork via a graphile job: the enqueue is a committed row, so an
     // interrupted fork (e.g. backend restart mid-fork) is re-run when the
     // worker reboots instead of bricking the worktree. Enqueued after
     // createAttempt so the attempt row exists before the job can run. Failures
     // surface via the job's deduped fork-error notification and /api/jobs.
-    await databaseForkJob.enqueue({ source: "singularity", target: thisAttemptId });
+    await databaseForkJob.enqueue({
+      source: "singularity",
+      target: thisAttemptId,
+    });
     conversationId = newId(CONVERSATION_PREFIX);
   }
 
@@ -169,7 +196,10 @@ export async function createConversation(
     if (newAttemptId) {
       // eslint-disable-next-line promise-safety/no-bare-catch
       await deleteAttempt(newAttemptId).catch((e) => {
-        console.error(`[conversations] failed to delete orphaned attempt ${newAttemptId} during cleanup`, e);
+        console.error(
+          `[conversations] failed to delete orphaned attempt ${newAttemptId} during cleanup`,
+          e,
+        );
       });
     }
     throw err;
@@ -181,7 +211,9 @@ export async function createConversation(
   // injected.
   const prepromptId =
     opts.prepromptId ??
-    (effectiveTaskId ? (await getTaskPreprompt(effectiveTaskId))?.prepromptId : undefined);
+    (effectiveTaskId
+      ? (await getTaskPreprompt(effectiveTaskId))?.prepromptId
+      : undefined);
   const preprompt = resolvePreprompt(prepromptId);
 
   // Bake the preprompt into the FIRST user turn (wrapped in
@@ -274,12 +306,66 @@ export async function deleteConversation(id: string): Promise<void> {
   await Runtime.get(runtimeId).delete(id);
 }
 
+// Thrown by the resume paths that map onto a request/response (the toolbar
+// Resume button). The transparent hibernation path returns the same information
+// as a `ResumeOutcome` instead — same check, two shapes, one definition.
+export class ResumeBlockedError extends Error {
+  constructor(
+    readonly reason: ResumeBlockedReason,
+    message: string,
+  ) {
+    super(message);
+    this.name = "ResumeBlockedError";
+  }
+}
+
+// Everything that must be true before a conversation can be handed to
+// `claude --resume`. Pure and side-effect free ON PURPOSE: a refusal has to
+// leave the conversation byte-for-byte as it was, so this runs before the stale
+// pane is killed and before any status is written.
+//
+// The worktree check is the load-bearing one. A conversation's checkout can be
+// reclaimed underneath it while its branch and transcript survive, and
+// `tmux new-session -c <missing-dir>` does NOT fail on a missing directory — it
+// silently starts the pane in $HOME. Unchecked, resuming such a conversation
+// boots the agent in the user's home directory with a transcript full of
+// repo-relative paths, and the only symptom is a trust prompt for `~`.
+function preflightResume(row: Conversation): { kind: "ok" } | ResumeBlocked {
+  if (!row.claudeSessionId) {
+    return {
+      kind: "blocked",
+      reason: "no-session",
+      message: `Conversation ${row.id} has no saved Claude session to resume.`,
+    };
+  }
+  if (!existsSync(row.worktreePath)) {
+    const branch = `claude-web/${row.attemptId}`;
+    return {
+      kind: "blocked",
+      reason: "worktree-missing",
+      message:
+        `This conversation's worktree checkout is gone (${row.worktreePath}), so it cannot be resumed. ` +
+        `Its branch ${branch} still exists — recreate the checkout with ` +
+        `\`git worktree add ${row.worktreePath} ${branch}\` to bring the conversation back.`,
+    };
+  }
+  return { kind: "ok" };
+}
+
 // Shared resume mechanics: clear the stale (dead) pane, reset the row to
 // "starting" so the poller tracks the new session (and the 30s STARTING_TIMEOUT
 // safety net catches a failed resume → gone), and spawn a fresh `claude --resume`
-// pane. Caller must have validated `row.claudeSessionId`. Does NOT touch task
-// hold/drop or the hibernation flag — callers own those.
+// pane. Does NOT touch task hold/drop or the hibernation flag — callers own those.
+//
+// Re-runs `preflightResume` as the invariant guard rather than trusting callers:
+// every statement below is destructive (kills the pane, rewrites status), so the
+// check must sit at the mutation, not one frame above it.
 async function respawnResume(row: Conversation): Promise<void> {
+  const preflight = preflightResume(row);
+  if (preflight.kind === "blocked") {
+    throw new ResumeBlockedError(preflight.reason, preflight.message);
+  }
+
   const runtime = Runtime.get(row.runtime);
   // tmux refuses `new-session -s <name>` when a (dead) session by that name
   // still exists. Clear any stale pane before re-spawning.
@@ -302,8 +388,14 @@ export async function resumeConversation(id: string): Promise<Conversation> {
   if (row.status !== "gone" && row.status !== "done") {
     throw new Error(`Cannot resume conversation ${id} (status: ${row.status})`);
   }
-  if (!row.claudeSessionId) {
-    throw new Error(`Conversation ${id} has no saved Claude session to resume`);
+
+  // Refuse before `respawnResume` touches anything, so a blocked resume leaves
+  // the conversation exactly where the user left it. (`respawnResume` asserts
+  // the same invariant; this call is what turns it into a clean 409 with an
+  // actionable message rather than a generic failure.)
+  const preflight = preflightResume(row);
+  if (preflight.kind === "blocked") {
+    throw new ResumeBlockedError(preflight.reason, preflight.message);
   }
 
   await respawnResume(row);
@@ -319,14 +411,22 @@ export async function resumeConversation(id: string): Promise<Conversation> {
 // `waiting`-class to the user (the brief "starting" is invisible — the transcript
 // renders from disk). The chokepoint before any live-process interaction
 // (viewed/select endpoint, sendTurn).
-export async function ensureResumed(id: string): Promise<void> {
+//
+// Returns a `ResumeOutcome` rather than throwing on a blocked resume: this fires
+// on every conversation open, so its failure arm has to be something the caller
+// can render. A blocked outcome deliberately leaves BOTH `status` and
+// `hibernatedAt` untouched — the conversation stays a normal hibernated,
+// still-active entry in the user's list. Losing track of a conversation because
+// its checkout was reclaimed would be a worse bug than the one being reported.
+export async function ensureResumed(id: string): Promise<ResumeOutcome> {
   const row = await getConversation(id);
   if (!row) throw new Error(`Conversation ${id} not found`);
-  if (!row.hibernatedAt) return;
-  if (!row.claudeSessionId) {
-    throw new Error(`Conversation ${id} is hibernated but has no saved Claude session to resume`);
-  }
+  if (!row.hibernatedAt) return { kind: "not-hibernated" };
+
+  const preflight = preflightResume(row);
+  if (preflight.kind === "blocked") return preflight;
 
   await respawnResume(row);
   await setConversationHibernated(id, null);
+  return { kind: "resumed" };
 }

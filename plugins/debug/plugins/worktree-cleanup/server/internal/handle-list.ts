@@ -1,16 +1,28 @@
-import { listAttempts, listTasks } from "@plugins/tasks/plugins/tasks-core/server";
+import {
+  listAttempts,
+  listTasks,
+} from "@plugins/tasks/plugins/tasks-core/server";
 import { listDatabases } from "@plugins/database/plugins/admin/server";
 import { ensureMainWorktreeRoot } from "@plugins/infra/plugins/worktree/server";
 import { ndjsonResponse } from "@plugins/infra/plugins/ndjson-stream/server";
 import { type WorktreeEntry } from "../../shared/endpoints";
 import { dirExists } from "./reap";
-import { canClassifyOrphans, dirAgeMs, readWorktreeDirs, type WorktreeDir } from "./dirs";
+import {
+  canClassifyOrphans,
+  dirAgeMs,
+  readWorktreeDirs,
+  type WorktreeDir,
+} from "./dirs";
 import { getGitHygiene, isTaskDeletable, isSafeToReap } from "./safety";
 
 const CONCURRENCY = 50;
 
 // Run `fn` over `items` with at most `limit` concurrent executions.
-async function pMap<T, R>(items: T[], limit: number, fn: (item: T) => Promise<R>): Promise<R[]> {
+async function pMap<T, R>(
+  items: T[],
+  limit: number,
+  fn: (item: T) => Promise<R>,
+): Promise<R[]> {
   const results: R[] = new Array(items.length);
   let index = 0;
 
@@ -21,7 +33,9 @@ async function pMap<T, R>(items: T[], limit: number, fn: (item: T) => Promise<R>
     }
   }
 
-  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, worker));
+  await Promise.all(
+    Array.from({ length: Math.min(limit, items.length) }, worker),
+  );
   return results;
 }
 
@@ -47,6 +61,11 @@ async function buildEntry(
   }
 
   const taskDeletable = isTaskDeletable(task?.status);
+  // Passing `retained` here is what finally makes the badge and the reaper agree.
+  // The reaper has always had a separate early-return for this (formerly on
+  // `attempt.active`) that `isSafeToReap` knew nothing about, so the UI happily
+  // showed "safe to delete" for attempts the reaper would never touch — the exact
+  // drift the shared predicate exists to prevent.
   const isSafe = isSafeToReap({
     dirExists: exists,
     dbPresent,
@@ -54,6 +73,7 @@ async function buildEntry(
     isDirty,
     taskDeletable,
     ageMs: Date.now() - attempt.createdAt.getTime(),
+    retained: attempt.retained,
   });
 
   return {
@@ -82,7 +102,10 @@ async function buildEntry(
 // lose" everywhere. It deliberately does NOT mirror the reaper's 90-day floor for
 // dir orphans — no row's `isSafe` has ever mirrored the hard floor, which exists
 // to reap abandoned work, not to certify it as safe.
-async function buildOrphanEntry(dir: WorktreeDir, dbSet: Set<string>): Promise<WorktreeEntry> {
+async function buildOrphanEntry(
+  dir: WorktreeDir,
+  dbSet: Set<string>,
+): Promise<WorktreeEntry> {
   const now = Date.now();
   const ageMs = await dirAgeMs(dir.path, now);
   const dbPresent = dbSet.has(dir.name);
@@ -107,6 +130,10 @@ async function buildOrphanEntry(dir: WorktreeDir, dbSet: Set<string>): Promise<W
       isDirty,
       taskDeletable: true,
       ageMs,
+      // No attempt row exists for a dir orphan, so there is no conversation that
+      // could still be open — nothing to retain it on this axis. The hygiene
+      // checks above are what protect it.
+      retained: false,
     }),
   };
 }
@@ -143,7 +170,9 @@ export function handleList(): Response {
     // canClassifyOrphans; the pane then lists exactly what it always did.
     if (canClassifyOrphans()) {
       const seen = new Set(attempts.map((a) => a.id));
-      const orphanDirs = (await readWorktreeDirs(root)).filter((d) => !seen.has(d.name));
+      const orphanDirs = (await readWorktreeDirs(root)).filter(
+        (d) => !seen.has(d.name),
+      );
       await pMap(orphanDirs, CONCURRENCY, async (dir) => {
         emit({ item: await buildOrphanEntry(dir, dbSet) });
       });

@@ -16,7 +16,8 @@
 // A channel may ALSO carry the other field (boot / duress-episodes feed BOTH a
 // report and the timeline); whichever fields are present are validated.
 
-export type ChannelConsumer = "report" | "timeline" | "rendering-only" | "internal";
+export type ChannelConsumer =
+  "report" | "timeline" | "rendering-only" | "internal";
 
 export interface ChannelAccounting {
   consumer: ChannelConsumer;
@@ -40,6 +41,11 @@ export const ACCOUNTING: Record<string, ChannelAccounting> = {
     reportKind: "duress-episode",
     timelineSource: "duress",
     note: "Sentinel duress trip/clear lines. Each episode files the duress-episode report (on clear) AND renders as a timeline duress band.",
+  },
+  "worktree-removal": {
+    consumer: "report",
+    reportKind: "worktree-removed-externally",
+    note: "Worktree checkout removal audit (infra/worktree/removal-audit). Two line kinds: `in-app` (every removeWorktree call, with caller) is forensic detail, and `disappeared` is the signal — a checkout that vanishes with no in-app line claiming it files the worktree-removed-externally report. The in-app lines exist to make that NEGATIVE evidence conclusive: without them, 'nothing we did explains this' is an inference rather than a fact. Deduped per worktree name so a burst (the 2026-08-09 event took 22 checkouts) collapses onto one task.",
   },
 
   // ── Continuous health series: timeline heat strips (never a report). ──────

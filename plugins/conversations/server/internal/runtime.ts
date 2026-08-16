@@ -8,7 +8,7 @@ import {
   rewindLastUserTurn,
   type Turn,
 } from "./claude-transcript";
-import { ensureResumed } from "./lifecycle";
+import { ensureResumed, ResumeBlockedError } from "./lifecycle";
 
 export type { Turn };
 
@@ -107,7 +107,14 @@ export async function sendTurn(id: string, text: string): Promise<void> {
   // A queued/meta-prompt turn must never be sent into a dead pane: if the
   // conversation is hibernated, transparently resume it (`claude --resume`)
   // before sending. No-op for live conversations.
-  await ensureResumed(id);
+  //
+  // A blocked resume must abort the send. Falling through would type the turn
+  // into whatever pane happens to answer to this id — including, when the
+  // worktree checkout is gone, one that tmux silently started in $HOME.
+  const resumed = await ensureResumed(id);
+  if (resumed.kind === "blocked") {
+    throw new ResumeBlockedError(resumed.reason, resumed.message);
+  }
   const row = await getConversationRuntime(id);
   if (!row) throw new Error(`Conversation ${id} not found`);
   await Runtime.get(row.runtime).send(id, text);
@@ -143,10 +150,15 @@ export async function readConversationTurns(
   id: string,
   since?: string,
 ): Promise<Turn[]> {
-  return readTurnsFromChain(await resolveConversationTranscriptPaths(id), since);
+  return readTurnsFromChain(
+    await resolveConversationTranscriptPaths(id),
+    since,
+  );
 }
 
-export async function rewindConversationTurn(id: string): Promise<string | null> {
+export async function rewindConversationTurn(
+  id: string,
+): Promise<string | null> {
   const paths = await resolveConversationTranscriptPaths(id);
   // The LIVE TAIL ONLY. `rewindLastUserTurn` truncates the file it is handed, and
   // the Stop button calls this on every stopped turn; truncating an ancestor would

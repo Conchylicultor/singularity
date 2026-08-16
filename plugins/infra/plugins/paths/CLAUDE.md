@@ -63,6 +63,7 @@
     - `infra/launcher`
     - `infra/warmup`
     - `infra/worktree`
+    - `infra/worktree/removal-audit`
     - `packages/host-semaphore`
     - `packages/signal-origin/sink`
     - `plugin-meta/plugin-health`

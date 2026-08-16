@@ -34,15 +34,49 @@ import {
 // `GROUP BY attempt_id` membership). `has_conv` is a constant `true` marker (like
 // the view) — a missing row reads as NULL = "no conversation" after the LEFT JOIN.
 //
+// TWO DISTINCT LIVENESS NOTIONS — do not confuse them (this cost a fleet of
+// worktrees once; see the `retained` column in views.ts):
+//
+//   has_live_conv  ⇔  status NOT IN ('gone','done')   "a process is expected"
+//     The PROGRESS notion. `gone` means the runtime process vanished, so nothing
+//     is running and nothing will run until someone resumes. Drives the DISPLAY
+//     derivations: attempts_v.status (in_progress / pushed) and, through
+//     attempts_v.active, tasks_v's in_progress / need_action / blocked branches.
+//
+//   has_open_conv  ⇔  status <> 'done'                "the user still owns this"
+//     The RETENTION notion, and the one any DESTRUCTIVE consumer must read.
+//     `done` is the ONLY terminal status — it is written exclusively by an
+//     explicit close (`exit_clean` / the UI Exit actions → markConversationClosed).
+//     `gone` is NOT terminal: it is precisely the state `resumeConversation`
+//     REQUIRES to allow a resume, so a `gone` conversation is a conversation the
+//     user can still come back to. Matches `isActiveStatus()`
+//     (conversations/server/status.ts) and `conversations_v.active`, which have
+//     always used `status <> 'done'`.
+//
+// Reading the progress notion as if it were the retention notion is what let the
+// worktree reaper delete the checkouts of live-but-dormant conversations: a pane
+// killed to reclaim resources wrote `gone`, which flipped has_live_conv false,
+// which flipped attempts_v.active false, which retired the reaper's "never reap
+// an active attempt" guard.
+//
 // `ATTEMPT_CONV_AGG_TABLE` MUST appear literally on the CREATE TABLE line (the
 // imperative-create-table-allowlisted check enforces this); it is interpolated.
+//
+// The trailing ALTER is how a rollup evolves its shape: `CREATE TABLE IF NOT
+// EXISTS` is a no-op against an existing table, so a new column would never reach
+// a DB that already has the rollup. `ADD COLUMN IF NOT EXISTS` is idempotent and
+// covers both paths (fresh DB → created by the CREATE above; existing DB → added
+// here), and the boot reconcile below fills it from source on the same boot, so no
+// backfill migration is needed. A rollup is derived state — never a migration.
 const convCreateDdl = `
 CREATE TABLE IF NOT EXISTS ${ATTEMPT_CONV_AGG_TABLE} (
   attempt_id    text PRIMARY KEY,
   has_conv      boolean     NOT NULL,
   has_live_conv boolean,
+  has_open_conv boolean,
   max_ended_at  timestamptz
 );
+ALTER TABLE ${ATTEMPT_CONV_AGG_TABLE} ADD COLUMN IF NOT EXISTS has_open_conv boolean;
 `;
 
 // One STATEMENT-level maintenance function shared by all three triggers. It reads
@@ -65,15 +99,17 @@ BEGIN
     SELECT c.attempt_id,
            true AS has_conv,
            bool_or(c.status NOT IN ('gone', 'done')) AS has_live_conv,
+           bool_or(c.status <> 'done') AS has_open_conv,
            max(c.ended_at) AS max_ended_at
     FROM conversations c
     WHERE c.attempt_id = ANY(affected_attempt_ids)
     GROUP BY c.attempt_id
   ), upserted AS (
-    INSERT INTO attempt_conv_agg (attempt_id, has_conv, has_live_conv, max_ended_at)
-    SELECT * FROM agg
+    INSERT INTO attempt_conv_agg (attempt_id, has_conv, has_live_conv, has_open_conv, max_ended_at)
+    SELECT attempt_id, has_conv, has_live_conv, has_open_conv, max_ended_at FROM agg
     ON CONFLICT (attempt_id) DO UPDATE SET
       has_conv = EXCLUDED.has_conv, has_live_conv = EXCLUDED.has_live_conv,
+      has_open_conv = EXCLUDED.has_open_conv,
       max_ended_at = EXCLUDED.max_ended_at
     RETURNING attempt_id
   )
@@ -111,14 +147,16 @@ BEGIN
       SELECT c.attempt_id,
              true AS has_conv,
              bool_or(c.status NOT IN ('gone', 'done')) AS has_live_conv,
+             bool_or(c.status <> 'done') AS has_open_conv,
              max(c.ended_at) AS max_ended_at
       FROM conversations c
       GROUP BY c.attempt_id
     ), upserted AS (
-      INSERT INTO attempt_conv_agg (attempt_id, has_conv, has_live_conv, max_ended_at)
-      SELECT * FROM agg
+      INSERT INTO attempt_conv_agg (attempt_id, has_conv, has_live_conv, has_open_conv, max_ended_at)
+      SELECT attempt_id, has_conv, has_live_conv, has_open_conv, max_ended_at FROM agg
       ON CONFLICT (attempt_id) DO UPDATE SET
         has_conv = EXCLUDED.has_conv, has_live_conv = EXCLUDED.has_live_conv,
+        has_open_conv = EXCLUDED.has_open_conv,
         max_ended_at = EXCLUDED.max_ended_at
       RETURNING attempt_id
     )

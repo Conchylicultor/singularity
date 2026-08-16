@@ -18,7 +18,15 @@ import {
 export const _attemptConvAgg = pgTable(ATTEMPT_CONV_AGG_TABLE, {
   attemptId: text("attempt_id").primaryKey(),
   hasConv: boolean("has_conv").notNull(),
+  // PROGRESS notion: `status NOT IN ('gone','done')` — a process is expected to
+  // be running. Feeds attempts_v.status and attempts_v.active (DISPLAY only).
   hasLiveConv: boolean("has_live_conv"),
+  // RETENTION notion: `status <> 'done'` — the user has not explicitly finished
+  // with it, so its worktree/DB are still theirs. Feeds attempts_v.retained.
+  // Every DESTRUCTIVE consumer reads this one, never hasLiveConv: `gone` is the
+  // state a conversation must be in to be RESUMABLE, so it is not terminal.
+  // See rollup-spec.ts for the full rationale.
+  hasOpenConv: boolean("has_open_conv"),
   maxEndedAt: timestamp("max_ended_at", { withTimezone: true }),
 });
 
