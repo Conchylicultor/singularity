@@ -1,8 +1,12 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { Pane } from "@plugins/primitives/plugins/pane/web";
 import { prototypesGalleryPane, prototypeDetailPane } from "./panes";
+import { ViewModeSwitcher, ImproveButton } from "./components/detail-actions";
 
 export { prototypesGalleryPane, prototypeDetailPane } from "./panes";
+export { ScaledIframe } from "./components/scaled-iframe";
+export { usePrototypeDetail } from "./context";
+export type { PrototypeViewMode, PrototypeDetailContextValue } from "./context";
 
 export default {
   description:
@@ -10,5 +14,13 @@ export default {
   contributions: [
     Pane.Register({ pane: prototypesGalleryPane }),
     Pane.Register({ pane: prototypeDetailPane }),
+    // The detail pane's header IS its action bar: every control in it is a
+    // contribution, so sibling plugins (e.g. Present) extend it without
+    // touching this plugin.
+    prototypeDetailPane.Actions({
+      component: ViewModeSwitcher,
+      position: "left",
+    }),
+    prototypeDetailPane.Actions({ component: ImproveButton }),
   ],
 } satisfies PluginDefinition;

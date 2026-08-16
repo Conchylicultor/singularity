@@ -396,6 +396,7 @@ guard: `confirmDialog` (`imperative-dialog/plugins/confirm`); native
     - `apps/pages/page-tree`
     - `apps/pages/trash`
     - `apps/prototypes/gallery`
+    - `apps/prototypes/present`
     - `apps/sonata/audio/metronome`
     - `apps/sonata/library`
     - `apps/sonata/piano-roll`

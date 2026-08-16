@@ -1,0 +1,84 @@
+import { MdAutoAwesome } from "react-icons/md";
+import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { SegmentedControl } from "@plugins/primitives/plugins/css/plugins/toggle-chip/web";
+import { LaunchAgentPopover } from "@plugins/primitives/plugins/launch/web";
+import { toast } from "@plugins/shell/plugins/notifications/web";
+import { conversationRoute } from "@plugins/conversations/core";
+import { agentManagerApp } from "@plugins/apps/plugins/agent-manager/plugins/shell/core";
+import { usePrototypeDetail, type PrototypeViewMode } from "../context";
+
+/**
+ * The detail pane's header controls, each a zero-prop contribution to
+ * `prototypeDetailPane.Actions` — the standard pane extension point, so any
+ * plugin can add a control beside these without this file changing (the
+ * Present menu is one such contribution, from a sibling plugin).
+ */
+
+const MODE_OPTIONS = [
+  { id: "focus" as const, label: "Focus" },
+  { id: "compare" as const, label: "Compare" },
+];
+
+/** Focus | Compare — picks which stage the pane body paints. */
+export function ViewModeSwitcher() {
+  const { mode, setMode } = usePrototypeDetail();
+  return (
+    <SegmentedControl<PrototypeViewMode>
+      options={MODE_OPTIONS}
+      value={mode}
+      onChange={setMode}
+    />
+  );
+}
+
+// The prompt every "Improve this prototype" agent starts from. It names exactly
+// one folder: an iterating agent has no more reason to read a sibling prototype
+// than a fresh one does, and this is the only instruction guaranteed to reach it.
+function improveText(name: string): string {
+  return [
+    `Iterate on the \`${name}\` UI prototype.`,
+    "",
+    `Edit the files under \`prototypes/${name}/\` — that folder and nothing else.`,
+    "Do not open any other prototype's folder. Saving reloads the open iframe",
+    "automatically.",
+    "",
+    "Keep it self-contained: flat files referenced relatively, JSX inline, and it",
+    "must still render when double-clicked straight off disk (`file://`).",
+    "`prototypes/CLAUDE.md` is the full contract.",
+  ].join("\n");
+}
+
+/** Launches an agent to iterate on the open prototype. */
+export function ImproveButton() {
+  const { name } = usePrototypeDetail();
+  return (
+    <LaunchAgentPopover
+      trigger={
+        <Button variant="outline">
+          <MdAutoAwesome />
+          Improve
+        </Button>
+      }
+      title="Improve prototype"
+      description={`Launch an agent to iterate on the ${name} prototype.`}
+      placeholder="What should change? (optional)"
+      align="end"
+      onLaunched={(conv) => {
+        toast({
+          type: "prototype",
+          title: "Improving prototype",
+          description:
+            "Agent launched in the background — open it from here or the bell.",
+          variant: "info",
+          linkTo: conversationRoute.link(agentManagerApp, { convId: conv.id }),
+        });
+      }}
+      getRequest={(userText) => {
+        const parts = [improveText(name)];
+        if (userText.trim())
+          parts.push(`Additional context: ${userText.trim()}`);
+        return { prompt: parts.join("\n\n") };
+      }}
+    />
+  );
+}

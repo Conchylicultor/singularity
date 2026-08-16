@@ -65,6 +65,7 @@ pane-relative overlay) or
   - Exports (values): `ViewportOverlay`
 - Cross-plugin:
   - Imported by:
+    - `apps/prototypes/present`
     - `apps/sonata/audio/metronome`
     - `debug/queue`
     - `improve/element-picker`

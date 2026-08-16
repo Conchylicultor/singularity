@@ -9,7 +9,9 @@ import {
  * A prototype mounted in a sandboxed iframe, scaled to fit its container.
  *
  * The container is the scaling box: it measures its own size and computes a
- * scale that fits the prototype's fixed `viewport`, never upscaling past 1.
+ * scale that fits the prototype's fixed `viewport`, never upscaling past 1 —
+ * unless `upscale` is set, which presentation surfaces pass so the prototype
+ * grows to fill a screen instead of sitting small in the middle of it.
  * The iframe is a rigid leaf fixed at the prototype's native `viewport` size,
  * shrunk via `transform: scale()` (the old `Stage`). The inner wrapper reserves
  * the scaled-down layout box so the iframe sits flush at the top-left.
@@ -21,10 +23,13 @@ export function ScaledIframe({
   meta,
   version,
   title,
+  upscale = false,
 }: {
   meta: PrototypeMeta;
   version: number;
   title?: string;
+  /** Allow a scale above 1, so the prototype fills a larger presentation area. */
+  upscale?: boolean;
 }) {
   const [containerRef, { width, height }] = useElementSize<HTMLDivElement>();
   // Default to 1 (not 0): the iframe must ALWAYS mount so it loads, even before
@@ -32,13 +37,11 @@ export function ScaledIframe({
   // mount (a ResizeObserver timing race) left the frame permanently absent. The
   // observer only ever refines the scale down to fit; overflow-hidden clips the
   // at-most-one-frame overshoot before it settles.
-  const scale = useMemo(
-    () =>
-      width && height
-        ? Math.min(width / meta.viewport.w, height / meta.viewport.h, 1)
-        : 1,
-    [width, height, meta.viewport.w, meta.viewport.h],
-  );
+  const scale = useMemo(() => {
+    if (!width || !height) return 1;
+    const fit = Math.min(width / meta.viewport.w, height / meta.viewport.h);
+    return upscale ? fit : Math.min(fit, 1);
+  }, [width, height, meta.viewport.w, meta.viewport.h, upscale]);
 
   const src = prototypeUrl(meta.name, { v: version });
 

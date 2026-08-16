@@ -2489,11 +2489,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - **`gallery`** — Prototypes gallery list pane and the Focus/Compare detail pane (scaled live iframes), with an Improve this prototype affordance.
           - Web:
             - Slots:
-              - `prototypeDetailPane.Actions`
+              - `prototypeDetailPane.Actions` ← `apps.prototypes.gallery`, `apps.prototypes.present`
               - `prototypesGalleryPane.Actions`
             - Contributes:
               - `Pane.Register` "prototypes-gallery"
               - `Pane.Register` "prototypes-detail"
+              - `prototypeDetailPane.Actions` → `ViewModeSwitcher`
+              - `prototypeDetailPane.Actions` → `ImproveButton`
             - Uses:
               - `primitives/css/text.Text`
               - `primitives/css/toggle-chip.SegmentedControl`
@@ -2511,9 +2513,38 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/pane.PaneChrome`
               - `primitives/pane.useOpenPane`
               - `shell/notifications.toast`
+            - Exports (types):
+              - `PrototypeDetailContextValue`
+              - `PrototypeViewMode`
             - Exports (values):
               - `prototypeDetailPane`
               - `prototypesGalleryPane`
+              - `ScaledIframe`
+              - `usePrototypeDetail`
+          - Cross-plugin:
+            - Imported by: `apps/prototypes/present`
+        - **`present`** — Present a prototype without the app around it: filling this browser tab, filling the screen (Fullscreen API), or opened as its own document in a new browser tab. Contributed into the detail pane's Actions.
+          - Web:
+            - Contributes: `prototypeDetailPane.Actions` → `PresentMenu`
+            - Uses:
+              - `apps/prototypes/gallery.prototypeDetailPane`
+              - `apps/prototypes/gallery.ScaledIframe`
+              - `primitives/css/pin.Pin`
+              - `primitives/css/text.Text`
+              - `primitives/css/ui-kit.Button`
+              - `primitives/css/ui-kit.cn`
+              - `primitives/css/ui-kit.DropdownMenu`
+              - `primitives/css/ui-kit.DropdownMenuContent`
+              - `primitives/css/ui-kit.DropdownMenuItem`
+              - `primitives/css/ui-kit.DropdownMenuTrigger`
+              - `primitives/css/viewport-overlay.ViewportOverlay`
+              - `primitives/hover-reveal.hoverRevealGroup`
+              - `primitives/hover-reveal.hoverRevealTarget`
+              - `primitives/icon-button.IconButton`
+              - `primitives/live-state.matchResource`
+              - `primitives/live-state.useCombinedResources`
+              - `primitives/live-state.useResource`
+              - `primitives/loading.Loading`
         - **`shell`** — App shell for Prototypes. Registers the /prototypes app entry and renders the gallery + Focus/Compare detail panes in a Miller layout.
           - Web:
             - Contributes: `Apps.App` "Prototypes" → `PrototypesLayout`
@@ -14515,6 +14546,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/mail/threads`
               - `apps/pages/history`
               - `apps/pages/page-tree`
+              - `apps/prototypes/present`
               - `code-explorer`
               - `conversations/conversation-category`
               - `conversations/conversation-view/jsonl-viewer`
@@ -20520,6 +20552,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps-core/surface/solo`
               - `apps/browser/webview`
               - `apps/pages/page-tree`
+              - `apps/prototypes/present`
               - `apps/sonata/notation`
               - `apps/sonata/piano-roll`
               - `apps/sonata/primitives/keyboard`
@@ -21383,6 +21416,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/pages/welcome/quick-create`
               - `apps/pages/welcome/recent-pages`
               - `apps/prototypes/gallery`
+              - `apps/prototypes/present`
               - `apps/sonata/audio/metronome`
               - `apps/sonata/library`
               - `apps/sonata/piano-roll`
@@ -21886,6 +21920,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/pages/page-tree`
               - `apps/pages/trash`
               - `apps/prototypes/gallery`
+              - `apps/prototypes/present`
               - `apps/sonata/audio/metronome`
               - `apps/sonata/library`
               - `apps/sonata/piano-roll`
@@ -22170,6 +22205,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Exports (values): `ViewportOverlay`
           - Cross-plugin:
             - Imported by:
+              - `apps/prototypes/present`
               - `apps/sonata/audio/metronome`
               - `debug/queue`
               - `improve/element-picker`
@@ -23361,6 +23397,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `active-data`
           - `apps-core/surface/floating`
           - `apps/pages/page-tree`
+          - `apps/prototypes/present`
           - `apps/sonata/progress/loop`
           - `apps/sonata/progress/sections`
           - `config_v2/settings`
@@ -23409,6 +23446,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/pages/page-tree`
           - `apps/pages/starred`
           - `apps/pages/trash`
+          - `apps/prototypes/present`
           - `apps/sonata/audio/engine`
           - `apps/sonata/audio/metronome`
           - `apps/sonata/library`
@@ -23830,6 +23868,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/pages/welcome/recent-pages`
           - `apps/prototypes/files`
           - `apps/prototypes/gallery`
+          - `apps/prototypes/present`
           - `apps/settings/config`
           - `apps/sonata/library`
           - `apps/sonata/playback-history`
@@ -24007,6 +24046,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/pages/trash`
           - `apps/pages/welcome/recent-pages`
           - `apps/prototypes/gallery`
+          - `apps/prototypes/present`
           - `apps/sonata/library`
           - `apps/sonata/sources/ultimate-guitar`
           - `apps/story/render`

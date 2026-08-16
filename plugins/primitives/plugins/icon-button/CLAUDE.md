@@ -62,6 +62,7 @@ stateful-indicator children; a justified one-off (e.g. a per-model glyph size
     - `apps/pages/page-tree`
     - `apps/pages/starred`
     - `apps/pages/trash`
+    - `apps/prototypes/present`
     - `apps/sonata/audio/engine`
     - `apps/sonata/audio/metronome`
     - `apps/sonata/library`

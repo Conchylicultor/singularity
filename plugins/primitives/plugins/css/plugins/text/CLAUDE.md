@@ -181,6 +181,7 @@ fixed raw size escapes per-site via
     - `apps/pages/welcome/quick-create`
     - `apps/pages/welcome/recent-pages`
     - `apps/prototypes/gallery`
+    - `apps/prototypes/present`
     - `apps/sonata/audio/metronome`
     - `apps/sonata/library`
     - `apps/sonata/piano-roll`

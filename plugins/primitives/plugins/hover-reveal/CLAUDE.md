@@ -41,6 +41,7 @@ remove button — the user is editing that row. The reveal ends when focus leave
     - `active-data`
     - `apps-core/surface/floating`
     - `apps/pages/page-tree`
+    - `apps/prototypes/present`
     - `apps/sonata/progress/loop`
     - `apps/sonata/progress/sections`
     - `config_v2/settings`

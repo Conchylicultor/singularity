@@ -86,6 +86,7 @@ offsets expressible on the semantic ramp.
     - `apps-core/surface/solo`
     - `apps/browser/webview`
     - `apps/pages/page-tree`
+    - `apps/prototypes/present`
     - `apps/sonata/notation`
     - `apps/sonata/piano-roll`
     - `apps/sonata/primitives/keyboard`
