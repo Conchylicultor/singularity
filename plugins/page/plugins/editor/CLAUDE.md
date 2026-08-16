@@ -648,10 +648,10 @@ The cheapest-looking design — "depth = the caret's format diverges from its
 node's" — is **aliased by three shipped mechanisms**, each of which produces that
 divergence with no escape step anywhere in the interaction:
 
-1. **`FormatShortcutsPlugin`'s Cmd+E** fires on a collapsed caret by design, and
-   Lexical's collapsed branch of `formatText` is a pure selection toggle — so
-   Cmd+E at the end of a `` `xxxx` `` run yields `format = N \ {code}`,
-   **bit-identical** to depth 1.
+1. **Every row of `FormatShortcutsPlugin`'s table** (not just the Cmd+E the e2e
+   drives) fires on a collapsed caret by design, and Lexical's collapsed branch
+   of `formatText` is a pure selection toggle — so Cmd+E at the end of a
+   `` `xxxx` `` run yields `format = N \ {code}`, **bit-identical** to depth 1.
 2. **`applyInlineFormat`** snapshots `preFormat` and restores it onto the
    post-transform caret, so **every** successful autoformat lands at `format = 0`
    on a marked node — the single most common path in the editor.

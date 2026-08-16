@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import {
   FORMAT_TEXT_COMMAND,
-  KEY_MODIFIER_COMMAND,
+  KEY_DOWN_COMMAND,
   COMMAND_PRIORITY_NORMAL,
   type TextFormatType,
 } from "lexical";
@@ -14,13 +14,31 @@ import { OPEN_LINK_POPOVER_COMMAND } from "../internal/link-command";
  * Lexical toggles the format for subsequently typed text, the standard editor
  * behavior, which the floating toolbar (range-only) cannot cover.
  *
- * Ownership: we register the FULL set explicitly via `KEY_MODIFIER_COMMAND` and
- * consume each match (`return true`), rather than relying on `RichTextPlugin`'s
- * built-in Cmd+B/I/U. `RichTextPlugin` only wires bold/italic/underline; code and
- * strikethrough have no built-in. Owning all five in one place keeps the shortcut
- * map a single closed source of truth and avoids a split between "framework
- * defaults" and "ours". Because this handler returns `true` for the marks it
- * owns, the framework default never double-fires.
+ * Ownership: we register the FULL set explicitly and consume each match
+ * (`return true`), rather than relying on Lexical's built-in Cmd+B/I/U. Lexical
+ * only wires bold/italic/underline; code and strikethrough have no built-in.
+ * Owning all five in one place keeps the shortcut map a single closed source of
+ * truth and avoids a split between "framework defaults" and "ours".
+ *
+ * THE COMMAND IS `KEY_DOWN_COMMAND`, AND THAT IS THE WHOLE MECHANISM — DO NOT
+ * MOVE IT BACK TO `KEY_MODIFIER_COMMAND`. This handler used to listen on
+ * `KEY_MODIFIER_COMMAND`, on the theory that consuming it stopped the framework
+ * default. It does not, and cannot: in `lexical@0.44.0` (`Lexical.dev.mjs`)
+ * `$handleKeyDown` — the built-in `KEY_DOWN_COMMAND` listener, registered at
+ * `COMMAND_PRIORITY_EDITOR` (:2430) — dispatches `FORMAT_TEXT_COMMAND` from its
+ * own `isBold` / `isUnderline` / `isItalic` branches (:2938-2946) and only THEN,
+ * outside that if/else chain, dispatches `KEY_MODIFIER_COMMAND` (:2974-2976). So
+ * ⌘B produced two `FORMAT_TEXT_COMMAND('bold')` dispatches — Lexical's, then
+ * ours — which toggled the mark on and straight back off. ⌘B, ⌘I and ⌘U applied
+ * nothing at all for as long as that registration stood, while ⌘E and ⌘⇧X (no
+ * built-in branch, so one dispatch) worked.
+ *
+ * Listening on `KEY_DOWN_COMMAND` at `COMMAND_PRIORITY_NORMAL` makes the claim
+ * true instead of aspirational: `triggerCommandListeners` walks priorities 4 → 0
+ * and stops at the first listener returning `true` (:8912-8929), so consuming
+ * here preempts the ENTIRE built-in chain — the format branch and the trailing
+ * `KEY_MODIFIER_COMMAND` dispatch alike. Exactly one dispatch per shortcut, ours.
+ * Spec: `e2e/format-shortcuts-verify.ts`.
  */
 const SHORTCUTS: { key: string; shift: boolean; format: TextFormatType }[] = [
   { key: "b", shift: false, format: "bold" },
@@ -35,10 +53,11 @@ export function FormatShortcutsPlugin() {
 
   useEffect(() => {
     return editor.registerCommand(
-      KEY_MODIFIER_COMMAND,
+      KEY_DOWN_COMMAND,
       (event: KeyboardEvent) => {
         // Cmd (mac) or Ctrl (win/linux) only; ignore Alt to avoid clobbering
-        // accented-character / compose input.
+        // accented-character / compose input. Checked first because this
+        // listener now sees EVERY keystroke, not only modified ones.
         const mod = event.metaKey || event.ctrlKey;
         if (!mod || event.altKey) return false;
         const key = event.key.toLowerCase();

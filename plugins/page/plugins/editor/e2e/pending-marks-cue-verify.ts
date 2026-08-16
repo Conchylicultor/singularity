@@ -401,15 +401,16 @@ await withBrowser(async (h) => {
   // kind today. The three reads also pin the LABEL CONTRACT: the set is rendered
   // in `bold italic underline strikethrough code` order, so `{bold, code}` is
   // "bold code" and never "code bold".
-  // KNOWN PRODUCT BUG — the two `BOLD_MARK` reads below FAIL as of 2026-08-09,
-  // and the cue is right to say so. Cmd+B arms nothing in this editor: a probe
-  // against the PERSISTED runs (so it does not depend on the chip) found that a
-  // collapsed caret + Cmd+B leaves the next typed character unmarked, and a text
-  // range + Cmd+B leaves the range unmarked, while Cmd+E through the SAME
-  // `format-shortcuts-plugin.tsx` table works in the same run. Do NOT weaken
-  // these two to match: they assert the behaviour the shortcut table promises,
-  // and they are the first thing that has ever made the defect visible — nothing
-  // displayed a collapsed caret's pending marks before this cue existed.
+  //
+  // The two `BOLD_MARK` reads below FAILED from 2026-08-09 to 2026-08-16, and the
+  // cue was right to say so: ⌘B (and ⌘I and ⌘U) armed nothing, because Lexical
+  // dispatched the format once from its own keydown branch and this editor's
+  // shortcut table dispatched it again, toggling the mark straight back off. They
+  // were deliberately left red rather than weakened, and they are what made a
+  // defect visible that nothing had ever displayed before this cue existed. Fixed
+  // in `format-shortcuts-plugin.tsx` (read its header) — the shortcut table now
+  // has its own spec in `format-shortcuts-verify.ts`, so a regression here would
+  // be a second signal rather than the only one.
   const p4 = await enterNewBlock(page, pageId);
   await page.keyboard.type("plain", { delay: 25 });
   await page.waitForTimeout(KEYSTROKE_MS);

@@ -81,6 +81,7 @@ import {
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 import type { Page } from "playwright";
 import { blockText, caretState, openBlankPage } from "./support/blank-page";
+import { makeRunsReader } from "./support/runs";
 
 const base = baseUrl();
 const out = arg("out", "/tmp/mark-boundary");
@@ -116,63 +117,13 @@ const TRANSFORM_MS = 500;
  */
 const FORMAT_WINDOW_MS = 700;
 
-/** Doc flush + the ~1s `data.text` projection, before a persisted-row read. */
-const PROJECTION_MS = 2500;
-
 /** A structural op (the Backspace merge in phase 4c) reaching the rows. */
 const OP_MS = 1500;
 
 // --- persisted-row reads ------------------------------------------------------
 
-/** A run exactly as `data.text` stores it — `marks` is absent when empty. */
-interface StoredRun {
-  text: string;
-  marks?: string[];
-  color?: string;
-  link?: string;
-}
-interface BlockRow {
-  id: string;
-  type: string;
-  data?: { text?: StoredRun[] } | null;
-}
-/** The shape the assertions compare, so an absent `marks` reads as `[]`. */
-interface NormRun {
-  text: string;
-  marks: string[];
-}
-
-async function fetchRows(pageId: string): Promise<Map<string, BlockRow>> {
-  const res = await fetch(`${base}/api/pages/${pageId}/blocks`);
-  if (!res.ok) throw new Error(`blocks fetch ${res.status}`);
-  const rows = (await res.json()) as BlockRow[];
-  return new Map(
-    rows.filter((row) => row.type !== "page").map((row) => [row.id, row]),
-  );
-}
-
-/**
- * A row's runs, normalized to `{text, marks}`.
- *
- * `report.eq` compares by `JSON.stringify`, so key ORDER would otherwise be part
- * of the assertion — normalizing here keeps the expected literals honest (and
- * `marks: []` an explicit claim rather than a missing key).
- */
-const runsOf = (row: BlockRow | undefined): NormRun[] =>
-  (row?.data?.text ?? []).map((run) => ({
-    text: run.text,
-    marks: run.marks ?? [],
-  }));
-
-/** One row's runs, after letting the doc flush and the projection run. */
-async function settledRuns(
-  page: Page,
-  pageId: string,
-  blockId: string,
-): Promise<NormRun[]> {
-  await page.waitForTimeout(PROJECTION_MS);
-  return runsOf((await fetchRows(pageId)).get(blockId));
-}
+/** Shared with `format-shortcuts-verify.ts` — see `support/runs.ts`. */
+const { fetchRows, settledRuns } = makeRunsReader(base);
 
 // --- DOM reads ----------------------------------------------------------------
 
