@@ -17,6 +17,7 @@ import {
   setLiveStore,
   setHistoryAdapter,
   defaultHistoryAdapter,
+  setAppNavigator,
   type ParsedRoute,
   type PaneSlot,
   type PaneStore,
@@ -774,9 +775,18 @@ export function TabsProvider({ children }: { children: ReactNode }): ReactNode {
   // Publish the cross-app navigator at module scope so out-of-provider callers
   // (the floating bar, a sibling Core.Root) can reach it via the free
   // `navigate()` export. Mirrors the pane primitive's `setLiveStore` handle.
+  //
+  // The pane primitive gets the same function through its own sink: a pane that
+  // names a home app must be able to reach that app when promoted, and the pane
+  // layer sits BELOW this one (tabs imports pane), so it cannot call in
+  // directly. Same seam shape as `setHistoryAdapter` above.
   useEffect(() => {
     setTabsNavigator(navigate);
-    return () => setTabsNavigator(null);
+    setAppNavigator(navigate);
+    return () => {
+      setTabsNavigator(null);
+      setAppNavigator(null);
+    };
   }, [navigate]);
 
   const closeTab = useCallback(

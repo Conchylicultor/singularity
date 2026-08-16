@@ -1,7 +1,18 @@
 import type { ReactElement } from "react";
-import { useResource, matchResource } from "@plugins/primitives/plugins/live-state/web";
-import { Pane, PaneChrome, useOpenPane } from "@plugins/primitives/plugins/pane/web";
-import { DataView, defineDataView } from "@plugins/primitives/plugins/data-view/web";
+import {
+  useResource,
+  matchResource,
+} from "@plugins/primitives/plugins/live-state/web";
+import {
+  Pane,
+  PaneChrome,
+  useOpenPane,
+} from "@plugins/primitives/plugins/pane/web";
+import { agentManagerApp } from "@plugins/apps/plugins/agent-manager/plugins/shell/core";
+import {
+  DataView,
+  defineDataView,
+} from "@plugins/primitives/plugins/data-view/web";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import type { Conversation } from "@plugins/tasks/plugins/tasks-core/core";
@@ -12,6 +23,7 @@ const ALL_CONVERSATIONS_VIEW = defineDataView("all-conversations");
 
 export const allConversationsPane = Pane.define({
   id: "all-conversations",
+  app: agentManagerApp,
   segment: "all-conversations",
   component: AllConversationsView,
   width: 720,
@@ -38,7 +50,8 @@ function AllConversationsView(): ReactElement {
         views={["table", "list"]}
         dataSource={{
           changeTick,
-          fetchPage: (args) => fetchEndpoint(queryConversations, {}, { body: args }),
+          fetchPage: (args) =>
+            fetchEndpoint(queryConversations, {}, { body: args }),
         }}
         onRowActivate={(c) =>
           openPane(conversationPane, { convId: c.id }, { mode: "push" })

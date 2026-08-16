@@ -452,10 +452,6 @@
       "name": "@singularity/plugin-apps-pages-history",
       "version": "0.0.1",
     },
-    "plugins/apps/plugins/pages/plugins/open-in-app": {
-      "name": "@singularity/plugin-apps-pages-open-in-app",
-      "version": "0.0.1",
-    },
     "plugins/apps/plugins/pages/plugins/page-tree": {
       "name": "@singularity/plugin-apps-pages-page-tree",
       "version": "0.0.1",
@@ -3931,6 +3927,10 @@
       "name": "@singularity/plugin-primitives-lazy-component",
       "version": "0.0.1",
     },
+    "plugins/primitives/plugins/link-gesture": {
+      "name": "@singularity/plugin-primitives-link-gesture",
+      "version": "0.0.1",
+    },
     "plugins/primitives/plugins/live-state": {
       "name": "@singularity/plugin-primitives-live-state",
       "version": "0.0.1",
@@ -5637,8 +5637,6 @@
 
     "@singularity/plugin-apps-pages-history": ["@singularity/plugin-apps-pages-history@workspace:plugins/apps/plugins/pages/plugins/history"],
 
-    "@singularity/plugin-apps-pages-open-in-app": ["@singularity/plugin-apps-pages-open-in-app@workspace:plugins/apps/plugins/pages/plugins/open-in-app"],
-
     "@singularity/plugin-apps-pages-page-tree": ["@singularity/plugin-apps-pages-page-tree@workspace:plugins/apps/plugins/pages/plugins/page-tree"],
 
     "@singularity/plugin-apps-pages-prompt-origin": ["@singularity/plugin-apps-pages-prompt-origin@workspace:plugins/apps/plugins/pages/plugins/prompt-origin"],
@@ -7282,6 +7280,8 @@
     "@singularity/plugin-primitives-launch": ["@singularity/plugin-primitives-launch@workspace:plugins/primitives/plugins/launch"],
 
     "@singularity/plugin-primitives-lazy-component": ["@singularity/plugin-primitives-lazy-component@workspace:plugins/primitives/plugins/lazy-component"],
+
+    "@singularity/plugin-primitives-link-gesture": ["@singularity/plugin-primitives-link-gesture@workspace:plugins/primitives/plugins/link-gesture"],
 
     "@singularity/plugin-primitives-live-state": ["@singularity/plugin-primitives-live-state@workspace:plugins/primitives/plugins/live-state"],
 

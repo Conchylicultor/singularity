@@ -405,6 +405,39 @@ Two rules the fixture encodes, both of which have bitten:
 Suites that only drive a `PaneStore` object (`pane-isolation`, `history-sink`)
 need no surface at all — the fixture adds nothing there.
 
+## A pane's home app, and what Expand means
+
+`Pane.define({ app })` names the app a pane **belongs to** — not wherever it is
+being rendered. Panes are reusable chrome: the agent manager hosts the page
+detail beside a conversation, and Pages could host a conversation the same way.
+
+Expand (the `MdOpenInFull` button in `PaneChrome`, `usePromote()`) reads it and
+picks one of two destinations:
+
+- **hosted by another app** → hand the pane's app-rooted URL to the tab manager,
+  so it lands in its own app with that app's whole surface around it. Offered
+  even at route position 0 — `/agents/page/X` is a page stranded in the agent
+  manager, which is precisely the case worth fixing.
+- **hosted by its own app** → the original behavior: drop the ancestors and
+  re-root the route here. Only meaningful below the root.
+
+Cross-app needs a declared `app`, a route-backed pane (a legacy segment pane has
+no `RouteDef`, so there is no URL to build), and an installed navigator; missing
+any of the three degrades silently to the same-app branch. `app` is optional
+ONLY because the ~90 existing panes are being annotated incrementally — an
+unannotated pane is not a decision, it is a to-do.
+
+**Why a sink for the navigation.** `apps-core/tabs` imports this primitive, so
+this primitive cannot import it back. Tabs installs its `navigate` into
+`app-nav-sink` at provider mount, exactly as it installs its history adapter —
+the pane layer calls a cross-app destination without knowing tabs exists.
+
+Read that sink through `useCanNavigateApp()`, never the imperative
+`canNavigateApp()`. Installation happens in an EFFECT, so a pane mounting in the
+same commit as the tab provider asks before the answer exists; an unsubscribed
+read caches "nowhere to go" for the life of the pane, and whether Expand appears
+comes down to whether that pane's plugin loaded before or after the provider.
+
 ## Not yet implemented (deferred)
 
 - `keepalive` for heavy panes — switching slots remounts by default.
@@ -440,6 +473,7 @@ See "Open questions" in the design doc.
     - `primitives/element-size.useResizeObserver`
     - `primitives/icon-button.IconButton`
     - `primitives/latest-ref.useLatestRef`
+    - `primitives/link-gesture.linkGestureProps`
     - `primitives/loading.Loading`
     - `primitives/select-scope.ContentScope`
     - `primitives/slot-render.renderIsolated`
@@ -447,6 +481,7 @@ See "Open questions" in the design doc.
     - `primitives/tooltip.WithTooltip`
   - Exports (types):
     - `AnyPane`
+    - `AppNavigator`
     - `Hint`
     - `HistoryAdapter`
     - `InferParams`
@@ -501,6 +536,7 @@ See "Open questions" in the design doc.
     - `parseUrl`
     - `reorderRoute`
     - `restoreRoute`
+    - `setAppNavigator`
     - `setBasePath`
     - `setHistoryAdapter`
     - `setLiveStore`

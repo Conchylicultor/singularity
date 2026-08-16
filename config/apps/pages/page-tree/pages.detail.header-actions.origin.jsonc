@@ -1,4 +1,4 @@
-// @hash faa6cbbb1783
+// @hash 83d722b8e10f
 {
   // Item: "<key>" (terse; <key> is "<pluginId>:<id>")
   // Hide: { "item": "<key>", "hidden": true }
@@ -7,7 +7,6 @@
   // Overflow (⋯ menu): { "type": "overflow", "id": "<unique-id>", "items": [ "<key>", … ] }
   "items": [
     "apps.pages.history:history",
-    "apps.pages.open-in-app:open-in-app",
     "apps.pages.starred:star"
   ]
 }

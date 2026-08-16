@@ -1,11 +1,13 @@
 import type { ReactNode } from "react";
 import { Pane, PaneChrome } from "@plugins/primitives/plugins/pane/web";
+import { agentManagerApp } from "@plugins/apps/plugins/agent-manager/plugins/shell/core";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 import { CommitDiffView } from "./components/commit-diff-view";
 import { useCommitInfo, type CommitInfoState } from "./use-commit-info";
 
 export const commitDetailPane = Pane.define({
   id: "commit-detail",
+  app: agentManagerApp,
   segment: "commit/:worktree/:sha",
   component: CommitDetailBody,
   chrome: { history: false },

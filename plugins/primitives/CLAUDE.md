@@ -48,6 +48,7 @@
   - **`latest-ref`** — Latest-value ref idiom as a primitive: useLatestRef(value) mirrors the latest value into a ref written in render (read only in callbacks/effects), and useEventCallback(fn) is the stable-identity callback built on it. The single sanctioned home + exemption for the idiom, so react-hooks/refs can be enforced at error.
   - **`launch`** — Reusable split [model dropdown | launch] control for creating conversations.
   - **`lazy-component`** — Pairs React.lazy with its own Suspense boundary so a heavy component is code-split off the eager plugin-boot wave, loading on first mount instead.
+  - **`link-gesture`** — The browser's link gestures as spreadable handler props: plain click opens here, ⌘/Ctrl- and middle-click open elsewhere. A <button> gets none of this for free, so every navigating control reads it from one place.
   - **`live-state`** — Server live-state primitive: useResource hook + NotificationsProvider + NotificationsClient. Thin TanStack Query wrapper over the app's leader-elected /ws/notifications channel.
   - **`loading`** — Single entry point for the loading state: text / spinner / skeleton-rows / skeleton-cards / shimmer-block variants composing Placeholder and Spinner, with a built-in CSS delay-before-show (~120ms) so fast loads never flash.
   - **`log-channels`** — Persistent log-channel substrate: clientLog browser emitter that buffers and flushes log lines over plain HTTP to the per-worktree JSONL files. Server barrel owns Log/persist/registry and the /api/logs/* + /ws/logs routes; debug/logs is the viewer.

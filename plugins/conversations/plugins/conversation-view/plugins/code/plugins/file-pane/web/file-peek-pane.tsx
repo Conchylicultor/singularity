@@ -1,4 +1,9 @@
-import { Pane, PaneChrome, useOpenPane } from "@plugins/primitives/plugins/pane/web";
+import {
+  Pane,
+  PaneChrome,
+  useOpenPane,
+} from "@plugins/primitives/plugins/pane/web";
+import { agentManagerApp } from "@plugins/apps/plugins/agent-manager/plugins/shell/core";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { useEditedFiles } from "@plugins/conversations/plugins/conversation-view/plugins/code/web";
@@ -19,6 +24,7 @@ function fileTitle(filePath: string): string {
 
 export const filePeekPane = Pane.define({
   id: "file-peek",
+  app: agentManagerApp,
   segment: "file/:worktree/:filePath*",
   component: FilePeekPaneBody,
   chrome: {
@@ -39,7 +45,9 @@ function FilePeekPaneBody() {
 
   const lineMatch = rawFilePath.match(/:(\d+)$/);
   const line = lineMatch ? parseInt(lineMatch[1]!, 10) : undefined;
-  const filePath = lineMatch ? rawFilePath.slice(0, -lineMatch[0]!.length) : rawFilePath;
+  const filePath = lineMatch
+    ? rawFilePath.slice(0, -lineMatch[0]!.length)
+    : rawFilePath;
 
   const resolved = useResolvedFile(worktree, filePath);
 
@@ -57,7 +65,8 @@ function FilePeekPaneBody() {
   const status =
     filesResult.pending || !filesResult.data.resolved
       ? "clean"
-      : (filesResult.data.value.find((f) => f.path === effectivePath)?.status ?? "clean");
+      : (filesResult.data.value.find((f) => f.path === effectivePath)?.status ??
+        "clean");
   const renderers = useFileRenderers({ path: effectivePath, status });
 
   if (resolved.status === "loading") {
@@ -67,7 +76,11 @@ function FilePeekPaneBody() {
         title={<FilepathBreadcrumb path={filePath} />}
         hideRightActions
       >
-        <Text as="div" variant="body" className="px-md py-sm text-muted-foreground">
+        <Text
+          as="div"
+          variant="body"
+          className="px-md py-sm text-muted-foreground"
+        >
           Resolving…
         </Text>
       </PaneChrome>
@@ -85,10 +98,14 @@ function FilePeekPaneBody() {
           query={filePath}
           matches={resolved.matches}
           onSelect={(fp) =>
-            openPane(filePeekPane, {
-              worktree,
-              filePath: line != null ? `${fp}:${line}` : fp,
-            }, { mode: "swap" })
+            openPane(
+              filePeekPane,
+              {
+                worktree,
+                filePath: line != null ? `${fp}:${line}` : fp,
+              },
+              { mode: "swap" },
+            )
           }
         />
       </PaneChrome>

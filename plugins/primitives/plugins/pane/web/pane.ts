@@ -8,7 +8,11 @@ import {
   type ComponentType,
   type ReactNode,
 } from "react";
-import { defineSlot, getDeferredLoadState, type Slot } from "@plugins/framework/plugins/web-sdk/core";
+import {
+  defineSlot,
+  getDeferredLoadState,
+  type Slot,
+} from "@plugins/framework/plugins/web-sdk/core";
 import type { PluginId } from "@plugins/framework/plugins/plugin-id/core";
 import { SurfaceIdContext } from "@plugins/primitives/plugins/surface-id/web";
 import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
@@ -27,9 +31,13 @@ import {
   setLiveStoreAccessor,
   type SerializedSlot,
 } from "./history-sink";
+import { useCanNavigateApp, navigateApp } from "./app-nav-sink";
 import type { PaneHeaderZones } from "./components/pane-header-item";
 
-export type { PaneHeaderZones, PaneToolbarItem } from "./components/pane-header-item";
+export type {
+  PaneHeaderZones,
+  PaneToolbarItem,
+} from "./components/pane-header-item";
 
 export type { InferParams } from "../core";
 
@@ -42,25 +50,29 @@ export type { InferParams } from "../core";
 
 type ParamName<S extends string> = S extends `${infer N}*` ? N : S;
 
-type ExtractParams<Path extends string> = Path extends `${infer Seg}/${infer Rest}`
-  ? (Seg extends `:${infer P}` ? { [K in ParamName<P>]: string } : {}) &
-      ExtractParams<Rest>
-  : Path extends `:${infer P}`
-    ? { [K in ParamName<P>]: string }
-    : {};
+type ExtractParams<Path extends string> =
+  Path extends `${infer Seg}/${infer Rest}`
+    ? (Seg extends `:${infer P}` ? { [K in ParamName<P>]: string } : {}) &
+        ExtractParams<Rest>
+    : Path extends `:${infer P}`
+      ? { [K in ParamName<P>]: string }
+      : {};
 
 // ---------------------------------------------------------------------------
 // Resolve hook — mandatory for parameterized panes, opt-out with `false`.
 // ---------------------------------------------------------------------------
 
-export type ResolveHook<Params extends Record<string, string>> =
-  (params: Params) => { pending: boolean; found: boolean };
+export type ResolveHook<Params extends Record<string, string>> = (
+  params: Params,
+) => { pending: boolean; found: boolean };
 
 // Tests the RAW extraction (`{}` for a paramless path → keyof never), NOT
 // `InferParams`: the latter now normalizes the empty case to
 // `Record<string, never>` whose `keyof` is `string | number`, which would
 // misreport every paramless pane as paramful.
-type HasParams<Path extends string> = keyof ExtractParams<Path> extends never ? false : true;
+type HasParams<Path extends string> = keyof ExtractParams<Path> extends never
+  ? false
+  : true;
 
 type ResolveField<Path extends string> =
   HasParams<Path> extends true
@@ -150,7 +162,10 @@ export interface Hint<T extends object> {
    * defined (a canonical `null` wins — that is a real value), otherwise the
    * opener's optimistic hint, itself `undefined` on a rebuilt route.
    */
-  pick<K extends keyof T>(key: K, canonical: T[K] | undefined): T[K] | undefined;
+  pick<K extends keyof T>(
+    key: K,
+    canonical: T[K] | undefined,
+  ): T[K] | undefined;
 }
 
 function makeHint(bag: PaneHintBag): Hint<Record<string, unknown>> {
@@ -251,6 +266,18 @@ export interface PaneInternal {
    * empty main area at its bare root.
    */
   appPath?: string;
+  /**
+   * The app this pane BELONGS to — its home, not wherever it happens to be
+   * rendered. A pane is reusable chrome: the agent manager hosts the page
+   * detail beside a conversation, and Pages could host a conversation the same
+   * way. Declaring the home is what lets Promote mean "show this on its own,
+   * in the app it belongs to" instead of stranding it in the host app.
+   *
+   * Optional only because the ~90 existing panes are annotated incrementally;
+   * an unannotated pane keeps the original same-app promote. See the pane
+   * CLAUDE.md.
+   */
+  app?: AppRef;
   component: ComponentType;
   chrome: NormalizedChrome;
   /** Default column width in pixels. Read by layout renderers (e.g. Miller). */
@@ -460,8 +487,7 @@ export type ParsedRoute =
   | { status: "unresolved"; rawPath: string }; // a segment matched no registered pane
 
 export function parseUrl(pathname: string): ParsedRoute {
-  const normalized =
-    pathname === "/" ? "" : pathname.replace(/^\/+|\/+$/g, "");
+  const normalized = pathname === "/" ? "" : pathname.replace(/^\/+|\/+$/g, "");
   const urlSegments = normalized ? normalized.split("/") : [];
 
   let cursor = 0;
@@ -587,7 +613,11 @@ export interface PaneStore {
   handleLocationChange(): void;
   reorderRoute(fromIndex: number, toIndex: number): void;
   restoreRoute(
-    slots: Array<{ paneId: string; params: Record<string, string>; options?: PaneOptions }>,
+    slots: Array<{
+      paneId: string;
+      params: Record<string, string>;
+      options?: PaneOptions;
+    }>,
   ): void;
   clearRoute(): void;
   /** Resolve the current route to a `PaneMatch` (memo-friendly, per-store). */
@@ -642,7 +672,12 @@ function createPaneStore(opts: { live: boolean } = { live: false }): PaneStore {
     // state must not outlive the navigation that created it, or it comes back as
     // stale data on the very paths (reload, back/forward) that have no opener to
     // vouch for it. Rebuilt routes carry `hint = {}` and read canonical instead.
-    const serialized: SerializedSlot[] = route.map(s => ({ paneId: s.paneId, params: s.params, options: s.options, uuid: s.uuid }));
+    const serialized: SerializedSlot[] = route.map((s) => ({
+      paneId: s.paneId,
+      params: s.params,
+      options: s.options,
+      uuid: s.uuid,
+    }));
     const fullUrl = applyBasePath(url);
     if (fullUrl === currentRoutePath() && replace) return;
     // Emit a push/replace INTENT through the installed history adapter — the
@@ -669,10 +704,16 @@ function createPaneStore(opts: { live: boolean } = { live: false }): PaneStore {
   }
 
   function restoreRoute(
-    slots: Array<{ paneId: string; params: Record<string, string>; options?: PaneOptions }>,
+    slots: Array<{
+      paneId: string;
+      params: Record<string, string>;
+      options?: PaneOptions;
+    }>,
   ): void {
     if (typeof window === "undefined") return;
-    const route: PaneSlot[] = slots.map((s) => createSlot(s.paneId, s.params, s.options ?? {}));
+    const route: PaneSlot[] = slots.map((s) =>
+      createSlot(s.paneId, s.params, s.options ?? {}),
+    );
     if (route.length === 0) return;
     setRoute(route);
   }
@@ -704,7 +745,10 @@ function createPaneStore(opts: { live: boolean } = { live: false }): PaneStore {
     if (parsed.status === "matched") {
       // A matched parse always wins (equality-guarded, as today) — the URL now
       // resolves to concrete panes.
-      if (currentState.kind === "resolved" && routesEqual(currentState.slots, parsed.slots)) {
+      if (
+        currentState.kind === "resolved" &&
+        routesEqual(currentState.slots, parsed.slots)
+      ) {
         return;
       }
       currentState = { kind: "resolved", slots: parsed.slots };
@@ -765,7 +809,7 @@ function createPaneStore(opts: { live: boolean } = { live: false }): PaneStore {
         });
       }
     }
-    prevResolvedByUuid = new Map(entries.map(e => [e.uuid, e]));
+    prevResolvedByUuid = new Map(entries.map((e) => [e.uuid, e]));
     return { panes: entries };
   }
 
@@ -788,7 +832,12 @@ function createPaneStore(opts: { live: boolean } = { live: false }): PaneStore {
     // navigated while focused (held in memory).
     if (!store.live) return;
     const state = window.history.state as {
-      route?: Array<{ paneId: string; params: Record<string, string>; options?: PaneOptions; uuid?: string }>;
+      route?: Array<{
+        paneId: string;
+        params: Record<string, string>;
+        options?: PaneOptions;
+        uuid?: string;
+      }>;
       pending?: string;
     } | null;
     if (state?.route) {
@@ -797,8 +846,14 @@ function createPaneStore(opts: { live: boolean } = { live: false }): PaneStore {
       // reads only `route`/`pending`. `routesEqual` compares options only, so a
       // no-op rebuild leaves an in-memory hint intact; only a genuine
       // back/forward rebuilds the slot without it.
-      const newRoute = state.route.map(s => createSlot(s.paneId, s.params, s.options ?? {}, {}, s.uuid));
-      if (currentState.kind === "resolved" && routesEqual(currentState.slots, newRoute)) return;
+      const newRoute = state.route.map((s) =>
+        createSlot(s.paneId, s.params, s.options ?? {}, {}, s.uuid),
+      );
+      if (
+        currentState.kind === "resolved" &&
+        routesEqual(currentState.slots, newRoute)
+      )
+        return;
       currentState = { kind: "resolved", slots: newRoute };
       notifyRouteListeners();
     } else if (typeof state?.pending === "string") {
@@ -834,14 +889,22 @@ function createPaneStore(opts: { live: boolean } = { live: false }): PaneStore {
       if (existingIdx >= 0) {
         const existing = route[existingIdx]!;
         const sameParams =
-          Object.keys(ownParams).length === Object.keys(existing.params).length &&
-          Object.keys(ownParams).every((k) => ownParams[k] === existing.params[k]);
+          Object.keys(ownParams).length ===
+            Object.keys(existing.params).length &&
+          Object.keys(ownParams).every(
+            (k) => ownParams[k] === existing.params[k],
+          );
         // Identity is (paneId, params, options). A hint is not identity: two
         // opens that differ only by their optimistic hint must dedupe to the
         // same slot, or the pane remounts (or stacks) for a display-only value.
         if (sameParams && sameOptions(options, existing.options)) return;
         const newRoute = route.slice(0, existingIdx + 1);
-        newRoute[existingIdx] = createSlot(internal.id, ownParams, options, hint);
+        newRoute[existingIdx] = createSlot(
+          internal.id,
+          ownParams,
+          options,
+          hint,
+        );
         setRoute(newRoute, replace);
         return;
       }
@@ -853,13 +916,16 @@ function createPaneStore(opts: { live: boolean } = { live: false }): PaneStore {
       const ancestorInternal = registry.get(ancestor.id);
       if (!ancestorInternal) continue;
       // Inherit params from existing route if available
-      const existingSlot = route.find(s => s.paneId === ancestor.id);
+      const existingSlot = route.find((s) => s.paneId === ancestor.id);
       const ancestorParams = existingSlot
         ? existingSlot.params
         : extractOwnParams(ancestorInternal, params);
       ancestorSlots.push(createSlot(ancestor.id, ancestorParams));
     }
-    setRoute([...ancestorSlots, createSlot(internal.id, ownParams, options, hint)], replace);
+    setRoute(
+      [...ancestorSlots, createSlot(internal.id, ownParams, options, hint)],
+      replace,
+    );
   }
 
   function close(internal: PaneInternal, instanceId: number): void {
@@ -892,7 +958,10 @@ function createPaneStore(opts: { live: boolean } = { live: false }): PaneStore {
     }
     // Options carry forward (they are the pane's configuration); the hint does
     // not — promoting is a navigation, and the promoted pane re-reads canonical.
-    openPaneImpl(internal, fullParams, { root: true, options: route[idx]!.options });
+    openPaneImpl(internal, fullParams, {
+      root: true,
+      options: route[idx]!.options,
+    });
   }
 
   const store: PaneStore = {
@@ -1029,7 +1098,9 @@ function useStoreOrLive(): PaneStore {
 // `useActiveApp`/`useCurrentAppId` fall back to the URL-derived focused app.
 // ---------------------------------------------------------------------------
 
-export const PaneSurfaceAppContext = createContext<string | undefined>(undefined);
+export const PaneSurfaceAppContext = createContext<string | undefined>(
+  undefined,
+);
 
 export function useSurfaceAppId(): string | undefined {
   return useContext(PaneSurfaceAppContext);
@@ -1150,7 +1221,11 @@ export function reorderRoute(fromIndex: number, toIndex: number): void {
 }
 
 export function restoreRoute(
-  slots: Array<{ paneId: string; params: Record<string, string>; options?: PaneOptions }>,
+  slots: Array<{
+    paneId: string;
+    params: Record<string, string>;
+    options?: PaneOptions;
+  }>,
 ): void {
   liveStore.restoreRoute(slots);
 }
@@ -1176,7 +1251,11 @@ export function getBasePath(): string {
 
 function useRouteSlots(): PaneSlot[] {
   const store = usePaneStore();
-  return useSyncExternalStore(store.subscribeRoute, store.getRouteSnapshot, () => []);
+  return useSyncExternalStore(
+    store.subscribeRoute,
+    store.getRouteSnapshot,
+    () => [],
+  );
 }
 
 /**
@@ -1251,7 +1330,9 @@ function extractOwnParams(
 // active-page highlight stay dead for months: "there is no surface" and "this
 // pane is not in the route" were the same value, so the broken case looked
 // exactly like the normal one. See {@link useMatchOrThrow}.
-export const PaneMatchContext = createContext<PaneMatch | null | undefined>(undefined);
+export const PaneMatchContext = createContext<PaneMatch | null | undefined>(
+  undefined,
+);
 export const PaneInstanceContext = createContext<number | undefined>(undefined);
 
 /**
@@ -1280,7 +1361,7 @@ export function useCurrentPane(): PaneInternal | null {
   const match = useMatchOrThrow();
   const instanceId = useContext(PaneInstanceContext);
   if (!match || instanceId === undefined) return null;
-  return match.panes.find(e => e.instanceId === instanceId)?.pane ?? null;
+  return match.panes.find((e) => e.instanceId === instanceId)?.pane ?? null;
 }
 
 // ---------------------------------------------------------------------------
@@ -1418,8 +1499,13 @@ export interface PaneObject<
   promote(instanceId: number): void;
   /** Hook: returns a bound close function for the current instance, or null if root/not in route. */
   useClose(): (() => void) | null;
-  /** Hook: returns a bound promote function for the current instance, or null if root/not in route. */
-  usePromote(): (() => void) | null;
+  /**
+   * Hook: returns a bound promote function for the current instance, or null
+   * when there is nothing to promote to (this pane is already the root of its
+   * own app's route, or it is not in the route at all). Pass `{ newTab: true }`
+   * to land a cross-app promote in a new tab instead of this one.
+   */
+  usePromote(): ((opts?: { newTab?: boolean }) => void) | null;
   /** Hook: toggle this pane open/closed relative to the caller's position in the route. */
   useToggle(
     params: FullParams,
@@ -1463,7 +1549,7 @@ function makePaneObject(
       );
     }
     if (instanceId !== undefined) {
-      const entry = match.panes.find(e => e.instanceId === instanceId);
+      const entry = match.panes.find((e) => e.instanceId === instanceId);
       if (entry?.pane === internal) return entry.params;
     }
     const entry = match.panes.find((e) => e.pane === internal);
@@ -1504,7 +1590,13 @@ function makePaneObject(
     if (!match) return null;
     const entry = match.panes.find((e) => e.pane === internal);
     if (!entry) return null;
-    return { instanceId: entry.instanceId, uuid: entry.uuid, params: entry.params, fullParams: entry.fullParams, options: entry.options };
+    return {
+      instanceId: entry.instanceId,
+      uuid: entry.uuid,
+      params: entry.params,
+      fullParams: entry.fullParams,
+      options: entry.options,
+    };
   }
 
   function useRouteEntries(): PaneRouteEntry[] {
@@ -1512,7 +1604,13 @@ function makePaneObject(
     if (!match) return [];
     return match.panes
       .filter((e) => e.pane === internal)
-      .map((e) => ({ instanceId: e.instanceId, uuid: e.uuid, params: e.params, fullParams: e.fullParams, options: e.options }));
+      .map((e) => ({
+        instanceId: e.instanceId,
+        uuid: e.uuid,
+        params: e.params,
+        fullParams: e.fullParams,
+        options: e.options,
+      }));
   }
 
   // Imperative methods on the PaneObject target the live store (the focused
@@ -1551,17 +1649,53 @@ function makePaneObject(
     }, [store, instanceId, route]);
   }
 
-  function usePromote(): (() => void) | null {
+  /**
+   * Promote = "show this pane on its own, in the app it belongs to".
+   *
+   * Two destinations, decided by where the pane currently IS:
+   *
+   *  • **Another app is hosting it** (the pane named a home app and this
+   *    surface is not it) — hand its app-rooted URL to the tab manager. This is
+   *    offered even at route position 0, because "you are in the wrong app" is
+   *    itself something to fix: `/agents/page/X` is a page stranded in the
+   *    agent manager, with none of Pages' own surface around it.
+   *  • **Its own app is hosting it** — the original behavior: drop the
+   *    ancestors and re-root the route here. Only meaningful below the root,
+   *    hence the `idx === 0` bail.
+   *
+   * Cross-app needs three things to be true, and quietly degrades to the
+   * same-app branch when any is missing: a declared home app, a route-backed
+   * pane (a legacy segment pane has no `RouteDef`, so there is no URL to
+   * build), and an installed navigator (see `app-nav-sink`).
+   */
+  function usePromote(): ((opts?: { newTab?: boolean }) => void) | null {
     const store = usePaneStore();
     const instanceId = useContext(PaneInstanceContext);
-    const route = useRouteSlots();
+    const slots = useRouteSlots();
+    const surfaceAppId = useSurfaceAppId();
+    // Subscribed, not read imperatively: the navigator is installed in an
+    // effect, so a pane that mounted in the same commit as the tab provider
+    // would otherwise cache "nowhere to go" for its whole life.
+    const canNavigate = useCanNavigateApp();
     return useMemo(() => {
       if (instanceId === undefined) return null;
-      const idx = route.findIndex((s) => s.instanceId === instanceId);
+      const idx = slots.findIndex((s) => s.instanceId === instanceId);
       if (idx < 0) return null;
+
+      const home = internal.app;
+      const away = !!home && !!route && home.id !== surfaceAppId && canNavigate;
+      if (away) {
+        // Params accumulate down the chain, so a pane's own URL needs every
+        // ancestor's params too — the same walk `store.promote` does.
+        const params: Record<string, string> = {};
+        for (let i = 0; i <= idx; i++) Object.assign(params, slots[i]!.params);
+        const url = route!.link(home!, params);
+        return (opts?: { newTab?: boolean }) => navigateApp(url, opts);
+      }
+
       if (idx === 0) return null;
       return () => store.promote(internal, instanceId);
-    }, [store, instanceId, route]);
+    }, [store, instanceId, slots, surfaceAppId, canNavigate]);
   }
 
   function useToggle(
@@ -1681,6 +1815,8 @@ type DefineArgs<
    * bare app-root URL resolve to this pane instead of the global welcome.
    */
   appPath?: string;
+  /** The app this pane belongs to. See {@link PaneInternal.app}. */
+  app?: AppRef;
   component: ComponentType;
   /**
    * Literal DEFAULTS for this pane's opener-supplied UI options. Read via
@@ -1752,6 +1888,8 @@ type RouteDefineArgs<
    * `path` equals this value. Only meaningful for root-segment panes.
    */
   appPath?: string;
+  /** The app this pane belongs to. See {@link PaneInternal.app}. */
+  app?: AppRef;
   component: ComponentType;
   /** Literal defaults for the pane's opener-supplied UI options. See {@link DefineArgs.options}. */
   options?: Options;
@@ -1840,15 +1978,19 @@ function define(
     position?: "left" | "right";
   }>(`pane.${id}.actions`);
 
-  const resolve = "resolve" in args ? (args.resolve as PaneInternal["resolve"]) : undefined;
+  const resolve =
+    "resolve" in args ? (args.resolve as PaneInternal["resolve"]) : undefined;
 
   const internal: PaneInternal = {
     id,
     defaultAncestors,
     segment,
     appPath: args.appPath,
+    app: args.app,
     component: args.component,
-    chrome: normalizeChrome(args.chrome as PaneChromeConfig<unknown> | undefined),
+    chrome: normalizeChrome(
+      args.chrome as PaneChromeConfig<unknown> | undefined,
+    ),
     width: args.width,
     actionsSlot,
     resolve,
@@ -1892,7 +2034,11 @@ export function useSyncPaneRegistry(): void {
       }
       // Index/empty-segment panes resolve via `appPath`, not URL matching, so
       // multiple empty segments are legal — only check real URL segments.
-      if (internal.segment && internal.segment !== "/" && internal.segment !== "") {
+      if (
+        internal.segment &&
+        internal.segment !== "/" &&
+        internal.segment !== ""
+      ) {
         const pattern = normalizeSegmentPattern(internal.segment);
         const owner = patternOwner.get(pattern);
         if (owner) {
@@ -1939,8 +2085,12 @@ export function useRoute(): PaneMatch | null {
   // identity (which tracks the registry, same as `useIndexMatch`) re-resolves the
   // instant the target pane's plugin loads — e.g. an instant-restored deep link.
   const contributions = PaneSlots.Register.useContributions();
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- `contributions` identity tracks the module-level registry Map read inside resolveRoute; it is the registry-version signal, not an unused dep.
-  return useMemo(() => store.resolveRoute(route), [store, route, contributions]);
+  /* eslint-disable react-hooks/exhaustive-deps -- `contributions` identity tracks the module-level registry Map read inside resolveRoute; it is the registry-version signal, not an unused dep. Block form, not next-line: this call is long enough for the formatter to reflow, which would carry a positional directive off it. */
+  return useMemo(
+    () => store.resolveRoute(route),
+    [store, route, contributions],
+  );
+  /* eslint-enable react-hooks/exhaustive-deps */
 }
 
 /**
@@ -2121,7 +2271,11 @@ export function useOpenPane(): OpenPaneFn {
       const hint = opts.hint ?? {};
 
       if (opts.mode === "root" || callerInstanceId === undefined) {
-        store.openPaneImpl(targetInternal, params, { root: opts.mode === "root", options, hint });
+        store.openPaneImpl(targetInternal, params, {
+          root: opts.mode === "root",
+          options,
+          hint,
+        });
         return;
       }
 
@@ -2145,11 +2299,19 @@ export function useOpenPane(): OpenPaneFn {
       if (opts.mode === "swap" && targetInternal.id === callerPaneId) {
         const existing = currentRoute[callerIndex]!;
         const sameParams =
-          Object.keys(ownParams).length === Object.keys(existing.params).length &&
-          Object.keys(ownParams).every((k) => ownParams[k] === existing.params[k]);
+          Object.keys(ownParams).length ===
+            Object.keys(existing.params).length &&
+          Object.keys(ownParams).every(
+            (k) => ownParams[k] === existing.params[k],
+          );
         if (sameParams && sameOptions(options, existing.options)) return;
         const newRoute = currentRoute.slice(0, callerIndex + 1);
-        newRoute[callerIndex] = createSlot(targetInternal.id, ownParams, options, hint);
+        newRoute[callerIndex] = createSlot(
+          targetInternal.id,
+          ownParams,
+          options,
+          hint,
+        );
         store.setRoute(newRoute, replace);
         return;
       }

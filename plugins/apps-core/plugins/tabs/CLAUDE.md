@@ -50,9 +50,14 @@ included). A new tab is always fresh, even when the target app is the focused
 one.
 
 `appLinkProps(url)` spreads onto any control to give it browser link gestures
-(click = here, ⌘/Ctrl- or middle-click = new tab). Do NOT reach for `<a href>`:
-these URLs address *in-app* tabs, so an anchor's middle-click cold-boots a whole
-second SPA in a browser tab instead.
+(click = here, ⌘/Ctrl- or middle-click = new tab), reading them via
+`primitives/link-gesture` — the same reader the pane primitive's Expand uses. Do
+NOT reach for `<a href>`: these URLs address *in-app* tabs, so an anchor's
+middle-click cold-boots a whole second SPA in a browser tab instead.
+
+`navigate` is also installed into the pane primitive's `app-nav-sink` here, so a
+pane that declares a home app can be promoted into it. Pane sits below tabs and
+cannot import it, hence the sink.
 
 ## App instances: three different things called a "tab"
 
@@ -141,6 +146,8 @@ same browser tab from finding the blob. Both call sites are marked for removal.
     - `primitives/app-instance.readAppInstance`
     - `primitives/app-instance.stampAppInstance`
     - `primitives/latest-ref.useLatestRef`
+    - `primitives/link-gesture.linkGestureProps`
+    - `primitives/link-gesture.LinkGestureProps`
     - `primitives/pane.createPaneStore`
     - `primitives/pane.currentRoutePath`
     - `primitives/pane.defaultHistoryAdapter`
@@ -154,12 +161,12 @@ same browser tab from finding the blob. Both call sites are marked for removal.
     - `primitives/pane.parseUrl`
     - `primitives/pane.RouteState`
     - `primitives/pane.SerializedSlot`
+    - `primitives/pane.setAppNavigator`
     - `primitives/pane.setHistoryAdapter`
     - `primitives/pane.setLiveStore`
     - `primitives/pane.stripBasePath`
     - `primitives/shortcuts.setFocusedSurfaceId`
   - Exports (types):
-    - `AppLinkProps`
     - `NavigateOptions`
     - `PlacementCapabilities`
     - `Tab`
@@ -195,7 +202,6 @@ same browser tab from finding the blob. Both call sites are marked for removal.
     - `apps/deploy/composition`
     - `apps/home/app-cards`
     - `apps/mail/shell`
-    - `apps/pages/open-in-app`
     - `apps/story/pages-integration`
     - `build`
     - `config_v2/config-link`

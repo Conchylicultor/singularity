@@ -1,5 +1,9 @@
 import { Pane, PaneChrome } from "@plugins/primitives/plugins/pane/web";
-import { traceListRoute, traceDetailRoute } from "@plugins/debug/plugins/trace/plugins/engine/core";
+import { debugApp } from "@plugins/apps/plugins/debug/plugins/shell/core";
+import {
+  traceListRoute,
+  traceDetailRoute,
+} from "@plugins/debug/plugins/trace/plugins/engine/core";
 import { SlowEvents } from "./slots";
 import { TraceDetail } from "./components/trace-detail";
 
@@ -8,6 +12,7 @@ import { TraceDetail } from "./components/trace-detail";
 // SlowEvents slot.
 export const slowEventsPane = Pane.define({
   route: traceListRoute,
+  app: debugApp,
   component: SlowEventsBody,
 });
 
@@ -23,6 +28,7 @@ function SlowEventsBody() {
 // the default column to fit the timeline.
 export const traceDetailPane = Pane.define({
   route: traceDetailRoute,
+  app: debugApp,
   component: TraceDetailBody,
   width: 640,
   // No route guard — the detail self-fetches by id and renders a graceful 404

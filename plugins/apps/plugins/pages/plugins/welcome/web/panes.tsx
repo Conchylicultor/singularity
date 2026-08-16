@@ -1,11 +1,16 @@
 import { type ReactElement } from "react";
 import { Pane, PaneChrome } from "@plugins/primitives/plugins/pane/web";
+import { pagesApp } from "@plugins/apps/plugins/pages/plugins/shell/core";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
-import { Stack, Inset } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import {
+  Stack,
+  Inset,
+} from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { PagesWelcome } from "./slots";
 
 export const pagesRootPane = Pane.define({
   id: "pages-root",
+  app: pagesApp,
   // Empty segment + `appPath` makes this the Pages app's index pane: bare
   // `/pages` (basePath-stripped to "/") resolves here instead of the global
   // agent-manager welcome pane. The page tree lives in the sidebar slot, so

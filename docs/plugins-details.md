@@ -2239,19 +2239,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `defineHistorySource('pages')`
               - `defineJob('pages.history.snapshot')`
               - `defineJob('pages.history.schedule')`
-        - **`open-in-app`** — Expand action in the page-detail header, shown only when the page is open outside the Pages app: takes it to Pages in this tab, or in a new one on middle-/⌘-click.
-          - Web:
-            - Contributes: `PageDetail.HeaderActions` → `OpenInAppAction`
-            - Uses:
-              - `apps-core.useCurrentAppId`
-              - `apps-core/tabs.appLinkProps`
-              - `apps/pages/page-tree.PageDetail`
-              - `primitives/icon-button.IconButton`
         - **`page-tree`** — Sidebar page-tree plus the page-detail pane (header, editor, sections slot) for the Pages app.
           - Web:
             - Slots:
               - `PageDetail.Section` ← `apps.pages.page-tree`, `apps.story.pages-integration`
-              - `PageDetail.HeaderActions` ← `apps.pages.history`, `apps.pages.open-in-app`, `apps.pages.starred`
+              - `PageDetail.HeaderActions` ← `apps.pages.history`, `apps.pages.starred`
               - `PageTree.RowActions` ← `apps.pages.page-tree`, `apps.pages.starred`, `apps.story.pages-integration`
               - `PageTree.Fields` ← `apps.pages.agent-origin`, `apps.pages.starred`
               - `pageDetailPane.Actions`
@@ -2334,7 +2326,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/pages/agent-origin`
               - `apps/pages/content-search`
               - `apps/pages/history`
-              - `apps/pages/open-in-app`
               - `apps/pages/prompt-origin`
               - `apps/pages/starred`
               - `apps/pages/welcome/quick-create`
@@ -5671,7 +5662,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `apps/home/app-cards`
       - `apps/home/shell`
       - `apps/mail/shell`
-      - `apps/pages/open-in-app`
       - `apps/pages/shell`
       - `apps/prototypes/shell`
       - `apps/settings/shell`
@@ -6122,6 +6112,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/app-instance.readAppInstance`
           - `primitives/app-instance.stampAppInstance`
           - `primitives/latest-ref.useLatestRef`
+          - `primitives/link-gesture.linkGestureProps`
+          - `primitives/link-gesture.LinkGestureProps`
           - `primitives/pane.createPaneStore`
           - `primitives/pane.currentRoutePath`
           - `primitives/pane.defaultHistoryAdapter`
@@ -6135,12 +6127,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/pane.parseUrl`
           - `primitives/pane.RouteState`
           - `primitives/pane.SerializedSlot`
+          - `primitives/pane.setAppNavigator`
           - `primitives/pane.setHistoryAdapter`
           - `primitives/pane.setLiveStore`
           - `primitives/pane.stripBasePath`
           - `primitives/shortcuts.setFocusedSurfaceId`
         - Exports (types):
-          - `AppLinkProps`
           - `NavigateOptions`
           - `PlacementCapabilities`
           - `Tab`
@@ -6176,7 +6168,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/deploy/composition`
           - `apps/home/app-cards`
           - `apps/mail/shell`
-          - `apps/pages/open-in-app`
           - `apps/story/pages-integration`
           - `build`
           - `config_v2/config-link`
@@ -14656,7 +14647,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/events/sources/source-detail/runs`
               - `apps/mail/threads`
               - `apps/pages/history`
-              - `apps/pages/open-in-app`
               - `apps/pages/page-tree`
               - `apps/prototypes/present`
               - `code-explorer`
@@ -23582,7 +23572,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/browser/webview`
           - `apps/mail/reading-pane`
           - `apps/pages/history`
-          - `apps/pages/open-in-app`
           - `apps/pages/page-tree`
           - `apps/pages/starred`
           - `apps/pages/trash`
@@ -23902,6 +23891,14 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/graph-canvas`
           - `primitives/markdown`
           - `primitives/text-editor`
+    - **`link-gesture`** — The browser's link gestures as spreadable handler props: plain click opens here, ⌘/Ctrl- and middle-click open elsewhere. A <button> gets none of this for free, so every navigating control reads it from one place.
+      - Cross-plugin:
+        - Imported by:
+          - `apps-core/tabs`
+          - `primitives/pane`
+      - Web:
+        - Exports (types): `LinkGestureProps`
+        - Exports (values): `linkGestureProps`
     - **`live-state`** — Server live-state primitive: useResource hook + NotificationsProvider + NotificationsClient. Thin TanStack Query wrapper over the app's leader-elected /ws/notifications channel.
       - Web:
         - Uses:
@@ -24550,6 +24547,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/element-size.useResizeObserver`
           - `primitives/icon-button.IconButton`
           - `primitives/latest-ref.useLatestRef`
+          - `primitives/link-gesture.linkGestureProps`
           - `primitives/loading.Loading`
           - `primitives/select-scope.ContentScope`
           - `primitives/slot-render.renderIsolated`
@@ -24557,6 +24555,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/tooltip.WithTooltip`
         - Exports (types):
           - `AnyPane`
+          - `AppNavigator`
           - `Hint`
           - `HistoryAdapter`
           - `InferParams`
@@ -24611,6 +24610,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `parseUrl`
           - `reorderRoute`
           - `restoreRoute`
+          - `setAppNavigator`
           - `setBasePath`
           - `setHistoryAdapter`
           - `setLiveStore`

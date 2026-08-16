@@ -1,6 +1,10 @@
 import { useRef, type ReactElement } from "react";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
-import { Pane, PaneChrome, useOpenPane } from "@plugins/primitives/plugins/pane/web";
+import {
+  Pane,
+  PaneChrome,
+  useOpenPane,
+} from "@plugins/primitives/plugins/pane/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { pagesResource, pageData } from "@plugins/page/plugins/editor/core";
 import {
@@ -8,6 +12,7 @@ import {
   pagesTreeRoute,
 } from "@plugins/apps/plugins/pages/plugins/page-tree/core";
 import { Pages } from "@plugins/apps/plugins/pages/plugins/shell/web";
+import { pagesApp } from "@plugins/apps/plugins/pages/plugins/shell/core";
 import {
   BlockEditor,
   PageContentColumn,
@@ -50,6 +55,7 @@ export const pageDetailPane = Pane.define({
   // yields a single-entry chain that replaces the empty state rather than
   // sitting beside it.
   route: pageDetailRoute,
+  app: pagesApp,
   component: PageDetailBody,
   width: 720,
   chrome: { title: (params) => params.pageId },
@@ -68,6 +74,7 @@ export const pagesTreePane = Pane.define({
   // shell paints — so search, tree, trash and every future contribution appear
   // here for free and this pane never names a contributor.
   route: pagesTreeRoute,
+  app: pagesApp,
   component: PagesTreeBody,
   // Nav-column width (the repo's list-column convention); detail panes run wider.
   width: 320,
@@ -78,7 +85,9 @@ export const pagesTreePane = Pane.define({
 function PagesTreeBody(): ReactElement {
   return (
     <PaneChrome pane={pagesTreePane} title="Pages">
-      <Pages.Sidebar.Render>{(item) => <item.component />}</Pages.Sidebar.Render>
+      <Pages.Sidebar.Render>
+        {(item) => <item.component />}
+      </Pages.Sidebar.Render>
     </PaneChrome>
   );
 }
@@ -133,7 +142,11 @@ function PageDetailBody(): ReactElement {
           <Stack gap="none">
             <div className={READING_MEASURE}>
               <PageContentColumn>
-                <PageHeader pageId={pageId} body={bodyRef} titleRef={titleRef} />
+                <PageHeader
+                  pageId={pageId}
+                  body={bodyRef}
+                  titleRef={titleRef}
+                />
               </PageContentColumn>
             </div>
             <BlockEditor
@@ -141,7 +154,9 @@ function PageDetailBody(): ReactElement {
               caretBefore={titleRef}
               pageId={pageId}
               contentClassName={READING_MEASURE}
-              onOpenPage={(id) => openPane(pageDetailPane, { pageId: id }, { mode: "swap" })}
+              onOpenPage={(id) =>
+                openPane(pageDetailPane, { pageId: id }, { mode: "swap" })
+              }
             />
           </Stack>
           <div className={READING_MEASURE}>

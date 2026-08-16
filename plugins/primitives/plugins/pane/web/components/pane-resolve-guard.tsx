@@ -1,3 +1,4 @@
+import { linkGestureProps } from "@plugins/primitives/plugins/link-gesture/web";
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Bar } from "@plugins/primitives/plugins/bar/web";
 import { useState, type ComponentType, type ReactNode } from "react";
@@ -38,7 +39,10 @@ export function PaneResolveGuard({ pane, params }: Props) {
 }
 
 /** Stable per-(pane, params) key so identity changes remount the guard. */
-function resolveIdentity(paneId: string, params: Record<string, string>): string {
+function resolveIdentity(
+  paneId: string,
+  params: Record<string, string>,
+): string {
   const parts = Object.keys(params)
     .sort()
     .map((k) => `${k}=${params[k]}`);
@@ -89,9 +93,7 @@ function StickyResolveGuard({
 
   return (
     <FallbackChrome pane={pane} title="Not Found">
-      <Placeholder tone="error">
-        This resource couldn't be found.
-      </Placeholder>
+      <Placeholder tone="error">This resource couldn't be found.</Placeholder>
     </FallbackChrome>
   );
 }
@@ -127,7 +129,11 @@ function FallbackChrome({
           </Text>
           <Stack direction="row" align="center" gap="sm" className="ml-auto">
             {chrome.promote && doPromote && (
-              <Button variant="ghost" onClick={doPromote} aria-label="Promote">
+              <Button
+                variant="ghost"
+                aria-label="Expand pane"
+                {...linkGestureProps(doPromote)}
+              >
                 <MdOpenInFull className="size-4" />
               </Button>
             )}

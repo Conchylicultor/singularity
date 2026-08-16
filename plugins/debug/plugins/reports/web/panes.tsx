@@ -1,6 +1,15 @@
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
-import { Pane, PaneChrome, useOpenPane } from "@plugins/primitives/plugins/pane/web";
-import { reportsRootRoute, reportDetailRoute, reportsResource } from "@plugins/reports/core";
+import {
+  Pane,
+  PaneChrome,
+  useOpenPane,
+} from "@plugins/primitives/plugins/pane/web";
+import { debugApp } from "@plugins/apps/plugins/debug/plugins/shell/core";
+import {
+  reportsRootRoute,
+  reportDetailRoute,
+  reportsResource,
+} from "@plugins/reports/core";
 import { ReportsView } from "./components/reports-view";
 import { ReportDetail } from "./components/report-detail";
 
@@ -10,6 +19,7 @@ import { ReportDetail } from "./components/report-detail";
 
 export const reportsPane = Pane.define({
   route: reportsRootRoute,
+  app: debugApp,
   component: ReportsBody,
 });
 
@@ -21,6 +31,7 @@ function useResolveReport({ reportId }: { reportId: string }) {
 
 export const reportDetailPane = Pane.define({
   route: reportDetailRoute,
+  app: debugApp,
   component: ReportDetailBody,
   width: 480,
   resolve: useResolveReport,
@@ -34,7 +45,9 @@ function ReportsBody() {
     <PaneChrome pane={reportsPane} title="Reports">
       <ReportsView
         selectedId={selectedId}
-        onSelect={(id) => openPane(reportDetailPane, { reportId: id }, { mode: "push" })}
+        onSelect={(id) =>
+          openPane(reportDetailPane, { reportId: id }, { mode: "push" })
+        }
       />
     </PaneChrome>
   );

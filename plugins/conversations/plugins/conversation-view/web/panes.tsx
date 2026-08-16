@@ -1,13 +1,23 @@
 import { useQuery } from "@tanstack/react-query";
-import { fetchEndpoint, EndpointError } from "@plugins/infra/plugins/endpoints/web";
-import { useResource, useCombinedResources } from "@plugins/primitives/plugins/live-state/web";
+import {
+  fetchEndpoint,
+  EndpointError,
+} from "@plugins/infra/plugins/endpoints/web";
+import {
+  useResource,
+  useCombinedResources,
+} from "@plugins/primitives/plugins/live-state/web";
 import { Pane } from "@plugins/primitives/plugins/pane/web";
+import { agentManagerApp } from "@plugins/apps/plugins/agent-manager/plugins/shell/core";
 import {
   conversationsActiveResource,
   conversationsGoneResource,
   conversationsSystemResource,
 } from "@plugins/tasks/plugins/tasks-core/core";
-import { getConversation, conversationRoute } from "@plugins/conversations/core";
+import {
+  getConversation,
+  conversationRoute,
+} from "@plugins/conversations/core";
 import { useConversationById } from "@plugins/conversations/web";
 import { ConversationView } from "./components/conversation-view";
 
@@ -19,9 +29,11 @@ function useResolveConversation({ convId }: { convId: string }) {
 
   const inLive =
     !resource.pending &&
-    [...resource.data.active, ...resource.data.gone, ...resource.data.system].some(
-      (c) => c.id === convId,
-    );
+    [
+      ...resource.data.active,
+      ...resource.data.gone,
+      ...resource.data.system,
+    ].some((c) => c.id === convId);
 
   // Older gone conversations may not be in the live resource — check via REST.
   const needsFallback = !resource.pending && !inLive;
@@ -49,6 +61,7 @@ function useResolveConversation({ convId }: { convId: string }) {
 
 export const conversationPane = Pane.define({
   route: conversationRoute,
+  app: agentManagerApp,
   component: ConversationView,
   width: 600,
   resolve: useResolveConversation,
@@ -61,6 +74,10 @@ export const conversationPane = Pane.define({
 });
 
 /** The conversation's title from the global live-state resource, or undefined. */
-function useConversationTitle({ convId }: { convId: string }): string | undefined {
+function useConversationTitle({
+  convId,
+}: {
+  convId: string;
+}): string | undefined {
   return useConversationById(convId)?.title ?? undefined;
 }

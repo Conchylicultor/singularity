@@ -1,16 +1,23 @@
 import type { ReactElement } from "react";
-import { Pane, PaneChrome, useOpenPane } from "@plugins/primitives/plugins/pane/web";
+import {
+  Pane,
+  PaneChrome,
+  useOpenPane,
+} from "@plugins/primitives/plugins/pane/web";
+import { debugApp } from "@plugins/apps/plugins/debug/plugins/shell/core";
 import { buildRoute, buildDetailRoute } from "@plugins/build/core";
 import { BuildPopoverContent } from "./components/build-popover-content";
 import { BuildDetail } from "./slots";
 
 export const buildPane = Pane.define({
   route: buildRoute,
+  app: debugApp,
   component: BuildPaneBody,
 });
 
 export const buildDetailPane = Pane.define({
   route: buildDetailRoute,
+  app: debugApp,
   component: BuildDetailBody,
   width: 480,
   resolve: false,
@@ -25,7 +32,9 @@ function BuildPaneBody(): ReactElement {
       <BuildPopoverContent
         variant="pane"
         selectedRunId={selectedRunId}
-        onRunClick={(runId) => openPane(buildDetailPane, { runId }, { mode: "push" })}
+        onRunClick={(runId) =>
+          openPane(buildDetailPane, { runId }, { mode: "push" })
+        }
       />
     </PaneChrome>
   );

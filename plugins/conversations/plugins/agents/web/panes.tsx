@@ -1,9 +1,16 @@
 import type { ReactElement } from "react";
-import { useResource, matchResource } from "@plugins/primitives/plugins/live-state/web";
+import {
+  useResource,
+  matchResource,
+} from "@plugins/primitives/plugins/live-state/web";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 import { Pane, PaneChrome } from "@plugins/primitives/plugins/pane/web";
+import { agentManagerApp } from "@plugins/apps/plugins/agent-manager/plugins/shell/core";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
-import { Stack, Inset } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import {
+  Stack,
+  Inset,
+} from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Surface } from "@plugins/primitives/plugins/css/plugins/surface/web";
 import { AgentSideBody } from "./components/agent-side-body";
 import { agentsResource, type Agent } from "../shared/resources";
@@ -14,6 +21,7 @@ import { SystemAgentDetail } from "./components/system-agent-detail";
 
 export const agentsRootPane = Pane.define({
   id: "agents-root",
+  app: agentManagerApp,
   segment: "agents",
   component: AgentsRoot,
   width: 320,
@@ -27,6 +35,7 @@ function useResolveAgent({ id }: { id: string }) {
 
 export const agentDetailPane = Pane.define({
   id: "agent-detail",
+  app: agentManagerApp,
   defaultAncestors: [agentsRootPane],
   segment: "ag/:id",
   component: AgentDetailBody,
@@ -36,6 +45,7 @@ export const agentDetailPane = Pane.define({
 
 export const systemAgentDetailPane = Pane.define({
   id: "agent-system-detail",
+  app: agentManagerApp,
   defaultAncestors: [agentsRootPane],
   segment: "system/:systemId",
   component: SystemAgentDetailBody,
@@ -55,7 +65,8 @@ export const agentSidePane = Pane.define({
 
 function AgentsRoot(): ReactElement {
   const selectedUserId = agentDetailPane.useRouteEntry()?.params.id;
-  const selectedSystemId = systemAgentDetailPane.useRouteEntry()?.params.systemId;
+  const selectedSystemId =
+    systemAgentDetailPane.useRouteEntry()?.params.systemId;
 
   return (
     <PaneChrome pane={agentsRootPane} title="Agents">
@@ -90,7 +101,9 @@ function AgentDetailBody(): ReactElement {
             <Surface level="raised" as="section" className="p-lg">
               {v.title ? (
                 // eslint-disable-next-line spacing/no-adhoc-spacing -- bottom offset separating the section title from its body
-                <Text as="h2" variant="label" className="mb-4">{v.title}</Text>
+                <Text as="h2" variant="label" className="mb-4">
+                  {v.title}
+                </Text>
               ) : null}
               <v.component agentId={id} />
             </Surface>
@@ -120,11 +133,13 @@ function SystemAgentDetailBody(): ReactElement {
     <PaneChrome pane={systemAgentDetailPane} title={descriptor.name}>
       <AgentsSlots.SystemAgent.Render>
         {(d) =>
-          d.id === systemId
-            ? d.component
-              ? <d.component descriptor={d} />
-              : <SystemAgentDetail descriptor={d} />
-            : null
+          d.id === systemId ? (
+            d.component ? (
+              <d.component descriptor={d} />
+            ) : (
+              <SystemAgentDetail descriptor={d} />
+            )
+          ) : null
         }
       </AgentsSlots.SystemAgent.Render>
     </PaneChrome>

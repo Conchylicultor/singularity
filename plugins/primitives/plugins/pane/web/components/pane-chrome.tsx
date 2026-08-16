@@ -1,4 +1,11 @@
-import { Button, Popover, PopoverContent, PopoverTrigger, SingleLineProvider } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { linkGestureProps } from "@plugins/primitives/plugins/link-gesture/web";
+import {
+  Button,
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+  SingleLineProvider,
+} from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Bar } from "@plugins/primitives/plugins/bar/web";
 import { Fragment, useContext, useRef, useState, type ReactNode } from "react";
 import { useResizeObserver } from "@plugins/primitives/plugins/element-size/web";
@@ -68,19 +75,47 @@ interface PaneChromeProps {
  * NO overflow-collapse. The body wrapper and single scroll are unchanged either
  * way.
  */
-export function PaneChrome({ pane, title, actions, hideRightActions, headerSpill, children }: PaneChromeProps) {
+/**
+ * A ReactNode pane title (breadcrumbs, chips, a conversation title) — laid out
+ * as a shrinkable row so multi-segment compositions align on one baseline.
+ *
+ * Extracted because both title branches rendered this byte-for-byte, each with
+ * its own copy of the suppression below. One definition is also what keeps that
+ * suppression stable: at this indentation the element fits on one line, so the
+ * formatter has nothing to reflow and the positional directive cannot drift off
+ * the code it means.
+ */
+function NodeTitle({ children }: { children: ReactNode }) {
+  return (
+    // eslint-disable-next-line layout/no-adhoc-layout -- node title needs inline-flex baseline alignment for breadcrumb-style multi-segment compositions
+    <Text as="div" variant="label" className="flex min-w-0 items-center">
+      {children}
+    </Text>
+  );
+}
+
+export function PaneChrome({
+  pane,
+  title,
+  actions,
+  hideRightActions,
+  headerSpill,
+  children,
+}: PaneChromeProps) {
   const chrome = pane._internal.chrome;
   const match = usePaneMatch();
   const fallbackTitle = chromeTitle(pane, match);
   const layoutCtx = useContext(PaneLayoutContext);
-  const { contentOwnsTopChrome, leadingControl } = useContext(SurfaceChromeContext);
+  const { contentOwnsTopChrome, leadingControl } =
+    useContext(SurfaceChromeContext);
   const doClose = pane.useClose();
   const doPromote = pane.usePromote();
   const resolvedTitle = title ?? fallbackTitle;
   // Surface-edge chrome: only when this pane header IS the surface's top chrome.
   // The first top-row header hosts the leading control (sidebar toggle); the
   // last reserves the floating-action-bar safe area on its right.
-  const showLeading = contentOwnsTopChrome && layoutCtx?.atSurfaceStart && leadingControl != null;
+  const showLeading =
+    contentOwnsTopChrome && layoutCtx?.atSurfaceStart && leadingControl != null;
   const reserveEnd = contentOwnsTopChrome && layoutCtx?.atSurfaceEnd;
   return (
     <Column
@@ -90,7 +125,11 @@ export function PaneChrome({ pane, title, actions, hideRightActions, headerSpill
           tier="pane"
           overflow={headerSpill ? "visible" : "hidden"}
           endSafeArea={reserveEnd}
-          className={layoutCtx?.dragHandleProps ? "cursor-grab active:cursor-grabbing" : undefined}
+          className={
+            layoutCtx?.dragHandleProps
+              ? "cursor-grab active:cursor-grabbing"
+              : undefined
+          }
           onDoubleClick={layoutCtx?.onDoubleClickHeader}
           {...layoutCtx?.dragHandleProps}
         >
@@ -116,10 +155,7 @@ export function PaneChrome({ pane, title, actions, hideRightActions, headerSpill
                   // its own overflow, and any single-line leaf inside it (chips,
                   // `ConversationTitle`) still truncates via its own container/class.
                   <SingleLineProvider value={false}>
-                    {/* eslint-disable-next-line layout/no-adhoc-layout -- node title needs inline-flex baseline alignment for breadcrumb-style multi-segment compositions */}
-                    <Text as="div" variant="label" className="flex min-w-0 items-center">
-                      {resolvedTitle}
-                    </Text>
+                    <NodeTitle>{resolvedTitle}</NodeTitle>
                   </SingleLineProvider>
                 ) : (
                   // Node titles get the SAME `label` typography baseline as string
@@ -128,10 +164,7 @@ export function PaneChrome({ pane, title, actions, hideRightActions, headerSpill
                   // enforced by the container (CSS inheritance), so title nodes need
                   // not — and should not — set their own size; per-segment weight/
                   // color (e.g. breadcrumb) still applies on top.
-                  // eslint-disable-next-line layout/no-adhoc-layout -- node title needs inline-flex baseline alignment for breadcrumb-style multi-segment compositions
-                  <Text as="div" variant="label" className="flex min-w-0 items-center">
-                    {resolvedTitle}
-                  </Text>
+                  <NodeTitle>{resolvedTitle}</NodeTitle>
                 ))}
               <PaneActionsSlot pane={pane} position="left" />
               {hideRightActions ? (
@@ -145,18 +178,14 @@ export function PaneChrome({ pane, title, actions, hideRightActions, headerSpill
           {chrome.promote && doPromote && (
             <Button
               variant="ghost"
-              onClick={doPromote}
-              aria-label="Promote"
+              aria-label="Expand pane"
+              {...linkGestureProps(doPromote)}
             >
               <MdOpenInFull className="size-4" />
             </Button>
           )}
           {chrome.close && doClose && (
-            <Button
-              variant="ghost"
-              onClick={doClose}
-              aria-label="Close"
-            >
+            <Button variant="ghost" onClick={doClose} aria-label="Close">
               <MdClose className="size-4" />
             </Button>
           )}
@@ -301,8 +330,13 @@ function OverflowActionsBar({
     { deps: [totalCount] },
   );
 
-  const visibleSlot = slotActions.slice(0, Math.min(visibleCount, slotActions.length));
-  const overflowSlot = slotActions.slice(Math.min(visibleCount, slotActions.length));
+  const visibleSlot = slotActions.slice(
+    0,
+    Math.min(visibleCount, slotActions.length),
+  );
+  const overflowSlot = slotActions.slice(
+    Math.min(visibleCount, slotActions.length),
+  );
   const extraVisible = hasExtra && visibleCount > slotActions.length;
   const extraOverflow = hasExtra && !extraVisible;
   const hasOverflow = overflowSlot.length > 0 || extraOverflow;
@@ -354,7 +388,10 @@ function OverflowActionsBar({
               <div className="flex flex-col">
                 {overflowSlot.map((a, i) => (
                   <Fragment key={visibleSlot.length + i}>
-                    {renderIsolated(pane.Actions.id, a as unknown as Contribution)}
+                    {renderIsolated(
+                      pane.Actions.id,
+                      a as unknown as Contribution,
+                    )}
                   </Fragment>
                 ))}
                 {extraOverflow && extraActions}

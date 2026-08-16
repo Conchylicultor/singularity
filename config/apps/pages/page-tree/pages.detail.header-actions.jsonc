@@ -1,14 +1,13 @@
-// @hash faa6cbbb1783
+// @hash 83d722b8e10f
 {
   // Hide: { "item": "<key>", "hidden": true }. Gap: { "type": "spacer", "id": "<unique-id>" }.
   //
-  // Star and history act on the page's CONTENT; expand acts on the pane itself
-  // (which surface you are reading it in). So expand sits last — the far corner,
-  // where a title bar's own maximize control lives — and the content actions
-  // keep their established order beside the title.
+  // A horizontal strip read left to right, trailing the page's breadcrumb. Star
+  // first: it is the one-tap action, and the one whose state you read at a
+  // glance. History second — a rarer, heavier affordance. The pane's own Expand
+  // and Close sit beyond these, painted by the pane chrome rather than this slot.
   "items": [
     "apps.pages.starred:star",
-    "apps.pages.history:history",
-    "apps.pages.open-in-app:open-in-app"
+    "apps.pages.history:history"
   ]
 }

@@ -1,9 +1,18 @@
 import { type ReactElement } from "react";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
-import { Pane, PaneChrome, useOpenPane } from "@plugins/primitives/plugins/pane/web";
+import {
+  Pane,
+  PaneChrome,
+  useOpenPane,
+} from "@plugins/primitives/plugins/pane/web";
+import { agentManagerApp } from "@plugins/apps/plugins/agent-manager/plugins/shell/core";
 import { Inset } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { TasksListView } from "@plugins/tasks/plugins/task-list/web";
-import { tasksResource, tasksRootRoute, taskDetailRoute } from "@plugins/tasks/plugins/tasks-core/core";
+import {
+  tasksResource,
+  tasksRootRoute,
+  taskDetailRoute,
+} from "@plugins/tasks/plugins/tasks-core/core";
 import { useTask } from "@plugins/tasks/web";
 import { TaskDetailFlushProvider } from "./context";
 import { TaskDetail } from "./components/task-detail";
@@ -14,6 +23,7 @@ import { TaskDetail } from "./components/task-detail";
 
 export const tasksRootPane = Pane.define({
   route: tasksRootRoute,
+  app: agentManagerApp,
   component: TasksRoot,
   width: 320,
 });
@@ -31,6 +41,7 @@ function useTaskTitle({ taskId }: { taskId: string }): string | undefined {
 
 export const taskDetailPane = Pane.define({
   route: taskDetailRoute,
+  app: agentManagerApp,
   component: TaskDetailBody,
   width: 480,
   resolve: useResolveTask,
@@ -52,7 +63,9 @@ function TasksRoot(): ReactElement {
       <Inset pad="lg" className="pane-gutter-flush">
         <TasksListView
           selectedId={selectedId}
-          onSelect={(id) => openPane(taskDetailPane, { taskId: id }, { mode: "push" })}
+          onSelect={(id) =>
+            openPane(taskDetailPane, { taskId: id }, { mode: "push" })
+          }
         />
       </Inset>
     </PaneChrome>

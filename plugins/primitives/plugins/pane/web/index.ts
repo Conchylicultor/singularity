@@ -62,6 +62,7 @@ export type {
   PaneToolbarItem,
 } from "./pane";
 export { setHistoryAdapter, defaultHistoryAdapter } from "./history-sink";
+export { setAppNavigator, type AppNavigator } from "./app-nav-sink";
 export type {
   HistoryAdapter,
   LocationChange,
@@ -79,8 +80,7 @@ export { SurfaceChromeContext } from "./surface-chrome-context";
 export type { SurfaceChrome } from "./surface-chrome-context";
 
 export default {
-  description:
-    "Unified pane primitive: Pane.define and chrome components.",
+  description: "Unified pane primitive: Pane.define and chrome components.",
   loadBearing: true,
   contributions: [],
 } satisfies PluginDefinition;

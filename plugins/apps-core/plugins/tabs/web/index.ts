@@ -11,7 +11,7 @@ export {
   type TabsApi,
   type NavigateOptions,
 } from "./internal/use-tabs";
-export { appLinkProps, type AppLinkProps } from "./internal/app-link";
+export { appLinkProps } from "./internal/app-link";
 export {
   appPathFor,
   appContributionFor,
