@@ -389,7 +389,6 @@ guard: `confirmDialog` (`imperative-dialog/plugins/confirm`); native
     - `apps-core/tab-bar`
     - `apps-core/tab-surface`
     - `apps-core/theme-scope`
-    - `apps/agent-manager/pages-nav`
     - `apps/agent-manager/welcome`
     - `apps/browser/bookmarks`
     - `apps/browser/start-page`
@@ -490,7 +489,6 @@ guard: `confirmDialog` (`imperative-dialog/plugins/confirm`); native
     - `conversations/conversation-view/pending-turn`
     - `conversations/conversation-view/prompt-templates`
     - `conversations/conversation-view/push-and-exit`
-    - `conversations/conversation-view/push-profiling`
     - `conversations/conversation-view/tasks-panel`
     - `conversations/conversation-view/terminal-pane`
     - `conversations/conversations-view`

@@ -1,13 +1,25 @@
 import { Button, cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useEffect, useState } from "react";
 import { MdClear, MdUndo } from "react-icons/md";
-import { DrawCanvas, type Stroke } from "@plugins/screenshot/plugins/draw-canvas/web";
+import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
+import {
+  DrawCanvas,
+  type Stroke,
+} from "@plugins/screenshot/plugins/draw-canvas/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { ViewportOverlay } from "@plugins/primitives/plugins/css/plugins/viewport-overlay/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
 
-const COLORS = ["#ef4444", "#f59e0b", "#22c55e", "#3b82f6", "#a855f7", "#000000", "#ffffff"];
+const COLORS = [
+  "#ef4444",
+  "#f59e0b",
+  "#22c55e",
+  "#3b82f6",
+  "#a855f7",
+  "#000000",
+  "#ffffff",
+];
 
 export interface LiveDrawOverlayProps {
   strokes: Stroke[];
@@ -80,7 +92,9 @@ export function LiveDrawOverlay({
                     onClick={() => onColorChange(c)}
                     className={cn(
                       "size-5 rounded-full border-2 transition",
-                      color === c ? "border-foreground scale-110" : "border-border",
+                      color === c
+                        ? "border-foreground scale-110"
+                        : "border-border",
                     )}
                     style={{ backgroundColor: c }}
                   />
@@ -101,24 +115,18 @@ export function LiveDrawOverlay({
                 />
               </Stack>
               <Stack direction="row" gap="xs" align="center">
-                <Button
-                  variant="ghost"
+                <IconButton
+                  icon={MdUndo}
+                  label="Undo"
                   onClick={() => onStrokesChange((s) => s.slice(0, -1))}
                   disabled={strokes.length === 0}
-                  title="Undo"
-                  aria-label="Undo"
-                >
-                  <MdUndo className="size-4" />
-                </Button>
-                <Button
-                  variant="ghost"
+                />
+                <IconButton
+                  icon={MdClear}
+                  label="Clear"
                   onClick={() => onStrokesChange([])}
                   disabled={strokes.length === 0}
-                  title="Clear"
-                  aria-label="Clear"
-                >
-                  <MdClear className="size-4" />
-                </Button>
+                />
               </Stack>
             </Stack>
           </Pin>

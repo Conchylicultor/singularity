@@ -18,7 +18,7 @@
     - `debug/profiling/ops/op-gantt.OpGantt`
     - `infra/endpoints.useEndpoint`
     - `primitives/css/text.Text`
-    - `primitives/css/ui-kit.Button`
+    - `primitives/icon-button.IconButton`
     - `primitives/pane.Pane`
     - `primitives/pane.PaneChrome`
     - `primitives/pane.useOpenPane`

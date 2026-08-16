@@ -1,8 +1,19 @@
-import { Button, ButtonGroup, cn, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import {
+  Button,
+  ButtonGroup,
+  cn,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { useState } from "react";
 import { MdPlayArrow, MdExpandMore, MdCheck } from "react-icons/md";
-import { useOpenPane, type PaneOpenMode } from "@plugins/primitives/plugins/pane/web";
+import {
+  useOpenPane,
+  type PaneOpenMode,
+} from "@plugins/primitives/plugins/pane/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { type Conversation } from "@plugins/tasks/plugins/tasks-core/core";
 import { createConversation } from "@plugins/conversations/core";
@@ -61,7 +72,10 @@ export function useLaunchConversation({
   openAfterLaunch = true,
   openMode = "push",
   onLaunched,
-}: Pick<LaunchControlProps, "getRequest" | "openAfterLaunch" | "openMode" | "onLaunched">) {
+}: Pick<
+  LaunchControlProps,
+  "getRequest" | "openAfterLaunch" | "openMode" | "onLaunched"
+>) {
   const [launching, setLaunching] = useState<ConversationModel | null>(null);
   const openPane = useOpenPane();
 
@@ -71,9 +85,18 @@ export function useLaunchConversation({
     setLaunching(model);
     try {
       const request = (await getRequest?.()) ?? {};
-      const conversation = await fetchEndpoint(createConversation, {}, { body: { model, ...request } });
+      const conversation = await fetchEndpoint(
+        createConversation,
+        {},
+        { body: { model, ...request } },
+      );
       onLaunched?.(conversation);
-      if (openAfterLaunch) openPane(conversationPane, { convId: conversation.id }, { mode: openMode });
+      if (openAfterLaunch)
+        openPane(
+          conversationPane,
+          { convId: conversation.id },
+          { mode: openMode },
+        );
     } finally {
       setLaunching(null);
     }
@@ -91,7 +114,10 @@ export function useLaunchConversation({
 export function LaunchModelMenuContent({
   launch,
 }: {
-  launch: (model: ConversationModel, e?: React.MouseEvent) => Promise<void> | void;
+  launch: (
+    model: ConversationModel,
+    e?: React.MouseEvent,
+  ) => Promise<void> | void;
 }) {
   const defaultModel = useDefaultModel();
   const visibleModels = useVisibleModels();
@@ -160,7 +186,12 @@ export function LaunchControl({
   disabled,
   className,
 }: LaunchControlProps) {
-  const { launch, launching } = useLaunchConversation({ getRequest, openAfterLaunch, openMode, onLaunched });
+  const { launch, launching } = useLaunchConversation({
+    getRequest,
+    openAfterLaunch,
+    openMode,
+    onLaunched,
+  });
   const defaultModel = useDefaultModel();
 
   const busy = disabled || launching !== null;
@@ -215,7 +246,11 @@ export function LaunchControl({
               variant={btnVariant}
               disabled={disabled}
               // eslint-disable-next-line layout/no-adhoc-layout -- flexible dropdown button absorbing slack inside the (raw) ButtonGroup row and spreading its own label↔chevron; no primitive composes onto the shadcn Button's internal flex
-              className={cn("gap-xs", blue, fullWidth && "flex-1 justify-between")}
+              className={cn(
+                "gap-xs",
+                blue,
+                fullWidth && "flex-1 justify-between",
+              )}
             />
           }
         >
@@ -224,6 +259,7 @@ export function LaunchControl({
         </DropdownMenuTrigger>
         {rows}
       </DropdownMenu>
+      {/* eslint-disable-next-line icon-button/prefer-icon-button -- the second segment of a ButtonGroup split control, not a standalone action: it must match the model button's height and seam, and owns its own px-sm + border-l */}
       <Button
         variant={btnVariant}
         disabled={busy}

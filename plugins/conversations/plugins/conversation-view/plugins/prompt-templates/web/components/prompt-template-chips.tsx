@@ -73,6 +73,7 @@ function TemplateChip({
         <MdEdit className="size-3" />
         <span>{template.title}</span>
       </Button>
+      {/* eslint-disable-next-line icon-button/prefer-icon-button -- the send half of a ButtonGroup template chip, not a standalone action: it shares the chip's outline seam and its size-3 glyph matches the label half */}
       <Button
         variant="outline"
         disabled={!canSend}

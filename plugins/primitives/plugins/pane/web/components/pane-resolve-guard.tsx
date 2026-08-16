@@ -1,5 +1,4 @@
 import { linkGestureProps } from "@plugins/primitives/plugins/link-gesture/web";
-import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Bar } from "@plugins/primitives/plugins/bar/web";
 import { useState, type ComponentType, type ReactNode } from "react";
 import { MdClose, MdOpenInFull } from "react-icons/md";
@@ -10,6 +9,7 @@ import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Column } from "@plugins/primitives/plugins/css/plugins/column/web";
 import { paneObjectFor, type PaneInternal, type ResolveHook } from "../pane";
+import { PaneIconAction } from "./pane-icon-action";
 
 interface Props {
   pane: PaneInternal;
@@ -129,18 +129,14 @@ function FallbackChrome({
           </Text>
           <Stack direction="row" align="center" gap="sm" className="ml-auto">
             {chrome.promote && doPromote && (
-              <Button
-                variant="ghost"
-                aria-label="Expand pane"
+              <PaneIconAction
+                label="Expand pane"
+                icon={MdOpenInFull}
                 {...linkGestureProps(doPromote)}
-              >
-                <MdOpenInFull className="size-4" />
-              </Button>
+              />
             )}
             {chrome.close && doClose && (
-              <Button variant="ghost" onClick={doClose} aria-label="Close">
-                <MdClose className="size-4" />
-              </Button>
+              <PaneIconAction label="Close" icon={MdClose} onClick={doClose} />
             )}
           </Stack>
         </Bar>

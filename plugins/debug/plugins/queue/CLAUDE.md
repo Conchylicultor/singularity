@@ -30,6 +30,7 @@
     - `primitives/css/viewport-overlay.ViewportOverlay`
     - `primitives/filter-chips.FilterChip`
     - `primitives/filter-chips.useChipFilter`
+    - `primitives/icon-button.IconButton`
     - `primitives/live-state.ResourceView`
     - `primitives/live-state.useResource`
     - `primitives/loading.Loading`

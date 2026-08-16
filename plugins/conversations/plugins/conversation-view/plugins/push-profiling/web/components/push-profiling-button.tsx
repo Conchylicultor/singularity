@@ -1,4 +1,4 @@
-import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { MdTimeline } from "react-icons/md";
 import { convPushProfilingPane } from "../panes";
 
@@ -6,15 +6,12 @@ export function PushProfilingButton() {
   const { isOpen, toggle } = convPushProfilingPane.useToggle({});
 
   return (
-    <Button
+    <IconButton
+      icon={MdTimeline}
+      label="Op profiling"
       variant={isOpen ? "secondary" : "ghost"}
-      title="Op profiling"
-      aria-label="Op profiling"
       aria-pressed={isOpen}
       onClick={toggle}
-      className="gap-xs"
-    >
-      <MdTimeline className="size-4" />
-    </Button>
+    />
   );
 }

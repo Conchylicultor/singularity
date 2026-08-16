@@ -1,4 +1,8 @@
-import { ESLintUtils, type TSESLint, type TSESTree } from "@typescript-eslint/utils";
+import {
+  ESLintUtils,
+  type TSESLint,
+  type TSESTree,
+} from "@typescript-eslint/utils";
 
 const createRule = ESLintUtils.RuleCreator(
   (name) => `https://github.com/anthropics/singularity/lint/${name}`,
@@ -10,21 +14,32 @@ const createRule = ESLintUtils.RuleCreator(
  * `IconButton` (`@plugins/primitives/plugins/icon-button/web`) is the sanctioned
  * way to render a single icon action: it injects the mandatory `aria-label` +
  * tooltip and renders a bare `<Icon/>`, so the control is always accessible. A
- * hand-rolled `<Button aspect="icon"><MdX/></Button>` slips past that — the audit
- * found exactly this (an icon action with no `aria-label`).
+ * hand-rolled `<Button><MdX/></Button>` slips past that — the audit found exactly
+ * this (an icon action with no `aria-label`).
  *
- * `aspect="icon"` on `Button` stays the legitimate base square-geometry
- * primitive (trigger render-targets, text-glyph buttons, stateful-indicator
- * children), so this rule fires NARROWLY — only on the unmistakable
- * "single react-icons glyph as a direct, standalone child" shape:
+ * The `aspect` axis is NOT part of the test, because the wrong half of it is the
+ * more common mistake: a `<Button>` with no `aspect` defaults to `aspect="text"`,
+ * so an icon dropped into it gets a TEXT box — `control-*` height with `px-2.5`
+ * on both sides — and sits ~8px wider than the square `IconButton` beside it in
+ * the same toolbar. That is what the conversation action bar looked like: half
+ * its icon actions square, half of them padded. Gating the rule on
+ * `aspect="icon"` caught only the half that already had the geometry right.
  *
- *   1. the element has `aspect="icon"` (string literal), AND
+ * So the rule fires on the unmistakable "single react-icons glyph as a direct,
+ * standalone child" shape, at any aspect:
+ *
+ *   1. the element's `aspect` is absent (→ the `"text"` default) or the string
+ *      literal `"icon"` — `"inline"` and any computed value are left alone, AND
  *   2. its children — ignoring whitespace `JSXText` — are EXACTLY ONE
  *      `JSXElement`, AND
  *   3. that child's tag identifier resolves (via scope → import binding) to a
  *      module matching `^react-icons(/|$)` — the `IconButton.icon` contract, AND
  *   4. the `<Button>` is NOT a render-target prop value (`trigger={<Button…/>}`
  *      / `render={<Button…/>}`), which legitimately keeps a bare Button.
+ *
+ * A justified one-off — a placeholder that must keep a text box's width, a
+ * text-glyph button, a stateful-indicator child — escapes per-site via
+ * `// eslint-disable-next-line icon-button/prefer-icon-button -- <reason>`.
  *
  * This is pure JSX-structure inspection (scope walk for the import binding) — no
  * `@plugins`/shared imports — so it loads cleanly under jiti, which cannot
@@ -44,7 +59,9 @@ function importSourceOfTag(
   name: TSESTree.JSXTagNameExpression,
 ): string | null {
   if (name.type !== "JSXIdentifier") return null;
-  let scope: TSESLint.Scope.Scope | null = sourceCode.getScope(name as unknown as TSESTree.Node);
+  let scope: TSESLint.Scope.Scope | null = sourceCode.getScope(
+    name as unknown as TSESTree.Node,
+  );
   let variable: TSESLint.Scope.Variable | undefined;
   while (scope && !variable) {
     variable = scope.variables.find((v) => v.name === name.name);
@@ -69,12 +86,12 @@ export default createRule({
     type: "suggestion",
     docs: {
       description:
-        "Steer a standalone `<Button aspect=\"icon\">` whose only child is a react-icons glyph toward `<IconButton icon={…} label=… />`, which adds the mandatory aria-label + tooltip.",
+        "Steer a standalone `<Button>` whose only child is a react-icons glyph toward `<IconButton icon={…} label=… />`, which adds the mandatory aria-label + tooltip and the square icon box.",
     },
     schema: [],
     messages: {
       preferIconButton:
-        "A standalone icon action should use `<IconButton icon={…} label=… />` (it adds the mandatory aria-label + tooltip). Keep a bare `<Button aspect=\"icon\">` only for triggers / text-glyph / stateful children.",
+        'A standalone icon action should use `<IconButton icon={…} label=… />` — it adds the mandatory aria-label + tooltip, and the square `aspect="icon"` box so it matches the other icon actions in its row (a default `<Button>` is text-shaped and renders ~8px wider). Keep a bare `<Button>` only for triggers / text-glyph / stateful children, with a per-site disable naming the reason.',
     },
   },
   defaultOptions: [],
@@ -85,16 +102,30 @@ export default createRule({
         const tag = opening.name;
         if (tag.type !== "JSXIdentifier" || tag.name !== "Button") return;
 
-        // (1) `aspect="icon"` as a string literal.
-        const hasIconAspect = opening.attributes.some(
-          (attr) =>
+        // (1) the box is icon-shaped or text-shaped — i.e. `aspect` is absent
+        // (the `"text"` default) or the literal `"icon"`. A spread
+        // (`{...props}`) can carry an `aspect` this walk cannot see, so a
+        // `<Button>` with no explicit `aspect` is only judged when it also has
+        // no spread; `"inline"` and any computed value are left alone.
+        const aspectAttr = opening.attributes.find(
+          (attr): attr is TSESTree.JSXAttribute =>
             attr.type === "JSXAttribute" &&
             attr.name.type === "JSXIdentifier" &&
-            attr.name.name === "aspect" &&
-            attr.value?.type === "Literal" &&
-            attr.value.value === "icon",
+            attr.name.name === "aspect",
         );
-        if (!hasIconAspect) return;
+        if (aspectAttr) {
+          const value = aspectAttr.value;
+          if (
+            value?.type !== "Literal" ||
+            (value.value !== "icon" && value.value !== "text")
+          ) {
+            return;
+          }
+        } else if (
+          opening.attributes.some((attr) => attr.type === "JSXSpreadAttribute")
+        ) {
+          return;
+        }
 
         // (4) skip render-target prop values: `trigger={<Button…/>}` etc.
         if (
@@ -113,7 +144,10 @@ export default createRule({
         if (only.type !== "JSXElement") return;
 
         // (3) that child's tag resolves to a react-icons import.
-        const source = importSourceOfTag(context.sourceCode, only.openingElement.name);
+        const source = importSourceOfTag(
+          context.sourceCode,
+          only.openingElement.name,
+        );
         if (!source || !REACT_ICONS_MODULE.test(source)) return;
 
         context.report({ node, messageId: "preferIconButton" });

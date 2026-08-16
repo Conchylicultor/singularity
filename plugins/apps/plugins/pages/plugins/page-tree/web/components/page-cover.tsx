@@ -1,5 +1,11 @@
 import { useRef, useState } from "react";
-import { MdSwapVert, MdImage, MdDelete, MdCheck, MdClose } from "react-icons/md";
+import {
+  MdSwapVert,
+  MdImage,
+  MdDelete,
+  MdCheck,
+  MdClose,
+} from "react-icons/md";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
 import {
@@ -11,7 +17,11 @@ import {
 } from "@plugins/page/plugins/editor/core";
 import { attachmentUrl } from "@plugins/primitives/plugins/text-editor/plugins/paste-images/web";
 import { Button, cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { hoverRevealGroup, hoverRevealTarget } from "@plugins/primitives/plugins/hover-reveal/web";
+import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
+import {
+  hoverRevealGroup,
+  hoverRevealTarget,
+} from "@plugins/primitives/plugins/hover-reveal/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Clip } from "@plugins/primitives/plugins/css/plugins/clip/web";
 import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
@@ -64,11 +74,24 @@ function FilledCover({
   const [repositioning, setRepositioning] = useState(false);
 
   return (
-    <Clip className={cn(hoverRevealGroup, "group/cover relative h-[30vh] max-h-64 w-full select-none")}>
+    <Clip
+      className={cn(
+        hoverRevealGroup,
+        "group/cover relative h-[30vh] max-h-64 w-full select-none",
+      )}
+    >
       {cover.type === "gradient" ? (
-        <div className="size-full" style={{ background: gradientCss(cover.preset) }} />
+        <div
+          className="size-full"
+          style={{ background: gradientCss(cover.preset) }}
+        />
       ) : (
-        <CoverImage cover={cover} repositioning={repositioning} onSave={onSave} onDone={() => setRepositioning(false)} />
+        <CoverImage
+          cover={cover}
+          repositioning={repositioning}
+          onSave={onSave}
+          onDone={() => setRepositioning(false)}
+        />
       )}
 
       {!repositioning && (
@@ -85,18 +108,20 @@ function FilledCover({
               }
             />
             {cover.type === "image" && (
-              <Button variant="secondary" onClick={() => setRepositioning(true)}>
+              <Button
+                variant="secondary"
+                onClick={() => setRepositioning(true)}
+              >
                 <MdSwapVert />
                 Reposition
               </Button>
             )}
-            <Button
+            <IconButton
+              icon={MdDelete}
+              label="Remove cover"
               variant="secondary"
-              aria-label="Remove cover"
               onClick={() => void onSave(null)}
-            >
-              <MdDelete />
-            </Button>
+            />
           </Stack>
         </Pin>
       )}
@@ -123,7 +148,11 @@ function CoverImage({
   onDone: () => void;
 }) {
   const [localY, setLocalY] = useState(cover.positionY);
-  const dragRef = useRef<{ startClientY: number; startY: number; height: number } | null>(null);
+  const dragRef = useRef<{
+    startClientY: number;
+    startY: number;
+    height: number;
+  } | null>(null);
 
   const positionY = repositioning ? localY : cover.positionY;
 
@@ -143,7 +172,8 @@ function CoverImage({
     if (!drag) return;
     // Drag up reveals lower part of the image (increase Y%); scale the pixel
     // delta to the band height so a full-band drag covers the full 0-100 range.
-    const delta = ((e.clientY - drag.startClientY) / Math.max(drag.height, 1)) * 100;
+    const delta =
+      ((e.clientY - drag.startClientY) / Math.max(drag.height, 1)) * 100;
     const next = Math.min(100, Math.max(0, drag.startY + delta));
     setLocalY(next);
   };
@@ -171,7 +201,10 @@ function CoverImage({
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
-        className={cn("size-full", repositioning && "cursor-grab active:cursor-grabbing")}
+        className={cn(
+          "size-full",
+          repositioning && "cursor-grab active:cursor-grabbing",
+        )}
       >
         <img
           src={attachmentUrl(cover.attachmentId)}

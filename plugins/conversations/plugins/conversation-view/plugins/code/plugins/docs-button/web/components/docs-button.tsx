@@ -23,6 +23,7 @@ export function DocsButton() {
   // hooks — lives in DocsButtonReady so all hooks here run first.
   if (filesResult.pending || !filesResult.data.resolved) {
     return (
+      // eslint-disable-next-line icon-button/prefer-icon-button -- placeholder for the icon+count button below; a square IconButton would resize the toolbar when the count settles
       <Button
         variant="ghost"
         title="Design docs"
@@ -56,12 +57,17 @@ function DocsButtonReady({
   isOpen: boolean;
   onToggle: () => void;
 }) {
-  const workingDocs = useMemo(() => files.filter((f) => isDocFile(f.path)), [files]);
+  const workingDocs = useMemo(
+    () => files.filter((f) => isDocFile(f.path)),
+    [files],
+  );
 
   const count = useMemo(() => {
     if (workingDocs.length === 0 && pushedDocs === null) return null;
     const workingPaths = new Set(workingDocs.map((f) => f.path));
-    const pushedOnlyCount = (pushedDocs ?? []).filter((f) => !workingPaths.has(f.path)).length;
+    const pushedOnlyCount = (pushedDocs ?? []).filter(
+      (f) => !workingPaths.has(f.path),
+    ).length;
     return workingDocs.length + pushedOnlyCount;
   }, [workingDocs, pushedDocs]);
 

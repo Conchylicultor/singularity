@@ -1,4 +1,4 @@
-import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { MdDescription } from "react-icons/md";
 import { pagesTreePane } from "@plugins/apps/plugins/pages/plugins/page-tree/web";
 
@@ -9,14 +9,12 @@ export function PagesTreeButton() {
   const { isOpen, toggle } = pagesTreePane.useToggle({});
 
   return (
-    <Button
+    <IconButton
+      icon={MdDescription}
+      label="Pages"
       variant={isOpen ? "secondary" : "ghost"}
-      title="Pages"
-      aria-label="Pages"
       aria-pressed={isOpen}
       onClick={toggle}
-    >
-      <MdDescription className="size-4" />
-    </Button>
+    />
   );
 }

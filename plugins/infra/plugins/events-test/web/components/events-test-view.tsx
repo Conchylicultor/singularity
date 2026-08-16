@@ -1,6 +1,11 @@
-import { Button, cn, Input } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import {
+  Button,
+  cn,
+  Input,
+} from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useCallback, useEffect, useState } from "react";
 import { MdBolt, MdDelete, MdRefresh, MdSend } from "react-icons/md";
+import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
@@ -86,7 +91,9 @@ export function EventsTestView() {
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional 1s poll for debug test panel: refresh() writes triggers/log state from two endpoint reads; there is no live-state resource for the events-test endpoints to subscribe to, so a deriving-in-render path does not exist
     void refresh();
-    const iv = setInterval(() => { void refresh(); }, 1000);
+    const iv = setInterval(() => {
+      void refresh();
+    }, 1000);
     return () => clearInterval(iv);
   }, [refresh]);
 
@@ -106,18 +113,27 @@ export function EventsTestView() {
 
   const onSubscribe = async () => {
     if (!subLabel.trim()) {
-      toast({ type: "debug", title: "Missing field", description: "label is required", variant: "warning" });
+      toast({
+        type: "debug",
+        title: "Missing field",
+        description: "label is required",
+        variant: "warning",
+      });
       return;
     }
     setSubBusy(true);
     try {
-      const { id } = await fetchEndpoint(subscribeEventsTest, {}, {
-        body: {
-          userId: subUserId.trim() || undefined,
-          label: subLabel.trim(),
-          oneShot: subOneShot,
+      const { id } = await fetchEndpoint(
+        subscribeEventsTest,
+        {},
+        {
+          body: {
+            userId: subUserId.trim() || undefined,
+            label: subLabel.trim(),
+            oneShot: subOneShot,
+          },
         },
-      });
+      );
       flashTrigger(id);
       toast({
         type: "debug",
@@ -135,17 +151,26 @@ export function EventsTestView() {
 
   const onEmit = async () => {
     if (!emitUserId.trim()) {
-      toast({ type: "debug", title: "Missing field", description: "userId is required", variant: "warning" });
+      toast({
+        type: "debug",
+        title: "Missing field",
+        description: "userId is required",
+        variant: "warning",
+      });
       return;
     }
     setEmitBusy(true);
     try {
-      await fetchEndpoint(emitEventsTest, {}, {
-        body: {
-          userId: emitUserId.trim(),
-          message: emitMessage.trim() || undefined,
+      await fetchEndpoint(
+        emitEventsTest,
+        {},
+        {
+          body: {
+            userId: emitUserId.trim(),
+            message: emitMessage.trim() || undefined,
+          },
         },
-      });
+      );
       toast({
         type: "debug",
         title: "Event emitted",
@@ -163,7 +188,12 @@ export function EventsTestView() {
   const onDeleteTrigger = async (id: string) => {
     try {
       await fetchEndpoint(deleteEventsTestTrigger, { id });
-      toast({ type: "debug", title: "Trigger deleted", description: `Trigger ${id}`, variant: "success" });
+      toast({
+        type: "debug",
+        title: "Trigger deleted",
+        description: `Trigger ${id}`,
+        variant: "success",
+      });
       await refresh();
     } catch (e) {
       toastErr(e, "delete failed");
@@ -172,14 +202,23 @@ export function EventsTestView() {
 
   const onDeleteTargeting = async () => {
     if (!dtLabel.trim()) {
-      toast({ type: "debug", title: "Missing field", description: "label is required", variant: "warning" });
+      toast({
+        type: "debug",
+        title: "Missing field",
+        description: "label is required",
+        variant: "warning",
+      });
       return;
     }
     setDtBusy(true);
     try {
-      await fetchEndpoint(deleteEventsTestTargeting, {}, {
-        body: { label: dtLabel.trim() },
-      });
+      await fetchEndpoint(
+        deleteEventsTestTargeting,
+        {},
+        {
+          body: { label: dtLabel.trim() },
+        },
+      );
       toast({
         type: "debug",
         title: "Triggers swept",
@@ -197,16 +236,25 @@ export function EventsTestView() {
 
   const onDirectEnqueue = async () => {
     if (!deLabel.trim()) {
-      toast({ type: "debug", title: "Missing field", description: "label is required", variant: "warning" });
+      toast({
+        type: "debug",
+        title: "Missing field",
+        description: "label is required",
+        variant: "warning",
+      });
       return;
     }
     setDeBusy(true);
     try {
-      const { jobId } = await fetchEndpoint(directEnqueueEventsTest, {}, {
-        body: {
-          label: deLabel.trim(),
+      const { jobId } = await fetchEndpoint(
+        directEnqueueEventsTest,
+        {},
+        {
+          body: {
+            label: deLabel.trim(),
+          },
         },
-      });
+      );
       toast({
         type: "debug",
         title: "Job enqueued",
@@ -224,7 +272,11 @@ export function EventsTestView() {
   const onResetLog = async () => {
     try {
       await fetchEndpoint(resetEventsTest, {});
-      toast({ type: "debug", title: "Log cleared", description: "Events test log reset", });
+      toast({
+        type: "debug",
+        title: "Log cleared",
+        description: "Events test log reset",
+      });
       await refresh();
     } catch (e) {
       toastErr(e, "reset failed");
@@ -242,10 +294,13 @@ export function EventsTestView() {
               Events Test
             </Text>
             <Text as="p" variant="body" tone="muted">
-              Exercises the <code className="rounded-md bg-muted px-xs">events</code>{" "}
-              and <code className="rounded-md bg-muted px-xs">jobs</code> plugins:
-              subscribe a trigger, emit a payload, watch the job fire. Backed
-              by <code className="rounded-md bg-muted px-xs">events_test.pinged</code>{" "}
+              Exercises the{" "}
+              <code className="rounded-md bg-muted px-xs">events</code> and{" "}
+              <code className="rounded-md bg-muted px-xs">jobs</code> plugins:
+              subscribe a trigger, emit a payload, watch the job fire. Backed by{" "}
+              <code className="rounded-md bg-muted px-xs">
+                events_test.pinged
+              </code>{" "}
               event and{" "}
               <code className="rounded-md bg-muted px-xs">events_test.log</code>{" "}
               job.
@@ -391,24 +446,45 @@ export function EventsTestView() {
                         {t.userId ?? "(any)"}
                       </Badge>
                       <span className="text-muted-foreground">→</span>
-                      <Text as="span" variant="caption" className="font-mono">{t.jobName}</Text>
-                      <Text as="span" variant="caption" tone="muted" className="truncate">
+                      <Text as="span" variant="caption" className="font-mono">
+                        {t.jobName}
+                      </Text>
+                      <Text
+                        as="span"
+                        variant="caption"
+                        tone="muted"
+                        className="truncate"
+                      >
                         {JSON.stringify(t.jobWith)}
                       </Text>
                     </div>
-                    <Text as="div" variant="caption" tone="muted" className="flex items-center gap-sm">
-                      <Text as="span" variant="caption" tone="muted">{t.oneShot ? "one-shot" : "recurring"}</Text>
-                      <Text as="span" variant="caption" tone="muted">·</Text>
-                      <Text as="span" variant="caption" tone="muted" className="truncate font-mono">{t.id}</Text>
+                    <Text
+                      as="div"
+                      variant="caption"
+                      tone="muted"
+                      className="flex items-center gap-sm"
+                    >
+                      <Text as="span" variant="caption" tone="muted">
+                        {t.oneShot ? "one-shot" : "recurring"}
+                      </Text>
+                      <Text as="span" variant="caption" tone="muted">
+                        ·
+                      </Text>
+                      <Text
+                        as="span"
+                        variant="caption"
+                        tone="muted"
+                        className="truncate font-mono"
+                      >
+                        {t.id}
+                      </Text>
                     </Text>
                   </div>
-                  <Button
-                    variant="ghost"
+                  <IconButton
+                    icon={MdDelete}
+                    label="Delete trigger"
                     onClick={() => onDeleteTrigger(t.id)}
-                    aria-label="Delete trigger"
-                  >
-                    <MdDelete className="size-4" />
-                  </Button>
+                  />
                 </div>
               ))}
             </div>
@@ -459,18 +535,31 @@ export function EventsTestView() {
                   className="px-md py-sm"
                 >
                   <Stack direction="row" gap="sm" align="center">
-                    <Badge colorClass="bg-info/10 text-info-foreground" className="font-mono">
+                    <Badge
+                      colorClass="bg-info/10 text-info-foreground"
+                      className="font-mono"
+                    >
                       {e.label}
                     </Badge>
                     <span className="text-muted-foreground">fired for</span>
                     <Text as="span" variant="caption" className="font-mono">
                       userId={e.userId}
                     </Text>
-                    <Text as="span" variant="caption" tone="muted" className="truncate">
+                    <Text
+                      as="span"
+                      variant="caption"
+                      tone="muted"
+                      className="truncate"
+                    >
                       msg={JSON.stringify(e.message)}
                     </Text>
                   </Stack>
-                  <Text as="div" variant="caption" tone="muted" className="truncate">
+                  <Text
+                    as="div"
+                    variant="caption"
+                    tone="muted"
+                    className="truncate"
+                  >
                     {new Date(e.firedAt).toLocaleTimeString()} ·{" "}
                     <span className="font-mono">job {e.jobId}</span>
                   </Text>
@@ -499,7 +588,9 @@ function Section({
     <Surface level="raised" as="section" className="p-lg">
       <Stack gap="md">
         <div className="flex items-center justify-between gap-sm">
-          <Text as="h2" variant="label">{title}</Text>
+          <Text as="h2" variant="label">
+            {title}
+          </Text>
           {action}
         </div>
         <Stack gap="md">{children}</Stack>
@@ -517,7 +608,9 @@ function FieldRow({
 }) {
   return (
     <Stack gap="xs">
-      <Text as="label" variant="caption" tone="muted">{label}</Text>
+      <Text as="label" variant="caption" tone="muted">
+        {label}
+      </Text>
       {children}
     </Stack>
   );
@@ -525,7 +618,12 @@ function FieldRow({
 
 function Empty({ children }: { children: React.ReactNode }) {
   return (
-    <Text as="div" variant="body" tone="muted" className="rounded-md border border-dashed border-border px-md py-xl text-center">
+    <Text
+      as="div"
+      variant="body"
+      tone="muted"
+      className="rounded-md border border-dashed border-border px-md py-xl text-center"
+    >
       {children}
     </Text>
   );

@@ -21,6 +21,7 @@ export function AttemptSwitchButton() {
   // the variant and toggle are data-independent so the button is usable immediately.
   if (result.pending) {
     return (
+      // eslint-disable-next-line icon-button/prefer-icon-button -- placeholder for the icon+count button below; a square IconButton would resize the toolbar when the count settles
       <Button
         variant={isOpen ? "secondary" : "ghost"}
         title={isOpen ? "Close attempt view" : "Open attempt view"}
@@ -33,7 +34,8 @@ export function AttemptSwitchButton() {
     );
   }
 
-  const attempt = result.data.find((a) => a.id === conversation?.attemptId) ?? null;
+  const attempt =
+    result.data.find((a) => a.id === conversation?.attemptId) ?? null;
   const count = attempt?.conversations.length ?? 0;
 
   return (

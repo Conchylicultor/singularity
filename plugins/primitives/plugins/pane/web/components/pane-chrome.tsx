@@ -1,8 +1,5 @@
 import { linkGestureProps } from "@plugins/primitives/plugins/link-gesture/web";
-import {
-  Button,
-  SingleLineProvider,
-} from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { SingleLineProvider } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Bar } from "@plugins/primitives/plugins/bar/web";
 import { useContext, type ReactNode } from "react";
 import { AdaptiveBar } from "@plugins/primitives/plugins/adaptive-bar/web";
@@ -15,6 +12,7 @@ import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { PaneScroll } from "./pane-scroll";
+import { PaneIconAction } from "./pane-icon-action";
 import { ToolbarItem, type PaneHeaderZones } from "./pane-header-item";
 import { usePaneMatch, type PaneMatch, type AnyPane } from "../pane";
 import { PaneLayoutContext } from "../maximize-context";
@@ -177,18 +175,14 @@ export function PaneChrome({
             </>
           )}
           {chrome.promote && doPromote && (
-            <Button
-              variant="ghost"
-              aria-label="Expand pane"
+            <PaneIconAction
+              label="Expand pane"
+              icon={MdOpenInFull}
               {...linkGestureProps(doPromote)}
-            >
-              <MdOpenInFull className="size-4" />
-            </Button>
+            />
           )}
           {chrome.close && doClose && (
-            <Button variant="ghost" onClick={doClose} aria-label="Close">
-              <MdClose className="size-4" />
-            </Button>
+            <PaneIconAction label="Close" icon={MdClose} onClick={doClose} />
           )}
         </Bar>
       }

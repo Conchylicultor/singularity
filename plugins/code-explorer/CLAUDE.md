@@ -37,7 +37,6 @@ worktrees, which is deliberate: repo paths coincide.
     - `primitives/css/center.Center`
     - `primitives/css/clip.Clip`
     - `primitives/css/text.Text`
-    - `primitives/css/ui-kit.Button`
     - `primitives/css/ui-kit.ResizableHandle`
     - `primitives/css/ui-kit.ResizablePanel`
     - `primitives/css/ui-kit.ResizablePanelGroup`
@@ -46,6 +45,7 @@ worktrees, which is deliberate: repo paths coincide.
     - `primitives/data-view.defineDataView`
     - `primitives/data-view.FieldDef`
     - `primitives/data-view.HierarchyConfig`
+    - `primitives/icon-button.IconButton`
     - `primitives/loading.Loading`
     - `primitives/pane.openPane`
     - `primitives/pane.Pane`
