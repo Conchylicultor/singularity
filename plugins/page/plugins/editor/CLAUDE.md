@@ -1219,17 +1219,22 @@ structure — no per-block Lexical history.
   effect: after navigating away, Cmd+Z does not reach back into the old page.
   Entries whose thunks are pure server calls (the sidebar's trash-restore) are
   unscoped and survive.
-- **One stack, surface-level router (focus-independent).** There is deliberately no
-  Lexical `HistoryPlugin` — a per-block parallel history is a layering error: the
+- **One stack, surface-level router.** There is deliberately no Lexical
+  `HistoryPlugin` — a per-block parallel history is a layering error: the
   `page_blocks` row tree, not a Lexical document, is the source of truth. Cmd+Z /
   Cmd+Shift+Z / Cmd+Y are NOT routed per-block and NOT registered by the editor:
   `TabSurface` mounts one `useUndoRedoShortcuts()` per tab (`surfaceId`-gated,
   `enableInInputs`, on the window-level `ShortcutManager`), so the sidebar and the
-  body cannot race for the same key id and the keys fire regardless of which DOM
-  element holds the caret — focus-dependent routing is exactly how Cmd+Z reached
-  neither handler once focus fell to `<body>` after a structural undo. Nothing in
-  the container `onKeyDown` consumes those keys, so the native keydown bubbles out
-  untouched and text/structure interleave chronologically.
+  body cannot race for the same key id. Nothing in the container `onKeyDown`
+  consumes those keys, so the native keydown bubbles out untouched and
+  text/structure interleave chronologically.
+- **The block list CLAIMS those keys, it does not inherit them**
+  (`surfaceUndoProps` on the interaction container). The binding yields to any
+  text field keeping its own history — otherwise ⌘Z in the agent prompt beside an
+  open page undoes the prompt AND the page. Focus on `<body>` (where a structural
+  undo leaves it) still resolves to the surface, so the old focus-independence
+  this relied on is preserved where it mattered. See `primitives/undo-redo`'s
+  *This stack is not the only undo history on screen*.
 - **Text edits are per-block `Y.UndoManager` items mirrored onto the stack.** Text
   history lives in each block's content doc; `recordTextEdit` mirrors each new
   manager item 1:1 as a shared-stack entry calling `um.undo()`/`um.redo()` (see the
@@ -2243,6 +2248,7 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
     - `primitives/text-editor/caret-trigger.useCaretQuery`
     - `primitives/text-editor/caret-trigger.useForcedCaretQuery`
     - `primitives/text-editor/decorator-nav.DecoratorNavPlugin`
+    - `primitives/undo-redo.surfaceUndoProps`
     - `primitives/undo-redo.useScopedUndoRedo`
     - `reorder.isNodeData`
     - `reorder.TopLevelEntry`

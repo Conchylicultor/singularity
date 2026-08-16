@@ -42,6 +42,7 @@ import {
 } from "@plugins/primitives/plugins/multi-select/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { ContentScope } from "@plugins/primitives/plugins/select-scope/web";
+import { surfaceUndoProps } from "@plugins/primitives/plugins/undo-redo/web";
 import {
   useEventCallback,
   useLatestRef,
@@ -326,7 +327,9 @@ function BlockEditorInner({
   // double-register). Nothing in the editor consumes those keys either (no Lexical
   // HistoryPlugin), so the native keydown bubbles to the window-level
   // ShortcutManager untouched, regardless of which DOM element (a contenteditable,
-  // the selection container, or <body> after a structural undo) holds the caret.
+  // the selection container, or <body> after a structural undo) holds the caret —
+  // the `surfaceUndoProps` marker on the container below is what tells that
+  // binding the caret's editing host has no history of its own to protect.
 
   // Block handles, read once here — `insertFirstBlock` below needs them.
   const contributions = Editor.Block.useContributions();
@@ -1356,6 +1359,13 @@ function SelectionLayer({
             as="div"
             ref={containerRef}
             tabIndex={-1}
+            // The whole block list delegates undo to the TAB's stack: there is
+            // no per-block Lexical `HistoryPlugin`, so ⌘Z with the caret in a
+            // block must drive that stack rather than the caret's own editing
+            // host. Every other editable on screen (the page title input, the
+            // agent prompt) keeps its own history and is left alone, which is
+            // exactly what this marker delimits.
+            {...surfaceUndoProps}
             // A NAMED GROUP, and nothing more specific — because nothing more
             // specific would be true. Every row here holds a `contenteditable`
             // editing host, so the rows are not options, and no composite role

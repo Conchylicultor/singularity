@@ -51,14 +51,14 @@ export function ShortcutManager() {
         // While typing, plain-key shortcuts yield to the field so the keystroke
         // is inserted. Modifier combos (Cmd/Ctrl/Alt) are deliberate commands
         // and still fire; a shortcut may opt in via enableInInputs.
+        if (editable && !comboHasModifier(parsed) && !shortcut.enableInInputs)
+          continue;
+        if (shortcut.when && !shortcut.when(e)) continue;
         if (
-          editable &&
-          !comboHasModifier(parsed) &&
-          !shortcut.enableInInputs
+          shortcut.surfaceId !== undefined &&
+          shortcut.surfaceId !== getFocusedSurfaceId()
         )
           continue;
-        if (shortcut.when && !shortcut.when()) continue;
-        if (shortcut.surfaceId !== undefined && shortcut.surfaceId !== getFocusedSurfaceId()) continue;
 
         const priority = shortcut.priority ?? 0;
         if (priority > winnerPriority) {

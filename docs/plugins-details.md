@@ -17477,6 +17477,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/text-editor/caret-trigger.useCaretQuery`
           - `primitives/text-editor/caret-trigger.useForcedCaretQuery`
           - `primitives/text-editor/decorator-nav.DecoratorNavPlugin`
+          - `primitives/undo-redo.surfaceUndoProps`
           - `primitives/undo-redo.useScopedUndoRedo`
           - `reorder.isNodeData`
           - `reorder.TopLevelEntry`
@@ -25436,6 +25437,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/lazy-component.lazyComponent`
           - `primitives/slot-render.defineRenderSlot`
           - `primitives/text-editor/decorator-nav.DecoratorNavPlugin`
+          - `primitives/undo-redo.localUndoProps`
         - Exports (types):
           - `NodeExtension`
           - `TextEditorPluginProps`
@@ -25734,10 +25736,15 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/shortcuts.useSurfaceShortcuts`
         - Exports (types):
           - `HistoryEntry`
+          - `UndoOwner`
           - `UndoRedoApi`
           - `UndoRedoProviderProps`
           - `UndoRedoShortcutsOptions`
         - Exports (values):
+          - `localUndoProps`
+          - `resolveUndoOwner`
+          - `surfaceUndoProps`
+          - `UNDO_OWNER_ATTR`
           - `UndoRedoProvider`
           - `useScopedUndoRedo`
           - `useUndoRedo`
@@ -25748,6 +25755,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/pages/page-tree`
           - `infra/trash`
           - `page/editor`
+          - `primitives/text-editor`
     - **`usage-rank`** — Frecency usage ranking for any (namespace, key) set: recordUsage() fires one atomic decay-and-increment, and useUsageOrder() returns the most-used-first order — one coalesced point subscription, frozen per context so chips never move under the cursor, seeded from a local cache so the first paint does not re-sort. Owns the usage_stats table: one frecency rollup per (namespace, key), updated by a single atomic decay-and-increment upsert, served as a bounded point resource and swept by a nightly 1-year retention job.
       - Server:
         - Contributes: `resource.declare` "usage-stats"

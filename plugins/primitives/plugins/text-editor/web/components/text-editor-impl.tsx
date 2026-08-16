@@ -1,6 +1,7 @@
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useEffect, useMemo, useRef } from "react";
 import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
+import { localUndoProps } from "@plugins/primitives/plugins/undo-redo/web";
 import { LexicalComposer } from "@lexical/react/LexicalComposer";
 import { PlainTextPlugin } from "@lexical/react/LexicalPlainTextPlugin";
 import { ContentEditable } from "@lexical/react/LexicalContentEditable";
@@ -86,7 +87,11 @@ export function TextEditor({
         maxHeight={maxHeight}
         bottomSlot={bottomSlot}
       />
-      <ValueSyncPlugin value={value} onChange={onChange} extensions={extensions} />
+      <ValueSyncPlugin
+        value={value}
+        onChange={onChange}
+        extensions={extensions}
+      />
       {initialSelection && (
         <InitialSelectionPlugin
           selection={initialSelection}
@@ -190,10 +195,19 @@ function EditorShell({
           : "bg-transparent dark:bg-input/30",
       )}
     >
-      <div className={cn("relative", disabled && "opacity-50 pointer-events-none cursor-not-allowed")}>
+      <div
+        className={cn(
+          "relative",
+          disabled && "opacity-50 pointer-events-none cursor-not-allowed",
+        )}
+      >
         <PlainTextPlugin
           contentEditable={
             <ContentEditable
+              // This editor mounts its own `HistoryPlugin` (below), so ⌘Z here
+              // is an edit to THIS editor and nothing else — claimed back from
+              // any surface-undo region it happens to be rendered inside.
+              {...localUndoProps}
               style={{ minHeight, maxHeight }}
               // eslint-disable-next-line layout/no-adhoc-layout -- overflow-y-auto configures the scroll on Lexical's third-party ContentEditable element (its own clamped editor viewport), not a primitive boundary
               className={cn(

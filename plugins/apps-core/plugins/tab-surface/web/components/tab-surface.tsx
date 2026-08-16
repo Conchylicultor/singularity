@@ -72,8 +72,10 @@ export function TabSurface({ tab }: { tab: Tab }) {
  * The tab's `mod+z` / `mod+shift+z` / `mod+y` bindings. Its own component only
  * because the hook must run INSIDE the `<UndoRedoProvider>` mounted in the same
  * JSX above. An app that records nothing keeps an empty stack, so `canUndo` is
- * false, the shortcut's `when` guard rejects, and the keys are never claimed —
- * native input undo is untouched there.
+ * false, the shortcut's `when` guard rejects, and the keys are never claimed.
+ * The guard also yields to any text field keeping its own undo history, so this
+ * one binding never reaches across the tab into an editor the user isn't in
+ * (see `primitives/undo-redo`'s `resolveUndoOwner`).
  */
 function UndoRedoKeys() {
   useUndoRedoShortcuts();

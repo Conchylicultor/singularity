@@ -1,12 +1,22 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 
-export { UndoRedoProvider, type UndoRedoProviderProps } from "./internal/provider";
+export {
+  UndoRedoProvider,
+  type UndoRedoProviderProps,
+} from "./internal/provider";
 export { useUndoRedo, type UndoRedoApi } from "./internal/use-undo-redo";
 export { useScopedUndoRedo } from "./internal/use-scoped-undo-redo";
 export {
   useUndoRedoShortcuts,
   type UndoRedoShortcutsOptions,
 } from "./internal/use-undo-redo-shortcuts";
+export {
+  surfaceUndoProps,
+  localUndoProps,
+  resolveUndoOwner,
+  UNDO_OWNER_ATTR,
+  type UndoOwner,
+} from "./internal/undo-owner";
 export type { HistoryEntry } from "./internal/stack";
 
 export default {

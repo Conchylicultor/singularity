@@ -12,7 +12,13 @@ export type ShortcutDescriptor = {
   label: string;
   group?: string;
   handler: () => void;
-  when?: () => boolean;
+  /**
+   * Eligibility gate, evaluated on the keystroke that matched. The event is
+   * passed so a shortcut can decide from WHERE the key landed (`event.target`)
+   * — e.g. undo yielding to a text field that keeps its own history. Most
+   * guards ignore it and read their own state.
+   */
+  when?: (event: KeyboardEvent) => boolean;
   priority?: number;
   /**
    * Fire even when an editable element (input/textarea/select/contenteditable)

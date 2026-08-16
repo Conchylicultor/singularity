@@ -69,6 +69,7 @@ way text enters the editor, so an extension is never wired per-entry-point:
     - `primitives/lazy-component.lazyComponent`
     - `primitives/slot-render.defineRenderSlot`
     - `primitives/text-editor/decorator-nav.DecoratorNavPlugin`
+    - `primitives/undo-redo.localUndoProps`
   - Exports (types):
     - `NodeExtension`
     - `TextEditorPluginProps`
