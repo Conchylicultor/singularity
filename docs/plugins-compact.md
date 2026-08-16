@@ -75,7 +75,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
           - Plugins:
             - **`quick-create`** — Quick-create section for the Pages landing surface: template tiles (blank, to-do, bulleted list) that create and open a new page.
             - **`recent-pages`** — Recent-pages section for the Pages landing surface: the most recently updated pages as clickable rows.
-    - **`prototypes`** [4 sub-plugins] — Prototypes — browse, focus, compare, and iterate on throwaway UI design mockups served from the repo-root prototypes/ dir.
+    - **`prototypes`** [4 sub-plugins] — Prototypes — browse, focus, compare, and iterate on throwaway UI design mockups served from the host-global prototypes data dir (PROTOTYPES_DIR), outside any checkout.
     - **`settings`** — Settings app.
       - Plugins:
         - **`accounts`** — Account settings surface: registers the accounts pane and its Settings sidebar entry.
@@ -170,7 +170,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
 
 - **`auth`** [load-bearing] [5 sub-plugins] — Shared authentication infrastructure (OAuth 2.0, API keys). Exposes the accounts pane + Auth.Provider slot; the Settings app surfaces the Account entry. Worktree-side auth helpers. Provides getTokenFromCentral() for worktree plugins that need OAuth tokens. Centralized OAuth/API-key infrastructure for third-party services. Tokens persist via the central secrets store; auth runs on the central runtime so all worktrees share one connected state.
 
-- **`backup`** [13 sub-plugins] — Backup orchestrator UI: run backups, view history, configure targets. Backup orchestrator: assembles archives from registered backup sources, dispatches to registered storage targets.
+- **`backup`** [14 sub-plugins] — Backup orchestrator UI: run backups, view history, configure targets. Backup orchestrator: assembles archives from registered backup sources, dispatches to registered storage targets.
 
 - **`build`** [10 sub-plugins] — Trigger `./singularity build` from the toolbar.
 
@@ -350,6 +350,8 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`mcp`** [load-bearing] — HTTP MCP server endpoint. Hosts tools contributed by other plugins via Mcp.tool.
     - **`ndjson-stream`** — Client NDJSON stream reader: an async generator yielding one parsed JSON frame per line from a streamed endpoint, guarding res.ok and reporting via EndpointError. NDJSON (application/x-ndjson) streaming Response builder: wrap a frame-emitting producer into a chunked stream that survives Bun's idle timeout and lets clients render rows progressively.
     - **`paths`**
+      - Plugins:
+        - **`display`** — The human-facing spelling of the singularity data dirs (the `~/…` form a message, an empty state, or an agent prompt writes). Web-safe by construction: string literals only, no node:* and no homedir() — so the browser can name a directory the server resolves.
     - **`query-resource`** — Declarative SQL query→resource compiler: one drizzle-based declaration derives the loader, scoped loader, identityTable, and client keyOf for keyed live-state resources.
     - **`retention`** — Retention primitive: defineRetention wraps defineJob into a nightly TTL sweep (DELETE WHERE column < now()-ttl) whose growth bound is recorded only when the sweep is mounted; markCascadeBounded verifies at module eval that an FK onDelete cascade really reclaims the rows. getGrowthBounds exposes the resulting true set of growth bounds.
     - **`runtime-profiler`** [load-bearing]

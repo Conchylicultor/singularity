@@ -2465,9 +2465,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `primitives/loading.Loading`
                   - `primitives/pane.useOpenPane`
                   - `primitives/relative-time.RelativeTime`
-    - **`prototypes`** — Prototypes — browse, focus, compare, and iterate on throwaway UI design mockups served from the repo-root prototypes/ dir.
+    - **`prototypes`** — Prototypes — browse, focus, compare, and iterate on throwaway UI design mockups served from the host-global prototypes data dir (PROTOTYPES_DIR), outside any checkout.
       - Plugins:
-        - **`files`** — Serves raw prototype files from the repo-root prototypes/ dir, declares the list + version live-state resources, and watches the dir to auto-reload open iframes on edit.
+        - **`files`** — Serves raw prototype files from the host-global prototypes data dir (PROTOTYPES_DIR — shared by every worktree and main, so a mock is visible without a build and without being committed), seeds the repo's _template/ into it, declares the list + version live-state resources, and watches the dir to auto-reload open iframes on edit.
           - Server:
             - Contributes:
               - `resource.declare` "prototypes.list"
@@ -2476,6 +2476,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `infra/endpoints.implement`
               - `infra/file-watcher.createFileWatcher`
               - `infra/file-watcher.FileWatcher`
+              - `infra/paths.PROTOTYPES_DIR`
               - `infra/paths.REPO_ROOT`
             - Resources:
               - `prototypes.list` (push)
@@ -2484,17 +2485,26 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Core:
             - Uses:
               - `infra/endpoints.defineEndpoint`
+              - `infra/html-decode.decodeHtmlText`
+              - `infra/html-decode.readHtmlAttr`
               - `primitives/live-state.resourceDescriptor`
-            - Exports (types): `PrototypeMeta`
+            - Exports (types):
+              - `PrototypeFolder`
+              - `PrototypeMeta`
+              - `PrototypeProblem`
             - Exports (values):
+              - `isScannableFile`
               - `listPrototypes`
               - `PROTOTYPE_ASSET_ROUTE`
+              - `PROTOTYPE_ENTRY_FILE`
               - `PROTOTYPE_FILE_ROUTE`
               - `PrototypeMetaSchema`
+              - `PrototypeProblemSchema`
               - `PROTOTYPES_API_BASE`
               - `prototypesResource`
               - `prototypesVersionResource`
               - `prototypeUrl`
+              - `validatePrototypeFolder`
         - **`gallery`** — Prototypes gallery list pane and the Focus/Compare detail pane (scaled live iframes), with an Improve this prototype affordance.
           - Web:
             - Slots:
@@ -2506,6 +2516,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `prototypeDetailPane.Actions` → `ViewModeSwitcher`
               - `prototypeDetailPane.Actions` → `ImproveButton`
             - Uses:
+              - `primitives/css/badge.Badge`
+              - `primitives/css/column.Column`
+              - `primitives/css/overlay.Overlay`
+              - `primitives/css/pin.Pin`
+              - `primitives/css/spacing.Inset`
+              - `primitives/css/spacing.Stack`
               - `primitives/css/text.Text`
               - `primitives/css/toggle-chip.SegmentedControl`
               - `primitives/css/ui-kit.Button`
@@ -6498,6 +6514,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `backup/sources/cost-history`
       - `backup/sources/databases`
       - `backup/sources/project-memory`
+      - `backup/sources/prototypes`
       - `backup/sources/secrets`
       - `backup/sources/singularity-platform`
       - `backup/sources/transcripts`
@@ -6599,6 +6616,19 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `config_v2.ConfigV2`
               - `config_v2.getConfig`
               - `infra/paths.CLAUDE_PROJECTS_DIR`
+        - **`prototypes`** — Config UI for the prototypes backup source. Backs up the throwaway UI prototypes into the backup archive — they live outside git on purpose, so this is what makes them recoverable.
+          - Web:
+            - Contributes: `ConfigV2.WebRegister`
+            - Uses: `config_v2.ConfigV2`
+          - Server:
+            - Contributes:
+              - `ConfigV2.Register` "config"
+              - `backup.source` "Prototypes"
+            - Uses:
+              - `backup.BackupSource`
+              - `config_v2.ConfigV2`
+              - `config_v2.getConfig`
+              - `infra/paths.PROTOTYPES_DIR`
         - **`secrets`** — Config UI for the secrets backup source. Backs up encrypted secrets into the backup archive.
           - Web:
             - Contributes: `ConfigV2.WebRegister`
@@ -7181,7 +7211,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
 
 - **`config_v2`** — Reactive useConfig hook for reading typed JSONC config in the browser. Typed JSONC config handles for server plugins.
   - Web:
-    - Slots: `ConfigV2.WebRegister` ← `apps-core.app-rail-framing`, `apps-core.surface.floating`, `apps-core.surface.floating.wallpaper`, `apps.sonata.audio.metronome`, `apps.sonata.notation`, `apps.sonata.piano-keyboard`, `apps.sonata.piano-roll`, `apps.sonata.piano-roll.fx-comets`, `apps.sonata.piano-roll.fx-core`, `apps.sonata.piano-roll.fx-ripples`, `apps.sonata.piano-roll.fx-shatter`, `apps.sonata.primitives.keyboard`, `apps.sonata.rich.chord-label`, `apps.sonata.sources.midi.folders`, `apps.sonata.voicing`, `auth.apple-signing`, `auth.google`, `auth.notion`, `backup`, `backup.sources.attachments`, `backup.sources.claude-settings`, `backup.sources.config`, `backup.sources.cost-history`, `backup.sources.databases`, `backup.sources.project-memory`, `backup.sources.secrets`, `backup.sources.singularity-platform`, `backup.sources.transcripts`, `backup.targets.google-drive`, `backup.targets.local`, `build`, `conversations`, `conversations.conversation-category`, `conversations.conversation-view.launch-prompts`, `conversations.conversation-view.prompt-templates`, `conversations.conversation-view.push-and-exit`, `conversations.conversation-view.turn-summary`, `conversations.hibernation`, `conversations.model-provider`, `conversations.preprompts`, `debug.boot-budget`, `debug.boot-monitor`, `debug.boot-watchdog`, `debug.live-state-churn.monitor`, `debug.op-rate`, `debug.paging-probe`, `debug.queue-health`, `debug.read-set-shrink`, `debug.sentinel`, `debug.session-divergence`, `debug.slow-ops`, `debug.stall-monitor`, `debug.trace.engine`, `infra.duress`, `integrations.gmail`, `plugin-meta.composition`, `primitives.data-view`, `reorder`, `review.code-review`, `shell.global-action-bar`, `stats.commits`, `stats.cost`, `tasks.task-draft-form`, `ui.segmented-progress-bar`, `ui.sidebar-framing`, `ui.tab-bar`, `ui.theme-engine`, `ui.tokens.categorical`, `ui.tokens.chart`, `ui.tokens.color-adjust`, `ui.tokens.color-palette`, `ui.tokens.density`, `ui.tokens.font-family`, `ui.tokens.rich-text-palette`, `ui.tokens.shadow`, `ui.tokens.shape`, `ui.tokens.sidebar-palette`, `ui.tokens.type-scale`, `ui.tree-disclosure`
+    - Slots: `ConfigV2.WebRegister` ← `apps-core.app-rail-framing`, `apps-core.surface.floating`, `apps-core.surface.floating.wallpaper`, `apps.sonata.audio.metronome`, `apps.sonata.notation`, `apps.sonata.piano-keyboard`, `apps.sonata.piano-roll`, `apps.sonata.piano-roll.fx-comets`, `apps.sonata.piano-roll.fx-core`, `apps.sonata.piano-roll.fx-ripples`, `apps.sonata.piano-roll.fx-shatter`, `apps.sonata.primitives.keyboard`, `apps.sonata.rich.chord-label`, `apps.sonata.sources.midi.folders`, `apps.sonata.voicing`, `auth.apple-signing`, `auth.google`, `auth.notion`, `backup`, `backup.sources.attachments`, `backup.sources.claude-settings`, `backup.sources.config`, `backup.sources.cost-history`, `backup.sources.databases`, `backup.sources.project-memory`, `backup.sources.prototypes`, `backup.sources.secrets`, `backup.sources.singularity-platform`, `backup.sources.transcripts`, `backup.targets.google-drive`, `backup.targets.local`, `build`, `conversations`, `conversations.conversation-category`, `conversations.conversation-view.launch-prompts`, `conversations.conversation-view.prompt-templates`, `conversations.conversation-view.push-and-exit`, `conversations.conversation-view.turn-summary`, `conversations.hibernation`, `conversations.model-provider`, `conversations.preprompts`, `debug.boot-budget`, `debug.boot-monitor`, `debug.boot-watchdog`, `debug.live-state-churn.monitor`, `debug.op-rate`, `debug.paging-probe`, `debug.queue-health`, `debug.read-set-shrink`, `debug.sentinel`, `debug.session-divergence`, `debug.slow-ops`, `debug.stall-monitor`, `debug.trace.engine`, `infra.duress`, `integrations.gmail`, `plugin-meta.composition`, `primitives.data-view`, `reorder`, `review.code-review`, `shell.global-action-bar`, `stats.commits`, `stats.cost`, `tasks.task-draft-form`, `ui.segmented-progress-bar`, `ui.sidebar-framing`, `ui.tab-bar`, `ui.theme-engine`, `ui.tokens.categorical`, `ui.tokens.chart`, `ui.tokens.color-adjust`, `ui.tokens.color-palette`, `ui.tokens.density`, `ui.tokens.font-family`, `ui.tokens.rich-text-palette`, `ui.tokens.shadow`, `ui.tokens.shape`, `ui.tokens.sidebar-palette`, `ui.tokens.type-scale`, `ui.tree-disclosure`
     - Contributes: `Core.Boot`
     - Uses:
       - `infra/endpoints.fetchEndpoint`
@@ -7349,6 +7379,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `backup/sources/cost-history`
       - `backup/sources/databases`
       - `backup/sources/project-memory`
+      - `backup/sources/prototypes`
       - `backup/sources/secrets`
       - `backup/sources/singularity-platform`
       - `backup/sources/transcripts`
@@ -15867,6 +15898,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `plugin-meta/plugin-tree`
           - `review/plugin-changes`
     - **`html-decode`** — Decode HTML character references in raw markup source: decodeHtmlText for text, readHtmlAttr for an HTMLRewriter attribute read. Bun's HTMLRewriter decodes nothing, so every scraped value needs decoding exactly once.
+      - Cross-plugin:
+        - Imported by: `apps/prototypes/files`
       - Core:
         - Exports (types): `AttributeSource`
         - Exports (values):
@@ -16085,6 +16118,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `backup/sources/config`
           - `backup/sources/cost-history`
           - `backup/sources/project-memory`
+          - `backup/sources/prototypes`
           - `backup/sources/secrets`
           - `backup/sources/singularity-platform`
           - `backup/targets/local`
@@ -16175,6 +16209,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `MAIN_WORKTREE_NAME`
           - `PGREP`
           - `PLUGINS_DIR`
+          - `PROTOTYPES_DIR`
           - `pruneWorktreeBuildArtifacts`
           - `pruneWorktreeCheckArtifacts`
           - `pruneWorktreeReleaseArtifacts`
@@ -16228,6 +16263,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `worktreeArtifacts`
           - `worktreeDataDir`
           - `WORKTREES_DIR`
+      - Plugins:
+        - **`display`** — The human-facing spelling of the singularity data dirs (the `~/…` form a message, an empty state, or an agent prompt writes). Web-safe by construction: string literals only, no node:* and no homedir() — so the browser can name a directory the server resolves.
+          - Core:
+            - Exports (values): `PROTOTYPES_DIR_DISPLAY`
     - **`query-resource`** — Declarative SQL query→resource compiler: one drizzle-based declaration derives the loader, scoped loader, identityTable, and client keyOf for keyed live-state resources.
       - Server:
         - Uses:
@@ -19826,6 +19865,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/events/sources/source-detail/status`
               - `apps/mail/attachments`
               - `apps/mail/search`
+              - `apps/prototypes/gallery`
               - `apps/sonata/sources/midi/folders`
               - `apps/sonata/sources/ultimate-guitar`
               - `apps/studio/compositions`
@@ -20236,6 +20276,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Imported by:
               - `apps/home/shell`
               - `apps/mail/shell`
+              - `apps/prototypes/gallery`
               - `apps/sonata/library`
               - `apps/studio/contributions`
               - `apps/studio/graph`
@@ -20542,6 +20583,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Cross-plugin:
             - Imported by:
               - `apps/browser/webview`
+              - `apps/prototypes/gallery`
               - `conversations/conversation-view/jsonl-viewer/collapsible-card`
               - `debug/timeline`
               - `page/editor`
@@ -20567,6 +20609,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps-core/surface/solo`
               - `apps/browser/webview`
               - `apps/pages/page-tree`
+              - `apps/prototypes/gallery`
               - `apps/prototypes/present`
               - `apps/sonata/notation`
               - `apps/sonata/piano-roll`
@@ -20945,6 +20988,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/pages/welcome`
               - `apps/pages/welcome/quick-create`
               - `apps/pages/welcome/recent-pages`
+              - `apps/prototypes/gallery`
               - `apps/sonata/audio/engine`
               - `apps/sonata/audio/metronome`
               - `apps/sonata/library`
