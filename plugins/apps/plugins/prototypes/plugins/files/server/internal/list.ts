@@ -1,11 +1,18 @@
-import { readdir } from "node:fs/promises";
-import type { Dirent } from "node:fs";
-import { join } from "node:path";
 import {
   decodeHtmlText,
   readHtmlAttr,
 } from "@plugins/infra/plugins/html-decode/core";
-import type { PrototypeMeta } from "../../core";
+import {
+  PROTOTYPE_ENTRY_FILE,
+  validatePrototypeFolder,
+  type PrototypeFolder,
+  type PrototypeMeta,
+  type PrototypeProblem,
+} from "../../core";
+import {
+  listPrototypeDirNames,
+  readPrototypeFolder,
+} from "../../shared/read-folder";
 import { PROTOTYPES_DIR } from "./paths";
 
 /** Canvas size used when the HTML declares no `prototype-viewport`. */
@@ -78,48 +85,58 @@ async function parseHtmlMeta(html: string): Promise<HtmlMeta> {
 }
 
 /**
- * Read every `prototypes/<name>/index.html` into a `PrototypeMeta[]`, skipping
- * `_`-prefixed dirs (`_template` is a seed, not a prototype) and dot-dirs. The
- * dir name is the `name`; the display `title` falls back to it when the HTML
- * declares none. A directory whose HTML can't be read is skipped and logged —
- * the gallery degrades rather than crashing on a half-authored mock.
+ * Read every prototype under the host-global prototypes dir into a
+ * `PrototypeMeta[]`, skipping `_`-prefixed dirs (`_template` is a seed, not a
+ * prototype) and dot-dirs. The dir name is the `name`; the display `title`
+ * falls back to it when the HTML declares none.
+ *
+ * A malformed folder is listed, not hidden: its `problems` say what is wrong and
+ * the gallery card shows them. Silently dropping it is how an author ends up
+ * staring at a gallery that doesn't contain the thing they just wrote.
  */
 export async function listPrototypeMetas(): Promise<PrototypeMeta[]> {
-  let entries: Dirent<string>[];
-  try {
-    entries = await readdir(PROTOTYPES_DIR, { withFileTypes: true });
-  } catch (err) {
-    // The prototypes/ dir may not exist yet — that's the one expected failure.
-    if ((err as NodeJS.ErrnoException).code === "ENOENT") return [];
-    throw err;
-  }
+  const dirNames = await listPrototypeDirNames(PROTOTYPES_DIR);
 
   const metas: PrototypeMeta[] = [];
-  for (const entry of entries) {
-    if (!entry.isDirectory()) continue;
-    const dirName = entry.name;
-    if (dirName.startsWith("_") || dirName.startsWith(".")) continue;
+  for (const dirName of dirNames) {
+    metas.push(await readMeta(dirName, dirNames));
+  }
+  return metas;
+}
 
-    const indexPath = join(PROTOTYPES_DIR, dirName, "index.html");
-    const file = Bun.file(indexPath);
-    if (!(await file.exists())) continue;
+async function readMeta(
+  dirName: string,
+  siblings: string[],
+): Promise<PrototypeMeta> {
+  const base = {
+    name: dirName,
+    title: dirName,
+    blurb: "",
+    viewport: { ...DEFAULT_VIEWPORT },
+  };
 
-    let parsed: HtmlMeta;
-    try {
-      parsed = await parseHtmlMeta(await file.text());
-    } catch (err) {
-      console.error(`[prototypes] could not read ${indexPath}`, err);
-      continue;
-    }
-
-    metas.push({
-      name: dirName,
-      title: parsed.title === "" ? dirName : parsed.title,
-      blurb: parsed.blurb,
-      viewport: parsed.viewport,
-    });
+  let folder: PrototypeFolder;
+  try {
+    folder = await readPrototypeFolder(PROTOTYPES_DIR, dirName, siblings);
+  } catch (err) {
+    // One unreadable folder must not take the whole gallery down with it — but
+    // it is reported on its own card rather than swallowed.
+    return {
+      ...base,
+      problems: [{ path: "", detail: `could not be read: ${String(err)}` }],
+    };
   }
 
-  metas.sort((a, b) => a.name.localeCompare(b.name));
-  return metas;
+  const problems: PrototypeProblem[] = await validatePrototypeFolder(folder);
+  const html = folder.texts.get(PROTOTYPE_ENTRY_FILE);
+  if (html === undefined) return { ...base, problems };
+
+  const parsed = await parseHtmlMeta(html);
+  return {
+    ...base,
+    title: parsed.title === "" ? dirName : parsed.title,
+    blurb: parsed.blurb,
+    viewport: parsed.viewport,
+    problems,
+  };
 }

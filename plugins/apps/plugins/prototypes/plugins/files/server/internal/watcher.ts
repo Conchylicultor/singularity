@@ -4,6 +4,7 @@ import {
   type FileWatcher,
 } from "@plugins/infra/plugins/file-watcher/server";
 import { PROTOTYPES_DIR } from "./paths";
+import { seedTemplate } from "./seed";
 import {
   prototypesResource,
   prototypesVersionResource,
@@ -22,9 +23,12 @@ export async function startPrototypesWatcher(): Promise<void> {
   if (started) return;
   started = true;
 
-  // @parcel/watcher errors if the watched dir doesn't exist; the content lives
-  // in prototypes/ authored separately, so ensure it exists before subscribing.
+  // @parcel/watcher errors if the watched dir doesn't exist; the content is
+  // authored separately (and lives outside any checkout), so ensure it exists
+  // before subscribing. Seeding the template needs the dir too, and needs to
+  // land before the first list so the blank page is there to copy.
   await mkdir(PROTOTYPES_DIR, { recursive: true });
+  await seedTemplate();
 
   watcher = await createFileWatcher({
     dirs: [PROTOTYPES_DIR],

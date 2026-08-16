@@ -9,3 +9,10 @@ export {
   listPrototypes,
 } from "./prototypes";
 export type { PrototypeMeta } from "./prototypes";
+export {
+  PrototypeProblemSchema,
+  PROTOTYPE_ENTRY_FILE,
+  isScannableFile,
+  validatePrototypeFolder,
+} from "./validate";
+export type { PrototypeProblem, PrototypeFolder } from "./validate";

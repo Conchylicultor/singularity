@@ -32,8 +32,9 @@ layout utilities).
 `NEW_PROTOTYPE_TEXT` and `improveText()` are the only instruction guaranteed to
 reach a prototype agent — they are always in its first user turn, unlike a
 `CLAUDE.md` it may never open. So they carry the rules that decide whether the
-result is an original design: **copy `prototypes/_template/`, never open another
-prototype's folder, never read `plugins/`**, keep the folder self-contained.
+result is an original design: **write to `~/.singularity/prototypes/` and commit
+nothing, copy `_template/`, never open another prototype's folder, never read
+`plugins/`**, keep the folder self-contained.
 Keep them tight and let `prototypes/CLAUDE.md` hold the rest — but do not let
 them drift back into "follow the shape of the existing mocks", which is what
 they said before and is why every prototype looked alike.
@@ -53,6 +54,12 @@ they said before and is why every prototype looked alike.
     - `prototypeDetailPane.Actions` → `ViewModeSwitcher`
     - `prototypeDetailPane.Actions` → `ImproveButton`
   - Uses:
+    - `primitives/css/badge.Badge`
+    - `primitives/css/column.Column`
+    - `primitives/css/overlay.Overlay`
+    - `primitives/css/pin.Pin`
+    - `primitives/css/spacing.Inset`
+    - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
     - `primitives/css/toggle-chip.SegmentedControl`
     - `primitives/css/ui-kit.Button`

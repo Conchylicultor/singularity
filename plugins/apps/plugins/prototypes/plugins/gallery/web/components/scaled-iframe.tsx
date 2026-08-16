@@ -71,7 +71,8 @@ export function ScaledIframe({
           // that fetch()es one of its own flat files (a `data.json`, say) works
           // here exactly as it does when the file is opened off disk — without
           // it the frame is a null origin and every such fetch is blocked.
-          // Safe here: prototypes are first-party files served from our repo.
+          // Safe here: prototypes are first-party files, authored on this
+          // machine and served from the user's own ~/.singularity/prototypes/.
           sandbox="allow-scripts allow-same-origin"
           width={meta.viewport.w}
           height={meta.viewport.h}

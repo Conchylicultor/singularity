@@ -155,6 +155,14 @@ export const LEGACY_AUTH_BLOB = join(LEGACY_AUTH_DIR, "tokens.json.enc");
 export const LEGACY_AUTH_KEY = join(LEGACY_AUTH_DIR, ".key");
 export const ATTACHMENTS_DIR = join(SINGULARITY_DIR, "attachments");
 export const REPORTS_DIR = join(SINGULARITY_DIR, "reports");
+// Throwaway UI mockups (`prototypes/<slug>/index.html`). Host-global on purpose:
+// a prototype is user content, not source. Living here rather than in the repo
+// means one shared set every worktree AND main serve — so a mock an agent writes
+// is visible immediately on the always-running main app, with no build and
+// nothing to commit — and it outlives the worktree that authored it. Recoverable
+// through the `prototypes` backup source. The `_template/` seed is the one part
+// that IS code: it ships in the repo and is copied in here on boot.
+export const PROTOTYPES_DIR = join(SINGULARITY_DIR, "prototypes");
 // Host-global incremental usage index for stats/cost. The `~/.claude/projects`
 // corpus is shared by every backend, so its aggregate is identical across
 // worktrees — the cache lives under the host-global root, not a per-worktree DB.

@@ -55,6 +55,7 @@
     - `backup/sources/cost-history`
     - `backup/sources/databases`
     - `backup/sources/project-memory`
+    - `backup/sources/prototypes`
     - `backup/sources/secrets`
     - `backup/sources/singularity-platform`
     - `backup/sources/transcripts`
@@ -82,6 +83,7 @@
       - **`cost-history`** — Config UI for the cost-history backup source. Backs up the permanent cost-history archive (year-sharded session records and the merged price table) into the backup archive.
       - **`databases`** — Config UI for the databases backup source. Backs up worktree databases into the backup archive.
       - **`project-memory`** — Config UI for the project memory backup source. Backs up Claude Code project memory files into the backup archive.
+      - **`prototypes`** — Config UI for the prototypes backup source. Backs up the throwaway UI prototypes into the backup archive — they live outside git on purpose, so this is what makes them recoverable.
       - **`secrets`** — Config UI for the secrets backup source. Backs up encrypted secrets into the backup archive.
       - **`singularity-platform`** — Config UI for the Singularity platform backup source. Backs up Singularity platform files (auth, database config, crashes) into the backup archive.
       - **`transcripts`** — Config UI for the transcripts backup source. Backs up retained-conversation transcripts (active, plus every conversation of a held task) into the backup archive.

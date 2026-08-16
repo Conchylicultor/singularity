@@ -1,17 +1,22 @@
 import { z } from "zod";
 import { resourceDescriptor } from "@plugins/primitives/plugins/live-state/core";
 import { defineEndpoint } from "@plugins/infra/plugins/endpoints/core";
+import { PrototypeProblemSchema } from "./validate";
 
 /**
- * Metadata for a single prototype, parsed out of `prototypes/<name>/index.html`.
- * There is no `meta.json`: a prototype is one self-contained HTML file, so its
- * metadata is expressed the way HTML already expresses metadata.
+ * Metadata for a single prototype, parsed out of `<slug>/index.html` under the
+ * host-global prototypes dir. There is no `meta.json`: a prototype is one
+ * self-contained HTML file, so its metadata is expressed the way HTML already
+ * expresses metadata.
  *
  * - `name` — the directory slug (injected by the server; what URLs address)
  * - `title` — `<title>`, the display name (falls back to `name`)
  * - `blurb` — `<meta name="description">` (defaults to `""`)
  * - `viewport` — `<meta name="prototype-viewport" content="1320x868">`
  *   (defaults to 1280x800)
+ * - `problems` — every way the folder breaks the self-contained contract, empty
+ *   when it holds. Prototypes are user content, not code, so this rides the
+ *   wire to the gallery card instead of gating a push.
  */
 // All fields required: this is the wire/output shape (the resource + endpoint
 // broadcast fully-populated metas). `list.ts` supplies a default for every key
@@ -21,6 +26,7 @@ export const PrototypeMetaSchema = z.object({
   title: z.string(),
   blurb: z.string(),
   viewport: z.object({ w: z.number(), h: z.number() }),
+  problems: z.array(PrototypeProblemSchema),
 });
 export type PrototypeMeta = z.infer<typeof PrototypeMetaSchema>;
 

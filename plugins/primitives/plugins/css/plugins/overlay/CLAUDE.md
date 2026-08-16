@@ -75,6 +75,7 @@ header content inside is a `<Frame>`.
 - Cross-plugin:
   - Imported by:
     - `apps/browser/webview`
+    - `apps/prototypes/gallery`
     - `conversations/conversation-view/jsonl-viewer/collapsible-card`
     - `debug/timeline`
     - `page/editor`

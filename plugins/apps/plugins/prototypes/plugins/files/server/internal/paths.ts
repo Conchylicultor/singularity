@@ -1,8 +1,22 @@
 import { join, resolve, sep } from "node:path";
-import { REPO_ROOT } from "@plugins/infra/plugins/paths/server";
+import { PROTOTYPES_DIR, REPO_ROOT } from "@plugins/infra/plugins/paths/server";
 
-/** Repo-root `prototypes/` directory — the only tree this plugin serves. */
-export const PROTOTYPES_DIR = join(REPO_ROOT, "prototypes");
+export { PROTOTYPES_DIR };
+
+/**
+ * The `_template/` seed, in the repo.
+ *
+ * The one part of `prototypes/` that is still code: it is reviewed, versioned,
+ * and every new prototype is copied from it. `seedTemplate()` copies it into
+ * {@link PROTOTYPES_DIR} so an agent's whole gesture — copy the template, edit
+ * the copy — happens inside the data dir. In a compiled release `REPO_ROOT`
+ * points into the binary's virtual FS, so this path simply won't exist and
+ * seeding is skipped.
+ */
+export const TEMPLATE_SEED_DIR = join(REPO_ROOT, "prototypes", "_template");
+
+/** The template's name once seeded — skipped by the lister, like any `_` dir. */
+export const TEMPLATE_DIR_NAME = "_template";
 
 // A prototype ships whatever it references, so the served set is not just code:
 // images and a font are part of "self-contained". No `.jsx` — JSX lives inline

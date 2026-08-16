@@ -59,6 +59,8 @@ Decoding is delegated to [`entities`](https://www.npmjs.com/package/entities)
 ## Plugin reference
 
 - Description: Decode HTML character references in raw markup source: decodeHtmlText for text, readHtmlAttr for an HTMLRewriter attribute read. Bun's HTMLRewriter decodes nothing, so every scraped value needs decoding exactly once.
+- Cross-plugin:
+  - Imported by: `apps/prototypes/files`
 - Core:
   - Exports (types): `AttributeSource`
   - Exports (values):

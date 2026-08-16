@@ -13,6 +13,12 @@ const ALLOWED_PATHS = [
   // The check itself and the paths plugin source files.
   "plugins/infra/plugins/paths/check/index.ts",
   "plugins/infra/plugins/paths/core/internal/paths.ts",
+  // The same paths written the way a person types them (`~/…`), for prose that
+  // TELLS somebody where a directory is: UI empty states, agent prompts, check
+  // messages. Its own leaf plugin because the browser needs it and cannot
+  // import paths.ts (homedir() at module scope). Same category as the entry
+  // above — the path family's owner declaring its own spelling.
+  "plugins/infra/plugins/paths/plugins/display/core/internal/display.ts",
   "plugins/infra/plugins/paths/server/internal/bins.ts",
   // CLI bin/ imports from @plugins/infra/paths/server — no homedir() calls, no allowlist entry needed.
   // Tooling inlines the subset of paths it needs (HOME_DIR) to avoid depending on cli/.

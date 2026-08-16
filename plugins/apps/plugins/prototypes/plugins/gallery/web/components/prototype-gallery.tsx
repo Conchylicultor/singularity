@@ -1,4 +1,4 @@
-import { MdAdd } from "react-icons/md";
+import { MdAdd, MdWarning } from "react-icons/md";
 import {
   DataView,
   defineDataView,
@@ -10,8 +10,12 @@ import {
 } from "@plugins/primitives/plugins/live-state/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
+import { Overlay } from "@plugins/primitives/plugins/css/plugins/overlay/web";
+import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
 import { LaunchAgentPopover } from "@plugins/primitives/plugins/launch/web";
 import { toast } from "@plugins/shell/plugins/notifications/web";
+import { PROTOTYPES_DIR_DISPLAY } from "@plugins/infra/plugins/paths/plugins/display/core";
 import { conversationRoute } from "@plugins/conversations/core";
 import { agentManagerApp } from "@plugins/apps/plugins/agent-manager/plugins/shell/core";
 import {
@@ -32,12 +36,32 @@ function hueFor(seed: string): number {
 function CoverSwatch({ meta }: { meta: PrototypeMeta }) {
   const hue = hueFor(meta.name);
   return (
-    <div
+    <Overlay
       className="h-full w-full"
-      style={{
-        background: `linear-gradient(135deg, hsl(${hue} 70% 55%), hsl(${(hue + 40) % 360} 70% 45%))`,
-      }}
-    />
+      // `fill`, not in-flow: the cover box is sized by the card, and an in-flow
+      // child's `h-full` would resolve against Overlay's auto-height wrapper —
+      // i.e. against nothing — leaving the swatch blank.
+      fill
+      // A marker only — the problems themselves are listed in the detail pane,
+      // where there is room to read them. `above` is pointer-events-none, so a
+      // tooltip here would never fire and the corner would go dead to clicks.
+      above={
+        meta.problems.length === 0 ? null : (
+          <Pin to="top-right" offset="xs">
+            <Badge variant="warning" icon={<MdWarning />}>
+              {meta.problems.length}
+            </Badge>
+          </Pin>
+        )
+      }
+    >
+      <div
+        className="h-full w-full"
+        style={{
+          background: `linear-gradient(135deg, hsl(${hue} 70% 55%), hsl(${(hue + 40) % 360} 70% 45%))`,
+        }}
+      />
+    </Overlay>
   );
 }
 
@@ -47,13 +71,18 @@ function CoverSwatch({ meta }: { meta: PrototypeMeta }) {
 // never open a sibling. The rest is a pointer to `prototypes/CLAUDE.md` — this
 // is a prompt, not the contract.
 const NEW_PROTOTYPE_TEXT = [
-  "Create a new throwaway UI prototype under `prototypes/<slug>/`.",
+  `Create a new throwaway UI prototype under \`${PROTOTYPES_DIR_DISPLAY}/<slug>/\`.`,
   "",
-  "Read `prototypes/CLAUDE.md` first — it is the full contract.",
+  "That directory is NOT in the repo, and that is deliberate: write the files",
+  "there directly, do not commit anything, and do not create anything under the",
+  "repo's `prototypes/`. Every worktree and main serve that one shared directory,",
+  "so the prototype is visible the moment you save it — no build, no push.",
   "",
-  "Design from a blank page: copy `prototypes/_template/` and go from there. Do",
-  "NOT open any other prototype's folder, and do not read `plugins/` — the app's",
-  "own components and tokens are not a starting point here.",
+  "Read `prototypes/CLAUDE.md` (in the repo) first — it is the full contract.",
+  "",
+  `Design from a blank page: copy \`${PROTOTYPES_DIR_DISPLAY}/_template/\` and go`,
+  "from there. Do NOT open any other prototype's folder, and do not read",
+  "`plugins/` — the app's own components and tokens are not a starting point here.",
   "",
   "Keep the folder self-contained and flat: one `index.html` plus whatever flat",
   "files it needs, referenced relatively. It must render when you double-click it",
@@ -131,7 +160,7 @@ export function PrototypeGallery() {
         openPane(prototypeDetailPane, { name: p.name }, { mode: "push" })
       }
       actions={newButton}
-      emptyState="No prototypes yet. Add one under prototypes/<slug>/."
+      emptyState={`No prototypes yet. Add one under ${PROTOTYPES_DIR_DISPLAY}/<slug>/.`}
       viewOptions={{
         gallery: {
           minCardWidth: 224,

@@ -1143,6 +1143,10 @@
       "name": "@singularity/plugin-backup-sources-project-memory",
       "version": "0.0.1",
     },
+    "plugins/backup/plugins/sources/plugins/prototypes": {
+      "name": "@singularity/plugin-backup-sources-prototypes",
+      "version": "0.0.1",
+    },
     "plugins/backup/plugins/sources/plugins/secrets": {
       "name": "@singularity/plugin-backup-sources-secrets",
       "version": "0.0.1",
@@ -2919,6 +2923,10 @@
     },
     "plugins/infra/plugins/paths": {
       "name": "@singularity/plugin-infra-paths",
+    },
+    "plugins/infra/plugins/paths/plugins/display": {
+      "name": "@singularity/plugin-infra-paths-display",
+      "version": "0.0.1",
     },
     "plugins/infra/plugins/query-resource": {
       "name": "@singularity/plugin-infra-query-resource",
@@ -5945,6 +5953,8 @@
 
     "@singularity/plugin-backup-sources-project-memory": ["@singularity/plugin-backup-sources-project-memory@workspace:plugins/backup/plugins/sources/plugins/project-memory"],
 
+    "@singularity/plugin-backup-sources-prototypes": ["@singularity/plugin-backup-sources-prototypes@workspace:plugins/backup/plugins/sources/plugins/prototypes"],
+
     "@singularity/plugin-backup-sources-secrets": ["@singularity/plugin-backup-sources-secrets@workspace:plugins/backup/plugins/sources/plugins/secrets"],
 
     "@singularity/plugin-backup-sources-singularity-platform": ["@singularity/plugin-backup-sources-singularity-platform@workspace:plugins/backup/plugins/sources/plugins/singularity-platform"],
@@ -6794,6 +6804,8 @@
     "@singularity/plugin-infra-ndjson-stream": ["@singularity/plugin-infra-ndjson-stream@workspace:plugins/infra/plugins/ndjson-stream"],
 
     "@singularity/plugin-infra-paths": ["@singularity/plugin-infra-paths@workspace:plugins/infra/plugins/paths"],
+
+    "@singularity/plugin-infra-paths-display": ["@singularity/plugin-infra-paths-display@workspace:plugins/infra/plugins/paths/plugins/display"],
 
     "@singularity/plugin-infra-query-resource": ["@singularity/plugin-infra-query-resource@workspace:plugins/infra/plugins/query-resource"],
 

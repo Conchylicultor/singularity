@@ -44,6 +44,7 @@ same threshold and can't desync in a row.
     - `apps/events/sources/source-detail/status`
     - `apps/mail/attachments`
     - `apps/mail/search`
+    - `apps/prototypes/gallery`
     - `apps/sonata/sources/midi/folders`
     - `apps/sonata/sources/ultimate-guitar`
     - `apps/studio/compositions`

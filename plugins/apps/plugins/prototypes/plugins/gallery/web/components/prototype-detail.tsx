@@ -6,6 +6,13 @@ import {
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { PaneChrome, useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
+import { Column } from "@plugins/primitives/plugins/css/plugins/column/web";
+import {
+  Inset,
+  Stack,
+} from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { MdWarning } from "react-icons/md";
 import {
   prototypesResource,
   prototypesVersionResource,
@@ -58,7 +65,12 @@ function PrototypeStage() {
         );
       }
       return mode === "focus" ? (
-        <ScaledIframe meta={meta} version={version} />
+        <Column
+          className="h-full"
+          header={<ProblemBanner meta={meta} />}
+          body={<ScaledIframe meta={meta} version={version} />}
+          scrollBody={false}
+        />
       ) : (
         <CompareGrid
           rows={rows}
@@ -70,6 +82,39 @@ function PrototypeStage() {
       );
     },
   });
+}
+
+/**
+ * What is wrong with this prototype's folder, above the prototype itself.
+ *
+ * Prototypes are user content in `~/.singularity/prototypes/`, not code, so the
+ * self-contained contract can't be enforced by a push-time check any more. It is
+ * enforced when the folder is read, and reported here — in front of the person
+ * who just wrote it, next to the thing that isn't rendering right.
+ */
+function ProblemBanner({ meta }: { meta: PrototypeMeta }) {
+  if (meta.problems.length === 0) return null;
+  return (
+    <Inset pad="sm">
+      <Stack direction="col" gap="2xs">
+        <Badge variant="warning" icon={<MdWarning />}>
+          {meta.problems.length === 1
+            ? "1 problem with this folder"
+            : `${meta.problems.length} problems with this folder`}
+        </Badge>
+        {meta.problems.map((p) => (
+          <Text
+            key={`${p.path}:${p.detail}`}
+            as="div"
+            variant="caption"
+            tone="muted"
+          >
+            {p.path === "" ? p.detail : `${p.path} — ${p.detail}`}
+          </Text>
+        ))}
+      </Stack>
+    </Inset>
+  );
 }
 
 /**

@@ -1,9 +1,11 @@
 # prototypes
 
 Prototypes app — a surface to browse, **Focus** on, **Compare**, and iterate on
-throwaway UI design mockups. The mockups live in a repo-root `prototypes/`
-directory (tracked, sibling to `research/`), authored separately from this
-plugin: **one folder per prototype holding a self-contained `index.html`**, with
+throwaway UI design mockups. The mockups live in `~/.singularity/prototypes/` —
+host-global, shared by every worktree and main, and deliberately **not** in git,
+so a mock is live with no build and nothing to commit (the `prototypes` backup
+source is what makes it recoverable). Authored separately from this plugin:
+**one folder per prototype holding a self-contained `index.html`**, with
 its metadata read out of that HTML (`<title>`, `<meta name="description">`,
 `<meta name="prototype-viewport">`). Nothing is shared between prototypes — no
 harness, no tokens, no `meta.json`. `prototypes/CLAUDE.md` is the authoring
@@ -12,7 +14,8 @@ contract; **do not edit a prototype from here without reading it.**
 This top-level plugin is an empty namespace (create-app rule). All content lives
 in sub-plugins:
 
-- **`files`** — server-side raw file serving for `prototypes/*`, the live-state
+- **`files`** — server-side raw file serving out of the data dir, seeding of the
+  repo's `_template/` into it, the live-state
   list + version resources, and the file-watcher that auto-reloads open iframes
   on edit. Owns the `/api/prototypes` route contract.
 - **`shell`** — the `Apps.App` rail entry, the app layout, and pane registration.
@@ -31,9 +34,9 @@ whose app surface still stands).
 
 ## Plugin reference
 
-- Description: Prototypes — browse, focus, compare, and iterate on throwaway UI design mockups served from the repo-root prototypes/ dir.
+- Description: Prototypes — browse, focus, compare, and iterate on throwaway UI design mockups served from the host-global prototypes data dir (PROTOTYPES_DIR), outside any checkout.
 - Sub-plugins:
-  - **`files`** — Serves raw prototype files from the repo-root prototypes/ dir, declares the list + version live-state resources, and watches the dir to auto-reload open iframes on edit.
+  - **`files`** — Serves raw prototype files from the host-global prototypes data dir (PROTOTYPES_DIR — shared by every worktree and main, so a mock is visible without a build and without being committed), seeds the repo's _template/ into it, declares the list + version live-state resources, and watches the dir to auto-reload open iframes on edit.
   - **`gallery`** — Prototypes gallery list pane and the Focus/Compare detail pane (scaled live iframes), with an Improve this prototype affordance.
   - **`present`** — Present a prototype without the app around it: filling this browser tab, filling the screen (Fullscreen API), or opened as its own document in a new browser tab. Contributed into the detail pane's Actions.
   - **`shell`** — App shell for Prototypes. Registers the /prototypes app entry and renders the gallery + Focus/Compare detail panes in a Miller layout.

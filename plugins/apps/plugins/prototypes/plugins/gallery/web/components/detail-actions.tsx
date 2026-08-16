@@ -3,6 +3,7 @@ import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { SegmentedControl } from "@plugins/primitives/plugins/css/plugins/toggle-chip/web";
 import { LaunchAgentPopover } from "@plugins/primitives/plugins/launch/web";
 import { toast } from "@plugins/shell/plugins/notifications/web";
+import { PROTOTYPES_DIR_DISPLAY } from "@plugins/infra/plugins/paths/plugins/display/core";
 import { conversationRoute } from "@plugins/conversations/core";
 import { agentManagerApp } from "@plugins/apps/plugins/agent-manager/plugins/shell/core";
 import { usePrototypeDetail, type PrototypeViewMode } from "../context";
@@ -38,9 +39,10 @@ function improveText(name: string): string {
   return [
     `Iterate on the \`${name}\` UI prototype.`,
     "",
-    `Edit the files under \`prototypes/${name}/\` — that folder and nothing else.`,
-    "Do not open any other prototype's folder. Saving reloads the open iframe",
-    "automatically.",
+    `Edit the files under \`${PROTOTYPES_DIR_DISPLAY}/${name}/\` — that folder and`,
+    "nothing else. That directory is not in the repo: edit in place and commit",
+    "nothing. Do not open any other prototype's folder. Saving reloads the open",
+    "iframe automatically.",
     "",
     "Keep it self-contained: flat files referenced relatively, JSX inline, and it",
     "must still render when double-clicked straight off disk (`file://`).",
