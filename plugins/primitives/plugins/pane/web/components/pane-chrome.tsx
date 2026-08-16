@@ -228,7 +228,6 @@ export function PaneChrome({
   );
 }
 
-
 /**
  * Custom-header content: the pane's reorderable `Start`/`End` zones rendered
  * inside the standard `<Bar tier="pane">` (same `ml-auto` End-cluster layout the
