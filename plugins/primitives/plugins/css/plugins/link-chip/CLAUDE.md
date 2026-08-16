@@ -25,6 +25,7 @@
     - `apps/studio/compositions/release/release-artifact`
     - `build/serve-composition`
     - `conversations/conversation-view/jsonl-viewer/tool-call/add-task`
+    - `conversations/conversation-view/jsonl-viewer/tool-call/page-tools`
     - `conversations/conversation-view/jsonl-viewer/tool-call/skill`
     - `conversations/conversation-view/markdown-extensions`
     - `debug/op-rate`

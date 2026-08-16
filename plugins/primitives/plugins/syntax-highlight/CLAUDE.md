@@ -26,6 +26,7 @@
     - `config_v2/settings`
     - `conversations/conversation-view/code/file-pane/raw`
     - `conversations/conversation-view/jsonl-viewer/code-listing`
+    - `conversations/conversation-view/jsonl-viewer/tool-call/page-tools`
     - `conversations/conversation-view/jsonl-viewer/tool-call/workflow`
     - `conversations/conversation-view/jsonl-viewer/tool-call/write`
     - `debug/timeline`

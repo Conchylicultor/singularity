@@ -240,6 +240,10 @@ per-site via `// eslint-disable-next-line spacing/no-adhoc-spacing -- reason`.
     - `conversations/conversation-view/jsonl-viewer/tool-call/agent`
     - `conversations/conversation-view/jsonl-viewer/tool-call/ask-user-question`
     - `conversations/conversation-view/jsonl-viewer/tool-call/edit`
+    - `conversations/conversation-view/jsonl-viewer/tool-call/page-tools`
+    - `conversations/conversation-view/jsonl-viewer/tool-call/page-tools/edit-page`
+    - `conversations/conversation-view/jsonl-viewer/tool-call/page-tools/read-page`
+    - `conversations/conversation-view/jsonl-viewer/tool-call/page-tools/write-note`
     - `conversations/conversation-view/jsonl-viewer/tool-call/skill`
     - `conversations/conversation-view/jsonl-viewer/tool-call/task-tools`
     - `conversations/conversation-view/jsonl-viewer/tool-call/workflow`

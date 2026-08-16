@@ -2340,6 +2340,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/pages/welcome/quick-create`
               - `apps/pages/welcome/recent-pages`
               - `apps/story/pages-integration`
+              - `conversations/conversation-view/jsonl-viewer/tool-call/page-tools`
         - **`prompt-origin`** — Origin backlink in the task detail: the page a `/prompt`-block-launched task came from, as a clickable chip opening pageDetailPane. Renders nothing when the task has no prompt-block link or the page is gone.
           - Web:
             - Contributes: `TaskDetailSlots.Section` "Origin" → `PromptOriginSection`
@@ -9321,7 +9322,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `primitives/markdown.Markdown`
             - **`tool-call`** — Renders paired tool-call events with exact/pattern/fallback dispatch to per-tool renderer plugins.
               - Web:
-                - Slots: `JsonlViewerTool.Renderer` ← `conversations.conversation-view.jsonl-viewer.tool-call.add-task`, `conversations.conversation-view.jsonl-viewer.tool-call.agent`, `conversations.conversation-view.jsonl-viewer.tool-call.ask-user-question`, `conversations.conversation-view.jsonl-viewer.tool-call.bash`, `conversations.conversation-view.jsonl-viewer.tool-call.edit`, `conversations.conversation-view.jsonl-viewer.tool-call.flag-raise`, `conversations.conversation-view.jsonl-viewer.tool-call.read`, `conversations.conversation-view.jsonl-viewer.tool-call.skill`, `conversations.conversation-view.jsonl-viewer.tool-call.task-tools`, `conversations.conversation-view.jsonl-viewer.tool-call.workflow`, `conversations.conversation-view.jsonl-viewer.tool-call.write`
+                - Slots: `JsonlViewerTool.Renderer` ← `conversations.conversation-view.jsonl-viewer.tool-call.add-task`, `conversations.conversation-view.jsonl-viewer.tool-call.agent`, `conversations.conversation-view.jsonl-viewer.tool-call.ask-user-question`, `conversations.conversation-view.jsonl-viewer.tool-call.bash`, `conversations.conversation-view.jsonl-viewer.tool-call.edit`, `conversations.conversation-view.jsonl-viewer.tool-call.flag-raise`, `conversations.conversation-view.jsonl-viewer.tool-call.page-tools.edit-page`, `conversations.conversation-view.jsonl-viewer.tool-call.page-tools.read-page`, `conversations.conversation-view.jsonl-viewer.tool-call.page-tools.write-note`, `conversations.conversation-view.jsonl-viewer.tool-call.read`, `conversations.conversation-view.jsonl-viewer.tool-call.skill`, `conversations.conversation-view.jsonl-viewer.tool-call.task-tools`, `conversations.conversation-view.jsonl-viewer.tool-call.workflow`, `conversations.conversation-view.jsonl-viewer.tool-call.write`
                 - Contributes:
                   - `JsonlViewer.EventRenderer` "tool-call" → `ToolCallRow`
                   - `JsonlRowActions.Item` "copy-tool-result" → `CopyToolResultAction`
@@ -9349,6 +9350,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `conversations/conversation-view/jsonl-viewer/tool-call/bash`
                   - `conversations/conversation-view/jsonl-viewer/tool-call/edit`
                   - `conversations/conversation-view/jsonl-viewer/tool-call/flag-raise`
+                  - `conversations/conversation-view/jsonl-viewer/tool-call/page-tools/edit-page`
+                  - `conversations/conversation-view/jsonl-viewer/tool-call/page-tools/read-page`
+                  - `conversations/conversation-view/jsonl-viewer/tool-call/page-tools/write-note`
                   - `conversations/conversation-view/jsonl-viewer/tool-call/read`
                   - `conversations/conversation-view/jsonl-viewer/tool-call/skill`
                   - `conversations/conversation-view/jsonl-viewer/tool-call/task-tools`
@@ -9469,6 +9473,68 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                       - `conversations/conversation-view/jsonl-viewer/tool-call.JsonlViewerTool`
                       - `conversations/conversation-view/jsonl-viewer/tool-call.ToolCallCard`
                       - `primitives/css/text.Text`
+                - **`page-tools`** — Shared appearance for the Singularity page MCP tool rows (read_page / write_agent_note / edit_page): the page-identity chip, the apply-report chips, the markdown body, and the refusal block. Contributes no renderer itself — one sub-plugin per tool does.
+                  - Web:
+                    - Uses:
+                      - `apps/pages/page-tree.pageDetailPane`
+                      - `primitives/css/badge.Badge`
+                      - `primitives/css/cluster.Cluster`
+                      - `primitives/css/link-chip.LinkChip`
+                      - `primitives/css/scroll.Scroll`
+                      - `primitives/css/spacing.Inset`
+                      - `primitives/css/text.Text`
+                      - `primitives/live-state.useResource`
+                      - `primitives/pane.useOpenPane`
+                      - `primitives/syntax-highlight.HighlightedCode`
+                    - Exports (types): `PageApplyReport`
+                    - Exports (values):
+                      - `PageMarkdown`
+                      - `PageRefChip`
+                      - `PageToolError`
+                      - `PageWriteReport`
+                      - `parsePageApplyReport`
+                  - Cross-plugin:
+                    - Imported by:
+                      - `conversations/conversation-view/jsonl-viewer/tool-call/page-tools/edit-page`
+                      - `conversations/conversation-view/jsonl-viewer/tool-call/page-tools/read-page`
+                      - `conversations/conversation-view/jsonl-viewer/tool-call/page-tools/write-note`
+                  - Plugins:
+                    - **`edit-page`** — Renders edit_page MCP tool calls as a side-by-side markdown diff, with the edited page as a clickable chip and what the write changed.
+                      - Web:
+                        - Contributes: `JsonlViewerTool.Renderer` "edit_page$" → `EditPageView`
+                        - Uses:
+                          - `conversations/conversation-view/jsonl-viewer/tool-call.JsonlViewerTool`
+                          - `conversations/conversation-view/jsonl-viewer/tool-call.ToolCallCard`
+                          - `conversations/conversation-view/jsonl-viewer/tool-call/page-tools.PageRefChip`
+                          - `conversations/conversation-view/jsonl-viewer/tool-call/page-tools.PageToolError`
+                          - `conversations/conversation-view/jsonl-viewer/tool-call/page-tools.PageWriteReport`
+                          - `conversations/conversation-view/jsonl-viewer/tool-call/page-tools.parsePageApplyReport`
+                          - `primitives/css/badge.Badge`
+                          - `primitives/css/inline.Inline`
+                          - `primitives/css/spacing.Stack`
+                          - `primitives/diff-view.TextDiff`
+                    - **`read-page`** — Renders read_page MCP tool calls: the page the read was scoped to as a clickable chip, and the markdown it returned.
+                      - Web:
+                        - Contributes: `JsonlViewerTool.Renderer` "read_page$" → `ReadPageView`
+                        - Uses:
+                          - `conversations/conversation-view/jsonl-viewer/tool-call.JsonlViewerTool`
+                          - `conversations/conversation-view/jsonl-viewer/tool-call.ToolCallCard`
+                          - `conversations/conversation-view/jsonl-viewer/tool-call/page-tools.PageMarkdown`
+                          - `conversations/conversation-view/jsonl-viewer/tool-call/page-tools.PageRefChip`
+                          - `conversations/conversation-view/jsonl-viewer/tool-call/page-tools.PageToolError`
+                          - `primitives/css/spacing.Stack`
+                    - **`write-note`** — Renders write_agent_note MCP tool calls: the page the card lives on, the markdown written into it, and what the write changed.
+                      - Web:
+                        - Contributes: `JsonlViewerTool.Renderer` "write_agent_note$" → `WriteNoteView`
+                        - Uses:
+                          - `conversations/conversation-view/jsonl-viewer/tool-call.JsonlViewerTool`
+                          - `conversations/conversation-view/jsonl-viewer/tool-call.ToolCallCard`
+                          - `conversations/conversation-view/jsonl-viewer/tool-call/page-tools.PageMarkdown`
+                          - `conversations/conversation-view/jsonl-viewer/tool-call/page-tools.PageRefChip`
+                          - `conversations/conversation-view/jsonl-viewer/tool-call/page-tools.PageToolError`
+                          - `conversations/conversation-view/jsonl-viewer/tool-call/page-tools.PageWriteReport`
+                          - `conversations/conversation-view/jsonl-viewer/tool-call/page-tools.parsePageApplyReport`
+                          - `primitives/css/spacing.Stack`
                 - **`read`** — Renders Read tool calls with syntax-highlighted file content, line-number gutter, and image thumbnails.
                   - Web:
                     - Contributes: `JsonlViewerTool.Renderer` "Read" → `ReadToolView`
@@ -14598,6 +14664,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `conversations/conversation-view/jsonl-viewer`
               - `conversations/conversation-view/jsonl-viewer/investigate-event`
               - `conversations/conversation-view/jsonl-viewer/message-toc`
+              - `conversations/conversation-view/jsonl-viewer/tool-call/page-tools`
               - `conversations/conversation-view/jsonl-viewer/transcript-stats`
               - `conversations/conversation-view/prompt-templates`
               - `conversations/conversations-view/data-view/queue`
@@ -19901,6 +19968,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `conversations/conversation-view/jsonl-viewer/tool-call/add-task`
               - `conversations/conversation-view/jsonl-viewer/tool-call/agent`
               - `conversations/conversation-view/jsonl-viewer/tool-call/ask-user-question`
+              - `conversations/conversation-view/jsonl-viewer/tool-call/page-tools`
+              - `conversations/conversation-view/jsonl-viewer/tool-call/page-tools/edit-page`
               - `conversations/conversation-view/jsonl-viewer/tool-call/read`
               - `conversations/conversation-view/jsonl-viewer/tool-call/task-tools`
               - `conversations/conversation-view/jsonl-viewer/tool-call/workflow`
@@ -20205,6 +20274,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/studio/graph`
               - `apps/website/demos/plugin-pyramid`
               - `apps/website/demos/sample-app`
+              - `conversations/conversation-view/jsonl-viewer/tool-call/page-tools`
               - `conversations/conversation-view/jsonl-viewer/tool-call/workflow`
               - `conversations/conversation-view/prompt-templates`
               - `debug/profiling/ops`
@@ -20406,6 +20476,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `conversations/conversation-progress`
               - `conversations/conversation-ui/item`
               - `conversations/conversation-view/jsonl-viewer/file-path`
+              - `conversations/conversation-view/jsonl-viewer/tool-call/page-tools/edit-page`
               - `conversations/conversation-view/op-status`
               - `debug/boot-budget`
               - `debug/boot-watchdog`
@@ -20549,6 +20620,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/studio/compositions/release/release-artifact`
               - `build/serve-composition`
               - `conversations/conversation-view/jsonl-viewer/tool-call/add-task`
+              - `conversations/conversation-view/jsonl-viewer/tool-call/page-tools`
               - `conversations/conversation-view/jsonl-viewer/tool-call/skill`
               - `conversations/conversation-view/markdown-extensions`
               - `debug/op-rate`
@@ -20869,6 +20941,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `conversations/conversation-view/jsonl-viewer/tool-call`
               - `conversations/conversation-view/jsonl-viewer/tool-call/agent`
               - `conversations/conversation-view/jsonl-viewer/tool-call/bash`
+              - `conversations/conversation-view/jsonl-viewer/tool-call/page-tools`
               - `conversations/conversation-view/jsonl-viewer/tool-call/skill`
               - `conversations/conversation-view/jsonl-viewer/tool-call/task-tools`
               - `conversations/conversation-view/jsonl-viewer/tool-call/workflow`
@@ -21092,6 +21165,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `conversations/conversation-view/jsonl-viewer/tool-call/agent`
               - `conversations/conversation-view/jsonl-viewer/tool-call/ask-user-question`
               - `conversations/conversation-view/jsonl-viewer/tool-call/edit`
+              - `conversations/conversation-view/jsonl-viewer/tool-call/page-tools`
+              - `conversations/conversation-view/jsonl-viewer/tool-call/page-tools/edit-page`
+              - `conversations/conversation-view/jsonl-viewer/tool-call/page-tools/read-page`
+              - `conversations/conversation-view/jsonl-viewer/tool-call/page-tools/write-note`
               - `conversations/conversation-view/jsonl-viewer/tool-call/skill`
               - `conversations/conversation-view/jsonl-viewer/tool-call/task-tools`
               - `conversations/conversation-view/jsonl-viewer/tool-call/workflow`
@@ -21596,6 +21673,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `conversations/conversation-view/jsonl-viewer/tool-call/bash`
               - `conversations/conversation-view/jsonl-viewer/tool-call/edit`
               - `conversations/conversation-view/jsonl-viewer/tool-call/flag-raise`
+              - `conversations/conversation-view/jsonl-viewer/tool-call/page-tools`
               - `conversations/conversation-view/jsonl-viewer/tool-call/read`
               - `conversations/conversation-view/jsonl-viewer/tool-call/skill`
               - `conversations/conversation-view/jsonl-viewer/tool-call/task-tools`
@@ -23221,6 +23299,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `config_v2/settings`
           - `conversations/conversation-view/code/file-pane/diff`
           - `conversations/conversation-view/jsonl-viewer/tool-call/edit`
+          - `conversations/conversation-view/jsonl-viewer/tool-call/page-tools/edit-page`
           - `review/code-review`
           - `review/plugin-changes/file-changes`
     - **`editable-field`** — Debounced-autosave field hook with focus tracking, flush-on-blur, and self-echo suppression. Used by task/agent detail forms.
@@ -23980,6 +24059,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conversations/conversation-view/jsonl-viewer/tool-call/add-task`
           - `conversations/conversation-view/jsonl-viewer/tool-call/agent`
           - `conversations/conversation-view/jsonl-viewer/tool-call/ask-user-question`
+          - `conversations/conversation-view/jsonl-viewer/tool-call/page-tools`
           - `conversations/conversation-view/jsonl-viewer/tool-call/task-tools`
           - `conversations/conversation-view/jsonl-viewer/tool-call/workflow`
           - `conversations/conversation-view/jsonl-viewer/transcript-stats`
@@ -24638,6 +24718,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conversations/conversation-view/jsonl-viewer/file-path`
           - `conversations/conversation-view/jsonl-viewer/tool-call/add-task`
           - `conversations/conversation-view/jsonl-viewer/tool-call/agent`
+          - `conversations/conversation-view/jsonl-viewer/tool-call/page-tools`
           - `conversations/conversation-view/jsonl-viewer/tool-call/skill`
           - `conversations/conversation-view/jsonl-viewer/tool-call/workflow`
           - `conversations/conversation-view/markdown-extensions`
@@ -25380,6 +25461,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `config_v2/settings`
           - `conversations/conversation-view/code/file-pane/raw`
           - `conversations/conversation-view/jsonl-viewer/code-listing`
+          - `conversations/conversation-view/jsonl-viewer/tool-call/page-tools`
           - `conversations/conversation-view/jsonl-viewer/tool-call/workflow`
           - `conversations/conversation-view/jsonl-viewer/tool-call/write`
           - `debug/timeline`

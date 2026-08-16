@@ -56,6 +56,7 @@ defined in exactly one place. The distinct export buys two things:
     - `apps/studio/graph`
     - `apps/website/demos/plugin-pyramid`
     - `apps/website/demos/sample-app`
+    - `conversations/conversation-view/jsonl-viewer/tool-call/page-tools`
     - `conversations/conversation-view/jsonl-viewer/tool-call/workflow`
     - `conversations/conversation-view/prompt-templates`
     - `debug/profiling/ops`

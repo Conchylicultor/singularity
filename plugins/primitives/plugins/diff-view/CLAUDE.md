@@ -44,6 +44,7 @@ Generic side-by-side / text diff renderer. The domain-agnostic diff-rendering cl
     - `config_v2/settings`
     - `conversations/conversation-view/code/file-pane/diff`
     - `conversations/conversation-view/jsonl-viewer/tool-call/edit`
+    - `conversations/conversation-view/jsonl-viewer/tool-call/page-tools/edit-page`
     - `review/code-review`
     - `review/plugin-changes/file-changes`
 
