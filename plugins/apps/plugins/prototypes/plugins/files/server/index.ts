@@ -19,6 +19,14 @@ import {
   stopPrototypesWatcher,
 } from "./internal/watcher";
 
+// What this plugin knows about `prototypes/` that a sibling cannot re-derive
+// without duplicating it: where the tree is, what is in it, and when it
+// changed. `onPrototypesChanged` in particular is what keeps a second file
+// watcher off the same directory.
+export { PROTOTYPES_DIR } from "./internal/paths";
+export { listPrototypeMetas } from "./internal/list";
+export { onPrototypesChanged } from "./internal/watcher";
+
 export default {
   // Names PROTOTYPES_DIR rather than spelling the path: a plugin description is
   // read TEXTUALLY by the docs pipeline, which rejects anything but a static

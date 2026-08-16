@@ -46,6 +46,7 @@ rule keeps the broken shape from coming back.
     - `apps/pages/page-outline`
     - `apps/pages/page-tree`
     - `apps/prototypes/present`
+    - `apps/prototypes/thumbnails`
     - `code-explorer`
     - `conversations/conversation-category`
     - `conversations/conversation-view/jsonl-viewer`

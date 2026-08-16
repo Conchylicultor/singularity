@@ -158,6 +158,7 @@ replay; a plain `Error` remains the right choice for anything retry could fix.
     - `apps/mail/sync`
     - `apps/pages/content-search`
     - `apps/pages/history`
+    - `apps/prototypes/thumbnails`
     - `apps/sonata/sources/midi/folders`
     - `apps/story/generation`
     - `apps/workflows/engine`

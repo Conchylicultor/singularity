@@ -9,6 +9,7 @@
     - `apps-core/surface/floating/wallpaper`
     - `apps/deploy/deployments`
     - `apps/prototypes/files`
+    - `apps/prototypes/thumbnails`
     - `backup`
     - `backup/sources/attachments`
     - `backup/sources/claude-settings`

@@ -76,6 +76,7 @@ header content inside is a `<Frame>`.
   - Imported by:
     - `apps/browser/webview`
     - `apps/prototypes/gallery`
+    - `apps/prototypes/thumbnails`
     - `conversations/conversation-view/jsonl-viewer/collapsible-card`
     - `debug/timeline`
     - `page/editor`

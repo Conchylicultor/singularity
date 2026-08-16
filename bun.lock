@@ -508,6 +508,13 @@
       "name": "@singularity/plugin-apps-prototypes-shell",
       "version": "0.0.1",
     },
+    "plugins/apps/plugins/prototypes/plugins/thumbnails": {
+      "name": "@singularity/plugin-apps-prototypes-thumbnails",
+      "version": "0.0.1",
+      "dependencies": {
+        "playwright": "^1.60.0",
+      },
+    },
     "plugins/apps/plugins/settings": {
       "name": "@singularity/plugin-apps-settings",
       "version": "0.0.1",
@@ -5680,6 +5687,8 @@
     "@singularity/plugin-apps-prototypes-present": ["@singularity/plugin-apps-prototypes-present@workspace:plugins/apps/plugins/prototypes/plugins/present"],
 
     "@singularity/plugin-apps-prototypes-shell": ["@singularity/plugin-apps-prototypes-shell@workspace:plugins/apps/plugins/prototypes/plugins/shell"],
+
+    "@singularity/plugin-apps-prototypes-thumbnails": ["@singularity/plugin-apps-prototypes-thumbnails@workspace:plugins/apps/plugins/prototypes/plugins/thumbnails"],
 
     "@singularity/plugin-apps-settings": ["@singularity/plugin-apps-settings@workspace:plugins/apps/plugins/settings"],
 

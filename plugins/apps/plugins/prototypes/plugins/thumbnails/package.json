@@ -1,0 +1,8 @@
+{
+  "name": "@singularity/plugin-apps-prototypes-thumbnails",
+  "private": true,
+  "version": "0.0.1",
+  "dependencies": {
+    "playwright": "^1.60.0"
+  }
+}

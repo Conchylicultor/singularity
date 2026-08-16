@@ -22,6 +22,7 @@ import {
   prototypesResource,
   type PrototypeMeta,
 } from "@plugins/apps/plugins/prototypes/plugins/files/core";
+import { PrototypeThumbnail } from "@plugins/apps/plugins/prototypes/plugins/thumbnails/web";
 import { prototypeDetailPane } from "../panes";
 
 const PROTOTYPES_VIEW = defineDataView("prototypes.gallery");
@@ -164,9 +165,18 @@ export function PrototypeGallery() {
       viewOptions={{
         gallery: {
           minCardWidth: 224,
+          // The card's cover is the prototype as it actually renders. The
+          // slug-tinted swatch stays as what a prototype looks like before its
+          // picture exists (or when rendering it failed) — the thumbnail owns
+          // the picture, this pane owns the stand-in.
           cover: (p: PrototypeMeta) => ({
             kind: "node",
-            node: <CoverSwatch meta={p} />,
+            node: (
+              <PrototypeThumbnail
+                name={p.name}
+                fallback={<CoverSwatch meta={p} />}
+              />
+            ),
           }),
         },
       }}

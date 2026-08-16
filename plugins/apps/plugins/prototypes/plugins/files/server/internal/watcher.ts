@@ -14,6 +14,24 @@ import {
 let watcher: FileWatcher | null = null;
 let started = false;
 
+const listeners: (() => void)[] = [];
+
+/**
+ * Subscribe to "something under `prototypes/` changed".
+ *
+ * This plugin owns the directory and therefore runs the ONLY watcher over it —
+ * a second subscription to the same tree from another plugin would double every
+ * filesystem event. So the signal it already computes is exported rather than
+ * re-derived: a consumer that needs to react to an edit (the thumbnail
+ * renderer) listens here instead of watching.
+ *
+ * Process-lifetime, like the watcher itself — there is no unsubscribe because
+ * every listener is registered once, in a plugin's `onReady`.
+ */
+export function onPrototypesChanged(listener: () => void): void {
+  listeners.push(listener);
+}
+
 /**
  * Watch `prototypes/` for edits. On any change: re-broadcast the list (new/edited
  * mocks appear in the gallery) and bump the version (open iframes cache-bust and
@@ -53,6 +71,7 @@ export async function startPrototypesWatcher(): Promise<void> {
       bumpPrototypesVersion();
       prototypesResource.notify();
       prototypesVersionResource.notify();
+      for (const listener of listeners) listener();
     },
   });
 }

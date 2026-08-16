@@ -4,9 +4,14 @@ The Prototypes app's two panes:
 
 - **Gallery root pane** (`/prototypes`, no chrome) — a `DataView` gallery over the
   live `prototypesResource`. Each card shows the prototype's `<title>` + blurb
-  over a slug-tinted cover (`name` stays the row key and the URL param — it is
-  the directory slug); activating one pushes the detail pane. A "New prototype"
-  button opens a `LaunchAgentPopover` seeding `NEW_PROTOTYPE_TEXT`.
+  over its rendered screenshot (`thumbnails`' `<PrototypeThumbnail>`; `name`
+  stays the row key and the URL param — it is the directory slug); activating
+  one pushes the detail pane. A "New prototype" button opens a
+  `LaunchAgentPopover` seeding `NEW_PROTOTYPE_TEXT`.
+
+  `CoverSwatch` — the slug-tinted gradient — stays here as the stand-in the
+  thumbnail falls back to before its picture exists, or when rendering it
+  failed. This pane owns the stand-in; `thumbnails` owns the picture.
 - **Detail pane** (`proto/:name`) — a Focus | Compare toggle over scaled live iframes.
   - **The pane header IS the action bar.** Every control in it (Focus/Compare,
     Improve, and the sibling `present` plugin's Present menu) is a contribution
@@ -54,6 +59,7 @@ they said before and is why every prototype looked alike.
     - `prototypeDetailPane.Actions` → `ViewModeSwitcher`
     - `prototypeDetailPane.Actions` → `ImproveButton`
   - Uses:
+    - `apps/prototypes/thumbnails.PrototypeThumbnail`
     - `primitives/css/badge.Badge`
     - `primitives/css/column.Column`
     - `primitives/css/overlay.Overlay`

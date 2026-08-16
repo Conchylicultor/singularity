@@ -676,6 +676,7 @@ This narrows re-renders, not the WS subscription: N callers of the same
     - `apps/prototypes/files`
     - `apps/prototypes/gallery`
     - `apps/prototypes/present`
+    - `apps/prototypes/thumbnails`
     - `apps/settings/config`
     - `apps/sonata/library`
     - `apps/sonata/playback-history`

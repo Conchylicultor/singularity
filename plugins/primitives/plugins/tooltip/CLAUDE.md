@@ -25,6 +25,7 @@
     - `apps-core/surface/floating`
     - `apps-core/tab-bar`
     - `apps/agent-manager/worktree-switcher`
+    - `apps/prototypes/thumbnails`
     - `apps/sonata/primitives/toolbar-control`
     - `apps/workflows/editor`
     - `build`
