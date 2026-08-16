@@ -12,6 +12,7 @@ import {
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Inset } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
+import { SlotItemLayout } from "@plugins/primitives/plugins/slot-render/web";
 import { MdMoreHoriz } from "react-icons/md";
 import { Children, type ReactNode } from "react";
 
@@ -103,7 +104,18 @@ export function OverflowBox({
                 <MdMoreHoriz />
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <ActionPresentation mode="menu">{children}</ActionPresentation>
+                {/* The members were rendered for the row this box sits in — a
+                    flex row, so the slot wrapped each of them in a horizontal
+                    `min-w-0` cell. Here they are stacked in a menu panel
+                    instead, so that cell is a lie: it makes each row a flex
+                    item that shrink-wraps to its own label, leaving the space
+                    beside the text dead to the pointer. Declare where they
+                    really landed. */}
+                <SlotItemLayout orientation="column">
+                  <ActionPresentation mode="menu">
+                    {children}
+                  </ActionPresentation>
+                </SlotItemLayout>
               </DropdownMenuContent>
             </DropdownMenu>
           ) : null}

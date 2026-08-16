@@ -1,4 +1,7 @@
-import { type ControlSize, ControlSizeProvider } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import {
+  type ControlSize,
+  ControlSizeProvider,
+} from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import {
   createElement,
   Fragment,
@@ -19,11 +22,41 @@ import {
   type SealedComponent,
 } from "@plugins/framework/plugins/web-sdk/core";
 import type { Contribution } from "@plugins/framework/plugins/web-sdk/core";
-import {
-  getSlotItemMiddlewares,
-  getSlotListMiddlewares,
-} from "./registry";
+import { getSlotItemMiddlewares, getSlotListMiddlewares } from "./registry";
 import { DispatchOutcomeContext } from "./dispatch-outcome";
+import { useSlotItemLayout } from "./item-layout";
+
+/**
+ * The per-contribution cell. Horizontal hosts get a `min-w-0` flex cell that
+ * relays the shrink-chain (so flexible text truncates instead of wrapping);
+ * everything else gets `display:contents`, a layout-neutral box.
+ *
+ * `horizontal` is what the slot MEASURED off its own host; a host that
+ * relocates contributions into a different layout context (the `overflow` node
+ * type's dropdown panel) DECLARES the truth via `<SlotItemLayout>`, and the
+ * declaration wins. A component rather than a bare element for exactly that
+ * reason: the override has to be read where the contribution renders, not where
+ * its element was created.
+ *
+ * Its element type is stable across the post-measure `horizontal` flip, so React
+ * reconciles each contribution subtree in place instead of tearing it down and
+ * rebuilding it on every (re)mount.
+ */
+function SlotItemCell({
+  horizontal,
+  children,
+}: {
+  horizontal: boolean;
+  children: ReactNode;
+}) {
+  const declared = useSlotItemLayout();
+  const isRow = declared !== null ? declared === "row" : horizontal;
+  return (
+    <div className={isRow ? "flex min-w-0 items-center" : "contents"}>
+      {children}
+    </div>
+  );
+}
 
 export interface RenderSlotConfig<P> {
   docLabel?: (props: P & { id: string }) => string | undefined;
@@ -88,10 +121,13 @@ interface RenderProps<P> {
   subId?: string;
 }
 
-export interface RenderSlot<P>
-  extends Slot<P & { id: string; excludeFromReorder?: boolean; reorderFill?: boolean }> {
+export interface RenderSlot<P> extends Slot<
+  P & { id: string; excludeFromReorder?: boolean; reorderFill?: boolean }
+> {
   Render: ComponentType<
-    RenderProps<P & { id: string; excludeFromReorder?: boolean; reorderFill?: boolean }>
+    RenderProps<
+      P & { id: string; excludeFromReorder?: boolean; reorderFill?: boolean }
+    >
   >;
 }
 
@@ -104,10 +140,9 @@ export function defineRenderSlot<P>(
   id: string,
   config?: RenderSlotConfig<P>,
 ): RenderSlot<P> {
-  const slot = defineSlot<P & { id: string; excludeFromReorder?: boolean; reorderFill?: boolean }>(
-    id,
-    { docLabel: config?.docLabel },
-  );
+  const slot = defineSlot<
+    P & { id: string; excludeFromReorder?: boolean; reorderFill?: boolean }
+  >(id, { docLabel: config?.docLabel });
 
   const renderSlot = slot as unknown as RenderSlot<P>;
   const controlSize = config?.controlSize;
@@ -151,7 +186,8 @@ export function defineRenderSlot<P>(
       // an actual flex container first; non-flex hosts fall through to the
       // untouched vertical path.
       const style = getComputedStyle(parent);
-      const isFlex = style.display === "flex" || style.display === "inline-flex";
+      const isFlex =
+        style.display === "flex" || style.display === "inline-flex";
       const dir = style.flexDirection;
       setHorizontal(isFlex && (dir === "row" || dir === "row-reverse"));
     }, []);
@@ -170,26 +206,18 @@ export function defineRenderSlot<P>(
               contribution,
             )
           : renderContributionIsolated(clean, contribution, id);
-        // Stable element type across the post-measure `horizontal` flip so React
-        // reconciles each contribution subtree in place instead of tearing it
-        // down and rebuilding it on every (re)mount. Horizontal rows get the
-        // `min-w-0` flex cell that relays the shrink-chain (so flexible text
-        // truncates instead of wrapping); vertical lists get `display:contents`,
-        // a layout-neutral box identical to the old `<Fragment>` — so vertical
-        // layout is byte-for-byte unchanged. Swapping the element type (div ↔
-        // Fragment) at the same key was the per-mount DOM-teardown amplifier.
+        // See `SlotItemCell`: the measured host orientation, overridable by a
+        // host that relocates contributions elsewhere.
         return (
-          <div key={cId} className={horizontal ? "flex min-w-0 items-center" : "contents"}>
+          <SlotItemCell key={cId} horizontal={horizontal}>
             {wrapped}
-          </div>
+          </SlotItemCell>
         );
       },
       [cleanById, children, horizontal],
     );
 
-    const defaultRendering = (
-      <>{rawContributions.map((c) => renderItem(c))}</>
-    );
+    const defaultRendering = <>{rawContributions.map((c) => renderItem(c))}</>;
 
     let result: ReactNode = defaultRendering;
     const listMws = getSlotListMiddlewares();
@@ -254,8 +282,9 @@ export interface MountSlotConfig<P> {
   docLabel?: (props: P & { id: string }) => string | undefined;
 }
 
-export interface MountSlot<P>
-  extends Slot<{ id: string; component: MountComponent<P> } & P> {
+export interface MountSlot<P> extends Slot<
+  { id: string; component: MountComponent<P> } & P
+> {
   /**
    * Mounts every contribution wrapped in item middlewares (error-boundary
    * isolation), no list/reorder middleware. Prop-less; renders null visually.
@@ -332,8 +361,9 @@ export interface WrapperSlotConfig<P extends object> {
   docLabel?: (c: WrapContribution & P) => string | undefined;
 }
 
-export interface WrapperSlot<P extends object = {}>
-  extends Slot<WrapContribution & P> {
+export interface WrapperSlot<P extends object = {}> extends Slot<
+  WrapContribution & P
+> {
   /**
    * Folds every contributed wrapper OUTSIDE-IN around `children`, in
    * contribution order: the first contribution is the OUTERMOST wrapper, the
@@ -402,7 +432,11 @@ export interface DispatchContribution<Props, Key extends string> {
   component: ComponentType<Props>;
 }
 
-export interface DispatchSlotConfig<Props, Key extends string, Extra extends object> {
+export interface DispatchSlotConfig<
+  Props,
+  Key extends string,
+  Extra extends object,
+> {
   /** Project the dispatch key out of the render props. */
   key: (props: Props) => Key;
   /** Rendered (and isolated) when nothing matches. */
@@ -412,8 +446,11 @@ export interface DispatchSlotConfig<Props, Key extends string, Extra extends obj
   ) => string | undefined;
 }
 
-export interface DispatchSlot<Props, Key extends string = string, Extra extends object = {}>
-  extends Slot<DispatchContribution<Props, Key> & Extra> {
+export interface DispatchSlot<
+  Props,
+  Key extends string = string,
+  Extra extends object = {},
+> extends Slot<DispatchContribution<Props, Key> & Extra> {
   Dispatch: ComponentType<Props>;
 }
 
@@ -507,14 +544,19 @@ export function defineDispatchSlot<
  * only enter the reorderable-slots manifest once every contribution carries an
  * id. `excludeFromReorder` mirrors the render-slot escape hatch.
  */
-export interface OrderedDispatchContribution<Props, Key extends string>
-  extends DispatchContribution<Props, Key> {
+export interface OrderedDispatchContribution<
+  Props,
+  Key extends string,
+> extends DispatchContribution<Props, Key> {
   id: string;
   excludeFromReorder?: boolean;
 }
 
-export interface OrderedDispatchSlot<Props, Key extends string = string, Extra extends object = {}>
-  extends Slot<OrderedDispatchContribution<Props, Key> & Extra> {
+export interface OrderedDispatchSlot<
+  Props,
+  Key extends string = string,
+  Extra extends object = {},
+> extends Slot<OrderedDispatchContribution<Props, Key> & Extra> {
   Dispatch: ComponentType<Props>;
 }
 

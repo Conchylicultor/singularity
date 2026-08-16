@@ -68,6 +68,16 @@ What this does and does NOT do:
   `overflow-hidden` as a fixed-height safety net so a forgotten leaf truncation
   clips to one line instead of breaking the layout.
 
+### Relocating hosts declare their layout
+
+The measurement is the slot's *host*, so it is wrong for a host that moves
+contributions somewhere else — the `overflow` reorder node type portals its
+members into a dropdown panel, where a horizontal cell makes each menu row a
+shrink-wrapping flex item. Such a host wraps the relocated children in
+`<SlotItemLayout orientation="column">` (or `"row"`), which the cell honors over
+what was measured. Read at render position, so it applies to contributions whose
+elements were created upstream.
+
 ## Dispatch outcome
 
 `.Dispatch` publishes what it did, so a descendant can react to *"nothing handled
@@ -140,6 +150,7 @@ the outcome too, with no separate code path.
     - `RenderSlot`
     - `RenderSlotConfig`
     - `SlotItemMiddleware`
+    - `SlotItemOrientation`
     - `SlotListMiddleware`
     - `WrapContribution`
     - `WrapperSlot`
@@ -154,6 +165,7 @@ the outcome too, with no separate code path.
     - `registerSlotListMiddleware`
     - `renderIsolated`
     - `RenderSlotSubIdContext`
+    - `SlotItemLayout`
     - `useDispatchOutcome`
 - Cross-plugin:
   - Imported by:
@@ -210,6 +222,7 @@ the outcome too, with no separate code path.
     - `primitives/text-editor`
     - `primitives/tree`
     - `reorder`
+    - `reorder/node-types/overflow`
     - `reports`
     - `review/plugin-changes`
     - `shell`

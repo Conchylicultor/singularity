@@ -25358,6 +25358,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `RenderSlot`
           - `RenderSlotConfig`
           - `SlotItemMiddleware`
+          - `SlotItemOrientation`
           - `SlotListMiddleware`
           - `WrapContribution`
           - `WrapperSlot`
@@ -25372,6 +25373,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `registerSlotListMiddleware`
           - `renderIsolated`
           - `RenderSlotSubIdContext`
+          - `SlotItemLayout`
           - `useDispatchOutcome`
       - Cross-plugin:
         - Imported by:
@@ -25428,6 +25430,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/text-editor`
           - `primitives/tree`
           - `reorder`
+          - `reorder/node-types/overflow`
           - `reports`
           - `review/plugin-changes`
           - `shell`
@@ -26482,6 +26485,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/ui-kit.DropdownMenu`
               - `primitives/css/ui-kit.DropdownMenuContent`
               - `primitives/css/ui-kit.DropdownMenuTrigger`
+              - `primitives/slot-render.SlotItemLayout`
               - `reorder/node-types.ReorderNodes`
         - **`spacer`** — Spacer reorder node type: a blank draggable gap (leaf), with an 'Add Spacer' insert affordance.
           - Web:

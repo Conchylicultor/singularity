@@ -96,6 +96,17 @@ The rule, in one line: *no primitive re-derives flex+absolute row layout by
 hand — above `Frame` use `Frame`; at/below it, use grid tracks, never
 `absolute` + reservation padding.*
 
+## A menu row spans its menu — keep the `w-full`
+
+Every row type (`DropdownMenuItem`, `DropdownMenuCheckboxItem`,
+`DropdownMenuRadioItem`, `DropdownMenuSubTrigger`, `SelectItem`) declares
+`w-full`. It looks redundant — block children already fill their parent — but
+rows arrive through machinery that interposes a box (the slot-render
+per-contribution cell, keyed wrappers, a host's own layout), and a flex-row box
+makes the row a flex item that shrink-wraps to its label: dead pointer space
+beside the text, and `ml-auto` (shortcut, submenu chevron) collapsing back
+against it. `w-full` keeps a row's width the menu's business, not the caller's.
+
 ## Labelled menu sections: use DropdownMenuSection, never a groupless label
 
 Base-ui's `Menu.GroupLabel` (our `DropdownMenuLabel`) reads its ancestor

@@ -24,12 +24,11 @@ export type {
   WrapperSlotConfig,
   WrapContribution,
 } from "./internal/render-slot";
+export { SlotItemLayout } from "./internal/item-layout";
+export type { SlotItemOrientation } from "./internal/item-layout";
 export { useDispatchOutcome } from "./internal/dispatch-outcome";
 export type { DispatchOutcome } from "./internal/dispatch-outcome";
-export type {
-  SlotItemMiddleware,
-  SlotListMiddleware,
-} from "./internal/types";
+export type { SlotItemMiddleware, SlotListMiddleware } from "./internal/types";
 export {
   registerSlotItemMiddleware,
   registerSlotListMiddleware,
