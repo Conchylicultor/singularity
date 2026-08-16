@@ -457,6 +457,30 @@ same commit as the tab provider asks before the answer exists; an unsubscribed
 read caches "nowhere to go" for the life of the pane, and whether Expand appears
 comes down to whether that pane's plugin loaded before or after the provider.
 
+### The app's index pane (`appIndex`)
+
+One pane per app is its **landing pane** — what the app's bare root shows when
+there is no route yet (`/mail`, `/pages`, `/agents`). It says so with a boolean:
+
+```ts
+export const mailRootPane = Pane.define({
+  id: "mail-root",
+  app: mailApp,
+  appIndex: true,     // ← bare `/mail` resolves here
+  component: MailRoot,
+});
+```
+
+A boolean, not a path: *which* app's root is `app.basePath`, which the pane
+already carries. Leave `segment` off — an index pane is reached at the app's
+base path and has no URL of its own. Registry sync throws on a segment-bearing
+index pane and on a second index for one app.
+
+There is **no global fallback**: an app with no index pane shows an empty main
+area at its bare root, which is a legitimate choice (`home`, `studio`).
+`useIndexMatch(basePath)` resolves it; the main-area renderer paints it only for
+a genuinely empty route, and overlay hosts ignore it.
+
 ## Not yet implemented (deferred)
 
 - `keepalive` for heavy panes — switching slots remounts by default.

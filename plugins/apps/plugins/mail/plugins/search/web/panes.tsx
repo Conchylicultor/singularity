@@ -7,7 +7,7 @@ import { MailMessageBody } from "./components/mail-message-reader";
 /**
  * On-demand mail search surface. `segment: "search"` resolves relative to the
  * Mail app's base path (`/mail/search`); it is opened as the surface root from
- * the sidebar entry (mode `"root"`). No `appPath` — the app's index landing
+ * the sidebar entry (mode `"root"`). Not `appIndex` — the app's index landing
  * pane already owns bare `/mail`.
  */
 export const mailSearchPane = Pane.define({

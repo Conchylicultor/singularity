@@ -1,9 +1,5 @@
 import type { AppShellSidebarItem } from "@plugins/primitives/plugins/app-shell/web";
 import { defineRenderSlot } from "@plugins/primitives/plugins/slot-render/web";
-import { eventsApp } from "../core";
-
-/** The Events app's base URL path and its index pane's `appPath`. */
-export const EVENTS_APP_PATH = eventsApp.basePath;
 
 export const Events = {
   /**

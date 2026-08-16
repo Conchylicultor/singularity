@@ -39,14 +39,13 @@ const testApp = defineApp({
 // NotFound / app-load-error surface once settled) — never the homepage at the
 // deep-link URL, whether loading or settled.
 
-// The app's index/landing pane: empty segment + `appPath` makes it the index
-// for `/app`. It is the ONLY pane we register — the deep link intentionally
-// matches nothing, reproducing the "target pane not yet loaded" gap.
+// The app's index/landing pane: `appIndex` makes it what `testApp`'s bare root
+// (`/app`) resolves to. It is the ONLY pane we register — the deep link
+// intentionally matches nothing, reproducing the "target pane not yet loaded" gap.
 const indexPane = Pane.define({
   id: "deep-link-test-index",
   app: testApp,
-  segment: "",
-  appPath: "/app",
+  appIndex: true,
   component: () => null,
 });
 

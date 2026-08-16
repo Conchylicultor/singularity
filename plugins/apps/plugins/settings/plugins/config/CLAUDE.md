@@ -12,7 +12,6 @@
     - `Settings.RailBadge` → `ConfigConflictDot`
   - Uses:
     - `apps/settings/shell.Settings`
-    - `apps/settings/shell.SETTINGS_APP_PATH`
     - `config_v2/settings.ConfigNav`
     - `config_v2/settings.ConfigSidebarButton`
     - `primitives/live-state.useResource`

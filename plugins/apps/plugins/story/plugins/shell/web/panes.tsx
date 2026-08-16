@@ -7,16 +7,15 @@ import { StoryEditor } from "./components/story-editor";
 import { StoryToolbar } from "./toolbar";
 
 /**
- * The gallery index pane — Story's landing surface at bare `/story`. Empty
- * segment + `appPath` makes it the app's index pane (the empty route resolves
+ * The gallery index pane — Story's landing surface at bare `/story`.
+ * `appIndex` marks it as the app's index pane (the empty route resolves
  * here). Standard chrome with a "Stories" title; the `DataView` body owns its
  * own virtualization inside the chrome's single `PaneScroll`.
  */
 export const storyGalleryPane = Pane.define({
   id: "story-gallery",
   app: storyApp,
-  segment: "",
-  appPath: "/story",
+  appIndex: true,
   component: StoryGalleryBody,
 });
 

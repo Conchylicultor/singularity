@@ -2,8 +2,8 @@
 
 App shell for the Events app. Registers the `/events` app entry (rail icon
 `MdEvent`, tooltip "Events"), defines the `Events.Sidebar` render slot for
-left-rail surface entries, and registers the index pane (`events-root`, empty
-segment + `appPath` so bare `/events` lands here).
+left-rail surface entries, and registers the index pane (`events-root`,
+`appIndex: true` so bare `/events` lands here).
 
 Sidebar-only, no app toolbar (the Pages/Settings shape): the active pane's own
 `PaneChrome` header owns the surface top and hosts the sidebar toggle, rather
@@ -39,9 +39,7 @@ Design: [`research/2026-08-03-apps-events-event-tracking-app.md`](../../../../..
     - `primitives/pane.Pane`
     - `primitives/pane.PaneChrome`
     - `primitives/slot-render.defineRenderSlot`
-  - Exports (values):
-    - `Events`
-    - `EVENTS_APP_PATH`
+  - Exports (values): `Events`
 - Core:
   - Uses: `primitives/pane.defineApp`
   - Exports (values): `eventsApp`

@@ -8,7 +8,7 @@ import { MailLayout } from "./components/mail-layout";
 import { MailRailBadge } from "./components/mail-rail-badge";
 import { mailRootPane } from "./panes";
 
-export { Mail, MAIL_APP_PATH } from "./slots";
+export { Mail } from "./slots";
 
 export default {
   description:

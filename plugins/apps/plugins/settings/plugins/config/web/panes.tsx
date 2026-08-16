@@ -1,7 +1,6 @@
 import { Pane, PaneChrome } from "@plugins/primitives/plugins/pane/web";
 import { settingsApp } from "@plugins/apps/plugins/settings/plugins/shell/core";
 import { ConfigNav } from "@plugins/config_v2/plugins/settings/web";
-import { SETTINGS_APP_PATH } from "@plugins/apps/plugins/settings/plugins/shell/web";
 
 // The Settings app's index pane: bare `/settings` lands on the config nav.
 // It renders the same `ConfigNav` as `configNavPane` (segment "config"), so the
@@ -13,8 +12,7 @@ import { SETTINGS_APP_PATH } from "@plugins/apps/plugins/settings/plugins/shell/
 export const settingsConfigIndexPane = Pane.define({
   id: "settings-config-index",
   app: settingsApp,
-  segment: "",
-  appPath: SETTINGS_APP_PATH,
+  appIndex: true,
   component: SettingsConfigIndexBody,
   width: 300,
 });

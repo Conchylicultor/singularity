@@ -16,9 +16,7 @@
     - `layouts/miller.MillerColumns`
     - `primitives/app-shell.AppShellLayout`
     - `primitives/slot-render.defineRenderSlot`
-  - Exports (values):
-    - `Settings`
-    - `SETTINGS_APP_PATH`
+  - Exports (values): `Settings`
 - Core:
   - Uses: `primitives/pane.defineApp`
   - Exports (values): `settingsApp`

@@ -125,8 +125,8 @@ function TabTitleReporter({ tabId }: { tabId: string }) {
 }
 
 /**
- * Empty-route fallback: resolves the tab app's index pane (the `appPath`-scoped
- * pane with an empty segment) via {@link useIndexMatch} and publishes its title
+ * Empty-route fallback: resolves the tab app's index pane (the one declaring
+ * `appIndex` for this app) via {@link useIndexMatch} and publishes its title
  * through the same {@link LeafTitleReporter}/`usePaneTitle` path. This is what
  * lets two same-app index tabs show their index pane's title instead of the bare
  * app name. The base path is read from `PaneBasePathContext`, which this tab's

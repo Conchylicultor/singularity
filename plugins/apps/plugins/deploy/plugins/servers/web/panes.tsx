@@ -21,9 +21,9 @@ export const NEW_SERVER_ID = "new";
 export const serversRootPane = Pane.define({
   id: "deploy-servers",
   app: deployApp,
-  // Empty segment + `appPath` makes this the Deploy app's index pane: bare /deploy.
-  segment: "",
-  appPath: "/deploy",
+  // The Deploy app's index/landing pane — what its bare root (/deploy)
+  // resolves to.
+  appIndex: true,
   component: ServersRoot,
   width: 320,
 });

@@ -257,15 +257,21 @@ export interface PaneInternal {
   /** Own URL segment (no leading slash). Used by the route URL parser/builder. */
   segment: string;
   /**
-   * Marks this pane as the index/landing pane for the app whose `Apps.App`
-   * `path` equals this value (e.g. "/pages", or "/" for the agent-manager).
-   * Only meaningful for root-segment panes ("" / "/"). At a bare app root the
-   * route is empty; `useIndexMatch` resolves the index pane whose `appPath`
-   * matches the active app's basePath and MillerColumns renders it. There is
-   * no global fallback — an app without an `appPath`-scoped index shows an
+   * Marks this pane as the index/landing pane of {@link app} — the pane the
+   * app's bare root resolves to. A boolean, not a path: the path is
+   * `app.basePath`, which this pane already carries, so an index pane cannot
+   * name the wrong app.
+   *
+   * At a bare app root the route is empty; `useIndexMatch` resolves the index
+   * pane whose app's basePath matches the surface's, and the main-area renderer
+   * paints it. There is no global fallback — an app with no index pane shows an
    * empty main area at its bare root.
+   *
+   * Two invariants, both thrown on at registry sync (`useSyncPaneRegistry`):
+   * an index pane has NO URL segment of its own (it is reached at the bare
+   * root), and an app has at most one.
    */
-  appPath?: string;
+  appIndex: boolean;
   /**
    * The app this pane BELONGS to — its home, not wherever it happens to be
    * rendered. A pane is reusable chrome: the agent manager hosts the page
@@ -1808,11 +1814,11 @@ type DefineArgs<
   /** Own URL segment (no leading slash). */
   segment?: Path;
   /**
-   * Marks this pane as the index/landing pane for the app whose `Apps.App`
-   * `path` equals this value. Only meaningful for root-segment panes; lets the
-   * bare app-root URL resolve to this pane instead of the global welcome.
+   * Marks this pane as {@link app}'s index/landing pane — what its bare root
+   * resolves to. Declare NO `segment`: an index pane is reached at the app's
+   * base path and has no URL of its own. See {@link PaneInternal.appIndex}.
    */
-  appPath?: string;
+  appIndex?: boolean;
   /** The app this pane belongs to (its official home). See {@link PaneInternal.app}. */
   app: AppRef;
   component: ComponentType;
@@ -1882,10 +1888,11 @@ type RouteDefineArgs<
 > = {
   route: RouteDef<Params>;
   /**
-   * Marks this pane as the index/landing pane for the app whose `Apps.App`
-   * `path` equals this value. Only meaningful for root-segment panes.
+   * Marks this pane as {@link app}'s index/landing pane — what its bare root
+   * resolves to. Only legal for a segment-less route.
+   * See {@link PaneInternal.appIndex}.
    */
-  appPath?: string;
+  appIndex?: boolean;
   /** The app this pane belongs to (its official home). See {@link PaneInternal.app}. */
   app: AppRef;
   component: ComponentType;
@@ -1983,7 +1990,7 @@ function define(
     id,
     defaultAncestors,
     segment,
-    appPath: args.appPath,
+    appIndex: args.appIndex ?? false,
     app: args.app,
     component: args.component,
     chrome: normalizeChrome(
@@ -2024,13 +2031,36 @@ export function useSyncPaneRegistry(): void {
     // Maps a normalized segment pattern → the paneId that first claimed it, so a
     // second pane whose segment matches the same URLs is caught immediately.
     const patternOwner = new Map<string, string>();
+    // Maps an app id → the paneId that claimed its index, so a second index
+    // pane for one app is caught here rather than silently losing to whichever
+    // one this iteration happens to reach first.
+    const indexOwner = new Map<string, string>();
     for (const contribution of contributions) {
       const internal = contribution.pane._internal;
       if (seen.has(internal.id)) {
         console.warn(`Pane "${internal.id}" registered twice.`);
         continue;
       }
-      // Index/empty-segment panes resolve via `appPath`, not URL matching, so
+      if (internal.appIndex) {
+        if (internal.segment && internal.segment !== "/") {
+          throw new Error(
+            `Pane "${internal.id}" declares appIndex but owns the URL segment "${internal.segment}". ` +
+              `An index pane is reached at its app's bare root ("${internal.app.basePath}"), so it ` +
+              `cannot have a segment of its own — drop the segment, or drop appIndex and let the ` +
+              `app's bare root resolve elsewhere.`,
+          );
+        }
+        const owner = indexOwner.get(internal.app.id);
+        if (owner) {
+          throw new Error(
+            `Pane index collision: "${owner}" and "${internal.id}" both declare appIndex for app ` +
+              `"${internal.app.id}". An app has exactly one index pane — the one its bare root ` +
+              `("${internal.app.basePath}") resolves to. Drop appIndex from one of them.`,
+          );
+        }
+        indexOwner.set(internal.app.id, internal.id);
+      }
+      // Index/empty-segment panes resolve via `appIndex`, not URL matching, so
       // multiple empty segments are legal — only check real URL segments.
       if (
         internal.segment &&
@@ -2135,7 +2165,13 @@ function indexInstanceIdFor(paneId: string): number {
 
 /**
  * Resolve the index/landing pane for the given app basePath into a stable
- * single-entry match, or null when the app declares no `appPath`-scoped index.
+ * single-entry match, or null when the app declares no index pane.
+ *
+ * The pane's side of the comparison is its OWN app's basePath — a pane names no
+ * path, so it cannot claim an app it does not belong to. The surface's side
+ * arrives from `Apps.App.path`, which the `apps-paths-from-app-ref` check pins
+ * to that same `AppRef.basePath`; so both sides trace back to one `defineApp`.
+ *
  * Recomputes only when the basePath or the registered pane set changes, so the
  * returned match identity is stable and the index pane never remounts.
  */
@@ -2144,9 +2180,10 @@ export function useIndexMatch(basePath: string): PaneMatch | null {
   return useMemo(() => {
     const bp = normalizeAppPath(basePath);
     for (const pane of registry.values()) {
-      if (pane.segment && pane.segment !== "/" && pane.segment !== "") continue;
-      if (pane.appPath === undefined) continue;
-      if (normalizeAppPath(pane.appPath) !== bp) continue;
+      // Segment-less and unique per app — both enforced at registry sync, so
+      // there is nothing left to defend against on this hot path.
+      if (!pane.appIndex) continue;
+      if (normalizeAppPath(pane.app.basePath) !== bp) continue;
       const entry: MatchEntry = {
         instanceId: indexInstanceIdFor(pane.id),
         uuid: `index:${pane.id}`,

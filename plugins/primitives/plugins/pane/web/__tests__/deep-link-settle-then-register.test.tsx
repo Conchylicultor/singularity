@@ -25,8 +25,7 @@ const testApp = defineApp({
 const indexPane = Pane.define({
   id: "st-index",
   app: testApp,
-  segment: "",
-  appPath: "/app",
+  appIndex: true,
   component: () => null,
 });
 const targetPane = Pane.define({

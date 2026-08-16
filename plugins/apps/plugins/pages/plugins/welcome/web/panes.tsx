@@ -11,13 +11,12 @@ import { PagesWelcome } from "./slots";
 export const pagesRootPane = Pane.define({
   id: "pages-root",
   app: pagesApp,
-  // Empty segment + `appPath` makes this the Pages app's index pane: bare
-  // `/pages` (basePath-stripped to "/") resolves here instead of the global
-  // agent-manager welcome pane. The page tree lives in the sidebar slot, so
-  // this pane is the landing surface shown before a page is opened — a
-  // quick-create + recent-pages launchpad rather than a bare placeholder.
-  segment: "",
-  appPath: "/pages",
+  // The Pages app's index/landing pane — what bare `/pages` resolves to,
+  // instead of the global agent-manager welcome pane. The page tree lives in
+  // the sidebar slot, so this pane is the landing surface shown before a page
+  // is opened — a quick-create + recent-pages launchpad rather than a bare
+  // placeholder.
+  appIndex: true,
   component: PagesRoot,
 });
 

@@ -9,7 +9,7 @@ import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
-import { MAIL_APP_PATH } from "../slots";
+import { mailApp } from "../../core";
 
 /**
  * Mail's index surface (bare `/mail`). It reads the Gmail integration's
@@ -31,7 +31,7 @@ export function MailRoot(): ReactElement {
   useEffect(() => {
     if (ready && !redirected.current) {
       redirected.current = true;
-      navigate(`${MAIL_APP_PATH}/threads`);
+      navigate(`${mailApp.basePath}/threads`);
     }
   }, [ready]);
 

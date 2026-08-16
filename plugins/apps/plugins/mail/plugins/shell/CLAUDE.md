@@ -3,8 +3,8 @@
 App shell for the Mail app. Registers the `/mail` app entry (rail icon
 `MdMail`, tooltip "Mail"), defines the `Mail.Sidebar` render slot for left-rail
 entries (today just Search — the mailboxes are the `threads` DataView's own tab
-strip, not a sidebar nav), and registers the index pane (`mail-root`, empty
-segment + `appPath` so bare `/mail` lands here). The index pane is a
+strip, not a sidebar nav), and registers the index pane (`mail-root`,
+`appIndex: true` so bare `/mail` lands here). The index pane is a
 capability-driven empty-state: it branches on `useGmailAccess().blocker` and
 renders the integration's `GmailAccessAction`, which resolves the blocker in
 place (enable / connect / grant) — never a "go to Settings" dead end. Once
@@ -44,9 +44,7 @@ Auth state and affordances come only from
     - `primitives/pane.Pane`
     - `primitives/pane.PaneChrome`
     - `primitives/slot-render.defineRenderSlot`
-  - Exports (values):
-    - `Mail`
-    - `MAIL_APP_PATH`
+  - Exports (values): `Mail`
 - Core:
   - Uses: `primitives/pane.defineApp`
   - Exports (values): `mailApp`

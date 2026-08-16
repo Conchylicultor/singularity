@@ -91,7 +91,7 @@ const check: Check = {
     const byPattern = new Map<string, SegmentSite[]>();
     for (const { rel, src } of sources) {
       for (const site of collectSegments(rel, src)) {
-        // Index/empty-segment panes resolve via appPath, not URL matching —
+        // Index/empty-segment panes resolve via appIndex, not URL matching —
         // multiple empties are legal (mirrors useSyncPaneRegistry).
         if (site.raw === "" || site.raw === "/") continue;
         const pattern = normalizeSegmentPattern(site.raw);
@@ -112,9 +112,7 @@ const check: Check = {
         .map(
           ([pattern, sites]) =>
             `  ${pattern}\n` +
-            sites
-              .map((s) => `    ${s.file}:${s.line}  "${s.raw}"`)
-              .join("\n"),
+            sites.map((s) => `    ${s.file}:${s.line}  "${s.raw}"`).join("\n"),
         )
         .join("\n");
 

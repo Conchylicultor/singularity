@@ -12,9 +12,9 @@ import { DefinitionDetail } from "./components/definition-detail";
 export const definitionsRootPane = Pane.define({
   id: "workflows-definitions",
   app: workflowsApp,
-  // Empty segment + `appPath` makes this the Workflows app's index pane: bare /workflows.
-  segment: "",
-  appPath: workflowsApp.basePath,
+  // The Workflows app's index/landing pane — what its bare root (/workflows)
+  // resolves to.
+  appIndex: true,
   component: DefinitionsRoot,
   width: 320,
 });

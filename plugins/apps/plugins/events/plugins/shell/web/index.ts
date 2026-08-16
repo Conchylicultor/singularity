@@ -7,7 +7,7 @@ import { eventsApp } from "../core";
 import { EventsLayout } from "./components/events-layout";
 import { eventsRootPane } from "./panes";
 
-export { Events, EVENTS_APP_PATH } from "./slots";
+export { Events } from "./slots";
 
 export default {
   description:

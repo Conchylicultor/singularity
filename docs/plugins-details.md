@@ -1354,9 +1354,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/pane.Pane`
               - `primitives/pane.PaneChrome`
               - `primitives/slot-render.defineRenderSlot`
-            - Exports (values):
-              - `Events`
-              - `EVENTS_APP_PATH`
+            - Exports (values): `Events`
           - Core:
             - Uses: `primitives/pane.defineApp`
             - Exports (values): `eventsApp`
@@ -1991,9 +1989,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/pane.Pane`
               - `primitives/pane.PaneChrome`
               - `primitives/slot-render.defineRenderSlot`
-            - Exports (values):
-              - `Mail`
-              - `MAIL_APP_PATH`
+            - Exports (values): `Mail`
           - Core:
             - Uses: `primitives/pane.defineApp`
             - Exports (values): `mailApp`
@@ -2654,7 +2650,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `Settings.RailBadge` → `ConfigConflictDot`
             - Uses:
               - `apps/settings/shell.Settings`
-              - `apps/settings/shell.SETTINGS_APP_PATH`
               - `config_v2/settings.ConfigNav`
               - `config_v2/settings.ConfigSidebarButton`
               - `primitives/live-state.useResource`
@@ -2672,9 +2667,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `layouts/miller.MillerColumns`
               - `primitives/app-shell.AppShellLayout`
               - `primitives/slot-render.defineRenderSlot`
-            - Exports (values):
-              - `Settings`
-              - `SETTINGS_APP_PATH`
+            - Exports (values): `Settings`
           - Core:
             - Uses: `primitives/pane.defineApp`
             - Exports (values): `settingsApp`

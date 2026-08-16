@@ -6,7 +6,7 @@ import { settingsApp } from "../core";
 import { SettingsLayout } from "./components/settings-layout";
 import { SettingsRailBadge } from "./components/settings-rail-badge";
 
-export { Settings, SETTINGS_APP_PATH } from "./slots";
+export { Settings } from "./slots";
 
 export default {
   description:

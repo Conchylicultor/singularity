@@ -28,16 +28,15 @@ import { SectionPane } from "./components/section-pane";
 // declarations, so the forward reference is safe at runtime.
 
 /**
- * The library index pane — Sonata's landing surface at bare `/sonata`. Empty
- * segment + `appPath` makes it the app's index pane (the empty route resolves
- * here via `useIndexMatch`). Standard chrome with a "Library" title; the
+ * The library index pane — Sonata's landing surface at bare `/sonata`.
+ * `appIndex` marks it as the app's index pane (the empty route resolves here
+ * via `useIndexMatch`). Standard chrome with a "Library" title; the
  * `Sonata.Home` gallery owns its scroll inside the chrome's single `PaneScroll`.
  */
 export const sonataLibraryPane = Pane.define({
   id: "sonata-library",
   app: sonataApp,
-  segment: "",
-  appPath: "/sonata",
+  appIndex: true,
   component: SonataLibraryBody,
 });
 

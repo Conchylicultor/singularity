@@ -8,8 +8,8 @@ panes (it is the natural owner: it already holds `useOpenSong`, the
 them without a `shell → library` import that would cycle with the existing
 `library → shell` dependency on `useSonata`).
 
-- `sonataLibraryPane` — index pane at bare `/sonata` (`segment: ""`,
-  `appPath: "/sonata"`, standard chrome titled "Library"). Renders the gallery via
+- `sonataLibraryPane` — index pane at bare `/sonata` (`appIndex: true`,
+  standard chrome titled "Library"). Renders the gallery via
   `Sonata.Home` inside `PaneChrome`.
 - `sonataPlayerPane` — player pane at `/sonata/song/:songId`
   (`chrome: { header: SonataToolbar }` — the `SonataToolbar` Start/End zones ARE

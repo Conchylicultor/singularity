@@ -7,8 +7,7 @@ import { PrototypeDetail } from "./components/prototype-detail";
 export const prototypesGalleryPane = Pane.define({
   id: "prototypes-gallery",
   app: prototypesApp,
-  segment: "",
-  appPath: "/prototypes",
+  appIndex: true,
   component: PrototypesGalleryBody,
   width: 360,
 });
