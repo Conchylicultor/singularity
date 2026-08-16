@@ -270,14 +270,13 @@ export interface PaneInternal {
    * The app this pane BELONGS to — its home, not wherever it happens to be
    * rendered. A pane is reusable chrome: the agent manager hosts the page
    * detail beside a conversation, and Pages could host a conversation the same
-   * way. Declaring the home is what lets Promote mean "show this on its own,
-   * in the app it belongs to" instead of stranding it in the host app.
+   * way. Being displayable anywhere does NOT make a pane app-less; it still has
+   * one official home, and declaring it is what lets Expand mean "show this on
+   * its own, in the app it belongs to" instead of stranding it in the host app.
    *
-   * Optional only because the ~90 existing panes are annotated incrementally;
-   * an unannotated pane keeps the original same-app promote. See the pane
-   * CLAUDE.md.
+   * Mandatory: an omission is not a decision, so there is nothing to omit.
    */
-  app?: AppRef;
+  app: AppRef;
   component: ComponentType;
   chrome: NormalizedChrome;
   /** Default column width in pixels. Read by layout renderers (e.g. Miller). */
@@ -1654,19 +1653,18 @@ function makePaneObject(
    *
    * Two destinations, decided by where the pane currently IS:
    *
-   *  • **Another app is hosting it** (the pane named a home app and this
-   *    surface is not it) — hand its app-rooted URL to the tab manager. This is
-   *    offered even at route position 0, because "you are in the wrong app" is
-   *    itself something to fix: `/agents/page/X` is a page stranded in the
-   *    agent manager, with none of Pages' own surface around it.
+   *  • **Another app is hosting it** (this surface is not the pane's `app`) —
+   *    hand its app-rooted URL to the tab manager. This is offered even at
+   *    route position 0, because "you are in the wrong app" is itself something
+   *    to fix: `/agents/page/X` is a page stranded in the agent manager, with
+   *    none of Pages' own surface around it.
    *  • **Its own app is hosting it** — the original behavior: drop the
    *    ancestors and re-root the route here. Only meaningful below the root,
    *    hence the `idx === 0` bail.
    *
-   * Cross-app needs three things to be true, and quietly degrades to the
-   * same-app branch when any is missing: a declared home app, a route-backed
-   * pane (a legacy segment pane has no `RouteDef`, so there is no URL to
-   * build), and an installed navigator (see `app-nav-sink`).
+   * The home app is mandatory, so only two things can still send a pane down
+   * the same-app branch: a legacy segment pane (no `RouteDef`, so there is no
+   * URL to build) and a missing navigator (see `app-nav-sink`).
    */
   function usePromote(): ((opts?: { newTab?: boolean }) => void) | null {
     const store = usePaneStore();
@@ -1683,13 +1681,13 @@ function makePaneObject(
       if (idx < 0) return null;
 
       const home = internal.app;
-      const away = !!home && !!route && home.id !== surfaceAppId && canNavigate;
+      const away = !!route && home.id !== surfaceAppId && canNavigate;
       if (away) {
         // Params accumulate down the chain, so a pane's own URL needs every
         // ancestor's params too — the same walk `store.promote` does.
         const params: Record<string, string> = {};
         for (let i = 0; i <= idx; i++) Object.assign(params, slots[i]!.params);
-        const url = route!.link(home!, params);
+        const url = route.link(home, params);
         return (opts?: { newTab?: boolean }) => navigateApp(url, opts);
       }
 
@@ -1815,8 +1813,8 @@ type DefineArgs<
    * bare app-root URL resolve to this pane instead of the global welcome.
    */
   appPath?: string;
-  /** The app this pane belongs to. See {@link PaneInternal.app}. */
-  app?: AppRef;
+  /** The app this pane belongs to (its official home). See {@link PaneInternal.app}. */
+  app: AppRef;
   component: ComponentType;
   /**
    * Literal DEFAULTS for this pane's opener-supplied UI options. Read via
@@ -1888,8 +1886,8 @@ type RouteDefineArgs<
    * `path` equals this value. Only meaningful for root-segment panes.
    */
   appPath?: string;
-  /** The app this pane belongs to. See {@link PaneInternal.app}. */
-  app?: AppRef;
+  /** The app this pane belongs to (its official home). See {@link PaneInternal.app}. */
+  app: AppRef;
   component: ComponentType;
   /** Literal defaults for the pane's opener-supplied UI options. See {@link DefineArgs.options}. */
   options?: Options;

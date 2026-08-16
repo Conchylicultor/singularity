@@ -1,4 +1,5 @@
 import { Pane, type } from "@plugins/primitives/plugins/pane/web";
+import { mailApp } from "@plugins/apps/plugins/mail/plugins/shell/core";
 import type { MailMessage } from "@plugins/apps/plugins/mail/plugins/mail-core/core";
 import { MailSearchBody } from "./components/mail-search-body";
 import { MailMessageBody } from "./components/mail-message-reader";
@@ -11,6 +12,7 @@ import { MailMessageBody } from "./components/mail-message-reader";
  */
 export const mailSearchPane = Pane.define({
   id: "mail-search",
+  app: mailApp,
   segment: "search",
   width: 480,
   component: MailSearchBody,
@@ -33,6 +35,7 @@ export const mailSearchPane = Pane.define({
  */
 export const mailMessagePane = Pane.define({
   id: "mail-message",
+  app: mailApp,
   defaultAncestors: [mailSearchPane],
   segment: "m/:messageId",
   width: 640,

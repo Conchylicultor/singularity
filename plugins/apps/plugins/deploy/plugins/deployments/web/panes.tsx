@@ -2,17 +2,25 @@ import type { ReactElement } from "react";
 import { Pane, PaneChrome } from "@plugins/primitives/plugins/pane/web";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { serverDetailPane } from "@plugins/apps/plugins/deploy/plugins/servers/web";
+import { deployApp } from "@plugins/apps/plugins/deploy/plugins/shell/core";
 import { deploymentsResource } from "../core";
 import { DeploymentDetail } from "./slots";
 
 function useResolveDeployment({ deploymentId }: { deploymentId: string }) {
   const result = useResource(deploymentsResource);
   if (result.pending) return { pending: true, found: false };
-  return { pending: false, found: result.data.some((d) => d.id === deploymentId) };
+  return {
+    pending: false,
+    found: result.data.some((d) => d.id === deploymentId),
+  };
 }
 
 /** The deployment's composition — the only name a person recognises it by. */
-function useDeploymentTitle({ deploymentId }: { deploymentId: string }): string | undefined {
+function useDeploymentTitle({
+  deploymentId,
+}: {
+  deploymentId: string;
+}): string | undefined {
   const result = useResource(deploymentsResource);
   if (result.pending) return undefined;
   return result.data.find((d) => d.id === deploymentId)?.compositionId;
@@ -31,6 +39,7 @@ function useDeploymentTitle({ deploymentId }: { deploymentId: string }): string 
  */
 export const deploymentDetailPane = Pane.define({
   id: "deploy-deployment-detail",
+  app: deployApp,
   defaultAncestors: [serverDetailPane],
   // Segments are GLOBALLY unique across all panes after param-name erasure —
   // `d/:sha` is the diff pane's, so a deployment uses `dep/…`.

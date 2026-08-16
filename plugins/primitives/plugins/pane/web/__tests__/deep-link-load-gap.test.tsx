@@ -14,7 +14,18 @@ import {
   usePaneRoute,
   useSyncPaneRegistry,
 } from "@plugins/primitives/plugins/pane/web";
+import { defineApp } from "@plugins/primitives/plugins/pane/core";
 import { createTestSurfaceStore, TestSurface } from "./surface-fixture";
+
+// A fixture app for the panes below. `Pane.define({ app })` is mandatory, but
+// this suite is about URL resolution, not homes — so the app is local to the
+// test rather than a real one (importing an app shell here would invert the
+// primitive → app dependency).
+const testApp = defineApp({
+  id: "deep-link-test-app",
+  basePath: "/app",
+  iconKey: "science",
+});
 
 // Regression: a cold deep-link reload must not flash the app's index/landing
 // pane at the deep-link URL.
@@ -33,6 +44,7 @@ import { createTestSurfaceStore, TestSurface } from "./surface-fixture";
 // matches nothing, reproducing the "target pane not yet loaded" gap.
 const indexPane = Pane.define({
   id: "deep-link-test-index",
+  app: testApp,
   segment: "",
   appPath: "/app",
   component: () => null,
@@ -49,6 +61,7 @@ const testPlugin = {
 // modeling the deferred plugin arriving.
 const targetPane = Pane.define({
   id: "deep-link-test-target",
+  app: testApp,
   segment: "thing/:id",
   resolve: false,
   component: () => null,
@@ -57,13 +70,17 @@ const targetPane = Pane.define({
 const targetPlugin = {
   id: "deep-link-test-target-plugin",
   description: "deep-link target pane fixture",
-  contributions: [Pane.Register({ pane: indexPane }), Pane.Register({ pane: targetPane })],
+  contributions: [
+    Pane.Register({ pane: indexPane }),
+    Pane.Register({ pane: targetPane }),
+  ],
 } as unknown as LoadedPlugin;
 
 /** Probes what `usePaneRoute` resolves to: a pane id chain, or "null". */
 function Probe({ basePath }: { basePath: string }) {
   const match = usePaneRoute(basePath);
-  const label = match === null ? "null" : match.panes.map((p) => p.pane.id).join(",");
+  const label =
+    match === null ? "null" : match.panes.map((p) => p.pane.id).join(",");
   return <div data-testid="out">{label}</div>;
 }
 

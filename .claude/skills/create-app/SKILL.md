@@ -14,6 +14,7 @@ description: >
 - All app content goes in sub-plugins: `plugins/apps/plugins/<name>/plugins/<feature>/`
 - The app shell (layout, routing) is a sub-plugin, not the top-level plugin.
 - Author the `Apps.App` `icon` via `mdAppIcon` from `@plugins/apps-core/plugins/app-icon/web` (the serializable `AppIcon` descriptor), e.g. `icon: mdAppIcon(MdSomeIcon)` with the glyph imported from `react-icons/md`.
+- The shell sub-plugin owns the app's identity: `shell/core/app.ts` exports `export const <name>App = defineApp({ id, basePath, iconKey })`. Every pane of the app declares `Pane.define({ app: <name>App })` (mandatory), so this must exist before the first pane.
 
 ## Example structure
 

@@ -7,17 +7,31 @@ import {
   resetDeferredLoadStateForTests,
   type LoadedPlugin,
 } from "@plugins/framework/plugins/web-sdk/core";
-import { type PaneStore, Pane, usePaneRoute } from "@plugins/primitives/plugins/pane/web";
+import {
+  type PaneStore,
+  Pane,
+  usePaneRoute,
+} from "@plugins/primitives/plugins/pane/web";
+import { defineApp } from "@plugins/primitives/plugins/pane/core";
 import { createTestSurfaceStore, TestSurface } from "./surface-fixture";
+
+// Local fixture app — this suite is about URL resolution, not pane homes.
+const testApp = defineApp({
+  id: "st-app",
+  basePath: "/app",
+  iconKey: "science",
+});
 
 const indexPane = Pane.define({
   id: "st-index",
+  app: testApp,
   segment: "",
   appPath: "/app",
   component: () => null,
 });
 const targetPane = Pane.define({
   id: "st-target",
+  app: testApp,
   segment: "thing/:id",
   resolve: false,
   component: () => null,
@@ -32,21 +46,33 @@ const indexOnly = {
 const withTarget = {
   id: "st-target-plugin",
   description: "x",
-  contributions: [Pane.Register({ pane: indexPane }), Pane.Register({ pane: targetPane })],
+  contributions: [
+    Pane.Register({ pane: indexPane }),
+    Pane.Register({ pane: targetPane }),
+  ],
 } as unknown as LoadedPlugin;
 
 function Probe({ basePath }: { basePath: string }) {
   const match = usePaneRoute(basePath);
-  const label = match === null ? "null" : match.panes.map((p) => p.pane.id).join(",");
+  const label =
+    match === null ? "null" : match.panes.map((p) => p.pane.id).join(",");
   return <div data-testid="out">{label}</div>;
 }
 
 function setPath(pathname: string): void {
-  Object.defineProperty(window, "location", { configurable: true, writable: true, value: { pathname } });
+  Object.defineProperty(window, "location", {
+    configurable: true,
+    writable: true,
+    value: { pathname },
+  });
 }
 // A cold direct load has null history.state (no serialized route/pending).
 function setNullHistory(): void {
-  Object.defineProperty(window, "history", { configurable: true, writable: true, value: { state: null } });
+  Object.defineProperty(window, "history", {
+    configurable: true,
+    writable: true,
+    value: { state: null },
+  });
 }
 
 let store: PaneStore;

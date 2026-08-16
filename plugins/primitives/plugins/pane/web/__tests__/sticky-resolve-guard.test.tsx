@@ -1,8 +1,20 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { cleanup, render } from "@testing-library/react";
 
-import { Pane, PaneResolveGuard, type PaneStore } from "@plugins/primitives/plugins/pane/web";
+import {
+  Pane,
+  PaneResolveGuard,
+  type PaneStore,
+} from "@plugins/primitives/plugins/pane/web";
+import { defineApp } from "@plugins/primitives/plugins/pane/core";
 import { createTestSurfaceStore, TestSurface } from "./surface-fixture";
+
+// Local fixture app — this suite is about the resolve guard, not pane homes.
+const testApp = defineApp({
+  id: "sticky-guard-app",
+  basePath: "/sticky-guard-app",
+  iconKey: "science",
+});
 
 // Regression: a resolve hook whose live-state resource flips transiently back to
 // `pending` (e.g. an HTTP-fallback refetch failing under memory pressure) must
@@ -12,13 +24,17 @@ import { createTestSurfaceStore, TestSurface } from "./surface-fixture";
 
 // A mutable resolve result the test drives frame-by-frame. Every guard render
 // reads the current value, so re-rendering after mutating it exercises a flip.
-let resolveResult: { pending: boolean; found: boolean } = { pending: true, found: false };
+let resolveResult: { pending: boolean; found: boolean } = {
+  pending: true,
+  found: false,
+};
 
 // A real defined pane: `Pane.define` registers it in the internal→object map
 // that the Not-Found fallback chrome (`paneObjectFor`) consults. `resolve` reads
 // the module-level `resolveResult`, so the test owns the resolve outcome.
 const testPane = Pane.define({
   id: "sticky-guard-test",
+  app: testApp,
   segment: "sticky/:id",
   resolve: () => resolveResult,
   component: () => <div data-testid="pane-body">resolved</div>,
@@ -66,7 +82,9 @@ describe("sticky resolve guard", () => {
 
   it("downgrades to Not Found on a settled miss even after it was found (real deletion)", () => {
     resolveResult = { pending: false, found: true };
-    const { getByTestId, queryByTestId, getByText, rerender } = render(guard("a"));
+    const { getByTestId, queryByTestId, getByText, rerender } = render(
+      guard("a"),
+    );
     expect(getByTestId("pane-body")).toBeTruthy();
 
     // The resource settles with the row gone — a genuine deletion.
@@ -80,7 +98,8 @@ describe("sticky resolve guard", () => {
   it("resets stickiness when params change (a swap re-roots the pane in place)", () => {
     // Resolve task "a".
     resolveResult = { pending: false, found: true };
-    const { getByTestId, queryByTestId, getAllByText, queryByText, rerender } = render(guard("a"));
+    const { getByTestId, queryByTestId, getAllByText, queryByText, rerender } =
+      render(guard("a"));
     expect(getByTestId("pane-body")).toBeTruthy();
 
     // Swap to task "b" while its resource is still loading. Stickiness from "a"

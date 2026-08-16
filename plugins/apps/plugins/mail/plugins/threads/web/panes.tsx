@@ -1,10 +1,21 @@
 import { type ReactElement } from "react";
 import { MdStar, MdStarBorder } from "react-icons/md";
-import { useResource, matchResource } from "@plugins/primitives/plugins/live-state/web";
-import { Pane, PaneChrome, useOpenPane } from "@plugins/primitives/plugins/pane/web";
-import { DataView, defineDataView } from "@plugins/primitives/plugins/data-view/web";
+import {
+  useResource,
+  matchResource,
+} from "@plugins/primitives/plugins/live-state/web";
+import {
+  Pane,
+  PaneChrome,
+  useOpenPane,
+} from "@plugins/primitives/plugins/pane/web";
+import {
+  DataView,
+  defineDataView,
+} from "@plugins/primitives/plugins/data-view/web";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { threadPane } from "@plugins/apps/plugins/mail/plugins/reading-pane/web";
+import { mailApp } from "@plugins/apps/plugins/mail/plugins/shell/core";
 import type { MailThread } from "@plugins/apps/plugins/mail/plugins/mail-core/core";
 import { mailThreadsRevisionResource, queryThreads } from "../core";
 import { useMailThreadFieldDefs } from "./internal/fields";
@@ -25,6 +36,7 @@ const MAIL_THREADS_VIEW = defineDataView("mail-threads");
  */
 export const mailThreadsPane = Pane.define({
   id: "mail-threads",
+  app: mailApp,
   segment: "threads",
   component: MailThreadsPaneView,
   width: 520,

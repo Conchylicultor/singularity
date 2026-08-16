@@ -1,8 +1,10 @@
 import { Pane } from "@plugins/primitives/plugins/pane/web";
+import { debugApp } from "@plugins/apps/plugins/debug/plugins/shell/core";
 import { OpDetailBody } from "./components/op-detail";
 
 export const opDetailPane = Pane.define({
   id: "debug-profiling-op-detail",
+  app: debugApp,
   segment: "op-profile/:opId",
   component: OpDetailBody,
   // Wider than the 380 the push detail used: this pane now hosts TWO Gantts

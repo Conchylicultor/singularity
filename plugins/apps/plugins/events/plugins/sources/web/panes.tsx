@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { Pane, PaneChrome } from "@plugins/primitives/plugins/pane/web";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
+import { eventsApp } from "@plugins/apps/plugins/events/plugins/shell/core";
 import { SourcesList } from "./components/sources-list";
 import { useEventSource } from "./internal/use-source";
 import { EventSourceDetail } from "./slots";
@@ -8,6 +9,7 @@ import { EventSourceDetail } from "./slots";
 /** The Sources surface: `/events/sources`. */
 export const eventSourcesPane = Pane.define({
   id: "event-sources",
+  app: eventsApp,
   segment: "sources",
   component: EventSourcesPaneView,
   width: 380,
@@ -31,6 +33,7 @@ export const eventSourcesPane = Pane.define({
  */
 export const eventSourceDetailPane = Pane.define({
   id: "event-source-detail",
+  app: eventsApp,
   defaultAncestors: [eventSourcesPane],
   segment: "source/:sourceId",
   component: EventSourceDetailPaneView,

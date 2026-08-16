@@ -1,10 +1,12 @@
 import type { ReactElement } from "react";
 import { Pane, PaneChrome } from "@plugins/primitives/plugins/pane/web";
+import { studioApp } from "@plugins/apps/plugins/studio/plugins/shell/core";
 import { compositionDetailPane } from "@plugins/apps/plugins/studio/plugins/compositions/web";
 import { ReleaseDetail } from "./slots";
 
 export const releaseDetailPane = Pane.define({
   id: "release-detail",
+  app: studioApp,
   defaultAncestors: [compositionDetailPane],
   // Segments are GLOBALLY unique across all panes (not path-scoped): build's
   // run-detail already owns "r/:runId", so the release run-detail uses "rel/…".

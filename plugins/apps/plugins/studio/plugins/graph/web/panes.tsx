@@ -1,10 +1,12 @@
 import type { PluginId } from "@plugins/framework/plugins/plugin-id/core";
 import { Pane, PaneChrome } from "@plugins/primitives/plugins/pane/web";
+import { studioApp } from "@plugins/apps/plugins/studio/plugins/shell/core";
 import { Clip } from "@plugins/primitives/plugins/css/plugins/clip/web";
 import { GraphView } from "./components/graph-view";
 
 export const graphCanvasPane = Pane.define({
   id: "graph",
+  app: studioApp,
   segment: "graph",
   component: GraphBody,
   width: 900,

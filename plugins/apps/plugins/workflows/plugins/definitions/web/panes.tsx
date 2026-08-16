@@ -1,4 +1,7 @@
-import { matchResource, useResource } from "@plugins/primitives/plugins/live-state/web";
+import {
+  matchResource,
+  useResource,
+} from "@plugins/primitives/plugins/live-state/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { Pane, PaneChrome } from "@plugins/primitives/plugins/pane/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
@@ -8,6 +11,7 @@ import { DefinitionDetail } from "./components/definition-detail";
 
 export const definitionsRootPane = Pane.define({
   id: "workflows-definitions",
+  app: workflowsApp,
   // Empty segment + `appPath` makes this the Workflows app's index pane: bare /workflows.
   segment: "",
   appPath: workflowsApp.basePath,
@@ -18,11 +22,15 @@ export const definitionsRootPane = Pane.define({
 function useResolveDefinition({ definitionId }: { definitionId: string }) {
   const result = useResource(workflowDefinitionsDescriptor);
   if (result.pending) return { pending: true, found: false };
-  return { pending: false, found: result.data.some((d) => d.id === definitionId) };
+  return {
+    pending: false,
+    found: result.data.some((d) => d.id === definitionId),
+  };
 }
 
 export const definitionDetailPane = Pane.define({
   id: "workflows-definition-detail",
+  app: workflowsApp,
   defaultAncestors: [definitionsRootPane],
   segment: "def/:definitionId",
   component: DefinitionDetailBody,
@@ -54,7 +62,11 @@ function DefinitionDetailBody() {
       if (!def) {
         return (
           <PaneChrome pane={definitionDetailPane} title="Workflow">
-            <Text as="div" variant="body" className="text-muted-foreground p-lg">
+            <Text
+              as="div"
+              variant="body"
+              className="text-muted-foreground p-lg"
+            >
               Workflow not found.
             </Text>
           </PaneChrome>

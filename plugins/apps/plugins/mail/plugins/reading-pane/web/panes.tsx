@@ -1,9 +1,13 @@
 import { type ReactNode } from "react";
 import { Pane, PaneChrome } from "@plugins/primitives/plugins/pane/web";
-import { useResource, matchResource } from "@plugins/primitives/plugins/live-state/web";
+import {
+  useResource,
+  matchResource,
+} from "@plugins/primitives/plugins/live-state/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
+import { mailApp } from "@plugins/apps/plugins/mail/plugins/shell/core";
 import { threadMessagesResource } from "../core";
 import { MessageList } from "./components/message-list";
 
@@ -13,6 +17,7 @@ import { MessageList } from "./components/message-list";
 // `Pane.Register` in the default plugin definition (`index.ts`).
 export const threadPane = Pane.define({
   id: "mail-thread",
+  app: mailApp,
   segment: "thread/:threadId",
   component: ThreadPaneView,
   width: 640,

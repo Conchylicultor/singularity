@@ -1,10 +1,14 @@
 import type { ReactElement } from "react";
 import { Pane, PaneChrome } from "@plugins/primitives/plugins/pane/web";
-import { DataView, defineDataView } from "@plugins/primitives/plugins/data-view/web";
+import {
+  DataView,
+  defineDataView,
+} from "@plugins/primitives/plugins/data-view/web";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { matchResource } from "@plugins/primitives/plugins/live-state/web";
 import { useEventsRevision } from "@plugins/apps/plugins/events/plugins/events-core/web";
+import { eventsApp } from "@plugins/apps/plugins/events/plugins/shell/core";
 import type { EventRecord } from "@plugins/apps/plugins/events/plugins/events-core/core";
 import { queryEvents } from "../core";
 import { eventFieldDefs } from "./internal/fields";
@@ -23,6 +27,7 @@ const EVENTS_LIST_VIEW = defineDataView("events.list");
 
 export const eventListPane = Pane.define({
   id: "event-list",
+  app: eventsApp,
   segment: "list",
   component: EventListPaneView,
   width: 560,

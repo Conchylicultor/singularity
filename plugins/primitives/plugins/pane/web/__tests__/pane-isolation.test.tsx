@@ -12,6 +12,7 @@ import {
   setLiveStore,
   useSyncPaneRegistry,
 } from "@plugins/primitives/plugins/pane/web";
+import { defineApp } from "@plugins/primitives/plugins/pane/core";
 
 // Proves the per-tab pane-store isolation invariants the multi-tab refactor
 // relies on. Each app tab owns its own `PaneStore` (independent route +
@@ -24,8 +25,16 @@ import {
 // minimal PluginProvider + `useSyncPaneRegistry` — no full plugin graph, so the
 // suite stays boundary-clean (imports only this plugin + the web-sdk it already
 // depends on).
+// Local fixture app — this suite is about store isolation, not pane homes.
+const testApp = defineApp({
+  id: "iso-app",
+  basePath: "/iso-app",
+  iconKey: "science",
+});
+
 const testPane = Pane.define({
   id: "iso-test",
+  app: testApp,
   segment: "iso/:id",
   resolve: false,
   component: () => null,

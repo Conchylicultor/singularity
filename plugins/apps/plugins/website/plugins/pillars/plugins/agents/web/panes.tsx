@@ -1,4 +1,5 @@
 import { Pane, PaneChrome } from "@plugins/primitives/plugins/pane/web";
+import { websiteApp } from "@plugins/apps/plugins/website/plugins/shell/core";
 import {
   WebsitePage,
   WebsiteToolbar,
@@ -18,6 +19,7 @@ import { WebsiteAgents } from "./slots";
  */
 export const agentsPane = Pane.define({
   id: "website-agents",
+  app: websiteApp,
   segment: "agent-manager",
   chrome: { header: WebsiteToolbar },
   component: AgentsBody,

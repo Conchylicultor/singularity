@@ -1,9 +1,11 @@
 import { Pane, PaneChrome } from "@plugins/primitives/plugins/pane/web";
+import { agentManagerApp } from "@plugins/apps/plugins/agent-manager/plugins/shell/core";
 import { ConvFileTreeBody } from "./components/conv-file-tree-body";
 import { GlobalFileTreeBody } from "./components/global-file-tree-body";
 
 export const globalFileTreePane = Pane.define({
   id: "global-file-tree",
+  app: agentManagerApp,
   segment: "code/:worktree",
   component: GlobalFileTreeChromedBody,
   resolve: false,
@@ -11,6 +13,7 @@ export const globalFileTreePane = Pane.define({
 
 export const convFileTreePane = Pane.define({
   id: "conv-file-tree",
+  app: agentManagerApp,
   segment: "files",
   // Conversation-scoped satellite: promote() would strip convId from the URL.
   chrome: { promote: false },

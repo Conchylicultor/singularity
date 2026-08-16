@@ -1,8 +1,10 @@
 import { Pane, PaneChrome } from "@plugins/primitives/plugins/pane/web";
+import { agentManagerApp } from "@plugins/apps/plugins/agent-manager/plugins/shell/core";
 import { SummaryPane } from "./components/summary-pane";
 
 export const convSummaryPane = Pane.define({
   id: "conv-summary",
+  app: agentManagerApp,
   segment: "summary",
   component: ConvSummaryBody,
   // Conversation-scoped satellite: promote() would strip convId from the URL.

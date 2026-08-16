@@ -26,11 +26,12 @@ Design rationale lives in:
 ```ts
 // plugins/tasks/web/panes.ts
 export const tasksRootPane = Pane.define({
-  id: "tasks-root", segment: "tasks", component: TasksRoot,
+  id: "tasks-root", app: agentManagerApp, segment: "tasks", component: TasksRoot,
 });
 
 export const taskDetailPane = Pane.define({
   id: "task-detail",
+  app: agentManagerApp,               // mandatory — see "A pane's home app" below
   defaultAncestors: [tasksRootPane],  // prepend when opening from scratch
   segment: "t/:taskId",
   component: TaskDetail,
@@ -429,11 +430,21 @@ picks one of two destinations:
 - **hosted by its own app** → the original behavior: drop the ancestors and
   re-root the route here. Only meaningful below the root.
 
-Cross-app needs a declared `app`, a route-backed pane (a legacy segment pane has
-no `RouteDef`, so there is no URL to build), and an installed navigator; missing
-any of the three degrades silently to the same-app branch. `app` is optional
-ONLY because the ~90 existing panes are being annotated incrementally — an
-unannotated pane is not a decision, it is a to-do.
+**`app` is mandatory, with no opt-out** — being displayable in any app is a fact
+about hosting, not an absence of ownership. The case that looks like an
+exception isn't: the theme customizer restyles whichever app you are in, and its
+home is still `settingsApp`, because Appearance is a Settings surface.
+
+Write it right after the identity field (`id:` / `route:`), importing the
+`AppRef` from the app shell's **core** barrel
+(`@plugins/apps/plugins/<app>/plugins/shell/core` — a leaf holding only
+`defineApp({...})`, so it can never close an import cycle). Test fixtures
+`defineApp` a local app instead, keeping this primitive's suites free of any
+dependency on `plugins/apps`.
+
+Cross-app Expand additionally needs a route-backed pane (a legacy segment pane
+has no `RouteDef`, so there is no URL to build) and an installed navigator;
+missing either degrades silently to the same-app branch.
 
 **Why a sink for the navigation.** `apps-core/tabs` imports this primitive, so
 this primitive cannot import it back. Tabs installs its `navigate` into

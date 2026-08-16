@@ -1,6 +1,7 @@
 import { Pane, PaneChrome } from "@plugins/primitives/plugins/pane/web";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { pagesResource } from "@plugins/page/plugins/editor/core";
+import { storyApp } from "../core";
 import { StoryGallery } from "./components/story-gallery";
 import { StoryEditor } from "./components/story-editor";
 import { StoryToolbar } from "./toolbar";
@@ -13,6 +14,7 @@ import { StoryToolbar } from "./toolbar";
  */
 export const storyGalleryPane = Pane.define({
   id: "story-gallery",
+  app: storyApp,
   segment: "",
   appPath: "/story",
   component: StoryGalleryBody,
@@ -35,6 +37,7 @@ function StoryGalleryBody() {
  */
 export const storyDetailPane = Pane.define({
   id: "story-detail",
+  app: storyApp,
   segment: "s/:pageId",
   chrome: { header: StoryToolbar },
   resolve: useStoryDetailResolve,

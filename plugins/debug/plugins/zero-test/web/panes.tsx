@@ -1,6 +1,10 @@
 import type { ReactElement } from "react";
 import { Pane, PaneChrome } from "@plugins/primitives/plugins/pane/web";
-import { ZeroRoot, useZeroResource } from "@plugins/database/plugins/zero/plugins/client/web";
+import { debugApp } from "@plugins/apps/plugins/debug/plugins/shell/core";
+import {
+  ZeroRoot,
+  useZeroResource,
+} from "@plugins/database/plugins/zero/plugins/client/web";
 import { ResourceView } from "@plugins/primitives/plugins/live-state/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
@@ -11,6 +15,7 @@ import { schema, zql } from "../core";
 
 export const zeroTestPane = Pane.define({
   id: "zero-test",
+  app: debugApp,
   segment: "zero-test",
   component: ZeroTestBody,
 });

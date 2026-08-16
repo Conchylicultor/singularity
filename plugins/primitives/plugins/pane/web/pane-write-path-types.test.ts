@@ -1,5 +1,6 @@
 import { expect, test } from "bun:test";
 import { openPane, Pane, type } from "./pane";
+import { defineApp } from "../core";
 
 // ---------------------------------------------------------------------------
 // Compile-time regression guard for the pane "write path" typing.
@@ -28,8 +29,16 @@ import { openPane, Pane, type } from "./pane";
 
 const Dummy = () => null;
 
+// Local fixture app — this harness is about the write-path typing, not homes.
+const testApp = defineApp({
+  id: "wtp-app",
+  basePath: "/wtp-app",
+  iconKey: "science",
+});
+
 const paramful = Pane.define({
   id: "wtp-paramful",
+  app: testApp,
   segment: "wtp/:foo",
   resolve: false,
   component: Dummy,
@@ -37,12 +46,14 @@ const paramful = Pane.define({
 
 const paramless = Pane.define({
   id: "wtp-paramless",
+  app: testApp,
   segment: "wtp-none",
   component: Dummy,
 });
 
 const optioned = Pane.define({
   id: "wtp-optioned",
+  app: testApp,
   segment: "wtp-opt",
   component: Dummy,
   options: { focused: false },
@@ -50,6 +61,7 @@ const optioned = Pane.define({
 
 const hinted = Pane.define({
   id: "wtp-hinted",
+  app: testApp,
   segment: "wtp-hint",
   component: Dummy,
   hint: type<{ title: string }>(),
@@ -109,7 +121,9 @@ function typeAssertions() {
 
   // `useOptions()` is TOTAL: a declared key is never `| undefined`, so a read
   // site has no absence to launder into a fabricated default with `??`.
-  const opts: { focused: boolean } = {} as ReturnType<typeof optioned.useOptions>;
+  const opts: { focused: boolean } = {} as ReturnType<
+    typeof optioned.useOptions
+  >;
   void opts;
 
   // ---- hint: the declared shape, and nothing else ---------------------------

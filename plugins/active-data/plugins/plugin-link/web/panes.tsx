@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import { Pane, PaneChrome } from "@plugins/primitives/plugins/pane/web";
+import { agentManagerApp } from "@plugins/apps/plugins/agent-manager/plugins/shell/core";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
@@ -12,6 +13,7 @@ import { getPluginFacetsTree } from "@plugins/plugin-meta/plugins/plugin-view/co
 
 export const pluginConvSidePane = Pane.define({
   id: "plugin-conv-side",
+  app: agentManagerApp,
   segment: "plugin/:pluginId",
   component: PluginConvSideBody,
   width: 600,

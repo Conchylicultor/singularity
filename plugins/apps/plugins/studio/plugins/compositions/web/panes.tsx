@@ -1,5 +1,6 @@
 import { useEffect, useRef, type ReactElement } from "react";
 import { Pane, PaneChrome } from "@plugins/primitives/plugins/pane/web";
+import { studioApp } from "@plugins/apps/plugins/studio/plugins/shell/core";
 import {
   useCompositionData,
   useManifestItems,
@@ -21,6 +22,7 @@ import { CompositionDetail } from "./slots";
 
 export const compositionsPane = Pane.define({
   route: compositionsRoute,
+  app: studioApp,
   component: CompositionsBody,
   width: 380,
 });
@@ -41,6 +43,7 @@ export const compositionDetailPane = Pane.define({
   // Identity (id / `comp/:id` segment / the compositions ancestor) comes from
   // the route in `core/`, so the cross-app links built from it land here.
   route: compositionDetailRoute,
+  app: studioApp,
   component: CompositionDetailBody,
   // Wider than release-detail's 480: it hosts the closure plugin tree.
   width: 560,
@@ -53,6 +56,7 @@ export const compositionDetailPane = Pane.define({
 
 export const comparePane = Pane.define({
   id: "composition-compare",
+  app: studioApp,
   defaultAncestors: [compositionsPane],
   segment: "compare",
   component: CompareBody,

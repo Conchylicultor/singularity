@@ -1,10 +1,12 @@
 import { type ReactElement } from "react";
 import { Pane, PaneChrome } from "@plugins/primitives/plugins/pane/web";
+import { eventsApp } from "../core";
 import { EventsRoot } from "./components/events-root";
 import { EVENTS_APP_PATH } from "./slots";
 
 export const eventsRootPane = Pane.define({
   id: "events-root",
+  app: eventsApp,
   // Empty segment + `appPath` makes this the Events app's index pane: bare
   // `/events` (basePath-stripped to "/") resolves here instead of the global
   // agent-manager welcome pane. The events surfaces live in the sidebar slot, so

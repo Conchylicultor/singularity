@@ -1,5 +1,10 @@
 import { type ReactElement, useEffect, useState } from "react";
-import { Pane, PaneChrome, type, type Hint } from "@plugins/primitives/plugins/pane/web";
+import {
+  Pane,
+  PaneChrome,
+  type,
+  type Hint,
+} from "@plugins/primitives/plugins/pane/web";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import {
@@ -8,6 +13,7 @@ import {
   TEMPO_MATH_FLOOR,
   useSonata,
 } from "@plugins/apps/plugins/sonata/plugins/shell/web";
+import { sonataApp } from "@plugins/apps/plugins/sonata/plugins/shell/core";
 import { Column } from "@plugins/primitives/plugins/css/plugins/column/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Clip } from "@plugins/primitives/plugins/css/plugins/clip/web";
@@ -29,6 +35,7 @@ import { SectionPane } from "./components/section-pane";
  */
 export const sonataLibraryPane = Pane.define({
   id: "sonata-library",
+  app: sonataApp,
   segment: "",
   appPath: "/sonata",
   component: SonataLibraryBody,
@@ -54,6 +61,7 @@ function SonataLibraryBody(): ReactElement {
  */
 export const sonataPlayerPane = Pane.define({
   id: "sonata-player",
+  app: sonataApp,
   segment: "song/:songId",
   chrome: { header: SonataToolbar },
   // Display-only optimistic label for `useTitle` (tab/document title) before the
@@ -82,7 +90,8 @@ function useSongTitle(
   // `pick` reads as "not known yet", so the hint shows through in the meantime
   // and is superseded the instant the real row (and any rename) arrives.
   let canonical: string | undefined;
-  if (!songs.pending) canonical = songs.data.find((s) => s.id === songId)?.title;
+  if (!songs.pending)
+    canonical = songs.data.find((s) => s.id === songId)?.title;
   return hint.pick("title", canonical);
 }
 
@@ -125,7 +134,10 @@ function useSonataPlayerResolve({ songId }: { songId: string }) {
   // `found` is gated by `hydrated` (requires the effect above to complete), so
   // the resource is guaranteed settled by the time `found` can be true. Reading
   // `.data` only when not pending avoids the collapse.
-  const found = hydrated && !songsResult.pending && songsResult.data.some((s) => s.id === songId);
+  const found =
+    hydrated &&
+    !songsResult.pending &&
+    songsResult.data.some((s) => s.id === songId);
   return { pending: !hydrated, found };
 }
 
@@ -138,8 +150,13 @@ function useSonataPlayerResolve({ songId }: { songId: string }) {
  */
 function SonataPlayerSurface(): ReactElement {
   const { songId } = sonataPlayerPane.useParams();
-  const { score, tempoScale, effectiveDisplayId, setCurrentSong, clearCurrentSong } =
-    useSonata();
+  const {
+    score,
+    tempoScale,
+    effectiveDisplayId,
+    setCurrentSong,
+    clearCurrentSong,
+  } = useSonata();
 
   // Mark this song open on mount (once per open — each open is a fresh
   // `mode:"root"` instance, so this fires exactly once and bumps `songOpenEpoch`).

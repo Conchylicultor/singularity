@@ -161,6 +161,7 @@ For opening a view or mounting a URL, use the `pane` plugin (`@plugins/primitive
 // web/panes.ts — the pane reads its own params via the binding it exports
 export const terminalPane = Pane.define({
   id: "terminal",
+  app: agentManagerApp, // mandatory: the app this pane BELONGS to (its AppRef)
   path: "/terminal/:worktree",
   component: () => {
     const { worktree } = terminalPane.useParams();

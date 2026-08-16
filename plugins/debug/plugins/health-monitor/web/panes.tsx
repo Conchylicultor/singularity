@@ -1,9 +1,11 @@
 import type { ReactElement } from "react";
 import { Pane, PaneChrome } from "@plugins/primitives/plugins/pane/web";
+import { debugApp } from "@plugins/apps/plugins/debug/plugins/shell/core";
 import { HealthMonitorPanel } from "./components/health-monitor-panel";
 
 export const healthMonitorPane = Pane.define({
   id: "debug-health-monitor",
+  app: debugApp,
   segment: "health",
   component: HealthMonitorBody,
 });

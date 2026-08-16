@@ -16,6 +16,7 @@ import {
   getEndpointErrorMessage,
 } from "@plugins/infra/plugins/endpoints/web";
 import { useEventSourceRun } from "@plugins/apps/plugins/events/plugins/events-core/web";
+import { eventsApp } from "@plugins/apps/plugins/events/plugins/shell/core";
 import type { EventSourceRun } from "@plugins/apps/plugins/events/plugins/events-core/core";
 import {
   RUN_OUTCOME_LABEL,
@@ -46,6 +47,7 @@ import { EventSourceRunDetail } from "./slots";
  */
 export const eventSourceRunPane = Pane.define({
   id: "event-source-run",
+  app: eventsApp,
   defaultAncestors: [eventSourceDetailPane],
   segment: "run/:runId",
   component: EventSourceRunPaneView,

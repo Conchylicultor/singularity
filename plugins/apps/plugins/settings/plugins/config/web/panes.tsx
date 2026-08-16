@@ -1,4 +1,5 @@
 import { Pane, PaneChrome } from "@plugins/primitives/plugins/pane/web";
+import { settingsApp } from "@plugins/apps/plugins/settings/plugins/shell/core";
 import { ConfigNav } from "@plugins/config_v2/plugins/settings/web";
 import { SETTINGS_APP_PATH } from "@plugins/apps/plugins/settings/plugins/shell/web";
 
@@ -11,6 +12,7 @@ import { SETTINGS_APP_PATH } from "@plugins/apps/plugins/settings/plugins/shell/
 // from the URL segment.
 export const settingsConfigIndexPane = Pane.define({
   id: "settings-config-index",
+  app: settingsApp,
   segment: "",
   appPath: SETTINGS_APP_PATH,
   component: SettingsConfigIndexBody,

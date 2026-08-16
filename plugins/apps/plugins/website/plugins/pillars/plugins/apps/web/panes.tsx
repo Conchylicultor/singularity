@@ -1,4 +1,5 @@
 import { Pane, PaneChrome } from "@plugins/primitives/plugins/pane/web";
+import { websiteApp } from "@plugins/apps/plugins/website/plugins/shell/core";
 import {
   WebsitePage,
   WebsiteToolbar,
@@ -13,6 +14,7 @@ import { WebsiteApps } from "./slots";
  */
 export const appsPane = Pane.define({
   id: "website-apps",
+  app: websiteApp,
   segment: "apps",
   chrome: { header: WebsiteToolbar },
   component: AppsBody,

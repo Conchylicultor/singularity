@@ -1,7 +1,12 @@
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
-import { Pane, PaneChrome, useOpenPane } from "@plugins/primitives/plugins/pane/web";
+import {
+  Pane,
+  PaneChrome,
+  useOpenPane,
+} from "@plugins/primitives/plugins/pane/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import { deployApp } from "@plugins/apps/plugins/deploy/plugins/shell/core";
 import { serversResource } from "../shared";
 import { ServersList } from "./components/servers-list";
 import { ServerCreateForm } from "./components/server-create-form";
@@ -15,6 +20,7 @@ export const NEW_SERVER_ID = "new";
 
 export const serversRootPane = Pane.define({
   id: "deploy-servers",
+  app: deployApp,
   // Empty segment + `appPath` makes this the Deploy app's index pane: bare /deploy.
   segment: "",
   appPath: "/deploy",
@@ -34,6 +40,7 @@ function useResolveServer({ serverId }: { serverId: string }) {
 // are the same surface.
 export const serverDetailPane = Pane.define({
   id: "deploy-server-detail",
+  app: deployApp,
   defaultAncestors: [serversRootPane],
   segment: "server/:serverId",
   component: ServerDetailBody,
@@ -81,7 +88,9 @@ function ServerDetailBody() {
   if (!server) {
     return (
       <PaneChrome pane={serverDetailPane} title="Server">
-        <Text as="div" variant="body" className="text-muted-foreground p-lg">Server not found.</Text>
+        <Text as="div" variant="body" className="text-muted-foreground p-lg">
+          Server not found.
+        </Text>
       </PaneChrome>
     );
   }

@@ -1,4 +1,5 @@
 import { Pane, PaneChrome } from "@plugins/primitives/plugins/pane/web";
+import { websiteApp } from "../core";
 import { Website, WebsiteToolbar } from "./slots";
 import { WebsitePage } from "./components/website-page";
 
@@ -10,6 +11,7 @@ import { WebsitePage } from "./components/website-page";
  */
 export const landingPane = Pane.define({
   id: "website-landing",
+  app: websiteApp,
   segment: "",
   appPath: "/website",
   chrome: { header: WebsiteToolbar },

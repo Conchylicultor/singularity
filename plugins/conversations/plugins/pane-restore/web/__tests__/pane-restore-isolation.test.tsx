@@ -12,6 +12,7 @@ import {
   setLiveStore,
   useSyncPaneRegistry,
 } from "@plugins/primitives/plugins/pane/web";
+import { agentManagerApp } from "@plugins/apps/plugins/agent-manager/plugins/shell/core";
 // Importing the barrel registers the module-load popstate/shell:navigate
 // listener (`import "./internal/pane-restore-store"`) and exposes the reader.
 import { loadRouteForConversation } from "@plugins/conversations/plugins/pane-restore/web";
@@ -29,12 +30,14 @@ const delay = (ms: number) => new Promise((r) => setTimeout(r, ms));
 // listener gates on (`route[0].paneId === "conversation"`).
 const conversationPaneDef = Pane.define({
   id: "conversation",
+  app: agentManagerApp,
   segment: "c/:convId",
   resolve: false,
   component: () => null,
 });
 const filePaneDef = Pane.define({
   id: "file-pane",
+  app: agentManagerApp,
   segment: "f/:path",
   resolve: false,
   component: () => null,
@@ -64,7 +67,8 @@ beforeAll(() => {
 });
 
 function clearSavedRoutes(): void {
-  for (const convId of ["X", "Y"]) localStorage.removeItem("route.restore." + convId);
+  for (const convId of ["X", "Y"])
+    localStorage.removeItem("route.restore." + convId);
 }
 
 beforeEach(() => {
@@ -137,7 +141,10 @@ describe("pane-restore corruption handling", () => {
   it("flags a valid-JSON-but-wrong-shape entry as corrupt (schema drift)", () => {
     // Parses fine, but not our Envelope shape — the realistic corruption after
     // a future SavedSlot/Envelope refactor reads an old entry.
-    localStorage.setItem("route.restore.X", JSON.stringify({ ts: Date.now(), v: [{ nope: 1 }] }));
+    localStorage.setItem(
+      "route.restore.X",
+      JSON.stringify({ ts: Date.now(), v: [{ nope: 1 }] }),
+    );
 
     expect(loadRouteForConversation("X")).toEqual({
       kind: "corrupt",

@@ -1,4 +1,12 @@
-import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from "vitest";
 import { cleanup, render } from "@testing-library/react";
 
 import {
@@ -15,6 +23,7 @@ import {
   useSyncPaneRegistry,
   type LocationChange,
 } from "@plugins/primitives/plugins/pane/web";
+import { defineApp } from "@plugins/primitives/plugins/pane/core";
 
 // Proves the `HistoryAdapter` seam the shell-history-snapshot refactor rests on:
 // the pane store never touches `window.history` directly — it emits push/replace
@@ -28,13 +37,22 @@ import {
 // `useSyncPaneRegistry`, so `buildRouteUrl` / route mutation have real panes to
 // resolve — no full plugin graph, so the suite stays boundary-clean.
 
+// Local fixture app — this suite is about history intents, not pane homes.
+const testApp = defineApp({
+  id: "hist-app",
+  basePath: "/hist-app",
+  iconKey: "science",
+});
+
 const rootPane = Pane.define({
   id: "hist-root",
+  app: testApp,
   segment: "hist",
   component: () => null,
 });
 const childPane = Pane.define({
   id: "hist-child",
+  app: testApp,
   segment: "c/:id",
   resolve: false,
   component: () => null,
@@ -44,6 +62,7 @@ const childPane = Pane.define({
 // ways through the adapter, not hard-coded.
 const noHistoryPane = Pane.define({
   id: "hist-nohistory",
+  app: testApp,
   segment: "nh",
   component: () => null,
   chrome: { history: false },
@@ -153,7 +172,9 @@ describe("commit intents — mode + url + state per the push/replace matrix", ()
     expect(change.mode).toBe("push");
     expect(change.url).toBe("/c/1");
     expect(change.state).toEqual({
-      route: [expect.objectContaining({ paneId: "hist-child", params: { id: "1" } })],
+      route: [
+        expect.objectContaining({ paneId: "hist-child", params: { id: "1" } }),
+      ],
     });
   });
 
@@ -219,7 +240,9 @@ describe("defaultHistoryAdapter — standalone behavior with no shell adapter", 
     store.restoreRoute([{ paneId: "hist-root", params: {} }]);
 
     // commit wrote the route payload verbatim (no { tabId, appId } — no shell).
-    expect(window.history.state).toMatchObject({ route: [{ paneId: "hist-root" }] });
+    expect(window.history.state).toMatchObject({
+      route: [{ paneId: "hist-root" }],
+    });
     expect(window.history.state).not.toHaveProperty("tabId");
     expect(store.getRoute().map((s) => s.paneId)).toEqual(["hist-root"]);
 
@@ -227,7 +250,16 @@ describe("defaultHistoryAdapter — standalone behavior with no shell adapter", 
     // already updated history.state + URL; the popstate listener → restore() →
     // getLiveStore().handleLocationChange() rebuilds the live store from it.
     window.history.pushState(
-      { route: [{ paneId: "hist-child", params: { id: "9" }, options: {}, uuid: "u9" }] },
+      {
+        route: [
+          {
+            paneId: "hist-child",
+            params: { id: "9" },
+            options: {},
+            uuid: "u9",
+          },
+        ],
+      },
       "",
       "/c/9",
     );

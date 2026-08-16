@@ -5,12 +5,14 @@ import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { useEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import { studioApp } from "@plugins/apps/plugins/studio/plugins/shell/core";
 import { getPluginFacetsTree } from "../core/endpoints";
 import type { PluginNode } from "../core/types";
 import { PluginDetail } from "./components/plugin-detail";
 
 export const pluginViewPane = Pane.define({
   id: "plugin-view",
+  app: studioApp,
   segment: "p/:pluginId",
   component: PluginViewBody,
   width: 600,
@@ -19,7 +21,11 @@ export const pluginViewPane = Pane.define({
 
 function PluginViewBody() {
   const { pluginId } = pluginViewPane.useParams();
-  const { data: treeData, isLoading, error } = useEndpoint(getPluginFacetsTree, {});
+  const {
+    data: treeData,
+    isLoading,
+    error,
+  } = useEndpoint(getPluginFacetsTree, {});
 
   const indexed = useMemo(() => {
     if (!treeData) return new Map<string, PluginNode>();

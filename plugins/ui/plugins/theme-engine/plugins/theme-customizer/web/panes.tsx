@@ -1,17 +1,19 @@
 import { Pane } from "@plugins/primitives/plugins/pane/web";
 import { defineRoute } from "@plugins/primitives/plugins/pane/core";
+import { settingsApp } from "@plugins/apps/plugins/settings/plugins/shell/core";
 import { ThemeCustomizerBody } from "./components/theme-customizer";
 
 /**
- * Deliberately app-less: the customizer opens inside whichever app you are
- * currently in (it styles that app's theme scope), so it has no single owning
- * `AppRef` and callers compose `activeApp.path + themeCustomizerRoute.path({})`.
+ * The customizer opens inside whichever app you are currently in — it styles
+ * that app's theme scope — so callers compose
+ * `activeApp.path + themeCustomizerRoute.path({})` rather than one fixed link.
  * Keeping the segment here rather than inline at call sites means a rename
  * still propagates to every link.
  *
- * Hence NO `Pane.define({ app })` either: a home app would make Expand rip the
- * customizer out of the app you are restyling, which is the one place it has to
- * stay. Its Expand correctly stays same-app.
+ * Being openable anywhere is NOT the same as having no home: Appearance is a
+ * Settings surface, so `app` is `settingsApp` and Expand takes the customizer
+ * to Settings, where it lives on its own. The in-place, restyle-what-you-see
+ * usage is the popover/side-pane one, which Expand does not disturb.
  */
 export const themeCustomizerRoute = defineRoute({
   id: "theme-customizer",
@@ -20,6 +22,7 @@ export const themeCustomizerRoute = defineRoute({
 
 export const themeCustomizerPane = Pane.define({
   route: themeCustomizerRoute,
+  app: settingsApp,
   component: ThemeCustomizerBody,
   width: 440,
 });

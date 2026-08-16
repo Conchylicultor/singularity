@@ -1,8 +1,10 @@
 import { Pane, PaneChrome } from "@plugins/primitives/plugins/pane/web";
+import { studioApp } from "@plugins/apps/plugins/studio/plugins/shell/core";
 import { ContributionsView } from "./components/contributions-view";
 
 export const contributionsPane = Pane.define({
   id: "contributions",
+  app: studioApp,
   segment: "contributions",
   component: ContributionsBody,
   width: 700,

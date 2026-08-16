@@ -54,6 +54,7 @@ export const systemAgentDetailPane = Pane.define({
 
 export const agentSidePane = Pane.define({
   id: "agent-side",
+  app: agentManagerApp,
   segment: "agent/:agentId",
   component: AgentSideBody,
   chrome: {

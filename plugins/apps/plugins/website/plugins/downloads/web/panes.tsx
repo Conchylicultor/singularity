@@ -1,4 +1,5 @@
 import { Pane, PaneChrome } from "@plugins/primitives/plugins/pane/web";
+import { websiteApp } from "@plugins/apps/plugins/website/plugins/shell/core";
 import {
   WebsitePage,
   WebsiteToolbar,
@@ -12,6 +13,7 @@ import { DownloadsPage } from "./components/downloads-page";
  */
 export const downloadsPane = Pane.define({
   id: "website-downloads",
+  app: websiteApp,
   segment: "download",
   chrome: { header: WebsiteToolbar },
   component: DownloadsBody,
