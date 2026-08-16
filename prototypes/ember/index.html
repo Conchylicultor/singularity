@@ -1,0 +1,356 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+<title>Ember — agent conversation</title>
+<meta name="description" content="A restyle of the agent conversation screen: two chrome bands instead of three, real depth between sidebar and canvas, one warm accent that only ever means &quot;an agent is working&quot;, and a queue you can scan without reading." />
+<meta name="prototype-viewport" content="1440x900" />
+
+<link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+<svg style="display:none" aria-hidden="true">
+  <defs>
+    <g id="s" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"></g>
+  </defs>
+  <symbol id="i-home" viewBox="0 0 24 24"><path d="M4 10.5 12 4l8 6.5V19a1 1 0 0 1-1 1h-4v-6H9v6H5a1 1 0 0 1-1-1z"/></symbol>
+  <symbol id="i-chat" viewBox="0 0 24 24"><path d="M20 15a2 2 0 0 1-2 2H8l-4 3V6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2z"/></symbol>
+  <symbol id="i-doc" viewBox="0 0 24 24"><path d="M14 3H7a1 1 0 0 0-1 1v16a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V7z"/><path d="M14 3v4h4M9 12h6M9 16h4"/></symbol>
+  <symbol id="i-mail" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3.5 7 8.5 6 8.5-6"/></symbol>
+  <symbol id="i-calendar" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></symbol>
+  <symbol id="i-book" viewBox="0 0 24 24"><path d="M4 5a2 2 0 0 1 2-2h5v18H6a2 2 0 0 1-2-2z"/><path d="M20 5a2 2 0 0 0-2-2h-5v18h5a2 2 0 0 0 2-2z"/></symbol>
+  <symbol id="i-flow" viewBox="0 0 24 24"><circle cx="6" cy="6" r="2.5"/><circle cx="18" cy="18" r="2.5"/><path d="M6 8.5V15a3 3 0 0 0 3 3h6"/></symbol>
+  <symbol id="i-grid" viewBox="0 0 24 24"><rect x="4" y="4" width="7" height="7" rx="1.5"/><rect x="13" y="4" width="7" height="7" rx="1.5"/><rect x="4" y="13" width="7" height="7" rx="1.5"/><rect x="13" y="13" width="7" height="7" rx="1.5"/></symbol>
+  <symbol id="i-globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17M12 3.5c2.2 2.4 3.3 5.4 3.3 8.5S14.2 18.1 12 20.5c-2.2-2.4-3.3-5.4-3.3-8.5S9.8 5.9 12 3.5"/></symbol>
+  <symbol id="i-cog" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 3.2v2M12 18.8v2M4.8 4.8l1.5 1.5M17.7 17.7l1.5 1.5M3.2 12h2M18.8 12h2M4.8 19.2l1.5-1.5M17.7 6.3l1.5-1.5"/></symbol>
+  <symbol id="i-check-list" viewBox="0 0 24 24"><path d="m4 7 1.8 1.8L9 5.4M4 16.4l1.8 1.8L9 14.8M12 7h8M12 17h8"/></symbol>
+  <symbol id="i-agent" viewBox="0 0 24 24"><rect x="4" y="7" width="16" height="12" rx="3"/><path d="M12 4v3M9 12.5h.01M15 12.5h.01M10 16h4"/></symbol>
+  <symbol id="i-folder" viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h4l2 2.5h8a2 2 0 0 1 2 2V18a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></symbol>
+  <symbol id="i-chart" viewBox="0 0 24 24"><path d="M4 19V6M4 15.5l4.5-4.5 3.5 3.5L20 7"/></symbol>
+  <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6"/><path d="m15.5 15.5 4 4"/></symbol>
+  <symbol id="i-bell" viewBox="0 0 24 24"><path d="M18 15.5V11a6 6 0 1 0-12 0v4.5L4.5 18h15z"/><path d="M10 20.5a2.2 2.2 0 0 0 4 0"/></symbol>
+  <symbol id="i-spark" viewBox="0 0 24 24"><path d="m12 4 1.7 4.9L18.5 10.5l-4.8 1.6L12 17l-1.7-4.9L5.5 10.5l4.8-1.6z"/><path d="M18.5 17.5 19 19l1.5.5L19 20l-.5 1.5L18 20l-1.5-.5L18 19z"/></symbol>
+  <symbol id="i-more" viewBox="0 0 24 24"><circle cx="5.5" cy="12" r="1.2" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.2" fill="currentColor" stroke="none"/><circle cx="18.5" cy="12" r="1.2" fill="currentColor" stroke="none"/></symbol>
+  <symbol id="i-terminal" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m7.5 10 2.5 2-2.5 2M13 14h4"/></symbol>
+  <symbol id="i-branch" viewBox="0 0 24 24"><circle cx="7" cy="6" r="2.2"/><circle cx="7" cy="18" r="2.2"/><circle cx="17" cy="9" r="2.2"/><path d="M7 8.2v7.6M17 11.2c0 3-2.4 4.3-5.2 4.8"/></symbol>
+  <symbol id="i-file-diff" viewBox="0 0 24 24"><path d="M14 3H7a1 1 0 0 0-1 1v16a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V7z"/><path d="M14 3v4h4M12 10.5v5M9.5 13h5"/></symbol>
+  <symbol id="i-pin" viewBox="0 0 24 24"><path d="M9 3h6l-1 6 3.5 3.5H6.5L10 9z"/><path d="M12 12.5V21"/></symbol>
+  <symbol id="i-expand" viewBox="0 0 24 24"><path d="M9 4H4v5M15 4h5v5M9 20H4v-5M15 20h5v-5"/></symbol>
+  <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2.5v2M12 19.5v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M2.5 12h2M19.5 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4"/></symbol>
+  <symbol id="i-chev-down" viewBox="0 0 24 24"><path d="m7 10 5 5 5-5"/></symbol>
+  <symbol id="i-chev-right" viewBox="0 0 24 24"><path d="m10 7 5 5-5 5"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+  <symbol id="i-close" viewBox="0 0 24 24"><path d="m6.5 6.5 11 11M17.5 6.5l-11 11"/></symbol>
+  <symbol id="i-mic" viewBox="0 0 24 24"><rect x="9.5" y="3" width="5" height="10" rx="2.5"/><path d="M5.5 11.5a6.5 6.5 0 0 0 13 0M12 18v3"/></symbol>
+  <symbol id="i-send" viewBox="0 0 24 24"><path d="M4 12h11M11 7l5 5-5 5"/></symbol>
+  <symbol id="i-stop" viewBox="0 0 24 24"><rect x="7.5" y="7.5" width="9" height="9" rx="1.5" fill="currentColor" stroke="none"/></symbol>
+  <symbol id="i-rows" viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></symbol>
+  <symbol id="i-sliders" viewBox="0 0 24 24"><path d="M5 6h14M5 12h14M5 18h14"/><circle cx="9" cy="6" r="2" fill="var(--surface-1)"/><circle cx="15" cy="12" r="2" fill="var(--surface-1)"/><circle cx="8" cy="18" r="2" fill="var(--surface-1)"/></symbol>
+</svg>
+
+<div id="root">
+<div class="app">
+
+  <!-- ───────────────────────── app rail ───────────────────────── -->
+  <nav class="rail" aria-label="Apps">
+    <a class="rail-item" href="#" title="Home"><svg class="ic"><use href="#i-home"/></svg></a>
+    <a class="rail-item is-active" href="#" title="Agents"><svg class="ic"><use href="#i-chat"/></svg></a>
+    <a class="rail-item" href="#" title="Pages"><svg class="ic"><use href="#i-doc"/></svg></a>
+    <a class="rail-item" href="#" title="Mail"><svg class="ic"><use href="#i-mail"/></svg><span class="rail-dot"></span></a>
+    <a class="rail-item" href="#" title="Events"><svg class="ic"><use href="#i-calendar"/></svg></a>
+    <a class="rail-item" href="#" title="Story"><svg class="ic"><use href="#i-book"/></svg></a>
+    <a class="rail-item" href="#" title="Workflows"><svg class="ic"><use href="#i-flow"/></svg></a>
+    <a class="rail-item" href="#" title="Studio"><svg class="ic"><use href="#i-grid"/></svg></a>
+    <a class="rail-item" href="#" title="Website"><svg class="ic"><use href="#i-globe"/></svg></a>
+    <div class="rail-spacer"></div>
+    <a class="rail-item" href="#" title="Settings"><svg class="ic"><use href="#i-cog"/></svg></a>
+    <a class="rail-avatar" href="#" title="Etienne">E</a>
+  </nav>
+
+  <!-- ───────────────────────── sidebar ───────────────────────── -->
+  <aside class="sidebar">
+    <header class="side-head">
+      <div class="brand">
+        <span class="brand-mark"></span>
+        <span class="brand-name">Singularity</span>
+      </div>
+      <button class="ghost-btn" title="Search"><svg class="ic"><use href="#i-search"/></svg></button>
+    </header>
+
+    <nav class="side-nav">
+      <a class="nav-item" href="#"><svg class="ic"><use href="#i-check-list"/></svg>Tasks<span class="nav-count">31</span></a>
+      <a class="nav-item" href="#"><svg class="ic"><use href="#i-agent"/></svg>Agents<span class="nav-count">4</span></a>
+      <a class="nav-item is-active" href="#"><svg class="ic"><use href="#i-chat"/></svg>Conversation</a>
+      <a class="nav-item" href="#"><svg class="ic"><use href="#i-folder"/></svg>Explorer</a>
+      <a class="nav-item" href="#"><svg class="ic"><use href="#i-chart"/></svg>Stats</a>
+    </nav>
+
+    <div class="side-toolbar">
+      <div class="seg">
+        <button class="seg-btn is-on">Queue</button>
+        <button class="seg-btn">Fable</button>
+      </div>
+      <div class="side-toolbar-end">
+        <button class="ghost-btn" title="Density"><svg class="ic"><use href="#i-rows"/></svg></button>
+        <button class="ghost-btn" title="Filters"><svg class="ic"><use href="#i-sliders"/></svg></button>
+        <button class="ghost-btn accent" title="New task"><svg class="ic"><use href="#i-plus"/></svg></button>
+      </div>
+    </div>
+
+    <div class="queue">
+
+      <div class="group-head">
+        <svg class="ic chev"><use href="#i-chev-down"/></svg>
+        <span class="group-title">Running</span>
+        <span class="group-count">2</span>
+      </div>
+
+      <a class="task is-current" href="#">
+        <span class="task-state working" aria-label="working"></span>
+        <span class="task-body">
+          <span class="task-title">Add semantic heading roles to page editor blocks</span>
+          <span class="task-meta">
+            <span class="phase" data-done="3"><i></i><i></i><i></i><i></i></span>
+            <span class="meta-sep"></span>
+            <span class="meta-text">Opus 5</span>
+          </span>
+        </span>
+        <span class="task-time">47s</span>
+      </a>
+
+      <a class="task" href="#">
+        <span class="task-state working" aria-label="working"></span>
+        <span class="task-body">
+          <span class="task-title">Fix Cmd+B bold shortcut in page editor selection</span>
+          <span class="task-meta">
+            <span class="phase" data-done="2"><i></i><i></i><i></i><i></i></span>
+            <span class="meta-sep"></span>
+            <span class="meta-text">2 attempts</span>
+          </span>
+        </span>
+        <span class="task-time">1h</span>
+      </a>
+
+      <div class="group-head">
+        <svg class="ic chev"><use href="#i-chev-down"/></svg>
+        <span class="group-title">Blocked</span>
+        <span class="group-count">2</span>
+      </div>
+
+      <a class="task" href="#">
+        <span class="task-state blocked" aria-label="blocked"></span>
+        <span class="task-body">
+          <span class="task-title">Debug session creation location in worktree fork</span>
+          <span class="task-meta"><span class="meta-text">waiting on&nbsp;<b>#412</b></span></span>
+        </span>
+        <span class="task-time">4h</span>
+      </a>
+
+      <a class="task" href="#">
+        <span class="task-state blocked" aria-label="blocked"></span>
+        <span class="task-body">
+          <span class="task-title">Investigate blocked push after 11 retries</span>
+          <span class="task-meta"><span class="meta-text">needs review</span></span>
+        </span>
+        <span class="task-time">16d</span>
+      </a>
+
+      <div class="group-head">
+        <svg class="ic chev"><use href="#i-chev-down"/></svg>
+        <span class="group-title">Queued</span>
+        <span class="group-count">19</span>
+      </div>
+
+      <a class="task" href="#">
+        <span class="task-state idle"></span>
+        <span class="task-body">
+          <span class="task-title">Add shotgun source for subscriber fan-out</span>
+          <span class="task-meta"><span class="meta-text">Feature</span></span>
+        </span>
+        <span class="task-time">8d</span>
+      </a>
+      <a class="task" href="#">
+        <span class="task-state idle"></span>
+        <span class="task-body">
+          <span class="task-title">Add sub-prefix for deployed agent namespaces</span>
+          <span class="task-meta"><span class="meta-text">Chore</span></span>
+        </span>
+        <span class="task-time">12d</span>
+      </a>
+      <a class="task" href="#">
+        <span class="task-state idle"></span>
+        <span class="task-body">
+          <span class="task-title">Investigate build hanging in dependency install</span>
+          <span class="task-meta"><span class="meta-text">Bug</span></span>
+        </span>
+        <span class="task-time">12d</span>
+      </a>
+      <a class="task" href="#">
+        <span class="task-state idle"></span>
+        <span class="task-body">
+          <span class="task-title">Analyze ListView renderRow escape hatches</span>
+          <span class="task-meta"><span class="meta-text">Research</span></span>
+        </span>
+        <span class="task-time">8d</span>
+      </a>
+      <a class="task" href="#">
+        <span class="task-state idle"></span>
+        <span class="task-body">
+          <span class="task-title">Understand SSH key generation for remote deploy</span>
+          <span class="task-meta"><span class="meta-text">Question</span></span>
+        </span>
+        <span class="task-time">22d</span>
+      </a>
+      <a class="task" href="#">
+        <span class="task-state idle"></span>
+        <span class="task-body">
+          <span class="task-title">Debug host-wide deadlock in build admission</span>
+          <span class="task-meta"><span class="meta-text">Bug</span></span>
+        </span>
+        <span class="task-time">24d</span>
+      </a>
+    </div>
+  </aside>
+
+  <!-- ───────────────────────── main ───────────────────────── -->
+  <main class="main">
+
+    <!-- band 1 — tabs + the few truly global actions -->
+    <div class="tabbar">
+      <div class="tabs">
+        <div class="tab is-active">
+          <span class="tab-state working"></span>
+          <span class="tab-label">Add semantic heading roles…</span>
+          <button class="tab-close"><svg class="ic"><use href="#i-close"/></svg></button>
+        </div>
+        <div class="tab">
+          <span class="tab-state idle"></span>
+          <span class="tab-label">mail-core sync window</span>
+          <button class="tab-close"><svg class="ic"><use href="#i-close"/></svg></button>
+        </div>
+        <button class="tab-new"><svg class="ic"><use href="#i-plus"/></svg></button>
+      </div>
+
+      <div class="global">
+        <button class="pill-btn"><svg class="ic"><use href="#i-spark"/></svg>Improve</button>
+        <button class="ghost-btn" title="Notifications"><svg class="ic"><use href="#i-bell"/></svg><span class="badge">9</span></button>
+        <button class="ghost-btn" title="Theme"><svg class="ic"><use href="#i-sun"/></svg></button>
+        <button class="ghost-btn" title="Fullscreen"><svg class="ic"><use href="#i-expand"/></svg></button>
+        <button class="ghost-btn" title="More"><svg class="ic"><use href="#i-more"/></svg></button>
+      </div>
+    </div>
+
+    <!-- band 2 — everything about THIS task, in one line -->
+    <header class="taskbar">
+      <div class="taskbar-lead">
+        <span class="status-pill working"><span class="status-dot"></span>Working<span class="status-time">47s</span></span>
+        <h1 class="task-name">Add semantic heading roles to page editor blocks</h1>
+        <span class="tag">Bug</span>
+        <span class="tag">App</span>
+      </div>
+
+      <div class="taskbar-end">
+        <div class="stat-cluster">
+          <span class="stat" title="Files changed"><svg class="ic"><use href="#i-file-diff"/></svg>3</span>
+          <span class="stat" title="Diff"><b class="add">+128</b><b class="del">−12</b></span>
+          <span class="stat" title="Branch"><svg class="ic"><use href="#i-branch"/></svg>1 ahead</span>
+        </div>
+        <span class="v-rule"></span>
+        <button class="ghost-btn" title="Files"><svg class="ic"><use href="#i-folder"/></svg></button>
+        <button class="ghost-btn" title="Terminal"><svg class="ic"><use href="#i-terminal"/></svg></button>
+        <button class="ghost-btn" title="Stats"><svg class="ic"><use href="#i-chart"/></svg></button>
+        <span class="v-rule"></span>
+        <button class="ghost-btn" title="Pin"><svg class="ic"><use href="#i-pin"/></svg></button>
+        <button class="ghost-btn" title="More"><svg class="ic"><use href="#i-more"/></svg></button>
+      </div>
+    </header>
+
+    <!-- band 3 — the pinned turn, docked, never overlapping -->
+    <div class="pinned">
+      <span class="pinned-label">Your&nbsp;turn</span>
+      <p class="pinned-text">Explain the issues simply — I'm not really familiar. Can you give some context and explain in simple terms?</p>
+      <button class="ghost-btn" title="Unpin"><svg class="ic"><use href="#i-chev-down"/></svg></button>
+    </div>
+
+    <!-- transcript -->
+    <div class="scroll">
+      <article class="thread">
+
+        <div class="turn">
+          <div class="turn-head">
+            <span class="avatar-a">◆</span>
+            <span class="turn-who">Opus 5</span>
+            <span class="turn-when">2 min ago</span>
+          </div>
+
+          <div class="prose">
+            <p>Worth noting: I only made the <em>positive</em> checks retry. Checks expecting “there should be zero of these” still look once. If you retry those, you'd accept the first moment something hasn't appeared yet and call it a pass — which would quietly stop catching real bugs.</p>
+
+            <h2>What's still broken</h2>
+            <p>Two things I did <strong>not</strong> fix, both the same underlying problem.</p>
+
+            <div class="callout">
+              <span class="callout-kicker">Follow-up filed</span>
+              <p><strong>Bulleted and numbered lists still aren't lists.</strong> A screen reader should say “list, 5 items” and count you through them. Right now it just reads five unrelated lines — the bullet character itself is decorative and deliberately unspoken.</p>
+              <p><strong>Quotes and callouts have no identity either.</strong> The box around a quotation is visible to you but invisible to a screen reader; it can't tell you where the quote starts or ends.</p>
+            </div>
+
+            <p>Both need something the page can't currently provide: a <em>container</em>. Marking something a “list item” requires a surrounding “list” element, and a quote needs an element that actually wraps the quoted passage. But the editor lays every block out as a flat sequence of siblings on purpose — that's precisely what keeps your cursor alive when you indent or move a block. Adding a wrapper would reintroduce the destroy-and-rebuild problem.</p>
+
+            <p>There's a known technique for this, but it carries real risk and it belongs to a different part of the system, so I filed both as follow-up tasks rather than half-doing them.</p>
+
+            <p><strong>One more thing I found but left alone</strong>, because it's a different bug from the one you asked about: the checkbox on a to-do block has no name at all. A screen reader announces “checkbox, not checked” and nothing else — it can't tell you <em>which</em> checkbox. That's arguably worse than the heading gap I just fixed, so it's your call whether to bundle it in or file it separately.</p>
+          </div>
+
+          <div class="turn-actions">
+            <button class="chip-btn">File both as tasks</button>
+            <button class="chip-btn">Bundle the checkbox fix</button>
+          </div>
+        </div>
+
+        <div class="activity">
+          <span class="activity-dot"></span>
+          <span class="activity-text">Working — reading <code>block-ops.test.ts</code></span>
+          <span class="activity-time">47s</span>
+        </div>
+
+      </article>
+    </div>
+
+    <!-- composer -->
+    <footer class="composer">
+      <div class="composer-box">
+        <div class="composer-input">Reply, or queue a message for the next turn…</div>
+        <div class="composer-bar">
+          <div class="composer-opts">
+            <button class="soft-btn">Opus 5<svg class="ic sm"><use href="#i-chev-down"/></svg></button>
+            <button class="soft-btn">Question only<svg class="ic sm"><use href="#i-chev-down"/></svg></button>
+            <button class="ghost-btn" title="Dictate"><svg class="ic"><use href="#i-mic"/></svg></button>
+            <button class="ghost-btn" title="More"><svg class="ic"><use href="#i-more"/></svg></button>
+          </div>
+          <div class="composer-actions">
+            <div class="ctx" title="Context used">
+              <span class="ctx-meter"><span style="width:29%"></span></span>
+              <span class="ctx-label">294k / 1M</span>
+            </div>
+            <button class="stop-btn"><svg class="ic sm"><use href="#i-stop"/></svg>Stop</button>
+            <button class="send-btn">Queue<svg class="ic sm"><use href="#i-send"/></svg></button>
+          </div>
+        </div>
+      </div>
+    </footer>
+
+  </main>
+</div>
+</div>
+
+<script>
+  /* The screen you land on is the live end of the conversation — scroll up for history. */
+  var s = document.querySelector(".scroll");
+  s.scrollTop = s.scrollHeight;
+</script>
+</body>
+</html>
