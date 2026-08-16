@@ -67,6 +67,7 @@ different need, extend the primitive rather than allowlisting a copy.
     - `primitives/data-view/gallery`
     - `primitives/expandable`
     - `primitives/graph-canvas`
+    - `primitives/outline/rail`
     - `primitives/overflow-menu`
     - `primitives/pane`
     - `primitives/responsive-overflow`

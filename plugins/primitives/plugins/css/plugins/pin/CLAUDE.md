@@ -122,6 +122,7 @@ offsets expressible on the semantic ramp.
     - `primitives/icon-picker`
     - `primitives/log-channels`
     - `primitives/multi-select`
+    - `primitives/outline/rail`
     - `primitives/row-actions`
     - `primitives/search`
     - `primitives/sync-status`

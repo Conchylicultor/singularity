@@ -288,7 +288,6 @@ fixed raw size escapes per-site via
     - `conversations/conversation-view/jsonl-viewer/event-counter`
     - `conversations/conversation-view/jsonl-viewer/fields-card`
     - `conversations/conversation-view/jsonl-viewer/file-path`
-    - `conversations/conversation-view/jsonl-viewer/message-toc`
     - `conversations/conversation-view/jsonl-viewer/meta-prompt`
     - `conversations/conversation-view/jsonl-viewer/preprompt`
     - `conversations/conversation-view/jsonl-viewer/queued-prompt-card`
@@ -415,6 +414,7 @@ fixed raw size escapes per-site via
     - `primitives/launch`
     - `primitives/log-channels`
     - `primitives/markdown`
+    - `primitives/outline/rail`
     - `primitives/pane`
     - `primitives/rank-reorder`
     - `primitives/setup-steps`

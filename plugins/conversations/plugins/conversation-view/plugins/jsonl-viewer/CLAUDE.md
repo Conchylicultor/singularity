@@ -55,6 +55,16 @@ re-contribute a renderer matching `"unknown"` — that would make the dispatch
 report `matched: true` and silently take the investigate action away from the
 one row family that most needs it.
 
+## Overlays: get the scroller from `usePaneScrollElement()`
+
+An `Overlay` contribution renders as a SIBLING of the transcript scroller (inside
+the pane's `relative isolate` frame), so `findScrollParent` cannot reach it and a
+global `document.querySelector("[data-pane-scroll]")` reaches the WRONG one — two
+panes can be open on the same conversation, and rows are keyed by `eventKey`
+(`user-text:<timestamp>`), which carries no conversation id. `JsonlPane` publishes
+its own scroll element; ask for it instead of rediscovering it. `data-pane-scroll`
+stays stamped for e2e scripts, not as a lookup mechanism from React.
+
 ## The row-action strip lives in `plugins/row-actions`
 
 `EventRowActions`, `EventActionProvider`, `RowActionButton`, `rowActionClass`,
@@ -77,7 +87,7 @@ back.
     - `JsonlViewer.EventRenderer` ← `conversations.conversation-view.jsonl-viewer.assistant-text`, `conversations.conversation-view.jsonl-viewer.assistant-thinking`, `conversations.conversation-view.jsonl-viewer.attachment`, `conversations.conversation-view.jsonl-viewer.meta-prompt`, `conversations.conversation-view.jsonl-viewer.preprompt`, `conversations.conversation-view.jsonl-viewer.queue-operation`, `conversations.conversation-view.jsonl-viewer.summary`, `conversations.conversation-view.jsonl-viewer.system`, `conversations.conversation-view.jsonl-viewer.task-notification`, `conversations.conversation-view.jsonl-viewer.teammate-message`, `conversations.conversation-view.jsonl-viewer.tool-call`, `conversations.conversation-view.jsonl-viewer.user-image`, `conversations.conversation-view.jsonl-viewer.user-text`
     - `JsonlViewer.PendingPrompt` ← `conversations.conversation-view.jsonl-viewer.tool-call.ask-user-question`
     - `JsonlViewer.EventFilter` ← `conversations.conversation-view.jsonl-viewer.tool-call.ask-user-question`, `conversations.conversation-view.jsonl-viewer.transcript-stats.token-budget`
-    - `JsonlViewer.Overlay` ← `conversations.conversation-view.jsonl-viewer.message-toc`, `conversations.conversation-view.jsonl-viewer.tool-call.task-tools`, `conversations.conversation-view.jsonl-viewer.transcript-stats`
+    - `JsonlViewer.Overlay` ← `conversations.conversation-view.jsonl-viewer.outline`, `conversations.conversation-view.jsonl-viewer.tool-call.task-tools`, `conversations.conversation-view.jsonl-viewer.transcript-stats`
     - `JsonlViewer.PendingPromptAction` ← `conversations.conversation-view.terminal-pane`
   - Contributes:
     - `JsonlRowActions.Item` "timestamp" → `TimestampAction`
@@ -121,6 +131,7 @@ back.
     - `Timestamp`
     - `useJsonlConversationId`
     - `useLastAssistantEvent`
+    - `usePaneScrollElement`
     - `useRowMarkdown`
     - `useSectionExpand`
     - `useVisibleEvents`
@@ -151,8 +162,8 @@ back.
     - `conversations/conversation-view/jsonl-viewer/assistant-thinking`
     - `conversations/conversation-view/jsonl-viewer/attachment`
     - `conversations/conversation-view/jsonl-viewer/investigate-event`
-    - `conversations/conversation-view/jsonl-viewer/message-toc`
     - `conversations/conversation-view/jsonl-viewer/meta-prompt`
+    - `conversations/conversation-view/jsonl-viewer/outline`
     - `conversations/conversation-view/jsonl-viewer/preprompt`
     - `conversations/conversation-view/jsonl-viewer/queue-operation`
     - `conversations/conversation-view/jsonl-viewer/summary`
@@ -178,8 +189,8 @@ back.
   - **`fields-card`** — Shared appearance for a headline + truncating summary preview + fold-out key/value field list. Used by the queued task-notification card and the native task-notification row so the two never diverge.
   - **`file-path`** — Clickable file path component with RTL ellipsis, copy button, and file-peek pane integration.
   - **`investigate-event`** — Contributes the add-a-renderer row action to every JSONL transcript row whose nearest dispatch fell back (unhandled event kind, tool name, or attachment subtype), launching an agent briefed to implement the missing renderer for that dispatch key.
-  - **`message-toc`** — Floating table of contents listing user messages for quick navigation.
   - **`meta-prompt`** — Renders harness-injected prompt turns (loop/queue wakeups, resumes) distinctly from human user messages.
+  - **`outline`** — The transcript's outline: one dash per user turn pinned to the right edge of the conversation, the current turn highlighted, expanding on hover into a clickable list of turns. An adapter over the outline rail primitive — this plugin owns only which turns exist and how a turn maps to its row.
   - **`preprompt`** — Renders the launch special-instructions (preprompt) block as a collapsible section in the JSONL viewer.
   - **`queue-operation`** — Renders Claude Code prompt-queue events (enqueue/dequeue/remove) in the JSONL viewer.
   - **`queued-prompt-card`** — Shared appearance for a queued prompt (a message the user parked while the agent was busy). Used by both the queued_command attachment and the prompt-queue enqueue row so the two never diverge.

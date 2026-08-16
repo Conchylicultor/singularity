@@ -615,6 +615,7 @@ guard: `confirmDialog` (`imperative-dialog/plugins/confirm`); native
     - `primitives/loading`
     - `primitives/log-channels`
     - `primitives/multi-select`
+    - `primitives/outline/rail`
     - `primitives/overflow-menu`
     - `primitives/pane`
     - `primitives/pane-toolbar`

@@ -58,6 +58,7 @@ stability-independent and is suppressed at the site with an inline disable.)
     - `primitives/markdown`
     - `primitives/networking`
     - `primitives/optimistic-mutation`
+    - `primitives/outline/scroll-spy`
     - `primitives/pane`
     - `primitives/prompt-editor/voice-input`
     - `primitives/scoped-store`

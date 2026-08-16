@@ -667,6 +667,7 @@ This narrows re-renders, not the WS subscription: N callers of the same
     - `apps/mail/threads`
     - `apps/pages/agent-origin`
     - `apps/pages/history`
+    - `apps/pages/page-outline`
     - `apps/pages/page-tree`
     - `apps/pages/prompt-origin`
     - `apps/pages/starred`
@@ -721,7 +722,7 @@ This narrows re-renders, not the WS subscription: N callers of the same
     - `conversations/conversation-view/drop-dependents`
     - `conversations/conversation-view/jsonl-viewer`
     - `conversations/conversation-view/jsonl-viewer/event-counter`
-    - `conversations/conversation-view/jsonl-viewer/message-toc`
+    - `conversations/conversation-view/jsonl-viewer/outline`
     - `conversations/conversation-view/jsonl-viewer/tool-call/add-task`
     - `conversations/conversation-view/jsonl-viewer/tool-call/agent`
     - `conversations/conversation-view/jsonl-viewer/tool-call/ask-user-question`

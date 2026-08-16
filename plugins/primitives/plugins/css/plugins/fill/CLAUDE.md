@@ -81,6 +81,7 @@ composes last.
     - `primitives/error-boundary`
     - `primitives/imperative-dialog/confirm`
     - `primitives/log-channels`
+    - `primitives/outline/rail`
     - `primitives/setup-steps`
     - `ui/tweakcn/community-browser`
 

@@ -86,6 +86,7 @@ stateful-indicator children; a justified one-off (e.g. a per-model glyph size
     - `build/build-logs`
     - `config_v2/config-link`
     - `conversations/agents`
+    - `conversations/conversation-view/jsonl-viewer/outline`
     - `conversations/conversation-view/jsonl-viewer/tool-call/agent`
     - `conversations/conversation-view/notes`
     - `conversations/conversation-view/resume`

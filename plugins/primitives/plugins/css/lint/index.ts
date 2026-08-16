@@ -87,7 +87,6 @@ export default {
       "plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/attachment/plugins/queued-command/web/components/structured-tag-card.tsx",
       "plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/attachment/plugins/task-reminder/web/components/task-reminder-attachment-view.tsx",
       "plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/collapsible-card/web/components/collapsible-card.tsx",
-      "plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/message-toc/web/components/message-toc.tsx",
       "plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/task-notification/web/components/task-notification-row.tsx",
       "plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/plugins/add-task/web/components/add-task-tool-view.tsx",
       "plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/plugins/agent/web/components/agent-tool-view.tsx",

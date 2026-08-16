@@ -122,6 +122,16 @@ function PageDetailBody(): ReactElement {
           {(s) => <s.component pageId={pageId} />}
         </PageDetail.HeaderActions.Render>
       }
+      // `PageDetail.Overlay` — the widgets that float over the page (the
+      // outline rail) — goes through PaneChrome's own overlay layer, beside
+      // the scroller and BELOW the header. A host wrapped around `PaneChrome`
+      // instead would make the header's own right-hand actions (star, version
+      // history) the top-right corner the rail pins itself onto.
+      overlay={
+        <PageDetail.Overlay.Render>
+          {(item) => <item.component pageId={pageId} />}
+        </PageDetail.Overlay.Render>
+      }
     >
       {/* Full-bleed cover scrolls away with the page (Notion-style). Below it,
           the header and section list are centered on the shared reading measure,

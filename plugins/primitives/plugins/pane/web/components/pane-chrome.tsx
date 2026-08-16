@@ -61,6 +61,18 @@ interface PaneChromeProps {
    * overflow; single-line leaves inside it still truncate via their own class.
    */
   headerSpill?: boolean;
+  /**
+   * The pane's non-scrolling overlay layer — widgets that float over the BODY
+   * (an outline rail) rather than scroll with it. Rendered as a SIBLING of the
+   * single `PaneScroll`, inside a `relative isolate` host: an absolutely
+   * positioned child of a scroller scrolls away with the document, and a host
+   * wrapped around `PaneChrome` instead spans the header — so a corner-pinned
+   * overlay lands on the header's own actions.
+   *
+   * The wrapper exists only when this is passed; omit it and the body is the
+   * same tree it always was.
+   */
+  overlay?: ReactNode;
   children: ReactNode;
 }
 
@@ -100,6 +112,7 @@ export function PaneChrome({
   actions,
   hideRightActions,
   headerSpill,
+  overlay,
   children,
 }: PaneChromeProps) {
   const chrome = pane._internal.chrome;
@@ -197,13 +210,24 @@ export function PaneChrome({
       // idiom. `scrollBody={false}` so Column doesn't add a second scroll.
       scrollBody={false}
       body={
-        <PaneScroll>
-          <ContentScope>{children}</ContentScope>
-        </PaneScroll>
+        overlay == null ? (
+          <PaneScroll>
+            <ContentScope>{children}</ContentScope>
+          </PaneScroll>
+        ) : (
+          // eslint-disable-next-line layout/no-adhoc-layout -- positioning host for the pane's overlay layer: it must be the scroller's PARENT (an absolute child of a scroller scrolls away) and sit below the header
+          <div className="relative isolate h-full">
+            <PaneScroll>
+              <ContentScope>{children}</ContentScope>
+            </PaneScroll>
+            {overlay}
+          </div>
+        )
       }
     />
   );
 }
+
 
 /**
  * Custom-header content: the pane's reorderable `Start`/`End` zones rendered

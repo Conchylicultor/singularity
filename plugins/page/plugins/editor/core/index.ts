@@ -46,6 +46,7 @@ export {
   canOutdent,
   childrenOf,
   inDocumentOrder,
+  toNodes,
   opBlockIds,
   pasteAnchorId,
   prevVisibleLine,

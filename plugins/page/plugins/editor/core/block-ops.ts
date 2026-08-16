@@ -6,7 +6,7 @@ import {
   selectionRoots,
   subtreeIds,
 } from "@plugins/primitives/plugins/tree/core";
-import { PAGE_BLOCK_TYPE } from "./schemas";
+import { PAGE_BLOCK_TYPE, type Block } from "./schemas";
 import { planForestInsert, positionalRank, rankWindow } from "./block-forest";
 import {
   IdentifiedBlockSchema,
@@ -36,6 +36,31 @@ export type BlockNode = {
   rank: string;
   expanded: boolean;
 };
+
+/**
+ * Project full `Block` rows to the reducer's JSON-pure `BlockNode` shape — the
+ * ONE adapter between the wire row and the node every helper in this module
+ * takes. The structural mismatch is `rank`: a `Block` carries a `Rank` INSTANCE
+ * while a `BlockNode` carries its stored string form, so it is serialized here.
+ * (`data` differs only in optionality — `z.unknown()` infers an optional key —
+ * which is why this cannot be replaced by a structural widening of the helpers:
+ * `Rank` is a class, not a string alias.)
+ *
+ * It lives in `core/` beside both types it maps between, so a read-only consumer
+ * outside this plugin — an outline, a walk, an export — can order a forest it
+ * holds as `Block[]` without hand-rolling the rank conversion.
+ */
+export function toNodes(rows: Block[]): BlockNode[] {
+  return rows.map((b) => ({
+    id: b.id,
+    pageId: b.pageId,
+    parentId: b.parentId,
+    type: b.type,
+    data: b.data,
+    rank: String(b.rank),
+    expanded: b.expanded,
+  }));
+}
 
 /**
  * The complete set of single-block, in-page tree operations. New blocks carry a

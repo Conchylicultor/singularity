@@ -18,6 +18,7 @@ import {
   dataEqual,
   namesField,
   opBlockIds,
+  toNodes,
   type BlockFieldChanges,
   type BlockNode,
   type BlockOp,
@@ -115,7 +116,10 @@ function overlayOpTargets(v: BlockOverlayOp): string[] {
  * id set, so the pair cascades; unrelated rows (e.g. a `projectText` patch on
  * another block) never do.
  */
-export function sameOverlayTarget(a: BlockOverlayOp, b: BlockOverlayOp): boolean {
+export function sameOverlayTarget(
+  a: BlockOverlayOp,
+  b: BlockOverlayOp,
+): boolean {
   const aIds = overlayOpTargets(a);
   const bIds = new Set(overlayOpTargets(b));
   return aIds.some((id) => bIds.has(id));
@@ -143,14 +147,18 @@ export function isReflected(blocks: Block[], e: OpEffect): boolean {
     case "unwrap":
       // Both halves: the container gone AND every promoted child where the
       // reducer put it (see the effect's doc for why neither alone will do).
-      return !blocks.some((b) => b.id === e.id) && e.moves.every((m) => movedTo(blocks, m));
+      return (
+        !blocks.some((b) => b.id === e.id) &&
+        e.moves.every((m) => movedTo(blocks, m))
+      );
   }
 }
 
 /** Does `blocks` place `m.id` at exactly the predicted parent + rank? */
 function movedTo(blocks: Block[], m: PredictedMove): boolean {
   return blocks.some(
-    (b) => b.id === m.id && b.parentId === m.parentId && String(b.rank) === m.rank,
+    (b) =>
+      b.id === m.id && b.parentId === m.parentId && String(b.rank) === m.rank,
   );
 }
 
@@ -170,13 +178,20 @@ function fieldsReflected(
   changes: BlockFieldChanges,
   compareData: boolean,
 ): boolean {
-  if (namesField(changes, "parentId") && row.parentId !== changes.parentId) return false;
+  if (namesField(changes, "parentId") && row.parentId !== changes.parentId)
+    return false;
   if (namesField(changes, "type") && row.type !== changes.type) return false;
-  if (namesField(changes, "rank") && String(row.rank) !== String(changes.rank)) return false;
-  if (namesField(changes, "expanded") && row.expanded !== changes.expanded) return false;
+  if (namesField(changes, "rank") && String(row.rank) !== String(changes.rank))
+    return false;
+  if (namesField(changes, "expanded") && row.expanded !== changes.expanded)
+    return false;
   // Deep-compared with the SAME predicate the diff used to emit the change, so
   // the writer and the guard can never disagree about whether a row differs.
-  if (compareData && namesField(changes, "data") && !dataEqual(row.data, changes.data)) {
+  if (
+    compareData &&
+    namesField(changes, "data") &&
+    !dataEqual(row.data, changes.data)
+  ) {
     return false;
   }
   return true;
@@ -203,7 +218,11 @@ function allFields(row: Block): BlockFieldChanges {
  * the row rather than replaying forever. That is the whole of what the retired
  * `updateOnly` flag was approximating.
  */
-function patchLanded(blocks: Block[], patch: BlockPatch, compareData: boolean): boolean {
+function patchLanded(
+  blocks: Block[],
+  patch: BlockPatch,
+  compareData: boolean,
+): boolean {
   const byId = new Map(blocks.map((b) => [b.id, b]));
   for (const c of patch.creates) {
     const cur = byId.get(c.id);
@@ -299,7 +318,9 @@ export function applyPatch(blocks: Block[], patch: BlockPatch): Block[] {
     const created = createById.get(b.id);
     if (created) return created.parentId;
     const changes = changesById.get(b.id);
-    return changes && namesField(changes, "parentId") ? (changes.parentId ?? null) : b.parentId;
+    return changes && namesField(changes, "parentId")
+      ? (changes.parentId ?? null)
+      : b.parentId;
   };
   const dropped = new Set(deleted);
   let grew = true;
@@ -336,24 +357,10 @@ export function applyPatch(blocks: Block[], patch: BlockPatch): Block[] {
   return next;
 }
 
-/**
- * Project full `Block` rows to the reducer's JSON-pure `BlockNode` shape. The
- * only structural mismatch is `rank`: a `Block` carries a `Rank` instance while
- * a `BlockNode` carries its stored string form, so we serialize it. This lets us
- * reuse `applyBlockOp` (and its rank-sorted sibling math) on the live `rowsRef`
- * both when resolving split/merge intent client-side and when applying overlays.
- */
-export function toNodes(rows: Block[]): BlockNode[] {
-  return rows.map((b) => ({
-    id: b.id,
-    pageId: b.pageId,
-    parentId: b.parentId,
-    type: b.type,
-    data: b.data,
-    rank: String(b.rank),
-    expanded: b.expanded,
-  }));
-}
+// `toNodes` now lives in `core/block-ops.ts`, beside the two types it maps
+// between, so consumers outside this plugin can reach it. Re-exported here so
+// this module's existing importers are unaffected.
+export { toNodes };
 
 /**
  * Reconstruct full `Block` rows from reducer output. Timestamps are preserved
@@ -404,7 +411,10 @@ export function applyOverlayOp(
     return applyPatch(blocks, v.patch);
   }
   if (isReflected(blocks, v.effect)) throw new OpNoLongerApplies();
-  return fromNodes(applyBlockOp(toNodes(blocks), v.op, opCtx(anchorTypes)), blocks);
+  return fromNodes(
+    applyBlockOp(toNodes(blocks), v.op, opCtx(anchorTypes)),
+    blocks,
+  );
 }
 
 /** `BlockOpContext` from the optional anchor-type set (`{}` when absent). */
@@ -466,7 +476,11 @@ export function buildOverlayOp(
       const nodes = toNodes(rows);
       const promoted = childrenOf(nodes, op.blockId).map((c) => c.id);
       const moves = predictMoves(nodes, op, promoted, anchorTypes);
-      return { tag: "op", op, effect: { kind: "unwrap", id: op.blockId, moves } };
+      return {
+        tag: "op",
+        op,
+        effect: { kind: "unwrap", id: op.blockId, moves },
+      };
     }
     case "indent":
     case "outdent":
@@ -498,12 +512,15 @@ function predictMoves(
   anchorTypes: ReadonlySet<string> | undefined,
 ): PredictedMove[] {
   const before = new Map(nodes.map((b) => [b.id, b]));
-  const after = new Map(applyBlockOp(nodes, op, opCtx(anchorTypes)).map((b) => [b.id, b]));
+  const after = new Map(
+    applyBlockOp(nodes, op, opCtx(anchorTypes)).map((b) => [b.id, b]),
+  );
   return ids.flatMap((id) => {
     const next = after.get(id);
     const prev = before.get(id);
     if (!next) return []; // vanished after apply (defensive; shouldn't happen)
-    if (prev && prev.parentId === next.parentId && prev.rank === next.rank) return [];
+    if (prev && prev.parentId === next.parentId && prev.rank === next.rank)
+      return [];
     return [{ id, parentId: next.parentId, rank: next.rank }];
   });
 }

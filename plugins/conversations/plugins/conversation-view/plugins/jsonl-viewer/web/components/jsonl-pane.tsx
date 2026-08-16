@@ -1,5 +1,6 @@
 import {
   Fragment,
+  useCallback,
   useEffect,
   useLayoutEffect,
   useMemo,
@@ -30,6 +31,7 @@ import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { EventRow } from "./event-row";
 import { LastAssistantProvider } from "./last-assistant-context";
 import { ConversationIdProvider } from "./conversation-id-context";
+import { PaneScrollProvider } from "./pane-scroll-context";
 import {
   usePendingTurns,
   reconcilePendingTurns,
@@ -233,69 +235,90 @@ function JsonlPaneInner({
       },
     });
 
+  // One DOM node, two readers. The sticky-scroll hook drives the scroller; the
+  // pane also PUBLISHES it (`usePaneScrollElement`) so overlay contributions —
+  // which are siblings of the scroller, not children — can scope a query to this
+  // pane's transcript instead of rediscovering it with a DOM walk. A node takes
+  // one `ref`, hence the fan-out. State, not a ref, so a consumer re-renders when
+  // the element attaches.
+  const [scrollEl, setScrollEl] = useState<HTMLElement | null>(null);
+  const attachScroll = useCallback(
+    (node: HTMLElement | null) => {
+      // `Scroll` hands back the base element type while the sticky hook types its
+      // ref to the div it renders — the same node either way, as when this was
+      // `ref={scrollRef}`.
+      scrollRef.current = node as HTMLDivElement | null;
+      setScrollEl(node);
+    },
+    [scrollRef],
+  );
+
   return (
-    // eslint-disable-next-line layout/no-adhoc-layout -- relative+isolate positioning host that is also the flex-fill child of JsonlPane's column; hosts the scroller plus the Pin'd overlays as siblings so they don't scroll
-    <div className="relative min-h-0 flex-1 isolate">
-      <Scroll
-        axis="both"
-        ref={scrollRef}
-        data-pane-scroll
-        className={`h-full transition-opacity ${isGone ? "opacity-50" : ""}`}
-      >
-        {events.length === 0 ? (
-          <Text as="div" variant="caption" className="text-muted-foreground">
-            <Stack gap="none" className="px-md py-sm">
-              <span>
-                No transcript yet. Claude may not have written its session log.
-              </span>
-              {isWorking && workingStartAt != null && (
-                <WorkingIndicator startAt={workingStartAt} />
-              )}
-              {pendingTurns.map((r) => (
-                <PendingTurnCard
-                  key={r.id}
-                  conversationId={conversation.id}
-                  record={r}
-                />
-              ))}
-            </Stack>
-          </Text>
-        ) : (
-          <LastAssistantProvider event={lastAssistantEvent}>
-            <EventSections events={visibleEvents}>
-              {isWorking && workingStartAt != null && (
-                <WorkingIndicator startAt={workingStartAt} />
-              )}
-              {!isWorking && !!conversation.waitingFor && (
-                <JsonlViewer.PendingPrompt.Dispatch
-                  conversationId={conversation.id}
-                  waitingFor={conversation.waitingFor}
-                />
-              )}
-              {pendingTurns.map((r) => (
-                <PendingTurnCard
-                  key={r.id}
-                  conversationId={conversation.id}
-                  record={r}
-                />
-              ))}
-            </EventSections>
-          </LastAssistantProvider>
-        )}
-        {/* Must stay the last child: it marks the true end of the content. */}
-        {bottomSentinel}
-      </Scroll>
-      {/* The readings pinned at the foot of the pane (context/output usage, the
+    <PaneScrollProvider element={scrollEl}>
+      {/* eslint-disable-next-line layout/no-adhoc-layout -- relative+isolate positioning host that is also the flex-fill child of JsonlPane's column; hosts the scroller plus the Pin'd overlays as siblings so they don't scroll */}
+      <div className="relative min-h-0 flex-1 isolate">
+        <Scroll
+          axis="both"
+          ref={attachScroll}
+          data-pane-scroll
+          className={`h-full transition-opacity ${isGone ? "opacity-50" : ""}`}
+        >
+          {events.length === 0 ? (
+            <Text as="div" variant="caption" className="text-muted-foreground">
+              <Stack gap="none" className="px-md py-sm">
+                <span>
+                  No transcript yet. Claude may not have written its session
+                  log.
+                </span>
+                {isWorking && workingStartAt != null && (
+                  <WorkingIndicator startAt={workingStartAt} />
+                )}
+                {pendingTurns.map((r) => (
+                  <PendingTurnCard
+                    key={r.id}
+                    conversationId={conversation.id}
+                    record={r}
+                  />
+                ))}
+              </Stack>
+            </Text>
+          ) : (
+            <LastAssistantProvider event={lastAssistantEvent}>
+              <EventSections events={visibleEvents}>
+                {isWorking && workingStartAt != null && (
+                  <WorkingIndicator startAt={workingStartAt} />
+                )}
+                {!isWorking && !!conversation.waitingFor && (
+                  <JsonlViewer.PendingPrompt.Dispatch
+                    conversationId={conversation.id}
+                    waitingFor={conversation.waitingFor}
+                  />
+                )}
+                {pendingTurns.map((r) => (
+                  <PendingTurnCard
+                    key={r.id}
+                    conversationId={conversation.id}
+                    record={r}
+                  />
+                ))}
+              </EventSections>
+            </LastAssistantProvider>
+          )}
+          {/* Must stay the last child: it marks the true end of the content. */}
+          {bottomSentinel}
+        </Scroll>
+        {/* The readings pinned at the foot of the pane (context/output usage, the
           token budget, …) are Overlay contributions now — see the
           `transcript-stats` sub-plugin, which owns the strip AND the reading
           position it reports as of. */}
-      <JsonlViewer.Overlay.Render />
-      <JumpToBottomButton
-        handle={{ isFollowing, jumpToBottom }}
-        // eslint-disable-next-line layout/no-adhoc-layout -- off-ramp corner pin on an external Button (self-renders null when hidden); bottom-12/right-4 are off the spacing ramp
-        className="absolute bottom-12 right-4 z-nav"
-      />
-    </div>
+        <JsonlViewer.Overlay.Render />
+        <JumpToBottomButton
+          handle={{ isFollowing, jumpToBottom }}
+          // eslint-disable-next-line layout/no-adhoc-layout -- off-ramp corner pin on an external Button (self-renders null when hidden); bottom-12/right-4 are off the spacing ramp
+          className="absolute bottom-12 right-4 z-nav"
+        />
+      </div>
+    </PaneScrollProvider>
   );
 }
 

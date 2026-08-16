@@ -69,12 +69,12 @@ Only present slots render — an absent slot produces no region and no phantom g
     - `conversations/conversation-view/code/docs-button`
     - `conversations/conversation-view/code/file-pane`
     - `conversations/conversation-view/commits-graph`
-    - `conversations/conversation-view/jsonl-viewer/message-toc`
     - `debug/boot-profile`
     - `debug/profiling`
     - `debug/timeline`
     - `history/dialog`
     - `primitives/diff-view`
+    - `primitives/outline/rail`
     - `primitives/pane`
     - `primitives/tabbed-view`
 

@@ -250,6 +250,14 @@ one sanctioned scroll for free and **should not add `overflow-*` on their root**
 e.g. an `IntersectionObserver` root) and the rest of `Scroll`'s surface
 (`hideScrollbar`, `isolate`, `as`, `className`).
 
+### `overlay` — widgets that float over the body
+
+Chrome that must NOT scroll with the document (an outline rail, a progress card)
+goes in `<PaneChrome overlay={…}>`, which renders it as a sibling of the single
+`PaneScroll` inside a `relative isolate` host. Do **not** wrap `PaneChrome` in
+your own `relative` host instead: that host spans the header too, so a
+corner-pinned overlay lands on the header's own right-hand actions.
+
 ### Actions
 
 Each pane auto-creates an `Actions` slot other plugins contribute to

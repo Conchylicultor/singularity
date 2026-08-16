@@ -44,6 +44,24 @@ export const PageDetail = {
   HeaderActions: defineRenderSlot<{
     component: ComponentType<{ pageId: string }>;
   }>("pages.detail.header-actions"),
+  /**
+   * A widget floating OVER the open page — an outline rail, a reading-progress
+   * indicator. The host gives it a positioning context and nothing else: a
+   * contribution owns its own placement inside that box (typically a `Pin`).
+   *
+   * Neither of the other two seams has this shape. `Section` is an in-flow card
+   * *below* the editor, and `HeaderActions` is a button *in* the header strip;
+   * an overlay is on top of the page and is not part of its flow at all.
+   *
+   * The host's positioning box wraps the pane, deliberately outside the pane's
+   * one scroller — an absolutely-positioned child of a scroller scrolls away
+   * with the document, which is the one thing a "where am I" indicator must not
+   * do. Mirrors `JsonlViewer.Overlay`, the same seam on the conversation
+   * transcript.
+   */
+  Overlay: defineRenderSlot<{
+    component: ComponentType<{ pageId: string }>;
+  }>("pages.detail.overlay", { docLabel: (p) => p.id }),
 };
 
 /**

@@ -2239,11 +2239,20 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `defineHistorySource('pages')`
               - `defineJob('pages.history.snapshot')`
               - `defineJob('pages.history.schedule')`
+        - **`page-outline`** — The open page's headings as an outline rail pinned to the right edge of the pane: one dash per heading, the current section highlighted, hover to expand into a click-to-jump outline. Headings are identified generically from each block type's declared `semantics`, so it names no block type.
+          - Web:
+            - Contributes: `PageDetail.Overlay` "outline" → `PageOutline`
+            - Uses:
+              - `apps/pages/page-tree.PageDetail`
+              - `page/editor.Editor`
+              - `primitives/live-state.useResource`
+              - `primitives/outline/rail.OutlineRail`
         - **`page-tree`** — Sidebar page-tree plus the page-detail pane (header, editor, sections slot) for the Pages app.
           - Web:
             - Slots:
               - `PageDetail.Section` ← `apps.pages.page-tree`, `apps.story.pages-integration`
               - `PageDetail.HeaderActions` ← `apps.pages.history`, `apps.pages.starred`
+              - `PageDetail.Overlay` ← `apps.pages.page-outline`
               - `PageTree.RowActions` ← `apps.pages.page-tree`, `apps.pages.starred`, `apps.story.pages-integration`
               - `PageTree.Fields` ← `apps.pages.agent-origin`, `apps.pages.starred`
               - `pageDetailPane.Actions`
@@ -2326,6 +2335,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/pages/agent-origin`
               - `apps/pages/content-search`
               - `apps/pages/history`
+              - `apps/pages/page-outline`
               - `apps/pages/prompt-origin`
               - `apps/pages/starred`
               - `apps/pages/welcome/quick-create`
@@ -8373,7 +8383,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conversations/conversation-view/jsonl-viewer/assistant-text`
           - `conversations/conversation-view/jsonl-viewer/event-counter`
           - `conversations/conversation-view/jsonl-viewer/file-path`
-          - `conversations/conversation-view/jsonl-viewer/message-toc`
+          - `conversations/conversation-view/jsonl-viewer/outline`
           - `conversations/conversation-view/jsonl-viewer/tool-call/agent`
           - `conversations/conversation-view/jsonl-viewer/tool-call/ask-user-question`
           - `conversations/conversation-view/jsonl-viewer/tool-call/read`
@@ -8853,7 +8863,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `JsonlViewer.EventRenderer` ← `conversations.conversation-view.jsonl-viewer.assistant-text`, `conversations.conversation-view.jsonl-viewer.assistant-thinking`, `conversations.conversation-view.jsonl-viewer.attachment`, `conversations.conversation-view.jsonl-viewer.meta-prompt`, `conversations.conversation-view.jsonl-viewer.preprompt`, `conversations.conversation-view.jsonl-viewer.queue-operation`, `conversations.conversation-view.jsonl-viewer.summary`, `conversations.conversation-view.jsonl-viewer.system`, `conversations.conversation-view.jsonl-viewer.task-notification`, `conversations.conversation-view.jsonl-viewer.teammate-message`, `conversations.conversation-view.jsonl-viewer.tool-call`, `conversations.conversation-view.jsonl-viewer.user-image`, `conversations.conversation-view.jsonl-viewer.user-text`
               - `JsonlViewer.PendingPrompt` ← `conversations.conversation-view.jsonl-viewer.tool-call.ask-user-question`
               - `JsonlViewer.EventFilter` ← `conversations.conversation-view.jsonl-viewer.tool-call.ask-user-question`, `conversations.conversation-view.jsonl-viewer.transcript-stats.token-budget`
-              - `JsonlViewer.Overlay` ← `conversations.conversation-view.jsonl-viewer.message-toc`, `conversations.conversation-view.jsonl-viewer.tool-call.task-tools`, `conversations.conversation-view.jsonl-viewer.transcript-stats`
+              - `JsonlViewer.Overlay` ← `conversations.conversation-view.jsonl-viewer.outline`, `conversations.conversation-view.jsonl-viewer.tool-call.task-tools`, `conversations.conversation-view.jsonl-viewer.transcript-stats`
               - `JsonlViewer.PendingPromptAction` ← `conversations.conversation-view.terminal-pane`
             - Contributes:
               - `JsonlRowActions.Item` "timestamp" → `TimestampAction`
@@ -8897,6 +8907,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `Timestamp`
               - `useJsonlConversationId`
               - `useLastAssistantEvent`
+              - `usePaneScrollElement`
               - `useRowMarkdown`
               - `useSectionExpand`
               - `useVisibleEvents`
@@ -8927,8 +8938,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `conversations/conversation-view/jsonl-viewer/assistant-thinking`
               - `conversations/conversation-view/jsonl-viewer/attachment`
               - `conversations/conversation-view/jsonl-viewer/investigate-event`
-              - `conversations/conversation-view/jsonl-viewer/message-toc`
               - `conversations/conversation-view/jsonl-viewer/meta-prompt`
+              - `conversations/conversation-view/jsonl-viewer/outline`
               - `conversations/conversation-view/jsonl-viewer/preprompt`
               - `conversations/conversation-view/jsonl-viewer/queue-operation`
               - `conversations/conversation-view/jsonl-viewer/summary`
@@ -9206,21 +9217,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `primitives/launch.LaunchAgentPopover`
                   - `primitives/slot-render.useDispatchOutcome`
                   - `shell/notifications.toast`
-            - **`message-toc`** — Floating table of contents listing user messages for quick navigation.
-              - Web:
-                - Contributes: `JsonlViewer.Overlay` "message-toc" → `MessageToc`
-                - Uses:
-                  - `conversations/conversation-view.conversationPane`
-                  - `conversations/conversation-view/jsonl-viewer.JsonlViewer`
-                  - `conversations/conversation-view/jsonl-viewer.useVisibleEvents`
-                  - `primitives/auto-scroll.scrollToBottom`
-                  - `primitives/css/center.Center`
-                  - `primitives/css/column.Column`
-                  - `primitives/css/text.Text`
-                  - `primitives/floating-action.FloatingAction`
-                  - `primitives/floating-action.FloatingActionFadeIn`
-                  - `primitives/live-state.useResource`
-                  - `primitives/scroll-reveal.revealElement`
             - **`meta-prompt`** — Renders harness-injected prompt turns (loop/queue wakeups, resumes) distinctly from human user messages.
               - Web:
                 - Contributes: `JsonlViewer.EventRenderer` "meta-prompt" → `MetaPromptRow`
@@ -9228,6 +9224,18 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `conversations/conversation-view/jsonl-viewer.JsonlViewer`
                   - `conversations/conversation-view/jsonl-viewer/collapsible-card.CollapsibleCard`
                   - `primitives/css/text.Text`
+            - **`outline`** — The transcript's outline: one dash per user turn pinned to the right edge of the conversation, the current turn highlighted, expanding on hover into a clickable list of turns. An adapter over the outline rail primitive — this plugin owns only which turns exist and how a turn maps to its row.
+              - Web:
+                - Contributes: `JsonlViewer.Overlay` "outline" → `ConversationOutline`
+                - Uses:
+                  - `conversations/conversation-view.conversationPane`
+                  - `conversations/conversation-view/jsonl-viewer.JsonlViewer`
+                  - `conversations/conversation-view/jsonl-viewer.usePaneScrollElement`
+                  - `conversations/conversation-view/jsonl-viewer.useVisibleEvents`
+                  - `primitives/auto-scroll.scrollToBottom`
+                  - `primitives/icon-button.IconButton`
+                  - `primitives/live-state.useResource`
+                  - `primitives/outline/rail.OutlineRail`
             - **`preprompt`** — Renders the launch special-instructions (preprompt) block as a collapsible section in the JSONL viewer.
               - Web:
                 - Contributes: `JsonlViewer.EventRenderer` "preprompt" → `PrepromptRow`
@@ -14647,13 +14655,14 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/events/sources/source-detail/runs`
               - `apps/mail/threads`
               - `apps/pages/history`
+              - `apps/pages/page-outline`
               - `apps/pages/page-tree`
               - `apps/prototypes/present`
               - `code-explorer`
               - `conversations/conversation-category`
               - `conversations/conversation-view/jsonl-viewer`
               - `conversations/conversation-view/jsonl-viewer/investigate-event`
-              - `conversations/conversation-view/jsonl-viewer/message-toc`
+              - `conversations/conversation-view/jsonl-viewer/outline`
               - `conversations/conversation-view/jsonl-viewer/tool-call/page-tools`
               - `conversations/conversation-view/jsonl-viewer/transcript-stats`
               - `conversations/conversation-view/prompt-templates`
@@ -17803,6 +17812,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `textOf`
           - `TextRunSchema`
           - `tokenOf`
+          - `toNodes`
           - `turnIntoPage`
           - `TurnIntoPageBodySchema`
           - `updateBlock`
@@ -17819,6 +17829,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/pages/agent-origin`
           - `apps/pages/content-search`
           - `apps/pages/history`
+          - `apps/pages/page-outline`
           - `apps/pages/page-tree`
           - `apps/pages/starred`
           - `apps/pages/welcome/recent-pages`
@@ -19653,11 +19664,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `build`
           - `build/build-logs`
           - `conversations/conversation-view/jsonl-viewer`
-          - `conversations/conversation-view/jsonl-viewer/message-toc`
+          - `conversations/conversation-view/jsonl-viewer/outline`
           - `debug/logs`
           - `layouts/miller`
           - `page/editor`
           - `primitives/log-channels`
+          - `primitives/outline/scroll-spy`
           - `primitives/virtual-rows`
     - **`avatar`** — Reusable circular avatar (icon + color) with an optional status-dot overlay and a chooser popover. Reusable circular avatar (icon + color) with an optional status-dot overlay and a chooser popover. Reusable circular avatar (icon + color) with an optional status-dot overlay and a chooser popover.
       - Web:
@@ -20134,7 +20146,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `conversations/conversation-view`
               - `conversations/conversation-view/code/file-pane/image`
               - `conversations/conversation-view/dependencies`
-              - `conversations/conversation-view/jsonl-viewer/message-toc`
               - `conversations/conversation-view/jsonl-viewer/tool-call/task-tools`
               - `debug/boot-profile`
               - `debug/broadcasts`
@@ -20234,6 +20245,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/app-shell`
               - `primitives/data-view/gallery`
               - `primitives/diff-view`
+              - `primitives/outline/rail`
               - `review/plugin-changes/file-changes`
               - `screenshot`
               - `tasks/task-graph`
@@ -20345,12 +20357,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `conversations/conversation-view/code/docs-button`
               - `conversations/conversation-view/code/file-pane`
               - `conversations/conversation-view/commits-graph`
-              - `conversations/conversation-view/jsonl-viewer/message-toc`
               - `debug/boot-profile`
               - `debug/profiling`
               - `debug/timeline`
               - `history/dialog`
               - `primitives/diff-view`
+              - `primitives/outline/rail`
               - `primitives/pane`
               - `primitives/tabbed-view`
         - **`control-size`** — Control-size standard: the shared control-* height scale and its enforcing lint rule (no-adhoc-control).
@@ -20404,6 +20416,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/error-boundary`
               - `primitives/imperative-dialog/confirm`
               - `primitives/log-channels`
+              - `primitives/outline/rail`
               - `primitives/setup-steps`
               - `ui/tweakcn/community-browser`
         - **`grid`** — Responsive/uniform grid layout primitive: <Grid minCellWidth> lays out a wrapping, equal-width card grid via a closed prop surface — not a raw grid-template passthrough.
@@ -20584,6 +20597,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/date-picker`
               - `primitives/error-boundary`
               - `primitives/log-channels`
+              - `primitives/outline/rail`
               - `reorder/node-types/overflow`
               - `ui/tab-bar/chip`
               - `ui/tab-bar/connected`
@@ -20708,6 +20722,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/icon-picker`
               - `primitives/log-channels`
               - `primitives/multi-select`
+              - `primitives/outline/rail`
               - `primitives/row-actions`
               - `primitives/search`
               - `primitives/sync-status`
@@ -20875,6 +20890,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/data-view/list`
               - `primitives/data-view/table`
               - `primitives/folder-picker`
+              - `primitives/outline/rail`
               - `primitives/section-card`
               - `reorder/editor`
               - `search/quick-find`
@@ -21289,6 +21305,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/loading`
               - `primitives/log-channels`
               - `primitives/multi-select`
+              - `primitives/outline/rail`
               - `primitives/pane`
               - `primitives/prompt-editor`
               - `primitives/row-actions`
@@ -21650,7 +21667,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `conversations/conversation-view/jsonl-viewer/event-counter`
               - `conversations/conversation-view/jsonl-viewer/fields-card`
               - `conversations/conversation-view/jsonl-viewer/file-path`
-              - `conversations/conversation-view/jsonl-viewer/message-toc`
               - `conversations/conversation-view/jsonl-viewer/meta-prompt`
               - `conversations/conversation-view/jsonl-viewer/preprompt`
               - `conversations/conversation-view/jsonl-viewer/queued-prompt-card`
@@ -21777,6 +21793,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/launch`
               - `primitives/log-channels`
               - `primitives/markdown`
+              - `primitives/outline/rail`
               - `primitives/pane`
               - `primitives/rank-reorder`
               - `primitives/setup-steps`
@@ -22267,6 +22284,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/loading`
               - `primitives/log-channels`
               - `primitives/multi-select`
+              - `primitives/outline/rail`
               - `primitives/overflow-menu`
               - `primitives/pane`
               - `primitives/pane-toolbar`
@@ -23339,6 +23357,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/data-view/gallery`
           - `primitives/expandable`
           - `primitives/graph-canvas`
+          - `primitives/outline/rail`
           - `primitives/overflow-menu`
           - `primitives/pane`
           - `primitives/responsive-overflow`
@@ -23438,8 +23457,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `FloatingActionFadeIn`
       - Cross-plugin:
         - Imported by:
-          - `conversations/conversation-view/jsonl-viewer/message-toc`
           - `conversations/conversation-view/prompt-templates`
+          - `primitives/outline/rail`
           - `shell/global-action-bar`
     - **`floating-surface`** — Focus-less caret-anchored floating surface: positions a panel against a virtual anchor rect via Floating UI (flip + scroll-follow), rendering the shared OverlayPanel inside a ViewportOverlay, without ever taking focus. A sibling to InlinePopover for transient caret menus.
       - Web:
@@ -23599,6 +23618,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `build/build-logs`
           - `config_v2/config-link`
           - `conversations/agents`
+          - `conversations/conversation-view/jsonl-viewer/outline`
           - `conversations/conversation-view/jsonl-viewer/tool-call/agent`
           - `conversations/conversation-view/notes`
           - `conversations/conversation-view/resume`
@@ -23803,6 +23823,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/markdown`
           - `primitives/networking`
           - `primitives/optimistic-mutation`
+          - `primitives/outline/scroll-spy`
           - `primitives/pane`
           - `primitives/prompt-editor/voice-input`
           - `primitives/scoped-store`
@@ -23998,6 +24019,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/mail/threads`
           - `apps/pages/agent-origin`
           - `apps/pages/history`
+          - `apps/pages/page-outline`
           - `apps/pages/page-tree`
           - `apps/pages/prompt-origin`
           - `apps/pages/starred`
@@ -24052,7 +24074,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conversations/conversation-view/drop-dependents`
           - `conversations/conversation-view/jsonl-viewer`
           - `conversations/conversation-view/jsonl-viewer/event-counter`
-          - `conversations/conversation-view/jsonl-viewer/message-toc`
+          - `conversations/conversation-view/jsonl-viewer/outline`
           - `conversations/conversation-view/jsonl-viewer/tool-call/add-task`
           - `conversations/conversation-view/jsonl-viewer/tool-call/agent`
           - `conversations/conversation-view/jsonl-viewer/tool-call/ask-user-question`
@@ -24493,6 +24515,46 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conversations/conversations-view/queue`
           - `page/editor`
           - `reports/optimistic-divergence`
+    - **`outline`** — Umbrella for the outline primitive: the scroll-spy position half and the rail chrome half.
+      - Plugins:
+        - **`rail`** — Notion-style outline rail: a dash per section pinned to the surface's right edge, the current one bright and wide (position from outline/scroll-spy), expanding on hover / focus / tap into the depth-indented outline with click-to-jump. Windows its dashes to the height it has while the panel always lists every entry, so a long document's indicator can never lie.
+          - Web:
+            - Uses:
+              - `primitives/css/clip.Clip`
+              - `primitives/css/column.Column`
+              - `primitives/css/fill.Fill`
+              - `primitives/css/line.Line`
+              - `primitives/css/pin.Pin`
+              - `primitives/css/row.Row`
+              - `primitives/css/spacing.insetClass`
+              - `primitives/css/spacing.Stack`
+              - `primitives/css/text.Text`
+              - `primitives/css/ui-kit.cn`
+              - `primitives/element-size.useElementSize`
+              - `primitives/floating-action.FloatingAction`
+              - `primitives/floating-action.FloatingActionFadeIn`
+              - `primitives/outline/scroll-spy.useActiveInView`
+              - `primitives/scroll-reveal.revealElement`
+              - `primitives/scroll-reveal.useRevealOnActive`
+            - Exports (types):
+              - `OutlineEntry`
+              - `OutlineRailProps`
+            - Exports (values): `OutlineRail`
+          - Cross-plugin:
+            - Imported by:
+              - `apps/pages/page-outline`
+              - `conversations/conversation-view/jsonl-viewer/outline`
+          - Core:
+            - Exports (types): `OutlineEntry`
+        - **`scroll-spy`** — Which section of a scrolling document the reader is looking at: useActiveInView(ids, resolve) watches the resolved elements through ONE IntersectionObserver biased to the top third of the scroller, answers with the first id in order that is on screen, holds the last answer while nothing is, and enrolls elements incrementally as they mount.
+          - Web:
+            - Uses:
+              - `primitives/auto-scroll.findScrollParent`
+              - `primitives/latest-ref.useEventCallback`
+              - `primitives/latest-ref.useLatestRef`
+            - Exports (values): `useActiveInView`
+          - Cross-plugin:
+            - Imported by: `primitives/outline/rail`
     - **`overflow-menu`** — Single-line row that keeps as many children inline as fit and collapses the overflow behind a trailing ⋯ dropdown menu. Built on responsive-overflow; reserves the trigger's width so it is never clipped.
       - Web:
         - Uses:
@@ -25147,9 +25209,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/sonata/sources/ultimate-guitar`
           - `conversations/conversation-view/code/file-pane/raw`
           - `conversations/conversation-view/jsonl-viewer`
-          - `conversations/conversation-view/jsonl-viewer/message-toc`
           - `page/editor`
           - `primitives/command-palette`
+          - `primitives/outline/rail`
           - `primitives/tree`
           - `search/quick-find`
     - **`search`** — Search input primitive: SearchInput component, useTextFilter hook for flat lists, and filterTree/collectAllIds utilities for recursive tree filtering.
@@ -26180,6 +26242,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `ConfigV2.WebRegister`
       - `ConfigV2.WebRegister`
       - `ConfigV2.WebRegister`
+      - `ConfigV2.WebRegister`
     - Uses:
       - `config_v2.ConfigV2`
       - `config_v2.useConfig`
@@ -26266,6 +26329,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `ConfigV2.Register` "page.editor.format-action"
       - `ConfigV2.Register` "page.editor.turn-into"
       - `ConfigV2.Register` "pages.detail.header-actions"
+      - `ConfigV2.Register` "pages.detail.overlay"
       - `ConfigV2.Register` "pages.detail.section"
       - `ConfigV2.Register` "pages.sidebar"
       - `ConfigV2.Register` "pages.tree.fields"

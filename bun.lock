@@ -452,6 +452,10 @@
       "name": "@singularity/plugin-apps-pages-history",
       "version": "0.0.1",
     },
+    "plugins/apps/plugins/pages/plugins/page-outline": {
+      "name": "@singularity/plugin-apps-pages-page-outline",
+      "version": "0.0.1",
+    },
     "plugins/apps/plugins/pages/plugins/page-tree": {
       "name": "@singularity/plugin-apps-pages-page-tree",
       "version": "0.0.1",
@@ -1447,12 +1451,12 @@
       "name": "@singularity/plugin-conversations-conversation-view-jsonl-viewer-investigate-event",
       "version": "0.0.1",
     },
-    "plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/message-toc": {
-      "name": "@singularity/plugin-conversations-conversation-view-jsonl-viewer-message-toc",
-      "version": "0.0.1",
-    },
     "plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/meta-prompt": {
       "name": "@singularity/plugin-conversations-conversation-view-jsonl-viewer-meta-prompt",
+      "version": "0.0.1",
+    },
+    "plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/outline": {
+      "name": "@singularity/plugin-conversations-conversation-view-jsonl-viewer-outline",
       "version": "0.0.1",
     },
     "plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/preprompt": {
@@ -3959,6 +3963,18 @@
       "name": "@singularity/plugin-primitives-optimistic-mutation",
       "version": "0.0.1",
     },
+    "plugins/primitives/plugins/outline": {
+      "name": "@singularity/plugin-primitives-outline",
+      "version": "0.0.1",
+    },
+    "plugins/primitives/plugins/outline/plugins/rail": {
+      "name": "@singularity/plugin-primitives-outline-rail",
+      "version": "0.0.1",
+    },
+    "plugins/primitives/plugins/outline/plugins/scroll-spy": {
+      "name": "@singularity/plugin-primitives-outline-scroll-spy",
+      "version": "0.0.1",
+    },
     "plugins/primitives/plugins/overflow-menu": {
       "name": "@singularity/plugin-primitives-overflow-menu",
       "version": "0.0.1",
@@ -5637,6 +5653,8 @@
 
     "@singularity/plugin-apps-pages-history": ["@singularity/plugin-apps-pages-history@workspace:plugins/apps/plugins/pages/plugins/history"],
 
+    "@singularity/plugin-apps-pages-page-outline": ["@singularity/plugin-apps-pages-page-outline@workspace:plugins/apps/plugins/pages/plugins/page-outline"],
+
     "@singularity/plugin-apps-pages-page-tree": ["@singularity/plugin-apps-pages-page-tree@workspace:plugins/apps/plugins/pages/plugins/page-tree"],
 
     "@singularity/plugin-apps-pages-prompt-origin": ["@singularity/plugin-apps-pages-prompt-origin@workspace:plugins/apps/plugins/pages/plugins/prompt-origin"],
@@ -6123,9 +6141,9 @@
 
     "@singularity/plugin-conversations-conversation-view-jsonl-viewer-investigate-event": ["@singularity/plugin-conversations-conversation-view-jsonl-viewer-investigate-event@workspace:plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/investigate-event"],
 
-    "@singularity/plugin-conversations-conversation-view-jsonl-viewer-message-toc": ["@singularity/plugin-conversations-conversation-view-jsonl-viewer-message-toc@workspace:plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/message-toc"],
-
     "@singularity/plugin-conversations-conversation-view-jsonl-viewer-meta-prompt": ["@singularity/plugin-conversations-conversation-view-jsonl-viewer-meta-prompt@workspace:plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/meta-prompt"],
+
+    "@singularity/plugin-conversations-conversation-view-jsonl-viewer-outline": ["@singularity/plugin-conversations-conversation-view-jsonl-viewer-outline@workspace:plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/outline"],
 
     "@singularity/plugin-conversations-conversation-view-jsonl-viewer-preprompt": ["@singularity/plugin-conversations-conversation-view-jsonl-viewer-preprompt@workspace:plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/preprompt"],
 
@@ -7296,6 +7314,12 @@
     "@singularity/plugin-primitives-networking": ["@singularity/plugin-primitives-networking@workspace:plugins/primitives/plugins/networking"],
 
     "@singularity/plugin-primitives-optimistic-mutation": ["@singularity/plugin-primitives-optimistic-mutation@workspace:plugins/primitives/plugins/optimistic-mutation"],
+
+    "@singularity/plugin-primitives-outline": ["@singularity/plugin-primitives-outline@workspace:plugins/primitives/plugins/outline"],
+
+    "@singularity/plugin-primitives-outline-rail": ["@singularity/plugin-primitives-outline-rail@workspace:plugins/primitives/plugins/outline/plugins/rail"],
+
+    "@singularity/plugin-primitives-outline-scroll-spy": ["@singularity/plugin-primitives-outline-scroll-spy@workspace:plugins/primitives/plugins/outline/plugins/scroll-spy"],
 
     "@singularity/plugin-primitives-overflow-menu": ["@singularity/plugin-primitives-overflow-menu@workspace:plugins/primitives/plugins/overflow-menu"],
 

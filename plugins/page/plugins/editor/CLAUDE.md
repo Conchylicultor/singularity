@@ -2517,6 +2517,7 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
     - `textOf`
     - `TextRunSchema`
     - `tokenOf`
+    - `toNodes`
     - `turnIntoPage`
     - `TurnIntoPageBodySchema`
     - `updateBlock`
@@ -2533,6 +2534,7 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
     - `apps/pages/agent-origin`
     - `apps/pages/content-search`
     - `apps/pages/history`
+    - `apps/pages/page-outline`
     - `apps/pages/page-tree`
     - `apps/pages/starred`
     - `apps/pages/welcome/recent-pages`
