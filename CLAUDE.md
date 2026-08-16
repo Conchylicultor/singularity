@@ -190,8 +190,8 @@ bun plugins/framework/plugins/tooling/plugins/e2e-harness/e2e/screenshot.ts \
 ```
 
 For a repeatable flow, write a standalone E2E script in the plugin it verifies,
-at `plugins/<path>/e2e/<name>.ts` — never `*.test.ts`, which `bun test` would
-pick up. These are manual only; nothing runs them automatically.
+at `plugins/<path>/e2e/<name>.ts` — never `*.test.ts`, which the test runner
+would pick up. These are manual only; nothing runs them automatically.
 
 ```bash
 bun plugins/apps-core/plugins/tabs/e2e/tabs-verify.ts --headed  # watch it run
@@ -257,31 +257,21 @@ Good: Normally a row's buttons appear when your mouse is over it, and vanish
 
 ### Testing
 
-Optional and manual — nothing runs them automatically. Requires `node_modules`,
-so run after a build or `bun install`.
+Optional and manual — nothing runs them automatically.
 
-**Use `./singularity test`** — the only command that knows about both runners. It
-routes each test file to its runner by location and always reports both buckets,
-including an empty one:
+**`./singularity test` is the ONLY way to run tests.** Paths only, no flags. It
+needs no setup: like every `./singularity` command it installs dependencies first
+when `node_modules` is missing or stale, so it works in a fresh worktree.
 
 ```bash
-./singularity test plugins/primitives/plugins/optimistic-mutation   # both suites
+./singularity test plugins/primitives/plugins/optimistic-mutation   # one plugin
 ./singularity test                                                  # everything
 ```
 
-The two runners underneath, still directly runnable for narrow targeting:
-
-- **`bun:test`** — pure logic, next to source as `*.test.ts(x)`, never under `__tests__/`.
-  ```bash
-  bun test plugins/page/plugins/editor/core/block-ops.test.ts   # file or folder
-  ```
-- **`vitest`** — jsdom/React, in the plugin's `web/__tests__/`. Auto-discovered by the root `vitest.config.ts`; no per-plugin config.
-  ```bash
-  bun run test:dom plugins/primitives/plugins/pane   # omit path for the full suite
-  ```
-
-Either one aimed at a *folder* gives a true but partial answer — it runs its own
-share and says nothing about the other's, so green ≠ the plugin's tests passed.
+Two runners sit underneath, split by file location: `*.test.ts(x)` next to its
+source is pure logic; `web/__tests__/` is jsdom/React (auto-discovered by the
+root `vitest.config.ts`, no per-plugin config). Never run a bare `bun test` /
+`vitest` — invoking a runner directly has caveats the CLI handles.
 
 The split itself (which runner owns which path, and the `test-layout:runner-split`
 check binding it) lives in
