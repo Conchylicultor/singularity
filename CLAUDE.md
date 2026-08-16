@@ -230,7 +230,7 @@ Independent projects that live in `sidequests/`, not directly related to Singula
 - **A rejected `AskUserQuestion` means stop immediately.** End the turn with NO text at all — no summary, no restated question, no proposed default. The rejection already means the user is about to answer; anything written is noise. Never guess a default or work around it.
 - **Subagents default to Sonnet.** When spawning any `Agent` call, always pass `model: "sonnet"` explicitly. Never omit the model and let it default to Opus. Only use Opus for load-bearing, complex implementation tasks — research, lookup, synthesis, and reporting are all Sonnet work.
 - **On breakage, rebase to HEAD first.** When the build fails to start or something is broken in an unexpected way, rebase the worktree branch onto `main` (`git fetch origin main && git rebase origin/main`) — the issue may already be fixed upstream.
-- **Don't memorize gotchas — report them so they get fixed structurally.** When you hit a footgun (a silent-`undefined` API, a "you must also update X" coupling, a boot-crash-if-misplaced rule, a build trap), do NOT write a memory file describing the workaround. A memory only documents the trap for one agent; the trap still exists for everyone else. Instead, surface it to the user (or `add_task` it) so it can be eliminated at the source — a required type, a `./singularity check`, a lint rule, or a derived value. The right response to a footgun is to remove the footgun. Durable how-it-works knowledge belongs in the relevant `CLAUDE.md` / `docs/`, not in personal memory.
+- **Don't memorize gotchas — report them so they get fixed structurally.** When you hit a footgun (a silent-`undefined` API, a "you must also update X" coupling, a boot-crash-if-misplaced rule, a build trap), do NOT write a memory file describing the workaround. A memory only documents the trap for one agent; the trap still exists for everyone else. Instead, surface it to the user (or `add_task` it) so it can be eliminated at the source, at the highest rung of the fix ladder under Coding Style. The right response to a footgun is to remove the footgun. Durable how-it-works knowledge belongs in the relevant `CLAUDE.md` / `docs/`, not in personal memory.
 - **When the user explicitly says "Exit"**, signal the outcome via exactly one MCP tool call, then write your final wrap-up message:
   1. Call exactly one MCP tool to signal the outcome:
      - `exit_clean` — everything went smoothly, nothing I need to know. The conversation will close automatically.
@@ -298,7 +298,17 @@ This is the single most important coding principle:
   (page-block-doc / pushes-by-attempt) and small schema-bounded scalars are also fine; unbounded
   full-collection values are not.
 - **Collections of domain records are DataViews.** Rendering a homogeneous set of domain records (rows from DB / live-state / config) is a `data-view` surface (`views={["list"]}` minimum — search/filter/sort/groupBy/item-actions come free), never a hand-rolled `.map()` of `<Row>`. `Row`+map is only for transient chrome (menus, pickers, tab strips), annotated `// eslint-disable-next-line data-view/no-adhoc-row-list -- <reason>` (ESLint: `no-adhoc-row-list`). See `plugins/primitives/plugins/data-view/CLAUDE.md` and `research/2026-07-17-global-data-view-adoption-guardrail.md`.
-- **Fix the structural issue, not the specific instance.** When something breaks, take a step back and ask why it was possible in the first place. Rethink the abstractions — a type constraint, a schema change, or an invariant enforced at the boundary can prevent the entire class of bug. A targeted fix in one call site leaves the rest exposed.
+- **Fix the structural issue, not the specific instance.** When something breaks, take a step back and ask why it was possible in the first place. A targeted fix in one call site leaves the rest exposed.
+
+  **Structural fixes are ranked — take the highest rung that can express the constraint, even when it's more work or churns call sites:**
+
+  1. **Inexpressible** — rethink the API, abstraction or mental model until the wrong thing has no spelling: drop the parameter, derive the value, take the data not the callback, delete the concept. Nothing left to enforce.
+  2. **Type error** — `tsc` rejects it: required field, discriminated union, branded type.
+  3. **Check/lint error** — cross-file invariants a type can't see ("these two must agree", "don't use X here").
+  4. **Loud runtime failure** — an assert at the boundary, for what only runtime knows.
+  5. **Documentation** — weakest; reaches only whoever reads it. Never when a rung above fits.
+
+  The rungs rank enforcement strength, not the space of fixes — invent the fix that makes the class of mistake impossible, then use the ladder to take its strongest form.
 ------------------------------------
 
 @docs/plugins-compact.md
