@@ -452,6 +452,10 @@
       "name": "@singularity/plugin-apps-pages-history",
       "version": "0.0.1",
     },
+    "plugins/apps/plugins/pages/plugins/open-in-app": {
+      "name": "@singularity/plugin-apps-pages-open-in-app",
+      "version": "0.0.1",
+    },
     "plugins/apps/plugins/pages/plugins/page-tree": {
       "name": "@singularity/plugin-apps-pages-page-tree",
       "version": "0.0.1",
@@ -5608,6 +5612,8 @@
     "@singularity/plugin-apps-pages-content-search": ["@singularity/plugin-apps-pages-content-search@workspace:plugins/apps/plugins/pages/plugins/content-search"],
 
     "@singularity/plugin-apps-pages-history": ["@singularity/plugin-apps-pages-history@workspace:plugins/apps/plugins/pages/plugins/history"],
+
+    "@singularity/plugin-apps-pages-open-in-app": ["@singularity/plugin-apps-pages-open-in-app@workspace:plugins/apps/plugins/pages/plugins/open-in-app"],
 
     "@singularity/plugin-apps-pages-page-tree": ["@singularity/plugin-apps-pages-page-tree@workspace:plugins/apps/plugins/pages/plugins/page-tree"],
 

@@ -9,8 +9,14 @@ export {
   useSurfaceMode,
   exitToPreviousMode,
   type TabsApi,
+  type NavigateOptions,
 } from "./internal/use-tabs";
-export { appPathFor, appContributionFor, type Tab } from "./internal/tabs-store";
+export { appLinkProps, type AppLinkProps } from "./internal/app-link";
+export {
+  appPathFor,
+  appContributionFor,
+  type Tab,
+} from "./internal/tabs-store";
 export { loadScopePrefixFor } from "./internal/load-scope";
 export {
   registerPlacementCapabilities,

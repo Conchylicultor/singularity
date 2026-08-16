@@ -84,12 +84,25 @@ export interface TabsApi {
    * set its route from the URL — all through the live pane store, so
    * the focused tab's `appId` can never drift from the URL. Use this anywhere
    * you'd reach for `window.history.pushState` (enforced by `no-raw-history-nav`).
+   *
+   * With `{ newTab: true }` the very same resolution instead seeds a BRAND-NEW
+   * tab (focused on arrival), leaving the current tab untouched — the in-app
+   * equivalent of a browser's middle-click. It is one option on one function
+   * rather than a second entry point precisely so the two can never resolve a
+   * URL differently: `openTab(appId)` can only reach an app's index, so
+   * "open THIS pane in a new tab" had no expressible form before.
    */
-  navigate(url: string): void;
+  navigate(url: string, opts?: NavigateOptions): void;
   focusTab(tabId: string): void;
   closeTab(tabId: string): void;
   /** Reorder: move the tab `activeId` to the position of `overId`. */
   moveTab(activeId: string, overId: string): void;
+}
+
+/** Where a {@link TabsApi.navigate} lands: the focused tab, or a new one. */
+export interface NavigateOptions {
+  /** Seed a brand-new focused tab instead of re-routing the focused one. */
+  newTab?: boolean;
 }
 
 const TabsContext = createContext<TabsApi | null>(null);
@@ -98,9 +111,12 @@ const TabsContext = createContext<TabsApi | null>(null);
 // `setLiveStore`/`liveStore` pointer in the pane primitive. Lets callers that
 // render OUTSIDE `<TabsProvider>` (e.g. the floating action bar, a sibling
 // `Core.Root`) reach the one sanctioned cross-app navigation without the hook.
-let tabsNavigator: ((url: string) => void) | null = null;
+let tabsNavigator: ((url: string, opts?: NavigateOptions) => void) | null =
+  null;
 
-function setTabsNavigator(fn: ((url: string) => void) | null): void {
+function setTabsNavigator(
+  fn: ((url: string, opts?: NavigateOptions) => void) | null,
+): void {
   tabsNavigator = fn;
 }
 
@@ -110,11 +126,11 @@ function setTabsNavigator(fn: ((url: string) => void) | null): void {
  * if invoked before the provider has mounted (a real bug: there is nothing to
  * navigate yet).
  */
-export function navigate(url: string): void {
+export function navigate(url: string, opts?: NavigateOptions): void {
   if (!tabsNavigator) {
     throw new Error("navigate() called before <TabsProvider> mounted.");
   }
-  tabsNavigator(url);
+  tabsNavigator(url, opts);
 }
 
 // Module-level mirror of the ONE per-surface rendering mode + its setters,
@@ -233,8 +249,7 @@ interface BootState {
  * that keeps whatever route the tab already holds.
  */
 type ActivateTarget =
-  | { kind: "route"; route: PaneSlot[] }
-  | { kind: "pending"; rawPath: string };
+  { kind: "route"; route: PaneSlot[] } | { kind: "pending"; rawPath: string };
 
 /**
  * The tabId the CURRENT history entry names, but ONLY on a browser back/forward
@@ -342,7 +357,9 @@ export function bootTabs(
   //      plugin loads (or a not-found once loading settles), never a stale pane.
   const focused = tabs[focusIdx]!;
   focused.store.setBasePath(appPathFor(focused.appId, apps));
-  const persistedFocused = persisted?.tabs.find((t) => t.tabId === focused.tabId);
+  const persistedFocused = persisted?.tabs.find(
+    (t) => t.tabId === focused.tabId,
+  );
   if (parsed.status === "matched" && parsed.slots.length > 0) {
     focused.store.restoreRoute(parsed.slots);
   } else if (parsed.status === "matched") {
@@ -482,12 +499,15 @@ export function TabsProvider({ children }: { children: ReactNode }): ReactNode {
    */
   const activate = useCallback(
     (next: Tab, target?: ActivateTarget, mode: "push" | "replace" = "push") => {
-      const current = tabsRef.current.find((t) => t.tabId === focusedRef.current);
+      const current = tabsRef.current.find(
+        (t) => t.tabId === focusedRef.current,
+      );
       if (current && current.tabId !== next.tabId) current.store.live = false;
       next.store.setBasePath(appPathFor(next.appId, appsRef.current));
       // Seed the target while still background (in-memory only, no history op).
       if (target?.kind === "route") next.store.setRoute(target.route);
-      else if (target?.kind === "pending") next.store.seedPending(target.rawPath);
+      else if (target?.kind === "pending")
+        next.store.seedPending(target.rawPath);
       next.store.live = true;
       setLiveStore(next.store);
       // Point the focused-tab ref at `next` BEFORE mirroring: the shell adapter's
@@ -541,25 +561,37 @@ export function TabsProvider({ children }: { children: ReactNode }): ReactNode {
   );
 
   /**
-   * Open a new tab for `appId` at its index. Used by the `+` new-tab button; the
-   * new tab is displayed under the current surface mode (a new window in windows
-   * mode, a docked tab otherwise) — the surface owns the mode, not the tab.
+   * Mint a new tab for `appId`, seeded with `target` (omit for the app's index),
+   * and focus it. The new tab is displayed under the current surface mode (a new
+   * window in windows mode, a docked tab otherwise) — the surface owns the mode,
+   * not the tab. Seeding happens inside `activate`, i.e. while the store is
+   * still background, so the target URL lands in ONE history op rather than a
+   * stray entry at the bare app root followed by the real one.
+   *
+   * The single tab-minting path: both the `+` button (`openTab`) and
+   * `navigate(url, { newTab: true })` come through here.
    */
-  const openTab = useCallback(
-    (appId: string): string => {
+  const openTabWith = useCallback(
+    (appId: string, target?: ActivateTarget): string => {
       const tabId = crypto.randomUUID();
       const store = makeBackgroundStore(appId, appsRef.current);
       const tab: Tab = { tabId, appId, store };
       const nextTabs = [...tabsRef.current, tab];
       tabsRef.current = nextTabs;
       setTabs(nextTabs);
-      activate(tab);
+      activate(tab, target);
       focusedRef.current = tabId;
       setFocusedTabId(tabId);
       persist();
       return tabId;
     },
     [activate, persist],
+  );
+
+  /** Open a new tab for `appId` at its index. Used by the `+` new-tab button. */
+  const openTab = useCallback(
+    (appId: string): string => openTabWith(appId),
+    [openTabWith],
   );
 
   // Swap a tab's app in place (keeps the tabId + position), rebinding a fresh
@@ -612,7 +644,12 @@ export function TabsProvider({ children }: { children: ReactNode }): ReactNode {
   // target pane's plugin loads.
   const replaceTabAppWithPending = useCallback(
     (tabId: string, appId: string, rawPath: string) =>
-      rebuildTabApp(tabId, appId, { kind: "pending", rawPath }, { mirror: true }),
+      rebuildTabApp(
+        tabId,
+        appId,
+        { kind: "pending", rawPath },
+        { mirror: true },
+      ),
     [rebuildTabApp],
   );
 
@@ -636,7 +673,7 @@ export function TabsProvider({ children }: { children: ReactNode }): ReactNode {
   );
 
   const navigate = useCallback(
-    (url: string) => {
+    (url: string, opts?: NavigateOptions) => {
       // Strip any query/hash — routing is path-based.
       const pathname = url.split(/[?#]/)[0] ?? url;
       const resolved = resolveAppForPath(pathname, appsRef.current);
@@ -653,8 +690,14 @@ export function TabsProvider({ children }: { children: ReactNode }): ReactNode {
         );
       }
       const parsed = parseUrl(resolved.routePath);
-      const focused = tabsRef.current.find((t) => t.tabId === focusedRef.current);
+      const focused = tabsRef.current.find(
+        (t) => t.tabId === focusedRef.current,
+      );
       if (parsed.status === "unresolved") {
+        // NOTE: the dead-link decision below is a property of the URL alone, so
+        // it is deliberately made BEFORE the newTab branch — a dead link must
+        // throw whether it was left-clicked or middle-clicked, never quietly
+        // spawn a tab that spins forever.
         // The path resolves to no registered pane RIGHT NOW. If the deferred tier
         // has settled AND nothing under this app's subtree failed to load, the
         // pane will never appear — the link is dead (a stale link, or a pane that
@@ -670,14 +713,31 @@ export function TabsProvider({ children }: { children: ReactNode }): ReactNode {
             `navigate(): path "${pathname}" resolves to no registered pane in app "${resolved.app.id}" — the link is dead (deferred load settled with no load error under "${prefix || "<app root>"}")`,
           );
         }
+        if (opts?.newTab) {
+          openTabWith(resolved.app.id, {
+            kind: "pending",
+            rawPath: parsed.rawPath,
+          });
+          return;
+        }
         if (focused && focused.appId === resolved.app.id) {
           focused.store.navigatePending(parsed.rawPath);
           return;
         }
-        replaceTabAppWithPending(focusedRef.current, resolved.app.id, parsed.rawPath);
+        replaceTabAppWithPending(
+          focusedRef.current,
+          resolved.app.id,
+          parsed.rawPath,
+        );
         return;
       }
       const route = parsed.slots;
+      if (opts?.newTab) {
+        // A new tab is always a fresh tab, even when the target app is the one
+        // already focused — that is what makes this the in-app middle-click.
+        openTabWith(resolved.app.id, { kind: "route", route });
+        return;
+      }
       if (focused && focused.appId === resolved.app.id) {
         // Already on this app — set the route on its live store (normal push,
         // preserving a back target).
@@ -689,7 +749,7 @@ export function TabsProvider({ children }: { children: ReactNode }): ReactNode {
       // consistent with the rail's in-place app switch.
       replaceTabAppWithRoute(focusedRef.current, resolved.app.id, route);
     },
-    [replaceTabAppWithRoute, replaceTabAppWithPending],
+    [replaceTabAppWithRoute, replaceTabAppWithPending, openTabWith],
   );
 
   // Push focus changes into the shortcuts focused-surface signal (push-based, no
@@ -862,8 +922,36 @@ export function TabsProvider({ children }: { children: ReactNode }): ReactNode {
   }, [refocusForRestore, rebuildTabApp, persist]);
 
   const api = useMemo<TabsApi>(
-    () => ({ tabs, focusedTabId, titles, mode, setMode, exitToPreviousMode, setTabTitle, openTab, replaceTabApp, navigate, focusTab, closeTab, moveTab }),
-    [tabs, focusedTabId, titles, mode, setMode, exitToPreviousMode, setTabTitle, openTab, replaceTabApp, navigate, focusTab, closeTab, moveTab],
+    () => ({
+      tabs,
+      focusedTabId,
+      titles,
+      mode,
+      setMode,
+      exitToPreviousMode,
+      setTabTitle,
+      openTab,
+      replaceTabApp,
+      navigate,
+      focusTab,
+      closeTab,
+      moveTab,
+    }),
+    [
+      tabs,
+      focusedTabId,
+      titles,
+      mode,
+      setMode,
+      exitToPreviousMode,
+      setTabTitle,
+      openTab,
+      replaceTabApp,
+      navigate,
+      focusTab,
+      closeTab,
+      moveTab,
+    ],
   );
 
   // Publish the surface mode + bound setters at module scope so out-of-provider

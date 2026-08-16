@@ -50,7 +50,7 @@ a flat `list` view, so that is the normal non-tree case, not a failure.
 - Web:
   - Slots:
     - `PageDetail.Section` ← `apps.pages.page-tree`, `apps.story.pages-integration`
-    - `PageDetail.HeaderActions` ← `apps.pages.history`, `apps.pages.starred`
+    - `PageDetail.HeaderActions` ← `apps.pages.history`, `apps.pages.open-in-app`, `apps.pages.starred`
     - `PageTree.RowActions` ← `apps.pages.page-tree`, `apps.pages.starred`, `apps.story.pages-integration`
     - `PageTree.Fields` ← `apps.pages.agent-origin`, `apps.pages.starred`
     - `pageDetailPane.Actions`
@@ -133,6 +133,7 @@ a flat `list` view, so that is the normal non-tree case, not a failure.
     - `apps/pages/agent-origin`
     - `apps/pages/content-search`
     - `apps/pages/history`
+    - `apps/pages/open-in-app`
     - `apps/pages/prompt-origin`
     - `apps/pages/starred`
     - `apps/pages/welcome/quick-create`

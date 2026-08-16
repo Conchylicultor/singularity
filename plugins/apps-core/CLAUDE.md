@@ -56,6 +56,7 @@
     - `apps/home/app-cards`
     - `apps/home/shell`
     - `apps/mail/shell`
+    - `apps/pages/open-in-app`
     - `apps/pages/shell`
     - `apps/prototypes/shell`
     - `apps/settings/shell`

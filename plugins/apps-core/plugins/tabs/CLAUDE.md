@@ -40,6 +40,20 @@ shows. The canonicalization redirect (apps-layout) stays URL-driven
 Because `tabId`s are sessionStorage-stable, a snapshot stamped before a reload
 still matches after it, so back/forward keeps working across reloads.
 
+## In-app links: one URL resolution, two destinations
+
+`navigate(url, { newTab })` is the only way to open a pane, in this tab or a
+fresh one — `openTab(appId)` can reach an app's *index* only, so it can't
+express "open THIS pane in a new tab". Keeping it one function keeps both
+destinations on one URL resolution (dead-link + unresolved-pane checks
+included). A new tab is always fresh, even when the target app is the focused
+one.
+
+`appLinkProps(url)` spreads onto any control to give it browser link gestures
+(click = here, ⌘/Ctrl- or middle-click = new tab). Do NOT reach for `<a href>`:
+these URLs address *in-app* tabs, so an anchor's middle-click cold-boots a whole
+second SPA in a browser tab instead.
+
 ## App instances: three different things called a "tab"
 
 Keep these apart — they are three layers, and the persisted state hangs off the
@@ -145,11 +159,14 @@ same browser tab from finding the blob. Both call sites are marked for removal.
     - `primitives/pane.stripBasePath`
     - `primitives/shortcuts.setFocusedSurfaceId`
   - Exports (types):
+    - `AppLinkProps`
+    - `NavigateOptions`
     - `PlacementCapabilities`
     - `Tab`
     - `TabsApi`
   - Exports (values):
     - `appContributionFor`
+    - `appLinkProps`
     - `appPathFor`
     - `exitToPreviousMode`
     - `getDefaultPlacement`
@@ -178,6 +195,7 @@ same browser tab from finding the blob. Both call sites are marked for removal.
     - `apps/deploy/composition`
     - `apps/home/app-cards`
     - `apps/mail/shell`
+    - `apps/pages/open-in-app`
     - `apps/story/pages-integration`
     - `build`
     - `config_v2/config-link`

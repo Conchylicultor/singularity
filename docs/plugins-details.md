@@ -2239,11 +2239,19 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `defineHistorySource('pages')`
               - `defineJob('pages.history.snapshot')`
               - `defineJob('pages.history.schedule')`
+        - **`open-in-app`** — Expand action in the page-detail header, shown only when the page is open outside the Pages app: takes it to Pages in this tab, or in a new one on middle-/⌘-click.
+          - Web:
+            - Contributes: `PageDetail.HeaderActions` → `OpenInAppAction`
+            - Uses:
+              - `apps-core.useCurrentAppId`
+              - `apps-core/tabs.appLinkProps`
+              - `apps/pages/page-tree.PageDetail`
+              - `primitives/icon-button.IconButton`
         - **`page-tree`** — Sidebar page-tree plus the page-detail pane (header, editor, sections slot) for the Pages app.
           - Web:
             - Slots:
               - `PageDetail.Section` ← `apps.pages.page-tree`, `apps.story.pages-integration`
-              - `PageDetail.HeaderActions` ← `apps.pages.history`, `apps.pages.starred`
+              - `PageDetail.HeaderActions` ← `apps.pages.history`, `apps.pages.open-in-app`, `apps.pages.starred`
               - `PageTree.RowActions` ← `apps.pages.page-tree`, `apps.pages.starred`, `apps.story.pages-integration`
               - `PageTree.Fields` ← `apps.pages.agent-origin`, `apps.pages.starred`
               - `pageDetailPane.Actions`
@@ -2326,6 +2334,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/pages/agent-origin`
               - `apps/pages/content-search`
               - `apps/pages/history`
+              - `apps/pages/open-in-app`
               - `apps/pages/prompt-origin`
               - `apps/pages/starred`
               - `apps/pages/welcome/quick-create`
@@ -5645,6 +5654,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `apps/home/app-cards`
       - `apps/home/shell`
       - `apps/mail/shell`
+      - `apps/pages/open-in-app`
       - `apps/pages/shell`
       - `apps/prototypes/shell`
       - `apps/settings/shell`
@@ -6113,11 +6123,14 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/pane.stripBasePath`
           - `primitives/shortcuts.setFocusedSurfaceId`
         - Exports (types):
+          - `AppLinkProps`
+          - `NavigateOptions`
           - `PlacementCapabilities`
           - `Tab`
           - `TabsApi`
         - Exports (values):
           - `appContributionFor`
+          - `appLinkProps`
           - `appPathFor`
           - `exitToPreviousMode`
           - `getDefaultPlacement`
@@ -6146,6 +6159,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/deploy/composition`
           - `apps/home/app-cards`
           - `apps/mail/shell`
+          - `apps/pages/open-in-app`
           - `apps/story/pages-integration`
           - `build`
           - `config_v2/config-link`
@@ -14545,6 +14559,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/events/sources/source-detail/runs`
               - `apps/mail/threads`
               - `apps/pages/history`
+              - `apps/pages/open-in-app`
               - `apps/pages/page-tree`
               - `apps/prototypes/present`
               - `code-explorer`
@@ -23443,6 +23458,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/browser/webview`
           - `apps/mail/reading-pane`
           - `apps/pages/history`
+          - `apps/pages/open-in-app`
           - `apps/pages/page-tree`
           - `apps/pages/starred`
           - `apps/pages/trash`

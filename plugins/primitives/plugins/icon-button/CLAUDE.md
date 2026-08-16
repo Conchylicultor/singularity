@@ -59,6 +59,7 @@ stateful-indicator children; a justified one-off (e.g. a per-model glyph size
     - `apps/browser/webview`
     - `apps/mail/reading-pane`
     - `apps/pages/history`
+    - `apps/pages/open-in-app`
     - `apps/pages/page-tree`
     - `apps/pages/starred`
     - `apps/pages/trash`

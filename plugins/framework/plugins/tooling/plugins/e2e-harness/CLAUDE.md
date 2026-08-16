@@ -43,6 +43,7 @@ rule keeps the broken shape from coming back.
     - `apps/events/sources/source-detail/runs`
     - `apps/mail/threads`
     - `apps/pages/history`
+    - `apps/pages/open-in-app`
     - `apps/pages/page-tree`
     - `apps/prototypes/present`
     - `code-explorer`

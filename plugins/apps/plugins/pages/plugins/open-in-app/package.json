@@ -1,0 +1,6 @@
+{
+  "name": "@singularity/plugin-apps-pages-open-in-app",
+  "description": "Expand action on a page opened outside the Pages app: takes the page to its home app.",
+  "private": true,
+  "version": "0.0.1"
+}
