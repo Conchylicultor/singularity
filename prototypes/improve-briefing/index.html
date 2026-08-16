@@ -1,0 +1,615 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+<title>Improve — briefing rail</title>
+<meta name="description" content="Keeps the dialog but gives it a spine: tasks stack as numbered cards on the left, chained one after another, and the right rail is the briefing for whichever card you're in — how it runs, what it will see. Live — add, remove, reorder the chain and switch between briefings." />
+<meta name="prototype-viewport" content="1280x800" />
+
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; height: 100%; }
+
+  :root {
+    --bg:        #121214;
+    --scrim:     rgba(6,6,8,.66);
+    --surface:   #1d1d20;
+    --rail:      #191a1c;
+    --sunken:    #151517;
+    --line:      rgba(255,255,255,.07);
+    --line-firm: rgba(255,255,255,.12);
+    --ink:       #ececee;
+    --ink-2:     #a3a3ab;
+    --ink-3:     #6d6d77;
+    --accent:    #d0765c;
+    --accent-hi: #e08d74;
+    --focus:     rgba(208,118,92,.48);
+  }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
+    background: var(--bg); color: var(--ink);
+    -webkit-font-smoothing: antialiased;
+  }
+  #root { width: 1280px; height: 800px; overflow: hidden; position: relative; display: grid; place-items: center; }
+
+  .app { position: absolute; inset: 0; }
+  .app-bar { height: 38px; border-bottom: 1px solid var(--line); background: #171719; display: flex; align-items: center; gap: 8px; padding: 0 12px; }
+  .app-pill { height: 20px; border-radius: 6px; background: rgba(255,255,255,.055); }
+  .app-body { padding: 26px 34px; display: flex; flex-direction: column; gap: 13px; }
+  .app-line { height: 11px; border-radius: 4px; background: rgba(255,255,255,.04); }
+  .scrim { position: absolute; inset: 0; background: var(--scrim); }
+
+  /* ---------------- dialog ---------------- */
+  .dialog {
+    position: relative; width: 748px;
+    background: var(--surface);
+    border: 1px solid var(--line-firm);
+    border-radius: 16px;
+    box-shadow: 0 0 0 1px rgba(0,0,0,.5), 0 28px 70px -14px rgba(0,0,0,.75);
+    overflow: hidden;
+    display: grid; grid-template-rows: auto 1fr auto;
+  }
+
+  .titlebar {
+    display: flex; align-items: center; gap: 9px;
+    padding: 13px 12px 13px 18px;
+    border-bottom: 1px solid var(--line);
+  }
+  .titlebar h1 { margin: 0; font-size: 13.5px; font-weight: 600; letter-spacing: .005em; }
+  .titlebar .sub { font-size: 12px; color: var(--ink-3); }
+  .spring { flex: 1; }
+
+  .cols { display: grid; grid-template-columns: 1fr 258px; min-height: 0; }
+
+  /* ---------------- left: the task chain ---------------- */
+  .stack {
+    padding: 14px 16px 16px;
+    display: flex; flex-direction: column;
+    max-height: 468px; overflow-y: auto;
+  }
+  .stack::-webkit-scrollbar { width: 9px; }
+  .stack::-webkit-scrollbar-thumb { background: rgba(255,255,255,.12); border-radius: 9px; border: 3px solid transparent; background-clip: content-box; }
+
+  .task {
+    position: relative;
+    border: 1px solid var(--line); border-radius: 11px;
+    background: var(--sunken);
+    padding: 11px 12px 10px 13px;
+    transition: border-color .14s, background .14s;
+    cursor: text;
+  }
+  .task:hover { border-color: rgba(255,255,255,.15); }
+  .task.sel { border-color: rgba(208,118,92,.5); background: #191618; }
+  .task.sel::before {
+    content: ""; position: absolute; left: -1px; top: 12px; bottom: 12px;
+    width: 2px; border-radius: 2px; background: var(--accent);
+  }
+
+  /* the link between one task and the next */
+  .link {
+    display: flex; align-items: center; gap: 7px;
+    height: 26px; margin-left: 21px;
+    color: var(--ink-3);
+  }
+  .link span { font-size: 10.5px; font-weight: 620; letter-spacing: .09em; text-transform: uppercase; }
+
+  .task-head { display: flex; align-items: center; gap: 8px; margin-bottom: 5px; }
+  .num {
+    width: 17px; height: 17px; flex: none; display: grid; place-items: center;
+    border-radius: 5px; background: rgba(255,255,255,.07);
+    font-size: 10.5px; font-weight: 620; color: var(--ink-3);
+    transition: background .14s, color .14s;
+  }
+  .task.sel .num { background: rgba(208,118,92,.2); color: var(--accent-hi); }
+  .task-head .cap { font-size: 11px; font-weight: 560; letter-spacing: .05em; text-transform: uppercase; color: var(--ink-3); }
+  .task-head .drop { font-size: 11.5px; color: var(--ink-3); }
+
+  .icon-x {
+    width: 22px; height: 22px; flex: none; display: grid; place-items: center;
+    border: 0; border-radius: 6px; background: transparent; color: var(--ink-3);
+    cursor: pointer; padding: 0;
+    opacity: 0; transition: opacity .13s, background .13s, color .13s;
+  }
+  .task:hover .icon-x, .icon-x:focus-visible { opacity: 1; }
+  .icon-x:hover { background: rgba(255,255,255,.09); color: var(--ink); }
+  .icon-x.always { opacity: 1; }
+  .icon-x[disabled] { opacity: 0 !important; pointer-events: none; }
+
+  .task textarea {
+    display: block; width: 100%; min-height: 44px;
+    background: transparent; border: 0; outline: 0; resize: none;
+    color: var(--ink); font: inherit; font-size: 14.5px; line-height: 1.55;
+    padding: 0;
+  }
+  .task textarea::placeholder { color: var(--ink-3); }
+
+  .add-task {
+    display: flex; align-items: center; gap: 7px; width: 100%;
+    height: 36px; padding: 0 13px; margin-top: 9px;
+    border: 1px dashed var(--line-firm); border-radius: 11px;
+    background: transparent; color: var(--ink-3);
+    font: inherit; font-size: 12.5px; font-weight: 500;
+    cursor: pointer; transition: color .13s, border-color .13s, background .13s;
+  }
+  .add-task:hover { color: var(--ink); border-color: rgba(255,255,255,.26); background: rgba(255,255,255,.025); }
+
+  /* ---------------- right: the briefing rail ---------------- */
+  .rail {
+    position: relative;
+    border-left: 1px solid var(--line);
+    background: var(--rail);
+    padding: 14px 14px 16px;
+    display: flex; flex-direction: column; gap: 16px;
+  }
+  .rail-title {
+    display: flex; align-items: baseline; gap: 6px;
+    font-size: 10.5px; font-weight: 620; letter-spacing: .08em;
+    text-transform: uppercase; color: var(--ink-3);
+  }
+  .rail-title em { font-style: normal; color: var(--accent-hi); }
+
+  .group { display: flex; flex-direction: column; gap: 3px; }
+
+  .row {
+    display: flex; align-items: center; gap: 8px; width: 100%;
+    height: 30px; padding: 0 7px 0 8px;
+    border: 0; border-radius: 7px; background: transparent;
+    color: var(--ink-2); font: inherit; font-size: 12.5px;
+    cursor: pointer; text-align: left;
+    transition: background .13s;
+  }
+  .row:hover, .row[aria-expanded="true"] { background: rgba(255,255,255,.055); }
+  .row .k { color: var(--ink-3); }
+  .row .v { margin-left: auto; display: inline-flex; align-items: center; gap: 5px; color: var(--ink); font-weight: 500; }
+  .row .caret { opacity: .45; }
+
+  .sub-label { font-size: 12.5px; color: var(--ink-3); padding: 5px 8px 1px; }
+
+  .seg {
+    display: flex; padding: 2px; gap: 2px;
+    border: 1px solid var(--line-firm); border-radius: 8px; background: rgba(0,0,0,.25);
+  }
+  .seg button {
+    flex: 1; height: 23px; border: 0; border-radius: 6px; background: transparent;
+    color: var(--ink-3); font: inherit; font-size: 11.5px; font-weight: 520; cursor: pointer;
+    transition: background .13s, color .13s;
+  }
+  .seg button:hover { color: var(--ink-2); }
+  .seg button[aria-pressed="true"] { background: rgba(255,255,255,.11); color: var(--ink); }
+
+  .ctx { display: flex; flex-direction: column; gap: 5px; }
+  .ctx-item {
+    display: flex; align-items: center; gap: 8px;
+    padding: 6px 6px 6px 8px; border-radius: 8px;
+    border: 1px solid var(--line); background: rgba(255,255,255,.022);
+  }
+  .ctx-item > svg { flex: none; color: var(--ink-3); }
+  .ctx-item .txt { min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+  .ctx-item .n { font-size: 12px; font-weight: 500; }
+  .ctx-item .m {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 10.5px; color: var(--ink-3);
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 168px;
+  }
+  .ctx-item .icon-x { opacity: 0; margin-left: auto; }
+  .ctx-item:hover .icon-x { opacity: 1; }
+
+  .ctx-add {
+    display: flex; align-items: center; gap: 7px;
+    height: 28px; padding: 0 9px;
+    border: 1px dashed var(--line-firm); border-radius: 8px; background: transparent;
+    color: var(--ink-3); font: inherit; font-size: 11.5px; font-weight: 500; cursor: pointer;
+    transition: color .13s, border-color .13s;
+  }
+  .ctx-add:hover { color: var(--ink); border-color: rgba(255,255,255,.26); }
+
+  .apply-all {
+    margin-top: auto;
+    display: none; align-items: center; gap: 6px; align-self: flex-start;
+    height: 26px; padding: 0 8px; border: 0; border-radius: 7px; background: transparent;
+    color: var(--ink-3); font: inherit; font-size: 11.5px; cursor: pointer;
+    transition: background .13s, color .13s;
+  }
+  .apply-all:hover { background: rgba(255,255,255,.06); color: var(--ink-2); }
+  .dialog.multi .apply-all { display: inline-flex; }
+  .apply-all.done { color: var(--accent-hi); }
+
+  /* ---------------- footer ---------------- */
+  .foot {
+    display: flex; align-items: center; gap: 8px;
+    padding: 11px 14px 13px 18px;
+    border-top: 1px solid var(--line);
+    background: rgba(255,255,255,.015);
+  }
+  .foot .hint { font-size: 11.5px; color: var(--ink-3); }
+  .foot .hint b { font-weight: 560; color: var(--ink-2); }
+
+  .btn {
+    height: 32px; padding: 0 14px; border: 1px solid transparent; border-radius: 8px;
+    font: inherit; font-size: 13px; font-weight: 550; cursor: pointer;
+    transition: background .13s, color .13s, transform .06s;
+  }
+  .btn:active { transform: translateY(.5px); }
+  .btn-quiet { background: transparent; color: var(--ink-2); }
+  .btn-quiet:hover { background: rgba(255,255,255,.07); color: var(--ink); }
+  .btn-primary {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: var(--accent); color: #17110e;
+    box-shadow: 0 1px 0 rgba(255,255,255,.16) inset, 0 1px 3px rgba(0,0,0,.45);
+  }
+  .btn-primary:hover { background: var(--accent-hi); }
+  .btn-primary kbd { font: inherit; font-size: 11px; font-weight: 620; color: rgba(23,17,14,.58); }
+
+  :is(button, textarea):focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+
+  /* ---------------- menu ---------------- */
+  .menu {
+    position: absolute; z-index: 10;
+    width: 190px; padding: 5px;
+    background: #232327;
+    border: 1px solid var(--line-firm);
+    border-radius: 11px;
+    box-shadow: 0 12px 32px -8px rgba(0,0,0,.7), 0 0 0 1px rgba(0,0,0,.4);
+  }
+  .menu-item {
+    display: flex; align-items: center; gap: 8px; width: 100%;
+    height: 29px; padding: 0 8px; border: 0; border-radius: 7px;
+    background: transparent; color: var(--ink-2);
+    font: inherit; font-size: 12.5px; text-align: left; cursor: pointer;
+  }
+  .menu-item:hover { background: rgba(255,255,255,.07); color: var(--ink); }
+  .menu-item[aria-checked="true"] { color: var(--ink); }
+  .menu-item .tick { margin-left: auto; color: var(--accent); opacity: 0; }
+  .menu-item[aria-checked="true"] .tick { opacity: 1; }
+
+  /* ---------------- filed confirmation ---------------- */
+  .filed {
+    position: absolute; left: 0; right: 0; bottom: 0;
+    min-height: 57px; padding: 13px 18px;
+    background: #232327;
+    border-top: 1px solid var(--line-firm);
+    display: flex; align-items: center; gap: 9px;
+    font-size: 12.5px; color: var(--ink-2);
+    transform: translateY(100%); transition: transform .22s cubic-bezier(.2,.8,.3,1);
+    z-index: 20;
+  }
+  .filed.show { transform: none; }
+  .filed > svg { color: var(--accent); flex: none; }
+  .filed b { color: var(--ink); font-weight: 560; }
+</style>
+</head>
+<body>
+<div id="root">
+
+  <div class="app" aria-hidden="true">
+    <div class="app-bar">
+      <div class="app-pill" style="width:78px"></div>
+      <div class="app-pill" style="width:52px"></div>
+      <div class="app-pill" style="width:52px"></div>
+      <div style="flex:1"></div>
+      <div class="app-pill" style="width:26px"></div>
+      <div class="app-pill" style="width:26px"></div>
+    </div>
+    <div class="app-body">
+      <div class="app-line" style="width:210px"></div>
+      <div class="app-line" style="width:660px"></div>
+      <div class="app-line" style="width:540px"></div>
+      <div class="app-line" style="width:600px"></div>
+    </div>
+  </div>
+  <div class="scrim" aria-hidden="true"></div>
+
+  <div class="dialog" id="dialog" role="dialog" aria-label="Improve this app">
+
+    <div class="titlebar">
+      <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="#d0765c" stroke-width="1.4" stroke-linejoin="round">
+        <path d="M8 1.8 9.5 5.6 13.3 7 9.5 8.4 8 12.2 6.5 8.4 2.7 7 6.5 5.6z"/>
+      </svg>
+      <h1>Improve this app</h1>
+      <span class="sub" id="sub"></span>
+      <span class="spring"></span>
+      <button class="icon-x always" aria-label="Close">
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M2.5 2.5 9.5 9.5M9.5 2.5 2.5 9.5"/></svg>
+      </button>
+    </div>
+
+    <div class="cols">
+      <div class="stack" id="stack"></div>
+      <div class="rail" id="rail"></div>
+    </div>
+
+    <div class="foot">
+      <span class="hint">Files under <b>Improvements</b></span>
+      <span class="spring"></span>
+      <button class="btn btn-quiet">Cancel</button>
+      <button class="btn btn-primary" id="submit"><span id="submitLabel">Submit</span> <kbd>⌘↵</kbd></button>
+    </div>
+
+    <div class="filed" id="filed">
+      <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="m2.4 7.4 2.6 2.6 6.6-6.6"/></svg>
+      <span id="filedText"></span>
+    </div>
+  </div>
+</div>
+
+<script>
+  // ---------------------------------------------------------------- data
+  const MODELS  = ["Opus 5", "Sonnet 5", "Haiku 4.5", "Don't start"];
+  const PREPROMPTS = ["None", "UI polish", "Bug hunt", "Refactor"];
+  const THINKING = ["Default", "Think", "Hard"];
+
+  const CONTEXT = {
+    url:     { n: "Page URL",  m: "/agents/c/3f2a91",     add: "Attach the page URL",
+               icon: '<path d="M6.5 9.5 9.5 6.5M7 4.5 8.4 3.1a2.7 2.7 0 0 1 3.8 3.8L10.8 8.3M9 11.5 7.6 12.9a2.7 2.7 0 0 1-3.8-3.8L5.2 7.7"/>' },
+    shot:    { n: "Screenshot", m: "1280 × 800 · just now", add: "Take a screenshot",
+               icon: '<rect x="2.2" y="3.2" width="11.6" height="9.6" rx="1.6"/><path d="m4.4 11 2.6-3 2 2.2 1.6-1.6 2.4 2.4"/>' },
+    element: { n: "Element",   m: "button.improve",       add: "Point at an element",
+               icon: '<path d="M7.6 2.2v2.2M7.6 10.8V13M2.2 7.6h2.2M10.8 7.6H13"/><circle cx="7.6" cy="7.6" r="2.4"/>' },
+  };
+
+  const svg = (paths, size) =>
+    `<svg width="${size}" height="${size}" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4">${paths}</svg>`;
+  const xIcon =
+    '<svg width="11" height="11" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M2.5 2.5 9.5 9.5M9.5 2.5 2.5 9.5"/></svg>';
+  const caret =
+    '<svg class="caret" width="10" height="10" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m3 4.8 3 3 3-3"/></svg>';
+  const tick =
+    '<svg class="tick" width="12" height="12" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m2.8 7.4 2.7 2.7 5.7-6"/></svg>';
+
+  let nextId = 1;
+  const tasks = [];
+  let sel = null;
+
+  const dialog    = document.getElementById("dialog");
+  const stack     = document.getElementById("stack");
+  const rail      = document.getElementById("rail");
+  const subEl     = document.getElementById("sub");
+  const submitLbl = document.getElementById("submitLabel");
+
+  // ---------------------------------------------------------------- a task
+  function makeTask(text) {
+    const id = nextId++;
+    const el = document.createElement("div");
+    el.className = "task";
+    el.innerHTML = `
+      <div class="task-head">
+        <span class="num"></span>
+        <span class="cap">Task</span>
+        <span class="drop"></span>
+        <span class="spring"></span>
+        <button class="icon-x kill" aria-label="Remove this task">${xIcon}</button>
+      </div>
+      <textarea rows="1" placeholder="What should change?"></textarea>`;
+
+    const t = {
+      id, el,
+      ta: el.querySelector("textarea"),
+      ctx: new Set(["url", "shot"]),
+      model: "Opus 5", preprompt: "None", thinking: "Default",
+    };
+    t.ta.value = text || "";
+
+    const grow = () => { t.ta.style.height = "auto"; t.ta.style.height = t.ta.scrollHeight + "px"; };
+    t.ta.addEventListener("input", grow);
+    t.ta.addEventListener("focus", () => select(id));
+    el.addEventListener("mousedown", () => select(id));
+    el.querySelector(".kill").addEventListener("click", (e) => { e.stopPropagation(); removeTask(id); });
+
+    requestAnimationFrame(grow);
+    return t;
+  }
+
+  // ---------------------------------------------------------------- chain
+  function rebuild(focusId) {
+    stack.innerHTML = "";
+    tasks.forEach((t, i) => {
+      if (i > 0) {
+        const link = document.createElement("div");
+        link.className = "link";
+        link.innerHTML = '<span>then</span>';
+        stack.appendChild(link);
+      }
+      stack.appendChild(t.el);
+    });
+
+    const add = document.createElement("button");
+    add.className = "add-task";
+    add.innerHTML =
+      '<svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M7 2.8v8.4M2.8 7h8.4"/></svg>' +
+      (tasks.length ? "Then another task" : "Add a task");
+    add.addEventListener("click", (e) => { e.stopPropagation(); addTask(); });
+    stack.appendChild(add);
+
+    sync();
+    if (focusId != null) {
+      const t = tasks.find((x) => x.id === focusId);
+      if (t) { t.ta.focus(); stack.scrollTop = stack.scrollHeight; }
+    }
+  }
+
+  function sync() {
+    const n = tasks.length;
+    dialog.classList.toggle("multi", n > 1);
+    subEl.textContent = n > 1 ? n + " tasks, chained" : "";
+    submitLbl.textContent = n > 1 ? `Submit ${n} tasks` : "Submit";
+
+    tasks.forEach((t, i) => {
+      t.el.classList.toggle("sel", t.id === sel);
+      t.el.querySelector(".num").textContent = i + 1;
+      t.el.querySelector(".drop").textContent = i === 0 ? "" : `· runs after ${i}`;
+      t.el.querySelector(".kill").toggleAttribute("disabled", n === 1);
+    });
+
+    renderRail();
+  }
+
+  function select(id) {
+    if (sel === id) return;
+    sel = id;
+    closeMenu();
+    sync();
+  }
+
+  function addTask() {
+    const t = makeTask("");
+    tasks.push(t);
+    sel = t.id;
+    rebuild(t.id);
+  }
+
+  function removeTask(id) {
+    const i = tasks.findIndex((t) => t.id === id);
+    if (i < 0 || tasks.length === 1) return;
+    tasks.splice(i, 1);
+    if (sel === id) sel = tasks[Math.max(0, i - 1)].id;
+    rebuild(null);
+  }
+
+  // ---------------------------------------------------------------- rail
+  function renderRail() {
+    closeMenu();
+    const t = tasks.find((x) => x.id === sel) || tasks[0];
+    const i = tasks.indexOf(t);
+    const multi = tasks.length > 1;
+
+    rail.innerHTML = `
+      <div class="rail-title">${multi ? `How task <em>${i + 1}</em> runs` : "How it runs"}</div>
+      <div class="group">
+        <button class="row" data-menu="model" aria-haspopup="menu" aria-expanded="false">
+          <span class="k">Model</span><span class="v">${t.model} ${caret}</span>
+        </button>
+        <button class="row" data-menu="preprompt" aria-haspopup="menu" aria-expanded="false">
+          <span class="k">Preprompt</span><span class="v">${t.preprompt} ${caret}</span>
+        </button>
+        <div>
+          <div class="sub-label">Thinking</div>
+          <div class="seg" role="group" aria-label="Thinking mode">
+            ${THINKING.map((x) => `<button aria-pressed="${x === t.thinking}">${x}</button>`).join("")}
+          </div>
+        </div>
+      </div>
+      <div class="group">
+        <div class="rail-title">What it will see</div>
+        <div class="ctx"></div>
+      </div>
+      <button class="apply-all">
+        <svg width="12" height="12" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m2.4 7.4 2.6 2.6 6.6-6.6"/></svg>
+        Use for all ${tasks.length} tasks
+      </button>`;
+
+    // context list
+    const ctxEl = rail.querySelector(".ctx");
+    for (const key of Object.keys(CONTEXT)) {
+      const c = CONTEXT[key];
+      if (t.ctx.has(key)) {
+        const item = document.createElement("div");
+        item.className = "ctx-item";
+        item.innerHTML =
+          svg(c.icon, 13) +
+          `<div class="txt"><span class="n">${c.n}</span><span class="m">${c.m}</span></div>` +
+          `<button class="icon-x" aria-label="Remove ${c.n}">${xIcon}</button>`;
+        item.querySelector(".icon-x").addEventListener("click", () => { t.ctx.delete(key); renderRail(); });
+        ctxEl.appendChild(item);
+      } else {
+        const add = document.createElement("button");
+        add.className = "ctx-add";
+        add.innerHTML = svg(c.icon, 12) + c.add;
+        add.addEventListener("click", () => { t.ctx.add(key); renderRail(); });
+        ctxEl.appendChild(add);
+      }
+    }
+
+    // thinking segmented
+    rail.querySelector(".seg").addEventListener("click", (e) => {
+      const b = e.target.closest("button");
+      if (!b) return;
+      t.thinking = b.textContent;
+      renderRail();
+    });
+
+    // dropdown rows
+    rail.querySelectorAll(".row[data-menu]").forEach((btn) => {
+      btn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        const kind = btn.dataset.menu;
+        openMenu(btn, kind === "model" ? MODELS : PREPROMPTS, t[kind], (v) => { t[kind] = v; renderRail(); });
+      });
+    });
+
+    // apply to every task in the chain
+    const applyAll = rail.querySelector(".apply-all");
+    applyAll.addEventListener("click", () => {
+      tasks.forEach((x) => { x.model = t.model; x.preprompt = t.preprompt; x.thinking = t.thinking; });
+      applyAll.classList.add("done");
+      applyAll.lastChild.textContent = ` Applied to all ${tasks.length}`;
+    });
+  }
+
+  // ---------------------------------------------------------------- menu
+  let menuEl = null;
+  function closeMenu() {
+    if (menuEl) { menuEl.remove(); menuEl = null; }
+    document.querySelectorAll('[aria-expanded="true"]').forEach((b) => b.setAttribute("aria-expanded", "false"));
+  }
+
+  function openMenu(anchor, items, current, onPick) {
+    const wasOpen = anchor.getAttribute("aria-expanded") === "true";
+    closeMenu();
+    if (wasOpen) return;
+
+    anchor.setAttribute("aria-expanded", "true");
+    menuEl = document.createElement("div");
+    menuEl.className = "menu";
+    menuEl.setAttribute("role", "menu");
+    items.forEach((item) => {
+      const b = document.createElement("button");
+      b.className = "menu-item";
+      b.setAttribute("role", "menuitemradio");
+      b.setAttribute("aria-checked", String(item === current));
+      b.innerHTML = `<span>${item}</span>${tick}`;
+      b.addEventListener("click", (e) => { e.stopPropagation(); closeMenu(); onPick(item); });
+      menuEl.appendChild(b);
+    });
+
+    rail.appendChild(menuEl);
+    const a = anchor.getBoundingClientRect();
+    const r = rail.getBoundingClientRect();
+    menuEl.style.left = Math.max(6, a.right - r.left - 190) + "px";
+    menuEl.style.top = a.bottom - r.top + 4 + "px";
+  }
+
+  document.addEventListener("click", closeMenu);
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") closeMenu();
+    if ((e.metaKey || e.ctrlKey) && e.key === "Enter") { e.preventDefault(); submit(); }
+  });
+
+  // ---------------------------------------------------------------- submit
+  const filed = document.getElementById("filed");
+  const filedText = document.getElementById("filedText");
+  let filedTimer;
+
+  function submit() {
+    const n = tasks.length;
+    filedText.innerHTML =
+      n === 1
+        ? `Filed <b>1 task</b> under Improvements — starting on <b>${tasks[0].model}</b>`
+        : `Filed <b>${n} chained tasks</b> — ${tasks.map((t, i) => `${i + 1}·${t.model}`).join(" → ")}`;
+    filed.classList.add("show");
+    clearTimeout(filedTimer);
+    filedTimer = setTimeout(() => filed.classList.remove("show"), 2800);
+  }
+  document.getElementById("submit").addEventListener("click", (e) => { e.stopPropagation(); submit(); });
+
+  // ---------------------------------------------------------------- boot
+  tasks.push(makeTask("The Improve dialog's controls all shout at the same volume — the description is the point and it reads like the least important field on screen."));
+  tasks.push(makeTask("Then do the same pass on the task-draft popover, so both surfaces agree."));
+  tasks[1].model = "Sonnet 5";
+  sel = tasks[0].id;
+  rebuild(null);
+</script>
+</body>
+</html>

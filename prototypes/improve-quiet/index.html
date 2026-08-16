@@ -1,0 +1,620 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+<title>Improve — quiet composer</title>
+<meta name="description" content="The Improve dialog rebuilt as a composer: the text field is the whole surface, every setting drops to a quiet footer strip that follows the task you're in, and chaining a second task threads it below the first with a 'then' rule. Live — add, remove and switch tasks." />
+<meta name="prototype-viewport" content="1280x800" />
+
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; height: 100%; }
+
+  :root {
+    --bg:        #131315;
+    --scrim:     rgba(8,8,10,.62);
+    --surface:   #1e1e21;
+    --raised:    #26262a;
+    --line:      rgba(255,255,255,.075);
+    --line-firm: rgba(255,255,255,.13);
+    --ink:       #ececed;
+    --ink-2:     #a5a5ad;
+    --ink-3:     #6f6f79;
+    --accent:    #d0765c;
+    --accent-hi: #e08d74;
+    --focus:     rgba(208,118,92,.45);
+  }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--ink);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  #root {
+    width: 1280px; height: 800px; overflow: hidden;
+    position: relative;
+    display: grid; place-items: center;
+  }
+
+  /* ---- faint app behind the scrim, so the dialog has somewhere to be ---- */
+  .app { position: absolute; inset: 0; }
+  .app-bar {
+    height: 38px; border-bottom: 1px solid var(--line);
+    display: flex; align-items: center; gap: 8px; padding: 0 12px;
+    background: #171719;
+  }
+  .app-pill { height: 20px; border-radius: 6px; background: rgba(255,255,255,.055); }
+  .app-body { padding: 26px 30px; display: flex; flex-direction: column; gap: 12px; }
+  .app-line { height: 11px; border-radius: 4px; background: rgba(255,255,255,.04); }
+
+  .scrim { position: absolute; inset: 0; background: var(--scrim); backdrop-filter: blur(1.5px); }
+
+  /* ---------------- dialog ---------------- */
+  .dialog {
+    position: relative;
+    width: 552px;
+    background: var(--surface);
+    border: 1px solid var(--line-firm);
+    border-radius: 16px;
+    box-shadow:
+      0 0 0 1px rgba(0,0,0,.5),
+      0 24px 64px -12px rgba(0,0,0,.7),
+      0 4px 12px rgba(0,0,0,.4);
+    overflow: hidden;
+  }
+
+  .head {
+    display: flex; align-items: center; gap: 8px;
+    padding: 14px 16px 5px 18px;
+  }
+  .head h1 {
+    margin: 0; font-size: 13px; font-weight: 590; letter-spacing: .01em;
+    color: var(--ink-2);
+  }
+  .head .count {
+    font-size: 12px; color: var(--ink-3);
+    opacity: 0; transition: opacity .16s;
+  }
+  .dialog.multi .head .count { opacity: 1; }
+
+  /* ---------------- composer / task stack ---------------- */
+  .composer {
+    padding: 11px 18px 2px;
+    max-height: 396px; overflow-y: auto;
+  }
+  /* a rule appears under the title once the stack scrolls beneath it */
+  .composer.scrolled { box-shadow: inset 0 1px 0 var(--line-firm); }
+  .composer::-webkit-scrollbar { width: 9px; }
+  .composer::-webkit-scrollbar-thumb { background: rgba(255,255,255,.12); border-radius: 9px; border: 3px solid transparent; background-clip: content-box; }
+
+  /* one task */
+  .task { position: relative; padding-bottom: 4px; }
+
+  .task-head {
+    display: none; align-items: center; gap: 7px;
+    height: 22px; margin-bottom: 2px;
+  }
+  .dialog.multi .task-head { display: flex; }
+
+  .num {
+    width: 16px; height: 16px; flex: none; display: grid; place-items: center;
+    border-radius: 5px; background: rgba(255,255,255,.07);
+    font-size: 10px; font-weight: 640; color: var(--ink-3);
+    transition: background .14s, color .14s;
+  }
+  .task.sel .num { background: rgba(208,118,92,.22); color: var(--accent-hi); }
+  .task-head .chain { font-size: 11.5px; color: var(--ink-3); }
+  .task-head .spring { flex: 1; }
+
+  .kill {
+    width: 21px; height: 21px; flex: none; display: grid; place-items: center;
+    border: 0; border-radius: 6px; background: transparent; color: var(--ink-3);
+    cursor: pointer; padding: 0;
+    opacity: 0; transition: opacity .13s, background .13s, color .13s;
+  }
+  .task:hover .kill, .kill:focus-visible { opacity: 1; }
+  .kill:hover { background: rgba(255,255,255,.09); color: var(--ink); }
+
+  textarea {
+    display: block; width: 100%; min-height: 42px;
+    background: transparent; border: 0; outline: 0; resize: none;
+    color: var(--ink);
+    font: inherit; font-size: 15.5px; line-height: 1.55;
+    padding: 2px 0 4px;
+  }
+  .dialog:not(.multi) textarea { min-height: 112px; }
+  textarea::placeholder { color: var(--ink-3); }
+
+  /* the chain rule between two tasks */
+  .then {
+    display: flex; align-items: center; gap: 10px;
+    margin: 8px 0 12px;
+    font-size: 10.5px; font-weight: 620; letter-spacing: .09em;
+    text-transform: uppercase; color: var(--ink-3);
+  }
+  .then::before, .then::after {
+    content: ""; height: 1px; background: var(--line); flex: 1;
+  }
+  .then::before { max-width: 6px; }
+
+  /* attached context — what used to be two lonely checkboxes */
+  .context { display: flex; flex-wrap: wrap; gap: 6px; padding: 4px 0 8px; }
+
+  .chip {
+    display: inline-flex; align-items: center; gap: 6px;
+    height: 26px; padding: 0 8px 0 7px;
+    border-radius: 7px;
+    border: 1px solid var(--line-firm);
+    background: rgba(255,255,255,.035);
+    color: var(--ink-2);
+    font-size: 12px; font-weight: 480;
+    max-width: 260px;
+  }
+  .chip .mono {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 11.5px; color: var(--ink);
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .chip svg { flex: none; opacity: .7; }
+  .chip .x {
+    display: grid; place-items: center;
+    width: 15px; height: 15px; margin-left: 1px; margin-right: -2px;
+    border: 0; border-radius: 4px; background: transparent;
+    color: var(--ink-3); cursor: pointer; padding: 0;
+  }
+  .chip .x:hover { background: rgba(255,255,255,.09); color: var(--ink); }
+
+  .chip-add {
+    display: inline-flex; align-items: center; gap: 6px;
+    height: 26px; padding: 0 9px 0 7px;
+    border-radius: 7px;
+    border: 1px dashed var(--line-firm);
+    background: transparent; color: var(--ink-3);
+    font: inherit; font-size: 12px; font-weight: 480;
+    cursor: pointer;
+    transition: color .13s, border-color .13s, background .13s;
+  }
+  .chip-add:hover { color: var(--ink); border-color: rgba(255,255,255,.28); background: rgba(255,255,255,.03); }
+  .chip-add svg { opacity: .85; }
+
+  /* ---------------- settings strip ---------------- */
+  .strip {
+    position: relative;
+    display: flex; align-items: center; gap: 4px;
+    padding: 8px 12px 8px 14px;
+    border-top: 1px solid var(--line);
+    background: rgba(255,255,255,.018);
+  }
+  .strip-for {
+    display: none; align-items: center; gap: 6px;
+    padding-left: 2px; padding-right: 4px;
+    font-size: 11.5px; color: var(--ink-3);
+  }
+  .dialog.multi .strip-for { display: inline-flex; }
+
+  .ghost {
+    display: inline-flex; align-items: center; gap: 5px;
+    height: 27px; padding: 0 7px 0 8px;
+    border: 0; border-radius: 7px;
+    background: transparent; color: var(--ink-2);
+    font: inherit; font-size: 12.5px; font-weight: 480;
+    cursor: pointer;
+    transition: background .13s, color .13s;
+  }
+  .ghost:hover, .ghost[aria-expanded="true"] { background: rgba(255,255,255,.07); color: var(--ink); }
+  .ghost .caret { opacity: .5; margin-left: -1px; }
+  .ghost.is-set { color: var(--ink); }
+  .ghost.is-set .dot { width: 5px; height: 5px; border-radius: 999px; background: var(--accent); }
+
+  .sep { width: 1px; height: 16px; background: var(--line-firm); margin: 0 5px; }
+  .spring { flex: 1; }
+
+  /* ---------------- actions ---------------- */
+  .actions {
+    display: flex; align-items: center; gap: 8px;
+    padding: 12px 14px 14px 18px;
+    border-top: 1px solid var(--line);
+  }
+
+  .add-task {
+    display: inline-flex; align-items: center; gap: 6px;
+    height: 30px; padding: 0 10px 0 8px;
+    border: 0; border-radius: 8px; background: transparent;
+    color: var(--ink-3); font: inherit; font-size: 12.5px; font-weight: 500;
+    cursor: pointer; transition: background .13s, color .13s;
+  }
+  .add-task:hover { background: rgba(255,255,255,.06); color: var(--ink); }
+
+  .btn {
+    height: 32px; padding: 0 14px;
+    border-radius: 8px; border: 1px solid transparent;
+    font: inherit; font-size: 13px; font-weight: 550;
+    cursor: pointer;
+    transition: background .13s, border-color .13s, color .13s, transform .06s;
+  }
+  .btn:active { transform: translateY(.5px); }
+  .btn-quiet { background: transparent; color: var(--ink-2); }
+  .btn-quiet:hover { background: rgba(255,255,255,.07); color: var(--ink); }
+
+  .btn-primary {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: var(--accent); color: #17110e;
+    box-shadow: 0 1px 0 rgba(255,255,255,.15) inset, 0 1px 3px rgba(0,0,0,.4);
+  }
+  .btn-primary:hover { background: var(--accent-hi); }
+  .btn-primary kbd {
+    font: inherit; font-size: 11px; font-weight: 600;
+    color: rgba(23,17,14,.6); letter-spacing: .04em;
+  }
+
+  :is(button, textarea):focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+
+  /* ---------------- menus ---------------- */
+  .menu {
+    display: none;
+    position: absolute; bottom: calc(100% + 6px);
+    width: 198px; padding: 5px;
+    background: var(--raised);
+    border: 1px solid var(--line-firm);
+    border-radius: 11px;
+    box-shadow: 0 12px 32px -8px rgba(0,0,0,.7), 0 0 0 1px rgba(0,0,0,.4);
+    z-index: 5;
+  }
+  .menu.open { display: block; }
+  .menu-label {
+    padding: 6px 8px 5px; font-size: 10.5px; font-weight: 600;
+    letter-spacing: .07em; text-transform: uppercase; color: var(--ink-3);
+  }
+  .menu-item {
+    display: flex; align-items: center; gap: 8px; width: 100%;
+    height: 29px; padding: 0 8px; border: 0; border-radius: 7px;
+    background: transparent; color: var(--ink-2);
+    font: inherit; font-size: 12.5px; text-align: left; cursor: pointer;
+  }
+  .menu-item:hover { background: rgba(255,255,255,.07); color: var(--ink); }
+  .menu-item[aria-checked="true"] { color: var(--ink); }
+  .menu-item .tick { margin-left: auto; color: var(--accent); opacity: 0; }
+  .menu-item[aria-checked="true"] .tick { opacity: 1; }
+  .menu-note { margin-left: auto; font-size: 11px; color: var(--ink-3); }
+
+  /* ---------------- filed confirmation ---------------- */
+  .filed {
+    position: absolute; left: 0; right: 0; bottom: 0;
+    min-height: 58px; padding: 13px 18px;
+    background: var(--raised);
+    border-top: 1px solid var(--line-firm);
+    display: flex; align-items: center; gap: 9px;
+    font-size: 12.5px; color: var(--ink-2);
+    transform: translateY(100%); transition: transform .22s cubic-bezier(.2,.8,.3,1);
+  }
+  .filed.show { transform: none; }
+  .filed svg { color: var(--accent); flex: none; }
+  .filed b { color: var(--ink); font-weight: 560; }
+</style>
+</head>
+<body>
+<div id="root">
+
+  <!-- the app, dimmed -->
+  <div class="app" aria-hidden="true">
+    <div class="app-bar">
+      <div class="app-pill" style="width:78px"></div>
+      <div class="app-pill" style="width:52px"></div>
+      <div class="app-pill" style="width:52px"></div>
+      <div style="flex:1"></div>
+      <div class="app-pill" style="width:26px"></div>
+      <div class="app-pill" style="width:26px"></div>
+    </div>
+    <div class="app-body">
+      <div class="app-line" style="width:210px"></div>
+      <div class="app-line" style="width:640px"></div>
+      <div class="app-line" style="width:520px"></div>
+      <div class="app-line" style="width:580px"></div>
+      <div class="app-line" style="width:300px"></div>
+    </div>
+  </div>
+  <div class="scrim" aria-hidden="true"></div>
+
+  <div class="dialog" id="dialog" role="dialog" aria-label="Improve this app">
+
+    <div class="head">
+      <h1>Improve this app</h1>
+      <span class="count" id="count"></span>
+    </div>
+
+    <div class="composer" id="composer"></div>
+
+    <div class="strip">
+      <span class="strip-for" id="stripFor"></span>
+
+      <button class="ghost is-set" data-menu="model" aria-haspopup="menu" aria-expanded="false">
+        <span class="dot"></span>
+        <span data-value="model">Opus 5</span>
+        <svg class="caret" width="10" height="10" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m3 4.8 3 3 3-3"/></svg>
+      </button>
+
+      <div class="sep"></div>
+
+      <button class="ghost" data-menu="preprompt" aria-haspopup="menu" aria-expanded="false">
+        <span data-value="preprompt">Preprompt</span>
+        <svg class="caret" width="10" height="10" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m3 4.8 3 3 3-3"/></svg>
+      </button>
+
+      <button class="ghost" data-menu="thinking" aria-haspopup="menu" aria-expanded="false">
+        <span data-value="thinking">Default thinking</span>
+        <svg class="caret" width="10" height="10" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m3 4.8 3 3 3-3"/></svg>
+      </button>
+
+      <div class="spring"></div>
+    </div>
+
+    <div class="actions">
+      <button class="add-task" id="addTask">
+        <svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M7 2.8v8.4M2.8 7h8.4"/></svg>
+        Another task
+      </button>
+      <div class="spring"></div>
+      <button class="btn btn-quiet">Cancel</button>
+      <button class="btn btn-primary" id="submit">
+        <span id="submitLabel">Submit</span> <kbd>⌘↵</kbd>
+      </button>
+    </div>
+
+    <div class="filed" id="filed">
+      <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="m2.4 7.4 2.6 2.6 6.6-6.6"/></svg>
+      <span id="filedText"></span>
+    </div>
+
+  </div>
+</div>
+
+<script>
+  // ---------------------------------------------------------------- data
+  const OPTIONS = {
+    model:     { label: "Auto-start with", items: ["Opus 5", "Sonnet 5", "Haiku 4.5", "Don't start"] },
+    preprompt: { label: "Preprompt",       items: ["None", "UI polish", "Bug hunt", "Refactor"] },
+    thinking:  { label: "Thinking mode",   items: ["Default thinking", "Think", "Think hard", "Ultrathink"] },
+  };
+
+  const CONTEXT = {
+    url:     { name: "/agents/c/3f2a91", mono: true,  add: "Page URL",
+               icon: '<path d="M6.5 9.5 9.5 6.5M7 4.5 8.4 3.1a2.7 2.7 0 0 1 3.8 3.8L10.8 8.3M9 11.5 7.6 12.9a2.7 2.7 0 0 1-3.8-3.8L5.2 7.7"/>' },
+    shot:    { name: "Screenshot", add: "Screenshot",
+               icon: '<rect x="2.2" y="3.2" width="11.6" height="9.6" rx="1.6"/><path d="m4.4 11 2.6-3 2 2.2 1.6-1.6 2.4 2.4"/>' },
+    element: { name: "button.improve", mono: true, add: "Point at something",
+               icon: '<path d="M7.6 2.2v2.2M7.6 10.8V13M2.2 7.6h2.2M10.8 7.6H13"/><circle cx="7.6" cy="7.6" r="2.4"/>' },
+  };
+
+  const svg = (paths, size) =>
+    `<svg width="${size}" height="${size}" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4">${paths}</svg>`;
+  const xIcon =
+    '<svg width="9" height="9" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M2.5 2.5 9.5 9.5M9.5 2.5 2.5 9.5"/></svg>';
+
+  let nextId = 1;
+  const tasks = [];
+  let sel = null;
+
+  const dialog    = document.getElementById("dialog");
+  const composer  = document.getElementById("composer");
+  const countEl   = document.getElementById("count");
+  const stripFor  = document.getElementById("stripFor");
+  const submitLbl = document.getElementById("submitLabel");
+
+  // ---------------------------------------------------------------- a task
+  function makeTask(text) {
+    const id = nextId++;
+    const el = document.createElement("div");
+    el.className = "task";
+    el.innerHTML = `
+      <div class="task-head">
+        <span class="num"></span>
+        <span class="chain"></span>
+        <span class="spring"></span>
+        <button class="kill" aria-label="Remove this task">${xIcon}</button>
+      </div>
+      <textarea rows="1" placeholder="What should change?"></textarea>
+      <div class="context"></div>`;
+
+    const t = {
+      id, el,
+      ta: el.querySelector("textarea"),
+      ctxEl: el.querySelector(".context"),
+      ctx: new Set(["url"]),
+      model: "Opus 5", preprompt: "Preprompt", thinking: "Default thinking",
+    };
+    t.ta.value = text || "";
+
+    const grow = () => { t.ta.style.height = "auto"; t.ta.style.height = t.ta.scrollHeight + "px"; };
+    t.ta.addEventListener("input", grow);
+    t.ta.addEventListener("focus", () => select(id));
+    el.addEventListener("mousedown", () => select(id));
+    el.querySelector(".kill").addEventListener("click", (e) => { e.stopPropagation(); removeTask(id); });
+
+    renderContext(t);
+    requestAnimationFrame(grow);
+    return t;
+  }
+
+  function renderContext(t) {
+    t.ctxEl.innerHTML = "";
+    for (const key of Object.keys(CONTEXT)) {
+      const c = CONTEXT[key];
+      if (t.ctx.has(key)) {
+        const chip = document.createElement("span");
+        chip.className = "chip";
+        chip.innerHTML =
+          svg(c.icon, 12) +
+          `<span class="${c.mono ? "mono" : ""}">${c.name}</span>` +
+          `<button class="x" aria-label="Remove ${c.add}">${xIcon}</button>`;
+        chip.querySelector(".x").addEventListener("click", (e) => {
+          e.stopPropagation();
+          t.ctx.delete(key);
+          renderContext(t);
+        });
+        t.ctxEl.appendChild(chip);
+      } else {
+        const add = document.createElement("button");
+        add.className = "chip-add";
+        add.innerHTML = svg(c.icon, 12) + c.add;
+        add.addEventListener("click", (e) => {
+          e.stopPropagation();
+          t.ctx.add(key);
+          renderContext(t);
+        });
+        t.ctxEl.appendChild(add);
+      }
+    }
+  }
+
+  // ---------------------------------------------------------------- stack
+  function rebuild(focusId) {
+    composer.innerHTML = "";
+    tasks.forEach((t, i) => {
+      if (i > 0) {
+        const rule = document.createElement("div");
+        rule.className = "then";
+        rule.textContent = "then";
+        composer.appendChild(rule);
+      }
+      composer.appendChild(t.el);
+    });
+    sync();
+    syncScroll();
+    requestAnimationFrame(syncScroll);
+    if (focusId != null) {
+      const t = tasks.find((x) => x.id === focusId);
+      if (t) { t.ta.focus(); composer.scrollTop = composer.scrollHeight; }
+    }
+  }
+
+  function sync() {
+    const n = tasks.length;
+    dialog.classList.toggle("multi", n > 1);
+    countEl.textContent = n > 1 ? n + " tasks" : "";
+    submitLbl.textContent = n > 1 ? `Submit ${n} tasks` : "Submit";
+
+    tasks.forEach((t, i) => {
+      t.el.classList.toggle("sel", t.id === sel);
+      t.el.querySelector(".num").textContent = i + 1;
+      t.el.querySelector(".chain").textContent = i === 0 ? "" : `runs after ${i}`;
+    });
+
+    const cur = tasks.find((t) => t.id === sel) || tasks[0];
+    stripFor.textContent = `Task ${tasks.indexOf(cur) + 1} ·`;
+    for (const kind of Object.keys(OPTIONS)) {
+      document.querySelector(`[data-value="${kind}"]`).textContent = cur[kind];
+    }
+  }
+
+  function select(id) {
+    if (sel === id) return;
+    sel = id;
+    closeMenus();
+    sync();
+  }
+
+  function addTask() {
+    const t = makeTask("");
+    tasks.push(t);
+    sel = t.id;
+    rebuild(t.id);
+  }
+
+  function removeTask(id) {
+    const i = tasks.findIndex((t) => t.id === id);
+    if (i < 0 || tasks.length === 1) return;
+    tasks.splice(i, 1);
+    if (sel === id) sel = tasks[Math.max(0, i - 1)].id;
+    rebuild(null);
+  }
+
+  // ---------------------------------------------------------------- menus
+  function closeMenus() {
+    document.querySelectorAll(".menu.open").forEach((m) => m.classList.remove("open"));
+    document.querySelectorAll('.ghost[aria-expanded="true"]').forEach((b) => b.setAttribute("aria-expanded", "false"));
+  }
+
+  document.querySelectorAll(".ghost[data-menu]").forEach((btn) => {
+    const kind = btn.dataset.menu;
+    const spec = OPTIONS[kind];
+
+    const menu = document.createElement("div");
+    menu.className = "menu";
+    menu.setAttribute("role", "menu");
+    menu.style.left = "10px";
+    menu.innerHTML = `<div class="menu-label">${spec.label}</div>`;
+    spec.items.forEach((item) => {
+      const b = document.createElement("button");
+      b.className = "menu-item";
+      b.setAttribute("role", "menuitemradio");
+      b.innerHTML =
+        `<span>${item}</span>` +
+        (item === "Don't start" ? '<span class="menu-note">file only</span>' : "") +
+        '<svg class="tick" width="12" height="12" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m2.8 7.4 2.7 2.7 5.7-6"/></svg>';
+      b.addEventListener("click", (e) => {
+        e.stopPropagation();
+        const cur = tasks.find((t) => t.id === sel);
+        cur[kind] = item;
+        closeMenus();
+        sync();
+      });
+      menu.appendChild(b);
+    });
+    btn.parentElement.appendChild(menu);
+
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const open = menu.classList.contains("open");
+      closeMenus();
+      if (!open) {
+        menu.style.left = btn.offsetLeft + "px";
+        menu.classList.add("open");
+        btn.setAttribute("aria-expanded", "true");
+        const cur = tasks.find((t) => t.id === sel);
+        menu.querySelectorAll(".menu-item").forEach((mi) =>
+          mi.setAttribute("aria-checked", String(mi.firstElementChild.textContent === cur[kind]))
+        );
+      }
+    });
+  });
+
+  function syncScroll() {
+    composer.classList.toggle("scrolled", composer.scrollTop > 2);
+  }
+  composer.addEventListener("scroll", syncScroll);
+
+  document.addEventListener("click", closeMenus);
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") closeMenus();
+    if ((e.metaKey || e.ctrlKey) && e.key === "Enter") { e.preventDefault(); submit(); }
+  });
+
+  // ---------------------------------------------------------------- submit
+  const filed = document.getElementById("filed");
+  const filedText = document.getElementById("filedText");
+  let filedTimer;
+
+  function submit() {
+    const n = tasks.length;
+    filedText.innerHTML =
+      n === 1
+        ? `Filed <b>1 task</b> — starting on <b>${tasks[0].model}</b>`
+        : `Filed <b>${n} tasks</b>, chained — ${tasks.map((t, i) => `${i + 1}. ${t.model}`).join(" → ")}`;
+    filed.classList.add("show");
+    clearTimeout(filedTimer);
+    filedTimer = setTimeout(() => filed.classList.remove("show"), 2600);
+  }
+  document.getElementById("submit").addEventListener("click", (e) => { e.stopPropagation(); submit(); });
+  document.getElementById("addTask").addEventListener("click", (e) => { e.stopPropagation(); addTask(); });
+
+  // ---------------------------------------------------------------- boot
+  tasks.push(makeTask("The Improve dialog's controls all shout at the same volume. The description is the whole point and it reads like the least important field on screen."));
+  sel = tasks[0].id;
+  rebuild(null);
+</script>
+</body>
+</html>
