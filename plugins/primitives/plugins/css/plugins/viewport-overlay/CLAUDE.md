@@ -70,6 +70,7 @@ pane-relative overlay) or
     - `debug/queue`
     - `improve/element-picker`
     - `page/editor`
+    - `primitives/adaptive-bar`
     - `primitives/floating-surface`
     - `primitives/text-editor/paste-images`
     - `screenshot/draw-on-app`

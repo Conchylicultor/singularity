@@ -10,11 +10,8 @@ import {
 } from "react";
 import { useResizeObserver } from "@plugins/primitives/plugins/element-size/web";
 import { MdExpandLess, MdExpandMore } from "react-icons/md";
-import {
-  useEditMode,
-  ReorderLayoutContext,
-  type ReorderLayout,
-} from "@plugins/reorder/web";
+import { useEditMode } from "@plugins/primitives/plugins/edit-mode-signal/web";
+import { ReorderLayoutContext, type ReorderLayout } from "@plugins/reorder/web";
 import { rectSortingStrategy } from "@plugins/primitives/plugins/sortable-list/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 
@@ -90,7 +87,7 @@ export function CollapsibleWrap({
   );
 
   // --- Overflow + clamp-height detection ------------------------------------
-  // Mirror responsive-overflow: ResizeObserver on the wrap box, deferred via
+  // Mirror adaptive-bar: ResizeObserver on the wrap box, deferred via
   // requestAnimationFrame. No timers/polling. We track both the 1-row clamp
   // height (the box's fixed layout height in BOTH states) and the full content
   // height (used to size the expanded popover backdrop).

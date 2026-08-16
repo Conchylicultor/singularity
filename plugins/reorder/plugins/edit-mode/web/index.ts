@@ -1,7 +1,10 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { ActionBar } from "@plugins/shell/plugins/action-bar/web";
 import { defineShortcut } from "@plugins/primitives/plugins/shortcuts/web";
-import { getEditMode, setEditMode } from "@plugins/reorder/web";
+import {
+  getEditMode,
+  setEditMode,
+} from "@plugins/primitives/plugins/edit-mode-signal/web";
 import { PenButton } from "./internal/pen-button";
 
 export default {

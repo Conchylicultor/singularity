@@ -57,7 +57,8 @@ const INSET = /^inset(?:-x|-y)?-(?:\d|px|auto|full|\[)/;
 const FLEX = /^(?:flex|inline-flex)$|^flex-|^basis-/;
 // Grid family: `grid`, `inline-grid`, every `grid-*`, and grid placement
 // (`col-span-*`, `col-start-*`, `row-end-*`, `col-auto`, …).
-const GRID = /^(?:grid|inline-grid)$|^grid-|^(?:col|row)-(?:span|start|end|auto)/;
+const GRID =
+  /^(?:grid|inline-grid)$|^grid-|^(?:col|row)-(?:span|start|end|auto)/;
 // Flex-child sizing. `flex-grow`/`flex-shrink` are already caught by FLEX.
 const SHRINK_GROW = /^(?:shrink|grow)(?:-|$)/;
 // The truncation-leaf footgun — min-width:0 at the wrong altitude is the churn.
@@ -102,7 +103,8 @@ const CLASS_BUILDERS = new Set(["cn", "clsx", "twMerge"]);
 function staticPropKey(prop: TSESTree.Property): string | null {
   if (prop.computed) return null;
   if (prop.key.type === "Identifier") return prop.key.name;
-  if (prop.key.type === "Literal" && typeof prop.key.value === "string") return prop.key.value;
+  if (prop.key.type === "Literal" && typeof prop.key.value === "string")
+    return prop.key.value;
   return null;
 }
 
@@ -113,7 +115,10 @@ function staticPropKey(prop: TSESTree.Property): string | null {
  * Structural (visit every child node) so it is robust to however the class
  * string is assembled (bare literal, template, `cn(...)`, ternaries, nesting).
  */
-function collectTokens(node: TSESTree.Node | null | undefined, out: Set<string>): void {
+function collectTokens(
+  node: TSESTree.Node | null | undefined,
+  out: Set<string>,
+): void {
   if (!node) return;
   if (node.type === "Literal") {
     if (typeof node.value === "string") {
@@ -164,15 +169,15 @@ export default createRule({
     messages: {
       adhocLayout:
         "Raw layout class `{{token}}` is banned — compose layout through the primitives: " +
-        "<Stack direction=\"row\">/<Cluster>/<Row> for horizontal rows, " +
+        '<Stack direction="row">/<Cluster>/<Row> for horizontal rows, ' +
         "<Grid>/<Center>/<Overlay> from @plugins/primitives/plugins/css/plugins/*, " +
         "<Stack gap>/<Inset pad> from @plugins/primitives/plugins/css/plugins/spacing/web, or <Text> " +
         "inside a line container for the min-w-0 truncation leaf. A genuine one-off escapes per-site with " +
         "`// eslint-disable-next-line layout/no-adhoc-layout -- <reason>`.",
       adhocStylePosition:
-        "Inline `position: \"{{value}}\"` is banned — anchor a cursor menu via CursorAnchoredMenu " +
-        "(@plugins/primitives/plugins/cursor-menu/web), measure off-screen via MeasureStrip " +
-        "(@plugins/primitives/plugins/css/plugins/measure-strip/web), or compose fixed/absolute through " +
+        'Inline `position: "{{value}}"` is banned — anchor a cursor menu via CursorAnchoredMenu ' +
+        "(@plugins/primitives/plugins/cursor-menu/web), collapse an overflowing bar via AdaptiveBar " +
+        "(@plugins/primitives/plugins/adaptive-bar/web), or compose fixed/absolute through " +
         "<Overlay>/<Pin>/ViewportOverlay. Genuine one-off: " +
         "`// eslint-disable-next-line layout/no-adhoc-layout -- <reason>`.",
     },
@@ -183,7 +188,11 @@ export default createRule({
       for (const token of tokens) {
         const c = baseClass(token);
         if (LAYOUT_PATTERNS.some((re) => re.test(c))) {
-          context.report({ node, messageId: "adhocLayout", data: { token: c } });
+          context.report({
+            node,
+            messageId: "adhocLayout",
+            data: { token: c },
+          });
         }
       }
     }
@@ -210,10 +219,18 @@ export default createRule({
       for (const prop of expr.properties) {
         if (prop.type !== "Property") continue;
         if (staticPropKey(prop) !== "position") continue;
-        if (prop.value.type !== "Literal" || typeof prop.value.value !== "string") continue;
+        if (
+          prop.value.type !== "Literal" ||
+          typeof prop.value.value !== "string"
+        )
+          continue;
         const value = prop.value.value;
         if (POSITION.test(value)) {
-          context.report({ node: prop, messageId: "adhocStylePosition", data: { value } });
+          context.report({
+            node: prop,
+            messageId: "adhocStylePosition",
+            data: { value },
+          });
         }
       }
     }
@@ -230,7 +247,10 @@ export default createRule({
         }
       },
       CallExpression(node) {
-        if (node.callee.type !== "Identifier" || !CLASS_BUILDERS.has(node.callee.name)) {
+        if (
+          node.callee.type !== "Identifier" ||
+          !CLASS_BUILDERS.has(node.callee.name)
+        ) {
           return;
         }
         const tokens = new Set<string>();

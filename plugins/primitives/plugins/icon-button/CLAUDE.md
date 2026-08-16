@@ -5,16 +5,20 @@
 rendering a bare `<Icon/>`. Its height is ambient (set by the region's
 `ControlSizeProvider` / slot `controlSize`) — it never sizes itself.
 
-## Presentation
+## Shrink form
 
 Because `IconButton` *is* the generic `{ icon, label, onClick }` action, it is the
-one place the ambient presentation is honored: under an `<ActionPresentation
-mode="menu">` region (`@plugins/primitives/plugins/action-presentation`) it
-returns a `MenuActionItem` — a labelled dropdown row — instead of the ghost icon
-box. Every action built on it (incl. `RowActionButton`) inherits that for free;
-no call site changes, since the default mode is `inline`. `variant`, `className`,
-`tooltip` and `side` are inert in menu form. Under `probe` it renders nothing and
-only counts itself, so a region can tell an empty action set from a populated one.
+one widget for which "a labelled row" is a lossless smaller form of itself — so
+it is the one that declares the `"row"` rung to
+`@plugins/primitives/plugins/action-presentation`
+(`useActionForm({ shrinksTo: ["row"] })`). When a bar runs out of room and
+relocates it, it renders as a `PanelActionRow`; `variant`, `className`, `tooltip`
+and `side` are inert in that form. Every action built on it (incl.
+`RowActionButton`) inherits the rung for free, and with no bar above — every
+ordinary call site — the hook is a constant `"full"` and the declaration a no-op.
+
+It deliberately does NOT declare `"compact"`: an icon button is already an
+icon-only square, so it has no narrower form of itself to offer.
 
 ## Enforcement
 
@@ -37,9 +41,8 @@ stateful-indicator children; a justified one-off (e.g. a per-model glyph size
 - Description: Ghost icon button with tooltip. Composes Button + Tooltip into a single component.
 - Web:
   - Uses:
-    - `primitives/action-presentation.MenuActionItem`
-    - `primitives/action-presentation.useActionPresentation`
-    - `primitives/action-presentation.useReportActionPresence`
+    - `primitives/action-presentation.PanelActionRow`
+    - `primitives/action-presentation.useActionForm`
     - `primitives/css/ui-kit.Button`
     - `primitives/css/ui-kit.DensityControlled`
     - `primitives/shortcuts.formatShortcutLabel`
@@ -102,6 +105,7 @@ stateful-indicator children; a justified one-off (e.g. a per-model glyph size
     - `page/editor`
     - `page/formatting/color`
     - `page/formatting/link`
+    - `primitives/adaptive-bar`
     - `primitives/collapsible-wrap`
     - `primitives/data-view`
     - `primitives/data-view/custom-columns`
@@ -109,7 +113,6 @@ stateful-indicator children; a justified one-off (e.g. a per-model glyph size
     - `primitives/date-picker`
     - `primitives/folder-picker`
     - `primitives/launch`
-    - `primitives/overflow-menu`
     - `primitives/pane`
     - `primitives/prompt-editor/voice-input`
     - `primitives/row-actions`

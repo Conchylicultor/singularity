@@ -18,9 +18,10 @@ export default {
     // contribution, so sibling plugins (e.g. Present) extend it without
     // touching this plugin.
     prototypeDetailPane.Actions({
+      id: "view-mode",
       component: ViewModeSwitcher,
       position: "left",
     }),
-    prototypeDetailPane.Actions({ component: ImproveButton }),
+    prototypeDetailPane.Actions({ id: "improve", component: ImproveButton }),
   ],
 } satisfies PluginDefinition;

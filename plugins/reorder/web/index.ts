@@ -8,11 +8,6 @@ import { ReorderItemMiddleware } from "./internal/dnd-item-middleware";
 import { reorderConfigContributions } from "./internal/config-registrations";
 import "./styles.css";
 
-export {
-  getEditMode,
-  setEditMode,
-  useEditMode,
-} from "./internal/edit-mode-store";
 export { ReorderLayoutContext } from "./internal/reorder-layout";
 export type { ReorderLayout } from "./internal/reorder-layout";
 export { useReorderedEntries } from "./internal/use-reordered-entries";

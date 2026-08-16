@@ -1,20 +1,17 @@
 import { linkGestureProps } from "@plugins/primitives/plugins/link-gesture/web";
 import {
   Button,
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
   SingleLineProvider,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Bar } from "@plugins/primitives/plugins/bar/web";
-import { Fragment, useContext, useRef, useState, type ReactNode } from "react";
-import { useResizeObserver } from "@plugins/primitives/plugins/element-size/web";
-import { MeasureStrip } from "@plugins/primitives/plugins/css/plugins/measure-strip/web";
-import { MdClose, MdMoreHoriz, MdOpenInFull } from "react-icons/md";
+import { useContext, type ReactNode } from "react";
+import { AdaptiveBar } from "@plugins/primitives/plugins/adaptive-bar/web";
+import { MdClose, MdOpenInFull } from "react-icons/md";
 import { renderIsolated } from "@plugins/primitives/plugins/slot-render/web";
 import type { Contribution } from "@plugins/framework/plugins/web-sdk/core";
 import { ContentScope } from "@plugins/primitives/plugins/select-scope/web";
 import { Column } from "@plugins/primitives/plugins/css/plugins/column/web";
+import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { PaneScroll } from "./pane-scroll";
@@ -39,8 +36,8 @@ interface PaneChromeProps {
    */
   actions?: ReactNode;
   /**
-   * When true, suppresses the right-side `OverflowActionsBar` (slot-based
-   * `position="right"` contributions). A flex-1 spacer is still rendered so
+   * When true, suppresses the right-side action bar (slot-based
+   * `position="right"` contributions). A `Fill` is still rendered so
    * expand/close stay pinned to the far right. Use when the host renders
    * right-side actions elsewhere (e.g. inside the content area).
    */
@@ -87,25 +84,6 @@ interface PaneChromeProps {
  * NO overflow-collapse. The body wrapper and single scroll are unchanged either
  * way.
  */
-/**
- * A ReactNode pane title (breadcrumbs, chips, a conversation title) — laid out
- * as a shrinkable row so multi-segment compositions align on one baseline.
- *
- * Extracted because both title branches rendered this byte-for-byte, each with
- * its own copy of the suppression below. One definition is also what keeps that
- * suppression stable: at this indentation the element fits on one line, so the
- * formatter has nothing to reflow and the positional directive cannot drift off
- * the code it means.
- */
-function NodeTitle({ children }: { children: ReactNode }) {
-  return (
-    // eslint-disable-next-line layout/no-adhoc-layout -- node title needs inline-flex baseline alignment for breadcrumb-style multi-segment compositions
-    <Text as="div" variant="label" className="flex min-w-0 items-center">
-      {children}
-    </Text>
-  );
-}
-
 export function PaneChrome({
   pane,
   title,
@@ -161,7 +139,7 @@ export function PaneChrome({
                 ) : headerSpill ? (
                   // Node title in a spill-enabled header (e.g. a `CollapsibleWrap`).
                   // The Bar's `overflow-visible` (headerSpill) is not enough on its
-                  // own: this `<Text>` wrapper sits in the Bar's single-line context,
+                  // own: `NodeTitle`'s `<Text>` sits in the Bar's single-line context,
                   // so it would auto-apply the `truncate` recipe (`overflow:hidden`)
                   // and re-clip the very spill headerSpill opened. Reset the
                   // single-line context so the wrapper stops clipping — the node owns
@@ -181,10 +159,20 @@ export function PaneChrome({
                 ))}
               <PaneActionsSlot pane={pane} position="left" />
               {hideRightActions ? (
-                // eslint-disable-next-line layout/no-adhoc-layout -- explicit flex-grow spacer to push expand/close buttons to far right inside Bar's flex row
-                <div className="flex-1" />
+                <Fill />
               ) : (
-                <OverflowActionsBar pane={pane} extraActions={actions} />
+                // The bar IS the row's grow cell (`min-w-0 flex-1`), which is
+                // why there is no `Fill` beside it: a second claimant on the
+                // same slack breaks the one contract the primitive has. Which is
+                // also why `align` is the bar's own prop — nothing outside it
+                // can place occupants within slack it has taken entirely.
+                <AdaptiveBar gap="xs" label="More actions" align="end">
+                  <PaneActionsSlot
+                    pane={pane}
+                    position="right"
+                    extra={actions}
+                  />
+                </AdaptiveBar>
               )}
             </>
           )}
@@ -247,6 +235,32 @@ function CustomHeader({ header }: { header: PaneHeaderZones }) {
   );
 }
 
+/**
+ * A non-string pane title (a breadcrumb, a chip row, a `CollapsibleWrap`).
+ *
+ * It gets the SAME `label` typography baseline as a string title, so a title
+ * node inherits the canonical pane-title size instead of drifting to the ambient
+ * body size. The size is enforced by this container (CSS inheritance), so title
+ * nodes need not — and should not — set their own; per-segment weight/color (e.g.
+ * a breadcrumb's) still composes on top.
+ *
+ * One component for both header branches — the spill branch differs only by the
+ * `SingleLineProvider` around it, so the markup itself has one home.
+ */
+function NodeTitle({ children }: { children: ReactNode }) {
+  return (
+    // `Line` is nearly this — `flex items-center` — but composing it here inverts
+    // the display class: `Text` passes its own single-line leaf recipe
+    // (`inline-block …`) down as `className`, which `cn` then resolves as the
+    // WINNER over `Line`'s `flex`, so the row silently stops being a row. Hence a
+    // raw class, kept on one prettier-stable line so the directive cannot drift.
+    // eslint-disable-next-line layout/no-adhoc-layout -- node title needs a flex row for breadcrumb-style multi-segment compositions; see above for why Line cannot supply it
+    <Text as="div" variant="label" className="flex min-w-0 items-center">
+      {children}
+    </Text>
+  );
+}
+
 function chromeTitle(pane: AnyPane, match: PaneMatch | null): ReactNode {
   const chrome = pane._internal.chrome;
   if (chrome.title === undefined) return null;
@@ -256,173 +270,56 @@ function chromeTitle(pane: AnyPane, match: PaneMatch | null): ReactNode {
   return chrome.title(entry.fullParams);
 }
 
+/**
+ * A pane's `Actions` contributions for one side.
+ *
+ * Each contribution is wrapped in an `AdaptiveBar.Item` UNCONDITIONALLY — the
+ * item is transparent when there is no bar above it, so `position="left"`
+ * (which renders straight into the pane `Bar`) gets exactly what it always got,
+ * and `position="right"` becomes an occupant of the header's `AdaptiveBar`
+ * without this component having to know which side it is on.
+ *
+ * The right side renders a bare fragment rather than a wrapper element, and
+ * that is structural, not cosmetic: the bar docks each occupant's container
+ * immediately before that occupant's own anchor, as a direct child of the bar
+ * root. An anchor nested inside a wrapper would have no such placement. The
+ * `gap` comes from the bar itself.
+ */
 export function PaneActionsSlot({
   pane,
   position = "right",
+  extra,
 }: {
   pane: AnyPane;
   position?: "left" | "right";
+  /**
+   * The host's own per-instance control, joining the contributed ones as one
+   * more bar occupant under the id `pane-extra`. Named `extra` rather than
+   * `actions` because it is one header control, not the hover-revealed trailing
+   * cluster `row-actions/no-raw-actions-slot` guards — that rule's vocabulary
+   * and a pane header's are two different things.
+   */
+  extra?: ReactNode;
 }) {
-  const actions = pane.Actions.useContributions().filter(
+  const contributions = pane.Actions.useContributions().filter(
     (a) => (a.position ?? "right") === position,
   );
-  if (actions.length === 0) return null;
+  if (contributions.length === 0 && extra == null) return null;
+  const items = contributions.map((a) => (
+    <AdaptiveBar.Item key={a.id} id={a.id}>
+      {renderIsolated(pane.Actions.id, a as unknown as Contribution)}
+    </AdaptiveBar.Item>
+  ));
+  if (extra != null) {
+    items.push(
+      <AdaptiveBar.Item key="pane-extra" id="pane-extra">
+        {extra}
+      </AdaptiveBar.Item>,
+    );
+  }
+  if (position === "right") return <>{items}</>;
   return (
     // eslint-disable-next-line layout/no-adhoc-layout -- horizontal chip row of action contributions inside Bar; Frame needs named slots but this is a dynamic list
-    <div className="flex items-center gap-xs">
-      {actions.map((a, i) => (
-        <Fragment key={i}>
-          {renderIsolated(pane.Actions.id, a as unknown as Contribution)}
-        </Fragment>
-      ))}
-    </div>
-  );
-}
-
-const MORE_BTN_W = 32; // size-icon button (w-8)
-const GAP = 4; // gap-1 = 4px
-
-/**
- * Right-side action bar with overflow detection. Fills available space (flex-1)
- * between left content and the fixed expand/close buttons. When contributions
- * don't all fit, the rightmost ones collapse behind a "⋯" popover.
- */
-function OverflowActionsBar({
-  pane,
-  extraActions,
-}: {
-  pane: AnyPane;
-  extraActions?: ReactNode;
-}) {
-  const slotActions = pane.Actions.useContributions().filter(
-    (a) => (a.position ?? "right") === "right",
-  );
-  const hasExtra = extraActions != null;
-  const totalCount = slotActions.length + (hasExtra ? 1 : 0);
-
-  const containerRef = useRef<HTMLDivElement>(null);
-  const measureRef = useRef<HTMLDivElement>(null);
-  // Start fully expanded; the synchronous initial measure corrects before first paint.
-  const [visibleCount, setVisibleCount] = useState(totalCount);
-
-  // The primitive runs this synchronously on mount (no-flash initial measure)
-  // and RAF-debounced on every container resize — so the setState never lands
-  // during the layout phase mutating the toolbar DOM and re-firing the observer
-  // (the ResizeObserver loop Chrome warns about).
-  useResizeObserver(
-    containerRef,
-    () => {
-      const container = containerRef.current;
-      const measure = measureRef.current;
-      if (!container || !measure) return;
-
-      const available = container.offsetWidth;
-      const items = Array.from(measure.children) as HTMLElement[];
-
-      if (items.length === 0) {
-        setVisibleCount(0);
-        return;
-      }
-
-      // Check if everything fits without a "more" button.
-      const totalW = items.reduce(
-        (acc, el, i) => acc + el.offsetWidth + (i > 0 ? GAP : 0),
-        0,
-      );
-      if (totalW <= available) {
-        setVisibleCount(items.length);
-        return;
-      }
-
-      // Find the largest prefix that fits with the "more" button.
-      let used = 0;
-      let count = 0;
-      for (const [i, item] of items.entries()) {
-        const w = item.offsetWidth;
-        const gapBefore = i > 0 ? GAP : 0;
-        const cumulative = used + gapBefore + w;
-        if (cumulative + GAP + MORE_BTN_W <= available) {
-          used = cumulative;
-          count = i + 1;
-        } else {
-          break;
-        }
-      }
-      setVisibleCount(count);
-    },
-    { deps: [totalCount] },
-  );
-
-  const visibleSlot = slotActions.slice(
-    0,
-    Math.min(visibleCount, slotActions.length),
-  );
-  const overflowSlot = slotActions.slice(
-    Math.min(visibleCount, slotActions.length),
-  );
-  const extraVisible = hasExtra && visibleCount > slotActions.length;
-  const extraOverflow = hasExtra && !extraVisible;
-  const hasOverflow = overflowSlot.length > 0 || extraOverflow;
-
-  return (
-    <>
-      {/* Off-screen measurement layer — renders all items to obtain their natural widths. */}
-      <MeasureStrip ref={measureRef} gap={GAP} enabled={totalCount > 0}>
-        {slotActions.map((a, i) => (
-          <Fragment key={i}>
-            {renderIsolated(pane.Actions.id, a as unknown as Contribution)}
-          </Fragment>
-        ))}
-        {hasExtra && <div>{extraActions}</div>}
-      </MeasureStrip>
-
-      {/* Container takes all remaining space; items are right-aligned. */}
-      <div
-        ref={containerRef}
-        // flex-1 measurement container for overflow detection; Row/Frame can't model a right-aligned flex-1 measurement region
-        // eslint-disable-next-line layout/no-adhoc-layout
-        className="flex min-w-0 flex-1 items-center justify-end gap-xs overflow-hidden whitespace-nowrap"
-      >
-        {visibleSlot.map((a, i) => (
-          <Fragment key={i}>
-            {renderIsolated(pane.Actions.id, a as unknown as Contribution)}
-          </Fragment>
-        ))}
-        {extraVisible && extraActions}
-
-        {hasOverflow && (
-          <Popover>
-            <PopoverTrigger
-              // eslint-disable-next-line layout/no-adhoc-layout -- icon-button trigger: inline-flex centering glyph; a self-contained control, not a layout region
-              className="inline-flex size-8 items-center justify-center rounded-md text-body hover:bg-accent hover:text-accent-foreground"
-              aria-label="More actions"
-            >
-              <MdMoreHoriz className="size-4" />
-            </PopoverTrigger>
-            <PopoverContent
-              side="bottom"
-              align="end"
-              width="content"
-              padding="xs"
-              // eslint-disable-next-line layout/no-adhoc-layout -- min-w-0 lets the popover shrink to its content width; sizing concern on the popover surface, not a layout region
-              className="min-w-0"
-            >
-              {/* eslint-disable-next-line layout/no-adhoc-layout -- flex column of overflow action items inside Popover; Column needs named slots but this is a flat list */}
-              <div className="flex flex-col">
-                {overflowSlot.map((a, i) => (
-                  <Fragment key={visibleSlot.length + i}>
-                    {renderIsolated(
-                      pane.Actions.id,
-                      a as unknown as Contribution,
-                    )}
-                  </Fragment>
-                ))}
-                {extraOverflow && extraActions}
-              </div>
-            </PopoverContent>
-          </Popover>
-        )}
-      </div>
-    </>
+    <div className="flex items-center gap-xs">{items}</div>
   );
 }

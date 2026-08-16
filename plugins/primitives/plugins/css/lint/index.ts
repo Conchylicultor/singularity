@@ -35,10 +35,12 @@ export default {
       // ── PERMANENT: the layout primitives themselves ──────────────────────
       "plugins/primitives/plugins/css/plugins/**/*.{ts,tsx}", // Grid/Cluster/Center/Overlay + presentational css/ sub-plugins (surface, card, text, spacing, badge, row, ...)
       "plugins/primitives/plugins/floating-action/web/internal/floating-action.tsx", // owns the morph/positioning mechanics (absolute panel, the rigid `trigger` collapsed-footprint wrapper) — a layout primitive, never drains
-      // The sanctioned homes for the body-portaled `position: fixed` mechanic —
-      // an off-screen measure strip and a cursor-anchored menu. They own the raw
-      // inline `position: fixed`; everyone else routes through them.
-      "plugins/primitives/plugins/css/plugins/measure-strip/**",
+      // The sanctioned home for the body-portaled `position: fixed` mechanic: a
+      // cursor-anchored menu. It owns the raw inline `position: fixed`; everyone
+      // else routes through it. (The off-screen measure strip used to sit beside
+      // it here — it is gone, along with the render-everything-twice measurement
+      // it existed to serve. See `primitives/adaptive-bar`, which measures the
+      // real nodes in place.)
       "plugins/primitives/plugins/cursor-menu/**",
       // ── REVERTED: restored to ad-hoc layout when the <Frame> primitive was
       //    removed. These files were migrated onto <Frame> during the drain;

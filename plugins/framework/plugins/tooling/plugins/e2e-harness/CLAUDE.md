@@ -73,6 +73,7 @@ rule keeps the broken shape from coming back.
     - `page/prompt/block`
     - `page/quote`
     - `page/url-paste`
+    - `primitives/adaptive-bar`
     - `primitives/css/radio-group`
     - `primitives/css/ui-kit`
     - `primitives/data-view`

@@ -41,6 +41,7 @@
     - `page/formatting/link`
     - `page/formatting/strikethrough`
     - `page/formatting/underline`
+    - `primitives/action-presentation`
     - `primitives/command-palette`
     - `primitives/icon-button`
     - `primitives/launch`

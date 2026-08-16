@@ -37,16 +37,23 @@ export default {
     Pane.Register({ pane: agentDetailPane }),
     Pane.Register({ pane: systemAgentDetailPane }),
     Pane.Register({ pane: agentSidePane }),
-    agentSidePane.Actions({ component: ExpandAgentButton }),
+    agentSidePane.Actions({ id: "expand-agent", component: ExpandAgentButton }),
     Shell.Sidebar({
       id: "agents",
-      ...sidebarNavItem({ title: "Agents", icon: MdPrecisionManufacturing, onClick: () => openPane(agentsRootPane, {}, { mode: "root" }) }),
+      ...sidebarNavItem({
+        title: "Agents",
+        icon: MdPrecisionManufacturing,
+        onClick: () => openPane(agentsRootPane, {}, { mode: "root" }),
+      }),
     }),
     Item.Avatar({
       match: ({ conv }) => conv.kind === "agent",
       component: AgentAvatarRow,
     }),
-    Conversation.Header({ id: "agent-avatar", component: AgentAvatarTitlePrefix }),
+    Conversation.Header({
+      id: "agent-avatar",
+      component: AgentAvatarTitlePrefix,
+    }),
     AgentsSlots.AgentActions({
       id: "expand-collapse-all",
       component: ExpandCollapseAllAction,

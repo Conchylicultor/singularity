@@ -1,11 +1,24 @@
 import { createHash } from "node:crypto";
-import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  renameSync,
+  writeFileSync,
+} from "node:fs";
 import { join, resolve } from "node:path";
 import { chromium } from "playwright";
 import { defineHostPool } from "@plugins/infra/plugins/host-admission/server";
 import { SINGULARITY_DIR } from "@plugins/infra/plugins/paths/core";
-import { getWorktreeRoot, spawnCaptured } from "@plugins/infra/plugins/spawn/core";
-import type { Check, CheckContext, CheckResult } from "@plugins/framework/plugins/tooling/core";
+import {
+  getWorktreeRoot,
+  spawnCaptured,
+} from "@plugins/infra/plugins/spawn/core";
+import type {
+  Check,
+  CheckContext,
+  CheckResult,
+} from "@plugins/framework/plugins/tooling/core";
 import { classifyFailure } from "./classify";
 
 // The contributed `layout-geometry` check. It gates the layout-primitive geometry
@@ -19,6 +32,17 @@ import { classifyFailure } from "./classify";
 const SIG_GLOBS = [
   "plugins/primitives/plugins/css/plugins/**",
   "plugins/primitives/plugins/css/plugins/ui-kit/web/theme/app.css",
+  // Every fixture contributor, wherever it lives — NOT just the css subtree.
+  // `fixtures/` is a collected dir, so a contributor is under no obligation to
+  // be a css primitive: `primitives/adaptive-bar` was the first that is not.
+  // Its fixtures sit outside the two globs above, so editing one changed the
+  // geometry the gate measures while leaving the signature identical — a
+  // regression the check would have reported as `ok (cached)`, which is worse
+  // than not running it at all. Adding a NEW contributor happened to invalidate
+  // anyway (it rewrites `fixtures.generated.ts`, which IS in the css subtree),
+  // so the hole only opened on the SECOND edit to an outside fixture — the kind
+  // of gap that stays quiet for months.
+  "plugins/**/fixtures/**",
 ];
 
 const SUITE_REL =
@@ -38,7 +62,11 @@ const MARKER_DIR = join(SINGULARITY_DIR, "layout-lab-cache");
 // pool; the caller ALSO spends a `ctx.grant` unit around the launch (below), so
 // the run is both mutually-exclusive AND accounted against the invoking build's
 // CPU grant — two different guarantees.
-const browserPool = defineHostPool({ id: "layout-geometry", size: 1, cost: { cpu: 1 } });
+const browserPool = defineHostPool({
+  id: "layout-geometry",
+  size: 1,
+  cost: { cpu: 1 },
+});
 
 function sha256(s: string): string {
   return createHash("sha256").update(s).digest("hex");
@@ -58,7 +86,11 @@ function listFiles(root: string): string[] {
   ];
   const set = new Set<string>();
   for (const a of args) {
-    const proc = Bun.spawnSync(["git", ...a], { cwd: root, stdout: "pipe", stderr: "pipe" });
+    const proc = Bun.spawnSync(["git", ...a], {
+      cwd: root,
+      stdout: "pipe",
+      stderr: "pipe",
+    });
     const out = new TextDecoder().decode(proc.stdout).trim();
     for (const line of out.split("\n")) if (line) set.add(line);
   }
@@ -118,79 +150,83 @@ const check: Check = {
     // waits for nothing) around the host-wide-serialized launch. Re-check the
     // marker after acquiring: a peer build with the same sig may have just run the
     // suite and written it, in which case we skip the launch (double-checked).
-    return ctx.grant.run(() => browserPool.run(async () => {
-      if (existsSync(markerFile(sig))) return { ok: true };
+    return ctx.grant.run(() =>
+      browserPool.run(async () => {
+        if (existsSync(markerFile(sig))) return { ok: true };
 
-      // Chromium must be provisioned (the e2e-harness provision step owns that). Fail loudly
-      // with a clear hint — never auto-install.
-      let exe: string;
-      try {
-        exe = chromium.executablePath();
-      } catch (err) {
+        // Chromium must be provisioned (the e2e-harness provision step owns that). Fail loudly
+        // with a clear hint — never auto-install.
+        let exe: string;
+        try {
+          exe = chromium.executablePath();
+        } catch (err) {
+          return {
+            ok: false,
+            message: `Could not resolve the Playwright Chromium executable: ${(err as Error).message}`,
+            hint: "Provision the browser with `bun run playwright install chromium` (normally done by the e2e-harness postinstall provision step), then re-run.",
+          };
+        }
+        if (!exe || !existsSync(exe)) {
+          return {
+            ok: false,
+            message: `Playwright Chromium is not installed (expected at ${exe || "<unresolved>"}).`,
+            hint: "Provision the browser with `bun run playwright install chromium` (normally done by the e2e-harness postinstall provision step), then re-run.",
+          };
+        }
+
+        // `--timeout 120000`: this suite's `beforeAll` runs a Vite build + a cold
+        // headless Chromium launch + page load, which routinely exceeds bun:test's
+        // default 5s per-hook budget under any real load — the dominant cause of the
+        // historical "hook timed out / launch timeout" flake. The flag raises the
+        // default for every hook AND test in the suite (the measures themselves stay
+        // sub-second), so a slow-but-healthy setup never trips the gate.
+        const { stdout, stderr, exitCode } = await spawnCaptured(
+          ["bun", "test", "--timeout", "120000", resolve(root, SUITE_REL)],
+          { cwd: root },
+        );
+
+        if (exitCode === 0) {
+          // Record the pass atomically (write-temp + rename on the same fs).
+          const file = markerFile(sig);
+          const tmp = join(MARKER_DIR, `.${sha256(file).slice(0, 12)}.tmp`);
+          writeFileSync(tmp, JSON.stringify({ sig, recordedAt: Date.now() }));
+          renameSync(tmp, file);
+          return { ok: true };
+        }
+
+        // Classify on the FULL, untruncated transcript — a real assertion/oracle
+        // failure printed early in a long, timeout-laced run must NOT be trimmed
+        // away by the tail and misread as environmental. Only the human-facing
+        // `message` below uses the tail.
+        const fullOutput = `${stdout}\n${stderr}`;
+
+        // bun:test prints results to stderr; include a tail of both streams.
+        const tail = (s: string, n = 60): string =>
+          s.trim().split("\n").slice(-n).join("\n");
+        const combined = [tail(stderr), tail(stdout)]
+          .filter(Boolean)
+          .join("\n");
+
+        if (classifyFailure(fullOutput) === "inconclusive") {
+          // Environmental: the suite never reached a verdict (cold Vite/Chromium
+          // under host load timed out), NOT a geometry regression. Non-fatal and
+          // NOT cached — the pass marker is deliberately not written, so the next
+          // build re-launches the suite and re-verifies the invariants.
+          return {
+            ok: false,
+            inconclusive: true,
+            message: `layout geometry suite timed out (environmental — cold Vite/Chromium under host load, not a geometry regression; exit ${exitCode}):\n${combined}`,
+            hint: `Re-run \`bun test --timeout 120000 ${SUITE_REL}\` on a quieter host to re-verify; the check retries automatically on the next build.`,
+          };
+        }
+
         return {
           ok: false,
-          message: `Could not resolve the Playwright Chromium executable: ${(err as Error).message}`,
-          hint: "Provision the browser with `bun run playwright install chromium` (normally done by the e2e-harness postinstall provision step), then re-run.",
+          message: `layout geometry suite failed (exit ${exitCode}):\n${combined}`,
+          hint: `A layout primitive geometry invariant regressed — run \`bun test --timeout 120000 ${SUITE_REL}\` to see which fixture/slot collided.`,
         };
-      }
-      if (!exe || !existsSync(exe)) {
-        return {
-          ok: false,
-          message: `Playwright Chromium is not installed (expected at ${exe || "<unresolved>"}).`,
-          hint: "Provision the browser with `bun run playwright install chromium` (normally done by the e2e-harness postinstall provision step), then re-run.",
-        };
-      }
-
-      // `--timeout 120000`: this suite's `beforeAll` runs a Vite build + a cold
-      // headless Chromium launch + page load, which routinely exceeds bun:test's
-      // default 5s per-hook budget under any real load — the dominant cause of the
-      // historical "hook timed out / launch timeout" flake. The flag raises the
-      // default for every hook AND test in the suite (the measures themselves stay
-      // sub-second), so a slow-but-healthy setup never trips the gate.
-      const { stdout, stderr, exitCode } = await spawnCaptured(
-        ["bun", "test", "--timeout", "120000", resolve(root, SUITE_REL)],
-        { cwd: root },
-      );
-
-      if (exitCode === 0) {
-        // Record the pass atomically (write-temp + rename on the same fs).
-        const file = markerFile(sig);
-        const tmp = join(MARKER_DIR, `.${sha256(file).slice(0, 12)}.tmp`);
-        writeFileSync(tmp, JSON.stringify({ sig, recordedAt: Date.now() }));
-        renameSync(tmp, file);
-        return { ok: true };
-      }
-
-      // Classify on the FULL, untruncated transcript — a real assertion/oracle
-      // failure printed early in a long, timeout-laced run must NOT be trimmed
-      // away by the tail and misread as environmental. Only the human-facing
-      // `message` below uses the tail.
-      const fullOutput = `${stdout}\n${stderr}`;
-
-      // bun:test prints results to stderr; include a tail of both streams.
-      const tail = (s: string, n = 60): string =>
-        s.trim().split("\n").slice(-n).join("\n");
-      const combined = [tail(stderr), tail(stdout)].filter(Boolean).join("\n");
-
-      if (classifyFailure(fullOutput) === "inconclusive") {
-        // Environmental: the suite never reached a verdict (cold Vite/Chromium
-        // under host load timed out), NOT a geometry regression. Non-fatal and
-        // NOT cached — the pass marker is deliberately not written, so the next
-        // build re-launches the suite and re-verifies the invariants.
-        return {
-          ok: false,
-          inconclusive: true,
-          message: `layout geometry suite timed out (environmental — cold Vite/Chromium under host load, not a geometry regression; exit ${exitCode}):\n${combined}`,
-          hint: `Re-run \`bun test --timeout 120000 ${SUITE_REL}\` on a quieter host to re-verify; the check retries automatically on the next build.`,
-        };
-      }
-
-      return {
-        ok: false,
-        message: `layout geometry suite failed (exit ${exitCode}):\n${combined}`,
-        hint: `A layout primitive geometry invariant regressed — run \`bun test --timeout 120000 ${SUITE_REL}\` to see which fixture/slot collided.`,
-      };
-    }));
+      }),
+    );
   },
 };
 

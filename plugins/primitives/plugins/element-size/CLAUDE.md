@@ -59,6 +59,7 @@ different need, extend the primitive rather than allowlisting a copy.
     - `apps/prototypes/gallery`
     - `apps/sonata/notation`
     - `apps/sonata/piano-roll`
+    - `primitives/adaptive-bar`
     - `primitives/collapsible-wrap`
     - `primitives/css/sticky/stack`
     - `primitives/css/ui-kit`
@@ -68,9 +69,6 @@ different need, extend the primitive rather than allowlisting a copy.
     - `primitives/expandable`
     - `primitives/graph-canvas`
     - `primitives/outline/rail`
-    - `primitives/overflow-menu`
-    - `primitives/pane`
-    - `primitives/responsive-overflow`
     - `primitives/terminal`
     - `reorder`
     - `screenshot`

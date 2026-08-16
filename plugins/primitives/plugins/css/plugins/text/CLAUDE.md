@@ -390,6 +390,7 @@ fixed raw size escapes per-site via
     - `plugin-meta/plugin-view/dependencies`
     - `plugin-meta/plugin-view/inclusion`
     - `plugin-meta/plugin-view/sub-plugins`
+    - `primitives/action-presentation`
     - `primitives/avatar`
     - `primitives/command-palette`
     - `primitives/commit-list`

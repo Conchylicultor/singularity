@@ -44,6 +44,7 @@ stability-independent and is suppressed at the site with an inline disable.)
     - `layouts/miller`
     - `page/code-block`
     - `page/editor`
+    - `primitives/action-presentation`
     - `primitives/auto-scroll`
     - `primitives/css/color-picker`
     - `primitives/css/ui-kit`

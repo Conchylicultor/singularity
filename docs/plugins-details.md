@@ -2950,6 +2950,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/sonata/shell.TEMPO_MATH_FLOOR`
               - `apps/sonata/shell.useSonata`
               - `infra/endpoints.useEndpointMutation`
+              - `primitives/action-presentation.useActionForm`
+              - `primitives/adaptive-bar.AdaptiveBar`
               - `primitives/css/card.Card`
               - `primitives/css/center.Center`
               - `primitives/css/clip.Clip`
@@ -2979,8 +2981,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/live-state.ResourceResult`
               - `primitives/live-state.useResource`
               - `primitives/loading.Loading`
-              - `primitives/overflow-menu.OverflowMenu`
-              - `primitives/overflow-menu.OverflowMenuItem`
               - `primitives/pane.Hint`
               - `primitives/pane.openPane`
               - `primitives/pane.Pane`
@@ -6097,15 +6097,14 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps-core/tabs.placementIsNewTabFollows`
           - `apps-core/tabs.useTabs`
           - `apps-core/theme-scope.useChromeThemeScope`
+          - `primitives/action-presentation.useActionForm`
+          - `primitives/adaptive-bar.AdaptiveBar`
           - `primitives/css/line.Line`
-          - `primitives/css/measure-strip.MeasureStrip`
-          - `primitives/css/scroll.Scroll`
           - `primitives/css/spacing.Stack`
           - `primitives/css/ui-kit.cn`
           - `primitives/css/ui-kit.ControlSizeProvider`
           - `primitives/css/ui-kit.PortalThemeScopeProvider`
           - `primitives/icon-button.IconButton`
-          - `primitives/responsive-overflow.useResponsiveOverflow`
           - `primitives/scroll-reveal.useRevealOnActive`
           - `primitives/sortable-list.SortableItem`
           - `primitives/sortable-list.SortableList`
@@ -9929,6 +9928,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `conversations.useConversationById`
               - `conversations/conversation-view.conversationPane`
               - `conversations/conversation-view/pending-turn.sendConversationTurn`
+              - `primitives/adaptive-bar.AdaptiveBar`
               - `primitives/css/cluster.Cluster`
               - `primitives/css/scroll.Scroll`
               - `primitives/css/spacing.Stack`
@@ -9939,7 +9939,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/floating-action.FloatingAction`
               - `primitives/floating-action.FloatingActionFadeIn`
               - `primitives/prompt-editor.PromptEditorSlots`
-              - `primitives/responsive-overflow.ResponsiveOverflow`
               - `primitives/usage-rank.recordUsage`
               - `primitives/usage-rank.useUsageOrder`
           - Server:
@@ -14720,6 +14719,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `page/prompt/block`
               - `page/quote`
               - `page/url-paste`
+              - `primitives/adaptive-bar`
               - `primitives/css/radio-group`
               - `primitives/css/ui-kit`
               - `primitives/data-view`
@@ -19529,25 +19529,94 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
 
 - **`primitives`** — Umbrella for cross-cutting client-side primitives used by feature plugins: pane router, tree, live state, networking, editable fields, syntax highlighting, launch buttons.
   - Plugins:
-    - **`action-presentation`** — Presentation mode for generic {icon,label,onClick} actions: a region declares itself inline, menu or probe via <ActionPresentation>, and the action component reads it with useActionPresentation() — so an opaque action renders as a ghost icon button on a row and as a labelled MenuActionItem inside a dropdown, with no change at the call site. The probe mode draws nothing and only counts itself into the surrounding ActionPresenceScope, so a region can tell whether its action set is empty for a given row before painting chrome for it.
+    - **`action-presentation`** — The shrink-ladder seam between a widget and the bar that hosts it: useActionForm declares the smaller forms a widget can render ITSELF as (and how eagerly it yields room to its neighbours) and reads back the form the region assigned — one hook, both directions. A region can only hand a widget a form that widget declared, so a rich control can never be transformed into something it is not; PanelActionRow renders the 'row' rung, the one IconButton declares — a labelled row that stands alone in the always-mounted overflow panel, never a menu item.
       - Web:
         - Uses:
-          - `primitives/css/ui-kit.DropdownMenuItem`
-          - `primitives/css/ui-kit.DropdownMenuShortcut`
+          - `primitives/css/fill.Fill`
+          - `primitives/css/line.Line`
+          - `primitives/css/text.Text`
+          - `primitives/css/ui-kit.cn`
+          - `primitives/latest-ref.useLatestRef`
           - `primitives/shortcuts.formatShortcutLabel`
+          - `primitives/tooltip.Kbd`
         - Exports (types):
-          - `ActionPresentationMode`
-          - `MenuActionItemProps`
+          - `ActionForm`
+          - `ItemFormChannel`
+          - `PanelActionRowProps`
+          - `ShrinkLadder`
+          - `YieldEagerness`
         - Exports (values):
-          - `ActionPresenceScope`
-          - `ActionPresentation`
-          - `MenuActionItem`
-          - `useActionPresentation`
-          - `useReportActionPresence`
+          - `ActionFormProvider`
+          - `PanelActionRow`
+          - `useActionForm`
+          - `useHoldShrink`
       - Cross-plugin:
         - Imported by:
+          - `apps-core/tab-bar`
+          - `apps/sonata/library`
+          - `primitives/adaptive-bar`
           - `primitives/icon-button`
+    - **`adaptive-bar`** — Overflow as relocation, not transformation: a bar that asks each widget for a smaller form of itself and moves the rest — as themselves, ONE live instance each, never rendered twice — into an always-mounted panel. Each occupant owns one stable portal container the bar re-parents imperatively, so a relocated slider is still the same slider mid-drag; measurement reads the real nodes, and every policy (which forms exist, how eagerly to yield) comes from the widget through action-presentation rather than from the host.
+      - Web:
+        - Uses:
+          - `primitives/action-presentation.ActionFormProvider`
+          - `primitives/action-presentation.ItemFormChannel`
+          - `primitives/css/spacing.SpaceStep`
+          - `primitives/css/spacing.Stack`
+          - `primitives/css/ui-kit.cn`
+          - `primitives/css/ui-kit.OverlayPanel`
+          - `primitives/css/ui-kit.SingleLineProvider`
+          - `primitives/css/ui-kit.usePortalForwardedAttrs`
+          - `primitives/css/viewport-overlay.ViewportOverlay`
+          - `primitives/edit-mode-signal.useEditMode`
+          - `primitives/element-size.useResizeObserver`
+          - `primitives/icon-button.IconButton`
+          - `primitives/popup-open.PopupOpenScope`
+        - Exports (types):
+          - `AdaptiveBarAlign`
+          - `AdaptiveBarCollapsedProps`
+          - `AdaptiveBarFault`
+          - `AdaptiveBarFaultKind`
+          - `AdaptiveBarItemProps`
+          - `AdaptiveBarOverflow`
+          - `AdaptiveBarProps`
+          - `MeasureWidth`
+        - Exports (values):
+          - `AdaptiveBar`
+          - `AdaptiveBarCollapsed`
+          - `AdaptiveBarItem`
+          - `AdaptiveBarMeasure`
+          - `adaptiveBarReportSink`
+      - Cross-plugin:
+        - Imported by:
+          - `apps-core/tab-bar`
+          - `apps/sonata/library`
+          - `conversations/conversation-view/prompt-templates`
+          - `primitives/pane`
           - `reorder/node-types/overflow`
+      - Core:
+        - Exports (types):
+          - `DockMove`
+          - `FitInput`
+          - `FitItem`
+          - `FitResult`
+          - `MeasuredWidth`
+          - `WidthCache`
+          - `WidthEstimate`
+          - `WidthMeasurement`
+          - `WriteRefusal`
+          - `WriteResult`
+        - Exports (values):
+          - `assign`
+          - `dropItem`
+          - `emptyWidthCache`
+          - `estimate`
+          - `inlineWidthsFor`
+          - `planMoves`
+          - `staleOthers`
+          - `widthKey`
+          - `widthKeyItemId`
+          - `write`
     - **`announce`** — Screen-reader announcement primitive: a plain announce(message, { assertive }) writing into the page's two Core.Root-mounted live regions (polite status + assertive alert). Re-announcing an identical string re-fires without any timer. Degrades to a silent no-op when no host is mounted.
       - Web:
         - Contributes: `Core.Root` → `AnnouncerHost`
@@ -19859,12 +19928,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses:
           - `primitives/css/surface.Surface`
           - `primitives/css/ui-kit.cn`
+          - `primitives/edit-mode-signal.useEditMode`
           - `primitives/element-size.useResizeObserver`
           - `primitives/icon-button.IconButton`
           - `primitives/sortable-list.rectSortingStrategy`
           - `reorder.ReorderLayout`
           - `reorder.ReorderLayoutContext`
-          - `reorder.useEditMode`
         - Exports (types): `CollapsibleWrapProps`
         - Exports (values): `CollapsibleWrap`
       - Cross-plugin:
@@ -20450,12 +20519,14 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `page/annotations/todo/task-link`
               - `page/inline-date`
               - `page/prompt/block`
+              - `primitives/action-presentation`
               - `primitives/data-view`
               - `primitives/date-picker`
               - `primitives/error-boundary`
               - `primitives/imperative-dialog/confirm`
               - `primitives/log-channels`
               - `primitives/outline/rail`
+              - `primitives/pane`
               - `primitives/setup-steps`
               - `ui/tweakcn/community-browser`
         - **`grid`** — Responsive/uniform grid layout primitive: <Grid minCellWidth> lays out a wrapping, equal-width card grid via a closed prop surface — not a raw grid-template passthrough.
@@ -20631,6 +20702,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `page/annotations/todo/task-link`
               - `page/inline-date`
               - `page/prompt/block`
+              - `primitives/action-presentation`
               - `primitives/bar`
               - `primitives/css/row`
               - `primitives/date-picker`
@@ -20676,16 +20748,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `plugin-meta/contributions-table`
               - `plugin-meta/plugin-view/inclusion`
               - `primitives/file-links`
-        - **`measure-strip`** — Off-screen body-portaled measurement strip: a hidden flex row for measuring children's natural widths before an overflow/collapse decision.
-          - Cross-plugin:
-            - Imported by:
-              - `apps-core/tab-bar`
-              - `primitives/overflow-menu`
-              - `primitives/pane`
-              - `primitives/responsive-overflow`
-          - Web:
-            - Exports (types): `MeasureStripProps`
-            - Exports (values): `MeasureStrip`
         - **`overlay`** — In-flow positioning layout primitive: <Overlay behind above clickThrough> paints full-bleed layers under/over its content within its own box, plus the click-through-toggle idiom.
           - Web:
             - Uses:
@@ -20958,7 +21020,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Cross-plugin:
             - Imported by:
               - `apps-core/surface/floating/wallpaper`
-              - `apps-core/tab-bar`
               - `apps/mail/reading-pane`
               - `apps/pages/page-tree`
               - `apps/pages/trash`
@@ -21318,6 +21379,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `plugin-meta/plugin-view/dependencies`
               - `plugin-meta/plugin-view/inclusion`
               - `plugin-meta/plugin-view/sub-plugins`
+              - `primitives/adaptive-bar`
               - `primitives/app-shell`
               - `primitives/command-palette`
               - `primitives/commit-list`
@@ -21810,6 +21872,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `plugin-meta/plugin-view/dependencies`
               - `plugin-meta/plugin-view/inclusion`
               - `plugin-meta/plugin-view/sub-plugins`
+              - `primitives/action-presentation`
               - `primitives/avatar`
               - `primitives/command-palette`
               - `primitives/commit-list`
@@ -22267,6 +22330,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `plugin-meta/facets/routes/render-detail`
               - `plugin-meta/plugin-view/inclusion`
               - `primitives/action-presentation`
+              - `primitives/adaptive-bar`
               - `primitives/app-shell`
               - `primitives/auto-scroll`
               - `primitives/avatar`
@@ -22326,13 +22390,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/log-channels`
               - `primitives/multi-select`
               - `primitives/outline/rail`
-              - `primitives/overflow-menu`
               - `primitives/pane`
               - `primitives/pane-toolbar`
               - `primitives/popover`
               - `primitives/prompt-editor`
               - `primitives/prompt-editor/voice-input`
-              - `primitives/responsive-overflow`
               - `primitives/row-actions`
               - `primitives/search`
               - `primitives/section-card`
@@ -22397,6 +22459,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `debug/queue`
               - `improve/element-picker`
               - `page/editor`
+              - `primitives/adaptive-bar`
               - `primitives/floating-surface`
               - `primitives/text-editor/paste-images`
               - `screenshot/draw-on-app`
@@ -23351,6 +23414,18 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conversations/conversation-view/jsonl-viewer/tool-call/page-tools/edit-page`
           - `review/code-review`
           - `review/plugin-changes/file-changes`
+    - **`edit-mode-signal`** — The page-global edit-mode signal — setEditMode / getEditMode / useEditMode — as a leaf primitive whose only import is react. Everything that reorder's edit mode restyles (a bar, a wrapping chip row) reads the signal without importing the reorder feature plugin.
+      - Cross-plugin:
+        - Imported by:
+          - `primitives/adaptive-bar`
+          - `primitives/collapsible-wrap`
+          - `reorder`
+          - `reorder/edit-mode`
+      - Web:
+        - Exports (values):
+          - `getEditMode`
+          - `setEditMode`
+          - `useEditMode`
     - **`editable-field`** — Debounced-autosave field hook with focus tracking, flush-on-blur, and self-echo suppression. Used by task/agent detail forms.
       - Web:
         - Uses:
@@ -23390,6 +23465,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/prototypes/gallery`
           - `apps/sonata/notation`
           - `apps/sonata/piano-roll`
+          - `primitives/adaptive-bar`
           - `primitives/collapsible-wrap`
           - `primitives/css/sticky/stack`
           - `primitives/css/ui-kit`
@@ -23399,9 +23475,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/expandable`
           - `primitives/graph-canvas`
           - `primitives/outline/rail`
-          - `primitives/overflow-menu`
-          - `primitives/pane`
-          - `primitives/responsive-overflow`
           - `primitives/terminal`
           - `reorder`
           - `screenshot`
@@ -23610,9 +23683,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`icon-button`** — Ghost icon button with tooltip. Composes Button + Tooltip into a single component.
       - Web:
         - Uses:
-          - `primitives/action-presentation.MenuActionItem`
-          - `primitives/action-presentation.useActionPresentation`
-          - `primitives/action-presentation.useReportActionPresence`
+          - `primitives/action-presentation.PanelActionRow`
+          - `primitives/action-presentation.useActionForm`
           - `primitives/css/ui-kit.Button`
           - `primitives/css/ui-kit.DensityControlled`
           - `primitives/shortcuts.formatShortcutLabel`
@@ -23675,6 +23747,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `page/editor`
           - `page/formatting/color`
           - `page/formatting/link`
+          - `primitives/adaptive-bar`
           - `primitives/collapsible-wrap`
           - `primitives/data-view`
           - `primitives/data-view/custom-columns`
@@ -23682,7 +23755,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/date-picker`
           - `primitives/folder-picker`
           - `primitives/launch`
-          - `primitives/overflow-menu`
           - `primitives/pane`
           - `primitives/prompt-editor/voice-input`
           - `primitives/row-actions`
@@ -23850,6 +23922,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `layouts/miller`
           - `page/code-block`
           - `page/editor`
+          - `primitives/action-presentation`
           - `primitives/auto-scroll`
           - `primitives/css/color-picker`
           - `primitives/css/ui-kit`
@@ -24597,24 +24670,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Exports (values): `useActiveInView`
           - Cross-plugin:
             - Imported by: `primitives/outline/rail`
-    - **`overflow-menu`** — Single-line row that keeps as many children inline as fit and collapses the overflow behind a trailing ⋯ dropdown menu. Built on responsive-overflow; reserves the trigger's width so it is never clipped.
-      - Web:
-        - Uses:
-          - `primitives/css/measure-strip.MeasureStrip`
-          - `primitives/css/ui-kit.Button`
-          - `primitives/css/ui-kit.cn`
-          - `primitives/css/ui-kit.DropdownMenu`
-          - `primitives/css/ui-kit.DropdownMenuContent`
-          - `primitives/css/ui-kit.DropdownMenuItem`
-          - `primitives/css/ui-kit.DropdownMenuTrigger`
-          - `primitives/element-size.useResizeObserver`
-          - `primitives/icon-button.IconButton`
-        - Exports (types):
-          - `OverflowMenuItem`
-          - `OverflowMenuProps`
-        - Exports (values): `OverflowMenu`
-      - Cross-plugin:
-        - Imported by: `apps/sonata/library`
     - **`overlay-boundary`** — React-only leaf error boundary for transient overlay content (popover/dialog/dropdown/select/tooltip/floating): OverlayBoundary catches a crash inside overlay content and renders a fallback injected via registerOverlayFallback, so the crash stays contained to the overlay instead of taking down the launching chrome. Sits below ui-kit so it can be wrapped around every *Content without closing the ui-kit → error-boundary cycle.
       - Cross-plugin:
         - Imported by:
@@ -24632,10 +24687,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Web:
         - Slots: `Pane.Register` ← `active-data.plugin-link`, `apps.agent-manager.welcome`, `apps.deploy.deployments`, `apps.deploy.servers`, `apps.events.event-list`, `apps.events.shell`, `apps.events.sources`, `apps.events.sources.source-detail.runs`, `apps.mail.reading-pane`, `apps.mail.search`, `apps.mail.shell`, `apps.mail.threads`, `apps.pages.page-tree`, `apps.pages.welcome`, `apps.prototypes.gallery`, `apps.settings.accounts`, `apps.settings.config`, `apps.sonata.library`, `apps.story.shell`, `apps.studio.compositions`, `apps.studio.compositions.release`, `apps.studio.contributions`, `apps.studio.contributions.tables`, `apps.studio.explorer`, `apps.studio.graph`, `apps.website.downloads`, `apps.website.pillars.agents`, `apps.website.pillars.apps`, `apps.website.pillars.platform`, `apps.website.shell`, `apps.workflows.definitions`, `apps.workflows.executions`, `auth.apple-signing.setup-wizard`, `auth.google.setup-wizard`, `backup`, `build`, `code-explorer`, `code-explorer.commit-detail`, `config_v2.settings`, `conversations.agents`, `conversations.all-conversations`, `conversations.conversation-view`, `conversations.conversation-view.code.docs-button`, `conversations.conversation-view.code.file-pane`, `conversations.conversation-view.commits-graph`, `conversations.conversation-view.jsonl-viewer.tool-call.agent`, `conversations.conversation-view.jsonl-viewer.tool-call.workflow`, `conversations.conversation-view.push-profiling`, `conversations.conversation-view.terminal-pane`, `conversations.recover`, `conversations.summary`, `debug.boot-profile`, `debug.broadcasts`, `debug.claude-cli-calls`, `debug.config-orphans`, `debug.health-monitor`, `debug.heap-snapshot`, `debug.live-state-churn.emit`, `debug.live-state-health`, `debug.logs`, `debug.memory`, `debug.profiling`, `debug.profiling.build`, `debug.profiling.ops`, `debug.queue`, `debug.read-set`, `debug.render-profiler`, `debug.reports`, `debug.trace.pane`, `debug.worktree-cleanup`, `debug.zero-test`, `infra.events-test`, `plugin-meta.plugin-view`, `primitives.css.layout-harness`, `review`, `screenshot`, `stats`, `tasks.attempt-view`, `tasks.task-detail`, `ui.theme-engine.theme-customizer`
         - Uses:
+          - `primitives/adaptive-bar.AdaptiveBar`
           - `primitives/bar.Bar`
           - `primitives/css/center.Center`
           - `primitives/css/column.Column`
-          - `primitives/css/measure-strip.MeasureStrip`
+          - `primitives/css/fill.Fill`
           - `primitives/css/placeholder.Placeholder`
           - `primitives/css/scroll.Scroll`
           - `primitives/css/scroll.ScrollProps`
@@ -24644,11 +24700,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/css/ui-kit.Button`
           - `primitives/css/ui-kit.cn`
           - `primitives/css/ui-kit.ControlSize`
-          - `primitives/css/ui-kit.Popover`
-          - `primitives/css/ui-kit.PopoverContent`
-          - `primitives/css/ui-kit.PopoverTrigger`
           - `primitives/css/ui-kit.SingleLineProvider`
-          - `primitives/element-size.useResizeObserver`
           - `primitives/icon-button.IconButton`
           - `primitives/latest-ref.useLatestRef`
           - `primitives/link-gesture.linkGestureProps`
@@ -24666,6 +24718,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `LocationChange`
           - `MatchEntry`
           - `OpenPaneFn`
+          - `PaneActionContribution`
           - `PaneChromeConfig`
           - `PaneHeaderZones`
           - `PaneHistoryState`
@@ -25023,6 +25076,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`popup-open`** — Typed 'is a popup open inside me' signal: PopupOpenScope aggregates every popup opened under it and hands the boolean to its render-prop child; ui-kit's Root wrappers publish it via useReportPopupOpen. Replaces CSS selectors that named a popup library's own attribute contract. Sits below ui-kit (imports only react) so ui-kit can consume it without a cycle.
       - Cross-plugin:
         - Imported by:
+          - `primitives/adaptive-bar`
           - `primitives/css/ui-kit`
           - `primitives/row-actions`
       - Web:
@@ -25169,23 +25223,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Core:
         - Exports (types): `ReportSink`
         - Exports (values): `defineReportSink`
-    - **`responsive-overflow`** — Progressively hides children that don't fit the container width. Exposes ResponsiveOverflow component and useResponsiveOverflow hook.
-      - Web:
-        - Uses:
-          - `primitives/css/measure-strip.MeasureStrip`
-          - `primitives/css/ui-kit.cn`
-          - `primitives/element-size.useResizeObserver`
-        - Exports (types):
-          - `ResponsiveOverflowProps`
-          - `UseResponsiveOverflowHandle`
-          - `UseResponsiveOverflowOptions`
-        - Exports (values):
-          - `ResponsiveOverflow`
-          - `useResponsiveOverflow`
-      - Cross-plugin:
-        - Imported by:
-          - `apps-core/tab-bar`
-          - `conversations/conversation-view/prompt-templates`
     - **`row-actions`** — Hover-revealed row-action cluster: a row of small ghost icon buttons (RowActionButton) revealed when their row is hovered/focused. The primitive owns the reveal (opacity↔pointer-events coupled, so a hidden action is never a live click-target), the right-edge Pin positioning, and the standard icon-xs sizing. Reveal is driven by the primitive's own `group/row-actions` group, applied to the row via the exported `rowActionsAnchor` class — so it never piggybacks on a consumer's group name.
       - Web:
         - Uses:
@@ -25472,7 +25509,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/text-editor`
           - `primitives/tree`
           - `reorder`
-          - `reorder/node-types/overflow`
           - `reports`
           - `review/plugin-changes`
           - `shell`
@@ -25777,6 +25813,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `page/formatting/link`
           - `page/formatting/strikethrough`
           - `page/formatting/underline`
+          - `primitives/action-presentation`
           - `primitives/command-palette`
           - `primitives/icon-button`
           - `primitives/launch`
@@ -26295,6 +26332,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `config_v2.useSetConfig`
       - `primitives/css/badge.Badge`
       - `primitives/css/ui-kit.Button`
+      - `primitives/edit-mode-signal.useEditMode`
       - `primitives/element-size.useResizeObserver`
       - `primitives/latest-ref.useLatestRef`
       - `primitives/popover.InlinePopover`
@@ -26312,11 +26350,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `ReorderState`
       - `TopLevelEntry`
     - Exports (values):
-      - `getEditMode`
       - `isNodeData`
       - `ReorderLayoutContext`
-      - `setEditMode`
-      - `useEditMode`
       - `useReorderedEntries`
   - Server:
     - Contributes:
@@ -26438,7 +26473,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Imported by:
       - `page/editor`
       - `primitives/collapsible-wrap`
-      - `reorder/edit-mode`
   - Shared:
     - Exports (types): `ReorderableSlot`
     - Exports (values):
@@ -26451,11 +26485,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `ActionBar.Item` → `PenButton`
           - `Shortcuts.Shortcut` "reorder.exit-edit-mode (escape)"
         - Uses:
+          - `primitives/edit-mode-signal.getEditMode`
+          - `primitives/edit-mode-signal.setEditMode`
+          - `primitives/edit-mode-signal.useEditMode`
           - `primitives/icon-button.IconButton`
           - `primitives/shortcuts.defineShortcut`
-          - `reorder.getEditMode`
-          - `reorder.setEditMode`
-          - `reorder.useEditMode`
           - `shell/action-bar.ActionBar`
     - **`editor`** — Presentational drag-and-drop reorder editor: sortable items, hide/restore, spacers, optional grouping zones. Display-only — no config_v2, catalog, or tree-format knowledge.
       - Web:
@@ -26514,21 +26548,15 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/text.Text`
               - `primitives/css/ui-kit.cn`
               - `reorder/node-types.ReorderNodes`
-        - **`overflow`** — Overflow reorder node type: a container whose members collapse behind one ⋯ dropdown and render as labelled menu rows (via action-presentation). In edit mode it is a labelled inline box so the bucket stays draggable. Owns the label payload schema.
+        - **`overflow`** — Overflow reorder node type: a container whose authored members all relocate behind one ⋯ panel, via AdaptiveBar.Collapsed — each rendering the form it declared, so a plain action becomes a labelled row and a richer widget stays itself, one live instance either way. In edit mode it is a labelled inline box so the bucket stays draggable. Owns the label payload schema.
           - Web:
             - Contributes: `ReorderNodes.NodeType` "overflow"
             - Uses:
-              - `primitives/action-presentation.ActionPresenceScope`
-              - `primitives/action-presentation.ActionPresentation`
+              - `primitives/adaptive-bar.AdaptiveBar`
               - `primitives/css/line.Line`
               - `primitives/css/spacing.Inset`
               - `primitives/css/text.Text`
-              - `primitives/css/ui-kit.Button`
               - `primitives/css/ui-kit.cn`
-              - `primitives/css/ui-kit.DropdownMenu`
-              - `primitives/css/ui-kit.DropdownMenuContent`
-              - `primitives/css/ui-kit.DropdownMenuTrigger`
-              - `primitives/slot-render.SlotItemLayout`
               - `reorder/node-types.ReorderNodes`
         - **`spacer`** — Spacer reorder node type: a blank draggable gap (leaf), with an 'Add Spacer' insert affordance.
           - Web:

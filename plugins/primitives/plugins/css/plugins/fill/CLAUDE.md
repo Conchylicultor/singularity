@@ -76,12 +76,14 @@ composes last.
     - `page/annotations/todo/task-link`
     - `page/inline-date`
     - `page/prompt/block`
+    - `primitives/action-presentation`
     - `primitives/data-view`
     - `primitives/date-picker`
     - `primitives/error-boundary`
     - `primitives/imperative-dialog/confirm`
     - `primitives/log-channels`
     - `primitives/outline/rail`
+    - `primitives/pane`
     - `primitives/setup-steps`
     - `ui/tweakcn/community-browser`
 

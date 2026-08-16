@@ -262,15 +262,33 @@ corner-pinned overlay lands on the header's own right-hand actions.
 ### Actions
 
 Each pane auto-creates an `Actions` slot other plugins contribute to
-(`taskDetailPane.Actions({ component, position })`). `position` defaults to
-`"right"` (after the title spacer, with the rest of the toolbar); `"left"` sits
-immediately after the title — for status chips or context badges.
+(`taskDetailPane.Actions({ id, component, position })`). `position` defaults to
+`"right"` (the growing part of the header, with the rest of the toolbar);
+`"left"` sits immediately after the title — for status chips or context badges.
+
+**`id` is required and must be stable for the contribution's whole life** —
+short kebab-case naming the action (`"improve"`, `"view-mode"`). It keys the
+[`AdaptiveBar`](../adaptive-bar/CLAUDE.md) width ledger and DOM move plan below,
+so an id that churns per render throws every measurement away each frame.
 
 For the common ghost-icon-button case, use the shared `<PaneIconAction label
 icon onClick>`; it forwards refs so it composes with components that need a
 button ref. (Base UI Popover triggers don't take `asChild` — use
 `<PopoverTrigger className={buttonVariants({variant:"ghost",size:"icon"})}>`
 directly when the trigger needs to be a popover.)
+
+#### When the header runs out of room
+
+The right-side actions are the `AdaptiveBar` occupants of the header row: each is
+asked for a smaller form of itself, and whatever still does not fit is **moved** —
+the same live element, never a second copy — into a panel behind a `⋯`.
+`PaneChrome`'s `actions` prop is one more occupant, id `pane-extra`.
+
+`PaneActionsSlot` wraps every contribution in an `AdaptiveBar.Item`
+unconditionally; the item is transparent with no bar above it, so `"left"` is
+unaffected. The bar's own limits apply to what you contribute — no
+`position: sticky` inside an action, and an action holding an `<iframe>` refuses
+to relocate. `chrome.header` (below) is a different header and collapses nothing.
 
 ### Hiding the close / promote buttons
 
@@ -497,10 +515,11 @@ See "Open questions" in the design doc.
 - Web:
   - Slots: `Pane.Register` ← `active-data.plugin-link`, `apps.agent-manager.welcome`, `apps.deploy.deployments`, `apps.deploy.servers`, `apps.events.event-list`, `apps.events.shell`, `apps.events.sources`, `apps.events.sources.source-detail.runs`, `apps.mail.reading-pane`, `apps.mail.search`, `apps.mail.shell`, `apps.mail.threads`, `apps.pages.page-tree`, `apps.pages.welcome`, `apps.prototypes.gallery`, `apps.settings.accounts`, `apps.settings.config`, `apps.sonata.library`, `apps.story.shell`, `apps.studio.compositions`, `apps.studio.compositions.release`, `apps.studio.contributions`, `apps.studio.contributions.tables`, `apps.studio.explorer`, `apps.studio.graph`, `apps.website.downloads`, `apps.website.pillars.agents`, `apps.website.pillars.apps`, `apps.website.pillars.platform`, `apps.website.shell`, `apps.workflows.definitions`, `apps.workflows.executions`, `auth.apple-signing.setup-wizard`, `auth.google.setup-wizard`, `backup`, `build`, `code-explorer`, `code-explorer.commit-detail`, `config_v2.settings`, `conversations.agents`, `conversations.all-conversations`, `conversations.conversation-view`, `conversations.conversation-view.code.docs-button`, `conversations.conversation-view.code.file-pane`, `conversations.conversation-view.commits-graph`, `conversations.conversation-view.jsonl-viewer.tool-call.agent`, `conversations.conversation-view.jsonl-viewer.tool-call.workflow`, `conversations.conversation-view.push-profiling`, `conversations.conversation-view.terminal-pane`, `conversations.recover`, `conversations.summary`, `debug.boot-profile`, `debug.broadcasts`, `debug.claude-cli-calls`, `debug.config-orphans`, `debug.health-monitor`, `debug.heap-snapshot`, `debug.live-state-churn.emit`, `debug.live-state-health`, `debug.logs`, `debug.memory`, `debug.profiling`, `debug.profiling.build`, `debug.profiling.ops`, `debug.queue`, `debug.read-set`, `debug.render-profiler`, `debug.reports`, `debug.trace.pane`, `debug.worktree-cleanup`, `debug.zero-test`, `infra.events-test`, `plugin-meta.plugin-view`, `primitives.css.layout-harness`, `review`, `screenshot`, `stats`, `tasks.attempt-view`, `tasks.task-detail`, `ui.theme-engine.theme-customizer`
   - Uses:
+    - `primitives/adaptive-bar.AdaptiveBar`
     - `primitives/bar.Bar`
     - `primitives/css/center.Center`
     - `primitives/css/column.Column`
-    - `primitives/css/measure-strip.MeasureStrip`
+    - `primitives/css/fill.Fill`
     - `primitives/css/placeholder.Placeholder`
     - `primitives/css/scroll.Scroll`
     - `primitives/css/scroll.ScrollProps`
@@ -509,11 +528,7 @@ See "Open questions" in the design doc.
     - `primitives/css/ui-kit.Button`
     - `primitives/css/ui-kit.cn`
     - `primitives/css/ui-kit.ControlSize`
-    - `primitives/css/ui-kit.Popover`
-    - `primitives/css/ui-kit.PopoverContent`
-    - `primitives/css/ui-kit.PopoverTrigger`
     - `primitives/css/ui-kit.SingleLineProvider`
-    - `primitives/element-size.useResizeObserver`
     - `primitives/icon-button.IconButton`
     - `primitives/latest-ref.useLatestRef`
     - `primitives/link-gesture.linkGestureProps`
@@ -531,6 +546,7 @@ See "Open questions" in the design doc.
     - `LocationChange`
     - `MatchEntry`
     - `OpenPaneFn`
+    - `PaneActionContribution`
     - `PaneChromeConfig`
     - `PaneHeaderZones`
     - `PaneHistoryState`

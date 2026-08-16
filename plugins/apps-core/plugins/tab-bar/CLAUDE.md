@@ -13,15 +13,14 @@
     - `apps-core/tabs.placementIsNewTabFollows`
     - `apps-core/tabs.useTabs`
     - `apps-core/theme-scope.useChromeThemeScope`
+    - `primitives/action-presentation.useActionForm`
+    - `primitives/adaptive-bar.AdaptiveBar`
     - `primitives/css/line.Line`
-    - `primitives/css/measure-strip.MeasureStrip`
-    - `primitives/css/scroll.Scroll`
     - `primitives/css/spacing.Stack`
     - `primitives/css/ui-kit.cn`
     - `primitives/css/ui-kit.ControlSizeProvider`
     - `primitives/css/ui-kit.PortalThemeScopeProvider`
     - `primitives/icon-button.IconButton`
-    - `primitives/responsive-overflow.useResponsiveOverflow`
     - `primitives/scroll-reveal.useRevealOnActive`
     - `primitives/sortable-list.SortableItem`
     - `primitives/sortable-list.SortableList`

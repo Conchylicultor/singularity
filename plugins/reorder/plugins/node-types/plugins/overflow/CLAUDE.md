@@ -1,27 +1,52 @@
 # overflow
 
 The `overflow` reorder node type — a **container** whose members are not laid out
-beside their siblings but collapsed behind a single `⋯` dropdown, as labelled
-menu rows. It is how a surface says *which* of its open-set actions stay inline
-and which fold away: an explicit, authored, git-committable split in the slot's
-config, never a magic count threshold.
+beside their siblings but collapsed behind a single `⋯`. It is how a surface says
+*which* of its open-set actions stay inline and which fold away: an explicit,
+authored, git-committable split in the slot's config, never a magic count
+threshold.
 
 `OverflowBox` never introspects its members — they are opaque pre-rendered
-contributions. It wraps them in `<ActionPresentation mode="menu">`
-(`@plugins/primitives/plugins/action-presentation`) and each action's own
-`IconButton` reads that and renders its menu form. In **edit mode** the box
-becomes a labelled inline frame mirroring `HeaderBox`, because a closed menu
-would hide the members from the pen's drag affordances.
+contributions. It hands each one to an
+[`AdaptiveBar.Collapsed`](../../../../../primitives/plugins/adaptive-bar/CLAUDE.md)
+item, which is the same bar machinery with the measurement taken out: every
+occupant relocates unconditionally into the always-mounted `⋯` panel, because
+membership here is a decision the author already made and no width has a say in
+it. In **edit mode** the box is instead a labelled inline frame mirroring
+`HeaderBox` — a closed panel would hide the members from the pen's drag
+affordances, so the two branches stay separate on purpose.
 
-The `⋯` appears only when a member actually renders — **authored** membership is
-not enough, since an item action returns `null` on rows it doesn't apply to and
-a whole bucket can come to nothing on one row. A `probe` pass answers that with
-no DOM; see action-presentation's CLAUDE.md.
+## Each member renders its own declared form
 
-Payload is `{ label? }` (default `"More"`, used as the trigger's aria-label +
-title). Container creation and membership are config-only, so there is no
-`insert`. Contributes one `ReorderNodes.NodeType(...)` to the `reorder.node-type`
-registry.
+Nothing transforms a member. An `IconButton` declares the `"row"` rung and
+arrives in the panel as a labelled `PanelActionRow`; anything richer — a slider,
+a jog wheel, a member that wrote its own markup — declares no such rung and
+renders **as itself**, live and still usable. It is also mounted exactly once,
+which is what lets it keep its state and an in-flight gesture across the move.
+(The predecessor wrapped everything in `<ActionPresentation mode="menu">`, so a
+member that was not a plain action had nowhere to go, and rendered every member a
+second time as a `probe` to find out whether the bucket was empty.)
+
+## When nothing paints
+
+Two different emptinesses, answered in two places:
+
+- **no authored members** — `OverflowBox` renders no DOM at all, not even the
+  bar's always-mounted panel;
+- **members that all rendered nothing** — an item action returns `null` for a row
+  it does not apply to (Close on an already-closed conversation), so a bucket of
+  five authored actions can come to nothing on one row. The bar reads that off
+  the one live instance (`childElementCount === 0`), hides that member, and paints
+  the `⋯` from the panel's occupancy — never from the member count.
+
+Payload is `{ label? }` (default `"More"`, the trigger's aria-label and the
+panel's accessible name). Container creation and membership are config-only, so
+there is no `insert`. Contributes one `ReorderNodes.NodeType(...)` to the
+`reorder.node-type` registry.
+
+Cost of the panel being a dialog rather than a `DropdownMenu`: Tab + Enter + Esc,
+no typeahead, no arrow-key roving. adaptive-bar's CLAUDE.md says why a
+`role="menu"` cannot hold a live widget.
 
 ```jsonc
 { "type": "overflow", "id": "row-overflow", "items": ["pluginId:a", "pluginId:b"] }
@@ -31,21 +56,15 @@ registry.
 
 ## Plugin reference
 
-- Description: Overflow reorder node type: a container whose members collapse behind one ⋯ dropdown and render as labelled menu rows (via action-presentation). In edit mode it is a labelled inline box so the bucket stays draggable. Owns the label payload schema.
+- Description: Overflow reorder node type: a container whose authored members all relocate behind one ⋯ panel, via AdaptiveBar.Collapsed — each rendering the form it declared, so a plain action becomes a labelled row and a richer widget stays itself, one live instance either way. In edit mode it is a labelled inline box so the bucket stays draggable. Owns the label payload schema.
 - Web:
   - Contributes: `ReorderNodes.NodeType` "overflow"
   - Uses:
-    - `primitives/action-presentation.ActionPresenceScope`
-    - `primitives/action-presentation.ActionPresentation`
+    - `primitives/adaptive-bar.AdaptiveBar`
     - `primitives/css/line.Line`
     - `primitives/css/spacing.Inset`
     - `primitives/css/text.Text`
-    - `primitives/css/ui-kit.Button`
     - `primitives/css/ui-kit.cn`
-    - `primitives/css/ui-kit.DropdownMenu`
-    - `primitives/css/ui-kit.DropdownMenuContent`
-    - `primitives/css/ui-kit.DropdownMenuTrigger`
-    - `primitives/slot-render.SlotItemLayout`
     - `reorder/node-types.ReorderNodes`
 
 <!-- AUTOGENERATED:END -->

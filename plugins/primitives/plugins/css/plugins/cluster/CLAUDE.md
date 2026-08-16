@@ -15,7 +15,7 @@ defined in exactly one place. The distinct export buys two things:
   (truncation is a leaf's altitude, never a chip group's), so a chip keeps its
   whole width and the group reflows by wrapping, never by crushing a chip.
 - **A future policy home.** Because every chip group routes through this one
-  primitive, Cluster can later compose `ResponsiveOverflow` (progressively hide
+  primitive, Cluster can later compose `AdaptiveBar` (shrink, then relocate,
   chips that don't fit, with a "+N more") with **zero call-site change**.
 
 ## Props

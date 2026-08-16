@@ -3564,6 +3564,13 @@
       "name": "@singularity/plugin-primitives-action-presentation",
       "version": "0.0.1",
     },
+    "plugins/primitives/plugins/adaptive-bar": {
+      "name": "@singularity/plugin-primitives-adaptive-bar",
+      "version": "0.0.1",
+      "dependencies": {
+        "@floating-ui/react-dom": "^2.1.8",
+      },
+    },
     "plugins/primitives/plugins/announce": {
       "name": "@singularity/plugin-primitives-announce",
       "version": "0.0.1",
@@ -3693,10 +3700,6 @@
     },
     "plugins/primitives/plugins/css/plugins/link-chip": {
       "name": "@singularity/plugin-primitives-css-link-chip",
-      "version": "0.0.1",
-    },
-    "plugins/primitives/plugins/css/plugins/measure-strip": {
-      "name": "@singularity/plugin-primitives-css-measure-strip",
       "version": "0.0.1",
     },
     "plugins/primitives/plugins/css/plugins/overlay": {
@@ -3847,6 +3850,10 @@
       "name": "@singularity/plugin-primitives-diff-view",
       "version": "0.0.1",
     },
+    "plugins/primitives/plugins/edit-mode-signal": {
+      "name": "@singularity/plugin-primitives-edit-mode-signal",
+      "version": "0.0.1",
+    },
     "plugins/primitives/plugins/editable-field": {
       "name": "@singularity/plugin-primitives-editable-field",
       "version": "0.0.1",
@@ -3982,10 +3989,6 @@
       "name": "@singularity/plugin-primitives-outline-scroll-spy",
       "version": "0.0.1",
     },
-    "plugins/primitives/plugins/overflow-menu": {
-      "name": "@singularity/plugin-primitives-overflow-menu",
-      "version": "0.0.1",
-    },
     "plugins/primitives/plugins/overlay-boundary": {
       "name": "@singularity/plugin-primitives-overlay-boundary",
       "version": "0.0.1",
@@ -4052,10 +4055,6 @@
     },
     "plugins/primitives/plugins/report-sink": {
       "name": "@singularity/plugin-primitives-report-sink",
-      "version": "0.0.1",
-    },
-    "plugins/primitives/plugins/responsive-overflow": {
-      "name": "@singularity/plugin-primitives-responsive-overflow",
       "version": "0.0.1",
     },
     "plugins/primitives/plugins/row-actions": {
@@ -7136,6 +7135,8 @@
 
     "@singularity/plugin-primitives-action-presentation": ["@singularity/plugin-primitives-action-presentation@workspace:plugins/primitives/plugins/action-presentation"],
 
+    "@singularity/plugin-primitives-adaptive-bar": ["@singularity/plugin-primitives-adaptive-bar@workspace:plugins/primitives/plugins/adaptive-bar"],
+
     "@singularity/plugin-primitives-announce": ["@singularity/plugin-primitives-announce@workspace:plugins/primitives/plugins/announce"],
 
     "@singularity/plugin-primitives-app-instance": ["@singularity/plugin-primitives-app-instance@workspace:plugins/primitives/plugins/app-instance"],
@@ -7195,8 +7196,6 @@
     "@singularity/plugin-primitives-css-line": ["@singularity/plugin-primitives-css-line@workspace:plugins/primitives/plugins/css/plugins/line"],
 
     "@singularity/plugin-primitives-css-link-chip": ["@singularity/plugin-primitives-css-link-chip@workspace:plugins/primitives/plugins/css/plugins/link-chip"],
-
-    "@singularity/plugin-primitives-css-measure-strip": ["@singularity/plugin-primitives-css-measure-strip@workspace:plugins/primitives/plugins/css/plugins/measure-strip"],
 
     "@singularity/plugin-primitives-css-overlay": ["@singularity/plugin-primitives-css-overlay@workspace:plugins/primitives/plugins/css/plugins/overlay"],
 
@@ -7266,6 +7265,8 @@
 
     "@singularity/plugin-primitives-diff-view": ["@singularity/plugin-primitives-diff-view@workspace:plugins/primitives/plugins/diff-view"],
 
+    "@singularity/plugin-primitives-edit-mode-signal": ["@singularity/plugin-primitives-edit-mode-signal@workspace:plugins/primitives/plugins/edit-mode-signal"],
+
     "@singularity/plugin-primitives-editable-field": ["@singularity/plugin-primitives-editable-field@workspace:plugins/primitives/plugins/editable-field"],
 
     "@singularity/plugin-primitives-element-size": ["@singularity/plugin-primitives-element-size@workspace:plugins/primitives/plugins/element-size"],
@@ -7330,8 +7331,6 @@
 
     "@singularity/plugin-primitives-outline-scroll-spy": ["@singularity/plugin-primitives-outline-scroll-spy@workspace:plugins/primitives/plugins/outline/plugins/scroll-spy"],
 
-    "@singularity/plugin-primitives-overflow-menu": ["@singularity/plugin-primitives-overflow-menu@workspace:plugins/primitives/plugins/overflow-menu"],
-
     "@singularity/plugin-primitives-overlay-boundary": ["@singularity/plugin-primitives-overlay-boundary@workspace:plugins/primitives/plugins/overlay-boundary"],
 
     "@singularity/plugin-primitives-overscroll-hint": ["@singularity/plugin-primitives-overscroll-hint@workspace:plugins/primitives/plugins/overscroll-hint"],
@@ -7363,8 +7362,6 @@
     "@singularity/plugin-primitives-relative-time": ["@singularity/plugin-primitives-relative-time@workspace:plugins/primitives/plugins/relative-time"],
 
     "@singularity/plugin-primitives-report-sink": ["@singularity/plugin-primitives-report-sink@workspace:plugins/primitives/plugins/report-sink"],
-
-    "@singularity/plugin-primitives-responsive-overflow": ["@singularity/plugin-primitives-responsive-overflow@workspace:plugins/primitives/plugins/responsive-overflow"],
 
     "@singularity/plugin-primitives-row-actions": ["@singularity/plugin-primitives-row-actions@workspace:plugins/primitives/plugins/row-actions"],
 

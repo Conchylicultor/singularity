@@ -4,15 +4,15 @@ Generic reorder primitive integrated into `RenderSlot.Render` via middleware. Ev
 
 ## Public API (web)
 
-```ts
-import { setEditMode, useEditMode } from "@plugins/reorder/web";
+`ReorderLayoutContext` / `ReorderLayout` (host-injected layout for the
+middleware), `useReorderedEntries` + `isNodeData` (see below), and the entry
+types.
 
-// Toggle edit mode programmatically
-setEditMode(true);
-
-// Read edit mode state in React
-const editMode = useEditMode();
-```
+**Edit mode is NOT here.** `setEditMode` / `getEditMode` / `useEditMode` live in
+the leaf `@plugins/primitives/plugins/edit-mode-signal/web` — reorder consumes
+it like everyone else. Read that plugin's CLAUDE.md before moving it back: a
+primitive must not take on `reorder/web` (and its `styles.css` side-effect
+import) just to read a boolean.
 
 Hosts just use `<MySlot.Render>{(item) => ...}</MySlot.Render>` — the reorder list and item middlewares handle sorting, DnD wrapping, registry-driven node types (spacers, container groups), and edit-mode affordances automatically. No configuration needed.
 
@@ -129,7 +129,7 @@ Because the origin default is the materialized catalog, adding/removing a contri
 
 ## Edit mode
 
-Module-level signal in `web/internal/edit-mode-store.ts` (no React Context). The pen button toggles it; middlewares read it via `useSyncExternalStore`. Esc exits edit mode (a registered shortcut in `reorder/edit-mode`).
+Module-level signal in `@plugins/primitives/plugins/edit-mode-signal/web` (no React Context). The pen button toggles it; middlewares read it via `useSyncExternalStore`. Esc exits edit mode (a registered shortcut in `reorder/edit-mode`).
 
 ## Constrained-space regimes (horizontal areas)
 
@@ -266,6 +266,7 @@ Edit mode inflates every item with chrome (ring, ×-badge, empty-item placeholde
     - `config_v2.useSetConfig`
     - `primitives/css/badge.Badge`
     - `primitives/css/ui-kit.Button`
+    - `primitives/edit-mode-signal.useEditMode`
     - `primitives/element-size.useResizeObserver`
     - `primitives/latest-ref.useLatestRef`
     - `primitives/popover.InlinePopover`
@@ -283,11 +284,8 @@ Edit mode inflates every item with chrome (ring, ×-badge, empty-item placeholde
     - `ReorderState`
     - `TopLevelEntry`
   - Exports (values):
-    - `getEditMode`
     - `isNodeData`
     - `ReorderLayoutContext`
-    - `setEditMode`
-    - `useEditMode`
     - `useReorderedEntries`
 - Server:
   - Contributes:
@@ -409,7 +407,6 @@ Edit mode inflates every item with chrome (ring, ×-badge, empty-item placeholde
   - Imported by:
     - `page/editor`
     - `primitives/collapsible-wrap`
-    - `reorder/edit-mode`
 - Shared:
   - Exports (types): `ReorderableSlot`
   - Exports (values):

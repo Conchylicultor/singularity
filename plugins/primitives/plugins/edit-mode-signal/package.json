@@ -1,0 +1,6 @@
+{
+  "name": "@singularity/plugin-primitives-edit-mode-signal",
+  "description": "The page-global edit-mode signal: setEditMode / getEditMode / useEditMode.",
+  "private": true,
+  "version": "0.0.1"
+}

@@ -77,7 +77,9 @@ function applyMutation(scope: HTMLElement, mutate: FixtureMutation): void {
         // overflows its block parent → `noClip` is violated.
         const leaf = scope.querySelector<HTMLElement>('[data-geo="content"]');
         if (!leaf) {
-          throw new Error('swapLeafDisplay:"inline" mutation: no `[data-geo="content"]` leaf found');
+          throw new Error(
+            'swapLeafDisplay:"inline" mutation: no `[data-geo="content"]` leaf found',
+          );
         }
         leaf.style.display = "inline";
         leaf.style.maxWidth = "none";
@@ -92,8 +94,12 @@ function applyMutation(scope: HTMLElement, mutate: FixtureMutation): void {
         // `trailing` track collapses to 0) and stretch the content leaf across
         // the full row width under it → `content.right > indicator.left` →
         // `noOverlap` is genuinely violated (measured boxes overlap).
-        const indicator = scope.querySelector<HTMLElement>('[data-geo="indicator"]');
-        const content = scope.querySelector<HTMLElement>('[data-geo="content"]');
+        const indicator = scope.querySelector<HTMLElement>(
+          '[data-geo="indicator"]',
+        );
+        const content = scope.querySelector<HTMLElement>(
+          '[data-geo="content"]',
+        );
         const grid = [...scope.querySelectorAll<HTMLElement>("*")].find(
           (el) => getComputedStyle(el).display === "grid",
         );
@@ -131,7 +137,8 @@ void loadFixtures().then((fixtures) => {
 
   window.__renderFixture = (id, width, falsify) => {
     const fixture = byId.get(id);
-    if (!fixture) throw new Error(`__renderFixture: unknown fixture id "${id}"`);
+    if (!fixture)
+      throw new Error(`__renderFixture: unknown fixture id "${id}"`);
     // The harness wrapper itself carries `data-geo="container"` (the width box).
     // A fixture that authors its OWN inner `[data-geo="container"]` is honored by
     // __measure's innermost-container precedence.
@@ -148,8 +155,11 @@ void loadFixtures().then((fixtures) => {
     // after a rAF tick from the driver) then sees the final layout.
     flushSync(() => ensureRoot().render(tree));
     if (falsify) {
-      const scope = container.querySelector<HTMLElement>('[data-geo="container"]');
-      if (!scope) throw new Error("__renderFixture: container missing after render");
+      const scope = container.querySelector<HTMLElement>(
+        '[data-geo="container"]',
+      );
+      if (!scope)
+        throw new Error("__renderFixture: container missing after render");
       applyMutation(scope, falsify);
     }
   };
@@ -158,8 +168,11 @@ void loadFixtures().then((fixtures) => {
     // Prefer the INNERMOST `[data-geo="container"]` so a fixture that authors its
     // own container (e.g. pin/menu-indicator-over-label's relative div) measures
     // against it rather than the harness width wrapper.
-    const containers = [...container.querySelectorAll<HTMLElement>('[data-geo="container"]')];
-    if (containers.length === 0) throw new Error("__measure: no [data-geo='container']");
+    const containers = [
+      ...container.querySelectorAll<HTMLElement>('[data-geo="container"]'),
+    ];
+    if (containers.length === 0)
+      throw new Error("__measure: no [data-geo='container']");
     const containerEl = containers.reduce((innermost, el) =>
       innermost.contains(el) ? el : innermost,
     );
@@ -169,6 +182,19 @@ void loadFixtures().then((fixtures) => {
       const key = el.getAttribute("data-geo")!;
       if (key === "container") continue;
       if (el === containerEl) continue;
+      // An element that generates NO BOXES is not a geometry participant, and
+      // measuring it invents one. `display:none` makes `getBoundingClientRect()`
+      // all zeros, so a hidden slot would report a 0×0 box at the viewport
+      // origin — which "overlaps" every sibling by its full width and "clips"
+      // past every container edge. Both are artefacts of asking a
+      // non-participant where it is.
+      //
+      // Skipping it here (rather than in each oracle rule) makes it identical to
+      // a slot the fixture did not render at all, which every rule already
+      // tolerates — `noOverlap` and `noClip` both skip absent slots. Any fixture
+      // with a conditionally-shown affordance needs this; the adaptive bar's `⋯`
+      // trigger, hidden while nothing has overflowed, was the first.
+      if (el.getClientRects().length === 0) continue;
       order.push(key);
       slots[key] = { box: box(el), truncates: el.scrollWidth > el.clientWidth };
     }

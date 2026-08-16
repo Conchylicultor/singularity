@@ -346,6 +346,7 @@ per-site via `// eslint-disable-next-line spacing/no-adhoc-spacing -- reason`.
     - `plugin-meta/plugin-view/dependencies`
     - `plugin-meta/plugin-view/inclusion`
     - `plugin-meta/plugin-view/sub-plugins`
+    - `primitives/adaptive-bar`
     - `primitives/app-shell`
     - `primitives/command-palette`
     - `primitives/commit-list`

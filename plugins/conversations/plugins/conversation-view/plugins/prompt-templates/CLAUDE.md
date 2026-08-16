@@ -17,6 +17,7 @@
     - `conversations.useConversationById`
     - `conversations/conversation-view.conversationPane`
     - `conversations/conversation-view/pending-turn.sendConversationTurn`
+    - `primitives/adaptive-bar.AdaptiveBar`
     - `primitives/css/cluster.Cluster`
     - `primitives/css/scroll.Scroll`
     - `primitives/css/spacing.Stack`
@@ -27,7 +28,6 @@
     - `primitives/floating-action.FloatingAction`
     - `primitives/floating-action.FloatingActionFadeIn`
     - `primitives/prompt-editor.PromptEditorSlots`
-    - `primitives/responsive-overflow.ResponsiveOverflow`
     - `primitives/usage-rank.recordUsage`
     - `primitives/usage-rank.useUsageOrder`
 - Server:

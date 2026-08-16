@@ -222,7 +222,6 @@ the outcome too, with no separate code path.
     - `primitives/text-editor`
     - `primitives/tree`
     - `reorder`
-    - `reorder/node-types/overflow`
     - `reports`
     - `review/plugin-changes`
     - `shell`

@@ -100,7 +100,7 @@ Reach for these instead of raw flex/grid. Import from `@plugins/primitives/plugi
 - **`Surface`** (`surface`) — elevation roles (sunken·base·raised·overlay). → [CLAUDE.md](../../../plugins/primitives/plugins/surface/CLAUDE.md)
 - **`Card`** (`card`) — raised + padded chrome. → [CLAUDE.md](../../../plugins/primitives/plugins/card/CLAUDE.md)
 - **`ViewportOverlay`** (`viewport-overlay`) — portals to body for true `fixed inset-0` + z-layer + theme-scope. → [CLAUDE.md](../../../plugins/primitives/plugins/viewport-overlay/CLAUDE.md)
-- **`ResponsiveOverflow`** (`responsive-overflow`) — progressively hides children that don't fit the width. → [CLAUDE.md](../../../plugins/primitives/plugins/responsive-overflow/CLAUDE.md)
+- **`AdaptiveBar`** (`adaptive-bar`) — a single-line bar that fits its children by asking each for a smaller form of itself, then **moving** (never re-rendering) the rest into a panel behind a `⋯`. Must be the growing cell of its row. → [CLAUDE.md](../../../plugins/primitives/plugins/adaptive-bar/CLAUDE.md)
 
 The full audit — every primitive's exact API, composition recipes, the defaults table, and known rough edges — is the [CSS primitives audit](../../../research/2026-06-20-css-primitives-audit.md). Design rationale + track mechanics for the original `css/*` primitives are frozen in [the API spec](../../../research/2026-06-15-global-css-layout-primitive-apis.md); the roadmap is in [the vision doc](../../../research/2026-06-15-global-css-layout-primitives-vision.md). The Scroll/Clip/Sticky/Pin set (closing the scroll/clip/sticky/positioning gaps) is specified in the [allowlist-drain plan](../../../research/2026-06-17-global-drain-no-adhoc-layout-allowlist.md).
 

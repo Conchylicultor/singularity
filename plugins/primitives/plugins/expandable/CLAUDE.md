@@ -6,7 +6,7 @@ less** toggle — but only when the content **actually overflows** that height.
 ## Why it exists (measure, don't guess)
 
 The collapse decision is made by **measuring the content's real rendered height**
-with a `ResizeObserver` (mirroring `collapsible-wrap` / `responsive-overflow` —
+with a `ResizeObserver` (mirroring `collapsible-wrap` / `adaptive-bar` —
 deferred via `requestAnimationFrame`, no timers, no polling), NOT by guessing
 from character counts or hard-newline counts.
 

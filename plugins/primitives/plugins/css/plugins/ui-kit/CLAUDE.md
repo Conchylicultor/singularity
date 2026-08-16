@@ -568,6 +568,7 @@ guard: `confirmDialog` (`imperative-dialog/plugins/confirm`); native
     - `plugin-meta/facets/routes/render-detail`
     - `plugin-meta/plugin-view/inclusion`
     - `primitives/action-presentation`
+    - `primitives/adaptive-bar`
     - `primitives/app-shell`
     - `primitives/auto-scroll`
     - `primitives/avatar`
@@ -627,13 +628,11 @@ guard: `confirmDialog` (`imperative-dialog/plugins/confirm`); native
     - `primitives/log-channels`
     - `primitives/multi-select`
     - `primitives/outline/rail`
-    - `primitives/overflow-menu`
     - `primitives/pane`
     - `primitives/pane-toolbar`
     - `primitives/popover`
     - `primitives/prompt-editor`
     - `primitives/prompt-editor/voice-input`
-    - `primitives/responsive-overflow`
     - `primitives/row-actions`
     - `primitives/search`
     - `primitives/section-card`

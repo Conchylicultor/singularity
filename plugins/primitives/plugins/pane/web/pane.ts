@@ -250,6 +250,24 @@ interface NormalizedChrome {
   keepMountedWhenCollapsed: boolean;
 }
 
+/**
+ * One contribution to a pane's `Actions` slot.
+ *
+ * `id` is REQUIRED and must be stable for the contribution's whole life: the
+ * right-side actions render inside an `AdaptiveBar`, whose width ledger and DOM
+ * move plan are both keyed on it. An id that churns per render throws every
+ * measurement away each frame; a duplicate id makes "which node is this" — and
+ * therefore "where does it go" — unanswerable. The array index this slot used to
+ * be rendered by was neither stable nor unique across a re-order.
+ */
+export interface PaneActionContribution {
+  /** Short kebab-case, describing the action ("improve", "view-mode"). */
+  id: string;
+  component: ComponentType;
+  /** `"right"` (default) joins the overflow-collapsing bar; `"left"` sits after the title. */
+  position?: "left" | "right";
+}
+
 export interface PaneInternal {
   id: string;
   /** Default ancestors to prepend when opening this pane from scratch (no caller context). */
@@ -287,7 +305,7 @@ export interface PaneInternal {
   chrome: NormalizedChrome;
   /** Default column width in pixels. Read by layout renderers (e.g. Miller). */
   width?: number;
-  actionsSlot: Slot<{ component: ComponentType; position?: "left" | "right" }>;
+  actionsSlot: Slot<PaneActionContribution>;
   resolve?: ResolveHook<Record<string, string>> | false;
   /**
    * Self-contained title resolver for tab labels and the browser document
@@ -1525,7 +1543,7 @@ export interface PaneObject<
    * resolve the app-relative path from. Delegates to {@link RouteDef.link}.
    */
   link?: (app: AppRef, params: FullParams) => string;
-  Actions: Slot<{ component: ComponentType; position?: "left" | "right" }>;
+  Actions: Slot<PaneActionContribution>;
   /** Internal. Consumers should not rely on this. */
   _internal: PaneInternal;
 }
@@ -1978,10 +1996,11 @@ function define(
     );
   }
 
-  const actionsSlot = defineSlot<{
-    component: ComponentType;
-    position?: "left" | "right";
-  }>(`pane.${id}.actions`);
+  // NOT a `defineRenderSlot`: the id is TEMPLATED per pane, so build-time
+  // codegen cannot extract it into the reorderable-slots manifest, and a render
+  // slot would put it in a reorder path whose config key it can never statically
+  // own. The `id` on each contribution is all the adaptive bar's ledger needs.
+  const actionsSlot = defineSlot<PaneActionContribution>(`pane.${id}.actions`);
 
   const resolve =
     "resolve" in args ? (args.resolve as PaneInternal["resolve"]) : undefined;

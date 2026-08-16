@@ -1,6 +1,6 @@
 import { useContext, type ReactNode } from "react";
 import type { Contribution } from "@plugins/framework/plugins/web-sdk/core";
-import { useEditMode } from "./edit-mode-store";
+import { useEditMode } from "@plugins/primitives/plugins/edit-mode-signal/web";
 import { ReorderEffectiveEditModeContext } from "./effective-edit-mode";
 import { ReorderItemClaimContext } from "./item-claim";
 import { contributionKey, contributionLabel } from "./sorting";
@@ -42,14 +42,15 @@ export function ReorderItemMiddleware({
     const key = contributionKey(contribution);
     if (!key) return <>{children}</>;
 
-    const excluded = (contribution as Record<string, unknown>).excludeFromReorder;
+    const excluded = (contribution as Record<string, unknown>)
+      .excludeFromReorder;
     if (excluded) return <>{children}</>;
 
     const fill = !!(contribution as Record<string, unknown>).reorderFill;
 
     const label =
-      (contribution as Record<string, unknown>).label as string | undefined
-      ?? contributionLabel(contribution);
+      ((contribution as Record<string, unknown>).label as string | undefined) ??
+      contributionLabel(contribution);
 
     return (
       <SortableReorderItem

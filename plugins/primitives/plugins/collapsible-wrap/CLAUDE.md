@@ -5,10 +5,12 @@ lines, clamped to `rows` rows by default, with a chevron toggle that reveals the
 
 ## Why it exists (clip, don't drop)
 
-This is the complement to `responsive-overflow`. `ResponsiveOverflow` *drops* (unmounts)
-children that don't fit. `CollapsibleWrap` *clips* via CSS — every child stays mounted —
-which is exactly what lets it compose with the global reorder edit mode: a clipped chip
-is still a mounted, valid drag target. The inner `flex flex-wrap` box's **layout height is
+This is the complement to `adaptive-bar`. `AdaptiveBar` keeps a single line and
+*relocates* what will not fit into a panel (its predecessor, `ResponsiveOverflow`,
+unmounted it outright). `CollapsibleWrap` instead *wraps* to more rows and *clips*
+via CSS — every child stays mounted, in place — which is exactly what lets it
+compose with the global reorder edit mode: a clipped chip is still a mounted,
+valid drag target. The inner `flex flex-wrap` box's **layout height is
 always one clamp** — a computed `max-height` (uniform row height × `rows` + `gap` ×
 (`rows`-1)) — in BOTH collapsed and expanded states. Only `overflow` flips: `hidden` when
 collapsed (clips the extra rows), `visible` when expanded (reveals them). The row height is
@@ -44,7 +46,7 @@ is *why* the whole box stays a single element that merely toggles its overflow.
 
 ## Force-expand on edit mode
 
-`const editMode = useEditMode()` (from `@plugins/reorder/web`); `expanded = userExpanded ||
+`const editMode = useEditMode()` (from `@plugins/primitives/plugins/edit-mode-signal/web`); `expanded = userExpanded ||
 editMode`. While the global reorder pen is active everything is force-expanded so every chip
 is a reachable drag target, and the chevron is hidden (a toggle would be a no-op).
 
@@ -59,7 +61,7 @@ no `CollapsibleWrap` is present the middleware sees a `null` context and falls b
 single-axis behavior byte-for-byte.
 
 Overflow detection (`ResizeObserver` on the wrap box, deferred via `requestAnimationFrame`,
-mirroring `responsive-overflow` — no timers, no polling) gates the chevron: it appears only
+mirroring `adaptive-bar` — no timers, no polling) gates the chevron: it appears only
 when `(overflowing || expanded) && !editMode`.
 
 ## Host contract
@@ -86,12 +88,12 @@ when `(overflowing || expanded) && !editMode`.
   - Uses:
     - `primitives/css/surface.Surface`
     - `primitives/css/ui-kit.cn`
+    - `primitives/edit-mode-signal.useEditMode`
     - `primitives/element-size.useResizeObserver`
     - `primitives/icon-button.IconButton`
     - `primitives/sortable-list.rectSortingStrategy`
     - `reorder.ReorderLayout`
     - `reorder.ReorderLayoutContext`
-    - `reorder.useEditMode`
   - Exports (types): `CollapsibleWrapProps`
   - Exports (values): `CollapsibleWrap`
 - Cross-plugin:

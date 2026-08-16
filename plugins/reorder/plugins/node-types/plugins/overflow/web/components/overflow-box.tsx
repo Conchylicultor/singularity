@@ -1,18 +1,8 @@
-import {
-  cn,
-  Button,
-  DropdownMenu,
-  DropdownMenuTrigger,
-  DropdownMenuContent,
-} from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import {
-  ActionPresentation,
-  ActionPresenceScope,
-} from "@plugins/primitives/plugins/action-presentation/web";
+import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { AdaptiveBar } from "@plugins/primitives/plugins/adaptive-bar/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Inset } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
-import { SlotItemLayout } from "@plugins/primitives/plugins/slot-render/web";
 import { MdMoreHoriz } from "react-icons/md";
 import { Children, type ReactNode } from "react";
 
@@ -21,23 +11,41 @@ type OverflowPayload = { label?: string };
 /**
  * The `overflow` container node type's box. Two forms, keyed on edit mode:
  *
- * - **live** — one `⋯` dropdown holding the members as labelled menu rows. The
- *   members are opaque pre-rendered contributions, so the switch to menu form is
- *   made by the region, not the host: `<ActionPresentation mode="menu">` around
- *   the content, read by each action's `IconButton`.
+ * - **live** — an `AdaptiveBar.Collapsed`: the bar's item/panel machinery with
+ *   the measurement taken out, so every member relocates unconditionally into
+ *   the `⋯` panel. Membership here is AUTHORED in the slot's config, which is
+ *   exactly what "no width has a say in it" means.
  * - **edit mode** — a labelled inline box (mirroring `HeaderBox`) so an author
- *   can see and drag the bucket's members. A closed menu would suppress drag,
- *   and the pen affordances live on the members themselves.
+ *   can see and drag the bucket's members. A closed panel would hide them from
+ *   the pen's drag affordances, so the two branches stay separate on purpose.
+ *
+ * Each member renders **its own declared form**: an `IconButton` declares the
+ * `"row"` rung and becomes a labelled `PanelActionRow`; anything richer renders
+ * as itself and stays usable. That is the whole point of the bar — the old
+ * `<ActionPresentation mode="menu">` wrapper transformed every member into a
+ * menu row, so a member that was not a plain action had nowhere to go.
  *
  * Renders **nothing** when the bucket is empty — and *empty* means "no member
  * actually rendered", not "no member is authored". An item action returns `null`
  * for a row it does not apply to (Close on an already-closed conversation, Move
  * to top on the row that is already top), so a bucket holding five authored
- * actions can still come to nothing on a given row. Whether that is so is only
- * knowable after the members run, which is what the `probe` pass below does: the
- * members render once drawing no DOM, each announcing itself to the surrounding
- * `ActionPresenceScope`, and the `⋯` is painted only if at least one did. Without
- * it, such a row gets a `⋯` opening an empty menu.
+ * actions can still come to nothing on a given row. Two different emptinesses,
+ * answered in two places:
+ *
+ * - **no authored members at all** — the guard below, and the box renders no DOM
+ *   whatsoever (not even the bar's always-mounted panel).
+ * - **members that all rendered nothing** — the bar's own answer. Each member is
+ *   mounted exactly once into its own container, so `childElementCount === 0`
+ *   says it drew nothing; such a member is `hidden`, is never eligible for the
+ *   panel, and the `⋯` follows the panel's occupancy rather than the member
+ *   count. No trigger is painted for a bucket that came to nothing on this row.
+ *
+ * That replaces action-presentation's `probe` pass, which answered the same
+ * question by instantiating every member a SECOND time to draw nothing and be
+ * counted — and only ever counted `IconButton`s, so it was blind to a member
+ * that hand-rolled its markup. The double mount (its own comment admitted "a
+ * member exists twice while its menu is open") is gone with it: one instance,
+ * always.
  */
 export function OverflowBox({
   payload,
@@ -76,51 +84,18 @@ export function OverflowBox({
   }
 
   return (
-    <ActionPresenceScope>
-      {(hasActions) => (
-        <>
-          {/* The probe. Renders no DOM — it exists so the members can say
-              whether they apply to this row before the trigger is painted. It
-              stays mounted alongside the open menu (rather than swapping with
-              it) so the answer keeps up with a row whose actions come and go — a
-              conversation that starts running, a task that reaches the top of
-              the queue — and so the trigger never blinks out for a frame as the
-              menu closes. The cost is that a member exists twice while its menu
-              is open, which the reorder wrappers only care about in edit mode —
-              and edit mode takes the inline branch above, never this one. */}
-          <ActionPresentation mode="probe">{children}</ActionPresentation>
-          {hasActions ? (
-            <DropdownMenu>
-              <DropdownMenuTrigger
-                render={
-                  <Button
-                    variant="ghost"
-                    aspect="icon"
-                    aria-label={label}
-                    title={label}
-                  />
-                }
-              >
-                <MdMoreHoriz />
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                {/* The members were rendered for the row this box sits in — a
-                    flex row, so the slot wrapped each of them in a horizontal
-                    `min-w-0` cell. Here they are stacked in a menu panel
-                    instead, so that cell is a lie: it makes each row a flex
-                    item that shrink-wraps to its own label, leaving the space
-                    beside the text dead to the pointer. Declare where they
-                    really landed. */}
-                <SlotItemLayout orientation="column">
-                  <ActionPresentation mode="menu">
-                    {children}
-                  </ActionPresentation>
-                </SlotItemLayout>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          ) : null}
-        </>
-      )}
-    </ActionPresenceScope>
+    <AdaptiveBar.Collapsed label={label}>
+      {/*
+        The members are opaque pre-rendered contributions — the node type is
+        handed a `ReactNode`, never the member list — so position is the only
+        identity available, and it is a real one: the bucket's membership and
+        order are authored in the config tree, so member `i` is the same member
+        on every render of that tree. The id keys the bar's per-item ledger; a
+        collapsed bucket measures nothing, so nothing else rides on it.
+      */}
+      {Children.map(children, (child, i) => (
+        <AdaptiveBar.Item id={`m${String(i)}`}>{child}</AdaptiveBar.Item>
+      ))}
+    </AdaptiveBar.Collapsed>
   );
 }

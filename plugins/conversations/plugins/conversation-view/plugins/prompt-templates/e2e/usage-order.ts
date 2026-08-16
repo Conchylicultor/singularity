@@ -38,26 +38,20 @@ const SETTLE_MS = 15_000;
  * The PINNED strip's ✎ buttons — the only one of each chip's pair carrying the
  * title in a `<span>` (the ➤ send button is icon-only).
  *
- * Excluding the two hidden copies is what makes this correct, and every looser
- * selector has been tried and fails. The same chip exists three times in the
- * DOM:
- *   - the live pinned strip (what we want),
- *   - the off-screen `MeasureStrip` copy `ResponsiveOverflow` measures against,
- *     parked at `left:-9999` with `opacity:0` — which Playwright's `:visible`
- *     still counts as VISIBLE, so a `:visible` match resolves the off-screen
- *     twin and clicks at a clamped point over some unrelated chip,
- *   - the collapsed `FloatingAction` panel, which holds EVERY template (not
- *     just the pinned ones) inside a `max-w-7` box, so its clipped chips
- *     overlap the strip and intercept clicks aimed at them.
- * Both exclusions are DESCENDANT selectors (`:not([x] *)`), not attribute
- * checks on the button itself: `aria-hidden` sits on the MeasureStrip's portal
- * root and `inert` on the panel wrapper, several levels above the chip. A
- * `:not([aria-hidden="true"])` on the button (or on the nearest
- * `responsive-overflow` node, which lives INSIDE the measure strip) matches
- * everything and excludes nothing.
+ * Each pinned chip is now mounted exactly ONCE (`adaptive-bar` measures the real
+ * node instead of rendering a hidden full-width twin), so the only other copy in
+ * the document is the genuine second surface: the collapsed `FloatingAction`
+ * panel, which holds EVERY template — not just the pinned ones — inside a
+ * `max-w-6` box, so its clipped chips overlap the strip and intercept clicks
+ * aimed at it. `[hidden]` covers the bar's own parking dock, where a chip the
+ * strip has no room for is kept alive off-layout.
+ *
+ * Both exclusions are DESCENDANT selectors (`:not([x] *)`), not attribute checks
+ * on the button itself: `inert` sits on the panel wrapper and `hidden` on the
+ * dock, several levels above the chip.
  */
 const LIVE_CHIP =
-  'button[data-ui-owner^="TemplateChip@"]:not([aria-hidden="true"] *):not([inert] *)';
+  'button[data-ui-owner^="TemplateChip@"]:not([inert] *):not([hidden] *)';
 
 function chipButtons(page: Page) {
   return page.locator(LIVE_CHIP);
@@ -94,7 +88,11 @@ await withBrowser(async (h) => {
 
   const before = await pinnedTitles(page);
   r.note(`pinned before: ${before.join(" | ")}`);
-  r.ok("pinned strip rendered", before.length > 1, `got ${before.length} chips`);
+  r.ok(
+    "pinned strip rendered",
+    before.length > 1,
+    `got ${before.length} chips`,
+  );
 
   // The LAST pinned chip: guaranteed not to be leading already, so "it leads
   // afterwards" is a real assertion rather than a tautology.

@@ -31,7 +31,7 @@ export interface ClusterProps extends React.HTMLAttributes<HTMLElement> {
  * It DELEGATES to `Stack` internally rather than reimplementing flex, so the gap
  * ramp and align/justify semantics stay defined in exactly one place. The
  * distinct export earns its keep as the future home for chip-overflow policy: it
- * can later compose `ResponsiveOverflow` (progressively hide chips that don't
+ * can later compose `AdaptiveBar` (shrink, then relocate, chips that don't
  * fit) with zero call-site change, because every chip group already routes
  * through this one primitive.
  *

@@ -42,6 +42,7 @@ case) and intentionally does not compose it.
     - `page/annotations/todo/task-link`
     - `page/inline-date`
     - `page/prompt/block`
+    - `primitives/action-presentation`
     - `primitives/bar`
     - `primitives/css/row`
     - `primitives/date-picker`

@@ -4,6 +4,6 @@ import { overflowNodeType } from "./internal/node-type";
 
 export default {
   description:
-    "Overflow reorder node type: a container whose members collapse behind one ⋯ dropdown and render as labelled menu rows (via action-presentation). In edit mode it is a labelled inline box so the bucket stays draggable. Owns the label payload schema.",
+    "Overflow reorder node type: a container whose authored members all relocate behind one ⋯ panel, via AdaptiveBar.Collapsed — each rendering the form it declared, so a plain action becomes a labelled row and a richer widget stays itself, one live instance either way. In edit mode it is a labelled inline box so the bucket stays draggable. Owns the label payload schema.",
   contributions: [ReorderNodes.NodeType({ nodeType: overflowNodeType })],
 } satisfies PluginDefinition;

@@ -1,79 +1,133 @@
 # action-presentation
 
-An action contributed to an open slot is an **opaque component** — its host gets a
-`ComponentType`, not `{ icon, label, onClick }` — so a host that wants the same
-action drawn some other way (a dropdown row instead of a ghost icon button)
-cannot introspect it. It does not need to: the action asks what region it is in.
+A widget in a bar and the bar that hosts it must agree on what happens when the
+room runs out. The bar knows the width; only the widget knows which smaller
+versions of *itself* still work. This plugin is the channel between them.
 
 ```tsx
-<ActionPresentation mode="menu">{children}</ActionPresentation>   // the region declares
-if (useActionPresentation() === "menu") return <MenuActionItem … />;  // the action reads
+// The widget offers rungs and reads back the one it got — one hook, both ways.
+const form = useActionForm({ shrinksTo: ["compact"], yields: "early" });
+if (form === "compact") return <IconButton icon={VolumeIcon} label="Volume" onClick={toggleMute} />;
+return <VolumeSlider />;
 ```
 
-Default is `"inline"`, so a call site with no provider above it renders exactly as
-before. Today the one `menu` region is the `overflow` reorder node type
-(`@plugins/reorder/plugins/node-types/plugins/overflow`) and the one component
-that branches is `IconButton` — which *is* the generic `{ icon, label, onClick }`
-shape, so switching it switches every action built on it (`RowActionButton`
-included).
+A **rung** (`"full" | "compact" | "row"`) names a form the widget renders itself
+as, never a place — a widget rendered as itself inside a floating panel is still
+`"full"`, and is never told where it is. `yields`
+(`"never" | "late" | "normal" | "early"`) says how eagerly it gives up room
+*relative to its neighbours*, because the bar cannot rank its own occupants: they
+come from different plugins and it can name none of them.
 
-`MenuActionItem` takes the **raw** shortcut string and formats it through the same
-`formatShortcutLabel` as the inline form, so the two presentations cannot drift.
+## The invariant: you only get a form you offered
 
-## `probe` — "is this action set empty for THIS row?"
+`useActionForm` returns the region's assignment only when that form is `"full"`
+or is in **this caller's own** `shrinksTo`; otherwise `"full"`. Enforced in the
+hook, not trusted of the region — including on the first commit, where the
+assignment (context, already committed) leads the declaration (an effect, still
+queued).
 
-An action returns `null` for a row it doesn't apply to, so a region can't know
-its set is empty until the members have run — and chrome painted for them (an
-`⋯`) would be dead. Under `probe`, `IconButton` renders nothing and only reports
-itself to the enclosing `ActionPresenceScope`, which hands its child one boolean.
+That filter is the design. The old `<ActionPresentation mode="menu">` blanketed a
+subtree, so a bar could turn anything below it into a labelled row. An icon
+button survives that losslessly; a volume slider or a jog wheel cannot be a
+labelled row at all, and the rule against putting one in such a region was prose
+in this file. Now a widget that never writes `"row"` cannot be handed `"row"` by
+any region, present or future.
 
-```tsx
-<ActionPresenceScope>
-  {(hasActions) => (
-    <>
-      <ActionPresentation mode="probe">{children}</ActionPresentation>
-      {hasActions ? <TheChromeThatHoldsThem /> : null}
-    </>
-  )}
-</ActionPresenceScope>
-```
+## Declaring nothing is safe
 
-Members are instantiated twice (probe + real); the probe emits no DOM.
-**It counts `IconButton`s** — same contract as menu form — so a member that
-hand-rolls its markup is invisible to it. Typed signal, not a CSS `:has()` on the
-probe's markup: members arrive inside whatever `display:contents` scaffolding the
-slot machinery renders, so a selector would assert on incidental DOM.
+`useActionForm()` with no argument — or never calling it — is a one-rung ladder
+at `yields: "normal"`: the bar may leave the widget alone or relocate it as
+itself, and nothing else. **With no bar above it returns `"full"` and the
+declaration is a no-op**, which is every ordinary call site, so the ~90 plugins
+rendering an `IconButton` in plain chrome are untouched.
 
-## Rules
+## Why report-up
 
-- Mount `ActionPresentation` around *content*, not chrome: the mode is inherited
-  by everything below it, so a `menu` region must hold only actions meant to
-  become menu rows.
-- `variant` / `className` / `tooltip` are **inert** in menu form — a menu row has
-  no ghost box to style and its label is already visible.
+The ladder flows *up*; context only flows down. DOM data-attributes were rejected
+for this case: between a bar and a contributed widget sit `renderIsolated`'s
+error boundary, the reorder item middleware and `.Render`'s own wrapper, so there
+is no "the widget's root element" to attribute. Static contribution metadata
+fails too — eagerness is per-instance and dynamic: every tab is the same
+component, and only the *focused* one says `yields: "never"`. So: an effect-time
+registration into the nearest item scope, the `useReportPopupOpen` shape.
+
+`declare` is keyed on a serialization of the ladder (`shrinksTo.join(",")`
++ `"|"` + `yields`), never object identity — call sites pass an inline literal,
+so identity churns every render and would thrash the region's ledger.
+
+## Holds
+
+`useHoldShrink(active)` freezes an item's assignment while a live interaction is
+in flight; the bar re-fits everything *around* it and applies the stored target
+on release (so "deferred forever" is unrepresentable). Only for what survives the
+pointer release — an inertial fling's coast. The bar pins the item under an
+active pointer itself, and `PopupOpenScope` pins one whose own popover is open.
+
+## `PanelActionRow` — a row, not a menu item
+
+The renderer of the `"row"` rung, and it **renders standalone**: no menu, no
+popover, no context above it. That is forced, not stylistic. The overflow panel
+holds relocated widgets' live DOM (a Web Audio volume control, a jog wheel
+mid-drag), so it must stay mounted — and `DropdownMenuContent` unmounts its
+children on close. The panel is therefore a plain dialog, where `role="menu"`
+would also be wrong: a menu's roving tabindex and typeahead eat the arrow keys a
+relocated `role="slider"` needs. Honest cost: **the panel is Tab + Enter + Esc,
+with no typeahead and no arrow-key roving.**
+
+It composes `Line` rather than `Row` — `Row → row-actions → IconButton →
+action-presentation` is a cycle `plugin-boundaries` rejects. The constraint is
+narrow: a component **`IconButton` itself renders** cannot use `Row`, which today
+means this one component. Ordinary consumers of `Row`, adaptive-bar included, are
+unaffected. The four duplicated chrome classes are that, not carelessness.
+
+Takes the **raw** shortcut string and formats it through the same
+`formatShortcutLabel` as the full form, so the two cannot drift. `IconButton` is
+the one widget that declares `"row"` — it *is* the generic
+`{ icon, label, onClick }` shape — so everything built on it (`RowActionButton`
+included) inherits the rung, and `variant` / `className` / `tooltip` / `side` are
+INERT in that form.
+
+## Why there is no `probe`
+
+`probe` answered *"is this bucket empty for THIS row?"* (an action returns `null`
+for a row it does not apply to, and an `⋯` with nothing behind it is dead chrome)
+by instantiating every member a second time to draw nothing and be counted. A bar
+mounts each item exactly once into its own container, so the same question is a
+one-line DOM read in the layout effect that already measures:
+`container.childElementCount === 0`. Strictly better — the probe counted
+`IconButton`s and was blind to a member that hand-rolled its markup — and no
+second mount. `ActionPresenceScope` / `useReportActionPresence` went with it.
 
 <!-- AUTOGENERATED:BEGIN — do not edit; regenerated by `./singularity build` -->
 
 ## Plugin reference
 
-- Description: Presentation mode for generic {icon,label,onClick} actions: a region declares itself inline, menu or probe via <ActionPresentation>, and the action component reads it with useActionPresentation() — so an opaque action renders as a ghost icon button on a row and as a labelled MenuActionItem inside a dropdown, with no change at the call site. The probe mode draws nothing and only counts itself into the surrounding ActionPresenceScope, so a region can tell whether its action set is empty for a given row before painting chrome for it.
+- Description: The shrink-ladder seam between a widget and the bar that hosts it: useActionForm declares the smaller forms a widget can render ITSELF as (and how eagerly it yields room to its neighbours) and reads back the form the region assigned — one hook, both directions. A region can only hand a widget a form that widget declared, so a rich control can never be transformed into something it is not; PanelActionRow renders the 'row' rung, the one IconButton declares — a labelled row that stands alone in the always-mounted overflow panel, never a menu item.
 - Web:
   - Uses:
-    - `primitives/css/ui-kit.DropdownMenuItem`
-    - `primitives/css/ui-kit.DropdownMenuShortcut`
+    - `primitives/css/fill.Fill`
+    - `primitives/css/line.Line`
+    - `primitives/css/text.Text`
+    - `primitives/css/ui-kit.cn`
+    - `primitives/latest-ref.useLatestRef`
     - `primitives/shortcuts.formatShortcutLabel`
+    - `primitives/tooltip.Kbd`
   - Exports (types):
-    - `ActionPresentationMode`
-    - `MenuActionItemProps`
+    - `ActionForm`
+    - `ItemFormChannel`
+    - `PanelActionRowProps`
+    - `ShrinkLadder`
+    - `YieldEagerness`
   - Exports (values):
-    - `ActionPresenceScope`
-    - `ActionPresentation`
-    - `MenuActionItem`
-    - `useActionPresentation`
-    - `useReportActionPresence`
+    - `ActionFormProvider`
+    - `PanelActionRow`
+    - `useActionForm`
+    - `useHoldShrink`
 - Cross-plugin:
   - Imported by:
+    - `apps-core/tab-bar`
+    - `apps/sonata/library`
+    - `primitives/adaptive-bar`
     - `primitives/icon-button`
-    - `reorder/node-types/overflow`
 
 <!-- AUTOGENERATED:END -->

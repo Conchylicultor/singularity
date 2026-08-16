@@ -27,7 +27,7 @@ import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
 import { useResizeObserver } from "@plugins/primitives/plugins/element-size/web";
 import { reorderDescriptors } from "./descriptors";
 import { useReorderConfig } from "./use-reorder-config";
-import { useEditMode } from "./edit-mode-store";
+import { useEditMode } from "@plugins/primitives/plugins/edit-mode-signal/web";
 import { ReorderEffectiveEditModeContext } from "./effective-edit-mode";
 import { ReorderItemClaimContext } from "./item-claim";
 import {
@@ -288,29 +288,23 @@ function ReorderInner({
 
   // --- Hide / restore (config-backed) ---------------------------------------
 
-  const hideItem = useCallback(
-    (key: string) => {
-      if (hiddenKeysRef.current.includes(key)) return;
-      commitTreeRef.current(
-        materializeTree(entriesRef.current, hiddenKeysRef.current, {
-          hideKey: key,
-        }),
-      );
-    },
-    [],
-  );
+  const hideItem = useCallback((key: string) => {
+    if (hiddenKeysRef.current.includes(key)) return;
+    commitTreeRef.current(
+      materializeTree(entriesRef.current, hiddenKeysRef.current, {
+        hideKey: key,
+      }),
+    );
+  }, []);
 
-  const restoreItem = useCallback(
-    (key: string) => {
-      if (!hiddenKeysRef.current.includes(key)) return;
-      commitTreeRef.current(
-        materializeTree(entriesRef.current, hiddenKeysRef.current, {
-          restoreKey: key,
-        }),
-      );
-    },
-    [],
-  );
+  const restoreItem = useCallback((key: string) => {
+    if (!hiddenKeysRef.current.includes(key)) return;
+    commitTreeRef.current(
+      materializeTree(entriesRef.current, hiddenKeysRef.current, {
+        restoreKey: key,
+      }),
+    );
+  }, []);
 
   // --- Drag reorder ----------------------------------------------------------
 
@@ -352,14 +346,11 @@ function ReorderInner({
   // Append the freshly-materialized tree with one new node and commit it. A
   // stable callback so the `inserts` memo below holds no ref reads in its body
   // (the latest entries/hidden/commit are read here, off render).
-  const doInsert = useCallback(
-    (create: () => ReorderNode) => {
-      const tree = materializeTree(entriesRef.current, hiddenKeysRef.current);
-      tree.push(create());
-      commitTreeRef.current(tree);
-    },
-    [],
-  );
+  const doInsert = useCallback((create: () => ReorderNode) => {
+    const tree = materializeTree(entriesRef.current, hiddenKeysRef.current);
+    tree.push(create());
+    commitTreeRef.current(tree);
+  }, []);
 
   const inserts = useMemo(() => {
     const out: Array<{ label: string; onInsert: () => void }> = [];
@@ -377,12 +368,9 @@ function ReorderInner({
 
   // --- Remove a node by id ---------------------------------------------------
 
-  const onRemoveNode = useCallback(
-    (id: string) => {
-      commitTreeRef.current(mapNodeById(itemsRef.current, id, () => null));
-    },
-    [],
-  );
+  const onRemoveNode = useCallback((id: string) => {
+    commitTreeRef.current(mapNodeById(itemsRef.current, id, () => null));
+  }, []);
 
   const onRemoveNodeRef = useLatestRef(onRemoveNode);
 
@@ -456,7 +444,8 @@ function ReorderInner({
       const onRemove = () => onRemoveNodeRef.current(data.id ?? renderId);
 
       if (nodeType.container) {
-        const collapsed = (payload as { collapsed?: boolean }).collapsed === true;
+        const collapsed =
+          (payload as { collapsed?: boolean }).collapsed === true;
         const memberIds: string[] = [];
         let children: ReactNode = null;
         if (!collapsed) {
@@ -475,7 +464,10 @@ function ReorderInner({
                     id: m.id,
                     editMode,
                     onPatch: (np: unknown) =>
-                      patchNodeRef.current(memberId, np as Record<string, unknown>),
+                      patchNodeRef.current(
+                        memberId,
+                        np as Record<string, unknown>,
+                      ),
                     onRemove: () => onRemoveNodeRef.current(m.id ?? memberId),
                   })}
                 </span>
@@ -580,9 +572,7 @@ function ReorderInner({
         const label = entry._doc?.label ?? contributionLabel(entry);
         return (
           <div className="cursor-grabbing rounded-md border border-primary/50 bg-background/95 px-sm py-2xs shadow-lg ring-1 ring-primary/50">
-            <Badge variant="primary">
-              {label}
-            </Badge>
+            <Badge variant="primary">{label}</Badge>
           </div>
         );
       }
@@ -620,7 +610,8 @@ function ReorderInner({
           : "editor-wrap";
 
   const wrap = regime === "editor-wrap";
-  const strategy = injected?.strategy ?? (wrap ? rectSortingStrategy : undefined);
+  const strategy =
+    injected?.strategy ?? (wrap ? rectSortingStrategy : undefined);
 
   // Shared callback wiring. These are passed straight through — each is already
   // a stable `useCallback([])` reading fresh state via internal refs (commitTree,

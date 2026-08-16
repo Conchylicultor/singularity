@@ -7,7 +7,7 @@ import type { Contribution } from "@plugins/framework/plugins/web-sdk/core";
 import { ReorderAreaContext } from "@plugins/reorder/plugins/editor/web";
 import { ReorderItemMiddleware } from "../internal/dnd-item-middleware";
 import { ReorderItemClaimContext } from "../internal/item-claim";
-import { setEditMode } from "../internal/edit-mode-store";
+import { setEditMode } from "@plugins/primitives/plugins/edit-mode-signal/web";
 
 /**
  * The claim invariant: a contribution is a sortable item iff it was rendered as
@@ -21,7 +21,10 @@ import { setEditMode } from "../internal/edit-mode-store";
 
 const SORTABLE = '[aria-roledescription="sortable"]';
 
-function contributionOf(id: string, extra?: Record<string, unknown>): Contribution {
+function contributionOf(
+  id: string,
+  extra?: Record<string, unknown>,
+): Contribution {
   // `contributionKey()` reads `_pluginId` + `id`; nothing else is touched.
   return { _pluginId: "test.plugin", id, ...extra } as unknown as Contribution;
 }
@@ -35,7 +38,11 @@ function contributionOf(id: string, extra?: Record<string, unknown>): Contributi
 function Area({ ids, children }: { ids: string[]; children: ReactNode }) {
   return (
     <ReorderAreaContext.Provider
-      value={{ orientation: "vertical", onHide: () => {}, onRemoveNode: () => {} }}
+      value={{
+        orientation: "vertical",
+        onHide: () => {},
+        onRemoveNode: () => {},
+      }}
     >
       <DndContext>
         <SortableContext items={ids}>{children}</SortableContext>
@@ -109,7 +116,9 @@ describe("reorder item claim", () => {
         <Claimed>
           <ReorderItemMiddleware
             slotId="area.slot"
-            contribution={contributionOf("excluded", { excludeFromReorder: true })}
+            contribution={contributionOf("excluded", {
+              excludeFromReorder: true,
+            })}
           >
             <div data-testid="nested">
               <ReorderItemMiddleware

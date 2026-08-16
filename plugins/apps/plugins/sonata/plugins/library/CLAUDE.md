@@ -120,6 +120,8 @@ the title — a chord-grid save endpoint physically cannot carry one.
     - `apps/sonata/shell.TEMPO_MATH_FLOOR`
     - `apps/sonata/shell.useSonata`
     - `infra/endpoints.useEndpointMutation`
+    - `primitives/action-presentation.useActionForm`
+    - `primitives/adaptive-bar.AdaptiveBar`
     - `primitives/css/card.Card`
     - `primitives/css/center.Center`
     - `primitives/css/clip.Clip`
@@ -149,8 +151,6 @@ the title — a chord-grid save endpoint physically cannot carry one.
     - `primitives/live-state.ResourceResult`
     - `primitives/live-state.useResource`
     - `primitives/loading.Loading`
-    - `primitives/overflow-menu.OverflowMenu`
-    - `primitives/overflow-menu.OverflowMenuItem`
     - `primitives/pane.Hint`
     - `primitives/pane.openPane`
     - `primitives/pane.Pane`

@@ -89,6 +89,35 @@ the primitive's mechanics. The harness's `__measure()` reads `[data-geo]` boxes 
 `scrollWidth > clientWidth` (the truncation signal) + DOM order into a
 `MeasuredFixture`.
 
+**A slot that generates no boxes is skipped, not measured as 0×0.**
+`getBoundingClientRect()` on a `display:none` element is all zeros, so a hidden
+slot would otherwise report a box at the viewport origin — which "overlaps" every
+sibling by its full width and "clips" past every container edge. Both are
+artefacts of asking a non-participant where it is. Skipping it in `__measure`
+(rather than per oracle rule) makes it identical to a slot the fixture did not
+render, which every rule already tolerates. Fixtures with a conditionally-shown
+affordance depend on this — adaptive-bar's `⋯` trigger, hidden until something
+overflows, was the first.
+
+## Settling: measure by observation, never by a frame count
+
+`measure()` re-measures until two consecutive frames agree (capped at 30, so an
+oscillating layout fails on its own geometry instead of hanging).
+
+The double-rAF this replaced assumed layout is final once the render is committed
+and painted — true only while layout is pure synchronous CSS, which every fixture
+was until adaptive-bar. A primitive that lays itself out from a `ResizeObserver`
+settles LATER by construction: the observer is delivered after layout, its handler
+is rAF-debounced, and each decision it commits is a React render whose own layout
+effect may measure and decide again. The frame count is a property of the fixture,
+not a constant the harness can know.
+
+Measuring mid-settle reads a transient, and the symptom is not subtle-looking: the
+gate reports the PREVIOUS width's geometry as an overlap/clip at the current
+width, with plausible pixel values. If you ever see a failure whose numbers match
+the adjacent sweep step exactly, suspect settling before you suspect the
+primitive.
+
 ## The oracle (`core/oracle.ts`)
 
 Pure, DOM-free functions — one per `GeometryInvariant` kind (`noOverlap`,

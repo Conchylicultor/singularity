@@ -1,9 +1,4 @@
-import {
-  useRef,
-  useState,
-  type CSSProperties,
-  type ReactNode,
-} from "react";
+import { useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { MdExpandLess, MdExpandMore } from "react-icons/md";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { useResizeObserver } from "@plugins/primitives/plugins/element-size/web";
@@ -34,7 +29,7 @@ const FADE_MASK = "linear-gradient(to bottom, black 65%, transparent 100%)";
  * toggle — but only when the content **actually overflows** that height.
  *
  * The decision is made by measuring the content's real rendered height with a
- * ResizeObserver (mirroring collapsible-wrap / responsive-overflow), NOT by
+ * ResizeObserver (mirroring collapsible-wrap / adaptive-bar), NOT by
  * guessing from character or newline counts. That makes it correct regardless
  * of soft-wrapping, font size, viewport width, or async-loaded media: a long
  * single-paragraph prose block that wraps tall is collapsed just like one with

@@ -15,7 +15,11 @@ declare global {
     /** True once `loadFixtures()` resolved and the globals below are installed. */
     __fixturesReady: boolean;
     /** Mount a fixture at `width`, optionally applying a falsification mutation. */
-    __renderFixture: (id: string, width: number, falsify?: FixtureMutation) => void;
+    __renderFixture: (
+      id: string,
+      width: number,
+      falsify?: FixtureMutation,
+    ) => void;
     /** Read the `[data-geo]` boxes of the currently mounted fixture. */
     __measure: () => MeasuredFixture;
   }
@@ -33,7 +37,11 @@ declare global {
 // real origin (the `file://`-fallback the harness design calls out).
 
 export interface Measurer {
-  measure(id: string, width: number, falsify?: FixtureMutation): Promise<MeasuredFixture>;
+  measure(
+    id: string,
+    width: number,
+    falsify?: FixtureMutation,
+  ): Promise<MeasuredFixture>;
   close(): Promise<void>;
 }
 
@@ -50,7 +58,9 @@ const CONTENT_TYPE: Record<string, string> = {
 
 function contentTypeFor(path: string): string {
   const dot = path.lastIndexOf(".");
-  return CONTENT_TYPE[dot >= 0 ? path.slice(dot) : ""] ?? "application/octet-stream";
+  return (
+    CONTENT_TYPE[dot >= 0 ? path.slice(dot) : ""] ?? "application/octet-stream"
+  );
 }
 
 /**
@@ -63,12 +73,18 @@ function serveDir(outDir: string): { origin: string; stop: () => void } {
     hostname: "127.0.0.1",
     async fetch(req) {
       const url = new URL(req.url);
-      const rel = decodeURIComponent(url.pathname === "/" ? "/entry.html" : url.pathname);
+      const rel = decodeURIComponent(
+        url.pathname === "/" ? "/entry.html" : url.pathname,
+      );
       const abs = normalize(join(outDir, rel));
-      if (!abs.startsWith(outDir)) return new Response("forbidden", { status: 403 });
+      if (!abs.startsWith(outDir))
+        return new Response("forbidden", { status: 403 });
       const file = Bun.file(abs);
-      if (!(await file.exists())) return new Response("not found", { status: 404 });
-      return new Response(file, { headers: { "content-type": contentTypeFor(abs) } });
+      if (!(await file.exists()))
+        return new Response("not found", { status: 404 });
+      return new Response(file, {
+        headers: { "content-type": contentTypeFor(abs) },
+      });
     },
   });
   return {
@@ -103,11 +119,39 @@ export async function openMeasurer(outDir: string): Promise<Measurer> {
         ({ id, width, falsify }) => {
           window.__renderFixture(id, width, falsify);
           return new Promise<MeasuredFixture>((resolve) => {
-            // Double-rAF settle so the post-render (incl. mutation) layout is
-            // final before measuring.
-            requestAnimationFrame(() =>
-              requestAnimationFrame(() => resolve(window.__measure())),
-            );
+            // Settle by OBSERVATION, not by a frame count.
+            //
+            // The double-rAF this replaces assumed layout is final once the
+            // render has been committed and painted, which holds only while
+            // layout is pure synchronous CSS. A primitive that lays itself out
+            // from a `ResizeObserver` — the adaptive bar, and every future
+            // measure-then-decide primitive — settles LATER by construction:
+            // the observer callback is delivered after layout, its handler is
+            // rAF-debounced, and each decision it commits is a React render
+            // whose own layout effect may measure and decide again. That is
+            // several frames, and the number is a property of the fixture, not
+            // a constant the harness can know.
+            //
+            // Measuring mid-settle reads a transient, so the gate would assert
+            // on the PREVIOUS width's layout and fail with real-looking overlaps
+            // — which is exactly what it did. Re-measure until two consecutive
+            // frames agree, with a cap so a genuinely oscillating layout fails
+            // loudly on its own geometry rather than hanging the suite.
+            const MAX_SETTLE_FRAMES = 30;
+            let previous: string | null = null;
+            let frames = 0;
+            const settle = (): void => {
+              const measured = window.__measure();
+              const signature = JSON.stringify(measured);
+              if (signature === previous || frames >= MAX_SETTLE_FRAMES) {
+                resolve(measured);
+                return;
+              }
+              previous = signature;
+              frames += 1;
+              requestAnimationFrame(settle);
+            };
+            requestAnimationFrame(() => requestAnimationFrame(settle));
           });
         },
         { id, width, falsify },

@@ -1,5 +1,8 @@
 import { MdEdit, MdDone } from "react-icons/md";
-import { setEditMode, useEditMode } from "@plugins/reorder/web";
+import {
+  setEditMode,
+  useEditMode,
+} from "@plugins/primitives/plugins/edit-mode-signal/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 
 export function PenButton() {
