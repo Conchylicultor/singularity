@@ -1,6 +1,13 @@
 import type { ReactNode } from "react";
-import { cn, SURFACE_LEVELS } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { Inset, insetClass } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import {
+  cn,
+  SURFACE_LEVELS,
+} from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import {
+  Inset,
+  insetClass,
+} from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { semanticsAttrs, type BlockSemantics } from "../../core";
 import { BLOCK_INSET, MARKER_GUTTER } from "../internal/page-column";
 import type { BlockChrome, BlockRegion, BlockRegionProps } from "../types";
 
@@ -42,6 +49,12 @@ import type { BlockChrome, BlockRegion, BlockRegionProps } from "../types";
 export interface TextBlockLayoutProps {
   /** The matched block type's presentation, or undefined for the plain default. */
   chrome?: BlockChrome;
+  /**
+   * The matched block type's ARIA identity (`BlockHandle.semantics`) — what the
+   * line IS, applied to the leaf cell. Separate from `chrome` on purpose: chrome
+   * is styling and sibling regions, and a role is neither.
+   */
+  semantics?: BlockSemantics;
   /** Everything a region is given — also the blob `boxClassName` reads. */
   region: BlockRegionProps;
   /**
@@ -67,6 +80,7 @@ function Region({ of: Of, ...props }: BlockRegionProps & { of?: BlockRegion }) {
 
 export function TextBlockLayout({
   chrome,
+  semantics,
   region,
   fallbackMarker,
   children,
@@ -92,7 +106,9 @@ export function TextBlockLayout({
           always. The member-access form is the escape valve `no-adhoc-surface`
           names explicitly. Cost: no baked-in Ctrl+A select-scope, which the page
           editor's own selection model is better off without. */}
-      <div className={cn(chrome?.surface && SURFACE_LEVELS[chrome.surface], box)}>
+      <div
+        className={cn(chrome?.surface && SURFACE_LEVELS[chrome.surface], box)}
+      >
         <Region of={regions?.header} {...region} />
         {/* C — the line. */}
         <div
@@ -118,9 +134,25 @@ export function TextBlockLayout({
           ) : null}
           {/* The LEAF cell. `relative` is what the editor's placeholder
               (`absolute left-0 top-0`) resolves against — `LexicalComposer`
-              emits no DOM, so this stays the placeholder's positioned ancestor. */}
-          {/* eslint-disable-next-line layout/no-adhoc-layout -- see the line's note: fixed-skeleton mechanics, deliberately raw. */}
-          <div className="relative min-w-0 flex-1">{children}</div>
+              emits no DOM, so this stays the placeholder's positioned ancestor.
+
+              It also CARRIES THE BLOCK'S ARIA IDENTITY, because it is the one
+              skeleton element whose content is exactly the text: the marker
+              gutter, all four regions, the rail and the row's `sr-only`
+              "Selected." marker all sit outside it, so a name-from-content role
+              (`heading`) is named by the line and nothing else. Attributes only
+              — the element stays a `div` on every type and on both surfaces, so
+              none of the three totality rules move. Do NOT put the role on the
+              `<ContentEditable>` instead: that would drop Lexical's
+              `role="textbox"` (the signal that this is editable) and the
+              read-only surface has no ContentEditable to put it on. */}
+          <div
+            // eslint-disable-next-line layout/no-adhoc-layout -- see the line's note: fixed-skeleton mechanics, deliberately raw.
+            className="relative min-w-0 flex-1"
+            {...semanticsAttrs(semantics)}
+          >
+            {children}
+          </div>
           <Region of={regions?.end} {...region} />
         </div>
         <Region of={regions?.footer} {...region} />

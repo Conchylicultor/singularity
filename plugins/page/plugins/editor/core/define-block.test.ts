@@ -51,6 +51,55 @@ describe("emptyRowData (the convert-path seed)", () => {
   });
 });
 
+describe("declared semantics (the type's ARIA identity)", () => {
+  test("a text-bearing type carries its declaration onto the handle", () => {
+    const handle = defineBlock({
+      type: "heading-2",
+      schema: textBlockSchema({}),
+      markdownPrefixes: ["## "],
+      textVariant: "heading",
+      semantics: { role: "heading", level: 2 },
+    });
+    expect(handle.semantics).toEqual({ role: "heading", level: 2 });
+  });
+
+  test("a type that declares none has no semantics — nothing supplies a default", () => {
+    // `textVariant: "title"` is the trap this pins: nothing derives a role from
+    // typography, because "renders large" and "is a heading" are different
+    // claims and only one of them is true of a big paragraph.
+    const handle = defineBlock({
+      type: "text",
+      schema: textBlockSchema({}),
+      textVariant: "title",
+    });
+    expect(handle.semantics).toBeUndefined();
+  });
+
+  test("a void type has none either (it has no line to describe)", () => {
+    const handle = defineBlock({ type: "divider", schema: z.object({}) });
+    expect(handle.semantics).toBeUndefined();
+  });
+
+  test("a void type CANNOT declare one — the gate is a compile error", () => {
+    // The load-bearing half, and the only assertion that guards it: `semantics`
+    // describes a LINE, so `SemanticsFor` collapses to a named unsatisfiable
+    // object for a schema without the text-bearing brand. tsc fails on an
+    // UNUSED `@ts-expect-error`, so if that gate ever stops erroring, the
+    // type-check fails here rather than a void type silently carrying an inert
+    // role. (Same idiom as `pane-write-path-types.test.ts`.)
+    const handle = defineBlock({
+      type: "divider",
+      schema: z.object({}),
+      // @ts-expect-error - a void schema has no line, so it may declare no semantics
+      semantics: { role: "heading", level: 1 },
+    });
+    // It is rejected at the TYPE level only — nothing throws, so the value still
+    // arrives on the handle. Pinned so the gate is never mistaken for a runtime
+    // guard by someone reading only the test names.
+    expect(handle.semantics).toEqual({ role: "heading", level: 1 });
+  });
+});
+
 describe("typed text lens", () => {
   // Branded via `textBlockSchema`, so the lens is present at both the type level
   // (required `text(data): RichText`) and at runtime.
@@ -75,9 +124,9 @@ describe("typed text lens", () => {
   });
 
   test("passes an existing runs array through", () => {
-    expect(textHandle.text({ text: [{ text: "a", marks: ["bold"] }] })).toEqual([
-      { text: "a", marks: ["bold"] },
-    ]);
+    expect(textHandle.text({ text: [{ text: "a", marks: ["bold"] }] })).toEqual(
+      [{ text: "a", marks: ["bold"] }],
+    );
   });
 
   test("a void handle has no lens (runtime undefined + type-level undefined)", () => {

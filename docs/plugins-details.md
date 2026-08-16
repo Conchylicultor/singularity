@@ -17502,6 +17502,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `BlockOpContext`
           - `BlockPage`
           - `BlockPatch`
+          - `BlockSemantics`
+          - `BlockSemanticsAttrs`
           - `BlockTag`
           - `BlockTagBody`
           - `BlockTextVariant`
@@ -17601,6 +17603,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `runsOfNode`
           - `runsToLexical`
           - `runsToXmlText`
+          - `semanticsAttrs`
           - `serializeBlockRuns`
           - `SerializedBlockSchema`
           - `serializeForestToMarkdown`

@@ -998,10 +998,14 @@ Two channels replace the missing attribute, and neither is decoration:
   flag arrives as a prop from the editor (which already recomputes every row on a
   selection change), never as a per-row subscription to the selection store.
 
-**Known bound:** heading blocks still expose no `role="heading"` / `aria-level`.
-Now that the listbox no longer flattens the subtree this is the next-largest gap
-for a screen reader, but it belongs to the block-type presentation API
-(`BlockChrome`), not to the selection surface. A follow-up, not an oversight.
+**Headings are exposed now** — which is what dropping the listbox was for: a
+block type declares `role="heading"` + `aria-level` and the shared skeleton
+stamps them on its line (*A block type declares its ARIA identity*). That lives
+in the block-type presentation API, not on this surface.
+
+**Known bounds:** a run of list blocks is still no `list` of `listitem`s, and a
+`quote` / `callout` container is no `blockquote`. Same section states why, and
+why the answer is `aria-owns` rather than another role.
 
 ## Block-selection mode: the container handles only keys it originated
 
@@ -1563,6 +1567,68 @@ line boxes* (line numbers, per-line comment anchors, a diff rail) — a sibling
 column cannot know line boxes without measuring rects; and a per-type wrapper of
 any kind. Cross-cutting affordances (comments, presence) are `Editor.BlockRegion`
 render slots at the same four positions, not a fifth knob.
+
+## A block type declares its ARIA identity (`semantics`)
+
+> A block type declares what its line **is** (`BlockHandle.semantics`),
+> separately from what the line looks like (`textVariant`) and from what glyph
+> precedes it (`marker`). The shared skeleton turns that declaration into ARIA
+> attributes on the one element whose content is exactly the text.
+
+The carrier is `TextBlockLayout`'s **leaf cell** — the one skeleton element whose
+content is exactly the text. Everything that would pollute a name-from-content
+role sits outside it: the marker gutter (`aria-hidden`), all four chrome regions,
+the rail, and the row's `sr-only` "Selected. " marker.
+
+**Attributes only** — the cell stays a `div` on every type and on both surfaces —
+so none of the three totality rules above move, and a type change is still a
+re-style. `semantics` rides the HANDLE, not `chrome` (styling plus sibling
+regions; a role is neither), which is what makes one declaration serve the
+editable and the read-only surface. On a type with no line it is a **compile
+error**: `SemanticsFor` keys off the same `TextBearingSchema` brand as the text
+lens, so a void type gets a named unsatisfiable object rather than an inert
+field.
+
+**The union is CLOSED, on two rules** (stated in `core/block-semantics.ts` — read
+them before adding an arm):
+
+- **The role's required ARIA context must be nothing.** The forest renders FLAT,
+  so no element spans a run of blocks and none wraps a subtree. `listitem` needs
+  an owning `list`; `blockquote` would have to CONTAIN the passage.
+- **The role must not have presentational children.** The line hosts a
+  `contenteditable`; `button` / `option` / `tab` / `img` would flatten the editing
+  host into a label — the failure the old `role="listbox"` produced. `heading`
+  takes its NAME from its contents and leaves them in the tree.
+
+**`level` tracks the markdown prefix, never `textVariant`** (`# ` ⇔ 1). Deriving
+a level from a font-size role is how a big paragraph starts announcing as a
+heading.
+
+Two carriers rejected. The **`<ContentEditable>`** drops Lexical's
+`role="textbox"` (the signal that the line is editable) and the read-only surface
+has none, so it would need a second mechanism; the `heading` > `textbox` nesting
+we get instead is what `<h2 contenteditable>` produces natively. Real **`<h1>`
+elements** are the per-type element type the fixed skeleton forbids outright.
+
+The placeholder renders INSIDE the leaf cell, so it is `aria-hidden` — otherwise
+an empty focused heading is *named* "Heading 1" by its own placeholder.
+
+**Two things it cannot express**, and they are one gap: a role needing an owning
+element, on a surface with no element to own it. A run of list siblings holds no
+`listitem`s (no shared DOM element; introducing one would change a block's DOM
+parent as it joins or leaves the run, remounting Lexical), and a `quote` /
+`callout` container is no `blockquote` (its decoration is an inert backdrop
+painted behind the rows, so it contains nothing). Neither is a missing arm: both
+want `aria-owns` from a zero-height `role="list"` / `role="blockquote"` element
+per run, grid-placed like `frameSpans`, owning the run by row id — a design on
+the run-owning surface, with real a11y-tree re-parenting risk, so a follow-up
+task.
+
+Specs: `core/block-semantics.test.ts`, `web/__tests__/block-semantics.test.tsx`
+(accessible name over a stand-in leaf) and `e2e/block-semantics-verify.ts` (real
+browser: the three levels, a conversion gaining the role without losing the
+caret, the hidden placeholder). Design:
+[`research/2026-08-16-page-block-aria-semantics.md`](../../../../research/2026-08-16-page-block-aria-semantics.md).
 
 ## Per-block CRDT text (unconditional)
 
@@ -2331,6 +2397,8 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
     - `BlockOpContext`
     - `BlockPage`
     - `BlockPatch`
+    - `BlockSemantics`
+    - `BlockSemanticsAttrs`
     - `BlockTag`
     - `BlockTagBody`
     - `BlockTextVariant`
@@ -2430,6 +2498,7 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
     - `runsOfNode`
     - `runsToLexical`
     - `runsToXmlText`
+    - `semanticsAttrs`
     - `serializeBlockRuns`
     - `SerializedBlockSchema`
     - `serializeForestToMarkdown`

@@ -373,6 +373,12 @@ export function BlockTextEditor({
         placeholder={
           isEmpty && isFocused && effectivePlaceholder ? (
             <div
+              // Decoration, not content. It sits INSIDE the leaf cell, which is
+              // where a block type's `semantics` role lands — so left visible to
+              // AT, an empty focused heading would be NAMED "Heading 1" by its
+              // own placeholder. Lexical hides its own built-in placeholder for
+              // the same reason.
+              aria-hidden
               className={cn(
                 "text-muted-foreground pointer-events-none absolute left-0 top-0 py-xs",
                 insetClass({ r: BLOCK_INSET }),

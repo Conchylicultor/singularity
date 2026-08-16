@@ -1,6 +1,15 @@
-import { useImperativeHandle, useRef, type KeyboardEvent, type Ref, type RefObject } from "react";
+import {
+  useImperativeHandle,
+  useRef,
+  type KeyboardEvent,
+  type Ref,
+  type RefObject,
+} from "react";
 import type { EditableField } from "@plugins/primitives/plugins/editable-field/web";
-import type { BlockEditorHandle, CaretSurface } from "@plugins/page/plugins/editor/web";
+import type {
+  BlockEditorHandle,
+  CaretSurface,
+} from "@plugins/page/plugins/editor/web";
 
 /** Any modifier turns an arrow into a selection/word move, never a surface crossing. */
 function isModified(event: KeyboardEvent<HTMLInputElement>): boolean {
@@ -55,7 +64,8 @@ export function PageTitle({
     if (event.nativeEvent.isComposing) return;
     const el = event.currentTarget;
     const atEnd =
-      el.selectionStart === el.value.length && el.selectionEnd === el.value.length;
+      el.selectionStart === el.value.length &&
+      el.selectionEnd === el.value.length;
 
     switch (event.key) {
       // Enter opens the top of the body for typing (creating a block if the page
@@ -90,6 +100,10 @@ export function PageTitle({
       onBlur={field.onBlur}
       onKeyDown={onKeyDown}
       placeholder="Untitled"
+      // Without this the field's accessible NAME is its placeholder, so every
+      // page's title reads as "Untitled" no matter what it is called. The name
+      // says which field this is; the value says what the page is called.
+      aria-label="Page title"
       className="page-doc-title w-full truncate bg-transparent outline-none"
     />
   );

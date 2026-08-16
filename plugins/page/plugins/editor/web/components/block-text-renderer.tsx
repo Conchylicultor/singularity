@@ -18,7 +18,12 @@ import { TextBlockLayout } from "./text-block-layout";
  * contribution's `chrome` (box styling and the four sibling regions), which
  * `TextBlockLayout` applies onto a fixed element tree.
  */
-export function BlockTextRenderer({ block, isFocused, editor, ordinal }: BlockRendererProps) {
+export function BlockTextRenderer({
+  block,
+  isFocused,
+  editor,
+  ordinal,
+}: BlockRendererProps) {
   const contributions = Editor.Block.useContributions();
   const contribution = useMemo(
     () => contributions.find((c) => c.block.type === block.type),
@@ -47,7 +52,10 @@ export function BlockTextRenderer({ block, isFocused, editor, ordinal }: BlockRe
           // that snapshot back would revert whatever was typed in the last
           // second. (`update` carries the projection across itself; see
           // `preserveText`.)
-          editor.update({ ...rowDataOf(data), [handle.toggle!.field]: !checked })
+          editor.update({
+            ...rowDataOf(data),
+            [handle.toggle!.field]: !checked,
+          })
         }
         // Don't blur the editor before the onChange registers; the editable
         // field flushes on blur anyway, but this keeps the caret put.
@@ -98,6 +106,7 @@ export function BlockTextRenderer({ block, isFocused, editor, ordinal }: BlockRe
   return (
     <TextBlockLayout
       chrome={contribution?.chrome}
+      semantics={handle?.semantics}
       region={region}
       fallbackMarker={fallbackMarker}
     >

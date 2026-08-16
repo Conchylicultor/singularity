@@ -4,6 +4,7 @@ import { runsOf, type RichText } from "./rich-text";
 import { rowDataOf, type RowData } from "./row-data";
 import type { TextBearingSchema } from "./text-data";
 import type { BlockMarkdown } from "./markdown";
+import type { BlockSemantics } from "./block-semantics";
 
 /**
  * The semantic typography roles an editable-text block can render at. Mirrors the
@@ -12,12 +13,7 @@ import type { BlockMarkdown } from "./markdown";
  * utility. `body` is the default for ordinary text blocks.
  */
 export type BlockTextVariant =
-  | "title"
-  | "heading"
-  | "subheading"
-  | "body"
-  | "label"
-  | "caption";
+  "title" | "heading" | "subheading" | "body" | "label" | "caption";
 
 /**
  * Who a block's content is FOR — see {@link BlockHandle.audience}. Two values,
@@ -37,7 +33,9 @@ export interface BlockHandle<T> {
    * `schema.safeParse` — the interface erases `schema` to `AnyZodObject`, whose
    * `safeParse` result is untyped.
    */
-  safeParse(data: unknown): { success: true; data: T } | { success: false; error: z.ZodError };
+  safeParse(
+    data: unknown,
+  ): { success: true; data: T } | { success: false; error: z.ZodError };
   /**
    * Whether this block type carries editable text — DERIVED once from the schema
    * (`"text" in schema.shape`), never inferred from a type name. Consumers use it
@@ -171,6 +169,23 @@ export interface BlockHandle<T> {
   /** Semantic typography variant for the editable text (default "body"). */
   textVariant?: BlockTextVariant;
   /**
+   * What this block's LINE is in the accessibility tree — a heading, today. The
+   * shared skeleton turns it into `role` / `aria-level` on the one element whose
+   * content is exactly the text (`TextBlockLayout`'s leaf cell), on BOTH the
+   * editable and the read-only surface.
+   *
+   * Distinct from `textVariant`, which is a font-size role: deriving "is a
+   * heading" from "renders large" is how a big paragraph starts announcing as a
+   * heading. Distinct from `chrome` too — that is styling plus sibling regions,
+   * and an accessibility role is neither.
+   *
+   * Text-bearing types only, enforced at the type level (`SemanticsFor`): a void
+   * or container type has no line to describe. See {@link BlockSemantics} for
+   * why the union is closed and what it therefore cannot express (list items,
+   * blockquotes).
+   */
+  semantics?: BlockSemantics;
+  /**
    * Where the gutter controls (+ / drag / chevron) seat vertically: a CSS length
    * from the block's TOP edge to the CENTER of its first rendered line, which is
    * where the controls center.
@@ -301,6 +316,17 @@ type TextLens<S extends AnyZodObject> = S extends TextBearingSchema
   ? { text(data: z.infer<S>): RichText }
   : { text?: undefined };
 
+/**
+ * `semantics` describes a LINE, so only a text-bearing type may declare one.
+ * Keyed on the same `TextBearingSchema` brand as the text lens, and shaped like
+ * `defineContainerBlock`'s `RejectTextBearing`: a void type that reaches for it
+ * gets a named, unsatisfiable type rather than a silently inert field.
+ * (Containers never see it at all — `ContainerBlockOptions` has no such key.)
+ */
+type SemanticsFor<S extends AnyZodObject> = S extends TextBearingSchema
+  ? BlockSemantics
+  : { __semantics_requires_a_text_bearing_schema: never };
+
 export function defineBlock<S extends AnyZodObject>(opts: {
   type: string;
   schema: S;
@@ -318,6 +344,7 @@ export function defineBlock<S extends AnyZodObject>(opts: {
   ordinalMarker?: (ordinal: number) => string;
   placeholder?: string;
   textVariant?: BlockTextVariant;
+  semantics?: SemanticsFor<S>;
   gutterFirstLineCenter?: string;
   splitInto?: string;
   dataOnSplit?(data: z.infer<S>): z.infer<S>;
@@ -355,6 +382,10 @@ export function defineBlock<S extends AnyZodObject>(opts: {
     ordinalMarker: opts.ordinalMarker,
     placeholder: opts.placeholder,
     textVariant: opts.textVariant,
+    // `SemanticsFor<S>` collapses to `BlockSemantics` on the branded (text-bearing)
+    // arm and to the named error object otherwise; the value can only be the
+    // former, since the latter is unsatisfiable at every real call site.
+    semantics: opts.semantics as BlockSemantics | undefined,
     gutterFirstLineCenter: opts.gutterFirstLineCenter,
     splitInto: opts.splitInto,
     dataOnSplit: opts.dataOnSplit,

@@ -168,6 +168,7 @@ function TextLikeBlock({
   return (
     <TextBlockLayout
       chrome={contribution.chrome}
+      semantics={handle.semantics}
       region={{
         // A read-only node may legitimately carry no id at all.
         id: node.id ?? "",

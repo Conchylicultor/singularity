@@ -127,6 +127,9 @@ export type { SerializedBlock, IdentifiedBlock } from "./serialized-block";
 
 export { rankWindow, planForestInsert } from "./block-forest";
 
+export { semanticsAttrs } from "./block-semantics";
+export type { BlockSemantics, BlockSemanticsAttrs } from "./block-semantics";
+
 export { conversionPrefixesOf, defineBlock } from "./define-block";
 export type {
   BlockAudience,
