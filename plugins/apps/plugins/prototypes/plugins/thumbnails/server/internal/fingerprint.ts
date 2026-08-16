@@ -1,5 +1,5 @@
 import { join } from "node:path";
-import { PROTOTYPES_DIR } from "@plugins/apps/plugins/prototypes/plugins/files/server";
+import { PROTOTYPES_DIR } from "@plugins/infra/plugins/paths/server";
 import { fingerprintDir } from "./hash-dir";
 
 /** The content fingerprint of one prototype folder — the thumbnail cache key. */

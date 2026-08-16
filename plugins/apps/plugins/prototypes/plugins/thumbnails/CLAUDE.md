@@ -18,10 +18,11 @@ change are the same call.
 
 ## Decisions that look wrong until you know why
 
-**The change signal is borrowed.** `files` owns `prototypes/` and already
+**The change signal is borrowed.** `files` owns the prototypes tree and already
 watches it; a second `@parcel/watcher` over the same tree doubles every event.
-So `files` exports `onPrototypesChanged` / `PROTOTYPES_DIR` /
-`listPrototypeMetas` and this plugin listens instead of watching.
+So `files` exports `onPrototypesChanged` / `listPrototypeMetas` and this plugin
+listens instead of watching. `PROTOTYPES_DIR` comes from `infra/paths`, its
+actual home — taking it via `files` would be a cross-plugin re-export.
 
 **The cache is content-addressed and host-global**
 (`~/.singularity/prototype-thumbnails/<sha256>.png`, `asset-mirror`'s shape).
@@ -101,8 +102,8 @@ Design: `research/2026-08-16-apps-prototype-gallery-thumbnails.md`.
   - Uses:
     - `apps/prototypes/files.listPrototypeMetas`
     - `apps/prototypes/files.onPrototypesChanged`
-    - `apps/prototypes/files.PROTOTYPES_DIR`
     - `infra/jobs.defineJob`
+    - `infra/paths.PROTOTYPES_DIR`
     - `infra/paths.SINGULARITY_DIR`
   - Register:
     - `defineJob('prototypes.render-thumbnail')`

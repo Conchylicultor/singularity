@@ -3,7 +3,7 @@ import { pathToFileURL } from "node:url";
 import type { Browser } from "playwright";
 import { createSemaphore } from "@plugins/packages/plugins/semaphore/core";
 import { ensureChromium } from "@plugins/infra/plugins/safe-fetch/plugins/browser-fetch/core";
-import { PROTOTYPES_DIR } from "@plugins/apps/plugins/prototypes/plugins/files/server";
+import { PROTOTYPES_DIR } from "@plugins/infra/plugins/paths/server";
 import type { PrototypeMeta } from "@plugins/apps/plugins/prototypes/plugins/files/core";
 import { classifyRenderOutcome } from "./decide";
 import { ThumbnailRenderError } from "./errors";

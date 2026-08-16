@@ -2480,6 +2480,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `infra/file-watcher.FileWatcher`
               - `infra/paths.PROTOTYPES_DIR`
               - `infra/paths.REPO_ROOT`
+            - Exports (values):
+              - `listPrototypeMetas`
+              - `onPrototypesChanged`
             - Resources:
               - `prototypes.list` (push)
               - `prototypes.version` (push)
@@ -2507,6 +2510,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `prototypesVersionResource`
               - `prototypeUrl`
               - `validatePrototypeFolder`
+          - Cross-plugin:
+            - Imported by: `apps/prototypes/thumbnails`
         - **`gallery`** — Prototypes gallery list pane and the Focus/Compare detail pane (scaled live iframes), with an Improve this prototype affordance.
           - Web:
             - Slots:
@@ -2518,6 +2523,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `prototypeDetailPane.Actions` → `ViewModeSwitcher`
               - `prototypeDetailPane.Actions` → `ImproveButton`
             - Uses:
+              - `apps/prototypes/thumbnails.PrototypeThumbnail`
               - `primitives/css/badge.Badge`
               - `primitives/css/column.Column`
               - `primitives/css/overlay.Overlay`
@@ -2583,6 +2589,42 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Core:
             - Uses: `primitives/pane.defineApp`
             - Exports (values): `prototypesApp`
+        - **`thumbnails`** — The rendered-preview cover for a prototype card: the cached PNG, the caller's fallback while it renders, and a visible 'Preview failed' marker carrying the reason. Rendered PNG previews for the prototypes gallery: a content-addressed disk cache, a headless-chromium render job driven by the files watcher, the push state resource the cards read, and the immutable serving route.
+          - Server:
+            - Contributes: `resource.declare` "prototypes.thumbnails"
+            - Uses:
+              - `apps/prototypes/files.listPrototypeMetas`
+              - `apps/prototypes/files.onPrototypesChanged`
+              - `infra/jobs.defineJob`
+              - `infra/paths.PROTOTYPES_DIR`
+              - `infra/paths.SINGULARITY_DIR`
+            - Register:
+              - `defineJob('prototypes.render-thumbnail')`
+              - `defineJob('prototypes.sweep-thumbnails')`
+            - Resources: `prototypes.thumbnails` (push)
+          - Web:
+            - Uses:
+              - `primitives/css/badge.Badge`
+              - `primitives/css/overlay.Overlay`
+              - `primitives/css/pin.Pin`
+              - `primitives/live-state.matchResource`
+              - `primitives/live-state.useResource`
+              - `primitives/tooltip.WithTooltip`
+            - Exports (values): `PrototypeThumbnail`
+          - Core:
+            - Uses: `primitives/live-state.resourceDescriptor`
+            - Exports (types):
+              - `ThumbnailFailureKind`
+              - `ThumbnailState`
+            - Exports (values):
+              - `PROTOTYPE_THUMB_ROUTE`
+              - `PROTOTYPE_THUMBS_BASE`
+              - `prototypeThumbnailsResource`
+              - `prototypeThumbnailUrl`
+              - `ThumbnailFailureKindSchema`
+              - `ThumbnailStateSchema`
+          - Cross-plugin:
+            - Imported by: `apps/prototypes/gallery`
     - **`settings`** — Settings app.
       - Plugins:
         - **`accounts`** — Account settings surface: registers the accounts pane and its Settings sidebar entry.
@@ -14658,6 +14700,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/pages/page-outline`
               - `apps/pages/page-tree`
               - `apps/prototypes/present`
+              - `apps/prototypes/thumbnails`
               - `code-explorer`
               - `conversations/conversation-category`
               - `conversations/conversation-view/jsonl-viewer`
@@ -16054,6 +16097,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/mail/sync`
           - `apps/pages/content-search`
           - `apps/pages/history`
+          - `apps/prototypes/thumbnails`
           - `apps/sonata/sources/midi/folders`
           - `apps/story/generation`
           - `apps/workflows/engine`
@@ -16178,6 +16222,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps-core/surface/floating/wallpaper`
           - `apps/deploy/deployments`
           - `apps/prototypes/files`
+          - `apps/prototypes/thumbnails`
           - `backup`
           - `backup/sources/attachments`
           - `backup/sources/claude-settings`
@@ -19936,6 +19981,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/mail/attachments`
               - `apps/mail/search`
               - `apps/prototypes/gallery`
+              - `apps/prototypes/thumbnails`
               - `apps/sonata/sources/midi/folders`
               - `apps/sonata/sources/ultimate-guitar`
               - `apps/studio/compositions`
@@ -20661,6 +20707,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Imported by:
               - `apps/browser/webview`
               - `apps/prototypes/gallery`
+              - `apps/prototypes/thumbnails`
               - `conversations/conversation-view/jsonl-viewer/collapsible-card`
               - `debug/timeline`
               - `page/editor`
@@ -20688,6 +20735,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/pages/page-tree`
               - `apps/prototypes/gallery`
               - `apps/prototypes/present`
+              - `apps/prototypes/thumbnails`
               - `apps/sonata/notation`
               - `apps/sonata/piano-roll`
               - `apps/sonata/primitives/keyboard`
@@ -24028,6 +24076,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/prototypes/files`
           - `apps/prototypes/gallery`
           - `apps/prototypes/present`
+          - `apps/prototypes/thumbnails`
           - `apps/settings/config`
           - `apps/sonata/library`
           - `apps/sonata/playback-history`
@@ -25719,6 +25768,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps-core/surface/floating`
           - `apps-core/tab-bar`
           - `apps/agent-manager/worktree-switcher`
+          - `apps/prototypes/thumbnails`
           - `apps/sonata/primitives/toolbar-control`
           - `apps/workflows/editor`
           - `build`

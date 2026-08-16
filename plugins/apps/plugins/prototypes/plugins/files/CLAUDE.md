@@ -118,7 +118,6 @@ and the `listPrototypes` endpoint.
   - Exports (values):
     - `listPrototypeMetas`
     - `onPrototypesChanged`
-    - `PROTOTYPES_DIR`
   - Resources:
     - `prototypes.list` (push)
     - `prototypes.version` (push)
