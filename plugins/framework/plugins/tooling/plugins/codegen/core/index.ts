@@ -1,6 +1,13 @@
+// The two plugin-tree constructors live in their own modules, one per tier of
+// the ordering `barrel-free-tree` → `slot-declaration-guard` → `enriched-tree`:
+// the enriched tree runs the slot-declaration pass before anything can read a
+// plugin's `contributions`, and the guard needs a barrel-free tree to know which
+// plugins the registry omits. The module layout is what makes that order
+// unskippable; the barrel still exports both names, so no consumer moves.
+export { buildBarrelFreeTree } from "./barrel-free-tree";
+export { buildEnrichedTree } from "./enriched-tree";
+
 export {
-  buildEnrichedTree,
-  buildBarrelFreeTree,
   collectAllPlugins,
   generatePluginDocs,
   pluginClaudeMdPath,

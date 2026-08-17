@@ -17,7 +17,7 @@ import { getFacet } from "@plugins/plugin-meta/plugins/facets/core";
 import { slotsFacetDef } from "@plugins/plugin-meta/plugins/facets/plugins/slots/core";
 import type { PluginId } from "@plugins/framework/plugins/plugin-id/core";
 import { computeDisabledIds } from "./disabled-ids";
-import { buildBarrelFreeTree } from "./docgen";
+import { buildBarrelFreeTree } from "./barrel-free-tree";
 
 /**
  * Load the web runtime the way the browser loads it, and run one declaration

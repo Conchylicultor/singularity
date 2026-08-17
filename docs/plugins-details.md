@@ -14435,6 +14435,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `getCreatedSlots`
           - `isSlot`
           - `recordCreatedSlot`
+          - `slotDeclarationPasses`
           - `subscribeSlotsDeclared`
     - **`tooling`** — Umbrella for build-time tooling: boundary checker, lint rules, checks, guards, codegen
       - Core:

@@ -1,13 +1,24 @@
 import { join } from "path";
-import type { PluginTree, PluginNode } from "@plugins/plugin-meta/plugins/plugin-tree/core";
+import type {
+  PluginTree,
+  PluginNode,
+} from "@plugins/plugin-meta/plugins/plugin-tree/core";
 import {
   createFacet,
   getFacet,
   type DocFact,
   type ExtractContext,
 } from "@plugins/plugin-meta/plugins/facets/core";
-import { type SlotDef, slotsFacetDef } from "@plugins/plugin-meta/plugins/facets/plugins/slots/core";
-import { readIfExists, stripTypes, maskSource } from "@plugins/plugin-meta/plugins/parse-utils/core";
+import {
+  type SlotDef,
+  slotsFacetDef,
+} from "@plugins/plugin-meta/plugins/facets/plugins/slots/core";
+import { slotDeclarationPasses } from "@plugins/framework/plugins/slot-declaration/core";
+import {
+  readIfExists,
+  stripTypes,
+  maskSource,
+} from "@plugins/plugin-meta/plugins/parse-utils/core";
 import {
   type Contribution,
   type ContributionsFacetData,
@@ -51,7 +62,8 @@ export default createFacet<ContributionsFacetData>({
           const [head, ...rest] = call.callee.split(".");
           const tail = rest.join(".");
           const imp = importMap.get(head!);
-          const displayHead = imp && imp.original !== "default" ? imp.original : head!;
+          const displayHead =
+            imp && imp.original !== "default" ? imp.original : head!;
           const slot = `${displayHead}.${tail}`;
           const props = parsePropsBlock(call.argsBody);
           const contribution: Contribution = { slot, props };
@@ -71,6 +83,29 @@ export default createFacet<ContributionsFacetData>({
     const runtimeContributions: DocMetaContribution[] = [];
     const { importedModules } = ctx;
     if (importedModules && importedModules.length > 0) {
+      // A plugin's `contributions` array is not always a literal in its barrel.
+      // `reorder`'s starts empty and is filled by a `subscribeSlotsDeclared`
+      // callback — one config directive per reorderable slot — so it holds 0
+      // entries until a slot-declaration pass has run in THIS process, and ~240
+      // after. Reading the array before that pass therefore answers with a
+      // smaller set that is indistinguishable from a correct one: that is how a
+      // `docs/plugins-details.md` missing reorder's whole `Contributes:` block
+      // got committed, and how it made `main` un-pushable four commits later.
+      // Refuse the early read instead of quietly under-reporting.
+      //
+      // The `skipBarrelImport` path passes no modules, so it never reaches here,
+      // and facets never run in the browser.
+      if (slotDeclarationPasses() === 0) {
+        throw new Error(
+          "[facet.contributions] Plugin barrels are imported, but no slot-declaration pass " +
+            "has run in this process. Any plugin whose `contributions` are derived from the " +
+            "declaration — reorder mints one config directive per reorderable slot — would " +
+            "read as EMPTY, and the result would look like a correct, slightly smaller answer. " +
+            "Build the tree with `buildEnrichedTree()` from " +
+            "`@plugins/framework/plugins/tooling/plugins/codegen/core`, which runs the pass " +
+            "first, instead of calling `buildPluginTree(..., { facets: true })` directly.",
+        );
+      }
       for (const { mod } of importedModules) {
         let def: Record<string, unknown> | undefined;
         try {
@@ -88,12 +123,14 @@ export default createFacet<ContributionsFacetData>({
         // whose barrel we're importing, so `pluginId` is filled in `relate()`
         // from `node.id` — matching the runtime `entryKey` (`${p.id}:${id}`).
         const rawContributions = def.contributions as
-          | Array<Record<string, unknown> & {
-              _slotId?: string;
-              _kind?: symbol;
-              id?: string;
-              _doc?: { label?: string; detail?: string };
-            }>
+          | Array<
+              Record<string, unknown> & {
+                _slotId?: string;
+                _kind?: symbol;
+                id?: string;
+                _doc?: { label?: string; detail?: string };
+              }
+            >
           | undefined;
         if (!rawContributions) continue;
 
@@ -102,7 +139,9 @@ export default createFacet<ContributionsFacetData>({
             // web slot contribution (existing behavior)
             const comp = c.component;
             const componentName =
-              typeof comp === "function" && comp.name ? (comp.name as string) : undefined;
+              typeof comp === "function" && comp.name
+                ? (comp.name as string)
+                : undefined;
             runtimeContributions.push({
               kind: "slot",
               slotId: c._slotId,
@@ -139,7 +178,12 @@ export default createFacet<ContributionsFacetData>({
       const nodeSlots = getFacet(node, slotsFacetDef) ?? [];
       for (const s of nodeSlots) {
         if (!slotDisplayNames.has(s.slotId)) {
-          slotDisplayNames.set(s.slotId, s.groupName === s.memberName ? s.groupName : `${s.groupName}.${s.memberName}`);
+          slotDisplayNames.set(
+            s.slotId,
+            s.groupName === s.memberName
+              ? s.groupName
+              : `${s.groupName}.${s.memberName}`,
+          );
         }
       }
     }
@@ -231,7 +275,8 @@ export default createFacet<ContributionsFacetData>({
         const head = parts[0];
         const last = parts[parts.length - 1];
         if (!head || !last) continue;
-        for (const slot of slotByGroupMember.get(`${head}.${last}`) ?? []) record(slot, node.id);
+        for (const slot of slotByGroupMember.get(`${head}.${last}`) ?? [])
+          record(slot, node.id);
       }
     }
     for (const [slot, set] of contributorsBySlot) {
@@ -250,8 +295,14 @@ export default createFacet<ContributionsFacetData>({
     };
     const web = data.runtime.filter((c) => c.kind === "slot");
     const server = data.runtime.filter((c) => c.kind === "server");
-    if (web.length > 0) facts.push({ folder: "web", key: "Contributes", values: web.map(fmt) });
-    if (server.length > 0) facts.push({ folder: "server", key: "Contributes", values: server.map(fmt) });
+    if (web.length > 0)
+      facts.push({ folder: "web", key: "Contributes", values: web.map(fmt) });
+    if (server.length > 0)
+      facts.push({
+        folder: "server",
+        key: "Contributes",
+        values: server.map(fmt),
+      });
     return facts;
   },
 });

@@ -1,7 +1,6 @@
 import { existsSync, readFileSync, unlinkSync } from "fs";
-import { join, resolve } from "path";
+import { join } from "path";
 import {
-  buildPluginTree,
   type PluginNode,
   type PluginTree,
 } from "@plugins/plugin-meta/plugins/plugin-tree/core";
@@ -16,6 +15,8 @@ import {
 } from "@plugins/framework/plugins/plugin-id/core";
 import { computeDisabledIds } from "./disabled-ids";
 import { writeGenerated } from "./write-generated";
+import { buildBarrelFreeTree } from "./barrel-free-tree";
+import { buildEnrichedTree } from "./enriched-tree";
 
 /**
  * Marker appended to a plugin's `name — description` line when it (or its
@@ -196,39 +197,6 @@ const COMPACT_HEADER =
 const DETAILS_HEADER =
   "# Plugins (details)\n\n" +
   "Full reference for every plugin. Read this on demand (e.g. before writing a helper, to check whether one already exists). The slim always-loaded index is [`plugins-compact.md`](./plugins-compact.md).\n\n";
-
-const enrichedTreeCache = new Map<string, Promise<PluginTree>>();
-
-export function buildEnrichedTree(root: string): Promise<PluginTree> {
-  let cached = enrichedTreeCache.get(root);
-  if (!cached) {
-    cached = buildPluginTree(resolve(root, "plugins"), { facets: true });
-    enrichedTreeCache.set(root, cached);
-  }
-  return cached;
-}
-
-const barrelFreeTreeCache = new Map<string, Promise<PluginTree>>();
-
-/**
- * The barrel-FREE plugin tree (`skipBarrelImport`) — a pure function of committed
- * plugin source (facet extraction reads only .ts/.tsx/package.json; no generated
- * manifest feeds it), so it is IDENTICAL for every skipBarrelImport caller in a
- * build. Memoized per root so one `./singularity build` does ONE barrel-free tree
- * build, not one per codegen step. Twin of `buildEnrichedTree` (which is the
- * enriched, barrel-imported tree; the two are deliberately separate caches).
- */
-export function buildBarrelFreeTree(root: string): Promise<PluginTree> {
-  let cached = barrelFreeTreeCache.get(root);
-  if (!cached) {
-    cached = buildPluginTree(resolve(root, "plugins"), {
-      skipBarrelImport: true,
-      facets: true,
-    });
-    barrelFreeTreeCache.set(root, cached);
-  }
-  return cached;
-}
 
 export async function renderCompactDoc({
   root,

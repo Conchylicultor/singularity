@@ -11,7 +11,7 @@ import {
 import { randomUUID } from "crypto";
 import { dirname, join, relative } from "path";
 import { parse as parseJsonc } from "jsonc-parser";
-import { buildEnrichedTree } from "./docgen";
+import { buildEnrichedTree } from "./enriched-tree";
 import {
   computeHash,
   effective,

@@ -6,7 +6,7 @@ import {
   findMarkerCalls,
   maskSource,
 } from "@plugins/plugin-meta/plugins/parse-utils/core";
-import { buildBarrelFreeTree } from "./docgen";
+import { buildBarrelFreeTree } from "./barrel-free-tree";
 import type { CollectedDirDef } from "@plugins/framework/plugins/tooling/plugins/collected-dir/core";
 import { asPluginId } from "@plugins/framework/plugins/plugin-id/core";
 import { computeDisabledIds } from "./disabled-ids";

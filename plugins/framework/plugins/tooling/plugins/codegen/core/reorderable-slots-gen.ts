@@ -1,6 +1,6 @@
 import { join } from "path";
 import { writeGenerated } from "./write-generated";
-import { buildEnrichedTree } from "./docgen";
+import { buildEnrichedTree } from "./enriched-tree";
 import {
   setDefaultOriginAnnotationsPreparer,
   setDefaultOriginDefaultsPreparer,

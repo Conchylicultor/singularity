@@ -10,7 +10,7 @@ import {
   walkFiles,
   readIfExists,
 } from "@plugins/plugin-meta/plugins/parse-utils/core";
-import { buildBarrelFreeTree } from "./docgen";
+import { buildBarrelFreeTree } from "./barrel-free-tree";
 import { computeDisabledIds } from "./disabled-ids";
 
 /**

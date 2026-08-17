@@ -6,6 +6,7 @@ export {
   declaredSlotSources,
   declarePluginSlots,
   subscribeSlotsDeclared,
+  slotDeclarationPasses,
   findUndeclaredSlots,
 } from "./declaration";
 export type {

@@ -1,7 +1,7 @@
 import { existsSync } from "fs";
 import { join, relative } from "path";
 import { writeGenerated } from "./write-generated";
-import { buildBarrelFreeTree } from "./docgen";
+import { buildBarrelFreeTree } from "./barrel-free-tree";
 import {
   registerBarrelStubs,
   importBarrel,

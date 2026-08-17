@@ -191,6 +191,26 @@ export type SlotDeclarationListener = (
 const declarationListeners = new Set<SlotDeclarationListener>();
 let lastOwners: ReadonlyMap<string, PluginId> = new Map();
 
+// How many declaration passes have COMPLETED in this runtime. A count, not
+// `lastOwners.size > 0`: a pass over a plugin set that legitimately declares no
+// slots must not be indistinguishable from a pass that never ran.
+let passes = 0;
+
+/**
+ * How many declaration passes have completed in this runtime.
+ *
+ * Not a general-purpose statistic — it is the EVIDENCE a consumer of plugins'
+ * `contributions` needs, because a contributions array is not always a literal:
+ * one derived from the declaration (reorder's per-slot config directives, filled
+ * by `subscribeSlotsDeclared`) is empty until a pass has run. A reader that
+ * imports barrels without running one therefore gets a silently smaller answer
+ * that is indistinguishable from a correct one. Zero here means "you are reading
+ * too early", and that is the only question this number exists to answer.
+ */
+export function slotDeclarationPasses(): number {
+  return passes;
+}
+
 /**
  * Subscribe to declaration passes. The listener is invoked immediately with the
  * latest owners map (empty before the first pass), so a subscriber that
@@ -239,6 +259,10 @@ export function declarePluginSlots(
     }
   }
   lastOwners = owners;
+  // Counted before the listeners run, so a subscriber that re-derives state here
+  // (and anything it calls) already sees the pass it is being notified about. A
+  // pass that threw above never gets counted — it did not settle any ownership.
+  passes++;
   for (const listener of declarationListeners) listener(owners);
   return owners;
 }
