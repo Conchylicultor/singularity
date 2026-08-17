@@ -110,9 +110,7 @@
     - `ensureResumed`
     - `flushInteractivePrompt`
     - `getConversationRow`
-    - `hasLiveProcess`
     - `interruptConversation`
-    - `isActiveStatus`
     - `maybeLaunchTaskJob`
     - `readConversationTurns`
     - `ResumeBlockedError`

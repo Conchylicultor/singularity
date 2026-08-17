@@ -7745,9 +7745,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `ensureResumed`
       - `flushInteractivePrompt`
       - `getConversationRow`
-      - `hasLiveProcess`
       - `interruptConversation`
-      - `isActiveStatus`
       - `maybeLaunchTaskJob`
       - `readConversationTurns`
       - `ResumeBlockedError`
@@ -14813,6 +14811,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - **`reactive-server-io`** — reactive-server-io lint rule: no-reactive-server-io
             - **`resize-observer-safety`** — resize-observer-safety lint rule: no-raw-resize-observer
             - **`route-teardown-safety`** — route-teardown-safety lint rule: no-unroute
+            - **`runtime-isolation`** — runtime-isolation lint rule: no-cross-runtime-import
             - **`scroll-safety`** — scroll-safety lint rules: no-adhoc-scroll-into-view, no-adhoc-scroll-write
             - **`sink-safety`** — sink-safety lint rules: no-adhoc-file-sink, no-adhoc-profiler-seam
             - **`trigger-render-safety`** — trigger-render-safety lint rule: no-provider-trigger-render
@@ -14843,6 +14842,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `infra/paths.SINGULARITY_DIR`
               - `packages/semaphore.createSemaphore`
             - Exports (types):
+              - `ArtifactKind`
               - `FleetSource`
               - `ImportMapEntry`
               - `OwnFile`
@@ -14862,8 +14862,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `defaultFleetSource`
               - `findUnmappedDynamicWarnings`
               - `findUnmappedSpecifiers`
+              - `firstSegmentOf`
               - `FORCED_VENDOR_SPECS`
               - `INLINE_PACKAGES`
+              - `inlinedRootsFor`
               - `isBareSpecifier`
               - `isBrowserUnreachableDynamic`
               - `isInlinedPackage`
@@ -14872,6 +14874,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `readFleetVendorMeta`
               - `runWebArtifactsPipeline`
               - `sha256Hex`
+              - `SHARED_ROOT`
     - **`web-core`**
       - Web:
         - Uses:

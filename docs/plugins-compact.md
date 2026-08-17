@@ -300,6 +300,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
             - **`reactive-server-io`** — reactive-server-io lint rule: no-reactive-server-io
             - **`resize-observer-safety`** — resize-observer-safety lint rule: no-raw-resize-observer
             - **`route-teardown-safety`** — route-teardown-safety lint rule: no-unroute
+            - **`runtime-isolation`** — runtime-isolation lint rule: no-cross-runtime-import
             - **`scroll-safety`** — scroll-safety lint rules: no-adhoc-scroll-into-view, no-adhoc-scroll-write
             - **`sink-safety`** — sink-safety lint rules: no-adhoc-file-sink, no-adhoc-profiler-seam
             - **`trigger-render-safety`** — trigger-render-safety lint rule: no-provider-trigger-render

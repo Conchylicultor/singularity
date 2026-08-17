@@ -10,9 +10,18 @@ export {
   packageNameOf,
 } from "./constants";
 export { makeArtifactExternal } from "./externals";
-export { computeIdentityHash, computeInputsHash, computeOwnHash, sha256Hex } from "./hash";
+export {
+  computeIdentityHash,
+  computeInputsHash,
+  computeOwnHash,
+  sha256Hex,
+} from "./hash";
 export type { OwnFile } from "./hash";
-export { buildImportMap, findUnmappedDynamicWarnings, findUnmappedSpecifiers } from "./import-map";
+export {
+  buildImportMap,
+  findUnmappedDynamicWarnings,
+  findUnmappedSpecifiers,
+} from "./import-map";
 export type { ImportMapEntry } from "./import-map";
 export { computePreloadClosure } from "./internal/compose";
 export { readFleetVendorMeta } from "./internal/expected";
@@ -23,4 +32,6 @@ export type {
 } from "./internal/pipeline";
 export { compositionFleetSource, defaultFleetSource } from "./internal/plan";
 export type { FleetSource } from "./internal/plan";
+export { firstSegmentOf, inlinedRootsFor, SHARED_ROOT } from "./own-roots";
+export type { ArtifactKind } from "./own-roots";
 export type { VendorSetMeta } from "./internal/vendors";

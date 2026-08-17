@@ -8,11 +8,16 @@
 
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { FORCED_VENDOR_SPECS, isBareSpecifier, isBrowserUnreachableDynamic } from "../constants";
+import {
+  FORCED_VENDOR_SPECS,
+  isBareSpecifier,
+  isBrowserUnreachableDynamic,
+} from "../constants";
 import { computeInputsHash, sha256Hex } from "../hash";
 import type { ImportMapEntry } from "../import-map";
+import type { ArtifactKind } from "../own-roots";
 import { computeBuilderIdentity, type BuilderIdentity } from "./identity";
-import { ownHashFor, type ArtifactKind } from "./own-files";
+import { ownHashFor } from "./own-files";
 import {
   allStaticImports,
   artifactDirName,
@@ -21,7 +26,11 @@ import {
   type FingerprintCache,
 } from "./store";
 import type { ArtifactBuildTarget } from "./vite-builder";
-import { vendorSetDirName, type VendorSetMeta, type VendorSpecRequest } from "./vendors";
+import {
+  vendorSetDirName,
+  type VendorSetMeta,
+  type VendorSpecRequest,
+} from "./vendors";
 
 export const WEB_CORE_REL = "plugins/framework/plugins/web-core";
 export const WEB_SDK_CORE_REL = "plugins/framework/plugins/web-sdk/core";
@@ -55,7 +64,9 @@ export interface FleetSource {
 /** The committed full registry — the source every plain build plans from. */
 export async function defaultFleetSource(root: string): Promise<FleetSource> {
   const registryFile = join(root, WEB_SDK_CORE_REL, "web.generated.ts");
-  const { webEntries } = (await import(registryFile)) as { webEntries: RegistryEntryRecord[] };
+  const { webEntries } = (await import(registryFile)) as {
+    webEntries: RegistryEntryRecord[];
+  };
   const { DEFERRED_PLUGIN_PATHS } = (await import(
     join(root, WEB_SDK_CORE_REL, "web-tiers.generated.ts")
   )) as { DEFERRED_PLUGIN_PATHS: ReadonlySet<string> };
@@ -89,7 +100,9 @@ export async function compositionFleetSource(opts: {
         `via generateCompositionRegistry({ name: "${opts.name}" }).`,
     );
   }
-  const { webEntries } = (await import(registryFile)) as { webEntries: RegistryEntryRecord[] };
+  const { webEntries } = (await import(registryFile)) as {
+    webEntries: RegistryEntryRecord[];
+  };
   const { DEFERRED_PLUGIN_PATHS } = (await import(
     join(opts.root, WEB_SDK_CORE_REL, "web-tiers.generated.ts")
   )) as { DEFERRED_PLUGIN_PATHS: ReadonlySet<string> };
@@ -139,7 +152,9 @@ export function eagerWebTargets(
   webTargets: PlannedTarget[],
   deferredPaths: ReadonlySet<string>,
 ): PlannedTarget[] {
-  return webTargets.filter((t) => t.pluginPath !== null && !deferredPaths.has(t.pluginPath));
+  return webTargets.filter(
+    (t) => t.pluginPath !== null && !deferredPaths.has(t.pluginPath),
+  );
 }
 
 /**
@@ -162,7 +177,11 @@ export async function planFleet(opts: {
   const source = opts.source ?? (await defaultFleetSource(root));
   const { webEntries, registryFile } = source;
 
-  const identity = computeBuilderIdentity({ repoRoot: root, pluginsRoot, minify: opts.minify });
+  const identity = computeBuilderIdentity({
+    repoRoot: root,
+    pluginsRoot,
+    minify: opts.minify,
+  });
 
   const target = (
     kind: ArtifactKind,
@@ -178,7 +197,11 @@ export async function planFleet(opts: {
       kind,
       cache,
     });
-    const inputsHash = computeInputsHash({ ownHash, kind, identityHash: identity.identityHash });
+    const inputsHash = computeInputsHash({
+      ownHash,
+      kind,
+      identityHash: identity.identityHash,
+    });
     const dirName = artifactDirName(slug, kind, inputsHash);
     return {
       dirName,
@@ -192,7 +215,12 @@ export async function planFleet(opts: {
   };
 
   const webTargets = webEntries.map((e) =>
-    target("web", e.pluginPath, join(pluginsRoot, e.pluginPath, "web", "index.ts"), `@plugins/${e.pluginPath}/web`),
+    target(
+      "web",
+      e.pluginPath,
+      join(pluginsRoot, e.pluginPath, "web", "index.ts"),
+      `@plugins/${e.pluginPath}/web`,
+    ),
   );
   const entryTarget = target("entry", null, join(webSrcDir, "main.tsx"), null);
 
@@ -203,7 +231,11 @@ export async function planFleet(opts: {
     identityHash: identity.identityHash,
   });
   const registryTarget: RegistryTargetPlan = {
-    dirName: artifactDirName(source.registrySlug, "registry", registryInputsHash),
+    dirName: artifactDirName(
+      source.registrySlug,
+      "registry",
+      registryInputsHash,
+    ),
     inputsHash: registryInputsHash,
     registryFile,
     needsBuild: !hasArtifact(
@@ -265,7 +297,11 @@ export async function resolveBarrelClosure(opts: {
     const nextSpecs = new Set<string>();
     for (const meta of frontier) {
       for (const spec of closureSpecsOf(meta)) {
-        if (!spec.startsWith("@plugins/") || barrelTargets.has(spec) || opts.webSpecs.has(spec)) {
+        if (
+          !spec.startsWith("@plugins/") ||
+          barrelTargets.has(spec) ||
+          opts.webSpecs.has(spec)
+        ) {
           continue;
         }
         nextSpecs.add(spec);
@@ -303,7 +339,9 @@ export async function resolveBarrelClosure(opts: {
         specifier: spec,
         entryFile: barrelFile,
         inputsHash,
-        needsBuild: !hasArtifact(artifactDirName(pluginIdOf(pluginPath), kind, inputsHash)),
+        needsBuild: !hasArtifact(
+          artifactDirName(pluginIdOf(pluginPath), kind, inputsHash),
+        ),
       };
       barrelTargets.set(spec, t);
       wave.push(t);
@@ -328,9 +366,13 @@ export async function collectVendorRequests(opts: {
   metaOf: (dirName: string) => ArtifactMeta;
 }): Promise<VendorSpecRequest[]> {
   const requests = new Map<string, string>();
-  for (const t of [...opts.targets].sort((a, b) => (a.dirName < b.dirName ? -1 : 1))) {
+  for (const t of [...opts.targets].sort((a, b) =>
+    a.dirName < b.dirName ? -1 : 1,
+  )) {
     const meta = opts.metaOf(t.dirName);
-    const dir = t.pluginPath ? join(opts.pluginsRoot, t.pluginPath) : join(opts.root, WEB_CORE_REL);
+    const dir = t.pluginPath
+      ? join(opts.pluginsRoot, t.pluginPath)
+      : join(opts.root, WEB_CORE_REL);
     for (const spec of [...allStaticImports(meta), ...meta.dynamicImports]) {
       if (isBareSpecifier(spec) && !requests.has(spec)) requests.set(spec, dir);
     }
@@ -348,7 +390,10 @@ export async function collectVendorRequests(opts: {
       }
     }
   }
-  return [...requests.entries()].map(([specifier, resolveDir]) => ({ specifier, resolveDir }));
+  return [...requests.entries()].map(([specifier, resolveDir]) => ({
+    specifier,
+    resolveDir,
+  }));
 }
 
 /**
@@ -365,7 +410,8 @@ export function composeMapEntries(opts: {
 }): ImportMapEntry[] {
   const entries: ImportMapEntry[] = [];
   for (const t of opts.targets) {
-    if (t.specifier !== null) entries.push({ specifier: t.specifier, url: artifactUrl(t.dirName) });
+    if (t.specifier !== null)
+      entries.push({ specifier: t.specifier, url: artifactUrl(t.dirName) });
   }
   entries.push({
     specifier: "@composition-web-registry",

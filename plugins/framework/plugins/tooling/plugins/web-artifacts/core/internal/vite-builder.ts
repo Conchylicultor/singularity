@@ -5,12 +5,22 @@
 // esbuild `keepNames`. NO `@tailwindcss/vite` here — utilities come from the
 // single global pass (see `global-css.ts`).
 
-import { existsSync, readFileSync, readdirSync, rmSync, unlinkSync, writeFileSync } from "node:fs";
-import { dirname, join, resolve } from "node:path";
+import {
+  existsSync,
+  readFileSync,
+  readdirSync,
+  rmSync,
+  unlinkSync,
+  writeFileSync,
+} from "node:fs";
+import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import type { Plugin as VitePlugin } from "vite";
 import { init as esLexerInit, parse as esLexerParse } from "es-module-lexer";
 import type { BabelPluginItem } from "@plugins/framework/plugins/web-core/core";
 import { makeArtifactExternal } from "../externals";
+import { inlinedRootsFor } from "../own-roots";
+import { createInlineAudit } from "./inline-audit";
+import { hashedRootsFor } from "./own-files";
 import type { ArtifactMeta } from "./store";
 import { artifactTmpDir, publishArtifact } from "./store";
 
@@ -53,44 +63,65 @@ const ARTIFACT_DEFINE: Record<string, string> = {
 };
 
 /**
- * Route EVERY own-core import of the plugin's web/shared code through the
- * external `@plugins/<path>/core` barrel — the barrel itself AND deep files
- * (`../core/resource`, `@plugins/<own>/core/x`). One URL = one module instance:
- * inlining any core file into the web artifact next to the shared core artifact
- * would double-instantiate its module state (live-state's descriptor registry
- * and config_v2's descriptor identities were real casualties). Named bindings
- * are preserved by the rewrite, so a deep import of a symbol the core barrel
- * does not re-export fails LOUDLY as a missing-export error at load — the fix
- * is to re-export it from the barrel (own-core symbols consumed by the
- * plugin's web surface are public API by construction).
+ * Route EVERY import that lands in one of the plugin's own NON-inlined folders
+ * through that folder's external `@plugins/<path>/<folder>` barrel — the barrel
+ * itself AND deep files (`../core/resource`, `@plugins/<own>/core/x`). One URL =
+ * one module instance: inlining any such file next to the artifact everyone
+ * else loads would double-instantiate its module state (live-state's descriptor
+ * registry and config_v2's descriptor identities were real casualties, and the
+ * Layout Lab ran two copies of a plugin's web module for the same reason).
+ * It is also what keeps the artifact's address honest: only the inlined roots
+ * are hashed, so any other own folder reaching the bytes would fossilise the
+ * artifact — see `../own-roots.ts`.
  *
- * Imports BETWEEN core files are exempt: in a web build no core file is ever
- * reached (all entries into core/ are rewritten), and in the plugin's own core
- * artifact build they are exactly the module graph being bundled.
+ * Which folders are inlined is `inlinedRootsFor(kind)`, so the rule needs no
+ * per-kind special case: building `core` inlines core's internal edges because
+ * `core` IS its inlined root, and building `web` never reaches a file under
+ * `core/` at all because every entry into it is rewritten here.
+ *
+ * Named bindings are preserved by the rewrite, so a deep import of a symbol the
+ * target barrel does not re-export fails LOUDLY as a missing-export error at
+ * load — the fix is to re-export it from the barrel (own symbols consumed
+ * across a folder boundary are public API by construction).
  */
-function ownCoreBarrelPlugin(pluginPath: string, pluginDir: string): VitePlugin {
-  const coreBarrel = resolve(pluginDir, "core", "index.ts");
-  const coreDir = resolve(pluginDir, "core");
-  const specifier = `@plugins/${pluginPath}/core`;
+function ownFolderBarrelPlugin(
+  pluginPath: string,
+  pluginDir: string,
+  kind: string,
+): VitePlugin {
+  const inlinedRoots = inlinedRootsFor(kind);
   return {
-    name: "web-artifacts:own-core-barrel",
+    name: "web-artifacts:own-folder-barrel",
     enforce: "pre",
     resolveId(id, importer) {
-      if (!importer || !existsSync(coreBarrel)) return null;
-      if (importer.startsWith(coreDir + "/")) return null; // inside core: keep internal edges
+      if (!importer) return null;
+      if (id.includes("?")) return null; // vite query suffix — not a source edge to reroute
+      if (id.endsWith(".css")) return null; // css stays in-graph (see ../externals.ts)
       // Relative ids resolve against the importer; vite's alias plugin has
-      // already rewritten `@plugins/<own>/core/…` to an absolute path.
-      let target: string | null = null;
-      if (id.startsWith("./") || id.startsWith("../")) {
-        target = resolve(dirname(importer), id);
-      } else if (id.startsWith(coreDir + "/") || id === coreDir) {
-        target = id;
-      }
+      // already rewritten `@plugins/<own>/…` to an absolute path.
+      const target =
+        id.startsWith("./") || id.startsWith("../")
+          ? resolve(dirname(importer), id)
+          : isAbsolute(id)
+            ? id
+            : null;
       if (target === null) return null;
-      if (target === coreDir || target.startsWith(coreDir + "/")) {
-        return { id: specifier, external: true };
+      const rel = relative(pluginDir, target);
+      if (rel === "" || rel.startsWith("..") || isAbsolute(rel)) return null; // outside our tree
+      const folder = rel.split(sep)[0]!;
+      if (folder === "node_modules") return null; // plugin-local npm deps
+      if (folder === "plugins") return null; // sub-plugins are other plugins (external by specifier)
+      if (inlinedRoots.includes(folder)) return null;
+      if (!existsSync(join(pluginDir, folder, "index.ts"))) {
+        throw new Error(
+          `web-artifact ${pluginPath} (kind "${kind}"): ${importer} imports "${id}", which ` +
+            `lands in the plugin's own "${folder}/" — a folder this artifact neither inlines ` +
+            `nor hashes, and which has no ${folder}/index.ts barrel to route the import to. ` +
+            `Give it a barrel and import through it, or add "${folder}" to inlinedRootsFor() ` +
+            `in core/own-roots.ts.`,
+        );
       }
-      return null;
+      return { id: `@plugins/${pluginPath}/${folder}`, external: true };
     },
   };
 }
@@ -141,9 +172,10 @@ function cssInjectionSnippet(css: string, dirName: string): string {
  * Statics are recorded PER FILE so the preload BFS walks real static edges and
  * never eagerly preloads a lazy chunk's dependencies.
  */
-export async function parseEmittedImports(
-  outDir: string,
-): Promise<{ staticImportsByFile: Record<string, string[]>; dynamicImports: string[] }> {
+export async function parseEmittedImports(outDir: string): Promise<{
+  staticImportsByFile: Record<string, string[]>;
+  dynamicImports: string[];
+}> {
   await esLexerInit;
   const staticImportsByFile: Record<string, string[]> = {};
   const dynamicImports = new Set<string>();
@@ -180,11 +212,26 @@ export async function buildArtifact(
     import("@vitejs/plugin-react"),
   ]);
   const tmpDir = artifactTmpDir(target.dirName);
-  const pluginDir = target.pluginPath ? join(ctx.pluginsRoot, target.pluginPath) : null;
+  // The dir the artifact's own-hash was taken against: the plugin dir for a
+  // plugin target, and (for `entry`) web-core's `web/` — which is exactly what
+  // `planFleet` passes to `ownHashFor`, so `hashedRootsFor` answers identically
+  // for both and the audit checks the roots the address really hashed.
+  const pluginDir = target.pluginPath
+    ? join(ctx.pluginsRoot, target.pluginPath)
+    : dirname(target.entryFile);
+  const audit = createInlineAudit({
+    dirName: target.dirName,
+    hashedRoots: hashedRootsFor(pluginDir, target.kind),
+    kind: target.kind,
+  });
 
-  const plugins: VitePlugin[] = [];
+  const plugins: VitePlugin[] = [audit.plugin];
   if (target.kind === "entry") plugins.push(stripGlobalCssPlugin());
-  if (target.pluginPath && pluginDir) plugins.push(ownCoreBarrelPlugin(target.pluginPath, pluginDir));
+  if (target.pluginPath) {
+    plugins.push(
+      ownFolderBarrelPlugin(target.pluginPath, pluginDir, target.kind),
+    );
+  }
 
   try {
     await viteBuild({
@@ -196,27 +243,41 @@ export async function buildArtifact(
       define: ARTIFACT_DEFINE,
       resolve: { alias: { "@plugins": ctx.pluginsRoot } },
       build: {
-        lib: { entry: target.entryFile, formats: ["es"], fileName: () => "index.js" },
+        lib: {
+          entry: target.entryFile,
+          formats: ["es"],
+          fileName: () => "index.js",
+        },
         outDir: tmpDir,
         emptyOutDir: true,
         minify: ctx.minify ? "esbuild" : false,
         sourcemap: true,
         reportCompressedSize: false,
-        rollupOptions: { external: makeArtifactExternal(target.pluginPath) },
+        rollupOptions: {
+          external: makeArtifactExternal(target.pluginPath, target.kind),
+        },
       },
     });
+    // Before anything reads the output: prove the bytes inline only what this
+    // artifact's address hashed (see `inline-audit.ts`).
+    audit.verify();
 
     // Fold any extracted CSS (plugin-local + npm package CSS; lib mode inlines
     // url() assets as data URIs) into the module so styles load atomically.
     const cssFiles = readdirSync(tmpDir).filter((f) => f.endsWith(".css"));
     if (cssFiles.length > 0) {
-      const css = cssFiles.map((f) => readFileSync(join(tmpDir, f), "utf8")).join("\n");
+      const css = cssFiles
+        .map((f) => readFileSync(join(tmpDir, f), "utf8"))
+        .join("\n");
       // Whole-file rewrite (read + concatenate + write), not an append: this is
       // build-artifact ASSEMBLY of a freshly-emitted index.js, not a durable
       // growing log — so it stays on the sanctioned whole-file writer.
       const indexJsPath = join(tmpDir, "index.js");
       const emitted = readFileSync(indexJsPath, "utf8");
-      writeFileSync(indexJsPath, emitted + cssInjectionSnippet(css, target.dirName));
+      writeFileSync(
+        indexJsPath,
+        emitted + cssInjectionSnippet(css, target.dirName),
+      );
       for (const f of cssFiles) unlinkSync(join(tmpDir, f));
     }
 
@@ -225,7 +286,8 @@ export async function buildArtifact(
       throw new Error(`vite build of ${target.dirName} emitted no index.js`);
     }
 
-    const { staticImportsByFile, dynamicImports } = await parseEmittedImports(tmpDir);
+    const { staticImportsByFile, dynamicImports } =
+      await parseEmittedImports(tmpDir);
     const meta: ArtifactMeta = {
       specifier: target.specifier,
       kind: target.kind,
@@ -270,9 +332,13 @@ export async function buildRegistryArtifact(opts: {
     sourcefile: "web.generated.ts",
   });
   const tmpDir = artifactTmpDir(opts.dirName);
-  writeFileSync(join(tmpDir, "index.js"), result.code + "\n//# sourceMappingURL=index.js.map\n");
+  writeFileSync(
+    join(tmpDir, "index.js"),
+    result.code + "\n//# sourceMappingURL=index.js.map\n",
+  );
   writeFileSync(join(tmpDir, "index.js.map"), result.map);
-  const { staticImportsByFile, dynamicImports } = await parseEmittedImports(tmpDir);
+  const { staticImportsByFile, dynamicImports } =
+    await parseEmittedImports(tmpDir);
   const meta: ArtifactMeta = {
     specifier: "@composition-web-registry",
     kind: "registry",

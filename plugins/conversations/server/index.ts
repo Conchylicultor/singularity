@@ -39,8 +39,6 @@ import { queryConversations } from "@plugins/conversations/plugins/all-conversat
 import { handleQuery } from "@plugins/conversations/plugins/all-conversations/server";
 
 export { maybeLaunchTaskJob } from "./internal/auto-start-jobs";
-
-export { isActiveStatus, hasLiveProcess } from "./status";
 export {
   createConversation,
   deleteConversation,

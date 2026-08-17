@@ -1,23 +1,19 @@
 // Own-file enumeration + the stat-fingerprint fast path. A plugin's artifact
-// hash covers exactly its OWN reachable source set:
-//   web artifact  → `web/`, `shared/`, `core/` subtrees + `package.json`
-//   core artifact → `core/` subtree + `package.json`
-//   entry artifact → web-core's `web/` (minus `public/`, tests)
-// Nested sub-plugins live under `<dir>/plugins/` — outside these roots — so a
+// hash covers exactly its OWN inlined source set — and that set is NOT a table
+// written here: the roots ARE `inlinedRootsFor(kind)` (`../own-roots`), the one
+// list the bundler's inline decision reads too, plus `package.json`. Hashing
+// anything less than what the bytes inline fossilises the artifact; hashing
+// more only forces spurious rebuilds. The lone special case is `entry`
+// (web-core's own `web/` dir, no plugin around it).
+//
+// Nested sub-plugins live under `<dir>/plugins/` — never an inlined root — so a
 // child's change never touches the parent's hash.
 
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join, relative } from "node:path";
 import { computeOwnHash } from "../hash";
+import { inlinedRootsFor, type ArtifactKind } from "../own-roots";
 import type { FingerprintCache, FingerprintRecord } from "./store";
-
-/**
- * `web` (web+shared+core roots), `entry` (web-core's web dir), or any other
- * single folder-barrel kind (`core`, `fixtures`, …) whose root is the folder
- * itself. Open-ended on purpose: the artifact closure builds whatever folder
- * barrels the EMITTED code statically imports.
- */
-export type ArtifactKind = string;
 
 const SKIP_DIRS = new Set(["node_modules", "__tests__", "public"]);
 const TEST_FILE_RE = /\.test\.[jt]sx?$/;
@@ -35,7 +31,12 @@ function walkFiles(dir: string, out: string[]): void {
     const p = join(dir, e.name);
     if (e.isSymbolicLink()) continue;
     if (e.isDirectory()) {
-      if (SKIP_DIRS.has(e.name) || e.name === "dist" || e.name.startsWith("dist.")) continue;
+      if (
+        SKIP_DIRS.has(e.name) ||
+        e.name === "dist" ||
+        e.name.startsWith("dist.")
+      )
+        continue;
       walkFiles(p, out);
     } else if (e.isFile()) {
       if (TEST_FILE_RE.test(e.name) || e.name === ".DS_Store") continue;
@@ -44,14 +45,24 @@ function walkFiles(dir: string, out: string[]): void {
   }
 }
 
+/**
+ * The absolute dirs an artifact of `kind` hashes — and, by construction, the
+ * only dirs its bytes may inline from. Shared by `listOwnFiles` (which walks
+ * them) and the build-time inline audit (which checks containment against
+ * them), so the address and its assertion cannot drift.
+ */
+export function hashedRootsFor(
+  pluginDir: string,
+  kind: ArtifactKind,
+): string[] {
+  return kind === "entry"
+    ? [pluginDir] // entry: web-core/web dir itself, no plugin folders around it
+    : inlinedRootsFor(kind).map((root) => join(pluginDir, root));
+}
+
 /** Absolute paths of the artifact's own files, sorted. */
 export function listOwnFiles(pluginDir: string, kind: ArtifactKind): string[] {
-  const roots =
-    kind === "web"
-      ? [join(pluginDir, "web"), join(pluginDir, "shared"), join(pluginDir, "core")]
-      : kind === "entry"
-        ? [pluginDir] // entry: web-core/web dir itself
-        : [join(pluginDir, kind)]; // folder barrel: core, fixtures, …
+  const roots = hashedRootsFor(pluginDir, kind);
   const out: string[] = [];
   for (const root of roots) walkFiles(root, out);
   if (kind !== "entry") {
@@ -82,7 +93,12 @@ export function cachedAggregateHash(opts: {
   files: string[];
   cache: FingerprintCache;
 }): string {
-  const stats: Array<{ abs: string; rel: string; mtimeMs: number; size: number }> = [];
+  const stats: Array<{
+    abs: string;
+    rel: string;
+    mtimeMs: number;
+    size: number;
+  }> = [];
   for (const f of opts.files) {
     let st;
     try {
@@ -92,7 +108,12 @@ export function cachedAggregateHash(opts: {
       continue;
     }
     if (!st.isFile()) continue;
-    stats.push({ abs: f, rel: relative(opts.baseDir, f), mtimeMs: st.mtimeMs, size: st.size });
+    stats.push({
+      abs: f,
+      rel: relative(opts.baseDir, f),
+      mtimeMs: st.mtimeMs,
+      size: st.size,
+    });
   }
 
   const record = opts.cache.records[opts.cacheKey];
