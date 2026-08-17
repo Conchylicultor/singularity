@@ -1,15 +1,24 @@
-import { Button, Sidebar, SidebarHeader, SidebarInset, SidebarProvider, SidebarTrigger } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import {
+  Button,
+  Sidebar,
+  SidebarHeader,
+  SidebarInset,
+  SidebarProvider,
+  SidebarTrigger,
+} from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Bar } from "@plugins/primitives/plugins/bar/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Clip } from "@plugins/primitives/plugins/css/plugins/clip/web";
 import { SurfaceChromeContext } from "@plugins/primitives/plugins/pane/web";
 import { useContext, useMemo, type ReactNode } from "react";
-import { PluginRuntimeContext, type Contribution } from "@plugins/framework/plugins/web-sdk/core";
+import {
+  PluginRuntimeContext,
+  type Contribution,
+} from "@plugins/framework/plugins/web-sdk/core";
 import {
   renderIsolated,
   type RenderSlot,
 } from "@plugins/primitives/plugins/slot-render/web";
-import { PANE_GUTTER_VAR } from "@plugins/primitives/plugins/data-view/core";
 import type { SidebarFramingProps } from "../../core";
 import { AppShell } from "../slots";
 export type AppShellSidebarItem = {
@@ -30,8 +39,7 @@ export type AppShellToolbarAction = {
   component?: never;
   group?: string;
 } & (
-  | { label: string; icon?: ToolbarIcon }
-  | { icon: ToolbarIcon; label?: string }
+  { label: string; icon?: ToolbarIcon } | { icon: ToolbarIcon; label?: string }
 );
 
 /**
@@ -54,7 +62,8 @@ export type AppShellToolbarComponent = {
  * impossible by type. {@link ToolbarItem} additionally throws on a forced
  * malformed item rather than rendering null.
  */
-export type AppShellToolbarItem = AppShellToolbarAction | AppShellToolbarComponent;
+export type AppShellToolbarItem =
+  AppShellToolbarAction | AppShellToolbarComponent;
 
 function ToolbarItem(item: AppShellToolbarItem) {
   if (item.component) {
@@ -115,7 +124,9 @@ function DefaultFlushFraming({
           </SidebarHeader>
         )}
         {/* eslint-disable-next-line layout/no-adhoc-layout -- flexible leaf of shadcn Sidebar's not-yet-drained flex column (claims the height left below the header) */}
-        <Stack gap="none" className="min-h-0 flex-1">{sidebarContent}</Stack>
+        <Stack gap="none" className="min-h-0 flex-1">
+          {sidebarContent}
+        </Stack>
       </Sidebar>
 
       {/* eslint-disable-next-line layout/no-adhoc-layout -- min-w-0 on shadcn SidebarInset lets the main area truncate within the not-yet-drained SidebarProvider flex row */}
@@ -208,7 +219,11 @@ export function AppShellLayout({
   // No sidebar → no SidebarProvider/Inset; just a full-height column holding
   // the (optional) toolbar and the main renderer. Framing is sidebar-only.
   if (!sidebarSlot) {
-    return <Stack gap="none" className="h-full min-h-0">{body}</Stack>;
+    return (
+      <Stack gap="none" className="h-full min-h-0">
+        {body}
+      </Stack>
+    );
   }
 
   const sidebarContent = (
@@ -226,19 +241,24 @@ export function AppShellLayout({
     // highlight identically by construction instead of one silently landing on
     // the page-canvas `--muted`, which sits on top of `--sidebar` and reads as
     // no hover at all.
-    // The sidebar also publishes the pane-gutter rail as its own `--space-sm`
-    // inset (instead of the pane-header default `--chrome-pad-x`), so any
+    // `rail-owe-sm` sets the sidebar's rail to its own `--space-sm` instead of
+    // the `rail-follow` fallback (the pane-header `--chrome-pad-x`), so any
     // DataView rendered in a sidebar sits on the sidebar's pill rail: band
     // chrome (toolbar, section headers) at the rail, row pills inset by it —
     // matching the nav items' `px-sm` wrapper. `--pad-row-x` ≡ `--space-sm` at
     // every density, so row content lands on the same rail as nav icon/label.
+    //
+    // `owe`, not `rail-sm`: it declares the rail WITHOUT paying it, so the
+    // sidebar's own bands apply the inset and their hover fills and section
+    // rules still reach the sidebar's edge. `rail-sm` would pad here too, and
+    // every band would then inset twice.
     <div
+      className="rail-owe-sm"
       style={
         {
           display: "contents",
           "--chrome-mask": "var(--sidebar)",
           "--hover-fill": "var(--sidebar-accent)",
-          [PANE_GUTTER_VAR]: "var(--space-sm)",
         } as React.CSSProperties
       }
     >

@@ -15,6 +15,7 @@ import {
 } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Card } from "@plugins/primitives/plugins/css/plugins/card/web";
 import { PluginErrorBoundary } from "@plugins/primitives/plugins/error-boundary/web";
+import { expandRegionFixtures } from "./expand-region-fixtures";
 
 /** Group fixtures by their `primitive`, preserving first-seen order. */
 function groupByPrimitive(
@@ -91,7 +92,10 @@ export function Gallery(): ReactElement {
   useEffect(() => {
     let alive = true;
     void loadFixtures().then((loaded) => {
-      if (alive) setFixtures(loaded);
+      // Regions expand into layout fixtures here too, so a contributed region
+      // shows up in the Lab — rendering the same `REGION_CHILDREN` kit the gate
+      // measures — with no gallery code aware there is a second fixture kind.
+      if (alive) setFixtures(expandRegionFixtures(loaded));
     });
     return () => {
       alive = false;

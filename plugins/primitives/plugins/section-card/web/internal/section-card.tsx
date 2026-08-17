@@ -100,9 +100,22 @@ export function SectionCard({
 
   return (
     <Card className={cn("rounded-lg p-none", className)}>
-      <Collapsible open={open} onOpenChange={onOpenChange} defaultOpen={defaultOpen}>
+      <Collapsible
+        open={open}
+        onOpenChange={onOpenChange}
+        defaultOpen={defaultOpen}
+      >
         {header}
-        <CollapsibleContent className="px-lg pb-lg">{children}</CollapsibleContent>
+        {/* The body OPENS a rail region rather than merely padding: `rail-x-lg`
+            applies the inset AND publishes it, so a descendant that follows the
+            rail (a DataView's bands, a DataTable's rows) knows the card already
+            paid and adds nothing. `px-lg` here would inset without publishing,
+            and a follower would then guess — which is what the deleted
+            `pane-gutter-flush` marker existed to correct, one wrapper at a time.
+            Inline-only, so `pb-lg` stays: the block rhythm is unchanged. */}
+        <CollapsibleContent className="rail-x-lg pb-lg">
+          {children}
+        </CollapsibleContent>
       </Collapsible>
     </Card>
   );

@@ -137,6 +137,7 @@ describe("classifyFailure", () => {
         "pinnedRight",
         "neverTruncatesWhenRoomy",
         "truncationOnsetOrder",
+        "railAlignment",
       ].sort(),
     );
   });

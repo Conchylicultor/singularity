@@ -1,5 +1,5 @@
 import { ControlPanel } from "@plugins/primitives/plugins/css/plugins/control-panel/web";
-import type { LayoutFixture } from "@plugins/primitives/plugins/css/plugins/layout-harness/core";
+import type { HarnessFixture } from "@plugins/primitives/plugins/css/plugins/layout-harness/core";
 import {
   Button,
   Input,
@@ -10,10 +10,10 @@ import { MdCallSplit, MdClose, MdSort, MdVisibility } from "react-icons/md";
 
 // ── The control-panel geometry gate ─────────────────────────────────
 //
-// Four fixtures, one per invariant the vocabulary exists to hold. They render
-// the REAL components with real Tailwind in a real browser and measure boxes, so
-// "every label starts at one x" stops being a review note and becomes a number
-// the build compares.
+// One region fixture plus one layout fixture per invariant the vocabulary exists
+// to hold. They render the REAL components with real Tailwind in a real browser
+// and measure boxes, so "every label starts at one x" stops being a review note
+// and becomes a number the build compares.
 //
 // Two widths everywhere: 262px and 524px — the `menu` and `builder` width roles
 // from `popover-width.ts`. A panel is only ever one of those two widths, so
@@ -106,7 +106,46 @@ const BUILDER_ROLE_WIDTH = 524;
 
 const WIDTHS = [MENU_ROLE_WIDTH, BUILDER_ROLE_WIDTH];
 
-export const controlPanelFixtures: LayoutFixture[] = [
+export const controlPanelFixtures: HarnessFixture[] = [
+  // ── Invariant #1, gated by children the fixture cannot choose ─────
+  //
+  // The region fixture, and the reason the two fixtures below it are no longer
+  // the last word. `mixed-content` was written after a raw `<Input>` shipped
+  // ~50px left of every label around it, and it closed exactly that case — an
+  // `<Input>` and a `<Button>`, both named here, both authored here. The next
+  // child kind nobody thought of was just as unmeasured as the first.
+  //
+  // A `RegionFixture` hands the harness a HOLE instead: it says only "this box
+  // opens a region", and `REGION_CHILDREN` decides what goes in it — a bare
+  // input, a bare button, bare prose, a `display: contents`-wrapped
+  // contribution, a `rail-follow` band, a `rail-bleed` row. Adding a member
+  // there re-gates this panel with no edit here, which is what turns
+  // "any new fixture must render something other than a Row" from a sentence
+  // asking authors to remember into something they cannot get wrong.
+  //
+  // The children go inside a `Section` because that is how content actually
+  // reaches a panel, and because the band is claimed to be inset-transparent:
+  // `cp-panel` is the one box that pays, `cp-band` adds nothing, so a child
+  // lands on the text rail through it by doing nothing at all. Both halves of
+  // that claim are under test here.
+  //
+  // Swept at the two width ROLES (262 / 524) like everything else in this file:
+  // a panel is only ever one of those two widths, and `cp-panel`'s rail is an
+  // asymmetric `calc()` pair (chrome pad + text rail on the start, chrome pad +
+  // row pad on the end) rather than a step off the ramp — so this is also the
+  // fixture that proves a hand-built rail publishes what it actually applies.
+  {
+    kind: "region",
+    id: "control-panel/region",
+    primitive: "control-panel",
+    widths: WIDTHS,
+    render: (children) => (
+      <ControlPanel aria-label="Region">
+        <ControlPanel.Section label="Group by">{children}</ControlPanel.Section>
+      </ControlPanel>
+    ),
+  },
+
   // ── Invariant #1: one rail ────────────────────────────────────────
   //
   // Measured across a MIXED row set on purpose. The 12/14/20/38px misalignment

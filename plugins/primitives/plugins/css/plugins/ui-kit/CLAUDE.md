@@ -185,9 +185,12 @@ one):
     parks the strip `padding-bottom` short of the inner edge — where scrolled
     content still shows, unfaded. Growing or offsetting the box to reach it is
     illegal (that is scrollable area again); ink is not. Each `POPOVER_PADDING`
-    role co-publishes its value as `--scroll-pad` (the `SURFACE_LEVELS` →
-    `--chrome-mask` contract), and the gradient's stops are offset by it so the
-    ramp *over content* is identical at every role.
+    role is one `rail-<step>` class, which *publishes* its own block padding as
+    `--rail-block-start` / `--rail-block-end` in the same declaration that
+    applies it; each strip reads the one for its own edge and offsets the
+    gradient's stops by it, so the ramp *over content* is identical at every
+    role. Per edge, not one shared number — a host with asymmetric block padding
+    would otherwise have one of its two strips silently wrong.
   - **The gradient must read as a gradient.** A row under the strip should visibly
     dissolve; hidden outright, it reads as a cutoff and says nothing about what is
     beyond. So: solid across the host's padding plus a hairline, then a long decay.
@@ -230,13 +233,29 @@ Composing it through base-ui's `render` has three rules:
 
 `DialogContent` is an `OverlayPanel` inside the full-viewport
 `DialogPrimitive.Popup` positioner. Pass content only —
-`<DialogContent size="md" padded={false}>…`.
+`<DialogContent size="md">…`.
 
 - `size`: `sm` (28rem, confirms) · `md` (32rem, default) · `lg` (56rem, two-pane).
   The three widths in use; no free-form width. Safe against the panel's own width
   role because the default `POPOVER_WIDTH.content` is the empty string.
-- `padded`: default `true` (`padding="lg"`); `false` for flush header/list panels
-  whose rows self-inset. `className` lands on the panel (e.g. `h-[32rem]`).
+  `className` lands on the panel (e.g. `h-[32rem]`).
+- **Padding is not a prop.** The panel always opens the region at `lg`; there is
+  no `padded` escape to switch it off, the same way `ControlPanelPopover` has no
+  `width` escape — an escape absent from the type cannot be reached for. A child
+  that must reach the panel edge (a header/footer band's rule) says so itself
+  with **`rail-bleed`**, which cancels and re-applies the rail as one act, so it
+  spans the panel while its content stays on the panel's rail. Two ways to get
+  this wrong:
+  - **Bleed only a direct child of the panel.** The panel's `overflow-x-hidden`
+    is what makes a bleed free; inside a nested `ScrollArea` (viewport
+    `overflow: scroll` on both axes) the same class buys sideways scroll rather
+    than a wider box.
+  - **Never `<DialogContent className="rail-bleed">`.** It reads as the
+    replacement for the old `padded={false}` and half-works, which is why it is
+    worth naming: `rail-bleed` is `extend px`, so it *removes* the panel's own
+    `rail-lg` — the panel loses its inset (the intended half) and simultaneously
+    bleeds itself against a rail that is now zero. Bleed the child, never the
+    panel.
 - A dialog is **centered, not anchored**, so no positioner publishes
   `--available-height` for it — it injects `style={{"--available-height":"75vh"}}`
   itself, which is how the panel's unconditional clamp reproduces this surface's
@@ -244,7 +263,7 @@ Composing it through base-ui's `render` has three rules:
   inner `<ScrollArea>` stays the only active scroller.
 
 **Never wrap your own `<Surface>`/`<Clip>` inside `<DialogContent>`** — doubles the
-ring/shadow/bg. Imperative twin: `openDialog(render, { size, padded })`; yes/no
+ring/shadow/bg. Imperative twin: `openDialog(render, { size, className })`; yes/no
 guard: `confirmDialog` (`imperative-dialog/plugins/confirm`); native
 `confirm`/`alert`/`prompt` banned by `imperative-dialog/no-native-dialog`.
 
@@ -255,6 +274,7 @@ guard: `confirmDialog` (`imperative-dialog/plugins/confirm`); native
 - Description: Global UI kit: the cn() class-merge util, the 14 shadcn/ui primitives, the theme/app.css global stylesheet, and the ControlSize affordance-sizing context.
 - Web:
   - Uses:
+    - `primitives/css/rail.useRailGuard`
     - `primitives/element-size.useResizeObserver`
     - `primitives/latest-ref.useEventCallback`
     - `primitives/overlay-boundary.OverlayBoundary`
@@ -612,7 +632,6 @@ guard: `confirmDialog` (`imperative-dialog/plugins/confirm`); native
     - `primitives/data-view/tree`
     - `primitives/data-view/view-core`
     - `primitives/date-picker`
-    - `primitives/detail-sections`
     - `primitives/floating-action`
     - `primitives/floating-surface`
     - `primitives/folder-picker`

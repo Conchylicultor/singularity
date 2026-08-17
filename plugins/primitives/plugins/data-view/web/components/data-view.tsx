@@ -1,4 +1,3 @@
-import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { type CSSProperties, type ReactNode, useMemo } from "react";
 import { useElementSize } from "@plugins/primitives/plugins/element-size/web";
 import type { SealContributions } from "@plugins/framework/plugins/web-sdk/core";
@@ -147,7 +146,7 @@ export function DataViewShellFrame(props: {
         <Sticky
           edge="top"
           // eslint-disable-next-line layout/no-adhoc-layout -- horizontal toolbar row of variable-content controls; no named-slot primitive maps
-          className={cn("bg-background flex items-center gap-sm py-sm px-pane-gutter")}
+          className="bg-background flex items-center gap-sm py-sm rail-follow"
         >
           {title ? (
             <Text as="div" variant="label">
@@ -160,7 +159,7 @@ export function DataViewShellFrame(props: {
             <CreatorsControl creators={creators} />
           </div>
         </Sticky>
-        <div className="px-pane-gutter py-md">
+        <div className="rail-follow py-md">
           <Placeholder>
             No views configured — author{" "}
             <code>config/&lt;plugin&gt;/{storageKey}.jsonc</code>

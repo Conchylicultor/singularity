@@ -8,16 +8,25 @@ import {
   DialogTitle,
   ScrollArea,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { Stack, Inset } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import {
+  Stack,
+  Inset,
+} from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Column } from "@plugins/primitives/plugins/css/plugins/column/web";
 import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
-import { SectionLabel, Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import {
+  SectionLabel,
+  Text,
+} from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
 import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
 import { toast } from "@plugins/shell/plugins/notifications/web";
-import { listVersions, restoreVersion } from "@plugins/history/plugins/engine/core";
+import {
+  listVersions,
+  restoreVersion,
+} from "@plugins/history/plugins/engine/core";
 import type { Version } from "@plugins/history/plugins/engine/core";
 import { useVersionHistory } from "../internal/use-version-history";
 
@@ -118,7 +127,8 @@ export function VersionHistoryDialog({
       toast({
         type: "history",
         title: "Version restored",
-        description: pendingRestore?.label || "The selected version is now live.",
+        description:
+          pendingRestore?.label || "The selected version is now live.",
         variant: "success",
       });
       setPendingRestore(null);
@@ -135,11 +145,17 @@ export function VersionHistoryDialog({
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent size="lg" padded={false} className="h-[32rem]">
+        <DialogContent size="lg" className="h-[32rem]">
           <Column
             className="h-full"
             header={
-              <div className="border-b px-lg py-sm">
+              // The panel owns the inset (its `lg` rail is exactly the `px-lg`
+              // this band used to apply), so the band applies none of its own
+              // and BLEEDS instead: its rule spans the whole panel while the
+              // title lands back on the panel's rail. Safe here — the band is a
+              // direct child of the panel, whose `overflow-x-hidden` clips a
+              // bleed, unlike a child of an inner ScrollArea.
+              <div className="border-b rail-bleed py-sm">
                 <DialogTitle>Version history</DialogTitle>
                 <DialogDescription>
                   Browse past versions and restore any of them.

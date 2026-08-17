@@ -9,9 +9,10 @@ export {
   checkPinnedRight,
   checkNeverTruncatesWhenRoomy,
   checkTruncationOnsetOrder,
+  checkRailAlignment,
 } from "./oracle";
 export type { OracleResult } from "./oracle";
-export { isLayoutFixture } from "./types";
+export { isLayoutFixture, isRegionFixture } from "./types";
 export type {
   FixtureState,
   FixtureDims,
@@ -20,4 +21,6 @@ export type {
   GeometryInvariant,
   FixtureMutation,
   LayoutFixture,
+  RegionFixture,
+  HarnessFixture,
 } from "./types";

@@ -22,6 +22,7 @@ export const ORACLE_INVARIANT_KINDS = [
   "pinnedRight",
   "neverTruncatesWhenRoomy",
   "truncationOnsetOrder",
+  "railAlignment",
 ] as const;
 
 // Fatal signatures — a REAL regression. Checked FIRST and win over any timeout

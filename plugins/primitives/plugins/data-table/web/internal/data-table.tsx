@@ -77,7 +77,6 @@ export function DataTable<TRow>({
   keepMountedRowKeys,
   controlSize = "xs",
   stickyHeaderOffset = "0px",
-  gutter = false,
 }: DataTableProps<TRow>) {
   const { rows, sortState, toggleSort } = useDataTable(
     data,
@@ -143,7 +142,6 @@ export function DataTable<TRow>({
       rowPersistentActions={rowPersistentActions}
       useRowDecoration={decorate}
       measure={measure}
-      gutter={gutter}
     />
   );
 
@@ -168,7 +166,11 @@ export function DataTable<TRow>({
           // eslint-disable-next-line layout/no-adhoc-layout -- sticky header is itself a full-span subgrid row inheriting the host's column tracks
           className={cn(
             "col-span-full grid grid-cols-subgrid border-b text-3xs font-medium uppercase tracking-wider text-muted-foreground",
-            gutter ? "py-control px-pane-gutter" : "p-control",
+            // Every subgrid row — this header, each data row, each group header —
+            // takes its inline padding from the ambient rail and its block padding
+            // from the control ramp. Column alignment holds because they all read
+            // the SAME rail, which is what made the old fixed `p-control` work.
+            "py-control rail-follow",
           )}
           style={{ top: stickyHeaderOffset }}
         >
@@ -198,7 +200,7 @@ export function DataTable<TRow>({
           {hasActionsTrack && <span aria-hidden />}
         </Sticky>
         {groups ? (
-          renderGroupedBody(groups, renderRow, groupHeaderTop, gutter)
+          renderGroupedBody(groups, renderRow, groupHeaderTop)
         ) : rows.length > VIRTUALIZE_THRESHOLD ? (
           <VirtualTableBody
             rows={rows}
@@ -233,7 +235,6 @@ function DataTableRow<TRow>({
   rowPersistentActions,
   useRowDecoration,
   measure,
-  gutter,
 }: {
   row: TRow;
   index: number;
@@ -248,7 +249,6 @@ function DataTableRow<TRow>({
     index: number,
   ) => DataTableRowDecoration | undefined;
   measure?: { ref: (el: Element | null) => void; index: number };
-  gutter: boolean;
 }): ReactNode {
   const decoration = useRowDecoration(row, index);
   const key = rowKey(row, index);
@@ -270,7 +270,8 @@ function DataTableRow<TRow>({
       // eslint-disable-next-line layout/no-adhoc-layout -- CSS subgrid row inheriting the outer grid's column tracks (no Frame/Grid equivalent for subgrid)
       className={cn(
         "col-span-full grid grid-cols-subgrid items-center border-b border-border/30 text-caption hover:bg-accent/30",
-        gutter ? "py-control px-pane-gutter" : "p-control",
+        // Same rail as the column header and the group headers — see there.
+        "py-control rail-follow",
         // Reveals the trailing RowActions cluster; its bundled `relative` also
         // hosts the decoration overlay (a positioned row with `z-index: auto`
         // lays out and stacks identically, so it is inert on plain rows).
@@ -474,7 +475,6 @@ function renderGroupedBody<TRow>(
   groups: DataTableGroup<TRow>[],
   renderRow: (row: TRow, i: number) => ReactNode,
   groupHeaderTop: string,
-  gutter: boolean,
 ): ReactNode {
   let i = 0;
   // Group headers accumulate: with few enough groups every header stays pinned,
@@ -498,7 +498,7 @@ function renderGroupedBody<TRow>(
             mask
             layer="raised"
             // eslint-disable-next-line layout/no-adhoc-layout -- full-span sticky group-header row spanning the subgrid table's column tracks
-            className={cn("col-span-full", gutter && "px-pane-gutter")}
+            className="col-span-full rail-follow"
           >
             {group.header}
           </StickyStackItem>

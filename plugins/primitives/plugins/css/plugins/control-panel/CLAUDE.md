@@ -83,21 +83,24 @@ borders. `--hover-fill` exists because `--muted` genuinely collided with
 `--sidebar`; there is no collision here, and `e2e/hairline-verify.ts` measures the
 rendered contrast, so a preset that ever collides fails loudly.
 
-## The inset has exactly one owner
+## The panel is a rail region
 
-**One box applies the panel's content inset — `cp-panel`, as its own padding.
-Every other participant either inherits it or cancels it, never both.**
+This is where the repo-wide **rail contract** was worked out, and the panel is now
+one instance of it rather than its own rule. Read
+[`primitives/css/rail`](../rail/CLAUDE.md) for the model; what is panel-specific:
 
-- **Inherits** — a raw `<Input>`, a contributed `FieldRenderer`, any JSX a
-  caller drops into a `Section`. It lands on the text rail by doing *nothing*:
-  no wrapper, no rail class, no opt-in. That is the whole point — content that
-  knows nothing about the vocabulary is still aligned with it.
-- **Cancels** — `cp-row` and `cp-rule` bleed the inset back out with negative
-  inline margins, so the row's box reaches the panel's inner edge (that
-  full-width hover / selected fill is what makes a row read as a *row*), then
-  re-insert their own `--cp-row-pad-x`, landing the label back on exactly the
-  inset the panel applied. `cp-rail-icon` is the other canceller: it hangs a
-  section label *back* one column to the icon rail.
+- **`cp-panel` is the region owner**, publishing an *asymmetric* pair
+  (`--rail-start` ≠ `--rail-end`, above) directly rather than taking a step off
+  the `rail-<step>` ramp — the documented custom-value case. It pays its own
+  rail, so `--rail-owed-*` is `0px` and a `rail-follow` band dropped in a panel
+  insets itself no further.
+- **`cp-row` / `cp-rule` are cancellers, and deliberately not `rail-bleed`.**
+  They stop `--cp-panel-pad` *short* of the rail's origin (the chrome gap a row's
+  fill keeps from the panel edge) and re-apply their own `--cp-row-pad-x`, not
+  the rail. Two terms written out with a reason, which the contract allows; what
+  it forbids is reaching for half of `rail-bleed`.
+- **`cp-rail-icon` is the other canceller** — it hangs a section label *back* one
+  column to the icon rail.
 
 The numbers make the panel's **content box** exactly a row's **content band** —
 it starts on the text rail, where every row label starts, and ends where a row's
@@ -149,8 +152,6 @@ var freezes its computed value wherever it is declared.
 | Token | Value | What it is |
 | --- | --- | --- |
 | `--cp-panel-pad` | `var(--space-xs)` | the chrome pad — the gap a row's fill keeps from the panel's edge |
-| `--cp-inset-start` | `var(--cp-rail-text)` | the content inset a row cancels; loose content lands here |
-| `--cp-inset-end` | `var(--cp-row-pad-x)` | its trailing twin, so the content box ends where a row's trailing cell does |
 | `--cp-row-pad-x` | `var(--pad-row-x)` | inline padding inside a row or rule row |
 | `--cp-gutter` | `var(--space-lg)` | leading track that hangs the drag handle (empty on non-reorderable rows) |
 | `--cp-icon-gap` | `var(--space-sm)` | **the** column gap — shared by `cp-row` and `cp-rule`, which is what puts a rule's prefix cell on the same rail as a row's icon cell |
@@ -162,7 +163,21 @@ var freezes its computed value wherever it is declared.
 | `--cp-rail-icon` | `calc(row-pad-x + gutter + icon-gap)` | the icon rail — where a section label starts |
 | `--cp-rail-text` | `calc(rail-icon + icon-col + icon-gap)` | the text rail — where every row label starts |
 
-Both rail formulas include `--cp-icon-gap` because the grid's column gap *follows*
+`cp-panel` then publishes those as the **shared** rail — the repo-wide pair, not a
+panel-private one:
+
+| Published | Value | |
+| --- | --- | --- |
+| `--rail-start` | `calc(panel-pad + rail-text)` | where loose content lands, chrome pad included |
+| `--rail-end` | `calc(panel-pad + row-pad-x)` | so the content box ends where a row's trailing cell does |
+
+The rail is the **whole** padding, not just the content half: a rail means *where
+a child that does nothing lands*, and a bare `<Input>` here lands past both terms.
+Publishing only the content half would advertise a rail 4px short of the real one.
+The chrome pad is recovered by the two cancellers, which stop short of the panel's
+inner edge on purpose.
+
+Both `--cp-rail-*` formulas include `--cp-icon-gap` because the grid's column gap *follows*
 the track it names: the icon cell begins one gap after the gutter track ends, and
 the label cell one gap after the icon cell. Dropping that term is the easy way to
 get a rail that is 8px wrong.
@@ -210,9 +225,18 @@ row's label), `row-height`, `rule-grid` (both shapes), and `long-label` — whos
 falsification re-renders the historical `absolute right-2` + reserved-padding
 construct and asserts the overlap check genuinely fails on it.
 
-**Any new fixture must render something other than a `Row`.** Rows were the one
-child kind the gate ever drew, which is how three geometry bugs shipped past a
-green suite.
+Plus `region` — a **`RegionFixture`**, which says only "`ControlPanel` opens a
+region" and lets the harness fill it from `REGION_CHILDREN` (bare input, bare
+button, bare prose, a `display: contents` contribution, a `rail-follow` band, a
+`rail-bleed` row). This file used to ask authors to "render something other than
+a `Row`", because rows were the one child kind the gate ever drew and three
+geometry bugs shipped past it; a region fixture has nowhere to say what its
+children are, so the request is now a mechanism. Adding a member to the kit
+re-gates this panel with no edit here.
+
+`useRailGuard` (`primitives/css/rail/web`) is the same check in dev, on the real
+DOM: it names any child of a live panel whose content does not start on the
+published rail.
 
 > The harness oracle compares **widths only**. `rigidIntegrity` on a row pins the
 > row's box, not its height, so invariant #2 rests on `--cp-row-h` plus the unit
@@ -246,6 +270,7 @@ The primitive needs **no** new lint exemptions: it inherits the
 - Description: The control-panel vocabulary: ControlPanel plus its closed set of members (Section, Row, RuleList, RuleRow, Field, Footer, Empty, Stack) and the ControlPanelPopover surface. The container draws the hairlines, the row is a grid so every label starts at one x, selection has one language per meaning, and width is a role rather than a measurement.
 - Web:
   - Uses:
+    - `primitives/css/rail.useRailGuard`
     - `primitives/css/selection-indicator.CheckboxIndicator`
     - `primitives/css/switch.SwitchIndicator`
     - `primitives/css/text.SectionLabel`

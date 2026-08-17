@@ -163,7 +163,12 @@ interface EdgeGeometry {
   clearedAt: number;
   /** Strongest deviation from the panel background in the unmasked control. */
   contrast: number;
-  /** `--scroll-pad` and `--scroll-fade-h`, in px, read off the live panel. */
+  /**
+   * The rail's block padding on THIS edge (`--rail-block-start` at the top,
+   * `--rail-block-end` at the bottom) and `--scroll-fade-h`, in px, read off the
+   * live panel. Per edge, because the strips are: one shared number for both was
+   * silently wrong the moment a panel's block padding stopped being symmetric.
+   */
   pad: number;
   ramp: number;
   profile: string;
@@ -177,9 +182,9 @@ async function panelGeometry(
   const box = await panel.boundingBox();
   if (!box) throw new Error("panelGeometry: panel has no box");
   const css = await panel.evaluate((el) => {
-    // Resolve the two custom properties to PIXELS by laying them out, never by
-    // parsing their text: `--scroll-fade-h` is `2.5rem` and `--scroll-pad` is
-    // itself a `var()` onto a spacing token, so `parseFloat` on the computed
+    // Resolve the custom properties to PIXELS by laying them out, never by
+    // parsing their text: `--scroll-fade-h` is `2.5rem` and the rail vars are
+    // themselves `var()`s onto a spacing token, so `parseFloat` on the computed
     // value reads 2.5 and NaN respectively — an 18px band that never reaches
     // past the solid plateau, and assertions that then measure nothing.
     const probe = document.createElement("div");
@@ -189,16 +194,22 @@ async function panelGeometry(
     const lengthOf = (name: string) => {
       probe.style.height = `var(${name})`;
       // An undefined var makes the declaration invalid → height auto → 0, which
-      // is the same fallback the utility itself uses for `--scroll-pad`.
+      // is the same fallback each strip uses for its own `--rail-block-*`.
       return probe.getBoundingClientRect().height;
     };
-    const pad = lengthOf("--scroll-pad");
+    // Read BOTH block edges of the rail. The strips read one each (`::before`
+    // takes `--rail-block-start`, `::after` `--rail-block-end`), so measuring one
+    // number and asserting it at both edges would pass a panel whose bottom strip
+    // reaches across the wrong distance.
+    const padTop = lengthOf("--rail-block-start");
+    const padBottom = lengthOf("--rail-block-end");
     const ramp = lengthOf("--scroll-fade-h");
     probe.remove();
     const s = getComputedStyle(el);
     const px = (v: string) => parseFloat(v) || 0;
     return {
-      pad,
+      padTop,
+      padBottom,
       ramp,
       borderTop: px(s.borderTopWidth),
       borderBottom: px(s.borderBottomWidth),
@@ -238,10 +249,8 @@ async function panelGeometry(
 
   /** How far the strip's paint reaches in from one edge. */
   const readEdge = (edge: "top" | "bottom"): EdgeGeometry => {
-    const depth = Math.min(
-      faded.height,
-      Math.round(css.ramp + 2 * css.pad + 16),
-    );
+    const pad = edge === "top" ? css.padTop : css.padBottom;
+    const depth = Math.min(faded.height, Math.round(css.ramp + 2 * pad + 16));
     const rows = Array.from({ length: depth }, (_, i) => {
       const y = edge === "top" ? i : faded.height - 1 - i;
       let bareDev = 0;
@@ -286,7 +295,7 @@ async function panelGeometry(
       uncoveredAt,
       clearedAt: Math.round(clearedAt),
       contrast,
-      pad: css.pad,
+      pad,
       ramp: css.ramp,
       // Every row near the edge, every fourth after: a sliver is a one-pixel
       // event, so a coarse profile shows a failure without showing its shape.

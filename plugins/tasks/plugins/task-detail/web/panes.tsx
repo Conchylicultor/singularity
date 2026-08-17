@@ -6,7 +6,6 @@ import {
   useOpenPane,
 } from "@plugins/primitives/plugins/pane/web";
 import { agentManagerApp } from "@plugins/apps/plugins/agent-manager/plugins/shell/core";
-import { Inset } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { TasksListView } from "@plugins/tasks/plugins/task-list/web";
 import {
   tasksResource,
@@ -58,16 +57,22 @@ function TasksRoot(): ReactElement {
 
   return (
     <PaneChrome pane={tasksRootPane} title="Tasks">
-      {/* Inset already supplies the horizontal inset, so the DataView's pane
-          gutter is zeroed to avoid double padding. */}
-      <Inset pad="lg" className="pane-gutter-flush">
+      {/* This box OPENS the region — it is not a padded box with a marker on it.
+          The `Inset` that used to be here is gone on purpose, and putting it
+          back is the mistake to avoid: `Inset` pads without publishing, so an
+          `Inset` carrying a rail class would tell its descendants a rail that
+          disagrees with the padding it actually applied. `rail-lg` pads AND
+          publishes in one declaration, which is why the two are fused into one
+          utility. Same step, same all-sides padding as the old `Inset pad="lg"`,
+          so the vertical rhythm is unchanged. */}
+      <div className="rail-lg">
         <TasksListView
           selectedId={selectedId}
           onSelect={(id) =>
             openPane(taskDetailPane, { taskId: id }, { mode: "push" })
           }
         />
-      </Inset>
+      </div>
     </PaneChrome>
   );
 }

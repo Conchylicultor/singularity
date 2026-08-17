@@ -128,7 +128,7 @@ export function DataViewToolbar({
         // in the shrinkable scroll lane below, so the trailing controls can never
         // be pushed past the container's edge and clipped.
         // eslint-disable-next-line layout/no-adhoc-layout
-        className="flex items-center gap-sm py-sm px-pane-gutter"
+        className="flex items-center gap-sm py-sm rail-follow"
       >
         {compact ? (
           <>

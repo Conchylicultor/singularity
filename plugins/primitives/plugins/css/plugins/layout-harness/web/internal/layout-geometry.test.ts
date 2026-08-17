@@ -7,6 +7,7 @@ import {
   type MeasuredFixture,
 } from "@plugins/primitives/plugins/css/plugins/layout-harness/core";
 import { buildFixturesPage, type BuiltPage } from "./build-fixtures-page";
+import { expandRegionFixtures } from "./expand-region-fixtures";
 import { openMeasurer, type Measurer } from "./measure-page";
 
 // THE generic geometry suite. It builds the measurer page once (Vite + React +
@@ -24,7 +25,14 @@ import { openMeasurer, type Measurer } from "./measure-page";
 // bun:test registers tests synchronously, but loadFixtures is async. Await it
 // once at module top-level so the per-fixture describes below are registered
 // before the run starts.
-const collected = await loadFixtures();
+//
+// `expandRegionFixtures` turns each contributed REGION (a fixture that hands the
+// harness a hole instead of a child list) into an ordinary layout fixture
+// rendering the whole `REGION_CHILDREN` kit, with its invariants supplied by the
+// expansion. The suite below is unchanged by the new fixture kind — it still
+// sweeps widths and evaluates invariants — which is the point of expanding here
+// rather than teaching every consumer a second shape.
+const collected = expandRegionFixtures(await loadFixtures());
 
 let built: BuiltPage;
 let measurer: Measurer;

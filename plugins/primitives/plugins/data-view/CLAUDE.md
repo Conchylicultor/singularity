@@ -406,9 +406,9 @@ containing block, the `<StickyStack>` pinned at the host-published
 `--dv-header-offset`, the DOM-less `<CollapsibleProvider>` per section, and the
 `SectionHeaderRow` (label + count). So group headers **pin, and stack up to 5
 groups, degrading to the swap hand-off above that** — in every view, for free.
-There is **no per-view header-inset axis**: `GroupedSections` owns `px-pane-gutter`
-on its `SectionHeaderRow`, so every group header shares the one pane gutter (see
-"Pane gutter" below) — no view passes a `headerClassName`.
+There is **no per-view header-inset axis**: `GroupedSections` owns `rail-follow`
+on its `SectionHeaderRow`, so every group header sits on the one rail (see "The
+rail" below) — no view passes a `headerClassName`.
 
 **Why it is shared and not per-view.** Per-view JSX drifts (a view child silently
 forgetting to pin its headers), and a lint rule can't state "a grouped section must
@@ -866,34 +866,31 @@ so the choice is durable and git-promotable. Surfaces wanting a deliberately nar
 body author `visibleFields` directly in their committed `.jsonc` — see the
 config-nav example under "Filtering".
 
-## Pane gutter
+## The rail (the inverted topology)
 
-Every horizontal band the DataView primitive owns — the toolbar, each view body
-(list / gallery / tree), the grouped-section headers, the table rows (via
-`DataTable`'s opt-in `gutter` prop), and the loading skeletons — reads the **one
-shared pane-gutter rail** through the `px-pane-gutter` utility:
+Every horizontal band the DataView owns — toolbar, view bodies, group headers,
+table rows, loading skeletons — applies `rail-follow`
+(`padding-inline: var(--rail-start, var(--chrome-pad-x))`). Vertical rhythm stays
+on the named spacing ramp.
 
-```css
-px-pane-gutter → padding-inline: var(--pane-gutter, var(--chrome-pad-x));
-```
+**The DataView container itself never pads — its bands do.** That is the inverse
+of the rail contract's normal shape (container pads, children inherit) and it is
+deliberate: flipping it means `PaneChrome` becoming a region owner, which would
+inset every pane in the app including the deliberately full-bleed ones. The two
+consequences you must hold in mind:
 
-Because the fallback is the pane header's own inset token (`--chrome-pad-x`),
-**nothing needs to publish the var by default**: the rail auto-aligns with the pane
-header's `px-chrome` (12px comfortable, density-scaled 12/10/8). The var is purely
-an override point:
+- A host that insets a DataView itself **opens a region** — `rail-<step>`, which
+  pads and publishes in one declaration, and so sets `--rail-owed-*` to zero: the
+  owner paid, followers owe nothing. (`detail-sections`' `Host`, `SectionCard`'s
+  body, task-detail's tasks pane.) Never `Inset` + a rail class on one box:
+  `Inset` pads without publishing, so the pair would announce a rail that
+  disagrees with the padding actually applied.
+- A host wanting a **different** rail publishes `--rail-start`/`--rail-end`
+  *without* padding — the app-shell sidebar does, at `--space-sm`, which is why a
+  sidebar DataView's chrome lands on the sidebar's pill rail. Here the follower
+  still owes the rail, and pays it.
 
-- A **host that already supplies its own horizontal inset** (task-detail's `Inset`,
-  the workflows detail card, and — generically — every `detail-sections` content
-  container) adds the **`pane-gutter-flush`** utility (`--pane-gutter: 0px`) so the
-  gutter isn't double-applied. `detail-sections` does this once for ANY DataView
-  dropped into a detail section, so those consumers need no per-site opt-out.
-- A **custom rail value** (none today) is set by writing the exported
-  `PANE_GUTTER_VAR = "--pane-gutter"` constant as an inline style on an ancestor —
-  the same host-publishes / consumers-read convention as `DATA_VIEW_HEADER_OFFSET_VAR`
-  (`--dv-header-offset`) and `--chrome-mask`.
-
-The utilities are **horizontal-only**; vertical rhythm stays on the named spacing
-ramp.
+See `research/2026-08-17-global-inset-ownership-rail-contract-v2.md`.
 
 ## Placement: always natural-height, never owns a scroll
 
@@ -1165,7 +1162,6 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
     - `isGroupableField`
     - `makeSortComparator`
     - `MergedDataView`
-    - `PANE_GUTTER_VAR`
     - `partitionIntoSections`
     - `pickPrimaryField`
     - `resolveBodyFields`
@@ -1349,7 +1345,6 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
     - `FilterNodeSchema`
     - `FilterRuleSchema`
     - `IDENTITY_CODEC`
-    - `PANE_GUTTER_VAR`
 - Sub-plugins:
   - **`custom-columns`** — User-defined custom columns for any DataView: the config-backed definition controller, the per-row values live hook + upsert mutation, and the toolbar settings (Fields) button. Persists per-row custom-column values keyed by (dataViewId, rowKey, columnId): a generic DB table, a push live resource, and an upsert/delete-on-empty endpoint.
   - **`gallery`** — Gallery view child for the data-view primitive: a responsive card grid with a field-driven default card plus a composable DataCard chrome.

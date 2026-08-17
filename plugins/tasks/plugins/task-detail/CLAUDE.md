@@ -16,7 +16,6 @@
     - `Shell.Sidebar` "Tasks" → `component`
   - Uses:
     - `primitives/app-shell.sidebarNavItem`
-    - `primitives/css/spacing.Inset`
     - `primitives/detail-sections.defineDetailSections`
     - `primitives/live-state.useResource`
     - `primitives/pane.openPane`

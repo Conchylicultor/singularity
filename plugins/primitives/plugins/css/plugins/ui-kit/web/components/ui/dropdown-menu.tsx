@@ -339,8 +339,11 @@ function DropdownMenuSeparator({
   return (
     <MenuPrimitive.Separator
       data-slot="dropdown-menu-separator"
-      // eslint-disable-next-line spacing/no-adhoc-spacing -- -mx-1 full-bleeds the divider through the menu's p-xs padding; my-1 is its vertical inset; no named margin utility
-      className={cn("-mx-1 my-1 h-px bg-border", className)}
+      // `rail-bleed` full-bleeds the hairline through the panel's own rail
+      // (whatever role it is on), instead of hardcoding the one step this menu
+      // happens to default to. Same fix as `SelectSeparator`.
+      // eslint-disable-next-line spacing/no-adhoc-spacing -- my-1 is the divider's vertical inset; no named margin utility
+      className={cn("rail-bleed my-1 h-px bg-border", className)}
       {...props}
     />
   );

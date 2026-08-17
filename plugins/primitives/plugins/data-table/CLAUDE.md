@@ -2,18 +2,18 @@
 
 `DataTable` declares compact (`xs`) control density by default, so badges in cells and row-action buttons render at the smallest tier. Overridable via the `controlSize` prop.
 
-## Pane gutter (opt-in `gutter`)
+## Row inset: the ambient rail
 
-The optional `gutter?: boolean` prop (default `false`) swaps every row's horizontal
-padding from the fixed `p-control` to `py-control px-pane-gutter` — the column-header
-row, each data row, and the `col-span-full` group-header rows — so the table's left/
-right rail follows the shared **pane gutter** (`var(--pane-gutter, var(--chrome-pad-x))`)
-instead of its own control padding. It is **value-preserving at the defaults** (`--pad-control-x`
-equals `--chrome-pad-x`, 0.75rem, at every density), and column alignment is preserved
-because every subgrid row gets the identical horizontal padding. Default off means the
-~8 non-data-view consumers are byte-identical. `data-view/plugins/table` opts in
-(`gutter: true`) so table rows align with the rest of a DataView's bands; see
-`data-view/CLAUDE.md` ("Pane gutter").
+Every subgrid row — the column header, each data row, each `col-span-full` group
+header — carries `py-control rail-follow`: block padding from the control ramp,
+inline padding from the ambient rail (`var(--rail-start, var(--chrome-pad-x))`).
+There is no per-table opt-out, and column alignment holds for the same reason the
+old fixed `p-control` worked: every row reads the *same* value.
+
+The default resolves to `--chrome-pad-x` ≡ `--pad-control-x` (0.75rem), so a table
+in a plain pane looks unchanged. A table inside a host that opened a rail region
+(any `detail-sections` card body, the app-shell sidebar) follows that host's rail
+instead — which is the point: the table stops being the one band that ignores it.
 
 ## Per-row actions
 

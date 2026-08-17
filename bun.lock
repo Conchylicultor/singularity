@@ -3734,6 +3734,10 @@
       "name": "@singularity/plugin-primitives-css-radius",
       "version": "0.0.1",
     },
+    "plugins/primitives/plugins/css/plugins/rail": {
+      "name": "@singularity/plugin-primitives-css-rail",
+      "version": "0.0.1",
+    },
     "plugins/primitives/plugins/css/plugins/row": {
       "name": "@singularity/plugin-primitives-css-row",
       "version": "0.0.1",
@@ -7244,6 +7248,8 @@
     "@singularity/plugin-primitives-css-radio-group": ["@singularity/plugin-primitives-css-radio-group@workspace:plugins/primitives/plugins/css/plugins/radio-group"],
 
     "@singularity/plugin-primitives-css-radius": ["@singularity/plugin-primitives-css-radius@workspace:plugins/primitives/plugins/css/plugins/radius"],
+
+    "@singularity/plugin-primitives-css-rail": ["@singularity/plugin-primitives-css-rail@workspace:plugins/primitives/plugins/css/plugins/rail"],
 
     "@singularity/plugin-primitives-css-row": ["@singularity/plugin-primitives-css-row@workspace:plugins/primitives/plugins/css/plugins/row"],
 

@@ -1,8 +1,8 @@
-import { useCallback } from "react"
-import type * as React from "react"
+import { useCallback } from "react";
+import type * as React from "react";
 
-import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web/lib/utils"
-import { SURFACE_LEVELS } from "@plugins/primitives/plugins/css/plugins/ui-kit/web/theme/surface"
+import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web/lib/utils";
+import { SURFACE_LEVELS } from "@plugins/primitives/plugins/css/plugins/ui-kit/web/theme/surface";
 import {
   POPOVER_WIDTH,
   POPOVER_PADDING,
@@ -10,11 +10,12 @@ import {
   type PopoverWidth,
   type PopoverPadding,
   type PopoverMaxHeight,
-} from "@plugins/primitives/plugins/css/plugins/ui-kit/web/theme/popover-width"
-import { SingleLineProvider } from "@plugins/primitives/plugins/css/plugins/ui-kit/web/theme/single-line"
-import { scopeSelectAllKeyDown } from "@plugins/primitives/plugins/select-scope/web"
-import { OverlayBoundary } from "@plugins/primitives/plugins/overlay-boundary/web"
-import { useScrollFade } from "@plugins/primitives/plugins/css/plugins/ui-kit/web/components/use-scroll-fade"
+} from "@plugins/primitives/plugins/css/plugins/ui-kit/web/theme/popover-width";
+import { SingleLineProvider } from "@plugins/primitives/plugins/css/plugins/ui-kit/web/theme/single-line";
+import { scopeSelectAllKeyDown } from "@plugins/primitives/plugins/select-scope/web";
+import { useRailGuard } from "@plugins/primitives/plugins/css/plugins/rail/web";
+import { OverlayBoundary } from "@plugins/primitives/plugins/overlay-boundary/web";
+import { useScrollFade } from "@plugins/primitives/plugins/css/plugins/ui-kit/web/components/use-scroll-fade";
 
 /**
  * THE floating panel — the one definition of the box every overlay surface
@@ -58,24 +59,24 @@ import { useScrollFade } from "@plugins/primitives/plugins/css/plugins/ui-kit/we
  */
 export interface OverlayPanelProps {
   /** Closed width role; default size-to-content. */
-  width?: PopoverWidth
+  width?: PopoverWidth;
   /** Padding role; default `md`. */
-  padding?: PopoverPadding
+  padding?: PopoverPadding;
   /** Comfort cap on top of the unconditional viewport fit; default `viewport`. */
-  maxHeight?: PopoverMaxHeight
+  maxHeight?: PopoverMaxHeight;
   /** Optional sticky header rendered above the content, full-bleed through the padding. */
-  header?: React.ReactNode
+  header?: React.ReactNode;
   /** Landing spot for a consumer override — always the LAST `cn()` argument. */
-  className?: string
-  children?: React.ReactNode
+  className?: string;
+  children?: React.ReactNode;
   /** Forwarded to the root (base-ui merges the popup's own ref into it). */
-  ref?: React.Ref<HTMLDivElement>
+  ref?: React.Ref<HTMLDivElement>;
   /** Composed with the baked-in select-scope handler (consumer runs first). */
-  onKeyDown?: React.KeyboardEventHandler<HTMLDivElement>
+  onKeyDown?: React.KeyboardEventHandler<HTMLDivElement>;
   /** Composed with the baked-in scroll-fade measurement (consumer runs first). */
-  onScroll?: React.UIEventHandler<HTMLDivElement>
+  onScroll?: React.UIEventHandler<HTMLDivElement>;
   /** Permissive passthrough for the rendered root (base-ui's merged popup props). */
-  [key: string]: unknown
+  [key: string]: unknown;
 }
 
 export function OverlayPanel({
@@ -94,27 +95,38 @@ export function OverlayPanel({
   // node takes one `ref`, so the fade's measurement ref and the caller's compose
   // here (base-ui merges the popup's own ref into `ref`, so dropping it would
   // silently break every floating surface).
-  const { measureRef, onScroll: measureScroll, top, bottom } = useScrollFade<HTMLDivElement>()
+  const {
+    measureRef,
+    onScroll: measureScroll,
+    top,
+    bottom,
+  } = useScrollFade<HTMLDivElement>();
+  // The `padding` role IS this panel's rail region (`POPOVER_PADDING` maps each
+  // role to one `rail-<step>`), so the panel is the publisher and the guard
+  // belongs on its own box — the rail is measured from the publisher's PADDING
+  // box, which for this bordered surface is one pixel inside its border box.
+  const railRef = useRailGuard<HTMLDivElement>("OverlayPanel");
   const panelRef = useCallback(
     (el: HTMLDivElement | null) => {
-      measureRef(el)
-      if (typeof ref === "function") ref(el)
-      else if (ref) ref.current = el
+      measureRef(el);
+      railRef.current = el;
+      if (typeof ref === "function") ref(el);
+      else if (ref) ref.current = el;
     },
-    [measureRef, ref],
-  )
+    [measureRef, railRef, ref],
+  );
   // Consumer first, then the scope — and the merged handler applied AFTER
   // `{...rest}` so nothing in the popup's merged props can clobber it. Safe in
   // either order: the scope handler only acts on Ctrl/Cmd+"a", which nothing in
   // the base-ui stack reads (typeahead bails on modifiers, dismiss reads Escape).
   const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
-    onKeyDown?.(e)
-    scopeSelectAllKeyDown(e)
-  }
+    onKeyDown?.(e);
+    scopeSelectAllKeyDown(e);
+  };
   const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
-    onScroll?.(e)
-    measureScroll()
-  }
+    onScroll?.(e);
+    measureScroll();
+  };
   return (
     <div
       ref={panelRef}
@@ -149,9 +161,16 @@ export function OverlayPanel({
       <SingleLineProvider value={false}>
         <OverlayBoundary>
           {header != null && (
-            // -mx-1 / -mt-1 full-bleed the header through the panel's own padding.
-            // eslint-disable-next-line spacing/no-adhoc-spacing -- negative-margin bleed past the panel's own padding has no named utility
-            <div className="sticky top-0 z-raised -mx-1 -mt-1 mb-xs border-b bg-popover px-xs py-xs">
+            // `rail-bleed` for the inline half: it cancels and re-applies
+            // whatever rail the panel is ACTUALLY on, which the `-mx-1` here
+            // before it did not — the default role is `md` (0.75rem), so a
+            // hardcoded 4px left every popover header visibly inset, and each of
+            // the six roles wanted a different number.
+            // `-mt-1` stays hardcoded because there is no block bleed in the
+            // contract: `--rail-block-*` is published for `scroll-fade` to read,
+            // and the escape is inline-only by design.
+            // eslint-disable-next-line spacing/no-adhoc-spacing -- -mt-1 bleeds the header through the panel's block padding; the contract has no block escape and no named negative-margin utility
+            <div className="sticky top-0 z-raised rail-bleed -mt-1 mb-xs border-b bg-popover py-xs">
               {header}
             </div>
           )}
@@ -159,5 +178,5 @@ export function OverlayPanel({
         </OverlayBoundary>
       </SingleLineProvider>
     </div>
-  )
+  );
 }

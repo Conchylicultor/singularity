@@ -301,7 +301,7 @@ export function GalleryView(props: DataViewRenderProps<unknown>): ReactNode {
         <Grid
           minCellWidth={`${minCardWidth}px`}
           gap="lg"
-          className="px-pane-gutter py-sm"
+          className="rail-follow py-sm"
         >
           {cells.map((cell) => (
             <div key={cellKey(cell)} className="contents">
@@ -313,7 +313,7 @@ export function GalleryView(props: DataViewRenderProps<unknown>): ReactNode {
     }
     const rowsOfCells = columns > 0 ? chunkRows(cells, columns) : [];
     return (
-      <div className="px-pane-gutter py-sm">
+      <div className="rail-follow py-sm">
         <Grid
           ref={probeRef}
           aria-hidden
@@ -359,8 +359,8 @@ export function GalleryView(props: DataViewRenderProps<unknown>): ReactNode {
 
   // Grouped: the shared pinned/stacking group-header chrome (identical to the
   // list's — the header is the same navigational aid whether the group holds rows
-  // or cards). GroupedSections owns the shared pane-gutter inset, so each header
-  // sits on the same rail as the grid body (which also reads `px-pane-gutter`).
+  // or cards). GroupedSections follows the ambient rail too, so each header
+  // sits on the same rail as the grid body (which also reads `rail-follow`).
   return (
     <GroupedSections
       sections={sections}

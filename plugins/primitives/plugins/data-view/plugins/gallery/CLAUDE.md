@@ -20,8 +20,8 @@ the shared `FieldDef` schema.
 ## Grouping + windowing
 
 Under group-by the grouped branch renders through the shared **`<GroupedSections>`**
-chrome, which owns the shared `px-pane-gutter` header inset (the grid body uses the
-same `px-pane-gutter` with a `py-sm` vertical rhythm), so its
+chrome, which owns the `rail-follow` header inset (the grid body uses the
+same `rail-follow` with a `py-sm` vertical rhythm), so its
 group headers pin and stack exactly like the list's — the header is the same
 navigational aid whether a group holds rows or cards. The policy lives in the
 data-view parent, not here; see its CLAUDE.md ("Grouped sections: one pipeline, one

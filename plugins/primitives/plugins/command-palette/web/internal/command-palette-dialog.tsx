@@ -1,4 +1,9 @@
-import { cn, Dialog, DialogContent, ScrollArea } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import {
+  cn,
+  Dialog,
+  DialogContent,
+  ScrollArea,
+} from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useState, useMemo, useCallback } from "react";
 import { MdSearch } from "react-icons/md";
 import { useRevealOnActive } from "@plugins/primitives/plugins/scroll-reveal/web";
@@ -81,8 +86,13 @@ export function CommandPaletteDialog({
   // transition, replacing the old mirror-`open`-into-state effect. The Dialog
   // shell stays mounted so its close animation is preserved.
   return (
-    <Dialog open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
-      <DialogContent size="md" padded={false}>
+    <Dialog
+      open={open}
+      onOpenChange={(o) => {
+        if (!o) onClose();
+      }}
+    >
+      <DialogContent size="md">
         {open && <CommandPaletteBody onClose={onClose} items={items} />}
       </DialogContent>
     </Dialog>
@@ -146,60 +156,58 @@ function CommandPaletteBody({
 
   return (
     <>
-          <div className="flex items-center gap-sm border-b px-md py-sm">
-            <MdSearch className="size-4 shrink-0 text-muted-foreground" />
-            <input
-              autoFocus
-              value={query}
-              onChange={(e) => {
-                setQuery(e.target.value);
-                setActiveIdx(0);
-              }}
-              onKeyDown={handleKeyDown}
-              className="flex-1 bg-transparent text-body outline-none placeholder:text-muted-foreground"
-              placeholder="Search commands..."
-            />
-          </div>
+      {/* The dialog panel owns the inset. The search band and the hint
+              footer apply none of their own and BLEED instead, so their rules
+              span the whole panel while their contents land back on the panel's
+              rail. Both are direct children of the panel, which is what makes a
+              bleed free (see the caveat in `dialog.tsx`). */}
+      <div className="flex items-center gap-sm border-b rail-bleed py-sm">
+        <MdSearch className="size-4 shrink-0 text-muted-foreground" />
+        <input
+          autoFocus
+          value={query}
+          onChange={(e) => {
+            setQuery(e.target.value);
+            setActiveIdx(0);
+          }}
+          onKeyDown={handleKeyDown}
+          className="flex-1 bg-transparent text-body outline-none placeholder:text-muted-foreground"
+          placeholder="Search commands..."
+        />
+      </div>
 
-          <ScrollArea className="max-h-80">
-            <div className="p-xs">
-              {flatList.length === 0 && (
-                <Text
-                  as="p"
-                  variant="body"
-                  className="px-md py-xl text-center text-muted-foreground"
-                >
-                  No commands found.
-                </Text>
-              )}
+      <ScrollArea className="max-h-80">
+        {/* Block rhythm only: the list opens NO region of its own, so its
+                group labels and rows inherit the panel's rail by doing nothing.
+                The rows do not `rail-bleed`: their active fill is a rounded pill
+                that reads as inset by design, and this list lives inside a
+                `ScrollArea` whose viewport is `overflow: scroll` on BOTH axes —
+                a bleeding child there buys 16px of sideways scroll rather than a
+                wider fill. Only the bands outside the scroller bleed. */}
+        <div className="py-xs">
+          {flatList.length === 0 && (
+            <Text
+              as="p"
+              variant="body"
+              className="py-xl text-center text-muted-foreground"
+            >
+              No commands found.
+            </Text>
+          )}
 
-              {groups
-                ? groups.map((group) => (
-                    <div key={group.label ?? "__ungrouped"}>
-                      {group.label && (
-                        <Text
-                          as="div"
-                          variant="caption"
-                          className="px-sm py-xs font-medium text-muted-foreground"
-                        >
-                          {group.label}
-                        </Text>
-                      )}
-                      {group.items.map((item) => {
-                        const idx = flatIdx++;
-                        return (
-                          <CommandRow
-                            key={item.id}
-                            item={item}
-                            isActive={idx === activeIdx}
-                            onMouseEnter={() => setActiveIdx(idx)}
-                            onClick={() => select(item)}
-                          />
-                        );
-                      })}
-                    </div>
-                  ))
-                : filtered.map((item) => {
+          {groups
+            ? groups.map((group) => (
+                <div key={group.label ?? "__ungrouped"}>
+                  {group.label && (
+                    <Text
+                      as="div"
+                      variant="caption"
+                      className="px-sm py-xs font-medium text-muted-foreground"
+                    >
+                      {group.label}
+                    </Text>
+                  )}
+                  {group.items.map((item) => {
                     const idx = flatIdx++;
                     return (
                       <CommandRow
@@ -211,35 +219,49 @@ function CommandPaletteBody({
                       />
                     );
                   })}
-            </div>
-          </ScrollArea>
+                </div>
+              ))
+            : filtered.map((item) => {
+                const idx = flatIdx++;
+                return (
+                  <CommandRow
+                    key={item.id}
+                    item={item}
+                    isActive={idx === activeIdx}
+                    onMouseEnter={() => setActiveIdx(idx)}
+                    onClick={() => select(item)}
+                  />
+                );
+              })}
+        </div>
+      </ScrollArea>
 
-          <Text
-            as="div"
-            variant="caption"
-            className="border-t px-md py-xs text-muted-foreground"
-          >
-            <Stack direction="row" gap="md">
-              <span>
-                <Kbd className="border-muted-foreground/30 bg-muted-foreground/10 text-muted-foreground">
-                  ↑↓
-                </Kbd>{" "}
-                navigate
-              </span>
-              <span>
-                <Kbd className="border-muted-foreground/30 bg-muted-foreground/10 text-muted-foreground">
-                  ↵
-                </Kbd>{" "}
-                select
-              </span>
-              <span>
-                <Kbd className="border-muted-foreground/30 bg-muted-foreground/10 text-muted-foreground">
-                  esc
-                </Kbd>{" "}
-                close
-              </span>
-            </Stack>
-          </Text>
+      <Text
+        as="div"
+        variant="caption"
+        className="border-t rail-bleed py-xs text-muted-foreground"
+      >
+        <Stack direction="row" gap="md">
+          <span>
+            <Kbd className="border-muted-foreground/30 bg-muted-foreground/10 text-muted-foreground">
+              ↑↓
+            </Kbd>{" "}
+            navigate
+          </span>
+          <span>
+            <Kbd className="border-muted-foreground/30 bg-muted-foreground/10 text-muted-foreground">
+              ↵
+            </Kbd>{" "}
+            select
+          </span>
+          <span>
+            <Kbd className="border-muted-foreground/30 bg-muted-foreground/10 text-muted-foreground">
+              esc
+            </Kbd>{" "}
+            close
+          </span>
+        </Stack>
+      </Text>
     </>
   );
 }
@@ -263,6 +285,8 @@ function CommandRow({
       role="option"
       aria-selected={isActive}
       className={cn(
+        // `px-sm` is the row's OWN pad, inside its own fill — not a second copy
+        // of the panel's rail, which the list above already inherits.
         "flex cursor-pointer items-center gap-sm rounded-md px-sm py-xs text-body",
         isActive && "bg-accent text-accent-foreground",
       )}

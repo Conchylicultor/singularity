@@ -3,7 +3,6 @@ import type { ReactNode } from "react";
 /** Presentation options forwarded to the host's `DialogContent`. */
 export interface DialogOptions {
   size?: "sm" | "md" | "lg";
-  padded?: boolean;
   className?: string;
 }
 

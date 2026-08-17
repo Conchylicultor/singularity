@@ -13,8 +13,8 @@
 // default — size-to-content, matching base-ui's native behavior. Every non-content
 // token also carries `max-w-(--available-width)` (base-ui's Positioner exposes the
 // CSS var on the popup, same as dropdown-menu.tsx) so no popover overflows a narrow
-// viewport. Padding is its own axis, mapped to the `p-*` @utility classes owned by
-// app.css, defaulting to `md` (preserves PopoverContent's previously baked-in padding).
+// viewport. Padding is its own axis, mapped to the `rail-*` @utility classes owned
+// by app.css, defaulting to `md` (preserves PopoverContent's previously baked-in padding).
 //
 // `fit` is the role for a popover whose content has a VARIABLE but bounded natural
 // width (e.g. a filter-rule row: `[field] [operator] [value-control]`). It grows to
@@ -85,29 +85,34 @@ export const POPOVER_WIDTH: Record<PopoverWidth, string> = {
   "4xl": "w-[40rem] max-w-(--available-width)",
 };
 
-// Each role ALSO co-publishes its own value as `--scroll-pad` (the arbitrary
-// `[--scroll-pad:…]` property), the same contract `SURFACE_LEVELS` uses to
-// co-publish `--chrome-mask` / `--hover-fill`: a role that is only a class name
-// is unreadable to CSS, so anything that must reason about the padding would
-// need per-role wiring of its own.
+// A padding role is ONE `rail-<step>` class, not a padding class plus a
+// hand-written co-publication of its value. Applying an inset IS opening a region
+// (the rail contract, in app.css): `rail-<step>` pads AND publishes the four
+// `--rail-*` vars in the same declaration, so the number exists exactly once and a
+// descendant can read the panel's real inset. The pair that used to be spelled
+// `p-<step> [--scroll-pad:…]` here is now a property of the shared contract rather
+// than of this file.
 //
-// The one consumer today is the `scroll-fade` utility (app.css). Its sticky edge
-// strips resolve their insets against the panel's CONTENT box, so without the
-// value they park `padding-block` short of the panel's inner edges — and scrolled
-// content, which does pass through that padding strip, re-emerges UNFADED there.
-// Publishing the value lets the fade offset itself by the real padding for any
-// role, present or future, with zero edits on either side.
+// The reason the value must be readable to CSS is unchanged. `scroll-fade`
+// (app.css) is the one consumer today: its sticky edge strips resolve their insets
+// against the panel's CONTENT box, so without the value they park `padding-block`
+// short of the panel's inner edges — and scrolled content, which does pass through
+// that padding strip, re-emerges UNFADED there. It now reads `--rail-block-start` /
+// `--rail-block-end` per edge, which is strictly better than the single
+// `--scroll-pad` it replaced: one value for both edges was silently wrong the
+// moment a role's block padding stopped being symmetric.
 //
-// Every role publishes, `none` included: custom properties INHERIT, so a `none`
-// panel that omitted it would pick up an enclosing panel's padding and offset its
-// fade past its own edge.
+// Every step publishes, `none` included: custom properties INHERIT, so a `none`
+// panel whose class published nothing would pick up an ENCLOSING panel's inset and
+// offset its fade past its own edge. `rail-none` publishes zeros like every other
+// step, so that hole cannot be reopened one role at a time.
 export const POPOVER_PADDING: Record<PopoverPadding, string> = {
-  none: "p-none [--scroll-pad:0px]",
-  "2xs": "p-2xs [--scroll-pad:var(--space-2xs)]",
-  xs: "p-xs [--scroll-pad:var(--space-xs)]",
-  sm: "p-sm [--scroll-pad:var(--space-sm)]",
-  md: "p-md [--scroll-pad:var(--space-md)]",
-  lg: "p-lg [--scroll-pad:var(--space-lg)]",
+  none: "rail-none",
+  "2xs": "rail-2xs",
+  xs: "rail-xs",
+  sm: "rail-sm",
+  md: "rail-md",
+  lg: "rail-lg",
 };
 
 // Max-height is its own axis, co-located with width/padding. The contract in one

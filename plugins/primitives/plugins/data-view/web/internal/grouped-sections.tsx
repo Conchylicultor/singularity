@@ -52,7 +52,7 @@ export interface GroupedSectionsProps {
  * showing through; `raised` sits above the (relative, in manual-order) rows while
  * the toolbar's `nav` keeps the headers sliding under it at the hand-off.
  *
- * The header's horizontal inset is the shared **pane gutter** (`px-pane-gutter`),
+ * The header's horizontal inset is the ambient **rail** (`rail-follow`),
  * the same rail every view body reads — so a group header and its rows line up on
  * one edge for free, and there is no longer a per-view `headerClassName` axis to
  * keep in sync with each body's padding.
@@ -85,7 +85,7 @@ export function GroupedSections({
             >
               <StickyStackItem itemKey={key} mask layer="raised">
                 <SectionHeaderRow
-                  className="px-pane-gutter"
+                  className="rail-follow"
                   actions={
                     <Text variant="caption" tone="muted">
                       {section.count}

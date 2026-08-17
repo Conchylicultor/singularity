@@ -262,17 +262,20 @@
  *    over-bleeding block box would ADD scrollable area rather than be clipped.
  *    Something has to cover it, because a sticky inset resolves against the
  *    scroller's CONTENT box, not its scrollport — measured, not assumed: at
- *    `top`/`bottom: 0` the strip parks exactly `--scroll-pad` short of the panel's
- *    visible inner edge, while scrolled content DOES pass through that padding
- *    strip, so the last row re-emerged UNFADED in the final few pixels (and the
- *    first row at the top, by the same geometry). A shadow is the one thing that
- *    reaches across it for free — see the strips below. The gradient's stops are
- *    offset by `--scroll-pad` to match, so the ramp OVER CONTENT is identical at
- *    every padding role. `--scroll-pad` is the host's own block padding,
- *    co-published by the padding ROLE (`POPOVER_PADDING`, theme/popover-width.ts)
- *    exactly as `SURFACE_LEVELS` co-publishes `--chrome-mask` — so the fade fits
- *    any role, present and future, with no per-role wiring here. Absent it, the
- *    `0px` fallback reproduces the un-padded case.
+ *    `top`/`bottom: 0` the strip parks exactly the host's block padding short of
+ *    the panel's visible inner edge, while scrolled content DOES pass through
+ *    that padding strip, so the last row re-emerged UNFADED in the final few
+ *    pixels (and the first row at the top, by the same geometry). A shadow is the
+ *    one thing that reaches across it for free — see the strips below. The
+ *    gradient's stops are offset by the same length to match, so the ramp OVER
+ *    CONTENT is identical at every padding role. That length is `--rail-block-start`
+ *    at the top and `--rail-block-end` at the bottom — the block half of the rail
+ *    the host's own padding class published (THE RAIL, below), exactly as
+ *    `SURFACE_LEVELS` publishes `--chrome-mask`. So the fade fits any padding
+ *    role, present and future, with no per-role wiring here. PER EDGE, not one
+ *    shared number: a host with asymmetric block padding would otherwise have one
+ *    of its two strips silently wrong. Absent a rail, the `0px` fallbacks
+ *    reproduce the un-padded case.
  *  - Fades to `--chrome-mask` — the surface's co-published "my background, for
  *    something painting over me" (see theme/surface.ts) — never a hardcoded
  *    `--popover`, so the fade follows the surface if it is ever re-toned. The ramp
@@ -293,28 +296,39 @@
   /* twmerge: standalone -- Additive ::before/::after gradient overlays gated on data-fade-*; pseudo-element paint has no single-value built-in group to conflict with. */
   /* The visible ramp, above the host's own padding. */
   --scroll-fade-h: 2.5rem;
-  /* The strip's real extent: the ramp plus the padding it has to reach across. */
-  --scroll-fade-span: calc(var(--scroll-fade-h) + var(--scroll-pad, 0px));
-  /* Solid across the host's padding plus a hairline, then a long near-linear
-   * dissolve. Every stop is `padding + <fraction of the ramp>`, so the ramp OVER
-   * CONTENT is identical at every padding role — only the invisible solid part
-   * covering the padding itself grows. */
-  --scroll-fade-stops:
-    var(--chrome-mask) 0,
-    var(--chrome-mask) calc(var(--scroll-pad, 0px) + var(--scroll-fade-h) * 0.06),
-    color-mix(in oklab, var(--chrome-mask) 86%, transparent)
-      calc(var(--scroll-pad, 0px) + var(--scroll-fade-h) * 0.2),
-    color-mix(in oklab, var(--chrome-mask) 66%, transparent)
-      calc(var(--scroll-pad, 0px) + var(--scroll-fade-h) * 0.36),
-    color-mix(in oklab, var(--chrome-mask) 44%, transparent)
-      calc(var(--scroll-pad, 0px) + var(--scroll-fade-h) * 0.52),
-    color-mix(in oklab, var(--chrome-mask) 25%, transparent)
-      calc(var(--scroll-pad, 0px) + var(--scroll-fade-h) * 0.68),
-    color-mix(in oklab, var(--chrome-mask) 10%, transparent)
-      calc(var(--scroll-pad, 0px) + var(--scroll-fade-h) * 0.84),
-    transparent var(--scroll-fade-span);
   &::before,
   &::after {
+    /* THE ONE PARAMETER THAT DIFFERS PER EDGE: how much of the host's own block
+     * padding this strip has to reach across. Each strip declares it (just
+     * below, beside its edge and its direction); everything derived from it —
+     * the span, the stop list, the height, the margin — is declared ONCE, here,
+     * for both. That is the same reason the margin is written once: the two
+     * strips are mirrors, and an invariant that holds for one and not the other
+     * is exactly the bug this utility keeps having.
+     * The derivations live on the pseudo-elements rather than on the host
+     * because a custom property's `var()`s are substituted where the property is
+     * DECLARED — declared on the host, `--scroll-fade-pad` would resolve to one
+     * value for both edges, which is the thing being fixed. */
+    --scroll-fade-span: calc(var(--scroll-fade-h) + var(--scroll-fade-pad));
+    /* Solid across the host's padding plus a hairline, then a long near-linear
+     * dissolve. Every stop is `padding + <fraction of the ramp>`, so the ramp
+     * OVER CONTENT is identical at every padding role — only the invisible solid
+     * part covering the padding itself grows. ONE list, substituted by both
+     * edges in opposite directions: splitting it is how they drift apart. */
+    --scroll-fade-stops:
+      var(--chrome-mask) 0,
+      var(--chrome-mask) calc(var(--scroll-fade-pad) + var(--scroll-fade-h) * 0.06),
+      color-mix(in oklab, var(--chrome-mask) 86%, transparent)
+        calc(var(--scroll-fade-pad) + var(--scroll-fade-h) * 0.2),
+      color-mix(in oklab, var(--chrome-mask) 66%, transparent)
+        calc(var(--scroll-fade-pad) + var(--scroll-fade-h) * 0.36),
+      color-mix(in oklab, var(--chrome-mask) 44%, transparent)
+        calc(var(--scroll-fade-pad) + var(--scroll-fade-h) * 0.52),
+      color-mix(in oklab, var(--chrome-mask) 25%, transparent)
+        calc(var(--scroll-fade-pad) + var(--scroll-fade-h) * 0.68),
+      color-mix(in oklab, var(--chrome-mask) 10%, transparent)
+        calc(var(--scroll-fade-pad) + var(--scroll-fade-h) * 0.84),
+      transparent var(--scroll-fade-span);
     content: "";
     display: block;
     position: sticky;
@@ -341,14 +355,14 @@
   }
   /* Anchored flush at the scrollport edge — offset 0, NEVER a negative inset.
    * A sticky box is confined to its containing block (the host's CONTENT box),
-   * so it stops `--scroll-pad` short of the visible inner edge while scrolled
-   * content passes right through that padding strip — which is the unfaded
-   * sliver this whole mechanism exists to kill. The tempting fix, pushing the
-   * strip out with `bottom: calc(-1 * var(--scroll-pad))`, silently breaks a
-   * different invariant: a relative offset contributes to the SCROLLABLE
-   * OVERFLOW region in the end direction, so every panel gained exactly
-   * `--scroll-pad` of phantom scroll height — enough for a menu that fits to
-   * measure as overflowing and paint a fade advertising content that is not
+   * so it stops the host's block padding short of the visible inner edge while
+   * scrolled content passes right through that padding strip — which is the
+   * unfaded sliver this whole mechanism exists to kill. The tempting fix,
+   * pushing the strip out with `bottom: calc(-1 * var(--scroll-fade-pad))`,
+   * silently breaks a different invariant: a relative offset contributes to the
+   * SCROLLABLE OVERFLOW region in the end direction, so every panel gained
+   * exactly that padding as phantom scroll height — enough for a menu that fits
+   * to measure as overflowing and paint a fade advertising content that is not
    * there.
    *
    * `box-shadow` covers that padding strip instead: it is INK overflow, never
@@ -357,18 +371,20 @@
    * clipped at the host's padding box, which is precisely the region that needs
    * covering, and the solid mask is contiguous with the gradient's own solid lip.
    *
-   * So each strip differs from its mirror in exactly three ways — which edge it
-   * sticks to, which way its gradient runs, and which way its shadow bleeds. The
-   * margin they SHARE, above. */
+   * So each strip differs from its mirror in exactly four ways — which edge of
+   * the rail it reaches across, which edge it sticks to, which way its gradient
+   * runs, and which way its shadow bleeds. Everything else they SHARE, above. */
   &::before {
+    --scroll-fade-pad: var(--rail-block-start, 0px);
     top: 0;
     background: linear-gradient(to bottom, var(--scroll-fade-stops));
-    box-shadow: 0 calc(-1 * var(--scroll-pad, 0px)) 0 0 var(--chrome-mask);
+    box-shadow: 0 calc(-1 * var(--scroll-fade-pad)) 0 0 var(--chrome-mask);
   }
   &::after {
+    --scroll-fade-pad: var(--rail-block-end, 0px);
     bottom: 0;
     background: linear-gradient(to top, var(--scroll-fade-stops));
-    box-shadow: 0 var(--scroll-pad, 0px) 0 0 var(--chrome-mask);
+    box-shadow: 0 var(--scroll-fade-pad) 0 0 var(--chrome-mask);
   }
   &[data-fade-top]::before {
     opacity: 1;
@@ -422,18 +438,221 @@
 @utility px-chrome { padding-left: var(--chrome-pad-x); padding-right: var(--chrome-pad-x); } /* twmerge: extend px */
 @utility pl-chrome { padding-left: var(--chrome-pad-x); } /* twmerge: extend pl */
 
-/* Pane-gutter contract — the single horizontal rail every band a DataView owns
- * (toolbar, view bodies, group headers) reads, so they line up with the pane
- * header instead of each inventing its own inset. `px-pane-gutter` READS the
- * gutter with the pane header's own inset (--chrome-pad-x) as its DEFAULT, so
- * nothing has to publish the var for the rail to auto-align (12/10/8 by density).
- * A host that already supplies its own inset zeroes the gutter with the
- * `pane-gutter-flush` class; a custom value goes through --pane-gutter directly
- * (PANE_GUTTER_VAR, in data-view). `py-control` is the vertical half of
- * `p-control`, for a row that takes the gutter horizontally but the control pad
- * vertically. */
-@utility px-pane-gutter { padding-left: var(--pane-gutter, var(--chrome-pad-x)); padding-right: var(--pane-gutter, var(--chrome-pad-x)); } /* twmerge: extend px */
-@utility pane-gutter-flush { --pane-gutter: 0px; } /* twmerge: standalone -- pane-gutter override to 0 for a host that already supplies its own inset */
+/* ── THE RAIL ─────────────────────────────────────────────────────────────
+ * Applying padding is the act of OPENING A REGION, not decorating a box. A box
+ * either opens a region — declares where its contents' edge is — or it lives in
+ * one somebody else opened and does nothing at all. There is no third thing,
+ * which is why "both of them applied it" is what *opened a region by accident*
+ * looks like from outside: a child indented twice, and not one call site that
+ * reads as wrong.
+ *
+ * A rail class PUBLISHES the inset and APPLIES it in the same breath, so the
+ * number exists exactly once. What it publishes is then readable to CSS —
+ * `--rail-start` / `--rail-end` on the inline axis, `--rail-block-start` /
+ * `--rail-block-end` on the block axis — which is the whole point: a class name
+ * has no length, so a descendant that must adapt to the region (bleed out of
+ * it, reach across it, follow it) has nothing to read unless the owner says it
+ * out loud. These are the GEOMETRY half of the publish-your-own-role contract;
+ * `--chrome-mask` / `--hover-fill` are the COLOUR half. See theme/CLAUDE.md.
+ *
+ * TWO PAIRS ON THE INLINE AXIS, because a descendant asks two different
+ * questions and one number cannot answer both:
+ *
+ *   - `--rail-start`/`--rail-end` — the inset that HAS BEEN APPLIED between my
+ *     content and the region's edge, wherever in the chain it was applied. This
+ *     is what a bleeder cancels, and it is why cancelling it lands on the edge
+ *     in either topology.
+ *   - `--rail-owed-start`/`--rail-owed-end` — the inset a follower must STILL
+ *     APPLY ITSELF. Zero when the owner already paid it; equal to the rail when
+ *     the owner published a region without padding (see `rail-owe-<step>`).
+ *
+ * Conflating them is a real bug, not a hypothetical: in data-view the bands pay
+ * and the container does not, so a container that pays AND publishes a non-zero
+ * "you owe this" is telling every band inside it to pay a second time. `rail-lg`
+ * over a `rail-follow` band would sit at 48px where it sits at 24 today.
+ *
+ * You inherit alignment by doing nothing. A bare <Input> dropped in a region
+ * lands on the rail because the region already moved its content edge — no
+ * wrapper, no opt-in, nothing to forget. Nesting is shadowing, not
+ * accumulation: an inner region re-declares the vars for its own subtree and
+ * the outer value simply stops being visible, with nothing to wire up.
+ * Custom-property inheritance passes through `display: contents` wrappers too,
+ * which is what `renderIsolated` wraps every contributed panel in.
+ *
+ * NONE OF THE VARS HAS A ROOT DEFAULT, deliberately. Every read carries its own
+ * fallback (`var(--rail-start, 0px)`, or the chrome pad for `rail-follow`), and
+ * a `0px` default at `:root` would make every one of those fallbacks dead code
+ * — `rail-follow` would resolve to zero everywhere and every pane would go
+ * flush. "Nobody opened a region here" has to stay distinguishable from
+ * "someone opened one of width zero", which is a real and different state
+ * (`rail-x-none` — how flush is spelled). (`css-vars-supplied` only demands a
+ * declaring owner for fallback-LESS refs, so it is satisfied either way.)
+ *
+ * WHY A PARALLEL RAMP rather than publishing from `p-*`/`px-*` directly.
+ * Folding it in is tempting — every padded box would open a region for free.
+ * It is wrong for one concrete reason: `p-md` and `px-lg` legitimately coexist
+ * on one element (tailwind-merge keeps both; `px` wins by CSS order), so
+ * `--rail-start` would resolve by STYLESHEET ORDER rather than by any cascade
+ * a human intended. Under its own groups a rail class carries exactly one rail
+ * declaration per axis, and a plain padding class written AFTER it removes it
+ * whole.
+ * Written BEFORE it, the plain class survives alongside — `conflicts:` compiles
+ * to a one-directional rule (a later builtin removes the group, never the
+ * reverse), so `cn("px-md", "rail-lg")` keeps both and the ramp below wins the
+ * inline axis on line order while `rail-lg` still publishes lg. That is a
+ * published-≠-applied lie, and the only reason it is tolerated here rather than
+ * fixed is that the fix is bidirectional conflicts in the codegen, not in this
+ * file. Do not pair a rail class with a plain padding class in either order.
+ * `rail-bleed` sidesteps it entirely by joining the `px` group outright — see
+ * the note there, which is worth reading before touching any marker below.
+ *
+ * THREE GROUPS, NOT ONE, and the shape is copied from p/px/py rather than
+ * invented. The two axis families write disjoint properties AND disjoint vars,
+ * so `rail-x-lg rail-y-sm` has to compose — one shared group would silently
+ * drop the first of them, which is the same class of invisible breakage this
+ * contract exists to kill. Within an axis, two rail classes still conflict and
+ * exactly one survives. And a LATER `p-*`/`px-*`/`py-*` removes the rail
+ * outright rather than half-overriding it: you replace a region, you do not
+ * edit one.
+ * @twmerge group sg-rail conflicts: p px py
+ * @twmerge group sg-rail-x conflicts: p px
+ * @twmerge group sg-rail-y conflicts: p py */
+@utility rail-none { --rail-start: 0px;              --rail-end: 0px;              --rail-block-start: 0px;              --rail-block-end: 0px;              --rail-owed-start: 0px; --rail-owed-end: 0px; padding-block: var(--rail-block-start) var(--rail-block-end); padding-inline: var(--rail-start) var(--rail-end); } /* twmerge: sg-rail */
+@utility rail-2xs  { --rail-start: var(--space-2xs); --rail-end: var(--space-2xs); --rail-block-start: var(--space-2xs); --rail-block-end: var(--space-2xs); --rail-owed-start: 0px; --rail-owed-end: 0px; padding-block: var(--rail-block-start) var(--rail-block-end); padding-inline: var(--rail-start) var(--rail-end); } /* twmerge: sg-rail */
+@utility rail-xs   { --rail-start: var(--space-xs);  --rail-end: var(--space-xs);  --rail-block-start: var(--space-xs);  --rail-block-end: var(--space-xs);  --rail-owed-start: 0px; --rail-owed-end: 0px; padding-block: var(--rail-block-start) var(--rail-block-end); padding-inline: var(--rail-start) var(--rail-end); } /* twmerge: sg-rail */
+@utility rail-sm   { --rail-start: var(--space-sm);  --rail-end: var(--space-sm);  --rail-block-start: var(--space-sm);  --rail-block-end: var(--space-sm);  --rail-owed-start: 0px; --rail-owed-end: 0px; padding-block: var(--rail-block-start) var(--rail-block-end); padding-inline: var(--rail-start) var(--rail-end); } /* twmerge: sg-rail */
+@utility rail-md   { --rail-start: var(--space-md);  --rail-end: var(--space-md);  --rail-block-start: var(--space-md);  --rail-block-end: var(--space-md);  --rail-owed-start: 0px; --rail-owed-end: 0px; padding-block: var(--rail-block-start) var(--rail-block-end); padding-inline: var(--rail-start) var(--rail-end); } /* twmerge: sg-rail */
+@utility rail-lg   { --rail-start: var(--space-lg);  --rail-end: var(--space-lg);  --rail-block-start: var(--space-lg);  --rail-block-end: var(--space-lg);  --rail-owed-start: 0px; --rail-owed-end: 0px; padding-block: var(--rail-block-start) var(--rail-block-end); padding-inline: var(--rail-start) var(--rail-end); } /* twmerge: sg-rail */
+@utility rail-xl   { --rail-start: var(--space-xl);  --rail-end: var(--space-xl);  --rail-block-start: var(--space-xl);  --rail-block-end: var(--space-xl);  --rail-owed-start: 0px; --rail-owed-end: 0px; padding-block: var(--rail-block-start) var(--rail-block-end); padding-inline: var(--rail-start) var(--rail-end); } /* twmerge: sg-rail */
+@utility rail-2xl  { --rail-start: var(--space-2xl); --rail-end: var(--space-2xl); --rail-block-start: var(--space-2xl); --rail-block-end: var(--space-2xl); --rail-owed-start: 0px; --rail-owed-end: 0px; padding-block: var(--rail-block-start) var(--rail-block-end); padding-inline: var(--rail-start) var(--rail-end); } /* twmerge: sg-rail */
+/* The inline axis on its own — the rail proper, and the member almost every
+ * region actually wants (a pane opens a horizontal region; its vertical rhythm
+ * is a different decision). */
+@utility rail-x-none { --rail-start: 0px;              --rail-end: 0px;              --rail-owed-start: 0px; --rail-owed-end: 0px; padding-inline: var(--rail-start) var(--rail-end); } /* twmerge: sg-rail-x */
+@utility rail-x-2xs  { --rail-start: var(--space-2xs); --rail-end: var(--space-2xs); --rail-owed-start: 0px; --rail-owed-end: 0px; padding-inline: var(--rail-start) var(--rail-end); } /* twmerge: sg-rail-x */
+@utility rail-x-xs   { --rail-start: var(--space-xs);  --rail-end: var(--space-xs);  --rail-owed-start: 0px; --rail-owed-end: 0px; padding-inline: var(--rail-start) var(--rail-end); } /* twmerge: sg-rail-x */
+@utility rail-x-sm   { --rail-start: var(--space-sm);  --rail-end: var(--space-sm);  --rail-owed-start: 0px; --rail-owed-end: 0px; padding-inline: var(--rail-start) var(--rail-end); } /* twmerge: sg-rail-x */
+@utility rail-x-md   { --rail-start: var(--space-md);  --rail-end: var(--space-md);  --rail-owed-start: 0px; --rail-owed-end: 0px; padding-inline: var(--rail-start) var(--rail-end); } /* twmerge: sg-rail-x */
+@utility rail-x-lg   { --rail-start: var(--space-lg);  --rail-end: var(--space-lg);  --rail-owed-start: 0px; --rail-owed-end: 0px; padding-inline: var(--rail-start) var(--rail-end); } /* twmerge: sg-rail-x */
+@utility rail-x-xl   { --rail-start: var(--space-xl);  --rail-end: var(--space-xl);  --rail-owed-start: 0px; --rail-owed-end: 0px; padding-inline: var(--rail-start) var(--rail-end); } /* twmerge: sg-rail-x */
+@utility rail-x-2xl  { --rail-start: var(--space-2xl); --rail-end: var(--space-2xl); --rail-owed-start: 0px; --rail-owed-end: 0px; padding-inline: var(--rail-start) var(--rail-end); } /* twmerge: sg-rail-x */
+/* PUBLISH WITHOUT PAYING — open a region and hand the bill to the children.
+ * The inverted topology, stated out loud instead of emerging from a var nobody
+ * set: the owner declares where its contents' edge is, applies no padding of
+ * its own, and every `rail-follow` band inside applies the rail itself. Its one
+ * live user is the app-shell sidebar, whose DataView bands align to the nav
+ * rail while the sidebar's own painted surface runs full width.
+ * Both pairs carry the step here — the rail because that IS the region's inset
+ * once a band has paid it (so a bleeder inside a band still lands on the edge),
+ * the owed pair because nothing has been paid yet.
+ * Inline only, like `rail-bleed` and `rail-follow`: `rail-follow` is the only
+ * thing that reads the owed pair, and nothing follows on the block axis.
+ * Note that setting `--rail-start` alone (through a style object, say) lands in
+ * this arm by default — the owed fallback reads the rail. That is the right
+ * default for a hand-published rail, but it means a hand-published rail that
+ * ALSO pads is the one shape that double-insets. Use the ramp, or this. */
+@utility rail-owe-none { --rail-start: 0px;              --rail-end: 0px;              --rail-owed-start: var(--rail-start); --rail-owed-end: var(--rail-end); } /* twmerge: sg-rail-x */
+@utility rail-owe-2xs  { --rail-start: var(--space-2xs); --rail-end: var(--space-2xs); --rail-owed-start: var(--rail-start); --rail-owed-end: var(--rail-end); } /* twmerge: sg-rail-x */
+@utility rail-owe-xs   { --rail-start: var(--space-xs);  --rail-end: var(--space-xs);  --rail-owed-start: var(--rail-start); --rail-owed-end: var(--rail-end); } /* twmerge: sg-rail-x */
+@utility rail-owe-sm   { --rail-start: var(--space-sm);  --rail-end: var(--space-sm);  --rail-owed-start: var(--rail-start); --rail-owed-end: var(--rail-end); } /* twmerge: sg-rail-x */
+@utility rail-owe-md   { --rail-start: var(--space-md);  --rail-end: var(--space-md);  --rail-owed-start: var(--rail-start); --rail-owed-end: var(--rail-end); } /* twmerge: sg-rail-x */
+@utility rail-owe-lg   { --rail-start: var(--space-lg);  --rail-end: var(--space-lg);  --rail-owed-start: var(--rail-start); --rail-owed-end: var(--rail-end); } /* twmerge: sg-rail-x */
+@utility rail-owe-xl   { --rail-start: var(--space-xl);  --rail-end: var(--space-xl);  --rail-owed-start: var(--rail-start); --rail-owed-end: var(--rail-end); } /* twmerge: sg-rail-x */
+@utility rail-owe-2xl  { --rail-start: var(--space-2xl); --rail-end: var(--space-2xl); --rail-owed-start: var(--rail-start); --rail-owed-end: var(--rail-end); } /* twmerge: sg-rail-x */
+
+/* The block axis on its own. It is published for the same reason the inline
+ * pair is — a sticky inset resolves against the CONTENT box, so `scroll-fade`'s
+ * edge strips cannot reach a padded edge they are unable to measure. There is
+ * no owed twin on this axis: `rail-follow` is the only reader of the owed pair
+ * and it is inline-only. */
+@utility rail-y-none { --rail-block-start: 0px;              --rail-block-end: 0px;              padding-block: var(--rail-block-start) var(--rail-block-end); } /* twmerge: sg-rail-y */
+@utility rail-y-2xs  { --rail-block-start: var(--space-2xs); --rail-block-end: var(--space-2xs); padding-block: var(--rail-block-start) var(--rail-block-end); } /* twmerge: sg-rail-y */
+@utility rail-y-xs   { --rail-block-start: var(--space-xs);  --rail-block-end: var(--space-xs);  padding-block: var(--rail-block-start) var(--rail-block-end); } /* twmerge: sg-rail-y */
+@utility rail-y-sm   { --rail-block-start: var(--space-sm);  --rail-block-end: var(--space-sm);  padding-block: var(--rail-block-start) var(--rail-block-end); } /* twmerge: sg-rail-y */
+@utility rail-y-md   { --rail-block-start: var(--space-md);  --rail-block-end: var(--space-md);  padding-block: var(--rail-block-start) var(--rail-block-end); } /* twmerge: sg-rail-y */
+@utility rail-y-lg   { --rail-block-start: var(--space-lg);  --rail-block-end: var(--space-lg);  padding-block: var(--rail-block-start) var(--rail-block-end); } /* twmerge: sg-rail-y */
+@utility rail-y-xl   { --rail-block-start: var(--space-xl);  --rail-block-end: var(--space-xl);  padding-block: var(--rail-block-start) var(--rail-block-end); } /* twmerge: sg-rail-y */
+@utility rail-y-2xl  { --rail-block-start: var(--space-2xl); --rail-block-end: var(--space-2xl); padding-block: var(--rail-block-start) var(--rail-block-end); } /* twmerge: sg-rail-y */
+
+/* THE ESCAPE — and the only one. A child that must reach the region's inner
+ * edge (a row whose hover fill reads as a row; a hairline that spans the panel)
+ * CANCELS the rail and RE-APPLIES it, and the two are ONE class so you cannot
+ * write half of the pair. Half of it is the entire bug: cancel without
+ * re-applying and the content moves; re-apply without cancelling and it moves
+ * twice.
+ * The width term pays back what the negative margins gave away — a `<button>`
+ * host sizes to its content, so `width: auto` would SHRINK the row instead of
+ * filling it.
+ * It reads the ambient rail rather than naming one, so the same class works in
+ * whatever region the child actually landed in — which is what makes a bleeding
+ * row portable. (`cp-row` used to name a panel-private inset var, so it bled
+ * correctly only inside a control panel.) The `0px` fallbacks mean a child
+ * outside any region is simply a child: nothing to cancel, nothing to restore.
+ *
+ * It reads the APPLIED pair, never the owed one, and that is what makes it work
+ * unchanged in both topologies — worth walking, because it is not obvious:
+ *   - inside `rail-lg`: the container paid lg, so cancelling lg lands on its
+ *     padding box. The bleeder may be any depth down through non-padding
+ *     wrappers; they all span the container's content box, so the same lg
+ *     reaches the same edge.
+ *   - inside a `rail-follow` band under `rail-owe-sm`: the BAND paid sm, and
+ *     the rail reads sm, so cancelling sm lands on the band's own edge — which
+ *     is the region's edge, the owner having padded nothing.
+ * The one shape it cannot serve is a direct child of a publish-without-paying
+ * owner: nothing has been applied there yet, so there is nothing to escape.
+ *
+ * ATOMIC IN CSS IS ONLY HALF OF IT — it must be atomic in CLASS STRINGS too.
+ * Fusing the three declarations means nobody can WRITE half an escape; it does
+ * not stop a neighbour NEUTRALISING half of one. A stray `px-md` on the same
+ * element overrides the re-apply while the negative margins and the width term
+ * still bleed, which is cancel-without-reapply — the exact bug, reached
+ * sideways.
+ * Hence `extend px`, and not the `standalone` its three properties would
+ * suggest. The marker does not claim this IS an inline-padding utility; it
+ * claims this and an inline-padding utility are MUTUALLY EXCLUSIVE, which is
+ * the only thing tailwind-merge can be told. Same-group membership is the one
+ * relation it treats symmetrically: `cn("rail-bleed", "px-md")` and
+ * `cn("px-md", "rail-bleed")` both keep exactly one class WHOLE. A synthetic
+ * group with `conflicts: p px` would have fixed only the first — `conflicts`
+ * compiles to a one-directional rule ("a later builtin removes the group"), and
+ * base-classes-first-caller-last is the commoner of the two orders.
+ * `py` is untouched by design: this is inline-axis only, and a bled row wants
+ * its own block padding (`py-control` on a data-table row is exactly that).
+ * The one cost: `rail-lg rail-bleed` on ONE element now resolves to the bleed
+ * alone. Escaping a region and opening a new one are two jobs; give them two
+ * elements. */
+@utility rail-bleed {
+  /* twmerge: extend px */
+  margin-inline: calc(-1 * var(--rail-start, 0px)) calc(-1 * var(--rail-end, 0px));
+  width: calc(100% + var(--rail-start, 0px) + var(--rail-end, 0px));
+  padding-inline: var(--rail-start, 0px) var(--rail-end, 0px);
+}
+
+/* FOLLOW — pay whatever the region says is still OWED, without opening a region
+ * of your own. For the inverted topology, where the container deliberately does
+ * not pad and each band insets itself instead (data-view's toolbar / bodies /
+ * group headers).
+ * The chain is owed → rail → chrome pad, and each arm is a different question
+ * answered honestly:
+ *   - owed is set        ⇒ the region said what is left to pay. Pay exactly it.
+ *                          A paying owner sets it to 0, so a band inside a
+ *                          `rail-lg` container adds NOTHING and the pane is
+ *                          inset once, not twice.
+ *   - only the rail set  ⇒ a hand-published region (a style object). Treat the
+ *                          rail as owed — see `rail-owe-<step>`.
+ *   - neither            ⇒ no region at all. Fall back to the pane header's own
+ *                          inset (12/10/8 by density) so a band still lines up
+ *                          with the header with nothing published anywhere,
+ *                          which is what the gutter class this replaced did.
+ * It is in the `px` group, not a rail group: it consumes a rail, never owns one
+ * — and note it deliberately does NOT clear the debt for its own descendants.
+ * It cannot: reading `--rail-owed-start` while also declaring it on the same
+ * element would resolve against its own declaration, not the region's. So two
+ * NESTED followers each pay, exactly as two nested gutter classes did before. */
+@utility rail-follow { padding-inline: var(--rail-owed-start, var(--rail-start, var(--chrome-pad-x))) var(--rail-owed-end, var(--rail-end, var(--chrome-pad-x))); } /* twmerge: extend px */
+
+/* The vertical half of `p-control`, for a row that takes its inline inset from
+ * the rail but its block padding from the control scale. */
 @utility py-control { padding-top: var(--pad-control-y); padding-bottom: var(--pad-control-y); } /* twmerge: extend py */
 
 /* Floating-bar safe area — right inset that clears the global floating action
@@ -452,9 +671,10 @@
  *
  * Six utilities, and between them they hold the five panel invariants:
  *
- *   - `cp-panel` — THE INSET OWNER: the panel's chrome pad PLUS the content
- *     inset every non-row child lands on (the full rule is at
- *     `--cp-inset-start`). Must sit on the SAME element as `cp-body`: a band's
+ *   - `cp-panel` — THE REGION OWNER: the panel's chrome pad PLUS the content
+ *     inset every non-row child lands on, published as the shared rail (the
+ *     full rule is in its own comment below). Must sit on the SAME element as
+ *     `cp-body`: a band's
  *     rule bleeds back out through this inset, and `cp-body`'s cancellation of
  *     the first rule is anchored on this box's own padding-box edge.
  *   - `cp-body`  — THE BAND CONTAINER: it spaces the panel's bands with `gap`,
@@ -492,12 +712,51 @@
  * source declares, exactly like `scroll-fade`'s `&::before`). */
 @utility cp-panel {
   /* twmerge: extend p */
-  /* THE inset owner (see the ownership rule at `--cp-inset-start`). The chrome
-     pad is the gap a row's fill keeps from the panel's edge; the content inset
-     on top of it is where everything that is NOT a row lands. */
+  /* ── THE REGION OWNER ────────────────────────────────────────────────
+     EXACTLY ONE BOX OPENS THE PANEL'S REGION — this one, as its own padding.
+     Every other participant either INHERITS the rail or CANCELS it, never
+     both:
+
+       - inherits — a raw <Input>, a FieldRenderer, any loose JSX. It lands on
+         the rail by doing NOTHING, which is the point: content needs no
+         wrapper and no opt-in to be aligned.
+       - cancels — `cp-row` / `cp-rule` (negative inline margins, so the row
+         BOX bleeds back out and its fill reads as a row) and `cp-rail-icon`
+         (a section label hangs back one column). Each then re-inserts its own
+         padding, landing its content back on a rail. A canceller never also
+         inherits, and an inheritor never pads.
+
+     The values make the panel's CONTENT BOX exactly a row's CONTENT BAND: it
+     starts on the TEXT rail — where every row label starts — and ends where a
+     row's trailing cell ends. So loose content lines up on the left with the
+     row labels above and below it, and on the right with their trailing
+     cells, with nothing at any call site to get wrong. Before this, a panel
+     had THREE left edges (section label ~36px, row content 12px, loose
+     content 4px) and only the two row kinds were ever measured.
+
+     It publishes that inset as the SHARED rail (`--rail-start`/`--rail-end`,
+     see THE RAIL above) rather than a panel-private pair, so a row's escape
+     names no panel and a `ControlPanel.Row` is droppable anywhere. The values
+     are asymmetric — the start rail is the chrome pad plus the text rail, the
+     end rail the chrome pad plus the row's own pad — so this sets the vars
+     directly instead of taking a step off the `rail-<step>` ramp; that is the
+     documented custom-value case.
+
+     THE RAIL IS THE WHOLE PADDING, chrome pad included, and it has to be: the
+     rail is defined as where a child that does nothing lands, and a bare
+     <Input> here lands past both terms. Publishing only the content half would
+     advertise a rail 4px short of the one a child actually sits on — precisely
+     the lie this contract exists to make impossible. The chrome pad is
+     recovered where it is actually needed, by the two cancellers below, which
+     deliberately stop short of the panel's inner edge. */
+  --rail-start: calc(var(--cp-panel-pad) + var(--cp-rail-text));
+  --rail-end: calc(var(--cp-panel-pad) + var(--cp-row-pad-x));
+  /* The panel PAYS its own rail, so nothing inside it owes one — without this a
+     `rail-follow` band dropped in a panel would inset itself a second time. */
+  --rail-owed-start: 0px;
+  --rail-owed-end: 0px;
   padding-block: var(--cp-panel-pad);
-  padding-inline: calc(var(--cp-panel-pad) + var(--cp-inset-start))
-    calc(var(--cp-panel-pad) + var(--cp-inset-end));
+  padding-inline: var(--rail-start) var(--rail-end);
 }
 
 @utility cp-body {
@@ -559,13 +818,14 @@
     content: "";
     position: absolute;
     top: calc(-1 * var(--cp-panel-pad));
-    /* Full-bleed: hang the rule OUT through the panel's whole inset — chrome pad
-       plus content inset — so it reaches the panel's inner edges. Unlike the
-       border this replaced there is no padding to restore afterwards: the rule
-       is its own empty box, not a wrapper around the band's content, so the pair
-       of cancellations that had to "mirror `cp-panel` exactly" is now one term. */
-    inset-inline: calc(-1 * (var(--cp-panel-pad) + var(--cp-inset-start)))
-      calc(-1 * (var(--cp-panel-pad) + var(--cp-inset-end)));
+    /* Full-bleed: hang the rule OUT through the panel's whole rail — chrome pad
+       and content inset alike, which is the whole of what the panel published —
+       so it reaches the panel's inner edges. Unlike the border this replaced
+       there is no padding to restore afterwards: the rule is its own empty box,
+       not a wrapper around the band's content, so the pair of cancellations that
+       had to "mirror `cp-panel` exactly" is now one term. */
+    inset-inline: calc(-1 * var(--rail-start, 0px))
+      calc(-1 * var(--rail-end, 0px));
     height: 1px;
     background: var(--border);
   }
@@ -577,15 +837,28 @@
   grid-template-columns: var(--cp-gutter) var(--cp-icon-col) minmax(0, 1fr) auto;
   column-gap: var(--cp-icon-gap);
   align-items: center;
-  /* CANCEL the panel's content inset (the ownership rule at
-     `--cp-inset-start`). The row's BOX bleeds back out to the panel's inner
-     edge — that full-width hover / selected fill is what makes a row read as a
-     row — and the tracks below then land its label back on exactly the inset
-     the panel applied, so a row label and a loose <Input> share one x. The
-     width has to grow by what the margins gave back: a `<button>` host sizes to
-     its content, so `width: auto` would shrink the row rather than fill. */
-  margin-inline: calc(-1 * var(--cp-inset-start)) calc(-1 * var(--cp-inset-end));
-  width: calc(100% + var(--cp-inset-start) + var(--cp-inset-end));
+  /* CANCEL the region's rail (the ownership rule at `cp-panel`). The row's BOX
+     bleeds back out toward the panel's inner edge — that full-width hover /
+     selected fill is what makes a row read as a row — and the tracks below then
+     land its label back on exactly the inset the panel applied, so a row label
+     and a loose <Input> share one x. The width has to grow by what the margins
+     gave back: a `<button>` host sizes to its content, so `width: auto` would
+     shrink the row rather than fill.
+     This is NOT `rail-bleed`, on two counts, both deliberate:
+       - it stops `--cp-panel-pad` SHORT of the rail's origin. The chrome gap is
+         the breathing room a row's fill keeps from the panel's edge; a full
+         escape would paint the fill flush against it.
+       - it re-applies its OWN `--cp-row-pad-x`, not the rail. A row's label x
+         comes from the grid tracks (pad + gutter + gap + icon + gap = the text
+         rail), so re-applying the rail would push every label a whole text rail
+         further in.
+     `min()` is what keeps the row droppable OUTSIDE a panel: with no rail
+     published there is nothing to hang back out of, and the row must not
+     indent itself by a chrome gap it is not inside. */
+  --cp-bleed-start: calc(min(var(--cp-panel-pad), var(--rail-start, 0px)) - var(--rail-start, 0px));
+  --cp-bleed-end: calc(min(var(--cp-panel-pad), var(--rail-end, 0px)) - var(--rail-end, 0px));
+  margin-inline: var(--cp-bleed-start) var(--cp-bleed-end);
+  width: calc(100% - var(--cp-bleed-start) - var(--cp-bleed-end));
   min-height: var(--cp-row-h);
   padding-inline: var(--cp-row-pad-x);
   border-radius: var(--radius-md);
@@ -611,9 +884,12 @@
     minmax(var(--cp-remove-col), auto);
   column-gap: var(--cp-rule-gap);
   align-items: center;
-  /* The same cancellation as `cp-row`, for the same reason — see it there. */
-  margin-inline: calc(-1 * var(--cp-inset-start)) calc(-1 * var(--cp-inset-end));
-  width: calc(100% + var(--cp-inset-start) + var(--cp-inset-end));
+  /* The same cancellation as `cp-row`, for the same reasons — see it there,
+     including why this is not `rail-bleed` and why the clamp is there. */
+  --cp-bleed-start: calc(min(var(--cp-panel-pad), var(--rail-start, 0px)) - var(--rail-start, 0px));
+  --cp-bleed-end: calc(min(var(--cp-panel-pad), var(--rail-end, 0px)) - var(--rail-end, 0px));
+  margin-inline: var(--cp-bleed-start) var(--cp-bleed-end);
+  width: calc(100% - var(--cp-bleed-start) - var(--cp-bleed-end));
   min-height: var(--cp-rule-h);
   padding-inline: var(--cp-row-pad-x);
   border-radius: var(--radius-md);
@@ -646,7 +922,7 @@
  * section label on the same x as every row's icon, indicator and drag handle.
  * There is no `cp-rail-text` twin: the text rail IS the panel's content inset,
  * so content reaches it by doing nothing at all. */
-@utility cp-rail-icon { margin-inline-start: calc(var(--cp-rail-icon) - var(--cp-inset-start)); } /* twmerge: standalone -- A negative hanging offset (margin-inline-start); the built-in margin groups are outside the allowed extend set, and nothing should selectively override half of a rail. */
+@utility cp-rail-icon { margin-inline-start: calc(var(--cp-rail-icon) - var(--cp-rail-text)); } /* twmerge: standalone -- A negative hanging offset (margin-inline-start); the built-in margin groups are outside the allowed extend set, and nothing should selectively override half of a rail. */
 
 /* Spacing scale utilities — the single source of truth for layout gap + padding
  * rhythm (<Stack gap> / <Inset pad> primitives, plugins/primitives/plugins/spacing).
@@ -882,29 +1158,12 @@
        approximate. */
     --cp-rail-icon: calc(var(--cp-row-pad-x) + var(--cp-gutter) + var(--cp-icon-gap));
     --cp-rail-text: calc(var(--cp-rail-icon) + var(--cp-icon-col) + var(--cp-icon-gap));
-    /* ── THE INSET OWNERSHIP RULE ──────────────────────────────────────
-       EXACTLY ONE BOX APPLIES THE PANEL'S CONTENT INSET — `cp-panel`, as its
-       own padding. Every other participant either INHERITS it or CANCELS it,
-       never both:
-
-         - inherits — a raw <Input>, a FieldRenderer, any loose JSX. It lands
-           on the rail by doing NOTHING, which is the point: content needs no
-           wrapper and no opt-in to be aligned.
-         - cancels — `cp-row` / `cp-rule` (negative inline margins, so the row
-           BOX bleeds back out to the panel's inner edge and its fill reads as
-           a row) and `cp-rail-icon` (a section label hangs back one column).
-           Each then re-inserts its own padding, landing its content back on a
-           rail. A canceller never also inherits, and an inheritor never pads.
-
-       The values make the panel's CONTENT BOX exactly a row's CONTENT BAND: it
-       starts on the TEXT rail — where every row label starts — and ends where a
-       row's trailing cell ends. So loose content lines up on the left with the
-       row labels above and below it, and on the right with their trailing
-       cells, with nothing at any call site to get wrong. Before this, a panel
-       had THREE left edges (section label ~36px, row content 12px, loose
-       content 4px) and only the two row kinds were ever measured. */
-    --cp-inset-start: var(--cp-rail-text);
-    --cp-inset-end: var(--cp-row-pad-x);
+    /* The panel's own content inset is NOT a token here: it is the rail
+       `cp-panel` publishes (`--rail-start`/`--rail-end`, THE RAIL above), and a
+       rail belongs to the box that opened the region, never to the document
+       root. The ownership rule that used to sit beside those two tokens now
+       sits on `cp-panel` itself, where it can be read next to the padding it
+       describes. */
     }
   body {
     @apply bg-background;

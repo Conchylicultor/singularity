@@ -548,7 +548,7 @@ export function TreeView(props: DataViewRenderProps<unknown>): ReactNode {
     return (
       <>
         {showToolbar && (
-          <div className="px-pane-gutter">
+          <div className="rail-follow">
             {/* eslint-disable-next-line spacing/no-adhoc-spacing -- mb separates the sticky toolbar from the sections below (mirrors TreeList's own toolbar) */}
             <Sticky mask className="mb-1">
               <Stack direction="row" gap="xs" align="center" justify="between">
@@ -573,13 +573,13 @@ export function TreeView(props: DataViewRenderProps<unknown>): ReactNode {
           setSectionCollapsed={props.setSectionCollapsed}
         >
           {(section) => (
-            <div className="px-pane-gutter">
+            <div className="rail-follow">
               {renderTreeList(grouped.rowsBySectionKey.get(section.key)!, true)}
             </div>
           )}
         </GroupedSections>
         {showRootAdd && (
-          <div className="px-pane-gutter">
+          <div className="rail-follow">
             <Button
               variant="ghost"
               onClick={() => void wrappedOnCreate({ parentId: null })}
@@ -596,8 +596,6 @@ export function TreeView(props: DataViewRenderProps<unknown>): ReactNode {
   }
 
   return (
-    <div className="px-pane-gutter">
-      {renderTreeList(sortedProjected, false)}
-    </div>
+    <div className="rail-follow">{renderTreeList(sortedProjected, false)}</div>
   );
 }

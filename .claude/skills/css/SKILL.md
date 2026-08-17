@@ -75,6 +75,34 @@ the import would cycle — write the grid tracks directly, with a named
 `eslint-disable`. Either way the indicator/affordance lives in a track, never
 floats over the label.
 
+## Who owns the inset (the rail contract)
+
+**Applying inline padding is the act of opening a region, not decorating a box.** A box either *opens* a region — declares where its contents' left edge is — or *lives* in one and does nothing. There is no third thing, so "both applied it" is what *opened a region without meaning to* looks like from outside. Nothing looks wrong at either call site; the only evidence is content indented twice. Full model: [`css/rail`](../../../plugins/primitives/plugins/css/plugins/rail/CLAUDE.md).
+
+A region publishes what it did, so a descendant has a number to read: `--rail-start`/`--rail-end` = **the inset already applied** (what a bleed cancels), `--rail-owed-start`/`--rail-owed-end` = **the inset a follower must still apply itself**. Three utilities, and you want exactly one of them:
+
+- **`rail-<step>`** (`rail-x-` / `rail-y-` are the single-axis members, mirroring `p`/`px`/`py`) — **open a region**: pad AND publish in one declaration, so the number exists once. Sets owed to `0px` — the owner paid. This is what a host that insets a `DataView`, a card body, or a panel reaches for.
+- **`rail-bleed`** — **the only escape**, for a child that must reach the region's inner edge (a row whose hover fill reads as a row, a hairline spanning the panel). Cancel and re-apply are ONE class because half of it is the entire bug: cancel without re-applying and the content moves, re-apply without cancelling and it moves twice.
+- **`rail-follow`** — **pay what is owed** without opening a region, for the inverted topology where the container deliberately does not pad and each band insets itself (`data-view`'s toolbar / bodies / group headers). Under a paying owner it adds nothing, which is what stops a band double-insetting.
+
+`rail-owe-<step>` is the fourth and rarest: publish a region and pay none of it, leaving every `rail-follow` band inside to apply it (the app-shell sidebar).
+
+```tsx
+// WRONG — Inset pads without publishing, so the rail class announces a number
+// nothing applied; every follower inside then guesses, and the ones that guess
+// right do so by coincidence.
+<Inset pad="lg" className="rail-x-lg"><DataView … /></Inset>
+
+// WRONG — a hand-published rail on a box that ALSO pads: `--rail-owed-*` falls
+// back to the rail, so each band inside pays a second time. 24px becomes 48.
+<div className="px-lg" style={{ "--rail-start": "var(--space-lg)" }}>…</div>
+
+// RIGHT — one declaration, one number. The bands follow it and add nothing.
+<div className="rail-x-lg"><DataView … /></div>
+```
+
+Never `Inset` + a rail class on one box, and never publish `--rail-start` by hand without also setting `--rail-owed-*`. Enforcement is the layout harness's **region fixtures** — a fixture says only "this box opens a region" and the harness supplies the children, so a region cannot be gated against the child kind it already handles — plus `useRailGuard` (`css/rail/web`), the dev-only guard a region owner attaches to name any child that lands off the rail.
+
 ## Layout primitives
 
 Reach for these instead of raw flex/grid. Import from `@plugins/primitives/plugins/<name>/web` (the `css/*` layout primitives live under `@plugins/primitives/plugins/css/plugins/<name>/web`). Shared conventions mirror `Stack`: `gap: SpaceStep`, reused `StackAlign`/`StackJustify`, `as?`, `className` last. **All accept `ref?: React.Ref<HTMLElement>`** (React-19 ref-as-prop) — pass `<Scroll ref={sticky.scrollRef}>` for auto-scroll / sticky-scroll / ResizeObserver / scroll-into-view; never fall back to a raw `<div ref=…>` + eslint-disable just to attach a ref.

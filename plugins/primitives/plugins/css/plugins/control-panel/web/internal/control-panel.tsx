@@ -1,4 +1,5 @@
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { useRailGuard } from "@plugins/primitives/plugins/css/plugins/rail/web";
 import {
   SectionLabel,
   Text,
@@ -42,8 +43,15 @@ export interface ControlPanelProps {
  * row's label. A `Row` is not an exception to that, it is the CANCELLING case:
  * it bleeds the inset back out so its fill reaches the panel's inner edge, then
  * re-inserts its own padding, landing its label on the very inset it cancelled.
- * Nothing inherits AND pads. The full rule lives beside the numbers, at
- * `--cp-inset-start` in `app.css`.
+ * Nothing inherits AND pads.
+ *
+ * That is not a panel rule — it is the repo-wide rail contract, of which this
+ * panel was the prototype: the model lives in
+ * [`primitives/css/rail`](../../../rail/CLAUDE.md), the utilities that carry it
+ * in `app.css`, and `cp-panel` is simply the region owner that publishes an
+ * asymmetric pair. `useRailGuard` below is the same rule read back off the
+ * rendered DOM in dev, so a child that pads on top of the panel's inset names
+ * itself instead of merely looking a little indented.
  *
  * The hairline is the second — the container draws the separators, so an author
  * never places one.
@@ -65,8 +73,14 @@ export function ControlPanel({
   className,
   children,
 }: ControlPanelProps) {
+  // The rail guard goes on THIS box because this is the publisher: `cp-panel`
+  // declares the rail here, and a rail is measured from its publisher's padding
+  // box. Attached one level down it would compare children against a rail whose
+  // origin it could not see.
+  const rootRef = useRailGuard<HTMLDivElement>("ControlPanel");
   return (
     <div
+      ref={rootRef}
       role="group"
       aria-label={ariaLabel}
       className={cn("cp-panel cp-body", className)}

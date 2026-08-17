@@ -18,10 +18,12 @@ await openDialog((close) => <MyForm onClose={close} />, { size: "md" });
 // resolves once the dialog is dismissed
 ```
 
-The second arg is the panel `{ size, padded, className }` — forwarded straight to
+The second arg is the panel `{ size, className }` — forwarded straight to
 `DialogContent`, which owns the panel chrome (see ui-kit's "Dialog owns the
-panel"). For a yes/no guard, reach for `confirmDialog`
-(`plugins/confirm`) instead of hand-rolling a confirm body.
+panel"). Padding is **not** among them: the panel always opens its own inset
+region, and content that must reach the panel edge says so itself with
+`rail-bleed`. For a yes/no guard, reach for `confirmDialog` (`plugins/confirm`)
+instead of hand-rolling a confirm body.
 
 ## How it works (the Core.Root global-host pattern)
 

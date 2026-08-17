@@ -177,7 +177,10 @@ export function checkPinnedRight(
 ): OracleResult {
   const w = widest(measuredByWidth);
   if (!w) {
-    return { ok: false, detail: `pinnedRight: no measured widths for slot "${slot}"` };
+    return {
+      ok: false,
+      detail: `pinnedRight: no measured widths for slot "${slot}"`,
+    };
   }
   const box = w.m.slots[slot];
   if (!box) {
@@ -272,6 +275,66 @@ export function checkTruncationOnsetOrder(
   return { ok: true };
 }
 
+// ── railAlignment ──────────────────────────────────────────────────
+//
+// At every measured width, EVERY measured slot's content starts on the rail the
+// region published: `contentLeft ≈ railOrigin + railStart`.
+//
+// Three properties make this the one invariant that cannot be scoped down to the
+// children a container already handles:
+//
+//   - It names no slot. `leftPack` compares two ids the fixture chose; this
+//     walks the whole measured set, so the gate covers whatever the harness put
+//     in the region — including the members added to `REGION_CHILDREN` long
+//     after the region was contributed.
+//   - It compares against an ABSOLUTE reference (the published rail), not
+//     against a sibling. Children agreeing with each other is precisely what a
+//     region whose inset was applied twice, or not at all, still produces.
+//   - A region that published NO rail fails. Publication is what makes the
+//     number knowable from outside the primitive, so "I inset correctly but
+//     told nobody" is a failure, not a style. That is what turns the contract
+//     from a convention into something a build can check.
+export function checkRailAlignment(
+  measuredByWidth: Record<number, MeasuredFixture>,
+  epsilon = DEFAULT_EPSILON,
+): OracleResult {
+  let compared = 0;
+  for (const width of widthsOf(measuredByWidth)) {
+    const m = measuredByWidth[width]!;
+    if (m.railStart === null || m.railEnd === null) {
+      const missing = [
+        m.railStart === null ? "--rail-start" : null,
+        m.railEnd === null ? "--rail-end" : null,
+      ]
+        .filter((n) => n !== null)
+        .join(" and ");
+      return {
+        ok: false,
+        detail: `railAlignment: at width ${width}px, the region publishes no ${missing} — a box that applies an inline inset must OPEN the region (a rail-* utility publishes and applies in one class), so content that knows nothing about the inset can be measured against it`,
+      };
+    }
+    const expected = m.railOrigin + m.railStart;
+    for (const id of m.order) {
+      const slot = m.slots[id];
+      if (!slot) continue;
+      compared += 1;
+      if (!closeEnough(slot.contentLeft, expected, epsilon)) {
+        return {
+          ok: false,
+          detail: `railAlignment: at width ${width}px, slot "${id}" starts its content at ${slot.contentLeft.toFixed(1)} but the region's published rail puts it at ${expected.toFixed(1)} (rail origin ${m.railOrigin.toFixed(1)} + --rail-start ${m.railStart.toFixed(1)}), off by ${(slot.contentLeft - expected).toFixed(1)}px (ε=${epsilon}) — the region and this child both applied an inset, or neither did`,
+        };
+      }
+    }
+  }
+  if (compared === 0) {
+    return {
+      ok: false,
+      detail: `railAlignment: no slots were measured across the width sweep — the region rendered none of the harness's children, so nothing was checked`,
+    };
+  }
+  return { ok: true };
+}
+
 // ── evaluateInvariant (dispatcher) ─────────────────────────────────
 //
 // `falsification` is NOT evaluated here. The test harness handles it specially:
@@ -289,7 +352,13 @@ export function evaluateInvariant(
     case "noClip":
       return checkNoClip(measuredByWidth, inv.epsilon);
     case "leftPack":
-      return checkLeftPack(measuredByWidth, inv.after, inv.slot, inv.gap, inv.epsilon);
+      return checkLeftPack(
+        measuredByWidth,
+        inv.after,
+        inv.slot,
+        inv.gap,
+        inv.epsilon,
+      );
     case "rigidIntegrity":
       return checkRigidIntegrity(measuredByWidth, inv.slot, inv.epsilon);
     case "pinnedRight":
@@ -298,6 +367,8 @@ export function evaluateInvariant(
       return checkNeverTruncatesWhenRoomy(measuredByWidth, inv.slots);
     case "truncationOnsetOrder":
       return checkTruncationOnsetOrder(measuredByWidth, inv.first, inv.last);
+    case "railAlignment":
+      return checkRailAlignment(measuredByWidth, inv.epsilon);
     case "falsification":
       // Handled specially by the suite (re-render mutated → assert violation).
       return { ok: true };

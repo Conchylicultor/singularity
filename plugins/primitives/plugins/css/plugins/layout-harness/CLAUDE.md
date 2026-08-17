@@ -9,13 +9,96 @@ by a **generic geometry oracle**, and (eventually) wired into
 
 ## How fixtures are contributed
 
-Each primitive drops a `fixtures/index.ts` (default-export `LayoutFixture[]`),
-exactly mirroring how each check is `<plugin>/check/index.ts`. `fixtures` is a
+Each primitive drops a `fixtures/index.ts` (default-export `HarnessFixture[]` —
+`LayoutFixture` and/or `RegionFixture`, see below), exactly mirroring how each
+check is `<plugin>/check/index.ts`. `fixtures` is a
 **collected-dir** runtime (marked by `defineCollectedDir("fixtures")` in
 `core/collected.ts`); codegen auto-discovers it and emits `core/fixtures.generated.ts`
 with zero codegen edits when a new primitive contributes. A fixture is pure data
 plus `render: () => ReactElement` — author `data-geo="<slot>"` on the boxes you
 want measured.
+
+## Region fixtures: the harness supplies the children
+
+A `LayoutFixture` authors its own children. A **`RegionFixture`** authors a
+**hole** — `render: (children) => ReactElement` — and the harness fills it with
+`REGION_CHILDREN`, the one kit in
+[`web/internal/region-children.tsx`](web/internal/region-children.tsx). The
+author says "this box opens a region"; the harness says what goes in it.
+
+**Why the kit is not authorable, at all.** A fixture that writes its own children
+only ever measures the child kind its primitive already handles. `control-panel`
+is the worked example: five fixtures, all green, every one rendering `Row`s —
+while a raw `<Input>` dropped into a panel sat ~50px left of every label around
+it. **Three geometry bugs shipped past that green suite**, and the remedy on the
+books was a sentence asking authors to render something else — rung 5 of the fix
+ladder. This is rung 1: there is nowhere to say what the children are.
+
+The gate grows by adding a member to `REGION_CHILDREN` once; **every** contributed
+region is re-gated by it, including regions contributed long before the member
+existed. Each member covers a distinct way a region gets it wrong:
+
+| Member | What only it catches |
+| --- | --- |
+| `bare-input` | the case that actually broke — a form control dropped straight in |
+| `bare-button` | a shrink-to-fit control, where the input stretches to fill |
+| `bare-text` | prose with no chrome of its own for a per-child rule to inset |
+| `contents-wrapped` | how a CONTRIBUTED panel arrives — `renderIsolated` wraps every contribution in a `display: contents` span, transparent to layout and opaque to selectors, so a region insetting via `> * + *` matches nothing |
+| `follower` | the **other topology** — a `rail-follow` band that insets ITSELF (data-view's shape). The only member that applies anything, so the only one that can catch a double-pay: put it under a region that also pads and 24px becomes 48px unless `--rail-owed-*` is honoured |
+| `bled-row` | the escape: `rail-bleed` cancels the inset and re-applies it as one class, and the content must come back to the same rail |
+
+`railAlignment` itself is topology-blind — it measures content against
+`railOrigin + railStart`, which both the inherit-by-doing-nothing and the
+follow-it-yourself shapes satisfy when correct. The kit, not the oracle, is what
+makes the second shape present at all.
+
+A region cannot pick its invariants either.
+[`expand-region-fixtures.ts`](web/internal/expand-region-fixtures.ts) supplies
+them — `railAlignment`, `noClip`, and a `railOverride` falsification — and
+rewrites each region into an ordinary `LayoutFixture`. That expansion is pure
+sugar: all three consumers below keep consuming `LayoutFixture`, and neither the
+suite, the check nor the gallery knows a second fixture kind exists.
+
+### How the rail is measured
+
+`railAlignment` asserts that at every width, **every** measured slot's
+`contentLeft` (`rect.left + paddingLeft`) equals `railOrigin + railStart`. Three
+mechanics carry that:
+
+- **The rail is resolved to pixels by laying it out, never by parsing text.**
+  `--rail-start: var(--space-lg)` has the computed value `1rem`, and
+  control-panel's rails are `calc()` chains — `parseFloat` reads `1` and `NaN`.
+  `__measure` sizes a hidden probe by the var and reads back its box (the same
+  idiom as `ui-kit/e2e/scroll-fade-verify.ts`), with a sentinel `var()` fallback
+  so **unpublished** and **`0px`** stay distinguishable.
+- **It is read from inside the region**, off the harness's own
+  `data-geo-rail` marker (a `display: contents` wrapper around the kit), because
+  custom properties inherit downward: the region publishes on its own box, a
+  descendant of the container. `railOrigin` is then found by walking back UP from
+  the marker to the outermost ancestor still reporting that same value — the
+  publisher — and taking its **padding-box** left edge. Padding box, not border
+  box: a bordered `OverlayPanel` would otherwise read 1px off at every width.
+- **A region publishing NO rail fails.** Publication is what makes the number
+  knowable from outside the primitive, so "I inset correctly but told nobody" is
+  a failure and not a style. That is the whole of what turns the rail contract
+  from a convention into something a build can check.
+
+Two falsifications, each isolating a different bug, both mutating from the marker
+(below the region, above the children — the cascade is per element, so a
+declaration on the region itself would lose to the region's own):
+
+- **`railOverride`** re-publishes the rail as `0px`. The children stay where the
+  region put them; only the claimed number moves. So a green result would mean
+  the oracle was merely checking the children agree with each other.
+- **`railOwedOverride`** forces `--rail-owed-*` back to the full rail, which only
+  a `rail-follow` child reads — reproducing the double-pay (24px → 48px) while
+  every inheriting sibling stays put. It can only be satisfied by the `follower`
+  member, so it fails loudly the moment the debt stops being paid.
+
+**Known limit:** two nested regions publishing the *same* value resolve to the
+outer one as publisher. Nesting is shadowing, so a correct inner region uses a
+different step; a fixture that genuinely needs identical nested rails is not
+expressible today.
 
 ## The three consumers (one catalog, generic collection)
 
@@ -168,7 +251,10 @@ the page-error drain to notice.
 
 Pure, DOM-free functions — one per `GeometryInvariant` kind (`noOverlap`,
 `noClip`, `leftPack`, `rigidIntegrity`, `pinnedRight`, `neverTruncatesWhenRoomy`,
-`truncationOnsetOrder`), dispatched by `evaluateInvariant`. The math is ported
+`truncationOnsetOrder`, `railAlignment`), dispatched by `evaluateInvariant`. A
+new kind MUST also be listed in `check/classify.ts`'s `ORACLE_INVARIANT_KINDS`,
+or a real regression is misclassified as an environmental timeout and passes
+non-fatally. The math is ported
 exactly from the bespoke `frame/web/internal/frame-geometry.test.ts`, the oracle
 being generalized. `rigidIntegrity` is measured-stable (max−min slot width ≤ ε),
 not a magic px constant. `falsification` is NOT evaluated by the oracle — the
@@ -204,6 +290,8 @@ server-core tsconfig where `check`/`facet` live. The
     - `primitives/css/text.SectionLabel`
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit`
+    - `primitives/css/ui-kit.Button`
+    - `primitives/css/ui-kit.Input`
     - `primitives/error-boundary.PluginErrorBoundary`
     - `primitives/loading.Loading`
     - `primitives/pane.openPane`
@@ -219,21 +307,25 @@ server-core tsconfig where `check`/`facet` live. The
     - `FixtureMutation`
     - `FixtureState`
     - `GeometryInvariant`
+    - `HarnessFixture`
     - `LayoutFixture`
     - `MeasuredBox`
     - `MeasuredFixture`
     - `OracleResult`
+    - `RegionFixture`
   - Exports (values):
     - `checkLeftPack`
     - `checkNeverTruncatesWhenRoomy`
     - `checkNoClip`
     - `checkNoOverlap`
     - `checkPinnedRight`
+    - `checkRailAlignment`
     - `checkRigidIntegrity`
     - `checkTruncationOnsetOrder`
     - `evaluateInvariant`
     - `fixturesCollectedDir`
     - `isLayoutFixture`
+    - `isRegionFixture`
     - `loadFixtures`
 
 <!-- AUTOGENERATED:END -->

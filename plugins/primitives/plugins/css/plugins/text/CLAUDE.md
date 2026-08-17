@@ -90,7 +90,7 @@ their type rung). The `-compact` utilities live beside the base `text-<role>`
 utilities in `…/ui-kit/web/theme/app.css`. `web/__tests__/compact-density.test.tsx`
 covers the swap.
 
-### Three orthogonal axes (they compose, no double-apply)
+### Three disjoint sizing axes
 
 | Axis                  | Owner                          | Scope      | Controls                                             |
 | --------------------- | ------------------------------ | ---------- | --------------------------------------------------- |
@@ -102,6 +102,12 @@ The `tokens/density` preset has **zero font-size tokens** — typography is a
 *separate* global preset (`tokens/type-scale`). So `ControlSize → Text` and the
 density preset never collide: `ControlSize` picks a *different role*; the
 type-scale preset still themes whichever role is picked.
+
+The three write different properties (padding vs font-size vs which role is
+picked), so there is no container/child race here and nothing to escape from —
+this is **not** the [rail contract](../rail/CLAUDE.md), despite the surface
+resemblance of "they compose, no double-apply". Do not reach for a rail utility
+to reconcile them; they never needed reconciling.
 
 ## Enforcement
 

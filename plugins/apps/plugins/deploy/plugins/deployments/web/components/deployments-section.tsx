@@ -58,7 +58,11 @@ const DEPLOYMENTS_VIEW = defineDataView("deploy.deployments");
  * open, and `RunFailureNotice` still surfaces a failed run here with the CLI's
  * own words.
  */
-export function DeploymentsSection({ server }: { server: Server }): ReactElement {
+export function DeploymentsSection({
+  server,
+}: {
+  server: Server;
+}): ReactElement {
   const serverId = server.id;
   const loaded = useCombinedResources({
     deployments: useResource(deploymentsResource),
@@ -67,9 +71,9 @@ export function DeploymentsSection({ server }: { server: Server }): ReactElement
   const health = useServerHealth(serverId);
 
   return (
-    // No `pane-gutter-flush` here: the `ServerDetail` host already declares the
-    // pane gutter spent for every section body, generically, so a DataView
-    // dropped into one is correctly inset with zero per-section code.
+    // Nothing about the rail here: `detail-sections` opens the region on every
+    // section's card body, generically, so a DataView dropped into one is
+    // correctly inset with zero per-section code.
     <Stack gap="md">
       <Text as="p" variant="caption" tone="muted">
         {health?.ok && health.platform
@@ -80,8 +84,12 @@ export function DeploymentsSection({ server }: { server: Server }): ReactElement
         // The DataView owns the loading render (its own skeleton) and keeps its
         // chrome stable, so the "nothing is deployed" empty state always means
         // confirmed-empty. Same shape as the servers list next door.
-        pending: () => <DeploymentsBody serverId={serverId} rows={[]} runs={{}} loading />,
-        error: () => <DeploymentsBody serverId={serverId} rows={[]} runs={{}} loading />,
+        pending: () => (
+          <DeploymentsBody serverId={serverId} rows={[]} runs={{}} loading />
+        ),
+        error: () => (
+          <DeploymentsBody serverId={serverId} rows={[]} runs={{}} loading />
+        ),
         ready: ({ deployments, runs }) => (
           <DeploymentsBody
             serverId={serverId}
@@ -145,9 +153,16 @@ function DeploymentsBody({
       onSelect: () => {
         // Fire-and-forget: awaiting `openDialog` would hold the toolbar's busy
         // flag for the dialog's whole open lifetime.
-        void openDialog((close) => (
-          <AddDeploymentDialog serverId={serverId} existing={rows} close={close} />
-        ), { size: "md" });
+        void openDialog(
+          (close) => (
+            <AddDeploymentDialog
+              serverId={serverId}
+              existing={rows}
+              close={close}
+            />
+          ),
+          { size: "md" },
+        );
       },
     },
   ];

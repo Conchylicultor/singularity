@@ -1,44 +1,47 @@
-import type * as React from "react"
-import { Dialog as DialogPrimitive } from "@base-ui/react/dialog"
+import type * as React from "react";
+import { Dialog as DialogPrimitive } from "@base-ui/react/dialog";
 
-import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web/lib/utils"
-import { usePortalForwardedAttrs } from "@plugins/primitives/plugins/css/plugins/ui-kit/web/components/portal-forward"
-import { OverlayPanel } from "@plugins/primitives/plugins/css/plugins/ui-kit/web/components/overlay-panel"
+import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web/lib/utils";
+import { usePortalForwardedAttrs } from "@plugins/primitives/plugins/css/plugins/ui-kit/web/components/portal-forward";
+import { OverlayPanel } from "@plugins/primitives/plugins/css/plugins/ui-kit/web/components/overlay-panel";
 
 function Dialog({ ...props }: DialogPrimitive.Root.Props) {
-  return <DialogPrimitive.Root data-slot="dialog" {...props} />
+  return <DialogPrimitive.Root data-slot="dialog" {...props} />;
 }
 
 function DialogTrigger({ ...props }: DialogPrimitive.Trigger.Props) {
-  return <DialogPrimitive.Trigger data-slot="dialog-trigger" {...props} />
+  return <DialogPrimitive.Trigger data-slot="dialog-trigger" {...props} />;
 }
 
 function DialogClose({ ...props }: DialogPrimitive.Close.Props) {
-  return <DialogPrimitive.Close data-slot="dialog-close" {...props} />
+  return <DialogPrimitive.Close data-slot="dialog-close" {...props} />;
 }
 
 function DialogPortal({ ...props }: DialogPrimitive.Portal.Props) {
-  return <DialogPrimitive.Portal data-slot="dialog-portal" {...props} />
+  return <DialogPrimitive.Portal data-slot="dialog-portal" {...props} />;
 }
 
-function DialogOverlay({ className, ...props }: DialogPrimitive.Backdrop.Props) {
+function DialogOverlay({
+  className,
+  ...props
+}: DialogPrimitive.Backdrop.Props) {
   return (
     <DialogPrimitive.Backdrop
       data-slot="dialog-overlay"
       className={cn(
         "fixed inset-0 z-popover bg-black/10 transition-opacity duration-150 data-ending-style:opacity-0 data-starting-style:opacity-0 supports-backdrop-filter:backdrop-blur-xs",
-        className
+        className,
       )}
       {...props}
     />
-  )
+  );
 }
 
 const DIALOG_SIZES = {
   sm: "w-full max-w-md",
   md: "w-full max-w-lg",
   lg: "w-full max-w-4xl",
-} as const
+} as const;
 
 type DialogContentProps = Omit<DialogPrimitive.Popup.Props, "className"> & {
   /**
@@ -48,21 +51,18 @@ type DialogContentProps = Omit<DialogPrimitive.Popup.Props, "className"> & {
    * the state-driven variants live as `data-*` selectors in the panel's own
    * class bundle anyway).
    */
-  className?: string
+  className?: string;
   /** Panel width tier. Default "md". */
-  size?: keyof typeof DIALOG_SIZES
-  /** Default panel padding (p-lg). Pass false for flush headers/rows that own their own insets. Default true. */
-  padded?: boolean
-}
+  size?: keyof typeof DIALOG_SIZES;
+};
 
 function DialogContent({
   className,
   children,
   size = "md",
-  padded = true,
   ...props
 }: DialogContentProps) {
-  const forwarded = usePortalForwardedAttrs()
+  const forwarded = usePortalForwardedAttrs();
   return (
     <DialogPortal>
       <DialogOverlay />
@@ -81,11 +81,31 @@ function DialogContent({
             cap only ever bites past 20vh top + 75vh = 95vh, so a caller's inner
             ScrollArea stays the only active scroller. `POPOVER_WIDTH.content`
             (the default role) is the empty string, so `DIALOG_SIZES` owns width
-            unopposed, and `padding="lg"` is the same `p-lg` this panel always
-            had. */}
+            unopposed.
+
+            `padding="lg"` is FIXED, and there is no `padded` prop to switch it
+            off: the panel owns the region's edge, so it owns the rail (see the
+            rail contract in app.css). A flush caller does not turn the region
+            off — the child that must reach the panel edge (a header band's
+            rule, a footer's) says so itself with `rail-bleed`, which cancels
+            and re-applies the rail as one indivisible act, so its content stays
+            on the same rail as everything else. Absent-from-the-type rather
+            than defaulted-in-it is the same move `ControlPanelPopover` makes
+            with `width`: an escape that has no spelling cannot be reached for
+            by accident.
+
+            Two caveats before reaching for it. Bleed only a DIRECT child of the
+            panel: the panel's own `overflow-x-hidden` is what makes a bleed free
+            — inside a nested `ScrollArea` (viewport `overflow: scroll` on both
+            axes) the same class buys sideways scroll instead of a wider box. And
+            never put it in this component's own `className`, however much it
+            looks like the replacement for the old `padded={false}`:
+            `rail-bleed` is `extend px`, so it would REMOVE the `rail-lg` below
+            it, leaving the panel un-inset (the intended half) and also bleeding
+            against a rail that is now zero. */}
         <OverlayPanel
           data-slot="dialog-panel"
-          padding={padded ? "lg" : "none"}
+          padding="lg"
           style={{ "--available-height": "75vh" } as React.CSSProperties}
           className={cn(DIALOG_SIZES[size], className)}
         >
@@ -93,20 +113,17 @@ function DialogContent({
         </OverlayPanel>
       </DialogPrimitive.Popup>
     </DialogPortal>
-  )
+  );
 }
 
 function DialogTitle({ className, ...props }: DialogPrimitive.Title.Props) {
   return (
     <DialogPrimitive.Title
       data-slot="dialog-title"
-      className={cn(
-        "font-heading text-subheading text-foreground",
-        className
-      )}
+      className={cn("font-heading text-subheading text-foreground", className)}
       {...props}
     />
-  )
+  );
 }
 
 function DialogDescription({
@@ -119,7 +136,7 @@ function DialogDescription({
       className={cn("text-body text-muted-foreground", className)}
       {...props}
     />
-  )
+  );
 }
 
 export {
@@ -131,4 +148,4 @@ export {
   DialogContent,
   DialogTitle,
   DialogDescription,
-}
+};

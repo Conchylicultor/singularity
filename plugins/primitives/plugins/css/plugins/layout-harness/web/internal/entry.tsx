@@ -8,6 +8,8 @@ import {
   type MeasuredBox,
   type MeasuredFixture,
 } from "@plugins/primitives/plugins/css/plugins/layout-harness/core";
+import { expandRegionFixtures } from "./expand-region-fixtures";
+import { RAIL_MARKER_ATTR } from "./region-children";
 // The ONLY place the real Tailwind stylesheet is imported — the fixtures
 // themselves never import it (so they stay Bun-safe). Bundling it here means the
 // measured page paints with the exact tokens/utilities the live app uses.
@@ -46,6 +48,89 @@ function box(el: Element): MeasuredBox {
     width: r.width,
     height: r.height,
   };
+}
+
+function px(value: string): number {
+  const n = parseFloat(value);
+  return Number.isNaN(n) ? 0 : n;
+}
+
+/** Where a box's CONTENT starts. See `MeasuredFixture["slots"]`. */
+function contentLeftOf(el: HTMLElement): number {
+  return el.getBoundingClientRect().left + px(getComputedStyle(el).paddingLeft);
+}
+
+// A rail this large is not a rail — it is the marker saying the property was
+// never published, arriving as `var()`'s fallback so "unpublished" and "0px"
+// stay distinguishable. Padding cannot be negative, so a negative sentinel would
+// collapse back to 0 and lose exactly that distinction.
+const RAIL_UNPUBLISHED_SENTINEL = 99_999;
+
+/**
+ * Resolve `--rail-start` / `--rail-end` to PIXELS as `host` sees them.
+ *
+ * By laying them out, never by parsing the computed text: the ramp declares
+ * `--rail-start: var(--space-lg)`, whose computed value is the string `1rem`,
+ * and control-panel's rails are `calc()` chains. `parseFloat` reads `1` and
+ * `NaN` respectively — a rail that is wrong by a factor of 16, silently. Same
+ * probe idiom as `ui-kit/e2e/scroll-fade-verify.ts`.
+ */
+function resolveRail(host: HTMLElement): {
+  start: number | null;
+  end: number | null;
+} {
+  const probe = document.createElement("div");
+  probe.style.cssText =
+    "position:fixed;top:-999999px;left:-999999px;visibility:hidden;width:0";
+  host.appendChild(probe);
+  const lengthOf = (name: string): number | null => {
+    probe.style.height = `var(${name}, ${RAIL_UNPUBLISHED_SENTINEL}px)`;
+    const h = probe.getBoundingClientRect().height;
+    return Math.abs(h - RAIL_UNPUBLISHED_SENTINEL) < 0.5 ? null : h;
+  };
+  const start = lengthOf("--rail-start");
+  const end = lengthOf("--rail-end");
+  probe.remove();
+  return { start, end };
+}
+
+/**
+ * Find the box that PUBLISHED the rail the marker sees, walking up from the
+ * marker to (and including) the container.
+ *
+ * Custom properties inherit, so the marker's computed `--rail-start` is shared
+ * by every ancestor from the publisher down. The publisher is therefore the
+ * OUTERMOST ancestor still reporting that same value — one step further up the
+ * value changes (or disappears), because that is where the declaration is.
+ *
+ * Why bother, rather than measuring from the container: the rail is an offset
+ * from the publisher's PADDING box, and the publisher is usually not the
+ * harness's width wrapper. A bordered region (an `OverlayPanel`) sits one pixel
+ * inside it, and a region rendered inside its own chrome sits further in still —
+ * measuring from the wrapper would report every child as off-by-the-chrome.
+ *
+ * Boxless elements are never chosen as the host: the marker itself is
+ * `display: contents`, and `railOverride` publishes ON the marker, so without
+ * this the mutated run would resolve its origin to a 0×0 rect at the viewport
+ * origin and "fail" for a reason unrelated to the rail.
+ */
+function railHostOf(
+  marker: HTMLElement,
+  containerEl: HTMLElement,
+): HTMLElement {
+  const published = getComputedStyle(marker).getPropertyValue("--rail-start");
+  let host: HTMLElement | null = null;
+  for (
+    let el: HTMLElement | null = marker;
+    el !== null && (el === containerEl || containerEl.contains(el));
+    el = el.parentElement
+  ) {
+    if (getComputedStyle(el).getPropertyValue("--rail-start") !== published)
+      break;
+    if (el.getClientRects().length > 0) host = el;
+    if (el === containerEl) break;
+  }
+  return host ?? containerEl;
 }
 
 /**
@@ -129,10 +214,57 @@ function applyMutation(scope: HTMLElement, mutate: FixtureMutation): void {
       }
       throw new Error(`swapLeafDisplay: unsupported value "${mutate.value}"`);
     }
+    case "railOverride": {
+      // Re-publish the rail from the harness's own marker — BELOW the region,
+      // ABOVE the children. Nothing moves: the region already laid its children
+      // out, and the children never read the var themselves. All that changes is
+      // the number the region claims to have used.
+      //
+      // That is the only mutation that isolates the assertion under test. Moving
+      // the children instead would also trip `noClip` and `noOverlap`, so a
+      // green `railAlignment` could hide behind its neighbours; this one is
+      // invisible to every other invariant, so if the falsification bites, it
+      // bit HERE.
+      //
+      // Setting it on the region itself would not take: the cascade is per
+      // element, so the region's own declaration wins on the region's own box
+      // whatever an ancestor says, `!important` included.
+      const marker = scope.querySelector<HTMLElement>(`[${RAIL_MARKER_ATTR}]`);
+      if (!marker) {
+        throw new Error(
+          `railOverride mutation: no [${RAIL_MARKER_ATTR}] in the fixture subtree — railOverride only applies to region fixtures, whose children the harness itself supplies`,
+        );
+      }
+      marker.style.setProperty("--rail-start", mutate.value);
+      marker.style.setProperty("--rail-end", mutate.value);
+      break;
+    }
+    case "railOwedOverride": {
+      // Same placement, and for the same cascade reason: the region declares
+      // `--rail-owed-*: 0px` on its own box (the `rail-<step>` ramp does it in
+      // the same breath as the padding), so only a declaration BELOW it reaches
+      // the children.
+      //
+      // Only a `rail-follow` child reads the debt, so this moves exactly one
+      // member and leaves the rest untouched — which is what makes a red result
+      // here mean "the follower double-paid" and nothing else.
+      const marker = scope.querySelector<HTMLElement>(`[${RAIL_MARKER_ATTR}]`);
+      if (!marker) {
+        throw new Error(
+          `railOwedOverride mutation: no [${RAIL_MARKER_ATTR}] in the fixture subtree — railOwedOverride only applies to region fixtures, whose children the harness itself supplies`,
+        );
+      }
+      marker.style.setProperty("--rail-owed-start", mutate.value);
+      marker.style.setProperty("--rail-owed-end", mutate.value);
+      break;
+    }
   }
 }
 
-void loadFixtures().then((fixtures) => {
+void loadFixtures().then((loaded) => {
+  // Region fixtures collapse into ordinary layout fixtures here, so everything
+  // below — render, measure, mutate — deals in one fixture shape.
+  const fixtures = expandRegionFixtures(loaded);
   byId = new Map(fixtures.map((f) => [f.id, f]));
 
   window.__renderFixture = (id, width, falsify) => {
@@ -208,9 +340,35 @@ void loadFixtures().then((fixtures) => {
       // trigger, hidden while nothing has overflowed, was the first.
       if (el.getClientRects().length === 0) continue;
       order.push(key);
-      slots[key] = { box: box(el), truncates: el.scrollWidth > el.clientWidth };
+      slots[key] = {
+        box: box(el),
+        truncates: el.scrollWidth > el.clientWidth,
+        contentLeft: contentLeftOf(el),
+      };
     }
-    return { container: box(containerEl), slots, order };
+    // The rail is read where the CHILDREN read it — from inside the region, off
+    // the harness's own marker — because custom properties inherit downward and
+    // the region publishes on its own box, a descendant of the container. A
+    // fixture that authors its own children has no marker, so the container is
+    // asked instead; those fixtures assert no `railAlignment`, and the fields
+    // are then simply the ambient rail, whatever it is.
+    const marker = container.querySelector<HTMLElement>(
+      `[${RAIL_MARKER_ATTR}]`,
+    );
+    const railHost = marker ? railHostOf(marker, containerEl) : containerEl;
+    const rail = resolveRail(marker ?? containerEl);
+    const railRect = railHost.getBoundingClientRect();
+    return {
+      container: box(containerEl),
+      slots,
+      order,
+      // The padding box, not the border box: a region's border sits outside the
+      // rail it publishes.
+      railOrigin:
+        railRect.left + px(getComputedStyle(railHost).borderLeftWidth),
+      railStart: rail.start,
+      railEnd: rail.end,
+    };
   };
 
   window.__fixturesReady = true;

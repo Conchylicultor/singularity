@@ -36,11 +36,16 @@ owner of every `--token`.
 - **Plugins consume tokens, never define them.** Plugin CSS files may reference `var(--background)` etc. but must not set `--background:` or any other theme variable. This rule is now **machine-enforced** by the `css-vars-single-owner` check: every token-group var must have exactly one declaring owner (its token group), so re-declaring one in static CSS — here or in any plugin — fails the build (declarations inside `@theme`/`@theme inline` are excluded, being Tailwind's lower-precedence utility layer).
 - **No plugin-level theming.** Themes are controlled globally. Plugins must not define their own theme overrides, color schemes, or mode-specific (`.dark`) custom property blocks. If a plugin needs a new token, add it to the relevant token group's descriptor.
 
-## Surface-relative helper vars (`--chrome-mask`, `--hover-fill`)
+## Publish your own role: a container names what a descendant must adapt to
 
-Two vars are **derived helpers**, not token-group tokens: they hold no value of
-their own, they *follow the surface* a component was dropped into. Every surface
-co-publishes both — see the `:root, [data-theme-scope]` defaults here,
+One contract, stated once: **a container publishes as a CSS variable any private
+decision a descendant has to adapt to.** A class name carries no value, so
+without this a child has nothing to read and every consumer ends up
+re-hardcoding the container's choice. There are two families.
+
+**Colour roles** — derived helpers, not token-group tokens: they hold no value
+of their own, they *follow the surface* a component was dropped into. Every
+surface co-publishes both — see the `:root, [data-theme-scope]` defaults here,
 `SURFACE_LEVELS` (per elevation role), and the app-shell sidebar wrapper.
 
 | var | utility | means |
@@ -48,11 +53,36 @@ co-publishes both — see the `:root, [data-theme-scope]` defaults here,
 | `--chrome-mask` | `bg-chrome-mask` | *my background*, for a sticky bar painting **over** me |
 | `--hover-fill` | `bg-hover-fill` | *a visible step off my background*, for a control highlighting **inside** me |
 
-A third var follows the same publish-your-own-role contract: `--scroll-pad`, *my
-own block padding*, co-published by each `POPOVER_PADDING` role. A padding role is
-just a class name, so its length is unreadable to CSS — `scroll-fade`'s sticky edge
-strips need it because a sticky inset resolves against the **content** box and
-would otherwise stop short of the padded edge.
+**Geometry roles** — the rail: where the things inside me start. Published by
+the `rail-*` utilities in `app.css` (see the RAIL section there, and
+[`primitives/css/rail`](../../../rail/CLAUDE.md) for the model).
+
+| var | published by | means |
+|---|---|---|
+| `--rail-start` / `--rail-end` | `rail-<step>`, `rail-x-`, `rail-owe-` | the inline inset **already applied** between a child's content and my edge |
+| `--rail-owed-start` / `--rail-owed-end` | same three | the inline inset a follower must **still apply itself** — `0` from the paying classes, the step from `rail-owe-` |
+| `--rail-block-start` / `--rail-block-end` | `rail-<step>`, `rail-y-` | *my block padding*, per edge |
+
+**`--rail-start` is what a bleeder cancels; `--rail-owed-*` is what a follower
+still pays.** They are two questions, and one number cannot answer both: in the
+inverted topology (data-view — the bands inset themselves, the container does
+not) a container that pads *and* publishes a non-zero rail is telling every band
+inside it to pay again, which doubles the inset. `rail-follow` reads owed → rail
+→ chrome pad; `rail-bleed` reads only the applied pair, which is what makes it
+land on the region edge under either topology.
+
+The block pair exists for `scroll-fade`'s sticky edge strips: a sticky inset
+resolves against the **content** box, so a strip at `top: 0` parks the host's
+block padding short of the visible inner edge and scrolled content re-emerges
+unfaded in the last few pixels. The strip has to know a length the padding class
+alone cannot tell it. Per edge, not one shared number — a host with asymmetric
+block padding would otherwise have one of its two strips silently wrong.
+
+Unlike the colour pair, the rail vars have **no `:root` default**, and must not
+gain one: every read carries its own fallback (`var(--rail-start, 0px)`, or the
+chrome pad for `rail-follow`), and a `0px` default would make all of them dead
+code — every pane would go flush. "Nobody opened a region here" must stay
+distinguishable from "someone opened one of width zero".
 
 `--hover-fill` exists because a **transparent** control has no surface of its own:
 `Button variant="ghost"` used to hover to the fixed `bg-muted`, which is
@@ -63,7 +93,8 @@ surface color onto itself and read as *no hover at all* — while the
 so one row highlighted in two different ways. Following `--hover-fill` makes the
 two identical **by construction** rather than by matching hardcoded classes.
 
-Consequences when adding either:
+Consequences when adding a **colour** role (the rail is per-region by
+construction, so none of these apply to it):
 
 - **Publish both together.** A new tinted surface that sets a background and
   neither var inherits the *enclosing* surface's — the hover/mask silently

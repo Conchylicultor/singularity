@@ -1,11 +1,10 @@
 import type { ComponentType, ReactNode } from "react";
 import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
 import {
-  insetClass,
   Stack,
   type SpaceStep,
 } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { railClass } from "@plugins/primitives/plugins/css/plugins/rail/core";
 import { useDraft } from "@plugins/primitives/plugins/persistent-draft/web";
 import { SectionCard } from "@plugins/primitives/plugins/section-card/web";
 import {
@@ -24,8 +23,9 @@ export interface DetailSectionsOptions {
    *
    * `"none"` is for a pane that ALREADY positions its content and would
    * otherwise inset it twice — Pages puts the page title, icon, and section list
-   * at the shared block inset, so the stack must not add its own on top. The
-   * pane-gutter marker is applied either way (see `Host`).
+   * at the shared block inset, so the stack must not add its own on top. Either
+   * way each card body opens its own rail region (see `CardSection`), so a
+   * DataView dropped into a section is inset once, by the card.
    */
   inset?: SpaceStep;
 }
@@ -53,8 +53,9 @@ interface DetailSectionCommon<EntityProps> {
 }
 
 /** A section with a body: a collapsible card, chevron and all. */
-interface DetailSectionWithBody<EntityProps>
-  extends DetailSectionCommon<EntityProps> {
+interface DetailSectionWithBody<
+  EntityProps,
+> extends DetailSectionCommon<EntityProps> {
   /** The body. Receives the pane's entity props. */
   component: ComponentType<EntityProps>;
   /** First-render open state when the user has no persisted choice yet. */
@@ -90,8 +91,7 @@ type DetailSectionOneLine<EntityProps> = DetailSectionCommon<EntityProps> & {
  * chevron is therefore never a choice — it exists exactly when a body does.
  */
 export type DetailSection<EntityProps> =
-  | DetailSectionWithBody<EntityProps>
-  | DetailSectionOneLine<EntityProps>;
+  DetailSectionWithBody<EntityProps> | DetailSectionOneLine<EntityProps>;
 
 /**
  * `Extra` carries contribution fields the PANE defines and the primitive knows
@@ -245,7 +245,10 @@ export function defineDetailSections<
     defaultOpen: boolean;
     Body: ComponentType<EntityProps>;
   }): ReactNode {
-    const [open, setOpen] = useDraft(`${slotId}.${section.id}.open`, defaultOpen);
+    const [open, setOpen] = useDraft(
+      `${slotId}.${section.id}.open`,
+      defaultOpen,
+    );
     const Icon = section.icon;
 
     return (
@@ -256,14 +259,12 @@ export function defineDetailSections<
         open={open}
         onOpenChange={setOpen}
       >
-        {/* Pane gutter: `SectionCard` supplies the body's own `px-lg` but not
-            the flush marker, so the pairing is re-declared HERE, next to the
-            padding it accounts for. Without it every DataView dropped into a
-            section double-gutters; without the padding it would go flush to the
-            card edge. The two always move together. */}
-        <div className="pane-gutter-flush">
-          <Body {...entityProps} />
-        </div>
+        {/* No wrapper, and nothing to declare: `SectionCard`'s body opens its
+            own rail region, so a DataView dropped into a section is inset once,
+            by the card. The marker that used to live here spoke for a box in
+            another plugin — which is why it had to be re-stated at every host
+            that ever padded one. */}
+        <Body {...entityProps} />
       </SectionCard>
     );
   }
@@ -351,7 +352,9 @@ export function defineDetailSections<
     useAvailable,
     section,
     entityProps,
-  }: SectionProps & { useAvailable: (props: EntityProps) => boolean }): ReactNode {
+  }: SectionProps & {
+    useAvailable: (props: EntityProps) => boolean;
+  }): ReactNode {
     return useAvailable(entityProps) ? (
       <OpenStateSection section={section} entityProps={entityProps} />
     ) : null;
@@ -372,16 +375,22 @@ export function defineDetailSections<
 
   function Host(entityProps: EntityProps): ReactNode {
     return (
-      // Inset and the flush marker MOVE TOGETHER — that pairing is the whole
-      // pane-gutter contract. The marker is unconditional (some container has
-      // always spent the gutter by the time a section body renders: this stack
-      // at `inset: "lg"`, or the pane's own column at `inset: "none"`), while
-      // the padding is the pane's to decline. A pane that already positions its
-      // content — Pages puts sections at the page's block inset — passes
-      // `inset: "none"` rather than being pushed in a second time.
-      <Stack gap="sm" className={cn(insetClass({ pad: inset }), "pane-gutter-flush")}>
+      // This stack OPENS the region: `railClass` pads and publishes the same
+      // step in one declaration. It replaced `insetClass`, and swapping it back
+      // is the mistake to avoid — `insetClass` pads WITHOUT publishing, so the
+      // stack would inset its sections by a number none of them could read.
+      // `{ rail }`, not `{ x }`: the both-axes member, the twin of the
+      // `insetClass({ pad })` it replaces, so the block rhythm is byte-identical.
+      //
+      // The padding is still the pane's to decline. A pane that already
+      // positions its content — Pages puts sections at the page's block inset —
+      // passes `inset: "none"`, which opens the region at zero rather than
+      // pushing the content in a second time.
+      <Stack gap="sm" className={railClass({ rail: inset })}>
         <Section.Render>
-          {(item) => <SectionItemHost section={item} entityProps={entityProps} />}
+          {(item) => (
+            <SectionItemHost section={item} entityProps={entityProps} />
+          )}
         </Section.Render>
       </Stack>
     );

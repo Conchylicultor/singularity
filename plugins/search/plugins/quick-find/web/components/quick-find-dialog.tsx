@@ -1,7 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { revealElement } from "@plugins/primitives/plugins/scroll-reveal/web";
-import { Dialog, DialogContent, ScrollArea } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import {
+  Dialog,
+  DialogContent,
+  ScrollArea,
+} from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { SearchInput } from "@plugins/primitives/plugins/search/web";
 import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
@@ -32,7 +36,10 @@ function Snippet({ snippet }: { snippet: string }) {
     <span className="truncate text-caption text-muted-foreground">
       {segments.map((seg, i) =>
         seg.highlight ? (
-          <mark key={i} className="rounded-sm bg-primary/15 px-2xs font-medium text-primary">
+          <mark
+            key={i}
+            className="rounded-sm bg-primary/15 px-2xs font-medium text-primary"
+          >
             {seg.text}
           </mark>
         ) : (
@@ -53,7 +60,7 @@ export function QuickFindDialog({
 }: QuickFindDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent size="md" padded={false}>
+      <DialogContent size="md">
         {/* Self-key the body on `open` so query + activeIdx re-initialize on every
             open via a fresh mount — no props-to-state reset effect. */}
         <QuickFindDialogBody
@@ -84,12 +91,16 @@ function QuickFindDialogBody({
   const [activeIdx, setActiveIdx] = useState(0);
   const activeRef = useRef<HTMLButtonElement>(null);
 
-  const { data: results, isFetching } = useSearch(query, { sources, enabled: open });
+  const { data: results, isFetching } = useSearch(query, {
+    sources,
+    enabled: open,
+  });
   const list = useMemo(() => results ?? [], [results]);
 
   // Derive the effective active index — never index past the current list, and
   // collapse to 0 when empty. Replaces the reset-to-0-on-results effect.
-  const safeActiveIdx = list.length > 0 ? Math.min(activeIdx, list.length - 1) : 0;
+  const safeActiveIdx =
+    list.length > 0 ? Math.min(activeIdx, list.length - 1) : 0;
 
   const select = useCallback(
     (result: SearchResult) => {
@@ -107,7 +118,9 @@ function QuickFindDialogBody({
         setActiveIdx((i) => (Math.min(i, list.length - 1) + 1) % list.length);
       } else if (e.key === "ArrowUp") {
         e.preventDefault();
-        setActiveIdx((i) => (Math.min(i, list.length - 1) - 1 + list.length) % list.length);
+        setActiveIdx(
+          (i) => (Math.min(i, list.length - 1) - 1 + list.length) % list.length,
+        );
       } else if (e.key === "Enter") {
         e.preventDefault();
         const chosen = list[safeActiveIdx];
@@ -125,7 +138,12 @@ function QuickFindDialogBody({
 
   return (
     <>
-      <div className="border-b p-sm">
+      {/* The dialog panel owns the inset, so this band applies none of its own
+          inline padding and BLEEDS instead: the rule underneath spans the whole
+          panel while the input inside it lands back on the panel's rail. It is a
+          direct child of the panel, which is what makes a bleed free (see the
+          caveat in `dialog.tsx`). */}
+      <div className="border-b rail-bleed py-sm">
         <SearchInput
           autoFocus
           value={query}
@@ -140,7 +158,14 @@ function QuickFindDialogBody({
       </div>
 
       <ScrollArea className="max-h-80">
-        <div className="p-xs">
+        {/* Block rhythm only: the list opens NO region of its own, so its rows
+            inherit the panel's rail by doing nothing. The rows themselves do not
+            `rail-bleed`: their fill is a rounded pill that reads as inset by
+            design, and this list lives inside a `ScrollArea` whose viewport is
+            `overflow: scroll` on BOTH axes — a bleeding child there buys 16px of
+            sideways scroll rather than a wider fill. Only the bands outside the
+            scroller bleed. */}
+        <div className="py-xs">
           {!hasQuery ? (
             <Placeholder>Type to search.</Placeholder>
           ) : isFetching && list.length === 0 ? (

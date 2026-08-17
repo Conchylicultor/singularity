@@ -20509,6 +20509,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - **`control-panel`** — The control-panel vocabulary: ControlPanel plus its closed set of members (Section, Row, RuleList, RuleRow, Field, Footer, Empty, Stack) and the ControlPanelPopover surface. The container draws the hairlines, the row is a grid so every label starts at one x, selection has one language per meaning, and width is a role rather than a measurement.
           - Web:
             - Uses:
+              - `primitives/css/rail.useRailGuard`
               - `primitives/css/selection-indicator.CheckboxIndicator`
               - `primitives/css/switch.SwitchIndicator`
               - `primitives/css/text.SectionLabel`
@@ -20720,6 +20721,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/text.SectionLabel`
               - `primitives/css/text.Text`
               - `primitives/css/ui-kit`
+              - `primitives/css/ui-kit.Button`
+              - `primitives/css/ui-kit.Input`
               - `primitives/error-boundary.PluginErrorBoundary`
               - `primitives/loading.Loading`
               - `primitives/pane.openPane`
@@ -20735,21 +20738,25 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `FixtureMutation`
               - `FixtureState`
               - `GeometryInvariant`
+              - `HarnessFixture`
               - `LayoutFixture`
               - `MeasuredBox`
               - `MeasuredFixture`
               - `OracleResult`
+              - `RegionFixture`
             - Exports (values):
               - `checkLeftPack`
               - `checkNeverTruncatesWhenRoomy`
               - `checkNoClip`
               - `checkNoOverlap`
               - `checkPinnedRight`
+              - `checkRailAlignment`
               - `checkRigidIntegrity`
               - `checkTruncationOnsetOrder`
               - `evaluateInvariant`
               - `fixturesCollectedDir`
               - `isLayoutFixture`
+              - `isRegionFixture`
               - `loadFixtures`
         - **`line`** — Single-line container primitive: <Line> pairs the structural single-line invariant (region-line) with the ambient SingleLineProvider so children never wrap and <Text> leaves truncate. The bare line-container contract composed by Row/Bar and bespoke strips.
           - Web:
@@ -21004,6 +21011,25 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `fields/dynamic-enum/config`
               - `fields/enum/config`
         - **`radius`** — Corner-radius standard: the token-driven rounded-* scale and its enforcing lint rule (no-adhoc-radius).
+        - **`rail`** — Web half of the rail contract: useRailGuard, the dev-only structural guard a region owner attaches to its own box. It measures every child's content edge against the rail the region published and names whoever applied an inset on top of it — the double-inset that looks reasonable at every call site and is only visible as content indented twice.
+          - Cross-plugin:
+            - Imported by:
+              - `primitives/css/control-panel`
+              - `primitives/css/ui-kit`
+          - Web:
+            - Exports (values): `useRailGuard`
+          - Core:
+            - Exports (types):
+              - `RailSides`
+              - `RailStep`
+            - Exports (values):
+              - `RAIL_BLOCK_END_VAR`
+              - `RAIL_BLOCK_START_VAR`
+              - `RAIL_END_VAR`
+              - `RAIL_OWED_END_VAR`
+              - `RAIL_OWED_START_VAR`
+              - `RAIL_START_VAR`
+              - `railClass`
         - **`row`** — Generic interactive row primitive (list, menu, nav, tree, and collapsible section-header rows) with a sanctioned home so ad-hoc rounded+padded interactive markup routes through one primitive.
           - Web:
             - Uses:
@@ -21509,7 +21535,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `tasks/task-attachments`
               - `tasks/task-dependencies`
               - `tasks/task-description`
-              - `tasks/task-detail`
               - `tasks/task-draft-form`
               - `tasks/task-events`
               - `tasks/task-header`
@@ -22099,6 +22124,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - **`ui-kit`** — Global UI kit: the cn() class-merge util, the 14 shadcn/ui primitives, the theme/app.css global stylesheet, and the ControlSize affordance-sizing context.
           - Web:
             - Uses:
+              - `primitives/css/rail.useRailGuard`
               - `primitives/element-size.useResizeObserver`
               - `primitives/latest-ref.useEventCallback`
               - `primitives/overlay-boundary.OverlayBoundary`
@@ -22456,7 +22482,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/data-view/tree`
               - `primitives/data-view/view-core`
               - `primitives/date-picker`
-              - `primitives/detail-sections`
               - `primitives/floating-action`
               - `primitives/floating-surface`
               - `primitives/folder-picker`
@@ -22830,7 +22855,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `isGroupableField`
           - `makeSortComparator`
           - `MergedDataView`
-          - `PANE_GUTTER_VAR`
           - `partitionIntoSections`
           - `pickPrimaryField`
           - `resolveBodyFields`
@@ -23014,7 +23038,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `FilterNodeSchema`
           - `FilterRuleSchema`
           - `IDENTITY_CODEC`
-          - `PANE_GUTTER_VAR`
       - Plugins:
         - **`custom-columns`** — User-defined custom columns for any DataView: the config-backed definition controller, the per-row values live hook + upsert mutation, and the toolbar settings (Fields) button. Persists per-row custom-column values keyed by (dataViewId, rowKey, columnId): a generic DB table, a push live resource, and an upsert/delete-on-empty endpoint.
           - Web:
@@ -23417,10 +23440,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Web:
         - Uses:
           - `primitives/css/inline.Inline`
-          - `primitives/css/spacing.insetClass`
           - `primitives/css/spacing.SpaceStep`
           - `primitives/css/spacing.Stack`
-          - `primitives/css/ui-kit.cn`
           - `primitives/persistent-draft.useDraft`
           - `primitives/section-card.SectionCard`
           - `primitives/slot-render.defineRenderSlot`
@@ -28131,7 +28152,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `Shell.Sidebar` "Tasks" → `component`
         - Uses:
           - `primitives/app-shell.sidebarNavItem`
-          - `primitives/css/spacing.Inset`
           - `primitives/detail-sections.defineDetailSections`
           - `primitives/live-state.useResource`
           - `primitives/pane.openPane`
