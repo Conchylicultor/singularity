@@ -1,9 +1,12 @@
 // @hash 3a0216538445
 {
+  // A horizontal strip, read left → right. The template chips are the one
+  // filling cell, so they hold the row's slack and everything after them is
+  // pinned to the right edge: the exit menu, Push & Exit, and the mic last.
   "items": [
-    "primitives.prompt-editor.voice-input:voice-input",
     "conversations.conversation-view.prompt-templates:prompt-templates",
     "conversations.conversation-view.exit-menu:exit-menu",
-    "conversations.conversation-view.push-and-exit:push-and-exit"
+    "conversations.conversation-view.push-and-exit:push-and-exit",
+    "primitives.prompt-editor.voice-input:voice-input"
   ]
 }
