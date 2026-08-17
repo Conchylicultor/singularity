@@ -1,5 +1,6 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { JsonlRowActions } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/row-actions/web";
+import { JsonlViewer as JsonlViewerSlots } from "./slots";
 import { RawJsonAction } from "./components/raw-json-button";
 import { TimestampAction } from "./components/timestamp-action";
 
@@ -24,4 +25,5 @@ export default {
     JsonlRowActions.Item({ id: "timestamp", component: TimestampAction }),
     JsonlRowActions.Item({ id: "raw-json", component: RawJsonAction }),
   ],
+  slots: [JsonlViewerSlots],
 } satisfies PluginDefinition;

@@ -24,4 +24,5 @@ export default {
     }),
     prototypeDetailPane.Actions({ id: "improve", component: ImproveButton }),
   ],
+  slots: [prototypesGalleryPane, prototypeDetailPane],
 } satisfies PluginDefinition;

@@ -32,8 +32,11 @@ export interface BlockMeta {
  * fields, `component` always resolved. What a plugin may WRITE is narrower; see
  * `BlockRegistration`.
  */
-export type BlockContribution =
-  OrderedDispatchContribution<BlockRendererProps, string> & BlockMeta;
+export type BlockContribution = OrderedDispatchContribution<
+  BlockRendererProps,
+  string
+> &
+  BlockMeta;
 
 /** Dispatch fields every block registration carries. */
 interface BlockRegistrationBase {
@@ -99,14 +102,15 @@ export type BlockRegistration =
 // manifest and owes an authored config override. The grouped block menus read
 // that config order (groups + labels) through `useReorderedEntries`; the slot
 // itself stays pure single-match dispatch.
-const blockSlot = defineOrderedDispatchSlot<BlockRendererProps, string, BlockMeta>(
-  "page.editor.block",
-  {
-    key: (props) => props.block.type,
-    fallback: UnknownBlock,
-    docLabel: (c) => c.block?.type,
-  },
-);
+const blockSlot = defineOrderedDispatchSlot<
+  BlockRendererProps,
+  string,
+  BlockMeta
+>("page.editor.block", {
+  key: (props) => props.block.type,
+  fallback: UnknownBlock,
+  docLabel: (c) => c.block?.type,
+});
 
 /**
  * Extra fields carried alongside a container frame's dispatch fields.
@@ -149,7 +153,11 @@ export interface BlockFrameMeta {
    * "menu sections contributed by a plugin" is ONE convention in this editor
    * rather than two that drift.
    */
-  menu?: ComponentType<{ block: Block; api: BlockEditorAPI; close: () => void }>;
+  menu?: ComponentType<{
+    block: Block;
+    api: BlockEditorAPI;
+    close: () => void;
+  }>;
 }
 
 export const Editor = {
@@ -171,6 +179,9 @@ export const Editor = {
       } as BlockContribution),
     {
       id: blockSlot.id,
+      // `meta` too: it is what makes this facade a SLOT to every collector
+      // (declaration, docs) rather than a callable that merely resembles one.
+      meta: blockSlot.meta,
       useContributions: blockSlot.useContributions,
       Dispatch: blockSlot.Dispatch,
     },
@@ -203,7 +214,11 @@ export const Editor = {
    * contribution receives the block, its editor API, and a `close` callback.
    */
   TurnInto: defineRenderSlot<{
-    component: ComponentType<{ block: Block; api: BlockEditorAPI; close: () => void }>;
+    component: ComponentType<{
+      block: Block;
+      api: BlockEditorAPI;
+      close: () => void;
+    }>;
   }>("page.editor.turn-into"),
   /**
    * Toolbar controls for the floating selection format bar. Each contribution
@@ -249,7 +264,10 @@ export function useFramedBlockTypes(): ReadonlySet<string> {
  * container while the surface paints nothing) — `./singularity check
  * page-editor:anchor-has-decoration` fails on it.
  */
-export function useBlockAnchors(): ReadonlyMap<string, ComponentType<BlockAnchorProps>> {
+export function useBlockAnchors(): ReadonlyMap<
+  string,
+  ComponentType<BlockAnchorProps>
+> {
   const contributions = Editor.BlockFrame.useContributions();
   return useMemo(() => {
     const out = new Map<string, ComponentType<BlockAnchorProps>>();

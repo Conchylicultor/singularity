@@ -1,5 +1,8 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
-import { ThemeEngine, useTokenGroupPresetOptions } from "@plugins/ui/plugins/theme-engine/web";
+import {
+  ThemeEngine,
+  useTokenGroupPresetOptions,
+} from "@plugins/ui/plugins/theme-engine/web";
 import { tokenGroupMatchesSearch } from "@plugins/ui/plugins/theme-engine/core";
 import { ThemeCustomizer } from "@plugins/ui/plugins/theme-engine/plugins/theme-customizer/web";
 import { ConfigV2 } from "@plugins/config_v2/web";
@@ -19,8 +22,9 @@ export default {
   description: "Color palette token group with switchable presets.",
   contributions: [
     ConfigV2.WebRegister({ descriptor: colorPaletteConfig }),
-    DynamicEnum.Options({ field: colorPaletteConfig.fields.preset, useOptions: () =>
-      useTokenGroupPresetOptions("color-palette")
+    DynamicEnum.Options({
+      field: colorPaletteConfig.fields.preset,
+      useOptions: () => useTokenGroupPresetOptions("color-palette"),
     }),
     ...builtInPresets.map((p) => ColorPalette.Preset(p)),
     ThemeEngine.TokenGroup({
@@ -43,7 +47,9 @@ export default {
       actions: ColorPaletteHeaderDots,
       // No token in this group answers the search box ⇒ no card, rather
       // than a titled bar over a filtered-to-empty list.
-      useAvailable: ({ search }) => tokenGroupMatchesSearch(colorPaletteGroup, search),
+      useAvailable: ({ search }) =>
+        tokenGroupMatchesSearch(colorPaletteGroup, search),
     }),
   ],
+  slots: [ColorPalette],
 } satisfies PluginDefinition;

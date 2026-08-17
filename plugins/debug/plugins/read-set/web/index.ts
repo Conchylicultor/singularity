@@ -8,12 +8,18 @@ import { readSetPane } from "./panes";
 export { readSetPane } from "./panes";
 
 export default {
-  description: "Read-set capture debug pane: the automatic loader→table dependency index plus a diff against the hand-drawn dependsOn graph.",
+  description:
+    "Read-set capture debug pane: the automatic loader→table dependency index plus a diff against the hand-drawn dependsOn graph.",
   contributions: [
     Pane.Register({ pane: readSetPane }),
     DebugApp.Sidebar({
       id: "read-set",
-      ...sidebarNavItem({ title: "Read-set", icon: MdTableChart, onClick: () => openPane(readSetPane, {}, { mode: "root" }) }),
+      ...sidebarNavItem({
+        title: "Read-set",
+        icon: MdTableChart,
+        onClick: () => openPane(readSetPane, {}, { mode: "root" }),
+      }),
     }),
   ],
+  slots: [readSetPane],
 } satisfies PluginDefinition;

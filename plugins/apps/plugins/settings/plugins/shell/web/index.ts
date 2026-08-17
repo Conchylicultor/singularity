@@ -5,6 +5,7 @@ import { Apps } from "@plugins/apps-core/web";
 import { settingsApp } from "../core";
 import { SettingsLayout } from "./components/settings-layout";
 import { SettingsRailBadge } from "./components/settings-rail-badge";
+import { Settings } from "./slots";
 
 export { Settings } from "./slots";
 
@@ -19,4 +20,5 @@ export default {
       badge: SettingsRailBadge,
     }),
   ],
+  slots: [Settings],
 } satisfies PluginDefinition;

@@ -4,7 +4,12 @@ import { InlineTextWalkerSlot } from "@plugins/primitives/plugins/inline-text/we
 import { TextEditorSlots } from "@plugins/primitives/plugins/text-editor/web";
 
 export { ActiveData, codeTag } from "./slots";
-export type { ActiveDataContribution, ActiveDataBlockContribution, ActiveDataInlineContribution, ActiveDataCodeContribution } from "./slots";
+export type {
+  ActiveDataContribution,
+  ActiveDataBlockContribution,
+  ActiveDataInlineContribution,
+  ActiveDataCodeContribution,
+} from "./slots";
 export { claimPending, declined, claimed } from "./claim";
 export type { CodeClaim, CodeResolver } from "./claim";
 export { useActiveDataSegments } from "./internal/segment-active-data";
@@ -18,6 +23,7 @@ export type { ActiveDataIdentity } from "./internal/identity-context";
 export { useActiveDataBinding } from "./internal/use-active-data-binding";
 export type { ActiveDataBindingHandle } from "./internal/use-active-data-binding";
 
+import { ActiveData as ActiveDataSlots } from "./slots";
 import { ActiveDataMarkdownEnhancer } from "./internal/markdown-enhancer";
 import { ActiveDataInlineWalker } from "./internal/inline-walker";
 import { useActiveDataNodeExtensions } from "./internal/node-extension-bridge";
@@ -48,4 +54,5 @@ export default {
       useExtensions: useActiveDataNodeExtensions,
     }),
   ],
+  slots: [ActiveDataSlots],
 } satisfies PluginDefinition;

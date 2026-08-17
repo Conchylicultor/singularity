@@ -4,6 +4,7 @@ import { MdPublic } from "react-icons/md";
 import { mdAppIcon } from "@plugins/apps-core/plugins/app-icon/web";
 import { browserApp } from "../core";
 import { BrowserLayout } from "./components/browser-layout";
+import { Browser } from "./slots";
 
 export { Browser } from "./slots";
 export {
@@ -32,4 +33,5 @@ export default {
       component: BrowserLayout,
     }),
   ],
+  slots: [Browser],
 } satisfies PluginDefinition;

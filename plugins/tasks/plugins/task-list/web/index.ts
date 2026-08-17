@@ -26,6 +26,10 @@ export default {
       component: ExpandCollapseAllAction,
     }),
     TasksSlots.TaskActions({ id: "delete", component: DeleteTaskAction }),
-    TasksSlots.TaskActions({ id: "launch-agent", component: LaunchAgentAction }),
+    TasksSlots.TaskActions({
+      id: "launch-agent",
+      component: LaunchAgentAction,
+    }),
   ],
+  slots: [TasksSlots],
 } satisfies PluginDefinition;

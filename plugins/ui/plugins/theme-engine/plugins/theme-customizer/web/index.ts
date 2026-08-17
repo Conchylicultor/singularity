@@ -1,6 +1,7 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { Pane } from "@plugins/primitives/plugins/pane/web";
 import { themeCustomizerPane } from "./panes";
+import { ThemeCustomizer } from "./slots";
 
 export { ThemeCustomizer } from "./slots";
 export { themeCustomizerPane, themeCustomizerRoute } from "./panes";
@@ -16,4 +17,5 @@ export default {
   // The toolbar entry point lives in the sibling `quick-theme` plugin: the
   // palette button opens the quick-switch popover, whose footer navigates here.
   contributions: [Pane.Register({ pane: themeCustomizerPane })],
+  slots: [ThemeCustomizer, themeCustomizerPane],
 } satisfies PluginDefinition;

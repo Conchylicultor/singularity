@@ -11,4 +11,5 @@ export default {
     Pane.Register({ pane: convCommitsGraphPane }),
     Conversation.ActionBar({ id: "commits-graph", component: CommitsChip }),
   ],
+  slots: [convCommitsGraphPane],
 } satisfies PluginDefinition;

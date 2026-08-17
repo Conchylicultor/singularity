@@ -8,7 +8,11 @@ export default {
   description:
     "Renders Workflow tool calls as a swimlane DAG of agent nodes (recovered by trace-executing the script), with per-node prompts in a side pane, a collapsible script, and the launched run/task ids.",
   contributions: [
-    JsonlViewerTool.Renderer({ match: "Workflow", component: WorkflowToolView }),
+    JsonlViewerTool.Renderer({
+      match: "Workflow",
+      component: WorkflowToolView,
+    }),
     Pane.Register({ pane: workflowNodePane }),
   ],
+  slots: [workflowNodePane],
 } satisfies PluginDefinition;

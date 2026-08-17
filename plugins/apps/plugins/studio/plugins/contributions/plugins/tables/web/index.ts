@@ -6,6 +6,7 @@ import {
 } from "@plugins/plugin-meta/plugins/contributions-table/web";
 import type { DbSchemaTableRow } from "@plugins/plugin-meta/plugins/facets/plugins/db-schema/core";
 import { tableDetailPane } from "./panes";
+import { TableDetail } from "./slots";
 
 export { TableDetail } from "./slots";
 export { tableDetailPane } from "./panes";
@@ -29,4 +30,5 @@ export default {
       }),
     ),
   ],
+  slots: [TableDetail, tableDetailPane],
 } satisfies PluginDefinition;

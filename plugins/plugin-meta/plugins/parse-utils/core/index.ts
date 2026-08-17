@@ -4,18 +4,21 @@ export {
   parseBarrelExports,
   parseBoolField,
   parseDefineGroup,
+  parseStaticCallId,
   parseStringField,
   readIfExists,
   readStaticCallId,
   readStringLiteral,
   runWithFsSnapshot,
   stripTypes,
+  unresolvableCallIdMessage,
   walkFiles,
 } from "./helpers";
 export type {
   BarrelExport,
   DefaultExportObject,
   FsSnapshot,
+  StaticCallIdResult,
   StringFieldResult,
   StringLiteralResult,
 } from "./helpers";

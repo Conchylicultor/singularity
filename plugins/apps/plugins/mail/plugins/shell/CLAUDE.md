@@ -23,6 +23,7 @@ Auth state and affordances come only from
     - `Mail.Sidebar` ← `apps.mail.search`
     - `Mail.Banner` ← `apps.mail.sync-status`
     - `Mail.RailBadge` ← `apps.mail.sync-status`
+    - `pane.mail-root.actions`
   - Contributes:
     - `Apps.App` "Mail" → `MailLayout`
     - `Pane.Register` "mail-root"

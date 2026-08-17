@@ -14,7 +14,12 @@ export default {
     Pane.Register({ pane: queuePane }),
     DebugApp.Sidebar({
       id: "queue",
-      ...sidebarNavItem({ title: "Queue", icon: MdQueue, onClick: () => openPane(queuePane, {}, { mode: "root" }) }),
+      ...sidebarNavItem({
+        title: "Queue",
+        icon: MdQueue,
+        onClick: () => openPane(queuePane, {}, { mode: "root" }),
+      }),
     }),
   ],
+  slots: [queuePane],
 } satisfies PluginDefinition;

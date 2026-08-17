@@ -31,4 +31,5 @@ export default {
     QueueItemActions({ id: "add-to-queue", component: AddToQueueAction }),
     QueueItemActions({ id: "close", component: CloseAction }),
   ],
+  slots: [QueueItemActions],
 } satisfies PluginDefinition;

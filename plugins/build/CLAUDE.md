@@ -17,8 +17,8 @@ commit; the docblock says why, and both alternatives loop.
 - Web:
   - Slots:
     - `BuildDetailSlots.Section` ← `build.build-commits`, `build.build-fix`, `build.build-info`, `build.build-logs`, `build.build-profiling`
-    - `buildDetailPane.Actions`
     - `buildPane.Actions`
+    - `buildDetailPane.Actions`
   - Contributes:
     - `ActionBar.Item` → `BuildButton`
     - `Pane.Register` "build"

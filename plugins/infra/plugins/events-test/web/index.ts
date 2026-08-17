@@ -13,7 +13,12 @@ export default {
     Pane.Register({ pane: eventsTestPane }),
     DebugApp.Sidebar({
       id: "events-test",
-      ...sidebarNavItem({ title: "Events Test", icon: MdBolt, onClick: () => openPane(eventsTestPane, {}, { mode: "root" }) }),
+      ...sidebarNavItem({
+        title: "Events Test",
+        icon: MdBolt,
+        onClick: () => openPane(eventsTestPane, {}, { mode: "root" }),
+      }),
     }),
   ],
+  slots: [eventsTestPane],
 } satisfies PluginDefinition;

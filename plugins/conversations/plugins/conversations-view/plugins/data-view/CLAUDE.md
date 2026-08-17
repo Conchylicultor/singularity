@@ -6,7 +6,7 @@
 
 - Description: Umbrella for the DataView conversation-list sidebar: owns the merged multi-source DataView surface (one config, one unified switcher) mounted directly by the conversations-view mount point. Per-source sub-plugins (Queue, History) contribute into SidebarSources.
 - Web:
-  - Slots: `SidebarSources.SidebarSources` ← `conversations.conversations-view.data-view.history`, `conversations.conversations-view.data-view.queue`
+  - Slots: `SidebarSources` ← `conversations.conversations-view.data-view.history`, `conversations.conversations-view.data-view.queue`
   - Uses:
     - `primitives/css/scroll.Scroll`
     - `primitives/data-view.defineDataView`

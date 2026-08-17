@@ -11,6 +11,10 @@ export default {
     "Main pane at /a/:id showing an attempt's conversations on the left and the selected conversation on the right. Adds a toolbar button to the conversation view to switch into it.",
   contributions: [
     Pane.Register({ pane: attemptPane }),
-    Conversation.ActionBar({ id: "attempt-switch", component: AttemptSwitchButton }),
+    Conversation.ActionBar({
+      id: "attempt-switch",
+      component: AttemptSwitchButton,
+    }),
   ],
+  slots: [attemptPane],
 } satisfies PluginDefinition;

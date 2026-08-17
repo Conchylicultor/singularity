@@ -18,7 +18,12 @@ export default {
     Pane.Register({ pane: backupPane }),
     DebugApp.Sidebar({
       id: "backup",
-      ...sidebarNavItem({ title: "Backup", icon: MdBackup, onClick: () => openPane(backupPane, {}, { mode: "root" }) }),
+      ...sidebarNavItem({
+        title: "Backup",
+        icon: MdBackup,
+        onClick: () => openPane(backupPane, {}, { mode: "root" }),
+      }),
     }),
   ],
+  slots: [backupPane],
 } satisfies PluginDefinition;

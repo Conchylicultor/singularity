@@ -11,4 +11,5 @@ export default {
     Pane.Register({ pane: convDocsPane }),
     Conversation.ActionBar({ id: "docs", component: DocsButton }),
   ],
+  slots: [convDocsPane],
 } satisfies PluginDefinition;

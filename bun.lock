@@ -2430,6 +2430,10 @@
         "typescript": "~6.0.3",
       },
     },
+    "plugins/framework/plugins/slot-declaration": {
+      "name": "@singularity/plugin-framework-slot-declaration",
+      "version": "0.0.1",
+    },
     "plugins/framework/plugins/tooling": {
       "name": "@singularity/plugin-framework-tooling",
       "version": "0.0.1",
@@ -6648,6 +6652,8 @@
     "@singularity/plugin-framework-resource-runtime": ["@singularity/plugin-framework-resource-runtime@workspace:plugins/framework/plugins/resource-runtime"],
 
     "@singularity/plugin-framework-server-core": ["@singularity/plugin-framework-server-core@workspace:plugins/framework/plugins/server-core"],
+
+    "@singularity/plugin-framework-slot-declaration": ["@singularity/plugin-framework-slot-declaration@workspace:plugins/framework/plugins/slot-declaration"],
 
     "@singularity/plugin-framework-tooling": ["@singularity/plugin-framework-tooling@workspace:plugins/framework/plugins/tooling"],
 

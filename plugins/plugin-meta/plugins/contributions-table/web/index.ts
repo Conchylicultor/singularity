@@ -1,3 +1,4 @@
+import { Contributions } from "./slots";
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 
 export { Contributions } from "./slots";
@@ -14,4 +15,5 @@ export default {
   description:
     "Registry for the Studio Contributions aggregated-table surface: FacetTable + RowClick slots and factories.",
   contributions: [],
+  slots: [Contributions],
 } satisfies PluginDefinition;

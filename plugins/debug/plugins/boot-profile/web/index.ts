@@ -38,4 +38,5 @@ export default {
       }),
     }),
   ],
+  slots: [bootProfilePane, bootProfileDetailPane, bootProfileListPane],
 } satisfies PluginDefinition;

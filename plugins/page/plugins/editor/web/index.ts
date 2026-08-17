@@ -1,4 +1,5 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
+import { Editor as EditorSlots } from "./slots";
 
 export { Editor, useFramedBlockTypes, useBlockAnchors } from "./slots";
 export type { BlockContribution, BlockFrameMeta } from "./slots";
@@ -30,7 +31,11 @@ export type {
   CollabHydrationReport,
 } from "./internal/hydration-report";
 export { PageContentColumn } from "./components/page-content-column";
-export { BLOCK_INSET, BLOCK_INDENT, MARKER_GUTTER } from "./internal/page-column";
+export {
+  BLOCK_INSET,
+  BLOCK_INDENT,
+  MARKER_GUTTER,
+} from "./internal/page-column";
 export { BlockTextRenderer } from "./components/block-text-renderer";
 // `BlockTextEditor` is deliberately NOT exported: a text-bearing block type
 // never renders the editor itself, it declares `chrome` and lets the shared
@@ -67,4 +72,5 @@ export type { PageIconProps } from "./components/page-icon";
 
 export default {
   description: "Block-based document editor component and slot system.",
+  slots: [EditorSlots],
 } satisfies PluginDefinition;

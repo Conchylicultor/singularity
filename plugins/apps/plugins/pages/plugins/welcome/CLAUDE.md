@@ -6,7 +6,9 @@
 
 - Description: Landing surface for the Pages app (shown at bare `/pages`): a quick-create + recent-pages launchpad rendered through the PagesWelcome.Section slot.
 - Web:
-  - Slots: `PagesWelcome.Section` ← `apps.pages.welcome.quick-create`, `apps.pages.welcome.recent-pages`
+  - Slots:
+    - `PagesWelcome.Section` ← `apps.pages.welcome.quick-create`, `apps.pages.welcome.recent-pages`
+    - `pane.pages-root.actions`
   - Contributes: `Pane.Register` "pages-root"
   - Uses:
     - `primitives/css/spacing.Inset`

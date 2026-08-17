@@ -1,3 +1,5 @@
+import { accountsPane } from "./panes";
+import { Auth } from "./slots";
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 
 export { Auth } from "./slots";
@@ -21,4 +23,5 @@ export default {
     "Shared authentication infrastructure (OAuth 2.0, API keys). Exposes the accounts pane + Auth.Provider slot; the Settings app surfaces the Account entry.",
   loadBearing: true,
   contributions: [],
+  slots: [Auth, accountsPane],
 } satisfies PluginDefinition;

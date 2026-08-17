@@ -6,6 +6,7 @@
 
 - Description: Contributes the priority Queue (pin/status group-by sections, task-group aggregation, and neighbor-based manual-order drag over the queue's live data/mutation layer) as the Queue source of the merged conversation-sidebar DataView.
 - Web:
+  - Slots: `conversations-sidebar-queue-actions` ← `conversations.conversations-view.data-view.queue`
   - Contributes:
     - `SidebarSources` "Queue" → `QueueSource`
     - `conversations-sidebar-queue-actions` "pin" → `PinAction`

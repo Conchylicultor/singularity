@@ -549,7 +549,9 @@ See "Open questions" in the design doc.
     - `primitives/link-gesture.linkGestureProps`
     - `primitives/loading.Loading`
     - `primitives/select-scope.ContentScope`
+    - `primitives/slot-render.defineRenderSlot`
     - `primitives/slot-render.renderIsolated`
+    - `primitives/slot-render.RenderSlot`
     - `primitives/surface-id.SurfaceIdContext`
     - `primitives/tooltip.WithTooltip`
   - Exports (types):

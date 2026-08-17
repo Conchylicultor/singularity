@@ -1,11 +1,18 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { ConfigV2 } from "@plugins/config_v2/web";
 import { DynamicEnum } from "@plugins/fields/plugins/dynamic-enum/plugins/config/web";
-import { ThemeEngine, useTokenGroupPresetOptions } from "@plugins/ui/plugins/theme-engine/web";
+import {
+  ThemeEngine,
+  useTokenGroupPresetOptions,
+} from "@plugins/ui/plugins/theme-engine/web";
 import { tokenGroupMatchesSearch } from "@plugins/ui/plugins/theme-engine/core";
 import { ThemeCustomizer } from "@plugins/ui/plugins/theme-engine/plugins/theme-customizer/web";
 import type { ShadowParams } from "../shared";
-import { shadowGroup, buildShadowTiers, DEFAULT_SHADOW_PARAMS } from "../shared";
+import {
+  shadowGroup,
+  buildShadowTiers,
+  DEFAULT_SHADOW_PARAMS,
+} from "../shared";
 import { shadowConfig } from "./internal/config";
 import { Shadow } from "./slots";
 import { ShadowPicker } from "./components/shadow-picker";
@@ -19,8 +26,9 @@ export default {
   description: "Shadow token group with switchable presets.",
   contributions: [
     ...builtInPresets.map((p) => Shadow.Preset(p)),
-    DynamicEnum.Options({ field: shadowConfig.fields.preset, useOptions: () =>
-      useTokenGroupPresetOptions("shadow")
+    DynamicEnum.Options({
+      field: shadowConfig.fields.preset,
+      useOptions: () => useTokenGroupPresetOptions("shadow"),
     }),
     ConfigV2.WebRegister({ descriptor: shadowConfig }),
     ThemeEngine.TokenGroup({
@@ -60,7 +68,16 @@ export default {
       component: ShadowSection,
       // No token in this group answers the search box ⇒ no card, rather
       // than a titled bar over a filtered-to-empty list.
-      useAvailable: ({ search }) => tokenGroupMatchesSearch(shadowGroup, search, ["shadow", "color", "opacity", "blur", "spread", "offset"]),
+      useAvailable: ({ search }) =>
+        tokenGroupMatchesSearch(shadowGroup, search, [
+          "shadow",
+          "color",
+          "opacity",
+          "blur",
+          "spread",
+          "offset",
+        ]),
     }),
   ],
+  slots: [Shadow],
 } satisfies PluginDefinition;

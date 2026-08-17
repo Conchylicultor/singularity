@@ -25,10 +25,23 @@ const check: Check = {
         hint: "Run `./singularity build` to generate it.",
       };
     }
-    const expected = await formatGenerated({
-      file,
-      content: await renderDataViewsManifest(root),
-    });
+    // The renderer THROWS on a `defineDataView` id it cannot resolve from source.
+    // That is a real finding about the tree, not a bug in the check — report it as
+    // this check's own failure so the runner prints the file/line, instead of
+    // aborting the whole run with a stack trace.
+    let expected: string;
+    try {
+      expected = await formatGenerated({
+        file,
+        content: await renderDataViewsManifest(root),
+      });
+    } catch (err) {
+      return {
+        ok: false,
+        message: `${rel} could not be regenerated: ${err instanceof Error ? err.message : String(err)}`,
+        hint: "Fix the marker call named above, then run `./singularity build`.",
+      };
+    }
     if (readFileSync(file, "utf8") !== expected) {
       return {
         ok: false,

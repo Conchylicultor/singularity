@@ -1,11 +1,18 @@
-import { type PluginDefinition, Core } from "@plugins/framework/plugins/web-sdk/core";
+import {
+  type PluginDefinition,
+  Core,
+} from "@plugins/framework/plugins/web-sdk/core";
 import { ConfigV2 } from "@plugins/config_v2/web";
 import { DynamicEnum } from "@plugins/fields/plugins/dynamic-enum/plugins/config/web";
 import { themeEngineConfig } from "../core";
 import { ThemeInjector, AppScopeThemes } from "./components/theme-injector";
 import { ThemeEngine } from "./slots";
 
-export { ThemeEngine, useTokenGroupPresets, useTokenGroupPresetOptions } from "./slots";
+export {
+  ThemeEngine,
+  useTokenGroupPresets,
+  useTokenGroupPresetOptions,
+} from "./slots";
 export type {
   VariantGroupContribution,
   TokenGroupContribution,
@@ -17,8 +24,14 @@ export type {
   PresetSourceContribution,
 } from "./slots";
 export { ThemeScope } from "./components/theme-scope";
-export { ThemeScopeProvider, useThemeScopeId } from "./components/theme-scope-context";
-export { ColorAdjustContext, ScopedAppTheme } from "./components/theme-injector";
+export {
+  ThemeScopeProvider,
+  useThemeScopeId,
+} from "./components/theme-scope-context";
+export {
+  ColorAdjustContext,
+  ScopedAppTheme,
+} from "./components/theme-injector";
 export { useColorMode, useResolvedColorMode } from "./use-color-mode";
 export type { ColorMode } from "./use-color-mode";
 export { transformValues } from "./internal/transform";
@@ -39,4 +52,5 @@ export default {
         })),
     }),
   ],
+  slots: [ThemeEngine],
 } satisfies PluginDefinition;

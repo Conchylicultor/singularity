@@ -1,5 +1,6 @@
 import { createContext, useMemo, type ReactNode } from "react";
 import { topoSortPlugins } from "@plugins/framework/plugins/plugin-loader/core";
+import { declarePluginSlots } from "@plugins/framework/plugins/slot-declaration/core";
 import type { Contribution, LoadedPlugin } from "./types";
 
 export interface PluginRuntime {
@@ -32,7 +33,7 @@ function runRegisterPhase(plugins: LoadedPlugin[]): LoadedPlugin[] {
             console.error(`[plugin.${p.id}] register failed`, err),
           );
         }
-      // eslint-disable-next-line promise-safety/no-bare-catch
+        // eslint-disable-next-line promise-safety/no-bare-catch
       } catch (err) {
         console.error(`[plugin.${p.id}] register failed`, err);
       }
@@ -50,6 +51,16 @@ export function PluginProvider({
 }) {
   const runtime = useMemo(() => {
     const ordered = runRegisterPhase(plugins);
+    // The slot pass, sibling of the `_pluginId` contribution stamp below: each
+    // declared slot gets its declaring plugin stamped onto the slot OBJECT (not
+    // a copy — the reorder middleware looks descriptors up by reference), and
+    // two plugins claiming one slot throws. Ownership therefore comes off the
+    // declaration rather than off module-cache order.
+    //
+    // NOT a completeness check: web plugins load in tiers, so mid-boot both the
+    // created and the declared sets are partial. `created \ declared` is gated
+    // at build time, in the codegen process, which imports every barrel.
+    declarePluginSlots(ordered);
     const contributions = ordered.flatMap((p) =>
       (p.contributions ?? []).map((c) => ({
         ...c,

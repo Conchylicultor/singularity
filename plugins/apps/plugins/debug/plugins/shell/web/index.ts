@@ -4,6 +4,7 @@ import { MdBugReport } from "react-icons/md";
 import { mdAppIcon } from "@plugins/apps-core/plugins/app-icon/web";
 import { debugApp } from "../core";
 import { DebugLayout } from "./components/debug-layout";
+import { DebugApp } from "./slots";
 
 export { DebugApp } from "./slots";
 
@@ -17,4 +18,5 @@ export default {
       component: DebugLayout,
     }),
   ],
+  slots: [DebugApp],
 } satisfies PluginDefinition;

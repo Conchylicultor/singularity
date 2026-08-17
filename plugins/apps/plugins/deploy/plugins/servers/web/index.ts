@@ -1,7 +1,7 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { Pane } from "@plugins/primitives/plugins/pane/web";
 import { serversRootPane, serverDetailPane } from "./panes";
-import { ServerDetail } from "./slots";
+import { ServerDetail, Servers } from "./slots";
 import { ServerEditForm } from "./components/server-edit-form";
 import { ServerDeleteAction } from "./components/server-delete-action";
 import {
@@ -41,5 +41,12 @@ export default {
       useDefaultOpen: () => true,
     }),
     ServerItemActions({ id: "open-console", component: OpenConsoleAction }),
+  ],
+  slots: [
+    ServerDetail,
+    Servers,
+    ServerItemActions,
+    serversRootPane,
+    serverDetailPane,
   ],
 } satisfies PluginDefinition;

@@ -46,7 +46,10 @@ let activeSnapshot: FsSnapshot | null = null;
  * synchronously on return, so even interleaved concurrent builds never observe
  * each other's snapshot. Pass `null` to force the sync-disk path.
  */
-export function runWithFsSnapshot<T>(snapshot: FsSnapshot | null, fn: () => T): T {
+export function runWithFsSnapshot<T>(
+  snapshot: FsSnapshot | null,
+  fn: () => T,
+): T {
   const prev = activeSnapshot;
   activeSnapshot = snapshot;
   try {
@@ -115,6 +118,11 @@ export type DefaultExportObject =
   | { kind: "object"; body: string } // text strictly between the `{` and its matching `}`
   | { kind: "absent" };
 
+export type StaticCallIdResult =
+  | { kind: "value"; value: string }
+  | { kind: "absent" } // the call has no arguments at all
+  | { kind: "dynamic"; expr: string }; // first argument is not a static string literal
+
 const CLOSERS: Record<string, string> = { "{": "}", "[": "]", "(": ")" };
 
 /**
@@ -167,7 +175,10 @@ function cookEscape(src: string, i: number): { text: string; next: number } {
         if (close > 0) {
           const hex = src.slice(i + 3, close);
           if (/^[0-9a-fA-F]+$/.test(hex)) {
-            return { text: String.fromCodePoint(parseInt(hex, 16)), next: close + 1 };
+            return {
+              text: String.fromCodePoint(parseInt(hex, 16)),
+              next: close + 1,
+            };
           }
         }
         return { text: "u", next: i + 2 }; // malformed → char itself
@@ -183,11 +194,19 @@ function cookEscape(src: string, i: number): { text: string; next: number } {
   }
 }
 
-/** A short, whitespace-collapsed snippet from `src[at..]`, capped at ~60 chars. */
-function snippetFrom(src: string, at: number): string {
-  const end = Math.min(src.length, at + 60);
+/**
+ * A short, whitespace-collapsed snippet from `src[at..]`, capped at ~60 chars.
+ * `stop` bounds the snippet to a sub-range (e.g. a call's closing paren) so it
+ * never spills past the construct being reported; it defaults to end-of-source.
+ */
+function snippetFrom(
+  src: string,
+  at: number,
+  stop: number = src.length,
+): string {
+  const end = Math.min(stop, at + 60);
   let s = src.slice(at, end).replace(/\s+/g, " ").trim();
-  if (end < src.length) s += "…";
+  if (end < stop) s += "…";
   return s;
 }
 
@@ -199,7 +218,10 @@ function snippetFrom(src: string, at: number): string {
  * lines — author-written backticks only). `"`/`'` literals are cooked with NO
  * collapse. An unterminated literal is `dynamic` (never hangs, never throws).
  */
-export function readStringLiteral(src: string, at: number): StringLiteralResult {
+export function readStringLiteral(
+  src: string,
+  at: number,
+): StringLiteralResult {
   const quote = src[at];
   if (quote !== '"' && quote !== "'" && quote !== "`") return { kind: "none" };
   const isTemplate = quote === "`";
@@ -239,7 +261,11 @@ function escapeRe(s: string): string {
  * contribution's key never shadows a top-level one. Without `depth0`, the first
  * match anywhere wins (today's behavior). Returns `null` when the key is absent.
  */
-function keyValueOffset(masked: string, field: string, depth0: boolean): number | null {
+function keyValueOffset(
+  masked: string,
+  field: string,
+  depth0: boolean,
+): number | null {
   const pattern = `\\b${escapeRe(field)}\\s*:\\s*`;
   if (!depth0) {
     const m = new RegExp(pattern).exec(masked);
@@ -312,7 +338,11 @@ export function parseStringField(
  * `parseStringField`. A boolean field's only valid literal forms are the bare
  * `true`/`false` tokens, so the return stays a plain `boolean`.
  */
-export function parseBoolField(src: string, field: string, opts?: { depth0?: boolean }): boolean {
+export function parseBoolField(
+  src: string,
+  field: string,
+  opts?: { depth0?: boolean },
+): boolean {
   const masked = maskSource(src);
   const at = keyValueOffset(masked, field, opts?.depth0 ?? false);
   if (at === null) return false;
@@ -339,7 +369,12 @@ export function defaultExportObjectBody(src: string): DefaultExportObject {
   return { kind: "object", body: src.slice(i + 1, close) };
 }
 
-export function matchBracket(src: string, start: number, open: string, close: string): number {
+export function matchBracket(
+  src: string,
+  start: number,
+  open: string,
+  close: string,
+): number {
   let depth = 0;
   for (let i = start; i < src.length; i++) {
     const c = src[i];
@@ -378,18 +413,81 @@ export function matchBracket(src: string, start: number, open: string, close: st
 
 /**
  * The leading string-literal argument of a marker call, read from the ORIGINAL
+ * source at the call's arg span, as a DISCRIMINATED result — the union-returning
+ * sibling of `readStaticCallId`, for scanners that must FAIL rather than drop an
+ * id they cannot resolve.
+ *
+ * - `value` — a static `"…"` / `'…'` / uninterpolated `` `…` `` literal. An
+ *   EMPTY literal is a legitimate `value` (`""`), not a miss: a `string | undefined`
+ *   reader conflates it with "no literal here", which is exactly how two scanners
+ *   over the same marker ended up disagreeing about `defineX("")`.
+ * - `absent` — the call has no arguments at all (`defineX()`).
+ * - `dynamic` — the first argument is an identifier, a call, a concatenation, or
+ *   an interpolated template such as `` `${id}.section` `` inside a slot factory.
+ *   `expr` is a short snippet of it, bounded by the call's own closing paren, for
+ *   the error message a caller raises.
+ *
+ * Pure passthrough over `readStringLiteral` — no parsing logic of its own — so a
+ * template's interior can never be handed back as if it were a real id.
+ */
+export function parseStaticCallId(
+  original: string,
+  span: MarkerCallSpan,
+): StaticCallIdResult {
+  let at = span.open + 1;
+  while (at < span.close && /\s/.test(original[at]!)) at++;
+  if (at >= span.close) return { kind: "absent" };
+  const lit = readStringLiteral(original, at);
+  if (lit.kind === "value") return { kind: "value", value: lit.value };
+  // Both misses (an interpolated/unterminated literal, and a non-quote leading
+  // char — identifier / call / concat) get the snippet bounded by the call's own
+  // `)`, so an unterminated template can't drag the NEXT statement into the
+  // reported expression.
+  return { kind: "dynamic", expr: snippetFrom(original, at, span.close) };
+}
+
+/**
+ * The one message shape for "a build-time scanner reached a marker call whose id
+ * it cannot resolve from source text". Shared so every scanner that raises on a
+ * `parseStaticCallId` miss reports the same three facts in the same order —
+ * where (file:line), what (the marker and the offending expression), and what to
+ * do about it (`hint`, supplied by the scanner that knows its own contract).
+ *
+ * `expr` is the offending argument text; pass the empty string for a call with
+ * no arguments at all.
+ */
+export function unresolvableCallIdMessage(opts: {
+  marker: string;
+  file: string;
+  line: number;
+  expr: string;
+  hint: string;
+}): string {
+  const got =
+    opts.expr === "" ? "the call has no arguments" : `got \`${opts.expr}\``;
+  return (
+    `${opts.file}:${opts.line}: ${opts.marker}(…) id is not a static string ` +
+    `literal — ${got}. ${opts.hint}`
+  );
+}
+
+/**
+ * The leading string-literal argument of a marker call, read from the ORIGINAL
  * source at the call's arg span — `null` when the first argument is not a STATIC
  * literal (an identifier, a call, or an interpolated template such as
  * `` `${id}.section` `` inside a slot factory). Such ids are not statically
  * resolvable, and a raw backtick-interior regex would otherwise hand back the
  * literal text `"${id}.section"` as if it were a real id.
+ *
+ * Flattening wrapper over `parseStaticCallId` — reach for that one when the
+ * unresolvable case must be reported rather than dropped.
  */
-export function readStaticCallId(original: string, span: MarkerCallSpan): string | null {
-  let at = span.open + 1;
-  while (at < span.close && /\s/.test(original[at]!)) at++;
-  const lit = readStringLiteral(original, at);
-  if (lit.kind !== "value") return null;
-  return lit.value;
+export function readStaticCallId(
+  original: string,
+  span: MarkerCallSpan,
+): string | null {
+  const r = parseStaticCallId(original, span);
+  return r.kind === "value" ? r.value : null;
 }
 
 export function parseDefineGroup<T>(
@@ -418,7 +516,9 @@ export function parseDefineGroup<T>(
     for (const span of spans) {
       if (span.identifier < braceStart || span.close > braceEnd) continue;
       // Member name: the nearest `Word:` immediately before the builder call.
-      const memberMatch = /([A-Z]\w*)\s*:\s*$/.exec(masked.slice(0, span.identifier));
+      const memberMatch = /([A-Z]\w*)\s*:\s*$/.exec(
+        masked.slice(0, span.identifier),
+      );
       if (!memberMatch) continue;
       const id = readStaticCallId(src, span);
       if (!id) continue;
@@ -461,7 +561,8 @@ export function parseBarrelExports(src: string): BarrelExport[] {
       const name = asMatch ? asMatch[2]! : s;
       if (name === "default") continue;
       if (!/^\w+$/.test(name)) continue;
-      const kind: "type" | "value" = blockIsType || itemIsType ? "type" : "value";
+      const kind: "type" | "value" =
+        blockIsType || itemIsType ? "type" : "value";
       setIfUnset(name, kind);
     }
   }

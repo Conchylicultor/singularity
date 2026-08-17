@@ -1,7 +1,10 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { ConfigV2 } from "@plugins/config_v2/web";
 import { DynamicEnum } from "@plugins/fields/plugins/dynamic-enum/plugins/config/web";
-import { ThemeEngine, useTokenGroupPresetOptions } from "@plugins/ui/plugins/theme-engine/web";
+import {
+  ThemeEngine,
+  useTokenGroupPresetOptions,
+} from "@plugins/ui/plugins/theme-engine/web";
 import { tokenGroupMatchesSearch } from "@plugins/ui/plugins/theme-engine/core";
 import { ThemeCustomizer } from "@plugins/ui/plugins/theme-engine/plugins/theme-customizer/web";
 import { typeScaleGroup } from "../shared";
@@ -15,12 +18,14 @@ export { TypeScale } from "./slots";
 export type { TypeScalePresetContribution } from "./slots";
 
 export default {
-  description: "Type-scale token group (font sizes, line heights, weights) with switchable presets.",
+  description:
+    "Type-scale token group (font sizes, line heights, weights) with switchable presets.",
   contributions: [
     ...builtInPresets.map((p) => TypeScale.Preset(p)),
     ConfigV2.WebRegister({ descriptor: typeScaleConfig }),
-    DynamicEnum.Options({ field: typeScaleConfig.fields.preset, useOptions: () =>
-      useTokenGroupPresetOptions("type-scale")
+    DynamicEnum.Options({
+      field: typeScaleConfig.fields.preset,
+      useOptions: () => useTokenGroupPresetOptions("type-scale"),
     }),
     ThemeEngine.TokenGroup({
       id: "type-scale",
@@ -41,7 +46,9 @@ export default {
       component: TypeScaleSection,
       // No token in this group answers the search box ⇒ no card, rather
       // than a titled bar over a filtered-to-empty list.
-      useAvailable: ({ search }) => tokenGroupMatchesSearch(typeScaleGroup, search),
+      useAvailable: ({ search }) =>
+        tokenGroupMatchesSearch(typeScaleGroup, search),
     }),
   ],
+  slots: [TypeScale],
 } satisfies PluginDefinition;

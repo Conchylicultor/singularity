@@ -203,4 +203,5 @@ export default {
       component: SettingsControlPanel,
     }),
   ],
+  slots: [DataViewSlots],
 } satisfies PluginDefinition;

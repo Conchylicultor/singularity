@@ -3,10 +3,8 @@ import { Pane, openPane } from "@plugins/primitives/plugins/pane/web";
 import { sidebarNavItem } from "@plugins/primitives/plugins/app-shell/web";
 import { Shell } from "@plugins/shell/web";
 import { MdChecklist } from "react-icons/md";
-import {
-  tasksRootPane,
-  taskDetailPane,
-} from "./panes";
+import { tasksRootPane, taskDetailPane } from "./panes";
+import { TaskDetail as TaskDetailSectionSlots } from "./slots";
 
 export { TaskDetail as TaskDetailSlots } from "./slots";
 export { useFlushAll, useRegisterFlush } from "./context";
@@ -21,7 +19,12 @@ export default {
     Pane.Register({ pane: taskDetailPane }),
     Shell.Sidebar({
       id: "tasks",
-      ...sidebarNavItem({ title: "Tasks", icon: MdChecklist, onClick: () => openPane(tasksRootPane, {}, { mode: "root" }) }),
+      ...sidebarNavItem({
+        title: "Tasks",
+        icon: MdChecklist,
+        onClick: () => openPane(tasksRootPane, {}, { mode: "root" }),
+      }),
     }),
   ],
+  slots: [TaskDetailSectionSlots, tasksRootPane, taskDetailPane],
 } satisfies PluginDefinition;

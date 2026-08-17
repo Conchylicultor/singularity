@@ -1,0 +1,22 @@
+// @hash 40c8910f2b9a
+// A single action, so there is no arrangement to make — the order below is
+// settled by there being nothing to order against. Left as a bare item (no
+// group, no spacer): the agent-side pane's bar has one control, and wrapping it
+// in chrome would imply a structure that isn't there.
+// Node forms:
+// Item: "<key>" (terse; <key> is "<pluginId>:<id>")
+// Hide: { "item": "<key>", "hidden": true }
+// Spacer (gap): { "type": "spacer", "id": "<unique-id>" }
+// Group: { "type": "header", "label": "<title>", "collapsed": false, "items": [ "<key>", … ] }
+// Overflow (⋯ menu): { "type": "overflow", "id": "<unique-id>", "items": [ "<key>", … ] }
+// At most one spacer per slot.
+{
+  // Item: "<key>" (terse; <key> is "<pluginId>:<id>")
+  // Hide: { "item": "<key>", "hidden": true }
+  // Spacer (gap): { "type": "spacer", "id": "<unique-id>" }
+  // Group: { "type": "header", "label": "<title>", "collapsed": false, "items": [ "<key>", … ] }
+  // Overflow (⋯ menu): { "type": "overflow", "id": "<unique-id>", "items": [ "<key>", … ] }
+  "items": [
+    "conversations.agents:expand-agent"
+  ]
+}

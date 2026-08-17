@@ -4,6 +4,7 @@ import { MdSchema } from "react-icons/md";
 import { mdAppIcon } from "@plugins/apps-core/plugins/app-icon/web";
 import { workflowsApp } from "../core";
 import { WorkflowsLayout } from "./components/workflows-layout";
+import { WorkflowsApp } from "./slots";
 
 export { WorkflowsApp } from "./slots";
 
@@ -17,4 +18,5 @@ export default {
       component: WorkflowsLayout,
     }),
   ],
+  slots: [WorkflowsApp],
 } satisfies PluginDefinition;

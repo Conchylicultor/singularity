@@ -8,8 +8,8 @@
 - Web:
   - Slots:
     - `TaskDetailSlots.Section` ← `apps.pages.prompt-origin`, `tasks.task-attachments`, `tasks.task-dependencies`, `tasks.task-deps-tree`, `tasks.task-description`, `tasks.task-events`, `tasks.task-graph`, `tasks.task-header`
-    - `taskDetailPane.Actions`
     - `tasksRootPane.Actions`
+    - `taskDetailPane.Actions`
   - Contributes:
     - `Pane.Register` "tasks-root"
     - `Pane.Register` "task-detail"

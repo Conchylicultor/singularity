@@ -25,4 +25,5 @@ export default {
         })),
     }),
   ],
+  slots: [TabBar],
 } satisfies PluginDefinition;

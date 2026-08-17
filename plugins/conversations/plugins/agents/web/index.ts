@@ -60,4 +60,11 @@ export default {
     }),
     AgentsSlots.AgentActions({ id: "delete", component: DeleteAgentAction }),
   ],
+  slots: [
+    AgentsSlots,
+    agentsRootPane,
+    agentDetailPane,
+    systemAgentDetailPane,
+    agentSidePane,
+  ],
 } satisfies PluginDefinition;

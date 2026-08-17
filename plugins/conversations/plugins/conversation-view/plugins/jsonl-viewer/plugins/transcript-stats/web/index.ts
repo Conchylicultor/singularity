@@ -1,5 +1,6 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { JsonlViewer } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/web";
+import { TranscriptStats as TranscriptStatsSlots } from "./slots";
 import { TranscriptStatsStrip } from "./components/transcript-stats-strip";
 
 export { TranscriptStats } from "./slots";
@@ -18,4 +19,5 @@ export default {
       component: TranscriptStatsStrip,
     }),
   ],
+  slots: [TranscriptStatsSlots],
 } satisfies PluginDefinition;

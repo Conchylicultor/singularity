@@ -4,6 +4,7 @@ import { MdFolder } from "react-icons/md";
 import { mdAppIcon } from "@plugins/apps-core/plugins/app-icon/web";
 import { fileExplorerApp } from "../core";
 import { FileExplorerLayout } from "./components/file-explorer-layout";
+import { FileExplorer } from "./slots";
 
 export { FileExplorer } from "./slots";
 
@@ -17,4 +18,5 @@ export default {
       component: FileExplorerLayout,
     }),
   ],
+  slots: [FileExplorer],
 } satisfies PluginDefinition;

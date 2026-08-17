@@ -1,10 +1,14 @@
 import { existsSync } from "fs";
-import { join } from "path";
+import { join, relative } from "path";
 import { writeGenerated } from "./write-generated";
 import {
-  findMarkerCalls,
-  readIfExists,
+  lineAt,
+  markerCallSpans,
+  maskSource,
+  parseStaticCallId,
+  unresolvableCallIdMessage,
   walkFiles,
+  readIfExists,
 } from "@plugins/plugin-meta/plugins/parse-utils/core";
 import { buildBarrelFreeTree } from "./docgen";
 import { computeDisabledIds } from "./disabled-ids";
@@ -43,10 +47,41 @@ const MANIFEST_HEADER = [
   "// The `data-views-in-sync` check fails on drift.",
 ].join("\n");
 
-/** Extract the first string-literal argument from a marker call's args text. */
-function firstStringArg(argsText: string): string | undefined {
-  const m = /^\s*"([^"]+)"|^\s*'([^']+)'|^\s*`([^`]+)`/.exec(argsText);
-  return m ? (m[1] ?? m[2] ?? m[3]) : undefined;
+const DATA_VIEW_MARKER = "defineDataView";
+
+/**
+ * Every `defineDataView("<id>")` id in one source file, in source order.
+ *
+ * The file is FULL-masked (so a marker written inside a comment, string or
+ * template literal is never matched) and each id is read back from the ORIGINAL
+ * by offset. THROWS — naming `displayPath`, the line, and the offending
+ * expression — on a call whose id is not a static string literal. Unlike the slot
+ * scanner there is no legitimate unresolvable shape here: `defineDataView` is
+ * only ever called, never declared in a plugin's `web/**`, and no factory
+ * produces data views. So there is nothing to exempt and no escape hatch.
+ */
+export function scanDataViewIds(src: string, displayPath: string): string[] {
+  const out: string[] = [];
+  for (const span of markerCallSpans(maskSource(src), DATA_VIEW_MARKER)) {
+    const id = parseStaticCallId(src, span);
+    if (id.kind !== "value") {
+      throw new Error(
+        unresolvableCallIdMessage({
+          marker: DATA_VIEW_MARKER,
+          file: displayPath,
+          line: lineAt(src, span.identifier),
+          expr: id.kind === "dynamic" ? id.expr : "",
+          hint:
+            "The data-views manifest is built from source text, so every id must be a " +
+            "literal at the call site — a data view whose id this scanner cannot read " +
+            "would silently register no config descriptor and lose its saved views. " +
+            "Inline the literal instead of hoisting or interpolating it.",
+        }),
+      );
+    }
+    out.push(id.value);
+  }
+  return out;
 }
 
 export interface DataViewEntry {
@@ -58,12 +93,17 @@ export interface DataViewEntry {
 /**
  * Walk the plugin tree (barrel-free static scan) and collect every
  * `defineDataView("<id>")` id keyed to its DEFINING plugin (the node whose
- * `web/**` owns the marker). Scans each node's `web/**` source via the blessed
- * `findMarkerCalls` scanner (which full-masks internally and reads each id back
- * from the ORIGINAL by offset, so a `defineDataView("x")` written inside a
- * string/template literal is never mistaken for a real marker). Deduped by id
- * (FIRST definer wins, stable
- * since `tree.byDir` iteration is deterministic) and sorted by id.
+ * `web/**` owns the marker). Each file is FULL-masked once (so a
+ * `defineDataView("x")` written inside a comment, string or template literal is
+ * never mistaken for a real marker) and every id is read back from the ORIGINAL
+ * by offset. Deduped by id (FIRST definer wins, stable since `tree.byDir`
+ * iteration is deterministic) and sorted by id.
+ *
+ * THROWS on a `defineDataView` call whose id is not statically resolvable. The
+ * manifest is the only thing that registers a data view's config descriptor, so
+ * an id this scanner cannot read is lost capability, not a tolerable gap —
+ * dropping it silently would leave a data view with no persisted view state and
+ * nothing anywhere saying why.
  *
  * Uses `{ skipBarrelImport: true }`: this collector only reads `node.dir` /
  * `node.id` and text-scans web source — it never touches facets/barrel data, so
@@ -89,17 +129,9 @@ export async function collectDataViews(root: string): Promise<DataViewEntry[]> {
     walkFiles(webDir, files);
     for (const file of files) {
       const src = readIfExists(file);
-      if (!src || !src.includes("defineDataView")) continue;
-      // `findMarkerCalls` full-masks internally (a `defineDataView("x")` written
-      // inside a string/template literal vanishes and is never matched) and
-      // slices `argsText` from the ORIGINAL, so the string-literal id survives
-      // for `firstStringArg` to read.
-      const calls = findMarkerCalls(src, "defineDataView");
-      for (const call of calls) {
-        const id = firstStringArg(call.argsText);
-        // Skip ids built from template/identifier expressions (not statically
-        // resolvable) — same fail-soft as parseSlotCalls.
-        if (id && !definingPath.has(id)) definingPath.set(id, node.id);
+      if (!src || !src.includes(DATA_VIEW_MARKER)) continue;
+      for (const id of scanDataViewIds(src, relative(root, file))) {
+        if (!definingPath.has(id)) definingPath.set(id, node.id);
       }
     }
   }

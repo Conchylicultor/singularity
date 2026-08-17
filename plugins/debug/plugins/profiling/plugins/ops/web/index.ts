@@ -19,4 +19,5 @@ export default {
     }),
     Pane.Register({ pane: opDetailPane }),
   ],
+  slots: [opDetailPane],
 } satisfies PluginDefinition;

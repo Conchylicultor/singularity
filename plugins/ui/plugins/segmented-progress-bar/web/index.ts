@@ -31,4 +31,5 @@ export default {
       selects: "component",
     }),
   ],
+  slots: [SegmentedProgressBar],
 } satisfies PluginDefinition;

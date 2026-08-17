@@ -9,11 +9,9 @@
   - Slots:
     - `WebsiteAgents.Section` ← `apps.website.demos.agent-run`, `apps.website.pillars.agents`
     - `agentsPane.Actions`
-    - `agentsPane.Start` ← `apps.website.shell`
-    - `agentsPane.End` ← `apps.website.downloads`, `apps.website.pillars.agents`, `apps.website.pillars.apps`, `apps.website.pillars.platform`
   - Contributes:
     - `Pane.Register` "website-agents"
-    - `downloadsPane.End` "agents" → `AgentsNavItem`
+    - `WebsiteToolbar.End` "agents" → `AgentsNavItem`
     - `WebsiteAgents.Section` "Hero" → `AgentsHero`
     - `WebsiteAgents.Section` "How it works" → `AgentsHowItWorks`
     - `WebsiteAgents.Section` "Closing links" → `AgentsClosing`

@@ -20,4 +20,5 @@ export default {
     }),
     Pane.Register({ pane: executionDetailPane }),
   ],
+  slots: [executionDetailPane],
 } satisfies PluginDefinition;

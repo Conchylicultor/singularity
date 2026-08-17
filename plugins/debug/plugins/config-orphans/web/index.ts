@@ -14,7 +14,12 @@ export default {
     Pane.Register({ pane: configOrphansPane }),
     DebugApp.Sidebar({
       id: "config-orphans",
-      ...sidebarNavItem({ title: "Config Orphans", icon: MdRuleFolder, onClick: () => openPane(configOrphansPane, {}, { mode: "root" }) }),
+      ...sidebarNavItem({
+        title: "Config Orphans",
+        icon: MdRuleFolder,
+        onClick: () => openPane(configOrphansPane, {}, { mode: "root" }),
+      }),
     }),
   ],
+  slots: [configOrphansPane],
 } satisfies PluginDefinition;

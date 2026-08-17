@@ -1,4 +1,5 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
+import { Workflows } from "./slots";
 
 export { Workflows } from "./slots";
 export { useStepTypeIndex } from "./internal/use-step-type-index";
@@ -7,5 +8,7 @@ export { StepTraceShell } from "./internal/step-trace-shell";
 export { ValueBlock, CollapsibleValue } from "./internal/value-block";
 
 export default {
-  description: "Core engine infrastructure. Defines the Workflows.StepType slot.",
+  description:
+    "Core engine infrastructure. Defines the Workflows.StepType slot.",
+  slots: [Workflows],
 } satisfies PluginDefinition;

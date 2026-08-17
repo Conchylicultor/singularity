@@ -1,3 +1,4 @@
+import { Reports } from "./slots";
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 
 export { report, investigate } from "./report";
@@ -8,4 +9,5 @@ export default {
   collapsed: true,
   description: "Reports uncaught browser errors to the server.",
   contributions: [],
+  slots: [Reports],
 } satisfies PluginDefinition;

@@ -21,4 +21,5 @@ export default {
       }),
     }),
   ],
+  slots: [healthMonitorPane],
 } satisfies PluginDefinition;

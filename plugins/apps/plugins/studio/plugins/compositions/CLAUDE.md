@@ -89,9 +89,10 @@ are no per-interaction round-trips.
 - Web:
   - Slots:
     - `CompositionDetail.Section` ← `apps.studio.compositions.closure-tree`, `apps.studio.compositions.contributors`, `apps.studio.compositions.draft-actions`, `apps.studio.compositions.entry-points`, `apps.studio.compositions.membership-summary`, `apps.studio.compositions.release`
-    - `comparePane.Actions`
-    - `compositionDetailPane.Actions`
+    - `studio.compositions.item-actions` ← `apps.studio.compositions`
     - `compositionsPane.Actions`
+    - `compositionDetailPane.Actions`
+    - `comparePane.Actions`
   - Contributes:
     - `Pane.Register` "compositions"
     - `Pane.Register` "composition-detail"

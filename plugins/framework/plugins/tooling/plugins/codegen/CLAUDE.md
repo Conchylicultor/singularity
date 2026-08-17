@@ -22,8 +22,16 @@
     - `framework/plugin-id.asPluginId`
     - `framework/plugin-id.PluginId`
     - `framework/plugin-id.UNDOCUMENTED_RUNTIME_FOLDERS`
+<<<<<<< .merge_file_7CMNlc
     - `framework/tooling/format.formatIfFormattable`
     - `framework/tooling/format.SourceBytes`
+=======
+    - `framework/slot-declaration.declaredSlotSources`
+    - `framework/slot-declaration.declarePluginSlots`
+    - `framework/slot-declaration.findUndeclaredSlots`
+    - `framework/slot-declaration.getCreatedSlots`
+    - `framework/tooling/format.formatSource`
+>>>>>>> .merge_file_Vvpcor
     - `plugin-meta/barrel-import.AUTO_STUB_CSS`
     - `plugin-meta/barrel-import.AUTO_STUB_PACKAGES`
     - `plugin-meta/barrel-import.AutoStubEntry`
@@ -36,13 +44,18 @@
     - `plugin-meta/facets.Facet`
     - `plugin-meta/facets.getFacet`
     - `plugin-meta/facets/contributions.contributionsFacetDef`
+    - `plugin-meta/facets/slots.slotsFacetDef`
     - `plugin-meta/parse-utils.findImports`
     - `plugin-meta/parse-utils.findMarkerCalls`
+    - `plugin-meta/parse-utils.lineAt`
+    - `plugin-meta/parse-utils.MarkerCallSpan`
     - `plugin-meta/parse-utils.markerCallSpans`
     - `plugin-meta/parse-utils.maskSource`
     - `plugin-meta/parse-utils.matchBracket`
     - `plugin-meta/parse-utils.parseBoolField`
+    - `plugin-meta/parse-utils.parseStaticCallId`
     - `plugin-meta/parse-utils.readIfExists`
+    - `plugin-meta/parse-utils.unresolvableCallIdMessage`
     - `plugin-meta/parse-utils.walkFiles`
     - `plugin-meta/plugin-tree.buildPluginTree`
     - `plugin-meta/plugin-tree.PluginNode`
@@ -67,6 +80,7 @@
   - Exports (values):
     - `assertCompositionName`
     - `assertServableCompositionNamespace`
+    - `assertSlotsDeclared`
     - `barrelStubsPath`
     - `buildBarrelFreeTree`
     - `buildEnrichedTree`
@@ -84,6 +98,7 @@
     - `computeEagerTier`
     - `customUtilitiesManifestPath`
     - `dataViewsManifestPath`
+    - `declareSlotsFromBarrels`
     - `discoverCollectedDirs`
     - `eagerTierManifestPath`
     - `extractRuntimeImportSpecifiers`
@@ -110,6 +125,7 @@
     - `pluginClaudeMdPath`
     - `pluginCompactDocPath`
     - `pluginDetailsDocPath`
+    - `postWebManifests`
     - `preBarrelManifests`
     - `propagateConfigToUser`
     - `readEffectiveConfigFromDisk`

@@ -1,7 +1,10 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { ConfigV2 } from "@plugins/config_v2/web";
 import { DynamicEnum } from "@plugins/fields/plugins/dynamic-enum/plugins/config/web";
-import { ThemeEngine, useTokenGroupPresetOptions } from "@plugins/ui/plugins/theme-engine/web";
+import {
+  ThemeEngine,
+  useTokenGroupPresetOptions,
+} from "@plugins/ui/plugins/theme-engine/web";
 import { tokenGroupMatchesSearch } from "@plugins/ui/plugins/theme-engine/core";
 import { ThemeCustomizer } from "@plugins/ui/plugins/theme-engine/plugins/theme-customizer/web";
 import { sidebarPaletteGroup } from "../shared";
@@ -20,8 +23,9 @@ export default {
   contributions: [
     ...builtInPresets.map((p) => SidebarPalette.Preset(p)),
     ConfigV2.WebRegister({ descriptor: sidebarPaletteConfig }),
-    DynamicEnum.Options({ field: sidebarPaletteConfig.fields.preset, useOptions: () =>
-      useTokenGroupPresetOptions("sidebar-palette")
+    DynamicEnum.Options({
+      field: sidebarPaletteConfig.fields.preset,
+      useOptions: () => useTokenGroupPresetOptions("sidebar-palette"),
     }),
     ThemeEngine.TokenGroup({
       id: "sidebar-palette",
@@ -43,7 +47,9 @@ export default {
       actions: SidebarPaletteHeaderDots,
       // No token in this group answers the search box ⇒ no card, rather
       // than a titled bar over a filtered-to-empty list.
-      useAvailable: ({ search }) => tokenGroupMatchesSearch(sidebarPaletteGroup, search),
+      useAvailable: ({ search }) =>
+        tokenGroupMatchesSearch(sidebarPaletteGroup, search),
     }),
   ],
+  slots: [SidebarPalette],
 } satisfies PluginDefinition;

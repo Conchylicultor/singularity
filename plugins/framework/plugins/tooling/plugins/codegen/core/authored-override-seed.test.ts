@@ -41,13 +41,14 @@ function read(rel: string): string {
 function descriptor(opts: {
   name: string;
   guidance?: string[];
+  seedWhen?: (defaults: Record<string, unknown>) => boolean;
 }): ConfigDescriptor {
   return {
     name: opts.name,
     fields: {},
     defaults: {},
     requiresAuthoredOverride: opts.guidance
-      ? { guidance: opts.guidance }
+      ? { guidance: opts.guidance, seedWhen: opts.seedWhen }
       : undefined,
   } as unknown as ConfigDescriptor;
 }
@@ -68,6 +69,7 @@ const ORIGIN = `// @hash ${ORIGIN_HASH}
 function seedOne(opts: {
   originRel: string;
   guidance?: string[];
+  seedWhen?: (defaults: Record<string, unknown>) => boolean;
 }): ReturnType<typeof applyAuthoredOverrideSeeding> {
   return applyAuthoredOverrideSeeding({
     configDir,
@@ -77,11 +79,18 @@ function seedOne(opts: {
         descriptor({
           name: opts.originRel.split("/").pop()!.replace(".origin.jsonc", ""),
           guidance: opts.guidance ?? GUIDANCE,
+          seedWhen: opts.seedWhen,
         }),
       ],
     ]),
   });
 }
+
+/** reorder's own predicate: an empty `items` orders nothing. */
+const NON_EMPTY_ITEMS = (defaults: Record<string, unknown>): boolean =>
+  Array.isArray(defaults.items) && defaults.items.length > 0;
+
+const EMPTY_ORIGIN = `// @hash cccccccccccc\n{\n  "items": []\n}\n`;
 
 test("seeds a missing override from the origin's bytes, with the marker block", async () => {
   write("apps/pages/shell/pages.sidebar.origin.jsonc", ORIGIN);
@@ -115,6 +124,59 @@ test("does not seed a descriptor without requiresAuthoredOverride", async () => 
 
   expect(result).toEqual({ seeded: [], remarked: [] });
   expect(existsSync(join(configDir, "build/build.jsonc"))).toBe(false);
+});
+
+test("seedWhen: false skips the seed entirely — no file, no marker", async () => {
+  write("apps/pages/shell/pages.sidebar.origin.jsonc", EMPTY_ORIGIN);
+
+  const result = await seedOne({
+    originRel: "apps/pages/shell/pages.sidebar.origin.jsonc",
+    seedWhen: NON_EMPTY_ITEMS,
+  });
+
+  expect(result).toEqual({ seeded: [], remarked: [] });
+  expect(
+    existsSync(join(configDir, "apps/pages/shell/pages.sidebar.jsonc")),
+  ).toBe(false);
+});
+
+test("seedWhen seeds as soon as the default stops being vacuous", async () => {
+  write("apps/pages/shell/pages.sidebar.origin.jsonc", EMPTY_ORIGIN);
+  const skipped = await seedOne({
+    originRel: "apps/pages/shell/pages.sidebar.origin.jsonc",
+    seedWhen: NON_EMPTY_ITEMS,
+  });
+  expect(skipped.seeded).toEqual([]);
+
+  // The slot gains a contribution → the next build's origin is no longer empty.
+  write("apps/pages/shell/pages.sidebar.origin.jsonc", ORIGIN);
+  const seededRun = await seedOne({
+    originRel: "apps/pages/shell/pages.sidebar.origin.jsonc",
+    seedWhen: NON_EMPTY_ITEMS,
+  });
+
+  expect(seededRun.seeded).toEqual(["apps/pages/shell/pages.sidebar.jsonc"]);
+  expect(read("apps/pages/shell/pages.sidebar.jsonc")).toContain("@review");
+});
+
+test("seedWhen never touches an override that already exists", async () => {
+  // The authored file was written when the slot had contributions; they have
+  // since all gone away, so the origin is empty and its hash has moved. The
+  // author's file must survive, and its staleness must still be surfaced.
+  write("apps/pages/shell/pages.sidebar.origin.jsonc", EMPTY_ORIGIN);
+  const authored = `// @hash ${ORIGIN_HASH}\n{\n  "items": ["plug:one"]\n}\n`;
+  write("apps/pages/shell/pages.sidebar.jsonc", authored);
+
+  const result = await seedOne({
+    originRel: "apps/pages/shell/pages.sidebar.origin.jsonc",
+    seedWhen: NON_EMPTY_ITEMS,
+  });
+
+  expect(result.seeded).toEqual([]);
+  expect(result.remarked).toEqual(["apps/pages/shell/pages.sidebar.jsonc"]);
+  const raw = read("apps/pages/shell/pages.sidebar.jsonc");
+  expect(raw.split("\n")[0]).toBe("// @hash cccccccccccc");
+  expect(raw).toContain('"items": ["plug:one"]');
 });
 
 test("leaves an existing in-sync, marker-free override untouched", async () => {

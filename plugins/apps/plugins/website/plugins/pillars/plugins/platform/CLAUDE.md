@@ -9,11 +9,9 @@
   - Slots:
     - `WebsitePlatform.Section` ← `apps.website.demos.plugin-pyramid`, `apps.website.demos.theme-toy`, `apps.website.pillars.platform`
     - `platformPane.Actions`
-    - `platformPane.Start` ← `apps.website.shell`
-    - `platformPane.End` ← `apps.website.downloads`, `apps.website.pillars.agents`, `apps.website.pillars.apps`, `apps.website.pillars.platform`
   - Contributes:
     - `Pane.Register` "website-platform"
-    - `downloadsPane.End` "platform" → `PlatformNavItem`
+    - `WebsiteToolbar.End` "platform" → `PlatformNavItem`
     - `WebsitePlatform.Section` "Hero" → `PlatformHero`
     - `WebsitePlatform.Section` "Architecture" → `PlatformArchitecture`
     - `WebsitePlatform.Section` "Closing links" → `PlatformClosing`

@@ -4,6 +4,7 @@ import { Pane, openPane } from "@plugins/primitives/plugins/pane/web";
 import { sidebarNavItem } from "@plugins/primitives/plugins/app-shell/web";
 import { Events } from "@plugins/apps/plugins/events/plugins/shell/web";
 import { eventListPane } from "./panes";
+import { EventList } from "./slots";
 
 export { eventListPane } from "./panes";
 export { EventList } from "./slots";
@@ -29,4 +30,5 @@ export default {
       }),
     }),
   ],
+  slots: [EventList, eventListPane],
 } satisfies PluginDefinition;

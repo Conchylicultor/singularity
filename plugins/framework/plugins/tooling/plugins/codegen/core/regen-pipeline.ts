@@ -9,10 +9,12 @@ import {
 import { generateEagerTier } from "./eager-tier-gen";
 import { generateTokenGroupVars } from "./token-group-vars-gen";
 import {
+  postWebManifests,
   preBarrelManifests,
   writePreBarrelManifest,
 } from "./pre-barrel-manifests";
 import { assertPreBarrelManifestsFresh } from "./pre-barrel-guard";
+import { assertSlotsDeclared } from "./slot-declaration-guard";
 
 /**
  * Single source of truth for the ordered, non-migration **repo-tree** codegen
@@ -83,7 +85,9 @@ export async function regenerateRegistryCodegen({
   root,
   onStep = runInline,
 }: RegenCodegenOptions): Promise<void> {
-  await onStep("barrelStubs", "barrel stubs", () => generateBarrelStubs({ root }));
+  await onStep("barrelStubs", "barrel stubs", () =>
+    generateBarrelStubs({ root }),
+  );
   const ctx = await buildRegistryGenContext(root);
   await onStep("pluginRegistry", "plugin registry", () =>
     generatePluginRegistry({ root, ctx }),
@@ -94,8 +98,8 @@ export async function regenerateRegistryCodegen({
 }
 
 /**
- * Manifest-level repo-tree codegen: pre-barrel manifests → plugin docs →
- * token-group-vars → config-origins.
+ * Manifest-level repo-tree codegen: pre-barrel manifests → the slot declaration
+ * guard → post-web manifests → plugin docs → token-group-vars → config-origins.
  *
  * Ordering constraints (load-bearing — do not reorder):
  *   - PRE-BARREL manifests FIRST — the set is now defined by `preBarrelManifests`
@@ -119,6 +123,19 @@ export async function regenerateRegistryCodegen({
  *     `custom-utilities.generated.ts`) at top level. Its renderer only reads
  *     app.css by path (no plugin tree), so generating it pre-barrel is sound; it
  *     was previously generated AFTER plugin docs, which was a latent freeze bug.
+ *   - the SLOT DECLARATION GUARD next — it opens the web declaration pass every
+ *     step below shares, and an undeclared slot must fail BEFORE
+ *     `generateConfigOrigins` runs (a missing manifest row is a descriptor that
+ *     never registers, which `pruneOrphanedConfigFiles` reads as an orphaned
+ *     config file and deletes).
+ *   - POST-WEB manifests next (`postWebManifests`) — a manifest whose renderer
+ *     must IMPORT the web barrels to see the truth (reorderableSlots reads each
+ *     plugin's `slots` declaration and each slot's `meta.reorderable`). It runs
+ *     between the web and the server import phases: its own renderer imports the
+ *     web barrels, and nothing has imported a server barrel yet, so
+ *     `reorder/server` — the only reader — is loaded after the write. The
+ *     complementary half is that NO WEB barrel may reach one of these, which
+ *     `pre-barrel-manifests-complete` enforces.
  *   - plugin docs: AFTER the pre-barrel manifests — it builds the enriched plugin
  *     tree (importing every barrel), which token-group-vars / config-origins
  *     reuse. Importing the codegen barrel also installs the reorder per-slot
@@ -146,6 +163,28 @@ export async function regenerateManifestCodegen({
   // invariant into a loud runtime failure instead of silent config pruning.
   setPreBarrelImportGuard(() => assertPreBarrelManifestsFresh(root));
   try {
+    // The web declaration pass happens here (inside both steps below, shared
+    // and memoized): it imports every WEB barrel and nothing else, so the
+    // freeze-point guard fires on the first of those imports, and no server
+    // barrel has read the manifest yet.
+    //
+    // The GUARD runs before the manifest is written, and both run before any
+    // config origin is generated. That order is load-bearing: an undeclared slot
+    // is a missing manifest row, a missing row is a config descriptor that never
+    // registers, and `pruneOrphanedConfigFiles` deletes config files with no live
+    // descriptor. Failing first is what keeps a declaration mistake from costing
+    // authored files.
+    await onStep("slotDeclarations", "slot declaration guard", () =>
+      assertSlotsDeclared(root),
+    );
+    // POST-WEB manifests: their renderers need those same declarations. The web
+    // imports are ESM-cache hits for `generatePluginDocs` below, so this costs
+    // one evaluation of each web barrel, not two.
+    for (const m of postWebManifests) {
+      await onStep(m.id, `${m.id} manifest`, () =>
+        writePreBarrelManifest(m, root),
+      );
+    }
     await onStep("pluginDocs", "generate plugin docs", () =>
       generatePluginDocs({ root }),
     );

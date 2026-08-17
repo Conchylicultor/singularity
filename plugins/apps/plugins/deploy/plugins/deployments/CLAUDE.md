@@ -224,8 +224,8 @@ any consumer — the `Servers.Fields` ← `health.StatusField` precedent.
 - Web:
   - Slots:
     - `DeploymentDetail.Section` ← `apps.deploy.composition`, `apps.deploy.deploy-history`, `apps.deploy.deployments`, `apps.deploy.local-serve`, `apps.deploy.remote-deploy`
-    - `DeploymentItemActions.DeploymentItemActions` ← `apps.deploy.deployments`, `apps.deploy.local-serve`
     - `Deployments.Fields` ← `apps.deploy.remote-deploy`
+    - `DeploymentItemActions` ← `apps.deploy.deployments`, `apps.deploy.local-serve`
     - `deploymentDetailPane.Actions`
   - Contributes:
     - `ServerDetail.Section` "Deployments" → `DeploymentsSection`

@@ -17,7 +17,9 @@ export default {
       name: "Apple Developer",
       icon: SiApple,
       rowComponent: AppleProviderRow,
-      configureCredentials: () => openPane(appleSetupPane, {}, { mode: "root" }),
+      configureCredentials: () =>
+        openPane(appleSetupPane, {}, { mode: "root" }),
     }),
   ],
+  slots: [appleSetupPane],
 } satisfies PluginDefinition;

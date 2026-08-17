@@ -2,12 +2,7 @@ import type { z } from "zod";
 import type { FieldsRecord, InferFieldsObject } from "@plugins/fields/core";
 
 export type JsonValue =
-  | string
-  | number
-  | boolean
-  | null
-  | JsonValue[]
-  | { [key: string]: JsonValue };
+  string | number | boolean | null | JsonValue[] | { [key: string]: JsonValue };
 
 export interface Disposable {
   dispose(): void;
@@ -49,5 +44,24 @@ export interface ConfigDescriptor<F extends FieldsRecord = FieldsRecord> {
   // `guidance` is descriptor-supplied prose, written into the seeded file as
   // comment lines. The seeding engine never authors family-specific text, so a
   // new family that owes an authored override costs zero engine edits.
-  readonly requiresAuthoredOverride?: { guidance: string[] };
+  readonly requiresAuthoredOverride?: {
+    guidance: string[];
+    // "Is there anything here to author?" — the descriptor's own answer, asked
+    // once, right before a MISSING override would be seeded. Returning false
+    // means this default is vacuous: there is no arrangement to make, so a
+    // seeded file would be a no-op the human can only rubber-stamp, and asking
+    // for that review buries the files where a real decision IS pending.
+    // Omitted = always seed (the original behaviour).
+    //
+    // The argument is the ORIGIN's effective defaults — the exact document
+    // seeding would write, i.e. `descriptor.defaults` already run through the
+    // build's `OriginDefaultsProvider`. Families that materialize their default
+    // at build time (reorder's live contribution catalog) would see nothing in
+    // `descriptor.defaults`, so reading anything else here would be wrong.
+    //
+    // Gates SEEDING ONLY, never registration: the descriptor stays live, so an
+    // override that already exists is never pruned, re-seeded or ignored when
+    // the answer later flips to false.
+    seedWhen?: (defaults: Record<string, unknown>) => boolean;
+  };
 }

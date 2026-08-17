@@ -17,6 +17,10 @@ export default {
       icon: MdTune,
       component: ConfigSidebarButton,
     }),
-    Settings.RailBadge({ id: "config-conflicts", component: ConfigConflictDot }),
+    Settings.RailBadge({
+      id: "config-conflicts",
+      component: ConfigConflictDot,
+    }),
   ],
+  slots: [settingsConfigIndexPane],
 } satisfies PluginDefinition;

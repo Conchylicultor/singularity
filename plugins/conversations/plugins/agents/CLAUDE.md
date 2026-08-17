@@ -24,10 +24,10 @@ drag-reparent behavior. Do not reintroduce it; see
     - `Agents.View`
     - `Agents.AgentActions` ← `conversations.agents`
     - `Agents.SystemAgent`
-    - `agentDetailPane.Actions`
-    - `agentSidePane.Actions` ← `conversations.agents`
     - `agentsRootPane.Actions`
+    - `agentDetailPane.Actions`
     - `systemAgentDetailPane.Actions`
+    - `agentSidePane.Actions` ← `conversations.agents`
   - Contributes:
     - `Pane.Register` "agents-root"
     - `Pane.Register` "agent-detail"

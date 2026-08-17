@@ -33,4 +33,5 @@ export default {
       component: PlatformClosing,
     }),
   ],
+  slots: [WebsitePlatform, platformPane],
 } satisfies PluginDefinition;

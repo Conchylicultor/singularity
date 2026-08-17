@@ -4,6 +4,7 @@ import { Pane } from "@plugins/primitives/plugins/pane/web";
 import { EventSourceDetail } from "@plugins/apps/plugins/events/plugins/sources/web";
 import { SourceRunsSection } from "./components/runs-section";
 import { eventSourceRunPane } from "./panes";
+import { RunActions, EventSourceRunDetail } from "./slots";
 
 export { RunActions, EventSourceRunDetail } from "./slots";
 export { eventSourceRunPane } from "./panes";
@@ -23,4 +24,5 @@ export default {
     }),
     Pane.Register({ pane: eventSourceRunPane }),
   ],
+  slots: [RunActions, EventSourceRunDetail, eventSourceRunPane],
 } satisfies PluginDefinition;

@@ -49,10 +49,23 @@ const check: Check = {
       };
     }
     const committed = readFileSync(file, "utf8");
-    const rendered = await formatGenerated({
-      file,
-      content: await renderReorderableSlotsManifest(root),
-    });
+    // The renderer THROWS on a slot-constructor id it cannot resolve from source.
+    // That is a real finding about the tree, not a bug in the check — report it as
+    // this check's own failure so the runner prints the file/line, instead of
+    // aborting the whole run with a stack trace.
+    let rendered: string;
+    try {
+      rendered = await formatGenerated({
+        file,
+        content: await renderReorderableSlotsManifest(root),
+      });
+    } catch (err) {
+      return {
+        ok: false,
+        message: `${rel} could not be regenerated: ${err instanceof Error ? err.message : String(err)}`,
+        hint: "Fix the slot-constructor call named above, then run `./singularity build`.",
+      };
+    }
     if (committed !== rendered) {
       const committedIds = new Set(parseSlots(committed).map((s) => s.slotId));
       const added = parseSlots(rendered).filter(

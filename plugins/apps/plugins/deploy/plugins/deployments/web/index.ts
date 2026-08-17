@@ -10,7 +10,7 @@ import {
   DeleteDeploymentAction,
 } from "./components/deployment-item-actions";
 import { deploymentDetailPane } from "./panes";
-import { DeploymentDetail } from "./slots";
+import { DeploymentDetail, Deployments } from "./slots";
 
 export {
   DeploymentItemActions,
@@ -44,5 +44,11 @@ export default {
     DeploymentItemActions({ id: "converge", component: ConvergeAction }),
     DeploymentItemActions({ id: "ship", component: ShipAction }),
     DeploymentItemActions({ id: "delete", component: DeleteDeploymentAction }),
+  ],
+  slots: [
+    DeploymentDetail,
+    Deployments,
+    DeploymentItemActions,
+    deploymentDetailPane,
   ],
 } satisfies PluginDefinition;

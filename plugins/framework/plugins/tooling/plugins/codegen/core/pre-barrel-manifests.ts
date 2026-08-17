@@ -40,11 +40,15 @@ import {
  *
  * Membership rule: a manifest belongs here iff a barrel reaches it at
  * module-load AND its renderer is barrel-free (so regenerating it before the
- * first barrel import is sound). All three current entries satisfy this:
- *   - dataViews / reorderableSlots: barrel-free static scans (`skipBarrelImport`).
+ * first barrel import is sound):
+ *   - dataViews: a barrel-free static scan (`skipBarrelImport`).
  *   - customUtilities: reads `app.css` by path only (no plugin tree); reachable
  *     at module-load via the ui-kit web barrel (`cn` → `lib/utils.ts` iterates
  *     `CUSTOM_UTILITY_REGISTRY` at top level).
+ *   - fieldsEager / eagerTier: barrel-free `skipBarrelImport` tree scans.
+ *
+ * A manifest whose renderer NEEDS barrels cannot satisfy that rule and does not
+ * belong here — see {@link postWebManifests}.
  */
 export interface PreBarrelManifest {
   id: string;
@@ -57,11 +61,6 @@ export const preBarrelManifests: readonly PreBarrelManifest[] = [
     id: "dataViews",
     path: dataViewsManifestPath,
     render: renderDataViewsManifest,
-  },
-  {
-    id: "reorderableSlots",
-    path: reorderableSlotsManifestPath,
-    render: renderReorderableSlotsManifest,
   },
   {
     id: "customUtilities",
@@ -93,10 +92,36 @@ export const preBarrelManifests: readonly PreBarrelManifest[] = [
 ];
 
 /**
- * Regenerate one pre-barrel manifest if it drifted: render in-memory, then hand
- * the bytes to the shared generated-artifact funnel. Every `generateX` helper
- * writes through that same funnel, so routing a manifest through this is
- * byte-identical to generating it directly.
+ * Manifests written BETWEEN the web and the server import phases — after the web
+ * barrels a renderer must import to see the truth, before the server barrels
+ * that read the result.
+ *
+ * The rule that replaces "renderer must be barrel-free": **no WEB barrel may
+ * reach one at module-load.** Bun's ESM cache freezes a module on first
+ * `import()`, so a web barrel importing one of these would freeze the PREVIOUS
+ * run's copy — the very failure the pre-barrel set exists to prevent, one phase
+ * later. `pre-barrel-manifests-complete` enforces both halves: reachable from a
+ * barrel ⇒ registered somewhere, and registered here ⇒ unreachable from web.
+ *
+ * The one entry: `reorderableSlots`, whose set is each plugin's own `slots`
+ * declaration plus `meta.reorderable` — facts that exist only once the web
+ * barrels have evaluated. Only `reorder/server` reads it (the server cannot see
+ * web slots); the web runtime derives the same set from the slot objects.
+ */
+export const postWebManifests: readonly PreBarrelManifest[] = [
+  {
+    id: "reorderableSlots",
+    path: reorderableSlotsManifestPath,
+    render: renderReorderableSlotsManifest,
+  },
+];
+
+/**
+ * Regenerate one manifest if it drifted: render in-memory, then hand the bytes
+ * to the shared generated-artifact funnel. Every `generateX` helper writes
+ * through that same funnel, so routing a manifest through this is byte-identical
+ * to generating it directly. Serves both lists above — the phase a manifest
+ * belongs to is which list holds it, not how it is written.
  */
 export async function writePreBarrelManifest(
   m: PreBarrelManifest,

@@ -1,3 +1,4 @@
+import { InlineTextWalkerSlot } from "./internal/slot";
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 
 export { InlineText } from "./internal/inline-text";
@@ -15,4 +16,5 @@ export default {
   description:
     "Renders a raw string with every registered inline-text walker (active-data chips, file-links) applied in registry order. Consumers write <InlineText text={…}/>; walkers register via InlineTextWalkerSlot. The string seed makes wrong-order composition structurally impossible.",
   contributions: [],
+  slots: [InlineTextWalkerSlot],
 } satisfies PluginDefinition;

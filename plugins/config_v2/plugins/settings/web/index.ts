@@ -2,7 +2,11 @@ import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { Pane } from "@plugins/primitives/plugins/pane/web";
 import { configNavPane, configDetailPane } from "./internal/panes";
 
-export { configNavPane, configDetailPane, configDetailRoute } from "./internal/panes";
+export {
+  configNavPane,
+  configDetailPane,
+  configDetailRoute,
+} from "./internal/panes";
 export { ConfigNav } from "./components/config-nav";
 export { ConfigSidebarButton } from "./components/config-sidebar-button";
 
@@ -13,4 +17,5 @@ export default {
     Pane.Register({ pane: configNavPane }),
     Pane.Register({ pane: configDetailPane }),
   ],
+  slots: [configNavPane, configDetailPane],
 } satisfies PluginDefinition;

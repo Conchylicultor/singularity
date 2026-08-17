@@ -33,7 +33,7 @@ semantics you want:
 - **`defineOrderedDispatchSlot`** — dispatch selection **plus** reorder
   participation → **reorderable**. Same runtime as `defineDispatchSlot` (one
   match via `.Dispatch`), but contributions require `id: string` so the slot
-  enters the reorderable-slots manifest (via its own codegen marker) and owes
+  can be ordered — it declares `meta.reorderable` like a render slot, and owes
   an authored config override. Consumers that need the config order (grouped
   menus, ordered pickers) read that order through the reorder read hook — the
   slot itself renders pure dispatch.

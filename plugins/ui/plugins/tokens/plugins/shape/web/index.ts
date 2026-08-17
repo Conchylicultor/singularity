@@ -1,7 +1,10 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { ConfigV2 } from "@plugins/config_v2/web";
 import { DynamicEnum } from "@plugins/fields/plugins/dynamic-enum/plugins/config/web";
-import { ThemeEngine, useTokenGroupPresetOptions } from "@plugins/ui/plugins/theme-engine/web";
+import {
+  ThemeEngine,
+  useTokenGroupPresetOptions,
+} from "@plugins/ui/plugins/theme-engine/web";
 import { tokenGroupMatchesSearch } from "@plugins/ui/plugins/theme-engine/core";
 import { ThemeCustomizer } from "@plugins/ui/plugins/theme-engine/plugins/theme-customizer/web";
 import { shapeGroup } from "../shared";
@@ -19,8 +22,9 @@ export default {
   contributions: [
     ...builtInPresets.map((p) => Shape.Preset(p)),
     ConfigV2.WebRegister({ descriptor: shapeConfig }),
-    DynamicEnum.Options({ field: shapeConfig.fields.preset, useOptions: () =>
-      useTokenGroupPresetOptions("shape")
+    DynamicEnum.Options({
+      field: shapeConfig.fields.preset,
+      useOptions: () => useTokenGroupPresetOptions("shape"),
     }),
     ThemeEngine.TokenGroup({
       id: "shape",
@@ -44,4 +48,5 @@ export default {
       useAvailable: ({ search }) => tokenGroupMatchesSearch(shapeGroup, search),
     }),
   ],
+  slots: [Shape],
 } satisfies PluginDefinition;

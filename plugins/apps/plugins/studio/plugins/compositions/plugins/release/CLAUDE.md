@@ -45,7 +45,9 @@ top-level and untouched by this; only the Studio UI lives here.
 
 - Description: Release sections of the Studio composition detail pane (target picker + Run, and this composition's run history), plus the run-detail pane hosting the info / logs / artifact sections.
 - Web:
-  - Slots: `ReleaseDetail.Section` ← `apps.studio.compositions.release.release-artifact`, `apps.studio.compositions.release.release-info`, `apps.studio.compositions.release.release-logs`
+  - Slots:
+    - `ReleaseDetail.Section` ← `apps.studio.compositions.release.release-artifact`, `apps.studio.compositions.release.release-info`, `apps.studio.compositions.release.release-logs`
+    - `pane.release-detail.actions`
   - Contributes:
     - `Pane.Register` "release-detail"
     - `CompositionDetail.Section` "Build & serve" → `ReleaseSection`

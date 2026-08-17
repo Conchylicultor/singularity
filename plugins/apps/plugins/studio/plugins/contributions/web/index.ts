@@ -6,8 +6,7 @@ import { Studio } from "@plugins/apps/plugins/studio/plugins/shell/web";
 import { contributionsPane } from "./panes";
 
 export default {
-  description:
-    "Central view of all plugin contributions aggregated by type.",
+  description: "Central view of all plugin contributions aggregated by type.",
   contributions: [
     Pane.Register({ pane: contributionsPane }),
     Studio.Sidebar({
@@ -19,4 +18,5 @@ export default {
       }),
     }),
   ],
+  slots: [contributionsPane],
 } satisfies PluginDefinition;

@@ -161,6 +161,10 @@ export function defineRenderSlot<P>(
   >(id, { docLabel: config?.docLabel });
 
   const renderSlot = slot as unknown as RenderSlot<P>;
+  // A render slot is visible and renders every contribution, so its order is
+  // always user-curatable — there is no opt-out (a slot that shouldn't be
+  // ordered is headless: `defineMountSlot`).
+  renderSlot.meta = { kind: "render", reorderable: true };
   const controlSize = config?.controlSize;
 
   renderSlot.Render = function SlotRender({
@@ -332,6 +336,8 @@ export function defineMountSlot<P = {}>(
   );
 
   const mountSlot = slot as unknown as MountSlot<P>;
+  // Headless: its contributions paint nothing, so order is meaningless.
+  mountSlot.meta = { kind: "mount", reorderable: false };
 
   mountSlot.Mount = function SlotMount() {
     const ctx = useContext(PluginRuntimeContext);
@@ -421,6 +427,8 @@ export function defineWrapperSlot<P extends object = {}>(
   });
 
   const wrapperSlot = slot as unknown as WrapperSlot<P>;
+  // Contributions NEST rather than sit as siblings; there is no list to order.
+  wrapperSlot.meta = { kind: "wrap", reorderable: false };
 
   wrapperSlot.Wrap = function SlotWrap({ children }: { children: ReactNode }) {
     const ctx = useContext(PluginRuntimeContext);
@@ -488,6 +496,9 @@ export function defineDispatchSlot<
   });
 
   const dispatchSlot = slot as unknown as DispatchSlot<Props, Key, Extra>;
+  // Exactly one contribution renders and contributions carry no id, so there is
+  // nothing to order. `defineOrderedDispatchSlot` overwrites this.
+  dispatchSlot.meta = { kind: "dispatch", reorderable: false };
 
   dispatchSlot.Dispatch = function SlotDispatch(props: Props) {
     const ctx = useContext(PluginRuntimeContext);
@@ -590,12 +601,16 @@ export interface OrderedDispatchSlot<
  * That id is what lets the slot participate in the reorder config-tree system.
  * A plain dispatch slot is absent from the reorderable-slots manifest and its
  * contributions carry no id, so it can neither be grouped nor reordered. An
- * ordered-dispatch slot enters the manifest via its own codegen marker
- * (`defineOrderedDispatchSlot`) and therefore owes an authored config override,
- * exactly like a render slot — but it renders via `.Dispatch` (one match), not
- * `.Render` (all contributions). Consumers that want the config order (grouped
- * menus, ordered pickers) read the manifest through the reorder read hook; the
- * slot itself keeps pure dispatch semantics.
+ * ordered-dispatch slot is `reorderable` in its own `meta` and therefore owes an
+ * authored config override, exactly like a render slot — but it renders via
+ * `.Dispatch` (one match), not `.Render` (all contributions). Consumers that
+ * want the config order (grouped menus, ordered pickers) read that order through
+ * the reorder read hook; the slot itself keeps pure dispatch semantics.
+ *
+ * Because the runtime IS `defineDispatchSlot`, this used to be a TS cast and
+ * nothing else: the slot's own identity existed only as the spelling of this
+ * function's name in source text, recoverable by grep and by nothing else. It
+ * now overwrites `meta`, so the fact is on the object.
  */
 export function defineOrderedDispatchSlot<
   Props,
@@ -605,10 +620,12 @@ export function defineOrderedDispatchSlot<
   id: string,
   config: DispatchSlotConfig<Props, Key, Extra & { id: string }>,
 ): OrderedDispatchSlot<Props, Key, Extra> {
-  return defineDispatchSlot<Props, Key, Extra & { id: string }>(
+  const slot = defineDispatchSlot<Props, Key, Extra & { id: string }>(
     id,
     config,
   ) as unknown as OrderedDispatchSlot<Props, Key, Extra>;
+  slot.meta = { kind: "ordered-dispatch", reorderable: true };
+  return slot;
 }
 
 /**

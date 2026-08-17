@@ -4,6 +4,7 @@ import { registerSlotItemMiddleware } from "@plugins/primitives/plugins/slot-ren
 import { registerOverlayFallback } from "@plugins/primitives/plugins/overlay-boundary/web";
 import { ErrorBoundaryMiddleware } from "./internal/error-boundary-middleware";
 import { CrashFallback } from "./components/crash-fallback";
+import { ErrorBoundary } from "./slots";
 
 export { PluginErrorBoundary } from "./components/plugin-error-boundary";
 export { ErrorBoundary } from "./slots";
@@ -42,4 +43,5 @@ export default {
     },
   ],
   contributions: [],
+  slots: [ErrorBoundary],
 } satisfies PluginDefinition;

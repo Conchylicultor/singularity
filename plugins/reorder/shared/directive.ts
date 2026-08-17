@@ -66,6 +66,20 @@ export function reorderDirectiveDescriptor(
         ...REORDER_NODE_LEGEND,
         "At most one spacer per slot.",
       ],
+      // A slot with no contributions has no arrangement to make: `items: []` is
+      // an ordering directive that orders nothing, so seeding it would ask a
+      // human to rubber-stamp a no-op — and a hundred of those bury the slots
+      // where a real decision is pending. Nothing is lost by waiting: the
+      // descriptor stays registered either way (so an already-authored file is
+      // never pruned or ignored when a slot's contributions drop back to zero),
+      // and the first build after the slot gains a contribution seeds it, which
+      // is the first moment there is anything to arrange.
+      //
+      // Reads the ORIGIN's materialized catalog, not `items`' field default —
+      // that default is always `[]`; the live catalog is injected at build time
+      // (`reorderable-slots-gen.ts`).
+      seedWhen: (defaults) =>
+        Array.isArray(defaults.items) && defaults.items.length > 0,
     },
     fields: {
       items: reorderTreeField({ label: "Items" }),

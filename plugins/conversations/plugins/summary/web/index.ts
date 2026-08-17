@@ -5,7 +5,6 @@ import { convSummaryPane } from "./panes";
 export default {
   description:
     "Toolbar button that opens a side pane with the Summarise action and the latest structured Sonnet summary (phase, flags, next action).",
-  contributions: [
-    Pane.Register({ pane: convSummaryPane }),
-  ],
+  contributions: [Pane.Register({ pane: convSummaryPane })],
+  slots: [convSummaryPane],
 } satisfies PluginDefinition;

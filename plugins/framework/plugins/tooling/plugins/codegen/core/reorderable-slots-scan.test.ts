@@ -2,7 +2,10 @@ import { afterAll, describe, expect, test } from "bun:test";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "fs";
 import { tmpdir } from "os";
 import { join } from "path";
-import type { PluginNode, PluginTree } from "@plugins/plugin-meta/plugins/plugin-tree/core";
+import type {
+  PluginNode,
+  PluginTree,
+} from "@plugins/plugin-meta/plugins/plugin-tree/core";
 import { asPluginId } from "@plugins/framework/plugins/plugin-id/core";
 import { collectRenderSlotsStatic } from "./reorderable-slots-scan";
 
@@ -16,7 +19,9 @@ afterAll(() => {
   for (const d of tmpDirs) rmSync(d, { recursive: true, force: true });
 });
 
-function fixtureTree(files: Record<string, { id: string; web: Record<string, string> }>): PluginTree {
+function fixtureTree(
+  files: Record<string, { id: string; web: Record<string, string> }>,
+): PluginTree {
   const root = mkdtempSync(join(tmpdir(), "slots-fixture-"));
   tmpDirs.push(root);
   const byDir = new Map<string, PluginNode>();
@@ -48,7 +53,8 @@ function fixtureTree(files: Record<string, { id: string; web: Record<string, str
   return { pluginsRoot: root, byDir, byPath: new Map(), roots: [], facets: [] };
 }
 
-const ids = (tree: PluginTree) => collectRenderSlotsStatic(tree).map((s) => s.slotId);
+const ids = (tree: PluginTree) =>
+  collectRenderSlotsStatic(tree).map((s) => s.slotId);
 
 describe("collectRenderSlotsStatic", () => {
   test("plain literal render slots are recorded with the owning plugin id", () => {
@@ -207,10 +213,172 @@ describe("collectRenderSlotsStatic", () => {
     expect(collectRenderSlotsStatic(tree)).toEqual([]);
   });
 
+  // ── Loudness: an id the scanner cannot resolve is an error, not a drop ──
+  //
+  // Two shapes are legitimately unresolvable and stay silent (both computed, not
+  // allowlisted). Everything else must name file, line and the expression.
+
+  test("the defineRenderSlot constructor's own declaration stays silent", () => {
+    const tree = fixtureTree({
+      "slot-render": {
+        id: "primitives.slot-render",
+        web: {
+          "internal/render-slot.tsx": `
+            export function defineRenderSlot<P>(
+              id: string,
+              config?: RenderSlotConfig<P>,
+            ): RenderSlot<P> {
+              return makeSlot(id, config);
+            }
+          `,
+        },
+      },
+    });
+    expect(collectRenderSlotsStatic(tree)).toEqual([]);
+  });
+
+  test("factory-internal calls (template AND passthrough) stay silent", () => {
+    const tree = fixtureTree({
+      "pane-toolbar": {
+        id: "primitives.pane-toolbar",
+        web: {
+          "internal/factory.tsx": `
+            import { defineRenderSlot } from "x";
+            export function definePaneToolbar(idBase: string) {
+              const Start = defineRenderSlot<Item>(\`\${idBase}.start\`, config);
+              const End = defineRenderSlot<Item>(\`\${idBase}.end\`, config);
+              return { Start, End };
+            }
+          `,
+          "internal/item-actions.tsx": `
+            import { defineRenderSlot } from "x";
+            export function defineItemActions<TRow>(id: string) {
+              return defineRenderSlot<ItemAction<TRow>>(id, { docLabel: (p) => p.id });
+            }
+          `,
+        },
+      },
+    });
+    // No call sites, so no ids — and, critically, no throw.
+    expect(collectRenderSlotsStatic(tree)).toEqual([]);
+  });
+
+  test("a LITERAL id inside a factory body is still recorded (not swept up by the exemption)", () => {
+    const tree = fixtureTree({
+      "pane-toolbar": {
+        id: "primitives.pane-toolbar",
+        web: {
+          "internal/factory.tsx": `
+            import { defineRenderSlot } from "x";
+            export function definePaneToolbar(idBase: string) {
+              const Start = defineRenderSlot<Item>(\`\${idBase}.start\`, config);
+              const Fixed = defineRenderSlot<Item>("pane-toolbar.fixed", config);
+              return { Start, Fixed };
+            }
+          `,
+        },
+      },
+    });
+    expect(ids(tree)).toEqual(["pane-toolbar.fixed"]);
+  });
+
+  test("a hoisted-id call site throws, naming file, line and expression", () => {
+    const tree = fixtureTree({
+      shell: {
+        id: "shell",
+        web: {
+          "slots.ts": `import { defineRenderSlot } from "x";
+const ID = "shell.sidebar";
+export const Sidebar = defineRenderSlot<Item>(ID, config);
+`,
+        },
+      },
+    });
+    let message = "";
+    try {
+      collectRenderSlotsStatic(tree);
+    } catch (err) {
+      if (!(err instanceof Error)) throw err;
+      message = err.message;
+    }
+    expect(message).toContain("slots.ts:3");
+    expect(message).toContain("defineRenderSlot");
+    expect(message).toContain("`ID, config`");
+  });
+
+  test("an interpolated id OUTSIDE any factory throws", () => {
+    const tree = fixtureTree({
+      shell: {
+        id: "shell",
+        web: {
+          "slots.ts": `import { defineOrderedDispatchSlot } from "x";
+export const Block = defineOrderedDispatchSlot<P>(\`\${prefix}.block\`, config);
+`,
+        },
+      },
+    });
+    expect(() => collectRenderSlotsStatic(tree)).toThrow(
+      /defineOrderedDispatchSlot/,
+    );
+  });
+
+  test("a commented-out or in-string defineRenderSlot never reaches the error path", () => {
+    const tree = fixtureTree({
+      shell: {
+        id: "shell",
+        web: {
+          "slots.ts": `
+            import { defineRenderSlot } from "x";
+            // defineRenderSlot(SOME_CONSTANT)
+            const doc = "call defineRenderSlot(\\"z\\") to make one";
+            const tmpl = \`defineRenderSlot(other)\`;
+            export const Real = defineRenderSlot<Item>("real.slot");
+          `,
+        },
+      },
+    });
+    expect(ids(tree)).toEqual(["real.slot"]);
+  });
+
+  test("a factory CALL SITE with a non-literal base throws", () => {
+    const tree = fixtureTree({
+      "pane-toolbar": {
+        id: "primitives.pane-toolbar",
+        web: {
+          "internal/factory.tsx": `
+            import { defineRenderSlot } from "x";
+            export function definePaneToolbar(idBase: string) {
+              return { Start: defineRenderSlot<Item>(\`\${idBase}.start\`, config) };
+            }
+          `,
+        },
+      },
+      story: {
+        id: "apps.story.shell",
+        web: {
+          "toolbar.ts": `import { definePaneToolbar } from "x";
+export const T = definePaneToolbar(paneId);
+`,
+        },
+      },
+    });
+    expect(() => collectRenderSlotsStatic(tree)).toThrow(/definePaneToolbar/);
+  });
+
   test("output is deterministic and sorted regardless of node iteration order", () => {
     const spec = {
-      a: { id: "a", web: { "slots.ts": `import {defineRenderSlot} from "x"; defineRenderSlot("z.slot"); defineRenderSlot("a.slot");` } },
-      b: { id: "b", web: { "slots.ts": `import {defineRenderSlot} from "x"; defineRenderSlot("m.slot");` } },
+      a: {
+        id: "a",
+        web: {
+          "slots.ts": `import {defineRenderSlot} from "x"; defineRenderSlot("z.slot"); defineRenderSlot("a.slot");`,
+        },
+      },
+      b: {
+        id: "b",
+        web: {
+          "slots.ts": `import {defineRenderSlot} from "x"; defineRenderSlot("m.slot");`,
+        },
+      },
     };
     const tree = fixtureTree(spec);
     const first = collectRenderSlotsStatic(tree);

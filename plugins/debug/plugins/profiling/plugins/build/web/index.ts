@@ -16,4 +16,5 @@ export default {
     }),
     Pane.Register({ pane: buildProfileDetailPane }),
   ],
+  slots: [buildProfileDetailPane],
 } satisfies PluginDefinition;

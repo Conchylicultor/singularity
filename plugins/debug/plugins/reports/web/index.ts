@@ -15,7 +15,12 @@ export default {
     Pane.Register({ pane: reportDetailPane }),
     DebugApp.Sidebar({
       id: "reports",
-      ...sidebarNavItem({ title: "Reports", icon: MdBugReport, onClick: () => openPane(reportsPane, {}, { mode: "root" }) }),
+      ...sidebarNavItem({
+        title: "Reports",
+        icon: MdBugReport,
+        onClick: () => openPane(reportsPane, {}, { mode: "root" }),
+      }),
     }),
   ],
+  slots: [reportsPane, reportDetailPane],
 } satisfies PluginDefinition;

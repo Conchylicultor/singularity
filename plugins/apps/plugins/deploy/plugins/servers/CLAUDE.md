@@ -24,8 +24,9 @@ contributing a section, never by wrapping the pane.
   - Slots:
     - `ServerDetail.Section` ← `apps.deploy.deployments`, `apps.deploy.health`, `apps.deploy.servers`, `apps.deploy.ssh-setup`
     - `Servers.Fields` ← `apps.deploy.health`
-    - `serverDetailPane.Actions`
+    - `deploy.servers.item-actions` ← `apps.deploy.servers`
     - `serversRootPane.Actions`
+    - `serverDetailPane.Actions`
   - Contributes:
     - `Pane.Register` "deploy-servers"
     - `Pane.Register` "deploy-server-detail"

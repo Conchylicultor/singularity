@@ -7,7 +7,10 @@ export function defineConfig<const F extends FieldsRecord>(opts: {
   fields: F;
   scope?: "app";
   source?: ConfigSource;
-  requiresAuthoredOverride?: { guidance: string[] };
+  requiresAuthoredOverride?: {
+    guidance: string[];
+    seedWhen?: (defaults: Record<string, unknown>) => boolean;
+  };
 }): ConfigDescriptor<F> {
   for (const key of Object.keys(opts.fields)) {
     if (key.includes(".")) {

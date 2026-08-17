@@ -28,8 +28,9 @@ import { writeGenerated } from "./write-generated";
  * claim that the values below are deliberate.
  *
  * Two events route through that single gate:
- *   - **seed** — the override is missing → write the origin's bytes verbatim
- *     (same hash, same body, same legend comments) plus the marker block.
+ *   - **seed** — the override is missing AND the descriptor says its default is
+ *     worth authoring (`seedWhen`) → write the origin's bytes verbatim (same
+ *     hash, same body, same legend comments) plus the marker block.
  *   - **re-mark + re-stamp** — an existing override's `@hash` went stale (a
  *     contribution appeared/disappeared under it) → restamp the header to the
  *     current hash AND insert the marker, body bytes untouched.
@@ -74,6 +75,40 @@ function seedMarkerLines(descriptor: ConfigDescriptor): string[] {
     `${REVIEW_MARKER} — seeded, not authored. Delete this line once the values below are deliberate.`,
     ...guidance.map((g) => `// ${g}`),
   ];
+}
+
+/**
+ * Is this origin's default worth authoring at all? — the descriptor's own
+ * `seedWhen` answer, asked once, only on the path that would CREATE a file.
+ *
+ * A default can be vacuous: a render slot with no contributions has no
+ * arrangement to make, so seeding `{"items": []}` would mint a review request
+ * whose only honest resolution is a rubber stamp — and a hundred of those bury
+ * the one file where a decision is genuinely pending. The engine stays
+ * descriptor-agnostic: it never inspects the document itself, it asks.
+ *
+ * Deliberately NOT consulted on the re-mark path. That path rewrites a file a
+ * human already authored; suppressing its marker there would silently restamp a
+ * stale hash (see `remarkIfStale`), and "your slot just lost every contribution"
+ * is a change worth telling its author about even though nothing is left to
+ * arrange.
+ */
+function isWorthAuthoring(opts: {
+  descriptor: ConfigDescriptor;
+  originRel: string;
+  originContent: unknown;
+}): boolean {
+  const seedWhen = opts.descriptor.requiresAuthoredOverride?.seedWhen;
+  if (!seedWhen) return true;
+  if (!isPlainObject(opts.originContent)) {
+    // Every origin this pass reads was rendered by `renderOriginJsonc` as a JSON
+    // object. A non-object means the file on disk is not the artifact we wrote,
+    // so the descriptor's predicate would be answering about the wrong thing.
+    throw new Error(
+      `seedAuthoredOverrides: config/${opts.originRel} does not parse to a JSON object, so its descriptor's seedWhen() has nothing to read.`,
+    );
+  }
+  return seedWhen(opts.originContent);
 }
 
 function remarkMarkerLines(
@@ -253,22 +288,31 @@ export async function applyAuthoredOverrideSeeding(opts: {
     const originBody = originRaw.slice(originMatch[0].length);
     const originContent = parseJsonc(originBody) as unknown;
 
-    // The BASE override is the mandatory one. Seed it when missing; otherwise it
-    // is an authored file and only ever gets re-marked.
+    // The BASE override is the mandatory one. Seed it when missing AND the
+    // descriptor says there is something to arrange; otherwise it is an authored
+    // file and only ever gets re-marked.
+    //
+    // A skipped seed leaves NO trace on disk — no empty file, no marker — and the
+    // descriptor stays live, so `pruneOrphanedConfigFiles` still protects any
+    // override that already exists. The next build re-asks: the moment the
+    // default stops being vacuous, the file is seeded and the review is owed then,
+    // when it is worth something.
     const baseRel = owner.hier
       ? `${owner.hier}/${owner.name}.jsonc`
       : `${owner.name}.jsonc`;
     const basePath = join(configDir, baseRel);
     if (!existsSync(basePath)) {
-      await writeGenerated({
-        file: basePath,
-        content: renderHeaderedFile(
-          originHash,
-          seedMarkerLines(descriptor),
-          originBody,
-        ),
-      });
-      seeded.push(baseRel);
+      if (isWorthAuthoring({ descriptor, originRel, originContent })) {
+        await writeGenerated({
+          file: basePath,
+          content: renderHeaderedFile(
+            originHash,
+            seedMarkerLines(descriptor),
+            originBody,
+          ),
+        });
+        seeded.push(baseRel);
+      }
     } else if (
       await remarkIfStale({
         filePath: basePath,

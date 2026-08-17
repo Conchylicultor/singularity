@@ -6,6 +6,7 @@
 
 - Description: Contributes the History list (a server-delegated bundle reusing the all-conversations query infra) as the History source of the merged conversation-sidebar DataView.
 - Web:
+  - Slots: `conversations-sidebar-history-actions` ← `conversations.conversations-view.data-view.history`
   - Contributes:
     - `SidebarSources` "History" → `HistorySource`
     - `conversations-sidebar-history-actions` "close" → `CloseConvAction`

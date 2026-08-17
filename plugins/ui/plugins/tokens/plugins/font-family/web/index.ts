@@ -1,7 +1,10 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { ConfigV2 } from "@plugins/config_v2/web";
 import { DynamicEnum } from "@plugins/fields/plugins/dynamic-enum/plugins/config/web";
-import { ThemeEngine, useTokenGroupPresetOptions } from "@plugins/ui/plugins/theme-engine/web";
+import {
+  ThemeEngine,
+  useTokenGroupPresetOptions,
+} from "@plugins/ui/plugins/theme-engine/web";
 import { tokenGroupMatchesSearch } from "@plugins/ui/plugins/theme-engine/core";
 import { ThemeCustomizer } from "@plugins/ui/plugins/theme-engine/plugins/theme-customizer/web";
 import { fontFamilyGroup } from "../shared";
@@ -16,12 +19,14 @@ export type { FontFamilyPresetContribution } from "./slots";
 export { fontFamilyConfig } from "./internal/config";
 
 export default {
-  description: "Font-family token group (sans/serif/mono families, letter-spacing) with switchable presets.",
+  description:
+    "Font-family token group (sans/serif/mono families, letter-spacing) with switchable presets.",
   contributions: [
     ...builtInPresets.map((p) => FontFamily.Preset(p)),
     ConfigV2.WebRegister({ descriptor: fontFamilyConfig }),
-    DynamicEnum.Options({ field: fontFamilyConfig.fields.preset, useOptions: () =>
-      useTokenGroupPresetOptions("font-family")
+    DynamicEnum.Options({
+      field: fontFamilyConfig.fields.preset,
+      useOptions: () => useTokenGroupPresetOptions("font-family"),
     }),
     ThemeEngine.TokenGroup({
       id: "font-family",
@@ -42,7 +47,9 @@ export default {
       component: FontFamilySection,
       // No token in this group answers the search box ⇒ no card, rather
       // than a titled bar over a filtered-to-empty list.
-      useAvailable: ({ search }) => tokenGroupMatchesSearch(fontFamilyGroup, search),
+      useAvailable: ({ search }) =>
+        tokenGroupMatchesSearch(fontFamilyGroup, search),
     }),
   ],
+  slots: [FontFamily],
 } satisfies PluginDefinition;

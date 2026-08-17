@@ -21,4 +21,5 @@ export default {
       }),
     }),
   ],
+  slots: [heapSnapshotPane],
 } satisfies PluginDefinition;

@@ -157,6 +157,8 @@ defineConfig({
   name: slotId,
   requiresAuthoredOverride: {
     guidance: ["Arrange \"items\" for how this slot renders", "(sidebar = vertical list, toolbar = horizontal bar)"],
+    // Optional. "Is there anything here to author?" — omit to always seed.
+    seedWhen: (defaults) => Array.isArray(defaults.items) && defaults.items.length > 0,
   },
   …
 })
@@ -167,6 +169,16 @@ defineConfig({
 comments — with a one-line `// @review` marker plus the descriptor's `guidance` lines
 after the hash header; and it **re-marks + re-stamps** an existing override whose origin
 hash moved underneath it. The human half is: arrange the values, delete the marker line.
+
+`seedWhen(defaults)` gates **creating** a file, and only that. Some defaults are vacuous —
+a render slot with no contributions has no arrangement to make, so `{"items": []}` would
+be a review a human can only rubber-stamp, burying the files where a decision is pending.
+`defaults` is the ORIGIN's effective document (post `OriginDefaultsProvider`), not
+`descriptor.defaults` — reorder's catalog is materialized at build time, so its field
+default is always `[]`. The descriptor stays REGISTERED regardless: never express this by
+withholding the descriptor, or `pruneOrphanedConfigFiles` deletes an authored override the
+moment its slot empties. An existing file is never seeded, deleted or skipped — and still
+re-marks when it goes stale, since "your slot lost every contribution" is worth saying.
 
 `guidance` is **descriptor-supplied prose**, so neither the engine nor the check ever
 names a config family — the check just echoes each offending file's own marker block back,

@@ -73,7 +73,7 @@ and
 
 - Description: SSH setup for deploy servers: owns the whole key flow (generate / paste-and-derive / fingerprint / install command / verify the connection / replace) as a collapsible section that always renders, and decorates it with the matched SshProvider's console prose when the server's console URL identifies one.
 - Web:
-  - Slots: `SshProvider.SshProvider` ← `apps.deploy.ssh-setup.hetzner`
+  - Slots: `SshProvider` ← `apps.deploy.ssh-setup.hetzner`
   - Contributes: `ServerDetail.Section` "Set up SSH access" → `SshSetupSection`
   - Uses:
     - `apps/deploy/health.useServerVerified`

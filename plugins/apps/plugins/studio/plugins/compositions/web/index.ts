@@ -8,6 +8,7 @@ import {
   CompositionItemActions,
   DeleteAction,
 } from "./components/composition-item-actions";
+import { CompositionDetail } from "./slots";
 
 export { CompositionDetail } from "./slots";
 export { compositionsPane, compositionDetailPane, comparePane } from "./panes";
@@ -28,5 +29,12 @@ export default {
         onClick: () => openPane(compositionsPane, {}, { mode: "root" }),
       }),
     }),
+  ],
+  slots: [
+    CompositionDetail,
+    CompositionItemActions,
+    compositionsPane,
+    compositionDetailPane,
+    comparePane,
   ],
 } satisfies PluginDefinition;

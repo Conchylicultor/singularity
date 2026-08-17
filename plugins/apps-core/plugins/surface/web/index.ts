@@ -1,6 +1,7 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { Apps } from "@plugins/apps-core/web";
 import { ActionBar } from "@plugins/shell/plugins/action-bar/web";
+import { Surface } from "./slots";
 import { SurfaceBody } from "./components/surface-body";
 import { ActionBarPlacementControl } from "./components/placement-control";
 
@@ -31,4 +32,5 @@ export default {
       component: ActionBarPlacementControl,
     }),
   ],
+  slots: [Surface],
 } satisfies PluginDefinition;

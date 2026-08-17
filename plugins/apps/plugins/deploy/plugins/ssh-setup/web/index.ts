@@ -4,6 +4,7 @@ import { ServerDetail } from "@plugins/apps/plugins/deploy/plugins/servers/web";
 import { useServerVerified } from "@plugins/apps/plugins/deploy/plugins/health/web";
 import { SshSetupSection } from "./components/ssh-setup-section";
 import { SshSetupActions } from "./components/ssh-setup-actions";
+import { SshProvider } from "./slots";
 
 export { SshProvider } from "./slots";
 export type { SshProviderDescriptor, SshConsoleProps } from "./slots";
@@ -31,4 +32,5 @@ export default {
       component: SshSetupSection,
     }),
   ],
+  slots: [SshProvider],
 } satisfies PluginDefinition;

@@ -1,6 +1,7 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { Pane } from "@plugins/primitives/plugins/pane/web";
 import { pluginViewPane } from "./panes";
+import { PluginView } from "./slots";
 
 export { pluginViewPane } from "./panes";
 export { PluginDetail } from "./components/plugin-detail";
@@ -18,4 +19,5 @@ export default {
   description:
     "Reusable detail pane for inspecting a single plugin. Defines PluginView.Section slot for extensible sections.",
   contributions: [Pane.Register({ pane: pluginViewPane })],
+  slots: [PluginView, pluginViewPane],
 } satisfies PluginDefinition;

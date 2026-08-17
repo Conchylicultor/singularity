@@ -4,14 +4,20 @@ import { Pane } from "@plugins/primitives/plugins/pane/web";
 import { Pages } from "@plugins/apps/plugins/pages/plugins/shell/web";
 import { pageDetailPane, pagesTreePane } from "./panes";
 import { PagesSidebar } from "./components/pages-sidebar";
-import { BacklinksSection, useHasBacklinks } from "./components/backlinks-section";
+import {
+  BacklinksSection,
+  useHasBacklinks,
+} from "./components/backlinks-section";
 import { DeletePageAction } from "./components/delete-page-action";
 import { AddPageBelowAction } from "./components/add-page-below-action";
 import { PageDetail, PageTree } from "./slots";
 
 export { PageDetail, PageTree } from "./slots";
 export { pageDetailPane, pagesTreePane } from "./panes";
-export { createPageWithSeed, type PageSeedBlock } from "./internal/create-page-with-seed";
+export {
+  createPageWithSeed,
+  type PageSeedBlock,
+} from "./internal/create-page-with-seed";
 
 export default {
   description:
@@ -34,4 +40,5 @@ export default {
     PageTree.RowActions({ id: "delete", component: DeletePageAction }),
     PageTree.RowActions({ id: "add-below", component: AddPageBelowAction }),
   ],
+  slots: [PageDetail, PageTree, pageDetailPane, pagesTreePane],
 } satisfies PluginDefinition;

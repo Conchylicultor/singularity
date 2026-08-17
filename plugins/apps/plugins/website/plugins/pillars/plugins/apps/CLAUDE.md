@@ -9,11 +9,9 @@
   - Slots:
     - `WebsiteApps.Section` ← `apps.website.demos.app-gallery`, `apps.website.demos.editor-toy`, `apps.website.pillars.apps`
     - `appsPane.Actions`
-    - `appsPane.Start` ← `apps.website.shell`
-    - `appsPane.End` ← `apps.website.downloads`, `apps.website.pillars.agents`, `apps.website.pillars.apps`, `apps.website.pillars.platform`
   - Contributes:
     - `Pane.Register` "website-apps"
-    - `downloadsPane.End` "apps" → `AppsNavItem`
+    - `WebsiteToolbar.End` "apps" → `AppsNavItem`
     - `WebsiteApps.Section` "Hero" → `AppsHero`
     - `WebsiteApps.Section` "App showcase" → `AppsShowcase`
     - `WebsiteApps.Section` "Closing links" → `AppsClosing`

@@ -13,7 +13,7 @@
     - `landingPane.Actions`
   - Contributes:
     - `Apps.App` "equin" → `WebsiteLayout`
-    - `downloadsPane.Start` "wordmark" → `WebsiteWordmark`
+    - `WebsiteToolbar.Start` "wordmark" → `WebsiteWordmark`
     - `Pane.Register` "website-landing"
   - Uses:
     - `apps-core.Apps`

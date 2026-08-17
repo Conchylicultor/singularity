@@ -4,6 +4,7 @@ import { MdExtension } from "react-icons/md";
 import { mdAppIcon } from "@plugins/apps-core/plugins/app-icon/web";
 import { studioApp } from "../core";
 import { StudioLayout } from "./components/studio-layout";
+import { Studio } from "./slots";
 
 export { Studio } from "./slots";
 
@@ -17,4 +18,5 @@ export default {
       component: StudioLayout,
     }),
   ],
+  slots: [Studio],
 } satisfies PluginDefinition;

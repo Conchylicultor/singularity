@@ -4,6 +4,7 @@ import { sidebarNavItem } from "@plugins/primitives/plugins/app-shell/web";
 import { Shell } from "@plugins/shell/web";
 import { MdInsights } from "react-icons/md";
 import { statsPane } from "./panes";
+import { Stats } from "./slots";
 
 export { Stats } from "./slots";
 export { statsPane } from "./panes";
@@ -11,12 +12,18 @@ export { useShowEmptyDays } from "./components/stats-context";
 
 export default {
   collapsed: true,
-  description: "Root plugin hosting stacked chart contributions from child plugins.",
+  description:
+    "Root plugin hosting stacked chart contributions from child plugins.",
   contributions: [
     Pane.Register({ pane: statsPane }),
     Shell.Sidebar({
       id: "stats",
-      ...sidebarNavItem({ title: "Stats", icon: MdInsights, onClick: () => openPane(statsPane, {}, { mode: "root" }) }),
+      ...sidebarNavItem({
+        title: "Stats",
+        icon: MdInsights,
+        onClick: () => openPane(statsPane, {}, { mode: "root" }),
+      }),
     }),
   ],
+  slots: [Stats, statsPane],
 } satisfies PluginDefinition;

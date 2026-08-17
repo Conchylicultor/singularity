@@ -17,6 +17,7 @@ Both payloads are wrapped in `Resolvable` (`shared/protocol.ts`): the resolved a
 
 - Description: Toolbar chip showing commits ahead/behind main; opens a side pane with the chain of commits between merge-base and HEAD. Toolbar chip showing commits ahead/behind main; opens a side pane with the chain of commits between merge-base and HEAD.
 - Web:
+  - Slots: `pane.conv-commits-graph.actions`
   - Contributes:
     - `Pane.Register` "conv-commits-graph"
     - `Conversation.ActionBar` → `CommitsChip`

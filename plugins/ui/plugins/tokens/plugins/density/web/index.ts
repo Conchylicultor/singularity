@@ -1,7 +1,10 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { ConfigV2 } from "@plugins/config_v2/web";
 import { DynamicEnum } from "@plugins/fields/plugins/dynamic-enum/plugins/config/web";
-import { ThemeEngine, useTokenGroupPresetOptions } from "@plugins/ui/plugins/theme-engine/web";
+import {
+  ThemeEngine,
+  useTokenGroupPresetOptions,
+} from "@plugins/ui/plugins/theme-engine/web";
 import { tokenGroupMatchesSearch } from "@plugins/ui/plugins/theme-engine/core";
 import { ThemeCustomizer } from "@plugins/ui/plugins/theme-engine/plugins/theme-customizer/web";
 import { densityGroup } from "../shared";
@@ -19,8 +22,9 @@ export default {
   contributions: [
     ...builtInPresets.map((p) => Density.Preset(p)),
     ConfigV2.WebRegister({ descriptor: densityConfig }),
-    DynamicEnum.Options({ field: densityConfig.fields.preset, useOptions: () =>
-      useTokenGroupPresetOptions("density")
+    DynamicEnum.Options({
+      field: densityConfig.fields.preset,
+      useOptions: () => useTokenGroupPresetOptions("density"),
     }),
     ThemeEngine.TokenGroup({
       id: "density",
@@ -41,7 +45,9 @@ export default {
       component: DensitySection,
       // No token in this group answers the search box ⇒ no card, rather
       // than a titled bar over a filtered-to-empty list.
-      useAvailable: ({ search }) => tokenGroupMatchesSearch(densityGroup, search),
+      useAvailable: ({ search }) =>
+        tokenGroupMatchesSearch(densityGroup, search),
     }),
   ],
+  slots: [Density],
 } satisfies PluginDefinition;

@@ -1,3 +1,4 @@
+import { Pane as PaneSlots } from "./slots";
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 
 export {
@@ -85,4 +86,5 @@ export default {
   description: "Unified pane primitive: Pane.define and chrome components.",
   loadBearing: true,
   contributions: [],
+  slots: [PaneSlots],
 } satisfies PluginDefinition;

@@ -4,6 +4,7 @@ import { MdDescription } from "react-icons/md";
 import { mdAppIcon } from "@plugins/apps-core/plugins/app-icon/web";
 import { pagesApp } from "../core";
 import { PagesLayout } from "./components/pages-layout";
+import { Pages } from "./slots";
 
 export { Pages } from "./slots";
 
@@ -17,4 +18,5 @@ export default {
       component: PagesLayout,
     }),
   ],
+  slots: [Pages],
 } satisfies PluginDefinition;

@@ -14,7 +14,12 @@ export interface FieldRendererComponent<T = unknown> {
   type: FieldType<T>;
 }
 
-const _slot = defineDispatchSlot<FieldRendererProps>(
+/**
+ * The renderer dispatch slot itself. Exported (not just wrapped by `Fields.Renderer`)
+ * because the plugin declares the slots it owns in its `slots: [...]`, and
+ * `Renderer` is a typed contribution helper — not a slot object.
+ */
+export const fieldRendererSlot = defineDispatchSlot<FieldRendererProps>(
   "config-v2.fields.renderer",
   {
     key: (props) => props.field.type.id,
@@ -26,12 +31,12 @@ const _slot = defineDispatchSlot<FieldRendererProps>(
 );
 
 function Renderer<T>(component: FieldRendererComponent<T>): Contribution {
-  return _slot({
+  return fieldRendererSlot({
     match: component.type.id,
     component: component as FieldRendererComponent,
   });
 }
-Renderer.id = _slot.id;
-Renderer.Dispatch = _slot.Dispatch;
+Renderer.id = fieldRendererSlot.id;
+Renderer.Dispatch = fieldRendererSlot.Dispatch;
 
 export const Fields = { Renderer } as const;

@@ -8,12 +8,18 @@ import { worktreeCleanupPane } from "./panes";
 export { worktreeCleanupPane } from "./panes";
 
 export default {
-  description: "Audit and remove stale git worktrees and their Postgres DB forks.",
+  description:
+    "Audit and remove stale git worktrees and their Postgres DB forks.",
   contributions: [
     Pane.Register({ pane: worktreeCleanupPane }),
     DebugApp.Sidebar({
       id: "worktree-cleanup",
-      ...sidebarNavItem({ title: "Worktree Cleanup", icon: MdFolderDelete, onClick: () => openPane(worktreeCleanupPane, {}, { mode: "root" }) }),
+      ...sidebarNavItem({
+        title: "Worktree Cleanup",
+        icon: MdFolderDelete,
+        onClick: () => openPane(worktreeCleanupPane, {}, { mode: "root" }),
+      }),
     }),
   ],
+  slots: [worktreeCleanupPane],
 } satisfies PluginDefinition;

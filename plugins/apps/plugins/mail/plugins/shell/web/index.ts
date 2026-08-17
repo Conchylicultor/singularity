@@ -7,6 +7,7 @@ import { mailApp } from "../core";
 import { MailLayout } from "./components/mail-layout";
 import { MailRailBadge } from "./components/mail-rail-badge";
 import { mailRootPane } from "./panes";
+import { Mail } from "./slots";
 
 export { Mail } from "./slots";
 
@@ -22,4 +23,5 @@ export default {
     }),
     Pane.Register({ pane: mailRootPane }),
   ],
+  slots: [Mail, mailRootPane],
 } satisfies PluginDefinition;

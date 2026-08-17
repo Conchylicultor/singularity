@@ -1,9 +1,16 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { MdAccountTree, MdFolderOpen } from "react-icons/md";
 import { TaskDetailSlots } from "@plugins/tasks/plugins/task-detail/web";
-import { DepsTreeSection, useHasDepsCluster } from "./components/deps-tree-section";
+import {
+  DepsTreeSection,
+  useHasDepsCluster,
+} from "./components/deps-tree-section";
 import { DepsActions, DetachAction } from "./internal/deps-actions";
-import { DepsSources, DepsSource, CreatedSource } from "./internal/deps-sources";
+import {
+  DepsSources,
+  DepsSource,
+  CreatedSource,
+} from "./internal/deps-sources";
 
 export default {
   description:
@@ -42,4 +49,5 @@ export default {
       component: CreatedSource,
     }),
   ],
+  slots: [DepsActions, DepsSources],
 } satisfies PluginDefinition;

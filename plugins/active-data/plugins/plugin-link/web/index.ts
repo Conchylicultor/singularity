@@ -20,4 +20,5 @@ export default {
     ),
     Pane.Register({ pane: pluginConvSidePane }),
   ],
+  slots: [pluginConvSidePane],
 } satisfies PluginDefinition;

@@ -1,3 +1,4 @@
+import { Tree } from "./slots";
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 
 export { TreeList } from "./internal/tree-list";
@@ -38,4 +39,5 @@ export default {
   description:
     "Tree hierarchy utilities (buildTree, isDescendant, resolveDropParent) and a generic TreeList with composable row primitives (RowChrome, RenameInput, useTreeRow) for list plugins.",
   contributions: [],
+  slots: [Tree],
 } satisfies PluginDefinition;

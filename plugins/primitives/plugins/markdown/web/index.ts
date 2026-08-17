@@ -1,3 +1,4 @@
+import { MarkdownEnhancerSlot } from "./internal/markdown";
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 
 export { Markdown, MarkdownEnhancerSlot } from "./internal/markdown";
@@ -13,4 +14,5 @@ export default {
   description:
     "Shared markdown renderer with slot-based enhancers. Consumers write <Markdown>{text}</Markdown>; context-specific behaviors auto-activate via Markdown.Enhancer contributions.",
   contributions: [],
+  slots: [MarkdownEnhancerSlot],
 } satisfies PluginDefinition;

@@ -6,6 +6,7 @@ import { Pane } from "@plugins/primitives/plugins/pane/web";
 import { eventsApp } from "../core";
 import { EventsLayout } from "./components/events-layout";
 import { eventsRootPane } from "./panes";
+import { Events } from "./slots";
 
 export { Events } from "./slots";
 
@@ -20,4 +21,5 @@ export default {
     }),
     Pane.Register({ pane: eventsRootPane }),
   ],
+  slots: [Events, eventsRootPane],
 } satisfies PluginDefinition;

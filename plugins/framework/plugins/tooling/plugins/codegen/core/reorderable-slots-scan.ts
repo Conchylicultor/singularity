@@ -1,13 +1,16 @@
 import { existsSync } from "fs";
-import { join } from "path";
+import { dirname, join, relative } from "path";
 import type { PluginTree } from "@plugins/plugin-meta/plugins/plugin-tree/core";
 import {
-  findMarkerCalls,
+  lineAt,
   markerCallSpans,
   matchBracket,
   maskSource,
+  parseStaticCallId,
   readIfExists,
+  unresolvableCallIdMessage,
   walkFiles,
+  type MarkerCallSpan,
 } from "@plugins/plugin-meta/plugins/parse-utils/core";
 
 /**
@@ -48,10 +51,21 @@ export interface StaticRenderSlot {
 const RENDER_SLOT_MARKER = "defineRenderSlot";
 const ORDERED_DISPATCH_SLOT_MARKER = "defineOrderedDispatchSlot";
 
-/** Extract the leading string-literal of an args/expression text, if any. */
-function leadingStringLiteral(text: string): string | undefined {
-  const m = /^\s*"([^"]*)"|^\s*'([^']*)'|^\s*`([^`$\\]*)`/.exec(text);
-  return m ? (m[1] ?? m[2] ?? m[3]) : undefined;
+/**
+ * True when the marker occurrence at `span` is the marker's own FUNCTION
+ * DECLARATION rather than a call to it — `export function defineRenderSlot<P>(id:
+ * string, …)`. `markerCallSpans` cannot tell the two apart: a declaration's
+ * parameter list is shaped exactly like an argument list, so the declaration
+ * surfaces as a call whose "id" is `id: string`.
+ *
+ * This is why the scanner used to have to fail SOFT here — a declaration is the
+ * one place where an unresolvable id is correct, not a defect. Recognising it
+ * structurally (the `function` keyword immediately before the name, read from the
+ * MASKED text so a comment can't fake it) is what lets every remaining
+ * unresolvable id become an error.
+ */
+function isFunctionDeclaration(masked: string, span: MarkerCallSpan): boolean {
+  return /\bfunction\s+$/.test(masked.slice(0, span.identifier));
 }
 
 /**
@@ -97,8 +111,20 @@ interface FactoryProducer {
  * Only template literals whose interpolation is exactly the factory's first
  * parameter (a bare identifier) and whose tail is a STATIC string are accepted —
  * anything else is not statically resolvable and is intentionally skipped.
+ *
+ * `onFactoryInternalId` is called with the ABSOLUTE offset of every visited
+ * `defineRenderSlot` call whose id is NOT a static literal — i.e. exactly the
+ * calls that only make sense relative to the enclosing factory's parameter.
+ * Those are the second class of legitimately-unresolvable ids (the first being a
+ * declaration), and pass 2 skips them instead of erroring. A call inside a
+ * factory body whose id IS a literal is deliberately NOT reported: it is a real
+ * direct slot that the literal pass must keep recording.
  */
-function collectFactoryProducers(raw: string, masked: string): FactoryProducer[] {
+function collectFactoryProducers(
+  raw: string,
+  masked: string,
+  onFactoryInternalId: (open: number) => void,
+): FactoryProducer[] {
   const out: FactoryProducer[] = [];
   // Each `export function NAME(` opens a factory candidate. We read its first
   // parameter name and the slice of source spanning its body, then scan the body
@@ -141,6 +167,12 @@ function collectFactoryProducers(raw: string, masked: string): FactoryProducer[]
 
     const suffixes = new Set<string>();
     for (const span of markerCallSpans(bodyMasked, RENDER_SLOT_MARKER)) {
+      // A body-relative span maps back to the file by adding `bodyStart` — the
+      // mask preserves offsets 1:1, so this is the same coordinate space pass 2
+      // scans in.
+      if (parseStaticCallId(bodyRaw, span).kind !== "value") {
+        onFactoryInternalId(bodyStart + span.open);
+      }
       const idExpr = bodyRaw.slice(span.open + 1, span.close);
       // Template literal: `${firstParam}.<static-suffix>`
       const tmpl = /^\s*`\$\{\s*([A-Za-z_$][\w$]*)\s*\}([^`]*)`/.exec(idExpr);
@@ -185,15 +217,31 @@ function nodeWebFiles(dir: string): string[] {
  *
  * Deduped by slotId, FIRST definer wins (stable, since `tree.byDir` iteration is
  * deterministic and the output is sorted by slotId by the caller).
+ *
+ * THROWS on any slot-constructor call whose id it cannot resolve from source
+ * text, naming file, line and the offending expression. A dropped id is a slot
+ * that never enters the manifest, so it silently registers no reorder directive
+ * and is not user-orderable — a parser limit turning into missing capability
+ * with nothing anywhere saying so. Exactly two shapes are legitimately
+ * unresolvable and are recognised structurally rather than allowlisted: the
+ * constructor's own `function` declaration, and a call inside a slot factory
+ * whose id is that factory's parameter (already expanded by the factory pass).
  */
 export function collectRenderSlotsStatic(tree: PluginTree): StaticRenderSlot[] {
+  const displayPath = (file: string): string =>
+    relative(dirname(tree.pluginsRoot), file);
   // Pass 1: discover slot-producing factories from ALL web source. A factory and
   // its call sites can live in different plugins, so producers are global.
   const producersByName = new Map<string, FactoryProducer>();
-  // Cache raw source per file (reused by pass 2). Pass 2 reads every id through
-  // `findMarkerCalls` (which full-masks internally), so no per-file mask is cached.
+  // Cache raw source per file (reused by pass 2). Pass 2 builds its own mask, once
+  // per file, lazily — most files contain no marker at all.
   const rawByFile = new Map<string, string>();
   const filesByDir = new Map<string, string[]>();
+  // Per file, the `(` offsets of `defineRenderSlot` calls that live inside a
+  // factory body and take that factory's id parameter. Pass 2 skips these: their
+  // ids are already expanded through the factory's call sites, so reading them
+  // literally is neither possible nor wanted.
+  const factoryInternalOpens = new Map<string, Set<number>>();
 
   for (const node of tree.byDir.values()) {
     const files = nodeWebFiles(node.dir);
@@ -209,7 +257,15 @@ export function collectRenderSlotsStatic(tree: PluginTree): StaticRenderSlot[] {
       // marker written inside a string/template literal can never invent a
       // phantom factory.
       const masked = maskSource(raw);
-      for (const producer of collectFactoryProducers(raw, masked)) {
+      let exempt = factoryInternalOpens.get(file);
+      if (!exempt) {
+        exempt = new Set<number>();
+        factoryInternalOpens.set(file, exempt);
+      }
+      const record = exempt;
+      for (const producer of collectFactoryProducers(raw, masked, (open) =>
+        record.add(open),
+      )) {
         // First definition of a factory name wins (deterministic).
         if (!producersByName.has(producer.name)) {
           producersByName.set(producer.name, producer);
@@ -229,38 +285,58 @@ export function collectRenderSlotsStatic(tree: PluginTree): StaticRenderSlot[] {
     for (const file of files) {
       const raw = rawByFile.get(file);
       if (raw == null) continue;
+      const exempt = factoryInternalOpens.get(file);
 
-      // Direct literal render slots. `findMarkerCalls` full-masks internally and
-      // slices `argsText` from the ORIGINAL, so a string-embedded marker is never
-      // matched while a real literal id survives for `leadingStringLiteral`.
-      if (raw.includes(RENDER_SLOT_MARKER)) {
-        for (const call of findMarkerCalls(raw, RENDER_SLOT_MARKER)) {
-          const id = leadingStringLiteral(call.argsText);
-          // Skip template/identifier ids (factory-internal, not resolvable here).
-          if (id) record(id, node.id);
-        }
-      }
+      // Every id below is located over a FULL mask (so a marker written inside a
+      // comment/string/template is never matched) and read back from the ORIGINAL
+      // by offset. One mask per file serves all three scans.
+      let masked: string | null = null;
+      const maskOnce = (): string => (masked ??= maskSource(raw));
 
-      // Direct literal ordered-dispatch slots. Same literal-only shape as render
-      // slots: `defineOrderedDispatchSlot("literal.id", …)`. No factory pass — the
-      // slot-render wrapper's own `defineOrderedDispatchSlot(...)` definition takes
-      // a non-literal id, so `leadingStringLiteral` returns undefined and it is
-      // never recorded as a phantom entry.
-      if (raw.includes(ORDERED_DISPATCH_SLOT_MARKER)) {
-        for (const call of findMarkerCalls(raw, ORDERED_DISPATCH_SLOT_MARKER)) {
-          const id = leadingStringLiteral(call.argsText);
-          if (id) record(id, node.id);
+      /**
+       * Ids from one marker's call sites in this file, `make`ing a slot id per
+       * resolved literal. An id that is neither a declaration's parameter list nor
+       * a factory-internal call and still doesn't resolve is a hard error.
+       */
+      const scanMarker = (
+        marker: string,
+        make: (literal: string) => string[],
+      ): void => {
+        if (!raw.includes(marker)) return;
+        for (const span of markerCallSpans(maskOnce(), marker)) {
+          if (isFunctionDeclaration(maskOnce(), span)) continue;
+          if (exempt?.has(span.open)) continue;
+          const id = parseStaticCallId(raw, span);
+          if (id.kind !== "value") {
+            throw new Error(
+              unresolvableCallIdMessage({
+                marker,
+                file: displayPath(file),
+                line: lineAt(raw, span.identifier),
+                expr: id.kind === "dynamic" ? id.expr : "",
+                hint:
+                  "The reorderable-slots manifest is built from source text, so a slot " +
+                  "whose id this scanner cannot read registers no reorder directive and " +
+                  "is silently not user-orderable. Inline the literal at the call site, " +
+                  "or build the id inside an exported slot factory whose suffix the " +
+                  "factory pass can read.",
+              }),
+            );
+          }
+          for (const slotId of make(id.value)) record(slotId, node.id);
         }
-      }
+      };
+
+      // Direct literal render slots, and ordered-dispatch slots (same
+      // literal-only shape: `defineOrderedDispatchSlot("literal.id", …)`).
+      scanMarker(RENDER_SLOT_MARKER, (literal) => [literal]);
+      scanMarker(ORDERED_DISPATCH_SLOT_MARKER, (literal) => [literal]);
 
       // Factory call sites: defineX("literal", …) → literal + suffix.
       for (const producer of producersByName.values()) {
-        if (!raw.includes(producer.name)) continue;
-        for (const call of findMarkerCalls(raw, producer.name)) {
-          const base = leadingStringLiteral(call.argsText);
-          if (base === undefined) continue;
-          for (const suffix of producer.suffixes) record(base + suffix, node.id);
-        }
+        scanMarker(producer.name, (literal) =>
+          producer.suffixes.map((suffix) => literal + suffix),
+        );
       }
     }
   }

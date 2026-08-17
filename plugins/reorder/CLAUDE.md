@@ -86,7 +86,7 @@ Unlike the old drift-tolerant directive (empty default, stable hash), the genera
 
 Files land under the **defining** plugin: `config/<defining-plugin>/<slotId>.jsonc` (override) and `<slotId>.origin.jsonc` (generated default; its `items` array is the materialized catalog, and a slim comment legend maps each `entryKey` → label). Agents edit layout by editing these files; defaults are committable to git and propagate to every worktree. See [`authoring-overrides.md`](./authoring-overrides.md) for the rules (ordering, when to add a spacer, when to hide).
 
-The directive descriptor sets config_v2's `requiresAuthoredOverride`, so **`./singularity build` seeds a missing override** from its origin (real hash, full catalog) and stamps a `// @review` marker into it — and re-marks + re-stamps an existing override whose origin hash shifted. The generic `config:overrides-authored` check (`plugins/config_v2/check/`) fails while any marker is present, echoing the descriptor's own guidance lines out of the file. So the obligation is *review*, not presence: deleting a required override just gets it re-seeded, marked, on the next build. The old bespoke `reorder:configs-authored` presence check and its grandfather list are gone.
+The directive descriptor sets config_v2's `requiresAuthoredOverride`, so **`./singularity build` seeds a missing override** from its origin (real hash, full catalog) and stamps a `// @review` marker into it — but only for a slot that HAS contributions (`seedWhen`): an `items: []` directive orders nothing, so seeding it would demand a rubber-stamp review. The descriptor is still registered for an empty slot (an existing override must never be pruned), and the first build after the slot gains a contribution seeds it — and re-marks + re-stamps an existing override whose origin hash shifted. The generic `config:overrides-authored` check (`plugins/config_v2/check/`) fails while any marker is present, echoing the descriptor's own guidance lines out of the file. So the obligation is *review*, not presence: deleting a required override just gets it re-seeded, marked, on the next build. The old bespoke `reorder:configs-authored` presence check and its grandfather list are gone.
 
 ### web↔server bridge
 
@@ -150,6 +150,108 @@ Edit mode inflates every item with chrome (ring, ×-badge, empty-item placeholde
 - Load-bearing: yes
 - Web:
   - Contributes:
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
     - `ConfigV2.WebRegister`
     - `ConfigV2.WebRegister`
     - `ConfigV2.WebRegister`
@@ -350,6 +452,108 @@ Edit mode inflates every item with chrome (ring, ×-badge, empty-item placeholde
     - `ConfigV2.Register` "pages.tree.fields"
     - `ConfigV2.Register` "pages.tree.row-actions"
     - `ConfigV2.Register` "pages.welcome.section"
+    - `ConfigV2.Register` "pane.accounts.actions"
+    - `ConfigV2.Register` "pane.agent-detail.actions"
+    - `ConfigV2.Register` "pane.agent-report.actions"
+    - `ConfigV2.Register` "pane.agent-side.actions"
+    - `ConfigV2.Register` "pane.agent-system-detail.actions"
+    - `ConfigV2.Register` "pane.agents-root.actions"
+    - `ConfigV2.Register` "pane.all-conversations.actions"
+    - `ConfigV2.Register` "pane.apple-setup.actions"
+    - `ConfigV2.Register` "pane.attempt.actions"
+    - `ConfigV2.Register` "pane.backup.actions"
+    - `ConfigV2.Register` "pane.build-detail.actions"
+    - `ConfigV2.Register` "pane.build.actions"
+    - `ConfigV2.Register` "pane.claude-cli-calls.actions"
+    - `ConfigV2.Register` "pane.commit-detail.actions"
+    - `ConfigV2.Register` "pane.composition-compare.actions"
+    - `ConfigV2.Register` "pane.composition-detail.actions"
+    - `ConfigV2.Register` "pane.compositions.actions"
+    - `ConfigV2.Register` "pane.config-orphans.actions"
+    - `ConfigV2.Register` "pane.config-v2-detail.actions"
+    - `ConfigV2.Register` "pane.config-v2-nav.actions"
+    - `ConfigV2.Register` "pane.contributions.actions"
+    - `ConfigV2.Register` "pane.conv-commits-graph.actions"
+    - `ConfigV2.Register` "pane.conv-docs.actions"
+    - `ConfigV2.Register` "pane.conv-file-tree.actions"
+    - `ConfigV2.Register` "pane.conv-push-profiling.actions"
+    - `ConfigV2.Register` "pane.conv-review.actions"
+    - `ConfigV2.Register` "pane.conv-summary.actions"
+    - `ConfigV2.Register` "pane.conv-terminal.actions"
+    - `ConfigV2.Register` "pane.conversation.actions"
+    - `ConfigV2.Register` "pane.conversations-recover.actions"
+    - `ConfigV2.Register` "pane.debug-boot-profile-detail.actions"
+    - `ConfigV2.Register` "pane.debug-boot-profile.actions"
+    - `ConfigV2.Register` "pane.debug-boot-profiles-list.actions"
+    - `ConfigV2.Register` "pane.debug-broadcasts.actions"
+    - `ConfigV2.Register` "pane.debug-health-monitor.actions"
+    - `ConfigV2.Register` "pane.debug-heap-snapshot.actions"
+    - `ConfigV2.Register` "pane.debug-live-state-emit.actions"
+    - `ConfigV2.Register` "pane.debug-memory.actions"
+    - `ConfigV2.Register` "pane.debug-profiling-build-detail.actions"
+    - `ConfigV2.Register` "pane.debug-profiling-op-detail.actions"
+    - `ConfigV2.Register` "pane.debug-profiling.actions"
+    - `ConfigV2.Register` "pane.debug-read-set.actions"
+    - `ConfigV2.Register` "pane.deploy-deployment-detail.actions"
+    - `ConfigV2.Register` "pane.deploy-server-detail.actions"
+    - `ConfigV2.Register` "pane.deploy-servers.actions"
+    - `ConfigV2.Register` "pane.event-list.actions"
+    - `ConfigV2.Register` "pane.event-source-detail.actions"
+    - `ConfigV2.Register` "pane.event-source-run.actions"
+    - `ConfigV2.Register` "pane.event-sources.actions"
+    - `ConfigV2.Register` "pane.events-root.actions"
+    - `ConfigV2.Register` "pane.events-test.actions"
+    - `ConfigV2.Register` "pane.explorer.actions"
+    - `ConfigV2.Register` "pane.file-peek.actions"
+    - `ConfigV2.Register` "pane.global-file-tree.actions"
+    - `ConfigV2.Register` "pane.google-setup.actions"
+    - `ConfigV2.Register` "pane.graph.actions"
+    - `ConfigV2.Register` "pane.layout-lab.actions"
+    - `ConfigV2.Register` "pane.live-state-health.actions"
+    - `ConfigV2.Register` "pane.logs-channel.actions"
+    - `ConfigV2.Register` "pane.logs.actions"
+    - `ConfigV2.Register` "pane.mail-message.actions"
+    - `ConfigV2.Register` "pane.mail-root.actions"
+    - `ConfigV2.Register` "pane.mail-search.actions"
+    - `ConfigV2.Register` "pane.mail-thread.actions"
+    - `ConfigV2.Register` "pane.mail-threads.actions"
+    - `ConfigV2.Register` "pane.page-detail.actions"
+    - `ConfigV2.Register` "pane.pages-root.actions"
+    - `ConfigV2.Register` "pane.pages-tree.actions"
+    - `ConfigV2.Register` "pane.plugin-conv-side.actions"
+    - `ConfigV2.Register` "pane.plugin-view.actions"
+    - `ConfigV2.Register` "pane.prototypes-detail.actions"
+    - `ConfigV2.Register` "pane.prototypes-gallery.actions"
+    - `ConfigV2.Register` "pane.queue.actions"
+    - `ConfigV2.Register` "pane.release-detail.actions"
+    - `ConfigV2.Register` "pane.render-profiler.actions"
+    - `ConfigV2.Register` "pane.report-detail.actions"
+    - `ConfigV2.Register` "pane.reports.actions"
+    - `ConfigV2.Register` "pane.screenshot.actions"
+    - `ConfigV2.Register` "pane.settings-config-index.actions"
+    - `ConfigV2.Register` "pane.sonata-library.actions"
+    - `ConfigV2.Register` "pane.sonata-player.actions"
+    - `ConfigV2.Register` "pane.stats.actions"
+    - `ConfigV2.Register` "pane.story-detail.actions"
+    - `ConfigV2.Register` "pane.story-gallery.actions"
+    - `ConfigV2.Register` "pane.table-detail.actions"
+    - `ConfigV2.Register` "pane.task-detail.actions"
+    - `ConfigV2.Register` "pane.tasks-root.actions"
+    - `ConfigV2.Register` "pane.theme-customizer.actions"
+    - `ConfigV2.Register` "pane.trace-detail.actions"
+    - `ConfigV2.Register` "pane.traces.actions"
+    - `ConfigV2.Register` "pane.website-agents.actions"
+    - `ConfigV2.Register` "pane.website-apps.actions"
+    - `ConfigV2.Register` "pane.website-downloads.actions"
+    - `ConfigV2.Register` "pane.website-landing.actions"
+    - `ConfigV2.Register` "pane.website-platform.actions"
+    - `ConfigV2.Register` "pane.welcome.actions"
+    - `ConfigV2.Register` "pane.workflow-node.actions"
+    - `ConfigV2.Register` "pane.workflows-definition-detail.actions"
+    - `ConfigV2.Register` "pane.workflows-definitions.actions"
+    - `ConfigV2.Register` "pane.workflows-execution-detail.actions"
+    - `ConfigV2.Register` "pane.worktree-cleanup.actions"
+    - `ConfigV2.Register` "pane.zero-test.actions"
     - `ConfigV2.Register` "plugin-view.section"
     - `ConfigV2.Register` "primitives.data-view.field-extension"
     - `ConfigV2.Register` "primitives.data-view.row-order"

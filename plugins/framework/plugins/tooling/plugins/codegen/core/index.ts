@@ -90,6 +90,11 @@ export {
 } from "./reorderable-slots-gen";
 
 export {
+  assertSlotsDeclared,
+  declareSlotsFromBarrels,
+} from "./slot-declaration-guard";
+
+export {
   collectDataViews,
   generateDataViews,
   renderDataViewsManifest,
@@ -143,6 +148,7 @@ export {
 // Read by both the runtime freeze-point guard and the static completeness check.
 export {
   preBarrelManifests,
+  postWebManifests,
   writePreBarrelManifest,
   type PreBarrelManifest,
 } from "./pre-barrel-manifests";

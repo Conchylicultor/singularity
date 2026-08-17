@@ -5,14 +5,15 @@ export interface SlotDef {
   slotId: string;
   groupName: string;
   /**
-   * Which slot factory defined this slot. `"render"` for `defineRenderSlot`,
+   * Which slot factory defined this slot — `SlotMeta.kind`, read off the slot
+   * object itself when barrels are imported. `"render"` for `defineRenderSlot`,
    * `"mount"` for `defineMountSlot`, `"dispatch"` for `defineDispatchSlot`,
-   * `"wrap"` for `defineWrapperSlot`, `"slot"` for `defineSlot`. Best-effort for
-   * runtime-discovered slots (the static parse can't always tell them apart).
-   * Reorderability derives from `kind`: `"render"` slots are always reorderable;
-   * every other kind (including `"wrap"`) never is.
+   * `"ordered-dispatch"` for `defineOrderedDispatchSlot`, `"wrap"` for
+   * `defineWrapperSlot`, `"slot"` for `defineSlot`. In the barrel-free
+   * (`skipBarrelImport`) mode it is inferred from the constructor's name in
+   * source text, which cannot see `"ordered-dispatch"`.
    */
-  kind?: "render" | "mount" | "dispatch" | "wrap" | "slot";
+  kind?: "render" | "mount" | "dispatch" | "ordered-dispatch" | "wrap" | "slot";
   /**
    * Full plugin ids (e.g. `apps/story/pages-integration`) of every plugin that
    * contributes to this specific slot — a per-slot reverse index populated by

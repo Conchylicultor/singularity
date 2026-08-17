@@ -8,12 +8,18 @@ import { layoutLabPane } from "./internal/lab-pane";
 export { layoutLabPane } from "./internal/lab-pane";
 
 export default {
-  description: "Live Layout Lab gallery: renders the layout-primitive fixture catalog across its width sweep, opened from the Debug sidebar.",
+  description:
+    "Live Layout Lab gallery: renders the layout-primitive fixture catalog across its width sweep, opened from the Debug sidebar.",
   contributions: [
     Pane.Register({ pane: layoutLabPane }),
     DebugApp.Sidebar({
       id: "layout-lab",
-      ...sidebarNavItem({ title: "Layout Lab", icon: MdGridView, onClick: () => openPane(layoutLabPane, {}, { mode: "root" }) }),
+      ...sidebarNavItem({
+        title: "Layout Lab",
+        icon: MdGridView,
+        onClick: () => openPane(layoutLabPane, {}, { mode: "root" }),
+      }),
     }),
   ],
+  slots: [layoutLabPane],
 } satisfies PluginDefinition;

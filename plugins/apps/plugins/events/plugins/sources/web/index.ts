@@ -4,7 +4,7 @@ import { Pane, openPane } from "@plugins/primitives/plugins/pane/web";
 import { sidebarNavItem } from "@plugins/primitives/plugins/app-shell/web";
 import { Events } from "@plugins/apps/plugins/events/plugins/shell/web";
 import { eventSourcesPane, eventSourceDetailPane } from "./panes";
-import { EventSourceActions } from "./slots";
+import { EventSourceActions, EventSourceDetail } from "./slots";
 import { SourceDeleteAction } from "./components/source-delete-action";
 
 export { eventSourcesPane, eventSourceDetailPane } from "./panes";
@@ -54,5 +54,11 @@ export default {
       }),
     }),
     EventSourceActions({ id: "delete", component: SourceDeleteAction }),
+  ],
+  slots: [
+    EventSourceDetail,
+    EventSourceActions,
+    eventSourcesPane,
+    eventSourceDetailPane,
   ],
 } satisfies PluginDefinition;

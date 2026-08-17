@@ -1,6 +1,7 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { Sonata } from "@plugins/apps/plugins/sonata/plugins/shell/web";
 import { ProgressBar } from "./components/progress-bar";
+import { SonataProgress } from "./slots";
 
 export { SonataProgress } from "./slots";
 export { RAIL_THICKNESS, railBandClass } from "./rail-geometry";
@@ -11,4 +12,5 @@ export default {
   contributions: [
     Sonata.Transport({ id: "progress-bar", component: ProgressBar }),
   ],
+  slots: [SonataProgress],
 } satisfies PluginDefinition;

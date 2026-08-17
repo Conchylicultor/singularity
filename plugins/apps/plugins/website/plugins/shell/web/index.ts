@@ -6,7 +6,7 @@ import { mdAppIcon } from "@plugins/apps-core/plugins/app-icon/web";
 import { websiteApp } from "../core";
 import { WebsiteLayout } from "./components/website-layout";
 import { WebsiteWordmark } from "./components/website-wordmark";
-import { WebsiteToolbar } from "./slots";
+import { WebsiteToolbar, Website } from "./slots";
 import { landingPane } from "./panes";
 
 export { Website, WebsiteToolbar } from "./slots";
@@ -26,4 +26,5 @@ export default {
     WebsiteToolbar.Start({ id: "wordmark", component: WebsiteWordmark }),
     Pane.Register({ pane: landingPane }),
   ],
+  slots: [Website, WebsiteToolbar, landingPane],
 } satisfies PluginDefinition;

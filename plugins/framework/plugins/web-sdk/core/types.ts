@@ -1,4 +1,5 @@
 import type { PluginId } from "@plugins/framework/plugins/plugin-id/core";
+import type { SlotSource } from "@plugins/framework/plugins/slot-declaration/core";
 
 /**
  * Auto-documentable metadata attached to contributions and registration tokens.
@@ -62,6 +63,26 @@ export interface PluginDefinition {
   loadBearing?: boolean;
   collapsed?: boolean;
   contributions?: Contribution[];
+  /**
+   * The slots this plugin OWNS — the exact sibling of `contributions`, and the
+   * only thing that makes a slot discoverable and attributable.
+   *
+   * An entry is a slot, or an object whose own values are slots, so a slot group
+   * (`export const Studio = {…}`), a `definePaneToolbar()` result and a pane
+   * (its `Actions` slot) all work:
+   *
+   * ```ts
+   * slots: [StoryToolbar, storyDetailPane, storyGalleryPane],
+   * ```
+   *
+   * Entries are read ONE level deep. That shortcut cannot degrade into a blind
+   * spot: every slot ever constructed is recorded at construction, and the
+   * build-time guard fails naming any that no plugin declared — so a slot nested
+   * deeper is reported, not lost. Declaring the same slot from two plugins is
+   * also an error; ownership (used for the slot's config path) is read off the
+   * declaration, not off whichever module imported it first.
+   */
+  slots?: SlotSource[];
   /**
    * Plugins this plugin's `register` array must run after. Mirror of the
    * server field with the same name; rarely needed on web because

@@ -8,12 +8,18 @@ import { broadcastsPane } from "./panes";
 export { broadcastsPane } from "./panes";
 
 export default {
-  description: "View and edit cli/broadcasts.json broadcast messages for stale worktrees.",
+  description:
+    "View and edit cli/broadcasts.json broadcast messages for stale worktrees.",
   contributions: [
     Pane.Register({ pane: broadcastsPane }),
     DebugApp.Sidebar({
       id: "broadcasts",
-      ...sidebarNavItem({ title: "Broadcasts", icon: MdAnnouncement, onClick: () => openPane(broadcastsPane, {}, { mode: "root" }) }),
+      ...sidebarNavItem({
+        title: "Broadcasts",
+        icon: MdAnnouncement,
+        onClick: () => openPane(broadcastsPane, {}, { mode: "root" }),
+      }),
     }),
   ],
+  slots: [broadcastsPane],
 } satisfies PluginDefinition;

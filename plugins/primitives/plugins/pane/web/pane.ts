@@ -8,11 +8,11 @@ import {
   type ComponentType,
   type ReactNode,
 } from "react";
+import { getDeferredLoadState } from "@plugins/framework/plugins/web-sdk/core";
 import {
-  defineSlot,
-  getDeferredLoadState,
-  type Slot,
-} from "@plugins/framework/plugins/web-sdk/core";
+  defineRenderSlot,
+  type RenderSlot,
+} from "@plugins/primitives/plugins/slot-render/web";
 import type { PluginId } from "@plugins/framework/plugins/plugin-id/core";
 import { SurfaceIdContext } from "@plugins/primitives/plugins/surface-id/web";
 import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
@@ -306,7 +306,7 @@ export interface PaneInternal {
   chrome: NormalizedChrome;
   /** Default column width in pixels. Read by layout renderers (e.g. Miller). */
   width?: number;
-  actionsSlot: Slot<PaneActionContribution>;
+  actionsSlot: RenderSlot<PaneActionContribution>;
   resolve?: ResolveHook<Record<string, string>> | false;
   /**
    * Self-contained title resolver for tab labels and the browser document
@@ -1587,7 +1587,7 @@ export interface PaneObject<
    * resolve the app-relative path from. Delegates to {@link RouteDef.link}.
    */
   link?: (app: AppRef, params: FullParams) => string;
-  Actions: Slot<PaneActionContribution>;
+  Actions: RenderSlot<PaneActionContribution>;
   /** Internal. Consumers should not rely on this. */
   _internal: PaneInternal;
 }
@@ -2052,11 +2052,14 @@ function define(
     );
   }
 
-  // NOT a `defineRenderSlot`: the id is TEMPLATED per pane, so build-time
-  // codegen cannot extract it into the reorderable-slots manifest, and a render
-  // slot would put it in a reorder path whose config key it can never statically
-  // own. The `id` on each contribution is all the adaptive bar's ledger needs.
-  const actionsSlot = defineSlot<PaneActionContribution>(`pane.${id}.actions`);
+  // A real render slot: a pane's actions are a visible list whose order the user
+  // should own, exactly like any other. (It was a plain `defineSlot` while slot
+  // discovery was a source-text scan that could not read a templated id; slots
+  // now declare themselves at runtime, so the id no longer has to be spellable
+  // in source.)
+  const actionsSlot = defineRenderSlot<PaneActionContribution>(
+    `pane.${id}.actions`,
+  );
 
   const resolve =
     "resolve" in args ? (args.resolve as PaneInternal["resolve"]) : undefined;

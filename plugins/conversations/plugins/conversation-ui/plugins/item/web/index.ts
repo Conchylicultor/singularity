@@ -1,4 +1,5 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
+import { Item as ItemSlots } from "./slots";
 
 export {
   ConversationItem,
@@ -16,4 +17,5 @@ export default {
   description:
     "Visual primitive for rendering a Conversation as a row or inline chip. Used by every surface that lists conversations.",
   contributions: [],
+  slots: [ItemSlots],
 } satisfies PluginDefinition;

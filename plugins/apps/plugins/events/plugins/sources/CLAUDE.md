@@ -69,10 +69,10 @@ Design: [`research/2026-08-03-apps-events-event-tracking-app.md`](../../../../..
 - Description: The Events app's Sources surface: the sidebar entry, the sources DataView with a registry-driven `+` menu, and the per-source side-pane whose sections are contributions. Renders every source type's configuration form generically from its `configFields`, so a source type ships no form code.
 - Web:
   - Slots:
-    - `EventSourceActions.EventSourceActions` ← `apps.events.sources`
     - `EventSourceDetail.Section` ← `apps.events.sources.source-detail.runs`, `apps.events.sources.source-detail.schedule`, `apps.events.sources.source-detail.settings`, `apps.events.sources.source-detail.status`
-    - `eventSourceDetailPane.Actions`
+    - `EventSourceActions` ← `apps.events.sources`
     - `eventSourcesPane.Actions`
+    - `eventSourceDetailPane.Actions`
   - Contributes:
     - `Pane.Register` "event-sources"
     - `Pane.Register` "event-source-detail"

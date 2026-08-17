@@ -28,6 +28,37 @@ A slot lives in one runtime, so bridging its contributions to the other runtime 
 
 Slots are grouped in a namespace object per plugin (`export const MyPlugin = { Panel: … }`) — see the `defineRenderSlot` example below, which has the same shape.
 
+### Declaring the slots you own
+
+A plugin lists the slots it owns in `slots: [...]`, the exact sibling of
+`contributions`:
+
+```typescript
+export default {
+  description: "…",
+  slots: [MyPlugin, myDetailPane],   // a slot group, and a pane
+  contributions: [ … ],
+} satisfies PluginDefinition;
+```
+
+An entry is **a slot, or an object whose own values are slots** — a slot group,
+a `definePaneToolbar()` result, a pane (its `Actions` slot). Entries are read
+**one level deep**; a slot nested deeper is listed on its own.
+
+This is not bookkeeping. It is what makes a slot **discoverable** (the docs and
+the reorder manifest read the declaration, not an export-graph crawl that
+depended on which symbols a barrel happened to re-export) and what makes it
+**attributable** — the declaring plugin is the slot's owner, which is where its
+reorder config file lands. Two plugins declaring one slot is an error.
+
+You cannot forget it: every slot is recorded at construction (`defineSlot` is
+the single funnel), and `./singularity build` fails naming any slot no plugin
+declared, plus the directory whose source constructed it.
+
+`defineSlot` also stamps `slot.meta` — `{ kind, reorderable }` — so what a slot
+IS is a fact on the object rather than something a reader re-derives by sniffing
+which render method got attached or by grepping for a constructor's name.
+
 ### Creating a plugin
 
 A plugin is a `PluginDefinition` — just `{ description, contributions? }`. There is no authored `name`: the loader derives the plugin's `id` from its hierarchy path and injects it as `LoadedPlugin.id`. User-facing titles belong to the contributions (an app's tooltip, a sidebar entry's title), not the plugin package.
@@ -241,6 +272,8 @@ An umbrella is a grouping shell that nests related sub-plugins under `plugins/`.
   - Uses:
     - `framework/plugin-id.asPluginId`
     - `framework/plugin-loader.topoSortPlugins`
+    - `framework/slot-declaration.declarePluginSlots`
+    - `framework/slot-declaration.recordCreatedSlot`
     - `framework/tooling/collected-dir.defineCollectedDir`
   - Exports (types):
     - `Contribution`
@@ -269,6 +302,7 @@ An umbrella is a grouping shell that nests related sub-plugins under `plugins/`.
     - `PluginProvider`
     - `PluginRuntimeContext`
     - `resetDeferredLoadStateForTests`
+    - `slots`
     - `subscribeDeferredLoadState`
     - `UNSAFE_unsealSlotComponent`
     - `useDeferredLoadState`

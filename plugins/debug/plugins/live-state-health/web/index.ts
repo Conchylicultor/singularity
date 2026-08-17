@@ -8,12 +8,18 @@ import { liveStateHealthPane } from "./panes";
 export { liveStateHealthPane } from "./panes";
 
 export default {
-  description: "Live health inspector for the client live-state pipeline (sockets, leader election, per-resource subscriptions), opened from the Debug sidebar.",
+  description:
+    "Live health inspector for the client live-state pipeline (sockets, leader election, per-resource subscriptions), opened from the Debug sidebar.",
   contributions: [
     Pane.Register({ pane: liveStateHealthPane }),
     DebugApp.Sidebar({
       id: "live-state-health",
-      ...sidebarNavItem({ title: "Live State", icon: MdMonitorHeart, onClick: () => openPane(liveStateHealthPane, {}, { mode: "root" }) }),
+      ...sidebarNavItem({
+        title: "Live State",
+        icon: MdMonitorHeart,
+        onClick: () => openPane(liveStateHealthPane, {}, { mode: "root" }),
+      }),
     }),
   ],
+  slots: [liveStateHealthPane],
 } satisfies PluginDefinition;

@@ -1,4 +1,5 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
+import { Apps } from "./slots";
 
 export {
   Apps,
@@ -30,4 +31,5 @@ export default {
   description:
     "App switcher rail. Wraps per-app shells; plugins contribute via Apps.App.",
   loadBearing: true,
+  slots: [Apps],
 } satisfies PluginDefinition;

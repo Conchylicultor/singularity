@@ -38,4 +38,5 @@ export default {
       }),
     }),
   ],
+  slots: [SlowEvents, slowEventsPane, traceDetailPane],
 } satisfies PluginDefinition;

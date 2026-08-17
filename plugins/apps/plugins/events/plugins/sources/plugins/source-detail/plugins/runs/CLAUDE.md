@@ -40,8 +40,8 @@ region is the `model-call` sub-plugin's section and **`runs` names no LLM**.
 - Description: Runs section of the Events source side-pane: the run ledger as a DataView (outcome, event counts, duration, error), including the cheap `unchanged` runs — the record that makes 'why did nothing happen' answerable. A row drills into the run's own pane, whose regions are contributions.
 - Web:
   - Slots:
+    - `RunActions`
     - `EventSourceRunDetail.Section` ← `apps.events.sources.source-detail.runs.caveats`, `apps.events.sources.source-detail.runs.extracted-events`, `apps.events.sources.source-detail.runs.model-call`
-    - `RunActions.RunActions`
     - `eventSourceRunPane.Actions`
   - Contributes:
     - `EventSourceDetail.Section` "Runs" → `SourceRunsSection`

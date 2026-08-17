@@ -8,9 +8,11 @@ export { screenshotPane } from "./panes";
 export { captureApp } from "./capture";
 
 export default {
-  description: "Capture the current page and edit it (crop, draw) in a new tab. Bottom prompt form launches a conversation with the edited screenshot attached.",
+  description:
+    "Capture the current page and edit it (crop, draw) in a new tab. Bottom prompt form launches a conversation with the edited screenshot attached.",
   contributions: [
     Pane.Register({ pane: screenshotPane }),
     ActionBar.Item({ id: "screenshot", component: ScreenshotButton }),
   ],
+  slots: [screenshotPane],
 } satisfies PluginDefinition;

@@ -2,6 +2,7 @@ import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { ReviewSlots } from "@plugins/review/web";
 import { PluginChangesSection } from "./components/plugin-changes-section";
 import { PluginChangesSummary } from "./components/plugin-changes-summary";
+import { PluginChanges } from "./slots";
 
 export { PluginChanges as PluginChangesSlots } from "./slots";
 export { usePluginFacetDiffs } from "./use-facet-diffs";
@@ -18,4 +19,5 @@ export default {
       summary: PluginChangesSummary,
     }),
   ],
+  slots: [PluginChanges],
 } satisfies PluginDefinition;

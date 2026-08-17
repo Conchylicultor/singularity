@@ -1,6 +1,7 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { ActionBar } from "@plugins/shell/plugins/action-bar/web";
 import { QuickThemeButton } from "./components/quick-theme-button";
+import { QuickTheme } from "./slots";
 
 export { QuickTheme } from "./slots";
 export type { QuickThemeSectionContribution } from "./slots";
@@ -14,4 +15,5 @@ export default {
       component: QuickThemeButton,
     }),
   ],
+  slots: [QuickTheme],
 } satisfies PluginDefinition;

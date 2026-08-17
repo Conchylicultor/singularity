@@ -6,13 +6,10 @@
 
 - Description: Downloads page for the equin website: the /website/download pane (per-platform download cards, current-platform highlight) plus the primary Download CTA in the shared site header.
 - Web:
-  - Slots:
-    - `downloadsPane.Actions`
-    - `downloadsPane.Start` ← `apps.website.shell`
-    - `downloadsPane.End` ← `apps.website.downloads`, `apps.website.pillars.agents`, `apps.website.pillars.apps`, `apps.website.pillars.platform`
+  - Slots: `downloadsPane.Actions`
   - Contributes:
     - `Pane.Register` "website-downloads"
-    - `downloadsPane.End` "download" → `DownloadNavItem`
+    - `WebsiteToolbar.End` "download" → `DownloadNavItem`
   - Uses:
     - `apps/website/shell.WebsiteNavLink`
     - `apps/website/shell.WebsitePage`

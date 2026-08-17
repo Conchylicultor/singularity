@@ -8,6 +8,7 @@ import { ConfigV2 } from "@plugins/config_v2/web";
 import { buildConfig } from "../shared/config";
 import { BuildButton } from "./components/build-button";
 import { buildPane, buildDetailPane } from "./panes";
+import { BuildDetail } from "./slots";
 
 export { BuildDetail as BuildDetailSlots } from "./slots";
 export { buildPane, buildDetailPane } from "./panes";
@@ -37,4 +38,5 @@ export default {
     }),
     ConfigV2.WebRegister({ descriptor: buildConfig }),
   ],
+  slots: [BuildDetail, buildPane, buildDetailPane],
 } satisfies PluginDefinition;

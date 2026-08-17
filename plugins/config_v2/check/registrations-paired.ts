@@ -7,6 +7,7 @@ import {
   registerBarrelStubs,
   importBarrel,
 } from "@plugins/plugin-meta/plugins/barrel-import/core";
+import { declareSlotsFromBarrels } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
 
 type CheckResult = { ok: true } | { ok: false; message: string; hint?: string };
 type Check = { id: string; description: string; run(): Promise<CheckResult> };
@@ -43,6 +44,16 @@ const check: Check = {
     const tree = await buildPluginTree(pluginsRoot, { skipBarrelImport: true });
     registerBarrelStubs(join(pluginsRoot, ".."));
 
+    // Importing a web barrel is only HALF of loading the web runtime. A plugin
+    // that derives its contributions from the slot DECLARATIONS (reorder mints
+    // one config descriptor per reorderable slot, under the plugin that declared
+    // it) has an empty `contributions` array until a declaration pass has run —
+    // `PluginProvider` runs one before it reads any plugin's contributions, and
+    // this is the build-time twin of that pass, over the same registry the
+    // browser would load. Without it this check compares a real server set
+    // against an empty web set and reports every reorder descriptor as unpaired.
+    await declareSlotsFromBarrels(root);
+
     const webPaths = new Set<string>();
     const serverPaths = new Set<string>();
 
@@ -61,8 +72,7 @@ const check: Check = {
           };
         }
         const def = mod.default as
-          | { contributions?: BarrelContribution[] }
-          | undefined;
+          { contributions?: BarrelContribution[] } | undefined;
         for (const c of def?.contributions ?? []) {
           if (c._slotId !== "config-v2.web-register") continue;
           const name = c.descriptor?.name;
@@ -83,8 +93,7 @@ const check: Check = {
           };
         }
         const def = mod.default as
-          | { contributions?: BarrelContribution[] }
-          | undefined;
+          { contributions?: BarrelContribution[] } | undefined;
         for (const c of def?.contributions ?? []) {
           // Web contributions also live in def.contributions on the web side,
           // but the server `contributions[]` are ServerContributions tagged by

@@ -51,8 +51,8 @@ they said before and is why every prototype looked alike.
 - Description: Prototypes gallery list pane and the Focus/Compare detail pane (scaled live iframes), with an Improve this prototype affordance.
 - Web:
   - Slots:
-    - `prototypeDetailPane.Actions` ← `apps.prototypes.gallery`, `apps.prototypes.present`
     - `prototypesGalleryPane.Actions`
+    - `prototypeDetailPane.Actions` ← `apps.prototypes.gallery`, `apps.prototypes.present`
   - Contributes:
     - `Pane.Register` "prototypes-gallery"
     - `Pane.Register` "prototypes-detail"

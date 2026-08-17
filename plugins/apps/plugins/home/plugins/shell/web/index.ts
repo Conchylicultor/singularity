@@ -4,6 +4,7 @@ import { MdHome } from "react-icons/md";
 import { mdAppIcon } from "@plugins/apps-core/plugins/app-icon/web";
 import { homeApp } from "../core";
 import { HomeLayout } from "./components/home-layout";
+import { Home } from "./slots";
 
 export { Home } from "./slots";
 
@@ -18,4 +19,5 @@ export default {
       default: true,
     }),
   ],
+  slots: [Home],
 } satisfies PluginDefinition;

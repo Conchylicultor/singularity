@@ -14,8 +14,8 @@ those channels (`tail`/`cat` the `.jsonl` files directly for raw access).
 - Description: System logs pane, opened from the Debug sidebar.
 - Web:
   - Slots:
-    - `logChannelPane.Actions`
     - `logsPane.Actions`
+    - `logChannelPane.Actions`
   - Contributes:
     - `Pane.Register` "logs"
     - `Pane.Register` "logs-channel"
