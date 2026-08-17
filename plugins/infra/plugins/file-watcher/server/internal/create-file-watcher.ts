@@ -44,13 +44,11 @@ export function getParcelWatcher(): Promise<typeof import("@parcel/watcher")> {
   return parcelWatcherPromise;
 }
 
-export interface FileWatcherOptions {
+interface FileWatcherBaseOptions {
   dirs: string[];
   onChange: (events: parcel.Event[]) => void;
-  onReconcile?: () => void;
   debounceMs?: number;
   ceilingMs?: number;
-  reconcileMs?: number | null;
   extensions?: string[];
   ignore?: string[];
   /**
@@ -61,6 +59,33 @@ export interface FileWatcherOptions {
    */
   name?: string;
 }
+
+/**
+ * The periodic re-check, which EXISTS ONLY when its own callback is supplied.
+ *
+ * A reconcile tick is not a change — nothing on disk moved, the timer merely
+ * came round. It used to fall back to `onChange([])`, so every consumer that
+ * read no events (the common shape: `onChange: () => rebuild()`) was told
+ * "something changed" every 30s forever. The prototypes gallery cache-busted its
+ * iframes on that tick and reloaded every open mock, losing whatever state the
+ * author had built up on screen.
+ *
+ * So the two signals are now different callbacks, and the tick has no spelling
+ * that reaches `onChange`: pass `onReconcile` and get a timer, pass nothing and
+ * get none. `reconcileMs` without `onReconcile` is a type error rather than a
+ * silently dead knob.
+ */
+type FileWatcherReconcileOptions =
+  | {
+      /** Called on the timer to re-derive state a dropped fsevent could have missed. */
+      onReconcile: () => void;
+      /** How often to reconcile. Default 30s. */
+      reconcileMs?: number;
+    }
+  | { onReconcile?: undefined; reconcileMs?: undefined };
+
+export type FileWatcherOptions = FileWatcherBaseOptions &
+  FileWatcherReconcileOptions;
 
 export interface FileWatcher {
   stop(): Promise<void>;
@@ -111,9 +136,7 @@ export async function createFileWatcher(
     if (debounceTimer) return;
     const since = Date.now() - lastFlushAt;
     const delay =
-      since >= ceilingMs
-        ? debounceMs
-        : Math.min(debounceMs, ceilingMs - since);
+      since >= ceilingMs ? debounceMs : Math.min(debounceMs, ceilingMs - since);
     debounceTimer = setTimeout(() => {
       debounceTimer = null;
       flush();
@@ -165,11 +188,9 @@ export async function createFileWatcher(
     }
   }
 
-  if (reconcileMs != null) {
+  if (onReconcile) {
     reconcileTimer = setInterval(() => {
-      void runTracked(`watch:${name}:reconcile`, () =>
-        onReconcile ? onReconcile() : onChange([]),
-      );
+      void runTracked(`watch:${name}:reconcile`, () => onReconcile());
     }, reconcileMs);
   }
 

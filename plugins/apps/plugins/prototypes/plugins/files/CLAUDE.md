@@ -71,13 +71,26 @@ prototype folder is flat by construction — `<name>/assets/x.svg` is unserveabl
 ## Live state
 
 - `prototypes.list` — the prototype list (push).
-- `prototypes.version` — a timestamp bumped on every file change; iframes append
-  it to their `src` so an agent's edit reloads them automatically.
+- `prototypes.version` — a timestamp bumped when a prototype's bytes change;
+  iframes append it to their `src` so an agent's edit reloads them
+  automatically.
 
 `onReady` starts a `createFileWatcher` over `prototypes/`, watching every
 extension a prototype can ship (`.html/.css/.js/.json` plus images and
-`.woff2`); each change notifies both resources and bumps the version.
-`onShutdown` stops it. No polling.
+`.woff2`); `onShutdown` stops it. No polling.
+
+**Nothing bumps the version unless the tree really moved.** Every wake-up — a
+watcher event, the 30s reconcile — runs the same gate: re-read
+`readPrototypesSignature()` (every file's size + mtime) and return early when it
+matches the last one. The version is a RELOAD of every open prototype iframe,
+and a prototype is a live app somebody is clicking through, so a reload costs
+the author the state they built up on screen. A watcher event only says
+something *might* have changed (a touch, a chmod, an atomic save's temp file),
+which is not enough of a reason.
+
+That gate is also why the reconcile is affordable at all: it is a backstop for
+an fsevent parcel dropped, and on an idle machine it is a few stats that agree
+with the last few stats and end there.
 
 **This is the only watcher over that tree, so the signal is exported rather than
 re-derived**: `onPrototypesChanged` (plus `prototypesDir` and

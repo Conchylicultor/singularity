@@ -1,5 +1,8 @@
 import { mkdir } from "node:fs/promises";
-import { createFileWatcher, type FileWatcher } from "@plugins/infra/plugins/file-watcher/server";
+import {
+  createFileWatcher,
+  type FileWatcher,
+} from "@plugins/infra/plugins/file-watcher/server";
 import { CONFIG_DIR } from "./config-dir";
 import type { Disposable } from "../../core";
 
@@ -23,9 +26,10 @@ export async function initConfigWatcher(): Promise<void> {
         if (watchers.has(p)) notifyWatchers(p);
       }
     },
-    // No blanket reconcile. The default 30s one re-fired EVERY watched path (2 per
-    // descriptor), each re-reading from disk and re-running a full conflicts
-    // recompute, producing an O(N²) idle I/O storm with nothing changed.
+    // No reconcile (no `onReconcile`, so no timer). One re-fired EVERY watched
+    // path (2 per descriptor), each re-reading from disk and re-running a full
+    // conflicts recompute, producing an O(N²) idle I/O storm with nothing
+    // changed.
     //
     // These events are therefore a PUSH-LATENCY mechanism, not a correctness one:
     // config files normally change in-process (setConfig / fork) or via
@@ -35,13 +39,15 @@ export async function initConfigWatcher(): Promise<void> {
     // "no event" as "no change" — derived state must be founded on the disk (see
     // the fingerprint-memoized conflict derivation in resource.ts), so a missed
     // event can only delay a push, never leave a wrong value behind.
-    reconcileMs: null,
     extensions: [".jsonc"],
   });
 }
 
 export async function shutdownConfigWatcher(): Promise<void> {
-  if (watcher) { await watcher.stop(); watcher = null; }
+  if (watcher) {
+    await watcher.stop();
+    watcher = null;
+  }
 }
 
 export function watchFileChange(absPath: string, cb: () => void): Disposable {

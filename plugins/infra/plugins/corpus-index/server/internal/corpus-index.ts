@@ -1,4 +1,11 @@
-import { readdir, readFile, rename, stat, writeFile, mkdir } from "node:fs/promises";
+import {
+  readdir,
+  readFile,
+  rename,
+  stat,
+  writeFile,
+  mkdir,
+} from "node:fs/promises";
 import { dirname, join } from "node:path";
 import type { Registration } from "@plugins/framework/plugins/server-core/core";
 import { createSemaphore } from "@plugins/packages/plugins/semaphore/core";
@@ -134,7 +141,10 @@ const DEFAULT_CONCURRENCY = 6;
  * The single-writer invariant: a `host` index is persisted only by main; a
  * `worktree` index is always persisted by its own backend. Exported for tests.
  */
-export function computePersist(scope: "host" | "worktree", mainBackend: boolean): boolean {
+export function computePersist(
+  scope: "host" | "worktree",
+  mainBackend: boolean,
+): boolean {
   return scope === "host" ? mainBackend : true;
 }
 
@@ -158,11 +168,16 @@ export async function loadCorpusFile<TPartial>(
     if (!(err instanceof SyntaxError)) throw err;
     return { version, files: {} };
   }
-  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard on untrusted on-disk JSON
-  if (!parsed || parsed.version !== version || typeof parsed.files !== "object") {
+  /* eslint-disable @typescript-eslint/no-unnecessary-condition -- runtime guard on untrusted on-disk JSON */
+  if (
+    !parsed ||
+    parsed.version !== version ||
+    typeof parsed.files !== "object"
+  ) {
     // Version mismatch (or a corrupt/partial file) ⇒ start empty and rebuild.
     return { version, files: {} };
   }
+  /* eslint-enable @typescript-eslint/no-unnecessary-condition */
   return parsed;
 }
 
@@ -186,7 +201,10 @@ async function saveCorpusFile<TPartial>(
  * mid-walk contributes nothing). Symlinks are not followed (only `isDirectory()`
  * entries are recursed) so the walk cannot loop.
  */
-async function enumerate(roots: string[], match: (path: string) => boolean): Promise<string[]> {
+async function enumerate(
+  roots: string[],
+  match: (path: string) => boolean,
+): Promise<string[]> {
   const out: string[] = [];
   const walk = async (dir: string): Promise<void> => {
     let dirents;
@@ -262,7 +280,12 @@ export async function refreshCorpus<TPartial>(
   // backend that never persists) that is EVERY file, which means "unknown",
   // not "edited". Only a file that HAD an entry with a different fingerprint
   // is genuinely "modified since the last walk".
-  const toParse: Array<{ path: string; mtimeMs: number; size: number; hadEntry: boolean }> = [];
+  const toParse: Array<{
+    path: string;
+    mtimeMs: number;
+    size: number;
+    hadEntry: boolean;
+  }> = [];
   const statGate = createSemaphore(deps.concurrency);
   await Promise.all(
     paths.map((path) =>
@@ -275,10 +298,19 @@ export async function refreshCorpus<TPartial>(
           return;
         }
         const cached = index.files[path];
-        if (cached && cached.mtimeMs === st.mtimeMs && cached.size === st.size) {
+        if (
+          cached &&
+          cached.mtimeMs === st.mtimeMs &&
+          cached.size === st.size
+        ) {
           return; // unchanged file — skip
         }
-        toParse.push({ path, mtimeMs: st.mtimeMs, size: st.size, hadEntry: cached !== undefined });
+        toParse.push({
+          path,
+          mtimeMs: st.mtimeMs,
+          size: st.size,
+          hadEntry: cached !== undefined,
+        });
       }),
     ),
   );
@@ -289,7 +321,11 @@ export async function refreshCorpus<TPartial>(
     toParse.map((item) =>
       parseGate.run(async () => {
         const partial = await deps.withSlot(() => deps.parse(item.path));
-        index.files[item.path] = { mtimeMs: item.mtimeMs, size: item.size, partial };
+        index.files[item.path] = {
+          mtimeMs: item.mtimeMs,
+          size: item.size,
+          partial,
+        };
         (item.hadEntry ? modifiedPaths : addedPaths).push(item.path);
         // A macrotask breath so request serving interleaves between files.
         await deps.yieldServer();
@@ -297,7 +333,10 @@ export async function refreshCorpus<TPartial>(
     ),
   );
 
-  const changed = addedPaths.length > 0 || modifiedPaths.length > 0 || removedPaths.length > 0;
+  const changed =
+    addedPaths.length > 0 ||
+    modifiedPaths.length > 0 ||
+    removedPaths.length > 0;
   if (changed && deps.persist) {
     await saveCorpusFile(deps.indexPath, index);
   }
@@ -311,7 +350,10 @@ export interface CorpusIndexEnv {
   isMain: () => boolean;
   withSlot: <R>(fn: () => Promise<R>) => Promise<R>;
   yieldServer: () => Promise<void>;
-  startFileWatcher: (opts: { dirs: string[]; onChange: () => void }) => Promise<void>;
+  startFileWatcher: (opts: {
+    dirs: string[];
+    onChange: () => void;
+  }) => Promise<void>;
 }
 
 /**
@@ -430,8 +472,12 @@ export function createCorpusIndex<TPartial>(
  * — the incrementally-maintained set of paths with no per-file payload); supply
  * it for a per-file `TPartial` payload.
  */
-export function defineCorpusIndex(spec: Omit<CorpusIndexSpec<null>, "parse">): CorpusIndex<null>;
-export function defineCorpusIndex<TPartial>(spec: CorpusIndexSpec<TPartial>): CorpusIndex<TPartial>;
+export function defineCorpusIndex(
+  spec: Omit<CorpusIndexSpec<null>, "parse">,
+): CorpusIndex<null>;
+export function defineCorpusIndex<TPartial>(
+  spec: CorpusIndexSpec<TPartial>,
+): CorpusIndex<TPartial>;
 export function defineCorpusIndex<TPartial>(
   spec: CorpusIndexSpec<TPartial>,
 ): CorpusIndex<TPartial> {
@@ -442,7 +488,16 @@ export function defineCorpusIndex<TPartial>(
     startFileWatcher: async ({ dirs, onChange }) => {
       // Process-lifetime watcher — the handle is intentionally discarded (the
       // original stats/cost watcher was likewise fire-and-forget, main-only).
-      await createFileWatcher({ dirs, onChange: () => onChange() });
+      //
+      // The reconcile tick re-runs the same re-index as a change would; it is a
+      // backstop for a dropped fsevent, and cheap because the pass is
+      // fingerprint-gated (nothing changed ⇒ nothing re-parsed). Spelled out
+      // because the primitive no longer runs a timer nobody asked for.
+      await createFileWatcher({
+        dirs,
+        onChange: () => onChange(),
+        onReconcile: () => onChange(),
+      });
     },
   });
 }

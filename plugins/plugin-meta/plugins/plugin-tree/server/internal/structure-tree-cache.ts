@@ -32,13 +32,7 @@ let watcherStarted: Promise<FileWatcher> | null = null;
 function ensureWatcher(): Promise<FileWatcher> {
   watcherStarted ??= createFileWatcher({
     dirs: [PLUGINS_DIR],
-    reconcileMs: null,
-    ignore: [
-      "**/.git/**",
-      "**/node_modules/**",
-      "**/dist/**",
-      "**/build/**",
-    ],
+    ignore: ["**/.git/**", "**/node_modules/**", "**/dist/**", "**/build/**"],
     onChange: (events) => {
       if (events.length > 0) generation++;
     },
