@@ -212,6 +212,7 @@ Browser/server logs persist to `~/.singularity/worktrees/<wt>/logs/<channel>.jso
 Independent projects that live in `sidequests/`, not directly related to Singularity. Each has its own `CLAUDE.md`.
 
 - [`sidequests/ui-mastery/`](sidequests/ui-mastery/CLAUDE.md) — Research and tooling to make agents produce professional UI. **Read before any UI polish work.** Feature agents build functionality; polish agents apply UI Mastery knowledge separately.
+- [`sidequests/monitors/`](sidequests/monitors/CLAUDE.md) — Host-level launchd monitors that watch the machine from outside the app, for failures the app's own observability cannot survive (FD leaks before a crash; worktree checkouts deleted under a live conversation). None are auto-installed.
 
 ## Instructions
 

@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.epot.worktree-removal-monitor</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>/bin/bash</string>
+        <string>/Users/epot/__A__/dev/singularity/sidequests/monitors/worktree-removal/worktree-removal-monitor.sh</string>
+    </array>
+    <!-- A long-lived stream, not a poll: RunAtLoad + KeepAlive, no StartInterval.
+         (fd-monitor is the opposite shape — it ticks and exits.) -->
+    <key>RunAtLoad</key>
+    <true/>
+    <key>KeepAlive</key>
+    <true/>
+    <!-- Yield CPU/IO to the interactive backends, same intent as darwinbg. -->
+    <key>ProcessType</key>
+    <string>Background</string>
+    <key>StandardOutPath</key>
+    <string>/dev/null</string>
+    <key>StandardErrorPath</key>
+    <string>/tmp/worktree-removal-monitor.err</string>
+</dict>
+</plist>

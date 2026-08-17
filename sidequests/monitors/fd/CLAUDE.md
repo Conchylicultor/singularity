@@ -76,7 +76,7 @@ Why dump *during* the tick: the leaker often dies before the next tick (hits `ke
 Override thresholds via env vars on the LaunchAgent if needed:
 
 ```sh
-SUSPECT_PID_FDS=5000 SYSTEM_NUM_FILES_PCT=40 zsh sidequests/fd-monitor/fd-monitor.sh
+SUSPECT_PID_FDS=5000 SYSTEM_NUM_FILES_PCT=40 zsh sidequests/monitors/fd/fd-monitor.sh
 ```
 
 Incident dirs older than 14 days are auto-purged. There's also a hard cap of `MAX_INCIDENT_DIRS` (default 200) — oldest are dropped if the cap is exceeded.
@@ -101,8 +101,8 @@ The script protects itself from amplifying a crisis it's trying to observe:
 ## Install
 
 ```sh
-chmod +x sidequests/fd-monitor/fd-monitor.sh
-cp sidequests/fd-monitor/com.epot.fd-monitor.plist ~/Library/LaunchAgents/
+chmod +x sidequests/monitors/fd/fd-monitor.sh
+cp sidequests/monitors/fd/com.epot.fd-monitor.plist ~/Library/LaunchAgents/
 launchctl load ~/Library/LaunchAgents/com.epot.fd-monitor.plist
 ```
 
@@ -128,7 +128,7 @@ After editing the plist:
 
 ```sh
 launchctl unload ~/Library/LaunchAgents/com.epot.fd-monitor.plist
-cp sidequests/fd-monitor/com.epot.fd-monitor.plist ~/Library/LaunchAgents/
+cp sidequests/monitors/fd/com.epot.fd-monitor.plist ~/Library/LaunchAgents/
 launchctl load ~/Library/LaunchAgents/com.epot.fd-monitor.plist
 ```
 
