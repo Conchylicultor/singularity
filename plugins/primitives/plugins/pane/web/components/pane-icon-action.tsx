@@ -1,10 +1,17 @@
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { forwardRef, type ComponentProps, type ComponentType, type ReactNode } from "react";
+import {
+  forwardRef,
+  type ComponentProps,
+  type ComponentType,
+  type ReactNode,
+} from "react";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { WithTooltip } from "@plugins/primitives/plugins/tooltip/web";
 
-interface PaneIconActionProps
-  extends Omit<ComponentProps<typeof IconButton>, "icon" | "label"> {
+interface PaneIconActionProps extends Omit<
+  ComponentProps<typeof IconButton>,
+  "icon" | "label"
+> {
   label: string;
   icon?: ComponentType<{ className?: string }>;
   children?: ReactNode;
@@ -20,7 +27,13 @@ export const PaneIconAction = forwardRef<
   if (children && !Icon) {
     return (
       <WithTooltip content={label}>
-        <Button ref={ref} variant="ghost" aspect="icon" aria-label={label} {...rest}>
+        <Button
+          ref={ref}
+          variant="ghost"
+          aspect="icon"
+          aria-label={label}
+          {...rest}
+        >
           {children}
         </Button>
       </WithTooltip>

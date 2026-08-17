@@ -222,7 +222,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Uses:
               - `apps/pages/page-tree.pagesTreePane`
               - `conversations/conversation-view/action-bar.Conversation`
-              - `primitives/css/ui-kit.Button`
+              - `primitives/icon-button.IconButton`
         - **`shell`** — App shell for the agent manager. Registers the /agents app entry and renders the main Shell layout.
           - Web:
             - Contributes: `Apps.App` "Agent Manager" → `AgentManagerLayout`
@@ -7135,7 +7135,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `primitives/css/center.Center`
       - `primitives/css/clip.Clip`
       - `primitives/css/text.Text`
-      - `primitives/css/ui-kit.Button`
       - `primitives/css/ui-kit.ResizableHandle`
       - `primitives/css/ui-kit.ResizablePanel`
       - `primitives/css/ui-kit.ResizablePanelGroup`
@@ -7144,6 +7143,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `primitives/data-view.defineDataView`
       - `primitives/data-view.FieldDef`
       - `primitives/data-view.HierarchyConfig`
+      - `primitives/icon-button.IconButton`
       - `primitives/loading.Loading`
       - `primitives/pane.openPane`
       - `primitives/pane.Pane`
@@ -10014,7 +10014,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `debug/profiling/ops/op-gantt.OpGantt`
               - `infra/endpoints.useEndpoint`
               - `primitives/css/text.Text`
-              - `primitives/css/ui-kit.Button`
+              - `primitives/icon-button.IconButton`
               - `primitives/pane.Pane`
               - `primitives/pane.PaneChrome`
               - `primitives/pane.useOpenPane`
@@ -11990,6 +11990,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/css/viewport-overlay.ViewportOverlay`
           - `primitives/filter-chips.FilterChip`
           - `primitives/filter-chips.useChipFilter`
+          - `primitives/icon-button.IconButton`
           - `primitives/live-state.ResourceView`
           - `primitives/live-state.useResource`
           - `primitives/loading.Loading`
@@ -15760,6 +15761,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/css/ui-kit.Button`
           - `primitives/css/ui-kit.cn`
           - `primitives/css/ui-kit.Input`
+          - `primitives/icon-button.IconButton`
           - `primitives/pane.openPane`
           - `primitives/pane.Pane`
           - `shell/notifications.toast`
@@ -22151,7 +22153,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps-core/tab-bar`
               - `apps-core/tab-surface`
               - `apps-core/theme-scope`
-              - `apps/agent-manager/pages-nav`
               - `apps/agent-manager/welcome`
               - `apps/browser/bookmarks`
               - `apps/browser/start-page`
@@ -22252,7 +22253,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `conversations/conversation-view/pending-turn`
               - `conversations/conversation-view/prompt-templates`
               - `conversations/conversation-view/push-and-exit`
-              - `conversations/conversation-view/push-profiling`
               - `conversations/conversation-view/tasks-panel`
               - `conversations/conversation-view/terminal-pane`
               - `conversations/conversations-view`
@@ -23697,6 +23697,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps-core/surface/floating`
           - `apps-core/surface/solo`
           - `apps-core/tab-bar`
+          - `apps/agent-manager/pages-nav`
           - `apps/browser/bookmarks`
           - `apps/browser/navigation`
           - `apps/browser/proxy`
@@ -23729,21 +23730,25 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/workflows/steps/user-input`
           - `build`
           - `build/build-logs`
+          - `code-explorer`
           - `config_v2/config-link`
           - `conversations/agents`
           - `conversations/conversation-view/jsonl-viewer/outline`
           - `conversations/conversation-view/jsonl-viewer/tool-call/agent`
           - `conversations/conversation-view/notes`
+          - `conversations/conversation-view/push-profiling`
           - `conversations/conversation-view/resume`
           - `conversations/conversation-view/terminal-pane`
           - `conversations/conversations-view`
           - `debug/broadcasts`
           - `debug/memory`
+          - `debug/queue`
           - `debug/timeline`
           - `debug/worktree-cleanup`
           - `fields/enum/column-config`
           - `fullscreen`
           - `improve/element-picker`
+          - `infra/events-test`
           - `page/editor`
           - `page/formatting/color`
           - `page/formatting/link`
