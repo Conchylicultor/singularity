@@ -158,9 +158,15 @@ export function FloatingTemplateChips({
         {pinnedTemplates.length > 0 && (
           // `clip`, not a second `⋯`: a chip that doesn't fit is simply dropped
           // from the strip, because every template is already one hover away in
-          // the panel beside it. The bar is this row's grow cell, so the ✎
-          // trigger keeps its place at the right of whatever fits.
-          <AdaptiveBar gap="xs" overflow="clip">
+          // the panel beside it.
+          //
+          // `end`, because the bar holds this row's slack and therefore decides
+          // where the row's empty space sits. Packed to the start, the slack
+          // lands BETWEEN the last chip and the ✎ beside it — splitting one
+          // control into two. Packed to the end, the strip and its trigger stay
+          // one group and the empty space falls at the left of the row, which is
+          // what a leading spacer used to be authored into the layout to do.
+          <AdaptiveBar gap="xs" overflow="clip" align="end">
             {pinnedTemplates.map((t) => (
               <AdaptiveBar.Item key={t.id} id={t.id}>
                 <TemplateChip

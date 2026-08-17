@@ -20577,6 +20577,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/log-channels`
               - `primitives/outline/rail`
               - `primitives/pane`
+              - `primitives/prompt-editor`
               - `primitives/setup-steps`
               - `ui/tweakcn/community-browser`
         - **`grid`** — Responsive/uniform grid layout primitive: <Grid minCellWidth> lays out a wrapping, equal-width card grid via a closed prop surface — not a raw grid-template passthrough.
@@ -25182,6 +25183,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Web:
         - Slots: `PromptEditorSlots.FloatingAction` ← `conversations.conversation-view.exit-menu`, `conversations.conversation-view.prompt-templates`, `conversations.conversation-view.push-and-exit`, `primitives.prompt-editor.voice-input`
         - Uses:
+          - `primitives/css/fill.Fill`
           - `primitives/css/spacing.Stack`
           - `primitives/css/ui-kit.cn`
           - `primitives/slot-render.defineRenderSlot`
