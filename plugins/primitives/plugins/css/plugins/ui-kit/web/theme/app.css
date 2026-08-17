@@ -443,6 +443,211 @@
  * header never sits under the bar without hand-reserving a pr-14. */
 @utility pr-floating-bar { padding-right: var(--floating-bar-safe-area, var(--chrome-pad-x)); } /* twmerge: extend pr */
 
+/* Control-panel geometry — the one grid every data-control panel (filter, sort,
+ * view settings, …) is drawn on, owned by the `control-panel` primitive. The
+ * `--cp-*` values themselves are declared at every theme-scope root (see the
+ * `:root, [data-theme-scope]` block in `@layer base` below) because most of them
+ * READ density tokens, and a custom property that reads a themed var freezes its
+ * computed value wherever it is declared.
+ *
+ * Six utilities, and between them they hold the five panel invariants:
+ *
+ *   - `cp-panel` — THE INSET OWNER: the panel's chrome pad PLUS the content
+ *     inset every non-row child lands on (the full rule is at
+ *     `--cp-inset-start`). Must sit on the SAME element as `cp-body`: a band's
+ *     rule bleeds back out through this inset, and `cp-body`'s cancellation of
+ *     the first rule is anchored on this box's own padding-box edge.
+ *   - `cp-body`  — THE BAND CONTAINER: it spaces the panel's bands with `gap`,
+ *     and cancels the rule of whichever band came first. Read it together with
+ *     `cp-band` — the two are one mechanism, and the comments at each explain the
+ *     half they own.
+ *   - `cp-band`  — THE SEPARATOR RULE, hung above a band that declares itself
+ *     one. So an author never places a divider and the rhythm cannot go ragged:
+ *     a conditionally-null section leaves no orphan rule, and a footer is
+ *     separated because it IS a band, not because it opted into chrome.
+ *   - `cp-row`   — the 4-track row grid: gutter | icon/indicator | label |
+ *     trailing. GRID TRACKS, never a leading flex child: a track occupies its
+ *     width whether or not it is filled, which is the whole of invariant #1 (the
+ *     label's x does not depend on whether this row happens to have an icon) —
+ *     and a long label truncates in its own column instead of sliding under the
+ *     trailing control (the `pr-2xl` + `absolute right-2` bug ui-kit's CLAUDE.md
+ *     documents).
+ *   - `cp-rule`  — the 6-track builder grid: gutter | prefix | field | operator |
+ *     value | remove. It shares `--cp-icon-gap` as its column gap with `cp-row`,
+ *     which is what puts the prefix cell on exactly the same rail as a row's icon
+ *     cell — so the filter builder, the sort builder and the settings menu all
+ *     line up with each other, not merely each with itself. `[data-span="field"]`
+ *     collapses the operator track for a builder that has no operator (sort), so
+ *     the two builders keep identical rails without leaving a hole mid-row. The
+ *     trailing track is the one ELASTIC rigid track (`minmax`): it grows for
+ *     extra `actions` beside the built-in remove, so keep a rule list's `actions`
+ *     uniform or the value column will step between rows.
+ *   - `cp-rail-icon` — the icon rail, for content that is not itself a row (a
+ *     section label). It hangs BACK out of the content inset, because the
+ *     panel's content box already starts on the text rail. There is no
+ *     `cp-rail-text` twin: the text rail is where loose content already is.
+ *
+ * Nested `& > * + *` / `&[data-span]` selectors inside `@utility` are supported
+ * (verified against tailwindcss 4.2.2: both compile to the same nested rule the
+ * source declares, exactly like `scroll-fade`'s `&::before`). */
+@utility cp-panel {
+  /* twmerge: extend p */
+  /* THE inset owner (see the ownership rule at `--cp-inset-start`). The chrome
+     pad is the gap a row's fill keeps from the panel's edge; the content inset
+     on top of it is where everything that is NOT a row lands. */
+  padding-block: var(--cp-panel-pad);
+  padding-inline: calc(var(--cp-panel-pad) + var(--cp-inset-start))
+    calc(var(--cp-panel-pad) + var(--cp-inset-end));
+}
+
+@utility cp-body {
+  /* twmerge: standalone -- Composite band container (flex column + gap + the positioned first-rule mask); no single-value built-in group to conflict with. */
+  /* THE BAND CONTAINER — half one of the separator mechanism (half two is
+     `cp-band`).
+     It lays the bands out itself, with `gap`: the only spacing in CSS that
+     exists strictly BETWEEN items, so the first band cannot be handed a leading
+     gap that then has to be taken away again.
+     `display: flex` is load-bearing for a second, less obvious reason. A band is
+     almost never the panel's direct CHILD: a contributed panel reaches this box
+     through `renderIsolated`, which wraps it in a `display: contents` lineage
+     span — and `display: contents` is transparent to LAYOUT while staying opaque
+     to SELECTORS. A flex container therefore still lays the bands out as its own
+     real flex items, at any wrapper depth and any number of wrappers, whereas
+     the `& > * + *` sibling rule this replaced matched NOTHING: it saw one span
+     in the filter panel, and one span per contribution in the settings panel. No
+     panel in the app drew a single hairline. */
+  display: flex;
+  flex-direction: column;
+  gap: calc(2 * var(--cp-panel-pad));
+  position: relative;
+  /* …and the one exception the mechanism owes: cancel the rule of whichever band
+     came FIRST, which has nothing above it to be separated from. There is no
+     selector for "the first band" — that is exactly what the wrappers took away
+     — so the panel cancels it GEOMETRICALLY, painting its own background over
+     the one rule that lands on its padding-box top edge. That the first rule
+     lands precisely there is not a number to keep in sync: a band hangs its rule
+     `--cp-panel-pad` above itself and `cp-panel` (always the same element as
+     this one) insets its content by the same `--cp-panel-pad`, so the two cannot
+     drift apart.
+     `::after`, not `::before`: a band's rule and this mask are both positioned
+     boxes at `z-index: auto`, so they paint in TREE order — and only `::after`
+     comes after the bands. `--chrome-mask` is the surface's own published
+     background (`SURFACE_LEVELS`), so the cancellation stays exact in a popover,
+     in a dialog and on the page canvas, under every preset and both modes —
+     rather than naming one of them. */
+  &::after {
+    content: "";
+    position: absolute;
+    inset-inline: 0;
+    top: 0;
+    height: 1px;
+    background: var(--chrome-mask);
+  }
+}
+
+@utility cp-band {
+  /* twmerge: standalone -- Composite band marker (positioning context + the full-bleed ::before hairline); no single-value built-in group to conflict with. */
+  /* THE SEPARATOR RULE — half two. A band declares that it IS one; the rule is
+     then drawn for it, so an author still never places a divider.
+     The rule is a pseudo-element hung `--cp-panel-pad` ABOVE the band, i.e. it
+     sits in the container's gap and the band's own box does not grow by it. That
+     is what lets the first band be cancelled by ink alone: were this a
+     `border-top`, the first band would also carry its 1px + top padding as real
+     height, and no padding on the panel could subtract that back out. */
+  position: relative;
+  &::before {
+    content: "";
+    position: absolute;
+    top: calc(-1 * var(--cp-panel-pad));
+    /* Full-bleed: hang the rule OUT through the panel's whole inset — chrome pad
+       plus content inset — so it reaches the panel's inner edges. Unlike the
+       border this replaced there is no padding to restore afterwards: the rule
+       is its own empty box, not a wrapper around the band's content, so the pair
+       of cancellations that had to "mirror `cp-panel` exactly" is now one term. */
+    inset-inline: calc(-1 * (var(--cp-panel-pad) + var(--cp-inset-start)))
+      calc(-1 * (var(--cp-panel-pad) + var(--cp-inset-end)));
+    height: 1px;
+    background: var(--border);
+  }
+}
+
+@utility cp-row {
+  /* twmerge: standalone -- Composite row grid (display + tracks + gap + min-height + inline padding + radius); not a single-property utility another class should selectively override. */
+  display: grid;
+  grid-template-columns: var(--cp-gutter) var(--cp-icon-col) minmax(0, 1fr) auto;
+  column-gap: var(--cp-icon-gap);
+  align-items: center;
+  /* CANCEL the panel's content inset (the ownership rule at
+     `--cp-inset-start`). The row's BOX bleeds back out to the panel's inner
+     edge — that full-width hover / selected fill is what makes a row read as a
+     row — and the tracks below then land its label back on exactly the inset
+     the panel applied, so a row label and a loose <Input> share one x. The
+     width has to grow by what the margins gave back: a `<button>` host sizes to
+     its content, so `width: auto` would shrink the row rather than fill. */
+  margin-inline: calc(-1 * var(--cp-inset-start)) calc(-1 * var(--cp-inset-end));
+  width: calc(100% + var(--cp-inset-start) + var(--cp-inset-end));
+  min-height: var(--cp-row-h);
+  padding-inline: var(--cp-row-pad-x);
+  border-radius: var(--radius-md);
+  text-align: left;
+}
+
+@utility cp-rule {
+  /* twmerge: standalone -- Composite builder grid (display + 6 tracks + gap + min-height + inline padding + radius + the data-span collapse); not a single-property utility another class should selectively override. */
+  display: grid;
+  /* The gutter track carries the difference between the row's gap and the
+     builder's, so the prefix cell still begins at `--cp-rail-icon`
+     (row-pad-x + gutter + icon-gap) even though every gap here is the tighter
+     `--cp-rule-gap`. That is what keeps a rule's prefix cell on the same rail as
+     a menu row's icon cell while giving the builder back 16px to share.
+     The three flexible cells share EQUALLY: the field, operator and value all
+     carry comparable phrases ("Status", "Is none of", "2 selected"), so the old
+     1.05/1/1.35 taper — which handed the most space to the value, the shortest
+     of the three — clipped the other two mid-word at the builder width. */
+  grid-template-columns:
+    calc(var(--cp-gutter) + var(--cp-icon-gap) - var(--cp-rule-gap))
+    var(--cp-prefix-col)
+    repeat(3, minmax(0, 1fr))
+    minmax(var(--cp-remove-col), auto);
+  column-gap: var(--cp-rule-gap);
+  align-items: center;
+  /* The same cancellation as `cp-row`, for the same reason — see it there. */
+  margin-inline: calc(-1 * var(--cp-inset-start)) calc(-1 * var(--cp-inset-end));
+  width: calc(100% + var(--cp-inset-start) + var(--cp-inset-end));
+  min-height: var(--cp-rule-h);
+  padding-inline: var(--cp-row-pad-x);
+  border-radius: var(--radius-md);
+  /* A builder with no operator (sort) is a DIFFERENT GRID, not the same grid
+     with one cell spanning two tracks. Spanning was the obvious move and it is
+     wrong: it hands the whole freed track to the field, so two flexible cells
+     end up 2fr / 1fr — the wider one holding the shorter content ("Updated" in
+     252px while "Newest first" clipped at 124px). Redeclaring the template
+     drops the operator track entirely and lets the two cells share equally, and
+     it needs no `grid-column` at all: with no operator cell rendered, the field,
+     value and trailing cells auto-place into tracks 3, 4 and 5.
+     The leading track keeps its compensation, so both builders still start their
+     prefix cell on `--cp-rail-icon` — that shared rail is what makes the filter
+     and the sort read as one family. */
+  &[data-span="field"] {
+    grid-template-columns:
+      calc(var(--cp-gutter) + var(--cp-icon-gap) - var(--cp-rule-gap))
+      var(--cp-prefix-col)
+      repeat(2, minmax(0, 1fr))
+      minmax(var(--cp-remove-col), auto);
+  }
+}
+
+/* The icon rail, for content that is not a row — a section label, and nothing
+ * else today. It CANCELS part of the panel's content inset rather than adding to
+ * it: the panel's content box already starts on the TEXT rail, so reaching the
+ * icon rail means hanging BACK one column, and the offset is negative by
+ * construction (`--cp-rail-icon` < `--cp-rail-text`, always, since the text rail
+ * is the icon rail plus the icon column and its gap). That hang is what puts a
+ * section label on the same x as every row's icon, indicator and drag handle.
+ * There is no `cp-rail-text` twin: the text rail IS the panel's content inset,
+ * so content reaches it by doing nothing at all. */
+@utility cp-rail-icon { margin-inline-start: calc(var(--cp-rail-icon) - var(--cp-inset-start)); } /* twmerge: standalone -- A negative hanging offset (margin-inline-start); the built-in margin groups are outside the allowed extend set, and nothing should selectively override half of a rail. */
+
 /* Spacing scale utilities — the single source of truth for layout gap + padding
  * rhythm (<Stack gap> / <Inset pad> primitives, plugins/primitives/plugins/spacing).
  * One closed 8-step ramp (none | 2xs | xs | sm | md | lg | xl | 2xl) backed by the
@@ -632,6 +837,74 @@
        preset's `--muted` and ignore its own. Guarded by
        `inherited-theme-defaults-scoped`. */
     --hover-fill: var(--muted);
+    /* Control-panel geometry — the numbers behind the `cp-*` utilities above.
+       They live at EVERY theme-scope root for the same reason `--chrome-mask`
+       does: most of them read a density token (`--space-*`, `--pad-row-x`,
+       `--control-height-*`), and custom-property inheritance passes the COMPUTED
+       value — anchored on `:root` alone, a forked app running the Compact preset
+       would draw its panels on the desktop preset's geometry. Guarded by
+       `inherited-theme-defaults-scoped`.
+
+       Most bind to the density ramp wherever the meaning matches, so panels
+       tighten with the Compact preset instead of freezing at one screenshot.
+       Binding the row height to `--control-height-md` is the load-bearing one: a
+       panel row is then exactly as tall as every Button / Input / ToggleChip in
+       the app, so the rail invariant extends past the panel's own edge. Only the
+       three COLUMN WIDTHS are literals — the spacing ramp models gaps and
+       insets, not column widths, so there is nothing honest to bind them to. */
+    --cp-panel-pad: var(--space-xs);
+    /* 4px at Comfortable. The design study used 6px, which is not on the ramp;
+       if this reads cramped on screen, declare a named 0.375rem density token
+       and bind to that rather than hardcoding a literal here. */
+    --cp-row-pad-x: var(--pad-row-x);
+    --cp-gutter: var(--space-lg); /* hangs the drag handle; empty on non-reorderable rows */
+    --cp-icon-gap: var(--space-sm); /* the row's column gap, and the rail's last term */
+    /* The BUILDER's column gap, deliberately tighter than the row's. A rule row
+       packs five controls where a menu row packs one label, and at the 524px
+       builder width the four inner gaps are the difference between "Is none of"
+       fitting and reading "Is no…". They are different jobs, so they are
+       different tokens; `cp-rule` adds the difference back into its gutter track
+       so the rail stays exactly where `--cp-rail-icon` says. Must stay ≤
+       `--cp-icon-gap`, which the ramp guarantees (xs ≤ sm at every preset). */
+    --cp-rule-gap: var(--space-xs);
+    --cp-icon-col: 1.125rem;
+    /* Fits the longest real prefix ("then by" / "Sort by") plus the filter's
+       And/Or picker. It was 4.625rem, which cost the field and operator cells
+       10px they needed more. */
+    --cp-prefix-col: 4rem;
+    --cp-remove-col: 1.5rem;
+    --cp-row-h: var(--control-height-md);
+    --cp-rule-h: var(--control-height-lg);
+    /* The two rails, measured from the panel's padding box. `--cp-rail-icon` is
+       the LEFT EDGE OF THE ICON CELL, so it includes the gap that follows the
+       gutter track — a section label hung on it lands exactly on the icon
+       column, which is what makes invariant #1 measurable rather than
+       approximate. */
+    --cp-rail-icon: calc(var(--cp-row-pad-x) + var(--cp-gutter) + var(--cp-icon-gap));
+    --cp-rail-text: calc(var(--cp-rail-icon) + var(--cp-icon-col) + var(--cp-icon-gap));
+    /* ── THE INSET OWNERSHIP RULE ──────────────────────────────────────
+       EXACTLY ONE BOX APPLIES THE PANEL'S CONTENT INSET — `cp-panel`, as its
+       own padding. Every other participant either INHERITS it or CANCELS it,
+       never both:
+
+         - inherits — a raw <Input>, a FieldRenderer, any loose JSX. It lands
+           on the rail by doing NOTHING, which is the point: content needs no
+           wrapper and no opt-in to be aligned.
+         - cancels — `cp-row` / `cp-rule` (negative inline margins, so the row
+           BOX bleeds back out to the panel's inner edge and its fill reads as
+           a row) and `cp-rail-icon` (a section label hangs back one column).
+           Each then re-inserts its own padding, landing its content back on a
+           rail. A canceller never also inherits, and an inheritor never pads.
+
+       The values make the panel's CONTENT BOX exactly a row's CONTENT BAND: it
+       starts on the TEXT rail — where every row label starts — and ends where a
+       row's trailing cell ends. So loose content lines up on the left with the
+       row labels above and below it, and on the right with their trailing
+       cells, with nothing at any call site to get wrong. Before this, a panel
+       had THREE left edges (section label ~36px, row content 12px, loose
+       content 4px) and only the two row kinds were ever measured. */
+    --cp-inset-start: var(--cp-rail-text);
+    --cp-inset-end: var(--cp-row-pad-x);
     }
   body {
     @apply bg-background;

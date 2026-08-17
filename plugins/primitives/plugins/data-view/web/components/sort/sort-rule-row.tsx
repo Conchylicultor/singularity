@@ -1,36 +1,38 @@
 import type { ReactNode } from "react";
-import { MdClose, MdDragIndicator } from "react-icons/md";
-import {
-  cn,
-  ControlSizeProvider,
-} from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
+import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { ControlPanel } from "@plugins/primitives/plugins/css/plugins/control-panel/web";
 import { SortableItem } from "@plugins/primitives/plugins/sortable-list/web";
-import {
-  useHoverReveal,
-  hoverRevealClass,
-} from "@plugins/primitives/plugins/hover-reveal/web";
 import type { FieldDef, SortRule } from "../../../core";
 import { useResolveDirectionLabels } from "../../internal/use-direction-labels";
+import { dragHandleProps } from "../../internal/drag-handle-props";
 import { FieldPicker } from "../filter/field-picker";
 import { DirectionPicker } from "./direction-picker";
 
 /**
- * One sort level: `[drag handle] [field ▾] [direction ▾] [✕]` — a flat single
- * line laid out as a `justify-between` flex row so the rigid pickers (left
- * cluster) never crush and the hover-revealed remove (right cluster) stays
- * pinned to the row edge. The whole row is a `SortableItem` keyed by `fieldId` —
- * priority = list order, reordered by dragging the handle.
+ * One sort level, read as a sentence: `Sort by [field] [direction]`, then
+ * `then by …` for each level under it. It is a `ControlPanel.RuleRow` on the
+ * builder's six-track grid, so its columns line up down the list AND with the
+ * filter builder's — where it used to be a `justify-between` flex row whose
+ * pickers hugged their own content.
+ *
+ * There is no operator in a sort, so the `operator` slot is OMITTED rather than
+ * filled with a spacer: the row then reports `data-span="field"` and the field
+ * cell takes the operator's track, which keeps the rails identical to the filter
+ * builder's without leaving a hole mid-row.
+ *
+ * The whole row is a `SortableItem` keyed by `fieldId` — priority = list order,
+ * reordered by dragging the handle in the row's gutter track.
  */
 export function SortRuleRow<TRow>(props: {
   rule: SortRule;
+  /** Position in the list — the first level reads "Sort by", the rest "then by". */
+  index: number;
   fields: FieldDef<TRow>[];
   onChangeField: (nextFieldId: string) => void;
   onSetDirection: (direction: "asc" | "desc") => void;
   onRemove: () => void;
 }): ReactNode {
   const { rule } = props;
-  const { revealed, groupProps } = useHoverReveal();
   const resolveDirectionLabels = useResolveDirectionLabels();
   const activeField = props.fields.find((f) => f.id === rule.fieldId);
   const directionLabels = resolveDirectionLabels(activeField?.type);
@@ -42,17 +44,11 @@ export function SortRuleRow<TRow>(props: {
       className={({ isDragging }) => cn(isDragging && "opacity-40")}
     >
       {(state) => (
-        <div
-          {...groupProps}
-          className="flex items-center justify-between gap-xs"
-        >
-          <div className="flex shrink-0 items-center gap-xs">
-            <div
-              {...state.handleProps}
-              className="cursor-grab text-muted-foreground hover:text-foreground active:cursor-grabbing"
-            >
-              <MdDragIndicator className="size-4" />
-            </div>
+        <ControlPanel.RuleRow
+          handle
+          handleProps={dragHandleProps(state)}
+          prefix={props.index === 0 ? "Sort by" : "then by"}
+          field={
             <FieldPicker
               fields={props.fields}
               value={rule.fieldId}
@@ -60,23 +56,17 @@ export function SortRuleRow<TRow>(props: {
               label="Sort field"
               placeholder="Sort by…"
             />
+          }
+          value={
             <DirectionPicker
               value={rule.direction}
               labels={directionLabels}
               onChange={props.onSetDirection}
             />
-          </div>
-          <div className="flex shrink-0 items-center justify-end gap-xs">
-            <ControlSizeProvider size="sm">
-              <IconButton
-                icon={MdClose}
-                label="Remove sort"
-                className={hoverRevealClass(revealed)}
-                onClick={props.onRemove}
-              />
-            </ControlSizeProvider>
-          </div>
-        </div>
+          }
+          onRemove={props.onRemove}
+          removeLabel="Remove sort"
+        />
       )}
     </SortableItem>
   );

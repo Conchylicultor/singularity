@@ -1,16 +1,12 @@
 import type { ReactNode } from "react";
+import { MdArrowDownward, MdArrowUpward } from "react-icons/md";
 import {
-  MdArrowDownward,
-  MdArrowUpward,
-  MdExpandMore,
-} from "react-icons/md";
-import {
-  Button,
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { ControlPanel } from "@plugins/primitives/plugins/css/plugins/control-panel/web";
 
 /**
  * Dropdown of the two sort directions. The trigger shows the current direction's
@@ -31,13 +27,13 @@ export function DirectionPicker(props: {
     <DropdownMenu>
       <DropdownMenuTrigger
         render={
-          <Button variant="outline" aria-label="Sort direction" />
+          <ControlPanel.Field
+            aria-label="Sort direction"
+            icon={asc ? <MdArrowUpward /> : <MdArrowDownward />}
+            label={asc ? labels.asc : labels.desc}
+          />
         }
-      >
-        {asc ? <MdArrowUpward /> : <MdArrowDownward />}
-        <span className="truncate">{asc ? labels.asc : labels.desc}</span>
-        <MdExpandMore />
-      </DropdownMenuTrigger>
+      />
       <DropdownMenuContent align="start">
         <DropdownMenuItem onClick={() => props.onChange("asc")}>
           <MdArrowUpward />

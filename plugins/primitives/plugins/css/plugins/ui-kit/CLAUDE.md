@@ -581,6 +581,7 @@ guard: `confirmDialog` (`imperative-dialog/plugins/confirm`); native
     - `primitives/css/clip`
     - `primitives/css/color-picker`
     - `primitives/css/column`
+    - `primitives/css/control-panel`
     - `primitives/css/fill`
     - `primitives/css/grid`
     - `primitives/css/inline`
@@ -597,6 +598,7 @@ guard: `confirmDialog` (`imperative-dialog/plugins/confirm`); native
     - `primitives/css/status-dot`
     - `primitives/css/sticky`
     - `primitives/css/surface`
+    - `primitives/css/switch`
     - `primitives/css/text`
     - `primitives/css/toggle-chip`
     - `primitives/css/viewport-overlay`

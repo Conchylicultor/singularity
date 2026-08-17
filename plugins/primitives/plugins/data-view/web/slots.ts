@@ -1,4 +1,7 @@
-import { defineSlot } from "@plugins/framework/plugins/web-sdk/core";
+import {
+  defineSlot,
+  type SealContributions,
+} from "@plugins/framework/plugins/web-sdk/core";
 import { defineRenderSlot } from "@plugins/primitives/plugins/slot-render/web";
 import type { ComponentType, ReactNode } from "react";
 import type { ViewTypeMeta } from "@plugins/primitives/plugins/data-view/plugins/view-core/core";
@@ -8,7 +11,8 @@ import type {
   DataViewRenderProps,
   ManualOrderConfig,
 } from "../core";
-import type { DataViewSettingsContextValue } from "./components/settings/settings-context";
+import type { ControlPanelSize } from "@plugins/primitives/plugins/css/plugins/control-panel/web";
+import type { DataViewControlsContextValue } from "./components/controls/controls-context";
 import { defineFieldExtensions } from "./internal/field-extensions";
 import { Cell } from "./cell-slot";
 import { CellEditor } from "./cell-editor-slot";
@@ -52,7 +56,12 @@ export interface DataViewContribution extends ViewTypeMeta {
  * the `View` slot's shape. `scope` places it in the "Current view" section
  * (per-instance settings like group-by / properties) or the "DataView" section
  * (surface-wide settings like custom-columns). The `component` reads everything it
- * needs from `DataViewSettingsContext` — no props are threaded.
+ * needs from `DataViewControlsContext` — no props are threaded.
+ *
+ * A `Setting` is one section INSIDE the settings control's panel; a `Control` (see
+ * below) is a whole toolbar affordance. The two levels are deliberate: flattening
+ * settings into controls would put Properties / Group by / Fields in competition
+ * for the toolbar's single line.
  */
 export interface DataViewSettingContribution {
   /** Stable id (React key + reorder/doc identity). */
@@ -69,9 +78,90 @@ export interface DataViewSettingContribution {
    * component's own self-hide so an "applicable" setting always renders. Absent =
    * always applicable.
    */
-  isApplicable?: (ctx: DataViewSettingsContextValue) => boolean;
+  isApplicable?: (ctx: DataViewControlsContextValue) => boolean;
   component: ComponentType;
 }
+
+/**
+ * What a control says about itself when it is narrowing what you see.
+ *
+ * It is **text, never chrome**: the wide toolbar's trigger is icon-only and
+ * spends this on its tooltip + accessible name, the compact fold spends it as the
+ * trailing text of the control's row, and the `count` feeds the fold's aggregate
+ * badge. Nothing here is allowed to grow the toolbar's one line.
+ *
+ * It is ONE object returned by ONE function, rather than a `summary` string plus
+ * a separate `count`, because two independent functions over the same state can
+ * disagree: that is exactly the bug `rule-resolution.ts` exists to close (the
+ * summary reading "0 rules" while a value-less `bool` rule silently filtered). One
+ * function, one object, and the disagreement is unrepresentable.
+ */
+export interface DataViewControlSummary {
+  /** What the control is doing, in words: "Status is none of 2", "Updated ↓". */
+  label: string;
+  /** Spoken form for a label that leans on a glyph — "Updated, descending". */
+  spoken?: string;
+  /** How many further things this control is doing, rendered as "+N". */
+  more?: number;
+  /** This control's contribution to the compact fold's aggregate badge.
+   *  Default `1 + (more ?? 0)` — the whole thing the summary describes. */
+  count?: number;
+}
+
+/**
+ * One toolbar control: a trigger the user opens, plus the panel behind it.
+ *
+ * This is what makes the toolbar name no control. It used to take three props —
+ * `sortControl`, `filterControl`, `fieldsControl` — which is the collection-consumer
+ * rule broken in the most literal way, and meant no plugin could ever add a fourth.
+ *
+ * It is a plain `defineSlot` + `renderIsolated` (the `View` / `Setting` precedent),
+ * NOT a `defineRenderSlot`. A render slot would mount EVERY control's panel on
+ * EVERY DataView on every page — each running `useFilterPresets`, the live
+ * custom-values resource, and so on — just to draw a closed trigger. The host
+ * instead reads the metadata (`label`, `icon`, `isApplicable`, `summary`), builds
+ * each trigger itself, and mounts exactly the one panel that is open. A render
+ * slot would also be unconditionally reorderable, owing an authored
+ * `config/…/primitives.data-view.control.jsonc` with a build-blocking `// @review`
+ * marker — for a fixed reading order that `order` already expresses.
+ */
+export interface DataViewControlContribution {
+  /** Stable id (React key + doc identity), e.g. `data-view.filter`. */
+  id: string;
+  /** The control's name: trigger tooltip + accessible name, compact-fold row
+   *  label, and the back-header title of a panel pushed from it. */
+  label: string;
+  icon: ComponentType<{ className?: string }>;
+  /** Reading order in the toolbar (ascending; default 0). */
+  order?: number;
+  /** Width ROLE of this control's panel — `menu` for a list of choices,
+   *  `builder` for a rule row. Not a measurement, and there is no third option. */
+  size?: ControlPanelSize;
+  /** Whether this control applies at all to the active view + schema. Absent =
+   *  always applicable. Pure: it is asked before any panel mounts. */
+  isApplicable?: (ctx: DataViewControlsContextValue) => boolean;
+  /**
+   * What this control is doing when it is active, in words, or `null` when it is
+   * not — the trigger's tooltip + accessible name and the compact fold's row
+   * text. **A pure function, never a hook** — the trigger has to render without
+   * mounting the panel, and computing N summaries by mounting N panels would make
+   * every DataView subscribe to every control's data on first paint.
+   */
+  summary?: (
+    ctx: DataViewControlsContextValue,
+  ) => DataViewControlSummary | null;
+  /** The panel body. Prop-less — it reads `useDataViewControls()`. */
+  component: ComponentType;
+}
+
+/**
+ * A registered control as the toolbar actually reads it. Every declared field
+ * stays readable — that is what lets the host build a trigger without mounting
+ * anything — except `component`, which the loader seals: the only way to draw it
+ * is `renderIsolated`, so a control's panel cannot be mounted outside the
+ * error-boundary chain.
+ */
+export type DataViewControl = SealContributions<DataViewControlContribution>;
 
 /**
  * Props a **global** row-order contribution receives. The twin of the global
@@ -140,9 +230,21 @@ export const DataViewSlots = {
   ),
   /** Contributable DataView settings menu entries (group-by, future per-view /
    *  surface-wide settings). Plain data slot, read by the host's settings menu. */
-  Setting: defineSlot<DataViewSettingContribution>("primitives.data-view.setting", {
-    docLabel: (p) => p.id,
-  }),
+  Setting: defineSlot<DataViewSettingContribution>(
+    "primitives.data-view.setting",
+    {
+      docLabel: (p) => p.id,
+    },
+  ),
+  /** Contributable toolbar controls (filter, sort, settings, and anything a
+   *  plugin adds). Plain data slot: the toolbar reads each contribution's
+   *  metadata to build its trigger and mounts only the open panel. */
+  Control: defineSlot<DataViewControlContribution>(
+    "primitives.data-view.control",
+    {
+      docLabel: (p) => p.label,
+    },
+  ),
   /** Per-type table cell. Contribute `{ match, component }`. */
   Cell,
   /** Per-type inline cell editor. Contribute `{ match, component }`. */

@@ -14,18 +14,22 @@ import type {
 import { DataViewSlots } from "../slots";
 import { InfiniteScrollFooter } from "@plugins/primitives/plugins/cursor-pagination/web";
 import { useServerDataSource } from "../internal/use-server-data-source";
-import { useFilterController } from "../internal/use-filter-controller";
-import { useSortController } from "../internal/use-sort-controller";
-import { useSortPresets } from "../internal/use-sort-presets";
-import { useFilterPresets } from "../internal/use-filter-presets";
+import {
+  useFilterController,
+  type FilterController,
+} from "../internal/use-filter-controller";
+import {
+  useSortController,
+  type SortController,
+} from "../internal/use-sort-controller";
 import { CollectFieldExtensions } from "../internal/field-extensions";
 import { CollectRowOrder } from "../internal/row-order";
 import type { DataViewBodyProps } from "../internal/body-types";
-import { FilterBuilderTrigger } from "./filter/filter-builder-trigger";
-import { SortBuilderTrigger } from "./sort/sort-builder-trigger";
 import { DataViewToolbar } from "./toolbar/data-view-toolbar";
-import { DataViewSettingsMenu } from "./settings/settings-menu";
-import type { DataViewSettingsContextValue } from "./settings/settings-context";
+import {
+  DataViewControlsProvider,
+  type DataViewControlsContextValue,
+} from "./controls/controls-context";
 
 /**
  * The per-active-instance body: everything downstream of "which instance is
@@ -162,7 +166,6 @@ function DataViewBodyInner<TRow>(props: DataViewBodyProps<TRow>): ReactNode {
     activeState.filter,
     setActiveFilter,
   );
-  const hasFilters = filterController.filterableFields.length > 0;
 
   // Sort controller — the popover builder consumes the flat surface (rules,
   // sortableFields, ruleCount, add/remove/setDirection/setField/move/clear).
@@ -175,14 +178,12 @@ function DataViewBodyInner<TRow>(props: DataViewBodyProps<TRow>): ReactNode {
     activeState.sort,
     setActiveSortRules,
   );
-  // Saved, shareable sort presets — read from the sibling `sortPresets` key in
-  // the same per-surface config doc (independent of the active instance, so call
-  // unconditionally next to the sort controller).
-  const sortPresets = useSortPresets(storageKey);
-  // Saved, shareable filter presets — the twin of sort presets, read from the
-  // sibling `filterPresets` key in the same per-surface config doc (call
-  // unconditionally next to the filter controller).
-  const filterPresets = useFilterPresets(storageKey);
+  // Saved sort/filter presets are NOT read here. They are config a user only
+  // ever looks at with a panel open, and each panel is a mounted component that
+  // can hook freely — so `useSortPresets` / `useFilterPresets` live in the sort
+  // and filter panels. Reading them here made every DataView on the page
+  // subscribe to its presets config just to draw a closed icon.
+
   // A view opts out of the Sort pill via `supportsSort: false`. Every current
   // view honors sort (the tree sorts each sibling group by field, defaulting to
   // manual/rank order), so this stays enabled; the flag remains for future
@@ -193,10 +194,13 @@ function DataViewBodyInner<TRow>(props: DataViewBodyProps<TRow>): ReactNode {
   // whether an order is *available* — see `manualOrderActive` below.
   const activeSupportsManualOrder =
     !!activeInstance.viewType.supportsManualOrder;
-  // Manual order no longer suppresses the Sort pill: a sort simply overrides the
-  // manual order (Notion's model), so the pill must stay reachable to clear it.
-  const hasSort =
-    sortController.sortableFields.length > 0 && activeSupportsSort;
+  // Whether the sort control applies at all is the SORT CONTROL's own
+  // `isApplicable` now (`activeSupportsSort && sortableFields.length > 0`, both
+  // published on the controls context) — the host no longer decides which
+  // controls exist. Manual order does not suppress it: a sort simply overrides
+  // the manual order (Notion's model), so the control must stay reachable to
+  // clear it.
+
   // Group-by support mirrors sort: every built-in view (including the tree,
   // which partitions its ROOTS into sections) supports it today; the opt-out
   // flag remains for future group-less view types. The settings menu hides the
@@ -324,64 +328,50 @@ function DataViewBodyInner<TRow>(props: DataViewBodyProps<TRow>): ReactNode {
           creators,
         };
 
-        // Context for the unified settings menu — settings contributions (group-by,
-        // custom-columns' "Fields" UI, …) read what they need from here, no
-        // prop-threading. Custom-columns is now a real global-scope Setting contributor
-        // (it imports the slot directly), so the host names it nowhere.
-        const settingsContext: DataViewSettingsContextValue = {
+        // The ONE context every toolbar control and settings contribution reads —
+        // no prop-threading. Nothing here is derived: every field was computed
+        // above (or, for `manualOrderOverridden`, a few lines up) and is merely
+        // re-homed, so a control's summary and what actually filters/sorts come
+        // from the very same controller objects the row pipeline uses.
+        //
+        // Provided around the TOOLBAR only (below), never around the view body:
+        // view children have a deliberate contract (`DataViewRenderProps`), and an
+        // ambient back door to `viewModel` would be a second undocumented seam.
+        const controlsContext: DataViewControlsContextValue = {
           storageKey,
           fields: fields as DataViewRenderProps<unknown>["fields"],
           activeViewId,
           activeState,
           viewModel,
           activeSupportsGroupBy,
+          activeSupportsSort,
+          activeSupportsManualOrder,
+          manualOrderOverridden,
+          filter: filterController as FilterController<unknown>,
+          sort: sortController as SortController<unknown>,
         };
 
         return (
           <>
             {/* The toolbar adapts to its own width: the wide inline row above
                 `COMPACT_BREAKPOINT`, the folded single-bar compact form below it
-                (search + sort/filter/fields all inside one `MdTune` options
-                popover, single-view switcher hidden). Each control
-                element is built once and handed to the toolbar, which only relocates
-                it — the sort/filter builder popovers are byte-for-byte identical in
-                either layout. */}
-            <DataViewToolbar
-              stickyRef={chrome.stickyRef}
-              title={chrome.title}
-              query={activeState.query}
-              onQueryChange={(next) => viewModel.setQuery(activeViewId, next)}
-              switcher={chrome.switcher}
-              switcherCount={chrome.switcherCount}
-              filterControl={
-                hasFilters ? (
-                  <FilterBuilderTrigger
-                    controller={filterController}
-                    presets={filterPresets}
-                  />
-                ) : null
-              }
-              sortControl={
-                hasSort ? (
-                  <SortBuilderTrigger
-                    controller={sortController}
-                    presets={sortPresets}
-                    manualOrderOverridden={manualOrderOverridden}
-                  />
-                ) : null
-              }
-              actions={chrome.actions}
-              /* Unified settings gear: renders every `DataViewSlots.Setting`
-                 contribution (per-view Group by, DataView-global custom-columns
-                 "Fields", …) uniformly. Self-hides when there is nothing to configure.
-                 Supersedes the old custom-columns-only gear. */
-              fieldsControl={<DataViewSettingsMenu context={settingsContext} />}
-              creators={creators}
-              activeControlCount={
-                (hasFilters ? filterController.ruleCount : 0) +
-                (hasSort ? sortController.ruleCount : 0)
-              }
-            />
+                (search + every control inside one `MdTune` options popover,
+                single-view switcher hidden). The host hands it NO control — the
+                toolbar reads `DataViewSlots.Control` itself and each control's
+                panel reads this provider's context, so adding a control is a
+                contribution and never an edit here. */}
+            <DataViewControlsProvider {...controlsContext}>
+              <DataViewToolbar
+                stickyRef={chrome.stickyRef}
+                title={chrome.title}
+                query={activeState.query}
+                onQueryChange={(next) => viewModel.setQuery(activeViewId, next)}
+                switcher={chrome.switcher}
+                switcherCount={chrome.switcherCount}
+                actions={chrome.actions}
+                creators={creators}
+              />
+            </DataViewControlsProvider>
             {/* One density for every view type, so a row's controls and decorations
                 (avatars, status dots, chips, buttons) look identical whether the same
                 data is shown as a table, tree, list, or gallery. The table view's

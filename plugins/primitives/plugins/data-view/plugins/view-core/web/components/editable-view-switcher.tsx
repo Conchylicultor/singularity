@@ -13,7 +13,7 @@ import {
   useHoverReveal,
   hoverRevealClass,
 } from "@plugins/primitives/plugins/hover-reveal/web";
-import { InlinePopover } from "@plugins/primitives/plugins/popover/web";
+import { ControlPanelPopover } from "@plugins/primitives/plugins/css/plugins/control-panel/web";
 import { ToggleChip } from "@plugins/primitives/plugins/css/plugins/toggle-chip/web";
 import {
   SortableList,
@@ -94,12 +94,12 @@ export function EditableViewSwitcher<T extends ViewTypeMeta>({
               <SortableItem key={id} id={id}>
                 {() =>
                   isActive ? (
-                    <InlinePopover
+                    <ControlPanelPopover
                       open={settingsOpen}
                       onOpenChange={setSettingsOpen}
                       align="start"
                       trigger={chip}
-                      width="lg"
+                      label={`${r.instance.name} settings`}
                     >
                       <ViewSettingsPopover
                         instance={r}
@@ -107,7 +107,7 @@ export function EditableViewSwitcher<T extends ViewTypeMeta>({
                         viewVariants={viewVariants}
                         onClose={() => setSettingsOpen(false)}
                       />
-                    </InlinePopover>
+                    </ControlPanelPopover>
                   ) : (
                     chip
                   )
@@ -133,43 +133,43 @@ export function EditableViewSwitcher<T extends ViewTypeMeta>({
             />
             <DropdownMenuContent align="start">
               {actions.availableSources.length === 1 &&
-              !actions.availableSources[0]!.title ? (
-                // Single implicit source → today's flat item list, unchanged.
-                actions.availableSources[0]!.types.map((v) => {
-                  const Icon = v.icon;
-                  return (
-                    <DropdownMenuItem
-                      key={v.type}
-                      onClick={() => actions.addView(v.type)}
+              !actions.availableSources[0]!.title
+                ? // Single implicit source → today's flat item list, unchanged.
+                  actions.availableSources[0]!.types.map((v) => {
+                    const Icon = v.icon;
+                    return (
+                      <DropdownMenuItem
+                        key={v.type}
+                        onClick={() => actions.addView(v.type)}
+                      >
+                        <Icon className="size-4" />
+                        {v.title}
+                      </DropdownMenuItem>
+                    );
+                  })
+                : // Multi-source → one labelled section per source (the composed
+                  // Group+GroupLabel primitive — a groupless label would crash).
+                  actions.availableSources.map((source) => (
+                    <DropdownMenuSection
+                      key={source.sourceId ?? ""}
+                      label={source.title ?? source.sourceId ?? "Views"}
                     >
-                      <Icon className="size-4" />
-                      {v.title}
-                    </DropdownMenuItem>
-                  );
-                })
-              ) : (
-                // Multi-source → one labelled section per source (the composed
-                // Group+GroupLabel primitive — a groupless label would crash).
-                actions.availableSources.map((source) => (
-                  <DropdownMenuSection
-                    key={source.sourceId ?? ""}
-                    label={source.title ?? source.sourceId ?? "Views"}
-                  >
-                    {source.types.map((v) => {
-                      const Icon = v.icon;
-                      return (
-                        <DropdownMenuItem
-                          key={v.type}
-                          onClick={() => actions.addView(v.type, source.sourceId)}
-                        >
-                          <Icon className="size-4" />
-                          {v.title}
-                        </DropdownMenuItem>
-                      );
-                    })}
-                  </DropdownMenuSection>
-                ))
-              )}
+                      {source.types.map((v) => {
+                        const Icon = v.icon;
+                        return (
+                          <DropdownMenuItem
+                            key={v.type}
+                            onClick={() =>
+                              actions.addView(v.type, source.sourceId)
+                            }
+                          >
+                            <Icon className="size-4" />
+                            {v.title}
+                          </DropdownMenuItem>
+                        );
+                      })}
+                    </DropdownMenuSection>
+                  ))}
             </DropdownMenuContent>
           </DropdownMenu>
         </span>

@@ -1,0 +1,34 @@
+import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
+
+export { ControlPanel } from "./internal/namespace";
+export {
+  ControlPanelPopover,
+  type ControlPanelPopoverProps,
+  type ControlPanelSize,
+} from "./internal/control-panel-popover";
+export {
+  usePanelStack,
+  type PanelStackApi,
+  type PanelStackEntry,
+  type ControlPanelStackProps,
+} from "./internal/panel-stack";
+export {
+  type ControlPanelProps,
+  type ControlPanelSectionProps,
+  type ControlPanelFooterProps,
+  type ControlPanelEmptyProps,
+  type ControlPanelRuleListProps,
+} from "./internal/control-panel";
+export {
+  type ControlPanelRowProps,
+  type ControlPanelRowSelect,
+  type ControlPanelRowTone,
+} from "./internal/control-panel-row";
+export { type ControlPanelRuleRowProps } from "./internal/rule-row";
+export { type ControlPanelFieldProps } from "./internal/field-control";
+
+export default {
+  description:
+    "The control-panel vocabulary: ControlPanel plus its closed set of members (Section, Row, RuleList, RuleRow, Field, Footer, Empty, Stack) and the ControlPanelPopover surface. The container draws the hairlines, the row is a grid so every label starts at one x, selection has one language per meaning, and width is a role rather than a measurement.",
+  contributions: [],
+} satisfies PluginDefinition;

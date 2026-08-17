@@ -19,7 +19,9 @@ export function newNodeId(): string {
 }
 
 /** A fresh empty root/child group with the given conjunction. */
-export function emptyGroup(conjunction: FilterConjunction = "and"): FilterGroup {
+export function emptyGroup(
+  conjunction: FilterConjunction = "and",
+): FilterGroup {
   return { kind: "group", id: newNodeId(), conjunction, children: [] };
 }
 
@@ -156,4 +158,33 @@ export function wrapRuleInGroup(
       children: [node],
     };
   });
+}
+
+/**
+ * Find the group with `id` anywhere in the tree, or `undefined`. The panel reads
+ * a nested group by ID rather than holding onto the object: a pushed sub-panel
+ * outlives several edits to the tree it is showing, and a captured node would be
+ * the one from the moment it was opened.
+ */
+export function findGroup(
+  root: FilterGroup,
+  id: string,
+): FilterGroup | undefined {
+  if (root.id === id) return root;
+  for (const child of root.children) {
+    if (child.kind !== "group") continue;
+    const found = findGroup(child, id);
+    if (found) return found;
+  }
+  return undefined;
+}
+
+/**
+ * How many rules a node holds, at any depth — what a collapsed group row counts
+ * when it says "Group · 3 conditions". Every rule counts, complete or not: the
+ * row is describing what is IN the group, not what is currently filtering.
+ */
+export function countRules(node: FilterNode): number {
+  if (node.kind !== "group") return 1;
+  return node.children.reduce((sum, child) => sum + countRules(child), 0);
 }

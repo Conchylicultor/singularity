@@ -619,6 +619,24 @@ export interface FilterOperator {
    * "Unchecked", a real constraint, so it stays complete even for `undefined`.
    */
   isComplete?: (operand: unknown) => boolean;
+  /**
+   * How this operand reads in the closed Filter control's summary
+   * ("Status is none of 2"), or `undefined` to fall back to the generic
+   * rendering (string → itself, number/boolean → `String`, a one-element string
+   * array → that option's label, a longer one → its count, anything else →
+   * omitted).
+   *
+   * It lives on the OPERATOR beside `isComplete` for the same reason that one
+   * does: the operand's shape is the operator's own. Only `date · is between`
+   * knows its operand is a pair of instants; only `bool · is` knows an absent
+   * operand means "Unchecked". No operator implements it today — the generic
+   * fallback covers every current type — and each one that adopts it improves
+   * its own summary with no edit to the summarizer.
+   */
+  summarize?: (
+    operand: unknown,
+    field: FieldDef<unknown>,
+  ) => string | undefined;
 }
 
 /**

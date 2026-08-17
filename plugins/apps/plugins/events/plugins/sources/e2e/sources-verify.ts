@@ -280,21 +280,23 @@ await withBrowser(async (h) => {
 
     // 8. The contributed `source` dimension reaches the events DataView.
     await boot(page, pathUrl("/events/list"), {
-      // The landing view's own chip: it exists only once the authored view
-      // instances have resolved, which is the same gate the Filter trigger's
-      // rule count sits behind.
+      // The landing view's own switcher chip: it exists only once the authored
+      // view instances have resolved, which is the same gate the Filter
+      // trigger's summary sits behind.
       marker: 'button:has-text("Upcoming")',
       timeoutMs: BOOT_TIMEOUT_MS,
       settleMs: 800,
     });
 
-    // The filter trigger renames ITSELF: `Filter` only while no rule is set,
-    // `{n} rule(s)` once one is (FilterBuilderTrigger). The landing view here is
-    // `Upcoming`, which ships an authored `startsAt >= today` rule — so matching
-    // the literal word "Filter" finds nothing on a toolbar that plainly has one.
-    // Match both spellings. Compact toolbars fold it behind "View options", so
-    // that path is covered too.
-    const filterName = /^(Filter|\d+ rules?)$/;
+    // The trigger is an icon button, so its ACCESSIBLE NAME is where it says
+    // what it is doing, and it renames itself: the bare word `Filter` only while
+    // no rule is set, `Filter: <what it is doing>` once one is (`ControlTrigger`
+    // spends the control's summary there). The landing view here is `Upcoming`,
+    // which ships an authored `startsAt >= today` rule, so matching the literal
+    // word alone finds nothing on a toolbar that plainly has a filter. Match
+    // both spellings. Compact toolbars fold it behind "View options", so that
+    // path is covered too.
+    const filterName = /^Filter(:.*)?$/;
     let filterTrigger = page.getByRole("button", { name: filterName });
 
     // Poll, never a bare `count()`: `count()` is a snapshot with no auto-wait,

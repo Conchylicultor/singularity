@@ -147,7 +147,10 @@ by the consumer's id list (`buildViewDescriptors(ids)`), contributions
   `ViewsConfigHandle`, `useViewModel`, `ViewModelCore`, `ViewActionsCore`,
   `useViewVariants`, `buildViewDescriptors`,
   `buildViewConfigContributions(entries: { id, descriptor, pluginId }[])`,
-  `EditableViewSwitcher`, `ViewSettingsPopover`. (The device-local active-id hook
+  `EditableViewSwitcher`, `ViewSettingsPopover` — the last drawn in the
+  `control-panel` vocabulary (a sibling primitive; view-core still imports NO
+  data-view), so the switcher opens it through `ControlPanelPopover`.
+  (The device-local active-id hook
   `useActiveViewId` now lives in the `view-switcher` primitive — `useViewModel`
   imports it from there; it is no longer re-exported here.)
 
@@ -162,10 +165,10 @@ by the consumer's id list (`buildViewDescriptors(ids)`), contributions
     - `config_v2.useConfig`
     - `config_v2.useSetConfig`
     - `config_v2/fields.FieldRenderer`
+    - `primitives/css/control-panel.ControlPanel`
+    - `primitives/css/control-panel.ControlPanelPopover`
     - `primitives/css/spacing.Stack`
-    - `primitives/css/text.SectionLabel`
     - `primitives/css/toggle-chip.ToggleChip`
-    - `primitives/css/ui-kit.Button`
     - `primitives/css/ui-kit.ControlSizeProvider`
     - `primitives/css/ui-kit.DropdownMenu`
     - `primitives/css/ui-kit.DropdownMenuContent`
@@ -177,7 +180,6 @@ by the consumer's id list (`buildViewDescriptors(ids)`), contributions
     - `primitives/hover-reveal.useHoverReveal`
     - `primitives/icon-button.IconButton`
     - `primitives/latest-ref.useLatestRef`
-    - `primitives/popover.InlinePopover`
     - `primitives/sortable-list.SortableItem`
     - `primitives/sortable-list.SortableList`
     - `primitives/view-switcher.useActiveViewId`

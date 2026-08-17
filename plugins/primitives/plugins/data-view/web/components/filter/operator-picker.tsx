@@ -1,7 +1,5 @@
 import { Fragment, type ReactNode } from "react";
-import { MdExpandMore } from "react-icons/md";
 import {
-  Button,
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -9,6 +7,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { ControlPanel } from "@plugins/primitives/plugins/css/plugins/control-panel/web";
 import { SectionLabel } from "@plugins/primitives/plugins/css/plugins/text/web";
 import type { FilterOperator } from "../../../core";
 
@@ -60,11 +59,14 @@ export function OperatorPicker(props: {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger
-        render={<Button variant="outline" aria-label="Filter operator" />}
-      >
-        <span className="truncate">{current?.label ?? "—"}</span>
-        <MdExpandMore />
-      </DropdownMenuTrigger>
+        render={
+          <ControlPanel.Field
+            aria-label="Filter operator"
+            label={current?.label ?? null}
+            placeholder="—"
+          />
+        }
+      />
       <DropdownMenuContent align="start">
         {groups.map((group, index) => {
           const items = group.operators.map((op) => (

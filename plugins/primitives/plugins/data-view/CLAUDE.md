@@ -289,7 +289,7 @@ Notion's model, and ours: with **no sort set**, a `list`/`table` view renders in
 manual order and rows are draggable; setting a **field sort overrides** it and
 suspends drag (the host simply withholds the config; `useDataViewSections`'s
 `manualRank ⇒ sort: []` rule is untouched); **clearing the sort restores** it.
-Consequently the **Sort pill stays visible** in manual mode — it must stay
+Consequently the **Sort control stays visible** in manual mode — it must stay
 reachable to clear the sort. It is also the *only* remaining thing that suspends
 drag, so the sort popover says so in a muted footer line whenever an order exists
 and a sort is shadowing it (`manualOrderOverridden`) — the cause is never silent.
@@ -476,6 +476,144 @@ while pending, so no consumer hand-rolls a per-call-site `useState`. The creator
 are also threaded into `DataViewRenderProps.creators` so views can opt into their
 own create UI (the gallery's trailing "+" card + empty-state CTA).
 
+## Toolbar controls
+
+Every affordance in the toolbar that opens a panel — Filter, Sort, the view
+settings — is a **`DataViewSlots.Control` contribution**. The toolbar names none
+of them.
+
+It used to name all three, as `sortControl` / `filterControl` / `fieldsControl`
+ReactNode props built by the host: the collection-consumer rule broken in the most
+literal way, and the reason no plugin could add a fourth control. Now the toolbar
+reads the slot, drops the contributions whose `isApplicable` says no, sorts by
+`order`, and builds one identical trigger per survivor.
+
+```ts
+DataViewSlots.Control({
+  id: "data-view.filter",
+  label: "Filter",              // tooltip + accessible name, compact-fold row
+  icon: MdFilterList,           // label, and a pushed sub-panel's back title
+  order: 0,
+  size: "builder",              // the panel's WIDTH ROLE — menu | builder
+  isApplicable: (ctx) => ctx.filter.filterableFields.length > 0,
+  summary: (ctx) => summarizeFilter(…),   // pure; see below
+  component: FilterControlPanel,           // prop-less; reads useDataViewControls()
+});
+```
+
+### `defineSlot` + `renderIsolated`, not `defineRenderSlot`
+
+The `View` / `Setting` precedent, for two reasons that are not stylistic:
+
+- A render slot mounts **every** contribution. That would mount every control's
+  panel on every DataView on every page — each running `useFilterPresets`, the
+  live custom-values resource, and so on — merely to draw a **closed** trigger.
+  With a plain slot the host reads metadata and mounts exactly the one panel that
+  is open.
+- A render slot is unconditionally reorderable, so it would owe an authored
+  `config/primitives/data-view/primitives.data-view.control.jsonc` carrying a
+  build-blocking `// @review` marker — for a fixed reading order that `order`
+  already expresses. **This slot owes no config override.**
+
+`DataViewSlots.Setting` survives unchanged, one level down: a *control* is a
+toolbar affordance, a *setting* is a section inside one control's panel. Flattening
+the two would put Properties / Group by / Fields in competition for the toolbar's
+single line.
+
+### One merged context
+
+`useDataViewControls()` (`web/components/controls/controls-context.tsx`) is what
+both a control's panel and a `Setting` contribution read — there is one context,
+not a "controls" one and a "settings" one, because the settings menu *is* a
+control. Everything on it is computed once in `DataViewBodyInner` and merely
+re-homed; nothing is derived here. In particular `filter` and `sort` are the same
+controller objects the row pipeline uses, so a summary and what actually filters
+cannot come from two computations.
+
+It is provided around **the toolbar only**, never around the view body: view
+children have a deliberate contract (`DataViewRenderProps`), and an ambient back
+door to `viewModel` would be a second undocumented seam. Popovers portal out of
+the DOM but stay React children, so the context still reaches every panel.
+
+### The trigger is icon-only, everywhere
+
+`ControlTrigger` draws a ghost `IconButton`, `secondary` while the control is
+narrowing what you see. No summary text on the button, no `+N` badge, and **no
+width-dependent form** — a trigger that spelled itself out when wide and shrank to
+a glyph when narrow is the per-surface inconsistency this registry exists to
+remove. (Summary pills were tried and reverted: two of them ate the whole toolbar
+of the agent-manager sidebar, the app's narrowest DataView.)
+
+### The summary is pure, one function — and TEXT, never chrome
+
+A control's closed state still says what it is doing via `summary(ctx)` → one
+`DataViewControlSummary` (`label`, optional `spoken` for a glyph-leaning label,
+`more`, `count`) or `null`, spent where it costs the toolbar no pixels:
+
+- the trigger's **tooltip** — `Filter: Status is none of 2 +1` (the glyph form);
+- the trigger's **accessible name** — `spoken ?? label`, "+N more" spelled out
+  (a bare number beside a phrase is ambiguous with no visual context);
+- the **compact fold's** control rows, as trailing text — a row each to spend;
+- `count` → the fold's aggregate badge on `MdTune`.
+
+**It cannot be a hook.** The trigger has to render without mounting the panel;
+computing N summaries by mounting N panels would make every DataView subscribe to
+every control's data on first paint. So `summarize-filter.ts` / `summarize-sort.ts`
+are plain functions over state, unit-tested next to their source.
+
+**It is one function returning an object, not `summary` + `count`.** Two
+independent functions over the same state can disagree — precisely the bug
+`rule-resolution.ts` exists to close (the summary reading "0 rules" while a
+value-less `bool` rule silently filtered). The summarizers import `isRuleActive`
+and the dangling-rule filter rather than re-deriving them, so the summary, the
+count and the evaluator ask one question.
+
+Value formatting tries the operator's own optional
+`FilterOperator.summarize(operand, field)` first — the operand's shape is the
+operator's, so only `date · is between` knows it holds a pair of instants — then
+falls back generically, omitting an operand it has no readable form for.
+
+Settings deliberately carries **no** summary: view settings are configuration, not
+a narrowing of what you see. A summary answers "what am I not seeing, and why";
+"Group by: Status" answers neither, and it would still count itself into the
+compact fold's badge as though something were hidden.
+
+### Panel bodies
+
+A control's `component` is **prop-less** and reads the context, which is what lets
+the wide bar and the compact fold mount it through the same
+`DataViewControlPanel({ control })` host with nothing left to diverge on. Panels
+are drawn with the `control-panel` vocabulary
+(`@plugins/primitives/plugins/css/plugins/control-panel/web`) — the panel body
+never paints its own surface or picks its own width; `size` is a role
+(`menu` | `builder`) and there is no third option.
+
+One capability was traded away: a `Control`'s `isApplicable` is pure and cannot
+read another slot, so the settings control can no longer self-hide when no
+`Setting` applies. It is always applicable and renders `ControlPanel.Empty` in
+that case. In practice nothing changes — custom-columns' "Fields" setting declares
+no `isApplicable`, so the gear was already always visible.
+
+**A `Setting` contribution renders its own `ControlPanel.Section`** — a contract,
+not a convention. The panel body lays its *bands* out itself, so a contribution
+that returned loose rows has no band and no rule, and one that wrapped itself in a
+`div` makes that opaque box the band instead of the sections inside it. (The host
+therefore maps contributions in through a `Fragment`, never a wrapper — see
+`control-panel`'s CLAUDE.md for why `display: contents` matters here.) For the same reason a setting owns
+a section and never the panel's `Footer`: Properties' "Show all fields" is its
+section's last ROW, because a footer placed from inside one section would sit above
+whatever contribution came next.
+
+**A sub-panel is a push, never a second popover.** `usePanelStack()` reaches the
+stack the host mounted — the filter builder's nested groups, "Save as preset",
+custom-columns' per-field editor and the compact fold's per-control pages are all
+pages of the one panel. Note what that costs: a stack entry's `render` closure is
+captured when the row is clicked and the pushed page REPLACES the root's subtree,
+so a page must read its own state through hooks (`useDataViewControls()`,
+`useFilterEditor()`, its own config hook) rather than taking it as a prop. Handing
+data down through the closure looks fine and then silently computes the page's
+second edit against the tree as it was before its first.
+
 ## Per-item actions
 
 Per-row actions (delete, expand-all, …) are a **cross-view** concern: contribute
@@ -599,7 +737,7 @@ error-boundary-isolated (`renderIsolated`), runs its own hooks, yields its
 Both the source-level and contribution-level folds are recursive **components**,
 never a `.map` over contributed hooks (which `react-hooks/rules-of-hooks` rejects).
 The fold wraps the model **before** the sort/filter controllers, so a contributed
-`int`/`date` field shows up in the Sort pill, the Filter pill, and the table
+`int`/`date` field shows up in the Sort control, the Filter control, and the table
 columns for free. It runs at `<unknown>` (the global slot spans disjoint consumer
 row types), so `props.fields`/`rowKey` and the merged result cross a safe
 `FieldDef<unknown>`↔`FieldDef<TRow>` cast at the top-level `DataView` boundary; the
@@ -644,7 +782,7 @@ new child plugin with zero consumer changes.
 
 ## Filtering
 
-Per-field filtering is driven by `FieldDef.type`: the host's `FilterBuilderTrigger`
+Per-field filtering is driven by `FieldDef.type`: the Filter control's panel
 writes a `FilterGroup` tree to `state.filter`, and every view evaluates it through
 the shared `evaluateNode` / `applyFilter` evaluator (resolved per field type via
 `useResolveOperatorSet`). Flat views apply it inside `useFlatRows` (search → filter
@@ -654,9 +792,12 @@ primitive. Filter semantics are therefore identical across all views.
 **Filter presets** are the twin of the sort presets: a named, reusable
 `FilterGroup` saved in the sibling `filterPresets` key of the same per-surface
 config doc (via the `presetsExtraFields` seam injected into the views descriptor —
-view-core never names it). The filter pill's popover hosts the saved presets at the
-top (apply = write the preset's group verbatim into the live filter) plus a
-`Save filter as preset` footer affordance, exactly like sort. Hook:
+view-core never names it). The filter panel hosts the saved presets in its top
+section (apply = write the preset's group verbatim into the live filter) plus a
+`Save as preset` footer row, exactly like sort. Both are drawn by the shared
+`web/components/presets/` pieces — including the "Delete a preset" page, which
+exists because a panel row's trailing cell is presentational by contract, so a
+per-row delete button beside a row that applies on click is unrepresentable. Hook:
 `useFilterPresets(storageKey)`; readers `readFilterPresets` /
 `filterPresetMatchesGroup` live next to the sort readers. A preset's group is
 stored opaquely as a `jsonField<FilterGroup>` (validated whole through
@@ -679,8 +820,8 @@ reorders each **sibling group** by that field (a stable global sort of the flat
 row list, which `buildTree` re-groups per parent), suspending DnD reorder while
 active. The `supportsSort: false` `DataViewContribution` flag (a data-view flag,
 *not* a generic `ViewTypeMeta` key — view-core never knows about sort) exists for a
-view type with no meaningful field-sort axis: the host then hides the Sort pill
-while keeping the Filter pill. Flag omitted = honors sort.
+view type with no meaningful field-sort axis: the Sort control's `isApplicable`
+then drops it while the Filter control stays. Flag omitted = honors sort.
 
 Body rendering is **show-all by default**, governed per view-instance by
 `visibleFields` (below) and *not* tied to `primary` — so a field is visible in the
@@ -714,8 +855,8 @@ to the ordered visible subset each view renders; the primary/title slot in
 gallery/list/tree is then `pickPrimaryField` over that **visible** subset (so a hidden
 title falls back to the next visible text field).
 
-Users edit this from the **settings gear** (`MdTune`) — the **"Properties"** entry in
-its "Current view" section, a `view`-scope `DataViewSlots.Setting` contribution
+Users edit this from the **View settings** control (`MdTune`) — the
+**"Properties"** entry in its "Current view" section, a `view`-scope `DataViewSlots.Setting` contribution
 (`PropertiesControl`) sitting alongside "Group by": a sortable, checkbox list to
 reorder / hide fields, plus a "Show all fields" reset (back to `null`). The setting
 gates itself to surfaces with more than one field (via the contribution's
@@ -840,6 +981,7 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
     - `DataViewSlots.FieldExtension` ← `primitives.data-view.custom-columns`
     - `DataViewSlots.RowOrder` ← `primitives.data-view.view-order`
     - `DataViewSlots.Setting` ← `primitives.data-view`, `primitives.data-view.custom-columns`
+    - `DataViewSlots.Control` ← `primitives.data-view`
     - `DataViewSlots.Cell` ← `fields.bool.table`, `fields.color.table`, `fields.date.table`, `fields.enum.table`, `fields.image.table`, `fields.number.table`, `fields.tags.table`, `fields.text.table`
     - `DataViewSlots.CellEditor` ← `fields.bool.inline`, `fields.date.inline`, `fields.enum.inline`, `fields.number.inline`, `fields.tags.inline`, `fields.text.inline`
     - `DataViewSlots.Filter` ← `fields.bool.filter`, `fields.date.filter`, `fields.enum.filter`, `fields.number.filter`, `fields.tags.filter`, `fields.text.filter`
@@ -888,25 +1030,26 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
     - `ConfigV2.WebRegister`
     - `DataViewSlots.Setting` "data-view.properties" → `PropertiesControl`
     - `DataViewSlots.Setting` "data-view.group-by" → `GroupByControl`
+    - `DataViewSlots.Control` "Filter" → `FilterControlPanel`
+    - `DataViewSlots.Control` "Sort" → `SortControlPanel`
+    - `DataViewSlots.Control` "View settings" → `SettingsControlPanel`
   - Uses:
     - `config_v2.useConfig`
     - `config_v2.useSetConfig`
     - `primitives/collapsible.CollapsibleContent`
     - `primitives/collapsible.CollapsibleProvider`
-    - `primitives/css/center.Center`
-    - `primitives/css/fill.Fill`
+    - `primitives/css/control-panel.ControlPanel`
+    - `primitives/css/control-panel.ControlPanelPopover`
+    - `primitives/css/control-panel.usePanelStack`
     - `primitives/css/inline.Inline`
     - `primitives/css/placeholder.Placeholder`
     - `primitives/css/row.Row`
     - `primitives/css/row.SectionHeaderRow`
     - `primitives/css/scroll.Scroll`
-    - `primitives/css/selection-indicator.CheckboxIndicator`
-    - `primitives/css/spacing.Inset`
     - `primitives/css/spacing.Stack`
     - `primitives/css/sticky.Sticky`
     - `primitives/css/sticky/stack.StickyStack`
     - `primitives/css/sticky/stack.StickyStackItem`
-    - `primitives/css/surface.Surface`
     - `primitives/css/text.SectionLabel`
     - `primitives/css/text.Text`
     - `primitives/css/toggle-chip.ToggleChip`
@@ -920,7 +1063,6 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
     - `primitives/css/ui-kit.DropdownMenuSeparator`
     - `primitives/css/ui-kit.DropdownMenuTrigger`
     - `primitives/css/ui-kit.Input`
-    - `primitives/css/ui-kit.SingleLineProvider`
     - `primitives/cursor-pagination.InfiniteScrollFooter`
     - `primitives/cursor-pagination.InfiniteScrollHandle`
     - `primitives/cursor-pagination.useInfiniteScroll`
@@ -931,12 +1073,11 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
     - `primitives/data-view/view-core.useViewModel`
     - `primitives/data-view/view-core.useViewVariants`
     - `primitives/element-size.useElementSize`
-    - `primitives/hover-reveal.hoverRevealClass`
-    - `primitives/hover-reveal.useHoverReveal`
     - `primitives/icon-button.IconButton`
     - `primitives/latest-ref.useLatestRef`
     - `primitives/loading.Loading`
     - `primitives/popover.InlinePopover`
+    - `primitives/row-actions.RowActionButton`
     - `primitives/search.SearchInput`
     - `primitives/search.useTextFilter`
     - `primitives/slot-render.defineDispatchSlot`
@@ -952,13 +1093,15 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
     - `CreateOption`
     - `DataViewAggregateConfig`
     - `DataViewContribution`
+    - `DataViewControlContribution`
+    - `DataViewControlsContextValue`
+    - `DataViewControlSummary`
     - `DataViewId`
     - `DataViewProps`
     - `DataViewRenderProps`
     - `DataViewRowEntry`
     - `DataViewSection`
     - `DataViewSettingContribution`
-    - `DataViewSettingsContextValue`
     - `DataViewSourceBundle`
     - `DataViewSourceContribution`
     - `DataViewSourceProps`
@@ -1027,8 +1170,8 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
     - `partitionIntoSections`
     - `pickPrimaryField`
     - `resolveBodyFields`
+    - `useDataViewControls`
     - `useDataViewSections`
-    - `useDataViewSettings`
     - `useFieldIdentities`
     - `useFilterController`
     - `useFlatRows`

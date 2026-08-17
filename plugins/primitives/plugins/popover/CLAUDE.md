@@ -38,7 +38,6 @@
     - `page/math/inline`
     - `page/page-link`
     - `primitives/data-view`
-    - `primitives/data-view/view-core`
     - `primitives/date-picker`
     - `primitives/folder-picker`
     - `primitives/launch`

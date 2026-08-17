@@ -39,12 +39,23 @@
 // just the anchor term. Surfaces that publish no anchor at all (a dialog) then
 // degrade to the floor rather than to nothing.
 
+// Two roles size a panel by WHAT IT IS rather than by a tier — the control-panel
+// vocabulary's only width dial (`ControlPanelPopover size`). `menu` is a list of
+// choices; `builder` is a six-track rule row. They are new roles rather than
+// aliases of `md` (256px) / `3xl` (480px) on purpose: reusing a t-shirt size
+// re-imports the thing the vocabulary exists to delete — a panel width chosen
+// because some measurement was nearby, which is how the filter panel ended up
+// 481px wide (its FOOTER was the widest row) and resized every time a rule was
+// added. The ramp already carries role names beside its sizes (`fit`, `snug`,
+// `anchor`, `anchor-min`); these two join them.
 export type PopoverWidth =
   | "content"
   | "fit"
   | "snug"
   | "anchor"
   | "anchor-min"
+  | "menu"
+  | "builder"
   | "xs"
   | "sm"
   | "md"
@@ -60,7 +71,10 @@ export const POPOVER_WIDTH: Record<PopoverWidth, string> = {
   fit: "w-max min-w-64 max-w-(--available-width)",
   snug: "w-max min-w-24 max-w-(--available-width)",
   anchor: "w-[var(--anchor-width,0px)] min-w-36",
-  "anchor-min": "w-max min-w-[max(8rem,var(--anchor-width,0px))] max-w-(--available-width)",
+  "anchor-min":
+    "w-max min-w-[max(8rem,var(--anchor-width,0px))] max-w-(--available-width)",
+  menu: "w-[16.375rem] max-w-(--available-width)", // 262px — a list of choices
+  builder: "w-[32.75rem] max-w-(--available-width)", // 524px — a six-track rule row
   xs: "w-48 max-w-(--available-width)",
   sm: "w-56 max-w-(--available-width)",
   md: "w-64 max-w-(--available-width)",

@@ -395,15 +395,14 @@ fixed raw size escapes per-site via
     - `primitives/command-palette`
     - `primitives/commit-list`
     - `primitives/css/color-picker`
+    - `primitives/css/control-panel`
     - `primitives/css/layout-harness`
     - `primitives/css/radio-group`
     - `primitives/data-table`
     - `primitives/data-view`
-    - `primitives/data-view/custom-columns`
     - `primitives/data-view/gallery`
     - `primitives/data-view/list`
     - `primitives/data-view/table`
-    - `primitives/data-view/view-core`
     - `primitives/date-picker`
     - `primitives/diff-view`
     - `primitives/error-boundary`

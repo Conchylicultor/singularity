@@ -110,7 +110,6 @@ layout set orthogonal (each primitive owns one distinct mechanic, no overlap).
     - `plugin-meta/plugin-view/sub-plugins`
     - `primitives/cursor-pagination`
     - `primitives/data-table`
-    - `primitives/data-view`
     - `primitives/data-view/gallery`
     - `primitives/data-view/list`
     - `primitives/data-view/tree`

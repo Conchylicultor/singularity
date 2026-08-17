@@ -129,7 +129,6 @@ icon+count button it stands in for — carries a per-site
     - `primitives/adaptive-bar`
     - `primitives/collapsible-wrap`
     - `primitives/data-view`
-    - `primitives/data-view/custom-columns`
     - `primitives/data-view/view-core`
     - `primitives/date-picker`
     - `primitives/folder-picker`

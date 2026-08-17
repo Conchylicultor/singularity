@@ -1,9 +1,15 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
+import { MdFilterList, MdSwapVert, MdTune } from "react-icons/md";
 import { dataViewConfigContributions } from "./internal/config-registrations";
 import { isGroupableField } from "./internal/use-data-view-sections";
 import { DataViewSlots } from "./slots";
 import { GroupByControl } from "./components/settings/group-by-control";
 import { PropertiesControl } from "./components/settings/properties-control";
+import { FilterControlPanel } from "./components/filter/filter-control-panel";
+import { SortControlPanel } from "./components/sort/sort-control-panel";
+import { SettingsControlPanel } from "./components/settings/settings-control-panel";
+import { summarizeFilter } from "./internal/summarize-filter";
+import { summarizeSort } from "./internal/summarize-sort";
 
 export { DataView } from "./components/data-view";
 export { MergedDataView } from "./components/merged-data-view";
@@ -26,12 +32,14 @@ export { DataViewSlots } from "./slots";
 export type {
   DataViewContribution,
   DataViewSettingContribution,
+  DataViewControlContribution,
+  DataViewControlSummary,
   GlobalRowOrderProps,
   GlobalRowOrderContribution,
 } from "./slots";
 export { getDataViewDescriptor } from "./internal/descriptors";
-export { useDataViewSettings } from "./components/settings/settings-context";
-export type { DataViewSettingsContextValue } from "./components/settings/settings-context";
+export { useDataViewControls } from "./components/controls/controls-context";
+export type { DataViewControlsContextValue } from "./components/controls/controls-context";
 export { useResolveCell } from "./cell-slot";
 export { useResolveCellEditor } from "./cell-editor-slot";
 export { useResolveOperatorSet } from "./filter-slot";
@@ -146,6 +154,54 @@ export default {
         ctx.activeSupportsGroupBy &&
         ctx.fields.some((f) => isGroupableField(f)),
       component: GroupByControl,
+    }),
+    // The three built-in toolbar controls. The toolbar names none of them: it
+    // reads this slot, asks each `isApplicable`, and builds one identical trigger
+    // per survivor. A plugin adds a fourth by contributing here.
+    //
+    // Filter and sort are NOT extracted into sub-plugins in this pass: both pull
+    // heavily on `web/internal/` (the controllers, `filter-tree-ops`,
+    // `rule-resolution`, `filter-slot`, `sort-presets`) and the evaluator is
+    // shared with `useFlatRows`, so extraction would push a large slice of
+    // `internal/` out through this barrel for no user-visible gain.
+    DataViewSlots.Control({
+      id: "data-view.filter",
+      label: "Filter",
+      icon: MdFilterList,
+      order: 0,
+      size: "builder",
+      // A literal transcription of the host's old `hasFilters`.
+      isApplicable: (ctx) => ctx.filter.filterableFields.length > 0,
+      summary: (ctx) =>
+        summarizeFilter(
+          ctx.filter.filter,
+          ctx.fields,
+          ctx.filter.resolveOperatorSet,
+        ),
+      component: FilterControlPanel,
+    }),
+    DataViewSlots.Control({
+      id: "data-view.sort",
+      label: "Sort",
+      icon: MdSwapVert,
+      order: 1,
+      size: "builder",
+      // A literal transcription of the host's old `hasSort`.
+      isApplicable: (ctx) =>
+        ctx.activeSupportsSort && ctx.sort.sortableFields.length > 0,
+      summary: (ctx) => summarizeSort(ctx.sort.rules, ctx.sort.sortableFields),
+      component: SortControlPanel,
+    }),
+    // Settings carries no summary on purpose: view settings are configuration,
+    // not a narrowing of what you see. A summary answers "what am I not seeing,
+    // and why" — "Group by: Status" answers neither, and it would still count
+    // itself into the compact fold's badge as if something were being hidden.
+    DataViewSlots.Control({
+      id: "data-view.settings",
+      label: "View settings",
+      icon: MdTune,
+      order: 2,
+      component: SettingsControlPanel,
     }),
   ],
 } satisfies PluginDefinition;

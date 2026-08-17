@@ -142,9 +142,21 @@ void loadFixtures().then((fixtures) => {
     // The harness wrapper itself carries `data-geo="container"` (the width box).
     // A fixture that authors its OWN inner `[data-geo="container"]` is honored by
     // __measure's innermost-container precedence.
+    // `data-theme-scope` alongside `data-geo-root`, on the SAME element that
+    // entry.html seeds the density ramp on. app.css declares its derived tokens
+    // (`--hover-fill`, the whole `--cp-*` panel geometry) at
+    // `:root, [data-theme-scope]`, and most of them read a density var. Custom
+    // property substitution happens where the property is DECLARED, so anchored
+    // on `:root` alone — where the harness seeds nothing — every one of them
+    // computes to guaranteed-invalid and inherits down invalid: a
+    // `grid-template-columns: var(--cp-gutter) …` then falls back to `none` and
+    // the measured grid silently collapses to one column. Marking this element a
+    // theme scope makes app.css re-declare them here, against the seeded ramp,
+    // so the harness reads the tokens from their single source instead of the
+    // page restating them.
     const tree = createElement(
       "div",
-      { "data-geo-root": "" },
+      { "data-geo-root": "", "data-theme-scope": "" },
       createElement(
         "div",
         { "data-geo": "container", style: { width, position: "relative" } },

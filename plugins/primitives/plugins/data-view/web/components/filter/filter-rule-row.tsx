@@ -1,106 +1,92 @@
 import type { ReactNode } from "react";
-import { MdClose, MdAccountTree } from "react-icons/md";
-import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
-import {
-  ControlSizeProvider,
-  cn,
-} from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { MdAccountTree } from "react-icons/md";
+import { ControlPanel } from "@plugins/primitives/plugins/css/plugins/control-panel/web";
+import { RowActionButton } from "@plugins/primitives/plugins/row-actions/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
-import {
-  useHoverReveal,
-  hoverRevealClass,
-} from "@plugins/primitives/plugins/hover-reveal/web";
-import type {
-  FieldDef,
-  FilterConjunction,
-  FilterRule,
-} from "../../../core";
+import type { FilterConjunction, FilterRule } from "../../../core";
+import { useFilterEditor } from "../../internal/use-filter-editor";
 import { ConjunctionCell } from "./conjunction-cell";
 import { FieldPicker } from "./field-picker";
 import { OperatorPicker } from "./operator-picker";
-import type { FilterEditorContext } from "./editor-context";
 
 /**
- * One rule row: `[conjunction] [field ▾] [operator ▾] [value] [⤳ ✕]` — a tidy
- * single line (no wrap) whose columns align rail-to-rail across rows. The value
- * editor is the resolved operator's `ValueInput` (rendered only when `hasValue`),
- * hosted in a flex-1 cell so it fills the remaining width and the trailing
- * actions stay pinned to the row edge. Remove is a direct, single-click
- * affordance (no buried menu); "turn into group" sits beside it as the
- * advanced/grouping path — both hover-revealed.
+ * One rule, as one line of the builder's shared grid:
+ * `[conjunction] [field ▾] [operator ▾] [value] [⤳ ✕]`. The value editor is the
+ * resolved operator's `ValueInput`, rendered only when the operator takes one.
+ *
+ * The row is a `ControlPanel.RuleRow`, so the cells are TRACKS: the value cell no
+ * longer needs a hand-rolled `min-w-0 flex-1` wrapper to absorb the slack, the
+ * trailing controls no longer need `useHoverReveal` to stay out of the way (the
+ * row-actions primitive inside the grid owns the reveal), and a value-less
+ * operator leaves its track empty instead of the row re-flowing around it.
+ *
+ * "Turn into group" sits in `actions`, before the built-in remove — the advanced
+ * path, beside the everyday one.
  */
-export function FilterRuleRow<TRow>(props: {
+export function FilterRuleRow(props: {
   rule: FilterRule;
   index: number;
   groupConjunction: FilterConjunction;
   onSetConjunction: (conjunction: FilterConjunction) => void;
-  ctx: FilterEditorContext<TRow>;
 }): ReactNode {
-  const { rule, ctx } = props;
-  const field = ctx.fields.find((f) => f.id === rule.fieldId);
+  const { rule } = props;
+  const editor = useFilterEditor();
+  const field = editor.fields.find((f) => f.id === rule.fieldId);
   const opSet = field
-    ? ctx.resolveOperatorSet(field.type ?? "text")
+    ? editor.resolveOperatorSet(field.type ?? "text")
     : undefined;
   const operator = opSet?.operators.find((o) => o.id === rule.operatorId);
   const ValueInput = operator?.hasValue ? operator.ValueInput : undefined;
-  const { revealed, groupProps } = useHoverReveal();
 
   return (
-    <Stack direction="row" gap="xs" align="center" {...groupProps}>
-      <ConjunctionCell
-        index={props.index}
-        conjunction={props.groupConjunction}
-        onChange={props.onSetConjunction}
-      />
-      <FieldPicker
-        fields={ctx.fields}
-        value={rule.fieldId}
-        onChange={(fieldId) => ctx.changeRuleField(rule.id, fieldId)}
-      />
-      {opSet ? (
-        <OperatorPicker
-          operators={opSet.operators}
-          value={rule.operatorId}
-          onChange={(operatorId) => ctx.changeRuleOperator(rule.id, operatorId)}
+    <ControlPanel.RuleRow
+      prefix={
+        <ConjunctionCell
+          index={props.index}
+          conjunction={props.groupConjunction}
+          onChange={props.onSetConjunction}
         />
-      ) : (
-        <Text as="span" variant="caption" tone="muted">
-          (unknown field)
-        </Text>
-      )}
-      {/* The flexible value cell absorbs the remaining row width (text/number
-          inputs fill, chip grids flow). It renders even for value-less operators
-          (e.g. "Is empty") so the trailing actions stay pinned to the row edge
-          instead of jumping. */}
-      <div className="min-w-0 flex-1">
-        {ValueInput && field ? (
+      }
+      field={
+        <FieldPicker
+          fields={editor.fields}
+          value={rule.fieldId}
+          onChange={(fieldId) => editor.changeRuleField(rule.id, fieldId)}
+        />
+      }
+      operator={
+        opSet ? (
+          <OperatorPicker
+            operators={opSet.operators}
+            value={rule.operatorId}
+            onChange={(operatorId) =>
+              editor.changeRuleOperator(rule.id, operatorId)
+            }
+          />
+        ) : (
+          <Text as="span" variant="caption" tone="muted">
+            (unknown field)
+          </Text>
+        )
+      }
+      value={
+        ValueInput && field ? (
           <ValueInput
             value={rule.value}
-            onChange={(value) => ctx.setRuleValue(rule.id, value)}
-            field={field as FieldDef<unknown>}
+            onChange={(value) => editor.setRuleValue(rule.id, value)}
+            field={field}
           />
-        ) : null}
-      </div>
-      <Stack
-        direction="row"
-        gap="2xs"
-        align="center"
-        className={cn("shrink-0", hoverRevealClass(revealed))}
-      >
-        <ControlSizeProvider size="sm">
-          <IconButton
-            icon={MdAccountTree}
-            label="Turn into group"
-            onClick={() => ctx.wrapRuleInGroup(rule.id)}
-          />
-          <IconButton
-            icon={MdClose}
-            label="Remove filter"
-            onClick={() => ctx.deleteNode(rule.id)}
-          />
-        </ControlSizeProvider>
-      </Stack>
-    </Stack>
+        ) : null
+      }
+      actions={
+        <RowActionButton
+          icon={MdAccountTree}
+          label="Turn into group"
+          onClick={() => editor.wrapRuleInGroup(rule.id)}
+        />
+      }
+      onRemove={() => editor.deleteNode(rule.id)}
+      removeLabel="Remove filter"
+    />
   );
 }

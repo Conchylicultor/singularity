@@ -130,7 +130,6 @@ a real density-scaling utility backed by `--pad-card`), or
     - `page/read-only-view`
     - `primitives/collapsible-wrap`
     - `primitives/css/card`
-    - `primitives/data-view`
     - `primitives/row-actions`
     - `stats`
 

@@ -3675,6 +3675,10 @@
       "name": "@singularity/plugin-primitives-css-column",
       "version": "0.0.1",
     },
+    "plugins/primitives/plugins/css/plugins/control-panel": {
+      "name": "@singularity/plugin-primitives-css-control-panel",
+      "version": "0.0.1",
+    },
     "plugins/primitives/plugins/css/plugins/control-size": {
       "name": "@singularity/plugin-primitives-css-control-size",
       "version": "0.0.1",
@@ -3764,6 +3768,10 @@
     },
     "plugins/primitives/plugins/css/plugins/surface": {
       "name": "@singularity/plugin-primitives-css-surface",
+      "version": "0.0.1",
+    },
+    "plugins/primitives/plugins/css/plugins/switch": {
+      "name": "@singularity/plugin-primitives-css-switch",
       "version": "0.0.1",
     },
     "plugins/primitives/plugins/css/plugins/text": {
@@ -7201,6 +7209,8 @@
 
     "@singularity/plugin-primitives-css-column": ["@singularity/plugin-primitives-css-column@workspace:plugins/primitives/plugins/css/plugins/column"],
 
+    "@singularity/plugin-primitives-css-control-panel": ["@singularity/plugin-primitives-css-control-panel@workspace:plugins/primitives/plugins/css/plugins/control-panel"],
+
     "@singularity/plugin-primitives-css-control-size": ["@singularity/plugin-primitives-css-control-size@workspace:plugins/primitives/plugins/css/plugins/control-size"],
 
     "@singularity/plugin-primitives-css-fill": ["@singularity/plugin-primitives-css-fill@workspace:plugins/primitives/plugins/css/plugins/fill"],
@@ -7244,6 +7254,8 @@
     "@singularity/plugin-primitives-css-sticky-stack": ["@singularity/plugin-primitives-css-sticky-stack@workspace:plugins/primitives/plugins/css/plugins/sticky/plugins/stack"],
 
     "@singularity/plugin-primitives-css-surface": ["@singularity/plugin-primitives-css-surface@workspace:plugins/primitives/plugins/css/plugins/surface"],
+
+    "@singularity/plugin-primitives-css-switch": ["@singularity/plugin-primitives-css-switch@workspace:plugins/primitives/plugins/css/plugins/switch"],
 
     "@singularity/plugin-primitives-css-text": ["@singularity/plugin-primitives-css-text@workspace:plugins/primitives/plugins/css/plugins/text"],
 

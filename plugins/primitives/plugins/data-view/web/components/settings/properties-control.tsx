@@ -1,77 +1,39 @@
 import { useCallback, type ReactNode } from "react";
-import { MdDragIndicator, MdVisibility } from "react-icons/md";
-import { Button, cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
-import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
-import {
-  SectionLabel,
-  Text,
-} from "@plugins/primitives/plugins/css/plugins/text/web";
-import { CheckboxIndicator } from "@plugins/primitives/plugins/css/plugins/selection-indicator/web";
+import { MdVisibility } from "react-icons/md";
+import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { ControlPanel } from "@plugins/primitives/plugins/css/plugins/control-panel/web";
 import {
   SortableItem,
   SortableList,
 } from "@plugins/primitives/plugins/sortable-list/web";
 import { useVisibleFieldsController } from "../../internal/use-visible-fields-controller";
-import { useDataViewSettings } from "./settings-context";
-
-/**
- * One Properties row: `[drag handle] [✓ field label]`. The whole label region is
- * the visibility toggle (a `Row`), and the leading handle reorders the field —
- * mirroring `SortRuleRow`'s handle + `data-view-settings-button`'s Row body. The
- * row is a `SortableItem` keyed by `field.id`; list order = body order.
- */
-function PropertyRow(props: {
-  id: string;
-  label: string;
-  visible: boolean;
-  onToggle: (id: string) => void;
-}): ReactNode {
-  const { id, label, visible, onToggle } = props;
-  return (
-    <SortableItem
-      id={id}
-      handle
-      className={({ isDragging }) => cn(isDragging && "opacity-40")}
-    >
-      {(state) => (
-        <Stack direction="row" align="center" gap="xs">
-          <span
-            {...state.handleProps}
-            className="cursor-grab text-muted-foreground hover:text-foreground active:cursor-grabbing"
-          >
-            <MdDragIndicator className="size-4" />
-          </span>
-          <Fill>
-            <Row
-              onClick={() => onToggle(id)}
-              icon={<CheckboxIndicator checked={visible} />}
-            >
-              <Text variant="body" className="truncate">
-                {label}
-              </Text>
-            </Row>
-          </Fill>
-        </Stack>
-      )}
-    </SortableItem>
-  );
-}
+import { dragHandleProps } from "../../internal/drag-handle-props";
+import { useDataViewControls } from "../controls/controls-context";
 
 /**
  * Properties setting (a `view`-scope settings contribution): a per-view-instance
  * control governing which fields render in the view body and in what order
  * (Notion "Properties"). A reorderable, toggleable field list driven by the
  * `VisibleFieldsController`, plus a "Show all fields" reset. Reads the field
- * schema + active-instance state from `DataViewSettingsContext` and writes back
+ * schema + active-instance state from `DataViewControlsContext` and writes back
  * through `viewModel.setVisibleFields` — no prop-threading, mirroring
  * `GroupByControl`. Renders nothing on a single-field surface (nothing to
- * configure); the contribution's `isApplicable` gates the menu on the same
+ * configure); the contribution's `isApplicable` gates the panel on the same
  * condition so the gear never opens onto an empty section.
+ *
+ * Each row is one `ControlPanel.Row`: the drag handle rides the row's own gutter
+ * track and the visibility toggle is the row's `select="check"`, so the handle,
+ * the checkbox and the label all sit on the same rails as every other panel row
+ * — where before this list hand-built `[handle] [Row with a checkbox icon]` and
+ * landed its label at a rail of its own.
+ *
+ * "Show all fields" is the section's LAST ROW, not the panel's footer: a
+ * contribution owns a section, not the panel, and a footer placed from inside one
+ * section would sit above whatever contribution came next.
  */
 export function PropertiesControl(): ReactNode {
-  const { fields, activeState, activeViewId, viewModel } = useDataViewSettings();
+  const { fields, activeState, activeViewId, viewModel } =
+    useDataViewControls();
 
   const setVisibleFields = useCallback(
     (ids: string[] | null) => viewModel.setVisibleFields(activeViewId, ids),
@@ -86,8 +48,7 @@ export function PropertiesControl(): ReactNode {
   if (fields.length <= 1) return null;
 
   return (
-    <Stack gap="sm">
-      <SectionLabel>Properties</SectionLabel>
+    <ControlPanel.Section label="Properties">
       <SortableList
         items={controller.items.map((i) => i.field.id)}
         orientation="vertical"
@@ -98,26 +59,35 @@ export function PropertiesControl(): ReactNode {
           if (toIndex !== -1) controller.move(activeId, toIndex);
         }}
       >
-        <Stack gap="2xs">
-          {controller.items.map((item) => (
-            <PropertyRow
-              key={item.field.id}
-              id={item.field.id}
-              label={item.field.label}
-              visible={item.visible}
-              onToggle={controller.toggle}
-            />
-          ))}
-        </Stack>
+        {controller.items.map((item) => (
+          <SortableItem
+            key={item.field.id}
+            id={item.field.id}
+            handle
+            className={({ isDragging }) => cn(isDragging && "opacity-40")}
+          >
+            {(state) => (
+              <ControlPanel.Row
+                handle
+                handleProps={dragHandleProps(state)}
+                select="check"
+                checked={item.visible}
+                onSelect={() => controller.toggle(item.field.id)}
+              >
+                {item.field.label}
+              </ControlPanel.Row>
+            )}
+          </SortableItem>
+        ))}
       </SortableList>
-      <Button
-        variant="ghost"
+      <ControlPanel.Row
+        icon={<MdVisibility />}
+        muted
         disabled={!controller.isCustomized}
-        onClick={controller.showAll}
+        onSelect={controller.showAll}
       >
-        <MdVisibility />
         Show all fields
-      </Button>
-    </Stack>
+      </ControlPanel.Row>
+    </ControlPanel.Section>
   );
 }

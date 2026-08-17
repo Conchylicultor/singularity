@@ -1,82 +1,92 @@
-import { useState, type ReactNode } from "react";
+import type { ReactNode } from "react";
 import { MdAdd, MdAccountTree } from "react-icons/md";
 import {
-  Button,
-  DropdownMenuSeparator,
-} from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+  ControlPanel,
+  usePanelStack,
+} from "@plugins/primitives/plugins/css/plugins/control-panel/web";
 import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
-import { InlinePopover } from "@plugins/primitives/plugins/popover/web";
-import type { FieldDef } from "../../../core";
+import { useFilterEditor } from "../../internal/use-filter-editor";
 import { FieldSearchList } from "./field-search-list";
 
 /**
- * `+ Add filter` affordance. A single ghost button that opens the search-first
- * `FieldSearchList`: picking a field adds a rule on it in one click. The advanced
- * "Add filter group" path lives at the bottom of the list, so the simple flow is
- * fast while grouped/nested filters stay one click away. Used both at the root
- * footer and inside nested groups.
+ * The `Add filter` row at the foot of a group's rule list. Clicking it PUSHES the
+ * search-first field list as a page: picking a field adds a rule on it and walks
+ * back in one click, and the advanced "Add filter group" path sits at the bottom
+ * of that list.
+ *
+ * It used to be a ghost button opening an `InlinePopover` — a popover from inside
+ * the panel's own popover, with a second width, a second clamp and a second
+ * dismissal.
  */
-export function AddFilterAffordance<TRow>(props: {
-  fields: FieldDef<TRow>[];
-  onPick: (fieldId: string) => void;
-  onAddGroup: () => void;
-}): ReactNode {
-  const [open, setOpen] = useState(false);
-
+export function AddFilterRow({ groupId }: { groupId: string }): ReactNode {
+  const { push } = usePanelStack();
   return (
-    <InlinePopover
-      open={open}
-      onOpenChange={setOpen}
-      align="start"
-      width="lg"
-      trigger={
-        <Button
-          variant="ghost"
-          // eslint-disable-next-line layout/no-adhoc-layout -- per-child start-alignment override in a stretch flex parent (no primitive for self-*)
-          className="self-start"
-          aria-label="Add filter"
-        >
-          <MdAdd />
-          Add filter
-        </Button>
+    <ControlPanel.Row
+      icon={<MdAdd />}
+      muted
+      onSelect={() =>
+        push({
+          key: `add-filter:${groupId}`,
+          title: "Add filter",
+          render: () => <AddFilterPanel groupId={groupId} />,
+        })
       }
     >
-      <FieldSearchList
-        fields={props.fields}
-        onPick={(fieldId) => {
-          setOpen(false);
-          props.onPick(fieldId);
-        }}
-        footer={
-          <AddGroupButton
-            onClick={() => {
-              setOpen(false);
-              props.onAddGroup();
-            }}
-          />
-        }
-      />
-    </InlinePopover>
+      Add filter
+    </ControlPanel.Row>
   );
 }
 
 /**
- * The "Add filter group" advanced row, shared by the `AddFilterAffordance`
- * popover and the empty-state field list so both expose the grouped-filter path
- * identically below the field list.
+ * The pushed page. It reads the editor itself rather than taking the field list
+ * and the edit callbacks as props: a stack entry's `render` closure is captured
+ * at push time, so anything handed in would be from the click, not from now.
  */
-export function AddGroupButton(props: { onClick: () => void }): ReactNode {
+function AddFilterPanel({ groupId }: { groupId: string }): ReactNode {
+  const editor = useFilterEditor();
+  const { pop } = usePanelStack();
+
   return (
-    <>
-      <DropdownMenuSeparator />
-      <Row
-        size="sm"
-        hover="muted"
-        icon={<MdAccountTree />}
-        onClick={props.onClick}
-      >
-        Add filter group
-      </Row>
-    </>
+    <ControlPanel.Section>
+      <FieldSearchList
+        fields={editor.fields}
+        onPick={(fieldId) => {
+          pop();
+          editor.addRuleForField(groupId, fieldId);
+        }}
+        footer={
+          <AddGroupRow
+            onClick={() => {
+              pop();
+              editor.addGroup(groupId);
+            }}
+          />
+        }
+      />
+    </ControlPanel.Section>
+  );
+}
+
+/**
+ * The "Add filter group" advanced row, shared by the pushed add page and the
+ * empty-state field list so both expose the grouped-filter path identically below
+ * the field list.
+ *
+ * A `css/row` `Row` and not a `ControlPanel.Row`, because it lives INSIDE
+ * `FieldSearchList` — it belongs to that list's vocabulary, not to the panel's,
+ * and the two lists it appears in are both search results. It draws no divider
+ * above itself: the one it used to borrow from the dropdown menu is exactly the
+ * hand-placed separator this pass removes.
+ */
+export function AddGroupRow(props: { onClick: () => void }): ReactNode {
+  return (
+    <Row
+      size="sm"
+      hover="muted"
+      icon={<MdAccountTree />}
+      onClick={props.onClick}
+    >
+      Add filter group
+    </Row>
   );
 }

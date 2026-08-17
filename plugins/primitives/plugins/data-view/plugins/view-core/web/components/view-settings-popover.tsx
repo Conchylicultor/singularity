@@ -1,8 +1,7 @@
 import { type ReactNode, useMemo } from "react";
 import { MdContentCopy, MdDelete } from "react-icons/md";
-import { Button, Input } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { SectionLabel } from "@plugins/primitives/plugins/css/plugins/text/web";
+import { Input } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { ControlPanel } from "@plugins/primitives/plugins/css/plugins/control-panel/web";
 import { variantField } from "@plugins/fields/plugins/variant/plugins/config/core";
 import type { VariantEntry } from "@plugins/fields/plugins/variant/plugins/config/core";
 import { FieldRenderer } from "@plugins/config_v2/plugins/fields/web";
@@ -13,8 +12,14 @@ import type { ViewActionsCore } from "../internal/use-view-model";
 
 /**
  * Settings panel for the active instance — opened by clicking the active chip.
- * Renders: a name input, the type-dispatched options sub-form (over a web-side
- * `variantField`), and Duplicate / Delete actions.
+ * A `Name` section, the type-dispatched options sub-form (over a web-side
+ * `variantField`), and a footer of Duplicate / Delete.
+ *
+ * It is written in the `control-panel` vocabulary, which is the sibling
+ * primitive: the sections are separated by the panel container rather than by
+ * spacing chosen here, and the two actions are full-width rows rather than an
+ * outline button beside a destructive ghost one. view-core imports the primitive
+ * and nothing else — it must never import data-view, which sits above it.
  *
  * The `viewField` is built **web-side at render** with the injected `useVariants`
  * registry, so the type selector + each type's `configSchema` sub-fields recurse
@@ -48,11 +53,11 @@ export function ViewSettingsPopover<T extends ViewTypeMeta>({
   };
 
   return (
-    <Stack gap="md">
-      <Stack gap="2xs">
-        <SectionLabel>Name</SectionLabel>
+    <>
+      <ControlPanel.Section label="Name">
         <Input
           defaultValue={instance.instance.name}
+          aria-label="View name"
           onBlur={(e) => {
             const next = e.target.value.trim();
             if (next && next !== instance.instance.name)
@@ -62,37 +67,39 @@ export function ViewSettingsPopover<T extends ViewTypeMeta>({
             if (e.key === "Enter") (e.target as HTMLInputElement).blur();
           }}
         />
-      </Stack>
+      </ControlPanel.Section>
 
-      <FieldRenderer
-        field={viewField}
-        value={view}
-        onChange={(v) => actions.updateView(id, v as VariantValue, { merge: true })}
-      />
+      <ControlPanel.Section>
+        <FieldRenderer
+          field={viewField}
+          value={view}
+          onChange={(v) =>
+            actions.updateView(id, v as VariantValue, { merge: true })
+          }
+        />
+      </ControlPanel.Section>
 
-      <Stack direction="row" gap="xs">
-        <Button
-          variant="outline"
-          onClick={() => {
+      <ControlPanel.Footer>
+        <ControlPanel.Row
+          icon={<MdContentCopy />}
+          onSelect={() => {
             actions.duplicateView(id);
             onClose();
           }}
         >
-          <MdContentCopy />
           Duplicate
-        </Button>
-        <Button
-          variant="ghost"
-          className="text-destructive"
-          onClick={() => {
+        </ControlPanel.Row>
+        <ControlPanel.Row
+          icon={<MdDelete />}
+          tone="danger"
+          onSelect={() => {
             actions.deleteView(id);
             onClose();
           }}
         >
-          <MdDelete />
           Delete
-        </Button>
-      </Stack>
-    </Stack>
+        </ControlPanel.Row>
+      </ControlPanel.Footer>
+    </>
   );
 }

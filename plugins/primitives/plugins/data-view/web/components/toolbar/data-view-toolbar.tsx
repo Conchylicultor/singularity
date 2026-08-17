@@ -6,12 +6,15 @@ import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { SearchInput } from "@plugins/primitives/plugins/search/web";
 import { useElementSize } from "@plugins/primitives/plugins/element-size/web";
 import type { CreateOption } from "../../../core";
+import { DataViewSlots } from "../../slots";
+import { useDataViewControls } from "../controls/controls-context";
 import { CompactControls } from "./compact-controls";
+import { ControlTrigger } from "./control-trigger";
 import { CreatorsControl } from "../creators-control";
 
 /**
- * Below this container width the toolbar folds: search AND sort/filter/fields
- * all collapse behind one `MdTune` options popover, leaving a single bar of
+ * Below this container width the toolbar folds: search AND every control
+ * collapse behind one `MdTune` options popover, leaving a single bar of
  * [switcher | actions | create | options]. Sized so the wide layout (search + 3
  * icon controls + view switcher) only ever renders when it genuinely fits —
  * narrow sidebars and split panes get the compact form automatically, with no
@@ -29,12 +32,6 @@ export interface DataViewToolbarProps {
   title?: ReactNode;
   query: string;
   onQueryChange: (next: string) => void;
-  /** Sort trigger (icon button + builder popover), or null when unsupported. */
-  sortControl: ReactNode | null;
-  /** Filter trigger, or null when the schema has no filterable field. */
-  filterControl: ReactNode | null;
-  /** Custom-columns "Fields" trigger, or null when opted out. */
-  fieldsControl: ReactNode | null;
   /** Consumer-supplied arbitrary toolbar actions. */
   actions?: ReactNode;
   /**
@@ -47,35 +44,58 @@ export interface DataViewToolbarProps {
   switcher: ReactNode;
   /** Number of view instances — the switcher is hidden when compact unless >1. */
   switcherCount: number;
-  /** Active sort + filter rule count, surfaced as the compact options badge. */
-  activeControlCount: number;
 }
 
 /**
  * The DataView toolbar — a `<Sticky>` header that adapts to its own width. Wide:
- * the full inline row (unchanged). Narrow: the folded compact form, which is
- * always exactly ONE bar. The toolbar measures itself ({@link useElementSize});
- * the breakpoint switch happens before paint, so there is no wide→compact flash.
+ * the full inline row. Narrow: the folded compact form, which is always exactly
+ * ONE bar. The toolbar measures itself ({@link useElementSize}); the breakpoint
+ * switch happens before paint, so there is no wide→compact flash.
+ *
+ * **It names no control.** It used to take `filterControl` / `sortControl` /
+ * `fieldsControl` as three ReactNode props built by the host — the
+ * collection-consumer rule broken literally, and the reason no plugin could add a
+ * toolbar control. Now it reads `DataViewSlots.Control`, drops the ones that do
+ * not apply to the active view + schema, orders them, and builds one identical
+ * trigger per control.
  */
 export function DataViewToolbar({
   stickyRef,
   title,
   query,
   onQueryChange,
-  sortControl,
-  filterControl,
-  fieldsControl,
   actions,
   creators,
   switcher,
   switcherCount,
-  activeControlCount,
 }: DataViewToolbarProps): ReactNode {
   const [measureRef, { width }] = useElementSize();
   const compact = width > 0 && width < COMPACT_BREAKPOINT;
+  const ctx = useDataViewControls();
+
+  // Applicability and ordering, once, for both layouts. `isApplicable` is pure
+  // and asked BEFORE anything mounts — a control that does not apply costs
+  // nothing, not even a mounted-then-null component.
+  const controls = DataViewSlots.Control.useContributions()
+    .filter((c) => c.isApplicable?.(ctx) ?? true)
+    .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+
+  // The compact trigger's badge: what the open panels would tell you, added up.
+  // Each control's own `summary` answers for itself (`count` defaults to the
+  // whole thing it describes), so a new control counts into the badge with no
+  // edit here — where the old `activeControlCount` prop hard-coded
+  // `filter.ruleCount + sort.ruleCount` in the host.
+  const activeCount =
+    controls.reduce((sum, c) => {
+      const s = c.summary?.(ctx) ?? null;
+      return sum + (s ? (s.count ?? 1 + (s.more ?? 0)) : 0);
+    }, 0) + (query.length > 0 ? 1 : 0);
+
   // Built once and relocated into whichever branch renders — the toolbar's
   // "each control element is built once" discipline. It folds on `compact`.
-  const creatorsControl = <CreatorsControl creators={creators} compact={compact} />;
+  const creatorsControl = (
+    <CreatorsControl creators={creators} compact={compact} />
+  );
   const searchInput = (
     <SearchInput
       value={query}
@@ -126,21 +146,13 @@ export function DataViewToolbar({
             {/* eslint-disable-next-line row-actions/no-raw-actions-slot -- surface-level toolbar actions, one per DataView, not a per-row cluster */}
             {actions}
             {creatorsControl}
-            {/* Search folds in here with sort/filter/fields — a non-empty query
+            {/* Search folds in here with every control — a non-empty query
                 counts toward the trigger's badge so a folded-away search is still
                 visible from the closed bar. */}
             <CompactControls
               search={searchInput}
-              entries={[
-                ...(filterControl
-                  ? [{ label: "Filter", control: filterControl }]
-                  : []),
-                ...(sortControl ? [{ label: "Sort", control: sortControl }] : []),
-                ...(fieldsControl
-                  ? [{ label: "Fields", control: fieldsControl }]
-                  : []),
-              ]}
-              activeCount={activeControlCount + (query.length > 0 ? 1 : 0)}
+              controls={controls}
+              activeCount={activeCount}
             />
           </>
         ) : (
@@ -152,11 +164,11 @@ export function DataViewToolbar({
                 switcher's flex-grow, collapsing its hover-reveal spacer). */}
             {switcher}
             {searchInput}
-            {filterControl}
-            {sortControl}
+            {controls.map((c) => (
+              <ControlTrigger key={c.id} control={c} />
+            ))}
             {/* eslint-disable-next-line row-actions/no-raw-actions-slot -- surface-level toolbar actions, one per DataView, not a per-row cluster */}
             {actions}
-            {fieldsControl}
             {creatorsControl}
           </>
         )}

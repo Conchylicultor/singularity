@@ -33,9 +33,14 @@ contract and never crack open `config`.
   `{ storageKey, rowKey }` so this contributor keys its per-row `value`/`onEdit`.
   This is the old host-owned `useCustomColumnFields` bridge, moved here.
 - **The "Fields" UI** via `DataViewSlots.Setting({ scope: "global" })`
-  (`custom-columns-setting.tsx`). It reads `storageKey` from `useDataViewSettings()`
+  (`custom-columns-setting.tsx`). It reads `storageKey` from `useDataViewControls()`
   and resolves the SAME reference-stable descriptor the host registered via
-  `getDataViewDescriptor(storageKey)` (config match is by `===`).
+  `getDataViewDescriptor(storageKey)` (config match is by `===`). The setting is one
+  `ControlPanel.Section` — a row per column plus `New field` — and editing or
+  creating one opens a **pushed page**. Those pages re-resolve the descriptor and
+  the defs controller themselves rather than capturing them: a panel-stack entry's
+  `render` closure is captured when the row is clicked, so a `def` passed in would
+  still be the pre-rename one after the page's own rename.
 
 Both resolve the descriptor through the host's exported `getDataViewDescriptor`;
 the host names neither contributor (full collection-consumer separation). The
@@ -56,26 +61,18 @@ how the caller obtained it.
     - `config_v2.useConfig`
     - `config_v2.useSetConfig`
     - `infra/endpoints.useEndpointMutation`
-    - `primitives/css/inline.Inline`
-    - `primitives/css/spacing.Stack`
-    - `primitives/css/text.SectionLabel`
-    - `primitives/css/ui-kit.Button`
+    - `primitives/css/control-panel.ControlPanel`
+    - `primitives/css/control-panel.usePanelStack`
     - `primitives/css/ui-kit.Input`
-    - `primitives/css/ui-kit.Select`
-    - `primitives/css/ui-kit.SelectContent`
-    - `primitives/css/ui-kit.SelectItem`
-    - `primitives/css/ui-kit.SelectTrigger`
-    - `primitives/css/ui-kit.SelectValue`
     - `primitives/data-view.DataViewId`
     - `primitives/data-view.DataViewSlots`
     - `primitives/data-view.getDataViewDescriptor`
-    - `primitives/data-view.useDataViewSettings`
+    - `primitives/data-view.useDataViewControls`
     - `primitives/data-view.useFieldIdentities`
     - `primitives/data-view.useResolveColumnConfig`
     - `primitives/data-view.useResolveColumnDerive`
     - `primitives/data-view.useResolveOperatorSet`
     - `primitives/data-view.useResolveValueCodec`
-    - `primitives/icon-button.IconButton`
     - `primitives/latest-ref.useLatestRef`
     - `primitives/live-state.useResource`
   - Exports (types):
