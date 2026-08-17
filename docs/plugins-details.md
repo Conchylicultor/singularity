@@ -14723,6 +14723,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `page/quote`
               - `page/url-paste`
               - `primitives/adaptive-bar`
+              - `primitives/css/control-panel`
               - `primitives/css/radio-group`
               - `primitives/css/ui-kit`
               - `primitives/data-view`
@@ -20298,7 +20299,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `plugin-meta/plugin-view/sub-plugins`
               - `primitives/cursor-pagination`
               - `primitives/data-table`
-              - `primitives/data-view`
               - `primitives/data-view/gallery`
               - `primitives/data-view/list`
               - `primitives/data-view/tree`
@@ -20483,6 +20483,46 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/outline/rail`
               - `primitives/pane`
               - `primitives/tabbed-view`
+        - **`control-panel`** — The control-panel vocabulary: ControlPanel plus its closed set of members (Section, Row, RuleList, RuleRow, Field, Footer, Empty, Stack) and the ControlPanelPopover surface. The container draws the hairlines, the row is a grid so every label starts at one x, selection has one language per meaning, and width is a role rather than a measurement.
+          - Web:
+            - Uses:
+              - `primitives/css/selection-indicator.CheckboxIndicator`
+              - `primitives/css/switch.SwitchIndicator`
+              - `primitives/css/text.SectionLabel`
+              - `primitives/css/text.Text`
+              - `primitives/css/ui-kit.Button`
+              - `primitives/css/ui-kit.cn`
+              - `primitives/css/ui-kit.Popover`
+              - `primitives/css/ui-kit.PopoverContent`
+              - `primitives/css/ui-kit.PopoverTrigger`
+              - `primitives/icon-button.IconButton`
+              - `primitives/row-actions.RowActions`
+              - `primitives/row-actions.rowActionsAnchor`
+            - Exports (types):
+              - `ControlPanelEmptyProps`
+              - `ControlPanelFieldProps`
+              - `ControlPanelFooterProps`
+              - `ControlPanelPopoverProps`
+              - `ControlPanelProps`
+              - `ControlPanelRowProps`
+              - `ControlPanelRowSelect`
+              - `ControlPanelRowTone`
+              - `ControlPanelRuleListProps`
+              - `ControlPanelRuleRowProps`
+              - `ControlPanelSectionProps`
+              - `ControlPanelSize`
+              - `ControlPanelStackProps`
+              - `PanelStackApi`
+              - `PanelStackEntry`
+            - Exports (values):
+              - `ControlPanel`
+              - `ControlPanelPopover`
+              - `usePanelStack`
+          - Cross-plugin:
+            - Imported by:
+              - `primitives/data-view`
+              - `primitives/data-view/custom-columns`
+              - `primitives/data-view/view-core`
         - **`control-size`** — Control-size standard: the shared control-* height scale and its enforcing lint rule (no-adhoc-control).
         - **`fill`** — Flexible-cell layout primitive: <Fill axis> is the single grow+shrink cell of a Line/Row (min-w-0 flex-1). The one home for the slack-absorbing, truncation-enabling cell, so a stray flex-1 never strands the grow slot.
           - Web:
@@ -20530,7 +20570,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `page/inline-date`
               - `page/prompt/block`
               - `primitives/action-presentation`
-              - `primitives/data-view`
               - `primitives/date-picker`
               - `primitives/error-boundary`
               - `primitives/imperative-dialog/confirm`
@@ -20624,7 +20663,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `plugin-meta/facets/routes/render-detail`
               - `plugin-meta/plugin-view/runtimes`
               - `primitives/data-view`
-              - `primitives/data-view/custom-columns`
               - `primitives/data-view/table`
               - `primitives/data-view/tree`
               - `primitives/detail-sections`
@@ -21114,7 +21152,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/website/demos/agent-run`
               - `conversations/conversation-view/jsonl-viewer/tool-call/ask-user-question`
               - `page/read-only-view`
-              - `primitives/data-view`
+              - `primitives/css/control-panel`
         - **`spacing`** — Layout spacing primitives: <Stack gap> (flex + gap) and <Inset pad> (padding) draw from the closed density spacing ramp (none|2xs|xs|sm|md|lg|xl|2xl), plus insetClass() — the same padding resolver as a class string, for consumers that only accept a className. The sanctioned home for layout rhythm; raw gap-/p-/m-/space- Tailwind is banned by no-adhoc-spacing.
           - Web:
             - Uses:
@@ -21400,7 +21438,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/cursor-pagination`
               - `primitives/data-table`
               - `primitives/data-view`
-              - `primitives/data-view/custom-columns`
               - `primitives/data-view/gallery`
               - `primitives/data-view/list`
               - `primitives/data-view/tree`
@@ -21607,9 +21644,19 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `page/read-only-view`
               - `primitives/collapsible-wrap`
               - `primitives/css/card`
-              - `primitives/data-view`
               - `primitives/row-actions`
               - `stats`
+        - **`switch`** — On/off switch primitive: SwitchIndicator is the presentational track+knob (a span with no role or handler, safe inside something that is already the click target), and Switch wraps it in its own role=switch button for standalone use.
+          - Web:
+            - Uses: `primitives/css/ui-kit.cn`
+            - Exports (types):
+              - `SwitchIndicatorProps`
+              - `SwitchProps`
+            - Exports (values):
+              - `Switch`
+              - `SwitchIndicator`
+          - Cross-plugin:
+            - Imported by: `primitives/css/control-panel`
         - **`text`** — Semantic typography primitive: <Text variant tone as> picks a frozen size/line-height/weight role from the typography token group (incl. the eyebrow/section-label role). The single sanctioned home for text hierarchy; raw text-size/leading-* is banned by no-adhoc-typography.
           - Web:
             - Uses:
@@ -21887,15 +21934,14 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/command-palette`
               - `primitives/commit-list`
               - `primitives/css/color-picker`
+              - `primitives/css/control-panel`
               - `primitives/css/layout-harness`
               - `primitives/css/radio-group`
               - `primitives/data-table`
               - `primitives/data-view`
-              - `primitives/data-view/custom-columns`
               - `primitives/data-view/gallery`
               - `primitives/data-view/list`
               - `primitives/data-view/table`
-              - `primitives/data-view/view-core`
               - `primitives/date-picker`
               - `primitives/diff-view`
               - `primitives/error-boundary`
@@ -22353,6 +22399,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/clip`
               - `primitives/css/color-picker`
               - `primitives/css/column`
+              - `primitives/css/control-panel`
               - `primitives/css/fill`
               - `primitives/css/grid`
               - `primitives/css/inline`
@@ -22369,6 +22416,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/status-dot`
               - `primitives/css/sticky`
               - `primitives/css/surface`
+              - `primitives/css/switch`
               - `primitives/css/text`
               - `primitives/css/toggle-chip`
               - `primitives/css/viewport-overlay`
@@ -22572,6 +22620,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `DataViewSlots.FieldExtension` ← `primitives.data-view.custom-columns`
           - `DataViewSlots.RowOrder` ← `primitives.data-view.view-order`
           - `DataViewSlots.Setting` ← `primitives.data-view`, `primitives.data-view.custom-columns`
+          - `DataViewSlots.Control` ← `primitives.data-view`
           - `DataViewSlots.Cell` ← `fields.bool.table`, `fields.color.table`, `fields.date.table`, `fields.enum.table`, `fields.image.table`, `fields.number.table`, `fields.tags.table`, `fields.text.table`
           - `DataViewSlots.CellEditor` ← `fields.bool.inline`, `fields.date.inline`, `fields.enum.inline`, `fields.number.inline`, `fields.tags.inline`, `fields.text.inline`
           - `DataViewSlots.Filter` ← `fields.bool.filter`, `fields.date.filter`, `fields.enum.filter`, `fields.number.filter`, `fields.tags.filter`, `fields.text.filter`
@@ -22620,25 +22669,26 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `ConfigV2.WebRegister`
           - `DataViewSlots.Setting` "data-view.properties" → `PropertiesControl`
           - `DataViewSlots.Setting` "data-view.group-by" → `GroupByControl`
+          - `DataViewSlots.Control` "Filter" → `FilterControlPanel`
+          - `DataViewSlots.Control` "Sort" → `SortControlPanel`
+          - `DataViewSlots.Control` "View settings" → `SettingsControlPanel`
         - Uses:
           - `config_v2.useConfig`
           - `config_v2.useSetConfig`
           - `primitives/collapsible.CollapsibleContent`
           - `primitives/collapsible.CollapsibleProvider`
-          - `primitives/css/center.Center`
-          - `primitives/css/fill.Fill`
+          - `primitives/css/control-panel.ControlPanel`
+          - `primitives/css/control-panel.ControlPanelPopover`
+          - `primitives/css/control-panel.usePanelStack`
           - `primitives/css/inline.Inline`
           - `primitives/css/placeholder.Placeholder`
           - `primitives/css/row.Row`
           - `primitives/css/row.SectionHeaderRow`
           - `primitives/css/scroll.Scroll`
-          - `primitives/css/selection-indicator.CheckboxIndicator`
-          - `primitives/css/spacing.Inset`
           - `primitives/css/spacing.Stack`
           - `primitives/css/sticky.Sticky`
           - `primitives/css/sticky/stack.StickyStack`
           - `primitives/css/sticky/stack.StickyStackItem`
-          - `primitives/css/surface.Surface`
           - `primitives/css/text.SectionLabel`
           - `primitives/css/text.Text`
           - `primitives/css/toggle-chip.ToggleChip`
@@ -22652,7 +22702,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/css/ui-kit.DropdownMenuSeparator`
           - `primitives/css/ui-kit.DropdownMenuTrigger`
           - `primitives/css/ui-kit.Input`
-          - `primitives/css/ui-kit.SingleLineProvider`
           - `primitives/cursor-pagination.InfiniteScrollFooter`
           - `primitives/cursor-pagination.InfiniteScrollHandle`
           - `primitives/cursor-pagination.useInfiniteScroll`
@@ -22663,8 +22712,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/data-view/view-core.useViewModel`
           - `primitives/data-view/view-core.useViewVariants`
           - `primitives/element-size.useElementSize`
-          - `primitives/hover-reveal.hoverRevealClass`
-          - `primitives/hover-reveal.useHoverReveal`
           - `primitives/icon-button.IconButton`
           - `primitives/latest-ref.useLatestRef`
           - `primitives/loading.Loading`
@@ -22684,13 +22731,15 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `CreateOption`
           - `DataViewAggregateConfig`
           - `DataViewContribution`
+          - `DataViewControlContribution`
+          - `DataViewControlsContextValue`
+          - `DataViewControlSummary`
           - `DataViewId`
           - `DataViewProps`
           - `DataViewRenderProps`
           - `DataViewRowEntry`
           - `DataViewSection`
           - `DataViewSettingContribution`
-          - `DataViewSettingsContextValue`
           - `DataViewSourceBundle`
           - `DataViewSourceContribution`
           - `DataViewSourceProps`
@@ -22759,8 +22808,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `partitionIntoSections`
           - `pickPrimaryField`
           - `resolveBodyFields`
+          - `useDataViewControls`
           - `useDataViewSections`
-          - `useDataViewSettings`
           - `useFieldIdentities`
           - `useFilterController`
           - `useFlatRows`
@@ -22950,26 +22999,18 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `config_v2.useConfig`
               - `config_v2.useSetConfig`
               - `infra/endpoints.useEndpointMutation`
-              - `primitives/css/inline.Inline`
-              - `primitives/css/spacing.Stack`
-              - `primitives/css/text.SectionLabel`
-              - `primitives/css/ui-kit.Button`
+              - `primitives/css/control-panel.ControlPanel`
+              - `primitives/css/control-panel.usePanelStack`
               - `primitives/css/ui-kit.Input`
-              - `primitives/css/ui-kit.Select`
-              - `primitives/css/ui-kit.SelectContent`
-              - `primitives/css/ui-kit.SelectItem`
-              - `primitives/css/ui-kit.SelectTrigger`
-              - `primitives/css/ui-kit.SelectValue`
               - `primitives/data-view.DataViewId`
               - `primitives/data-view.DataViewSlots`
               - `primitives/data-view.getDataViewDescriptor`
-              - `primitives/data-view.useDataViewSettings`
+              - `primitives/data-view.useDataViewControls`
               - `primitives/data-view.useFieldIdentities`
               - `primitives/data-view.useResolveColumnConfig`
               - `primitives/data-view.useResolveColumnDerive`
               - `primitives/data-view.useResolveOperatorSet`
               - `primitives/data-view.useResolveValueCodec`
-              - `primitives/icon-button.IconButton`
               - `primitives/latest-ref.useLatestRef`
               - `primitives/live-state.useResource`
             - Exports (types):
@@ -23197,10 +23238,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `config_v2.useConfig`
               - `config_v2.useSetConfig`
               - `config_v2/fields.FieldRenderer`
+              - `primitives/css/control-panel.ControlPanel`
+              - `primitives/css/control-panel.ControlPanelPopover`
               - `primitives/css/spacing.Stack`
-              - `primitives/css/text.SectionLabel`
               - `primitives/css/toggle-chip.ToggleChip`
-              - `primitives/css/ui-kit.Button`
               - `primitives/css/ui-kit.ControlSizeProvider`
               - `primitives/css/ui-kit.DropdownMenu`
               - `primitives/css/ui-kit.DropdownMenuContent`
@@ -23212,7 +23253,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/hover-reveal.useHoverReveal`
               - `primitives/icon-button.IconButton`
               - `primitives/latest-ref.useLatestRef`
-              - `primitives/popover.InlinePopover`
               - `primitives/sortable-list.SortableItem`
               - `primitives/sortable-list.SortableList`
               - `primitives/view-switcher.useActiveViewId`
@@ -23679,7 +23719,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `page/file`
           - `page/image`
           - `page/video`
-          - `primitives/data-view`
           - `primitives/data-view/view-core`
           - `primitives/text-editor/paste-images`
           - `tasks/task-description`
@@ -23769,8 +23808,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `page/formatting/link`
           - `primitives/adaptive-bar`
           - `primitives/collapsible-wrap`
+          - `primitives/css/control-panel`
           - `primitives/data-view`
-          - `primitives/data-view/custom-columns`
           - `primitives/data-view/view-core`
           - `primitives/date-picker`
           - `primitives/folder-picker`
@@ -25119,7 +25158,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `page/math/inline`
           - `page/page-link`
           - `primitives/data-view`
-          - `primitives/data-view/view-core`
           - `primitives/date-picker`
           - `primitives/folder-picker`
           - `primitives/launch`
@@ -25298,6 +25336,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conversations/conversation-view/jsonl-viewer`
           - `conversations/conversation-view/jsonl-viewer/row-actions`
           - `primitives/breadcrumb`
+          - `primitives/css/control-panel`
           - `primitives/css/row`
           - `primitives/data-table`
           - `primitives/data-view/gallery`

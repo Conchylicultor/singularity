@@ -54,6 +54,7 @@ export const lintEntries: CollectedEntry[] = [
   { pluginPath: "primitives/plugins/css", id: "primitives.css", loader: () => import("@plugins/primitives/plugins/css/lint"), dependsOn: [] },
   { pluginPath: "primitives/plugins/css/plugins/badge", id: "primitives.css.badge", loader: () => import("@plugins/primitives/plugins/css/plugins/badge/lint"), dependsOn: [] },
   { pluginPath: "primitives/plugins/css/plugins/column", id: "primitives.css.column", loader: () => import("@plugins/primitives/plugins/css/plugins/column/lint"), dependsOn: [] },
+  { pluginPath: "primitives/plugins/css/plugins/control-panel", id: "primitives.css.control-panel", loader: () => import("@plugins/primitives/plugins/css/plugins/control-panel/lint"), dependsOn: [] },
   { pluginPath: "primitives/plugins/css/plugins/control-size", id: "primitives.css.control-size", loader: () => import("@plugins/primitives/plugins/css/plugins/control-size/lint"), dependsOn: [] },
   { pluginPath: "primitives/plugins/css/plugins/icon-auto", id: "primitives.css.icon-auto", loader: () => import("@plugins/primitives/plugins/css/plugins/icon-auto/lint"), dependsOn: [] },
   { pluginPath: "primitives/plugins/css/plugins/radio-group", id: "primitives.css.radio-group", loader: () => import("@plugins/primitives/plugins/css/plugins/radio-group/lint"), dependsOn: [] },

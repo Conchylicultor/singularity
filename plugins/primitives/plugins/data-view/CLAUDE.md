@@ -1077,7 +1077,6 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
     - `primitives/latest-ref.useLatestRef`
     - `primitives/loading.Loading`
     - `primitives/popover.InlinePopover`
-    - `primitives/row-actions.RowActionButton`
     - `primitives/search.SearchInput`
     - `primitives/search.useTextFilter`
     - `primitives/slot-render.defineDispatchSlot`

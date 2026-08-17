@@ -255,7 +255,7 @@ The primitive needs **no** new lint exemptions: it inherits the
     - `primitives/css/ui-kit.Popover`
     - `primitives/css/ui-kit.PopoverContent`
     - `primitives/css/ui-kit.PopoverTrigger`
-    - `primitives/row-actions.RowActionButton`
+    - `primitives/icon-button.IconButton`
     - `primitives/row-actions.RowActions`
     - `primitives/row-actions.rowActionsAnchor`
   - Exports (types):

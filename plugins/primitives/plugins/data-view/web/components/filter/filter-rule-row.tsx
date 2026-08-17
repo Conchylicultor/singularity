@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { MdAccountTree } from "react-icons/md";
 import { ControlPanel } from "@plugins/primitives/plugins/css/plugins/control-panel/web";
-import { RowActionButton } from "@plugins/primitives/plugins/row-actions/web";
+import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import type { FilterConjunction, FilterRule } from "../../../core";
 import { useFilterEditor } from "../../internal/use-filter-editor";
@@ -79,7 +79,7 @@ export function FilterRuleRow(props: {
         ) : null
       }
       actions={
-        <RowActionButton
+        <IconButton
           icon={MdAccountTree}
           label="Turn into group"
           onClick={() => editor.wrapRuleInGroup(rule.id)}

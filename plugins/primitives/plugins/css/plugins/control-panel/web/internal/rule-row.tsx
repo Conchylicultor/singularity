@@ -1,6 +1,6 @@
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import {
-  RowActionButton,
   RowActions,
   rowActionsAnchor,
 } from "@plugins/primitives/plugins/row-actions/web";
@@ -135,7 +135,7 @@ export function ControlPanelRuleRow({
         {actions ? <RowActions pin={null}>{actions}</RowActions> : null}
         {onRemove ? (
           <RowActions pin={null} alwaysVisible>
-            <RowActionButton
+            <IconButton
               icon={MdClose}
               label={removeLabel}
               onClick={onRemove}
