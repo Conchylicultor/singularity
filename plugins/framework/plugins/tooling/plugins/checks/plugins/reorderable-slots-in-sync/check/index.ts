@@ -49,10 +49,10 @@ const check: Check = {
       };
     }
     const committed = readFileSync(file, "utf8");
-    const rendered = await formatGenerated(
+    const rendered = await formatGenerated({
       file,
-      await renderReorderableSlotsManifest(root),
-    );
+      content: await renderReorderableSlotsManifest(root),
+    });
     if (committed !== rendered) {
       const committedIds = new Set(parseSlots(committed).map((s) => s.slotId));
       const added = parseSlots(rendered).filter(

@@ -81,7 +81,7 @@ const check: Check = {
         };
       }
       const raw = readFileSync(filePath, "utf8");
-      if (raw !== (await formatGenerated(filePath, content))) {
+      if (raw !== (await formatGenerated({ file: filePath, content }))) {
         return {
           ok: false,
           message: `${rel} is out of sync with defineConfig defaults`,

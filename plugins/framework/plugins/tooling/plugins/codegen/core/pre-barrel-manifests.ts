@@ -102,5 +102,5 @@ export async function writePreBarrelManifest(
   m: PreBarrelManifest,
   root: string,
 ): Promise<void> {
-  await writeGenerated(m.path(root), await m.render(root));
+  await writeGenerated({ file: m.path(root), content: await m.render(root) });
 }

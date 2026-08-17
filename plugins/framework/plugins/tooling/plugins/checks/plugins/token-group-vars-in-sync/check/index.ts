@@ -25,10 +25,10 @@ const check: Check = {
         hint: "Run `./singularity build` to generate it.",
       };
     }
-    const expected = await formatGenerated(
+    const expected = await formatGenerated({
       file,
-      await renderTokenGroupVarsManifest(root),
-    );
+      content: await renderTokenGroupVarsManifest(root),
+    });
     if (readFileSync(file, "utf8") !== expected) {
       return {
         ok: false,

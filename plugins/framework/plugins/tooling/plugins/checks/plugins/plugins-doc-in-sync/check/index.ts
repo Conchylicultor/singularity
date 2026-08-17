@@ -41,7 +41,10 @@ const check: Check = {
 
     if (
       readFileSync(compactFile, "utf8") !==
-      (await formatGenerated(compactFile, await renderCompactDoc({ root })))
+      (await formatGenerated({
+        file: compactFile,
+        content: await renderCompactDoc({ root }),
+      }))
     ) {
       return {
         ok: false,
@@ -51,7 +54,10 @@ const check: Check = {
     }
     if (
       readFileSync(detailsFile, "utf8") !==
-      (await formatGenerated(detailsFile, await renderDetailsDoc({ root })))
+      (await formatGenerated({
+        file: detailsFile,
+        content: await renderDetailsDoc({ root }),
+      }))
     ) {
       return {
         ok: false,
@@ -65,10 +71,16 @@ const check: Check = {
     for (const info of tree.byDir.values()) {
       const file = pluginClaudeMdPath(info);
       const existing = existsSync(file) ? readFileSync(file, "utf8") : null;
-      const expected = await formatGenerated(
+      const expected = await formatGenerated({
         file,
-        renderPluginClaudeMd(info, existing, root, tree.facets, disabled),
-      );
+        content: renderPluginClaudeMd(
+          info,
+          existing,
+          root,
+          tree.facets,
+          disabled,
+        ),
+      });
       if (existing !== expected) {
         return {
           ok: false,

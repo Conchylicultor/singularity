@@ -230,8 +230,8 @@ setDefaultOriginDefaultsPreparer(async (root: string) => {
 export async function generateReorderableSlots(opts: {
   root: string;
 }): Promise<void> {
-  await writeGenerated(
-    reorderableSlotsManifestPath(opts.root),
-    await renderReorderableSlotsManifest(opts.root),
-  );
+  await writeGenerated({
+    file: reorderableSlotsManifestPath(opts.root),
+    content: await renderReorderableSlotsManifest(opts.root),
+  });
 }

@@ -194,14 +194,14 @@ async function remarkIfStale(opts: {
 
   const body = raw.slice(match[0].length);
   const delta = catalogDelta(opts.originContent, parseJsonc(body) as unknown);
-  await writeGenerated(
-    opts.filePath,
-    renderHeaderedFile(
+  await writeGenerated({
+    file: opts.filePath,
+    content: renderHeaderedFile(
       opts.originHash,
       remarkMarkerLines(opts.descriptor, delta),
       body,
     ),
-  );
+  });
   return true;
 }
 
@@ -260,10 +260,14 @@ export async function applyAuthoredOverrideSeeding(opts: {
       : `${owner.name}.jsonc`;
     const basePath = join(configDir, baseRel);
     if (!existsSync(basePath)) {
-      await writeGenerated(
-        basePath,
-        renderHeaderedFile(originHash, seedMarkerLines(descriptor), originBody),
-      );
+      await writeGenerated({
+        file: basePath,
+        content: renderHeaderedFile(
+          originHash,
+          seedMarkerLines(descriptor),
+          originBody,
+        ),
+      });
       seeded.push(baseRel);
     } else if (
       await remarkIfStale({

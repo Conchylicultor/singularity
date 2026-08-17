@@ -8,7 +8,9 @@ export {
   FORMATTABLE_EXTENSIONS,
   isFormattable,
   formatSource,
+  formatIfFormattable,
 } from "./internal/prettier";
+export type { SourceBytes } from "./internal/prettier";
 export { listChangedFormattableFiles } from "./internal/changed-files";
 export {
   findDisplacedDirectives,

@@ -14544,7 +14544,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `framework/plugin-id.asPluginId`
               - `framework/plugin-id.PluginId`
               - `framework/plugin-id.UNDOCUMENTED_RUNTIME_FOLDERS`
-              - `framework/tooling/format.formatSource`
+              - `framework/tooling/format.formatIfFormattable`
+              - `framework/tooling/format.SourceBytes`
               - `plugin-meta/barrel-import.AUTO_STUB_CSS`
               - `plugin-meta/barrel-import.AUTO_STUB_PACKAGES`
               - `plugin-meta/barrel-import.AutoStubEntry`
@@ -14750,12 +14751,14 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Exports (types):
               - `DirectiveDisplacement`
               - `DirectiveTarget`
+              - `SourceBytes`
             - Exports (values):
               - `findDirectiveDisplacements`
               - `findDisplacedDirectives`
               - `findUnformatted`
               - `formatChangedSources`
               - `formatDirectiveDisplacementReport`
+              - `formatIfFormattable`
               - `formatSource`
               - `FORMATTABLE_EXTENSIONS`
               - `isFormattable`

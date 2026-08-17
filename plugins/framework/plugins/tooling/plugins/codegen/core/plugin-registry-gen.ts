@@ -413,10 +413,10 @@ export async function generatePluginRegistry(opts: {
   const ctx = opts.ctx ?? (await buildRegistryGenContext(opts.root));
   const defs = discoverCollectedDirs(opts.root);
   for (const def of defs) {
-    await writeGenerated(
-      collectedDirRegistryPath(def),
-      renderCollectedDirRegistry({ ctx, def }),
-    );
+    await writeGenerated({
+      file: collectedDirRegistryPath(def),
+      content: renderCollectedDirRegistry({ ctx, def }),
+    });
   }
 }
 
@@ -514,10 +514,10 @@ export async function generateCompositionRegistry(opts: {
   const defs = discoverCollectedDirs(opts.root);
   for (const def of defs) {
     if (!COMPOSITION_RUNTIME_DIRS.has(def.dir)) continue;
-    await writeGenerated(
-      collectedDirNamedCompositionRegistryPath(def, opts.name),
-      renderCollectedDirRegistry({ ctx, def, bundle: opts.bundle }),
-    );
+    await writeGenerated({
+      file: collectedDirNamedCompositionRegistryPath(def, opts.name),
+      content: renderCollectedDirRegistry({ ctx, def, bundle: opts.bundle }),
+    });
   }
 }
 

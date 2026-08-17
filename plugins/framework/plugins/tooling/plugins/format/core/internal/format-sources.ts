@@ -16,6 +16,10 @@ import { formatSource } from "./prettier";
 /**
  * Read → format → compare. NEVER writes. Returns the subset of `files` (paths
  * relative to `root`) whose on-disk bytes differ from prettier's output.
+ *
+ * `files` must already be formattable — pass {@link listChangedFormattableFiles}
+ * output, which is filtered by `isFormattable`. A held-out path THROWS out of
+ * `formatSource` rather than being silently reported as already-formatted.
  */
 export async function findUnformatted(
   root: string,
@@ -23,8 +27,10 @@ export async function findUnformatted(
 ): Promise<string[]> {
   const unformatted: string[] = [];
   for (const rel of files) {
-    const source = await readFile(join(root, rel), "utf8");
-    if ((await formatSource(rel, source)) !== source) unformatted.push(rel);
+    const content = await readFile(join(root, rel), "utf8");
+    if ((await formatSource({ file: rel, content })) !== content) {
+      unformatted.push(rel);
+    }
   }
   return unformatted;
 }
@@ -48,9 +54,15 @@ export async function findDisplacedDirectives(
 ): Promise<DirectiveDisplacement[]> {
   const displaced: DirectiveDisplacement[] = [];
   for (const rel of files) {
-    const source = await readFile(join(root, rel), "utf8");
-    const next = await formatSource(rel, source);
-    displaced.push(...(await findDirectiveDisplacements(rel, source, next)));
+    const content = await readFile(join(root, rel), "utf8");
+    const next = await formatSource({ file: rel, content });
+    displaced.push(
+      ...(await findDirectiveDisplacements({
+        file: rel,
+        before: content,
+        after: next,
+      })),
+    );
   }
   return displaced;
 }
@@ -94,11 +106,15 @@ export async function formatChangedSources(opts: {
 
   for (const rel of files) {
     const abs = join(root, rel);
-    const source = await readFile(abs, "utf8");
-    const next = await formatSource(rel, source);
-    if (next === source) continue;
+    const content = await readFile(abs, "utf8");
+    const next = await formatSource({ file: rel, content });
+    if (next === content) continue;
 
-    const moved = await findDirectiveDisplacements(rel, source, next);
+    const moved = await findDirectiveDisplacements({
+      file: rel,
+      before: content,
+      after: next,
+    });
     if (moved.length > 0) {
       displaced.push(...moved);
       log?.(
@@ -108,7 +124,7 @@ export async function formatChangedSources(opts: {
     }
 
     const current = await readFile(abs, "utf8");
-    if (current !== source) {
+    if (current !== content) {
       log?.(`format: skipped ${rel} — changed on disk during the pass`);
       continue;
     }

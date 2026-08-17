@@ -292,8 +292,8 @@ export function renderCustomUtilities(root: string): string {
 export async function generateCustomUtilities(opts: {
   root: string;
 }): Promise<void> {
-  await writeGenerated(
-    customUtilitiesManifestPath(opts.root),
-    renderCustomUtilities(opts.root),
-  );
+  await writeGenerated({
+    file: customUtilitiesManifestPath(opts.root),
+    content: renderCustomUtilities(opts.root),
+  });
 }

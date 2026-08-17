@@ -448,7 +448,7 @@ export async function generateConfigOrigins(opts: {
     // `.jsonc` is not in the format allowlist, so the funnel returns these bytes
     // unchanged — routing through it anyway is what keeps one write idiom for
     // every generated artifact. It also creates the parent dir on the write path.
-    await writeGenerated(join(configDir, relPath), content);
+    await writeGenerated({ file: join(configDir, relPath), content });
   }
 
   // Prune anything whose descriptor disappeared, so removing a `defineConfig`

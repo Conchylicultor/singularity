@@ -146,8 +146,8 @@ export async function renderDataViewsManifest(root: string): Promise<string> {
 
 /** Regenerate `data-views.generated.ts` if it drifted. */
 export async function generateDataViews(opts: { root: string }): Promise<void> {
-  await writeGenerated(
-    dataViewsManifestPath(opts.root),
-    await renderDataViewsManifest(opts.root),
-  );
+  await writeGenerated({
+    file: dataViewsManifestPath(opts.root),
+    content: await renderDataViewsManifest(opts.root),
+  });
 }

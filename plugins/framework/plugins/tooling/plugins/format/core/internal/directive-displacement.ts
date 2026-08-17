@@ -254,12 +254,21 @@ function targetOf(facts: FileFacts, line0: number): DirectiveTarget {
  * sequence — and the pairing is verified by comparing the comment text, so a
  * formatter that ever did drop or rewrite one is reported (`kind: "lost"`)
  * rather than silently mis-paired.
+ *
+ * Arguments are NAMED, like the rest of this seam: three adjacent unlabelled
+ * strings meant a `before`/`after` slip silently inverted the report — and this
+ * report is the gate that stops a bad write, so an inverted one is worse than
+ * none.
  */
-export async function findDirectiveDisplacements(
-  file: string,
-  before: string,
-  after: string,
-): Promise<DirectiveDisplacement[]> {
+export async function findDirectiveDisplacements({
+  file,
+  before,
+  after,
+}: {
+  file: string;
+  before: string;
+  after: string;
+}): Promise<DirectiveDisplacement[]> {
   if (before === after) return [];
   if (!/eslint-disable-(next-)?line/.test(before)) return [];
 

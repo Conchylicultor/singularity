@@ -22,7 +22,8 @@
     - `framework/plugin-id.asPluginId`
     - `framework/plugin-id.PluginId`
     - `framework/plugin-id.UNDOCUMENTED_RUNTIME_FOLDERS`
-    - `framework/tooling/format.formatSource`
+    - `framework/tooling/format.formatIfFormattable`
+    - `framework/tooling/format.SourceBytes`
     - `plugin-meta/barrel-import.AUTO_STUB_CSS`
     - `plugin-meta/barrel-import.AUTO_STUB_PACKAGES`
     - `plugin-meta/barrel-import.AutoStubEntry`

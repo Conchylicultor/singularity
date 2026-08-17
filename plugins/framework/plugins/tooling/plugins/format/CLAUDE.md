@@ -5,7 +5,24 @@ with which options, and over which files — so the writer (`./singularity build
 `./singularity format`) and the readers (the `*-in-sync` checks, `format-clean`)
 cannot produce different bytes.
 
-Design doc: [`research/2026-08-06-global-prettier-auto-format.md`](../../../../../../research/2026-08-06-global-prettier-auto-format.md).
+Design docs:
+[`research/2026-08-06-global-prettier-auto-format.md`](../../../../../../research/2026-08-06-global-prettier-auto-format.md)
+(the seam) and
+[`research/2026-08-17-global-format-seam-named-arguments.md`](../../../../../../research/2026-08-17-global-format-seam-named-arguments.md)
+(why its arguments are named).
+
+## Path and content are NEVER positional
+
+Every function here takes ONE named object — `{ file, content }`,
+`{ file, before, after }` — as do codegen's `formatGenerated` / `writeGenerated`
+across the seam. Hard rule for anything added, not a style preference: as two
+adjacent unlabelled strings, `formatSource(source, file)` type-checked, ran no
+prettier, and returned the PATH as formatted source. It destroyed 44 files
+silently on 2026-08-17. `writeGenerated` needs it most — it writes, so a slip
+created a file named after its own content.
+
+The bytes are `content` everywhere (one name per concept), not `source`, which
+would be false for the `.md` / `.jsonc` / `.css` this seam also carries.
 
 ## Why `core/` and not `server/`
 
@@ -19,10 +36,19 @@ build. `core/` here means runtime-neutral Node, not web-safe: it reaches
 `FORMATTABLE_EXTENSIONS` is `.ts`, `.tsx`, `.mts`, `.cts`. **Markdown must never
 be added.** JSON/JSONC is deliberately deferred.
 
-The API makes the allowlist impossible to route around: `formatSource` takes a
+The API makes the allowlist impossible to route around: both entry points take a
 **file path**, there is no `parser` parameter, and there is no content-only
-entry point. A non-allowlisted extension returns its input unchanged (without
-even loading prettier), so a caller cannot format a `.md` by calling it anyway.
+entry point. So a caller cannot format a `.md` by calling it anyway.
+
+**Two entry points, because "held out" and "garbage" must not share a return
+value.** `formatSource` THROWS on a non-formattable path.
+`formatIfFormattable` returns the content unchanged (without even loading
+prettier), and has exactly ONE caller: codegen's `formatGenerated`, whose file
+set legitimately spans `.md`, `.jsonc`, `app.css` and held-out
+`*.generated.ts`. Don't reach for it elsewhere — when the pass-through was the
+only behavior, a swapped argument was indistinguishable from a legitimate one.
+Both also reject a `file` that cannot be a path (empty, newline, absurdly long),
+which is the only rung an untyped ad-hoc script gets.
 
 **`FORMATTABLE_EXTENSIONS` is a pure extension list; `isFormattable` is not.**
 The predicate answers "will this file actually be formatted?", which is the
@@ -145,12 +171,14 @@ idempotent and per-file.
   - Exports (types):
     - `DirectiveDisplacement`
     - `DirectiveTarget`
+    - `SourceBytes`
   - Exports (values):
     - `findDirectiveDisplacements`
     - `findDisplacedDirectives`
     - `findUnformatted`
     - `formatChangedSources`
     - `formatDirectiveDisplacementReport`
+    - `formatIfFormattable`
     - `formatSource`
     - `FORMATTABLE_EXTENSIONS`
     - `isFormattable`

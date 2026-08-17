@@ -15,8 +15,8 @@ import { extname } from "path";
  * mechanical benefit, and the docgen emitters would fight it. JSON/JSONC is
  * deliberately deferred.
  *
- * The allowlist is unbypassable by construction: `formatSource` takes a file
- * path, has no `parser` parameter, and no content-only entry point exists — so
+ * The allowlist is unbypassable by construction: the entry points take a file
+ * path, have no `parser` parameter, and no content-only entry point exists — so
  * a caller cannot format a `.md` by asking nicely.
  */
 export const FORMATTABLE_EXTENSIONS = [".ts", ".tsx", ".mts", ".cts"] as const;
@@ -31,7 +31,7 @@ export const FORMATTABLE_EXTENSIONS = [".ts", ".tsx", ".mts", ".cts"] as const;
  * codegen wrote the file unformatted, the build's format pass (which runs after
  * all codegen) reformatted it, so no build was ever idempotent and every
  * `*-in-sync` check over a generated file went red, since disk was formatted and
- * `formatGenerated(renderX(...))` was not.
+ * `formatGenerated({ file, content: renderX(...) })` was not.
  *
  * Flipping it is its own commit, on purpose. At prettier's default width
  * `web.generated.ts` goes from 783 to 10,150 lines (see the open decision in
@@ -49,9 +49,14 @@ const GENERATED_SUFFIX = ".generated.ts";
  * {@link FORMATTABLE_EXTENSIONS}, and it is not a generated artifact being held
  * out by {@link FORMAT_GENERATED_ARTIFACTS}.
  *
- * Both consumers read this one predicate — `formatSource` (and therefore
- * codegen's `formatGenerated`) and the changed-set filter — so a generated file
- * cannot be formatted by one and not the other.
+ * Both consumers read this one predicate — the format entry points (and
+ * therefore codegen's `formatGenerated`) and the changed-set filter — so a
+ * generated file cannot be formatted by one and not the other.
+ *
+ * Deliberately does NOT run {@link assertPathArg}: this is a filter predicate
+ * over git-enumerated paths (`files.filter(isFormattable)`), `false` is a
+ * legitimate answer for it, and making it throw would make that enumeration
+ * non-total for no gain. The entry points assert; the predicate answers.
  */
 export function isFormattable(file: string): boolean {
   const ext = extname(file).toLowerCase();
@@ -135,26 +140,87 @@ function prettier(): Promise<typeof import("prettier")> {
 }
 
 /**
- * Format `source` as if it lived at `file`. Pure — never reads, never writes.
+ * The bytes of one file, for the two entry points below.
  *
- * Returns `source` UNCHANGED (without even loading prettier) when the extension
- * is not in {@link FORMATTABLE_EXTENSIONS}, so a caller cannot format a `.md`
- * by calling it anyway.
+ * A single NAMED object, never two positional strings, and that is the whole
+ * point of the shape. `formatSource(source, file)` used to type-check and
+ * silently return the PATH (see {@link assertPathArg}); with named fields there
+ * is no adjacent slip left to make — producing the bug now requires naming both
+ * fields wrongly, which is a lie rather than a typo.
  *
- * A prettier failure (syntax error) THROWS, re-stamped with the path so the
+ * The bytes are `content`, not `source`, because ONE name per concept and this
+ * seam's file set is `.md` / `.jsonc` / `.css` as much as it is `.ts`.
+ */
+export interface SourceBytes {
+  file: string;
+  content: string;
+}
+
+/** A path longer than this is not a path; POSIX `PATH_MAX` is 4096 on Linux. */
+const MAX_PATH_LENGTH = 4096;
+
+/**
+ * Refuse a `file` argument that cannot be a path, naming the swap.
+ *
+ * This is the rung that matters for how the damage actually happened: an ad-hoc
+ * script, run outside `tsc`, where the named-argument shape is a convention
+ * rather than a constraint. On 2026-08-17 such a script called
+ * `formatSource(src, file)`, got the path back as "formatted source", wrote it,
+ * and destroyed 44 files with no error of any kind. Real source text has
+ * newlines, so a swapped call now dies before anything can be returned.
+ *
+ * The not-formattable throw in {@link formatSource} catches the same swap from
+ * typed code. This closes the residual case where a blob of source text happens
+ * to end in something `extname` reads as an allowlisted extension.
+ */
+function assertPathArg(fn: string, file: string): void {
+  if (file === "") throw new Error(`${fn}: "file" is empty.`);
+  if (/[\n\r\0]/.test(file)) {
+    throw new Error(
+      `${fn}: "file" is not a path — it contains a newline or NUL. ` +
+        `Arguments swapped? The shape is { file, content }.`,
+    );
+  }
+  if (file.length > MAX_PATH_LENGTH) {
+    throw new Error(
+      `${fn}: "file" is ${file.length} chars, longer than any path. ` +
+        `Arguments swapped? The shape is { file, content }.`,
+    );
+  }
+}
+
+/**
+ * Format `content` as if it lived at `file`. Pure — never reads, never writes.
+ *
+ * THROWS when `file` is not formattable, rather than returning the input. The
+ * two conditions "this file type is held out" and "the caller handed me
+ * garbage" must not come back as the same value: when they did, a swapped-
+ * argument call was indistinguishable from a legitimate pass-through and the
+ * failure was totally silent. A caller whose file set legitimately contains
+ * held-out paths says so by calling {@link formatIfFormattable} instead.
+ *
+ * A prettier failure (syntax error) THROWS too, re-stamped with the path so the
  * `line:col` prettier reports is attributable. Never swallow it: a silently
  * skipped file lands unformatted and `format-clean` then fails at push with no
  * explanation.
  */
-export async function formatSource(
-  file: string,
-  source: string,
-): Promise<string> {
-  if (!isFormattable(file)) return source;
+export async function formatSource({
+  file,
+  content,
+}: SourceBytes): Promise<string> {
+  assertPathArg("formatSource", file);
+  if (!isFormattable(file)) {
+    throw new Error(
+      `formatSource: "${file}" is not a formattable path ` +
+        `(allowlist: ${FORMATTABLE_EXTENSIONS.join(", ")}` +
+        `${FORMAT_GENERATED_ARTIFACTS ? "" : `; ${GENERATED_SUFFIX} held out`}). ` +
+        `Use formatIfFormattable if a non-formattable file in your set is expected.`,
+    );
+  }
   const { format } = await prettier();
   try {
     // `parser` is pinned; `filepath` is what enables JSX for `.tsx`.
-    return await format(source, {
+    return await format(content, {
       ...PRETTIER_OPTIONS,
       filepath: file,
       parser: "typescript",
@@ -167,4 +233,23 @@ export async function formatSource(
       },
     );
   }
+}
+
+/**
+ * {@link formatSource} for a caller whose file set legitimately contains paths
+ * the allowlist holds out: returns `content` UNCHANGED for those, without even
+ * loading prettier.
+ *
+ * The pass-through is load-bearing, which is why it has a name of its own
+ * rather than living inside `formatSource` where it doubled as the swallow
+ * path. Its ONE caller is codegen's `formatGenerated`, which routes every
+ * generated artifact through this funnel with no per-emitter opt-in — and those
+ * are `.md` (docgen, plugin `CLAUDE.md`), `.jsonc` (config origins, authored
+ * overrides), `app.css`, and the `*.generated.ts` artifacts held out by
+ * {@link FORMAT_GENERATED_ARTIFACTS}.
+ */
+export async function formatIfFormattable(bytes: SourceBytes): Promise<string> {
+  assertPathArg("formatIfFormattable", bytes.file);
+  if (!isFormattable(bytes.file)) return bytes.content;
+  return await formatSource(bytes);
 }

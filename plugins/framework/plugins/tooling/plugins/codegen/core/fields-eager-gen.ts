@@ -108,8 +108,8 @@ export async function renderFieldsEagerManifest(root: string): Promise<string> {
 export async function generateFieldsEager(opts: {
   root: string;
 }): Promise<void> {
-  await writeGenerated(
-    fieldsEagerManifestPath(opts.root),
-    await renderFieldsEagerManifest(opts.root),
-  );
+  await writeGenerated({
+    file: fieldsEagerManifestPath(opts.root),
+    content: await renderFieldsEagerManifest(opts.root),
+  });
 }

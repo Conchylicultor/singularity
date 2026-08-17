@@ -26,7 +26,10 @@ export async function assertPreBarrelManifestsFresh(
     // Through the same funnel `writePreBarrelManifest` writes with — comparing
     // raw render output against formatted bytes on disk would report every
     // manifest as stale and abort the build.
-    const next = await formatGenerated(file, await m.render(root));
+    const next = await formatGenerated({
+      file,
+      content: await m.render(root),
+    });
     const existing = existsSync(file) ? readFileSync(file, "utf8") : "";
     if (next !== existing) stale.push({ m, rel: relative(root, file) });
   }

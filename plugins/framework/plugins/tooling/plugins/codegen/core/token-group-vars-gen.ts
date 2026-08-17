@@ -155,8 +155,8 @@ export async function renderTokenGroupVarsManifest(
 export async function generateTokenGroupVars(opts: {
   root: string;
 }): Promise<void> {
-  await writeGenerated(
-    tokenGroupVarsManifestPath(opts.root),
-    await renderTokenGroupVarsManifest(opts.root),
-  );
+  await writeGenerated({
+    file: tokenGroupVarsManifestPath(opts.root),
+    content: await renderTokenGroupVarsManifest(opts.root),
+  });
 }

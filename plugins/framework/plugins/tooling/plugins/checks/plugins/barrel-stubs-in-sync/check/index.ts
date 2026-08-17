@@ -36,7 +36,8 @@ const check: Check = {
       };
     }
     if (
-      readFileSync(file, "utf8") !== (await formatGenerated(file, expected))
+      readFileSync(file, "utf8") !==
+      (await formatGenerated({ file, content: expected }))
     ) {
       return {
         ok: false,

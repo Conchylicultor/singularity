@@ -333,24 +333,30 @@ export async function generatePluginDocs({
   // Markdown is not in the format allowlist, so the funnel hands these bytes
   // back untouched — they route through it anyway so there is exactly one write
   // idiom for generated artifacts, with no per-extension opt-in to forget.
-  await writeGenerated(
-    pluginCompactDocPath(root),
-    renderCompactDocFromTree(tree, root),
-  );
-  await writeGenerated(
-    pluginDetailsDocPath(root),
-    renderDetailsDocFromTree(tree, root),
-  );
+  await writeGenerated({
+    file: pluginCompactDocPath(root),
+    content: renderCompactDocFromTree(tree, root),
+  });
+  await writeGenerated({
+    file: pluginDetailsDocPath(root),
+    content: renderDetailsDocFromTree(tree, root),
+  });
 
   for (const info of tree.byDir.values()) {
     const file = pluginClaudeMdPath(info);
     // The renderer needs the CURRENT file (it rewrites only the AUTOGEN block
     // and preserves the hand-written prose around it), so the read stays here.
     const existing = readIfExists(file);
-    await writeGenerated(
+    await writeGenerated({
       file,
-      renderPluginClaudeMd(info, existing, root, tree.facets, disabled),
-    );
+      content: renderPluginClaudeMd(
+        info,
+        existing,
+        root,
+        tree.facets,
+        disabled,
+      ),
+    });
   }
 
   const legacy = legacyPluginDocsPath(root);

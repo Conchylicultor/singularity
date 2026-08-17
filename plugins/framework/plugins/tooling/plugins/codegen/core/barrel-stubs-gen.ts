@@ -181,5 +181,8 @@ export async function generateBarrelStubs({
 }: {
   root: string;
 }): Promise<void> {
-  await writeGenerated(barrelStubsPath(root), renderBarrelStubs({ root }));
+  await writeGenerated({
+    file: barrelStubsPath(root),
+    content: renderBarrelStubs({ root }),
+  });
 }

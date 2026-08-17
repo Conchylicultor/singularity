@@ -101,8 +101,8 @@ export default createRule({
         "still: it hoists above ensureDeps() and resolves out of the node_modules " +
         "ensureDeps exists to repair. Route through " +
         "@plugins/framework/plugins/tooling/plugins/format/core instead — " +
-        "formatSource / formatChangedSources / findUnformatted / " +
-        "listChangedFormattableFiles / isFormattable.",
+        "formatSource / formatIfFormattable / formatChangedSources / " +
+        "findUnformatted / listChangedFormattableFiles / isFormattable.",
     },
   },
   defaultOptions: [],

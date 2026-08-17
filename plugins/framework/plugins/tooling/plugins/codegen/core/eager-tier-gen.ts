@@ -370,8 +370,8 @@ export async function generateEagerTier(opts: {
   root: string;
   ctx?: RegistryGenContext;
 }): Promise<void> {
-  await writeGenerated(
-    eagerTierManifestPath(opts.root),
-    await renderEagerTierManifest(opts.root, opts.ctx),
-  );
+  await writeGenerated({
+    file: eagerTierManifestPath(opts.root),
+    content: await renderEagerTierManifest(opts.root, opts.ctx),
+  });
 }
