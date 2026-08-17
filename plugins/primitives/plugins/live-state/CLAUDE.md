@@ -625,11 +625,11 @@ This narrows re-renders, not the WS subscription: N callers of the same
     - `NotificationsProvider`
     - `pointResourceDescriptor`
     - `queryKeyFor`
-    - `registerSlowResourceReporter`
     - `resourceDescriptor`
     - `resourceDescriptorByKey`
     - `ResourceStaleReadError`
     - `ResourceView`
+    - `slowResourceReportSink`
     - `subscribeResourceTxAcks`
     - `useCombinedResources`
     - `useNotificationsChannelStatuses`

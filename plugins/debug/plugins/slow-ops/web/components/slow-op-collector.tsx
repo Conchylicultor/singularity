@@ -2,7 +2,7 @@ import { useEffect } from "react";
 import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
 import { useConfig } from "@plugins/config_v2/web";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
-import { registerSlowResourceReporter } from "@plugins/primitives/plugins/live-state/web";
+import { slowResourceReportSink } from "@plugins/primitives/plugins/live-state/web";
 import { getBootTrace } from "@plugins/primitives/plugins/perfs/plugins/boot-trace/web";
 import { currentRoutePath } from "@plugins/primitives/plugins/pane/web";
 import { toClientBootSection } from "@plugins/debug/plugins/trace/plugins/client-boot/core";
@@ -55,7 +55,7 @@ export function SlowOpCollector() {
 
   // Element signal: live-state resources hand us their mount → settle duration.
   useEffect(() => {
-    registerSlowResourceReporter((info) => {
+    slowResourceReportSink.register((info) => {
       // Mount→first-data settle IS the user-perceived time-to-content. Report it
       // as-is, including the cold-start boot wave: a slow boot is a real UX
       // regression, not noise. The gateway hot-swaps only once the backend is
@@ -91,7 +91,7 @@ export function SlowOpCollector() {
         },
       );
     });
-    return () => registerSlowResourceReporter(null);
+    return () => slowResourceReportSink.register(null);
   }, []);
 
   return null;

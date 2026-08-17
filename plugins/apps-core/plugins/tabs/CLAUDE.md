@@ -103,7 +103,10 @@ Consequences worth remembering:
 - The two-tabs-after-a-bookmark bug is fixed **by the storage key alone**: on a
   `navigate` boot the key names a fresh generation, so `loadPersistedTabs()`
   returns null and the existing seed-one-tab-from-the-URL path runs. Surface
-  mode resets for free through `persisted?.mode ?? getDefaultPlacement()`.
+  mode resets for free through `persisted?.mode ?? ""` — boot seeds the
+  unresolved `""` (it runs during render, so it must not sample the placement
+  registry) and `TabsProvider` resolves it to the registered default reactively,
+  against `usePlacementCapabilities()`, on every render.
 - Old generations are **not** swept on a fresh boot: Back into an older instance
   is a cross-document load that re-boots from storage, so the retained
   generation count is a real UX knob (how many bookmark hops back restore in
@@ -145,12 +148,13 @@ same browser tab from finding the blob. Both call sites are marked for removal.
     - `primitives/app-instance.mayAdoptLegacyPayload`
     - `primitives/app-instance.readAppInstance`
     - `primitives/app-instance.stampAppInstance`
+    - `primitives/install-sink.defineInstallSink`
     - `primitives/latest-ref.useLatestRef`
     - `primitives/link-gesture.linkGestureProps`
     - `primitives/link-gesture.LinkGestureProps`
+    - `primitives/pane.appNavSink`
     - `primitives/pane.createPaneStore`
     - `primitives/pane.currentRoutePath`
-    - `primitives/pane.defaultHistoryAdapter`
     - `primitives/pane.HistoryAdapter`
     - `primitives/pane.LocationChange`
     - `primitives/pane.PaneHistoryState`
@@ -161,7 +165,6 @@ same browser tab from finding the blob. Both call sites are marked for removal.
     - `primitives/pane.parseUrl`
     - `primitives/pane.RouteState`
     - `primitives/pane.SerializedSlot`
-    - `primitives/pane.setAppNavigator`
     - `primitives/pane.setHistoryAdapter`
     - `primitives/pane.setLiveStore`
     - `primitives/pane.stripBasePath`
@@ -176,16 +179,17 @@ same browser tab from finding the blob. Both call sites are marked for removal.
     - `appLinkProps`
     - `appPathFor`
     - `exitToPreviousMode`
-    - `getDefaultPlacement`
     - `getSurfaceMode`
     - `loadScopePrefixFor`
     - `navigate`
+    - `peekDefaultPlacement`
     - `placementHasAppThemeScope`
     - `placementIsNewTabFollows`
     - `registerPlacementCapabilities`
     - `setSurfaceMode`
     - `TabsProvider`
     - `useDefaultPlacement`
+    - `usePlacementCapabilities`
     - `useSurfaceMode`
     - `useTabs`
 - Cross-plugin:

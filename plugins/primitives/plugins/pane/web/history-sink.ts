@@ -1,3 +1,4 @@
+import { defineInstallSink } from "@plugins/primitives/plugins/install-sink/web";
 import type { PaneOptions, PaneStore } from "./pane";
 
 // ---------------------------------------------------------------------------
@@ -38,7 +39,8 @@ export type SerializedSlot = {
  * when it writes; `handleLocationChange` reads only these keys and ignores the
  * rest, so the two runtimes never need to agree on the composite shape.
  */
-export type PaneHistoryState = { route: SerializedSlot[] } | { pending: string };
+export type PaneHistoryState =
+  { route: SerializedSlot[] } | { pending: string };
 
 /** An in-memory route change to project onto the browser. */
 export interface LocationChange {
@@ -56,18 +58,21 @@ export interface HistoryAdapter {
   restore(): void;
 }
 
-// The default adapter's `restore()` must reach the live PaneStore, which lives
-// in pane.ts. pane.ts already imports THIS module (for the pointer + commit), so
-// having history-sink import pane.ts back would form a runtime import cycle.
-// Instead pane.ts injects a thunk at module-load time — the runtime dependency
-// stays one-way (pane.ts → history-sink), and the only edge back is this
-// type-only import (erased at runtime).
-let getLiveStore: (() => PaneStore) | null = null;
-
-/** Wire the live-store accessor. Called once by pane.ts at module load. */
-export function setLiveStoreAccessor(fn: () => PaneStore): void {
-  getLiveStore = fn;
-}
+/**
+ * The default adapter's `restore()` must reach the live PaneStore, which lives
+ * in pane.ts. pane.ts already imports THIS module (for the adapter + commit), so
+ * having history-sink import pane.ts back would form a runtime import cycle.
+ * Instead pane.ts installs a thunk here at module-load time — the runtime
+ * dependency stays one-way (pane.ts → history-sink), and the only edge back is
+ * the type-only import above (erased at runtime).
+ *
+ * Empty (no fallback): a composition where pane.ts never loaded has no live
+ * store at all, and `peekOrThrow()` says so by name instead of inventing one.
+ */
+export const liveStoreAccessorSink = defineInstallSink<() => PaneStore>({
+  name: "pane.live-store-accessor",
+  what: "the live-store accessor (installed by pane.ts at module load)",
+});
 
 /**
  * The standalone adapter — the behavior when no shell adapter is installed
@@ -89,29 +94,31 @@ export const defaultHistoryAdapter: HistoryAdapter = {
     window.dispatchEvent(new CustomEvent("shell:navigate"));
   },
   restore() {
-    if (!getLiveStore) {
-      throw new Error(
-        "defaultHistoryAdapter.restore() ran before the live-store accessor was injected — pane.ts must call setLiveStoreAccessor() at module load.",
-      );
-    }
-    getLiveStore().handleLocationChange();
+    // A sample, not a subscription: `restore()` only ever runs from the
+    // `popstate` listener, long after module load, and re-reads on every
+    // traversal.
+    liveStoreAccessorSink.peekOrThrow()().handleLocationChange();
   },
 };
 
-// The currently-installed adapter. `defaultHistoryAdapter` until the tabs layer
-// installs its own; a getter (not an exported mutable binding) so the single
-// pane.ts consumer always reads the current value at commit/restore time.
-let activeAdapter: HistoryAdapter = defaultHistoryAdapter;
-
-/** The installed history adapter (read at commit/restore time). */
-export function getHistoryAdapter(): HistoryAdapter {
-  return activeAdapter;
-}
+/**
+ * The installed history adapter. Filled, never empty: with no shell adapter
+ * installed the slot holds `defaultHistoryAdapter`, which is the standalone
+ * behavior — so `peek()` at commit/restore time always has an adapter to call
+ * and no consumer has to handle "none".
+ */
+export const historySink = defineInstallSink<HistoryAdapter>({
+  name: "pane.history-adapter",
+  fallback: defaultHistoryAdapter,
+  what: "the history adapter (apps-core/tabs installs its app-aware one at provider mount)",
+});
 
 /**
- * Install a history adapter. The tabs layer installs its app-aware adapter in
- * its wiring effect and restores `defaultHistoryAdapter` on teardown.
+ * Install a history adapter — the tabs layer's app-aware one, from its wiring
+ * effect. The returned disposer puts the PREVIOUS occupant back (the default
+ * adapter, unless something else was installed meanwhile), so teardown code
+ * never has to remember what the standalone behavior was.
  */
-export function setHistoryAdapter(adapter: HistoryAdapter): void {
-  activeAdapter = adapter;
+export function setHistoryAdapter(adapter: HistoryAdapter): () => void {
+  return historySink.install(adapter);
 }

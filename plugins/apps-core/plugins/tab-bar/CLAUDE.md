@@ -11,6 +11,7 @@
     - `apps-core.Apps`
     - `apps-core/app-icon.appIconComponent`
     - `apps-core/tabs.placementIsNewTabFollows`
+    - `apps-core/tabs.usePlacementCapabilities`
     - `apps-core/tabs.useTabs`
     - `apps-core/theme-scope.useChromeThemeScope`
     - `primitives/action-presentation.useActionForm`

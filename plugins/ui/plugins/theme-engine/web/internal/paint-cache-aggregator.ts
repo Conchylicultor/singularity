@@ -46,6 +46,7 @@ const styles = new Map<string, string>();
 // styleIds claimed by a currently-mounted GroupStyle this session (prune set).
 const claimed = new Set<string>();
 // The active app path / configured mode / root-scope ownership, set by ThemeInjector.
+// eslint-disable-next-line install-sink/no-adhoc-install-sink -- not an installed sink: `context` is plain accumulator state (a data record with a total default), read only by this module's own flush(), alongside the `styles`/`claimed` collections. Nobody installs an implementation, nobody asks whether one is present, and there is no render-path read to cache a pre-install answer.
 let context: PaintContext = {
   appPath: undefined,
   mode: "system",

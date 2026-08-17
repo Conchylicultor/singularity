@@ -1,4 +1,7 @@
-import { getRoute, type PaneOptions } from "@plugins/primitives/plugins/pane/web";
+import {
+  peekRoute,
+  type PaneOptions,
+} from "@plugins/primitives/plugins/pane/web";
 import { report } from "@plugins/reports/web";
 
 const LS_PREFIX = "route.restore.";
@@ -9,7 +12,11 @@ const TTL = 30 * 24 * 60 * 60 * 1000;
 // is the structured PaneOptions bag, not a string map. A pane's `hint` is
 // deliberately absent: an optimistic mirror of server-owned state must not
 // outlive the navigation that created it (see `Hint`).
-type SavedSlot = { paneId: string; params: Record<string, string>; options?: PaneOptions };
+type SavedSlot = {
+  paneId: string;
+  params: Record<string, string>;
+  options?: PaneOptions;
+};
 type Envelope = { v: SavedSlot[]; ts: number };
 
 // Tri-state so a genuine storage-read failure can never be mistaken for a
@@ -25,12 +32,16 @@ export type RouteRestore =
   | { kind: "none" }
   | { kind: "corrupt"; reason: string };
 
-export function saveRouteForConversation(convId: string, slots: SavedSlot[]): void {
+export function saveRouteForConversation(
+  convId: string,
+  slots: SavedSlot[],
+): void {
   try {
     const envelope: Envelope = { v: slots, ts: Date.now() };
     localStorage.setItem(LS_PREFIX + convId, JSON.stringify(envelope));
   } catch (err) {
-    if (err instanceof DOMException && err.name === "QuotaExceededError") return;
+    if (err instanceof DOMException && err.name === "QuotaExceededError")
+      return;
     throw err;
   }
 }
@@ -38,7 +49,11 @@ export function saveRouteForConversation(convId: string, slots: SavedSlot[]): vo
 function isSavedSlot(value: unknown): value is SavedSlot {
   if (typeof value !== "object" || value === null) return false;
   const slot = value as Record<string, unknown>;
-  return typeof slot.paneId === "string" && typeof slot.params === "object" && slot.params !== null;
+  return (
+    typeof slot.paneId === "string" &&
+    typeof slot.params === "object" &&
+    slot.params !== null
+  );
 }
 
 function isEnvelope(value: unknown): value is Envelope {
@@ -108,11 +123,15 @@ function handleNavigation(): void {
   if (saveTimer !== null) clearTimeout(saveTimer);
   saveTimer = setTimeout(() => {
     saveTimer = null;
-    const route = getRoute();
+    const route = peekRoute();
     if (route.length === 0 || route[0]?.paneId !== "conversation") return;
     const convId = route[0]?.params.convId;
     if (!convId) return;
-    const slots: SavedSlot[] = route.map((s) => ({ paneId: s.paneId, params: s.params, options: s.options }));
+    const slots: SavedSlot[] = route.map((s) => ({
+      paneId: s.paneId,
+      params: s.params,
+      options: s.options,
+    }));
     saveRouteForConversation(convId, slots);
   }, 50);
 }

@@ -42,9 +42,17 @@ import { ESLintUtils, type TSESTree } from "@typescript-eslint/utils";
  * indistinguishable from a `Map` correctly keyed by a surface id. Those cases
  * are caught in review, not here.
  *
- * Escape hatch — a genuinely process-global store (one value for the whole page,
- * by design: a focused-surface signal, a server boot fact, a cross-surface
- * registry) disables this per-site with a reason:
+ * A page-global store that ONE layer fills and another layer CALLS — a
+ * navigator, a history adapter, a capabilities registry — is an *installed
+ * sink*, and it has its own sanctioned home: `defineInstallSink`
+ * (`primitives/install-sink`). Reach for that before the escape hatch below: it
+ * owns the subscription, so a late install can never leave a render-path reader
+ * cached on the pre-install answer, and it names the imperative sample `peek…`
+ * so a lint rule can tell one from a plain getter.
+ *
+ * Escape hatch — a genuinely process-global store that is neither of those (one
+ * value for the whole page, by design: a focused-surface signal, a server boot
+ * fact) disables this per-site with a reason:
  *
  *   // eslint-disable-next-line scoped-store/no-module-mutable-store -- <reason>
  */
@@ -54,7 +62,9 @@ const createRule = ESLintUtils.RuleCreator(
 );
 
 /** Is this an enclosing-scope node a module-scope `let`/`var` declaration lives at? */
-function isProgramScopeDeclaration(decl: TSESTree.VariableDeclaration): boolean {
+function isProgramScopeDeclaration(
+  decl: TSESTree.VariableDeclaration,
+): boolean {
   // Bare module statement, or one fronted by an `export` — both sit at Program.
   const parent = decl.parent;
   if (parent.type === "Program") return true;
@@ -72,7 +82,10 @@ function isProgramScopeDeclaration(decl: TSESTree.VariableDeclaration): boolean 
 function calleeName(node: TSESTree.CallExpression): string | null {
   const callee = node.callee;
   if (callee.type === "Identifier") return callee.name;
-  if (callee.type === "MemberExpression" && callee.property.type === "Identifier") {
+  if (
+    callee.type === "MemberExpression" &&
+    callee.property.type === "Identifier"
+  ) {
     return callee.property.name;
   }
   return null;
@@ -88,9 +101,15 @@ function collectIdentifierNames(node: TSESTree.Node, out: Set<string>): void {
     }
     const rec = n as Record<string, unknown> & { type?: string };
     if (typeof rec.type !== "string") return;
-    if (rec.type === "Identifier" && typeof rec.name === "string") out.add(rec.name);
+    if (rec.type === "Identifier" && typeof rec.name === "string")
+      out.add(rec.name);
     for (const key of Object.keys(rec)) {
-      if (key === "parent" || key === "type" || key === "loc" || key === "range") {
+      if (
+        key === "parent" ||
+        key === "type" ||
+        key === "loc" ||
+        key === "range"
+      ) {
         continue;
       }
       visit(rec[key]);
@@ -117,8 +136,13 @@ export default createRule({
         "desktop / keep-alive mounts surfaces multiple times at once, so state " +
         "bleeds between windows. Use defineScopedStore " +
         "(@plugins/primitives/plugins/scoped-store/web) so state is per-surface. " +
-        "For a genuinely page-global store, disable this rule on the line with " +
-        "a reason (`-- <why this is intentionally global>`).",
+        "If it is a genuinely page-global slot that ONE layer fills and another " +
+        "calls (a navigator, an adapter, a capabilities registry), it is an " +
+        "installed sink: use defineInstallSink " +
+        "(@plugins/primitives/plugins/install-sink/web), which owns the " +
+        "subscription and names its imperative read `peek…`. Only if neither " +
+        "fits, disable this rule on the line with a reason " +
+        "(`-- <why this is intentionally global>`).",
     },
   },
   defaultOptions: [],
@@ -131,9 +155,10 @@ export default createRule({
      * negatives, per the rule's narrow contract.
      */
     function resolveModuleBinding(name: string): TSESTree.Node | null {
-      const moduleScope = context.sourceCode.scopeManager?.globalScope?.childScopes.find(
-        (s) => s.type === "module",
-      );
+      const moduleScope =
+        context.sourceCode.scopeManager?.globalScope?.childScopes.find(
+          (s) => s.type === "module",
+        );
       const scope = moduleScope ?? context.sourceCode.scopeManager?.globalScope;
       const variable = scope?.variables.find((v) => v.name === name);
       if (!variable) return null;
@@ -164,7 +189,8 @@ export default createRule({
         if (node.kind !== "let" && node.kind !== "var") return;
         if (!isProgramScopeDeclaration(node)) return;
         for (const decl of node.declarations) {
-          if (decl.id.type === "Identifier") mutableBindings.set(decl.id.name, node);
+          if (decl.id.type === "Identifier")
+            mutableBindings.set(decl.id.name, node);
         }
       },
       CallExpression(node) {

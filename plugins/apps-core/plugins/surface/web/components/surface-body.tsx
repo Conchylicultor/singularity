@@ -38,8 +38,15 @@ import { useTabPresence } from "../internal/use-tab-presence";
  * mounted (Chrome-style keep-alive).
  */
 export function SurfaceBody() {
-  const { tabs, focusedTabId, focusTab, closeTab, mode, exitToPreviousMode, titles } =
-    useTabs();
+  const {
+    tabs,
+    focusedTabId,
+    focusTab,
+    closeTab,
+    mode,
+    exitToPreviousMode,
+    titles,
+  } = useTabs();
 
   const defs = Surface.Placement.useContributions();
   const sorted = useMemo(
@@ -59,19 +66,23 @@ export function SurfaceBody() {
   // Publish the derived capabilities to the apps-owned registry so apps-side
   // chrome (tab bar `+`, theme scope, use-tabs default) can read them back
   // without ever importing or naming a specific mode. Direction stays
-  // surface → apps (apps never imports surface).
-  useEffect(() => {
-    registerPlacementCapabilities({
-      defaultId,
-      ids: new Set(sorted.map((d) => d.id)),
-      newTabFollows: new Set(
-        sorted.filter((d) => d.newTabFollows).map((d) => d.id),
-      ),
-      appThemeScope: new Set(
-        sorted.filter((d) => d.themeScope === "app").map((d) => d.id),
-      ),
-    });
-  }, [sorted, defaultId]);
+  // surface → apps (apps never imports surface). The registration hands back a
+  // disposer that restores the previous capabilities, so this body un-publishes
+  // itself when it unmounts instead of leaving a dead set installed.
+  useEffect(
+    () =>
+      registerPlacementCapabilities({
+        defaultId,
+        ids: new Set(sorted.map((d) => d.id)),
+        newTabFollows: new Set(
+          sorted.filter((d) => d.newTabFollows).map((d) => d.id),
+        ),
+        appThemeScope: new Set(
+          sorted.filter((d) => d.themeScope === "app").map((d) => d.id),
+        ),
+      }),
+    [sorted, defaultId],
+  );
 
   // The ONE active mode descriptor: the surface renders EVERY tab under it.
   // Resolve the stored mode id to a registered descriptor, falling back to the
@@ -173,7 +184,9 @@ function TabContainer({
 }: TabContainerProps) {
   // Dynamic style pushed by the active placement's `Chrome` (null for static
   // placements like docked / solo). These are the keep-alive override channel.
-  const [overrideStyle, setOverrideStyle] = useState<CSSProperties | null>(null);
+  const [overrideStyle, setOverrideStyle] = useState<CSSProperties | null>(
+    null,
+  );
   const [insetStyle, setInsetStyle] = useState<CSSProperties | null>(null);
   const [pointerDownCapture, setPointerDownCapture] = useState<
     ((e: PointerEvent) => void) | null

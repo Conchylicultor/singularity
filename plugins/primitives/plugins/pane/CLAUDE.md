@@ -354,10 +354,13 @@ stays app-agnostic:
   `popstate` listener is its only caller — and rebuilds the in-memory state.
 
 Programmatic navigation ⇒ `shell:navigate`; browser traversal ⇒ `popstate`. A
-hard event contract, not idempotency-by-comparison. The
-**`defaultHistoryAdapter`** (standalone / tests) writes the route verbatim and
-restores it straight back into the live store via `handleLocationChange()`. The
-**tabs layer installs an app-aware adapter** (`setHistoryAdapter`) that widens
+hard event contract, not idempotency-by-comparison. The adapter lives in an
+[`install-sink`](../install-sink/CLAUDE.md) filled with the
+**`defaultHistoryAdapter`** (standalone / tests), which writes the route
+verbatim and restores it straight back into the live store via
+`handleLocationChange()` — so the slot is never empty and teardown never has to
+remember the default (`setHistoryAdapter` returns the disposer that restores
+it). The **tabs layer installs an app-aware adapter** that widens
 every entry into a complete SNAPSHOT of what the user was looking at —
 `{ tabId, appId, appInstance, route | pending }` — and restores it whole
 (refocus the tab, re-sync its app, restore the route) with zero URL parsing. See
@@ -466,14 +469,14 @@ missing either degrades silently to the same-app branch.
 
 **Why a sink for the navigation.** `apps-core/tabs` imports this primitive, so
 this primitive cannot import it back. Tabs installs its `navigate` into
-`app-nav-sink` at provider mount, exactly as it installs its history adapter —
-the pane layer calls a cross-app destination without knowing tabs exists.
+`appNavSink` (`app-nav-sink.ts`) at provider mount, exactly as it installs its
+history adapter — the pane layer calls a cross-app destination without knowing
+tabs exists.
 
-Read that sink through `useCanNavigateApp()`, never the imperative
-`canNavigateApp()`. Installation happens in an EFFECT, so a pane mounting in the
-same commit as the tab provider asks before the answer exists; an unsubscribed
-read caches "nowhere to go" for the life of the pane, and whether Expand appears
-comes down to whether that pane's plugin loaded before or after the provider.
+Both are [`install-sink`](../install-sink/CLAUDE.md) sinks, which decides how
+you read them: `appNavSink.useInstalled()` from a render path (subscribed, so a
+late install re-renders whoever asked early), `peek…` only from an event handler
+or an effect.
 
 ### The app's index pane (`appIndex`)
 
@@ -530,6 +533,7 @@ See "Open questions" in the design doc.
     - `primitives/css/ui-kit.ControlSize`
     - `primitives/css/ui-kit.SingleLineProvider`
     - `primitives/icon-button.IconButton`
+    - `primitives/install-sink.defineInstallSink`
     - `primitives/latest-ref.useLatestRef`
     - `primitives/link-gesture.linkGestureProps`
     - `primitives/loading.Loading`
@@ -568,14 +572,13 @@ See "Open questions" in the design doc.
     - `SurfaceChrome`
     - `TypeMarker`
   - Exports (values):
+    - `appNavSink`
     - `buildRouteUrl`
     - `clearRoute`
     - `createPaneStore`
     - `currentRoutePath`
     - `defaultHistoryAdapter`
     - `defaultStore`
-    - `getBasePath`
-    - `getRoute`
     - `openPane`
     - `Pane`
     - `PaneActionsSlot`
@@ -593,9 +596,10 @@ See "Open questions" in the design doc.
     - `PaneSurfaceAppContext`
     - `PaneSurfaceProvider`
     - `parseUrl`
+    - `peekBasePath`
+    - `peekRoute`
     - `reorderRoute`
     - `restoreRoute`
-    - `setAppNavigator`
     - `setBasePath`
     - `setHistoryAdapter`
     - `setLiveStore`

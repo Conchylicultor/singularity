@@ -75,7 +75,7 @@ the bar).
     - `primitives/css/inline.Inline`
     - `primitives/css/link-chip.LinkChip`
     - `primitives/latest-ref.useLatestRef`
-    - `primitives/live-state.registerSlowResourceReporter`
+    - `primitives/live-state.slowResourceReportSink`
     - `primitives/pane.currentRoutePath`
     - `primitives/perfs/boot-trace.getBootTrace`
     - `reports.Reports`

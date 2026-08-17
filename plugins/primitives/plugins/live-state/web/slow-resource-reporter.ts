@@ -1,3 +1,5 @@
+import { defineReportSink } from "@plugins/primitives/plugins/report-sink/core";
+
 export interface SlowResourceInfo {
   key: string;
   params: unknown;
@@ -19,20 +21,18 @@ export interface SlowResourceInfo {
   transportWaitMs: number;
 }
 
-type Reporter = (info: SlowResourceInfo) => void;
-
-// Set by a domain plugin (e.g. `reports`/slow-ops) at mount time. `useResource`
-// measures every resource's mount→settle duration and hands it to the reporter
-// — live-state stays threshold-agnostic and never decides what "slow" means.
-// The consumer gates on its own threshold (pre-hydrated resources settle at
-// ~0ms and are correctly ignored downstream). This is the generic seam; the
-// primitive only reports the duration.
-let reporter: Reporter | null = null;
-
-export function registerSlowResourceReporter(fn: Reporter | null): void {
-  reporter = fn;
-}
-
-export function reportSlowResource(info: SlowResourceInfo): void {
-  reporter?.(info);
-}
+/**
+ * One resource's mount→first-data settle duration, emitted by `useResource` on
+ * every settle. A domain plugin (`debug/slow-ops`) registers the handler at
+ * mount time; live-state stays threshold-agnostic and never decides what "slow"
+ * means — the consumer gates on its own threshold (pre-hydrated resources settle
+ * at ~0ms and are correctly ignored downstream).
+ *
+ * This is an EMIT slot, not an installed sink: nothing here reads a value back
+ * or asks whether anything is registered, and an unregistered sink is the
+ * ordinary steady state (nobody has mounted the collector). So it is the
+ * write-side twin — `defineReportSink`, exactly as `httpStaleDropReportSink`
+ * next door — rather than `defineInstallSink`, and it inherits that primitive's
+ * never-throw contract on the emit path.
+ */
+export const slowResourceReportSink = defineReportSink<SlowResourceInfo>();

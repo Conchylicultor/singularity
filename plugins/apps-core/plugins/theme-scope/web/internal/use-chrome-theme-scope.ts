@@ -3,6 +3,7 @@ import { useActiveApp } from "@plugins/apps-core/web";
 import {
   useSurfaceMode,
   placementHasAppThemeScope,
+  usePlacementCapabilities,
 } from "@plugins/apps-core/plugins/tabs/web";
 
 /**
@@ -28,11 +29,19 @@ import {
  * resolves the focused app from the URL when called outside a surface —
  * reactive across focus switches, which mirror the focused tab's route into the
  * URL — and `useSurfaceMode` reads the module-level surface-mode store.
+ *
+ * All THREE inputs are subscribed, including the placement set. This hook is
+ * mounted in the first commit, before the surface body's effect fills the
+ * placement registry; asking the registry directly meant computing "no app
+ * theme scope" once and keeping it, which put the rail, the tab bar, the
+ * toaster and the page's own `:root` tokens on a different theme than the
+ * focused app.
  */
 export function useRootThemeScope(): string | undefined {
   const activeApp = useActiveApp();
   const mode = useSurfaceMode();
-  return placementHasAppThemeScope(mode) && activeApp
+  const placements = usePlacementCapabilities();
+  return placementHasAppThemeScope(placements, mode) && activeApp
     ? appThemeScope(activeApp.id)
     : undefined;
 }

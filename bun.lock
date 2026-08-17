@@ -3941,6 +3941,10 @@
       "name": "@singularity/plugin-primitives-inline-text",
       "version": "0.0.1",
     },
+    "plugins/primitives/plugins/install-sink": {
+      "name": "@singularity/plugin-primitives-install-sink",
+      "version": "0.0.1",
+    },
     "plugins/primitives/plugins/keyset": {
       "name": "@singularity/plugin-primitives-keyset",
       "version": "0.0.1",
@@ -7318,6 +7322,8 @@
     "@singularity/plugin-primitives-in-view": ["@singularity/plugin-primitives-in-view@workspace:plugins/primitives/plugins/in-view"],
 
     "@singularity/plugin-primitives-inline-text": ["@singularity/plugin-primitives-inline-text@workspace:plugins/primitives/plugins/inline-text"],
+
+    "@singularity/plugin-primitives-install-sink": ["@singularity/plugin-primitives-install-sink@workspace:plugins/primitives/plugins/install-sink"],
 
     "@singularity/plugin-primitives-keyset": ["@singularity/plugin-primitives-keyset@workspace:plugins/primitives/plugins/keyset"],
 

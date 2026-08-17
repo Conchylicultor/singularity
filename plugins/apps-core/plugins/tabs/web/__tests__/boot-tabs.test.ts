@@ -13,7 +13,6 @@ import {
   type NavigationType,
 } from "@plugins/primitives/plugins/app-instance/web";
 import { bootTabs } from "../internal/use-tabs";
-import { getDefaultPlacement } from "../internal/placement-registry";
 import { isDeadUnresolvedLink } from "../internal/load-scope";
 import { savePersistedTabs, type PersistedTabs } from "../internal/tabs-store";
 
@@ -64,7 +63,10 @@ function setPath(pathname: string): void {
 
 /** Write the persisted-tabs blob under the CURRENT app instance's storage key. */
 function persist(payload: PersistedTabs): void {
-  window.sessionStorage.setItem(appInstanceKey("app-tabs"), JSON.stringify(payload));
+  window.sessionStorage.setItem(
+    appInstanceKey("app-tabs"),
+    JSON.stringify(payload),
+  );
 }
 
 /**
@@ -98,8 +100,14 @@ function focusedState() {
 
 beforeEach(() => {
   const mem = new MemoryStorage();
-  Object.defineProperty(window, "sessionStorage", { value: mem, configurable: true });
-  Object.defineProperty(globalThis, "sessionStorage", { value: mem, configurable: true });
+  Object.defineProperty(window, "sessionStorage", {
+    value: mem,
+    configurable: true,
+  });
+  Object.defineProperty(globalThis, "sessionStorage", {
+    value: mem,
+    configurable: true,
+  });
   // Storage first, then drop the memoized instance: the resolver mints/adopts
   // against sessionStorage on its next call, which must be this fresh one.
   resetAppInstanceForTests();
@@ -125,7 +133,9 @@ describe("bootTabs — tri-state focused-tab seeding", () => {
         {
           tabId: "t1",
           appId: "pages",
-          route: [{ paneId: "page", params: { id: "abc" }, options: {}, uuid: "u1" }],
+          route: [
+            { paneId: "page", params: { id: "abc" }, options: {}, uuid: "u1" },
+          ],
           rawPath: "page/abc",
         },
       ],
@@ -137,9 +147,9 @@ describe("bootTabs — tri-state focused-tab seeding", () => {
     const state = focusedState();
     expect(state.kind).toBe("resolved");
     // restoreRoute (branch 3), NOT clearRoute and NOT seedPending.
-    expect(state.kind === "resolved" ? state.slots.map((s) => s.paneId) : null).toEqual([
-      "page",
-    ]);
+    expect(
+      state.kind === "resolved" ? state.slots.map((s) => s.paneId) : null,
+    ).toEqual(["page"]);
   });
 
   it("different deep link: persisted rawPath ≠ the URL ⇒ seeds a pending route", () => {
@@ -148,7 +158,14 @@ describe("bootTabs — tri-state focused-tab seeding", () => {
         {
           tabId: "t1",
           appId: "pages",
-          route: [{ paneId: "page", params: { id: "other" }, options: {}, uuid: "u1" }],
+          route: [
+            {
+              paneId: "page",
+              params: { id: "other" },
+              options: {},
+              uuid: "u1",
+            },
+          ],
           rawPath: "page/other",
         },
       ],
@@ -249,8 +266,11 @@ describe("bootTabs — app instances (fresh state vs. preserved state)", () => {
     expect(boot.tabs[0]!.appId).toBe("pages");
     expect(boot.focusedTabId).toBe(boot.tabs[0]!.tabId);
     expect(boot.tabs.map((t) => t.tabId)).not.toContain("t-story");
-    // Surface mode is instance state, so it resets with the instance.
-    expect(boot.mode).toBe(getDefaultPlacement());
+    // Surface mode is instance state, so it resets with the instance. `""` is
+    // the unresolved seed: boot no longer samples the placement registry (a
+    // render-path read), and TabsProvider resolves "" to the registered
+    // default on every render.
+    expect(boot.mode).toBe("");
     expect(boot.mode).not.toBe("floating");
   });
 
@@ -326,9 +346,12 @@ describe("bootTabs — the pre-instance (legacy key) migration", () => {
     expect(boot.tabs.length).toBe(1);
     expect(boot.tabs.map((t) => t.tabId)).not.toContain("t-story");
     expect(boot.tabs.map((t) => t.tabId)).not.toContain("t-pages");
-    expect(boot.mode).toBe(getDefaultPlacement());
+    // The unresolved seed (see above): nothing persisted was adopted.
+    expect(boot.mode).toBe("");
     // Refused, not consumed: this load was never entitled to it.
-    expect(window.sessionStorage.getItem(legacyInstanceKey("app-tabs"))).not.toBeNull();
+    expect(
+      window.sessionStorage.getItem(legacyInstanceKey("app-tabs")),
+    ).not.toBeNull();
   });
 
   it("preserving load with ONLY a legacy payload: adopts it, consumes it, re-homes it under the generation", () => {
@@ -343,7 +366,9 @@ describe("bootTabs — the pre-instance (legacy key) migration", () => {
     expect(boot.tabs.map((t) => t.tabId)).toEqual(["t-pages", "t-story"]);
     expect(boot.mode).toBe("floating");
     // Consumed, so no LATER fresh instance in this browser tab can find it.
-    expect(window.sessionStorage.getItem(legacyInstanceKey("app-tabs"))).toBeNull();
+    expect(
+      window.sessionStorage.getItem(legacyInstanceKey("app-tabs")),
+    ).toBeNull();
 
     // …and the next persist re-homes the payload under the gen-scoped key, so
     // one preserving load carries the state across.

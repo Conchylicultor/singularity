@@ -9,6 +9,7 @@
   - Uses:
     - `apps-core.useActiveApp`
     - `apps-core/tabs.placementHasAppThemeScope`
+    - `apps-core/tabs.usePlacementCapabilities`
     - `apps-core/tabs.useSurfaceMode`
     - `primitives/css/ui-kit.appThemeScope`
   - Exports (values):

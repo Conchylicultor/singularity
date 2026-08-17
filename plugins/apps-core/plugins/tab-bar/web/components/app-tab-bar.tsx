@@ -23,6 +23,7 @@ import { useChromeThemeScope } from "@plugins/apps-core/plugins/theme-scope/web"
 import {
   useTabs,
   placementIsNewTabFollows,
+  usePlacementCapabilities,
 } from "@plugins/apps-core/plugins/tabs/web";
 
 /** Bar-item id of the trailing `+`; tab ids are uuids, so it can't collide. */
@@ -76,7 +77,13 @@ export function AppTabBar() {
   // window", otherwise a "new tab". Either way `openTab` adds a tab under the
   // current mode — the surface owns the mode, not the tab. (The tab bar is
   // covered while the surface is solo, so `+` is unreachable in that state.)
-  const newTabIsWindow = placementIsNewTabFollows(mode);
+  //
+  // Subscribed: the placement registry is filled by the surface body's effect,
+  // in a different subtree, so this bar renders before it exists. Reading it
+  // through the hook is what re-renders the `+` when it lands — asking the
+  // registry directly here left the button stuck on "new tab" from boot.
+  const placements = usePlacementCapabilities();
+  const newTabIsWindow = placementIsNewTabFollows(placements, mode);
 
   const resolved = tabs.flatMap((tab) => {
     const app = apps.find((a) => a.id === tab.appId);

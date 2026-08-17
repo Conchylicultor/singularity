@@ -19,7 +19,7 @@ import { loadRouteForConversation } from "@plugins/conversations/plugins/pane-re
 
 // Proves the pane-restore save listener does not cross-contaminate between tabs.
 // It reads the focused (live) store's route AND its conversation key from the
-// same `getRoute()` snapshot, so the persisted entry for a conversation always
+// same `peekRoute()` snapshot, so the persisted entry for a conversation always
 // reflects that conversation's own route — switching the focused tab to a second
 // conversation never clobbers the first.
 

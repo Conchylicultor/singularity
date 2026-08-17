@@ -1,4 +1,4 @@
-import { useSyncExternalStore } from "react";
+import { defineInstallSink } from "@plugins/primitives/plugins/install-sink/web";
 
 /**
  * The placement *capabilities* `apps`-side chrome needs to make routing
@@ -9,9 +9,9 @@ import { useSyncExternalStore } from "react";
  * This registry is **owned by `apps` but written by `surface`**: `surface`'s
  * body derives the capabilities from its `Surface.Placement` contributions and
  * calls {@link registerPlacementCapabilities}. The dependency direction stays
- * `surface → apps`. Until the first registration the getters return inert
- * sentinels (`""` / `undefined` / `false`) — an accepted one-frame seam on the
- * very first commit, before any user interaction.
+ * `surface → apps`. Until the first registration the sink is empty, which every
+ * consumer reads as the inert answer (`""` / `false`) — an accepted one-frame
+ * seam on the very first commit, before any user interaction.
  */
 export interface PlacementCapabilities {
   /** The id of the default surface mode (the one the surface boots into). */
@@ -25,33 +25,44 @@ export interface PlacementCapabilities {
   appThemeScope: Set<string>;
 }
 
-// Module-global latest snapshot, mirroring the `focusedPlacement` module-global
-// + subscriber-set pattern in use-tabs.tsx. Written by surface via
-// registerPlacementCapabilities; read by the getters/predicates and made
-// reactive for useDefaultPlacement through useSyncExternalStore.
-// eslint-disable-next-line scoped-store/no-module-mutable-store -- page-global by design: this is the set of INSTALLED placement plugins (which placements exist, the default, the tear-off target), identical across every surface/window — not per-surface state. Registered once by the single surface body and read by chrome both inside and outside any surface tree, mirroring tabsNavigator/focusedPlacement in use-tabs.tsx, so it cannot be a per-surface scoped store.
-let capabilities: PlacementCapabilities | null = null;
-const subscribers = new Set<() => void>();
+/**
+ * The one slot holding the installed placement set. Page-global by design: it
+ * is which placement plugins EXIST (the default, which ones the `+` follows,
+ * which wear the app theme), identical across every surface and window — not
+ * per-surface state — so it is a sink, not a scoped store.
+ *
+ * Empty until `surface`'s body registers, which happens in an EFFECT. Chrome
+ * mounted in that same commit (the tab bar, the chrome theme scope) therefore
+ * asks before the answer exists, which is why the render-path read is the
+ * subscribed {@link usePlacementCapabilities} and the predicates below take the
+ * value rather than fetching it.
+ */
+const placementSink = defineInstallSink<PlacementCapabilities>({
+  name: "tabs.placement-capabilities",
+  what: "the placement capabilities (registered by apps-core/surface's body from its Surface.Placement contributions)",
+});
 
 /**
- * Publish the latest placement capabilities. Called by the `surface` body in a
- * memo keyed on its contributions; notifies subscribers so
- * {@link useDefaultPlacement} re-renders when the registry first populates (or
- * the default changes).
+ * Publish the latest placement capabilities. Called by the `surface` body from
+ * an effect keyed on its contributions; subscribers re-render when the registry
+ * first populates (or the default changes). The returned disposer restores the
+ * previous capabilities, so the effect's cleanup is the disposer itself.
  */
 export function registerPlacementCapabilities(
   caps: PlacementCapabilities,
-): void {
-  capabilities = caps;
-  for (const fn of subscribers) fn();
+): () => void {
+  return placementSink.install(caps);
 }
 
 /**
- * Non-hook read of the default placement id — for plain-function callers (e.g.
- * `useTabs`'s open/seed paths). Returns `""` until `surface` registers.
+ * One-shot read of the default placement id — for event handlers and effect
+ * cleanups (`useTabs`'s solo-exit fallback, the surface-mode teardown), which
+ * run after registration and re-run on every invocation. Returns `""` until
+ * `surface` registers. NEVER from a render path: use {@link useDefaultPlacement}
+ * there, or the pre-registration `""` is cached for the component's life.
  */
-export function getDefaultPlacement(): string {
-  return capabilities?.defaultId ?? "";
+export function peekDefaultPlacement(): string {
+  return placementSink.peek()?.defaultId ?? "";
 }
 
 /**
@@ -59,14 +70,7 @@ export function getDefaultPlacement(): string {
  * registers, then re-renders consumers once the registry populates.
  */
 export function useDefaultPlacement(): string {
-  return useSyncExternalStore(
-    (cb) => {
-      subscribers.add(cb);
-      return () => subscribers.delete(cb);
-    },
-    () => capabilities?.defaultId ?? "",
-    () => capabilities?.defaultId ?? "",
-  );
+  return placementSink.useValue()?.defaultId ?? "";
 }
 
 /**
@@ -74,31 +78,41 @@ export function useDefaultPlacement(): string {
  * registers. Backs the tab provider's mode resolution: an empty/stale stored
  * mode id resolves to `defaultId` the moment the registry populates, so every
  * mode consumer (theme scope, mode control, persistence) agrees with what the
- * surface actually renders.
+ * surface actually renders. It is also the ONLY way a render path can obtain
+ * the value the two predicates below need.
  */
 export function usePlacementCapabilities(): PlacementCapabilities | null {
-  return useSyncExternalStore(
-    (cb) => {
-      subscribers.add(cb);
-      return () => subscribers.delete(cb);
-    },
-    () => capabilities,
-    () => capabilities,
-  );
+  return placementSink.useValue();
 }
 
 /**
  * Whether `+` reads as "new window" in surface mode `id` (i.e. windows mode).
- * False until `surface` registers.
+ *
+ * Takes the capabilities rather than reading the sink: a predicate that cannot
+ * sample cannot be sampled from render, and the only way a component can hold
+ * `caps` is {@link usePlacementCapabilities}, which subscribes. Before this,
+ * the tab bar asked in its component body and could keep "not a window" from
+ * boot, because the registry lands in a different subtree's effect and the bar
+ * subscribed to nothing that changes when it does. `null` (not registered yet)
+ * is `false`.
  */
-export function placementIsNewTabFollows(id: string): boolean {
-  return capabilities?.newTabFollows.has(id) ?? false;
+export function placementIsNewTabFollows(
+  caps: PlacementCapabilities | null,
+  id: string,
+): boolean {
+  return caps?.newTabFollows.has(id) ?? false;
 }
 
 /**
  * Whether the focused chrome wears the app theme when the focused tab uses
- * placement `id`. False until `surface` registers.
+ * placement `id`. Same value-in shape, for the same reason — and here the
+ * stale answer reached further: this one decides the `:root` token layer for
+ * the whole page, so a sampled `false` left the rail, tab bar, toaster and
+ * `:root` on a different theme than the focused app's. `null` is `false`.
  */
-export function placementHasAppThemeScope(id: string): boolean {
-  return capabilities?.appThemeScope.has(id) ?? false;
+export function placementHasAppThemeScope(
+  caps: PlacementCapabilities | null,
+  id: string,
+): boolean {
+  return caps?.appThemeScope.has(id) ?? false;
 }

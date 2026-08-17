@@ -1,3 +1,4 @@
+import { defineInstallSink } from "@plugins/primitives/plugins/install-sink/web";
 import { getFocusedSurfaceId } from "@plugins/primitives/plugins/shortcuts/web";
 import {
   bringWindowToFront,
@@ -24,11 +25,12 @@ import type { SnapDirection } from "./hooks/use-snap";
  *
  * Cross-window commands (close, cycle) additionally need the live floating tab
  * order + focus/close callbacks. The load-bearing `apps` plugin exposes those
- * only through the `useTabs()` hook, so a tiny in-tree publisher
- * ({@link setFloatingTabsBridge}, written from the floating Foreground) bridges
- * them to module scope — the same module-channel pattern this plugin already uses
- * for window geometry and the snap preview. There is never more than one floating
- * surface in focus, so a single page-global channel is the right shape.
+ * only through the `useTabs()` hook, so a tiny in-tree publisher (the
+ * {@link floatingTabsBridgeSink} install sink, filled from the floating
+ * Foreground) bridges them to module scope. There is never more than one
+ * floating surface in focus, so a single page-global slot is the right shape.
+ * Every read below runs from a keyboard-shortcut handler — after installation,
+ * and re-sampled on every keypress — so `peek()` is the correct read.
  */
 export interface FloatingTabsBridge {
   /** Open floating tabIds, in tab-strip order (cycle order). */
@@ -37,13 +39,11 @@ export interface FloatingTabsBridge {
   closeTab: (tabId: string) => void;
 }
 
-// eslint-disable-next-line scoped-store/no-module-mutable-store -- page-global by design: a single bridge for the (single) focused floating surface, mirroring this plugin's module-global geometry + snap-preview channels.
-let bridge: FloatingTabsBridge | null = null;
-
-/** Publish (or clear, with `null`) the live tabs bridge from the Foreground. */
-export function setFloatingTabsBridge(next: FloatingTabsBridge | null) {
-  bridge = next;
-}
+/** The live tabs bridge, installed by `FloatingTabsBridge` while a floating window exists. */
+export const floatingTabsBridgeSink = defineInstallSink<FloatingTabsBridge>({
+  name: "floating.tabs-bridge",
+  what: "the floating tab order + focus/close callbacks (installed by the floating Foreground's FloatingTabsBridge)",
+});
 
 /** The window currently holding the focused surface (the active member's tab). */
 function focusedWindowId(): string | undefined {
@@ -75,6 +75,7 @@ export function togglePinFocusedWindow() {
  */
 export function closeFocusedWindow() {
   const tabId = getFocusedSurfaceId();
+  const bridge = floatingTabsBridgeSink.peek();
   if (tabId && bridge) bridge.closeTab(tabId);
 }
 
@@ -87,6 +88,7 @@ export function closeFocusedWindow() {
  * too.
  */
 export function cycleWindows(step: 1 | -1) {
+  const bridge = floatingTabsBridgeSink.peek();
   if (!bridge || bridge.tabIds.length === 0) return;
   const { tabIds, focusTab } = bridge;
   // Ordered unique windowIds (apps tab order, deduped).
@@ -126,7 +128,7 @@ export function switchDesktopByDelta(step: 1 | -1) {
   if (target.id === activeDesktopId) return;
   setActiveDesktop(target.id);
   const top = topmostWindowOnDesktop(target.id);
-  if (top) bridge?.focusTab(top.activeTabId);
+  if (top) floatingTabsBridgeSink.peek()?.focusTab(top.activeTabId);
 }
 
 /**
@@ -159,5 +161,5 @@ export function moveFocusedWindowByDelta(step: 1 | -1) {
   moveWindowToDesktop(windowId, targetId);
   setActiveDesktop(targetId);
   bringWindowToFront(windowId);
-  bridge?.focusTab(win.activeTabId);
+  floatingTabsBridgeSink.peek()?.focusTab(win.activeTabId);
 }

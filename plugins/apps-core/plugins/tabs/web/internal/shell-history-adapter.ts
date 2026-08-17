@@ -99,10 +99,12 @@ export function serializePaneState(state: RouteState): PaneHistoryState {
 
 /**
  * Build the shell history adapter over `deps`. Installed by `TabsProvider` via
- * `setHistoryAdapter(...)` in its wiring effect; torn down back to the default
- * adapter on unmount.
+ * `setHistoryAdapter(...)` in its wiring effect, whose cleanup is the disposer
+ * that install returns — putting the default adapter back on unmount.
  */
-export function makeShellHistoryAdapter(deps: ShellHistoryDeps): HistoryAdapter {
+export function makeShellHistoryAdapter(
+  deps: ShellHistoryDeps,
+): HistoryAdapter {
   function commit({ url, state, mode }: LocationChange): void {
     const focused = deps.focused();
     // Merge the focused-tab snapshot into the route payload so the entry is a

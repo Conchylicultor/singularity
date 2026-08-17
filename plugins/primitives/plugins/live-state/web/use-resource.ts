@@ -1,4 +1,13 @@
-import { createContext, createElement, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import {
+  createContext,
+  createElement,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import {
   QueryClient,
   QueryClientProvider,
@@ -7,7 +16,7 @@ import {
 } from "@tanstack/react-query";
 import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
 import { NotificationsClient, queryKeyFor } from "./notifications-client";
-import { reportSlowResource } from "./slow-resource-reporter";
+import { slowResourceReportSink } from "./slow-resource-reporter";
 import { dateAwareReplaceEqualDeep } from "./internal/structural-sharing";
 import type { ChannelStatuses } from "./notifications-client";
 import type { ResourceDescriptor } from "../core/resource";
@@ -41,14 +50,21 @@ export interface NotificationsProviderProps {
   queryClient?: QueryClient;
 }
 
-export function NotificationsProvider({ children, queryClient }: NotificationsProviderProps) {
+export function NotificationsProvider({
+  children,
+  queryClient,
+}: NotificationsProviderProps) {
   const qc = queryClient ?? getDefaultQueryClient();
   // NotificationsClient is a singleton for the tab; create on first render.
   const notifications = getOrCreateNotifications(qc);
   return createElement(
     QueryClientProvider,
     { client: qc },
-    createElement(NotificationsContext.Provider, { value: notifications }, children),
+    createElement(
+      NotificationsContext.Provider,
+      { value: notifications },
+      children,
+    ),
   );
 }
 
@@ -81,7 +97,10 @@ export function getNotificationsClient(): NotificationsClient | null {
 
 export function useNotificationsStatus(): WsStatus {
   const client = useContext(NotificationsContext);
-  if (!client) throw new Error("useNotificationsStatus must be inside NotificationsProvider");
+  if (!client)
+    throw new Error(
+      "useNotificationsStatus must be inside NotificationsProvider",
+    );
   const [status, setStatus] = useState(() => client.getStatus());
   useEffect(() => client.subscribeStatus(setStatus), [client]);
   return status;
@@ -89,7 +108,10 @@ export function useNotificationsStatus(): WsStatus {
 
 export function useNotificationsChannelStatuses(): ChannelStatuses {
   const client = useContext(NotificationsContext);
-  if (!client) throw new Error("useNotificationsChannelStatuses must be inside NotificationsProvider");
+  if (!client)
+    throw new Error(
+      "useNotificationsChannelStatuses must be inside NotificationsProvider",
+    );
   const [statuses, setStatuses] = useState(() => client.getChannelStatuses());
   useEffect(() => client.subscribeChannelStatuses(setStatuses), [client]);
   return statuses;
@@ -100,7 +122,10 @@ export function useNotificationsChannelStatuses(): ChannelStatuses {
 // debugSnapshot()/subscribeDebug(). Must be called inside NotificationsProvider.
 export function useNotificationsClient(): NotificationsClient {
   const client = useContext(NotificationsContext);
-  if (!client) throw new Error("useNotificationsClient must be inside NotificationsProvider");
+  if (!client)
+    throw new Error(
+      "useNotificationsClient must be inside NotificationsProvider",
+    );
   return client;
 }
 
@@ -119,7 +144,10 @@ export function hydrateResource<T, P extends ResourceParams = ResourceParams>(
   value: unknown,
 ): void {
   const parsed = resource.schema.parse(value);
-  getDefaultQueryClient().setQueryData(queryKeyFor(resource.key, params), parsed);
+  getDefaultQueryClient().setQueryData(
+    queryKeyFor(resource.key, params),
+    parsed,
+  );
 }
 
 // Seed an arbitrary query on the app's default QueryClient before mount — the
@@ -140,7 +168,12 @@ export function hydrateQuery(queryKey: unknown[], data: unknown): void {
 // a transient error moves to the opt-in `stale?: T` on the pending arm: named,
 // greppable, and never what a `.data` read reaches.
 export type ResourceResult<T> =
-  | { pending: true; error: Error | null; stale?: T; refetch: () => Promise<void> }
+  | {
+      pending: true;
+      error: Error | null;
+      stale?: T;
+      refetch: () => Promise<void>;
+    }
   | { pending: false; data: T; refetch: () => Promise<void> };
 
 // Optional read options for useResource.
@@ -233,7 +266,8 @@ export function useResource<T, S, P extends ResourceParams = ResourceParams>(
     // prime (notifications-client.ts `fetchOverHttp`). Runs as the WS-down
     // fallback and the invalidate-mode post-invalidate refetch; the sub-ack
     // normally fills the cache so this rarely runs. Errors propagate to `q.error`.
-    queryFn: () => notifications.fetchOverHttp(key, p, origin, schema, "fallback"),
+    queryFn: () =>
+      notifications.fetchOverHttp(key, p, origin, schema, "fallback"),
     // sub-ack writes setQueryData, so normally queryFn never runs.
     // It's the fallback when the WS is down.
     initialData: resource.initialData as NonUndefinedGuard<T>,
@@ -253,7 +287,9 @@ export function useResource<T, S, P extends ResourceParams = ResourceParams>(
     // bump (which fires on every push) from forcing a re-render. We still read
     // `q.dataUpdatedAt` below for `pending` — reading a prop does not re-enable
     // it once notifyOnChangeProps is an explicit list.
-    ...(selectActive ? { select, notifyOnChangeProps: ["data", "error"] as const } : {}),
+    ...(selectActive
+      ? { select, notifyOnChangeProps: ["data", "error"] as const }
+      : {}),
   });
 
   // `hasValue` — a real value has landed at least once (`dataUpdatedAt` leaves
@@ -309,7 +345,7 @@ export function useResource<T, S, P extends ResourceParams = ResourceParams>(
           : firstReadyAt === null
             ? performance.now() - start
             : Math.max(0, Math.min(firstReadyAt, performance.now()) - start);
-      reportSlowResource({
+      slowResourceReportSink.emit({
         key,
         params: p,
         durationMs: start === null ? 0 : performance.now() - start,
@@ -325,9 +361,11 @@ export function useResource<T, S, P extends ResourceParams = ResourceParams>(
   // Keyed on `hasValue`, not `pending`: a transient error keeps `pending` true
   // while `q.data` still holds the last authoritative value, and re-selecting
   // `initialData` there would blank the slice.
-  const data = (select !== undefined && !selectActive && hasValue
-    ? select(q.data as T)
-    : q.data) as T | S;
+  const data = (
+    select !== undefined && !selectActive && hasValue
+      ? select(q.data as T)
+      : q.data
+  ) as T | S;
   // Last-known-good for the pending arm: the SELECTED slice (same expression as
   // `data`) once a value has landed, else `undefined` — a first-load failure has
   // no trustworthy value to expose.
@@ -340,8 +378,17 @@ export function useResource<T, S, P extends ResourceParams = ResourceParams>(
   return useMemo(
     (): ResourceResult<T | S> =>
       pending
-        ? { pending: true, error, stale, refetch: () => refetchRef.current().then(() => {}) }
-        : { pending: false, data, refetch: () => refetchRef.current().then(() => {}) },
+        ? {
+            pending: true,
+            error,
+            stale,
+            refetch: () => refetchRef.current().then(() => {}),
+          }
+        : {
+            pending: false,
+            data,
+            refetch: () => refetchRef.current().then(() => {}),
+          },
     [pending, data, error, stale],
   );
 }

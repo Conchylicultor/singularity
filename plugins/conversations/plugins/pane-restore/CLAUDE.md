@@ -7,8 +7,8 @@
 - Description: Saves and restores the pane route per conversation using localStorage.
 - Web:
   - Uses:
-    - `primitives/pane.getRoute`
     - `primitives/pane.PaneOptions`
+    - `primitives/pane.peekRoute`
     - `reports.report`
   - Exports (types): `RouteRestore`
   - Exports (values):

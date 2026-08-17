@@ -16,6 +16,7 @@ import {
 import type { PluginId } from "@plugins/framework/plugins/plugin-id/core";
 import { SurfaceIdContext } from "@plugins/primitives/plugins/surface-id/web";
 import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
+import { defineInstallSink } from "@plugins/primitives/plugins/install-sink/web";
 import {
   fillSegment,
   normalizeRoutePath,
@@ -27,11 +28,11 @@ import {
 import { Pane as PaneSlots } from "./slots";
 import { useRenderSync } from "./use-render-sync";
 import {
-  getHistoryAdapter,
-  setLiveStoreAccessor,
+  historySink,
+  liveStoreAccessorSink,
   type SerializedSlot,
 } from "./history-sink";
-import { useCanNavigateApp, navigateApp } from "./app-nav-sink";
+import { appNavSink, navigateApp } from "./app-nav-sink";
 import type { PaneHeaderZones } from "./components/pane-header-item";
 
 export type {
@@ -708,7 +709,7 @@ function createPaneStore(opts: { live: boolean } = { live: false }): PaneStore {
     // writes `{ route }` verbatim; the shell adapter stamps `{ tabId, appId }`
     // into the entry so back/forward restores the full snapshot. Either way it
     // announces `shell:navigate` (never a synthetic popstate).
-    getHistoryAdapter().commit({
+    historySink.peek().commit({
       url: fullUrl,
       state: { route: serialized },
       mode: replace ? "replace" : "push",
@@ -756,7 +757,7 @@ function createPaneStore(opts: { live: boolean } = { live: false }): PaneStore {
     notifyRouteListeners();
     if (!store.live) return;
     const fullUrl = applyBasePath("/" + rawPath);
-    getHistoryAdapter().commit({
+    historySink.peek().commit({
       url: fullUrl,
       state: { pending: rawPath },
       mode: replace ? "replace" : "push",
@@ -1018,26 +1019,41 @@ function createPaneStore(opts: { live: boolean } = { live: false }): PaneStore {
 }
 
 // The default store mirrors the historical module-global behavior exactly: it
-// is live and is the initial `liveStore` that the imperative free functions
-// and the (single) module-level window listener delegate to. With exactly one
-// store (Phase 1) everything behaves identically to before.
+// is live and is what the live-store sink holds until a tab manager installs a
+// focused tab's store, so the imperative free functions and the (single)
+// module-level window listener delegate to it. With exactly one store (Phase 1)
+// everything behaves identically to before.
 const defaultStore = createPaneStore({ live: true });
 
-// The focused store the imperative (non-hook) navigation API targets, AND the
-// store the single module-level window listener forwards browser back/forward
-// to. Phase 2's tab manager re-points this on focus switch via `setLiveStore`.
-let liveStore: PaneStore = defaultStore;
+/**
+ * The focused store the imperative (non-hook) navigation API targets, AND the
+ * store the single module-level window listener forwards browser back/forward
+ * to. Filled with `defaultStore`, which is the whole standalone behavior, so
+ * every reader has a store to talk to before any tab manager exists; the tab
+ * manager re-points it on focus switch via {@link setLiveStore}.
+ */
+const liveStoreSink = defineInstallSink<PaneStore>({
+  name: "pane.live-store",
+  fallback: defaultStore,
+  what: "the focused tab's pane store (re-pointed by apps-core/tabs on focus switch)",
+});
 
 /**
  * Re-point the live store — the target of every imperative (non-hook)
- * navigation call (`openPane`, `getRoute`, `restoreRoute`, …) and of the
+ * navigation call (`openPane`, `peekRoute`, `restoreRoute`, …) and of the
  * module-level `popstate`/`shell:navigate` window listener. Phase 2's tab
  * manager calls this when the focused tab changes, after flipping the old
  * store's `live` off and the new store's `live` on; browser back/forward then
  * drives the focused tab's store.
+ *
+ * The install disposer is deliberately dropped. This is a RE-POINT, not a
+ * scoped installation: the caller says "the focused tab is now this one", and
+ * nothing about that is meant to be undone later — the next focus switch
+ * overwrites it. Restoring the previously-focused tab's store on some teardown
+ * would point the URL writer at a tab the user has already left.
  */
 export function setLiveStore(store: PaneStore): void {
-  liveStore = store;
+  liveStoreSink.install(store);
 }
 
 // Exactly ONE module-level window listener for the whole app, and it listens to
@@ -1049,11 +1065,13 @@ export function setLiveStore(store: PaneStore): void {
 // contract that replaces the old synthetic-popstate / `routesEqual`-bail dance.
 // The tab provider must NOT add a second `popstate` listener.
 if (typeof window !== "undefined") {
-  // Inject the live-store accessor so the default adapter's `restore()` can
-  // reach the focused store without importing this module back (see history-sink).
-  setLiveStoreAccessor(() => liveStore);
+  // Install the live-store accessor so the default adapter's `restore()` can
+  // reach the focused store without importing this module back (see
+  // history-sink). Installed at module load, never torn down, so the disposer
+  // has nothing to restore to.
+  liveStoreAccessorSink.install(() => liveStoreSink.peek());
   window.addEventListener("popstate", () => {
-    getHistoryAdapter().restore();
+    historySink.peek().restore();
   });
 }
 
@@ -1102,7 +1120,7 @@ export function usePaneStore(): PaneStore {
  * path on behalf of the focused tab. They perform a global imperative op on
  * whichever store currently owns the URL — the surface store when there is one,
  * otherwise the LIVE (focused-tab) store, mirroring the free `setBasePath()` /
- * `getRoute()` functions they sit beside.
+ * `peekRoute()` functions they sit beside.
  *
  * Deliberately NOT the public `usePaneStore()`: this is a non-reactive
  * imperative read, so a component that needs to re-render on route changes must
@@ -1110,7 +1128,8 @@ export function usePaneStore(): PaneStore {
  * orphan whose silent commits caused global chrome to write dead URLs.
  */
 function useStoreOrLive(): PaneStore {
-  return useContext(PaneStoreContext) ?? liveStore;
+  // eslint-disable-next-line install-sink/no-render-phase-peek -- deliberately a sample, not a subscription (see above): the sink is re-pointed by TabsProvider's one-shot wiring DURING its own render, so subscribing here would notify an already-mounted subscriber mid-render. The callers do a global imperative op and re-render for their own reasons; anything that must re-render on route changes belongs inside a surface.
+  return useContext(PaneStoreContext) ?? liveStoreSink.peek();
 }
 
 // ---------------------------------------------------------------------------
@@ -1235,12 +1254,19 @@ function SurfaceMatchProvider({
 // library/story/conversation-list) untouched.
 // ---------------------------------------------------------------------------
 
-export function getRoute(): PaneSlot[] {
-  return liveStore.getRoute();
+/**
+ * The focused tab's route, sampled now. Named `peek…` because it is exactly
+ * that — a one-shot read of the live-store slot AND of the route in it, correct
+ * from an event handler or effect and wrong during render, where the answer
+ * would be frozen. A render path reads `useRoute()` instead. The name is what
+ * makes every call site visible to `install-sink/no-render-phase-peek`.
+ */
+export function peekRoute(): PaneSlot[] {
+  return liveStoreSink.peek().getRoute();
 }
 
 export function reorderRoute(fromIndex: number, toIndex: number): void {
-  liveStore.reorderRoute(fromIndex, toIndex);
+  liveStoreSink.peek().reorderRoute(fromIndex, toIndex);
 }
 
 export function restoreRoute(
@@ -1250,7 +1276,7 @@ export function restoreRoute(
     options?: PaneOptions;
   }>,
 ): void {
-  liveStore.restoreRoute(slots);
+  liveStoreSink.peek().restoreRoute(slots);
 }
 
 /**
@@ -1261,15 +1287,16 @@ export function restoreRoute(
  * empty route then re-resolves to the index pane via `useIndexMatch`.
  */
 export function clearRoute(): void {
-  liveStore.clearRoute();
+  liveStoreSink.peek().clearRoute();
 }
 
 export function setBasePath(basePath: string): void {
-  liveStore.setBasePath(basePath);
+  liveStoreSink.peek().setBasePath(basePath);
 }
 
-export function getBasePath(): string {
-  return liveStore.getBasePath();
+/** The live store's base path, sampled now — same one-shot contract as {@link peekRoute}. */
+export function peekBasePath(): string {
+  return liveStoreSink.peek().getBasePath();
 }
 
 function useRouteSlots(): PaneSlot[] {
@@ -1395,7 +1422,7 @@ export function useCurrentPane(): PaneInternal | null {
 
 export const PaneBasePathContext = createContext<string>("");
 
-// `setBasePath` / `getBasePath` are the imperative delegations to the live
+// `setBasePath` / `peekBasePath` are the imperative delegations to the live
 // store (declared above near the other imperative free functions). The per-
 // store base path now lives inside each `PaneStore`; only these helpers stay
 // module-level because they are pure (no per-store state) and shared.
@@ -1640,15 +1667,15 @@ function makePaneObject(
   // tab's route), matching the historical module-global behavior for external
   // imperative callers (e.g. `conversationPane.close(instanceId)`).
   function close(instanceId: number): void {
-    liveStore.close(internal, instanceId);
+    liveStoreSink.peek().close(internal, instanceId);
   }
 
   function unwrap(instanceId: number): void {
-    liveStore.unwrap(instanceId);
+    liveStoreSink.peek().unwrap(instanceId);
   }
 
   function promote(instanceId: number): void {
-    liveStore.promote(internal, instanceId);
+    liveStoreSink.peek().promote(internal, instanceId);
   }
 
   function back(): void {
@@ -1695,10 +1722,12 @@ function makePaneObject(
     const instanceId = useContext(PaneInstanceContext);
     const slots = useRouteSlots();
     const surfaceAppId = useSurfaceAppId();
-    // Subscribed, not read imperatively: the navigator is installed in an
-    // effect, so a pane that mounted in the same commit as the tab provider
-    // would otherwise cache "nowhere to go" for its whole life.
-    const canNavigate = useCanNavigateApp();
+    // Subscribed, not sampled: the navigator is installed in an effect, so a
+    // pane that mounted in the same commit as the tab provider would otherwise
+    // cache "nowhere to go" for its whole life (the memo below has the sink in
+    // no dependency array). `useInstalled()` is the only presence answer the
+    // sink offers a render path, for exactly this reason.
+    const canNavigate = appNavSink.useInstalled();
     return useMemo(() => {
       if (instanceId === undefined) return null;
       const idx = slots.findIndex((s) => s.instanceId === instanceId);
@@ -2266,12 +2295,14 @@ export function openPane<
   params: NoInfer<Params>,
   opts: { mode: "root"; options?: Partial<Options>; hint?: HintT },
 ): void {
-  liveStore.openPaneImpl(target._internal, params as Record<string, string>, {
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- overload narrows mode to "root" but the check keeps this future-proof for additional modes
-    root: opts.mode === "root",
-    options: opts.options as PaneOptions | undefined,
-    hint: opts.hint as PaneHintBag | undefined,
-  });
+  liveStoreSink
+    .peek()
+    .openPaneImpl(target._internal, params as Record<string, string>, {
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- overload narrows mode to "root" but the check keeps this future-proof for additional modes
+      root: opts.mode === "root",
+      options: opts.options as PaneOptions | undefined,
+      hint: opts.hint as PaneHintBag | undefined,
+    });
 }
 
 // ---------------------------------------------------------------------------

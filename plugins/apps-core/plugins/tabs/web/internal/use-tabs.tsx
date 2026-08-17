@@ -16,8 +16,7 @@ import {
   parseUrl,
   setLiveStore,
   setHistoryAdapter,
-  defaultHistoryAdapter,
-  setAppNavigator,
+  appNavSink,
   type ParsedRoute,
   type PaneSlot,
   type PaneStore,
@@ -37,7 +36,7 @@ import {
   serializePaneState,
 } from "./shell-history-adapter";
 import {
-  getDefaultPlacement,
+  peekDefaultPlacement,
   usePlacementCapabilities,
 } from "./placement-registry";
 import {
@@ -375,11 +374,14 @@ export function bootTabs(
   }
   focused.store.live = true;
 
-  // Restore the persisted surface mode, or fall back to the registry default
-  // (which is "" until `surface` registers). The provider resolves this raw
-  // value against the registry on every render (see the `mode` derivation in
-  // TabsProvider), so a pre-registration "" seed never leaks to consumers.
-  const mode = persisted?.mode ?? getDefaultPlacement();
+  // Restore the persisted surface mode, or seed "" — deliberately NOT the
+  // registry default. `bootTabs` runs inside a `useState` initializer, i.e.
+  // during render, where sampling the placement registry would read whatever
+  // happened to be installed at that instant and freeze it. It never needed to:
+  // `TabsProvider` re-derives the mode against `usePlacementCapabilities()` on
+  // every render, and "" is not a registered id, so it resolves to the default
+  // the moment the registry populates — reactively, which the sample was not.
+  const mode = persisted?.mode ?? "";
 
   return { tabs, focusedTabId: focused.tabId, mode };
 }
@@ -782,10 +784,13 @@ export function TabsProvider({ children }: { children: ReactNode }): ReactNode {
   // directly. Same seam shape as `setHistoryAdapter` above.
   useEffect(() => {
     setTabsNavigator(navigate);
-    setAppNavigator(navigate);
+    // The sink's disposer restores the PREVIOUS occupant rather than clearing,
+    // and is inert once superseded — so a StrictMode double-mount (install,
+    // re-install, dispose the first) cannot empty a slot that was just filled.
+    const uninstallAppNav = appNavSink.install(navigate);
     return () => {
       setTabsNavigator(null);
-      setAppNavigator(null);
+      uninstallAppNav();
     };
   }, [navigate]);
 
@@ -880,7 +885,7 @@ export function TabsProvider({ children }: { children: ReactNode }): ReactNode {
   // current (defensive: never leave the surface stuck in solo).
   const exitToPreviousMode = useCallback(() => {
     const prev = previousModeRef.current;
-    setMode(prev && prev !== modeRef.current ? prev : getDefaultPlacement());
+    setMode(prev && prev !== modeRef.current ? prev : peekDefaultPlacement());
   }, [setMode]);
 
   // Install the shell (app-aware) history adapter so the pane store's push/
@@ -894,8 +899,9 @@ export function TabsProvider({ children }: { children: ReactNode }): ReactNode {
   // Replace-stamp the initial composite so `history.state` carries the focused
   // tab's identity from the very FIRST entry — back/forward works immediately,
   // and survives reload (tabIds are sessionStorage-stable, so a stamp written
-  // before a reload still matches after it). Teardown restores the default
-  // (standalone) adapter. The dep callbacks are stable, so this runs once.
+  // before a reload still matches after it). Teardown is the sink's own
+  // disposer, which puts the previous occupant — the standalone default
+  // adapter — back. The dep callbacks are stable, so this runs once.
   useEffect(() => {
     const adapter = makeShellHistoryAdapter({
       focused: () => {
@@ -914,7 +920,7 @@ export function TabsProvider({ children }: { children: ReactNode }): ReactNode {
       setFocusedApp,
       persist,
     });
-    setHistoryAdapter(adapter);
+    const uninstallAdapter = setHistoryAdapter(adapter);
     const focused = tabsRef.current.find((t) => t.tabId === focusedRef.current);
     if (focused) {
       // `currentRoutePath()`, never the raw pathname: this replace-stamp is the
@@ -928,7 +934,7 @@ export function TabsProvider({ children }: { children: ReactNode }): ReactNode {
         mode: "replace",
       });
     }
-    return () => setHistoryAdapter(defaultHistoryAdapter);
+    return uninstallAdapter;
   }, [refocusForRestore, rebuildTabApp, persist]);
 
   const api = useMemo<TabsApi>(
@@ -969,7 +975,7 @@ export function TabsProvider({ children }: { children: ReactNode }): ReactNode {
   // drive it. Mirrors the `setTabsNavigator` handle above.
   useEffect(() => {
     publishSurfaceMode(mode, setMode, exitToPreviousMode);
-    return () => publishSurfaceMode(getDefaultPlacement(), null, null);
+    return () => publishSurfaceMode(peekDefaultPlacement(), null, null);
   }, [mode, setMode, exitToPreviousMode]);
 
   return <TabsContext.Provider value={api}>{children}</TabsContext.Provider>;

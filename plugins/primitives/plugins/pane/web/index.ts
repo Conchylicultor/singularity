@@ -9,7 +9,7 @@ export {
   PaneInstanceContext,
   PaneBasePathContext,
   setBasePath,
-  getBasePath,
+  peekBasePath,
   stripBasePath,
   currentRoutePath,
   useRoute,
@@ -22,7 +22,7 @@ export {
   usePaneRoute,
   parseUrl,
   buildRouteUrl,
-  getRoute,
+  peekRoute,
   reorderRoute,
   restoreRoute,
   clearRoute,
@@ -63,7 +63,7 @@ export type {
   PaneToolbarItem,
 } from "./pane";
 export { setHistoryAdapter, defaultHistoryAdapter } from "./history-sink";
-export { setAppNavigator, type AppNavigator } from "./app-nav-sink";
+export { appNavSink, type AppNavigator } from "./app-nav-sink";
 export type {
   HistoryAdapter,
   LocationChange,

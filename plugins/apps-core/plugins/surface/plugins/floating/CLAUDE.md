@@ -160,6 +160,7 @@ last desktop creates a new one; moving before the first clamps).
     - `primitives/hover-reveal.hoverRevealClass`
     - `primitives/hover-reveal.useHoverReveal`
     - `primitives/icon-button.IconButton`
+    - `primitives/install-sink.defineInstallSink`
     - `primitives/latest-ref.useLatestRef`
     - `primitives/shortcuts.defineShortcut`
     - `primitives/shortcuts.formatShortcutLabel`

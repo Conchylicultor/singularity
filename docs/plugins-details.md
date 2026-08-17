@@ -5942,6 +5942,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/hover-reveal.hoverRevealClass`
               - `primitives/hover-reveal.useHoverReveal`
               - `primitives/icon-button.IconButton`
+              - `primitives/install-sink.defineInstallSink`
               - `primitives/latest-ref.useLatestRef`
               - `primitives/shortcuts.defineShortcut`
               - `primitives/shortcuts.formatShortcutLabel`
@@ -6095,6 +6096,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps-core.Apps`
           - `apps-core/app-icon.appIconComponent`
           - `apps-core/tabs.placementIsNewTabFollows`
+          - `apps-core/tabs.usePlacementCapabilities`
           - `apps-core/tabs.useTabs`
           - `apps-core/theme-scope.useChromeThemeScope`
           - `primitives/action-presentation.useActionForm`
@@ -6155,12 +6157,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/app-instance.mayAdoptLegacyPayload`
           - `primitives/app-instance.readAppInstance`
           - `primitives/app-instance.stampAppInstance`
+          - `primitives/install-sink.defineInstallSink`
           - `primitives/latest-ref.useLatestRef`
           - `primitives/link-gesture.linkGestureProps`
           - `primitives/link-gesture.LinkGestureProps`
+          - `primitives/pane.appNavSink`
           - `primitives/pane.createPaneStore`
           - `primitives/pane.currentRoutePath`
-          - `primitives/pane.defaultHistoryAdapter`
           - `primitives/pane.HistoryAdapter`
           - `primitives/pane.LocationChange`
           - `primitives/pane.PaneHistoryState`
@@ -6171,7 +6174,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/pane.parseUrl`
           - `primitives/pane.RouteState`
           - `primitives/pane.SerializedSlot`
-          - `primitives/pane.setAppNavigator`
           - `primitives/pane.setHistoryAdapter`
           - `primitives/pane.setLiveStore`
           - `primitives/pane.stripBasePath`
@@ -6186,16 +6188,17 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `appLinkProps`
           - `appPathFor`
           - `exitToPreviousMode`
-          - `getDefaultPlacement`
           - `getSurfaceMode`
           - `loadScopePrefixFor`
           - `navigate`
+          - `peekDefaultPlacement`
           - `placementHasAppThemeScope`
           - `placementIsNewTabFollows`
           - `registerPlacementCapabilities`
           - `setSurfaceMode`
           - `TabsProvider`
           - `useDefaultPlacement`
+          - `usePlacementCapabilities`
           - `useSurfaceMode`
           - `useTabs`
       - Cross-plugin:
@@ -6228,6 +6231,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses:
           - `apps-core.useActiveApp`
           - `apps-core/tabs.placementHasAppThemeScope`
+          - `apps-core/tabs.usePlacementCapabilities`
           - `apps-core/tabs.useSurfaceMode`
           - `primitives/css/ui-kit.appThemeScope`
         - Exports (values):
@@ -10421,8 +10425,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`pane-restore`** — Saves and restores the pane route per conversation using localStorage.
       - Web:
         - Uses:
-          - `primitives/pane.getRoute`
           - `primitives/pane.PaneOptions`
+          - `primitives/pane.peekRoute`
           - `reports.report`
         - Exports (types): `RouteRestore`
         - Exports (values):
@@ -12300,7 +12304,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/css/inline.Inline`
           - `primitives/css/link-chip.LinkChip`
           - `primitives/latest-ref.useLatestRef`
-          - `primitives/live-state.registerSlowResourceReporter`
+          - `primitives/live-state.slowResourceReportSink`
           - `primitives/pane.currentRoutePath`
           - `primitives/perfs/boot-trace.getBootTrace`
           - `reports.Reports`
@@ -23897,6 +23901,19 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conversations/conversation-view/jsonl-viewer/user-text`
           - `conversations/conversation-view/markdown-extensions`
           - `tasks/task-description`
+    - **`install-sink`** — Installed-sink primitive: defineInstallSink declares the module-level slot a higher layer installs an implementation into and a lower layer calls (the navigator, the history adapter, the overlay fallback). Presence is answerable from render ONLY through the subscribed useInstalled(), so a late install re-renders whoever asked early; the imperative sample is named peek… so install-sink/no-render-phase-peek can keep it out of render.
+      - Cross-plugin:
+        - Imported by:
+          - `apps-core/surface/floating`
+          - `apps-core/tabs`
+          - `primitives/overlay-boundary`
+          - `primitives/pane`
+      - Web:
+        - Exports (types):
+          - `FilledInstallSink`
+          - `InstallSink`
+          - `InstallSinkOptions`
+        - Exports (values): `defineInstallSink`
     - **`keyset`** — Field-agnostic keyset (cursor) pagination machinery. Null-aware keyset seek/order-by compiler over drizzle SQL (server) paired with the browser-safe cursor codec + sort signature (core). No data-view dependency, so any server-delegated windowed query can reuse it.
       - Cross-plugin:
         - Imported by:
@@ -24119,11 +24136,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `NotificationsProvider`
           - `pointResourceDescriptor`
           - `queryKeyFor`
-          - `registerSlowResourceReporter`
           - `resourceDescriptor`
           - `resourceDescriptorByKey`
           - `ResourceStaleReadError`
           - `ResourceView`
+          - `slowResourceReportSink`
           - `subscribeResourceTxAcks`
           - `useCombinedResources`
           - `useNotificationsChannelStatuses`
@@ -24704,15 +24721,16 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `conversations/conversation-view/jsonl-viewer/transcript-stats`
               - `primitives/outline/rail`
     - **`overlay-boundary`** — React-only leaf error boundary for transient overlay content (popover/dialog/dropdown/select/tooltip/floating): OverlayBoundary catches a crash inside overlay content and renders a fallback injected via registerOverlayFallback, so the crash stays contained to the overlay instead of taking down the launching chrome. Sits below ui-kit so it can be wrapped around every *Content without closing the ui-kit → error-boundary cycle.
-      - Cross-plugin:
-        - Imported by:
-          - `primitives/css/ui-kit`
-          - `primitives/error-boundary`
       - Web:
+        - Uses: `primitives/install-sink.defineInstallSink`
         - Exports (types): `OverlayFallbackProps`
         - Exports (values):
           - `OverlayBoundary`
           - `registerOverlayFallback`
+      - Cross-plugin:
+        - Imported by:
+          - `primitives/css/ui-kit`
+          - `primitives/error-boundary`
     - **`overscroll-hint`** — Wasted-scroll hint: a single invisible global controller (mounted via Core.Root) that plays a small native-feeling rubber-band bounce on a surface when a wheel/trackpad/touch gesture scrolls nothing (not scrollable, or already at the edge). Detects 'wasted' gestures by checking whether a real scroll event fired within one animation frame of the gesture.
       - Web:
         - Contributes: `Core.Root` → `OverscrollHintController`
@@ -24735,6 +24753,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/css/ui-kit.ControlSize`
           - `primitives/css/ui-kit.SingleLineProvider`
           - `primitives/icon-button.IconButton`
+          - `primitives/install-sink.defineInstallSink`
           - `primitives/latest-ref.useLatestRef`
           - `primitives/link-gesture.linkGestureProps`
           - `primitives/loading.Loading`
@@ -24773,14 +24792,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `SurfaceChrome`
           - `TypeMarker`
         - Exports (values):
+          - `appNavSink`
           - `buildRouteUrl`
           - `clearRoute`
           - `createPaneStore`
           - `currentRoutePath`
           - `defaultHistoryAdapter`
           - `defaultStore`
-          - `getBasePath`
-          - `getRoute`
           - `openPane`
           - `Pane`
           - `PaneActionsSlot`
@@ -24798,9 +24816,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `PaneSurfaceAppContext`
           - `PaneSurfaceProvider`
           - `parseUrl`
+          - `peekBasePath`
+          - `peekRoute`
           - `reorderRoute`
           - `restoreRoute`
-          - `setAppNavigator`
           - `setBasePath`
           - `setHistoryAdapter`
           - `setLiveStore`

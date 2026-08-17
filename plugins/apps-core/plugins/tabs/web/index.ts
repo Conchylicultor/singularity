@@ -20,8 +20,9 @@ export {
 export { loadScopePrefixFor } from "./internal/load-scope";
 export {
   registerPlacementCapabilities,
-  getDefaultPlacement,
+  peekDefaultPlacement,
   useDefaultPlacement,
+  usePlacementCapabilities,
   placementIsNewTabFollows,
   placementHasAppThemeScope,
   type PlacementCapabilities,
