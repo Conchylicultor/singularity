@@ -1,9 +1,8 @@
-import { mkdir } from "node:fs/promises";
 import {
   createFileWatcher,
   type FileWatcher,
 } from "@plugins/infra/plugins/file-watcher/server";
-import { PROTOTYPES_DIR } from "./paths";
+import { prototypesDir } from "../../data-dirs";
 import { seedTemplate } from "./seed";
 import {
   prototypesResource,
@@ -45,11 +44,11 @@ export async function startPrototypesWatcher(): Promise<void> {
   // authored separately (and lives outside any checkout), so ensure it exists
   // before subscribing. Seeding the template needs the dir too, and needs to
   // land before the first list so the blank page is there to copy.
-  await mkdir(PROTOTYPES_DIR, { recursive: true });
+  prototypesDir.ensure();
   await seedTemplate();
 
   watcher = await createFileWatcher({
-    dirs: [PROTOTYPES_DIR],
+    dirs: [prototypesDir.path],
     // Everything a self-contained prototype can ship. No `.jsx`: JSX lives
     // inline in index.html, because Babel fetches an external `src` with XHR
     // and Chrome blocks that over file:// (the `prototypes:self-contained`

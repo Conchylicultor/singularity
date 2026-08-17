@@ -22,12 +22,19 @@
  * into a full check — best-effort, never wrong.
  */
 import { createRequire } from "node:module";
-import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, renameSync, rmSync, statSync } from "node:fs";
+import {
+  copyFileSync,
+  existsSync,
+  mkdirSync,
+  readdirSync,
+  readFileSync,
+  renameSync,
+  rmSync,
+  statSync,
+} from "node:fs";
 import { dirname, join } from "node:path";
-import { SINGULARITY_DIR } from "@plugins/infra/plugins/paths/core";
+import { tsBuildInfoPoolDir } from "../data-dirs";
 import { tsBuildInfoPath } from "./discover";
-
-const POOL_DIR = join(SINGULARITY_DIR, "tsbuildinfo");
 
 // Keep a few recent bases per (tsVersion, target) so a publish racing a read
 // never leaves the pool empty, and age out the rest. ~21 MB steady state.
@@ -51,13 +58,15 @@ function tsVersion(): string {
   // materialize+publish), and the resolved compiler cannot change mid-process.
   if (cachedTsVersion === null) {
     const pj = require.resolve("typescript/package.json");
-    cachedTsVersion = (JSON.parse(readFileSync(pj, "utf8")) as { version: string }).version;
+    cachedTsVersion = (
+      JSON.parse(readFileSync(pj, "utf8")) as { version: string }
+    ).version;
   }
   return cachedTsVersion;
 }
 
 function poolDirFor(targetName: string): string {
-  return join(POOL_DIR, tsVersion(), targetName);
+  return tsBuildInfoPoolDir.file(tsVersion(), targetName);
 }
 
 /** Pool entries newest-first. Ids are monotonic, so name order IS recency. */

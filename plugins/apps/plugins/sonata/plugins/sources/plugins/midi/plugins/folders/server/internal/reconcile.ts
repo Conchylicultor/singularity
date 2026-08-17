@@ -1,7 +1,6 @@
 import { realpathSync } from "node:fs";
-import { extname, join, sep } from "node:path";
+import { extname, sep } from "node:path";
 import { getConfig } from "@plugins/config_v2/server";
-import { SINGULARITY_DIR } from "@plugins/infra/plugins/paths/core";
 import {
   defineCorpusIndex,
   type CorpusDelta,
@@ -11,6 +10,7 @@ import {
   setSourceMissing,
   listFolderImportedSongs,
 } from "@plugins/apps/plugins/sonata/plugins/sources/plugins/midi/server";
+import { sonataDir } from "../../data-dirs";
 import { midiFoldersConfig } from "../../shared/config";
 import { importMidiFileJob } from "./import-job";
 
@@ -56,16 +56,16 @@ export function watchedDirsSync(): string[] {
 // re-imported (a drift hole the old boot reconcile could never close).
 //
 // `scope: "host"` is deliberate: the corpus is a host-global user folder, so ONE
-// shared index lives under ~/.singularity and only main PERSISTS it. A
-// per-worktree index would make every freshly-forked worktree start with an empty
-// index, see every file as "changed", and enqueue an import job per MIDI file.
-// The DB is still per-worktree, so `reconcile()` runs on every backend, reading
-// the shared index and computing its own delta in memory.
+// shared index lives in the `apps/sonata` data dir this plugin declares, and only
+// main PERSISTS it. A per-worktree index would make every freshly-forked worktree
+// start with an empty index, see every file as "changed", and enqueue an import
+// job per MIDI file. The DB is still per-worktree, so `reconcile()` runs on every
+// backend, reading the shared index and computing its own delta in memory.
 const midiIndex = defineCorpusIndex({
   name: "sonata.midi-folders",
   roots: watchedDirsSync,
   match: (p) => MIDI_EXTENSIONS.has(extname(p).toLowerCase()),
-  indexPath: join(SINGULARITY_DIR, "sonata", "midi-folders-index.json"),
+  indexPath: sonataDir.file("midi-folders-index.json"),
   scope: "host",
   version: 1,
 });

@@ -18,6 +18,7 @@
     "../../../../**/plugins/*/core",
     "../../../../**/plugins/*/shared",
     "../../../../**/plugins/*/check",
+    "../../../../**/plugins/*/data-dirs",
     "../../../../**/plugins/*/facet",
     "../../../../**/plugins/*/composition",
     "../../../../**/plugins/*/prewarm"

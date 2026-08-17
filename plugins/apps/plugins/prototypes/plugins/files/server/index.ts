@@ -20,11 +20,13 @@ import {
 } from "./internal/watcher";
 
 // What this plugin knows about the prototypes tree that a sibling cannot
-// re-derive without duplicating it: what is in it, and when it changed.
-// `onPrototypesChanged` in particular is what keeps a second file watcher off
-// the same directory. Where the tree IS belongs to `infra/paths`, so consumers
-// take PROTOTYPES_DIR from there — surfacing it here too would be a re-export
-// of another plugin's symbol.
+// re-derive without duplicating it: where it IS, what is in it, and when it
+// changed. `onPrototypesChanged` in particular is what keeps a second file
+// watcher off the same directory. `prototypesDir` is this plugin's OWN data-dir
+// declaration (`data-dirs/`) — a data dir is declared exactly once, by the plugin
+// that creates, seeds, serves and watches the tree — so surfacing it here is
+// exporting a symbol from its home, not proxying another plugin's.
+export { prototypesDir } from "../data-dirs";
 export { listPrototypeMetas } from "./internal/list";
 export { onPrototypesChanged } from "./internal/watcher";
 

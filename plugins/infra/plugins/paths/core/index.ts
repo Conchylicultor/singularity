@@ -31,6 +31,23 @@ export {
 } from "./internal/paths";
 export type { ReleaseIdentity } from "./internal/paths";
 
+// The declared-directory registry for the data root. `SINGULARITY_DIR` above is
+// still exported for the call sites not yet migrated; it is removed once every
+// owner declares its directories, leaving `dataRoot()` as the only way to name
+// the root and `defineDataDir` as the only way to name anything under it.
+export {
+  DATA_DIR_KINDS,
+  dataRoot,
+  defineDataDir,
+  getDataDirs,
+} from "./internal/data-dir";
+export type {
+  DataDir,
+  DataDirKind,
+  DataDirSpec,
+  ReclaimPolicy,
+} from "./internal/data-dir";
+
 // The check transcript is written by the check runner, which is a `core`-runtime
 // module — so its prune has to be reachable from `core`. The build/release prunes
 // stay `server`-only exports because every one of their writers is server-side;

@@ -1,10 +1,10 @@
-import { join } from "node:path";
-import { SINGULARITY_DIR } from "@plugins/infra/plugins/paths/core";
+import { zeroReplicaDir } from "../../data-dirs";
 
 // zero-cache's local SQLite replica of the upstream Postgres DB. zero-cache
-// owns this file; it is rebuilt by an initial COPY on first start.
-export const ZERO_DIR = join(SINGULARITY_DIR, "zero");
-export const ZERO_REPLICA_FILE = join(ZERO_DIR, "replica.db");
+// owns this file; it is rebuilt by an initial COPY on first start. The directory
+// is declared in this plugin's `data-dirs/index.ts`.
+export const ZERO_DIR = zeroReplicaDir.path;
+export const ZERO_REPLICA_FILE = zeroReplicaDir.file("replica.db");
 
 // Upstream DSN zero-cache replicates from. Direct loopback TCP to the embedded
 // cluster (port 5433) — NOT PgBouncer (6432: transaction-mode pooling breaks

@@ -45,6 +45,7 @@ import {
 // `zeroCache` block. The same predicate gates the cache-service install-time
 // provision, so the fence stays consistent across runtime and build time.
 import { zeroCacheEnabled } from "@plugins/database/plugins/zero/core";
+import { gatewayLogs } from "../../data-dirs";
 import { listenFlag } from "./listen";
 
 // Progress sink. The launcher runs in a CLI process whose human-facing output
@@ -57,16 +58,15 @@ const noop: LogFn = () => {};
 // All data paths derive from the (possibly overridden) SINGULARITY_DIR, so a
 // release launched with SINGULARITY_DIR=<releaseRoot> isolates its entire install
 // — pid file, logs, the PG cluster, the registry — under that root.
-const LOGS_DIR = join(SINGULARITY_DIR, "logs");
-// The gateway owns the rotating per-channel logs under LOGS_DIR (gateway.log,
+// The gateway owns the rotating per-channel logs under its log dir (gateway.log,
 // <worktree>.log). This file only captures the daemon's raw stdout/stderr — Go
 // panics and any crash before slog is wired up. Truncated on each start so it
 // can't grow unbounded; the last crash survives until the next launch.
-const GATEWAY_STDIO_LOG = join(LOGS_DIR, "gateway-stdio.log");
+const GATEWAY_STDIO_LOG = gatewayLogs.file("gateway-stdio.log");
 // The gateway's own rotating slog sink. Only ever read as a FALLBACK when the
 // stdio log has nothing (see gatewayLogTail): it carries prior sessions too, so
 // its tail may describe a boot that is not this one.
-const GATEWAY_SLOG_LOG = join(LOGS_DIR, "gateway.log");
+const GATEWAY_SLOG_LOG = gatewayLogs.file("gateway.log");
 
 /**
  * Host preconditions the whole stack depends on, asserted before anything is
@@ -241,7 +241,10 @@ export function zeroCacheSpec(opts: {
   };
 }
 
-export function ensureDatabaseConfig(repoRoot: string, log: LogFn = noop): void {
+export function ensureDatabaseConfig(
+  repoRoot: string,
+  log: LogFn = noop,
+): void {
   // Upgrade existing config: add pgbouncer service if packages are now installed.
   if (existsSync(DATABASE_CONFIG_PATH)) {
     try {
@@ -454,7 +457,7 @@ export function spawnGatewayDaemon(opts: {
    */
   defaultNamespace?: string;
 }): Bun.Subprocess {
-  mkdirSync(LOGS_DIR, { recursive: true });
+  const logsDir = gatewayLogs.ensure();
   // Truncate ("w"): only holds raw stdout/stderr until slog takes over, plus
   // any panic. The gateway writes its own rotating logs under -log-dir.
   const logFd = openSync(GATEWAY_STDIO_LOG, "w");
@@ -467,7 +470,7 @@ export function spawnGatewayDaemon(opts: {
       "-log-level",
       opts.logLevel,
       "-log-dir",
-      LOGS_DIR,
+      logsDir,
       ...(opts.defaultNamespace
         ? ["-default-namespace", opts.defaultNamespace]
         : []),
@@ -600,7 +603,7 @@ export async function awaitPgReady(
       try {
         await getAdminPool().query("SELECT 1");
         return true;
-      // eslint-disable-next-line promise-safety/no-absorbed-failure -- retryUntil probe: null signals "not ready yet, retry" (lastErr captured for the deadline); a genuine failure surfaces when the retry deadline elapses
+        // eslint-disable-next-line promise-safety/no-absorbed-failure -- retryUntil probe: null signals "not ready yet, retry" (lastErr captured for the deadline); a genuine failure surfaces when the retry deadline elapses
       } catch (err) {
         lastErr = err;
         return null;
@@ -652,7 +655,7 @@ async function awaitAppReady(name: string, port: number): Promise<void> {
         if (resp.ok) return true;
         lastErr = new Error(`health/ready returned ${resp.status}`);
         return null;
-      // eslint-disable-next-line promise-safety/no-absorbed-failure -- retryUntil probe: null signals "not ready yet, retry" (lastErr captured for the deadline); a genuine failure surfaces when the retry deadline elapses
+        // eslint-disable-next-line promise-safety/no-absorbed-failure -- retryUntil probe: null signals "not ready yet, retry" (lastErr captured for the deadline); a genuine failure surfaces when the retry deadline elapses
       } catch (err) {
         lastErr = err;
         return null;

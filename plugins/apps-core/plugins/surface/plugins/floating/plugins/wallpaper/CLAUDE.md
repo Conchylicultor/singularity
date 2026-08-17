@@ -43,7 +43,6 @@
     - `config_v2.ConfigV2`
     - `infra/endpoints.HttpError`
     - `infra/endpoints.implement`
-    - `infra/paths.SINGULARITY_DIR`
     - `infra/safe-fetch.parsePublicUrl`
     - `infra/safe-fetch.safeFetch`
     - `infra/safe-fetch.SsrfError`

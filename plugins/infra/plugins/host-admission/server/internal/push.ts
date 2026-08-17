@@ -1,17 +1,24 @@
-import { join } from "node:path";
-import { SINGULARITY_DIR } from "@plugins/infra/plugins/paths/server";
 import { defineHostPool } from "./pool";
 
 // The global push mutex, folded onto the host-pool primitive. `size 1` ⇒ at most
 // one push runs host-wide; `cost.cpu 0` because a push waits on git/network, not
 // CPU (it takes a CPU grant separately, for its nested checks). Its single slot
-// file — `~/.singularity/push-slots/slot-0.lock` — is the SAME file
-// `worktree-op.ts`'s `PUSH_LOCK_PATH` probes, so the op-status derivation reads
-// the authoritative kernel flock the CLI holds. Keep the two paths identical.
-export const pushPool = defineHostPool({ id: "push", size: 1, cost: { cpu: 0 } });
+// file is the SAME file `worktree-op.ts`'s push probe reads, so the op-status
+// derivation reads the authoritative kernel flock the CLI holds.
+export const pushPool = defineHostPool({
+  id: "push",
+  size: 1,
+  cost: { cpu: 0 },
+});
 
 /**
- * The push pool's single slot file. Exported so the worktree op-status probe and
- * this pool can be asserted to target the identical path.
+ * The push pool's single slot file.
+ *
+ * A FUNCTION, and read off the pool's own declared directory rather than
+ * rebuilt: that is what makes "this path equals the pool's slot-0" true by
+ * construction instead of by a comment asking two files to stay in sync. It also
+ * keeps the path resolved on each read, since the data root is env-overridable.
  */
-export const PUSH_SLOT_PATH = join(SINGULARITY_DIR, "push-slots", "slot-0.lock");
+export function pushSlotPath(): string {
+  return pushPool.slots.file("slot-0.lock");
+}

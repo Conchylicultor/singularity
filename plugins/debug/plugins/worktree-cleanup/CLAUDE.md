@@ -41,7 +41,6 @@
     - `infra/ndjson-stream.ndjsonResponse`
     - `infra/paths.GIT`
     - `infra/paths.isMain`
-    - `infra/paths.SINGULARITY_DIR`
     - `infra/worktree.ensureMainWorktreeRoot`
     - `infra/worktree.gitWorktreesDir`
     - `infra/worktree.isCanonicalWorktreePath`

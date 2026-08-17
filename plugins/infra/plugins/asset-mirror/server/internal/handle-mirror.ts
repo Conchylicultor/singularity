@@ -1,11 +1,6 @@
-import { join } from "node:path";
-import { SINGULARITY_DIR } from "@plugins/infra/plugins/paths/server";
+import { assetMirrorCache } from "../../data-dirs";
 import { mirrorFetchToDisk } from "./fetch-to-disk";
 import { mirrorRegistry } from "./registry";
-
-/** Shared, machine-wide cache root (one download per machine across all
- *  worktrees, since `~/.singularity/` is not worktree-scoped). */
-const CACHE_ROOT = join(SINGULARITY_DIR, "asset-mirror");
 
 const MIME_BY_EXT: Record<string, string> = {
   ".ogg": "audio/ogg",
@@ -48,7 +43,7 @@ export async function handleMirror(
     return new Response("invalid file", { status: 400 });
   }
 
-  const diskPath = join(CACHE_ROOT, id, name);
+  const diskPath = assetMirrorCache.file(id, name);
 
   if (!(await Bun.file(diskPath).exists())) {
     // Cache miss → fetch from the registered remote source, then cache it. The
@@ -56,7 +51,11 @@ export async function handleMirror(
     // throws (fail loud) on any upstream failure; the route catches that to keep
     // its external contract: log + 502, never a partial write.
     try {
-      await mirrorFetchToDisk({ remoteBaseUrl: remoteBase, file: name, diskPath });
+      await mirrorFetchToDisk({
+        remoteBaseUrl: remoteBase,
+        file: name,
+        diskPath,
+      });
     } catch (err) {
       console.error(
         `[asset-mirror:${id}] upstream fetch failed for "${name}": ${String(err)}`,

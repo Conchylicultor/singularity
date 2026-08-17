@@ -3,7 +3,11 @@
 Server-side file serving for the Prototypes app, plus the live-state resources
 that drive gallery refresh and iframe auto-reload.
 
-## Where the content lives: `~/.singularity/prototypes/` (`PROTOTYPES_DIR`)
+## Where the content lives: the `apps/prototypes` data dir (`prototypesDir`)
+
+This plugin DECLARES it (`data-dirs/index.ts`) and exports it from its server
+barrel — it creates the dir, seeds `_template/` into it, serves it and watches
+it. `thumbnails` takes the same declaration from here; never re-derive the path.
 
 Host-global, outside every checkout, and NOT in git. One shared set that every
 worktree backend and main serve, so a mock is visible on the always-running main
@@ -76,7 +80,7 @@ extension a prototype can ship (`.html/.css/.js/.json` plus images and
 `onShutdown` stops it. No polling.
 
 **This is the only watcher over that tree, so the signal is exported rather than
-re-derived**: `onPrototypesChanged` (plus `PROTOTYPES_DIR` and
+re-derived**: `onPrototypesChanged` (plus `prototypesDir` and
 `listPrototypeMetas`) is what lets `thumbnails` react to an edit without a
 second `@parcel/watcher` subscription doubling every filesystem event.
 
@@ -113,11 +117,11 @@ and the `listPrototypes` endpoint.
     - `infra/endpoints.implement`
     - `infra/file-watcher.createFileWatcher`
     - `infra/file-watcher.FileWatcher`
-    - `infra/paths.PROTOTYPES_DIR`
     - `infra/paths.REPO_ROOT`
   - Exports (values):
     - `listPrototypeMetas`
     - `onPrototypesChanged`
+    - `prototypesDir`
   - Resources:
     - `prototypes.list` (push)
     - `prototypes.version` (push)

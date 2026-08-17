@@ -1,23 +1,21 @@
-import { appendFileSync, mkdirSync, readFileSync, unlinkSync } from "node:fs";
-import { join } from "node:path";
-import { REPORTS_DIR } from "@plugins/infra/plugins/paths/server";
+import { appendFileSync, readFileSync, unlinkSync } from "node:fs";
+import { reportsBufferDir } from "../../data-dirs";
 import type { ReportSource } from "@plugins/reports/core";
 
 // Server crashes during `uncaughtException` can't write to Postgres (the
 // driver is async and the event loop is dying). We buffer to a JSONL file
 // under the user's home so re-forks / branch switches don't wipe it, then
-// flush on the next boot via `flushBufferedReports`.
-
-const dir = REPORTS_DIR;
+// flush on the next boot via `flushBufferedReports`. The directory itself is
+// declared in this plugin's `data-dirs/index.ts`.
 
 function bufferFile(): string {
   const worktree = process.env.SINGULARITY_WORKTREE ?? "unknown";
-  return join(dir, `${worktree}.jsonl`);
+  return reportsBufferDir.file(`${worktree}.jsonl`);
 }
 
 export function appendReportSync(source: ReportSource, err: Error): void {
   try {
-    mkdirSync(dir, { recursive: true });
+    reportsBufferDir.ensure();
     const line =
       JSON.stringify({
         source,
@@ -27,7 +25,7 @@ export function appendReportSync(source: ReportSource, err: Error): void {
         at: new Date().toISOString(),
       }) + "\n";
     appendFileSync(bufferFile(), line);
-  // eslint-disable-next-line promise-safety/no-bare-catch
+    // eslint-disable-next-line promise-safety/no-bare-catch
   } catch {
     // Best-effort: we're in a crash path; swallowing is better than throwing.
   }
@@ -59,14 +57,14 @@ export function readAndClearBuffer(): BufferedReport[] {
     if (!trimmed) continue;
     try {
       reports.push(JSON.parse(trimmed) as BufferedReport);
-    // eslint-disable-next-line promise-safety/no-bare-catch
+      // eslint-disable-next-line promise-safety/no-bare-catch
     } catch {
       // Skip corrupt lines rather than failing the whole flush.
     }
   }
   try {
     unlinkSync(file);
-  // eslint-disable-next-line promise-safety/no-bare-catch
+    // eslint-disable-next-line promise-safety/no-bare-catch
   } catch {
     // If unlink fails we'll re-process these on the next boot. Duplicate
     // entries collapse via the fingerprint unique index.

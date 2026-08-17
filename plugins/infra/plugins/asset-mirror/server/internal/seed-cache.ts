@@ -1,15 +1,23 @@
 import { existsSync, mkdirSync, readdirSync, copyFileSync } from "node:fs";
 import { join } from "node:path";
+import { assetMirrorRelativeToRoot } from "../../data-dirs";
 
-/** The bundle/data subdir this primitive owns. Kept here so the launcher never
- *  has to know the literal name. */
-const ASSET_MIRROR_SUBDIR = "asset-mirror";
+/** The bundle subdir this primitive owns, and the name the release pipeline
+ *  bakes assets under. Kept here so the launcher never has to know the literal
+ *  name. The DESTINATION under the app-data root is NOT this — it comes from the
+ *  cache's own declaration (see `assetMirrorRelativeToRoot`), so the two cannot
+ *  drift when the declared directory moves. */
+const ASSET_MIRROR_BUNDLE_SUBDIR = "asset-mirror";
 
 /**
  * Seed the app-data asset-mirror cache from a release bundle on first run.
  *
- * Recursively copies every file under `<bundleRoot>/asset-mirror` into
- * `<dataDir>/asset-mirror`, creating parent dirs as needed. COPY-IF-ABSENT: any
+ * Recursively copies every file under `<bundleRoot>/asset-mirror` into the
+ * asset-mirror cache's declared spot beneath `<dataDir>`, creating parent dirs as
+ * needed. `dataDir` is a parameter rather than this process's own data root
+ * because the target may be a fresh install's — a preview root under `/tmp`, or
+ * a release's bundled data dir — which is why the destination is composed from a
+ * root plus the cache's declared relative location. COPY-IF-ABSENT: any
  * file that already exists at the destination is skipped, so a user's
  * previously-downloaded samples are never clobbered and newly-shipped files are
  * filled in. No-op if `<bundleRoot>/asset-mirror` does not exist (e.g. a release
@@ -26,10 +34,10 @@ export function seedAssetMirrorCache(opts: {
   const { bundleRoot, dataDir } = opts;
   const log = opts.log ?? (() => {});
 
-  const src = join(bundleRoot, ASSET_MIRROR_SUBDIR);
+  const src = join(bundleRoot, ASSET_MIRROR_BUNDLE_SUBDIR);
   if (!existsSync(src)) return;
 
-  const dest = join(dataDir, ASSET_MIRROR_SUBDIR);
+  const dest = join(dataDir, assetMirrorRelativeToRoot());
   let copied = 0;
 
   const walk = (from: string, to: string): void => {

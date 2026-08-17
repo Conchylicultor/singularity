@@ -20,7 +20,7 @@ import { mkdir, rename, rm, writeFile } from "node:fs/promises";
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { dirname, join } from "node:path";
-import { SINGULARITY_DIR } from "@plugins/infra/plugins/paths/core";
+import { zeroNodeDir } from "../data-dirs";
 import {
   ZERO_NODE_BUILD_TARGET,
   ZERO_NODE_MAJOR,
@@ -31,7 +31,10 @@ import {
 function nodeMajor(bin: string): number {
   const probe = spawnSync(bin, ["--version"], { encoding: "utf-8" });
   if (probe.status !== 0 || typeof probe.stdout !== "string") return NaN;
-  return Number.parseInt(probe.stdout.trim().replace(/^v/, "").split(".")[0] ?? "", 10);
+  return Number.parseInt(
+    probe.stdout.trim().replace(/^v/, "").split(".")[0] ?? "",
+    10,
+  );
 }
 
 /**
@@ -52,11 +55,12 @@ async function bestEffortRemove(path: string): Promise<void> {
 }
 
 export async function ensureZeroNode(): Promise<void> {
-  const cacheDir = zeroNodeCacheDir(SINGULARITY_DIR);
+  const cacheDir = zeroNodeCacheDir(zeroNodeDir.path);
   const cachedNode = join(cacheDir, "bin", "node");
 
   // 1. Already cached and compatible → noop.
-  if (existsSync(cachedNode) && nodeMajor(cachedNode) === ZERO_NODE_MAJOR) return;
+  if (existsSync(cachedNode) && nodeMajor(cachedNode) === ZERO_NODE_MAJOR)
+    return;
 
   // 2. Host `node` on PATH already satisfies → no download.
   if (nodeMajor("node") === ZERO_NODE_MAJOR) return;
@@ -107,9 +111,14 @@ export async function ensureZeroNode(): Promise<void> {
     // SHASUMS256.txt lines are `<sha256>  <filename>` (two spaces) or, for
     // binary mode, `<sha256> *<filename>`. Match on the whitespace/`*`-delimited
     // filename so a tarball name can't be a suffix of an unrelated one.
-    const shaLine = shaText
-      .split("\n")
-      .find((line) => /[\s*]/.test(line) && line.trim().split(/[\s*]+/).pop() === tarball);
+    const shaLine = shaText.split("\n").find(
+      (line) =>
+        /[\s*]/.test(line) &&
+        line
+          .trim()
+          .split(/[\s*]+/)
+          .pop() === tarball,
+    );
     if (!shaLine) {
       throw new Error(`no SHASUMS256 entry for ${tarball}`);
     }
@@ -166,5 +175,7 @@ export async function ensureZeroNode(): Promise<void> {
         `${ZERO_NODE_MAJOR} binary's absolute path.`,
     );
   }
-  console.log(`ensure-zero-node: provisioned Node v${ZERO_NODE_BUILD_TARGET} at ${cachedNode}`);
+  console.log(
+    `ensure-zero-node: provisioned Node v${ZERO_NODE_BUILD_TARGET} at ${cachedNode}`,
+  );
 }

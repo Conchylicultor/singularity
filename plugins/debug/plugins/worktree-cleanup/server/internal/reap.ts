@@ -1,6 +1,9 @@
 import { rm, stat } from "node:fs/promises";
-import { join } from "node:path";
-import { databaseExists, dropDatabase } from "@plugins/database/plugins/admin/server";
+import { configDir } from "@plugins/config_v2/data-dirs";
+import {
+  databaseExists,
+  dropDatabase,
+} from "@plugins/database/plugins/admin/server";
 import { dropZeroReplicationArtifacts } from "@plugins/database/plugins/zero/plugins/cache-service/server";
 import {
   ensureMainWorktreeRoot,
@@ -8,7 +11,6 @@ import {
   removeWorktree,
   removeWorktreeSpec,
 } from "@plugins/infra/plugins/worktree/server";
-import { SINGULARITY_DIR } from "@plugins/infra/plugins/paths/server";
 
 export async function dirExists(path: string): Promise<boolean> {
   try {
@@ -36,7 +38,10 @@ export async function reapAttempt(
 ): Promise<void> {
   if (opts.worktreePath) {
     const root = await ensureMainWorktreeRoot();
-    if (isCanonicalWorktreePath(opts.worktreePath, root) && (await dirExists(opts.worktreePath))) {
+    if (
+      isCanonicalWorktreePath(opts.worktreePath, root) &&
+      (await dirExists(opts.worktreePath))
+    ) {
       opts.onStep?.("worktree");
       await removeWorktree(opts.worktreePath);
     }
@@ -57,7 +62,10 @@ export async function reapAttempt(
   }
 
   opts.onStep?.("config");
-  await rm(join(SINGULARITY_DIR, "config", id), { recursive: true, force: true });
+  // The reaped worktree's subtree of config_v2's declared user-config directory
+  // — read from that plugin's own declaration, so the two halves of the
+  // fork-here/reap-there pair can never name different directories.
+  await rm(configDir.file(id), { recursive: true, force: true });
 
   // Deleting the spec file is how the gateway deregisters (its fsnotify Remove
   // handler calls registry.remove()) and frees the worktree's fsnotify watch.

@@ -5,7 +5,8 @@ import { singularityPlatformSourceConfig } from "../shared/config";
 import { assembleSingularityPlatform } from "./internal/assemble-singularity-platform";
 
 export default {
-  description: "Backs up Singularity platform files (auth, database config, crashes) into the backup archive.",
+  description:
+    "Backs up Singularity platform files (auth, database config) into the backup archive.",
   contributions: [
     ConfigV2.Register({ descriptor: singularityPlatformSourceConfig }),
     BackupSource({

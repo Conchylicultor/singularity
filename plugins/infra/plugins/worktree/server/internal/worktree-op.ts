@@ -8,10 +8,21 @@ import {
   rmSync,
   writeFileSync,
 } from "node:fs";
-import { type FileHandle, mkdir, open, readdir, readFile } from "node:fs/promises";
+import {
+  type FileHandle,
+  mkdir,
+  open,
+  readdir,
+  readFile,
+} from "node:fs/promises";
 import { join } from "node:path";
 import { flockTry } from "@plugins/packages/plugins/flock/server";
-import { SINGULARITY_DIR, WORKTREES_DIR, worktreeDataDir } from "@plugins/infra/plugins/paths/server";
+import { pushSlotPath } from "@plugins/infra/plugins/host-admission/server";
+import {
+  SINGULARITY_DIR,
+  WORKTREES_DIR,
+  worktreeDataDir,
+} from "@plugins/infra/plugins/paths/server";
 
 // A per-worktree, crash-safe marker for a long-running operation (build, push,
 // check) that will eventually finish and resume the agent. The conversation
@@ -113,7 +124,11 @@ export function markWorktreeOpStart(
 // queued build now owns. Flipping to "running" stamps `runningAt` (the lock-grant
 // instant) once: the first waiting→running transition wins, so a re-flip can't
 // reset the work clock.
-export function setWorktreeOpPhase(slug: string, op: WorktreeOp, phase: WorktreeOpPhase): void {
+export function setWorktreeOpPhase(
+  slug: string,
+  op: WorktreeOp,
+  phase: WorktreeOpPhase,
+): void {
   const path = opFile(slug, op);
   let raw: string;
   try {
@@ -158,7 +173,9 @@ export function clearWorktreeOp(slug: string, op: WorktreeOp): void {
 // an fs error (ENOENT, EACCES, …) or garbled JSON (SyntaxError). A genuinely
 // unexpected error (code == null and not a SyntaxError) is re-thrown by callers.
 function isReapableReadError(err: unknown): boolean {
-  return (err as NodeJS.ErrnoException).code != null || err instanceof SyntaxError;
+  return (
+    (err as NodeJS.ErrnoException).code != null || err instanceof SyntaxError
+  );
 }
 
 type MarkerJson = {
@@ -172,13 +189,21 @@ type MarkerJson = {
 // Pure: turn a parsed marker into its WorktreeOpInfo, or null if it names a dead
 // pid (a caller reaps the file on null). No IO — shared by the sync and async
 // marker readers.
-function markerInfoFromParsed(slug: string, parsed: MarkerJson): WorktreeOpInfo | null {
+function markerInfoFromParsed(
+  slug: string,
+  parsed: MarkerJson,
+): WorktreeOpInfo | null {
   if (typeof parsed.pid !== "number" || !isPidAlive(parsed.pid)) return null;
   return {
     slug,
-    op: KNOWN_OPS.includes(parsed.op as WorktreeOp) ? (parsed.op as WorktreeOp) : "build",
+    op: KNOWN_OPS.includes(parsed.op as WorktreeOp)
+      ? (parsed.op as WorktreeOp)
+      : "build",
     pid: parsed.pid,
-    startedAt: typeof parsed.startedAt === "string" ? parsed.startedAt : new Date(0).toISOString(),
+    startedAt:
+      typeof parsed.startedAt === "string"
+        ? parsed.startedAt
+        : new Date(0).toISOString(),
     // Back-compat: markers written before the phase field default to "running".
     phase: parsed.phase === "waiting-for-lock" ? "waiting-for-lock" : "running",
     // Builds/checks stamp their own runningAt on the lock grant; for pushes it is
@@ -196,7 +221,10 @@ function markerInfoFromParsed(slug: string, parsed: MarkerJson): WorktreeOpInfo 
 // only fires for already-dead markers, and the write/clear TOCTOU is inherent to
 // the marker scheme — the async read doesn't worsen it. isPidAlive stays sync (a
 // signal syscall, not IO).
-async function readLiveMarkerAsync(slug: string, path: string): Promise<WorktreeOpInfo | null> {
+async function readLiveMarkerAsync(
+  slug: string,
+  path: string,
+): Promise<WorktreeOpInfo | null> {
   let parsed: MarkerJson;
   try {
     parsed = JSON.parse(await readFile(path, "utf8")) as MarkerJson;
@@ -225,7 +253,9 @@ export async function isWorktreeOpActive(slug: string): Promise<boolean> {
     if ((err as NodeJS.ErrnoException).code === "ENOENT") return false;
     throw err;
   }
-  const infos = await Promise.all(files.map((f) => readLiveMarkerAsync(slug, join(dir, f))));
+  const infos = await Promise.all(
+    files.map((f) => readLiveMarkerAsync(slug, join(dir, f))),
+  );
   return infos.some((i) => i !== null);
 }
 
@@ -258,7 +288,9 @@ export async function listActiveWorktreeOps(): Promise<WorktreeOpInfo[]> {
         if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
         return []; // Not a worktree-with-ops dir; skip.
       }
-      const infos = await Promise.all(files.map((f) => readLiveMarkerAsync(slug, join(dir, f))));
+      const infos = await Promise.all(
+        files.map((f) => readLiveMarkerAsync(slug, join(dir, f))),
+      );
       return infos.filter((i): i is WorktreeOpInfo => i !== null);
     }),
   );
@@ -285,13 +317,13 @@ export async function listActiveWorktreeOps(): Promise<WorktreeOpInfo[]> {
 // The holder file is written by whoever holds the flock (in the CLI's
 // onLockAcquired) and removed on release; the server only reads it.
 
-// The push mutex is now the `push` host-pool's single slot file (declared via
+// The push mutex is the `push` host-pool's single slot file (declared via
 // `defineHostPool({ id: "push", size: 1 })` in host-admission). Its slot-0 lock
-// IS the push mutex, so this probe path MUST equal the pool's slot-0 path
-// (`~/.singularity/push-slots/slot-0.lock`, mirrored as `PUSH_SLOT_PATH` in
-// host-admission/server). The CLI push acquires the pool; this probes the same
-// kernel flock it holds, keeping the op-status derivation authoritative.
-export const PUSH_LOCK_PATH = join(SINGULARITY_DIR, "push-slots", "slot-0.lock");
+// IS the push mutex, so this probe must read the pool's OWN slot-0 — which it
+// now does, by asking the pool, instead of rebuilding the path here and asking a
+// comment to keep the two spellings equal. The CLI push acquires the pool; this
+// probes the same kernel flock it holds, keeping the op-status derivation
+// authoritative.
 const PUSH_HOLDER_PATH = join(SINGULARITY_DIR, "push-holder.json");
 
 export interface PushHolder {
@@ -306,7 +338,7 @@ export interface PushHolder {
 // immediately on success (open in append mode so we never truncate the lock
 // file the CLI may be holding). When the lock is held the probe fails fast
 // without acquiring, so it never disturbs the real holder.
-export function pushLockHeld(lockPath: string = PUSH_LOCK_PATH): boolean {
+export function pushLockHeld(lockPath: string = pushSlotPath()): boolean {
   mkdirSync(SINGULARITY_DIR, { recursive: true });
   let fd: number;
   try {
@@ -328,7 +360,9 @@ export function pushLockHeld(lockPath: string = PUSH_LOCK_PATH): boolean {
 // non-blocking syscall (LOCK_NB) — not IO wait — so it stays a synchronous FFI
 // call. Identical semantics to the sync version: ENOENT on open ⇒ false; a
 // failed take ⇒ held; always release/close.
-async function pushLockHeldAsync(lockPath: string = PUSH_LOCK_PATH): Promise<boolean> {
+async function pushLockHeldAsync(
+  lockPath: string = pushSlotPath(),
+): Promise<boolean> {
   await mkdir(SINGULARITY_DIR, { recursive: true });
   let handle: FileHandle;
   try {
@@ -348,7 +382,10 @@ async function pushLockHeldAsync(lockPath: string = PUSH_LOCK_PATH): Promise<boo
 // Atomically publish the holder identity (temp + rename) so a reader never sees
 // a torn write. Called by the flock holder the instant the lock is granted. The
 // path defaults to the real holder file; tests pass a temp path.
-export function writePushHolder(holder: PushHolder, path: string = PUSH_HOLDER_PATH): void {
+export function writePushHolder(
+  holder: PushHolder,
+  path: string = PUSH_HOLDER_PATH,
+): void {
   mkdirSync(SINGULARITY_DIR, { recursive: true });
   const tmp = `${path}.${process.pid}.tmp`;
   writeFileSync(tmp, JSON.stringify(holder));
@@ -369,13 +406,20 @@ function holderFromParsed(parsed: Partial<PushHolder>): PushHolder | null {
     slug: parsed.slug,
     pid: parsed.pid,
     pushId: parsed.pushId,
-    acquiredAt: typeof parsed.acquiredAt === "string" ? parsed.acquiredAt : new Date(0).toISOString(),
+    acquiredAt:
+      typeof parsed.acquiredAt === "string"
+        ? parsed.acquiredAt
+        : new Date(0).toISOString(),
   };
 }
 
-export function readPushHolder(path: string = PUSH_HOLDER_PATH): PushHolder | null {
+export function readPushHolder(
+  path: string = PUSH_HOLDER_PATH,
+): PushHolder | null {
   try {
-    return holderFromParsed(JSON.parse(readFileSync(path, "utf8")) as Partial<PushHolder>);
+    return holderFromParsed(
+      JSON.parse(readFileSync(path, "utf8")) as Partial<PushHolder>,
+    );
   } catch (err) {
     if (!isReapableReadError(err)) throw err;
     return null; // absent or unparseable
@@ -384,9 +428,13 @@ export function readPushHolder(path: string = PUSH_HOLDER_PATH): PushHolder | nu
 
 // Async twin of readPushHolder for the flush-cycle loader (readFile on the libuv
 // threadpool). Identical semantics: absent/unparseable/malformed ⇒ null.
-async function readPushHolderAsync(path: string = PUSH_HOLDER_PATH): Promise<PushHolder | null> {
+async function readPushHolderAsync(
+  path: string = PUSH_HOLDER_PATH,
+): Promise<PushHolder | null> {
   try {
-    return holderFromParsed(JSON.parse(await readFile(path, "utf8")) as Partial<PushHolder>);
+    return holderFromParsed(
+      JSON.parse(await readFile(path, "utf8")) as Partial<PushHolder>,
+    );
   } catch (err) {
     if (!isReapableReadError(err)) throw err;
     return null; // absent or unparseable
@@ -396,7 +444,10 @@ async function readPushHolderAsync(path: string = PUSH_HOLDER_PATH): Promise<Pus
 // Remove the holder file ONLY if it still names this push — a late-dying waiter
 // (or a previous holder whose exit handler fires after the next holder took
 // over) must not delete the current holder's file.
-export function clearPushHolder(pushId: string, path: string = PUSH_HOLDER_PATH): void {
+export function clearPushHolder(
+  pushId: string,
+  path: string = PUSH_HOLDER_PATH,
+): void {
   const holder = readPushHolder(path);
   if (holder && holder.pushId !== pushId) return;
   rmSync(path, { force: true });
@@ -422,7 +473,8 @@ export function derivePushPhases(
   holder: PushHolder | null,
   deps: DerivePushDeps,
 ): WorktreeOpInfo[] {
-  const running = holder && deps.isAlive(holder.pid) && deps.lockHeld() ? holder : null;
+  const running =
+    holder && deps.isAlive(holder.pid) && deps.lockHeld() ? holder : null;
   return markers.map((m) => {
     if (m.op !== "push") return m;
     const isRunning = m.slug === running?.slug;

@@ -8,7 +8,8 @@ export const asPluginId = (s: string): PluginId => s as PluginId;
 export const asPath = (id: PluginId): string => id.split(".").join("/");
 
 /** Real filesystem path under plugins/: "conversations/plugins/conversation-view". */
-export const asFsPath = (id: PluginId): string => id.split(".").join("/plugins/");
+export const asFsPath = (id: PluginId): string =>
+  id.split(".").join("/plugins/");
 
 /** Segments for breadcrumbs / last-segment matching. */
 export const pluginIdSegments = (id: PluginId): string[] => id.split(".");
@@ -23,7 +24,15 @@ export const pluginIdSegments = (id: PluginId): string[] => id.split(".");
  *  — `e2e` may reach `core` and other `e2e` barrels, never `web`/`server`, since
  *  an end-to-end test drives the deployed app through the browser rather than
  *  importing the code under test. */
-export const RUNTIME_FOLDERS = ["web", "server", "central", "core", "shared", "e2e"] as const;
+export const RUNTIME_FOLDERS = [
+  "web",
+  "server",
+  "central",
+  "core",
+  "shared",
+  "e2e",
+  "data-dirs",
+] as const;
 export type RuntimeFolder = (typeof RUNTIME_FOLDERS)[number];
 
 /** Whether a runtime folder's facts belong in the GENERATED plugin docs
@@ -44,6 +53,17 @@ const RUNTIME_FOLDER_DOCUMENTED: Record<RuntimeFolder, boolean> = {
   core: true,
   shared: true,
   e2e: false,
+  // `data-dirs` holds a plugin's declarations of the directories it owns under
+  // the singularity data root. Undocumented not because the facts are private —
+  // the folder IS a legal cross-plugin barrel, so two plugins sharing one
+  // directory import a single declaration — but because the generated reference
+  // is the wrong reader for them. "Who owns this directory, and may I delete
+  // it?" is answered against the LIVE filesystem by
+  // `paths:no-undeclared-data-dirs` and by `getDataDirs()`, which a stale doc
+  // block cannot do; duplicating the set into every CLAUDE.md would spend
+  // context on a second, drift-prone copy of a registry that is already
+  // enumerable at runtime.
+  "data-dirs": false,
 };
 
 /** Runtime folders the generated plugin docs omit — the doc renderer's generic

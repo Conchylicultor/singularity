@@ -13,7 +13,7 @@ import {
   listPrototypeDirNames,
   readPrototypeFolder,
 } from "../../shared/read-folder";
-import { PROTOTYPES_DIR } from "./paths";
+import { prototypesDir } from "../../data-dirs";
 
 /** Canvas size used when the HTML declares no `prototype-viewport`. */
 const DEFAULT_VIEWPORT = { w: 1280, h: 800 } as const;
@@ -95,7 +95,7 @@ async function parseHtmlMeta(html: string): Promise<HtmlMeta> {
  * staring at a gallery that doesn't contain the thing they just wrote.
  */
 export async function listPrototypeMetas(): Promise<PrototypeMeta[]> {
-  const dirNames = await listPrototypeDirNames(PROTOTYPES_DIR);
+  const dirNames = await listPrototypeDirNames(prototypesDir.path);
 
   const metas: PrototypeMeta[] = [];
   for (const dirName of dirNames) {
@@ -117,7 +117,7 @@ async function readMeta(
 
   let folder: PrototypeFolder;
   try {
-    folder = await readPrototypeFolder(PROTOTYPES_DIR, dirName, siblings);
+    folder = await readPrototypeFolder(prototypesDir.path, dirName, siblings);
   } catch (err) {
     // One unreadable folder must not take the whole gallery down with it — but
     // it is reported on its own card rather than swallowed.

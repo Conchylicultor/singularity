@@ -98,7 +98,6 @@ Key invariants:
   - Uses:
     - `framework/web-core.findViteContributions`
     - `framework/web-core.loadBabelContributions`
-    - `infra/paths.SINGULARITY_DIR`
     - `packages/semaphore.createSemaphore`
   - Exports (types):
     - `ArtifactKind`

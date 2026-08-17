@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { ReportKind } from "@plugins/reports/server";
 import type { ReportRow } from "@plugins/reports/server";
+import { costUsageDir } from "../../data-dirs";
 
 // ─── What these are ───────────────────────────────────────────────────────────
 //
@@ -63,7 +64,7 @@ function renderUnpriced(row: ReportRow, d: UnpricedModelPayload): string {
       `**${d.tokens.toLocaleString()} tokens** contributed **$0** to every chart ` +
       `that read them.`,
     "",
-    `The price table (\`COST_USAGE_DIR/price-table.json\`) is merge-only — it is ` +
+    `The price table (\`${costUsageDir.file("price-table.json")}\`) is merge-only — it is ` +
       `refreshed daily from LiteLLM's ` +
       `\`model_prices_and_context_window.json\` and never drops a key it has ` +
       `learned. So an unpriced model means one of:`,

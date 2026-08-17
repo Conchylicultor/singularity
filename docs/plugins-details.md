@@ -2474,11 +2474,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `infra/endpoints.implement`
               - `infra/file-watcher.createFileWatcher`
               - `infra/file-watcher.FileWatcher`
-              - `infra/paths.PROTOTYPES_DIR`
               - `infra/paths.REPO_ROOT`
             - Exports (values):
               - `listPrototypeMetas`
               - `onPrototypesChanged`
+              - `prototypesDir`
             - Resources:
               - `prototypes.list` (push)
               - `prototypes.version` (push)
@@ -2591,9 +2591,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Uses:
               - `apps/prototypes/files.listPrototypeMetas`
               - `apps/prototypes/files.onPrototypesChanged`
+              - `apps/prototypes/files.prototypesDir`
               - `infra/jobs.defineJob`
-              - `infra/paths.PROTOTYPES_DIR`
-              - `infra/paths.SINGULARITY_DIR`
             - Register:
               - `defineJob('prototypes.render-thumbnail')`
               - `defineJob('prototypes.sweep-thumbnails')`
@@ -6005,7 +6004,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `config_v2.ConfigV2`
                   - `infra/endpoints.HttpError`
                   - `infra/endpoints.implement`
-                  - `infra/paths.SINGULARITY_DIR`
                   - `infra/safe-fetch.parsePublicUrl`
                   - `infra/safe-fetch.safeFetch`
                   - `infra/safe-fetch.SsrfError`
@@ -6619,7 +6617,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `backup.BackupSource`
               - `config_v2.ConfigV2`
               - `config_v2.getConfig`
-              - `infra/paths.SINGULARITY_DIR`
         - **`cost-history`** — Config UI for the cost-history backup source. Backs up the permanent cost-history archive (year-sharded session records and the merged price table) into the backup archive.
           - Web:
             - Contributes: `ConfigV2.WebRegister`
@@ -6632,7 +6629,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `backup.BackupSource`
               - `config_v2.ConfigV2`
               - `config_v2.getConfig`
-              - `infra/paths.COST_USAGE_DIR`
         - **`databases`** — Config UI for the databases backup source. Backs up worktree databases into the backup archive.
           - Web:
             - Contributes: `ConfigV2.WebRegister`
@@ -6688,7 +6684,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `config_v2.getConfig`
               - `infra/paths.KEY_PATH`
               - `infra/paths.STORE_PATH`
-        - **`singularity-platform`** — Config UI for the Singularity platform backup source. Backs up Singularity platform files (auth, database config, crashes) into the backup archive.
+        - **`singularity-platform`** — Config UI for the Singularity platform backup source. Backs up Singularity platform files (auth, database config) into the backup archive.
           - Web:
             - Contributes: `ConfigV2.WebRegister`
             - Uses: `config_v2.ConfigV2`
@@ -6700,6 +6696,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `backup.BackupSource`
               - `config_v2.ConfigV2`
               - `config_v2.getConfig`
+              - `infra/paths.LEGACY_AUTH_DIR`
               - `infra/paths.SINGULARITY_DIR`
         - **`transcripts`** — Config UI for the transcripts backup source. Backs up retained-conversation transcripts (active, plus every conversation of a held task) into the backup archive.
           - Web:
@@ -7284,7 +7281,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `infra/paths.MAIN_WORKTREE_NAME`
       - `infra/paths.REPO_CONFIG_DIR`
       - `infra/paths.REPO_ROOT`
-      - `infra/paths.SINGULARITY_DIR`
     - Exports (types): `FieldStorageProvider`
     - Exports (values):
       - `acknowledgeConflictByPath`
@@ -12845,7 +12841,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `infra/ndjson-stream.ndjsonResponse`
           - `infra/paths.GIT`
           - `infra/paths.isMain`
-          - `infra/paths.SINGULARITY_DIR`
           - `infra/worktree.ensureMainWorktreeRoot`
           - `infra/worktree.gitWorktreesDir`
           - `infra/worktree.isCanonicalWorktreePath`
@@ -14673,6 +14668,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `framework/web-sdk`
               - `improve/element-picker`
               - `infra/asset-mirror`
+              - `infra/paths`
               - `plugin-meta/facets`
               - `primitives/css/layout-harness`
           - Core:
@@ -14857,7 +14853,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Uses:
               - `framework/web-core.findViteContributions`
               - `framework/web-core.loadBabelContributions`
-              - `infra/paths.SINGULARITY_DIR`
               - `packages/semaphore.createSemaphore`
             - Exports (types):
               - `ArtifactKind`
@@ -15093,13 +15088,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
 - **`infra`** — Umbrella for cross-cutting server-side primitives used by feature plugins: jobs, events, secrets, mcp, attachments.
   - Plugins:
     - **`asset-mirror`** — Generic server-side asset mirror: plugins declare a remote asset source via defineAssetMirror; files are lazily downloaded on first request, cached on local disk, and served same-origin thereafter (offline-capable after one warm-up).
-      - Server:
-        - Uses: `infra/paths.SINGULARITY_DIR`
-        - Exports (types): `AssetMirrorSpec`
-        - Exports (values):
-          - `defineAssetMirror`
-          - `runAssetMirrorPrewarm`
-          - `seedAssetMirrorCache`
       - Core:
         - Uses: `framework/tooling/collected-dir.defineCollectedDir`
         - Exports (types):
@@ -15116,6 +15104,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/sonata/audio/piano`
           - `apps/sonata/audio/soundfont`
           - `infra/launcher`
+      - Server:
+        - Exports (types): `AssetMirrorSpec`
+        - Exports (values):
+          - `defineAssetMirror`
+          - `runAssetMirrorPrewarm`
+          - `seedAssetMirrorCache`
     - **`attachments`** — Polymorphic file attachments. Exposes uploadAttachment() helper; storage/serve on the server plugin. Attachments on disk (UUID-named under ~/.singularity/attachments/). Consumers declare ownership with Attachments.defineLink(ownerTable); orphan sweep reclaims unreferenced rows past TTL.
       - Web:
         - Uses: `infra/endpoints.fetchEndpoint`
@@ -15965,7 +15959,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`host-admission`** — Host-admission registry: one place a host-wide concurrency pool comes into existence, wrapping createHostSemaphore with a summed CPU/RAM ceiling and true host occupancy.
       - Server:
         - Uses:
-          - `infra/paths.SINGULARITY_DIR`
           - `packages/host-semaphore.AcquireHooks`
           - `packages/host-semaphore.createHostSemaphore`
           - `packages/host-semaphore.HostShare`
@@ -15978,8 +15971,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `defineHostPool`
           - `hostOccupancy`
           - `inheritedGrant`
-          - `PUSH_SLOT_PATH`
           - `pushPool`
+          - `pushSlotPath`
           - `withHostGrant`
       - Cross-plugin:
         - Imported by:
@@ -16235,17 +16228,57 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Server:
         - Exports (values): `ndjsonResponse`
     - **`paths`**
+      - Core:
+        - Uses: `framework/tooling/collected-dir.defineCollectedDir`
+        - Exports (types):
+          - `DataDir`
+          - `DataDirKind`
+          - `DataDirSpec`
+          - `ReclaimPolicy`
+          - `ReleaseIdentity`
+        - Exports (values):
+          - `ATTACHMENTS_DIR`
+          - `BACKUPS_DIR`
+          - `CHECK_ARTIFACTS_RETENTION`
+          - `checkoutWorktreeName`
+          - `CLAUDE_DIR`
+          - `CLAUDE_PROJECTS_DIR`
+          - `CLAUDE_SESSIONS_DIR`
+          - `COST_USAGE_DIR`
+          - `currentWorktreeName`
+          - `DATA_DIR_KINDS`
+          - `dataRoot`
+          - `defineDataDir`
+          - `getDataDirs`
+          - `HOME_DIR`
+          - `isHostSingleton`
+          - `isMain`
+          - `isRelease`
+          - `KEY_PATH`
+          - `LEGACY_AUTH_BLOB`
+          - `LEGACY_AUTH_DIR`
+          - `LEGACY_AUTH_KEY`
+          - `MAIN_WORKTREE_NAME`
+          - `PLUGINS_DIR`
+          - `pruneWorktreeCheckArtifacts`
+          - `releaseIdentity`
+          - `REPO_CONFIG_DIR`
+          - `REPO_ROOT`
+          - `REPORTS_DIR`
+          - `SECRETS_DIR`
+          - `setReleaseIdentity`
+          - `SINGULARITY_DIR`
+          - `STORE_PATH`
+          - `worktreeArtifacts`
+          - `worktreeDataDir`
+          - `WORKTREES_DIR`
       - Cross-plugin:
         - Imported by:
-          - `apps-core/surface/floating/wallpaper`
           - `apps/deploy/deployments`
           - `apps/prototypes/files`
-          - `apps/prototypes/thumbnails`
           - `backup`
           - `backup/sources/attachments`
           - `backup/sources/claude-settings`
-          - `backup/sources/config`
-          - `backup/sources/cost-history`
           - `backup/sources/project-memory`
           - `backup/sources/prototypes`
           - `backup/sources/secrets`
@@ -16285,19 +16318,15 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `debug/worktree-cleanup`
           - `framework/tooling/checks`
           - `framework/tooling/guards`
-          - `framework/tooling/web-artifacts`
-          - `infra/asset-mirror`
           - `infra/attachments`
           - `infra/claude-cli`
           - `infra/corpus-index`
           - `infra/duress/latch`
           - `infra/git-watcher`
-          - `infra/host-admission`
           - `infra/launcher`
           - `infra/warmup`
           - `infra/worktree`
           - `infra/worktree/removal-audit`
-          - `packages/host-semaphore`
           - `packages/signal-origin/sink`
           - `plugin-meta/plugin-health`
           - `plugin-meta/plugin-tree`
@@ -16306,13 +16335,17 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/terminal`
           - `release`
           - `release/bundles`
-          - `reports`
           - `review/plugin-changes`
           - `stats/commits`
           - `stats/cost`
           - `tasks`
       - Server:
-        - Exports (types): `ReleaseIdentity`
+        - Exports (types):
+          - `DataDir`
+          - `DataDirKind`
+          - `DataDirSpec`
+          - `ReclaimPolicy`
+          - `ReleaseIdentity`
         - Exports (values):
           - `ATTACHMENTS_DIR`
           - `BACKUPS_DIR`
@@ -16325,6 +16358,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `CLAUDE_SESSIONS_DIR`
           - `COST_USAGE_DIR`
           - `currentWorktreeName`
+          - `DATA_DIR_KINDS`
+          - `dataRoot`
+          - `defineDataDir`
+          - `getDataDirs`
           - `GIT`
           - `HOME_DIR`
           - `isHostSingleton`
@@ -16355,40 +16392,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `TMUX`
           - `WEB_CORE_RELATIVE`
           - `webDistDir`
-          - `worktreeArtifacts`
-          - `worktreeDataDir`
-          - `WORKTREES_DIR`
-      - Core:
-        - Exports (types): `ReleaseIdentity`
-        - Exports (values):
-          - `ATTACHMENTS_DIR`
-          - `BACKUPS_DIR`
-          - `CHECK_ARTIFACTS_RETENTION`
-          - `checkoutWorktreeName`
-          - `CLAUDE_DIR`
-          - `CLAUDE_PROJECTS_DIR`
-          - `CLAUDE_SESSIONS_DIR`
-          - `COST_USAGE_DIR`
-          - `currentWorktreeName`
-          - `HOME_DIR`
-          - `isHostSingleton`
-          - `isMain`
-          - `isRelease`
-          - `KEY_PATH`
-          - `LEGACY_AUTH_BLOB`
-          - `LEGACY_AUTH_DIR`
-          - `LEGACY_AUTH_KEY`
-          - `MAIN_WORKTREE_NAME`
-          - `PLUGINS_DIR`
-          - `pruneWorktreeCheckArtifacts`
-          - `releaseIdentity`
-          - `REPO_CONFIG_DIR`
-          - `REPO_ROOT`
-          - `REPORTS_DIR`
-          - `SECRETS_DIR`
-          - `setReleaseIdentity`
-          - `SINGULARITY_DIR`
-          - `STORE_PATH`
           - `worktreeArtifacts`
           - `worktreeDataDir`
           - `WORKTREES_DIR`
@@ -16756,6 +16759,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Server:
         - Uses:
           - `infra/host-admission.defineHostPool`
+          - `infra/host-admission.pushSlotPath`
           - `infra/paths.GIT`
           - `infra/paths.SINGULARITY_DIR`
           - `infra/paths.worktreeDataDir`
@@ -16789,7 +16793,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `markWorktreeOpStart`
           - `namespaceCollision`
           - `probeNamespace`
-          - `PUSH_LOCK_PATH`
           - `pushLockHeld`
           - `readCompositionMarker`
           - `readPushHolder`
@@ -17001,9 +17004,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `flockTry`
     - **`host-semaphore`** — Cross-process concurrency primitive: createHostSemaphore bounds work across processes via flock slot files (the host-wide twin of packages/semaphore).
       - Server:
-        - Uses:
-          - `infra/paths.SINGULARITY_DIR`
-          - `packages/flock.flockTry`
+        - Uses: `packages/flock.flockTry`
         - Exports (types):
           - `AcquireHooks`
           - `HostSemaphore`
@@ -26302,7 +26303,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses:
           - `infra/paths.currentWorktreeName`
           - `infra/paths.GIT`
-          - `infra/paths.SINGULARITY_DIR`
         - Exports (types):
           - `GitProvenance`
           - `PruneResult`
@@ -26711,7 +26711,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `infra/duress.ShedSummary`
       - `infra/endpoints.HttpError`
       - `infra/endpoints.implement`
-      - `infra/paths.REPORTS_DIR`
       - `infra/retention.defineRetention`
       - `infra/warmup.defineWarmup`
       - `shell/notifications.recordNotification`
@@ -27599,7 +27598,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `infra/endpoints.implement`
           - `infra/jobs.defineJob`
           - `infra/paths.CLAUDE_PROJECTS_DIR`
-          - `infra/paths.COST_USAGE_DIR`
           - `infra/paths.isHostSingleton`
           - `infra/safe-fetch.safeFetch`
           - `infra/warmup.defineWarmup`

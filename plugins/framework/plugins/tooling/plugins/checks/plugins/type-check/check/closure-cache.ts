@@ -1,20 +1,18 @@
 import { createHash } from "crypto";
 import {
   existsSync,
-  mkdirSync,
   readdirSync,
   renameSync,
   rmSync,
   statSync,
   writeFileSync,
 } from "fs";
-import { join } from "path";
-import { SINGULARITY_DIR } from "@plugins/infra/plugins/paths/core";
+import { closureCacheDir } from "../data-dirs";
 
 // Global (not per-worktree) + content-keyed on the dependency-closure
 // fingerprint: a fresh worktree (or push at the same tree) can reuse PASSes
 // recorded by a sibling worktree for files with an identical import closure.
-const CACHE_DIR = join(SINGULARITY_DIR, "closure-cache");
+// The directory itself is declared in this plugin's `data-dirs/index.ts`.
 
 // Pruning bounds — keep the dir from growing unbounded across weeks of trees.
 // AGE is the intended evictor; the count is only a disk backstop. Entries are
@@ -43,7 +41,7 @@ function sha256(s: string): string {
 
 function entryFile(relPath: string, fingerprint: string): string {
   // The fingerprint already subsumes tree + config state, so no checkId/treeHash.
-  return join(CACHE_DIR, `${sha256(`${relPath}:${fingerprint}`)}.json`);
+  return closureCacheDir.file(`${sha256(`${relPath}:${fingerprint}`)}.json`);
 }
 
 export interface ClosureCache {
@@ -55,9 +53,8 @@ export interface ClosureCache {
 
 /** Open (and lazily create) the global closure-cache. */
 export function openClosureCache(): ClosureCache {
-  // ~/.singularity already hosts secrets/attachments; creating a subdir is safe.
   // A genuinely unwritable home is a real fault and should surface loudly.
-  mkdirSync(CACHE_DIR, { recursive: true });
+  closureCacheDir.ensure();
   prune();
   return {
     has(relPath, fingerprint) {
@@ -65,7 +62,7 @@ export function openClosureCache(): ClosureCache {
     },
     record(relPath, fingerprint) {
       const file = entryFile(relPath, fingerprint);
-      const tmp = join(CACHE_DIR, `.${sha256(file).slice(0, 12)}.tmp`);
+      const tmp = closureCacheDir.file(`.${sha256(file).slice(0, 12)}.tmp`);
       writeFileSync(
         tmp,
         JSON.stringify({ relPath, fingerprint, recordedAt: Date.now() }),
@@ -80,7 +77,10 @@ export function openClosureCache(): ClosureCache {
 // listed as an entry.
 function ageSweepDue(now: number): boolean {
   try {
-    return now - statSync(join(CACHE_DIR, MARKER_FILE)).mtimeMs > PRUNE_INTERVAL_MS;
+    return (
+      now - statSync(closureCacheDir.file(MARKER_FILE)).mtimeMs >
+      PRUNE_INTERVAL_MS
+    );
   } catch (err) {
     if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
     return true; // never swept
@@ -97,13 +97,15 @@ function ageSweepDue(now: number): boolean {
 // must) or the hourly age sweep is due. Both bounds are preserved exactly; only
 // the cadence of the age sweep changes.
 function prune(): void {
-  const names = readdirSync(CACHE_DIR).filter((n) => n.endsWith(".json"));
+  const names = readdirSync(closureCacheDir.path).filter((n) =>
+    n.endsWith(".json"),
+  );
   const now = Date.now();
   if (names.length <= MAX_ENTRIES && !ageSweepDue(now)) return;
-  writeFileSync(join(CACHE_DIR, MARKER_FILE), "");
+  writeFileSync(closureCacheDir.file(MARKER_FILE), "");
   const live: { path: string; mtimeMs: number }[] = [];
   for (const name of names) {
-    const path = join(CACHE_DIR, name);
+    const path = closureCacheDir.file(name);
     let mtimeMs: number;
     try {
       mtimeMs = statSync(path).mtimeMs;

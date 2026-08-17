@@ -1,5 +1,4 @@
-import { join } from "node:path";
-import { SINGULARITY_DIR } from "@plugins/infra/plugins/paths/server";
+import { configDir } from "../../data-dirs";
 
 const worktree = process.env.SINGULARITY_WORKTREE;
 if (!worktree) {
@@ -8,4 +7,5 @@ if (!worktree) {
   );
 }
 
-export const CONFIG_DIR = join(SINGULARITY_DIR, "config", worktree);
+/** This worktree's subtree of the declared user-config directory. */
+export const CONFIG_DIR = configDir.file(worktree);

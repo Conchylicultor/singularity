@@ -110,9 +110,9 @@ State machine during restart: `Running → Restarting → Running`. During `Rest
 
 ## Service supervision
 
-The gateway includes a generic service supervisor (`supervisor.go`) that manages long-lived daemons defined in `~/.singularity/database.json`. The gateway knows nothing about what services are — it just executes start commands, probes readiness, and runs watchdogs.
+The gateway includes a generic service supervisor (`supervisor.go`) that manages long-lived daemons defined in the `-db-config` file. The gateway knows nothing about what services are — it just executes start commands, probes readiness, and runs watchdogs.
 
-### Config file: `~/.singularity/database.json`
+### Config file: `-db-config` (default `~/.singularity/database.json`)
 
 Auto-generated on first `./singularity start`. Contains two sections:
 - `connection` — database host/port/user, read by the server and CLI (not by the gateway)

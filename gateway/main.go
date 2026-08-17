@@ -30,7 +30,22 @@ type Config struct {
 	RegistryDir       string
 	SocketsDir        string
 	CentralRoutesFile string
+	DbConfigFile      string
 	DefaultNamespace  string
+}
+
+// dataRoot resolves the Singularity data root (`~/.singularity` by default).
+//
+// It exists ONLY to derive the defaults of the path flags below. Every path the
+// gateway uses is a flag, so the launcher can hand it fully-resolved locations
+// and the root never has to be re-derived anywhere else in the process — which
+// is what let two independently-drifting copies of this fallback exist before.
+func dataRoot() string {
+	if dir := os.Getenv("SINGULARITY_DIR"); dir != "" {
+		return dir
+	}
+	home, _ := os.UserHomeDir()
+	return filepath.Join(home, ".singularity")
 }
 
 func parseFlags() Config {
@@ -47,11 +62,7 @@ func parseFlags() Config {
 	flag.StringVar(&cfg.LogFormat, "log-format", "text", "log format: text|json")
 	flag.IntVar(&cfg.LogBufferLines, "log-buffer-lines", 1000, "per-worktree backend log ring capacity")
 
-	dataDir := os.Getenv("SINGULARITY_DIR")
-	if dataDir == "" {
-		home, _ := os.UserHomeDir()
-		dataDir = filepath.Join(home, ".singularity")
-	}
+	dataDir := dataRoot()
 	defaultLogDir := filepath.Join(dataDir, "logs")
 	flag.StringVar(&cfg.LogDir, "log-dir", defaultLogDir, "directory for the gateway and per-worktree log files")
 	defaultRegistry := filepath.Join(dataDir, "worktrees")
@@ -63,6 +74,8 @@ func parseFlags() Config {
 	flag.StringVar(&cfg.SocketsDir, "sockets-dir", defaultSockets, "directory for per-worktree Unix sockets (env: SINGULARITY_SOCKETS_DIR; short /tmp dir for deep release roots)")
 	defaultCentralRoutes := filepath.Join(dataDir, "central-routes.json")
 	flag.StringVar(&cfg.CentralRoutesFile, "central-routes-file", defaultCentralRoutes, "path to the central routing manifest")
+	defaultDbConfig := filepath.Join(dataDir, "database.json")
+	flag.StringVar(&cfg.DbConfigFile, "db-config", defaultDbConfig, "path to the managed-service (database) config the supervisor reads")
 	// Fallback namespace for subdomain-less requests. Empty ⇒ such requests 404
 	// (dev/multi-app). A packaged single-app build (desktop/Tauri, single-origin
 	// web) sets it to the app's name so a bare-localhost webview reaches the
@@ -135,20 +148,14 @@ func main() {
 	reconcileOrphanBackends(cfg.SocketsDir, reg)
 
 	routes := NewCentralRoutesStore(cfg.CentralRoutesFile)
-	dataDir := os.Getenv("SINGULARITY_DIR")
-	if dataDir == "" {
-		home, _ := os.UserHomeDir()
-		dataDir = filepath.Join(home, ".singularity")
-	}
-	dbConfigPath := filepath.Join(dataDir, "database.json")
-	sup, err := NewSupervisor(dbConfigPath)
+	sup, err := NewSupervisor(cfg.DbConfigFile)
 	if err != nil {
 		// A malformed database.json is a misconfiguration, not a signal. The
 		// benign "I manage my own database" case is a *missing* file, which
 		// NewSupervisor already answers with an empty supervisor — so reaching
 		// here means the operator wrote a config we could not honour, and
 		// silently managing nothing would hide that behind a later timeout.
-		fatal(fmt.Sprintf("gateway: fatal: bad managed-service config %s: %v", dbConfigPath, err),
+		fatal(fmt.Sprintf("gateway: fatal: bad managed-service config %s: %v", cfg.DbConfigFile, err),
 			"supervisor: failed to load config", err)
 	}
 

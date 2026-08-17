@@ -1,17 +1,37 @@
 import { defineBoundaries, zone, allow } from "./core/config";
 
 export default defineBoundaries({
-  zones: [
-    zone("plugin", { match: "plugins", discover: "plugin-tree" }),
-  ],
+  zones: [zone("plugin", { match: "plugins", discover: "plugin-tree" })],
 
   // Layer 1: Runtime isolation (default-deny — unlisted = blocked)
   runtimes: {
+    // `data-dirs` is absent from `web` and `core` ON PURPOSE. A data-dir
+    // declaration reaches `paths/core`, which calls `homedir()` at module scope
+    // — a single such edge into the web bundle breaks it at module eval. `core`
+    // is web-importable, so granting `core -> data-dirs` would open that path
+    // transitively; the browser names a directory through the `paths/display`
+    // string literals instead.
+    //
+    // KNOW WHAT THIS DOES AND DOES NOT CATCH. The evaluator only extracts
+    // specifiers matching `ZONE_SPECIFIER_RE` (`boundaries/core/check.ts`) and
+    // short-circuits when source and target zones are equal, so it polices the
+    // CROSS-PLUGIN alias form (`@plugins/other/data-dirs` from a `core/` file)
+    // and not a plugin reaching its own `../data-dirs` relatively. The
+    // cross-plugin form is the one that matters — it is how a genuinely
+    // web-reachable `core/` would acquire this edge — and the same-plugin
+    // relative form was never policed for `paths/core` either (`checks/core`
+    // imports it directly today). Do not read this row as airtight.
     web: ["web", "core", "shared"],
-    server: ["server", "core", "shared"],
-    central: ["central", "core", "shared"],
+    server: ["server", "core", "shared", "data-dirs"],
+    central: ["central", "core", "shared", "data-dirs"],
     core: ["core"],
-    shared: ["shared", "core"],
+    shared: ["shared", "core", "data-dirs"],
+    // Declarations of the directories a plugin owns under the data root. A leaf
+    // runtime: it reads `paths/core` to build its paths and nothing else, so it
+    // can be imported cross-plugin (two plugins sharing one directory — e.g.
+    // pgbouncer writing into the embedded cluster's dir — import the single
+    // declaration rather than each joining the root).
+    "data-dirs": ["data-dirs", "core"],
     // e2e/ — Playwright scripts that drive the deployed app from OUTSIDE it.
     // They may use other plugins' `core` types and other plugins' `e2e` flow
     // helpers (the shared harness, the "open a blank Pages doc" flow), and are

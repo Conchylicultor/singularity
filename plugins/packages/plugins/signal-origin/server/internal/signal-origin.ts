@@ -1,8 +1,8 @@
 import { createHash } from "node:crypto";
-import { existsSync, mkdirSync, readFileSync, renameSync, rmSync } from "node:fs";
+import { existsSync, readFileSync, renameSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { dlopen, ptr } from "bun:ffi";
-import { SINGULARITY_DIR } from "@plugins/infra/plugins/paths/core";
+import { signalOriginNative } from "../../data-dirs";
 import type { SignalOrigin } from "../../core";
 
 /**
@@ -17,7 +17,13 @@ const EXPECTED_LAYOUT_VERSION = 1;
 const SNAPSHOT_BUF_BYTES = 16 * 1024;
 
 /** The `.c` this plugin compiles. Exported so a caller can record WHAT failed to build. */
-export const signalOriginSourcePath = join(import.meta.dir, "..", "..", "native", "signal-origin.c");
+export const signalOriginSourcePath = join(
+  import.meta.dir,
+  "..",
+  "..",
+  "native",
+  "signal-origin.c",
+);
 
 /**
  * Arming either worked, or it did not and says why.
@@ -28,8 +34,7 @@ export const signalOriginSourcePath = join(import.meta.dir, "..", "..", "native"
  * confusable with "nobody sent a signal".
  */
 export type SignalOriginArmResult =
-  | { armed: true; libraryPath: string }
-  | { armed: false; reason: string };
+  { armed: true; libraryPath: string } | { armed: false; reason: string };
 
 interface TapSymbols {
   so_install: (signo: number) => number;
@@ -61,7 +66,8 @@ function disabledByEnv(): boolean {
  *
  * Steady-state cost is one `existsSync`.
  */
-function ensureTapLibrary(): { ok: true; path: string } | { ok: false; reason: string } {
+function ensureTapLibrary():
+  { ok: true; path: string } | { ok: false; reason: string } {
   let source: Buffer;
   try {
     source = readFileSync(signalOriginSourcePath);
@@ -73,25 +79,46 @@ function ensureTapLibrary(): { ok: true; path: string } | { ok: false; reason: s
 
   const sha8 = createHash("sha256").update(source).digest("hex").slice(0, 8);
   const ext = process.platform === "darwin" ? "dylib" : "so";
-  const dir = join(SINGULARITY_DIR, "native");
-  const target = join(dir, `signal-origin-${sha8}-${process.arch}.${ext}`);
+  const target = signalOriginNative.file(
+    `signal-origin-${sha8}-${process.arch}.${ext}`,
+  );
   if (existsSync(target)) return { ok: true, path: target };
 
   const cc = process.env.CC ?? "cc";
   const shared = process.platform === "darwin" ? "-dynamiclib" : "-shared";
   const tmp = `${target}.tmp.${process.pid}`;
   try {
-    mkdirSync(dir, { recursive: true });
+    signalOriginNative.ensure();
     // spawnSync buffers natively (no JS streams), so it is outside the
     // exit-during-stream-pull wedge that bans raw async `Bun.spawn`.
-    const res = Bun.spawnSync([cc, "-O2", "-fPIC", "-std=c11", shared, "-o", tmp, signalOriginSourcePath], {
-      stdout: "pipe",
-      stderr: "pipe",
-    });
+    const res = Bun.spawnSync(
+      [
+        cc,
+        "-O2",
+        "-fPIC",
+        "-std=c11",
+        shared,
+        "-o",
+        tmp,
+        signalOriginSourcePath,
+      ],
+      {
+        stdout: "pipe",
+        stderr: "pipe",
+      },
+    );
     if (res.exitCode !== 0) {
       rmSync(tmp, { force: true });
-      const stderr = res.stderr.toString().trim().split("\n").slice(-3).join(" / ");
-      return { ok: false, reason: `${cc} exited ${res.exitCode}: ${stderr || "(no output)"}` };
+      const stderr = res.stderr
+        .toString()
+        .trim()
+        .split("\n")
+        .slice(-3)
+        .join(" / ");
+      return {
+        ok: false,
+        reason: `${cc} exited ${res.exitCode}: ${stderr || "(no output)"}`,
+      };
     }
     renameSync(tmp, target);
     return { ok: true, path: target };
@@ -122,7 +149,10 @@ function loadTap(): { ok: true; path: string } | { ok: false; reason: string } {
     const loaded = symbols as unknown as TapSymbols;
     const version = loaded.so_layout_version();
     if (version !== EXPECTED_LAYOUT_VERSION) {
-      return { ok: false, reason: `layout version ${version}, expected ${EXPECTED_LAYOUT_VERSION}` };
+      return {
+        ok: false,
+        reason: `layout version ${version}, expected ${EXPECTED_LAYOUT_VERSION}`,
+      };
     }
     tap = loaded;
     return { ok: true, path: lib.path };
@@ -154,7 +184,10 @@ export function armSignalOrigin(signos: number[]): SignalOriginArmResult {
   // idempotent, so arming more is free.
   if (armResult !== null && !armResult.armed) return armResult;
   if (disabledByEnv()) {
-    armResult = { armed: false, reason: "disabled by SINGULARITY_NO_SIGNAL_ORIGIN=1" };
+    armResult = {
+      armed: false,
+      reason: "disabled by SINGULARITY_NO_SIGNAL_ORIGIN=1",
+    };
     return armResult;
   }
 
@@ -178,7 +211,10 @@ export function armSignalOrigin(signos: number[]): SignalOriginArmResult {
   armResult =
     failed.length === 0
       ? { armed: true, libraryPath: loaded.path }
-      : { armed: false, reason: `so_install refused signal(s) ${failed.join(",")}` };
+      : {
+          armed: false,
+          reason: `so_install refused signal(s) ${failed.join(",")}`,
+        };
   return armResult;
 }
 

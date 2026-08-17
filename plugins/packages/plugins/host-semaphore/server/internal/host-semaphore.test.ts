@@ -2,7 +2,7 @@ import { afterEach, describe, expect, test } from "bun:test";
 import { dlopen } from "bun:ffi";
 import { closeSync, mkdirSync, openSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { SINGULARITY_DIR } from "@plugins/infra/plugins/paths/server";
+import { defineDataDir, type DataDir } from "@plugins/infra/plugins/paths/core";
 import { createHostSemaphore, type HostShare } from "./host-semaphore";
 
 // Raw flock, the same way the module dials it — used by `isSlotHeld` below to probe
@@ -45,12 +45,40 @@ const FLOCK_WAIT_PATH = join(
 // resolves.
 const HOST_SEMAPHORE_MODULE = join(import.meta.dir, "host-semaphore.ts");
 
+// The paths plugin's `core` barrel, by absolute path for the same reason: the
+// fixture needs `defineDataDir` to declare its throwaway pool directory, and a
+// `bun -e` snippet has no file of its own for an `@plugins/*` alias to resolve
+// against.
+const PATHS_CORE_MODULE = join(
+  import.meta.dir,
+  "..",
+  "..",
+  "..",
+  "..",
+  "..",
+  "infra",
+  "plugins",
+  "paths",
+  "core",
+  "index.ts",
+);
+
 // A one-shot fixture (run via `bun -e`): construct the named pool and acquire+release
 // one slot immediately, printing OK on success or THREW:<msg> on any error. Used to
 // hammer a fresh pool's first-acquire from many separate processes at once.
 const FIRST_ACQUIRE_FIXTURE = `
   const { createHostSemaphore } = await import(process.env.HS_MOD);
-  const sem = createHostSemaphore({ name: process.env.HS_NAME, size: 4 });
+  const { defineDataDir } = await import(process.env.HS_PATHS_MOD);
+  const sem = createHostSemaphore({
+    slots: defineDataDir({
+      kind: "locks",
+      name: process.env.HS_NAME,
+      owner: "packages/host-semaphore",
+      description: "throwaway test pool",
+      reclaim: { kind: "restart" },
+    }),
+    size: 4,
+  });
   try {
     const share = await sem.acquireShare(1);
     await share.release();
@@ -62,38 +90,50 @@ const FIRST_ACQUIRE_FIXTURE = `
   }
 `;
 
-// Unique slot dir per `createHostSemaphore` so parallel test runs (and the two
-// tests below) never collide on the same lock files.
+// A freshly DECLARED slot directory per pool, so parallel test runs (and the two
+// tests below) never collide on the same lock files. Declaring it — rather than
+// joining a path — is the point: `createHostSemaphore` no longer derives a
+// directory, it is handed one, and these tests exercise the real API.
 let counter = 0;
-const usedNames: string[] = [];
-function uniqueName(prefix: string): string {
-  const name = `hosttest-${prefix}-${process.pid}-${Date.now()}-${counter++}`;
-  usedNames.push(name);
-  return name;
+const usedDirs: DataDir[] = [];
+function uniqueSlots(prefix: string): DataDir {
+  const dir = defineDataDir({
+    kind: "locks",
+    name: `hosttest-${prefix}-${process.pid}-${Date.now()}-${counter++}`,
+    owner: "packages/host-semaphore",
+    description: "throwaway test pool",
+    reclaim: { kind: "restart" },
+  });
+  usedDirs.push(dir);
+  return dir;
 }
 
 afterEach(() => {
-  for (const name of usedNames.splice(0)) {
-    rmSync(join(SINGULARITY_DIR, `${name}-slots`), {
-      recursive: true,
-      force: true,
-    });
+  for (const dir of usedDirs.splice(0)) {
+    rmSync(dir.path, { recursive: true, force: true });
   }
 });
 
 const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 
-test("validates size and name", () => {
-  expect(() => createHostSemaphore({ name: "ok", size: 0 })).toThrow();
-  expect(() => createHostSemaphore({ name: "ok", size: 1.5 })).toThrow();
-  expect(() => createHostSemaphore({ name: "Bad_Name", size: 1 })).toThrow();
-  expect(() => createHostSemaphore({ name: "-bad", size: 1 })).toThrow();
-  expect(() => createHostSemaphore({ name: "good-1", size: 1 })).not.toThrow();
+// Name validation is no longer here: the pool's name IS its declared directory's
+// name, which `defineDataDir` validates against the same lowercase-kebab regex.
+// One rule, one owner — the two can no longer disagree.
+test("validates size", () => {
+  expect(() =>
+    createHostSemaphore({ slots: uniqueSlots("v0"), size: 0 }),
+  ).toThrow();
+  expect(() =>
+    createHostSemaphore({ slots: uniqueSlots("v1"), size: 1.5 }),
+  ).toThrow();
+  expect(() =>
+    createHostSemaphore({ slots: uniqueSlots("v2"), size: 1 }),
+  ).not.toThrow();
 });
 
 describe("cross-process serialization", () => {
   test("size 1 serializes 3 overlapping runs through fast-path + broker", async () => {
-    const sem = createHostSemaphore({ name: uniqueName("s1"), size: 1 });
+    const sem = createHostSemaphore({ slots: uniqueSlots("s1"), size: 1 });
 
     let active = 0;
     let peak = 0;
@@ -119,7 +159,7 @@ describe("cross-process serialization", () => {
   });
 
   test("size 2 allows 2 concurrent but never 3", async () => {
-    const sem = createHostSemaphore({ name: uniqueName("s2"), size: 2 });
+    const sem = createHostSemaphore({ slots: uniqueSlots("s2"), size: 2 });
 
     let active = 0;
     let peak = 0;
@@ -143,7 +183,7 @@ describe("cross-process serialization", () => {
   });
 
   test("a rejecting fn never leaks a slot", async () => {
-    const sem = createHostSemaphore({ name: uniqueName("rej"), size: 1 });
+    const sem = createHostSemaphore({ slots: uniqueSlots("rej"), size: 1 });
 
     let rejected: unknown;
     try {
@@ -184,7 +224,10 @@ async function rejection(p: Promise<unknown>): Promise<Error> {
 
 describe("acquireShare", () => {
   test("throws on a non-positive-integer max", async () => {
-    const sem = createHostSemaphore({ name: uniqueName("share-arg"), size: 4 });
+    const sem = createHostSemaphore({
+      slots: uniqueSlots("share-arg"),
+      size: 4,
+    });
     // Failure is a thrown type, never a `slots: 0` value a caller could absorb.
     for (const bad of [0, -1, 1.5]) {
       expect((await rejection(sem.acquireShare(bad))).message).toContain(
@@ -195,7 +238,7 @@ describe("acquireShare", () => {
 
   test("on an idle pool takes the full share with no broker", async () => {
     const sem = createHostSemaphore({
-      name: uniqueName("share-idle"),
+      slots: uniqueSlots("share-idle"),
       size: 4,
     });
 
@@ -222,7 +265,7 @@ describe("acquireShare", () => {
 
   test("with 3 of 4 slots held, returns the single remaining slot", async () => {
     const sem = createHostSemaphore({
-      name: uniqueName("share-partial"),
+      slots: uniqueSlots("share-partial"),
       size: 4,
     });
 
@@ -241,7 +284,7 @@ describe("acquireShare", () => {
 
   test("with all 4 slots held, blocks then returns once one frees (broker path)", async () => {
     const sem = createHostSemaphore({
-      name: uniqueName("share-full"),
+      slots: uniqueSlots("share-full"),
       size: 4,
     });
 
@@ -268,7 +311,7 @@ describe("acquireShare", () => {
 
   test("two concurrent callers never hold more than 4 slots at once", async () => {
     const sem = createHostSemaphore({
-      name: uniqueName("share-race"),
+      slots: uniqueSlots("share-race"),
       size: 4,
     });
 
@@ -292,7 +335,10 @@ describe("acquireShare", () => {
   });
 
   test("release is idempotent and leaks no slot when the caller's body throws", async () => {
-    const sem = createHostSemaphore({ name: uniqueName("share-rej"), size: 4 });
+    const sem = createHostSemaphore({
+      slots: uniqueSlots("share-rej"),
+      size: 4,
+    });
 
     // Idempotent: a double release is a no-op, not a double-close error.
     const first = await sem.acquireShare(4);
@@ -328,9 +374,9 @@ describe("acquireShare", () => {
 // grant, and the split's presence in the pool identity.
 describe("reserved floor (lanes)", () => {
   test("background never takes a slot at or above backgroundLimit", async () => {
-    const name = uniqueName("bg-floor");
-    const slotsDir = join(SINGULARITY_DIR, `${name}-slots`);
-    const sem = createHostSemaphore({ name, size: 4, backgroundLimit: 2 });
+    const slots = uniqueSlots("bg-floor");
+    const slotsDir = slots.path;
+    const sem = createHostSemaphore({ slots, size: 4, backgroundLimit: 2 });
 
     // Two background handles take the whole background window — deterministically
     // slot-0 then slot-1 (forward sweep, one slot each).
@@ -370,9 +416,9 @@ describe("reserved floor (lanes)", () => {
   });
 
   test("an interactive acquire is granted immediately from the floor while background is saturated", async () => {
-    const name = uniqueName("floor-fast");
-    const slotsDir = join(SINGULARITY_DIR, `${name}-slots`);
-    const sem = createHostSemaphore({ name, size: 4, backgroundLimit: 2 });
+    const slots = uniqueSlots("floor-fast");
+    const slotsDir = slots.path;
+    const sem = createHostSemaphore({ slots, size: 4, backgroundLimit: 2 });
 
     const h1 = await sem.acquireShare(1, { lane: "background" });
     const h2 = await sem.acquireShare(1, { lane: "background" });
@@ -411,9 +457,9 @@ describe("reserved floor (lanes)", () => {
   });
 
   test("interactive sweeps high-first: an idle acquire holds the top slot", async () => {
-    const name = uniqueName("hi-first");
-    const slotsDir = join(SINGULARITY_DIR, `${name}-slots`);
-    const sem = createHostSemaphore({ name, size: 4, backgroundLimit: 2 });
+    const slots = uniqueSlots("hi-first");
+    const slotsDir = slots.path;
+    const sem = createHostSemaphore({ slots, size: 4, backgroundLimit: 2 });
 
     const share = await sem.acquireShare(1, { lane: "interactive" });
     expect(share.slots).toBe(1);
@@ -426,12 +472,12 @@ describe("reserved floor (lanes)", () => {
   });
 
   test("backgroundLimit is part of pool identity: a live split is adopted, an idle one resizes", async () => {
-    const name = uniqueName("bg-identity");
-    const slotsDir = join(SINGULARITY_DIR, `${name}-slots`);
+    const slots = uniqueSlots("bg-identity");
+    const slotsDir = slots.path;
 
     // Establish the pool at size 4 / backgroundLimit 2 and HOLD both background slots
     // so the window is FULL and the pool is live.
-    const sem = createHostSemaphore({ name, size: 4, backgroundLimit: 2 });
+    const sem = createHostSemaphore({ slots, size: 4, backgroundLimit: 2 });
     const held = await sem.acquireShare(2, { lane: "background" });
     expect(held.slots).toBe(2);
 
@@ -439,7 +485,7 @@ describe("reserved floor (lanes)", () => {
     // declared index-3 would let this background acquire take slot-2 — a slot the live
     // pool reserves for interactive. Adopting the live 4:2 keeps the floor where every
     // holder thinks it is, so the acquire blocks on the full window instead.
-    const other = createHostSemaphore({ name, size: 4, backgroundLimit: 3 });
+    const other = createHostSemaphore({ slots, size: 4, backgroundLimit: 3 });
     let resolved = false;
     const blocked = other.acquireShare(1, { lane: "background" }).then((s) => {
       resolved = true;
@@ -458,7 +504,7 @@ describe("reserved floor (lanes)", () => {
 
     // Fully idle, a fresh pool with a different split claims the sentinel silently —
     // the declared split still lands, it just waits for the pool rather than crashing.
-    const resized = createHostSemaphore({ name, size: 4, backgroundLimit: 3 });
+    const resized = createHostSemaphore({ slots, size: 4, backgroundLimit: 3 });
     const third = await resized.acquireShare(3, { lane: "background" });
     expect(third.slots).toBe(3);
     await third.release();
@@ -533,7 +579,7 @@ describe("wakes on any freed slot (stranding gate)", () => {
   for (const k of [0, 1, 2, 3]) {
     test(`releasing held slot ${k} wakes the fan-out waiter`, async () => {
       const sem = createHostSemaphore({
-        name: uniqueName(`strand-${k}`),
+        slots: uniqueSlots(`strand-${k}`),
         size: 4,
       });
 
@@ -564,14 +610,14 @@ describe("wakes on any freed slot (stranding gate)", () => {
 test("a SIGKILLed out-of-process holder wakes a fan-out waiter", async () => {
   // flock releases on holder *death*, not just graceful close — so a SIGKILL must
   // wake the waiter. This is the case any userspace tick-file/watcher design fails.
-  const name = uniqueName("sigkill");
-  const slotsDir = join(SINGULARITY_DIR, `${name}-slots`);
+  const slots = uniqueSlots("sigkill");
+  const slotsDir = slots.path;
   mkdirSync(slotsDir, { recursive: true });
 
   const holder = spawnHolder(join(slotsDir, "slot-0.lock"));
   await awaitGrantedRaw(holder.stdout); // holder now owns the only slot
 
-  const sem = createHostSemaphore({ name, size: 1 });
+  const sem = createHostSemaphore({ slots, size: 1 });
   const waiterP = sem.acquireShare(1);
   await sleep(150); // waiter finds the slot busy and fans out
   holder.kill(9); // hard kill — the flock releases as the process dies
@@ -589,8 +635,8 @@ test("a fan-out child is not orphaned when its parent is SIGKILLed", async () =>
   // A child blocked on flock must still exit when its parent dies with no chance to
   // SIGTERM it — the orphan hole the old main-thread-flock broker had. The worker-
   // thread design keeps the child's main thread free to observe stdin EOF.
-  const name = uniqueName("orphan");
-  const slotsDir = join(SINGULARITY_DIR, `${name}-slots`);
+  const slots = uniqueSlots("orphan");
+  const slotsDir = slots.path;
   mkdirSync(slotsDir, { recursive: true });
   const lockFile = join(slotsDir, "slot-0.lock");
 
@@ -636,7 +682,7 @@ test("losers are reaped before the extras sweep, so no undercount", async () => 
   // When a full share is released at once, all `size` fan-out children may each grab a
   // different slot. The winner keeps one; the losers are SIGKILLed and awaited so their
   // slots are back BEFORE the extras re-sweep — the waiter must reclaim more than one.
-  const sem = createHostSemaphore({ name: uniqueName("extras"), size: 4 });
+  const sem = createHostSemaphore({ slots: uniqueSlots("extras"), size: 4 });
 
   const holder = await sem.acquireShare(4);
   expect(holder.slots).toBe(4);
@@ -652,17 +698,17 @@ test("losers are reaped before the extras sweep, so no undercount", async () => 
 });
 
 test("size is part of pool identity: a live size is adopted, an idle one resizes", async () => {
-  const name = uniqueName("identity");
+  const slots = uniqueSlots("identity");
 
   // Establish the pool at size 4 and HOLD every slot so it is live AND full.
-  const sem4 = createHostSemaphore({ name, size: 4 });
+  const sem4 = createHostSemaphore({ slots, size: 4 });
   const held = await sem4.acquireShare(4);
   expect(held.slots).toBe(4);
 
   // A size-8 process on the same live pool must NOT sweep slot-4..7 — nobody else is
   // watching those, so it would silently double the bound. It adopts the live 4 and
   // therefore finds the pool full, exactly as a size-4 process would.
-  const sem8 = createHostSemaphore({ name, size: 8 });
+  const sem8 = createHostSemaphore({ slots, size: 8 });
   let resolved = false;
   const blocked = sem8.acquireShare(1).then((s) => {
     resolved = true;
@@ -680,19 +726,19 @@ test("size is part of pool identity: a live size is adopted, an idle one resizes
   await adopted.release();
 
   // Once idle, a fresh size-8 pool claims the sentinel silently and gets all 8.
-  const sem8b = createHostSemaphore({ name, size: 8 });
+  const sem8b = createHostSemaphore({ slots, size: 8 });
   const share = await sem8b.acquireShare(8);
   expect(share.slots).toBe(8);
   await share.release();
 });
 
 test("an adopted instance converges back once the pool is resized to its declared size", async () => {
-  const name = uniqueName("identity-converge");
+  const slots = uniqueSlots("identity-converge");
 
   // A size-4 pool is live and full; the size-8 instance adopts 4.
-  const sem4 = createHostSemaphore({ name, size: 4 });
+  const sem4 = createHostSemaphore({ slots, size: 4 });
   const held = await sem4.acquireShare(4);
-  const sem8 = createHostSemaphore({ name, size: 8 });
+  const sem8 = createHostSemaphore({ slots, size: 8 });
   const blocked = sem8.acquireShare(1);
   await Bun.sleep(200);
   expect(sem8.liveSize()).toBe(4);
@@ -709,17 +755,17 @@ test("an adopted instance converges back once the pool is resized to its declare
 });
 
 test("a legacy bare-integer sentinel migrates to size:size instead of crashing", async () => {
-  const name = uniqueName("legacy-sentinel");
+  const slots = uniqueSlots("legacy-sentinel");
 
   // Simulate the pre-reserved-floor on-disk state: a slot dir whose `size` sentinel
   // holds a bare "4" (the historical non-laned pools have exactly this today).
-  const slotsDir = join(SINGULARITY_DIR, `${name}-slots`);
+  const slotsDir = slots.path;
   mkdirSync(slotsDir, { recursive: true });
   writeFileSync(join(slotsDir, "size"), "4");
 
   // A size-4 (backgroundLimit defaults to 4) process must read "4" as 4:4 and proceed,
   // not throw corruption. This is the hot-path migration guarantee.
-  const sem = createHostSemaphore({ name, size: 4 });
+  const sem = createHostSemaphore({ slots, size: 4 });
   const share = await sem.acquireShare(4);
   expect(share.slots).toBe(4);
   await share.release();
@@ -734,12 +780,17 @@ test("concurrent first-acquire on a fresh pool never crashes on the size-guard r
   // (the promise memo dedupes); it needs separate processes racing on the flock.
   const results: string[] = [];
   for (let trial = 0; trial < 3; trial++) {
-    const name = uniqueName(`race-${trial}`);
+    const slots = uniqueSlots(`race-${trial}`);
     const children = Array.from({ length: 12 }, () =>
       Bun.spawn([process.execPath, "-e", FIRST_ACQUIRE_FIXTURE], {
         stdout: "pipe",
         stderr: "inherit",
-        env: { ...process.env, HS_MOD: HOST_SEMAPHORE_MODULE, HS_NAME: name },
+        env: {
+          ...process.env,
+          HS_MOD: HOST_SEMAPHORE_MODULE,
+          HS_PATHS_MOD: PATHS_CORE_MODULE,
+          HS_NAME: slots.spec.name,
+        },
       }),
     );
     const outs = await Promise.all(

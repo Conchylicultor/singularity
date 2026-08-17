@@ -21,11 +21,13 @@ change are the same call.
 **The change signal is borrowed.** `files` owns the prototypes tree and already
 watches it; a second `@parcel/watcher` over the same tree doubles every event.
 So `files` exports `onPrototypesChanged` / `listPrototypeMetas` and this plugin
-listens instead of watching. `PROTOTYPES_DIR` comes from `infra/paths`, its
-actual home — taking it via `files` would be a cross-plugin re-export.
+listens instead of watching. `prototypesDir` comes from `files` too — `files`
+DECLARES that data dir (`data-dirs/`, `apps/prototypes`), so taking it from
+there is reading a symbol at its home, not a cross-plugin re-export. A data dir
+is declared exactly once, so re-deriving the path here would be the bug.
 
-**The cache is content-addressed and host-global**
-(`~/.singularity/prototype-thumbnails/<sha256>.png`, `asset-mirror`'s shape).
+**The cache is content-addressed and host-global** (a `cache/`-kind data dir,
+`<sha256>.png` per prototype, `asset-mirror`'s shape).
 The filename IS the folder's content hash, which buys three things: two
 worktrees holding the same prototype share one render; the route can say
 `immutable` and mean it (an edit yields a different URL, never a stale hit); and
@@ -102,9 +104,8 @@ Design: `research/2026-08-16-apps-prototype-gallery-thumbnails.md`.
   - Uses:
     - `apps/prototypes/files.listPrototypeMetas`
     - `apps/prototypes/files.onPrototypesChanged`
+    - `apps/prototypes/files.prototypesDir`
     - `infra/jobs.defineJob`
-    - `infra/paths.PROTOTYPES_DIR`
-    - `infra/paths.SINGULARITY_DIR`
   - Register:
     - `defineJob('prototypes.render-thumbnail')`
     - `defineJob('prototypes.sweep-thumbnails')`

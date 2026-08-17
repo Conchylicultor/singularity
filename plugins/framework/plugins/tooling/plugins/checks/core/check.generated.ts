@@ -70,7 +70,7 @@ export const checkEntries: CollectedEntry[] = [
   { pluginPath: "framework/plugins/tooling/plugins/checks/plugins/tailwind-scan-covers-classes", id: "framework.tooling.checks.tailwind-scan-covers-classes", loader: () => import("@plugins/framework/plugins/tooling/plugins/checks/plugins/tailwind-scan-covers-classes/check"), dependsOn: [] },
   { pluginPath: "framework/plugins/tooling/plugins/checks/plugins/token-group-vars-in-sync", id: "framework.tooling.checks.token-group-vars-in-sync", loader: () => import("@plugins/framework/plugins/tooling/plugins/checks/plugins/token-group-vars-in-sync/check"), dependsOn: [] },
   { pluginPath: "framework/plugins/tooling/plugins/checks/plugins/tsconfig-alias-single-owner", id: "framework.tooling.checks.tsconfig-alias-single-owner", loader: () => import("@plugins/framework/plugins/tooling/plugins/checks/plugins/tsconfig-alias-single-owner/check"), dependsOn: [] },
-  { pluginPath: "framework/plugins/tooling/plugins/checks/plugins/type-check", id: "framework.tooling.checks.type-check", loader: () => import("@plugins/framework/plugins/tooling/plugins/checks/plugins/type-check/check"), dependsOn: ["infra/plugins/paths"] },
+  { pluginPath: "framework/plugins/tooling/plugins/checks/plugins/type-check", id: "framework.tooling.checks.type-check", loader: () => import("@plugins/framework/plugins/tooling/plugins/checks/plugins/type-check/check"), dependsOn: [] },
   { pluginPath: "framework/plugins/tooling/plugins/test-layout", id: "framework.tooling.test-layout", loader: () => import("@plugins/framework/plugins/tooling/plugins/test-layout/check"), dependsOn: ["infra/plugins/paths"] },
   { pluginPath: "framework/plugins/tooling/plugins/web-artifacts", id: "framework.tooling.web-artifacts", loader: () => import("@plugins/framework/plugins/tooling/plugins/web-artifacts/check"), dependsOn: ["infra/plugins/paths"] },
   { pluginPath: "infra/plugins/endpoints", id: "infra.endpoints", loader: () => import("@plugins/infra/plugins/endpoints/check"), dependsOn: [] },
@@ -78,7 +78,7 @@ export const checkEntries: CollectedEntry[] = [
   { pluginPath: "page/plugins/annotations", id: "page.annotations", loader: () => import("@plugins/page/plugins/annotations/check"), dependsOn: ["page/plugins/editor", "plugin-meta/plugins/facets"] },
   { pluginPath: "page/plugins/editor", id: "page.editor", loader: () => import("@plugins/page/plugins/editor/check"), dependsOn: ["plugin-meta/plugins/facets"] },
   { pluginPath: "plugin-meta/plugins/facets", id: "plugin-meta.facets", loader: () => import("@plugins/plugin-meta/plugins/facets/check"), dependsOn: [] },
-  { pluginPath: "primitives/plugins/css/plugins/layout-harness", id: "primitives.css.layout-harness", loader: () => import("@plugins/primitives/plugins/css/plugins/layout-harness/check"), dependsOn: ["infra/plugins/paths"] },
+  { pluginPath: "primitives/plugins/css/plugins/layout-harness", id: "primitives.css.layout-harness", loader: () => import("@plugins/primitives/plugins/css/plugins/layout-harness/check"), dependsOn: [] },
   { pluginPath: "primitives/plugins/icon-picker", id: "primitives.icon-picker", loader: () => import("@plugins/primitives/plugins/icon-picker/check"), dependsOn: [] },
   { pluginPath: "primitives/plugins/pane", id: "primitives.pane", loader: () => import("@plugins/primitives/plugins/pane/check"), dependsOn: [] },
 ];

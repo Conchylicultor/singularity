@@ -101,7 +101,6 @@ process can import it.
   - Uses:
     - `infra/paths.currentWorktreeName`
     - `infra/paths.GIT`
-    - `infra/paths.SINGULARITY_DIR`
   - Exports (types):
     - `GitProvenance`
     - `PruneResult`

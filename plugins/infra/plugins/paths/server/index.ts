@@ -34,6 +34,27 @@ export {
 } from "../core/internal/paths";
 export type { ReleaseIdentity } from "../core/internal/paths";
 
+// The declared-directory registry for the data root, re-exported from the
+// server barrel exactly as the core barrel exports it — same module, so a
+// declaration made through either specifier lands in the one registry. Server
+// plugins are the bulk of the writers under the root, and a server file that
+// had to reach into `…/paths/core` for `defineDataDir` while taking every other
+// path from `…/paths/server` is the friction that keeps people joining the root
+// by hand. `SINGULARITY_DIR` above stays exported until every owner has
+// declared its directories.
+export {
+  DATA_DIR_KINDS,
+  dataRoot,
+  defineDataDir,
+  getDataDirs,
+} from "../core/internal/data-dir";
+export type {
+  DataDir,
+  DataDirKind,
+  DataDirSpec,
+  ReclaimPolicy,
+} from "../core/internal/data-dir";
+
 export { GIT, PGREP, PS, CLAUDE, TMUX } from "./internal/bins";
 
 export { listWorktreeDirs } from "./internal/worktree-dirs";

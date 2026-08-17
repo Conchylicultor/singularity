@@ -1,10 +1,10 @@
 # host-semaphore
 
 Cross-process twin of `packages/semaphore`.
-`createHostSemaphore({ name, size, backgroundLimit? })` returns the same
+`createHostSemaphore({ slots, size, backgroundLimit? })` returns the same
 `{ run(fn, hooks?) }` shape, but the bound is enforced *across* processes — at most
-`size` `run` bodies execute at once across every process sharing the same `name`, not
-just within one. Use it to cap CPU-heavy work (git subprocesses, `git archive | tar`,
+`size` `run` bodies execute at once across every process sharing the same `slots`
+directory, not just within one. Use it to cap CPU-heavy work (git subprocesses, `git archive | tar`,
 filesystem walks, JSONL scans) across the ~16 worktree server processes sharing one
 box, where a per-worktree in-process `createSemaphore` of N still admits ~16×N
 concurrent spawns.
@@ -12,12 +12,29 @@ concurrent spawns.
 `backgroundLimit` (optional, default `size` — no reserved floor) partitions the pool
 into two lanes; see **Reserved floor** below.
 
-The bound is N `flock(2)` advisory lock files under
-`~/.singularity/<name>-slots/slot-0.lock … slot-(N-1).lock` (one holder per fd, so
-at most `size` holders host-wide). flock auto-releases when the fd closes **or the
-holding process dies**, so a SIGKILLed server never leaks a slot — the same
-crash-safety every host pool relies on (all declared through
-`@plugins/infra/plugins/host-admission`, the sole importer of this primitive).
+The bound is N `flock(2)` advisory lock files — `slot-0.lock … slot-(N-1).lock`
+inside `slots` (one holder per fd, so at most `size` holders host-wide). flock
+auto-releases when the fd closes **or the holding process dies**, so a SIGKILLed
+server never leaks a slot — the same crash-safety every host pool relies on (all
+declared through `@plugins/infra/plugins/host-admission`, the sole importer of this
+primitive).
+
+## The slot directory is handed in, never derived
+
+`slots` is a **declared** `DataDir` (`@plugins/infra/plugins/paths`), supplied by
+the caller. This primitive derives no path of its own — and that is a deliberate
+correction, not a style choice. It used to do
+``join(SINGULARITY_DIR, `${name}-slots`)`` itself, which meant one primitive
+silently minted a top-level directory in `~/.singularity/` per pool: ten existed on
+disk, only seven had a live `defineHostPool`, and nothing in the repo could
+enumerate any of them because the paths existed only as a template literal inside a
+function.
+
+The pool's identity — the `name` in every error message below — IS `slots.spec.name`,
+so a pool cannot be named one thing and stored under another. The path is read
+through `slots.path` on every use rather than captured at construction, because
+`defineHostPool` runs at consumer module eval and the data root is env-overridable
+after that (see `dataRoot()`).
 
 ## Hybrid acquire — fast path in-process, fan-out only under contention
 
@@ -200,9 +217,7 @@ export.
 
 - Description: Cross-process concurrency primitive: createHostSemaphore bounds work across processes via flock slot files (the host-wide twin of packages/semaphore).
 - Server:
-  - Uses:
-    - `infra/paths.SINGULARITY_DIR`
-    - `packages/flock.flockTry`
+  - Uses: `packages/flock.flockTry`
   - Exports (types):
     - `AcquireHooks`
     - `HostSemaphore`

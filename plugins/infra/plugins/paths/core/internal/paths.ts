@@ -144,8 +144,25 @@ export function checkoutWorktreeName(root: string): string {
 }
 
 export const HOME_DIR = homedir();
-export const SINGULARITY_DIR =
-  process.env.SINGULARITY_DIR ?? join(HOME_DIR, ".singularity");
+
+/**
+ * The singularity data root, derived AT CALL TIME.
+ *
+ * THE single derivation of the root — `SINGULARITY_DIR` below is an eager
+ * snapshot of it, kept for the call sites that still read the plain string, and
+ * `dataRoot()` (`./data-dir.ts`) is its public spelling. Not exported from the
+ * barrel on purpose: a consumer that wants the root gets the lazy function, and
+ * a consumer that wants a directory under it gets a `DataDir`.
+ *
+ * A function because `SINGULARITY_DIR` is env-overridable and the release
+ * launcher sets it before importing anything path-dependent — the same reason
+ * `webDistDir()` is a function. See its docblock below.
+ */
+export function resolveDataRoot(): string {
+  return process.env.SINGULARITY_DIR ?? join(HOME_DIR, ".singularity");
+}
+
+export const SINGULARITY_DIR = resolveDataRoot();
 export const BACKUPS_DIR = join(HOME_DIR, ".backups/singularity");
 export const SECRETS_DIR = join(SINGULARITY_DIR, "secrets");
 export const STORE_PATH = join(SINGULARITY_DIR, "secrets.json.enc");

@@ -1,12 +1,11 @@
-import { join } from "node:path";
 import { isNotNull } from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import { _conversations } from "@plugins/tasks/plugins/tasks-core/server";
 import {
   CLAUDE_PROJECTS_DIR,
-  COST_USAGE_DIR,
   isHostSingleton,
 } from "@plugins/infra/plugins/paths/server";
+import { costUsageDir } from "../../data-dirs";
 import { ensureMainWorktreeRoot } from "@plugins/infra/plugins/worktree/server";
 import { defineCorpusIndex } from "@plugins/infra/plugins/corpus-index/server";
 import { defineWarmup } from "@plugins/infra/plugins/warmup/server";
@@ -94,8 +93,10 @@ interface BundleBuild {
   shrunk: ArchiveShrink[];
 }
 
-const INDEX_PATH = join(COST_USAGE_DIR, "index.json");
-const PRICE_TABLE_PATH = join(COST_USAGE_DIR, "price-table.json");
+// Both files, and the year-sharded archive beside them, live in the host-global
+// usage dir this plugin declares in its `data-dirs/index.ts`.
+const INDEX_PATH = costUsageDir.file("index.json");
+const PRICE_TABLE_PATH = costUsageDir.file("price-table.json");
 
 // The incremental host-global transcript index — the generic mechanics
 // (enumerate → (mtime,size) fingerprint diff → bounded parse → atomic persist →
@@ -149,7 +150,10 @@ async function ensurePriceTable(): Promise<PriceTable> {
  * years and would otherwise silently reprice that history as unknown-model.
  */
 export async function refreshPriceTable(): Promise<{ models: number }> {
-  const [existing, fetched] = await Promise.all([ensurePriceTable(), fetchPriceTable()]);
+  const [existing, fetched] = await Promise.all([
+    ensurePriceTable(),
+    fetchPriceTable(),
+  ]);
   const next = mergePriceTable(existing, fetched);
   await savePriceTable(PRICE_TABLE_PATH, next);
   priceTable = next;
@@ -167,7 +171,7 @@ async function ensureArchive(): Promise<Map<string, ArchiveEntry>> {
   if (archive) return archive;
   archiveInflight ??= (async () => {
     try {
-      archive = await loadArchive(COST_USAGE_DIR);
+      archive = await loadArchive(costUsageDir.path);
       return archive;
     } finally {
       archiveInflight = null;
@@ -209,12 +213,10 @@ async function buildBundle(): Promise<BundleBuild> {
   const { daily, sessions, unpriced } = rollup(partials, table);
 
   const projectIsSingularity = classifyProjects(merged.values(), repoBasename);
-  const decorated = sessions.map(
-    (s: SessionRollup): PerSession => ({
-      ...s,
-      isSingularity: projectIsSingularity.get(s.projectDir) ?? false,
-    }),
-  );
+  const decorated = sessions.map((s: SessionRollup): PerSession => ({
+    ...s,
+    isSingularity: projectIsSingularity.get(s.projectDir) ?? false,
+  }));
   return {
     bundle: {
       daily,
@@ -255,7 +257,7 @@ export async function captureCostHistory(): Promise<void> {
   const { merged, unpriced, shrunk } = await buildBundle();
   await reportCostAnomalies(unpriced, shrunk);
   if (!isHostSingleton()) return;
-  await flushArchive(COST_USAGE_DIR, merged);
+  await flushArchive(costUsageDir.path, merged);
 }
 
 // Declared heavy boot warm-up (replacing the former raw `onReady` prewarm): warm
@@ -370,7 +372,8 @@ function classifyProjects(
   const out = new Map<string, boolean>();
   for (const e of entries) {
     const dir = e.partial.projectDir;
-    const live = repoBasename !== "" && isSingularityProjectDir(dir, repoBasename);
+    const live =
+      repoBasename !== "" && isSingularityProjectDir(dir, repoBasename);
     out.set(dir, (out.get(dir) ?? false) || live || e.isSingularity);
   }
   return out;

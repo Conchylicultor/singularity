@@ -1,6 +1,5 @@
 import {
   closeSync,
-  mkdirSync,
   openSync,
   readFileSync,
   renameSync,
@@ -9,12 +8,12 @@ import {
 } from "node:fs";
 import { join } from "node:path";
 import { flockTry } from "@plugins/packages/plugins/flock/server";
-import { SINGULARITY_DIR } from "@plugins/infra/plugins/paths/server";
+import type { DataDir } from "@plugins/infra/plugins/paths/core";
 
 // Cross-process twin of `createSemaphore` (the in-process counter+queue gate in
 // `packages/semaphore`). Bounds CPU-heavy work *across* the ~16 worktree server
 // processes sharing one box, not just within one. The bound is N flock(2) lock
-// files under `~/.singularity/<name>-slots/`: at most one holder per fd, so at
+// files in a caller-supplied declared directory: at most one holder per fd, so at
 // most `size` holders host-wide. flock auto-releases when the fd closes OR the
 // holding process dies, so a SIGKILLed server never leaks a slot — the same
 // crash-safety every host pool relies on (declared via `infra/host-admission`).
@@ -190,8 +189,19 @@ export interface HostSemaphore {
 
 /**
  * Cross-process bounded-concurrency gate: at most `size` `run` bodies execute at
- * once across every process sharing the same `name`. `name` keys the slot
- * directory (`~/.singularity/<name>-slots/`) and must be a safe filename segment.
+ * once across every process sharing the same slot directory.
+ *
+ * `slots` is that directory, and the caller supplies it as a **declared**
+ * `DataDir` — this primitive derives no path of its own. It used to, with
+ * ``join(SINGULARITY_DIR, `${name}-slots`)``, and that one line is why the data
+ * root grew a top-level directory per pool that nothing in the repo could
+ * enumerate. The pool's identity (the `name` in every error below) is the
+ * directory's own declared name, so the two can no longer disagree.
+ *
+ * The path is read through `slots.path` on every use, never captured at
+ * construction: `defineHostPool` runs at consumer module eval, and a frozen
+ * value there would not follow a `SINGULARITY_DIR` the release launcher sets
+ * later.
  *
  * `backgroundLimit` (default `size`, i.e. no reserved floor) caps how many slots the
  * `background` lane may take, reserving the remaining `size - backgroundLimit` slots
@@ -200,11 +210,15 @@ export interface HostSemaphore {
  * un-laned pool.
  */
 export function createHostSemaphore(opts: {
-  name: string;
+  slots: DataDir;
   size: number;
   backgroundLimit?: number;
 }): HostSemaphore {
-  const { name } = opts;
+  const { slots } = opts;
+  // The pool's identity, for the error messages below. Not a separate input:
+  // `defineDataDir` already validated it as one lowercase-kebab path segment, so
+  // the name-vs-directory drift the old `name` parameter allowed is gone.
+  const name = slots.spec.name;
   const declaredSize = opts.size;
   const declaredBackgroundLimit = opts.backgroundLimit ?? declaredSize;
   if (!Number.isInteger(declaredSize) || declaredSize < 1) {
@@ -221,12 +235,6 @@ export function createHostSemaphore(opts: {
       `createHostSemaphore: backgroundLimit must be an integer in 1..${declaredSize}, got ${declaredBackgroundLimit}`,
     );
   }
-  if (!/^[a-z0-9][a-z0-9-]*$/.test(name)) {
-    throw new Error(
-      `createHostSemaphore: name must match /^[a-z0-9][a-z0-9-]*$/, got ${JSON.stringify(name)}`,
-    );
-  }
-
   // The identity this instance is ACTUALLY sweeping. It starts at the declared pair
   // and is reconciled against the on-disk sentinel on every acquire: when another
   // process already has the pool open at a different pair, this instance adopts that
@@ -247,11 +255,11 @@ export function createHostSemaphore(opts: {
       ? Array.from({ length: backgroundLimit }, (_, i) => i)
       : Array.from({ length: size }, (_, i) => size - 1 - i);
 
-  const slotsDir = join(SINGULARITY_DIR, `${name}-slots`);
-  const slotFile = (i: number) => join(slotsDir, `slot-${i}.lock`);
-  const turnstileFile = join(slotsDir, "turnstile.lock");
-  const sizeFile = join(slotsDir, "size");
-  const guardFile = join(slotsDir, ".size.lock");
+  // Resolved per call, never captured — see the docblock on `slots`.
+  const slotFile = (i: number) => slots.file(`slot-${i}.lock`);
+  const turnstileFile = () => slots.file("turnstile.lock");
+  const sizeFile = () => slots.file("size");
+  const guardFile = () => slots.file(".size.lock");
 
   // Queue-depth gauge: how many callers are currently parked on the slow path.
   // Incremented when entering the slow path and decremented in a `finally`
@@ -282,7 +290,7 @@ export function createHostSemaphore(opts: {
     { size: number; backgroundLimit: number } | undefined {
     let raw: string;
     try {
-      raw = readFileSync(sizeFile, "utf8");
+      raw = readFileSync(sizeFile(), "utf8");
     } catch (err) {
       if ((err as NodeJS.ErrnoException).code === "ENOENT") return undefined;
       throw err;
@@ -316,9 +324,10 @@ export function createHostSemaphore(opts: {
   // only one it can legitimately claim authorship of. Called only where claiming it is
   // legal: a first touch, or a resize of a pool proven idle. An adoption never writes.
   function writeSentinelAtomic(): void {
-    const tmp = `${sizeFile}.${process.pid}.tmp`;
+    const path = sizeFile();
+    const tmp = `${path}.${process.pid}.tmp`;
     writeFileSync(tmp, `${declaredSize}:${declaredBackgroundLimit}`);
-    renameSync(tmp, sizeFile);
+    renameSync(tmp, path);
     size = declaredSize;
     backgroundLimit = declaredBackgroundLimit;
   }
@@ -356,18 +365,19 @@ export function createHostSemaphore(opts: {
   }
 
   async function doEnsureSizeIdentity(): Promise<void> {
-    mkdirSync(slotsDir, { recursive: true });
+    slots.ensure();
 
     // Take the size guard. Non-blocking in-process first; if it's contended, another
     // process is mid-initialization — that is a benign flock race, NOT a broken
     // invariant, so we WAIT for the guard via one `flock-wait` child (the turnstile
     // pattern) rather than crash. A blocking in-process flock is banned (freezes the
     // loop) and polling is banned; the child does the blocking wait off our loop.
-    const guardFd = openSync(guardFile, "w");
+    const guard = guardFile();
+    const guardFd = openSync(guard, "w");
     let guardChild: WaitChild | undefined;
     if (!flockTry(guardFd)) {
       closeSync(guardFd);
-      guardChild = spawnWait(guardFile);
+      guardChild = spawnWait(guard);
       await awaitGranted(guardChild.stdout, name);
     }
     const releaseGuard = async (): Promise<void> => {
@@ -467,7 +477,7 @@ export function createHostSemaphore(opts: {
   // floor for a background caller) are never opened, so they are structurally
   // unreachable. `limit === 0` locks nothing and returns [].
   function sweepKeep(limit: number, order: number[]): number[] {
-    mkdirSync(slotsDir, { recursive: true });
+    slots.ensure();
     const kept: number[] = [];
     for (const i of order) {
       const fd = openSync(slotFile(i), "w");
@@ -553,12 +563,13 @@ export function createHostSemaphore(opts: {
         // (a) Turnstile — only the head waiter fans out host-wide. Take it
         // non-blocking in-process; if contended, wait for it via a single child (a
         // turnstile is one file, so an ordinary flock queue on it can't strand).
-        let turnstileFd: number | undefined = openSync(turnstileFile, "w");
+        const turnstile = turnstileFile();
+        let turnstileFd: number | undefined = openSync(turnstile, "w");
         let turnstileChild: WaitChild | undefined;
         if (!flockTry(turnstileFd)) {
           closeSync(turnstileFd);
           turnstileFd = undefined;
-          turnstileChild = spawnWait(turnstileFile);
+          turnstileChild = spawnWait(turnstile);
           await awaitGranted(turnstileChild.stdout, name);
         }
 

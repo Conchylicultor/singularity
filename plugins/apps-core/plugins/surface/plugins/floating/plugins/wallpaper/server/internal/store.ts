@@ -1,15 +1,17 @@
-import { mkdir, writeFile, readFile } from "node:fs/promises";
-import { join } from "node:path";
-import { SINGULARITY_DIR } from "@plugins/infra/plugins/paths/server";
+import { writeFile, readFile } from "node:fs/promises";
+import { wallpaperDir } from "../../data-dirs";
 
-// Machine-global wallpaper store, sibling to attachments/secrets/reports under
-// ~/.singularity. A SINGLETON: there is exactly one current desktop wallpaper, so
-// the image always lands at the same path (a fixed name) and is overwritten on
-// each save. The mime is sidecar metadata so the image route can serve the right
+// Machine-global wallpaper store, in the `apps/wallpaper` data dir this plugin
+// declares. A SINGLETON: there is exactly one current desktop wallpaper, so the
+// image always lands at the same path (a fixed name) and is overwritten on each
+// save. The mime is sidecar metadata so the image route can serve the right
 // content-type after a restart.
-const WALLPAPER_DIR = join(SINGULARITY_DIR, "wallpaper");
-const IMAGE_PATH = join(WALLPAPER_DIR, "current");
-const META_PATH = join(WALLPAPER_DIR, "current.json");
+//
+// Functions, not consts: `DataDir.path` is a getter resolved per read, because
+// the data root is env-overridable and a value frozen at module eval would
+// capture whatever the environment said when this module was first imported.
+const imagePath = (): string => wallpaperDir.file("current");
+const metaPath = (): string => wallpaperDir.file("current.json");
 
 interface WallpaperMeta {
   mime: string;
@@ -18,12 +20,12 @@ interface WallpaperMeta {
 
 /** Absolute path of the stored current image, for streaming via `Bun.file`. */
 export function wallpaperImagePath(): string {
-  return IMAGE_PATH;
+  return imagePath();
 }
 
 async function readMeta(): Promise<WallpaperMeta | null> {
   try {
-    const raw = await readFile(META_PATH, "utf8");
+    const raw = await readFile(metaPath(), "utf8");
     const meta = JSON.parse(raw) as Partial<WallpaperMeta>;
     if (typeof meta.mime !== "string" || !meta.mime) return null;
     return { mime: meta.mime, version: meta.version ?? 0 };
@@ -43,12 +45,12 @@ export async function writeWallpaper(
   bytes: Uint8Array,
   mime: string,
 ): Promise<{ version: number; mime: string }> {
-  await mkdir(WALLPAPER_DIR, { recursive: true });
+  wallpaperDir.ensure();
   const prev = await readMeta();
   const version = (prev?.version ?? 0) + 1;
-  await writeFile(IMAGE_PATH, bytes);
+  await writeFile(imagePath(), bytes);
   const meta: WallpaperMeta = { mime, version };
-  await writeFile(META_PATH, JSON.stringify(meta));
+  await writeFile(metaPath(), JSON.stringify(meta));
   return { version, mime };
 }
 

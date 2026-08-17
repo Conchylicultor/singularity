@@ -1,9 +1,8 @@
-import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 import type { Browser } from "playwright";
 import { createSemaphore } from "@plugins/packages/plugins/semaphore/core";
 import { ensureChromium } from "@plugins/infra/plugins/safe-fetch/plugins/browser-fetch/core";
-import { PROTOTYPES_DIR } from "@plugins/infra/plugins/paths/server";
+import { prototypesDir } from "@plugins/apps/plugins/prototypes/plugins/files/server";
 import type { PrototypeMeta } from "@plugins/apps/plugins/prototypes/plugins/files/core";
 import { classifyRenderOutcome } from "./decide";
 import { ThumbnailRenderError } from "./errors";
@@ -166,7 +165,7 @@ export async function renderThumbnail(
       // contract, so this needs no gateway, no socket, and no server round-trip
       // — and it is the same path a human gets by double-clicking the file.
       const url = pathToFileURL(
-        join(PROTOTYPES_DIR, meta.name, "index.html"),
+        prototypesDir.file(meta.name, "index.html"),
       ).href;
 
       try {

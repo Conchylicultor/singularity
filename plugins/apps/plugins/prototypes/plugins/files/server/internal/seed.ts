@@ -1,7 +1,7 @@
 import { cp, mkdtemp, rename, rm } from "node:fs/promises";
 import { existsSync } from "node:fs";
-import { join } from "node:path";
-import { PROTOTYPES_DIR, TEMPLATE_DIR_NAME, TEMPLATE_SEED_DIR } from "./paths";
+import { prototypesDir } from "../../data-dirs";
+import { TEMPLATE_DIR_NAME, TEMPLATE_SEED_DIR } from "./paths";
 
 /**
  * Copy the repo's `_template/` into the prototypes data dir, once.
@@ -19,12 +19,12 @@ import { PROTOTYPES_DIR, TEMPLATE_DIR_NAME, TEMPLATE_SEED_DIR } from "./paths";
  * silently revert that.
  */
 export async function seedTemplate(): Promise<void> {
-  const dest = join(PROTOTYPES_DIR, TEMPLATE_DIR_NAME);
+  const dest = prototypesDir.file(TEMPLATE_DIR_NAME);
   if (existsSync(dest)) return;
   // Absent in a compiled release (REPO_ROOT is the binary's virtual FS).
   if (!existsSync(TEMPLATE_SEED_DIR)) return;
 
-  const staging = await mkdtemp(join(PROTOTYPES_DIR, ".template-staging-"));
+  const staging = await mkdtemp(prototypesDir.file(".template-staging-"));
   try {
     await cp(TEMPLATE_SEED_DIR, staging, { recursive: true });
     await rename(staging, dest);

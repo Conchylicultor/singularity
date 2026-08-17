@@ -34,10 +34,13 @@ import { rm, mkdir } from "node:fs/promises";
 import { join, dirname } from "node:path";
 import { spawnSync, spawn } from "node:child_process";
 import { Client } from "pg";
-import { SINGULARITY_DIR } from "@plugins/infra/plugins/paths/core";
+import { zeroNodeDir } from "../data-dirs";
 import { dropZeroSlotsAndPublications } from "../shared/internal/slot-sql";
 import { zeroAppId } from "../shared/internal/app-id";
-import { ZERO_NODE_MAJOR, zeroNodeCacheDir } from "../shared/internal/node-runtime";
+import {
+  ZERO_NODE_MAJOR,
+  zeroNodeCacheDir,
+} from "../shared/internal/node-runtime";
 
 // ─── env contract (gateway-provided; fail loud if absent) ────────────────────
 
@@ -60,7 +63,8 @@ const ZERO_REPLICA_FILE = requireEnv("ZERO_REPLICA_FILE");
 // the pre-flight slot/publication cleanup DDL.
 function dbNameFromDsn(dsn: string): string {
   const name = new URL(dsn).pathname.replace(/^\//, "");
-  if (!name) throw new Error(`zero-cache: no database in ZERO_UPSTREAM_DB (${dsn})`);
+  if (!name)
+    throw new Error(`zero-cache: no database in ZERO_UPSTREAM_DB (${dsn})`);
   return name;
 }
 
@@ -77,7 +81,7 @@ function dbNameFromDsn(dsn: string): string {
  * no compatible runtime is found.
  */
 function resolveNode(): string {
-  const managedNode = join(zeroNodeCacheDir(SINGULARITY_DIR), "bin", "node");
+  const managedNode = join(zeroNodeCacheDir(zeroNodeDir.path), "bin", "node");
 
   const candidates: string[] = [];
   const override = process.env.SINGULARITY_ZERO_NODE;
@@ -89,7 +93,10 @@ function resolveNode(): string {
     const probe = spawnSync(candidate, ["--version"], { encoding: "utf-8" });
     if (probe.status !== 0 || typeof probe.stdout !== "string") continue;
     const version = probe.stdout.trim(); // e.g. "v24.17.0"
-    const major = Number.parseInt(version.replace(/^v/, "").split(".")[0] ?? "", 10);
+    const major = Number.parseInt(
+      version.replace(/^v/, "").split(".")[0] ?? "",
+      10,
+    );
     if (Number.isNaN(major)) continue;
     if (major === ZERO_NODE_MAJOR) {
       console.log(`zero-cache: using Node ${version} (${candidate})`);

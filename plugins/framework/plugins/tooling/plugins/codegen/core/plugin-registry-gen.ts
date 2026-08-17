@@ -184,6 +184,22 @@ export async function buildRegistryGenContext(
   return { root, tree, disabled: computeDisabledIds(tree) };
 }
 
+/**
+ * A collected-dir folder name as a JavaScript identifier: `data-dirs` →
+ * `dataDirs`, so the emitted registry const is `dataDirsEntries`.
+ *
+ * Interpolating the folder name raw was fine only because every collected dir
+ * happened to be one lowercase word (`check`, `facet`, `fixtures`). The first
+ * hyphenated one emitted `export const data-dirsEntries`, which is not a legal
+ * identifier — so the generated file failed to PARSE, and the failure surfaced
+ * far from here, as a facet-extraction `AggregateError` during doc generation.
+ * Deriving the identifier is what makes a hyphenated collected dir
+ * representable at all, rather than a trap the next one falls into too.
+ */
+function identifierForDir(dir: string): string {
+  return dir.replace(/-([a-z0-9])/g, (_, c: string) => c.toUpperCase());
+}
+
 function collectEntries(tree: PluginTree, dir: string): CollectedRawEntry[] {
   const entries: CollectedRawEntry[] = [];
   for (const node of tree.byDir.values()) {
@@ -369,7 +385,7 @@ export function renderCollectedDirRegistry(opts: {
 }): string {
   const { ctx, def, bundle } = opts;
   const { entries, deps } = collectEntriesWithDeps(ctx, def.dir, bundle);
-  const exportName = `${def.dir}Entries`;
+  const exportName = `${identifierForDir(def.dir)}Entries`;
 
   const lines: string[] = [];
   lines.push(HEADER);

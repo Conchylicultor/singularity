@@ -1,7 +1,5 @@
 import { dlopen } from "bun:ffi";
 import { closeSync, openSync } from "node:fs";
-import { join } from "node:path";
-import { SINGULARITY_DIR } from "@plugins/infra/plugins/paths/server";
 import {
   createHostSemaphore,
   type AcquireHooks,
@@ -9,6 +7,8 @@ import {
 } from "@plugins/packages/plugins/host-semaphore/server";
 import { registerGateGauge } from "@plugins/infra/plugins/runtime-profiler/core";
 import type { PoolCost } from "@plugins/infra/plugins/host-admission/core";
+import type { DataDir } from "@plugins/infra/plugins/paths/core";
+import { poolLockDir } from "../../data-dirs";
 
 // The one place a host pool comes into existence. `createHostSemaphore` is
 // imported HERE ONLY — the `host-pools-declared` check makes that the structural
@@ -49,11 +49,10 @@ function slotHeld(slotPath: string): boolean {
 // whole pool could make a concurrent acquirer's `sweepKeep` see zero free slots
 // and needlessly fan out. One slot at a time bounds that transient hold to a
 // single slot.
-function probeOccupancy(id: string, size: number): number {
-  const dir = join(SINGULARITY_DIR, `${id}-slots`);
+function probeOccupancy(slots: DataDir, size: number): number {
   let held = 0;
   for (let i = 0; i < size; i++) {
-    if (slotHeld(join(dir, `slot-${i}.lock`))) held++;
+    if (slotHeld(slots.file(`slot-${i}.lock`))) held++;
   }
   return held;
 }
@@ -69,6 +68,13 @@ export interface HostPool {
    * than overrules (see `createHostSemaphore`). Observability only.
    */
   liveSize(): number;
+  /**
+   * The pool's declared flock slot directory (`data-dirs/index.ts`). Exposed so a
+   * consumer that must name a specific slot file — the push mutex's `slot-0.lock`,
+   * which `worktree`'s op-status probe reads — reaches it through the pool rather
+   * than rebuilding the path and hoping the two stay equal.
+   */
+  readonly slots: DataDir;
   readonly cost: PoolCost;
   /** Run `fn` holding exactly one slot; release in a `finally`. */
   run<T>(fn: () => Promise<T>, hooks?: AcquireHooks): Promise<T>;
@@ -80,7 +86,11 @@ export interface HostPool {
 
 /** Declares a host pool: what one holder costs the host, and how many slots exist. */
 export interface HostPoolSpec {
-  /** Names `~/.singularity/<id>-slots/`; a safe filename segment. */
+  /**
+   * The pool's identity. It must have a lock directory declared for it in this
+   * plugin's `data-dirs/index.ts` — which, since those are derived from
+   * `RESERVED_POOLS`, means the pool must already be in the budget table.
+   */
   id: string;
   size: number;
   /** What ONE holder costs the host, including its fan-out. */
@@ -127,8 +137,21 @@ export function defineHostPool(spec: HostPoolSpec): HostPool {
     );
   }
 
+  // The pool's slot directory is a DECLARATION, not something the primitive
+  // derives — that derivation is what silently minted a top-level directory per
+  // pool. An id with no declared dir is a wiring bug and fails loudly here rather
+  // than quietly creating an unowned directory.
+  const slots = poolLockDir(spec.id);
+  if (!slots) {
+    throw new Error(
+      `defineHostPool(${spec.id}): no lock directory is declared for this pool. ` +
+        `Add it to the host-admission budget table (RESERVED_POOLS in core/internal/budget.ts), ` +
+        `which is what data-dirs/index.ts derives the locks/<id> declarations from.`,
+    );
+  }
+
   const sem = createHostSemaphore({
-    name: spec.id,
+    slots,
     size: spec.size,
     // Only a laned pool partitions its slots; an un-laned pool leaves
     // `backgroundLimit` at the primitive's default (`= size`, inert).
@@ -146,7 +169,7 @@ export function defineHostPool(spec: HostPoolSpec): HostPool {
   // pool open at a different size. Probing the declared set would then miss the
   // holders on the slots this process is actually sweeping.
   registerGateGauge(`${spec.id}-acquire`, () => ({
-    active: probeOccupancy(spec.id, sem.liveSize()),
+    active: probeOccupancy(slots, sem.liveSize()),
     queued: sem.depth(),
     max: sem.liveSize(),
   }));
@@ -155,6 +178,7 @@ export function defineHostPool(spec: HostPoolSpec): HostPool {
     id: spec.id,
     size: spec.size,
     liveSize: () => sem.liveSize(),
+    slots,
     cost: spec.cost,
     run: (fn, hooks) => sem.run(fn, hooks),
     acquireShare: (max, hooks) => sem.acquireShare(max, hooks),
@@ -182,7 +206,7 @@ export async function hostOccupancy(): Promise<PoolOccupancy[]> {
   const out: PoolOccupancy[] = [];
   for (const pool of registry.values()) {
     const size = pool.liveSize();
-    out.push({ id: pool.id, held: probeOccupancy(pool.id, size), size });
+    out.push({ id: pool.id, held: probeOccupancy(pool.slots, size), size });
     await Promise.resolve(); // yield between pools so a long registry never hogs the loop
   }
   return out;

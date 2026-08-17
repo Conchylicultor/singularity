@@ -77,7 +77,7 @@ the constant.
 ## `defineHostPool` (`server`)
 
 `defineHostPool({ id, size, cost, laned? })` wraps `createHostSemaphore` and
-returns a `HostPool` (`run` / `acquireShare` / `depth`). It is a **registry**:
+returns a `HostPool` (`run` / `acquireShare` / `depth` / `slots`). It is a **registry**:
 one handle per id per process, so a repeat call for the same id — an occupant
 contending for the same physical slots — returns the one handle rather than
 building a second semaphore or double-registering the gauge. A mismatching spec
@@ -89,6 +89,19 @@ host-wide occupancy** — probed from the flock files across every backend, not
 this process's local held count. The ported pools deleted their hand-rolled
 `heldByThisProcess` counter and the false "host-wide occupancy is not cheaply
 readable" comment along with it.
+
+### Where the slot files live
+
+`createHostSemaphore` no longer derives its own directory — it is handed one, and
+this plugin supplies it. The seven `locks/<id>` directories are declared in
+[`data-dirs/index.ts`](./data-dirs/index.ts), **derived from `RESERVED_POOLS`**
+(plus `cpu`, which is the residual and so is absent from the reserved table by
+construction). There is no second list of pool ids to keep in sync: a pool that is
+in the budget gets a lock directory, and a pool that is not gets a loud throw from
+`defineHostPool` instead of an unowned directory nobody can enumerate.
+
+`pool.slots` exposes that directory, which is how a consumer that must name one
+specific slot file reaches it. The only one today is the push mutex — see below.
 
 A `laned` pool MUST also pass an explicit `backgroundLimit` (the `background`
 lane's slot window); `defineHostPool` throws otherwise, since silently falling
@@ -131,10 +144,13 @@ spend it per child instead of acquiring again.
 `pushPool = defineHostPool({ id: "push", size: 1, cost: { cpu: 0 } })` is the
 global push serialization, folded onto the primitive: at most one push runs
 host-wide, `cost.cpu 0` because a push waits on git/network (it takes an
-interactive CPU grant separately for its nested checks). Its single slot file —
-`~/.singularity/push-slots/slot-0.lock` (mirrored as `PUSH_SLOT_PATH`) — is the
-SAME file `worktree/server`'s `PUSH_LOCK_PATH` probes, so the op-status
-derivation keeps reading the authoritative kernel flock the CLI holds.
+interactive CPU grant separately for its nested checks).
+
+Its single slot file IS the push mutex, and `worktree/server`'s op-status probe
+must read that exact file. It now does so by asking the pool —
+`pushSlotPath()` returns `pushPool.slots.file("slot-0.lock")`, and `pushLockHeld`
+defaults to it — rather than rebuilding the path at both ends with a comment
+asking the two spellings to stay equal.
 
 ## `hostOccupancy()`
 
@@ -159,7 +175,6 @@ See `research/2026-07-10-global-host-admission-unified-budget.md`.
 - Description: Host-admission registry: one place a host-wide concurrency pool comes into existence, wrapping createHostSemaphore with a summed CPU/RAM ceiling and true host occupancy.
 - Server:
   - Uses:
-    - `infra/paths.SINGULARITY_DIR`
     - `packages/host-semaphore.AcquireHooks`
     - `packages/host-semaphore.createHostSemaphore`
     - `packages/host-semaphore.HostShare`
@@ -172,8 +187,8 @@ See `research/2026-07-10-global-host-admission-unified-budget.md`.
     - `defineHostPool`
     - `hostOccupancy`
     - `inheritedGrant`
-    - `PUSH_SLOT_PATH`
     - `pushPool`
+    - `pushSlotPath`
     - `withHostGrant`
 - Cross-plugin:
   - Imported by:

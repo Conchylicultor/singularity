@@ -35,7 +35,6 @@ export {
   readPushHolder,
   writePushHolder,
   clearPushHolder,
-  PUSH_LOCK_PATH,
   worktreesDir,
 } from "./internal/worktree-op";
 export {

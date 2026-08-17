@@ -1,7 +1,6 @@
 import { createHash, randomUUID } from "crypto";
 import {
   existsSync,
-  mkdirSync,
   readdirSync,
   readFileSync,
   renameSync,
@@ -10,12 +9,12 @@ import {
   writeFileSync,
 } from "fs";
 import { dirname, join } from "path";
-import { SINGULARITY_DIR } from "@plugins/infra/plugins/paths/core";
+import { checkCacheDir } from "../data-dirs";
 import type { ReadSet } from "./read-set";
 
 // Global (not per-worktree) + content-keyed: the main-worktree auto-build can
 // reuse passes recorded by an agent worktree for the identical (ff-merged) tree.
-const CACHE_DIR = join(SINGULARITY_DIR, "check-cache");
+// The directory itself is declared in this plugin's `data-dirs/index.ts`.
 
 // Pruning bounds — keep the dir from growing unbounded across weeks of trees.
 // AGE is the intended evictor; the count is only a disk backstop, so it must sit
@@ -53,14 +52,14 @@ function sha256(s: string): string {
  * first rename already consumed the temp. That ENOENT propagates out of
  * `runChecks` and aborts the build.
  *
- * It is reachable, not theoretical: `CACHE_DIR` is global (see above), and the
+ * It is reachable, not theoretical: the cache dir is global (see above), and the
  * read-set slot is keyed on `(checkId, sig)` with NO treeHash — where `sig` is
  * `""` for every input-keyed check that declares no `cacheSignature()`. Two
  * worktrees building at once over a cache-cold check therefore publish to the
  * same path routinely.
  *
  * The temp is placed in the DESTINATION's own directory so the rename is
- * same-filesystem (hence atomic) by construction rather than by `CACHE_DIR`
+ * same-filesystem (hence atomic) by construction rather than by the cache dir
  * happening to be the parent.
  */
 function publishAtomic(file: string, contents: string): void {
@@ -81,7 +80,7 @@ function publishAtomic(file: string, contents: string): void {
 
 function entryFile(checkId: string, treeHash: string, sig: string): string {
   const key = `${treeHash}:${checkId}:${sha256(sig)}`;
-  return join(CACHE_DIR, `${sha256(key)}.json`);
+  return checkCacheDir.file(`${sha256(key)}.json`);
 }
 
 // Input-keyed read-set slot: a SINGLE slot per (checkId, sig) — NOT keyed on
@@ -92,7 +91,7 @@ function entryFile(checkId: string, treeHash: string, sig: string): string {
 // while never colliding with a legacy `${sha256(key)}.json` name.
 function readSetFile(checkId: string, sig: string): string {
   const key = `${checkId}:${sha256(sig)}`;
-  return join(CACHE_DIR, `${sha256(key)}.readset.json`);
+  return checkCacheDir.file(`${sha256(key)}.readset.json`);
 }
 
 export interface CheckCache {
@@ -109,16 +108,15 @@ export interface CheckCache {
   /**
    * Record (overwrite) the read-set for a PASS. Atomic, and safe against
    * concurrent publishers of the same slot — which is the common case, since
-   * this slot is NOT keyed on treeHash and `CACHE_DIR` is global.
+   * this slot is NOT keyed on treeHash and the cache dir is global.
    */
   recordReadSet(checkId: string, sig: string, readSet: ReadSet): void;
 }
 
 /** Open (and lazily create) the global check-result cache. */
 export function openCheckCache(): CheckCache {
-  // ~/.singularity already hosts secrets/attachments; creating a subdir is safe.
   // A genuinely unwritable home is a real fault and should surface loudly.
-  mkdirSync(CACHE_DIR, { recursive: true });
+  checkCacheDir.ensure();
   prune();
   return {
     has(checkId, treeHash, sig) {
@@ -135,7 +133,7 @@ export function openCheckCache(): CheckCache {
       if (!existsSync(file)) return null;
       try {
         return JSON.parse(readFileSync(file, "utf8")) as ReadSet;
-      // eslint-disable-next-line promise-safety/no-bare-catch, promise-safety/no-absorbed-failure -- fail-open: a corrupt/half-written slot must degrade to a cache MISS (run the check), never a false HIT; null here means "no usable read-set", which the caller treats exactly as absent
+        // eslint-disable-next-line promise-safety/no-bare-catch, promise-safety/no-absorbed-failure -- fail-open: a corrupt/half-written slot must degrade to a cache MISS (run the check), never a false HIT; null here means "no usable read-set", which the caller treats exactly as absent
       } catch {
         return null;
       }
@@ -151,7 +149,10 @@ export function openCheckCache(): CheckCache {
 // listed as an entry.
 function ageSweepDue(now: number): boolean {
   try {
-    return now - statSync(join(CACHE_DIR, MARKER_FILE)).mtimeMs > PRUNE_INTERVAL_MS;
+    return (
+      now - statSync(checkCacheDir.file(MARKER_FILE)).mtimeMs >
+      PRUNE_INTERVAL_MS
+    );
   } catch (err) {
     if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
     return true; // never swept
@@ -170,7 +171,7 @@ function ageSweepDue(now: number): boolean {
 function sweepOrphanTemps(all: string[], now: number): void {
   for (const name of all) {
     if (!name.endsWith(".tmp")) continue;
-    const path = join(CACHE_DIR, name);
+    const path = checkCacheDir.file(name);
     try {
       if (now - statSync(path).mtimeMs <= TEMP_ORPHAN_MS) continue; // maybe in flight
     } catch (err) {
@@ -192,15 +193,15 @@ function sweepOrphanTemps(all: string[], now: number): void {
 // must) or the hourly age sweep is due. Both bounds are preserved exactly; only
 // the cadence of the age sweep changes.
 function prune(): void {
-  const all = readdirSync(CACHE_DIR);
+  const all = readdirSync(checkCacheDir.path);
   const names = all.filter((n) => n.endsWith(".json"));
   const now = Date.now();
   if (names.length <= MAX_ENTRIES && !ageSweepDue(now)) return;
-  writeFileSync(join(CACHE_DIR, MARKER_FILE), "");
+  writeFileSync(checkCacheDir.file(MARKER_FILE), "");
   sweepOrphanTemps(all, now);
   const live: { path: string; mtimeMs: number }[] = [];
   for (const name of names) {
-    const path = join(CACHE_DIR, name);
+    const path = checkCacheDir.file(name);
     let mtimeMs: number;
     try {
       mtimeMs = statSync(path).mtimeMs;

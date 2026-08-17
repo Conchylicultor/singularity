@@ -1,7 +1,12 @@
 import { join } from "node:path";
-import { SINGULARITY_DIR } from "@plugins/infra/plugins/paths/core";
+import { pgClusterDir } from "@plugins/database/plugins/embedded/data-dirs";
 
-const PG_DIR = join(SINGULARITY_DIR, "postgres");
+// PgBouncer's generated config, userlist, log and pidfile live INSIDE the
+// embedded cluster's directory. That directory has exactly one owner — the
+// `embedded` plugin declares it — so this reads the declaration rather than
+// spelling `join(<root>, "postgres")` a second time, which is how the two could
+// silently drift apart.
+const PG_DIR = pgClusterDir.path;
 
 export const PGBOUNCER_PORT = 6432;
 
@@ -18,11 +23,14 @@ export const PGBOUNCER_LOG_FILE = join(PG_DIR, "pgbouncer.log");
 
 /**
  * The PgBouncer pidfile under an arbitrary install root. Used by teardown to find
- * a preview's PgBouncer (rooted at its `/tmp/sgp-XXXXXX` data dir, not the dev
- * `SINGULARITY_DIR`). `PGBOUNCER_PID_FILE` is the same path under the dev root.
+ * a preview's PgBouncer (rooted at its `/tmp/sgp-XXXXXX` data dir, not this
+ * process's own data root). `PGBOUNCER_PID_FILE` is the same path under the dev
+ * root.
  */
 export function pgbouncerPidFileUnder(root: string): string {
   return join(root, "postgres", "pgbouncer.pid");
 }
 
-export const PGBOUNCER_PID_FILE = pgbouncerPidFileUnder(SINGULARITY_DIR);
+// The same file under THIS process's data root — through the declared cluster
+// dir, like every other path in this file.
+export const PGBOUNCER_PID_FILE = join(PG_DIR, "pgbouncer.pid");

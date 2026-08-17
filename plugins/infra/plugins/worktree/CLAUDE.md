@@ -11,6 +11,7 @@ Git worktree CRUD primitive: resolve the main worktree root, derive per-id paths
 - Server:
   - Uses:
     - `infra/host-admission.defineHostPool`
+    - `infra/host-admission.pushSlotPath`
     - `infra/paths.GIT`
     - `infra/paths.SINGULARITY_DIR`
     - `infra/paths.worktreeDataDir`
@@ -44,7 +45,6 @@ Git worktree CRUD primitive: resolve the main worktree root, derive per-id paths
     - `markWorktreeOpStart`
     - `namespaceCollision`
     - `probeNamespace`
-    - `PUSH_LOCK_PATH`
     - `pushLockHeld`
     - `readCompositionMarker`
     - `readPushHolder`

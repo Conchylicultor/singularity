@@ -1,5 +1,6 @@
 import { join } from "node:path";
-import { SINGULARITY_DIR, currentWorktreeName } from "@plugins/infra/plugins/paths/server";
+import { currentWorktreeName } from "@plugins/infra/plugins/paths/server";
+import { releasesDir } from "../../data-dirs";
 
 /**
  * A fresh release run id, `release-<ms>-<rand>`. The `<ms>` embeds a timestamp so
@@ -24,7 +25,7 @@ export function compositionReleaseDir(
   composition: string,
   target: string,
 ): string {
-  return join(SINGULARITY_DIR, "releases", namespace, `${composition}-${target}`);
+  return releasesDir.file(namespace, `${composition}-${target}`);
 }
 
 /**
@@ -43,6 +44,13 @@ export function compositionReleaseDir(
  * `SINGULARITY_SOCKETS_DIR` — so a long versioned `<run-id>` segment is safe even
  * for a direct `<out>/launch`.
  */
-export function releaseOutDir(composition: string, target: string, runId: string): string {
-  return join(compositionReleaseDir(currentWorktreeName(), composition, target), runId);
+export function releaseOutDir(
+  composition: string,
+  target: string,
+  runId: string,
+): string {
+  return join(
+    compositionReleaseDir(currentWorktreeName(), composition, target),
+    runId,
+  );
 }

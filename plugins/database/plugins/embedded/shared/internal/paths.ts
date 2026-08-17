@@ -1,5 +1,5 @@
 import { join } from "node:path";
-import { SINGULARITY_DIR } from "@plugins/infra/plugins/paths/core";
+import { pgClusterDir } from "../../data-dirs";
 
 // Per-instance port override. Default 5433 (dev cluster). A local release preview
 // runs PG alongside the dev cluster on the same host, so its loopback TCP listener
@@ -22,7 +22,12 @@ export const PG_USER = "singularity";
 export const PG_MAJOR = 18;
 export const MAX_CONNECTIONS = 500;
 
-export const PG_DIR = join(SINGULARITY_DIR, "postgres");
+// The cluster directory is DECLARED in this plugin's `data-dirs/index.ts` (a
+// grandfathered `services/postgres` whose `legacyLocation` pins it exactly where
+// the running postmaster already has it), so the literal name lives in one place
+// and pgbouncer — which writes its own config/pid/log beside the cluster —
+// imports that same declaration instead of re-joining the root.
+export const PG_DIR = pgClusterDir.path;
 export const PG_DATA_DIR = join(PG_DIR, `data-pg${PG_MAJOR}`);
 
 // The PG Unix socket directory. Decoupled from PG_DIR via an env override so a
@@ -39,11 +44,13 @@ export const PG_LOG_FILE = join(PG_DIR, "postgres.log");
 
 /**
  * The PG postmaster pidfile under an arbitrary install root. Used by teardown to
- * find a preview's PG (rooted at its `/tmp/sgp-XXXXXX` data dir, not the dev
- * `SINGULARITY_DIR`). `PG_PID_FILE` is the same path under the dev root.
+ * find a preview's PG (rooted at its `/tmp/sgp-XXXXXX` data dir, not this
+ * process's own data root). `PG_PID_FILE` is the same path under the dev root.
  */
 export function pgPostmasterPidFile(root: string): string {
   return join(root, "postgres", `data-pg${PG_MAJOR}`, "postmaster.pid");
 }
 
-export const PG_PID_FILE = pgPostmasterPidFile(SINGULARITY_DIR);
+// The same file under THIS process's data root — expressed through the declared
+// cluster dir (via PG_DATA_DIR) rather than by re-deriving it from the root.
+export const PG_PID_FILE = join(PG_DATA_DIR, "postmaster.pid");

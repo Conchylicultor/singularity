@@ -50,7 +50,8 @@
 import { readdir } from "node:fs/promises";
 import { join } from "node:path";
 import { loadSessionData } from "ccusage/data-loader";
-import { CLAUDE_PROJECTS_DIR, COST_USAGE_DIR } from "@plugins/infra/plugins/paths/core";
+import { CLAUDE_PROJECTS_DIR } from "@plugins/infra/plugins/paths/core";
+import { costUsageDir } from "../data-dirs";
 import { loadFallbackPriceTable } from "../server/internal/litellm-fallback";
 import {
   fetchPriceTable,
@@ -59,7 +60,11 @@ import {
   type ModelPrice,
   type PriceTable,
 } from "../server/internal/price-table";
-import { parseTranscript, rollup, type FilePartial } from "../server/internal/usage-index";
+import {
+  parseTranscript,
+  rollup,
+  type FilePartial,
+} from "../server/internal/usage-index";
 
 const PARSE_CONCURRENCY = 8;
 
@@ -70,7 +75,9 @@ const wantFetch = argv.includes("--fetch");
 const topIndex = argv.indexOf("--top");
 const TOP = topIndex >= 0 ? Number(argv[topIndex + 1] ?? "8") : 8;
 if (!Number.isFinite(TOP) || TOP < 0) {
-  throw new Error(`--top expects a non-negative number, got ${String(argv[topIndex + 1])}`);
+  throw new Error(
+    `--top expects a non-negative number, got ${String(argv[topIndex + 1])}`,
+  );
 }
 
 // ─── the corpus ──────────────────────────────────────────────────────────────
@@ -110,10 +117,11 @@ async function parseAll(paths: string[]): Promise<Map<string, FilePartial>> {
  * on top through the real `mergePriceTable`.
  */
 async function resolveTable(): Promise<{ table: PriceTable; source: string }> {
-  const persisted = await loadPriceTable(join(COST_USAGE_DIR, "price-table.json"));
+  const priceTablePath = costUsageDir.file("price-table.json");
+  const persisted = await loadPriceTable(priceTablePath);
   const base = persisted ?? (await loadFallbackPriceTable());
   const baseSource = persisted
-    ? "COST_USAGE_DIR/price-table.json"
+    ? priceTablePath
     : "vendored litellm-fallback.json";
   if (!wantFetch) return { table: base, source: baseSource };
   const merged = mergePriceTable(base, await fetchPriceTable());
@@ -133,7 +141,8 @@ function fiveMinuteOnly(table: PriceTable): PriceTable {
     const next: ModelPrice = { ...price, cacheCreate1h: price.cacheCreate5m };
     // Absent must stay ABSENT: an untiered model with a present-but-undefined
     // `cacheCreate1hAbove200k` would be a different shape, not a different rate.
-    if (price.cacheCreate5mAbove200k === undefined) delete next.cacheCreate1hAbove200k;
+    if (price.cacheCreate5mAbove200k === undefined)
+      delete next.cacheCreate1hAbove200k;
     else next.cacheCreate1hAbove200k = price.cacheCreate5mAbove200k;
     models[key] = next;
   }
@@ -145,7 +154,10 @@ function fiveMinuteOnly(table: PriceTable): PriceTable {
 function ourCostsByProject(
   partials: Map<string, FilePartial>,
   table: PriceTable,
-): { byProject: Map<string, number>; unpriced: { model: string; tokens: number }[] } {
+): {
+  byProject: Map<string, number>;
+  unpriced: { model: string; tokens: number }[];
+} {
   const { sessions, unpriced } = rollup(partials, table);
   const byProject = new Map<string, number>();
   for (const s of sessions) {
@@ -163,7 +175,10 @@ async function ccusageCostsByProject(): Promise<Map<string, number>> {
   const rows = await loadSessionData({ mode: "auto" });
   const byProject = new Map<string, number>();
   for (const row of rows) {
-    byProject.set(row.sessionId, (byProject.get(row.sessionId) ?? 0) + row.totalCost);
+    byProject.set(
+      row.sessionId,
+      (byProject.get(row.sessionId) ?? 0) + row.totalCost,
+    );
   }
   return byProject;
 }
@@ -171,7 +186,8 @@ async function ccusageCostsByProject(): Promise<Map<string, number>> {
 // ─── reporting ───────────────────────────────────────────────────────────────
 
 const usd = (n: number): string => `$${n.toFixed(2)}`;
-const sum = (m: Map<string, number>): number => [...m.values()].reduce((a, b) => a + b, 0);
+const sum = (m: Map<string, number>): number =>
+  [...m.values()].reduce((a, b) => a + b, 0);
 
 function pct(delta: number, base: number): string {
   if (base === 0) return "n/a";
@@ -218,7 +234,9 @@ console.log(
 );
 
 const paths = await listTranscripts(CLAUDE_PROJECTS_DIR);
-console.log(`corpus:      ${paths.length} transcripts under ${CLAUDE_PROJECTS_DIR}`);
+console.log(
+  `corpus:      ${paths.length} transcripts under ${CLAUDE_PROJECTS_DIR}`,
+);
 
 const partials = await parseAll(paths);
 const shipped = ourCostsByProject(partials, table);
@@ -226,14 +244,16 @@ const control = ourCostsByProject(partials, fiveMinuteOnly(table));
 
 // Last, and deliberately: ccusage's whole-corpus parse is the slow, memory-hungry
 // half (~9.8 s / ~3.3 GB), so a failure in OUR half surfaces before paying for it.
-console.log("running ccusage loadSessionData({mode:\"auto\"}) …");
+console.log('running ccusage loadSessionData({mode:"auto"}) …');
 const theirs = await ccusageCostsByProject();
 
 const shippedTotal = sum(shipped.byProject);
 const controlTotal = sum(control.byProject);
 const theirsTotal = sum(theirs);
 
-console.log("\n─── totals ─────────────────────────────────────────────────────");
+console.log(
+  "\n─── totals ─────────────────────────────────────────────────────",
+);
 console.log(`  ccusage                 ${usd(theirsTotal).padStart(12)}`);
 console.log(
   `  ours, 5m-only control   ${usd(controlTotal).padStart(12)}   ` +
@@ -251,18 +271,31 @@ console.log(
 );
 
 if (shipped.unpriced.length > 0) {
-  console.log("\n─── unpriced models (would be $0 in every chart) ───────────────");
+  console.log(
+    "\n─── unpriced models (would be $0 in every chart) ───────────────",
+  );
   // A zero-token entry costs nothing and is expected: `<synthetic>` is Claude
   // Code's pseudo-model for local, unbilled turns. The server suppresses those
   // rather than filing a report; here they are printed, flagged, so the list
   // stays a full account of what the table could not resolve.
   for (const u of shipped.unpriced) {
-    const note = u.tokens === 0 ? "  (zero-token pseudo-model — not reported by the server)" : "";
+    const note =
+      u.tokens === 0
+        ? "  (zero-token pseudo-model — not reported by the server)"
+        : "";
     console.log(`  ${u.model}: ${u.tokens.toLocaleString()} tokens${note}`);
   }
 }
 
-printOutliers("─── per-project outliers: 5m-only control vs ccusage ───", control.byProject, theirs);
-printOutliers("─── per-project outliers: shipped vs ccusage ───────────", shipped.byProject, theirs);
+printOutliers(
+  "─── per-project outliers: 5m-only control vs ccusage ───",
+  control.byProject,
+  theirs,
+);
+printOutliers(
+  "─── per-project outliers: shipped vs ccusage ───────────",
+  shipped.byProject,
+  theirs,
+);
 
 console.log(`\ndone in ${((Date.now() - startedAt) / 1000).toFixed(1)}s`);

@@ -1,15 +1,8 @@
 import { createHash } from "node:crypto";
-import {
-  existsSync,
-  mkdirSync,
-  readFileSync,
-  renameSync,
-  writeFileSync,
-} from "node:fs";
+import { existsSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { chromium } from "playwright";
 import { defineHostPool } from "@plugins/infra/plugins/host-admission/server";
-import { SINGULARITY_DIR } from "@plugins/infra/plugins/paths/core";
 import {
   getWorktreeRoot,
   spawnCaptured,
@@ -19,6 +12,7 @@ import type {
   CheckContext,
   CheckResult,
 } from "@plugins/framework/plugins/tooling/core";
+import { layoutLabDir } from "../data-dirs";
 import { classifyFailure } from "./classify";
 
 // The contributed `layout-geometry` check. It gates the layout-primitive geometry
@@ -77,8 +71,6 @@ function fixtureContributorGlobs(fixturePaths: readonly string[]): string[] {
 
 const SUITE_REL =
   "plugins/primitives/plugins/css/plugins/layout-harness/web/internal/layout-geometry.test.ts";
-
-const MARKER_DIR = join(SINGULARITY_DIR, "layout-lab-cache");
 
 // Host-wide single-holder gate for the browser-based suite. The suite spawns a
 // Vite build + a headless Chromium; concurrent worktree builds would otherwise
@@ -167,8 +159,11 @@ function rootSync(): string {
   return new TextDecoder().decode(proc.stdout).trim();
 }
 
+// The sidecar pass markers live in the `cache/layout-lab` data dir this plugin
+// declares — host-global on purpose, so a peer worktree that already ran the
+// suite for these exact bytes counts as a real pass.
 function markerFile(sig: string): string {
-  return join(MARKER_DIR, `${sig}.pass`);
+  return layoutLabDir.file(`${sig}.pass`);
 }
 
 const check: Check = {
@@ -187,7 +182,7 @@ const check: Check = {
     // Steady state: an unchanged css subtree ⇒ the sidecar marker exists ⇒ return
     // OK WITHOUT launching Chromium, regardless of unrelated edits elsewhere. This
     // fast path stays UN-gated, so the zero-launch steady state never queues.
-    mkdirSync(MARKER_DIR, { recursive: true });
+    layoutLabDir.ensure();
     if (existsSync(markerFile(sig))) return { ok: true };
 
     // Marker absent ⇒ the suite must actually launch Chromium. Spend a grant unit
@@ -233,7 +228,7 @@ const check: Check = {
         if (exitCode === 0) {
           // Record the pass atomically (write-temp + rename on the same fs).
           const file = markerFile(sig);
-          const tmp = join(MARKER_DIR, `.${sha256(file).slice(0, 12)}.tmp`);
+          const tmp = layoutLabDir.file(`.${sha256(file).slice(0, 12)}.tmp`);
           writeFileSync(tmp, JSON.stringify({ sig, recordedAt: Date.now() }));
           renameSync(tmp, file);
           return { ok: true };

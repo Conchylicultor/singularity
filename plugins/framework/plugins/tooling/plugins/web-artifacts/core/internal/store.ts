@@ -15,12 +15,19 @@ import {
   writeFileSync,
 } from "node:fs";
 import { join } from "node:path";
-import { SINGULARITY_DIR } from "@plugins/infra/plugins/paths/core";
+import { webArtifactsDir } from "../../data-dirs";
 
-export const WEB_ARTIFACTS_DIR = join(SINGULARITY_DIR, "web-artifacts");
-export const WEB_ARTIFACTS_STORE_DIR = join(WEB_ARTIFACTS_DIR, "store");
+// Read off the declaration in this plugin's `data-dirs/index.ts` rather than
+// joining the data root by hand. These stay module-level consts, exactly as
+// they were when they read a frozen `SINGULARITY_DIR`: three sibling modules
+// (`check/index.ts`, `vendors.ts`, `global-css.ts`) already join them into
+// their own module-level consts, so the whole family freezes at first import
+// either way. They become functions when the store actually moves off its
+// `legacyLocation`, which is the point at which a stale read could differ.
+export const WEB_ARTIFACTS_DIR = webArtifactsDir.path;
+export const WEB_ARTIFACTS_STORE_DIR = webArtifactsDir.file("store");
 const STORE_DIR = WEB_ARTIFACTS_STORE_DIR;
-const FINGERPRINTS_DIR = join(WEB_ARTIFACTS_DIR, "fingerprints");
+const FINGERPRINTS_DIR = webArtifactsDir.file("fingerprints");
 
 // Pruning bounds. An artifact dir is small (one module + map); the fleet is
 // ~700 per builder identity, so these allow a handful of live identities.
@@ -55,7 +62,11 @@ export function allStaticImports(meta: ArtifactMeta): string[] {
   return [...specs].sort();
 }
 
-export function artifactDirName(slug: string, kind: string, inputsHash: string): string {
+export function artifactDirName(
+  slug: string,
+  kind: string,
+  inputsHash: string,
+): string {
   return `${slug}.${kind}.${inputsHash.slice(0, 16)}`;
 }
 
@@ -95,14 +106,19 @@ export function touchArtifact(dirName: string): void {
  * build of the identical artifact (another worktree) may win the rename race —
  * that's a success (identical content), so EEXIST/ENOTEMPTY discard the loser.
  */
-export function publishArtifact(dirName: string, tmpDir: string, meta: ArtifactMeta): void {
+export function publishArtifact(
+  dirName: string,
+  tmpDir: string,
+  meta: ArtifactMeta,
+): void {
   writeFileSync(join(tmpDir, "meta.json"), JSON.stringify(meta, null, 2));
   const dest = artifactStorePath(dirName);
   try {
     renameSync(tmpDir, dest);
   } catch (err) {
     const code = (err as NodeJS.ErrnoException).code;
-    if (code !== "EEXIST" && code !== "ENOTEMPTY" && code !== "EPERM") throw err;
+    if (code !== "EEXIST" && code !== "ENOTEMPTY" && code !== "EPERM")
+      throw err;
     if (!hasArtifact(dirName)) throw err; // dest exists but is not a complete artifact
     rmSync(tmpDir, { recursive: true, force: true });
   }
@@ -138,7 +154,10 @@ export function pruneStore(): void {
       continue; // vanished underneath us — nothing to prune
     }
     // Leftover temp dirs from crashed builds age out like artifacts.
-    if (now - mtimeMs > MAX_AGE_MS || (name.startsWith(".tmp.") && now - mtimeMs > 60 * 60 * 1000)) {
+    if (
+      now - mtimeMs > MAX_AGE_MS ||
+      (name.startsWith(".tmp.") && now - mtimeMs > 60 * 60 * 1000)
+    ) {
       rmSync(path, { recursive: true, force: true });
     } else if (!name.startsWith(".tmp.")) {
       live.push({ path, mtimeMs });
@@ -187,13 +206,19 @@ export function loadFingerprintCache(worktreeName: string): FingerprintCache {
     if (!(err instanceof SyntaxError)) throw err;
     return { version: FINGERPRINT_CACHE_VERSION, records: {} };
   }
-  if (parsed.version !== FINGERPRINT_CACHE_VERSION || typeof parsed.records !== "object") {
+  if (
+    parsed.version !== FINGERPRINT_CACHE_VERSION ||
+    typeof parsed.records !== "object"
+  ) {
     return { version: FINGERPRINT_CACHE_VERSION, records: {} };
   }
   return parsed;
 }
 
-export function saveFingerprintCache(worktreeName: string, cache: FingerprintCache): void {
+export function saveFingerprintCache(
+  worktreeName: string,
+  cache: FingerprintCache,
+): void {
   ensureStoreDirs();
   const file = join(FINGERPRINTS_DIR, `${worktreeName}.json`);
   const tmp = `${file}.${process.pid}.tmp`;

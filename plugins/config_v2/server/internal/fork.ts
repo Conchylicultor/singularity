@@ -1,10 +1,10 @@
 import { cp, stat } from "node:fs/promises";
-import { join } from "node:path";
-import { SINGULARITY_DIR, MAIN_WORKTREE_NAME } from "@plugins/infra/plugins/paths/server";
+import { MAIN_WORKTREE_NAME } from "@plugins/infra/plugins/paths/server";
+import { configDir } from "../../data-dirs";
 
 export async function forkConfig(targetWorktree: string): Promise<void> {
-  const sourceDir = join(SINGULARITY_DIR, "config", MAIN_WORKTREE_NAME);
-  const targetDir = join(SINGULARITY_DIR, "config", targetWorktree);
+  const sourceDir = configDir.file(MAIN_WORKTREE_NAME);
+  const targetDir = configDir.file(targetWorktree);
   try {
     await stat(sourceDir);
   } catch (err) {

@@ -28,7 +28,6 @@
     - `infra/duress.ShedSummary`
     - `infra/endpoints.HttpError`
     - `infra/endpoints.implement`
-    - `infra/paths.REPORTS_DIR`
     - `infra/retention.defineRetention`
     - `infra/warmup.defineWarmup`
     - `shell/notifications.recordNotification`

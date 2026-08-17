@@ -232,7 +232,6 @@ override where it survives.
     - `infra/endpoints.implement`
     - `infra/jobs.defineJob`
     - `infra/paths.CLAUDE_PROJECTS_DIR`
-    - `infra/paths.COST_USAGE_DIR`
     - `infra/paths.isHostSingleton`
     - `infra/safe-fetch.safeFetch`
     - `infra/warmup.defineWarmup`
