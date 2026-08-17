@@ -269,6 +269,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`plugin-loader`** — Pure plugin-graph algorithms: topological load-wave partitioning and dependsOn topo-sort, shared by the server/central/web plugin loaders.
     - **`resource-runtime`**
     - **`server-core`**
+    - **`slot-declaration`** — The slot self-description + declaration contract: SlotMeta (what kind of slot, and whether it is reorderable), the created-at-construction slot set, and the one normalisation of a plugin's `slots: [...]` declaration. A leaf — it imports no React — so the build-time collectors can read the contract without pulling the web runtime.
     - **`tooling`** — Umbrella for build-time tooling: boundary checker, lint rules, checks, guards, codegen
       - Plugins:
         - **`boundaries`** — Boundary-rules checker: zone DSL, edge evaluator, and project boundary config

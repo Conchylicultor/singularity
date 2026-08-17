@@ -73,6 +73,10 @@ export interface AppSlot {
   id: string;
   useContributions: RenderSlot<AppEntry>["useContributions"];
   Render: RenderSlot<AppEntry>["Render"];
+  /** Carried through so this hand-built callable is a COMPLETE slot handle: the
+   * barrel declares `Apps` (this object) rather than the private `appSlot`, and
+   * a declaration missing `meta` leaves the real slot undeclared. */
+  meta: RenderSlot<AppEntry>["meta"];
 }
 
 /** The contribution restates nothing about the app, so the framework-required
@@ -84,6 +88,7 @@ const App: AppSlot = Object.assign(
     id: appSlot.id,
     useContributions: appSlot.useContributions,
     Render: appSlot.Render,
+    meta: appSlot.meta,
   },
 );
 

@@ -22,16 +22,12 @@
     - `framework/plugin-id.asPluginId`
     - `framework/plugin-id.PluginId`
     - `framework/plugin-id.UNDOCUMENTED_RUNTIME_FOLDERS`
-<<<<<<< .merge_file_7CMNlc
-    - `framework/tooling/format.formatIfFormattable`
-    - `framework/tooling/format.SourceBytes`
-=======
     - `framework/slot-declaration.declaredSlotSources`
     - `framework/slot-declaration.declarePluginSlots`
     - `framework/slot-declaration.findUndeclaredSlots`
     - `framework/slot-declaration.getCreatedSlots`
-    - `framework/tooling/format.formatSource`
->>>>>>> .merge_file_Vvpcor
+    - `framework/tooling/format.formatIfFormattable`
+    - `framework/tooling/format.SourceBytes`
     - `plugin-meta/barrel-import.AUTO_STUB_CSS`
     - `plugin-meta/barrel-import.AUTO_STUB_PACKAGES`
     - `plugin-meta/barrel-import.AutoStubEntry`
