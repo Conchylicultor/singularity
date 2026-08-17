@@ -9662,12 +9662,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                 - Uses:
                   - `conversations/conversation-view/jsonl-viewer.JsonlViewer`
                   - `conversations/conversation-view/jsonl-viewer.useJsonlConversationId`
+                  - `conversations/conversation-view/jsonl-viewer.usePaneScrollElement`
                   - `conversations/conversation-view/jsonl-viewer.useVisibleEvents`
                   - `primitives/css/badge.Badge`
                   - `primitives/css/pin.Pin`
                   - `primitives/css/spacing.Stack`
-                  - `primitives/latest-ref.useLatestRef`
                   - `primitives/live-state.useResource`
+                  - `primitives/outline/scroll-spy.useActiveInView`
                   - `primitives/slot-render.defineRenderSlot`
                 - Exports (types):
                   - `StatTone`
@@ -14806,6 +14807,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - **`hover-reveal-safety`** — hover-reveal-safety lint rule: no-uncoupled-hover-reveal
             - **`icon-safety`** — icon-safety lint rules: no-lucide-react
             - **`import-scan-safety`** — import-scan-safety lint rule: no-adhoc-import-scan
+            - **`intersection-observer-safety`** — intersection-observer-safety lint rule: no-raw-intersection-observer
             - **`marker-scan-safety`** — marker-scan-safety lint rule: no-adhoc-marker-scan
             - **`promise-safety`** — promise-safety lint rules: no-floating-promises, no-bare-catch
             - **`reactive-server-io`** — reactive-server-io lint rule: no-reactive-server-io
@@ -19743,6 +19745,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses:
           - `primitives/css/ui-kit.Button`
           - `primitives/css/ui-kit.cn`
+          - `primitives/in-view.useInView`
           - `primitives/latest-ref.useEventCallback`
           - `primitives/latest-ref.useLatestRef`
           - `primitives/persistent-draft.clearDraft`
@@ -22499,6 +22502,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/css/spacing.Stack`
           - `primitives/css/ui-kit.Button`
           - `primitives/css/ui-kit.ControlSizeProvider`
+          - `primitives/in-view.useInView`
           - `primitives/loading.Loading`
         - Exports (types):
           - `CursorPage`
@@ -23857,6 +23861,22 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/workflows/editor`
               - `apps/workflows/executions`
               - `build/serve-composition`
+    - **`in-view`** — The one sanctioned home for new IntersectionObserver: createInViewWatcher(onChange, options) is the DOM layer, owning the WeakSet enrollment rule so a re-enrollment pass costs nothing, and useInView(target, onChange, {deps}) is the React layer — observes one element, hands the most recent entry of each batch to a stabilised callback, and rebuilds the observer only when deps change (the rebuild is what re-delivers against a still-intersecting element).
+      - Web:
+        - Uses: `primitives/latest-ref.useEventCallback`
+        - Exports (types):
+          - `InViewOptions`
+          - `InViewRoot`
+          - `InViewTarget`
+          - `InViewWatcher`
+        - Exports (values):
+          - `createInViewWatcher`
+          - `useInView`
+      - Cross-plugin:
+        - Imported by:
+          - `primitives/auto-scroll`
+          - `primitives/cursor-pagination`
+          - `primitives/outline/scroll-spy`
     - **`inline-text`** — Renders a raw string with every registered inline-text walker (active-data chips, file-links) applied in registry order. Consumers write <InlineText text={…}/>; walkers register via InlineTextWalkerSlot. The string seed makes wrong-order composition structurally impossible.
       - Web:
         - Slots: `InlineTextWalkerSlot.InlineTextWalkerSlot` ← `active-data`, `conversations.conversation-view.markdown-extensions`
@@ -23920,7 +23940,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/sonata/shell`
           - `apps/website/demos/app-gallery`
           - `apps/workflows/editor`
-          - `conversations/conversation-view/jsonl-viewer/transcript-stats`
           - `conversations/conversation-view/prompt-input`
           - `conversations/conversation-view/push-and-exit`
           - `debug/slow-ops`
@@ -23938,6 +23957,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/data-view/view-order`
           - `primitives/editable-field`
           - `primitives/element-size`
+          - `primitives/in-view`
           - `primitives/live-state`
           - `primitives/markdown`
           - `primitives/networking`
@@ -24666,15 +24686,20 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `conversations/conversation-view/jsonl-viewer/outline`
           - Core:
             - Exports (types): `OutlineEntry`
-        - **`scroll-spy`** — Which section of a scrolling document the reader is looking at: useActiveInView(ids, resolve) watches the resolved elements through ONE IntersectionObserver biased to the top third of the scroller, answers with the first id in order that is on screen, holds the last answer while nothing is, and enrolls elements incrementally as they mount.
+        - **`scroll-spy`** — Where the reader is in a scrolling document: useActiveInView(ids, resolve, {position}) watches the resolved elements through ONE in-view watcher and answers with either the section being read (the first id in the top third of the scroller) or how far the reader has got (the last id anywhere on screen). Holds the last answer while nothing is on screen, and enrolls elements incrementally as they mount.
           - Web:
             - Uses:
               - `primitives/auto-scroll.findScrollParent`
+              - `primitives/in-view.createInViewWatcher`
+              - `primitives/in-view.InViewWatcher`
               - `primitives/latest-ref.useEventCallback`
               - `primitives/latest-ref.useLatestRef`
+            - Exports (types): `ReadingPosition`
             - Exports (values): `useActiveInView`
           - Cross-plugin:
-            - Imported by: `primitives/outline/rail`
+            - Imported by:
+              - `conversations/conversation-view/jsonl-viewer/transcript-stats`
+              - `primitives/outline/rail`
     - **`overlay-boundary`** — React-only leaf error boundary for transient overlay content (popover/dialog/dropdown/select/tooltip/floating): OverlayBoundary catches a crash inside overlay content and renders a fallback injected via registerOverlayFallback, so the crash stays contained to the overlay instead of taking down the launching chrome. Sits below ui-kit so it can be wrapped around every *Content without closing the ui-kit → error-boundary cycle.
       - Cross-plugin:
         - Imported by:

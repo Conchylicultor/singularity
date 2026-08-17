@@ -2725,6 +2725,10 @@
       "name": "@singularity/plugin-framework-tooling-lint-import-scan-safety",
       "version": "0.0.1",
     },
+    "plugins/framework/plugins/tooling/plugins/lint/plugins/intersection-observer-safety": {
+      "name": "@singularity/plugin-framework-tooling-lint-intersection-observer-safety",
+      "version": "0.0.1",
+    },
     "plugins/framework/plugins/tooling/plugins/lint/plugins/marker-scan-safety": {
       "name": "@singularity/plugin-framework-tooling-lint-marker-scan-safety",
       "version": "0.0.1",
@@ -3923,6 +3927,10 @@
     },
     "plugins/primitives/plugins/imperative-dialog/plugins/confirm": {
       "name": "@singularity/plugin-primitives-imperative-dialog-confirm",
+      "version": "0.0.1",
+    },
+    "plugins/primitives/plugins/in-view": {
+      "name": "@singularity/plugin-primitives-in-view",
       "version": "0.0.1",
     },
     "plugins/primitives/plugins/inline-text": {
@@ -6759,6 +6767,8 @@
 
     "@singularity/plugin-framework-tooling-lint-import-scan-safety": ["@singularity/plugin-framework-tooling-lint-import-scan-safety@workspace:plugins/framework/plugins/tooling/plugins/lint/plugins/import-scan-safety"],
 
+    "@singularity/plugin-framework-tooling-lint-intersection-observer-safety": ["@singularity/plugin-framework-tooling-lint-intersection-observer-safety@workspace:plugins/framework/plugins/tooling/plugins/lint/plugins/intersection-observer-safety"],
+
     "@singularity/plugin-framework-tooling-lint-marker-scan-safety": ["@singularity/plugin-framework-tooling-lint-marker-scan-safety@workspace:plugins/framework/plugins/tooling/plugins/lint/plugins/marker-scan-safety"],
 
     "@singularity/plugin-framework-tooling-lint-promise-safety": ["@singularity/plugin-framework-tooling-lint-promise-safety@workspace:plugins/framework/plugins/tooling/plugins/lint/plugins/promise-safety"],
@@ -7298,6 +7308,8 @@
     "@singularity/plugin-primitives-imperative-dialog": ["@singularity/plugin-primitives-imperative-dialog@workspace:plugins/primitives/plugins/imperative-dialog"],
 
     "@singularity/plugin-primitives-imperative-dialog-confirm": ["@singularity/plugin-primitives-imperative-dialog-confirm@workspace:plugins/primitives/plugins/imperative-dialog/plugins/confirm"],
+
+    "@singularity/plugin-primitives-in-view": ["@singularity/plugin-primitives-in-view@workspace:plugins/primitives/plugins/in-view"],
 
     "@singularity/plugin-primitives-inline-text": ["@singularity/plugin-primitives-inline-text@workspace:plugins/primitives/plugins/inline-text"],
 

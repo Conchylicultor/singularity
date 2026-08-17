@@ -11,12 +11,13 @@
   - Uses:
     - `conversations/conversation-view/jsonl-viewer.JsonlViewer`
     - `conversations/conversation-view/jsonl-viewer.useJsonlConversationId`
+    - `conversations/conversation-view/jsonl-viewer.usePaneScrollElement`
     - `conversations/conversation-view/jsonl-viewer.useVisibleEvents`
     - `primitives/css/badge.Badge`
     - `primitives/css/pin.Pin`
     - `primitives/css/spacing.Stack`
-    - `primitives/latest-ref.useLatestRef`
     - `primitives/live-state.useResource`
+    - `primitives/outline/scroll-spy.useActiveInView`
     - `primitives/slot-render.defineRenderSlot`
   - Exports (types):
     - `StatTone`

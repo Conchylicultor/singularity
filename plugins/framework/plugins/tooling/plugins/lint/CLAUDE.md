@@ -75,6 +75,7 @@ naming the one sanctioned home of an idiom — e.g. `scroll-safety` exempts the
   - **`hover-reveal-safety`** — hover-reveal-safety lint rule: no-uncoupled-hover-reveal
   - **`icon-safety`** — icon-safety lint rules: no-lucide-react
   - **`import-scan-safety`** — import-scan-safety lint rule: no-adhoc-import-scan
+  - **`intersection-observer-safety`** — intersection-observer-safety lint rule: no-raw-intersection-observer
   - **`marker-scan-safety`** — marker-scan-safety lint rule: no-adhoc-marker-scan
   - **`promise-safety`** — promise-safety lint rules: no-floating-promises, no-bare-catch
   - **`reactive-server-io`** — reactive-server-io lint rule: no-reactive-server-io

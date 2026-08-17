@@ -8,34 +8,52 @@ the current section, or a highlighted sidebar entry all want the same answer.
 const activeId = useActiveInView(ids, (id) => root.querySelector(`[data-block-id="${CSS.escape(id)}"]`));
 ```
 
-## What "active" means
+## The two reading positions
 
-The **first id in `ids` order whose element is on screen**, where "on screen"
-means intersecting the top third of the scroller.
+`position` picks which question you are asking about the reader. It defaults to
+`"reading-line"`, and there are exactly two answers worth having:
 
-Those two rules are one design, not two knobs. The `rootMargin`
-(`0px 0px -66% 0px`) shrinks the observation box to the top third, so a section
-you have scrolled well past stops counting long before it leaves the viewport.
-And because a reader sitting in the MIDDLE of a long section has nothing in that
-band — the section's own anchor is above it, the next one below — the hold rule
-below keeps the previous answer, which is the correct one. Widen the band and
-the highlight lags a section behind; drop the hold and it flickers to the next
-section every time the band falls between two anchors.
+| `position` | answers | on screen means | takes |
+| --- | --- | --- | --- |
+| `"reading-line"` (default) | *which section am I reading?* | the top third of the scroller | the **first** id in `ids` order |
+| `"furthest-read"` | *how far have I got?* | anywhere in the scroller | the **last** id in `ids` order |
 
-## Two rules copied from the prior art
+The band and the pick are **one decision, not two knobs**, which is why they are
+chosen together by name rather than passed separately. Both are fixed at
+construction, so switching `position` at runtime retires the watcher and rebuilds
+it (dropping its on-screen set — membership under one band says nothing about the
+other). That is supported; the answer simply restarts from the new position's
+first observation.
 
-Both come from
-[`transcript-stats/web/use-reading-anchor.ts`](../../../../../conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/transcript-stats/web/use-reading-anchor.ts),
-which solved the same problem for one surface before this primitive existed:
+For the reading line, the `rootMargin` (`0px 0px -66% 0px`) shrinks the
+observation box to the top third, so a section you have scrolled well past stops
+counting long before it leaves the viewport. And because a reader sitting in the
+MIDDLE of a long section has nothing in that band — the section's own anchor is
+above it, the next one below — the hold rule below keeps the previous answer,
+which is the correct one. Widen the band and the highlight lags a section behind;
+drop the hold and it flickers to the next section every time the band falls
+between two anchors.
+
+The furthest-read watermark wants the opposite of both: everything above the
+bottom-most visible row has demonstrably been scrolled past, so the whole
+scroller counts and the last id wins. That is the point the conversation's stats
+strip reports its running totals "as of".
+
+## Two rules a hand-rolled copy forgets
+
+They live here so no caller has to remember them. Neither omission fails
+loudly — both just produce a highlight that lags or flickers:
 
 - **Hold the last value when nothing is on screen.** An empty moment is a
   transient — mid-fling, a section taller than the band, a pane being torn down —
   never "the reader is nowhere". `null` comes back **only** before the first
   observation, i.e. genuinely *not known yet*.
-- **Enroll through a `WeakSet`.** The observer is built once and elements are
-  added as they mount; a re-render never re-observes a node already watched, and
-  a removed element stays collectable. Rebuilding the observer per change would
-  make every arriving row cost a re-measure of the whole document.
+- **Enroll incrementally.** The watcher is built once and elements are added as
+  they mount; a re-render never re-observes a node already watched, and a removed
+  element stays collectable. Rebuilding the observer per change would make every
+  arriving row cost a re-measure of the whole document. That rule now belongs to
+  [`primitives/in-view`](../../../in-view/), which holds the `WeakSet` — this hook
+  simply re-runs its enrollment pass and pays for the new elements only.
 
 ## The root is derived, not passed
 
@@ -46,7 +64,7 @@ nothing for a caller to get wrong and no `root` prop to thread.
 
 ## What the caller owns
 
-Only `ids` (the order that defines "first") and `resolve` (id → DOM node).
+Only `ids` (the document order the pick runs over) and `resolve` (id → DOM node).
 `resolve` returning `null` means *not mounted* — virtualized away, filtered out —
 and that id is skipped, then picked up on a later enrollment pass.
 
@@ -70,25 +88,23 @@ A surface that mounts new elements for an unchanged id list once already
 enrolled — a virtualizer over a fixed set — still will not see them; no consumer
 does that today, and the fix is a signal from the caller, not a per-render sweep.
 
-## The third hand-rolled site
-
-`IntersectionObserver` is hand-rolled in three places (`use-reading-anchor`,
-`use-infinite-scroll`, and this) while `ResizeObserver` has a lint-enforced
-primitive. This plugin is deliberately its own so it can become that home;
-migrating the other two is a follow-up, not a prerequisite.
-
 <!-- AUTOGENERATED:BEGIN — do not edit; regenerated by `./singularity build` -->
 
 ## Plugin reference
 
-- Description: Which section of a scrolling document the reader is looking at: useActiveInView(ids, resolve) watches the resolved elements through ONE IntersectionObserver biased to the top third of the scroller, answers with the first id in order that is on screen, holds the last answer while nothing is, and enrolls elements incrementally as they mount.
+- Description: Where the reader is in a scrolling document: useActiveInView(ids, resolve, {position}) watches the resolved elements through ONE in-view watcher and answers with either the section being read (the first id in the top third of the scroller) or how far the reader has got (the last id anywhere on screen). Holds the last answer while nothing is on screen, and enrolls elements incrementally as they mount.
 - Web:
   - Uses:
     - `primitives/auto-scroll.findScrollParent`
+    - `primitives/in-view.createInViewWatcher`
+    - `primitives/in-view.InViewWatcher`
     - `primitives/latest-ref.useEventCallback`
     - `primitives/latest-ref.useLatestRef`
+  - Exports (types): `ReadingPosition`
   - Exports (values): `useActiveInView`
 - Cross-plugin:
-  - Imported by: `primitives/outline/rail`
+  - Imported by:
+    - `conversations/conversation-view/jsonl-viewer/transcript-stats`
+    - `primitives/outline/rail`
 
 <!-- AUTOGENERATED:END -->

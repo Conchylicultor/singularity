@@ -1,10 +1,20 @@
-import { createElement, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactElement } from "react";
+import {
+  createElement,
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactElement,
+} from "react";
 import {
   clearDraft,
   readDraft,
   writeDraft,
 } from "@plugins/primitives/plugins/persistent-draft/web";
 import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
+import { useInView } from "@plugins/primitives/plugins/in-view/web";
 import { BottomSentinel } from "./internal/bottom-sentinel";
 import { scrollChildIntoView } from "./scroll-child-into-view";
 import {
@@ -227,7 +237,9 @@ export function useStickyScroll(
       : null;
     const outcome = resolveRestore(saved, (key) =>
       cfg
-        ? el.querySelector<HTMLElement>(`[${cfg.anchorAttr}="${CSS.escape(key)}"]`)
+        ? el.querySelector<HTMLElement>(
+            `[${cfg.anchorAttr}="${CSS.escape(key)}"]`,
+          )
         : null,
     );
 
@@ -256,29 +268,32 @@ export function useStickyScroll(
   }, [sentinelEl, writeToBottom, persistRef, applyAnchoring]);
 
   // ---- the sensor ----------------------------------------------------------
-  useEffect(() => {
-    const el = scrollRef.current;
-    const sentinel = sentinelEl;
-    if (!el || !sentinel) return;
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        const entry = entries[entries.length - 1];
-        if (!entry) return;
-        sentinelVisibleRef.current = entry.isIntersecting;
-        // The follow loop: while following, anything that moves the content end
-        // off screen (a new message, an image loading, shiki resolving, a
-        // reflow) pulls us back down. While parked, this is inert by
-        // construction — see followAction.
-        if (followAction(modeRef.current, entry.isIntersecting) === "scroll-to-bottom") {
-          writeToBottom(el);
-        }
-      },
-      { root: el, ...sentinelObserverOptions(threshold) },
-    );
-    observer.observe(sentinel);
-    return () => observer.disconnect();
-  }, [sentinelEl, threshold, writeToBottom]);
+  // The getter carries the "no scroll container, no sensor" guard the effect used
+  // to spell out. Without it a missing container would resolve to a null root,
+  // and the observer would silently measure against the viewport instead.
+  useInView(
+    () => (scrollRef.current && sentinelEl ? sentinelEl : null),
+    (entry) => {
+      sentinelVisibleRef.current = entry.isIntersecting;
+      // The follow loop: while following, anything that moves the content end
+      // off screen (a new message, an image loading, shiki resolving, a
+      // reflow) pulls us back down. While parked, this is inert by
+      // construction — see followAction.
+      const el = scrollRef.current;
+      if (
+        el &&
+        followAction(modeRef.current, entry.isIntersecting) ===
+          "scroll-to-bottom"
+      ) {
+        writeToBottom(el);
+      }
+    },
+    {
+      root: scrollRef,
+      ...sentinelObserverOptions(threshold),
+      deps: [sentinelEl, threshold, writeToBottom],
+    },
+  );
 
   // ---- intent: "a scroll I did not author" ---------------------------------
   useEffect(() => {
@@ -297,7 +312,9 @@ export function useStickyScroll(
       // value before the observer catches up.
       const atBottom = isAtBottom(el, threshold);
       sentinelVisibleRef.current = atBottom;
-      applyMode(nextMode({ t: "foreign-scroll", sentinelVisible: atBottom, movedUp }));
+      applyMode(
+        nextMode({ t: "foreign-scroll", sentinelVisible: atBottom, movedUp }),
+      );
     };
     el.addEventListener("scroll", onScroll, { passive: true });
     return () => el.removeEventListener("scroll", onScroll);

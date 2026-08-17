@@ -24,10 +24,11 @@ mount) and signal nothing — there is no content-length effect to remember.
 **Do not reintroduce a size observer.**
 [`research/2026-05-25-global-sticky-scroll-redesign.md`](../../../../research/2026-05-25-global-sticky-scroll-redesign.md)
 removed one because a size delta is *sign-blind*: opening the file pane rewraps
-text taller, which is indistinguishable from new content. An
-`IntersectionObserver` on the sentinel is *sign-asymmetric* — a taller reflow can
-only make the bottom **less** visible — so it can exclusively un-follow, and a
-signal like that cannot drag anyone downward. Asserted in
+text taller, which is indistinguishable from new content. Watching the sentinel
+(`useInView`, from [`primitives/in-view`](../in-view/CLAUDE.md)) is instead
+*sign-asymmetric* — a taller reflow can only make the bottom **less** visible —
+so it can exclusively un-follow, and a signal like that cannot drag anyone
+downward. Asserted in
 `internal/sticky-scroll-machine.test.ts`. The guarantee is narrower than it
 sounds: while following, reflow *does* write. It is "no observation-driven writes
 **while not following**".
@@ -47,7 +48,8 @@ only a position change fires `scroll`.
 **`followKey` means "the user just acted"** — never ambient state. `isWorking`
 also rises when a background agent resumes, which must not move a reading user.
 
-**Sentinel geometry, both load-bearing:** the pin `threshold` becomes bottom
+**Sentinel geometry, both load-bearing** (the observer is `in-view`'s; the
+geometry and the follow policy stay here): the pin `threshold` becomes bottom
 `rootMargin` (a zero-height node at `threshold: 0` means a 0px pin distance), and
 the root is widened hugely left/right so horizontal scroll on an `axis="both"`
 surface can't carry the sentinel out of view.
@@ -97,6 +99,7 @@ even before enough rows arrive to overflow it. Hence an opt-in, not one behavior
   - Uses:
     - `primitives/css/ui-kit.Button`
     - `primitives/css/ui-kit.cn`
+    - `primitives/in-view.useInView`
     - `primitives/latest-ref.useEventCallback`
     - `primitives/latest-ref.useLatestRef`
     - `primitives/persistent-draft.clearDraft`

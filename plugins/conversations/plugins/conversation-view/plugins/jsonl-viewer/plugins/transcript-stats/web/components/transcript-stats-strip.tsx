@@ -1,17 +1,18 @@
-import { useMemo, useRef } from "react";
+import { useCallback, useMemo } from "react";
 import { MdHistory } from "react-icons/md";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { useActiveInView } from "@plugins/primitives/plugins/outline/plugins/scroll-spy/web";
 import {
   useJsonlConversationId,
+  usePaneScrollElement,
   useVisibleEvents,
 } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/web";
 import { jsonlEventsResource } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/core";
 import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-watcher/core";
 import { TranscriptStats } from "../slots";
 import { TranscriptReadProvider } from "../read-context";
-import { useReadingAnchor } from "../use-reading-anchor";
 import { StatBadge } from "./stat-badge";
 
 export function TranscriptStatsStrip() {
@@ -29,11 +30,22 @@ function Strip({ conversationId }: { conversationId: string }) {
 }
 
 function StripWithEvents({ events }: { events: JsonlEvent[] }) {
-  const hostRef = useRef<HTMLElement>(null);
+  // This strip is a sibling of the transcript scroller inside the pane frame,
+  // not inside it, so the scroller has to be published rather than walked to.
+  const scroller = usePaneScrollElement();
   // The DOM numbers rows over the FILTERED transcript, so the anchor comes back
   // in those terms and has to be translated before it can slice the raw one.
   const visible = useVisibleEvents(events);
-  const anchor = useReadingAnchor(hostRef, visible.length);
+  // The candidates ARE the rows currently in the transcript, so a torn-out row
+  // cannot pin the anchor past the end — no staleness guard needed downstream.
+  const ids = useMemo(() => visible.map((_, i) => String(i)), [visible]);
+  const resolve = useCallback(
+    (id: string) =>
+      scroller?.querySelector(`[data-event-index="${CSS.escape(id)}"]`) ?? null,
+    [scroller],
+  );
+  const anchorId = useActiveInView(ids, resolve, { position: "furthest-read" });
+  const anchor = anchorId === null ? null : Number(anchorId);
 
   const read = useMemo(() => {
     const anchorEvent = anchor === null ? undefined : visible[anchor];
@@ -53,7 +65,6 @@ function StripWithEvents({ events }: { events: JsonlEvent[] }) {
   return (
     <Pin to="bottom" stretch offset="sm" layer="raised" decorative>
       <Stack
-        ref={hostRef}
         direction="row"
         justify="end"
         align="center"

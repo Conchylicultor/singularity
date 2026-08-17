@@ -1,6 +1,9 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import { act, render } from "@testing-library/react";
-import { useInfiniteScroll, type InfiniteScrollOptions } from "../internal/use-infinite-scroll";
+import {
+  useInfiniteScroll,
+  type InfiniteScrollOptions,
+} from "../internal/use-infinite-scroll";
 
 /**
  * A controllable IntersectionObserver stub: the test drives when the sentinel
@@ -13,7 +16,10 @@ class FakeIntersectionObserver {
   cb: IntersectionObserverCallback;
   options?: IntersectionObserverInit;
   disconnected = false;
-  constructor(cb: IntersectionObserverCallback, options?: IntersectionObserverInit) {
+  constructor(
+    cb: IntersectionObserverCallback,
+    options?: IntersectionObserverInit,
+  ) {
     this.cb = cb;
     this.options = options;
     FakeIntersectionObserver.instances.push(this);
@@ -23,7 +29,9 @@ class FakeIntersectionObserver {
     this.disconnected = true;
   }
   static live(): FakeIntersectionObserver | undefined {
-    return FakeIntersectionObserver.instances.filter((o) => !o.disconnected).at(-1);
+    return FakeIntersectionObserver.instances
+      .filter((o) => !o.disconnected)
+      .at(-1);
   }
 }
 
@@ -44,7 +52,9 @@ function Harness(props: InfiniteScrollOptions) {
   return <div ref={sentinelRef} data-testid="sentinel" />;
 }
 
-const baseOpts = (over: Partial<InfiniteScrollOptions>): InfiniteScrollOptions => ({
+const baseOpts = (
+  over: Partial<InfiniteScrollOptions>,
+): InfiniteScrollOptions => ({
   hasNextPage: true,
   isFetchingNextPage: false,
   isFetchNextPageError: false,
@@ -67,7 +77,9 @@ describe("useInfiniteScroll", () => {
 
   it("does NOT fetch while a next-page fetch is in flight", () => {
     const fetchNextPage = vi.fn();
-    render(<Harness {...baseOpts({ fetchNextPage, isFetchingNextPage: true })} />);
+    render(
+      <Harness {...baseOpts({ fetchNextPage, isFetchingNextPage: true })} />,
+    );
     fireIntersecting();
     expect(fetchNextPage).not.toHaveBeenCalled();
   });
@@ -90,7 +102,9 @@ describe("useInfiniteScroll", () => {
     );
     // Fetch fails: fetching flips back to false AND the error flag is set. This
     // re-runs the effect (recreating the observer) — the exact loop trigger.
-    rerender(<Harness {...baseOpts({ fetchNextPage, isFetchNextPageError: true })} />);
+    rerender(
+      <Harness {...baseOpts({ fetchNextPage, isFetchNextPageError: true })} />,
+    );
     fireIntersecting();
     expect(fetchNextPage).not.toHaveBeenCalled();
   });
@@ -103,7 +117,9 @@ describe("useInfiniteScroll", () => {
     fireIntersecting();
     expect(fetchNextPage).not.toHaveBeenCalled();
     // Error clears (e.g. the user hit Retry) → the observer re-arms.
-    rerender(<Harness {...baseOpts({ fetchNextPage, isFetchNextPageError: false })} />);
+    rerender(
+      <Harness {...baseOpts({ fetchNextPage, isFetchNextPageError: false })} />,
+    );
     fireIntersecting();
     expect(fetchNextPage).toHaveBeenCalledTimes(1);
   });
@@ -111,5 +127,30 @@ describe("useInfiniteScroll", () => {
   it("passes rootMargin through to the observer for early prefetch", () => {
     render(<Harness {...baseOpts({ rootMargin: "400px" })} />);
     expect(FakeIntersectionObserver.live()?.options?.rootMargin).toBe("400px");
+  });
+
+  // Asserted on the observer itself, deliberately, because no fired
+  // intersection can catch this: a sentinel sitting in view does not move
+  // between pages, so nothing will ever deliver against it again — only a NEW
+  // observer re-reports a still-intersecting element. Every test above hand-
+  // fires the callback and so passes just as happily against a stale observer.
+  // Drop an entry from `useInView`'s `deps` and pagination stops after page 1
+  // with nothing thrown and nothing logged; this is what turns red instead.
+  it("rebuilds the observer when a gate flag changes (re-delivery, not bookkeeping)", () => {
+    const fetchNextPage = vi.fn();
+    const { rerender } = render(
+      <Harness {...baseOpts({ fetchNextPage, isFetchingNextPage: true })} />,
+    );
+    const duringFetch = FakeIntersectionObserver.live();
+    expect(duringFetch).toBeDefined();
+
+    // The page lands: the gate re-opens, which must re-arm the sentinel.
+    rerender(
+      <Harness {...baseOpts({ fetchNextPage, isFetchingNextPage: false })} />,
+    );
+
+    expect(duringFetch?.disconnected).toBe(true);
+    expect(FakeIntersectionObserver.live()).toBeDefined();
+    expect(FakeIntersectionObserver.live()).not.toBe(duringFetch);
   });
 });
