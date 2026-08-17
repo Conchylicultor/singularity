@@ -1,70 +1,20 @@
-import type { CommitDelta, CommitRow, CommitsGraph } from "../../shared/protocol";
-import { runGit, tryRunGit, GitError, LOG_FORMAT, parseGitLog } from "@plugins/primitives/plugins/commit-list/server";
+import type { CommitRow, CommitsGraph } from "../../shared/protocol";
+import {
+  runGit,
+  LOG_FORMAT,
+  parseGitLog,
+} from "@plugins/primitives/plugins/commit-list/server";
 import { withHeavyReadSlot } from "@plugins/infra/plugins/host-read-pool/server";
-import { createSignedMemo } from "@plugins/infra/plugins/git-read-cache/server";
-import { lastKnownMainSha } from "@plugins/infra/plugins/git-watcher/server";
+import {
+  probeHeadMain,
+  readBranch,
+  readMergeBase,
+} from "@plugins/tasks/plugins/attempt-work/server";
 import { createInflight } from "@plugins/packages/plugins/inflight/core";
-import { deltaEtag } from "./etag";
 
 const MAIN = "main";
 const MAX_COMMITS = 200;
 const MAX_BEHIND = 50;
-
-const ZERO_DELTA: CommitDelta = {
-  ahead: 0,
-  behind: 0,
-  mergeBase: null,
-  branch: null,
-};
-
-async function readBranch(worktreePath: string): Promise<string | null> {
-  // runGit throws on a real git failure; a detached HEAD legitimately reports
-  // the literal "HEAD" (no branch name) → null.
-  const trimmed = (await runGit(["rev-parse", "--abbrev-ref", "HEAD"], worktreePath)).trim();
-  if (!trimmed || trimmed === "HEAD") return null;
-  return trimmed;
-}
-
-async function readMergeBase(worktreePath: string): Promise<string | null> {
-  // `git merge-base` exits 1 legitimately when the branches share no common
-  // ancestor — that is a real "no merge-base" answer (→ null), NOT a failure.
-  // Any other non-zero exit is a genuine failure and must throw so the caller
-  // aborts the recompute and keeps its previous cache (never a "" collision).
-  const res = await tryRunGit(["merge-base", MAIN, "HEAD"], worktreePath);
-  if (!res.ok) {
-    if (res.exitCode === 1) return null;
-    throw new GitError({
-      args: ["merge-base", MAIN, "HEAD"],
-      cwd: worktreePath,
-      exitCode: res.exitCode,
-      stderr: res.stderr,
-    });
-  }
-  const trimmed = res.stdout.trim();
-  return trimmed.length > 0 ? trimmed : null;
-}
-
-async function readDeltaCounts(
-  worktreePath: string,
-): Promise<{ ahead: number; behind: number }> {
-  // `--left-right --count <left>...<right>` prints "<left-only>\t<right-only>".
-  // left  = main only  = behind
-  // right = HEAD only  = ahead
-  // runGit throws on failure — a false 0/0 is never manufactured from a failed read.
-  const out = await runGit(
-    ["rev-list", "--left-right", "--count", `${MAIN}...HEAD`],
-    worktreePath,
-  );
-  const parts = out.trim().split(/\s+/);
-  const behind = Number.parseInt(parts[0] ?? "", 10);
-  const ahead = Number.parseInt(parts[1] ?? "", 10);
-  if (Number.isNaN(behind) || Number.isNaN(ahead)) {
-    throw new Error(
-      `rev-list --left-right --count returned unparseable output: ${JSON.stringify(out)}`,
-    );
-  }
-  return { ahead, behind };
-}
 
 // Exact, uncapped one-sided commit count (the commit log is capped at
 // MAX_COMMITS/MAX_BEHIND, so a count derived from the array would underreport on
@@ -75,66 +25,11 @@ async function readCount(range: string, worktreePath: string): Promise<number> {
   const out = await runGit(["rev-list", "--count", range], worktreePath);
   const n = Number.parseInt(out.trim(), 10);
   if (Number.isNaN(n)) {
-    throw new Error(`rev-list --count ${range} returned non-numeric output: ${JSON.stringify(out)}`);
+    throw new Error(
+      `rev-list --count ${range} returned non-numeric output: ${JSON.stringify(out)}`,
+    );
   }
   return n;
-}
-
-async function computeDeltaCore(worktreePath: string): Promise<CommitDelta> {
-  const branch = await readBranch(worktreePath);
-  const mergeBase = await readMergeBase(worktreePath);
-  if (mergeBase === null) {
-    return { ...ZERO_DELTA, branch };
-  }
-  const counts = await readDeltaCounts(worktreePath);
-  return { ahead: counts.ahead, behind: counts.behind, mergeBase, branch };
-}
-
-export async function probeHeadMain(
-  worktreePath: string,
-): Promise<{ headSha: string; mainSha: string }> {
-  // Both reads are the thin ungated `runGit` (a rev-parse is microseconds);
-  // `main` is read from git-watcher's in-memory sha when seeded, else an ungated
-  // `rev-parse main` (never trust a missing watcher as "main unchanged").
-  // runGit throws on failure — a failed read must NEVER coalesce to "" and poison
-  // the cache signature (two different failures would collide on the same "|"
-  // key). A throw here aborts the memo recompute, retaining the previous entry.
-  const headSha = (await runGit(["rev-parse", "HEAD"], worktreePath)).trim();
-  const mainSha =
-    lastKnownMainSha() ?? (await runGit(["rev-parse", MAIN], worktreePath)).trim();
-  return { headSha, mainSha };
-}
-
-// ── delta: signed memo — one authority for `revalidate` and the loader ──────
-// `deltaEtag(headSha, mainSha)` covers every input ahead/behind/mergeBase derive
-// from (commits are immutable, so unmoved tips ⇒ unmoved merge-base and
-// rev-lists). A hit (HEAD & main unchanged since last compute) returns the cached
-// delta with NO heavy slot; worktree-keying coalesces the N attempts on one
-// worktree onto one compute.
-//
-// `createSignedMemo` binds `signature` and `compute` at construction, so the
-// resource's `revalidate` (→ `deltaSignature`) and its loader (→ `computeDelta`)
-// are provably the same authority over the same inputs. Before this they were two
-// independent call sites agreeing only by a comment — the drift that made
-// `edited-files` certify a stale value with a fresh ETag, pinning the client on it
-// forever via 304. See research/2026-07-09-global-etag-value-coproduction.md.
-const deltaMemo = createSignedMemo<CommitDelta>({
-  name: "commits-graph.delta",
-  signature: async (worktreePath) => {
-    const { headSha, mainSha } = await probeHeadMain(worktreePath);
-    return deltaEtag(headSha, mainSha);
-  },
-  compute: (worktreePath) => withHeavyReadSlot(() => computeDeltaCore(worktreePath)),
-});
-
-/** The delta resource's `loader`: read through the memo. */
-export function computeDelta(worktreePath: string): Promise<CommitDelta> {
-  return deltaMemo.get(worktreePath);
-}
-
-/** The delta resource's `revalidate`: the memo's own signature, not a twin of it. */
-export function deltaSignature(worktreePath: string): Promise<string> {
-  return deltaMemo.signature(worktreePath);
 }
 
 async function computeCommitsFromShas(
@@ -160,9 +55,12 @@ async function computeCommitsFromShas(
 // Keys (each a faithful function of the inputs that half reads):
 //   pending : `${headSha}|${mergeBase}`          → { commits, ahead, branch }
 //   behind  : `${mainSha}|${mergeBase}`          → { behindCommits, behind }
-//   landed  : `${headSha}|${mergeBase}|${pushedShasKey}` → { landedCommits }
-// landedCommits = pushedShas log filtered to exclude the pending set, so it must
-// refresh whenever EITHER the pending set (headSha+mergeBase) OR pushedShas move.
+//   landed  : `${headSha}|${mergeBase}|${landedShasKey}` → { landedCommits }
+// landedCommits = the landedShas log filtered to exclude the pending set, so it
+// must refresh whenever EITHER the pending set (headSha+mergeBase) OR the landed
+// set moves. The landed set is now git-measured (attempt-work greps `main`'s
+// Singularity-Conversation trailers) rather than read off the `pushes` ledger, so
+// it is keyed by the shas themselves and cannot lag behind a stalled ingest job.
 
 interface PendingHalf {
   key: string;
@@ -194,13 +92,13 @@ async function probeGraphState(
   return { headSha, mainSha, mergeBase };
 }
 
-function pushedShasKey(pushedShas: string[]): string {
-  return [...pushedShas].sort().join(",");
+function landedShasKey(landedShas: string[]): string {
+  return [...landedShas].sort().join(",");
 }
 
 export async function computeGraph(
   worktreePath: string,
-  pushedShas: string[] = [],
+  landedShas: string[] = [],
 ): Promise<CommitsGraph> {
   const { headSha, mainSha, mergeBase } = await probeGraphState(worktreePath);
 
@@ -209,7 +107,9 @@ export async function computeGraph(
     // read it ungated (cheap) so the chip can show the branch name.
     const branch = await readBranch(worktreePath);
     return {
-      ...ZERO_DELTA,
+      ahead: 0,
+      behind: 0,
+      mergeBase: null,
       branch,
       commits: [],
       landedCommits: [],
@@ -219,13 +119,16 @@ export async function computeGraph(
 
   const pendingKey = `${headSha}|${mergeBase}`;
   const behindKey = `${mainSha}|${mergeBase}`;
-  const landedKey = `${headSha}|${mergeBase}|${pushedShasKey(pushedShas)}`;
+  const landedKey = `${headSha}|${mergeBase}|${landedShasKey(landedShas)}`;
 
   return graphInflight.run(worktreePath, async () => {
     const entry = graphCache.get(worktreePath) ?? {};
-    const pendingHit = entry.pending?.key === pendingKey ? entry.pending : undefined;
-    const behindHit = entry.behind?.key === behindKey ? entry.behind : undefined;
-    const landedHit = entry.landed?.key === landedKey ? entry.landed : undefined;
+    const pendingHit =
+      entry.pending?.key === pendingKey ? entry.pending : undefined;
+    const behindHit =
+      entry.behind?.key === behindKey ? entry.behind : undefined;
+    const landedHit =
+      entry.landed?.key === landedKey ? entry.landed : undefined;
 
     // All three pieces fresh ⇒ assemble from cache with ZERO gated work and NO
     // heavy slot acquired. This is the steady-state no-op notify path.
@@ -239,7 +142,7 @@ export async function computeGraph(
     //
     // Main-advance fast path: a `main` advance moves `mainSha` only — `headSha`
     // and `mergeBase` are unchanged, so `pendingKey` and (for an unchanged
-    // pushedShas set) `landedKey` still match. Only `behindHit` is undefined, so
+    // landed set) `landedKey` still match. Only `behindHit` is undefined, so
     // the expensive max-200 `mergeBase..HEAD` log below is skipped entirely; the
     // slot wraps just the cheap max-50 `HEAD..main` log.
     const result = await withHeavyReadSlot(async () => {
@@ -250,7 +153,13 @@ export async function computeGraph(
       // landed depends on the pending set, so resolve pending first (above),
       // then compute landed against it if its key moved.
       const landed =
-        landedHit ?? (await recomputeLanded(worktreePath, pushedShas, pending.commits, landedKey));
+        landedHit ??
+        (await recomputeLanded(
+          worktreePath,
+          landedShas,
+          pending.commits,
+          landedKey,
+        ));
       return { pending, behind, landed };
     });
 
@@ -270,7 +179,15 @@ async function recomputePending(
 ): Promise<PendingHalf> {
   const pendingRange = `${mergeBase}..HEAD`;
   const [out, ahead, branch] = await Promise.all([
-    runGit(["log", `--max-count=${MAX_COMMITS}`, `--format=${LOG_FORMAT}`, pendingRange], worktreePath),
+    runGit(
+      [
+        "log",
+        `--max-count=${MAX_COMMITS}`,
+        `--format=${LOG_FORMAT}`,
+        pendingRange,
+      ],
+      worktreePath,
+    ),
     readCount(pendingRange, worktreePath),
     readBranch(worktreePath),
   ]);
@@ -278,10 +195,21 @@ async function recomputePending(
   return { key, commits, ahead, branch };
 }
 
-async function recomputeBehind(worktreePath: string, key: string): Promise<BehindHalf> {
+async function recomputeBehind(
+  worktreePath: string,
+  key: string,
+): Promise<BehindHalf> {
   const behindRange = `HEAD..${MAIN}`;
   const [out, behind] = await Promise.all([
-    runGit(["log", `--max-count=${MAX_BEHIND}`, `--format=${LOG_FORMAT}`, behindRange], worktreePath),
+    runGit(
+      [
+        "log",
+        `--max-count=${MAX_BEHIND}`,
+        `--format=${LOG_FORMAT}`,
+        behindRange,
+      ],
+      worktreePath,
+    ),
     readCount(behindRange, worktreePath),
   ]);
   const behindCommits = parseGitLog(out);
@@ -290,11 +218,11 @@ async function recomputeBehind(worktreePath: string, key: string): Promise<Behin
 
 async function recomputeLanded(
   worktreePath: string,
-  pushedShas: string[],
+  landedShas: string[],
   pendingCommits: CommitRow[],
   key: string,
 ): Promise<LandedPiece> {
-  const landedAll = await computeCommitsFromShas(pushedShas, worktreePath);
+  const landedAll = await computeCommitsFromShas(landedShas, worktreePath);
   const pendingShaSet = new Set(pendingCommits.map((c) => c.sha));
   const landedCommits = landedAll.filter((c) => !pendingShaSet.has(c.sha));
   return { key, landedCommits };
@@ -317,8 +245,7 @@ function assemble(
   };
 }
 
-/** Drop a worktree's cached delta + graph state (subscription-lifecycle cleanup). */
+/** Drop a worktree's cached graph state (subscription-lifecycle cleanup). */
 export function evictWorktree(worktreePath: string): void {
-  deltaMemo.evict(worktreePath);
   graphCache.delete(worktreePath);
 }

@@ -4439,6 +4439,10 @@
       "name": "@singularity/plugin-tasks-attempt-view",
       "version": "0.0.1",
     },
+    "plugins/tasks/plugins/attempt-work": {
+      "name": "@singularity/plugin-tasks-attempt-work",
+      "version": "0.0.1",
+    },
     "plugins/tasks/plugins/auto-start": {
       "name": "@singularity/plugin-tasks-auto-start",
       "version": "0.0.1",
@@ -7576,6 +7580,8 @@
     "@singularity/plugin-tasks-attempt-status": ["@singularity/plugin-tasks-attempt-status@workspace:plugins/tasks/plugins/attempt-status"],
 
     "@singularity/plugin-tasks-attempt-view": ["@singularity/plugin-tasks-attempt-view@workspace:plugins/tasks/plugins/attempt-view"],
+
+    "@singularity/plugin-tasks-attempt-work": ["@singularity/plugin-tasks-attempt-work@workspace:plugins/tasks/plugins/attempt-work"],
 
     "@singularity/plugin-tasks-auto-start": ["@singularity/plugin-tasks-auto-start@workspace:plugins/tasks/plugins/auto-start"],
 

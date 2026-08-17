@@ -1,14 +1,11 @@
 import { z } from "zod";
 import { defineJob } from "@plugins/infra/plugins/jobs/server";
-import {
-  afterTurn,
-  deleteConversation,
-} from "@plugins/conversations/server";
+import { afterTurn, deleteConversation } from "@plugins/conversations/server";
 import {
   getConversation,
   markConversationClosed,
-  maybeDropTaskOnExit,
 } from "@plugins/tasks/plugins/tasks-core/server";
+import { dropTaskOnExit } from "@plugins/conversations/plugins/conversation-view/plugins/drop-and-exit/server";
 import { recordNotification } from "@plugins/shell/plugins/notifications/server";
 import { conversationRoute } from "@plugins/conversations/core";
 import { agentManagerApp } from "@plugins/apps/plugins/agent-manager/plugins/shell/core";
@@ -32,13 +29,14 @@ export const exitCleanFinalizeJob = defineJob({
     await afterTurn(ctx, conversationId, { timeoutMs: FINALIZE_TIMEOUT_MS });
     await ctx.step("close-conversation", async () => {
       // An agent that exits without landing any work should return its task to
-      // `dropped` rather than leaving it stranded as `attempted` — same policy
-      // as the manual "Drop & Close" action. Guarded against pushed work and
-      // active sibling conversations inside maybeDropTaskOnExit.
+      // `dropped` rather than leaving it stranded as `attempted` — the same
+      // `dropTaskOnExit` policy the manual "Drop & Close" action runs, which
+      // never drops when the attempt's git-measured standing shows work at stake
+      // or cannot be measured at all. This is the path that used to drop the
+      // task of an agent that pushed and then called `exit_clean`, because the
+      // guard read the lagging pushes ledger.
       const conversation = await getConversation(conversationId);
-      const dropped = conversation
-        ? await maybeDropTaskOnExit(conversation)
-        : false;
+      const dropped = conversation ? await dropTaskOnExit(conversation) : false;
 
       await markConversationClosed(conversationId);
       await deleteConversation(conversationId);
@@ -53,7 +51,9 @@ export const exitCleanFinalizeJob = defineJob({
           ? "No changes were pushed — task marked as dropped"
           : "Branch pushed and conversation closed",
         variant: dropped ? "info" : "success",
-        linkTo: conversationRoute.link(agentManagerApp, { convId: conversationId }),
+        linkTo: conversationRoute.link(agentManagerApp, {
+          convId: conversationId,
+        }),
         dedupeKey: `push-and-exit-clean:${conversationId}`,
       });
     });

@@ -1,23 +1,21 @@
 import { defineResource } from "@plugins/framework/plugins/server-core/core";
 import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";
 import { WorktreeGoneError } from "@plugins/primitives/plugins/commit-list/server";
-import { resolved, unresolved } from "@plugins/primitives/plugins/live-state/core";
-import { refHeadResource } from "@plugins/infra/plugins/git-watcher/server";
-import { getAttempt, listPushesForAttempt, pushesResource } from "@plugins/tasks/plugins/tasks-core/server";
-import type { Push } from "@plugins/tasks/plugins/tasks-core/core";
 import {
-  CommitDeltaPayloadSchema,
+  resolved,
+  unresolved,
+} from "@plugins/primitives/plugins/live-state/core";
+import { refHeadResource } from "@plugins/infra/plugins/git-watcher/server";
+import { getAttempt } from "@plugins/tasks/plugins/tasks-core/server";
+import {
+  probeHeadMain,
+  readLandedShas,
+} from "@plugins/tasks/plugins/attempt-work/server";
+import {
   CommitsGraphPayloadSchema,
-  type CommitDeltaPayload,
   type CommitsGraphPayload,
 } from "../../shared/protocol";
-import {
-  computeDelta,
-  computeGraph,
-  deltaSignature,
-  evictWorktree,
-  probeHeadMain,
-} from "./compute-graph";
+import { computeGraph, evictWorktree } from "./compute-graph";
 import { graphEtag } from "./etag";
 
 type Params = { attemptId: string };
@@ -60,70 +58,32 @@ function evictWorktreeFor(attemptId: string): void {
   );
 }
 
-// Map upstream pushes notifications to the set of attemptIds that have ever
-// pushed. The downstream notify is gated by per-attempt subscriptions, so
-// only actively-watched chips re-run git.
-function attemptIdsFromPushes(_upstreamParams: unknown, value: unknown): Params[] {
-  const pushes = (value ?? []) as Array<Pick<Push, "attemptId">>;
-  const ids = new Set<string>();
-  for (const p of pushes) ids.add(p.attemptId);
-  return [...ids].map((attemptId) => ({ attemptId }));
-}
-
-// AttemptIds with a live chip/pane subscriber, tracked per resource via the
-// sub-lifecycle hooks. A git ref advance (local commit / rebase / sync-to-head,
-// or main moving) changes the ahead/behind of every visible delta, so any
-// refHeadResource notify fans out to exactly the attempts currently on screen.
-// git-watcher only tracks `main` + this worktree's own branch, so a notify
-// already implies a relevant ref moved — no need to inspect the refName.
-const activeDeltaAttempts = new Set<string>();
+// AttemptIds with a live pane subscriber, tracked via the sub-lifecycle hooks. A
+// git ref advance (local commit / rebase / sync-to-head, or main moving) changes
+// the graph of every visible attempt, so any refHeadResource notify fans out to
+// exactly the attempts currently on screen. git-watcher only tracks `main` + this
+// worktree's own branch, so a notify already implies a relevant ref moved — no
+// need to inspect the refName.
 const activeGraphAttempts = new Set<string>();
 
 function activeAttemptParams(active: ReadonlySet<string>): () => Params[] {
   return () => [...active].map((attemptId) => ({ attemptId }));
 }
 
-export const commitDeltaResource = defineResource({
-  key: "commits-graph.delta",
-  mode: "push",
-  schema: CommitDeltaPayloadSchema,
-  dependsOn: [
-    { resource: pushesResource, map: attemptIdsFromPushes },
-    { resource: refHeadResource, map: activeAttemptParams(activeDeltaAttempts) },
-  ],
-  onFirstSubscribe: ({ attemptId }: Params) => {
-    activeDeltaAttempts.add(attemptId);
-  },
-  onLastUnsubscribe: ({ attemptId }: Params) => {
-    activeDeltaAttempts.delete(attemptId);
-    evictWorktreeFor(attemptId);
-  },
-  loader: ({ attemptId }: Params): Promise<CommitDeltaPayload> =>
-    onWorktree(attemptId, unresolved("worktree unavailable"), async (wt) =>
-      resolved(await computeDelta(wt)),
-    ),
-  // Cheap ETag: literally `deltaMemo`'s own signature — the very key the loader's
-  // read-through caches under, not a separately-maintained twin of it. The two
-  // cannot drift, so a fresh ETag can never certify a stale value (see
-  // research/2026-07-09-global-etag-value-coproduction.md). It derives entirely
-  // from (headSha, mainSha), so an unchanged pair proves ahead/behind/mergeBase
-  // are unchanged. No worktree (or a reaped one) ⇒ `unresolved(...)`, so a stable
-  // "no-worktree" sentinel keeps that determinate non-value up-to-date — the ETag
-  // and value are one consistent pair produced from the SAME `onWorktree` branch,
-  // now honest ("unknown") rather than a `{ahead: 0, …}` stand-in that lies about
-  // an unmeasured branch. Cost: 1–2 ungated `rev-parse` vs. the loader's
-  // `merge-base` + `rev-list --count`.
-  revalidate: ({ attemptId }: Params): Promise<string> =>
-    onWorktree(attemptId, "no-worktree", (wt) => deltaSignature(wt)),
-});
-
 export const commitsGraphResource = defineResource({
   key: "commits-graph.graph",
   mode: "push",
   schema: CommitsGraphPayloadSchema,
+  // A `main` or branch advance is the COMPLETE refresh signal. The landed set is
+  // derived from `main`'s own history (attempt-work greps the
+  // Singularity-Conversation trailers), so a commit can only join it by landing on
+  // `main` — which git-watcher reports. There is deliberately no `pushesResource`
+  // dependency: the graph no longer reads the ledger at all.
   dependsOn: [
-    { resource: pushesResource, map: attemptIdsFromPushes },
-    { resource: refHeadResource, map: activeAttemptParams(activeGraphAttempts) },
+    {
+      resource: refHeadResource,
+      map: activeAttemptParams(activeGraphAttempts),
+    },
   ],
   onFirstSubscribe: ({ attemptId }: Params) => {
     activeGraphAttempts.add(attemptId);
@@ -133,27 +93,28 @@ export const commitsGraphResource = defineResource({
     evictWorktreeFor(attemptId);
   },
   loader: ({ attemptId }: Params): Promise<CommitsGraphPayload> =>
-    onWorktree(attemptId, unresolved("worktree unavailable"), async (wt) => {
-      const pushes = await listPushesForAttempt(attemptId);
-      return resolved(await computeGraph(wt, pushes.map((p) => p.sha)));
-    }),
+    onWorktree(attemptId, unresolved("worktree unavailable"), async (wt) =>
+      // `readLandedShas` THROWS on an unmeasurable standing rather than returning
+      // `[]` (which would be indistinguishable from "this attempt landed
+      // nothing"). It is unmeasurable only when the attempt row is gone — the very
+      // state `onWorktree`'s `worktreeFor` lookup just excluded — so the only way
+      // to reach the throw is a delete racing this compute. That gets the same
+      // treatment as every other racing failure here: it propagates, and the
+      // error gate keeps the client on its last vouched-for value.
+      resolved(await computeGraph(wt, await readLandedShas(attemptId))),
+    ),
   // Cheap ETag: the graph value derives from (headSha, mainSha, mergeBase,
-  // pushedShas). mergeBase is a pure function of the two tips (immutable history),
-  // so folding in both tips covers it without spawning `merge-base`; pushedShas
-  // (a DB read, NOT derivable from the tips) is folded in because the landed set
-  // moves whenever a push lands — head/main alone would serve a stale graph. No
+  // landedShas). mergeBase is a pure function of the two tips (immutable history),
+  // and the landed set can only grow by a commit landing on `main`, so both tips
+  // cover every input — no DB read, and no separate landed-shas dimension. No
   // worktree ⇒ `unresolved(...)`, so a stable "no-worktree" sentinel keeps that
   // determinate non-value up-to-date — ETag and value are one consistent pair
   // from the SAME `onWorktree` branch, honest ("unknown") rather than an empty
-  // graph stand-in. Cost: 1–2 ungated `rev-parse` + the same push DB read the
-  // loader does, vs. the loader's additional `merge-base` and up-to-250-commit
-  // `git log`s.
+  // graph stand-in. Cost: 1–2 ungated `rev-parse`, vs. the loader's additional
+  // `merge-base` and up-to-250-commit `git log`s.
   revalidate: ({ attemptId }: Params): Promise<string> =>
     onWorktree(attemptId, "no-worktree", async (wt) => {
-      const [{ headSha, mainSha }, pushes] = await Promise.all([
-        probeHeadMain(wt),
-        listPushesForAttempt(attemptId),
-      ]);
-      return graphEtag(headSha, mainSha, pushes.map((p) => p.sha));
+      const { headSha, mainSha } = await probeHeadMain(wt);
+      return graphEtag(headSha, mainSha);
     }),
 });

@@ -9,20 +9,14 @@ import { ensureMainWorktreeRoot } from "@plugins/infra/plugins/worktree/server";
 import { defineJob } from "@plugins/infra/plugins/jobs/server";
 import { defineWarmup } from "@plugins/infra/plugins/warmup/server";
 import { GIT } from "@plugins/infra/plugins/paths/server";
-
-const FORMAT =
-  "%H%x00%cI%x00" +
-  "%(trailers:key=Singularity-Conversation,valueonly,separator=%x00)%x00" +
-  "%(trailers:key=Singularity-Push,valueonly,separator=%x00)%x00" +
-  "%s%x00";
-
-interface ParsedCommit {
-  sha: string;
-  committedAt: Date;
-  conversationId: string;
-  pushId: string;
-  subject: string;
-}
+// The trailer grammar's reader half lives in `attempt-work/core` — the format
+// string and the parse that consumes it are one thing, and the git-measured
+// standing asks `main` the same question this ingest does.
+import {
+  TRAILER_LOG_FORMAT,
+  parseTrailerLog,
+  type TrailerCommit,
+} from "@plugins/tasks/plugins/attempt-work/core";
 
 async function runGit(args: string[], cwd: string): Promise<string> {
   const proc = Bun.spawn([GIT, ...args], {
@@ -39,55 +33,26 @@ async function runGit(args: string[], cwd: string): Promise<string> {
   return text;
 }
 
-// Trailer-only commits get rejected: the pushes table joins through the
-// conversation/attempt graph, and a commit lacking either trailer (e.g. a
-// `--from-main` push) can't be attributed. The git-watcher event still fires
-// for those commits — auto-build runs regardless of trailers.
-function parseLog(raw: string): ParsedCommit[] {
-  const records = raw.split("\0\n").filter((r) => r.length > 0);
-  const out: ParsedCommit[] = [];
-  for (const record of records) {
-    const fields = record.split("\0");
-    if (fields.length < 5) continue;
-    const [sha, cIso, convRaw, pushRaw, subject] = fields;
-    if (!sha || !cIso) continue;
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
-    const conversationId = (convRaw ?? "").trim();
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
-    const pushId = (pushRaw ?? "").trim();
-    if (!conversationId || !pushId) continue;
-    out.push({
-      sha,
-      committedAt: new Date(cIso),
-      conversationId,
-      pushId,
-      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
-      subject: subject ?? "",
-    });
-  }
-  return out;
-}
-
 async function readCommitsInRange(
   range: string,
   cwd: string,
-): Promise<ParsedCommit[]> {
+): Promise<TrailerCommit[]> {
   const raw = await runGit(
-    ["log", "--no-color", `--format=${FORMAT}`, range],
+    ["log", "--no-color", `--format=${TRAILER_LOG_FORMAT}`, range],
     cwd,
   );
-  return parseLog(raw);
+  return parseTrailerLog(raw);
 }
 
-async function readAllMainCommits(cwd: string): Promise<ParsedCommit[]> {
+async function readAllMainCommits(cwd: string): Promise<TrailerCommit[]> {
   const raw = await runGit(
-    ["log", "--no-color", `--format=${FORMAT}`, "refs/heads/main"],
+    ["log", "--no-color", `--format=${TRAILER_LOG_FORMAT}`, "refs/heads/main"],
     cwd,
   );
-  return parseLog(raw);
+  return parseTrailerLog(raw);
 }
 
-async function recordCommits(commits: ParsedCommit[]): Promise<boolean> {
+async function recordCommits(commits: TrailerCommit[]): Promise<boolean> {
   if (commits.length === 0) return false;
   const existing = await listAttempts();
   const localAttemptIds = new Set(existing.map((a) => a.id));
@@ -114,7 +79,7 @@ async function recordCommits(commits: ParsedCommit[]): Promise<boolean> {
 // conversation/attempt resolution. One indexed SELECT keeps the heal scan
 // cheap in the steady state — bounded by the trigger event's previousSha
 // window.
-async function recordMissing(commits: ParsedCommit[]): Promise<boolean> {
+async function recordMissing(commits: TrailerCommit[]): Promise<boolean> {
   if (commits.length === 0) return false;
   const have = await listPushShasIn(commits.map((c) => c.sha));
   const missing = commits.filter((c) => !have.has(c.sha));
@@ -135,7 +100,7 @@ export async function runInitialReconcile(): Promise<void> {
   try {
     const commits = await readAllMainCommits(cwd);
     await recordMissing(commits);
-  // eslint-disable-next-line promise-safety/no-bare-catch
+    // eslint-disable-next-line promise-safety/no-bare-catch
   } catch (err) {
     console.error("[tasks.push-watcher] initial reconcile failed", err);
   }
@@ -182,7 +147,7 @@ export const pushIngestJob = defineJob({
         ? await readCommitsInRange(`${event.previousSha}..${event.sha}`, cwd)
         : await readAllMainCommits(cwd);
       await recordMissing(commits);
-    // eslint-disable-next-line promise-safety/no-bare-catch
+      // eslint-disable-next-line promise-safety/no-bare-catch
     } catch (err) {
       console.error("[tasks.push-ingest] ingest failed", err);
     }

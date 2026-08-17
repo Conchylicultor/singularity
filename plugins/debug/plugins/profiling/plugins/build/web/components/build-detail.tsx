@@ -7,6 +7,7 @@ import {
   type Span,
 } from "@plugins/debug/plugins/profiling/web";
 import { useEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import { stripAttemptBranchPrefix } from "@plugins/infra/plugins/worktree/core";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 import { Clip } from "@plugins/primitives/plugins/css/plugins/clip/web";
 import { Inset } from "@plugins/primitives/plugins/css/plugins/spacing/web";
@@ -17,11 +18,17 @@ import { getBuildRunProfileByWorktree } from "../../shared/endpoints";
 
 export function BuildProfileDetailBody(): ReactElement {
   const { worktree, buildId } = buildProfileDetailPane.useParams();
-  const { data, error } = useEndpoint(getBuildRunProfileByWorktree, { worktree, buildId });
+  const { data, error } = useEndpoint(getBuildRunProfileByWorktree, {
+    worktree,
+    buildId,
+  });
   const [hovered, setHovered] = useState<Span | null>(null);
-  const ctxValue = useMemo(() => ({ hovered, setHovered, refreshKey: 0 }), [hovered, setHovered]);
+  const ctxValue = useMemo(
+    () => ({ hovered, setHovered, refreshKey: 0 }),
+    [hovered, setHovered],
+  );
 
-  const title = `Build · ${worktree.replace(/^claude-web\//, "")}`;
+  const title = `Build · ${stripAttemptBranchPrefix(worktree)}`;
 
   return (
     <PaneChrome pane={buildProfileDetailPane} title={title}>
@@ -34,9 +41,7 @@ export function BuildProfileDetailBody(): ReactElement {
           No profile recorded for this build.
         </Placeholder>
       ) : (
-        <ProfilingContext.Provider
-          value={ctxValue}
-        >
+        <ProfilingContext.Provider value={ctxValue}>
           <Inset pad="sm">
             <Clip className="rounded-md border">
               {(() => {

@@ -40,13 +40,13 @@
     - `conversations.afterTurn`
     - `conversations.deleteConversation`
     - `conversations.sendTurn`
+    - `conversations/conversation-view/drop-and-exit.dropTaskOnExit`
     - `infra/endpoints.implement`
     - `infra/jobs.defineJob`
     - `infra/mcp.Mcp`
     - `shell/notifications.recordNotification`
     - `tasks/tasks-core.getConversation`
     - `tasks/tasks-core.markConversationClosed`
-    - `tasks/tasks-core.maybeDropTaskOnExit`
     - `tasks/tasks-core.updateConversation`
   - Register:
     - `defineJob('push_and_exit.exit_clean_finalize')`

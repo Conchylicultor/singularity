@@ -8716,26 +8716,20 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/pane.PaneChrome`
               - `primitives/pane.useOpenPane`
           - Server:
-            - Contributes:
-              - `resource.declare` "commits-graph.delta"
-              - `resource.declare` "commits-graph.graph"
+            - Contributes: `resource.declare` "commits-graph.graph"
             - Uses:
-              - `infra/git-read-cache.createSignedMemo`
-              - `infra/git-watcher.lastKnownMainSha`
               - `infra/git-watcher.refHeadResource`
               - `infra/host-read-pool.withHeavyReadSlot`
-              - `primitives/commit-list.GitError`
               - `primitives/commit-list.LOG_FORMAT`
               - `primitives/commit-list.parseGitLog`
               - `primitives/commit-list.runGit`
-              - `primitives/commit-list.tryRunGit`
               - `primitives/commit-list.WorktreeGoneError`
+              - `tasks/attempt-work.probeHeadMain`
+              - `tasks/attempt-work.readBranch`
+              - `tasks/attempt-work.readLandedShas`
+              - `tasks/attempt-work.readMergeBase`
               - `tasks/tasks-core.getAttempt`
-              - `tasks/tasks-core.listPushesForAttempt`
-              - `tasks/tasks-core.pushesResource`
-            - Resources:
-              - `commits-graph.delta` (push)
-              - `commits-graph.graph` (push)
+            - Resources: `commits-graph.graph` (push)
         - **`dependencies`** — Unified prompt-bar button showing blocked-by and blocking dependency counts with per-direction edit popovers.
           - Web:
             - Contributes: `Conversation.PromptBar` "Deps" → `DependenciesButton`
@@ -8790,13 +8784,17 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `conversations.deleteConversation`
               - `infra/endpoints.HttpError`
               - `infra/endpoints.implement`
+              - `tasks/attempt-work.getAttemptWork`
+              - `tasks/tasks-core.dropTaskIfNoActiveSibling`
               - `tasks/tasks-core.getConversation`
               - `tasks/tasks-core.markConversationClosed`
-              - `tasks/tasks-core.maybeDropTaskOnExit`
+            - Exports (values): `dropTaskOnExit`
             - Routes: `POST /api/conversations/:id/drop-and-exit`
           - Core:
             - Uses: `infra/endpoints.defineEndpoint`
             - Exports (values): `dropAndExit`
+          - Cross-plugin:
+            - Imported by: `conversations/conversation-view/push-and-exit`
         - **`drop-dependents`** — Exit-menu entry that drops the task and all its transitive dependents, then closes the conversation.
           - Web:
             - Contributes: `ExitMenu.Item` "drop-dependents" → `DropDependentsItem`
@@ -10009,13 +10007,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `conversations.afterTurn`
               - `conversations.deleteConversation`
               - `conversations.sendTurn`
+              - `conversations/conversation-view/drop-and-exit.dropTaskOnExit`
               - `infra/endpoints.implement`
               - `infra/jobs.defineJob`
               - `infra/mcp.Mcp`
               - `shell/notifications.recordNotification`
               - `tasks/tasks-core.getConversation`
               - `tasks/tasks-core.markConversationClosed`
-              - `tasks/tasks-core.maybeDropTaskOnExit`
               - `tasks/tasks-core.updateConversation`
             - Register:
               - `defineJob('push_and_exit.exit_clean_finalize')`
@@ -15958,10 +15956,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Cross-plugin:
         - Imported by:
           - `conversations/conversation-view/code`
-          - `conversations/conversation-view/commits-graph`
           - `conversations/conversation-view/jsonl-viewer`
           - `plugin-meta/plugin-tree`
           - `review/plugin-changes`
+          - `tasks/attempt-work`
       - Server:
         - Exports (types):
           - `GitStateMemo`
@@ -16000,6 +15998,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conversations/conversation-view/commits-graph`
           - `review/plugin-changes`
           - `tasks`
+          - `tasks/attempt-work`
     - **`health`** — Surfaces server restarts as a toast; exposes /api/health helpers. Liveness endpoint used by clients to detect server restarts.
       - Web:
         - Contributes:
@@ -16098,6 +16097,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `infra/warmup`
           - `plugin-meta/plugin-tree`
           - `review/plugin-changes`
+          - `tasks/attempt-work`
     - **`html-decode`** — Decode HTML character references in raw markup source: decodeHtmlText for text, readHtmlAttr for an HTMLRewriter attribute read. Bun's HTMLRewriter decodes nothing, so every scraped value needs decoding exactly once.
       - Cross-plugin:
         - Imported by: `apps/prototypes/files`
@@ -16908,7 +16908,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `stats/commits`
           - `stats/cost`
           - `tasks`
+          - `tasks/attempt-work`
           - `tasks/tasks-core`
+      - Core:
+        - Exports (values):
+          - `attemptBranchName`
+          - `attemptBranchRef`
+          - `stripAttemptBranchPrefix`
       - Plugins:
         - **`removal-audit`** — Worktree checkout disappearance audit: a main-only watcher over <repo>/.claude/worktrees that diffs the top-level checkout set on every filesystem event and records each vanished checkout to the worktree-removal channel — attributed to an in-app removeWorktree call when one claims it, or filed as a worktree-removed-externally report (Debug → Reports + bell) with a process snapshot when none does.
           - Server:
@@ -20119,6 +20125,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conversations/conversation-view/commits-graph`
           - `infra/git-watcher`
           - `review/plugin-changes`
+          - `tasks/attempt-work`
       - Core:
         - Exports (types): `CommitRow`
         - Exports (values): `CommitRowSchema`
@@ -24524,6 +24531,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `shell/notifications`
           - `tasks`
           - `tasks/attempt-view`
+          - `tasks/attempt-work`
           - `tasks/auto-start`
           - `tasks/task-category`
           - `tasks/task-dependencies`
@@ -28253,6 +28261,65 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `active-data/attempt`
           - `conversations/conversation-view/push-profiling`
           - `debug/profiling/ops`
+    - **`attempt-work`** — The attempt-work authority: where an attempt stands relative to `main`, measured from git (branch counts + Singularity-Conversation trailers on main) rather than from the lagging pushes ledger, as one live resource plus a direct read for the server-side exit-drop guard.
+      - Server:
+        - Contributes: `resource.declare` "attempt-work"
+        - Uses:
+          - `infra/git-read-cache.createSignedMemo`
+          - `infra/git-watcher.lastKnownMainSha`
+          - `infra/git-watcher.refHeadResource`
+          - `infra/host-read-pool.withHeavyReadSlot`
+          - `infra/worktree.ensureMainWorktreeRoot`
+          - `primitives/commit-list.GitError`
+          - `primitives/commit-list.runGit`
+          - `primitives/commit-list.tryRunGit`
+          - `primitives/commit-list.WorktreeGoneError`
+          - `tasks/tasks-core.getAttempt`
+          - `tasks/tasks-core.listConversationIdsForAttempt`
+          - `tasks/tasks-core.listPushesForAttempt`
+        - Exports (values):
+          - `attemptWorkEtag`
+          - `attemptWorkServerResource`
+          - `attemptWorkSignature`
+          - `deltaEtag`
+          - `evictAttemptWork`
+          - `getAttemptWork`
+          - `probeHeadMain`
+          - `probeRefMain`
+          - `readBranch`
+          - `readDeltaCounts`
+          - `readLanded`
+          - `readLandedShas`
+          - `readMergeBase`
+          - `readPendingFromBranchRef`
+          - `readPendingInWorktree`
+          - `refExists`
+        - Resources: `attempt-work` (push)
+      - Core:
+        - Uses:
+          - `primitives/live-state.resolvableSchema`
+          - `primitives/live-state.resourceDescriptor`
+          - `primitives/live-state.unresolved`
+        - Exports (types):
+          - `AttemptPending`
+          - `AttemptWork`
+          - `AttemptWorkPayload`
+          - `Standing`
+          - `TrailerCommit`
+        - Exports (values):
+          - `AttemptPendingSchema`
+          - `AttemptWorkPayloadSchema`
+          - `attemptWorkResource`
+          - `AttemptWorkSchema`
+          - `CONVERSATION_TRAILER_KEY`
+          - `parseTrailerLog`
+          - `PUSH_TRAILER_KEY`
+          - `standingOf`
+          - `TRAILER_LOG_FORMAT`
+      - Cross-plugin:
+        - Imported by:
+          - `conversations/conversation-view/commits-graph`
+          - `conversations/conversation-view/drop-and-exit`
     - **`auto-start`** — Owns the tasks_ext_auto_start side-table via the entity-extensions primitive; the model picker over it is the launch-option sub-plugin. Owns the tasks_ext_auto_start side-table via the entity-extensions primitive. CAS mutations for setTaskAutoStart/claimAutoStart.
       - Web:
         - Contributes: `Tasks.TaskActions` "queued-chip" → `QueuedChipAction`
@@ -28948,6 +29015,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `createTask`
           - `deleteAttempt`
           - `deleteConversationRow`
+          - `dropTaskIfNoActiveSibling`
           - `dropTaskTree`
           - `emitStatusChangeIfChanged`
           - `findNextRankInFolder`
@@ -28968,6 +29036,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `listAttempts`
           - `listAttemptsForTask`
           - `listBlockingDepIds`
+          - `listConversationIdsForAttempt`
           - `listConversationsForDisplay`
           - `listConversationsForInfra`
           - `listDependentIds`
@@ -28982,7 +29051,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `listTasks`
           - `markConversationClosed`
           - `markConversationGone`
-          - `maybeDropTaskOnExit`
           - `pushesByAttemptResource`
           - `pushesResource`
           - `pushLanded`
@@ -29121,6 +29189,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `stats/cost`
           - `stats/tasks`
           - `tasks`
+          - `tasks/attempt-work`
           - `tasks/auto-start`
           - `tasks/reports-investigation`
           - `tasks/task-category`

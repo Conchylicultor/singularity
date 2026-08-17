@@ -135,6 +135,7 @@ the `fields.storage` contributions, unregistered in the browser). So
     - `createTask`
     - `deleteAttempt`
     - `deleteConversationRow`
+    - `dropTaskIfNoActiveSibling`
     - `dropTaskTree`
     - `emitStatusChangeIfChanged`
     - `findNextRankInFolder`
@@ -155,6 +156,7 @@ the `fields.storage` contributions, unregistered in the browser). So
     - `listAttempts`
     - `listAttemptsForTask`
     - `listBlockingDepIds`
+    - `listConversationIdsForAttempt`
     - `listConversationsForDisplay`
     - `listConversationsForInfra`
     - `listDependentIds`
@@ -169,7 +171,6 @@ the `fields.storage` contributions, unregistered in the browser). So
     - `listTasks`
     - `markConversationClosed`
     - `markConversationGone`
-    - `maybeDropTaskOnExit`
     - `pushesByAttemptResource`
     - `pushesResource`
     - `pushLanded`
@@ -308,6 +309,7 @@ the `fields.storage` contributions, unregistered in the browser). So
     - `stats/cost`
     - `stats/tasks`
     - `tasks`
+    - `tasks/attempt-work`
     - `tasks/auto-start`
     - `tasks/reports-investigation`
     - `tasks/task-category`

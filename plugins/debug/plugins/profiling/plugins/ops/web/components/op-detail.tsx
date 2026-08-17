@@ -13,8 +13,15 @@ import {
   waitFillClass,
 } from "@plugins/debug/plugins/profiling/plugins/ops/plugins/op-gantt/web";
 import { useEndpoint } from "@plugins/infra/plugins/endpoints/web";
-import { Badge, formatStatusLabel } from "@plugins/primitives/plugins/css/plugins/badge/web";
-import { Text, SectionLabel } from "@plugins/primitives/plugins/css/plugins/text/web";
+import { stripAttemptBranchPrefix } from "@plugins/infra/plugins/worktree/core";
+import {
+  Badge,
+  formatStatusLabel,
+} from "@plugins/primitives/plugins/css/plugins/badge/web";
+import {
+  Text,
+  SectionLabel,
+} from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 import { PaneChrome, useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
@@ -34,7 +41,13 @@ function outcomeVariant(
   return "muted";
 }
 
-function Stat({ label, value }: { label: string; value: number }): ReactElement {
+function Stat({
+  label,
+  value,
+}: {
+  label: string;
+  value: number;
+}): ReactElement {
   return (
     <Stack gap="2xs" className="bg-card px-md py-sm">
       <span className="text-3xs font-medium uppercase tracking-wider text-muted-foreground">
@@ -167,7 +180,7 @@ export function OpDetailBody(): ReactElement {
   const openPane = useOpenPane();
   const { data, error } = useEndpoint(getOpDetail, { opId });
 
-  const branchShort = data?.branch.replace(/^claude-web\//, "") ?? opId;
+  const branchShort = data ? stripAttemptBranchPrefix(data.branch) : opId;
 
   return (
     <PaneChrome pane={opDetailPane} title="Op">
@@ -192,8 +205,12 @@ export function OpDetailBody(): ReactElement {
             {data.lane && (
               <Badge variant="muted">{formatStatusLabel(data.lane)} lane</Badge>
             )}
-            {data.mode === "from-main" && <Badge variant="warning">from main</Badge>}
-            {data.interrupted && <Badge variant="destructive">interrupted</Badge>}
+            {data.mode === "from-main" && (
+              <Badge variant="warning">from main</Badge>
+            )}
+            {data.interrupted && (
+              <Badge variant="destructive">interrupted</Badge>
+            )}
           </Cluster>
 
           {/* eslint-disable-next-line layout/no-adhoc-layout -- fixed 3-column hairline stat grid: the 1px (gap-px) gaps reveal the bg-border as cell separators, a hairline technique the Grid gap ramp can't express */}
@@ -209,7 +226,10 @@ export function OpDetailBody(): ReactElement {
                 build's real work by the whole queue time. `holdMs` is still on
                 the wire for anyone who wants the entry-ticket hold. */}
             <Stat label="Wait" value={data.waitMs} />
-            <Stat label="Work" value={Math.max(0, data.totalMs - data.waitMs)} />
+            <Stat
+              label="Work"
+              value={Math.max(0, data.totalMs - data.waitMs)}
+            />
             <Stat label="Total" value={data.totalMs} />
           </div>
 

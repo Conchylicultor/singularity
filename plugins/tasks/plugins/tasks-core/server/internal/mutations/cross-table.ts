@@ -6,35 +6,41 @@ import type { Conversation } from "../schema";
 import { eq } from "drizzle-orm";
 import { findNextRankInFolder } from "../queries/tasks";
 import { listActiveConversations } from "../queries/conversations";
-import { listPushesForAttempt } from "../queries/pushes";
 import { updateTask } from "./tasks";
-import { ensureMainWorktreeRoot, isCanonicalWorktreePath } from "@plugins/infra/plugins/worktree/server";
+import {
+  ensureMainWorktreeRoot,
+  isCanonicalWorktreePath,
+} from "@plugins/infra/plugins/worktree/server";
 import path from "path";
 
-// Exit policy shared by every conversation-close path (the manual "Drop &
-// Close" exit-menu action and the agent-driven `exit_clean` flow): a
-// conversation that closes without landing any work should return its task to
-// `dropped` rather than leaving it stranded as `attempted`. We only drop when
-// BOTH are true: the attempt never pushed, AND no sibling conversation on the
-// same task is still active (another attempt/conversation may still land the
-// work). The closing conversation is excluded by id, so callers may invoke
-// this either before or after marking it closed.
+// ONE HALF of the exit-drop policy, and named for exactly the half it is: does
+// any sibling conversation on this task remain active? If one does, another
+// conversation may still land the work, so this closing one must not drop the
+// task. The closing conversation is excluded by id, so callers may invoke this
+// either before or after marking it closed.
+//
+// The other half — "does this attempt have work at stake?" — deliberately does
+// NOT live here. It used to: this function read `listPushesForAttempt` and
+// treated an empty result as proof that nothing was pushed, which is false
+// whenever the `tasks.push-ingest` job lags (observed 40+ minutes behind a
+// wedged queue). An agent that pushed and then exited cleanly got its task
+// dropped. That fact is now git-measured by `tasks/attempt-work`, and the whole
+// policy lives in the plugin named for it, `conversation-view/drop-and-exit`,
+// as `dropTaskOnExit` — the only thing callers should reach for. tasks-core has
+// no business guessing at an attempt's standing, and an honest name here cannot
+// be mistaken for the whole policy.
+// Design: research/2026-08-17-global-attempt-work-git-derived-standing.md.
 //
 // Returns whether the task was dropped.
-export async function maybeDropTaskOnExit(
+export async function dropTaskIfNoActiveSibling(
   conversation: Conversation,
 ): Promise<boolean> {
-  const pushes = conversation.attemptId
-    ? await listPushesForAttempt(conversation.attemptId)
-    : [];
-  const hasPush = pushes.length > 0;
-
   const activeConversations = await listActiveConversations();
   const hasOtherActive = activeConversations.some(
     (c) => c.taskId === conversation.taskId && c.id !== conversation.id,
   );
 
-  if (hasPush || hasOtherActive) return false;
+  if (hasOtherActive) return false;
   await updateTask(conversation.taskId, { drop: true });
   return true;
 }
@@ -109,13 +115,11 @@ export async function adoptOrphanConversation(input: AdoptOrphanInput) {
   } else {
     await db.transaction(async (tx) => {
       const rank = await findNextRankInFolder(null, tx);
-      await tx
-        .insert(_tasks)
-        .values({
-          id: taskId,
-          title: input.title?.trim() || "Untitled",
-          rank: rank.toJSON(),
-        });
+      await tx.insert(_tasks).values({
+        id: taskId,
+        title: input.title?.trim() || "Untitled",
+        rank: rank.toJSON(),
+      });
       await tx
         .insert(_attempts)
         .values({ id: attemptId, taskId, worktreePath: input.worktreePath });

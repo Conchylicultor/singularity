@@ -78,7 +78,13 @@ Git worktree CRUD primitive: resolve the main worktree root, derive per-id paths
     - `stats/commits`
     - `stats/cost`
     - `tasks`
+    - `tasks/attempt-work`
     - `tasks/tasks-core`
+- Core:
+  - Exports (values):
+    - `attemptBranchName`
+    - `attemptBranchRef`
+    - `stripAttemptBranchPrefix`
 - Sub-plugins:
   - **`removal-audit`** — Worktree checkout disappearance audit: a main-only watcher over <repo>/.claude/worktrees that diffs the top-level checkout set on every filesystem event and records each vanished checkout to the worktree-removal channel — attributed to an in-app removeWorktree call when one claims it, or filed as a worktree-removed-externally report (Debug → Reports + bell) with a process snapshot when none does.
 

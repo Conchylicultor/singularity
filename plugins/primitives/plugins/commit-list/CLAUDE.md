@@ -37,6 +37,7 @@
     - `conversations/conversation-view/commits-graph`
     - `infra/git-watcher`
     - `review/plugin-changes`
+    - `tasks/attempt-work`
 - Core:
   - Exports (types): `CommitRow`
   - Exports (values): `CommitRowSchema`

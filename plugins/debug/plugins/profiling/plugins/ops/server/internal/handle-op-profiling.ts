@@ -1,14 +1,23 @@
 import type { OpRecord } from "@plugins/debug/plugins/profiling/plugins/op-log/core";
 import { readOpRecords } from "@plugins/debug/plugins/profiling/plugins/op-log/server";
 import { implement } from "@plugins/infra/plugins/endpoints/server";
-import { getOpProfiling, type OpEntry, type WorktreeGroup } from "../../shared/endpoints";
+import { attemptBranchName } from "@plugins/infra/plugins/worktree/core";
+import {
+  getOpProfiling,
+  type OpEntry,
+  type WorktreeGroup,
+} from "../../shared/endpoints";
 import { resolveWorktreeTitles } from "./resolve-worktree-titles";
 
 const TWENTY_FOUR_HOURS = 24 * 60 * 60 * 1000;
 const TWENTY_MINUTES = 20 * 60 * 1000;
 
 function matchesWorktree(wt: string, target: string): boolean {
-  return wt === target || wt === `claude-web/${target}` || wt.endsWith(`/${target}`);
+  return (
+    wt === target ||
+    wt === attemptBranchName(target) ||
+    wt.endsWith(`/${target}`)
+  );
 }
 
 // Ops for the same worktree carry different identifiers: builds log the basename
@@ -57,77 +66,82 @@ function computeWorktreeWindow(
   };
 }
 
-export const handleOpProfiling = implement(getOpProfiling, async ({ query }) => {
-  const allRecords = readOpRecords();
+export const handleOpProfiling = implement(
+  getOpProfiling,
+  async ({ query }) => {
+    const allRecords = readOpRecords();
 
-  let recent: OpRecord[];
-  if (query.worktree) {
-    const padding = query.padding ?? TWENTY_MINUTES;
-    const window = computeWorktreeWindow(allRecords, query.worktree, padding);
-    if (!window) return { groups: [], totalMs: 0 };
+    let recent: OpRecord[];
+    if (query.worktree) {
+      const padding = query.padding ?? TWENTY_MINUTES;
+      const window = computeWorktreeWindow(allRecords, query.worktree, padding);
+      if (!window) return { groups: [], totalMs: 0 };
 
-    recent = allRecords.filter(
-      (r) => endMsOf(r) >= window.cutoffStart && startMsOf(r) <= window.cutoffEnd,
-    );
-  } else {
-    const sinceMs = query.since ?? TWENTY_FOUR_HOURS;
-    const cutoff = Date.now() - sinceMs;
-    recent = allRecords.filter((r) => startMsOf(r) >= cutoff);
-  }
-
-  if (recent.length === 0) return { groups: [], totalMs: 0 };
-
-  recent.sort((a, b) => startMsOf(a) - startMsOf(b));
-
-  const originMs = startMsOf(recent[0]!);
-
-  const byWorktree = new Map<string, OpEntry[]>();
-  for (const r of recent) {
-    const wt = canonicalWorktree(worktreeOf(r));
-    let ops = byWorktree.get(wt);
-    if (!ops) {
-      ops = [];
-      byWorktree.set(wt, ops);
+      recent = allRecords.filter(
+        (r) =>
+          endMsOf(r) >= window.cutoffStart && startMsOf(r) <= window.cutoffEnd,
+      );
+    } else {
+      const sinceMs = query.since ?? TWENTY_FOUR_HOURS;
+      const cutoff = Date.now() - sinceMs;
+      recent = allRecords.filter((r) => startMsOf(r) >= cutoff);
     }
-    ops.push({
-      opId: r.opId,
-      kind: r.kind,
-      startMs: startMsOf(r) - originMs,
-      totalMs: r.totalMs,
-      waits: r.waits,
-      holdMs: r.holdMs,
-      outcome: r.outcome,
-      interrupted: r.interrupted,
-      branch: r.branch,
-      buildId: r.buildId,
-      conversationId: r.conversationId,
-      lane: r.lane,
-    });
-  }
 
-  // Each worktree's label reads as the human title of the task that drove it.
-  // The worktree id is the attempt id (basename invariant), and every attempt
-  // has a NOT-NULL task title — so resolve the label directly from the
-  // worktree id. This attributes build-only rows too (builds carry no
-  // conversationId) and prefers the stable task title over a per-conversation
-  // one. The conversationId is still derived per row, purely as the row-click
-  // navigation target into the conversation that ran the work.
-  const titles = await resolveWorktreeTitles([...byWorktree.keys()]);
+    if (recent.length === 0) return { groups: [], totalMs: 0 };
 
-  const groups: WorktreeGroup[] = [];
-  for (const [worktree, ops] of byWorktree) {
-    // Ops are appended chronologically, so the first one carrying a
-    // conversationId is the first conversation that added an event.
-    const conversationId = ops.find((o) => o.conversationId != null)?.conversationId ?? null;
-    groups.push({
-      worktree,
-      conversationId,
-      title: titles.get(worktree) ?? null,
-      ops,
-    });
-  }
+    recent.sort((a, b) => startMsOf(a) - startMsOf(b));
 
-  const totalMs = Math.max(0, ...recent.map((r) => endMsOf(r) - originMs));
+    const originMs = startMsOf(recent[0]!);
 
-  return { groups, totalMs };
-});
+    const byWorktree = new Map<string, OpEntry[]>();
+    for (const r of recent) {
+      const wt = canonicalWorktree(worktreeOf(r));
+      let ops = byWorktree.get(wt);
+      if (!ops) {
+        ops = [];
+        byWorktree.set(wt, ops);
+      }
+      ops.push({
+        opId: r.opId,
+        kind: r.kind,
+        startMs: startMsOf(r) - originMs,
+        totalMs: r.totalMs,
+        waits: r.waits,
+        holdMs: r.holdMs,
+        outcome: r.outcome,
+        interrupted: r.interrupted,
+        branch: r.branch,
+        buildId: r.buildId,
+        conversationId: r.conversationId,
+        lane: r.lane,
+      });
+    }
+
+    // Each worktree's label reads as the human title of the task that drove it.
+    // The worktree id is the attempt id (basename invariant), and every attempt
+    // has a NOT-NULL task title — so resolve the label directly from the
+    // worktree id. This attributes build-only rows too (builds carry no
+    // conversationId) and prefers the stable task title over a per-conversation
+    // one. The conversationId is still derived per row, purely as the row-click
+    // navigation target into the conversation that ran the work.
+    const titles = await resolveWorktreeTitles([...byWorktree.keys()]);
+
+    const groups: WorktreeGroup[] = [];
+    for (const [worktree, ops] of byWorktree) {
+      // Ops are appended chronologically, so the first one carrying a
+      // conversationId is the first conversation that added an event.
+      const conversationId =
+        ops.find((o) => o.conversationId != null)?.conversationId ?? null;
+      groups.push({
+        worktree,
+        conversationId,
+        title: titles.get(worktree) ?? null,
+        ops,
+      });
+    }
+
+    const totalMs = Math.max(0, ...recent.map((r) => endMsOf(r) - originMs));
+
+    return { groups, totalMs };
+  },
+);

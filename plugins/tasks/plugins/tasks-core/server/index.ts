@@ -102,6 +102,7 @@ export {
   listConversationsForInfra,
   listExistingConversationIds,
   listConversationsForDisplay,
+  listConversationIdsForAttempt,
   listActiveConversations,
   listRetainedConversations,
   conversationCascadeSignatures,
@@ -204,7 +205,7 @@ export type { DbExecutor } from "./internal/status-batch";
 
 export {
   adoptOrphanConversation,
-  maybeDropTaskOnExit,
+  dropTaskIfNoActiveSibling,
 } from "./internal/mutations/cross-table";
 export type { AdoptOrphanInput } from "./internal/mutations/cross-table";
 

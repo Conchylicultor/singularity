@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { attemptBranchName } from "@plugins/infra/plugins/worktree/core";
 import { ReportKind } from "@plugins/reports/server";
 import type { ReportRow } from "@plugins/reports/server";
 
@@ -68,14 +69,14 @@ function renderDescription(row: ReportRow, d: ExternalRemovalPayload): string {
   );
   lines.push("");
   lines.push(
-    `**Why this matters:** the branch \`claude-web/${d.name}\` normally survives, ` +
+    `**Why this matters:** the branch \`${attemptBranchName(d.name)}\` normally survives, ` +
       `but the checkout does not. Any uncommitted work in it is gone, and a ` +
       `conversation resuming into the missing directory is the failure this ` +
       `report exists to make visible immediately rather than a week later.`,
   );
   lines.push("");
   lines.push(
-    `**Recovery:** \`git worktree add ${d.path} claude-web/${d.name}\``,
+    `**Recovery:** \`git worktree add ${d.path} ${attemptBranchName(d.name)}\``,
   );
   lines.push("");
   if (d.candidates === null) {

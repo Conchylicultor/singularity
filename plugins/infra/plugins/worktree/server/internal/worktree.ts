@@ -3,6 +3,7 @@ import { rm } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { GIT } from "@plugins/infra/plugins/paths/server";
 import { backgroundArgv } from "@plugins/packages/plugins/spawn-priority/server";
+import { attemptBranchName } from "../../core";
 import { withWorktreeMutateSlot } from "./mutate-gate";
 import {
   beginInAppRemoval,
@@ -88,7 +89,7 @@ export async function setupWorktree(id: string, wtPath: string): Promise<void> {
   if (existsSync(wtPath)) return;
 
   const repoRoot = await ensureMainWorktreeRoot();
-  const branch = `claude-web/${id}`;
+  const branch = attemptBranchName(id);
   // Gate ONLY the heavy checkout subprocess host-wide (the 77 MB / 8385-file disk
   // offender). The idempotent existsSync early-return and `mise trust` stay
   // outside the gate — they are cheap and must not hold a slot.

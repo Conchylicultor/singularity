@@ -782,6 +782,7 @@ This narrows re-renders, not the WS subscription: N callers of the same
     - `shell/notifications`
     - `tasks`
     - `tasks/attempt-view`
+    - `tasks/attempt-work`
     - `tasks/auto-start`
     - `tasks/task-category`
     - `tasks/task-dependencies`

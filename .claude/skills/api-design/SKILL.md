@@ -73,6 +73,17 @@ throws only for *transient* failures. The transient half is closed for you:
 whenever a load has failed. See the "`pending` means no trustworthy value"
 section of `plugins/primitives/plugins/live-state/CLAUDE.md`.
 
+**A derived ledger's emptiness is never evidence.** A table filled in by a
+background job (the `pushes` ledger, fed by `tasks.push-ingest` off
+`git.refAdvanced`) reads empty for two unrelated reasons: nothing happened, or
+the job has not run yet. No wrapper fixes that — the *source* cannot tell the
+two apart, so a decision must not read it. Measure the fact where it is
+authoritative (git, the filesystem, the process table) and keep the ledger as
+what it is: a row **proves** its event happened, its absence proves nothing, so
+it may only be ORed *into* a positive answer. This produced the Drop & Close
+incident, where a merged conversation was offered the destructive default; see
+`research/2026-08-17-global-attempt-work-git-derived-standing.md`.
+
 ## Layered architecture
 
 Organize code in clear dependency layers. Lower layers are general-purpose

@@ -3,9 +3,9 @@ import { deleteConversation } from "@plugins/conversations/server";
 import {
   getConversation,
   markConversationClosed,
-  maybeDropTaskOnExit,
 } from "@plugins/tasks/plugins/tasks-core/server";
 import { dropAndExit } from "../../core/endpoints";
+import { dropTaskOnExit } from "./drop-task-on-exit";
 
 export const handleDropAndExit = implement(dropAndExit, async ({ params }) => {
   const { id } = params;
@@ -15,7 +15,7 @@ export const handleDropAndExit = implement(dropAndExit, async ({ params }) => {
     throw new HttpError(404, "Conversation not found");
   }
 
-  const dropped = await maybeDropTaskOnExit(conversation);
+  const dropped = await dropTaskOnExit(conversation);
 
   await markConversationClosed(id);
   await deleteConversation(id);

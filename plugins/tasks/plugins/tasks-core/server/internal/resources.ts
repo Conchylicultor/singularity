@@ -62,57 +62,83 @@ import {
 // scoped to its id — which is why attempts can cascade off this one sub-resource
 // alone (the derived edge fires on the delivered affected set, not on whether the
 // active-filtered payload changed).
-export const conversationsActiveResource = queryResource(conversationsActiveDescriptor, {
-  from: conversations,
-  // conversations_v PgView. The identity base table is declared explicitly
-  // (matching the View({ view: conversations, identityTable: "conversations" })
-  // contribution): it cannot be derived here — this call resolves at module eval,
-  // before the boot-time contribution collection that populates identity bases.
-  identity: { table: "conversations", pk: conversations.id },
-  where: and(eq(conversations.active, true), ne(conversations.kind, "system")),
-  orderBy: desc(conversations.createdAt),
-  scopedMembership: true,
-  // Highest fan-out source: one notify cascades to attempts → tasks. The poller
-  // can notify multiple times per tick; a fixed-window trailing debounce
-  // collapses a tick's status changes into one flush. Source-only — never on the
-  // keyed attempts/tasks resources.
-  // See research/2026-06-15-global-live-state-cascade-contention.md.
-  debounceMs: 250,
-});
-
-export const conversationsSystemResource = queryResource(conversationsSystemDescriptor, {
-  from: conversations,
-  identity: { table: "conversations", pk: conversations.id },
-  where: and(eq(conversations.kind, "system"), eq(conversations.active, true)),
-  orderBy: desc(conversations.createdAt),
-  scopedMembership: true,
-});
-
-export const conversationsGoneResource = defineResource(conversationsGoneDescriptor, {
-  // Bounded window ordered by endedAt DESC LIMIT 30: one conversation ending
-  // changes window MEMBERSHIP (a row enters, the oldest may drop), which a per-id
-  // scoped recompute can't express — so it declares the explicit FULL opt-out.
-  recompute: {
-    kind: "full",
-    reason:
-      "bounded recent-gone window ordered by endedAt; one conversation ending changes window membership",
+export const conversationsActiveResource = queryResource(
+  conversationsActiveDescriptor,
+  {
+    from: conversations,
+    // conversations_v PgView. The identity base table is declared explicitly
+    // (matching the View({ view: conversations, identityTable: "conversations" })
+    // contribution): it cannot be derived here — this call resolves at module eval,
+    // before the boot-time contribution collection that populates identity bases.
+    identity: { table: "conversations", pk: conversations.id },
+    where: and(
+      eq(conversations.active, true),
+      ne(conversations.kind, "system"),
+    ),
+    orderBy: desc(conversations.createdAt),
+    scopedMembership: true,
+    // Highest fan-out source: one notify cascades to attempts → tasks. The poller
+    // can notify multiple times per tick; a fixed-window trailing debounce
+    // collapses a tick's status changes into one flush. Source-only — never on the
+    // keyed attempts/tasks resources.
+    // See research/2026-06-15-global-live-state-cascade-contention.md.
+    debounceMs: 250,
   },
-  loader: async (): Promise<Conversation[]> =>
-    listGoneConversations({ limit: RECENT_GONE_LIMIT }),
-});
+);
 
-export const conversationsGoneStatsResource = defineResource(conversationsGoneStatsDescriptor, {
-  mode: "push",
-  loader: async () => ({ totalGoneCount: await countGoneConversations() }),
-});
+export const conversationsSystemResource = queryResource(
+  conversationsSystemDescriptor,
+  {
+    from: conversations,
+    identity: { table: "conversations", pk: conversations.id },
+    where: and(
+      eq(conversations.kind, "system"),
+      eq(conversations.active, true),
+    ),
+    orderBy: desc(conversations.createdAt),
+    scopedMembership: true,
+  },
+);
 
-// Global push-mode carrier for the SERVER cascade only (attempts status +
-// commits-graph refresh). No web subscriber — attempt-scoped surfaces read
-// `pushesByAttemptResource`. Kept push-mode + param-less because the commits-graph
-// downstream is a value-aware `map` (it reads the whole pushes value), which a
-// bounded window cannot serve on the zero-subscriber `{}` cascade tuple. Not
-// bootCritical (descriptor) ⇒ no L2 persist and no boot payload — the 525 KB
-// churn is gone even though the loader still runs per push for the value `map`.
+export const conversationsGoneResource = defineResource(
+  conversationsGoneDescriptor,
+  {
+    // Bounded window ordered by endedAt DESC LIMIT 30: one conversation ending
+    // changes window MEMBERSHIP (a row enters, the oldest may drop), which a per-id
+    // scoped recompute can't express — so it declares the explicit FULL opt-out.
+    recompute: {
+      kind: "full",
+      reason:
+        "bounded recent-gone window ordered by endedAt; one conversation ending changes window membership",
+    },
+    loader: async (): Promise<Conversation[]> =>
+      listGoneConversations({ limit: RECENT_GONE_LIMIT }),
+  },
+);
+
+export const conversationsGoneStatsResource = defineResource(
+  conversationsGoneStatsDescriptor,
+  {
+    mode: "push",
+    loader: async () => ({ totalGoneCount: await countGoneConversations() }),
+  },
+);
+
+// Global push-mode carrier for the SERVER cascade only: the `attempts` status
+// invalidation edge below (`rel(pushesResource, …)`) maps changed push ids to
+// their attempt ids, which needs a loader that reads the whole table. No web
+// subscriber — attempt-scoped surfaces read `pushesByAttemptResource`. Not
+// bootCritical (descriptor) ⇒ no L2 persist and no boot payload.
+//
+// commits-graph used to be the other downstream, and the reason this stayed
+// param-less: its `map` was value-aware. It no longer subscribes — its landed set
+// is measured from git via `tasks/attempt-work` rather than read off this ledger
+// (research/2026-08-17-global-attempt-work-git-derived-standing.md) — so the only
+// remaining consumer is the attempts edge. Note what that means and is a known
+// gap: an attempt's DERIVED STATUS still comes from `attempt_push_agg`, so a
+// stalled `tasks.push-ingest` still leaves landed work looking unfinished. That
+// is non-destructive and self-heals when ingest catches up; the destructive
+// decisions no longer read this table at all.
 export const pushesResource = defineResource(pushesDescriptor, {
   mode: "push",
   loader: async () => db.select().from(pushes).orderBy(desc(pushes.createdAt)),
@@ -126,20 +152,28 @@ export const pushesResource = defineResource(pushesDescriptor, {
 // (bounded), desc(createdAt) to match the former global order. Correct for
 // arbitrarily old attempts; it queries by attemptId directly, never a global
 // window. This is what every attempt-scoped push consumer subscribes to.
-export const pushesByAttemptResource = defineResource(pushesByAttemptDescriptor, {
-  identityTable: "pushes",
-  loader: async ({ attemptId }, ctx) =>
-    ctx?.affectedIds
-      ? db
-          .select()
-          .from(pushes)
-          .where(and(eq(pushes.attemptId, attemptId), inArray(pushes.id, [...ctx.affectedIds])))
-      : db
-          .select()
-          .from(pushes)
-          .where(eq(pushes.attemptId, attemptId))
-          .orderBy(desc(pushes.createdAt)),
-});
+export const pushesByAttemptResource = defineResource(
+  pushesByAttemptDescriptor,
+  {
+    identityTable: "pushes",
+    loader: async ({ attemptId }, ctx) =>
+      ctx?.affectedIds
+        ? db
+            .select()
+            .from(pushes)
+            .where(
+              and(
+                eq(pushes.attemptId, attemptId),
+                inArray(pushes.id, [...ctx.affectedIds]),
+              ),
+            )
+        : db
+            .select()
+            .from(pushes)
+            .where(eq(pushes.attemptId, attemptId))
+            .orderBy(desc(pushes.createdAt)),
+  },
+);
 
 export const attemptsResource = defineResource(attemptsDescriptor, {
   // A direct `attempts` change scopes to that attempt id; conversation and push
@@ -169,7 +203,11 @@ export const attemptsResource = defineResource(attemptsDescriptor, {
     // changes still flow through (they're in the signature).
     rel(
       conversationsActiveResource,
-      { via: _conversations, from: _conversations.id, to: _conversations.attemptId },
+      {
+        via: _conversations,
+        from: _conversations.id,
+        to: _conversations.attemptId,
+      },
       { signature: conversationCascadeSignatures },
     ),
     // Push changes flip an attempt's derived status (in_progress → pushed /
@@ -265,7 +303,13 @@ export const tasksResource = queryResource(tasksDescriptor, {
   // attempts_task_id_idx). Reads the base table where the old closure read
   // attempts_v — an FK-equivalent taskId set (attempts_v is _attempts + computed
   // columns; taskId is a base column), verified by the parity diff.
-  edges: [rel(attemptsResource, { via: _attempts, from: _attempts.id, to: _attempts.taskId })],
+  edges: [
+    rel(attemptsResource, {
+      via: _attempts,
+      from: _attempts.id,
+      to: _attempts.taskId,
+    }),
+  ],
 });
 
 // Per-id detail resource: the full task row (incl. `description`). Only loads
@@ -276,7 +320,11 @@ export const tasksResource = queryResource(tasksDescriptor, {
 export const taskDetailResource = defineResource(taskDetailDescriptor, {
   mode: "push",
   loader: async ({ id }) => {
-    const [row] = await db.select().from(tasks).where(eq(tasks.id, id)).limit(1);
+    const [row] = await db
+      .select()
+      .from(tasks)
+      .where(eq(tasks.id, id))
+      .limit(1);
     return (row as unknown as Task | undefined) ?? null;
   },
 });

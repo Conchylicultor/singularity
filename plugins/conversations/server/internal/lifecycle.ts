@@ -24,6 +24,7 @@ import type {
 import { databaseForkJob } from "@plugins/database/plugins/fork/server";
 import { forkConfig } from "@plugins/config_v2/server";
 import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";
+import { attemptBranchName } from "@plugins/infra/plugins/worktree/core";
 import { worktreePathFor } from "@plugins/infra/plugins/worktree/server";
 import { spawnConversationJob } from "./spawn-job";
 import { conversationCreated } from "./tables-created-event";
@@ -339,7 +340,7 @@ function preflightResume(row: Conversation): { kind: "ok" } | ResumeBlocked {
     };
   }
   if (!existsSync(row.worktreePath)) {
-    const branch = `claude-web/${row.attemptId}`;
+    const branch = attemptBranchName(row.attemptId);
     return {
       kind: "blocked",
       reason: "worktree-missing",

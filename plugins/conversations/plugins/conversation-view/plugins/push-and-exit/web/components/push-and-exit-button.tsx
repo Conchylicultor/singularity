@@ -2,12 +2,36 @@ import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useMemo, useState } from "react";
 import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
 import type { IconType } from "react-icons";
-import { MdDeleteForever, MdErrorOutline, MdLogout, MdPlayArrow, MdPlaylistAdd, MdReplay, MdRocketLaunch, MdSend, MdStop } from "react-icons/md";
-import { isDraftEmpty, conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
-import { useHasActiveSiblingInWorktree, useConversation, useConversationById } from "@plugins/conversations/web";
+import {
+  MdDeleteForever,
+  MdErrorOutline,
+  MdLogout,
+  MdPlayArrow,
+  MdPlaylistAdd,
+  MdReplay,
+  MdRocketLaunch,
+  MdSend,
+  MdStop,
+} from "react-icons/md";
+import {
+  isDraftEmpty,
+  conversationPane,
+} from "@plugins/conversations/plugins/conversation-view/web";
+import {
+  useHasActiveSiblingInWorktree,
+  useConversation,
+  useConversationById,
+} from "@plugins/conversations/web";
 import { stopConversation } from "@plugins/conversations/core";
-import { fetchEndpoint, getEndpointErrorMessage, EndpointError } from "@plugins/infra/plugins/endpoints/web";
-import { sendConversationTurn, usePendingTurns } from "@plugins/conversations/plugins/conversation-view/plugins/pending-turn/web";
+import {
+  fetchEndpoint,
+  getEndpointErrorMessage,
+  EndpointError,
+} from "@plugins/infra/plugins/endpoints/web";
+import {
+  sendConversationTurn,
+  usePendingTurns,
+} from "@plugins/conversations/plugins/conversation-view/plugins/pending-turn/web";
 import { useConfig } from "@plugins/config_v2/web";
 import { pushAndExitConfig } from "../../shared";
 import { pushAndExitDelivery } from "../internal/delivery";
@@ -16,8 +40,11 @@ import { exitConversation } from "@plugins/conversations/plugins/conversation-vi
 import { dropAndExit } from "@plugins/conversations/plugins/conversation-view/plugins/drop-and-exit/core";
 import { toast } from "@plugins/shell/plugins/notifications/web";
 import { useDraft } from "@plugins/primitives/plugins/persistent-draft/web";
-import { useResource, useCombinedResources } from "@plugins/primitives/plugins/live-state/web";
-import { pushesByAttemptResource } from "@plugins/tasks/plugins/tasks-core/core";
+import {
+  useResource,
+  useCombinedResources,
+} from "@plugins/primitives/plugins/live-state/web";
+import { attemptWorkResource } from "@plugins/tasks/plugins/attempt-work/core";
 import { useEditedFiles } from "@plugins/conversations/plugins/conversation-view/plugins/code/web";
 import type { PromptEditorActionProps } from "@plugins/primitives/plugins/prompt-editor/web";
 import { deriveExitMode, type Mode } from "./exit-mode";
@@ -46,13 +73,18 @@ type ActionSpec = {
 // body.message, so for a plain-string body it would fall back to "HTTP 409"
 // and lose the custom message. Prefer a non-empty string body to preserve it.
 function endpointErrorText(err: unknown): string {
-  if (err instanceof EndpointError && typeof err.body === "string" && err.body) {
+  if (
+    err instanceof EndpointError &&
+    typeof err.body === "string" &&
+    err.body
+  ) {
     return err.body;
   }
   return getEndpointErrorMessage(err);
 }
 
-const PRIMARY = "gap-1.5 bg-primary hover:bg-primary/90 text-primary-foreground";
+const PRIMARY =
+  "gap-1.5 bg-primary hover:bg-primary/90 text-primary-foreground";
 
 const ICONS: Record<Mode, IconType> = {
   restore: MdReplay,
@@ -97,7 +129,9 @@ export function PushAndExitButton(_: PromptEditorActionProps) {
   const conversation = useConversationById(convId);
   const live = useConversation(convId) ?? conversation;
 
-  const [draft, setDraft, clearDraft] = useDraft("conversation:prompt", "", { scope: convId });
+  const [draft, setDraft, clearDraft] = useDraft("conversation:prompt", "", {
+    scope: convId,
+  });
   const [busy, setBusy] = useState(false);
   const draftRef = useLatestRef(draft);
   // Client-side read of the very prompt the server injects for Push & Close —
@@ -109,13 +143,17 @@ export function PushAndExitButton(_: PromptEditorActionProps) {
   // while the first request is still open is blocked no matter which surface
   // started it. `sending` only, so queueing further messages stays open once
   // the request has landed.
-  const sendInFlight = usePendingTurns(convId).some((r) => r.state === "sending");
+  const sendInFlight = usePendingTurns(convId).some(
+    (r) => r.state === "sending",
+  );
 
   const filesResult = useEditedFiles(convId);
-  // Per-attempt bounded sub — correct for arbitrarily old attempts; gating the
-  // destructive Drop-vs-Push default on the global recent window could mis-read an
-  // idle-open conversation whose only push fell outside it.
-  const pushesResult = useResource(pushesByAttemptResource, {
+  // Where this attempt stands relative to `main`, measured from git rather than
+  // read off the push ledger — so the destructive Drop-vs-Push default can never
+  // be decided by how far a background ingest job happens to have got. The
+  // subscription is per attempt because the standing is a fact about this attempt
+  // and nothing else.
+  const workResult = useResource(attemptWorkResource, {
     attemptId: conversation?.attemptId ?? "",
   });
   // Derived slice: only re-renders when this worktree's sibling-active answer
@@ -126,18 +164,24 @@ export function PushAndExitButton(_: PromptEditorActionProps) {
     convId,
   );
   // The exit-vs-drop decision reads THREE independently-arriving resources
-  // (pushes + the conversations sibling slice + edited-files). Gate on all
-  // together: while any is loading the button shows a neutral disabled "Exit"
-  // instead of falling through to the destructive "Drop & Exit" default — or
-  // flashing it before edited-files settle into "Push & Exit".
+  // (the attempt standing + the conversations sibling slice + edited-files). Gate
+  // on all together: while any is loading the button shows a neutral disabled
+  // "Exit" instead of falling through to the destructive "Drop & Exit" default —
+  // or flashing it before edited-files settle into "Push & Exit".
   const exitDecision = useCombinedResources({
-    pushes: pushesResult,
+    work: workResult,
     hasSibling: siblingResult,
     files: filesResult,
   });
 
   const { mode, provisional } = useMemo(
-    () => deriveExitMode({ conversation, live, draftEmpty: isDraftEmpty(draft), exitDecision }),
+    () =>
+      deriveExitMode({
+        conversation,
+        live,
+        draftEmpty: isDraftEmpty(draft),
+        exitDecision,
+      }),
     [draft, exitDecision, conversation, live],
   );
 
@@ -149,10 +193,16 @@ export function PushAndExitButton(_: PromptEditorActionProps) {
   // `busy` + the button's `loading` prop for the awaited actions, `sendInFlight`
   // for the turn-sending ones whose thunk returns immediately.
   const sendsATurn =
-    mode === "send" || mode === "queue" || mode === "go" || mode === "push-and-exit";
-  const disabled = mode === "restore"
-    ? !hasSession
-    : live.status === "starting" || provisional || (sendsATurn && sendInFlight);
+    mode === "send" ||
+    mode === "queue" ||
+    mode === "go" ||
+    mode === "push-and-exit";
+  const disabled =
+    mode === "restore"
+      ? !hasSession
+      : live.status === "starting" ||
+        provisional ||
+        (sendsATurn && sendInFlight);
 
   function specFor(m: Mode): ActionSpec | null {
     switch (m) {
@@ -236,7 +286,12 @@ export function PushAndExitButton(_: PromptEditorActionProps) {
     try {
       await spec.run();
       if (spec.successToast) {
-        toast({ type: "conversation", title: spec.verb, description: spec.successToast, variant: "success" });
+        toast({
+          type: "conversation",
+          title: spec.verb,
+          description: spec.successToast,
+          variant: "success",
+        });
       }
     } catch (err) {
       toast({

@@ -1,4 +1,18 @@
-import { and, asc, count, desc, eq, inArray, isNotNull, isNull, lt, ne, or, sql, type SQL } from "drizzle-orm";
+import {
+  and,
+  asc,
+  count,
+  desc,
+  eq,
+  inArray,
+  isNotNull,
+  isNull,
+  lt,
+  ne,
+  or,
+  sql,
+  type SQL,
+} from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import { _conversations, _tasks } from "../tables";
 import { conversations } from "../views";
@@ -46,7 +60,8 @@ function buildWhere(f: Filters): SQL | undefined {
   if (f.onlySystem) clauses.push(eq(conversations.kind, "system"));
   else if (!f.includeSystem) clauses.push(notSystem);
   if (f.active !== undefined) clauses.push(eq(conversations.active, f.active));
-  if (f.activeOrHeldTask) clauses.push(or(eq(conversations.active, true), onHeldTask())!);
+  if (f.activeOrHeldTask)
+    clauses.push(or(eq(conversations.active, true), onHeldTask())!);
   if (f.endedAtNotNull) clauses.push(isNotNull(conversations.endedAt));
   if (f.endedAtBefore) clauses.push(lt(conversations.endedAt, f.endedAtBefore));
   if (f.taskIds) clauses.push(inArray(conversations.taskId, [...f.taskIds]));
@@ -65,7 +80,11 @@ function queryConversations(
   limit?: number,
 ): Promise<Conversation[]> {
   const orderExpr = order.dir === "asc" ? asc(order.col) : desc(order.col);
-  const base = db.select().from(conversations).where(buildWhere(filters)).orderBy(orderExpr);
+  const base = db
+    .select()
+    .from(conversations)
+    .where(buildWhere(filters))
+    .orderBy(orderExpr);
   const q = limit !== undefined ? base.limit(limit) : base;
   return q;
 }
@@ -113,7 +132,10 @@ export async function listExistingConversationIds(
 export function listConversationsForDisplay(
   taskIds?: readonly string[],
 ): Promise<Conversation[]> {
-  return queryConversations({ taskIds }, { col: conversations.createdAt, dir: "desc" });
+  return queryConversations(
+    { taskIds },
+    { col: conversations.createdAt, dir: "desc" },
+  );
 }
 
 // User-visible + active=true. Server-side batch callers (backup, transcript
@@ -121,7 +143,10 @@ export function listConversationsForDisplay(
 // resources no longer route through here — they are declarative `queryResource`s
 // (see ../resources.ts), so this needs no scoped-recompute id parameter.
 export function listActiveConversations(): Promise<Conversation[]> {
-  return queryConversations({ active: true }, { col: conversations.createdAt, dir: "desc" });
+  return queryConversations(
+    { active: true },
+    { col: conversations.createdAt, dir: "desc" },
+  );
 }
 
 // User-visible rows whose Claude JSONL transcript must be kept alive: every
@@ -149,10 +174,12 @@ export async function countGoneConversations(): Promise<number> {
 }
 
 // Ended user-visible rows, newest-first by endedAt. Pass `before` for pagination.
-export function listGoneConversations(opts: {
-  before?: Date;
-  limit?: number;
-} = {}): Promise<Conversation[]> {
+export function listGoneConversations(
+  opts: {
+    before?: Date;
+    limit?: number;
+  } = {},
+): Promise<Conversation[]> {
   return queryConversations(
     { active: false, endedAtNotNull: true, endedAtBefore: opts.before },
     { col: conversations.endedAt, dir: "desc" },
@@ -190,6 +217,22 @@ export async function listConversationSummariesByAttempt(
     .orderBy(asc(conversations.createdAt));
 }
 
+// Every conversation id of one attempt — INCLUDING system kinds, unlike every
+// other entry point here. The consumer (attempt-work) greps `main` for commits
+// carrying a `Singularity-Conversation` trailer in this set, and a commit authored
+// by a machine-spawned conversation is still that attempt's landed work: an
+// omitted id would read as "nothing landed", which is exactly the false negative
+// the git-derived standing exists to remove.
+export async function listConversationIdsForAttempt(
+  attemptId: string,
+): Promise<string[]> {
+  const rows = await db
+    .select({ id: conversations.id })
+    .from(conversations)
+    .where(eq(conversations.attemptId, attemptId));
+  return rows.map((r) => r.id);
+}
+
 // Transient conversation columns the aggregate resources (attempts / tasks /
 // agent-launches) never read. The poller rewrites these at up to ~1/s on active
 // conversations: `waitingFor` (interactive-prompt hint), `updatedAt` (bumped on
@@ -198,7 +241,11 @@ export async function listConversationSummariesByAttempt(
 // created timestamps — so a write touching ONLY these columns would otherwise
 // cascade into attempts → tasks → agent-launches and recompute-then-diff-to-
 // empty on every tick. See the `signature` cascade gate below.
-const TRANSIENT_CONVERSATION_FIELDS = ["waitingFor", "updatedAt", "lastViewedAt"] as const;
+const TRANSIENT_CONVERSATION_FIELDS = [
+  "waitingFor",
+  "updatedAt",
+  "lastViewedAt",
+] as const;
 
 // Cascade relevance signature for a conversation change (see
 // DependsOnEntry.signature). Returns id → hash of the conversation row MINUS the
@@ -228,7 +275,9 @@ export async function conversationCascadeSignatures(
 // Idle-kill candidates: waiting, not already hibernated, resumable (has a
 // saved Claude session), and idle since `before` (lastViewedAt, or createdAt
 // when never viewed). Used by the conversations.hibernate-idle job.
-export function listHibernationCandidates(before: Date): Promise<{ id: string }[]> {
+export function listHibernationCandidates(
+  before: Date,
+): Promise<{ id: string }[]> {
   return db
     .select({ id: conversations.id })
     .from(conversations)
@@ -237,12 +286,17 @@ export function listHibernationCandidates(before: Date): Promise<{ id: string }[
         eq(conversations.status, "waiting"),
         isNull(conversations.hibernatedAt),
         isNotNull(conversations.claudeSessionId),
-        lt(sql`coalesce(${conversations.lastViewedAt}, ${conversations.createdAt})`, before),
+        lt(
+          sql`coalesce(${conversations.lastViewedAt}, ${conversations.createdAt})`,
+          before,
+        ),
       ),
     );
 }
 
-export async function getConversation(id: string): Promise<Conversation | null> {
+export async function getConversation(
+  id: string,
+): Promise<Conversation | null> {
   const [row] = await db
     .select()
     .from(conversations)
@@ -253,9 +307,11 @@ export async function getConversation(id: string): Promise<Conversation | null> 
 }
 
 // Reads only the columns needed by the runtime (no join, no derived fields).
-export async function getConversationRuntime(
-  id: string,
-): Promise<{ status: string; runtime: string; claudeSessionId: string | null } | null> {
+export async function getConversationRuntime(id: string): Promise<{
+  status: string;
+  runtime: string;
+  claudeSessionId: string | null;
+} | null> {
   const [row] = await db
     .select({
       status: _conversations.status,

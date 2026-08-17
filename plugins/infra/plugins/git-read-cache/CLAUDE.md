@@ -172,10 +172,10 @@ primitive and Stage 2.1).
 - Cross-plugin:
   - Imported by:
     - `conversations/conversation-view/code`
-    - `conversations/conversation-view/commits-graph`
     - `conversations/conversation-view/jsonl-viewer`
     - `plugin-meta/plugin-tree`
     - `review/plugin-changes`
+    - `tasks/attempt-work`
 - Server:
   - Exports (types):
     - `GitStateMemo`

@@ -12,6 +12,7 @@ import { StatusDot } from "@plugins/primitives/plugins/css/plugins/status-dot/we
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Cluster } from "@plugins/primitives/plugins/css/plugins/cluster/web";
 import type { Lane } from "@plugins/infra/plugins/host-admission/core";
+import { stripAttemptBranchPrefix } from "@plugins/infra/plugins/worktree/core";
 import type {
   OpKind,
   OpWait,
@@ -235,7 +236,11 @@ export function OpGantt({
  * actually contains, so a pane with no duress episode never spends a line
  * explaining one.
  */
-function OpLegend({ groups }: { groups: WorktreeGroup[] }): ReactElement | null {
+function OpLegend({
+  groups,
+}: {
+  groups: WorktreeGroup[];
+}): ReactElement | null {
   const entries = useMemo(() => {
     const kinds = new Set<OpKind>();
     const waits = new Set<WaitKind>();
@@ -248,7 +253,11 @@ function OpLegend({ groups }: { groups: WorktreeGroup[] }): ReactElement | null 
       }
     }
     return [
-      ...[...kinds].map((k) => ({ key: `kind:${k}`, label: k, fill: TYPE_FILL[k] })),
+      ...[...kinds].map((k) => ({
+        key: `kind:${k}`,
+        label: k,
+        fill: TYPE_FILL[k],
+      })),
       ...[...waits].map((w) => ({
         key: `wait:${w}`,
         label: `${w} wait`,
@@ -293,6 +302,9 @@ function OpRow({
   // Each op's own FULL span, summed. Never `waits + hold` — that omits the work
   // gaps between the waits and would under-report every build.
   const totalDuration = group.ops.reduce((sum, op) => sum + op.totalMs, 0);
+  // A push falls back to the branch when SINGULARITY_WORKTREE is unset, so the
+  // row's identifier may arrive branch-shaped; the label shows the bare id.
+  const worktreeLabel = stripAttemptBranchPrefix(group.worktree);
 
   const handleClick = useMemo(() => {
     if (!onWorktreeClick) return undefined;
@@ -323,7 +335,7 @@ function OpRow({
         // eslint-disable-next-line layout/no-adhoc-layout -- fixed 160px (w-40) worktree-label column kept rigid (shrink-0) to align with the Gantt time axis (LABEL_WIDTH)
         className="flex w-40 shrink-0 items-center gap-xs truncate"
         // Bare worktree id stays discoverable on hover even when a title shows.
-        title={group.worktree.replace(/^claude-web\//, "")}
+        title={worktreeLabel}
       >
         <StatusDot colorClass={dotColor} />
         <span
@@ -333,7 +345,7 @@ function OpRow({
             group.title ? "" : "font-mono",
           )}
         >
-          {group.title ?? group.worktree.replace(/^claude-web\//, "")}
+          {group.title ?? worktreeLabel}
         </span>
       </div>
       {/* eslint-disable-next-line layout/no-adhoc-layout -- flexible timeline track (flex-1) clipping the runtime-positioned bars (overflow-hidden) */}
