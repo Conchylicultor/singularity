@@ -88,18 +88,25 @@ eslogger exec unlink 2>>"$ERR" \
       def wt:
         [ (.event.unlink.target.path // ""), (args | join(" ")) ]
         | join(" ")
-        | capture("/\\.claude/worktrees/(?<n>[^/ \"]+)").n // "?";
+        | capture("/\\.claude/worktrees/(?<n>[A-Za-z0-9._-]+)").n // "?";
 
       # unlink is ground truth and unevadable. exec is a convenience layer that
       # adds the literal command line, so it is kept only when the command is
       # plausibly a removal — otherwise every `ls <worktree path>` an agent runs
       # would land in the log.
+      #
+      # Matched against argv ELEMENTS, never the joined string: a shell -c script
+      # is ONE element, so a command that merely MENTIONS the phrase (a commit
+      # message, this file) is not a removal. Substring matching made every such
+      # command a hit.
+      # NB: no apostrophes anywhere in this jq program — it is a bash
+      # single-quoted string, so one would silently truncate it.
       def isRemoval:
         (execname | IN("rm","rmdir","unlink","trash","mv"))
-        or ((args | join(" ")) | test("worktree[[:space:]]+(remove|prune)"));
+        or ((args | index("worktree")) and (args | (index("remove") // index("prune"))));
 
       . as $e | ($e | wt) as $w
-      | select($w != "?")
+      | select($w | test("^[A-Za-z0-9._-]+$"))
       | select(($e.event.exec | not) or ($e | isRemoval))
       | select((($e.event.unlink.target.path // "") | test($noise)) | not)
       | { t:        ($e.time // null),
