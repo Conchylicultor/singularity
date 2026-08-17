@@ -22,7 +22,7 @@ export default {
       component: ConversationsSidebar,
       // This section fills the sidebar column and scrolls internally; keep that
       // bound in reorder edit mode so it doesn't overflow onto sibling sections.
-      reorderFill: true,
+      fill: true,
     }),
   ],
 } satisfies PluginDefinition;

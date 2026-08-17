@@ -566,9 +566,9 @@ function ReorderInner({
       // drag overlay produces a tall floating panel — wrong for a "pick up this
       // section" gesture. Show a compact label chip instead, using the human
       // label the slot already exposes via `docLabel` (id fallback). Gated on the
-      // same first-class `reorderFill` flag that bounds the edit-mode wrapper, so
+      // same first-class `fill` flag that bounds the edit-mode wrapper, so
       // the primitive stays generic (never reads app-shell's title/icon).
-      if ((entry as Record<string, unknown>).reorderFill) {
+      if ((entry as Record<string, unknown>).fill) {
         const label = entry._doc?.label ?? contributionLabel(entry);
         return (
           <div className="cursor-grabbing rounded-md border border-primary/50 bg-background/95 px-sm py-2xs shadow-lg ring-1 ring-primary/50">

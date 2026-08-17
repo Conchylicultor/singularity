@@ -1,4 +1,5 @@
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { useCallback, useEffect, useState } from "react";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
@@ -10,7 +11,11 @@ import {
 import { PromptEditorSlots } from "../slots";
 
 type FloatingActionItem = Parameters<
-  NonNullable<React.ComponentProps<typeof PromptEditorSlots.FloatingAction.Render>["children"]>
+  NonNullable<
+    React.ComponentProps<
+      typeof PromptEditorSlots.FloatingAction.Render
+    >["children"]
+  >
 >[0];
 
 export function PromptEditor(props: {
@@ -74,16 +79,28 @@ function ToolbarRow() {
   );
 
   const renderItem = useCallback(
-    (item: FloatingActionItem) => (
-      // eslint-disable-next-line layout/no-adhoc-layout -- flexible leaf wrapper letting an arbitrary contributed action component shrink within the toolbar Stack row
-      <div className={cn("min-w-0", !editable && !item.alwaysActive && disabledPartCls)}>
+    (item: FloatingActionItem) => {
+      const dimmed =
+        !editable && !item.alwaysActive ? disabledPartCls : undefined;
+      const action = (
         <item.component
           insertText={insertText}
           getContent={getContent}
           clearContent={clearContent}
         />
-      </div>
-    ),
+      );
+      // This box carries the disabled dimming, and it sits INSIDE the slot's own
+      // per-contribution cell — so it is also where that cell's chain continues.
+      // A contribution the cell grew for would shrink-wrap here and hand its own
+      // content back to itself as "the room I have": `fill` has to be relayed,
+      // not just declared once.
+      return item.fill ? (
+        <Fill className={dimmed}>{action}</Fill>
+      ) : (
+        // eslint-disable-next-line layout/no-adhoc-layout -- rigid leaf wrapper relaying the slot cell's shrink chain onto an arbitrary contributed action component
+        <div className={cn("min-w-0", dimmed)}>{action}</div>
+      );
+    },
     [editable, insertText, getContent, clearContent],
   );
 
@@ -98,7 +115,9 @@ function ToolbarRow() {
       className="px-sm pb-xs"
       onMouseDown={focusEditor}
     >
-      <PromptEditorSlots.FloatingAction.Render>{renderItem}</PromptEditorSlots.FloatingAction.Render>
+      <PromptEditorSlots.FloatingAction.Render>
+        {renderItem}
+      </PromptEditorSlots.FloatingAction.Render>
     </Stack>
   );
 }

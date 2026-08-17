@@ -38,6 +38,11 @@ says "these live behind a `⋯`". `overflow` is `"panel"` (default) | `"scroll"`
 > single-line row (`Line` / `Row` / `Bar`), with no `Fill` or other `flex-1`
 > sibling competing for the same slack, and never inside a shrink-to-content
 > parent (`inline-flex`, `w-fit`, `Cluster`). One adaptive bar per row.
+>
+> Every box between that row and the bar has to relay the grow, not just the
+> shrink — a `min-w-0` wrapper is still shrink-to-content. Inside a render slot
+> that means the contribution declares `fill: true`, which is what makes its
+> `slot-render` cell (and any wrapper the host adds inside it) a growing one.
 
 This is a contract, not a styling preference. The bar declares itself
 `min-w-0 flex-1`, so `barRoot.getBoundingClientRect().width` **is** the available
@@ -47,12 +52,27 @@ recalculation per competing sibling. The primitive it replaces
 content-sized container and then had to go looking for the width it had given
 away.
 
-Break the rule and you get told: a `flex-grow: 0` at mount, or a row that fits by
-the math and still sticks out past its parent, throws in dev and files a report
-through `adaptiveBarReportSink` in prod (prod also commits the floor layout —
-every unpinned occupant at its narrowest rung — because taking down a pane header
-over a layout disagreement is worse than a cramped row plus an alert). Both
-guards only run when a real layout engine answered, so neither fires in jsdom.
+Break the rule and you get told. Two guards, and they throw in dev and file a
+report through `adaptiveBarReportSink` in prod, because taking down a pane header
+over a layout disagreement is worse than a cramped row plus an alert:
+
+- **no-slack** — once per bar, it hides everything the row is holding, re-reads
+  the row, and puts it back. A bar that was *given* its width measures the same
+  either way; one whose host shrink-wraps to it measures its own content twice.
+  That is the whole premise checked directly, and the reason it is not a style
+  proxy: `flex-grow` is `1` in the failing case (the bar sets it on itself), and
+  a parent that shrink-wraps to its child can never be overshot by it — so the
+  shape reads as healthy on every cheaper test. Recovery is the **ceiling**
+  (everything inline, CSS clips), latched: a width the bar cannot trust makes
+  eviction the one thing it must not do, and re-deciding against it oscillates.
+- **overshoot** — the fit says everything fits and the rendered row still sticks
+  out past its parent's content box. Commits the narrow floor. Reads the layout
+  engine directly, so it is gated on a real one and never fires in jsdom.
+
+A row that measures 0px while occupants are relocated out of it is the same
+fault: "not laid out yet" is only honest while the row still holds everything it
+was given, and believing it there is how the bar reaches a state it can never
+measure its way out of.
 
 ## Why one stable container per item
 
@@ -176,7 +196,8 @@ itself triggers the pass, so "deferred forever" is unrepresentable.
   is evicted, so the first fit has nothing to read; it is un-hidden, measured and
   re-hidden inside one synchronous block. One forced reflow, once per bar — and
   still better than the `MORE_BTN_W = 32` it replaces, which is simply wrong at
-  any other control density.
+  any other control density. The no-slack probe costs a second one, on the same
+  hide-measure-restore discipline.
 - **`overflow="clip"` can silently drop a widget.** Kept because
   prompt-templates needs it and has a second route to the content. If it starts
   papering over layout bugs, the fix is a lint rule demanding a named reason, not

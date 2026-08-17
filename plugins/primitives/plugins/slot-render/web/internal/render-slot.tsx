@@ -38,21 +38,37 @@ import { useSlotItemLayout } from "./item-layout";
  * reason: the override has to be read where the contribution renders, not where
  * its element was created.
  *
+ * `fill` relays the GROW half of the same chain, and is why the flag is not a
+ * reorder detail. A cell is rigid by default — right for the buttons and chips
+ * a chrome row is usually made of, and wrong for the one contribution that is
+ * meant to expand into the row's slack. Without it that contribution's box
+ * shrink-wraps to its own content, so anything inside it that sizes itself from
+ * the room it is given (an `AdaptiveBar`, a truncating strip) reads its own
+ * content back as "the room I have" — a measurement that moves with the answer
+ * it produces.
+ *
  * Its element type is stable across the post-measure `horizontal` flip, so React
  * reconciles each contribution subtree in place instead of tearing it down and
  * rebuilding it on every (re)mount.
  */
 function SlotItemCell({
   horizontal,
+  fill,
   children,
 }: {
   horizontal: boolean;
+  fill: boolean;
   children: ReactNode;
 }) {
   const declared = useSlotItemLayout();
   const isRow = declared !== null ? declared === "row" : horizontal;
+  if (!isRow) return <div className="contents">{children}</div>;
   return (
-    <div className={isRow ? "flex min-w-0 items-center" : "contents"}>
+    <div
+      className={
+        fill ? "flex min-w-0 flex-1 items-center" : "flex min-w-0 items-center"
+      }
+    >
       {children}
     </div>
   );
@@ -122,11 +138,11 @@ interface RenderProps<P> {
 }
 
 export interface RenderSlot<P> extends Slot<
-  P & { id: string; excludeFromReorder?: boolean; reorderFill?: boolean }
+  P & { id: string; excludeFromReorder?: boolean; fill?: boolean }
 > {
   Render: ComponentType<
     RenderProps<
-      P & { id: string; excludeFromReorder?: boolean; reorderFill?: boolean }
+      P & { id: string; excludeFromReorder?: boolean; fill?: boolean }
     >
   >;
 }
@@ -141,7 +157,7 @@ export function defineRenderSlot<P>(
   config?: RenderSlotConfig<P>,
 ): RenderSlot<P> {
   const slot = defineSlot<
-    P & { id: string; excludeFromReorder?: boolean; reorderFill?: boolean }
+    P & { id: string; excludeFromReorder?: boolean; fill?: boolean }
   >(id, { docLabel: config?.docLabel });
 
   const renderSlot = slot as unknown as RenderSlot<P>;
@@ -207,9 +223,14 @@ export function defineRenderSlot<P>(
             )
           : renderContributionIsolated(clean, contribution, id);
         // See `SlotItemCell`: the measured host orientation, overridable by a
-        // host that relocates contributions elsewhere.
+        // host that relocates contributions elsewhere, plus the contribution's
+        // own claim on the row's slack.
         return (
-          <SlotItemCell key={cId} horizontal={horizontal}>
+          <SlotItemCell
+            key={cId}
+            horizontal={horizontal}
+            fill={(clean as { fill?: boolean }).fill === true}
+          >
             {wrapped}
           </SlotItemCell>
         );

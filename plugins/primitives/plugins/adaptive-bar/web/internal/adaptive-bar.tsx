@@ -250,6 +250,28 @@ function AdaptiveBarShell({
   const [placement, setPlacement] = useState<Placement>(EMPTY_PLACEMENT);
   const [panelOpen, setPanelOpen] = useState(false);
 
+  /**
+   * The bar has stopped believing its own width, and renders every occupant
+   * inline forever.
+   *
+   * Reached only from a fault, and it is the honest floor for one: when the
+   * width reading is a lie, "everything in the row, clipped by CSS" is the one
+   * configuration that hides nothing and cannot be argued with. The narrow
+   * floor (`commitFloor`) is the opposite — it takes occupants OUT of the row,
+   * which is exactly the outcome a bad width reading was already producing.
+   *
+   * Latching matters as much as the layout: without it the recovery re-measures,
+   * re-decides, re-evicts, and oscillates forever against a host that cannot
+   * give it a straight answer.
+   */
+  const [degraded, setDegraded] = useState(false);
+  /**
+   * What the rest of the component reads. `EMPTY_PLACEMENT` has no entry for
+   * anyone, and `rungOf` reads a missing entry as rung 0 — so "degraded" IS
+   * "everyone inline at their widest", with no second code path to keep in step.
+   */
+  const effective = degraded ? EMPTY_PLACEMENT : placement;
+
   // Everything the next decision reads but nobody renders. Bumping `version` is
   // how a change here asks for a pass; the entries themselves never live in
   // React state, so a pointer-down that changes nothing on screen re-renders
@@ -298,7 +320,8 @@ function AdaptiveBarShell({
   const promotedRef = useRef(new Map<string, number>());
   const passesRef = useRef(0);
   const triggerWidthRef = useRef<number | null>(null);
-  const growCellCheckedRef = useRef(false);
+  /** The slack probe costs a forced reflow, so it runs once per bar. */
+  const slackCheckedRef = useRef(false);
 
   const registry = useMemo<BarRegistry>(
     () => ({
@@ -386,10 +409,10 @@ function AdaptiveBarShell({
   const forms = useMemo<ReadonlyMap<string, ActionForm>>(() => {
     const map = new Map<string, ActionForm>();
     for (const [id, ladder] of ladders) {
-      map.set(id, formFor(ladder, collapsed ? null : rungOf(placement, id)));
+      map.set(id, formFor(ladder, collapsed ? null : rungOf(effective, id)));
     }
     return map;
-  }, [ladders, placement, collapsed]);
+  }, [ladders, effective, collapsed]);
 
   // An `⋯` with nothing behind it is dead chrome, so the trigger follows the
   // placement rather than the item count — including in the collapsed bucket,
@@ -397,9 +420,9 @@ function AdaptiveBarShell({
   // exactly this reason.
   const evictedCount = useMemo(() => {
     let n = 0;
-    for (const rung of placement.values()) if (rung === null) n += 1;
+    for (const rung of effective.values()) if (rung === null) n += 1;
     return n;
-  }, [placement]);
+  }, [effective]);
 
   const showTrigger = overflow === "panel" && evictedCount > 0;
 
@@ -442,7 +465,7 @@ function AdaptiveBarShell({
       // would still be paid for on both sides, so absence has to be `hidden`
       // (not a flex item at all) rather than a zero width.
       entry.container.hidden = absent;
-      const rung = collapsed ? null : rungOf(placement, id);
+      const rung = collapsed ? null : rungOf(effective, id);
       if (rung === null && !absent) {
         evicted.push(id);
       } else {
@@ -466,6 +489,11 @@ function AdaptiveBarShell({
     // A resize alone never closes it.
     if (evicted.length === 0) setPanelOpen(false);
 
+    // Degraded: the placement above IS "everyone inline", and there is nothing
+    // left to decide. Returning here rather than skipping the whole pass keeps
+    // a late-arriving occupant docked like the rest.
+    if (degraded) return;
+
     // The authored bucket has no width to consult — membership is the author's
     // decision, so there is nothing to measure and nothing to converge.
     if (collapsed) {
@@ -483,17 +511,49 @@ function AdaptiveBarShell({
     // display:none ancestor, a jsdom test with no measurement seam. Deciding
     // from it would evict the whole row and then put it back, so we decide
     // nothing and wait for a width.
-    if (available <= 0) return;
-
-    if (layoutMeasured && !growCellCheckedRef.current) {
-      growCellCheckedRef.current = true;
-      if (getComputedStyle(root).flexGrow === "0") {
+    //
+    // That reading is only honest while the row still holds everything it was
+    // given. With occupants already OUT of it, a zero can be the bar's own
+    // doing — an empty row measures empty — and then waiting is waiting for a
+    // width that only re-admitting them could produce. That is the one
+    // absorbing state this primitive can reach, so it is a fault, not a pause.
+    if (available <= 0) {
+      if (evicted.length > 0) {
+        setDegraded(true);
         failLoudly({
           kind: "no-slack",
           label,
           message:
-            "the bar was given no slack. Put it where there is room to give — as the growing cell of a single-line row, with no Fill or other flex-1 sibling competing for the same slack, and never inside a shrink-to-content parent (inline-flex, w-fit, Cluster). One adaptive bar per row.",
+            "the row measured 0px wide while occupants were relocated out of it, so the only width the bar can read is the one its own evictions produced. Re-admitted everything.",
         });
+      }
+      return;
+    }
+
+    // The bar's whole premise: `available` is handed to it and does not move
+    // when it decides. Tested against the layout engine rather than inferred
+    // from a style — `flex-grow: 1` is no promise of slack when an ancestor
+    // shrink-wraps, and that shape reads as healthy on every proxy.
+    if (!slackCheckedRef.current) {
+      const inline = order
+        .filter(
+          ({ entry }) =>
+            entry.container.parentNode === root &&
+            entry.container.hidden !== true,
+        )
+        .map(({ entry }) => entry.container);
+      if (inline.length > 0) {
+        slackCheckedRef.current = true;
+        if (widthFollowsContent(root, inline, measure)) {
+          setDegraded(true);
+          failLoudly({
+            kind: "no-slack",
+            label,
+            message:
+              "the bar's own width moves with its own content, so every eviction shrinks the width that decides the next one — a one-way ratchet with an empty row at the end of it. Put it where there is room to give: as the growing cell of a single-line row, with no Fill or other flex-1 sibling competing for the same slack, and never inside a shrink-to-content parent (inline-flex, w-fit, Cluster, or a wrapper that relays shrink but not grow). One adaptive bar per row.",
+          });
+          return;
+        }
       }
     }
 
@@ -632,6 +692,8 @@ function AdaptiveBarShell({
     panelDock,
     parkingDock,
     placement,
+    effective,
+    degraded,
     collapsed,
     overflow,
     label,
@@ -793,6 +855,47 @@ function measureTrigger(
   trigger.hidden = true;
   cache.current = px;
   return px;
+}
+
+/**
+ * Does this bar's width follow its own content?
+ *
+ * The one question the whole primitive rests on, asked of the layout engine
+ * directly instead of inferred from a style. Hide everything the row is
+ * currently holding, read the row again, put it back: a bar that was GIVEN its
+ * width measures the same either way, and a bar sitting in a box that
+ * shrink-wraps to it measures its own content twice.
+ *
+ * Every cheaper proxy misses the shape that actually ships. `flex-grow: 0` is
+ * false here — the bar sets `flex-1` on itself, so the failing case reads as
+ * healthy — and `overshootsParent` cannot fire either, because a parent that
+ * shrink-wraps to its child is never overshot by it. Both proxies describe the
+ * bar's own declaration; only this one describes what the engine did with it.
+ *
+ * One forced reflow, once per bar, and invisible to React and to the paint:
+ * the mutation is reverted inside the same synchronous block, so the shared
+ * `ResizeObserver` compares against sizes that never changed. Same discipline
+ * as {@link measureTrigger}, which reveals the hidden trigger to measure it.
+ *
+ * Goes through the measurement seam rather than `getBoundingClientRect`, so the
+ * jsdom suite can model a shrink-wrapping host and drive this exact path —
+ * a real fixture, not a mock of the thing under test.
+ */
+function widthFollowsContent(
+  root: HTMLElement,
+  inline: readonly HTMLElement[],
+  measure: (el: Element) => number,
+): boolean {
+  const withContent = measure(root);
+  const wasHidden = inline.map((el) => el.hidden);
+  for (const el of inline) el.hidden = true;
+  const withoutContent = measure(root);
+  inline.forEach((el, i) => {
+    el.hidden = wasHidden[i] ?? false;
+  });
+  // A pixel of tolerance: sub-pixel layout rounding is not content dependence,
+  // and the failure this catches is measured in whole occupants.
+  return Math.abs(withContent - withoutContent) > 1;
 }
 
 /**

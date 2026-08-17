@@ -46,7 +46,7 @@ export function ReorderItemMiddleware({
       .excludeFromReorder;
     if (excluded) return <>{children}</>;
 
-    const fill = !!(contribution as Record<string, unknown>).reorderFill;
+    const fill = !!(contribution as Record<string, unknown>).fill;
 
     const label =
       ((contribution as Record<string, unknown>).label as string | undefined) ??

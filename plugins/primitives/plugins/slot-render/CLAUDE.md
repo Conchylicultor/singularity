@@ -68,6 +68,22 @@ What this does and does NOT do:
   `overflow-hidden` as a fixed-height safety net so a forgotten leaf truncation
   clips to one line instead of breaking the layout.
 
+### `fill: true` — the one contribution that takes the row's slack
+
+A row cell is **rigid** by default (`flex: 0 1 auto`): right for the buttons and
+chips a chrome row is made of, wrong for a contribution meant to expand into the
+row's free space. That one declares `fill: true` on its contribution and gets a
+growing cell (`flex-1`) instead.
+
+It is not cosmetic. A rigid cell shrink-wraps to its content, so anything inside
+that sizes itself from the room it is given — an `AdaptiveBar`, a truncating
+strip — reads its own content back as "the room I have", a measurement that moves
+with the answer it produces. Any wrapper a host adds *inside* the cell must relay
+`fill` too (`prompt-editor`'s toolbar does), or the chain breaks one level down.
+
+Reorder reads the same flag for its edit-mode wrapper and drag overlay — hence
+`fill`, not `reorderFill`: it is a layout role, not a reorder detail.
+
 ### Relocating hosts declare their layout
 
 The measurement is the slot's *host*, so it is wrong for a host that moves

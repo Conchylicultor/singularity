@@ -64,14 +64,19 @@ sidebar section). For those, `fill` makes the edit-mode wrapper a bounded flex
 column at **both** levels (the outer item box and the inner content wrapper) so
 the scroll region clamps instead of expanding to its natural height and
 overflowing onto the rows below. The `reorder` list middleware maps it from the
-contribution's `reorderFill: true` field; the field renderer never fills.
+contribution's `fill: true` field; the field renderer never fills.
 
-Because a fill contribution works in normal mode without any opt-in (the wrapper
+`fill` is a **slot-level layout role, not a reorder detail** — it is declared on
+the render-slot contribution and `slot-render`'s own per-contribution cell reads
+it too (a row cell grows instead of shrink-wrapping). Reorder is one of two
+readers, which is why the field is named `fill` rather than `reorderFill`.
+
+In a **column** host a forgotten `fill` is invisible in normal mode (the wrapper
 is `display:contents`, so the child participates in its host column directly) and
-only breaks in edit mode, a forgotten `fill` is a silent, mode-specific footgun.
-`SortableReorderItem` therefore detects it after mount: if the contribution's
-root box declares `flex-grow` but `fill` is false, it logs a one-time
-`console.error` naming the contribution and pointing at `reorderFill: true`.
+only breaks in edit mode — a silent, mode-specific footgun. `SortableReorderItem`
+therefore detects it after mount: if the contribution's root box declares
+`flex-grow` but `fill` is false, it logs a one-time `console.error` naming the
+contribution and pointing at `fill: true`.
 
 ### `editMode` is a prop, not a signal
 

@@ -1,4 +1,7 @@
-import { Button, type ControlSize } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import {
+  Button,
+  type ControlSize,
+} from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import type { ComponentType, ReactNode } from "react";
 
 /**
@@ -50,7 +53,7 @@ export function ToolbarItem(item: PaneToolbarItem): ReactNode {
 type PaneHeaderRenderItem = PaneToolbarItem & {
   id: string;
   excludeFromReorder?: boolean;
-  reorderFill?: boolean;
+  fill?: boolean;
 };
 
 /**
@@ -63,11 +66,15 @@ type PaneHeaderRenderItem = PaneToolbarItem & {
 export interface PaneHeaderZones {
   /** Leading zone (left): nav, title, selectors. */
   Start: {
-    Render: ComponentType<{ children?: (item: PaneHeaderRenderItem) => ReactNode }>;
+    Render: ComponentType<{
+      children?: (item: PaneHeaderRenderItem) => ReactNode;
+    }>;
   };
   /** Trailing zone (right, `ml-auto`): actions/transport. */
   End: {
-    Render: ComponentType<{ children?: (item: PaneHeaderRenderItem) => ReactNode }>;
+    Render: ComponentType<{
+      children?: (item: PaneHeaderRenderItem) => ReactNode;
+    }>;
   };
   /** Optional override for the zone control density (innermost wins). */
   controlSize?: ControlSize;

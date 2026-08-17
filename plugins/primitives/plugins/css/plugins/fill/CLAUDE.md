@@ -83,6 +83,7 @@ composes last.
     - `primitives/log-channels`
     - `primitives/outline/rail`
     - `primitives/pane`
+    - `primitives/prompt-editor`
     - `primitives/setup-steps`
     - `ui/tweakcn/community-browser`
 

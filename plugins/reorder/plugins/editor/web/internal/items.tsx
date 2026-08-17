@@ -1,5 +1,19 @@
-import { Button, cn, Input } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { createContext, useCallback, useContext, useEffect, useRef, useState, useSyncExternalStore, type RefObject, type ReactNode } from "react";
+import {
+  Button,
+  cn,
+  Input,
+} from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+  useSyncExternalStore,
+  type RefObject,
+  type ReactNode,
+} from "react";
 import { MdAdd, MdClose, MdSearch, MdStorefront } from "react-icons/md";
 import { InlinePopover } from "@plugins/primitives/plugins/popover/web";
 import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
@@ -27,7 +41,7 @@ export const ReorderAreaContext = createContext<ReorderAreaCtxValue | null>(
 
 // --- Sortable reorder item ---------------------------------------------------
 
-// A fill contribution that forgets `reorderFill` works fine in normal mode (the
+// A fill contribution that forgets `fill` works fine in normal mode (the
 // wrapper is `display:contents` and the child participates in its host column
 // directly) and only breaks in edit mode — a silent, mode-specific footgun. We
 // can't infer "wants to fill" without the flag, but we CAN detect the symptom
@@ -112,12 +126,15 @@ export function SortableReorderItem({
     if (!el) return;
     const root = firstBoxDescendant(el);
     if (!root) return;
-    if (getComputedStyle(root).flexGrow !== "0" && !warnedMissingFill.has(itemKey)) {
+    if (
+      getComputedStyle(root).flexGrow !== "0" &&
+      !warnedMissingFill.has(itemKey)
+    ) {
       warnedMissingFill.add(itemKey);
       console.error(
         `[reorder] Contribution "${itemKey}" fills its host (its root sets ` +
           `flex-grow) but reorder was not told it fills: in edit mode its ` +
-          `content overflows onto the rows below. Set \`reorderFill: true\` on ` +
+          `content overflows onto the rows below. Set \`fill: true\` on ` +
           `its render-slot contribution.`,
       );
     }
@@ -183,7 +200,10 @@ export function SortableReorderItem({
               // Propagate the fill bound to the content wrapper too, so the
               // contribution's inner `flex-1 min-h-0` scroll region resolves
               // against a bounded box instead of growing to its natural height.
-              editMode && fill && !isEmpty && "flex flex-col flex-1 min-h-0 overflow-hidden",
+              editMode &&
+                fill &&
+                !isEmpty &&
+                "flex flex-col flex-1 min-h-0 overflow-hidden",
             )}
           >
             {children}
@@ -305,92 +325,87 @@ export function RestoreButton({
       padding="none"
     >
       {hasHidden && (
-          <div className="p-xs">
-            {hiddenItems.map((item) => (
-              <Row
-                key={item.key}
-                size="sm"
-                hover="accent"
-                icon={<MdAdd className="text-muted-foreground" />}
-                onClick={() => {
-                  handleRestore(item.key);
-                  if (hiddenItems.length <= 1) setOpen(false);
-                }}
-              >
-                {item.label}
-              </Row>
-            ))}
-          </div>
-        )}
-
-        {inserts.length > 0 && (
-          <div className="border-t border-border p-xs">
-            {inserts.map((insert) => (
-              <Row
-                key={insert.label}
-                size="sm"
-                hover="accent"
-                icon={<MdAdd className="text-muted-foreground" />}
-                onClick={() => {
-                  insert.onInsert();
-                  setOpen(false);
-                }}
-              >
-                {insert.label}
-              </Row>
-            ))}
-          </div>
-        )}
-
-        <div className="border-t border-border px-sm py-sm">
-          <Inline
-            as="div"
-            gap="xs"
-            // eslint-disable-next-line spacing/no-adhoc-spacing -- bottom offset separating the Marketplace label from the search input
-            className="text-muted-foreground mb-1.5"
-          >
-            <MdStorefront className="size-3.5" />
-            <Text as="span" variant="label">
-              Marketplace
-            </Text>
-          </Inline>
-          <div className="relative">
-            {/* Decorative search glyph pinned to the input's left edge, vertically centered. `left-2` (0.5rem) is off the density ramp → inline-style offset. */}
-            <Pin
-              to="left"
-              decorative
-              style={{ left: "0.5rem" }}
-              className="size-3.5 text-muted-foreground"
+        <div className="p-xs">
+          {hiddenItems.map((item) => (
+            <Row
+              key={item.key}
+              size="sm"
+              hover="accent"
+              icon={<MdAdd className="text-muted-foreground" />}
+              onClick={() => {
+                handleRestore(item.key);
+                if (hiddenItems.length <= 1) setOpen(false);
+              }}
             >
-              <MdSearch className="size-3.5" />
-            </Pin>
-            <Input
-              placeholder="Search..."
-              // eslint-disable-next-line spacing/no-adhoc-spacing -- precise left padding clearing the absolutely-positioned search icon
-              className="h-7 pl-7 text-caption"
-              disabled
-            />
-          </div>
-          <Text
-            as="p"
-            variant="caption"
-            // eslint-disable-next-line spacing/no-adhoc-spacing -- top offset separating the empty-state text from the search input above
-            className="mt-1.5 text-center text-muted-foreground/60"
-          >
-            No items
-          </Text>
+              {item.label}
+            </Row>
+          ))}
         </div>
+      )}
 
+      {inserts.length > 0 && (
         <div className="border-t border-border p-xs">
-          <Row
-            size="sm"
-            hover="accent"
-            disabled
-            icon={<MdAdd />}
-          >
-            Create custom plugin
-          </Row>
+          {inserts.map((insert) => (
+            <Row
+              key={insert.label}
+              size="sm"
+              hover="accent"
+              icon={<MdAdd className="text-muted-foreground" />}
+              onClick={() => {
+                insert.onInsert();
+                setOpen(false);
+              }}
+            >
+              {insert.label}
+            </Row>
+          ))}
         </div>
-      </InlinePopover>
+      )}
+
+      <div className="border-t border-border px-sm py-sm">
+        <Inline
+          as="div"
+          gap="xs"
+          // eslint-disable-next-line spacing/no-adhoc-spacing -- bottom offset separating the Marketplace label from the search input
+          className="text-muted-foreground mb-1.5"
+        >
+          <MdStorefront className="size-3.5" />
+          <Text as="span" variant="label">
+            Marketplace
+          </Text>
+        </Inline>
+        <div className="relative">
+          {/* Decorative search glyph pinned to the input's left edge, vertically centered. `left-2` (0.5rem) is off the density ramp → inline-style offset. */}
+          <Pin
+            to="left"
+            decorative
+            style={{ left: "0.5rem" }}
+            className="size-3.5 text-muted-foreground"
+          >
+            <MdSearch className="size-3.5" />
+          </Pin>
+          <Input
+            placeholder="Search..."
+            // eslint-disable-next-line spacing/no-adhoc-spacing -- precise left padding clearing the absolutely-positioned search icon
+            className="h-7 pl-7 text-caption"
+            disabled
+          />
+        </div>
+        <Text
+          as="p"
+          variant="caption"
+          // eslint-disable-next-line spacing/no-adhoc-spacing -- top offset separating the empty-state text from the search input above
+          className="mt-1.5 text-center text-muted-foreground/60"
+        >
+          No items
+        </Text>
+      </div>
+
+      <div className="border-t border-border p-xs">
+        <Row size="sm" hover="accent" disabled icon={<MdAdd />}>
+          Create custom plugin
+        </Row>
+      </div>
+    </InlinePopover>
   );
 }
