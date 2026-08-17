@@ -52,10 +52,10 @@ recalculation per competing sibling. The primitive it replaces
 content-sized container and then had to go looking for the width it had given
 away.
 
-<<<<<<< .merge_file_adAIuc
-Break the rule and you get told. Two guards, and they throw in dev and file a
-report through `adaptiveBarReportSink` in prod, because taking down a pane header
-over a layout disagreement is worse than a cramped row plus an alert:
+Break the rule and you get told. Every fault throws in dev and files a report
+through `adaptiveBarReportSink` in prod (→ Debug → Reports via
+`reports/adaptive-bar`), because taking down a pane header over a layout
+disagreement is worse than a cramped row plus an alert:
 
 - **no-slack** — once per bar, it hides everything the row is holding, re-reads
   the row, and puts it back. A bar that was *given* its width measures the same
@@ -63,56 +63,42 @@ over a layout disagreement is worse than a cramped row plus an alert:
   That is the whole premise checked directly, and the reason it is not a style
   proxy: `flex-grow` is `1` in the failing case (the bar sets it on itself), and
   a parent that shrink-wraps to its child can never be overshot by it — so the
-  shape reads as healthy on every cheaper test. Recovery is the **ceiling**
-  (everything inline, CSS clips), latched: a width the bar cannot trust makes
-  eviction the one thing it must not do, and re-deciding against it oscillates.
-- **overshoot** — the fit says everything fits and the rendered row still sticks
-  out past its parent's content box. Commits the narrow floor. Reads the layout
-  engine directly, so it is gated on a real one and never fires in jsdom.
+  shape reads as healthy on every cheaper test. A row that measures 0px while
+  occupants are relocated out of it is the same fault: "not laid out yet" is
+  only honest while the row still holds everything it was given.
+- **row-overflow** — the fit says everything fits and the rendered row still
+  overflows the box the bar was given. Measured as the union of the occupants'
+  own boxes against the bar's own content box (`measureRowOverflow` +
+  `core/overflow.ts`), and two simpler spellings are both wrong, so do not
+  "simplify" it back to either. An **ancestor** comparison: `offsetParent` is
+  the nearest *positioned* ancestor, not the row the bar is a cell of — a bar in
+  a scrolled strip fits its row perfectly while sitting far outside it — and
+  `parentElement` is no better, since the parent may shrink or carry padding.
+  **`scrollWidth > clientWidth`**: LTR scrollable overflow ignores content past
+  the *left* edge, so an `align="end"` row (every pane header) reads them equal
+  while overflowing by 16px, and it folds in descendants' overflow, so a
+  widget's own transform becomes a false accusation. `scroll` mode skips the
+  guard: there, overflowing IS the contract.
+- **no-convergence** — `MAX_PASSES` measure-and-decide rounds and the answer was
+  still moving.
 
-A row that measures 0px while occupants are relocated out of it is the same
-fault: "not laid out yet" is only honest while the row still holds everything it
-was given, and believing it there is how the bar reaches a state it can never
-measure its way out of.
-=======
-Break the rule and you get told: a `flex-grow: 0` at mount throws in dev and
-files a report through `adaptiveBarReportSink` in prod, with the bar carrying on
-regardless (there is no better width available to it); a row that fits by the
-math and still overflows the box the layout engine gave it does the same but
-also commits the **floor layout** — every unpinned occupant at its narrowest
-rung — and stops deciding for the rest of that mount, because taking down a pane
-header over a layout disagreement is worse than a cramped row plus an alert.
-Both guards only run when a real layout engine answered, so neither fires in
-jsdom, and the report lands in Debug → Reports via `reports/adaptive-bar`.
+Both engine-facing guards are gated on a real layout engine, so neither fires in
+jsdom.
 
-**A fault stops the bar at that WIDTH**: `commitFloor` latches the surrender
-itself, so "take the floor and keep searching" has no spelling. Without that, a
-floor re-runs the pass, the fit recomputes the same answer and floors again —
-forever, since both the convergence branch and the floor reset `passesRef`, so
-`MAX_PASSES` counts a number being zeroed underneath it. Scoped to the width and
-not the mount because `no-convergence` is often transient (a font landing
-mid-pass) and fires on healthy panes: parking the bar at its floor until the pane
-reopens buries every action in the `⋯` panel. A genuine resize re-arms it —
-which cannot feed itself, since the bar's width comes from its row and never
-from its own content — capped by `MAX_SURRENDERS` for the shrink-to-content
-shape where that does not hold. A stopped bar still DOCKS. Proof:
+**The remedy differs by fault, and the two must not be merged.** `no-slack` can
+trust nothing it measures, so it takes the **ceiling** (everything inline, CSS
+clips) and latches for good: eviction is the one thing a bad width reading must
+not do, since it is what that reading was already producing. `row-overflow` and
+`no-convergence` have an honest width and a search that disagrees with the
+engine, so they take the **floor** and stop deciding *at that width* —
+`commitFloor` latches it, so "take the floor and keep searching" has no
+spelling. Without that latch the floor re-runs the pass, the fit recomputes the
+same answer and floors again forever (both the convergence branch and the floor
+reset `passesRef`, so `MAX_PASSES` counted a number being zeroed underneath it).
+Scoped to the width and not the mount because `no-convergence` is often
+transient and fires on healthy panes; a genuine resize re-arms it, capped by
+`MAX_SURRENDERS`. A stopped bar still DOCKS. Proof:
 `web/__tests__/termination.test.tsx`.
-
-**The row-overflow guard reads the occupants against the bar's own content box**
-(`measureRowOverflow` + `core/overflow.ts`), and two simpler spellings are both
-wrong, so do not "simplify" it back to either. An **ancestor** comparison:
-`offsetParent` is the nearest *positioned* ancestor, not the row the bar is a
-cell of — a bar inside a scrolled strip fits its row perfectly while sitting far
-outside it, and `parentElement` is no better since the parent may shrink or carry
-its own padding. **`root.scrollWidth > root.clientWidth`**: LTR scrollable
-overflow ignores content past the *left* edge, so an `align="end"` row (every
-pane header) reads `scrollWidth === clientWidth` while overflowing by 16px —
-measured, not assumed — and it also folds in descendants' overflow, so a widget's
-own transform or absolute badge becomes a false accusation. Neither guard catches
-a shrink-to-content ANCESTOR: the bar cannot soundly attribute a box that is not
-its own, and a false accusation costs the whole pane. `scroll` mode skips the
-guard: there, overflowing IS the contract.
->>>>>>> .merge_file_zgMiHo
 
 ## Why one stable container per item
 

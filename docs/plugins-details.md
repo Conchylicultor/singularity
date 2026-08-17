@@ -14912,7 +14912,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`web-sdk`** — Web plugin runtime: slots, contributions, loader
       - Web:
         - Slots:
-          - `Core.Root` ← `apps-core.layout`, `apps.mail.sync.auto-resume`, `conversations.model-provider`, `debug.live-state-churn.emit`, `debug.render-profiler`, `debug.slow-ops`, `infra.health`, `primitives.announce`, `primitives.command-palette`, `primitives.imperative-dialog`, `primitives.overscroll-hint`, `primitives.shortcuts`, `reports.caret-flight`, `reports.collab-hydration`, `reports.crash`, `reports.endpoint-errors`, `reports.live-state-stale-drop`, `reports.mutation-errors`, `reports.optimistic-divergence`, `reports.plugin-load-errors`, `reports.render-loop`, `shell.global-action-bar`, `shell.toast`, `ui.theme-engine`, `ui.tokens.font-family.google-fonts`
+          - `Core.Root` ← `apps-core.layout`, `apps.mail.sync.auto-resume`, `conversations.model-provider`, `debug.live-state-churn.emit`, `debug.render-profiler`, `debug.slow-ops`, `infra.health`, `primitives.announce`, `primitives.command-palette`, `primitives.imperative-dialog`, `primitives.overscroll-hint`, `primitives.shortcuts`, `reports.adaptive-bar`, `reports.caret-flight`, `reports.collab-hydration`, `reports.crash`, `reports.endpoint-errors`, `reports.live-state-stale-drop`, `reports.mutation-errors`, `reports.optimistic-divergence`, `reports.plugin-load-errors`, `reports.render-loop`, `shell.global-action-bar`, `shell.toast`, `ui.theme-engine`, `ui.tokens.font-family.google-fonts`
           - `Core.Boot` ← `config_v2`, `infra.boot-snapshot`, `ui.tweakcn`
       - Core:
         - Uses:
@@ -19614,6 +19614,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conversations/conversation-view/prompt-templates`
           - `primitives/pane`
           - `reorder/node-types/overflow`
+          - `reports/adaptive-bar`
       - Core:
         - Exports (types):
           - `DockMove`
@@ -19621,6 +19622,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `FitItem`
           - `FitResult`
           - `MeasuredWidth`
+          - `Span`
           - `WidthCache`
           - `WidthEstimate`
           - `WidthMeasurement`
@@ -19632,6 +19634,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `emptyWidthCache`
           - `estimate`
           - `inlineWidthsFor`
+          - `overflowPx`
           - `planMoves`
           - `staleOthers`
           - `widthKey`
@@ -20161,6 +20164,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/data-view/table`
               - `primitives/file-links`
               - `reorder`
+              - `reports/adaptive-bar`
               - `reports/caret-flight`
               - `reports/collab-hydration`
               - `reports/live-state-stale-drop`
@@ -20679,6 +20683,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/detail-sections`
               - `primitives/tooltip`
               - `reorder/editor`
+              - `reports/adaptive-bar`
               - `reports/caret-flight`
               - `reports/collab-hydration`
               - `reports/live-state-stale-drop`
@@ -20706,6 +20711,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/text.SectionLabel`
               - `primitives/css/text.Text`
               - `primitives/css/ui-kit`
+              - `primitives/error-boundary.PluginErrorBoundary`
               - `primitives/loading.Loading`
               - `primitives/pane.openPane`
               - `primitives/pane.Pane`
@@ -23572,6 +23578,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `framework/web-core`
           - `layouts/full-pane`
           - `layouts/miller`
+          - `primitives/css/layout-harness`
           - `reports/crash`
           - `reports/launch-fix`
     - **`expandable`** — Clamps tall content to a max height and reveals a Show more/less toggle only when the rendered content actually overflows (measured via ResizeObserver, not char/line heuristics).
@@ -26674,7 +26681,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
 
 - **`reports`** — Reports uncaught browser errors to the server. Records server/frontend crashes as deduped reports; investigation tasks are filed on demand.
   - Web:
-    - Slots: `Reports.KindView` ← `debug.boot-budget`, `debug.boot-watchdog`, `debug.duress-shed`, `debug.live-state-churn.monitor`, `debug.op-rate`, `debug.queue-health`, `debug.read-set-shrink`, `debug.sentinel`, `debug.session-divergence`, `debug.slow-ops`, `debug.stall-monitor`, `reports.caret-flight`, `reports.collab-hydration`, `reports.crash`, `reports.live-state-stale-drop`, `reports.optimistic-divergence`, `reports.render-loop`, `reports.turn-unconfirmed`
+    - Slots: `Reports.KindView` ← `debug.boot-budget`, `debug.boot-watchdog`, `debug.duress-shed`, `debug.live-state-churn.monitor`, `debug.op-rate`, `debug.queue-health`, `debug.read-set-shrink`, `debug.sentinel`, `debug.session-divergence`, `debug.slow-ops`, `debug.stall-monitor`, `reports.adaptive-bar`, `reports.caret-flight`, `reports.collab-hydration`, `reports.crash`, `reports.live-state-stale-drop`, `reports.optimistic-divergence`, `reports.render-loop`, `reports.turn-unconfirmed`
     - Uses:
       - `infra/endpoints.fetchEndpoint`
       - `primitives/slot-render.defineDispatchSlot`
@@ -26759,6 +26766,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `debug/trace/engine`
       - `infra/boot-snapshot`
       - `infra/worktree/removal-audit`
+      - `reports/adaptive-bar`
       - `reports/caret-flight`
       - `reports/collab-hydration`
       - `reports/crash`
@@ -26773,6 +26781,25 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `stats/cost`
       - `tasks/reports-investigation`
   - Plugins:
+    - **`adaptive-bar`** — Adaptive-bar collector: drains the adaptive-bar primitive's adaptiveBarReportSink into a deduped report whenever a bar's layout contract is violated (it was given no slack, its fit disagrees with the layout engine, its placement never converged, or it refused to relocate an iframe), plus the Debug → Reports summary view. Adaptive-bar report kind: validates the adaptive-bar primitive's layout-contract fault payloads (no-slack = the bar was given no room to give, row-overflow = on a converged pass the fit blessed the row as fitting and the occupants still stick out of the bar's own content box, no-convergence = the placement never settled, iframe-relocation = a frame the browser cannot move without reloading), fingerprints by fault + bar label (excluding the per-fault-constant message, so one broken bar = one row), and renders a per-fault task stating what the bar did instead and the consumer-side fix. Re-arms periodically (6h) since a broken host re-produces the fault on every mount.
+      - Web:
+        - Contributes:
+          - `Core.Root` → `AdaptiveBarCollector`
+          - `Reports.KindView` → `AdaptiveBarKindView`
+        - Uses:
+          - `primitives/adaptive-bar.adaptiveBarReportSink`
+          - `primitives/css/badge.Badge`
+          - `primitives/css/inline.Inline`
+          - `reports.report`
+          - `reports.Reports`
+      - Server:
+        - Contributes: `report-kind` "adaptive-bar"
+        - Uses: `reports.ReportKind`
+      - Core:
+        - Exports (types): `AdaptiveBarPayload`
+        - Exports (values):
+          - `adaptiveBarFingerprint`
+          - `AdaptiveBarPayloadSchema`
     - **`caret-flight`** — Caret-flight collector: drains the page editor's caretFlightReportSink into a report whenever a claimed caret landing is abandoned and the keystrokes it was holding had to be replayed into the origin block (or were lost), plus the Debug → Reports summary view. Caret-flight report kind: validates the page editor's caret-authority abort payloads (a claimed caret landing that never happened, so the keystrokes it was holding were replayed back into the origin block — or lost), fingerprints by reason + recovered/lost (excluding the volatile block ids and buffer size, so one defect = one row), and renders an investigation task.
       - Web:
         - Contributes:
