@@ -117,6 +117,7 @@ export async function computeExpectedComposition(opts: {
     minify: opts.minify,
     builderVersion: BUILDER_VERSION,
     builderSource: fleet.builderSource,
+    root: opts.root,
   });
   const vendorMeta = readVendorSetMeta(setHash);
   if (vendorMeta === null) {
@@ -164,6 +165,7 @@ export async function readFleetVendorMeta(opts: {
     minify: opts.minify,
     builderVersion: BUILDER_VERSION,
     builderSource: fleet.builderSource,
+    root: opts.root,
   });
   const meta = readVendorSetMeta(setHash);
   if (meta === null) {

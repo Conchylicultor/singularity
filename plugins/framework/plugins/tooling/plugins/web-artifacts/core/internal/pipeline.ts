@@ -231,14 +231,16 @@ export async function runWebArtifactsPipeline(
         targets: allTargets,
         metaOf: (dirName) => buildOut.metas.get(dirName)!,
       });
-      const meta = await ensureVendorSet({
+      const { meta, stats } = await ensureVendorSet({
         requests,
         minify: opts.minify,
         builderVersion: BUILDER_VERSION,
         builderSource: plan.identity.sourceDigest,
+        root,
       });
       log(
-        `vendors: ${requests.length} specifiers (set ${meta.setHash.slice(0, 12)})`,
+        `vendors: ${requests.length} specifiers, ${stats.cached} cached / ${stats.resolved} resolved ` +
+          `in ${stats.elapsedMs}ms (set ${meta.setHash.slice(0, 12)})`,
       );
       return meta;
     },
