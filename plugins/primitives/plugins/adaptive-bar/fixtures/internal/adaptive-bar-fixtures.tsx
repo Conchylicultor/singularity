@@ -169,6 +169,105 @@ function useTriggerGeoSlot(): (el: HTMLElement | null) => void {
   return setHost;
 }
 
+/**
+ * An occupant the layout engine WOULD squeeze, if the bar let it — and the only
+ * one in the catalog that can be, which is worth understanding before writing
+ * another.
+ *
+ * An item container is a flex item of the row with `min-width: auto`, so its
+ * floor is its own **min-content**. Every other occupant here reaches that floor
+ * at its natural width: the row is `whitespace-nowrap`, a text run that cannot
+ * break has a min-content equal to its max-content, and `Button` is `shrink-0`
+ * outright. `min-w-0` inside a widget does not change this — it lets the LEAF be
+ * smaller, not the box the bar measures.
+ *
+ * What does: **content that can reflow narrower**. This chip opts back into
+ * wrapping, so its min-content is its longest word and the engine can take most
+ * of its width. A widget rendering a short sentence is the realistic version;
+ * a percentage-sized image is another. Neither is exotic, and neither is
+ * expressible as a rung — which is the point: the bar's ladder is the only
+ * shrinking an occupant should ever do.
+ *
+ * Declares no ladder on purpose: one rung, so the width the harness measures
+ * cannot change for any legitimate reason. Anything that moves it is the engine
+ * taking width from the occupant.
+ */
+function LabelledChip({ label }: { label: string }): ReactElement {
+  return (
+    // `whitespace-normal` overrides the row's own `nowrap`, which is what gives
+    // this box a min-content below its natural width. Not a style choice — it is
+    // the entire mechanism under test.
+    <div className="whitespace-normal rounded-md border px-xs py-2xs">
+      {label}
+    </div>
+  );
+}
+
+/**
+ * Stamps the harness's `data-geo` vocabulary onto the bar's own OCCUPANT
+ * containers, over their stable marker attribute.
+ *
+ * The box that has to be proven rigid is the container the bar measures and
+ * writes into the ledger — not the widget inside it, which is a block child of
+ * that container and would be dragged along by a squeeze without being the
+ * number under test. The primitive must not know the harness exists, so the
+ * fixture bridges the two, exactly as {@link useTriggerGeoSlot} does for the
+ * `⋯`.
+ *
+ * No dependency array: an occupant relocated into the body-portaled panel and
+ * back is not in this subtree in between, and re-stamping every render is both
+ * cheaper and more obviously correct than tracking that.
+ */
+function useOccupantGeoSlots(
+  ids: readonly string[],
+): (el: HTMLElement | null) => void {
+  const [host, setHost] = useState<HTMLElement | null>(null);
+  useLayoutEffect(() => {
+    if (host === null) return;
+    host
+      .querySelector("[data-adaptive-bar-trigger]")
+      ?.setAttribute("data-geo", "trigger");
+    for (const id of ids) {
+      host
+        .querySelector(`[data-adaptive-bar-item="${id}"]`)
+        ?.setAttribute("data-geo", id);
+    }
+  });
+  return setHost;
+}
+
+const SQUEEZABLE_IDS = ["alpha", "beta", "gamma", "delta"] as const;
+
+/**
+ * The width ledger's axiom, as geometry: **an occupant's width is a property of
+ * that occupant, not of how many neighbours it has.**
+ *
+ * Four single-rung occupants, each holding a truncating leaf, in an ordinary
+ * `panel` bar swept from roomy to cramped. At the wide end all four are in the
+ * row; at the narrow end the fit relocates some of them behind the `⋯`. What
+ * must never happen is the third thing: an occupant that STAYS in the row and
+ * gets narrower, which is the engine deciding an occupant's width from the
+ * placement and the bar then storing that number as if it were the item's own.
+ *
+ * `rigidIntegrity` is exactly that assertion — it compares a slot's width
+ * across the widths where the slot is present and ignores the ones where it is
+ * absent, so eviction is tolerated and a squeeze is not.
+ */
+function SqueezableBarFixture(): ReactElement {
+  const hostRef = useOccupantGeoSlots(SQUEEZABLE_IDS);
+  return (
+    <Line ref={hostRef} className="w-full">
+      <AdaptiveBar gap="xs" label="More labels">
+        {SQUEEZABLE_IDS.map((id) => (
+          <AdaptiveBar.Item key={id} id={id}>
+            <LabelledChip label={`${id} toolbar section`} />
+          </AdaptiveBar.Item>
+        ))}
+      </AdaptiveBar>
+    </Line>
+  );
+}
+
 function RichBarFixture(): ReactElement {
   const hostRef = useTriggerGeoSlot();
   return (
@@ -348,6 +447,42 @@ export const adaptiveBarFixtures: LayoutFixture[] = [
     widths: [400, 300, 200, 120, 60],
     render: () => <ActionsBarFixture />,
     invariants: [{ kind: "noOverlap" }, { kind: "noClip" }],
+  },
+  {
+    // The width ledger's axiom, measured. The only fixture whose occupants CAN
+    // be squeezed (a truncating `<Text>` leaf, min-content ≈ 0), so the only one
+    // that can tell whether the row's `[&>*]:shrink-0` is doing anything.
+    //
+    // The widths are chosen so every slot is inline at more than one of them
+    // with a DIFFERENT number of neighbours — a slot present at only one width
+    // satisfies `rigidIntegrity` trivially, and the whole question is whether
+    // the neighbours change the answer.
+    id: "adaptive-bar/squeezable-occupants",
+    primitive: "adaptive-bar",
+    dims: { contentLen: "long", withMeta: false, state: "idle" },
+    widths: [880, 700, 520, 340],
+    render: () => <SqueezableBarFixture />,
+    invariants: [
+      { kind: "noOverlap" },
+      { kind: "noClip" },
+      ...SQUEEZABLE_IDS.map(
+        (slot) => ({ kind: "rigidIntegrity", slot }) as const,
+      ),
+      // And the proof that the assertion above bites. `shrinkSlots` hands the
+      // measured boxes back to the engine — `flex: 0 1 auto` + `min-width: 0`,
+      // what an ordinary flex item is — which is precisely the state this whole
+      // change removed: the occupants absorb the row's deficit, their widths
+      // become a function of the placement, and `rigidIntegrity` must fail.
+      //
+      // Without it this would be the one invariant in the catalog with nothing
+      // to say it is not vacuous, and a fixture whose labels turned out short
+      // enough never to crowd its row would pass forever while proving nothing.
+      {
+        kind: "falsification",
+        mutate: { kind: "shrinkSlots" },
+        expectViolated: { kind: "rigidIntegrity", slot: "alpha" },
+      },
+    ],
   },
   {
     // The regression fixture for the guard that took the Layout Lab down: a bar

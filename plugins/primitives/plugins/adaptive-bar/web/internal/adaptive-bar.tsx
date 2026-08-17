@@ -64,7 +64,7 @@ import {
   WIDTH_EPSILON_PX,
 } from "./diagnostics";
 import { DEFAULT_LADDER, formFor, inlineRungsOf, yieldRankOf } from "./ladder";
-import { readColumnGap, useLayoutMeasured, useMeasureWidth } from "./measure";
+import { readRowMetrics, useLayoutMeasured, useMeasureWidth } from "./measure";
 import { OverflowPanel } from "./overflow-panel";
 import {
   BarFormsContext,
@@ -124,8 +124,31 @@ export interface AdaptiveBarProps {
  * harvest string literals reached from a `className` — so, exactly like
  * `viewport-overlay`'s `OVERLAY_ROOT`, the primitive that OWNS these mechanics
  * does not have to disable the rule that keeps them out of feature code.
+ *
+ * `[&>*]:shrink-0` is the other half of that contract, and it is what makes the
+ * width ledger's axiom true rather than merely assumed: **this row never takes
+ * width from what it holds.** See `core/width-cache.ts`. An ordinary flex item
+ * (`flex: 0 1 auto`) is squeezed whenever its row is over-full — which is
+ * exactly the state a pass measures in, since it measures the placement React
+ * has already committed. Two things then go wrong at once: the ledger stores a
+ * placement-dependent number as `exact`, and `measureRowOverflow` goes blind,
+ * because flex absorbs the whole deficit and the occupants sum to exactly the
+ * content box.
+ *
+ * Whether an occupant can be squeezed at all is an accident of its content — a
+ * container's floor is its own min-content, and under this row's
+ * `whitespace-nowrap` a text run's min-content IS its natural width, which is
+ * why every occupant shipping today happens to be safe and a widget with
+ * reflowable content would not be.
+ *
+ * Declared on the ROW rather than on each occupant, for three reasons. It
+ * covers the `⋯` trigger — a flex item of this row whose width `measureTrigger`
+ * CACHES, so a single squeezed reading would under-reserve it forever. It keeps
+ * `flex-shrink` meaning one thing: an occupant's container also lives in the
+ * panel dock's column, where the same declaration would be about height. And it
+ * covers whatever this row holds next without anyone having to remember.
  */
-const BAR_ROOT = "min-w-0 flex-1 whitespace-nowrap";
+const BAR_ROOT = "min-w-0 flex-1 whitespace-nowrap [&>*]:shrink-0";
 /** `panel`/`clip`: what does not fit leaves the row, and the row never spills. */
 const BAR_CLIP = "overflow-hidden";
 /** `scroll`: nothing leaves the row; the row itself scrolls. */
@@ -619,7 +642,13 @@ function AdaptiveBarShell({
     }
 
     // ── 2. Measure ────────────────────────────────────────────────────────
-    const available = measure(root);
+    // The CONTENT box, not the border box. The occupants are laid out inside
+    // the row's padding and border, and `measureRowOverflow` judges them
+    // against that same box — so a budget that included the padding would be a
+    // budget for room that does not exist, and the fault it produced would be
+    // the fit's arithmetic accusing the layout.
+    const metrics = readRowMetrics(root);
+    const available = measure(root) - metrics.insetPx;
     // Zero available width is "not laid out yet" — a collapsed pane, a
     // display:none ancestor, a jsdom test with no measurement seam. Deciding
     // from it would evict the whole row and then put it back, so we decide
@@ -696,7 +725,7 @@ function AdaptiveBarShell({
       startEpisode(episodeRef.current);
     }
 
-    const gapPx = readColumnGap(root);
+    const gapPx = metrics.gapPx;
     const triggerPx =
       overflow === "panel"
         ? measureTrigger(trigger, measure, triggerWidthRef)

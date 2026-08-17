@@ -258,6 +258,30 @@ function applyMutation(scope: HTMLElement, mutate: FixtureMutation): void {
       marker.style.setProperty("--rail-owed-end", mutate.value);
       break;
     }
+    case "shrinkSlots": {
+      // Hand the measured boxes back to the layout engine: let it take width
+      // from them when their row runs out. That is the DEFAULT for a flex item
+      // (`flex: 0 1 auto`), so this mutation does not invent a broken shape so
+      // much as remove a deliberate one — which is what makes it the right
+      // falsification for any primitive whose contract is "a box I measure is
+      // the size of its own content, whatever else is in the row".
+      //
+      // `min-width: 0` rides along because a flex item's automatic minimum size
+      // would otherwise stop the squeeze at min-content, and a slot whose
+      // content is already unsqueezable (a button, a bare string) would report
+      // a false green.
+      const slots = [...scope.querySelectorAll<HTMLElement>("[data-geo]")];
+      if (slots.length === 0) {
+        throw new Error(
+          "shrinkSlots mutation: no [data-geo] boxes in the fixture subtree",
+        );
+      }
+      for (const slot of slots) {
+        slot.style.flexShrink = "1";
+        slot.style.minWidth = "0";
+      }
+      break;
+    }
   }
 }
 

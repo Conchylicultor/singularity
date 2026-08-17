@@ -335,7 +335,37 @@ No DOM, no React, so it is exercisable without a layout engine.
 | `core/width-cache.ts` | what each item measured at each rung, and how much we trust it |
 | `core/dock-plan.ts` | the fewest DOM moves that turn one dock order into another |
 
-### The four rules worth knowing before you touch this
+### The five rules worth knowing before you touch this
+
+**An occupant's width is its own** — a property of the item and its rung, never
+of how many neighbours it has. That is what `exact` claims, and it is a fact
+about the row, discharged by **`BAR_ROOT`'s `[&>*]:shrink-0`**.
+
+A pass measures the placement React has ALREADY committed, so an over-full row
+is the normal mid-search state. Let the engine take the deficit out of the
+occupants there and the squeezed number is stored as `exact` — sticky, since an
+item is only re-measured at the rung it sits at — the row-overflow guard goes
+blind (the occupants now sum to exactly the content box), and `assign` compares
+that same sum against the same width and stops demoting.
+
+Which occupants can that happen to is subtler than it looks, and worth knowing
+before assuming a widget is safe. A container is a flex item with
+`min-width: auto`, so its floor is its own min-content; the row is
+`whitespace-nowrap`, so a text run cannot break and its min-content IS its
+natural width. `min-w-0` inside a widget does not change that — it lets the leaf
+be smaller, not the box the bar measures. So today's occupants (buttons, chips,
+labels) happen to be unsqueezable, and a widget whose content can reflow
+narrower — a wrapping sentence, a percentage-sized image — is not. The
+declaration is what makes it not depend on that accident.
+
+On the ROW, not on each occupant: the `⋯` trigger is a flex item of the same row
+whose width `measureTrigger` **caches**, so one squeezed reading under-reserves
+it forever; and an occupant's container also lives in the panel's column, where
+the same declaration would be about height.
+
+Proven under a real engine by `adaptive-bar/squeezable-occupants` in
+`fixtures/`, whose occupants opt back into wrapping precisely so they CAN be
+squeezed — remove the declaration and all four collapse 186px → 83px.
 
 **Only an inline item is measurable.** A width read while the widget sits in the
 panel describes the panel, so `write` refuses it outright. That single asymmetry

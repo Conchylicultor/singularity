@@ -95,6 +95,13 @@ declaration on the region itself would lose to the region's own):
   every inheriting sibling stays put. It can only be satisfied by the `follower`
   member, so it fails loudly the moment the debt stops being paid.
 
+A third mutation, **`shrinkSlots`**, is not about regions: it sets
+`flex-shrink: 1; min-width: 0` on every `[data-geo]` box — what an ordinary flex
+item is — so the engine takes its row's deficit out of the measured boxes. It is
+the falsification for any primitive whose contract is *a box I measure is the
+size of its own content, whatever else is in the row*, and it pairs with
+`rigidIntegrity` (adaptive-bar's `squeezable-occupants`).
+
 **Known limit:** two nested regions publishing the *same* value resolve to the
 outer one as publisher. Nesting is shadowing, so a correct inner region uses a
 different step; a fixture that genuinely needs identical nested rails is not

@@ -129,6 +129,13 @@ export type FixtureMutation =
   // against the PUBLISHED rail rather than merely observing that the children
   // agree with each other — which they would, whatever the number said.
   | { kind: "railOverride"; value: string }
+  // Hand every measured `[data-geo]` box back to the layout engine —
+  // `flex-shrink: 1` + `min-width: 0`, which is what an ordinary flex item is.
+  // The falsification for a primitive whose contract is "a box I measure is the
+  // size of its own content, whatever else is in the row": under it the engine
+  // takes the row's deficit out of the slots, so a slot's width becomes a
+  // function of its neighbours and `rigidIntegrity` must fail.
+  | { kind: "shrinkSlots" }
   // Re-publish what a FOLLOWER still owes as `value` (both `--rail-owed-*`),
   // from below the region. A region that pays sets the debt to `0px`; forcing it
   // back to the full rail reproduces the double-pay bug exactly — the owner pads

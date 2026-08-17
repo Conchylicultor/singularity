@@ -66,21 +66,61 @@ export function AdaptiveBarMeasure({
   );
 }
 
+/** What the row's own computed style says about the space it has to give. */
+export interface RowMetrics {
+  /**
+   * The gap between two adjacent occupants, read from the RENDERED element
+   * rather than from the `gap` prop it was built from.
+   *
+   * The prop names a role on the density ramp; the pixels it resolves to depend
+   * on the active density preset, which changes at runtime. Re-deriving the
+   * number from the role would be a second source of truth that silently
+   * desyncs the moment a preset changes — the `MORE_BTN_W = 32` mistake in a
+   * different costume.
+   */
+  gapPx: number;
+  /**
+   * Horizontal padding + border: the part of the row's border box that its
+   * occupants are NOT laid out in.
+   *
+   * The fit's budget has to be the CONTENT box, because that is the box the
+   * occupants are laid out in and the box `measureRowOverflow` compares them
+   * against. Reading `getBoundingClientRect().width` and stopping there gave the
+   * fit a budget one padding wider than the room that exists, so a consumer
+   * adding padding to a bar root would produce a row the fit blessed and the
+   * engine overflowed — a `row-overflow` fault caused by the guard's own
+   * arithmetic rather than by the layout.
+   *
+   * That was invisible while occupants could be squeezed: flex absorbed the
+   * difference, the spans summed to the content box, and the guard measured no
+   * overflow however much padding the root carried.
+   */
+  insetPx: number;
+}
+
 /**
- * The row's gap, read from the rendered element rather than from the `gap` prop
- * it was built from.
+ * The row's gap and its horizontal inset, from ONE computed-style read.
  *
- * The prop names a role on the density ramp; the pixels it resolves to depend on
- * the active density preset, which changes at runtime. Re-deriving the number
- * from the role would be a second source of truth that silently desyncs the
- * moment a preset changes — the `MORE_BTN_W = 32` mistake in a different
- * costume.
+ * Together rather than separately because they are read at the same instant for
+ * the same decision, and a second `getComputedStyle` is a second chance for the
+ * two to describe different layouts.
  *
- * A non-numeric answer (`"normal"`, or jsdom's empty string) is not a width, so
+ * A non-numeric answer (`"normal"`, or jsdom's empty string) is not a length, so
  * it contributes nothing rather than a `NaN` that would poison every sum.
  */
-export function readColumnGap(el: Element): number {
-  const raw = getComputedStyle(el).columnGap;
+export function readRowMetrics(el: Element): RowMetrics {
+  const style = getComputedStyle(el);
+  return {
+    gapPx: lengthPx(style.columnGap),
+    insetPx:
+      lengthPx(style.paddingLeft) +
+      lengthPx(style.paddingRight) +
+      lengthPx(style.borderLeftWidth) +
+      lengthPx(style.borderRightWidth),
+  };
+}
+
+function lengthPx(raw: string): number {
   const px = Number.parseFloat(raw);
   return Number.isFinite(px) ? px : 0;
 }

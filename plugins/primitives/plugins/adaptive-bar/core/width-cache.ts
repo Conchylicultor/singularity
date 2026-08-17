@@ -10,6 +10,32 @@
  * *currently rendering inline*. A width read anywhere else is either wrong (the
  * panel lays out differently) or unobtainable, so the ledger's job is to keep
  * what it legitimately learned and to be honest about the rest.
+ *
+ * ## The axiom, and where it is discharged
+ *
+ * An entry is keyed `(item id, rung)` and marked `exact`, which asserts
+ * something stronger than "we measured it": **an occupant's width at a rung is
+ * a property of that occupant and that rung** — never of how many neighbours it
+ * happens to be sitting beside. Nothing in this file can enforce that; it is a
+ * fact about the row the width was read in, and it is discharged in one place:
+ * `BAR_ROOT`'s `[&>*]:shrink-0` in `web/internal/adaptive-bar.tsx`, which makes
+ * every child of the measuring row a rigid flex item.
+ *
+ * Without it the ledger is quietly wrong in the one state it does most of its
+ * learning in. A pass measures the placement React has ALREADY committed, so an
+ * over-full row is normal mid-search, and there the engine takes the deficit out
+ * of the occupants — the squeezed number is written here as `exact`, and it is
+ * sticky, since an item is only ever re-measured at the rung it sits at. Worse,
+ * the deficit then vanishes: the occupants sum to exactly the row's content box,
+ * so the row-overflow guard sees nothing and the very next `assign` compares
+ * that sum against the same width and concludes the row fits.
+ *
+ * Whether a given occupant CAN be squeezed is an accident of its content, which
+ * is why this was invisible rather than merely rare: the container is a flex
+ * item with `min-width: auto`, so its floor is its own min-content, and under
+ * the row's `whitespace-nowrap` a text run's min-content is its natural width.
+ * Today's occupants are all unsqueezable for that reason; a widget whose content
+ * can reflow narrower is not, and nothing warns you which one you are writing.
  */
 
 /** One measured (or once-measured) width. */
