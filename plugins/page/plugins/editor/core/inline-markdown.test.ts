@@ -293,13 +293,16 @@ describe("INLINE_SYNTAXES — decision pins on the table itself", () => {
 
 /**
  * The real token patterns, transcribed rather than imported: they live in the
- * inline-date / inline-page-link / math-inline plugins' `core/tokens.ts`, and
- * importing one here would form a plugin import cycle the boundary checker
- * catches (each of those imports the editor core). The shapes are what matters —
- * `\(latex\)` in particular is FULL of `_` and `*`.
+ * inline-date / inline-page-link / math-inline plugins' `core/tokens.ts` — the
+ * single source of truth for each — and importing one here would form a plugin
+ * import cycle the boundary checker catches (each of those imports the editor
+ * core). The shapes are what matters — `\(latex\)` in particular is FULL of `_`
+ * and `*`. A transcription can go stale, so keep the body UNCONSTRAINED the way
+ * the real page-link pattern does: its namespace prefix, not the id's shape, is
+ * what makes it a token.
  */
 const LATEX = /\\\(([^\n]*?)\\\)/;
-const PAGE_TOKEN = /\[\[(block-\d+-[a-z0-9]+)\]\]/;
+const PAGE_TOKEN = /\[\[page:([^[\]\n]+)\]\]/;
 const DATE_TOKEN = /\[\[date:([0-9T:.Z-]+)\]\]/;
 const TOKENS = [LATEX, PAGE_TOKEN, DATE_TOKEN];
 
@@ -343,8 +346,12 @@ describe("serializeInlineMarkdown — every mark, color, link", () => {
   });
 
   test("color is a tag (it is a run ATTRIBUTE, not a mark)", () => {
-    expect(ser([{ text: "x", color: "blue" }])).toBe('<color value="blue">x</color>');
-    expect(par('<color value="blue">x</color>')).toEqual([{ text: "x", color: "blue" }]);
+    expect(ser([{ text: "x", color: "blue" }])).toBe(
+      '<color value="blue">x</color>',
+    );
+    expect(par('<color value="blue">x</color>')).toEqual([
+      { text: "x", color: "blue" },
+    ]);
   });
 
   test("`default` color emits nothing", () => {
@@ -352,12 +359,14 @@ describe("serializeInlineMarkdown — every mark, color, link", () => {
   });
 
   test("link is `[text](url)`, outermost, with `)` escaped in the url", () => {
-    expect(ser([{ text: "x", link: "https://a.io" }])).toBe("[x](https://a.io)");
+    expect(ser([{ text: "x", link: "https://a.io" }])).toBe(
+      "[x](https://a.io)",
+    );
     // Only `\` and `)` are escaped in a URL — a URL is read verbatim up to its
     // first UNESCAPED `)`, so `(` needs nothing.
-    expect(ser([{ text: "x", link: "https://a.io/p(1)", marks: ["bold"] }])).toBe(
-      "[**x**](https://a.io/p(1\\))",
-    );
+    expect(
+      ser([{ text: "x", link: "https://a.io/p(1)", marks: ["bold"] }]),
+    ).toBe("[**x**](https://a.io/p(1\\))");
     expect(par("[**x**](https://a.io/p(1\\))")).toEqual([
       { text: "x", marks: ["bold"], link: "https://a.io/p(1)" },
     ]);
@@ -385,13 +394,19 @@ describe("parseInlineMarkdown — marks are a per-run SET, never a tree", () => 
 
   test("marks land in MARK_ORDER regardless of nesting order", () => {
     expect(par("`<u>x</u>`")).toEqual(par("`<u>x</u>`"));
-    expect(par("<u>**x**</u>")).toEqual([{ text: "x", marks: ["bold", "underline"] }]);
-    expect(par("**<u>x</u>**")).toEqual([{ text: "x", marks: ["bold", "underline"] }]);
+    expect(par("<u>**x**</u>")).toEqual([
+      { text: "x", marks: ["bold", "underline"] },
+    ]);
+    expect(par("**<u>x</u>**")).toEqual([
+      { text: "x", marks: ["bold", "underline"] },
+    ]);
   });
 
   test("output is canonical: coalesced, no zero-length runs", () => {
     // Two adjacent spans with identical attributes merge into ONE run.
-    expect(par("<u>a</u><u>b</u>")).toEqual([{ text: "ab", marks: ["underline"] }]);
+    expect(par("<u>a</u><u>b</u>")).toEqual([
+      { text: "ab", marks: ["underline"] },
+    ]);
     expect(par("")).toEqual([]);
   });
 
@@ -422,7 +437,9 @@ describe("parseInlineMarkdown — marks are a per-run SET, never a tree", () => 
   test("unmatched delimiters, tags and brackets stay literal", () => {
     expect(par("**unclosed")).toEqual([{ text: "**unclosed" }]);
     expect(par("<u>unclosed")).toEqual([{ text: "<u>unclosed" }]);
-    expect(par("[text] (not a link)")).toEqual([{ text: "[text] (not a link)" }]);
+    expect(par("[text] (not a link)")).toEqual([
+      { text: "[text] (not a link)" },
+    ]);
     expect(par("[x]()")).toEqual([{ text: "[x]()" }]);
   });
 
@@ -477,30 +494,36 @@ describe("protected spans — the reason `protectedSpans` exists", () => {
   test("no delimiter may open or close INSIDE a protected span", () => {
     // The token's neighbours are unmarked too, so `coalesce` merges the three
     // runs back into one — the point is that the `_`s did NOT italicize.
-    expect(par("x \\(a*b*c\\) y", TOKENS)).toEqual([{ text: "x \\(a*b*c\\) y" }]);
-    expect(par("x \\(a*b*c\\) y", [])).not.toEqual([{ text: "x \\(a*b*c\\) y" }]);
+    expect(par("x \\(a*b*c\\) y", TOKENS)).toEqual([
+      { text: "x \\(a*b*c\\) y" },
+    ]);
+    expect(par("x \\(a*b*c\\) y", [])).not.toEqual([
+      { text: "x \\(a*b*c\\) y" },
+    ]);
     // `_` inside a token is doubly safe (the intra-word rule also declines it),
     // but `*` is intraword-legal, which is what makes the masking load-bearing.
-    expect(par("x \\(a_b_c\\) y", TOKENS)).toEqual([{ text: "x \\(a_b_c\\) y" }]);
+    expect(par("x \\(a_b_c\\) y", TOKENS)).toEqual([
+      { text: "x \\(a_b_c\\) y" },
+    ]);
   });
 
-  test("`[[block-1-x]]` is never split, and never escaped on the way out", () => {
-    const runs: RichText = [{ text: "see [[block-1-x]] here" }];
-    expect(ser(runs, TOKENS)).toBe("see [[block-1-x]] here");
-    expect(par("see [[block-1-x]] here", TOKENS)).toEqual(runs);
+  test("`[[page:block-1-x]]` is never split, and never escaped on the way out", () => {
+    const runs: RichText = [{ text: "see [[page:block-1-x]] here" }];
+    expect(ser(runs, TOKENS)).toBe("see [[page:block-1-x]] here");
+    expect(par("see [[page:block-1-x]] here", TOKENS)).toEqual(runs);
   });
 
   test("a mark is not applied ACROSS a token — it becomes its own unmarked run", () => {
     // Exactly what `runs-lexical.ts`'s `walkNode` produces for a decorator node,
     // so this is the canonical form rather than a loss.
-    expect(par("**see [[block-1-x]] here**", TOKENS)).toEqual([
+    expect(par("**see [[page:block-1-x]] here**", TOKENS)).toEqual([
       { text: "see ", marks: ["bold"] },
-      { text: "[[block-1-x]]" },
+      { text: "[[page:block-1-x]]" },
       { text: " here", marks: ["bold"] },
     ]);
-    expect(ser([{ text: "see [[block-1-x]] here", marks: ["bold"] }], TOKENS)).toBe(
-      "**see** [[block-1-x]] **here**",
-    );
+    expect(
+      ser([{ text: "see [[page:block-1-x]] here", marks: ["bold"] }], TOKENS),
+    ).toBe("**see** [[page:block-1-x]] **here**");
   });
 
   test("a token inherits an enclosing LINK, as the Lexical walk does", () => {
@@ -518,9 +541,7 @@ describe("protected spans — the reason `protectedSpans` exists", () => {
   });
 
   test("a token is honored inside a code span too", () => {
-    expect(par("`\\(x\\)`", TOKENS)).toEqual([
-      { text: "\\(x\\)" },
-    ]);
+    expect(par("`\\(x\\)`", TOKENS)).toEqual([{ text: "\\(x\\)" }]);
   });
 });
 
@@ -541,7 +562,11 @@ describe("round trip — parse ∘ serialize is the identity on canonical runs",
     [{ text: "x", link: "https://a.io", marks: ["bold", "underline"] }],
     [{ text: "a*b_c~d`e[f]g<h>i\\j" }],
     [{ text: "2 * 3 * 4 and snake_case_name" }],
-    [{ text: "a", marks: ["bold"] }, { text: " " }, { text: "b", marks: ["code"] }],
+    [
+      { text: "a", marks: ["bold"] },
+      { text: " " },
+      { text: "b", marks: ["code"] },
+    ],
   ];
 
   for (const runs of canonical) {

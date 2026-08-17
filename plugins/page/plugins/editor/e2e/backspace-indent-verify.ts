@@ -29,6 +29,7 @@ import {
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 import { openBlankPage } from "./support/blank-page";
+import { caretLinear } from "./support/caret";
 import { typeLines } from "./support/type-lines";
 
 const base = baseUrl();
@@ -58,34 +59,19 @@ function shape(rs: Row[]): string {
   return rs.map((row) => `${row.text}@${row.pad}`).join(" | ");
 }
 
-/** The caret's linear offset in its block, or -1 when it is not in one. */
-async function caretOffset(page: Page): Promise<number> {
-  return page.evaluate(() => {
-    const sel = window.getSelection();
-    if (!sel || sel.rangeCount === 0 || !sel.anchorNode) return -1;
-    const anchor = sel.anchorNode;
-    const editable =
-      anchor.parentElement?.closest?.('[contenteditable="true"]') ??
-      (anchor instanceof Element ? anchor.closest('[contenteditable="true"]') : null);
-    if (!editable) return -1;
-    const range = document.createRange();
-    range.selectNodeContents(editable);
-    range.setEnd(anchor, sel.anchorOffset);
-    return range.toString().length;
-  });
-}
-
 /**
  * Park the caret at the very start of `id`'s text. Clicking the left edge lands
  * at offset 0 in practice; the ArrowLeft loop is the exact-count fallback (never
  * over-pressing, which would cross into the previous block).
  */
 async function caretToStartOf(page: Page, id: string): Promise<void> {
-  const block = page.locator(`[data-block-id="${id}"] [contenteditable="true"]`).first();
+  const block = page
+    .locator(`[data-block-id="${id}"] [contenteditable="true"]`)
+    .first();
   await block.click({ position: { x: 2, y: 8 } });
   await page.waitForTimeout(200);
   for (let guard = 0; guard < 40; guard++) {
-    const at = await caretOffset(page);
+    const at = await caretLinear(page);
     if (at <= 0) return;
     await page.keyboard.press("ArrowLeft");
   }
@@ -142,10 +128,12 @@ await withBrowser(async (h) => {
     );
     r.ok(
       "1: the follower keeps its own indentation (never adopted)",
-      after.length === 2 && after[1]!.text === "ccc" && after[1]!.pad === cccPad,
+      after.length === 2 &&
+        after[1]!.text === "ccc" &&
+        after[1]!.pad === cccPad,
       `${cccPad} → ${after[1]?.pad}`,
     );
-    r.ok("1: the caret sits at the join", (await caretOffset(page)) === 3);
+    r.ok("1: the caret sits at the join", (await caretLinear(page)) === 3);
   }
 
   // --- 2. excess indentation: outdent to the next line's level, then merge ---
@@ -191,7 +179,10 @@ await withBrowser(async (h) => {
     );
     r.ok(
       "2 press 1: nothing else moves (the outdent adopted no follower)",
-      mid.length === 4 && mid[0]!.pad === a!.pad && mid[1]!.pad === a2!.pad && mid[3]!.pad === c!.pad,
+      mid.length === 4 &&
+        mid[0]!.pad === a!.pad &&
+        mid[1]!.pad === a2!.pad &&
+        mid[3]!.pad === c!.pad,
       shape(mid),
     );
 
@@ -220,7 +211,9 @@ await withBrowser(async (h) => {
     console.log("3 setup:", shape(before));
     r.ok(
       "3 setup: aaa / indented bbb, nothing below",
-      before.length === 2 && before[1]!.text === "bbb" && before[1]!.pad > before[0]!.pad,
+      before.length === 2 &&
+        before[1]!.text === "bbb" &&
+        before[1]!.pad > before[0]!.pad,
       shape(before),
     );
 

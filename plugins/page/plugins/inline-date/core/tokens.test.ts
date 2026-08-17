@@ -31,10 +31,15 @@ test("the createNodeFromMatch branch reproduces iso/id round-trip", () => {
   // Mirrors register.ts: m[1] -> date node, else reminder node from m[2]/m[3].
   const fromToken = (token: string) => {
     const m = MENTION_TOKEN_PATTERN.exec(token)!;
-    return m[1] ? { iso: m[1], reminderId: null } : { iso: m[3], reminderId: m[2] };
+    return m[1]
+      ? { iso: m[1], reminderId: null }
+      : { iso: m[3], reminderId: m[2] };
   };
   expect(fromToken(dateToken(ISO))).toEqual({ iso: ISO, reminderId: null });
-  expect(fromToken(reminderToken(ID, ISO))).toEqual({ iso: ISO, reminderId: ID });
+  expect(fromToken(reminderToken(ID, ISO))).toEqual({
+    iso: ISO,
+    reminderId: ID,
+  });
 });
 
 test("scanReminderTokens finds every reminder (and ignores plain dates)", () => {
@@ -55,5 +60,5 @@ test("stripInlineTokens removes all [[…]] tokens for a clean notification snip
   const text = `Ship it ${dateToken(ISO)} then review ${reminderToken(ID, ISO)}`;
   expect(stripInlineTokens(text)).toBe("Ship it then review");
   // page-link tokens are stripped too
-  expect(stripInlineTokens("see [[block-123-abc]] now")).toBe("see now");
+  expect(stripInlineTokens("see [[page:block-123-abc]] now")).toBe("see now");
 });

@@ -21,6 +21,7 @@ import {
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 import { blockText, openBlankPage } from "./support/blank-page";
+import { caretLinear, pressUntilOffset } from "./support/caret";
 
 const base = baseUrl();
 const out = arg("out", "/tmp/sm");
@@ -99,17 +100,20 @@ await withBrowser(async (h) => {
   );
 
   // --- 2. SPLIT mid-bold-word ---------------------------------------------------
-  // Caret to the very start, then 9 x ArrowRight = after "alpha bol" (inside boldy).
+  // Caret to the very start, then WALK to linear offset 9 = after "alpha bol"
+  // (inside boldy). Not a press count: the `alpha `|`boldy` seam is a mark
+  // boundary, so one press there arms the pending mark and moves nothing — nine
+  // presses advance eight positions (see `support/caret.ts`).
   // NOTE: Home / Cmd+ArrowLeft don't move the caret in headless Chromium on
   // macOS — click at the text's left edge instead (nearest position = offset 0).
   await block.click({ position: { x: 2, y: 12 } });
   await pageA.waitForTimeout(300);
-  // Slow enough for Lexical to absorb each native caret move via selectionchange
-  // (its internal selection lags the DOM under a rapid synthetic key burst).
-  for (let i = 0; i < 9; i++) {
-    await pageA.keyboard.press("ArrowRight");
-    await pageA.waitForTimeout(60);
-  }
+  await pressUntilOffset(pageA, 9);
+  r.eq(
+    "fixture: the caret is at offset 9 before the split",
+    await caretLinear(pageA),
+    9,
+  );
   await pageA.waitForTimeout(500);
   const preSplitCaret = await pageA.evaluate(() => {
     const sel = window.getSelection();
@@ -137,7 +141,11 @@ await withBrowser(async (h) => {
     const all = [...document.querySelectorAll("[data-block-id]")].filter((el) =>
       el.querySelector('[contenteditable="true"]'),
     );
-    return all.map((el) => el.getAttribute("data-block-id")).find((id) => id !== b1) ?? null;
+    return (
+      all
+        .map((el) => el.getAttribute("data-block-id"))
+        .find((id) => id !== b1) ?? null
+    );
   }, block1Id);
   console.log("block2 id:", tailBlockId);
   const tail = pageA
@@ -223,7 +231,11 @@ await withBrowser(async (h) => {
       .map((n) => n.textContent)
       .join(""),
   );
-  r.ok("merge: bold run restored to 'boldy'", mergedBold === "boldy", mergedBold);
+  r.ok(
+    "merge: bold run restored to 'boldy'",
+    mergedBold === "boldy",
+    mergedBold,
+  );
   const mergedDecorators = await head.evaluate(
     (el) => el.querySelectorAll("[data-lexical-decorator]").length,
   );

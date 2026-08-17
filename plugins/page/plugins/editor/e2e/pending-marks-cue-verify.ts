@@ -66,6 +66,7 @@ import {
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 import type { Page } from "playwright";
 import { caretState, openBlankPage } from "./support/blank-page";
+import { caretLinear, pressUntilLinear } from "./support/caret";
 
 const base = baseUrl();
 const out = arg("out", "/tmp/pending-marks-cue");
@@ -159,31 +160,6 @@ async function editableIds(page: Page): Promise<string[]> {
 const editableOf = (page: Page, blockId: string) =>
   page.locator(`[data-block-id="${blockId}"] [contenteditable="true"]`).first();
 
-/**
- * The caret's linear offset inside its own block, or -1 when it is not in one.
- * The same read `mark-boundary-verify.ts` and `backspace-indent-verify.ts` use.
- *
- * Never an assertion here — this file asserts the chip. It is how the phase-5
- * fixture WALKS to the seam, and a diagnostic when a phase fails.
- */
-async function caretLinear(page: Page): Promise<number> {
-  return page.evaluate(() => {
-    const sel = window.getSelection();
-    if (!sel || sel.rangeCount === 0 || !sel.anchorNode) return -1;
-    const anchor = sel.anchorNode;
-    const editable =
-      anchor.parentElement?.closest?.('[contenteditable="true"]') ??
-      (anchor instanceof Element
-        ? anchor.closest('[contenteditable="true"]')
-        : null);
-    if (!editable) return -1;
-    const range = document.createRange();
-    range.selectNodeContents(editable);
-    range.setEnd(anchor, sel.anchorOffset);
-    return range.toString().length;
-  });
-}
-
 // --- caret placement ----------------------------------------------------------
 
 /**
@@ -218,29 +194,6 @@ async function caretToEndOf(page: Page, id: string): Promise<void> {
     await page.keyboard.press("ArrowRight");
   }
   throw new Error(`caret never reached the end of ${id}`);
-}
-
-/**
- * Press `key` until the caret's linear offset reads `target`, returning how many
- * presses that took (-1 if it never did).
- *
- * Used only to WALK TO a fixture position, never to assert one: whether a press
- * is absorbed by a virtual stop is `mark-boundary-verify.ts`'s claim, and this
- * loop stops the moment it reads `target`, so it never spends the press phase 5
- * is about to measure.
- */
-async function pressUntilLinear(
-  page: Page,
-  key: string,
-  target: number,
-  maxPresses = 12,
-): Promise<number> {
-  for (let presses = 0; presses <= maxPresses; presses++) {
-    if ((await caretLinear(page)) === target) return presses;
-    await page.keyboard.press(key);
-    await page.waitForTimeout(80);
-  }
-  return -1;
 }
 
 // --- authoring helpers --------------------------------------------------------

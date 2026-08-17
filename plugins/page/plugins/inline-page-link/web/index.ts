@@ -3,6 +3,6 @@ import "./internal/register";
 
 export default {
   description:
-    "Inline page links: type [[ in any text block to drop a clickable page reference; stored as a [[<pageId>]] token and fed into the backlinks index.",
+    "Inline page links: type [[ in any text block to drop a clickable page reference; stored as a [[page:<pageId>]] token and fed into the backlinks index.",
   contributions: [],
 } satisfies PluginDefinition;

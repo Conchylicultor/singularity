@@ -117,7 +117,11 @@ const WHITESPACE = /\s/;
  * cancels it", so `** x**` does not bold — but that rejection must NOT abort the
  * row: an earlier position can still be a legal opener, so the scan continues.
  */
-function findOpener(line: string, tag: string, closeStart: number): number | null {
+function findOpener(
+  line: string,
+  tag: string,
+  closeStart: number,
+): number | null {
   const d = tag.length;
   for (let start = closeStart - 1; start >= 0; start--) {
     if (!line.startsWith(tag, start)) continue;
@@ -222,7 +226,10 @@ export function matchInlineFormat(
     // opener means we are INSIDE an unclosed code span, where nothing else
     // formats — so `` `a*b*c` `` stays literal until its own backtick closes it.
     // The code row itself is exempt: it is the thing doing the closing.
-    if (!row.marks.includes("code") && countBackticksBefore(line, openStart) % 2 === 1) {
+    if (
+      !row.marks.includes("code") &&
+      countBackticksBefore(line, openStart) % 2 === 1
+    ) {
       continue;
     }
 
@@ -255,7 +262,7 @@ export function matchInlineFormat(
 //   set is narrower — `\` and `)` only — because a URL is read verbatim up to
 //   its first unescaped `)`.
 //
-// PROTECTED SPANS (`\(latex\)`, `[[block-…]]`, `[[date:…]]`, …) are matched
+// PROTECTED SPANS (`\(latex\)`, `[[page:…]]`, `[[date:…]]`, …) are matched
 // FIRST and masked out of the scan in both directions: their bytes are emitted
 // verbatim on serialize (never escaped) and taken verbatim on parse (never
 // scanned for delimiters). Inline LaTeX is full of `_` and `*`, which is the
@@ -294,7 +301,9 @@ const ESCAPABLE = new Set(["\\", "*", "_", "~", "`", "[", "]", "<"]);
  * whitespace-sensitive. Derived from the table so it cannot drift from it
  * (today: everything but `underline`, which is tag-wrapped and therefore safe).
  */
-const DELIMITED_MARKS = new Set<Mark>(INLINE_SYNTAXES.flatMap((row) => [...row.marks]));
+const DELIMITED_MARKS = new Set<Mark>(
+  INLINE_SYNTAXES.flatMap((row) => [...row.marks]),
+);
 
 /**
  * `text` with every `protectedSpans` match replaced by `MASK` repeated to the
@@ -342,13 +351,22 @@ interface Wrapper {
  * cannot drift from a second copy. `inline-markdown.test.ts` pins that this
  * covers every delimited mark.
  */
-const MARK_NESTING: readonly Mark[] = ["bold", "italic", "strikethrough", "code"];
+const MARK_NESTING: readonly Mark[] = [
+  "bold",
+  "italic",
+  "strikethrough",
+  "code",
+];
 
 /** `(mark, its single-mark row's tag)` in `MARK_NESTING` order. */
-const MARK_TAGS: readonly (readonly [Mark, string])[] = MARK_NESTING.flatMap((mark) => {
-  const row = INLINE_SYNTAXES.find((r) => r.marks.length === 1 && r.marks[0] === mark);
-  return row ? [[mark, row.tag] as const] : [];
-});
+const MARK_TAGS: readonly (readonly [Mark, string])[] = MARK_NESTING.flatMap(
+  (mark) => {
+    const row = INLINE_SYNTAXES.find(
+      (r) => r.marks.length === 1 && r.marks[0] === mark,
+    );
+    return row ? [[mark, row.tag] as const] : [];
+  },
+);
 
 /** Backslash-escape a URL's `\` and `)` (see THE ESCAPING RULE). */
 function escapeUrl(url: string): string {
@@ -382,7 +400,11 @@ function escapeText(text: string, protectedSpans: RegExp[]): string {
 function wrappersOf(run: TextRun): Wrapper[] {
   const out: Wrapper[] = [];
   if (run.link) {
-    out.push({ key: `link:${run.link}`, open: "[", close: `](${escapeUrl(run.link)})` });
+    out.push({
+      key: `link:${run.link}`,
+      open: "[",
+      close: `](${escapeUrl(run.link)})`,
+    });
   }
   if (run.color && run.color !== "default") {
     out.push({
@@ -397,7 +419,8 @@ function wrappersOf(run: TextRun): Wrapper[] {
     out.push({ key: "mark:underline", open: "<u>", close: "</u>" });
   }
   for (const [mark, tag] of MARK_TAGS) {
-    if (marks.has(mark)) out.push({ key: `mark:${mark}`, open: tag, close: tag });
+    if (marks.has(mark))
+      out.push({ key: `mark:${mark}`, open: tag, close: tag });
   }
   return out;
 }
@@ -418,13 +441,16 @@ function hoistBoundaryWhitespace(runs: RichText): RichText {
     }
     const leadLen = run.text.length - run.text.trimStart().length;
     const trailLen =
-      leadLen === run.text.length ? 0 : run.text.length - run.text.trimEnd().length;
+      leadLen === run.text.length
+        ? 0
+        : run.text.length - run.text.trimEnd().length;
     if (leadLen === 0 && trailLen === 0) {
       out.push(run);
       continue;
     }
     const lead = run.text.slice(0, leadLen);
-    const trail = trailLen === 0 ? "" : run.text.slice(run.text.length - trailLen);
+    const trail =
+      trailLen === 0 ? "" : run.text.slice(run.text.length - trailLen);
     const core = run.text.slice(leadLen, run.text.length - trailLen);
     const kept = marks.filter((m) => !DELIMITED_MARKS.has(m));
     const bare = (text: string): TextRun => ({
@@ -447,7 +473,10 @@ function hoistBoundaryWhitespace(runs: RichText): RichText {
  * decorator token is never marked, so a mark may not span one. Without it the
  * round trip still converges, but takes two cycles instead of one.
  */
-function splitProtectedSpans(runs: RichText, protectedSpans: RegExp[]): RichText {
+function splitProtectedSpans(
+  runs: RichText,
+  protectedSpans: RegExp[],
+): RichText {
   if (protectedSpans.length === 0) return runs;
   const out: RichText = [];
   for (const run of runs) {
@@ -455,7 +484,8 @@ function splitProtectedSpans(runs: RichText, protectedSpans: RegExp[]): RichText
     let i = 0;
     let plainFrom = 0;
     const pushPlain = (end: number): void => {
-      if (end > plainFrom) out.push({ ...run, text: run.text.slice(plainFrom, end) });
+      if (end > plainFrom)
+        out.push({ ...run, text: run.text.slice(plainFrom, end) });
     };
     while (i < masked.length) {
       if (masked[i] !== MASK) {
@@ -484,7 +514,11 @@ function splitProtectedSpans(runs: RichText, protectedSpans: RegExp[]): RichText
  * the recursively-emitted range. The runs themselves stay FLAT — marks are a
  * per-run set, never a tree; the nesting exists only in the emitted string.
  */
-function emitRuns(runs: RichText, applied: Set<string>, protectedSpans: RegExp[]): string {
+function emitRuns(
+  runs: RichText,
+  applied: Set<string>,
+  protectedSpans: RegExp[],
+): string {
   const pendingOf = (run: TextRun): Wrapper[] =>
     wrappersOf(run).filter((w) => !applied.has(w.key));
   let out = "";
@@ -510,7 +544,10 @@ function emitRuns(runs: RichText, applied: Set<string>, protectedSpans: RegExp[]
       j += 1;
     }
     applied.add(wrapper.key);
-    out += wrapper.open + emitRuns(runs.slice(i, j), applied, protectedSpans) + wrapper.close;
+    out +=
+      wrapper.open +
+      emitRuns(runs.slice(i, j), applied, protectedSpans) +
+      wrapper.close;
     applied.delete(wrapper.key);
     i = j;
   }
@@ -524,7 +561,10 @@ function emitRuns(runs: RichText, applied: Set<string>, protectedSpans: RegExp[]
  * match emitted verbatim. Round-trips through {@link parseInlineMarkdown} — see
  * the section header for the exact statement.
  */
-export function serializeInlineMarkdown(runs: RichText, protectedSpans: RegExp[]): string {
+export function serializeInlineMarkdown(
+  runs: RichText,
+  protectedSpans: RegExp[],
+): string {
   const canonical = hoistBoundaryWhitespace(
     splitProtectedSpans(coalesce(runs), protectedSpans),
   );
@@ -559,7 +599,9 @@ function runWith(text: string, attrs: ScanAttrs): TextRun {
 /** `s.text[i]` starts a backslash escape that consumes `s.text[i + 1]`. */
 function isEscapeAt(s: Scan, i: number, to: number): boolean {
   if (s.text[i] !== "\\" || s.masked[i] === MASK) return false;
-  return i + 1 < to && s.masked[i + 1] !== MASK && ESCAPABLE.has(s.text[i + 1]!);
+  return (
+    i + 1 < to && s.masked[i + 1] !== MASK && ESCAPABLE.has(s.text[i + 1]!)
+  );
 }
 
 /** A tag construct: `<u>…</u>` or `<color value="…">…</color>`. */
@@ -579,13 +621,20 @@ const TAG_SYNTAXES: readonly TagSyntax[] = [
       const value = m[1]! as ColorToken;
       // An unrecognized colour is not a failure — parsing foreign markdown is
       // lenient, so the tag simply stays literal text.
-      return COLOR_TOKENS.includes(value) && value !== "default" ? { color: value } : null;
+      return COLOR_TOKENS.includes(value) && value !== "default"
+        ? { color: value }
+        : null;
     },
   },
 ];
 
 /** Index of the `</name>` closing the `<name…>` opened before `from`, or null. */
-function findTagClose(s: Scan, from: number, to: number, name: string): number | null {
+function findTagClose(
+  s: Scan,
+  from: number,
+  to: number,
+  name: string,
+): number | null {
   const close = `</${name}>`;
   const openPrefix = `<${name}`;
   let depth = 1;
@@ -831,7 +880,14 @@ function scanSpan(
         const link = matchLink(s, i, to);
         if (link) {
           flush();
-          scanSpan(s, link.textStart, link.textEnd, { ...attrs, link: link.url }, out, false);
+          scanSpan(
+            s,
+            link.textStart,
+            link.textEnd,
+            { ...attrs, link: link.url },
+            out,
+            false,
+          );
           i = link.end;
           continue;
         }
@@ -864,7 +920,10 @@ function scanSpan(
  * zero-length runs. See the section header for the round-trip statement and the
  * escaping rule.
  */
-export function parseInlineMarkdown(text: string, protectedSpans: RegExp[]): RichText {
+export function parseInlineMarkdown(
+  text: string,
+  protectedSpans: RegExp[],
+): RichText {
   const s: Scan = { text, masked: maskProtected(text, protectedSpans) };
   const out: RichText = [];
   scanSpan(s, 0, text.length, { marks: [] }, out, false);

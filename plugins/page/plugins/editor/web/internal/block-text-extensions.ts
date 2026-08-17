@@ -85,7 +85,7 @@ export function getBlockTextExtensions(): readonly BlockTextExtension[] {
 
 /**
  * The registered token patterns, as the `MarkdownContext.protectedSpans` the
- * markdown conversion requires. An inline decorator token (`[[block-…]]`,
+ * markdown conversion requires. An inline decorator token (`[[page:…]]`,
  * `[[date:…]]`, `\(latex\)`) is a plain substring inside `TextRun.text`, so the
  * marks-aware inline scan must be told to leave those bytes alone — inline LaTeX
  * is full of `_` and `*`.

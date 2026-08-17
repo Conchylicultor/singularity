@@ -1,6 +1,6 @@
 # page-link
 
-Renders raw `block-<id>` strings (e.g. `block-1785758168006-jdr04d`) inline as
+Renders raw `block-<id>` strings (e.g. `block-2b45803b-6360-4fec-b10e-611cf21e83ab`) inline as
 clickable chips. Agents write the bare id — no tag wrapping — and the
 active-data linkify primitive replaces matches at render time. Clicking opens
 `pageDetailPane` (`page/:pageId`) with `mode: "push"`, so the page appears as a
@@ -25,10 +25,15 @@ Unresolvable ids (trashed, purged, or a false-positive match in prose) render
 as the plain raw string — the plugin-link precedent: a chip that opens nothing
 is worse than the text the model wrote.
 
-Client-minted content blocks carry UUIDs, deliberately not matched: a bare UUID
-in prose is far more often something else.
+**The shape pattern is the one thing here that must stay loose.** A bare id has
+no delimiter around it, so unlike the editor's namespaced token this genuinely
+parses a block id's shape — against the mint's own rule that nothing may
+(`page/editor/core/block-id.ts`). It matches `block-` plus two or more
+hyphen-separated alphanumeric groups, covering the uuid mint and the retired
+`block-<epochMillis>-<base36>` form alike; pinning it tighter is how every chip
+switched off last time. `internal/pattern.test.ts` pins it to `newBlockId()`.
 
-Related but distinct: `page/inline-page-link` is the `[[pageId]]` token *inside*
+Related but distinct: `page/inline-page-link` is the `[[page:<id>]]` token *inside*
 the block editor (a Lexical node with its own typeahead). This plugin is the
 read-surface chip for a bare id written anywhere active-data renders.
 
@@ -38,7 +43,7 @@ read-surface chip for a bare id written anywhere active-data renders.
 
 - Description: Renders raw `block-<id>` strings inline as clickable chips that open the page displaying that block in the page-detail pane. Models emit the bare id, no tag wrapping needed.
 - Web:
-  - Contributes: `ActiveData.Tag` "(?<!\/)block-\d+-[a-z0-9]{4,8}(?![/.])\b" → `PageLinkChip`
+  - Contributes: `ActiveData.Tag` "(?<!\/)block-[0-9a-z]+(?:-[0-9a-z]+)+(?![0-9a-z-])(?![/.])\b" → `PageLinkChip`
   - Uses:
     - `active-data.ActiveData`
     - `apps/pages/page-tree.pageDetailPane`

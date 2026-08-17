@@ -141,7 +141,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports (values): `ConvChip`
     - **`page-link`** — Renders raw `block-<id>` strings inline as clickable chips that open the page displaying that block in the page-detail pane. Models emit the bare id, no tag wrapping needed.
       - Web:
-        - Contributes: `ActiveData.Tag` "(?<!\/)block-\d+-[a-z0-9]{4,8}(?![/.])\b" → `PageLinkChip`
+        - Contributes: `ActiveData.Tag` "(?<!\/)block-[0-9a-z]+(?:-[0-9a-z]+)+(?![0-9a-z-])(?![/.])\b" → `PageLinkChip`
         - Uses:
           - `active-data.ActiveData`
           - `apps/pages/page-tree.pageDetailPane`
@@ -18207,11 +18207,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `reminderToken`
           - `scanReminderTokens`
           - `stripInlineTokens`
-    - **`inline-page-link`** — Inline page links: type [[ in any text block to drop a clickable page reference; stored as a [[<pageId>]] token and fed into the backlinks index. Backlinks extractor for inline `[[<pageId>]]` page links embedded in any block's text.
+    - **`inline-page-link`** — Inline page links: type [[ in any text block to drop a clickable page reference; stored as a [[page:<pageId>]] token and fed into the backlinks index. Backlinks extractor for inline `[[page:<pageId>]]` page links embedded in any block's text.
       - Server:
         - Contributes:
           - `page.links.extractor` "* (all blocks)"
-          - `page.inline-token` "\[\[(block-\d+-[a-z0-9]+)\]\]"
+          - `page.inline-token` "\[\[(?:page:([^[\]\n]+)|(block-\d+-[a-z0-9]+))\]\]"
         - Uses:
           - `page/editor.Editor`
           - `page/links.PageLinks`

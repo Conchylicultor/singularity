@@ -29,7 +29,7 @@ import { createLinkedPage } from "../internal/create-linked-page";
  *
  * On select, the `[[query` is replaced with an inline page-link node (+ a trailing
  * space); for "Create '<query>'" a new page is created first. The node persists as
- * a `[[<pageId>]]` token via the block-text extension's serializer. Removing the
+ * a `[[page:<pageId>]]` token via the block-text extension's serializer. Removing the
  * `[[query` text inside the same `update()` re-derives "no trigger", so the menu
  * closes by derivation — no explicit close.
  */
@@ -78,10 +78,13 @@ export function InlinePageLinkPlugin(_: BlockTextPluginProps) {
   // 0 (not interactive) then, and the menu shows a spinner, not "No pages found".
   const options = pageOptionsResult.pending ? [] : pageOptionsResult.options;
 
-  const { surfaceOpen, activeIndex, setActiveIndex, commit } = useCaretMenu(caret, {
-    itemCount: options.length,
-    onCommit: (i) => handleSelect(options[i]!),
-  });
+  const { surfaceOpen, activeIndex, setActiveIndex, commit } = useCaretMenu(
+    caret,
+    {
+      itemCount: options.length,
+      onCommit: (i) => handleSelect(options[i]!),
+    },
+  );
 
   // Keyboard (Enter) and mouse both commit through `onCommit` via the menu's
   // `commit` (pointerdown-timed + `editor.update`-wrapped), so a click behaves

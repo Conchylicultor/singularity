@@ -67,7 +67,7 @@ import {
  * rather than given a paragraph-boundary alignment nothing would ever exercise.
  * Correct, just not identity-preserving; stated rather than hidden.
  *
- * Extensions are deliberately `[]`: inline decorator tokens (`[[pageId]]`,
+ * Extensions are deliberately `[]`: inline decorator tokens (`[[page:<pageId>]]`,
  * `\(latex\)`) are web-only Lexical node classes, so the server keeps them as
  * the plain characters they already are inside `TextRun.text`. See the note on
  * `readBlockDocRuns` for the case this does NOT cover.
@@ -189,8 +189,20 @@ function newUnitsOf(runs: RichText): NewUnit[] {
     lines.forEach((line, i) => {
       // A line break carries no marks of its own — `appendRun` emits a bare
       // `LineBreakNode` — so it rebuilds from a bare `\n` run.
-      if (i > 0) out.push({ run: { text: "\n" }, attrKey: "br", text: "", isText: false });
-      if (line) out.push({ run: { ...run, text: line }, attrKey, text: line, isText: true });
+      if (i > 0)
+        out.push({
+          run: { text: "\n" },
+          attrKey: "br",
+          text: "",
+          isText: false,
+        });
+      if (line)
+        out.push({
+          run: { ...run, text: line },
+          attrKey,
+          text: line,
+          isText: true,
+        });
     });
   }
   return out;
@@ -268,10 +280,7 @@ export function $spliceRunsInto(newRuns: RichText): void {
   // byte-identical to what a fresh seed of the same runs would produce.
   const scratch = $createParagraphNode();
   root.append(scratch);
-  $appendRuns(
-    coalesce(newMiddle.map((u) => u.run)),
-    [],
-  );
+  $appendRuns(coalesce(newMiddle.map((u) => u.run)), []);
   const built = scratch.getChildren();
 
   // Insert BEFORE removing the old middle, so the paragraph is never

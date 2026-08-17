@@ -1,7 +1,11 @@
 import { Fragment, type CSSProperties, type ReactNode } from "react";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { colorCssValue } from "@plugins/page/plugins/editor/web";
-import { runsOf, type RichText, type TextRun } from "@plugins/page/plugins/editor/core";
+import {
+  runsOf,
+  type RichText,
+  type TextRun,
+} from "@plugins/page/plugins/editor/core";
 import { PAGE_LINK_TOKEN_PATTERN } from "@plugins/page/plugins/inline-page-link/core";
 import { INLINE_MATH_TOKEN_PATTERN } from "@plugins/page/plugins/math/plugins/inline/core";
 import { KatexMath } from "@plugins/page/plugins/math/plugins/render/web";
@@ -17,7 +21,7 @@ import { PageLinkChip } from "./page-link-chip";
  *    pixel-identical.
  *  - color: `colorCssValue(token)` → the shared `var(--rt-color-<token>)` CSS var.
  *  - link: a non-editable `<a>` styled like the editor's link theme.
- *  - inline `[[<pageId>]]` page-link tokens → a read-only `<PageLinkChip>`.
+ *  - inline `[[page:<pageId>]]` page-link tokens → a read-only `<PageLinkChip>`.
  *  - inline `\(latex\)` math tokens → `<KatexMath display={false}>`.
  *
  * The mark class strings are duplicated from the editor's Lexical `theme.text`
@@ -62,7 +66,8 @@ function segmentsOf(text: string): Segment[] {
     if (link && (!math || link.index <= math.index)) {
       next = {
         index: link.index,
-        seg: { kind: "page-link", pageId: link[1]! },
+        // Group 1 = the namespaced form, group 2 = the pre-namespace one.
+        seg: { kind: "page-link", pageId: link[1] ?? link[2]! },
         length: link[0].length,
       };
     } else if (math) {
@@ -116,7 +121,9 @@ function decorateRun(run: TextRun, children: ReactNode): ReactNode {
     .filter(Boolean)
     .join(" ");
   const colorValue = colorCssValue(run.color);
-  const style: CSSProperties | undefined = colorValue ? { color: colorValue } : undefined;
+  const style: CSSProperties | undefined = colorValue
+    ? { color: colorValue }
+    : undefined;
 
   let node: ReactNode = children;
   if (marks.includes("italic")) node = <em>{node}</em>;
@@ -162,7 +169,9 @@ export function RunsRenderer({ value }: RunsRendererProps) {
             return <PageLinkChip key={si} pageId={seg.pageId} />;
           }
           if (seg.kind === "math") {
-            return <KatexMath key={si} expression={seg.latex} display={false} />;
+            return (
+              <KatexMath key={si} expression={seg.latex} display={false} />
+            );
           }
           return <Fragment key={si}>{renderText(seg.text)}</Fragment>;
         });

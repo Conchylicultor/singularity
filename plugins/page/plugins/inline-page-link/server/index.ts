@@ -6,13 +6,15 @@ import { extractInlinePageLinks } from "./internal/extract-inline-links";
 
 export default {
   description:
-    "Backlinks extractor for inline `[[<pageId>]]` page links embedded in any block's text.",
+    "Backlinks extractor for inline `[[page:<pageId>]]` page links embedded in any block's text.",
   contributions: [
     // Global extractor (no `type`): runs on every block so inline links in any
     // text-bearing block type feed the backlinks index without enumerating types.
     PageLinks.Extractor({ extract: extractInlinePageLinks }),
     // The same pattern the web extension deserializes with, so server-side
-    // markdown serialization leaves `[[<pageId>]]` bytes alone.
+    // markdown serialization leaves `[[page:<pageId>]]` bytes alone. One
+    // RegExp, and its alternation already covers the pre-namespace form — the
+    // slot takes a pattern, never a capture group, so nothing here branches.
     Editor.InlineToken({ pattern: PAGE_LINK_TOKEN_PATTERN }),
   ],
 } satisfies ServerPluginDefinition;

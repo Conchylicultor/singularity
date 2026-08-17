@@ -80,7 +80,9 @@ import {
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 import type { Page } from "playwright";
+import { pageLinkToken } from "@plugins/page/plugins/inline-page-link/core";
 import { blockText, caretState, openBlankPage } from "./support/blank-page";
+import { caretLinear, pressUntilLinear } from "./support/caret";
 import { makeRunsReader } from "./support/runs";
 
 const base = baseUrl();
@@ -159,32 +161,6 @@ async function markedTexts(
   );
 }
 
-/**
- * The caret's linear offset inside its own block, or -1 when it is not in one.
- *
- * The same read `backspace-indent-verify.ts` uses. It is the ONLY caret fact the
- * DOM can give this spec: a virtual stop and the natural position it shadows are
- * the same linear offset and the same pixel, and `selection.format` — the thing
- * that actually differs — is not exposed at all.
- */
-async function caretLinear(page: Page): Promise<number> {
-  return page.evaluate(() => {
-    const sel = window.getSelection();
-    if (!sel || sel.rangeCount === 0 || !sel.anchorNode) return -1;
-    const anchor = sel.anchorNode;
-    const editable =
-      anchor.parentElement?.closest?.('[contenteditable="true"]') ??
-      (anchor instanceof Element
-        ? anchor.closest('[contenteditable="true"]')
-        : null);
-    if (!editable) return -1;
-    const range = document.createRange();
-    range.selectNodeContents(editable);
-    range.setEnd(anchor, sel.anchorOffset);
-    return range.toString().length;
-  });
-}
-
 /** The block the caret is currently in, or null — the "did it leave" test for a walk. */
 async function caretBlockId(page: Page): Promise<string | null> {
   return page.evaluate(() => {
@@ -257,28 +233,6 @@ async function caretToEndOf(page: Page, id: string): Promise<void> {
     await page.keyboard.press("ArrowRight");
   }
   throw new Error(`caret never reached the end of ${id}`);
-}
-
-/**
- * Press `key` until the caret's linear offset reads `target`, returning how many
- * presses that took (-1 if it never did).
- *
- * Used only to WALK TO a fixture position, never to assert one: a press absorbed
- * by a virtual stop is exactly what phase 6 is measuring, so the walk must not
- * silently depend on the count it is about to test.
- */
-async function pressUntilLinear(
-  page: Page,
-  key: string,
-  target: number,
-  maxPresses = 12,
-): Promise<number> {
-  for (let presses = 0; presses <= maxPresses; presses++) {
-    if ((await caretLinear(page)) === target) return presses;
-    await page.keyboard.press(key);
-    await page.waitForTimeout(80);
-  }
-  return -1;
 }
 
 // --- authoring helpers --------------------------------------------------------
@@ -1130,7 +1084,7 @@ await withBrowser(async (h) => {
   // line, which doubles as the block the rightward walk of 11e exits into.
 
   /** The inline page-link token for THIS page — a chip pointing at itself. */
-  const CHIP = `[[${pageId}]]`;
+  const CHIP = pageLinkToken(pageId);
 
   /**
    * Paste `lines` at the end of the document; the ids of the blocks it created,

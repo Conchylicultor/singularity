@@ -13,6 +13,7 @@ import { describe, expect, test } from "bun:test";
 import { getBlockTextExtensions } from "@plugins/page/plugins/editor/web";
 import {
   coalesce,
+  newBlockId,
   runsToXmlText,
   xmlTextToRuns,
   type RichText,
@@ -40,11 +41,17 @@ function decoratorFields(
       const out: unknown[] = [];
       const walk = (n: Record<string, unknown>) => {
         if (n.type === type) out.push(n[field]);
-        for (const c of (n.children as Record<string, unknown>[] | undefined) ?? []) {
+        for (const c of (n.children as Record<string, unknown>[] | undefined) ??
+          []) {
           walk(c);
         }
       };
-      walk(editor.getEditorState().toJSON().root as unknown as Record<string, unknown>);
+      walk(
+        editor.getEditorState().toJSON().root as unknown as Record<
+          string,
+          unknown
+        >,
+      );
       return out;
     },
     { nodes: opts.nodes ? [...opts.nodes] : [] },
@@ -52,7 +59,9 @@ function decoratorFields(
 }
 
 describe("page-link inline node ↔ Y.XmlText", () => {
-  const pageId = "block-1718000000000-abc123";
+  // From the REAL mint, never a literal: a hand-written id is how the token
+  // pattern stayed pinned to a retired id shape while every link went dark.
+  const pageId = newBlockId();
 
   test("token round-trips losslessly through a materialized decorator node", () => {
     const runs: RichText = [
@@ -62,7 +71,9 @@ describe("page-link inline node ↔ Y.XmlText", () => {
 
     // Materialized as a real PageLinkInlineNode (not left as plain text) with
     // its __pageId field intact after the Yjs property sync.
-    expect(decoratorFields(xmlText, "page-link-inline", "pageId")).toEqual([pageId]);
+    expect(decoratorFields(xmlText, "page-link-inline", "pageId")).toEqual([
+      pageId,
+    ]);
 
     expect(xmlTextToRuns(xmlText, opts)).toEqual(coalesce(runs));
   });

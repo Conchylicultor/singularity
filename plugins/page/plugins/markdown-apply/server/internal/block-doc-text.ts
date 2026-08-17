@@ -1,5 +1,11 @@
 import { LinkNode } from "@lexical/link";
-import { applyUpdate, Doc, encodeStateAsUpdate, XmlElement, XmlText } from "yjs";
+import {
+  applyUpdate,
+  Doc,
+  encodeStateAsUpdate,
+  XmlElement,
+  XmlText,
+} from "yjs";
 import { db } from "@plugins/database/server";
 import {
   editYDocState,
@@ -30,7 +36,7 @@ import { $spliceRunsInto } from "./runs-splice";
  * Extensions are empty, and that has one real consequence
  * ---------------------------------------------------------------------------
  *
- * Inline decorator tokens (`[[pageId]]`, `[[date:…]]`, `\(latex\)`) are stored
+ * Inline decorator tokens (`[[page:<pageId>]]`, `[[date:…]]`, `\(latex\)`) are stored
  * INSIDE `TextRun.text` as plain characters, so runs-level work needs no
  * extensions — which is why `protectedSpans` (pure data, contributed to
  * `Editor.InlineToken`) was enough to make markdown conversion server-safe.
@@ -154,7 +160,12 @@ function readStateRuns(state: Uint8Array, blockId: string): RichText {
  */
 function canonicalRuns(runs: RichText): string {
   return JSON.stringify(
-    coalesce(runs).map((r) => [r.text, r.marks ?? [], r.color ?? "", r.link ?? ""]),
+    coalesce(runs).map((r) => [
+      r.text,
+      r.marks ?? [],
+      r.color ?? "",
+      r.link ?? "",
+    ]),
   );
 }
 

@@ -16,7 +16,7 @@ type SerializedPageLinkInlineNode = {
 
 /**
  * An inline, non-editable reference to another page, rendered as a clickable
- * chip. Lives inside a text block's Lexical tree; persists as a `[[<pageId>]]`
+ * chip. Lives inside a text block's Lexical tree; persists as a `[[page:<pageId>]]`
  * token in the block's text (see core's token helpers). Its own `getTextContent()`
  * stays empty so the token never leaks into live root-text reads (slash menu, the
  * `[[` query scan) — serialization happens via the extension's `serializeNode`.
@@ -90,7 +90,11 @@ function PageLinkInlineView({ pageId }: { pageId: string }) {
     <LinkChip
       leading={
         <Center as="span" className="size-3.5">
-          <PageIcon nodes={data?.iconSvgNodes} fallback={MdLink} className="size-3.5" />
+          <PageIcon
+            nodes={data?.iconSvgNodes}
+            fallback={MdLink}
+            className="size-3.5"
+          />
         </Center>
       }
       onClick={(e) => {

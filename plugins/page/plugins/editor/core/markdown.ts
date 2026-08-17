@@ -30,7 +30,7 @@ import type { SerializedBlock } from "./serialized-block";
  * Everything the conversion needs that is NOT a block's own business.
  *
  * `protectedSpans` is REQUIRED, not optional, and that is the whole point: the
- * inline decorator tokens (`[[block-…]]`, `[[date:…]]`, `\(latex\)`) live as
+ * inline decorator tokens (`[[page:…]]`, `[[date:…]]`, `\(latex\)`) live as
  * plain substrings inside `TextRun.text`, so a marks-aware scan that does not
  * know about them corrupts inline LaTeX — which is full of `_` and `*`. An
  * optional parameter is one a caller can silently forget; a required one makes

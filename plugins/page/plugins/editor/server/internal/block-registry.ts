@@ -79,7 +79,7 @@ export function resolveBlockHandle(
 /**
  * The registered token patterns, as the `MarkdownContext.protectedSpans` the
  * markdown conversion requires — the server twin of the web's
- * `blockTextProtectedSpans()`. An inline decorator token (`[[block-…]]`,
+ * `blockTextProtectedSpans()`. An inline decorator token (`[[page:…]]`,
  * `[[date:…]]`, `\(latex\)`) is a plain substring inside `TextRun.text`, so the
  * marks-aware inline scan must be told to leave those bytes alone; inline LaTeX
  * is full of `_` and `*`. Without it, server-side serialization corrupts every
