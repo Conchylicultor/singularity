@@ -77,6 +77,20 @@ Two notes on that pipeline:
 `ancestry` can be empty when the process exits before `ps` runs; `signid` and
 `resp` still identify it.
 
+### Baseline traffic is not silence
+
+A healthy log is not empty. Anything that rewrites files inside a checkout shows
+up — a `./singularity push` rebase, a build clearing a non-excluded path. Those
+records are the point of comparison, not noise to suppress: what matters is a
+record whose actor is not the app, arriving when a checkout goes missing.
+
+### Isolated events lag; bursts do not
+
+`awk` block-buffers its input from a pipe, so ONE stray unlink can sit unwritten
+until more traffic arrives (~20s observed). Harmless for the case this exists to
+catch: removing a checkout is ~8000 unlinks, which flushes instantly. Do not
+"fix" this by reaching for `stdbuf` — macOS does not ship it.
+
 The monitor also records Singularity's **own** legitimate reaps
 (`plugins/debug/plugins/worktree-cleanup` → `reapAttempt`). That is deliberate —
 it is the control group. A disappearance whose actor is not the server settles
@@ -92,10 +106,12 @@ LaunchAgent like the other monitors here.
 sudo eslogger exec | head -2
 ```
 
-If that fails with a permissions error, grant **Full Disk Access** to your
-terminal (System Settings → Privacy & Security → Full Disk Access) and retry.
-ES clients need root *and* TCC; this step is the whole uncertainty, so do it
-first.
+ES clients need root *and* TCC, and the two failures are distinguishable — this
+step is the whole uncertainty, so do it first:
+
+- `ES_NEW_CLIENT_RESULT_ERR_NOT_PRIVILEGED` — not root. You dropped the `sudo`.
+- `ES_NEW_CLIENT_RESULT_ERR_NOT_PERMITTED` — root, but TCC says no. Grant **Full
+  Disk Access** to your terminal (System Settings → Privacy & Security) and retry.
 
 ```sh
 # 1. install + start
@@ -111,6 +127,19 @@ sudo launchctl list | grep worktree-removal-monitor
 tail -2 ~/.singularity/logs/worktree-removal-monitor.jsonl
 cat /tmp/worktree-removal-monitor.err          # should be empty
 ```
+
+```sh
+# 3. prove it CAPTURES — a clean monitor-start proves nothing. Every failure
+#    this monitor has had was silent: it ran, logged, errored not at all, and
+#    saw zero events. So always end-to-end test with a canary.
+C=/Users/epot/__A__/dev/singularity/.claude/worktrees/<any-live-worktree>/.monitor-canary
+echo hi > "$C" && rm -f "$C"
+sleep 25 && grep monitor-canary ~/.singularity/logs/worktree-removal-monitor.jsonl
+```
+
+A plain FILE, deliberately: the app's own removal audit diffs *directories*
+directly under `.claude/worktrees/`, so a canary directory would make it file a
+spurious `worktree-removed-externally` report. A file is invisible to it.
 
 If the daemon starts but `…-monitor.err` shows an ES client error, TCC is
 denying the daemon rather than your terminal. The daemon's TCC subject is its

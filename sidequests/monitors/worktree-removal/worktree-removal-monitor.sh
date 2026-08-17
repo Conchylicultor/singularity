@@ -24,8 +24,22 @@ set -uo pipefail
 
 OUT="${WORKTREE_MONITOR_OUT:-/Users/epot/.singularity/logs/worktree-removal-monitor.jsonl}"
 ERR="${OUT%.jsonl}.err"
-MARK='/.claude/worktrees/'
 WINDOW=300 # seconds; collapse repeat (worktree,pid,kind) hits inside this
+
+# The pre-filter runs on the RAW line, before any JSON parsing, so it must
+# tolerate how the emitter escapes a path. Foundation's JSON encoder writes
+# forward slashes as `\/`, so a fixed-string `/.claude/worktrees/` matches
+# nothing — the failure is silent and total (the monitor runs, logs cleanly, and
+# sees zero events). Hence `\\?/`: match the slash with or without its escape.
+MARK='\.claude\\?/worktrees'
+# Build-churn paths, excluded for VOLUME only, NOT correctness: a real tree
+# removal also deletes plugins/, docs/, research/, so it cannot hide behind these.
+#
+# Applied inside jq against the parsed unlink path, NEVER as a grep over the raw
+# line: an exec event embeds the whole environment, and PATH nearly always
+# contains `node_modules`, so a raw-line `grep -v` silently discarded every exec
+# — including the `git worktree remove` this monitor exists to catch.
+NOISE='/(node_modules|dist|\.git|\.cache|coverage|\.turbo)/'
 
 if [ "$(id -u)" != "0" ]; then
   echo "must run as root — eslogger needs an Endpoint Security client" >&2
@@ -47,30 +61,61 @@ chown epot "$OUT" "$ERR" 2>/dev/null
 #               jq also supplies the clock: macOS awk has no systime/strftime.
 # 4. awk      — collapse the burst on the key, and capture the actor's live
 #               process ancestry on the first hit (what ES alone cannot give us).
+# Optional raw tap: WORKTREE_MONITOR_RAW=/tmp/es-raw.json captures the first 200
+# UNFILTERED events so the emitter's actual schema and escaping can be checked
+# without a second privileged run. Bounded by `head`, so it cannot fill the disk
+# if left on. Off by default.
+tap() {
+  if [ -n "${WORKTREE_MONITOR_RAW:-}" ]; then
+    tee >(head -200 >"$WORKTREE_MONITOR_RAW")
+  else
+    cat
+  fi
+}
+
 eslogger exec unlink 2>>"$ERR" \
-  | grep --line-buffered -F "$MARK" \
-  | grep --line-buffered -vE '/(node_modules|dist|\.git|\.cache|coverage|\.turbo)/' \
-  | jq -rc --unbuffered '
+  | tap \
+  | grep --line-buffered -E "$MARK" \
+  | jq -rc --unbuffered --arg noise "$NOISE" '
       def proc: .process;
+      def args: (.event.exec.args // []);
+      def execname: ((.event.exec.target.executable.path // "") | split("/") | last);
+
+      # The worktree name is read ONLY from the deleted path or the command line
+      # — never from the exec cwd or env. Every command an agent runs carries its
+      # worktree in both, so trusting them makes each agent keystroke a "hit":
+      # the first live run logged 150 junk records a minute this way.
       def wt:
-        [ (.event.unlink.target.path // ""),
-          ((.event.exec.target.args // []) | join(" ")) ]
+        [ (.event.unlink.target.path // ""), (args | join(" ")) ]
         | join(" ")
         | capture("/\\.claude/worktrees/(?<n>[^/ \"]+)").n // "?";
-      { t:        (.time // .event_time // null),
-        kind:     (if .event.exec then "exec" elif .event.unlink then "unlink" else (.event | keys[0]) end),
-        worktree: wt,
-        path:     (.event.unlink.target.path // null),
-        argv:     (.event.exec.target.args // null),
-        newexe:   (.event.exec.target.executable.path // null),
-        pid:      (proc.audit_token.pid // null),
-        ppid:     (proc.ppid // null),
-        oppid:    (proc.original_ppid // null),
-        exe:      (proc.executable.path // null),
-        signid:   (proc.signing_id // null),
-        team:     (proc.team_id // null),
-        resp:     (proc.responsible_audit_token.pid // null),
-        wallclock:(now | todate) }
+
+      # unlink is ground truth and unevadable. exec is a convenience layer that
+      # adds the literal command line, so it is kept only when the command is
+      # plausibly a removal — otherwise every `ls <worktree path>` an agent runs
+      # would land in the log.
+      def isRemoval:
+        (execname | IN("rm","rmdir","unlink","trash","mv"))
+        or ((args | join(" ")) | test("worktree[[:space:]]+(remove|prune)"));
+
+      . as $e | ($e | wt) as $w
+      | select($w != "?")
+      | select(($e.event.exec | not) or ($e | isRemoval))
+      | select((($e.event.unlink.target.path // "") | test($noise)) | not)
+      | { t:        ($e.time // null),
+          kind:     (if $e.event.exec then "exec" elif $e.event.unlink then "unlink" else ($e.event | keys[0]) end),
+          worktree: $w,
+          path:     ($e.event.unlink.target.path // null),
+          argv:     ($e.event.exec.args // null),
+          newexe:   ($e.event.exec.target.executable.path // null),
+          pid:      ($e | proc.audit_token.pid // null),
+          ppid:     ($e | proc.ppid // null),
+          oppid:    ($e | proc.original_ppid // null),
+          exe:      ($e | proc.executable.path // null),
+          signid:   ($e | proc.signing_id // null),
+          team:     ($e | proc.team_id // null),
+          resp:     ($e | proc.responsible_audit_token.pid // null),
+          wallclock:(now | todate) }
       | "\(.worktree)|\(.pid)|\(.kind)\t\(now | floor)\t\(tojson)"
     ' 2>>"$ERR" \
   | awk -F'\t' -v out="$OUT" -v window="$WINDOW" '
