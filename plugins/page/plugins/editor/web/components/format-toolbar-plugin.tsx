@@ -9,6 +9,10 @@ import {
 import { $getSelectionStyleValueForProperty } from "@lexical/selection";
 import { $isLinkNode } from "@lexical/link";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
+import {
+  hasBox,
+  selectionRect,
+} from "@plugins/primitives/plugins/dom-selection/web";
 import { ViewportOverlay } from "@plugins/primitives/plugins/css/plugins/viewport-overlay/web";
 import { Surface } from "@plugins/primitives/plugins/css/plugins/surface/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
@@ -24,7 +28,7 @@ import {
   type FormatToolbarValue,
 } from "../internal/format-toolbar-context";
 import { caretFormatCue } from "../internal/caret-format-cue";
-import { $readMarkBoundary } from "../internal/caret-geometry";
+import { $readMarkBoundary, caretLineRect } from "../internal/caret-geometry";
 import { virtualStop } from "../internal/mark-boundary";
 import { CaretFormatChip } from "./caret-format-chip";
 
@@ -157,15 +161,6 @@ function placementTransform(
 }
 
 /**
- * A rect carrying no box at all. A collapsed caret's range rect has `width ===
- * 0` but a real height, so it is NOT empty by this test and measures fine; an
- * EMPTY block has no text to measure and yields an all-zero rect.
- */
-function isEmptyRect(rect: DOMRect): boolean {
-  return rect.width === 0 && rect.height === 0;
-}
-
-/**
  * Which of the two presentations the current selection calls for, or `null` for
  * neither. Mutually exclusive by construction: `selection.isCollapsed()` picks
  * one, so there is no state in which both could be on screen.
@@ -278,13 +273,12 @@ export function FormatToolbarPlugin() {
       setPresentation(null);
       return;
     }
-    const rect = domSelection.getRangeAt(0).getBoundingClientRect();
 
     if (selection.isCollapsed()) {
       // ---- the CUE: a caret, and what it will type with ----
-      // The DOM must agree it is a caret. The rect below is read off the DOM
-      // range, so a native selection that has not collapsed with the model would
-      // hand us a whole selection's box rather than a caret's.
+      // The DOM must agree it is a caret. The anchor rect below is read off the
+      // DOM selection, so a native selection that has not collapsed with the
+      // model would hand us a whole selection's box rather than a caret's.
       if (!domSelection.isCollapsed) {
         setPresentation(null);
         return;
@@ -317,17 +311,24 @@ export function FormatToolbarPlugin() {
         setPresentation(null);
         return;
       }
-      // A collapsed caret's range rect has width 0 but a real height, so it
-      // anchors fine — except in an EMPTY block, which has no text to measure and
-      // yields an all-zero rect. Cmd+B on an empty line is a common flow, so fall
-      // back to the editor root's own box. (`caret-trigger`'s `caretAnchor` makes
-      // the same fallback for its empty-block case; it is written out here rather
-      // than imported because reaching into that barrel for it is a lint error —
-      // `no-adhoc-caret-trigger` — and this is not a trigger menu.)
-      const anchorRect = isEmptyRect(rect)
-        ? root.getBoundingClientRect()
-        : rect;
-      if (isEmptyRect(anchorRect)) {
+      // The chip hangs under the caret's own LINE, which is what
+      // `caretLineRect()` answers — the same read the arrow-key line logic uses,
+      // so the cue and the caret model agree about where the caret is instead of
+      // the cue taking a weaker one. In the common case its primary branch is
+      // `pickEdge(range.getClientRects(), "first")` on the collapsed range, i.e.
+      // the same narrow caret box this used to read off the DOM range directly,
+      // so nothing moves. The difference is the two positions where a collapsed
+      // range paints NOTHING — an empty soft line (the caret between two `<br>`s)
+      // and the boundary beside an inline decorator chip: there it borrows the
+      // neighbouring node's line box, where the previous fallback reached for the
+      // editor root's whole box and hung the chip under the ENTIRE block, wrong
+      // on both axes on any multi-line one.
+      //
+      // The root fallback survives as the genuinely last resort: a block with no
+      // painted content at all (Cmd+B on a blank line, a common flow) has no line
+      // to borrow.
+      const anchorRect = caretLineRect() ?? root.getBoundingClientRect();
+      if (!hasBox(anchorRect)) {
         setPresentation(null);
         return;
       }
@@ -343,7 +344,11 @@ export function FormatToolbarPlugin() {
       setPresentation(null);
       return;
     }
-    if (isEmptyRect(rect)) {
+    // The selected text's own box. `selectionRect()` folds "no range to read" and
+    // "a range carrying no box" into one null, so the bar has a single bail
+    // rather than a read followed by an emptiness test of its own.
+    const rect = selectionRect();
+    if (!rect) {
       setPresentation(null);
       return;
     }

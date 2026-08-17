@@ -1,6 +1,5 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 
-export { caretAnchor } from "./internal/caret-anchor";
 export { atWordBoundary } from "./internal/trigger-state";
 export type { Trigger } from "./internal/trigger-state";
 export type { CanOpenCtx } from "./internal/find-trigger";
@@ -18,6 +17,6 @@ export type { CaretTriggerMenuProps } from "./components/caret-trigger-menu";
 
 export default {
   description:
-    "Caret-anchored trigger primitive for Lexical editors: derives open-state from editor text, a single-owner arbiter, and the shared caretAnchor.",
+    "Caret-anchored trigger primitive for Lexical editors: derives open-state from editor text and a single-owner arbiter.",
   contributions: [],
 } satisfies PluginDefinition;

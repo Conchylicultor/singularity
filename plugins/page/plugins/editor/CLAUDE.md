@@ -521,6 +521,17 @@ guess. Rules that look redundant but are not:
   element offset 0 would land every hit on the block's first line. A hit resolving to
   the RootNode, a `LineBreakNode` or a **decorator** lands *beside* it — an
   element-typed point on a decorator is a caret the browser cannot paint.
+- **`caretLineRect` is exported, and the pending-marks cue anchors to it** — so the
+  chip and the arrow-key line logic answer "where is the caret" with the same read
+  rather than the cue taking a weaker one. The borrowing branches are what it buys:
+  on an empty soft line and beside an inline chip the chip sits on the caret's line,
+  and the editor-root fallback is last-resort rather than the common empty case.
+- **The guarded selection read is not this module's.** `getSelection()` →
+  `rangeCount` → `getRangeAt(0)` (which throws `IndexSizeError`) is `selectionRange()`
+  from `@plugins/primitives/plugins/dom-selection/web`, enforced by
+  `no-raw-selection-range`; `hasBox` from the same barrel is what `usable()` states.
+  Ranges this module CONSTRUCTS (`nodeLineRect`) involve no document selection and
+  are untouched.
 
 Spec: `e2e/soft-line-caret-verify.ts`. Crossing a decorator sideways belongs to
 `primitives/text-editor/decorator-nav` (mounted by both Lexical hosts), not here.
@@ -753,7 +764,10 @@ for the first reason.
   that changes neither arm stays invisible: right after `` `zz` `` autoformats
   (`preFormat` already left the caret at `{}`) the chip reads `plain` both
   before and after the ArrowRight out, and it is the ArrowLeft back INSIDE that
-  reads `code` — `e2e/pending-marks-cue-verify.ts` phase 3 is that pair. Design:
+  reads `code` — `e2e/pending-marks-cue-verify.ts` phase 3 is that pair. It
+  anchors to the caret's LINE box (`caretLineRect`), so it is correct on an empty
+  soft line and beside an inline chip; the editor-root rect is a last resort for a
+  block with nothing painted, not the common empty-block path. Design:
   [`research/2026-08-09-page-collapsed-caret-pending-marks-cue.md`](../../../../research/2026-08-09-page-collapsed-caret-pending-marks-cue.md).
 - **The inline-code chip cannot carry it instead** — settled, so it is not
   re-asked. Both caret states are the SAME DOM position (the code `TextNode`'s
@@ -2216,6 +2230,9 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
     - `primitives/css/ui-kit.ControlSizeProvider`
     - `primitives/css/ui-kit.SURFACE_LEVELS`
     - `primitives/css/viewport-overlay.ViewportOverlay`
+    - `primitives/dom-selection.hasBox`
+    - `primitives/dom-selection.selectionRange`
+    - `primitives/dom-selection.selectionRect`
     - `primitives/icon-button.IconButton`
     - `primitives/icon-picker.SvgIcon`
     - `primitives/latest-ref.useEventCallback`

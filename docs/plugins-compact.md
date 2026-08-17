@@ -287,6 +287,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
             - **`context-safety`** — context-safety lint rule: no-unstable-context-value
             - **`detached-work-safety`** — detached-work-safety lint rule: no-untracked-detached-work
             - **`dom-access-safety`** — dom-access-safety lint rule: no-module-scope-dom
+            - **`dom-selection-safety`** — dom-selection-safety lint rule: no-raw-selection-range
             - **`element-type-safety`** — element-type-safety lint rule: no-post-mount-element-type
             - **`entity-projection-safety`** — entity-projection-safety lint rule: no-hand-rolled-entity-projection
             - **`format-safety`** — format-safety lint rule: no-adhoc-prettier
@@ -480,6 +481,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`date-picker`** — Themed date-picker primitive: <Calendar> month grid, <TimeField> native clock input, <DatePickerPanel> (presets + calendar + time + clear), and <DatePickerPopover>. Day math lives in core/ and is local-calendar, never UTC.
     - **`detail-sections`** — Factory for extensible detail-view section slots with built-in Reorder DnD.
     - **`diff-view`** — Generic side-by-side / text diff renderer primitive. Exposes TextDiff (two in-memory strings), DiffView/DiffOrImageView (worktree file vs a git ref), DiffRenderer, and the shiki token helpers.
+    - **`dom-selection`** — The one sanctioned home for the guarded document-selection read: selectionRange() states the three-part guard (no selection → rangeCount 0 → getRangeAt(0) throwing IndexSizeError) that four hand-rolled copies each remembered a different subset of, selectionRect() is that range's bounding rect, and hasBox(rect) is the one statement of 'a rect with no box is not an anchor'. Named for the DOM selection to keep it apart from Lexical's model $getSelection; owns the range read too, since a copy handler wants the range for its content, not its geometry.
     - **`edit-mode-signal`** — The page-global edit-mode signal — setEditMode / getEditMode / useEditMode — as a leaf primitive whose only import is react. Everything that reorder's edit mode restyles (a bar, a wrapping chip row) reads the signal without importing the reorder feature plugin.
     - **`editable-field`** — Debounced-autosave field hook with focus tracking, flush-on-blur, and self-echo suppression. Used by task/agent detail forms.
     - **`element-size`** — Element-size ResizeObserver idiom as a primitive: useElementSize(target?) reactively measures an element's size (callback ref, getBoundingClientRect, supports attach-one-node-measure-another via a target getter), and useResizeObserver(target, onResize, {debounce, deps}) is the substrate — synchronous initial measure, RAF-debounced resize callbacks, auto cleanup. The single sanctioned home for the hand-rolled ResizeObserver-for-size idiom.
@@ -554,7 +556,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`text-editor`** — Generic Lexical-based rich text editor primitive. Plugins inject behaviors via the Plugin slot and registerNodeExtension.
       - Plugins:
         - **`caret-motion`** — The caret-crossing channel for Lexical editors: a mover that relocates a caret ACROSS something announces it in the direction of travel, and every consumer of a synthesized caret position observes that one command.
-        - **`caret-trigger`** — Caret-anchored trigger primitive for Lexical editors: derives open-state from editor text, a single-owner arbiter, and the shared caretAnchor.
+        - **`caret-trigger`** — Caret-anchored trigger primitive for Lexical editors: derives open-state from editor text and a single-owner arbiter.
         - **`decorator-nav`** — Caret crossing over inline decorator nodes for Lexical editors: one ArrowLeft/ArrowRight steps to the far side instead of stalling on the contenteditable=false span.
         - **`paste-images`** — Image paste/drop support for the text editor. Uploads images via the attachments primitive and renders inline thumbnails with lightbox expand.
     - **`tooltip`** — WithTooltip wrapper and <Kbd> keyboard shortcut badge.

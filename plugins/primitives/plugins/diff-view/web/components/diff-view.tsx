@@ -1,4 +1,11 @@
-import type { ClipboardEvent, CSSProperties, JSX, KeyboardEvent, MouseEvent, ReactNode } from "react";
+import type {
+  ClipboardEvent,
+  CSSProperties,
+  JSX,
+  KeyboardEvent,
+  MouseEvent,
+  ReactNode,
+} from "react";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Decoration,
@@ -14,6 +21,7 @@ import { useDarkMode } from "@plugins/primitives/plugins/syntax-highlight/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
+import { selectionRange } from "@plugins/primitives/plugins/dom-selection/web";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { getFileContent } from "@plugins/code-explorer/plugins/code-api/core";
 import { useFileDiff } from "../use-file-diff";
@@ -39,7 +47,10 @@ function getSide(el: Element | null): DiffSide | null {
       if (!tr?.classList.contains("diff-line")) return null;
       let idx = 0;
       let prev = el.previousElementSibling;
-      while (prev) { idx++; prev = prev.previousElementSibling; }
+      while (prev) {
+        idx++;
+        prev = prev.previousElementSibling;
+      }
       const count = tr.children.length;
       if (count === 4) return idx <= 1 ? "old" : "new";
       return null;
@@ -50,7 +61,9 @@ function getSide(el: Element | null): DiffSide | null {
 }
 
 function getSideFromNode(node: Node | null): DiffSide | null {
-  return getSide(node instanceof Element ? node : node?.parentElement ?? null);
+  return getSide(
+    node instanceof Element ? node : (node?.parentElement ?? null),
+  );
 }
 
 export const DiffRenderer = memo(function DiffRenderer({
@@ -67,7 +80,11 @@ export const DiffRenderer = memo(function DiffRenderer({
   onExpandLines?: (start: number, end: number) => void;
 }) {
   const fixedSide: DiffSide | null =
-    files[0]?.type === "add" ? "new" : files[0]?.type === "delete" ? "old" : null;
+    files[0]?.type === "add"
+      ? "new"
+      : files[0]?.type === "delete"
+        ? "old"
+        : null;
 
   const containerRef = useRef<HTMLElement>(null);
   const lastClickedSide = useRef<DiffSide | null>(null);
@@ -96,7 +113,11 @@ export const DiffRenderer = memo(function DiffRenderer({
       const anchorNode = sel.anchorNode;
       const anchorOffset = sel.anchorOffset;
       const nth = CODE_NTH_SPLIT[activeSide];
-      const cells = Array.from(container.querySelectorAll<Element>(`.diff-line > td:nth-child(${nth})`));
+      const cells = Array.from(
+        container.querySelectorAll<Element>(
+          `.diff-line > td:nth-child(${nth})`,
+        ),
+      );
       const firstCell = cells[0];
       const lastCell = cells[cells.length - 1];
       if (!firstCell || !lastCell) return;
@@ -129,14 +150,18 @@ export const DiffRenderer = memo(function DiffRenderer({
       const sel = window.getSelection();
       if (!sel) return;
 
-      const side = fixedSide ?? lastClickedSide.current ?? getSideFromNode(sel.anchorNode);
+      const side =
+        fixedSide ?? lastClickedSide.current ?? getSideFromNode(sel.anchorNode);
       if (!side) return;
 
       e.preventDefault();
       sel.removeAllRanges();
-      if (!fixedSide) containerRef.current.setAttribute("data-active-side", side);
+      if (!fixedSide)
+        containerRef.current.setAttribute("data-active-side", side);
       const nth = fixedSide ? CODE_NTH_MONO : CODE_NTH_SPLIT[side];
-      const cells = containerRef.current.querySelectorAll(`.diff-line > td:nth-child(${nth})`);
+      const cells = containerRef.current.querySelectorAll(
+        `.diff-line > td:nth-child(${nth})`,
+      );
       const first = cells[0];
       const last = cells[cells.length - 1];
       if (first && last) {
@@ -152,14 +177,15 @@ export const DiffRenderer = memo(function DiffRenderer({
     const side = lastClickedSide.current;
     if (!side || !containerRef.current) return;
 
-    const sel = window.getSelection();
-    if (!sel || sel.rangeCount === 0) return;
+    const range = selectionRange();
+    if (!range) return;
 
-    const range = sel.getRangeAt(0);
     const nth = fixedSide ? CODE_NTH_MONO : CODE_NTH_SPLIT[side];
     const lines: string[] = [];
 
-    for (const row of containerRef.current.querySelectorAll<HTMLElement>(".diff-line")) {
+    for (const row of containerRef.current.querySelectorAll<HTMLElement>(
+      ".diff-line",
+    )) {
       const cell = row.children[nth - 1] as Element | undefined;
       if (!cell || !range.intersectsNode(cell)) continue;
       const cellRange = document.createRange();
@@ -188,57 +214,80 @@ export const DiffRenderer = memo(function DiffRenderer({
   const diffElements = useMemo(() => {
     const effectiveHunks = hunks ?? files[0]?.hunks ?? [];
     return files.map((file, i) => (
-        <Diff
-          key={`${file.oldRevision}-${file.newRevision}`}
-          viewType="split"
-          diffType={file.type}
-          hunks={i === 0 ? effectiveHunks : file.hunks}
-          tokens={i === 0 ? tokens : null}
-          renderToken={renderShikiToken}
-        >
-          {(fileHunks) =>
-            fileHunks.flatMap((hunk, idx) => {
-              const prevHunk = idx > 0 ? fileHunks[idx - 1] : null;
-              const linesAbove = prevHunk
-                ? getCollapsedLinesCountBetween(prevHunk, hunk)
-                : hunk.oldStart - 1;
-              const gapStart = prevHunk ? prevHunk.oldStart + prevHunk.oldLines : 1;
-              const gapEnd = hunk.oldStart;
-              const elements: JSX.Element[] = [];
-              if (linesAbove > 0 && i === 0 && onExpandLines) {
+      <Diff
+        key={`${file.oldRevision}-${file.newRevision}`}
+        viewType="split"
+        diffType={file.type}
+        hunks={i === 0 ? effectiveHunks : file.hunks}
+        tokens={i === 0 ? tokens : null}
+        renderToken={renderShikiToken}
+      >
+        {(fileHunks) =>
+          fileHunks.flatMap((hunk, idx) => {
+            const prevHunk = idx > 0 ? fileHunks[idx - 1] : null;
+            const linesAbove = prevHunk
+              ? getCollapsedLinesCountBetween(prevHunk, hunk)
+              : hunk.oldStart - 1;
+            const gapStart = prevHunk
+              ? prevHunk.oldStart + prevHunk.oldLines
+              : 1;
+            const gapEnd = hunk.oldStart;
+            const elements: JSX.Element[] = [];
+            if (linesAbove > 0 && i === 0 && onExpandLines) {
+              elements.push(
+                <Decoration key={`skip-${idx}-${hunk.newStart}`}>
+                  <SkipSeparator
+                    count={linesAbove}
+                    onExpandTop={(n) =>
+                      onExpandLines(gapStart, Math.min(gapStart + n, gapEnd))
+                    }
+                    onExpandBottom={(n) =>
+                      onExpandLines(Math.max(gapEnd - n, gapStart), gapEnd)
+                    }
+                    onExpandAll={() => onExpandLines(gapStart, gapEnd)}
+                  />
+                </Decoration>,
+              );
+            }
+            elements.push(<Hunk key={hunk.content} hunk={hunk} />);
+            if (
+              idx === fileHunks.length - 1 &&
+              i === 0 &&
+              totalLines != null &&
+              onExpandLines
+            ) {
+              const lastOldLine = hunk.oldStart + hunk.oldLines - 1;
+              const linesBelow = totalLines - lastOldLine;
+              if (linesBelow > 0) {
                 elements.push(
-                  <Decoration key={`skip-${idx}-${hunk.newStart}`}>
+                  <Decoration key={`skip-end-${hunk.newStart}`}>
                     <SkipSeparator
-                      count={linesAbove}
-                      onExpandTop={(n) => onExpandLines(gapStart, Math.min(gapStart + n, gapEnd))}
-                      onExpandBottom={(n) => onExpandLines(Math.max(gapEnd - n, gapStart), gapEnd)}
-                      onExpandAll={() => onExpandLines(gapStart, gapEnd)}
+                      count={linesBelow}
+                      onExpandTop={(n) =>
+                        onExpandLines(
+                          lastOldLine + 1,
+                          Math.min(lastOldLine + 1 + n, totalLines + 1),
+                        )
+                      }
+                      onExpandBottom={(n) =>
+                        onExpandLines(
+                          Math.max(totalLines + 1 - n, lastOldLine + 1),
+                          totalLines + 1,
+                        )
+                      }
+                      onExpandAll={() =>
+                        onExpandLines(lastOldLine + 1, totalLines + 1)
+                      }
                     />
                   </Decoration>,
                 );
               }
-              elements.push(<Hunk key={hunk.content} hunk={hunk} />);
-              if (idx === fileHunks.length - 1 && i === 0 && totalLines != null && onExpandLines) {
-                const lastOldLine = hunk.oldStart + hunk.oldLines - 1;
-                const linesBelow = totalLines - lastOldLine;
-                if (linesBelow > 0) {
-                  elements.push(
-                    <Decoration key={`skip-end-${hunk.newStart}`}>
-                      <SkipSeparator
-                        count={linesBelow}
-                        onExpandTop={(n) => onExpandLines(lastOldLine + 1, Math.min(lastOldLine + 1 + n, totalLines + 1))}
-                        onExpandBottom={(n) => onExpandLines(Math.max(totalLines + 1 - n, lastOldLine + 1), totalLines + 1)}
-                        onExpandAll={() => onExpandLines(lastOldLine + 1, totalLines + 1)}
-                      />
-                    </Decoration>,
-                  );
-                }
-              }
-              return elements;
-            })
-          }
-        </Diff>
-      ));
+            }
+            return elements;
+          })
+        }
+      </Diff>
+    ));
   }, [files, hunks, tokens, totalLines, onExpandLines]);
 
   return (
@@ -290,7 +339,9 @@ export function DiffView({
   // expandedHunks / totalLines / fileContentRef to null, replacing the prior
   // reset effect. The remount stays owned by the primitive so no consumer can
   // forget the key.
-  const instanceKey = [worktree, path, base ?? "", head ?? "", from ?? ""].join(":");
+  const instanceKey = [worktree, path, base ?? "", head ?? "", from ?? ""].join(
+    ":",
+  );
   return (
     <DiffBody
       key={instanceKey}
@@ -340,24 +391,41 @@ function DiffBody({
   useEffect(() => {
     if (!baseHunks) return;
     const ref = base ?? "HEAD";
-    // eslint-disable-next-line promise-safety/no-bare-catch -- background preload; 404/413 are expected for deleted/large files
-    void fetchEndpoint(getFileContent, { worktree }, { query: { path: basePath, ref } })
+    /* eslint-disable promise-safety/no-bare-catch -- background preload; 404/413 are expected for deleted/large files. Block form, not `disable-next-line`: prettier splits this call across lines, which would slide a positional directive off its target. */
+    void fetchEndpoint(
+      getFileContent,
+      { worktree },
+      { query: { path: basePath, ref } },
+    )
       .then((body) => {
         fileContentRef.current = body.content;
         setTotalLines(body.content.split("\n").length);
       })
       .catch(() => {});
+    /* eslint-enable promise-safety/no-bare-catch */
   }, [baseHunks, worktree, basePath, base]);
 
   const effectiveHunks = expandedHunks ?? baseHunks;
-  const tokens = useDiffTokens(effectiveHunks, path, dark, worktree, base, head, from);
+  const tokens = useDiffTokens(
+    effectiveHunks,
+    path,
+    dark,
+    worktree,
+    base,
+    head,
+    from,
+  );
 
   const expandLines = useCallback(
     async (start: number, end: number) => {
       if (!fileContentRef.current) {
         const ref = base ?? "HEAD";
         try {
-          const body = await fetchEndpoint(getFileContent, { worktree }, { query: { path: basePath, ref } });
+          const body = await fetchEndpoint(
+            getFileContent,
+            { worktree },
+            { query: { path: basePath, ref } },
+          );
           fileContentRef.current = body.content;
           setTotalLines(fileContentRef.current.split("\n").length);
         } catch (err) {

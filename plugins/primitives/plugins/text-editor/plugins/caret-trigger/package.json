@@ -1,6 +1,6 @@
 {
   "name": "@singularity/plugin-primitives-text-editor-caret-trigger",
-  "description": "Caret-anchored trigger primitive for Lexical editors: derives open-state from editor text, a single-owner arbiter, and the shared caretAnchor.",
+  "description": "Caret-anchored trigger primitive for Lexical editors: derives open-state from editor text and a single-owner arbiter.",
   "private": true,
   "version": "0.0.1",
   "dependencies": {

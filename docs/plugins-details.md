@@ -14803,6 +14803,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - **`context-safety`** — context-safety lint rule: no-unstable-context-value
             - **`detached-work-safety`** — detached-work-safety lint rule: no-untracked-detached-work
             - **`dom-access-safety`** — dom-access-safety lint rule: no-module-scope-dom
+            - **`dom-selection-safety`** — dom-selection-safety lint rule: no-raw-selection-range
             - **`element-type-safety`** — element-type-safety lint rule: no-post-mount-element-type
             - **`entity-projection-safety`** — entity-projection-safety lint rule: no-hand-rolled-entity-projection
             - **`format-safety`** — format-safety lint rule: no-adhoc-prettier
@@ -17561,6 +17562,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/css/ui-kit.ControlSizeProvider`
           - `primitives/css/ui-kit.SURFACE_LEVELS`
           - `primitives/css/viewport-overlay.ViewportOverlay`
+          - `primitives/dom-selection.hasBox`
+          - `primitives/dom-selection.selectionRange`
+          - `primitives/dom-selection.selectionRect`
           - `primitives/icon-button.IconButton`
           - `primitives/icon-picker.SvgIcon`
           - `primitives/latest-ref.useEventCallback`
@@ -23436,6 +23440,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/css/scroll.Scroll`
           - `primitives/css/spacing.Stack`
           - `primitives/css/text.Text`
+          - `primitives/dom-selection.selectionRange`
           - `primitives/loading.Loading`
           - `primitives/syntax-highlight.getHighlighter`
           - `primitives/syntax-highlight.languageForPath`
@@ -23464,6 +23469,17 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conversations/conversation-view/jsonl-viewer/tool-call/page-tools/edit-page`
           - `review/code-review`
           - `review/plugin-changes/file-changes`
+    - **`dom-selection`** — The one sanctioned home for the guarded document-selection read: selectionRange() states the three-part guard (no selection → rangeCount 0 → getRangeAt(0) throwing IndexSizeError) that four hand-rolled copies each remembered a different subset of, selectionRect() is that range's bounding rect, and hasBox(rect) is the one statement of 'a rect with no box is not an anchor'. Named for the DOM selection to keep it apart from Lexical's model $getSelection; owns the range read too, since a copy handler wants the range for its content, not its geometry.
+      - Cross-plugin:
+        - Imported by:
+          - `page/editor`
+          - `primitives/diff-view`
+          - `primitives/text-editor/caret-trigger`
+      - Web:
+        - Exports (values):
+          - `hasBox`
+          - `selectionRange`
+          - `selectionRect`
     - **`edit-mode-signal`** — The page-global edit-mode signal — setEditMode / getEditMode / useEditMode — as a leaf primitive whose only import is react. Everything that reorder's edit mode restyles (a bar, a wrapping chip row) reads the signal without importing the reorder feature plugin.
       - Cross-plugin:
         - Imported by:
@@ -25781,9 +25797,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `announceCaretCrossing`
               - `CARET_CROSSED_COMMAND`
               - `crossCaret`
-        - **`caret-trigger`** — Caret-anchored trigger primitive for Lexical editors: derives open-state from editor text, a single-owner arbiter, and the shared caretAnchor.
+        - **`caret-trigger`** — Caret-anchored trigger primitive for Lexical editors: derives open-state from editor text and a single-owner arbiter.
           - Web:
             - Uses:
+              - `primitives/dom-selection.selectionRect`
               - `primitives/floating-surface.FloatingSurface`
               - `primitives/floating-surface.FloatingSurfaceProps`
               - `primitives/latest-ref.useEventCallback`
@@ -25799,7 +25816,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `UseForcedCaretQueryOpts`
             - Exports (values):
               - `atWordBoundary`
-              - `caretAnchor`
               - `CaretTriggerMenu`
               - `useCaretMenu`
               - `useCaretQuery`

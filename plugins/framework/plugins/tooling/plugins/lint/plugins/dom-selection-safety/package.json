@@ -1,0 +1,6 @@
+{
+  "name": "@singularity/plugin-framework-tooling-lint-dom-selection-safety",
+  "version": "0.0.1",
+  "private": true,
+  "description": "dom-selection-safety lint rule: no-raw-selection-range"
+}

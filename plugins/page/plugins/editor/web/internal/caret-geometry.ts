@@ -34,6 +34,10 @@ import {
   type RangeSelection,
   type TextNode,
 } from "lexical";
+import {
+  hasBox,
+  selectionRange,
+} from "@plugins/primitives/plugins/dom-selection/web";
 import { marksOfTextNode, type Mark } from "../../core";
 import {
   $linearCaretOffset,
@@ -221,10 +225,18 @@ function $boundaryAtLinearOffset(offset: number): MarkBoundary | null {
 // Every rect read below therefore either returns a real box or returns null, and
 // null propagates to a structural answer rather than a fabricated visual one.
 
-/** A rect the layout engine actually painted. A collapsed caret is 0-wide but never 0-tall. */
+/**
+ * A rect the layout engine actually painted. A collapsed caret is 0-wide but
+ * never 0-tall.
+ *
+ * The predicate itself is `hasBox` from `primitives/dom-selection` — the one
+ * statement of "a rect with no box is not an anchor", which this module used to
+ * spell out inline and `format-toolbar-plugin` spelled out a second time. What
+ * stays here is only the null-tolerance every caller below relies on.
+ */
 function usable(rect: DOMRect | null | undefined): DOMRect | null {
   if (!rect) return null;
-  return rect.width === 0 && rect.height === 0 ? null : rect;
+  return hasBox(rect) ? rect : null;
 }
 
 /** The topmost (`first`) or bottommost (`last`) painted box among `rects`. */
@@ -318,11 +330,18 @@ function edgeLineRect(
  * *at* the offset is what the caret sits immediately before (the `<br>` that ends
  * an empty line, the chip the caret sits in front of), and the node before it is
  * what the caret sits immediately after.
+ *
+ * Exported because it is also the ANCHOR READ for the pending-marks cue
+ * (`components/format-toolbar-plugin.tsx`): the chip has to sit under the caret's
+ * own line, and those two borrowing branches are exactly the positions a cue read
+ * off the collapsed range alone gets wrong.
  */
-function caretLineRect(): DOMRect | null {
-  const sel = window.getSelection();
-  if (!sel || sel.rangeCount === 0) return null;
-  const range = sel.getRangeAt(0);
+export function caretLineRect(): DOMRect | null {
+  // `selectionRange()` is the one home of the three-part guard (no selection →
+  // `rangeCount === 0` → `getRangeAt(0)` throwing `IndexSizeError`); this read
+  // used to carry the first two and not the third.
+  const range = selectionRange();
+  if (!range) return null;
   const direct = pickEdge(range.getClientRects(), "first");
   if (direct) return direct;
 

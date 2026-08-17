@@ -53,7 +53,10 @@
 //     does blurring the editor. Both re-armed with a fresh Cmd+E first, so
 //     neither half can pass vacuously;
 //  7. an ordinary plain paragraph never shows it — read after EVERY character,
-//     not only at the end.
+//     not only at the end;
+//  8. WHERE the chip hangs. The only phase that asserts a position, and the only
+//     one the anchor read can break: 1-7 read `getClientRects().length > 0` and
+//     nothing else, so they pass identically whatever the chip is anchored to.
 //
 // Manual-only; nothing runs this automatically.
 // Usage: bun plugins/page/plugins/editor/e2e/pending-marks-cue-verify.ts [--base <url>] [--out /tmp/pending-marks-cue]
@@ -144,6 +147,67 @@ async function cueLabel(page: Page): Promise<string | null> {
 async function settledCue(page: Page): Promise<string | null> {
   await page.waitForTimeout(CUE_SETTLE_MS);
   return cueLabel(page);
+}
+
+interface CuePlacement {
+  /** Viewport `top` of the chip itself (not of the wrapper positioning it). */
+  chipTop: number;
+  /** Viewport `top` / `bottom` of the whole block element the caret is in. */
+  blockTop: number;
+  blockBottom: number;
+}
+
+/**
+ * The chip's vertical position against the block it is describing — phase 8's
+ * only subject.
+ *
+ * Reads the CHIP's own box rather than the absolutely-positioned wrapper's: an
+ * `"above"` placement pins the wrapper's bottom edge via `translateY(-100%)`, and
+ * `getBoundingClientRect` already accounts for that, so this one read is correct
+ * on both sides of the flip.
+ */
+async function cuePlacement(
+  page: Page,
+  blockId: string,
+): Promise<CuePlacement> {
+  const placement = await page.evaluate((id) => {
+    const chip = [...document.querySelectorAll("[data-caret-format-cue]")].find(
+      (el) => el.getClientRects().length > 0,
+    );
+    const block = document.querySelector(`[data-block-id="${id}"]`);
+    if (!chip || !block) return null;
+    const c = chip.getBoundingClientRect();
+    const b = block.getBoundingClientRect();
+    return { chipTop: c.top, blockTop: b.top, blockBottom: b.bottom };
+  }, blockId);
+  if (!placement) throw new Error(`no chip and/or block ${blockId} on screen`);
+  return placement;
+}
+
+/**
+ * Does the caret stand at a position its OWN collapsed range paints nothing for?
+ *
+ * That is the precondition phase 8 needs, and it is the case the anchor read
+ * exists for — an empty soft line, where `getClientRects()` on the collapsed
+ * range is empty and the line box has to be borrowed from the neighbouring node.
+ * Asserting it before the placement read is what stops the phase passing
+ * vacuously against a caret that never reached the blank line.
+ *
+ * The range is rebuilt from `(anchorNode, anchorOffset)` rather than taken from
+ * `getRangeAt(0)`: identical for a collapsed selection, and `getRangeAt` is
+ * routed through `primitives/dom-selection` everywhere in this repo.
+ */
+async function caretPaintsNothing(page: Page): Promise<boolean> {
+  return page.evaluate(() => {
+    const sel = window.getSelection();
+    if (!sel || !sel.anchorNode || !sel.isCollapsed) return false;
+    const range = document.createRange();
+    range.setStart(sel.anchorNode, sel.anchorOffset);
+    range.collapse(true);
+    return ![...range.getClientRects()].some(
+      (rc) => rc.width !== 0 || rc.height !== 0,
+    );
+  });
 }
 
 // --- DOM reads ----------------------------------------------------------------
@@ -492,8 +556,57 @@ await withBrowser(async (h) => {
     );
   }
 
+  // --- Phase 8: the chip hangs on the CARET'S LINE, not under the block ------
+  //
+  // Every phase above reads the chip's LABEL; this one reads where it is. The
+  // fixture is a block with THREE visual lines — "alpha" / "" / "omega" — with
+  // the caret parked on the empty middle one, which is a position a collapsed
+  // range paints nothing for. So the cue's anchor read cannot use the caret's own
+  // range and has to answer some other way, and which way it answers is the whole
+  // question:
+  //
+  //   - the caret's LINE box (today): the chip hangs between lines 2 and 3, i.e.
+  //     ABOVE the block's bottom edge, right under the line it describes;
+  //   - the editor root's whole box (before): the chip hangs ~8px BELOW the
+  //     entire block, two lines away from the caret — wrong on both axes, and
+  //     invisible to a probe that only asks whether the chip is painted.
+  //
+  // Hence a comparison rather than a pixel: the chip's top must sit above the
+  // block's bottom. On this fixture the two readings are a full line apart, so
+  // the assertion has real margin without pinning any coordinate.
+  const p8 = await enterNewBlock(page, pageId);
+  await page.keyboard.type("alpha", { delay: 25 });
+  await page.keyboard.press("Shift+Enter");
+  await page.keyboard.press("Shift+Enter");
+  await page.keyboard.type("omega", { delay: 25 });
+  await page.waitForTimeout(400);
+  // ArrowUp off the last line: the block's own line logic keeps the caret inside
+  // the block (only its TOP line crosses upward), so this lands on the blank one.
+  await page.keyboard.press("ArrowUp");
+  await page.waitForTimeout(400);
+  r.ok(
+    "P8 the caret reached the empty soft line (its own range paints nothing)",
+    await caretPaintsNothing(page),
+    JSON.stringify(await caretState(editableOf(page, p8))),
+  );
+
+  await page.keyboard.press(CODE_MARK);
+  r.eq(
+    "P8 Cmd+E on the blank line arms the chip",
+    await settledCue(page),
+    "code",
+  );
+
+  const p8Place = await cuePlacement(page, p8);
+  await snap(page, out, "8-empty-soft-line-anchor");
+  r.ok(
+    "P8 the chip hangs on the caret's line, not below the whole block",
+    p8Place.chipTop < p8Place.blockBottom && p8Place.chipTop > p8Place.blockTop,
+    JSON.stringify(p8Place),
+  );
+
   console.log("PAGE_URL:", pageUrl);
-  console.log("BLOCK_IDS:", JSON.stringify({ p1, p3, p4, p5, p6, p7 }));
+  console.log("BLOCK_IDS:", JSON.stringify({ p1, p3, p4, p5, p6, p7, p8 }));
 
   r.finish();
 });

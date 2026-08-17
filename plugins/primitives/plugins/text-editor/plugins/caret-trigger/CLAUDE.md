@@ -111,8 +111,15 @@ and hand-rolled a `FloatingSurface` of `<Row onClick>`s, which rendered in the
 right place but had no `activeIndex`, no arrows and no Enter — a mouse-only
 menu, plus a duplicate `KEY_ESCAPE_COMMAND`. **A non-trigger-char open signal is
 not a reason to leave the primitive**; it is the `useForcedCaretQuery` case.
-`no-adhoc-caret-trigger` now enforces that: importing `caretAnchor` or
-`CaretTriggerMenu` without calling `useCaretMenu` is an error.
+`no-adhoc-caret-trigger` now enforces that: importing `CaretTriggerMenu` **or
+`FloatingSurface`** without calling `useCaretMenu` is an error. `caretAnchor` is
+plugin-private now — a thin live-anchor adapter over `selectionRect()` from
+`@plugins/primitives/plugins/dom-selection/web`, which owns the guarded read — so
+it is not importable at all. Aiming the rule at the panel rather than at the
+anchor helper is strictly stronger: `FloatingSurface`'s only production consumer
+is `CaretTriggerMenu`, so the rule now catches a hand-rolled caret menu *however
+it obtained its anchor* — including one anchored to an element rect, which never
+touched `caretAnchor` and used to slip through.
 
 ## The three gates (they are genuinely distinct)
 
@@ -237,9 +244,10 @@ bun plugins/primitives/plugins/text-editor/plugins/caret-trigger/e2e/caret-trigg
 
 ## Plugin reference
 
-- Description: Caret-anchored trigger primitive for Lexical editors: derives open-state from editor text, a single-owner arbiter, and the shared caretAnchor.
+- Description: Caret-anchored trigger primitive for Lexical editors: derives open-state from editor text and a single-owner arbiter.
 - Web:
   - Uses:
+    - `primitives/dom-selection.selectionRect`
     - `primitives/floating-surface.FloatingSurface`
     - `primitives/floating-surface.FloatingSurfaceProps`
     - `primitives/latest-ref.useEventCallback`
@@ -255,7 +263,6 @@ bun plugins/primitives/plugins/text-editor/plugins/caret-trigger/e2e/caret-trigg
     - `UseForcedCaretQueryOpts`
   - Exports (values):
     - `atWordBoundary`
-    - `caretAnchor`
     - `CaretTriggerMenu`
     - `useCaretMenu`
     - `useCaretQuery`

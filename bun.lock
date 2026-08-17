@@ -2693,6 +2693,10 @@
       "name": "@singularity/plugin-framework-tooling-lint-dom-access-safety",
       "version": "0.0.1",
     },
+    "plugins/framework/plugins/tooling/plugins/lint/plugins/dom-selection-safety": {
+      "name": "@singularity/plugin-framework-tooling-lint-dom-selection-safety",
+      "version": "0.0.1",
+    },
     "plugins/framework/plugins/tooling/plugins/lint/plugins/element-type-safety": {
       "name": "@singularity/plugin-framework-tooling-lint-element-type-safety",
       "version": "0.0.1",
@@ -3860,6 +3864,10 @@
     },
     "plugins/primitives/plugins/diff-view": {
       "name": "@singularity/plugin-primitives-diff-view",
+      "version": "0.0.1",
+    },
+    "plugins/primitives/plugins/dom-selection": {
+      "name": "@singularity/plugin-primitives-dom-selection",
       "version": "0.0.1",
     },
     "plugins/primitives/plugins/edit-mode-signal": {
@@ -6763,6 +6771,8 @@
 
     "@singularity/plugin-framework-tooling-lint-dom-access-safety": ["@singularity/plugin-framework-tooling-lint-dom-access-safety@workspace:plugins/framework/plugins/tooling/plugins/lint/plugins/dom-access-safety"],
 
+    "@singularity/plugin-framework-tooling-lint-dom-selection-safety": ["@singularity/plugin-framework-tooling-lint-dom-selection-safety@workspace:plugins/framework/plugins/tooling/plugins/lint/plugins/dom-selection-safety"],
+
     "@singularity/plugin-framework-tooling-lint-element-type-safety": ["@singularity/plugin-framework-tooling-lint-element-type-safety@workspace:plugins/framework/plugins/tooling/plugins/lint/plugins/element-type-safety"],
 
     "@singularity/plugin-framework-tooling-lint-entity-projection-safety": ["@singularity/plugin-framework-tooling-lint-entity-projection-safety@workspace:plugins/framework/plugins/tooling/plugins/lint/plugins/entity-projection-safety"],
@@ -7290,6 +7300,8 @@
     "@singularity/plugin-primitives-detail-sections": ["@singularity/plugin-primitives-detail-sections@workspace:plugins/primitives/plugins/detail-sections"],
 
     "@singularity/plugin-primitives-diff-view": ["@singularity/plugin-primitives-diff-view@workspace:plugins/primitives/plugins/diff-view"],
+
+    "@singularity/plugin-primitives-dom-selection": ["@singularity/plugin-primitives-dom-selection@workspace:plugins/primitives/plugins/dom-selection"],
 
     "@singularity/plugin-primitives-edit-mode-signal": ["@singularity/plugin-primitives-edit-mode-signal@workspace:plugins/primitives/plugins/edit-mode-signal"],
 
