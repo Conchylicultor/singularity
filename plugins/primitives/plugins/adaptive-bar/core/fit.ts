@@ -71,6 +71,45 @@ export interface FitResult {
   iterations: number;
 }
 
+/** Never fewer rounds than the constant this replaced, so no row gets a smaller budget than before. */
+const MIN_PASS_BUDGET = 4;
+/**
+ * And never more than this. Every round costs at least one nested synchronous
+ * React update, and React's own limit is 50 — so the budget has to stay clear of
+ * it by a margin, or a slow search becomes a dead pane instead of a warning.
+ */
+const MAX_PASS_BUDGET = 16;
+
+/**
+ * How many placement-changing rounds one search may legitimately need, derived
+ * from the row it is searching rather than fixed.
+ *
+ * The quantity is **the total number of steps this row has to give**: each item
+ * can be demoted through its remaining rungs and then, if it may, out of the row
+ * altogether. A round does not necessarily spend one step per item — the
+ * **one estimated step per pass** rule (see {@link Placed.spentEstimatedStep})
+ * caps each item at one *unmeasured* step per call, and the widths an item
+ * reveals by moving can change what its neighbours need — so the honest bound is
+ * the sum, plus one round for a ladder that arrives late (`useActionForm`
+ * declares on a passive effect, so the first round or two of a cold start runs
+ * with the default one-rung ladder) and one for the round that re-derives the
+ * same answer and thereby converges.
+ *
+ * Deliberately not a constant. The constant it replaces (`MAX_PASSES = 4`)
+ * carried a docstring naming the ladder depth, but ladder depth is 2 for every
+ * bar in this repo — so it was really a fixed 4 with no stated derivation and,
+ * as it turned out, no margin: a cold start on a real row costs 2 rounds, a late
+ * ladder a third and hysteresis a fourth, and the fifth was a filed fault.
+ */
+export function passBudget(items: readonly FitItem[]): number {
+  let steps = 0;
+  for (const item of items) {
+    if (item.absent === true) continue;
+    steps += item.inlineWidths.length - 1 + (item.evictable ? 1 : 0);
+  }
+  return Math.min(MAX_PASS_BUDGET, Math.max(MIN_PASS_BUDGET, steps + 2));
+}
+
 /**
  * How confidently we know an item's width at one rung.
  *
@@ -277,8 +316,28 @@ export function assign(input: FitInput): FitResult {
     .filter((p) => !frozen.has(p.item.id))
     .sort((a, b) => b.item.yieldRank - a.item.yieldRank || b.index - a.index);
 
+  /**
+   * An item we cannot size is an item we must not move.
+   *
+   * `unbounded` means nothing is known about this item at this rung or any wider
+   * one, so it contributes 0 to `sum` — demoting it cannot reduce a total it was
+   * never counted in, and evicting it makes the ignorance PERMANENT: only an
+   * inline node is measurable, so an item in the panel can never teach the
+   * ledger what it costs.
+   *
+   * That is not a hypothetical. `staleOthers` downgrades an item's other rungs
+   * the moment its current one measures differently, so an occupant sitting at
+   * its compact rung whose content changes leaves rung 0 unmeasured-and-
+   * unbounded. Without this clause the very next fit seeds it there, `doesFit`
+   * is false forever, every evictable occupant goes to the panel, the placement
+   * is stable — so the bar CONVERGES on the floor, files nothing, and can never
+   * find its way back. Keeping the item inline costs one cramped pass and the
+   * next one measures it.
+   */
   const isDemotable = (p: Placed): boolean =>
-    !p.spentEstimatedStep && nextState(p) !== null;
+    !p.spentEstimatedStep &&
+    p.contributedKind !== "unbounded" &&
+    nextState(p) !== null;
 
   let iterations = 0;
   let cursor = 0;

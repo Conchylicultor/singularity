@@ -1,5 +1,21 @@
 export type { FitItem, FitInput, FitResult } from "./fit";
-export { assign } from "./fit";
+export { assign, passBudget } from "./fit";
+
+export type {
+  ConvergenceEvidence,
+  MovedWidth,
+  PremiseShift,
+  Round,
+  RoundItem,
+} from "./round-trace";
+export {
+  describeEvidence,
+  isShifted,
+  premiseShift,
+  pushRound,
+  recordMoves,
+  summarizeRounds,
+} from "./round-trace";
 
 export type {
   MeasuredWidth,

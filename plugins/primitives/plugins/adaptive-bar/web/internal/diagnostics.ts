@@ -1,4 +1,8 @@
 import { defineReportSink } from "@plugins/primitives/plugins/report-sink/core";
+import type { ConvergenceEvidence } from "@plugins/primitives/plugins/adaptive-bar/core";
+// Type-only, and therefore not a runtime cycle: the fault body names the bar's
+// overflow mode, and the mode is declared where the props that carry it are.
+import type { AdaptiveBarOverflow } from "./adaptive-bar";
 
 /**
  * The ways an adaptive bar is *wrong*, as opposed to merely cramped.
@@ -13,16 +17,47 @@ export type AdaptiveBarFaultKind =
   | "no-slack"
   /** The fit said "everything fits" and the rendered row still overflows the box the bar was given. */
   | "row-overflow"
-  /** `MAX_PASSES` measure→decide rounds and the answer still changed. */
+  /** The round budget ran out and the answer was still changing. */
   | "no-convergence"
   /** A container holds an `<iframe>` and this browser has no `moveBefore`, so relocating it would reload it. */
   | "iframe-relocation";
 
 export interface AdaptiveBarFault {
   kind: AdaptiveBarFaultKind;
-  /** The bar's accessible label — the only name a generic primitive has for itself. */
+  /** The bar's accessible label — the name its own consumer gave it. */
   label: string;
+  /**
+   * Which composition this bar belongs to.
+   *
+   * The label alone is not an identity. It defaults to `"More"`, and two
+   * unrelated bars on one route take that default today (the app tab strip and
+   * the pinned prompt-template chips), so a fault fingerprinted on the label
+   * collapses them onto one row and hides the second behind the first's count.
+   *
+   * Read from the DOM at fault time as the innermost UI-context node above the
+   * bar's root — `apps-core.tab-bar@apps.tab-bar` for one of those two,
+   * `conversations.conversation-view.prompt-templates@prompt-editor.floating-action`
+   * for the other. Absent where nothing carries lineage: a fixture, a story, a
+   * bare test render.
+   */
+  origin?: string;
+  /** The full lineage path, for the reader who needs more than one name. */
+  originPath?: string;
+  /**
+   * The bar's overflow mode.
+   *
+   * Carried, and fingerprinted, because it is the one discriminator that costs
+   * nothing and already separates today's two colliding `"More"` bars — the tab
+   * strip is `scroll`, the prompt-template chips are `clip`. It also decides
+   * what a fault's remedy is allowed to do, so a reader needs it.
+   */
+  overflow?: AdaptiveBarOverflow;
   message: string;
+  /**
+   * What the bar established about a `no-convergence`, so nobody has to
+   * reproduce a transient. Absent for the other kinds, which have no rounds.
+   */
+  evidence?: ConvergenceEvidence;
 }
 
 /**
@@ -50,14 +85,15 @@ export function reportFault(fault: AdaptiveBarFault): void {
  * For the faults that mean the bar's own contract is broken — it was given no
  * slack, or its fit math disagrees with the layout engine. Those must not be
  * lived with: in dev the throw is the fastest possible feedback, and in prod we
- * file the alert and take the floor layout instead, because taking down a pane
- * header over a layout disagreement is worse than a cramped row plus a report.
+ * file the alert and take a cramped-but-usable layout instead, because taking
+ * down a pane header over a layout disagreement is worse than a cramped row
+ * plus a report.
  *
- * The caller applies the floor BEFORE calling this, so the two orders are not
+ * The caller commits that layout BEFORE calling this, so the two orders are not
  * interchangeable: throwing first would leave the row in the state that was
- * already known to be wrong. Committing the floor also SURRENDERS the bar (see
- * `commitFloor`) — without that, "file and keep going" was a render loop, and
- * the prod outcome was the dead pane the throw was meant to avoid.
+ * already known to be wrong. Committing it also SURRENDERS the bar (see
+ * `commitSurrender`) — without that, "file and keep going" was a render loop,
+ * and the prod outcome was the dead pane the throw was meant to avoid.
  */
 export function failLoudly(fault: AdaptiveBarFault): void {
   reportFault(fault);
@@ -67,11 +103,58 @@ export function failLoudly(fault: AdaptiveBarFault): void {
 }
 
 /**
- * How many measure→decide rounds one resize episode may take before we stop
- * believing the algorithm. Four is generous: a converging pass costs one rung
- * step, and the ladder is at most three rungs deep.
+ * How far apart two widths have to be before they are different widths.
+ *
+ * Rects are fractional, and a fraction of a pixel is layout rounding rather
+ * than a widget resizing itself or a row being given more room. Without this
+ * tolerance every round on a real page reads as a changed premise — the same
+ * mistake as counting a changed premise as a failed round, inverted.
+ *
+ * Must stay strictly below {@link HYSTERESIS_PX}, which is the width change a
+ * surrendered bar needs before it re-arms. If the two ever crossed, a width
+ * could be "a new premise, start counting again" and "not a resize, stay
+ * surrendered" at the same time.
  */
-export const MAX_PASSES = 4;
+export const WIDTH_EPSILON_PX = 0.5;
+
+/**
+ * How many rounds of evidence a fault carries.
+ *
+ * Enough to show a cycle (which needs a repeat) and the widths either side of a
+ * move; not a log. The ring is kept for every bar on every pass, so it is
+ * numbers only and it is short.
+ */
+export const TRACE_ROUNDS = 6;
+
+/**
+ * How many times the premise may move without the bar ever reaching a settled
+ * answer.
+ *
+ * Tolerating a moving premise — a font landing, a late icon, a ladder arriving
+ * on a passive effect one round after the item it belongs to — is the whole
+ * point of scoping the round counter to it. But a bar whose widths never stop
+ * moving is a real pathology, distinct from a search that will not settle, and
+ * it deserves to be said in those words rather than blamed on the fit.
+ */
+export const MAX_PREMISE_SHIFTS = 6;
+
+/**
+ * The round counter nothing resets, and the reason a resettable one is safe.
+ *
+ * `reconcile` re-enters itself **synchronously** through its layout effect
+ * after every commit — there is no frame boundary anywhere in the chain — so a
+ * bar whose occupants resize themselves on each of those commits would reset
+ * the per-premise counter forever. Not hypothetically: `:hover` is recomputed
+ * when a container is re-parented out from under the pointer, and a widget with
+ * its own measuring layout effect re-measures whenever its parent re-renders.
+ * Neither is expressible as "the search failed"; both are unbounded without
+ * this.
+ *
+ * Well under React's own nested-update limit (50), because every round costs at
+ * least one nested synchronous update and some cost more. That margin is the
+ * difference between a warning in Debug → Reports and a dead pane.
+ */
+export const HARD_ROUND_CEILING = 20;
 
 /**
  * How many times one bar may give up and try again before it stays given up.

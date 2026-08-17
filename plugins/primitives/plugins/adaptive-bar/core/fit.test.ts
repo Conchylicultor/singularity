@@ -8,7 +8,7 @@
  */
 
 import { describe, expect, test } from "bun:test";
-import { assign, type FitInput, type FitItem } from "./fit";
+import { assign, passBudget, type FitInput, type FitItem } from "./fit";
 
 function item(over: Partial<FitItem> & { id: string }): FitItem {
   return {
@@ -515,5 +515,88 @@ describe("assign — termination", () => {
     const r = assign(fit({ items, available: 0, gap: 4, triggerPx: 32 }));
     expect(performance.now() - started).toBeLessThan(3000);
     expect(r.iterations).toBe(3 * n);
+  });
+});
+
+describe("an item whose width is unknown at every rung", () => {
+  /**
+   * The absorbing state, as a test.
+   *
+   * `staleOthers` downgrades an item's OTHER rungs the moment its current one
+   * measures differently — so an occupant sitting at its compact rung whose
+   * content changes leaves rung 0 with no exact width and nothing wider to bound
+   * it. Before the demotability rule below, the very next fit seeded it there,
+   * `doesFit` was false forever, every evictable occupant went to the panel, the
+   * placement was stable — so the bar CONVERGED on the floor, filed nothing, and
+   * could never recover: only an inline node is measurable, so the width it was
+   * missing could never be learned.
+   */
+  test("stays in the row rather than being evicted into permanent ignorance", () => {
+    const r = assign(
+      fit({
+        available: 100,
+        items: [
+          item({ id: "known", inlineWidths: [80] }),
+          item({
+            id: "unknown",
+            inlineWidths: [undefined, 40],
+            currentRung: 1,
+          }),
+        ],
+      }),
+    );
+    // It cannot be sized, so it cannot be blamed for the overflow and must not
+    // be moved somewhere it can never be measured again.
+    expect(r.placement.get("unknown")).toBe(0);
+    // Everything sizeable still gives what it can, and the row is honest about
+    // not fitting.
+    expect(r.placement.get("known")).toBe(null);
+    expect(r.fits).toBe(false);
+  });
+
+  test("an unmeasurable item does not stop the others from compacting", () => {
+    const r = assign(
+      fit({
+        available: 100,
+        items: [
+          item({ id: "a", inlineWidths: [80, 30], evictable: false }),
+          item({ id: "unknown", inlineWidths: [undefined], currentRung: 0 }),
+        ],
+      }),
+    );
+    expect(r.placement.get("a")).toBe(1);
+    expect(r.placement.get("unknown")).toBe(0);
+  });
+});
+
+describe("passBudget — how many rounds a search may legitimately take", () => {
+  test("never below the constant it replaced", () => {
+    expect(passBudget([])).toBe(4);
+    expect(passBudget([item({ id: "a", inlineWidths: [100] })])).toBe(4);
+  });
+
+  test("grows with the steps the row actually has to give", () => {
+    // Six two-rung evictable occupants: each can compact once and leave once, so
+    // the search may need to walk twelve steps — and a fixed budget of four
+    // reported that as a search that does not terminate.
+    const items = Array.from({ length: 6 }, (_, k) =>
+      item({ id: `i${k}`, inlineWidths: [100, 60] }),
+    );
+    expect(passBudget(items)).toBe(14);
+  });
+
+  test("an absent occupant costs nothing: it is not in the row", () => {
+    const items = [
+      item({ id: "a", inlineWidths: [100, 60] }),
+      item({ id: "gone", inlineWidths: [100, 60], absent: true }),
+    ];
+    expect(passBudget(items)).toBe(4);
+  });
+
+  test("clamped well below React's own nested-update limit", () => {
+    const items = Array.from({ length: 200 }, (_, k) =>
+      item({ id: `i${k}`, inlineWidths: [100, 60, 30] }),
+    );
+    expect(passBudget(items)).toBe(16);
   });
 });

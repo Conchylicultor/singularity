@@ -19601,6 +19601,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/element-size.useResizeObserver`
           - `primitives/icon-button.IconButton`
           - `primitives/popup-open.PopupOpenScope`
+          - `primitives/ui-context.collectLineage`
         - Exports (types):
           - `AdaptiveBarAlign`
           - `AdaptiveBarCollapsedProps`
@@ -19626,11 +19627,16 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `reports/adaptive-bar`
       - Core:
         - Exports (types):
+          - `ConvergenceEvidence`
           - `DockMove`
           - `FitInput`
           - `FitItem`
           - `FitResult`
           - `MeasuredWidth`
+          - `MovedWidth`
+          - `PremiseShift`
+          - `Round`
+          - `RoundItem`
           - `Span`
           - `WidthCache`
           - `WidthEstimate`
@@ -19639,13 +19645,20 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `WriteResult`
         - Exports (values):
           - `assign`
+          - `describeEvidence`
           - `dropItem`
           - `emptyWidthCache`
           - `estimate`
           - `inlineWidthsFor`
+          - `isShifted`
           - `overflowPx`
+          - `passBudget`
           - `planMoves`
+          - `premiseShift`
+          - `pushRound`
+          - `recordMoves`
           - `staleOthers`
+          - `summarizeRounds`
           - `widthKey`
           - `widthKeyItemId`
           - `write`
@@ -26078,6 +26091,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `improve/element-picker`
           - `layouts/full-pane`
           - `layouts/miller`
+          - `primitives/adaptive-bar`
           - `primitives/error-boundary`
           - `reports/crash`
           - `reports/render-loop`
@@ -26809,7 +26823,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `stats/cost`
       - `tasks/reports-investigation`
   - Plugins:
-    - **`adaptive-bar`** — Adaptive-bar collector: drains the adaptive-bar primitive's adaptiveBarReportSink into a deduped report whenever a bar's layout contract is violated (it was given no slack, its fit disagrees with the layout engine, its placement never converged, or it refused to relocate an iframe), plus the Debug → Reports summary view. Adaptive-bar report kind: validates the adaptive-bar primitive's layout-contract fault payloads (no-slack = the bar was given no room to give, row-overflow = on a converged pass the fit blessed the row as fitting and the occupants still stick out of the bar's own content box, no-convergence = the placement never settled, iframe-relocation = a frame the browser cannot move without reloading), fingerprints by fault + bar label (excluding the per-fault-constant message, so one broken bar = one row), and renders a per-fault task stating what the bar did instead and the consumer-side fix. Re-arms periodically (6h) since a broken host re-produces the fault on every mount.
+    - **`adaptive-bar`** — Adaptive-bar collector: drains the adaptive-bar primitive's adaptiveBarReportSink into a deduped report whenever a bar's layout contract is violated (it was given no slack, its fit disagrees with the layout engine, its placement never converged, or it refused to relocate an iframe), plus the Debug → Reports summary view. Adaptive-bar report kind: validates the adaptive-bar primitive's layout-contract fault payloads (no-slack = the bar was given no room to give, row-overflow = on a converged pass the fit blessed the row as fitting and the occupants still stick out of the bar's own content box, no-convergence = the placement never settled, iframe-relocation = a frame the browser cannot move without reloading), fingerprints by fault + origin (the innermost UI-context node above the bar's root, falling back to the label that several unrelated bars share) + overflow mode, excluding the per-occurrence lineage path, round evidence and message so one broken bar = one row, and renders a per-fault task — what the bar did instead, the consumer-side fix, and for no-convergence the recorded rounds naming which occupant resized itself. Re-arms periodically (6h) since a broken host re-produces the fault on every mount.
       - Web:
         - Contributes:
           - `Core.Root` → `AdaptiveBarCollector`

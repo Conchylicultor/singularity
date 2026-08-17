@@ -11,17 +11,32 @@ import {
 import { MdMoreHoriz } from "react-icons/md";
 import {
   assign,
+  describeEvidence,
   dropItem,
   emptyWidthCache,
   estimate,
   inlineWidthsFor,
+  isShifted,
   overflowPx,
+  passBudget,
+  premiseShift,
+  pushRound,
+  recordMoves,
   staleOthers,
+  summarizeRounds,
   write,
   type FitItem,
+  type MovedWidth,
+  type Round,
+  type RoundItem,
   type Span,
   type WidthCache,
 } from "@plugins/primitives/plugins/adaptive-bar/core";
+import {
+  formatLineageNode,
+  formatLineagePath,
+} from "@plugins/primitives/plugins/ui-context/core";
+import { collectLineage } from "@plugins/primitives/plugins/ui-context/web";
 import type {
   ActionForm,
   ShrinkLadder,
@@ -41,9 +56,12 @@ import { AdaptiveBarItem } from "./bar-item";
 import {
   failLoudly,
   reportFault,
+  HARD_ROUND_CEILING,
   HYSTERESIS_PX,
-  MAX_PASSES,
+  MAX_PREMISE_SHIFTS,
   MAX_SURRENDERS,
+  TRACE_ROUNDS,
+  WIDTH_EPSILON_PX,
 } from "./diagnostics";
 import { DEFAULT_LADDER, formFor, inlineRungsOf, yieldRankOf } from "./ladder";
 import { readColumnGap, useLayoutMeasured, useMeasureWidth } from "./measure";
@@ -224,6 +242,63 @@ interface Surrender {
   count: { current: number };
 }
 
+/**
+ * One search: everything scoped to "this row, this question, until the answer
+ * stops moving".
+ *
+ * Bundled for the same reason {@link Surrender} is — a caller able to reset half
+ * of it would file a fault describing a different episode, or reset the counter
+ * that is the termination guarantee. {@link startEpisode} takes all of it or
+ * none.
+ *
+ * The two counters are deliberately different, and merging them would give back
+ * one of the two bugs this exists to fix:
+ *
+ * - `rounds` is **rounds of the same question**. A round that follows a resize,
+ *   a contribution mounting or an occupant resizing itself is a new question,
+ *   and answering it differently is not evidence that the search fails to
+ *   settle. It resets whenever the premise moves. That is the fix.
+ * - `total` is **rounds since the last settled answer**, and NOTHING resets it
+ *   short of settling. It is the termination guarantee: `reconcile` re-enters
+ *   itself synchronously after every commit, so an occupant that resizes itself
+ *   on each of those commits would reset `rounds` forever and take the pane down
+ *   with React's nested-update limit. See {@link HARD_ROUND_CEILING}.
+ */
+interface Episode {
+  rounds: number;
+  total: number;
+  /** How many times the premise moved without the search ever settling. */
+  shifts: number;
+  /** What the previous round decided from. */
+  premise: Round | null;
+  /** The last few rounds, kept for whatever fault ends the episode. */
+  trace: Round[];
+  /** Occupants that moved under the search, collapsed per (id, rung). */
+  moved: Map<string, MovedWidth>;
+  /**
+   * The best answer the search actually produced: the widest placement it
+   * blessed as fitting, from measurements rather than estimates, at the width
+   * recorded beside it.
+   *
+   * A search that runs out of rounds has usually produced perfectly good
+   * answers along the way. Throwing all of them away and taking the floor is
+   * what makes a transient fault cost the user their whole toolbar.
+   */
+  best: { placement: Placement; available: number } | null;
+}
+
+function newEpisode(): Episode {
+  return {
+    rounds: 0,
+    total: 0,
+    shifts: 0,
+    premise: null,
+    trace: [],
+    moved: new Map(),
+    best: null,
+  };
+}
+
 const EMPTY_PLACEMENT: Placement = new Map();
 
 /**
@@ -340,7 +415,7 @@ function AdaptiveBarShell({
   );
   /** Rungs we promoted INTO on the last committed pass — H2's evidence. */
   const promotedRef = useRef(new Map<string, number>());
-  const passesRef = useRef(0);
+  const episodeRef = useRef<Episode>(newEpisode());
   const triggerWidthRef = useRef<number | null>(null);
   /** The slack probe costs a forced reflow, so it runs once per bar. */
   const slackCheckedRef = useRef(false);
@@ -472,8 +547,8 @@ function AdaptiveBarShell({
    * compact form after a commit — so a pass cannot both decide and observe the
    * consequence. Docking, by contrast, is pure DOM and happens here, following
    * the placement React has already committed. The loop terminates by the
-   * placement repeating, not by a fixed number of rounds; `MAX_PASSES` is the
-   * assertion that it does.
+   * placement repeating, not by a fixed number of rounds; the round budget is
+   * the assertion that it does.
    */
   const reconcile = useCallback((): void => {
     if (root === null) return;
@@ -561,6 +636,8 @@ function AdaptiveBarShell({
         failLoudly({
           kind: "no-slack",
           label,
+          overflow,
+          ...originOf(root),
           message:
             "the row measured 0px wide while occupants were relocated out of it, so the only width the bar can read is the one its own evictions produced. Re-admitted everything.",
         });
@@ -587,6 +664,8 @@ function AdaptiveBarShell({
           failLoudly({
             kind: "no-slack",
             label,
+            overflow,
+            ...originOf(root),
             message:
               "the bar's own width moves with its own content, so every eviction shrinks the width that decides the next one — a one-way ratchet with an empty row at the end of it. Put it where there is room to give: as the growing cell of a single-line row, with no Fill or other flex-1 sibling competing for the same slack, and never inside a shrink-to-content parent (inline-flex, w-fit, Cluster, or a wrapper that relays shrink but not grow). One adaptive bar per row.",
           });
@@ -614,7 +693,7 @@ function AdaptiveBarShell({
         Math.abs(available - surrenderedAt) > HYSTERESIS_PX;
       if (!resized || surrenderCountRef.current >= MAX_SURRENDERS) return;
       surrenderedRef.current = false;
-      passesRef.current = 0;
+      startEpisode(episodeRef.current);
     }
 
     const gapPx = readColumnGap(root);
@@ -623,6 +702,8 @@ function AdaptiveBarShell({
         ? measureTrigger(trigger, measure, triggerWidthRef)
         : 0;
 
+    /** Every occupant this pass could legitimately read — the round's premise. */
+    const measured: RoundItem[] = [];
     for (const { id, entry } of order) {
       const rung = rungOf(placement, id);
       if (rung === null) continue;
@@ -635,6 +716,7 @@ function AdaptiveBarShell({
       )
         continue;
       const px = measure(entry.container);
+      measured.push({ id, rung, px });
       const known = estimate(cacheRef.current, id, rung);
       if (known.kind === "exact" && known.px !== px) {
         // The item's own size changed, so what we believe about its OTHER rungs
@@ -652,6 +734,42 @@ function AdaptiveBarShell({
       // A refusal is information, not an error: a 0 means the contribution
       // rendered nothing, which the `hidden` flag above already recorded.
       if (result.ok) cacheRef.current = result.cache;
+    }
+
+    // ── The premise ───────────────────────────────────────────────────────
+    // Was this round asking the same question as the last one? Only then is a
+    // changed answer evidence that the search does not settle. A resize, a
+    // contribution mounting, or an occupant resizing itself at a rung it was
+    // already sitting at are all "somebody moved the row underneath us" — the
+    // rounds before are about a width that no longer exists, so they are not
+    // rounds of this search and the counter starts again.
+    //
+    // The restriction to an UNCHANGED rung is what keeps this from dissolving
+    // the bound: an occupant that just changed rung is SUPPOSED to measure
+    // differently, and treating that as a moving premise would reset the
+    // counter on every round of the bar's own chain. `episode.total` bounds the
+    // other side — see HARD_ROUND_CEILING.
+    const episode = episodeRef.current;
+    const round: Round = {
+      available,
+      shape: order
+        .map(
+          ({ id, entry }) =>
+            `${id}:${String(inlineRungsOf(entry.ladder).length)}`,
+        )
+        .join(","),
+      items: measured,
+    };
+    const previous = episode.premise;
+    episode.premise = round;
+    pushRound(episode.trace, round, TRACE_ROUNDS);
+    if (previous !== null) {
+      const shift = premiseShift(previous, round, WIDTH_EPSILON_PX);
+      if (isShifted(shift)) {
+        episode.rounds = 0;
+        episode.shifts += 1;
+        recordMoves(episode.moved, shift.moved);
+      }
     }
 
     // ── 3. Decide ─────────────────────────────────────────────────────────
@@ -680,6 +798,10 @@ function AdaptiveBarShell({
       items,
       blocked: blockedRef.current,
     });
+    // This round's OUTPUT, kept on the round so a repeat is recognisable as a
+    // cycle in the fit rather than as a premise that keeps moving. Two different
+    // defects, two different fixes, and only the evidence can tell them apart.
+    round.decided = placementKey(result.placement);
 
     // H2: a promotion we COMMITTED, then measured, and are now undoing at the
     // same width was a promotion this row cannot afford. Bar that rung until the
@@ -694,8 +816,19 @@ function AdaptiveBarShell({
       }
     }
 
+    // The best answer the search has produced so far, kept for the case where it
+    // runs out of rounds. `fits` from measurements alone — an estimate can
+    // refuse a fit but never fabricate one, so a `fits` reached through
+    // estimates is a weaker claim than the one this fallback needs to make.
+    if (result.fits && !result.usedEstimate) {
+      episode.best = { placement: result.placement, available };
+    }
+
     if (samePlacement(result.placement, placement)) {
-      passesRef.current = 0;
+      // The episode is over: the counters, the premise and the evidence all
+      // belong to a search that has finished, and carrying them into the next
+      // one would blame it for rounds it never ran.
+      startEpisode(episode);
       promotedRef.current.clear();
 
       // The row-overflow guard belongs HERE, and only here.
@@ -725,10 +858,15 @@ function AdaptiveBarShell({
       if (layoutMeasured && overflow !== "scroll" && result.fits) {
         const overflowingBy = measureRowOverflow(root, order, trigger);
         if (overflowingBy > 0) {
-          commitFloor(items, setPlacement, surrender, available);
+          // The floor, unconditionally: the fit's own numbers have just been
+          // contradicted by the engine, so "the widest placement the fit blessed
+          // as fitting" is exactly the claim under suspicion.
+          commitFloor(items, overflow, setPlacement, surrender, available);
           failLoudly({
             kind: "row-overflow",
             label,
+            overflow,
+            ...originOf(root),
             message: `the fit says everything fits and the rendered row still overflows the box the bar was given, by ${String(Math.round(overflowingBy))}px — so the widths the fit decided from are not the widths the row actually has.`,
           });
         }
@@ -736,13 +874,48 @@ function AdaptiveBarShell({
       return;
     }
 
-    passesRef.current += 1;
-    if (passesRef.current > MAX_PASSES) {
-      commitFloor(items, setPlacement, surrender, available);
+    episode.rounds += 1;
+    episode.total += 1;
+    // Three bounds, three diagnoses, one remedy. They are counted separately
+    // because they are different bugs with different owners, and the fault says
+    // which one tripped:
+    //
+    // - `rounds` is the search's own cost, derived from the steps this row has
+    //   to give. Over it means the fit really is not settling at a premise that
+    //   held still.
+    // - `shifts` means the widths under this bar never stopped moving. Not the
+    //   search's fault, but not something to keep re-deciding through either.
+    // - `total` is the one nothing resets. It is what makes tolerating a moving
+    //   premise safe rather than unbounded — see HARD_ROUND_CEILING.
+    const stopped =
+      episode.rounds > passBudget(items)
+        ? `the placement still changed after ${String(episode.rounds)} measure-and-decide rounds at a premise that held still`
+        : episode.shifts > MAX_PREMISE_SHIFTS
+          ? `the widths underneath this bar moved ${String(episode.shifts)} times without the placement ever settling`
+          : episode.total > HARD_ROUND_CEILING
+            ? `this bar has re-decided ${String(episode.total)} times without ever settling`
+            : null;
+    if (stopped !== null) {
+      const evidence = summarizeRounds(episode.trace, episode.moved, {
+        rounds: episode.rounds,
+        shifts: episode.shifts,
+        total: episode.total,
+      });
+      const remedy = commitSurrender(
+        items,
+        episode.best,
+        overflow,
+        setPlacement,
+        surrender,
+        available,
+      );
       failLoudly({
         kind: "no-convergence",
         label,
-        message: `the placement still changed after ${String(MAX_PASSES)} measure-and-decide rounds. Committed the floor (every unpinned occupant at its narrowest rung), which is the one configuration that cannot overflow.`,
+        ...originOf(root),
+        overflow,
+        message: `${stopped}. ${describeEvidence(evidence)} ${remedy} The bar has stopped deciding until the row is genuinely resized.`,
+        evidence,
       });
       return;
     }
@@ -830,11 +1003,13 @@ function AdaptiveBarShell({
       reportFault({
         kind: "iframe-relocation",
         label,
+        overflow,
+        ...(root === null ? {} : originOf(root)),
         message: `bar item "${entry.id}" contains an <iframe> and this browser has no moveBefore(), so relocating it would reload the frame. It is pinned in the row instead.`,
       });
       bump();
     }
-  }, [version, label, bump]);
+  }, [version, label, bump, root, overflow]);
 
   const rootClass = collapsed
     ? cn(BAR_COLLAPSED_ROOT, className)
@@ -923,7 +1098,11 @@ function measureTrigger(
   trigger.hidden = false;
   const px = measure(trigger);
   trigger.hidden = true;
-  cache.current = px;
+  // Same `px > 0` guard as the visible branch, and for a sharper reason: a 0
+  // cached HERE is permanent. A hidden element reports no resize, so the shared
+  // observer can never repair it, and every later fit would under-reserve the
+  // trigger's width and manufacture a row that overflows by exactly one button.
+  if (px > 0) cache.current = px;
   return px;
 }
 
@@ -988,7 +1167,7 @@ function widthFollowsContent(
  * the fit — deliberately current-state-independent apart from pins and
  * hysteresis — recomputes the same ideal it had before, converges, trips the
  * same guard, and floors again. Neither counter could stop it: the convergence
- * branch and this function both reset `passes`, so `MAX_PASSES` counted a
+ * branch and the commit both reset the round counter, so the budget counted a
  * number that was being zeroed underneath it, and React eventually threw
  * "maximum update depth exceeded" over a layout disagreement.
  *
@@ -1001,6 +1180,7 @@ function widthFollowsContent(
  */
 function commitFloor(
   items: readonly FitItem[],
+  overflow: AdaptiveBarOverflow,
   setPlacement: (next: Placement) => void,
   surrender: Surrender,
   atWidth: number,
@@ -1015,9 +1195,139 @@ function commitFloor(
       floor.set(item.id, item.currentRung);
       continue;
     }
-    floor.set(item.id, item.evictable ? null : item.inlineWidths.length - 1);
+    // Evicting is only a remedy where an evicted occupant is still REACHABLE,
+    // and that is `panel` alone. `clip` drops its evictions into a hidden
+    // parking dock, so flooring a clip bar hides every occupant it holds — a
+    // strictly worse outcome than the clipping that mode already accepts, and
+    // for a fault whose whole premise is "my width reading is honest".
+    const evictable = item.evictable && overflow === "panel";
+    floor.set(item.id, evictable ? null : item.inlineWidths.length - 1);
   }
   setPlacement(floor);
+}
+
+/**
+ * Stop deciding, and commit the best answer this search actually produced.
+ *
+ * A search that runs out of rounds has usually produced perfectly good answers
+ * along the way, and the floor throws all of them away: every occupant at its
+ * narrowest rung, everything evictable behind the `⋯`. That is what makes a
+ * *transient* fault cost the user their whole toolbar, and the fault is
+ * transient often enough to be worth this.
+ *
+ * The floor's one virtue is that it cannot overflow. A placement the fit blessed
+ * as `fits` from measurements alone (never estimates, which can refuse a fit but
+ * never fabricate one) carries the same claim, by the same arithmetic, and is
+ * strictly wider — so it is preferred whenever the search produced one AT THIS
+ * WIDTH. The width test is not decoration: a placement that fitted 900px says
+ * nothing about 400px.
+ *
+ * Latching lives HERE, in both branches, and that is the load-bearing part.
+ * Committing and stopping are one act, so there is no spelling of "take the
+ * fallback and keep deciding" — which is precisely what took the Layout Lab pane
+ * down: a commit changes the placement, a changed placement re-runs the
+ * measure-and-decide effect, the fit recomputes the same answer, trips the same
+ * guard, and commits again, forever.
+ *
+ * Scoped to the WIDTH rather than the mount, bounded by {@link MAX_SURRENDERS}:
+ * a genuine resize is a premise this bar has not failed under, and refusing to
+ * re-derive there would park a toolbar for the life of the pane.
+ *
+ * Returns the sentence describing what it did, for the fault message — so the
+ * remedy cannot be described by a caller that does not know which branch ran.
+ */
+function commitSurrender(
+  items: readonly FitItem[],
+  best: { placement: Placement; available: number } | null,
+  overflow: AdaptiveBarOverflow,
+  setPlacement: (next: Placement) => void,
+  surrender: Surrender,
+  atWidth: number,
+): string {
+  if (best !== null && Math.abs(best.available - atWidth) <= WIDTH_EPSILON_PX) {
+    surrender.surrendered.current = true;
+    surrender.at.current = atWidth;
+    surrender.count.current += 1;
+    setPlacement(best.placement);
+    return "Committed the widest placement this search measured as fitting, rather than throwing the whole search away.";
+  }
+  commitFloor(items, overflow, setPlacement, surrender, atWidth);
+  return overflow === "panel"
+    ? "The search never produced a placement it could vouch for at this width, so the bar took the floor: every unpinned occupant at its narrowest rung, everything else in the overflow panel."
+    : "The search never produced a placement it could vouch for at this width, so the bar took the floor: every unpinned occupant at its narrowest rung, all of them still in the row.";
+}
+
+/**
+ * Start counting again: these rounds were not part of the search that is about
+ * to run.
+ *
+ * Called from the two places an episode genuinely ends — a converged pass, and
+ * a surrender re-armed by a real resize. Takes the whole {@link Episode} for the
+ * same reason {@link Surrender} is bundled: a caller able to reset the counter
+ * but not the evidence would file a fault describing a different episode, and a
+ * caller able to reset `total` would give back the termination bound.
+ *
+ * `premise` is deliberately NOT cleared. It describes the row as it currently
+ * is, not the search — so the first round of the next episode can still say
+ * whether a width moved underneath it.
+ */
+function startEpisode(episode: Episode): void {
+  episode.rounds = 0;
+  episode.total = 0;
+  episode.shifts = 0;
+  episode.trace.length = 0;
+  episode.moved.clear();
+  episode.best = null;
+}
+
+/** A placement as one comparable string — for spotting a repeat, not for equality. */
+function placementKey(placement: ReadonlyMap<string, number | null>): string {
+  return [...placement]
+    .map(([id, rung]) => `${id}:${rung === null ? "-" : String(rung)}`)
+    .sort()
+    .join(",");
+}
+
+/**
+ * Where this bar is written.
+ *
+ * A generic primitive has no name of its own, and the one its consumer gave it
+ * (`label`) is not an identity: it defaults to `"More"`, and two unrelated bars
+ * on one route take that default today. The DOM already holds the answer — the
+ * innermost UI-context node above the bar's root, which resolves to
+ * `apps-core.tab-bar@apps.tab-bar` for the app tab strip and
+ * `conversations.conversation-view.prompt-templates@prompt-editor.floating-action`
+ * for the pinned prompt-template chips. Measured on the live app, not assumed.
+ *
+ * Deliberately NOT `nearestSource` (the build-stamped `<file>:<line>` the
+ * element picker uses), even though it reads like the better name: the nearest
+ * stamped element above a bar root is the picker's own marker span, or a
+ * primitive the consumer composed — never the consumer. It would have been the
+ * same constant for every bar in the app.
+ *
+ * The full lineage path is carried separately and never fingerprinted: it embeds
+ * per-instance region ids, so two conversation panes would split one finding in
+ * two — the mirror of the collision this exists to fix.
+ *
+ * On the fault path only. The walk climbs ancestors and portal chains, which is
+ * far too much to pay per pass and exactly nothing to pay per fault.
+ */
+function originOf(root: HTMLElement): { origin?: string; originPath?: string } {
+  const nodes = collectLineage(root);
+  const innermost = nodes[nodes.length - 1];
+  const path = formatLineagePath(nodes);
+  // A contribution node is already an id-free name (`plugin@slot`), and
+  // `formatLineageNode` is where that spelling lives — re-spelling it here is
+  // how two consumers of one grammar drift. A region node is NOT usable as it
+  // stands: its spelling carries the per-instance pane/tab id, so it is reduced
+  // to the parts that are the same on every mount.
+  const origin =
+    innermost === undefined
+      ? undefined
+      : innermost.kind === "contribution"
+        ? formatLineageNode(innermost)
+        : `${innermost.pluginId ?? ""}#${innermost.regionKind}`;
+  return { origin, originPath: path === "" ? undefined : path };
 }
 
 function samePlacement(a: Placement, b: Placement): boolean {

@@ -79,26 +79,98 @@ disagreement is worse than a cramped row plus an alert:
   while overflowing by 16px, and it folds in descendants' overflow, so a
   widget's own transform becomes a false accusation. `scroll` mode skips the
   guard: there, overflowing IS the contract.
-- **no-convergence** — `MAX_PASSES` measure-and-decide rounds and the answer was
-  still moving.
+- **no-convergence** — the round budget ran out and the answer was still moving.
+  See *A round is only a round of the same question* below, which is most of
+  what there is to know about this one.
 
 Both engine-facing guards are gated on a real layout engine, so neither fires in
 jsdom.
 
-**The remedy differs by fault, and the two must not be merged.** `no-slack` can
+Every fault carries **who it is about**: `label` is the name the consumer gave
+the bar, and `origin` is the innermost UI-context node above the bar's root
+(`apps-core.tab-bar@apps.tab-bar`). The label alone is not an identity — it
+defaults to `"More"` and two unrelated bars on one route take that default — so
+`origin` plus `overflow` is what the report fingerprints on. Both are read from
+the DOM at fault time and cost nothing on the hot path.
+
+**The remedy differs by fault, and the kinds must not be merged.** `no-slack` can
 trust nothing it measures, so it takes the **ceiling** (everything inline, CSS
 clips) and latches for good: eviction is the one thing a bad width reading must
-not do, since it is what that reading was already producing. `row-overflow` and
-`no-convergence` have an honest width and a search that disagrees with the
-engine, so they take the **floor** and stop deciding *at that width* —
-`commitFloor` latches it, so "take the floor and keep searching" has no
-spelling. Without that latch the floor re-runs the pass, the fit recomputes the
-same answer and floors again forever (both the convergence branch and the floor
-reset `passesRef`, so `MAX_PASSES` counted a number being zeroed underneath it).
-Scoped to the width and not the mount because `no-convergence` is often
-transient and fires on healthy panes; a genuine resize re-arms it, capped by
-`MAX_SURRENDERS`. A stopped bar still DOCKS. Proof:
+not do, since it is what that reading was already producing.
+
+`row-overflow` and `no-convergence` have an honest width and a search that
+disagrees with the engine — but not in the same way, so they do not commit the
+same thing:
+
+- `row-overflow` takes the **floor**: every unpinned occupant at its narrowest
+  rung. The fit's own arithmetic has just been contradicted by the engine, so
+  "the widest placement the fit blessed as fitting" is exactly the claim under
+  suspicion.
+- `no-convergence` takes the **best answer the search actually produced** — the
+  widest placement it measured (never estimated) as fitting, at this width — and
+  only falls back to the floor when it never produced one. A search that runs
+  out of rounds has usually blessed several perfectly good placements along the
+  way, and throwing all of them away is what made a transient fault cost the
+  user their whole toolbar.
+
+In `clip` mode the floor never evicts, whichever fault reached it: `clip` drops
+its evictions into a hidden parking dock, so flooring a clip bar hides
+everything it holds — strictly worse than the clipping that mode already
+accepts.
+
+Committing and stopping are **one act** (`commitSurrender` latches), so "take
+the fallback and keep searching" has no spelling. Without that latch the commit
+re-runs the pass, the fit recomputes the same answer and commits again forever
+(both the convergence branch and the commit reset the round counter, so the
+budget counted a number being zeroed underneath it). Scoped to the width and not
+the mount, because a genuine resize is a premise the bar has not failed under;
+capped by `MAX_SURRENDERS`. A stopped bar still DOCKS. Proof:
 `web/__tests__/termination.test.tsx`.
+
+## A round is only a round of the same question
+
+`reconcile` runs for four reasons — the bar committed a placement, the row was
+given a different width, an occupant mounted/unmounted/re-declared, an
+occupant's own width moved — and only the first is a round of the search.
+
+So each pass records its **premise** (the row's width, the ordered occupant ids
+and ladder depths, every occupant's measured width) and compares it with the
+previous pass's. When the premise moved, the round counter starts again: the
+rounds before it were about a row that no longer exists.
+
+The width clause counts **only a width that moved at a rung the item was already
+sitting at**. That restriction is the whole correctness argument — an occupant
+that just changed rung is *supposed* to measure differently, and counting it
+would reset the counter on every round of the bar's own chain, removing the bound
+entirely.
+
+Three counters, three diagnoses, one remedy — and the fault says which tripped:
+
+- **`rounds`** vs `passBudget(items)` — the search's own cost, derived from the
+  steps this row has to give (each item's remaining rungs, plus one if it can
+  leave), clamped to `[4, 16]`. Not a constant: the constant it replaces was 4,
+  and a cold start costs 2 rounds, a late-arriving ladder a third and hysteresis
+  a fourth. The fifth was a filed fault, which is what this whole section is
+  about.
+- **`shifts`** vs `MAX_PREMISE_SHIFTS` — the widths under this bar never stopped
+  moving. A real pathology, but not the fit's fault, and worth saying in those
+  words.
+- **`total`** vs `HARD_ROUND_CEILING` — rounds since the last settled answer, and
+  **nothing resets it**. This is the termination guarantee, and it is what makes
+  the resettable counter safe: `reconcile` re-enters itself *synchronously*
+  through its layout effect, so a widget that resizes itself on every commit
+  (`:hover` is recomputed when a container is re-parented out from under the
+  pointer; a widget with its own measuring layout effect re-measures when its
+  parent re-renders) would otherwise reset `rounds` forever and take the pane
+  down with React's nested-update limit.
+
+The fault carries **evidence**, because this one is frequently transient and a
+transient that records nothing can never be diagnosed: the round trace is
+summarised into which occupants moved (id, rung, from → to px), the distinct row
+widths the episode decided from, the three counters, and whether a placement the
+search had already produced came back (a cycle in the fit, as opposed to a
+premise that keeps moving). It reaches Debug → Reports through
+`reports/adaptive-bar`.
 
 ## Why one stable container per item
 
@@ -372,6 +444,7 @@ inline it.
     - `primitives/element-size.useResizeObserver`
     - `primitives/icon-button.IconButton`
     - `primitives/popup-open.PopupOpenScope`
+    - `primitives/ui-context.collectLineage`
   - Exports (types):
     - `AdaptiveBarAlign`
     - `AdaptiveBarCollapsedProps`
@@ -397,11 +470,16 @@ inline it.
     - `reports/adaptive-bar`
 - Core:
   - Exports (types):
+    - `ConvergenceEvidence`
     - `DockMove`
     - `FitInput`
     - `FitItem`
     - `FitResult`
     - `MeasuredWidth`
+    - `MovedWidth`
+    - `PremiseShift`
+    - `Round`
+    - `RoundItem`
     - `Span`
     - `WidthCache`
     - `WidthEstimate`
@@ -410,13 +488,20 @@ inline it.
     - `WriteResult`
   - Exports (values):
     - `assign`
+    - `describeEvidence`
     - `dropItem`
     - `emptyWidthCache`
     - `estimate`
     - `inlineWidthsFor`
+    - `isShifted`
     - `overflowPx`
+    - `passBudget`
     - `planMoves`
+    - `premiseShift`
+    - `pushRound`
+    - `recordMoves`
     - `staleOthers`
+    - `summarizeRounds`
     - `widthKey`
     - `widthKeyItemId`
     - `write`

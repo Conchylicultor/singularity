@@ -215,6 +215,7 @@ marker is *additive* alongside it; nothing here reads or writes it.
     - `improve/element-picker`
     - `layouts/full-pane`
     - `layouts/miller`
+    - `primitives/adaptive-bar`
     - `primitives/error-boundary`
     - `reports/crash`
     - `reports/render-loop`
