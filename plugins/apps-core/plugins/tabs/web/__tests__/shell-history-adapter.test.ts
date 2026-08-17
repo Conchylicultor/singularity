@@ -18,10 +18,14 @@ import type { Tab } from "../internal/tabs-store";
 // are spies here; the TabsProvider integration suite proves they flip the real
 // tab liveness/focus. This suite pins the decision logic itself.
 
-/** Two fake registered apps; `resolveAppForPath` reads only `.id` / `.path`. */
+/**
+ * Two fake registered apps; `resolveAppForPath` reads only the contribution's
+ * `.id` and its `AppRef`'s `.basePath` (the app is handed to `Apps.App` whole,
+ * so the base path lives on `.app`, not on the contribution).
+ */
 const APPS = [
-  { id: "pages", path: "/pages" },
-  { id: "story", path: "/story" },
+  { id: "pages", app: { id: "pages", name: "Pages", basePath: "/pages" } },
+  { id: "story", app: { id: "story", name: "Story", basePath: "/story" } },
 ] as unknown as ActiveApp[];
 
 /** A fake open tab; the adapter reads only `.tabId` / `.appId` (never `.store`). */
@@ -48,7 +52,14 @@ function makeDeps(opts: {
     setFocusedApp,
     persist,
   };
-  return { deps, refocus, rebuildAppInPlace, restoreLiveRoute, setFocusedApp, persist };
+  return {
+    deps,
+    refocus,
+    rebuildAppInPlace,
+    restoreLiveRoute,
+    setFocusedApp,
+    persist,
+  };
 }
 
 beforeEach(() => {
@@ -76,7 +87,14 @@ describe("serializePaneState", () => {
       ],
     };
     expect(serializePaneState(state)).toEqual({
-      route: [{ paneId: "p", params: { id: "1" }, options: { compact: true }, uuid: "u1" }],
+      route: [
+        {
+          paneId: "p",
+          params: { id: "1" },
+          options: { compact: true },
+          uuid: "u1",
+        },
+      ],
     });
   });
 
@@ -94,7 +112,9 @@ describe("commit — stamps the focused tab's identity onto every entry", () => 
 
     adapter.commit({
       url: "/pages/x",
-      state: { route: [{ paneId: "p", params: { id: "x" }, options: {}, uuid: "u" }] },
+      state: {
+        route: [{ paneId: "p", params: { id: "x" }, options: {}, uuid: "u" }],
+      },
       mode: "push",
     });
 
@@ -143,9 +163,18 @@ describe("commit — stamps the focused tab's identity onto every entry", () => 
 
 describe("restore — snapshot → the right history-free dep, never a history write", () => {
   it("returns early when nothing is focused (popstate before the provider mounted)", () => {
-    const { deps, refocus, rebuildAppInPlace, restoreLiveRoute, setFocusedApp } =
-      makeDeps({ focused: null });
-    window.history.replaceState({ tabId: "T1", appId: "pages", route: [] }, "", "/pages");
+    const {
+      deps,
+      refocus,
+      rebuildAppInPlace,
+      restoreLiveRoute,
+      setFocusedApp,
+    } = makeDeps({ focused: null });
+    window.history.replaceState(
+      { tabId: "T1", appId: "pages", route: [] },
+      "",
+      "/pages",
+    );
 
     makeShellHistoryAdapter(deps).restore();
 
@@ -156,7 +185,13 @@ describe("restore — snapshot → the right history-free dep, never a history w
   });
 
   it("legacy/{} entry: reconciles the focused tab to the URL's app (in place, no mint)", () => {
-    const { deps, refocus, rebuildAppInPlace, restoreLiveRoute, setFocusedApp } = makeDeps({
+    const {
+      deps,
+      refocus,
+      rebuildAppInPlace,
+      restoreLiveRoute,
+      setFocusedApp,
+    } = makeDeps({
       focused: { tabId: "T1", appId: "pages" },
       tabs: [tab("T1", "pages")],
     });
@@ -172,10 +207,11 @@ describe("restore — snapshot → the right history-free dep, never a history w
   });
 
   it("legacy entry whose URL app already matches the focus does NOT rebuild", () => {
-    const { deps, rebuildAppInPlace, restoreLiveRoute, setFocusedApp } = makeDeps({
-      focused: { tabId: "T1", appId: "pages" },
-      tabs: [tab("T1", "pages")],
-    });
+    const { deps, rebuildAppInPlace, restoreLiveRoute, setFocusedApp } =
+      makeDeps({
+        focused: { tabId: "T1", appId: "pages" },
+        tabs: [tab("T1", "pages")],
+      });
     window.history.replaceState({ route: [] }, "", "/pages");
 
     makeShellHistoryAdapter(deps).restore();
@@ -190,7 +226,11 @@ describe("restore — snapshot → the right history-free dep, never a history w
       focused: { tabId: "T1", appId: "pages" },
       tabs: [tab("T1", "pages")], // the snapshot's "ghost" tab is gone
     });
-    window.history.replaceState({ tabId: "ghost", appId: "story", route: [] }, "", "/story");
+    window.history.replaceState(
+      { tabId: "ghost", appId: "story", route: [] },
+      "",
+      "/story",
+    );
 
     makeShellHistoryAdapter(deps).restore();
 
@@ -201,11 +241,21 @@ describe("restore — snapshot → the right history-free dep, never a history w
   });
 
   it("foreign tabId, same app: refocuses that tab (no store rebuild)", () => {
-    const { deps, refocus, rebuildAppInPlace, restoreLiveRoute, setFocusedApp } = makeDeps({
+    const {
+      deps,
+      refocus,
+      rebuildAppInPlace,
+      restoreLiveRoute,
+      setFocusedApp,
+    } = makeDeps({
       focused: { tabId: "T1", appId: "pages" },
       tabs: [tab("T1", "pages"), tab("T2", "pages")],
     });
-    window.history.replaceState({ tabId: "T2", appId: "pages", route: [] }, "", "/pages");
+    window.history.replaceState(
+      { tabId: "T2", appId: "pages", route: [] },
+      "",
+      "/pages",
+    );
 
     makeShellHistoryAdapter(deps).restore();
 
@@ -216,11 +266,21 @@ describe("restore — snapshot → the right history-free dep, never a history w
   });
 
   it("matching tabId, different app: rebuilds that tab in place with NO history write", () => {
-    const { deps, refocus, rebuildAppInPlace, restoreLiveRoute, setFocusedApp } = makeDeps({
+    const {
+      deps,
+      refocus,
+      rebuildAppInPlace,
+      restoreLiveRoute,
+      setFocusedApp,
+    } = makeDeps({
       focused: { tabId: "T1", appId: "pages" },
       tabs: [tab("T1", "pages"), tab("T2", "pages")],
     });
-    window.history.replaceState({ tabId: "T2", appId: "story", route: [] }, "", "/story");
+    window.history.replaceState(
+      { tabId: "T2", appId: "story", route: [] },
+      "",
+      "/story",
+    );
     // Spy AFTER the setup write so the assertion sees only what restore() does.
     const pushSpy = vi.spyOn(window.history, "pushState");
     const replaceSpy = vi.spyOn(window.history, "replaceState");
@@ -237,7 +297,13 @@ describe("restore — snapshot → the right history-free dep, never a history w
   });
 
   it("FOREIGN appInstance: falls back to URL reparse, never refocuses the foreign tabId", () => {
-    const { deps, refocus, rebuildAppInPlace, restoreLiveRoute, setFocusedApp } = makeDeps({
+    const {
+      deps,
+      refocus,
+      rebuildAppInPlace,
+      restoreLiveRoute,
+      setFocusedApp,
+    } = makeDeps({
       focused: { tabId: "T1", appId: "pages" },
       // T2 exists here, so only the instance check can stop the adapter from
       // trusting the entry — if it refocused T2 it would be honouring a tabId
@@ -245,7 +311,12 @@ describe("restore — snapshot → the right history-free dep, never a history w
       tabs: [tab("T1", "pages"), tab("T2", "pages")],
     });
     window.history.replaceState(
-      { tabId: "T2", appId: "pages", appInstance: "some-other-instance", route: [] },
+      {
+        tabId: "T2",
+        appId: "pages",
+        appInstance: "some-other-instance",
+        route: [],
+      },
       "",
       "/story/s/1",
     );
@@ -265,7 +336,12 @@ describe("restore — snapshot → the right history-free dep, never a history w
       tabs: [tab("T1", "pages"), tab("T2", "pages")],
     });
     window.history.replaceState(
-      { tabId: "T2", appId: "pages", appInstance: getAppInstanceId(), route: [] },
+      {
+        tabId: "T2",
+        appId: "pages",
+        appInstance: getAppInstanceId(),
+        route: [],
+      },
       "",
       "/pages",
     );
@@ -278,11 +354,21 @@ describe("restore — snapshot → the right history-free dep, never a history w
   });
 
   it("matching tabId, already focused, same app: only restores the route", () => {
-    const { deps, refocus, rebuildAppInPlace, restoreLiveRoute, setFocusedApp } = makeDeps({
+    const {
+      deps,
+      refocus,
+      rebuildAppInPlace,
+      restoreLiveRoute,
+      setFocusedApp,
+    } = makeDeps({
       focused: { tabId: "T1", appId: "pages" },
       tabs: [tab("T1", "pages")],
     });
-    window.history.replaceState({ tabId: "T1", appId: "pages", route: [] }, "", "/pages");
+    window.history.replaceState(
+      { tabId: "T1", appId: "pages", route: [] },
+      "",
+      "/pages",
+    );
 
     makeShellHistoryAdapter(deps).restore();
 

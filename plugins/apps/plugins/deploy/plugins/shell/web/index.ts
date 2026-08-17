@@ -9,11 +9,9 @@ export default {
   description: "App shell for the deploy platform.",
   contributions: [
     Apps.App({
-      id: deployApp.id,
+      app: deployApp,
       icon: mdAppIcon(MdCloud),
-      tooltip: "Deploy",
       component: DeployLayout,
-      path: deployApp.basePath,
     }),
   ],
 } satisfies PluginDefinition;

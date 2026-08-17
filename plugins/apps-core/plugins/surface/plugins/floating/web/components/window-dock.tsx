@@ -60,7 +60,7 @@ export function WindowDock({ tabIds }: { tabIds: string[] }) {
   const [anchorRef, { width: desktopW, height: desktopH }] =
     useElementSize<HTMLDivElement>((el) => el.offsetParent);
 
-  // tabId → Tab, so each chip can resolve its app (icon / tooltip) from appId.
+  // tabId → Tab, so each chip can resolve its app (icon / name) from appId.
   const byTabId = useMemo(() => {
     const m = new Map<string, Tab>();
     for (const t of tabs) m.set(t.tabId, t);
@@ -112,8 +112,8 @@ export function WindowDock({ tabIds }: { tabIds: string[] }) {
         )}
         {windows.map((win) => {
           const tab = byTabId.get(win.activeTabId);
-          const app = apps.find((a) => a.id === tab?.appId);
-          const base = titles[win.activeTabId] ?? app?.tooltip ?? "Window";
+          const entry = apps.find((a) => a.id === tab?.appId);
+          const base = titles[win.activeTabId] ?? entry?.app.name ?? "Window";
           const label =
             win.members.length > 1 ? `${base} (${win.members.length})` : base;
           const minimized = win.geo.minimized;
@@ -138,10 +138,10 @@ export function WindowDock({ tabIds }: { tabIds: string[] }) {
                 // per-app attention dot (e.g. the active member's Mail
                 // sync-error) is pixel-identical to the tab-strip / docked bar.
                 icon={
-                  app?.icon ? (
+                  entry?.icon ? (
                     <TabIcon
-                      icon={appIconComponent(app.icon)}
-                      badge={app.badge}
+                      icon={appIconComponent(entry.icon)}
+                      badge={entry.badge}
                     />
                   ) : undefined
                 }

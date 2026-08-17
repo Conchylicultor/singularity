@@ -12,11 +12,9 @@ export default {
     "App shell for Studio. Registers the /studio app entry and defines Studio.Sidebar/Toolbar slots.",
   contributions: [
     Apps.App({
-      id: studioApp.id,
+      app: studioApp,
       icon: mdAppIcon(MdExtension),
-      tooltip: "Studio",
       component: StudioLayout,
-      path: studioApp.basePath,
     }),
   ],
 } satisfies PluginDefinition;

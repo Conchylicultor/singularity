@@ -12,11 +12,9 @@ export default {
     "App shell for Pages. Registers the /pages app entry and defines the Pages.Sidebar slot.",
   contributions: [
     Apps.App({
-      id: pagesApp.id,
+      app: pagesApp,
       icon: mdAppIcon(MdDescription),
-      tooltip: "Pages",
       component: PagesLayout,
-      path: pagesApp.basePath,
     }),
   ],
 } satisfies PluginDefinition;

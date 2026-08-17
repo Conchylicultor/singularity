@@ -18,6 +18,7 @@ import { createTestSurfaceStore, TestSurface } from "./surface-fixture";
 // Local fixture app — this suite is about URL resolution, not pane homes.
 const testApp = defineApp({
   id: "st-app",
+  name: "Settle-then-register test app",
   basePath: "/app",
   iconKey: "science",
 });

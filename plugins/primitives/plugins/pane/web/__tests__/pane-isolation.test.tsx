@@ -28,6 +28,7 @@ import { defineApp } from "@plugins/primitives/plugins/pane/core";
 // Local fixture app — this suite is about store isolation, not pane homes.
 const testApp = defineApp({
   id: "iso-app",
+  name: "Isolation test app",
   basePath: "/iso-app",
   iconKey: "science",
 });

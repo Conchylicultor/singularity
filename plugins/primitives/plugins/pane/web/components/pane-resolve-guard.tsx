@@ -118,7 +118,7 @@ function FallbackChrome({
   const paneObject = paneObjectFor(pane);
   const chrome = pane.chrome;
   const doClose = paneObject.useClose();
-  const doPromote = paneObject.usePromote();
+  const promote = paneObject.usePromote();
   return (
     <Column
       className="h-full"
@@ -128,11 +128,15 @@ function FallbackChrome({
             {title}
           </Text>
           <Stack direction="row" align="center" gap="sm" className="ml-auto">
-            {chrome.promote && doPromote && (
+            {chrome.promote && promote && (
               <PaneIconAction
-                label="Expand pane"
+                label={
+                  promote.kind === "cross-app"
+                    ? `Open in ${promote.app.name}`
+                    : "Expand pane"
+                }
                 icon={MdOpenInFull}
-                {...linkGestureProps(doPromote)}
+                {...linkGestureProps(promote.run)}
               />
             )}
             {chrome.close && doClose && (

@@ -1,9 +1,4 @@
-import {
-  createContext,
-  useContext,
-  useLayoutEffect,
-  useMemo,
-} from "react";
+import { createContext, useContext, useLayoutEffect, useMemo } from "react";
 import { useConfig, useScopeMembership } from "@plugins/config_v2/web";
 import { useActiveApp, Apps } from "@plugins/apps-core/web";
 import { useRootThemeScope } from "@plugins/apps-core/plugins/theme-scope/web";
@@ -236,7 +231,7 @@ export function ThemeInjector() {
   const rootIsGlobal = rootScopeId === undefined;
 
   // The active app's path — the pre-paint cache key (one app is loaded per page).
-  const appPath = useActiveApp()?.path;
+  const appPath = useActiveApp()?.app.basePath;
 
   const groups = ThemeEngine.TokenGroup.useContributions();
   const colorTransforms = ThemeEngine.ColorTransform.useContributions();
@@ -250,7 +245,9 @@ export function ThemeInjector() {
   // matchMedia each load. Read at `rootScopeId` so the cached mode matches the
   // `:root` theme the focused app paints. The live `.dark` class still uses the
   // global `resolved` above.
-  const { colorMode } = useConfig(themeEngineConfig, { scopeId: rootScopeId }) as {
+  const { colorMode } = useConfig(themeEngineConfig, {
+    scopeId: rootScopeId,
+  }) as {
     colorMode: CachedColorMode;
   };
 
@@ -330,7 +327,12 @@ export function ScopedAppTheme({
   const colorTransforms = ThemeEngine.ColorTransform.useContributions();
 
   const styles = groups.map((g) => (
-    <GroupStyle key={g.id} group={g} scopeId={scopeId} scopeToken={appThemeScope(appId)} />
+    <GroupStyle
+      key={g.id}
+      group={g}
+      scopeId={scopeId}
+      scopeToken={appThemeScope(appId)}
+    />
   ));
 
   const firstTransform = colorTransforms[0];

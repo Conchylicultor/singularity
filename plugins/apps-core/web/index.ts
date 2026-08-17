@@ -2,6 +2,7 @@ import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 
 export {
   Apps,
+  type AppEntry,
   type RailFramingContribution,
   type SurfaceContribution,
   type TabBarContribution,

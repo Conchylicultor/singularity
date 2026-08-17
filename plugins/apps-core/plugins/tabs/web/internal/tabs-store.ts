@@ -212,19 +212,16 @@ export function savePersistedTabs(
 }
 
 /**
- * The base path for an app id, matching apps-layout's rule: an app whose `path`
- * is "/" has an empty base path; otherwise its `path` is the base path. Pane
- * segments are app-local and the base path is the implicit URL prefix.
+ * The base path for an app id, matching apps-layout's rule: an app whose base
+ * path is "/" contributes an empty URL prefix; otherwise its base path IS the
+ * prefix. Pane segments are app-local and the base path is the implicit prefix.
  */
-export function appPathFor(
-  appId: string,
-  apps: readonly ActiveApp[],
-): string {
-  const app = apps.find((a) => a.id === appId);
-  if (!app) {
+export function appPathFor(appId: string, apps: readonly ActiveApp[]): string {
+  const entry = apps.find((a) => a.id === appId);
+  if (!entry) {
     throw new Error(`No registered app for id "${appId}".`);
   }
-  return app.path === "/" ? "" : app.path;
+  return entry.app.basePath === "/" ? "" : entry.app.basePath;
 }
 
 /** The `Apps.App` contribution for an app id (for rendering its surface). */

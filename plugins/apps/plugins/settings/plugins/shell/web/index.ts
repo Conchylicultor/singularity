@@ -13,11 +13,9 @@ export default {
     "App shell for Settings. Registers the /settings app entry, defines the Settings.Sidebar + Settings.RailBadge slots, and surfaces an attention dot on the rail icon.",
   contributions: [
     Apps.App({
-      id: settingsApp.id,
+      app: settingsApp,
       icon: mdAppIcon(MdSettings),
-      tooltip: "Settings",
       component: SettingsLayout,
-      path: settingsApp.basePath,
       badge: SettingsRailBadge,
     }),
   ],

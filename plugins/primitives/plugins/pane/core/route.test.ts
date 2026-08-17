@@ -1,8 +1,18 @@
 import { describe, expect, test } from "bun:test";
 import { defineApp, defineRoute, normalizeRoutePath } from "./route";
 
-const agents = defineApp({ id: "agent-manager", basePath: "/agents", iconKey: "chat_bubble" });
-const rootApp = defineApp({ id: "home", basePath: "/", iconKey: "home" });
+const agents = defineApp({
+  id: "agent-manager",
+  name: "Agent manager",
+  basePath: "/agents",
+  iconKey: "chat_bubble",
+});
+const rootApp = defineApp({
+  id: "home",
+  name: "Home",
+  basePath: "/",
+  iconKey: "home",
+});
 
 describe("route link builder", () => {
   test("root route links under the app base path", () => {
@@ -70,6 +80,8 @@ describe("normalizeRoutePath", () => {
   });
 
   test("does not decode or otherwise touch encoded segments", () => {
-    expect(normalizeRoutePath("//agents/c/a%2Fb%20c")).toBe("/agents/c/a%2Fb%20c");
+    expect(normalizeRoutePath("//agents/c/a%2Fb%20c")).toBe(
+      "/agents/c/a%2Fb%20c",
+    );
   });
 });

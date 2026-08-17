@@ -25,7 +25,9 @@ export function QuickThemeButton() {
 
   const openEditor = () => {
     setOpen(false);
-    navigate(`${activeApp?.path ?? ""}${themeCustomizerRoute.path({})}`);
+    navigate(
+      `${activeApp?.app.basePath ?? ""}${themeCustomizerRoute.path({})}`,
+    );
   };
 
   return (

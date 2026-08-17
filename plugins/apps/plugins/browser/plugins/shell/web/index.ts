@@ -27,11 +27,9 @@ export default {
     "App shell for the Browser app. Registers the /browser app entry, owns the per-surface tab store (each tab an independent nav stack), defines the Browser.* slots, and exports the <Favicon> component.",
   contributions: [
     Apps.App({
-      id: browserApp.id,
+      app: browserApp,
       icon: mdAppIcon(MdPublic),
-      tooltip: "Browser",
       component: BrowserLayout,
-      path: browserApp.basePath,
     }),
   ],
 } satisfies PluginDefinition;

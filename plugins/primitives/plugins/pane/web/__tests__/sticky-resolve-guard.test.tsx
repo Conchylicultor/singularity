@@ -12,6 +12,7 @@ import { createTestSurfaceStore, TestSurface } from "./surface-fixture";
 // Local fixture app — this suite is about the resolve guard, not pane homes.
 const testApp = defineApp({
   id: "sticky-guard-app",
+  name: "Sticky guard test app",
   basePath: "/sticky-guard-app",
   iconKey: "science",
 });

@@ -14,11 +14,9 @@ export default {
     "App shell for Events. Registers the /events app entry, defines the Events.Sidebar slot, and renders the landing pane.",
   contributions: [
     Apps.App({
-      id: eventsApp.id,
+      app: eventsApp,
       icon: mdAppIcon(MdEvent),
-      tooltip: "Events",
       component: EventsLayout,
-      path: eventsApp.basePath,
     }),
     Pane.Register({ pane: eventsRootPane }),
   ],

@@ -37,7 +37,7 @@ export function AppGrid() {
       rows={launchable}
       rowKey={(a) => a.id}
       fields={[
-        { id: "name", label: "Name", type: "text", value: (a) => a.tooltip },
+        { id: "name", label: "Name", type: "text", value: (a) => a.app.name },
       ]}
       views={["gallery"]}
       defaultView="gallery"

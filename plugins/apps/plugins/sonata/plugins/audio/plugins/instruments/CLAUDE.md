@@ -16,7 +16,7 @@ register or resolve an instrument.
 
 This axis used to live in `sonata/shell`, alongside the app's other slots
 (`Source`, `Display`, `Overlay`, `Transport`, …) **and** the barrel's
-`Apps.App({ id: "sonata" })` registration. That co-location meant any instrument
+`Apps.App({ app: sonataApp })` registration. That co-location meant any instrument
 contributor — or any host resolving the sampled grand generically — had to import
 `shell/web`, dragging a second `Apps.App` into its bundle. The website's
 app-gallery vignette embeds a real, playable Sonata keyboard + sampled piano; on

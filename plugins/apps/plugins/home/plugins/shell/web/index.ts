@@ -12,11 +12,9 @@ export default {
     "App shell for Home. Registers the /home app entry and defines the Home.Section slot.",
   contributions: [
     Apps.App({
-      id: homeApp.id,
+      app: homeApp,
       icon: mdAppIcon(MdHome),
-      tooltip: "Home",
       component: HomeLayout,
-      path: homeApp.basePath,
       default: true,
     }),
   ],

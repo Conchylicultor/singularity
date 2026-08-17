@@ -2,7 +2,12 @@ import { useCallback, useMemo, type ReactNode } from "react";
 import { MdAdd, MdLayers } from "react-icons/md";
 import { Apps } from "@plugins/apps-core/web";
 import { AppIconView } from "@plugins/apps-core/plugins/app-icon/web";
-import { scopeAppId, configV2ScopesResource, configV2ConflictResource, forkDescriptorScope } from "@plugins/config_v2/core";
+import {
+  scopeAppId,
+  configV2ScopesResource,
+  configV2ConflictResource,
+  forkDescriptorScope,
+} from "@plugins/config_v2/core";
 import type { ConfigV2ScopesMap } from "@plugins/config_v2/core";
 import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
@@ -19,13 +24,18 @@ type AppContribution = ReturnType<typeof Apps.App.useContributions>[number];
 // Resolves an `app:<id>` scopeId to its app's display label + icon (falls back
 // to the raw id when no app matches — e.g. a committed scope for an app that
 // isn't installed in this build).
-function resolveScope(scopeId: string, apps: AppContribution[]): {
+function resolveScope(
+  scopeId: string,
+  apps: AppContribution[],
+): {
   label: string;
   icon: ReactNode;
 } {
   const rawId = scopeAppId(scopeId);
-  const app = apps.find((a) => a.id === rawId);
-  if (app) return { label: app.tooltip, icon: <AppIconView icon={app.icon} /> };
+  const entry = apps.find((a) => a.id === rawId);
+  if (entry) {
+    return { label: entry.app.name, icon: <AppIconView icon={entry.icon} /> };
+  }
   return { label: rawId ?? scopeId, icon: <MdLayers /> };
 }
 
@@ -44,7 +54,11 @@ export function ScopeTabs({
     (map: ConfigV2ScopesMap) => map[storePath] ?? [],
     [storePath],
   );
-  const scopesRes = useResource(configV2ScopesResource, {}, { select: selectScopes });
+  const scopesRes = useResource(
+    configV2ScopesResource,
+    {},
+    { select: selectScopes },
+  );
   // `{}` initialData → never pending; gate anyway so the tab bar paints only
   // settled data (no flash of a Base-only bar before known scopes resolve).
   if (scopesRes.pending) return <Loading />;
@@ -73,7 +87,12 @@ export function ScopeTabs({
           />
         );
       })}
-      <AddScopeButton storePath={storePath} apps={apps} scopes={scopes} onSelect={onSelect} />
+      <AddScopeButton
+        storePath={storePath}
+        apps={apps}
+        scopes={scopes}
+        onSelect={onSelect}
+      />
     </Stack>
   );
 }
@@ -96,7 +115,10 @@ function ScopeTab({
   active: boolean;
   onSelect: (scopeId: string | undefined) => void;
 }) {
-  const conflictRes = useResource(configV2ConflictResource, { path: storePath, ...(scopeId ? { scopeId } : {}) });
+  const conflictRes = useResource(configV2ConflictResource, {
+    path: storePath,
+    ...(scopeId ? { scopeId } : {}),
+  });
   const hasConflict = !conflictRes.pending && conflictRes.data !== null;
 
   return (
@@ -149,20 +171,20 @@ function AddScopeButton({
       ) : (
         <Stack gap="2xs">
           {/* eslint-disable-next-line data-view/no-adhoc-row-list -- add-app-scope picker (transient chrome) */}
-          {available.map((app) => {
-            const sid = `app:${app.id}`;
+          {available.map((entry) => {
+            const sid = `app:${entry.id}`;
             return (
               <Row
-                key={app.id}
+                key={entry.id}
                 size="sm"
                 hover="muted"
-                icon={<AppIconView icon={app.icon} />}
+                icon={<AppIconView icon={entry.icon} />}
                 onClick={() => {
                   fork({ body: { storePath, scopeId: sid } });
                   onSelect(sid);
                 }}
               >
-                {app.tooltip}
+                {entry.app.name}
               </Row>
             );
           })}

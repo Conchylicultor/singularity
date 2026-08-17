@@ -19,7 +19,10 @@ import {
   useFloatingWindows,
   useTabWindow,
 } from "./hooks/use-floating-windows";
-import { WindowChrome, WINDOW_TITLEBAR_INSET } from "./components/window-chrome";
+import {
+  WindowChrome,
+  WINDOW_TITLEBAR_INSET,
+} from "./components/window-chrome";
 import {
   type TabDragCommit,
   type WindowMember,
@@ -72,14 +75,22 @@ export const floatingDef: PlacementDef = {
  * Focus-on-pointerdown is owned by the host; this only ADDS raise-to-front via
  * the registered pointer-down-capture handler.
  */
-function FloatingChrome({ tabId, appId, focused, exiting }: PlacementChromeProps) {
+function FloatingChrome({
+  tabId,
+  appId,
+  focused,
+  exiting,
+}: PlacementChromeProps) {
   const { window: win, isActive, setGeo, bringToFront } = useTabWindow(tabId);
   const windows = useFloatingWindows();
   const { desktops, activeDesktopId } = useDesktops();
   const { tabs, titles, focusTab, closeTab, openTab, setMode } = useTabs();
   const apps = Apps.App.useContributions();
-  const { setContainerStyle, setContentInsetStyle, setContainerPointerDownCapture } =
-    usePlacementStyle();
+  const {
+    setContainerStyle,
+    setContentInsetStyle,
+    setContainerPointerDownCapture,
+  } = usePlacementStyle();
 
   // Store reconcile (pruneWindows) lives in the floating Foreground now, keyed on
   // the host's live + retained id sets — so a window mid-exit-tween isn't pruned
@@ -104,10 +115,7 @@ function FloatingChrome({ tabId, appId, focused, exiting }: PlacementChromeProps
   // away (titlebar X / last member / mod+w on a single-member window), not just a
   // single chip of a multi-tab window (which the Foreground's prune resolves to an
   // instant sibling reveal). Only a whole-window close plays the exit tween.
-  const liveIds = useMemo(
-    () => new Set(tabs.map((t) => t.tabId)),
-    [tabs],
-  );
+  const liveIds = useMemo(() => new Set(tabs.map((t) => t.tabId)), [tabs]);
   const windowClosing = exiting && win.members.every((m) => !liveIds.has(m));
 
   // Virtual-desktop visibility: a window off the active desktop is hidden
@@ -168,12 +176,12 @@ function FloatingChrome({ tabId, appId, focused, exiting }: PlacementChromeProps
     () =>
       win.members.map((memberId) => {
         const appId = tabAppId.get(memberId);
-        const app = apps.find((a) => a.id === appId);
+        const entry = apps.find((a) => a.id === appId);
         return {
           tabId: memberId,
-          title: titles[memberId] ?? app?.tooltip ?? "Window",
-          icon: app?.icon,
-          badge: app?.badge,
+          title: titles[memberId] ?? entry?.app.name ?? "Window",
+          icon: entry?.icon,
+          badge: entry?.badge,
         };
       }),
     [win.members, tabAppId, apps, titles],
@@ -184,10 +192,10 @@ function FloatingChrome({ tabId, appId, focused, exiting }: PlacementChromeProps
     for (const other of windows.values()) {
       if (other.id === win.id) continue;
       const appId = tabAppId.get(other.activeTabId);
-      const app = apps.find((a) => a.id === appId);
+      const entry = apps.find((a) => a.id === appId);
       out.push({
         id: other.id,
-        title: titles[other.activeTabId] ?? app?.tooltip ?? "Window",
+        title: titles[other.activeTabId] ?? entry?.app.name ?? "Window",
       });
     }
     return out;
@@ -217,7 +225,8 @@ function FloatingChrome({ tabId, appId, focused, exiting }: PlacementChromeProps
   }, [win.members, closeTab]);
 
   const onMergeInto = useCallback(
-    (targetWindowId: string) => mergeTabIntoWindow(win.activeTabId, targetWindowId),
+    (targetWindowId: string) =>
+      mergeTabIntoWindow(win.activeTabId, targetWindowId),
     [win.activeTabId],
   );
 

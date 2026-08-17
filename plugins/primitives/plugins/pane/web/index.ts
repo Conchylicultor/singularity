@@ -40,6 +40,7 @@ export {
 } from "./pane";
 export type {
   PaneObject,
+  PromoteAction,
   PaneRouteEntry,
   PaneMatch,
   MatchEntry,

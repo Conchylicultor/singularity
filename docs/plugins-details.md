@@ -5668,8 +5668,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `primitives/pane.stripBasePath`
       - `primitives/pane.useSurfaceAppId`
       - `primitives/slot-render.defineRenderSlot`
+      - `primitives/slot-render.RenderSlot`
     - Exports (types):
       - `ActiveApp`
+      - `AppEntry`
       - `Placement`
       - `RailFramingContribution`
       - `ResolvedApp`
@@ -14472,7 +14474,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `validate`
           - Plugins:
             - **`app-css-utilities-in-sync`**
-            - **`apps-paths-from-app-ref`**
             - **`barrel-stubs-in-sync`**
             - **`class-token-walk-in-sync`**
             - **`collected-dir-tsconfig-coverage`**
@@ -24828,6 +24829,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `PaneToggleOpts`
           - `PaneToolbarItem`
           - `ParsedRoute`
+          - `PromoteAction`
           - `ResolveHook`
           - `RouteState`
           - `SerializedSlot`

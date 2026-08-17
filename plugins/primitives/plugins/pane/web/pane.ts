@@ -1515,6 +1515,23 @@ export interface PaneRouteEntry<OwnParams = Record<string, string>> {
   options: PaneOptions;
 }
 
+/**
+ * What Expand will do, not just how to do it. The two destinations
+ * `usePromote()` decides between (see the hook for why) are different enough
+ * that the chrome around the button needs to tell them apart: a cross-app
+ * hand-off can name where it is sending you ("Open in Pages"), a re-root
+ * cannot. A bare callback erased that, so the destination travels with `run`.
+ */
+export type PromoteAction =
+  /** Hand off to another app — this pane is being hosted away from home. */
+  | {
+      kind: "cross-app";
+      app: AppRef;
+      run: (opts?: { newTab?: boolean }) => void;
+    }
+  /** Re-root here: drop the ancestors, stay in the app already hosting us. */
+  | { kind: "re-root"; run: (opts?: { newTab?: boolean }) => void };
+
 export interface PaneObject<
   FullParams = {},
   OwnParams = FullParams,
@@ -1550,12 +1567,12 @@ export interface PaneObject<
   /** Hook: returns a bound close function for the current instance, or null if root/not in route. */
   useClose(): (() => void) | null;
   /**
-   * Hook: returns a bound promote function for the current instance, or null
-   * when there is nothing to promote to (this pane is already the root of its
-   * own app's route, or it is not in the route at all). Pass `{ newTab: true }`
-   * to land a cross-app promote in a new tab instead of this one.
+   * Hook: returns the bound {@link PromoteAction} for the current instance, or
+   * null when there is nowhere to promote to (this pane is already the root of
+   * its own app's route, or it is not in the route at all). Pass
+   * `{ newTab: true }` to `run` to land a cross-app promote in a new tab.
    */
-  usePromote(): ((opts?: { newTab?: boolean }) => void) | null;
+  usePromote(): PromoteAction | null;
   /** Hook: toggle this pane open/closed relative to the caller's position in the route. */
   useToggle(
     params: FullParams,
@@ -1716,8 +1733,11 @@ function makePaneObject(
    * The home app is mandatory, so only two things can still send a pane down
    * the same-app branch: a legacy segment pane (no `RouteDef`, so there is no
    * URL to build) and a missing navigator (see `app-nav-sink`).
+   *
+   * Which destination it picked is part of the answer, not an implementation
+   * detail: the chrome labels the button from it (see {@link PromoteAction}).
    */
-  function usePromote(): ((opts?: { newTab?: boolean }) => void) | null {
+  function usePromote(): PromoteAction | null {
     const store = usePaneStore();
     const instanceId = useContext(PaneInstanceContext);
     const slots = useRouteSlots();
@@ -1741,11 +1761,18 @@ function makePaneObject(
         const params: Record<string, string> = {};
         for (let i = 0; i <= idx; i++) Object.assign(params, slots[i]!.params);
         const url = route.link(home, params);
-        return (opts?: { newTab?: boolean }) => navigateApp(url, opts);
+        return {
+          kind: "cross-app",
+          app: home,
+          run: (opts?: { newTab?: boolean }) => navigateApp(url, opts),
+        };
       }
 
       if (idx === 0) return null;
-      return () => store.promote(internal, instanceId);
+      return {
+        kind: "re-root",
+        run: () => store.promote(internal, instanceId),
+      };
     }, [store, instanceId, slots, surfaceAppId, canNavigate]);
   }
 
@@ -2216,9 +2243,9 @@ function indexInstanceIdFor(paneId: string): number {
  * single-entry match, or null when the app declares no index pane.
  *
  * The pane's side of the comparison is its OWN app's basePath — a pane names no
- * path, so it cannot claim an app it does not belong to. The surface's side
- * arrives from `Apps.App.path`, which the `apps-paths-from-app-ref` check pins
- * to that same `AppRef.basePath`; so both sides trace back to one `defineApp`.
+ * path, so it cannot claim an app it does not belong to. The surface's side is
+ * `app.basePath` off the `AppRef` the `Apps.App` contribution takes whole,
+ * restating none of it; so both sides trace back to one `defineApp`.
  *
  * Recomputes only when the basePath or the registered pane set changes, so the
  * returned match identity is stable and the index pane never remounts.

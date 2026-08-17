@@ -6,7 +6,10 @@ import {
   type LoadedPlugin,
 } from "@plugins/framework/plugins/web-sdk/core";
 import { Apps, getFocusedAppId, setFocusedApp } from "@plugins/apps-core/web";
-import { defaultStore, setLiveStore } from "@plugins/primitives/plugins/pane/web";
+import {
+  defaultStore,
+  setLiveStore,
+} from "@plugins/primitives/plugins/pane/web";
 import { TabsProvider, useTabs, type TabsApi } from "../internal/use-tabs";
 
 // End-to-end proof of the shell-history-snapshot model at the TabsProvider
@@ -52,17 +55,13 @@ const appsPlugin = {
   description: "fake apps for the tabs-history suite",
   contributions: [
     Apps.App({
-      id: "pages",
-      path: "/pages",
-      tooltip: "Pages",
+      app: { id: "pages", name: "Pages", basePath: "/pages", iconKey: "" },
       component: () => null,
       default: true,
       icon: {} as never,
     }),
     Apps.App({
-      id: "story",
-      path: "/story",
-      tooltip: "Story",
+      app: { id: "story", name: "Story", basePath: "/story", iconKey: "" },
       component: () => null,
       icon: {} as never,
     }),
@@ -105,8 +104,14 @@ function goBackTo(state: unknown, url: string) {
 
 beforeEach(() => {
   const mem = new MemoryStorage();
-  Object.defineProperty(window, "sessionStorage", { value: mem, configurable: true });
-  Object.defineProperty(globalThis, "sessionStorage", { value: mem, configurable: true });
+  Object.defineProperty(window, "sessionStorage", {
+    value: mem,
+    configurable: true,
+  });
+  Object.defineProperty(globalThis, "sessionStorage", {
+    value: mem,
+    configurable: true,
+  });
   window.history.replaceState(null, "", "/pages");
   setFocusedApp(undefined);
 });
@@ -254,7 +259,9 @@ describe("restore (real browser back/forward)", () => {
     act(() => {
       hook.current.navigate("/pages");
     });
-    expect(hook.current.tabs.find((t) => t.tabId === tabId)!.appId).toBe("pages");
+    expect(hook.current.tabs.find((t) => t.tabId === tabId)!.appId).toBe(
+      "pages",
+    );
 
     // Model the browser restoring the story entry BEFORE spying, so only what
     // restore() itself does is measured.
@@ -265,7 +272,9 @@ describe("restore (real browser back/forward)", () => {
       window.dispatchEvent(new PopStateEvent("popstate"));
     });
 
-    expect(hook.current.tabs.find((t) => t.tabId === tabId)!.appId).toBe("story");
+    expect(hook.current.tabs.find((t) => t.tabId === tabId)!.appId).toBe(
+      "story",
+    );
     expect(hook.current.tabs.length).toBe(1);
     expect(getFocusedAppId()).toBe("story");
     // Restoration NEVER writes history — the browser already advanced it.

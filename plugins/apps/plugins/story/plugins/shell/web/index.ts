@@ -20,11 +20,9 @@ export default {
     "App shell for Story Builder. Registers the /story app entry and the gallery + editor panes (browse story-marked pages, author a story, switch between Author and renderer lenses).",
   contributions: [
     Apps.App({
-      id: storyApp.id,
+      app: storyApp,
       icon: mdAppIcon(MdAutoStories),
-      tooltip: "Story",
       component: StoryLayout,
-      path: storyApp.basePath,
     }),
     // Editor toolbar zones: Start (← Stories, title) + End (view switcher).
     StoryToolbar.Start({ id: "back", component: BackToStories }),

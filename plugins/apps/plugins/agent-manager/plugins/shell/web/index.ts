@@ -10,11 +10,9 @@ export default {
     "App shell for the agent manager. Registers the /agents app entry and renders the main Shell layout.",
   contributions: [
     Apps.App({
-      id: agentManagerApp.id,
+      app: agentManagerApp,
       icon: mdAppIcon(MdChatBubble),
-      tooltip: "Agent Manager",
       component: AgentManagerLayout,
-      path: agentManagerApp.basePath,
     }),
   ],
 } satisfies PluginDefinition;

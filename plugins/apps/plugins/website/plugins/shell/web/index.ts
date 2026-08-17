@@ -19,11 +19,9 @@ export default {
     "App shell for the Website (equin public site). Registers the /website app entry and the landing pane, owns the shared site toolbar (wordmark + nav zones) every site pane opts into, and defines the Website.Section landing slot.",
   contributions: [
     Apps.App({
-      id: websiteApp.id,
+      app: websiteApp,
       icon: mdAppIcon(MdPublic),
-      tooltip: "equin",
       component: WebsiteLayout,
-      path: websiteApp.basePath,
     }),
     WebsiteToolbar.Start({ id: "wordmark", component: WebsiteWordmark }),
     Pane.Register({ pane: landingPane }),

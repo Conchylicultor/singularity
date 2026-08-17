@@ -34,7 +34,9 @@ export function useOpenConfig() {
       // full `/config/cd/<configPath>` app-relative URL; prefix the focused
       // app's base path (root app → "") and navigate cross-app.
       const appBase =
-        !activeApp || activeApp.path === "/" ? "" : activeApp.path;
+        !activeApp || activeApp.app.basePath === "/"
+          ? ""
+          : activeApp.app.basePath;
       navigate(
         appBase +
           configDetailRoute.path({

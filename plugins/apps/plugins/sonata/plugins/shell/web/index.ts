@@ -53,11 +53,9 @@ export default {
     "App shell for Sonata. Registers the /sonata app entry, owns SonataContext + transport, and defines the Sonata.{Source,Display,Analyzer,Overlay,Transport,Section} slots.",
   contributions: [
     Apps.App({
-      id: sonataApp.id,
+      app: sonataApp,
       icon: mdAppIcon(MdPiano),
-      tooltip: "Sonata",
       component: SonataLayout,
-      path: sonataApp.basePath,
     }),
   ],
 } satisfies PluginDefinition;

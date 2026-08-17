@@ -23,6 +23,7 @@ import { createTestSurfaceStore, TestSurface } from "./surface-fixture";
 // primitive → app dependency).
 const testApp = defineApp({
   id: "deep-link-test-app",
+  name: "Deep link test app",
   basePath: "/app",
   iconKey: "science",
 });

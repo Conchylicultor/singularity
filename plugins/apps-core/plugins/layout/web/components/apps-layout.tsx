@@ -8,7 +8,10 @@ import { renderIsolated } from "@plugins/primitives/plugins/slot-render/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
-import { Button, TooltipProvider } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import {
+  Button,
+  TooltipProvider,
+} from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import {
@@ -24,7 +27,11 @@ import {
   defaultApp,
   matchAppForPath,
 } from "@plugins/apps-core/web";
-import { TabsProvider, useTabs, navigate } from "@plugins/apps-core/plugins/tabs/web";
+import {
+  TabsProvider,
+  useTabs,
+  navigate,
+} from "@plugins/apps-core/plugins/tabs/web";
 import { AppTabsBody } from "@plugins/apps-core/plugins/tab-surface/web";
 import { resolveUnmatchedUrl } from "../internal/unmatched-url";
 
@@ -80,7 +87,7 @@ function DocumentTitleSync() {
   const { tabs, focusedTabId, titles } = useTabs();
   const apps = Apps.App.useContributions();
   const focused = tabs.find((t) => t.tabId === focusedTabId);
-  const appName = apps.find((a) => a.id === focused?.appId)?.tooltip;
+  const appName = apps.find((a) => a.id === focused?.appId)?.app.name;
   const entity = focused ? titles[focused.tabId] : undefined;
   useEffect(() => {
     document.title = [entity, appName, "Singularity"]
@@ -110,7 +117,7 @@ export function AppsLayout() {
   // adjudication legitimately follows the URL — kept apart.
   const urlMatchedId = matchAppForPath(pathname, apps)?.id;
   const fallbackApp = defaultApp(apps);
-  const defaultPath = fallbackApp?.path;
+  const defaultPath = fallbackApp?.app.basePath;
 
   // ONE rule decides both the redirect and what the tabs area paints, so the two
   // can never disagree (see `resolveUnmatchedUrl` for the full case table).
@@ -132,7 +139,7 @@ export function AppsLayout() {
     if (outcome === "redirect") redirectTo(defaultPath!);
   }, [outcome, defaultPath]);
 
-  const basePath = activeApp?.path ?? "";
+  const basePath = activeApp?.app.basePath ?? "";
 
   // Populate the global pane registry here, at the apps root, rather than
   // relying on the active app's layout renderer to do it. The registry reflects
@@ -167,7 +174,7 @@ export function AppsLayout() {
               <NoSuchRouteSurface
                 pathname={pathname}
                 defaultPath={defaultPath}
-                defaultName={fallbackApp?.tooltip}
+                defaultName={fallbackApp?.app.name}
               />
             ) : outcome === "loading" ? (
               <Center className="size-full">
@@ -267,11 +274,7 @@ function FramedSurface() {
   // The `surface` plugin owns the multi-placement body; with no contributor,
   // `apps` degrades to its built-in docked-only strip.
   const body = surface ? (
-    renderIsolated(
-      Apps.Surface.id,
-      surface as unknown as Contribution,
-      {},
-    )
+    renderIsolated(Apps.Surface.id, surface as unknown as Contribution, {})
   ) : (
     <AppTabsBody />
   );

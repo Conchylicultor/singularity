@@ -86,12 +86,12 @@ export function AppTabBar() {
   const newTabIsWindow = placementIsNewTabFollows(placements, mode);
 
   const resolved = tabs.flatMap((tab) => {
-    const app = apps.find((a) => a.id === tab.appId);
-    if (!app) return [];
+    const entry = apps.find((a) => a.id === tab.appId);
+    if (!entry) return [];
     // The tab's selected content (page / conversation / song …); the app name is
     // the fallback when the tab is at its index or its pane has no title.
-    const label = titles[tab.tabId] ?? app.tooltip;
-    return [{ tab, app, label }];
+    const label = titles[tab.tabId] ?? entry.app.name;
+    return [{ tab, entry, label }];
   });
 
   return (
@@ -137,7 +137,7 @@ export function AppTabBar() {
             orientation="horizontal"
             disabled={tabs.length < 2}
           >
-            {resolved.map(({ tab, app, label }) => (
+            {resolved.map(({ tab, entry, label }) => (
               // The item wraps the SortableItem, never the other way round: the
               // bar docks each container immediately before its own anchor, so
               // the anchor has to be the bar's own child — and dnd-kit's node (and
@@ -162,12 +162,12 @@ export function AppTabBar() {
                   {() => (
                     <TabChip
                       appId={tab.appId}
-                      icon={appIconComponent(app.icon)}
+                      icon={appIconComponent(entry.icon)}
                       // Ambient per-app attention indicator (e.g. Mail sync-error,
                       // Settings config-conflict) — the same badge the app-rail
                       // icon paints, now on the more-proximate tab chip. Rides the
                       // icon so it survives collapsed/icon-only mode.
-                      badge={app.badge}
+                      badge={entry.badge}
                       label={label}
                       active={tab.tabId === focusedTabId}
                       fillHeight={fillHeight}

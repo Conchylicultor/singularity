@@ -83,7 +83,6 @@ is scan-tree-aware and untracked-aware (it shares the discovery plumbing behind
     - `validate`
 - Sub-plugins:
   - **`app-css-utilities-in-sync`**
-  - **`apps-paths-from-app-ref`**
   - **`barrel-stubs-in-sync`**
   - **`class-token-walk-in-sync`**
   - **`collected-dir-tsconfig-coverage`**

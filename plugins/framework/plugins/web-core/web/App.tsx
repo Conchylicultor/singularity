@@ -10,7 +10,10 @@ import {
   pluginLoadReportSink,
   UNSAFE_unsealSlotComponent,
 } from "@plugins/framework/plugins/web-sdk/core";
-import type { LoadedPlugin, PluginLoadError } from "@plugins/framework/plugins/web-sdk/core";
+import type {
+  LoadedPlugin,
+  PluginLoadError,
+} from "@plugins/framework/plugins/web-sdk/core";
 import { PluginErrorBoundary } from "@plugins/primitives/plugins/error-boundary/web";
 import { normalizeRoutePath } from "@plugins/primitives/plugins/pane/core";
 import {
@@ -18,7 +21,10 @@ import {
   ensureNotificationsClient,
 } from "@plugins/primitives/plugins/live-state/web";
 import { yieldToMain } from "@plugins/primitives/plugins/perfs/plugins/scheduler/web";
-import { startBootSpan, markBootInstant } from "@plugins/primitives/plugins/perfs/plugins/boot-trace/web";
+import {
+  startBootSpan,
+  markBootInstant,
+} from "@plugins/primitives/plugins/perfs/plugins/boot-trace/web";
 import { webEntries } from "@composition-web-registry";
 import { PluginLoadErrors } from "./components/plugin-load-errors";
 
@@ -64,14 +70,22 @@ function resolveActiveAppPrefix(
   eagerPlugins: LoadedPlugin[],
   eagerEntries: WebEntry[],
 ): string | null {
-  const idToPath = new Map(eagerEntries.map((e) => [e.id, e.pluginPath] as const));
+  const idToPath = new Map(
+    eagerEntries.map((e) => [e.id, e.pluginPath] as const),
+  );
   const apps: { path: string; pluginPath: string }[] = [];
   for (const p of eagerPlugins) {
     const pluginPath = idToPath.get(p.id);
     if (!pluginPath) continue;
     for (const c of p.contributions ?? []) {
-      if (c._slotId === "apps.app" && typeof c.path === "string") {
-        apps.push({ path: c.path, pluginPath });
+      if (c._slotId !== "apps.app") continue;
+      // An `Apps.App` contribution carries the app's whole `AppRef` (`{ id,
+      // name, basePath, iconKey }`) and restates nothing about it, so the base
+      // path is read off `c.app`. Kept defensive (`unknown` narrowing rather
+      // than a cast): this runs pre-boot on raw, unstamped, untyped values.
+      const app = c.app as { basePath?: unknown } | undefined;
+      if (typeof app?.basePath === "string") {
+        apps.push({ path: app.basePath, pluginPath });
       }
     }
   }
@@ -99,7 +113,8 @@ function recordErrors(errors: PluginLoadError[]): void {
   if (errors.length === 0) return;
   markDeferredPluginsFailed(errors.map((e) => e.pluginPath));
   for (const e of errors) {
-    const message = e.error instanceof Error ? e.error.message : String(e.error);
+    const message =
+      e.error instanceof Error ? e.error.message : String(e.error);
     pluginLoadReportSink.emit({ pluginPath: e.pluginPath, message });
   }
 }
@@ -137,10 +152,16 @@ export default function App() {
     // so PluginProvider's useMemo re-derives and registers only the newcomers
     // (runRegisterPhase is idempotent via its `registered` WeakSet), then publish
     // the loaded ids on the deferred-load signal for the layout host.
-    const appendPlugins = (plugins: LoadedPlugin[], errors: PluginLoadError[]) => {
+    const appendPlugins = (
+      plugins: LoadedPlugin[],
+      errors: PluginLoadError[],
+    ) => {
       setState((prev) =>
         prev
-          ? { plugins: [...prev.plugins, ...plugins], errors: [...prev.errors, ...errors] }
+          ? {
+              plugins: [...prev.plugins, ...plugins],
+              errors: [...prev.errors, ...errors],
+            }
           : { plugins, errors },
       );
       markDeferredPluginsLoaded(plugins.map((p) => p.id));
@@ -174,10 +195,18 @@ export default function App() {
 
       // Eager tier: load → boot tasks → paint. Chrome renders and
       // NotificationsProvider mounts (the socket is already warming from Layer 1).
-      const endLoad = startBootSpan("load-plugins", "scripts", "loadPlugins (eager)");
+      const endLoad = startBootSpan(
+        "load-plugins",
+        "scripts",
+        "loadPlugins (eager)",
+      );
       const eagerResult = await loadPlugins(eager);
       endLoad();
-      const endBoot = startBootSpan("boot-tasks", "boot-tasks", "runBootTasks (eager)");
+      const endBoot = startBootSpan(
+        "boot-tasks",
+        "boot-tasks",
+        "runBootTasks (eager)",
+      );
       await runBootTasks(eagerResult.plugins);
       endBoot();
       markBootInstant("set-state", "paint", "App setState (first render)");
@@ -192,7 +221,8 @@ export default function App() {
       const priority: WebEntry[] = [];
       const rest: WebEntry[] = [];
       for (const e of deferred) {
-        if (activePrefix && e.pluginPath.startsWith(activePrefix)) priority.push(e);
+        if (activePrefix && e.pluginPath.startsWith(activePrefix))
+          priority.push(e);
         else rest.push(e);
       }
 

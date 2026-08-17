@@ -10,11 +10,9 @@ export default {
     "App shell for Prototypes. Registers the /prototypes app entry and renders the gallery + Focus/Compare detail panes in a Miller layout.",
   contributions: [
     Apps.App({
-      id: prototypesApp.id,
+      app: prototypesApp,
       icon: mdAppIcon(MdDashboardCustomize),
-      tooltip: "Prototypes",
       component: PrototypesLayout,
-      path: prototypesApp.basePath,
     }),
   ],
 } satisfies PluginDefinition;

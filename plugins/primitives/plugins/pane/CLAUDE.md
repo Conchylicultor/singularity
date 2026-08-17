@@ -447,9 +447,16 @@ picks one of two destinations:
 - **hosted by another app** → hand the pane's app-rooted URL to the tab manager,
   so it lands in its own app with that app's whole surface around it. Offered
   even at route position 0 — `/agents/page/X` is a page stranded in the agent
-  manager, which is precisely the case worth fixing.
+  manager, which is precisely the case worth fixing. The button says where it
+  is about to send you: **"Open in Pages"**.
 - **hosted by its own app** → the original behavior: drop the ancestors and
-  re-root the route here. Only meaningful below the root.
+  re-root the route here. Only meaningful below the root. The button says
+  **"Expand pane"**, because there is no other app to name.
+
+So `usePromote()` returns the destination, not just a way to get there: a
+discriminated `PromoteAction` (`{ kind: "cross-app"; app; run }` /
+`{ kind: "re-root"; run }`) the chrome labels itself from. `null` still means
+"nowhere to go" and paints no button.
 
 **`app` is mandatory, with no opt-out** — being displayable in any app is a fact
 about hosting, not an absence of ownership. The case that looks like an
@@ -462,6 +469,10 @@ Write it right after the identity field (`id:` / `route:`), importing the
 `defineApp({...})`, so it can never close an import cycle). Test fixtures
 `defineApp` a local app instead, keeping this primitive's suites free of any
 dependency on `plugins/apps`.
+
+`AppRef.name` ("Pages", "Agent manager") is the **single** authoring site for an
+app's display name — the rail tooltip, a tab's fallback title and Expand all
+read it, so none of them restates it.
 
 Cross-app Expand additionally needs a route-backed pane (a legacy segment pane
 has no `RouteDef`, so there is no URL to build) and an installed navigator;
@@ -566,6 +577,7 @@ See "Open questions" in the design doc.
     - `PaneToggleOpts`
     - `PaneToolbarItem`
     - `ParsedRoute`
+    - `PromoteAction`
     - `ResolveHook`
     - `RouteState`
     - `SerializedSlot`

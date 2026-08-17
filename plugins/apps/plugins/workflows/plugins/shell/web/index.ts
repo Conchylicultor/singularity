@@ -12,11 +12,9 @@ export default {
     "App shell for the workflows app. Registers the /workflows app entry and defines WorkflowsApp.Sidebar/Toolbar slots.",
   contributions: [
     Apps.App({
-      id: workflowsApp.id,
+      app: workflowsApp,
       icon: mdAppIcon(MdSchema),
-      tooltip: "Workflows",
       component: WorkflowsLayout,
-      path: workflowsApp.basePath,
     }),
   ],
 } satisfies PluginDefinition;

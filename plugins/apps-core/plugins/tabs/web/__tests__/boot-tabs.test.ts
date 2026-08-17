@@ -23,10 +23,15 @@ import { savePersistedTabs, type PersistedTabs } from "../internal/tabs-store";
 // `unresolved` — exactly the cold-boot "deferred plugin not loaded yet" case the
 // four-branch logic exists for.
 
-// bootTabs only reads `.id` / `.path` off each app; cast a plain fixture to the
-// sealed contribution list type.
+// bootTabs only reads each contribution's `.id` and its `AppRef`'s `.basePath`
+// (the app is handed to `Apps.App` whole, so the base path lives on `.app`);
+// cast a plain fixture to the sealed contribution list type.
 type AppList = Parameters<typeof bootTabs>[0];
-const APPS = [{ id: "pages", path: "/pages" }] as unknown as AppList;
+const fakeApp = (id: string, basePath: string) => ({
+  id,
+  app: { id, name: id, basePath },
+});
+const APPS = [fakeApp("pages", "/pages")] as unknown as AppList;
 
 /** Minimal in-memory Storage — jsdom's sessionStorage under vitest is inert. */
 class MemoryStorage implements Storage {
@@ -199,8 +204,8 @@ describe("bootTabs — snapshot-stable focus across reload", () => {
   // PERSISTED ids, so the focused tab keeps its id when the URL's app matches —
   // this is what makes back/forward keep working across reloads.
   const APPS2 = [
-    { id: "pages", path: "/pages" },
-    { id: "story", path: "/story" },
+    fakeApp("pages", "/pages"),
+    fakeApp("story", "/story"),
   ] as unknown as AppList;
 
   it("reuses the persisted focused tabId when the URL's app matches (no phantom mint)", () => {
@@ -236,8 +241,8 @@ describe("bootTabs — snapshot-stable focus across reload", () => {
 
 describe("bootTabs — app instances (fresh state vs. preserved state)", () => {
   const APPS2 = [
-    { id: "pages", path: "/pages" },
-    { id: "story", path: "/story" },
+    fakeApp("pages", "/pages"),
+    fakeApp("story", "/story"),
   ] as unknown as AppList;
 
   it("navigate (bookmark / address bar): seeds exactly ONE tab from the URL, at the default mode", () => {
@@ -318,8 +323,8 @@ describe("bootTabs — app instances (fresh state vs. preserved state)", () => {
 
 describe("bootTabs — the pre-instance (legacy key) migration", () => {
   const APPS2 = [
-    { id: "pages", path: "/pages" },
-    { id: "story", path: "/story" },
+    fakeApp("pages", "/pages"),
+    fakeApp("story", "/story"),
   ] as unknown as AppList;
 
   /** A populated pre-deploy session: two tabs, focused on story, non-default mode. */

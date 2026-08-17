@@ -32,6 +32,7 @@ const Dummy = () => null;
 // Local fixture app — this harness is about the write-path typing, not homes.
 const testApp = defineApp({
   id: "wtp-app",
+  name: "Write path test app",
   basePath: "/wtp-app",
   iconKey: "science",
 });

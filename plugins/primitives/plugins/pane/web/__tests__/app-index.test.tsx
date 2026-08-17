@@ -17,8 +17,18 @@ import { createTestSurfaceStore, TestSurface } from "./surface-fixture";
 // app, and the two invariants that used to fail silently (an index pane with a
 // URL of its own, and two index panes for one app).
 
-const appA = defineApp({ id: "ai-a", basePath: "/app", iconKey: "science" });
-const appB = defineApp({ id: "ai-b", basePath: "/other", iconKey: "science" });
+const appA = defineApp({
+  id: "ai-a",
+  name: "App index A",
+  basePath: "/app",
+  iconKey: "science",
+});
+const appB = defineApp({
+  id: "ai-b",
+  name: "App index B",
+  basePath: "/other",
+  iconKey: "science",
+});
 
 function plugin(id: string, panes: AnyPane[]) {
   return {

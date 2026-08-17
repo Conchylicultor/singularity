@@ -12,11 +12,9 @@ export default {
     "App shell for the file explorer. Registers the /files app entry and defines FileExplorer.Sidebar/Toolbar slots.",
   contributions: [
     Apps.App({
-      id: fileExplorerApp.id,
+      app: fileExplorerApp,
       icon: mdAppIcon(MdFolder),
-      tooltip: "File Explorer",
       component: FileExplorerLayout,
-      path: fileExplorerApp.basePath,
     }),
   ],
 } satisfies PluginDefinition;

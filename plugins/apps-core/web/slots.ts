@@ -1,6 +1,13 @@
 import type { ComponentType } from "react";
-import { defineSlot } from "@plugins/framework/plugins/web-sdk/core";
-import { defineRenderSlot } from "@plugins/primitives/plugins/slot-render/web";
+import {
+  defineSlot,
+  type Contribution,
+} from "@plugins/framework/plugins/web-sdk/core";
+import {
+  defineRenderSlot,
+  type RenderSlot,
+} from "@plugins/primitives/plugins/slot-render/web";
+import type { AppRef } from "@plugins/primitives/plugins/pane/core";
 import type { AppIcon } from "@plugins/apps-core/plugins/app-icon/core";
 import type { RailFramingProps } from "../core";
 
@@ -27,23 +34,61 @@ export interface TabBarContribution {
   component: ComponentType<Record<string, never>>;
 }
 
+/**
+ * One installed app, as its shell authors it. The app's identity — id, base
+ * path, display name, icon key — is authored ONCE via `defineApp` in the
+ * shell's `core/`, and handed here whole as {@link AppRef}. The contribution
+ * restates none of it, so the two can never disagree.
+ */
+export interface AppEntry {
+  /** The app itself (`defineApp(…)` from the shell's `core/app.ts`). */
+  app: AppRef;
+  /** The app's canonical serializable icon descriptor (see {@link AppIcon}). */
+  icon: AppIcon;
+  component: ComponentType;
+  onClick?: () => void;
+  /** Marks this app as the fallback when the URL matches no app and on initial boot. */
+  default?: boolean;
+  /** Optional overlay rendered on the app's rail icon (e.g. an attention
+   * dot). Painted at the icon's top-right corner; render `null` when there's
+   * nothing to surface so the corner stays empty. */
+  badge?: ComponentType<{ className?: string }>;
+}
+
+const appSlot = defineRenderSlot<AppEntry>("apps.app", {
+  docLabel: (p) => p.app.name,
+});
+
+/**
+ * The `Apps.App` slot, with a call signature that accepts ONLY an
+ * {@link AppEntry} — writing `id`, `path` or `tooltip` is a type error, because
+ * there is nothing left to write them into.
+ *
+ * Declared explicitly rather than inferred from `Object.assign`: an intersection
+ * of two call signatures reads as an overload set, which would let an author
+ * reach the raw slot's `id`-taking signature again.
+ */
+export interface AppSlot {
+  (entry: AppEntry): Contribution;
+  id: string;
+  useContributions: RenderSlot<AppEntry>["useContributions"];
+  Render: RenderSlot<AppEntry>["Render"];
+}
+
+/** The contribution restates nothing about the app, so the framework-required
+ *  contribution id is derived from the `AppRef` here — the one place it can be,
+ *  and therefore the one value it can ever have. */
+const App: AppSlot = Object.assign(
+  (entry: AppEntry) => appSlot({ ...entry, id: entry.app.id }),
+  {
+    id: appSlot.id,
+    useContributions: appSlot.useContributions,
+    Render: appSlot.Render,
+  },
+);
+
 export const Apps = {
-  App: defineRenderSlot<{
-    /** The app's canonical serializable icon descriptor (see {@link AppIcon}). */
-    icon: AppIcon;
-    tooltip: string;
-    component: ComponentType;
-    path: string;
-    onClick?: () => void;
-    /** Marks this app as the fallback when the URL matches no app and on initial boot. */
-    default?: boolean;
-    /** Optional overlay rendered on the app's rail icon (e.g. an attention
-     * dot). Painted at the icon's top-right corner; render `null` when there's
-     * nothing to surface so the corner stays empty. */
-    badge?: ComponentType<{ className?: string }>;
-  }>("apps.app", {
-    docLabel: (p) => p.tooltip,
-  }),
+  App,
   /** The far-left app-rail framing (rail / hidden). The active variant owns the
    * outer wrapper and the `--app-rail-width` var (the rail's own width); the
    * rail sits as a flex sibling of the app body. */

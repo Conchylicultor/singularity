@@ -12,11 +12,9 @@ export default {
     "App shell for the debug tools. Registers the /debug app entry and defines DebugApp.Sidebar/Toolbar slots.",
   contributions: [
     Apps.App({
-      id: debugApp.id,
+      app: debugApp,
       icon: mdAppIcon(MdBugReport),
-      tooltip: "Debug",
       component: DebugLayout,
-      path: debugApp.basePath,
     }),
   ],
 } satisfies PluginDefinition;

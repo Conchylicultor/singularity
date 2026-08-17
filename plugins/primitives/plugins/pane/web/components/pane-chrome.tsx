@@ -98,7 +98,7 @@ export function PaneChrome({
   const { contentOwnsTopChrome, leadingControl } =
     useContext(SurfaceChromeContext);
   const doClose = pane.useClose();
-  const doPromote = pane.usePromote();
+  const promote = pane.usePromote();
   const resolvedTitle = title ?? fallbackTitle;
   // Surface-edge chrome: only when this pane header IS the surface's top chrome.
   // The first top-row header hosts the leading control (sidebar toggle); the
@@ -174,11 +174,15 @@ export function PaneChrome({
               )}
             </>
           )}
-          {chrome.promote && doPromote && (
+          {chrome.promote && promote && (
             <PaneIconAction
-              label="Expand pane"
+              label={
+                promote.kind === "cross-app"
+                  ? `Open in ${promote.app.name}`
+                  : "Expand pane"
+              }
               icon={MdOpenInFull}
-              {...linkGestureProps(doPromote)}
+              {...linkGestureProps(promote.run)}
             />
           )}
           {chrome.close && doClose && (

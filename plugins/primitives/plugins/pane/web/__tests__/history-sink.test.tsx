@@ -40,6 +40,7 @@ import { defineApp } from "@plugins/primitives/plugins/pane/core";
 // Local fixture app — this suite is about history intents, not pane homes.
 const testApp = defineApp({
   id: "hist-app",
+  name: "History test app",
   basePath: "/hist-app",
   iconKey: "science",
 });

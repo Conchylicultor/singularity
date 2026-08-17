@@ -7,18 +7,20 @@ function appMatchesPath(appPath: string, pathname: string): boolean {
 }
 
 /**
- * The registered app whose `path` best matches `pathname` (longest path wins,
- * so `/studio` beats `/` for `/studio/foo`). No fallback — returns undefined
- * when nothing matches, so callers that need the "is this a real app route"
- * signal (e.g. apps-layout's canonicalization redirect) still get it. Shared by
- * {@link useActiveApp} and {@link resolveAppForPath}.
+ * The registered app whose base path best matches `pathname` (longest path
+ * wins, so `/studio` beats `/` for `/studio/foo`). No fallback — returns
+ * undefined when nothing matches, so callers that need the "is this a real app
+ * route" signal (e.g. apps-layout's canonicalization redirect) still get it.
+ * Shared by {@link useActiveApp} and {@link resolveAppForPath}.
  */
 export function matchAppForPath(
   pathname: string,
   apps: readonly ActiveApp[],
 ): ActiveApp | undefined {
-  const sorted = [...apps].sort((a, b) => b.path.length - a.path.length);
-  return sorted.find((a) => appMatchesPath(a.path, pathname));
+  const sorted = [...apps].sort(
+    (a, b) => b.app.basePath.length - a.app.basePath.length,
+  );
+  return sorted.find((entry) => appMatchesPath(entry.app.basePath, pathname));
 }
 
 /**
@@ -28,9 +30,7 @@ export function matchAppForPath(
  * apps core never names a specific contributor; an app opts in via its own
  * `Apps.App({ default: true })`.
  */
-export function defaultApp(
-  apps: readonly ActiveApp[],
-): ActiveApp | undefined {
+export function defaultApp(apps: readonly ActiveApp[]): ActiveApp | undefined {
   return apps.find((a) => a.default) ?? apps[0];
 }
 
@@ -42,7 +42,7 @@ export interface ResolvedApp {
 
 /**
  * Resolve a root-relative `pathname` to the app that should own it AND the
- * app-local route path to load. Every app owns its `path` prefix and all its
+ * app-local route path to load. Every app owns its base-path prefix and all its
  * deep links live under it (e.g. agent-manager's `/agents/c/:id`), so pure
  * longest-prefix matching resolves everything — no catch-all app. Returns
  * undefined when nothing matches (the caller decides what to do, e.g. redirect
@@ -58,5 +58,8 @@ export function resolveAppForPath(
 ): ResolvedApp | undefined {
   const matched = matchAppForPath(pathname, apps);
   if (!matched) return undefined;
-  return { app: matched, routePath: stripBasePath(pathname, matched.path) };
+  return {
+    app: matched,
+    routePath: stripBasePath(pathname, matched.app.basePath),
+  };
 }

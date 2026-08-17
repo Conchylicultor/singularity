@@ -15,11 +15,9 @@ export default {
     "App shell for Mail. Registers the /mail app entry, defines the Mail.Sidebar slot, and renders the capability-driven landing pane.",
   contributions: [
     Apps.App({
-      id: mailApp.id,
+      app: mailApp,
       icon: mdAppIcon(MdMail),
-      tooltip: "Mail",
       component: MailLayout,
-      path: mailApp.basePath,
       badge: MailRailBadge,
     }),
     Pane.Register({ pane: mailRootPane }),

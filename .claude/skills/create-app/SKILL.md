@@ -14,7 +14,8 @@ description: >
 - All app content goes in sub-plugins: `plugins/apps/plugins/<name>/plugins/<feature>/`
 - The app shell (layout, routing) is a sub-plugin, not the top-level plugin.
 - Author the `Apps.App` `icon` via `mdAppIcon` from `@plugins/apps-core/plugins/app-icon/web` (the serializable `AppIcon` descriptor), e.g. `icon: mdAppIcon(MdSomeIcon)` with the glyph imported from `react-icons/md`.
-- The shell sub-plugin owns the app's identity: `shell/core/app.ts` exports `export const <name>App = defineApp({ id, basePath, iconKey })`. Every pane of the app declares `Pane.define({ app: <name>App })` (mandatory), so this must exist before the first pane.
+- The shell sub-plugin owns the app's identity: `shell/core/app.ts` exports `export const <name>App = defineApp({ id, name, basePath, iconKey })` — `name` is the app's human-readable display name (rail tooltip, tab fallback title), authored ONLY here. Every pane of the app declares `Pane.define({ app: <name>App })` (mandatory), so this must exist before the first pane.
+- The shell's web barrel hands that `AppRef` over whole: `Apps.App({ app: <name>App, icon: mdAppIcon(MdSomeIcon), component: <Name>Layout })`. There is no `id` / `path` / `tooltip` prop — the contribution restates nothing about the app.
 
 ## Example structure
 

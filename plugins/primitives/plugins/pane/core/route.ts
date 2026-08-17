@@ -12,12 +12,13 @@
 
 type ParamName<S extends string> = S extends `${infer N}*` ? N : S;
 
-type ExtractParams<Path extends string> = Path extends `${infer Seg}/${infer Rest}`
-  ? (Seg extends `:${infer P}` ? { [K in ParamName<P>]: string } : {}) &
-      ExtractParams<Rest>
-  : Path extends `:${infer P}`
-    ? { [K in ParamName<P>]: string }
-    : {};
+type ExtractParams<Path extends string> =
+  Path extends `${infer Seg}/${infer Rest}`
+    ? (Seg extends `:${infer P}` ? { [K in ParamName<P>]: string } : {}) &
+        ExtractParams<Rest>
+    : Path extends `:${infer P}`
+      ? { [K in ParamName<P>]: string }
+      : {};
 
 export type InferParams<Path extends string> =
   ExtractParams<Path> extends infer O
@@ -44,6 +45,13 @@ type RouteParams<Path extends string> = {
 
 export interface AppRef {
   readonly id: string;
+  /**
+   * Human-readable app name, e.g. "Pages", "Agent manager". THE single place an
+   * app's display name is authored — chrome that points AT an app (rail
+   * tooltip, tab fallback title, pane Expand) reads it from here rather than
+   * restating it, so the same app can never be named two different things.
+   */
+  readonly name: string;
   /** App base path, e.g. "/agents", "/pages", or "/" for the root app. */
   readonly basePath: string;
   /**
@@ -57,11 +65,13 @@ export interface AppRef {
 
 export function defineApp(def: {
   id: string;
+  name: string;
   basePath: string;
   iconKey: string;
 }): AppRef {
   return Object.freeze({
     id: def.id,
+    name: def.name,
     basePath: def.basePath,
     iconKey: def.iconKey,
   });

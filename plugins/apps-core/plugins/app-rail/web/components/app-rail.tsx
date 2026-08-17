@@ -28,24 +28,26 @@ export function AppRail() {
       className="relative z-nav w-(--app-rail-width) shrink-0 border-r bg-background pt-md"
     >
       <Apps.App.Render>
-        {(app) => (
-          <WithTooltip content={app.tooltip} side="right">
+        {(entry) => (
+          <WithTooltip content={entry.app.name} side="right">
             <Center
               as="button"
               // Icon-only button: the tooltip is invisible to the a11y tree, so
               // the app name must ALSO be the accessible name.
-              aria-label={app.tooltip}
-              onClick={app.onClick ?? (() => replaceTabApp(focusedTabId, app.id))}
+              aria-label={entry.app.name}
+              onClick={
+                entry.onClick ?? (() => replaceTabApp(focusedTabId, entry.id))
+              }
               className={cn(
                 "relative size-8 rounded-md text-sidebar-foreground/60 transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
-                app.id === activeAppId &&
+                entry.id === activeAppId &&
                   "bg-sidebar-accent text-sidebar-accent-foreground",
               )}
             >
-              <AppIconView icon={app.icon} className="size-4" />
-              {app.badge && (
+              <AppIconView icon={entry.icon} className="size-4" />
+              {entry.badge && (
                 <Pin to="top-right" offset="xs" decorative>
-                  <app.badge />
+                  <entry.badge />
                 </Pin>
               )}
             </Center>
