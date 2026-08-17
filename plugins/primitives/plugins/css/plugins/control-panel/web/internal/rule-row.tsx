@@ -135,11 +135,7 @@ export function ControlPanelRuleRow({
         {actions ? <RowActions pin={null}>{actions}</RowActions> : null}
         {onRemove ? (
           <RowActions pin={null} alwaysVisible>
-            <IconButton
-              icon={MdClose}
-              label={removeLabel}
-              onClick={onRemove}
-            />
+            <IconButton icon={MdClose} label={removeLabel} onClick={onRemove} />
           </RowActions>
         ) : null}
       </span>
