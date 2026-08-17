@@ -42,6 +42,15 @@ export interface Measurer {
     width: number,
     falsify?: FixtureMutation,
   ): Promise<MeasuredFixture>;
+  /**
+   * Uncaught page errors observed since the last call, and CLEARED by it.
+   *
+   * Drain-on-read is what makes attribution possible: the suite drains once
+   * after the page loads and again after each fixture's sweep, so an error
+   * belongs to the fixture that was on screen when it fired rather than to
+   * every fixture measured after it.
+   */
+  takePageErrors(): string[];
   close(): Promise<void>;
 }
 
@@ -105,6 +114,30 @@ export async function openMeasurer(outDir: string): Promise<Measurer> {
   // give it generous headroom rather than flaking the geometry gate.
   const browser: Browser = await chromium.launch({ timeout: 120_000 });
   const page: Page = await browser.newPage();
+
+  // A fixture that CRASHES must fail the gate, and until this listener existed
+  // it could not: `__measure` reads whatever `[data-geo]` boxes are still in the
+  // DOM, and React tearing a subtree down leaves that DOM behind for at least
+  // one frame — so the settle loop happily agreed with itself twice and the
+  // suite measured a corpse. The Layout Lab died of exactly this for months
+  // (an adaptive-bar guard looping into React #185) with the gate green.
+  //
+  // We listen for `pageerror` ONLY — "an exception reached the top of the page"
+  // — and deliberately not for `console` messages of type `error`. Those are a
+  // much wider class: a 404 on a source map, a font that failed to load, a
+  // component's own diagnostic `console.error`. None of them means a fixture
+  // stopped rendering, and failing the geometry gate on them would make it fire
+  // for reasons that have nothing to do with geometry. Nothing in the class we
+  // DO care about is console-only: the measurer page mounts no error boundary,
+  // so React funnels every uncaught render/commit error through `reportError`,
+  // which surfaces here. (An unhandled promise rejection during the async
+  // fixture load is caught earlier and differently — `__fixturesReady` never
+  // flips, so `waitForFunction` below times out.)
+  const pageErrors: string[] = [];
+  page.on("pageerror", (err: Error) => {
+    pageErrors.push(err.stack ?? `${err.name}: ${err.message}`);
+  });
+
   await page.goto(`${srv.origin}/entry.html`);
   // The entry sets `window.__fixturesReady` after loadFixtures() resolves and the
   // globals are installed; wait for it rather than the bare function existence so
@@ -156,6 +189,9 @@ export async function openMeasurer(outDir: string): Promise<Measurer> {
         },
         { id, width, falsify },
       );
+    },
+    takePageErrors() {
+      return pageErrors.splice(0, pageErrors.length);
     },
     async close() {
       await browser.close();

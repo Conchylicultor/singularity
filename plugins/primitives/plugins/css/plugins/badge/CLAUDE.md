@@ -142,6 +142,7 @@ same threshold and can't desync in a row.
     - `primitives/data-view/table`
     - `primitives/file-links`
     - `reorder`
+    - `reports/adaptive-bar`
     - `reports/caret-flight`
     - `reports/collab-hydration`
     - `reports/live-state-stale-drop`

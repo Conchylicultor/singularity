@@ -28,12 +28,13 @@ through the generic `loadFixtures()`:
    across each fixture's `widths`, and calls `evaluateInvariant` per invariant. A
    `falsification` invariant is re-measured with its mutation applied and asserted
    VIOLATED (proof the gate bites). jsdom can't lay out grid/overflow, so this
-   drives a real browser.
+   drives a real browser. It also fails on a **page error** — see below.
 2. **the contributed check** (`check/index.ts`, id `layout-geometry`) — shells out
-   to (1), gated by a sidecar marker keyed on a sha256 of the css-subtree +
-   ui-kit `app.css` WORKING-TREE content (tracked + untracked-not-ignored). An
-   unchanged subtree ⇒ ZERO browser launches; a touched css primitive re-runs. It
-   folds the same sig into `cacheSignature()` so the runner's own cache also
+   to (1), gated by a sidecar marker keyed on a sha256 of the WORKING-TREE
+   content (tracked + untracked-not-ignored) of the css subtree, ui-kit
+   `app.css`, and **every fixture contributor's whole plugin subtree**. An
+   unchanged input set ⇒ ZERO browser launches; a touched css primitive re-runs.
+   It folds the same sig into `cacheSignature()` so the runner's own cache also
    short-circuits identical full-tree reruns. Fails loudly (no auto-install) if
    Chromium is unprovisioned.
 
@@ -41,11 +42,13 @@ through the generic `loadFixtures()`:
    flake under load ("hook timed out / headless-launch timeout"). Four guards now
    make that healthy-but-slow path robust:
    - **bun:test timeout.** The suite's `beforeAll` (Vite build + cold Chromium
-     launch + page load) routinely exceeds bun:test's default 5s per-hook budget —
-     it ran ~5.0–5.5s even in isolation, so the gate was always one stall from
-     failing. The check spawns `bun test --timeout 120000`, raising the budget for
-     every hook AND test (the dominant fix). `measure-page.ts` likewise raises
-     Playwright's own 30s `launch` timeout to 120s.
+     launch + page load) routinely exceeds bun:test's default 5s per-hook budget.
+     The suite declares its own 120s hook budget (`SETUP_TIMEOUT_MS`), so it is
+     correct however it is invoked — a flag on one caller is not a property of a
+     suite, and `./singularity test <this plugin>` used to report a hook timeout
+     that had nothing to do with geometry. The check still spawns
+     `bun test --timeout 120000` as belt-and-braces, and `measure-page.ts`
+     likewise raises Playwright's own 30s `launch` timeout to 120s.
    - **host-wide serialization + grant.** The run is gated behind
      `defineHostPool({ id: "layout-geometry", size: 1, cost: { cpu: 1 } })`
      (`@plugins/infra/plugins/host-admission`): size 1 ⇒ at most one suite (Vite
@@ -64,10 +67,24 @@ through the generic `loadFixtures()`:
      returned as a non-fatal `inconclusive` result — the build deploys anyway and,
      because no pass marker is written, re-verifies the geometry next build. A real
      regression (any oracle-invariant kind, `AssertionError`, `falsification did
-     not bite:`, or anything unrecognized) stays fatal (fatal wins on any overlap;
-     ambiguous → fatal).
+     not bite:`, `fixture page error:`, or anything unrecognized) stays fatal
+     (fatal wins on any overlap; ambiguous → fatal). `fixture page error:` is
+     fatal specifically because a crashing fixture usually times out as well, so
+     the two signatures co-occur and the crash must win.
 3. **the live Layout Lab gallery** (`web/index.ts` → Debug sidebar) — renders the
-   catalog in-app (the human-eyeball complement; no measurement).
+   catalog in-app (the human-eyeball complement; no measurement). Each (fixture,
+   width) card is wrapped in `PluginErrorBoundary`, so a fixture that throws
+   costs its own cell and not the catalog. The slot middleware's boundary cannot
+   do this — its granularity is the whole pane.
+
+### The signature covers the primitive, not just the fixture
+
+A fixture is a few lines of JSX; what it measures is the primitive it renders.
+So `check/index.ts` derives each contributor's plugin root from the
+`plugins/**/fixtures/**` matches (`<root>/fixtures/…` ⇒ `<root>`) and hashes
+that whole subtree. Derived, not listed, so a plugin that starts contributing
+fixtures is covered the day it does. Keep `computeSig` sync and cheap —
+`cacheSignature()` calls it on every check run.
 
 ### How the measurer page is served
 
@@ -118,6 +135,35 @@ width, with plausible pixel values. If you ever see a failure whose numbers matc
 the adjacent sweep step exactly, suspect settling before you suspect the
 primitive.
 
+## A crashed fixture fails the gate
+
+`measure-page.ts` collects `page.on("pageerror")` into a buffer the suite drains
+(`takePageErrors()`, drain-on-read). Without it the gate measured whatever DOM
+React left behind after tearing a crashed subtree down — two frames agreed, the
+oracle judged a corpse, green.
+
+Drained per WIDTH inside `sweep` (the only place the fixture *and* width are
+known), plus once after the page loads and once per fixture for late arrivals. A
+crash also rejects the `measure()` call with Playwright's own
+"Execution context was destroyed", which names nothing — so the buffer wins and
+the driver error is re-thrown only when the buffer is empty.
+
+Deliberately NOT `console` messages of type `error`: a 404 on a source map or a
+component's own diagnostic log is not a fixture that stopped rendering, and the
+measurer page mounts no error boundary, so React funnels every uncaught
+render/commit error through `reportError` and into `pageerror` anyway.
+
+**The gate does not see a primitive's dev-only assertions.**
+`build-fixtures-page.ts` calls Vite's `build()` with no `mode`, which defaults to
+production, so `import.meta.env.DEV` is statically `false` and a
+`if (import.meta.env.DEV) throw` is tree-shaken out of the bundle (verified by
+grepping the emitted chunks for the throw's template). A primitive that reports
+loudly in dev and degrades quietly in prod therefore reaches this gate only
+through its *quiet* branch — so a fixture must assert the degraded shape as
+geometry (adaptive-bar's strip fixtures use `rigidIntegrity` for exactly this:
+occupants floored into the panel disappear from the row) and must not rely on
+the page-error drain to notice.
+
 ## The oracle (`core/oracle.ts`)
 
 Pure, DOM-free functions — one per `GeometryInvariant` kind (`noOverlap`,
@@ -158,6 +204,7 @@ server-core tsconfig where `check`/`facet` live. The
     - `primitives/css/text.SectionLabel`
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit`
+    - `primitives/error-boundary.PluginErrorBoundary`
     - `primitives/loading.Loading`
     - `primitives/pane.openPane`
     - `primitives/pane.Pane`

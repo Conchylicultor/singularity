@@ -3,14 +3,23 @@ import {
   loadFixtures,
   type LayoutFixture,
 } from "@plugins/primitives/plugins/css/plugins/layout-harness/core";
-import { Stack, Inset } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import {
+  Stack,
+  Inset,
+} from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
-import { SectionLabel, Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import {
+  SectionLabel,
+  Text,
+} from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Card } from "@plugins/primitives/plugins/css/plugins/card/web";
+import { PluginErrorBoundary } from "@plugins/primitives/plugins/error-boundary/web";
 
 /** Group fixtures by their `primitive`, preserving first-seen order. */
-function groupByPrimitive(fixtures: LayoutFixture[]): [string, LayoutFixture[]][] {
+function groupByPrimitive(
+  fixtures: LayoutFixture[],
+): [string, LayoutFixture[]][] {
   const groups = new Map<string, LayoutFixture[]>();
   for (const f of fixtures) {
     const bucket = groups.get(f.primitive);
@@ -43,7 +52,26 @@ function FixtureRow({ fixture }: { fixture: LayoutFixture }): ReactElement {
                 {width}px
               </Text>
               {/* Fixed-px width is legitimate sizing — the harness sweeps container widths. */}
-              <Card style={{ width }}>{fixture.render()}</Card>
+              <Card style={{ width }}>
+                {/*
+                  One crashing fixture must cost one card, not the catalog.
+                  The Lab renders arbitrary contributed components from
+                  arbitrary plugins, and it spent months showing nothing but a
+                  crash banner because a single primitive threw here — so the
+                  ONE surface where a fixture is looked at was dark exactly
+                  when there was something to look at. The pane-level boundary
+                  the slot middleware provides cannot help: its granularity is
+                  the whole pane. This one is per (fixture, width) cell, and
+                  the label names which cell died so the banner is a lead
+                  rather than a mystery.
+                */}
+                <PluginErrorBoundary
+                  slot="layout-lab"
+                  label={`${fixture.id} @ ${String(width)}px`}
+                >
+                  {fixture.render()}
+                </PluginErrorBoundary>
+              </Card>
             </Stack>
           ))}
         </Stack>

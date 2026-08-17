@@ -52,6 +52,26 @@ error: falsification did not bite: applying {"kind":"swapLeafDisplay","value":"i
  0 pass
  1 fail`;
 
+// A crashed fixture. The suite drains the measurer's `pageerror` buffer and
+// throws with the `fixture page error:` prefix.
+const PAGE_ERROR_FAILURE = `(fail) adaptive-bar/inside-horizontal-strip > no page error while measuring this fixture
+error: fixture page error: 1 uncaught error(s) escaped to the top of the measurer page while measuring "adaptive-bar/inside-horizontal-strip" across widths [720, 320].
+
+Error: Minified React error #185
+    at chunk-abc123.js:1:2345
+ 0 pass
+ 1 fail`;
+
+// The dangerous case for THIS signature: a crashing fixture usually times out
+// too (a render loop burns the settle budget), so the transcript carries both.
+// The crash must win — waved through as environmental, the run would be
+// non-fatal AND uncached, i.e. silently retried forever.
+const PAGE_ERROR_WITH_TIMEOUT_NOISE = `(fail) adaptive-bar/rich-widgets > noOverlap [120000ms]
+  ^ this test timed out after 120000ms.
+error: fixture page error: 3 uncaught error(s) escaped to the top of the measurer page while it loaded.
+ 0 pass
+ 2 fail`;
+
 const GARBAGE = `Segmentation fault (core dumped)
 [some vite build error]
  0 pass`;
@@ -81,6 +101,14 @@ describe("classifyFailure", () => {
     expect(classifyFailure(FALSIFICATION_FAILURE)).toBe("fatal");
   });
 
+  test("fixture page error → fatal", () => {
+    expect(classifyFailure(PAGE_ERROR_FAILURE)).toBe("fatal");
+  });
+
+  test("fixture page error wins over timeout noise → fatal", () => {
+    expect(classifyFailure(PAGE_ERROR_WITH_TIMEOUT_NOISE)).toBe("fatal");
+  });
+
   test("unrecognized garbage → fatal (ambiguous → fatal)", () => {
     expect(classifyFailure(GARBAGE)).toBe("fatal");
   });
@@ -89,7 +117,9 @@ describe("classifyFailure", () => {
   // FATAL signature list against drift from core/oracle.ts.
   test("every oracle invariant kind → fatal", () => {
     for (const kind of ORACLE_INVARIANT_KINDS) {
-      expect(classifyFailure(`${kind}: at width 320px, slot "x" overlaps "y"`)).toBe("fatal");
+      expect(
+        classifyFailure(`${kind}: at width 320px, slot "x" overlaps "y"`),
+      ).toBe("fatal");
     }
   });
 

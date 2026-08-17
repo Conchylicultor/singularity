@@ -6,7 +6,7 @@
 
 - Description: Reports uncaught browser errors to the server. Records server/frontend crashes as deduped reports; investigation tasks are filed on demand.
 - Web:
-  - Slots: `Reports.KindView` ← `debug.boot-budget`, `debug.boot-watchdog`, `debug.duress-shed`, `debug.live-state-churn.monitor`, `debug.op-rate`, `debug.queue-health`, `debug.read-set-shrink`, `debug.sentinel`, `debug.session-divergence`, `debug.slow-ops`, `debug.stall-monitor`, `reports.caret-flight`, `reports.collab-hydration`, `reports.crash`, `reports.live-state-stale-drop`, `reports.optimistic-divergence`, `reports.render-loop`, `reports.turn-unconfirmed`
+  - Slots: `Reports.KindView` ← `debug.boot-budget`, `debug.boot-watchdog`, `debug.duress-shed`, `debug.live-state-churn.monitor`, `debug.op-rate`, `debug.queue-health`, `debug.read-set-shrink`, `debug.sentinel`, `debug.session-divergence`, `debug.slow-ops`, `debug.stall-monitor`, `reports.adaptive-bar`, `reports.caret-flight`, `reports.collab-hydration`, `reports.crash`, `reports.live-state-stale-drop`, `reports.optimistic-divergence`, `reports.render-loop`, `reports.turn-unconfirmed`
   - Uses:
     - `infra/endpoints.fetchEndpoint`
     - `primitives/slot-render.defineDispatchSlot`
@@ -91,6 +91,7 @@
     - `debug/trace/engine`
     - `infra/boot-snapshot`
     - `infra/worktree/removal-audit`
+    - `reports/adaptive-bar`
     - `reports/caret-flight`
     - `reports/collab-hydration`
     - `reports/crash`
@@ -105,6 +106,7 @@
     - `stats/cost`
     - `tasks/reports-investigation`
 - Sub-plugins:
+  - **`adaptive-bar`** — Adaptive-bar collector: drains the adaptive-bar primitive's adaptiveBarReportSink into a deduped report whenever a bar's layout contract is violated (it was given no slack, its fit disagrees with the layout engine, its placement never converged, or it refused to relocate an iframe), plus the Debug → Reports summary view. Adaptive-bar report kind: validates the adaptive-bar primitive's layout-contract fault payloads (no-slack = the bar was given no room to give, row-overflow = on a converged pass the fit blessed the row as fitting and the occupants still stick out of the bar's own content box, no-convergence = the placement never settled, iframe-relocation = a frame the browser cannot move without reloading), fingerprints by fault + bar label (excluding the per-fault-constant message, so one broken bar = one row), and renders a per-fault task stating what the bar did instead and the consumer-side fix. Re-arms periodically (6h) since a broken host re-produces the fault on every mount.
   - **`caret-flight`** — Caret-flight collector: drains the page editor's caretFlightReportSink into a report whenever a claimed caret landing is abandoned and the keystrokes it was holding had to be replayed into the origin block (or were lost), plus the Debug → Reports summary view. Caret-flight report kind: validates the page editor's caret-authority abort payloads (a claimed caret landing that never happened, so the keystrokes it was holding were replayed back into the origin block — or lost), fingerprints by reason + recovered/lost (excluding the volatile block ids and buffer size, so one defect = one row), and renders an investigation task.
   - **`collab-hydration`** — Collab-hydration collector: drains the page editor's collabHydrationReportSink into a report whenever a block's rendered text stops agreeing with its content doc (a binding that never hydrated) or with the server (a doc that never received its push), plus the Debug → Reports summary view. Collab-hydration report kind: validates the page editor's hydration-guard payloads (a block whose rendered text stopped agreeing with its content doc, or whose doc fell behind the server), fingerprints by reason alone (the block id and the three lengths are per-occurrence noise), and renders an investigation task.
   - **`crash`** — Crash report kind: browser crash collector and the Debug → Reports summary view. Crash report kind: validates crash payloads, fingerprints by error + stack, and renders per-crash tasks.

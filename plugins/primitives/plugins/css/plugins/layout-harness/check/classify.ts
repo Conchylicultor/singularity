@@ -32,6 +32,15 @@ const FATAL_SIGNATURES: RegExp[] = [
   /\bAssertionError\b/,
   // The falsification guard: the mutated construct failed to violate its invariant.
   /falsification did not bite:/,
+  // An uncaught exception escaped to the top of the measurer page — a fixture
+  // (or the harness) CRASHED. This must be fatal and it must be checked here,
+  // above the environmental pass, for a specific reason: a crashing fixture very
+  // often ALSO times out (a React update-depth loop burns the settle budget, a
+  // torn-down tree never settles), so the transcript carries timeout wording as
+  // well. Classified environmental, that run would be waved through as a flake
+  // AND re-tried forever, which is how the Layout Lab stayed broken. Emitted by
+  // `web/internal/layout-geometry.test.ts`; the two strings are one contract.
+  /fixture page error:/,
   // Any oracle invariant violation — `new Error(r.detail)`, `detail` prefixed
   // with the invariant kind at line start.
   new RegExp(`^(${ORACLE_INVARIANT_KINDS.join("|")}):`, "m"),
@@ -56,7 +65,8 @@ const ENVIRONMENTAL_SIGNATURES: RegExp[] = [
 export function classifyFailure(fullOutput: string): "inconclusive" | "fatal" {
   // Fatal wins on any overlap — checked first and unconditionally.
   if (FATAL_SIGNATURES.some((re) => re.test(fullOutput))) return "fatal";
-  if (ENVIRONMENTAL_SIGNATURES.some((re) => re.test(fullOutput))) return "inconclusive";
+  if (ENVIRONMENTAL_SIGNATURES.some((re) => re.test(fullOutput)))
+    return "inconclusive";
   // Unrecognized (Vite build error, OOM kill, Chromium segfault, …) → fatal.
   return "fatal";
 }

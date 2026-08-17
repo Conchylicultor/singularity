@@ -52,6 +52,7 @@ recalculation per competing sibling. The primitive it replaces
 content-sized container and then had to go looking for the width it had given
 away.
 
+<<<<<<< .merge_file_adAIuc
 Break the rule and you get told. Two guards, and they throw in dev and file a
 report through `adaptiveBarReportSink` in prod, because taking down a pane header
 over a layout disagreement is worse than a cramped row plus an alert:
@@ -73,6 +74,45 @@ A row that measures 0px while occupants are relocated out of it is the same
 fault: "not laid out yet" is only honest while the row still holds everything it
 was given, and believing it there is how the bar reaches a state it can never
 measure its way out of.
+=======
+Break the rule and you get told: a `flex-grow: 0` at mount throws in dev and
+files a report through `adaptiveBarReportSink` in prod, with the bar carrying on
+regardless (there is no better width available to it); a row that fits by the
+math and still overflows the box the layout engine gave it does the same but
+also commits the **floor layout** — every unpinned occupant at its narrowest
+rung — and stops deciding for the rest of that mount, because taking down a pane
+header over a layout disagreement is worse than a cramped row plus an alert.
+Both guards only run when a real layout engine answered, so neither fires in
+jsdom, and the report lands in Debug → Reports via `reports/adaptive-bar`.
+
+**A fault stops the bar at that WIDTH**: `commitFloor` latches the surrender
+itself, so "take the floor and keep searching" has no spelling. Without that, a
+floor re-runs the pass, the fit recomputes the same answer and floors again —
+forever, since both the convergence branch and the floor reset `passesRef`, so
+`MAX_PASSES` counts a number being zeroed underneath it. Scoped to the width and
+not the mount because `no-convergence` is often transient (a font landing
+mid-pass) and fires on healthy panes: parking the bar at its floor until the pane
+reopens buries every action in the `⋯` panel. A genuine resize re-arms it —
+which cannot feed itself, since the bar's width comes from its row and never
+from its own content — capped by `MAX_SURRENDERS` for the shrink-to-content
+shape where that does not hold. A stopped bar still DOCKS. Proof:
+`web/__tests__/termination.test.tsx`.
+
+**The row-overflow guard reads the occupants against the bar's own content box**
+(`measureRowOverflow` + `core/overflow.ts`), and two simpler spellings are both
+wrong, so do not "simplify" it back to either. An **ancestor** comparison:
+`offsetParent` is the nearest *positioned* ancestor, not the row the bar is a
+cell of — a bar inside a scrolled strip fits its row perfectly while sitting far
+outside it, and `parentElement` is no better since the parent may shrink or carry
+its own padding. **`root.scrollWidth > root.clientWidth`**: LTR scrollable
+overflow ignores content past the *left* edge, so an `align="end"` row (every
+pane header) reads `scrollWidth === clientWidth` while overflowing by 16px —
+measured, not assumed — and it also folds in descendants' overflow, so a widget's
+own transform or absolute badge becomes a false accusation. Neither guard catches
+a shrink-to-content ANCESTOR: the bar cannot soundly attribute a box that is not
+its own, and a false accusation costs the whole pane. `scroll` mode skips the
+guard: there, overflowing IS the contract.
+>>>>>>> .merge_file_zgMiHo
 
 ## Why one stable container per item
 
@@ -295,14 +335,15 @@ Not a lot, deliberately, and the two are never collapsed into one boolean.
 `fits: false` means the row is at its floor and STILL overflows (or a width has
 no bound at all) — but the bar already clips or scrolls by CSS, so that outcome
 is handled structurally rather than by a branch. The one place `fits` is read is
-the overshoot guard, and only on a **converged** pass: `overshootsParent`
-measures the row as *rendered*, which is the committed placement, so checking it
+the row-overflow guard, and only on a **converged** pass: `measureRowOverflow`
+measures the row as *rendered* — the union of the occupants' boxes against the
+bar's own content box — which is the committed placement, so checking it
 against a placement we are about to commit would report a disagreement between
 two different configurations — and throw over it in dev.
 
 `usedEstimate` deliberately does not gate that guard. An estimate is an upper
 bound, so it can refuse a fit but never fabricate one; a `fits: true` reached
-through estimates is still a claim that the row fits, and an overshoot still
+through estimates is still a claim that the row fits, and a row-overflow still
 contradicts it.
 
 ### `yieldRank`: higher yields sooner
@@ -367,6 +408,7 @@ inline it.
     - `conversations/conversation-view/prompt-templates`
     - `primitives/pane`
     - `reorder/node-types/overflow`
+    - `reports/adaptive-bar`
 - Core:
   - Exports (types):
     - `DockMove`
@@ -374,6 +416,7 @@ inline it.
     - `FitItem`
     - `FitResult`
     - `MeasuredWidth`
+    - `Span`
     - `WidthCache`
     - `WidthEstimate`
     - `WidthMeasurement`
@@ -385,6 +428,7 @@ inline it.
     - `emptyWidthCache`
     - `estimate`
     - `inlineWidthsFor`
+    - `overflowPx`
     - `planMoves`
     - `staleOthers`
     - `widthKey`

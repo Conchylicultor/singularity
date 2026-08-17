@@ -15,9 +15,11 @@ import {
   emptyWidthCache,
   estimate,
   inlineWidthsFor,
+  overflowPx,
   staleOthers,
   write,
   type FitItem,
+  type Span,
   type WidthCache,
 } from "@plugins/primitives/plugins/adaptive-bar/core";
 import type {
@@ -41,6 +43,7 @@ import {
   reportFault,
   HYSTERESIS_PX,
   MAX_PASSES,
+  MAX_SURRENDERS,
 } from "./diagnostics";
 import { DEFAULT_LADDER, formFor, inlineRungsOf, yieldRankOf } from "./ladder";
 import { readColumnGap, useLayoutMeasured, useMeasureWidth } from "./measure";
@@ -202,6 +205,25 @@ AdaptiveBar.Collapsed = AdaptiveBarCollapsed;
 /** id → rung index, or `null` for "left the row". */
 type Placement = ReadonlyMap<string, number | null>;
 
+/**
+ * The three refs that together mean "this bar has stopped deciding": whether it
+ * has, the width it stopped at, and how many times it has done so.
+ *
+ * Bundled so {@link commitFloor} takes all of them or none. Flooring and
+ * stopping are one act — a caller able to do half of it is the render loop that
+ * killed the Layout Lab pane.
+ *
+ * Distinct from `degraded`, and the two must not be merged. `degraded` answers
+ * "my width reading is a lie", so its remedy is the CEILING and it latches for
+ * good. This one answers "my width is fine and my own search disagrees with the
+ * engine at this width", so its remedy is the floor and it re-arms on a resize.
+ */
+interface Surrender {
+  surrendered: { current: boolean };
+  at: { current: number | null };
+  count: { current: number };
+}
+
 const EMPTY_PLACEMENT: Placement = new Map();
 
 /**
@@ -322,6 +344,22 @@ function AdaptiveBarShell({
   const triggerWidthRef = useRef<number | null>(null);
   /** The slack probe costs a forced reflow, so it runs once per bar. */
   const slackCheckedRef = useRef(false);
+  /**
+   * This bar has stopped deciding, and the width it stopped at. See
+   * {@link commitFloor}: a fault-forced floor is the last placement computed
+   * for THIS width, and the bar re-arms only when the row genuinely resizes.
+   */
+  const surrenderedRef = useRef(false);
+  const surrenderedAtRef = useRef<number | null>(null);
+  const surrenderCountRef = useRef(0);
+  const surrender = useMemo<Surrender>(
+    () => ({
+      surrendered: surrenderedRef,
+      at: surrenderedAtRef,
+      count: surrenderCountRef,
+    }),
+    [],
+  );
 
   const registry = useMemo<BarRegistry>(
     () => ({
@@ -557,6 +595,28 @@ function AdaptiveBarShell({
       }
     }
 
+    // ── The stop ──────────────────────────────────────────────────────────
+    // A surrendered bar still DOCKS — section 1 ran, so an occupant that
+    // mounted or unmounted since is placed correctly — but it does not decide.
+    // Everything below is the search, and a fault says the search cannot be
+    // trusted AT THIS WIDTH.
+    //
+    // Below the measurement rather than above it, because "has the premise
+    // changed" is a question about the width. A resize is the one event that
+    // makes re-deriving legitimate, and it cannot be self-inflicted: the bar is
+    // the grow cell, so this number comes from its row and never from its own
+    // content — which the slack probe just above has now VERIFIED of the layout
+    // engine rather than assumed. `MAX_SURRENDERS` is the backstop anyway.
+    if (surrenderedRef.current) {
+      const surrenderedAt = surrenderedAtRef.current;
+      const resized =
+        surrenderedAt === null ||
+        Math.abs(available - surrenderedAt) > HYSTERESIS_PX;
+      if (!resized || surrenderCountRef.current >= MAX_SURRENDERS) return;
+      surrenderedRef.current = false;
+      passesRef.current = 0;
+    }
+
     const gapPx = readColumnGap(root);
     const triggerPx =
       overflow === "panel"
@@ -638,38 +698,47 @@ function AdaptiveBarShell({
       passesRef.current = 0;
       promotedRef.current.clear();
 
-      // The overshoot guard belongs HERE, and only here.
+      // The row-overflow guard belongs HERE, and only here.
       //
       // It compares what the fit believes against what the layout engine did —
-      // so the two have to describe the SAME configuration. `overshootsParent`
-      // measures the row as currently rendered, which is the COMMITTED
-      // placement; `result` is what we are about to commit. On any pass where
-      // they differ, the row on screen is the one we already know is wrong and
-      // are in the middle of fixing, so checking it there reports a disagreement
-      // that does not exist — and, in dev, throws over it.
+      // so the two have to describe the SAME configuration.
+      // `measureRowOverflow` measures the row as currently rendered, which is
+      // the COMMITTED placement; `result` is what we are about to commit. On
+      // any pass where they differ, the row on screen is the one we already
+      // know is wrong and are in the middle of fixing, so checking it there
+      // reports a disagreement that does not exist — and, in dev, throws over
+      // it.
       //
       // Converged means rendered == blessed, which is the only state in which
-      // "the fit says it fits and the row sticks out" is a real contradiction.
+      // "the fit says it fits and the row does not" is a real contradiction.
       //
       // `usedEstimate` deliberately does NOT gate this. An estimate is an upper
       // bound, so it can refuse a fit but never fabricate one: a `fits: true`
       // reached through estimates is still a claim the row fits, and an
-      // overshoot still contradicts it.
-      if (layoutMeasured && result.fits && overshootsParent(root)) {
-        commitFloor(items, setPlacement, promotedRef, passesRef);
-        failLoudly({
-          kind: "overshoot",
-          label,
-          message:
-            "the fit says everything fits and the rendered row still sticks out past its parent's content box, so the bar was never given the slack its width reading assumes.",
-        });
+      // overflowing row still contradicts it.
+      //
+      // In `scroll` mode the row overflowing IS the contract — nothing leaves
+      // the row and the row scrolls — so there is no contradiction to detect.
+      // The skip is mandatory rather than cosmetic: the root is user-scrollable
+      // there, so the occupants' rects shift with `scrollLeft`, and flooring a
+      // bar that was asked to scroll would shrink every one of them.
+      if (layoutMeasured && overflow !== "scroll" && result.fits) {
+        const overflowingBy = measureRowOverflow(root, order, trigger);
+        if (overflowingBy > 0) {
+          commitFloor(items, setPlacement, surrender, available);
+          failLoudly({
+            kind: "row-overflow",
+            label,
+            message: `the fit says everything fits and the rendered row still overflows the box the bar was given, by ${String(Math.round(overflowingBy))}px — so the widths the fit decided from are not the widths the row actually has.`,
+          });
+        }
       }
       return;
     }
 
     passesRef.current += 1;
     if (passesRef.current > MAX_PASSES) {
-      commitFloor(items, setPlacement, promotedRef, passesRef);
+      commitFloor(items, setPlacement, surrender, available);
       failLoudly({
         kind: "no-convergence",
         label,
@@ -694,6 +763,7 @@ function AdaptiveBarShell({
     placement,
     effective,
     degraded,
+    surrender,
     collapsed,
     overflow,
     label,
@@ -868,9 +938,9 @@ function measureTrigger(
  *
  * Every cheaper proxy misses the shape that actually ships. `flex-grow: 0` is
  * false here — the bar sets `flex-1` on itself, so the failing case reads as
- * healthy — and `overshootsParent` cannot fire either, because a parent that
- * shrink-wraps to its child is never overshot by it. Both proxies describe the
- * bar's own declaration; only this one describes what the engine did with it.
+ * healthy — and `measureRowOverflow` cannot fire either, because a bar whose box
+ * grew to fit its own content is not overflowing that box. Both proxies describe
+ * the bar's own declaration; only this one describes what the engine did with it.
  *
  * One forced reflow, once per bar, and invisible to React and to the paint:
  * the mutation is reverted inside the same synchronous block, so the shared
@@ -902,13 +972,42 @@ function widthFollowsContent(
  * Every unpinned occupant at its narrowest rung — the one configuration
  * guaranteed not to overflow, and therefore what we commit when we stop
  * believing the search.
+ *
+ * Only for a fault whose width reading is TRUSTWORTHY and whose fit disagrees
+ * with the engine anyway. When the width itself is the lie, the floor is the
+ * wrong direction entirely and `degraded` (the ceiling) is the remedy — taking
+ * occupants out of the row is precisely what a bad width was already doing.
+ *
+ * **It is also the last placement this bar computes at this width**, and that
+ * is why the surrender is latched HERE rather than by the callers: flooring and
+ * stopping are one act, so there is no spelling of "take the floor and keep
+ * deciding".
+ *
+ * That spelling is what took the Layout Lab pane down. A floor commit changes
+ * the placement, a changed placement re-runs the measure-and-decide effect, and
+ * the fit — deliberately current-state-independent apart from pins and
+ * hysteresis — recomputes the same ideal it had before, converges, trips the
+ * same guard, and floors again. Neither counter could stop it: the convergence
+ * branch and this function both reset `passes`, so `MAX_PASSES` counted a
+ * number that was being zeroed underneath it, and React eventually threw
+ * "maximum update depth exceeded" over a layout disagreement.
+ *
+ * Scoped to the WIDTH rather than the mount, and that distinction is load-
+ * bearing rather than cautious. `no-convergence` is often transient — a font
+ * arriving mid-pass, a late icon — and it is observed on ordinary healthy
+ * surfaces; parking such a bar at its floor until the pane is reopened buries
+ * every action in the `⋯` panel, which is worse than the fault.
+ * {@link MAX_SURRENDERS} bounds the re-arms.
  */
 function commitFloor(
   items: readonly FitItem[],
   setPlacement: (next: Placement) => void,
-  promoted: { current: Map<string, number> },
-  passes: { current: number },
+  surrender: Surrender,
+  atWidth: number,
 ): void {
+  surrender.surrendered.current = true;
+  surrender.at.current = atWidth;
+  surrender.count.current += 1;
   const floor = new Map<string, number | null>();
   for (const item of items) {
     if (item.absent === true) continue;
@@ -918,8 +1017,6 @@ function commitFloor(
     }
     floor.set(item.id, item.evictable ? null : item.inlineWidths.length - 1);
   }
-  promoted.current.clear();
-  passes.current = 0;
   setPlacement(floor);
 }
 
@@ -938,20 +1035,64 @@ function px(value: string): number {
 }
 
 /**
- * Did the row end up wider than the box it was supposed to fit in?
+ * By how much does the rendered row stick out of the box the bar was given?
  *
- * The second half of the grow-cell contract. The first guard catches "nobody
- * gave this bar slack" at mount; this one catches the subtler version, where
- * the bar reads a width that is not the width it actually gets — and it catches
- * it per pass, against the rendered result rather than against an assumption.
+ * The second half of the grow-cell contract. `widthFollowsContent` catches "the
+ * width I read is not a width I was given" once, at mount; this catches the
+ * case where the width is honest and the fit's own numbers are not — per pass,
+ * against the rendered result rather than an assumption.
+ *
+ * **The occupants against the bar's own content box — never an ancestor.**
+ * This question used to be put to `root.offsetParent`, which is the nearest
+ * *positioned* ancestor: a different thing from "the row I am a cell of", and
+ * one that can be anywhere on the page. A bar inside a horizontally scrolled
+ * strip sits hundreds of pixels to its right in viewport space while fitting
+ * its own row perfectly, and was accused on every pass — which is what killed
+ * the Layout Lab, where every fixture card has exactly that shape. Do not
+ * reintroduce an ancestor comparison in any form; `parentElement` is no better,
+ * since the parent may shrink or carry padding of its own.
+ *
+ * **And not `root.scrollWidth > root.clientWidth` either**, tempting as the
+ * one-liner is. LTR scrollable overflow ignores content past the *left* edge,
+ * and `align="end"` packs the occupants against the far edge — so a pane header
+ * (every one of which is `align="end"`) overflowing by 16px reads
+ * `scrollWidth === clientWidth`. Measured, not assumed. It also folds in
+ * *descendants'* overflow, so a widget's own `active:scale` transform or an
+ * absolutely-positioned badge would inflate it into a false accusation, and a
+ * false accusation costs the whole pane.
+ *
+ * Reading the occupant containers instead is exact on both counts: each rect is
+ * that container's own border box, so nothing a widget paints inside itself
+ * leaks into the answer, and the union covers both directions.
  */
-function overshootsParent(root: HTMLElement): boolean {
-  const parent = (root.offsetParent ??
-    root.parentElement) as HTMLElement | null;
-  if (parent === null) return false;
-  const box = parent.getBoundingClientRect();
-  const style = getComputedStyle(parent);
-  const contentRight =
-    box.right - px(style.paddingRight) - px(style.borderRightWidth);
-  return root.getBoundingClientRect().right > contentRight + 1;
+function measureRowOverflow(
+  root: HTMLElement,
+  order: readonly { entry: BarItemEntry }[],
+  trigger: HTMLElement | null,
+): number {
+  const rect = root.getBoundingClientRect();
+  const style = getComputedStyle(root);
+  const box = {
+    left: rect.left + px(style.paddingLeft) + px(style.borderLeftWidth),
+    right: rect.right - px(style.paddingRight) - px(style.borderRightWidth),
+  };
+
+  const spans: Span[] = [];
+  const addIfLaidOut = (el: HTMLElement): void => {
+    // Two filters, both load-bearing. A container whose parent is not the root
+    // has been relocated into the body-portaled panel, so its rect describes the
+    // panel's layout and says nothing about this row. And an element generating
+    // NO boxes (`hidden`, which is how absence and the un-needed `⋯` are both
+    // spelled) reports a rect of all zeros — at the viewport origin, which would
+    // fabricate a full-width LEFT overflow on every bar. The layout harness
+    // documents the same trap for `display: none` slots.
+    if (el.parentNode !== root) return;
+    if (el.getClientRects().length === 0) return;
+    const r = el.getBoundingClientRect();
+    spans.push({ left: r.left, right: r.right });
+  };
+  for (const { entry } of order) addIfLaidOut(entry.container);
+  if (trigger !== null) addIfLaidOut(trigger);
+
+  return overflowPx(box, spans);
 }

@@ -102,6 +102,7 @@ line, it's also the fix for a multi-contribution chip slot (`<Inline><Slot.Rende
     - `primitives/detail-sections`
     - `primitives/tooltip`
     - `reorder/editor`
+    - `reports/adaptive-bar`
     - `reports/caret-flight`
     - `reports/collab-hydration`
     - `reports/live-state-stale-drop`

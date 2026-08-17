@@ -1,0 +1,16 @@
+import {
+  Core,
+  type PluginDefinition,
+} from "@plugins/framework/plugins/web-sdk/core";
+import { Reports } from "@plugins/reports/web";
+import { AdaptiveBarCollector } from "./components/adaptive-bar-collector";
+import { AdaptiveBarKindView } from "./components/adaptive-bar-kind-view";
+
+export default {
+  description:
+    "Adaptive-bar collector: drains the adaptive-bar primitive's adaptiveBarReportSink into a deduped report whenever a bar's layout contract is violated (it was given no slack, its fit disagrees with the layout engine, its placement never converged, or it refused to relocate an iframe), plus the Debug → Reports summary view.",
+  contributions: [
+    Core.Root({ component: AdaptiveBarCollector }),
+    Reports.KindView({ match: "adaptive-bar", component: AdaptiveBarKindView }),
+  ],
+} satisfies PluginDefinition;

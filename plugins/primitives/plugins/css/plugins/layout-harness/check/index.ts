@@ -25,10 +25,14 @@ import { classifyFailure } from "./classify";
 // invariants (no track collision / no overlap / truncation-onset) by shelling out
 // to the bun:test geometry suite — but only when the inputs the suite depends on
 // have changed. Steady-state cost is ZERO browser launches via a sidecar marker
-// keyed on the css-subtree + app.css tree hash.
+// keyed on a tree hash of the css subtree, app.css, and every fixture
+// contributor's whole plugin subtree.
 
 // Globs whose tree-SHAs are the suite's real inputs: every css primitive (the
 // fixtures + the primitives they render) and the ui-kit Tailwind stylesheet.
+//
+// These are the SEED globs. The real input set is derived from them — see
+// `listFiles` — because a glob list alone could not close the hole below.
 const SIG_GLOBS = [
   "plugins/primitives/plugins/css/plugins/**",
   "plugins/primitives/plugins/css/plugins/ui-kit/web/theme/app.css",
@@ -44,6 +48,32 @@ const SIG_GLOBS = [
   // of gap that stays quiet for months.
   "plugins/**/fixtures/**",
 ];
+
+/**
+ * The plugin roots of the fixture contributors, derived from the fixture paths
+ * themselves — `<root>/fixtures/<anything>` ⇒ `<root>`.
+ *
+ * A fixture is not the thing under test. It is a few lines of JSX; what it
+ * measures is the PRIMITIVE it renders. Hashing `adaptive-bar/fixtures/**` and
+ * not `adaptive-bar/web/**` therefore covered the cheap half and missed the
+ * expensive one: an edit to the primitive changed every box the gate measures
+ * and left the marker valid, so the check answered `ok (cached)` about geometry
+ * it had never seen. That is how a primitive whose guard took the Layout Lab
+ * down shipped past a green gate.
+ *
+ * Derived rather than listed, so a plugin that starts contributing fixtures
+ * tomorrow is covered the day it does — with no glob to remember to add, which
+ * is the maintenance failure that opened the hole the first time.
+ */
+function fixtureContributorGlobs(fixturePaths: readonly string[]): string[] {
+  const roots = new Set<string>();
+  for (const rel of fixturePaths) {
+    const at = rel.lastIndexOf("/fixtures/");
+    if (at < 0) continue;
+    roots.add(rel.slice(0, at));
+  }
+  return [...roots].sort().map((root) => `${root}/**`);
+}
 
 const SUITE_REL =
   "plugins/primitives/plugins/css/plugins/layout-harness/web/internal/layout-geometry.test.ts";
@@ -79,12 +109,12 @@ function sha256(s: string): string {
 // therefore enumerate the paths with git (which honors .gitignore) and hash each
 // file's actual on-disk content. Sync + cheap (the css subtree is small source),
 // so `cacheSignature` reuses it.
-function listFiles(root: string): string[] {
+function gitList(root: string, globs: readonly string[]): string[] {
   const args = [
-    ["ls-files", "--", ...SIG_GLOBS],
-    ["ls-files", "--others", "--exclude-standard", "--", ...SIG_GLOBS],
+    ["ls-files", "--", ...globs],
+    ["ls-files", "--others", "--exclude-standard", "--", ...globs],
   ];
-  const set = new Set<string>();
+  const found: string[] = [];
   for (const a of args) {
     const proc = Bun.spawnSync(["git", ...a], {
       cwd: root,
@@ -92,7 +122,22 @@ function listFiles(root: string): string[] {
       stderr: "pipe",
     });
     const out = new TextDecoder().decode(proc.stdout).trim();
-    for (const line of out.split("\n")) if (line) set.add(line);
+    for (const line of out.split("\n")) if (line) found.push(line);
+  }
+  return found;
+}
+
+// Two passes, because the second glob set is not knowable up front: list the
+// seeds, read the fixture contributors OUT of what came back, then list their
+// whole plugin subtrees too. Four `git ls-files` invocations over a source tree,
+// all sync — `cacheSignature()` calls this on every check run, so it must stay
+// cheap enough to be free.
+function listFiles(root: string): string[] {
+  const seed = gitList(root, SIG_GLOBS);
+  const contributorGlobs = fixtureContributorGlobs(seed);
+  const set = new Set(seed);
+  if (contributorGlobs.length > 0) {
+    for (const rel of gitList(root, contributorGlobs)) set.add(rel);
   }
   return [...set].sort();
 }

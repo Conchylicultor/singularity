@@ -320,6 +320,7 @@ export const serverEntries: CollectedEntry[] = [
   { pluginPath: "release/plugins/bundles", id: "release.bundles", loader: () => import("@plugins/release/plugins/bundles/server"), dependsOn: ["infra/plugins/paths", "infra/plugins/spawn"] },
   { pluginPath: "release", id: "release", loader: () => import("@plugins/release/server"), dependsOn: ["database", "fields/plugins/server-capabilities", "fields/plugins/server-capabilities-loader", "infra/plugins/endpoints", "infra/plugins/launcher", "infra/plugins/paths", "infra/plugins/runtime-profiler", "primitives/plugins/data-view", "primitives/plugins/data-view/plugins/server-query", "primitives/plugins/keyset", "primitives/plugins/log-channels", "release/plugins/bundles"] },
   { pluginPath: "reorder", id: "reorder", loader: () => import("@plugins/reorder/server"), dependsOn: ["config_v2"] },
+  { pluginPath: "reports/plugins/adaptive-bar", id: "reports.adaptive-bar", loader: () => import("@plugins/reports/plugins/adaptive-bar/server"), dependsOn: ["reports"] },
   { pluginPath: "reports/plugins/caret-flight", id: "reports.caret-flight", loader: () => import("@plugins/reports/plugins/caret-flight/server"), dependsOn: ["reports"] },
   { pluginPath: "reports/plugins/collab-hydration", id: "reports.collab-hydration", loader: () => import("@plugins/reports/plugins/collab-hydration/server"), dependsOn: ["reports"] },
   { pluginPath: "reports/plugins/crash", id: "reports.crash", loader: () => import("@plugins/reports/plugins/crash/server"), dependsOn: ["build/plugins/server-build-id", "reports"] },

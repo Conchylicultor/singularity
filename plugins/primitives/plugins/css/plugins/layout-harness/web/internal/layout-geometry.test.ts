@@ -29,10 +29,26 @@ const collected = await loadFixtures();
 let built: BuiltPage;
 let measurer: Measurer;
 
+/**
+ * This suite's own budget, declared here rather than left to whoever runs it.
+ *
+ * bun:test's default is 5s per hook and per test, and the setup below — a cold
+ * Vite build, a cold headless Chromium launch, a page load — routinely runs
+ * longer than that even on an idle machine, let alone a host running several
+ * worktree servers. The `layout-geometry` check passes `--timeout 120000` for
+ * exactly this reason, but a flag on one caller is not a property of the suite:
+ * running it the ordinary way (`./singularity test <this plugin>`) blew the
+ * default budget and reported a hook timeout that had nothing to do with
+ * geometry. A suite that only passes when invoked with the right flag is a
+ * suite with a trap in it, so the budget lives with the code that needs it and
+ * the check's flag is now belt-and-braces.
+ */
+const SETUP_TIMEOUT_MS = 120_000;
+
 beforeAll(async () => {
   built = await buildFixturesPage();
   measurer = await openMeasurer(built.outDir);
-});
+}, SETUP_TIMEOUT_MS);
 
 afterAll(async () => {
   await measurer?.close();
@@ -40,24 +56,80 @@ afterAll(async () => {
 });
 
 /** Measure a fixture across all its widths (unmutated). */
-async function sweep(fixture: LayoutFixture): Promise<Record<number, MeasuredFixture>> {
+async function sweep(
+  fixture: LayoutFixture,
+): Promise<Record<number, MeasuredFixture>> {
   const out: Record<number, MeasuredFixture> = {};
   for (const width of fixture.widths) {
-    out[width] = await measurer.measure(fixture.id, width);
+    const at = `while measuring "${fixture.id}" at ${String(width)}px`;
+    try {
+      out[width] = await measurer.measure(fixture.id, width);
+    } catch (err) {
+      // A crashing fixture usually takes the measure call down with it, and the
+      // rejection Playwright hands back ("Execution context was destroyed…")
+      // names nothing and reads as a driver problem. The page-error buffer
+      // names the fault, so it wins; the driver's own error is only re-thrown
+      // when the buffer is empty and it really is all we know.
+      throwOnPageErrors(measurer.takePageErrors(), at);
+      throw err;
+    }
+    // Drained per WIDTH, not per fixture: this is the only point at which we
+    // know which fixture was on screen when the error fired. The per-fixture
+    // test below is the catch-all for one that arrives after the last measure
+    // resolved (a rAF loop still unwinding).
+    throwOnPageErrors(measurer.takePageErrors(), at);
   }
   return out;
+}
+
+/**
+ * Turn a drained batch of page errors into the one loud failure.
+ *
+ * The literal `fixture page error:` prefix is a contract with
+ * `check/classify.ts`: it is a FATAL signature there, so a crashed fixture can
+ * never be filed as an environmental timeout and cached past. Keep the two in
+ * step if the wording changes.
+ */
+function throwOnPageErrors(errors: string[], where: string): void {
+  if (errors.length === 0) return;
+  throw new Error(
+    `fixture page error: ${String(errors.length)} uncaught error(s) escaped to the top of the measurer page ${where}. A fixture that throws is not laying anything out, so every box measured around it is meaningless:\n\n${errors.join("\n\n--- next page error ---\n\n")}`,
+  );
 }
 
 test("the fixture catalog is non-empty", () => {
   expect(collected.length).toBeGreaterThan(0);
 });
 
+// Registered BEFORE the per-fixture describes so it drains the load window only:
+// anything that threw while the bundle evaluated and `loadFixtures()` resolved.
+// Nothing has been rendered yet at this point, so an error here is the harness
+// itself, not a fixture.
+test("the measurer page loaded without a page error", () => {
+  throwOnPageErrors(measurer.takePageErrors(), "while it loaded");
+});
+
 for (const fixture of collected) {
   describe(fixture.id, () => {
     let measuredByWidth: Record<number, MeasuredFixture>;
 
+    // Same reasoning as the setup budget: a sweep is one settle loop per width,
+    // and a settle loop waits on frames. A fixture whose layout takes a while to
+    // settle is slow, not broken, and must not read as a hook timeout.
     beforeAll(async () => {
       measuredByWidth = await sweep(fixture);
+    }, SETUP_TIMEOUT_MS);
+
+    // The catch-all for an error that fired after the sweep's last measure
+    // resolved — a rAF loop still unwinding, a deferred effect. Errors DURING
+    // the sweep are drained inside `sweep` itself, where the width is still
+    // known. First test in the describe so it reports before the invariants,
+    // whose numbers are meaningless once something has crashed.
+    test("no page error while measuring this fixture", () => {
+      throwOnPageErrors(
+        measurer.takePageErrors(),
+        `while measuring "${fixture.id}" across widths [${fixture.widths.join(", ")}]`,
+      );
     });
 
     for (const inv of fixture.invariants) {
@@ -73,6 +145,13 @@ for (const fixture of collected) {
               inv.mutate,
             );
           }
+          // The mutation is applied to the painted DOM, so it can crash the page
+          // in its own right; drained here so that reads as the mutation's
+          // fault rather than the next fixture's.
+          throwOnPageErrors(
+            measurer.takePageErrors(),
+            `while measuring "${fixture.id}" with the ${inv.mutate.kind} falsification applied`,
+          );
           const r = evaluateInvariant(inv.expectViolated, mutatedByWidth);
           // The whole point: the mutation reproduces the historical broken shape,
           // so the inner invariant MUST fail. If it passes, the harness is NOT

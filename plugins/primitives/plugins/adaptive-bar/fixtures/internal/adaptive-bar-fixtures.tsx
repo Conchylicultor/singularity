@@ -5,8 +5,12 @@ import {
   useActionForm,
   useHoldShrink,
 } from "@plugins/primitives/plugins/action-presentation/web";
-import { AdaptiveBar } from "@plugins/primitives/plugins/adaptive-bar/web";
+import {
+  AdaptiveBar,
+  type AdaptiveBarAlign,
+} from "@plugins/primitives/plugins/adaptive-bar/web";
 import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
+import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
@@ -219,6 +223,109 @@ function ActionsBarFixture(): ReactElement {
   );
 }
 
+/**
+ * How far right of the harness's own box the bar is pushed, and how wide the
+ * box it actually has to fit in is. Both are authored rather than swept: the
+ * point of these two fixtures is that the bar's own row is comfortable while
+ * its position on the page is nowhere near the ancestor a naive guard picks.
+ *
+ * 1200px is not a magic number so much as "wider than any swept width", so the
+ * bar's viewport rect starts past the right edge of the harness wrapper at
+ * every width in the sweep.
+ */
+const STRIP_SPACER_PX = 1200;
+const STRIP_CARD_PX = 360;
+
+/**
+ * The Layout Lab's own shape, reduced to one card.
+ *
+ * A bar that fits its row perfectly, parked far to the right of the nearest
+ * *positioned* ancestor. The Lab produces this by construction — it renders
+ * every fixture once per swept width as a fixed-width card inside a
+ * horizontally scrolling strip, so every card after the first sits hundreds of
+ * pixels right of the pane box — and it is the shape that killed the pane: the
+ * guard used to compare the bar against `root.offsetParent`, the nearest
+ * POSITIONED ancestor, which is a different thing from "the row I am a cell
+ * of". Here that ancestor is the harness's own `position: relative` width
+ * wrapper, hundreds of pixels to the left. Every pass was accused, every
+ * accusation floored the bar, flooring re-decided, and React threw "maximum
+ * update depth exceeded".
+ *
+ * Three structural details, each of which the fixture stops reproducing
+ * anything without:
+ *
+ * - **The strip is authored exactly as wide as its two children**, so the flex
+ *   row has no free space to distribute and no deficit to recover. The spacer
+ *   IS the offset; a spacer that collapsed under flex shrinking would quietly
+ *   delete the premise.
+ * - **The card holding the bar is a plain `<div>`, never `position: relative`.**
+ *   A positioned card would become the `offsetParent` itself and the old
+ *   predicate would answer correctly — the fixture would pass either way and
+ *   prove nothing.
+ * - **The card carries its own `data-geo="container"`, and the spacer carries
+ *   no `data-geo` at all.** `__measure` prefers the INNERMOST container, so
+ *   `noClip`/`noOverlap` are judged against the card the bar actually lives in
+ *   rather than against the harness wrapper the strip legitimately overruns —
+ *   which would otherwise fail for an honest reason that has nothing to do
+ *   with the bar.
+ *
+ * `align` is the whole difference between the two fixtures below; see them for
+ * why the `"end"` direction is not redundant.
+ */
+function StripBarFixture({ align }: { align: AdaptiveBarAlign }): ReactElement {
+  const hostRef = useTriggerGeoSlot();
+  return (
+    <Scroll axis="x">
+      {/* Sized to the sum of its children so the flex row has zero free space
+          to distribute and zero deficit to recover — no shrinking, either way. */}
+      <div style={{ width: STRIP_SPACER_PX + STRIP_CARD_PX }}>
+        <Stack direction="row" gap="none" align="center">
+          {/* No `data-geo`: the spacer is scenery, not a measured participant. */}
+          <div style={{ width: STRIP_SPACER_PX }}>
+            <Text variant="caption" tone="muted">
+              spacer — the bar starts {STRIP_SPACER_PX}px right of the box a
+              positioned-ancestor guard would compare it against
+            </Text>
+          </div>
+          <div data-geo="container" style={{ width: STRIP_CARD_PX }}>
+            <Line ref={hostRef} className="w-full">
+              <AdaptiveBar gap="xs" align={align} label="Strip actions">
+                <AdaptiveBar.Item id="search">
+                  <span data-geo="search">
+                    <IconButton
+                      icon={MdSearch}
+                      label="Search"
+                      onClick={() => {}}
+                    />
+                  </span>
+                </AdaptiveBar.Item>
+                <AdaptiveBar.Item id="share">
+                  <span data-geo="share">
+                    <IconButton
+                      icon={MdShare}
+                      label="Share"
+                      onClick={() => {}}
+                    />
+                  </span>
+                </AdaptiveBar.Item>
+                <AdaptiveBar.Item id="settings">
+                  <span data-geo="settings">
+                    <IconButton
+                      icon={MdSettings}
+                      label="Settings"
+                      onClick={() => {}}
+                    />
+                  </span>
+                </AdaptiveBar.Item>
+              </AdaptiveBar>
+            </Line>
+          </div>
+        </Stack>
+      </div>
+    </Scroll>
+  );
+}
+
 export const adaptiveBarFixtures: LayoutFixture[] = [
   {
     // The load-bearing one: a draggable `role="slider"` and a two-rung volume
@@ -241,5 +348,65 @@ export const adaptiveBarFixtures: LayoutFixture[] = [
     widths: [400, 300, 200, 120, 60],
     render: () => <ActionsBarFixture />,
     invariants: [{ kind: "noOverlap" }, { kind: "noClip" }],
+  },
+  {
+    // The regression fixture for the guard that took the Layout Lab down: a bar
+    // whose own row is roomy, parked far from its nearest positioned ancestor.
+    //
+    // The width sweep is deliberately inert for the bar — the strip and the
+    // card are authored, so widening the harness only widens the SCROLL
+    // VIEWPORT the strip overruns. That is itself the assertion: the bar's
+    // geometry must depend on the box it was given and on nothing else, and the
+    // narrower harness width is the harsher case (the offset relative to the
+    // positioned ancestor is larger, not smaller).
+    //
+    // `rigidIntegrity` is here for a reason the other two invariants cannot
+    // cover, and it is the load-bearing one rather than a belt-and-braces
+    // extra. `noOverlap` and `noClip` both skip a slot that is absent, and once
+    // a fault is terminal this bug PRESENTS as every occupant floored into the
+    // panel and gone from the row — geometrically serene, and completely wrong.
+    // The measurer page is a Vite PRODUCTION build, so the bar's dev-only throw
+    // is compiled out and the page-error drain never hears about it; the quiet
+    // branch is the only branch the gate can see. `rigidIntegrity` fails on a
+    // slot that is never present across the sweep, so "the three actions are
+    // still in the row, at the same width" is asserted rather than assumed.
+    id: "adaptive-bar/inside-horizontal-strip",
+    primitive: "adaptive-bar",
+    dims: { contentLen: "short", withMeta: false, state: "idle" },
+    widths: [720, 320],
+    render: () => <StripBarFixture align="start" />,
+    invariants: [
+      { kind: "noOverlap" },
+      { kind: "noClip" },
+      { kind: "rigidIntegrity", slot: "search" },
+      { kind: "rigidIntegrity", slot: "share" },
+      { kind: "rigidIntegrity", slot: "settings" },
+    ],
+  },
+  {
+    // The same shape with `align="end"`, and it is not redundant with the one
+    // above — it is the direction a right-edge-only guard cannot see at all.
+    //
+    // `align="end"` packs the occupants against the far edge, so an over-full
+    // row spills to the LEFT, and LTR scrollable overflow does not account for
+    // content past the left edge: `root.scrollWidth` reads exactly equal to
+    // `clientWidth` on a row overflowing that way (measured in Chromium, not
+    // assumed). Any guard phrased as "does the content stick out to the right"
+    // is blind here — and this is not an exotic configuration, it is what every
+    // pane header in the app renders. So the guard is exercised in this
+    // direction too, on the same strip shape, rather than leaving it to the
+    // synthetic spans in the primitive's own unit tests.
+    id: "adaptive-bar/inside-horizontal-strip-end",
+    primitive: "adaptive-bar",
+    dims: { contentLen: "short", withMeta: false, state: "idle" },
+    widths: [720, 320],
+    render: () => <StripBarFixture align="end" />,
+    invariants: [
+      { kind: "noOverlap" },
+      { kind: "noClip" },
+      { kind: "rigidIntegrity", slot: "search" },
+      { kind: "rigidIntegrity", slot: "share" },
+      { kind: "rigidIntegrity", slot: "settings" },
+    ],
   },
 ];

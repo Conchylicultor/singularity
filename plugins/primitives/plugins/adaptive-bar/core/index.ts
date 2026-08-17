@@ -22,3 +22,6 @@ export {
 
 export type { DockMove } from "./dock-plan";
 export { planMoves } from "./dock-plan";
+
+export type { Span } from "./overflow";
+export { overflowPx } from "./overflow";

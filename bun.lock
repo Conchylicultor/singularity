@@ -4261,6 +4261,10 @@
       "name": "@singularity/plugin-reports",
       "version": "0.0.1",
     },
+    "plugins/reports/plugins/adaptive-bar": {
+      "name": "@singularity/plugin-reports-adaptive-bar",
+      "version": "0.0.1",
+    },
     "plugins/reports/plugins/caret-flight": {
       "name": "@singularity/plugin-reports-caret-flight",
       "version": "0.0.1",
@@ -7480,6 +7484,8 @@
     "@singularity/plugin-reorder-node-types-spacer": ["@singularity/plugin-reorder-node-types-spacer@workspace:plugins/reorder/plugins/node-types/plugins/spacer"],
 
     "@singularity/plugin-reports": ["@singularity/plugin-reports@workspace:plugins/reports"],
+
+    "@singularity/plugin-reports-adaptive-bar": ["@singularity/plugin-reports-adaptive-bar@workspace:plugins/reports/plugins/adaptive-bar"],
 
     "@singularity/plugin-reports-caret-flight": ["@singularity/plugin-reports-caret-flight@workspace:plugins/reports/plugins/caret-flight"],
 
