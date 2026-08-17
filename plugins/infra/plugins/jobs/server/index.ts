@@ -21,7 +21,13 @@ import {
 } from "./internal/worker";
 import { listJobs, listDeadJobs, retryJob, cancelJob } from "../core/endpoints";
 
-export { defineJob, UNSAFE_getRegisteredJob, getAllRegisteredJobNames, DEFAULT_MAX_ATTEMPTS, getJobSlowThresholdMs } from "./internal/registry";
+export {
+  defineJob,
+  UNSAFE_getRegisteredJob,
+  getAllRegisteredJobNames,
+  DEFAULT_MAX_ATTEMPTS,
+  getJobSlowThresholdMs,
+} from "./internal/registry";
 export { sweepOnce as UNSAFE_sweepStuckLocks } from "./internal/stuck-lock-sweeper";
 export type {
   DefineJobSpec,
@@ -31,6 +37,7 @@ export type {
   JobFactory,
   RegisteredJob,
   ScheduleSpec,
+  SerialSpec,
 } from "./internal/registry";
 export {
   isSuspendSignal,

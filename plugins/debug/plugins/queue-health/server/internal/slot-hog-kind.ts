@@ -21,6 +21,10 @@ export const slotHogKind = ReportKind({
   kind: "queue-slot-hog",
   schema: QueueSlotHogPayloadSchema,
   fingerprint: (d: QueueSlotHogPayload) => `queue-slot-hog:${d.jobName}`,
+  // Exempt from the duress shed gate — see the same comment on `deadJobKind`.
+  // A job holding a slot for many minutes is a normal SYMPTOM of a host under
+  // duress, which is exactly the window in which the report would be shed.
+  duressExempt: true,
   meta: {
     tag: "[queue]",
     notif: "Job hogging a queue slot",

@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
+import type { TaskSpec } from "graphile-worker";
 import type { PoolClient } from "pg";
 import type { z } from "zod";
 import type { Registration } from "@plugins/framework/plugins/server-core/core";
@@ -37,6 +38,53 @@ export interface JobCtx {
    * Used as the key for the step and wait logs.
    */
   workflowRunId: string;
+  /**
+   * Aborted when THIS dispatch has used up its execution budget — the wall-clock
+   * time one run of this handler may spend holding a worker slot. (The budget
+   * itself lands in a later phase; today nothing fires this signal, so it is a
+   * signal that stays unaborted for the handler's whole life. Threading it now is
+   * free and means the budget arrives without touching call sites.)
+   *
+   * **Thread it into anything that accepts one.** `fetch`, child processes, gate
+   * and pool acquisition — anywhere the handler can wait. Aborting the signal is
+   * the ONLY lever the worker has: it cannot un-await a promise. So a handler that
+   * ignores it does not stop when its budget expires; it keeps running, invisibly,
+   * after its job row has already been recorded as failed. That is the shape of
+   * both wedges on 2026-08-17 — an un-timed `await browser.close()` inside a
+   * semaphore, and an un-timed `git worktree remove` inside a host-wide flock —
+   * which between them held all four slots of the pool for 70 minutes while 690
+   * jobs piled up behind them
+   * (`research/2026-08-17-global-bounded-job-execution.md`).
+   *
+   * **This is NOT graphile's `helpers.abortSignal`.** That one is runner-level and
+   * fires on worker SHUTDOWN. We deliberately do not use it and deliberately do
+   * not wire the two together: "the process is going down" wants you to stop
+   * cleanly and let the row be retried elsewhere, while "this one run overran"
+   * wants a loud, attributed failure against this job. Conflating them would make
+   * an ordinary deploy look like 4 jobs blowing their budget, and a genuine
+   * overrun look like a restart.
+   *
+   * **A long WAIT is not a long RUN — use `ctx.waitFor` / `ctx.sleep` for it.**
+   * Those RETURN from `run` (via the suspend sentinel), releasing the worker slot;
+   * the workflow resumes later as a fresh dispatch with a fresh budget. So a
+   * workflow may legitimately span days while every one of its runs stays short.
+   * That is precisely why bounding execution is safe: nothing correct needs to
+   * hold a slot for a long time. If you find yourself wanting a bigger budget in
+   * order to wait for something, you want a suspend instead.
+   *
+   * **Why this is not the liveness inference this plugin bans** (see the top of
+   * `jobs/CLAUDE.md`, and the ~25 live jobs the old age-based lease stole in 8
+   * days): the banned claim is third-person and made about a stranger — "this row
+   * has been locked for T, therefore its owner is dead, therefore I may re-dispatch
+   * it" — which no clock can support. This is first-person: the process aborting
+   * the handler is the same process running it and holding its advisory lock, so
+   * it is saying "I am giving up on my own work", never "someone else must be
+   * gone". Nothing here moves a job row, and the invariant downstream is unchanged
+   * — a row is still reclaimed only when its lock is provably absent from
+   * `pg_locks`. A budget bounds how long "alive" may last; it never decides who is
+   * alive.
+   */
+  readonly signal: AbortSignal;
   /**
    * Run `fn` exactly once per `workflowRunId` and memoize its result in
    * `_job_steps`. On replay (retry or resume), returns the cached result
@@ -95,15 +143,16 @@ export interface RegisteredJob {
   /** Recurring schedule, if the job declared one. Read by the worker at
    * startup to build graphile-worker cron items. */
   schedule?: ScheduleSpec;
+  /** Serialization lane, if the job declared one (see {@link SerialSpec}).
+   * Read through {@link queueNameFor} by every enqueue path, so the queue name
+   * is a property of the registered job rather than of any call site. */
+  serial?: SerialSpec;
   /**
    * Enqueue by the registered job's public factory. Exposed here so the
    * builtin `jobs.resume` can re-enqueue a target by name without holding
    * a typed `JobFactory` reference.
    */
-  enqueue: (
-    input: unknown,
-    opts?: EnqueueOpts,
-  ) => Promise<{ jobId: string }>;
+  enqueue: (input: unknown, opts?: EnqueueOpts) => Promise<{ jobId: string }>;
 }
 
 export interface EnqueueOpts {
@@ -126,9 +175,53 @@ export interface EnqueueOpts {
 }
 
 export type Dedup<S extends z.ZodType> =
-  | "singleton"
-  | "none"
-  | { key: (input: z.infer<S>) => string };
+  "singleton" | "none" | { key: (input: z.infer<S>) => string };
+
+/**
+ * Declares that runs of this job must not overlap — `true` serializes the job
+ * against itself, `{ with: "<lane>" }` serializes it against every other job
+ * naming the same lane (one Chromium at a time across several job names).
+ *
+ * **This is not a semaphore, and the difference is the entire point.** An
+ * in-process gate — `createSemaphore(1)`, a mutex, an async queue — is entered
+ * AFTER graphile has already handed the job to a worker, so a job waiting on it
+ * is holding a slot from the shared pool while it waits. On 2026-08-17 main's
+ * queue stopped for 70 minutes and three of its four slots came from ONE bug:
+ * `prototypes.render-thumbnail` guarded Chromium with a process-local
+ * `createSemaphore(1)`, one run wedged holding the permit, and the next two
+ * renders were dequeued and then blocked forever *waiting for it* — each
+ * occupying a slot to do nothing. An in-process gate entered after dispatch
+ * turns one stuck job into N stuck slots.
+ *
+ * `serial` moves the wait to BEFORE dispatch. It is plumbed to graphile's
+ * `queue_name`, and graphile's fetch query (`dist/sql/getJob.js:72-74`) filters
+ * candidate rows on `job_queues.is_available = true` — so a job whose queue is
+ * busy is never fetched and never occupies a slot at all. Waiting becomes free,
+ * and a wedged serialized job shows up as ready backlog (already attributed per
+ * jobName by queue-health) rather than as invisible slot exhaustion.
+ *
+ * **Scope: per-database, i.e. per worktree backend.** graphile's queue lock is a
+ * row in this database's `graphile_worker._private_job_queues`, and every
+ * worktree backend runs its own worker against its own DB fork. So `serial`
+ * bounds THIS backend — exactly the scope `createSemaphore(1)` had, and exactly
+ * the scope it replaces. It says nothing about the other ~16 backends on the
+ * box. Host-wide bounds are a different mechanism and remain
+ * `infra/host-admission`'s job; reach for that when the resource is the machine
+ * (CPU, RAM, a shared directory), and for `serial` when the resource is this
+ * process.
+ *
+ * **Queue names must come from a small FIXED set — never from the input.**
+ * graphile picks its fetch strategy on whether named queues exist at all: with
+ * none it uses the fastest path, and the moment any exist it switches to
+ * strategy 2, which its own benchmark comment (`dist/sql/getJob.js`, ~lines
+ * 30-60) measures at ~843 jobs/s against ~11.8k for strategy 0. That is ample
+ * for this queue's volume, but the same comment calls a distinct queue name per
+ * job instance ("randomly generating queue names") pathological, at roughly
+ * 40 jobs/s. So serialize on the RESOURCE — the browser, the git checkout, the
+ * external API — and never on the payload: `serial: true` on a thumbnail
+ * renderer is right; a queue per prototype slug is the pathological case.
+ */
+export type SerialSpec = true | { readonly with: string };
 
 export interface ScheduleSpec {
   /**
@@ -162,7 +255,12 @@ export interface ScheduleSpec {
   perWorktree?: boolean;
 }
 
-export interface DefineJobSpec<
+/**
+ * Everything a job declares that is independent of whether it is scheduled.
+ * Not exported: {@link DefineJobSpec} is the only spelling of a job spec, and
+ * it is the union that carries the scheduled ⇒ singleton invariant.
+ */
+interface BaseJobSpec<
   N extends string,
   S extends z.ZodType,
   E extends z.ZodType,
@@ -184,17 +282,6 @@ export interface DefineJobSpec<
    * `.enqueue()` always passes `event: undefined` regardless of schema.
    */
   event: E;
-  dedup: Dedup<S>;
-  /**
-   * Run this job on a recurring schedule (see {@link ScheduleSpec}). The jobs
-   * worker builds a graphile-worker cron item from this at startup.
-   *
-   * Scheduled jobs MUST have an `input` schema that parses `{}` (all fields
-   * optional or defaulted) — the cron payload is built from `input.parse({})`.
-   * If that throws, the worker fails loud at startup (it's a defineJob misuse,
-   * not a runtime condition).
-   */
-  schedule?: ScheduleSpec;
   /**
    * Handler body. Receives `{ input, event, ctx }` as a single object.
    *
@@ -216,7 +303,54 @@ export interface DefineJobSpec<
    * expected to run long (backfills, syncs) so they don't file noise.
    */
   slowThresholdMs?: number;
+  /**
+   * Never run two of these at once — see {@link SerialSpec} for what that
+   * means, why it is not a semaphore, and why the set of lane names must stay
+   * small and name a resource rather than an input.
+   */
+  serial?: SerialSpec;
 }
+
+/**
+ * A job spec — either unscheduled with any {@link Dedup}, or scheduled and
+ * therefore `dedup: "singleton"`.
+ *
+ * **Why a union rather than two optional fields.** A keyed schedule is
+ * meaningless on its own terms: the cron payload is always `input.parse({})`,
+ * so a `key(input)` function is evaluated against one constant value and yields
+ * one constant key — i.e. a singleton wearing a costume. Worse, the cron item
+ * built in `worker.ts` hardcodes the singleton job key `${job.name}:_`, and
+ * that key is only TOTAL over scheduled jobs if a scheduled job cannot declare
+ * anything else. Before that key existed the cron path ignored `dedup`
+ * altogether and every tick inserted a new row forever — 57 copies each of six
+ * per-minute monitors by the time main's queue wedged on 2026-08-17. Rung 2 of
+ * the fix ladder: make the wrong combination a tsc error rather than a
+ * convention a future scheduled job can quietly break.
+ */
+export type DefineJobSpec<
+  N extends string,
+  S extends z.ZodType,
+  E extends z.ZodType,
+> =
+  | (BaseJobSpec<N, S, E> & {
+      dedup: Dedup<S>;
+      /** Unscheduled. Declare `schedule` and `dedup` narrows to `"singleton"`. */
+      schedule?: undefined;
+    })
+  | (BaseJobSpec<N, S, E> & {
+      /** Forced by {@link schedule} — see the union's note above. */
+      dedup: "singleton";
+      /**
+       * Run this job on a recurring schedule (see {@link ScheduleSpec}). The jobs
+       * worker builds a graphile-worker cron item from this at startup.
+       *
+       * Scheduled jobs MUST have an `input` schema that parses `{}` (all fields
+       * optional or defaulted) — the cron payload is built from `input.parse({})`.
+       * If that throws, the worker fails loud at startup (it's a defineJob misuse,
+       * not a runtime condition).
+       */
+      schedule: ScheduleSpec;
+    });
 
 export interface JobFactory<
   N extends string,
@@ -226,10 +360,7 @@ export interface JobFactory<
   readonly name: N;
   readonly inputSchema: S;
   readonly eventSchema: E;
-  enqueue(
-    input: z.input<S>,
-    opts?: EnqueueOpts,
-  ): Promise<{ jobId: string }>;
+  enqueue(input: z.input<S>, opts?: EnqueueOpts): Promise<{ jobId: string }>;
 }
 
 // Module-load-time registry. Populated by `defineJob`; the worker reads it at
@@ -250,6 +381,100 @@ export interface JobTaskPayload {
    * derives a stable per-tick `workflowRunId` from it.
    */
   _cron?: { ts: string; backfilled?: boolean };
+}
+
+// --- The one derivation of a graphile queue name ------------------------------
+//
+// A serialized job that is enqueued WITHOUT its queue name escapes its own
+// serialization — the row lands with `job_queue_id IS NULL`, graphile fetches it
+// regardless of who else is running, and the guarantee silently evaporates for
+// that one path. There are five places a `jobs.run` row is inserted (this file's
+// two enqueue paths, `resume-job.ts`'s target re-enqueue, `worker.ts`'s
+// `scheduleResume`, and `worker.ts`'s cron items), so "remember to pass the
+// queue name" is five chances to be wrong and no way to notice.
+//
+// Hence: the queue name is derived from the REGISTERED JOB and is never a caller
+// argument. `queueNameFor` is the single derivation; `graphileSpecFor` is the
+// single assembly of a graphile `TaskSpec` around it, and the raw-SQL enqueue
+// path reads its columns off that same spec rather than composing its own. The
+// `jobs:no-raw-addjob` check (`../../check/index.ts`) bans `utils.addJob(` and
+// `graphile_worker.add_job` everywhere but this file, so a sixth insertion site
+// cannot be written without going through here.
+
+/** `sg:` namespaces our queue names inside graphile's global queue-name space,
+ * so they are recognizable in `_private_job_queues` and cannot collide with a
+ * name some future library picks. */
+const QUEUE_PREFIX = "sg:";
+
+/**
+ * The graphile `queue_name` for a registered job, or `undefined` when the job
+ * declared no {@link SerialSpec} (the overwhelming majority — an unnamed queue
+ * is the fast, unserialized path).
+ *
+ * `serial: true` → `sg:<jobName>`, serialized against itself only.
+ * `serial: { with: "chromium" }` → `sg:lane:chromium`, shared by every job name
+ * naming that lane, so N job names serialize against ONE resource.
+ */
+export function queueNameFor(job: {
+  name: string;
+  serial?: SerialSpec;
+}): string | undefined {
+  if (!job.serial) return undefined;
+  if (job.serial === true) return `${QUEUE_PREFIX}${job.name}`;
+  return `${QUEUE_PREFIX}lane:${job.serial.with}`;
+}
+
+/**
+ * Build the graphile `TaskSpec` for one insertion of `job`. Everything a caller
+ * legitimately varies per enqueue (`jobKey`, `runAt`, `maxAttempts`) is an
+ * argument; the queue name deliberately is NOT — it comes from the job.
+ */
+export function graphileSpecFor(
+  job: { name: string; serial?: SerialSpec },
+  opts: GraphileInsertOpts,
+): TaskSpec {
+  return {
+    queueName: queueNameFor(job),
+    jobKey: opts.jobKey ?? undefined,
+    runAt: opts.runAt ?? undefined,
+    maxAttempts: opts.maxAttempts,
+  };
+}
+
+export interface GraphileInsertOpts {
+  jobKey?: string | null;
+  runAt?: Date | null;
+  maxAttempts?: number;
+}
+
+/**
+ * Insert one `jobs.run` row for an already-resolved {@link RegisteredJob},
+ * bypassing `enqueue`'s input parse and its per-job-name job-key namespacing.
+ *
+ * `UNSAFE_` because both bypasses matter: the payload is stored verbatim (the
+ * caller is responsible for it already being in post-transform shape — see
+ * `resume-job.ts` on why re-parsing a resumed input is wrong), and the `jobKey`
+ * is taken literally rather than prefixed. General plugin code must call
+ * `job.enqueue(...)` instead.
+ *
+ * It lives here, next to `graphileSpecFor`, so that `utils.addJob` has exactly
+ * ONE call site in the repo. The two internal callers (`worker.ts`'s
+ * `scheduleResume`, `resume-job.ts`'s target re-enqueue) need the bypasses but
+ * must not be free to omit the queue name; routing them through here means they
+ * cannot. `jobs:no-raw-addjob` enforces the exclusivity.
+ */
+export async function UNSAFE_insertJobRow(
+  job: { name: string; serial?: SerialSpec },
+  payload: JobTaskPayload,
+  opts: GraphileInsertOpts,
+): Promise<{ jobId: string }> {
+  const utils = await getWorkerUtils();
+  const added = await utils.addJob(
+    JOB_TASK,
+    payload,
+    graphileSpecFor(job, opts),
+  );
+  return { jobId: String(added.id) };
 }
 
 export function defineJob<
@@ -289,8 +514,17 @@ export function defineJob<
       input: parsed,
       event: opts?._event,
     };
+    // Both branches below insert the SAME row through two different transports,
+    // so both derive their graphile columns from one spec. Deriving them twice
+    // is how the shared-tx path would quietly lose the queue name.
+    const graphileOpts: GraphileInsertOpts = {
+      jobKey: graphileJobKey,
+      runAt: opts?.runAt,
+      maxAttempts,
+    };
 
     if (opts?.tx) {
+      const graphileSpec = graphileSpecFor(spec, graphileOpts);
       // Shared-tx path: write into graphile_worker.jobs on the caller's
       // transaction client by calling Graphile's documented public SQL
       // function. Rollback drops the row alongside the caller's writes.
@@ -305,14 +539,20 @@ export function defineJob<
            payload      := $2::json,
            run_at       := $3,
            max_attempts := $4,
-           job_key      := $5
+           job_key      := $5,
+           queue_name   := $6
          )).id::text AS id`,
         [
           JOB_TASK,
           JSON.stringify(payload),
-          opts.runAt ?? null,
-          maxAttempts,
-          graphileJobKey,
+          graphileSpec.runAt ?? null,
+          graphileSpec.maxAttempts ?? null,
+          graphileSpec.jobKey ?? null,
+          // NULL ⇒ unnamed queue, which is what graphile's own default is and
+          // what every non-`serial` job gets. `add_job` takes queue_name as a
+          // named argument (sql/000016.sql:8), so passing NULL explicitly is
+          // identical to omitting it.
+          graphileSpec.queueName ?? null,
         ],
       );
       const id = result.rows[0]?.id;
@@ -320,13 +560,7 @@ export function defineJob<
       return { jobId: id };
     }
 
-    const utils = await getWorkerUtils();
-    const job = await utils.addJob(JOB_TASK, payload, {
-      jobKey: graphileJobKey ?? undefined,
-      maxAttempts,
-      runAt: opts?.runAt,
-    });
-    return { jobId: String(job.id) };
+    return UNSAFE_insertJobRow(spec, payload, graphileOpts);
   }
 
   const factory: JobFactory<N, S, E> = {
@@ -355,6 +589,7 @@ export function defineJob<
         maxAttempts: spec.maxAttempts ?? DEFAULT_MAX_ATTEMPTS,
         slowThresholdMs: spec.slowThresholdMs,
         schedule: spec.schedule,
+        serial: spec.serial,
         enqueue,
       });
     },

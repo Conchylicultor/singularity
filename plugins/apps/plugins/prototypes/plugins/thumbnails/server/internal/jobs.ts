@@ -18,6 +18,27 @@ const THUMBNAIL_TTL_MS = 30 * 24 * 60 * 60 * 1000;
  * the same folder. The payload carries the fingerprint the enqueue was for, so
  * the job can tell it has been superseded.
  *
+ * `dedup` has a limit worth naming, because it cost main's queue 70 minutes on
+ * 2026-08-17: it cannot collapse onto a row that is already LOCKED. Three saves
+ * of one prototype in 14 seconds therefore became three rows, not one — the
+ * first running, the next two behind it.
+ *
+ * `serial: true` is what makes that harmless. One browser at a time is the
+ * right bound — a chromium launch plus a render saturates roughly a core, and a
+ * gallery open can ask for several prototypes at once — but it must be enforced
+ * BEFORE dispatch, not inside the handler. This job used to hold a
+ * `createSemaphore(1)` around the browser; a run wedged holding the permit, and
+ * the two behind it were dequeued and then blocked *waiting for it*, each
+ * burning a worker slot to do nothing. `serial` is graphile's `queue_name`: a
+ * job whose queue is busy is never fetched, so it waits in the ready backlog
+ * where waiting is free and visible.
+ *
+ * Known limit, unchanged: this bounds THIS backend, not the host —
+ * `browser-fetch` reserves a host-wide pool for its own launches and this does
+ * not share it. Fine while prototype renders are rare and short; if galleries
+ * get opened across many worktrees at once the fix is a `RESERVED_POOLS` entry
+ * in `host-admission/core`, not anything here.
+ *
  * `maxAttempts` is left at the default because it only ever governs the
  * UNEXPECTED case: a classified render failure is caught here and becomes a
  * visible state on the card, which is a successful job.
@@ -27,6 +48,7 @@ export const renderThumbnailJob = defineJob({
   input: z.object({ name: z.string(), key: z.string() }),
   event: z.never(),
   dedup: { key: (input) => input.name },
+  serial: true,
   // A browser launch plus a page render is seconds by nature; that is not a
   // slow op worth reporting.
   slowThresholdMs: 60_000,

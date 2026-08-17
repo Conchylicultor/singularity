@@ -12030,13 +12030,14 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/pane.Pane`
           - `shell/notifications.toast`
         - Exports (values): `queuePane`
-    - **`queue-health`** — Queue-health report renderers: one-line Debug → Reports summaries for the queue-dead-job, queue-backlog, and queue-slot-hog kinds, plus the threshold config registration. Queue-health monitor: a cheap per-worktree scheduled job that samples the graphile queue and files deduped reports for terminally-dead jobs (per jobName), backlog/stall (with per-jobName attribution), and slot-hogging jobs, through the existing reports engine. Also exposes a queue-health summary endpoint + the get_queue_health MCP tool.
+    - **`queue-health`** — Queue-health report renderers: one-line Debug → Reports summaries for the queue-wedged, queue-dead-job, queue-backlog, and queue-slot-hog kinds, plus the threshold config registration. Queue-health watchdog: a 30s interval on the backend's own event loop — deliberately NOT a scheduled job, which would queue behind the wedge it exists to detect — that samples the graphile queue and files deduped reports for a wedged queue (every slot held by the same live jobs while ready work starves), backlog/stall, slot-hogging jobs, and terminally-dead jobs, through the existing reports engine. All four kinds are duressExempt. Also exposes a queue-health summary endpoint + the get_queue_health MCP tool.
       - Web:
         - Contributes:
           - `ConfigV2.WebRegister`
           - `Reports.KindView` → `DeadJobSummary`
           - `Reports.KindView` → `BacklogSummary`
           - `Reports.KindView` → `SlotHogSummary`
+          - `Reports.KindView` → `WedgedSummary`
         - Uses:
           - `config_v2.ConfigV2`
           - `primitives/css/badge.Badge`
@@ -12048,23 +12049,24 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `report-kind` "queue-dead-job"
           - `report-kind` "queue-backlog"
           - `report-kind` "queue-slot-hog"
+          - `report-kind` "queue-wedged"
         - Uses:
           - `config_v2.ConfigV2`
           - `config_v2.getConfig`
           - `infra/endpoints.implement`
-          - `infra/jobs.defineJob`
           - `infra/jobs.JOB_CONCURRENCY`
           - `infra/jobs.queryBacklogByJobName`
           - `infra/jobs.queryDeadJobStats`
           - `infra/jobs.queryQueueBacklog`
           - `infra/jobs.queryRunningJobs`
+          - `infra/jobs.QueueBacklogStat`
+          - `infra/jobs.RunningJobStat`
           - `infra/mcp.Mcp`
           - `reports.recordReport`
           - `reports.ReportKind`
           - `tasks/tasks-core.getConversation`
-        - Register:
-          - `defineJob('debug.queue-health-monitor')`
-          - `mcpTool('get_queue_health')`
+        - Exports (values): `queueHealthTickOnce`
+        - Register: `mcpTool('get_queue_health')`
         - Routes: `GET /api/debug/queue-health/summary`
       - Core:
         - Uses:
@@ -12077,6 +12079,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `QueueDeadJobPayload`
           - `QueueHealthSummary`
           - `QueueSlotHogPayload`
+          - `QueueWedgedPayload`
         - Exports (values):
           - `QueueBacklogPayloadSchema`
           - `QueueDeadJobPayloadSchema`
@@ -12084,6 +12087,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `queueHealthSummaryEndpoint`
           - `QueueHealthSummarySchema`
           - `QueueSlotHogPayloadSchema`
+          - `QueueWedgedPayloadSchema`
     - **`read-set`** — Read-set capture debug pane: the automatic loader→table dependency index plus a diff against the hand-drawn dependsOn graph.
       - Web:
         - Slots: `readSetPane.Actions`
@@ -15863,6 +15867,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - DB schema: `plugins/infra/plugins/events-test/server/internal/tables.ts`
         - Register:
           - `defineJob('events_test.log')`
+          - `defineJob('events_test.serial')`
+          - `defineJob('events_test.cron-dedup')`
           - `defineTriggerEvent('events_test.pinged')`
         - Routes:
           - `POST /api/events-test/subscribe`
@@ -15875,6 +15881,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `GET /api/events-test/triggers`
           - `GET /api/events-test/wait-idle`
           - `POST /api/events-test/crash-recovery`
+          - `POST /api/events-test/serial-queue`
+          - `POST /api/events-test/queue-lock-no-steal`
+          - `POST /api/events-test/cron-dedup`
       - Shared:
         - Exports (types):
           - `DeleteTargetingBody`
@@ -15883,6 +15892,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `SubscribeBody`
         - Exports (values):
           - `crashRecoveryEventsTest`
+          - `cronDedupEventsTest`
           - `deleteEventsTestTargeting`
           - `deleteEventsTestTrigger`
           - `DeleteTargetingBodySchema`
@@ -15892,7 +15902,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `emitEventsTest`
           - `getEventsTestLog`
           - `listEventsTestTriggers`
+          - `queueLockNoStealEventsTest`
           - `resetEventsTest`
+          - `serialQueueEventsTest`
           - `SubscribeBodySchema`
           - `subscribeEventsTest`
           - `waitEventsTestIdle`
@@ -16113,6 +16125,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `RegisteredJob`
           - `RunningJobStat`
           - `ScheduleSpec`
+          - `SerialSpec`
         - Exports (values):
           - `abortDurableRun`
           - `deadJobsResource`

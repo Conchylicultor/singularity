@@ -19,6 +19,10 @@ export const backlogKind = ReportKind({
   kind: "queue-backlog",
   schema: QueueBacklogPayloadSchema,
   fingerprint: () => "queue-backlog:rollup",
+  // Exempt from the duress shed gate — see the same comment on `deadJobKind`.
+  // A host under duress is precisely when the queue backs up, so gating this
+  // report on the duress latch means never filing it when it matters.
+  duressExempt: true,
   meta: {
     tag: "[queue]",
     notif: "Job queue backing up",

@@ -1,6 +1,5 @@
 import { pathToFileURL } from "node:url";
 import type { Browser } from "playwright";
-import { createSemaphore } from "@plugins/packages/plugins/semaphore/core";
 import { ensureChromium } from "@plugins/infra/plugins/safe-fetch/plugins/browser-fetch/core";
 import { prototypesDir } from "@plugins/apps/plugins/prototypes/plugins/files/server";
 import type { PrototypeMeta } from "@plugins/apps/plugins/prototypes/plugins/files/core";
@@ -17,6 +16,14 @@ const SETTLE_TIMEOUT_MS = 3_000;
 const CONTENT_TIMEOUT_MS = 5_000;
 /** Bound on Playwright's own module evaluation (~3 s cold on this box). */
 const MODULE_TIMEOUT_MS = 30_000;
+/** Bound on the browser handing back a fresh, empty context. */
+const CONTEXT_TIMEOUT_MS = 15_000;
+/** Bound on that context handing back its first page. */
+const PAGE_TIMEOUT_MS = 15_000;
+/** Bound on capturing the PNG, once the page is judged worth capturing. */
+const SCREENSHOT_TIMEOUT_MS = 15_000;
+/** Bound on tearing the browser down — see `closeBrowser`. */
+const CLOSE_TIMEOUT_MS = 10_000;
 
 /**
  * Render at half density: a 1280×800 prototype yields a 640×400 PNG. The
@@ -48,19 +55,6 @@ const HAS_CONTENT_EXPR = `(() => {
   if ((body.innerText || "").trim().length > 0) return true;
   return body.querySelector("canvas, svg, img, video") !== null;
 })()`;
-
-/**
- * One browser at a time in this backend. Chromium's launch + render saturates
- * roughly a core, and a gallery open can ask for several prototypes at once.
- *
- * Known limit: this bounds the backend, not the host — `browser-fetch` reserves
- * a host-wide slot pool for its own launches, and this does not share it. That
- * is acceptable while prototype renders are rare and short (a handful of mocks,
- * a couple of seconds each); if agents start opening galleries concurrently
- * across many worktrees, the fix is a `RESERVED_POOLS` entry in
- * `host-admission/core`, not a bigger number here.
- */
-const renderGate = createSemaphore(1);
 
 type PlaywrightModule = typeof import("playwright");
 let playwrightModule: Promise<PlaywrightModule> | undefined;
@@ -108,11 +102,60 @@ function isTimeout(err: unknown): boolean {
 }
 
 /**
+ * Tear the browser down without ever waiting on it forever.
+ *
+ * This is the call that wedged main's job queue on 2026-08-17: `close()` never
+ * returned, so the handler held its worker slot until the backend restarted.
+ * Every other bound in this file guards work we are waiting *for*; this one
+ * guards the cleanup after it, which is exactly the one nobody thinks about.
+ *
+ * It never changes the verdict, in either direction. By the time it runs the
+ * PNG is already captured and trustworthy, or a classified failure is already
+ * unwinding — so a slow teardown is evidence about the browser, never about the
+ * picture, and rethrowing here would either fail a good render or bury the
+ * classified error under a teardown one.
+ *
+ * There is nothing left to kill on the other side of that timeout: Playwright's
+ * `Browser` exposes no process handle (only the `BrowserServer` that
+ * `launchServer()` hands out does), and a `close()` that does not answer means
+ * chromium is already gone — as it was on the 17th, where no chromium process
+ * was alive by the time the wedge was diagnosed — or unresponsive. Stated
+ * plainly: an unresponsive-but-alive chromium survives here, until Playwright's
+ * own exit handlers kill it when this backend restarts. That is a smaller,
+ * self-clearing problem than a permanently lost worker slot.
+ */
+async function closeBrowser(browser: Browser, name: string): Promise<void> {
+  try {
+    await withTimeout(
+      browser.close(),
+      CLOSE_TIMEOUT_MS,
+      () =>
+        new Error(
+          `browser.close() did not return within ${CLOSE_TIMEOUT_MS}ms`,
+        ),
+    );
+    // eslint-disable-next-line promise-safety/no-bare-catch -- best-effort teardown: see above, propagating from here can only corrupt a verdict that is already decided
+  } catch (err) {
+    console.error(
+      `[prototype-thumbnails] ${name}: browser teardown failed, chromium may have survived it: ${String(err)}`,
+    );
+  }
+}
+
+/**
  * Render one prototype to a PNG.
  *
  * Throws — with a classified `kind` — rather than ever returning a picture it
  * does not trust. The caller turns that into a visible `failed` state on the
  * card; nothing is written to the cache.
+ *
+ * Only ever one browser at a time, but that is the job's business, not this
+ * function's: `prototypes.render-thumbnail` declares `serial: true`, so the
+ * queue never hands out a second render while one is running.
+ *
+ * Every `await` below is bounded. That is not tidiness — this runs inside a job
+ * handler, and an unbounded wait there holds a worker slot for as long as it
+ * lasts.
  */
 export async function renderThumbnail(
   meta: PrototypeMeta,
@@ -120,99 +163,127 @@ export async function renderThumbnail(
   await ensureChromium();
   const { chromium } = await loadPlaywright();
 
-  return renderGate.run(async () => {
-    let browser: Browser | undefined;
-    try {
-      browser = await chromium.launch({
-        // The non-SSRF subset of browser-fetch's argv: no telemetry, no
-        // variations, no component updates — none of which a local file needs,
-        // and each of which is startup latency. The sandbox stays ON: a
-        // prototype is arbitrary third-party JS running in the user's account.
-        args: [
-          "--disable-background-networking",
-          "--no-first-run",
-          "--disable-sync",
-          "--disable-component-update",
-          "--js-flags=--max-old-space-size=512",
-        ],
-        timeout: LAUNCH_TIMEOUT_MS,
-      });
-    } catch (err) {
-      throw new ThumbnailRenderError(
-        "browser-unavailable",
-        `could not launch chromium: ${String(err)}`,
-        { cause: err },
-      );
-    }
+  let browser: Browser | undefined;
+  try {
+    browser = await chromium.launch({
+      // The non-SSRF subset of browser-fetch's argv: no telemetry, no
+      // variations, no component updates — none of which a local file needs,
+      // and each of which is startup latency. The sandbox stays ON: a
+      // prototype is arbitrary third-party JS running in the user's account.
+      args: [
+        "--disable-background-networking",
+        "--no-first-run",
+        "--disable-sync",
+        "--disable-component-update",
+        "--js-flags=--max-old-space-size=512",
+      ],
+      timeout: LAUNCH_TIMEOUT_MS,
+    });
+  } catch (err) {
+    throw new ThumbnailRenderError(
+      "browser-unavailable",
+      `could not launch chromium: ${String(err)}`,
+      { cause: err },
+    );
+  }
 
-    try {
-      const context = await browser.newContext({
+  try {
+    // Neither of these two takes a timeout of its own, so both are bounded by
+    // hand. A browser that launched but will not hand back a page is a broken
+    // browser, not a broken prototype — hence `browser-unavailable`.
+    const context = await withTimeout(
+      browser.newContext({
         viewport: { width: meta.viewport.w, height: meta.viewport.h },
         deviceScaleFactor: DEVICE_SCALE_FACTOR,
         serviceWorkers: "block",
         acceptDownloads: false,
-      });
-      const page = await context.newPage();
+      }),
+      CONTEXT_TIMEOUT_MS,
+      () =>
+        new ThumbnailRenderError(
+          "browser-unavailable",
+          `chromium did not open a context within ${CONTEXT_TIMEOUT_MS}ms`,
+        ),
+    );
+    const page = await withTimeout(
+      context.newPage(),
+      PAGE_TIMEOUT_MS,
+      () =>
+        new ThumbnailRenderError(
+          "browser-unavailable",
+          `chromium did not open a page within ${PAGE_TIMEOUT_MS}ms`,
+        ),
+    );
 
-      const failedCritical: string[] = [];
-      page.on("requestfailed", (request) => {
-        if (!CRITICAL_RESOURCE_TYPES.has(request.resourceType())) return;
-        const reason = request.failure()?.errorText ?? "unknown error";
-        failedCritical.push(`${request.url()} (${reason})`);
-      });
+    const failedCritical: string[] = [];
+    page.on("requestfailed", (request) => {
+      if (!CRITICAL_RESOURCE_TYPES.has(request.resourceType())) return;
+      const reason = request.failure()?.errorText ?? "unknown error";
+      failedCritical.push(`${request.url()} (${reason})`);
+    });
 
-      // `file://`, not the HTTP route: a prototype renders off disk by
-      // contract, so this needs no gateway, no socket, and no server round-trip
-      // — and it is the same path a human gets by double-clicking the file.
-      const url = pathToFileURL(
-        prototypesDir.file(meta.name, "index.html"),
-      ).href;
+    // `file://`, not the HTTP route: a prototype renders off disk by
+    // contract, so this needs no gateway, no socket, and no server round-trip
+    // — and it is the same path a human gets by double-clicking the file.
+    const url = pathToFileURL(prototypesDir.file(meta.name, "index.html")).href;
 
-      try {
-        await page.goto(url, { waitUntil: "load", timeout: NAV_TIMEOUT_MS });
-      } catch (err) {
-        if (!isTimeout(err)) throw err;
-        throw new ThumbnailRenderError(
-          "render-timeout",
-          `${meta.name} did not finish loading within ${NAV_TIMEOUT_MS}ms`,
-          { cause: err },
-        );
-      }
-
-      // The settle ceiling is the EXPECTED path, not a failure: a page holding
-      // an open connection never goes idle, and it has still rendered.
-      try {
-        await page.waitForLoadState("networkidle", {
-          timeout: SETTLE_TIMEOUT_MS,
-        });
-      } catch (err) {
-        if (!isTimeout(err)) throw err;
-      }
-
-      // Waiting for content and detecting a blank page are the same act: this
-      // gives an in-browser Babel compile time to produce a first paint, and
-      // its timeout IS the blankness verdict.
-      let painted = true;
-      try {
-        await page.waitForFunction(HAS_CONTENT_EXPR, undefined, {
-          timeout: CONTENT_TIMEOUT_MS,
-        });
-      } catch (err) {
-        if (!isTimeout(err)) throw err;
-        painted = false;
-      }
-
-      const rejection = classifyRenderOutcome(
-        meta.name,
-        failedCritical,
-        painted,
+    try {
+      await page.goto(url, { waitUntil: "load", timeout: NAV_TIMEOUT_MS });
+    } catch (err) {
+      if (!isTimeout(err)) throw err;
+      throw new ThumbnailRenderError(
+        "render-timeout",
+        `${meta.name} did not finish loading within ${NAV_TIMEOUT_MS}ms`,
+        { cause: err },
       );
-      if (rejection) throw rejection;
-
-      const png = await page.screenshot({ type: "png" });
-      return new Uint8Array(png);
-    } finally {
-      await browser.close();
     }
-  });
+
+    // The settle ceiling is the EXPECTED path, not a failure: a page holding
+    // an open connection never goes idle, and it has still rendered.
+    try {
+      await page.waitForLoadState("networkidle", {
+        timeout: SETTLE_TIMEOUT_MS,
+      });
+    } catch (err) {
+      if (!isTimeout(err)) throw err;
+    }
+
+    // Waiting for content and detecting a blank page are the same act: this
+    // gives an in-browser Babel compile time to produce a first paint, and
+    // its timeout IS the blankness verdict.
+    let painted = true;
+    try {
+      await page.waitForFunction(HAS_CONTENT_EXPR, undefined, {
+        timeout: CONTENT_TIMEOUT_MS,
+      });
+    } catch (err) {
+      if (!isTimeout(err)) throw err;
+      painted = false;
+    }
+
+    const rejection = classifyRenderOutcome(meta.name, failedCritical, painted);
+    if (rejection) throw rejection;
+
+    // Playwright would apply its own default here; say the number out loud
+    // instead, so this file holds every bound the render is subject to. A
+    // capture that times out yields nothing — a half-painted PNG is
+    // indistinguishable from a finished one, and that is the picture we must
+    // never cache.
+    try {
+      const png = await page.screenshot({
+        type: "png",
+        timeout: SCREENSHOT_TIMEOUT_MS,
+      });
+      return new Uint8Array(png);
+    } catch (err) {
+      if (!isTimeout(err)) throw err;
+      throw new ThumbnailRenderError(
+        "render-timeout",
+        `${meta.name} did not produce a screenshot within ${SCREENSHOT_TIMEOUT_MS}ms`,
+        { cause: err },
+      );
+    }
+  } finally {
+    await closeBrowser(browser, meta.name);
+  }
 }

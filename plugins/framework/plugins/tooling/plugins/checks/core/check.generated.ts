@@ -74,6 +74,7 @@ export const checkEntries: CollectedEntry[] = [
   { pluginPath: "framework/plugins/tooling/plugins/test-layout", id: "framework.tooling.test-layout", loader: () => import("@plugins/framework/plugins/tooling/plugins/test-layout/check"), dependsOn: ["infra/plugins/paths"] },
   { pluginPath: "framework/plugins/tooling/plugins/web-artifacts", id: "framework.tooling.web-artifacts", loader: () => import("@plugins/framework/plugins/tooling/plugins/web-artifacts/check"), dependsOn: ["infra/plugins/paths"] },
   { pluginPath: "infra/plugins/endpoints", id: "infra.endpoints", loader: () => import("@plugins/infra/plugins/endpoints/check"), dependsOn: [] },
+  { pluginPath: "infra/plugins/jobs", id: "infra.jobs", loader: () => import("@plugins/infra/plugins/jobs/check"), dependsOn: [] },
   { pluginPath: "infra/plugins/paths", id: "infra.paths", loader: () => import("@plugins/infra/plugins/paths/check"), dependsOn: [] },
   { pluginPath: "page/plugins/annotations", id: "page.annotations", loader: () => import("@plugins/page/plugins/annotations/check"), dependsOn: ["page/plugins/editor", "plugin-meta/plugins/facets"] },
   { pluginPath: "page/plugins/editor", id: "page.editor", loader: () => import("@plugins/page/plugins/editor/check"), dependsOn: ["plugin-meta/plugins/facets"] },

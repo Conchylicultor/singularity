@@ -77,12 +77,26 @@ since a page holding a connection never idles.
 
 ## Bounds
 
-One browser per backend (`createSemaphore(1)`), one render per prototype
-(`dedup` by slug). **Known limit:** that bounds the backend, not the host —
-`browser-fetch` reserves a host-wide pool this does not share. Fine while
-renders are rare and short; if galleries get opened across many worktrees at
-once the fix is a `RESERVED_POOLS` entry in `host-admission/core`, not a bigger
-semaphore.
+**One browser per backend, enforced by the QUEUE** — `serial: true` on
+`render-thumbnail` is graphile's `queue_name`, so a second render is never
+fetched while the first runs and therefore holds no worker slot. Never put this
+back behind an in-process gate: a semaphore is entered *after* dispatch, so a
+waiting render burns a slot, and one wedged render turns every later one into
+another wedged slot (it cost main three of four slots for 70 minutes on
+2026-08-17).
+
+`dedup` by slug collapses a burst only while the previous row is still
+*pending* — graphile cannot replace a row it has already locked — so a fast
+burst does produce several rows. `serial` is what makes that harmless.
+
+Every wait is bounded, teardown included; `browser.close()` was the one that
+wedged, and `closeBrowser` in `render.ts` says why a timed-out close is logged
+and abandoned rather than failing a picture already captured.
+
+**Known limit:** all of this bounds the backend, not the host — `browser-fetch`
+reserves a host-wide pool this does not share. Fine while renders are rare and
+short; if galleries get opened across many worktrees at once the fix is a
+`RESERVED_POOLS` entry in `host-admission/core`.
 
 ## The card
 

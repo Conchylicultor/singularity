@@ -20,6 +20,15 @@ export const deadJobKind = ReportKind({
   kind: "queue-dead-job",
   schema: QueueDeadJobPayloadSchema,
   fingerprint: (d: QueueDeadJobPayload) => `queue-dead-job:${d.jobName}`,
+  // Every queue kind is duressExempt, for the same reason `duress-shed` and
+  // `duress-episode` are: a queue in trouble and a host under duress are
+  // overwhelmingly the same event, so the shed gate in `recordReport` would
+  // buffer exactly the reports that describe the outage — and drop them on
+  // buffer overflow at peak. These reports ARE the durable record of the
+  // condition; shedding them loses the only evidence there was one. This was
+  // the second, quieter silencer of the 2026-08-17 queue wedge: even a monitor
+  // that ran would have had its report swallowed.
+  duressExempt: true,
   meta: {
     tag: "[queue]",
     notif: "Dead jobs in queue",

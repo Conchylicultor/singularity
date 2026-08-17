@@ -128,6 +128,13 @@ export interface DurableCtxInit {
   jobName: string;
   originalInput: unknown;
   /**
+   * Aborted when this dispatch's execution budget expires. One controller per
+   * dispatch, owned by `dispatch()` in worker.ts. Surfaced to handlers as
+   * `ctx.signal` — the doc that explains what it is for, and what it is NOT,
+   * lives on `JobCtx.signal` in registry.ts, which is the one users read.
+   */
+  signal: AbortSignal;
+  /**
    * Enqueue a job for suspension bookkeeping. The worker passes the registry's
    * own enqueue so we don't recurse through the public barrel. Returns void —
    * we only need to know it scheduled.
@@ -148,6 +155,12 @@ export interface DurableCtx {
   jobId: string;
   attempt: number;
   workflowRunId: string;
+  /**
+   * This dispatch's execution-budget signal. Handed straight through from
+   * `DurableCtxInit`; the user-facing contract is documented on
+   * `JobCtx.signal` in registry.ts.
+   */
+  readonly signal: AbortSignal;
   step<R>(name: string, fn: () => Promise<R> | R): Promise<R>;
   waitFor<T extends Record<string, unknown>>(
     event: EventSourceLike & { __t?: T },
@@ -173,6 +186,7 @@ export function makeDurableCtx(init: DurableCtxInit): DurableCtx {
     jobId: init.jobId,
     attempt: init.attempt,
     workflowRunId: init.workflowRunId,
+    signal: init.signal,
 
     async step<R>(name: string, fn: () => Promise<R> | R): Promise<R> {
       const existing = await db

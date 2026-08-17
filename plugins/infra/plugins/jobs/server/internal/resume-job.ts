@@ -1,15 +1,14 @@
 import { and, eq, sql } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@plugins/database/server";
-import { JOB_TASK } from "./constants";
 import {
   defineJob,
   UNSAFE_getRegisteredJob,
+  UNSAFE_insertJobRow,
   type JobTaskPayload,
 } from "./registry";
 import { RESUME_KEYS, ResumeInputSchema } from "./resume-contract";
 import { _jobWaits } from "./tables";
-import { getWorkerUtils } from "./worker";
 
 // Builtin — registered once at jobs plugin boot. Targeted by every
 // `ctx.waitFor(...)` trigger row and every `ctx.sleep(...)` / timeout
@@ -65,7 +64,9 @@ export const jobsResumeJob = defineJob({
       .update(_jobWaits)
       .set({
         status: isTimeout ? "timed_out" : "resolved",
-        payloadJson: isTimeout ? null : (payloadRecord as Record<string, unknown>),
+        payloadJson: isTimeout
+          ? null
+          : (payloadRecord as Record<string, unknown>),
         resolvedAt: new Date(),
       })
       .where(
@@ -86,8 +87,8 @@ export const jobsResumeJob = defineJob({
       return;
     }
 
-    // Re-enqueue the handler with the ORIGINAL input by going straight to
-    // graphile's `addJob`, NOT through `target.enqueue`. The public enqueue
+    // Re-enqueue the handler with the ORIGINAL input via `UNSAFE_insertJobRow`,
+    // NOT through `target.enqueue`. The public enqueue
     // path runs `spec.input.parse(input)` on every call; re-running that on
     // an already-parsed value would apply the schema's `.transform()` a
     // second time and diverge for non-idempotent transforms. Resume uses
@@ -96,9 +97,16 @@ export const jobsResumeJob = defineJob({
     //
     // jobKey = workflowRunId means graphile collapses any stale row with
     // the same workflow key (replace mode).
-    const utils = await getWorkerUtils();
-    await utils.addJob(
-      JOB_TASK,
+    //
+    // Note the job handed to `UNSAFE_insertJobRow` is `target`, the job being
+    // RESUMED — not `jobs.resume` itself. This is the insertion that is easiest
+    // to get wrong: a job declaring `serial` suspends on `ctx.waitFor`, and if
+    // its resume row were inserted without the target's own queue name it would
+    // come back OUTSIDE its queue and run alongside the sibling the queue exists
+    // to exclude. Deriving from the registered target makes that impossible to
+    // forget.
+    await UNSAFE_insertJobRow(
+      target,
       {
         jobName: targetJobName,
         workflowRunId,

@@ -79,3 +79,19 @@ export const waitEventsTestIdle = defineEndpoint({
 export const crashRecoveryEventsTest = defineEndpoint({
   route: "POST /api/events-test/crash-recovery",
 });
+
+// The three queue-level regression harnesses. Like crash-recovery they declare
+// no response schema: each returns a structured verdict (`{ok:true, …}` or
+// `{ok:false, step, error, …}`) as a raw Response, so a failure names the
+// assertion that failed rather than throwing.
+export const serialQueueEventsTest = defineEndpoint({
+  route: "POST /api/events-test/serial-queue",
+});
+
+export const queueLockNoStealEventsTest = defineEndpoint({
+  route: "POST /api/events-test/queue-lock-no-steal",
+});
+
+export const cronDedupEventsTest = defineEndpoint({
+  route: "POST /api/events-test/cron-dedup",
+});

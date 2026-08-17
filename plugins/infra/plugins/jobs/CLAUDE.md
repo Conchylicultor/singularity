@@ -49,6 +49,21 @@ lock is held by a *live* connection survives a forced sweep — the case the old
 harness could not express) and **reclaim** (destroy the socket, wait for the lock
 to drop, sweep, handler re-runs).
 
+Three more harnesses beside it, same plugin, same verdict shape:
+
+- `POST /api/events-test/queue-lock-no-steal` — the queue-level twin, guarding the
+  riskier half of the same sweep: **no-steal** (a queue whose job's advisory lock
+  is live survives a forced sweep and no second job in it is fetched — clearing it
+  would put two jobs in a lane that exists to hold one) and **reclaim**.
+- `POST /api/events-test/serial-queue` — four jobs in one `serial` lane, the first
+  held open. Asserts they share one non-null `job_queue_id`, at most one is locked,
+  and the other three have `locked_at IS NULL` — never fetched, holding no slot.
+- `POST /api/events-test/cron-dedup` — cron-shaped inserts collapse onto one
+  pending row with an unmoved `run_at`; a manual `enqueue()` shares that row.
+  Drives `add_job` with the cron path's arguments rather than waiting on real
+  ticks, so the key format is restated there rather than read from
+  `buildCronItems`.
+
 ## Retry policy & non-retryable failures
 
 A failing job is retried up to `maxAttempts` (default `DEFAULT_MAX_ATTEMPTS`,
@@ -99,6 +114,7 @@ replay; a plain `Error` remains the right choice for anything retry could fix.
     - `RegisteredJob`
     - `RunningJobStat`
     - `ScheduleSpec`
+    - `SerialSpec`
   - Exports (values):
     - `abortDurableRun`
     - `deadJobsResource`

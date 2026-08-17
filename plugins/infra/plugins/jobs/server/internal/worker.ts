@@ -19,7 +19,9 @@ import {
 import { JOB_TASK, JOB_CONCURRENCY } from "./constants";
 import {
   getScheduledJobs,
+  queueNameFor,
   UNSAFE_getRegisteredJob,
+  UNSAFE_insertJobRow,
   type JobTaskPayload,
 } from "./registry";
 import { isSuspendSignal, makeDurableCtx } from "./step-ctx";
@@ -38,7 +40,9 @@ let workerUtilsPromise: Promise<WorkerUtils> | null = null;
 
 export function getWorkerUtils(): Promise<WorkerUtils> {
   if (!workerUtilsPromise) {
-    workerUtilsPromise = makeWorkerUtils({ connectionString: connectionString() });
+    workerUtilsPromise = makeWorkerUtils({
+      connectionString: connectionString(),
+    });
   }
   return workerUtilsPromise;
 }
@@ -84,8 +88,73 @@ function buildCronItems(): ParsedCronItem[] {
         match: cron.trim(),
         identifier: `cron:${job.name}`,
         payload: { jobName: job.name, input } satisfies JobTaskPayload,
-        // backfillPeriod 0 ⇒ no catch-up flood on boot.
-        options: { backfillPeriod: 0, maxAttempts: job.maxAttempts },
+        options: {
+          // backfillPeriod 0 ⇒ no catch-up flood on boot.
+          backfillPeriod: 0,
+          maxAttempts: job.maxAttempts,
+          // Without a jobKey the cron path ignored `dedup` entirely — every
+          // tick INSERTed a brand-new row, forever. On 2026-08-17 main's queue
+          // wedged for 70 min and had accumulated 57 copies each of six
+          // per-minute monitors, including the queue-health monitor whose whole
+          // purpose is to report that condition.
+          //
+          // `${job.name}:_` is deliberately byte-identical to the key
+          // `enqueue()` derives for a `dedup: "singleton"` job (registry.ts:
+          // `effectiveJobKey = "_"`, then `workflowRunId = ${spec.name}:${effectiveJobKey}`,
+          // which becomes the graphile job_key). Sharing it is the point: a
+          // manual `enqueue()` and a cron tick then collapse onto the SAME
+          // pending row instead of racing as two. That key is only TOTAL
+          // because `DefineJobSpec` types a scheduled job as `dedup: "singleton"` —
+          // if a schedule could be keyed, this line would be a lie for it.
+          //
+          // "preserve_run_at" is MANDATORY, not a preference. graphile's
+          // `add_jobs` (sql/000018.sql:161-164) keeps the original `run_at` on
+          // conflict only in this mode, and only while `attempts = 0`:
+          //   run_at = (case
+          //     when job_key_preserve_run_at is true and jobs.attempts = 0 then jobs.run_at
+          //     else excluded.run_at
+          //   end)
+          // Under the default "replace" a pending row's `run_at` is pushed
+          // forward on EVERY tick, which (i) starves a `* * * * *` job in a
+          // merely-busy queue — it is perpetually re-scheduled a minute out and
+          // never becomes the oldest ready row — and (ii) resets
+          // `oldestOverdueMs` to near-zero every minute during a wedge, making
+          // the backlog signal QUIETER than it is with no dedup at all. The
+          // dedup fix and the queue-health backlog signal only compose in this
+          // mode.
+          //
+          // A key CANNOT silence a schedule, which is the first thing to check
+          // when adding one. The collapse-onto-one-row upsert above is gated
+          // `where jobs.locked_at is null`; separately (000018.sql:107-116)
+          // graphile first clears `key` on any row that is not `is_available`,
+          // and `is_available` is `locked_at is null AND attempts < max_attempts`
+          // (000011.sql:67). So a row that is mid-run — or that has already
+          // dead-lettered — releases the key and this tick inserts a fresh row.
+          // The cost is the one behaviour to watch on day 1: an OVERRUNNING run
+          // has its retry budget collapsed to `attempts = max_attempts` when the
+          // next tick fires. A successful overrun is still just deleted, so
+          // nothing is lost; a FAILING one dead-letters after that attempt
+          // instead of retrying. Only `mail.sync-tick` and `backup.run` can
+          // plausibly overrun their interval — watch `queue-dead-job` for those.
+          jobKey: `${job.name}:_`,
+          jobKeyMode: "preserve_run_at",
+          // A scheduled job that declared `serial` must tick INTO its own queue,
+          // or every cron tick would be the one insertion that escapes the
+          // serialization. `CronItemOptions.queueName` is graphile's supported
+          // spelling for exactly this (`dist/interfaces.d.ts:172` —
+          // "set the job queue_name to enforce that the jobs run serially"), and
+          // `dist/cron.js:65` passes it straight into the tick's job spec.
+          // Derived through the same `queueNameFor` as the four enqueue paths, so
+          // there is one rule about what a job's queue is called and not two.
+          queueName: queueNameFor(job),
+        },
+        // NOTE the payload deliberately carries NO `workflowRunId`. `jobKey` is
+        // QUEUE-ROW identity (at most one pending row per job); `workflowRunId`
+        // is RUN identity (per tick), and it is the memoization key for
+        // `_jobSteps` / `_jobWaits`. `dispatch()` below derives it per tick from
+        // the `_cron.ts` graphile injects. Collapsing the two would make every
+        // tick of a scheduled workflow replay the FIRST tick's cached steps
+        // forever.
       }),
     );
   }
@@ -181,10 +250,26 @@ async function dispatch(
       ? `${payload.jobName}:${payload._cron.ts}`
       : `legacy:${meta.jobId}`);
 
+  // One controller per dispatch, not per job name and not per workflow: the unit
+  // being bounded is a single run holding a single worker slot. A suspended
+  // workflow resumes as a different `_private_jobs` row through a fresh
+  // `dispatch()`, and so gets a fresh controller — which is what makes "the
+  // budget bounds execution, not workflow duration" true by construction rather
+  // than by convention.
+  //
+  // Nothing aborts it yet. The deadline that does, and the policy for a handler
+  // that does not unwind when it fires, are later phases of
+  // `research/2026-08-17-global-bounded-job-execution.md`; this step only makes
+  // the signal reachable from handlers so those phases land without call-site
+  // churn. Deliberately NOT graphile's `helpers.abortSignal` — see the doc on
+  // `JobCtx.signal`.
+  const abort = new AbortController();
+
   const ctx = makeDurableCtx({
     jobId: meta.jobId,
     attempt: meta.attempt,
     workflowRunId,
+    signal: abort.signal,
     jobName: payload.jobName,
     originalInput: payload.input,
     scheduleResume: async (resumePayload, opts) => {
@@ -201,9 +286,14 @@ async function dispatch(
       // `jobs.resume:` and the DELETE would miss. The worker re-parses
       // `input` against `inputSchema` on dispatch, so we don't lose
       // schema-drift detection by skipping the public parse.
-      const utils = await getWorkerUtils();
-      await utils.addJob(
-        JOB_TASK,
+      //
+      // The jobKey is ours; the QUEUE NAME is not. `UNSAFE_insertJobRow` gives
+      // us both bypasses (verbatim payload, literal jobKey) while deriving the
+      // queue from the registered `jobs.resume` — which declares no `serial`
+      // today, so it is `undefined`, but the rule about what a job's queue is
+      // called lives in one place rather than being restated here.
+      await UNSAFE_insertJobRow(
+        resumeJob,
         {
           jobName: "jobs.resume",
           workflowRunId: opts.jobKey,
@@ -336,7 +426,7 @@ async function dispatch(
         .delete(_jobWaits)
         .where(eq(_jobWaits.workflowRunId, workflowRunId));
     });
-  // eslint-disable-next-line promise-safety/no-bare-catch
+    // eslint-disable-next-line promise-safety/no-bare-catch
   } catch (err) {
     console.warn(
       `[jobs] cleanup of step/wait logs failed for workflow ${workflowRunId}`,

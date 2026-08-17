@@ -1,5 +1,9 @@
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
 import { handleCrashRecovery } from "./internal/crash-recovery";
+import { cronDedupProbe, handleCronDedup } from "./internal/cron-dedup";
+import { handleQueueLockNoSteal } from "./internal/queue-lock-no-steal";
+import { handleSerialQueue } from "./internal/serial-queue";
+import { serialProbe } from "./internal/serial-job";
 import {
   handleDeleteTargeting,
   handleDeleteTrigger,
@@ -24,6 +28,9 @@ import {
   listEventsTestTriggers,
   waitEventsTestIdle,
   crashRecoveryEventsTest,
+  serialQueueEventsTest,
+  queueLockNoStealEventsTest,
+  cronDedupEventsTest,
 } from "../shared/endpoints";
 
 export default {
@@ -39,6 +46,9 @@ export default {
     [listEventsTestTriggers.route]: handleListTriggers,
     [waitEventsTestIdle.route]: handleWaitIdle,
     [crashRecoveryEventsTest.route]: handleCrashRecovery,
+    [serialQueueEventsTest.route]: handleSerialQueue,
+    [queueLockNoStealEventsTest.route]: handleQueueLockNoSteal,
+    [cronDedupEventsTest.route]: handleCronDedup,
   },
-  register: [logPing, pinged],
+  register: [logPing, serialProbe, cronDedupProbe, pinged],
 } satisfies ServerPluginDefinition;

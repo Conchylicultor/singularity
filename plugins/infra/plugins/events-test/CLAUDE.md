@@ -43,6 +43,8 @@
   - DB schema: `plugins/infra/plugins/events-test/server/internal/tables.ts`
   - Register:
     - `defineJob('events_test.log')`
+    - `defineJob('events_test.serial')`
+    - `defineJob('events_test.cron-dedup')`
     - `defineTriggerEvent('events_test.pinged')`
   - Routes:
     - `POST /api/events-test/subscribe`
@@ -55,6 +57,9 @@
     - `GET /api/events-test/triggers`
     - `GET /api/events-test/wait-idle`
     - `POST /api/events-test/crash-recovery`
+    - `POST /api/events-test/serial-queue`
+    - `POST /api/events-test/queue-lock-no-steal`
+    - `POST /api/events-test/cron-dedup`
 - Shared:
   - Exports (types):
     - `DeleteTargetingBody`
@@ -63,6 +68,7 @@
     - `SubscribeBody`
   - Exports (values):
     - `crashRecoveryEventsTest`
+    - `cronDedupEventsTest`
     - `deleteEventsTestTargeting`
     - `deleteEventsTestTrigger`
     - `DeleteTargetingBodySchema`
@@ -72,7 +78,9 @@
     - `emitEventsTest`
     - `getEventsTestLog`
     - `listEventsTestTriggers`
+    - `queueLockNoStealEventsTest`
     - `resetEventsTest`
+    - `serialQueueEventsTest`
     - `SubscribeBodySchema`
     - `subscribeEventsTest`
     - `waitEventsTestIdle`
