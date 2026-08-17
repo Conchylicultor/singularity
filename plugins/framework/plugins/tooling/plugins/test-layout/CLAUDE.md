@@ -22,6 +22,25 @@ by both. Hence `isBunTestPath` is written out rather than derived as
 than folding leftovers into `bun` — a green run for tests that never executed is
 the exact failure this plugin prevents.
 
+## No hand-built DOM in a bun:test file (rule e)
+
+`bun test` has no DOM. A suite for a DOM-bound module therefore has exactly one
+home — the plugin's `web/__tests__/`, where vitest hands it jsdom, whole. Rule
+**e** rejects the other move: installing `window` / `document` / `sessionStorage`
+/ … on `globalThis` from a file bun:test runs (`core/fake-dom.ts` holds the name
+set and the detector; `core/fake-dom.test.ts` its fixtures).
+
+The ban is not tidiness. Runtime-agnostic code guards on
+`typeof window === "undefined"` — a **presence** test — so a stub like
+`window = { sessionStorage }` walks past every one of those guards and then
+throws on the first member it does not carry, inside some module the suite is not
+even about. Widening the stub only moves that edge; jsdom is already the complete
+one. So: move the suite, never grow the stub.
+
+The detector reads `maskSource`d text, so an install inside a comment or a string
+is not code and is not reported — which is what lets `core/fake-dom.test.ts`
+spell out the banned idiom as fixtures without reporting itself.
+
 **Why a check, not a lint rule.** Rule files are dual-loaded under jiti, which
 cannot resolve `@plugins/*` — a rule could not import `core/` and would have to
 duplicate the two literals plus add an in-sync check to keep the copies honest.
@@ -42,9 +61,13 @@ reads the two config files directly, so its reads bypass the recording
 
 - Description: The canonical bun:test ⇄ vitest split as data (core), enforced as the test-layout:runner-split check.
 - Core:
+  - Uses: `plugin-meta/parse-utils.maskSource`
+  - Exports (types): `FakeDomInstall`
   - Exports (values):
     - `BUN_TEST_IGNORE`
     - `DOM_TEST_INCLUDE`
+    - `FAKE_DOM_GLOBALS`
+    - `fakeDomInstalls`
     - `isBunTestPath`
     - `isDomTestPath`
     - `isTestFilePath`

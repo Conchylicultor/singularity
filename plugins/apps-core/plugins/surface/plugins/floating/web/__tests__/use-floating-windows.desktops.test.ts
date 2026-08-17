@@ -1,34 +1,25 @@
-import { beforeAll, describe, expect, it } from "bun:test";
+import { describe, expect, it } from "vitest";
 
-// The window store hydrates + persists against `window` / `sessionStorage`, both
-// undefined in bun. Stub a minimal in-memory pair BEFORE importing the module so
-// `hydrate()` proceeds (minting the default desktop) and `persist()` is a no-op
-// success rather than a thrown ReferenceError. This lets the otherwise DOM-bound
-// store be exercised as plain module-global state — the desktop ops are pure
-// reassignments over that state, so no real DOM is needed here.
-beforeAll(() => {
-  const store = new Map<string, string>();
-  const sessionStorage = {
-    getItem: (k: string) => store.get(k) ?? null,
-    setItem: (k: string, v: string) => void store.set(k, v),
-    removeItem: (k: string) => void store.delete(k),
-  };
-  (globalThis as Record<string, unknown>).window = { sessionStorage };
-  (globalThis as Record<string, unknown>).sessionStorage = sessionStorage;
-});
-
-// Imported lazily (after the stub) so the module's first `hydrate()` sees a DOM.
-const {
+// A jsdom suite, not a bun:test one, because the module under test is DOM-bound:
+// the window store hydrates and persists through `window` / `sessionStorage`, and
+// its instance-scoped storage key reaches `window.history.state` via
+// `primitives/app-instance`. It used to live beside its source under bun:test with
+// a hand-built `window = { sessionStorage }` — which satisfied every
+// `typeof window === "undefined"` guard while having no `history`, so the key read
+// crashed. jsdom gives the real objects, so nothing here is stubbed and no
+// half-window can exist. Its sibling `floating-foreground.test.tsx` imports the
+// same store from the same folder.
+import {
   createDesktop,
   getDesktopsState,
+  getFloatingWindow,
   moveWindowToDesktop,
   removeDesktop,
   setActiveDesktop,
   splitTabToNewWindow,
   topmostWindowOnDesktop,
   windowForTab,
-  getFloatingWindow,
-} = await import("./use-floating-windows");
+} from "../hooks/use-floating-windows";
 
 /**
  * The store is module-global, so state accumulates across tests in this file —

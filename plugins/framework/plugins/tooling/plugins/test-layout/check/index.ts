@@ -11,6 +11,7 @@ import {
   lineAt,
   maskSource,
 } from "@plugins/plugin-meta/plugins/parse-utils/core";
+import { fakeDomInstalls } from "../core/fake-dom";
 import {
   BUN_TEST_IGNORE,
   DOM_TEST_INCLUDE,
@@ -31,7 +32,7 @@ const VITEST_CONFIG = "vitest.config.ts";
  * vitest-only jsdom suites and produced a wall of failures indistinguishable
  * from real ones.
  *
- * Four rules, every offender reported:
+ * Five rules, every offender reported:
  *   (a) no bun:test file imports `vitest`      — the direct guard on that bug
  *   (b) no vitest file imports `bun:test`      — the mirror direction
  *   (c) no test file sits under a `__tests__/` dir that is not
@@ -40,6 +41,7 @@ const VITEST_CONFIG = "vitest.config.ts";
  *       directory convention
  *   (d) both scope literals are still present in their config files — this is
  *       what makes the fix structural instead of deletable
+ *   (e) no bun:test file builds itself a fake DOM — see {@link FAKE_DOM_GLOBALS}
  *
  * NOT `inputKeyed`: unlike the `grepCode`-only pattern checks, this one
  * discovers files via `git ls-files` and reads `bunfig.toml` /
@@ -60,11 +62,22 @@ const check: Check = {
 
     const crossVitest: string[] = [];
     const crossBunTest: string[] = [];
+    const fakeDom: string[] = [];
 
     await Promise.all(
       files.map(async (rel) => {
         const src = await Bun.file(join(root, rel)).text();
         const dom = isDomTestPath(rel);
+
+        // (e) A bun:test file installing a browser global onto `globalThis`.
+        if (isBunTestPath(rel)) {
+          for (const install of fakeDomInstalls(src)) {
+            fakeDom.push(
+              `${rel}:${lineAt(src, install.index)}  (installs \`${install.name}\`)`,
+            );
+          }
+        }
+
         // A test file's runner is decided by WHERE it lives, so the banned
         // specifier is whichever runner does not own this location.
         const banned = dom ? "bun:test" : "vitest";
@@ -112,6 +125,12 @@ const check: Check = {
       );
     }
 
+    if (fakeDom.length > 0) {
+      sections.push(
+        `(e) ${fakeDom.length} bun:test file(s) install a browser global on \`globalThis\` — bun:test has no DOM, and a hand-built one is a PARTIAL one:\n    ${fakeDom.sort().join("\n    ")}`,
+      );
+    }
+
     // ---- rule (d): the two scope literals ---------------------------------
     // A substring assert, not a parse: the point is that the exact string a
     // human would delete is still there.
@@ -123,7 +142,7 @@ const check: Check = {
     return {
       ok: false,
       message: `test-runner layout violations:\n  ${sections.join("\n  ")}`,
-      hint: "The runner is chosen by where the file lives: pure-logic tests are `*.test.ts(x)` next to their source and run under `bun:test`; jsdom/React tests live in the plugin's `web/__tests__/` and run under vitest. Move the file to the folder that matches its runner rather than swapping the import — and never introduce a `__tests__/` dir outside `web/`. The two scope literals in `bunfig.toml` and `vitest.config.ts` are a complementary pair; edit neither alone.",
+      hint: "The runner is chosen by where the file lives: pure-logic tests are `*.test.ts(x)` next to their source and run under `bun:test`; jsdom/React tests live in the plugin's `web/__tests__/` and run under vitest. Move the file to the folder that matches its runner rather than swapping the import (or stubbing the DOM it lacks) — and never introduce a `__tests__/` dir outside `web/`. The two scope literals in `bunfig.toml` and `vitest.config.ts` are a complementary pair; edit neither alone.",
     };
   },
 };

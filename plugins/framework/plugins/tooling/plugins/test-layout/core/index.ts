@@ -7,3 +7,8 @@ export {
   isBunTestPath,
   partitionTestPaths,
 } from "./test-layout";
+export {
+  FAKE_DOM_GLOBALS,
+  fakeDomInstalls,
+  type FakeDomInstall,
+} from "./fake-dom";

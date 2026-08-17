@@ -14840,9 +14840,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - **`react-compiler`** — Enables the React Compiler (Babel) across the frontend via a vite/ build contribution; presence of this folder is the on/off switch.
         - **`test-layout`** — The canonical bun:test ⇄ vitest split as data (core), enforced as the test-layout:runner-split check.
           - Core:
+            - Uses: `plugin-meta/parse-utils.maskSource`
+            - Exports (types): `FakeDomInstall`
             - Exports (values):
               - `BUN_TEST_IGNORE`
               - `DOM_TEST_INCLUDE`
+              - `FAKE_DOM_GLOBALS`
+              - `fakeDomInstalls`
               - `isBunTestPath`
               - `isDomTestPath`
               - `isTestFilePath`
@@ -19268,6 +19272,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `framework/tooling/boundaries`
           - `framework/tooling/checks`
           - `framework/tooling/codegen`
+          - `framework/tooling/test-layout`
           - `plugin-meta/plugin-tree`
       - Core:
         - Exports (types):
