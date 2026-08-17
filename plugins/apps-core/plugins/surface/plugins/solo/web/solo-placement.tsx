@@ -7,12 +7,19 @@ import type {
 } from "@plugins/apps-core/plugins/surface/web";
 
 /**
- * The solo (fullscreen) surface mode: only the focused tab, full-viewport. It
- * portals its container to `document.body` so the `fixed inset-0` box is relative
- * to the VIEWPORT (not the surface backdrop). `z-overlay` (NOT `z-max`): the box
- * portals to <body>, so a higher band would paint its opaque `bg-background` over
- * every popover/dropdown/dialog opened from inside the solo'd app. `z-overlay`
- * still covers all app chrome (`z-nav`) and the surface backdrop.
+ * The solo (fullscreen) surface mode: only the focused tab, full-viewport. Its
+ * container is `fixed inset-0`, and `viewportRelative` tells the surface to drop
+ * the `transform` off its backdrop while this mode is active — so the box
+ * resolves against the viewport instead of the content area. The tab itself does
+ * not move: the container stays exactly where it is in the tree, which is what
+ * keeps the app inside it mounted (its scroll, its edits, its iframes).
+ *
+ * `z-overlay` (NOT `z-max`): with the backdrop's transform gone the container
+ * sits in the ROOT stacking context, alongside every body-portaled popover, so a
+ * higher band would paint its opaque `bg-background` over every
+ * popover/dropdown/dialog opened from inside the solo'd app. `z-overlay` still
+ * covers all app chrome (`z-nav`) and the surface backdrop, and `z-popover`
+ * overlays still paint above it.
  *
  * Mutual exclusion with windows mode is guaranteed one level up, structurally:
  * the surface is in exactly ONE mode, and each mode renders every tab under its
@@ -25,7 +32,7 @@ export const soloDef: PlacementDef = {
   label: "Fullscreen (solo)",
   icon: MdFullscreen,
   order: 2,
-  portalToBody: true,
+  viewportRelative: true,
   // A single app fills the viewport, so the chrome wears the app's theme (like
   // docked, unlike floating's multi-window backdrop) — see useChromeThemeScope.
   themeScope: "app",

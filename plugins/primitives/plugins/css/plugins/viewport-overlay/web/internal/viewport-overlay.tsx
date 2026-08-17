@@ -1,6 +1,9 @@
 import type { ReactNode } from "react";
 import { createPortal } from "react-dom";
-import { cn, usePortalForwardedAttrs } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import {
+  cn,
+  usePortalForwardedAttrs,
+} from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import {
   type PortaledLayer,
   zLayerClass,
@@ -15,13 +18,6 @@ const OVERLAY_ROOT = "fixed inset-0";
 export interface ViewportOverlayProps {
   /** Stacking layer. Defaults to "popover" (the documented portaled-layer). */
   layer?: PortaledLayer;
-  /**
-   * When false, render `children` inline (no portal, no fixed wrapper, and `rest`
-   * is ignored). The extension point for keep-alive toggles like the per-tab solo
-   * placement, where the same React element must move in and out of the portal
-   * without remounting its subtree.
-   */
-  active?: boolean;
   /** Extra classes for the overlay root (background, flex layout, etc.). */
   className?: string;
   children: ReactNode;
@@ -49,16 +45,24 @@ export interface ViewportOverlayProps {
  * then clipped with no error. Routing every viewport overlay through this
  * primitive makes that whole class of bug structurally impossible — enforced by
  * the co-located `no-adhoc-viewport-overlay` lint rule.
+ *
+ * The portal is a POSITIONING mechanism, not a mount-retention one, and there is
+ * deliberately no prop to turn it off. React reconciles a portal by container
+ * identity, so putting one behind a condition — `cond ? createPortal(…) : …`, or
+ * a container that changes — deletes the subtree and builds a new one. This
+ * overlay always portals, always into `document.body`, so its subtree survives
+ * its own rerenders; a caller who needs a subtree to survive a LAYOUT change
+ * needs something else entirely (see the co-located
+ * `web/__tests__/portal-toggle-remounts.test.tsx` and the
+ * `no-portal-toggle` rule).
  */
 export function ViewportOverlay({
   layer = "popover",
-  active = true,
   className,
   children,
   ...rest
 }: ViewportOverlayProps) {
   const forwarded = usePortalForwardedAttrs();
-  if (!active) return <>{children}</>;
   return createPortal(
     <div
       {...forwarded}

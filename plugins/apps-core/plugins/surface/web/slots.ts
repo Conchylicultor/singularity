@@ -37,9 +37,16 @@ export interface PlacementChromeProps {
  * time (per-surface, never per-tab), and renders every open tab under that one
  * descriptor — so two modes can never be visible at once (e.g. a solo app and a
  * floating window). Almost all of it is *data*: the host (`SurfaceBody`) keeps
- * one stable container per tab and only varies the descriptor's class / portal /
- * chrome, so a mode switch re-positions the still-mounted tabs rather than
- * remounting them (keep-alive).
+ * one stable container per tab and only varies the descriptor's class / chrome,
+ * so a mode switch re-positions the still-mounted tabs rather than remounting
+ * them (keep-alive).
+ *
+ * What preserves the mount is narrow and worth stating: the container renders at
+ * the same position in the React tree, as the same element type, under an
+ * unchanged parent chain. Only its props differ. A descriptor may therefore
+ * never ask the host to render a tab somewhere else — a branch that swaps a
+ * plain element for a portal (or swaps a portal's container) is reconciled as a
+ * different child, and React deletes the subtree and builds a new one.
  *
  * The optional {@link PlacementDef.Chrome} is the escape hatch for dynamic,
  * hook-derived presentation (floating's geometry box): it runs its own hooks and
@@ -70,8 +77,19 @@ export interface PlacementDef {
 
   /** Static class applied to the stable per-tab container in this mode. */
   containerClassName: string;
-  /** Render each container into `document.body` (escapes the backdrop, e.g. solo). */
-  portalToBody?: boolean;
+  /**
+   * This mode's containers position against the VIEWPORT (`position: fixed`, e.g.
+   * solo's `fixed inset-0`), so the surface must be neither their containing
+   * block nor their stacking context: while this mode is active the surface
+   * backdrop drops its `transform`, which is what lets such a container reach the
+   * full window AND lets its `z-overlay` out-rank the app rail's `z-nav` instead
+   * of being compared only against its siblings inside the surface.
+   *
+   * It is a property of the container's own CSS, declared here so the host can
+   * honour it without naming any mode. The tab never moves — moving it is what
+   * would remount it.
+   */
+  viewportRelative?: boolean;
   /**
    * Paint EVERY tab in this mode, not just the focused one (windows mode). When
    * false (docked / solo) only the focused tab is painted; the rest stay mounted
@@ -163,7 +181,9 @@ export function PlacementStyleProvider({
 export function usePlacementStyle(): PlacementStyleApi {
   const ctx = useContext(PlacementStyleContext);
   if (!ctx) {
-    throw new Error("usePlacementStyle() called outside <PlacementStyleProvider>.");
+    throw new Error(
+      "usePlacementStyle() called outside <PlacementStyleProvider>.",
+    );
   }
   return ctx;
 }

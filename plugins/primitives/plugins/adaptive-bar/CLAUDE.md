@@ -86,10 +86,10 @@ to be measured.
 The container must be minted once and never replaced, and that is a reconciler
 rule rather than a matter of taste: React reconciles a portal by **container
 identity**. Swapping a host element for a portal at the same position, or
-changing a portal's container, deletes the subtree and builds a new one.
-(`ViewportOverlay active={false}` is documented as a keep-alive seam and is not
-one — `web/__tests__/viewport-overlay-keepalive.test.tsx` measures it and finds a
-remount.)
+changing a portal's container, deletes the subtree and builds a new one. Measured
+both ways in
+[`viewport-overlay`](../css/plugins/viewport-overlay/web/__tests__/portal-toggle-remounts.test.tsx),
+whose `no-portal-toggle` rule bans the shape.
 
 Everything ancestry-derived that a portal severs — theme scope, plugin lineage,
 pane id — is stamped onto the container **imperatively and unconditionally**, not

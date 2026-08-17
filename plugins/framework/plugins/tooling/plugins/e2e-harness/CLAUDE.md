@@ -34,6 +34,7 @@ rule keeps the broken shape from coming back.
   - Imported by:
     - `active-data/page-link`
     - `apps-core/layout`
+    - `apps-core/surface`
     - `apps-core/tabs`
     - `apps/agent-manager/pages-nav`
     - `apps/deploy/local-serve`

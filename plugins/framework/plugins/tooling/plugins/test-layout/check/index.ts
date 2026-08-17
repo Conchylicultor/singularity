@@ -1,9 +1,16 @@
 import { existsSync } from "node:fs";
 import { join } from "node:path";
-import type { Check, CheckResult } from "@plugins/framework/plugins/tooling/core";
+import type {
+  Check,
+  CheckResult,
+} from "@plugins/framework/plugins/tooling/core";
 import { REPO_ROOT } from "@plugins/infra/plugins/paths/core";
 import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
-import { findImports, lineAt, maskSource } from "@plugins/plugin-meta/plugins/parse-utils/core";
+import {
+  findImports,
+  lineAt,
+  maskSource,
+} from "@plugins/plugin-meta/plugins/parse-utils/core";
 import {
   BUN_TEST_IGNORE,
   DOM_TEST_INCLUDE,
@@ -63,7 +70,11 @@ const check: Check = {
         const banned = dom ? "bun:test" : "vitest";
         const lines = src.split("\n");
         for (const ref of runnerImports(src)) {
-          if (ref.specifier !== banned && !ref.specifier.startsWith(`${banned}/`)) continue;
+          if (
+            ref.specifier !== banned &&
+            !ref.specifier.startsWith(`${banned}/`)
+          )
+            continue;
           const line = lineAt(src, ref.index);
           const entry = `${rel}:${line}:${(lines[line - 1] ?? "").trim()}`;
           if (dom) crossBunTest.push(entry);
@@ -88,7 +99,9 @@ const check: Check = {
     // an orphan runs under NO runner; a misplaced suite runs under bun:test
     // while claiming vitest's directory convention.
     const strays = files
-      .filter((rel) => !isDomTestPath(rel) && rel.split("/").includes("__tests__"))
+      .filter(
+        (rel) => !isDomTestPath(rel) && rel.split("/").includes("__tests__"),
+      )
       .map(
         (rel) =>
           `${rel}  (${isBunTestPath(rel) ? "bun:test suite wearing vitest's `__tests__/` convention" : "in NEITHER runner's scope — never runs"})`,
@@ -110,8 +123,7 @@ const check: Check = {
     return {
       ok: false,
       message: `test-runner layout violations:\n  ${sections.join("\n  ")}`,
-      hint:
-        "The runner is chosen by where the file lives: pure-logic tests are `*.test.ts(x)` next to their source and run under `bun:test`; jsdom/React tests live in the plugin's `web/__tests__/` and run under vitest. Move the file to the folder that matches its runner rather than swapping the import — and never introduce a `__tests__/` dir outside `web/`. The two scope literals in `bunfig.toml` and `vitest.config.ts` are a complementary pair; edit neither alone.",
+      hint: "The runner is chosen by where the file lives: pure-logic tests are `*.test.ts(x)` next to their source and run under `bun:test`; jsdom/React tests live in the plugin's `web/__tests__/` and run under vitest. Move the file to the folder that matches its runner rather than swapping the import — and never introduce a `__tests__/` dir outside `web/`. The two scope literals in `bunfig.toml` and `vitest.config.ts` are a complementary pair; edit neither alone.",
     };
   },
 };
@@ -122,16 +134,35 @@ const check: Check = {
  * brand-new offender is visible while `node_modules` and nested worktrees are
  * not. (`git grep` would miss the untracked file; `Bun.Glob` would walk the
  * ignored trees.)
+ *
+ * Files DELETED in the working tree are then subtracted, because `--cached`
+ * lists the index and a deletion is not staged until it is committed: a test
+ * file moved or removed in a worktree is still an index entry with no bytes on
+ * disk, and reading it threw an ENOENT that took the whole build down with it.
+ * Asking git for that set is exact — a `catch` on the read, or an `existsSync`
+ * filter, would also swallow a genuinely unreadable file.
  */
 async function listTestFiles(root: string): Promise<string[]> {
+  const [present, deleted] = await Promise.all([
+    lsFiles(root, ["--cached", "--others", "--exclude-standard"]),
+    lsFiles(root, ["--deleted"]),
+  ]);
+  const gone = new Set(deleted);
+  return present.filter((rel) => !gone.has(rel));
+}
+
+/** One `git ls-files` pass over the test-file globs, repo-relative. */
+async function lsFiles(root: string, flags: string[]): Promise<string[]> {
   const result = await spawnCaptured(
-    ["git", "ls-files", "--cached", "--others", "--exclude-standard", "--", "*.test.ts", "*.test.tsx"],
+    ["git", "ls-files", ...flags, "--", "*.test.ts", "*.test.tsx"],
     { cwd: root },
   );
   // An empty list from a FAILED git call would silently pass every file rule —
   // the enumeration failing must be loud, not an absorbed "no offenders".
   if (result.exitCode !== 0) {
-    throw new Error(`git ls-files failed in ${root} (exit ${result.exitCode}): ${result.stderr.trim()}`);
+    throw new Error(
+      `git ls-files failed in ${root} (exit ${result.exitCode}): ${result.stderr.trim()}`,
+    );
   }
   return result.stdout
     .split("\n")
@@ -168,7 +199,10 @@ function runnerImports(src: string): RunnerImport[] {
     const openQuote = m.index + m[0].length - 1;
     const close = masked.indexOf(masked[openQuote]!, openQuote + 1);
     if (close < 0) continue;
-    out.push({ specifier: src.slice(openQuote + 1, close), index: openQuote + 1 });
+    out.push({
+      specifier: src.slice(openQuote + 1, close),
+      index: openQuote + 1,
+    });
   }
   return out;
 }
@@ -196,7 +230,9 @@ async function checkScopeLiterals(root: string): Promise<string | null> {
   // intact, which is where the literal lives); TOML gets the same treatment from
   // the small stripper below.
   const bunfig = stripTomlComments(await Bun.file(bunfigPath).text());
-  const vitestConfig = maskSource(await Bun.file(vitestPath).text(), { strings: false });
+  const vitestConfig = maskSource(await Bun.file(vitestPath).text(), {
+    strings: false,
+  });
 
   const bunfigOk = bunfig.includes(BUN_TEST_IGNORE);
   const vitestOk = vitestConfig.includes(DOM_TEST_INCLUDE);

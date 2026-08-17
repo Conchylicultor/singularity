@@ -12,6 +12,11 @@ export {
   type PlacementChromeProps,
   type PlacementStyleApi,
 } from "./slots";
+export {
+  surfaceReportSink,
+  type SurfaceFault,
+  type SurfaceFaultKind,
+} from "./internal/assert-viewport-escape";
 
 export default {
   description:
@@ -21,6 +26,9 @@ export default {
     Apps.Surface({ component: SurfaceBody }),
     // The mode control, contributed as a shared action-bar item so it renders in
     // both the docked tab-bar strip and the floating overlay.
-    ActionBar.Item({ id: "placement-control", component: ActionBarPlacementControl }),
+    ActionBar.Item({
+      id: "placement-control",
+      component: ActionBarPlacementControl,
+    }),
   ],
 } satisfies PluginDefinition;

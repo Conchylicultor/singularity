@@ -5861,15 +5861,19 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps-core/tabs.useTabs`
           - `primitives/css/clip.Clip`
           - `primitives/css/toggle-chip.SegmentedControl`
+          - `primitives/css/ui-kit.cn`
           - `primitives/css/ui-kit.PortalThemeScopeProvider`
           - `shell/action-bar.ActionBar`
         - Exports (types):
           - `PlacementChromeProps`
           - `PlacementDef`
           - `PlacementStyleApi`
+          - `SurfaceFault`
+          - `SurfaceFaultKind`
         - Exports (values):
           - `PlacementStyleProvider`
           - `Surface`
+          - `surfaceReportSink`
           - `usePlacementStyle`
       - Cross-plugin:
         - Imported by:
@@ -14684,6 +14688,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Imported by:
               - `active-data/page-link`
               - `apps-core/layout`
+              - `apps-core/surface`
               - `apps-core/tabs`
               - `apps/agent-manager/pages-nav`
               - `apps/deploy/local-serve`

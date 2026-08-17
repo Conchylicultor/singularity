@@ -1,18 +1,22 @@
 import {
   useEffect,
+  useLayoutEffect,
   useMemo,
+  useRef,
   useState,
   type CSSProperties,
   type PointerEvent,
 } from "react";
-import { createPortal } from "react-dom";
 import { TabSurface } from "@plugins/apps-core/plugins/tab-surface/web";
 import {
   useTabs,
   registerPlacementCapabilities,
   type Tab,
 } from "@plugins/apps-core/plugins/tabs/web";
-import { PortalThemeScopeProvider } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import {
+  cn,
+  PortalThemeScopeProvider,
+} from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Clip } from "@plugins/primitives/plugins/css/plugins/clip/web";
 import {
   Surface,
@@ -21,6 +25,7 @@ import {
   type PlacementStyleApi,
 } from "../slots";
 import { useTabPresence } from "../internal/use-tab-presence";
+import { assertViewportEscape } from "../internal/assert-viewport-escape";
 
 /**
  * The single surface body that renders EVERY open tab at once and positions each
@@ -33,9 +38,9 @@ import { useTabPresence } from "../internal/use-tab-presence";
  * floating / solo …) is a self-contained sub-plugin contributing one
  * {@link PlacementDef} to the `Surface.Placement` registry; this dispatcher
  * resolves each tab through the matching descriptor and varies only data
- * (class / portal / chrome / backdrop). One stable container per tab whose parent
- * chain never changes across placement transitions keeps each `TabSurface`
- * mounted (Chrome-style keep-alive).
+ * (class / chrome / backdrop). One stable container per tab, rendered at the same
+ * tree position as the same element type under an unchanged parent chain, keeps
+ * each `TabSurface` mounted across a mode switch (Chrome-style keep-alive).
  */
 export function SurfaceBody() {
   const {
@@ -103,16 +108,47 @@ export function SurfaceBody() {
   const Backdrop = activeDef?.Backdrop;
   const Foreground = activeDef?.Foreground;
 
+  // A placement whose containers are `fixed` (solo) needs the whole window AND
+  // needs to out-paint the chrome beside the surface — see the class below.
+  const viewportRelative = activeDef?.viewportRelative === true;
+  const backdropRef = useRef<HTMLElement>(null);
+
+  // Both of those promises are made by ancestors, up to <html>, across plugin
+  // boundaries, and are only checkable once rendered. So check them, and fail
+  // loudly: one failure is a fullscreen app that is 40px short, the other is a
+  // fullscreen app with the rail still down the side, and both survive review.
+  // Runs on activation only — a placement change, not a render.
+  useLayoutEffect(() => {
+    if (!viewportRelative) return;
+    assertViewportEscape(backdropRef.current!);
+  }, [viewportRelative]);
+
   return (
-    // The shared backdrop for all modes. `transform-gpu` makes it the containing
-    // block for the absolutely-positioned tabs (and their fixed-position app
-    // chrome), so docked/floating tabs are clipped to the surface below the tab
-    // bar. (Solo tabs escape via `position: fixed` + portalToBody.) No
-    // `data-theme-scope` here — the backdrop inherits the desktop `:root` theme.
-    // Each forked app's scope block is mounted centrally (theme-engine's
+    // The shared backdrop for all modes. `relative` is what docked's `absolute
+    // inset-0` and floating's geometry box resolve against, so it is
+    // unconditional. `transform-gpu` is NOT about them: what it buys is stacking
+    // isolation, keeping the surface's own painting out of the root stacking
+    // context — which is also why a docked tab paints BELOW the app rail. It is
+    // dropped for a viewport-relative placement, and both halves of that matter:
+    // a transform would make this element the containing block for the
+    // placement's `fixed` containers (clipping a fullscreen tab to the content
+    // area) AND trap their `z-overlay` inside the surface's own stacking layer
+    // (so it would lose to the rail's `z-nav`). Nothing inside can leak while it
+    // is dropped: solo declares no Backdrop/Foreground and every unfocused tab
+    // is `display:none`. (An app's OWN `fixed` chrome stays bounded by the
+    // per-tab content inset below, a different transform, in every mode.)
+    //
+    // No `data-theme-scope` here — the backdrop inherits the desktop `:root`
+    // theme. Each forked app's scope block is mounted centrally (theme-engine's
     // AppScopeThemes at Core.Root); each tab container is still tagged
     // `data-theme-scope="app:<id>"` to pick it up.
-    <Clip className="relative h-full w-full bg-background transform-gpu">
+    <Clip
+      ref={backdropRef}
+      className={cn(
+        "relative h-full w-full bg-background",
+        !viewportRelative && "transform-gpu",
+      )}
+    >
       {/* The active mode's optional backdrop (e.g. windows' desktop wallpaper). */}
       {Backdrop && <Backdrop />}
       {presence.map((p) => (
@@ -162,9 +198,17 @@ interface TabContainerProps {
 /**
  * One tab's stable keep-alive container. The container `<div>` and the content
  * inset → `PortalThemeScopeProvider` → `TabSurface` chain are byte-identical
- * across every placement, so a placement change re-positions the still-mounted
- * tab rather than remounting it. Only the container's class / inline style / the
+ * across every placement, so a placement change restyles the still-mounted tab
+ * rather than remounting it. Only the container's class / inline style / the
  * presence of a sibling `Chrome` overlay change.
+ *
+ * That is the whole mechanism, and it is fragile in one specific way: React
+ * reconciles by position AND element type, so returning this container wrapped
+ * in anything conditional — a portal above all, whose identity is its container
+ * node — reads as a different child and deletes the subtree. Every placement is
+ * therefore expressed as CSS on the container that is already here; a placement
+ * that needs to escape an ancestor says so with `viewportRelative` and the host
+ * changes the ANCESTOR, never where the tab renders.
  *
  * The active placement's optional `Chrome` is a SIBLING overlay (never a parent
  * of `TabSurface`). It pushes dynamic inline style (floating's geometry box /
@@ -210,7 +254,6 @@ function TabContainer({
     ? def.containerClassName
     : "absolute inset-0 bg-background";
   const visibleWhenUnfocused = def?.visibleWhenUnfocused ?? false;
-  const portalToBody = def?.portalToBody ?? false;
   const Chrome = def?.Chrome;
 
   // Every tab stays mounted (keep-alive); only the visibility gate changes. A
@@ -227,9 +270,15 @@ function TabContainer({
     pointerDownCapture?.(e);
   };
 
-  const container = (
+  return (
     <div
       onPointerDownCapture={onContainerPointerDownCapture}
+      // Which tab this box IS. The theme scope below is an app-level tag that
+      // cross-app chrome (the tab strip, the rail) wears too, so it cannot name
+      // one tab's container; anything asking "where does tab X live on screen"
+      // — a debug overlay, the e2e that proves a mode switch never moved it —
+      // needs this one.
+      data-tab-id={tab.tabId}
       // Tags this tab's subtree so the matching `ScopedAppTheme` block themes its
       // inline content with this app's palette. Portaled descendants escape this
       // attribute, so they re-adopt the theme via the PortalThemeScopeProvider
@@ -275,11 +324,4 @@ function TabContainer({
       )}
     </div>
   );
-
-  // `portalToBody` placements (solo) portal their container to `document.body` so
-  // a `fixed inset-0` box is relative to the VIEWPORT, not the `transform-gpu`
-  // backdrop (which would otherwise contain it below the tab bar / right of the
-  // rail). `createPortal` only moves the DOM node — the React tree position is
-  // unchanged, so `TabSurface` keeps its state across the transition (keep-alive).
-  return portalToBody ? createPortal(container, document.body) : container;
 }

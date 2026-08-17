@@ -107,8 +107,9 @@ function useActionBarPin() {
  * Floating overlay host (mounted at `Core.Root`, outside any transformed
  * ancestor). Renders only when **unpinned**: a top-right `z-popover` overlay
  * collapsed to the status glyph that hover-expands the action row leftward.
- * Mounting in the body stacking context above the solo portal's `z-overlay`
- * keeps it visible in every placement mode, including solo (the headline fix).
+ * Mounting in the root stacking context, one band above the solo placement's
+ * `z-overlay` container, keeps it visible in every placement mode, including
+ * solo (the headline fix).
  */
 export function FloatingActionBarHost() {
   const { enabled } = useConfig(actionBarConfig);
