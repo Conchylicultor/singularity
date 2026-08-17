@@ -8,6 +8,25 @@ import {
   type ReactNode,
 } from "react";
 import { defineSlot } from "@plugins/framework/plugins/web-sdk/core";
+import type { ClassName } from "@plugins/primitives/plugins/css/plugins/ui-kit/core";
+
+/**
+ * How a placement's per-tab container is POSITIONED — a role, not a recipe. The
+ * host (`SurfaceBody`) owns the class each role maps to, so a mode states the
+ * geometry it wants ONCE and cannot spell it two ways that disagree:
+ *
+ *  - `pane` — fills the surface area it is rendered in (docked's full-bleed tab).
+ *  - `window` — a free box inside the surface, positioned by the mode's own
+ *    `Chrome` via the keep-alive style channel, and clipped to its own corner.
+ *  - `viewport` — positions against the VIEWPORT (`position: fixed`), so the
+ *    surface must be neither its containing block nor its stacking context:
+ *    while such a mode is active the surface backdrop drops its `transform`,
+ *    which is what lets the container reach the full window AND lets its
+ *    `z-overlay` out-rank the app rail's `z-nav` instead of being compared only
+ *    against its siblings inside the surface. The tab never moves — moving it is
+ *    what would remount it.
+ */
+export type PlacementFrame = "pane" | "window" | "viewport";
 
 /**
  * Props handed to a placement's optional {@link PlacementDef.Chrome}. The Chrome
@@ -75,21 +94,22 @@ export interface PlacementDef {
    */
   exitDurationMs?: number;
 
-  /** Static class applied to the stable per-tab container in this mode. */
-  containerClassName: string;
   /**
-   * This mode's containers position against the VIEWPORT (`position: fixed`, e.g.
-   * solo's `fixed inset-0`), so the surface must be neither their containing
-   * block nor their stacking context: while this mode is active the surface
-   * backdrop drops its `transform`, which is what lets such a container reach the
-   * full window AND lets its `z-overlay` out-rank the app rail's `z-nav` instead
-   * of being compared only against its siblings inside the surface.
-   *
-   * It is a property of the container's own CSS, declared here so the host can
-   * honour it without naming any mode. The tab never moves — moving it is what
-   * would remount it.
+   * How the per-tab container is POSITIONED, as a role the host maps to
+   * mechanics. A role cannot disagree with itself — which is the whole point:
+   * the geometry and its consequences (the backdrop's dropped `transform`, the
+   * runtime viewport-escape audit) are read off this ONE field, so a mode can no
+   * longer say `fixed` in one place and forget to say what it means in another.
    */
-  viewportRelative?: boolean;
+  frame: PlacementFrame;
+  /**
+   * PAINT ONLY — background, border, radius. Geometry belongs to {@link
+   * PlacementDef.frame}. `ClassName` makes that a checked contract rather than a
+   * comment: the value comes out of `cn()`, so `no-adhoc-layout` reads its tokens
+   * and rejects any positioning / clipping / flow class that tries to sneak back
+   * in.
+   */
+  paintClassName?: ClassName;
   /**
    * Paint EVERY tab in this mode, not just the focused one (windows mode). When
    * false (docked / solo) only the focused tab is painted; the rest stay mounted

@@ -148,6 +148,7 @@ same threshold and can't desync in a row.
     - `reports/live-state-stale-drop`
     - `reports/optimistic-divergence`
     - `reports/render-loop`
+    - `reports/viewport-escape`
     - `review/code-review`
     - `review/plugin-changes`
     - `review/plugin-changes/api-changes`

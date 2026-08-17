@@ -1,4 +1,8 @@
-import { ESLintUtils, type TSESLint, type TSESTree } from "@typescript-eslint/utils";
+import {
+  ESLintUtils,
+  type TSESLint,
+  type TSESTree,
+} from "@typescript-eslint/utils";
 
 const createRule = ESLintUtils.RuleCreator(
   (name) => `https://github.com/anthropics/singularity/lint/${name}`,
@@ -106,7 +110,10 @@ function collectTokens(
         // followed, and a map reached only through an intermediate local is out
         // of range by design.
         const init = def.type === "Variable" ? def.node.init : null;
-        if (init && (init.type === "ObjectExpression" || init.type === "ArrayExpression")) {
+        if (
+          init &&
+          (init.type === "ObjectExpression" || init.type === "ArrayExpression")
+        ) {
           collectTokens(sourceCode, init, out, seen);
         }
       }
@@ -143,6 +150,17 @@ function baseClass(token: string): string {
 
 const HOST_TAGS = new Set(["button", "a"]);
 
+/**
+ * JSX attribute names whose value is a class-name string. `className`/`class`
+ * are React's and HTML's own; the `*ClassName` suffix is the pass-through
+ * convention (`panelClassName`, `itemClassName`, `wrapperClassName`,
+ * `trackClassName`) a component uses to forward classes to an inner element.
+ * Those forwarded strings style a real element exactly like `className` does,
+ * but were invisible to every class rule purely because of the attribute's
+ * spelling.
+ */
+const CLASS_ATTRS = /^(?:class|className)$|ClassName$/;
+
 export default createRule({
   name: "no-adhoc-control",
   meta: {
@@ -168,7 +186,10 @@ export default createRule({
         if (typeof source !== "string") return;
         // Match the canonical `@/components/ui/button` and any specifier that
         // resolves to the same module (e.g. a relative `../components/ui/button`).
-        if (source !== "@/components/ui/button" && !source.endsWith("/components/ui/button")) {
+        if (
+          source !== "@/components/ui/button" &&
+          !source.endsWith("/components/ui/button")
+        ) {
           return;
         }
         for (const spec of node.specifiers) {
@@ -182,10 +203,15 @@ export default createRule({
         }
       },
 
-      // Check B — inspect a `className` attribute on a raw <button>/<a>.
+      // Check B — inspect a class-name attribute on a raw <button>/<a>.
       JSXAttribute(node) {
-        // Only `className` attributes.
-        if (node.name.type !== "JSXIdentifier" || node.name.name !== "className") return;
+        // Only class-name attributes (`className`/`class`, or a `*ClassName`
+        // pass-through prop).
+        if (
+          node.name.type !== "JSXIdentifier" ||
+          !CLASS_ATTRS.test(node.name.name)
+        )
+          return;
 
         // A JSXAttribute's parent is always the JSXOpeningElement.
         const tag = node.parent.name;

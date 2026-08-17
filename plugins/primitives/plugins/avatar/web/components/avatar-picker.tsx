@@ -1,11 +1,21 @@
-import { cn, Popover, PopoverContent, PopoverTrigger } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import type { ClassName } from "@plugins/primitives/plugins/css/plugins/ui-kit/core";
+import {
+  cn,
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useState, type ReactNode } from "react";
 import { SectionLabel } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Cluster } from "@plugins/primitives/plugins/css/plugins/cluster/web";
 import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
 import { IconPicker } from "@plugins/primitives/plugins/icon-picker/web";
 import type { SvgNode } from "@plugins/primitives/plugins/icon-picker/core";
-import { AVATAR_COLOR_KEYS, AVATAR_COLORS, type AvatarColor } from "../internal/colors";
+import {
+  AVATAR_COLOR_KEYS,
+  AVATAR_COLORS,
+  type AvatarColor,
+} from "../internal/colors";
 
 export interface AvatarSpec {
   icon: string | null;
@@ -17,7 +27,7 @@ export interface AvatarPickerProps {
   value: AvatarSpec;
   onChange: (next: AvatarSpec) => void | Promise<void>;
   children: ReactNode;
-  triggerClassName?: string;
+  triggerClassName?: ClassName;
   triggerLabel?: string;
 }
 
@@ -35,13 +45,15 @@ export function AvatarPicker({
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger
-        className={cn("rounded-full outline-none focus-visible:ring-2 focus-visible:ring-ring", triggerClassName)}
+        className={cn(
+          "rounded-full outline-none focus-visible:ring-2 focus-visible:ring-ring",
+          triggerClassName,
+        )}
         aria-label={triggerLabel ?? "Pick avatar"}
       >
         {children}
       </PopoverTrigger>
       <PopoverContent width="xl" padding="sm" align="start">
-
         {/* Color row */}
         <SectionLabel className="px-xs pt-xs pb-xs text-3xs">
           Color
@@ -57,7 +69,8 @@ export function AvatarPicker({
               className={cn(
                 "size-5 rounded-full border border-border transition-transform",
                 AVATAR_COLORS[key],
-                value.color === key && "scale-110 ring-2 ring-ring ring-offset-1 ring-offset-background",
+                value.color === key &&
+                  "scale-110 ring-2 ring-ring ring-offset-1 ring-offset-background",
               )}
             />
           ))}
@@ -66,7 +79,9 @@ export function AvatarPicker({
         {/* Icon picker */}
         <IconPicker
           value={value.icon}
-          onSelect={({ key, svgNodes }) => void onChange({ ...value, icon: key, svgNodes })}
+          onSelect={({ key, svgNodes }) =>
+            void onChange({ ...value, icon: key, svgNodes })
+          }
         />
 
         {/* Clear */}
@@ -77,7 +92,9 @@ export function AvatarPicker({
             <Row
               size="sm"
               hover="accent"
-              onClick={() => void onChange({ icon: null, color: null, svgNodes: null })}
+              onClick={() =>
+                void onChange({ icon: null, color: null, svgNodes: null })
+              }
               className="text-muted-foreground"
             >
               Clear

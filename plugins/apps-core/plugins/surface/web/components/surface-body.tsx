@@ -1,6 +1,5 @@
 import {
   useEffect,
-  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -18,14 +17,54 @@ import {
   PortalThemeScopeProvider,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Clip } from "@plugins/primitives/plugins/css/plugins/clip/web";
+import { useViewportEscape } from "@plugins/primitives/plugins/css/plugins/viewport-overlay/web";
 import {
   Surface,
   PlacementStyleProvider,
   type PlacementDef,
+  type PlacementFrame,
   type PlacementStyleApi,
 } from "../slots";
 import { useTabPresence } from "../internal/use-tab-presence";
-import { assertViewportEscape } from "../internal/assert-viewport-escape";
+
+/**
+ * The one place a {@link PlacementFrame} role becomes CSS. A mode declares the
+ * role; this host owns the mechanics, so the two can never drift apart and a
+ * mode cannot spell a geometry the host does not know how to unwind.
+ *
+ * - `pane` — fills the surface box it is rendered in.
+ * - `window` — a free box positioned by the mode's own `Chrome` (floating's
+ *   geometry push). `overflow-hidden` is part of the ROLE, not one mode's taste:
+ *   a window frame that leaks past its own rounded corner is a bug in every
+ *   conceivable window mode.
+ * - `viewport` — `fixed`, against the real window. `z-overlay` and NOT `z-max`:
+ *   with the backdrop's transform dropped (see `escapesSurface` below) the
+ *   container sits in the ROOT stacking context, alongside every body-portaled
+ *   popover, so a higher band would paint its opaque background over every
+ *   popover/dropdown/dialog opened from inside the fullscreen app. `z-overlay`
+ *   still covers all app chrome (`z-nav`) and the surface backdrop, and
+ *   `z-popover` overlays still paint above it.
+ *
+ * It is a module const rather than an inline class literal for the same reason
+ * `<ViewportOverlay>`'s own recipe is: this module is the OWNER of these
+ * mechanics, and an owner is deliberately opaque to the `no-adhoc-*` rules that
+ * redirect everyone else to it. Those rules harvest literals from class-name
+ * attributes and `cn()` arguments; a plain object read through an identifier is
+ * neither, so no per-site disable is needed here (`<Card>` / `<Surface>` /
+ * `<ViewportOverlay>` all stay clear of their own lint the same way).
+ */
+const FRAME_CLASS: Record<PlacementFrame, string> = {
+  pane: "absolute inset-0",
+  window: "absolute overflow-hidden",
+  viewport: "fixed inset-0 z-overlay",
+};
+
+/**
+ * The paint for the empty-registry fallback (no placement sub-plugins loaded):
+ * a bare `pane` frame still needs the app's own background under it, since the
+ * container carries `data-theme-scope="app:<id>"`.
+ */
+const FALLBACK_PAINT = cn("bg-background");
 
 /**
  * The single surface body that renders EVERY open tab at once and positions each
@@ -109,8 +148,11 @@ export function SurfaceBody() {
   const Foreground = activeDef?.Foreground;
 
   // A placement whose containers are `fixed` (solo) needs the whole window AND
-  // needs to out-paint the chrome beside the surface — see the class below.
-  const viewportRelative = activeDef?.viewportRelative === true;
+  // needs to out-paint the chrome beside the surface — see the class below. This
+  // is the SINGLE fact behind both consequences (the dropped `transform-gpu` and
+  // the runtime audit), read off the same `frame` role that produced the `fixed`
+  // in the first place — so forgetting one of them has no spelling.
+  const escapesSurface = activeDef?.frame === "viewport";
   const backdropRef = useRef<HTMLElement>(null);
 
   // Both of those promises are made by ancestors, up to <html>, across plugin
@@ -118,10 +160,17 @@ export function SurfaceBody() {
   // loudly: one failure is a fullscreen app that is 40px short, the other is a
   // fullscreen app with the rail still down the side, and both survive review.
   // Runs on activation only — a placement change, not a render.
-  useLayoutEffect(() => {
-    if (!viewportRelative) return;
-    assertViewportEscape(backdropRef.current!);
-  }, [viewportRelative]);
+  //
+  // The walk itself is `viewport-overlay`'s: it is pure CSS and knows nothing
+  // about tabs or placements. What the surface contributes is the two strings —
+  // what the user loses, and what to do instead. `from` defaults to "self"
+  // because this backdrop is the ANCESTOR being audited, not the fixed box.
+  useViewportEscape(backdropRef, {
+    enabled: escapesSurface,
+    subject: "a fullscreen (solo) tab",
+    remedy:
+      "Remove the property, or scope it below the surface — a fullscreen tab must cover the whole window and out-paint the chrome beside it (the app rail's z-nav).",
+  });
 
   return (
     // The shared backdrop for all modes. `relative` is what docked's `absolute
@@ -129,7 +178,7 @@ export function SurfaceBody() {
     // unconditional. `transform-gpu` is NOT about them: what it buys is stacking
     // isolation, keeping the surface's own painting out of the root stacking
     // context — which is also why a docked tab paints BELOW the app rail. It is
-    // dropped for a viewport-relative placement, and both halves of that matter:
+    // dropped for a `viewport`-framed placement, and both halves of that matter:
     // a transform would make this element the containing block for the
     // placement's `fixed` containers (clipping a fullscreen tab to the content
     // area) AND trap their `z-overlay` inside the surface's own stacking layer
@@ -146,7 +195,7 @@ export function SurfaceBody() {
       ref={backdropRef}
       className={cn(
         "relative h-full w-full bg-background",
-        !viewportRelative && "transform-gpu",
+        !escapesSurface && "transform-gpu",
       )}
     >
       {/* The active mode's optional backdrop (e.g. windows' desktop wallpaper). */}
@@ -207,7 +256,7 @@ interface TabContainerProps {
  * in anything conditional — a portal above all, whose identity is its container
  * node — reads as a different child and deletes the subtree. Every placement is
  * therefore expressed as CSS on the container that is already here; a placement
- * that needs to escape an ancestor says so with `viewportRelative` and the host
+ * that needs to escape an ancestor says so with `frame: "viewport"` and the host
  * changes the ANCESTOR, never where the tab renders.
  *
  * The active placement's optional `Chrome` is a SIBLING overlay (never a parent
@@ -247,12 +296,14 @@ function TabContainer({
     [],
   );
 
-  // Empty registry (no mode plugins): fall back to a built-in docked-like
-  // full-area container so the app stays usable. The control renders nothing.
-  const fallback = !def;
-  const containerClassName = def
-    ? def.containerClassName
-    : "absolute inset-0 bg-background";
+  // The container's class is the active mode's FRAME role resolved to mechanics,
+  // plus its paint. Empty registry (no mode plugins) is not a separate branch —
+  // it is simply the `pane` frame with a fallback paint, so the app stays usable
+  // and looks docked-like. The control renders nothing.
+  const containerClassName = cn(
+    FRAME_CLASS[def?.frame ?? "pane"],
+    def ? def.paintClassName : FALLBACK_PAINT,
+  );
   const visibleWhenUnfocused = def?.visibleWhenUnfocused ?? false;
   const Chrome = def?.Chrome;
 
@@ -285,11 +336,7 @@ function TabContainer({
       // wrapping TabSurface below.
       data-theme-scope={`app:${tab.appId}`}
       className={containerClassName}
-      style={
-        fallback
-          ? { display: focused ? "block" : "none" }
-          : { display: visible ? "block" : "none", ...overrideStyle }
-      }
+      style={{ display: visible ? "block" : "none", ...overrideStyle }}
     >
       {/* Stable content inset: ALWAYS present so `TabSurface`'s parent chain is
           identical in every placement. Only its CSS changes (pushed by the active

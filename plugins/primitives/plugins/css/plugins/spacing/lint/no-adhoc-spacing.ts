@@ -26,9 +26,9 @@ const createRule = ESLintUtils.RuleCreator(
  * Stack gap / Inset pad) is a per-site judgement.
  *
  * Class strings are inspected only in a class-name context — a `className`/
- * `class` attribute value or a `cn(...)`/`clsx(...)`/`twMerge(...)` argument —
- * via the same `collectTokens` walk the sibling `no-adhoc-*` rules use, so a
- * doc-string that merely mentions `gap-2` is never flagged.
+ * `class`/`*ClassName` attribute value or a `cn(...)`/`clsx(...)`/`twMerge(...)`
+ * argument — via the same `collectTokens` walk the sibling `no-adhoc-*` rules
+ * use, so a doc-string that merely mentions `gap-2` is never flagged.
  */
 
 // Raw spacing utilities: a numeric step (`-2`, `-0.5`) or an arbitrary value
@@ -43,8 +43,16 @@ const PAD = /^p[xytrbl]?-(?:\d+(?:\.\d+)?(?![a-z])|\[)/;
 const MARGIN = /^m[xytrbl]?-(?:\d+(?:\.\d+)?(?![a-z])|\[)/;
 const SPACE = /^space-[xy]-(?:\d+(?:\.\d+)?(?![a-z])|\[)/;
 
-/** JSX attribute names whose value is a class-name string. */
-const CLASS_ATTRS = new Set(["className", "class"]);
+/**
+ * JSX attribute names whose value is a class-name string. `className`/`class`
+ * are React's and HTML's own; the `*ClassName` suffix is the pass-through
+ * convention (`panelClassName`, `itemClassName`, `wrapperClassName`,
+ * `trackClassName`) a component uses to forward classes to an inner element.
+ * Those forwarded strings style a real element exactly like `className` does,
+ * but were invisible to every class rule purely because of the attribute's
+ * spelling.
+ */
+const CLASS_ATTRS = /^(?:class|className)$|ClassName$/;
 /** Class-builder calls whose string arguments are class-name strings. */
 const CLASS_BUILDERS = new Set(["cn", "clsx", "twMerge"]);
 
@@ -55,7 +63,10 @@ const CLASS_BUILDERS = new Set(["cn", "clsx", "twMerge"]);
  * Structural (visit every child node) so it is robust to however the class
  * string is assembled (bare literal, template, `cn(...)`, ternaries, nesting).
  */
-function collectTokens(node: TSESTree.Node | null | undefined, out: Set<string>): void {
+function collectTokens(
+  node: TSESTree.Node | null | undefined,
+  out: Set<string>,
+): void {
   if (!node) return;
   if (node.type === "Literal") {
     if (typeof node.value === "string") {
@@ -116,20 +127,31 @@ export default createRule({
       for (const token of tokens) {
         const c = baseClass(token);
         if (GAP.test(c) || PAD.test(c) || MARGIN.test(c) || SPACE.test(c)) {
-          context.report({ node, messageId: "adhocSpacing", data: { token: c } });
+          context.report({
+            node,
+            messageId: "adhocSpacing",
+            data: { token: c },
+          });
         }
       }
     }
 
     return {
       JSXAttribute(node) {
-        if (node.name.type !== "JSXIdentifier" || !CLASS_ATTRS.has(node.name.name)) return;
+        if (
+          node.name.type !== "JSXIdentifier" ||
+          !CLASS_ATTRS.test(node.name.name)
+        )
+          return;
         const tokens = new Set<string>();
         collectTokens(node.value, tokens);
         checkTokens(node, tokens);
       },
       CallExpression(node) {
-        if (node.callee.type !== "Identifier" || !CLASS_BUILDERS.has(node.callee.name)) {
+        if (
+          node.callee.type !== "Identifier" ||
+          !CLASS_BUILDERS.has(node.callee.name)
+        ) {
           return;
         }
         const tokens = new Set<string>();

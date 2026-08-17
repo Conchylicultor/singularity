@@ -1,3 +1,4 @@
+import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { type ReactNode, type Ref } from "react";
 import { Sticky } from "@plugins/primitives/plugins/css/plugins/sticky/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
@@ -103,7 +104,7 @@ export function DataViewToolbar({
       placeholder="Search…"
       // Wide: a fixed lane in the inline row. Compact: full width of the options
       // popover (the wrapper's own block box) — hence no width class there.
-      wrapperClassName={compact ? undefined : "w-48"}
+      wrapperClassName={compact ? undefined : cn("w-48")}
     />
   );
 

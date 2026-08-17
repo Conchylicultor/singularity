@@ -1,9 +1,12 @@
 import { useState } from "react";
-import { Stack, Inset } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import {
+  Stack,
+  Inset,
+} from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Surface } from "@plugins/primitives/plugins/css/plugins/surface/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
-import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { Button, cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { BlockEditor } from "@plugins/page/plugins/editor/web";
 import { SEED_DOC, TEXT_BLOCKS } from "../seed";
 
@@ -31,16 +34,21 @@ export function EditorToySection() {
               A living document, right here.
             </Text>
             <Text variant="body" tone="muted" className="max-w-xl">
-              Type, press Enter to split, drag to reorder, or hit <kbd>/</kbd> for
-              the block menu. Everything runs in your browser — nothing you write
-              is saved or sent anywhere.
+              Type, press Enter to split, drag to reorder, or hit <kbd>/</kbd>{" "}
+              for the block menu. Everything runs in your browser — nothing you
+              write is saved or sent anywhere.
             </Text>
           </Stack>
           <div className="w-full max-w-3xl">
             <Surface level="raised">
               <Stack gap="none">
                 <Inset x="lg" y="sm">
-                  <Stack direction="row" justify="between" align="center" gap="sm">
+                  <Stack
+                    direction="row"
+                    justify="between"
+                    align="center"
+                    gap="sm"
+                  >
                     <Badge variant="info" shape="pill">
                       In-memory demo
                     </Badge>
@@ -58,7 +66,7 @@ export function EditorToySection() {
                   persist={false}
                   initialContent={SEED_DOC}
                   enabledBlockTypes={TEXT_BLOCKS}
-                  contentClassName="mx-auto w-full max-w-2xl"
+                  contentClassName={cn("mx-auto w-full max-w-2xl")}
                 />
               </Stack>
             </Surface>

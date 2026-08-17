@@ -20,8 +20,9 @@ const createRule = ESLintUtils.RuleCreator(
  * tag-allowlist to fail open through (the former `HOST_TAGS` gate did just that).
  *
  * Two fingerprints, each a co-occurrence of classes that may live in different
- * `cn()` fragments — so we aggregate every class token of one `className`
- * attribute into a single Set and test against it:
+ * `cn()` fragments — so we aggregate every class token of one class-name
+ * attribute (`className`, or a `*ClassName` pass-through prop) into a single Set
+ * and test against it:
  *
  *   - `raised`  — `rounded` + `border` + the card-surface token `bg-card` +
  *                 padding → `<Surface level="raised">` / `<Card>`. (This is the
@@ -76,6 +77,17 @@ const PY = /^py-/;
 const P_CARD = "p-card";
 
 /**
+ * JSX attribute names whose value is a class-name string. `className`/`class`
+ * are React's and HTML's own; the `*ClassName` suffix is the pass-through
+ * convention (`panelClassName`, `itemClassName`, `wrapperClassName`,
+ * `trackClassName`) a component uses to forward classes to an inner element.
+ * Those forwarded strings style a real element exactly like `className` does,
+ * but were invisible to every class rule purely because of the attribute's
+ * spelling.
+ */
+const CLASS_ATTRS = /^(?:class|className)$|ClassName$/;
+
+/**
  * Recursively collect class tokens from a `className` attribute value subtree.
  * Harvest only string `Literal` `.value`s and `TemplateElement.value.raw`s —
  * never identifiers from dynamic expressions (e.g. a `SURFACE_LEVELS.overlay`
@@ -85,7 +97,10 @@ const P_CARD = "p-card";
  * than shape-specific, so it is robust to however the class string is assembled
  * (bare literal, cn(...)/clsx(...), template literal, ternary, …).
  */
-function collectTokens(node: TSESTree.Node | null | undefined, out: Set<string>): void {
+function collectTokens(
+  node: TSESTree.Node | null | undefined,
+  out: Set<string>,
+): void {
   if (!node) return;
   if (node.type === "Literal") {
     if (typeof node.value === "string") {
@@ -134,7 +149,7 @@ export default createRule({
       adhocRaised:
         "Ad-hoc raised-surface recipe (rounded + border + the card-surface token `bg-card` + " +
         "padding) — flagged on any host element (intrinsic, layout component, or member tag). " +
-        "Route through `<Surface level=\"raised\">` (or `<Card>`) from " +
+        'Route through `<Surface level="raised">` (or `<Card>`) from ' +
         "`@plugins/primitives/plugins/css/plugins/surface/web`, which freezes the raised bundle " +
         "and bakes in the Ctrl+A select-scope. If intentionally bespoke, " +
         "use the named padding token (`p-card`), or " +
@@ -142,7 +157,7 @@ export default createRule({
       adhocOverlay:
         "Ad-hoc overlay-surface recipe (the `bg-popover` token + a shadow + rounded) — " +
         "flagged on any host element (intrinsic, layout component, or member tag). " +
-        "Route through `<Surface level=\"overlay\">` from " +
+        'Route through `<Surface level="overlay">` from ' +
         "`@plugins/primitives/plugins/css/plugins/surface/web` (or `PopoverContent`/`DropdownMenuContent`), which " +
         "freeze the overlay bundle. If intentionally bespoke, " +
         "`// eslint-disable-next-line surface/no-adhoc-surface -- <reason>`.",
@@ -152,7 +167,11 @@ export default createRule({
   create(context) {
     return {
       JSXAttribute(node) {
-        if (node.name.type !== "JSXIdentifier" || node.name.name !== "className") return;
+        if (
+          node.name.type !== "JSXIdentifier" ||
+          !CLASS_ATTRS.test(node.name.name)
+        )
+          return;
 
         // No host-tag gate: the literal recipe is the violation on ANY host
         // element. The sanctioned surfaces are invisible here for structural
@@ -178,7 +197,8 @@ export default createRule({
           if (BG_CARD.test(t)) hasCardBg = true;
           if (BG_POPOVER.test(t)) hasPopoverBg = true;
           if (SHADOW.test(t)) hasShadow = true;
-          if (P_NUM.test(t) || P_ARBITRARY.test(t) || P_RAMP.test(t)) hasPadding = true;
+          if (P_NUM.test(t) || P_ARBITRARY.test(t) || P_RAMP.test(t))
+            hasPadding = true;
           if (PX.test(t)) hasPx = true;
           if (PY.test(t)) hasPy = true;
           if (t === P_CARD) pCardEscape = true;
@@ -191,7 +211,13 @@ export default createRule({
           return;
         }
         // raised fingerprint (the former no-adhoc-card), with the p-card escape.
-        if (!pCardEscape && hasRounded && hasBorder && hasCardBg && hasPadding) {
+        if (
+          !pCardEscape &&
+          hasRounded &&
+          hasBorder &&
+          hasCardBg &&
+          hasPadding
+        ) {
           context.report({ node, messageId: "adhocRaised" });
         }
       },

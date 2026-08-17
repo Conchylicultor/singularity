@@ -109,6 +109,7 @@ line, it's also the fix for a multi-contribution chip slot (`<Inline><Slot.Rende
     - `reports/optimistic-divergence`
     - `reports/render-loop`
     - `reports/turn-unconfirmed`
+    - `reports/viewport-escape`
     - `tasks/attempt-view`
     - `tasks/task-deps-tree`
     - `tasks/task-draft-form`

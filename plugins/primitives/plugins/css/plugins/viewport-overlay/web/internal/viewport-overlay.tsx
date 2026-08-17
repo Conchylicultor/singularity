@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { useRef, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import {
   cn,
@@ -8,6 +8,7 @@ import {
   type PortaledLayer,
   zLayerClass,
 } from "@plugins/primitives/plugins/css/plugins/z-layers/web";
+import { useViewportEscape } from "./use-viewport-escape";
 
 // The viewport-fill recipe lives in a module const (not an inline className
 // literal) so the `no-adhoc-viewport-overlay` rule — which only harvests literals
@@ -63,11 +64,36 @@ export function ViewportOverlay({
   ...rest
 }: ViewportOverlayProps) {
   const forwarded = usePortalForwardedAttrs();
+  const rootRef = useRef<HTMLDivElement>(null);
+
+  // The one failure this primitive's design cannot make impossible. Portaling to
+  // `<body>` escapes every ancestor INSIDE the app — that is the whole point —
+  // but it cannot escape `body` and `html` themselves. A global `filter` or
+  // `transform` there (a blur-while-locked scrim, a devtools frame, a browser
+  // extension that wraps the page) is still a containing block for this box, and
+  // the overlay is then clipped with no error, exactly like the ad-hoc `fixed
+  // inset-0` this primitive exists to replace.
+  //
+  // `from: "parent"` because this element IS the fixed box: a `position: fixed`
+  // element is its own stacking context, so an inclusive walk would report the
+  // overlay against itself every time. Dev only — outside dev there is nobody to
+  // fix it while the page is open, and the walk is not free.
+  useViewportEscape(rootRef, {
+    enabled: !!import.meta.env.DEV,
+    from: "parent",
+    subject: `a <ViewportOverlay layer="${layer}">`,
+    remedy:
+      "Remove the property from <body> / <html>, or scope it to a subtree that does not contain the portal root.",
+  });
+
   return createPortal(
     <div
       {...forwarded}
       className={cn(OVERLAY_ROOT, zLayerClass(layer), className)}
       {...rest}
+      // After the passthrough, like the class recipe above it: the primitive's
+      // own audit is not something a caller can spread away.
+      ref={rootRef}
     >
       {children}
     </div>,

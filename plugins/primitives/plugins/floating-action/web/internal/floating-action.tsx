@@ -1,12 +1,24 @@
+import {
+  insetClass,
+  type SpaceStep,
+  type StackAlign,
+  type StackDirection,
+} from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import type { ClassName } from "@plugins/primitives/plugins/css/plugins/ui-kit/core";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { type ComponentProps, type ReactNode, useLayoutEffect, useRef } from "react";
+import {
+  type ComponentProps,
+  type ReactNode,
+  useLayoutEffect,
+  useRef,
+} from "react";
 import { useDisclosureIntent } from "./use-disclosure-intent";
 
 export type FloatingAnchor =
-  | "top-left"
-  | "top-right"
-  | "bottom-left"
-  | "bottom-right";
+  "top-left" | "top-right" | "bottom-left" | "bottom-right";
+
+/** Which end of the panel's axis the trigger sits at; content fills the other. */
+export type FloatingActionTriggerAt = "start" | "end";
 
 const anchorClasses: Record<FloatingAnchor, string> = {
   "top-left": "top-0 left-0",
@@ -15,11 +27,69 @@ const anchorClasses: Record<FloatingAnchor, string> = {
   "bottom-right": "bottom-0 right-0",
 };
 
-export interface FloatingActionProps
-  extends Omit<ComponentProps<"div">, "className"> {
+// The panel's flow, from the two roles that decide it. The primitive fixes the
+// trigger as the FIRST DOM child (it owns the rigid collapsed-footprint
+// wrapper), so "the trigger sits at the end" is a REVERSED flex direction — and
+// reversal also flips where the panel packs its items, which is what keeps the
+// trigger flush against a clamped panel's far edge while the content is revealed
+// past the other one. Both halves are mechanics; the call site states the roles.
+const FLOW_CLASS: Record<
+  StackDirection,
+  Record<FloatingActionTriggerAt, string>
+> = {
+  row: { start: "flex-row", end: "flex-row-reverse" },
+  col: { start: "flex-col", end: "flex-col-reverse" },
+};
+
+const ALIGN_CLASS: Record<StackAlign, string> = {
+  start: "items-start",
+  center: "items-center",
+  end: "items-end",
+  stretch: "items-stretch",
+  baseline: "items-baseline",
+};
+
+// The ramp's gap classes as literals, mirroring `<Grid>`: Tailwind emits a
+// `@utility` only for a token its source scanner can see, so the step→class
+// record lives here and the call site passes the step. (Padding needs no copy —
+// `insetClass()` is the exported resolver for exactly this case.)
+const GAP_CLASS: Record<SpaceStep, string> = {
+  none: "gap-none",
+  "2xs": "gap-2xs",
+  xs: "gap-xs",
+  sm: "gap-sm",
+  md: "gap-md",
+  lg: "gap-lg",
+  xl: "gap-xl",
+  "2xl": "gap-2xl",
+};
+
+export interface FloatingActionProps extends Omit<
+  ComponentProps<"div">,
+  "className"
+> {
   variant?: "outlined" | "ghost";
   className?: string;
-  panelClassName?: string;
+  /**
+   * SIZING ONLY — the panel's collapsed→open morph (`max-w-*` / `max-h-*` /
+   * `w-*`), which the primitive animates but deliberately does not size, since
+   * the open extent is a per-call-site measurement. The panel's LAYOUT is the
+   * props above (`direction` / `triggerAt` / `align` / `gap` / `pad`), and this
+   * field cannot take it back: its `ClassName` brand means the value comes out
+   * of `cn()`, so `no-adhoc-layout` reads its tokens and rejects any flow,
+   * alignment, positioning or clipping class written here.
+   */
+  panelClassName?: ClassName;
+  /** Axis the panel's content flows along. Defaults to `row`. */
+  direction?: StackDirection;
+  /** Which end of `direction` the trigger sits at. Defaults to `start`. */
+  triggerAt?: FloatingActionTriggerAt;
+  /** Cross-axis alignment of the trigger against the content (`items-*`). */
+  align?: StackAlign;
+  /** Gap between the trigger and the content, from the spacing ramp. */
+  gap?: SpaceStep;
+  /** Padding inside the panel, from the spacing ramp. */
+  pad?: SpaceStep;
   closeDelay?: number;
   anchor?: FloatingAnchor;
   /**
@@ -35,6 +105,11 @@ export interface FloatingActionProps
 export function FloatingAction({
   className,
   panelClassName,
+  direction = "row",
+  triggerAt = "start",
+  align,
+  gap,
+  pad,
   variant = "outlined",
   closeDelay,
   anchor = "bottom-right",
@@ -82,6 +157,10 @@ export function FloatingAction({
           // eslint-disable-next-line text/no-clip-without-nowrap -- generic morph panel: overflow-hidden clips the width/height transition, not text; single-line-ness is the consumer's call, not this primitive's
           className={cn(
             "flex overflow-hidden rounded-md",
+            FLOW_CLASS[direction][triggerAt],
+            align && ALIGN_CLASS[align],
+            gap && GAP_CLASS[gap],
+            pad && insetClass({ pad }),
             "transition-[width,max-width,max-height,padding,background-color,box-shadow,border-color] duration-200 ease-out",
             variant === "outlined" && [
               "border border-border/60 backdrop-blur",

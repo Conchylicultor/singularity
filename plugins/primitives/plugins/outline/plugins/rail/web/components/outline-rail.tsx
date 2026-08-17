@@ -1,3 +1,4 @@
+import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useCallback, useMemo, type ReactElement, type ReactNode } from "react";
 
 import { Clip } from "@plugins/primitives/plugins/css/plugins/clip/web";
@@ -124,7 +125,12 @@ function OutlineRailBody({
           // the panel, which is a surface and should look like one.
           variant="ghost"
           anchor="top-right"
-          panelClassName="flex-col w-8 group-data-open/fa:w-56"
+          // A column with the dash stack above the outline (`triggerAt`
+          // defaults to `start`, and the dashes are the trigger).
+          direction="col"
+          // The panel's collapsed→open morph, which the primitive animates but
+          // does not size.
+          panelClassName={cn("w-8 group-data-open/fa:w-56")}
           trigger={
             // The panel REPLACES the dashes, as Notion's does — left in place
             // they sit as a dead band across the open panel's top and push the

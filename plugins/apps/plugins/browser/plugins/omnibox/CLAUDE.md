@@ -10,6 +10,7 @@
   - Uses:
     - `apps/browser/shell.Browser`
     - `apps/browser/shell.useBrowserNav`
+    - `primitives/css/ui-kit.cn`
     - `primitives/search.SearchInput`
   - Exports (types): `NormalizedInput`
   - Exports (values): `normalizeInput`

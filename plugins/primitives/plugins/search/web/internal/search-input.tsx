@@ -1,10 +1,10 @@
+import type { ClassName } from "@plugins/primitives/plugins/css/plugins/ui-kit/core";
 import { cn, Input } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
 import { MdClose, MdSearch } from "react-icons/md";
 
-export interface SearchInputProps
-  extends React.InputHTMLAttributes<HTMLInputElement> {
-  wrapperClassName?: string;
+export interface SearchInputProps extends React.InputHTMLAttributes<HTMLInputElement> {
+  wrapperClassName?: ClassName;
 }
 
 export function SearchInput({

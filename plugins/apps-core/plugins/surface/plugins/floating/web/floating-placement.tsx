@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo } from "react";
 import { MdWebAsset } from "react-icons/md";
 import { Apps } from "@plugins/apps-core/web";
+import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useTabs } from "@plugins/apps-core/plugins/tabs/web";
 import {
   usePlacementStyle,
@@ -49,10 +50,13 @@ export const floatingDef: PlacementDef = {
   // `FloatingChrome` can animate the window out before the host unmounts it.
   // Single-sourced with the tween (CLOSE_MS) so retention + tween never drift.
   exitDurationMs: CLOSE_MS,
+  // A free box inside the surface — the `window` frame. Its position and size are
+  // pushed per-window by `FloatingChrome`; the frame owns the positioning context
+  // and the clip to its own rounded corner, so this only names the paint.
   // Shadow is NOT static here: the motion layer drives `boxShadow` per-window from
   // focus (focused lifts, unfocused recedes), so the active window reads as elevated.
-  containerClassName:
-    "absolute overflow-hidden rounded-lg border bg-background",
+  frame: "window",
+  paintClassName: cn("rounded-lg border bg-background"),
   Backdrop: DesktopBackdrop,
   Foreground: FloatingForeground,
   Chrome: FloatingChrome,

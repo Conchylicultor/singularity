@@ -1,3 +1,5 @@
+import type { ClassName } from "@plugins/primitives/plugins/css/plugins/ui-kit/core";
+import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useCallback, useId, useMemo, useState } from "react";
 
 export interface UseCollapsibleOptions {
@@ -16,7 +18,7 @@ export interface UseCollapsibleReturn {
     onClick: () => void;
   };
   contentId: string;
-  chevronClassName: string;
+  chevronClassName: ClassName;
 }
 
 export function useCollapsible({
@@ -46,9 +48,10 @@ export function useCollapsible({
         onClick: toggle,
       },
       contentId,
-      chevronClassName: open
-        ? "transition-transform duration-200 rotate-90"
-        : "transition-transform duration-200",
+      chevronClassName: cn(
+        "transition-transform duration-200",
+        open && "rotate-90",
+      ),
     }),
     [open, toggle, contentId],
   );

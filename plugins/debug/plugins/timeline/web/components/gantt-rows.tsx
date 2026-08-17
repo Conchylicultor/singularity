@@ -1,3 +1,4 @@
+import type { ClassName } from "@plugins/primitives/plugins/css/plugins/ui-kit/core";
 import type { ReactElement, ReactNode } from "react";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
@@ -30,7 +31,7 @@ function GanttRow({
   label?: ReactNode;
   /** Absolutely-positioned children of the relative track cell. */
   track: ReactNode;
-  trackClassName?: string;
+  trackClassName?: ClassName;
   className?: string;
 }): ReactElement {
   return (
@@ -51,13 +52,17 @@ function GanttRow({
  * wall-clock reading. Ticks are generated for the full window; under zoom the
  * out-of-view ones are skipped (the relative axis keeps carrying offsets).
  */
-export function WallclockAxis({ range }: { range: TimelineWindow }): ReactElement {
+export function WallclockAxis({
+  range,
+}: {
+  range: TimelineWindow;
+}): ReactElement {
   const { toLeftPct, totalMs } = useGanttContainerContext();
   const ticks = wallclockTicks(range);
   return (
     <GanttRow
       className="h-6 border-b"
-      trackClassName="h-full"
+      trackClassName={cn("h-full")}
       track={ticks.map((tick) => {
         const pct = parseFloat(toLeftPct(tick.relMs, totalMs));
         if (pct < 0 || pct > 100) return null;
@@ -69,7 +74,12 @@ export function WallclockAxis({ range }: { range: TimelineWindow }): ReactElemen
             style={{ left: `${pct}%` }}
           >
             <div className="h-1.5 w-px bg-border" />
-            <Text as="span" variant="caption" tone="muted" className="tabular-nums">
+            <Text
+              as="span"
+              variant="caption"
+              tone="muted"
+              className="tabular-nums"
+            >
               {tick.label}
             </Text>
           </div>
@@ -114,7 +124,7 @@ export function HeatStrip({
           {label}
         </Text>
       }
-      trackClassName="h-1.5 rounded-full bg-muted/30"
+      trackClassName={cn("h-1.5 rounded-full bg-muted/30")}
       track={segments.map((seg, i) => (
         <div
           key={i}
@@ -137,8 +147,10 @@ export function HeatStrip({
 
 /** The duress band's tooltip: the trip reason plus its end-edge semantics. */
 function duressBandTitle(band: DuressBand): string {
-  if (band.open) return `${band.label} — open (no clear line yet; possibly live)`;
-  if (band.endUnknown) return `${band.label} — lapsed; end time unknown (no clear line)`;
+  if (band.open)
+    return `${band.label} — open (no clear line yet; possibly live)`;
+  if (band.endUnknown)
+    return `${band.label} — lapsed; end time unknown (no clear line)`;
   return band.label;
 }
 
@@ -160,7 +172,7 @@ export function IncidentBandLayer({
   return (
     <GanttRow
       className="h-full"
-      trackClassName="h-full"
+      trackClassName={cn("h-full")}
       track={
         <>
           {duress.map((band) => (
@@ -216,7 +228,7 @@ export function DuressBadgeRow({
           duress
         </Text>
       }
-      trackClassName="h-5"
+      trackClassName={cn("h-5")}
       track={bands.map((band) => (
         <div
           key={band.id}
@@ -244,7 +256,11 @@ export function DuressBadgeRow({
  * lanes (not inside the behind-layer, where lane content would swallow the
  * badge tooltips).
  */
-export function IncidentBadgeRow({ bands }: { bands: IncidentBand[] }): ReactElement {
+export function IncidentBadgeRow({
+  bands,
+}: {
+  bands: IncidentBand[];
+}): ReactElement {
   const { toLeftPct, totalMs } = useGanttContainerContext();
   return (
     <GanttRow
@@ -254,7 +270,7 @@ export function IncidentBadgeRow({ bands }: { bands: IncidentBand[] }): ReactEle
           incidents
         </Text>
       }
-      trackClassName="h-5"
+      trackClassName={cn("h-5")}
       track={bands.map((band) => (
         <div
           key={band.incidentId}

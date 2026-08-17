@@ -1,3 +1,4 @@
+import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useState } from "react";
 import type { FormEvent } from "react";
 import { SearchInput } from "@plugins/primitives/plugins/search/web";
@@ -55,7 +56,7 @@ function OmniboxInput({
     // that cell's width.
     <form onSubmit={submit} className="w-full">
       <SearchInput
-        wrapperClassName="w-full"
+        wrapperClassName={cn("w-full")}
         value={value}
         onChange={(e) => setValue(e.target.value)}
         placeholder="Search or enter address"

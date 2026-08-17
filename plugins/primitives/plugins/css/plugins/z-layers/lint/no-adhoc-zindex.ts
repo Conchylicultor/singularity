@@ -1,4 +1,8 @@
-import { ESLintUtils, type TSESLint, type TSESTree } from "@typescript-eslint/utils";
+import {
+  ESLintUtils,
+  type TSESLint,
+  type TSESTree,
+} from "@typescript-eslint/utils";
 
 const createRule = ESLintUtils.RuleCreator(
   (name) => `https://github.com/anthropics/singularity/lint/${name}`,
@@ -15,7 +19,7 @@ const createRule = ESLintUtils.RuleCreator(
  * across call sites is how stacking bugs (a floating panel painting under a
  * sibling) creep back in.
  *
- * This rule fingerprints the escape hatch: any `className` token that is a raw
+ * This rule fingerprints the escape hatch: any class-name token that is a raw
  * Tailwind z-index utility — built-in numerics (`z-0`…`z-50`) or arbitrary
  * values (`z-[60]`, `z-[9999]`). The named `z-<word>` utilities are NOT raw and
  * are intentionally allowed.
@@ -28,6 +32,17 @@ const createRule = ESLintUtils.RuleCreator(
 // (`z-[60]`, `z-[9999]`). The named utilities (`z-base`, `z-raised`, …) start
 // with a letter after `z-`, so they never match.
 const RAW_ZINDEX = /^z-(\d|\[)/;
+
+/**
+ * JSX attribute names whose value is a class-name string. `className`/`class`
+ * are React's and HTML's own; the `*ClassName` suffix is the pass-through
+ * convention (`panelClassName`, `itemClassName`, `wrapperClassName`,
+ * `trackClassName`) a component uses to forward classes to an inner element.
+ * Those forwarded strings style a real element exactly like `className` does,
+ * but were invisible to every class rule purely because of the attribute's
+ * spelling.
+ */
+const CLASS_ATTRS = /^(?:class|className)$|ClassName$/;
 
 // >>> shared:class-token-walk — keep byte-identical across the no-adhoc-* class rules (enforced by the class-token-walk-in-sync check) >>>
 /**
@@ -85,7 +100,10 @@ function collectTokens(
         // followed, and a map reached only through an intermediate local is out
         // of range by design.
         const init = def.type === "Variable" ? def.node.init : null;
-        if (init && (init.type === "ObjectExpression" || init.type === "ArrayExpression")) {
+        if (
+          init &&
+          (init.type === "ObjectExpression" || init.type === "ArrayExpression")
+        ) {
           collectTokens(sourceCode, init, out, seen);
         }
       }
@@ -139,15 +157,22 @@ export default createRule({
     return {
       // z-index is not element-specific — flag a raw z token on ANY element.
       JSXAttribute(node) {
-        // Only `className` attributes.
-        if (node.name.type !== "JSXIdentifier" || node.name.name !== "className") return;
+        // Only class-name attributes (`className`/`class`, or a `*ClassName`
+        // pass-through prop).
+        if (
+          node.name.type !== "JSXIdentifier" ||
+          !CLASS_ATTRS.test(node.name.name)
+        )
+          return;
 
         // Aggregate every class token of this attribute into one Set, stripping
         // variant prefixes so `hover:z-10` etc. count as their base.
         const tokens = new Set<string>();
         collectTokens(context.sourceCode, node.value, tokens);
 
-        const hasRawZindex = [...tokens].some((t) => RAW_ZINDEX.test(baseClass(t)));
+        const hasRawZindex = [...tokens].some((t) =>
+          RAW_ZINDEX.test(baseClass(t)),
+        );
         if (!hasRawZindex) return;
 
         context.report({ node, messageId: "adhocZindex" });

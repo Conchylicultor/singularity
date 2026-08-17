@@ -1,3 +1,4 @@
+import type { ClassName } from "@plugins/primitives/plugins/css/plugins/ui-kit/core";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import {
   MdCancel,
@@ -27,67 +28,67 @@ export const STATUS_META: Record<
   TaskStatus,
   {
     icon: IconType;
-    iconClassName: string;
+    iconClassName: ClassName;
     label: string;
-    badgeClassName: string;
+    badgeClassName: ClassName;
     /** Background color class for the at-rest StatusDot read-signal. */
     dotClass: string;
   }
 > = {
   new: {
     icon: MdRadioButtonUnchecked,
-    iconClassName: "text-muted-foreground/60",
+    iconClassName: cn("text-muted-foreground/60"),
     label: "New",
-    badgeClassName: "bg-muted",
+    badgeClassName: cn("bg-muted"),
     dotClass: "bg-muted-foreground/40",
   },
   in_progress: {
     icon: MdTimelapse,
-    iconClassName: "text-info",
+    iconClassName: cn("text-info"),
     label: "In progress",
-    badgeClassName: "bg-muted",
+    badgeClassName: cn("bg-muted"),
     dotClass: "bg-info",
   },
   need_action: {
     icon: MdInput,
-    iconClassName: "text-warning",
+    iconClassName: cn("text-warning"),
     label: "Need action",
-    badgeClassName: "bg-warning/15 text-warning",
+    badgeClassName: cn("bg-warning/15 text-warning"),
     dotClass: "bg-warning",
   },
   attempted: {
     icon: MdIncompleteCircle,
-    iconClassName: "text-muted-foreground",
+    iconClassName: cn("text-muted-foreground"),
     label: "Attempted",
-    badgeClassName: "bg-muted",
+    badgeClassName: cn("bg-muted"),
     dotClass: "bg-muted-foreground/60",
   },
   done: {
     icon: MdCheckCircle,
-    iconClassName: "text-success",
+    iconClassName: cn("text-success"),
     label: "Done",
-    badgeClassName: "bg-muted",
+    badgeClassName: cn("bg-muted"),
     dotClass: "bg-success",
   },
   held: {
     icon: MdPauseCircle,
-    iconClassName: "text-warning",
+    iconClassName: cn("text-warning"),
     label: "Held",
-    badgeClassName: "bg-warning/15 text-warning",
+    badgeClassName: cn("bg-warning/15 text-warning"),
     dotClass: "bg-warning",
   },
   dropped: {
     icon: MdCancel,
-    iconClassName: "text-muted-foreground/50",
+    iconClassName: cn("text-muted-foreground/50"),
     label: "Dropped",
-    badgeClassName: "bg-muted text-muted-foreground/60 italic",
+    badgeClassName: cn("bg-muted text-muted-foreground/60 italic"),
     dotClass: "bg-muted-foreground/40",
   },
   blocked: {
     icon: MdPauseCircle,
-    iconClassName: "text-muted-foreground",
+    iconClassName: cn("text-muted-foreground"),
     label: "Blocked",
-    badgeClassName: "bg-muted text-muted-foreground",
+    badgeClassName: cn("bg-muted text-muted-foreground"),
     dotClass: "bg-muted-foreground/60",
   },
 };
@@ -110,11 +111,7 @@ export function StatusIcon({ status }: { status: TaskStatus }) {
 
 export function StatusBadge({ status }: { status: TaskStatus }) {
   const meta = STATUS_META[status];
-  return (
-    <Badge colorClass={meta.badgeClassName}>
-      {meta.label}
-    </Badge>
-  );
+  return <Badge colorClass={meta.badgeClassName}>{meta.label}</Badge>;
 }
 
 /**
@@ -130,7 +127,9 @@ export function StatusSignal({ status }: { status: TaskStatus }) {
   return (
     <Inline gap="xs">
       <StatusDot colorClass={meta.dotClass} />
-      <Text variant="caption" tone="muted">{meta.label}</Text>
+      <Text variant="caption" tone="muted">
+        {meta.label}
+      </Text>
     </Inline>
   );
 }

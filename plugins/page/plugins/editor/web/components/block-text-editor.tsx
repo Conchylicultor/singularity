@@ -1,3 +1,4 @@
+import type { ClassName } from "@plugins/primitives/plugins/css/plugins/ui-kit/core";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { insetClass } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { useEffect, useMemo, useRef, type ReactNode } from "react";
@@ -231,7 +232,7 @@ export function BlockTextEditor({
   /** Shown when the block is empty and focused. */
   placeholder?: ReactNode;
   /** Extra classes for the editable content (e.g. strikethrough when done). */
-  contentClassName?: string;
+  contentClassName?: ClassName;
   /** Semantic typography variant for the editable text and placeholder. */
   textVariant: BlockTextVariant;
 }) {

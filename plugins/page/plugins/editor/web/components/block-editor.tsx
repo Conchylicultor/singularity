@@ -1,3 +1,4 @@
+import type { ClassName } from "@plugins/primitives/plugins/css/plugins/ui-kit/core";
 import {
   useCallback,
   useEffect,
@@ -181,7 +182,7 @@ export interface BlockEditorHandle extends CaretSurface {
  */
 type BlockEditorProps = {
   onOpenPage?: (pageId: string) => void;
-  contentClassName?: string;
+  contentClassName?: ClassName;
   ref?: Ref<BlockEditorHandle>;
   caretBefore?: CaretSurfaceRef;
   caretAfter?: CaretSurfaceRef;
@@ -261,7 +262,7 @@ function MemoryBlockEditor({
   initialContent?: SerializedBlock[];
   enabledBlockTypes?: readonly string[];
   onOpenPage?: (pageId: string) => void;
-  contentClassName?: string;
+  contentClassName?: ClassName;
   caretBefore?: CaretSurfaceRef;
   caretAfter?: CaretSurfaceRef;
   handleRef?: Ref<BlockEditorHandle>;
@@ -305,7 +306,7 @@ function BlockEditorInner({
   contentClassName,
   handleRef,
 }: {
-  contentClassName?: string;
+  contentClassName?: ClassName;
   handleRef?: Ref<BlockEditorHandle>;
 }) {
   // `blocks`/`pending` come from the provider's optimistic resource so `rowsRef`
@@ -415,7 +416,7 @@ function SelectionLayer({
 }: {
   rows: Block[];
   flat: FlatBlock[];
-  contentClassName?: string;
+  contentClassName?: ClassName;
 }) {
   const {
     move,

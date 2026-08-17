@@ -14,6 +14,7 @@
     - `apps-core/tabs.exitToPreviousMode`
     - `apps-core/tabs.getSurfaceMode`
     - `primitives/css/pin.Pin`
+    - `primitives/css/ui-kit.cn`
     - `primitives/icon-button.IconButton`
     - `primitives/shortcuts.defineShortcut`
 

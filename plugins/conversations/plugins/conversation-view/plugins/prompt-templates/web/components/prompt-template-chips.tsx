@@ -186,7 +186,18 @@ export function FloatingTemplateChips({
         <FloatingAction
           className="relative size-6 z-popover"
           variant="ghost"
-          panelClassName="flex-col-reverse items-end gap-xs p-xs group-data-open/fa:px-xs max-w-6 group-data-open/fa:max-w-sm max-h-6 group-data-open/fa:max-h-56"
+          // A column with the gear at the BOTTOM of the opened stack, chips
+          // flush with the prompt bar's right edge.
+          direction="col"
+          triggerAt="end"
+          align="end"
+          gap="xs"
+          pad="xs"
+          // The same panel's collapsed→open morph, which the primitive animates
+          // but does not size.
+          panelClassName={cn(
+            "max-w-6 group-data-open/fa:max-w-sm max-h-6 group-data-open/fa:max-h-56",
+          )}
           trigger={
             <MdEdit className="size-3 text-muted-foreground/40 group-data-open/fa:text-muted-foreground transition-colors" />
           }

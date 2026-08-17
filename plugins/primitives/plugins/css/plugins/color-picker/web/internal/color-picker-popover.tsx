@@ -1,10 +1,16 @@
-import { cn, Popover, PopoverContent, PopoverTrigger } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import type { ClassName } from "@plugins/primitives/plugins/css/plugins/ui-kit/core";
+import {
+  cn,
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useState, type ReactNode } from "react";
 import { ColorPicker, type ColorPickerProps } from "./color-picker";
 
 export interface ColorPickerPopoverProps extends ColorPickerProps {
   children?: ReactNode;
-  contentClassName?: string;
+  contentClassName?: ClassName;
 }
 
 export function ColorPickerPopover({
@@ -28,9 +34,7 @@ export function ColorPickerPopover({
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger
-        className="rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring"
-      >
+      <PopoverTrigger className="rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring">
         {trigger}
       </PopoverTrigger>
       <PopoverContent

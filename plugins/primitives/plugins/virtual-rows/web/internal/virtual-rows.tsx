@@ -1,3 +1,4 @@
+import type { ClassName } from "@plugins/primitives/plugins/css/plugins/ui-kit/core";
 import {
   type ReactNode,
   type RefObject,
@@ -26,7 +27,7 @@ export interface VirtualRowsProps<T> {
   overscan?: number;
   getKey: (item: T, index: number) => string;
   /** Applied to each absolute-positioned row wrapper (e.g. horizontal inset). */
-  itemClassName?: string;
+  itemClassName?: ClassName;
   /** When set, scrolls the virtualizer to this index (align: auto — only when off-screen). For host-driven selection reveal. */
   scrollToIndex?: number | null;
   /**
@@ -176,11 +177,25 @@ export function VirtualRows<T>({
   children,
 }: VirtualRowsProps<T>): ReactNode {
   const { measureRef, virtualizer, virtualItems, scrollMargin, totalSize } =
-    useVirtualRows({ items, estimateSize, overscan, getKey, scrollToIndex, keepMounted });
+    useVirtualRows({
+      items,
+      estimateSize,
+      overscan,
+      getKey,
+      scrollToIndex,
+      keepMounted,
+    });
 
   return (
-    // eslint-disable-next-line layout/no-adhoc-layout -- the windowing sizer: a relative positioning host whose height is the full virtual extent, anchoring each row at a measured translateY offset; no positioning primitive models a windowed list
-    <div ref={measureRef} className="relative w-full" style={{ height: totalSize }}>
+    // The windowing sizer: a `relative` positioning host whose height is the full
+    // virtual extent, anchoring each row at a measured translateY offset. No
+    // suppression needed — `no-adhoc-layout` deliberately leaves positioning
+    // CONTEXT (`relative`/`static`) and sizing (`w-full`) alone.
+    <div
+      ref={measureRef}
+      className="relative w-full"
+      style={{ height: totalSize }}
+    >
       {virtualItems.map((vi) => (
         <div
           key={vi.key}

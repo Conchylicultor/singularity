@@ -22,17 +22,15 @@
     - `primitives/css/toggle-chip.SegmentedControl`
     - `primitives/css/ui-kit.cn`
     - `primitives/css/ui-kit.PortalThemeScopeProvider`
+    - `primitives/css/viewport-overlay.useViewportEscape`
     - `shell/action-bar.ActionBar`
   - Exports (types):
     - `PlacementChromeProps`
     - `PlacementDef`
     - `PlacementStyleApi`
-    - `SurfaceFault`
-    - `SurfaceFaultKind`
   - Exports (values):
     - `PlacementStyleProvider`
     - `Surface`
-    - `surfaceReportSink`
     - `usePlacementStyle`
 - Cross-plugin:
   - Imported by:

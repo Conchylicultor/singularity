@@ -1,3 +1,4 @@
+import type { ClassName } from "@plugins/primitives/plugins/css/plugins/ui-kit/core";
 import type { ReactNode } from "react";
 import type {
   RowChromeMenuHelpers,
@@ -58,5 +59,5 @@ export interface TreeViewOptions<TRow> {
   /** Extra content rendered on the left of the tree's own toolbar row. */
   toolbarStart?: ReactNode;
   /** Per-row label className (e.g. done/dropped strikethrough styling). */
-  labelClassName?: (row: TRow) => string | undefined;
+  labelClassName?: (row: TRow) => ClassName | undefined;
 }

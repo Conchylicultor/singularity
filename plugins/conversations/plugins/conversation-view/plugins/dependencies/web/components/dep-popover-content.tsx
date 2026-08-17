@@ -1,9 +1,16 @@
+import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { MdClose } from "react-icons/md";
-import { SectionLabel, Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import {
+  SectionLabel,
+  Text,
+} from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { ConversationItem } from "@plugins/conversations/plugins/conversation-ui/plugins/item/web";
-import { SearchInput, useTextFilter } from "@plugins/primitives/plugins/search/web";
+import {
+  SearchInput,
+  useTextFilter,
+} from "@plugins/primitives/plugins/search/web";
 import type { Conversation as ConversationRecord } from "@plugins/tasks/plugins/tasks-core/core";
 import type { TaskListItem } from "@plugins/tasks/plugins/tasks-core/core";
 
@@ -91,7 +98,8 @@ export function DepPopoverContent({
         placeholder="Search conversations…"
         value={search}
         onChange={(e) => setSearch(e.target.value)}
-        wrapperClassName="mb-1.5"
+        // eslint-disable-next-line spacing/no-adhoc-spacing -- bottom offset separating the search input from the list below it; siblings sit in a fragment with no flex parent to own the gap, and `wrapperClassName` is SearchInput's only handle on its outermost box (the same offset its two siblings above carry)
+        wrapperClassName={cn("mb-1.5")}
       />
       {availableConvs.length === 0 ? (
         <Text
@@ -105,11 +113,7 @@ export function DepPopoverContent({
         <Scroll as="ul" className="max-h-64 space-y-px">
           {availableConvs.map((c) => (
             <li key={c.taskId}>
-              <Row
-                size="sm"
-                onClick={() => onAdd(c)}
-                disabled={busy !== null}
-              >
+              <Row size="sm" onClick={() => onAdd(c)} disabled={busy !== null}>
                 <ConversationItem conv={c} layout="inline" />
               </Row>
             </li>

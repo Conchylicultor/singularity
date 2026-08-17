@@ -13,11 +13,6 @@ export {
   type PlacementChromeProps,
   type PlacementStyleApi,
 } from "./slots";
-export {
-  surfaceReportSink,
-  type SurfaceFault,
-  type SurfaceFaultKind,
-} from "./internal/assert-viewport-escape";
 
 export default {
   description:

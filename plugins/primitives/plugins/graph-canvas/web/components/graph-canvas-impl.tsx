@@ -1,3 +1,4 @@
+import type { ClassName } from "@plugins/primitives/plugins/css/plugins/ui-kit/core";
 import type { ReactNode } from "react";
 import { useCallback, useMemo, useRef } from "react";
 import { useResizeObserver } from "@plugins/primitives/plugins/element-size/web";
@@ -42,7 +43,7 @@ export interface GraphCanvasNode {
   /** Emphasis ring (focus / entry, Tailwind class). */
   ringClass?: string | null;
   /** Extra classes on the truncating label span (e.g. `italic line-through`). */
-  labelClassName?: string | null;
+  labelClassName?: ClassName | null;
   /** Shrink-0 content rendered before the label (e.g. a status icon). */
   leading?: ReactNode;
   /** Optional trailing inline content. */
@@ -76,9 +77,9 @@ export interface GraphCanvasGroup {
   /** Member node ids; the primitive computes the bounding box from their positions. */
   memberIds: string[];
   /** Background + border classes (caller resolves any palette / depth). */
-  className?: string | null;
+  bgClassName?: ClassName | null;
   /** Classes for the corner label. */
-  labelClassName?: string | null;
+  labelClassName?: ClassName | null;
 }
 
 export interface GraphCanvasProps {
@@ -127,7 +128,13 @@ function layout(
 
   const g = new dagre.graphlib.Graph();
   g.setDefaultEdgeLabel(() => ({}));
-  g.setGraph({ rankdir: direction, nodesep: 24, ranksep: 60, marginx: 12, marginy: 12 });
+  g.setGraph({
+    rankdir: direction,
+    nodesep: 24,
+    ranksep: 60,
+    marginx: 12,
+    marginy: 12,
+  });
 
   for (const n of sorted) {
     g.setNode(n.id, { width: NODE_WIDTH, height: NODE_HEIGHT });
@@ -177,8 +184,15 @@ function layout(
         id: `${e.from}->${e.to}`,
         source: e.from,
         target: e.to,
-        ...(needsCustom ? { type: CANVAS_EDGE_TYPE, data: { actions: e.actions, edgePath } } : {}),
-        markerEnd: { type: MarkerType.ArrowClosed, color: stroke, width: 14, height: 14 },
+        ...(needsCustom
+          ? { type: CANVAS_EDGE_TYPE, data: { actions: e.actions, edgePath } }
+          : {}),
+        markerEnd: {
+          type: MarkerType.ArrowClosed,
+          color: stroke,
+          width: 14,
+          height: 14,
+        },
         style: {
           stroke,
           strokeWidth: e.emphasized ? 2 : 1.5,
@@ -193,15 +207,24 @@ function layout(
   for (const grp of groups) {
     const positions = grp.memberIds.map((id) => g.node(id)).filter(Boolean);
     if (positions.length === 0) continue;
-    const minX = Math.min(...positions.map((p) => p.x - NODE_WIDTH / 2)) - GROUP_PAD;
+    const minX =
+      Math.min(...positions.map((p) => p.x - NODE_WIDTH / 2)) - GROUP_PAD;
     const minY =
-      Math.min(...positions.map((p) => p.y - NODE_HEIGHT / 2)) - GROUP_PAD - GROUP_LABEL_HEIGHT;
-    const maxX = Math.max(...positions.map((p) => p.x + NODE_WIDTH / 2)) + GROUP_PAD;
-    const maxY = Math.max(...positions.map((p) => p.y + NODE_HEIGHT / 2)) + GROUP_PAD;
+      Math.min(...positions.map((p) => p.y - NODE_HEIGHT / 2)) -
+      GROUP_PAD -
+      GROUP_LABEL_HEIGHT;
+    const maxX =
+      Math.max(...positions.map((p) => p.x + NODE_WIDTH / 2)) + GROUP_PAD;
+    const maxY =
+      Math.max(...positions.map((p) => p.y + NODE_HEIGHT / 2)) + GROUP_PAD;
     bgNodes.push({
       id: grp.id,
       type: GROUP_BG_TYPE,
-      data: { label: grp.label, className: grp.className, labelClassName: grp.labelClassName },
+      data: {
+        label: grp.label,
+        bgClassName: grp.bgClassName,
+        labelClassName: grp.labelClassName,
+      },
       position: { x: minX, y: minY },
       style: { width: maxX - minX, height: maxY - minY, pointerEvents: "none" },
       selectable: false,
@@ -236,7 +259,8 @@ function GraphCanvasInner({
 
   const handleConnect = useCallback(
     (connection: Connection) => {
-      if (connection.source && connection.target) onConnect?.(connection.source, connection.target);
+      if (connection.source && connection.target)
+        onConnect?.(connection.source, connection.target);
     },
     [onConnect],
   );
@@ -302,7 +326,10 @@ export function GraphCanvas({
   );
   // A cheap key that changes whenever the node/group set changes, so the inner re-fits.
   const fitKey = useMemo(
-    () => [...nodes.map((n) => n.id), ...(groups ?? []).map((grp) => grp.id)].join("|"),
+    () =>
+      [...nodes.map((n) => n.id), ...(groups ?? []).map((grp) => grp.id)].join(
+        "|",
+      ),
     [nodes, groups],
   );
 

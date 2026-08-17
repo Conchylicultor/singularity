@@ -61,6 +61,7 @@ vi.mock("@plugins/apps-core/plugins/tabs/web", () => ({
   registerPlacementCapabilities: () => {},
 }));
 
+import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { SurfaceBody } from "../components/surface-body";
 import { Surface, type PlacementDef } from "../slots";
 
@@ -71,7 +72,8 @@ const containedDef: PlacementDef = {
   icon: () => null,
   order: 0,
   default: true,
-  containerClassName: "absolute inset-0 bg-background",
+  frame: "pane",
+  paintClassName: cn("bg-background"),
   themeScope: "app",
 };
 
@@ -81,18 +83,37 @@ const viewportDef: PlacementDef = {
   label: "Viewport",
   icon: () => null,
   order: 1,
-  viewportRelative: true,
-  containerClassName: "fixed inset-0 z-overlay bg-background",
+  frame: "viewport",
+  paintClassName: cn("bg-background"),
   themeScope: "app",
+};
+
+/** A placement that is a free box inside the surface (floating's shape). */
+const windowDef: PlacementDef = {
+  id: "window-ish",
+  label: "Window",
+  icon: () => null,
+  order: 2,
+  frame: "window",
+  paintClassName: cn("rounded-lg border bg-background"),
+  visibleWhenUnfocused: true,
 };
 
 const placementsPlugin = {
   id: "surface-keepalive-test-placements",
-  description: "two fake placements for the mode-switch keep-alive suite",
+  description: "three fake placements for the mode-switch keep-alive suite",
   contributions: [
     Surface.Placement(containedDef),
     Surface.Placement(viewportDef),
+    Surface.Placement(windowDef),
   ],
+} as unknown as LoadedPlugin;
+
+/** No placement sub-plugins at all — the empty-registry fallback. */
+const emptyPlugin = {
+  id: "surface-keepalive-test-no-placements",
+  description: "a plugin contributing no placements at all",
+  contributions: [],
 } as unknown as LoadedPlugin;
 
 function renderSurface() {
@@ -154,8 +175,11 @@ describe("a surface-mode switch keeps every tab mounted", () => {
   it("hands the tab the active placement's class without moving it", () => {
     const { container, rerender } = renderSurface();
 
+    // Exact strings, not `toContain`: the host resolves a `frame` role to
+    // mechanics, so this is where the resolution is pinned to what the modes
+    // used to spell out by hand.
     const tabNode = container.querySelector('[data-theme-scope="app:a1"]');
-    expect(tabNode!.className).toContain("absolute");
+    expect(tabNode!.className).toBe("absolute inset-0 bg-background");
 
     tabsState.mode = viewportDef.id;
     rerender(
@@ -168,7 +192,7 @@ describe("a surface-mode switch keeps every tab mounted", () => {
     expect(container.querySelector('[data-theme-scope="app:a1"]')).toBe(
       tabNode,
     );
-    expect(tabNode!.className).toContain("fixed");
+    expect(tabNode!.className).toBe("fixed inset-0 z-overlay bg-background");
     // And it is still a child of the surface, never of <body>.
     expect(container.contains(tabNode)).toBe(true);
   });
@@ -199,5 +223,49 @@ describe("a surface-mode switch keeps every tab mounted", () => {
       </PluginProvider>,
     );
     expect(backdrop.className).toContain("transform-gpu");
+  });
+});
+
+// A placement declares a `frame` ROLE and the host owns the mechanics, so the
+// mapping is the thing that can silently change what every mode looks like.
+// These are the exact strings the three modes used to spell out by hand.
+describe("the frame role resolves to the container mechanics", () => {
+  function classForMode(modeId: string, plugin = placementsPlugin): string {
+    tabsState.mode = modeId;
+    const { container } = render(
+      <PluginProvider plugins={[plugin]}>
+        <SurfaceBody />
+      </PluginProvider>,
+    );
+    return container.querySelector('[data-theme-scope="app:a1"]')!.className;
+  }
+
+  it("positions a pane frame against the surface", () => {
+    expect(classForMode(containedDef.id)).toBe(
+      "absolute inset-0 bg-background",
+    );
+  });
+
+  it("positions a viewport frame against the window, above the app chrome", () => {
+    expect(classForMode(viewportDef.id)).toBe(
+      "fixed inset-0 z-overlay bg-background",
+    );
+  });
+
+  // `absolute` and `overflow-hidden` belong to the ROLE, not to floating: a
+  // window frame that leaks past its own rounded corner is a bug in every
+  // conceivable window mode.
+  it("clips a window frame to its own corner", () => {
+    expect(classForMode(windowDef.id)).toBe(
+      "absolute overflow-hidden rounded-lg border bg-background",
+    );
+  });
+
+  // Not a separate branch any more — an empty registry is the `pane` frame with
+  // a fallback paint, which is exactly what the old hardcoded fallback painted.
+  it("falls back to a pane frame when no placement is registered", () => {
+    expect(classForMode("", emptyPlugin)).toBe(
+      "absolute inset-0 bg-background",
+    );
   });
 });

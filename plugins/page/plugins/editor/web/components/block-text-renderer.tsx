@@ -1,3 +1,4 @@
+import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useMemo, type ReactNode } from "react";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { rowDataOf } from "../../core";
@@ -90,7 +91,8 @@ export function BlockTextRenderer({
 
   const contentClassName =
     handle?.toggle && checked
-      ? (handle.toggle.doneClassName ?? "line-through text-muted-foreground")
+      ? (handle.toggle.doneClassName ??
+        cn("line-through text-muted-foreground"))
       : undefined;
 
   const region: BlockRegionProps = {

@@ -1,4 +1,8 @@
-import { ESLintUtils, type TSESLint, type TSESTree } from "@typescript-eslint/utils";
+import {
+  ESLintUtils,
+  type TSESLint,
+  type TSESTree,
+} from "@typescript-eslint/utils";
 
 const createRule = ESLintUtils.RuleCreator(
   (name) => `https://github.com/anthropics/singularity/lint/${name}`,
@@ -33,9 +37,10 @@ const createRule = ESLintUtils.RuleCreator(
  *
  * Class strings appear in two shapes — bare JSX `className="…"` and inside
  * `cn(...)`/`clsx(...)`/template literals. We only inspect strings in a
- * class-name context (a `className`/`class` attribute value, or a class-builder
- * argument), via the same `collectTokens` walk the sibling `no-adhoc-*` rules
- * use, so a doc-string or fixture that merely mentions `text-sm` is never
+ * class-name context (a `className`/`class`/`*ClassName` attribute value, or a
+ * class-builder argument), via the same `collectTokens` walk the sibling
+ * `no-adhoc-*` rules use, so a doc-string or fixture that merely mentions
+ * `text-sm` is never
  * flagged. The shared walk also resolves same-file object/array MAP aliases
  * indexed in a class context (e.g. a `text-sm` in a tone/style map reached via
  * `cn(TONE[tone])`) — but NOT a bare string `const` (see the shared block below).
@@ -48,8 +53,16 @@ const SIZE = /^text-(?:xs|sm|base|lg|xl|[2-9]xl)$/;
 // Any raw line-height utility.
 const LEADING = /^leading-/;
 
-/** JSX attribute names whose value is a class-name string. */
-const CLASS_ATTRS = new Set(["className", "class"]);
+/**
+ * JSX attribute names whose value is a class-name string. `className`/`class`
+ * are React's and HTML's own; the `*ClassName` suffix is the pass-through
+ * convention (`panelClassName`, `itemClassName`, `wrapperClassName`,
+ * `trackClassName`) a component uses to forward classes to an inner element.
+ * Those forwarded strings style a real element exactly like `className` does,
+ * but were invisible to every class rule purely because of the attribute's
+ * spelling.
+ */
+const CLASS_ATTRS = /^(?:class|className)$|ClassName$/;
 /** Class-builder calls whose string arguments are class-name strings. */
 const CLASS_BUILDERS = new Set(["cn", "clsx", "twMerge"]);
 
@@ -109,7 +122,10 @@ function collectTokens(
         // followed, and a map reached only through an intermediate local is out
         // of range by design.
         const init = def.type === "Variable" ? def.node.init : null;
-        if (init && (init.type === "ObjectExpression" || init.type === "ArrayExpression")) {
+        if (
+          init &&
+          (init.type === "ObjectExpression" || init.type === "ArrayExpression")
+        ) {
           collectTokens(sourceCode, init, out, seen);
         }
       }
@@ -167,7 +183,11 @@ export default createRule({
       for (const token of tokens) {
         const c = baseClass(token);
         if (SIZE.test(c) || LEADING.test(c)) {
-          context.report({ node, messageId: "adhocTypography", data: { token: c } });
+          context.report({
+            node,
+            messageId: "adhocTypography",
+            data: { token: c },
+          });
         }
       }
     }
@@ -176,7 +196,11 @@ export default createRule({
       // className / class attribute values — `className="…"`,
       // `className={`…`}`, `className={cn(…)}`, etc., on ANY element.
       JSXAttribute(node) {
-        if (node.name.type !== "JSXIdentifier" || !CLASS_ATTRS.has(node.name.name)) return;
+        if (
+          node.name.type !== "JSXIdentifier" ||
+          !CLASS_ATTRS.test(node.name.name)
+        )
+          return;
         const tokens = new Set<string>();
         collectTokens(context.sourceCode, node.value, tokens);
         checkTokens(node, tokens);
@@ -184,11 +208,15 @@ export default createRule({
       // Class-builder calls — `cn(...)`, `clsx(...)`, … — wherever they appear
       // (a `const cls = cn("text-sm")` assigned outside JSX still counts).
       CallExpression(node) {
-        if (node.callee.type !== "Identifier" || !CLASS_BUILDERS.has(node.callee.name)) {
+        if (
+          node.callee.type !== "Identifier" ||
+          !CLASS_BUILDERS.has(node.callee.name)
+        ) {
           return;
         }
         const tokens = new Set<string>();
-        for (const arg of node.arguments) collectTokens(context.sourceCode, arg, tokens);
+        for (const arg of node.arguments)
+          collectTokens(context.sourceCode, arg, tokens);
         checkTokens(node, tokens);
       },
     };

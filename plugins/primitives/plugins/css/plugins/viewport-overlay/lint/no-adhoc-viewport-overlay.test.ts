@@ -2,11 +2,13 @@
  * Tests for the `no-adhoc-viewport-overlay` lint rule. Run with `bun test` from
  * the repo root (or this file's directory).
  *
- * The rule fingerprints the viewport-fill recipe (`fixed` + `inset-0`) on
- * intrinsic span/div/button/a tags and redirects it to `<ViewportOverlay>`. It
- * skips capitalized component tags, and only fires when BOTH `fixed` and
- * `inset-0` are present (pane-relative `absolute inset-0` and partial `fixed`
- * positioning are left alone).
+ * The rule fingerprints the viewport-fill recipe (`fixed` + `inset-0`) and
+ * redirects it to `<ViewportOverlay>`. The gate is the recipe, not the host tag:
+ * it fires on ANY element and in any `cn`/`clsx`/`twMerge` call, and only when
+ * BOTH `fixed` and `inset-0` are present (pane-relative `absolute inset-0` and
+ * partial `fixed` positioning are left alone). What stays invisible is a class
+ * string the literal-only walk cannot read — a module const or a helper's return
+ * value — which is the escape valve the primitive itself uses.
  */
 
 import { RuleTester } from "eslint";
@@ -33,8 +35,8 @@ ruleTester.run(
   rule as unknown as Parameters<RuleTester["run"]>[1],
   {
     valid: [
-      // Routed through the primitive (capitalized host tag — skipped).
-      `const a = <ViewportOverlay className="fixed inset-0 bg-black/30" />;`,
+      // Routed through the primitive, which bakes the recipe in itself.
+      `const a = <ViewportOverlay layer="popover" className="bg-black/30" />;`,
       // Pane-relative overlay: absolute, not fixed — the sanctioned alternative.
       `const a = <div className="absolute inset-0 z-overlay bg-background" />;`,
       // Positioned chrome that is not a full viewport fill (no inset-0).
@@ -50,9 +52,20 @@ ruleTester.run(
         code: `const a = <div className="fixed inset-0 z-popover bg-black/30" />;`,
         errors: [{ messageId: "adhocViewportOverlay" }],
       },
-      // Across split cn() fragments.
+      // Across split cn() fragments. Reported twice — once for the attribute,
+      // once for the `cn()` call, which is its own anchor now (same double
+      // report the sibling no-adhoc-layout / no-adhoc-spacing rules produce).
       {
         code: `const a = <div className={cn("fixed", "inset-0", "z-max")} />;`,
+        errors: [
+          { messageId: "adhocViewportOverlay" },
+          { messageId: "adhocViewportOverlay" },
+        ],
+      },
+      // A class string built OUTSIDE any JSX attribute: the `cn()` call is the
+      // anchor, and the element it is spread onto is a few lines away.
+      {
+        code: `const c = cn("fixed", "inset-0", "z-overlay");`,
         errors: [{ messageId: "adhocViewportOverlay" }],
       },
       // Variant-prefixed tokens still resolve to the base class.
@@ -63,6 +76,18 @@ ruleTester.run(
       // Other intrinsic host tags are covered too.
       {
         code: `const a = <button className="fixed inset-0" />;`,
+        errors: [{ messageId: "adhocViewportOverlay" }],
+      },
+      // A sectioning tag — the exact shape the former span/div/button/a
+      // allowlist failed open on.
+      {
+        code: `const a = <section className="fixed inset-0" />;`,
+        errors: [{ messageId: "adhocViewportOverlay" }],
+      },
+      // Forwarded through a `*ClassName` pass-through prop: the string still
+      // lands on a real element, so the spelling of the attribute is irrelevant.
+      {
+        code: `const a = <Panel panelClassName="fixed inset-0" />;`,
         errors: [{ messageId: "adhocViewportOverlay" }],
       },
     ],

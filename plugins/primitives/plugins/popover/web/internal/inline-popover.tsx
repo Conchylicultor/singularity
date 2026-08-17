@@ -1,4 +1,9 @@
-import { Popover, PopoverContent, PopoverTrigger } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import type { ClassName } from "@plugins/primitives/plugins/css/plugins/ui-kit/core";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import type {
   PopoverWidth,
   PopoverPadding,
@@ -35,7 +40,7 @@ export interface InlinePopoverProps extends ContentPositionerProps {
    * Extra classes forwarded to PopoverContent. Must NOT carry width, padding or
    * max-height — use the `width` / `padding` / `maxHeight` props instead.
    */
-  contentClassName?: string;
+  contentClassName?: ClassName;
   /** Controlled open state — omit for uncontrolled. */
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
@@ -58,7 +63,11 @@ export function InlinePopover({
 
   return (
     <Popover open={open} onOpenChange={onOpenChange}>
-      {tooltip ? <WithTooltip content={tooltip}>{triggerNode}</WithTooltip> : triggerNode}
+      {tooltip ? (
+        <WithTooltip content={tooltip}>{triggerNode}</WithTooltip>
+      ) : (
+        triggerNode
+      )}
       <PopoverContent
         align={align}
         side={side}

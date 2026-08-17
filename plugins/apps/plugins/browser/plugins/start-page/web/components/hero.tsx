@@ -1,3 +1,4 @@
+import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useState } from "react";
 import type { FormEvent } from "react";
 import { MdPublic } from "react-icons/md";
@@ -42,7 +43,7 @@ export function Hero() {
       </Stack>
       <form onSubmit={submit} className="w-full">
         <SearchInput
-          wrapperClassName="w-full"
+          wrapperClassName={cn("w-full")}
           value={value}
           onChange={(e) => setValue(e.target.value)}
           placeholder="Search or enter address"

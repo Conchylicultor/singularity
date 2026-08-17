@@ -4321,6 +4321,10 @@
       "name": "@singularity/plugin-reports-turn-unconfirmed",
       "version": "0.0.1",
     },
+    "plugins/reports/plugins/viewport-escape": {
+      "name": "@singularity/plugin-reports-viewport-escape",
+      "version": "0.0.1",
+    },
     "plugins/review": {
       "name": "@singularity/plugin-review",
       "version": "0.0.1",
@@ -7522,6 +7526,8 @@
     "@singularity/plugin-reports-render-loop": ["@singularity/plugin-reports-render-loop@workspace:plugins/reports/plugins/render-loop"],
 
     "@singularity/plugin-reports-turn-unconfirmed": ["@singularity/plugin-reports-turn-unconfirmed@workspace:plugins/reports/plugins/turn-unconfirmed"],
+
+    "@singularity/plugin-reports-viewport-escape": ["@singularity/plugin-reports-viewport-escape@workspace:plugins/reports/plugins/viewport-escape"],
 
     "@singularity/plugin-review": ["@singularity/plugin-review@workspace:plugins/review"],
 

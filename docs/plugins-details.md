@@ -369,6 +369,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Uses:
               - `apps/browser/shell.Browser`
               - `apps/browser/shell.useBrowserNav`
+              - `primitives/css/ui-kit.cn`
               - `primitives/search.SearchInput`
             - Exports (types): `NormalizedInput`
             - Exports (values): `normalizeInput`
@@ -464,6 +465,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/spacing.Stack`
               - `primitives/css/text.SectionLabel`
               - `primitives/css/text.Text`
+              - `primitives/css/ui-kit.cn`
               - `primitives/css/ui-kit.SingleLineProvider`
               - `primitives/live-state.matchResource`
               - `primitives/live-state.useResource`
@@ -5016,6 +5018,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `primitives/css/surface.Surface`
                   - `primitives/css/text.Text`
                   - `primitives/css/ui-kit.Button`
+                  - `primitives/css/ui-kit.cn`
             - **`plugin-pyramid`** — Interactive pyramid composer on the public site's Platform page: the visitor toggles plugin blocks on/off and watches a sample app's regions appear or empty into labelled slots, with the top tier showing the release targets the one composition ships to — the plugins → apps → releases architecture made visible.
               - Web:
                 - Contributes: `WebsitePlatform.Section` "Pyramid demo" → `PluginPyramidSection`
@@ -5873,17 +5876,15 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/css/toggle-chip.SegmentedControl`
           - `primitives/css/ui-kit.cn`
           - `primitives/css/ui-kit.PortalThemeScopeProvider`
+          - `primitives/css/viewport-overlay.useViewportEscape`
           - `shell/action-bar.ActionBar`
         - Exports (types):
           - `PlacementChromeProps`
           - `PlacementDef`
           - `PlacementStyleApi`
-          - `SurfaceFault`
-          - `SurfaceFaultKind`
         - Exports (values):
           - `PlacementStyleProvider`
           - `Surface`
-          - `surfaceReportSink`
           - `usePlacementStyle`
       - Cross-plugin:
         - Imported by:
@@ -5894,7 +5895,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - **`docked`** — Docked surface placement — the default full-area tab that fills the surface below the tab strip.
           - Web:
             - Contributes: `Surface.Placement`
-            - Uses: `apps-core/surface.Surface`
+            - Uses:
+              - `apps-core/surface.Surface`
+              - `primitives/css/ui-kit.cn`
         - **`floating`** — Floating-window surface placement: a free-floating, draggable/resizable window over a desktop wallpaper backdrop. Owns the per-tab geometry store, window chrome, and keyboard window-management shortcuts (tile / minimize / close / cycle).
           - Web:
             - Contributes:
@@ -6101,6 +6104,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps-core/tabs.exitToPreviousMode`
               - `apps-core/tabs.getSurfaceMode`
               - `primitives/css/pin.Pin`
+              - `primitives/css/ui-kit.cn`
               - `primitives/icon-button.IconButton`
               - `primitives/shortcuts.defineShortcut`
     - **`tab-bar`** — App tab bar: the top tab strip with per-tab titles, overflow collapse, drag reorder/tear-off, and the new-tab/new-window + button.
@@ -14979,7 +14983,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`web-sdk`** — Web plugin runtime: slots, contributions, loader
       - Web:
         - Slots:
-          - `Core.Root` ← `apps-core.layout`, `apps.mail.sync.auto-resume`, `conversations.model-provider`, `debug.live-state-churn.emit`, `debug.render-profiler`, `debug.slow-ops`, `infra.health`, `primitives.announce`, `primitives.command-palette`, `primitives.imperative-dialog`, `primitives.overscroll-hint`, `primitives.shortcuts`, `reports.adaptive-bar`, `reports.caret-flight`, `reports.collab-hydration`, `reports.crash`, `reports.endpoint-errors`, `reports.live-state-stale-drop`, `reports.mutation-errors`, `reports.optimistic-divergence`, `reports.plugin-load-errors`, `reports.render-loop`, `shell.global-action-bar`, `shell.toast`, `ui.theme-engine`, `ui.tokens.font-family.google-fonts`
+          - `Core.Root` ← `apps-core.layout`, `apps.mail.sync.auto-resume`, `conversations.model-provider`, `debug.live-state-churn.emit`, `debug.render-profiler`, `debug.slow-ops`, `infra.health`, `primitives.announce`, `primitives.command-palette`, `primitives.imperative-dialog`, `primitives.overscroll-hint`, `primitives.shortcuts`, `reports.adaptive-bar`, `reports.caret-flight`, `reports.collab-hydration`, `reports.crash`, `reports.endpoint-errors`, `reports.live-state-stale-drop`, `reports.mutation-errors`, `reports.optimistic-divergence`, `reports.plugin-load-errors`, `reports.render-loop`, `reports.viewport-escape`, `shell.global-action-bar`, `shell.toast`, `ui.theme-engine`, `ui.tokens.font-family.google-fonts`
           - `Core.Boot` ← `config_v2`, `infra.boot-snapshot`, `ui.tweakcn`
       - Core:
         - Uses:
@@ -20274,6 +20278,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `reports/live-state-stale-drop`
               - `reports/optimistic-divergence`
               - `reports/render-loop`
+              - `reports/viewport-escape`
               - `review/code-review`
               - `review/plugin-changes`
               - `review/plugin-changes/api-changes`
@@ -20795,6 +20800,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `reports/optimistic-divergence`
               - `reports/render-loop`
               - `reports/turn-unconfirmed`
+              - `reports/viewport-escape`
               - `tasks/attempt-view`
               - `tasks/task-deps-tree`
               - `tasks/task-draft-form`
@@ -21594,6 +21600,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/diff-view`
               - `primitives/expandable`
               - `primitives/filter-chips`
+              - `primitives/floating-action`
               - `primitives/folder-picker`
               - `primitives/graph-canvas`
               - `primitives/icon-picker`
@@ -22347,15 +22354,18 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps-core/app-rail`
               - `apps-core/layout`
               - `apps-core/surface`
+              - `apps-core/surface/docked`
               - `apps-core/surface/floating`
               - `apps-core/surface/floating/wallpaper`
               - `apps-core/surface/floating/wallpaper/from-url`
               - `apps-core/surface/floating/wallpaper/upload`
+              - `apps-core/surface/solo`
               - `apps-core/tab-bar`
               - `apps-core/tab-surface`
               - `apps-core/theme-scope`
               - `apps/agent-manager/welcome`
               - `apps/browser/bookmarks`
+              - `apps/browser/omnibox`
               - `apps/browser/start-page`
               - `apps/browser/tabs`
               - `apps/browser/webview`
@@ -22619,6 +22629,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `shell/toast`
               - `stats/commits`
               - `stats/cost`
+              - `tasks/attempt-status`
               - `tasks/attempt-view`
               - `tasks/task-dependencies`
               - `tasks/task-deps-tree`
@@ -22644,17 +22655,32 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `ui/tree-disclosure/merged`
               - `ui/tweakcn/community-browser`
               - `ui/variant-region`
-        - **`viewport-overlay`** — Viewport-filling overlay primitive: self-portals to document.body + z-layer + theme-scope so fixed inset-0 fills the real viewport, never a transformed ancestor.
+          - Core:
+            - Exports (types): `ClassName`
+        - **`viewport-overlay`** — Viewport-filling overlay primitive: self-portals to document.body + z-layer + theme-scope so fixed inset-0 fills the real viewport, never a transformed ancestor. Also owns the runtime auditor for the same invariant — the containing-block + stacking-context ancestor walk (assertViewportEscape / useViewportEscape), which reports the two ways a fixed box silently stops being viewport-relative.
           - Web:
             - Uses:
               - `primitives/css/ui-kit.cn`
               - `primitives/css/ui-kit.usePortalForwardedAttrs`
               - `primitives/css/z-layers.PortaledLayer`
               - `primitives/css/z-layers.zLayerClass`
-            - Exports (types): `ViewportOverlayProps`
-            - Exports (values): `ViewportOverlay`
+            - Exports (types):
+              - `ViewportBlocker`
+              - `ViewportBlockerReason`
+              - `ViewportEscapeFault`
+              - `ViewportEscapeFaultKind`
+              - `ViewportEscapeOptions`
+              - `ViewportOverlayProps`
+            - Exports (values):
+              - `assertViewportEscape`
+              - `describeElement`
+              - `findViewportBlocker`
+              - `useViewportEscape`
+              - `viewportEscapeReportSink`
+              - `ViewportOverlay`
           - Cross-plugin:
             - Imported by:
+              - `apps-core/surface`
               - `apps/prototypes/present`
               - `apps/sonata/audio/metronome`
               - `debug/queue`
@@ -22663,6 +22689,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/adaptive-bar`
               - `primitives/floating-surface`
               - `primitives/text-editor/paste-images`
+              - `reports/viewport-escape`
               - `screenshot/draw-on-app`
         - **`z-layers`** — Semantic z-layer scale (z-base..z-max) and its enforcing lint rule (no-adhoc-zindex).
           - Cross-plugin:
@@ -23764,10 +23791,16 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `debug/queue`
     - **`floating-action`** — Disclosure-intent floating action: a single morphing panel revealed by hover, focus, or touch via the useDisclosureIntent state machine (grace-delay close, no re-entry dead zone, Esc/outside-press dismiss), over a stable hover hitbox that cures open/close flicker.
       - Web:
-        - Uses: `primitives/css/ui-kit.cn`
+        - Uses:
+          - `primitives/css/spacing.insetClass`
+          - `primitives/css/spacing.SpaceStep`
+          - `primitives/css/spacing.StackAlign`
+          - `primitives/css/spacing.StackDirection`
+          - `primitives/css/ui-kit.cn`
         - Exports (types):
           - `FloatingActionFadeInProps`
           - `FloatingActionProps`
+          - `FloatingActionTriggerAt`
           - `FloatingAnchor`
         - Exports (values):
           - `FloatingAction`
@@ -27012,7 +27045,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
 
 - **`reports`** — Reports uncaught browser errors to the server. Records server/frontend crashes as deduped reports; investigation tasks are filed on demand.
   - Web:
-    - Slots: `Reports.KindView` ← `debug.boot-budget`, `debug.boot-watchdog`, `debug.duress-shed`, `debug.live-state-churn.monitor`, `debug.op-rate`, `debug.queue-health`, `debug.read-set-shrink`, `debug.sentinel`, `debug.session-divergence`, `debug.slow-ops`, `debug.stall-monitor`, `reports.adaptive-bar`, `reports.caret-flight`, `reports.collab-hydration`, `reports.crash`, `reports.live-state-stale-drop`, `reports.optimistic-divergence`, `reports.render-loop`, `reports.turn-unconfirmed`
+    - Slots: `Reports.KindView` ← `debug.boot-budget`, `debug.boot-watchdog`, `debug.duress-shed`, `debug.live-state-churn.monitor`, `debug.op-rate`, `debug.queue-health`, `debug.read-set-shrink`, `debug.sentinel`, `debug.session-divergence`, `debug.slow-ops`, `debug.stall-monitor`, `reports.adaptive-bar`, `reports.caret-flight`, `reports.collab-hydration`, `reports.crash`, `reports.live-state-stale-drop`, `reports.optimistic-divergence`, `reports.render-loop`, `reports.turn-unconfirmed`, `reports.viewport-escape`
     - Uses:
       - `infra/endpoints.fetchEndpoint`
       - `primitives/slot-render.defineDispatchSlot`
@@ -27108,6 +27141,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `reports/plugin-load-errors`
       - `reports/render-loop`
       - `reports/turn-unconfirmed`
+      - `reports/viewport-escape`
       - `stats/cost`
       - `tasks/reports-investigation`
   - Plugins:
@@ -27299,6 +27333,25 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports (values):
           - `turnUnconfirmedFingerprint`
           - `TurnUnconfirmedPayloadSchema`
+    - **`viewport-escape`** — Viewport-escape collector: drains the viewport-overlay primitive's viewportEscapeReportSink into a deduped report whenever an ancestor stops a viewport-filling box from reaching the viewport (a containing block) or from painting over the chrome beside it (a stacking context), plus the Debug → Reports summary view. Viewport-escape report kind: validates the viewport-overlay auditor's fault payloads (viewport-containing-block = an ancestor's transform/filter/contain made itself the frame of reference, so the box is clipped instead of full-viewport; viewport-stacking-context = an ancestor opened a stacking context, so the box's z-index is compared in the wrong bracket and it stops covering the chrome beside it), fingerprints by fault + subject + blocking element (excluding the message, whose quoted computed value changes every scroll), and renders a per-fault task naming the declaration to remove, scope or make conditional. Re-arms periodically (6h) since the offending declaration reproduces the fault on every activation.
+      - Web:
+        - Contributes:
+          - `Core.Root` → `ViewportEscapeCollector`
+          - `Reports.KindView` → `ViewportEscapeKindView`
+        - Uses:
+          - `primitives/css/badge.Badge`
+          - `primitives/css/inline.Inline`
+          - `primitives/css/viewport-overlay.viewportEscapeReportSink`
+          - `reports.report`
+          - `reports.Reports`
+      - Server:
+        - Contributes: `report-kind` "viewport-escape"
+        - Uses: `reports.ReportKind`
+      - Core:
+        - Exports (types): `ViewportEscapePayload`
+        - Exports (values):
+          - `viewportEscapeFingerprint`
+          - `ViewportEscapePayloadSchema`
 
 - **`review`** — Toolbar button that opens a side pane exposing agent modifications in a structured, extensible view.
   - Web:
@@ -28159,6 +28212,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses:
           - `primitives/css/badge.Badge`
           - `primitives/css/badge.formatStatusLabel`
+          - `primitives/css/ui-kit.cn`
         - Exports (values):
           - `ATTEMPT_STATUS_META`
           - `AttemptStatusBadge`

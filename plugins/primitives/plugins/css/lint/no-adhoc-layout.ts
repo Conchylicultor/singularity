@@ -41,9 +41,9 @@ const createRule = ESLintUtils.RuleCreator(
  * judgement, exactly like `no-adhoc-spacing`.
  *
  * Class strings are inspected only in a class-name context — a `className`/
- * `class` attribute value or a `cn(...)`/`clsx(...)`/`twMerge(...)` argument —
- * via the same `collectTokens` walk the sibling `no-adhoc-*` rules use, so a
- * doc-string that merely mentions `flex` is never flagged.
+ * `class`/`*ClassName` attribute value or a `cn(...)`/`clsx(...)`/`twMerge(...)`
+ * argument — via the same `collectTokens` walk the sibling `no-adhoc-*` rules
+ * use, so a doc-string that merely mentions `flex` is never flagged.
  */
 
 // Position keywords. `relative`/`static` are NOT banned — they merely establish
@@ -90,8 +90,16 @@ const LAYOUT_PATTERNS = [
   OVERFLOW,
 ];
 
-/** JSX attribute names whose value is a class-name string. */
-const CLASS_ATTRS = new Set(["className", "class"]);
+/**
+ * JSX attribute names whose value is a class-name string. `className`/`class`
+ * are React's and HTML's own; the `*ClassName` suffix is the pass-through
+ * convention (`panelClassName`, `itemClassName`, `wrapperClassName`,
+ * `trackClassName`) a component uses to forward classes to an inner element.
+ * Those forwarded strings style a real element exactly like `className` does,
+ * but were invisible to every class rule purely because of the attribute's
+ * spelling.
+ */
+const CLASS_ATTRS = /^(?:class|className)$|ClassName$/;
 /** Class-builder calls whose string arguments are class-name strings. */
 const CLASS_BUILDERS = new Set(["cn", "clsx", "twMerge"]);
 
@@ -238,7 +246,7 @@ export default createRule({
     return {
       JSXAttribute(node) {
         if (node.name.type !== "JSXIdentifier") return;
-        if (CLASS_ATTRS.has(node.name.name)) {
+        if (CLASS_ATTRS.test(node.name.name)) {
           const tokens = new Set<string>();
           collectTokens(node.value, tokens);
           checkTokens(node, tokens);

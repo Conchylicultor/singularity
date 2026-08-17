@@ -1,3 +1,4 @@
+import type { ClassName } from "@plugins/primitives/plugins/css/plugins/ui-kit/core";
 import type { ComponentType } from "react";
 import type { AnyZodObject, z } from "zod";
 import { runsOf, type RichText } from "./rich-text";
@@ -223,7 +224,7 @@ export interface BlockHandle<T> {
    * `doneClassName` (default: strikethrough + muted) to the text content when the
    * field is truthy. Generic — the renderer never names a specific block type.
    */
-  toggle?: { field: string; doneClassName?: string };
+  toggle?: { field: string; doneClassName?: ClassName };
   /**
    * When "always", the editor shows the collapse chevron for this block type even
    * when it has no children yet (used by the toggle block, and by `sub-page` /
@@ -348,7 +349,7 @@ export function defineBlock<S extends AnyZodObject>(opts: {
   gutterFirstLineCenter?: string;
   splitInto?: string;
   dataOnSplit?(data: z.infer<S>): z.infer<S>;
-  toggle?: { field: string; doneClassName?: string };
+  toggle?: { field: string; doneClassName?: ClassName };
   collapsible?: "always";
   anchor?: true;
   wrapOnConvert?: true;

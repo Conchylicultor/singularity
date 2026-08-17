@@ -124,7 +124,9 @@ export function FloatingActionBarHost() {
       className="fixed top-2 right-3 z-popover"
       anchor="top-right"
       variant="ghost"
-      panelClassName="items-center"
+      // The trigger glyph and the action row are different heights; centering
+      // them keeps the glyph on the row's centre line as the panel widens.
+      align="center"
       trigger={<StatusGlyph status={status} />}
     >
       {/* eslint-disable-next-line layout/no-adhoc-layout -- animated max-width hover-reveal strip (clipped while collapsed) */}

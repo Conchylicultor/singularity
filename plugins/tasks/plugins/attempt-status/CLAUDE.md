@@ -15,6 +15,7 @@ derived via `formatStatusLabel`, so they never drift from the house casing rule.
   - Uses:
     - `primitives/css/badge.Badge`
     - `primitives/css/badge.formatStatusLabel`
+    - `primitives/css/ui-kit.cn`
   - Exports (values):
     - `ATTEMPT_STATUS_META`
     - `AttemptStatusBadge`

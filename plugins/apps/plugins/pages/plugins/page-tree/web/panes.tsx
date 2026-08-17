@@ -1,3 +1,4 @@
+import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useRef, type ReactElement } from "react";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import {
@@ -35,7 +36,7 @@ import { PageDetail } from "./slots";
 // its content wrapper), so drag-to-select works from the whitespace beside the
 // column — the header and sections, which carry no such surface, apply the
 // measure to themselves directly.
-const READING_MEASURE = "mx-auto w-full max-w-4xl";
+const READING_MEASURE = cn("mx-auto w-full max-w-4xl");
 
 // Panes are declared first so their types are known before the component
 // bodies reference them. The component identifiers below are hoisted function

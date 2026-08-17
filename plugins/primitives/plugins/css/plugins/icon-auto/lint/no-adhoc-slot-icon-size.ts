@@ -1,4 +1,8 @@
-import { ESLintUtils, type TSESLint, type TSESTree } from "@typescript-eslint/utils";
+import {
+  ESLintUtils,
+  type TSESLint,
+  type TSESTree,
+} from "@typescript-eslint/utils";
 
 const createRule = ESLintUtils.RuleCreator(
   (name) => `https://github.com/anthropics/singularity/lint/${name}`,
@@ -40,13 +44,30 @@ const SLOT_NAMES = new Set(["icon", "leading"]);
 // with the primitives whose slot containers apply the icon-auto utility (Badge,
 // Row, LinkChip, ToggleChip, Breadcrumb). Matched by the owning opening-element
 // identifier name string only — aliased re-imports are an accepted false negative.
-const AUTO_SIZING_PARENTS = new Set(["Badge", "Row", "LinkChip", "ToggleChip", "Breadcrumb"]);
+const AUTO_SIZING_PARENTS = new Set([
+  "Badge",
+  "Row",
+  "LinkChip",
+  "ToggleChip",
+  "Breadcrumb",
+]);
 
 // Hardcoded icon-size markers: `size-3`, `size-3.5`, `h-4`, `w-4`, …. Numeric
 // suffix required so `size-full`/`h-auto`/`w-fit` etc. are NOT matched.
 const SIZE = /^size-\d/;
 const H = /^h-\d/;
 const W = /^w-\d/;
+
+/**
+ * JSX attribute names whose value is a class-name string. `className`/`class`
+ * are React's and HTML's own; the `*ClassName` suffix is the pass-through
+ * convention (`panelClassName`, `itemClassName`, `wrapperClassName`,
+ * `trackClassName`) a component uses to forward classes to an inner element.
+ * Those forwarded strings style a real element exactly like `className` does,
+ * but were invisible to every class rule purely because of the attribute's
+ * spelling.
+ */
+const CLASS_ATTRS = /^(?:class|className)$|ClassName$/;
 
 /**
  * Strip a leading Tailwind variant prefix (`hover:`, `md:`, `dark:`, …) so the
@@ -113,7 +134,10 @@ function collectTokens(
         // followed, and a map reached only through an intermediate local is out
         // of range by design.
         const init = def.type === "Variable" ? def.node.init : null;
-        if (init && (init.type === "ObjectExpression" || init.type === "ArrayExpression")) {
+        if (
+          init &&
+          (init.type === "ObjectExpression" || init.type === "ArrayExpression")
+        ) {
           collectTokens(sourceCode, init, out, seen);
         }
       }
@@ -156,13 +180,21 @@ export default createRule({
     return {
       JSXAttribute(node) {
         // 1. Slot gate: `icon=` or `leading=`.
-        if (node.name.type !== "JSXIdentifier" || !SLOT_NAMES.has(node.name.name)) return;
+        if (
+          node.name.type !== "JSXIdentifier" ||
+          !SLOT_NAMES.has(node.name.name)
+        )
+          return;
 
         // 3. Parent allow-list: the element that owns this attribute must be one
         // of the auto-sizing primitives. The attribute's parent is always the
         // JSXOpeningElement; match its identifier name.
         const ownerTag = node.parent.name;
-        if (ownerTag.type !== "JSXIdentifier" || !AUTO_SIZING_PARENTS.has(ownerTag.name)) return;
+        if (
+          ownerTag.type !== "JSXIdentifier" ||
+          !AUTO_SIZING_PARENTS.has(ownerTag.name)
+        )
+          return;
 
         // 2. Only an inline JSX element literal: `icon={<MdFoo .../>}`. Skip
         // identifiers, calls, conditionals, fragments — no variable tracing.
@@ -181,18 +213,21 @@ export default createRule({
         const isGlyph = slotTag.name === "svg" || /^[A-Z]/.test(slotTag.name);
         if (!isGlyph) return;
 
-        // 5. Find a `className` attribute with an analyzable literal value in the
-        // inline element's opening tag.
-        const classAttr = expr.openingElement.attributes.find(
+        // 5. Find the class-name attributes with an analyzable literal value in
+        // the inline element's opening tag. Every one of them is aggregated, not
+        // just the first: a glyph can carry both `className` and a `*ClassName`
+        // pass-through, and a size hardcoded in either one is the same override.
+        const classAttrs = expr.openingElement.attributes.filter(
           (a): a is TSESTree.JSXAttribute =>
             a.type === "JSXAttribute" &&
             a.name.type === "JSXIdentifier" &&
-            a.name.name === "className",
+            CLASS_ATTRS.test(a.name.name),
         );
-        if (!classAttr) return;
+        if (classAttrs.length === 0) return;
 
         const tokens = new Set<string>();
-        collectTokens(context.sourceCode, classAttr.value, tokens);
+        for (const attr of classAttrs)
+          collectTokens(context.sourceCode, attr.value, tokens);
         if (tokens.size === 0) return; // not a simple analyzable className — skip.
 
         const hasHardcodedSize = [...tokens].some((t) => {

@@ -38,6 +38,48 @@ content keeps its originating surface's palette after the portal hop.
 
 There is deliberately no prop to turn the portal off, for the reason below.
 
+## The runtime auditor
+
+The lint rule can only fingerprint the *recipe* (`fixed` + `inset-0` in one class
+list). Whether a given box really reaches the viewport is a fact about its
+ancestor chain, which crosses plugin boundaries and only exists once rendered —
+so this plugin also owns the runtime check for the same invariant.
+
+```ts
+useViewportEscape(ref, { enabled, subject, remedy, from });
+assertViewportEscape(el, { subject, remedy, from });  // the imperative twin
+findViewportBlocker(el);                              // the walk, no reporting
+```
+
+`findViewportBlocker` walks from an element up to `<html>` and returns the first
+ancestor that breaks one of two promises: **containing block** (`transform` /
+`translate` / `rotate` / `scale` / `perspective` / `filter` / `backdrop-filter` /
+`will-change` / `contain` / `container-type` — the box is clipped to that element
+instead of the window) or **stacking context** (`opacity` < 1 / `isolation` /
+`mix-blend-mode` / a positioned element with a numeric `z-index` — the box's
+z-index is compared inside that layer, so it stops covering the chrome beside it
+however high it is set). `null` is the clear chain.
+
+The walk is pure CSS and names nothing: **`subject`** ("a fullscreen (solo) tab")
+and **`remedy`** are strings the caller supplies, and they are the only domain
+knowledge in play. **`from`** picks where the walk starts: `"self"` (default)
+when the element is an ancestor that HOSTS fixed children (what
+`apps-core/surface` passes for its backdrop), `"parent"` when the element IS the
+fixed box — a `position: fixed` element is its own stacking context, so an
+inclusive walk would report every overlay against itself.
+
+Both faults report to `viewportEscapeReportSink` and then throw under
+`import.meta.env.DEV`. The sink is a no-op until something registers it;
+`plugins/reports/plugins/viewport-escape` is the consumer that files them as
+reports, and an app composition without it drops every production fault.
+
+`<ViewportOverlay>` audits its own chain in dev with `from: "parent"`. A portal
+to `<body>` escapes every ancestor *inside* the app — that is the point — but it
+cannot escape `body`/`html` themselves, so a global `filter`/`transform` there (a
+blur-while-locked scrim, a devtools frame, an extension that wraps the page) is
+still a containing block. That is the one failure this primitive's design cannot
+make impossible, which is why it is checked rather than assumed.
+
 ## A portal toggle is not keep-alive
 
 Conditional portals get reached for as a way to move a subtree without losing it.
@@ -72,11 +114,22 @@ positive control that an unconditional overlay keeps one instance.
 ## Enforcement
 
 `lint/no-adhoc-viewport-overlay.ts` fails `./singularity check` on the
-viewport-fill recipe — `fixed` + `inset-0` co-occurring on an intrinsic
-`span`/`div`/`button`/`a` (aggregated across one `className`). Capitalized
-component tags (the primitive itself, base-ui `*.Backdrop`) are skipped by the
-host-tag gate. Escape a genuinely-contained case with `absolute inset-0` (for a
-pane-relative overlay) or
+viewport-fill recipe — `fixed` + `inset-0` co-occurring, aggregated across one
+class-name attribute (`className`/`class`, or a `*ClassName` pass-through prop) or
+one `cn`/`clsx`/`twMerge` call. Both anchors matter: the recipe is just as wrong
+when it is assembled into a `const c = cn("fixed", "inset-0")` and spread onto an
+element a few lines later.
+
+The gate is the **recipe, not the host tag** — it fires on any element. There is
+no tag allowlist to fail open through (the former `span`/`div`/`button`/`a` gate
+did just that). What stays invisible is instead structural: the primitive keeps
+the recipe in a module const the literal-only token walk never harvests, and the
+shadcn dialog/sheet definitions under `ui-kit/web/components/ui/` (really portaled
+by base-ui) are exempted by the same `lint/index.ts` file-glob `no-adhoc-surface`
+uses for those files.
+
+Escape a genuinely-contained case with `absolute inset-0` (for a pane-relative
+overlay) or
 `// eslint-disable-next-line viewport-overlay/no-adhoc-viewport-overlay -- <reason>`.
 
 `lint/no-portal-toggle.ts` fails on a `createPortal` put behind a condition — a
@@ -89,17 +142,30 @@ claim.
 
 ## Plugin reference
 
-- Description: Viewport-filling overlay primitive: self-portals to document.body + z-layer + theme-scope so fixed inset-0 fills the real viewport, never a transformed ancestor.
+- Description: Viewport-filling overlay primitive: self-portals to document.body + z-layer + theme-scope so fixed inset-0 fills the real viewport, never a transformed ancestor. Also owns the runtime auditor for the same invariant — the containing-block + stacking-context ancestor walk (assertViewportEscape / useViewportEscape), which reports the two ways a fixed box silently stops being viewport-relative.
 - Web:
   - Uses:
     - `primitives/css/ui-kit.cn`
     - `primitives/css/ui-kit.usePortalForwardedAttrs`
     - `primitives/css/z-layers.PortaledLayer`
     - `primitives/css/z-layers.zLayerClass`
-  - Exports (types): `ViewportOverlayProps`
-  - Exports (values): `ViewportOverlay`
+  - Exports (types):
+    - `ViewportBlocker`
+    - `ViewportBlockerReason`
+    - `ViewportEscapeFault`
+    - `ViewportEscapeFaultKind`
+    - `ViewportEscapeOptions`
+    - `ViewportOverlayProps`
+  - Exports (values):
+    - `assertViewportEscape`
+    - `describeElement`
+    - `findViewportBlocker`
+    - `useViewportEscape`
+    - `viewportEscapeReportSink`
+    - `ViewportOverlay`
 - Cross-plugin:
   - Imported by:
+    - `apps-core/surface`
     - `apps/prototypes/present`
     - `apps/sonata/audio/metronome`
     - `debug/queue`
@@ -108,6 +174,7 @@ claim.
     - `primitives/adaptive-bar`
     - `primitives/floating-surface`
     - `primitives/text-editor/paste-images`
+    - `reports/viewport-escape`
     - `screenshot/draw-on-app`
 
 <!-- AUTOGENERATED:END -->

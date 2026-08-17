@@ -1,3 +1,4 @@
+import type { ClassName } from "@plugins/primitives/plugins/css/plugins/ui-kit/core";
 import type { ComponentType } from "react";
 import type { InsetSides } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import type { SurfaceLevel } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
@@ -179,7 +180,7 @@ export interface BlockChrome {
    * ancestor, so a stray `overflow-*` would silently change caret scroll
    * semantics.
    */
-  boxClassName?: string | ((data: unknown) => string);
+  boxClassName?: ClassName | ((data: unknown) => ClassName);
   /** Whether the LINE supplies the page column's left inset (default true). */
   inset?: boolean;
   regions?: BlockRegions;

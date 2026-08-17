@@ -9,7 +9,10 @@ import {
   type GraphCanvasGroup,
 } from "@plugins/primitives/plugins/graph-canvas/web";
 import { addTaskDependency } from "@plugins/tasks/core";
-import { isSettled, type TaskListItem } from "@plugins/tasks/plugins/tasks-core/core";
+import {
+  isSettled,
+  type TaskListItem,
+} from "@plugins/tasks/plugins/tasks-core/core";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Clip } from "@plugins/primitives/plugins/css/plugins/clip/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
@@ -19,7 +22,10 @@ import { STATUS_META } from "@plugins/tasks/plugins/task-status/web";
 import { EdgeActions } from "./edge-actions";
 import { useTaskClosure } from "../hooks";
 
-function getGroupDepth(groupId: string, byId: Map<string, TaskListItem>): number {
+function getGroupDepth(
+  groupId: string,
+  byId: Map<string, TaskListItem>,
+): number {
   let depth = 0;
   let current = groupId;
   const seen = new Set<string>();
@@ -34,10 +40,22 @@ function getGroupDepth(groupId: string, byId: Map<string, TaskListItem>): number
 }
 
 const GROUP_PALETTE = [
-  { bg: "bg-categorical-1/8 border-categorical-1/30", text: "text-categorical-1/70" },
-  { bg: "bg-categorical-2/8 border-categorical-2/30", text: "text-categorical-2/70" },
-  { bg: "bg-categorical-3/8 border-categorical-3/30", text: "text-categorical-3/70" },
-  { bg: "bg-categorical-4/8 border-categorical-4/30", text: "text-categorical-4/70" },
+  {
+    bg: cn("bg-categorical-1/8 border-categorical-1/30"),
+    text: cn("text-categorical-1/70"),
+  },
+  {
+    bg: cn("bg-categorical-2/8 border-categorical-2/30"),
+    text: cn("text-categorical-2/70"),
+  },
+  {
+    bg: cn("bg-categorical-3/8 border-categorical-3/30"),
+    text: cn("text-categorical-3/70"),
+  },
+  {
+    bg: cn("bg-categorical-4/8 border-categorical-4/30"),
+    text: cn("text-categorical-4/70"),
+  },
 ];
 
 /** Hover-revealed soft-drop button rendered as a node `actions` overlay. */
@@ -74,10 +92,16 @@ function buildGraph(
   allTasks: readonly TaskListItem[],
   selectedId: string,
   onNavigate: (taskId: string) => void,
-): { nodes: GraphCanvasNode[]; edges: GraphCanvasEdge[]; groups: GraphCanvasGroup[] } {
+): {
+  nodes: GraphCanvasNode[];
+  edges: GraphCanvasEdge[];
+  groups: GraphCanvasGroup[];
+} {
   const ids = new Set(closure.map((t) => t.id));
   const byId = new Map(closure.map((t) => [t.id, t]));
-  const childIds = new Set(allTasks.filter((t) => t.folderId).map((t) => t.folderId!));
+  const childIds = new Set(
+    allTasks.filter((t) => t.folderId).map((t) => t.folderId!),
+  );
 
   const nodes: GraphCanvasNode[] = closure.map((task) => {
     const meta = STATUS_META[task.status];
@@ -91,7 +115,8 @@ function buildGraph(
       title: `${task.title} — ${meta.label}`,
       tintClass: isTerminal ? "text-muted-foreground" : null,
       ringClass: selected ? "border-primary ring-primary/30 ring-2" : null,
-      labelClassName: task.status === "dropped" ? "italic line-through" : null,
+      labelClassName:
+        task.status === "dropped" ? cn("italic line-through") : null,
       // eslint-disable-next-line layout/no-adhoc-layout -- rigid status icon in the graph node's leading slot (graph-canvas owns the row); must never shrink
       leading: <Icon className={cn("size-4 shrink-0", meta.iconClassName)} />,
       connectable: true,
@@ -134,7 +159,11 @@ function buildGraph(
     if (!members.includes(groupId)) members.push(groupId);
   }
   const groups: GraphCanvasGroup[] = [...groupMembers.entries()]
-    .map(([groupId, memberIds]) => ({ groupId, memberIds, depth: getGroupDepth(groupId, byId) }))
+    .map(([groupId, memberIds]) => ({
+      groupId,
+      memberIds,
+      depth: getGroupDepth(groupId, byId),
+    }))
     // Shallower groups first so they render behind deeper (nested) ones.
     .sort((a, b) => a.depth - b.depth)
     .map(({ groupId, memberIds, depth }) => {
@@ -143,7 +172,7 @@ function buildGraph(
         id: `group-${groupId}`,
         label: byId.get(groupId)?.title || "Group",
         memberIds,
-        className: palette.bg,
+        bgClassName: palette.bg,
         labelClassName: palette.text,
       };
     });
@@ -160,11 +189,16 @@ export function TaskGraph({ taskId }: { taskId: string }) {
     [openPane],
   );
   const onConnect = useCallback((source: string, target: string) => {
-    void fetchEndpoint(addTaskDependency, { id: target }, { body: { dependsOnTaskId: source } });
+    void fetchEndpoint(
+      addTaskDependency,
+      { id: target },
+      { body: { dependsOnTaskId: source } },
+    );
   }, []);
   const graph = useMemo(
     () =>
-      closure && buildGraph(closure.closure, closure.allTasks, taskId, onNavigate),
+      closure &&
+      buildGraph(closure.closure, closure.allTasks, taskId, onNavigate),
     [closure, taskId, onNavigate],
   );
 

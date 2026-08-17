@@ -34,6 +34,7 @@ export const CLIENT_REPORT_SOURCES = [
   "client-live-state-stale-drop",
   "client-caret-flight",
   "client-adaptive-bar",
+  "client-viewport-escape",
   "client-collab-hydration",
   "boot-snapshot",
   "plugin-load",

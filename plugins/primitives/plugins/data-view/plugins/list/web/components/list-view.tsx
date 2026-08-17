@@ -286,7 +286,7 @@ export function ListView(props: DataViewRenderProps<unknown>): ReactNode {
           items={entries}
           estimateSize={estimateSize}
           getKey={(entry) => entry.key}
-          itemClassName="rail-follow"
+          itemClassName={cn("rail-follow")}
           keepMounted={activeId ? [activeId] : undefined}
         >
           {(entry) => renderEntry(entry, group)}
