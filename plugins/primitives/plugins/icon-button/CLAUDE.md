@@ -13,9 +13,10 @@ it is the one that declares the `"row"` rung to
 `@plugins/primitives/plugins/action-presentation`
 (`useActionForm({ shrinksTo: ["row"] })`). When a bar runs out of room and
 relocates it, it renders as a `PanelActionRow`; `variant`, `className`, `tooltip`
-and `side` are inert in that form. Every action built on it (incl.
-`RowActionButton`) inherits the rung for free, and with no bar above — every
-ordinary call site — the hook is a constant `"full"` and the declaration a no-op.
+and `side` are inert in that form. Every action built on it inherits the rung for
+free — including the ones inside a `RowActions` cluster, which are plain
+`IconButton`s — and with no bar above (every ordinary call site) the hook is a
+constant `"full"` and the declaration a no-op.
 
 It deliberately does NOT declare `"compact"`: an icon button is already an
 icon-only square, so it has no narrower form of itself to offer.
@@ -69,6 +70,10 @@ icon+count button it stands in for — carries a per-site
     - `apps/browser/proxy`
     - `apps/browser/tabs`
     - `apps/browser/webview`
+    - `apps/deploy/deployments`
+    - `apps/deploy/local-serve`
+    - `apps/deploy/servers`
+    - `apps/events/sources`
     - `apps/mail/reading-pane`
     - `apps/pages/history`
     - `apps/pages/page-tree`
@@ -88,6 +93,7 @@ icon+count button it stands in for — carries a per-site
     - `apps/story/pages-integration`
     - `apps/story/renderers/slides`
     - `apps/story/shell`
+    - `apps/studio/compositions`
     - `apps/studio/compositions/entry-points`
     - `apps/studio/explorer/membership`
     - `apps/studio/graph`
@@ -106,6 +112,8 @@ icon+count button it stands in for — carries a per-site
     - `conversations/conversation-view/resume`
     - `conversations/conversation-view/terminal-pane`
     - `conversations/conversations-view`
+    - `conversations/conversations-view/data-view/history`
+    - `conversations/conversations-view/data-view/queue`
     - `debug/broadcasts`
     - `debug/memory`
     - `debug/queue`
@@ -128,7 +136,6 @@ icon+count button it stands in for — carries a per-site
     - `primitives/launch`
     - `primitives/pane`
     - `primitives/prompt-editor/voice-input`
-    - `primitives/row-actions`
     - `primitives/sync-status`
     - `primitives/tree`
     - `reorder/edit-mode`

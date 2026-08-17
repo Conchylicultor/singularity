@@ -1,12 +1,15 @@
 import { createContext, useContext, type ReactElement } from "react";
 import { MdClose } from "react-icons/md";
-import { useResource, matchResource } from "@plugins/primitives/plugins/live-state/web";
+import {
+  useResource,
+  matchResource,
+} from "@plugins/primitives/plugins/live-state/web";
 import { defineItemActions } from "@plugins/primitives/plugins/data-view/web";
 import type {
   DataViewSourceProps,
   ItemActionProps,
 } from "@plugins/primitives/plugins/data-view/web";
-import { RowActionButton } from "@plugins/primitives/plugins/row-actions/web";
+import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import {
   conversationsRevisionResource,
@@ -33,11 +36,13 @@ const CloseConversationContext = createContext<
 >(null);
 
 /** The hover-revealed Close action contributed into {@link HistoryItemActions}. */
-export function CloseConvAction({ row }: ItemActionProps<Conversation>): ReactElement | null {
+export function CloseConvAction({
+  row,
+}: ItemActionProps<Conversation>): ReactElement | null {
   const onCloseConversation = useContext(CloseConversationContext);
   if (!onCloseConversation) return null;
   return (
-    <RowActionButton
+    <IconButton
       icon={MdClose}
       label="Close conversation"
       onClick={(e) => {
@@ -82,14 +87,20 @@ export function HistorySource({
         onRowActivate: (c) => onNavigate(c.id),
         viewOptions: {
           list: {
-            renderRow: (c: Conversation) => <ConversationItem conv={c} layout="block" />,
+            renderRow: (c: Conversation) => (
+              <ConversationItem conv={c} layout="block" />
+            ),
           },
         },
         itemActions: HistoryItemActions,
         dataSource: {
           changeTick,
           fetchPage: (args) =>
-            fetchEndpoint(queryConversations, {}, { body: { ...args, includeSystem: true } }),
+            fetchEndpoint(
+              queryConversations,
+              {},
+              { body: { ...args, includeSystem: true } },
+            ),
         },
       })}
     </CloseConversationContext.Provider>

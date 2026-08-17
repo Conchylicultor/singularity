@@ -4,8 +4,11 @@ import {
   defineItemActions,
   type ItemActionProps,
 } from "@plugins/primitives/plugins/data-view/web";
-import { RowActionButton } from "@plugins/primitives/plugins/row-actions/web";
-import { EndpointError, useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
+import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
+import {
+  EndpointError,
+  useEndpointMutation,
+} from "@plugins/infra/plugins/endpoints/web";
 import { openDialog } from "@plugins/primitives/plugins/imperative-dialog/web";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { useServerHealth } from "@plugins/apps/plugins/deploy/plugins/health/web";
@@ -76,11 +79,13 @@ export function useBlockedReason(deployment: Deployment): string | null {
  * layout, `env`, Caddy, systemd unit, firewall). Idempotent: re-running repairs
  * drift, which is why it needs no confirmation.
  */
-export function ConvergeAction({ row }: ItemActionProps<Deployment>): ReactElement {
+export function ConvergeAction({
+  row,
+}: ItemActionProps<Deployment>): ReactElement {
   const blocked = useBlockedReason(row);
   const run = useEndpointMutation(runDeployment);
   return (
-    <RowActionButton
+    <IconButton
       icon={MdTune}
       label="Converge"
       tooltip={blocked ?? `Converge ${row.compositionId} on this server`}
@@ -102,10 +107,12 @@ export function ShipAction({ row }: ItemActionProps<Deployment>): ReactElement {
   const blocked = useBlockedReason(row);
   const run = useEndpointMutation(runDeployment);
   return (
-    <RowActionButton
+    <IconButton
       icon={MdRocketLaunch}
       label="Ship"
-      tooltip={blocked ?? `Ship the latest ${row.compositionId} bundle to this server`}
+      tooltip={
+        blocked ?? `Ship the latest ${row.compositionId} bundle to this server`
+      }
       disabled={blocked !== null || run.isPending}
       onClick={(e) => {
         e.stopPropagation();
@@ -121,7 +128,7 @@ export function DeleteDeploymentAction({
 }: ItemActionProps<Deployment>): ReactElement {
   const remove = useEndpointMutation(deleteDeployment);
   return (
-    <RowActionButton
+    <IconButton
       icon={MdDelete}
       label="Delete deployment"
       disabled={remove.isPending}
@@ -129,23 +136,26 @@ export function DeleteDeploymentAction({
         e.stopPropagation();
         // Fire-and-forget: returning the openDialog promise would pend the
         // button for the dialog's whole open lifetime rather than the delete's.
-        void openDialog((close) => (
-          <DeleteDeploymentDialog
-            deployment={row}
-            onCancel={close}
-            onConfirm={() =>
-              remove
-                .mutateAsync({ params: { id: row.id } })
-                .then(() => close())
-                .catch((err: unknown) => {
-                  // Expected failure — the global toast already reported it;
-                  // keep the dialog open so the user can retry or cancel.
-                  if (err instanceof EndpointError) return;
-                  throw err;
-                })
-            }
-          />
-        ), { size: "sm" });
+        void openDialog(
+          (close) => (
+            <DeleteDeploymentDialog
+              deployment={row}
+              onCancel={close}
+              onConfirm={() =>
+                remove
+                  .mutateAsync({ params: { id: row.id } })
+                  .then(() => close())
+                  .catch((err: unknown) => {
+                    // Expected failure — the global toast already reported it;
+                    // keep the dialog open so the user can retry or cancel.
+                    if (err instanceof EndpointError) return;
+                    throw err;
+                  })
+              }
+            />
+          ),
+          { size: "sm" },
+        );
       }}
     />
   );

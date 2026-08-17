@@ -10,7 +10,7 @@ import {
 } from "react-icons/md";
 import { defineItemActions } from "@plugins/primitives/plugins/data-view/web";
 import type { ItemActionProps } from "@plugins/primitives/plugins/data-view/web";
-import { RowActionButton } from "@plugins/primitives/plugins/row-actions/web";
+import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import {
   promoteQueue,
@@ -46,88 +46,122 @@ export const CloseConversationContext = createContext<
  * running can still be pinned for when it comes back — but never on the closed
  * conversations under Done.
  */
-export function PinAction({ row }: ItemActionProps<QueueRow>): ReactElement | null {
+export function PinAction({
+  row,
+}: ItemActionProps<QueueRow>): ReactElement | null {
   if (row.section === "done" || row.section === "disconnected") return null;
   return (
-    <RowActionButton
+    <IconButton
       icon={row.pinned ? MdPushPin : MdOutlinePushPin}
       label={row.pinned ? "Unpin" : "Pin to top"}
       onClick={(e) => {
         e.stopPropagation();
-        return fetchEndpoint(pinQueue, {}, {
-          body: { conversationId: row.id, pinned: !row.pinned },
-        });
+        return fetchEndpoint(
+          pinQueue,
+          {},
+          {
+            body: { conversationId: row.id, pinned: !row.pinned },
+          },
+        );
       }}
     />
   );
 }
 
 /** Move the row's task-group to the top of its section. */
-export function PromoteAction({ row }: ItemActionProps<QueueRow>): ReactElement | null {
-  if ((row.section !== "queued" && row.section !== "pinned") || row.isTop) return null;
+export function PromoteAction({
+  row,
+}: ItemActionProps<QueueRow>): ReactElement | null {
+  if ((row.section !== "queued" && row.section !== "pinned") || row.isTop)
+    return null;
   return (
-    <RowActionButton
+    <IconButton
       icon={MdVerticalAlignTop}
       label="Move to top"
       onClick={(e) => {
         e.stopPropagation();
-        return fetchEndpoint(promoteQueue, {}, { body: { conversationId: row.id } });
+        return fetchEndpoint(
+          promoteQueue,
+          {},
+          { body: { conversationId: row.id } },
+        );
       }}
     />
   );
 }
 
 /** Step the row's task-group down five positions. */
-export function StepDownAction({ row }: ItemActionProps<QueueRow>): ReactElement | null {
+export function StepDownAction({
+  row,
+}: ItemActionProps<QueueRow>): ReactElement | null {
   if (!row.canStepDown) return null;
   return (
-    <RowActionButton
+    <IconButton
       icon={MdKeyboardDoubleArrowDown}
       label="Move down 5"
       onClick={(e) => {
         e.stopPropagation();
-        return fetchEndpoint(stepDownQueue, {}, { body: { conversationId: row.id, steps: 5 } });
+        return fetchEndpoint(
+          stepDownQueue,
+          {},
+          { body: { conversationId: row.id, steps: 5 } },
+        );
       }}
     />
   );
 }
 
 /** Move the row's task-group to the bottom of the queue. */
-export function DemoteAction({ row }: ItemActionProps<QueueRow>): ReactElement | null {
-  if ((row.section !== "pinned" && row.section !== "queued") || row.isBottom) return null;
+export function DemoteAction({
+  row,
+}: ItemActionProps<QueueRow>): ReactElement | null {
+  if ((row.section !== "pinned" && row.section !== "queued") || row.isBottom)
+    return null;
   return (
-    <RowActionButton
+    <IconButton
       icon={MdVerticalAlignBottom}
       label="Move to bottom"
       onClick={(e) => {
         e.stopPropagation();
-        return fetchEndpoint(demoteQueue, {}, { body: { conversationId: row.id } });
+        return fetchEndpoint(
+          demoteQueue,
+          {},
+          { body: { conversationId: row.id } },
+        );
       }}
     />
   );
 }
 
 /** Seed a rank for an unranked (waiting) conversation, adding it to the queue. */
-export function AddToQueueAction({ row }: ItemActionProps<QueueRow>): ReactElement | null {
+export function AddToQueueAction({
+  row,
+}: ItemActionProps<QueueRow>): ReactElement | null {
   if (row.section !== "unranked") return null;
   return (
-    <RowActionButton
+    <IconButton
       icon={MdOutlineQueue}
       label="Add to queue"
       onClick={(e) => {
         e.stopPropagation();
-        return fetchEndpoint(rerankQueue, {}, { body: { conversationId: row.id } });
+        return fetchEndpoint(
+          rerankQueue,
+          {},
+          { body: { conversationId: row.id } },
+        );
       }}
     />
   );
 }
 
 /** Close the conversation (all sections except Done). */
-export function CloseAction({ row }: ItemActionProps<QueueRow>): ReactElement | null {
+export function CloseAction({
+  row,
+}: ItemActionProps<QueueRow>): ReactElement | null {
   const onCloseConversation = useContext(CloseConversationContext);
   if (row.section === "done" || !onCloseConversation) return null;
   return (
-    <RowActionButton
+    <IconButton
       icon={MdClose}
       label="Close conversation"
       onClick={(e) => {

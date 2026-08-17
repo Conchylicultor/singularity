@@ -629,6 +629,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/data-view.ItemActionProps`
               - `primitives/detail-sections.defineDetailSections`
               - `primitives/editable-field.useEditableField`
+              - `primitives/icon-button.IconButton`
               - `primitives/imperative-dialog.openDialog`
               - `primitives/live-state.matchResource`
               - `primitives/live-state.useCombinedResources`
@@ -638,7 +639,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/pane.PaneChrome`
               - `primitives/pane.useOpenPane`
               - `primitives/relative-time.RelativeTime`
-              - `primitives/row-actions.RowActionButton`
             - Exports (values):
               - `DeploymentDetail`
               - `deploymentDetailPane`
@@ -831,10 +831,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/placeholder.Placeholder`
               - `primitives/css/spacing.Stack`
               - `primitives/css/text.Text`
+              - `primitives/icon-button.IconButton`
               - `primitives/live-state.matchResource`
               - `primitives/live-state.useResource`
               - `primitives/loading.Loading`
-              - `primitives/row-actions.RowActionButton`
         - **`remote-deploy`** — Deploy one composition to its remote server: a single Deploy button launching the `update` sequence (converge → build a platform-pinned candidate unless one is already current → ship that pinned run id), the three-phase report of the running deploy, what is currently built and how it relates to HEAD, the public URLs to inspect the deployed app, the phase-following deploy/build log output section, and the `Release` column contributed into the deployments list.
           - Web:
             - Contributes:
@@ -914,6 +914,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/detail-sections.defineDetailSections`
               - `primitives/editable-field.EditableField`
               - `primitives/editable-field.useEditableField`
+              - `primitives/icon-button.IconButton`
               - `primitives/imperative-dialog.openDialog`
               - `primitives/live-state.matchResource`
               - `primitives/live-state.useResource`
@@ -921,7 +922,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/pane.Pane`
               - `primitives/pane.PaneChrome`
               - `primitives/pane.useOpenPane`
-              - `primitives/row-actions.RowActionButton`
             - Exports (types):
               - `Server`
               - `SshKey`
@@ -1400,6 +1400,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/data-view.defineItemActions`
               - `primitives/data-view.FieldDef`
               - `primitives/detail-sections.defineDetailSections`
+              - `primitives/icon-button.IconButton`
               - `primitives/imperative-dialog.openDialog`
               - `primitives/live-state.matchResource`
               - `primitives/pane.openPane`
@@ -1407,7 +1408,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/pane.PaneChrome`
               - `primitives/pane.useOpenPane`
               - `primitives/relative-time.RelativeTime`
-              - `primitives/row-actions.RowActionButton`
             - Exports (types):
               - `ConfigValues`
               - `EventSourceTypeContribution`
@@ -2990,7 +2990,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/pane.usePaneStore`
               - `primitives/persistent-draft.useDraft`
               - `primitives/relative-time.formatRelativeTime`
-              - `primitives/row-actions.RowActionButton`
             - Exports (values):
               - `Library`
               - `openSongImperative`
@@ -4457,12 +4456,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/data-view.defineDataView`
               - `primitives/data-view.defineItemActions`
               - `primitives/detail-sections.defineDetailSections`
+              - `primitives/icon-button.IconButton`
               - `primitives/loading.Loading`
               - `primitives/pane.openPane`
               - `primitives/pane.Pane`
               - `primitives/pane.PaneChrome`
               - `primitives/pane.useOpenPane`
-              - `primitives/row-actions.RowActionButton`
             - Exports (values):
               - `comparePane`
               - `CompositionDetail`
@@ -10189,9 +10188,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `conversations/conversations-view/data-view.SidebarSources`
                   - `infra/endpoints.fetchEndpoint`
                   - `primitives/data-view.defineItemActions`
+                  - `primitives/icon-button.IconButton`
                   - `primitives/live-state.matchResource`
                   - `primitives/live-state.useResource`
-                  - `primitives/row-actions.RowActionButton`
             - **`queue`** — Contributes the priority Queue (pin/status group-by sections, task-group aggregation, and neighbor-based manual-order drag over the queue's live data/mutation layer) as the Queue source of the merged conversation-sidebar DataView.
               - Web:
                 - Contributes:
@@ -10212,9 +10211,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `conversations/conversations-view/queue.TaskGroup`
                   - `infra/endpoints.fetchEndpoint`
                   - `primitives/data-view.defineItemActions`
+                  - `primitives/icon-button.IconButton`
                   - `primitives/live-state.useResource`
                   - `primitives/optimistic-mutation.useOptimisticResource`
-                  - `primitives/row-actions.RowActionButton`
         - **`grouped`** — Conversation-group persistence (tables + addMemberToGroup) backing the improve plugin's group-on-launch. No UI.
           - Server:
             - Uses:
@@ -19544,9 +19543,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Web:
         - Uses:
           - `primitives/css/fill.Fill`
-          - `primitives/css/line.Line`
+          - `primitives/css/row.Row`
           - `primitives/css/text.Text`
-          - `primitives/css/ui-kit.cn`
           - `primitives/latest-ref.useLatestRef`
           - `primitives/shortcuts.formatShortcutLabel`
           - `primitives/tooltip.Kbd`
@@ -20714,7 +20712,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `page/annotations/todo/task-link`
               - `page/inline-date`
               - `page/prompt/block`
-              - `primitives/action-presentation`
               - `primitives/bar`
               - `primitives/css/row`
               - `primitives/date-picker`
@@ -21000,6 +20997,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `plugin-meta/facets/exports/render-detail`
               - `plugin-meta/plugin-view/dependencies`
               - `plugin-meta/plugin-view/sub-plugins`
+              - `primitives/action-presentation`
               - `primitives/avatar`
               - `primitives/data-view`
               - `primitives/data-view/list`
@@ -22339,7 +22337,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `plugin-meta/facets/routes/render-contributions`
               - `plugin-meta/facets/routes/render-detail`
               - `plugin-meta/plugin-view/inclusion`
-              - `primitives/action-presentation`
               - `primitives/adaptive-bar`
               - `primitives/app-shell`
               - `primitives/auto-scroll`
@@ -23714,6 +23711,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/browser/proxy`
           - `apps/browser/tabs`
           - `apps/browser/webview`
+          - `apps/deploy/deployments`
+          - `apps/deploy/local-serve`
+          - `apps/deploy/servers`
+          - `apps/events/sources`
           - `apps/mail/reading-pane`
           - `apps/pages/history`
           - `apps/pages/page-tree`
@@ -23733,6 +23734,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/story/pages-integration`
           - `apps/story/renderers/slides`
           - `apps/story/shell`
+          - `apps/studio/compositions`
           - `apps/studio/compositions/entry-points`
           - `apps/studio/explorer/membership`
           - `apps/studio/graph`
@@ -23751,6 +23753,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conversations/conversation-view/resume`
           - `conversations/conversation-view/terminal-pane`
           - `conversations/conversations-view`
+          - `conversations/conversations-view/data-view/history`
+          - `conversations/conversations-view/data-view/queue`
           - `debug/broadcasts`
           - `debug/memory`
           - `debug/queue`
@@ -23773,7 +23777,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/launch`
           - `primitives/pane`
           - `primitives/prompt-editor/voice-input`
-          - `primitives/row-actions`
           - `primitives/sync-status`
           - `primitives/tree`
           - `reorder/edit-mode`
@@ -25275,7 +25278,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Core:
         - Exports (types): `ReportSink`
         - Exports (values): `defineReportSink`
-    - **`row-actions`** — Hover-revealed row-action cluster: a row of small ghost icon buttons (RowActionButton) revealed when their row is hovered/focused. The primitive owns the reveal (opacity↔pointer-events coupled, so a hidden action is never a live click-target), the right-edge Pin positioning, and the standard icon-xs sizing. Reveal is driven by the primitive's own `group/row-actions` group, applied to the row via the exported `rowActionsAnchor` class — so it never piggybacks on a consumer's group name.
+    - **`row-actions`** — Hover-revealed row-action cluster: a row of ordinary IconButtons revealed when their row is hovered/focused. The primitive owns the reveal (opacity↔pointer-events coupled, so a hidden action is never a live click-target), the right-edge Pin positioning, and the icon-xs sizing it applies to its children — so it ships no button of its own and stays BELOW icon-button, which is what lets css/row compose it. Reveal is driven by the primitive's own `group/row-actions` group, applied to the row via the exported `rowActionsAnchor` class — so it never piggybacks on a consumer's group name.
       - Web:
         - Uses:
           - `primitives/css/pin.Pin`
@@ -25285,27 +25288,15 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/css/surface.Surface`
           - `primitives/css/ui-kit.cn`
           - `primitives/css/ui-kit.ControlSizeProvider`
-          - `primitives/icon-button.IconButton`
           - `primitives/popup-open.PopupOpenScope`
-        - Exports (types):
-          - `RowActionButtonProps`
-          - `RowActionsProps`
+        - Exports (types): `RowActionsProps`
         - Exports (values):
-          - `RowActionButton`
           - `RowActions`
           - `rowActionsAnchor`
       - Cross-plugin:
         - Imported by:
-          - `apps/deploy/deployments`
-          - `apps/deploy/local-serve`
-          - `apps/deploy/servers`
-          - `apps/events/sources`
-          - `apps/sonata/library`
-          - `apps/studio/compositions`
           - `conversations/conversation-view/jsonl-viewer`
           - `conversations/conversation-view/jsonl-viewer/row-actions`
-          - `conversations/conversations-view/data-view/history`
-          - `conversations/conversations-view/data-view/queue`
           - `primitives/breadcrumb`
           - `primitives/css/row`
           - `primitives/data-table`

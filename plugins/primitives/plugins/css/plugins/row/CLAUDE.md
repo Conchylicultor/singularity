@@ -107,6 +107,7 @@ genuine transient-chrome list escapes with
     - `plugin-meta/facets/exports/render-detail`
     - `plugin-meta/plugin-view/dependencies`
     - `plugin-meta/plugin-view/sub-plugins`
+    - `primitives/action-presentation`
     - `primitives/avatar`
     - `primitives/data-view`
     - `primitives/data-view/list`

@@ -565,7 +565,6 @@ guard: `confirmDialog` (`imperative-dialog/plugins/confirm`); native
     - `plugin-meta/facets/routes/render-contributions`
     - `plugin-meta/facets/routes/render-detail`
     - `plugin-meta/plugin-view/inclusion`
-    - `primitives/action-presentation`
     - `primitives/adaptive-bar`
     - `primitives/app-shell`
     - `primitives/auto-scroll`

@@ -74,18 +74,16 @@ would also be wrong: a menu's roving tabindex and typeahead eat the arrow keys a
 relocated `role="slider"` needs. Honest cost: **the panel is Tab + Enter + Esc,
 with no typeahead and no arrow-key roving.**
 
-It composes `Line` rather than `Row` — `Row → row-actions → IconButton →
-action-presentation` is a cycle `plugin-boundaries` rejects. The constraint is
-narrow: a component **`IconButton` itself renders** cannot use `Row`, which today
-means this one component. Ordinary consumers of `Row`, adaptive-bar included, are
-unaffected. The four duplicated chrome classes are that, not carelessness.
+It composes `Row`, which is right here precisely because `Row` stamps **no
+`role`** — it cannot turn this into a `menuitem`. It passes
+`disabled={disabled ?? false}`: both `onClick` and `disabled` are optional, and
+`Row` infers a non-interactive `<div>` when both are absent.
 
 Takes the **raw** shortcut string and formats it through the same
 `formatShortcutLabel` as the full form, so the two cannot drift. `IconButton` is
 the one widget that declares `"row"` — it *is* the generic
-`{ icon, label, onClick }` shape — so everything built on it (`RowActionButton`
-included) inherits the rung, and `variant` / `className` / `tooltip` / `side` are
-INERT in that form.
+`{ icon, label, onClick }` shape — so everything built on it inherits the rung,
+and `variant` / `className` / `tooltip` / `side` are INERT in that form.
 
 ## Why there is no `probe`
 
@@ -106,9 +104,8 @@ second mount. `ActionPresenceScope` / `useReportActionPresence` went with it.
 - Web:
   - Uses:
     - `primitives/css/fill.Fill`
-    - `primitives/css/line.Line`
+    - `primitives/css/row.Row`
     - `primitives/css/text.Text`
-    - `primitives/css/ui-kit.cn`
     - `primitives/latest-ref.useLatestRef`
     - `primitives/shortcuts.formatShortcutLabel`
     - `primitives/tooltip.Kbd`

@@ -126,12 +126,12 @@ are no per-interaction round-trips.
     - `primitives/data-view.defineDataView`
     - `primitives/data-view.defineItemActions`
     - `primitives/detail-sections.defineDetailSections`
+    - `primitives/icon-button.IconButton`
     - `primitives/loading.Loading`
     - `primitives/pane.openPane`
     - `primitives/pane.Pane`
     - `primitives/pane.PaneChrome`
     - `primitives/pane.useOpenPane`
-    - `primitives/row-actions.RowActionButton`
   - Exports (values):
     - `comparePane`
     - `CompositionDetail`

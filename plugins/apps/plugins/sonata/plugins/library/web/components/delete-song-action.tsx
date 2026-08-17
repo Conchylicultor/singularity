@@ -1,5 +1,5 @@
 import { MdDelete } from "react-icons/md";
-import { RowActionButton } from "@plugins/primitives/plugins/row-actions/web";
+import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
 import type { ItemActionProps } from "@plugins/primitives/plugins/data-view/web";
 import { deleteSong } from "../../core";
@@ -16,7 +16,7 @@ import type { Song } from "../../core";
 export function DeleteSongAction({ row }: ItemActionProps<Song>) {
   const { mutate: deleteSongMutation } = useEndpointMutation(deleteSong);
   return (
-    <RowActionButton
+    <IconButton
       icon={MdDelete}
       label="Delete"
       onClick={(e) => {

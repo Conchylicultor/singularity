@@ -51,6 +51,7 @@ contributing a section, never by wrapping the pane.
     - `primitives/detail-sections.defineDetailSections`
     - `primitives/editable-field.EditableField`
     - `primitives/editable-field.useEditableField`
+    - `primitives/icon-button.IconButton`
     - `primitives/imperative-dialog.openDialog`
     - `primitives/live-state.matchResource`
     - `primitives/live-state.useResource`
@@ -58,7 +59,6 @@ contributing a section, never by wrapping the pane.
     - `primitives/pane.Pane`
     - `primitives/pane.PaneChrome`
     - `primitives/pane.useOpenPane`
-    - `primitives/row-actions.RowActionButton`
   - Exports (types):
     - `Server`
     - `SshKey`

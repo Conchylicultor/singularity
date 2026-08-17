@@ -1,7 +1,7 @@
 import type { ReactElement } from "react";
 import { MdBolt, MdOpenInNew } from "react-icons/md";
 import type { ItemActionProps } from "@plugins/primitives/plugins/data-view/web";
-import { RowActionButton } from "@plugins/primitives/plugins/row-actions/web";
+import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { useManifestItemByName } from "@plugins/plugin-meta/plugins/composition/web";
 import type { CompositionManifestItem } from "@plugins/plugin-meta/plugins/composition/core";
 import {
@@ -21,14 +21,16 @@ import type { Deployment } from "@plugins/apps/plugins/deploy/plugins/deployment
  * actually served: the state comes from the `composition.json` marker, not from
  * the `autoBuild` intent.
  */
-export function ServeAction({ row }: ItemActionProps<Deployment>): ReactElement {
+export function ServeAction({
+  row,
+}: ItemActionProps<Deployment>): ReactElement {
   // Name → item, because deploy is name-keyed and the serve namespace is the
   // item's id (they diverge for UI-created compositions).
   const item = useManifestItemByName(row.compositionId);
 
   if (!item) {
     return (
-      <RowActionButton
+      <IconButton
         icon={MdBolt}
         label="Serve locally"
         tooltip={`No composition named "${row.compositionId}" in the compositions config.`}
@@ -43,13 +45,17 @@ export function ServeAction({ row }: ItemActionProps<Deployment>): ReactElement 
  * Split out so the liveness read happens only once there is a composition to
  * read it for — a hook cannot be called after an early return.
  */
-function ServeRowAction({ item }: { item: CompositionManifestItem }): ReactElement {
+function ServeRowAction({
+  item,
+}: {
+  item: CompositionManifestItem;
+}): ReactElement {
   const status = useServeStatus(item.id);
   const { serve } = useServeComposition();
 
   if (status.kind === "pending") {
     return (
-      <RowActionButton
+      <IconButton
         icon={MdBolt}
         label="Serve locally"
         tooltip="Checking what is served locally…"
@@ -59,7 +65,7 @@ function ServeRowAction({ item }: { item: CompositionManifestItem }): ReactEleme
   }
   if (status.kind === "error") {
     return (
-      <RowActionButton
+      <IconButton
         icon={MdBolt}
         label="Serve locally"
         tooltip={`Could not read the serve state: ${status.message}`}
@@ -71,7 +77,7 @@ function ServeRowAction({ item }: { item: CompositionManifestItem }): ReactEleme
   if (status.live.served) {
     const { url } = status.live;
     return (
-      <RowActionButton
+      <IconButton
         icon={MdOpenInNew}
         label="Open the local serve"
         tooltip={`Open ${url}`}
@@ -83,7 +89,7 @@ function ServeRowAction({ item }: { item: CompositionManifestItem }): ReactEleme
     );
   }
   return (
-    <RowActionButton
+    <IconButton
       icon={MdBolt}
       label="Serve locally"
       tooltip={

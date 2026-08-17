@@ -2,14 +2,15 @@ import { type ReactElement } from "react";
 import { MdDeleteOutline } from "react-icons/md";
 import { defineItemActions } from "@plugins/primitives/plugins/data-view/web";
 import type { ItemActionProps } from "@plugins/primitives/plugins/data-view/web";
-import { RowActionButton } from "@plugins/primitives/plugins/row-actions/web";
+import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { useManifestActions } from "@plugins/plugin-meta/plugins/composition/web";
 import type { CompositionManifestItem } from "@plugins/plugin-meta/plugins/composition/core";
 
 /** Per-consumer trailing-action slot for the Compositions list rows. */
-export const CompositionItemActions = defineItemActions<CompositionManifestItem>(
-  "studio.compositions.item-actions",
-);
+export const CompositionItemActions =
+  defineItemActions<CompositionManifestItem>(
+    "studio.compositions.item-actions",
+  );
 
 /**
  * Delete a stored composition from the config registry. Independent of the draft
@@ -22,7 +23,7 @@ export function DeleteAction({
 }: ItemActionProps<CompositionManifestItem>): ReactElement {
   const { remove } = useManifestActions();
   return (
-    <RowActionButton
+    <IconButton
       icon={MdDeleteOutline}
       label="Delete composition"
       onClick={(e) => {

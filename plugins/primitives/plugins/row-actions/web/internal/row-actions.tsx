@@ -1,7 +1,12 @@
-import type { ComponentType, ReactNode } from "react";
-import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
-import { cn, ControlSizeProvider } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { Pin, type PinAnchor } from "@plugins/primitives/plugins/css/plugins/pin/web";
+import type { ReactNode } from "react";
+import {
+  cn,
+  ControlSizeProvider,
+} from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import {
+  Pin,
+  type PinAnchor,
+} from "@plugins/primitives/plugins/css/plugins/pin/web";
 import { PopupOpenScope } from "@plugins/primitives/plugins/popup-open/web";
 import {
   insetClass,
@@ -24,7 +29,7 @@ import { Surface } from "@plugins/primitives/plugins/css/plugins/surface/web";
  * <SidebarMenuItem className={rowActionsAnchor}>
  *   <SidebarMenuButton>…</SidebarMenuButton>
  *   <RowActions>
- *     <RowActionButton icon={MdClose} label="Close" onClick={…} />
+ *     <IconButton icon={MdClose} label="Close" onClick={…} />
  *   </RowActions>
  * </SidebarMenuItem>
  * ```
@@ -68,47 +73,6 @@ const revealClasses =
   "group-hover/row-actions:opacity-100 group-hover/row-actions:pointer-events-auto " +
   "has-[:focus-visible]:opacity-100 has-[:focus-visible]:pointer-events-auto";
 
-export interface RowActionButtonProps {
-  icon: ComponentType<{ className?: string }>;
-  label: string;
-  /** Overrides {@link label} as the tooltip content. */
-  tooltip?: ReactNode;
-  /** Return the action's promise to get the auto-spinner + double-click guard. */
-  onClick?: (e: React.MouseEvent) => void | Promise<void>;
-  disabled?: boolean;
-  className?: string;
-}
-
-/**
- * The single button path for a hover-revealed trailing row action (close,
- * delete, move, requeue…).
- *
- * It composes the shared {@link IconButton} → `Button`, so an async `onClick`
- * (one that returns a promise) automatically shows a spinner and disables the
- * button until it settles — the in-flight feedback every other button in the app
- * already gets for free. `label` doubles as the tooltip and aria-label.
- */
-export function RowActionButton({
-  icon,
-  label,
-  tooltip,
-  onClick,
-  disabled,
-  className,
-}: RowActionButtonProps) {
-  return (
-    <IconButton
-      icon={icon}
-      label={label}
-      tooltip={tooltip}
-      variant="ghost"
-      onClick={onClick}
-      disabled={disabled}
-      className={className}
-    />
-  );
-}
-
 interface RowActionsCommonProps {
   children: ReactNode;
   /** Keep the cluster always visible instead of revealing on row hover. */
@@ -151,10 +115,18 @@ export type RowActionsProps = RowActionsCommonProps &
 
 /**
  * The hover-revealed action cluster for a list/tree/sidebar row. Holds one or
- * more {@link RowActionButton}. Anchor it inside a row carrying
- * {@link rowActionsAnchor}; the actions fade in on row hover (and on keyboard
- * focus reaching a button inside the cluster), with the opacity↔pointer-events
- * coupling owned here so a hidden action is never a live click-target.
+ * more `IconButton` (`primitives/icon-button`) — the cluster sizes them itself
+ * via `ControlSizeProvider size="xs"`, so an action button is an ordinary
+ * `IconButton` and this plugin has no button of its own. Anchor it inside a row
+ * carrying {@link rowActionsAnchor}; the actions fade in on row hover (and on
+ * keyboard focus reaching a button inside the cluster), with the
+ * opacity↔pointer-events coupling owned here so a hidden action is never a live
+ * click-target.
+ *
+ * Owning no button is what keeps this plugin BELOW `icon-button` in the plugin
+ * graph, which is what lets `css/row` — a layout primitive — compose it. An
+ * alias for "the button that goes in here" would drag `icon-button` (and
+ * through it `action-presentation`) into every consumer of `Row`.
  *
  * The reveal is **opacity only** — the cluster is pinned, so it occupies no flow
  * width and its geometry is identical hovered or not. That is load-bearing, not

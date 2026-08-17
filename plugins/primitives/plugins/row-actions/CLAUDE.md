@@ -33,6 +33,17 @@ survived `no-uncoupled-hover-reveal` in `ee2dfe424`).
 and nested reveal scopes, where per-instance JS state beats a shared CSS group.
 Boundary: **an action cluster on a row/card/table row is this plugin, not that.**
 
+## This plugin owns no button — put plain `IconButton`s in the cluster
+
+The cluster applies `ControlSizeProvider size="xs"` to its children, so an action
+button is an ordinary `IconButton` and needs no wrapper. **Do not add a
+`RowActionButton` alias back.** It reads as a harmless convenience, but it drags
+`icon-button` (and through it `action-presentation`) into this barrel — and
+`css/row` composes this plugin, so the alias is what pushes `Row`, a *layout*
+primitive, above `IconButton` in the graph. Everything `IconButton` renders is
+then forbidden from using `Row`.
+`research/2026-08-17-global-row-usable-below-icon-button.md`.
+
 ## Reveal: row hover, or keyboard focus INSIDE the cluster
 
 `has-[:focus-visible]`, never `group-focus-within/row-actions` — **the row's own
@@ -86,7 +97,7 @@ construction; *visibility* rests on this signal, and only the runtime asserts it
 
 ## Plugin reference
 
-- Description: Hover-revealed row-action cluster: a row of small ghost icon buttons (RowActionButton) revealed when their row is hovered/focused. The primitive owns the reveal (opacity↔pointer-events coupled, so a hidden action is never a live click-target), the right-edge Pin positioning, and the standard icon-xs sizing. Reveal is driven by the primitive's own `group/row-actions` group, applied to the row via the exported `rowActionsAnchor` class — so it never piggybacks on a consumer's group name.
+- Description: Hover-revealed row-action cluster: a row of ordinary IconButtons revealed when their row is hovered/focused. The primitive owns the reveal (opacity↔pointer-events coupled, so a hidden action is never a live click-target), the right-edge Pin positioning, and the icon-xs sizing it applies to its children — so it ships no button of its own and stays BELOW icon-button, which is what lets css/row compose it. Reveal is driven by the primitive's own `group/row-actions` group, applied to the row via the exported `rowActionsAnchor` class — so it never piggybacks on a consumer's group name.
 - Web:
   - Uses:
     - `primitives/css/pin.Pin`
@@ -96,27 +107,15 @@ construction; *visibility* rests on this signal, and only the runtime asserts it
     - `primitives/css/surface.Surface`
     - `primitives/css/ui-kit.cn`
     - `primitives/css/ui-kit.ControlSizeProvider`
-    - `primitives/icon-button.IconButton`
     - `primitives/popup-open.PopupOpenScope`
-  - Exports (types):
-    - `RowActionButtonProps`
-    - `RowActionsProps`
+  - Exports (types): `RowActionsProps`
   - Exports (values):
-    - `RowActionButton`
     - `RowActions`
     - `rowActionsAnchor`
 - Cross-plugin:
   - Imported by:
-    - `apps/deploy/deployments`
-    - `apps/deploy/local-serve`
-    - `apps/deploy/servers`
-    - `apps/events/sources`
-    - `apps/sonata/library`
-    - `apps/studio/compositions`
     - `conversations/conversation-view/jsonl-viewer`
     - `conversations/conversation-view/jsonl-viewer/row-actions`
-    - `conversations/conversations-view/data-view/history`
-    - `conversations/conversations-view/data-view/queue`
     - `primitives/breadcrumb`
     - `primitives/css/row`
     - `primitives/data-table`

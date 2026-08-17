@@ -1,5 +1,4 @@
-import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
+import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Kbd } from "@plugins/primitives/plugins/tooltip/web";
@@ -37,13 +36,17 @@ export interface PanelActionRowProps {
  * relocated `role="slider"` needs. The honest cost is that the panel has no
  * typeahead and no arrow-key roving — it is Tab + Enter + Esc.
  *
- * Composes `Line` (as `Row` itself does) rather than `Row`, because
- * `Row → row-actions → IconButton → action-presentation` is a cycle
- * `./singularity check plugin-boundaries` rejects. The constraint is narrow — a
- * component `IconButton` ITSELF renders cannot use `Row`, which today means this
- * one — so it says nothing about `Row` for ordinary consumers. Hence the handful
- * of chrome classes below that would otherwise come from `Row`; do not "fix"
- * them back without breaking that edge first.
+ * `Row` is the right primitive here for exactly that reason: it stamps **no
+ * `role`**, so it cannot turn this into a `menuitem` — it is a plain
+ * `<button type="button">` named by its `<Text>` child. (It also stamps no
+ * `aria-current`, which needs `selected`, which this row never passes.)
+ *
+ * This row once composed `Line` and hand-copied `Row`'s chrome, because
+ * `Row → row-actions → IconButton → action-presentation` was a cycle
+ * `./singularity check plugin-boundaries` rejects. That edge is gone:
+ * `row-actions` shipped an `IconButton` alias whose deletion dropped `Row`
+ * below `icon-button`. See
+ * `research/2026-08-17-global-row-usable-below-icon-button.md`.
  */
 export function PanelActionRow({
   icon: Icon,
@@ -53,26 +56,23 @@ export function PanelActionRow({
   onClick,
 }: PanelActionRowProps) {
   return (
-    <Line
-      as="button"
-      type="button"
-      // Always a real <button>, so the row is keyboard-reachable and
-      // Enter/Space-activatable with nothing above it to supply that.
-      disabled={disabled}
+    <Row
+      icon={<Icon />}
+      hover="muted"
       onClick={onClick}
-      className={cn(
-        "w-full gap-sm rounded-md p-row text-left text-body",
-        "[&_svg:not([class*='size-'])]:icon-auto",
-        "hover:bg-muted/50 disabled:pointer-events-none disabled:opacity-50",
-      )}
+      // `disabled` drives `Row`'s element inference as much as `onClick` does:
+      // with BOTH undefined `Row` infers a non-interactive `<div>`, and both
+      // are optional here. `?? false` pins the inference, so this is always a
+      // real, keyboard-activatable `<button>` — there is nothing above it in
+      // the panel to supply activation.
+      disabled={disabled ?? false}
     >
-      <Icon />
       {/* The one flexible cell: the label absorbs the slack and ellipsizes, so a
           long action name cannot push the shortcut out of the panel. */}
       <Fill>
         <Text>{label}</Text>
       </Fill>
       {shortcut ? <Kbd>{formatShortcutLabel(shortcut)}</Kbd> : null}
-    </Line>
+    </Row>
   );
 }

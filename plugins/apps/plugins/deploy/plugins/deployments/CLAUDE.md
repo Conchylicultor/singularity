@@ -267,6 +267,7 @@ any consumer — the `Servers.Fields` ← `health.StatusField` precedent.
     - `primitives/data-view.ItemActionProps`
     - `primitives/detail-sections.defineDetailSections`
     - `primitives/editable-field.useEditableField`
+    - `primitives/icon-button.IconButton`
     - `primitives/imperative-dialog.openDialog`
     - `primitives/live-state.matchResource`
     - `primitives/live-state.useCombinedResources`
@@ -276,7 +277,6 @@ any consumer — the `Servers.Fields` ← `health.StatusField` precedent.
     - `primitives/pane.PaneChrome`
     - `primitives/pane.useOpenPane`
     - `primitives/relative-time.RelativeTime`
-    - `primitives/row-actions.RowActionButton`
   - Exports (values):
     - `DeploymentDetail`
     - `deploymentDetailPane`

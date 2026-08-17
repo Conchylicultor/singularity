@@ -2,7 +2,7 @@ import type { ReactElement } from "react";
 import { MdDeleteOutline } from "react-icons/md";
 import type { ItemActionProps } from "@plugins/primitives/plugins/data-view/web";
 import { openDialog } from "@plugins/primitives/plugins/imperative-dialog/web";
-import { RowActionButton } from "@plugins/primitives/plugins/row-actions/web";
+import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import {
   Button,
   DialogDescription,
@@ -27,7 +27,7 @@ export function SourceDeleteAction({
   const remove = useDeleteEventSource();
 
   return (
-    <RowActionButton
+    <IconButton
       icon={MdDeleteOutline}
       label="Delete source"
       onClick={(e) => {

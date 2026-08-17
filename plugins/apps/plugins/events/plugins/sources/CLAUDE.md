@@ -104,6 +104,7 @@ Design: [`research/2026-08-03-apps-events-event-tracking-app.md`](../../../../..
     - `primitives/data-view.defineItemActions`
     - `primitives/data-view.FieldDef`
     - `primitives/detail-sections.defineDetailSections`
+    - `primitives/icon-button.IconButton`
     - `primitives/imperative-dialog.openDialog`
     - `primitives/live-state.matchResource`
     - `primitives/pane.openPane`
@@ -111,7 +112,6 @@ Design: [`research/2026-08-03-apps-events-event-tracking-app.md`](../../../../..
     - `primitives/pane.PaneChrome`
     - `primitives/pane.useOpenPane`
     - `primitives/relative-time.RelativeTime`
-    - `primitives/row-actions.RowActionButton`
   - Exports (types):
     - `ConfigValues`
     - `EventSourceTypeContribution`

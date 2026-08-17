@@ -32,7 +32,7 @@ function useDeploymentTitle({
  * The list used to be the app's one dead end: the deploy surface — a primary
  * action, a phase report, what is built and how it relates to HEAD, the public
  * URLs, and the log — does not fit a row's rigid trailing region (already three
- * `RowActionButton`s and a run chip), so the row navigates here instead.
+ * action buttons and a run chip), so the row navigates here instead.
  *
  * `titleOwner` is deliberately NOT set — the server page keeps the tab title; a
  * deployment is a drill-in under it, not a new main surface.

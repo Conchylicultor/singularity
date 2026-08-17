@@ -160,7 +160,6 @@ the title — a chord-grid save endpoint physically cannot carry one.
     - `primitives/pane.usePaneStore`
     - `primitives/persistent-draft.useDraft`
     - `primitives/relative-time.formatRelativeTime`
-    - `primitives/row-actions.RowActionButton`
   - Exports (values):
     - `Library`
     - `openSongImperative`
