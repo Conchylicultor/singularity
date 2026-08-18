@@ -17,7 +17,21 @@ export interface FitItem {
   /**
    * Inline widths per rung, **widest first** (rung 0 is the widest form the
    * widget can render). `undefined` = that rung has never been measured.
-   * Length ≥ 1 — even a widget with no smaller form has one rung.
+   *
+   * One rung per form the occupant is actually OFFERED, which is not the same as
+   * the forms it declared: a rung the occupant has been observed to render
+   * nothing at is not a rung the bar may put it on, so the driver cuts the
+   * declared ladder short there (`core/absent-rungs.ts`).
+   *
+   * **Length ≥ 1, and by construction rather than by convention.** An occupant
+   * whose ladder cuts to nothing renders nothing at every form the bar could
+   * hand it — it has a host and a 0×0 container, but it is not an occupant, so
+   * it never reaches the fit at all. That decision is made in exactly ONE place,
+   * where the cut is computed (`reconcile`'s item construction), and nothing
+   * here repeats it. There is deliberately no `absent` flag beside this array
+   * either: a flag can disagree with the ladder, and an occupant that is both
+   * "absent" and "has a rung 0 it renders content at" is exactly the state that
+   * made the bar flip between the two for ever.
    *
    * The array is monotone by construction: a narrower rung is never wider than
    * a wider one. `assign` relies on that to bound an unmeasured rung from a
@@ -33,12 +47,29 @@ export interface FitItem {
    * the bar touches.
    */
   yieldRank: number;
-  /** Frozen at `currentRung` — a live drag or an open popup. */
+  /**
+   * Frozen at `currentRung` — a live drag or an open popup.
+   *
+   * Frozen at the rung it can legally occupy, which is not always the one it is
+   * on: `clampCurrent` still applies, so an item pinned at a rung its ladder no
+   * longer reaches (the widget stopped rendering that form, and the cut moved
+   * the ladder out from under it) is seated at the nearest rung it does reach.
+   * A pin protects an interaction from being MOVED; it cannot hold a widget
+   * somewhere it renders nothing, which would freeze it into invisibility.
+   */
   pinned?: boolean;
   /** Current rung index, or `null` if currently evicted. */
   currentRung: number | null;
-  /** The item rendered nothing: contributes no width, no gap, and never evicts. */
-  absent?: boolean;
+  /**
+   * How many forms the widget DECLARED, which is ≥ `inlineWidths.length`.
+   *
+   * Read by {@link passBudget} alone — never by `assign`, which may only ever
+   * place an item at a rung it is offered. The difference between the two counts
+   * is what the search had to *discover*: each cut cost it a round, exactly as a
+   * demotion does, so a budget derived from the offered ladder alone would
+   * shrink by the very rounds it is meant to be paying for.
+   */
+  declaredRungs: number;
 }
 
 export interface FitInput {
@@ -57,7 +88,11 @@ export interface FitInput {
 }
 
 export interface FitResult {
-  /** id → rung index, or `null` for evicted. Contains every non-absent item. */
+  /**
+   * id → rung index, or `null` for evicted. **Total over `items`** — every item
+   * handed in gets an entry, so a caller reading this map back can treat a
+   * missing id as exactly one thing: an id this decision never saw.
+   */
   placement: ReadonlyMap<string, number | null>;
   /** True when any width used in the decision was an estimate rather than a measurement. */
   usedEstimate: boolean;
@@ -91,8 +126,13 @@ const MAX_PASS_BUDGET = 16;
  * from the row it is searching rather than fixed.
  *
  * The quantity is **the total number of steps this row has to give**: each item
- * can be demoted through its remaining rungs and then, if it may, out of the row
- * altogether. A round does not necessarily spend one step per item — the
+ * can be demoted through the rungs its widget declared and then, if it may, out
+ * of the row altogether. Declared rather than offered, because a rung the bar
+ * has since stopped offering is not a step the row lost — it is a step the
+ * search spent a round DISCOVERING, and a budget that shrank as it learned would
+ * charge that round twice.
+ *
+ * A round does not necessarily spend one step per item — the
  * **one estimated step per pass** rule (see {@link Placed.spentEstimatedStep})
  * caps each item at one *unmeasured* step per call, and the widths an item
  * reveals by moving can change what its neighbours need — so the honest bound is
@@ -110,8 +150,7 @@ const MAX_PASS_BUDGET = 16;
 export function passBudget(items: readonly FitItem[]): number {
   let steps = 0;
   for (const item of items) {
-    if (item.absent === true) continue;
-    steps += item.inlineWidths.length - 1 + (item.evictable ? 1 : 0);
+    steps += item.declaredRungs - 1 + (item.evictable ? 1 : 0);
   }
   return Math.min(MAX_PASS_BUDGET, Math.max(MIN_PASS_BUDGET, steps + 2));
 }
@@ -189,12 +228,11 @@ interface Placed {
 export function assign(input: FitInput): FitResult {
   const { available, gap, triggerPx, hysteresisPx, items, blocked } = input;
 
-  // An absent item rendered nothing. It has a host and a 0×0 container, but it
-  // is not an occupant: no width, no gap, no eviction, and no entry in the
-  // placement (there is nothing to place).
-  const active = items.filter((i) => i.absent !== true);
-
-  const states: Placed[] = active.map((item, index) => ({
+  // Every item handed in is an occupant, and every occupant gets an entry in the
+  // placement below. A contribution that renders nothing at every form it was
+  // offered is not an occupant and never arrives here — see
+  // `FitItem.inlineWidths`, and the one place that decides it.
+  const states: Placed[] = items.map((item, index) => ({
     item,
     index,
     seated: false,
@@ -384,9 +422,13 @@ export function assign(input: FitInput): FitResult {
 /**
  * The item's current state, coerced to something it can legally occupy.
  *
- * A `currentRung` outside the ladder (the widget's rung count changed under us)
- * or `null` on a non-evictable item is stale bookkeeping, not an instruction to
- * unmount a control — clamp rather than trust it.
+ * A `currentRung` outside the ladder — the widget's rung count changed under us,
+ * or the bar stopped offering the rung it was on because the widget renders
+ * nothing there — or `null` on a non-evictable item is stale bookkeeping, not an
+ * instruction to unmount a control. Clamp rather than trust it.
+ *
+ * The ladder is never empty (see `FitItem.inlineWidths`), so `last` is never
+ * negative and this never invents a rung nobody can occupy.
  */
 function clampCurrent(item: FitItem): number | null {
   if (item.currentRung === null) return item.evictable ? null : 0;

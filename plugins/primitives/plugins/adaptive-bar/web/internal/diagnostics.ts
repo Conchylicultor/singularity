@@ -8,9 +8,8 @@ import type { AdaptiveBarOverflow } from "./adaptive-bar";
  * The ways an adaptive bar is *wrong*, as opposed to merely cramped.
  *
  * Running out of room is the normal case and is never a fault — it is what the
- * whole primitive is for. These four are the states where the bar's own
- * assumptions have been violated, and living with them silently is how a layout
- * bug becomes permanent.
+ * whole primitive is for. These five are the states where an assumption has been
+ * violated, and living with them silently is how a layout bug becomes permanent.
  */
 export type AdaptiveBarFaultKind =
   /** The bar was not given slack: some ancestor is shrink-to-content, or a sibling took the grow slot. */
@@ -20,7 +19,21 @@ export type AdaptiveBarFaultKind =
   /** The round budget ran out and the answer was still changing. */
   | "no-convergence"
   /** A container holds an `<iframe>` and this browser has no `moveBefore`, so relocating it would reload it. */
-  | "iframe-relocation";
+  | "iframe-relocation"
+  /**
+   * A widget declared a smaller form and then rendered NOTHING as it.
+   *
+   * The one fault about the *contributor* rather than the host or the browser:
+   * `useActionForm({ shrinksTo: ["compact"] })` is a promise to render something
+   * as compact, and vanishing is the one transformation this primitive exists to
+   * prevent. The bar recovers on its own — it stops offering that form and the
+   * widget leaves the row instead — which is exactly why it has to say so, or
+   * the widget silently loses a form nobody knows it lost.
+   *
+   * Rung 0 is not this: a contribution that renders nothing at all is ordinary,
+   * supported, and reported nowhere.
+   */
+  | "empty-rung";
 
 export interface AdaptiveBarFault {
   kind: AdaptiveBarFaultKind;
@@ -54,6 +67,16 @@ export interface AdaptiveBarFault {
   overflow?: AdaptiveBarOverflow;
   message: string;
   /**
+   * Which occupant a fault is about, where it is about one.
+   *
+   * `empty-rung` is the only kind whose subject is a specific CONTRIBUTOR rather
+   * than the bar's host, and the id is the field a reader filters on, so it is a
+   * typed field and not only a phrase inside {@link AdaptiveBarFault.message}.
+   * Fingerprinted, because one bar holding three vanishing widgets is three
+   * findings with three different owners, not one row with a count of three.
+   */
+  item?: { id: string; rung: number; form: string };
+  /**
    * What the bar established about a `no-convergence`, so nobody has to
    * reproduce a transient. Absent for the other kinds, which have no rounds.
    */
@@ -71,9 +94,12 @@ export interface AdaptiveBarFault {
 export const adaptiveBarReportSink = defineReportSink<AdaptiveBarFault>();
 
 /**
- * Report and keep going. For a fault the *browser* caused rather than the
- * caller: refusing to relocate an iframe is the right behaviour, not a bug to
- * take a pane down over.
+ * Report and keep going. For a fault the bar has already handled correctly:
+ * refusing to relocate an iframe, or declining to offer a form a widget does not
+ * render. Both are the right behaviour rather than a bug to take a pane down
+ * over — and `empty-rung` in particular must never throw in dev, because a
+ * widget that renders nothing for one frame while its data loads would take the
+ * pane with it.
  */
 export function reportFault(fault: AdaptiveBarFault): void {
   adaptiveBarReportSink.emit(fault);

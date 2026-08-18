@@ -87,9 +87,20 @@ disagreement is worse than a cramped row plus an alert:
 - **no-convergence** — the round budget ran out and the answer was still moving.
   See *A round is only a round of the same question* below, which is most of
   what there is to know about this one.
+- **empty-rung** — a widget declared a smaller form and then rendered **nothing**
+  as it. The only fault about the *contributor* rather than the host or the
+  browser, and the only one that never throws in dev: a widget rendering nothing
+  for one frame while its data loads must not take a pane down. The bar recovers
+  by itself (it stops offering that form — see *A form a widget does not render
+  is not a form it has* below), which is exactly why it has to say so. A
+  contribution that renders nothing **at all** is ordinary and is reported
+  nowhere. In `panel` mode the widget ends up behind the `⋯` rendering as
+  itself; in `clip` mode it ends up in the hidden parking dock, i.e. invisible —
+  which is the same outcome its blank form was already producing, but worth
+  knowing before reading a report from a `clip` bar.
 
-Both engine-facing guards are gated on a real layout engine, so neither fires in
-jsdom.
+The two engine-facing guards (`no-slack`, `row-overflow`) are gated on a real
+layout engine, so neither fires in jsdom.
 
 Every fault carries **who it is about**: `label` is the name the consumer gave
 the bar, and `origin` is the innermost UI-context node above the bar's root
@@ -235,8 +246,15 @@ something nobody has to be told.
 
 `hidden` means `display: none`, which means the anchor is not a flex item — no
 width, and (the half that is easy to miss) no gap. The same trick carries
-absence: an occupant whose contribution rendered nothing is `hidden`, so it costs
-no gap either, and it is never eligible for the panel. That replaces
+absence: an occupant that rendered nothing is `hidden`, so it costs no gap
+either, and it is never eligible for the panel.
+
+`hidden` and the blank-rung ledger are two different facts and neither is
+derivable from the other, so do not try to collapse them: **`hidden` is a layout
+fact** — does this generate a box right now, which is what buys the no-gap
+property — and **the ledger is a decision fact** — may the bar offer this rung at
+all. They are allowed to disagree for exactly one pass, which is the pass that
+learns. That replaces
 `action-presentation`'s old `probe` mode, which answered the same question by
 instantiating every member a second time to draw nothing and be counted. A
 `MutationObserver` on each container carries the signal back, because a
@@ -339,9 +357,10 @@ No DOM, no React, so it is exercisable without a layout engine.
 | `core/fit.ts` | which rung each item renders at, and who leaves the row |
 | `core/width-cache.ts` | what each item measured at each rung, and how much we trust it |
 | `core/blocked-rungs.ts` | which rungs a failed promotion barred, and until what width |
+| `core/absent-rungs.ts` | which rungs an occupant renders nothing at, so they are never offered |
 | `core/dock-plan.ts` | the fewest DOM moves that turn one dock order into another |
 
-### The five rules worth knowing before you touch this
+### The six rules worth knowing before you touch this
 
 **An occupant's width is its own** — a property of the item and its rung, never
 of how many neighbours it has. That is what `exact` claims, and it is a fact
@@ -394,6 +413,32 @@ the first overflow of a session.
 **A node already in the right place is never touched.** `planMoves` is an LIS
 diff, not a re-append: an unchanged order plans zero moves. Every avoided move is
 a preserved focus, pointer capture, CSS transition and inner scroll offset.
+
+**A form a widget does not render is not a form it has.** "Renders nothing" is a
+fact about an occupant AND a rung — read from the DOM (an empty container) at
+whatever rung it is currently sitting at — so `core/absent-rungs.ts` records it
+per rung, and the ladder handed to `assign` is the declared one **cut short** at
+the first blank rung. The fit therefore cannot put a widget where it vanishes,
+and an occupant whose ladder cuts to nothing is not an occupant: it never reaches
+the fit, which is decided in one place (`reconcile`'s item construction) and
+repeated nowhere.
+
+Reading that narrower fact as the wider one ("this occupant is nothing") is what
+made the bar flip for ever: `assign` dropped an absent item from the placement
+("nothing to place"), `rungOf` read the hole as rung 0 ("never placed"), the
+widget rendered its full form, the fit demoted it back to compact, and round one
+came round again. Both readings were right; the conflation was not. See
+[`research/2026-08-18-global-adaptive-bar-absent-rung.md`](../../../../research/2026-08-18-global-adaptive-bar-absent-rung.md).
+
+Two things about a cut ladder are easy to get wrong. **Nothing about the widths
+is invalidated when a rung is cut** — downgrading them leaves rung 0 with no
+wider rung to bound it, `assign` reports `unbounded`, and the search empties the
+row around a widget it can no longer size. And **the cut rung is never sat on
+again**, so "it renders there after all" is unobservable: the only thing that can
+grow a ladder back is the occupant measuring differently at the rung it *is* on,
+which is where the clearing lives. A widget that cannot render a form right now
+should stop declaring it — that is the recovery path with no round-trip, and
+`action-presentation` documents it.
 
 ### Hysteresis, and the two things `assign` reads about the present
 
@@ -480,12 +525,27 @@ round-robin) leaves every widget half-shrunk instead of most of them intact.
 
 ### The `null` that is not a missing key
 
-The web half's placement map stores `null` for "left the row" and simply omits an
-item it has never placed. Those are two different absences, and `?? 0` collapses
-them — `null ?? 0` is `0`, which puts every evicted occupant straight back in the
-row and makes the bar look like it never overflows at all. `rungOf()` in
-`web/internal/adaptive-bar.tsx` is the one place that distinction is made; do not
-inline it.
+The web half's placement map has three states, and two pairs of them have each
+been confused once:
+
+| state | means |
+|---|---|
+| a number | the rung the last decision put it at |
+| `null` | the fit deliberately took it out of the row |
+| no entry | the last decision did not place it |
+
+`?? 0` collapses the middle into the last — `null ?? 0` is `0` — which puts every
+evicted occupant straight back in the row and makes the bar look like it never
+overflows at all. `rungOf()` in `web/internal/adaptive-bar.tsx` is the one place
+that distinction is made; do not inline it.
+
+"No entry" is itself two situations — an occupant that mounted since the last
+decision, and one that renders nothing at every form it was offered — and both
+correctly want rung 0, because in both cases nothing has been decided and the
+widget's own output decides what happens next. That is safe **only** because a
+blank rung is never offered again (the rule above). Undo that and the default
+becomes the flip: rendered → demoted → blank → dropped → read as rung 0 →
+rendered.
 
 <!-- AUTOGENERATED:BEGIN — do not edit; regenerated by `./singularity build` -->
 
@@ -533,6 +593,7 @@ inline it.
     - `reports/adaptive-bar`
 - Core:
   - Exports (types):
+    - `AbsentRungs`
     - `BlockedRungs`
     - `ConvergenceEvidence`
     - `DockMove`
@@ -553,14 +614,19 @@ inline it.
   - Exports (values):
     - `assign`
     - `barRung`
+    - `clearAbsentRungs`
     - `describeEvidence`
     - `dropItem`
     - `emptyBlockedRungs`
     - `emptyWidthCache`
     - `estimate`
     - `inlineWidthsFor`
+    - `isAbsentRung`
     - `isBarred`
     - `isShifted`
+    - `markAbsentRung`
+    - `noAbsentRungs`
+    - `offeredRungCount`
     - `overflowPx`
     - `passBudget`
     - `planMoves`

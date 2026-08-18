@@ -39,6 +39,7 @@ export function AdaptiveBarCollector() {
         originPath: d.originPath,
         overflow: d.overflow,
         message: d.message,
+        item: d.item,
         evidence: d.evidence,
       } satisfies AdaptiveBarPayload;
       void report({

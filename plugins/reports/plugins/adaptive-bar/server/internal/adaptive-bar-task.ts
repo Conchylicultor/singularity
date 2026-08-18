@@ -32,6 +32,7 @@ const HEADLINES: Record<AdaptiveBarPayload["fault"], string> = {
   "row-overflow": "adaptive bar's fit disagrees with the layout engine",
   "no-convergence": "adaptive bar never converged",
   "iframe-relocation": "adaptive bar refused to relocate an iframe",
+  "empty-rung": "adaptive bar widget declared a form it does not render",
 };
 
 // What to call this bar in prose. `origin` — the innermost UI-context node above
@@ -77,6 +78,13 @@ function whatHappened(data: AdaptiveBarPayload): string[] {
         `The bar **"${name}" left an occupant in the row that it wanted to move out**. That occupant contains an \`<iframe>\`, and this browser has no state-preserving \`moveBefore()\` — so re-parenting it into the overflow panel would tear the frame down and **reload it**, losing whatever is inside.`,
         `The bar refused, deliberately: silently reloading a user's embedded content is worse than a row that stays wider than it wanted to be. This is the one fault the *browser* causes rather than the consumer — nothing in the host's layout is wrong, and the report exists so the trade-off is visible instead of mysterious. It resolves by itself on any engine that ships \`moveBefore()\`.`,
       ];
+    case "empty-rung":
+      return [
+        data.item === undefined
+          ? `An occupant of the bar **"${name}" declared a smaller form and then rendered nothing as it**. \`useActionForm({ shrinksTo: ["compact"] })\` is a promise that the widget can render ITSELF as compact; this one returned no DOM at all when it was asked to. The message below names the occupant and the form.`
+          : `The bar occupant **\`${data.item.id}\`** (in the bar **"${name}"**) **declared a \`"${data.item.form}"\` form and then rendered nothing as it**. \`useActionForm({ shrinksTo: [...] })\` is a promise that the widget can render ITSELF in that form; this one returned no DOM at all when it was asked to.`,
+        `Vanishing is the one transformation this primitive exists to prevent — the whole design is relocation, not transformation, so a control that disappears instead of shrinking is worse than a cramped row. It is also, until now, how the bar could be made to flip for ever: an occupant that rendered nothing was read as "not an occupant", dropped from the placement, read back as "never placed", rendered its full form, and demoted again. This is the contributor-side half of that fix, and the only fault the **contributor** causes rather than the host or the browser.`,
+      ];
   }
 }
 
@@ -101,6 +109,8 @@ function whatTheBarDid(data: AdaptiveBarPayload): string {
       return `It committed **the widest placement this search had measured as fitting** at this width, if it produced one — that placement carries the same "it fits" claim as the floor, by the same arithmetic, from measurements rather than estimates, and it is strictly wider, so throwing it away would cost the user their whole toolbar over a fault that is frequently transient. The width test is not decoration: a placement that fitted at 900px says nothing at 400px, so where the search produced no such placement *at this width* the bar falls back to the **floor** — every unpinned occupant at its narrowest rung. ${stopsDeciding}`;
     case "iframe-relocation":
       return `It pinned that occupant inline for good and re-fitted everything else around it. The row may therefore be wider than the bar would otherwise have allowed, and other occupants may have been relocated in its place.`;
+    case "empty-rung":
+      return `It **stopped offering that form** to that occupant: the ladder the fit sees is now cut short there, so the widget stays at its widest form and leaves the row (into the \`⋯\` panel, where it renders as itself) when the row runs out of room. Nothing else is affected, and the bar keeps deciding normally. The form is offered again as soon as the widget is observed to render differently — so fixing the widget needs no restart, and the fix is to render something as that form, or to stop declaring it.`;
   }
 }
 
@@ -194,6 +204,14 @@ function howToFix(data: AdaptiveBarPayload): string[] {
       return [
         findTheBar,
         `There is nothing to fix in the bar. Decide whether that occupant belongs in an adaptive bar at all: an \`<iframe>\` is the one payload that cannot survive a fallback re-parent, so if it must be in the row, it will simply stay there on engines without \`moveBefore()\`. If the row is now too crowded because of it, give that surface fewer bar occupants, or host the frame outside the bar.`,
+      ];
+    case "empty-rung":
+      return [
+        data.item === undefined
+          ? `**The fix is in the occupant, not in the bar** — the message above names it and the form it vanished at. Open that widget and find the branch that returns \`null\` (or renders nothing) when \`useActionForm()\` hands it that form.`
+          : `**The fix is in the occupant, not in the bar.** Grep for the \`<AdaptiveBar.Item id="${data.item.id}">\` (or the contribution whose id that is), open the widget inside it, and find the branch that returns \`null\` — or renders nothing — when \`useActionForm()\` hands it \`"${data.item.form}"\`.`,
+        `Then pick one of two. Either **render something as that form** — an icon-only button, a count without its label, whatever the smaller version of this control is; that is what the ladder promised. Or **stop declaring it**: drop it from \`shrinksTo\`, and the bar will relocate the widget into the \`⋯\` panel instead, where it renders as itself. Do not "fix" it by leaving the declaration and rendering an empty box — a zero-width occupant still pays for a gap, and the control is still invisible.`,
+        `One special case is worth checking first: a widget that renders nothing **at every form** (an empty list, data that has not arrived) is ordinary and is never reported. If this one is really in that state, the branch to fix is the one that made the widest form render while a narrower one did not.`,
       ];
   }
 }

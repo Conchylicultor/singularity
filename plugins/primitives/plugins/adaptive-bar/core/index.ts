@@ -1,6 +1,15 @@
 export type { FitItem, FitInput, FitResult } from "./fit";
 export { assign, passBudget } from "./fit";
 
+export type { AbsentRungs } from "./absent-rungs";
+export {
+  clearAbsentRungs,
+  isAbsentRung,
+  markAbsentRung,
+  noAbsentRungs,
+  offeredRungCount,
+} from "./absent-rungs";
+
 export type { BlockedRungs } from "./blocked-rungs";
 export {
   barRung,

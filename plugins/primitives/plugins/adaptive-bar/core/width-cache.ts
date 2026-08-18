@@ -129,6 +129,13 @@ export function write(cache: WidthCache, m: WidthMeasurement): WriteResult {
  * The item's content changed and we re-measured `keptRung`. Every OTHER rung of
  * that item is now hearsay: keep the number as an estimate, drop the claim that
  * it is exact.
+ *
+ * There is deliberately no "keep nothing" spelling. Every caller has just
+ * measured the rung it is keeping, so the kept entry is the freshest fact the
+ * ledger holds — and downgrading it too strands the item at `unbounded`, where
+ * `assign` will neither size it nor move it and instead empties the row around
+ * it. If one rung's stored width is ever known to be wrong, delete that entry;
+ * do not widen this.
  */
 export function staleOthers(
   cache: WidthCache,

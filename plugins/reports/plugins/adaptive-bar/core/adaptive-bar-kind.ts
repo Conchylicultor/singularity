@@ -75,7 +75,10 @@ export const AdaptiveBarPayloadSchema = z.object({
   // says which of the three round bounds tripped); `iframe-relocation`
   // = an occupant holds an `<iframe>` and this browser has no `moveBefore()`, so
   // moving it would reload the frame and the bar refused (the only fault the
-  // BROWSER causes rather than the consumer).
+  // BROWSER causes rather than the consumer); `empty-rung` = a widget declared a
+  // smaller form (`useActionForm({ shrinksTo: [...] })`) and then rendered
+  // NOTHING as it, so the bar stopped offering that form — the only fault the
+  // CONTRIBUTOR causes rather than the host.
   //
   // This enum is a deliberate DUPLICATE of `AdaptiveBarFaultKind` in
   // `plugins/primitives/plugins/adaptive-bar/web/internal/diagnostics.ts`, not an
@@ -91,6 +94,7 @@ export const AdaptiveBarPayloadSchema = z.object({
     "row-overflow",
     "no-convergence",
     "iframe-relocation",
+    "empty-rung",
   ]),
   // The bar's accessible label ("More actions", "More controls", …) — the name
   // its own consumer gave it. Carried because it is what a human greps for at
@@ -130,14 +134,24 @@ export const AdaptiveBarPayloadSchema = z.object({
   // authored at the fault site, so it is the most precise description that
   // exists. Carried for the task body; excluded from the fingerprint.
   message: z.string(),
-  // The `no-convergence` finding. Absent on the other three faults, and absent
+  // Which occupant the fault is about, where it is about one. Only `empty-rung`
+  // has a subject that is a specific CONTRIBUTOR rather than the bar's host, and
+  // the id is what a reader filters on — so it is a typed field rather than only
+  // a phrase inside `message`. `form` is the ActionForm name the widget refused
+  // to render ("compact"), kept as a plain string because the form set lives on
+  // the primitive's WEB barrel and this file is `core`; the same `satisfies` pin
+  // in the collector catches a rename.
+  item: z
+    .object({ id: z.string(), rung: z.number(), form: z.string() })
+    .optional(),
+  // The `no-convergence` finding. Absent on the other four faults, and absent
   // on every row filed before the bar started recording rounds.
   evidence: ConvergenceEvidenceSchema.optional(),
 });
 export type AdaptiveBarPayload = z.infer<typeof AdaptiveBarPayloadSchema>;
 
-// Fingerprint = sha256(fault + "\0" + (origin ?? label) + "\0" + (overflow ?? "")),
-// first 16 hex chars.
+// Fingerprint = sha256(fault + "\0" + (origin ?? label) + "\0" + (overflow ?? "")
+//                       + "\0" + (item?.id ?? "")), first 16 hex chars.
 //
 // `origin` is the identity, and `label` is only its fallback. That is the
 // correction of a real collision rather than a refinement: `label` defaults to
@@ -160,6 +174,15 @@ export type AdaptiveBarPayload = z.infer<typeof AdaptiveBarPayloadSchema>;
 // ids, so one broken bar opened in two conversation panes would split into two
 // rows — the mirror of the collision above.
 //
+// `item.id` is INCLUDED, and it is the one field that separates findings with
+// different OWNERS: a bar holding three widgets that each declared a form they
+// do not render is three bugs in three plugins, and collapsing them onto one row
+// would hide two of them behind the first one's count. It is empty for every
+// other fault kind, which is why folding it in cost those kinds nothing but a
+// one-time re-fingerprint (the kind was one day old, with a single row in it).
+// `item.rung`/`item.form` are excluded: they are the same fact said twice, and
+// one widget cannot vanish at two rungs while its ladder is cut at the first.
+//
 // `evidence` is EXCLUDED: every field of it is per-occurrence. The round
 // counters and the pixel widths differ on each sighting of one defect, so
 // folding them in would mint a fresh `_reports` row per occurrence and destroy
@@ -177,9 +200,9 @@ export async function adaptiveBarFingerprint(
   data: AdaptiveBarPayload,
 ): Promise<string> {
   const identity = data.origin ?? data.label;
-  return sha256Hex(`${data.fault}\0${identity}\0${data.overflow ?? ""}`).then(
-    (h) => h.slice(0, 16),
-  );
+  return sha256Hex(
+    `${data.fault}\0${identity}\0${data.overflow ?? ""}\0${data.item?.id ?? ""}`,
+  ).then((h) => h.slice(0, 16));
 }
 
 async function sha256Hex(input: string): Promise<string> {

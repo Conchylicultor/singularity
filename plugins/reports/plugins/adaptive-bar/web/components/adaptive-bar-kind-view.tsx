@@ -20,11 +20,13 @@ export function AdaptiveBarKindView({ report }: { report: Report }) {
   if (!parsed.success) return <>{report.message}</>;
   const d = parsed.data;
   const name = d.origin ?? d.label;
-  // The first occupant whose own width moved at an unchanged rung — the one the
-  // task is most likely to be about, and the only part of the evidence worth a
-  // whole line's width here. Absent on the other faults, on a row filed before
-  // the bar recorded rounds, and on a no-convergence nobody's width caused.
-  const movedId = d.evidence?.moved[0]?.id;
+  // The occupant the finding is about. `item` names it outright (only
+  // `empty-rung` has one); otherwise it is the first occupant whose own width
+  // moved at an unchanged rung — the one a `no-convergence` task is most likely
+  // to be about, and the only part of the evidence worth a whole line's width
+  // here. Neither exists on the remaining faults, nor on a row filed before the
+  // bar recorded rounds.
+  const occupantId = d.item?.id ?? d.evidence?.moved[0]?.id;
 
   return (
     <Inline gap="xs">
@@ -34,7 +36,7 @@ export function AdaptiveBarKindView({ report }: { report: Report }) {
       <span className="truncate" title={d.originPath ?? name}>
         {name}
       </span>
-      {movedId !== undefined && <Badge mono>{movedId}</Badge>}
+      {occupantId !== undefined && <Badge mono>{occupantId}</Badge>}
       <span className="text-muted-foreground truncate">{d.message}</span>
     </Inline>
   );

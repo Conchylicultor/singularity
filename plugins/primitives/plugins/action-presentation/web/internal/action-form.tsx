@@ -101,6 +101,21 @@ const NO_RUNGS: readonly Exclude<ActionForm, "full">[] = [];
  * A widget that calls this with nothing gets a one-rung ladder: the region may
  * leave it alone or relocate it as itself, never transform it. Calling it not at
  * all is the same thing, so a contributor who never heard of this seam is safe.
+ *
+ * THE OTHER HALF OF THE PROMISE — **declaring a form commits you to rendering
+ * something as it.** Returning `null` when the region hands you the form you
+ * asked for is not "shrinking to nothing"; it is a control disappearing, which
+ * is the one transformation this seam exists to prevent. A region cannot tell
+ * that apart from a contribution that renders nothing at all until it has
+ * already put the widget there, so it costs a wasted round and a filed report
+ * (`adaptive-bar`'s `empty-rung`) before it stops offering the form.
+ *
+ * Which means a form you cannot render **right now** — data still loading, a
+ * permission missing, an empty list — should not be declared right now. The
+ * declaration is a live subscription re-run whenever the ladder's value changes,
+ * so `shrinksTo: items.length > 0 ? ["compact"] : []` is both legal and the
+ * intended spelling; a region invalidates everything it had learned about a
+ * widget whose rung set really changed.
  */
 export function useActionForm(ladder?: ShrinkLadder): ActionForm {
   const channel = useContext(ItemFormChannelContext);

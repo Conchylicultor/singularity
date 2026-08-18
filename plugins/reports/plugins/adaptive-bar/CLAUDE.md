@@ -9,7 +9,7 @@ The bar takes all of its row's slack and reads its own
 never a fault — compacting widgets and relocating the rest into the panel is what
 the primitive is *for*, and it never reports it. A fault means the premise
 underneath that width reading is false, and no amount of re-fitting can recover
-from that. Four of them, discriminated by `fault` in the payload:
+from that. Five of them, discriminated by `fault` in the payload:
 
 - **`no-slack`** — the bar's root computed `flex-grow: 0` at its first laid-out
   pass, so the width it reads is a shrink-to-content box's, not "the room I was
@@ -24,6 +24,14 @@ from that. Four of them, discriminated by `fault` in the payload:
 - **`iframe-relocation`** — an occupant holds an `<iframe>` and this browser has
   no `moveBefore()`, so relocating it would reload the frame. The bar refused and
   pinned it inline. The one fault the *browser* causes rather than the consumer.
+- **`empty-rung`** — a widget declared a smaller form
+  (`useActionForm({ shrinksTo: ["compact"] })`) and then rendered **nothing** as
+  it. The one fault the *contributor* causes rather than the host or the browser,
+  and the fix is always in the widget: render something as that form, or stop
+  declaring it. The bar recovers by itself — it cuts that occupant's ladder short
+  and relocates it instead — which is why it has to say so, or a control silently
+  loses a form. A contribution that renders nothing **at all** is ordinary,
+  supported, and never reported.
 
 `row-overflow` and `no-convergence` both stop deciding *at that width* — a bar
 that keeps re-deriving from a broken premise is a render loop, not a cramped row
@@ -70,8 +78,8 @@ stays assignable, so it is silently not carried until someone adds it here.
 
 ## Fingerprint
 
-`sha256(fault + "\0" + (origin ?? label) + "\0" + (overflow ?? ""))`, first 16
-hex chars.
+`sha256(fault + "\0" + (origin ?? label) + "\0" + (overflow ?? "") + "\0" + (item?.id ?? ""))`,
+first 16 hex chars.
 
 `origin` is the **identity**, and `label` is only its stand-in. The label is the
 name the consumer gave the bar, and it is not an identity: it defaults to
@@ -94,6 +102,15 @@ reason `origin` is included: it embeds the per-instance pane and tab ids, so one
 broken bar opened in two conversation panes would split into two rows — the
 mirror of the collision above. It is carried for the task body, which is where
 "which pane was this" belongs.
+
+`item.id` is **included**, and it is the one field that separates findings with
+different *owners*. A bar holding three widgets that each declared a form they do
+not render is three bugs in three plugins; collapsing them onto one row hides two
+of them behind the first one's count. It is empty for every other fault kind,
+which is why folding it in cost those kinds nothing beyond a one-time
+re-fingerprint. `item.rung` and `item.form` are excluded — they are the same fact
+said twice, and one widget cannot vanish at two rungs while its ladder is cut at
+the first.
 
 `evidence` is **excluded**: every field of it is per-occurrence. Round counts and
 pixel widths differ on each sighting of one defect, so folding them in would mint
@@ -149,7 +166,7 @@ sighting.
 
 ## Plugin reference
 
-- Description: Adaptive-bar collector: drains the adaptive-bar primitive's adaptiveBarReportSink into a deduped report whenever a bar's layout contract is violated (it was given no slack, its fit disagrees with the layout engine, its placement never converged, or it refused to relocate an iframe), plus the Debug → Reports summary view. Adaptive-bar report kind: validates the adaptive-bar primitive's layout-contract fault payloads (no-slack = the bar was given no room to give, row-overflow = on a converged pass the fit blessed the row as fitting and the occupants still stick out of the bar's own content box, no-convergence = the placement never settled, iframe-relocation = a frame the browser cannot move without reloading), fingerprints by fault + origin (the innermost UI-context node above the bar's root, falling back to the label that several unrelated bars share) + overflow mode, excluding the per-occurrence lineage path, round evidence and message so one broken bar = one row, and renders a per-fault task — what the bar did instead, the consumer-side fix, and for no-convergence the recorded rounds naming which occupant resized itself. Re-arms periodically (6h) since a broken host re-produces the fault on every mount.
+- Description: Adaptive-bar collector: drains the adaptive-bar primitive's adaptiveBarReportSink into a deduped report whenever a bar's layout contract is violated (it was given no slack, its fit disagrees with the layout engine, its placement never converged, it refused to relocate an iframe, or one of its widgets declared a form it does not render), plus the Debug → Reports summary view. Adaptive-bar report kind: validates the adaptive-bar primitive's layout-contract fault payloads (no-slack = the bar was given no room to give, row-overflow = on a converged pass the fit blessed the row as fitting and the occupants still stick out of the bar's own content box, no-convergence = the placement never settled, iframe-relocation = a frame the browser cannot move without reloading, empty-rung = a widget declared a smaller form and rendered nothing as it), fingerprints by fault + origin (the innermost UI-context node above the bar's root, falling back to the label that several unrelated bars share) + overflow mode + the offending occupant's id, excluding the per-occurrence lineage path, round evidence and message so one broken bar = one row, and renders a per-fault task — what the bar did instead, the consumer-side fix, and for no-convergence the recorded rounds naming which occupant resized itself. Re-arms periodically (6h) since a broken host re-produces the fault on every mount.
 - Web:
   - Contributes:
     - `Core.Root` → `AdaptiveBarCollector`

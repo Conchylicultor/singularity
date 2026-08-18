@@ -12,13 +12,18 @@ import { MdMoreHoriz } from "react-icons/md";
 import {
   assign,
   barRung,
+  clearAbsentRungs,
   describeEvidence,
   dropItem,
   emptyBlockedRungs,
   emptyWidthCache,
   estimate,
   inlineWidthsFor,
+  isAbsentRung,
   isShifted,
+  markAbsentRung,
+  noAbsentRungs,
+  offeredRungCount,
   overflowPx,
   passBudget,
   premiseShift,
@@ -29,6 +34,7 @@ import {
   sweepBarred,
   unbarItem,
   write,
+  type AbsentRungs,
   type BlockedRungs,
   type FitItem,
   type MovedWidth,
@@ -357,12 +363,26 @@ const EMPTY_PLACEMENT: Placement = new Map();
 /**
  * Where an occupant currently sits.
  *
- * Two different absences meet here and must not be confused: **not in the map
- * at all** is an item that has never been placed (or rendered nothing), and it
- * starts at its widest rung inline; a stored **`null`** is an item the fit
- * deliberately took out of the row. Reaching for `?? 0` collapses them — `null
- * ?? 0` is `0` — which silently puts every evicted occupant straight back in
- * the row, and the bar then looks like it simply never overflows.
+ * Three states, and the first two must never be read as each other:
+ *
+ * - a stored **number** — the rung the last decision put it at;
+ * - a stored **`null`** — the fit deliberately took it out of the row. Reaching
+ *   for `?? 0` collapses this into the case below (`null ?? 0` is `0`), which
+ *   silently puts every evicted occupant straight back in the row and makes the
+ *   bar look as though it simply never overflows;
+ * - **no entry at all** — the last decision did not place it. Either it mounted
+ *   since, or it renders nothing at every form it was offered, so `assign` had
+ *   nothing to place. Both want rung 0, and for the same reason: nothing has
+ *   been decided about this occupant, so it renders as itself and its own
+ *   output decides what happens next.
+ *
+ * That last default is safe only because an occupant that renders nothing at
+ * rung 0 keeps rendering nothing there — the bar records what a widget renders
+ * per RUNG and never offers one it vanishes on (`core/absent-rungs.ts`). Before
+ * it did, this default was the other half of a cycle: an occupant blank at its
+ * compact rung was dropped from the placement, read back here as rung 0,
+ * rendered its full form, was demoted to compact, and vanished again — for ever.
+ * Anyone who makes a blank rung offerable again brings that back.
  */
 function rungOf(placement: Placement, id: string): number | null {
   return placement.has(id) ? (placement.get(id) ?? null) : 0;
@@ -464,6 +484,13 @@ function AdaptiveBarShell({
   const cacheRef = useRef<WidthCache>(emptyWidthCache);
   /** H2: rungs a committed promotion measured as not fitting, barred until the row is wider. */
   const blockedRef = useRef<BlockedRungs>(emptyBlockedRungs);
+  /**
+   * Rungs an occupant has been observed to render NOTHING at, so the bar stops
+   * offering them. See `core/absent-rungs.ts` — this is what makes "the fit put
+   * a widget where it vanishes, then un-placed it for having vanished"
+   * unspellable rather than merely rare.
+   */
+  const absentRef = useRef<AbsentRungs>(noAbsentRungs);
   const episodeRef = useRef<Episode>(newEpisode());
   const triggerWidthRef = useRef<number | null>(null);
   /** The slack probe costs a forced reflow, so it runs once per bar. */
@@ -510,6 +537,7 @@ function AdaptiveBarShell({
           // deliberately kept.
           cacheRef.current = dropItem(cacheRef.current, id);
           blockedRef.current = unbarItem(blockedRef.current, id);
+          absentRef.current = clearAbsentRungs(absentRef.current, id);
           episodeRef.current.promoted.delete(id);
           putLadder(id, null);
           bump();
@@ -539,6 +567,10 @@ function AdaptiveBarShell({
         if (entry.declaredRungs !== rungs) {
           entry.declaredRungs = rungs;
           blockedRef.current = unbarItem(blockedRef.current, id);
+          // And what it renders at each of them. A rung index only means
+          // anything against a ladder, so "renders nothing at rung 1" recorded
+          // against the old one names a different form entirely.
+          absentRef.current = clearAbsentRungs(absentRef.current, id);
           episodeRef.current.promoted.delete(id);
         }
         putLadder(id, ladder);
@@ -785,15 +817,75 @@ function AdaptiveBarShell({
       // Only an INLINE node is measurable. A width read in the panel describes
       // the panel's layout, not the row's, and would poison every later fit —
       // `write` refuses it, and this is the caller half of that contract.
-      if (
-        entry.container.parentNode !== root ||
-        entry.container.hidden === true
-      )
+      if (entry.container.parentNode !== root) continue;
+
+      // ── The occupant rendered nothing, and this is where that is learned ──
+      //
+      // "Renders nothing" is a fact about this occupant AT THIS RUNG, and an
+      // inline pass is the only place it can be read. Recorded as such (see
+      // `core/absent-rungs.ts`), so the bar stops OFFERING a rung the widget
+      // vanishes on — rather than concluding the occupant itself is nothing,
+      // dropping it from the placement, reading the hole as rung 0 next round,
+      // and flipping between the two for ever.
+      //
+      // Nothing is measured here on purpose: a hidden element reports 0 because
+      // it generates no box, not because it is 0 wide, and the ledger's
+      // discipline is that absence is decided from the DOM and never from a 0
+      // (`write` refuses one outright).
+      if (entry.container.hidden === true) {
+        // A rung outside the declared ladder is stale bookkeeping (the widget
+        // re-declared a shorter one and the placement has not caught up), so
+        // there is no form to name and nothing true to record about it. The next
+        // pass clamps it; see `clampCurrent`.
+        const declaredRungs = inlineRungsOf(entry.ladder).length;
+        if (
+          rung < declaredRungs &&
+          !isAbsentRung(absentRef.current, id, rung)
+        ) {
+          absentRef.current = markAbsentRung(absentRef.current, id, rung);
+          // Its H2 bars go: a bar says "this rung did not fit", which was a
+          // claim about content the occupant is evidently no longer rendering.
+          blockedRef.current = unbarItem(blockedRef.current, id);
+          // The WIDTHS deliberately do not, and the symmetry is a trap. The
+          // ladder has just been cut to this rung, so downgrading rung 0 leaves
+          // it with no wider rung to bound it: `resolveWidth` reports
+          // `unbounded`, `doesFit` is false at EVERY width, and the search walks
+          // every other occupant out of the row to pay for one widget's blank
+          // form. Nothing is lost by leaving them — this pass measured nothing
+          // (a hidden element has no box to read), and any width below the cut
+          // is unreachable until the mark is cleared, which only the
+          // content-changed clause below does, having downgraded them already.
+          //
+          // Rung 0 blank is the ordinary supported case — a contribution that
+          // renders nothing — and is nobody's bug. A blank rung BELOW it is a
+          // widget that declared a form and does not render it, which the bar
+          // now recovers from silently and which nobody would otherwise ever
+          // find out about.
+          if (rung > 0) {
+            const form = formFor(entry.ladder, rung);
+            reportFault({
+              kind: "empty-rung",
+              label,
+              overflow,
+              ...originOf(root),
+              item: { id, rung, form },
+              message: `bar item "${id}" declared a "${form}" form and then rendered nothing as one. That form is not offered to it again: the widget stays at its widest form and leaves the row when the row runs out of room. Render something as "${form}", or stop declaring it — a widget that cannot render a form right now should not be offering it.`,
+            });
+          }
+        }
         continue;
+      }
+
       const px = measure(entry.container);
       measured.push({ id, rung, px });
       const known = estimate(cacheRef.current, id, rung);
-      if (known.kind === "exact" && known.px !== px) {
+      // ── What this occupant renders has changed ────────────────────────────
+      // Two ways to notice it, one conclusion. Either it measures differently at
+      // a rung it was already sitting at, or it is rendering at a rung recorded
+      // blank — reachable only at rung 0, since a blank rung above that is never
+      // offered again and so is never sat on.
+      const rendersAgain = isAbsentRung(absentRef.current, id, rung);
+      if (rendersAgain || (known.kind === "exact" && known.px !== px)) {
         // The item's own size changed, so what we believe about its OTHER rungs
         // is hearsay. Kept as estimates rather than deleted: an item sitting at
         // rung 1 is only measurable at rung 1, so dropping the rest would strand
@@ -804,6 +896,16 @@ function AdaptiveBarShell({
         // the time — content whose size has just moved, so the rejection is
         // about something that no longer exists.
         blockedRef.current = unbarItem(blockedRef.current, id);
+        // And so do the rungs the bar stopped offering it, for exactly the same
+        // reason: "renders nothing as compact" was a claim about content that
+        // has since moved. This is the ONE channel by which a cut ladder grows
+        // back — a blank rung above 0 is never sat on again, so nothing else can
+        // ever observe it — and it costs one demote-and-measure round trip per
+        // content change, the same bound H2 lives under. It cannot re-open the
+        // flip: the fit's own demote/promote chain never produces a changed
+        // width at an UNCHANGED rung, which is the restriction the premise check
+        // rests on too.
+        absentRef.current = clearAbsentRungs(absentRef.current, id);
       }
       const result = write(cacheRef.current, {
         id,
@@ -832,6 +934,14 @@ function AdaptiveBarShell({
     const episode = episodeRef.current;
     const round: Round = {
       available,
+      // The ladder as DECLARED, never as currently offered. A cut ladder is
+      // self-inflicted — the bar found the blank rung by putting the widget
+      // there — and a premise is by definition what a decision reads that the
+      // decision itself does not cause. Counting it would reset `rounds` on the
+      // bar's own chain, blame the shift on "the widths underneath this bar",
+      // and (worst) clear `episode.promoted`, throwing away H2's evidence for
+      // every OTHER occupant in the row. A discovery is paid for on the budget
+      // side instead — see `FitItem.declaredRungs`.
       shape: order
         .map(
           ({ id, entry }) =>
@@ -872,11 +982,26 @@ function AdaptiveBarShell({
       HYSTERESIS_PX,
     );
 
-    const items: FitItem[] = order.map(({ id, entry }) => {
-      const rungCount = inlineRungsOf(entry.ladder).length;
-      return {
+    // THE one place "is this an occupant at all" is decided, and the one place
+    // the offered ladder is derived. Everything downstream — the fit, the
+    // budget, the floor, the placement — takes occupants as given, so none of
+    // them repeats the rule and none of them can drift from it.
+    const items: FitItem[] = [];
+    for (const { id, entry } of order) {
+      const declaredRungs = inlineRungsOf(entry.ladder).length;
+      // What the widget declared, cut short at the first rung it has been
+      // observed to render nothing at: a form a widget does not render is not a
+      // form it has, so the fit is never offered it.
+      const rungCount = offeredRungCount(absentRef.current, id, declaredRungs);
+      // Cut to nothing: it renders nothing at every form the bar could hand it.
+      // It keeps its host and its hidden container — section 1 above docked it —
+      // but it is not an occupant, so it costs no width, no gap, cannot be
+      // evicted, and gets no entry in the placement.
+      if (rungCount === 0) continue;
+      items.push({
         id,
         inlineWidths: inlineWidthsFor(cacheRef.current, id, rungCount),
+        declaredRungs,
         evictable: overflow !== "scroll" && !entry.immovable,
         yieldRank: yieldRankOf(entry.ladder),
         pinned:
@@ -885,9 +1010,8 @@ function AdaptiveBarShell({
           entry.pointerPinned ||
           entry.immovable,
         currentRung: rungOf(placement, id),
-        absent: entry.container.hidden === true,
-      };
-    });
+      });
+    }
 
     const result = assign({
       available,
@@ -1301,7 +1425,6 @@ function commitFloor(
   surrender.count.current += 1;
   const floor = new Map<string, number | null>();
   for (const item of items) {
-    if (item.absent === true) continue;
     if (item.pinned === true) {
       floor.set(item.id, item.currentRung);
       continue;

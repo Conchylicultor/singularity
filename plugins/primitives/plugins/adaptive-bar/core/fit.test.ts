@@ -12,8 +12,12 @@ import { barRung, emptyBlockedRungs } from "./blocked-rungs";
 import { assign, passBudget, type FitInput, type FitItem } from "./fit";
 
 function item(over: Partial<FitItem> & { id: string }): FitItem {
+  // `declaredRungs` defaults to the offered ladder's length — i.e. "nothing has
+  // been cut" — so a test that cares about a cut states it, and every other test
+  // reads as if the concept did not exist.
   return {
-    inlineWidths: [100],
+    inlineWidths: over.inlineWidths ?? [100],
+    declaredRungs: (over.inlineWidths ?? [100]).length,
     evictable: true,
     yieldRank: 0,
     currentRung: 0,
@@ -57,6 +61,23 @@ describe("assign — the easy cases", () => {
     const r = assign(fit({ available: 0, items: [] }));
     expect(r.placement.size).toBe(0);
     expect(r.fits).toBe(true);
+  });
+
+  test("the placement is total: every item handed in gets an entry", () => {
+    // The driver decides what an occupant is — a contribution that renders
+    // nothing at every form it was offered never arrives here — so a missing id
+    // in the result means exactly one thing: this decision never saw it. When
+    // that was two things, the web half read the hole as rung 0 and the bar
+    // flipped a vanishing widget in and out of the row for ever.
+    const items = [
+      item({ id: "b", inlineWidths: [100, 50] }),
+      item({ id: "c", inlineWidths: [100, 50] }),
+    ];
+    const roomy = assign(fit({ available: 210, gap: 10, items }));
+    expect([...roomy.placement.keys()].sort()).toEqual(["b", "c"]);
+    // And with no room at all, where every one of them is evicted.
+    const tight = assign(fit({ available: 0, gap: 10, items }));
+    expect([...tight.placement.keys()].sort()).toEqual(["b", "c"]);
   });
 
   test("one item over: exactly one demotion, on the eagerest yielder", () => {
@@ -130,23 +151,6 @@ describe("assign — the trigger and the gaps", () => {
       c: null,
     });
   });
-
-  test("an absent item costs no width, no gap, and never evicts", () => {
-    const items = [
-      item({ id: "ghost", absent: true, inlineWidths: [999] }),
-      item({ id: "b", inlineWidths: [100, 50] }),
-      item({ id: "c", inlineWidths: [100, 50] }),
-    ];
-    // Two occupants, so ONE gap: 100 + 10 + 100 = 210. A third gap would force a demote.
-    const r = assign(fit({ available: 210, gap: 10, items }));
-    expect(Object.fromEntries(r.placement)).toEqual({ b: 0, c: 0 });
-    expect(r.placement.has("ghost")).toBe(false);
-    expect(r.fits).toBe(true);
-
-    // Even with no room at all, the absent item is not "evicted" — it is nothing.
-    const tight = assign(fit({ available: 0, gap: 10, items }));
-    expect(tight.placement.has("ghost")).toBe(false);
-  });
 });
 
 describe("assign — pinned items are frozen", () => {
@@ -177,6 +181,27 @@ describe("assign — pinned items are frozen", () => {
       }),
     );
     expect(Object.fromEntries(r.placement)).toEqual({ parked: null });
+  });
+
+  test("a pin cannot hold an occupant at a rung its ladder no longer reaches", () => {
+    // The widget stopped rendering its compact form, so the bar cut the ladder
+    // under an item that was sitting on it. A pin protects an interaction from
+    // being MOVED; it must not freeze a widget into invisibility.
+    const r = assign(
+      fit({
+        available: 10,
+        items: [
+          item({
+            id: "pinned",
+            pinned: true,
+            currentRung: 1,
+            inlineWidths: [100],
+            declaredRungs: 2,
+          }),
+        ],
+      }),
+    );
+    expect(Object.fromEntries(r.placement)).toEqual({ pinned: 0 });
   });
 
   test("a stale currentRung past the end of the ladder is clamped, not trusted", () => {
@@ -495,6 +520,7 @@ describe("assign — termination", () => {
         return {
           id: `i${k}`,
           inlineWidths,
+          declaredRungs: rungs,
           evictable: rand(2) === 0,
           yieldRank: rand(4),
           currentRung: 0,
@@ -608,12 +634,22 @@ describe("passBudget — how many rounds a search may legitimately take", () => 
     expect(passBudget(items)).toBe(14);
   });
 
-  test("an absent occupant costs nothing: it is not in the row", () => {
-    const items = [
-      item({ id: "a", inlineWidths: [100, 60] }),
-      item({ id: "gone", inlineWidths: [100, 60], absent: true }),
+  test("counts the rungs the widget DECLARED, not the ones still offered", () => {
+    // A rung the bar has stopped offering is not a step the row lost — it is a
+    // step the search spent a round discovering. Charging the budget for it
+    // would take the round away twice.
+    const cut = [
+      item({ id: "a", inlineWidths: [100], declaredRungs: 2 }),
+      item({ id: "b", inlineWidths: [100], declaredRungs: 2 }),
+      item({ id: "c", inlineWidths: [100], declaredRungs: 2 }),
     ];
-    expect(passBudget(items)).toBe(4);
+    const whole = [
+      item({ id: "a", inlineWidths: [100, 60] }),
+      item({ id: "b", inlineWidths: [100, 60] }),
+      item({ id: "c", inlineWidths: [100, 60] }),
+    ];
+    expect(passBudget(cut)).toBe(passBudget(whole));
+    expect(passBudget(cut)).toBe(8);
   });
 
   test("clamped well below React's own nested-update limit", () => {
