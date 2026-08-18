@@ -34,7 +34,7 @@ describe("defineInstallSink", () => {
       // The WRONG read, kept here to show what the hook exists to avoid: a
       // one-shot sample taken during render, with the sink in no dependency
       // array, so nothing ever re-runs it.
-      // eslint-disable-next-line install-sink/no-render-phase-peek -- deliberate: this suite asserts that a render-phase sample goes stale, which is the failure useInstalled() removes
+      // deliberate: this suite asserts that a render-phase sample goes stale, which is the failure useInstalled() removes
       sampledInRender = useMemo(() => sink.peek(), []);
       return null;
     }

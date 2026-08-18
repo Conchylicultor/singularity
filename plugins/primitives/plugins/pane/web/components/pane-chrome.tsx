@@ -201,7 +201,7 @@ export function PaneChrome({
             <ContentScope>{children}</ContentScope>
           </PaneScroll>
         ) : (
-          // eslint-disable-next-line layout/no-adhoc-layout -- positioning host for the pane's overlay layer: it must be the scroller's PARENT (an absolute child of a scroller scrolls away) and sit below the header
+          // positioning host for the pane's overlay layer: it must be the scroller's PARENT (an absolute child of a scroller scrolls away) and sit below the header
           <div className="relative isolate h-full">
             <PaneScroll>
               <ContentScope>{children}</ContentScope>

@@ -50,9 +50,7 @@ export function parseTrailerLog(raw: string): TrailerCommit[] {
     if (fields.length < 5) continue;
     const [sha, cIso, convRaw, pushRaw, subject] = fields;
     if (!sha || !cIso) continue;
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
     const conversationId = (convRaw ?? "").trim();
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
     const pushId = (pushRaw ?? "").trim();
     if (!conversationId || !pushId) continue;
     out.push({
@@ -60,7 +58,6 @@ export function parseTrailerLog(raw: string): TrailerCommit[] {
       committedAt: new Date(cIso),
       conversationId,
       pushId,
-      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
       subject: subject ?? "",
     });
   }

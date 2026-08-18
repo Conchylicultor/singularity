@@ -160,7 +160,7 @@ function OutlineRailBody({
               body={
                 <FloatingActionFadeIn>
                   {
-                    // eslint-disable-next-line data-view/no-adhoc-row-list -- transient navigation chrome
+                    // transient navigation chrome
                     entries.map((entry) => (
                       <OutlineRow
                         key={entry.id}

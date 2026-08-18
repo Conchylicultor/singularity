@@ -234,7 +234,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps-core/tabs.navigate`
               - `layouts/miller.MillerColumns`
               - `primitives/app-shell.AppShellLayout`
+              - `primitives/css/fill.Fill`
+              - `primitives/css/line.Line`
+              - `primitives/css/rigid.rigidClass`
               - `primitives/css/text.Text`
+              - `primitives/css/ui-kit.cn`
               - `primitives/pane.currentRoutePath`
               - `shell.Shell`
           - Core:
@@ -250,7 +254,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/card.Card`
               - `primitives/css/center.Center`
               - `primitives/css/clip.Clip`
+              - `primitives/css/fill.fillClasses`
               - `primitives/css/grid.Grid`
+              - `primitives/css/rigid.rigidClass`
               - `primitives/css/spacing.Stack`
               - `primitives/css/status-dot.StatusDot`
               - `primitives/css/text.Text`
@@ -265,6 +271,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Web:
             - Contributes: `ActionBar.Item` → `WorktreeDropdown`
             - Uses:
+              - `primitives/css/fill.Fill`
+              - `primitives/css/line.Line`
               - `primitives/css/status-dot.StatusDot`
               - `primitives/css/text.Text`
               - `primitives/live-state.useResource`
@@ -418,6 +426,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps-core.Apps`
               - `apps-core/app-icon.mdAppIcon`
               - `primitives/bar.Bar`
+              - `primitives/css/clip.Clip`
+              - `primitives/css/clip.clipClasses`
+              - `primitives/css/fill.Fill`
+              - `primitives/css/line.Line`
+              - `primitives/css/rigid.rigidClass`
+              - `primitives/css/spacing.Stack`
+              - `primitives/css/ui-kit.cn`
               - `primitives/scoped-store.defineScopedStore`
               - `primitives/slot-render.defineMountSlot`
               - `primitives/slot-render.defineRenderSlot`
@@ -906,6 +921,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `infra/endpoints.useEndpointMutation`
               - `primitives/copy-to-clipboard.CopyButton`
               - `primitives/css/fill.Fill`
+              - `primitives/css/fill.fillClasses`
               - `primitives/css/spacing.Stack`
               - `primitives/css/text.Text`
               - `primitives/css/ui-kit.Button`
@@ -2218,6 +2234,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `page/editor.BLOCK_INSET`
               - `page/editor.PageIcon`
               - `page/read-only-view.ReadOnlyBlocks`
+              - `primitives/css/line.Line`
               - `primitives/css/placeholder.Placeholder`
               - `primitives/css/spacing.Inset`
               - `primitives/css/spacing.Stack`
@@ -2470,8 +2487,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `page/editor.PageIcon`
                   - `primitives/css/card.Card`
                   - `primitives/css/clip.Clip`
+                  - `primitives/css/fill.Fill`
+                  - `primitives/css/rigid.rigidClass`
                   - `primitives/css/spacing.Stack`
                   - `primitives/css/text.Text`
+                  - `primitives/css/ui-kit.cn`
                   - `primitives/live-state.useResource`
                   - `primitives/loading.Loading`
                   - `primitives/pane.useOpenPane`
@@ -3162,7 +3182,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `config_v2.useSetConfig`
               - `primitives/css/center.Center`
               - `primitives/css/clip.Clip`
+              - `primitives/css/fill.Fill`
+              - `primitives/css/line.Line`
               - `primitives/css/pin.Pin`
+              - `primitives/css/rigid.rigidClass`
               - `primitives/css/spacing.Stack`
               - `primitives/css/text.SectionLabel`
               - `primitives/css/text.Text`
@@ -3858,6 +3881,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `infra/attachments.getAttachmentFile`
                   - `infra/attachments.uploadAttachment`
                   - `infra/endpoints.fetchEndpoint`
+                  - `primitives/css/line.Line`
+                  - `primitives/css/rigid.rigidClass`
                   - `primitives/css/spacing.Stack`
                   - `primitives/css/text.Text`
                   - `primitives/css/ui-kit.cn`
@@ -4051,6 +4076,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/sonata/shell.useSonata`
               - `infra/endpoints.fetchEndpoint`
               - `primitives/css/color-picker.SwatchGrid`
+              - `primitives/css/fill.Fill`
+              - `primitives/css/line.Line`
+              - `primitives/css/rigid.rigidClass`
               - `primitives/css/row.Row`
               - `primitives/css/scroll.Scroll`
               - `primitives/css/spacing.Stack`
@@ -4394,9 +4422,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `layouts/full-pane.FullPane`
               - `page/editor.BlockEditor`
               - `page/editor.PageIcon`
+              - `primitives/css/fill.Fill`
+              - `primitives/css/fill.fillClasses`
+              - `primitives/css/rigid.rigidClass`
               - `primitives/css/spacing.Stack`
               - `primitives/css/toggle-chip.SegmentedControl`
               - `primitives/css/ui-kit.Button`
+              - `primitives/css/ui-kit.cn`
               - `primitives/data-view.DataView`
               - `primitives/data-view.defineDataView`
               - `primitives/editable-field.useEditableField`
@@ -5942,6 +5974,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/badge.Badge`
               - `primitives/css/center.Center`
               - `primitives/css/cluster.Cluster`
+              - `primitives/css/layer.Layer`
+              - `primitives/css/layer.layerClasses`
               - `primitives/css/spacing.Stack`
               - `primitives/css/surface.Surface`
               - `primitives/css/text.Text`
@@ -6274,9 +6308,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `infra/endpoints.EndpointError`
       - `infra/endpoints.fetchEndpoint`
       - `primitives/css/badge.Badge`
+      - `primitives/css/fill.Fill`
+      - `primitives/css/rigid.rigidClass`
       - `primitives/css/spacing.Stack`
       - `primitives/css/text.Text`
       - `primitives/css/ui-kit.Button`
+      - `primitives/css/ui-kit.cn`
       - `primitives/live-state.ResourceResult`
       - `primitives/live-state.useResource`
       - `primitives/pane.Pane`
@@ -6538,9 +6575,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `infra/endpoints.useEndpointMutation`
       - `primitives/app-shell.sidebarNavItem`
       - `primitives/css/clip.Clip`
+      - `primitives/css/fill.fillClasses`
+      - `primitives/css/rigid.rigidClass`
       - `primitives/css/spacing.Stack`
       - `primitives/css/text.Text`
       - `primitives/css/ui-kit.Button`
+      - `primitives/css/ui-kit.cn`
       - `primitives/loading.Loading`
       - `primitives/pane.openPane`
       - `primitives/pane.Pane`
@@ -6793,6 +6833,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `primitives/commit-list.CommitRowItem`
       - `primitives/css/badge.Badge`
       - `primitives/css/pin.Pin`
+      - `primitives/css/rigid.rigidClass`
       - `primitives/css/row.Row`
       - `primitives/css/scroll.Scroll`
       - `primitives/css/spacing.Stack`
@@ -6959,8 +7000,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `build/build-status.BuildStatusBadge`
           - `infra/endpoints.useEndpoint`
           - `primitives/css/badge.Badge`
+          - `primitives/css/rigid.rigidClass`
           - `primitives/css/spacing.Stack`
           - `primitives/css/text.Text`
+          - `primitives/css/ui-kit.cn`
           - `primitives/live-state.useResource`
           - `primitives/loading.Loading`
           - `primitives/relative-time.RelativeTime`
@@ -6978,6 +7021,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/collapsible.CollapsibleTrigger`
           - `primitives/css/clip.Clip`
           - `primitives/css/pin.Pin`
+          - `primitives/css/rigid.rigidClass`
           - `primitives/css/scroll.Scroll`
           - `primitives/css/spacing.Stack`
           - `primitives/css/text.Text`
@@ -7224,10 +7268,14 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `infra/endpoints.useEndpoint`
           - `primitives/collapsible.CollapsibleChevron`
           - `primitives/css/column.Column`
+          - `primitives/css/fill.Fill`
+          - `primitives/css/line.Line`
           - `primitives/css/placeholder.Placeholder`
+          - `primitives/css/rigid.rigidClass`
           - `primitives/css/spacing.Stack`
           - `primitives/css/sticky.Sticky`
           - `primitives/css/text.Text`
+          - `primitives/css/ui-kit.cn`
           - `primitives/diff-view.DiffOrImageView`
           - `primitives/loading.Loading`
           - `primitives/pane.Pane`
@@ -7514,6 +7562,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps-core/tabs.navigate`
           - `config_v2.useConfigRegistrations`
           - `config_v2/settings.configDetailRoute`
+          - `primitives/css/fill.Fill`
+          - `primitives/css/rigid.rigidClass`
+          - `primitives/css/spacing.Stack`
           - `primitives/css/text.SectionLabel`
           - `primitives/css/ui-kit.ControlSizeProvider`
           - `primitives/css/ui-kit.DropdownMenuContent`
@@ -7601,8 +7652,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/css/badge.Badge`
           - `primitives/css/center.Center`
           - `primitives/css/clip.Clip`
+          - `primitives/css/fill.Fill`
           - `primitives/css/pin.Pin`
           - `primitives/css/placeholder.Placeholder`
+          - `primitives/css/rigid.Rigid`
+          - `primitives/css/rigid.rigidClass`
           - `primitives/css/row.Row`
           - `primitives/css/scroll.Scroll`
           - `primitives/css/spacing.Inset`
@@ -8333,7 +8387,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Uses:
               - `primitives/avatar.Avatar`
               - `primitives/css/badge.Badge`
+              - `primitives/css/clip.Clip`
+              - `primitives/css/fill.Fill`
               - `primitives/css/inline.Inline`
+              - `primitives/css/line.Line`
               - `primitives/css/spacing.Stack`
               - `primitives/css/status-dot.StatusDot`
               - `primitives/css/text.Text`
@@ -8592,7 +8649,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `conversations/conversation-view/code/file-pane.FilePaneView`
                   - `infra/endpoints.fetchEndpoint`
                   - `primitives/css/column.Column`
+                  - `primitives/css/line.Line`
                   - `primitives/css/placeholder.Placeholder`
+                  - `primitives/css/rigid.rigidClass`
                   - `primitives/css/scroll.Scroll`
                   - `primitives/css/spacing.Stack`
                   - `primitives/css/status-dot.StatusDot`
@@ -8616,7 +8675,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `conversations/conversation-view/code.useEditedFiles`
                   - `infra/endpoints.EndpointError`
                   - `infra/endpoints.useEndpoint`
+                  - `primitives/css/clip.Clip`
                   - `primitives/css/column.Column`
+                  - `primitives/css/fill.Fill`
+                  - `primitives/css/line.Line`
                   - `primitives/css/scroll.Scroll`
                   - `primitives/css/spacing.Stack`
                   - `primitives/css/text.Text`
@@ -8706,6 +8768,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/commit-list.CommitRowItem`
               - `primitives/commit-list.MergeBaseMarker`
               - `primitives/css/column.Column`
+              - `primitives/css/fill.Fill`
               - `primitives/css/placeholder.Placeholder`
               - `primitives/css/spacing.Stack`
               - `primitives/css/text.Text`
@@ -8740,6 +8803,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `infra/endpoints.EndpointError`
               - `infra/endpoints.fetchEndpoint`
               - `primitives/css/center.Center`
+              - `primitives/css/clip.Clip`
+              - `primitives/css/fill.Fill`
+              - `primitives/css/fill.fillClasses`
+              - `primitives/css/rigid.rigidClass`
               - `primitives/css/row.Row`
               - `primitives/css/scroll.Scroll`
               - `primitives/css/spacing.Stack`
@@ -8936,10 +9003,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/auto-scroll.JumpToBottomButton`
               - `primitives/auto-scroll.useStickyScroll`
               - `primitives/css/bouncing-dots.BouncingDots`
+              - `primitives/css/fill.Fill`
+              - `primitives/css/rigid.rigidClass`
               - `primitives/css/scroll.Scroll`
               - `primitives/css/spacing.Stack`
               - `primitives/css/sticky.Sticky`
               - `primitives/css/text.Text`
+              - `primitives/css/ui-kit.cn`
               - `primitives/live-state.ResourceView`
               - `primitives/live-state.useResource`
               - `primitives/loading.Loading`
@@ -9165,8 +9235,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                     - Uses:
                       - `conversations/conversation-view/jsonl-viewer/attachment.JsonlViewerAttachment`
                       - `conversations/conversation-view/jsonl-viewer/collapsible-card.CollapsibleCard`
+                      - `primitives/css/fill.fillClasses`
+                      - `primitives/css/rigid.rigidClass`
                       - `primitives/css/spacing.Stack`
                       - `primitives/css/text.Text`
+                      - `primitives/css/ui-kit.cn`
             - **`code-listing`** — Renders `cat -n`-formatted file content with syntax highlighting and a line-number gutter. Shared by the Read tool renderer and the edited-file attachment renderer.
               - Web:
                 - Uses:
@@ -9192,6 +9265,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `primitives/css/fill.Fill`
                   - `primitives/css/line.Line`
                   - `primitives/css/overlay.Overlay`
+                  - `primitives/css/rigid.rigidClass`
+                  - `primitives/css/spacing.Stack`
                   - `primitives/css/text.Text`
                   - `primitives/css/ui-kit.cn`
                 - Exports (types): `CollapsibleCardProps`
@@ -9389,8 +9464,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `conversations/conversation-view/jsonl-viewer/row-actions.JsonlRowActions`
                   - `primitives/css/badge.Badge`
                   - `primitives/css/bouncing-dots.BouncingDots`
+                  - `primitives/css/rigid.rigidClass`
                   - `primitives/css/scroll.Scroll`
                   - `primitives/css/text.Text`
+                  - `primitives/css/ui-kit.cn`
                   - `primitives/slot-render.defineDispatchSlot`
                   - `primitives/slot-render.DispatchContribution`
                 - Exports (types): `ToolRendererContribution`
@@ -9426,6 +9503,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                       - `conversations/conversation-view/jsonl-viewer/tool-call.ToolCallCard`
                       - `primitives/css/badge.Badge`
                       - `primitives/css/link-chip.LinkChip`
+                      - `primitives/css/rigid.rigidClass`
                       - `primitives/css/spacing.Stack`
                       - `primitives/css/text.Text`
                       - `primitives/live-state.useResource`
@@ -9444,6 +9522,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                       - `conversations/conversation-view/jsonl-viewer/tool-call.ToolCallCard`
                       - `conversations/model-provider.familyClass`
                       - `primitives/css/badge.Badge`
+                      - `primitives/css/line.Line`
                       - `primitives/css/row.Row`
                       - `primitives/css/scroll.Scroll`
                       - `primitives/css/spacing.Inset`
@@ -9474,6 +9553,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                       - `infra/endpoints.useEndpointMutation`
                       - `primitives/css/badge.Badge`
                       - `primitives/css/fill.Fill`
+                      - `primitives/css/line.Line`
+                      - `primitives/css/rigid.rigidClass`
                       - `primitives/css/selection-indicator.CheckboxIndicator`
                       - `primitives/css/selection-indicator.RadioIndicator`
                       - `primitives/css/spacing.Stack`
@@ -9507,7 +9588,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                       - `conversations/conversation-view/jsonl-viewer/tool-call.JsonlViewerTool`
                       - `conversations/conversation-view/jsonl-viewer/tool-call.ToolCallCard`
                       - `primitives/css/clip.Clip`
+                      - `primitives/css/fill.Fill`
                       - `primitives/css/scroll.Scroll`
+                      - `primitives/css/spacing.Stack`
                       - `primitives/css/text.Text`
                       - `primitives/select-scope.ContentScope`
                 - **`edit`** — Renders Edit and MultiEdit tool calls as side-by-side syntax-highlighted diffs.
@@ -9519,6 +9602,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                       - `conversations/conversation-view/jsonl-viewer/file-path.FilePath`
                       - `conversations/conversation-view/jsonl-viewer/tool-call.JsonlViewerTool`
                       - `conversations/conversation-view/jsonl-viewer/tool-call.ToolCallCard`
+                      - `primitives/css/fill.Fill`
                       - `primitives/css/spacing.Stack`
                       - `primitives/css/text.Text`
                       - `primitives/diff-view.TextDiff`
@@ -9528,7 +9612,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                     - Uses:
                       - `conversations/conversation-view/jsonl-viewer/tool-call.JsonlViewerTool`
                       - `conversations/conversation-view/jsonl-viewer/tool-call.ToolCallCard`
+                      - `primitives/css/rigid.rigidClass`
+                      - `primitives/css/spacing.Stack`
                       - `primitives/css/text.Text`
+                      - `primitives/css/ui-kit.cn`
                 - **`page-tools`** — Shared appearance for the Singularity page MCP tool rows (read_page / write_agent_note / edit_page): the page-identity chip, the apply-report chips, the markdown body, and the refusal block. Contributes no renderer itself — one sub-plugin per tool does.
                   - Web:
                     - Uses:
@@ -9602,6 +9689,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                       - `conversations/conversation-view/jsonl-viewer/tool-call.JsonlViewerTool`
                       - `conversations/conversation-view/jsonl-viewer/tool-call.ToolCallCard`
                       - `primitives/css/badge.Badge`
+                      - `primitives/css/line.Line`
                       - `primitives/css/text.Text`
                 - **`skill`** — Renders Skill tool calls with skill name, args preview, and injected context.
                   - Web:
@@ -9635,10 +9723,14 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                       - `primitives/css/badge.Badge`
                       - `primitives/css/badge.formatStatusLabel`
                       - `primitives/css/center.Center`
+                      - `primitives/css/fill.Fill`
+                      - `primitives/css/line.Line`
                       - `primitives/css/pin.Pin`
+                      - `primitives/css/rigid.rigidClass`
                       - `primitives/css/scroll.Scroll`
                       - `primitives/css/spacing.Stack`
                       - `primitives/css/text.Text`
+                      - `primitives/css/ui-kit.cn`
                       - `primitives/live-state.useResource`
                 - **`workflow`** — Renders Workflow tool calls as a swimlane DAG of agent nodes (recovered by trace-executing the script), with per-node prompts in a side pane, a collapsible script, and the launched run/task ids.
                   - Web:
@@ -9655,8 +9747,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                       - `primitives/css/badge.Badge`
                       - `primitives/css/badge.formatStatusLabel`
                       - `primitives/css/card.Card`
+                      - `primitives/css/center.Center`
                       - `primitives/css/cluster.Cluster`
+                      - `primitives/css/fill.Fill`
                       - `primitives/css/grid.Grid`
+                      - `primitives/css/line.Line`
+                      - `primitives/css/rigid.rigidClass`
                       - `primitives/css/scroll.Scroll`
                       - `primitives/css/spacing.Stack`
                       - `primitives/css/text.Text`
@@ -9767,6 +9863,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `infra/endpoints.fetchEndpoint`
               - `infra/endpoints.getEndpointErrorMessage`
               - `primitives/css/badge.Badge`
+              - `primitives/css/fill.Fill`
               - `primitives/css/ui-kit.Button`
               - `primitives/css/ui-kit.DropdownMenu`
               - `primitives/css/ui-kit.DropdownMenuItem`
@@ -9861,9 +9958,14 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `conversations/conversation-ui/item.Item`
               - `conversations/conversation-view.Conversation`
               - `primitives/css/clip.Clip`
+              - `primitives/css/fill.Fill`
               - `primitives/css/inline.Inline`
+              - `primitives/css/rigid.Rigid`
+              - `primitives/css/rigid.rigidClass`
+              - `primitives/css/spacing.Stack`
               - `primitives/css/spinner.Spinner`
               - `primitives/css/text.Text`
+              - `primitives/css/ui-kit.cn`
               - `primitives/live-state.useResource`
               - `primitives/tooltip.WithTooltip`
           - Server:
@@ -10110,8 +10212,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `conversations/conversation-view.Conversation`
               - `primitives/collapsible.CollapsibleChevron`
               - `primitives/collapsible.useCollapsible`
+              - `primitives/css/fill.Fill`
+              - `primitives/css/rigid.rigidClass`
               - `primitives/css/spacing.Stack`
               - `primitives/css/text.Text`
+              - `primitives/css/ui-kit.cn`
               - `primitives/live-state.useResource`
           - Server:
             - Contributes:
@@ -10504,11 +10609,14 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/debug/shell.DebugApp`
           - `infra/endpoints.fetchEndpoint`
           - `primitives/app-shell.sidebarNavItem`
+          - `primitives/css/fill.fillClasses`
           - `primitives/css/placeholder.Placeholder`
+          - `primitives/css/rigid.rigidClass`
           - `primitives/css/scroll.Scroll`
           - `primitives/css/spacing.Stack`
           - `primitives/css/text.Text`
           - `primitives/css/ui-kit.Button`
+          - `primitives/css/ui-kit.cn`
           - `primitives/css/ui-kit.ControlSizeProvider`
           - `primitives/live-state.useResource`
           - `primitives/loading.Loading`
@@ -11271,11 +11379,15 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/app-shell.sidebarNavItem`
           - `primitives/css/badge.Badge`
           - `primitives/css/center.Center`
+          - `primitives/css/fill.Fill`
+          - `primitives/css/line.Line`
+          - `primitives/css/rigid.rigidClass`
           - `primitives/css/scroll.Scroll`
           - `primitives/css/spacing.Stack`
           - `primitives/css/text.Text`
           - `primitives/css/toggle-chip.ToggleChip`
           - `primitives/css/ui-kit.Button`
+          - `primitives/css/ui-kit.cn`
           - `primitives/css/ui-kit.ControlSizeProvider`
           - `primitives/icon-button.IconButton`
           - `primitives/loading.Loading`
@@ -11315,6 +11427,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/collapsible.useCollapsible`
           - `primitives/css/badge.Badge`
           - `primitives/css/center.Center`
+          - `primitives/css/cluster.Cluster`
+          - `primitives/css/fill.Fill`
           - `primitives/css/scroll.Scroll`
           - `primitives/css/spacing.Stack`
           - `primitives/css/text.Text`
@@ -11382,8 +11496,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `infra/endpoints.useEndpoint`
           - `primitives/app-shell.sidebarNavItem`
           - `primitives/css/badge.Badge`
+          - `primitives/css/fill.Fill`
           - `primitives/css/grid.Grid`
           - `primitives/css/placeholder.Placeholder`
+          - `primitives/css/rigid.Rigid`
           - `primitives/css/spacing.Inset`
           - `primitives/css/spacing.Stack`
           - `primitives/css/status-dot.StatusDot`
@@ -11562,7 +11678,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `infra/endpoints.useEndpoint`
           - `primitives/app-shell.sidebarNavItem`
           - `primitives/css/badge.Badge`
+          - `primitives/css/fill.Fill`
           - `primitives/css/inline.Inline`
+          - `primitives/css/rigid.Rigid`
           - `primitives/css/scroll.Scroll`
           - `primitives/css/spacing.Stack`
           - `primitives/css/status-dot.StatusDot`
@@ -11622,6 +11740,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/css/badge.Badge`
           - `primitives/css/badge.formatStatusLabel`
           - `primitives/css/center.Center`
+          - `primitives/css/line.Line`
+          - `primitives/css/rigid.rigidClass`
           - `primitives/css/scroll.Scroll`
           - `primitives/css/spacing.Stack`
           - `primitives/css/text.SectionLabel`
@@ -11725,6 +11845,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/app-shell.sidebarNavItem`
           - `primitives/css/center.Center`
           - `primitives/css/column.Column`
+          - `primitives/css/fill.Fill`
+          - `primitives/css/line.Line`
+          - `primitives/css/rigid.rigidClass`
           - `primitives/css/spacing.Stack`
           - `primitives/css/text.SectionLabel`
           - `primitives/css/text.Text`
@@ -12012,6 +12135,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/css/center.Center`
           - `primitives/css/clip.Clip`
           - `primitives/css/cluster.Cluster`
+          - `primitives/css/fill.Fill`
           - `primitives/css/inline.Inline`
           - `primitives/css/scroll.Scroll`
           - `primitives/css/spacing.Stack`
@@ -12424,6 +12548,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `infra/ndjson-stream.readNdjson`
               - `primitives/css/badge.Badge`
               - `primitives/css/clip.Clip`
+              - `primitives/css/fill.Fill`
               - `primitives/css/placeholder.Placeholder`
               - `primitives/css/scroll.Scroll`
               - `primitives/css/spacing.Stack`
@@ -12851,12 +12976,15 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `infra/ndjson-stream.readNdjson`
           - `primitives/app-shell.sidebarNavItem`
           - `primitives/css/badge.Badge`
+          - `primitives/css/fill.fillClasses`
           - `primitives/css/placeholder.Placeholder`
+          - `primitives/css/rigid.rigidClass`
           - `primitives/css/scroll.Scroll`
           - `primitives/css/spacing.Stack`
           - `primitives/css/spinner.Spinner`
           - `primitives/css/text.Text`
           - `primitives/css/ui-kit.Button`
+          - `primitives/css/ui-kit.cn`
           - `primitives/css/ui-kit.ControlSizeProvider`
           - `primitives/icon-button.IconButton`
           - `primitives/loading.Loading`
@@ -13045,6 +13173,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/avatar.AvatarPicker`
               - `primitives/avatar.AvatarSpec`
               - `primitives/css/center.Center`
+              - `primitives/css/spacing.Stack`
           - Core:
             - Uses:
               - `fields.FieldDef`
@@ -13077,6 +13206,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `config_v2/fields.FieldHeader`
               - `config_v2/fields.FieldRendererComponent`
               - `config_v2/fields.Fields`
+              - `primitives/css/spacing.Stack`
           - Core:
             - Uses:
               - `fields.FieldDef`
@@ -13166,6 +13296,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `config_v2/fields.FieldRendererComponent`
               - `config_v2/fields.Fields`
               - `primitives/css/color-picker.ColorPickerPopover`
+              - `primitives/css/spacing.Stack`
           - Core:
             - Uses:
               - `fields.FieldDef`
@@ -13641,6 +13772,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Uses:
               - `config_v2/fields.FieldRenderer`
               - `config_v2/fields.Fields`
+              - `primitives/css/fill.Fill`
+              - `primitives/css/rigid.rigidClass`
               - `primitives/css/spacing.Stack`
               - `primitives/css/text.Text`
               - `primitives/css/ui-kit.Button`
@@ -14011,6 +14144,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Contributes: `config-v2.fields.renderer` "string-list" → `StringListRenderer`
             - Uses:
               - `config_v2/fields.Fields`
+              - `primitives/css/fill.fillClasses`
+              - `primitives/css/rigid.rigidClass`
               - `primitives/css/spacing.Stack`
               - `primitives/css/text.Text`
               - `primitives/css/ui-kit.Button`
@@ -15140,11 +15275,18 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses:
           - `active-data.ActiveData`
           - `improve.insertIntoImproveDraft`
+          - `primitives/css/fill.Fill`
+          - `primitives/css/fill.fillClasses`
+          - `primitives/css/inline.Inline`
           - `primitives/css/pin.Pin`
+          - `primitives/css/rigid.rigidClass`
           - `primitives/css/spacing.Inset`
+          - `primitives/css/spacing.insetClass`
           - `primitives/css/spacing.Stack`
           - `primitives/css/text.Text`
+          - `primitives/css/ui-kit.cn`
           - `primitives/css/ui-kit.PortalForwardProvider`
+          - `primitives/css/ui-kit.SingleLineProvider`
           - `primitives/css/ui-kit.usePortalForwardedAttrs`
           - `primitives/css/viewport-overlay.ViewportOverlay`
           - `primitives/icon-button.IconButton`
@@ -15848,6 +15990,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `infra/endpoints.fetchEndpoint`
           - `primitives/app-shell.sidebarNavItem`
           - `primitives/css/badge.Badge`
+          - `primitives/css/fill.Fill`
           - `primitives/css/scroll.Scroll`
           - `primitives/css/spacing.Stack`
           - `primitives/css/surface.Surface`
@@ -17472,8 +17615,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/css/card.Card`
           - `primitives/css/center.Center`
           - `primitives/css/clip.Clip`
+          - `primitives/css/fill.Fill`
           - `primitives/css/pin.Pin`
           - `primitives/css/placeholder.Placeholder`
+          - `primitives/css/rigid.rigidClass`
           - `primitives/css/spacing.Inset`
           - `primitives/css/spacing.Stack`
           - `primitives/css/text.Text`
@@ -17560,7 +17705,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `page/editor.Editor`
           - `primitives/copy-to-clipboard.CopyButton`
           - `primitives/css/clip.Clip`
+          - `primitives/css/clip.clipClasses`
+          - `primitives/css/fill.fillClasses`
+          - `primitives/css/layer.layerClasses`
           - `primitives/css/pin.Pin`
+          - `primitives/css/rigid.rigidClass`
           - `primitives/css/spacing.Inset`
           - `primitives/css/spacing.Stack`
           - `primitives/css/ui-kit.cn`
@@ -18130,7 +18279,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `page/editor.registerBlockPasteHandler`
           - `primitives/css/card.Card`
           - `primitives/css/center.Center`
+          - `primitives/css/fill.Fill`
           - `primitives/css/pin.Pin`
+          - `primitives/css/rigid.rigidClass`
           - `primitives/css/spacing.Inset`
           - `primitives/css/spacing.Stack`
           - `primitives/css/text.Text`
@@ -19152,8 +19303,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `plugin-meta/plugin-view.PluginViewSlots`
                   - `plugin-meta/plugin-view.SectionCount`
                   - `plugin-meta/plugin-view.SubHeading`
+                  - `primitives/css/line.Line`
+                  - `primitives/css/rigid.rigidClass`
                   - `primitives/css/spacing.Stack`
                   - `primitives/css/text.Text`
+                  - `primitives/css/ui-kit.cn`
             - **`render-diff`** (disabled — cascade) — Diff renderer for the db-schema facet (PR review).
               - Web:
                 - Contributes: `PluginChangesSlots.DiffRenderer` "Tables"
@@ -19226,8 +19380,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `plugin-meta/plugin-view.PluginViewSlots`
                   - `plugin-meta/plugin-view.RUNTIME_COLORS`
                   - `plugin-meta/plugin-view.SectionCount`
+                  - `primitives/css/fill.Fill`
+                  - `primitives/css/line.Line`
+                  - `primitives/css/rigid.rigidClass`
                   - `primitives/css/spacing.Stack`
                   - `primitives/css/text.Text`
+                  - `primitives/css/ui-kit.cn`
             - **`render-diff`** (disabled — cascade) — Diff renderer for the registrations facet (PR review).
               - Web:
                 - Contributes: `PluginChangesSlots.DiffRenderer` "Registrations"
@@ -19257,8 +19415,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `plugin-meta/plugin-view.PluginNode`
                   - `plugin-meta/plugin-view.PluginViewSlots`
                   - `plugin-meta/plugin-view.SectionCount`
+                  - `primitives/css/fill.Fill`
+                  - `primitives/css/line.Line`
+                  - `primitives/css/rigid.rigidClass`
                   - `primitives/css/spacing.Stack`
                   - `primitives/css/text.Text`
+                  - `primitives/css/ui-kit.cn`
             - **`render-diff`** (disabled — cascade) — Diff renderer for the resources facet (PR review).
               - Web:
                 - Contributes: `PluginChangesSlots.DiffRenderer` "Resources"
@@ -19291,7 +19453,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `plugin-meta/plugin-view.PluginViewSlots`
                   - `plugin-meta/plugin-view.SectionCount`
                   - `primitives/css/cluster.Cluster`
+                  - `primitives/css/fill.Fill`
                   - `primitives/css/inline.Inline`
+                  - `primitives/css/line.Line`
+                  - `primitives/css/rigid.rigidClass`
                   - `primitives/css/spacing.Stack`
                   - `primitives/css/text.Text`
                   - `primitives/css/ui-kit.cn`
@@ -19995,7 +20160,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/pane`
     - **`breadcrumb`** — Generic breadcrumb with arbitrary segments, configurable separator, and trailing actions slot.
       - Web:
-        - Uses: `primitives/row-actions.RowActions`
+        - Uses:
+          - `primitives/css/rigid.rigidClass`
+          - `primitives/css/spacing.Stack`
+          - `primitives/css/ui-kit.cn`
+          - `primitives/row-actions.RowActions`
         - Exports (types):
           - `BreadcrumbProps`
           - `BreadcrumbSegment`
@@ -20103,6 +20272,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Slots: `CommandPalette.Item`
         - Contributes: `Core.Root` → `CommandPaletteRoot`
         - Uses:
+          - `primitives/css/fill.Fill`
+          - `primitives/css/fill.fillClasses`
+          - `primitives/css/line.Line`
+          - `primitives/css/rigid.rigidClass`
           - `primitives/css/spacing.Stack`
           - `primitives/css/text.Text`
           - `primitives/css/ui-kit.cn`
@@ -20117,8 +20290,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Web:
         - Uses:
           - `primitives/css/badge.Badge`
+          - `primitives/css/fill.Fill`
+          - `primitives/css/rigid.rigidClass`
           - `primitives/css/spacing.Stack`
           - `primitives/css/text.Text`
+          - `primitives/css/ui-kit.cn`
         - Exports (types): `CommitRow`
         - Exports (values):
           - `COMMIT_ROW_HEIGHT`
@@ -20418,6 +20594,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `conversations/conversation-view/code/file-pane/image`
               - `conversations/conversation-view/dependencies`
               - `conversations/conversation-view/jsonl-viewer/tool-call/task-tools`
+              - `conversations/conversation-view/jsonl-viewer/tool-call/workflow`
               - `debug/boot-profile`
               - `debug/broadcasts`
               - `debug/claude-cli-calls`
@@ -20462,6 +20639,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/setup-steps`
               - `primitives/text-editor/paste-images`
               - `primitives/tree`
+              - `reorder/node-types/header`
               - `screenshot`
               - `shell/global-action-bar`
               - `shell/notifications`
@@ -20485,6 +20663,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Imported by:
               - `apps-core/surface`
               - `apps/agent-manager/welcome`
+              - `apps/browser/shell`
               - `apps/pages/page-tree`
               - `apps/pages/welcome/recent-pages`
               - `apps/sonata/library`
@@ -20498,7 +20677,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `build/build-logs`
               - `code-explorer`
               - `config_v2/settings`
+              - `conversations/conversation-ui/item`
               - `conversations/conversation-view`
+              - `conversations/conversation-view/code/file-pane`
+              - `conversations/conversation-view/dependencies`
               - `conversations/conversation-view/jsonl-viewer/tool-call/bash`
               - `conversations/conversation-view/op-status`
               - `conversations/conversation-view/terminal-pane`
@@ -20514,8 +20696,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `page/math/equation`
               - `primitives/app-shell`
               - `primitives/data-view/gallery`
+              - `primitives/data-view/list`
               - `primitives/diff-view`
               - `primitives/outline/rail`
+              - `review/plugin-changes`
               - `review/plugin-changes/file-changes`
               - `screenshot`
               - `tasks/task-graph`
@@ -20549,6 +20733,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `conversations/conversation-view/jsonl-viewer/tool-call/page-tools`
               - `conversations/conversation-view/jsonl-viewer/tool-call/workflow`
               - `conversations/conversation-view/prompt-templates`
+              - `debug/claude-cli-calls`
               - `debug/profiling/ops`
               - `debug/profiling/ops/op-gantt`
               - `debug/queue`
@@ -20688,6 +20873,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `fillClasses`
           - Cross-plugin:
             - Imported by:
+              - `apps/agent-manager/shell`
+              - `apps/agent-manager/welcome`
+              - `apps/agent-manager/worktree-switcher`
+              - `apps/browser/shell`
               - `apps/deploy/deploy-history`
               - `apps/deploy/deployments`
               - `apps/deploy/servers`
@@ -20701,36 +20890,93 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/mail/search`
               - `apps/mail/sync-status`
               - `apps/mail/threads`
+              - `apps/pages/welcome/recent-pages`
               - `apps/sonata/library`
+              - `apps/sonata/piano-roll`
               - `apps/sonata/sources/ultimate-guitar`
+              - `apps/sonata/track-mixer`
+              - `apps/story/shell`
               - `apps/studio/compositions/contributors`
               - `apps/studio/compositions/release/release-logs`
               - `apps/website/demos/release-switcher`
               - `apps/website/landing/pillars`
               - `apps/website/shell`
               - `apps/workflows/editor`
+              - `auth`
               - `auth/apple-signing/setup-wizard`
+              - `backup`
+              - `code-explorer/commit-detail`
+              - `config_v2/config-link`
+              - `config_v2/settings`
+              - `conversations/conversation-ui/item`
+              - `conversations/conversation-view/code/file-pane`
+              - `conversations/conversation-view/commits-graph`
+              - `conversations/conversation-view/dependencies`
+              - `conversations/conversation-view/jsonl-viewer`
+              - `conversations/conversation-view/jsonl-viewer/attachment/task-reminder`
               - `conversations/conversation-view/jsonl-viewer/collapsible-card`
               - `conversations/conversation-view/jsonl-viewer/tool-call/ask-user-question`
+              - `conversations/conversation-view/jsonl-viewer/tool-call/bash`
+              - `conversations/conversation-view/jsonl-viewer/tool-call/edit`
+              - `conversations/conversation-view/jsonl-viewer/tool-call/task-tools`
+              - `conversations/conversation-view/jsonl-viewer/tool-call/workflow`
+              - `conversations/conversation-view/launch-prompts`
+              - `conversations/conversation-view/op-status`
+              - `conversations/conversation-view/turn-summary`
               - `conversations/conversations-view`
+              - `conversations/recover`
+              - `debug/broadcasts`
+              - `debug/claude-cli-calls`
+              - `debug/health-monitor`
+              - `debug/live-state-health`
               - `debug/logs`
+              - `debug/profiling`
+              - `debug/queue`
+              - `debug/slow-ops/cluster`
               - `debug/timeline`
               - `debug/trace/pane`
               - `debug/trace/spans`
               - `debug/trace/stall`
+              - `debug/worktree-cleanup`
+              - `fields/list/config`
+              - `fields/string-list/config`
+              - `improve/element-picker`
+              - `infra/events-test`
               - `page/annotations/agent-notes/authorship`
               - `page/annotations/todo/task-link`
+              - `page/bookmark`
+              - `page/code-block`
+              - `page/file`
               - `page/inline-date`
               - `page/prompt/block`
+              - `plugin-meta/facets/registrations/render-detail`
+              - `plugin-meta/facets/resources/render-detail`
+              - `plugin-meta/facets/routes/render-detail`
               - `primitives/action-presentation`
+              - `primitives/command-palette`
+              - `primitives/commit-list`
               - `primitives/date-picker`
               - `primitives/error-boundary`
+              - `primitives/folder-picker`
+              - `primitives/graph-canvas`
               - `primitives/imperative-dialog/confirm`
+              - `primitives/launch`
               - `primitives/log-channels`
               - `primitives/outline/rail`
               - `primitives/pane`
               - `primitives/prompt-editor`
               - `primitives/setup-steps`
+              - `review/code-review`
+              - `review/plugin-changes`
+              - `review/plugin-changes/file-changes`
+              - `shell/notifications`
+              - `tasks/attempt-view`
+              - `tasks/task-draft-form`
+              - `tasks/task-events`
+              - `tasks/task-header`
+              - `ui/theme-engine/theme-customizer`
+              - `ui/tokens/color-adjust`
+              - `ui/tokens/shadow`
               - `ui/tweakcn/community-browser`
         - **`grid`** — Responsive/uniform grid layout primitive: <Grid minCellWidth> lays out a wrapping, equal-width card grid via a closed prop surface — not a raw grid-template passthrough.
           - Web:
@@ -20808,6 +21054,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `debug/slow-ops`
               - `debug/stall-monitor`
               - `debug/trace/spans`
+              - `improve/element-picker`
               - `page/editor`
               - `page/embed`
               - `page/formatting/link`
@@ -20835,6 +21082,24 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `tasks/task-draft-form`
               - `tasks/task-status`
               - `ui/segmented-progress-bar/dots`
+              - `ui/theme-engine/theme-customizer`
+        - **`layer`** — Full-bleed layer layout primitive: <Layer> / layerClasses() is a standalone absolute inset-0 child of a positioned parent. The element-shaped sibling of Overlay's behind/above props.
+          - Web:
+            - Uses:
+              - `primitives/css/ui-kit.cn`
+              - `primitives/css/z-layers.InTreeLayer`
+              - `primitives/css/z-layers.zLayerClass`
+            - Exports (types):
+              - `LayerOptions`
+              - `LayerProps`
+            - Exports (values):
+              - `Layer`
+              - `layerClasses`
+          - Cross-plugin:
+            - Imported by:
+              - `apps-core/surface/floating`
+              - `page/code-block`
+              - `primitives/tree`
         - **`layout-harness`** — Live Layout Lab gallery: renders the layout-primitive fixture catalog across its width sweep, opened from the Debug sidebar.
           - Web:
             - Slots: `layoutLabPane.Actions`
@@ -20898,6 +21163,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Cross-plugin:
             - Imported by:
               - `apps-core/tab-bar`
+              - `apps/agent-manager/shell`
+              - `apps/agent-manager/worktree-switcher`
+              - `apps/browser/shell`
               - `apps/events/event-list`
               - `apps/events/sources`
               - `apps/events/sources/source-detail/runs`
@@ -20905,24 +21173,55 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/events/sources/source-detail/status`
               - `apps/mail/search`
               - `apps/mail/threads`
+              - `apps/pages/history`
               - `apps/sonata/library`
+              - `apps/sonata/piano-roll`
+              - `apps/sonata/sources/midi`
+              - `apps/sonata/track-mixer`
               - `apps/studio/compositions/release/release-logs`
+              - `code-explorer/commit-detail`
+              - `conversations/conversation-ui/item`
+              - `conversations/conversation-view/code/docs-button`
+              - `conversations/conversation-view/code/file-pane`
               - `conversations/conversation-view/jsonl-viewer/collapsible-card`
+              - `conversations/conversation-view/jsonl-viewer/tool-call/agent`
+              - `conversations/conversation-view/jsonl-viewer/tool-call/ask-user-question`
+              - `conversations/conversation-view/jsonl-viewer/tool-call/read`
+              - `conversations/conversation-view/jsonl-viewer/tool-call/task-tools`
+              - `conversations/conversation-view/jsonl-viewer/tool-call/workflow`
               - `conversations/conversations-view`
+              - `debug/broadcasts`
+              - `debug/memory`
+              - `debug/profiling`
               - `debug/timeline`
               - `page/annotations/todo/task-link`
               - `page/inline-date`
               - `page/prompt/block`
+              - `plugin-meta/facets/db-schema/render-detail`
+              - `plugin-meta/facets/registrations/render-detail`
+              - `plugin-meta/facets/resources/render-detail`
+              - `plugin-meta/facets/routes/render-detail`
               - `primitives/bar`
+              - `primitives/command-palette`
               - `primitives/css/row`
               - `primitives/date-picker`
               - `primitives/error-boundary`
               - `primitives/log-channels`
               - `primitives/outline/rail`
+              - `reorder/node-types/header`
               - `reorder/node-types/overflow`
+              - `review/code-review`
+              - `review/plugin-changes`
+              - `review/plugin-changes/api-changes`
+              - `review/plugin-changes/file-changes`
+              - `shell/notifications`
+              - `tasks/attempt-view`
+              - `tasks/task-events`
               - `ui/tab-bar/chip`
               - `ui/tab-bar/connected`
               - `ui/tab-bar/underline`
+              - `ui/theme-engine/theme-customizer`
+              - `ui/tokens/shadow`
               - `ui/tweakcn/community-browser`
         - **`link-chip`** — Inline, clickable navigational chip — a clickable Badge with link coloring (bg-muted + text-primary, hover underline), baseline-aligned for inline-in-text use, with optional leading icon and monospace label.
           - Web:
@@ -21160,6 +21459,79 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `RAIL_OWED_START_VAR`
               - `RAIL_START_VAR`
               - `railClass`
+        - **`rigid`** — Rigid-leaf layout primitive: <Rigid> / rigidClass() is the flex child that never shrinks (shrink-0). The missing half of <Fill>, kept a sibling the way <Clip> is to <Scroll>.
+          - Web:
+            - Uses: `primitives/css/ui-kit.cn`
+            - Exports (types): `RigidProps`
+            - Exports (values):
+              - `Rigid`
+              - `rigidClass`
+          - Cross-plugin:
+            - Imported by:
+              - `apps/agent-manager/shell`
+              - `apps/agent-manager/welcome`
+              - `apps/browser/shell`
+              - `apps/pages/welcome/recent-pages`
+              - `apps/sonata/piano-roll`
+              - `apps/sonata/sources/midi`
+              - `apps/sonata/track-mixer`
+              - `apps/story/shell`
+              - `auth`
+              - `backup`
+              - `build`
+              - `build/build-info`
+              - `build/build-logs`
+              - `code-explorer/commit-detail`
+              - `config_v2/config-link`
+              - `config_v2/settings`
+              - `conversations/conversation-view/code/docs-button`
+              - `conversations/conversation-view/dependencies`
+              - `conversations/conversation-view/jsonl-viewer`
+              - `conversations/conversation-view/jsonl-viewer/attachment/task-reminder`
+              - `conversations/conversation-view/jsonl-viewer/collapsible-card`
+              - `conversations/conversation-view/jsonl-viewer/tool-call`
+              - `conversations/conversation-view/jsonl-viewer/tool-call/add-task`
+              - `conversations/conversation-view/jsonl-viewer/tool-call/ask-user-question`
+              - `conversations/conversation-view/jsonl-viewer/tool-call/flag-raise`
+              - `conversations/conversation-view/jsonl-viewer/tool-call/task-tools`
+              - `conversations/conversation-view/jsonl-viewer/tool-call/workflow`
+              - `conversations/conversation-view/op-status`
+              - `conversations/conversation-view/turn-summary`
+              - `conversations/recover`
+              - `debug/broadcasts`
+              - `debug/health-monitor`
+              - `debug/live-state-health`
+              - `debug/memory`
+              - `debug/profiling`
+              - `debug/worktree-cleanup`
+              - `fields/list/config`
+              - `fields/string-list/config`
+              - `improve/element-picker`
+              - `page/bookmark`
+              - `page/code-block`
+              - `page/file`
+              - `plugin-meta/facets/db-schema/render-detail`
+              - `plugin-meta/facets/registrations/render-detail`
+              - `plugin-meta/facets/resources/render-detail`
+              - `plugin-meta/facets/routes/render-detail`
+              - `primitives/breadcrumb`
+              - `primitives/command-palette`
+              - `primitives/commit-list`
+              - `primitives/data-view/list`
+              - `primitives/graph-canvas`
+              - `primitives/loading`
+              - `reorder/node-types/header`
+              - `review/code-review`
+              - `review/plugin-changes`
+              - `review/plugin-changes/api-changes`
+              - `review/plugin-changes/file-changes`
+              - `shell/notifications`
+              - `stats/commits`
+              - `tasks/attempt-view`
+              - `tasks/task-events`
+              - `tasks/task-status`
+              - `ui/tokens/shadow`
+              - `ui/tweakcn/community-browser`
         - **`row`** — Generic interactive row primitive (list, menu, nav, tree, and collapsible section-header rows) with a sanctioned home so ad-hoc rounded+padded interactive markup routes through one primitive.
           - Web:
             - Uses:
@@ -21368,6 +21740,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/agent-manager/welcome`
               - `apps/browser/bookmarks`
               - `apps/browser/navigation`
+              - `apps/browser/shell`
               - `apps/browser/start-page`
               - `apps/browser/tabs`
               - `apps/browser/webview`
@@ -21475,6 +21848,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `build/serve-composition`
               - `code-explorer/commit-detail`
               - `code-explorer/file-resolve`
+              - `config_v2/config-link`
               - `config_v2/fields`
               - `config_v2/settings`
               - `conversations/agents`
@@ -21497,12 +21871,15 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `conversations/conversation-view/jsonl-viewer/attachment/hook-success`
               - `conversations/conversation-view/jsonl-viewer/attachment/skill-listing`
               - `conversations/conversation-view/jsonl-viewer/attachment/task-reminder`
+              - `conversations/conversation-view/jsonl-viewer/collapsible-card`
               - `conversations/conversation-view/jsonl-viewer/fields-card`
               - `conversations/conversation-view/jsonl-viewer/summary`
               - `conversations/conversation-view/jsonl-viewer/tool-call/add-task`
               - `conversations/conversation-view/jsonl-viewer/tool-call/agent`
               - `conversations/conversation-view/jsonl-viewer/tool-call/ask-user-question`
+              - `conversations/conversation-view/jsonl-viewer/tool-call/bash`
               - `conversations/conversation-view/jsonl-viewer/tool-call/edit`
+              - `conversations/conversation-view/jsonl-viewer/tool-call/flag-raise`
               - `conversations/conversation-view/jsonl-viewer/tool-call/page-tools`
               - `conversations/conversation-view/jsonl-viewer/tool-call/page-tools/edit-page`
               - `conversations/conversation-view/jsonl-viewer/tool-call/page-tools/read-page`
@@ -21512,6 +21889,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `conversations/conversation-view/jsonl-viewer/tool-call/workflow`
               - `conversations/conversation-view/jsonl-viewer/transcript-stats`
               - `conversations/conversation-view/jsonl-viewer/user-image`
+              - `conversations/conversation-view/op-status`
               - `conversations/conversation-view/pending-turn`
               - `conversations/conversation-view/prompt-templates`
               - `conversations/conversation-view/turn-summary`
@@ -21550,7 +21928,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `debug/trace/stall`
               - `debug/worktree-cleanup`
               - `debug/zero-test`
+              - `fields/avatar/config`
+              - `fields/bool/config`
               - `fields/bool/filter`
+              - `fields/color/config`
               - `fields/color/table`
               - `fields/date/filter`
               - `fields/directory-path/config`
@@ -21611,6 +21992,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `plugin-meta/plugin-view/sub-plugins`
               - `primitives/adaptive-bar`
               - `primitives/app-shell`
+              - `primitives/breadcrumb`
               - `primitives/command-palette`
               - `primitives/commit-list`
               - `primitives/css/cluster`
@@ -22392,9 +22774,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps-core/tab-bar`
               - `apps-core/tab-surface`
               - `apps-core/theme-scope`
+              - `apps/agent-manager/shell`
               - `apps/agent-manager/welcome`
               - `apps/browser/bookmarks`
               - `apps/browser/omnibox`
+              - `apps/browser/shell`
               - `apps/browser/start-page`
               - `apps/browser/tabs`
               - `apps/browser/webview`
@@ -22409,6 +22793,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/mail/sync-status`
               - `apps/pages/page-tree`
               - `apps/pages/trash`
+              - `apps/pages/welcome/recent-pages`
               - `apps/prototypes/gallery`
               - `apps/prototypes/present`
               - `apps/sonata/audio/metronome`
@@ -22465,9 +22850,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `backup`
               - `build`
               - `build/build-fix`
+              - `build/build-info`
               - `build/build-logs`
               - `build/serve-composition`
               - `code-explorer`
+              - `code-explorer/commit-detail`
               - `config_v2/config-link`
               - `config_v2/settings`
               - `conversations/agents`
@@ -22481,20 +22868,27 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `conversations/conversation-view/exit`
               - `conversations/conversation-view/exit-menu`
               - `conversations/conversation-view/hold-and-exit`
+              - `conversations/conversation-view/jsonl-viewer`
+              - `conversations/conversation-view/jsonl-viewer/attachment/task-reminder`
               - `conversations/conversation-view/jsonl-viewer/collapsible-card`
               - `conversations/conversation-view/jsonl-viewer/fields-card`
               - `conversations/conversation-view/jsonl-viewer/file-path`
               - `conversations/conversation-view/jsonl-viewer/queued-prompt-card`
               - `conversations/conversation-view/jsonl-viewer/row-actions`
+              - `conversations/conversation-view/jsonl-viewer/tool-call`
               - `conversations/conversation-view/jsonl-viewer/tool-call/ask-user-question`
+              - `conversations/conversation-view/jsonl-viewer/tool-call/flag-raise`
+              - `conversations/conversation-view/jsonl-viewer/tool-call/task-tools`
               - `conversations/conversation-view/jsonl-viewer/tool-call/workflow`
               - `conversations/conversation-view/launch-prompts`
               - `conversations/conversation-view/new-child-task`
+              - `conversations/conversation-view/op-status`
               - `conversations/conversation-view/pending-turn`
               - `conversations/conversation-view/prompt-templates`
               - `conversations/conversation-view/push-and-exit`
               - `conversations/conversation-view/tasks-panel`
               - `conversations/conversation-view/terminal-pane`
+              - `conversations/conversation-view/turn-summary`
               - `conversations/conversations-view`
               - `conversations/effort-provider`
               - `conversations/model-provider`
@@ -22565,7 +22959,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `page/sub-page`
               - `page/video`
               - `plugin-meta/facets/cross-refs/render-detail`
+              - `plugin-meta/facets/db-schema/render-detail`
               - `plugin-meta/facets/exports/render-detail`
+              - `plugin-meta/facets/registrations/render-detail`
+              - `plugin-meta/facets/resources/render-detail`
               - `plugin-meta/facets/routes/render-contributions`
               - `plugin-meta/facets/routes/render-detail`
               - `plugin-meta/plugin-view/inclusion`
@@ -22574,9 +22971,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/auto-scroll`
               - `primitives/avatar`
               - `primitives/bar`
+              - `primitives/breadcrumb`
               - `primitives/collapsible`
               - `primitives/collapsible-wrap`
               - `primitives/command-palette`
+              - `primitives/commit-list`
               - `primitives/copy-to-clipboard`
               - `primitives/css/badge`
               - `primitives/css/bouncing-dots`
@@ -22589,11 +22988,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/fill`
               - `primitives/css/grid`
               - `primitives/css/inline`
+              - `primitives/css/layer`
               - `primitives/css/layout-harness`
               - `primitives/css/line`
               - `primitives/css/overlay`
               - `primitives/css/pin`
               - `primitives/css/placeholder`
+              - `primitives/css/rigid`
               - `primitives/css/row`
               - `primitives/css/scroll`
               - `primitives/css/selection-indicator`
@@ -22651,10 +23052,15 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `reorder/node-types/header`
               - `reorder/node-types/overflow`
               - `review`
+              - `review/code-review`
+              - `review/plugin-changes`
+              - `review/plugin-changes/api-changes`
+              - `review/plugin-changes/file-changes`
               - `screenshot`
               - `screenshot/draw-on-app`
               - `search/quick-find`
               - `shell/global-action-bar`
+              - `shell/notifications`
               - `shell/toast`
               - `stats/commits`
               - `stats/cost`
@@ -22664,6 +23070,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `tasks/task-deps-tree`
               - `tasks/task-description`
               - `tasks/task-draft-form`
+              - `tasks/task-events`
               - `tasks/task-graph`
               - `tasks/task-header`
               - `tasks/task-list`
@@ -22723,6 +23130,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - **`z-layers`** — Semantic z-layer scale (z-base..z-max) and its enforcing lint rule (no-adhoc-zindex).
           - Cross-plugin:
             - Imported by:
+              - `primitives/css/layer`
               - `primitives/css/overlay`
               - `primitives/css/pin`
               - `primitives/css/sticky`
@@ -23306,7 +23714,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Uses:
               - `primitives/css/badge.Badge`
               - `primitives/css/center.Center`
+              - `primitives/css/clip.clipClasses`
               - `primitives/css/pin.Pin`
+              - `primitives/css/rigid.rigidClass`
               - `primitives/css/row.Row`
               - `primitives/css/spacing.Stack`
               - `primitives/css/text.Text`
@@ -23857,6 +24267,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `infra/endpoints.getEndpointErrorMessage`
           - `infra/endpoints.useEndpoint`
           - `primitives/css/center.Center`
+          - `primitives/css/fill.Fill`
           - `primitives/css/pin.Pin`
           - `primitives/css/placeholder.Placeholder`
           - `primitives/css/row.Row`
@@ -23890,7 +24301,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`graph-canvas`** — Generic dagre+xyflow graph canvas primitive: a pan/zoom/fit viewer with HTML/Tailwind nodes and solid/dashed directed edges, behind a domain-agnostic node/edge API. Read-only by default, with opt-in editor affordances (hover connect handles + onConnect, node/edge action overlays, group-background layers, smoothstep edges).
       - Web:
         - Uses:
+          - `primitives/css/fill.Fill`
           - `primitives/css/pin.Pin`
+          - `primitives/css/rigid.Rigid`
           - `primitives/css/spacing.Stack`
           - `primitives/css/text.Text`
           - `primitives/css/ui-kit.cn`
@@ -24267,6 +24680,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conversations/model-provider.useVisibleModels`
           - `conversations/preprompts.PrepromptSelect`
           - `infra/endpoints.fetchEndpoint`
+          - `primitives/css/fill.fillClasses`
           - `primitives/css/spacing.Stack`
           - `primitives/css/text.Text`
           - `primitives/css/ui-kit.Button`
@@ -24594,6 +25008,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses:
           - `primitives/css/grid.Grid`
           - `primitives/css/placeholder.Placeholder`
+          - `primitives/css/rigid.rigidClass`
           - `primitives/css/spacing.Stack`
           - `primitives/css/spinner.Spinner`
           - `primitives/css/ui-kit.cn`
@@ -26133,6 +26548,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/collapsible.CollapsibleChevron`
           - `primitives/collapsible.ExpandAllButton`
           - `primitives/css/center.Center`
+          - `primitives/css/layer.layerClasses`
           - `primitives/css/pin.Pin`
           - `primitives/css/spacing.Stack`
           - `primitives/css/sticky.Sticky`
@@ -27052,6 +27468,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Contributes: `ReorderNodes.NodeType` "header"
             - Uses:
               - `primitives/collapsible.CollapsibleChevron`
+              - `primitives/css/center.Center`
+              - `primitives/css/line.Line`
+              - `primitives/css/rigid.rigidClass`
               - `primitives/css/spacing.Inset`
               - `primitives/css/text.Text`
               - `primitives/css/ui-kit.cn`
@@ -27435,11 +27854,15 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/collapsible.useExpandAll`
           - `primitives/copy-to-clipboard.CopyButton`
           - `primitives/css/badge.Badge`
+          - `primitives/css/fill.Fill`
+          - `primitives/css/line.Line`
           - `primitives/css/placeholder.Placeholder`
+          - `primitives/css/rigid.rigidClass`
           - `primitives/css/scroll.Scroll`
           - `primitives/css/spacing.Stack`
           - `primitives/css/sticky.Sticky`
           - `primitives/css/text.Text`
+          - `primitives/css/ui-kit.cn`
           - `primitives/diff-view.DiffOrImageView`
           - `primitives/live-state.ResourceView`
           - `primitives/live-state.useResource`
@@ -27463,8 +27886,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/css/badge.Badge`
           - `primitives/css/badge.formatStatusLabel`
           - `primitives/css/card.Card`
+          - `primitives/css/clip.Clip`
+          - `primitives/css/fill.Fill`
+          - `primitives/css/line.Line`
+          - `primitives/css/rigid.rigidClass`
           - `primitives/css/spacing.Stack`
           - `primitives/css/text.Text`
+          - `primitives/css/ui-kit.cn`
           - `primitives/live-state.useResource`
           - `primitives/loading.Loading`
           - `primitives/slot-render.defineRenderSlot`
@@ -27523,8 +27951,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Contributes: `PluginChangesSlots.Section` → `ApiChangesSection`
             - Uses:
               - `primitives/css/badge.Badge`
+              - `primitives/css/line.Line`
+              - `primitives/css/rigid.rigidClass`
               - `primitives/css/spacing.Stack`
               - `primitives/css/text.Text`
+              - `primitives/css/ui-kit.cn`
               - `review/plugin-changes.FacetDiff`
               - `review/plugin-changes.PluginChangesSlots`
               - `review/plugin-changes.usePluginFacetDiffs`
@@ -27538,7 +27969,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/copy-to-clipboard.CopyButton`
               - `primitives/css/badge.Badge`
               - `primitives/css/clip.Clip`
+              - `primitives/css/fill.fillClasses`
+              - `primitives/css/line.Line`
+              - `primitives/css/rigid.rigidClass`
               - `primitives/css/text.Text`
+              - `primitives/css/ui-kit.cn`
               - `primitives/diff-view.DiffOrImageView`
               - `primitives/loading.Loading`
               - `review/plugin-changes.PluginChangesSlots`
@@ -27749,11 +28184,15 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `infra/endpoints.fetchEndpoint`
           - `primitives/css/badge.Badge`
           - `primitives/css/center.Center`
+          - `primitives/css/fill.Fill`
+          - `primitives/css/line.Line`
           - `primitives/css/pin.Pin`
+          - `primitives/css/rigid.rigidClass`
           - `primitives/css/scroll.Scroll`
           - `primitives/css/spacing.Stack`
           - `primitives/css/text.Text`
           - `primitives/css/toggle-chip.ToggleChip`
+          - `primitives/css/ui-kit.cn`
           - `primitives/icon-button.IconButton`
           - `primitives/live-state.useWindowResource`
           - `primitives/popover.InlinePopover`
@@ -27911,6 +28350,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `infra/endpoints.useEndpoint`
           - `primitives/css/cluster.Cluster`
           - `primitives/css/placeholder.Placeholder`
+          - `primitives/css/rigid.rigidClass`
           - `primitives/css/spacing.Stack`
           - `primitives/css/text.Text`
           - `primitives/css/toggle-chip.SegmentedControl`
@@ -28264,7 +28704,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conversations/conversation-view.conversationPane`
           - `conversations/conversation-view/action-bar.Conversation`
           - `primitives/css/badge.Badge`
+          - `primitives/css/fill.Fill`
+          - `primitives/css/fill.fillClasses`
           - `primitives/css/inline.Inline`
+          - `primitives/css/line.Line`
+          - `primitives/css/rigid.rigidClass`
           - `primitives/css/spacing.Inset`
           - `primitives/css/spacing.Stack`
           - `primitives/css/status-dot.StatusDot`
@@ -28655,6 +29099,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `infra/endpoints.fetchEndpoint`
           - `infra/endpoints.getEndpointErrorMessage`
           - `primitives/css/center.Center`
+          - `primitives/css/fill.Fill`
           - `primitives/css/inline.Inline`
           - `primitives/css/pin.Pin`
           - `primitives/css/spacing.Inset`
@@ -28765,9 +29210,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conversations/conversation-ui/item.ConversationItem`
           - `conversations/conversation-view.conversationPane`
           - `infra/endpoints.useEndpoint`
+          - `primitives/css/fill.Fill`
+          - `primitives/css/line.Line`
+          - `primitives/css/rigid.rigidClass`
           - `primitives/css/row.Row`
           - `primitives/css/spacing.Stack`
           - `primitives/css/text.Text`
+          - `primitives/css/ui-kit.cn`
           - `primitives/icon-button.IconButton`
           - `primitives/live-state.useResource`
           - `primitives/loading.Loading`
@@ -28800,6 +29249,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Contributes: `TaskDetailSlots.Section` "Task" → `TaskHeader`
         - Uses:
           - `conversations.useConversationById`
+          - `primitives/css/fill.Fill`
           - `primitives/css/spacing.Stack`
           - `primitives/css/text.SectionLabel`
           - `primitives/css/text.Text`
@@ -28914,6 +29364,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/css/badge.Badge`
           - `primitives/css/center.Center`
           - `primitives/css/inline.Inline`
+          - `primitives/css/rigid.rigidClass`
           - `primitives/css/status-dot.StatusDot`
           - `primitives/css/text.Text`
           - `primitives/css/ui-kit.cn`
@@ -29572,7 +30023,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/cluster.Cluster`
               - `primitives/css/color-picker.Color`
               - `primitives/css/color-picker.ColorPickerPopover`
+              - `primitives/css/fill.Fill`
               - `primitives/css/grid.Grid`
+              - `primitives/css/inline.Inline`
+              - `primitives/css/line.Line`
               - `primitives/css/row.Row`
               - `primitives/css/spacing.Stack`
               - `primitives/css/text.Text`
@@ -29721,6 +30175,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `config_v2.useConfig`
               - `config_v2.useSetConfig`
               - `fields/dynamic-enum/config.DynamicEnum`
+              - `primitives/css/fill.fillClasses`
               - `primitives/css/spacing.Stack`
               - `ui/theme-engine.ThemeEngine`
               - `ui/theme-engine.useThemeScopeId`
@@ -29897,11 +30352,15 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/cluster.Cluster`
               - `primitives/css/color-picker.Color`
               - `primitives/css/color-picker.ColorPickerPopover`
+              - `primitives/css/fill.fillClasses`
+              - `primitives/css/line.Line`
+              - `primitives/css/rigid.rigidClass`
               - `primitives/css/row.Row`
               - `primitives/css/row.SectionHeaderRow`
               - `primitives/css/spacing.Stack`
               - `primitives/css/text.Text`
               - `primitives/css/ui-kit.Button`
+              - `primitives/css/ui-kit.cn`
               - `ui/theme-engine.ThemeEngine`
               - `ui/theme-engine.useThemeScopeId`
               - `ui/theme-engine.useTokenGroupPresetOptions`
@@ -30130,8 +30589,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/collapsible.CollapsibleContent`
               - `primitives/collapsible.CollapsibleTrigger`
               - `primitives/css/fill.Fill`
+              - `primitives/css/fill.fillClasses`
               - `primitives/css/grid.Grid`
               - `primitives/css/line.Line`
+              - `primitives/css/rigid.rigidClass`
               - `primitives/css/scroll.Scroll`
               - `primitives/css/spacing.Stack`
               - `primitives/css/text.Text`
