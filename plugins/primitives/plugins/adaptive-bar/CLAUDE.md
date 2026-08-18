@@ -57,10 +57,13 @@ differ, so do not simplify the subtraction away. Pinned in
 content-sized container and then had to go looking for the width it had given
 away.
 
-Break the rule and you get told. Every fault throws in dev and files a report
-through `adaptiveBarReportSink` in prod (→ Debug → Reports via
-`reports/adaptive-bar`), because taking down a pane header over a layout
-disagreement is worse than a cramped row plus an alert.
+Break the rule and you get told. Every fault files a report through
+`adaptiveBarReportSink` (→ Debug → Reports via `reports/adaptive-bar`), and the
+ones that mean the bar's own contract is broken also **throw in dev** — because
+taking down a pane header over a layout disagreement is worse than a cramped row
+plus an alert. The ones the bar has already handled correctly (`empty-rung`,
+`iframe-relocation`, and the over-full row below) report without throwing and
+without latching anything.
 
 "In dev" is narrower than it sounds, and worth knowing before you go looking for
 that throw in a browser: `import.meta.env.DEV` is compiled to `false` in every
@@ -71,7 +74,7 @@ So the throw exists under vitest and nowhere else — in the deployed app, in th
 Layout Lab and in the geometry gate a fault is silent: `reportFault` plus
 whichever layout the remedy commits.
 
-The four faults:
+The five faults:
 
 - **no-slack** — it hides everything the row is holding, re-reads the row, and
   puts it back. A bar that was *given* its width measures the same either way;
@@ -79,23 +82,62 @@ The four faults:
   whole premise checked directly, and the reason it is not a style proxy:
   `flex-grow` is `1` in the failing case (the bar sets it on itself), and a
   parent that shrink-wraps to its child can never be overshot by it — so the
-  shape reads as healthy on every cheaper test. A row that measures 0px while
-  occupants are relocated out of it is the same fault — "not laid out yet" is
-  only honest while the row still holds everything it was given — but **only if
-  the row generates a box**. An element inside a `display: none` subtree
-  generates none, and this app keeps whole surfaces mounted-but-not-rendered
-  exactly that way in four places: an unfocused tab (`apps-core/surface`'s
-  `surface-body.tsx`), the keep-alive fallback body (`apps-core/tab-surface`), a
-  minimized or off-desktop floating window (`apps-core/surface/floating`), and a
-  collapsed miller column (`layouts/miller`). Such a row was never *given* a
-  width, so its 0 is not a reading at all — it is the absence of one, and the
-  predicate that tells the two apart is `getClientRects().length > 0`, asked
-  through the measurement seam (`isRendered`) and spelled exactly as
-  `measureRowOverflow` already spells it. `visibility: hidden` still faults:
-  layout is unchanged there, so the width is genuine. The distinction is not
-  pedantry — a 0 standing in for "there is no answer" is an absorbable failure
-  value (root `CLAUDE.md`), and this consumer's response to it latches
-  irreversibly.
+  shape reads as healthy on every cheaper test.
+
+  A row that measures **0px while occupants are relocated out of it** is the
+  other way in, and it is a *question*, never a verdict. Two filters and then a
+  re-ask:
+
+  **Does the row generate a box at all?** An element inside a `display: none`
+  subtree generates none, and this app keeps whole surfaces
+  mounted-but-not-rendered exactly that way in four places: an unfocused tab
+  (`apps-core/surface`'s `surface-body.tsx`), the keep-alive fallback body
+  (`apps-core/tab-surface`), a minimized or off-desktop floating window
+  (`apps-core/surface/floating`), and a collapsed miller column
+  (`layouts/miller`). Such a row was never *given* a width, so its 0 is not a
+  reading at all — it is the absence of one, and the predicate that tells the
+  two apart is `getClientRects().length > 0`, asked through the measurement seam
+  (`isRendered`) and spelled exactly as `measureRowOverflow` already spells it.
+  `visibility: hidden` is rendered and so still counts: layout is unchanged
+  there, so the width is genuine. The distinction is not pedantry — a 0 standing
+  in for "there is no answer" is an absorbable failure value (root `CLAUDE.md`),
+  and the act at the end of this branch latches irreversibly.
+
+  **And even a rendered 0px row is still two different things.** Either the
+  ratchet has reached its end — the host shrink-wraps to the bar, so every
+  eviction shrank the width that decided the next one, and the row has emptied
+  itself — or the row is merely **over-full**: `flex-1` is `flex: 1 1 0%`, so
+  when the row's *other* items over-fill their container, free space is negative
+  and a cell with a base size of 0 has no basis on which to absorb a share of
+  it, resolving to exactly 0px while fully laid out. Nothing is wrong with that
+  host; there is simply no room at this width, and there will be again when the
+  row widens. The probe at the top of this bullet is the guard that can tell
+  them apart — it is correctly silent for the over-full row, because hiding the
+  occupants cannot change a width that comes from free space — but it needs
+  occupants in the row to hide, which is exactly what the ratchet has run out
+  of.
+
+  So the bar does not guess — it runs the experiment. It **re-admits everything,
+  clears the premise watermark and reserves a probe**, and the very next pass
+  splits the two: a shrink-wrapping host now measures its own content, so the
+  probe runs and faults in the words that name the defect and latches; an
+  over-full row measures nothing again but has nothing evicted any more, so
+  nothing is latched and the bar decides again the moment the row has room.
+
+  Both answers are said out loud, and only the first commits anything. The
+  over-full answer is a `reportFault` — no throw, no latch — because at 0px with
+  `overflow-hidden` every occupant *and* the `⋯` are clipped to invisibility,
+  and a surface showing nothing with nothing filed is the outcome these guards
+  exist to prevent. It is filed once per mount, and only after a recovery has
+  actually happened, which is what makes it evidence rather than a guess.
+
+  The recovery **defers while a gesture holds an occupant** (`holds`,
+  `popupOpen`, `pointerPinned` — deliberately not `immovable`, which never
+  clears): re-admitting is a re-parent, and doing it under a live pointer is the
+  gesture-killing move the pointer lock exists to prevent. Every release bumps,
+  so it is deferred, never dropped. It is bounded by `MAX_ZERO_RECOVERIES`,
+  which is also where the honest termination argument is written down — and it
+  is not the one you would guess.
 
   Asked **per width**, not once per mount: the premise is a property of the
   *host*, and a host changes under a mounted bar — a framing variant swaps, a
@@ -158,7 +200,11 @@ the DOM at fault time and cost nothing on the hot path.
 **The remedy differs by fault, and the kinds must not be merged.** `no-slack` can
 trust nothing it measures, so it takes the **ceiling** (everything inline, CSS
 clips) and latches for good: eviction is the one thing a bad width reading must
-not do, since it is what that reading was already producing.
+not do, since it is what that reading was already producing. Its 0px branch has
+a third remedy the others have no spelling for — the ceiling **without** the
+latch — because there the bar is not yet accusing anyone, it is re-asking. And
+its over-full answer commits nothing at all: it is a report about a row that is
+already recovering.
 
 `row-overflow` and `no-convergence` have an honest width and a search that
 disagrees with the engine — but not in the same way, so they do not commit the
@@ -181,7 +227,12 @@ everything it holds — strictly worse than the clipping that mode already
 accepts.
 
 Committing and stopping are **one act** (`commitSurrender` latches), so "take
-the fallback and keep searching" has no spelling. Without that latch the commit
+the fallback and keep searching" has no spelling. The zero-width recovery is not
+a counter-example, and the difference is worth being precise about: it commits
+the search's *input* (everyone back in the row), not an answer, and the next
+thing to read that input is the probe rather than the fit — so the loop this
+doctrine prevents, where the fit recomputes the same answer and trips the same
+guard, has nothing to run on. Without that latch the commit
 re-runs the pass, the fit recomputes the same answer and commits again forever
 (both the convergence branch and the commit reset the round counter, so the
 budget counted a number being zeroed underneath it). Scoped to the width and not
@@ -369,8 +420,11 @@ itself triggers the pass, so "deferred forever" is unrepresentable.
 - **`degraded` latches per mount.** Nothing clears it but a remount, so a false
   `no-slack` costs that surface the whole relocation behaviour until it is torn
   down and rebuilt — which is why the 0px branch is held to a higher standard
-  than the others and asks whether the row generates a box before it accuses
-  anyone.
+  than the others: it asks whether the row generates a box before it accuses
+  anyone, and then re-admits and re-asks rather than accusing on a number that
+  cannot carry the answer. Each re-ask costs the re-admitted layout for one pass
+  and one extra probe reflow, up to `MAX_ZERO_RECOVERIES` of them per settled
+  answer.
 - **`overflow="clip"` can silently drop a widget.** Kept because
   prompt-templates needs it and has a second route to the content. If it starts
   papering over layout bugs, the fix is a lint rule demanding a named reason, not
@@ -378,7 +432,7 @@ itself triggers the pass, so "deferred forever" is unrepresentable.
 
 ## Where the claims are proven
 
-Four suites, because no one of them can carry the whole thing:
+Four kinds of suite, because no one of them can carry the whole thing:
 
 | where | what only it can prove |
 |---|---|
@@ -386,6 +440,8 @@ Four suites, because no one of them can carry the whole thing:
 | `web/__tests__/` (jsdom) | React never unmounted the subtree; the pins; the panel's dock survives a close |
 | `fixtures/index.ts` → `./singularity check layout-geometry` | the boxes do not collide and nothing spills, under a real layout engine, across a width sweep |
 | `e2e/adaptive-bar-relocate.ts` (manual) | **a relocated slider still drags**, and comes back as the same instance |
+| `e2e/adaptive-bar-hidden-host.ts` (manual) | a bar hidden with `display: none` and shown again is **still deciding** |
+| `e2e/adaptive-bar-overfull-row.ts` (manual) | a bar whose row is over-filled until its cell resolves to 0px is **still deciding** once the row has room again |
 
 jsdom has no layout engine and the shared `ResizeObserver` stub is inert, so the
 jsdom suite supplies widths through `AdaptiveBarMeasure` — the primitive's own

@@ -296,6 +296,7 @@ grow cell.
 ## Follow-ups worth filing
 
 **1. Branch A cannot tell the ratchet from an over-full row, and latches anyway.**
+*(Done — [`…-zero-width-recovery.md`](./2026-08-18-global-adaptive-bar-zero-width-recovery.md), which follows the sketch below.)*
 `flex-1` is `flex: 1 1 0%`. When a row's other items over-fill it, free space is
 negative and the `flex-1` cell resolves to exactly **0px while fully rendered** —
 so `isRendered` says yes and branch A latches the ceiling for the life of the

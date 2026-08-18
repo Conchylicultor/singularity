@@ -72,6 +72,7 @@ import {
   MAX_PREMISE_SHIFTS,
   MAX_SLACK_PROBES,
   MAX_SURRENDERS,
+  MAX_ZERO_RECOVERIES,
   TRACE_ROUNDS,
   WIDTH_EPSILON_PX,
 } from "./diagnostics";
@@ -503,6 +504,21 @@ function AdaptiveBarShell({
   const slackVerifiedAtRef = useRef<number | null>(null);
   const slackProbesRef = useRef(0);
   /**
+   * How many times this bar has re-admitted its occupants to re-ask a zero
+   * width, since the last time it reached a settled answer.
+   *
+   * See {@link MAX_ZERO_RECOVERIES} for what the recovery is and why the bound
+   * is scoped to "since the last convergence" rather than to the mount.
+   */
+  const zeroRecoveriesRef = useRef(0);
+  /**
+   * Whether this bar has already said that its row is over-full — the answer a
+   * recovery comes back with when the zero was never the bar's own doing. Said
+   * once per mount: the state is recoverable and self-healing, so it is worth
+   * knowing about and not worth repeating.
+   */
+  const overFullReportedRef = useRef(false);
+  /**
    * This bar has stopped deciding, and the width it stopped at. See
    * {@link commitFloor}: a fault-forced floor is the last placement computed
    * for THIS width, and the bar re-arms only when the row genuinely resizes.
@@ -717,6 +733,13 @@ function AdaptiveBarShell({
 
     // The authored bucket has no width to consult — membership is the author's
     // decision, so there is nothing to measure and nothing to converge.
+    //
+    // This return has to stay ABOVE the measurement, and the zero-width recovery
+    // below is why it is worth saying so. A collapsed bar puts EVERY occupant
+    // out of the row unconditionally, so it always looks like "occupants
+    // relocated out of a row measuring nothing" — and a recovery there would
+    // commit the ceiling only for this branch to put everything straight back
+    // out on the next pass, for ever.
     if (collapsed) {
       const next = new Map<string, number | null>();
       for (const { id, entry } of order) {
@@ -746,7 +769,8 @@ function AdaptiveBarShell({
     // With occupants already OUT of the row, a zero CAN be the bar's own doing —
     // an empty row measures empty — and then waiting is waiting for a width that
     // only re-admitting them could produce. That is the one absorbing state this
-    // primitive can reach, so it is a fault rather than a pause.
+    // primitive can reach, so it is not a pause. It is also not a verdict: see
+    // the recovery below.
     //
     // But only if the row generates a box at all. An element in a `display:
     // none` subtree was never given a width: reading 0 off it is not a reading,
@@ -765,16 +789,126 @@ function AdaptiveBarShell({
     // `isRendered` costs nothing: it is asked only on the path that already read
     // zero AND has evictions, after `measure(root)` flushed layout — so it
     // forces no reflow of its own.
+    //
+    // And a row that DOES generate a box, and still measures nothing with
+    // occupants parked outside it, is two different things that this number
+    // cannot tell apart:
+    //
+    // - the ratchet at its end. The host shrink-wraps to the bar, so every
+    //   eviction shrank the width that decided the next one, and the row has
+    //   emptied itself. A real fault, and the ceiling is the right remedy.
+    // - a merely OVER-FULL row. `flex-1` is `flex: 1 1 0%`: when the row's other
+    //   items over-fill their container, free space is negative, and a cell
+    //   whose base size is 0 has no basis to absorb a share of it — so it
+    //   resolves to exactly 0px while fully laid out. Nothing is wrong with the
+    //   host and nothing is wrong with the bar. There is no room at this width,
+    //   and there will be again when the row widens. Latching here would take
+    //   the relocation behaviour away for the life of the mount over a row that
+    //   is merely cramped.
+    //
+    // So do not decide it from a number that carries no answer — restore the
+    // conditions under which the guard that CAN answer will run, and let it. The
+    // recovery re-admits everything, clears the premise watermark and refunds a
+    // probe, which splits the two cases on the very next pass: a shrink-wrapping
+    // host now measures its own content, so the probe below runs and faults in
+    // the words that name the defect; an over-full row measures nothing again
+    // but has nothing evicted any more, so this branch declines it and the pass
+    // is the ordinary "no width yet" pause, which recovers by itself the moment
+    // the row widens. {@link MAX_ZERO_RECOVERIES} is where the bound and its
+    // termination argument are written down.
     if (available <= 0) {
       if (evicted.length > 0 && isRendered(root)) {
-        setDegraded(true);
-        failLoudly({
+        // A gesture holds one of the occupants. Re-admitting would re-parent it
+        // out of the body-portaled panel mid-drag — pointer capture released,
+        // top layer dropped, transition restarted, the whole list the pointer
+        // lock exists to prevent. Deferred, never dropped: every release bumps,
+        // so the pass runs again the moment the gesture ends.
+        //
+        // `immovable` is deliberately NOT in this predicate, unlike the fit's
+        // own `pinned`: it never clears, so including it would defer for ever
+        // and leave a 0px row with nothing to say for itself. An immovable
+        // occupant is never evicted anyway, so re-admitting costs it nothing.
+        const gestured = order.some(
+          ({ entry }) =>
+            entry.holds > 0 || entry.popupOpen || entry.pointerPinned,
+        );
+        if (gestured) return;
+        if (zeroRecoveriesRef.current < MAX_ZERO_RECOVERIES) {
+          zeroRecoveriesRef.current += 1;
+          // Load-bearing, not tidiness: leaving the old watermark in place
+          // would make the WIDER re-admitted width read as already verified,
+          // the probe would not run, and the whole re-ask would fail silently.
+          slackVerifiedAtRef.current = null;
+          // Reserve a probe rather than refund one. `n - 1` would manufacture
+          // budget — spend-then-refund nets to zero, and `MAX_SLACK_PROBES`
+          // would stop bounding reflows at all. This guarantees exactly what
+          // the re-ask needs: that one probe is available to answer it.
+          slackProbesRef.current = Math.min(
+            slackProbesRef.current,
+            MAX_SLACK_PROBES - 1,
+          );
+          // H2's evidence goes with the placement it was evidence ABOUT. This
+          // branch returns above the premise block, so a promotion recorded
+          // before the collapse would otherwise survive the re-admission and
+          // bar a rung on the strength of a search that no longer exists —
+          // exactly what `startEpisode` clears it for.
+          episodeRef.current.promoted.clear();
+          // The ceiling as a PLACEMENT, not as `degraded`: the same layout —
+          // `rungOf` reads a missing entry as rung 0, so this is everyone inline
+          // at their widest — but one the next pass is free to leave again.
+          //
+          // Never a no-op commit, and the invariant is worth stating because a
+          // silent bail-out here would tick the counter without ever re-admitting
+          // anything: `evicted` requires `rungOf` to have returned `null`, which
+          // requires `placement.has(id)`, which an empty map cannot satisfy. So
+          // `placement` is never `EMPTY_PLACEMENT` on this path.
+          //
+          // It can also re-arm a surrendered bar, since the re-admitted width
+          // differs from the width it surrendered at. That is the right outcome
+          // — the floor evidently did not help — and `MAX_SURRENDERS` bounds it.
+          setPlacement(EMPTY_PLACEMENT);
+        } else {
+          setDegraded(true);
+          failLoudly({
+            kind: "no-slack",
+            label,
+            overflow,
+            ...originOf(root),
+            message: `the row measured 0px wide while occupants were relocated out of it, and it does generate a box — so this is a width its host really gave it. Re-admitting every occupant ${String(MAX_ZERO_RECOVERIES)} times never produced a width the slack probe could judge, so the bar has stopped deciding: everything back in the row, CSS clips. Two hosts reach this. One shrink-wraps to the bar, so every eviction shrinks the width that decides the next one — put the bar where there is room to give: as the growing cell of a single-line row, with no Fill or other flex-1 sibling competing for the same slack, and never inside a shrink-to-content parent (inline-flex, w-fit, Cluster). The other is a row so over-full that the bar's flex-1 cell (base size 0) has nothing left to resolve to — there the fix is the bar's SIBLINGS, which are taking more than the row has.`,
+          });
+        }
+      } else if (
+        zeroRecoveriesRef.current > 0 &&
+        !overFullReportedRef.current &&
+        isRendered(root)
+      ) {
+        // The re-admission ANSWERED. This row holds every occupant it has, is
+        // fully rendered, and still measures nothing — so the zero did not come
+        // from the bar's own evictions and never could have: the row it sits in
+        // is over-full, and `flex: 1 1 0%` against negative free space resolves
+        // this cell to exactly nothing.
+        //
+        // Reported, and reported once, because the alternative is silence about
+        // an invisible toolbar: at 0px with `overflow-hidden` every occupant AND
+        // the `⋯` trigger are clipped away, and a surface that shows nothing
+        // with nothing filed is the outcome this primitive's guards exist to
+        // prevent. `reportFault` rather than `failLoudly` — nothing is latched,
+        // nothing throws, and the bar goes straight back to work when the row
+        // has room. The same discipline as `empty-rung`: handled correctly, and
+        // still worth knowing.
+        //
+        // Gated on a recovery having happened, which is what makes it evidence
+        // rather than a guess — and what keeps it away from the ordinary
+        // "not laid out yet" pause and from the `display: none` case, which
+        // never recovers because `isRendered` refuses it first.
+        overFullReportedRef.current = true;
+        reportFault({
           kind: "no-slack",
           label,
           overflow,
           ...originOf(root),
           message:
-            "the row measured 0px wide while occupants were relocated out of it, and it does generate a box — so this is a width its host really gave it: either the ratchet's terminal state, where the only width left to read is the one the bar's own evictions produced, or a row so over-full that its flex-1 cell (base size 0) resolved to nothing. Re-admitted everything.",
+            "the bar's own cell resolved to 0px while it was fully rendered and holding every occupant it has — so the row it sits in is over-full: its other cells' content leaves negative free space, and flex: 1 1 0% resolves this cell to nothing. Everything the bar holds, the ⋯ trigger included, is clipped to invisibility at that width. Nothing was evicted and nothing has been latched: the bar decides again as soon as the row has room. The fix is on the SIBLING cells — make one of them shrinkable (min-w-0, or a truncating leaf) so the row stops over-filling.",
         });
       }
       return;
@@ -1143,8 +1277,19 @@ function AdaptiveBarShell({
             ...originOf(root),
             message: `the fit says everything fits and the rendered row still overflows the box the bar was given, by ${String(Math.round(overflowingBy))}px — so the widths the fit decided from are not the widths the row actually has.`,
           });
+          // Not a settled answer: it floored and surrendered. Falling through
+          // to the clear below would refund a zero-width recovery on the way
+          // out of a fault, which is the one place it must not be refunded.
+          return;
         }
       }
+      // A settled answer at a real width, with nothing to report — so whatever
+      // a zero-width recovery was about is over, and the next one starts from
+      // scratch. This is the ONLY place the counter is cleared, and it is safe
+      // for a structural reason: convergence means no `setState`, so it ENDS
+      // the synchronous re-entry chain. Nothing can reach here from inside one.
+      // See {@link MAX_ZERO_RECOVERIES}.
+      zeroRecoveriesRef.current = 0;
       return;
     }
 

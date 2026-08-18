@@ -17,8 +17,9 @@ from that. Five of them, discriminated by `fault` in the payload:
   is a shrink-to-content box's — its own content's — not "the room I was
   given". Not a computed-style test: `flex-grow` reads `1` in the failing case
   too, since the bar declares `flex-1` on itself, which is exactly why that
-  cheaper check can never catch it. The bar latches into `degraded` for the
-  rest of its mount: every occupant goes back into the row at its widest form,
+  cheaper check can never catch it. When that probe is what tripped, the bar
+  latches into `degraded` for the rest of its mount: every occupant goes back
+  into the row at its widest form,
   and whatever does not fit is left for CSS to clip. That is the **ceiling**
   rather than the floor `row-overflow` takes, because an eviction is precisely
   what a bad width reading was already producing — pulling more occupants out
@@ -30,7 +31,21 @@ from that. Five of them, discriminated by `fault` in the payload:
   unfocused tab, a minimized window, a collapsed miller column — no longer
   files: such a row generates no box, so its 0px is the absence of a width
   rather than a width its host gave it, and rows filed before that date are
-  largely those false positives.
+  largely those false positives. Since the same date a **rendered** 0px row does
+  not file straight away either: it re-admits its occupants and re-asks the
+  probe, because a `flex: 1 1 0%` cell in an over-full row also resolves to 0px
+  while perfectly healthy.
+
+  So `no-slack` now arrives in **two flavours, and only the message tells them
+  apart** — the fingerprint is `fault + origin + overflow + item.id`, which
+  deliberately excludes `message`, so both land on one row with one count. That
+  is the intent: same bar, same host defect, different severity. One flavour
+  latched the ceiling for the life of the mount (a shrink-wrapping host, or a
+  re-ask that never produced a judgeable width). The other latched **nothing**
+  and says so: the bar's row is over-full, its cell resolves to 0px, everything
+  it holds is clipped to invisibility — and it decides again as soon as the row
+  has room. The remedy for the second is on the bar's *siblings*, not its
+  ancestors.
 - **`row-overflow`** — on a **converged** pass (rendered *is* what the fit
   decided) the fit blessed the row as fitting, and the union of the occupants'
   own boxes still sticks out of the bar's own content box on one side or the

@@ -241,6 +241,52 @@ export const MAX_SURRENDERS = 3;
 export const MAX_SLACK_PROBES = 6;
 
 /**
+ * How many times one bar may re-admit its occupants to re-ask a zero width,
+ * before it stops asking and takes the ceiling for good.
+ *
+ * A RENDERED row that measures nothing with occupants parked outside it can mean
+ * two different things, and the width alone cannot tell them apart. Either the
+ * ratchet has reached its end — the host shrink-wraps to the bar, so every
+ * eviction shrank the width that decided the next one, and the row has emptied
+ * itself — or the row is merely OVER-FULL: `flex-1` is `flex: 1 1 0%`, so when
+ * the row's other items over-fill their container, free space is negative and
+ * the bar's cell resolves to exactly 0px while fully laid out. Nothing is wrong
+ * with the host there; the bar simply has no room at this width.
+ *
+ * The differential probe ({@link MAX_SLACK_PROBES}) is the guard that CAN tell
+ * them apart, and it is correctly silent in the second case — hiding the
+ * occupants cannot change a width that comes from negative free space. But it
+ * needs occupants in the row to hide, which is exactly what the first case has
+ * run out of. So the bar re-admits everything and re-asks, instead of guessing
+ * from a number that carries no answer.
+ *
+ * **This is not what makes the recovery terminate**, and believing it is would
+ * be the way to break it. A recovery's follow-up pass runs at a real width and
+ * commits a different placement, so it costs one `episode.total` like any other
+ * — which means {@link HARD_ROUND_CEILING} already bounds a recovery loop, and
+ * already ends it with a `no-convergence` surrender. What this number decides is
+ * the **diagnosis**: whether a bar that cannot get an answer says `no-slack`
+ * (true — the width reading is the problem) or `no-convergence` (a
+ * misdiagnosis, blaming the fit for a host's arithmetic).
+ *
+ * So it is cleared at exactly the instant `episode.total` is — a pass that
+ * converges without faulting — rather than on any looser signal. Tying the two
+ * together means this introduces no new termination claim: it inherits one that
+ * is already proven and already tested (`web/__tests__/termination.test.tsx`).
+ * A monotonic per-mount cap was the obvious alternative and is wrong: a single
+ * drag oscillating around the collapse point burns one per crossing, so it
+ * reinstates the permanent latch, conditioned on gesture history.
+ *
+ * Three, and the ceiling is React's margin rather than a UX budget. Each
+ * recovery costs about two nested synchronous updates on top of an episode
+ * already allowed to run to {@link HARD_ROUND_CEILING}, which is itself chosen
+ * to stay well under React's nested-update limit of 50. One recovery is all a
+ * healthy answer needs; the other two are the spare for an occupant that mounts
+ * mid-chain.
+ */
+export const MAX_ZERO_RECOVERIES = 3;
+
+/**
  * The promote band, in px — one `gap-sm`. A demotion is accepted the moment the
  * row overflows; a promotion needs this much headroom on top. The two
  * predicates are disjoint, so no single width both demands a demote and permits

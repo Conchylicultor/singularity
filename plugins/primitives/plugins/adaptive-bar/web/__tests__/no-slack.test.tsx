@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { cleanup, render } from "@testing-library/react";
+import { cleanup, fireEvent, render } from "@testing-library/react";
 import { type ReactElement } from "react";
 import { useActionForm } from "@plugins/primitives/plugins/action-presentation/web";
 import {
@@ -8,7 +8,7 @@ import {
   adaptiveBarReportSink,
 } from "../index";
 import type { AdaptiveBarFault } from "../index";
-import { MAX_SLACK_PROBES } from "../internal/diagnostics";
+import { MAX_SLACK_PROBES, MAX_ZERO_RECOVERIES } from "../internal/diagnostics";
 
 /**
  * The host contract, as a test.
@@ -379,20 +379,96 @@ describe("a row that generates no box", () => {
     expect(inlineCount()).toBe(2);
   });
 
-  it("still faults when a RENDERED row measures nothing with occupants parked outside it", () => {
+  it("re-admits everything when a RENDERED row measures nothing, and decides again when the width comes back", () => {
     const { rerender } = render(<HiddenHostRow />);
     expect(inlineCount()).toBe(2);
 
-    // A box that really is zero wide: the ratchet's terminal state, or a row so
-    // over-full that its flex-1 cell (base size 0) resolved to nothing. Either
-    // way the host gave the bar that width, and the bar cannot decide from it.
+    // A box that really is zero wide — and a width its host really gave the bar,
+    // so `isRendered` says yes and the recovery branch is the one that runs. The
+    // host here is not content-following (it answers `hostPx` however much the
+    // row is holding), which is the over-full row: `flex: 1 1 0%` against
+    // negative free space resolves to nothing while fully laid out.
     hostPx = 0;
     rerender(<HiddenHostRow />);
 
+    // Everything re-admitted, and the re-admission is what ANSWERS the
+    // question: a row holding all of its occupants and still measuring nothing
+    // was never collapsed by the bar's own evictions. So it is said out loud —
+    // at 0px with `overflow-hidden` the whole toolbar is clipped away, and
+    // silence there is an invisible surface nobody can act on — but it is said
+    // without latching anything.
     expect(hiddenFaults.map((f) => f.kind)).toEqual(["no-slack"]);
-    // The ceiling: everything back in the row, CSS clips. The negative control
-    // that stops a later "simplification" turning the branch off entirely.
+    expect(hiddenFaults[0]?.message).toMatch(/the row it sits in is over-full/);
+    expect(hiddenFaults[0]?.message).toMatch(/nothing has been latched/);
     expect(inlineCount()).toBe(3);
+
+    // The load-bearing half. A bar that latched holds all three for ever; this
+    // one goes straight back to work at the width it had before.
+    hostPx = CAP_PX;
+    rerender(<HiddenHostRow />);
+    expect(inlineCount()).toBe(2);
+
+    // And it says it once. The state is recoverable and self-healing, so a
+    // report per collapse would be noise about a row that is already fine.
+    hostPx = 0;
+    rerender(<HiddenHostRow />);
+    hostPx = CAP_PX;
+    rerender(<HiddenHostRow />);
+    expect(hiddenFaults).toHaveLength(1);
+    expect(inlineCount()).toBe(2);
+  });
+
+  it("keeps deciding across many collapses, which a per-mount budget could not", () => {
+    const { rerender } = render(<HiddenHostRow />);
+
+    // A pane being dragged back and forth across the width where its row starts
+    // over-filling. Every crossing spends a recovery, so a counter scoped to the
+    // MOUNT rather than to the last settled answer would run out here and hand
+    // the user the permanent latch this whole branch exists to avoid.
+    for (let i = 0; i < MAX_ZERO_RECOVERIES + 3; i += 1) {
+      hostPx = 0;
+      rerender(<HiddenHostRow />);
+      hostPx = CAP_PX;
+      rerender(<HiddenHostRow />);
+    }
+
+    // Still deciding, and still only the one over-full note to show for it.
+    expect(hiddenFaults).toHaveLength(1);
+    expect(inlineCount()).toBe(2);
+  });
+
+  it("waits for a gesture to end before re-admitting anything", () => {
+    const { rerender } = render(<HiddenHostRow />);
+    expect(inlineCount()).toBe(2);
+
+    // The occupant the row could not fit. Re-admitting is a re-parent, so doing
+    // it under a live pointer would release the capture and kill the gesture —
+    // and this is exactly the state where that happens, because a pinned
+    // occupant that is already out of the row STAYS out, which is what keeps
+    // the zero-width branch reachable for as long as the gesture lasts.
+    const parked = [
+      ...document.querySelectorAll<HTMLElement>("[data-adaptive-bar-item]"),
+    ].find((c) => c.parentElement?.hidden === true);
+    const parkedId = parked?.getAttribute("data-adaptive-bar-item");
+    expect(parkedId).toBeTypeOf("string");
+    fireEvent.pointerDown(
+      document.querySelector<HTMLElement>(`[data-probe="${parkedId ?? ""}"]`)!,
+      { pointerId: 1 },
+    );
+
+    hostPx = 0;
+    rerender(<HiddenHostRow />);
+
+    // Deferred, not decided and not accused: the widget under the pointer is
+    // still where the gesture left it.
+    expect(hiddenFaults).toEqual([]);
+    expect(inlineCount()).toBe(2);
+
+    // Deferred, never dropped — the release is what lets the recovery run.
+    fireEvent.pointerUp(document, { pointerId: 1 });
+    rerender(<HiddenHostRow />);
+    expect(inlineCount()).toBe(3);
+    expect(hiddenFaults.map((f) => f.kind)).toEqual(["no-slack"]);
   });
 
   it("measures nothing at all while the host is hidden", () => {
@@ -406,5 +482,149 @@ describe("a row that generates no box", () => {
     // one root read and stops. Reading the occupants would be reading zeros
     // into the width cache, where they are sticky.
     expect(itemMeasures).toBe(0);
+  });
+});
+
+/**
+ * The two things a RENDERED 0px row can mean, and the guard that can tell them
+ * apart.
+ *
+ * A row that generates a box and still measures nothing with occupants parked
+ * outside it is either the ratchet at its end — the host shrink-wraps to the
+ * bar, every eviction shrank the width that decided the next one, and the row
+ * has emptied itself — or a row that is merely OVER-FULL, where `flex: 1 1 0%`
+ * against negative free space resolves to exactly 0px while fully laid out.
+ * The width alone cannot separate them, and the remedy for one is catastrophic
+ * for the other: `degraded` latches for the life of the mount.
+ *
+ * The differential probe CAN separate them, and is correctly silent for the
+ * over-full row (hiding the occupants does not change a width that comes from
+ * free space) — but it needs occupants in the row to hide, which is exactly
+ * what the ratchet has run out of. So the bar re-admits everything and re-asks
+ * instead of guessing, and the pass after the recovery is where the two part
+ * company. The cases below are that fork, both ways, plus its bound.
+ */
+
+/** What a host that GIVES a width hands the row, before anything goes wrong. */
+let ratchetPx = 0;
+/** Once true, the row's width IS the content it is holding — the ratchet. */
+let contentDriven = false;
+let ratchetFaults: AdaptiveBarFault[] = [];
+
+function measureRatchet(el: Element): number {
+  if (el.hasAttribute("data-adaptive-bar-trigger")) return 30;
+  if (el.hasAttribute("data-adaptive-bar-item")) {
+    return (el as HTMLElement).hidden ? 0 : ITEM_PX;
+  }
+  const shown = heldByRow(el).filter((c) => !c.hidden);
+  return contentDriven ? shown.length * ITEM_PX : ratchetPx;
+}
+
+function RatchetRow(): ReactElement {
+  return (
+    <AdaptiveBarMeasure measure={(el) => measureRatchet(el)}>
+      <AdaptiveBar gap="xs" label="Actions" overflow="clip">
+        {["alpha", "beta", "gamma"].map((id) => (
+          <AdaptiveBar.Item key={id} id={id}>
+            <Probe id={id} />
+          </AdaptiveBar.Item>
+        ))}
+      </AdaptiveBar>
+    </AdaptiveBarMeasure>
+  );
+}
+
+describe("a rendered row that measures nothing", () => {
+  beforeEach(() => {
+    ratchetPx = 400;
+    contentDriven = false;
+    ratchetFaults = [];
+    // The production path is the one under test: in dev `failLoudly` throws,
+    // which unmounts the tree and hides what the bar does next.
+    vi.stubEnv("DEV", false);
+    adaptiveBarReportSink.register((fault) => ratchetFaults.push(fault));
+  });
+
+  it("hands the ratchet's end state to the probe, which names it properly", () => {
+    const { rerender } = render(<RatchetRow />);
+    expect(inlineCount()).toBe(3);
+
+    // Narrow past the point where anything fits: in `clip` mode every occupant
+    // is evictable, so the row ends up holding nothing. Still a healthy host —
+    // its width does not move when the row empties — so nothing is reported.
+    ratchetPx = 10;
+    rerender(<RatchetRow />);
+    expect(ratchetFaults).toEqual([]);
+    expect(inlineCount()).toBe(0);
+
+    // NOW the host starts taking its width from the row's content. With the row
+    // already empty that reads as 0, which is branch A's exact shape — and the
+    // probe cannot be asked, because a probe with nothing to hide proves
+    // nothing. The recovery is what puts the occupants back where it can.
+    contentDriven = true;
+    rerender(<RatchetRow />);
+
+    expect(ratchetFaults.map((f) => f.kind)).toEqual(["no-slack"]);
+    // And it is the probe's diagnosis, in the probe's words — not the 0px
+    // branch guessing. That is the whole point of the hand-off.
+    expect(ratchetFaults[0]?.message).toMatch(/moves with its own content/);
+    // The ceiling: everything back in the row, CSS clips.
+    expect(inlineCount()).toBe(3);
+  });
+});
+
+/**
+ * A host that contradicts itself: 0 whenever anything has been evicted, a fixed
+ * width otherwise. Hiding the occupants — which is what the probe does — leaves
+ * them in the row, so the probe reads the same number twice and answers "the
+ * premise holds" every single time.
+ *
+ * No guard can get a true answer out of that, which is precisely why the
+ * recovery is bounded. Note the loop is entirely SYNCHRONOUS: `reconcile`
+ * re-enters itself through its layout effect after every commit, so this is the
+ * shape that ends in "maximum update depth exceeded" if nothing counts it.
+ */
+const GIVEN_PX = 250;
+let contradictingFaults: AdaptiveBarFault[] = [];
+
+function measureContradicting(el: Element): number {
+  if (el.hasAttribute("data-adaptive-bar-trigger")) return 30;
+  if (el.hasAttribute("data-adaptive-bar-item")) {
+    return (el as HTMLElement).hidden ? 0 : ITEM_PX;
+  }
+  return heldByRow(el).length === 3 ? GIVEN_PX : 0;
+}
+
+function ContradictingRow(): ReactElement {
+  return (
+    <AdaptiveBarMeasure measure={(el) => measureContradicting(el)}>
+      <AdaptiveBar gap="xs" label="Actions" overflow="clip">
+        {["alpha", "beta", "gamma"].map((id) => (
+          <AdaptiveBar.Item key={id} id={id}>
+            <Probe id={id} />
+          </AdaptiveBar.Item>
+        ))}
+      </AdaptiveBar>
+    </AdaptiveBarMeasure>
+  );
+}
+
+describe("a host no guard can get a true answer out of", () => {
+  beforeEach(() => {
+    contradictingFaults = [];
+    vi.stubEnv("DEV", false);
+    adaptiveBarReportSink.register((fault) => contradictingFaults.push(fault));
+  });
+
+  it("re-asks a bounded number of times, then takes the ceiling for good", () => {
+    render(<ContradictingRow />);
+
+    // One fault, not one per recovery: the recoveries are silent (a row with no
+    // room is cramped, not wrong), and only the exhausted budget is reported.
+    expect(contradictingFaults.map((f) => f.kind)).toEqual(["no-slack"]);
+    expect(contradictingFaults[0]?.message).toMatch(
+      new RegExp(`Re-admitting every occupant ${String(MAX_ZERO_RECOVERIES)}`),
+    );
+    expect(inlineCount()).toBe(3);
   });
 });
