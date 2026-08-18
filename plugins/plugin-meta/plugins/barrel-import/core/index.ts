@@ -1,4 +1,5 @@
 export {
+  BARREL_STUB_WORKTREE,
   registerBarrelStubs,
   importBarrel,
   setPreBarrelImportGuard,

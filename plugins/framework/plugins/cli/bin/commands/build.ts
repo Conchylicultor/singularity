@@ -43,10 +43,8 @@ import {
 } from "@plugins/infra/plugins/spawn/core";
 import { registerMergeDrivers } from "../git/register-merge-drivers";
 import { clearMergeMarkers } from "../../core";
-import {
-  runChecks,
-  markBuildInProgress,
-} from "@plugins/framework/plugins/tooling/plugins/checks/core";
+import { markBuildInProgress } from "@plugins/framework/plugins/tooling/plugins/checks/core";
+import { runCheckSubprocess } from "../check-subprocess";
 import {
   listDatabases,
   forkTempPrefix,
@@ -645,7 +643,8 @@ export function registerBuild(program: Command) {
     .option("--no-restart", "Skip asking the gateway to restart the backend")
     .option(
       "--skip-checks",
-      "Skip the post-build runChecks() pass (faster dev iteration; checks still gate `push`).",
+      "Skip the post-build full check pass — the alwaysRun subset still runs " +
+        "(faster dev iteration; checks still gate `push`).",
     )
     .option(
       "--allow-main",
@@ -1161,8 +1160,9 @@ export function registerBuild(program: Command) {
         // orchestrator's own footprint here: `process.resourceUsage().maxRSS` is a
         // TRUE peak (getrusage RUSAGE_SELF; Bun reports it in bytes), not an
         // instantaneous sample, so it covers every in-process phase — registry /
-        // manifest / composition codegen, config propagation, the checks driver —
-        // no matter when it is read. Idempotent.
+        // manifest / composition codegen, config propagation — no matter when it
+        // is read. The check pass is no longer among them: it is a child process
+        // now, and reports its own peak through this same seam. Idempotent.
         let footprintFlushed = false;
         const flushFootprint = (): void => {
           if (footprintFlushed) return;
@@ -1388,8 +1388,9 @@ export function registerBuild(program: Command) {
         // entrypoints.
         //
         // (`lane` is derived once, up-front, next to the op record it also feeds.)
-        // Publish the lane from the same fact (so any inheriting subprocess sees
-        // it) BEFORE runChecks runs in-process below. See ../lane.ts.
+        // Publish the lane from the same fact BEFORE the check pass is spawned
+        // below — the child is exactly the inheriting subprocess this exists for,
+        // and it classifies itself from what it reads here. See ../lane.ts.
         publishLane(branch === "main");
         // Agent-branch builds additionally run their heavy children (tsc, vite)
         // darwinbg-demoted so even a single build can't starve the interactive
@@ -1411,34 +1412,56 @@ export function registerBuild(program: Command) {
         // Gantt's `build:checks` lane. Validation is not artifact production, so
         // stage 3 takes it as a companion job sharing its ONE host grant.
         const fullChecksJob: HeavyJob = async (grant) => {
-          const lines: StepResult["lines"] = [];
           const start = performance.now();
-          const ok = await runChecks(undefined, {
-            // The build's host CPU grant — type-check spends it per worker.
+          // SPAWNED, never called in-process — see ../check-subprocess.ts. This
+          // process has already imported every plugin barrel and run the
+          // slot-declaration pass, so a check running here would record a global
+          // cache entry no standalone check could reproduce, and a later push
+          // would read it back as its own verdict.
+          //
+          // NO scope filter: build is the one caller that CAN assert
+          // `scope: "deploy"`, because it is the process producing the dist those
+          // checks inspect.
+          const result = await runCheckSubprocess({
+            root,
+            // The build's host CPU grant — the child's type-check spends it per
+            // worker, without re-acquiring host-wide.
             grant,
-            // Full, untruncated check output lands in this build's own
-            // `check-<buildId>.log`, beside its other per-run artifacts; the
-            // buffered `lines` (console + build.log) stay summarized.
-            logRun: { worktree: name, runId: buildId },
-            onCheckDone: (id, durationMs, wallStartMs) => {
-              pushBuildSpan(
-                `check:${id}`,
-                "build:checks",
-                id,
-                durationMs,
-                wallStartMs,
-              );
-            },
-            log: (line, stream) => {
-              lines.push({ text: line, stream });
-            },
+            // The child derives `check-<buildId>.log` from this — the identical
+            // path this build's failure funnel points at, because both sides
+            // compute it from `basename(root)`. Full, untruncated check output
+            // lands there beside the build's other per-run artifacts; the
+            // captured `lines` (console + build.log) stay summarized.
+            runId: buildId,
+            output: "capture",
           });
+          // Replayed from the child's own settle records, reconciled onto this
+          // process's clock — so `build:checks` still draws one bar per check at
+          // its true offset. A killed child draws a partial lane, which is honest
+          // and strictly better than the in-process pass it replaces, which drew
+          // nothing at all when interrupted.
+          for (const span of result.spans) {
+            pushBuildSpan(
+              `check:${span.checkId}`,
+              "build:checks",
+              span.checkId,
+              span.durationMs,
+              span.wallStartMs,
+            );
+          }
+          // New information the in-process pass could not produce: the check
+          // fleet used to run inside this process, where it was invisible in the
+          // orchestrator's own `getrusage(RUSAGE_SELF)` peak. Now it is a child
+          // with a footprint of its own, measured like every other heavy child.
+          recordFootprint("checks", result.maxRssBytes);
           return {
+            // `id: "checks"` is load-bearing — the build's failure funnel keys on
+            // it to add the check-log pointer.
             id: "checks",
             label: "checks",
-            lines,
+            lines: result.lines,
             durationMs: Math.round(performance.now() - start),
-            success: ok,
+            success: result.ok,
           };
         };
 
@@ -1448,7 +1471,7 @@ export function registerBuild(program: Command) {
         const companions: HeavyJob[] = opts.skipChecks
           ? await fastValidationJobs({
               root,
-              checkLogRun: { worktree: name, runId: buildId },
+              checkRunId: buildId,
               background: backgroundBuild,
               hooks,
             })

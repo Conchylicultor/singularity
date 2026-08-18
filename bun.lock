@@ -2685,6 +2685,10 @@
       "name": "@singularity/plugin-framework-tooling-lint-caret-trigger-safety",
       "version": "0.0.1",
     },
+    "plugins/framework/plugins/tooling/plugins/lint/plugins/check-runner-safety": {
+      "name": "@singularity/plugin-framework-tooling-lint-check-runner-safety",
+      "version": "0.0.1",
+    },
     "plugins/framework/plugins/tooling/plugins/lint/plugins/context-safety": {
       "name": "@singularity/plugin-framework-tooling-lint-context-safety",
       "version": "0.0.1",
@@ -6794,6 +6798,8 @@
     "@singularity/plugin-framework-tooling-lint-button-safety": ["@singularity/plugin-framework-tooling-lint-button-safety@workspace:plugins/framework/plugins/tooling/plugins/lint/plugins/button-safety"],
 
     "@singularity/plugin-framework-tooling-lint-caret-trigger-safety": ["@singularity/plugin-framework-tooling-lint-caret-trigger-safety@workspace:plugins/framework/plugins/tooling/plugins/lint/plugins/caret-trigger-safety"],
+
+    "@singularity/plugin-framework-tooling-lint-check-runner-safety": ["@singularity/plugin-framework-tooling-lint-check-runner-safety@workspace:plugins/framework/plugins/tooling/plugins/lint/plugins/check-runner-safety"],
 
     "@singularity/plugin-framework-tooling-lint-context-safety": ["@singularity/plugin-framework-tooling-lint-context-safety@workspace:plugins/framework/plugins/tooling/plugins/lint/plugins/context-safety"],
 

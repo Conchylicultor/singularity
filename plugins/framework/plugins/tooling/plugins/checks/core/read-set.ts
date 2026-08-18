@@ -16,11 +16,19 @@
 // content-addressed view of the whole scan surface, from which all four
 // projections derive with zero further git calls.
 //
-// STAGE 0: this file is built but DORMANT — no check sets `inputKeyed`, so the
-// runner never takes the input-keyed branch and none of the recording/validate
-// paths execute at runtime. Grep instrumentation (recording `queries`) lands in
-// a later stage; the `queries`/`glob` projections exist here but are not yet
-// exercised.
+// THIS FILE IS LIVE. Nine checks set `inputKeyed` today — `type-check`,
+// `plugin-boundaries`, and the seven grepCode pattern checks (`active-data`,
+// `no-raw-event-source`, `no-raw-sse`, `no-raw-websocket`,
+// `no-hardcoded-colors`, `no-hand-built-link-to`, `no-use-resource-cast`) — so
+// the runner takes the input-keyed branch and the recording/validate paths
+// execute on every check pass.
+//
+// A PASS RECORDED HERE IS NOT BOUNDED BY A TREE. The read-set slot is keyed on
+// `(checkId, cacheSignature())` with no tree hash at all (`cache.ts`
+// `readSetFile`), so it survives forward into later trees for as long as the
+// replay still validates — which is the point, and also why a check whose
+// verdict is not a pure function of the checkout must never be moved onto this
+// flag. See the `inputKeyed` JSDoc in `tooling/core/types.ts`.
 //
 // FAIL-OPEN CONTRACT: the cache must never CAUSE a stale PASS. Any snapshot load
 // failure yields `null` (caller runs uncached); `validate` returns a
@@ -133,7 +141,10 @@ export interface TreeSnapshot {
   createRecordingView(): FileSystemView;
 }
 
-async function gitStdout(root: string, args: string[]): Promise<{ code: number; bytes: Uint8Array }> {
+async function gitStdout(
+  root: string,
+  args: string[],
+): Promise<{ code: number; bytes: Uint8Array }> {
   const result = await spawnCaptured(["git", ...args], { cwd: root });
   return { code: result.exitCode, bytes: result.stdoutBytes };
 }
@@ -143,11 +154,19 @@ async function gitStdout(root: string, args: string[]): Promise<{ code: number; 
  * unavailable or `ls-tree` fails/looks malformed, so callers degrade to running
  * uncached rather than risking a bogus view.
  */
-export async function loadTreeSnapshot(root: string, treeHash: string): Promise<TreeSnapshot | null> {
+export async function loadTreeSnapshot(
+  root: string,
+  treeHash: string,
+): Promise<TreeSnapshot | null> {
   try {
     // -z: NUL-terminated records, no path quoting. Each record is
     // `<mode> <type> <sha>\t<path>`; `-r` recurses so only blobs/commits appear.
-    const { code, bytes } = await gitStdout(root, ["ls-tree", "-r", "-z", treeHash]);
+    const { code, bytes } = await gitStdout(root, [
+      "ls-tree",
+      "-r",
+      "-z",
+      treeHash,
+    ]);
     if (code !== 0) return null;
     const text = new TextDecoder().decode(bytes);
     const blobSha = new Map<string, string>();
@@ -165,7 +184,7 @@ export async function loadTreeSnapshot(root: string, treeHash: string): Promise<
     }
     if (blobSha.size === 0) return null; // an empty tree is never a real scan surface
     return buildSnapshot(root, treeHash, blobSha);
-  // eslint-disable-next-line promise-safety/no-bare-catch, promise-safety/no-absorbed-failure -- explicit fail-open contract, mirroring computeTreeHash: any error (no git, spawn failure, malformed output) returns null so checks run uncached; propagating would break the whole run in a degraded environment
+    // eslint-disable-next-line promise-safety/no-bare-catch, promise-safety/no-absorbed-failure -- explicit fail-open contract, mirroring computeTreeHash: any error (no git, spawn failure, malformed output) returns null so checks run uncached; propagating would break the whole run in a degraded environment
   } catch {
     return null;
   }
@@ -251,7 +270,11 @@ export function computeCheckSourceHash(snapshot: TreeSnapshot): string {
   return snapshot.checkSourceHash();
 }
 
-function buildSnapshot(root: string, treeHash: string, blobSha: Map<string, string>): TreeSnapshot {
+function buildSnapshot(
+  root: string,
+  treeHash: string,
+  blobSha: Map<string, string>,
+): TreeSnapshot {
   // Build the `dir → immediate child names` index ONCE. For a/b/c.ts we add
   // c.ts under a/b, b under a, a under "" (root). Files and subdirs both count
   // as members, so a membership probe sees a newly-added file OR subdir.
@@ -302,12 +325,16 @@ function buildSnapshot(root: string, treeHash: string, blobSha: Map<string, stri
     matchPathspecs,
     pathspecFingerprint: (pathspecs) => {
       const matches = matchPathspecs(pathspecs);
-      return sha256(matches.map((p) => `${p}\0${blobSha.get(p) ?? ""}`).join("\n"));
+      return sha256(
+        matches.map((p) => `${p}\0${blobSha.get(p) ?? ""}`).join("\n"),
+      );
     },
     checkSourceHash: () => {
       if (checkSourceHashMemo === undefined) {
         const parts = sortedPaths
-          .filter((p) => CHECK_SOURCE_PREFIXES.some((prefix) => p.startsWith(prefix)))
+          .filter((p) =>
+            CHECK_SOURCE_PREFIXES.some((prefix) => p.startsWith(prefix)),
+          )
           .map((p) => `${p}\0${blobSha.get(p)!}`);
         checkSourceHashMemo = sha256(parts.join("\n"));
       }
@@ -315,7 +342,11 @@ function buildSnapshot(root: string, treeHash: string, blobSha: Map<string, stri
     },
     readBlobText: async (path) => {
       if (!blobSha.has(path)) return null;
-      const { code, bytes } = await gitStdout(root, ["cat-file", "blob", `${treeHash}:${path}`]);
+      const { code, bytes } = await gitStdout(root, [
+        "cat-file",
+        "blob",
+        `${treeHash}:${path}`,
+      ]);
       if (code !== 0) return null;
       return new TextDecoder().decode(bytes);
     },
@@ -422,7 +453,12 @@ export interface FileSystemView {
   /** Expand a glob/pathspec, recording a glob fact. */
   glob(pattern: string): string[];
   /** Record a `git grep -l` selection + its pathspec fingerprint (Group-A). */
-  recordQuery(grepArg: string, fixed: boolean, pathspecs: string[], matches: string[]): void;
+  recordQuery(
+    grepArg: string,
+    fixed: boolean,
+    pathspecs: string[],
+    matches: string[],
+  ): void;
   /** Finalise the accumulated, canonicalised read-set. */
   readSet(): ReadSet;
 }
@@ -472,16 +508,17 @@ function createRecordingView(snapshot: TreeSnapshot): FileSystemView {
         pathspecFp: snapshot.pathspecFingerprint(pathspecs),
       });
     },
-    readSet: () => canonicalize({
-      sourceHash: snapshot.checkSourceHash(),
-      treeHashAtRecord: snapshot.treeHash,
-      recordedAt: Date.now(),
-      files: [...files].map(([path, blobSha]) => ({ path, blobSha })),
-      absent: [...absent],
-      dirs: [...dirs].map(([dir, members]) => ({ dir, members })),
-      globs: [...globs].map(([glob, matches]) => ({ glob, matches })),
-      queries,
-    }),
+    readSet: () =>
+      canonicalize({
+        sourceHash: snapshot.checkSourceHash(),
+        treeHashAtRecord: snapshot.treeHash,
+        recordedAt: Date.now(),
+        files: [...files].map(([path, blobSha]) => ({ path, blobSha })),
+        absent: [...absent],
+        dirs: [...dirs].map(([dir, members]) => ({ dir, members })),
+        globs: [...globs].map(([glob, matches]) => ({ glob, matches })),
+        queries,
+      }),
   };
 }
 
@@ -489,7 +526,9 @@ function createRecordingView(snapshot: TreeSnapshot): FileSystemView {
 function canonicalize(rs: ReadSet): ReadSet {
   return {
     ...rs,
-    files: [...rs.files].sort((a, b) => (a.path < b.path ? -1 : a.path > b.path ? 1 : 0)),
+    files: [...rs.files].sort((a, b) =>
+      a.path < b.path ? -1 : a.path > b.path ? 1 : 0,
+    ),
     absent: [...rs.absent].sort(),
     dirs: [...rs.dirs]
       .map((d) => ({ dir: d.dir, members: [...d.members].sort() }))
@@ -498,7 +537,11 @@ function canonicalize(rs: ReadSet): ReadSet {
       .map((g) => ({ glob: g.glob, matches: [...g.matches].sort() }))
       .sort((a, b) => (a.glob < b.glob ? -1 : a.glob > b.glob ? 1 : 0)),
     queries: [...rs.queries]
-      .map((q) => ({ ...q, pathspecs: [...q.pathspecs].sort(), matches: [...q.matches].sort() }))
+      .map((q) => ({
+        ...q,
+        pathspecs: [...q.pathspecs].sort(),
+        matches: [...q.matches].sort(),
+      }))
       .sort((a, b) => {
         const ka = `${a.grepArg}\0${a.pathspecs.join(",")}`;
         const kb = `${b.grepArg}\0${b.pathspecs.join(",")}`;
@@ -522,7 +565,13 @@ export function fingerprint(readSet: ReadSet): string {
       absent: c.absent,
       dirs: c.dirs,
       globs: c.globs,
-      queries: c.queries.map((q) => ({ grepArg: q.grepArg, fixed: q.fixed, pathspecs: q.pathspecs, matches: q.matches, pathspecFp: q.pathspecFp })),
+      queries: c.queries.map((q) => ({
+        grepArg: q.grepArg,
+        fixed: q.fixed,
+        pathspecs: q.pathspecs,
+        matches: q.matches,
+        pathspecFp: q.pathspecFp,
+      })),
     }),
   );
 }
@@ -575,7 +624,10 @@ export async function validate(
   }
   for (const path of readSet.absent) {
     if (snapshot.exists(path)) {
-      return { hit: false, reason: `previously-absent path now present: ${path}` };
+      return {
+        hit: false,
+        reason: `previously-absent path now present: ${path}`,
+      };
     }
   }
   for (const d of readSet.dirs) {
@@ -591,7 +643,10 @@ export async function validate(
   for (const q of readSet.queries) {
     if (snapshot.pathspecFingerprint(q.pathspecs) === q.pathspecFp) continue; // provably identical
     if (!opts?.replayQuery) {
-      return { hit: false, reason: `query inputs changed (no replay hook): ${q.grepArg}` };
+      return {
+        hit: false,
+        reason: `query inputs changed (no replay hook): ${q.grepArg}`,
+      };
     }
     const fresh = await opts.replayQuery(q);
     if (!sortedEqual(fresh, q.matches)) {

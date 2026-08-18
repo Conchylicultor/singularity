@@ -67,6 +67,38 @@ export interface Check {
    *     (which deploys, then verifies), a standalone `./singularity check`, and
    *     main's post-push auto-build.
    *
+   * TREE PURITY — the second half of what `"tree"` promises. The verdict must be
+   * a function of the tree hash AND of NOTHING ELSE, including what else already
+   * ran in this process. That is what makes a recorded PASS TRANSFERABLE: the
+   * runner writes a cache entry from one process and a later `./singularity push`
+   * reads it from another, so a verdict that also depended on process history is
+   * one the reading process cannot reproduce — and has no way to detect that it
+   * cannot. It just returns the green.
+   *
+   * How that goes wrong, from `plugins-doc-in-sync`: `reorder`'s `contributions`
+   * array starts EMPTY and is filled by a `subscribeSlotsDeclared` callback, one
+   * entry per reorderable slot. So the check read the full set inside a build
+   * (which runs the declaration pass during codegen) and none in a standalone
+   * check — one source, two outputs, decided by process history. Four builds each
+   * recorded a passing entry; four pushes trusted it; a `docs/plugins-details.md`
+   * that only a build could reproduce shipped across four commits.
+   *
+   * Commit `18126884a` is the fix shape to copy — BOTH halves, neither optional:
+   *   - MOVE THE PRECONDITION INTO THE PRODUCER. `buildEnrichedTree`
+   *     (`../plugins/codegen/core/enriched-tree.ts`) runs the declaration pass
+   *     itself, memoized per root, so every caller gets it. It used to live in one
+   *     caller's pipeline ordering, where it held for that pipeline and nowhere
+   *     else.
+   *   - MAKE THE EARLY READ THROW. `slotDeclarationPasses()`
+   *     (`plugins/framework/plugins/slot-declaration/core/declaration.ts`) — a
+   *     COUNT, not `owners.size > 0`, so a pass that legitimately declares no
+   *     slots is not misread as a pass that never ran — is checked by the
+   *     contributions facet
+   *     (`plugins/plugin-meta/plugins/facets/plugins/contributions/facet/index.ts`),
+   *     which refuses to extract while it is zero. Without the throw the mistake
+   *     yields a smaller answer indistinguishable from a correct one, which is
+   *     exactly how it shipped.
+   *
    * Consumers select BY THIS PROPERTY, NEVER by check id: `push` asks for
    * `--scope tree`, not for "everything except web-artifacts:map-in-sync".
    * Classifying a new check is then the only edit a new check needs.
@@ -98,6 +130,13 @@ export interface Check {
    *               scope env — so distinct parameterizations get distinct keys).
    *   - null    → NEVER cache (impure: reads DB/network/env/git history).
    * Must be cheap and side-effect-free.
+   *
+   * A SIGNATURE KEYS A VERDICT; IT CANNOT MAKE ONE REPRODUCIBLE. Folding a value
+   * into the key only separates two runs that would otherwise share a slot. If
+   * the verdict depends on anything outside the checkout AND outside the
+   * signature — including what else ran in this process (see the tree-purity note
+   * on `scope`) — the correct value here is `null`, and the real repair is to
+   * remove the dependency at its source rather than key around it.
    */
   cacheSignature?(): string | null;
   /**
@@ -106,7 +145,7 @@ export interface Check {
    *   - absent (default) → LEGACY whole-tree keying. The PASS is keyed on the
    *     entire working-tree hash (`computeTreeHash`), so ANY tree change re-runs
    *     the check. Unchanged, always-sound, and the behaviour of every check
-   *     today.
+   *     that does not set this flag.
    *   - `true` → INPUT-KEYED via validate-by-replay. The check runs against a
    *     recording `FileSystemView` (see `checks/core/read-set.ts`) that logs the
    *     exact tree facts its verdict depended on (file contents, existence,
@@ -123,9 +162,21 @@ export interface Check {
    *     `drizzle-kit`). Wired in a later stage.
    *
    * Consumers (the runner) read this GENERICALLY and never name check ids
-   * (collection-consumer rule). STAGE 0: no check sets this — the input-keyed
-   * path is fully built but dormant, so every check takes the legacy path and
-   * behaviour is unchanged.
+   * (collection-consumer rule). This flag is LIVE and runs on every check pass:
+   * `type-check`, `plugin-boundaries`, `active-data`, `no-raw-event-source`,
+   * `no-raw-sse`, `no-raw-websocket`, `no-hardcoded-colors`,
+   * `no-hand-built-link-to` and `no-use-resource-cast` all set it today.
+   *
+   * THE EXTRA RULE THIS FLAG CARRIES — read it before adding the tenth adopter.
+   * The read-set slot is keyed on `(checkId, cacheSignature())` with NO TREE HASH
+   * AT ALL (`checks/core/cache.ts` `readSetFile`), so a PASS recorded there
+   * survives forward into LATER trees for as long as the replay still validates.
+   * A wrong answer on the tree-hash slot is confined to the one tree it was
+   * recorded against; here there is no tree hash to bound it. A check that is not
+   * a pure function of the checkout must NEVER be moved onto this flag — fix the
+   * impurity at its source first. `format-clean`, `lint-directives-stable` and
+   * `test-layout:runner-split` each document, at their own definition, why they
+   * stay off it.
    */
   inputKeyed?: boolean | "declared";
   /**

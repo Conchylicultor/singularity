@@ -295,6 +295,25 @@ export interface CheckRunProgress {
   startedCount: number;
   endedCount: number;
   /**
+   * Every check that SETTLED, in completion order. `at - durationMs` is the
+   * start instant EXACTLY (both derive from the same `end` record, so they
+   * cannot disagree), which is what lets a parent process place each check as a
+   * bar in its own timeline without the child ever reporting a clock.
+   *
+   * This is the ONLY machine-readable per-check channel, deliberately. A
+   * structured stdout line or a per-run summary JSON would duplicate a record
+   * that already exists here — and both are written at the END, so they are lost
+   * in exactly the case this log exists for: a killed or hung run. These `end`
+   * records are on disk the instant each check settles.
+   */
+  completed: Array<{
+    checkId: string;
+    at: string;
+    durationMs: number;
+    ok: boolean;
+    cached: boolean;
+  }>;
+  /**
    * Bootstrap phases started and never ended. Non-empty means the run never
    * reached its checks at all — read this BEFORE `outstanding`, which is
    * necessarily empty in that case and would otherwise read as "healthy".
@@ -346,6 +365,7 @@ export function readCheckProgress(): CheckRunProgress[] {
         selected: null,
         startedCount: 0,
         endedCount: 0,
+        completed: [],
         outstandingBootstrap: [],
         outstanding: [],
         done: null,
@@ -376,6 +396,13 @@ export function readCheckProgress(): CheckRunProgress[] {
     } else if (record.phase === "end") {
       run.endedCount += 1;
       starts.delete(record.checkId);
+      run.completed.push({
+        checkId: record.checkId,
+        at: record.t,
+        durationMs: record.durationMs,
+        ok: record.ok,
+        cached: record.cached,
+      });
     } else if (record.phase === "done") {
       run.done = {
         at: record.t,

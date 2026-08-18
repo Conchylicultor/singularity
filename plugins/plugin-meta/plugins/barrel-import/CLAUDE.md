@@ -14,6 +14,7 @@
   - Exports (values):
     - `AUTO_STUB_CSS`
     - `AUTO_STUB_PACKAGES`
+    - `BARREL_STUB_WORKTREE`
     - `importBarrel`
     - `registerBarrelStubs`
     - `setPreBarrelImportGuard`

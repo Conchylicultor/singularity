@@ -9,10 +9,14 @@ import type { FileSystemView } from "./read-set";
 //     PASS be recorded for content never scanned.
 //   - `view`: the recording FileSystemView for an input-keyed check (null for a
 //     legacy whole-tree-keyed check, which sets no read-set). When present, the
-//     check's reads route through it so its read-set is captured. STAGE 0: no
-//     check is input-keyed yet, so `view` is always null and recording never
-//     fires — behaviour is identical to the old `{ tree }`-only store.
-const store = new AsyncLocalStorage<{ tree: string | null; view: FileSystemView | null }>();
+//     check's reads route through it so its read-set is captured. This is a LIVE
+//     path, not a dormant one: nine checks set `inputKeyed` today (`type-check`,
+//     `plugin-boundaries`, and the seven grepCode pattern checks), so recording
+//     fires on every check pass.
+const store = new AsyncLocalStorage<{
+  tree: string | null;
+  view: FileSystemView | null;
+}>();
 
 /**
  * Run `fn` with `tree` as the ambient scan target and `view` as the ambient

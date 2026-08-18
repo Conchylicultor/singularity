@@ -10,12 +10,11 @@ import {
 } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
 import {
   discoverTscTargets,
-  listAllChecks,
   materializeWarmBase,
   publishWarmBase,
-  runChecks,
   tsBuildInfoPath,
 } from "@plugins/framework/plugins/tooling/plugins/checks/core";
+import { runCheckSubprocess } from "../../check-subprocess";
 import {
   compositionFleetSource,
   runWebArtifactsPipeline,
@@ -528,54 +527,66 @@ export async function generateAppSources(opts: {
  * Plus one incremental tsc per runtime entrypoint, since the full `typescript`
  * check (which covers them) did not run.
  *
- * NB the registry reads (`listAllChecks`, `discoverTscTargets`) happen HERE, when
- * the job list is built — i.e. before the host grant, not inside it. Both are
- * cheap filesystem scans that emit no span and no output; only the heavy work
- * they describe runs on the grant.
+ * NB the registry read (`discoverTscTargets`) happens HERE, when the job list is
+ * built — i.e. before the host grant, not inside it. It is a cheap filesystem
+ * scan that emits no span and no output; only the heavy work it describes runs
+ * on the grant.
+ *
+ * The check selection is NOT read here. It used to be — this function called
+ * `listAllChecks()` and handed the resulting id list to `runChecks` — which was
+ * a registry read performed in whichever process happened to be building, i.e.
+ * the same contamination the spawned pass exists to escape, one level up. The
+ * selection now travels as the `alwaysRun` flag and is resolved by the child,
+ * which is also the only place that can notice it came out empty.
  */
 export async function fastValidationJobs(opts: {
   root: string;
-  /** The run these checks belong to — the runner derives `check-<runId>.log` from it. */
-  checkLogRun: { worktree: string; runId: string };
+  /**
+   * The run these checks belong to. Adopted by the spawned check pass, which
+   * derives `check-<runId>.log` from it — the caller does not spell a path, and
+   * cannot: the child resolves the worktree from its own `cwd`, so both sides
+   * name the same file by construction rather than by agreement.
+   */
+  checkRunId: string;
   background: boolean;
   hooks: ArtifactHooks;
 }): Promise<HeavyJob[]> {
-  const { root, checkLogRun, background, hooks } = opts;
+  const { root, checkRunId, background, hooks } = opts;
   const jobs: HeavyJob[] = [];
 
-  const alwaysRunIds = (await listAllChecks())
-    .filter((c) => c.alwaysRun)
-    .map((c) => c.id);
-  // Guard: runChecks([]) falls through to running ALL checks.
-  if (alwaysRunIds.length > 0) {
-    jobs.push(async (grant) => {
-      const lines: StepResult["lines"] = [];
-      const start = performance.now();
-      const ok = await runChecks(alwaysRunIds, {
-        grant,
-        logRun: checkLogRun,
-        onCheckDone: (id, durationMs, wallStartMs) => {
-          hooks.pushSpan(
-            `check:${id}`,
-            "build:checks",
-            id,
-            durationMs,
-            wallStartMs,
-          );
-        },
-        log: (line, stream) => {
-          lines.push({ text: line, stream });
-        },
-      });
-      return {
-        id: "checks",
-        label: "checks (always-run)",
-        lines,
-        durationMs: Math.round(performance.now() - start),
-        success: ok,
-      };
+  // Spawned, never called in-process — see ../../check-subprocess.ts. The
+  // selection is the `alwaysRun` FLAG, resolved in the child against its own
+  // freshly-loaded registry; no id list crosses the boundary. An empty selection
+  // (the last `alwaysRun: true` deleted) fails loudly there, which is the only
+  // place it can be noticed now that nothing here enumerates the set.
+  jobs.push(async (grant) => {
+    const start = performance.now();
+    const result = await runCheckSubprocess({
+      root,
+      grant,
+      select: { alwaysRun: true },
+      runId: checkRunId,
+      output: "capture",
     });
-  }
+    for (const span of result.spans) {
+      hooks.pushSpan(
+        `check:${span.checkId}`,
+        "build:checks",
+        span.checkId,
+        span.durationMs,
+        span.wallStartMs,
+      );
+    }
+    hooks.recordFootprint("checks (always-run)", result.maxRssBytes);
+    return {
+      // `id: "checks"` is load-bearing — build's failure funnel keys on it.
+      id: "checks",
+      label: "checks (always-run)",
+      lines: result.lines,
+      durationMs: Math.round(performance.now() - start),
+      success: result.ok,
+    };
+  });
 
   for (const target of discoverTscTargets(root).filter(
     (t) => t.hasEntrypoint,

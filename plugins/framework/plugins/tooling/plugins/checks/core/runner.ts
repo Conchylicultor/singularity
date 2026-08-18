@@ -20,6 +20,7 @@ import {
 import { gitGrepList } from "./grep-code";
 import { openProgressRun } from "./progress-log";
 import { openCheckTranscript } from "./transcript";
+import { isBuildProcess } from "./run-context";
 
 function isCheck(value: unknown): value is Check {
   return (
@@ -100,6 +101,15 @@ export interface RunChecksOptions {
    */
   scope?: CheckScope;
   /**
+   * Restrict the run to checks flagged `Check.alwaysRun`; omitted = no such
+   * restriction. This is the `--skip-checks` validation set, selected BY
+   * PROPERTY exactly like `scope` — a caller never enumerates the ids, because
+   * a list computed in the caller's process is a registry read performed
+   * wherever that process happens to be, not in the process that runs them.
+   * Composes with `scope` as an AND.
+   */
+  alwaysRun?: boolean;
+  /**
    * The run this transcript belongs to — the worktree whose data dir it sits in,
    * and the id the caller ALREADY owns (a build's `buildId`, a standalone
    * check's `opId`). Omitted, no transcript is written.
@@ -123,16 +133,48 @@ export async function runChecks(
   ids: string[] | undefined,
   options: RunChecksOptions,
 ): Promise<boolean> {
+  // FIRST STATEMENT, ahead of even the progress run: a refused call must not
+  // leave a phantom open run behind for `--status` to report as a hang.
+  //
+  // A passing check writes a durable entry to the GLOBAL cache, keyed on the
+  // tree hash and carrying no provenance — so a later `push` in a clean process
+  // reads back a verdict this process recorded. That makes a recorded PASS a
+  // TRANSFERABLE claim, and it is only true if the process that produced it did
+  // nothing but run checks. A build's process has already imported every plugin
+  // barrel and run the slot-declaration pass, so a check reading either sees a
+  // world no standalone check can reproduce. That is not hypothetical: commit
+  // `fa7e865e0` shipped a `docs/plugins-details.md` only a build could
+  // reproduce, four pushes hit the cached pass, and the failure surfaced hours
+  // later on an unrelated branch (fixed at the source in `18126884a`).
+  //
+  // Deliberately not folded into `assertScopeInvariant`: that validates the
+  // loaded check COLLECTION at load time; this validates the PROCESS at call
+  // time. Different subject, different lifetime.
+  if (isBuildProcess()) {
+    throw new Error(
+      "runChecks() was called from the build process itself. A check pass must run " +
+        "in a process that did nothing but run checks: a passing check records a " +
+        "durable entry in the global check cache that a later `push` reads back from " +
+        "a clean process, so the verdict has to be transferable. A build's process " +
+        "has already imported every plugin barrel and run the slot-declaration pass " +
+        "— that contamination is how commit fa7e865e0 shipped a generated doc only a " +
+        "build could reproduce (fixed at the source in 18126884a). Spawn the check " +
+        "pass instead: `runCheckSubprocess(...)` from cli/bin/check-subprocess.ts.",
+    );
+  }
+
   // Durable, per-run progress records (~/.singularity/logs/check-progress/check-progress.jsonl).
   // These exist because a single hung check makes the whole run report NOTHING:
   // the print loop far below only reaches the console after `Promise.all` fully
   // resolves. Written as each unit of work starts and settles — never from that
   // loop, which is precisely what a hang prevents from ever running.
   //
-  // FIRST STATEMENT IN THE FUNCTION, deliberately. Everything after this line —
-  // loading the check modules, `git rev-parse`, the tree hash, the cache, the
-  // tree snapshot — can be slow or hang, and a hang before the run announces
-  // itself is a hang we learn nothing about. Only the caller's own request is
+  // FIRST WORK IN THE FUNCTION, deliberately — only the process guard above it,
+  // which does no work and whose whole point is to refuse BEFORE a run exists.
+  // Everything after this line — loading the check modules, `git rev-parse`, the
+  // tree hash, the cache, the tree snapshot — can be slow or hang, and a hang
+  // before the run announces itself is a hang we learn nothing about. Only the
+  // caller's own request is
   // knowable here; `treeHash` and the resolved selection arrive via
   // `progress.resolved()` once bootstrap has earned them.
   const requested = ids && ids.length > 0 ? ids : null;
@@ -180,7 +222,7 @@ export async function runChecks(
   // a single named id, an empty selection reaches `Promise.all([])` and passes
   // vacuously. Fail loudly instead.
   const scope = options.scope;
-  const selected =
+  const scoped =
     scope === undefined ? named : named.filter((c) => scopeOf(c) === scope);
   if (scope !== undefined && ids && ids.length > 0) {
     const excluded = named.filter((c) => scopeOf(c) !== scope);
@@ -193,6 +235,47 @@ export async function runChecks(
       progress.finish(false);
       return false;
     }
+  }
+
+  // The `alwaysRun` filter composes with `--scope` as an AND, and reuses the
+  // scope filter's exact shape for the same reason: an id the caller named
+  // EXPLICITLY but this filter excludes is a caller error, not a selection to
+  // quietly narrow.
+  const alwaysRun = options.alwaysRun === true;
+  const selected = alwaysRun
+    ? scoped.filter((c) => c.alwaysRun === true)
+    : scoped;
+  if (alwaysRun && ids && ids.length > 0) {
+    const excluded = scoped.filter((c) => c.alwaysRun !== true);
+    if (excluded.length > 0) {
+      const message = `Excluded by --always-run: ${excluded
+        .map((c) => `${c.id} is not alwaysRun`)
+        .join(
+          ", ",
+        )}. Drop the --always-run flag, or name only alwaysRun checks.`;
+      console.error(message);
+      transcript?.finish([message], false);
+      progress.finish(false);
+      return false;
+    }
+  }
+  // An `alwaysRun` selection that comes out EMPTY is a vacuous pass:
+  // `Promise.all([])` resolves to `[]` and this function returns true having
+  // proven nothing. This is the only place that can notice — the caller
+  // expresses the selection as a flag and never enumerates it, precisely so the
+  // registry is read in the process that runs the checks. So if the last
+  // `alwaysRun: true` is ever deleted, `build --skip-checks` fails loudly here
+  // instead of silently proving less than it claims.
+  if (alwaysRun && selected.length === 0) {
+    const message =
+      "No checks are flagged `alwaysRun`, so --always-run selected nothing. " +
+      "A run that asserts nothing must not report a pass: either restore the " +
+      "alwaysRun flag on the checks the fast path depends on, or drop the flag " +
+      "and stop claiming this pass validates anything.";
+    console.error(message);
+    transcript?.finish([message], false);
+    progress.finish(false);
+    return false;
   }
 
   const noCache =
@@ -217,7 +300,9 @@ export async function runChecks(
   // Loaded ONLY when some selected check is actually input-keyed, so the extra
   // spawn is never paid while the feature is unused. Fail-open: null → those
   // checks fall back to running under a null view (still keyed via the legacy
-  // `has()/record()` path). STAGE 0: no check is input-keyed, so this is null.
+  // `has()/record()` path). Nine checks are input-keyed today, `type-check` and
+  // `plugin-boundaries` among them, so a full pass loads this snapshot — it is a
+  // hot path, not a dormant one.
   const anyInputKeyed = selected.some((c) => c.inputKeyed === true);
   const snapshot: TreeSnapshot | null =
     anyInputKeyed && root && treeHash
@@ -233,10 +318,11 @@ export async function runChecks(
     selected.map((c) => c.id),
   );
 
-  // Shadow-mode scaffold (dormant): when enabled, an input-keyed check logs the
+  // Shadow mode (opt-in via the env var): an input-keyed check logs the
   // old-vs-new decision so a divergence (old MISS/new HIT, or the validate
   // reason) is visible before a check is trusted. Never changes the verdict or
-  // the default output. No check is input-keyed in Stage 0, so this never fires.
+  // the default output. Off unless asked for — the input-keyed path itself is
+  // live on every run, so this is the one part that is genuinely opt-in.
   const shadow = process.env.SINGULARITY_CHECK_SHADOW === "1";
 
   interface CheckOutcome {
@@ -284,8 +370,9 @@ export async function runChecks(
     };
 
     // INPUT-KEYED path (validate-by-replay). Selected GENERICALLY on the
-    // `inputKeyed` flag — the runner never names check ids. Dormant in Stage 0
-    // (no check sets the flag). A boolean `true` uses record-then-replay; the
+    // `inputKeyed` flag — the runner never names check ids. Live: nine checks
+    // set the flag today, so this branch runs on every check pass. A boolean
+    // `true` uses record-then-replay; the
     // `"declared"` variant (opaque checks) is not wired yet and falls through
     // to the legacy path until its stage lands. Narrow inline (not via a stored
     // boolean) so TS sees cache/treeHash/sig as non-null in this branch.

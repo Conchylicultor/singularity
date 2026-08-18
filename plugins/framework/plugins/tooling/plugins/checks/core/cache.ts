@@ -78,9 +78,47 @@ function publishAtomic(file: string, contents: string): void {
   }
 }
 
+/**
+ * Cache-key format version. Bump when the MEANING of a recorded entry changes
+ * while its key would not — i.e. when entries recorded under the old regime are
+ * no longer entries you would accept today. `v2` retires every entry recorded
+ * before the isolated-runner change, when a build recorded passes from a
+ * process that had already imported every plugin barrel; those verdicts were
+ * not transferable and a later push read them anyway.
+ *
+ * NOT the same thing as `ReadSet.sourceHash`. That hashes the check-system
+ * source, lives INSIDE the read-set payload and is verified on read, so it
+ * invalidates on a change to check LOGIC. It cannot help the legacy slot at
+ * all: `has()` is a bare `existsSync` that never opens the file, so nothing
+ * inside a legacy entry is ever read. The only way to retire one is to change
+ * its NAME — which is what this constant does. So: never bump for a change in
+ * check logic (that is `sourceHash`'s job), only for a change in what a
+ * recorded entry means.
+ *
+ * NEVER REVERT A BUMP. Going back to a retired version re-addresses the exact
+ * entries it was raised to abandon. To undo `v2`, go to `v3`.
+ *
+ * Orphaned entries under an old version are not deleted — they simply become
+ * unreachable and age out under the existing 14-day `prune()` sweep, well
+ * inside the 20 000-entry backstop. The cost of a bump is one cold pass per
+ * tree.
+ */
+const CACHE_KEY_VERSION = "v2";
+
+/**
+ * The ONE place a cache slot name is minted — a half-invalidated cache is worse
+ * than none, because the surviving half is the half nobody thought about. Both
+ * slot kinds route through here, so "bump one and forget the other" has no
+ * spelling.
+ */
+function slotName(parts: string[], suffix: string): string {
+  return checkCacheDir.file(
+    `${sha256([CACHE_KEY_VERSION, ...parts].join(":"))}${suffix}`,
+  );
+}
+
 function entryFile(checkId: string, treeHash: string, sig: string): string {
-  const key = `${treeHash}:${checkId}:${sha256(sig)}`;
-  return checkCacheDir.file(`${sha256(key)}.json`);
+  return slotName([treeHash, checkId, sha256(sig)], ".json");
 }
 
 // Input-keyed read-set slot: a SINGLE slot per (checkId, sig) — NOT keyed on
@@ -90,8 +128,7 @@ function entryFile(checkId: string, treeHash: string, sig: string): string {
 // still ends in `.json` and is swept by the same `prune()` as the legacy slots,
 // while never colliding with a legacy `${sha256(key)}.json` name.
 function readSetFile(checkId: string, sig: string): string {
-  const key = `${checkId}:${sha256(sig)}`;
-  return checkCacheDir.file(`${sha256(key)}.readset.json`);
+  return slotName([checkId, sha256(sig)], ".readset.json");
 }
 
 export interface CheckCache {

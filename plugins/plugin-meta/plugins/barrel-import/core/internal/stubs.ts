@@ -3,6 +3,19 @@ import { registerAutoStubs } from "./auto-stubs.generated";
 let registered = false;
 
 /**
+ * The dummy `SINGULARITY_WORKTREE` the stubs install (see `registerBarrelStubs`).
+ *
+ * Exported because it is a LIE that outlives this process: anything spawned from
+ * a barrel-importing process inherits it, and would then believe it is running
+ * in a worktree by that name. The one consumer today is the check subprocess
+ * helper (`cli/bin/check-subprocess.ts`), which scrubs the variable when — and
+ * only when — it still holds this exact value; a real inherited worktree name
+ * must survive. Spelled once here so the scrub and the stub can never disagree
+ * about what the sentinel is.
+ */
+export const BARREL_STUB_WORKTREE = "barrel-import-stub";
+
+/**
  * Registers Bun runtime stubs so web/server barrel files can be imported
  * outside the browser. Must be called once before any `importBarrel()` call.
  *
@@ -24,7 +37,7 @@ export function registerBarrelStubs(_repoRoot: string): void {
 
   // Server barrels read SINGULARITY_WORKTREE at module init (e.g. database
   // pool guard). Set a dummy value so they don't throw during barrel import.
-  process.env.SINGULARITY_WORKTREE ??= "barrel-import-stub";
+  process.env.SINGULARITY_WORKTREE ??= BARREL_STUB_WORKTREE;
 
   const noop = () => {};
   const identity = <T>(x: T): T => x;
@@ -46,12 +59,29 @@ export function registerBarrelStubs(_repoRoot: string): void {
       href: "http://localhost/",
       origin: "http://localhost",
     };
-    const fakeEl = () => ({ style: {}, setAttribute: noop, addEventListener: noop, appendChild: noop, classList: { add: noop, remove: noop, toggle: noop, contains: () => false } });
+    const fakeEl = () => ({
+      style: {},
+      setAttribute: noop,
+      addEventListener: noop,
+      appendChild: noop,
+      classList: {
+        add: noop,
+        remove: noop,
+        toggle: noop,
+        contains: () => false,
+      },
+    });
     (globalThis as any).window = {
       location: loc,
       addEventListener: noop,
       removeEventListener: noop,
-      matchMedia: () => ({ matches: false, addEventListener: noop, removeEventListener: noop, addListener: noop, removeListener: noop }),
+      matchMedia: () => ({
+        matches: false,
+        addEventListener: noop,
+        removeEventListener: noop,
+        addListener: noop,
+        removeListener: noop,
+      }),
       getComputedStyle: () => new Proxy({}, { get: () => "" }),
       requestAnimationFrame: (cb: () => void) => setTimeout(cb, 0),
       cancelAnimationFrame: noop,
@@ -72,9 +102,21 @@ export function registerBarrelStubs(_repoRoot: string): void {
       body: { style: {}, appendChild: noop },
       head: { appendChild: noop },
     };
-    (globalThis as any).MutationObserver = class { observe = noop; disconnect = noop; takeRecords = () => []; };
-    (globalThis as any).ResizeObserver = class { observe = noop; disconnect = noop; unobserve = noop; };
-    (globalThis as any).IntersectionObserver = class { observe = noop; disconnect = noop; unobserve = noop; };
+    (globalThis as any).MutationObserver = class {
+      observe = noop;
+      disconnect = noop;
+      takeRecords = () => [];
+    };
+    (globalThis as any).ResizeObserver = class {
+      observe = noop;
+      disconnect = noop;
+      unobserve = noop;
+    };
+    (globalThis as any).IntersectionObserver = class {
+      observe = noop;
+      disconnect = noop;
+      unobserve = noop;
+    };
   }
 
   const reactExports = {
@@ -86,7 +128,10 @@ export function registerBarrelStubs(_repoRoot: string): void {
       displayName: "",
       _currentValue: defaultValue,
     }),
-    useState: (init: unknown) => [typeof init === "function" ? (init as () => unknown)() : init, noop],
+    useState: (init: unknown) => [
+      typeof init === "function" ? (init as () => unknown)() : init,
+      noop,
+    ],
     useEffect: noop,
     useLayoutEffect: noop,
     useMemo: (fn: () => unknown) => fn(),
@@ -96,19 +141,24 @@ export function registerBarrelStubs(_repoRoot: string): void {
     useContext: (ctx: { _currentValue?: unknown }) => ctx?._currentValue,
     useReducer: (_r: unknown, init: unknown) => [init, noop],
     useId: () => "stub",
-    useSyncExternalStore: (_sub: unknown, getSnapshot: () => unknown) => getSnapshot(),
+    useSyncExternalStore: (_sub: unknown, getSnapshot: () => unknown) =>
+      getSnapshot(),
     forwardRef: (c: unknown) => c,
     memo: (c: unknown) => c,
     Fragment: Symbol.for("react.fragment"),
     Children: {
-      map: (_c: unknown, fn: unknown) => (Array.isArray(_c) ? _c.map(fn as never) : []),
+      map: (_c: unknown, fn: unknown) =>
+        Array.isArray(_c) ? _c.map(fn as never) : [],
       forEach: noop,
       count: (c: unknown) => (Array.isArray(c) ? c.length : 0),
       only: identity,
       toArray: (c: unknown) => (Array.isArray(c) ? c : []),
     },
     isValidElement: () => false,
-    lazy: (load: unknown) => ({ $$typeof: Symbol.for("react.lazy"), _payload: load }),
+    lazy: (load: unknown) => ({
+      $$typeof: Symbol.for("react.lazy"),
+      _payload: load,
+    }),
     Suspense: noop,
     startTransition: (fn: () => void) => fn(),
     useTransition: () => [false, (fn: () => void) => fn()],
@@ -146,7 +196,12 @@ export function registerBarrelStubs(_repoRoot: string): void {
         exports: jsxExports,
         loader: "object",
       }));
-      const reactDomExports = { createPortal: () => null, flushSync: (fn: () => void) => fn(), __esModule: true, default: null as unknown };
+      const reactDomExports = {
+        createPortal: () => null,
+        flushSync: (fn: () => void) => fn(),
+        __esModule: true,
+        default: null as unknown,
+      };
       reactDomExports.default = reactDomExports;
       build.module("react-dom", () => ({
         exports: reactDomExports,
@@ -208,9 +263,7 @@ export function registerBarrelStubs(_repoRoot: string): void {
 let preBarrelImportGuard: (() => void | Promise<void>) | null = null;
 
 /** Install (or replace) the one-shot pre-barrel-import guard. */
-export function setPreBarrelImportGuard(
-  fn: () => void | Promise<void>,
-): void {
+export function setPreBarrelImportGuard(fn: () => void | Promise<void>): void {
   preBarrelImportGuard = fn;
 }
 
@@ -219,7 +272,9 @@ export function setPreBarrelImportGuard(
  * surface as build errors rather than silently omitting plugin metadata.
  * Requires `registerBarrelStubs()` to have been called first.
  */
-export async function importBarrel(barrelPath: string): Promise<Record<string, unknown>> {
+export async function importBarrel(
+  barrelPath: string,
+): Promise<Record<string, unknown>> {
   // Fire-once freeze-point guard: capture and clear FIRST (even if it throws),
   // so a single barrel import triggers it exactly once and never re-arms.
   if (preBarrelImportGuard) {

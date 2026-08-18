@@ -139,6 +139,19 @@ export function registerCheck(program: Command) {
         "`deploy` = it verifies the local gitignored dist/artifact store `build` produces. " +
         "`--scope tree` reproduces the pass `./singularity push` runs.",
     )
+    .option(
+      "--always-run",
+      "Run only the checks flagged `alwaysRun` — the cheap structural subset a " +
+        "`build --skip-checks` still proves. By PROPERTY, never by id, so deleting the " +
+        "last such check fails loudly instead of quietly proving less. Composes with " +
+        "--scope (AND).",
+    )
+    .option(
+      "--run-id <id>",
+      "Adopt the calling op's run id, so this run's own check transcript, its progress records " +
+        "and the console all name the parent op. Only valid for a nested check (one that " +
+        "inherited a parent's host grant) — a top-level check must mint its own.",
+    )
     .action(
       async (
         checks: string[],
@@ -147,6 +160,8 @@ export function registerCheck(program: Command) {
           status?: boolean;
           cache?: boolean;
           scope?: string;
+          alwaysRun?: boolean;
+          runId?: string;
         },
       ) => {
         // Validate before anything else: an unrecognized scope must NOT fall
@@ -163,6 +178,37 @@ export function registerCheck(program: Command) {
           scope = opts.scope as CheckScope;
         }
 
+        // NESTING, resolved before anything acts on it. The parent op (`push`, or
+        // `build` via bin/check-subprocess.ts) hands this child its host CPU grant
+        // in the environment; `inheritedGrant()` reconstructs it, and we spend
+        // those units WITHOUT acquiring host-wide again — no double-acquire, no
+        // deadlock. Its presence is also the single answer to "did a parent
+        // already do this?", which several steps below now gate on. A direct
+        // `./singularity check` inherits nothing and owns everything itself.
+        const inherited = inheritedGrant();
+        const nested = inherited !== undefined;
+        // Only a top-level check plants a worktree op marker, writes an op-log
+        // record, and installs its own signal handlers — the parent op already
+        // owns all three, and a second set would double-count the time and churn
+        // the status. "This check has a marker of its own" and "this check
+        // contends for a grant of its own" are one fact, not two.
+        const marker = !nested;
+
+        // `--run-id` is meaningful ONLY for a nested check. A top-level check
+        // must mint its own id, because that id also names its op-log row and its
+        // kill line — reusing a parent's would collide with the parent's own
+        // records. This is what lets `opId` below stay a fresh uuid on every path
+        // that actually writes an op record.
+        if (opts.runId !== undefined && !nested) {
+          console.error(
+            "--run-id is only valid for a nested check (one that inherited a parent op's " +
+              "host grant via SINGULARITY_HOST_GRANT). A top-level check mints its own id, " +
+              "which also names its op-log row and its kill line — adopting a parent's would " +
+              "collide with the parent's own records. Drop the flag.",
+          );
+          process.exit(1);
+        }
+
         if (opts.list) {
           const all = await listAllChecks();
           // Print the scope: it decides whether `push` asserts a check at all, so
@@ -175,7 +221,9 @@ export function registerCheck(program: Command) {
           printProgress();
           return;
         }
-        await checkBroadcasts("check");
+        // Gated on `!nested`: the parent op printed the same banner before it
+        // spawned us, and a nested check re-printing it is pure noise.
+        if (!nested) await checkBroadcasts("check");
 
         // Resolve the worktree slug once: it names the op marker and the data dir
         // this run's transcript is written into. The full check transcript is
@@ -185,48 +233,47 @@ export function registerCheck(program: Command) {
 
         // An interrupted build prints no verdict and sets no exit code its caller
         // can see, so the next op is where it surfaces. Checks are very often run
-        // to validate what a build just deployed.
-        reportInterruptedPredecessor(slug);
+        // to validate what a build just deployed. Gated on `!nested` for the same
+        // reason as the broadcast banner above: the parent op already announced
+        // its predecessor, and a nested check announcing it again double-prints
+        // the same line — which push does today.
+        if (!nested) reportInterruptedPredecessor(slug);
 
         // Publish the lane: a direct check on the main worktree is human-blocking
-        // (interactive), any other direct check is background. publishLane
-        // not-clobbers, so a push-nested check keeps the interactive value push.ts
-        // set in its env even though it runs on an agent branch. See ../lane.ts.
+        // (interactive), any other direct check is background. Left
+        // UNCONDITIONAL, unlike the two gates above: publishLane not-clobbers, and
+        // a parent op's `grant.env()` always sets SINGULARITY_LANE, so a nested
+        // check already reads the parent's classification here — a `!nested` gate
+        // would be a second, competing rule saying the same thing. That is how a
+        // push-nested check keeps the interactive value push.ts set even though it
+        // runs on an agent branch. See ../lane.ts.
         const lane: Lane =
           slug === MAIN_WORKTREE_NAME ? "interactive" : "background";
         publishLane(slug === MAIN_WORKTREE_NAME);
 
-        // Push runs its checks via this command in a subprocess (see push.ts). The
-        // parent push already holds a host CPU grant and hands us its unit count in
-        // the environment, so `inheritedGrant()` reconstructs it and we spend those
-        // units WITHOUT acquiring host-wide again — no double-acquire, no deadlock.
-        // A direct `./singularity check` inherits nothing and acquires its own
-        // grant via `withHostGrant`.
-        const inherited = inheritedGrant();
-
-        // Mark this worktree as having a check in flight so the conversation status
-        // poller keeps the agent's pane reading as "working" while the CLI "shell"
-        // status persists (see worktree-op.ts), and the op-status banner/chip
-        // surface "Check in progress". Written up-front as "waiting-for-lock" and
-        // flipped to "running" once the host CPU grant is acquired, so a check
-        // queued for its grant reads as queued rather than running. Only for a
-        // DIRECT `./singularity check` (no inherited grant); a push-nested check
-        // (inherited grant, no wait) is already covered by the push marker, so a
-        // second marker would just churn the status.
-        const marker = inherited === undefined;
-
-        // The op-log record rides the SAME gate, deliberately: "this check has a
-        // marker of its own" and "this check contends for a grant of its own" are
-        // one fact, not two. A push-nested check inherits its parent's grant and
-        // never queues host-wide — the parent push already accounts for that time,
-        // so a second record would double-count it. Until this, a direct check
-        // wrote nothing at all: it occupied a grant slot, making every other
-        // agent's build and push queue, while appearing nowhere as the cause.
+        // The marker (resolved at the top of the action) governs three things at
+        // once, and they are one fact rather than three:
+        //
+        //  • the worktree op marker, which keeps the agent's pane reading as
+        //    "working" and drives the op-status banner. Written up-front as
+        //    "waiting-for-lock" and flipped to "running" once the host CPU grant
+        //    is acquired, so a check queued for its grant reads as queued.
+        //  • the op-log record. A nested check inherits its parent's grant and
+        //    never queues host-wide — the parent already accounts for that time,
+        //    so a second record would double-count it. Until this existed, a
+        //    direct check wrote nothing at all: it occupied a grant slot, making
+        //    every other agent's build and push queue, while appearing nowhere as
+        //    the cause.
+        //  • the signal handlers (below).
+        //
         // A check has no natural id, unlike a push's pushId or a build's buildId —
-        // and `opId` must be unique and non-null. Minted once and shared: the
+        // and `opId` must be unique and non-null. A nested check ADOPTS its
+        // parent's via `--run-id` (validated above to be nested-only), so the
+        // child's transcript and progress records name the op a human is actually
+        // looking at; a top-level check mints its own. Minted once and shared: the
         // op-log record and the signal-origin sink line are about the same run, so
         // "who killed this check?" resolves to a row the profiler also wrote.
-        const opId = crypto.randomUUID();
+        const opId = opts.runId ?? crypto.randomUUID();
 
         // …and shared once more, with this run's transcript: `check-<opId>.log`
         // sits in the worktree's data dir beside a build's artifacts, so the three
@@ -310,6 +357,7 @@ export function registerCheck(program: Command) {
                 : undefined,
               noCache: opts.cache === false,
               scope,
+              alwaysRun: opts.alwaysRun === true,
               logRun: { worktree: slug, runId: opId },
               log: (line, stream) =>
                 stream === "stderr" ? console.error(line) : console.log(line),

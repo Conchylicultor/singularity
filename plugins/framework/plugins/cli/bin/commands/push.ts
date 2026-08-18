@@ -9,6 +9,7 @@ import {
   normalizeGeneratedArtifacts,
   SKIP_POST_REWRITE_ENV,
 } from "../git/normalize-generated";
+import { runCheckSubprocess } from "../check-subprocess";
 import {
   createOpProfiler,
   type OpProfiler,
@@ -17,10 +18,7 @@ import {
   pushPool,
   withHostGrant,
 } from "@plugins/infra/plugins/host-admission/server";
-import {
-  cpuBudget,
-  type Grant,
-} from "@plugins/infra/plugins/host-admission/core";
+import { cpuBudget } from "@plugins/infra/plugins/host-admission/core";
 import {
   markWorktreeOpStart,
   setWorktreeOpPhase,
@@ -117,46 +115,6 @@ async function installRebasedDeps(root: string): Promise<void> {
   }
 }
 
-// Spawns a fresh process so checks see the post-rebase code on disk, not the
-// stale module cache from process start. The eslint check always considers the
-// full lintable set; its per-file closure cache decides what actually re-lints,
-// so there is no lint scope env to thread through. The child INHERITS this
-// push's host CPU grant via `grant.env()` (SINGULARITY_HOST_GRANT +
-// SINGULARITY_LANE): its own `inheritedGrant()` reconstructs the grant and
-// SPENDS those units for its type-check fleet without re-acquiring host-wide —
-// no double-acquire, no deadlock (the parent already holds the slots).
-//
-// `--scope tree` narrows the pass to the push payload (see `Check.scope`).
-// Deploy-scoped checks verify the local gitignored dist / artifact store that
-// `build` produces: it never lands on main, and this push's own rebase moves the
-// tree past it by construction, so a push can never meaningfully assert it — it
-// could only ever report the artifact as stale for having done its job. The
-// filter is EXPRESSED here as a flag and RESOLVED in the child, for the same
-// reason the child exists at all: computing an id list in this process would
-// read the pre-rebase module cache. It is by property, never by id, and
-// hand-reproducible as `./singularity check --scope tree`.
-async function runChecksSubprocess(
-  root: string,
-  grant: Grant,
-): Promise<boolean> {
-  const { exitCode } = await spawnPassthrough(
-    [
-      "bun",
-      "plugins/framework/plugins/cli/bin/index.ts",
-      "check",
-      "--scope",
-      "tree",
-    ],
-    {
-      cwd: root,
-      // `process.env` values are `string | undefined`; the inferred spread type
-      // is exactly what the spawn `env` contract accepts.
-      env: { ...process.env, ...grant.env() },
-    },
-  );
-  return exitCode === 0;
-}
-
 // Run the rebased-tree checks. A push is human-blocking, so it takes an
 // INTERACTIVE host CPU grant (its reserved floor is unreachable by agent work,
 // so it never queues behind agent builds) — even though the checks execute on
@@ -171,6 +129,16 @@ async function runChecksSubprocess(
 // wall clock, so a slow `checks` was indistinguishably queue time or real check
 // time. `grantHooks()` lands it as its own `host-grant` wait, nested inside the
 // step.
+//
+// The spawn itself is `../check-subprocess.ts` — read its docblock for why a
+// check pass is a separate process at all and why the selection is expressed as
+// a flag rather than an id list. `--scope tree` narrows the pass to the push
+// payload (see `Check.scope`): deploy-scoped checks verify the local gitignored
+// dist that `build` produces, which never lands on main and which this push's
+// own rebase moves the tree past by construction, so a push could only ever
+// report the artifact as stale for having done its job. The eslint check always
+// considers the full lintable set; its per-file closure cache decides what
+// actually re-lints, so there is no lint scope env to thread through.
 async function runRebasedChecks(
   root: string,
   profiler: OpProfiler<"push">,
@@ -179,7 +147,15 @@ async function runRebasedChecks(
   console.log("Running checks...");
   const ok = await withHostGrant(
     { lane: "interactive", max: cpuBudget().B, hooks: profiler.grantHooks() },
-    (grant) => runChecksSubprocess(root, grant),
+    async (grant) => {
+      const result = await runCheckSubprocess({
+        root,
+        grant,
+        select: { scope: "tree" },
+        output: "inherit",
+      });
+      return result.ok;
+    },
   );
   profiler.stepEnd("checks");
   return ok;

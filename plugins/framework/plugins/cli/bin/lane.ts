@@ -3,8 +3,13 @@
 // The CLI origins that acquire a host CPU grant map to two lanes; one is
 // human-blocking, the other is not:
 //
-//   interactive  ←  main build,   push (its nested check)
+//   interactive  ←  main build,   push
 //   background   ←  agent build,  direct agent check
+//
+// A NESTED check acquires nothing — `build` and `push` both spawn their check
+// pass (bin/check-subprocess.ts) and hand it the grant they already hold, so it
+// inherits its parent's lane rather than classifying itself. That inheritance is
+// what the not-clobber below exists for.
 //
 // The `Lane` a build/check passes to `withHostGrant` IS this fact. `publishLane`
 // additionally mirrors it into `SINGULARITY_LANE` so a subprocess that does not
@@ -34,7 +39,12 @@ export function laneFor(isInteractiveOrigin: boolean): Lane {
  * branch; without this not-clobber it would reclassify itself to background off
  * its own branch — the exact trap the interactive lane's reserved floor exists
  * to prevent. build is never nested, so the guard is a harmless no-op there;
- * keeping one entry point means the two callers can't diverge.
+ * keeping one entry point means the callers can't diverge.
+ *
+ * This is also why the `check` command calls it UNCONDITIONALLY while gating its
+ * other startup steps on nesting: a nested check reads its parent's value here
+ * rather than writing its own, so a second `!nested` rule would only restate
+ * what the not-clobber already guarantees.
  */
 export function publishLane(isInteractiveOrigin: boolean): void {
   if (process.env[LANE_ENV]) return; // an ancestor already decided the lane

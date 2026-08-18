@@ -290,7 +290,7 @@ export async function runHermeticBuild(opts: {
   // would re-prove the same tree N times.
   const companions = await fastValidationJobs({
     root,
-    checkLogRun: { worktree: name, runId: buildId },
+    checkRunId: buildId,
     background: false,
     hooks,
   });
