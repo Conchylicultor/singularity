@@ -2,7 +2,7 @@ import { existsSync } from "node:fs";
 import { rm } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { GIT } from "@plugins/infra/plugins/paths/server";
-import { backgroundArgv } from "@plugins/packages/plugins/spawn-priority/server";
+import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
 import { attemptBranchName } from "../../core";
 import { withWorktreeMutateSlot } from "./mutate-gate";
 import {
@@ -14,6 +14,68 @@ import {
 
 let cachedRepoRoot: string | null = null;
 
+// Every git subprocess in this file is bounded, because every one of them can be
+// reached while the host-wide `worktree-mutate` flock is held: an unbounded child
+// there does not hang one caller, it stops worktree checkouts on every backend on
+// the machine (the 2026-08-17 outage). The values are ~100× the measured p50 of
+// each command, loose enough that only a genuinely wedged child trips them.
+//
+// Independently of the timeouts, moving off raw `Bun.spawn` is itself the fix for
+// the observed wedge: the old code spawned with `{stdout: "pipe", stderr: "pipe"}`
+// and then awaited `.exited` WITHOUT EVER READING STDOUT. A child writing more than
+// the ~64 KB pipe buffer to an undrained fd blocks forever — a plain deadlock, no
+// bug required — and it is also the exact bun 1.3.13 exit-during-stream-pull shape.
+// `spawnCaptured` redirects to numeric temp-file fds, which removes both outright.
+// THESE ARE WEDGE-BREAKERS, NOT LATENCY POLICE, and they are deliberately far
+// looser than "a bit above p99". Every one of them is consumed by a `throw`, and
+// a false positive is expensive in both directions: `worktreeListPaths` treats a
+// failure as fatal precisely because absence must never be read as evidence
+// (see its docblock), and a false timeout on `worktree add` triggers the
+// destructive partial-checkout cleanup below. Being late to break a real wedge
+// costs one more hourly tick; firing early costs a failed checkout or removal.
+//
+// Calibrated against measurement, not intuition. `git worktree list --porcelain`
+// on this repo (111 worktrees, 76 GB of checkouts) samples at p50 94 ms / p99
+// 302 ms / max 585 ms under host load — and a 10 s bound STILL false-fired in a
+// real `./singularity check` run, where `ensureMainWorktreeRoot()` is called from
+// every parallel type-check worker at once on a saturated box. Starvation, not
+// slowness, is what these commands actually suffer, and starvation is unbounded
+// by the p99 of an idle box. So each value is ~2-3 orders of magnitude above p50.
+const LIST_TIMEOUT_MS = 60_000; // ~640x the 94 ms p50
+const ADD_TIMEOUT_MS = 600_000; // ~160x the 3.8 s p50; its false positive is the destructive one
+const PRUNE_TIMEOUT_MS = 60_000; // metadata-only, same starvation exposure as list
+const REMOVE_TIMEOUT_MS = 300_000; // ~250x the 1.2 s p50; still frees the flock inside one hourly tick
+const MISE_TRUST_TIMEOUT_MS = 30_000;
+
+// A git subprocess in this file blew its bound and was KILLED. Its own type,
+// not a bare Error, because the distinction is load-bearing for callers: a
+// killed child here means a wedge — very likely one that sat on a host-wide
+// `worktree-mutate` slot while it hung (the 2026-08-17 outage shape) — whereas a
+// nonzero exit is an ordinary git failure. The reaper files a different report
+// for each, and the only alternative way to tell them apart would be to match on
+// the message text, which is the weakest rung of enforcement for something the
+// throw site already knows for certain.
+//
+// `worktreePath` is the worktree the command was operating on where there is
+// one; `worktreeListPaths` reads repo-wide metadata and has none.
+export class WorktreeGitTimeoutError extends Error {
+  readonly command: string;
+  readonly timeoutMs: number;
+  readonly worktreePath: string | undefined;
+  constructor(opts: {
+    message: string;
+    command: string;
+    timeoutMs: number;
+    worktreePath?: string;
+  }) {
+    super(opts.message);
+    this.name = "WorktreeGitTimeoutError";
+    this.command = opts.command;
+    this.timeoutMs = opts.timeoutMs;
+    this.worktreePath = opts.worktreePath;
+  }
+}
+
 // The absolute paths git currently tracks as worktrees, in git's own order (the
 // main worktree first). One parser for every `worktree list --porcelain` reader,
 // so "which paths does git know about" is answered the same way everywhere.
@@ -22,19 +84,27 @@ let cachedRepoRoot: string | null = null;
 // ABSENCE from this list as meaning, so a git failure that degraded to `[]`
 // would read as "git tracks nothing" — which in removeWorktree selects the
 // recursive-delete branch. A failure here must never be mistaken for evidence.
+//
+// The tightest bound in the file, because `removeWorktreeUnlogged` calls it from
+// INSIDE the mutate gate: a wedge here holds one of three host-wide slots while
+// doing nothing but reading metadata.
 async function worktreeListPaths(argv: string[]): Promise<string[]> {
-  const proc = Bun.spawn(argv, { stdout: "pipe", stderr: "pipe" });
-  const [text, stderr] = await Promise.all([
-    new Response(proc.stdout).text(),
-    new Response(proc.stderr).text(),
-  ]);
-  await proc.exited;
-  if (proc.exitCode !== 0) {
+  const r = await spawnCaptured(argv, { timeoutMs: LIST_TIMEOUT_MS });
+  if (r.timedOut) {
+    throw new WorktreeGitTimeoutError({
+      message:
+        `git worktree list did not finish within ${LIST_TIMEOUT_MS} ms and was killed ` +
+        `(it may run while a host-wide worktree-mutate slot is held): ${argv.join(" ")}`,
+      command: argv.join(" "),
+      timeoutMs: LIST_TIMEOUT_MS,
+    });
+  }
+  if (r.exitCode !== 0) {
     throw new Error(
-      `git worktree list failed (exit ${proc.exitCode}): ${stderr.trim() || "<no stderr>"}`,
+      `git worktree list failed (exit ${r.exitCode}): ${r.stderr.trim() || "<no stderr>"}`,
     );
   }
-  return text
+  return r.stdout
     .split("\n")
     .filter((l) => l.startsWith("worktree "))
     .map((l) => l.slice("worktree ".length).trim());
@@ -94,44 +164,76 @@ export async function setupWorktree(id: string, wtPath: string): Promise<void> {
   // offender). The idempotent existsSync early-return and `mise trust` stay
   // outside the gate — they are cheap and must not hold a slot.
   await withWorktreeMutateSlot(async () => {
-    // Demoted (darwinbg): the checkout runs in the deferred spawn job — always
-    // background work relative to the interactive backends.
-    const proc = Bun.spawn(
-      backgroundArgv([
-        GIT,
-        "-C",
-        repoRoot,
-        "worktree",
-        "add",
-        "-b",
-        branch,
-        wtPath,
-        "main",
-      ]),
-      { stdout: "pipe", stderr: "pipe" },
+    // Demoted (`background: true` applies backgroundArgv/darwinbg): the checkout
+    // runs in the deferred spawn job — always background work relative to the
+    // interactive backends.
+    const r = await spawnCaptured(
+      [GIT, "-C", repoRoot, "worktree", "add", "-b", branch, wtPath, "main"],
+      { background: true, timeoutMs: ADD_TIMEOUT_MS },
     );
-    const [stderr, exit] = await Promise.all([
-      new Response(proc.stderr).text(),
-      proc.exited,
-    ]);
+    if (r.timedOut) {
+      // MANDATORY companion to the timeout, not defensive tidiness. This function
+      // opens with `if (existsSync(wtPath)) return;` — so a checkout we killed
+      // half-way leaves a partial tree that the durable job's next retry reads as
+      // "already set up", handing a HALF-POPULATED worktree to `runtime.create`.
+      // That is strictly worse than the hang the timeout replaces, so the partial
+      // tree must not outlive the kill.
+      //
+      // Cleaned up INSIDE the same gate hold, and deliberately NOT via
+      // `removeWorktree`: that re-enters `withWorktreeMutateSlot` and would take a
+      // second of the three host-wide slots while we are still holding one.
+      //
+      // Known gap, accepted: SIGTERM reaches only the direct child. `taskpolicy`
+      // execs, so the kill lands on git itself, but git's forked `checkout` /
+      // `read-tree` grandchildren survive and may write into the tree we are about
+      // to remove. `rm -rf` is idempotent and anything they recreate is an
+      // unregistered leftover the reaper's next tick removes.
+      await rm(wtPath, { recursive: true, force: true });
+      const pruned = await spawnCaptured(
+        [GIT, "-C", repoRoot, "worktree", "prune"],
+        {
+          background: true,
+          timeoutMs: PRUNE_TIMEOUT_MS,
+        },
+      );
+      if (pruned.timedOut || pruned.exitCode !== 0) {
+        console.warn(
+          `[worktree] prune after a timed-out 'worktree add' for ${id} did not succeed ` +
+            `(${pruned.timedOut ? "timed out" : `exit ${pruned.exitCode}`}): ` +
+            `${pruned.stderr.trim() || "<no stderr>"}`,
+        );
+      }
+      throw new WorktreeGitTimeoutError({
+        message:
+          `git worktree add for ${id} did not finish within ${ADD_TIMEOUT_MS} ms and was ` +
+          `killed; the partial checkout at ${wtPath} was removed so the retry starts clean`,
+        command: `${GIT} -C ${repoRoot} worktree add -b ${branch} ${wtPath} main`,
+        timeoutMs: ADD_TIMEOUT_MS,
+        worktreePath: wtPath,
+      });
+    }
     // Fail loudly on a genuine checkout failure so the durable spawn job retries
     // instead of handing `runtime.create` a nonexistent worktree dir (the latent
     // swallowed-failure bug this replaces: the old code awaited `.exited` and
     // ignored `exitCode`). A nonzero exit where the dir now exists is a benign
     // "already exists" race (a concurrent creator won) — treat it as success.
-    if (exit !== 0 && !existsSync(wtPath)) {
+    if (r.exitCode !== 0 && !existsSync(wtPath)) {
       throw new Error(
-        `git worktree add for ${id} failed (exit ${exit}): ${stderr.trim() || "<no stderr>"}`,
+        `git worktree add for ${id} failed (exit ${r.exitCode}): ${r.stderr.trim() || "<no stderr>"}`,
       );
     }
   });
   // Trust the mise config so agents can run build commands without hitting
   // "config file is not trusted" errors. No-op if mise is not installed.
+  //
+  // Best-effort: mise may not be installed at all, and a missing trust only costs
+  // the agent one prompt later. What the empty catch swallows is now bounded — with
+  // `timeoutMs` the only thing it can hide is a genuine "mise is absent or broken"
+  // throw, never a child hanging forever behind an empty catch.
   try {
-    await Bun.spawn(["mise", "trust", `${wtPath}/mise.toml`], {
-      stdout: "pipe",
-      stderr: "pipe",
-    }).exited;
+    await spawnCaptured(["mise", "trust", `${wtPath}/mise.toml`], {
+      timeoutMs: MISE_TRUST_TIMEOUT_MS,
+    });
     // eslint-disable-next-line promise-safety/no-bare-catch
   } catch {}
 }
@@ -197,33 +299,55 @@ async function removeWorktreeUnlogged(
       setRemovalBranch(removal, "rm-and-prune");
       await rm(wtPath, { recursive: true, force: true });
       // Drop any stale administrative entry left behind in .git/worktrees.
-      await Bun.spawn(
-        backgroundArgv([GIT, "-C", repoRoot, "worktree", "prune"]),
+      //
+      // The outcome is now READ — the old code awaited `.exited` and never looked
+      // at `exitCode`, so a prune that failed was indistinguishable from one that
+      // worked. It is logged rather than thrown on purpose: the destructive `rm`
+      // above already succeeded, so failing the call here would report a completed
+      // removal as a failure and, in the reaper, lose the work every retry redoes.
+      // A stale admin entry is harmless and the next prune clears it.
+      const pruned = await spawnCaptured(
+        [GIT, "-C", repoRoot, "worktree", "prune"],
         {
-          stdout: "pipe",
-          stderr: "pipe",
+          background: true,
+          timeoutMs: PRUNE_TIMEOUT_MS,
         },
-      ).exited;
+      );
+      if (pruned.timedOut || pruned.exitCode !== 0) {
+        console.warn(
+          `[worktree] 'worktree prune' after removing ${wtPath} did not succeed ` +
+            `(${pruned.timedOut ? `timed out after ${PRUNE_TIMEOUT_MS} ms` : `exit ${pruned.exitCode}`}): ` +
+            `${pruned.stderr.trim() || "<no stderr>"}`,
+        );
+      }
       return;
     }
     setRemovalBranch(removal, "git-worktree-remove");
-    // Demoted (darwinbg): removal is cleanup/reap work, never interactive.
-    const proc = Bun.spawn(
-      backgroundArgv([
-        GIT,
-        "-C",
-        repoRoot,
-        "worktree",
-        "remove",
-        wtPath,
-        "--force",
-      ]),
-      { stdout: "pipe", stderr: "pipe" },
+    // Demoted (`background: true` applies backgroundArgv/darwinbg): removal is
+    // cleanup/reap work, never interactive.
+    //
+    // This is the site of the 2026-08-17 outage: it holds a host-wide
+    // `worktree-mutate` slot, and with no bound a wedged git here blocked worktree
+    // checkouts on every backend on the machine until someone noticed. 120 s is
+    // ~100× the 1.2 s p50 — loose enough to never fire on real work, short enough
+    // that a wedged hourly reap frees the flock within its own tick.
+    const r = await spawnCaptured(
+      [GIT, "-C", repoRoot, "worktree", "remove", wtPath, "--force"],
+      { background: true, timeoutMs: REMOVE_TIMEOUT_MS },
     );
-    await proc.exited;
-    if (proc.exitCode !== 0) {
-      const err = await new Response(proc.stderr).text();
-      throw new Error(`git worktree remove failed: ${err}`);
+    if (r.timedOut) {
+      throw new WorktreeGitTimeoutError({
+        message:
+          `git worktree remove for ${wtPath} did not finish within ${REMOVE_TIMEOUT_MS} ms ` +
+          `and was killed; the host-wide worktree-mutate slot is released and the next ` +
+          `sweep retries`,
+        command: `${GIT} -C ${repoRoot} worktree remove ${wtPath} --force`,
+        timeoutMs: REMOVE_TIMEOUT_MS,
+        worktreePath: wtPath,
+      });
+    }
+    if (r.exitCode !== 0) {
+      throw new Error(`git worktree remove failed: ${r.stderr}`);
     }
   });
 }

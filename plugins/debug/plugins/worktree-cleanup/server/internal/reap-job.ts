@@ -1,6 +1,8 @@
 import { z } from "zod";
 import { defineJob } from "@plugins/infra/plugins/jobs/server";
 import { defineLogSink } from "@plugins/primitives/plugins/log-channels/server";
+import { recordReport } from "@plugins/reports/server";
+import { WorktreeGitTimeoutError } from "@plugins/infra/plugins/worktree/server";
 import { collectReapable, type ReapTarget } from "./reap-policy";
 import { reapAttempt } from "./reap";
 
@@ -45,22 +47,36 @@ export const worktreeReapJob = defineJob({
   // graphile clears a job_key on a row that is no longer `is_available`
   // (sql/000018.sql:107-116), and a LOCKED row is not available — so a tick that
   // fires while the previous run is still going does not collapse onto it, it
-  // inserts a fresh row that gets fetched into a second slot. This handler still
-  // awaits `git worktree remove` with no timeout (see removeWorktreeUnlogged in
-  // infra/worktree), so "still going" can mean forever: one wedged run would
-  // become one more wedged slot every hour until the pool of 4 was gone. That is
-  // the 2026-08-17 outage again, four hours slower.
+  // inserts a fresh row that gets fetched into a second slot. The git
+  // subprocesses this handler drives are now bounded (see removeWorktreeUnlogged
+  // in infra/worktree), so "still going" can no longer mean forever — but a bound
+  // is minutes, not instant, so a slow sweep still overlaps the next tick and
+  // would still accumulate one slot per hour.
   //
-  // `serial` bounds it at exactly one slot no matter how many ticks wedge:
+  // `serial` bounds it at exactly one slot no matter how many ticks overlap:
   // graphile refuses to FETCH a job whose queue is busy, so the later ticks wait
   // in the ready backlog, where waiting costs nothing and is visible to
-  // queue-health. The timeout on the git subprocess is still the real fix and is
-  // still owed — this only caps the blast radius until it lands.
+  // queue-health.
   serial: true,
   schedule: { cron: "0 * * * *" }, // hourly
   async run() {
-    const targets = await collectReapable(Date.now());
+    const scan = await collectReapable(Date.now());
+    const targets = scan.targets;
     let reaped = 0;
+
+    // The scan's own shape, logged every tick. `scanned` vs `candidates` shows
+    // how much of the attempt table has nothing left to reclaim (the cost the
+    // readdir inversion removed), and `hygieneProbes` is K — the residual git
+    // fan-out. K is what decides whether a negative hygiene cache is worth any
+    // state at all; if it stays single-digit, the answer is no.
+    log.publish(
+      `auto-reap scan: scanned=${scan.scanned} candidates=${scan.candidates} hygieneProbes=${scan.hygieneProbes} targets=${targets.length}`,
+    );
+
+    // Failures of the REPORTING path, not of a reap. Collected rather than
+    // thrown where they happen, and re-thrown once the sweep is over — see the
+    // inner catch and the throw at the end of the handler.
+    const reportFailures: string[] = [];
 
     // Per-caller cap kept ≤ the host `worktree-mutate` gate size. The host gate
     // (infra/worktree.withWorktreeMutateSlot) is now the HARD bound on concurrent
@@ -74,9 +90,59 @@ export const worktreeReapJob = defineJob({
         reaped++;
       } catch (err) {
         log.publish(`reap ${t.id} failed: ${String(err)}`, "stderr");
+        // The containment above is correct — one corrupt fork must not block the
+        // sweep — but containment must not mean silence. The log channel nobody
+        // tails was the entire alerting story for the single most important
+        // signal these bounds produce: a git child killed while holding a
+        // host-wide `worktree-mutate` slot, i.e. the 2026-08-17 outage caught in
+        // the act. So every contained failure also files a report, which reaches
+        // Debug → Reports and the bell.
+        //
+        // `timedOut` is read from the ERROR'S TYPE, never from its message: the
+        // throw site knows for certain whether it killed a child, and a report
+        // that fingerprints a wedge apart from an ordinary failure must not rest
+        // on string matching.
+        const wedge = err instanceof WorktreeGitTimeoutError ? err : undefined;
+        try {
+          await recordReport({
+            kind: "worktree-reap-failed",
+            source: "server-caught",
+            message: `reap ${t.id} failed: ${String(err)}`,
+            data: {
+              targetId: t.id,
+              timedOut: wedge !== undefined,
+              ...(wedge
+                ? { command: wedge.command, timeoutMs: wedge.timeoutMs }
+                : {}),
+              message: String(err),
+            },
+          });
+        } catch (reportErr) {
+          // Not swallowed — parked, and re-thrown below once every target has
+          // been attempted. recordReport throws on a wiring bug (no registered
+          // kind, a payload its schema rejects) and on a DB failure; both must
+          // fail the job loudly, so neither may be dropped here. But throwing
+          // from inside this worker would abandon the remaining targets — the
+          // very containment this catch exists to preserve — and pMap's other
+          // in-flight workers are only awaited through the Promise.all that a
+          // throw here rejects, so a second failure would surface as an
+          // unhandled rejection instead of a job failure. Parking keeps the
+          // sweep whole AND the failure loud.
+          reportFailures.push(String(reportErr));
+        }
       }
     });
 
     log.publish(`auto-reap: ${reaped}/${targets.length} reaped`);
+
+    // The sweep itself is finished; now fail the job so a broken reporting path
+    // is visible in queue-health rather than being the second silent failure in
+    // the same handler. The sweep is idempotent, so the retry costs nothing.
+    if (reportFailures.length > 0) {
+      throw new Error(
+        `worktree reap: ${reportFailures.length} failure report(s) could not be ` +
+          `recorded (the sweep itself ran to completion): ${reportFailures.join("; ")}`,
+      );
+    }
   },
 });

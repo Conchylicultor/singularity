@@ -94,6 +94,7 @@ froze). Pinned by `server/internal/pool.test.ts`. See
     - `conversations/conversation-view/commits-graph`
     - `debug/health-monitor`
     - `debug/profiling/boot-bench`
+    - `debug/worktree-cleanup`
     - `infra/corpus-index`
     - `infra/warmup`
     - `plugin-meta/plugin-tree`

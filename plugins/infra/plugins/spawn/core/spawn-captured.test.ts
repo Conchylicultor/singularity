@@ -12,10 +12,39 @@
  */
 
 import { test, expect } from "bun:test";
-import { mkdtempSync, realpathSync, rmSync } from "node:fs";
+import { getEventListeners } from "node:events";
+import {
+  existsSync,
+  mkdtempSync,
+  readFileSync,
+  realpathSync,
+  rmSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { spawnCaptured, spawnExpectOk, SpawnFailedError } from "./internal/spawn-captured";
+import {
+  spawnCaptured,
+  spawnExpectOk,
+  SpawnFailedError,
+} from "./internal/spawn-captured";
+
+/**
+ * Await a promise that MUST reject, and hand back what it threw.
+ *
+ * Used instead of `await expect(p).rejects.…`: bun:test types that matcher as
+ * returning `void`, so awaiting it is an `await-thenable` lint error, and the
+ * un-awaited form would let a rejection escape the test as an unhandled one.
+ * Returning the reason also lets each caller assert on identity — these tests
+ * care that `signal.reason` arrives verbatim, not merely that something threw.
+ */
+async function rejection(promise: Promise<unknown>): Promise<unknown> {
+  try {
+    await promise;
+  } catch (err) {
+    return err;
+  }
+  throw new Error("expected the promise to reject, but it resolved");
+}
 
 test("GATE: numeric-fd stdio — echo roundtrip captures stdout", async () => {
   const result = await spawnCaptured(["echo", "hello-fd"]);
@@ -46,7 +75,8 @@ test("spawnExpectOk throws SpawnFailedError carrying the capture", async () => {
 });
 
 test("binary fidelity: stdoutBytes carries all 256 byte values untouched", async () => {
-  const script = "process.stdout.write(Buffer.from(Array.from({ length: 256 }, (_, i) => i)));";
+  const script =
+    "process.stdout.write(Buffer.from(Array.from({ length: 256 }, (_, i) => i)));";
   const result = await spawnCaptured([process.execPath, "-e", script]);
   expect(result.exitCode).toBe(0);
   expect(result.stdoutBytes.length).toBe(256);
@@ -67,7 +97,9 @@ test("stdin roundtrip: Uint8Array in", async () => {
 });
 
 test("mergeStderr interleaves 2>&1 into stdout; stderr is empty", async () => {
-  const result = await spawnCaptured(["sh", "-c", "echo out; echo err 1>&2"], { mergeStderr: true });
+  const result = await spawnCaptured(["sh", "-c", "echo out; echo err 1>&2"], {
+    mergeStderr: true,
+  });
   expect(result.exitCode).toBe(0);
   expect(result.stdout).toBe("out\nerr\n");
   expect(result.stderr).toBe("");
@@ -86,9 +118,12 @@ test("cwd is honored", async () => {
 });
 
 test("env is a full replacement, same contract as Bun.spawn", async () => {
-  const result = await spawnCaptured(["sh", "-c", 'printf %s "$SG_SPAWN_TEST"'], {
-    env: { ...process.env, SG_SPAWN_TEST: "visible" },
-  });
+  const result = await spawnCaptured(
+    ["sh", "-c", 'printf %s "$SG_SPAWN_TEST"'],
+    {
+      env: { ...process.env, SG_SPAWN_TEST: "visible" },
+    },
+  );
   expect(result.stdout).toBe("visible");
 });
 
@@ -115,16 +150,133 @@ test("timeoutMs kills a hung child and reports timedOut", async () => {
 }, 15_000);
 
 test("timeoutMs that does not expire leaves the result untouched", async () => {
-  const result = await spawnCaptured(["echo", "in-time"], { timeoutMs: 30_000 });
+  const result = await spawnCaptured(["echo", "in-time"], {
+    timeoutMs: 30_000,
+  });
   expect(result.exitCode).toBe(0);
   expect(result.timedOut).toBe(false);
   expect(result.stdout).toBe("in-time\n");
 });
 
 test("output written before the deadline is still captured", async () => {
-  const result = await spawnCaptured(["sh", "-c", "echo early; sleep 30"], { timeoutMs: 400 });
+  const result = await spawnCaptured(["sh", "-c", "echo early; sleep 30"], {
+    timeoutMs: 400,
+  });
   expect(result.timedOut).toBe(true);
   expect(result.stdout).toBe("early\n");
+}, 15_000);
+
+// --- signal: ambient cancellation. Unlike `timeoutMs` these THROW, so an
+// abandoned caller cannot read the cancellation as a value and keep going.
+
+test("an already-aborted signal spawns no child at all", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "sg-spawn-abort-"));
+  try {
+    const marker = join(dir, "ran");
+    const controller = new AbortController();
+    controller.abort();
+    expect(
+      await rejection(
+        spawnCaptured(["touch", marker], { signal: controller.signal }),
+      ),
+    ).toBeInstanceOf(Error);
+    // The proof is the absence of the side effect: we returned before Bun.spawn.
+    expect(existsSync(marker)).toBe(false);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("aborting mid-flight kills the child and rejects with signal.reason", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "sg-spawn-abort-"));
+  try {
+    const pidFile = join(dir, "pid");
+    const controller = new AbortController();
+    const reason = new Error("caller was abandoned");
+    const started = Date.now();
+    // `exec` keeps the pid: what we record is the process we later assert is gone.
+    const promise = spawnCaptured(
+      ["sh", "-c", `echo $$ > ${pidFile}; exec sleep 30`],
+      {
+        signal: controller.signal,
+      },
+    );
+    await Bun.sleep(150);
+    controller.abort(reason);
+    expect(await rejection(promise)).toBe(reason);
+    // Returned on the kill, not on `sleep 30` finishing, and inside the grace.
+    expect(Date.now() - started).toBeLessThan(5_000);
+    const pid = Number(readFileSync(pidFile, "utf8").trim());
+    expect(pid).toBeGreaterThan(0);
+    expect(() => process.kill(pid, 0)).toThrow();
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+}, 15_000);
+
+test("an abort still throws even when the child exited cleanly first", async () => {
+  const controller = new AbortController();
+  // Ignores TERM, so it survives the escalation and exits 0 with real output
+  // AFTER the abort. The good result is discarded on purpose: the caller was
+  // told to stop before it was ever handed the value.
+  const promise = spawnCaptured(
+    ["sh", "-c", 'trap "" TERM; sleep 0.5; echo done'],
+    {
+      signal: controller.signal,
+    },
+  );
+  await Bun.sleep(100);
+  controller.abort();
+  expect(String(await rejection(promise))).toMatch(/aborted/i);
+}, 15_000);
+
+test("abort wins over timedOut when the deadline fired first", async () => {
+  const controller = new AbortController();
+  const reason = new Error("abandoned after the deadline");
+  // TERM-proof: the 100ms deadline fires (timedOut := true) but cannot end the
+  // child, so the abort lands while a timed-out result is already pending. The
+  // SIGKILL that finally reaps it is the deadline's own escalation timer — the
+  // abort must not have scheduled a second one.
+  const promise = spawnCaptured(["sh", "-c", 'trap "" TERM; sleep 30'], {
+    timeoutMs: 100,
+    signal: controller.signal,
+  });
+  await Bun.sleep(300);
+  controller.abort(reason);
+  expect(await rejection(promise)).toBe(reason);
+}, 15_000);
+
+test("many spawns on one long-lived signal leave no listeners behind", async () => {
+  const controller = new AbortController();
+  const warnings: string[] = [];
+  const onWarning = (w: Error) => warnings.push(w.name);
+  process.on("warning", onWarning);
+  try {
+    // Sequential and well past any listener cap: a leak of one listener per call
+    // is what would trip MaxListenersExceededWarning on a batch caller's
+    // dispatch-lifetime signal.
+    for (let i = 0; i < 60; i++) {
+      const result = await spawnCaptured(["echo", "ok"], {
+        signal: controller.signal,
+      });
+      expect(result.exitCode).toBe(0);
+    }
+    expect(getEventListeners(controller.signal, "abort").length).toBe(0);
+    expect(warnings).not.toContain("MaxListenersExceededWarning");
+  } finally {
+    process.off("warning", onWarning);
+  }
+}, 60_000);
+
+test("spawnExpectOk propagates the abort reason, not SpawnFailedError", async () => {
+  const controller = new AbortController();
+  const reason = new Error("stop");
+  const promise = spawnExpectOk(["sh", "-c", "sleep 30; exit 3"], {
+    signal: controller.signal,
+  });
+  await Bun.sleep(100);
+  controller.abort(reason);
+  expect(await rejection(promise)).toBe(reason);
 }, 15_000);
 
 test("background: true demotes without breaking the capture", async () => {
@@ -151,3 +303,28 @@ test("wedge smoke: 200 fast-exiting noisy children complete (concurrency 20)", a
   });
   await Promise.all(workers);
 }, 60_000);
+
+test("a child that survives the deadline and succeeds is not reported as timed out", async () => {
+  // REGRESSION (2026-08-17). `timedOut` must mean "we killed a child that was
+  // still running", never "our deadline elapsed without us observing an exit" —
+  // the two come apart because `child.exitCode` is only populated at reap time,
+  // and reaping needs the event loop the parent may be blocking. In the field,
+  // `./singularity check` blocks its own loop ~77s building TypeScript programs,
+  // and a `git worktree list` that finished in 73ms came back
+  // `timedOut: true, exitCode: 0` — a successful result discarded as a timeout,
+  // which made `worktreeListPaths` throw and killed the CLI at boot.
+  //
+  // Reproduced deterministically instead of by starvation: the child ignores
+  // SIGTERM, so the deadline provably fires against a live child (`timedOut` is
+  // set and the kill is delivered) and yet the child goes on to exit 0 on its
+  // own, well before the SIGKILL grace elapses. Only an OUTCOME-based decision
+  // gets this right; a timer-based one reports the timeout it intended.
+  const result = await spawnCaptured(
+    ["sh", "-c", 'trap "" TERM; sleep 1; echo survived; exit 0'],
+    { timeoutMs: 300 },
+  );
+  expect(result.exitCode).toBe(0);
+  expect(result.signalCode).toBeNull();
+  expect(result.stdout).toBe("survived\n");
+  expect(result.timedOut).toBe(false);
+}, 20_000);

@@ -12866,12 +12866,15 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/pane.PaneChrome`
         - Exports (values): `worktreeCleanupPane`
       - Server:
+        - Contributes: `report-kind` "worktree-reap-failed"
         - Uses:
           - `database/admin.databaseExists`
           - `database/admin.dropDatabase`
           - `database/admin.listDatabases`
           - `database/zero/cache-service.dropZeroReplicationArtifacts`
           - `infra/endpoints.implement`
+          - `infra/host-read-pool.heavyReadSlotCount`
+          - `infra/host-read-pool.withHeavyReadSlot`
           - `infra/jobs.defineJob`
           - `infra/ndjson-stream.ndjsonResponse`
           - `infra/paths.GIT`
@@ -12881,9 +12884,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `infra/worktree.isCanonicalWorktreePath`
           - `infra/worktree.removeWorktree`
           - `infra/worktree.removeWorktreeSpec`
+          - `infra/worktree.WorktreeGitTimeoutError`
           - `infra/worktree.worktreePathFor`
           - `infra/worktree.worktreesDir`
           - `primitives/log-channels.defineLogSink`
+          - `reports.recordReport`
+          - `reports.ReportKind`
           - `tasks/tasks-core.getAttempt`
           - `tasks/tasks-core.listAttempts`
           - `tasks/tasks-core.listTasks`
@@ -16094,6 +16100,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conversations/conversation-view/commits-graph`
           - `debug/health-monitor`
           - `debug/profiling/boot-bench`
+          - `debug/worktree-cleanup`
           - `infra/corpus-index`
           - `infra/warmup`
           - `plugin-meta/plugin-tree`
@@ -16738,6 +16745,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Core:
         - Uses: `packages/spawn-priority.backgroundArgv`
         - Exports (types):
+          - `SpawnBound`
           - `SpawnedChild`
           - `SpawnOptions`
           - `SpawnPassthroughOptions`
@@ -16848,7 +16856,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `infra/paths.worktreeDataDir`
           - `infra/paths.WORKTREES_DIR`
           - `packages/flock.flockTry`
-          - `packages/spawn-priority.backgroundArgv`
         - Exports (types):
           - `CompositionMarker`
           - `DerivePushDeps`
@@ -16886,6 +16893,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `setupWorktree`
           - `setWorktreeOpPhase`
           - `withWorktreeMutateSlot`
+          - `WorktreeGitTimeoutError`
           - `worktreePathFor`
           - `worktreeRemovalSink`
           - `worktreesDir`
@@ -17165,7 +17173,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conversations/runtime-tmux`
           - `database/admin`
           - `infra/spawn`
-          - `infra/worktree`
       - Server:
         - Exports (values):
           - `backgroundArgv`
@@ -27143,6 +27150,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `debug/slow-ops`
       - `debug/stall-monitor`
       - `debug/trace/engine`
+      - `debug/worktree-cleanup`
       - `infra/boot-snapshot`
       - `infra/worktree/removal-audit`
       - `reports/adaptive-bar`

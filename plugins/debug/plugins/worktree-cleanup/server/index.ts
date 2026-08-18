@@ -4,16 +4,23 @@ import { handleList } from "./internal/handle-list";
 import { handleDelete } from "./internal/handle-delete";
 import { handleBulkDelete } from "./internal/handle-bulk-delete";
 import { worktreeReapJob } from "./internal/reap-job";
-import { listWorktrees, bulkDeleteWorktrees, deleteWorktree } from "../shared/endpoints";
+import { worktreeReapFailedKind } from "./internal/reap-failed-kind";
+import {
+  listWorktrees,
+  bulkDeleteWorktrees,
+  deleteWorktree,
+} from "../shared/endpoints";
 
 export default {
-  description: "Audit and remove stale git worktrees and their Postgres DB forks.",
+  description:
+    "Audit and remove stale git worktrees and their Postgres DB forks.",
   httpRoutes: {
     [listWorktrees.route]: handleList,
     [bulkDeleteWorktrees.route]: handleBulkDelete,
     [deleteWorktree.route]: handleDelete,
   },
   register: [worktreeReapJob],
+  contributions: [worktreeReapFailedKind],
   // Drain the stale-registry backlog promptly after boot rather than waiting up
   // to an hour for the next scheduled tick. The reap job is main-only (DBs +
   // the registry are global cluster resources) and `dedup: "singleton"` keeps

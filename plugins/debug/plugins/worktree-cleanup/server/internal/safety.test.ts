@@ -3,9 +3,11 @@ import {
   classifyGitStatus,
   isSafeToReap,
   isTaskDeletable,
+  needsHygiene,
   SAFE_REAP_AGE_MS,
   type SafetyInput,
 } from "./safety";
+import { AUTO_REAP_AGE_MS } from "./reap-policy";
 
 // A realistic `git status --porcelain=v2 --branch` header for a clean branch
 // that has an upstream and is level with it.
@@ -137,6 +139,75 @@ describe("isSafeToReap", () => {
     expect(isSafeToReap(input({ dirExists: false, dbPresent: false }))).toBe(
       false,
     );
+  });
+});
+
+// The guard on the reaper's "skip the git probe" short-circuit. `needsHygiene`
+// claims that outside its window the subprocess answer is ignored — this pins
+// that claim to `isSafeToReap` itself, so a future term that reads hygiene
+// somewhere new fails here instead of silently making the reaper trust a
+// conservative default it never obtained.
+//
+// The invariant is stated over the reaper's FULL verdict, `isSafeToReap(...) ||
+// hardFloor`, not over `isSafeToReap` alone: past the 90-day floor the reaper
+// takes a dirty worktree, so `isSafeToReap` itself legitimately differs between
+// clean and dirty there while the verdict does not. Below the floor the two
+// statements coincide, and the second assertion pins that stronger form.
+describe("needsHygiene short-circuit", () => {
+  const CLEAN = { unpushedCount: 0, isDirty: false };
+  const DIRTY = { unpushedCount: 1, isDirty: true };
+
+  const AGES = [
+    0,
+    SAFE_REAP_AGE_MS - 1,
+    SAFE_REAP_AGE_MS,
+    AUTO_REAP_AGE_MS - 1,
+    AUTO_REAP_AGE_MS,
+    AUTO_REAP_AGE_MS * 2,
+  ];
+
+  test("where no probe is needed, the git answer cannot move the verdict", () => {
+    for (const dbPresent of [true, false]) {
+      for (const taskDeletable of [true, false]) {
+        for (const ageMs of AGES) {
+          const hardFloor = ageMs >= AUTO_REAP_AGE_MS;
+          if (needsHygiene({ hardFloor, taskDeletable, ageMs })) continue;
+
+          const base = {
+            dirExists: true,
+            dbPresent,
+            taskDeletable,
+            ageMs,
+            retained: false,
+          };
+          const verdict = (h: typeof CLEAN) =>
+            isSafeToReap({ ...base, ...h }) || hardFloor;
+
+          expect(verdict(CLEAN)).toBe(verdict(DIRTY));
+          if (!hardFloor) {
+            expect(isSafeToReap({ ...base, ...CLEAN })).toBe(
+              isSafeToReap({ ...base, ...DIRTY }),
+            );
+          }
+        }
+      }
+    }
+  });
+
+  test("a probe IS asked for where the verdict is exactly the git answer", () => {
+    const ageMs = SAFE_REAP_AGE_MS;
+    expect(needsHygiene({ hardFloor: false, taskDeletable: true, ageMs })).toBe(
+      true,
+    );
+    const base = {
+      dirExists: true,
+      dbPresent: true,
+      taskDeletable: true,
+      ageMs,
+      retained: false,
+    };
+    expect(isSafeToReap({ ...base, ...CLEAN })).toBe(true);
+    expect(isSafeToReap({ ...base, ...DIRTY })).toBe(false);
   });
 });
 

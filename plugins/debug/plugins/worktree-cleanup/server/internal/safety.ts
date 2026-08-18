@@ -1,4 +1,7 @@
 import { GIT } from "@plugins/infra/plugins/paths/server";
+import { withHeavyReadSlot } from "@plugins/infra/plugins/host-read-pool/server";
+import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";
+import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
 
 export interface GitHygiene {
   unpushedCount: number;
@@ -53,39 +56,59 @@ export function classifyGitStatus(statusOut: string): GitHygiene {
   return { unpushedCount: parseInt(aheadMatch[1]!, 10), isDirty };
 }
 
-// `git status --porcelain=v2 --branch` gives us branch tracking info (ahead N)
-// AND dirty working tree in one subprocess. `du` was removed — it takes ~5s per
-// 50-dir batch on macOS even for empty dirs, making it the dominant bottleneck.
+// A `git status` over a 690 MB checkout is a CPU/IO-heavy read (measured ~0.4 s
+// warm, ~0.95 s cold), so the whole probe is one admitted, bounded, attributed
+// unit — and every caller gets all three by calling this function, because the
+// three wrappers live HERE rather than at the call sites:
 //
-// FAILURE IS CONSERVATIVE, and the exit-code check is the load-bearing half:
-// `Bun.spawn` does NOT throw on a nonzero exit, so a failed `git status` used to
-// fall out of the try block with empty stdout and parse as "clean, 0 unpushed"
-// — the catch's conservative default was unreachable for the single most likely
-// failure mode. Both halves now funnel into HYGIENE_UNKNOWN.
-export async function getGitHygiene(wtPath: string): Promise<GitHygiene> {
-  try {
-    const p = Bun.spawn(
-      [
-        GIT,
-        "--no-optional-locks",
-        "-C",
-        wtPath,
-        "status",
-        "--porcelain=v2",
-        "--branch",
-      ],
-      { stdout: "pipe", stderr: "pipe" },
-    );
-    const [statusOut, exitCode] = await Promise.all([
-      new Response(p.stdout).text(),
-      p.exited,
-    ]);
-    if (exitCode !== 0) return HYGIENE_UNKNOWN;
-    return classifyGitStatus(statusOut);
-    // eslint-disable-next-line promise-safety/no-bare-catch -- git spawn can fail for many reasons (binary missing, worktree deleted mid-flight, not a git repo); all map to the same conservative safe default (assume dirty = not safe to delete), so every error is correctly handled here
-  } catch {
-    return HYGIENE_UNKNOWN;
-  }
+//   1. `runTracked` — the probe is a first-class `bg` entry span. Without it the
+//      reap job's git fan-out was 100% unattributed self-time: 200 captured
+//      traces all read `childMs: 0` for a job that spends its life in git.
+//   2. `withHeavyReadSlot` — the host-wide heavy-read budget (4 slots). Both
+//      callers used to fan out unadmitted (the reaper 24-wide, the UI list
+//      handler 50-wide), oversubscribing the host's entire sanctioned read
+//      budget several times over from a background sweep.
+//   3. `timeoutMs` — a wedged `git status` now fails in bounded time instead of
+//      hanging the sweep (and, through it, the host-wide worktree-mutate flock).
+//
+// `background: true` demotes the child via taskpolicy; the reaper passes it (its
+// probes must yield to interactive backends), the UI list handler does not (a
+// human is waiting on it).
+//
+// FAILURE IS CONSERVATIVE, and the non-zero-exit check is the load-bearing half:
+// `spawnCaptured` reports a failed command as a RESULT (`exitCode !== 0`,
+// `timedOut: true`) rather than throwing, so a failed `git status` would
+// otherwise reach `classifyGitStatus` with empty stdout — which is exactly the
+// input that used to parse as "clean, 0 unpushed", the maximally-reapable
+// answer. All three arms (throw, timeout, non-zero exit) funnel into
+// HYGIENE_UNKNOWN.
+export async function getGitHygiene(
+  wtPath: string,
+  opts: { background?: boolean } = {},
+): Promise<GitHygiene> {
+  return runTracked("worktree-cleanup:hygiene", () =>
+    withHeavyReadSlot(async () => {
+      try {
+        const r = await spawnCaptured(
+          [
+            GIT,
+            "--no-optional-locks",
+            "-C",
+            wtPath,
+            "status",
+            "--porcelain=v2",
+            "--branch",
+          ],
+          { timeoutMs: 30_000, background: opts.background },
+        );
+        if (r.timedOut || r.exitCode !== 0) return HYGIENE_UNKNOWN;
+        return classifyGitStatus(r.stdout);
+        // eslint-disable-next-line promise-safety/no-bare-catch -- git spawn can fail for many reasons (binary missing, worktree deleted mid-flight, not a git repo); all map to the same conservative safe default (assume dirty = not safe to delete), so every error is correctly handled here
+      } catch {
+        return HYGIENE_UNKNOWN;
+      }
+    }),
+  );
 }
 
 // Allowlist of task statuses known to have no live agent session AND nothing the
@@ -144,4 +167,31 @@ export function isSafeToReap(i: SafetyInput): boolean {
     i.taskDeletable &&
     i.ageMs >= SAFE_REAP_AGE_MS
   );
+}
+
+// Whether running the git hygiene probe can still change the reaper's verdict for
+// a NON-retained attempt whose worktree dir is present. Lives here, directly
+// under the conjunction it is derived from, so the short-circuit and the
+// predicate cannot drift apart in separate files.
+//
+// The reaper's verdict is `isSafeToReap(...) || hardFloor`. With `retained: false`
+// and `dirExists: true`, `isSafeToReap` reduces to
+// `clean && taskDeletable && ageMs >= SAFE_REAP_AGE_MS`, where `clean`
+// (`unpushedCount === 0 && !isDirty`) is the ONLY term the subprocess supplies.
+// So:
+//   - `hardFloor`                    ⇒ verdict is true whatever git says ⇒ no probe
+//   - `!taskDeletable` or too young  ⇒ verdict is false whatever git says ⇒ no probe
+//   - otherwise                      ⇒ the verdict IS `clean` ⇒ probe required
+//
+// This is a REORDERING, not a policy change: the probe is skipped only where its
+// answer is provably ignored. The property test in safety.test.ts pins that —
+// if `isSafeToReap` ever grows a term that reads hygiene outside this window,
+// the test fails rather than the reaper silently starting to trust a stale
+// conservative default.
+export function needsHygiene(i: {
+  hardFloor: boolean;
+  taskDeletable: boolean;
+  ageMs: number;
+}): boolean {
+  return !i.hardFloor && i.taskDeletable && i.ageMs >= SAFE_REAP_AGE_MS;
 }

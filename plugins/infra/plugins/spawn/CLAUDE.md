@@ -37,8 +37,8 @@ tmpdir sweep (repo convention).
   spawn. `opts`: `cwd`, `env` (FULL replacement, same contract as `Bun.spawn`),
   `stdin` (whole `string | Uint8Array` buffer, EOF at the end), `background`
   (argv := `backgroundArgv(argv)` from `spawn-priority/core`), `mergeStderr`
-  (2>&1; `result.stderr === ""`), `timeoutMs` (opt-in one-shot deadline — see
-  below). The result's `exitCode` **≠ 0 is a
+  (2>&1; `result.stderr === ""`), plus the two bounds `timeoutMs` and `signal`
+  (see below). The result's `exitCode` **≠ 0 is a
   legitimate result** — the caller branches. `stdout`/`stderr` are lazy cached
   utf8 decodes of `stdoutBytes`/`stderrBytes` (the raw bytes exist for
   byte-offset parsers like `git cat-file --batch` framing).
@@ -62,25 +62,29 @@ tmpdir sweep (repo convention).
   first callers share it). Outside a git repo they **throw** — the old copies
   absorbed that to `""`, a latent path bug (repo fail-loud rule).
 
-## `timeoutMs` — opt-in, never a default
+## The two bounds: `timeoutMs` and `signal` (`SpawnBound`)
 
-Originally a stated non-goal ("a per-call timeout would just absorb hangs"),
-now available **opt-in and off by default**, because the reasoning only holds
-for callers that have no deadline of their own. It is one-shot — SIGTERM on
-expiry, SIGKILL 2s later, both timers cleared in the existing `finally` — not
-a polling loop, and it does not absorb anything: the kill surfaces as
-`timedOut: true` on the result, which the caller must branch on.
+Both run the same escalation — SIGTERM, SIGKILL after 2s, timers cleared in the
+existing `finally` — through one `escalateKill()`, so setting both cannot leak a
+timer. They differ in how the kill is reported, deliberately:
 
-Use it only where the CALLER owns a deadline it must honor — the first such
-site is `infra/ssh`, whose child talks to an arbitrary remote host and can wedge
-mid-handshake (past TCP connect, which is all OpenSSH's `ConnectTimeout`
-bounds), hanging an HTTP request forever. For everything else there is now **no
-ceiling at all** — the fleet-level one (`debug/op-wedge-watchdog`) was retired
-2026-07-28 because every wedge it reported was a false positive
-(`research/2026-07-28-global-retire-op-wedge-watchdog.md`). A hung child with no
-`timeoutMs` hangs until a human notices and kills it; adding a local timer is
-still the wrong fix for a caller that owns no deadline, because it would absorb
-the hang instead of surfacing it.
+- **`timeoutMs` returns `timedOut: true`.** It is the CALLER's own deadline, so
+  the caller classifies it. Whatever the child wrote first is still captured.
+- **`signal` THROWS `signal.reason`.** An abort is ambient ("everything you are
+  doing has been abandoned"); as a result field it would be absorbed by a caller
+  that maps a failed probe to a conservative default and then runs a hundred more
+  spawns. `spawnExpectOk` needs no special case — the abort propagates before the
+  exit-code check. Edges: an abort beats `timedOut` in either order, and an abort
+  after a clean exit still throws, discarding a good result.
+
+Both are still optional. Set a bound wherever the caller owns a deadline, and
+**always where a host-wide lock/slot is held** — an unbounded child under the
+`worktree-mutate` flock stops worktree checkouts on every backend on the box (the
+2026-08-17 outage). Without one there is no other ceiling: the fleet-level
+watchdog was retired 2026-07-28 as an all-false-positive instrument
+(`research/2026-07-28-global-retire-op-wedge-watchdog.md`), so an unbounded hung
+child hangs until a human notices. `research/2026-08-17-global-reap-stale-cost-and-bounded-execution.md`
+plans making a bound required.
 
 ## Deliberate non-goals
 
@@ -92,25 +96,28 @@ the hang instead of surfacing it.
 
 ## Exception policy
 
-A genuinely interactive/streaming child — one that must be parsed live while
-being written to — cannot use after-exit temp files. There is exactly ONE:
-`cli/bin/migrations-interactive.ts` (drizzle-kit's create-vs-rename prompt
-parser). New legitimate streaming sites get a file entry in `lint/index.ts`'s
-`ignores` with a written justification (intended review pressure, mirroring
-git-grep-safety), never an inline disable.
+A genuinely streaming or long-lived child — parsed live, written to live, or
+meant to outlive the call — cannot use after-exit temp files. Those get a file
+entry in `lint/index.ts`'s `ignores` **with a written justification** (intended
+review pressure, mirroring git-grep-safety), never an inline disable.
 
-## Stage 2
+## Stage 2 — in progress
 
-`plugins/**/server/**` (~65 sites, 38 files) is temporarily lint-ignored and
-migrates in batches once Stage 1 is confirmed to have stopped field wedges — see
-the plan doc's deferred annex. The automated instrument that was to confirm it
-(the `cli-op-wedge` report) was retired 2026-07-28 — every row it ever filed was
-a false positive; see
-`research/2026-07-28-global-retire-op-wedge-watchdog.md`. The criterion is now
-the absence of an observed field wedge (an op that never returns / a gridlocked
-fleet), diagnosed by hand off the progress-log heartbeat. Each batch shrinks the
-server ignore glob. The `pg_dump → pg_restore` stdin chaining is the known streaming
-exception there (stays piped or moves to a fifo/file handoff).
+The blanket "every plugin server tree" glob is gone. `lint/index.ts` now lists
+the exempt server files individually, split into a permanent streaming/long-lived
+group and a **temporary backlog of 21 plain capture sites**, each a mechanical
+`spawnCaptured` conversion. Delete an entry as you migrate its file; Stage 2 is
+done when the backlog group is empty.
+
+The gate that held this back has flipped. `spawn/CLAUDE.md` used to set the
+criterion as "the absence of an observed field wedge, diagnosed by hand" — a
+field wedge has now been observed **twice**, including the 2026-08-17 outage,
+where an unbounded `git worktree remove` under the host-wide `worktree-mutate`
+flock blocked worktree checkouts fleet-wide.
+
+Note the migration is worth doing even ignoring timeouts: the pre-migration
+pattern (`{stdout: "pipe"}` then `await proc.exited` with stdout never read) is a
+plain >64KB pipe-buffer deadlock on top of the bun race.
 
 ## Boundaries
 
@@ -127,6 +134,7 @@ presence only — **no re-exports**; import from `core/`.
 - Core:
   - Uses: `packages/spawn-priority.backgroundArgv`
   - Exports (types):
+    - `SpawnBound`
     - `SpawnedChild`
     - `SpawnOptions`
     - `SpawnPassthroughOptions`

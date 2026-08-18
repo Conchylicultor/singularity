@@ -31,12 +31,15 @@
     - `primitives/pane.PaneChrome`
   - Exports (values): `worktreeCleanupPane`
 - Server:
+  - Contributes: `report-kind` "worktree-reap-failed"
   - Uses:
     - `database/admin.databaseExists`
     - `database/admin.dropDatabase`
     - `database/admin.listDatabases`
     - `database/zero/cache-service.dropZeroReplicationArtifacts`
     - `infra/endpoints.implement`
+    - `infra/host-read-pool.heavyReadSlotCount`
+    - `infra/host-read-pool.withHeavyReadSlot`
     - `infra/jobs.defineJob`
     - `infra/ndjson-stream.ndjsonResponse`
     - `infra/paths.GIT`
@@ -46,9 +49,12 @@
     - `infra/worktree.isCanonicalWorktreePath`
     - `infra/worktree.removeWorktree`
     - `infra/worktree.removeWorktreeSpec`
+    - `infra/worktree.WorktreeGitTimeoutError`
     - `infra/worktree.worktreePathFor`
     - `infra/worktree.worktreesDir`
     - `primitives/log-channels.defineLogSink`
+    - `reports.recordReport`
+    - `reports.ReportKind`
     - `tasks/tasks-core.getAttempt`
     - `tasks/tasks-core.listAttempts`
     - `tasks/tasks-core.listTasks`

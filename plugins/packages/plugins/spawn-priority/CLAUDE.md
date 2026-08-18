@@ -52,7 +52,6 @@ server-only (`bun:ffi`).
     - `conversations/runtime-tmux`
     - `database/admin`
     - `infra/spawn`
-    - `infra/worktree`
 - Server:
   - Exports (values):
     - `backgroundArgv`

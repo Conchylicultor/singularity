@@ -88,6 +88,7 @@
     - `debug/slow-ops`
     - `debug/stall-monitor`
     - `debug/trace/engine`
+    - `debug/worktree-cleanup`
     - `infra/boot-snapshot`
     - `infra/worktree/removal-audit`
     - `reports/adaptive-bar`

@@ -7,6 +7,7 @@ export {
   isCanonicalWorktreePath,
   setupWorktree,
   removeWorktree,
+  WorktreeGitTimeoutError,
 } from "./internal/worktree";
 export { withWorktreeMutateSlot } from "./internal/mutate-gate";
 export {

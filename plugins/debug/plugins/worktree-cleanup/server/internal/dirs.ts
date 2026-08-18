@@ -1,7 +1,10 @@
 import { readdir, stat } from "node:fs/promises";
 import { join } from "node:path";
 import { isMain } from "@plugins/infra/plugins/paths/server";
-import { gitWorktreesDir, worktreePathFor } from "@plugins/infra/plugins/worktree/server";
+import {
+  gitWorktreesDir,
+  worktreePathFor,
+} from "@plugins/infra/plugins/worktree/server";
 import { dirExists } from "./reap";
 
 // Canonical worktree-id shape (attempt id == fork DB name == registry entry
@@ -24,21 +27,55 @@ export interface WorktreeDir {
   path: string;
 }
 
-// Canonical-shaped worktree dirs actually present on disk. A missing parent dir
-// (ENOENT) yields an empty list; any other error is surfaced loudly. Reads the
-// GIT worktree parent (`<root>/.claude/worktrees`), NOT the `~/.singularity`
-// registry that `readRegistryNames` walks.
-export async function readWorktreeDirs(root: string): Promise<WorktreeDir[]> {
+export interface WorktreeDirIndex {
+  // EVERY dirent name in `<root>/.claude/worktrees`, unfiltered by node type and
+  // unfiltered by WORKTREE_NAME_RE — the exact set a `stat` of a child path
+  // would find, so it can stand in for one.
+  //
+  // THE FILTERING IS THE WHOLE POINT OF KEEPING TWO LISTS. A caller asking "is
+  // this attempt's dir still there?" must consult `allNames`, NEVER `canonical`:
+  // a dir whose name fails the regex, or that is a symlink rather than a real
+  // directory, is absent from `canonical` but very much present on disk. Reading
+  // it as absent routes the attempt down the age-free orphan branch, which
+  // removes the dir with no hygiene check and no age floor. See the matching
+  // comment at the `hasDir` computation in reap-policy.ts.
+  allNames: Set<string>;
+  // The canonical-shaped worktree dirs — real directories whose name matches
+  // WORKTREE_NAME_RE. Safe to enumerate as "the worktrees this system created".
+  canonical: WorktreeDir[];
+}
+
+// ONE readdir of the git worktree parent (`<root>/.claude/worktrees`), returning
+// both the membership set and the canonical list. A missing parent dir (ENOENT)
+// yields empty halves; any other error is surfaced loudly. Reads the GIT worktree
+// parent, NOT the `~/.singularity` registry that `readRegistryNames` walks.
+//
+// One readdir answers "does this dir exist" for every id at once, which is what
+// lets the reaper classify thousands of attempt rows without a stat each.
+export async function readWorktreeDirIndex(
+  root: string,
+): Promise<WorktreeDirIndex> {
   const dir = gitWorktreesDir(root);
   try {
     const entries = await readdir(dir, { withFileTypes: true });
-    return entries
-      .filter((e) => e.isDirectory() && isCanonicalWorktreeName(e.name))
-      .map((e) => ({ name: e.name, path: join(dir, e.name) }));
+    return {
+      allNames: new Set(entries.map((e) => e.name)),
+      canonical: entries
+        .filter((e) => e.isDirectory() && isCanonicalWorktreeName(e.name))
+        .map((e) => ({ name: e.name, path: join(dir, e.name) })),
+    };
   } catch (err) {
-    if ((err as NodeJS.ErrnoException).code === "ENOENT") return [];
+    if ((err as NodeJS.ErrnoException).code === "ENOENT")
+      return { allNames: new Set(), canonical: [] };
     throw err;
   }
+}
+
+// Canonical-shaped worktree dirs actually present on disk. Delegates to
+// `readWorktreeDirIndex` so the UI list handler and the reaper share one
+// enumeration and can never disagree about what is on disk.
+export async function readWorktreeDirs(root: string): Promise<WorktreeDir[]> {
+  return (await readWorktreeDirIndex(root)).canonical;
 }
 
 // Age of a worktree dir that has no attempt row to date it. `git worktree add`
