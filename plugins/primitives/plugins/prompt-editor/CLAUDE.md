@@ -22,7 +22,8 @@ editing surfaces use `TextEditor` directly.
 - Web:
   - Slots: `PromptEditorSlots.FloatingAction` ← `conversations.conversation-view.exit-menu`, `conversations.conversation-view.prompt-templates`, `conversations.conversation-view.push-and-exit`, `primitives.prompt-editor.voice-input`
   - Uses:
-    - `primitives/css/fill.Fill`
+    - `primitives/css/fill.fillClasses`
+    - `primitives/css/grow-relay.GrowRelay`
     - `primitives/css/spacing.Stack`
     - `primitives/css/ui-kit.cn`
     - `primitives/slot-render.defineRenderSlot`

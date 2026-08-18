@@ -20,6 +20,7 @@ case) and intentionally does not compose it.
 - Description: Single-line container primitive: <Line> pairs the structural single-line invariant (region-line) with the ambient SingleLineProvider so children never wrap and <Text> leaves truncate. The bare line-container contract composed by Row/Bar and bespoke strips.
 - Web:
   - Uses:
+    - `primitives/css/grow-relay.GrowRelay`
     - `primitives/css/ui-kit.cn`
     - `primitives/css/ui-kit.SingleLineProvider`
   - Exports (types): `LineProps`

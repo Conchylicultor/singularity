@@ -56,6 +56,11 @@ export function Fill({
   children,
   ...rest
 }: FillProps) {
+  // Deliberately NOT a `GrowRelay`, though it sits mid-chain in the Sonata
+  // display picker (slot cell → Fill → Stack → the bar): a Fill already grows
+  // unconditionally, and a grow ask crosses it for free, because context passes
+  // through any component. A relay here would buy nothing and cost a fiber plus
+  // a provider at every one of Fill's call sites, many of them list rows.
   return (
     <As ref={ref} className={cn(fillClasses(axis), className)} {...rest}>
       {children}

@@ -3699,6 +3699,10 @@
       "name": "@singularity/plugin-primitives-css-grid",
       "version": "0.0.1",
     },
+    "plugins/primitives/plugins/css/plugins/grow-relay": {
+      "name": "@singularity/plugin-primitives-css-grow-relay",
+      "version": "0.0.1",
+    },
     "plugins/primitives/plugins/css/plugins/icon-auto": {
       "name": "@singularity/plugin-primitives-css-icon-auto",
       "version": "0.0.1",
@@ -7256,6 +7260,8 @@
     "@singularity/plugin-primitives-css-fill": ["@singularity/plugin-primitives-css-fill@workspace:plugins/primitives/plugins/css/plugins/fill"],
 
     "@singularity/plugin-primitives-css-grid": ["@singularity/plugin-primitives-css-grid@workspace:plugins/primitives/plugins/css/plugins/grid"],
+
+    "@singularity/plugin-primitives-css-grow-relay": ["@singularity/plugin-primitives-css-grow-relay@workspace:plugins/primitives/plugins/css/plugins/grow-relay"],
 
     "@singularity/plugin-primitives-css-icon-auto": ["@singularity/plugin-primitives-css-icon-auto@workspace:plugins/primitives/plugins/css/plugins/icon-auto"],
 

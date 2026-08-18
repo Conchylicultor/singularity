@@ -1,5 +1,6 @@
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
+import { GrowRelay } from "@plugins/primitives/plugins/css/plugins/grow-relay/web";
+import { fillClasses } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { useCallback, useEffect, useState } from "react";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
@@ -91,14 +92,19 @@ function ToolbarRow() {
       );
       // This box carries the disabled dimming, and it sits INSIDE the slot's own
       // per-contribution cell — so it is also where that cell's chain continues.
-      // A contribution the cell grew for would shrink-wrap here and hand its own
-      // content back to itself as "the room I have": `fill` has to be relayed,
-      // not just declared once.
-      return item.fill ? (
-        <Fill className={dimmed}>{action}</Fill>
-      ) : (
-        // eslint-disable-next-line layout/no-adhoc-layout -- rigid leaf wrapper relaying the slot cell's shrink chain onto an arbitrary contributed action component
-        <div className={cn("min-w-0", dimmed)}>{action}</div>
+      // A widget that needs the row's room would shrink-wrap here and hand its
+      // own content back to itself as "the room I have", so the box relays: it
+      // grows when something under it asked, and the ask travels on to the cell.
+      // Nothing here reads `item.fill`, because nothing has to be declared.
+      return (
+        <GrowRelay>
+          {(asked) => (
+            // eslint-disable-next-line layout/no-adhoc-layout -- wrapper relaying the slot cell's shrink chain (and, on request, its grow) onto an arbitrary contributed action component
+            <div className={cn(asked ? fillClasses("x") : "min-w-0", dimmed)}>
+              {action}
+            </div>
+          )}
+        </GrowRelay>
       );
     },
     [editable, insertText, getContent, clearContent],
@@ -108,16 +114,21 @@ function ToolbarRow() {
   if (items.length === 0) return null;
   if (!editable && !hasAlwaysActive) return null;
   return (
-    <Stack
-      direction="row"
-      align="center"
-      gap="xs"
-      className="px-sm pb-xs"
-      onMouseDown={focusEditor}
-    >
-      <PromptEditorSlots.FloatingAction.Render>
-        {renderItem}
-      </PromptEditorSlots.FloatingAction.Render>
-    </Stack>
+    // `GrowRelay.Stop`: this Stack IS the row the actions sit in, so a grow ask
+    // travelling up from one of them has arrived. Without it the ask would keep
+    // going and grow some ancestor cell that has nothing to do with this strip.
+    <GrowRelay.Stop>
+      <Stack
+        direction="row"
+        align="center"
+        gap="xs"
+        className="px-sm pb-xs"
+        onMouseDown={focusEditor}
+      >
+        <PromptEditorSlots.FloatingAction.Render>
+          {renderItem}
+        </PromptEditorSlots.FloatingAction.Render>
+      </Stack>
+    </GrowRelay.Stop>
   );
 }

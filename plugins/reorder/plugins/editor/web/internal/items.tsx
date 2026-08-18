@@ -21,6 +21,7 @@ import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
 import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
 import { SortableItem } from "@plugins/primitives/plugins/sortable-list/web";
+import { GrowRelay } from "@plugins/primitives/plugins/css/plugins/grow-relay/web";
 
 // --- Area context ------------------------------------------------------------
 
@@ -89,13 +90,7 @@ function firstBoxDescendant(root: HTMLElement): HTMLElement | null {
   return el;
 }
 
-export function SortableReorderItem({
-  itemKey,
-  editMode,
-  label,
-  fill = false,
-  children,
-}: {
+interface SortableReorderItemProps {
   itemKey: string;
   editMode: boolean;
   label: string;
@@ -106,10 +101,38 @@ export function SortableReorderItem({
    * and the inner content wrapper — so that scroll region clamps and scrolls
    * instead of expanding to its natural height and overflowing onto the rows
    * below. A non-fill row leaves both levels untouched.
+   *
+   * This is the BLOCK axis, and it is a different question from the inline
+   * grow the item also relays below — merging the two would turn an adaptive
+   * bar into a flex column.
    */
   fill?: boolean;
   children: ReactNode;
-}) {
+}
+
+/**
+ * In edit mode the item box and its content wrapper are two more boxes between
+ * a contribution's widget and the row, so they relay the widget's inline grow
+ * ask like the slot cell above them does — otherwise a bar inside a
+ * contribution reads its own content back as its width for as long as the pen
+ * is on.
+ */
+export function SortableReorderItem(props: SortableReorderItemProps) {
+  return (
+    <GrowRelay>
+      {(asked) => <ReorderItemBox {...props} asked={asked} />}
+    </GrowRelay>
+  );
+}
+
+function ReorderItemBox({
+  itemKey,
+  editMode,
+  label,
+  fill = false,
+  asked,
+  children,
+}: SortableReorderItemProps & { asked: boolean }) {
   const ctx = useContext(ReorderAreaContext);
   const isHorizontal = ctx?.orientation === "horizontal";
   const contentRef = useRef<HTMLDivElement>(null);
@@ -120,25 +143,40 @@ export function SortableReorderItem({
   // `fill` wasn't passed, the edit-mode wrapper isn't a bounded flex column, so
   // its content overflows onto sibling rows. Turn that silent visual bug into an
   // actionable console error instead of leaving authors to discover it by eye.
+  //
+  // Two things narrow it, because the accusation LATCHES and a wrong one is
+  // permanent for the session. `fill` is the BLOCK axis, so a horizontal area
+  // can never want it — and `asked` is the other explanation for the same
+  // `flex-grow`: an `AdaptiveBar` inside the contribution sets `flex-1` on
+  // itself and asks the chain for room on the INLINE axis, so accusing it would
+  // send an author to add a flag that turns their bar into a flex column.
+  //
+  // Deferred a frame, and that is not politeness: `asked` arrives one render
+  // late (the ask registers in a layout effect), so a passive effect running on
+  // the first commit would read `false` and latch. The re-run's cleanup cancels
+  // the pending frame, so the corrected answer wins.
   useEffect(() => {
-    if (!editMode || fill || isEmpty) return;
-    const el = contentRef.current;
-    if (!el) return;
-    const root = firstBoxDescendant(el);
-    if (!root) return;
-    if (
-      getComputedStyle(root).flexGrow !== "0" &&
-      !warnedMissingFill.has(itemKey)
-    ) {
-      warnedMissingFill.add(itemKey);
-      console.error(
-        `[reorder] Contribution "${itemKey}" fills its host (its root sets ` +
-          `flex-grow) but reorder was not told it fills: in edit mode its ` +
-          `content overflows onto the rows below. Set \`fill: true\` on ` +
-          `its render-slot contribution.`,
-      );
-    }
-  }, [editMode, fill, isEmpty, itemKey]);
+    if (!editMode || fill || asked || isHorizontal || isEmpty) return;
+    const frame = requestAnimationFrame(() => {
+      const el = contentRef.current;
+      if (!el) return;
+      const root = firstBoxDescendant(el);
+      if (!root) return;
+      if (
+        getComputedStyle(root).flexGrow !== "0" &&
+        !warnedMissingFill.has(itemKey)
+      ) {
+        warnedMissingFill.add(itemKey);
+        console.error(
+          `[reorder] Contribution "${itemKey}" fills its host (its root sets ` +
+            `flex-grow) but reorder was not told it fills: in edit mode its ` +
+            `content overflows onto the rows below. Set \`fill: true\` on ` +
+            `its render-slot contribution.`,
+        );
+      }
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [editMode, fill, asked, isHorizontal, isEmpty, itemKey]);
 
   function handleHide(e: React.MouseEvent) {
     e.stopPropagation();
@@ -162,6 +200,11 @@ export function SortableReorderItem({
           // Fill contributions span the column height as a bounded flex column
           // so their inner scroll region clamps (see `fill` docs).
           fill && "flex-col flex-1 min-h-0",
+          // Relay the INLINE grow a widget inside asked for. Only in a
+          // horizontal area: in a vertical one the item already spans the
+          // column (`w-full`), and `flex-1` there would be the block axis —
+          // which is `fill`'s question, not this one.
+          asked && isHorizontal && "min-w-0 flex-1",
           isDragging && "opacity-40",
         )
     : "contents";
@@ -204,6 +247,13 @@ export function SortableReorderItem({
                 fill &&
                 !isEmpty &&
                 "flex flex-col flex-1 min-h-0 overflow-hidden",
+              // The second level of the inline relay: the item box grew, and
+              // this wrapper sits between it and the widget that asked.
+              editMode &&
+                asked &&
+                isHorizontal &&
+                !isEmpty &&
+                "flex min-w-0 flex-1",
             )}
           >
             {children}

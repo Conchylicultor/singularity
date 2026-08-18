@@ -68,15 +68,24 @@ contribution's `fill: true` field; the field renderer never fills.
 
 `fill` is a **slot-level layout role, not a reorder detail** — it is declared on
 the render-slot contribution and `slot-render`'s own per-contribution cell reads
-it too (a row cell grows instead of shrink-wrapping). Reorder is one of two
-readers, which is why the field is named `fill` rather than `reorderFill`.
+it too. Reorder is one of two readers, which is why the field is named `fill`
+rather than `reorderFill`.
+
+Here it is always the **block** axis. The INLINE grow — a row cell that expands
+instead of shrink-wrapping — is not declared at all any more: the widget that
+needs it asks ([`grow-relay`](../../../primitives/plugins/css/plugins/grow-relay/CLAUDE.md)),
+and the edit-mode item box and its content wrapper relay the ask like the slot
+cell above them, so a bar inside a contribution keeps its width while the pen is
+on. Merging the two would turn that bar into a flex column.
 
 In a **column** host a forgotten `fill` is invisible in normal mode (the wrapper
 is `display:contents`, so the child participates in its host column directly) and
 only breaks in edit mode — a silent, mode-specific footgun. `SortableReorderItem`
 therefore detects it after mount: if the contribution's root box declares
 `flex-grow` but `fill` is false, it logs a one-time `console.error` naming the
-contribution and pointing at `fill: true`.
+contribution and pointing at `fill: true`. A relayed inline ask is the OTHER
+explanation for that same `flex-grow`, and silences it — otherwise the error
+would send an author to add the flag that breaks their bar.
 
 ### `editMode` is a prop, not a signal
 
@@ -96,6 +105,7 @@ prop (middleware auto-detects; field is always `"vertical"`).
 - Description: Presentational drag-and-drop reorder editor: sortable items, hide/restore, spacers, optional grouping zones. Display-only — no config_v2, catalog, or tree-format knowledge.
 - Web:
   - Uses:
+    - `primitives/css/grow-relay.GrowRelay`
     - `primitives/css/inline.Inline`
     - `primitives/css/pin.Pin`
     - `primitives/css/row.Row`

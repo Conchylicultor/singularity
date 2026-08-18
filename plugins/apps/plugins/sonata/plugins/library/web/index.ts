@@ -28,15 +28,10 @@ export default {
     // Player toolbar leading zone: ← Library, song title, display picker.
     SonataToolbar.Start({ id: "back", component: BackToLibrary }),
     SonataToolbar.Start({ id: "title", component: SongTitle }),
-    SonataToolbar.Start({
-      id: "display-picker",
-      component: DisplayPicker,
-      // The picker is the header's expanding cell: it renders as many display
-      // choices as the row can spare room for, so it needs room that is GIVEN
-      // to it rather than derived from the choices it decided to render. The
-      // other two contributions in this zone are rigid.
-      fill: true,
-    }),
+    // The picker is the header's expanding cell, and it says so itself: the
+    // `AdaptiveBar` inside it asks the chain for the room (`grow-relay`), so
+    // there is no layout flag here to keep in sync with it.
+    SonataToolbar.Start({ id: "display-picker", component: DisplayPicker }),
     // Play is the library's one at-rest affordance: it earns a permanent slot
     // on every view that has one (the card's footer, the table's trailing
     // track). Delete keeps the default hover-revealed zone.

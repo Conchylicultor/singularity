@@ -16,6 +16,7 @@
     - `apps-core/theme-scope.useChromeThemeScope`
     - `primitives/action-presentation.useActionForm`
     - `primitives/adaptive-bar.AdaptiveBar`
+    - `primitives/css/grow-relay.GrowRelay`
     - `primitives/css/line.Line`
     - `primitives/css/spacing.Stack`
     - `primitives/css/ui-kit.cn`

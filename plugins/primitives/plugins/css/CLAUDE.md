@@ -29,6 +29,13 @@ rules. Compose layout through the primitives instead — one per mechanic:
 | positioning | `<Overlay>` (in-flow full-bleed layers, as props) · `<Layer>` (ONE standalone `absolute inset-0` child) · `<Pin to>` (point-anchored) · `<Sticky edge>` · `ViewportOverlay` (true `fixed inset-0`) |
 | padding / gap | `<Inset pad>` · `<Stack gap>` (`spacing`) |
 
+A widget that sizes itself from the room it is given cannot be handed that room
+by a flag somewhere else, so it **asks**: `useRequestGrow()`
+([`grow-relay`](plugins/grow-relay/CLAUDE.md)), and every relaying box between it
+and its row grows because it was asked. Not a box you reach for while composing
+— `Fill` is — but the reason the slot cell and the reorder wrapper relay, and the
+reason no contribution declares `fill: true` for an `AdaptiveBar` any more.
+
 **When you cannot wrap the element** — a third-party `className`-only prop, a
 Lexical `<ContentEditable>`, a raw `<img>`/`<svg>`/`<button>` leaf that must
 itself be the box — take the class string instead of the component:
@@ -68,6 +75,7 @@ genuinely-fixed one-off escapes per-site via
   - **`control-size`** — Control-size standard: the shared control-* height scale and its enforcing lint rule (no-adhoc-control).
   - **`fill`** — Flexible-cell layout primitive: <Fill axis> is the single grow+shrink cell of a Line/Row (min-w-0 flex-1). The one home for the slack-absorbing, truncation-enabling cell, so a stray flex-1 never strands the grow slot.
   - **`grid`** — Responsive/uniform grid layout primitive: <Grid minCellWidth> lays out a wrapping, equal-width card grid via a closed prop surface — not a raw grid-template passthrough.
+  - **`grow-relay`** — The grow request: a widget that sizes itself from the room it is given asks for that room (useRequestGrow), every box in between relays the ask upward (<GrowRelay>, render-prop), and the row stops it (<GrowRelay.Stop>). Replaces the fill flag a contribution had to declare three files away from the <AdaptiveBar> it was about — the ask travels with the widget, so there is nothing left to forget.
   - **`icon-auto`** — icon-auto slot-icon sizing convention: the icon-auto @utility (em-based, in app.css) plus the no-adhoc-slot-icon-size lint rule.
   - **`inline`** — Inline-level flow layout primitive: <Inline gap> lays out a baseline-aligned inline-flex row for chips/icons that sit inline in a text run. The inline-level sibling of Stack, delegating to Stack.
   - **`layer`** — Full-bleed layer layout primitive: <Layer> / layerClasses() is a standalone absolute inset-0 child of a positioned parent. The element-shaped sibling of Overlay's behind/above props.

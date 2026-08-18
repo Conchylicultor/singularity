@@ -77,6 +77,8 @@ const NOT_A_LAYOUT_MECHANIC: Record<string, string> = {
   "control-panel":
     "the vocabulary of ONE surface (a data-control panel's sections/rows/fields), not a general arrangement mechanic",
   "control-size": "a token standard (control heights) + its own lint rule",
+  "grow-relay":
+    "the grow-request handshake — who asks the row for its slack and who relays the ask — a contract BETWEEN boxes, not a box to reach for. The box you reach for is Fill, which the message already names.",
   "icon-auto": "a token standard (slot-icon sizing) + its own lint rule",
   "layout-harness":
     "the geometry test harness for the primitives, not a primitive",

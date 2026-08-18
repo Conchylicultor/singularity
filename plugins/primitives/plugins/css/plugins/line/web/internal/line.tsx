@@ -2,6 +2,7 @@ import {
   cn,
   SingleLineProvider,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { GrowRelay } from "@plugins/primitives/plugins/css/plugins/grow-relay/web";
 import type React from "react";
 
 export interface LineProps extends React.HTMLAttributes<HTMLElement> {
@@ -50,9 +51,18 @@ export function Line({
 }: LineProps) {
   return (
     <SingleLineProvider value={true}>
-      <As ref={ref} className={cn("flex region-line", className)} {...rest}>
-        {children}
-      </As>
+      {/*
+        A line container is where slack comes from, so a grow ask travelling up
+        from a widget inside it stops here — `GrowRelay.Stop`. That boundary is
+        the one the adaptive-bar contract already names ("the growing cell of a
+        single-line row"), and stopping at it keeps a cell somewhere far above
+        from growing for a bar that was never its concern.
+      */}
+      <GrowRelay.Stop>
+        <As ref={ref} className={cn("flex region-line", className)} {...rest}>
+          {children}
+        </As>
+      </GrowRelay.Stop>
     </SingleLineProvider>
   );
 }

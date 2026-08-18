@@ -11,11 +11,6 @@ export default {
     PromptEditorSlots.FloatingAction({
       id: "prompt-templates",
       component: FloatingTemplateChips,
-      // The chip strip is the prompt row's expanding cell: it renders as many
-      // chips as the row can spare room for, so it needs room that is GIVEN to
-      // it rather than derived from the chips it decided to render. Every other
-      // action in this row is a rigid button.
-      fill: true,
     }),
     ConfigV2.WebRegister({ descriptor: promptTemplatesConfig }),
   ],

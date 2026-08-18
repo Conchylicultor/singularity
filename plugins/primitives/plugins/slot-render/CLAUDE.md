@@ -68,21 +68,32 @@ What this does and does NOT do:
   `overflow-hidden` as a fixed-height safety net so a forgotten leaf truncation
   clips to one line instead of breaking the layout.
 
-### `fill: true` — the one contribution that takes the row's slack
+### The cell grows because it was asked, not because it was told
 
 A row cell is **rigid** by default (`flex: 0 1 auto`): right for the buttons and
 chips a chrome row is made of, wrong for a contribution meant to expand into the
-row's free space. That one declares `fill: true` on its contribution and gets a
-growing cell (`flex-1`) instead.
-
-It is not cosmetic. A rigid cell shrink-wraps to its content, so anything inside
+row's free space. A rigid cell shrink-wraps to its content, so anything inside
 that sizes itself from the room it is given — an `AdaptiveBar`, a truncating
 strip — reads its own content back as "the room I have", a measurement that moves
-with the answer it produces. Any wrapper a host adds *inside* the cell must relay
-`fill` too (`prompt-editor`'s toolbar does), or the chain breaks one level down.
+with the answer it produces.
 
-Reorder reads the same flag for its edit-mode wrapper and drag overlay — hence
-`fill`, not `reorderFill`: it is a layout role, not a reorder detail.
+The cell is a [`GrowRelay`](../css/plugins/grow-relay/CLAUDE.md): the widget that
+needs the slack asks for it from where it is rendered, and the cell grows because
+it was asked. The ask travels on, so a wrapper a host adds *inside* the cell
+relays too (`prompt-editor`'s toolbar does) instead of the chain breaking one
+level down. Nothing about the widget's need is restated on the contribution —
+which is what it used to be, several files away, and both consumers in the repo
+got it wrong once each.
+
+Only the **row** branch is a relay. The `display:contents` branch generates no
+box, so it has nothing to grow — and the ask crosses it for free, because
+context passes through any component that is not a relay.
+
+`fill: true` remains on the contribution for the two things nobody can ask for:
+a contribution that wants the slack with no such widget inside it, and reorder's
+own reading of the flag for its edit-mode wrapper — where it means the **block**
+axis (a bounded flex column so an inner scroll region clamps), a different
+question from the inline grow the cell relays.
 
 ### Relocating hosts declare their layout
 
@@ -151,6 +162,7 @@ the outcome too, with no separate code path.
 - Load-bearing: yes
 - Web:
   - Uses:
+    - `primitives/css/grow-relay.GrowRelay`
     - `primitives/css/ui-kit.ControlSize`
     - `primitives/css/ui-kit.ControlSizeProvider`
   - Exports (types):

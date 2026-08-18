@@ -2,6 +2,7 @@ import {
   type ControlSize,
   ControlSizeProvider,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { GrowRelay } from "@plugins/primitives/plugins/css/plugins/grow-relay/web";
 import {
   createElement,
   Fragment,
@@ -38,14 +39,21 @@ import { useSlotItemLayout } from "./item-layout";
  * reason: the override has to be read where the contribution renders, not where
  * its element was created.
  *
- * `fill` relays the GROW half of the same chain, and is why the flag is not a
- * reorder detail. A cell is rigid by default — right for the buttons and chips
- * a chrome row is usually made of, and wrong for the one contribution that is
- * meant to expand into the row's slack. Without it that contribution's box
- * shrink-wraps to its own content, so anything inside it that sizes itself from
- * the room it is given (an `AdaptiveBar`, a truncating strip) reads its own
- * content back as "the room I have" — a measurement that moves with the answer
- * it produces.
+ * The GROW half of the same chain is not declared — it is **asked for**. A cell
+ * is rigid by default, which is right for the buttons and chips a chrome row is
+ * usually made of and wrong for the one contribution meant to expand into the
+ * row's slack: that contribution's box would shrink-wrap to its own content, so
+ * anything inside it that sizes itself from the room it is given (an
+ * `AdaptiveBar`, a truncating strip) reads its own content back as "the room I
+ * have" — a measurement that moves with the answer it produces. So the cell is
+ * a `GrowRelay`: the widget that needs the slack asks for it from where it is
+ * rendered, and the cell grows because it was asked. Nothing about the widget's
+ * need has to be restated on the contribution, several files away, for the two
+ * to agree.
+ *
+ * `fill` remains as the explicit declaration — a contribution that wants the
+ * slack with no such widget inside it, and reorder's own (block-axis) reading
+ * of the same flag for its edit-mode wrapper.
  *
  * Its element type is stable across the post-measure `horizontal` flip, so React
  * reconciles each contribution subtree in place instead of tearing it down and
@@ -62,16 +70,26 @@ function SlotItemCell({
 }) {
   const declared = useSlotItemLayout();
   const isRow = declared !== null ? declared === "row" : horizontal;
+  // A `display:contents` cell generates no box, so it has nothing to grow and
+  // stays out of the chain entirely — an ask crosses it for free (context passes
+  // through), and counting it as a relay would report a link that applied
+  // nothing.
   if (!isRow) return <div className="contents">{children}</div>;
   return (
-    <div
-      // eslint-disable-next-line layout/no-adhoc-layout -- one box whose DISPLAY flips at runtime between a flex cell and `display:contents`, on a React element type that must stay `div` across the flip (see the docstring: swapping the type tears the contribution subtree down, and <Line>/<Fill> are not `div` to React). No container primitive can express that, and the non-`fill` cell is `min-w-0` WITHOUT `flex-1` on purpose — it relays the shrink-chain but must not grow, so it is not a <Fill>.
-      className={
-        fill ? "flex min-w-0 flex-1 items-center" : "flex min-w-0 items-center"
-      }
-    >
-      {children}
-    </div>
+    <GrowRelay>
+      {(asked) => (
+        <div
+          // eslint-disable-next-line layout/no-adhoc-layout -- one box whose DISPLAY flips at runtime between a flex cell and `display:contents`, on a React element type that must stay `div` across the flip (see the docstring: swapping the type tears the contribution subtree down, and <Line>/<Fill> are not `div` to React). No container primitive can express that, and the rigid cell is `min-w-0` WITHOUT `flex-1` on purpose — it relays the shrink-chain but must not grow, so it is not a <Fill>.
+          className={
+            fill || asked
+              ? "flex min-w-0 flex-1 items-center"
+              : "flex min-w-0 items-center"
+          }
+        >
+          {children}
+        </div>
+      )}
+    </GrowRelay>
   );
 }
 

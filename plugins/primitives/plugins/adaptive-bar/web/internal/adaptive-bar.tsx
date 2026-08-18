@@ -60,6 +60,7 @@ import {
   Stack,
   type SpaceStep,
 } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { useRequestGrow } from "@plugins/primitives/plugins/css/plugins/grow-relay/web";
 import { useResizeObserver } from "@plugins/primitives/plugins/element-size/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { useEditMode } from "@plugins/primitives/plugins/edit-mode-signal/web";
@@ -262,6 +263,26 @@ export function AdaptiveBarCollapsed({
 AdaptiveBar.Item = AdaptiveBarItem;
 AdaptiveBar.Collapsed = AdaptiveBarCollapsed;
 
+/**
+ * Which half of the chain a width fault should send the reader to.
+ *
+ * The ask travels through the boxes this primitive knows (the slot cell, the
+ * reorder edit-mode wrapper) and is invisible to the ones it does not (a
+ * hand-rolled wrapper `<div>`), so the count separates "nobody above me can
+ * give room" from "everyone I can see gave it and something I cannot see took
+ * it back".
+ *
+ * Module-level and called at the fault site, not derived in render: a fresh
+ * string per render would churn `reconcile`, whose identity the resize
+ * observer's layout effect keys on.
+ */
+function relayNote(relays: number): string {
+  if (relays === 0) {
+    return "No box above this bar relayed its grow request. Either it is not inside a slot cell at all — its row is simply not giving it room — or the nearest box above it is a Line/Row/Bar, which stops the ask because it IS the row; then the fix is that row, not the bar.";
+  }
+  return `${String(relays)} box(es) above this bar relayed its grow request and every one of them applied it, so whatever swallows the grow is a box this primitive cannot see — a hand-rolled wrapper between the relay and the bar. Recompose it onto Fill / Line.`;
+}
+
 /** id → rung index, or `null` for "left the row". */
 type Placement = ReadonlyMap<string, number | null>;
 
@@ -410,6 +431,19 @@ function AdaptiveBarShell({
   const { measure, isRendered } = useMeasureBundle();
   const layoutMeasured = useLayoutMeasured();
   const editMode = useEditMode();
+
+  // The bar asks for its own room. Its whole premise is that
+  // `root.getBoundingClientRect().width` is a width it was GIVEN, which holds
+  // only if every box between it and its row relays the grow — so it says so
+  // from where it is rendered rather than relying on a `fill: true` declared on
+  // a contribution several files away, which is a thing two of two consumers
+  // forgot. `.Collapsed` is one rigid `⋯` and asks for nothing.
+  //
+  // `granted` is not decoration: relays apply the grow in a state update from
+  // this hook's layout effect, which React flushes AFTER every layout effect of
+  // the commit — including the reconcile below. Deciding on that first reading
+  // would judge the un-grown box, and `no-slack` latches.
+  const grow = useRequestGrow(!collapsed);
 
   // Nodes are tracked as STATE via callback refs, not as refs read during
   // render: the reconcile pass must re-run when one attaches, and a ref would
@@ -676,6 +710,11 @@ function AdaptiveBarShell({
    */
   const reconcile = useCallback((): void => {
     if (root === null) return;
+    // Not yet the width this bar will have: a relay above it has taken the ask
+    // and has not applied the grow yet. Settles inside this same pre-paint
+    // layout phase (one sync pass per relay), and `grow.granted` is in this
+    // callback's closure, so the pass re-runs the moment it flips.
+    if (!grow.granted) return;
     const entries = entriesRef.current;
 
     // ── Order, straight from the DOM ──────────────────────────────────────
@@ -874,7 +913,7 @@ function AdaptiveBarShell({
             label,
             overflow,
             ...originOf(root),
-            message: `the row measured 0px wide while occupants were relocated out of it, and it does generate a box — so this is a width its host really gave it. Re-admitting every occupant ${String(MAX_ZERO_RECOVERIES)} times never produced a width the slack probe could judge, so the bar has stopped deciding: everything back in the row, CSS clips. Two hosts reach this. One shrink-wraps to the bar, so every eviction shrinks the width that decides the next one — put the bar where there is room to give: as the growing cell of a single-line row, with no Fill or other flex-1 sibling competing for the same slack, and never inside a shrink-to-content parent (inline-flex, w-fit, Cluster). The other is a row so over-full that the bar's flex-1 cell (base size 0) has nothing left to resolve to — there the fix is the bar's SIBLINGS, which are taking more than the row has.`,
+            message: `the row measured 0px wide while occupants were relocated out of it, and it does generate a box — so this is a width its host really gave it. Re-admitting every occupant ${String(MAX_ZERO_RECOVERIES)} times never produced a width the slack probe could judge, so the bar has stopped deciding: everything back in the row, CSS clips. Two hosts reach this. One shrink-wraps to the bar, so every eviction shrinks the width that decides the next one — put the bar where there is room to give: as the growing cell of a single-line row, with no Fill or other flex-1 sibling competing for the same slack, and never inside a shrink-to-content parent (inline-flex, w-fit, Cluster). The other is a row so over-full that the bar's flex-1 cell (base size 0) has nothing left to resolve to — there the fix is the bar's SIBLINGS, which are taking more than the row has. ${relayNote(grow.relays)}`,
           });
         }
       } else if (
@@ -949,8 +988,7 @@ function AdaptiveBarShell({
             label,
             overflow,
             ...originOf(root),
-            message:
-              "the bar's own width moves with its own content, so every eviction shrinks the width that decides the next one — a one-way ratchet with an empty row at the end of it. Put it where there is room to give: as the growing cell of a single-line row, with no Fill or other flex-1 sibling competing for the same slack, and never inside a shrink-to-content parent (inline-flex, w-fit, Cluster, or a wrapper that relays shrink but not grow). One adaptive bar per row.",
+            message: `the bar's own width moves with its own content, so every eviction shrinks the width that decides the next one — a one-way ratchet with an empty row at the end of it. Put it where there is room to give: as the growing cell of a single-line row, with no Fill or other flex-1 sibling competing for the same slack, and never inside a shrink-to-content parent (inline-flex, w-fit, Cluster, or a wrapper that relays shrink but not grow). One adaptive bar per row. ${relayNote(grow.relays)}`,
           });
           return;
         }
@@ -1365,6 +1403,8 @@ function AdaptiveBarShell({
     measure,
     isRendered,
     layoutMeasured,
+    grow.granted,
+    grow.relays,
   ]);
 
   // ONE subscription covering everything that can change a width: the row's own

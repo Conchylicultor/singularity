@@ -40,9 +40,20 @@ says "these live behind a `⋯`". `overflow` is `"panel"` (default) | `"scroll"`
 > parent (`inline-flex`, `w-fit`, `Cluster`). One adaptive bar per row.
 >
 > Every box between that row and the bar has to relay the grow, not just the
-> shrink — a `min-w-0` wrapper is still shrink-to-content. Inside a render slot
-> that means the contribution declares `fill: true`, which is what makes its
-> `slot-render` cell (and any wrapper the host adds inside it) a growing one.
+> shrink — a `min-w-0` wrapper is still shrink-to-content. **The bar asks for
+> that itself**, so there is nothing to declare: `useRequestGrow` publishes the
+> need from where the bar is rendered, and every relaying box between it and the
+> row grows because it was asked
+> ([`grow-relay`](../css/plugins/grow-relay/CLAUDE.md)). The `slot-render` cell
+> and the reorder edit-mode wrapper are relays; `Line`/`Row`/`Bar` stop the ask,
+> because they are the row it was about. `Fill` is neither: it grows already,
+> and the ask crosses it for free.
+>
+> A wrapper the host hand-rolls is invisible to that chain and still swallows
+> the grow — which is what the `no-slack` fault below is for, and why it prints
+> how many boxes relayed the ask: `0` says nothing above the bar can give it
+> room, `n` says everything visible relayed and the offender is a `<div>` to
+> recompose onto `Fill`.
 
 This is a contract, not a styling preference. The bar declares itself
 `min-w-0 flex-1`, so `barRoot.getBoundingClientRect().width` **is** the width it
@@ -664,6 +675,7 @@ rendered.
   - Uses:
     - `primitives/action-presentation.ActionFormProvider`
     - `primitives/action-presentation.ItemFormChannel`
+    - `primitives/css/grow-relay.useRequestGrow`
     - `primitives/css/spacing.SpaceStep`
     - `primitives/css/spacing.Stack`
     - `primitives/css/ui-kit.cn`

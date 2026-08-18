@@ -37,10 +37,11 @@ export function BackToLibrary() {
 export function DisplayPicker() {
   const { effectiveDisplayId, setActiveDisplay } = useSonata();
   const displays = Sonata.Display.useContributions();
-  // `<Fill>` is what hands the picker room: the contribution declares
-  // `fill: true`, so its slot cell grows, and `Fill` (`min-w-0 flex-1`) relays
-  // that grow — and the shrink — down to the row the bar decides against. The
-  // eyebrow stays rigid so the bar takes all of the slack.
+  // `<Fill>` is one link of the chain that hands the picker room: the
+  // `AdaptiveBar` inside `Picker` asks for the row's slack, the ask crosses this
+  // box up to the slot cell, and the cell grows because it was asked — `Fill`
+  // then relays that grow (and the shrink) back down. Nothing is declared
+  // anywhere. The eyebrow stays rigid so the bar takes all of the slack.
   return (
     <Fill>
       <Stack direction="row" align="center" gap="sm">
