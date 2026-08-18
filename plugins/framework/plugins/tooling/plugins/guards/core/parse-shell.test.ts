@@ -121,6 +121,192 @@ describe("parseShell reaches inside block structure", () => {
   });
 });
 
+describe("heredoc bodies are data, not commands", () => {
+  const S = "./singularity";
+
+  describe("a document being written is not a script", () => {
+    test("markdown inline code in the body mints no call", () => {
+      const cmd = [
+        "cat > research/x.md <<'EOF'",
+        "## Verification",
+        "",
+        "- `" + S + " build --composition sonata` from an agent worktree",
+        "- `" + S + " build` with no flag is byte-equivalent",
+        "EOF",
+      ].join("\n");
+      expect(names(cmd)).toEqual(["cat"]);
+    });
+
+    test("a fenced code block in the body mints no call", () => {
+      const cmd = [
+        "cat > doc.md <<'EOF'",
+        "```bash",
+        S + " build && git push",
+        "```",
+        "EOF",
+      ].join("\n");
+      expect(names(cmd)).toEqual(["cat"]);
+    });
+
+    test("the owning call keeps its redirection and loses the operator", () => {
+      const parsed = parseShell("cat > f <<'EOF'\nbody\nEOF");
+      expect(parsed.calls).toHaveLength(1);
+      expect(parsed.calls[0]!.args).toEqual([]);
+      expect(parsed.calls[0]!.redirections).toEqual([{ op: ">", target: "f" }]);
+    });
+
+    test("code holds neither the body nor the operator", () => {
+      const { code } = parseShell("cat > f <<'EOF'\nbody\nEOF");
+      expect(code).not.toContain("body");
+      expect(code).not.toContain("<<");
+      expect(code).toContain("cat > f");
+    });
+
+    test("<<- strips tabs from body and terminator alike", () => {
+      expect(names("cat <<-EOF\n\tbody\n\tEOF\ngit push")).toEqual([
+        "cat",
+        "git",
+      ]);
+    });
+
+    test("two heredocs on one line consume their bodies in order", () => {
+      expect(names("cat <<'A' <<'B'\nfirst\nA\nsecond\nB\necho done")).toEqual([
+        "cat",
+        "echo",
+      ]);
+    });
+
+    test("an unterminated heredoc runs to the end of the input", () => {
+      expect(names("cat <<'EOF'\ngit push")).toEqual(["cat"]);
+    });
+
+    test("an unbalanced quote in the body does not leak past the terminator", () => {
+      expect(names("cat <<'EOF'\nit's (unbalanced\nEOF\ngit push")).toEqual([
+        "cat",
+        "git",
+      ]);
+    });
+
+    test("a backslash-escaped delimiter is quoted, so the body is inert", () => {
+      expect(names("cat <<\\EOF\n$(git push)\nEOF")).toEqual(["cat"]);
+    });
+  });
+
+  describe("nothing real is hidden by it", () => {
+    const message = (body: string) =>
+      [S + " push -m \"$(cat <<'EOF'", body, "EOF", ')"'].join("\n");
+
+    test("a commit message body is stripped, the push is still seen", () => {
+      const cmd = message("fix(x): a thing\n\nRan `" + S + " build` first");
+      expect(names(cmd)).toEqual(["singularity", "cat"]);
+    });
+
+    test("… even when the message body holds an unpaired quote", () => {
+      // The `"` desyncs splitOnOperators, so without a substitution-aware
+      // pre-pass the remaining body lines split into calls at depth 0.
+      const cmd = message(
+        'He said "hi and ran `' + S + " build` then\nnext $(git push) here",
+      );
+      expect(names(cmd)).toEqual(["singularity", "cat"]);
+    });
+
+    test("an interpreter executes its body whatever the delimiter quoting", () => {
+      expect(names("bash <<'EOF'\ngit push\nEOF")).toEqual(["bash", "git"]);
+    });
+
+    test("a wrapped interpreter is still an interpreter", () => {
+      expect(names("nohup bash <<'EOF'\ngit push\nEOF")).toEqual([
+        "nohup",
+        "bash",
+        "git",
+      ]);
+    });
+
+    test("a body piped into a shell is executed by it", () => {
+      expect(names("cat <<'EOF' | bash\ngit push\nEOF")).toEqual([
+        "cat",
+        "bash",
+        "git",
+      ]);
+    });
+
+    test("a body piped into anything else stays data", () => {
+      expect(names("cat <<'EOF' | tail -3\ngit push\nEOF")).toEqual([
+        "cat",
+        "tail",
+      ]);
+    });
+
+    test("an unquoted delimiter expands its substitutions", () => {
+      expect(names("cat <<EOF\nvalue $(git push)\nEOF")).toEqual([
+        "cat",
+        "git",
+      ]);
+    });
+
+    test("… and an apostrophe in the body does not hide them", () => {
+      expect(names("cat <<EOF\nit's $(git push)\nEOF")).toEqual(["cat", "git"]);
+    });
+
+    test("body calls run in the owning segment's cwd", () => {
+      const calls = parseShell(
+        "cd sub && bash <<'EOF'\nrm -rf .\nEOF",
+        "/base",
+      ).calls;
+      expect(calls.find((c) => c.name === "rm")!.cwd).toBe("/base/sub");
+    });
+
+    test("parsing resumes after the terminator", () => {
+      expect(names("python3 - <<'PY'\nprint(1)\nPY\ngit push")).toEqual([
+        "python3",
+        "git",
+      ]);
+    });
+  });
+
+  describe("what must not be read as a heredoc", () => {
+    test("<<< is a here-string, and eats no following line", () => {
+      expect(names('rg foo <<< "$x"\ngit push')).toContain("git");
+    });
+
+    test("arithmetic with a variable operand is not a delimiter", () => {
+      expect(names("n=$((1 << shift)); git push")).toContain("git");
+    });
+
+    test("arithmetic with a constant operand is not a delimiter", () => {
+      expect(names("n=$((1 << 2)); git push")).toContain("git");
+    });
+
+    test("a comment mentioning <<EOF swallows nothing", () => {
+      expect(names("# see <<EOF for details\ngit push")).toContain("git");
+    });
+  });
+
+  describe("the guards that read the parse", () => {
+    test("a doc write mentioning the push rule is allowed", () => {
+      const cmd = [
+        "cat > rules.md <<'EOF'",
+        "Never run `git push` yourself.",
+        "EOF",
+      ].join("\n");
+      expect(blocks(gitPushGuard, cmd)).toBe(false);
+    });
+
+    test("a doc write mentioning the rebase rule is allowed", () => {
+      const cmd = [
+        "cat > rules.md <<'EOF'",
+        "Never run `git reset --hard origin/main`.",
+        "EOF",
+      ].join("\n");
+      expect(blocks(gitResetMainGuard, cmd)).toBe(false);
+    });
+
+    test("but a real push inside a heredoc-fed shell is still blocked", () => {
+      expect(blocks(gitPushGuard, "bash <<'EOF'\ngit push\nEOF")).toBe(true);
+    });
+  });
+});
+
 describe("existing guards now see inside loops and substitutions", () => {
   test("git-push blocked inside an until loop", () => {
     expect(blocks(gitPushGuard, "until false; do git push; done")).toBe(true);

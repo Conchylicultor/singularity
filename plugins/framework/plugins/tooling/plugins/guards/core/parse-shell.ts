@@ -24,6 +24,16 @@ export interface ShellParseResult {
   calls: ShellCall[];
   /** Every redirection across the command, flattened from `calls`. */
   redirections: ShellRedirection[];
+  /**
+   * The text the shell would actually EXECUTE: the input with every heredoc body
+   * — and the `<<DELIM` operator introducing it — removed.
+   *
+   * A guard that must regex raw command text reads THIS, never `input.command`,
+   * or a document being WRITTEN reads as a command being RUN. A body an
+   * interpreter executes (`bash <<EOF`) is not re-inserted here; its commands
+   * still surface in `calls`.
+   */
+  code: string;
 }
 
 type Mode = "none" | "single" | "double";
@@ -49,8 +59,8 @@ export function findCall(
 
 export function parseShell(cmd: string, baseCwd = ""): ShellParseResult {
   const calls: ShellCall[] = [];
-  collect(cmd, baseCwd, calls, 0);
-  return { calls, redirections: calls.flatMap((c) => c.redirections) };
+  const { code } = collect(cmd, baseCwd, calls, 0);
+  return { calls, redirections: calls.flatMap((c) => c.redirections), code };
 }
 
 /** Guards against a pathological nesting depth in hand-written input. */
@@ -69,60 +79,427 @@ const MAX_DEPTH = 8;
  * held for `$(…)`, backticks and `( … )` groups. Any construct a shell executes
  * must produce a call here, or it becomes a blind spot every Bash guard shares.
  *
- * Returns the cwd in effect after the last segment. Inner scopes get the
+ * Returns the cwd in effect after the last segment, and the executable text this
+ * scope parsed (its input minus every heredoc body). Inner scopes get the
  * enclosing cwd and their return value is discarded on purpose: a `cd` inside a
  * subshell or a `$( … )` does not move the parent shell's directory.
+ *
+ * The heredoc pre-pass runs HERE rather than once in `parseShell`, so every
+ * context this function parses is heredoc-modelled — the top-level string, a
+ * `$( … )` body, a backtick body, a `( … )` group. `splitOnOperators` splits on
+ * newlines, so any body that survives into it is read line-by-line as commands,
+ * which is the whole bug this models away.
  */
 function collect(
   cmd: string,
   baseCwd: string,
   out: ShellCall[],
   depth: number,
-): string {
-  if (depth > MAX_DEPTH) return baseCwd;
+): { cwd: string; code: string } {
+  if (depth > MAX_DEPTH) return { cwd: baseCwd, code: cmd };
+  const { code, docs } = splitHeredocs(cmd);
   let cwd = baseCwd;
-  for (const sub of splitOnOperators(cmd)) {
-    const seg = sub.trim();
-    if (!seg) continue;
+  /** One entry per segment, so a heredoc body can be attributed to its owner. */
+  const segs: Segment[] = [];
+  for (const part of splitOnOperators(code)) {
+    const from = out.length;
+    const segCwd = cwd;
+    const seg = part.text.trim();
+    if (seg) cwd = collectSegment(seg, cwd, out, depth);
+    segs.push({
+      end: part.end,
+      sep: part.sep,
+      from,
+      to: out.length,
+      cwd: segCwd,
+    });
+  }
+  for (const doc of docs) attachDoc(doc, segs, out, baseCwd, depth);
+  return { cwd, code };
+}
 
-    // Pull `$( … )` / backtick bodies out FIRST, so their contents are parsed as
-    // commands rather than swallowed as opaque argument text — and so the
-    // prefix peel below cannot mistake a substitution body for a command. In
-    // `x=$(cd /tmp && pwd)` the assignment's value spans a space, so peeling on
-    // whitespace before extraction would strand `/tmp && pwd)` as the command.
-    const { stripped, inner } = extractSubstitutions(seg);
-    const head = peelPrefixes(stripped);
+/** A segment of a compound command, plus the span of `out` it contributed. */
+interface Segment {
+  /** Offset in `code` just past this segment's text (its separator's index). */
+  end: number;
+  /** The operator that ended this segment (`""` for the last one). */
+  sep: string;
+  from: number;
+  to: number;
+  /** The cwd in effect BEFORE this segment's own `cd`. */
+  cwd: string;
+}
 
-    // A whole `( … )` group is its own shell: parse it in an isolated scope so
-    // a `cd` inside cannot move the parent's directory.
-    if (head.startsWith("(") && matchParen(head, 0) === head.length - 1) {
-      collect(head.slice(1, -1), cwd, out, depth + 1);
-      for (const src of inner) collect(src, cwd, out, depth + 1);
+/** Emit the calls of one already-split segment; returns the cwd after it. */
+function collectSegment(
+  seg: string,
+  cwd: string,
+  out: ShellCall[],
+  depth: number,
+): string {
+  // Pull `$( … )` / backtick bodies out FIRST, so their contents are parsed as
+  // commands rather than swallowed as opaque argument text — and so the
+  // prefix peel below cannot mistake a substitution body for a command. In
+  // `x=$(cd /tmp && pwd)` the assignment's value spans a space, so peeling on
+  // whitespace before extraction would strand `/tmp && pwd)` as the command.
+  const { stripped, inner } = extractSubstitutions(seg);
+  const head = peelPrefixes(stripped);
+
+  // A whole `( … )` group is its own shell: parse it in an isolated scope so
+  // a `cd` inside cannot move the parent's directory.
+  if (head.startsWith("(") && matchParen(head, 0) === head.length - 1) {
+    collect(head.slice(1, -1), cwd, out, depth + 1);
+    for (const src of inner) collect(src, cwd, out, depth + 1);
+    return cwd;
+  }
+
+  let cur = cwd;
+  const tokens = stripGroupParens(stripRedirections(shellSplit(head)));
+  const redirections = scanRedirections(head);
+  // A wrapper (`nohup`, `env`, `sudo`, `xargs`, `timeout`, …) carries the real
+  // command in its args, hiding it from every name-matching predicate the same
+  // way a loop body did — `nohup git push` would otherwise walk past git-push.
+  // Emit the wrapper AND what it wraps, peeling one layer at a time.
+  for (let toks = tokens; toks.length > 0;) {
+    const name = basename(toks[0]!);
+    const args = toks.slice(1);
+    // The call runs in the cwd in effect BEFORE its own `cd` takes hold; a
+    // `cd` only moves the directory for the calls that follow it.
+    out.push({ name, args, raw: seg, cwd: cur, redirections });
+    if (name === "cd") cur = applyCd(cur, args);
+    if (!WRAPPERS.has(name)) break;
+    const wrapped = dropWrapperOptions(args);
+    if (wrapped.length === 0 || wrapped.length === toks.length) break;
+    toks = wrapped;
+  }
+
+  for (const src of inner) collect(src, cur, out, depth + 1);
+  return cur;
+}
+
+/** A heredoc operator seen on the current line, awaiting its body. */
+interface PendingHeredoc {
+  delim: string;
+  expanded: boolean;
+  strip: boolean;
+  at: number;
+}
+
+/** One heredoc lifted out of a command by `splitHeredocs`. */
+interface HeredocDoc {
+  /** The body text, verbatim, minus the terminator line. */
+  body: string;
+  /** Unquoted delimiter: the shell expands `$( … )` / backticks inside the body. */
+  expanded: boolean;
+  /** Offset in `code` where the `<<DELIM` operator was removed. */
+  at: number;
+}
+
+/**
+ * A delimiter word, in the four spellings bash accepts. Anything else is left
+ * alone — the grammar is what keeps `$((x << shift))` and stray `a << b` prose
+ * from starting a "body" that swallows the rest of the command and blinds every
+ * guard after it. Only the bare form expands the body.
+ */
+const HEREDOC_DELIM =
+  /^(?:'([A-Za-z_][\w.-]*)'|"([A-Za-z_][\w.-]*)"|\\([A-Za-z_][\w.-]*)|([A-Za-z_][\w.-]*))/;
+
+/**
+ * Binaries that read a script on stdin, so their heredoc body IS executed.
+ *
+ * `python3 - <<'PY'` and friends are deliberately absent: their bodies are not
+ * shell, and pretending otherwise mints phantom calls out of another language's
+ * source. That blind spot is the same one `python3 -c "…"` already has, and
+ * making it consistent beats making it lucky.
+ */
+const SHELL_INTERPRETERS = new Set([
+  "bash",
+  "sh",
+  "zsh",
+  "dash",
+  "ksh",
+  "mksh",
+  "ash",
+]);
+
+/**
+ * Lift every heredoc body out of a command, leaving the text the shell actually
+ * executes.
+ *
+ * A body is data handed to a process on stdin — never part of the token stream.
+ * Left in place it is read as commands, because `splitOnOperators` splits on
+ * newlines and `extractSubstitutions` lifts backticks: a markdown document
+ * written by `cat > x.md <<'EOF'` then parses as a script, and every Bash guard
+ * denies the write on a command nothing is running.
+ *
+ * The scanner tracks quoting AND substitution context, not quoting alone. The
+ * commonest heredoc in this repo is
+ *
+ *     ./singularity push -m "$(cat <<'EOF'   ← `<<` sits inside the `-m` quote
+ *
+ * where a quote-only mask declines. It is tempting to leave that to the
+ * recursion — `splitOnOperators` keeps the whole `$( … )` in one segment, so the
+ * body reaches `collect` again through `extractSubstitutions` and is stripped
+ * there. That holds only while the body's `"` count is even: one unpaired quote
+ * in the prose flips the mode back to `none` mid-body, and the remaining lines
+ * split at depth 0 into phantom commands the recursion never sees. Entering a
+ * `$( … )` restores the fresh quoting context the shell itself uses, so the body
+ * is removed here — which also repairs the quote tracking downstream instead of
+ * working around it.
+ */
+function splitHeredocs(text: string): { code: string; docs: HeredocDoc[] } {
+  if (!text.includes("<<")) return { code: text, docs: [] };
+
+  const docs: HeredocDoc[] = [];
+  const pending: PendingHeredoc[] = [];
+  let code = "";
+  let mode: Mode = "none";
+  /** Quoting modes suspended by an enclosing `$( … )` / `( … )` / backtick. */
+  const frames: { mode: Mode; kind: "subst" | "paren" | "backtick" }[] = [];
+  let i = 0;
+
+  while (i < text.length) {
+    const c = text[i]!;
+    const next = text[i + 1];
+
+    if (c === "\n") {
+      code += c;
+      i++;
+      if (pending.length > 0) i = consumeBodies(text, i, pending, docs);
       continue;
     }
 
-    const tokens = stripGroupParens(stripRedirections(shellSplit(head)));
-    const redirections = scanRedirections(head);
-    // A wrapper (`nohup`, `env`, `sudo`, `xargs`, `timeout`, …) carries the real
-    // command in its args, hiding it from every name-matching predicate the same
-    // way a loop body did — `nohup git push` would otherwise walk past git-push.
-    // Emit the wrapper AND what it wraps, peeling one layer at a time.
-    for (let toks = tokens; toks.length > 0;) {
-      const name = basename(toks[0]!);
-      const args = toks.slice(1);
-      // The call runs in the cwd in effect BEFORE its own `cd` takes hold; a
-      // `cd` only moves the directory for the calls that follow it.
-      out.push({ name, args, raw: seg, cwd, redirections });
-      if (name === "cd") cwd = applyCd(cwd, args);
-      if (!WRAPPERS.has(name)) break;
-      const wrapped = dropWrapperOptions(args);
-      if (wrapped.length === 0 || wrapped.length === toks.length) break;
-      toks = wrapped;
+    if (mode === "single") {
+      code += c;
+      if (c === "'") mode = "none";
+      i++;
+      continue;
     }
 
-    for (const src of inner) collect(src, cwd, out, depth + 1);
+    if (c === "\\" && next !== undefined) {
+      code += c + next;
+      i += 2;
+      continue;
+    }
+
+    if (mode === "none") {
+      if (c === "'") {
+        mode = "single";
+        code += c;
+        i++;
+        continue;
+      }
+      // A comment runs to end of line: `# see <<EOF for details` must not start
+      // a body that eats the rest of the script.
+      if (c === "#" && (code === "" || /[\s;|&(]$/.test(code))) {
+        const nl = text.indexOf("\n", i);
+        const end = nl === -1 ? text.length : nl;
+        code += text.slice(i, end);
+        i = end;
+        continue;
+      }
+    }
+
+    if (c === '"') {
+      mode = mode === "double" ? "none" : "double";
+      code += c;
+      i++;
+      continue;
+    }
+
+    // `$(( … ))` is arithmetic, not a command: copy it verbatim so `x << shift`
+    // inside it can never be read as a heredoc.
+    if (c === "$" && next === "(" && text[i + 2] === "(") {
+      const end = matchParen(text, i + 1);
+      if (end !== -1) {
+        code += text.slice(i, end + 1);
+        i = end + 1;
+        continue;
+      }
+    }
+
+    // A substitution starts a fresh quoting context, in `none` AND in `double`.
+    if (c === "$" && next === "(") {
+      frames.push({ mode, kind: "subst" });
+      mode = "none";
+      code += "$(";
+      i += 2;
+      continue;
+    }
+    if (c === "`") {
+      const top = frames.at(-1);
+      if (top?.kind === "backtick") {
+        mode = top.mode;
+        frames.pop();
+      } else {
+        frames.push({ mode, kind: "backtick" });
+        mode = "none";
+      }
+      code += c;
+      i++;
+      continue;
+    }
+    if (mode === "none" && c === "(") {
+      frames.push({ mode, kind: "paren" });
+      code += c;
+      i++;
+      continue;
+    }
+    if (mode === "none" && c === ")") {
+      const top = frames.at(-1);
+      if (top && top.kind !== "backtick") {
+        mode = top.mode;
+        frames.pop();
+      }
+      code += c;
+      i++;
+      continue;
+    }
+
+    if (mode === "none" && c === "<" && next === "<") {
+      // `<<<` is a here-string, not a heredoc. Stepping one char at a time would
+      // land on the second `<`, read `<<` + a word, and swallow every following
+      // line as a body — so consume all three at once.
+      if (text[i + 2] === "<") {
+        code += "<<<";
+        i += 3;
+        continue;
+      }
+      const doc = matchHeredocOperator(text, i);
+      if (doc) {
+        // Drop the operator's own text: the pre-pass knows its exact offsets,
+        // where a token-level rule could not tell `<<EOF` from a quoted `"<<x>>"`
+        // argument, `shellSplit` having already erased the quotes.
+        code = code.replace(/\d+$/, "");
+        pending.push({ ...doc, at: code.length });
+        i = doc.end;
+        continue;
+      }
+    }
+
+    code += c;
+    i++;
   }
-  return cwd;
+
+  // An unterminated heredoc: bash errors, but the body is still not a command.
+  if (pending.length > 0) consumeBodies(text, i, pending, docs);
+  return { code, docs };
+}
+
+/** Read one `\d*<<-?DELIM` operator at `i`, or null when it is not one. */
+function matchHeredocOperator(
+  text: string,
+  i: number,
+): (Omit<PendingHeredoc, "at"> & { end: number }) | null {
+  let j = i + 2;
+  const strip = text[j] === "-";
+  if (strip) j++;
+  while (text[j] === " " || text[j] === "\t") j++;
+  const m = HEREDOC_DELIM.exec(text.slice(j));
+  if (!m) return null;
+  const delim = m[1] ?? m[2] ?? m[3] ?? m[4]!;
+  return { delim, expanded: m[4] !== undefined, strip, end: j + m[0].length };
+}
+
+/**
+ * Consume one body per pending operator, in the order the operators appeared,
+ * and return the offset just past the last terminator.
+ *
+ * The terminator test is deliberately lax (`trim()`, where bash wants an exact
+ * line): terminating earlier than the shell leaves text OUTSIDE the body, where
+ * it is still parsed. Erring the other way would hide real commands.
+ */
+function consumeBodies(
+  text: string,
+  start: number,
+  pending: PendingHeredoc[],
+  docs: HeredocDoc[],
+): number {
+  let i = start;
+  for (const p of pending) {
+    const lines: string[] = [];
+    while (i < text.length) {
+      const nl = text.indexOf("\n", i);
+      const line = nl === -1 ? text.slice(i) : text.slice(i, nl);
+      i = nl === -1 ? text.length : nl + 1;
+      const candidate = p.strip ? line.replace(/^\t+/, "") : line;
+      if (candidate.trim() === p.delim) break;
+      lines.push(line);
+    }
+    docs.push({ body: lines.join("\n"), expanded: p.expanded, at: p.at });
+  }
+  pending.length = 0;
+  return i;
+}
+
+/**
+ * Parse a heredoc body as far as the shell would, and no further.
+ *
+ * `bash <<'EOF'` executes its body whatever the delimiter quoting, and so does
+ * `cat <<'EOF' … | bash` — without the pipeline arm this fix would hand every
+ * Bash guard a one-line bypass. An unquoted delimiter expands substitutions but
+ * runs nothing else. A quoted delimiter on a non-interpreter is inert data, the
+ * 97% case, and contributes nothing.
+ */
+function attachDoc(
+  doc: HeredocDoc,
+  segs: Segment[],
+  out: ShellCall[],
+  baseCwd: string,
+  depth: number,
+): void {
+  const i = segs.findIndex((s) => doc.at <= s.end);
+  const owner = i === -1 ? segs.at(-1) : segs[i];
+  // The body runs where its own segment runs: `cd sub && bash <<'EOF'` must not
+  // resolve the body's paths against the parent directory.
+  const cwd = owner?.cwd ?? baseCwd;
+  const interpreter = (s: Segment | undefined) =>
+    !!s && out.slice(s.from, s.to).some((c) => SHELL_INTERPRETERS.has(c.name));
+  const piped = owner?.sep === "|" && i !== -1 ? segs[i + 1] : undefined;
+
+  if (interpreter(owner) || interpreter(piped)) {
+    collect(doc.body, cwd, out, depth + 1);
+    return;
+  }
+  if (!doc.expanded) return;
+  for (const src of bodySubstitutions(doc.body))
+    collect(src, cwd, out, depth + 1);
+}
+
+/**
+ * The `$( … )` / backtick sources inside an expanded heredoc body.
+ *
+ * Quote-BLIND on purpose: a body has no quoting, so `'` is a literal apostrophe
+ * there. `extractSubstitutions` would let one open a phantom single-quoted region
+ * and hide every substitution after it — `it's $(git push)` would parse to
+ * nothing at all.
+ */
+function bodySubstitutions(body: string): string[] {
+  const out: string[] = [];
+  for (let i = 0; i < body.length; i++) {
+    const c = body[i];
+    const next = body[i + 1];
+    if (c === "\\" && next !== undefined) {
+      i++;
+      continue;
+    }
+    if (c === "$" && next === "(") {
+      const end = matchParen(body, i + 1);
+      if (end !== -1) {
+        out.push(body.slice(i + 2, end));
+        i = end;
+        continue;
+      }
+    }
+    if (c === "`") {
+      const end = body.indexOf("`", i + 1);
+      if (end !== -1) {
+        out.push(body.slice(i + 1, end));
+        i = end;
+      }
+    }
+  }
+  return out;
 }
 
 /**
@@ -345,8 +722,21 @@ function basename(p: string): string {
   return i === -1 ? p : p.slice(i + 1);
 }
 
-function splitOnOperators(s: string): string[] {
-  const parts: string[] = [];
+/**
+ * One part of a compound command, carrying its span so a heredoc body recorded
+ * by the pre-pass can be attributed to the part that owns it — its cwd, and
+ * whether it is piped into a shell.
+ */
+interface ShellPart {
+  text: string;
+  /** Offset in the input just past this part (its separator's index). */
+  end: number;
+  /** The operator that ended this part (`""` for the last one). */
+  sep: string;
+}
+
+function splitOnOperators(s: string): ShellPart[] {
+  const parts: ShellPart[] = [];
   let cur = "";
   let mode: Mode = "none";
   // Depth of `(` … `)` — covers both subshells and `$( … )`. Operators inside a
@@ -400,7 +790,7 @@ function splitOnOperators(s: string): string[] {
         continue;
       }
       if ((c === "&" && next === "&") || (c === "|" && next === "|")) {
-        parts.push(cur);
+        parts.push({ text: cur, end: i, sep: c + next });
         cur = "";
         i++;
         continue;
@@ -411,7 +801,7 @@ function splitOnOperators(s: string): string[] {
       // continuation (`\<newline>`) is consumed by the `\\` escape branch above,
       // so it never reaches here and correctly does NOT split.
       if (c === ";" || c === "|" || c === "&" || c === "\n" || c === "\r") {
-        parts.push(cur);
+        parts.push({ text: cur, end: i, sep: c });
         cur = "";
         continue;
       }
@@ -429,7 +819,7 @@ function splitOnOperators(s: string): string[] {
       if (c === '"') mode = "none";
     }
   }
-  if (cur) parts.push(cur);
+  if (cur) parts.push({ text: cur, end: s.length, sep: "" });
   return parts;
 }
 

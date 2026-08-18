@@ -88,6 +88,22 @@ describe("watchSubjects", () => {
   });
 });
 
+describe("a document that mentions a file is not watching it", () => {
+  test("log paths inside a heredoc body name no subject", () => {
+    const cmd = [
+      "cat > notes.md <<'EOF'",
+      "Read `logs/build.jsonl` and the receipt at build-status.json,",
+      "plus the captured output under tasks/abc123.output.",
+      "EOF",
+    ].join("\n");
+    expect(watchSubjects(cmd)).toEqual([]);
+  });
+
+  test("but a real read of the same log still does", () => {
+    expect(watchSubjects("rg x logs/agent.jsonl")).toEqual(["log:agent"]);
+  });
+});
+
 describe("classify", () => {
   test("reading a task output file is an observation", () => {
     expect(classify(`cat ${TASK} | tail -30`)).toBe("observe");

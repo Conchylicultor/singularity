@@ -1,4 +1,4 @@
-import { parseShell } from "./parse-shell";
+import { parseShell, type ShellParseResult } from "./parse-shell";
 
 /**
  * Polling detection, as pure functions over a command string and a window.
@@ -172,7 +172,8 @@ function writesAFile(target: string): boolean {
  * nor a reason to forget the polls already seen.
  */
 export function classify(cmd: string): CommandClass {
-  const { calls, redirections } = parseShell(cmd);
+  const parsed = parseShell(cmd);
+  const { calls, redirections } = parsed;
   if (redirections.some((r) => writesAFile(r.target))) return "mutate";
 
   let allReadOnly = calls.length > 0;
@@ -191,7 +192,7 @@ export function classify(cmd: string): CommandClass {
     if (!READ_ONLY.has(call.name)) allReadOnly = false;
   }
 
-  if (allReadOnly && watchSubjects(cmd).length > 0) return "observe";
+  if (allReadOnly && watchSubjectsFrom(parsed).length > 0) return "observe";
   return "neutral";
 }
 
@@ -205,6 +206,15 @@ export function classify(cmd: string): CommandClass {
  * `pgrep` appended — so byte-equality caught 2 of 47 recorded loops.
  */
 export function watchSubjects(cmd: string): WatchSubject[] {
+  return watchSubjectsFrom(parseShell(cmd));
+}
+
+/** As `watchSubjects`, for a caller that has already parsed the command. */
+export function watchSubjectsFrom(parsed: ShellParseResult): WatchSubject[] {
+  // `code`, never the raw command: a research note that merely MENTIONS
+  // `build-status.json` is not something the agent is watching, and a heredoc
+  // body full of log paths is a document being written.
+  const cmd = parsed.code;
   const out = new Set<WatchSubject>();
   const add = (re: RegExp, make: (m: RegExpMatchArray) => string) => {
     for (const m of cmd.matchAll(new RegExp(re.source, "g"))) out.add(make(m));
@@ -224,7 +234,7 @@ export function watchSubjects(cmd: string): WatchSubject[] {
   // Process probes read their target off the PARSED call: a pattern is routinely
   // quoted (`pgrep -f "singularity push"`), and a regex over the raw text stops
   // at the first space inside the quotes, splitting one watch into two.
-  for (const call of parseShell(cmd).calls) {
+  for (const call of parsed.calls) {
     if (call.name === "pgrep" || call.name === "pkill") {
       const pattern = call.args.find((a) => !a.startsWith("-"));
       if (pattern) out.add(`proc:${normalise(pattern)}`);
@@ -263,7 +273,7 @@ export function watchSubjects(cmd: string): WatchSubject[] {
   // process, so without this it has no subject at all and reads as `neutral` —
   // which let `sleep 300; echo TICK` repeat indefinitely. Only when nothing else
   // was found: `sleep 5 && curl …` is already identified by the thing it polls.
-  if (out.size === 0 && parseShell(cmd).calls.some((c) => c.name === "sleep")) {
+  if (out.size === 0 && parsed.calls.some((c) => c.name === "sleep")) {
     out.add("time:sleep");
   }
 

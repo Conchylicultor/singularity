@@ -1,5 +1,5 @@
 import { defineGuard } from "../define-guard";
-import { parseShell } from "../parse-shell";
+import { parseShell, type ShellParseResult } from "../parse-shell";
 import type { BashInput } from "../types";
 
 /**
@@ -15,8 +15,8 @@ const INSTANT_FLAGS = new Set(["--list", "--help", "-h", "--version", "-V"]);
 /** Shell-level detach: looks like backgrounding, produces no tracked task. */
 const SHELL_DETACH = new Set(["nohup", "setsid", "disown"]);
 
-function longOpIn(cmd: string): string | null {
-  for (const call of parseShell(cmd).calls) {
+function longOpIn(parsed: ShellParseResult): string | null {
+  for (const call of parsed.calls) {
     if (call.name !== "singularity") continue;
     const sub = call.args.find((a) => !a.startsWith("-"));
     if (!sub || !LONG_OPS.has(sub)) continue;
@@ -26,12 +26,13 @@ function longOpIn(cmd: string): string | null {
   return null;
 }
 
-function shellDetachIn(cmd: string): boolean {
-  const calls = parseShell(cmd).calls;
-  if (calls.some((c) => SHELL_DETACH.has(c.name))) return true;
+function shellDetachIn(parsed: ShellParseResult): boolean {
+  if (parsed.calls.some((c) => SHELL_DETACH.has(c.name))) return true;
   // A trailing `&` survives tokenizing as its own empty segment, so look at the
-  // raw text instead — but not `2>&1` / `&>file`, where the `&` is a redirection.
-  return /(?<![>&])&\s*$/.test(cmd.trim());
+  // text instead — but not `2>&1` / `&>file`, where the `&` is a redirection.
+  // `code`, never the raw command: a script being WRITTEN by `cat > s.sh <<'EOF'`
+  // whose last body line ends in `&` is not a detach.
+  return /(?<![>&])&\s*$/.test(parsed.code.trim());
 }
 
 /**
@@ -57,11 +58,12 @@ export const backgroundOpsGuard = defineGuard<BashInput>({
     const cmd = input.command;
     if (!cmd) return null;
 
-    const op = longOpIn(cmd);
+    const parsed = parseShell(cmd);
+    const op = longOpIn(parsed);
     if (!op) return null;
 
     if (input.run_in_background === true) {
-      if (!shellDetachIn(cmd)) return null;
+      if (!shellDetachIn(parsed)) return null;
       return {
         blocked: `This command already runs in the background — the extra shell-level detach (\`&\`/\`nohup\`) breaks it.`,
         why: "Detaching inside the shell makes the task exit immediately, so the harness records a completed task while the op is still running. You are then notified about the wrong thing.",
@@ -69,7 +71,7 @@ export const backgroundOpsGuard = defineGuard<BashInput>({
       };
     }
 
-    if (shellDetachIn(cmd)) {
+    if (shellDetachIn(parsed)) {
       return {
         blocked: `\`./singularity ${op}\` is being detached by the shell, which produces no tracked task.`,
         why: "A shell-detached process is invisible to the harness: nothing notifies you when it ends, so the only way to learn the outcome is to watch a file. That is the polling loop this repo is trying to remove.",

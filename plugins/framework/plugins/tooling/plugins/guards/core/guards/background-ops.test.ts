@@ -81,6 +81,74 @@ describe("background-ops guard", () => {
     });
   });
 
+  describe("documents are written, not run", () => {
+    const S = "./singularity";
+
+    test("the repro: a research doc mentioning the build in inline code", () => {
+      const cmd = [
+        "cat > research/x.md <<'EOF'",
+        "## Verification",
+        "",
+        "- `" + S + " build --composition sonata` from an agent worktree",
+        "- `" + S + " build` with no flag is byte-equivalent",
+        "EOF",
+      ].join("\n");
+      expect(blocks(cmd)).toBe(false);
+    });
+
+    test("… and in a fenced code block", () => {
+      const cmd = [
+        "cat > doc.md <<'EOF'",
+        "```bash",
+        S + " build",
+        "```",
+        "EOF",
+      ].join("\n");
+      expect(blocks(cmd)).toBe(false);
+    });
+
+    test("a script whose body ends in & is not a detach", () => {
+      const cmd = ["cat > s.sh <<'EOF'", S + " build &", "EOF"].join("\n");
+      expect(blocks(cmd)).toBe(false);
+    });
+
+    test("a commit message body is data, but the push it decorates is not", () => {
+      const cmd = [
+        S + " push -m \"$(cat <<'EOF'",
+        "fix(x): a thing",
+        "",
+        "Ran `" + S + " build` first",
+        "EOF",
+        ')"',
+      ].join("\n");
+      expect(blocks(cmd)).toBe(true);
+      expect(blocks(cmd, true)).toBe(false);
+    });
+
+    test("… including when the message body holds an unpaired quote", () => {
+      const cmd = [
+        S + " push -m \"$(cat <<'EOF'",
+        'He said "hi and ran `' + S + " build` then",
+        "EOF",
+        ')"',
+      ].join("\n");
+      expect(blocks(cmd)).toBe(true);
+      expect(blocks(cmd, true)).toBe(false);
+    });
+
+    test("the scanner resumes after a terminator", () => {
+      const cmd = ["python3 - <<'PY'", "print(1)", "PY", S + " check"].join(
+        "\n",
+      );
+      expect(blocks(cmd)).toBe(true);
+    });
+
+    test("a body piped into a shell really runs", () => {
+      const cmd = ["cat <<'EOF' | bash", S + " build", "EOF"].join("\n");
+      expect(blocks(cmd)).toBe(true);
+    });
+  });
+
   describe("short commands stay allowed", () => {
     test("check --list", () => {
       expect(blocks("./singularity check --list")).toBe(false);
