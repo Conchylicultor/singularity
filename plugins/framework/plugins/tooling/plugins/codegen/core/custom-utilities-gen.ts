@@ -15,6 +15,14 @@ import { writeGenerated } from "./write-generated";
  * Mirrors the token-group-vars-gen trio: `renderCustomUtilities` (in-memory),
  * `generateCustomUtilities` (write-on-diff), `customUtilitiesManifestPath`.
  *
+ * A synthetic group states its relation to the built-in groups as `excludes:`
+ * (mutual — whichever class is last survives, in EITHER order) and, as the escape
+ * hatch, `under: <builtin…> -- <reason>` (the built-in is strictly broader, so it
+ * removes the group but the group must not remove it). The generator only records
+ * what the decl says; `lib/utils.ts` compiles it to tailwind-merge's directional
+ * `conflictingClassGroups` and closes it over tailwind-merge's own map, which is
+ * why nothing here needs to know that `p` is broader than `px`.
+ *
  * The generator reads app.css by PATH via fs — it must NOT statically import the
  * ui-kit plugin (that would be an illegal framework→ui cross-plugin edge), so it
  * owns its own copy of the builtin-group-id allow-list (kept in sync with
@@ -67,15 +75,32 @@ type Marker =
   | { kind: "group"; group: string }
   | { kind: "standalone"; reason: string };
 
+interface UnderRelation {
+  group: string;
+  reason: string;
+}
+
 type RegistryEntry =
   | { classes: string[]; extend: string }
-  | { classes: string[]; group: string; conflictsWith: string[] }
+  | {
+      classes: string[];
+      group: string;
+      excludes: string[];
+      under: UnderRelation[];
+    }
   | { classes: string[]; standalone: true; reason: string };
 
 /** A synthetic-group declaration scanned file-wide from a section header. */
 interface GroupDecl {
   id: string;
-  conflicts: string[];
+  /** Built-ins this group is MUTUALLY exclusive with (both directions). */
+  excludes: string[];
+  /**
+   * Built-ins that are strictly BROADER than this group: a later built-in removes
+   * the group, a later group member does NOT remove the built-in. The escape
+   * hatch, so each one carries a required reason.
+   */
+  under: UnderRelation[];
 }
 
 /**
@@ -117,23 +142,114 @@ function parseMarker(ref: string, where: string): Marker {
   );
 }
 
-/** Scan every `/* @twmerge group <id> conflicts: <ids…> *\/` decl file-wide. */
+function assertBuiltin(id: string, group: string, clause: string): void {
+  if (!BUILTIN_GROUP_IDS.has(id)) {
+    throw new Error(
+      `app.css @twmerge group ${group}: unknown built-in tailwind-merge group "${id}" in the ${clause} list. ` +
+        `Allowed: ${[...BUILTIN_GROUP_IDS].join(", ")}.`,
+    );
+  }
+}
+
+/**
+ * Scan every `/* @twmerge group <id> excludes: <ids…> [under: <ids…> -- <why>] *\/`
+ * decl file-wide.
+ *
+ * A decl's body runs from its `@twmerge group <id>` header to whichever comes
+ * first: the next `@twmerge` header, or the end of the enclosing comment. That
+ * boundary (rather than end-of-line) is what lets a `under:` reason wrap across
+ * lines; the leading ` * ` of each continuation line is stripped.
+ *
+ * The removed `conflicts:` spelling is rejected explicitly rather than ignored:
+ * it compiled to a ONE-directional rule (a later built-in removes the group, never
+ * the reverse), which is the bug `excludes:` exists to fix — so a marker must not
+ * be able to keep the old semantics by keeping the old word.
+ */
 function collectGroupDecls(css: string): Map<string, GroupDecl> {
   const decls = new Map<string, GroupDecl>();
-  const re =
-    /@twmerge\s+group\s+([\w-]+)\s+conflicts:\s*([^*]+?)\s*(?:\*\/|\n|$)/g;
-  for (const m of css.matchAll(re)) {
-    const id = m[1]!;
-    const conflicts = m[2]!.trim().split(/\s+/).filter(Boolean);
-    for (const c of conflicts) {
-      if (!BUILTIN_GROUP_IDS.has(c)) {
+  const headers = [...css.matchAll(/@twmerge\s+group\s+([\w-]+)/g)];
+
+  for (let i = 0; i < headers.length; i++) {
+    const header = headers[i]!;
+    const id = header[1]!;
+    const bodyStart = header.index! + header[0].length;
+    const nextHeader = headers[i + 1]?.index ?? css.length;
+    const commentEnd = css.indexOf("*/", bodyStart);
+    const bodyEnd = Math.min(
+      nextHeader,
+      commentEnd === -1 ? css.length : commentEnd,
+    );
+    // Strip each continuation line's ` * ` comment gutter, then flatten to one line.
+    const body = css
+      .slice(bodyStart, bodyEnd)
+      .split("\n")
+      .map((line, index) =>
+        index === 0 ? line : line.replace(/^\s*\*\s?/, ""),
+      )
+      .join(" ");
+
+    if (/\bconflicts\s*:/.test(body)) {
+      throw new Error(
+        `app.css @twmerge group ${id}: "conflicts:" no longer exists — it compiled to a ` +
+          `one-directional rule (a later built-in removed the group, never the reverse), so a ` +
+          `group and a built-in could both survive on one element. Use "excludes: <builtin…>" ` +
+          `for mutual exclusion, or "under: <builtin…> -- <reason>" when the built-in is ` +
+          `strictly broader and must not be removed by this group.`,
+      );
+    }
+
+    const decl: GroupDecl = { id, excludes: [], under: [] };
+    // Split the body into clauses, keeping each keyword with its own segment.
+    const clauses = body.split(/\b(excludes|under)\s*:/);
+    for (let c = 1; c < clauses.length; c += 2) {
+      const keyword = clauses[c]!;
+      const segment = clauses[c + 1] ?? "";
+      if (keyword === "excludes") {
+        const ids = segment.trim().split(/\s+/).filter(Boolean);
+        if (ids.length === 0) {
+          throw new Error(
+            `app.css @twmerge group ${id}: "excludes:" needs at least one built-in group id.`,
+          );
+        }
+        for (const builtin of ids) {
+          if (!/^[\w-]+$/.test(builtin)) {
+            throw new Error(
+              `app.css @twmerge group ${id}: "${builtin}" is not a group id in the excludes list.`,
+            );
+          }
+          assertBuiltin(builtin, id, "excludes");
+        }
+        decl.excludes.push(...ids);
+        continue;
+      }
+      const [target, ...reasonParts] = segment.split("--");
+      const reason = reasonParts.join("--").trim();
+      const ids = target!.trim().split(/\s+/).filter(Boolean);
+      if (ids.length === 0) {
         throw new Error(
-          `app.css @twmerge group ${id}: unknown built-in tailwind-merge group "${c}" in conflicts list. ` +
-            `Allowed: ${[...BUILTIN_GROUP_IDS].join(", ")}.`,
+          `app.css @twmerge group ${id}: "under:" needs at least one built-in group id.`,
         );
       }
+      if (!reason) {
+        throw new Error(
+          `app.css @twmerge group ${id}: "under: ${ids.join(" ")}" requires a reason ` +
+            `("under: <builtin…> -- <reason>"). It is the one-directional escape — say why ` +
+            `the built-in is strictly broader than this group.`,
+        );
+      }
+      for (const builtin of ids) {
+        assertBuiltin(builtin, id, "under");
+        decl.under.push({ group: builtin, reason });
+      }
     }
-    decls.set(id, { id, conflicts });
+
+    if (decl.excludes.length === 0 && decl.under.length === 0) {
+      throw new Error(
+        `app.css @twmerge group ${id}: declaration has no recognised clause. ` +
+          `Expected "excludes: <builtin…>" and/or "under: <builtin…> -- <reason>".`,
+      );
+    }
+    decls.set(id, decl);
   }
   return decls;
 }
@@ -193,7 +309,7 @@ export function parseCustomUtilities(css: string): RegistryEntry[] {
     if (rec.marker.kind === "group" && !groupDecls.has(rec.marker.group)) {
       throw new Error(
         `app.css @utility ${rec.name}: twmerge marker "${rec.marker.group}" has no ` +
-          `matching "/* @twmerge group ${rec.marker.group} conflicts: … */" declaration.`,
+          `matching "/* @twmerge group ${rec.marker.group} excludes: … */" declaration.`,
       );
     }
   }
@@ -218,10 +334,12 @@ export function parseCustomUtilities(css: string): RegistryEntry[] {
     if (rec.marker.kind === "extend") {
       entry = { classes: [rec.name], extend: rec.marker.builtin };
     } else if (rec.marker.kind === "group") {
+      const decl = groupDecls.get(rec.marker.group)!;
       entry = {
         classes: [rec.name],
         group: rec.marker.group,
-        conflictsWith: groupDecls.get(rec.marker.group)!.conflicts,
+        excludes: decl.excludes,
+        under: decl.under,
       };
     } else {
       entry = {
@@ -243,10 +361,17 @@ function renderEntry(entry: RegistryEntry): string {
     return `  { classes: [${classes}], extend: ${JSON.stringify(entry.extend)} },`;
   }
   if ("group" in entry) {
-    const conflicts = entry.conflictsWith
-      .map((c) => JSON.stringify(c))
+    const excludes = entry.excludes.map((c) => JSON.stringify(c)).join(", ");
+    const under = entry.under
+      .map(
+        (u) =>
+          `{ group: ${JSON.stringify(u.group)}, reason: ${JSON.stringify(u.reason)} }`,
+      )
       .join(", ");
-    return `  { classes: [${classes}], group: ${JSON.stringify(entry.group)}, conflictsWith: [${conflicts}] },`;
+    // Always emitted, even empty: an omitted field would be absent from the
+    // `as const` literal type, so reading `entry.under` on the registry union
+    // would not type-check.
+    return `  { classes: [${classes}], group: ${JSON.stringify(entry.group)}, excludes: [${excludes}], under: [${under}] },`;
   }
   return `  { classes: [${classes}], standalone: true, reason: ${JSON.stringify(entry.reason)} },`;
 }

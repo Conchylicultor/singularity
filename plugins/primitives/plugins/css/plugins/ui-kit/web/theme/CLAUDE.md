@@ -128,18 +128,39 @@ immediate codegen-step build error, not a silent post-build check miss). `<ref>`
 - `<sg-id>` — a synthetic group id, for multi-property utilities (e.g. `h`+`w`) or a
   property covered by several built-in groups (`height` → both `h` and `size`).
   Declare the group **once** in the section-header comment as
-  `/* @twmerge group <sg-id> conflicts: <builtin…> */`; each member just references
-  the id. The listed built-ins override the group when they appear later.
+  `/* @twmerge group <sg-id> excludes: <builtin…> */`; each member just references
+  the id.
 - `standalone -- <reason>` — intentionally outside twMerge; the reason is required.
 
 Examples (all real, from `app.css`):
 
 ```css
-/* Density padding utilities … @twmerge group sg-pad conflicts: p */
+/* Density padding utilities … @twmerge group sg-pad excludes: p */
 @utility p-card    { padding: var(--pad-card); }                /* twmerge: sg-pad */
 @utility p-sm      { padding: var(--space-sm); }                /* twmerge: extend p */
 @utility focus-ring { … /* twmerge: standalone -- Additive box-shadow/outline; no single-value built-in group to conflict with. */ }
 ```
+
+### What a group declares
+
+`excludes:` is **mutual** — whichever class comes last survives, in either order.
+
+**List only what must be mutually exclusive.** `lib/utils.ts` closes the list over
+tailwind-merge's own map both ways, so naming `p` also beats `px`/`pt`/`ps`/… and
+naming `h` also submits to `size`. Over-listing is how you delete a neighbour's
+real padding.
+
+**But a utility that PUBLISHES what it applies must also name the per-edge
+groups** — closure widens up and down, never sideways into a narrower neighbour,
+so without `pt` a later `pt-2` sits beside `rail-lg` and `--rail-block-start`
+advertises a number `padding-top` no longer applies. Hence
+`sg-rail excludes: p px py pt pr pb pl`, while non-publishing `sg-pad` stays at
+`excludes: p` so `p-card px-2` can legitimately keep both.
+
+`under: <builtin…> -- <reason>` is the one-directional escape (the built-in is
+strictly broader: it removes the group, the group must not remove it). Reason
+required. Nothing needs one today — closure covers every current case — so use it
+only when you can write down why.
 
 The marker may sit at end-of-line, on the line below, or inside the rule body — the
 generator slices from each `@utility` to the next and reads the first

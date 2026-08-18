@@ -397,7 +397,7 @@
 /* Density padding utilities — the only bridge for runtime-themeable padding,
  * since padding utilities can't read theme vars. Values come from the density
  * token group (--pad-* runtime vars, overridden by ThemeInjector).
- * @twmerge group sg-pad conflicts: p */
+ * @twmerge group sg-pad excludes: p */
 @utility p-chip    { padding: var(--pad-chip-y) var(--pad-chip-x); }     /* twmerge: sg-pad */
 @utility p-control { padding: var(--pad-control-y) var(--pad-control-x); } /* twmerge: sg-pad */
 @utility p-row     { padding: var(--pad-row-y) var(--pad-row-x); }       /* twmerge: sg-pad */
@@ -408,8 +408,12 @@
  * token group (--control-height-* runtime vars, overridden by ThemeInjector),
  * so every control scales together with the active density preset. Height only:
  * padding/font/icon stay per-primitive.
- * @twmerge group sg-control-height conflicts: size h
- * @twmerge group sg-control-icon conflicts: size h w */
+ * Only `h` / `w` are listed: `size` writes both and is therefore BROADER, so the
+ * closure in lib/utils.ts adds it as a one-way overrider — a later `size-8` drops
+ * `control-sm`, but a later `control-sm` (height only) must not drop `size-8` and
+ * take its width with it.
+ * @twmerge group sg-control-height excludes: h
+ * @twmerge group sg-control-icon excludes: size h w */
 @utility control-xs { height: var(--control-height-xs); } /* twmerge: sg-control-height */
 @utility control-sm { height: var(--control-height-sm); } /* twmerge: sg-control-height */
 @utility control-md { height: var(--control-height-md); } /* twmerge: sg-control-height */
@@ -421,7 +425,7 @@
 /* Min-height variants — for chrome that wraps variable-height content but should
  * share the control scale's floor (e.g. reorder edit-mode item boxes), so the
  * wrapper lines up with fixed-height controls instead of hugging its content.
- * @twmerge group sg-control-min conflicts: min-h */
+ * @twmerge group sg-control-min excludes: min-h */
 @utility control-min-xs { min-height: var(--control-height-xs); } /* twmerge: sg-control-min */
 @utility control-min-sm { min-height: var(--control-height-sm); } /* twmerge: sg-control-min */
 @utility control-min-md { min-height: var(--control-height-md); } /* twmerge: sg-control-min */
@@ -494,29 +498,36 @@
  * on one element (tailwind-merge keeps both; `px` wins by CSS order), so
  * `--rail-start` would resolve by STYLESHEET ORDER rather than by any cascade
  * a human intended. Under its own groups a rail class carries exactly one rail
- * declaration per axis, and a plain padding class written AFTER it removes it
- * whole.
- * Written BEFORE it, the plain class survives alongside — `conflicts:` compiles
- * to a one-directional rule (a later builtin removes the group, never the
- * reverse), so `cn("px-md", "rail-lg")` keeps both and the ramp below wins the
- * inline axis on line order while `rail-lg` still publishes lg. That is a
- * published-≠-applied lie, and the only reason it is tolerated here rather than
- * fixed is that the fix is bidirectional conflicts in the codegen, not in this
- * file. Do not pair a rail class with a plain padding class in either order.
- * `rail-bleed` sidesteps it entirely by joining the `px` group outright — see
- * the note there, which is worth reading before touching any marker below.
+ * declaration per axis, and a plain padding class removes it whole — in EITHER
+ * order, which is the part that had to be built. `excludes:` compiles to a
+ * mutual rule, so `cn("px-md", "rail-lg")` and `cn("rail-lg", "px-md")` each
+ * keep exactly one class and what is published is always what is applied.
+ * (It used to compile one-directionally — a later builtin removed the group,
+ * never the reverse — so the commoner base-classes-first order kept both and
+ * `rail-lg` advertised `lg` while `px-md` did the padding. That is the lie this
+ * marker now makes unrepresentable.)
+ *
+ * A PUBLISHING UTILITY LISTS THE PER-EDGE GROUPS TOO. The mutual set is
+ * authored, and the closure in lib/utils.ts only widens it downward (whatever
+ * `p` beats, we beat) and upward (whatever beats `px`, beats us). Neither
+ * direction reaches a NARROWER neighbour on its own — so without `pt` in the
+ * list, a later `pt-2` would sit alongside `rail-lg` and `--rail-block-start`
+ * would advertise a number `padding-top` no longer applies. Every edge a rail
+ * class publishes is therefore named. `sg-pad` does NOT do this, and must not:
+ * `p-card` publishes nothing, so `p-card px-2` legitimately keeps both and the
+ * card's block padding survives.
  *
  * THREE GROUPS, NOT ONE, and the shape is copied from p/px/py rather than
  * invented. The two axis families write disjoint properties AND disjoint vars,
  * so `rail-x-lg rail-y-sm` has to compose — one shared group would silently
  * drop the first of them, which is the same class of invisible breakage this
  * contract exists to kill. Within an axis, two rail classes still conflict and
- * exactly one survives. And a LATER `p-*`/`px-*`/`py-*` removes the rail
- * outright rather than half-overriding it: you replace a region, you do not
+ * exactly one survives. And a `p-*`/`px-*`/`py-*` in either position removes the
+ * rail outright rather than half-overriding it: you replace a region, you do not
  * edit one.
- * @twmerge group sg-rail conflicts: p px py
- * @twmerge group sg-rail-x conflicts: p px
- * @twmerge group sg-rail-y conflicts: p py */
+ * @twmerge group sg-rail excludes: p px py pt pr pb pl
+ * @twmerge group sg-rail-x excludes: px pr pl
+ * @twmerge group sg-rail-y excludes: py pt pb */
 @utility rail-none { --rail-start: 0px;              --rail-end: 0px;              --rail-block-start: 0px;              --rail-block-end: 0px;              --rail-owed-start: 0px; --rail-owed-end: 0px; padding-block: var(--rail-block-start) var(--rail-block-end); padding-inline: var(--rail-start) var(--rail-end); } /* twmerge: sg-rail */
 @utility rail-2xs  { --rail-start: var(--space-2xs); --rail-end: var(--space-2xs); --rail-block-start: var(--space-2xs); --rail-block-end: var(--space-2xs); --rail-owed-start: 0px; --rail-owed-end: 0px; padding-block: var(--rail-block-start) var(--rail-block-end); padding-inline: var(--rail-start) var(--rail-end); } /* twmerge: sg-rail */
 @utility rail-xs   { --rail-start: var(--space-xs);  --rail-end: var(--space-xs);  --rail-block-start: var(--space-xs);  --rail-block-end: var(--space-xs);  --rail-owed-start: 0px; --rail-owed-end: 0px; padding-block: var(--rail-block-start) var(--rail-block-end); padding-inline: var(--rail-start) var(--rail-end); } /* twmerge: sg-rail */
@@ -609,13 +620,20 @@
  * sideways.
  * Hence `extend px`, and not the `standalone` its three properties would
  * suggest. The marker does not claim this IS an inline-padding utility; it
- * claims this and an inline-padding utility are MUTUALLY EXCLUSIVE, which is
- * the only thing tailwind-merge can be told. Same-group membership is the one
- * relation it treats symmetrically: `cn("rail-bleed", "px-md")` and
- * `cn("px-md", "rail-bleed")` both keep exactly one class WHOLE. A synthetic
- * group with `conflicts: p px` would have fixed only the first — `conflicts`
- * compiles to a one-directional rule ("a later builtin removes the group"), and
- * base-classes-first-caller-last is the commoner of the two orders.
+ * claims this and an inline-padding utility are MUTUALLY EXCLUSIVE, so
+ * `cn("rail-bleed", "px-md")` and `cn("px-md", "rail-bleed")` both keep exactly
+ * one class WHOLE. (A synthetic group with `excludes: px` would now say the same
+ * thing — symmetry is no longer the reason to prefer same-group membership. What
+ * still is: a group cannot yet name ANOTHER synthetic group, and `extend px` is
+ * what earns the mutual relation with `sg-rail`/`sg-rail-x` for free, since both
+ * list `px`.)
+ * KNOWN GAP, and it is the `width` term: `extend px` guards the padding half
+ * only, so a later `w-full` overrides the width while the negative margins keep
+ * bleeding — cancel-without-reapply, reached through the one door this marker
+ * leaves open. Closing it means a `sg-bleed` group saying `excludes: px w mx`,
+ * which first needs synthetic↔synthetic relations so it can re-declare what
+ * `extend px` gives it today. Until then: do not pair `rail-bleed` with a width
+ * utility.
  * `py` is untouched by design: this is inline-axis only, and a bled row wants
  * its own block padding (`py-control` on a data-table row is exactly that).
  * The one cost: `rail-lg rail-bleed` on ONE element now resolves to the bleed
@@ -1050,7 +1068,7 @@
  * text-xs (12px) -> ~13.8px, matching today's dominant size-3.5 (14px) better
  * than bare 1em. Kept in sync with app.css via the app-css-utilities-in-sync
  * check (the generated custom-utilities registry is derived from these markers).
- * @twmerge group sg-icon-auto conflicts: size h w */
+ * @twmerge group sg-icon-auto excludes: size h w */
 @utility icon-auto { width: 1.15em; height: 1.15em; } /* twmerge: sg-icon-auto */
 
 /* Semantic z-layer utilities — the single source of truth for stacking order.

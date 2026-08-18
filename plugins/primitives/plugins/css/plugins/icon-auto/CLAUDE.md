@@ -7,15 +7,17 @@ should track the slot's font-size instead of carrying a hardcoded `size-N`.
 ## The utility
 
 The `@utility icon-auto { width: 1.15em; height: 1.15em; }` lives in
-`plugins/framework/plugins/web-core/web/theme/app.css` (per the theme rule that
-all `@utility`/token CSS lives in the web-core theme folder). `1.15em` reads as
-slightly larger than cap height — next to `text-xs` (12px) it renders ~13.8px,
-matching the dominant `size-3.5` (14px) better than a bare `1em`. The name is
-registered in `web-core/web/theme/custom-utilities.ts` (its twMerge conflict
-group), kept in sync by the `app-css-utilities-in-sync` check.
+`plugins/primitives/plugins/css/plugins/ui-kit/web/theme/app.css` (per the theme
+rule that all `@utility`/token CSS lives in the ui-kit theme folder). `1.15em`
+reads as slightly larger than cap height — next to `text-xs` (12px) it renders
+~13.8px, matching the dominant `size-3.5` (14px) better than a bare `1em`. Its
+twMerge wiring is the co-located `/* twmerge: sg-icon-auto */` marker (the group
+is mutually exclusive with `size`/`h`/`w`), compiled into
+`custom-utilities.generated.ts` by `./singularity build` and guarded by the
+`app-css-utilities-in-sync` check.
 
 This plugin owns only the **lint rule + convention** — the CSS and the twMerge
-config stay in web-core, mirroring how `control-size` owns its lint rule while the
+config stay in ui-kit, mirroring how `control-size` owns its lint rule while the
 `control-*` utilities live in `app.css`.
 
 ## Enforcement — `lint/no-adhoc-slot-icon-size.ts`

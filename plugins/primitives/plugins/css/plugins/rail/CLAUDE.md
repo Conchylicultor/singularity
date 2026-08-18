@@ -33,13 +33,14 @@ its own two terms and says why, rather than reaching for half of `rail-bleed`.
 **Atomic in CSS is only half the invariant — it must be atomic in class strings
 too.** Fusing the declarations stops anyone *writing* half an escape; it does not
 stop a neighbouring `px-md` *neutralising* half of one, leaving the margins and
-width bleeding while the re-apply is overridden. That is why `rail-bleed` carries
+width bleeding while the re-apply is overridden. Hence `rail-bleed` carries
 `/* twmerge: extend px */` rather than the `standalone` its three properties
-suggest: same-group membership is the one relation tailwind-merge treats
-symmetrically, so either order keeps exactly one class whole. `conflicts:` on a
-synthetic group would only cover "a later plain padding class wins" and leave
-base-classes-first-caller-last — the commoner order — broken. Read the note at
-the utility before changing any marker here.
+suggest — and it stays `extend px` even though `excludes:` is now symmetric too,
+because a synthetic group cannot yet name *another* synthetic group, and `px`
+membership is what earns the mutual relation with `sg-rail`/`sg-rail-x` for free.
+**Known gap: `extend px` guards the padding term only, so a later `w-full` kills
+the width term while the margins keep bleeding. Do not pair `rail-bleed` with a
+width utility.** Read the note at the utility before changing any marker here.
 
 **Nesting is shadowing, not accumulation.** A region inside a region re-declares
 the vars for its own subtree; the outer value simply stops being visible. There
@@ -115,9 +116,13 @@ There are three groups, not one (`sg-rail`, `sg-rail-x`, `sg-rail-y`), copying
 the p/px/py topology rather than inventing one. The two axis families write
 disjoint properties **and** disjoint vars, so `rail-x-lg rail-y-sm` has to
 compose — a single shared group would silently drop the first of the pair, which
-is the same class of invisible breakage this contract exists to kill. A later
-`p-*`/`px-*`/`py-*` still removes the rail outright: you replace a region, you
-do not edit one.
+is the same class of invisible breakage this contract exists to kill. A plain
+padding class in **either** position removes the rail outright: you replace a
+region, you do not edit one. Each group therefore names every per-edge padding
+group it publishes over (`sg-rail excludes: p px py pt pr pb pl`) — a rail that
+kept a later `pt-2` alongside it would publish a block inset it no longer
+applies. The one asymmetry is deliberate: `p-*` is broader than `rail-x-*`, so a
+later `rail-x-lg` leaves an earlier `p-md` alone and its block padding survives.
 
 ## Why one shared var pair, and not a name per region
 

@@ -25,7 +25,7 @@ string-compares it to the committed generated file:
 
 To add a custom `@utility`: declare it in `app.css` with a co-located marker — one
 of `/* twmerge: extend <builtin> */`, `/* twmerge: <sg-id> */` (with a
-`/* @twmerge group <sg-id> conflicts: … */` decl in the section header), or
+`/* @twmerge group <sg-id> excludes: … */` decl in the section header), or
 `/* twmerge: standalone -- <reason> */` — then run `./singularity build`. twMerge
 wiring is automatic; no other file is touched.
 

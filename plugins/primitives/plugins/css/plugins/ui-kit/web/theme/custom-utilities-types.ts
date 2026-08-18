@@ -16,24 +16,63 @@
 //              out of any wrong fallback group (e.g. text-* out of text-color).
 //              Use for single-property utilities whose property maps 1:1 to one
 //              built-in group. Marker in app.css: `/* twmerge: extend <builtin> */`.
-// `group`+`conflictsWith`  synthetic group that the listed built-in groups override
-//              when they appear later. Use for multi-property utilities (w+h) or
+// `group`+`excludes`  synthetic group MUTUALLY exclusive with the listed built-in
+//              groups: whichever class comes last survives and the other is
+//              removed, in either order. Use for multi-property utilities (w+h) or
 //              when a single property is covered by several built-in groups
 //              (height → both `h` and `size`). Marker: `/* twmerge: <sg-id> */`,
-//              with one `/* @twmerge group <sg-id> conflicts: … */` decl per group.
+//              with one `/* @twmerge group <sg-id> excludes: … */` decl per group.
+//              `../lib/utils.ts` CLOSES the list over tailwind-merge's own map, so
+//              listing `p` also beats `px`/`pt`/`ps`/… and listing `h` also submits
+//              to `size` — list only what must be mutually exclusive.
+// `under`      the one-directional escape, per built-in and with a required reason:
+//              the built-in is strictly BROADER, so a later built-in removes the
+//              group but a later group member must NOT remove the built-in (the
+//              part of it the group does not own legitimately survives). Spelled
+//              `under: <builtin…> -- <reason>` in the group decl. Nothing needs one
+//              today — the closure supplies every case the eight groups have — so
+//              reach for it only when you can write the reason.
 // `standalone` intentionally outside twMerge; `reason` is required and documents
 //              why. Marker: `/* twmerge: standalone -- <reason> */`.
 
 // The fixed allow-list of built-in tailwind-merge group ids the project extends.
 // The generator owns its own copy of these literals (it can't import this file —
-// cross-plugin boundary) and validates every `extend <id>` / `conflicts: <id>`
-// marker against it; keep the two in sync.
+// cross-plugin boundary) and validates every `extend <id>` / `excludes: <id>` /
+// `under: <id>` marker against it; keep the two in sync. `../lib/utils.ts` asserts
+// at load that every declared id is a real tailwind-merge class group, which is the
+// backstop for that duplication.
 export type BuiltinGroupId =
-  | "font-size" | "z" | "h" | "w" | "size" | "min-h"
-  | "p" | "px" | "py" | "pt" | "pr" | "pb" | "pl"
-  | "gap" | "gap-x" | "gap-y" | "rounded";
+  | "font-size"
+  | "z"
+  | "h"
+  | "w"
+  | "size"
+  | "min-h"
+  | "p"
+  | "px"
+  | "py"
+  | "pt"
+  | "pr"
+  | "pb"
+  | "pl"
+  | "gap"
+  | "gap-x"
+  | "gap-y"
+  | "rounded";
+
+/** A `under:` relation: one built-in group, and why it is one-directional. */
+export interface UnderRelation {
+  group: BuiltinGroupId;
+  reason: string;
+}
 
 export type RegistryEntry =
   | { classes: readonly string[]; extend: BuiltinGroupId }
-  | { classes: readonly string[]; group: string; conflictsWith: readonly BuiltinGroupId[] }
+  | {
+      classes: readonly string[];
+      group: string;
+      excludes: readonly BuiltinGroupId[];
+      /** Always present, usually empty — see `under` in the wiring notes above. */
+      under: readonly UnderRelation[];
+    }
   | { classes: readonly string[]; standalone: true; reason: string };
