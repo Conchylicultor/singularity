@@ -6,8 +6,11 @@ import {
   appThemeScope,
   themeScopeSelectors,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { useResolvedColorMode, type ColorMode } from "../use-color-mode";
-import { themeEngineConfig } from "../../core";
+import {
+  useConfiguredColorMode,
+  useResolvedColorMode,
+  type ColorMode,
+} from "../use-color-mode";
 import { ThemeScopeProvider } from "./theme-scope-context";
 import { ThemeEngine, useTokenGroupPresets } from "../slots";
 import type {
@@ -18,7 +21,6 @@ import type {
 import { transformValues } from "../internal/transform";
 import { mergeGroupValues } from "../internal/merge-group-values";
 import { renderGroupBlock } from "../internal/serialize-vars";
-import { type CachedColorMode } from "../internal/theme-cache";
 import {
   claimPaintStyle,
   releasePaintStyle,
@@ -235,21 +237,19 @@ export function ThemeInjector() {
 
   const groups = ThemeEngine.TokenGroup.useContributions();
   const colorTransforms = ThemeEngine.ColorTransform.useContributions();
-  // Color mode stays GLOBAL: `<html>.dark` is a single global class read at
-  // `scopeId: undefined`, even though the `:root` token *values* follow
-  // `rootScopeId`. Per-scope dark is deferred; keeping the resolved scheme global
-  // means focusing a differently-themed app never flips light/dark.
-  const resolved = useResolvedColorMode(undefined);
-  // The CONFIGURED color mode (not the resolved light/dark) is what the cache
-  // stores, so the pre-paint script can re-resolve "system" against live
-  // matchMedia each load. Read at `rootScopeId` so the cached mode matches the
-  // `:root` theme the focused app paints. The live `.dark` class still uses the
-  // global `resolved` above.
-  const { colorMode } = useConfig(themeEngineConfig, {
-    scopeId: rootScopeId,
-  }) as {
-    colorMode: CachedColorMode;
-  };
+  // Color mode is NOT scoped like the token values are: the `:root` tokens follow
+  // `rootScopeId` (the focused app), but `<html>.dark` is a single global class.
+  // Both reads below therefore go through use-color-mode, which names the owning
+  // scope once — neither takes one. That is load-bearing here: the cache is a
+  // PREDICTION of the class, replayed before React can apply it, so a cached mode
+  // read at a different scope than `resolved` paints the wrong scheme for the
+  // whole load. (It did: an app configured `light` under a global `dark` gave a
+  // white first frame that flipped to dark on mount.)
+  const resolved = useResolvedColorMode();
+  // The CONFIGURED mode (not the resolved light/dark) is what the cache stores, so
+  // the pre-paint script can re-resolve "system" against live matchMedia each
+  // load — an OS appearance flip between sessions still paints the right scheme.
+  const colorMode = useConfiguredColorMode();
 
   // Feed the active paint context to the module-level aggregator, which collects
   // EVERY GroupStyle's CSS text (the `:root`/`.dark` blocks plus every other

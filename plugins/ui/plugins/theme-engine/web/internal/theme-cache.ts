@@ -28,7 +28,10 @@
 
 const KEY = "theme-engine:critical-css";
 
-export type CachedColorMode = "light" | "dark" | "system";
+// The configured setting, one definition shared with the hooks that read it —
+// the cache stores exactly what `useConfiguredColorMode()` returns.
+import type { ConfiguredColorMode } from "../use-color-mode";
+export type CachedColorMode = ConfiguredColorMode;
 
 export interface PaintCacheEntry {
   /** styleId (`theme-engine-<group>`) → full `:root{…}.dark{…}` CSS text. */
@@ -51,7 +54,7 @@ function read(): CriticalCssEnvelope {
       const env = JSON.parse(raw) as CriticalCssEnvelope;
       if (env && env.v === 3 && env.entries) return env;
     }
-  // eslint-disable-next-line promise-safety/no-bare-catch
+    // eslint-disable-next-line promise-safety/no-bare-catch
   } catch {
     // Corrupt / unavailable / pre-v3 cache — start fresh; the runtime path is
     // authoritative and rewrites the whole envelope below.
@@ -79,7 +82,7 @@ export function writeCriticalCss(opts: {
     env.entries[appPath ?? ""] = entry;
     if (rootIsGlobal) env.entries[""] = entry;
     localStorage.setItem(KEY, JSON.stringify(env));
-  // eslint-disable-next-line promise-safety/no-bare-catch
+    // eslint-disable-next-line promise-safety/no-bare-catch
   } catch {
     // Quota exceeded / storage disabled — the cache is a best-effort first-paint
     // optimization; a miss degrades to the neutral cold floor, never breaks.

@@ -20,7 +20,6 @@
   - Uses:
     - `apps-core.Apps`
     - `apps-core.useActiveApp`
-    - `apps-core.useCurrentAppId`
     - `apps-core/theme-scope.useRootThemeScope`
     - `config_v2.ConfigV2`
     - `config_v2.useConfig`
