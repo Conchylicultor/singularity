@@ -22,7 +22,7 @@ import { collectCommit, type PositionOccupant } from "./fiber-walk";
 
 interface FiberSpec {
   tag: number;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- test fixture mirrors React's loose `type`
+  // test fixture mirrors React's loose `type`
   type: any;
   key?: string | null;
   index?: number;
@@ -96,7 +96,9 @@ describe("remount detection", () => {
       type: comp("Parent"),
       rendered: true,
       mounted: true,
-      children: [fib({ tag: FunctionComponent, type: A, index: 0, mounted: true })],
+      children: [
+        fib({ tag: FunctionComponent, type: A, index: 0, mounted: true }),
+      ],
     });
     const curr = fib({
       tag: FunctionComponent,
@@ -104,7 +106,9 @@ describe("remount detection", () => {
       rendered: true,
       mounted: true,
       // B freshly mounts at the same unkeyed slot (index 0) — alternate null.
-      children: [fib({ tag: FunctionComponent, type: B, index: 0, mounted: false })],
+      children: [
+        fib({ tag: FunctionComponent, type: B, index: 0, mounted: false }),
+      ],
     });
 
     const { remounts } = diff(prev, curr);
@@ -123,8 +127,20 @@ describe("remount detection", () => {
       rendered: true,
       mounted: true,
       children: [
-        fib({ tag: FunctionComponent, type: A, key: "a", index: 0, mounted: true }),
-        fib({ tag: FunctionComponent, type: B, key: "b", index: 1, mounted: true }),
+        fib({
+          tag: FunctionComponent,
+          type: A,
+          key: "a",
+          index: 0,
+          mounted: true,
+        }),
+        fib({
+          tag: FunctionComponent,
+          type: B,
+          key: "b",
+          index: 1,
+          mounted: true,
+        }),
       ],
     });
     const curr = fib({
@@ -134,10 +150,28 @@ describe("remount detection", () => {
       mounted: true,
       children: [
         // X is genuinely new (fresh key-slot) — a mount, not a remount.
-        fib({ tag: FunctionComponent, type: X, key: "x", index: 0, mounted: false }),
+        fib({
+          tag: FunctionComponent,
+          type: X,
+          key: "x",
+          index: 0,
+          mounted: false,
+        }),
         // A/B keep their key-slots and are reused in place (alternate present).
-        fib({ tag: FunctionComponent, type: A, key: "a", index: 1, mounted: true }),
-        fib({ tag: FunctionComponent, type: B, key: "b", index: 2, mounted: true }),
+        fib({
+          tag: FunctionComponent,
+          type: A,
+          key: "a",
+          index: 1,
+          mounted: true,
+        }),
+        fib({
+          tag: FunctionComponent,
+          type: B,
+          key: "b",
+          index: 2,
+          mounted: true,
+        }),
       ],
     });
 
@@ -152,7 +186,12 @@ describe("remount detection", () => {
       rendered: true,
       mounted: true,
       children: [
-        fib({ tag: FragmentTag, type: Symbol("react.fragment"), index: 0, mounted: true }),
+        fib({
+          tag: FragmentTag,
+          type: Symbol("react.fragment"),
+          index: 0,
+          mounted: true,
+        }),
       ],
     });
     const curr = fib({
@@ -183,7 +222,15 @@ describe("remount detection", () => {
       type: comp("Keyed"),
       rendered: true,
       mounted: true,
-      children: [fib({ tag: FunctionComponent, type: A, key: "v1", index: 0, mounted: true })],
+      children: [
+        fib({
+          tag: FunctionComponent,
+          type: A,
+          key: "v1",
+          index: 0,
+          mounted: true,
+        }),
+      ],
     });
     const curr = fib({
       tag: FunctionComponent,
@@ -192,7 +239,15 @@ describe("remount detection", () => {
       mounted: true,
       // Same component A, same slot (index 0), new key — freshly mounted, and v1
       // is NOT among current siblings (only v2 exists) ⇒ genuine destroy/rebuild.
-      children: [fib({ tag: FunctionComponent, type: A, key: "v2", index: 0, mounted: false })],
+      children: [
+        fib({
+          tag: FunctionComponent,
+          type: A,
+          key: "v2",
+          index: 0,
+          mounted: false,
+        }),
+      ],
     });
 
     const { remounts } = diff(prev, curr);
@@ -218,7 +273,14 @@ describe("remount detection", () => {
       rendered: true,
       mounted: true,
       children: [
-        fib({ tag: FunctionComponent, type: A, index: 0, mounted: false, placed: false, rendered: true }),
+        fib({
+          tag: FunctionComponent,
+          type: A,
+          index: 0,
+          mounted: false,
+          placed: false,
+          rendered: true,
+        }),
       ],
     });
     const curr = fib({
@@ -227,7 +289,14 @@ describe("remount detection", () => {
       rendered: true,
       mounted: true,
       children: [
-        fib({ tag: FunctionComponent, type: A, index: 0, mounted: false, placed: false, rendered: true }),
+        fib({
+          tag: FunctionComponent,
+          type: A,
+          index: 0,
+          mounted: false,
+          placed: false,
+          rendered: true,
+        }),
       ],
     });
 
@@ -268,7 +337,11 @@ describe("remount detection", () => {
     // Same fiber OBJECT walked across two commits (React reuses it on bail-out).
     const pass1 = collectCommit(rootOf(stale), new Map(), new WeakSet());
     expect(pass1.initiators).toHaveLength(1); // first sight: no history, reported
-    const pass2 = collectCommit(rootOf(stale), pass1.currentPositions, pass1.currentSeen);
+    const pass2 = collectCommit(
+      rootOf(stale),
+      pass1.currentPositions,
+      pass1.currentSeen,
+    );
     expect(pass2.initiators).toHaveLength(0); // persisted object, stale flag: suppressed
   });
 
@@ -276,10 +349,20 @@ describe("remount detection", () => {
     // React double-buffers: a real re-render swaps current↔alternate, so the
     // committed fiber is a NEW object each commit. It must keep reporting even
     // though it was 'seen' (at a different object) last commit.
-    const c1 = fib({ tag: FunctionComponent, type: A, rendered: true, mounted: true });
+    const c1 = fib({
+      tag: FunctionComponent,
+      type: A,
+      rendered: true,
+      mounted: true,
+    });
     const p1 = collectCommit(rootOf(c1), new Map(), new WeakSet());
     expect(p1.initiators).toHaveLength(1);
-    const c2 = fib({ tag: FunctionComponent, type: A, rendered: true, mounted: true });
+    const c2 = fib({
+      tag: FunctionComponent,
+      type: A,
+      rendered: true,
+      mounted: true,
+    });
     const p2 = collectCommit(rootOf(c2), p1.currentPositions, p1.currentSeen);
     expect(p2.initiators).toHaveLength(1);
   });
@@ -303,8 +386,20 @@ describe("remount detection", () => {
       rendered: true,
       mounted: true,
       children: [
-        fib({ tag: FunctionComponent, type: A, key: "a", index: 0, mounted: true }),
-        fib({ tag: FunctionComponent, type: B, key: "b", index: 1, mounted: true }),
+        fib({
+          tag: FunctionComponent,
+          type: A,
+          key: "a",
+          index: 0,
+          mounted: true,
+        }),
+        fib({
+          tag: FunctionComponent,
+          type: B,
+          key: "b",
+          index: 1,
+          mounted: true,
+        }),
       ],
     });
     const curr = fib({
@@ -314,8 +409,20 @@ describe("remount detection", () => {
       mounted: true,
       // Both reused in place (alternate present) — a pure reorder, no mounts at all.
       children: [
-        fib({ tag: FunctionComponent, type: B, key: "b", index: 0, mounted: true }),
-        fib({ tag: FunctionComponent, type: A, key: "a", index: 1, mounted: true }),
+        fib({
+          tag: FunctionComponent,
+          type: B,
+          key: "b",
+          index: 0,
+          mounted: true,
+        }),
+        fib({
+          tag: FunctionComponent,
+          type: A,
+          key: "a",
+          index: 1,
+          mounted: true,
+        }),
       ],
     });
 

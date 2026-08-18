@@ -6,10 +6,11 @@ import { useEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { ConversationItem } from "@plugins/conversations/plugins/conversation-ui/plugins/item/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
+import { getRepoInfo } from "@plugins/tasks/core";
 import {
-  getRepoInfo,
-} from "@plugins/tasks/core";
-import { attemptsResource, pushesByAttemptResource } from "@plugins/tasks/plugins/tasks-core/core";
+  attemptsResource,
+  pushesByAttemptResource,
+} from "@plugins/tasks/plugins/tasks-core/core";
 import type {
   AttemptWithConversations,
   Push,
@@ -18,6 +19,10 @@ import { AttemptStatusBadge } from "@plugins/tasks/plugins/attempt-status/web";
 import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
+import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
+import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
+import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 
 function useGithubBase(): string | null {
   const { data } = useEndpoint(getRepoInfo, {});
@@ -34,7 +39,13 @@ function formatDate(value: Date | string): string {
   });
 }
 
-function PushRow({ push, githubBase }: { push: Push; githubBase: string | null }) {
+function PushRow({
+  push,
+  githubBase,
+}: {
+  push: Push;
+  githubBase: string | null;
+}) {
   const short = push.sha.slice(0, 7);
   const url = githubBase ? `${githubBase}/commit/${push.sha}` : null;
   return (
@@ -46,14 +57,32 @@ function PushRow({ push, githubBase }: { push: Push; githubBase: string | null }
         bordered
         className="gap-md"
       >
-        <Text as="code" variant="caption" tone="muted" className="shrink-0 font-mono">
+        <Text
+          as="code"
+          variant="caption"
+          tone="muted"
+          className={cn(rigidClass(), "font-mono")}
+        >
           {short}
         </Text>
-        <Text as="span" variant="body" className="flex-1 truncate">{push.message}</Text>
-        <Text as="span" variant="caption" tone="muted" className="shrink-0 tabular-nums">
+        <Fill as="span">
+          <Text as="span" variant="body">
+            {push.message}
+          </Text>
+        </Fill>
+        <Text
+          as="span"
+          variant="caption"
+          tone="muted"
+          className={cn(rigidClass(), "tabular-nums")}
+        >
           {formatDate(push.createdAt)}
         </Text>
-        {url ? <MdOpenInNew className="text-muted-foreground size-4 shrink-0" /> : null}
+        {url ? (
+          <MdOpenInNew
+            className={cn("text-muted-foreground size-4", rigidClass())}
+          />
+        ) : null}
       </Row>
     </li>
   );
@@ -62,7 +91,13 @@ function PushRow({ push, githubBase }: { push: Push; githubBase: string | null }
 // One attempt's pushes, subscribed per-attempt (bounded, correct for arbitrarily
 // old attempts). Rendered once per attempt so a task's push history is grouped by
 // attempt (attempts already sorted newest-first; pushes within an attempt too).
-function AttemptPushList({ attemptId, githubBase }: { attemptId: string; githubBase: string | null }) {
+function AttemptPushList({
+  attemptId,
+  githubBase,
+}: {
+  attemptId: string;
+  githubBase: string | null;
+}) {
   const pushesQ = useResource(pushesByAttemptResource, { attemptId });
   if (pushesQ.pending) return null;
   const pushes = [...pushesQ.data].sort(
@@ -106,7 +141,11 @@ export function TaskPushes({ taskId }: { taskId: string }) {
 
   if (!attempts) return <Loading variant="rows" />;
   if (attempts.length === 0) {
-    return <Text as="p" variant="body" tone="muted">No pushes yet.</Text>;
+    return (
+      <Text as="p" variant="body" tone="muted">
+        No pushes yet.
+      </Text>
+    );
   }
 
   return (
@@ -124,14 +163,17 @@ export function TaskAttempts({ taskId }: { taskId: string }) {
   // Find the last conversationPane in the chain — if there are multiple
   // (host + nested), the last one is the one the user opened from here.
   const convEntries = conversationPane.useRouteEntries();
-  const activeConvEntry = convEntries.length > 1
-    ? convEntries[convEntries.length - 1]!
-    : null;
+  const activeConvEntry =
+    convEntries.length > 1 ? convEntries[convEntries.length - 1]! : null;
   const activeConvId = activeConvEntry?.params.convId;
 
   if (!attempts) return <Loading variant="rows" />;
   if (attempts.length === 0) {
-    return <Text as="p" variant="body" tone="muted">No attempts yet.</Text>;
+    return (
+      <Text as="p" variant="body" tone="muted">
+        No attempts yet.
+      </Text>
+    );
   }
 
   return (
@@ -145,15 +187,22 @@ export function TaskAttempts({ taskId }: { taskId: string }) {
             gap="sm"
             className="rounded-md border px-md py-sm"
           >
-            <div className="flex items-center gap-md">
+            <Line className="gap-md">
               <AttemptStatusBadge status={attempt.status} />
-              <Text className="flex-1 truncate text-caption font-mono text-muted-foreground">
-                {attempt.worktreePath.split("/").pop()}
-              </Text>
-              <Text as="span" variant="caption" tone="muted" className="shrink-0 tabular-nums">
+              <Fill as="span">
+                <Text className="text-caption font-mono text-muted-foreground">
+                  {attempt.worktreePath.split("/").pop()}
+                </Text>
+              </Fill>
+              <Text
+                as="span"
+                variant="caption"
+                tone="muted"
+                className={cn(rigidClass(), "tabular-nums")}
+              >
                 {formatDate(attempt.createdAt)}
               </Text>
-            </div>
+            </Line>
             {convs.length === 0 ? (
               <Text as="p" variant="caption" tone="muted" className="pl-xs">
                 No conversations.
@@ -170,9 +219,13 @@ export function TaskAttempts({ taskId }: { taskId: string }) {
                           if (activeConvId === c.id && activeConvEntry) {
                             conversationPane.close(activeConvEntry.instanceId);
                           } else {
-                            openPane(conversationPane, {
-                              convId: c.id,
-                            }, { mode: "push" });
+                            openPane(
+                              conversationPane,
+                              {
+                                convId: c.id,
+                              },
+                              { mode: "push" },
+                            );
                           }
                         }}
                         actions={
@@ -181,9 +234,13 @@ export function TaskAttempts({ taskId }: { taskId: string }) {
                             label="Open as page"
                             tooltip="Open in a new page"
                             onClick={() => {
-                              openPane(conversationPane, {
-                                convId: c.id,
-                              }, { mode: "root" });
+                              openPane(
+                                conversationPane,
+                                {
+                                  convId: c.id,
+                                },
+                                { mode: "root" },
+                              );
                             }}
                           />
                         }

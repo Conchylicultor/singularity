@@ -1,8 +1,13 @@
+import type React from "react";
 import { MillerColumns } from "@plugins/layouts/plugins/miller/web";
 import { navigate } from "@plugins/apps-core/plugins/tabs/web";
 import { AppShellLayout } from "@plugins/primitives/plugins/app-shell/web";
 import { currentRoutePath } from "@plugins/primitives/plugins/pane/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
+import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
+import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
+import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Shell } from "@plugins/shell/web";
 
 export function AgentManagerLayout() {
@@ -14,20 +19,27 @@ export function AgentManagerLayout() {
         // header (provided by AppShellLayout via SurfaceChromeContext), so it
         // works whether the sidebar is open or collapsed. The header keeps only
         // the brand; Cmd/Ctrl+B still toggles the sidebar globally.
-        <a
+        <Line
+          as="a"
           href="/agents"
-          onClick={(e) => {
+          onClick={(e: React.MouseEvent) => {
             e.preventDefault();
             if (currentRoutePath() === "/agents") return;
             navigate("/agents");
           }}
-          className="flex min-w-0 items-center gap-sm rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          className="gap-sm rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
-          <img src="/icon.svg" alt="Singularity" className="size-6 shrink-0" />
-          <Text as="span" variant="subheading" className="truncate tracking-tight">
-            Singularity
-          </Text>
-        </a>
+          <img
+            src="/icon.svg"
+            alt="Singularity"
+            className={cn("size-6", rigidClass())}
+          />
+          <Fill>
+            <Text as="span" variant="subheading" className="tracking-tight">
+              Singularity
+            </Text>
+          </Fill>
+        </Line>
       }
     >
       <div className="h-full min-h-0">

@@ -30,7 +30,10 @@ directly — it is no longer re-exported here.)
   - Uses:
     - `primitives/avatar.Avatar`
     - `primitives/css/badge.Badge`
+    - `primitives/css/clip.Clip`
+    - `primitives/css/fill.Fill`
     - `primitives/css/inline.Inline`
+    - `primitives/css/line.Line`
     - `primitives/css/spacing.Stack`
     - `primitives/css/status-dot.StatusDot`
     - `primitives/css/text.Text`

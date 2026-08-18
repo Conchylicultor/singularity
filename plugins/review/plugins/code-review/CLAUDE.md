@@ -24,11 +24,15 @@
     - `primitives/collapsible.useExpandAll`
     - `primitives/copy-to-clipboard.CopyButton`
     - `primitives/css/badge.Badge`
+    - `primitives/css/fill.Fill`
+    - `primitives/css/line.Line`
     - `primitives/css/placeholder.Placeholder`
+    - `primitives/css/rigid.rigidClass`
     - `primitives/css/scroll.Scroll`
     - `primitives/css/spacing.Stack`
     - `primitives/css/sticky.Sticky`
     - `primitives/css/text.Text`
+    - `primitives/css/ui-kit.cn`
     - `primitives/diff-view.DiffOrImageView`
     - `primitives/live-state.ResourceView`
     - `primitives/live-state.useResource`

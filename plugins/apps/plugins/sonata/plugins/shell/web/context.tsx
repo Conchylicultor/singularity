@@ -25,8 +25,14 @@ import {
   subdivideBars,
   type Score,
 } from "@plugins/apps/plugins/sonata/plugins/score/core";
-import { inferKeys, transposeScore } from "@plugins/apps/plugins/sonata/plugins/theory/core";
-import { reVoiceChords, voicingConfig } from "@plugins/apps/plugins/sonata/plugins/voicing/core";
+import {
+  inferKeys,
+  transposeScore,
+} from "@plugins/apps/plugins/sonata/plugins/theory/core";
+import {
+  reVoiceChords,
+  voicingConfig,
+} from "@plugins/apps/plugins/sonata/plugins/voicing/core";
 import { useConfig } from "@plugins/config_v2/web";
 import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
 import { Sonata } from "./slots";
@@ -436,7 +442,9 @@ export function SonataProvider({ children }: { children: ReactNode }) {
   // keeps the view-options popover from filtering on a null id and hiding its
   // lens-scoped options on first load before any pick.
   const effectiveDisplayId =
-    activeDisplayId ?? (displays.find((d) => d.default) ?? displays[0])?.id ?? null;
+    activeDisplayId ??
+    (displays.find((d) => d.default) ?? displays[0])?.id ??
+    null;
   // Raw input keyed by source id — each source keeps its own input so they
   // accumulate and merge, rather than one active source replacing another.
   const [rawById, setRawById] = useState<Record<string, unknown>>({});
@@ -769,7 +777,6 @@ export function SonataProvider({ children }: { children: ReactNode }) {
     setLoopState(null);
     // A freshly loaded song never inherits a stale count-in (its lead-in belonged
     // to the previous content). Paired with the imperative cursor rewind above.
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional transport reset on score change (see above)
     setCountIn(null);
     if (playOnLoadRef.current) {
       playOnLoadRef.current = false;
@@ -784,7 +791,7 @@ export function SonataProvider({ children }: { children: ReactNode }) {
       setSeekEpoch((n) => n + 1);
       play();
     } else {
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional transport reset on score change: loading/editing new content imperatively rewinds the cursor (cursor.setBeat) and stops playback; this is a genuine side-effect (paired with the imperative cursor write), not derivable in render
+      // intentional transport reset on score change: loading/editing new content imperatively rewinds the cursor (cursor.setBeat) and stops playback; this is a genuine side-effect (paired with the imperative cursor write), not derivable in render
       setIsPlaying(false);
     }
     // Keyed on `contentScore` (the loaded timeline), NOT `baseScore` — so the
@@ -855,7 +862,10 @@ export function SonataProvider({ children }: { children: ReactNode }) {
       // sits one unit below it, supplied as the backward `min` clamp so a rewind
       // off beat 0 lands on the empty lead-in bar rather than sticking at 0.
       const start = scoreStartBeat(score);
-      const grid = subdivideBars(score, seekSubdivisions(tempoScaleRef.current));
+      const grid = subdivideBars(
+        score,
+        seekSubdivisions(tempoScaleRef.current),
+      );
       if (direction > 0) {
         seekTo(nextLine(grid, here, end));
         return;
@@ -884,55 +894,63 @@ export function SonataProvider({ children }: { children: ReactNode }) {
   const scrubRafRef = useRef<number | null>(null);
   const scrubWasPlayingRef = useRef(false);
 
-  const startScrub = useCallback((direction: -1 | 1) => {
-    if (scrubRafRef.current !== null) return; // already holding
-    const score = scoreRef.current;
-    const end = scoreEndBeat(score);
-    if (end <= 0) return;
-    // Backward hold bottoms out at the timeline origin (the lead-in pre-roll),
-    // not 0 — same lower bound as the tap-rewind and `seekTo` clamp.
-    const start = scoreStartBeat(score);
+  const startScrub = useCallback(
+    (direction: -1 | 1) => {
+      if (scrubRafRef.current !== null) return; // already holding
+      const score = scoreRef.current;
+      const end = scoreEndBeat(score);
+      if (end <= 0) return;
+      // Backward hold bottoms out at the timeline origin (the lead-in pre-roll),
+      // not 0 — same lower bound as the tap-rewind and `seekTo` clamp.
+      const start = scoreStartBeat(score);
 
-    // The seek grid for this hold — captured once: playback is suspended for the
-    // duration, so neither the score nor the tempo can shift the unit mid-hold.
-    const grid = subdivideBars(score, seekSubdivisions(tempoScaleRef.current));
+      // The seek grid for this hold — captured once: playback is suspended for the
+      // duration, so neither the score nor the tempo can shift the unit mid-hold.
+      const grid = subdivideBars(
+        score,
+        seekSubdivisions(tempoScaleRef.current),
+      );
 
-    // Suspend playback while holding; remember whether to resume on release.
-    scrubWasPlayingRef.current = isPlayingRef.current;
-    if (isPlayingRef.current) setIsPlaying(false);
+      // Suspend playback while holding; remember whether to resume on release.
+      scrubWasPlayingRef.current = isPlayingRef.current;
+      if (isPlayingRef.current) setIsPlaying(false);
 
-    // Seconds between bar steps: starts spaced out so a brief hold steps a few
-    // bars, then tightens the longer it's held so a far rewind doesn't crawl.
-    const START_INTERVAL = 0.16;
-    const MIN_INTERVAL = 0.05;
-    const ACCEL = 0.06; // interval shaved per second held
+      // Seconds between bar steps: starts spaced out so a brief hold steps a few
+      // bars, then tightens the longer it's held so a far rewind doesn't crawl.
+      const START_INTERVAL = 0.16;
+      const MIN_INTERVAL = 0.05;
+      const ACCEL = 0.06; // interval shaved per second held
 
-    let last = performance.now() / 1000;
-    let held = 0;
-    let acc = 0;
-    const step = () => {
-      const now = performance.now() / 1000;
-      const dt = now - last;
-      last = now;
-      held += dt;
-      acc += dt;
-      const interval = Math.max(MIN_INTERVAL, START_INTERVAL - held * ACCEL);
-      if (acc >= interval) {
-        acc = 0;
-        const here = cursor.getBeat();
-        const next =
-          direction < 0 ? prevLine(grid, here, start) : nextLine(grid, here, end);
-        // Move the visual cursor directly — no `seekTo` (no re-anchor / seekEpoch
-        // bump) since playback is suspended. The store write is read back by the
-        // next step's `cursor.getBeat()` and the final `endScrub` commit. A
-        // bar-jump is navigation, not playback — flag it a seek so onset FX
-        // don't fire on every step.
-        if (next !== here) cursor.setBeat(next, { seek: true });
-      }
+      let last = performance.now() / 1000;
+      let held = 0;
+      let acc = 0;
+      const step = () => {
+        const now = performance.now() / 1000;
+        const dt = now - last;
+        last = now;
+        held += dt;
+        acc += dt;
+        const interval = Math.max(MIN_INTERVAL, START_INTERVAL - held * ACCEL);
+        if (acc >= interval) {
+          acc = 0;
+          const here = cursor.getBeat();
+          const next =
+            direction < 0
+              ? prevLine(grid, here, start)
+              : nextLine(grid, here, end);
+          // Move the visual cursor directly — no `seekTo` (no re-anchor / seekEpoch
+          // bump) since playback is suspended. The store write is read back by the
+          // next step's `cursor.getBeat()` and the final `endScrub` commit. A
+          // bar-jump is navigation, not playback — flag it a seek so onset FX
+          // don't fire on every step.
+          if (next !== here) cursor.setBeat(next, { seek: true });
+        }
+        scrubRafRef.current = requestAnimationFrame(step);
+      };
       scrubRafRef.current = requestAnimationFrame(step);
-    };
-    scrubRafRef.current = requestAnimationFrame(step);
-  }, [cursor]);
+    },
+    [cursor],
+  );
 
   const endScrub = useCallback(() => {
     if (scrubRafRef.current === null) return;
@@ -952,7 +970,8 @@ export function SonataProvider({ children }: { children: ReactNode }) {
   // Cancel any in-flight scrub loop on unmount so the rAF doesn't outlive us.
   useEffect(() => {
     return () => {
-      if (scrubRafRef.current !== null) cancelAnimationFrame(scrubRafRef.current);
+      if (scrubRafRef.current !== null)
+        cancelAnimationFrame(scrubRafRef.current);
     };
   }, []);
 

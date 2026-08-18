@@ -14,11 +14,12 @@ import "./block-document-scale.css";
 /** One empty body line plus the standard row padding — the childless-anchor box. */
 const ONE_EMPTY_LINE = "calc(var(--space-xs) * 2 + var(--doc-lh-body))";
 
-// The anchor decoration's own column. Hoisted out of the JSX so its lint
-// suppression sits on a line prettier cannot reflow — a positional
-// `eslint-disable-next-line` inside a JSX attribute is one format pass away from
-// suppressing different code (`format-clean` fails the build on exactly that).
-// eslint-disable-next-line layout/no-adhoc-layout -- positioned via JS coords (style left/width at the use site); `.block-anchor` owns the borrowed-first-line vertical seat
+// The anchor decoration's own column. The `absolute` is deliberate and has no
+// primitive: the column is positioned via JS coords (style left/width at the use
+// site), and `.block-anchor` owns the borrowed-first-line vertical seat. Keep it
+// hoisted rather than inlined into the JSX — inline it becomes a `className`
+// literal that `layout/no-adhoc-layout` reports, and the only escape there is a
+// positional directive inside a JSX attribute, which a format pass can displace.
 const ANCHOR_COLUMN = "block-anchor absolute z-raised";
 
 // The selection marker: a selected block SAYS "Selected." to a screen reader,

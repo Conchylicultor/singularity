@@ -1,4 +1,10 @@
-import { Button, ControlSizeProvider } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import {
+  Button,
+  cn,
+  ControlSizeProvider,
+} from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { fillClasses } from "@plugins/primitives/plugins/css/plugins/fill/web";
+import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { MdDelete, MdFolderDelete, MdRefresh, MdWarning } from "react-icons/md";
@@ -6,7 +12,10 @@ import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Spinner } from "@plugins/primitives/plugins/css/plugins/spinner/web";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
-import { fetchEndpoint, getEndpointErrorMessage } from "@plugins/infra/plugins/endpoints/web";
+import {
+  fetchEndpoint,
+  getEndpointErrorMessage,
+} from "@plugins/infra/plugins/endpoints/web";
 import { interpolatePath } from "@plugins/infra/plugins/endpoints/core";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
@@ -58,13 +67,29 @@ function StatusBadge({ status }: { status: string }) {
 
 function DirtyIndicator({ entry }: { entry: WorktreeEntry }) {
   if (!entry.dirExists && !entry.dbExists) {
-    return <Text as="span" variant="caption" className="text-success">fully clean</Text>;
+    return (
+      <Text as="span" variant="caption" className="text-success">
+        fully clean
+      </Text>
+    );
   }
   if (!entry.dirExists) {
-    return <Text as="span" variant="caption" className="text-muted-foreground italic">no dir</Text>;
+    return (
+      <Text
+        as="span"
+        variant="caption"
+        className="text-muted-foreground italic"
+      >
+        no dir
+      </Text>
+    );
   }
   if (entry.isSafe) {
-    return <Text as="span" variant="caption" className="text-muted-foreground">clean</Text>;
+    return (
+      <Text as="span" variant="caption" className="text-muted-foreground">
+        clean
+      </Text>
+    );
   }
   const parts: string[] = [];
   if (entry.unpushedCount > 0) parts.push(`${entry.unpushedCount} unpushed`);
@@ -83,7 +108,9 @@ export function WorktreeCleanupPanel() {
   const [entries, setEntries] = useState<WorktreeEntry[] | null>(null);
   const [listError, setListError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [deletingSteps, setDeletingSteps] = useState<Map<string, DeletingStep>>(new Map());
+  const [deletingSteps, setDeletingSteps] = useState<Map<string, DeletingStep>>(
+    new Map(),
+  );
   const [confirmDirtyId, setConfirmDirtyId] = useState<string | null>(null);
   const [rowErrors, setRowErrors] = useState<Map<string, string>>(new Map());
   const [bulkResult, setBulkResult] = useState<string | null>(null);
@@ -141,37 +168,40 @@ export function WorktreeCleanupPanel() {
   // Abort any in-flight stream on unmount.
   useEffect(() => () => loadAbort.current?.abort(), []);
 
-  const deleteOne = useCallback(async (id: string) => {
-    setDeletingSteps((prev) => new Map(prev).set(id, "worktree"));
-    setRowErrors((prev) => {
-      const next = new Map(prev);
-      next.delete(id);
-      return next;
-    });
-    try {
-      for await (const frame of readNdjson(
-        deleteWorktree.route,
-        interpolatePath(deleteWorktree.path, { id }),
-        { method: "DELETE" },
-      )) {
-        const event = frame as DeleteEvent;
-        if ("step" in event) {
-          setDeletingSteps((prev) => new Map(prev).set(id, event.step));
-        } else if (!event.ok) {
-          setRowErrors((prev) => new Map(prev).set(id, event.error));
-        }
-      }
-    } catch (e) {
-      setRowErrors((prev) => new Map(prev).set(id, String(e)));
-    } finally {
-      setDeletingSteps((prev) => {
+  const deleteOne = useCallback(
+    async (id: string) => {
+      setDeletingSteps((prev) => new Map(prev).set(id, "worktree"));
+      setRowErrors((prev) => {
         const next = new Map(prev);
         next.delete(id);
         return next;
       });
-    }
-    await load();
-  }, [load]);
+      try {
+        for await (const frame of readNdjson(
+          deleteWorktree.route,
+          interpolatePath(deleteWorktree.path, { id }),
+          { method: "DELETE" },
+        )) {
+          const event = frame as DeleteEvent;
+          if ("step" in event) {
+            setDeletingSteps((prev) => new Map(prev).set(id, event.step));
+          } else if (!event.ok) {
+            setRowErrors((prev) => new Map(prev).set(id, event.error));
+          }
+        }
+      } catch (e) {
+        setRowErrors((prev) => new Map(prev).set(id, String(e)));
+      } finally {
+        setDeletingSteps((prev) => {
+          const next = new Map(prev);
+          next.delete(id);
+          return next;
+        });
+      }
+      await load();
+    },
+    [load],
+  );
 
   const deleteSafe = useCallback(async () => {
     if (!entries) return;
@@ -204,7 +234,10 @@ export function WorktreeCleanupPanel() {
 
   // Server streams rows in completion order; sort for display (was a server sort).
   const sortedEntries = useMemo(
-    () => (entries ? [...entries].sort((a, b) => b.createdAt.localeCompare(a.createdAt)) : null),
+    () =>
+      entries
+        ? [...entries].sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+        : null,
     [entries],
   );
 
@@ -213,16 +246,38 @@ export function WorktreeCleanupPanel() {
   return (
     <Stack gap="none" className="h-full">
       {/* Header */}
-      <div className="flex items-center justify-between px-lg py-md border-b gap-md">
-        <div className="flex items-center gap-sm min-w-0">
-          <Text as="h2" variant="label" className="font-semibold shrink-0">Worktree Cleanup</Text>
+      <Stack
+        direction="row"
+        gap="md"
+        align="center"
+        justify="between"
+        className="px-lg py-md border-b"
+      >
+        <Stack
+          direction="row"
+          gap="sm"
+          align="center"
+          className={fillClasses("x")}
+        >
+          <Text
+            as="h2"
+            variant="label"
+            className={cn("font-semibold", rigidClass())}
+          >
+            Worktree Cleanup
+          </Text>
           {entries && entries.length > 0 && (
-            <Text as="span" variant="caption" className="text-muted-foreground truncate">
-              {entries.length} worktree{entries.length !== 1 ? "s" : ""} · {safeCount} safe to delete
+            <Text
+              as="span"
+              variant="caption"
+              className="text-muted-foreground truncate"
+            >
+              {entries.length} worktree{entries.length !== 1 ? "s" : ""} ·{" "}
+              {safeCount} safe to delete
             </Text>
           )}
-        </div>
-        <div className="flex items-center gap-sm shrink-0">
+        </Stack>
+        <Stack direction="row" gap="sm" align="center" className={rigidClass()}>
           <Button
             variant="destructive"
             onClick={deleteSafe}
@@ -233,18 +288,34 @@ export function WorktreeCleanupPanel() {
             <MdFolderDelete className="size-4 mr-1.5" />
             Delete {safeCount} safe
           </Button>
-          <IconButton icon={MdRefresh} label="Refresh" variant="outline" onClick={() => load()} loading={loading} />
-        </div>
-      </div>
+          <IconButton
+            icon={MdRefresh}
+            label="Refresh"
+            variant="outline"
+            onClick={() => load()}
+            loading={loading}
+          />
+        </Stack>
+      </Stack>
 
       {/* Automatic-reaper policy note */}
-      <Text as="div" variant="caption" className="px-lg py-sm text-muted-foreground border-b">
-        Orphaned forks, config dirs, and gateway registry entries are reclaimed hourly; worktrees are deleted automatically after 90 days. Use the controls below to reap early.
+      <Text
+        as="div"
+        variant="caption"
+        className="px-lg py-sm text-muted-foreground border-b"
+      >
+        Orphaned forks, config dirs, and gateway registry entries are reclaimed
+        hourly; worktrees are deleted automatically after 90 days. Use the
+        controls below to reap early.
       </Text>
 
       {/* Bulk result banner */}
       {bulkResult && (
-        <Text as="div" variant="caption" className="px-lg py-sm bg-muted text-muted-foreground border-b">
+        <Text
+          as="div"
+          variant="caption"
+          className="px-lg py-sm bg-muted text-muted-foreground border-b"
+        >
           {bulkResult}
         </Text>
       )}
@@ -328,10 +399,17 @@ function EntryRow({
 
   return (
     <>
-      <tr className={`border-b transition-colors ${highlighted ? "bg-destructive/10" : "hover:bg-muted/30"}`}>
+      <tr
+        className={`border-b transition-colors ${highlighted ? "bg-destructive/10" : "hover:bg-muted/30"}`}
+      >
         <td className="px-lg py-sm max-w-[220px]">
           <Stack gap="2xs">
-            <Text as="span" variant="caption" className="truncate font-medium" title={entry.taskTitle}>
+            <Text
+              as="span"
+              variant="caption"
+              className="truncate font-medium"
+              title={entry.taskTitle}
+            >
               {entry.taskTitle}
             </Text>
             <Stack direction="row" gap="xs" align="center">
@@ -351,7 +429,11 @@ function EntryRow({
         <td className="px-lg py-sm text-right whitespace-nowrap">
           <ControlSizeProvider size="sm">
             {!entry.dirExists && !entry.dbExists ? (
-              <Button variant="ghost" disabled className="opacity-40 cursor-default">
+              <Button
+                variant="ghost"
+                disabled
+                className="opacity-40 cursor-default"
+              >
                 {/* eslint-disable-next-line spacing/no-adhoc-spacing -- icon-to-label inset inside a Button; parent is a 3rd-party Button, no gap to own it */}
                 <MdDelete className="size-3.5 mr-1" />
                 Drop DB
@@ -385,21 +467,27 @@ function EntryRow({
       {confirmOpen && (
         <tr className="border-b bg-warning/5">
           <td colSpan={5} className="px-lg py-sm">
-            <div className="flex items-center justify-between gap-lg">
+            <Stack direction="row" gap="lg" align="center" justify="between">
               <Text as="span" variant="caption" className="text-warning">
-                This worktree has unpushed commits or uncommitted changes. Delete anyway?
+                This worktree has unpushed commits or uncommitted changes.
+                Delete anyway?
               </Text>
               <ControlSizeProvider size="sm">
-                <div className="flex items-center gap-sm shrink-0">
+                <Stack
+                  direction="row"
+                  gap="sm"
+                  align="center"
+                  className={rigidClass()}
+                >
                   <Button variant="outline" onClick={onCancelConfirm}>
                     Cancel
                   </Button>
                   <Button variant="destructive" onClick={onConfirm}>
                     Delete
                   </Button>
-                </div>
+                </Stack>
               </ControlSizeProvider>
-            </div>
+            </Stack>
           </td>
         </tr>
       )}
@@ -408,7 +496,9 @@ function EntryRow({
       {error && (
         <tr className="border-b">
           <td colSpan={5} className="px-lg py-xs">
-            <Text as="span" variant="caption" className="text-destructive">{error}</Text>
+            <Text as="span" variant="caption" className="text-destructive">
+              {error}
+            </Text>
           </td>
         </tr>
       )}

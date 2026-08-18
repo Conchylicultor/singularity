@@ -54,6 +54,7 @@ silently destroy work in progress — hence a request type rather than an `initi
     - `infra/endpoints.fetchEndpoint`
     - `infra/endpoints.getEndpointErrorMessage`
     - `primitives/css/center.Center`
+    - `primitives/css/fill.Fill`
     - `primitives/css/inline.Inline`
     - `primitives/css/pin.Pin`
     - `primitives/css/spacing.Inset`

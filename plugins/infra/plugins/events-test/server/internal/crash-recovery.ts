@@ -2,7 +2,10 @@ import { sql as drizzleSql } from "drizzle-orm";
 import { randomUUID } from "node:crypto";
 import { Client } from "pg";
 import { connectionString } from "@plugins/database/plugins/admin/server";
-import { UNSAFE_sweepStuckLocks, queryRunningJobs } from "@plugins/infra/plugins/jobs/server";
+import {
+  UNSAFE_sweepStuckLocks,
+  queryRunningJobs,
+} from "@plugins/infra/plugins/jobs/server";
 import { retryUntil, fixed } from "@plugins/packages/plugins/retry/core";
 import { db } from "@plugins/database/server";
 import { logEntries, logPing, resetLog } from "./log-job";
@@ -47,8 +50,15 @@ import { logEntries, logPing, resetLog } from "./log-job";
 // unambiguously past it, and only the advisory lock decides the outcome.
 const FORGED_LOCK_AGE = "2 minutes";
 
-function fail(step: string, detail: string, extra: Record<string, unknown> = {}): Response {
-  return Response.json({ ok: false, step, error: detail, ...extra }, { status: 500 });
+function fail(
+  step: string,
+  detail: string,
+  extra: Record<string, unknown> = {},
+): Response {
+  return Response.json(
+    { ok: false, step, error: detail, ...extra },
+    { status: 500 },
+  );
 }
 
 // Liveness as the rest of the system sees it: the jobs plugin's own public
@@ -78,7 +88,6 @@ export async function handleCrashRecovery(): Promise<Response> {
      LIMIT 1
   `);
   const row = result.rows[0];
-  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
   if (!row) {
     return Response.json(
       { ok: false, error: "enqueued row not found" },
@@ -103,7 +112,10 @@ export async function handleCrashRecovery(): Promise<Response> {
   holder.on("error", (err) => {
     if (killed) return;
     preKillErrors.push(err);
-    console.error("[crash-recovery] lock-holder connection failed before the simulated crash", err);
+    console.error(
+      "[crash-recovery] lock-holder connection failed before the simulated crash",
+      err,
+    );
   });
 
   try {
@@ -125,16 +137,22 @@ export async function handleCrashRecovery(): Promise<Response> {
     `);
 
     if (preKillErrors.length > 0) {
-      return fail("setup", "lock-holder connection died before the test began", {
-        detail: preKillErrors.map(String),
-      });
+      return fail(
+        "setup",
+        "lock-holder connection died before the test began",
+        {
+          detail: preKillErrors.map(String),
+        },
+      );
     }
 
     // Setup gate: the whole harness is vacuous if the lock was never really taken,
     // so prove it is visible as liveness before asserting anything about sweeps.
     const claimed = await readRunning(jobId);
     if (!claimed) {
-      return fail("setup", "forged row is not visible as a running job", { jobId });
+      return fail("setup", "forged row is not visible as a running job", {
+        jobId,
+      });
     }
     if (!claimed.alive) {
       return fail(
@@ -159,10 +177,15 @@ export async function handleCrashRecovery(): Promise<Response> {
       );
     }
     if (!survived.alive) {
-      return fail("no-steal", "row still locked but no longer reads as alive", { jobId });
+      return fail("no-steal", "row still locked but no longer reads as alive", {
+        jobId,
+      });
     }
     if (logEntries.some((e) => e.label === label)) {
-      return fail("no-steal", "handler ran while its lock was still held", { jobId, label });
+      return fail("no-steal", "handler ran while its lock was still held", {
+        jobId,
+        label,
+      });
     }
 
     // ── Case 2 (positive): the holder dies ──────────────────────────────────
@@ -202,11 +225,24 @@ export async function handleCrashRecovery(): Promise<Response> {
 
     // Worker polls every 2s by default; give it enough headroom.
     return retryUntil(
-      async () => logEntries.some((e) => e.label === label) ? Response.json({ ok: true, label, jobId }) : null,
+      async () =>
+        logEntries.some((e) => e.label === label)
+          ? Response.json({ ok: true, label, jobId })
+          : null,
       {
         delay: fixed(100),
         deadline: 8_000,
-        onDeadline: () => Response.json({ ok: false, step: "reclaim", error: "handler did not run within 8s", label, jobId }, { status: 504 }),
+        onDeadline: () =>
+          Response.json(
+            {
+              ok: false,
+              step: "reclaim",
+              error: "handler did not run within 8s",
+              label,
+              jobId,
+            },
+            { status: 504 },
+          ),
       },
     );
   } finally {

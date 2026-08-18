@@ -1,15 +1,29 @@
-import { ControlSizeProvider, cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import {
+  ControlSizeProvider,
+  cn,
+} from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { useState, useMemo } from "react";
-import { SectionLabel, Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import {
+  SectionLabel,
+  Text,
+} from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { MdRefresh } from "react-icons/md";
-import { Badge, formatStatusLabel } from "@plugins/primitives/plugins/css/plugins/badge/web";
+import {
+  Badge,
+  formatStatusLabel,
+} from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
+import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 import { Markdown } from "@plugins/primitives/plugins/markdown/web";
-import { getEndpointErrorMessage, useEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import {
+  getEndpointErrorMessage,
+  useEndpoint,
+} from "@plugins/infra/plugins/endpoints/web";
 import { listMemoryFiles, readMemoryFile } from "../../shared/endpoints";
 
 type MemoryFile = {
@@ -36,7 +50,10 @@ export function MemoryPanel() {
   const [picked, setPicked] = useState<string | null>(null);
 
   const listQuery = useEndpoint(listMemoryFiles, {});
-  const files: MemoryFile[] = useMemo(() => listQuery.data?.files ?? [], [listQuery.data]);
+  const files: MemoryFile[] = useMemo(
+    () => listQuery.data?.files ?? [],
+    [listQuery.data],
+  );
   const dir = listQuery.data?.dir ?? "";
   const selected = picked ?? files[0]?.name ?? null;
 
@@ -45,12 +62,22 @@ export function MemoryPanel() {
     { name: selected ?? "" },
     { enabled: selected !== null },
   );
-  const content = selected !== null ? (contentQuery.data?.content ?? null) : null;
+  const content =
+    selected !== null ? (contentQuery.data?.content ?? null) : null;
   const loadingContent = selected !== null && contentQuery.isLoading;
-  const error = contentQuery.error ? getEndpointErrorMessage(contentQuery.error) : null;
+  const error = contentQuery.error
+    ? getEndpointErrorMessage(contentQuery.error)
+    : null;
 
   const grouped = useMemo(() => {
-    const order: MemoryFile["type"][] = ["index", "feedback", "project", "user", "reference", "other"];
+    const order: MemoryFile["type"][] = [
+      "index",
+      "feedback",
+      "project",
+      "user",
+      "reference",
+      "other",
+    ];
     const groups = new Map<MemoryFile["type"], MemoryFile[]>();
     for (const f of files) {
       const g = groups.get(f.type) ?? [];
@@ -66,9 +93,14 @@ export function MemoryPanel() {
   return (
     <Stack direction="row" gap="none" className="h-full">
       {/* File list */}
-      {/* eslint-disable-next-line layout/no-adhoc-layout -- rigid fixed-width sidebar column in the two-pane row; must not shrink under the flexible content pane */}
-      <Stack gap="none" className="w-56 shrink-0 border-r">
-        <div className="flex items-center justify-between border-b px-md py-sm">
+      <Stack gap="none" className={cn("w-56 border-r", rigidClass())}>
+        <Stack
+          direction="row"
+          gap="none"
+          align="center"
+          justify="between"
+          className="border-b px-md py-sm"
+        >
           <SectionLabel as="span" className="font-medium">
             Memory files
           </SectionLabel>
@@ -80,7 +112,7 @@ export function MemoryPanel() {
               onClick={() => void listQuery.refetch()}
             />
           </ControlSizeProvider>
-        </div>
+        </Stack>
         <Scroll fill className="py-xs">
           {grouped.map(({ type, items }) => (
             <div key={type}>
@@ -90,12 +122,13 @@ export function MemoryPanel() {
                 </div>
               )}
               {items.map((f) => (
-                <button
+                <Line
                   key={f.name}
+                  as="button"
                   type="button"
                   onClick={() => setPicked(f.name)}
                   className={cn(
-                    "w-full px-md py-xs text-left text-caption transition-colors hover:bg-muted/50 flex items-center gap-xs min-w-0",
+                    "w-full gap-xs px-md py-xs text-left text-caption transition-colors hover:bg-muted/50",
                     selected === f.name && "bg-muted font-medium",
                   )}
                 >
@@ -103,22 +136,33 @@ export function MemoryPanel() {
                   {f.type !== "index" && f.type !== "other" && (
                     <Badge
                       colorClass={TYPE_BADGE_CLASSES[f.type]}
-                      className="ml-auto shrink-0"
+                      className={cn("ml-auto", rigidClass())}
                     >
                       {formatStatusLabel(f.type)}
                     </Badge>
                   )}
-                </button>
+                </Line>
               ))}
             </div>
           ))}
           {files.length === 0 && (
-            <Text as="p" variant="caption" className="px-md py-lg text-muted-foreground">No memory files found.</Text>
+            <Text
+              as="p"
+              variant="caption"
+              className="px-md py-lg text-muted-foreground"
+            >
+              No memory files found.
+            </Text>
           )}
         </Scroll>
         {dir && (
           <div className="border-t px-md py-sm">
-            <p className="truncate font-mono text-3xs text-muted-foreground/50" title={dir}>{dir}</p>
+            <p
+              className="truncate font-mono text-3xs text-muted-foreground/50"
+              title={dir}
+            >
+              {dir}
+            </p>
           </div>
         )}
       </Stack>

@@ -39,6 +39,7 @@ contributing a section, never by wrapping the pane.
     - `infra/endpoints.useEndpointMutation`
     - `primitives/copy-to-clipboard.CopyButton`
     - `primitives/css/fill.Fill`
+    - `primitives/css/fill.fillClasses`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.Button`

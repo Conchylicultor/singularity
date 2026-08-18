@@ -53,7 +53,6 @@ export async function loadBlockScope(blockId: string): Promise<BlockScope> {
     .where(and(eq(_blocks.id, blockId), isNull(_blocks.deletedAt)))
     .limit(1);
 
-  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
   if (!row) throw new HttpError(404, `block ${blockId} does not exist`);
   const pageId = row.type === PAGE_BLOCK_TYPE ? row.id : row.pageId;
   if (pageId === null) {

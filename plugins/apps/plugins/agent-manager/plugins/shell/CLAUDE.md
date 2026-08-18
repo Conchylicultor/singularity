@@ -13,7 +13,11 @@
     - `apps-core/tabs.navigate`
     - `layouts/miller.MillerColumns`
     - `primitives/app-shell.AppShellLayout`
+    - `primitives/css/fill.Fill`
+    - `primitives/css/line.Line`
+    - `primitives/css/rigid.rigidClass`
     - `primitives/css/text.Text`
+    - `primitives/css/ui-kit.cn`
     - `primitives/pane.currentRoutePath`
     - `shell.Shell`
 - Core:

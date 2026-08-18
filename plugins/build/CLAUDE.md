@@ -44,6 +44,7 @@ commit; the docblock says why, and both alternatives loop.
     - `primitives/commit-list.CommitRowItem`
     - `primitives/css/badge.Badge`
     - `primitives/css/pin.Pin`
+    - `primitives/css/rigid.rigidClass`
     - `primitives/css/row.Row`
     - `primitives/css/scroll.Scroll`
     - `primitives/css/spacing.Stack`

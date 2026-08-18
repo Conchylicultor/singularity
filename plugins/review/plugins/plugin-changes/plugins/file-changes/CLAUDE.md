@@ -15,7 +15,11 @@
     - `primitives/copy-to-clipboard.CopyButton`
     - `primitives/css/badge.Badge`
     - `primitives/css/clip.Clip`
+    - `primitives/css/fill.fillClasses`
+    - `primitives/css/line.Line`
+    - `primitives/css/rigid.rigidClass`
     - `primitives/css/text.Text`
+    - `primitives/css/ui-kit.cn`
     - `primitives/diff-view.DiffOrImageView`
     - `primitives/loading.Loading`
     - `review/plugin-changes.PluginChangesSlots`

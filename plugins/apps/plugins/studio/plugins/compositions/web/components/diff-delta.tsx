@@ -1,7 +1,10 @@
 import { useMemo } from "react";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Cluster } from "@plugins/primitives/plugins/css/plugins/cluster/web";
-import { SectionLabel, Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import {
+  SectionLabel,
+  Text,
+} from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import type { DiffState } from "@plugins/plugin-meta/plugins/composition/web";
@@ -93,12 +96,10 @@ function DeltaGroup({
 }) {
   return (
     <Stack gap="sm">
-      <div className="flex items-center justify-between gap-sm">
+      <Stack direction="row" gap="sm" align="center" justify="between">
         <SectionLabel>{label}</SectionLabel>
-        <Badge variant="muted">
-          {ids.length}
-        </Badge>
-      </div>
+        <Badge variant="muted">{ids.length}</Badge>
+      </Stack>
       {ids.length === 0 ? (
         <Text variant="caption" tone="muted">
           No plugins unique to this side.

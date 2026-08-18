@@ -1,9 +1,24 @@
-import { useResource, ResourceView } from "@plugins/primitives/plugins/live-state/web";
+import {
+  useResource,
+  ResourceView,
+} from "@plugins/primitives/plugins/live-state/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
 import { useEditableField } from "@plugins/primitives/plugins/editable-field/web";
-import { pagesResource, updateBlock, pageData, type Block } from "@plugins/page/plugins/editor/core";
+import {
+  pagesResource,
+  updateBlock,
+  pageData,
+  type Block,
+} from "@plugins/page/plugins/editor/core";
 import { PageIcon } from "@plugins/page/plugins/editor/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import {
+  Fill,
+  fillClasses,
+} from "@plugins/primitives/plugins/css/plugins/fill/web";
+import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
+import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 
 /**
  * Editable story title in the editor top bar. Mirrors the pages `PageHeader` but
@@ -22,7 +37,13 @@ export function StoryHeader({ pageId }: { pageId: string }) {
   );
 }
 
-function StoryHeaderInner({ pageId, page }: { pageId: string; page: Block | undefined }) {
+function StoryHeaderInner({
+  pageId,
+  page,
+}: {
+  pageId: string;
+  page: Block | undefined;
+}) {
   const data = page ? pageData(page) : undefined;
 
   const { mutateAsync } = useEndpointMutation(updateBlock);
@@ -39,8 +60,11 @@ function StoryHeaderInner({ pageId, page }: { pageId: string; page: Block | unde
   });
 
   return (
-    <div className="flex min-w-0 flex-1 items-center gap-sm">
-      <PageIcon nodes={data?.iconSvgNodes} className="size-5 shrink-0 text-muted-foreground" />
+    <Stack as={Fill} direction="row" gap="sm" align="center">
+      <PageIcon
+        nodes={data?.iconSvgNodes}
+        className={cn("size-5 text-muted-foreground", rigidClass())}
+      />
       <input
         value={title.value}
         onChange={(e) => title.onChange(e.target.value)}
@@ -50,8 +74,11 @@ function StoryHeaderInner({ pageId, page }: { pageId: string; page: Block | unde
         // `text-subheading` is the sanctioned typographic scale (the same utility
         // `<Text variant="subheading">` emits); it carries its own weight, so no
         // raw `font-semibold` / banned `text-lg` is needed on this <input>.
-        className="min-w-0 flex-1 truncate bg-transparent text-subheading outline-none"
+        className={cn(
+          fillClasses("x"),
+          "truncate bg-transparent text-subheading outline-none",
+        )}
       />
-    </div>
+    </Stack>
   );
 }

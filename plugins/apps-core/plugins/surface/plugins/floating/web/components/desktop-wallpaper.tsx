@@ -1,5 +1,7 @@
 import { useConfig } from "@plugins/config_v2/web";
 import { wallpaperConfig } from "@plugins/apps-core/plugins/surface/plugins/floating/plugins/wallpaper/core";
+import { layerClasses } from "@plugins/primitives/plugins/css/plugins/layer/web";
+import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 
 /**
  * The desktop backdrop revealed in "desktop mode" (once any tab floats). Reads
@@ -22,8 +24,12 @@ export function DesktopWallpaper() {
         aria-hidden
         src={`/api/wallpaper/image?v=${state.version}`}
         alt=""
-        // eslint-disable-next-line layout/no-adhoc-layout -- full-bleed wallpaper image: the <img> is itself the absolute backdrop layer (size-full + object-cover crop), not an Overlay wrapping content
-        className="pointer-events-none absolute inset-0 size-full object-cover"
+        // The <img> IS the backdrop layer, so it takes the class rather than a
+        // wrapping <Layer>; `size-full object-cover` crops it to the desktop.
+        className={cn(
+          layerClasses({ decorative: true }),
+          "size-full object-cover",
+        )}
       />
     );
   }
@@ -48,8 +54,11 @@ function DefaultGradientBackdrop() {
   return (
     <svg
       aria-hidden
-      // eslint-disable-next-line layout/no-adhoc-layout -- passive full-bleed wallpaper: the SVG element is itself the absolute backdrop layer (its own viewBox + size-full), not an Overlay wrapping content
-      className="pointer-events-none absolute inset-0 size-full"
+      // The <svg> IS the backdrop layer (its own viewBox fills it). `<Layer
+      // as="svg">` is not an option until the primitives take generic props
+      // over the host element — today `viewBox`/`preserveAspectRatio` are not
+      // assignable to HTMLAttributes<HTMLElement>.
+      className={cn(layerClasses({ decorative: true }), "size-full")}
       viewBox="0 0 1600 1000"
       preserveAspectRatio="xMidYMid slice"
     >

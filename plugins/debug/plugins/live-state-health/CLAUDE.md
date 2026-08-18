@@ -28,7 +28,9 @@ instrumentation of its own.
     - `infra/endpoints.useEndpoint`
     - `primitives/app-shell.sidebarNavItem`
     - `primitives/css/badge.Badge`
+    - `primitives/css/fill.Fill`
     - `primitives/css/inline.Inline`
+    - `primitives/css/rigid.Rigid`
     - `primitives/css/scroll.Scroll`
     - `primitives/css/spacing.Stack`
     - `primitives/css/status-dot.StatusDot`

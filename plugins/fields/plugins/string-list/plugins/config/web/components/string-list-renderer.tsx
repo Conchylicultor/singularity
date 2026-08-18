@@ -1,7 +1,14 @@
-import { Button, Input, cn, SURFACE_LEVELS } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import {
+  Button,
+  Input,
+  cn,
+  SURFACE_LEVELS,
+} from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useCallback, useState } from "react";
 import { MdAdd, MdDragIndicator, MdClose } from "react-icons/md";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { fillClasses } from "@plugins/primitives/plugins/css/plugins/fill/web";
+import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import {
   SortableList,
@@ -138,18 +145,19 @@ function StringRow({
       id={id}
       handle
       className={({ isDragging }) =>
-        cn(
-          SURFACE_LEVELS.raised,
-          "flex items-center gap-sm p-sm",
-          isDragging && "opacity-40",
-        )
+        cn(SURFACE_LEVELS.raised, "p-sm", isDragging && "opacity-40")
       }
     >
       {(state) => (
-        <>
+        // SortableItem owns its own `<div>` and exposes only a `className`, so
+        // the row layout lives one level in, on a box this component owns.
+        <Stack direction="row" gap="sm" align="center">
           <div
             {...state.handleProps}
-            className="shrink-0 cursor-grab text-muted-foreground hover:text-foreground active:cursor-grabbing"
+            className={cn(
+              rigidClass(),
+              "cursor-grab text-muted-foreground hover:text-foreground active:cursor-grabbing",
+            )}
           >
             <MdDragIndicator className="size-4" />
           </div>
@@ -162,16 +170,19 @@ function StringRow({
               setFocused(false);
               onChange(local);
             }}
-            className="min-w-0 flex-1"
+            className={fillClasses("x")}
           />
           <button
             type="button"
             onClick={onRemove}
-            className="shrink-0 rounded-sm p-2xs text-muted-foreground hover:text-destructive"
+            className={cn(
+              rigidClass(),
+              "rounded-sm p-2xs text-muted-foreground hover:text-destructive",
+            )}
           >
             <MdClose className="size-3.5" />
           </button>
-        </>
+        </Stack>
       )}
     </SortableItem>
   );

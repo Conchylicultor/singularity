@@ -1,5 +1,9 @@
 import type { ReactNode } from "react";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
+import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
+import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { EventRowActions } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/row-actions/web";
 
 /**
@@ -27,16 +31,26 @@ export function EventLine({
     <Text
       as="div"
       variant="caption"
-      className="flex items-center gap-sm px-xs py-xs text-muted-foreground"
+      className="px-xs py-xs text-muted-foreground"
     >
-      <span className="flex shrink-0 items-center gap-xs font-medium tracking-wide text-2xs">
-        {icon}
-        {label}
-      </span>
-      {children != null && (
-        <span className="flex min-w-0 items-center gap-xs">{children}</span>
-      )}
-      <EventRowActions className="ml-auto" />
+      <Stack direction="row" gap="sm" align="center">
+        <Stack
+          as="span"
+          direction="row"
+          gap="xs"
+          align="center"
+          className={cn(rigidClass(), "font-medium tracking-wide text-2xs")}
+        >
+          {icon}
+          {label}
+        </Stack>
+        {children != null && (
+          <Stack as={Fill} direction="row" gap="xs" align="center">
+            {children}
+          </Stack>
+        )}
+        <EventRowActions className="ml-auto" />
+      </Stack>
     </Text>
   );
 }

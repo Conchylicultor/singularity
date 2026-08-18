@@ -13,8 +13,11 @@
     - `page/editor.PageIcon`
     - `primitives/css/card.Card`
     - `primitives/css/clip.Clip`
+    - `primitives/css/fill.Fill`
+    - `primitives/css/rigid.rigidClass`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
+    - `primitives/css/ui-kit.cn`
     - `primitives/live-state.useResource`
     - `primitives/loading.Loading`
     - `primitives/pane.useOpenPane`

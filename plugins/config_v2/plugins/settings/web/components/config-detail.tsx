@@ -1,18 +1,46 @@
-import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { Button, cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
+import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 import { useMemo, useCallback, useState } from "react";
-import { MdWarning, MdCode, MdTune, MdUndo, MdDifference, MdMerge, MdLayersClear } from "react-icons/md";
+import {
+  MdWarning,
+  MdCode,
+  MdTune,
+  MdUndo,
+  MdDifference,
+  MdMerge,
+  MdLayersClear,
+} from "react-icons/md";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
-import { useEndpoint, useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
-import { useCombinedResources, useResource } from "@plugins/primitives/plugins/live-state/web";
+import {
+  useEndpoint,
+  useEndpointMutation,
+} from "@plugins/infra/plugins/endpoints/web";
+import {
+  useCombinedResources,
+  useResource,
+} from "@plugins/primitives/plugins/live-state/web";
 import { useConfigRegistrations } from "@plugins/config_v2/web";
-import { configV2Resource, removeDescriptorScope } from "@plugins/config_v2/core";
-import type { ConfigV2ConflictEntry, ConfigV2Tiers, ConfigV2Values } from "@plugins/config_v2/core";
+import {
+  configV2Resource,
+  removeDescriptorScope,
+} from "@plugins/config_v2/core";
+import type {
+  ConfigV2ConflictEntry,
+  ConfigV2Tiers,
+  ConfigV2Values,
+} from "@plugins/config_v2/core";
 import { HighlightedCode } from "@plugins/primitives/plugins/syntax-highlight/web";
 import { showToast } from "@plugins/shell/plugins/toast/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { acknowledgeConflict, deleteOverride, mergeConflict, getConfigRawFile } from "../../core";
+import {
+  acknowledgeConflict,
+  deleteOverride,
+  mergeConflict,
+  getConfigRawFile,
+} from "../../core";
 import { configDetailPane } from "../internal/panes";
 import { useConflict } from "../internal/use-conflicts";
 import { useTiers } from "../internal/use-tiers";
@@ -50,7 +78,12 @@ export function ConfigDetail() {
 
   // key on storePath so ConfigDetailInner remounts (and scopeId re-inits to Base)
   // whenever a different descriptor opens — no props-to-state mirror effect needed.
-  return <ConfigDetailInner key={registration.storePath} registration={registration} />;
+  return (
+    <ConfigDetailInner
+      key={registration.storePath}
+      registration={registration}
+    />
+  );
 }
 
 // All-or-nothing gate over values + conflicts + tiers — none is boot-hydrated
@@ -82,7 +115,11 @@ function ConfigDetailInner({
 
   return (
     <Stack gap="xs" className="p-md">
-      <ScopeTabs storePath={registration.storePath} scopeId={scopeId} onSelect={setScopeId} />
+      <ScopeTabs
+        storePath={registration.storePath}
+        scopeId={scopeId}
+        onSelect={setScopeId}
+      />
       {gated.pending ? (
         <Loading />
       ) : (
@@ -145,7 +182,10 @@ function ConfigDetailBody({
   const isSoftConflict = useMemo(() => {
     if (!conflictEntry) return false;
     for (const key of Object.keys(registration.descriptor.fields)) {
-      if (JSON.stringify(valueFor(key)) !== JSON.stringify(conflictEntry.originValues[key])) {
+      if (
+        JSON.stringify(valueFor(key)) !==
+        JSON.stringify(conflictEntry.originValues[key])
+      ) {
         return false;
       }
     }
@@ -154,7 +194,8 @@ function ConfigDetailBody({
 
   const hasAnyModified = useMemo(() => {
     for (const key of Object.keys(registration.descriptor.fields)) {
-      if (JSON.stringify(valueFor(key)) !== JSON.stringify(defaults[key])) return true;
+      if (JSON.stringify(valueFor(key)) !== JSON.stringify(defaults[key]))
+        return true;
     }
     return false;
   }, [valueFor, defaults, registration.descriptor.fields]);
@@ -230,14 +271,22 @@ function ConfigDetailBody({
     onSelectScope(undefined);
   }, [removeScope, registration.storePath, scopeId, onSelectScope]);
 
-  const toggleIcon = showRaw
-    ? <MdTune className="size-3.5" />
-    : <MdCode className="size-3.5" />;
+  const toggleIcon = showRaw ? (
+    <MdTune className="size-3.5" />
+  ) : (
+    <MdCode className="size-3.5" />
+  );
 
   return (
     <>
-      {/* eslint-disable-next-line spacing/no-adhoc-spacing -- mb separates the action toolbar from the fields below (no named margin utility) */}
-      <Stack direction="row" align="center" justify="end" gap="sm" className="mb-1">
+      <Stack
+        direction="row"
+        align="center"
+        justify="end"
+        gap="sm"
+        // eslint-disable-next-line spacing/no-adhoc-spacing -- mb separates the action toolbar from the fields below (no named margin utility)
+        className="mb-1"
+      >
         {scopeId && !showRaw && (
           <Button
             variant="ghost"
@@ -248,10 +297,13 @@ function ConfigDetailBody({
             Stop customizing
           </Button>
         )}
-        {hasAnyModified && !showRaw && (
-          confirmReset ? (
+        {hasAnyModified &&
+          !showRaw &&
+          (confirmReset ? (
             <Stack direction="row" align="center" gap="xs">
-              <Text variant="caption" tone="muted">Reset all fields?</Text>
+              <Text variant="caption" tone="muted">
+                Reset all fields?
+              </Text>
               <Button
                 variant="ghost"
                 loading={resetOverrideM.isPending}
@@ -260,27 +312,17 @@ function ConfigDetailBody({
               >
                 Reset
               </Button>
-              <Button
-                variant="ghost"
-                onClick={() => setConfirmReset(false)}
-              >
+              <Button variant="ghost" onClick={() => setConfirmReset(false)}>
                 Cancel
               </Button>
             </Stack>
           ) : (
-            <Button
-              variant="ghost"
-              onClick={() => setConfirmReset(true)}
-            >
+            <Button variant="ghost" onClick={() => setConfirmReset(true)}>
               <MdUndo className="size-3.5" />
               Reset all
             </Button>
-          )
-        )}
-        <Button
-          variant="ghost"
-          onClick={() => setShowRaw((v) => !v)}
-        >
+          ))}
+        <Button variant="ghost" onClick={() => setShowRaw((v) => !v)}>
           {toggleIcon}
           {showRaw ? "Fields" : "Raw file"}
         </Button>
@@ -289,16 +331,22 @@ function ConfigDetailBody({
         <RawFileView storePath={registration.storePath} scopeId={scopeId} />
       ) : (
         <>
-          {conflictEntry && (
-            conflictEntry.kind === "invalid" ? (
+          {conflictEntry &&
+            (conflictEntry.kind === "invalid" ? (
               <>
-                {/* eslint-disable-next-line spacing/no-adhoc-spacing -- mb separates the invalid banner from the fields below (no named margin utility) */}
-                <Text as="div" variant="body" className="mb-2 rounded-md border border-destructive/30 bg-destructive/10 px-md py-sm text-destructive">
+                <Text
+                  as="div"
+                  variant="body"
+                  // eslint-disable-next-line spacing/no-adhoc-spacing -- mb separates the invalid banner from the fields below (no named margin utility)
+                  className="mb-2 rounded-md border border-destructive/30 bg-destructive/10 px-md py-sm text-destructive"
+                >
                   <Stack gap="xs">
-                    <div className="flex items-center gap-sm">
-                      <MdWarning className="size-4 shrink-0" />
-                      <span className="flex-1">Stored config is invalid for the current schema</span>
-                      <div className="flex shrink-0 gap-xs">
+                    <Stack direction="row" gap="sm" align="center">
+                      <MdWarning className={cn("size-4", rigidClass())} />
+                      <Fill as="span">
+                        Stored config is invalid for the current schema
+                      </Fill>
+                      <Stack direction="row" gap="xs" className={rigidClass()}>
                         <Button
                           variant="ghost"
                           onClick={() => setShowDiff((v) => !v)}
@@ -322,126 +370,177 @@ function ConfigDetailBody({
                         >
                           Reset to defaults
                         </Button>
-                      </div>
-                    </div>
-                    {conflictEntry.issues && conflictEntry.issues.length > 0 && (
-                      // eslint-disable-next-line spacing/no-adhoc-spacing -- ml indents the issue list under the banner heading (no named margin utility)
-                      <Stack gap="sm" className="ml-6">
-                        {conflictEntry.issues.map((issue, i) => {
-                          const value = drillPath(conflictEntry.overrideValues, issue.path);
-                          const label = issue.path.length > 0 ? issue.path.join(".") : "(root)";
-                          return (
-                            <Stack key={i} gap="xs">
-                              <Text as="div" variant="caption" className="text-destructive/90">
-                                <code className="rounded-sm bg-destructive/15 px-xs font-medium">{label}</code>
-                                {" — "}
-                                {issue.message}
-                              </Text>
-                              {value === MISSING ? (
-                                <Text as="div" variant="caption" tone="muted">(value missing)</Text>
-                              ) : (
-                                <HighlightedCode code={JSON.stringify(value, null, 2)} lang="json" />
-                              )}
-                            </Stack>
-                          );
-                        })}
                       </Stack>
-                    )}
+                    </Stack>
+                    {conflictEntry.issues &&
+                      conflictEntry.issues.length > 0 && (
+                        // eslint-disable-next-line spacing/no-adhoc-spacing -- ml indents the issue list under the banner heading (no named margin utility)
+                        <Stack gap="sm" className="ml-6">
+                          {conflictEntry.issues.map((issue, i) => {
+                            const value = drillPath(
+                              conflictEntry.overrideValues,
+                              issue.path,
+                            );
+                            const label =
+                              issue.path.length > 0
+                                ? issue.path.join(".")
+                                : "(root)";
+                            return (
+                              <Stack key={i} gap="xs">
+                                <Text
+                                  as="div"
+                                  variant="caption"
+                                  className="text-destructive/90"
+                                >
+                                  <code className="rounded-sm bg-destructive/15 px-xs font-medium">
+                                    {label}
+                                  </code>
+                                  {" — "}
+                                  {issue.message}
+                                </Text>
+                                {value === MISSING ? (
+                                  <Text as="div" variant="caption" tone="muted">
+                                    (value missing)
+                                  </Text>
+                                ) : (
+                                  <HighlightedCode
+                                    code={JSON.stringify(value, null, 2)}
+                                    lang="json"
+                                  />
+                                )}
+                              </Stack>
+                            );
+                          })}
+                        </Stack>
+                      )}
                   </Stack>
                 </Text>
                 {showDiff && <InvalidDiff storePath={registration.storePath} />}
               </>
             ) : isSoftConflict ? (
-              // eslint-disable-next-line spacing/no-adhoc-spacing -- mb separates the soft-conflict banner from the fields below (no named margin utility)
-              <Text as="div" variant="body" className="mb-2 flex items-center justify-between rounded-md border border-warning/30 bg-warning/10 px-md py-sm text-warning">
-                <span>Defaults updated — no conflicts</span>
-                <Button
-                  variant="ghost"
-                  loading={acknowledgeM.isPending}
-                  onClick={handleDismiss}
-                  className="shrink-0 bg-warning/20 hover:bg-warning/30"
+              <Text
+                as="div"
+                variant="body"
+                // eslint-disable-next-line spacing/no-adhoc-spacing -- mb separates the soft-conflict banner from the fields below (no named margin utility)
+                className="mb-2 rounded-md border border-warning/30 bg-warning/10 px-md py-sm text-warning"
+              >
+                <Stack
+                  direction="row"
+                  gap="sm"
+                  align="center"
+                  justify="between"
                 >
-                  Dismiss
-                </Button>
+                  <span>Defaults updated — no conflicts</span>
+                  <Button
+                    variant="ghost"
+                    loading={acknowledgeM.isPending}
+                    onClick={handleDismiss}
+                    className={cn(
+                      "bg-warning/20 hover:bg-warning/30",
+                      rigidClass(),
+                    )}
+                  >
+                    Dismiss
+                  </Button>
+                </Stack>
               </Text>
             ) : (
               <>
-                {/* eslint-disable-next-line spacing/no-adhoc-spacing -- mb separates the hash-conflict banner from the fields below (no named margin utility) */}
-                <Text as="div" variant="body" className="mb-2 flex items-center gap-sm rounded-md border border-warning/30 bg-warning/10 px-md py-sm text-warning">
-                  <MdWarning className="size-4 shrink-0" />
-                  <span className="flex-1">
-                    {canMerge && trueConflictKeys!.length > 0
-                      ? `Upstream defaults changed — ${trueConflictKeys!.length} field${trueConflictKeys!.length === 1 ? "" : "s"} need${trueConflictKeys!.length === 1 ? "s" : ""} your attention`
-                      : canMerge
-                        ? "Upstream defaults changed — ready to merge cleanly"
-                        : "Upstream defaults changed"}
-                  </span>
-                  <div className="flex shrink-0 gap-xs">
-                    <Button
-                      variant="ghost"
-                      onClick={() => setShowDiff((v) => !v)}
-                      className="bg-warning/20 hover:bg-warning/30"
-                    >
-                      <MdDifference className="size-3.5" />
-                      {showDiff ? "Hide diff" : "View diff"}
-                    </Button>
-                    {canMerge && (
+                <Text
+                  as="div"
+                  variant="body"
+                  // eslint-disable-next-line spacing/no-adhoc-spacing -- mb separates the hash-conflict banner from the fields below (no named margin utility)
+                  className="mb-2 rounded-md border border-warning/30 bg-warning/10 px-md py-sm text-warning"
+                >
+                  <Stack direction="row" gap="sm" align="center">
+                    <MdWarning className={cn("size-4", rigidClass())} />
+                    <Fill as="span">
+                      {canMerge && trueConflictKeys!.length > 0
+                        ? `Upstream defaults changed — ${trueConflictKeys!.length} field${trueConflictKeys!.length === 1 ? "" : "s"} need${trueConflictKeys!.length === 1 ? "s" : ""} your attention`
+                        : canMerge
+                          ? "Upstream defaults changed — ready to merge cleanly"
+                          : "Upstream defaults changed"}
+                    </Fill>
+                    <Stack direction="row" gap="xs" className={rigidClass()}>
                       <Button
                         variant="ghost"
-                        loading={mergeM.isPending}
-                        onClick={handleMerge}
+                        onClick={() => setShowDiff((v) => !v)}
                         className="bg-warning/20 hover:bg-warning/30"
                       >
-                        <MdMerge className="size-3.5" />
-                        Merge
+                        <MdDifference className="size-3.5" />
+                        {showDiff ? "Hide diff" : "View diff"}
                       </Button>
-                    )}
-                    <Button
-                      variant="ghost"
-                      loading={resetOverrideM.isPending}
-                      onClick={handleAcceptAll}
-                      className="bg-warning/20 hover:bg-warning/30"
-                    >
-                      Accept all new defaults
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      loading={acknowledgeM.isPending}
-                      onClick={handleDismiss}
-                      className="bg-warning/20 hover:bg-warning/30"
-                    >
-                      Keep my values
-                    </Button>
-                  </div>
+                      {canMerge && (
+                        <Button
+                          variant="ghost"
+                          loading={mergeM.isPending}
+                          onClick={handleMerge}
+                          className="bg-warning/20 hover:bg-warning/30"
+                        >
+                          <MdMerge className="size-3.5" />
+                          Merge
+                        </Button>
+                      )}
+                      <Button
+                        variant="ghost"
+                        loading={resetOverrideM.isPending}
+                        onClick={handleAcceptAll}
+                        className="bg-warning/20 hover:bg-warning/30"
+                      >
+                        Accept all new defaults
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        loading={acknowledgeM.isPending}
+                        onClick={handleDismiss}
+                        className="bg-warning/20 hover:bg-warning/30"
+                      >
+                        Keep my values
+                      </Button>
+                    </Stack>
+                  </Stack>
                 </Text>
-                {showDiff && <ConflictDiff storePath={registration.storePath} />}
+                {showDiff && (
+                  <ConflictDiff storePath={registration.storePath} />
+                )}
               </>
-            )
+            ))}
+          {Object.entries(registration.descriptor.fields).map(
+            ([key, field]) => (
+              <ConfigFieldRow
+                key={key}
+                fieldKey={key}
+                field={field}
+                value={valueFor(key)}
+                defaultValue={defaults[key]}
+                storePath={registration.storePath}
+                scopeId={scopeId}
+                originValue={conflictEntry?.originValues[key]}
+                trueConflictKeys={trueConflictKeys}
+                tier={tiers[key]}
+              />
+            ),
           )}
-          {Object.entries(registration.descriptor.fields).map(([key, field]) => (
-            <ConfigFieldRow
-              key={key}
-              fieldKey={key}
-              field={field}
-              value={valueFor(key)}
-              defaultValue={defaults[key]}
-              storePath={registration.storePath}
-              scopeId={scopeId}
-              originValue={conflictEntry?.originValues[key]}
-              trueConflictKeys={trueConflictKeys}
-              tier={tiers[key]}
-            />
-          ))}
         </>
       )}
     </>
   );
 }
 
-function RawFileView({ storePath, scopeId }: { storePath: string; scopeId: string | undefined }) {
-  const { data, isPending } = useEndpoint(getConfigRawFile, {}, {
-    query: { storePath, ...(scopeId ? { scopeId } : {}) },
-  });
+function RawFileView({
+  storePath,
+  scopeId,
+}: {
+  storePath: string;
+  scopeId: string | undefined;
+}) {
+  const { data, isPending } = useEndpoint(
+    getConfigRawFile,
+    {},
+    {
+      query: { storePath, ...(scopeId ? { scopeId } : {}) },
+    },
+  );
 
   if (isPending) return <Loading />;
   if (!data) return <Placeholder>No data</Placeholder>;
@@ -453,23 +552,57 @@ function RawFileView({ storePath, scopeId }: { storePath: string; scopeId: strin
 
   return (
     <Stack gap="md">
-      <RawSection label="User override" path={data.overridePath} code={data.override} />
-      <RawSection label="Git override" path={data.gitOverridePath} code={data.gitOverride} />
-      <RawSection label="Origin (defaults)" path={data.gitOriginPath} code={data.gitOrigin} />
+      <RawSection
+        label="User override"
+        path={data.overridePath}
+        code={data.override}
+      />
+      <RawSection
+        label="Git override"
+        path={data.gitOverridePath}
+        code={data.gitOverride}
+      />
+      <RawSection
+        label="Origin (defaults)"
+        path={data.gitOriginPath}
+        code={data.gitOrigin}
+      />
       {showResolved && (
-        <RawSection label="Resolved origin (app reads — build pending)" path={data.originPath} code={data.origin} />
+        <RawSection
+          label="Resolved origin (app reads — build pending)"
+          path={data.originPath}
+          code={data.origin}
+        />
       )}
     </Stack>
   );
 }
 
-function RawSection({ label, path, code }: { label: string; path: string; code: string | null }) {
+function RawSection({
+  label,
+  path,
+  code,
+}: {
+  label: string;
+  path: string;
+  code: string | null;
+}) {
   return (
     <section>
       {/* eslint-disable-next-line spacing/no-adhoc-spacing -- mb separates the section label from the code block below (no named margin utility) */}
-      <Text as="div" variant="caption" tone="muted" className="mb-1 flex items-baseline gap-sm">
-        <span className="shrink-0 whitespace-nowrap font-medium">{label}</span>
-        <span className="min-w-0 truncate font-mono opacity-70" title={path}>{path}</span>
+      <Text as="div" variant="caption" tone="muted" className="mb-1">
+        <Stack direction="row" gap="sm" align="baseline">
+          <span className={cn("whitespace-nowrap font-medium", rigidClass())}>
+            {label}
+          </span>
+          <Fill
+            as="span"
+            className="truncate font-mono opacity-70"
+            title={path}
+          >
+            {path}
+          </Fill>
+        </Stack>
       </Text>
       {code !== null ? (
         <HighlightedCode code={code} lang="json" />

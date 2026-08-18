@@ -10,8 +10,11 @@
   - Contributes: `PluginChangesSlots.Section` → `ApiChangesSection`
   - Uses:
     - `primitives/css/badge.Badge`
+    - `primitives/css/line.Line`
+    - `primitives/css/rigid.rigidClass`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
+    - `primitives/css/ui-kit.cn`
     - `review/plugin-changes.FacetDiff`
     - `review/plugin-changes.PluginChangesSlots`
     - `review/plugin-changes.usePluginFacetDiffs`

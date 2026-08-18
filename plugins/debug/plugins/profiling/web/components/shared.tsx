@@ -2,6 +2,7 @@ import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { createContext, useContext, type ReactElement } from "react";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 import {
   formatDuration,
   GanttContainer,
@@ -31,7 +32,9 @@ export interface ProfilingContextValue {
   refreshKey: number;
 }
 
-export const ProfilingContext = createContext<ProfilingContextValue | null>(null);
+export const ProfilingContext = createContext<ProfilingContextValue | null>(
+  null,
+);
 
 export function useProfilingContext(): ProfilingContextValue {
   const ctx = useContext(ProfilingContext);
@@ -112,8 +115,14 @@ export function PhaseGroup({
     <div className={cn("border-b", config.bg)}>
       <Stack direction="row" align="center" gap="sm" className="px-lg py-xs">
         <div className={cn("size-2.5 rounded-full", config.color)} />
-        <Text as="div" variant="caption" className="font-semibold">{config.label}</Text>
-        <Text as="div" variant="caption" className="font-mono tabular-nums text-muted-foreground">
+        <Text as="div" variant="caption" className="font-semibold">
+          {config.label}
+        </Text>
+        <Text
+          as="div"
+          variant="caption"
+          className="font-mono tabular-nums text-muted-foreground"
+        >
           {formatDuration(phaseDuration)}
         </Text>
         <Text as="div" variant="caption" className="text-muted-foreground">
@@ -156,8 +165,14 @@ export function SpanRow({
       onMouseEnter={() => setHovered(span)}
       onMouseLeave={() => setHovered(null)}
     >
-      {/* eslint-disable-next-line layout/no-adhoc-layout -- fixed 160px (w-40) label column kept rigid (shrink-0) to align with the Gantt time axis (LABEL_WIDTH) */}
-      <div className="w-40 shrink-0 truncate font-mono text-2xs text-muted-foreground">
+      {/* Fixed 160px (w-40) label column, rigid so it stays aligned with the
+          Gantt time axis (LABEL_WIDTH). */}
+      <div
+        className={cn(
+          "w-40 truncate font-mono text-2xs text-muted-foreground",
+          rigidClass(),
+        )}
+      >
         {span.label}
       </div>
       {/* eslint-disable-next-line layout/no-adhoc-layout -- flexible timeline track (flex-1) clipping the runtime-positioned bar (overflow-hidden) */}
@@ -175,8 +190,14 @@ export function SpanRow({
           }}
         />
       </div>
-      {/* eslint-disable-next-line layout/no-adhoc-layout -- fixed 64px (w-16) duration column kept rigid (shrink-0) to align with the Gantt time axis (DURATION_WIDTH) */}
-      <div className="w-16 shrink-0 text-right font-mono text-2xs tabular-nums text-muted-foreground">
+      {/* Fixed 64px (w-16) duration column, rigid so it stays aligned with the
+          Gantt time axis (DURATION_WIDTH). */}
+      <div
+        className={cn(
+          "w-16 text-right font-mono text-2xs tabular-nums text-muted-foreground",
+          rigidClass(),
+        )}
+      >
         {formatDuration(span.durationMs)}
       </div>
     </Stack>
@@ -216,7 +237,9 @@ export function SpanDetail({
           </span>
         </>
       ) : (
-        <span className="text-muted-foreground/50">Hover a span to see details</span>
+        <span className="text-muted-foreground/50">
+          Hover a span to see details
+        </span>
       )}
     </Text>
   );

@@ -43,9 +43,7 @@ async function conversationContext(
     .where(eq(_conversations.id, conversationId))
     .limit(1);
   return {
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
     taskId: row?.taskId ?? null,
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
     status: (row?.status as ConversationStatus | undefined) ?? null,
   };
 }
@@ -56,7 +54,6 @@ async function taskIdForAttempt(attemptId: string): Promise<string | null> {
     .from(_attempts)
     .where(eq(_attempts.id, attemptId))
     .limit(1);
-  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
   return row?.taskId ?? null;
 }
 
@@ -110,7 +107,6 @@ export async function insertConversationOnConflictDoNothing(
       .returning();
     return inserted;
   });
-  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
   return row ?? null;
 }
 

@@ -90,9 +90,12 @@ See the Phase 3 plan in [research/2026-04-28-global-phase-3-auth-to-central.md](
     - `infra/endpoints.EndpointError`
     - `infra/endpoints.fetchEndpoint`
     - `primitives/css/badge.Badge`
+    - `primitives/css/fill.Fill`
+    - `primitives/css/rigid.rigidClass`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.Button`
+    - `primitives/css/ui-kit.cn`
     - `primitives/live-state.ResourceResult`
     - `primitives/live-state.useResource`
     - `primitives/pane.Pane`

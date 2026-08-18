@@ -7,7 +7,9 @@
 - Description: Generic dagre+xyflow graph canvas primitive: a pan/zoom/fit viewer with HTML/Tailwind nodes and solid/dashed directed edges, behind a domain-agnostic node/edge API. Read-only by default, with opt-in editor affordances (hover connect handles + onConnect, node/edge action overlays, group-background layers, smoothstep edges).
 - Web:
   - Uses:
+    - `primitives/css/fill.Fill`
     - `primitives/css/pin.Pin`
+    - `primitives/css/rigid.Rigid`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.cn`

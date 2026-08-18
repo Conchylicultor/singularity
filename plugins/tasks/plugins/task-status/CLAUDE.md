@@ -12,6 +12,7 @@ Single source of truth for `TaskStatus` display metadata. All plugins that rende
     - `primitives/css/badge.Badge`
     - `primitives/css/center.Center`
     - `primitives/css/inline.Inline`
+    - `primitives/css/rigid.rigidClass`
     - `primitives/css/status-dot.StatusDot`
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.cn`

@@ -42,7 +42,7 @@ export function useActionBarStatus(): ActionBarStatus {
     if (!currentHash) return;
     if (initialHashRef.current === null) initialHashRef.current = currentHash;
     else if (currentHash !== initialHashRef.current) setStaleTab(true);
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- hashResult identity changes on each push; depend on the result object
+    // hashResult identity changes on each push; depend on the result object
   }, [hashResult]);
 
   // Unread error/warning notifications (same filter as the bell button).

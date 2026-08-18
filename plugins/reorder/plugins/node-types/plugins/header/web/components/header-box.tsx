@@ -3,6 +3,9 @@ import type { ReactNode } from "react";
 import { CollapsibleChevron } from "@plugins/primitives/plugins/collapsible/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Inset } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
+import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
+import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 
 type HeaderPayload = { label?: string; collapsed?: boolean };
 
@@ -28,14 +31,19 @@ export function HeaderBox({
 
   return (
     <div className="rounded-md border border-border/50">
-      <div className="flex items-center gap-2xs px-xs py-xs">
+      <Line className="gap-2xs px-xs py-xs">
         <button
           type="button"
           onClick={() => onPatch({ collapsed: !collapsed })}
           aria-label={collapsed ? "Expand" : "Collapse"}
-          className="flex size-4 shrink-0 items-center justify-center rounded-sm text-muted-foreground hover:text-foreground"
+          className={cn(
+            rigidClass(),
+            "size-4 rounded-sm text-muted-foreground hover:text-foreground",
+          )}
         >
-          <CollapsibleChevron open={!collapsed} className="size-3.5" />
+          <Center className="size-full">
+            <CollapsibleChevron open={!collapsed} className="size-3.5" />
+          </Center>
         </button>
         <Text
           variant="caption"
@@ -44,7 +52,7 @@ export function HeaderBox({
         >
           {payload.label || "Group"}
         </Text>
-      </div>
+      </Line>
       {!collapsed && (
         <Inset x="xs" b="xs">
           {children}

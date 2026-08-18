@@ -9,14 +9,24 @@
 import { describe, expect, test } from "bun:test";
 import { z } from "zod";
 import { eq, type SQL } from "drizzle-orm";
-import { PgDialect, QueryBuilder, integer, jsonb, pgTable, text } from "drizzle-orm/pg-core";
+import {
+  PgDialect,
+  QueryBuilder,
+  integer,
+  jsonb,
+  pgTable,
+  text,
+} from "drizzle-orm/pg-core";
 import {
   pointQueryResourceDescriptor,
   windowQueryResourceDescriptor,
 } from "@plugins/infra/plugins/query-resource/core";
 import { compileWindowQuery, windowQueryResource } from "./compile-window";
 import type { QueryDb, SelectMap, WindowQueryResourceSpec } from "./spec";
-import type { WindowParams, PointParams } from "@plugins/primitives/plugins/live-state/core";
+import type {
+  WindowParams,
+  PointParams,
+} from "@plugins/primitives/plugins/live-state/core";
 
 const rows = pgTable("rows", {
   id: text("id").primaryKey(),
@@ -30,7 +40,9 @@ const rowSchema = z.object({ id: z.string(), n: z.number() });
 
 // Unique-key descriptor factories (descriptors self-register globally by key).
 let seq = 0;
-const winDescriptor = (opts: { defaultLimit: number } = { defaultLimit: 100 }) =>
+const winDescriptor = (
+  opts: { defaultLimit: number } = { defaultLimit: 100 },
+) =>
   windowQueryResourceDescriptor(`test.cw.win-${seq++}`, rowSchema, "id", opts);
 const ptDescriptor = () =>
   pointQueryResourceDescriptor(`test.cw.pt-${seq++}`, rowSchema, "id");
@@ -46,7 +58,6 @@ function fakeDb(script: (info: Recorded) => unknown[] = () => []): {
 } {
   const dialect = new PgDialect();
   const calls: Recorded[] = [];
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const wrap = (q: any): any => ({
     where: (p: SQL) => wrap(q.where(p)),
     orderBy: (...o: SQL[]) => wrap(q.orderBy(...o)),
@@ -64,8 +75,9 @@ function fakeDb(script: (info: Recorded) => unknown[] = () => []): {
     },
   });
   const qb = new QueryBuilder();
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const makeFrom = (builder: any) => ({ from: (t: any) => wrap(builder.from(t)) });
+  const makeFrom = (builder: any) => ({
+    from: (t: any) => wrap(builder.from(t)),
+  });
   const db = {
     select: (fields?: SelectMap) =>
       makeFrom(fields ? qb.select(fields) : qb.select()),
@@ -101,13 +113,16 @@ describe("compileWindowQuery — window SQL", () => {
 
   test("the limit comes from the subscription params and clamps to maxLimit", async () => {
     const { db, calls } = fakeDb();
-    const { serverOpts } = compileWindowQuery(winDescriptor({ defaultLimit: 10 }), {
-      from: rows,
-      select: { id: rows.id, n: rows.n },
-      orderBy: { col: rows.n },
-      window: { maxLimit: 50 },
-      db,
-    });
+    const { serverOpts } = compileWindowQuery(
+      winDescriptor({ defaultLimit: 10 }),
+      {
+        from: rows,
+        select: { id: rows.id, n: rows.n },
+        orderBy: { col: rows.n },
+        window: { maxLimit: 50 },
+        db,
+      },
+    );
     await serverOpts.loader({ limit: "25" });
     expect(calls[0]!.params).toEqual([25]);
     await serverOpts.loader({ limit: "9999" }); // over the cap → clamped, never trusted
@@ -123,7 +138,9 @@ describe("compileWindowQuery — window SQL", () => {
       window: { maxLimit: 500 },
       db,
     });
-    expect(() => serverOpts.loader({} as WindowParams)).toThrow(/params\.limit/);
+    expect(() => serverOpts.loader({} as WindowParams)).toThrow(
+      /params\.limit/,
+    );
     expect(() => serverOpts.loader({ limit: "1e9" })).toThrow(/params\.limit/);
   });
 
@@ -340,7 +357,11 @@ describe("compileWindowQuery — point", () => {
       db,
     });
     expect(win.serverOpts.ackChannel).toBe(true);
-    const off = compileWindowQuery(ptDescriptor(), { from: rows, point: { by: rows.id }, db });
+    const off = compileWindowQuery(ptDescriptor(), {
+      from: rows,
+      point: { by: rows.id },
+      db,
+    });
     expect("ackChannel" in off.serverOpts).toBe(false);
   });
 });
@@ -362,13 +383,18 @@ describe("compileWindowQuery — misuse guards (module-eval throws)", () => {
 
   test("neither window nor point → use queryResource instead", () => {
     expect(() =>
-      compileWindowQuery(winDescriptor(), { ...base } as WindowQueryResourceSpec<WindowParams>),
+      compileWindowQuery(winDescriptor(), {
+        ...base,
+      } as WindowQueryResourceSpec<WindowParams>),
     ).toThrow(/use queryResource/);
   });
 
   test("window without orderBy", () => {
     expect(() =>
-      compileWindowQuery(winDescriptor(), { ...base, window: { maxLimit: 10 } }),
+      compileWindowQuery(winDescriptor(), {
+        ...base,
+        window: { maxLimit: 10 },
+      }),
     ).toThrow(/REQUIRES `orderBy`/);
   });
 

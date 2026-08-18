@@ -23,6 +23,8 @@ while the column/sort/filter come free. `useSongMidiMap()` is the batch hook a
     - `infra/attachments.getAttachmentFile`
     - `infra/attachments.uploadAttachment`
     - `infra/endpoints.fetchEndpoint`
+    - `primitives/css/line.Line`
+    - `primitives/css/rigid.rigidClass`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.cn`

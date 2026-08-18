@@ -5,8 +5,22 @@ import {
   type UiContextField,
   type UiContextMeta,
 } from "@plugins/primitives/plugins/ui-context/core";
-import { Inset, Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import {
+  Fill,
+  fillClasses,
+} from "@plugins/primitives/plugins/css/plugins/fill/web";
+import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
+import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
+import {
+  Inset,
+  insetClass,
+  Stack,
+} from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import {
+  cn,
+  SingleLineProvider,
+} from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { InlinePopover } from "@plugins/primitives/plugins/popover/web";
 import { LineagePath } from "./lineage-path";
 
@@ -16,10 +30,11 @@ import { LineagePath } from "./lineage-path";
  * ONE field's value is drawn, so a field can still never be silently dropped,
  * and a field with no entry here falls back to plain text.
  */
-const FIELD_BODY: Partial<Record<UiContextField["key"], (v: string) => ReactNode>> =
-  {
-    path: (v) => <LineagePath path={v} />,
-  };
+const FIELD_BODY: Partial<
+  Record<UiContextField["key"], (v: string) => ReactNode>
+> = {
+  path: (v) => <LineagePath path={v} />,
+};
 
 /**
  * A single detail row: right-aligned label, value cell. EVERY field uses it,
@@ -27,7 +42,13 @@ const FIELD_BODY: Partial<Record<UiContextField["key"], (v: string) => ReactNode
  * popover scannable, so a field that opts out of the grid to claim full width
  * reads as messier than the flat string it replaced.
  */
-function DetailRow({ label, children }: { label: string; children: ReactNode }) {
+function DetailRow({
+  label,
+  children,
+}: {
+  label: string;
+  children: ReactNode;
+}) {
   return (
     <Stack as="div" direction="row" gap="sm" align="baseline">
       <Text
@@ -36,11 +57,11 @@ function DetailRow({ label, children }: { label: string; children: ReactNode }) 
         tone="muted"
         // Wide enough for the longest registered label ("Contribution"), which
         // otherwise overflows its column and runs into the value.
-        className="w-20 shrink-0 text-right"
+        className={cn(rigidClass(), "w-20 text-right")}
       >
         {label}
       </Text>
-      <div className="min-w-0 flex-1">{children}</div>
+      <Fill>{children}</Fill>
     </Stack>
   );
 }
@@ -48,30 +69,43 @@ function DetailRow({ label, children }: { label: string; children: ReactNode }) 
 /** The compact inline chip representing a captured UI element. Clicking it opens
  * a popover with the full captured metadata. */
 export function UiContextChip({ meta }: { meta: UiContextMeta }) {
+  // The chip is a single-line inline-level strip: `Inline` supplies the
+  // inline-flex row, and the ambient single-line context makes the label `<Text>`
+  // ellipsize against the chip's own max width.
   const trigger = (
-    <Inset
-      as="button"
-      x="xs"
-      y="2xs"
-      contentEditable={false}
-      className="bg-muted border-border text-foreground hover:bg-accent inline-flex max-w-40 cursor-pointer rounded-md border align-middle transition-colors"
-    >
-      <Stack as="span" direction="row" gap="2xs" align="center" className="min-w-0">
-        <MdAdsClick className="text-muted-foreground size-3.5 shrink-0" />
-        <Text as="span" variant="label" className="min-w-0 truncate">
+    <SingleLineProvider value={true}>
+      <Inline
+        as="button"
+        gap="2xs"
+        contentEditable={false}
+        className={cn(
+          insetClass({ x: "xs", y: "2xs" }),
+          "bg-muted border-border text-foreground hover:bg-accent max-w-40 cursor-pointer rounded-md border align-middle transition-colors",
+        )}
+      >
+        <MdAdsClick
+          className={cn("text-muted-foreground size-3.5", rigidClass())}
+        />
+        <Text as="span" variant="label">
           {meta.element}
         </Text>
-      </Stack>
-    </Inset>
+      </Inline>
+    </SingleLineProvider>
   );
 
   return (
     <InlinePopover trigger={trigger} width="2xl" tooltip="UI element context">
       <Inset pad="sm">
         <Stack gap="sm">
-          <Stack direction="row" gap="2xs" align="center" className="min-w-0">
-            <MdAdsClick className="text-muted-foreground size-4 shrink-0" />
-            <Text as="span" variant="label" className="min-w-0 break-all">
+          <Stack direction="row" gap="2xs" align="center">
+            <MdAdsClick
+              className={cn("text-muted-foreground size-4", rigidClass())}
+            />
+            <Text
+              as="span"
+              variant="label"
+              className={cn(fillClasses("x"), "break-all")}
+            >
               {meta.element}
             </Text>
           </Stack>

@@ -2,6 +2,7 @@ import {
   DesktopContextMenu,
   WallpaperAttribution,
 } from "@plugins/apps-core/plugins/surface/plugins/floating/plugins/wallpaper/web";
+import { Layer } from "@plugins/primitives/plugins/css/plugins/layer/web";
 import { DesktopWallpaper } from "./desktop-wallpaper";
 
 /**
@@ -16,16 +17,15 @@ import { DesktopWallpaper } from "./desktop-wallpaper";
  *    desktop reaches this menu.
  * 3. {@link WallpaperAttribution} — the unobtrusive corner credit.
  *
- * A full-bleed `relative inset-0` host so the capture layer's `absolute inset-0`
- * and the attribution's corner `Pin` anchor to the desktop, not the surface.
+ * A full-bleed `<Layer>` host so the capture layer's own full-bleed box and the
+ * attribution's corner `Pin` anchor to the desktop, not to the surface.
  */
 export function DesktopBackdrop() {
   return (
-    // eslint-disable-next-line layout/no-adhoc-layout -- full-bleed desktop backdrop host: it IS the absolute desktop layer (positioning context for the capture layer + corner attribution), not an Overlay wrapping content
-    <div className="absolute inset-0">
+    <Layer>
       <DesktopWallpaper />
       <DesktopContextMenu />
       <WallpaperAttribution />
-    </div>
+    </Layer>
   );
 }

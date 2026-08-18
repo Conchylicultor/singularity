@@ -23,8 +23,11 @@
     - `primitives/css/badge.Badge`
     - `primitives/css/center.Center`
     - `primitives/css/clip.Clip`
+    - `primitives/css/fill.Fill`
     - `primitives/css/pin.Pin`
     - `primitives/css/placeholder.Placeholder`
+    - `primitives/css/rigid.Rigid`
+    - `primitives/css/rigid.rigidClass`
     - `primitives/css/row.Row`
     - `primitives/css/scroll.Scroll`
     - `primitives/css/spacing.Inset`

@@ -1,4 +1,10 @@
-import { Button, ControlSizeProvider } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import {
+  Button,
+  cn,
+  ControlSizeProvider,
+} from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { fillClasses } from "@plugins/primitives/plugins/css/plugins/fill/web";
+import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { MdRestore } from "react-icons/md";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -54,7 +60,11 @@ export function RecoveryView() {
     queryKey: QUERY_KEY,
     queryFn: async (): Promise<Conversation[]> => {
       const before = new Date().toISOString();
-      const data = await fetchEndpoint(listGoneConversations, {}, { query: { before, limit: String(GONE_PAGE_SIZE) } });
+      const data = await fetchEndpoint(
+        listGoneConversations,
+        {},
+        { query: { before, limit: String(GONE_PAGE_SIZE) } },
+      );
       return data.items;
     },
     placeholderData: (prev) => prev,
@@ -126,22 +136,39 @@ export function RecoveryView() {
 
   return (
     <Stack gap="none" className="h-full">
-      <div className="flex items-center justify-between px-lg py-md border-b gap-md">
-        <div className="flex items-center gap-sm min-w-0">
-          <Text as="h2" variant="label" className="font-semibold shrink-0">Recovery</Text>
+      <Stack
+        direction="row"
+        gap="md"
+        align="center"
+        justify="between"
+        className="px-lg py-md border-b"
+      >
+        <Stack
+          direction="row"
+          gap="sm"
+          align="center"
+          className={fillClasses("x")}
+        >
+          <Text
+            as="h2"
+            variant="label"
+            className={cn("font-semibold", rigidClass())}
+          >
+            Recovery
+          </Text>
           {items.length > 0 && (
             <Text as="span" variant="caption" tone="muted" className="truncate">
               {items.length} recently closed
             </Text>
           )}
-        </div>
-      </div>
+        </Stack>
+      </Stack>
 
       <Scroll axis="both" fill>
         {isLoading && items.length === 0 ? (
           <Loading />
         ) : q.isError && items.length === 0 ? (
-          <Stack gap="sm" className="items-start py-sm">
+          <Stack gap="sm" align="start" className="py-sm">
             <Placeholder tone="error">
               Couldn't load recently closed conversations
               {q.error instanceof Error ? `: ${q.error.message}` : ""}.
@@ -199,7 +226,13 @@ function ClusterGroup({
   return (
     <div className="border-b">
       {isCluster && endedAt && (
-        <div className="flex items-center justify-between px-lg py-sm bg-muted/30 border-b">
+        <Stack
+          direction="row"
+          gap="sm"
+          align="center"
+          justify="between"
+          className="px-lg py-sm bg-muted/30 border-b"
+        >
           <Text as="span" variant="caption" className="font-medium">
             {formatTime(endedAt)} — {group.length} conversations closed
           </Text>
@@ -214,7 +247,7 @@ function ClusterGroup({
               Restore all ({group.length})
             </Button>
           </ControlSizeProvider>
-        </div>
+        </Stack>
       )}
       {group.map((conversation) => (
         <ConversationRow
@@ -242,31 +275,41 @@ function ConversationRow({
 }) {
   return (
     <>
-      <div className="flex items-center gap-md px-lg py-sm hover:bg-muted/30">
-        <div className="flex-1 min-w-0 flex flex-col gap-2xs">
+      <Stack
+        direction="row"
+        gap="md"
+        align="center"
+        className="px-lg py-sm hover:bg-muted/30"
+      >
+        <Stack gap="2xs" className={fillClasses("x")}>
           <Text as="span" variant="caption" className="truncate font-medium">
             {conversation.title ?? conversation.id}
           </Text>
-          <div className="flex items-center gap-sm text-3xs text-muted-foreground">
-            <span>{conversation.model}</span>
-            {conversation.endedAt && <span>{formatTime(conversation.endedAt)}</span>}
-          </div>
-        </div>
-        <ControlSizeProvider size="sm">
-          <Button
-            variant="outline"
-            onClick={onRestore}
-            loading={pending}
+          <Stack
+            direction="row"
+            gap="sm"
+            align="center"
+            className="text-3xs text-muted-foreground"
           >
+            <span>{conversation.model}</span>
+            {conversation.endedAt && (
+              <span>{formatTime(conversation.endedAt)}</span>
+            )}
+          </Stack>
+        </Stack>
+        <ControlSizeProvider size="sm">
+          <Button variant="outline" onClick={onRestore} loading={pending}>
             {/* eslint-disable-next-line spacing/no-adhoc-spacing -- leading-icon offset inside button label */}
             <MdRestore className="size-3.5 mr-1" />
             Restore
           </Button>
         </ControlSizeProvider>
-      </div>
+      </Stack>
       {error && (
         <div className="px-lg py-xs bg-muted/10">
-          <Text as="span" variant="caption" tone="destructive">{error}</Text>
+          <Text as="span" variant="caption" tone="destructive">
+            {error}
+          </Text>
         </div>
       )}
     </>

@@ -35,6 +35,7 @@ import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
+import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 import {
   Collapsible,
   CollapsibleTrigger,
@@ -195,7 +196,13 @@ function BuildLogView({ variant }: { variant: "popover" | "pane" }) {
 
   return (
     <Stack gap="none" className="relative border-b">
-      <div className="flex items-center justify-between border-b px-md py-xs">
+      <Stack
+        direction="row"
+        align="center"
+        justify="between"
+        gap="none"
+        className="border-b px-md py-xs"
+      >
         <Text as="span" variant="label" className="text-muted-foreground">
           Logs
         </Text>
@@ -208,7 +215,7 @@ function BuildLogView({ variant }: { variant: "popover" | "pane" }) {
             disabled={entries.length === 0}
           />
         </ControlSizeProvider>
-      </div>
+      </Stack>
       <Scroll
         axis="y"
         fill={variant === "pane"}
@@ -222,16 +229,15 @@ function BuildLogView({ variant }: { variant: "popover" | "pane" }) {
           <span className="text-muted-foreground">No build logs yet</span>
         )}
         {entries.map((entry) => (
-          <div
+          <Stack
+            direction="row"
+            gap="sm"
             key={entry.seq}
-            className={cn(
-              "flex gap-sm",
-              entry.stream === "stderr"
-                ? "text-destructive"
-                : "text-foreground",
-            )}
+            className={
+              entry.stream === "stderr" ? "text-destructive" : "text-foreground"
+            }
           >
-            <span className="shrink-0 text-muted-foreground">
+            <span className={cn(rigidClass(), "text-muted-foreground")}>
               {new Date(entry.timestamp).toLocaleTimeString([], {
                 hour: "2-digit",
                 minute: "2-digit",
@@ -240,7 +246,7 @@ function BuildLogView({ variant }: { variant: "popover" | "pane" }) {
               })}
             </span>
             <span className="whitespace-pre-wrap break-all">{entry.line}</span>
-          </div>
+          </Stack>
         ))}
         {/* Must stay the last child: it marks the true end of the content. */}
         {bottomSentinel}

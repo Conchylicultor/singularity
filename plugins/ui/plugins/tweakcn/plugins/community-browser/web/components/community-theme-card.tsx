@@ -2,6 +2,9 @@ import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useDarkMode } from "@plugins/primitives/plugins/syntax-highlight/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Grid } from "@plugins/primitives/plugins/css/plugins/grid/web";
+import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
+import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
+import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import type { CatalogTheme } from "../../shared";
 
@@ -59,21 +62,23 @@ export function CommunityThemeCard({
         ))}
       </Grid>
 
-      <div className="flex items-center gap-xs">
-        <Text
-          as="span"
-          variant="label"
-          className="flex-1 truncate"
-          style={{ color: fg }}
-        >
-          {theme.name}
-        </Text>
+      <Line className="gap-xs">
+        <Fill>
+          <Text as="span" variant="label" style={{ color: fg }}>
+            {theme.name}
+          </Text>
+        </Fill>
         {theme.source === "registry" && (
-          <span className="shrink-0 rounded-full bg-primary/10 px-xs text-3xs uppercase tracking-wide text-primary">
+          <span
+            className={cn(
+              rigidClass(),
+              "rounded-full bg-primary/10 px-xs text-3xs uppercase tracking-wide text-primary",
+            )}
+          >
             curated
           </span>
         )}
-      </div>
+      </Line>
     </Stack>
   );
 }

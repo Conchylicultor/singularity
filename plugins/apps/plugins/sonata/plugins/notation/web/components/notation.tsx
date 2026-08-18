@@ -21,7 +21,10 @@ import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
-import { Inset, Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import {
+  Inset,
+  Stack,
+} from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { convert, type StaffLayout } from "../internal/convert";
 import {
   planEngraving,
@@ -308,8 +311,8 @@ function NotationInner({ score }: NotationProps) {
 
   return (
     // Fixed white "paper" surface — sheet music is always black-on-white,
-    // independent of the app theme (see PAPER).
-    // eslint-disable-next-line layout/no-adhoc-layout -- positioning context for the corner-pinned HUD over the scroll body
+    // independent of the app theme (see PAPER). `relative` makes it the
+    // positioning context for the corner-pinned HUD over the scroll body.
     <div
       className="notation-surface relative h-full w-full"
       style={{ backgroundColor: PAPER.background }}
@@ -318,9 +321,11 @@ function NotationInner({ score }: NotationProps) {
       <Scroll axis="y" className="h-full">
         <Inset pad="md">
           {/* Width source for the plan (measured) + start of the virtual region. */}
-          {/* eslint-disable-next-line layout/no-adhoc-layout -- relative host measured for engraving width; the windowing sizer lives inside it */}
           <div ref={sizeRef} className="relative">
-            {/* eslint-disable-next-line layout/no-adhoc-layout -- the windowing sizer: a relative host whose height is the full virtual extent, anchoring each system row at a measured translateY; no layout primitive models a windowed list, and the playhead is its absolutely-positioned sibling */}
+            {/* The windowing sizer: a relative host whose height is the full
+                virtual extent, anchoring each system row at a measured
+                translateY. No layout primitive models a windowed list, and the
+                playhead is its absolutely-positioned sibling. */}
             <div
               ref={measureRef}
               className="relative w-full"
@@ -350,7 +355,11 @@ function NotationInner({ score }: NotationProps) {
                 ref={playheadRef}
                 // eslint-disable-next-line layout/no-adhoc-layout -- playhead line positioned imperatively (transform/height written per frame by applyCursor); a sizer sibling, so scrollMargin cancels exactly as it does for the rows
                 className="pointer-events-none absolute left-0 top-0 z-raised w-0.5"
-                style={{ display: "none", backgroundColor: PAPER.accent, opacity: 0.7 }}
+                style={{
+                  display: "none",
+                  backgroundColor: PAPER.accent,
+                  opacity: 0.7,
+                }}
               />
             </div>
           </div>

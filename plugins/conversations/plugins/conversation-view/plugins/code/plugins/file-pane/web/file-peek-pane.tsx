@@ -5,6 +5,9 @@ import {
 } from "@plugins/primitives/plugins/pane/web";
 import { agentManagerApp } from "@plugins/apps/plugins/agent-manager/plugins/shell/core";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
+import { Clip } from "@plugins/primitives/plugins/css/plugins/clip/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { useEditedFiles } from "@plugins/conversations/plugins/conversation-view/plugins/code/web";
 import { FilepathBreadcrumb } from "@plugins/primitives/plugins/filepath-breadcrumb/web";
@@ -113,12 +116,12 @@ function FilePeekPaneBody() {
   }
 
   const title = (
-    <span className="flex min-w-0 items-center gap-sm">
-      <span className="min-w-0 overflow-hidden">
+    <Stack as={Fill} direction="row" align="center" gap="sm">
+      <Clip as="span">
         <FilepathBreadcrumb path={effectivePath} />
-      </span>
+      </Clip>
       <FileTabs {...renderers} />
-    </span>
+    </Stack>
   );
 
   return (

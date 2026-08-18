@@ -1,7 +1,13 @@
-import { Button, ControlSizeProvider } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import {
+  Button,
+  ControlSizeProvider,
+} from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { useState, useEffect } from "react";
-import { useResource, useNotificationsChannelStatuses } from "@plugins/primitives/plugins/live-state/web";
+import {
+  useResource,
+  useNotificationsChannelStatuses,
+} from "@plugins/primitives/plugins/live-state/web";
 import { MdOpenInFull, MdRefresh, MdBuild } from "react-icons/md";
 import { Spinner } from "@plugins/primitives/plugins/css/plugins/spinner/web";
 import { WithTooltip } from "@plugins/primitives/plugins/tooltip/web";
@@ -15,6 +21,7 @@ import { buildHistoryResource, type BuildRun } from "../../shared";
 import { useStaleFrontend } from "../hooks/use-stale-frontend";
 import { BuildPopoverContent } from "./build-popover-content";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 
 /** Inner component: receives settled history data so hooks run unconditionally with real values. */
 function BuildButtonInner({
@@ -38,22 +45,26 @@ function BuildButtonInner({
 
   // Priority: a stale tab (new frontend already served) needs a reload regardless
   // of build state; otherwise reflect the active build, then the last outcome.
-  const status: "idle" | "building" | "restarting" | "updated" | "failed" = staleTab
-    ? "updated"
-    : building && wsStatus !== "open"
-      ? "restarting"
-      : building
-        ? "building"
-        : failed
-          ? "failed"
-          : "idle";
+  const status: "idle" | "building" | "restarting" | "updated" | "failed" =
+    staleTab
+      ? "updated"
+      : building && wsStatus !== "open"
+        ? "restarting"
+        : building
+          ? "building"
+          : failed
+            ? "failed"
+            : "idle";
 
   // During the compose-serve tail the latest open row is a composition child
   // (target !== "main"), so name it: "Building sonata…".
-  const buildingComposition = building && latestRun != null && latestRun.target !== "main";
+  const buildingComposition =
+    building && latestRun != null && latestRun.target !== "main";
   const label = {
     idle: "Builds",
-    building: buildingComposition ? `Building ${latestRun!.target}…` : "Building…",
+    building: buildingComposition
+      ? `Building ${latestRun!.target}…`
+      : "Building…",
     restarting: "Server restarting…",
     updated: "Server updated",
     failed: "Build failed",
@@ -75,7 +86,14 @@ function BuildButtonInner({
         finishedAt: latestRun?.finishedAt,
       }),
     );
-  }, [status, building, wsStatus, staleTab, latestRun?.target, latestRun?.finishedAt]);
+  }, [
+    status,
+    building,
+    wsStatus,
+    staleTab,
+    latestRun?.target,
+    latestRun?.finishedAt,
+  ]);
 
   return (
     <InlinePopover
@@ -112,8 +130,16 @@ function BuildButtonInner({
       width="3xl"
       padding="none"
     >
-      <div className="flex items-center justify-between border-b px-md py-sm">
-        <Text as="span" variant="label">Builds</Text>
+      <Stack
+        direction="row"
+        align="center"
+        justify="between"
+        gap="none"
+        className="border-b px-md py-sm"
+      >
+        <Text as="span" variant="label">
+          Builds
+        </Text>
         <ControlSizeProvider size="xs">
           <IconButton
             icon={MdOpenInFull}
@@ -125,7 +151,7 @@ function BuildButtonInner({
             }}
           />
         </ControlSizeProvider>
-      </div>
+      </Stack>
       <BuildPopoverContent
         variant="popover"
         onRunClick={(runId) => {

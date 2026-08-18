@@ -26,6 +26,7 @@ import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Clip } from "@plugins/primitives/plugins/css/plugins/clip/web";
 import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
+import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 import { getBuildRunLogs } from "../../shared/endpoints";
 import type { BuildStepLog } from "../../shared/endpoints";
 import type {
@@ -69,7 +70,13 @@ function PersistedLogs({ steps }: { steps: BuildStepLog[] }): ReactElement {
 
   return (
     <Stack gap="xs">
-      <div className="flex items-center justify-between pb-xs">
+      <Stack
+        direction="row"
+        gap="sm"
+        align="center"
+        justify="between"
+        className="pb-xs"
+      >
         <Text as="span" variant="label" className="text-muted-foreground">
           Logs
         </Text>
@@ -81,7 +88,7 @@ function PersistedLogs({ steps }: { steps: BuildStepLog[] }): ReactElement {
             onClick={copyAll}
           />
         </ControlSizeProvider>
-      </div>
+      </Stack>
       {steps.map((step) => (
         <StepSection key={step.id} step={step} />
       ))}
@@ -95,12 +102,16 @@ function StepSection({ step }: { step: BuildStepLog }): ReactElement {
   return (
     <Collapsible defaultOpen={!step.success || step.lines.length <= 6}>
       <Clip className="rounded-md border bg-muted/30">
-        <CollapsibleTrigger className="flex items-center gap-sm px-md py-xs text-caption hover:bg-muted/50 transition-colors">
+        {/* CollapsibleTrigger is already a line container (`flex w-full region-line`),
+            so this only adds the gap + chrome. */}
+        <CollapsibleTrigger className="gap-sm px-md py-xs text-caption hover:bg-muted/50 transition-colors">
           <CollapsibleChevron className="size-3 text-muted-foreground" />
           {step.success ? (
-            <MdCheck className="size-3.5 text-success shrink-0" />
+            <MdCheck className={cn("size-3.5 text-success", rigidClass())} />
           ) : (
-            <MdClose className="size-3.5 text-destructive shrink-0" />
+            <MdClose
+              className={cn("size-3.5 text-destructive", rigidClass())}
+            />
           )}
           <span className="font-medium">{step.label}</span>
           <span className="text-muted-foreground ml-auto">{duration}s</span>
@@ -193,7 +204,13 @@ function LiveLogs(): ReactElement {
 
   return (
     <Stack gap="none" className="relative">
-      <div className="flex items-center justify-between pb-xs">
+      <Stack
+        direction="row"
+        gap="sm"
+        align="center"
+        justify="between"
+        className="pb-xs"
+      >
         <Text as="span" variant="label" className="text-muted-foreground">
           {/* eslint-disable-next-line spacing/no-adhoc-spacing -- inline word spacing after "Logs" label text */}
           Logs <span className="text-muted-foreground/60 ml-1">Live</span>
@@ -207,7 +224,7 @@ function LiveLogs(): ReactElement {
             disabled={entries.length === 0}
           />
         </ControlSizeProvider>
-      </div>
+      </Stack>
       <Scroll
         axis="y"
         ref={scrollRef}
@@ -217,16 +234,17 @@ function LiveLogs(): ReactElement {
           <span className="text-muted-foreground">No build logs yet</span>
         )}
         {entries.map((entry) => (
-          <div
+          <Stack
             key={entry.seq}
+            direction="row"
+            gap="sm"
             className={cn(
-              "flex gap-sm",
               entry.stream === "stderr"
                 ? "text-destructive"
                 : "text-foreground",
             )}
           >
-            <span className="shrink-0 text-muted-foreground">
+            <span className={cn("text-muted-foreground", rigidClass())}>
               {new Date(entry.timestamp).toLocaleTimeString([], {
                 hour: "2-digit",
                 minute: "2-digit",
@@ -235,7 +253,7 @@ function LiveLogs(): ReactElement {
               })}
             </span>
             <span className="whitespace-pre-wrap break-all">{entry.line}</span>
-          </div>
+          </Stack>
         ))}
         {/* Must stay the last child: it marks the true end of the content. */}
         {bottomSentinel}

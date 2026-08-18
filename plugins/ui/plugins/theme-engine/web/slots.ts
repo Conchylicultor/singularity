@@ -77,15 +77,10 @@ export function useTokenGroupPresets(groupId: string): TokenGroupPresets {
     (g) => g.id === groupId,
   );
   const staticPresets = group?.usePresets() ?? [];
-  // Block form, not `eslint-disable-next-line`: the directive has to cover the
-  // hook call inside the `.map()` callback, and a positional directive binds to
-  // one line — which prettier moves. A disable/enable PAIR is a line RANGE and
-  // survives any reflow (see `lint-directives-stable`).
-  /* eslint-disable react-hooks/rules-of-hooks -- PresetSource contributions are static slot entries; count never changes */
+  // PresetSource contributions are static slot entries; count never changes.
   const dynamic = ThemeEngine.PresetSource.useContributions().map((s) =>
     s.usePresets(groupId),
   );
-  /* eslint-enable react-hooks/rules-of-hooks */
   if (dynamic.some((d) => d === undefined)) return { pending: true };
   return {
     pending: false,

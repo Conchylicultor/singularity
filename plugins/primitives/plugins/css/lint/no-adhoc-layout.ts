@@ -24,12 +24,29 @@ const createRule = ESLintUtils.RuleCreator(
  *   - positioning:     `absolute`, `fixed`, `sticky`, `inset-*`
  *   - clipping:        `overflow-*`
  *
- * Compose these through the layout primitives instead:
- *   - `<Stack direction="row">` / `<Cluster>` / `<Row>` — horizontal rows.
- *   - `<Grid>` / `<Center>` / `<Overlay>` — the other layout modes.
- *   - `<Stack>` / `<Inset>` (@plugins/primitives/plugins/css/plugins/spacing/web) — 1-D flow.
- *   - `<Text>` inside a line container — THE truncation leaf; the only home for
- *     `min-w-0` (it ellipsizes via the ambient single-line context).
+ * Compose these through the layout primitives instead — one primitive per
+ * mechanic, all under `@plugins/primitives/plugins/css/plugins/<name>/web`:
+ *   - rows / flow:      `<Line>` (bare single-line strip) · `<Row>` (interactive
+ *                       row) · `<Stack direction="row">` · `<Cluster>` (wrapping
+ *                       chips) · `<Inline>` (chips mid-sentence)
+ *   - columns / panes:  `<Column header body footer>` — rigid | flexible | rigid
+ *   - space-sharing:    `<Fill>` — THE grow+shrink cell (`min-w-0 flex-1`) ·
+ *                       `<Rigid>` — THE leaf that never shrinks (`shrink-0`) ·
+ *                       `<Text>` inside a line container — THE truncation leaf
+ *   - grids / centring: `<Grid minCellWidth>` · `<Center axis>`
+ *   - overflow:         `<Scroll>` (scrolls) · `<Clip>` (clips, no scroll)
+ *   - positioning:      `<Overlay>` (in-flow full-bleed layers) · `<Layer>` (ONE
+ *                       standalone `absolute inset-0` child) · `<Pin to>`
+ *                       (point-anchored child) · `<Sticky edge>` ·
+ *                       `ViewportOverlay` (true `fixed inset-0`)
+ *   - padding / gap:    `<Inset pad>` / `<Stack gap>` (css/plugins/spacing/web)
+ *
+ * When the element cannot be WRAPPED (a third-party `className`-only prop, a
+ * Lexical `<ContentEditable>`, a raw `<img>`/`<svg>`/`<button>` leaf that must
+ * ITSELF be the box), take the class string instead of the component:
+ * `fillClasses(axis)`, `rigidClass()`, `layerClasses(opts)`, `insetClass(step)`.
+ * Own the element ⇒ the component; don't own it ⇒ the class helper. Neither
+ * supersedes the other.
  *
  * NOT banned (deliberately): `relative` / `static` (positioning *context* is
  * benign — Overlay establishes it), sizing (`w-*`, `h-*`, `size-*`, `min-w-*`
@@ -171,17 +188,28 @@ export default createRule({
     type: "problem",
     docs: {
       description:
-        "Disallow raw Tailwind layout utilities (flex/grid/positioning/alignment/overflow). Compose layout through the <Stack>/<Cluster>/<Row>/<Grid>/<Center>/<Overlay> and <Inset> primitives.",
+        "Disallow raw Tailwind layout utilities (flex/grid/positioning/alignment/overflow). Compose layout through the css layout primitives — <Line>/<Row>/<Stack>/<Cluster>/<Inline>, <Column>, <Fill>/<Rigid>/<Text>, <Grid>/<Center>, <Scroll>/<Clip>, <Overlay>/<Layer>/<Pin>/<Sticky>, <Inset> — or, when the element cannot be wrapped, their class-string helpers.",
     },
     schema: [],
     messages: {
+      // The indexed list is HARDCODED, not derived from a registry: lint rules
+      // dual-load under jiti, which cannot resolve `@plugins/*`. The
+      // `css:message-names-primitives` check (plugins/primitives/plugins/css/check)
+      // reads the css/plugins/* DIRECTORY LISTING and fails if a layout-mechanic
+      // primitive is missing from this text, so the list cannot silently rot.
       adhocLayout:
-        "Raw layout class `{{token}}` is banned — compose layout through the primitives: " +
-        '<Stack direction="row">/<Cluster>/<Row> for horizontal rows, ' +
-        "<Grid>/<Center>/<Overlay> from @plugins/primitives/plugins/css/plugins/*, " +
-        "<Stack gap>/<Inset pad> from @plugins/primitives/plugins/css/plugins/spacing/web, or <Text> " +
-        "inside a line container for the min-w-0 truncation leaf. A genuine one-off escapes per-site with " +
-        "`// eslint-disable-next-line layout/no-adhoc-layout -- <reason>`.",
+        "Raw layout class `{{token}}` is banned — write the role, not the mechanics.\n" +
+        "Pick the primitive that owns the mechanic (all under @plugins/primitives/plugins/css/plugins/<name>/web):\n" +
+        '  rows / flow       <Line> single-line strip · <Row> interactive row · <Stack direction="row"> · <Cluster> wrapping chips · <Inline> chips mid-sentence\n' +
+        "  columns / panes   <Column header body footer> — rigid | flexible | rigid, scrolling body\n" +
+        "  space-sharing     <Fill> — THE grow+shrink cell (min-w-0 flex-1) · <Rigid> — THE leaf that never shrinks (shrink-0) · <Text> in a line container — THE truncation leaf\n" +
+        "  grids / centring  <Grid minCellWidth> · <Center axis>\n" +
+        "  overflow          <Scroll axis fill> scrolls · <Clip axis> clips, no scroll\n" +
+        "  positioning       <Overlay> in-flow full-bleed layers · <Layer> ONE standalone absolute inset-0 child · <Pin to> point-anchored child · <Sticky edge> · ViewportOverlay for true fixed inset-0\n" +
+        "  padding / gap     <Inset pad> · <Stack gap>  (css/plugins/spacing/web)\n" +
+        "When you cannot wrap the element (a third-party `className` prop, a Lexical `ContentEditable`, a raw <img>/<svg>/<button> leaf that must ITSELF be the box), " +
+        "take the class string instead: fillClasses(axis), rigidClass(), layerClasses({layer,decorative}), insetClass(step).\n" +
+        "A genuine one-off escapes per-site with `// eslint-disable-next-line layout/no-adhoc-layout -- <reason>`.",
       adhocStylePosition:
         'Inline `position: "{{value}}"` is banned — anchor a cursor menu via CursorAnchoredMenu ' +
         "(@plugins/primitives/plugins/cursor-menu/web), collapse an overflowing bar via AdaptiveBar " +

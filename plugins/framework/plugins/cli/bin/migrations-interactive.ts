@@ -25,8 +25,7 @@ export interface DetectedPrompt {
 }
 
 export type MigrationAnswer =
-  | { action: "create" }
-  | { action: "rename"; from: string };
+  { action: "create" } | { action: "rename"; from: string };
 
 /**
  * Stable identity key for a prompt, used to persist + replay the create-vs-rename
@@ -57,8 +56,8 @@ export interface DrizzlePromptResult {
 
 // ─── ANSI / prompt parsing utilities ─────────────────────────────────────────
 
-// eslint-disable-next-line no-control-regex
-const ANSI_RE = /\x1b(?:\[[0-9;]*[a-zA-Z]|\[\?[0-9;]*[a-zA-Z]|\][^\x07]*\x07|[()][AB012])/g;
+const ANSI_RE =
+  /\x1b(?:\[[0-9;]*[a-zA-Z]|\[\?[0-9;]*[a-zA-Z]|\][^\x07]*\x07|[()][AB012])/g;
 
 function stripAnsi(str: string): string {
   return str.replace(ANSI_RE, "");
@@ -101,10 +100,7 @@ function tryParseQuestion(line: string): ParsedQuestion | null {
   return null;
 }
 
-function tryParseOption(
-  line: string,
-  index: number,
-): PromptOption | null {
+function tryParseOption(line: string, index: number): PromptOption | null {
   const createMatch = OPTION_CREATE_RE.exec(line);
   if (createMatch) {
     return { index, action: "create", label: `+ ${createMatch[1]!.trim()}` };
@@ -272,7 +268,11 @@ export async function runDrizzleKitWithPrompts(opts: {
   function tryFlushAfterDelay() {
     if (flushTimer) clearTimeout(flushTimer);
     flushTimer = setTimeout(() => {
-      if (currentQuestion && currentOptions.length > 0 && !awaitingConfirmation) {
+      if (
+        currentQuestion &&
+        currentOptions.length > 0 &&
+        !awaitingConfirmation
+      ) {
         flushPrompt(proc.stdin);
       }
     }, 100);

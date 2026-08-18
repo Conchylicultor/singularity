@@ -13,7 +13,11 @@
     - `page/editor.Editor`
     - `primitives/copy-to-clipboard.CopyButton`
     - `primitives/css/clip.Clip`
+    - `primitives/css/clip.clipClasses`
+    - `primitives/css/fill.fillClasses`
+    - `primitives/css/layer.layerClasses`
     - `primitives/css/pin.Pin`
+    - `primitives/css/rigid.rigidClass`
     - `primitives/css/spacing.Inset`
     - `primitives/css/spacing.Stack`
     - `primitives/css/ui-kit.cn`

@@ -54,8 +54,12 @@ interface PluginContribution {
  */
 async function loadContributions(root: string): Promise<PluginContribution[]> {
   const results = await Promise.allSettled(
-    lintEntries.map((e) =>
-      import(pathToFileURL(join(root, "plugins", e.pluginPath, "lint", "index.ts")).href),
+    lintEntries.map(
+      (e) =>
+        import(
+          pathToFileURL(join(root, "plugins", e.pluginPath, "lint", "index.ts"))
+            .href
+        ),
     ),
   );
   const contributions: PluginContribution[] = [];
@@ -64,24 +68,32 @@ async function loadContributions(root: string): Promise<PluginContribution[]> {
     const r = results[i]!;
     const e = lintEntries[i]!;
     if (r.status === "rejected") {
-      failures.push(`${e.pluginPath}/lint — ${(r.reason as Error)?.message ?? String(r.reason)}`);
+      failures.push(
+        `${e.pluginPath}/lint — ${(r.reason as Error)?.message ?? String(r.reason)}`,
+      );
       continue;
     }
-    const def = (r.value as {
-      default?: {
-        name?: string;
-        rules?: Record<string, unknown>;
-        ignores?: Record<string, string[]>;
-        enforceEverywhere?: string[];
-      };
-    }).default;
+    const def = (
+      r.value as {
+        default?: {
+          name?: string;
+          rules?: Record<string, unknown>;
+          ignores?: Record<string, string[]>;
+          enforceEverywhere?: string[];
+        };
+      }
+    ).default;
     if (!def?.name || !def.rules) {
-      failures.push(`${e.pluginPath}/lint — default export missing { name, rules }`);
+      failures.push(
+        `${e.pluginPath}/lint — default export missing { name, rules }`,
+      );
       continue;
     }
     // A typo'd rule id in enforceEverywhere would silently leave the rule off in
     // tests — exactly the failure this mechanism exists to prevent. Fail loudly.
-    const unknown = (def.enforceEverywhere ?? []).filter((id) => !(id in def.rules!));
+    const unknown = (def.enforceEverywhere ?? []).filter(
+      (id) => !(id in def.rules!),
+    );
     if (unknown.length > 0) {
       failures.push(
         `${e.pluginPath}/lint — enforceEverywhere names rule(s) this plugin does not define: ${unknown.join(", ")}`,
@@ -97,15 +109,16 @@ async function loadContributions(root: string): Promise<PluginContribution[]> {
     });
   }
   if (failures.length > 0) {
-    throw new Error(`[eslint] failed to load lint contributions:\n  ${failures.join("\n  ")}`);
+    throw new Error(
+      `[eslint] failed to load lint contributions:\n  ${failures.join("\n  ")}`,
+    );
   }
   return contributions;
 }
 
 /** How the parser resolves TypeScript type information for type-aware rules. */
 export type ParserTypeSource =
-  | { projectService: true }
-  | { programs: Program[] };
+  { projectService: true } | { programs: Program[] };
 
 export interface BuildLintConfigOptions {
   /** Repo root — locates lint barrels and anchors `tsconfigRootDir`. */
@@ -161,7 +174,9 @@ function compilerDiagnosticRulesAsWarn(): Record<string, Linter.RuleEntry> {
 }
 
 /** Build the full flat config array (base + plugin rules + per-rule exemptions). */
-export async function buildLintConfig(opts: BuildLintConfigOptions): Promise<Linter.Config[]> {
+export async function buildLintConfig(
+  opts: BuildLintConfigOptions,
+): Promise<Linter.Config[]> {
   const { root, typeSource } = opts;
   const contributions = await loadContributions(root);
 
@@ -180,6 +195,12 @@ export async function buildLintConfig(opts: BuildLintConfigOptions): Promise<Lin
   const baseConfigs: Linter.Config[] = [
     {
       files: ["**/*.{ts,tsx}"],
+      // A disable directive that suppresses nothing is litter: it hides the fact
+      // that the rule stopped applying, and it survives every later refactor
+      // because nothing contradicts it. `error` (not `warn`) is load-bearing —
+      // the type-check worker keeps only severity 2, so `warn` would be a
+      // silent no-op here, which is exactly how the dead ones accumulated.
+      linterOptions: { reportUnusedDisableDirectives: "error" },
       languageOptions: {
         parser: tsParser as unknown as Linter.Parser,
         parserOptions: parserOptions as Linter.ParserOptions,
@@ -201,13 +222,19 @@ export async function buildLintConfig(opts: BuildLintConfigOptions): Promise<Lin
       },
       rules: {
         "@typescript-eslint/no-floating-promises": "off",
-        "@typescript-eslint/no-misused-promises": ["error", {
-          checksVoidReturn: { attributes: false },
-        }],
+        "@typescript-eslint/no-misused-promises": [
+          "error",
+          {
+            checksVoidReturn: { attributes: false },
+          },
+        ],
         "@typescript-eslint/switch-exhaustiveness-check": "error",
-        "@typescript-eslint/no-unnecessary-condition": ["warn", {
-          allowConstantLoopConditions: true,
-        }],
+        "@typescript-eslint/no-unnecessary-condition": [
+          "warn",
+          {
+            allowConstantLoopConditions: true,
+          },
+        ],
         "@typescript-eslint/await-thenable": "error",
         // React Compiler / Rules-of-React diagnostics, warn-first (see
         // compilerDiagnosticRulesAsWarn above). Spread FIRST so the two
@@ -272,7 +299,7 @@ export async function buildLintConfig(opts: BuildLintConfigOptions): Promise<Lin
         "react-hooks/config": "error",
         "react-hooks/gating": "error",
         "no-constant-binary-expression": "error",
-        "eqeqeq": ["error", "smart"],
+        eqeqeq: ["error", "smart"],
         "no-template-curly-in-string": "error",
       },
     },
@@ -294,9 +321,13 @@ export async function buildLintConfig(opts: BuildLintConfigOptions): Promise<Lin
 
   const pluginConfigs: Linter.Config[] = contributions.map((c) => ({
     files: ["**/*.{ts,tsx}"],
-    plugins: { [c.name]: { rules: c.rules } } as unknown as Linter.Config["plugins"],
+    plugins: {
+      [c.name]: { rules: c.rules },
+    } as unknown as Linter.Config["plugins"],
     rules: Object.fromEntries(
-      Object.keys(c.rules).map((ruleId) => [`${c.name}/${ruleId}`, "error"] as const),
+      Object.keys(c.rules).map(
+        (ruleId) => [`${c.name}/${ruleId}`, "error"] as const,
+      ),
     ),
   }));
 
@@ -305,7 +336,9 @@ export async function buildLintConfig(opts: BuildLintConfigOptions): Promise<Lin
   const nonAppConfigs: Linter.Config[] = contributions
     .map((c) => {
       const enforced = new Set(c.enforceEverywhere ?? []);
-      const off = Object.keys(c.rules).filter((ruleId) => !enforced.has(ruleId));
+      const off = Object.keys(c.rules).filter(
+        (ruleId) => !enforced.has(ruleId),
+      );
       return { c, off };
     })
     .filter(({ off }) => off.length > 0)
@@ -323,7 +356,10 @@ export async function buildLintConfig(opts: BuildLintConfigOptions): Promise<Lin
       .filter(([, globs]) => globs.length > 0)
       .map((entry) => {
         const [ruleId, globs] = entry;
-        return { files: globs, rules: { [`${c.name}/${ruleId}`]: "off" } } as Linter.Config;
+        return {
+          files: globs,
+          rules: { [`${c.name}/${ruleId}`]: "off" },
+        } as Linter.Config;
       }),
   );
 

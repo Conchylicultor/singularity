@@ -64,7 +64,7 @@ export function DesktopMinimap({
       // own height directly. `relative overflow-hidden` makes it the positioning
       // context that clips the fractional window rects — no layout primitive
       // models a clipped fractional-coordinate canvas like this.
-      // eslint-disable-next-line layout/no-adhoc-layout, control-size/no-adhoc-density -- mini-desktop frame: clips windows at arbitrary fractional positions (no positioning primitive models it) at a fixed minimap height (a non-control box, not inherited control density)
+      // eslint-disable-next-line layout/no-adhoc-layout -- mini-desktop frame: clips windows at arbitrary fractional positions (no positioning primitive models it)
       className={cn(
         "relative block control-md overflow-hidden rounded-md border border-border/60",
         active ? "ring-2 ring-primary" : "opacity-70",

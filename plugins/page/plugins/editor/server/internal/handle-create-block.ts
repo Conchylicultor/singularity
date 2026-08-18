@@ -33,7 +33,6 @@ export const handleCreateBlock = implement(
         .from(_blocks)
         .where(and(eq(_blocks.id, body.afterId), isNull(_blocks.deletedAt)))
         .limit(1);
-      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
       if (!after) throw new HttpError(404, "Block not found");
       parentId = after.parentId;
     }
@@ -84,7 +83,6 @@ export const handleCreateBlock = implement(
       .from(_blocks)
       .where(eq(_blocks.id, id))
       .limit(1);
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
     if (!row) throw new HttpError(500, "Failed to retrieve created block");
     return BlockSchema.parse(row);
   },

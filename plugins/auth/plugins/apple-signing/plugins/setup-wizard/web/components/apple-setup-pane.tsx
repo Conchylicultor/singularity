@@ -1,4 +1,7 @@
-import { Button, Input } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import {
+  Button,
+  Input,
+} from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useState } from "react";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
@@ -38,7 +41,9 @@ export function AppleSetupPane() {
   const registrations = useConfigRegistrations();
   const reg = registrations.find((r) => r.descriptor.name === "apple-signing");
   const storePath = reg?.storePath ?? "";
-  const metaResult = useResource(configV2SecretMetaResource, { path: storePath });
+  const metaResult = useResource(configV2SecretMetaResource, {
+    path: storePath,
+  });
   const cfgResult = useResource(configV2Resource, { path: storePath });
 
   if (metaResult.pending || cfgResult.pending) return <Loading />;
@@ -110,11 +115,23 @@ export function AppleSetupPane() {
     setSavingKey(true);
     try {
       if (p8Pem)
-        await fetchEndpoint(setConfigField, {}, { body: { storePath, key: "ascApiKey", value: p8Pem } });
+        await fetchEndpoint(
+          setConfigField,
+          {},
+          { body: { storePath, key: "ascApiKey", value: p8Pem } },
+        );
       if (keyId)
-        await fetchEndpoint(setConfigField, {}, { body: { storePath, key: "ascKeyId", value: keyId } });
+        await fetchEndpoint(
+          setConfigField,
+          {},
+          { body: { storePath, key: "ascKeyId", value: keyId } },
+        );
       if (issuerId)
-        await fetchEndpoint(setConfigField, {}, { body: { storePath, key: "ascIssuerId", value: issuerId } });
+        await fetchEndpoint(
+          setConfigField,
+          {},
+          { body: { storePath, key: "ascIssuerId", value: issuerId } },
+        );
       setP8Pem("");
       setP8FileName("");
       setKeyId("");
@@ -157,7 +174,6 @@ export function AppleSetupPane() {
               </StepDone>
             ) : (
               <>
-                {/* eslint-disable-next-line spacing/no-adhoc-spacing -- native file input spacing */}
                 <input
                   type="file"
                   accept=".p12"
@@ -184,7 +200,9 @@ export function AppleSetupPane() {
                   Save certificate
                 </Button>
                 {certError ? (
-                  <Text as="p" variant="caption" className="text-warning">{certError}</Text>
+                  <Text as="p" variant="caption" className="text-warning">
+                    {certError}
+                  </Text>
                 ) : null}
                 {needsManualIdentity ? (
                   <>
@@ -230,7 +248,6 @@ export function AppleSetupPane() {
               <StepDone>API key configured</StepDone>
             ) : (
               <>
-                {/* eslint-disable-next-line spacing/no-adhoc-spacing -- native file input spacing */}
                 <input
                   type="file"
                   accept=".p8"

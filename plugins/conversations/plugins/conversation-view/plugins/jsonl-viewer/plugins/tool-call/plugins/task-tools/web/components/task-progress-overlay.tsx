@@ -10,6 +10,10 @@ import {
   MdClose,
 } from "react-icons/md";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
+import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
@@ -18,28 +22,47 @@ import { useTaskAggregate, type TaskEntry } from "./use-task-aggregate";
 function StatusIcon({ status }: { status: string }) {
   switch (status) {
     case "in_progress":
-      return <MdTimelapse className="size-4 shrink-0 text-info" />;
+      return <MdTimelapse className={cn("size-4 text-info", rigidClass())} />;
     case "completed":
-      return <MdCheckCircle className="size-4 shrink-0 text-success" />;
+      return (
+        <MdCheckCircle className={cn("size-4 text-success", rigidClass())} />
+      );
     case "failed":
-      return <MdCancel className="size-4 shrink-0 text-destructive" />;
+      return (
+        <MdCancel className={cn("size-4 text-destructive", rigidClass())} />
+      );
     case "stopped":
-      return <MdStopCircle className="size-4 shrink-0 text-muted-foreground" />;
+      return (
+        <MdStopCircle
+          className={cn("size-4 text-muted-foreground", rigidClass())}
+        />
+      );
     default:
-      return <MdRadioButtonUnchecked className="size-4 shrink-0 text-muted-foreground" />;
+      return (
+        <MdRadioButtonUnchecked
+          className={cn("size-4 text-muted-foreground", rigidClass())}
+        />
+      );
   }
 }
 
 function TaskRow({ task }: { task: TaskEntry }) {
   return (
-    <Text as="div" variant="caption" className="flex items-center gap-sm px-md py-xs">
-      <StatusIcon status={task.status} />
-      <span className="min-w-0 flex-1 truncate text-foreground/80">
-        {task.description}
-      </span>
-      <span className="shrink-0 font-mono text-3xs text-muted-foreground/60">
-        {task.taskId.slice(0, 8)}
-      </span>
+    <Text as="div" variant="caption">
+      <Stack direction="row" gap="sm" align="center" className="px-md py-xs">
+        <StatusIcon status={task.status} />
+        <Fill as="span" className="truncate text-foreground/80">
+          {task.description}
+        </Fill>
+        <span
+          className={cn(
+            "font-mono text-3xs text-muted-foreground/60",
+            rigidClass(),
+          )}
+        >
+          {task.taskId.slice(0, 8)}
+        </span>
+      </Stack>
     </Text>
   );
 }
@@ -63,11 +86,21 @@ export function TaskProgressOverlay() {
       <Center axis="horizontal">
         {/* eslint-disable-next-line spacing/no-adhoc-spacing -- mx-4 gutters the centered card; can't fold into the parent without breaking the centered max-width */}
         <div className="pointer-events-auto mx-4 w-full max-w-sm rounded-lg border bg-background/90 shadow-sm backdrop-blur-sm">
-          <div className="flex items-center px-md py-sm">
-            <Text as="span" variant="caption" className="tabular-nums text-muted-foreground">
+          <Stack
+            direction="row"
+            gap="none"
+            align="center"
+            className="px-md py-sm"
+          >
+            <Text
+              as="span"
+              variant="caption"
+              className="tabular-nums text-muted-foreground"
+            >
               {completedCount}/{totalCount} complete
             </Text>
-            <div className="ml-auto flex items-center gap-xs">
+            <Fill />
+            <Stack direction="row" gap="xs" align="center">
               <button
                 type="button"
                 onClick={() => setExpanded((v) => !v)}
@@ -86,8 +119,8 @@ export function TaskProgressOverlay() {
               >
                 <MdClose className="size-4" />
               </button>
-            </div>
-          </div>
+            </Stack>
+          </Stack>
           {expanded && tasks.length > 0 && (
             <Scroll className="max-h-[180px] border-t border-border/40 py-xs">
               {tasks.map((task) => (

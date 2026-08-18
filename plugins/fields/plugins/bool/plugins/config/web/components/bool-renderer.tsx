@@ -2,6 +2,7 @@ import {
   FieldHeader,
   type FieldRendererComponent,
 } from "@plugins/config_v2/plugins/fields/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { boolFieldType } from "@plugins/fields/plugins/bool/core";
 
 const BoolRenderer: FieldRendererComponent<boolean> = ({
@@ -10,7 +11,13 @@ const BoolRenderer: FieldRendererComponent<boolean> = ({
   onChange,
 }) => {
   return (
-    <div className="flex items-start justify-between gap-lg py-md">
+    <Stack
+      direction="row"
+      gap="lg"
+      align="start"
+      justify="between"
+      className="py-md"
+    >
       <FieldHeader field={field} />
       <input
         type="checkbox"
@@ -19,7 +26,7 @@ const BoolRenderer: FieldRendererComponent<boolean> = ({
         checked={value}
         onChange={(e) => onChange(e.target.checked)}
       />
-    </div>
+    </Stack>
   );
 };
 BoolRenderer.type = boolFieldType;

@@ -11,7 +11,9 @@
     - `conversations/conversation-view/jsonl-viewer/tool-call.JsonlViewerTool`
     - `conversations/conversation-view/jsonl-viewer/tool-call.ToolCallCard`
     - `primitives/css/clip.Clip`
+    - `primitives/css/fill.Fill`
     - `primitives/css/scroll.Scroll`
+    - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
     - `primitives/select-scope.ContentScope`
 

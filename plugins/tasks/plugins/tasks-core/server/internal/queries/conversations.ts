@@ -169,7 +169,6 @@ export async function countGoneConversations(): Promise<number> {
     .select({ value: count() })
     .from(conversations)
     .where(buildWhere({ active: false, endedAtNotNull: true }));
-  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
   return row?.value ?? 0;
 }
 
@@ -302,7 +301,6 @@ export async function getConversation(
     .from(conversations)
     .where(eq(conversations.id, id))
     .limit(1);
-  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
   return row ?? null;
 }
 
@@ -321,7 +319,6 @@ export async function getConversationRuntime(id: string): Promise<{
     .from(_conversations)
     .where(eq(_conversations.id, id))
     .limit(1);
-  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
   return row ?? null;
 }
 
@@ -335,7 +332,6 @@ export async function getConversationClaudeSessionId(
     .from(_conversations)
     .where(eq(_conversations.id, id))
     .limit(1);
-  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
   if (!row) return undefined;
   return row.claudeSessionId;
 }

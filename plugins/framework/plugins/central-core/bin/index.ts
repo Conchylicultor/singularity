@@ -1,8 +1,20 @@
-import type { WsData, HttpHandler, WsHandler, CentralPluginDefinition, LoadedCentralPlugin } from "@plugins/framework/plugins/central-core/core";
-import { notificationsWsHandler, handleResourceHttp } from "@plugins/framework/plugins/central-core/core";
+import type {
+  WsData,
+  HttpHandler,
+  WsHandler,
+  CentralPluginDefinition,
+  LoadedCentralPlugin,
+} from "@plugins/framework/plugins/central-core/core";
+import {
+  notificationsWsHandler,
+  handleResourceHttp,
+} from "@plugins/framework/plugins/central-core/core";
 import { asPluginId } from "@plugins/framework/plugins/plugin-id/core";
 import { centralEntries } from "../core/central.generated";
-import { computeLoadWaves, topoSortPlugins } from "@plugins/framework/plugins/plugin-loader/core";
+import {
+  computeLoadWaves,
+  topoSortPlugins,
+} from "@plugins/framework/plugins/plugin-loader/core";
 import { PLUGINS_DIR } from "@plugins/infra/plugins/paths/core";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
@@ -49,10 +61,14 @@ for (const wave of waves) {
   // site: a genuinely broken core re-rejects when its own (or a dependent's)
   // central barrel imports it below, and is recorded there — nothing is swallowed.
   const coreWave = wave.filter((e) => hasCoreBarrel(e.pluginPath));
-  await Promise.allSettled(coreWave.map((e) => import(`@plugins/${e.pluginPath}/core`)));
+  await Promise.allSettled(
+    coreWave.map((e) => import(`@plugins/${e.pluginPath}/core`)),
+  );
 
   const results = await Promise.allSettled(
-    wave.map((e) => e.loader() as Promise<{ default: CentralPluginDefinition }>),
+    wave.map(
+      (e) => e.loader() as Promise<{ default: CentralPluginDefinition }>,
+    ),
   );
   for (let i = 0; i < results.length; i++) {
     const r = results[i]!;
@@ -142,8 +158,12 @@ async function shutdown(signal: string): Promise<void> {
   );
   process.exit(0);
 }
-process.on("SIGTERM", () => { void shutdown("SIGTERM"); });
-process.on("SIGINT", () => { void shutdown("SIGINT"); });
+process.on("SIGTERM", () => {
+  void shutdown("SIGTERM");
+});
+process.on("SIGINT", () => {
+  void shutdown("SIGINT");
+});
 
 if (process.ppid !== 1) {
   setInterval(() => {
@@ -232,7 +252,8 @@ if (!socketPath) throw new Error("SOCKET_PATH env var is required");
 // `no-store` that closes the cache-poisoning wedge class on central too (Fix E).
 // Bun's constructed-Response headers are mutable in place (probed), so no clone.
 function withDefaultCacheControl(res: Response): Response {
-  if (!res.headers.has("cache-control")) res.headers.set("cache-control", "no-store");
+  if (!res.headers.has("cache-control"))
+    res.headers.set("cache-control", "no-store");
   return res;
 }
 
@@ -251,7 +272,10 @@ async function safeHandle(
     return withDefaultCacheControl(await handler(req, params));
   } catch (err) {
     const errObj = err instanceof Error ? err : new Error(String(err));
-    console.error(`[http] ${req.method} ${pathname}: ${errObj.message}`, errObj.stack ?? "");
+    console.error(
+      `[http] ${req.method} ${pathname}: ${errObj.message}`,
+      errObj.stack ?? "",
+    );
     return withDefaultCacheControl(
       Response.json({ error: "Internal server error" }, { status: 500 }),
     );
@@ -265,7 +289,6 @@ const server = Bun.serve<WsData>({
 
     if (req.headers.get("upgrade") === "websocket") {
       const handler = wsRoutes[url.pathname];
-      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
       if (handler) {
         server.upgrade(req, { data: { path: url.pathname } });
         return;
@@ -273,7 +296,6 @@ const server = Bun.serve<WsData>({
     }
 
     const literal = literalHttpRoutes[`${req.method} ${url.pathname}`];
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
     if (literal) return safeHandle(literal, req, {}, url.pathname);
 
     const matched = matchSegments(
@@ -281,21 +303,19 @@ const server = Bun.serve<WsData>({
       paramHttpRoutes,
       (r) => (r as HttpParamRoute).method === req.method,
     );
-    if (matched) return safeHandle(matched.handler, req, matched.params, url.pathname);
+    if (matched)
+      return safeHandle(matched.handler, req, matched.params, url.pathname);
 
     return new Response("Not found", { status: 404 });
   },
   websocket: {
     open(ws) {
-      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
       wsRoutes[ws.data.path]?.open(ws);
     },
     message(ws, msg) {
-      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
       wsRoutes[ws.data.path]?.message(ws, msg);
     },
     close(ws, code, reason) {
-      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
       wsRoutes[ws.data.path]?.close(ws, code, reason);
     },
   },

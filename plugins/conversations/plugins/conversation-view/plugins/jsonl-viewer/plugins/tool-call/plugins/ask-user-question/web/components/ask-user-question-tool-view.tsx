@@ -4,6 +4,9 @@ import { conversationPane } from "@plugins/conversations/plugins/conversation-vi
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
+import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
+import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { jsonlEventsResource } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/core";
 import { isInterruptContent } from "@plugins/conversations/plugins/transcript-watcher/core";
@@ -21,32 +24,37 @@ import {
 
 function summaryFor(questions: Question[], firstAnswerParts: string[]) {
   return (
-    <span className="flex min-w-0 items-center gap-xs">
+    <Line as="span" className="gap-xs">
       {questions.length > 0 ? (
         questions.map((q, i) => (
-          <Badge key={i} colorClass="bg-info/15 text-info" className="shrink-0 font-mono">
+          <Badge
+            key={i}
+            colorClass="bg-info/15 text-info"
+            className={cn(rigidClass(), "font-mono")}
+          >
             {q.header}
           </Badge>
         ))
       ) : (
-        <Badge colorClass="bg-info/15 text-info" className="shrink-0 font-mono">
+        <Badge
+          colorClass="bg-info/15 text-info"
+          className={cn(rigidClass(), "font-mono")}
+        >
           question
         </Badge>
       )}
       {questions[0]?.question && (
-        <span className="min-w-0 truncate text-muted-foreground">
-          {questions[0].question}
-        </span>
+        <Text tone="muted">{questions[0].question}</Text>
       )}
       {firstAnswerParts.length > 0 && (
         <>
-          <span className="shrink-0 text-muted-foreground/50">&rarr;</span>
-          <span className="min-w-0 truncate text-foreground">
-            {firstAnswerParts.join(", ")}
+          <span className={cn(rigidClass(), "text-muted-foreground/50")}>
+            &rarr;
           </span>
+          <Text className="text-foreground">{firstAnswerParts.join(", ")}</Text>
         </>
       )}
-    </span>
+    </Line>
   );
 }
 
@@ -105,7 +113,11 @@ export function AskUserQuestionToolView({ event }: ToolRendererProps) {
   let answerMap: Record<string, ParsedAnswer> | null = null;
   if (answerTurn != null) {
     answerMap = parseMarkerAnswer(answerTurn, questions);
-  } else if (event.result != null && !resultIsInterrupt && !event.result.isError) {
+  } else if (
+    event.result != null &&
+    !resultIsInterrupt &&
+    !event.result.isError
+  ) {
     answerMap = parseAnswerMap(event.result.content, questions);
   }
 
@@ -124,7 +136,9 @@ export function AskUserQuestionToolView({ event }: ToolRendererProps) {
         ...firstSel.selected,
         ...(firstSel.otherText ? [firstSel.otherText] : []),
         // Fall back to the note when the user attached one without picking an option.
-        ...(firstSel.selected.size === 0 && !firstSel.otherText && firstSel.notes
+        ...(firstSel.selected.size === 0 &&
+        !firstSel.otherText &&
+        firstSel.notes
           ? [firstSel.notes]
           : []),
       ]
@@ -180,7 +194,11 @@ export function AskUserQuestionToolView({ event }: ToolRendererProps) {
                 ))}
                 {otherText != null && (
                   <OptionRow selected multi={q.multiSelect}>
-                    <Text as="p" variant="caption" className="italic text-foreground">
+                    <Text
+                      as="p"
+                      variant="caption"
+                      className="italic text-foreground"
+                    >
                       {otherText}
                     </Text>
                   </OptionRow>

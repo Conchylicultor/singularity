@@ -1,7 +1,11 @@
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { ChartState } from "@plugins/stats/plugins/commits/web";
-import { useEndpoint, getEndpointErrorMessage } from "@plugins/infra/plugins/endpoints/web";
+import {
+  useEndpoint,
+  getEndpointErrorMessage,
+} from "@plugins/infra/plugins/endpoints/web";
 import { getCostSessions } from "../../shared/endpoints";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
@@ -24,7 +28,11 @@ interface Row {
 
 export function TopConversationsTable() {
   const { scope } = useScope();
-  const { data: resp, error } = useEndpoint(getCostSessions, {}, { query: { scope, limit: "50" } });
+  const { data: resp, error } = useEndpoint(
+    getCostSessions,
+    {},
+    { query: { scope, limit: "50" } },
+  );
   return (
     <ChartState
       error={error ? getEndpointErrorMessage(error) : null}
@@ -62,7 +70,12 @@ function TopRow({ row }: { row: Row }) {
     row.cacheReadTokens;
   const isClickable = !!row.conversationId;
   const onClick = isClickable
-    ? () => openPane(conversationPane, { convId: row.conversationId! }, { mode: "push" })
+    ? () =>
+        openPane(
+          conversationPane,
+          { convId: row.conversationId! },
+          { mode: "push" },
+        )
     : undefined;
   return (
     <tr
@@ -73,14 +86,16 @@ function TopRow({ row }: { row: Row }) {
       )}
     >
       <td className="px-sm py-xs">
-        <div className="flex items-baseline gap-sm">
+        <Stack direction="row" gap="sm" align="baseline">
           <span className="truncate font-medium text-foreground">
             {row.title ?? <UntitledLabel sessionId={row.sessionId} />}
           </span>
           {row.status && (
-            <span className="text-caption text-muted-foreground">{row.status}</span>
+            <span className="text-caption text-muted-foreground">
+              {row.status}
+            </span>
           )}
-        </div>
+        </Stack>
       </td>
       <td className="px-sm py-xs text-caption text-muted-foreground">
         {row.modelsUsed.join(", ")}

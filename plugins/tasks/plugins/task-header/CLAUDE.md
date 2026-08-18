@@ -9,6 +9,7 @@
   - Contributes: `TaskDetailSlots.Section` "Task" → `TaskHeader`
   - Uses:
     - `conversations.useConversationById`
+    - `primitives/css/fill.Fill`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.SectionLabel`
     - `primitives/css/text.Text`

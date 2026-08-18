@@ -11,6 +11,8 @@ import {
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
+import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 
 function formatDuration(start: Date, end: Date | null): string {
@@ -21,12 +23,26 @@ function formatDuration(start: Date, end: Date | null): string {
   return `${m}m ${s % 60}s`;
 }
 
-function Row({ label, children }: { label: string; children: React.ReactNode }) {
+function Row({
+  label,
+  children,
+}: {
+  label: string;
+  children: React.ReactNode;
+}) {
   return (
-    <div className="flex items-baseline justify-between gap-lg">
-      <Text as="span" variant="caption" className="shrink-0 text-muted-foreground">{label}</Text>
-      <Text as="span" variant="body">{children}</Text>
-    </div>
+    <Stack direction="row" gap="lg" align="baseline" justify="between">
+      <Text
+        as="span"
+        variant="caption"
+        className={cn(rigidClass(), "text-muted-foreground")}
+      >
+        {label}
+      </Text>
+      <Text as="span" variant="body">
+        {children}
+      </Text>
+    </Stack>
   );
 }
 
@@ -65,7 +81,9 @@ function TerminationDetail({ run }: { run: BuildRun }) {
       {/* A flow container, not a Row: the attribution carries a full ancestry
           chain and must wrap onto as many lines as it needs rather than
           ellipsize away the very pids it exists to name. */}
-      <Text as="p" variant="body">{described.headline}</Text>
+      <Text as="p" variant="body">
+        {described.headline}
+      </Text>
       {described.note !== null && (
         <Text as="p" variant="caption" className="text-muted-foreground">
           {described.note}
@@ -81,7 +99,11 @@ export function BuildInfo({ runId }: { runId: string }) {
   const run = result.data.find((r) => r.id === runId);
 
   if (!run) {
-    return <Text as="p" variant="caption" className="text-muted-foreground">Run not found</Text>;
+    return (
+      <Text as="p" variant="caption" className="text-muted-foreground">
+        Run not found
+      </Text>
+    );
   }
 
   return (
@@ -95,12 +117,16 @@ export function BuildInfo({ runId }: { runId: string }) {
 
       <Stack gap="sm">
         <Row label="Target">
-          <Badge variant={run.target === "main" ? "muted" : "info"}>{run.target}</Badge>
+          <Badge variant={run.target === "main" ? "muted" : "info"}>
+            {run.target}
+          </Badge>
         </Row>
         {run.commitHash && (
           <Row label="Commit">
             {/* eslint-disable-next-line text/no-adhoc-typography -- mono commit-hash chip, intentional inline-code size */}
-            <code className="font-mono text-xs">{run.commitHash.slice(0, 8)}</code>
+            <code className="font-mono text-xs">
+              {run.commitHash.slice(0, 8)}
+            </code>
           </Row>
         )}
         <Row label="Started">
@@ -112,7 +138,9 @@ export function BuildInfo({ runId }: { runId: string }) {
           </Row>
         )}
         <Row label="Duration">
-          <span className="tabular-nums">{formatDuration(run.startedAt, run.finishedAt)}</span>
+          <span className="tabular-nums">
+            {formatDuration(run.startedAt, run.finishedAt)}
+          </span>
         </Row>
       </Stack>
 

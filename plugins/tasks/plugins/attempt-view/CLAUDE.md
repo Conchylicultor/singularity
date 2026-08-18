@@ -16,7 +16,11 @@
     - `conversations/conversation-view.conversationPane`
     - `conversations/conversation-view/action-bar.Conversation`
     - `primitives/css/badge.Badge`
+    - `primitives/css/fill.Fill`
+    - `primitives/css/fill.fillClasses`
     - `primitives/css/inline.Inline`
+    - `primitives/css/line.Line`
+    - `primitives/css/rigid.rigidClass`
     - `primitives/css/spacing.Inset`
     - `primitives/css/spacing.Stack`
     - `primitives/css/status-dot.StatusDot`

@@ -11,6 +11,5 @@ export const handleDelete = implement(deleteDeployment, async ({ params }) => {
     .delete(_deployDeployments)
     .where(eq(_deployDeployments.id, params.id))
     .returning();
-  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
   if (!row) throw new HttpError(404, "Not found");
 });

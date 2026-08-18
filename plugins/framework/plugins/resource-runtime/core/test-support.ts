@@ -130,9 +130,7 @@ export function createHarness(
   const runtime = createResourceRuntime(runtimeOpts);
   const frames: RecordedFrame[] = [];
   let seq = 0;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const handler = runtime.notificationsWsHandler as any;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const wsList: any[] = [];
   for (let i = 0; i < socketCount; i++) {
     const socketIdx = i;

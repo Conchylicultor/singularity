@@ -66,7 +66,6 @@ export async function serializePageContent(
       ),
     )
     .limit(1);
-  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
   if (!pageBlock) return null;
   const rows = await loadPageBlocks(pageId, executor);
   return {
@@ -88,7 +87,10 @@ export async function serializePageContent(
  * ordered by rank. Rows that don't connect to the page root are dropped (they
  * cannot be reached and would otherwise orphan).
  */
-function rowsToForest(blocks: StoredBlock[], pageId: string): SerializedBlock[] {
+function rowsToForest(
+  blocks: StoredBlock[],
+  pageId: string,
+): SerializedBlock[] {
   const childrenByParent = new Map<string | null, StoredBlock[]>();
   // Sub-page SHELL rows (`type="page"`) are preserved in place by
   // `replacePageContent` (their own content is a different `page_id` the snapshot
@@ -174,7 +176,12 @@ export async function replacePageContent(
         .limit(1);
       const floor = maxRow ? Rank.from(maxRow.rank) : null;
       const rootRanks = Rank.nBetween(floor, null, forest.length);
-      await insertForest(ctx.tx, { pageId, parentId: pageId, rootRanks, forest });
+      await insertForest(ctx.tx, {
+        pageId,
+        parentId: pageId,
+        rootRanks,
+        forest,
+      });
     }
   });
   await notifyBlockChange({ pageId, type: PAGE_BLOCK_TYPE, blockId: pageId });

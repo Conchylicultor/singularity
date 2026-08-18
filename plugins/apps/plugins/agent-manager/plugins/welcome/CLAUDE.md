@@ -14,7 +14,9 @@
     - `primitives/css/card.Card`
     - `primitives/css/center.Center`
     - `primitives/css/clip.Clip`
+    - `primitives/css/fill.fillClasses`
     - `primitives/css/grid.Grid`
+    - `primitives/css/rigid.rigidClass`
     - `primitives/css/spacing.Stack`
     - `primitives/css/status-dot.StatusDot`
     - `primitives/css/text.Text`

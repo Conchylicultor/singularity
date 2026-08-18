@@ -2,17 +2,28 @@ import { useState } from "react";
 import { CollapsibleChevron } from "@plugins/primitives/plugins/collapsible/web";
 import { CopyButton } from "@plugins/primitives/plugins/copy-to-clipboard/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
+import { fillClasses } from "@plugins/primitives/plugins/css/plugins/fill/web";
+import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
+import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Clip } from "@plugins/primitives/plugins/css/plugins/clip/web";
+import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { useConversationById } from "@plugins/conversations/web";
 import { DiffOrImageView } from "@plugins/primitives/plugins/diff-view/web";
 import { gitStatusBadge } from "@plugins/conversations/plugins/conversation-view/plugins/code/web";
-import type { PluginChangedFile, PluginChangeDiff, PluginReviewProps } from "@plugins/review/plugins/plugin-changes/core";
+import type {
+  PluginChangedFile,
+  PluginChangeDiff,
+  PluginReviewProps,
+} from "@plugins/review/plugins/plugin-changes/core";
 
 /** Strip border-* utilities from a gitStatusBadge string (keep only bg/text). */
 function statusBadgeColor(status: string): string {
-  return gitStatusBadge(status).split(" ").filter((c) => !c.startsWith("border-")).join(" ");
+  return gitStatusBadge(status)
+    .split(" ")
+    .filter((c) => !c.startsWith("border-"))
+    .join(" ");
 }
 
 const STATUS_LABEL: Record<string, string> = {
@@ -41,17 +52,28 @@ function FileRow({
 
   return (
     <div className="border-b border-border/40 last:border-b-0">
-      <button
+      <Line
+        as="button"
         type="button"
         onClick={() => setExpanded(!expanded)}
-        className="text-body flex w-full items-center gap-sm px-sm py-xs text-left hover:bg-muted/50"
+        className="text-body w-full gap-sm px-sm py-xs text-left hover:bg-muted/50"
         aria-expanded={expanded}
       >
-        <CollapsibleChevron open={expanded} className="size-3.5 shrink-0 text-muted-foreground" />
-        <Badge colorClass={statusBadgeColor(file.status)} className="shrink-0">
+        <CollapsibleChevron
+          open={expanded}
+          className={cn("size-3.5 text-muted-foreground", rigidClass())}
+        />
+        <Badge
+          colorClass={statusBadgeColor(file.status)}
+          className={rigidClass()}
+        >
           {label}
         </Badge>
-        <Text as="span" variant="caption" className="group/path min-w-0 flex-1 truncate">
+        <Text
+          as="span"
+          variant="caption"
+          className={cn(fillClasses("x"), "group/path truncate")}
+        >
           {from && (
             <>
               <span className="text-muted-foreground line-through">{from}</span>
@@ -70,11 +92,18 @@ function FileRow({
             onClick={(e) => e.stopPropagation()}
           />
         </Text>
-        <Text as="span" variant="caption" className="flex shrink-0 items-center gap-sm tabular-nums">
+        {/* `Line as={Text}` (rather than the usual `Text as={Line}`) keeps this
+            stats group a <span>: it sits inside a <button>, whose content model is
+            phrasing content, so Line's default <div> host would be invalid. */}
+        <Line
+          as={Text}
+          variant="caption"
+          className={cn("gap-sm tabular-nums", rigidClass())}
+        >
           <span className="text-success">+{file.additions}</span>
           <span className="text-destructive">&minus;{file.deletions}</span>
-        </Text>
-      </button>
+        </Line>
+      </Line>
       {expanded && (
         <div className="bg-background">
           <DiffOrImageView
@@ -89,7 +118,10 @@ function FileRow({
   );
 }
 
-export function FileChangesSection({ conversationId, plugin }: PluginReviewProps) {
+export function FileChangesSection({
+  conversationId,
+  plugin,
+}: PluginReviewProps) {
   const conversation = useConversationById(conversationId);
 
   if (!conversation) {
@@ -101,7 +133,11 @@ export function FileChangesSection({ conversationId, plugin }: PluginReviewProps
   return (
     <Clip className="rounded-md border border-border/40">
       {plugin.files.map((file) => (
-        <FileRow key={file.path} file={file} worktree={conversation.attemptId} />
+        <FileRow
+          key={file.path}
+          file={file}
+          worktree={conversation.attemptId}
+        />
       ))}
     </Clip>
   );

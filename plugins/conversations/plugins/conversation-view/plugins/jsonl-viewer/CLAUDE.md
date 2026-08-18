@@ -104,10 +104,13 @@ back.
     - `primitives/auto-scroll.JumpToBottomButton`
     - `primitives/auto-scroll.useStickyScroll`
     - `primitives/css/bouncing-dots.BouncingDots`
+    - `primitives/css/fill.Fill`
+    - `primitives/css/rigid.rigidClass`
     - `primitives/css/scroll.Scroll`
     - `primitives/css/spacing.Stack`
     - `primitives/css/sticky.Sticky`
     - `primitives/css/text.Text`
+    - `primitives/css/ui-kit.cn`
     - `primitives/live-state.ResourceView`
     - `primitives/live-state.useResource`
     - `primitives/loading.Loading`

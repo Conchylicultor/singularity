@@ -10,11 +10,23 @@ import { conversationPane } from "@plugins/conversations/plugins/conversation-vi
 import { CONV_STATUS_DOT } from "@plugins/conversations/plugins/conversation-ui/plugins/item/web";
 import { StatusDot } from "@plugins/primitives/plugins/css/plugins/status-dot/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
+import {
+  Fill,
+  fillClasses,
+} from "@plugins/primitives/plugins/css/plugins/fill/web";
+import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
+import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 import { LaunchControl } from "@plugins/primitives/plugins/launch/web";
-import { attemptsResource, type AttemptWithConversations } from "@plugins/tasks/plugins/tasks-core/core";
+import {
+  attemptsResource,
+  type AttemptWithConversations,
+} from "@plugins/tasks/plugins/tasks-core/core";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
-import { Stack, Inset } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import {
+  Stack,
+  Inset,
+} from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
 import { attemptPane } from "../panes";
 
@@ -51,17 +63,18 @@ function AttemptSection({
   const worktreeName = attempt.worktreePath.split("/").pop();
   return (
     <Stack gap="2xs">
-      <div className="flex items-center gap-xs px-sm py-xs">
-        <span
+      <Line className="gap-xs px-sm py-xs">
+        <Fill
+          as="span"
           className={cn(
-            "min-w-0 flex-1 truncate font-mono text-2xs",
+            "truncate font-mono text-2xs",
             isCurrent ? "font-medium text-foreground" : "text-muted-foreground",
           )}
         >
           {worktreeName}
-        </span>
-        <Badge className="shrink-0">{attempt.conversations.length}</Badge>
-      </div>
+        </Fill>
+        <Badge className={rigidClass()}>{attempt.conversations.length}</Badge>
+      </Line>
       {attempt.conversations.length === 0 ? (
         <Text
           as="p"
@@ -75,31 +88,41 @@ function AttemptSection({
           {attempt.conversations.map((c) => {
             const isActive = c.id === selectedConvId;
             return (
-              <li
+              <Line
+                as="li"
                 key={c.id}
                 className={cn(
-                  "group flex items-center rounded-md",
+                  "group rounded-md",
                   isActive ? "bg-accent" : "hover:bg-accent",
                 )}
               >
-                <button
+                <Line
+                  as="button"
                   type="button"
                   onClick={() => onSelect(c.id)}
-                  className="flex min-w-0 flex-1 items-center gap-sm px-sm py-xs text-left text-body"
+                  className={cn(
+                    fillClasses("x"),
+                    "gap-sm px-sm py-xs text-left text-body",
+                  )}
                 >
                   <StatusDot colorClass={CONV_STATUS_DOT[c.status]} />
-                  <span className="min-w-0 flex-1 truncate">
+                  <Fill as="span" className="truncate">
                     {c.title ?? "Starting…"}
-                  </span>
-                </button>
+                  </Fill>
+                </Line>
                 {convInstanceId !== undefined && !isActive && (
-                  <div className="flex shrink-0 items-center pr-xs opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto">
+                  <Line
+                    className={cn(
+                      "pr-xs opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto",
+                      rigidClass(),
+                    )}
+                  >
                     <PaneInstanceContext.Provider value={convInstanceId}>
                       <SideBySideButton convId={c.id} />
                     </PaneInstanceContext.Provider>
-                  </div>
+                  </Line>
                 )}
-              </li>
+              </Line>
             );
           })}
         </Stack>
@@ -148,7 +171,11 @@ export function AttemptPane() {
     <PaneChrome pane={attemptPane} title={title}>
       <Inset pad="sm">
         {taskAttempts.length === 0 ? (
-          <Text as="p" variant="body" className="text-muted-foreground px-sm py-xs">
+          <Text
+            as="p"
+            variant="body"
+            className="text-muted-foreground px-sm py-xs"
+          >
             No attempts.
           </Text>
         ) : (

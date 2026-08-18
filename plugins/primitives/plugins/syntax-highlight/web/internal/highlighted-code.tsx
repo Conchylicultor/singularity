@@ -24,8 +24,9 @@ export function HighlightedCode({
     : null;
   const { html } = useHighlightedHtml(code, resolved, { dark, cacheKey });
 
+  // `[&>pre]:m-0` resets shiki's injected <pre> default margin — there is no
+  // named margin utility for a reset-to-zero.
   const wrapper =
-    // eslint-disable-next-line spacing/no-adhoc-spacing -- [&>pre]:m-0 resets shiki's injected <pre> default margin; no named margin utility
     "[&>pre]:m-0 [&>pre]:overflow-auto [&>pre]:rounded [&>pre]:bg-muted [&>pre]:p-md [&>pre]:font-mono [&>pre]:text-xs [&>pre]:leading-5";
 
   if (!resolved || html === null) {

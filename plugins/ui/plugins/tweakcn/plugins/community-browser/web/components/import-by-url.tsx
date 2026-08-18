@@ -1,5 +1,6 @@
-import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { Button, cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useState } from "react";
+import { fillClasses } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import {
   useEndpoint,
   useEndpointMutation,
@@ -22,7 +23,9 @@ import {
 function parseThemeId(input: string): string {
   const trimmed = input.trim();
   // Match URLs like https://tweakcn.com/r/themes/<id>.json or .../themes/<id>
-  const urlMatch = trimmed.match(/tweakcn\.com\/r\/themes\/([^/.]+)(?:\.json)?/);
+  const urlMatch = trimmed.match(
+    /tweakcn\.com\/r\/themes\/([^/.]+)(?:\.json)?/,
+  );
   if (urlMatch) return urlMatch[1]!;
   // Strip trailing .json if present
   return trimmed.replace(/\.json$/, "");
@@ -92,73 +95,83 @@ export function ImportByUrl({
       </CollapsibleTrigger>
 
       <CollapsibleContent className="border-t border-border/60 px-md py-md">
-       <Stack gap="md">
-        <Stack direction="row" gap="sm">
-          <input
-            type="text"
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") handleImport();
-            }}
-            placeholder="Theme ID or tweakcn URL..."
-            // eslint-disable-next-line layout/no-adhoc-layout -- flexible text input filling the row beside the rigid Import button
-            className="flex-1 rounded-md border border-border bg-muted/20 px-md py-xs text-body text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none"
-          />
-          <Button
-            variant="ghost"
-            onClick={handleImport}
-            loading={importMutation.isPending}
-            disabled={!input.trim()}
-            className="border border-border"
-          >
-            Import
-          </Button>
-        </Stack>
-
-        {importMutation.isError && (
-          <Text as="p" variant="body" tone="destructive">
-            {importMutation.error.message}
-          </Text>
-        )}
-
-        {visible.length > 0 ? (
-          <Stack gap="sm">
-            {visible.map((theme) => (
-              <div
-                key={theme.id}
-                className="flex items-center justify-between rounded-lg border border-border/60 px-md py-sm"
-              >
-                <Text as="span" variant="label">
-                  {theme.label}
-                </Text>
-                <div className="flex gap-xs">
-                  <Button
-                    variant="ghost"
-                    onClick={() => onApply(theme.tweakcnId, theme.presets)}
-                    className="text-primary hover:bg-primary/10"
-                  >
-                    Apply
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    onClick={() => deleteMutation.mutate({ params: { id: theme.id } })}
-                    loading={deleteMutation.isPending}
-                    className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
-                  >
-                    Delete
-                  </Button>
-                </div>
-              </div>
-            ))}
+        <Stack gap="md">
+          <Stack direction="row" gap="sm">
+            <input
+              type="text"
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") handleImport();
+              }}
+              placeholder="Theme ID or tweakcn URL..."
+              // A raw <input> must itself be the flex cell, so it takes the class
+              // string rather than a <Fill> wrapper.
+              className={cn(
+                fillClasses("x"),
+                "rounded-md border border-border bg-muted/20 px-md py-xs text-body text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none",
+              )}
+            />
+            <Button
+              variant="ghost"
+              onClick={handleImport}
+              loading={importMutation.isPending}
+              disabled={!input.trim()}
+              className="border border-border"
+            >
+              Import
+            </Button>
           </Stack>
-        ) : (
-          <Text as="p" variant="body" tone="muted">
-            Paste a tweakcn theme ID or URL to import any theme — including ones
-            not in the community catalog.
-          </Text>
-        )}
-       </Stack>
+
+          {importMutation.isError && (
+            <Text as="p" variant="body" tone="destructive">
+              {importMutation.error.message}
+            </Text>
+          )}
+
+          {visible.length > 0 ? (
+            <Stack gap="sm">
+              {visible.map((theme) => (
+                <Stack
+                  key={theme.id}
+                  direction="row"
+                  gap="none"
+                  align="center"
+                  justify="between"
+                  className="rounded-lg border border-border/60 px-md py-sm"
+                >
+                  <Text as="span" variant="label">
+                    {theme.label}
+                  </Text>
+                  <Stack direction="row" gap="xs">
+                    <Button
+                      variant="ghost"
+                      onClick={() => onApply(theme.tweakcnId, theme.presets)}
+                      className="text-primary hover:bg-primary/10"
+                    >
+                      Apply
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      onClick={() =>
+                        deleteMutation.mutate({ params: { id: theme.id } })
+                      }
+                      loading={deleteMutation.isPending}
+                      className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                    >
+                      Delete
+                    </Button>
+                  </Stack>
+                </Stack>
+              ))}
+            </Stack>
+          ) : (
+            <Text as="p" variant="body" tone="muted">
+              Paste a tweakcn theme ID or URL to import any theme — including
+              ones not in the community catalog.
+            </Text>
+          )}
+        </Stack>
       </CollapsibleContent>
     </Collapsible>
   );

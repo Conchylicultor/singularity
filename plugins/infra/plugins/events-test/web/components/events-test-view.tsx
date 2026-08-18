@@ -7,6 +7,7 @@ import { useCallback, useEffect, useState } from "react";
 import { MdBolt, MdDelete, MdRefresh, MdSend } from "react-icons/md";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
+import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Surface } from "@plugins/primitives/plugins/css/plugins/surface/web";
@@ -288,7 +289,13 @@ export function EventsTestView() {
   return (
     <Scroll axis="both" className="h-full p-xl">
       <Stack gap="xl" className="mx-auto w-full max-w-3xl">
-        <header className="flex items-start justify-between gap-lg">
+        <Stack
+          as="header"
+          direction="row"
+          gap="lg"
+          align="start"
+          justify="between"
+        >
           <div>
             <Text as="h1" variant="title" className="tracking-tight">
               Events Test
@@ -310,7 +317,7 @@ export function EventsTestView() {
             <MdRefresh className="size-4" />
             Refresh
           </Button>
-        </header>
+        </Stack>
 
         {/* Subscribe + Emit forms */}
         {/* eslint-disable-next-line layout/no-adhoc-layout -- responsive 1→2 column form grid */}
@@ -433,59 +440,59 @@ export function EventsTestView() {
           ) : (
             <div className="divide-y divide-border rounded-md border border-border">
               {triggers.map((t) => (
-                <div
+                <Stack
                   key={t.id}
+                  direction="row"
+                  gap="md"
+                  align="center"
                   className={cn(
-                    "flex items-center gap-md px-md py-sm text-body transition-colors",
+                    "px-md py-sm text-body transition-colors",
                     flashedIds.has(t.id) && "bg-success/10",
                   )}
                 >
-                  <div className="flex min-w-0 flex-1 flex-col gap-2xs">
-                    <div className="flex items-center gap-sm">
-                      <Badge variant="muted" className="font-mono">
-                        {t.userId ?? "(any)"}
-                      </Badge>
-                      <span className="text-muted-foreground">→</span>
-                      <Text as="span" variant="caption" className="font-mono">
-                        {t.jobName}
-                      </Text>
-                      <Text
-                        as="span"
-                        variant="caption"
-                        tone="muted"
-                        className="truncate"
-                      >
-                        {JSON.stringify(t.jobWith)}
-                      </Text>
-                    </div>
-                    <Text
-                      as="div"
-                      variant="caption"
-                      tone="muted"
-                      className="flex items-center gap-sm"
-                    >
-                      <Text as="span" variant="caption" tone="muted">
-                        {t.oneShot ? "one-shot" : "recurring"}
-                      </Text>
-                      <Text as="span" variant="caption" tone="muted">
-                        ·
-                      </Text>
-                      <Text
-                        as="span"
-                        variant="caption"
-                        tone="muted"
-                        className="truncate font-mono"
-                      >
-                        {t.id}
-                      </Text>
-                    </Text>
-                  </div>
+                  <Fill>
+                    <Stack gap="2xs">
+                      <Stack direction="row" gap="sm" align="center">
+                        <Badge variant="muted" className="font-mono">
+                          {t.userId ?? "(any)"}
+                        </Badge>
+                        <span className="text-muted-foreground">→</span>
+                        <Text as="span" variant="caption" className="font-mono">
+                          {t.jobName}
+                        </Text>
+                        <Text
+                          as="span"
+                          variant="caption"
+                          tone="muted"
+                          className="truncate"
+                        >
+                          {JSON.stringify(t.jobWith)}
+                        </Text>
+                      </Stack>
+                      <Stack direction="row" gap="sm" align="center">
+                        <Text as="span" variant="caption" tone="muted">
+                          {t.oneShot ? "one-shot" : "recurring"}
+                        </Text>
+                        <Text as="span" variant="caption" tone="muted">
+                          ·
+                        </Text>
+                        <Text
+                          as="span"
+                          variant="caption"
+                          tone="muted"
+                          className="truncate font-mono"
+                        >
+                          {t.id}
+                        </Text>
+                      </Stack>
+                    </Stack>
+                  </Fill>
                   <IconButton
                     icon={MdDelete}
                     label="Delete trigger"
                     onClick={() => onDeleteTrigger(t.id)}
                   />
-                </div>
+                </Stack>
               ))}
             </div>
           )}
@@ -493,8 +500,8 @@ export function EventsTestView() {
 
         {/* Cleanup by config */}
         <Section title="Delete triggers by job config">
-          <div className="flex items-end gap-sm">
-            <div className="flex-1">
+          <Stack direction="row" gap="sm" align="end">
+            <Fill>
               <FieldRow label="label match">
                 <Input
                   placeholder="exact label to sweep (JSONB @>)"
@@ -502,7 +509,7 @@ export function EventsTestView() {
                   onChange={(e) => setDtLabel(e.target.value)}
                 />
               </FieldRow>
-            </div>
+            </Fill>
             <Button
               variant="outline"
               onClick={onDeleteTargeting}
@@ -511,7 +518,7 @@ export function EventsTestView() {
               <MdDelete className="size-4" />
               Sweep
             </Button>
-          </div>
+          </Stack>
         </Section>
 
         {/* Job log */}
@@ -587,12 +594,12 @@ function Section({
   return (
     <Surface level="raised" as="section" className="p-lg">
       <Stack gap="md">
-        <div className="flex items-center justify-between gap-sm">
+        <Stack direction="row" gap="sm" align="center" justify="between">
           <Text as="h2" variant="label">
             {title}
           </Text>
           {action}
-        </div>
+        </Stack>
         <Stack gap="md">{children}</Stack>
       </Stack>
     </Surface>

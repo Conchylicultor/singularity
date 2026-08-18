@@ -297,8 +297,15 @@ export async function upsertSlowOp(
   snapshot: ContentionSnapshot,
   conn: NodePgDatabase = db,
 ): Promise<void> {
-  const { operationKind, operation, durationMs, thresholdMs, caller, waits, traceId } =
-    input;
+  const {
+    operationKind,
+    operation,
+    durationMs,
+    thresholdMs,
+    caller,
+    waits,
+    traceId,
+  } = input;
   const worktree = process.env.SINGULARITY_WORKTREE ?? "unknown";
 
   // `occurredAt` is the trip instant, which under duress-shed replay is
@@ -326,11 +333,7 @@ export async function upsertSlowOp(
         lastSeenAt: occurredAt,
       })
       .onConflictDoUpdate({
-        target: [
-          _slowOps.operationKind,
-          _slowOps.operation,
-          _slowOps.worktree,
-        ],
+        target: [_slowOps.operationKind, _slowOps.operation, _slowOps.worktree],
         set: {
           count: sql`${_slowOps.count} + 1`,
           totalMs: sql`${_slowOps.totalMs} + ${durationMs}`,
@@ -343,7 +346,6 @@ export async function upsertSlowOp(
       })
       .returning();
 
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
     if (!row) throw new Error("recordSlowOp: upsert returned no row");
 
     // A second read-modify-write within the same row-locked transaction so

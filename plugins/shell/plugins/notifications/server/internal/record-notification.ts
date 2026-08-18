@@ -53,8 +53,7 @@ export async function recordNotification(
   input: RecordNotificationInput,
 ): Promise<string> {
   const id =
-    input.id ??
-    `notif-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    input.id ?? `notif-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
   const dedupKey = input.dedupeKey ?? null;
   const now = new Date();
   // Re-surface gate: a dedup hit re-alerts only once its row has been quiet (not
@@ -105,7 +104,6 @@ export async function recordNotification(
     .returning({ id: _notifications.id });
   // onConflictDoUpdate returns the row on both insert and update, so this is
   // populated whether the write was a fresh insert or a dedup hit.
-  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
   if (inserted[0]) {
     return inserted[0].id;
   }

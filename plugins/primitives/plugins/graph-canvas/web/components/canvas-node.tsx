@@ -6,6 +6,9 @@ import {
   cn,
   SURFACE_LEVELS,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
+import { Rigid } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 
 export const CANVAS_NODE_TYPE = "graphCanvas";
 
@@ -58,7 +61,10 @@ export function CanvasNode({ data }: NodeProps<CanvasFlowNode>) {
     : undefined;
 
   return (
-    <div
+    <Stack
+      direction="row"
+      align="center"
+      gap="sm"
       title={title ?? label}
       className={cn(
         // The raised-surface chrome (rounded + border + bg-card + shadow) routed
@@ -68,7 +74,7 @@ export function CanvasNode({ data }: NodeProps<CanvasFlowNode>) {
         // an interactive xyflow node. tintClass/ringClass intentionally trail so a
         // node's accent overrides the base border/bg.
         SURFACE_LEVELS.raised,
-        "text-foreground relative flex h-9 items-center gap-sm px-sm text-caption transition-colors",
+        "text-foreground relative h-9 px-sm text-caption transition-colors",
         "hover:border-foreground/40 focus:outline-none cursor-pointer",
         tintClass,
         ringClass,
@@ -84,11 +90,11 @@ export function CanvasNode({ data }: NodeProps<CanvasFlowNode>) {
         isConnectable={connectable ?? false}
         style={handleStyle}
       />
-      {leading != null && <span className="shrink-0">{leading}</span>}
-      <span className={cn("min-w-0 flex-1 truncate", labelClassName)}>
+      {leading != null && <Rigid as="span">{leading}</Rigid>}
+      <Fill as="span" className={cn("truncate", labelClassName)}>
         {label}
-      </span>
-      {badge != null && <span className="shrink-0">{badge}</span>}
+      </Fill>
+      {badge != null && <Rigid as="span">{badge}</Rigid>}
       <Handle
         type="source"
         position={Position.Right}
@@ -110,6 +116,6 @@ export function CanvasNode({ data }: NodeProps<CanvasFlowNode>) {
           {actions}
         </div>
       )}
-    </div>
+    </Stack>
   );
 }

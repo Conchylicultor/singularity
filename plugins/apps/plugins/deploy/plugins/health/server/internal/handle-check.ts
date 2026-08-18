@@ -15,7 +15,6 @@ export const handleCheckSsh = implement(checkServerSsh, async ({ params }) => {
     .select()
     .from(_deployServers)
     .where(eq(_deployServers.id, params.id));
-  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
   if (!row) throw new HttpError(404, "Not found");
 
   // The private key is asked of `servers` by name; the `deploy-ssh` secret
@@ -74,7 +73,9 @@ export const handleCheckSsh = implement(checkServerSsh, async ({ params }) => {
     platform: probedPlatform?.ok ? probedPlatform.tag : null,
     // A failed check never drops the pin: only a successful learn adds one, and
     // only the explicit forget-host-key action removes one.
-    hostKeyLine: result.ok ? (result.learnedHostKey ?? pinnedHostKey) : pinnedHostKey,
+    hostKeyLine: result.ok
+      ? (result.learnedHostKey ?? pinnedHostKey)
+      : pinnedHostKey,
   });
   // The upsert is what fires the DB change-feed and refreshes the live
   // resource — no explicit notify, same as the keypair handler.

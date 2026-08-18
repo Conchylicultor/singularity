@@ -17,11 +17,31 @@ alignment (`items-*`, `justify-*`, `place-*`, `self-*`), positioning
 **not** touch positioning *context* (`relative`/`static`), sizing
 (`w-*`/`h-*`/`size-*`/`min-w-*` other than the `min-w-0` footgun), or non-flow
 display (`block`/`hidden`/`inline`); spacing and `z-*` are owned by their own
-rules. Compose layout through the primitives instead —
-`<Stack direction="row">`/`<Cluster>`/`<Row>` for rows,
-`<Grid>`/`<Center>`/`<Overlay>` for the other modes, `<Stack>` / `<Inset>` for
-1-D flow, `<Text>` inside a line container for the `min-w-0` truncation leaf (it
-ellipsizes via the ambient single-line context).
+rules. Compose layout through the primitives instead — one per mechanic:
+
+| Mechanic | Reach for |
+| --- | --- |
+| rows / flow | `<Line>` (bare single-line strip) · `<Row>` (interactive row) · `<Stack direction="row">` · `<Cluster>` (wrapping chips) · `<Inline>` (chips mid-sentence) |
+| columns / panes | `<Column header body footer>` — rigid \| flexible \| rigid, scrolling body |
+| space-sharing | `<Fill>` — THE grow+shrink cell (`min-w-0 flex-1`) · `<Rigid>` — THE leaf that never shrinks (`shrink-0`) · `<Text>` in a line container — THE truncation leaf |
+| grids / centring | `<Grid minCellWidth>` · `<Center axis>` |
+| overflow | `<Scroll>` (scrolls) · `<Clip>` (clips, no scroll) |
+| positioning | `<Overlay>` (in-flow full-bleed layers, as props) · `<Layer>` (ONE standalone `absolute inset-0` child) · `<Pin to>` (point-anchored) · `<Sticky edge>` · `ViewportOverlay` (true `fixed inset-0`) |
+| padding / gap | `<Inset pad>` · `<Stack gap>` (`spacing`) |
+
+**When you cannot wrap the element** — a third-party `className`-only prop, a
+Lexical `<ContentEditable>`, a raw `<img>`/`<svg>`/`<button>` leaf that must
+itself be the box — take the class string instead of the component:
+`fillClasses(axis)`, `rigidClass()`, `layerClasses({layer,decorative})`,
+`insetClass(step)`. The question is *do you own the element?* Own it ⇒ the
+component; don't ⇒ the helper. Neither supersedes the other, and a raw `<div>` +
+`eslint-disable` is not the third answer.
+
+The rule's error message carries this same list (hardcoded — lint rules
+dual-load under jiti, which cannot resolve `@plugins/*`). The
+`css:message-names-primitives` check (`css/check/`) derives the layout-mechanic
+set from the `css/plugins/*` directory listing and fails if one is missing from
+the message, so a new primitive cannot ship unadvertised.
 
 The `ignores` allowlist in `lint/index.ts` keeps the **permanent** globs for the
 layout primitives themselves (they own the raw mechanics), plus a **reverted**
@@ -50,6 +70,7 @@ genuinely-fixed one-off escapes per-site via
   - **`grid`** — Responsive/uniform grid layout primitive: <Grid minCellWidth> lays out a wrapping, equal-width card grid via a closed prop surface — not a raw grid-template passthrough.
   - **`icon-auto`** — icon-auto slot-icon sizing convention: the icon-auto @utility (em-based, in app.css) plus the no-adhoc-slot-icon-size lint rule.
   - **`inline`** — Inline-level flow layout primitive: <Inline gap> lays out a baseline-aligned inline-flex row for chips/icons that sit inline in a text run. The inline-level sibling of Stack, delegating to Stack.
+  - **`layer`** — Full-bleed layer layout primitive: <Layer> / layerClasses() is a standalone absolute inset-0 child of a positioned parent. The element-shaped sibling of Overlay's behind/above props.
   - **`layout-harness`** — Live Layout Lab gallery: renders the layout-primitive fixture catalog across its width sweep, opened from the Debug sidebar.
   - **`line`** — Single-line container primitive: <Line> pairs the structural single-line invariant (region-line) with the ambient SingleLineProvider so children never wrap and <Text> leaves truncate. The bare line-container contract composed by Row/Bar and bespoke strips.
   - **`link-chip`** — Inline, clickable navigational chip — a clickable Badge with link coloring (bg-muted + text-primary, hover underline), baseline-aligned for inline-in-text use, with optional leading icon and monospace label.
@@ -59,6 +80,7 @@ genuinely-fixed one-off escapes per-site via
   - **`radio-group`** — Native radio-group control: <RadioGroup options value onChange> mints its own HTML `name` per mount (useId) so two groups on one page are structurally two groups, plus the no-adhoc-radio lint rule keeping raw <input type="radio"> out of feature code.
   - **`radius`** — Corner-radius standard: the token-driven rounded-* scale and its enforcing lint rule (no-adhoc-radius).
   - **`rail`** — Web half of the rail contract: useRailGuard, the dev-only structural guard a region owner attaches to its own box. It measures every child's content edge against the rail the region published and names whoever applied an inset on top of it — the double-inset that looks reasonable at every call site and is only visible as content indented twice.
+  - **`rigid`** — Rigid-leaf layout primitive: <Rigid> / rigidClass() is the flex child that never shrinks (shrink-0). The missing half of <Fill>, kept a sibling the way <Clip> is to <Scroll>.
   - **`row`** — Generic interactive row primitive (list, menu, nav, tree, and collapsible section-header rows) with a sanctioned home so ad-hoc rounded+padded interactive markup routes through one primitive.
   - **`scroll`** — Scroll-container layout primitive: <Scroll axis fill> owns overflow AND the flex-child fill policy (min-h-0 flex-1) as one role.
   - **`selection-indicator`** — Presentational checkbox / radio indicator boxes (border + fill + glyph) with the correct preset-independent fixed shape baked in (rounded-checkbox for the checkbox, rounded-full for the radio). The sanctioned home for styled selection indicators so the fixed shape lives in one place and consumers never write radius classes.

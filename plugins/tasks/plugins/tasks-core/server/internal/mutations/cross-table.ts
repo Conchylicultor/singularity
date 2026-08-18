@@ -96,7 +96,6 @@ export async function adoptOrphanConversation(input: AdoptOrphanInput) {
     .where(eq(_attempts.id, attemptId))
     .limit(1);
 
-  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
   if (existing) {
     const [row] = await db
       .insert(_conversations)
@@ -146,7 +145,6 @@ export async function adoptOrphanConversation(input: AdoptOrphanInput) {
     .from(conversations)
     .where(eq(conversations.id, input.id))
     .limit(1);
-  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
   if (!row) return null;
   return { conversation: row, createdTaskId };
 }

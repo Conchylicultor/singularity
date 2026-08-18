@@ -1,7 +1,14 @@
 import { useMemo } from "react";
-import { useResource, ResourceView } from "@plugins/primitives/plugins/live-state/web";
+import {
+  useResource,
+  ResourceView,
+} from "@plugins/primitives/plugins/live-state/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
-import { FilterChip, FilterGroup, useChipFilter } from "@plugins/primitives/plugins/filter-chips/web";
+import {
+  FilterChip,
+  FilterGroup,
+  useChipFilter,
+} from "@plugins/primitives/plugins/filter-chips/web";
 import { claudeCliCallsResource } from "@plugins/infra/plugins/claude-cli/core";
 import type { ClaudeCliCall } from "@plugins/infra/plugins/claude-cli/core";
 import {
@@ -13,6 +20,7 @@ import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { CallRow } from "./call-row";
 
 type ModelFilter = "all" | ModelTier;
@@ -53,9 +61,18 @@ function CallsViewInner({ calls }: { calls: ClaudeCliCall[] }) {
 
   return (
     <Stack gap="none" className="h-full">
-      <div className="flex flex-wrap items-center gap-sm border-b px-md py-sm">
+      <Stack
+        direction="row"
+        wrap
+        gap="sm"
+        align="center"
+        className="border-b px-md py-sm"
+      >
         <FilterGroup label="Model">
-          <FilterChip active={modelChip.value === "all"} onClick={() => modelChip.setValue("all")}>
+          <FilterChip
+            active={modelChip.value === "all"}
+            onClick={() => modelChip.setValue("all")}
+          >
             all
           </FilterChip>
           {MODEL_TIERS.map((tier) => (
@@ -70,7 +87,10 @@ function CallsViewInner({ calls }: { calls: ClaudeCliCall[] }) {
         </FilterGroup>
         {sources.length > 0 && (
           <FilterGroup label="Source">
-            <FilterChip active={sourceChip.value === "all"} onClick={() => sourceChip.setValue("all")}>
+            <FilterChip
+              active={sourceChip.value === "all"}
+              onClick={() => sourceChip.setValue("all")}
+            >
               all
             </FilterChip>
             {sources.map((s) => (
@@ -84,12 +104,17 @@ function CallsViewInner({ calls }: { calls: ClaudeCliCall[] }) {
             ))}
           </FilterGroup>
         )}
-        <div className="flex-1" />
-        <Text as="div" variant="caption" className="text-muted-foreground tabular-nums">
+        {/* An empty Fill absorbs the slack, so the count sits flush right. */}
+        <Fill />
+        <Text
+          as="div"
+          variant="caption"
+          className="text-muted-foreground tabular-nums"
+        >
           {visible.length}
           {visible.length !== calls.length ? ` / ${calls.length}` : ""} calls
         </Text>
-      </div>
+      </Stack>
       <Scroll axis="both" fill>
         {visible.length === 0 ? (
           <Center className="h-full">

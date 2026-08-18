@@ -92,6 +92,7 @@ return is `useMemo`'d because it is now a context value.
     - `primitives/collapsible.CollapsibleChevron`
     - `primitives/collapsible.ExpandAllButton`
     - `primitives/css/center.Center`
+    - `primitives/css/layer.layerClasses`
     - `primitives/css/pin.Pin`
     - `primitives/css/spacing.Stack`
     - `primitives/css/sticky.Sticky`

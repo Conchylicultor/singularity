@@ -99,7 +99,9 @@ conditional hook.
   - Uses:
     - `primitives/css/badge.Badge`
     - `primitives/css/center.Center`
+    - `primitives/css/clip.clipClasses`
     - `primitives/css/pin.Pin`
+    - `primitives/css/rigid.rigidClass`
     - `primitives/css/row.Row`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`

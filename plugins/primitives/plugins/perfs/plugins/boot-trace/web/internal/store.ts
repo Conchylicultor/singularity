@@ -75,20 +75,42 @@ export function recordBootSpan(span: BootSpan): void {
  * its measured duration. The single clock means `startMs` is simply
  * `performance.now()` at the open instant.
  */
-export function startBootSpan(id: string, phase: BootPhase, label: string): () => void {
+export function startBootSpan(
+  id: string,
+  phase: BootPhase,
+  label: string,
+): () => void {
   const startMs = performance.now();
   return () => {
-    recordBootSpan({ id, phase, label, startMs, durationMs: performance.now() - startMs });
+    recordBootSpan({
+      id,
+      phase,
+      label,
+      startMs,
+      durationMs: performance.now() - startMs,
+    });
   };
 }
 
 /** Record a 0-duration marker span at the current instant. */
-export function markBootInstant(id: string, phase: BootPhase, label: string): void {
-  recordBootSpan({ id, phase, label, startMs: performance.now(), durationMs: 0 });
+export function markBootInstant(
+  id: string,
+  phase: BootPhase,
+  label: string,
+): void {
+  recordBootSpan({
+    id,
+    phase,
+    label,
+    startMs: performance.now(),
+    durationMs: 0,
+  });
 }
 
 function readNavTiming(): NavTiming | null {
-  const [entry] = performance.getEntriesByType("navigation") as PerformanceNavigationTiming[];
+  const [entry] = performance.getEntriesByType(
+    "navigation",
+  ) as PerformanceNavigationTiming[];
   if (!entry) return null;
   // All fields are already relative to `timeOrigin`, so use them directly.
   return {
@@ -105,9 +127,13 @@ function readNavTiming(): NavTiming | null {
   };
 }
 
-function readPaintTiming(): { firstPaintMs: number | null; firstContentfulPaintMs: number | null } {
+function readPaintTiming(): {
+  firstPaintMs: number | null;
+  firstContentfulPaintMs: number | null;
+} {
   const entries = performance.getEntriesByType("paint");
-  const find = (name: string) => entries.find((e) => e.name === name)?.startTime ?? null;
+  const find = (name: string) =>
+    entries.find((e) => e.name === name)?.startTime ?? null;
   return {
     firstPaintMs: find("first-paint"),
     firstContentfulPaintMs: find("first-contentful-paint"),
@@ -124,7 +150,9 @@ function readAssets(): AssetTiming[] {
   // extension instead.
   const isModuleChunk = (e: PerformanceResourceTiming) =>
     e.initiatorType === "other" && /\.m?js(\?|$)/.test(e.name);
-  return (performance.getEntriesByType("resource") as PerformanceResourceTiming[])
+  return (
+    performance.getEntriesByType("resource") as PerformanceResourceTiming[]
+  )
     .filter(
       (e) =>
         e.initiatorType === "script" ||
@@ -150,7 +178,10 @@ function readAssets(): AssetTiming[] {
  * Returns 0 when neither is known yet (caller should then not clip).
  */
 export function bootWindowEnd(trace: BootTrace): number {
-  return Math.max(trace.paint.firstContentfulPaintMs ?? 0, trace.firstCommitMs ?? 0);
+  return Math.max(
+    trace.paint.firstContentfulPaintMs ?? 0,
+    trace.firstCommitMs ?? 0,
+  );
 }
 
 /** Assemble the current trace. Navigation/paint/assets are read lazily at call time. */
@@ -177,7 +208,11 @@ export function useBootTrace(): BootTrace {
   // `v` is the change token (getBootTrace() returns a fresh object each call, so
   // it can't be the snapshot). Re-assemble the trace only when the version
   // advances — getBootTrace reads the latest mutable store + lazily-read timing.
-  const v = useSyncExternalStore(subscribeBootTrace, getBootTraceVersion, () => 0);
+  const v = useSyncExternalStore(
+    subscribeBootTrace,
+    getBootTraceVersion,
+    () => 0,
+  );
   return useMemo(() => {
     void v; // version is the cache key: re-read the mutable store on each advance
     return getBootTrace();
@@ -194,7 +229,9 @@ export function useBootTrace(): BootTrace {
   try {
     const hook = (
       window as unknown as {
-        __REACT_DEVTOOLS_GLOBAL_HOOK__?: { __commitSubscribers?: Set<(root: unknown) => void> };
+        __REACT_DEVTOOLS_GLOBAL_HOOK__?: {
+          __commitSubscribers?: Set<(root: unknown) => void>;
+        };
       }
     ).__REACT_DEVTOOLS_GLOBAL_HOOK__;
     const subscribers = hook?.__commitSubscribers;
@@ -206,7 +243,7 @@ export function useBootTrace(): BootTrace {
       notify();
     };
     subscribers.add(onCommit);
-    // eslint-disable-next-line promise-safety/no-bare-catch -- boot-path instrumentation must never throw and brick boot; the commit bridge is best-effort, so any failure to install the one-shot subscriber is safe to drop (the trace simply lacks firstCommitMs).
+    // boot-path instrumentation must never throw and brick boot; the commit bridge is best-effort, so any failure to install the one-shot subscriber is safe to drop (the trace simply lacks firstCommitMs).
   } catch (err) {
     void err;
   }
@@ -222,7 +259,7 @@ export function useBootTrace(): BootTrace {
   try {
     const obs = new PerformanceObserver(() => notify());
     obs.observe({ type: "paint", buffered: true });
-    // eslint-disable-next-line promise-safety/no-bare-catch -- boot-path instrumentation must never throw; PerformanceObserver/paint may be unsupported, in which case FCP simply stays null until a manual Refresh.
+    // boot-path instrumentation must never throw; PerformanceObserver/paint may be unsupported, in which case FCP simply stays null until a manual Refresh.
   } catch (err) {
     void err;
   }
@@ -238,12 +275,16 @@ export function useBootTrace(): BootTrace {
   try {
     const obs = new PerformanceObserver((list) => {
       for (const e of list.getEntries()) {
-        longTasks.push({ startMs: e.startTime, durationMs: e.duration, name: e.name });
+        longTasks.push({
+          startMs: e.startTime,
+          durationMs: e.duration,
+          name: e.name,
+        });
       }
       notify();
     });
     obs.observe({ type: "longtask", buffered: true });
-    // eslint-disable-next-line promise-safety/no-bare-catch -- boot-path instrumentation must never throw; the Long Tasks API may be unsupported, in which case the main-thread phase simply stays empty.
+    // boot-path instrumentation must never throw; the Long Tasks API may be unsupported, in which case the main-thread phase simply stays empty.
   } catch (err) {
     void err;
   }

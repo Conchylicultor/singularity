@@ -51,6 +51,7 @@ import { ViewportOverlay } from "@plugins/primitives/plugins/css/plugins/viewpor
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Clip } from "@plugins/primitives/plugins/css/plugins/clip/web";
 import { Cluster } from "@plugins/primitives/plugins/css/plugins/cluster/web";
+import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { Sticky } from "@plugins/primitives/plugins/css/plugins/sticky/web";
@@ -183,7 +184,12 @@ function JobsTabInner({
 
   return (
     <Stack gap="none" className="h-full">
-      <div className="flex items-center gap-xs border-b px-md py-sm">
+      <Stack
+        direction="row"
+        gap="xs"
+        align="center"
+        className="border-b px-md py-sm"
+      >
         <FilterChip
           active={chipFilter.value === "all"}
           onClick={() => chipFilter.setValue("all")}
@@ -214,11 +220,11 @@ function JobsTabInner({
         >
           Dead <span className="opacity-60">{counts.dead}</span>
         </FilterChip>
-        <div className="flex-1" />
+        <Fill />
         <Button variant="ghost" onClick={() => refetch()}>
           <MdRefresh className="size-4" /> Refresh
         </Button>
-      </div>
+      </Stack>
       <Scroll axis="both" fill>
         {visible.length === 0 ? (
           <Empty>No jobs.</Empty>
@@ -316,12 +322,18 @@ function Drawer({
           onClick={(e) => e.stopPropagation()}
         >
           <Stack gap="none" className="h-full">
-            <div className="flex items-center justify-between border-b px-lg py-md">
+            <Stack
+              direction="row"
+              gap="sm"
+              align="center"
+              justify="between"
+              className="border-b px-lg py-md"
+            >
               {header}
               <Button variant="ghost" onClick={onClose}>
                 Close
               </Button>
-            </div>
+            </Stack>
             <Scroll fill className="p-lg">
               {/* eslint-disable-next-line spacing/no-adhoc-spacing -- vertical rhythm between Field rows on a scrollable Text drawer body; not a plain flex container */}
               <Text as="div" variant="body" className="space-y-4">
@@ -432,16 +444,21 @@ function DeadTabInner({
   const [selected, setSelected] = useState<DeadJobRow | null>(null);
   return (
     <Stack gap="none" className="h-full">
-      <div className="flex items-center border-b px-md py-sm">
+      <Stack
+        direction="row"
+        gap="none"
+        align="center"
+        className="border-b px-md py-sm"
+      >
         <Text as="div" variant="caption" className="text-muted-foreground">
           Permanently-failed jobs archived from the queue (bounded; GC'd
           hourly).
         </Text>
-        <div className="flex-1" />
+        <Fill />
         <Button variant="ghost" onClick={() => refetch()}>
           <MdRefresh className="size-4" /> Refresh
         </Button>
-      </div>
+      </Stack>
       <Scroll axis="both" fill>
         {data.rows.length === 0 ? (
           <Empty>
@@ -568,15 +585,20 @@ function EventsTab() {
 
   return (
     <Stack gap="none" className="h-full">
-      <div className="flex items-center border-b px-md py-sm">
+      <Stack
+        direction="row"
+        gap="none"
+        align="center"
+        className="border-b px-md py-sm"
+      >
         <Text as="div" variant="caption" className="text-muted-foreground">
           Capped ring-buffer of last ~1000 emit() calls.
         </Text>
-        <div className="flex-1" />
+        <Fill />
         <Button variant="ghost" onClick={() => refetch()}>
           <MdRefresh className="size-4" /> Refresh
         </Button>
-      </div>
+      </Stack>
       <Scroll axis="both" fill>
         {rows.length === 0 ? (
           <Empty>
@@ -742,7 +764,12 @@ function TriggersTabInner({
 
   return (
     <Stack gap="none" className="h-full">
-      <div className="flex items-center gap-xs border-b px-md py-sm">
+      <Stack
+        direction="row"
+        gap="xs"
+        align="center"
+        className="border-b px-md py-sm"
+      >
         <Text as="div" variant="caption" className="text-muted-foreground">
           Active subscriptions across all registered events.
         </Text>
@@ -755,11 +782,11 @@ function TriggersTabInner({
             <span className="opacity-60">{danglingCount}</span>
           </FilterChip>
         )}
-        <div className="flex-1" />
+        <Fill />
         <Button variant="ghost" onClick={() => refetch()}>
           <MdRefresh className="size-4" /> Refresh
         </Button>
-      </div>
+      </Stack>
       <Scroll axis="both" fill>
         {grouped.length === 0 ? (
           <Empty>No active triggers.</Empty>

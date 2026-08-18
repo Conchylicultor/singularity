@@ -18,6 +18,7 @@
     - `infra/endpoints.fetchEndpoint`
     - `infra/endpoints.getEndpointErrorMessage`
     - `primitives/css/badge.Badge`
+    - `primitives/css/fill.Fill`
     - `primitives/css/ui-kit.Button`
     - `primitives/css/ui-kit.DropdownMenu`
     - `primitives/css/ui-kit.DropdownMenuItem`

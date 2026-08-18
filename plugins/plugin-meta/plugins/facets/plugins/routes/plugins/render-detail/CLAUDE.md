@@ -19,7 +19,10 @@ Reads `node.facets["routes"]` directly.
     - `plugin-meta/plugin-view.PluginViewSlots`
     - `plugin-meta/plugin-view.SectionCount`
     - `primitives/css/cluster.Cluster`
+    - `primitives/css/fill.Fill`
     - `primitives/css/inline.Inline`
+    - `primitives/css/line.Line`
+    - `primitives/css/rigid.rigidClass`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.cn`

@@ -6,22 +6,35 @@ import {
 import type { PluginReviewProps } from "@plugins/review/plugins/plugin-changes/core";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
+import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
+import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 
-function DiffSection({ label, diff }: { label: string; diff: FacetDiff["diff"] }) {
+function DiffSection({
+  label,
+  diff,
+}: {
+  label: string;
+  diff: FacetDiff["diff"];
+}) {
   return (
     <Stack gap="2xs">
-      <Text as="span" variant="caption" className="font-medium text-muted-foreground uppercase tracking-wider">
+      <Text
+        as="span"
+        variant="caption"
+        className="font-medium text-muted-foreground uppercase tracking-wider"
+      >
         {label}
       </Text>
       {diff.added.map((item) => (
-        <Text as="span" variant="caption" key={item} className="flex items-center gap-xs">
-          <MdAdd className="size-3 text-success shrink-0" />
+        <Text as={Line} variant="caption" key={item} className="gap-xs">
+          <MdAdd className={cn("size-3 text-success", rigidClass())} />
           <code className="text-success">{item}</code>
         </Text>
       ))}
       {diff.removed.map((item) => (
-        <Text as="span" variant="caption" key={item} className="flex items-center gap-xs">
-          <MdRemove className="size-3 text-destructive shrink-0" />
+        <Text as={Line} variant="caption" key={item} className="gap-xs">
+          <MdRemove className={cn("size-3 text-destructive", rigidClass())} />
           <code className="text-destructive">{item}</code>
         </Text>
       ))}

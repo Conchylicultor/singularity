@@ -1,14 +1,26 @@
-import { Button, DropdownMenu, DropdownMenuItem, DropdownMenuTrigger } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import {
+  Button,
+  DropdownMenu,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { ConfigMenuContent } from "@plugins/config_v2/plugins/config-link/web";
 import { useState } from "react";
 import { MdPlaylistPlay } from "react-icons/md";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
+import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import type { Conversation as ConversationRecord } from "@plugins/tasks/plugins/tasks-core/core";
 import { useConfig } from "@plugins/config_v2/web";
 import { toast } from "@plugins/shell/plugins/notifications/web";
-import { fetchEndpoint, getEndpointErrorMessage } from "@plugins/infra/plugins/endpoints/web";
+import {
+  fetchEndpoint,
+  getEndpointErrorMessage,
+} from "@plugins/infra/plugins/endpoints/web";
 import { createConversation } from "@plugins/conversations/core";
-import { MODEL_REGISTRY, normalizeModel } from "@plugins/conversations/plugins/model-provider/core";
+import {
+  MODEL_REGISTRY,
+  normalizeModel,
+} from "@plugins/conversations/plugins/model-provider/core";
 import { familyClass } from "@plugins/conversations/plugins/model-provider/web";
 import { launchPromptsConfig } from "../../shared/config";
 
@@ -26,17 +38,25 @@ export function LaunchPromptsButton({
     if (launching) return;
     setLaunching(true);
     try {
-      await fetchEndpoint(createConversation, {}, {
-        body: {
-          // item.model is a stored config value (enum-constrained at authoring
-          // time but typed as string) — normalize on read to a concrete
-          // ConversationModel before it enters the strict createConversation body.
-          model: normalizeModel(item.model),
-          prompt: item.prompt,
-          attemptId: conversation.attemptId,
+      await fetchEndpoint(
+        createConversation,
+        {},
+        {
+          body: {
+            // item.model is a stored config value (enum-constrained at authoring
+            // time but typed as string) — normalize on read to a concrete
+            // ConversationModel before it enters the strict createConversation body.
+            model: normalizeModel(item.model),
+            prompt: item.prompt,
+            attemptId: conversation.attemptId,
+          },
         },
+      );
+      toast({
+        type: "conversation",
+        title: "Conversation launched",
+        description: `Launched: ${item.title}`,
       });
-      toast({ type: "conversation", title: "Conversation launched", description: `Launched: ${item.title}` });
     } catch (err) {
       toast({
         type: "conversation",
@@ -53,20 +73,30 @@ export function LaunchPromptsButton({
     <DropdownMenu>
       <DropdownMenuTrigger
         render={
-          <Button variant="outline" loading={launching} aria-label="Launch prompts" />
+          <Button
+            variant="outline"
+            loading={launching}
+            aria-label="Launch prompts"
+          />
         }
       >
         <MdPlaylistPlay className="size-3" />
         Launch
       </DropdownMenuTrigger>
-      <ConfigMenuContent descriptor={launchPromptsConfig} label="Launch prompts" align="start">
+      <ConfigMenuContent
+        descriptor={launchPromptsConfig}
+        label="Launch prompts"
+        align="start"
+      >
         {prompts.map((item) => (
           <DropdownMenuItem
             key={item.id}
             onClick={() => void launch(item)}
-            className="flex items-center justify-between gap-xl"
+            className="gap-xl"
           >
-            <span>{item.title}</span>
+            {/* The title is the row's one elastic cell, so the model badge sits
+                flush-right without a justify-between on the menu item chrome. */}
+            <Fill as="span">{item.title}</Fill>
             {(() => {
               const meta = MODEL_REGISTRY[normalizeModel(item.model)];
               return (

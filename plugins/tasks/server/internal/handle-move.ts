@@ -16,7 +16,10 @@ export const handleMove = implement(moveTask, async ({ params, body }) => {
   if (body.targetId === params.id) {
     throw new HttpError(400, "Cannot position a task relative to itself");
   }
-  if (body.folderId !== null && (await isDescendant(params.id, body.folderId))) {
+  if (
+    body.folderId !== null &&
+    (await isDescendant(params.id, body.folderId))
+  ) {
     throw new HttpError(400, "Cannot file a task into its own descendant");
   }
 
@@ -30,7 +33,6 @@ export const handleMove = implement(moveTask, async ({ params, body }) => {
       .from(_tasks)
       .where(eq(_tasks.id, params.id))
       .limit(1);
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
     if (!before) throw new HttpError(404, "Not found");
 
     // The COMPLETE sibling set of the destination folder — the whole point of
@@ -44,7 +46,10 @@ export const handleMove = implement(moveTask, async ({ params, body }) => {
           ? isNull(_tasks.folderId)
           : eq(_tasks.folderId, body.folderId),
       );
-    if (body.targetId !== null && !siblings.some((s) => s.id === body.targetId)) {
+    if (
+      body.targetId !== null &&
+      !siblings.some((s) => s.id === body.targetId)
+    ) {
       throw new HttpError(
         400,
         `Target ${body.targetId} is not filed under the destination folder`,

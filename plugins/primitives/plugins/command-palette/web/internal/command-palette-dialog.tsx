@@ -10,6 +10,12 @@ import { useRevealOnActive } from "@plugins/primitives/plugins/scroll-reveal/web
 import { Kbd } from "@plugins/primitives/plugins/tooltip/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
+import {
+  Fill,
+  fillClasses,
+} from "@plugins/primitives/plugins/css/plugins/fill/web";
+import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 import type { CommandPaletteItem } from "../slots";
 import { fuzzyMatch, type FuzzyMatch } from "./fuzzy";
 
@@ -161,8 +167,10 @@ function CommandPaletteBody({
               span the whole panel while their contents land back on the panel's
               rail. Both are direct children of the panel, which is what makes a
               bleed free (see the caveat in `dialog.tsx`). */}
-      <div className="flex items-center gap-sm border-b rail-bleed py-sm">
-        <MdSearch className="size-4 shrink-0 text-muted-foreground" />
+      <Line className="gap-sm border-b rail-bleed py-sm">
+        <MdSearch
+          className={cn("size-4 text-muted-foreground", rigidClass())}
+        />
         <input
           autoFocus
           value={query}
@@ -171,10 +179,13 @@ function CommandPaletteBody({
             setActiveIdx(0);
           }}
           onKeyDown={handleKeyDown}
-          className="flex-1 bg-transparent text-body outline-none placeholder:text-muted-foreground"
+          className={cn(
+            fillClasses("x"),
+            "bg-transparent text-body outline-none placeholder:text-muted-foreground",
+          )}
           placeholder="Search commands..."
         />
-      </div>
+      </Line>
 
       <ScrollArea className="max-h-80">
         {/* Block rhythm only: the list opens NO region of its own, so its
@@ -280,31 +291,35 @@ function CommandRow({
   const revealRef = useRevealOnActive(isActive);
   const Icon = item.icon;
   return (
-    <div
+    <Line
       ref={revealRef}
       role="option"
       aria-selected={isActive}
       className={cn(
         // `px-sm` is the row's OWN pad, inside its own fill — not a second copy
         // of the panel's rail, which the list above already inherits.
-        "flex cursor-pointer items-center gap-sm rounded-md px-sm py-xs text-body",
+        "cursor-pointer gap-sm rounded-md px-sm py-xs text-body",
         isActive && "bg-accent text-accent-foreground",
       )}
       onMouseEnter={onMouseEnter}
       onClick={onClick}
     >
-      {Icon && <Icon className="size-4 shrink-0 text-muted-foreground" />}
-      <span className="flex-1 truncate text-muted-foreground">
-        <HighlightedLabel
-          label={item.label}
-          ranges={item._match?.ranges ?? []}
-        />
-      </span>
+      {Icon && (
+        <Icon className={cn("size-4 text-muted-foreground", rigidClass())} />
+      )}
+      <Fill as="span">
+        <Text tone="muted">
+          <HighlightedLabel
+            label={item.label}
+            ranges={item._match?.ranges ?? []}
+          />
+        </Text>
+      </Fill>
       {item.shortcut && (
         <Kbd className="border-muted-foreground/30 bg-muted-foreground/10 text-muted-foreground">
           {item.shortcut}
         </Kbd>
       )}
-    </div>
+    </Line>
   );
 }

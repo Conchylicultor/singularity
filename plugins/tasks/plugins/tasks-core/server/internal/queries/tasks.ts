@@ -24,7 +24,6 @@ export async function getTask(id: string): Promise<Task | null> {
     .from(tasks)
     .where(eq(tasks.id, id))
     .limit(1)) as unknown as Task[];
-  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
   return row ?? null;
 }
 

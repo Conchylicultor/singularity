@@ -93,10 +93,7 @@ function DiffWrap({
   children: ReactNode;
 }) {
   if (!kind) return <>{children}</>;
-  return (
-    // eslint-disable-next-line radius/no-adhoc-radius -- rounded-sm is the token-driven small radius for the diff rail wrapper
-    <div className={cn("rounded-sm", DIFF_CLASS[kind])}>{children}</div>
-  );
+  return <div className={cn("rounded-sm", DIFF_CLASS[kind])}>{children}</div>;
 }
 
 // ---------------------------------------------------------------------------
@@ -238,12 +235,7 @@ function MediaBlock({
     return (
       <Inset x={BLOCK_INSET} y="xs">
         <div className="inline-block max-w-full" style={style}>
-          {/* Written in prettier's OWN shape (already split as it would split
-              it), so the format pass is a no-op here and has nothing left to
-              move — the positional directive below then cannot be displaced off
-              the code it means. A JSX attribute position admits no
-              disable/enable pair, so this is the only stable form. */}
-          {/* eslint-disable-next-line radius/no-adhoc-radius -- rounded-md token matches the editor's image chrome */}
+          {/* `rounded-md` matches the editor's image chrome. */}
           <img
             src={attachmentUrl(attachmentId)}
             alt={alt}

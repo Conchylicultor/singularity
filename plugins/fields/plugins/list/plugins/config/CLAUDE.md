@@ -39,6 +39,8 @@ external keys** (the DataView `views` list is the example — its ids key
   - Uses:
     - `config_v2/fields.FieldRenderer`
     - `config_v2/fields.Fields`
+    - `primitives/css/fill.Fill`
+    - `primitives/css/rigid.rigidClass`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.Button`

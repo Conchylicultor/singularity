@@ -44,7 +44,6 @@ export const handleTurnIntoPage = implement(
       .from(_blocks)
       .where(eq(_blocks.id, params.id))
       .limit(1);
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
     if (!block) throw new HttpError(404, "Block not found");
     if (block.type === PAGE_BLOCK_TYPE) {
       throw new HttpError(409, `Block ${params.id} is already a page`);
@@ -105,7 +104,6 @@ export const handleTurnIntoPage = implement(
       .from(_blocks)
       .where(eq(_blocks.id, params.id))
       .limit(1);
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
     if (!row) throw new HttpError(500, "Block vanished during turn-into-page");
 
     // Emits for the new page's own id (its content list just appeared) AND for the

@@ -30,6 +30,8 @@ and remove flush immediately. `FieldRendererComponent` comes from the slot owner
   - Contributes: `config-v2.fields.renderer` "string-list" → `StringListRenderer`
   - Uses:
     - `config_v2/fields.Fields`
+    - `primitives/css/fill.fillClasses`
+    - `primitives/css/rigid.rigidClass`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.Button`

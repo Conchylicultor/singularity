@@ -3,7 +3,10 @@ import {
   useCursorSelector,
   useSonata,
 } from "@plugins/apps/plugins/sonata/plugins/shell/web";
-import { SectionLabel, Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import {
+  SectionLabel,
+  Text,
+} from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import {
   chordPitches,
@@ -72,7 +75,8 @@ function fitToWindow(voicings: number[][]): {
   return {
     low,
     high,
-    voicings: shift === 0 ? voicings : voicings.map((v) => v.map((p) => p + shift)),
+    voicings:
+      shift === 0 ? voicings : voicings.map((v) => v.map((p) => p + shift)),
   };
 }
 
@@ -158,7 +162,7 @@ export function ChordReadout() {
         {/* Row: the big chord symbol, and — when a key is in force — its
             Roman-numeral function trailing in the accent color, so the chord's
             name and its harmonic role read side by side. */}
-        <div className="flex items-baseline gap-sm">
+        <Stack direction="row" align="baseline" gap="sm">
           {/* eslint-disable-next-line text/no-adhoc-typography -- large display readout (36px) exceeds the title token (20px), no equivalent variant */}
           <div className="text-4xl font-bold tracking-tight text-foreground">
             {current ? (
@@ -177,7 +181,7 @@ export function ChordReadout() {
               {roman}
             </Text>
           )}
-        </div>
+        </Stack>
         <Text as="div" variant="caption" className="text-muted-foreground">
           {current ? (
             <>
@@ -203,7 +207,7 @@ export function ChordReadout() {
       </Stack>
 
       <Stack gap="sm">
-        <div className="flex items-center justify-between">
+        <Stack direction="row" align="center" justify="between" gap="none">
           <SectionLabel>Notes</SectionLabel>
           {/* Rendered (disabled) rather than hidden with nothing to invert, so
               the row keeps its height across the gaps between chords. */}
@@ -214,7 +218,7 @@ export function ChordReadout() {
           >
             Inversions
           </ToggleChip>
-        </div>
+        </Stack>
         <Stack gap="sm">
           {rows.map((voicing, k) => {
             const bass = voicing[0];

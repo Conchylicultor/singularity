@@ -3,13 +3,20 @@ import {
   SectionCount,
   type PluginNode,
 } from "@plugins/plugin-meta/plugins/plugin-view/web";
-import { useResource, ResourceView } from "@plugins/primitives/plugins/live-state/web";
+import {
+  useResource,
+  ResourceView,
+} from "@plugins/primitives/plugins/live-state/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { getPluginStaleness, getPluginHealthTasks } from "../../core/endpoints";
 import { pluginHealthReviewsDescriptor } from "../../shared/schemas";
-import type { PluginHealthReview, PluginStaleness, ReviewTaskSummary } from "../../core";
+import type {
+  PluginHealthReview,
+  PluginStaleness,
+  ReviewTaskSummary,
+} from "../../core";
 
 interface ReviewWithMeta {
   id: string;
@@ -21,11 +28,7 @@ interface ReviewWithMeta {
 }
 
 function StatusDot({ color }: { color: string }) {
-  return (
-    <span
-      className={`inline-block h-2 w-2 rounded-full ${color}`}
-    />
-  );
+  return <span className={`inline-block h-2 w-2 rounded-full ${color}`} />;
 }
 
 function healthColor(
@@ -62,10 +65,10 @@ function HealthSectionInner({
 
     void (async () => {
       const [stalenessRes, ...taskResults] = await Promise.all([
-        // eslint-disable-next-line reactive-server-io/no-reactive-server-io -- read-only per-tab view refresh on live-state change; each tab renders its own enriched view, no cross-tab write to deduplicate
+        // read-only per-tab view refresh on live-state change; each tab renders its own enriched view, no cross-tab write to deduplicate
         fetchEndpoint(getPluginStaleness, { pluginId: node.id }),
         ...pluginReviews.map((r) =>
-          // eslint-disable-next-line reactive-server-io/no-reactive-server-io -- read-only per-tab view refresh on live-state change; each tab renders its own enriched view, no cross-tab write to deduplicate
+          // read-only per-tab view refresh on live-state change; each tab renders its own enriched view, no cross-tab write to deduplicate
           fetchEndpoint(getPluginHealthTasks, { reviewId: r.id }),
         ),
       ]);
@@ -73,9 +76,7 @@ function HealthSectionInner({
       // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- set to true in useEffect cleanup
       if (cancelled) return;
 
-      const stalenessMap = new Map(
-        stalenessRes.map((s) => [s.axis, s]),
-      );
+      const stalenessMap = new Map(stalenessRes.map((s) => [s.axis, s]));
 
       setEnriched(
         pluginReviews.map((r, i) => ({

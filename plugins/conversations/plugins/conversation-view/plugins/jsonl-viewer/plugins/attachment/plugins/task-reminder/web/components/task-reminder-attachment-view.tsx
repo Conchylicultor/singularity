@@ -2,6 +2,9 @@ import { CollapsibleCard } from "@plugins/conversations/plugins/conversation-vie
 import type { AttachmentRendererProps } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/attachment/core";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import { fillClasses } from "@plugins/primitives/plugins/css/plugins/fill/web";
+import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
+import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 
 interface TaskReminderItem {
   id: string;
@@ -38,23 +41,26 @@ export function TaskReminderAttachmentView({ event }: AttachmentRendererProps) {
       note={`(${count === 0 ? "no tasks" : `${count} task${count === 1 ? "" : "s"}`})`}
     >
       {count === 0 ? (
-        <Text as="p" variant="caption" className="text-muted-foreground/60 italic">
+        <Text
+          as="p"
+          variant="caption"
+          className="text-muted-foreground/60 italic"
+        >
           No active tasks.
         </Text>
       ) : (
         <Stack as="ul" gap="xs">
           {att.content.map((task) => (
-            <Text
-              as="li"
-              variant="caption"
-              key={task.id}
-              className="flex items-start gap-sm"
-            >
+            <Stack as="li" key={task.id} direction="row" gap="sm" align="start">
               <span
                 // eslint-disable-next-line spacing/no-adhoc-spacing -- vertical offset aligning the status dot with the first line of wrapping subject text; not a sibling gap
-                className={`mt-1.5 size-2 shrink-0 rounded-full ${STATUS_DOT[task.status] ?? DEFAULT_DOT}`}
+                className={cn(
+                  "mt-1.5 size-2 rounded-full",
+                  rigidClass(),
+                  STATUS_DOT[task.status] ?? DEFAULT_DOT,
+                )}
               />
-              <span className="min-w-0">
+              <Text as="span" variant="caption" className={fillClasses("x")}>
                 <span className="text-foreground">{task.subject}</span>
                 {task.description && (
                   /* eslint-disable-next-line spacing/no-adhoc-spacing -- inline left offset separating description from subject within a text line; not a flex-sibling gap */
@@ -62,8 +68,8 @@ export function TaskReminderAttachmentView({ event }: AttachmentRendererProps) {
                     — {task.description}
                   </span>
                 )}
-              </span>
-            </Text>
+              </Text>
+            </Stack>
           ))}
         </Stack>
       )}

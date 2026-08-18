@@ -13,7 +13,10 @@ import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
-import { Inset, Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import {
+  Inset,
+  Stack,
+} from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { revealElement } from "@plugins/primitives/plugins/scroll-reveal/web";
 import { SongsheetLine, type ActiveChord } from "./songsheet-line";
@@ -91,10 +94,7 @@ function SongsheetInner({ score }: SongsheetProps) {
     [score.annotations],
   );
 
-  const groups = useMemo(
-    () => groupLines(lines, sections),
-    [lines, sections],
-  );
+  const groups = useMemo(() => groupLines(lines, sections), [lines, sections]);
 
   // Index of the line whose [start, end) contains the playhead, else -1. Bails
   // out (no re-render) until the playhead crosses into a different line.
@@ -148,7 +148,8 @@ function SongsheetInner({ score }: SongsheetProps) {
   // Running global line index across groups, so a line's ref slot and its
   // active-state checks use the same flat index the selectors return.
   return (
-    // eslint-disable-next-line layout/no-adhoc-layout -- positioning context for the corner-pinned HUD over the scroll body
+    // `relative` is the positioning context for the corner-pinned HUD over the
+    // scroll body.
     <div className="relative h-full w-full bg-background">
       <Scroll axis="y" className="h-full">
         <Inset pad="lg">

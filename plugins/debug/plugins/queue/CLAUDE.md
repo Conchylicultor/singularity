@@ -18,6 +18,7 @@
     - `primitives/css/center.Center`
     - `primitives/css/clip.Clip`
     - `primitives/css/cluster.Cluster`
+    - `primitives/css/fill.Fill`
     - `primitives/css/inline.Inline`
     - `primitives/css/scroll.Scroll`
     - `primitives/css/spacing.Stack`

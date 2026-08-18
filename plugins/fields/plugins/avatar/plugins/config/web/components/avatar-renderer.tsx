@@ -8,6 +8,7 @@ import {
   type AvatarSpec,
 } from "@plugins/primitives/plugins/avatar/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { MdAdd } from "react-icons/md";
 import { avatarFieldType } from "@plugins/fields/plugins/avatar/core";
 
@@ -25,11 +26,19 @@ const AvatarRenderer: FieldRendererComponent<AvatarSpec> = ({
     (value.svgNodes == null || value.svgNodes.length === 0);
 
   return (
-    <div className="flex items-start justify-between gap-lg py-md">
+    <Stack
+      direction="row"
+      gap="lg"
+      align="start"
+      justify="between"
+      className="py-md"
+    >
       <FieldHeader field={field} />
       <AvatarPicker
         value={value}
-        onChange={(next) => onChange({ icon: next.icon, color: next.color, svgNodes: null })}
+        onChange={(next) =>
+          onChange({ icon: next.icon, color: next.color, svgNodes: null })
+        }
       >
         {isEmpty ? (
           <Center
@@ -46,7 +55,7 @@ const AvatarRenderer: FieldRendererComponent<AvatarSpec> = ({
           />
         )}
       </AvatarPicker>
-    </div>
+    </Stack>
   );
 };
 AvatarRenderer.type = avatarFieldType;

@@ -15,11 +15,19 @@ import { AttachmentUpload } from "@plugins/page/plugins/attachment-block/web";
 import { attachmentUrl } from "@plugins/primitives/plugins/text-editor/plugins/paste-images/web";
 import { Card } from "@plugins/primitives/plugins/css/plugins/card/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
-import { Stack, Inset } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import {
+  Stack,
+  Inset,
+} from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
+import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
+import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { hoverRevealGroup, hoverRevealTarget } from "@plugins/primitives/plugins/hover-reveal/web";
+import {
+  hoverRevealGroup,
+  hoverRevealTarget,
+} from "@plugins/primitives/plugins/hover-reveal/web";
 import type { BlockRendererProps } from "@plugins/page/plugins/editor/web";
 import { fileBlock } from "../../core";
 
@@ -37,10 +45,13 @@ function formatBytes(n: number): string {
 }
 
 // Pick a leading icon from the file's mime type.
-function iconForMime(mime: string | undefined): ComponentType<{ className?: string }> {
+function iconForMime(
+  mime: string | undefined,
+): ComponentType<{ className?: string }> {
   const m = (mime ?? "").toLowerCase();
   if (m === "application/pdf") return MdPictureAsPdf;
-  if (m.includes("zip") || m.includes("compressed") || m.includes("tar")) return MdFolderZip;
+  if (m.includes("zip") || m.includes("compressed") || m.includes("tar"))
+    return MdFolderZip;
   if (m.startsWith("audio/")) return MdAudiotrack;
   if (m.startsWith("video/")) return MdMovie;
   if (m.startsWith("image/")) return MdImage;
@@ -70,7 +81,9 @@ export function FileBlock({ block, isFocused, editor }: BlockRendererProps) {
     );
   }
 
-  const iconEl = createElement(iconForMime(mime), { className: "size-6 shrink-0 text-muted-foreground" });
+  const iconEl = createElement(iconForMime(mime), {
+    className: cn("size-6 text-muted-foreground", rigidClass()),
+  });
   const name = filename ?? "File";
 
   return (
@@ -81,27 +94,33 @@ export function FileBlock({ block, isFocused, editor }: BlockRendererProps) {
           interactive
           href={attachmentUrl(attachmentId)}
           download={name}
-          className="flex items-center gap-md"
         >
-          {iconEl}
-          <Stack gap="none" className="min-w-0 flex-1">
-            <Text variant="label" className="truncate">
-              {name}
-            </Text>
-            {size != null ? (
-              <Text variant="caption" tone="muted">
-                {formatBytes(size)}
+          <Stack direction="row" align="center" gap="md">
+            {iconEl}
+            <Stack as={Fill} gap="none">
+              <Text variant="label" className="truncate">
+                {name}
               </Text>
-            ) : null}
+              {size != null ? (
+                <Text variant="caption" tone="muted">
+                  {formatBytes(size)}
+                </Text>
+              ) : null}
+            </Stack>
+            <MdDownload
+              className={cn("size-5 text-muted-foreground", rigidClass())}
+            />
           </Stack>
-          <MdDownload className="size-5 shrink-0 text-muted-foreground" />
         </Card>
         <Pin to="top-right" offset="xs">
           <button
             type="button"
             aria-label="Replace file"
             onClick={() => editor.update({})}
-            className={cn(hoverRevealTarget, "size-6 rounded-full bg-black/50 text-white hover:bg-black/70")}
+            className={cn(
+              hoverRevealTarget,
+              "size-6 rounded-full bg-black/50 text-white hover:bg-black/70",
+            )}
           >
             <Center className="size-full">
               <MdSwapHoriz className="size-4" />

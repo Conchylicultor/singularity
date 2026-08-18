@@ -14,6 +14,7 @@
     - `page/editor.BLOCK_INSET`
     - `page/editor.PageIcon`
     - `page/read-only-view.ReadOnlyBlocks`
+    - `primitives/css/line.Line`
     - `primitives/css/placeholder.Placeholder`
     - `primitives/css/spacing.Inset`
     - `primitives/css/spacing.Stack`

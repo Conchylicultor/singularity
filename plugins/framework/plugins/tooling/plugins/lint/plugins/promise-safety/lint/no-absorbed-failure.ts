@@ -43,7 +43,11 @@
  * jiti cannot resolve `@plugins/*` in rule files and cross-plugin relative
  * imports are banned, so duplication is the established pattern here.
  */
-import { AST_NODE_TYPES, ESLintUtils, type TSESTree } from "@typescript-eslint/utils";
+import {
+  AST_NODE_TYPES,
+  ESLintUtils,
+  type TSESTree,
+} from "@typescript-eslint/utils";
 import type { TSESLint } from "@typescript-eslint/utils";
 
 const createRule = ESLintUtils.RuleCreator(
@@ -98,9 +102,12 @@ function initializerOf(
 function isEmptyDefaultLiteral(node: TSESTree.Node): boolean {
   const n = unwrap(node);
   if (n.type === AST_NODE_TYPES.ArrayExpression) return n.elements.length === 0;
-  if (n.type === AST_NODE_TYPES.ObjectExpression) return n.properties.length === 0;
+  if (n.type === AST_NODE_TYPES.ObjectExpression)
+    return n.properties.length === 0;
   if (n.type === AST_NODE_TYPES.Literal) {
-    return n.value === null || n.value === false || n.value === 0 || n.value === "";
+    return (
+      n.value === null || n.value === false || n.value === 0 || n.value === ""
+    );
   }
   if (n.type === AST_NODE_TYPES.Identifier) return n.name === "undefined";
   if (n.type === AST_NODE_TYPES.UnaryExpression) return n.operator === "void";
@@ -126,7 +133,10 @@ const DISCRIMINANT_KEYS = new Set(["kind", "ok", "status", "error"]);
 function propKeyName(p: TSESTree.ObjectLiteralElement): string | null {
   if (p.type !== AST_NODE_TYPES.Property || p.computed) return null;
   if (p.key.type === AST_NODE_TYPES.Identifier) return p.key.name;
-  if (p.key.type === AST_NODE_TYPES.Literal && typeof p.key.value === "string") {
+  if (
+    p.key.type === AST_NODE_TYPES.Literal &&
+    typeof p.key.value === "string"
+  ) {
     return p.key.value;
   }
   return null;
@@ -210,7 +220,13 @@ function collectOwnReturns(body: TSESTree.Node): TSESTree.ReturnStatement[] {
 }
 
 /** Raw byte/text body readers whose failure-to-empty is the optional-read idiom. */
-const RAW_BODY_READERS = new Set(["text", "arrayBuffer", "blob", "bytes", "formData"]);
+const RAW_BODY_READERS = new Set([
+  "text",
+  "arrayBuffer",
+  "blob",
+  "bytes",
+  "formData",
+]);
 
 /**
  * Is `receiver` a raw-body read call — `x.text()` / `x.arrayBuffer()` / … — the
@@ -258,19 +274,19 @@ export default createRule<[], MessageId>({
     schema: [],
     messages: {
       absorbedCatch:
-        "Returning an empty/default value (`[]`, `{}`, `null`, `0`, `\"\"`, `false`, `undefined`) from a catch " +
+        'Returning an empty/default value (`[]`, `{}`, `null`, `0`, `""`, `false`, `undefined`) from a catch ' +
         "republishes the failure AS DATA — the caller can no longer tell a real result from a swallowed error, and " +
         "downstream code caches/renders the false-empty as settled truth (the absorbable-failure bug class). " +
         "Fail loudly instead: re-throw after handling the case you expect " +
         "(`catch (err) { if (isExpected(err)) …; throw err; }`), or return a discriminated result the caller MUST " +
-        "branch on (`{ kind: \"error\", … }` / `{ ok: false, … }`). If empty genuinely IS the right answer here, say " +
+        'branch on (`{ kind: "error", … }` / `{ ok: false, … }`). If empty genuinely IS the right answer here, say ' +
         "why with `// eslint-disable-next-line promise-safety/no-absorbed-failure -- <why empty is a real answer, " +
         "not a failure signal>`. See research/2026-07-08-global-absorbable-failure-guardrail.md.",
       absorbedCatchHandler:
-        ".catch(handler) resolving to an empty/default value (`[]`, `{}`, `null`, `0`, `\"\"`, `false`, `undefined`) " +
+        '.catch(handler) resolving to an empty/default value (`[]`, `{}`, `null`, `0`, `""`, `false`, `undefined`) ' +
         "republishes the failure AS DATA — the caller sees a legitimate-looking result and the error becomes invisible " +
         "(the absorbable-failure bug class). Fail loudly instead: re-throw after handling the case you expect, or " +
-        "resolve to a discriminated result the caller MUST branch on (`{ kind: \"error\", … }` / `{ ok: false, … }`). " +
+        'resolve to a discriminated result the caller MUST branch on (`{ kind: "error", … }` / `{ ok: false, … }`). ' +
         "If empty genuinely IS the right answer here, say why with " +
         "`// eslint-disable-next-line promise-safety/no-absorbed-failure -- <why empty is a real answer, not a " +
         "failure signal>`. See research/2026-07-08-global-absorbable-failure-guardrail.md.",
@@ -287,9 +303,10 @@ export default createRule<[], MessageId>({
       },
 
       // .catch(handler) — an inline arrow/function handler resolving an empty-default.
-      "CallExpression[callee.property.name='catch']"(node: TSESTree.CallExpression) {
+      "CallExpression[callee.property.name='catch']"(
+        node: TSESTree.CallExpression,
+      ) {
         const arg = node.arguments[0];
-        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
         if (!arg) return;
 
         // Raw-body read tolerance: `res.text().catch(() => "")` etc. (escape #3).

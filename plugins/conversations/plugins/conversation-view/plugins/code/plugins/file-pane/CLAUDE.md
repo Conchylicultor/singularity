@@ -17,7 +17,10 @@
     - `conversations/conversation-view/code.useEditedFiles`
     - `infra/endpoints.EndpointError`
     - `infra/endpoints.useEndpoint`
+    - `primitives/css/clip.Clip`
     - `primitives/css/column.Column`
+    - `primitives/css/fill.Fill`
+    - `primitives/css/line.Line`
     - `primitives/css/scroll.Scroll`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`

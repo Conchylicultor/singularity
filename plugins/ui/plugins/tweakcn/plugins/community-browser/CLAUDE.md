@@ -18,8 +18,10 @@
     - `primitives/collapsible.CollapsibleContent`
     - `primitives/collapsible.CollapsibleTrigger`
     - `primitives/css/fill.Fill`
+    - `primitives/css/fill.fillClasses`
     - `primitives/css/grid.Grid`
     - `primitives/css/line.Line`
+    - `primitives/css/rigid.rigidClass`
     - `primitives/css/scroll.Scroll`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`

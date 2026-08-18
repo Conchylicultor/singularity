@@ -35,8 +35,11 @@ A persistent global trigger on `conversationTurnCompleted` (installed in this pl
     - `conversations/conversation-view.Conversation`
     - `primitives/collapsible.CollapsibleChevron`
     - `primitives/collapsible.useCollapsible`
+    - `primitives/css/fill.Fill`
+    - `primitives/css/rigid.rigidClass`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
+    - `primitives/css/ui-kit.cn`
     - `primitives/live-state.useResource`
 - Server:
   - Contributes:

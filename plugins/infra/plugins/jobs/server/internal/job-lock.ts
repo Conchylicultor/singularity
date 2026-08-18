@@ -145,7 +145,7 @@ export async function withJobLock<T>(
           console.warn(message);
           reportServerError({ message, stack: null });
         }
-      // eslint-disable-next-line promise-safety/no-bare-catch -- the unlock is best-effort BECAUSE destroying the session below releases the lock unconditionally; rethrowing here would replace the handler's own outcome with a cleanup failure
+        // the unlock is best-effort BECAUSE destroying the session below releases the lock unconditionally; rethrowing here would replace the handler's own outcome with a cleanup failure
       } catch (err) {
         destroyOnRelease = true;
         const errObj = err instanceof Error ? err : new Error(String(err));

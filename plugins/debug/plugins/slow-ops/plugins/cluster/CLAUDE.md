@@ -41,6 +41,7 @@ so the pane never imports this component directly.
     - `infra/ndjson-stream.readNdjson`
     - `primitives/css/badge.Badge`
     - `primitives/css/clip.Clip`
+    - `primitives/css/fill.Fill`
     - `primitives/css/placeholder.Placeholder`
     - `primitives/css/scroll.Scroll`
     - `primitives/css/spacing.Stack`

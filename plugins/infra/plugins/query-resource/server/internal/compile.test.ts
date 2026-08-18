@@ -49,7 +49,6 @@ function fakeDb(script: (info: Recorded) => unknown[] = () => []): {
 } {
   const dialect = new PgDialect();
   const calls: Recorded[] = [];
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const wrap = (q: any): any => ({
     where: (p: SQL) => wrap(q.where(p)),
     orderBy: (...o: SQL[]) => wrap(q.orderBy(...o)),
@@ -67,8 +66,9 @@ function fakeDb(script: (info: Recorded) => unknown[] = () => []): {
     },
   });
   const qb = new QueryBuilder();
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const makeFrom = (builder: any) => ({ from: (t: any) => wrap(builder.from(t)) });
+  const makeFrom = (builder: any) => ({
+    from: (t: any) => wrap(builder.from(t)),
+  });
   const db = {
     select: (fields?: SelectMap) =>
       makeFrom(fields ? qb.select(fields) : qb.select()),
@@ -142,9 +142,9 @@ describe("resolveIdentity", () => {
   });
 
   test("pk column not present in the projection throws", () => {
-    expect(() =>
-      resolveIdentity(rows, undefined, { n: rows.n }),
-    ).toThrow(/not present in the select projection/);
+    expect(() => resolveIdentity(rows, undefined, { n: rows.n })).toThrow(
+      /not present in the select projection/,
+    );
   });
 });
 
@@ -299,7 +299,13 @@ describe("compileQuery — scopedMembership (M5)", () => {
   test("scopedMembership + limit throws at compile", () => {
     const { db } = fakeDb();
     expect(() =>
-      compileQuery({ from: rows, select: { id: rows.id }, limit: 10, scopedMembership: true, db }),
+      compileQuery({
+        from: rows,
+        select: { id: rows.id },
+        limit: 10,
+        scopedMembership: true,
+        db,
+      }),
     ).toThrow(/scopedMembership is incompatible with `limit`/);
   });
 
@@ -324,7 +330,9 @@ describe("compileQuery — scopedMembership (M5)", () => {
       scopedMembership: true,
       db,
     });
-    expect(typeof optedIn.serverOpts.scopedMembership?.orderOf).toBe("function");
+    expect(typeof optedIn.serverOpts.scopedMembership?.orderOf).toBe(
+      "function",
+    );
     // The scope policy is still the plain identityTable (never recompute).
     expect(optedIn.serverOpts).toMatchObject({ identityTable: "rows" });
 
@@ -382,7 +390,9 @@ describe("rel() → dependsOn", () => {
 
   test("multi-hop chains one selectDistinct per hop, threading ids", async () => {
     const { db, calls } = fakeDb((info) =>
-      info.sql.includes(`from "rows"`) ? [{ v: "a1" }, { v: "a2" }] : [{ v: "b1" }],
+      info.sql.includes(`from "rows"`)
+        ? [{ v: "a1" }, { v: "a2" }]
+        : [{ v: "b1" }],
     );
     const edge = twoHop({ key: "up" } as never);
     const { serverOpts } = compileQuery({
@@ -391,7 +401,10 @@ describe("rel() → dependsOn", () => {
       edges: [edge],
       db,
     });
-    const out = await serverOpts.dependsOn![0]!.affectedMap!(new Set(["c1"]), {});
+    const out = await serverOpts.dependsOn![0]!.affectedMap!(
+      new Set(["c1"]),
+      {},
+    );
     expect(out).toEqual(["b1"]);
     expect(calls).toHaveLength(2); // one selectDistinct per hop
     expect(calls[0]!.sql).toBe(
@@ -416,7 +429,10 @@ describe("rel() → dependsOn", () => {
       edges: [edge],
       db,
     });
-    const out = await serverOpts.dependsOn![0]!.affectedMap!(new Set(["c1"]), {});
+    const out = await serverOpts.dependsOn![0]!.affectedMap!(
+      new Set(["c1"]),
+      {},
+    );
     expect(out).toEqual([]);
     expect(calls).toHaveLength(1); // the second hop is never queried
   });
@@ -436,7 +452,10 @@ describe("rel() → dependsOn", () => {
       edges: [edge],
       db,
     });
-    const out = await serverOpts.dependsOn![0]!.affectedMap!(new Set(["c1"]), {});
+    const out = await serverOpts.dependsOn![0]!.affectedMap!(
+      new Set(["c1"]),
+      {},
+    );
     expect(out).toEqual(["b1"]);
     expect(calls[1]!.params).toEqual(["a1", "a2"]);
   });
@@ -453,7 +472,11 @@ describe("queryResource — descriptor/keyField assertion", () => {
       "n",
     );
     expect(() =>
-      queryResource(descriptor, { from: rows, select: { id: rows.id, n: rows.n }, db }),
+      queryResource(descriptor, {
+        from: rows,
+        select: { id: rows.id, n: rows.n },
+        db,
+      }),
     ).toThrow(/does not match the keyField "id"/);
   });
 });

@@ -4,6 +4,9 @@ import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Cluster } from "@plugins/primitives/plugins/css/plugins/cluster/web";
 import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
+import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
+import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 import {
   SectionCount,
   PluginLink,
@@ -46,7 +49,8 @@ function methodAndPath(r: RouteDef): { method: string; path: string } {
 function routes(node: PluginNode): RoutesData | null {
   const data = node.facets?.[ROUTES_FACET_ID] as RoutesData | undefined;
   if (!data) return null;
-  if (data.routes.length === 0 && data.endpointCallers.length === 0) return null;
+  if (data.routes.length === 0 && data.endpointCallers.length === 0)
+    return null;
   return data;
 }
 
@@ -60,7 +64,9 @@ export function RoutesCount({ node }: { node: PluginNode }) {
   if (!data) return null;
   const parts: string[] = [];
   if (data.routes.length > 0)
-    parts.push(`${data.routes.length} route${data.routes.length !== 1 ? "s" : ""}`);
+    parts.push(
+      `${data.routes.length} route${data.routes.length !== 1 ? "s" : ""}`,
+    );
   if (data.endpointCallers.length > 0)
     parts.push(
       `${data.endpointCallers.length} caller${data.endpointCallers.length !== 1 ? "s" : ""}`,
@@ -83,25 +89,31 @@ export function RoutesDetailSection({ node }: { node: PluginNode }) {
             const { method, path } = methodAndPath(r);
             return (
               <Text
-                as="div"
+                as={Line}
                 variant="caption"
                 key={`${r.runtime}:${r.type}:${r.route}`}
-                className="flex items-center gap-sm px-sm py-2xs"
+                className="gap-sm px-sm py-2xs"
               >
                 {method && (
                   <span
                     className={cn(
-                      "w-10 shrink-0 font-mono text-3xs font-semibold",
+                      rigidClass(),
+                      "w-10 font-mono text-3xs font-semibold",
                       METHOD_COLORS[method] ?? "text-muted-foreground",
                     )}
                   >
                     {method}
                   </span>
                 )}
-                <code className="min-w-0 truncate font-mono text-foreground">
+                <Fill as="code" className="truncate font-mono text-foreground">
                   {path}
-                </code>
-                <span className="ml-auto shrink-0 text-3xs text-muted-foreground/50">
+                </Fill>
+                <span
+                  className={cn(
+                    rigidClass(),
+                    "text-3xs text-muted-foreground/50",
+                  )}
+                >
                   {r.runtime}
                 </span>
               </Text>

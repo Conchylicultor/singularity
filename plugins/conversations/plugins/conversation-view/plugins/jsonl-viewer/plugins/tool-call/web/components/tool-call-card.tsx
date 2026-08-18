@@ -2,6 +2,8 @@ import { type ReactNode } from "react";
 import type { ToolCallEvent } from "../../core";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { BouncingDots } from "@plugins/primitives/plugins/css/plugins/bouncing-dots/web";
+import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
+import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import {
   CollapsibleCard,
   CardHeaderAction,
@@ -58,13 +60,17 @@ export function ToolCallCard({
                 ? "bg-destructive/15 text-destructive"
                 : "bg-primary/10 text-primary"
             }
-            className="shrink-0 font-mono"
+            className={cn(rigidClass(), "font-mono")}
           >
             {event.name || "tool_call"}
           </Badge>
           {/* Interactive chip sits inside the (click-through) label, so it opts
               back into pointer events via CardHeaderAction to keep its onClick. */}
-          {leading && <CardHeaderAction className="shrink-0">{leading}</CardHeaderAction>}
+          {leading && (
+            <CardHeaderAction className={rigidClass()}>
+              {leading}
+            </CardHeaderAction>
+          )}
         </>
       }
     >

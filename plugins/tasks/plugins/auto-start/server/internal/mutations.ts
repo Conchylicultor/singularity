@@ -28,7 +28,6 @@ export async function setTaskAutoStart(
     .from(_tasks)
     .where(eq(_tasks.id, id))
     .limit(1);
-  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
   if (!task) return false;
   if (autoStart) {
     const now = new Date();

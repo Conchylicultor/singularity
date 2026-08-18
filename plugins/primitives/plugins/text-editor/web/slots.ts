@@ -1,7 +1,10 @@
 import { type ComponentType } from "react";
 import { defineSlot } from "@plugins/framework/plugins/web-sdk/core";
 import { defineRenderSlot } from "@plugins/primitives/plugins/slot-render/web";
-import { getNodeExtensions, type NodeExtension } from "./internal/node-extensions";
+import {
+  getNodeExtensions,
+  type NodeExtension,
+} from "./internal/node-extensions";
 
 export interface TextEditorPluginProps {
   onError?: (msg: string) => void;
@@ -21,7 +24,9 @@ export const TextEditorSlots = {
   Plugin: defineRenderSlot<{
     component: ComponentType<TextEditorPluginProps>;
   }>("text-editor.plugin"),
-  NodeExtensions: defineSlot<NodeExtensionSource>("text-editor.node-extensions"),
+  NodeExtensions: defineSlot<NodeExtensionSource>(
+    "text-editor.node-extensions",
+  ),
 };
 
 // Merges the static module-level extensions (registerNodeExtension) with the
@@ -33,7 +38,7 @@ export const TextEditorSlots = {
 // stable identity should key on the node-type set (see TextEditor).
 export function useMergedNodeExtensions(): readonly NodeExtension[] {
   const sources = TextEditorSlots.NodeExtensions.useContributions();
-  // eslint-disable-next-line react-hooks/rules-of-hooks -- NodeExtensions contributions are static slot entries; count never changes after boot
+  // NodeExtensions contributions are static slot entries; count never changes after boot
   const dynamic = sources.flatMap((s) => s.useExtensions());
   return [...getNodeExtensions(), ...dynamic];
 }

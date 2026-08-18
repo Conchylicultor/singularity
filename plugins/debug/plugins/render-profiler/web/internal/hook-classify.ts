@@ -4,14 +4,11 @@ import type { Fiber } from "./react-types";
 // React hook node in the `memoizedState` linked list. Shapes vary by hook type;
 // all fields optional, accessed defensively (never throw on a weird shape).
 interface HookNode {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- React internal: value/effect/[value,deps]/{current}
+  // React internal: value/effect/[value,deps]/{current}
   memoizedState?: any;
   queue?: {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- React internal
     lastRenderedReducer?: any;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- React internal
     dispatch?: any;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- React internal
     pending?: any;
     getSnapshot?: unknown;
   } | null;

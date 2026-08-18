@@ -3,6 +3,8 @@ import { useState } from "react";
 import { MdCancel, MdCheckCircle, MdFolderOpen } from "react-icons/md";
 import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
+import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { InlinePopover } from "@plugins/primitives/plugins/popover/web";
 import { FolderPicker } from "./folder-picker";
@@ -40,8 +42,8 @@ export function FolderPickerPopover({
   const valid = validity?.exists === true && validity.isDirectory;
 
   return (
-    <div className="flex items-center gap-xs">
-      <div className="relative flex-1">
+    <Stack direction="row" gap="xs" align="center">
+      <Fill className="relative">
         <Input
           value={local}
           placeholder={placeholder ?? "Absolute folder path"}
@@ -66,7 +68,7 @@ export function FolderPickerPopover({
             </Center>
           </Pin>
         ) : null}
-      </div>
+      </Fill>
 
       <InlinePopover
         open={open}
@@ -86,6 +88,6 @@ export function FolderPickerPopover({
           }}
         />
       </InlinePopover>
-    </div>
+    </Stack>
   );
 }

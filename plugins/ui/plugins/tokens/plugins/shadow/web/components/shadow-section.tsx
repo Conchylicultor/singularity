@@ -1,4 +1,7 @@
-import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { Button, cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { fillClasses } from "@plugins/primitives/plugins/css/plugins/fill/web";
+import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
+import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 import { useRef, useState } from "react";
 import { MdUndo } from "react-icons/md";
 import { useConfig, useSetConfig } from "@plugins/config_v2/web";
@@ -6,7 +9,10 @@ import {
   Collapsible,
   CollapsibleContent,
 } from "@plugins/primitives/plugins/collapsible/web";
-import { Row, SectionHeaderRow } from "@plugins/primitives/plugins/css/plugins/row/web";
+import {
+  Row,
+  SectionHeaderRow,
+} from "@plugins/primitives/plugins/css/plugins/row/web";
 import { Cluster } from "@plugins/primitives/plugins/css/plugins/cluster/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
@@ -15,7 +21,11 @@ import {
   ColorPickerPopover,
 } from "@plugins/primitives/plugins/css/plugins/color-picker/web";
 import type { ShadowParams } from "../../shared";
-import { buildShadowTiers, shadowGroup, DEFAULT_SHADOW_PARAMS } from "../../shared";
+import {
+  buildShadowTiers,
+  shadowGroup,
+  DEFAULT_SHADOW_PARAMS,
+} from "../../shared";
 import { useThemeScopeId } from "@plugins/ui/plugins/theme-engine/web";
 import { shadowConfig } from "../internal/config";
 import { Shadow } from "../slots";
@@ -67,7 +77,11 @@ function mergeParams(
 
 type ParamKey = keyof ShadowParams;
 
-const PARAM_FIELDS: { key: ParamKey; label: string; type: "text" | "number" }[] = [
+const PARAM_FIELDS: {
+  key: ParamKey;
+  label: string;
+  type: "text" | "number";
+}[] = [
   { key: "opacity", label: "Opacity", type: "number" },
   { key: "blur", label: "Blur", type: "text" },
   { key: "spread", label: "Spread", type: "text" },
@@ -116,31 +130,41 @@ function ParamInput({
   };
 
   return (
-    <div className="flex items-center gap-sm group">
+    <Line className="gap-sm group">
       <input
         ref={inputRef}
         type="text"
-        className="flex-1 text-caption font-mono bg-transparent border border-transparent rounded-md px-xs py-2xs focus:border-border focus:bg-background focus:outline-none"
+        className={cn(
+          fillClasses("x"),
+          "text-caption font-mono bg-transparent border border-transparent rounded-md px-xs py-2xs focus:border-border focus:bg-background focus:outline-none",
+        )}
         value={localValue}
         onChange={(e) => setLocalValue(e.target.value)}
         onFocus={() => setFocused(true)}
-        onBlur={() => { setFocused(false); commit(); }}
-        onKeyDown={(e) => { if (e.key === "Enter") inputRef.current?.blur(); }}
+        onBlur={() => {
+          setFocused(false);
+          commit();
+        }}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") inputRef.current?.blur();
+        }}
       />
       <button
         type="button"
         onClick={handleReset}
         title="Reset to preset value"
-        className={`shrink-0 text-muted-foreground hover:text-foreground transition-opacity ${
+        className={cn(
+          rigidClass(),
+          "text-muted-foreground hover:text-foreground transition-opacity",
           isOverridden
             ? "opacity-100"
-            : "opacity-0 group-hover:opacity-30 pointer-events-none"
-        }`}
+            : "opacity-0 group-hover:opacity-30 pointer-events-none",
+        )}
         aria-hidden={!isOverridden}
       >
         <MdUndo size={14} />
       </button>
-    </div>
+    </Line>
   );
 }
 
@@ -157,11 +181,15 @@ export function ShadowSection() {
 
   const active = presets.find((p) => p.id === config.preset) ?? presets[0];
   const overrides = config.overrides;
-  const baseParams: ShadowParams = (active as { params?: ShadowParams } | undefined)?.params ?? DEFAULT_SHADOW_PARAMS;
+  const baseParams: ShadowParams =
+    (active as { params?: ShadowParams } | undefined)?.params ??
+    DEFAULT_SHADOW_PARAMS;
   const mergedParams = mergeParams(baseParams, overrides);
   const hasOverrides = Object.values(overrides).some((v) => v !== "");
 
-  const tokens = hasOverrides ? buildShadowTiers(mergedParams) : (active?.light ?? buildShadowTiers(DEFAULT_SHADOW_PARAMS));
+  const tokens = hasOverrides
+    ? buildShadowTiers(mergedParams)
+    : (active?.light ?? buildShadowTiers(DEFAULT_SHADOW_PARAMS));
 
   const schema = shadowGroup.schema;
   type ShadowKey = keyof typeof schema;
@@ -208,8 +236,19 @@ export function ShadowSection() {
           <Stack gap="xs">
             {/* Color row */}
             <Row hover="muted" className="gap-sm">
-              <Text as="span" variant="label" className="w-16 shrink-0">Color</Text>
-              <div className="flex items-center gap-sm flex-1">
+              <Text
+                as="span"
+                variant="label"
+                className={cn("w-16", rigidClass())}
+              >
+                Color
+              </Text>
+              <Stack
+                direction="row"
+                gap="sm"
+                align="center"
+                className={fillClasses("x")}
+              >
                 <ColorPickerPopover
                   value={colorOklch}
                   onChange={(oklch) => {
@@ -222,21 +261,27 @@ export function ShadowSection() {
                     }
                   }}
                 />
-                <Text as="span" variant="caption" className="font-mono text-muted-foreground">
+                <Text
+                  as="span"
+                  variant="caption"
+                  className="font-mono text-muted-foreground"
+                >
                   {mergedParams.color}
                 </Text>
-              </div>
+              </Stack>
               <button
                 type="button"
                 onClick={() => {
                   setConfig("overrides", { ...overrides, color: "" });
                 }}
                 title="Reset to preset value"
-                className={`shrink-0 text-muted-foreground hover:text-foreground transition-opacity ${
+                className={cn(
+                  rigidClass(),
+                  "text-muted-foreground hover:text-foreground transition-opacity",
                   colorIsOverridden
                     ? "opacity-100"
-                    : "opacity-0 group-hover:opacity-30 pointer-events-none"
-                }`}
+                    : "opacity-0 group-hover:opacity-30 pointer-events-none",
+                )}
                 aria-hidden={!colorIsOverridden}
               >
                 <MdUndo size={14} />
@@ -249,7 +294,11 @@ export function ShadowSection() {
               const isOverridden = overrides[key] !== "";
               return (
                 <Row key={key} hover="muted" className="gap-sm">
-                  <Text as="span" variant="label" className="w-16 shrink-0">
+                  <Text
+                    as="span"
+                    variant="label"
+                    className={cn("w-16", rigidClass())}
+                  >
                     {label}
                   </Text>
                   <ParamInput

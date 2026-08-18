@@ -37,6 +37,7 @@ The chip renders a muted `—` (reason as tooltip) both for an unresolved payloa
     - `primitives/commit-list.CommitRowItem`
     - `primitives/commit-list.MergeBaseMarker`
     - `primitives/css/column.Column`
+    - `primitives/css/fill.Fill`
     - `primitives/css/placeholder.Placeholder`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`

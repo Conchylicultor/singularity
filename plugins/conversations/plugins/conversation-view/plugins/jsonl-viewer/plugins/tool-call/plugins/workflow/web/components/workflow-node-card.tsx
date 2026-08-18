@@ -1,13 +1,22 @@
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { MdAccountTree } from "react-icons/md";
 import { familyClass } from "@plugins/conversations/plugins/model-provider/web";
-import { MODEL_TIERS, modelDisplayLabel } from "@plugins/conversations/plugins/model-provider/core";
+import {
+  MODEL_TIERS,
+  modelDisplayLabel,
+} from "@plugins/conversations/plugins/model-provider/core";
 import type { TracedNode } from "../internal/trace-types";
-import { Badge, formatStatusLabel } from "@plugins/primitives/plugins/css/plugins/badge/web";
+import {
+  Badge,
+  formatStatusLabel,
+} from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Card } from "@plugins/primitives/plugins/css/plugins/card/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Cluster } from "@plugins/primitives/plugins/css/plugins/cluster/web";
+import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
+import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
+import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 
 export type NodeEmphasis = "normal" | "dim" | "dep" | "dependent" | "active";
 
@@ -30,9 +39,13 @@ export function WorkflowNodeCard({
   onOpen: (nodeId: string) => void;
   onHover: (nodeId: string | null) => void;
 }) {
-  const modelTier = node.model ? MODEL_TIERS.find((t) => node.model!.includes(t)) : undefined;
+  const modelTier = node.model
+    ? MODEL_TIERS.find((t) => node.model!.includes(t))
+    : undefined;
   const modelColor = node.model
-    ? (modelTier ? familyClass(modelTier) : "bg-muted text-muted-foreground")
+    ? modelTier
+      ? familyClass(modelTier)
+      : "bg-muted text-muted-foreground"
     : null;
 
   return (
@@ -52,23 +65,34 @@ export function WorkflowNodeCard({
       )}
     >
       <Stack gap="xs">
-        <span className="flex min-w-0 items-center gap-xs">
+        <Line as="span" className="gap-xs">
           {node.kind === "workflow" && (
-            <MdAccountTree className="size-3 shrink-0 text-muted-foreground" />
+            <MdAccountTree
+              className={cn("size-3 text-muted-foreground", rigidClass())}
+            />
           )}
-          <Text as="span" variant="label" className="min-w-0 flex-1 truncate text-foreground">
-            {node.label}
-          </Text>
+          <Fill as="span">
+            <Text as="span" variant="label" className="text-foreground">
+              {node.label}
+            </Text>
+          </Fill>
           {modelColor && (
-            <Badge colorClass={modelColor} className="shrink-0 font-mono">
+            <Badge
+              colorClass={modelColor}
+              className={cn(rigidClass(), "font-mono")}
+            >
               {modelDisplayLabel(node.model!)}
             </Badge>
           )}
-        </span>
+        </Line>
         {(node.agentType || node.isolation || node.hasSchema) && (
           <Cluster gap="xs">
-            {node.agentType && <MetaChip>{formatStatusLabel(node.agentType)}</MetaChip>}
-            {node.isolation && <MetaChip>{formatStatusLabel(node.isolation)}</MetaChip>}
+            {node.agentType && (
+              <MetaChip>{formatStatusLabel(node.agentType)}</MetaChip>
+            )}
+            {node.isolation && (
+              <MetaChip>{formatStatusLabel(node.isolation)}</MetaChip>
+            )}
             {node.hasSchema && <MetaChip>Schema</MetaChip>}
           </Cluster>
         )}

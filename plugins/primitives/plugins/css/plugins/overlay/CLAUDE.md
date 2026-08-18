@@ -5,6 +5,14 @@ positioning context on its own box and paints full-bleed `behind` / `above`
 layers around its in-flow `children`. It also folds in the **click-through
 toggle** idiom that headers like `CollapsibleCard` used to hand-roll.
 
+## Not for a layer that IS an element
+
+Overlay takes its layers as **props** around required in-flow `children`, so it
+can only express "a box with layers painted around its content". A full-bleed
+`<img>` wallpaper, a background `<svg>`, a plain sibling in a list of layers, or
+a backdrop that is itself the positioning host — those are
+[`<Layer>` / `layerClasses()`](../layer/CLAUDE.md), a sibling primitive.
+
 ## Pairs with — does not replace — `viewport-overlay`
 
 `viewport-overlay` portals to `<body>` for a true `fixed inset-0` against the

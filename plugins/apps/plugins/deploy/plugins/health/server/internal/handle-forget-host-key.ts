@@ -21,7 +21,6 @@ export const handleForgetHostKey = implement(
       .set({ hostKeyLine: null, updatedAt: new Date() })
       .where(eq(_deployServersHealthExt.parentId, params.id))
       .returning();
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
     if (!row) throw new HttpError(404, "This server has never been checked.");
   },
 );

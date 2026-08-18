@@ -11,7 +11,6 @@ export const handleDelete = implement(deleteServer, async ({ params }) => {
     .delete(_deployServers)
     .where(eq(_deployServers.id, params.id))
     .returning();
-  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
   if (!row) throw new HttpError(404, "Not found");
   await deleteSecret({ namespace: SSH_SECRET_NAMESPACE, key: params.id });
 });

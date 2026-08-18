@@ -4,6 +4,13 @@ import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { Spinner } from "@plugins/primitives/plugins/css/plugins/spinner/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Clip } from "@plugins/primitives/plugins/css/plugins/clip/web";
+import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
+import {
+  Rigid,
+  rigidClass,
+} from "@plugins/primitives/plugins/css/plugins/rigid/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import {
   conversationsActiveResource,
   conversationsGoneResource,
@@ -43,9 +50,15 @@ function useTitleBySlug(): Record<string, string> {
   // (structural sharing deep-compares the Record), not on every status flip in
   // the conversations list. One select per keyed sub-resource keeps the lists
   // independent.
-  const active = useResource(conversationsActiveResource, undefined, { select: titleMapOf });
-  const gone = useResource(conversationsGoneResource, undefined, { select: titleMapOf });
-  const system = useResource(conversationsSystemResource, undefined, { select: titleMapOf });
+  const active = useResource(conversationsActiveResource, undefined, {
+    select: titleMapOf,
+  });
+  const gone = useResource(conversationsGoneResource, undefined, {
+    select: titleMapOf,
+  });
+  const system = useResource(conversationsSystemResource, undefined, {
+    select: titleMapOf,
+  });
   return useMemo(() => {
     if (active.pending || gone.pending || system.pending) return EMPTY_TITLES;
     // Spread order matches the previous [...system, ...recentGone, ...active]:
@@ -88,14 +101,17 @@ function phaseStartedAt(op: WorktreeOp): number {
 // on its per-worktree/host slot — all stamp `runningAt` on the grant.
 function waitedMs(op: WorktreeOp): number | null {
   if (op.phase !== "running" || !op.runningAt) return null;
-  const ms = new Date(op.runningAt).getTime() - new Date(op.startedAt).getTime();
+  const ms =
+    new Date(op.runningAt).getTime() - new Date(op.startedAt).getTime();
   return ms > 1000 ? ms : null;
 }
 
 function summaryLabel(op: WorktreeOp): string {
   const waiting = op.phase === "waiting-for-lock";
-  if (op.op === "build") return waiting ? "Build queued — waiting for lock" : "Build in progress";
-  if (op.op === "check") return waiting ? "Check queued — waiting for lock" : "Check in progress";
+  if (op.op === "build")
+    return waiting ? "Build queued — waiting for lock" : "Build in progress";
+  if (op.op === "check")
+    return waiting ? "Check queued — waiting for lock" : "Check in progress";
   return waiting ? "Push queued — waiting for lock" : "Push in progress";
 }
 
@@ -117,7 +133,9 @@ interface OpRow {
 function buildRows(ops: WorktreeOp[], selfSlug: string): OpRow[] {
   const pushes = ops.filter((o) => o.op === "push");
   const running = pushes.filter((o) => o.phase === "running").sort(byStartedAt);
-  const waiting = pushes.filter((o) => o.phase === "waiting-for-lock").sort(byStartedAt);
+  const waiting = pushes
+    .filter((o) => o.phase === "waiting-for-lock")
+    .sort(byStartedAt);
   const unqueued = ops
     .filter((o) => o.op === "build" || o.op === "check")
     .sort(byStartedAt);
@@ -136,7 +154,15 @@ function buildRows(ops: WorktreeOp[], selfSlug: string): OpRow[] {
   return [...pushRows, ...unqueuedRows];
 }
 
-function OpRowView({ row, title, now }: { row: OpRow; title?: string; now: number }) {
+function OpRowView({
+  row,
+  title,
+  now,
+}: {
+  row: OpRow;
+  title?: string;
+  now: number;
+}) {
   const { op, queuePos, isSelf } = row;
   const waiting = op.phase === "waiting-for-lock";
   const elapsed = formatElapsed(now - phaseStartedAt(op));
@@ -153,42 +179,70 @@ function OpRowView({ row, title, now }: { row: OpRow; title?: string; now: numbe
     <Text
       as="div"
       variant="caption"
-      className={`flex items-center gap-sm px-md py-xs ${
-        isSelf ? "bg-primary/5" : ""
-      }`}
+      className={isSelf ? "bg-primary/5" : undefined}
     >
-      {queuePos !== null ? (
-        <span className="w-6 shrink-0 text-center font-mono tabular-nums text-muted-foreground">
-          #{queuePos}
+      <Stack direction="row" gap="sm" align="center" className="px-md py-xs">
+        {queuePos !== null ? (
+          <span
+            className={cn(
+              "w-6 text-center font-mono tabular-nums text-muted-foreground",
+              rigidClass(),
+            )}
+          >
+            #{queuePos}
+          </span>
+        ) : (
+          <Rigid as="span" className="w-6" />
+        )}
+        {waiting ? (
+          <MdHourglassEmpty
+            className={cn("size-3.5 text-warning", rigidClass())}
+          />
+        ) : (
+          <Spinner className={cn("size-3.5", rigidClass())} />
+        )}
+        <Fill as="span" className="truncate">
+          {title ? (
+            <span className="truncate">{title}</span>
+          ) : (
+            <span className="font-mono">{op.slug}</span>
+          )}
+          {isSelf && (
+            // eslint-disable-next-line spacing/no-adhoc-spacing -- inline left offset on a trailing label inside a truncating flex cell; not a sibling gap the parent can own
+            <span className="ml-1.5 text-muted-foreground">
+              (this conversation)
+            </span>
+          )}
+        </Fill>
+        <span className={cn("text-muted-foreground", rigidClass())}>
+          {phaseText}
         </span>
-      ) : (
-        <span className="w-6 shrink-0" />
-      )}
-      {waiting ? (
-        <MdHourglassEmpty className="size-3.5 shrink-0 text-warning" />
-      ) : (
-        <Spinner className="size-3.5 shrink-0" />
-      )}
-      <span className="min-w-0 flex-1 truncate">
-        {title ? <span className="truncate">{title}</span> : <span className="font-mono">{op.slug}</span>}
-        {/* eslint-disable-next-line spacing/no-adhoc-spacing -- inline left offset on a trailing label inside a truncating flex cell; not a sibling gap the parent can own */}
-        {isSelf && <span className="ml-1.5 text-muted-foreground">(this conversation)</span>}
-      </span>
-      <span className="shrink-0 text-muted-foreground">{phaseText}</span>
-      {waited !== null && (
+        {waited !== null && (
+          <span
+            className={cn("text-muted-foreground/70", rigidClass())}
+            title="Time spent queued for the push lock before pushing started"
+          >
+            waited {formatElapsed(waited)}
+          </span>
+        )}
         <span
-          className="shrink-0 text-muted-foreground/70"
-          title="Time spent queued for the push lock before pushing started"
+          className={cn(
+            "font-mono tabular-nums text-muted-foreground",
+            rigidClass(),
+          )}
         >
-          waited {formatElapsed(waited)}
+          {elapsed}
         </span>
-      )}
-      <span className="shrink-0 font-mono tabular-nums text-muted-foreground">{elapsed}</span>
+      </Stack>
     </Text>
   );
 }
 
-export function OpStatusBanner({ conversation }: { conversation: ConversationRecord }) {
+export function OpStatusBanner({
+  conversation,
+}: {
+  conversation: ConversationRecord;
+}) {
   const result = useResource(worktreeOpsResource);
   const titleBySlug = useTitleBySlug();
   const now = useNow(1000);
@@ -209,57 +263,75 @@ export function OpStatusBanner({ conversation }: { conversation: ConversationRec
 
   return (
     <Text as="div" variant="caption">
-    <Clip
-      className={`rounded-md border ${
-        queued
-          ? "border-warning/40 bg-warning/10 text-warning"
-          : "border-border bg-muted/30 text-foreground"
-      }`}
-    >
-      <button
-        type="button"
-        onClick={() => setExpanded((v) => !v)}
-        className="flex w-full items-center gap-sm px-md py-sm text-left hover:bg-foreground/[0.03]"
+      <Clip
+        className={`rounded-md border ${
+          queued
+            ? "border-warning/40 bg-warning/10 text-warning"
+            : "border-border bg-muted/30 text-foreground"
+        }`}
       >
-        {queued ? (
-          <MdHourglassEmpty className="size-3.5 shrink-0" />
-        ) : (
-          <Spinner className="size-3.5 shrink-0" />
-        )}
-        <span className="flex-1">{summaryLabel(op)}</span>
-        {others > 0 && (
-          <span className="shrink-0 text-muted-foreground">
-            +{others} other{others === 1 ? "" : "s"}
-          </span>
-        )}
-        {waited !== null && (
-          <span
-            className="shrink-0 text-muted-foreground/70"
-            title="Time spent queued for the push lock before pushing started"
+        <button
+          type="button"
+          onClick={() => setExpanded((v) => !v)}
+          className="w-full text-left hover:bg-foreground/[0.03]"
+        >
+          <Stack
+            direction="row"
+            gap="sm"
+            align="center"
+            className="px-md py-sm"
           >
-            waited {formatElapsed(waited)}
-          </span>
+            {queued ? (
+              <MdHourglassEmpty className={cn("size-3.5", rigidClass())} />
+            ) : (
+              <Spinner className={cn("size-3.5", rigidClass())} />
+            )}
+            <Fill as="span">{summaryLabel(op)}</Fill>
+            {others > 0 && (
+              <span className={cn("text-muted-foreground", rigidClass())}>
+                +{others} other{others === 1 ? "" : "s"}
+              </span>
+            )}
+            {waited !== null && (
+              <span
+                className={cn("text-muted-foreground/70", rigidClass())}
+                title="Time spent queued for the push lock before pushing started"
+              >
+                waited {formatElapsed(waited)}
+              </span>
+            )}
+            <span
+              className={cn(
+                "font-mono tabular-nums text-muted-foreground",
+                rigidClass(),
+              )}
+            >
+              {elapsed}
+            </span>
+            {expanded ? (
+              <MdExpandLess
+                className={cn("size-4 text-muted-foreground", rigidClass())}
+              />
+            ) : (
+              <MdExpandMore
+                className={cn("size-4 text-muted-foreground", rigidClass())}
+              />
+            )}
+          </Stack>
+        </button>
+        {expanded && (
+          <div className="border-t border-border/60 bg-background/40 py-xs text-foreground">
+            {rows.map((row) => (
+              <OpRowView
+                key={`${row.op.op}:${row.op.slug}`}
+                row={row}
+                title={titleBySlug[row.op.slug]}
+                now={now}
+              />
+            ))}
+          </div>
         )}
-        <span className="shrink-0 font-mono tabular-nums text-muted-foreground">{elapsed}</span>
-        {expanded ? (
-          <MdExpandLess className="size-4 shrink-0 text-muted-foreground" />
-        ) : (
-          <MdExpandMore className="size-4 shrink-0 text-muted-foreground" />
-        )}
-      </button>
-      {expanded && (
-        <div className="border-t border-border/60 bg-background/40 py-xs text-foreground">
-          {rows.map((row) => (
-            <OpRowView
-              key={`${row.op.op}:${row.op.slug}`}
-              row={row}
-              title={titleBySlug[row.op.slug]}
-              now={now}
-            />
-          ))}
-        </div>
-      )}
-    </Clip>
+      </Clip>
     </Text>
   );
 }

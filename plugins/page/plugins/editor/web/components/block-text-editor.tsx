@@ -1,5 +1,6 @@
 import type { ClassName } from "@plugins/primitives/plugins/css/plugins/ui-kit/core";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
 import { insetClass } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { useEffect, useMemo, useRef, type ReactNode } from "react";
 import { LexicalComposer } from "@lexical/react/LexicalComposer";
@@ -357,7 +358,7 @@ export function BlockTextEditor({
   return (
     // `LexicalComposer` emits no DOM, so these all render directly inside
     // `TextBlockLayout`'s `relative` leaf cell — which is what the placeholder's
-    // `absolute left-0 top-0` resolves against.
+    // top-left `<Pin>` resolves against.
     <LexicalComposer initialConfig={initialConfig}>
       <RichTextPlugin
         contentEditable={
@@ -373,7 +374,12 @@ export function BlockTextEditor({
         }
         placeholder={
           isEmpty && isFocused && effectivePlaceholder ? (
-            <div
+            <Pin
+              to="top-left"
+              // `base`, not Pin's `raised` default: the placeholder shares its
+              // box with the focused caret, so it must not paint over it.
+              layer="base"
+              decorative
               // Decoration, not content. It sits INSIDE the leaf cell, which is
               // where a block type's `semantics` role lands — so left visible to
               // AT, an empty focused heading would be NAMED "Heading 1" by its
@@ -381,13 +387,13 @@ export function BlockTextEditor({
               // the same reason.
               aria-hidden
               className={cn(
-                "text-muted-foreground pointer-events-none absolute left-0 top-0 py-xs",
+                "text-muted-foreground py-xs",
                 insetClass({ r: BLOCK_INSET }),
                 TEXT_VARIANT_CLASS[textVariant],
               )}
             >
               {effectivePlaceholder}
-            </div>
+            </Pin>
           ) : null
         }
         ErrorBoundary={LexicalErrorBoundary}

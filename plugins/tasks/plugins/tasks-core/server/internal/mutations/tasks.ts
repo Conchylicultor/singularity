@@ -165,7 +165,6 @@ async function updateTaskOn(
       .returning({ id: _tasks.id });
     return row;
   });
-  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
   if (!updated) return null;
   // No destination force-expand on a re-file, for the same reason as in
   // `createTask`: the tree opens a collapsed drop target itself
@@ -176,7 +175,6 @@ async function updateTaskOn(
     .from(tasks)
     .where(eq(tasks.id, id))
     .limit(1);
-  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
   return row ?? null;
 }
 
@@ -207,14 +205,12 @@ export async function addTaskDependency(
     .from(_tasks)
     .where(eq(_tasks.id, taskId))
     .limit(1);
-  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
   if (!task) throw new Error("Task not found");
   const [dep] = await exec
     .select({ id: _tasks.id })
     .from(_tasks)
     .where(eq(_tasks.id, dependsOnTaskId))
     .limit(1);
-  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
   if (!dep) throw new Error("Dependency task not found");
   // Read the cycle check on `exec` so it sees edges added earlier in the batch.
   if (await taskDependsOn(dependsOnTaskId, taskId, exec)) {
@@ -263,7 +259,6 @@ export async function removeTaskDependency(
       .returning({ taskId: _taskDependencies.taskId });
     return deleted;
   });
-  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
   if (!row) return false;
   return true;
 }

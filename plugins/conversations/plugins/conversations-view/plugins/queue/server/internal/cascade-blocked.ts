@@ -1,7 +1,12 @@
 import { and, asc, eq, inArray } from "drizzle-orm";
 import { Rank } from "@plugins/primitives/plugins/rank/core";
 import type { RankExecutor } from "@plugins/primitives/plugins/rank/server";
-import { _conversations, _attempts, listDependentIds, listBlockingDepIds } from "@plugins/tasks/plugins/tasks-core/server";
+import {
+  _conversations,
+  _attempts,
+  listDependentIds,
+  listBlockingDepIds,
+} from "@plugins/tasks/plugins/tasks-core/server";
 import type { ConversationStatus } from "@plugins/tasks/plugins/tasks-core/core";
 import { conversationsQueue } from "./tables";
 import {
@@ -38,7 +43,11 @@ export async function cascadeBlockedDependents(
       const blockingTaskIds = await listBlockingDepIds(depTaskId, tx);
       if (blockingTaskIds.length === 0) continue;
 
-      const requiredRank = await rankAfterBlockers(leadRow.id, blockingTaskIds, tx);
+      const requiredRank = await rankAfterBlockers(
+        leadRow.id,
+        blockingTaskIds,
+        tx,
+      );
       const currentRank = Rank.from(leadRow.rank as string);
       if (Rank.compare(currentRank, requiredRank) >= 0) continue;
 
@@ -66,6 +75,5 @@ async function leadConversation(
     )
     .orderBy(asc(_cq.rank))
     .limit(1);
-  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
   return row ?? null;
 }

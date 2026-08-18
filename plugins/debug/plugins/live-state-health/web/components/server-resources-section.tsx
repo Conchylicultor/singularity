@@ -1,11 +1,19 @@
 import { useMemo, type ReactElement } from "react";
 import { useEndpoint } from "@plugins/infra/plugins/endpoints/web";
-import { SectionLabel, Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import {
+  SectionLabel,
+  Text,
+} from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
-import { resourcesDebugEndpoint, type ResourceDebug } from "../../shared/endpoints";
+import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
+import { Rigid } from "@plugins/primitives/plugins/css/plugins/rigid/web";
+import {
+  resourcesDebugEndpoint,
+  type ResourceDebug,
+} from "../../shared/endpoints";
 
 // Server-fed companion to the client `ResourcesSection`: the authoritative
 // server view of every registered resource's fan-out (max per-pk subscriber
@@ -15,10 +23,10 @@ import { resourcesDebugEndpoint, type ResourceDebug } from "../../shared/endpoin
 // they answer "is a cheap loader being hammered, and how wide does it fan out?".
 // Default-sorted by call-rate desc so the hottest loader is on top.
 //
-// Composed from flow flex rows + <Inline>, NOT a
-// DataTable: the pane is a single flow `overflow-auto` column shared by every
-// section, and DataTable pins a `sticky` header to that shared scroll container
-// — which overlaps the sections above it. Flow rows compose correctly here.
+// Composed from <Stack> rows + <Inline>, NOT a DataTable: the pane is a single
+// flowing scroll column shared by every section, and DataTable pins its header
+// to that shared scroll container — which overlaps the sections above it. Flow
+// rows compose correctly here.
 
 function maxFanOut(subCounts: Record<string, number>): number {
   const values = Object.values(subCounts);
@@ -31,7 +39,8 @@ export function ServerResourcesSection(): ReactElement {
   const rows = useMemo<ResourceDebug[]>(() => {
     if (!data) return [];
     return [...data.resources].sort(
-      (a, b) => (b.loaderStats?.ratePerMin ?? 0) - (a.loaderStats?.ratePerMin ?? 0),
+      (a, b) =>
+        (b.loaderStats?.ratePerMin ?? 0) - (a.loaderStats?.ratePerMin ?? 0),
     );
   }, [data]);
 
@@ -43,7 +52,9 @@ export function ServerResourcesSection(): ReactElement {
       {!data ? (
         <Loading />
       ) : rows.length === 0 ? (
-        <Text variant="caption" tone="muted">No registered resources.</Text>
+        <Text variant="caption" tone="muted">
+          No registered resources.
+        </Text>
       ) : (
         <Stack gap="2xs">
           {rows.map((r) => (
@@ -58,11 +69,11 @@ export function ServerResourcesSection(): ReactElement {
 function ServerResourceRow({ r }: { r: ResourceDebug }): ReactElement {
   const fanOut = maxFanOut(r.subCounts);
   return (
-    <div className="flex items-center gap-sm">
-      <div className="min-w-0 flex-1">
+    <Stack direction="row" align="center" gap="sm">
+      <Fill>
         <Text variant="caption">{r.key}</Text>
-      </div>
-      <div className="flex shrink-0 items-center gap-sm">
+      </Fill>
+      <Stack as={Rigid} direction="row" align="center" gap="sm">
         <Inline gap="sm">
           <Stat label="subs" value={r.subscribers} />
           {fanOut > 1 ? (
@@ -70,16 +81,28 @@ function ServerResourceRow({ r }: { r: ResourceDebug }): ReactElement {
           ) : (
             <Stat label="fan" value={`×${fanOut}`} />
           )}
-          <Stat label="/min" value={r.loaderStats ? Math.round(r.loaderStats.ratePerMin) : "—"} />
-          <Stat label="max ms" value={r.loaderStats ? Math.round(r.loaderStats.maxMs) : "—"} />
+          <Stat
+            label="/min"
+            value={r.loaderStats ? Math.round(r.loaderStats.ratePerMin) : "—"}
+          />
+          <Stat
+            label="max ms"
+            value={r.loaderStats ? Math.round(r.loaderStats.maxMs) : "—"}
+          />
         </Inline>
-      </div>
-    </div>
+      </Stack>
+    </Stack>
   );
 }
 
 // One labeled stat: a muted value with a dimmer trailing unit label.
-function Stat({ label, value }: { label: string; value: string | number }): ReactElement {
+function Stat({
+  label,
+  value,
+}: {
+  label: string;
+  value: string | number;
+}): ReactElement {
   return (
     <Text as="span" variant="caption" tone="muted">
       <span className="tabular-nums">{value}</span>

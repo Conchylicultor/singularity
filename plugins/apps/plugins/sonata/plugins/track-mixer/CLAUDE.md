@@ -61,6 +61,9 @@ plus a per-song reset.
     - `apps/sonata/shell.useSonata`
     - `infra/endpoints.fetchEndpoint`
     - `primitives/css/color-picker.SwatchGrid`
+    - `primitives/css/fill.Fill`
+    - `primitives/css/line.Line`
+    - `primitives/css/rigid.rigidClass`
     - `primitives/css/row.Row`
     - `primitives/css/scroll.Scroll`
     - `primitives/css/spacing.Stack`

@@ -5,9 +5,13 @@ import {
   type FieldDef,
 } from "@plugins/primitives/plugins/data-view/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
-import { SectionLabel, Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import {
+  SectionLabel,
+  Text,
+} from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
@@ -67,7 +71,12 @@ export function ClusterView(): ReactElement {
         cell: (r) => (
           // eslint-disable-next-line layout/no-adhoc-layout -- flexible leaf of the data-view cell's grid; min-w-0 lets the truncating rows shrink
           <Stack gap="2xs" className="min-w-0">
-            <Text as="span" variant="caption" className="truncate font-mono" title={r.operation}>
+            <Text
+              as="span"
+              variant="caption"
+              className="truncate font-mono"
+              title={r.operation}
+            >
               {r.operation}
             </Text>
             <Text
@@ -76,7 +85,8 @@ export function ClusterView(): ReactElement {
               className="pl-md text-3xs text-muted-foreground"
               title={r.worktrees.join(", ")}
             >
-              slow across {r.worktrees.length} worktree{r.worktrees.length === 1 ? "" : "s"}
+              slow across {r.worktrees.length} worktree
+              {r.worktrees.length === 1 ? "" : "s"}
             </Text>
           </Stack>
         ),
@@ -153,7 +163,11 @@ export function ClusterView(): ReactElement {
         value: (r) => r.worktree,
         options: uniqueSorted(timeline.map((r) => r.worktree)),
         cell: (r) => (
-          <Badge variant="muted" className="truncate font-mono" title={r.worktree}>
+          <Badge
+            variant="muted"
+            className="truncate font-mono"
+            title={r.worktree}
+          >
             {r.worktree}
           </Badge>
         ),
@@ -180,7 +194,8 @@ export function ClusterView(): ReactElement {
             className="truncate font-mono"
             title={`${r.operationKind} ${r.operation}`}
           >
-            <span className="text-muted-foreground">{r.operationKind}</span> {r.operation}
+            <span className="text-muted-foreground">{r.operationKind}</span>{" "}
+            {r.operation}
           </Text>
         ),
       },
@@ -200,7 +215,10 @@ export function ClusterView(): ReactElement {
         align: "end",
         value: (r) => r.loadAvg1,
         cell: (r) => (
-          <Badge variant={loadSeverity(r.loadAvg1, r.cpuCount)} className="font-mono">
+          <Badge
+            variant={loadSeverity(r.loadAvg1, r.cpuCount)}
+            className="font-mono"
+          >
             {Math.round(r.loadAvg1)} / {r.cpuCount}
           </Badge>
         ),
@@ -220,19 +238,25 @@ export function ClusterView(): ReactElement {
   return (
     <Scroll axis="both" className="h-full">
       <Stack gap="xl" className="px-md py-md">
-        <div className="flex items-center justify-between gap-md">
-          <Stack gap="2xs" className="min-w-0 flex-1">
+        <Stack direction="row" align="center" gap="md">
+          <Stack as={Fill} gap="2xs">
             <SectionLabel>Cross-worktree cluster</SectionLabel>
             {status === "streaming" && (
               <ScanProgress received={worktrees.length} total={total} />
             )}
             {status === "done" && (
-              <Text as="span" variant="caption" className="text-muted-foreground">
+              <Text
+                as="span"
+                variant="caption"
+                className="text-muted-foreground"
+              >
                 {okCount} worktree{okCount === 1 ? "" : "s"} merged
                 {failed.length > 0 && (
                   <span
                     className="ml-xs text-warning"
-                    title={failed.map((f) => `${f.name}: ${f.error}`).join("\n")}
+                    title={failed
+                      .map((f) => `${f.name}: ${f.error}`)
+                      .join("\n")}
                   >
                     · {failed.length} failed to load
                   </span>
@@ -250,7 +274,7 @@ export function ClusterView(): ReactElement {
           >
             Refresh
           </Button>
-        </div>
+        </Stack>
 
         <DataView<ClusterAggregate>
           rows={aggregates}

@@ -16,6 +16,7 @@ import { StatusDot } from "@plugins/primitives/plugins/css/plugins/status-dot/we
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
+import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 
 /**
  * States that warrant a colored filled badge (they need the user's attention).
@@ -111,8 +112,7 @@ export function StatusIcon({ status }: { status: TaskStatus }) {
       as="span"
       title={meta.label}
       aria-label={meta.label}
-      // eslint-disable-next-line layout/no-adhoc-layout -- rigid fixed-size status-icon box; must never shrink in a flex row
-      className="size-5 shrink-0"
+      className={cn("size-5", rigidClass())}
     >
       <Icon className={cn("size-4", meta.iconClassName)} />
     </Center>

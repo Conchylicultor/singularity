@@ -105,6 +105,7 @@ per-site via `// eslint-disable-next-line spacing/no-adhoc-spacing -- reason`.
     - `apps/agent-manager/welcome`
     - `apps/browser/bookmarks`
     - `apps/browser/navigation`
+    - `apps/browser/shell`
     - `apps/browser/start-page`
     - `apps/browser/tabs`
     - `apps/browser/webview`
@@ -212,6 +213,7 @@ per-site via `// eslint-disable-next-line spacing/no-adhoc-spacing -- reason`.
     - `build/serve-composition`
     - `code-explorer/commit-detail`
     - `code-explorer/file-resolve`
+    - `config_v2/config-link`
     - `config_v2/fields`
     - `config_v2/settings`
     - `conversations/agents`
@@ -234,12 +236,15 @@ per-site via `// eslint-disable-next-line spacing/no-adhoc-spacing -- reason`.
     - `conversations/conversation-view/jsonl-viewer/attachment/hook-success`
     - `conversations/conversation-view/jsonl-viewer/attachment/skill-listing`
     - `conversations/conversation-view/jsonl-viewer/attachment/task-reminder`
+    - `conversations/conversation-view/jsonl-viewer/collapsible-card`
     - `conversations/conversation-view/jsonl-viewer/fields-card`
     - `conversations/conversation-view/jsonl-viewer/summary`
     - `conversations/conversation-view/jsonl-viewer/tool-call/add-task`
     - `conversations/conversation-view/jsonl-viewer/tool-call/agent`
     - `conversations/conversation-view/jsonl-viewer/tool-call/ask-user-question`
+    - `conversations/conversation-view/jsonl-viewer/tool-call/bash`
     - `conversations/conversation-view/jsonl-viewer/tool-call/edit`
+    - `conversations/conversation-view/jsonl-viewer/tool-call/flag-raise`
     - `conversations/conversation-view/jsonl-viewer/tool-call/page-tools`
     - `conversations/conversation-view/jsonl-viewer/tool-call/page-tools/edit-page`
     - `conversations/conversation-view/jsonl-viewer/tool-call/page-tools/read-page`
@@ -249,6 +254,7 @@ per-site via `// eslint-disable-next-line spacing/no-adhoc-spacing -- reason`.
     - `conversations/conversation-view/jsonl-viewer/tool-call/workflow`
     - `conversations/conversation-view/jsonl-viewer/transcript-stats`
     - `conversations/conversation-view/jsonl-viewer/user-image`
+    - `conversations/conversation-view/op-status`
     - `conversations/conversation-view/pending-turn`
     - `conversations/conversation-view/prompt-templates`
     - `conversations/conversation-view/turn-summary`
@@ -287,7 +293,10 @@ per-site via `// eslint-disable-next-line spacing/no-adhoc-spacing -- reason`.
     - `debug/trace/stall`
     - `debug/worktree-cleanup`
     - `debug/zero-test`
+    - `fields/avatar/config`
+    - `fields/bool/config`
     - `fields/bool/filter`
+    - `fields/color/config`
     - `fields/color/table`
     - `fields/date/filter`
     - `fields/directory-path/config`
@@ -348,6 +357,7 @@ per-site via `// eslint-disable-next-line spacing/no-adhoc-spacing -- reason`.
     - `plugin-meta/plugin-view/sub-plugins`
     - `primitives/adaptive-bar`
     - `primitives/app-shell`
+    - `primitives/breadcrumb`
     - `primitives/command-palette`
     - `primitives/commit-list`
     - `primitives/css/cluster`

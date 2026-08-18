@@ -14,13 +14,10 @@ interface GoogleUserInfo {
   picture?: string;
 }
 
-async function fetchGoogleIdentity(
-  accessToken: string,
-): Promise<AuthIdentity> {
-  const res = await fetch(
-    "https://openidconnect.googleapis.com/v1/userinfo",
-    { headers: { Authorization: `Bearer ${accessToken}` } },
-  );
+async function fetchGoogleIdentity(accessToken: string): Promise<AuthIdentity> {
+  const res = await fetch("https://openidconnect.googleapis.com/v1/userinfo", {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
   if (!res.ok) {
     throw new Error(
       `google: userinfo ${res.status} ${await res.text().catch(() => "")}`,
@@ -62,7 +59,7 @@ export const googleDescriptor: AuthProviderDescriptor = defineAuthProvider({
       const cfg = await readSecretConfig(googleAuthConfig);
       // Google requires both; either missing means we can't complete the OAuth
       // flow, so treat the provider as unconfigured.
-      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard; readSecretConfig returns "" for unset secrets
+      // readSecretConfig returns "" for unset secrets, so a falsy value means unconfigured
       if (!cfg.clientId || !cfg.clientSecret) {
         throw new AuthCredentialsMissingError("google");
       }

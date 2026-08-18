@@ -21,7 +21,10 @@
     - `primitives/css/cluster.Cluster`
     - `primitives/css/color-picker.Color`
     - `primitives/css/color-picker.ColorPickerPopover`
+    - `primitives/css/fill.Fill`
     - `primitives/css/grid.Grid`
+    - `primitives/css/inline.Inline`
+    - `primitives/css/line.Line`
     - `primitives/css/row.Row`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`

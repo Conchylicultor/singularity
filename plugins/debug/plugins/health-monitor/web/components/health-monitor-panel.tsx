@@ -23,8 +23,16 @@ import {
   useEndpoint,
   getEndpointErrorMessage,
 } from "@plugins/infra/plugins/endpoints/web";
-import { SectionLabel, Text } from "@plugins/primitives/plugins/css/plugins/text/web";
-import { Stack, Inset } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import {
+  SectionLabel,
+  Text,
+} from "@plugins/primitives/plugins/css/plugins/text/web";
+import {
+  Stack,
+  Inset,
+} from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
+import { Rigid } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 import { Grid } from "@plugins/primitives/plugins/css/plugins/grid/web";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
@@ -88,7 +96,10 @@ function MetricChart({
     <div className="h-44 w-full">
       <ChartState error={null} loading={false} empty={data.length === 0}>
         <ResponsiveContainer width="100%" height="100%">
-          <LineChart data={data} margin={{ top: 8, right: 16, bottom: 8, left: 0 }}>
+          <LineChart
+            data={data}
+            margin={{ top: 8, right: 16, bottom: 8, left: 0 }}
+          >
             <CartesianGrid {...gridProps} />
             <XAxis
               dataKey="sampledAt"
@@ -172,7 +183,9 @@ function ChartBlock({
 function BackendSection({ series }: { series: HealthSeries }): ReactElement {
   const rows = useMemo(
     () =>
-      [...series.samples].sort((a, b) => a.sampledAt - b.sampledAt) as unknown as ChartRow[],
+      [...series.samples].sort(
+        (a, b) => a.sampledAt - b.sampledAt,
+      ) as unknown as ChartRow[],
     [series.samples],
   );
   // Coalesce the (potentially hundreds of) markers to the 10s sample grid: one
@@ -182,10 +195,14 @@ function BackendSection({ series }: { series: HealthSeries }): ReactElement {
   const markers = useMemo<SpikeMarker[]>(() => {
     const buckets = new Map<number, SpikeMarker>();
     for (const m of series.slowOpMarkers) {
-      const x = Math.round(m.atTime.getTime() / SAMPLE_BUCKET_MS) * SAMPLE_BUCKET_MS;
+      const x =
+        Math.round(m.atTime.getTime() / SAMPLE_BUCKET_MS) * SAMPLE_BUCKET_MS;
       const severity = loadSeverity(m.loadAvg1, m.cpuCount);
       const existing = buckets.get(x);
-      if (!existing || SEVERITY_RANK[severity] > SEVERITY_RANK[existing.severity]) {
+      if (
+        !existing ||
+        SEVERITY_RANK[severity] > SEVERITY_RANK[existing.severity]
+      ) {
         buckets.set(x, {
           key: String(x),
           x,
@@ -216,7 +233,11 @@ function BackendSection({ series }: { series: HealthSeries }): ReactElement {
           markers={markers}
           lines={[
             { key: "eventLoopP99Ms", label: "p99", color: "var(--primary)" },
-            { key: "eventLoopMaxMs", label: "max", color: "var(--destructive)" },
+            {
+              key: "eventLoopMaxMs",
+              label: "max",
+              color: "var(--destructive)",
+            },
           ]}
         />
         <ChartBlock
@@ -224,7 +245,11 @@ function BackendSection({ series }: { series: HealthSeries }): ReactElement {
           data={rows}
           markers={markers}
           lines={[
-            { key: "physFootprintMb", label: "Footprint", color: "var(--destructive)" },
+            {
+              key: "physFootprintMb",
+              label: "Footprint",
+              color: "var(--destructive)",
+            },
             // ri_resident_size: pages physically in RAM. The gap between Footprint
             // and this line is the backend's squeezed-out (compressed/swapped)
             // bytes — the paging-victimhood signal. Optional field ⇒ gaps on
@@ -239,7 +264,9 @@ function BackendSection({ series }: { series: HealthSeries }): ReactElement {
           label="Heap growth per interval (MB)"
           data={rows}
           markers={markers}
-          lines={[{ key: "heapGrowthMb", label: "Δ heap", color: "var(--warning)" }]}
+          lines={[
+            { key: "heapGrowthMb", label: "Δ heap", color: "var(--warning)" },
+          ]}
         />
         {/* Monitoring self-cost: the observability subsystem's own work per 10s
             tick (everything under runWithoutProfiling) — suppressed from the
@@ -273,7 +300,13 @@ const IDLE_WORK_PER_BACKEND = [
 ];
 const IDLE_WORK_MAIN_ONLY = ["host-sampler 10s", "crons"];
 
-function BackendRow({ series, now }: { series: HealthSeries; now: number }): ReactElement {
+function BackendRow({
+  series,
+  now,
+}: {
+  series: HealthSeries;
+  now: number;
+}): ReactElement {
   const latest = series.samples.length
     ? series.samples.reduce((a, b) => (a.sampledAt > b.sampledAt ? a : b))
     : null;
@@ -281,12 +314,12 @@ function BackendRow({ series, now }: { series: HealthSeries; now: number }): Rea
   const stale = ageMs > STALE_AGE_MS;
   const depth = latest?.heavyReadDepth ?? 0;
   return (
-    <div className="flex items-center gap-sm">
+    <Stack direction="row" align="center" gap="sm">
       <Stack direction="row" align="center" gap="xs">
         <StatusDot colorClass={stale ? "bg-muted-foreground" : "bg-success"} />
         <Text variant="caption">{series.worktree}</Text>
       </Stack>
-      <div className="min-w-0 flex-1">
+      <Fill>
         {latest ? (
           <Text variant="caption" tone="muted">
             <RelativeTime date={new Date(latest.sampledAt)} />
@@ -296,22 +329,26 @@ function BackendRow({ series, now }: { series: HealthSeries; now: number }): Rea
             no samples
           </Text>
         )}
-      </div>
-      <div className="flex shrink-0 items-center gap-sm">
+      </Fill>
+      <Stack as={Rigid} direction="row" align="center" gap="sm">
         <Badge
           variant={depth > 0 ? "warning" : "muted"}
           title="Host-wide heavy-read gate queue depth"
         >
           {`heavy-read ${depth}`}
         </Badge>
-      </div>
-    </div>
+      </Stack>
+    </Stack>
   );
 }
 
-function BackendsSection(
-  { series, now }: { series: HealthSeries[]; now: number },
-): ReactElement | null {
+function BackendsSection({
+  series,
+  now,
+}: {
+  series: HealthSeries[];
+  now: number;
+}): ReactElement | null {
   const rows = useMemo(
     () => [...series].sort((a, b) => a.worktree.localeCompare(b.worktree)),
     [series],
@@ -332,9 +369,16 @@ function BackendsSection(
   );
 }
 
-function HostSection({ samples }: { samples: HostSample[] }): ReactElement | null {
+function HostSection({
+  samples,
+}: {
+  samples: HostSample[];
+}): ReactElement | null {
   const rows = useMemo(
-    () => [...samples].sort((a, b) => a.sampledAt - b.sampledAt) as unknown as ChartRow[],
+    () =>
+      [...samples].sort(
+        (a, b) => a.sampledAt - b.sampledAt,
+      ) as unknown as ChartRow[],
     [samples],
   );
   if (rows.length === 0) return null;
@@ -355,7 +399,11 @@ function HostSection({ samples }: { samples: HostSample[] }): ReactElement | nul
           data={rows}
           lines={[
             { key: "freeMemMb", label: "free MB", color: "var(--success)" },
-            { key: "swapOutPagesPerSec", label: "swap-out/s", color: "var(--destructive)" },
+            {
+              key: "swapOutPagesPerSec",
+              label: "swap-out/s",
+              color: "var(--destructive)",
+            },
           ]}
         />
         {/* Compressor thrash is the memory-pressure channel swap misses — each
@@ -364,7 +412,11 @@ function HostSection({ samples }: { samples: HostSample[] }): ReactElement | nul
           label="Memory compressor (pages/s)"
           data={rows}
           lines={[
-            { key: "compressionsPerSec", label: "compressions/s", color: "var(--warning)" },
+            {
+              key: "compressionsPerSec",
+              label: "compressions/s",
+              color: "var(--warning)",
+            },
             {
               key: "decompressionsPerSec",
               label: "decompressions/s",
@@ -405,7 +457,9 @@ export function HealthMonitorPanel(): ReactElement {
         <HostSection samples={data.hostSamples} />
         <BackendsSection series={data.series} now={dataUpdatedAt} />
         {data.series.length === 0 ? (
-          <Placeholder>No health samples yet — the sampler warms up within ~10s.</Placeholder>
+          <Placeholder>
+            No health samples yet — the sampler warms up within ~10s.
+          </Placeholder>
         ) : (
           data.series.map((s) => <BackendSection key={s.worktree} series={s} />)
         )}

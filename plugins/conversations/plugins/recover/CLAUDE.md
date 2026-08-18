@@ -14,11 +14,14 @@
     - `apps/debug/shell.DebugApp`
     - `infra/endpoints.fetchEndpoint`
     - `primitives/app-shell.sidebarNavItem`
+    - `primitives/css/fill.fillClasses`
     - `primitives/css/placeholder.Placeholder`
+    - `primitives/css/rigid.rigidClass`
     - `primitives/css/scroll.Scroll`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.Button`
+    - `primitives/css/ui-kit.cn`
     - `primitives/css/ui-kit.ControlSizeProvider`
     - `primitives/live-state.useResource`
     - `primitives/loading.Loading`

@@ -14,6 +14,7 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { TaskDraftCard } from "./task-draft-card";
 import { ChainConnector } from "./chain-connector";
@@ -166,7 +167,9 @@ export function TaskDraftForm({
 
   const toggleLink = (idx: number) => {
     onCardsChange(
-      cards.map((c, i) => (i === idx ? { ...c, linkedToPrev: !c.linkedToPrev } : c)),
+      cards.map((c, i) =>
+        i === idx ? { ...c, linkedToPrev: !c.linkedToPrev } : c,
+      ),
     );
   };
 
@@ -192,14 +195,23 @@ export function TaskDraftForm({
       className={`w-[480px] ${isAgentWorktree ? "rounded-lg border-2 border-destructive/60 p-md" : ""}`}
     >
       {isAgentWorktree && (
-        <Stack direction="row" align="center" gap="xs" className="text-destructive">
+        <Stack
+          direction="row"
+          align="center"
+          gap="xs"
+          className="text-destructive"
+        >
           <MdScience className="size-3.5" />
           <Text as="span" variant="caption" className="font-medium">
             Experimental — tasks target main from an agent worktree
           </Text>
         </Stack>
       )}
-      <Text as="div" variant="caption" className="text-muted-foreground font-medium">
+      <Text
+        as="div"
+        variant="caption"
+        className="text-muted-foreground font-medium"
+      >
         {heading ?? "Draft tasks"}
       </Text>
 
@@ -237,7 +249,9 @@ export function TaskDraftForm({
                     removable={cards.length > 1}
                     disabled={submitting}
                     onTextChange={(t) => updateCard(idx, { text: t })}
-                    onLaunchOptionsChange={(o) => updateCard(idx, { options: o })}
+                    onLaunchOptionsChange={(o) =>
+                      updateCard(idx, { options: o })
+                    }
                     onRemove={() => removeAt(idx)}
                     onSubmitChord={() => {
                       if (!disabled) onSubmit();
@@ -258,17 +272,33 @@ export function TaskDraftForm({
                     }
                     relateMode={isHead ? relateMode : undefined}
                     onRelateModeChange={isHead ? onRelateModeChange : undefined}
-                    showIndependentRelate={isHead ? showIndependentRelate : undefined}
+                    showIndependentRelate={
+                      isHead ? showIndependentRelate : undefined
+                    }
                     relateTaskChildren={
                       isHead && relateMode === "followup"
                         ? relateTaskChildren
                         : undefined
                     }
                     insertBeforeIds={isHead ? insertBeforeIds : undefined}
-                    onInsertBeforeChange={isHead ? onInsertBeforeChange : undefined}
-                    standalone={isHead && relateMode === "prerequisite" ? standalone : undefined}
-                    onStandaloneChange={isHead && relateMode === "prerequisite" ? onStandaloneChange : undefined}
-                    showStandalone={isHead && relateMode === "prerequisite" ? showStandalone : undefined}
+                    onInsertBeforeChange={
+                      isHead ? onInsertBeforeChange : undefined
+                    }
+                    standalone={
+                      isHead && relateMode === "prerequisite"
+                        ? standalone
+                        : undefined
+                    }
+                    onStandaloneChange={
+                      isHead && relateMode === "prerequisite"
+                        ? onStandaloneChange
+                        : undefined
+                    }
+                    showStandalone={
+                      isHead && relateMode === "prerequisite"
+                        ? showStandalone
+                        : undefined
+                    }
                   />
                 </Fragment>
               );
@@ -284,21 +314,26 @@ export function TaskDraftForm({
           loading={submitting}
           className="text-muted-foreground"
         >
-          <MdAdd className="size-3.5" />
-          + task
+          <MdAdd className="size-3.5" />+ task
         </Button>
       </Stack>
 
-      <div className="border-border flex items-center gap-sm border-t pt-sm">
+      <Stack
+        direction="row"
+        gap="sm"
+        align="center"
+        className="border-border border-t pt-sm"
+      >
         {footerStart}
-        <div className="flex-1" />
+        {/* Empty grow cell: it absorbs the slack so Cancel/Submit sit flush-right. */}
+        <Fill />
         <Button variant="ghost" onClick={onCancel} loading={submitting}>
           Cancel
         </Button>
         <Button onClick={onSubmit} loading={submitting} disabled={hasEmpty}>
           {isMulti ? "Submit chain" : "Submit"}
         </Button>
-      </div>
+      </Stack>
     </Stack>
   );
 }

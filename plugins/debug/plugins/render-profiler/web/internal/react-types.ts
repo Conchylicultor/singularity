@@ -37,15 +37,14 @@ export interface ContextItem {
 
 export interface Fiber {
   tag: number;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- React internal: component fn/class/forwardRef/memo object
+  // React internal: component fn/class/forwardRef/memo object
   type: any;
   key: string | null;
   /** React's authoritative per-parent reconciliation slot index. */
   index: number;
   flags: number;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- React internal: hook linked-list node
+  // React internal: hook linked-list node
   memoizedState: any;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- React internal: props object
   memoizedProps: any;
   dependencies: { firstContext: ContextItem | null } | null;
   child: Fiber | null;
@@ -69,7 +68,7 @@ export interface RenderProfilerGlobal {
 /** The passive commit bridge installed by index.html, before React loads. */
 export interface ReactDevtoolsHook {
   __commitSubscribers?: Set<(root: FiberRoot) => void>;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- the full hook has many fields we don't touch
+  // the full hook has many fields we don't touch
   [key: string]: any;
 }
 

@@ -1,5 +1,8 @@
 import { useEffect, useState } from "react";
-import { useEndpoint, EndpointError } from "@plugins/infra/plugins/endpoints/web";
+import {
+  useEndpoint,
+  EndpointError,
+} from "@plugins/infra/plugins/endpoints/web";
 import { SearchInput } from "@plugins/primitives/plugins/search/web";
 import { Grid } from "@plugins/primitives/plugins/css/plugins/grid/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
@@ -86,7 +89,6 @@ export function WallpaperSearchPanel({
                   src={result.thumbUrl}
                   alt={result.attribution?.title ?? ""}
                   loading="lazy"
-                  // eslint-disable-next-line layout/no-adhoc-layout -- image fills its own tile button (object-cover crop), not a layout wrapper
                   className="size-full object-cover"
                 />
               </button>

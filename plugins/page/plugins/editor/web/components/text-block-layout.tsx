@@ -74,7 +74,7 @@ export interface TextBlockLayoutProps {
  * object, exactly like `Anchor` in `block-row.tsx` / `read-only-blocks.tsx`.
  */
 function Region({ of: Of, ...props }: BlockRegionProps & { of?: BlockRegion }) {
-  // eslint-disable-next-line react-hooks/static-components -- not a component CREATED during render: `Of` comes from the STATIC `BlockChrome.regions` object built at module eval inside the contribution literal, so its identity is a module constant and no state can reset.
+  // `Of` comes from the STATIC `BlockChrome.regions` object built at module eval inside the contribution literal, so its identity is a module constant and no state can reset.
   return Of ? <Of {...props} /> : null;
 }
 

@@ -7,6 +7,9 @@ import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Grid } from "@plugins/primitives/plugins/css/plugins/grid/web";
+import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
+import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
+import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 
 // A renderable block: either a leaf agent/workflow node or a concurrency group.
 type Block =
@@ -118,7 +121,10 @@ export function WorkflowGraph({
       {(graph.truncated || graph.dynamic) && (
         <Stack gap="xs">
           {graph.truncated && (
-            <Badge colorClass="bg-warning/10 text-warning" icon={<MdWarningAmber />}>
+            <Badge
+              colorClass="bg-warning/10 text-warning"
+              icon={<MdWarningAmber />}
+            >
               Graph truncated at the preview cap — see full script below.
             </Badge>
           )}
@@ -134,22 +140,36 @@ export function WorkflowGraph({
         <div key={lane.title || `lane-${i}`}>
           {lane.title && (
             // eslint-disable-next-line spacing/no-adhoc-spacing -- mb-1.5 spaces the lane title row from the blocks below it
-            <div className="mb-1.5 flex items-baseline gap-sm">
-              <span className="flex size-4 shrink-0 items-center justify-center rounded-full bg-categorical-6/15 font-mono text-3xs text-categorical-6">
+            <Stack direction="row" gap="sm" align="baseline" className="mb-1.5">
+              <Center
+                as="span"
+                className={cn(
+                  "size-4 rounded-full bg-categorical-6/15 font-mono text-3xs text-categorical-6",
+                  rigidClass(),
+                )}
+              >
                 {lane.numberLabel}
-              </span>
+              </Center>
               <Text as="span" variant="label" className="text-foreground">
                 {lane.title}
               </Text>
               {lane.detail && (
-                <span className="min-w-0 truncate text-2xs text-muted-foreground">
+                <Fill
+                  as="span"
+                  className="truncate text-2xs text-muted-foreground"
+                >
                   {lane.detail}
-                </span>
+                </Fill>
               )}
-            </div>
+            </Stack>
           )}
-          {/* eslint-disable-next-line spacing/no-adhoc-spacing -- ml-1.5 indents the lane's blocks to align with the border-left rule */}
-          <Stack gap="xs" className={cn(lane.title && "ml-1.5 border-l border-border/50 pl-md")}>
+          <Stack
+            gap="xs"
+            // eslint-disable-next-line spacing/no-adhoc-spacing -- ml-1.5 indents the lane's blocks to align with the border-left rule
+            className={cn(
+              lane.title && "ml-1.5 border-l border-border/50 pl-md",
+            )}
+          >
             {lane.blocks.map(renderBlock)}
           </Stack>
         </div>

@@ -19,7 +19,9 @@
     - `conversations/conversation-view/code/file-pane.FilePaneView`
     - `infra/endpoints.fetchEndpoint`
     - `primitives/css/column.Column`
+    - `primitives/css/line.Line`
     - `primitives/css/placeholder.Placeholder`
+    - `primitives/css/rigid.rigidClass`
     - `primitives/css/scroll.Scroll`
     - `primitives/css/spacing.Stack`
     - `primitives/css/status-dot.StatusDot`

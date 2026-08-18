@@ -19,8 +19,12 @@
     - `primitives/css/badge.Badge`
     - `primitives/css/badge.formatStatusLabel`
     - `primitives/css/card.Card`
+    - `primitives/css/center.Center`
     - `primitives/css/cluster.Cluster`
+    - `primitives/css/fill.Fill`
     - `primitives/css/grid.Grid`
+    - `primitives/css/line.Line`
+    - `primitives/css/rigid.rigidClass`
     - `primitives/css/scroll.Scroll`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`

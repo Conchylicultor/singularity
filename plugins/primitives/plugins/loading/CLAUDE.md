@@ -52,6 +52,7 @@ which is what the `no-adhoc-loading-text` lint rule enforces.
   - Uses:
     - `primitives/css/grid.Grid`
     - `primitives/css/placeholder.Placeholder`
+    - `primitives/css/rigid.rigidClass`
     - `primitives/css/spacing.Stack`
     - `primitives/css/spinner.Spinner`
     - `primitives/css/ui-kit.cn`

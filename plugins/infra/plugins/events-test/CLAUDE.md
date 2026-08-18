@@ -15,6 +15,7 @@
     - `infra/endpoints.fetchEndpoint`
     - `primitives/app-shell.sidebarNavItem`
     - `primitives/css/badge.Badge`
+    - `primitives/css/fill.Fill`
     - `primitives/css/scroll.Scroll`
     - `primitives/css/spacing.Stack`
     - `primitives/css/surface.Surface`

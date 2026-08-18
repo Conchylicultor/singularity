@@ -9,6 +9,9 @@ import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Card } from "@plugins/primitives/plugins/css/plugins/card/web";
 import { Clip } from "@plugins/primitives/plugins/css/plugins/clip/web";
+import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
+import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
+import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
 
@@ -49,23 +52,42 @@ export function RecentPagesSection(): ReactElement | null {
             {recent.map((page) => {
               const { title, iconSvgNodes } = pageData(page);
               return (
-                <button
+                <Stack
                   key={page.id}
-                  className="flex items-center gap-md px-md py-sm text-left transition-colors hover:bg-accent"
+                  as="button"
+                  direction="row"
+                  gap="md"
+                  align="center"
+                  className="px-md py-sm text-left transition-colors hover:bg-accent"
                   onClick={() =>
-                    openPane(pageDetailPane, { pageId: page.id }, { mode: "push" })
+                    openPane(
+                      pageDetailPane,
+                      { pageId: page.id },
+                      { mode: "push" },
+                    )
                   }
                 >
-                  <PageIcon nodes={iconSvgNodes} className="size-5 shrink-0 text-muted-foreground" />
-                  <Text variant="body" className="min-w-0 flex-1">
-                    {title || "Untitled"}
-                  </Text>
+                  <PageIcon
+                    nodes={iconSvgNodes}
+                    className={cn("size-5 text-muted-foreground", rigidClass())}
+                  />
+                  <Fill as="span">
+                    <Text variant="body">{title || "Untitled"}</Text>
+                  </Fill>
                   <RelativeTime
                     date={page.updatedAt}
-                    className="shrink-0 text-caption text-muted-foreground"
+                    className={cn(
+                      rigidClass(),
+                      "text-caption text-muted-foreground",
+                    )}
                   />
-                  <MdArrowForward className="size-4 shrink-0 text-muted-foreground/50" />
-                </button>
+                  <MdArrowForward
+                    className={cn(
+                      "size-4 text-muted-foreground/50",
+                      rigidClass(),
+                    )}
+                  />
+                </Stack>
               );
             })}
           </Stack>

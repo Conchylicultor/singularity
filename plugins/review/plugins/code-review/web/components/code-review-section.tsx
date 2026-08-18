@@ -3,7 +3,16 @@ import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { ResourceView } from "@plugins/primitives/plugins/live-state/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
-import { Collapsible, CollapsibleTrigger, CollapsibleContent, CollapsibleChevron, useExpandAll, ExpandAllButton } from "@plugins/primitives/plugins/collapsible/web";
+import {
+  Collapsible,
+  CollapsibleTrigger,
+  CollapsibleContent,
+  CollapsibleChevron,
+  useExpandAll,
+  ExpandAllButton,
+} from "@plugins/primitives/plugins/collapsible/web";
+import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
+import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { Sticky } from "@plugins/primitives/plugins/css/plugins/sticky/web";
@@ -33,7 +42,10 @@ export function CodeReviewSection({
   return (
     <Stack gap="none" className="min-h-0">
       {source.kind === "working" ? (
-        <WorkingTreeBody conversationId={conversation.id} worktree={conversation.attemptId} />
+        <WorkingTreeBody
+          conversationId={conversation.id}
+          worktree={conversation.attemptId}
+        />
       ) : (
         <PushBody pushId={source.pushId} />
       )}
@@ -52,14 +64,26 @@ function WorkingTreeBody({
   return (
     <ResourceView
       resource={filesResult}
-      fallback={<FileList files={null} worktree={worktree} base="main" emptyLabel="No edited files." />}
+      fallback={
+        <FileList
+          files={null}
+          worktree={worktree}
+          base="main"
+          emptyLabel="No edited files."
+        />
+      }
     >
       {(payload) =>
         // The payload is a `Resolvable`: an unresolved worktree is a determinate
         // "unknown", NOT an empty diff, so it renders its `reason` rather than the
         // "No edited files." empty copy that would read as a genuinely clean tree.
         payload.resolved ? (
-          <FileList files={payload.value} worktree={worktree} base="main" emptyLabel="No edited files." />
+          <FileList
+            files={payload.value}
+            worktree={worktree}
+            base="main"
+            emptyLabel="No edited files."
+          />
         ) : (
           <Body>
             <Placeholder tone="error">{payload.reason}</Placeholder>
@@ -73,12 +97,18 @@ function WorkingTreeBody({
 function PushBody({ pushId }: { pushId: string }) {
   const state = usePushFiles(pushId);
   if (state.kind === "loading") {
-    return <Body><Loading /></Body>;
+    return (
+      <Body>
+        <Loading />
+      </Body>
+    );
   }
   if (state.kind === "error") {
     return (
       <Body>
-        <Placeholder tone="error">{state.message || "Failed to load push."}</Placeholder>
+        <Placeholder tone="error">
+          {state.message || "Failed to load push."}
+        </Placeholder>
       </Body>
     );
   }
@@ -133,12 +163,14 @@ function FileList({
     return [...files].sort((a, b) => a.path.localeCompare(b.path));
   }, [files]);
 
-  const sortedPaths = useMemo(
-    () => sorted?.map((f) => f.path) ?? [],
-    [sorted],
-  );
+  const sortedPaths = useMemo(() => sorted?.map((f) => f.path) ?? [], [sorted]);
 
-  const { expanded, allExpanded, toggleAll, toggle: toggleOne } = useExpandAll(sortedPaths);
+  const {
+    expanded,
+    allExpanded,
+    toggleAll,
+    toggle: toggleOne,
+  } = useExpandAll(sortedPaths);
 
   const sections = useMemo((): FileSection[] | null => {
     if (!sorted) return null;
@@ -146,7 +178,8 @@ function FileList({
   }, [sorted, reviewSections]);
 
   const totals = useMemo(
-    () => (sorted ? sumStats(sorted) : { count: 0, additions: 0, deletions: 0 }),
+    () =>
+      sorted ? sumStats(sorted) : { count: 0, additions: 0, deletions: 0 },
     [sorted],
   );
 
@@ -212,7 +245,9 @@ function FileSectionBlock({
           <span>·</span>
           <span className="tabular-nums">{totals.count} files</span>
           <span className="tabular-nums text-success">+{totals.additions}</span>
-          <span className="tabular-nums text-destructive">−{totals.deletions}</span>
+          <span className="tabular-nums text-destructive">
+            −{totals.deletions}
+          </span>
         </CollapsibleTrigger>
       </Sticky>
       <CollapsibleContent>
@@ -248,28 +283,34 @@ function ToolbarRow({
   onToggleAll: () => void;
 }) {
   return (
-    <div className="sticky top-0 z-raised flex items-center gap-md border-b border-border bg-background/95 px-lg py-sm backdrop-blur">
-      <Text as="div" variant="label" className="flex items-center gap-sm">
+    <Stack
+      as={Sticky}
+      direction="row"
+      gap="md"
+      align="center"
+      className="border-b border-border bg-background/95 px-lg py-sm backdrop-blur"
+    >
+      <Text as={Line} variant="label" className="gap-sm">
         <span className="tabular-nums">{count} files</span>
-        <span className="text-success tabular-nums">
-          +{additions}
-        </span>
-        <span className="text-destructive tabular-nums">
-          −{deletions}
-        </span>
+        <span className="text-success tabular-nums">+{additions}</span>
+        <span className="text-destructive tabular-nums">−{deletions}</span>
       </Text>
-      <div className="flex flex-1 items-center justify-end gap-xs">
+      <Stack as={Fill} direction="row" gap="xs" align="center" justify="end">
         <ExpandAllButton
           variant="full"
           allExpanded={allExpanded}
           onToggle={onToggleAll}
           disabled={!canToggle}
         />
-      </div>
-    </div>
+      </Stack>
+    </Stack>
   );
 }
 
 function Body({ children }: { children: React.ReactNode }) {
-  return <Scroll axis="both" fill isolate>{children}</Scroll>;
+  return (
+    <Scroll axis="both" fill isolate>
+      {children}
+    </Scroll>
+  );
 }

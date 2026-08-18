@@ -4,6 +4,8 @@ import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
+import { clipClasses } from "@plugins/primitives/plugins/css/plugins/clip/web";
+import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import {
@@ -188,7 +190,12 @@ export function ListView(props: DataViewRenderProps<unknown>): ReactNode {
         options.renderRow(row)
       ) : (
         <>
-          <div className="flex min-w-0 flex-col overflow-hidden">
+          {/* Clipping already floors this flex item's automatic minimum size at
+              0, so the cell needs no min-w-0 of its own. */}
+          <Stack
+            gap="none"
+            className={clipClasses({ axis: "both", fill: false })}
+          >
             {titleField ? (
               <Text
                 as="div"
@@ -224,10 +231,15 @@ export function ListView(props: DataViewRenderProps<unknown>): ReactNode {
                 ))}
               </Text>
             ) : null}
-          </div>
+          </Stack>
           {trailingFields.length > 0 ||
           (aggregateCount && aggregateCount > 1) ? (
-            <div className="ml-auto flex shrink-0 items-center gap-xs">
+            <Stack
+              direction="row"
+              gap="xs"
+              align="center"
+              className={cn("ml-auto", rigidClass())}
+            >
               {trailingFields.map((field) => (
                 <span key={field.id}>
                   <FieldCell
@@ -242,7 +254,7 @@ export function ListView(props: DataViewRenderProps<unknown>): ReactNode {
               {aggregateCount && aggregateCount > 1 ? (
                 <Badge variant="muted">{`×${aggregateCount}`}</Badge>
               ) : null}
-            </div>
+            </Stack>
           ) : null}
         </>
       )}

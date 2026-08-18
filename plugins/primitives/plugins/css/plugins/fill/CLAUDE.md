@@ -21,6 +21,25 @@ Fill adds NO truncation/overflow itself — that is the `<Text>` leaf's job (box
 clipping is `<Clip>`'s). It is purely the flex-cell mechanic; `className`
 composes last.
 
+The opposite role — the leaf that must **not** give — is
+[`rigid`](../rigid/CLAUDE.md) (`shrink-0`), a sibling plugin. It takes no axis:
+`flex-shrink` is one property that follows the container's main axis, whereas
+Fill's `min-w-0`/`min-h-0` are two different ones.
+
+## When you only have a `className`
+
+- **`fillClasses(axis)`** — the same resolver `<Fill>` uses (same axis records,
+  same emitted pair), returning a class string. Use it when you can only pass a
+  `className` and cannot wrap the element: a third-party component's `className`
+  prop, Lexical's `<ContentEditable>`, a raw `<img>`/`<textarea>`/`<button>` leaf
+  that must itself be the flex cell. Use `<Fill>` whenever you own the element.
+
+The two are not alternatives to weigh — **the question is whether you own the
+element.** Own it ⇒ the component (it also carries the `as`/`ref` surface); don't
+own it ⇒ the class helper. Reaching for a raw `<div className="min-w-0 flex-1">`
+plus an `eslint-disable` is the wrong third answer: it re-hand-rolls the pair the
+primitive exists to name.
+
 > Why it exists: a stray `flex-1` on the WRONG element strands the grow slot —
 > e.g. the transcript `CollapsibleCard` header grew an empty identity group while
 > the real content sat in a non-growing sibling, producing a gap on short content
@@ -42,6 +61,10 @@ composes last.
     - `fillClasses`
 - Cross-plugin:
   - Imported by:
+    - `apps/agent-manager/shell`
+    - `apps/agent-manager/welcome`
+    - `apps/agent-manager/worktree-switcher`
+    - `apps/browser/shell`
     - `apps/deploy/deploy-history`
     - `apps/deploy/deployments`
     - `apps/deploy/servers`
@@ -55,36 +78,93 @@ composes last.
     - `apps/mail/search`
     - `apps/mail/sync-status`
     - `apps/mail/threads`
+    - `apps/pages/welcome/recent-pages`
     - `apps/sonata/library`
+    - `apps/sonata/piano-roll`
     - `apps/sonata/sources/ultimate-guitar`
+    - `apps/sonata/track-mixer`
+    - `apps/story/shell`
     - `apps/studio/compositions/contributors`
     - `apps/studio/compositions/release/release-logs`
     - `apps/website/demos/release-switcher`
     - `apps/website/landing/pillars`
     - `apps/website/shell`
     - `apps/workflows/editor`
+    - `auth`
     - `auth/apple-signing/setup-wizard`
+    - `backup`
+    - `code-explorer/commit-detail`
+    - `config_v2/config-link`
+    - `config_v2/settings`
+    - `conversations/conversation-ui/item`
+    - `conversations/conversation-view/code/file-pane`
+    - `conversations/conversation-view/commits-graph`
+    - `conversations/conversation-view/dependencies`
+    - `conversations/conversation-view/jsonl-viewer`
+    - `conversations/conversation-view/jsonl-viewer/attachment/task-reminder`
     - `conversations/conversation-view/jsonl-viewer/collapsible-card`
     - `conversations/conversation-view/jsonl-viewer/tool-call/ask-user-question`
+    - `conversations/conversation-view/jsonl-viewer/tool-call/bash`
+    - `conversations/conversation-view/jsonl-viewer/tool-call/edit`
+    - `conversations/conversation-view/jsonl-viewer/tool-call/task-tools`
+    - `conversations/conversation-view/jsonl-viewer/tool-call/workflow`
+    - `conversations/conversation-view/launch-prompts`
+    - `conversations/conversation-view/op-status`
+    - `conversations/conversation-view/turn-summary`
     - `conversations/conversations-view`
+    - `conversations/recover`
+    - `debug/broadcasts`
+    - `debug/claude-cli-calls`
+    - `debug/health-monitor`
+    - `debug/live-state-health`
     - `debug/logs`
+    - `debug/profiling`
+    - `debug/queue`
+    - `debug/slow-ops/cluster`
     - `debug/timeline`
     - `debug/trace/pane`
     - `debug/trace/spans`
     - `debug/trace/stall`
+    - `debug/worktree-cleanup`
+    - `fields/list/config`
+    - `fields/string-list/config`
+    - `improve/element-picker`
+    - `infra/events-test`
     - `page/annotations/agent-notes/authorship`
     - `page/annotations/todo/task-link`
+    - `page/bookmark`
+    - `page/code-block`
+    - `page/file`
     - `page/inline-date`
     - `page/prompt/block`
+    - `plugin-meta/facets/registrations/render-detail`
+    - `plugin-meta/facets/resources/render-detail`
+    - `plugin-meta/facets/routes/render-detail`
     - `primitives/action-presentation`
+    - `primitives/command-palette`
+    - `primitives/commit-list`
     - `primitives/date-picker`
     - `primitives/error-boundary`
+    - `primitives/folder-picker`
+    - `primitives/graph-canvas`
     - `primitives/imperative-dialog/confirm`
+    - `primitives/launch`
     - `primitives/log-channels`
     - `primitives/outline/rail`
     - `primitives/pane`
     - `primitives/prompt-editor`
     - `primitives/setup-steps`
+    - `review/code-review`
+    - `review/plugin-changes`
+    - `review/plugin-changes/file-changes`
+    - `shell/notifications`
+    - `tasks/attempt-view`
+    - `tasks/task-draft-form`
+    - `tasks/task-events`
+    - `tasks/task-header`
+    - `ui/theme-engine/theme-customizer`
+    - `ui/tokens/color-adjust`
+    - `ui/tokens/shadow`
     - `ui/tweakcn/community-browser`
 
 <!-- AUTOGENERATED:END -->

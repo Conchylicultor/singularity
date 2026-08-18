@@ -31,9 +31,13 @@
     - `layouts/full-pane.FullPane`
     - `page/editor.BlockEditor`
     - `page/editor.PageIcon`
+    - `primitives/css/fill.Fill`
+    - `primitives/css/fill.fillClasses`
+    - `primitives/css/rigid.rigidClass`
     - `primitives/css/spacing.Stack`
     - `primitives/css/toggle-chip.SegmentedControl`
     - `primitives/css/ui-kit.Button`
+    - `primitives/css/ui-kit.cn`
     - `primitives/data-view.DataView`
     - `primitives/data-view.defineDataView`
     - `primitives/editable-field.useEditableField`

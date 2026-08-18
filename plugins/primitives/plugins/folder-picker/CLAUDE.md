@@ -42,6 +42,7 @@ has **no** config_v2 dependency — the `directory-path` config field type wraps
     - `infra/endpoints.getEndpointErrorMessage`
     - `infra/endpoints.useEndpoint`
     - `primitives/css/center.Center`
+    - `primitives/css/fill.Fill`
     - `primitives/css/pin.Pin`
     - `primitives/css/placeholder.Placeholder`
     - `primitives/css/row.Row`

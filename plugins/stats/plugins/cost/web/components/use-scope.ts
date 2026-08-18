@@ -11,7 +11,6 @@ export function useScope(): {
   const { singularityOnly } = useConfig(costConfig);
   const setConfig = useSetConfig(costConfig);
   return {
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
     scope: singularityOnly ? "singularity" : "all",
     singularityOnly,
     toggle: () => setConfig("singularityOnly", !singularityOnly),

@@ -59,7 +59,6 @@ export async function investigateReport(
           .from(_reports)
           .where(eq(_reports.id, reportId))
           .limit(1);
-        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
         if (!row) {
           throw new Error(
             `investigateReport: no report found for id "${reportId}"`,

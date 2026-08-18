@@ -77,7 +77,6 @@ export function useTabPresence(
     if (!prevLiveIds.has(tab.tabId)) continue; // already gone before this render
     // eslint-disable-next-line react-hooks/refs -- intentional render-time exit-presence diff: the vanishing tab must persist in this same render to play its exit tween; refs track prev-render state and the retained map by design
     if (retained.has(tab.tabId)) continue; // already retained
-    // eslint-disable-next-line react-hooks/refs -- intentional render-time exit-presence diff: the vanishing tab must persist in this same render to play its exit tween; refs track prev-render state and the retained map by design
     const duration = activeDef?.exitDurationMs;
     if (!duration || duration <= 0) continue; // instant unmount (docked / solo)
     // eslint-disable-next-line react-hooks/refs -- intentional render-time exit-presence diff: the vanishing tab must persist in this same render to play its exit tween; refs track prev-render state and the retained map by design

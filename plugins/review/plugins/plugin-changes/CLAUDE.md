@@ -18,8 +18,13 @@
     - `primitives/css/badge.Badge`
     - `primitives/css/badge.formatStatusLabel`
     - `primitives/css/card.Card`
+    - `primitives/css/clip.Clip`
+    - `primitives/css/fill.Fill`
+    - `primitives/css/line.Line`
+    - `primitives/css/rigid.rigidClass`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
+    - `primitives/css/ui-kit.cn`
     - `primitives/live-state.useResource`
     - `primitives/loading.Loading`
     - `primitives/slot-render.defineRenderSlot`

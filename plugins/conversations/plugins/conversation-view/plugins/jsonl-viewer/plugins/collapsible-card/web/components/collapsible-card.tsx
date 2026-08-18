@@ -8,6 +8,8 @@ import { Card } from "@plugins/primitives/plugins/css/plugins/card/web";
 import { Overlay } from "@plugins/primitives/plugins/css/plugins/overlay/web";
 import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
+import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { EventRowActions } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/row-actions/web";
 
@@ -153,14 +155,20 @@ export function CollapsibleCard({
               collapses under a long neighbour, so the chevron + tool badge stay
               intact. pointer-events-none lets clicks fall through to the overlay
               toggle beneath, so tapping the identity area collapses the card. */}
-          <span className="pointer-events-none relative flex shrink-0 items-center gap-xs">
+          <Stack
+            as="span"
+            direction="row"
+            align="center"
+            gap="xs"
+            className={cn(rigidClass(), "pointer-events-none relative")}
+          >
             <CollapsibleChevron open={open} className="size-3" />
             {icon}
             {label}
             {note != null && (
               <span className="text-muted-foreground/60">{note}</span>
             )}
-          </span>
+          </Stack>
           {/* Zone 2 — the single flexible cell. Always present: it absorbs all
               slack (so an empty one pushes the trailing actions flush-right, the
               ml-auto role) and is the ONE place truncation happens. Holds the
@@ -173,18 +181,25 @@ export function CollapsibleCard({
                 grow/shrink, <Line> the row mechanics. */}
             <Line className="gap-sm">
               {summary != null && (
-                <Text className="pointer-events-none opacity-70">{summary}</Text>
+                <Text className="pointer-events-none opacity-70">
+                  {summary}
+                </Text>
               )}
               {sideContent && (
-                <CardHeaderAction className="min-w-0">{sideContent}</CardHeaderAction>
+                // eslint-disable-next-line layout/no-adhoc-layout -- shrink-only cell: the aside must fall below its content width so the FilePath inside can start-ellipsize, but must NOT grow. <Fill>'s flex-1 (basis 0) would hand the summary <Text> its full content width and squeeze the aside alone, instead of the two yielding together as they do today. Fill and Text are the only owners of min-w-0 and both bundle grow/truncate with it, so bare min-w-0 has no primitive.
+                <CardHeaderAction className="min-w-0">
+                  {sideContent}
+                </CardHeaderAction>
               )}
             </Line>
           </Fill>
           {/* Zone 3 — rigid trailing actions, flush-right (slack lives in Fill). */}
           {trailing && (
-            <CardHeaderAction className="shrink-0">{trailing}</CardHeaderAction>
+            <CardHeaderAction className={rigidClass()}>
+              {trailing}
+            </CardHeaderAction>
           )}
-          <CardHeaderAction className="shrink-0">
+          <CardHeaderAction className={rigidClass()}>
             <EventRowActions />
           </CardHeaderAction>
         </Line>

@@ -99,8 +99,14 @@ export const MIN_VISIBLE = 48;
  * when already in range so `setGeo`'s identity guard can skip the notify.
  */
 export function clampToBounds(g: Geometry, bounds: Bounds): Geometry {
-  const x = Math.min(Math.max(MIN_VISIBLE - g.w, g.x), bounds.width - MIN_VISIBLE);
-  const y = Math.min(Math.max(0, g.y), Math.max(0, bounds.height - MIN_VISIBLE));
+  const x = Math.min(
+    Math.max(MIN_VISIBLE - g.w, g.x),
+    bounds.width - MIN_VISIBLE,
+  );
+  const y = Math.min(
+    Math.max(0, g.y),
+    Math.max(0, bounds.height - MIN_VISIBLE),
+  );
   if (x === g.x && y === g.y) return g;
   return { ...g, x, y };
 }
@@ -110,9 +116,7 @@ export function clampToBounds(g: Geometry, bounds: Bounds): Geometry {
 // every floating surface reading the same window stays in sync and survives
 // remounts. `tabToWindow` is a derived reverse index (tabId → windowId), rebuilt
 // from every window's `members` whenever the windows mutate.
-// eslint-disable-next-line scoped-store/no-module-mutable-store -- page-global by design: floating windows own geometry shared across every keep-alive surface mount (never per-surface), mirroring the module-global geometry store this file replaces.
 const windows = new Map<WindowId, FloatingWindow>();
-// eslint-disable-next-line scoped-store/no-module-mutable-store -- page-global by design: a derived reverse index of the page-global `windows` map, rebuilt on every mutation.
 const tabToWindow = new Map<string, WindowId>();
 const subscribers = new Set<() => void>();
 
@@ -126,9 +130,7 @@ function mintWindowId(): WindowId {
 // ordered list + the active id, both persisted alongside the windows map. Ids
 // mint monotonically (`d1, d2, …`). A default `d1` is guaranteed to exist after
 // `hydrate()`, so `activeDesktopId` always points at a real desktop.
-// eslint-disable-next-line scoped-store/no-module-mutable-store -- page-global by design: virtual desktops group the page-global floating windows across every keep-alive surface mount (never per-surface), mirroring the module-global windows map beside it.
 let desktops: Desktop[] = [];
-// eslint-disable-next-line scoped-store/no-module-mutable-store -- page-global by design: the active virtual desktop for the (single) floating surface, mirroring this plugin's module-global window store.
 let activeDesktopId = "";
 
 /** Monotonic desktop-id counter (deterministic, mirrors the window-id counter). */
@@ -144,7 +146,6 @@ function mintDesktopId(): string {
  * exactly when it first materializes on the desktop, never on a refresh or a
  * placement round-trip.
  */
-// eslint-disable-next-line scoped-store/no-module-mutable-store -- page-global by design: a one-shot set of just-opened window ids, consumed once by the chrome (mirrors this plugin's module-global geometry store).
 const introIds = new Set<WindowId>();
 
 /** Consume (read-and-clear) a window's pending open-animation flag. */
@@ -347,9 +348,10 @@ function hydrate() {
     // `Record<tabId, Geometry>`), where the parsed object IS the windows record.
     const legacy = !("windows" in parsed);
     const store = parsed as Partial<PersistedStore>;
-    const windowsRecord = (
-      legacy ? parsed : (store.windows ?? {})
-    ) as Record<string, unknown>;
+    const windowsRecord = (legacy ? parsed : (store.windows ?? {})) as Record<
+      string,
+      unknown
+    >;
 
     // Restore (or mint a default) desktop layout BEFORE the windows, so legacy
     // windows can land on the default desktop and `nextDesktopId` is kept ahead
@@ -462,7 +464,9 @@ export function windowForTab(tabId: string): WindowId | undefined {
 }
 
 /** Imperative read of a window by id (commands / menu). */
-export function getFloatingWindow(windowId: WindowId): FloatingWindow | undefined {
+export function getFloatingWindow(
+  windowId: WindowId,
+): FloatingWindow | undefined {
   hydrate();
   return windows.get(windowId);
 }
@@ -570,7 +574,11 @@ export function setActiveMember(windowId: WindowId, tabId: string) {
 }
 
 /** Reorder `tabId` to `atIndex` within its window's member strip (no-op if absent). */
-export function reorderMember(windowId: WindowId, tabId: string, atIndex: number) {
+export function reorderMember(
+  windowId: WindowId,
+  tabId: string,
+  atIndex: number,
+) {
   hydrate();
   const win = windows.get(windowId);
   if (!win) return;
@@ -724,8 +732,7 @@ export function snapWindowDirection(windowId: WindowId, dir: SnapDirection) {
           ...geo,
           snap: zone,
           // Keep an existing free box; only capture one when leaving the free state.
-          restore:
-            geo.restore ?? { x: geo.x, y: geo.y, w: geo.w, h: geo.h },
+          restore: geo.restore ?? { x: geo.x, y: geo.y, w: geo.w, h: geo.h },
           minimized: false,
         };
   windows.set(windowId, { ...current, geo: nextGeo });
@@ -820,7 +827,10 @@ export function getDesktopsState(): {
  * module desktop snapshot — a stable reference between mutations (rebuilt only in
  * `reindex`), so `useSyncExternalStore` never sees a phantom change.
  */
-export function useDesktops(): { desktops: Desktop[]; activeDesktopId: string } {
+export function useDesktops(): {
+  desktops: Desktop[];
+  activeDesktopId: string;
+} {
   return useSyncExternalStore(
     (cb) => {
       subscribers.add(cb);
@@ -835,7 +845,10 @@ export function useDesktops(): { desktops: Desktop[]; activeDesktopId: string } 
 }
 
 /** Hydrate-then-read the desktop snapshot (the client getSnapshot for {@link useDesktops}). */
-function readDesktopSnapshot(): { desktops: Desktop[]; activeDesktopId: string } {
+function readDesktopSnapshot(): {
+  desktops: Desktop[];
+  activeDesktopId: string;
+} {
   hydrate();
   return desktopSnapshot;
 }
@@ -906,5 +919,10 @@ export function useTabWindow(tabId: string): TabWindowHandle {
     if (id) bringWindowToFront(id);
   }, [tabId]);
 
-  return { window, isActive: window.activeTabId === tabId, setGeo, bringToFront };
+  return {
+    window,
+    isActive: window.activeTabId === tabId,
+    setGeo,
+    bringToFront,
+  };
 }

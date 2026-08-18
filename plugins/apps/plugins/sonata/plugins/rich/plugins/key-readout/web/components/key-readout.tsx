@@ -3,7 +3,10 @@ import {
   useCursorSelector,
   useSonata,
 } from "@plugins/apps/plugins/sonata/plugins/shell/web";
-import { SectionLabel, Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import {
+  SectionLabel,
+  Text,
+} from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Keyboard } from "@plugins/apps/plugins/sonata/plugins/primitives/plugins/keyboard/web";
 import {
@@ -17,7 +20,10 @@ import { tonicPc } from "@plugins/apps/plugins/sonata/plugins/theory/core";
 /** The active key plus where it came from, for the source badge. */
 type ActiveKey = { key: KeySignature; source: "authored" | "derived" };
 
-function sameActiveKey(a: ActiveKey | undefined, b: ActiveKey | undefined): boolean {
+function sameActiveKey(
+  a: ActiveKey | undefined,
+  b: ActiveKey | undefined,
+): boolean {
   if (a === undefined || b === undefined) return a === b;
   return (
     a.key.tonic === b.key.tonic &&
@@ -131,23 +137,27 @@ export function KeyReadout() {
                 {current.mode}
               </span>
             </div>
-            <div className="flex items-baseline justify-between gap-sm">
-              <Text as="div" variant="caption" className="text-muted-foreground">
+            <Stack direction="row" align="baseline" justify="between" gap="sm">
+              <Text
+                as="div"
+                variant="caption"
+                className="text-muted-foreground"
+              >
                 relative {scale.relative.tonic} {scale.relative.mode}
               </Text>
               <span className="text-2xs font-semibold uppercase tracking-wide text-muted-foreground/80">
                 {active?.source === "derived" ? "Auto-detected" : "From MIDI"}
               </span>
-            </div>
+            </Stack>
           </Stack>
 
           <Stack gap="xs">
-            <div className="flex items-center justify-between">
+            <Stack direction="row" align="center" justify="between" gap="none">
               <SectionLabel>Scale</SectionLabel>
               <div className="text-2xs tabular-nums text-muted-foreground/80 text-right">
                 {scale.names.join(" · ")}
               </div>
-            </div>
+            </Stack>
             <Keyboard
               low={KB_LOW}
               high={KB_HIGH}

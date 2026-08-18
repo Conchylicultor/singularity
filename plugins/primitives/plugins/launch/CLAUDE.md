@@ -26,6 +26,7 @@ and the form defaults `openAfterLaunch` to `false`.
     - `conversations/model-provider.useVisibleModels`
     - `conversations/preprompts.PrepromptSelect`
     - `infra/endpoints.fetchEndpoint`
+    - `primitives/css/fill.fillClasses`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.Button`

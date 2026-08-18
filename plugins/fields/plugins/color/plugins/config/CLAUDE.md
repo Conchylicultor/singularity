@@ -26,6 +26,7 @@ carrying the canonical `fields/` color token
     - `config_v2/fields.FieldRendererComponent`
     - `config_v2/fields.Fields`
     - `primitives/css/color-picker.ColorPickerPopover`
+    - `primitives/css/spacing.Stack`
 - Core:
   - Uses:
     - `fields.FieldDef`

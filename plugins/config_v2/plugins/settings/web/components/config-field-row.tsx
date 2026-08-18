@@ -12,7 +12,15 @@ import {
 } from "@plugins/config_v2/plugins/fields/web";
 import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
-import { Inset } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import {
+  Inset,
+  Stack,
+} from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
+import {
+  Rigid,
+  rigidClass,
+} from "@plugins/primitives/plugins/css/plugins/rigid/web";
 import type { FieldDef } from "@plugins/fields/core";
 import { mapConfigLists, setConfigField } from "@plugins/config_v2/core";
 import { resetConfigField } from "../../core";
@@ -120,15 +128,15 @@ export function ConfigFieldRow({
 
   return (
     <div>
-      <div
-        className={cn(
-          hoverRevealGroup,
-          "flex items-center gap-sm rounded-md py-xs pl-none pr-sm",
-        )}
+      <Stack
+        direction="row"
+        gap="sm"
+        align="center"
+        className={cn(hoverRevealGroup, "rounded-md py-xs pl-none pr-sm")}
       >
-        <div
+        <Rigid
           className={cn(
-            "h-8 w-0.5 shrink-0 rounded-full transition-colors",
+            "h-8 w-0.5 rounded-full transition-colors",
             hasConflict
               ? "bg-warning"
               : isModified
@@ -136,7 +144,7 @@ export function ConfigFieldRow({
                 : "bg-transparent",
           )}
         />
-        <div className="min-w-0 flex-1">
+        <Fill>
           <ConfigFieldContext.Provider value={configFieldCtxValue}>
             <FieldRenderer
               field={field}
@@ -144,9 +152,12 @@ export function ConfigFieldRow({
               onChange={handleChange}
             />
           </ConfigFieldContext.Provider>
-        </div>
+        </Fill>
         {tier && tier !== "default" && (
-          <Badge colorClass={TIER_BADGE[tier].className} className="shrink-0">
+          <Badge
+            colorClass={TIER_BADGE[tier].className}
+            className={rigidClass()}
+          >
             {TIER_BADGE[tier].label}
           </Badge>
         )}
@@ -154,14 +165,15 @@ export function ConfigFieldRow({
           type="button"
           onClick={handleReset}
           className={cn(
-            "shrink-0 rounded-sm p-xs text-muted-foreground hover:text-foreground",
+            rigidClass(),
+            "rounded-sm p-xs text-muted-foreground hover:text-foreground",
             isModified ? hoverRevealTarget : "pointer-events-none opacity-0",
           )}
           aria-label={`Reset ${field.meta.label ?? fieldKey}`}
         >
           <MdUndo className="size-3.5" />
         </button>
-      </div>
+      </Stack>
       {hasConflict && (
         // The left inset indents the note under the field's value column, past
         // the accent bar and its gap. On the wrapper, not the note, so the
@@ -170,21 +182,23 @@ export function ConfigFieldRow({
           <Text
             as="div"
             variant="caption"
-            className="flex items-center gap-sm rounded-md border border-warning/30 bg-warning/10 px-sm py-xs text-warning"
+            className="rounded-md border border-warning/30 bg-warning/10 px-sm py-xs text-warning"
           >
-            <MdWarning className="size-3 shrink-0" />
-            <span className="flex-1 truncate">
-              Upstream: {formatOriginValue(originValue)}
-            </span>
-            <Badge
-              as="button"
-              type="button"
-              variant="warning"
-              className="shrink-0 hover:bg-warning/30"
-              onClick={handleAcceptOrigin}
-            >
-              Accept
-            </Badge>
+            <Stack direction="row" gap="sm" align="center">
+              <MdWarning className={cn("size-3", rigidClass())} />
+              <Fill as="span" className="truncate">
+                Upstream: {formatOriginValue(originValue)}
+              </Fill>
+              <Badge
+                as="button"
+                type="button"
+                variant="warning"
+                className={cn("hover:bg-warning/30", rigidClass())}
+                onClick={handleAcceptOrigin}
+              >
+                Accept
+              </Badge>
+            </Stack>
           </Text>
         </Inset>
       )}

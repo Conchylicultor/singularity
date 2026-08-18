@@ -4,12 +4,16 @@ import { ToolCallCard } from "@plugins/conversations/plugins/conversation-view/p
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { Markdown } from "@plugins/primitives/plugins/markdown/web";
 import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
+import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { familyClass } from "@plugins/conversations/plugins/model-provider/web";
-import { MODEL_TIERS, modelDisplayLabel } from "@plugins/conversations/plugins/model-provider/core";
+import {
+  MODEL_TIERS,
+  modelDisplayLabel,
+} from "@plugins/conversations/plugins/model-provider/core";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { agentReportPane } from "../panes";
 
@@ -55,19 +59,20 @@ export function AgentToolView({ event }: ToolRendererProps) {
   };
 
   const summary = (
-    <span className="flex min-w-0 items-center gap-sm">
-      <Badge colorClass="bg-categorical-6/15 text-categorical-6" className="font-mono">
+    <Line as="span" className="gap-sm">
+      <Badge
+        colorClass="bg-categorical-6/15 text-categorical-6"
+        className="font-mono"
+      >
         {agentType}
       </Badge>
       {input.model && <ModelBadge model={input.model} />}
       {input.run_in_background && <MetaBadge>Background</MetaBadge>}
       {input.isolation === "worktree" && <MetaBadge>Worktree</MetaBadge>}
       {description && (
-        <Text className="min-w-0 text-muted-foreground">
-          {description}
-        </Text>
+        <Text className="text-muted-foreground">{description}</Text>
       )}
-    </span>
+    </Line>
   );
 
   // The report affordance must be a header *sibling*, not part of `summary`:

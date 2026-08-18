@@ -6,7 +6,11 @@
 
 - Description: Generic breadcrumb with arbitrary segments, configurable separator, and trailing actions slot.
 - Web:
-  - Uses: `primitives/row-actions.RowActions`
+  - Uses:
+    - `primitives/css/rigid.rigidClass`
+    - `primitives/css/spacing.Stack`
+    - `primitives/css/ui-kit.cn`
+    - `primitives/row-actions.RowActions`
   - Exports (types):
     - `BreadcrumbProps`
     - `BreadcrumbSegment`

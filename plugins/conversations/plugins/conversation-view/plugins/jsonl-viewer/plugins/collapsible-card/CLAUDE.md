@@ -14,6 +14,8 @@
     - `primitives/css/fill.Fill`
     - `primitives/css/line.Line`
     - `primitives/css/overlay.Overlay`
+    - `primitives/css/rigid.rigidClass`
+    - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.cn`
   - Exports (types): `CollapsibleCardProps`

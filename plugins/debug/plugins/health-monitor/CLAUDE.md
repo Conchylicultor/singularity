@@ -112,8 +112,10 @@ measured overhead on a real worktree workload is still an open task.
     - `infra/endpoints.useEndpoint`
     - `primitives/app-shell.sidebarNavItem`
     - `primitives/css/badge.Badge`
+    - `primitives/css/fill.Fill`
     - `primitives/css/grid.Grid`
     - `primitives/css/placeholder.Placeholder`
+    - `primitives/css/rigid.Rigid`
     - `primitives/css/spacing.Inset`
     - `primitives/css/spacing.Stack`
     - `primitives/css/status-dot.StatusDot`

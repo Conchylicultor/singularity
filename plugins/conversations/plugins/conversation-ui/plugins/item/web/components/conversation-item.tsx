@@ -3,12 +3,18 @@ import {
   ControlSizeProvider,
   SingleLineProvider,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import type { ConversationKind, ConversationStatus } from "@plugins/tasks/plugins/tasks-core/core";
+import type {
+  ConversationKind,
+  ConversationStatus,
+} from "@plugins/tasks/plugins/tasks-core/core";
 import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
 import { StatusDot } from "@plugins/primitives/plugins/css/plugins/status-dot/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
+import { Clip } from "@plugins/primitives/plugins/css/plugins/clip/web";
+import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
+import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Item } from "../slots";
 
@@ -64,16 +70,17 @@ export type ConversationItemProps = {
 };
 
 export function ConvStatusDot({ conv }: { conv: ConversationItemConv }) {
-  return <StatusDot colorClass={CONV_STATUS_DOT[conv.status]} className="inline-block" />;
+  return (
+    <StatusDot
+      colorClass={CONV_STATUS_DOT[conv.status]}
+      className="inline-block"
+    />
+  );
 }
 
 export function ConvSysBadge({ conv }: { conv: ConversationItemConv }) {
   if (conv.kind !== "system") return null;
-  return (
-    <Badge className="text-muted-foreground/80">
-      sys
-    </Badge>
-  );
+  return <Badge className="text-muted-foreground/80">sys</Badge>;
 }
 
 export function ConvTitle({ conv }: { conv: ConversationItemConv }) {
@@ -123,25 +130,31 @@ export function ConversationItem({
     );
   }
   return (
-    <div className={cn("flex w-full items-start gap-sm overflow-hidden", active && "opacity-60")}>
+    <Stack
+      as={Clip}
+      direction="row"
+      gap="sm"
+      align="start"
+      className={cn("w-full", active && "opacity-60")}
+    >
       {/* eslint-disable-next-line spacing/no-adhoc-spacing -- one-off vertical nudge to baseline-align the avatar with the title row */}
       <span className="mt-0.5">
         <ControlSizeProvider size="sm">
           <AvatarSlot conv={conv} />
         </ControlSizeProvider>
       </span>
-      <Stack gap="2xs" className="min-w-0 flex-1">
-        <div className="flex items-center gap-xs overflow-hidden whitespace-nowrap">
+      <Stack as={Fill} gap="2xs">
+        <Line as={Clip} className="gap-xs">
           <ConvTitle conv={conv} />
           <ConvSysBadge conv={conv} />
-        </div>
-        <div className="flex items-center gap-xs">
+        </Line>
+        <Stack direction="row" gap="xs" align="center">
           <ChipsSlot conv={conv} />
-          <span className="ml-auto">
-            <ConvRelativeTime conv={conv} />
-          </span>
-        </div>
+          {/* An empty Fill absorbs the slack, so the timestamp sits flush right in its own track. */}
+          <Fill />
+          <ConvRelativeTime conv={conv} />
+        </Stack>
       </Stack>
-    </div>
+    </Stack>
   );
 }

@@ -8,8 +8,10 @@ export const ReorderNodes = {
   // assignable to `ReorderNodeType<unknown>`; `<any>` is the standard
   // variance-erasing form for a registry slot prop (readers always treat the
   // payload as `unknown`), mirroring `Fields.Identity`.
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  NodeType: defineSlot<{ nodeType: ReorderNodeType<any> }>("reorder.node-type", {
-    docLabel: (p) => p.nodeType.type,
-  }),
+  NodeType: defineSlot<{ nodeType: ReorderNodeType<any> }>(
+    "reorder.node-type",
+    {
+      docLabel: (p) => p.nodeType.type,
+    },
+  ),
 };

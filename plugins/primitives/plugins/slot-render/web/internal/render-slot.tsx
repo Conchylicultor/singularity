@@ -65,6 +65,7 @@ function SlotItemCell({
   if (!isRow) return <div className="contents">{children}</div>;
   return (
     <div
+      // eslint-disable-next-line layout/no-adhoc-layout -- one box whose DISPLAY flips at runtime between a flex cell and `display:contents`, on a React element type that must stay `div` across the flip (see the docstring: swapping the type tears the contribution subtree down, and <Line>/<Fill> are not `div` to React). No container primitive can express that, and the non-`fill` cell is `min-w-0` WITHOUT `flex-1` on purpose — it relays the shrink-chain but must not grow, so it is not a <Fill>.
       className={
         fill ? "flex min-w-0 flex-1 items-center" : "flex min-w-0 items-center"
       }

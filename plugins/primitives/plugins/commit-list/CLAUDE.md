@@ -8,8 +8,11 @@
 - Web:
   - Uses:
     - `primitives/css/badge.Badge`
+    - `primitives/css/fill.Fill`
+    - `primitives/css/rigid.rigidClass`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
+    - `primitives/css/ui-kit.cn`
   - Exports (types): `CommitRow`
   - Exports (values):
     - `COMMIT_ROW_HEIGHT`

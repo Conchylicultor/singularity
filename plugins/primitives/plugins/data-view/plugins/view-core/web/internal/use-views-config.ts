@@ -151,7 +151,6 @@ export function useViewsConfig<T extends ViewTypeMeta>(
         : incoming;
     });
     // configRows is derived from configJson; depend on the string only.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [configJson]);
 
   // Flush any pending durable write on unmount.

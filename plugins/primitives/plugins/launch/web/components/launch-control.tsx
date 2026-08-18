@@ -29,6 +29,8 @@ import {
 } from "@plugins/conversations/plugins/model-provider/web";
 import { Kbd } from "@plugins/primitives/plugins/tooltip/web";
 import { formatShortcutLabel } from "@plugins/primitives/plugins/shortcuts/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { fillClasses } from "@plugins/primitives/plugins/css/plugins/fill/web";
 
 export type LaunchRequest = {
   prompt?: string;
@@ -141,13 +143,21 @@ export function LaunchModelMenuContent({
         <DropdownMenuItem
           key={id}
           onClick={() => setDefaultModel(id)}
-          className="justify-between gap-lg"
+          className="gap-lg"
         >
-          <span className="flex items-center gap-xs">
+          {/* The label group is the row's one grow cell, so the trailing
+              launch/shortcut cluster sits flush right. */}
+          <Stack
+            as="span"
+            direction="row"
+            align="center"
+            gap="xs"
+            className={fillClasses("x")}
+          >
             {MODEL_REGISTRY[id].label}
             {id === defaultModel && <MdCheck className="size-3.5 opacity-70" />}
-          </span>
-          <span className="flex items-center gap-xs">
+          </Stack>
+          <Stack as="span" direction="row" align="center" gap="xs">
             <IconButton
               icon={MdPlayArrow}
               label={`Launch ${MODEL_REGISTRY[id].label}`}
@@ -162,7 +172,7 @@ export function LaunchModelMenuContent({
             <Kbd className="ml-0 text-muted-foreground border-border bg-muted">
               {formatShortcutLabel(`mod+${i + 1}`)}
             </Kbd>
-          </span>
+          </Stack>
         </DropdownMenuItem>
       ))}
     </DropdownMenuContent>

@@ -4,6 +4,8 @@ import { FilepathBreadcrumb } from "@plugins/primitives/plugins/filepath-breadcr
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Column } from "@plugins/primitives/plugins/css/plugins/column/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
+import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
+import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { FileTabs } from "./file-tabs";
 import { useFileRenderers } from "./use-file-renderers";
 
@@ -24,20 +26,21 @@ export function FilePaneView({
       fill
       className="h-full"
       header={
-        <Text
-          as="div"
-          variant="body"
-          className="flex items-center gap-sm border-b px-sm py-xs"
-        >
-          <div className="min-w-0 flex-1">
+        <Text as={Line} variant="body" className="gap-sm border-b px-sm py-xs">
+          <Fill>
             <FilepathBreadcrumb path={path} />
-          </div>
+          </Fill>
           <FileTabs {...renderers} />
         </Text>
       }
       body={
         <Scroll axis="both" className="h-full">
-          <FileContent worktree={worktree} path={path} line={line} active={renderers.active} />
+          <FileContent
+            worktree={worktree}
+            path={path}
+            line={line}
+            active={renderers.active}
+          />
         </Scroll>
       }
       scrollBody={false}

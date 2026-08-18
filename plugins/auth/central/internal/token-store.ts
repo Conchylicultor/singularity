@@ -1,7 +1,4 @@
-import type {
-  AuthIdentity,
-  AuthProviderKind,
-} from "@plugins/auth/core";
+import type { AuthIdentity, AuthProviderKind } from "@plugins/auth/core";
 import { AuthKeychainLockedError } from "@plugins/auth/core";
 import {
   getSecret,
@@ -96,7 +93,6 @@ export function getAccount(
   accountId = "primary",
 ): StoredAccount | undefined {
   const blob = ensureLoaded();
-  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
   return blob.providers[providerId]?.[accountId];
 }
 
@@ -105,7 +101,6 @@ export function listAccounts(
 ): Array<[string, StoredAccount]> {
   const blob = ensureLoaded();
   const accounts = blob.providers[providerId];
-  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
   if (!accounts) return [];
   return Object.entries(accounts);
 }
@@ -122,7 +117,6 @@ export async function setAccount(
 ): Promise<void> {
   return enqueueWrite(async () => {
     const blob = ensureLoaded();
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
     if (!blob.providers[providerId]) blob.providers[providerId] = {};
     blob.providers[providerId]![accountId] = account;
     await persist();
@@ -136,9 +130,7 @@ export async function patchAccount(
 ): Promise<StoredAccount | undefined> {
   return enqueueWrite(async () => {
     const blob = ensureLoaded();
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
     const existing = blob.providers[providerId]?.[accountId];
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
     if (!existing) return undefined;
     const updated: StoredAccount = { ...existing, ...patch };
     blob.providers[providerId]![accountId] = updated;
@@ -154,10 +146,8 @@ export async function deleteAccount(
   return enqueueWrite(async () => {
     const blob = ensureLoaded();
     const accounts = blob.providers[providerId];
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
     if (!accounts) return undefined;
     const removed = accounts[accountId];
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
     if (!removed) return undefined;
     delete accounts[accountId];
     if (Object.keys(accounts).length === 0) delete blob.providers[providerId];

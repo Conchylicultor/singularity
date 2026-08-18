@@ -12,11 +12,15 @@
     - `infra/endpoints.fetchEndpoint`
     - `primitives/css/badge.Badge`
     - `primitives/css/center.Center`
+    - `primitives/css/fill.Fill`
+    - `primitives/css/line.Line`
     - `primitives/css/pin.Pin`
+    - `primitives/css/rigid.rigidClass`
     - `primitives/css/scroll.Scroll`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
     - `primitives/css/toggle-chip.ToggleChip`
+    - `primitives/css/ui-kit.cn`
     - `primitives/icon-button.IconButton`
     - `primitives/live-state.useWindowResource`
     - `primitives/popover.InlinePopover`

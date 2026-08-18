@@ -27,7 +27,6 @@ export const handleLaunch = implement(launchAgent, async ({ params, body }) => {
     .from(agents)
     .where(eq(agents.id, agentId))
     .limit(1);
-  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
   if (!agent) throw new HttpError(404, "Not found");
   if (!agent.prompt) {
     throw new HttpError(400, "Agent has no prompt (folder node)");
@@ -56,7 +55,9 @@ export const handleLaunch = implement(launchAgent, async ({ params, body }) => {
   const launchId = `launch-${Math.floor(Date.now() / 1000)}-${Math.random()
     .toString(36)
     .slice(2, 6)}`;
-  await db.insert(_agent_launches).values({ id: launchId, agentId, taskId: task.id });
+  await db
+    .insert(_agent_launches)
+    .values({ id: launchId, agentId, taskId: task.id });
 
   return {
     launchId,

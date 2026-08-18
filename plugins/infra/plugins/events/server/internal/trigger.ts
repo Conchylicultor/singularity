@@ -92,7 +92,6 @@ async function insertTriggerRow<P>(spec: RowInsertSpec<P>): Promise<string> {
     });
 
   const row = rows[0];
-  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
   if (!row) throw new Error(`[events] trigger insert returned no rows`);
   return row.id as string;
 }

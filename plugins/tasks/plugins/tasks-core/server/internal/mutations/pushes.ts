@@ -23,7 +23,6 @@ export async function insertPush(input: InsertPushInput): Promise<boolean> {
     .from(_attempts)
     .where(eq(_attempts.id, input.attemptId))
     .limit(1);
-  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
   const taskId = attemptRow?.taskId ?? null;
   // An orphan push (its attempt gone) seeds nothing — see insertConversation.
   const row = await withTaskStatusChange(taskId ?? [], db, async () => {
@@ -34,7 +33,6 @@ export async function insertPush(input: InsertPushInput): Promise<boolean> {
       .returning();
     return inserted;
   });
-  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
   if (row) {
     // Emit after the INSERT has committed (auto-commit: no tx wraps this call).
     // See docs/events.md §"Transactional boundary on emit()".

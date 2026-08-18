@@ -6,8 +6,11 @@ import { AgentSchema } from "../../core/schemas";
 import { agents } from "./views";
 
 export const handleGet = implement(getAgent, async ({ params }) => {
-  const [row] = await db.select().from(agents).where(eq(agents.id, params.id)).limit(1);
-  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
+  const [row] = await db
+    .select()
+    .from(agents)
+    .where(eq(agents.id, params.id))
+    .limit(1);
   if (!row) throw new HttpError(404, "Not found");
   return AgentSchema.parse(row);
 });

@@ -3,6 +3,8 @@
 **Date:** 2026-06-20
 **Scope:** Every CSS/layout primitive under `plugins/primitives/plugins/css/plugins/*` plus the layout-relevant primitives that live one level up (`bar`, `truncating-text`, `viewport-overlay`, `responsive-overflow`). Covers the mental model, the full primitive taxonomy with exact APIs, the canonical composition recipes, the enforcement rules, and a set of rough edges found during the audit.
 
+> **Corrections, 2026-08-17.** This is a dated record and is left as written, with two false statements corrected in place (§4 [^c1], §7 [^c2]). Read the rest with one standing caveat: **`<Frame>` was deleted on 2026-06-21**, the day after this audit, and `TruncatingText` never existed as a plugin — so every remaining mention of either names something that is gone. Their live replacements are a line container + `Fill` (`Line`/`Row` + `Fill`) and `Text` inside a line container. The current map is the [`css` skill](../.claude/skills/css/SKILL.md).
+
 This is the deep reference behind the always-loaded [`css` skill](../.claude/skills/css/SKILL.md). The skill is the one-screen map; this doc is the audit. For tokens/color/presets see the [`theme` skill](../.claude/skills/theme/SKILL.md). Design-rationale companions: [layout primitive APIs](./2026-06-15-global-css-layout-primitive-apis.md), [vision](./2026-06-15-global-css-layout-primitives-vision.md), [drain plan](./2026-06-17-global-drain-no-adhoc-layout-allowlist.md).
 
 ---
@@ -218,13 +220,13 @@ No `min-w-0`, no `shrink-0`, no `flex-1` — the grid tracks encode the shrink h
 |---|---|---|
 | Gap between stacked blocks | `Stack gap` | `flex flex-col gap-2` / `space-y-2` |
 | Padding | `Inset pad` | `p-3` / `px-4` |
-| Header row with title + actions | `Frame` | `flex … min-w-0` + `absolute` trailing |
+| Header row with title + actions | `Line`/`Row` + `Fill` [^c1] | `flex … min-w-0` + `absolute` trailing |
 | Pane with scrolling body | `Column` (or `Scroll fill`) | `min-h-0 flex-1 overflow-y-auto` |
 | Card collection | `Grid` | `grid grid-cols-…` |
 | Wrapping tag row | `Cluster` | `flex flex-wrap gap-2` |
 | Chip mid-sentence | `Inline` | `inline-flex items-center` |
 | Center a thing | `Center` | `flex items-center justify-center` |
-| Ellipsized label | `TruncatingText` | `truncate min-w-0` by hand |
+| Ellipsized label | `Text` inside a line container [^c1] | `truncate min-w-0` by hand |
 | Clip overflow, no scroll | `Clip` | `overflow-hidden` |
 | Sticky header | `Sticky` | `sticky top-0 z-10` |
 | Corner badge / close button | `Pin` | `absolute top-1 right-1` |
@@ -237,6 +239,8 @@ No `min-w-0`, no `shrink-0`, no `flex-1` — the grid tracks encode the shrink h
 | Uppercase section label | `SectionLabel` | `text-xs uppercase tracking-wide` |
 | Status/identity chip | `Badge` | `inline-flex rounded px-2 text-xs` |
 | Toggle/segmented pill | `ToggleChip` / `SegmentedControl` | hand-rolled active-state button |
+
+[^c1]: **Corrected 2026-08-17.** Two rows named primitives that no longer exist. `Frame` (the named-slot row) was **deleted on 2026-06-21**, the day after this audit; the header-row answer is a line container + `Fill` (`<Line><Icon/><Fill><Text/></Fill><Actions/></Line>`). `TruncatingText` never existed as a plugin — the truncation leaf is `Text` inside a line container, which ellipsizes via the ambient single-line context. Everything else in this table is unchanged.
 
 ---
 
@@ -288,7 +292,9 @@ The split is intentional (in-tree chrome can't out-stack a portaled modal). Both
 
 **Deliberately allowed:** positioning *context* (`relative`/`static`), sizing (`w-*`/`h-*`/`size-*`/`min-w-*` ≠ `min-w-0`), non-flow display (`block`/`hidden`/`inline`). Spacing and z-index live in their own rules.
 
-**Allowlist state (audited 2026-06-20):** *fully drained.* `no-adhoc-layout` went 471 → 0; `no-adhoc-spacing` went 389 → 0. The only permanent exemptions are the layout primitives themselves (they own the mechanics) plus `floating-action.tsx`. `radius`/`z-layers`/`control-size`/`icon-auto` rules launched with zero exemptions. New code is gated immediately.
+**Allowlist state (audited 2026-06-20):** *fully drained.* `no-adhoc-layout` went 471 → 0; `no-adhoc-spacing` went 389 → 0. The only permanent exemptions are the layout primitives themselves (they own the mechanics) plus `floating-action.tsx`. `radius`/`z-layers`/`control-size`/`icon-auto` rules launched with zero exemptions. New code is gated immediately. [^c2]
+
+[^c2]: **Corrected 2026-08-17 — no longer true for `no-adhoc-layout`.** `css/lint/index.ts` carries **136 globs** in two tiers: 4 permanent (the primitives, plus `floating-action`/`measure-strip`/`cursor-menu`) and **132 reverted** — files restored to ad-hoc layout on 2026-06-21 when `<Frame>` was deleted, one day after this audit. The reverted tier is a backlog that drains as those files are recomposed onto `Line`/`Row` + `Fill`; it is not licence to add new globs (new code still escapes per-site with a named disable). `no-adhoc-spacing`'s burndown is unaffected by this correction.
 
 Sibling standard rules (own their dimensions): `no-adhoc-typography` (Text), `no-adhoc-radius`, `no-adhoc-zindex`, `no-adhoc-control`, `no-adhoc-surface` (Surface/Card), `no-adhoc-slot-icon-size` (icon-auto), `no-adhoc-bar` (Bar), `no-adhoc-pane-toolbar`, `no-adhoc-row` (Row), `no-badge-text-transform` (Badge), `no-clip-without-nowrap` (Clip/TruncatingText), `no-adhoc-viewport-overlay`.
 

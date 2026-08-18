@@ -58,7 +58,6 @@ export const generateTurnSummaryJob = defineJob({
   maxAttempts: 2,
   run: async ({ event }) => {
     const { enabled } = getConfig(turnSummaryConfig);
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard; config value is boolean at runtime
     if (!enabled) return;
 
     const conversationId = event?.conversationId;

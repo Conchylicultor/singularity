@@ -30,6 +30,7 @@
     - `config_v2.useConfig`
     - `config_v2.useSetConfig`
     - `fields/dynamic-enum/config.DynamicEnum`
+    - `primitives/css/fill.fillClasses`
     - `primitives/css/spacing.Stack`
     - `ui/theme-engine.ThemeEngine`
     - `ui/theme-engine.useThemeScopeId`

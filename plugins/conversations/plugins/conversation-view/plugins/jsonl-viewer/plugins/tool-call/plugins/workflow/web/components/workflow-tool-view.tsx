@@ -6,6 +6,11 @@ import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { Cluster } from "@plugins/primitives/plugins/css/plugins/cluster/web";
+import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
+import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
+import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
+import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
+import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { HighlightedCode } from "@plugins/primitives/plugins/syntax-highlight/web";
 import { useCollapsible } from "@plugins/primitives/plugins/collapsible/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
@@ -32,22 +37,30 @@ function PhaseList({
   return (
     <Stack as="ol" gap="xs">
       {phases.map((phase, i) => (
-        <Text as="li" variant="caption" key={i} className="flex gap-sm">
-          {/* eslint-disable-next-line spacing/no-adhoc-spacing -- mt-0.5 optically centers the number badge to the first text line */}
-          <span className="mt-0.5 flex size-4 shrink-0 items-center justify-center rounded-full bg-categorical-6/15 font-mono text-3xs text-categorical-6">
-            {i + 1}
-          </span>
-          <div className="min-w-0">
-            <span className="font-medium text-foreground">
-              {phase.title ?? "(untitled phase)"}
-            </span>
-            {phase.detail && (
-              // eslint-disable-next-line spacing/no-adhoc-spacing -- ml-1.5 separates the inline detail from the phase title
-              <span className="ml-1.5 text-muted-foreground">
-                {phase.detail}
+        <Text as="li" variant="caption" key={i}>
+          <Stack direction="row" gap="sm">
+            <Center
+              as="span"
+              // eslint-disable-next-line spacing/no-adhoc-spacing -- mt-0.5 optically centers the number badge to the first text line
+              className={cn(
+                "mt-0.5 size-4 rounded-full bg-categorical-6/15 font-mono text-3xs text-categorical-6",
+                rigidClass(),
+              )}
+            >
+              {i + 1}
+            </Center>
+            <Fill>
+              <span className="font-medium text-foreground">
+                {phase.title ?? "(untitled phase)"}
               </span>
-            )}
-          </div>
+              {phase.detail && (
+                // eslint-disable-next-line spacing/no-adhoc-spacing -- ml-1.5 separates the inline detail from the phase title
+                <span className="ml-1.5 text-muted-foreground">
+                  {phase.detail}
+                </span>
+              )}
+            </Fill>
+          </Stack>
         </Text>
       ))}
     </Stack>
@@ -108,26 +121,31 @@ export function WorkflowToolView({ event }: ToolRendererProps) {
 
   const agentCount = graph?.nodes.length ?? 0;
   const summary = (
-    <span className="flex min-w-0 items-center gap-sm">
-      <Badge colorClass="bg-categorical-6/15 text-categorical-6" icon={<MdAccountTree />} className="shrink-0 font-mono">
+    // eslint-disable-next-line layout/no-adhoc-layout -- shrink-only cell: this summary rides CollapsibleCard's own <Fill>, so it must fall BELOW its content width (letting the description Text ellipsize) but must NOT grow, or it would squeeze the card's sibling aside. Fill and Text are the only owners of min-w-0 and both bundle grow/truncate with it, so bare min-w-0 has no primitive (same gap collapsible-card documents).
+    <Line as="span" className="min-w-0 gap-sm">
+      <Badge
+        colorClass="bg-categorical-6/15 text-categorical-6"
+        icon={<MdAccountTree />}
+        className={cn("font-mono", rigidClass())}
+      >
         {name ?? "workflow"}
       </Badge>
       {phases.length > 0 && (
-        <Badge variant="muted" className="shrink-0 tracking-wider">
+        <Badge variant="muted" className={cn("tracking-wider", rigidClass())}>
           {phases.length} {phases.length === 1 ? "phase" : "phases"}
         </Badge>
       )}
       {agentCount > 0 && (
-        <Badge variant="muted" className="shrink-0 tracking-wider">
+        <Badge variant="muted" className={cn("tracking-wider", rigidClass())}>
           {agentCount} {agentCount === 1 ? "agent" : "agents"}
         </Badge>
       )}
       {description && (
-        <span className="min-w-0 truncate text-muted-foreground">
+        <Text as="span" tone="muted">
           {description}
-        </span>
+        </Text>
       )}
-    </span>
+    </Line>
   );
 
   return (
@@ -167,7 +185,8 @@ export function WorkflowToolView({ event }: ToolRendererProps) {
                 )}
                 {parsedResult.taskId && (
                   <span>
-                    Task <span className="font-mono">{parsedResult.taskId}</span>
+                    Task{" "}
+                    <span className="font-mono">{parsedResult.taskId}</span>
                   </span>
                 )}
               </Cluster>

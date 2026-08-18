@@ -3,6 +3,7 @@ import {
   useEditableField,
   type EditableField,
 } from "@plugins/primitives/plugins/editable-field/web";
+import { fillClasses } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import type { Server } from "../../shared";
 import { updateServer, type UpdateServerBody } from "../../shared/endpoints";
@@ -12,9 +13,8 @@ import { FieldShell, fieldInputClass } from "./server-fields";
 function fieldProps(field: EditableField<string>) {
   return {
     value: field.value,
-    onChange: (
-      e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
-    ) => field.onChange(e.target.value),
+    onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
+      field.onChange(e.target.value),
     onFocus: field.onFocus,
     onBlur: field.onBlur,
   };
@@ -70,19 +70,28 @@ export function ServerEditForm({ server }: { server: Server }) {
   return (
     <Stack gap="lg">
       <FieldShell label="Name">
-        <input className={fieldInputClass} placeholder={server.host} {...fieldProps(name)} />
+        <input
+          className={fieldInputClass}
+          placeholder={server.host}
+          {...fieldProps(name)}
+        />
       </FieldShell>
       <FieldShell label="Host" required>
         <input className={fieldInputClass} {...fieldProps(host)} />
       </FieldShell>
-      <div className="flex gap-md">
-        <FieldShell label="SSH User" className="flex-1">
+      <Stack direction="row" gap="md">
+        {/* FieldShell owns its own element, so the grow cell arrives as a class. */}
+        <FieldShell label="SSH User" className={fillClasses("x")}>
           <input className={fieldInputClass} {...fieldProps(sshUser)} />
         </FieldShell>
         <FieldShell label="Port" className="w-20">
-          <input className={fieldInputClass} type="number" {...fieldProps(port)} />
+          <input
+            className={fieldInputClass}
+            type="number"
+            {...fieldProps(port)}
+          />
         </FieldShell>
-      </div>
+      </Stack>
       <FieldShell
         label="Console URL"
         hint="Link to the provider's management console for this server."

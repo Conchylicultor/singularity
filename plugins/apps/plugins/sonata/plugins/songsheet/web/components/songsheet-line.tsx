@@ -36,10 +36,7 @@ interface SongsheetLineProps {
  * emphasised in the chord row.
  */
 export const SongsheetLine = forwardRef<HTMLButtonElement, SongsheetLineProps>(
-  function SongsheetLine(
-    { lyric, index, isActive, activeChord, onSeek },
-    ref,
-  ) {
+  function SongsheetLine({ lyric, index, isActive, activeChord, onSeek }, ref) {
     const { text, chords } = lyric.data;
     return (
       <button
@@ -47,7 +44,8 @@ export const SongsheetLine = forwardRef<HTMLButtonElement, SongsheetLineProps>(
         type="button"
         onClick={() => onSeek(lyric.start)}
         title={`Seek to beat ${lyric.start.toFixed(2)}`}
-        // eslint-disable-next-line layout/no-adhoc-layout -- clickable full-width songsheet row; the left accent bar is a rigid border (border-l-2), only painted on the active line
+        // Clickable full-width songsheet row. The left accent bar is a rigid
+        // border (border-l-2), only painted on the active line.
         className={cn(
           "block w-full rounded-md border-l-2 border-transparent px-md py-xs text-left transition-colors",
           "hover:bg-muted/40",
@@ -61,34 +59,34 @@ export const SongsheetLine = forwardRef<HTMLButtonElement, SongsheetLineProps>(
           <Text
             variant="body"
             as="div"
-            // eslint-disable-next-line layout/no-adhoc-layout -- positioning context for the absolutely-placed chords; `relative` is not banned but the chords below need a positioned ancestor
+            // `relative` is the positioning context the absolutely-placed
+            // chords below need.
             className="relative h-[1.5em] whitespace-pre font-mono font-semibold"
           >
-            {chords.length === 0 ? (
-              " "
-            ) : (
-              chords.map((c, i) => (
-                <span
-                  key={i}
-                  // eslint-disable-next-line layout/no-adhoc-layout -- chord pinned to its exact monospace column; `left` is a computed `ch` offset (one column = one char), not an ad-hoc spacing token
-                  className="absolute bottom-0"
-                  style={{ left: `${c.charOffset}ch` }}
-                >
-                  <Text
-                    as="span"
-                    className={cn(
-                      "font-mono",
-                      activeChord && activeChord.line === index &&
-                        activeChord.chord === i
-                        ? "font-bold text-primary"
-                        : "font-semibold text-primary/70",
-                    )}
+            {chords.length === 0
+              ? " "
+              : chords.map((c, i) => (
+                  <span
+                    key={i}
+                    // eslint-disable-next-line layout/no-adhoc-layout -- chord pinned to its exact monospace column; `left` is a computed `ch` offset (one column = one char), not an ad-hoc spacing token
+                    className="absolute bottom-0"
+                    style={{ left: `${c.charOffset}ch` }}
                   >
-                    {c.symbol}
-                  </Text>
-                </span>
-              ))
-            )}
+                    <Text
+                      as="span"
+                      className={cn(
+                        "font-mono",
+                        activeChord &&
+                          activeChord.line === index &&
+                          activeChord.chord === i
+                          ? "font-bold text-primary"
+                          : "font-semibold text-primary/70",
+                      )}
+                    >
+                      {c.symbol}
+                    </Text>
+                  </span>
+                ))}
           </Text>
 
           {/* Lyric row: the raw text, leading spaces preserved. An empty line

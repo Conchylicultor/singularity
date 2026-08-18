@@ -3703,6 +3703,10 @@
       "name": "@singularity/plugin-primitives-css-inline",
       "version": "0.0.1",
     },
+    "plugins/primitives/plugins/css/plugins/layer": {
+      "name": "@singularity/plugin-primitives-css-layer",
+      "version": "0.0.1",
+    },
     "plugins/primitives/plugins/css/plugins/layout-harness": {
       "name": "@singularity/plugin-primitives-css-layout-harness",
       "version": "0.0.1",
@@ -3740,6 +3744,10 @@
     },
     "plugins/primitives/plugins/css/plugins/rail": {
       "name": "@singularity/plugin-primitives-css-rail",
+      "version": "0.0.1",
+    },
+    "plugins/primitives/plugins/css/plugins/rigid": {
+      "name": "@singularity/plugin-primitives-css-rigid",
       "version": "0.0.1",
     },
     "plugins/primitives/plugins/css/plugins/row": {
@@ -7247,6 +7255,8 @@
 
     "@singularity/plugin-primitives-css-inline": ["@singularity/plugin-primitives-css-inline@workspace:plugins/primitives/plugins/css/plugins/inline"],
 
+    "@singularity/plugin-primitives-css-layer": ["@singularity/plugin-primitives-css-layer@workspace:plugins/primitives/plugins/css/plugins/layer"],
+
     "@singularity/plugin-primitives-css-layout-harness": ["@singularity/plugin-primitives-css-layout-harness@workspace:plugins/primitives/plugins/css/plugins/layout-harness"],
 
     "@singularity/plugin-primitives-css-line": ["@singularity/plugin-primitives-css-line@workspace:plugins/primitives/plugins/css/plugins/line"],
@@ -7264,6 +7274,8 @@
     "@singularity/plugin-primitives-css-radius": ["@singularity/plugin-primitives-css-radius@workspace:plugins/primitives/plugins/css/plugins/radius"],
 
     "@singularity/plugin-primitives-css-rail": ["@singularity/plugin-primitives-css-rail@workspace:plugins/primitives/plugins/css/plugins/rail"],
+
+    "@singularity/plugin-primitives-css-rigid": ["@singularity/plugin-primitives-css-rigid@workspace:plugins/primitives/plugins/css/plugins/rigid"],
 
     "@singularity/plugin-primitives-css-row": ["@singularity/plugin-primitives-css-row@workspace:plugins/primitives/plugins/css/plugins/row"],
 

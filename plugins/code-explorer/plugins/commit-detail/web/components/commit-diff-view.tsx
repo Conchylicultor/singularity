@@ -8,6 +8,10 @@ import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Column } from "@plugins/primitives/plugins/css/plugins/column/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Sticky } from "@plugins/primitives/plugins/css/plugins/sticky/web";
+import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
+import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
+import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
+import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useCommitFiles } from "../use-commit-files";
 
 export function CommitDiffView({
@@ -85,10 +89,18 @@ function CommitFileList({
           <Text as="span" variant="label" className="tabular-nums">
             {files.length} {files.length === 1 ? "file" : "files"}
           </Text>
-          <Text as="span" variant="caption" className="tabular-nums text-success">
+          <Text
+            as="span"
+            variant="caption"
+            className="tabular-nums text-success"
+          >
             +{totals.additions}
           </Text>
-          <Text as="span" variant="caption" className="tabular-nums text-destructive">
+          <Text
+            as="span"
+            variant="caption"
+            className="tabular-nums text-destructive"
+          >
             −{totals.deletions}
           </Text>
         </Stack>
@@ -137,24 +149,37 @@ function CommitFileRow({
           className="text-body w-full bg-muted px-md py-xs text-left hover:bg-muted/80"
           aria-expanded={expanded}
         >
-          <div className="flex w-full items-center gap-sm">
-            <CollapsibleChevron open={expanded} className="size-4 shrink-0 text-muted-foreground" />
-            <span className="min-w-0 flex-1 truncate">
-              {from && (
-                <>
-                  <span className="text-muted-foreground line-through">{from}</span>
-                  {/* eslint-disable-next-line spacing/no-adhoc-spacing -- inline horizontal offset around the rename arrow between two file paths */}
-                  <span className="mx-1.5 text-muted-foreground">→</span>
-                </>
-              )}
-              <span className="text-muted-foreground">{dir}</span>
-              <span className="font-medium">{basename}</span>
-            </span>
-            <Text as="span" variant="caption" className="flex shrink-0 items-center gap-sm tabular-nums">
-              <span className="text-success">+{file.additions}</span>
-              <span className="text-destructive">−{file.deletions}</span>
+          <Line className="w-full gap-sm">
+            <CollapsibleChevron
+              open={expanded}
+              className={cn("size-4 text-muted-foreground", rigidClass())}
+            />
+            <Fill as="span">
+              <Text as="span">
+                {from && (
+                  <>
+                    <span className="text-muted-foreground line-through">
+                      {from}
+                    </span>
+                    {/* eslint-disable-next-line spacing/no-adhoc-spacing -- inline horizontal offset around the rename arrow between two file paths */}
+                    <span className="mx-1.5 text-muted-foreground">→</span>
+                  </>
+                )}
+                <span className="text-muted-foreground">{dir}</span>
+                <span className="font-medium">{basename}</span>
+              </Text>
+            </Fill>
+            <Text
+              as="span"
+              variant="caption"
+              className={cn(rigidClass(), "tabular-nums")}
+            >
+              <Stack as="span" direction="row" gap="sm" align="center">
+                <span className="text-success">+{file.additions}</span>
+                <span className="text-destructive">−{file.deletions}</span>
+              </Stack>
             </Text>
-          </div>
+          </Line>
         </button>
       </Sticky>
       {expanded && (

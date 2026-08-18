@@ -12,7 +12,13 @@
 
 import { describe, expect, test } from "bun:test";
 import { z } from "zod";
-import { integer, pgTable, text, PgDialect, QueryBuilder } from "drizzle-orm/pg-core";
+import {
+  integer,
+  pgTable,
+  text,
+  PgDialect,
+  QueryBuilder,
+} from "drizzle-orm/pg-core";
 import type { SQL } from "drizzle-orm";
 import {
   createResourceRuntime,
@@ -45,12 +51,14 @@ function liveDb() {
 
   const dialect = new PgDialect();
   const qb = new QueryBuilder();
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const wrap = (q: any): any => ({
     where: (p: SQL) => wrap(q.where(p)),
     orderBy: (...o: SQL[]) => wrap(q.orderBy(...o)),
     limit: (nn: number) => wrap(q.limit(nn)),
-    then: (resolve: (v: unknown[]) => unknown, reject?: (e: unknown) => unknown) => {
+    then: (
+      resolve: (v: unknown[]) => unknown,
+      reject?: (e: unknown) => unknown,
+    ) => {
       const { sql, params } = dialect.sqlToQuery(q.getSQL());
       let rows: unknown[];
       if (sql.includes(" in (")) {
@@ -69,10 +77,12 @@ function liveDb() {
       return Promise.resolve(rows).then(resolve, reject);
     },
   });
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const makeFrom = (builder: any) => ({ from: (t: any) => wrap(builder.from(t)) });
+  const makeFrom = (builder: any) => ({
+    from: (t: any) => wrap(builder.from(t)),
+  });
   const db = {
-    select: (fields?: SelectMap) => makeFrom(fields ? qb.select(fields) : qb.select()),
+    select: (fields?: SelectMap) =>
+      makeFrom(fields ? qb.select(fields) : qb.select()),
     selectDistinct: (fields: SelectMap) => makeFrom(qb.selectDistinct(fields)),
   } as unknown as QueryDb;
   return { db, table };
@@ -97,7 +107,6 @@ function harness() {
       frames.push(msg);
     },
   };
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const handler = runtime.notificationsWsHandler as any;
   handler.open(ws);
   return {
@@ -139,10 +148,19 @@ describe("compiled window resource — end-to-end", () => {
     await h.subscribe(key, descriptor.defaultParams);
 
     const ack = h.frames.find((f) => f.kind === "sub-ack")!;
-    expect(ack.value).toEqual([{ id: "b", n: 2 }, { id: "c", n: 3 }]); // bounded, never d
+    expect(ack.value).toEqual([
+      { id: "b", n: 2 },
+      { id: "c", n: 3 },
+    ]); // bounded, never d
 
     table.set("a", { n: 1 }); // sorts first → enters, c squeezed out
-    h.runtime.applyDbChange({ table: "rows", op: "I", ids: ["a"], origin: "rows", identityBase: "rows" });
+    h.runtime.applyDbChange({
+      table: "rows",
+      op: "I",
+      ids: ["a"],
+      origin: "rows",
+      identityBase: "rows",
+    });
     await tick();
 
     const ds = h.deltas(key);
@@ -173,7 +191,13 @@ describe("compiled window resource — end-to-end", () => {
     await h.subscribe(key, descriptor.defaultParams); // window [a,b]
 
     table.delete("b");
-    h.runtime.applyDbChange({ table: "rows", op: "D", ids: ["b"], origin: "rows", identityBase: "rows" });
+    h.runtime.applyDbChange({
+      table: "rows",
+      op: "D",
+      ids: ["b"],
+      origin: "rows",
+      identityBase: "rows",
+    });
     await tick();
 
     const ds = h.deltas(key);
@@ -208,7 +232,13 @@ describe("compiled window resource — end-to-end", () => {
     // UPDATE (membership `where` untouched). b sorts past d → leaves the window
     // via the fresh order; d is pulled in as the new tail.
     table.set("b", { n: 9 });
-    h.runtime.applyDbChange({ table: "rows", op: "U", ids: ["b"], origin: "rows", identityBase: "rows" });
+    h.runtime.applyDbChange({
+      table: "rows",
+      op: "U",
+      ids: ["b"],
+      origin: "rows",
+      identityBase: "rows",
+    });
     await tick();
 
     const ds = h.deltas(key);
@@ -241,20 +271,38 @@ describe("compiled point resource — end-to-end", () => {
 
     // In-set update → one scoped upsert.
     table.set("a", { n: 5 });
-    h.runtime.applyDbChange({ table: "rows", op: "U", ids: ["a"], origin: "rows", identityBase: "rows" });
+    h.runtime.applyDbChange({
+      table: "rows",
+      op: "U",
+      ids: ["a"],
+      origin: "rows",
+      identityBase: "rows",
+    });
     await tick();
     expect(h.deltas(key)).toHaveLength(1);
     expect(h.deltas(key)[0]!.upserts).toEqual([["a", { id: "a", n: 5 }]]);
 
     // Foreign-id update → no frame at all.
     table.set("z", { n: 10 });
-    h.runtime.applyDbChange({ table: "rows", op: "U", ids: ["z"], origin: "rows", identityBase: "rows" });
+    h.runtime.applyDbChange({
+      table: "rows",
+      op: "U",
+      ids: ["z"],
+      origin: "rows",
+      identityBase: "rows",
+    });
     await tick();
     expect(h.deltas(key)).toHaveLength(1); // unchanged
 
     // The missing subscribed id appearing → entrant append.
     table.set("b", { n: 7 });
-    h.runtime.applyDbChange({ table: "rows", op: "I", ids: ["b"], origin: "rows", identityBase: "rows" });
+    h.runtime.applyDbChange({
+      table: "rows",
+      op: "I",
+      ids: ["b"],
+      origin: "rows",
+      identityBase: "rows",
+    });
     await tick();
     const ds = h.deltas(key);
     expect(ds).toHaveLength(2);

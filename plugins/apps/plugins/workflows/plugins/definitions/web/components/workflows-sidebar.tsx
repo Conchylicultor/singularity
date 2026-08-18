@@ -1,6 +1,9 @@
 import { useMemo } from "react";
 import { MdAdd, MdSchema } from "react-icons/md";
-import { matchResource, useResource } from "@plugins/primitives/plugins/live-state/web";
+import {
+  matchResource,
+  useResource,
+} from "@plugins/primitives/plugins/live-state/web";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { ControlSizeProvider } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
@@ -82,7 +85,11 @@ export function WorkflowsSidebar() {
   );
 
   return (
-    <SidebarPaneSection title="Workflows" icon={MdSchema} labelExtra={WorkflowsHeaderAdd}>
+    <SidebarPaneSection
+      title="Workflows"
+      icon={MdSchema}
+      labelExtra={WorkflowsHeaderAdd}
+    >
       <Scroll fill className="py-xs">
         {matchResource(result, {
           pending: () => renderList([], true),
@@ -111,7 +118,6 @@ function WorkflowsHeaderAdd() {
           return createDefinitionAndOpen(openPane);
         }}
         variant="ghost"
-        // eslint-disable-next-line spacing/no-adhoc-spacing -- push the hover-reveal add affordance to the trailing edge of the section header label
         className="ml-auto opacity-0 pointer-events-none group-hover/label:opacity-100 group-hover/label:pointer-events-auto focus-visible:opacity-100 focus-visible:pointer-events-auto"
       />
     </ControlSizeProvider>

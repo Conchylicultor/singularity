@@ -17,13 +17,14 @@ declare module "@tanstack/react-query" {
   }
 }
 
-type MutationVariables<TParams, TBody> = TParams extends Record<string, never>
-  ? TBody extends void
-    ? { params?: TParams; body?: never }
-    : { params?: TParams; body: TBody }
-  : TBody extends void
-    ? { params: TParams; body?: never }
-    : { params: TParams; body: TBody };
+type MutationVariables<TParams, TBody> =
+  TParams extends Record<string, never>
+    ? TBody extends void
+      ? { params?: TParams; body?: never }
+      : { params?: TParams; body: TBody }
+    : TBody extends void
+      ? { params: TParams; body?: never }
+      : { params: TParams; body: TBody };
 
 /**
  * TanStack Query useMutation wrapper for POST/PATCH/DELETE endpoints.
@@ -40,7 +41,7 @@ export function useEndpointMutation<
 >(
   endpoint: EndpointDef<Route, TParams, TBody, TResponse, TQuery>,
   opts?: {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- invalidation targets are heterogeneous
+    // invalidation targets are heterogeneous
     invalidates?: EndpointDef<any, any, any, any, any>[];
     onSuccess?: (data: TResponse extends void ? void : TResponse) => void;
     onError?: (err: EndpointError) => void;
@@ -53,7 +54,8 @@ export function useEndpointMutation<
   MutationVariables<TParams, TBody>
 > {
   const queryClient = useQueryClient();
-  const suppressError = opts?.meta?.suppressError ?? (opts?.onError !== undefined);
+  const suppressError =
+    opts?.meta?.suppressError ?? opts?.onError !== undefined;
 
   return useMutation<
     TResponse extends void ? void : TResponse,
@@ -68,7 +70,7 @@ export function useEndpointMutation<
       return fetchEndpoint(
         endpoint,
         params,
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- internal dispatch; external callers are fully typed
+        // internal dispatch; external callers are fully typed
         fetchOpts as any,
       ) as Promise<TResponse extends void ? void : TResponse>;
     },

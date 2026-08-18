@@ -1,4 +1,7 @@
-import { Rank, computeFlatReorder } from "@plugins/primitives/plugins/rank/core";
+import {
+  Rank,
+  computeFlatReorder,
+} from "@plugins/primitives/plugins/rank/core";
 
 export type DropZone = "before" | "after" | "child";
 
@@ -43,10 +46,9 @@ export function isDescendant<T extends { id: string; parentId: string | null }>(
  * an FK cascade on delete, or moving with their parent). Preserves the order in
  * which ids appear in `rows`.
  */
-export function selectionRoots<T extends { id: string; parentId: string | null }>(
-  rows: readonly T[],
-  selectedIds: ReadonlySet<string>,
-): string[] {
+export function selectionRoots<
+  T extends { id: string; parentId: string | null },
+>(rows: readonly T[], selectedIds: ReadonlySet<string>): string[] {
   const parents = new Map(rows.map((r) => [r.id, r.parentId] as const));
   const hasSelectedAncestor = (id: string): boolean => {
     let cur = parents.get(id) ?? null;
@@ -106,7 +108,9 @@ export function subtreeIds<T extends { id: string; parentId: string | null }>(
  *
  * Argument order mirrors `computeDrop` so a call site swaps one name.
  */
-export function resolveDropParent<T extends { id: string; parentId: string | null }>(
+export function resolveDropParent<
+  T extends { id: string; parentId: string | null },
+>(
   rows: readonly T[],
   draggedId: string,
   zone: DropZone,
@@ -145,10 +149,9 @@ export function computeDrop<T extends Node>(
     try {
       return {
         parentId: target.id,
-        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
         rank: Rank.between(last?.rank ?? null, null),
       };
-    // eslint-disable-next-line promise-safety/no-bare-catch, promise-safety/no-absorbed-failure -- Rank.between throws a plain Error on rank exhaustion/corruption; returning null aborts the DnD drop, which is the correct signal for an impossible drop position
+      // eslint-disable-next-line promise-safety/no-bare-catch, promise-safety/no-absorbed-failure -- Rank.between throws a plain Error on rank exhaustion/corruption; returning null aborts the DnD drop, which is the correct signal for an impossible drop position
     } catch {
       return null;
     }

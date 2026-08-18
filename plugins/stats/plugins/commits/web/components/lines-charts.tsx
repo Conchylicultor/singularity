@@ -22,9 +22,16 @@ import {
   ToggleChip,
 } from "@plugins/primitives/plugins/css/plugins/toggle-chip/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { useEndpoint, getEndpointErrorMessage } from "@plugins/infra/plugins/endpoints/web";
-import { getCommitsLinesCumulative, getCommitsLinesRate } from "../../shared/endpoints";
+import {
+  useEndpoint,
+  getEndpointErrorMessage,
+} from "@plugins/infra/plugins/endpoints/web";
+import {
+  getCommitsLinesCumulative,
+  getCommitsLinesRate,
+} from "../../shared/endpoints";
 import {
   ChartState,
   axisProps,
@@ -99,12 +106,21 @@ interface CumulativePoint {
 
 export function CumulativeLinesChart({ dedup }: { dedup?: boolean }) {
   const { showEmptyDays } = useShowEmptyDays();
-  const { data: resp, error } = useEndpoint(getCommitsLinesCumulative, {}, { query: { dedup: dedup ? "true" : "false" } });
+  const { data: resp, error } = useEndpoint(
+    getCommitsLinesCumulative,
+    {},
+    { query: { dedup: dedup ? "true" : "false" } },
+  );
   // Plain (non-breakdown) call site — the response is always the plain branch.
-  const rawPoints = useMemo(() => (resp?.points ?? []) as CumulativePoint[], [resp]);
+  const rawPoints = useMemo(
+    () => (resp?.points ?? []) as CumulativePoint[],
+    [resp],
+  );
   const { hidden, onLegendClick, legendFormatter } = useToggleable();
   const points = useMemo(() => {
-    const filled = showEmptyDays ? fillGaps(rawPoints, "date", "day", "carry") : rawPoints;
+    const filled = showEmptyDays
+      ? fillGaps(rawPoints, "date", "day", "carry")
+      : rawPoints;
     return filled.map((p) => ({
       date: p.date,
       added: p.added,
@@ -205,14 +221,26 @@ interface RatePoint {
   removed: number;
 }
 
-export function LinesRateChart({ bucket, dedup }: { bucket: Bucket; dedup?: boolean }) {
+export function LinesRateChart({
+  bucket,
+  dedup,
+}: {
+  bucket: Bucket;
+  dedup?: boolean;
+}) {
   const { showEmptyDays } = useShowEmptyDays();
-  const { data: resp, error } = useEndpoint(getCommitsLinesRate, {}, { query: { bucket, dedup: dedup ? "true" : "false" } });
+  const { data: resp, error } = useEndpoint(
+    getCommitsLinesRate,
+    {},
+    { query: { bucket, dedup: dedup ? "true" : "false" } },
+  );
   // Plain (non-breakdown) call site — the response is always the plain branch.
   const rawPoints = useMemo(() => (resp?.points ?? []) as RatePoint[], [resp]);
   const { hidden, onLegendClick, legendFormatter } = useToggleable();
   const points = useMemo(() => {
-    const filled = showEmptyDays ? fillGaps(rawPoints, "bucket", bucket) : rawPoints;
+    const filled = showEmptyDays
+      ? fillGaps(rawPoints, "bucket", bucket)
+      : rawPoints;
     return filled.map((p) => ({ ...p, removed: -p.removed }));
   }, [rawPoints, showEmptyDays, bucket]);
 
@@ -321,24 +349,37 @@ function flattenByExt(
 function extColor(ext: string): string {
   if (ext === OTHER_KEY) return OTHER_COLOR;
   let hash = 0;
-  for (let i = 0; i < ext.length; i++) hash = (hash * 31 + ext.charCodeAt(i)) >>> 0;
+  for (let i = 0; i < ext.length; i++)
+    hash = (hash * 31 + ext.charCodeAt(i)) >>> 0;
   return EXT_PALETTE[hash % EXT_PALETTE.length] ?? OTHER_COLOR;
 }
 
 export function CumulativeLinesBreakdownChart({ dedup }: { dedup?: boolean }) {
   const { showEmptyDays } = useShowEmptyDays();
-  const { data: resp, error } = useEndpoint(getCommitsLinesCumulative, {}, { query: { breakdown: "ext", dedup: dedup ? "true" : "false" } });
+  const { data: resp, error } = useEndpoint(
+    getCommitsLinesCumulative,
+    {},
+    { query: { breakdown: "ext", dedup: dedup ? "true" : "false" } },
+  );
   // breakdown=ext call site — the response is always the byExt branch.
   const points = useMemo(() => (resp?.points ?? []) as ByExtPoint[], [resp]);
   const exts = useMemo(() => topExtensions(points), [points]);
-  const rawFlat = useMemo(() => flattenByExt(points, exts, "date"), [points, exts]);
+  const rawFlat = useMemo(
+    () => flattenByExt(points, exts, "date"),
+    [points, exts],
+  );
   const flatPoints = useMemo(
     () => (showEmptyDays ? fillGaps(rawFlat, "date", "day", "carry") : rawFlat),
     [rawFlat, showEmptyDays],
   );
   const allKeys = exts.includes(OTHER_KEY)
     ? exts
-    : [...new Set([...exts, ...(flatPoints.some((p) => OTHER_KEY in p) ? [OTHER_KEY] : [])])];
+    : [
+        ...new Set([
+          ...exts,
+          ...(flatPoints.some((p) => OTHER_KEY in p) ? [OTHER_KEY] : []),
+        ]),
+      ];
 
   return (
     <div className="h-64 w-full">
@@ -395,13 +436,26 @@ export function CumulativeLinesBreakdownChart({ dedup }: { dedup?: boolean }) {
   );
 }
 
-export function LinesRateBreakdownChart({ bucket, dedup }: { bucket: Bucket; dedup?: boolean }) {
+export function LinesRateBreakdownChart({
+  bucket,
+  dedup,
+}: {
+  bucket: Bucket;
+  dedup?: boolean;
+}) {
   const { showEmptyDays } = useShowEmptyDays();
-  const { data: resp, error } = useEndpoint(getCommitsLinesRate, {}, { query: { bucket, breakdown: "ext", dedup: dedup ? "true" : "false" } });
+  const { data: resp, error } = useEndpoint(
+    getCommitsLinesRate,
+    {},
+    { query: { bucket, breakdown: "ext", dedup: dedup ? "true" : "false" } },
+  );
   // breakdown=ext call site — the response is always the byExt branch.
   const points = useMemo(() => (resp?.points ?? []) as ByExtPoint[], [resp]);
   const exts = useMemo(() => topExtensions(points), [points]);
-  const rawFlat = useMemo(() => flattenByExt(points, exts, "bucket"), [points, exts]);
+  const rawFlat = useMemo(
+    () => flattenByExt(points, exts, "bucket"),
+    [points, exts],
+  );
   const flatPoints = useMemo(
     () => (showEmptyDays ? fillGaps(rawFlat, "bucket", bucket) : rawFlat),
     [rawFlat, showEmptyDays, bucket],
@@ -469,8 +523,12 @@ export function LinesChartsSection() {
   // useEndpoint query key. Refetch explicitly when the filter changes.
   const queryClient = useQueryClient();
   useEffect(() => {
-    void queryClient.invalidateQueries({ queryKey: ["endpoint", getCommitsLinesCumulative.route] });
-    void queryClient.invalidateQueries({ queryKey: ["endpoint", getCommitsLinesRate.route] });
+    void queryClient.invalidateQueries({
+      queryKey: ["endpoint", getCommitsLinesCumulative.route],
+    });
+    void queryClient.invalidateQueries({
+      queryKey: ["endpoint", getCommitsLinesRate.route],
+    });
   }, [queryClient, filterKey]);
 
   return (
@@ -480,18 +538,38 @@ export function LinesChartsSection() {
         <ToggleChip
           active={byType}
           onClick={() => setByType((v) => !v)}
-          className="shrink-0"
+          className={rigidClass()}
         >
           By type
         </ToggleChip>
       </Stack>
       <Stack gap="md">
-        <Text as="h3" variant="caption" className="font-medium text-muted-foreground">Over time</Text>
-        {byType ? <CumulativeLinesBreakdownChart dedup={filterRebases} /> : <CumulativeLinesChart dedup={filterRebases} />}
+        <Text
+          as="h3"
+          variant="caption"
+          className="font-medium text-muted-foreground"
+        >
+          Over time
+        </Text>
+        {byType ? (
+          <CumulativeLinesBreakdownChart dedup={filterRebases} />
+        ) : (
+          <CumulativeLinesChart dedup={filterRebases} />
+        )}
       </Stack>
       <Stack gap="md">
-        <Text as="h3" variant="caption" className="font-medium text-muted-foreground">Per period</Text>
-        {byType ? <LinesRateBreakdownChart bucket={bucket} dedup={filterRebases} /> : <LinesRateChart bucket={bucket} dedup={filterRebases} />}
+        <Text
+          as="h3"
+          variant="caption"
+          className="font-medium text-muted-foreground"
+        >
+          Per period
+        </Text>
+        {byType ? (
+          <LinesRateBreakdownChart bucket={bucket} dedup={filterRebases} />
+        ) : (
+          <LinesRateChart bucket={bucket} dedup={filterRebases} />
+        )}
         <SegmentedControl
           options={BUCKETS}
           value={bucket}

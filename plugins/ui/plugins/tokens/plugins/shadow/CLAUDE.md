@@ -27,11 +27,15 @@
     - `primitives/css/cluster.Cluster`
     - `primitives/css/color-picker.Color`
     - `primitives/css/color-picker.ColorPickerPopover`
+    - `primitives/css/fill.fillClasses`
+    - `primitives/css/line.Line`
+    - `primitives/css/rigid.rigidClass`
     - `primitives/css/row.Row`
     - `primitives/css/row.SectionHeaderRow`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.Button`
+    - `primitives/css/ui-kit.cn`
     - `ui/theme-engine.ThemeEngine`
     - `ui/theme-engine.useThemeScopeId`
     - `ui/theme-engine.useTokenGroupPresetOptions`

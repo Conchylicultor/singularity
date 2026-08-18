@@ -70,7 +70,7 @@ async function persist(): Promise<void> {
   } catch (err) {
     try {
       await unlink(tmpPath);
-    // eslint-disable-next-line promise-safety/no-bare-catch
+      // eslint-disable-next-line promise-safety/no-bare-catch
     } catch {
       /* ignore */
     }
@@ -87,21 +87,20 @@ function enqueueWrite<T>(fn: () => Promise<T>): Promise<T> {
 
 export function getLocal(namespace: string, key: string): string | undefined {
   const blob = ensureLoaded();
-  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
   return blob.namespaces[namespace]?.[key]?.value;
 }
 
 export function hasLocal(namespace: string, key: string): boolean {
   const blob = ensureLoaded();
-  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
   return blob.namespaces[namespace]?.[key] !== undefined;
 }
 
-export function getMetadataLocal(namespace: string, key: string): SecretMetadata {
+export function getMetadataLocal(
+  namespace: string,
+  key: string,
+): SecretMetadata {
   const blob = ensureLoaded();
-  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
   const entry = blob.namespaces[namespace]?.[key];
-  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
   if (!entry) return { set: false };
   return { set: true, updatedAt: entry.updatedAt };
 }
@@ -109,7 +108,6 @@ export function getMetadataLocal(namespace: string, key: string): SecretMetadata
 export function listKeysLocal(namespace: string): string[] {
   const blob = ensureLoaded();
   const ns = blob.namespaces[namespace];
-  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
   return ns ? Object.keys(ns) : [];
 }
 
@@ -120,7 +118,6 @@ export async function setLocal(
 ): Promise<void> {
   return enqueueWrite(async () => {
     const blob = ensureLoaded();
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
     if (!blob.namespaces[namespace]) blob.namespaces[namespace] = {};
     blob.namespaces[namespace]![key] = { value, updatedAt: Date.now() };
     await persist();
@@ -134,7 +131,6 @@ export async function deleteLocal(
   return enqueueWrite(async () => {
     const blob = ensureLoaded();
     const ns = blob.namespaces[namespace];
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
     if (!ns) return;
     if (!(key in ns)) return;
     delete ns[key];

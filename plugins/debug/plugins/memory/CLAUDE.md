@@ -33,6 +33,8 @@ Browse Claude Code auto-memory files for the current project. Lists all `.md` fi
     - `primitives/css/badge.Badge`
     - `primitives/css/badge.formatStatusLabel`
     - `primitives/css/center.Center`
+    - `primitives/css/line.Line`
+    - `primitives/css/rigid.rigidClass`
     - `primitives/css/scroll.Scroll`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.SectionLabel`

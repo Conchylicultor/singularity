@@ -3,8 +3,14 @@ import { useEffect, useRef, useState } from "react";
 import { MdAutoAwesome } from "react-icons/md";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { toast } from "@plugins/shell/plugins/notifications/web";
-import { useResource, ResourceView } from "@plugins/primitives/plugins/live-state/web";
-import { useEndpointMutation, getEndpointErrorMessage } from "@plugins/infra/plugins/endpoints/web";
+import {
+  useResource,
+  ResourceView,
+} from "@plugins/primitives/plugins/live-state/web";
+import {
+  useEndpointMutation,
+  getEndpointErrorMessage,
+} from "@plugins/infra/plugins/endpoints/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
@@ -28,7 +34,10 @@ export function SummaryPane() {
   return (
     <ResourceView resource={summariesResult} fallback={<Loading />}>
       {(summariesData) => (
-        <SummaryPaneInner convId={convId} latest={summariesData[convId ?? ""]?.[0]} />
+        <SummaryPaneInner
+          convId={convId}
+          latest={summariesData[convId ?? ""]?.[0]}
+        />
       )}
     </ResourceView>
   );
@@ -62,8 +71,18 @@ function SummaryPaneInner({
     if (pendingSince !== null) {
       // eslint-disable-next-line react-hooks/set-state-in-effect -- optimistic-cleanup: clears the user-set optimistic pendingSince marker when server truth (a new latest.id pushed over live-state) confirms the summary arrived; this is a response to an external resource push, not a derivable render value.
       setPendingSince(null);
-      // eslint-disable-next-line reactive-server-io/no-reactive-server-io -- per-tab user-initiated (pendingSince gating), not a cross-tab broadcast reaction.
-      toast({ type: "summary", title: "Summary ready", description: "A new conversation summary is available", variant: "success" });
+      // This toast is per-tab user-initiated (pendingSince gating), not a
+      // cross-tab broadcast reaction — so it is not the reactive server I/O
+      // `reactive-server-io/no-reactive-server-io` exists to catch. That rule
+      // does not fire here only because `latest` reaches this component as a
+      // prop (the `useResource` read lives in the parent), so keep the
+      // reasoning even though there is no longer a directive to carry it.
+      toast({
+        type: "summary",
+        title: "Summary ready",
+        description: "A new conversation summary is available",
+        variant: "success",
+      });
     }
   }, [latest, pendingSince]);
 
@@ -74,12 +93,22 @@ function SummaryPaneInner({
     const remaining = pendingSince + PENDING_TIMEOUT_MS - Date.now();
     if (remaining <= 0) {
       setPendingSince(null);
-      toast({ type: "summary", title: "Summarisation timed out", description: "No summary returned in time", variant: "error" });
+      toast({
+        type: "summary",
+        title: "Summarisation timed out",
+        description: "No summary returned in time",
+        variant: "error",
+      });
       return;
     }
     const t = setTimeout(() => {
       setPendingSince(null);
-      toast({ type: "summary", title: "Summarisation timed out", description: "No summary returned in time", variant: "error" });
+      toast({
+        type: "summary",
+        title: "Summarisation timed out",
+        description: "No summary returned in time",
+        variant: "error",
+      });
     }, remaining);
     /* eslint-enable react-hooks/set-state-in-effect */
     return () => clearTimeout(t);
@@ -105,7 +134,7 @@ function SummaryPaneInner({
         variant="outline"
         onClick={onSummarize}
         loading={isPending}
-        // eslint-disable-next-line layout/no-adhoc-layout -- per-child self-start so the button hugs its content within the stretch column
+        // eslint-disable-next-line layout/no-adhoc-layout -- per-child cross-axis override: this one button must hug its content inside a Stack column whose other child (the summary card) must keep stretching, so the alignment cannot move to the container's `align`. Per-child `self-*` has no primitive — `selfClass()` is designed, not built.
         className="gap-xs self-start text-caption"
         aria-label={latest ? "Re-summarise" : "Summarise"}
       >
@@ -128,7 +157,7 @@ function SummaryCard({ summary }: { summary: ConversationSummary }) {
   const generated = summary.generatedAt;
   return (
     <Stack gap="md" className="rounded-md border p-md">
-      <div className="flex items-center justify-between gap-sm">
+      <Stack direction="row" gap="sm" align="center" justify="between">
         <Badge colorClass={PHASE_CLASSES[summary.phase]}>
           {PHASE_LABEL[summary.phase]}
         </Badge>
@@ -139,7 +168,7 @@ function SummaryCard({ summary }: { summary: ConversationSummary }) {
         >
           {formatRelative(generated)} · {summary.turnCountAtGeneration} turns
         </Text>
-      </div>
+      </Stack>
 
       {summary.phaseDetail && (
         <Section label="Detail">{summary.phaseDetail}</Section>
@@ -168,9 +197,7 @@ function Section({
     <div>
       <div
         className={`text-3xs uppercase tracking-wide ${
-          tone === "warn"
-            ? "text-warning"
-            : "text-muted-foreground"
+          tone === "warn" ? "text-warning" : "text-muted-foreground"
         }`}
       >
         {label}

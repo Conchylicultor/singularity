@@ -23,7 +23,10 @@ describe("MailHtml sanitization", () => {
 
   it("forces links to open externally with a safe rel", () => {
     const { container } = render(
-      <MailHtml html={`<a href="https://x.com">x</a>`} showRemoteImages={false} />,
+      <MailHtml
+        html={`<a href="https://x.com">x</a>`}
+        showRemoteImages={false}
+      />,
     );
     const a = container.querySelector("a")!;
     expect(a.getAttribute("target")).toBe("_blank");
@@ -32,8 +35,10 @@ describe("MailHtml sanitization", () => {
 
   it("neutralizes javascript: hrefs", () => {
     const { container } = render(
-      // eslint-disable-next-line no-script-url
-      <MailHtml html={`<a href="javascript:evil()">x</a>`} showRemoteImages={false} />,
+      <MailHtml
+        html={`<a href="javascript:evil()">x</a>`}
+        showRemoteImages={false}
+      />,
     );
     expect(container.querySelector("a")?.getAttribute("href")).toBeNull();
   });
@@ -72,7 +77,11 @@ describe("MailHtml remote-image gating", () => {
   it("reports no remote images for a purely local message", () => {
     const onDetect = vi.fn();
     render(
-      <MailHtml html={`<p>plain text</p>`} showRemoteImages={false} onRemoteImagesDetected={onDetect} />,
+      <MailHtml
+        html={`<p>plain text</p>`}
+        showRemoteImages={false}
+        onRemoteImagesDetected={onDetect}
+      />,
     );
     expect(onDetect).toHaveBeenCalledWith(false);
   });
@@ -86,7 +95,9 @@ describe("MailHtml remote-image gating", () => {
     );
     // Either the img was dropped outright, or its data: src was stripped —
     // both mean nothing loads.
-    expect(container.querySelector("img")?.getAttribute("src") ?? null).toBeNull();
+    expect(
+      container.querySelector("img")?.getAttribute("src") ?? null,
+    ).toBeNull();
   });
 });
 
@@ -96,7 +107,9 @@ describe("MailHtml cid resolution", () => {
       <MailHtml
         html={`<img src="cid:logo@x">`}
         showRemoteImages={false}
-        resolveCid={(cid) => (cid === "logo@x" ? "/api/attachments/abc" : undefined)}
+        resolveCid={(cid) =>
+          cid === "logo@x" ? "/api/attachments/abc" : undefined
+        }
       />,
     );
     expect(container.querySelector("img")?.getAttribute("src")).toBe(
@@ -106,7 +119,11 @@ describe("MailHtml cid resolution", () => {
 
   it("leaves a placeholder when the cid is not yet available", () => {
     const { container } = render(
-      <MailHtml html={`<img src="cid:logo@x">`} showRemoteImages={false} resolveCid={() => undefined} />,
+      <MailHtml
+        html={`<img src="cid:logo@x">`}
+        showRemoteImages={false}
+        resolveCid={() => undefined}
+      />,
     );
     const img = container.querySelector("img")!;
     expect(img.getAttribute("src")).toBeNull();

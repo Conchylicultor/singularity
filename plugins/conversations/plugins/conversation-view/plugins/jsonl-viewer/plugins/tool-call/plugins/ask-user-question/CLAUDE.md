@@ -49,6 +49,8 @@ Selection is signalled on exactly **two** channels: the radio/checkbox indicator
     - `infra/endpoints.useEndpointMutation`
     - `primitives/css/badge.Badge`
     - `primitives/css/fill.Fill`
+    - `primitives/css/line.Line`
+    - `primitives/css/rigid.rigidClass`
     - `primitives/css/selection-indicator.CheckboxIndicator`
     - `primitives/css/selection-indicator.RadioIndicator`
     - `primitives/css/spacing.Stack`

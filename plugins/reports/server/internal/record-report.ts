@@ -81,7 +81,10 @@ function shedSummaryMessage(s: ShedSummary): string {
 // the accounting silently lost. So the duress-shed kind declares itself
 // `duressExempt` (see ReportKindSpec) and bypasses the gate; "flush only
 // happens after clear" alone would not close that race.
-const reportShed = createShedBuffer<{ input: ReportInput; fingerprint: string }>({
+const reportShed = createShedBuffer<{
+  input: ReportInput;
+  fingerprint: string;
+}>({
   kind: "reports",
   cascadeKeyOf: (item) => item.fingerprint,
   replay: async (items) => {
@@ -106,8 +109,15 @@ const reportShed = createShedBuffer<{ input: ReportInput; fingerprint: string }>
 export async function recordReport(
   input: ReportInput,
 ): Promise<RecordReportResult> {
-  const { kind, source, message: rawMessage, url, userAgent, clientId, buildId } =
-    input;
+  const {
+    kind,
+    source,
+    message: rawMessage,
+    url,
+    userAgent,
+    clientId,
+    buildId,
+  } = input;
 
   // Stamp the true event instant BEFORE the shed gate below: a report buffered
   // during a duress episode must carry its time through the buffer so replay
@@ -123,9 +133,11 @@ export async function recordReport(
     // not a runtime condition to paper over with a default.
     throw new Error(
       `recordReport: no ReportKind registered for kind "${kind}". ` +
-        `Registered kinds: ${ReportKind.getContributions()
-          .map((k) => k.kind)
-          .join(", ") || "(none)"}`,
+        `Registered kinds: ${
+          ReportKind.getContributions()
+            .map((k) => k.kind)
+            .join(", ") || "(none)"
+        }`,
     );
   }
 
@@ -206,7 +218,6 @@ export async function recordReport(
     }),
   );
 
-  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
   if (!row) return { reportId: null, taskId: null, rateLimited: limited };
 
   // Gate on the per-call `limited`, NOT the persisted `row.rateLimited`. The

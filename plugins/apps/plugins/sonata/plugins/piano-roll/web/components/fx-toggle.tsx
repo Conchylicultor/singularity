@@ -19,8 +19,14 @@ import { MdAutoAwesome } from "react-icons/md";
 import { useConfig, useSetConfig } from "@plugins/config_v2/web";
 import { InlinePopover } from "@plugins/primitives/plugins/popover/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { SectionLabel, Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import {
+  SectionLabel,
+  Text,
+} from "@plugins/primitives/plugins/css/plugins/text/web";
 import { ToggleChip } from "@plugins/primitives/plugins/css/plugins/toggle-chip/web";
+import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
+import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
+import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { PianoRollFx } from "../slots";
 
@@ -67,15 +73,25 @@ export function FxToggle() {
         }
       >
         <Stack gap="sm">
-          {ambient.length > 0 ? <FxTierSection label="Ambient" effects={ambient} /> : null}
-          {fancy.length > 0 ? <FxTierSection label="Fancy" effects={fancy} /> : null}
+          {ambient.length > 0 ? (
+            <FxTierSection label="Ambient" effects={ambient} />
+          ) : null}
+          {fancy.length > 0 ? (
+            <FxTierSection label="Fancy" effects={fancy} />
+          ) : null}
         </Stack>
       </InlinePopover>
     </div>
   );
 }
 
-function FxTierSection({ label, effects }: { label: string; effects: FxItem[] }) {
+function FxTierSection({
+  label,
+  effects,
+}: {
+  label: string;
+  effects: FxItem[];
+}) {
   return (
     <Stack gap="2xs">
       <SectionLabel className="p-xs">{label}</SectionLabel>
@@ -91,22 +107,26 @@ function FxToggleRow({ effect }: { effect: FxItem }) {
   const setConfig = useSetConfig(effect.config);
   const Icon = effect.icon;
   return (
-    <button
+    <Line
+      as="button"
       type="button"
       role="switch"
       aria-checked={enabled}
       onClick={() => setConfig("enabled", !enabled)}
-      className="flex w-full items-center gap-sm rounded-sm p-xs text-left transition-colors hover:bg-muted"
+      className="w-full gap-sm rounded-sm p-xs text-left transition-colors hover:bg-muted"
     >
-      {Icon ? <Icon className="icon-auto shrink-0 text-muted-foreground" /> : null}
-      <Text variant="body" className="min-w-0 flex-1 truncate">
-        {effect.label}
-      </Text>
+      {Icon ? (
+        <Icon className={cn("icon-auto text-muted-foreground", rigidClass())} />
+      ) : null}
+      <Fill as="span">
+        <Text variant="body">{effect.label}</Text>
+      </Fill>
       {/* Switch visual — the whole row is the actual control (role="switch"). */}
       <span
         aria-hidden
         className={cn(
-          "relative h-4 w-7 shrink-0 rounded-full transition-colors",
+          "relative h-4 w-7 rounded-full transition-colors",
+          rigidClass(),
           enabled ? "bg-primary" : "bg-muted-foreground/30",
         )}
       >
@@ -118,6 +138,6 @@ function FxToggleRow({ effect }: { effect: FxItem }) {
           )}
         />
       </span>
-    </button>
+    </Line>
   );
 }

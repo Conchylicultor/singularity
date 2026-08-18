@@ -13,8 +13,10 @@ export const handleDelete = implement(deleteAgent, async ({ params }) => {
   if (children.length > 0) {
     throw new HttpError(409, "Agent has children");
   }
-  const [row] = await db.delete(_agents).where(eq(_agents.id, params.id)).returning();
-  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
+  const [row] = await db
+    .delete(_agents)
+    .where(eq(_agents.id, params.id))
+    .returning();
   if (!row) throw new HttpError(404, "Not found");
   // Launches cascade via FK; the DB change-feed invalidates the agents and
   // agent-launches resources so subscribed detail views refresh.

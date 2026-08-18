@@ -411,9 +411,11 @@ guard: `confirmDialog` (`imperative-dialog/plugins/confirm`); native
     - `apps-core/tab-bar`
     - `apps-core/tab-surface`
     - `apps-core/theme-scope`
+    - `apps/agent-manager/shell`
     - `apps/agent-manager/welcome`
     - `apps/browser/bookmarks`
     - `apps/browser/omnibox`
+    - `apps/browser/shell`
     - `apps/browser/start-page`
     - `apps/browser/tabs`
     - `apps/browser/webview`
@@ -428,6 +430,7 @@ guard: `confirmDialog` (`imperative-dialog/plugins/confirm`); native
     - `apps/mail/sync-status`
     - `apps/pages/page-tree`
     - `apps/pages/trash`
+    - `apps/pages/welcome/recent-pages`
     - `apps/prototypes/gallery`
     - `apps/prototypes/present`
     - `apps/sonata/audio/metronome`
@@ -484,9 +487,11 @@ guard: `confirmDialog` (`imperative-dialog/plugins/confirm`); native
     - `backup`
     - `build`
     - `build/build-fix`
+    - `build/build-info`
     - `build/build-logs`
     - `build/serve-composition`
     - `code-explorer`
+    - `code-explorer/commit-detail`
     - `config_v2/config-link`
     - `config_v2/settings`
     - `conversations/agents`
@@ -500,20 +505,27 @@ guard: `confirmDialog` (`imperative-dialog/plugins/confirm`); native
     - `conversations/conversation-view/exit`
     - `conversations/conversation-view/exit-menu`
     - `conversations/conversation-view/hold-and-exit`
+    - `conversations/conversation-view/jsonl-viewer`
+    - `conversations/conversation-view/jsonl-viewer/attachment/task-reminder`
     - `conversations/conversation-view/jsonl-viewer/collapsible-card`
     - `conversations/conversation-view/jsonl-viewer/fields-card`
     - `conversations/conversation-view/jsonl-viewer/file-path`
     - `conversations/conversation-view/jsonl-viewer/queued-prompt-card`
     - `conversations/conversation-view/jsonl-viewer/row-actions`
+    - `conversations/conversation-view/jsonl-viewer/tool-call`
     - `conversations/conversation-view/jsonl-viewer/tool-call/ask-user-question`
+    - `conversations/conversation-view/jsonl-viewer/tool-call/flag-raise`
+    - `conversations/conversation-view/jsonl-viewer/tool-call/task-tools`
     - `conversations/conversation-view/jsonl-viewer/tool-call/workflow`
     - `conversations/conversation-view/launch-prompts`
     - `conversations/conversation-view/new-child-task`
+    - `conversations/conversation-view/op-status`
     - `conversations/conversation-view/pending-turn`
     - `conversations/conversation-view/prompt-templates`
     - `conversations/conversation-view/push-and-exit`
     - `conversations/conversation-view/tasks-panel`
     - `conversations/conversation-view/terminal-pane`
+    - `conversations/conversation-view/turn-summary`
     - `conversations/conversations-view`
     - `conversations/effort-provider`
     - `conversations/model-provider`
@@ -584,7 +596,10 @@ guard: `confirmDialog` (`imperative-dialog/plugins/confirm`); native
     - `page/sub-page`
     - `page/video`
     - `plugin-meta/facets/cross-refs/render-detail`
+    - `plugin-meta/facets/db-schema/render-detail`
     - `plugin-meta/facets/exports/render-detail`
+    - `plugin-meta/facets/registrations/render-detail`
+    - `plugin-meta/facets/resources/render-detail`
     - `plugin-meta/facets/routes/render-contributions`
     - `plugin-meta/facets/routes/render-detail`
     - `plugin-meta/plugin-view/inclusion`
@@ -593,9 +608,11 @@ guard: `confirmDialog` (`imperative-dialog/plugins/confirm`); native
     - `primitives/auto-scroll`
     - `primitives/avatar`
     - `primitives/bar`
+    - `primitives/breadcrumb`
     - `primitives/collapsible`
     - `primitives/collapsible-wrap`
     - `primitives/command-palette`
+    - `primitives/commit-list`
     - `primitives/copy-to-clipboard`
     - `primitives/css/badge`
     - `primitives/css/bouncing-dots`
@@ -608,11 +625,13 @@ guard: `confirmDialog` (`imperative-dialog/plugins/confirm`); native
     - `primitives/css/fill`
     - `primitives/css/grid`
     - `primitives/css/inline`
+    - `primitives/css/layer`
     - `primitives/css/layout-harness`
     - `primitives/css/line`
     - `primitives/css/overlay`
     - `primitives/css/pin`
     - `primitives/css/placeholder`
+    - `primitives/css/rigid`
     - `primitives/css/row`
     - `primitives/css/scroll`
     - `primitives/css/selection-indicator`
@@ -670,10 +689,15 @@ guard: `confirmDialog` (`imperative-dialog/plugins/confirm`); native
     - `reorder/node-types/header`
     - `reorder/node-types/overflow`
     - `review`
+    - `review/code-review`
+    - `review/plugin-changes`
+    - `review/plugin-changes/api-changes`
+    - `review/plugin-changes/file-changes`
     - `screenshot`
     - `screenshot/draw-on-app`
     - `search/quick-find`
     - `shell/global-action-bar`
+    - `shell/notifications`
     - `shell/toast`
     - `stats/commits`
     - `stats/cost`
@@ -683,6 +707,7 @@ guard: `confirmDialog` (`imperative-dialog/plugins/confirm`); native
     - `tasks/task-deps-tree`
     - `tasks/task-description`
     - `tasks/task-draft-form`
+    - `tasks/task-events`
     - `tasks/task-graph`
     - `tasks/task-header`
     - `tasks/task-list`

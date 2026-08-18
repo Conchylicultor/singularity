@@ -2,9 +2,16 @@ import { MdWarning } from "react-icons/md";
 import { CollapsibleChevron } from "@plugins/primitives/plugins/collapsible/web";
 import { CopyButton } from "@plugins/primitives/plugins/copy-to-clipboard/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
+import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
+import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
+import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Sticky } from "@plugins/primitives/plugins/css/plugins/sticky/web";
-import type { EditedFile, EditedFileStatus } from "@plugins/conversations/plugins/conversation-view/plugins/code/core";
+import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import type {
+  EditedFile,
+  EditedFileStatus,
+} from "@plugins/conversations/plugins/conversation-view/plugins/code/core";
 import { gitStatusBadge } from "@plugins/conversations/plugins/conversation-view/plugins/code/web";
 import { useConfig } from "@plugins/config_v2/web";
 import { DiffOrImageView } from "@plugins/primitives/plugins/diff-view/web";
@@ -13,7 +20,10 @@ import { reviewConfig } from "../../shared/config";
 
 /** Strip border-* utilities from a gitStatusBadge string (keep only bg/text). */
 function statusBadgeColor(status: EditedFileStatus): string {
-  return gitStatusBadge(status).split(" ").filter((c) => !c.startsWith("border-")).join(" ");
+  return gitStatusBadge(status)
+    .split(" ")
+    .filter((c) => !c.startsWith("border-"))
+    .join(" ");
 }
 
 const STATUS_LABEL: Record<EditedFileStatus, string> = {
@@ -70,21 +80,33 @@ export function ReviewFileRow({
   return (
     <div className="border-b border-border last:border-b-0">
       <Sticky edge="top">
-        <button
+        <Line
+          as="button"
           type="button"
           onClick={onToggle}
-          className={`text-body flex w-full items-center gap-sm px-md py-xs text-left hover:bg-muted/80 ${LEVEL_BG[level]}`}
+          className={cn(
+            "text-body w-full gap-sm px-md py-xs text-left hover:bg-muted/80",
+            LEVEL_BG[level],
+          )}
           aria-expanded={expanded}
           title={level !== "safe" ? LEVEL_TOOLTIP[level] : undefined}
         >
-          <CollapsibleChevron open={expanded} className="size-4 shrink-0 text-muted-foreground" />
-          <Badge colorClass={statusBadgeColor(file.status)} className="shrink-0">
+          <CollapsibleChevron
+            open={expanded}
+            className={cn("size-4 text-muted-foreground", rigidClass())}
+          />
+          <Badge
+            colorClass={statusBadgeColor(file.status)}
+            className={rigidClass()}
+          >
             {STATUS_LABEL[file.status]}
           </Badge>
-          <span className="group/path min-w-0 flex-1 truncate">
+          <Fill as="span" className="group/path truncate">
             {from && (
               <>
-                <span className="text-muted-foreground line-through">{from}</span>
+                <span className="text-muted-foreground line-through">
+                  {from}
+                </span>
                 {/* eslint-disable-next-line spacing/no-adhoc-spacing -- inline arrow separator offset between from/to paths */}
                 <span className="mx-1.5 text-muted-foreground">→</span>
               </>
@@ -99,8 +121,15 @@ export function ReviewFileRow({
               className="ml-1 text-muted-foreground opacity-0 pointer-events-none transition-opacity hover:text-foreground group-hover/path:opacity-100 group-hover/path:pointer-events-auto"
               onClick={(e) => e.stopPropagation()}
             />
-          </span>
-          <Text as="span" variant="caption" className="flex shrink-0 items-center gap-sm tabular-nums">
+          </Fill>
+          {/* `Line as={Text}` (rather than the usual `Text as={Line}`) keeps this
+              stats group a <span>: it sits inside a <button>, whose content model
+              is phrasing content, so Line's default <div> host would be invalid. */}
+          <Line
+            as={Text}
+            variant="caption"
+            className={cn("gap-sm tabular-nums", rigidClass())}
+          >
             <span className="text-success">+{file.additions}</span>
             <span className="text-destructive">−{file.deletions}</span>
             {level !== "safe" && (
@@ -109,8 +138,8 @@ export function ReviewFileRow({
                 aria-label={LEVEL_TOOLTIP[level]}
               />
             )}
-          </Text>
-        </button>
+          </Line>
+        </Line>
       </Sticky>
       {expanded && (
         <div className="bg-background">

@@ -92,11 +92,18 @@ Two of its fields are stamped by **this** plugin's build transform
   - Uses:
     - `active-data.ActiveData`
     - `improve.insertIntoImproveDraft`
+    - `primitives/css/fill.Fill`
+    - `primitives/css/fill.fillClasses`
+    - `primitives/css/inline.Inline`
     - `primitives/css/pin.Pin`
+    - `primitives/css/rigid.rigidClass`
     - `primitives/css/spacing.Inset`
+    - `primitives/css/spacing.insetClass`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
+    - `primitives/css/ui-kit.cn`
     - `primitives/css/ui-kit.PortalForwardProvider`
+    - `primitives/css/ui-kit.SingleLineProvider`
     - `primitives/css/ui-kit.usePortalForwardedAttrs`
     - `primitives/css/viewport-overlay.ViewportOverlay`
     - `primitives/icon-button.IconButton`

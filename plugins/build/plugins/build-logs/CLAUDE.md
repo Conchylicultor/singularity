@@ -18,6 +18,7 @@
     - `primitives/collapsible.CollapsibleTrigger`
     - `primitives/css/clip.Clip`
     - `primitives/css/pin.Pin`
+    - `primitives/css/rigid.rigidClass`
     - `primitives/css/scroll.Scroll`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`

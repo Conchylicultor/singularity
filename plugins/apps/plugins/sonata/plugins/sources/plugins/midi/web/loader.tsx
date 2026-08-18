@@ -9,6 +9,8 @@
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useCallback, useRef, useState } from "react";
 import { MdMusicNote, MdUploadFile } from "react-icons/md";
+import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
+import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 
@@ -34,7 +36,9 @@ export function MidiLoader({ onRaw }: Props) {
       reader.onload = (e) => {
         const result = e.target?.result;
         if (!(result instanceof ArrayBuffer)) {
-          throw new Error("[midi source] FileReader did not return ArrayBuffer");
+          throw new Error(
+            "[midi source] FileReader did not return ArrayBuffer",
+          );
         }
         onRaw(result);
       };
@@ -96,8 +100,12 @@ export function MidiLoader({ onRaw }: Props) {
           <Text as="p" variant="label">
             {fileName ?? "Drop a MIDI file here"}
           </Text>
-          {/* eslint-disable-next-line spacing/no-adhoc-spacing -- small top offset separating the hint line from the filename above inside the centered dropzone caption */}
-          <Text as="p" variant="caption" className="mt-0.5 text-muted-foreground">
+          <Text
+            as="p"
+            variant="caption"
+            // eslint-disable-next-line spacing/no-adhoc-spacing -- small top offset separating the hint line from the filename above inside the centered dropzone caption
+            className="mt-0.5 text-muted-foreground"
+          >
             .mid / .midi — or click to browse
           </Text>
         </div>
@@ -105,16 +113,23 @@ export function MidiLoader({ onRaw }: Props) {
           <Text
             as="div"
             variant="caption"
-            className="flex items-center gap-xs rounded-md bg-muted px-sm py-xs text-muted-foreground"
+            className="rounded-md bg-muted px-sm py-xs text-muted-foreground"
           >
-            <MdMusicNote className="size-3.5 shrink-0" />
-            <Text className="truncate max-w-[16rem]">{fileName}</Text>
+            <Line className="gap-xs">
+              <MdMusicNote className={cn("size-3.5", rigidClass())} />
+              <Text className="max-w-[16rem]">{fileName}</Text>
+            </Line>
           </Text>
         ) : null}
       </Stack>
 
       {error ? (
-        <Text as="p" variant="caption" className="text-destructive" role="alert">
+        <Text
+          as="p"
+          variant="caption"
+          className="text-destructive"
+          role="alert"
+        >
           {error}
         </Text>
       ) : null}

@@ -6,7 +6,10 @@ import {
 } from "@plugins/primitives/plugins/collapsible/web";
 import type { Conversation as ConversationRecord } from "@plugins/tasks/plugins/tasks-core/core";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
+import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { turnSummariesResource } from "../../shared";
 
 function parseBullets(text: string): string[] {
@@ -54,23 +57,39 @@ export function TurnSummaryCard({
   const hasDetail = caveats.length > 0 || actions.length > 0;
 
   return (
-    <Text as="div" variant="caption" className="rounded-md border border-border bg-muted/30 px-md py-sm">
+    <Text
+      as="div"
+      variant="caption"
+      className="rounded-md border border-border bg-muted/30 px-md py-sm"
+    >
+      {/* The button hosts identity (type/aria/click); the row layout is the
+          Stack inside it — the summary text wraps, so this is a flow row and NOT
+          a single-line `Line` (whose whitespace-nowrap would defeat the wrap). */}
       <button
         type="button"
         onClick={hasDetail ? toggle : undefined}
-        className={`flex w-full items-start gap-xs text-left ${
-          hasDetail ? "cursor-pointer" : "cursor-default"
-        }`}
+        className={cn(
+          "w-full text-left",
+          hasDetail ? "cursor-pointer" : "cursor-default",
+        )}
         aria-expanded={hasDetail ? open : undefined}
       >
-        {hasDetail ? (
-          // eslint-disable-next-line spacing/no-adhoc-spacing -- tiny top offset to baseline-align the chevron with the first line of summary text
-          <CollapsibleChevron open={open} className="mt-0.5 size-3.5 shrink-0 text-muted-foreground" />
-        ) : (
-          // eslint-disable-next-line spacing/no-adhoc-spacing -- tiny top offset matching the chevron's, keeps the spacer placeholder aligned
-          <span className="mt-0.5 size-3.5 shrink-0" />
-        )}
-        <span className="flex-1">{summary.summary || "(no summary)"}</span>
+        <Stack direction="row" gap="xs" align="start">
+          {hasDetail ? (
+            <CollapsibleChevron
+              open={open}
+              // eslint-disable-next-line spacing/no-adhoc-spacing -- tiny top offset to baseline-align the chevron with the first line of summary text
+              className={cn(
+                "mt-0.5 size-3.5 text-muted-foreground",
+                rigidClass(),
+              )}
+            />
+          ) : (
+            // eslint-disable-next-line spacing/no-adhoc-spacing -- tiny top offset matching the chevron's, keeps the spacer placeholder aligned
+            <span className={cn("mt-0.5 size-3.5", rigidClass())} />
+          )}
+          <Fill as="span">{summary.summary || "(no summary)"}</Fill>
+        </Stack>
       </button>
       {hasDetail && open && (
         // eslint-disable-next-line spacing/no-adhoc-spacing -- mt-2 separates this detail block from the always-visible summary button (sibling under a non-flex Text); ml-5 indents it under the chevron column
@@ -78,8 +97,10 @@ export function TurnSummaryCard({
           {caveats.length > 0 && (
             <BulletList
               icon={
-                // eslint-disable-next-line spacing/no-adhoc-spacing -- tiny top offset to baseline-align the bullet icon with its first text line
-                <MdWarning className="mt-0.5 size-3 shrink-0 text-warning" />
+                <MdWarning
+                  // eslint-disable-next-line spacing/no-adhoc-spacing -- tiny top offset to baseline-align the bullet icon with its first text line
+                  className={cn("mt-0.5 size-3 text-warning", rigidClass())}
+                />
               }
               items={caveats}
             />
@@ -87,8 +108,10 @@ export function TurnSummaryCard({
           {actions.length > 0 && (
             <BulletList
               icon={
-                // eslint-disable-next-line spacing/no-adhoc-spacing -- tiny top offset to baseline-align the bullet icon with its first text line
-                <MdArrowForward className="mt-0.5 size-3 shrink-0 text-info" />
+                <MdArrowForward
+                  // eslint-disable-next-line spacing/no-adhoc-spacing -- tiny top offset to baseline-align the bullet icon with its first text line
+                  className={cn("mt-0.5 size-3 text-info", rigidClass())}
+                />
               }
               items={actions}
             />
@@ -109,10 +132,10 @@ function BulletList({
   return (
     <Stack as="ul" gap="xs">
       {items.map((item, i) => (
-        <li key={i} className="flex items-start gap-xs">
+        <Stack as="li" key={i} direction="row" gap="xs" align="start">
           {icon}
           <span>{item}</span>
-        </li>
+        </Stack>
       ))}
     </Stack>
   );

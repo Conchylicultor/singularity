@@ -77,6 +77,7 @@ layout set orthogonal (each primitive owns one distinct mechanic, no overlap).
     - `conversations/conversation-view/code/file-pane/image`
     - `conversations/conversation-view/dependencies`
     - `conversations/conversation-view/jsonl-viewer/tool-call/task-tools`
+    - `conversations/conversation-view/jsonl-viewer/tool-call/workflow`
     - `debug/boot-profile`
     - `debug/broadcasts`
     - `debug/claude-cli-calls`
@@ -121,6 +122,7 @@ layout set orthogonal (each primitive owns one distinct mechanic, no overlap).
     - `primitives/setup-steps`
     - `primitives/text-editor/paste-images`
     - `primitives/tree`
+    - `reorder/node-types/header`
     - `screenshot`
     - `shell/global-action-bar`
     - `shell/notifications`

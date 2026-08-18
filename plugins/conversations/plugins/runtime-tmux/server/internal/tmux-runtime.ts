@@ -534,7 +534,6 @@ export async function listPanes(): Promise<
     map.set(name, {
       panePid: pid,
       dead: deadStr === "1",
-      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
       worktreePath: startPath ?? "",
       rawTitle: rest.join(SEP),
     });

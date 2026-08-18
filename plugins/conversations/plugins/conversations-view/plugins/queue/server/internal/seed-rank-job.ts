@@ -1,7 +1,13 @@
 import { z } from "zod";
 import { eq } from "drizzle-orm";
 import { defineJob } from "@plugins/infra/plugins/jobs/server";
-import { lockDeck, rankForTop, seatJoiningGroup, findTaskIdForConversation, upsertRank } from "./queue-ranks";
+import {
+  lockDeck,
+  rankForTop,
+  seatJoiningGroup,
+  findTaskIdForConversation,
+  upsertRank,
+} from "./queue-ranks";
 import { db } from "@plugins/database/server";
 import { conversationsQueue } from "./tables";
 
@@ -23,13 +29,14 @@ export const seedRankJob = defineJob({
         .from(conversationsQueue.table)
         .where(eq(conversationsQueue.table.parentId, conversationId))
         .limit(1);
-      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
       if (existing) return;
 
       // If the task already has a group, take its seat — position AND pin —
       // rather than going to top as a fresh unpinned row.
       const taskId = await findTaskIdForConversation(conversationId, tx);
-      const seat = taskId ? await seatJoiningGroup(taskId, conversationId, tx) : null;
+      const seat = taskId
+        ? await seatJoiningGroup(taskId, conversationId, tx)
+        : null;
       const rank = seat?.rank ?? (await rankForTop(conversationId, tx));
       await upsertRank(conversationId, rank, tx, seat?.pinned ?? false);
     });

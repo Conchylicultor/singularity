@@ -14,6 +14,10 @@
     - `infra/endpoints.EndpointError`
     - `infra/endpoints.fetchEndpoint`
     - `primitives/css/center.Center`
+    - `primitives/css/clip.Clip`
+    - `primitives/css/fill.Fill`
+    - `primitives/css/fill.fillClasses`
+    - `primitives/css/rigid.rigidClass`
     - `primitives/css/row.Row`
     - `primitives/css/scroll.Scroll`
     - `primitives/css/spacing.Stack`

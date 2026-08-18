@@ -17,16 +17,18 @@ const UUID_RE =
 
 // Persist the posted snapshot under a generated id, stamping the worktree the
 // permalink stays scoped to. Returns the id the client builds the URL from.
-export const handleSaveBootTrace = implement(saveBootTrace, async ({ body }) => {
-  const worktree = process.env.SINGULARITY_WORKTREE ?? "unknown";
-  const [row] = await db
-    .insert(_bootTraces)
-    .values({ worktree, snapshot: body.snapshot })
-    .returning({ id: _bootTraces.id });
-  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
-  if (!row) throw new HttpError(500, "saveBootTrace: insert returned no row");
-  return { id: row.id };
-});
+export const handleSaveBootTrace = implement(
+  saveBootTrace,
+  async ({ body }) => {
+    const worktree = process.env.SINGULARITY_WORKTREE ?? "unknown";
+    const [row] = await db
+      .insert(_bootTraces)
+      .values({ worktree, snapshot: body.snapshot })
+      .returning({ id: _bootTraces.id });
+    if (!row) throw new HttpError(500, "saveBootTrace: insert returned no row");
+    return { id: row.id };
+  },
+);
 
 // Fetch one snapshot (with the full blob) for the detail render. 404 loudly when
 // the id is unknown so the pane can render a graceful not-found state.

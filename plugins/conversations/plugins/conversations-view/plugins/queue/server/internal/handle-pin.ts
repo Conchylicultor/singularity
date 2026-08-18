@@ -34,7 +34,6 @@ export const handlePin = implement(pinQueue, async ({ body }) => {
       .from(conversationsQueue.table)
       .where(eq(conversationsQueue.table.parentId, conversationId))
       .limit(1);
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
     if (!existing && pinned) {
       // Join the task's group if it already holds a seat, else enter at the top.
       const seat = await seatJoiningGroup(conv.taskId, conversationId, tx);

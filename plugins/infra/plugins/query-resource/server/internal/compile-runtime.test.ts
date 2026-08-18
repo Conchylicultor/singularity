@@ -77,7 +77,6 @@ function fakeDb(
   const from = { from: () => step(false) };
   const distinctFrom = { from: () => distinctStep() };
   return {
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     select: (_fields?: SelectMap) => from,
     selectDistinct: () => distinctFrom,
   } as unknown as QueryDb;
@@ -96,7 +95,9 @@ interface SentFrame {
 }
 
 function harness(readSetMap: Record<string, string[]>) {
-  const runtime = createResourceRuntime({ readSet: (key) => readSetMap[key] ?? [] });
+  const runtime = createResourceRuntime({
+    readSet: (key) => readSetMap[key] ?? [],
+  });
   const frames: SentFrame[] = [];
   let seq = 0;
   const ws = {
@@ -121,7 +122,6 @@ function harness(readSetMap: Record<string, string[]>) {
       });
     },
   };
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const handler = runtime.notificationsWsHandler as any;
   handler.open(ws);
   return {
@@ -139,7 +139,9 @@ function harness(readSetMap: Record<string, string[]>) {
 
 const tick = (): Promise<void> => new Promise((r) => setTimeout(r, 0));
 const rowSchema = z.array(z.object({ id: z.string(), n: z.number() }));
-const keyed = (key: string): KeyedResourceContract<{ id: string; n: number }[]> => ({
+const keyed = (
+  key: string,
+): KeyedResourceContract<{ id: string; n: number }[]> => ({
   key,
   schema: rowSchema,
   keyed: { keyOf: (r) => (r as { id: string }).id },
@@ -178,14 +180,30 @@ describe("compiled query-resource — end-to-end via the change-feed", () => {
     register(
       h.runtime,
       "rows",
-      { from: rows, identity: { pk: rows.id }, db: fakeDb(() => [{ id: "a", n: 1 }, { id: "b", n: 1 }], () => [{ id: "a", n: 2 }]) },
+      {
+        from: rows,
+        identity: { pk: rows.id },
+        db: fakeDb(
+          () => [
+            { id: "a", n: 1 },
+            { id: "b", n: 1 },
+          ],
+          () => [{ id: "a", n: 2 }],
+        ),
+      },
       loads,
       () => subscribed,
     );
     await h.subscribe("rows");
     subscribed = true;
 
-    h.runtime.applyDbChange({ table: "rows", op: "U", ids: ["a"], origin: "rows", identityBase: "rows" });
+    h.runtime.applyDbChange({
+      table: "rows",
+      op: "U",
+      ids: ["a"],
+      origin: "rows",
+      identityBase: "rows",
+    });
     await tick();
 
     const pushes = h.pushesFor("rows");
@@ -201,7 +219,14 @@ describe("compiled query-resource — end-to-end via the change-feed", () => {
     register(
       h.runtime,
       "rows",
-      { from: rows, identity: { pk: rows.id }, db: fakeDb(() => [{ id: "a", n: 1 }], () => [{ id: "a", n: 2 }]) },
+      {
+        from: rows,
+        identity: { pk: rows.id },
+        db: fakeDb(
+          () => [{ id: "a", n: 1 }],
+          () => [{ id: "a", n: 2 }],
+        ),
+      },
       loads,
       () => subscribed,
     );
@@ -209,7 +234,13 @@ describe("compiled query-resource — end-to-end via the change-feed", () => {
     subscribed = true;
 
     // origin === identityTable but identityBase !== identityTable ⇒ dropped.
-    h.runtime.applyDbChange({ table: "rows", op: "U", ids: ["a"], origin: "rows", identityBase: "other" });
+    h.runtime.applyDbChange({
+      table: "rows",
+      op: "U",
+      ids: ["a"],
+      origin: "rows",
+      identityBase: "other",
+    });
     await tick();
 
     expect(h.pushesFor("rows")).toHaveLength(0);
@@ -229,14 +260,27 @@ describe("compiled query-resource — end-to-end via the change-feed", () => {
     register(
       h.runtime,
       "rows",
-      { from: rows, identity: { pk: rows.id }, db: fakeDb(() => [{ id: "a", n: 1 }], () => []) },
+      {
+        from: rows,
+        identity: { pk: rows.id },
+        db: fakeDb(
+          () => [{ id: "a", n: 1 }],
+          () => [],
+        ),
+      },
       loads,
       () => subscribed,
     );
     await h.subscribe("rows");
     subscribed = true;
 
-    h.runtime.applyDbChange({ table: "rows", op: "U", ids: ["a"], origin: "rows", identityBase: "rows" });
+    h.runtime.applyDbChange({
+      table: "rows",
+      op: "U",
+      ids: ["a"],
+      origin: "rows",
+      identityBase: "rows",
+    });
     await tick();
 
     expect(h.pushesFor("rows")).toHaveLength(0); // empty scoped diff ⇒ no send
@@ -256,7 +300,13 @@ describe("compiled query-resource — end-to-end via the change-feed", () => {
         from: rows,
         identity: { pk: rows.id },
         recompute: { kind: "full", reason: "windowed read" },
-        db: fakeDb(() => [{ id: "a", n: 2 }, { id: "b", n: 1 }], () => [{ id: "a", n: 99 }]),
+        db: fakeDb(
+          () => [
+            { id: "a", n: 2 },
+            { id: "b", n: 1 },
+          ],
+          () => [{ id: "a", n: 99 }],
+        ),
       },
       loads,
       () => subscribed,
@@ -264,7 +314,13 @@ describe("compiled query-resource — end-to-end via the change-feed", () => {
     await h.subscribe("rows");
     subscribed = true;
 
-    h.runtime.applyDbChange({ table: "rows", op: "U", ids: ["a"], origin: "rows", identityBase: "rows" });
+    h.runtime.applyDbChange({
+      table: "rows",
+      op: "U",
+      ids: ["a"],
+      origin: "rows",
+      identityBase: "rows",
+    });
     await tick();
 
     expect(loads).toEqual([false]); // FULL recompute (no scoped ctx)
@@ -289,7 +345,13 @@ describe("compiled query-resource — end-to-end via the change-feed", () => {
         identity: { pk: rows.id },
         recompute: { kind: "full", reason: "where-filtered membership (test)" },
         db: fakeDb(
-          () => (flipped ? [{ id: "b", n: 1 }] : [{ id: "a", n: 1 }, { id: "b", n: 1 }]),
+          () =>
+            flipped
+              ? [{ id: "b", n: 1 }]
+              : [
+                  { id: "a", n: 1 },
+                  { id: "b", n: 1 },
+                ],
           () => [],
         ),
       },
@@ -300,7 +362,13 @@ describe("compiled query-resource — end-to-end via the change-feed", () => {
     subscribed = true;
     flipped = true; // the UPDATE below flipped `a` out of the result set
 
-    h.runtime.applyDbChange({ table: "rows", op: "U", ids: ["a"], origin: "rows", identityBase: "rows" });
+    h.runtime.applyDbChange({
+      table: "rows",
+      op: "U",
+      ids: ["a"],
+      origin: "rows",
+      identityBase: "rows",
+    });
     await tick();
 
     const pushes = h.pushesFor("rows");
@@ -328,7 +396,10 @@ describe("compiled query-resource — rel() cascade edges end-to-end", () => {
       {
         from: convs,
         identity: { pk: convs.id },
-        db: fakeDb(() => [{ id: "c1", n: 1 }], () => [{ id: "c1", n: 2 }]),
+        db: fakeDb(
+          () => [{ id: "c1", n: 1 }],
+          () => [{ id: "c1", n: 2 }],
+        ),
       },
       [],
       () => subscribed,
@@ -354,7 +425,13 @@ describe("compiled query-resource — rel() cascade edges end-to-end", () => {
     await h.subscribe("down_a");
     subscribed = true;
 
-    h.runtime.applyDbChange({ table: "convs", op: "U", ids: ["c1"], origin: "convs", identityBase: "convs" });
+    h.runtime.applyDbChange({
+      table: "convs",
+      op: "U",
+      ids: ["c1"],
+      origin: "convs",
+      identityBase: "convs",
+    });
     await tick();
 
     const downPushes = h.pushesFor("down_a");
@@ -378,7 +455,10 @@ describe("compiled query-resource — rel() cascade edges end-to-end", () => {
       {
         from: convs,
         identity: { pk: convs.id },
-        db: fakeDb(() => [{ id: "c1", n: 1 }], () => [{ id: "c1", n: 2 }]),
+        db: fakeDb(
+          () => [{ id: "c1", n: 1 }],
+          () => [{ id: "c1", n: 2 }],
+        ),
       },
       [],
       () => subscribed,
@@ -390,9 +470,16 @@ describe("compiled query-resource — rel() cascade edges end-to-end", () => {
       identityTable: "attempts_t",
       dependsOn: compileEdges(
         [rel(A, { via: convs, from: convs.id, to: convs.attemptId })],
-        fakeDb(() => [], () => [], () => [{ v: "at1" }]), // conv c1 → attempt at1
+        fakeDb(
+          () => [],
+          () => [],
+          () => [{ v: "at1" }],
+        ), // conv c1 → attempt at1
       ),
-      loader: (_p: ResourceParams, ctx?: { affectedIds: readonly string[] }) => {
+      loader: (
+        _p: ResourceParams,
+        ctx?: { affectedIds: readonly string[] },
+      ) => {
         if (subscribed) bIds.push(ctx?.affectedIds);
         return ctx ? [{ id: "at1", n: 2 }] : [{ id: "at1", n: 1 }];
       },
@@ -405,7 +492,9 @@ describe("compiled query-resource — rel() cascade edges end-to-end", () => {
       {
         from: tasksT,
         identity: { pk: tasksT.id },
-        edges: [rel(B, { via: attemptsT, from: attemptsT.id, to: attemptsT.taskId })],
+        edges: [
+          rel(B, { via: attemptsT, from: attemptsT.id, to: attemptsT.taskId }),
+        ],
         db: fakeDb(
           () => [{ id: "ta1", n: 1 }],
           () => [{ id: "ta1", n: 2 }],
@@ -421,7 +510,13 @@ describe("compiled query-resource — rel() cascade edges end-to-end", () => {
     await h.subscribe("C");
     subscribed = true;
 
-    h.runtime.applyDbChange({ table: "convs", op: "U", ids: ["c1"], origin: "convs", identityBase: "convs" });
+    h.runtime.applyDbChange({
+      table: "convs",
+      op: "U",
+      ids: ["c1"],
+      origin: "convs",
+      identityBase: "convs",
+    });
     await tick();
 
     expect(h.pushesFor("B")).toHaveLength(1);
@@ -451,10 +546,13 @@ describe("compiled query-resource — rel() cascade edges end-to-end", () => {
         identity: { pk: convs.id },
         // Distinct n each call so `up` itself always ships a frame — isolating the
         // gate's effect to the DOWNSTREAM edge.
-        db: fakeDb(() => [{ id: "c1", n: 1 }], (() => {
-          let k = 1;
-          return () => [{ id: "c1", n: ++k }];
-        })()),
+        db: fakeDb(
+          () => [{ id: "c1", n: 1 }],
+          (() => {
+            let k = 1;
+            return () => [{ id: "c1", n: ++k }];
+          })(),
+        ),
       },
       [],
       () => subscribed,
@@ -471,7 +569,8 @@ describe("compiled query-resource — rel() cascade edges end-to-end", () => {
             { via: convs, from: convs.id, to: convs.attemptId },
             {
               // Only transient fields changed ⇒ the same signature both times.
-              signature: (ids) => new Map([...ids].map((id) => [id, "sig-const"])),
+              signature: (ids) =>
+                new Map([...ids].map((id) => [id, "sig-const"])),
             },
           ),
         ],
@@ -492,7 +591,13 @@ describe("compiled query-resource — rel() cascade edges end-to-end", () => {
     subscribed = true;
 
     // First change: new signature → passes → one downstream delta, affectedMap once.
-    h.runtime.applyDbChange({ table: "convs", op: "U", ids: ["c1"], origin: "convs", identityBase: "convs" });
+    h.runtime.applyDbChange({
+      table: "convs",
+      op: "U",
+      ids: ["c1"],
+      origin: "convs",
+      identityBase: "convs",
+    });
     await tick();
     expect(h.pushesFor("down_s")).toHaveLength(1);
     expect(loads).toEqual([true]);
@@ -500,7 +605,13 @@ describe("compiled query-resource — rel() cascade edges end-to-end", () => {
 
     // Second change: identical signature → the gate short-circuits the edge, so
     // no new downstream frame and affectedMap is never re-consulted.
-    h.runtime.applyDbChange({ table: "convs", op: "U", ids: ["c1"], origin: "convs", identityBase: "convs" });
+    h.runtime.applyDbChange({
+      table: "convs",
+      op: "U",
+      ids: ["c1"],
+      origin: "convs",
+      identityBase: "convs",
+    });
     await tick();
     expect(h.pushesFor("down_s")).toHaveLength(1); // still just the first frame
     expect(loads).toEqual([true]); // down never re-loaded
@@ -526,7 +637,12 @@ describe("compiled query-resource — scopedMembership (M5) end-to-end", () => {
     orderOfCalls: { n: number },
     subscribed: () => boolean,
   ) {
-    const { serverOpts } = compileQuery({ from: rows, identity: { pk: rows.id }, scopedMembership: true, db });
+    const { serverOpts } = compileQuery({
+      from: rows,
+      identity: { pk: rows.id },
+      scopedMembership: true,
+      db,
+    });
     const innerLoader = serverOpts.loader;
     const innerOrderOf = serverOpts.scopedMembership!.orderOf;
     const wrapped = {
@@ -557,7 +673,13 @@ describe("compiled query-resource — scopedMembership (M5) end-to-end", () => {
       h.runtime,
       "rows",
       fakeDb(
-        () => (inserted ? [{ id: "a", n: 1 }, { id: "b", n: 1 }] : [{ id: "a", n: 1 }]),
+        () =>
+          inserted
+            ? [
+                { id: "a", n: 1 },
+                { id: "b", n: 1 },
+              ]
+            : [{ id: "a", n: 1 }],
         () => [{ id: "b", n: 1 }],
       ),
       loads,
@@ -568,7 +690,13 @@ describe("compiled query-resource — scopedMembership (M5) end-to-end", () => {
     subscribed = true;
     inserted = true;
 
-    h.runtime.applyDbChange({ table: "rows", op: "I", ids: ["b"], origin: "rows", identityBase: "rows" });
+    h.runtime.applyDbChange({
+      table: "rows",
+      op: "I",
+      ids: ["b"],
+      origin: "rows",
+      identityBase: "rows",
+    });
     await tick();
 
     const pushes = h.pushesFor("rows");
@@ -589,7 +717,10 @@ describe("compiled query-resource — scopedMembership (M5) end-to-end", () => {
       h.runtime,
       "rows",
       fakeDb(
-        () => [{ id: "a", n: 1 }, { id: "b", n: 1 }],
+        () => [
+          { id: "a", n: 1 },
+          { id: "b", n: 1 },
+        ],
         () => [],
       ),
       loads,
@@ -599,7 +730,13 @@ describe("compiled query-resource — scopedMembership (M5) end-to-end", () => {
     await h.subscribe("rows"); // snapshot = {a, b}
     subscribed = true;
 
-    h.runtime.applyDbChange({ table: "rows", op: "D", ids: ["a"], origin: "rows", identityBase: "rows" });
+    h.runtime.applyDbChange({
+      table: "rows",
+      op: "D",
+      ids: ["a"],
+      origin: "rows",
+      identityBase: "rows",
+    });
     await tick();
 
     const pushes = h.pushesFor("rows");
@@ -623,7 +760,10 @@ describe("compiled query-resource — scopedMembership (M5) end-to-end", () => {
       h.runtime,
       "rows",
       fakeDb(
-        () => [{ id: "a", n: 1 }, { id: "b", n: 1 }],
+        () => [
+          { id: "a", n: 1 },
+          { id: "b", n: 1 },
+        ],
         () => [], // the refilled id `a` no longer matches ⇒ empty ⇒ exit
       ),
       loads,
@@ -633,7 +773,13 @@ describe("compiled query-resource — scopedMembership (M5) end-to-end", () => {
     await h.subscribe("rows"); // snapshot = {a, b}
     subscribed = true;
 
-    h.runtime.applyDbChange({ table: "rows", op: "U", ids: ["a"], origin: "rows", identityBase: "rows" });
+    h.runtime.applyDbChange({
+      table: "rows",
+      op: "U",
+      ids: ["a"],
+      origin: "rows",
+      identityBase: "rows",
+    });
     await tick();
 
     const pushes = h.pushesFor("rows");

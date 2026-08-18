@@ -13,9 +13,13 @@
     - `conversations/conversation-ui/item.ConversationItem`
     - `conversations/conversation-view.conversationPane`
     - `infra/endpoints.useEndpoint`
+    - `primitives/css/fill.Fill`
+    - `primitives/css/line.Line`
+    - `primitives/css/rigid.rigidClass`
     - `primitives/css/row.Row`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
+    - `primitives/css/ui-kit.cn`
     - `primitives/icon-button.IconButton`
     - `primitives/live-state.useResource`
     - `primitives/loading.Loading`

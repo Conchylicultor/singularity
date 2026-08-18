@@ -30,21 +30,27 @@ export const handleMove = implement(moveAgent, async ({ params, body }) => {
       .from(_agents)
       .where(eq(_agents.id, params.id))
       .limit(1);
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
     if (!before) throw new HttpError(404, "Not found");
 
     // The COMPLETE sibling set of the destination parent — the whole point of
     // resolving the anchor here rather than on the client, which only ever
     // holds a filtered/grouped projection of it.
     const siblings = await tx
-      .select({ id: _agents.id, parentId: _agents.parentId, rank: _agents.rank })
+      .select({
+        id: _agents.id,
+        parentId: _agents.parentId,
+        rank: _agents.rank,
+      })
       .from(_agents)
       .where(
         body.parentId === null
           ? isNull(_agents.parentId)
           : eq(_agents.parentId, body.parentId),
       );
-    if (body.targetId !== null && !siblings.some((s) => s.id === body.targetId)) {
+    if (
+      body.targetId !== null &&
+      !siblings.some((s) => s.id === body.targetId)
+    ) {
       throw new HttpError(
         400,
         `Target ${body.targetId} is not a child of the destination parent`,

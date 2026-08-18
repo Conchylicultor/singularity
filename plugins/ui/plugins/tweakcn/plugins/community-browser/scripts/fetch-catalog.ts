@@ -54,8 +54,7 @@ async function fetchRegistry(): Promise<CatalogTheme[]> {
 // This action ID is fragile — it changes on every tweakcn deploy.
 // If fetching fails with HTML or 404, grab the new ID from the network tab
 // at https://tweakcn.com/community (filter for POST requests with Next-Action header).
-const COMMUNITY_ACTION_ID =
-  "7edf343b3e44853a7703ed4df5826212401090a152";
+const COMMUNITY_ACTION_ID = "7edf343b3e44853a7703ed4df5826212401090a152";
 const COMMUNITY_URL = "https://tweakcn.com/community";
 const PAGE_DELAY_MS = 200;
 const MAX_RETRIES = 3;
@@ -200,7 +199,6 @@ async function fetchCommunity(): Promise<CatalogTheme[]> {
   let cursor: Cursor = null;
   let page = 0;
 
-  // eslint-disable-next-line no-constant-condition
   while (true) {
     page++;
     process.stdout.write(`  Page ${page}...`);
@@ -212,23 +210,23 @@ async function fetchCommunity(): Promise<CatalogTheme[]> {
       console.error(
         `\n  Failed on page ${page}: ${err instanceof Error ? err.message : err}`,
       );
-      console.error(`  Stopping community fetch. Got ${allThemes.length} themes so far.`);
+      console.error(
+        `  Stopping community fetch. Got ${allThemes.length} themes so far.`,
+      );
       break;
     }
 
     const converted = result.themes
       .filter((t) => t.styles?.light && t.styles?.dark)
-      .map(
-        (t): CatalogTheme => ({
-          id: t.id,
-          name: t.name,
-          tags: t.tags ?? [],
-          source: "community",
-          likeCount: t.likeCount,
-          author: extractAuthorName(t.author),
-          cssVars: stylesToCssVars(t.styles),
-        }),
-      );
+      .map((t): CatalogTheme => ({
+        id: t.id,
+        name: t.name,
+        tags: t.tags ?? [],
+        source: "community",
+        likeCount: t.likeCount,
+        author: extractAuthorName(t.author),
+        cssVars: stylesToCssVars(t.styles),
+      }));
 
     allThemes.push(...converted);
     console.log(` ${result.themes.length} themes (total: ${allThemes.length})`);

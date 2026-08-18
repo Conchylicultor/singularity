@@ -22,6 +22,7 @@
     - `infra/endpoints.useEndpoint`
     - `primitives/css/cluster.Cluster`
     - `primitives/css/placeholder.Placeholder`
+    - `primitives/css/rigid.rigidClass`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
     - `primitives/css/toggle-chip.SegmentedControl`

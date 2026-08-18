@@ -1,7 +1,10 @@
 import { and, asc, desc, eq, gt, inArray, lt, ne } from "drizzle-orm";
 import { Rank } from "@plugins/primitives/plugins/rank/core";
 import { db } from "@plugins/database/server";
-import { _conversations, _attempts } from "@plugins/tasks/plugins/tasks-core/server";
+import {
+  _conversations,
+  _attempts,
+} from "@plugins/tasks/plugins/tasks-core/server";
 import type { RankExecutor } from "@plugins/primitives/plugins/rank/server";
 import type { ConversationStatus } from "@plugins/tasks/plugins/tasks-core/core";
 import { conversationsQueue } from "./tables";
@@ -12,9 +15,15 @@ const LIVE_STATUSES: ConversationStatus[] = ["waiting", "working", "starting"];
 
 function joinedLive(executor: RankExecutor = db) {
   return executor
-    .select({ rank: _conversationsExtQueue.rank, id: _conversationsExtQueue.parentId })
+    .select({
+      rank: _conversationsExtQueue.rank,
+      id: _conversationsExtQueue.parentId,
+    })
     .from(_conversationsExtQueue)
-    .innerJoin(_conversations, eq(_conversations.id, _conversationsExtQueue.parentId));
+    .innerJoin(
+      _conversations,
+      eq(_conversations.id, _conversationsExtQueue.parentId),
+    );
 }
 
 function safeBetween(prev: Rank | null, next: Rank | null): Rank {
@@ -29,7 +38,6 @@ export async function endRank(): Promise<Rank> {
     .where(inArray(_conversations.status, LIVE_STATUSES))
     .orderBy(desc(_conversationsExtQueue.rank))
     .limit(1);
-  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
   return Rank.between(last?.rank ? Rank.from(last.rank as string) : null, null);
 }
 
@@ -37,12 +45,18 @@ export async function lockDeck(executor: RankExecutor): Promise<void> {
   await executor
     .select({ id: _conversationsExtQueue.parentId })
     .from(_conversationsExtQueue)
-    .innerJoin(_conversations, eq(_conversations.id, _conversationsExtQueue.parentId))
+    .innerJoin(
+      _conversations,
+      eq(_conversations.id, _conversationsExtQueue.parentId),
+    )
     .where(inArray(_conversations.status, LIVE_STATUSES))
     .for("update", { of: _conversationsExtQueue });
 }
 
-export async function rankForTop(excludeId: string, executor: RankExecutor = db): Promise<Rank> {
+export async function rankForTop(
+  excludeId: string,
+  executor: RankExecutor = db,
+): Promise<Rank> {
   const [first] = await joinedLive(executor)
     .where(
       and(
@@ -52,11 +66,16 @@ export async function rankForTop(excludeId: string, executor: RankExecutor = db)
     )
     .orderBy(asc(_conversationsExtQueue.rank))
     .limit(1);
-  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
-  return Rank.between(null, first?.rank ? Rank.from(first.rank as string) : null);
+  return Rank.between(
+    null,
+    first?.rank ? Rank.from(first.rank as string) : null,
+  );
 }
 
-export async function rankForBottom(excludeId: string, executor: RankExecutor = db): Promise<Rank> {
+export async function rankForBottom(
+  excludeId: string,
+  executor: RankExecutor = db,
+): Promise<Rank> {
   const [last] = await joinedLive(executor)
     .where(
       and(
@@ -66,18 +85,20 @@ export async function rankForBottom(excludeId: string, executor: RankExecutor = 
     )
     .orderBy(desc(_conversationsExtQueue.rank))
     .limit(1);
-  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
   return Rank.between(last?.rank ? Rank.from(last.rank as string) : null, null);
 }
 
 // Skips N distinct task groups below the current position.
-export async function rankAfterN(conversationId: string, n: number, executor: RankExecutor = db): Promise<Rank> {
+export async function rankAfterN(
+  conversationId: string,
+  n: number,
+  executor: RankExecutor = db,
+): Promise<Rank> {
   const [self] = await executor
     .select({ rank: _conversationsExtQueue.rank })
     .from(_conversationsExtQueue)
     .where(eq(_conversationsExtQueue.parentId, conversationId))
     .limit(1);
-  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
   if (!self?.rank) return rankForBottom(conversationId, executor);
 
   const taskId = await findTaskIdForConversation(conversationId, executor);
@@ -95,7 +116,10 @@ export async function rankAfterN(conversationId: string, n: number, executor: Ra
       taskId: _attempts.taskId,
     })
     .from(_conversationsExtQueue)
-    .innerJoin(_conversations, eq(_conversations.id, _conversationsExtQueue.parentId))
+    .innerJoin(
+      _conversations,
+      eq(_conversations.id, _conversationsExtQueue.parentId),
+    )
     .innerJoin(_attempts, eq(_attempts.id, _conversations.attemptId))
     .where(and(...conditions))
     .orderBy(asc(_conversationsExtQueue.rank));
@@ -114,10 +138,7 @@ export async function rankAfterN(conversationId: string, n: number, executor: Ra
 
   if (repsBelow.length < n) return rankForBottom(conversationId, executor);
 
-  return Rank.between(
-    repsBelow[n - 1]!,
-    repsBelow[n] ?? null,
-  );
+  return Rank.between(repsBelow[n - 1]!, repsBelow[n] ?? null);
 }
 
 // Insert before or after the target group's shared rank.
@@ -131,14 +152,17 @@ export async function rankAdjacentTo(
     .from(_conversationsExtQueue)
     .where(eq(_conversationsExtQueue.parentId, targetId))
     .limit(1);
-  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
-  if (!target?.rank) throw new Error(`No queue rank for conversation ${targetId}`);
+  if (!target?.rank)
+    throw new Error(`No queue rank for conversation ${targetId}`);
 
   if (zone === "before") {
     const [pred] = await executor
       .select({ rank: _conversationsExtQueue.rank })
       .from(_conversationsExtQueue)
-      .innerJoin(_conversations, eq(_conversations.id, _conversationsExtQueue.parentId))
+      .innerJoin(
+        _conversations,
+        eq(_conversations.id, _conversationsExtQueue.parentId),
+      )
       .where(
         and(
           inArray(_conversations.status, LIVE_STATUSES),
@@ -149,7 +173,6 @@ export async function rankAdjacentTo(
       .limit(1);
 
     return safeBetween(
-      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
       pred?.rank ? Rank.from(pred.rank as string) : null,
       Rank.from(target.rank as string),
     );
@@ -157,7 +180,10 @@ export async function rankAdjacentTo(
     const [succ] = await executor
       .select({ rank: _conversationsExtQueue.rank })
       .from(_conversationsExtQueue)
-      .innerJoin(_conversations, eq(_conversations.id, _conversationsExtQueue.parentId))
+      .innerJoin(
+        _conversations,
+        eq(_conversations.id, _conversationsExtQueue.parentId),
+      )
       .where(
         and(
           inArray(_conversations.status, LIVE_STATUSES),
@@ -169,7 +195,6 @@ export async function rankAdjacentTo(
 
     return safeBetween(
       Rank.from(target.rank as string),
-      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
       succ?.rank ? Rank.from(succ.rank as string) : null,
     );
   }
@@ -185,7 +210,10 @@ export async function rankAfterBlockers(
   const [last] = await executor
     .select({ rank: _conversationsExtQueue.rank })
     .from(_conversationsExtQueue)
-    .innerJoin(_conversations, eq(_conversations.id, _conversationsExtQueue.parentId))
+    .innerJoin(
+      _conversations,
+      eq(_conversations.id, _conversationsExtQueue.parentId),
+    )
     .innerJoin(_attempts, eq(_attempts.id, _conversations.attemptId))
     .where(
       and(
@@ -197,7 +225,6 @@ export async function rankAfterBlockers(
     .orderBy(desc(_conversationsExtQueue.rank))
     .limit(1);
 
-  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
   if (!last?.rank) return rankForTop(conversationId, executor);
 
   const [succ] = await joinedLive(executor)
@@ -213,7 +240,6 @@ export async function rankAfterBlockers(
 
   return safeBetween(
     Rank.from(last.rank as string),
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
     succ?.rank ? Rank.from(succ.rank as string) : null,
   );
 }
@@ -230,7 +256,6 @@ export async function findTaskIdForConversation(
     .innerJoin(_attempts, eq(_attempts.id, _conversations.attemptId))
     .where(eq(_conversations.id, conversationId))
     .limit(1);
-  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
   return row?.taskId ?? null;
 }
 
@@ -242,7 +267,10 @@ async function findGroupSiblingIds(
   const rows = await executor
     .select({ id: _conversationsExtQueue.parentId })
     .from(_conversationsExtQueue)
-    .innerJoin(_conversations, eq(_conversations.id, _conversationsExtQueue.parentId))
+    .innerJoin(
+      _conversations,
+      eq(_conversations.id, _conversationsExtQueue.parentId),
+    )
     .innerJoin(_attempts, eq(_attempts.id, _conversations.attemptId))
     .where(
       and(
@@ -286,9 +314,15 @@ export async function seatJoiningGroup(
   executor: RankExecutor = db,
 ): Promise<GroupSeat | null> {
   const [existing] = await executor
-    .select({ rank: _conversationsExtQueue.rank, pinned: _conversationsExtQueue.pinned })
+    .select({
+      rank: _conversationsExtQueue.rank,
+      pinned: _conversationsExtQueue.pinned,
+    })
     .from(_conversationsExtQueue)
-    .innerJoin(_conversations, eq(_conversations.id, _conversationsExtQueue.parentId))
+    .innerJoin(
+      _conversations,
+      eq(_conversations.id, _conversationsExtQueue.parentId),
+    )
     .innerJoin(_attempts, eq(_attempts.id, _conversations.attemptId))
     .where(
       and(
@@ -299,7 +333,6 @@ export async function seatJoiningGroup(
     )
     .limit(1);
 
-  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
   if (!existing?.rank) return null;
   return { rank: Rank.from(existing.rank as string), pinned: existing.pinned };
 }
@@ -317,7 +350,12 @@ export async function upsertRank(
   const now = new Date();
   await executor
     .insert(_conversationsExtQueue)
-    .values({ parentId: conversationId, rank: rank.toJSON(), pinned, updatedAt: now })
+    .values({
+      parentId: conversationId,
+      rank: rank.toJSON(),
+      pinned,
+      updatedAt: now,
+    })
     .onConflictDoUpdate({
       target: _conversationsExtQueue.parentId,
       set: { rank: rank.toJSON(), updatedAt: now },
@@ -340,5 +378,7 @@ export async function setGroupPinned(
   await executor
     .update(_conversationsExtQueue)
     .set({ pinned, updatedAt: new Date() })
-    .where(inArray(_conversationsExtQueue.parentId, [conversationId, ...siblingIds]));
+    .where(
+      inArray(_conversationsExtQueue.parentId, [conversationId, ...siblingIds]),
+    );
 }

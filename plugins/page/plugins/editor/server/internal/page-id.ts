@@ -14,8 +14,7 @@ import type { PageForestTx } from "./page-forest";
  * Same reason, same shape as `trash-blocks.ts`'s `BlockExecutor`.
  */
 export type BlockReadExecutor =
-  | NodePgDatabase
-  | Parameters<Parameters<NodePgDatabase["transaction"]>[0]>[0];
+  NodePgDatabase | Parameters<Parameters<NodePgDatabase["transaction"]>[0]>[0];
 
 export interface LiveParent {
   id: string;
@@ -63,7 +62,6 @@ export async function requireLiveParent(
     .from(_blocks)
     .where(and(eq(_blocks.id, parentId), isNull(_blocks.deletedAt)))
     .limit(1);
-  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
   if (!parent) throw new HttpError(404, `Block ${parentId} not found`);
   return parent;
 }

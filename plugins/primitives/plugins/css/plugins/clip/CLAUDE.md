@@ -37,6 +37,7 @@ truncation leaf (it ellipsizes via the ambient single-line context).
   - Imported by:
     - `apps-core/surface`
     - `apps/agent-manager/welcome`
+    - `apps/browser/shell`
     - `apps/pages/page-tree`
     - `apps/pages/welcome/recent-pages`
     - `apps/sonata/library`
@@ -50,7 +51,10 @@ truncation leaf (it ellipsizes via the ambient single-line context).
     - `build/build-logs`
     - `code-explorer`
     - `config_v2/settings`
+    - `conversations/conversation-ui/item`
     - `conversations/conversation-view`
+    - `conversations/conversation-view/code/file-pane`
+    - `conversations/conversation-view/dependencies`
     - `conversations/conversation-view/jsonl-viewer/tool-call/bash`
     - `conversations/conversation-view/op-status`
     - `conversations/conversation-view/terminal-pane`
@@ -66,8 +70,10 @@ truncation leaf (it ellipsizes via the ambient single-line context).
     - `page/math/equation`
     - `primitives/app-shell`
     - `primitives/data-view/gallery`
+    - `primitives/data-view/list`
     - `primitives/diff-view`
     - `primitives/outline/rail`
+    - `review/plugin-changes`
     - `review/plugin-changes/file-changes`
     - `screenshot`
     - `tasks/task-graph`

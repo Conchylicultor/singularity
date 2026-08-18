@@ -9,9 +9,10 @@ export const handleListBlocks = implement(listBlocks, async ({ params }) => {
   const [page] = await db
     .select({ id: _blocks.id })
     .from(_blocks)
-    .where(and(eq(_blocks.id, params.pageId), eq(_blocks.type, PAGE_BLOCK_TYPE)))
+    .where(
+      and(eq(_blocks.id, params.pageId), eq(_blocks.type, PAGE_BLOCK_TYPE)),
+    )
     .limit(1);
-  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
   if (!page) throw new HttpError(404, "Page not found");
   // The page's content forest, sub-page rows included — the SAME set as
   // `blocksLiveResource` and as the reducer's `loadPageBlocks`. This endpoint is

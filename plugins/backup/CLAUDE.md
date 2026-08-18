@@ -20,9 +20,12 @@
     - `infra/endpoints.useEndpointMutation`
     - `primitives/app-shell.sidebarNavItem`
     - `primitives/css/clip.Clip`
+    - `primitives/css/fill.fillClasses`
+    - `primitives/css/rigid.rigidClass`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.Button`
+    - `primitives/css/ui-kit.cn`
     - `primitives/loading.Loading`
     - `primitives/pane.openPane`
     - `primitives/pane.Pane`

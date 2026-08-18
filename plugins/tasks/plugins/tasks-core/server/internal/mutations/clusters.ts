@@ -33,7 +33,6 @@ export async function clusterLabelOf(
     .from(_tasks)
     .where(eq(_tasks.id, taskId))
     .limit(1);
-  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
   if (!row) throw new Error(`Task not found: ${taskId}`);
   return row.clusterId ?? taskId;
 }
@@ -102,7 +101,11 @@ export async function unionTaskClusters(
   await unionOnTx(a, b, exec);
 }
 
-async function unionOnTx(a: string, b: string, exec: DbExecutor): Promise<void> {
+async function unionOnTx(
+  a: string,
+  b: string,
+  exec: DbExecutor,
+): Promise<void> {
   const rows = await exec
     .select({ id: _tasks.id, clusterId: _tasks.clusterId })
     .from(_tasks)

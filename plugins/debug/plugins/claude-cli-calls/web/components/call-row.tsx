@@ -7,6 +7,9 @@ import { familyClass } from "@plugins/conversations/plugins/model-provider/web";
 import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
 import { useCollapsible } from "@plugins/primitives/plugins/collapsible/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
+import { Cluster } from "@plugins/primitives/plugins/css/plugins/cluster/web";
+import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 
 export function CallRow({ call }: { call: ClaudeCliCall }) {
@@ -14,25 +17,35 @@ export function CallRow({ call }: { call: ClaudeCliCall }) {
   const modelMeta = MODEL_REGISTRY[call.model];
   const isError = call.error !== null;
   const previewText = isError
-    ? call.error ?? "<error>"
-    : (call.output ?? "").trim().split(/\r?\n/, 1)[0] ?? "";
+    ? (call.error ?? "<error>")
+    : ((call.output ?? "").trim().split(/\r?\n/, 1)[0] ?? "");
 
   return (
     <li className="px-md py-sm">
-      <button
+      <Stack
+        as="button"
         {...triggerProps}
-        className="flex w-full items-start gap-sm text-left"
+        direction="row"
+        gap="sm"
+        align="start"
+        className="w-full text-left"
       >
         {/* eslint-disable-next-line spacing/no-adhoc-spacing -- one-off top offset to align chevron with first text line */}
         <span className="mt-0.5 text-muted-foreground">
-          {open ? <MdExpandLess className="size-4" /> : <MdExpandMore className="size-4" />}
+          {open ? (
+            <MdExpandLess className="size-4" />
+          ) : (
+            <MdExpandMore className="size-4" />
+          )}
         </span>
-        <div className="flex min-w-0 flex-1 flex-col gap-xs">
-          <Text as="div" variant="caption" className="flex flex-wrap items-center gap-sm">
+        <Stack as={Fill} gap="xs">
+          <Text as={Cluster} variant="caption">
             <Badge colorClass={familyClass(modelMeta.family)}>
               {modelMeta.label}
             </Badge>
-            <Badge variant="muted" className="font-mono">{call.sourceName}</Badge>
+            <Badge variant="muted" className="font-mono">
+              {call.sourceName}
+            </Badge>
             <SourceContextChip context={call.sourceContext} />
             <span className="text-muted-foreground">
               <RelativeTime date={call.createdAt} />
@@ -40,11 +53,7 @@ export function CallRow({ call }: { call: ClaudeCliCall }) {
             <span className="tabular-nums text-muted-foreground">
               {call.durationMs}ms
             </span>
-            {isError && (
-              <Badge variant="destructive">
-                error
-              </Badge>
-            )}
+            {isError && <Badge variant="destructive">error</Badge>}
           </Text>
           <Text
             as="div"
@@ -54,10 +63,12 @@ export function CallRow({ call }: { call: ClaudeCliCall }) {
               isError ? "text-destructive" : "text-foreground",
             )}
           >
-            {previewText || <span className="text-muted-foreground">&lt;empty&gt;</span>}
+            {previewText || (
+              <span className="text-muted-foreground">&lt;empty&gt;</span>
+            )}
           </Text>
-        </div>
-      </button>
+        </Stack>
+      </Stack>
       {open && (
         // The expanded body is the claude-cli plugin's own rendering of a call —
         // this pane owns only the collapsed header and the indent placing it
@@ -82,7 +93,8 @@ function SourceContextChip({
   const summary = keys
     .map((k) => {
       const v = context[k];
-      if (typeof v === "string" && v.length > 12) return `${k}=${v.slice(0, 8)}…`;
+      if (typeof v === "string" && v.length > 12)
+        return `${k}=${v.slice(0, 8)}…`;
       return `${k}=${typeof v === "string" ? v : JSON.stringify(v)}`;
     })
     .join(" ");

@@ -8,6 +8,7 @@ import type { Contribution } from "@plugins/framework/plugins/web-sdk/core";
 import { CollapsibleChevron } from "@plugins/primitives/plugins/collapsible/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
+import { layerClasses } from "@plugins/primitives/plugins/css/plugins/layer/web";
 import {
   RowActions,
   rowActionsAnchor,
@@ -96,9 +97,11 @@ function DefaultMergedDisclosure({
         <TreeDisclosureToggle
           isOpen={isOpen}
           onToggle={onToggle}
-          // eslint-disable-next-line layout/no-adhoc-layout -- chevron button overlays the icon slot full-bleed (icon at rest, chevron on hover)
           className={cn(
-            "absolute inset-0",
+            // The chevron button overlays the icon slot full-bleed (icon at
+            // rest, chevron on hover). It is the layer itself, so it takes the
+            // class rather than a wrapping <Layer>.
+            layerClasses(),
             "opacity-0 pointer-events-none group-hover/tree-row:opacity-100 group-hover/tree-row:pointer-events-auto focus-visible:opacity-100 focus-visible:pointer-events-auto",
           )}
         />

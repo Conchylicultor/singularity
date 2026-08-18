@@ -6,11 +6,15 @@ import { tasksResource } from "@plugins/tasks/plugins/tasks-core/core";
 import { StatusIcon } from "@plugins/tasks/plugins/task-status/web";
 import type { ToolRendererProps } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/core";
 import { ToolCallCard } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/web";
-import { MODEL_REGISTRY, normalizeModel } from "@plugins/conversations/plugins/model-provider/core";
+import {
+  MODEL_REGISTRY,
+  normalizeModel,
+} from "@plugins/conversations/plugins/model-provider/core";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { LinkChip } from "@plugins/primitives/plugins/css/plugins/link-chip/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 
 type AddTaskInput = {
   title: string;
@@ -46,7 +50,10 @@ export function AddTaskToolView({ event }: ToolRendererProps) {
   const tasksResult = useResource(tasksResource);
   const openPane = useOpenPane();
   const task = useMemo(
-    () => (tasksResult.pending || !taskId) ? null : (tasksResult.data.find((t) => t.id === taskId) ?? null),
+    () =>
+      tasksResult.pending || !taskId
+        ? null
+        : (tasksResult.data.find((t) => t.id === taskId) ?? null),
     [tasksResult, taskId],
   );
 
@@ -57,18 +64,18 @@ export function AddTaskToolView({ event }: ToolRendererProps) {
   };
 
   const summary = (
-    <span className="flex min-w-0 items-center gap-sm">
-      <span className="min-w-0 truncate">{input.title}</span>
+    <Stack as="span" direction="row" align="center" gap="sm">
+      <Text as="span">{input.title}</Text>
       {autostart ? (
-        <Badge variant="success" className="shrink-0">
+        <Badge variant="success" className={rigidClass()}>
           auto-launch {MODEL_REGISTRY[normalizeModel(autostart)].label}
         </Badge>
       ) : (
-        <Badge variant="warning" className="shrink-0">
+        <Badge variant="warning" className={rigidClass()}>
           no auto-launch
         </Badge>
       )}
-    </span>
+    </Stack>
   );
 
   return (
@@ -76,7 +83,11 @@ export function AddTaskToolView({ event }: ToolRendererProps) {
       {/* eslint-disable-next-line spacing/no-adhoc-spacing -- mt-2 offsets the body from the ToolCallCard header inside its collapsible region; not a Stack-owned gap */}
       <Stack gap="sm" className="mt-2">
         {input.description && (
-          <Text as="p" variant="caption" className="text-muted-foreground whitespace-pre-wrap">
+          <Text
+            as="p"
+            variant="caption"
+            className="text-muted-foreground whitespace-pre-wrap"
+          >
             {input.description}
           </Text>
         )}
@@ -90,7 +101,9 @@ export function AddTaskToolView({ event }: ToolRendererProps) {
           </LinkChip>
         )}
         {event.result?.isError && (
-          <Text as="p" variant="caption" className="text-destructive">{event.result.content}</Text>
+          <Text as="p" variant="caption" className="text-destructive">
+            {event.result.content}
+          </Text>
         )}
       </Stack>
     </ToolCallCard>

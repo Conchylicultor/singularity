@@ -31,10 +31,14 @@ re-breaks every conversation-less surface.
     - `infra/endpoints.useEndpoint`
     - `primitives/collapsible.CollapsibleChevron`
     - `primitives/css/column.Column`
+    - `primitives/css/fill.Fill`
+    - `primitives/css/line.Line`
     - `primitives/css/placeholder.Placeholder`
+    - `primitives/css/rigid.rigidClass`
     - `primitives/css/spacing.Stack`
     - `primitives/css/sticky.Sticky`
     - `primitives/css/text.Text`
+    - `primitives/css/ui-kit.cn`
     - `primitives/diff-view.DiffOrImageView`
     - `primitives/loading.Loading`
     - `primitives/pane.Pane`

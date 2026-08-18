@@ -1,6 +1,7 @@
 import type { ToolRendererProps } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/core";
 import { ToolCallCard } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
+import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 
 type TaskUpdateInput = {
@@ -27,21 +28,25 @@ export function TaskUpdateToolView({ event }: ToolRendererProps) {
   const taskId = input.taskId ?? input.id;
   const summary =
     taskId || input.status ? (
-      <span className="flex min-w-0 items-center gap-sm">
+      <Line as="span" className="gap-sm">
         {taskId && <span className="font-mono text-2xs">{taskId}</span>}
         {input.status && (
           <Badge colorClass={statusBadgeClass(input.status)}>
             {input.status}
           </Badge>
         )}
-      </span>
+      </Line>
     ) : undefined;
 
   return (
     <ToolCallCard event={event} summary={summary} defaultOpen={false}>
       {input.description && (
-        // eslint-disable-next-line spacing/no-adhoc-spacing -- mt-2 offsets the description from the card header
-        <Text as="p" variant="caption" className="mt-2 text-muted-foreground whitespace-pre-wrap">
+        <Text
+          as="p"
+          variant="caption"
+          // eslint-disable-next-line spacing/no-adhoc-spacing -- mt-2 offsets the description from the card header
+          className="mt-2 text-muted-foreground whitespace-pre-wrap"
+        >
           {input.description}
         </Text>
       )}

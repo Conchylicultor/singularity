@@ -81,9 +81,14 @@ lock) was indistinguishable from the agent merely "working".
     - `conversations/conversation-ui/item.Item`
     - `conversations/conversation-view.Conversation`
     - `primitives/css/clip.Clip`
+    - `primitives/css/fill.Fill`
     - `primitives/css/inline.Inline`
+    - `primitives/css/rigid.Rigid`
+    - `primitives/css/rigid.rigidClass`
+    - `primitives/css/spacing.Stack`
     - `primitives/css/spinner.Spinner`
     - `primitives/css/text.Text`
+    - `primitives/css/ui-kit.cn`
     - `primitives/live-state.useResource`
     - `primitives/tooltip.WithTooltip`
 - Server:

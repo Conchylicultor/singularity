@@ -86,7 +86,7 @@ const MINIMIZED_ORIGIN = "bottom center";
 // (the style hook) live in the same single focused floating surface.
 // ---------------------------------------------------------------------------
 
-// eslint-disable-next-line scoped-store/no-module-mutable-store -- page-global by design: a transient set of windows under active pointer drag/resize, shared between the chrome's drag handlers and the per-window style hook (mirrors this plugin's module-global geometry + snap-preview channels).
+// page-global by design: a transient set of windows under active pointer drag/resize, shared between the chrome's drag handlers and the per-window style hook (mirrors this plugin's module-global geometry + snap-preview channels).
 const interacting = new Set<WindowId>();
 const interactionSubs = new Set<() => void>();
 
@@ -153,12 +153,7 @@ function usePrefersReducedMotion(): boolean {
  *                  exit-presence retention elapses.
  */
 type Phase =
-  | "intro"
-  | "normal"
-  | "minimizing"
-  | "minimized"
-  | "restoring"
-  | "closing";
+  "intro" | "normal" | "minimizing" | "minimized" | "restoring" | "closing";
 
 export interface WindowStyle {
   /** The animated container box style (pushed onto the keep-alive container). */

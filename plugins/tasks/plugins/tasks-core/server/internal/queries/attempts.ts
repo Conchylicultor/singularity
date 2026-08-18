@@ -8,8 +8,11 @@ export async function listAttempts(): Promise<Attempt[]> {
 }
 
 export async function getAttempt(id: string): Promise<Attempt | null> {
-  const [row] = await db.select().from(attempts).where(eq(attempts.id, id)).limit(1);
-  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
+  const [row] = await db
+    .select()
+    .from(attempts)
+    .where(eq(attempts.id, id))
+    .limit(1);
   return row ?? null;
 }
 

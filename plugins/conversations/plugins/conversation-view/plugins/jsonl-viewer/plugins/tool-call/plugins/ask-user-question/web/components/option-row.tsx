@@ -33,7 +33,8 @@ function Indicator({
   // A checkbox (multi) and a radio (single) are semantic fixed shapes that must
   // stay a square / circle under every Shape preset. The selection-indicator
   // primitive owns those fixed shapes, so this just picks the right one.
-  // eslint-disable-next-line spacing/no-adhoc-spacing -- mt nudges the indicator to align with the first line of multi-line label text (no named margin utility)
+  // The `mt` nudges the indicator to align with the first line of multi-line
+  // label text — there is no named margin utility at that step.
   const nudge = align === "start" ? "mt-0.5" : undefined;
   return multi ? (
     <CheckboxIndicator checked={selected} className={nudge} />

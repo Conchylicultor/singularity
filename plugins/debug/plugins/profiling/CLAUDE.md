@@ -17,6 +17,9 @@
     - `primitives/app-shell.sidebarNavItem`
     - `primitives/css/center.Center`
     - `primitives/css/column.Column`
+    - `primitives/css/fill.Fill`
+    - `primitives/css/line.Line`
+    - `primitives/css/rigid.rigidClass`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.SectionLabel`
     - `primitives/css/text.Text`

@@ -1,6 +1,7 @@
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import type { ReactNode } from "react";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
+import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 import { Spinner } from "@plugins/primitives/plugins/css/plugins/spinner/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Grid } from "@plugins/primitives/plugins/css/plugins/grid/web";
@@ -46,16 +47,19 @@ export function Loading({
       );
     case "spinner":
       return (
-        <div
+        <Stack
+          direction="row"
+          gap="sm"
+          align="center"
           role="status"
           className={cn(
-            "loading-delayed flex items-center gap-sm px-md py-sm text-body text-muted-foreground",
+            "loading-delayed px-md py-sm text-body text-muted-foreground",
             className,
           )}
         >
-          <Spinner className="size-4 shrink-0" />
+          <Spinner className={cn("size-4", rigidClass())} />
           {label}
-        </div>
+        </Stack>
       );
     case "rows":
       return (

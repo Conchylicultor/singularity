@@ -200,7 +200,6 @@ export function makeDurableCtx(init: DurableCtxInit): DurableCtx {
         )
         .limit(1);
       const row = existing[0];
-      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
       if (row) {
         if (row.errorMessage) {
           throw new Error(`[jobs.step "${name}"] ${row.errorMessage}`);
@@ -255,7 +254,6 @@ export function makeDurableCtx(init: DurableCtxInit): DurableCtx {
         )
         .limit(1);
       const row = existing[0];
-      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
       if (row) {
         if (row.status === "resolved") {
           return (row.payloadJson ?? null) as T | null;
@@ -343,7 +341,6 @@ export function makeDurableCtx(init: DurableCtxInit): DurableCtx {
         )
         .limit(1);
       const row = existing[0];
-      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
       if (row) {
         if (row.status === "resolved" || row.status === "timed_out") return;
         throw new SuspendSignal("sleep");

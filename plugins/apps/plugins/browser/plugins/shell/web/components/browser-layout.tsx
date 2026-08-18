@@ -1,4 +1,13 @@
 import { Bar } from "@plugins/primitives/plugins/bar/web";
+import {
+  Clip,
+  clipClasses,
+} from "@plugins/primitives/plugins/css/plugins/clip/web";
+import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
+import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
+import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Browser } from "../slots";
 import { BrowserTabsStore } from "../nav-store";
 
@@ -7,35 +16,44 @@ import { BrowserTabsStore } from "../nav-store";
  * tab strip, chrome bars, sub-bar, viewport, effects) can read the per-surface
  * tab store.
  *
- * The chrome bar is a flex row: leading nav controls, the flexible omnibox in
- * the truncating fill track, and the trailing actions cluster. The outer
- * shell is the irreducible full-surface column (toolbar rows + a filling,
- * clipping main) — the one shape no css primitive expresses, so its flex-fill
- * mechanics carry per-site escapes.
+ * The chrome bar is a single-line row: leading nav controls, the flexible
+ * omnibox in the truncating fill track, and the trailing actions cluster. The
+ * outer shell is the full-surface column — a `Stack` that also clips, so it
+ * takes `clipClasses()` rather than wrapping itself in a `<Clip>`.
  */
 function BrowserInner() {
   return (
-    // eslint-disable-next-line layout/no-adhoc-layout -- full-surface app column: a filling, clipping vertical shell that no css primitive expresses.
-    <div className="flex h-full flex-col overflow-hidden bg-background">
+    <Stack
+      gap="none"
+      className={cn(
+        "h-full bg-background",
+        clipClasses({ axis: "both", fill: false }),
+      )}
+    >
       <Browser.TabStrip.Render />
       <Bar tier="chrome">
-        <div className="flex w-full items-center gap-sm whitespace-nowrap">
+        <Line className="w-full gap-sm">
           <Browser.NavControls.Render />
-          <div className="min-w-0 flex-1">
+          <Fill>
             <Browser.Omnibox.Render />
-          </div>
-          <div className="flex shrink-0 items-center justify-end gap-sm">
+          </Fill>
+          <Stack
+            direction="row"
+            gap="sm"
+            align="center"
+            justify="end"
+            className={rigidClass()}
+          >
             <Browser.Actions.Render />
-          </div>
-        </div>
+          </Stack>
+        </Line>
       </Bar>
       <Browser.SubBar.Render />
-      {/* eslint-disable-next-line layout/no-adhoc-layout -- main fills the remaining column height and clips overflow; no css primitive expresses a vertical fill track. */}
-      <main className="min-h-0 flex-1 overflow-hidden">
+      <Clip as="main" fill>
         <Browser.Viewport.Render />
-      </main>
+      </Clip>
       <Browser.Effects.Mount />
-    </div>
+    </Stack>
   );
 }
 

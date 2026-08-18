@@ -6,6 +6,10 @@ import {
 import type { DocMetaRegistration } from "@plugins/plugin-meta/plugins/facets/plugins/registrations/core";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
+import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
+import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
+import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 
 // Renders the registrations facet's own data. Read `node.facets[id]` directly
 // (as every render host does) rather than importing the build-time `facets/core`
@@ -21,13 +25,16 @@ function format(r: DocMetaRegistration): string {
 /** The plugin's registrations, or `null` when it registers nothing. */
 function registrations(node: PluginNode): DocMetaRegistration[] | null {
   const data = node.facets?.[REGISTRATIONS_FACET_ID] as
-    | DocMetaRegistration[]
-    | undefined;
+    DocMetaRegistration[] | undefined;
   return data && data.length > 0 ? data : null;
 }
 
 /** No registrations ⇒ the host paints no card at all. */
-export function useRegistrationsAvailable({ node }: { node: PluginNode }): boolean {
+export function useRegistrationsAvailable({
+  node,
+}: {
+  node: PluginNode;
+}): boolean {
   return registrations(node) !== null;
 }
 
@@ -44,16 +51,22 @@ export function RegistrationsDetailSection({ node }: { node: PluginNode }) {
     <Stack gap="2xs">
       {data.map((r, i) => (
         <Text
-          as="div"
+          as={Line}
           variant="caption"
           key={`${r.runtime}:${r.kind}:${i}`}
-          className="flex items-center gap-sm px-sm py-2xs"
+          className="gap-sm px-sm py-2xs"
         >
-          <Text as="code" className="min-w-0 truncate font-mono text-foreground">
+          <Text as="code" className="font-mono text-foreground">
             {format(r)}
           </Text>
+          {/* An empty Fill absorbs the slack, so the runtime tag sits flush right. */}
+          <Fill />
           <span
-            className={`ml-auto shrink-0 font-mono text-3xs ${RUNTIME_COLORS[r.runtime]}`}
+            className={cn(
+              rigidClass(),
+              "font-mono text-3xs",
+              RUNTIME_COLORS[r.runtime],
+            )}
           >
             {r.runtime}
           </span>

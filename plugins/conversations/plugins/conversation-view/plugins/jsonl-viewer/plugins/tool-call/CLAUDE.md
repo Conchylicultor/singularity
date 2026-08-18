@@ -18,8 +18,10 @@
     - `conversations/conversation-view/jsonl-viewer/row-actions.JsonlRowActions`
     - `primitives/css/badge.Badge`
     - `primitives/css/bouncing-dots.BouncingDots`
+    - `primitives/css/rigid.rigidClass`
     - `primitives/css/scroll.Scroll`
     - `primitives/css/text.Text`
+    - `primitives/css/ui-kit.cn`
     - `primitives/slot-render.defineDispatchSlot`
     - `primitives/slot-render.DispatchContribution`
   - Exports (types): `ToolRendererContribution`

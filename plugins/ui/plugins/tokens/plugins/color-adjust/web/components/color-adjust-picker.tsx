@@ -1,4 +1,5 @@
 import { useConfig, useSetConfig } from "@plugins/config_v2/web";
+import { fillClasses } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { useThemeScopeId } from "@plugins/ui/plugins/theme-engine/web";
 import { colorAdjustConfig } from "../internal/config";
@@ -37,7 +38,7 @@ export function ColorAdjustPicker() {
         ))}
       </Stack>
       <Stack gap="sm" className="text-body">
-        <label className="flex items-center gap-sm">
+        <Stack as="label" direction="row" gap="sm" align="center">
           <span className="w-24 text-muted-foreground">Hue</span>
           <input
             type="range"
@@ -46,11 +47,11 @@ export function ColorAdjustPicker() {
             step={1}
             value={hueShift}
             onChange={(e) => setConfig("hueShift", Number(e.target.value))}
-            className="flex-1"
+            className={fillClasses("x")}
           />
           <span className="w-10 text-right tabular-nums">{hueShift}</span>
-        </label>
-        <label className="flex items-center gap-sm">
+        </Stack>
+        <Stack as="label" direction="row" gap="sm" align="center">
           <span className="w-24 text-muted-foreground">Saturation</span>
           <input
             type="range"
@@ -61,13 +62,13 @@ export function ColorAdjustPicker() {
             onChange={(e) =>
               setConfig("saturationScale", Number(e.target.value))
             }
-            className="flex-1"
+            className={fillClasses("x")}
           />
           <span className="w-10 text-right tabular-nums">
             {saturationScale.toFixed(2)}
           </span>
-        </label>
-        <label className="flex items-center gap-sm">
+        </Stack>
+        <Stack as="label" direction="row" gap="sm" align="center">
           <span className="w-24 text-muted-foreground">Lightness</span>
           <input
             type="range"
@@ -78,12 +79,12 @@ export function ColorAdjustPicker() {
             onChange={(e) =>
               setConfig("lightnessScale", Number(e.target.value))
             }
-            className="flex-1"
+            className={fillClasses("x")}
           />
           <span className="w-10 text-right tabular-nums">
             {lightnessScale.toFixed(2)}
           </span>
-        </label>
+        </Stack>
       </Stack>
     </Stack>
   );

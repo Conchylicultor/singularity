@@ -8,6 +8,8 @@
 - Web:
   - Contributes: `ActionBar.Item` → `WorktreeDropdown`
   - Uses:
+    - `primitives/css/fill.Fill`
+    - `primitives/css/line.Line`
     - `primitives/css/status-dot.StatusDot`
     - `primitives/css/text.Text`
     - `primitives/live-state.useResource`

@@ -16,6 +16,7 @@
     - `conversations/conversation-view/jsonl-viewer/tool-call.ToolCallCard`
     - `conversations/model-provider.familyClass`
     - `primitives/css/badge.Badge`
+    - `primitives/css/line.Line`
     - `primitives/css/row.Row`
     - `primitives/css/scroll.Scroll`
     - `primitives/css/spacing.Inset`

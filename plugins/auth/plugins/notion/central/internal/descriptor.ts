@@ -9,15 +9,15 @@ import { notionAuthConfig } from "../../shared";
 
 interface NotionMe {
   bot?: {
-    owner?: { user?: { id?: string; name?: string; person?: { email?: string } } };
+    owner?: {
+      user?: { id?: string; name?: string; person?: { email?: string } };
+    };
   };
   id?: string;
   name?: string;
 }
 
-async function fetchNotionIdentity(
-  accessToken: string,
-): Promise<AuthIdentity> {
+async function fetchNotionIdentity(accessToken: string): Promise<AuthIdentity> {
   const res = await fetch("https://api.notion.com/v1/users/me", {
     headers: {
       Authorization: `Bearer ${accessToken}`,
@@ -64,7 +64,7 @@ export const notionDescriptor: AuthProviderDescriptor = defineAuthProvider({
         return { clientId: idFromEnv, clientSecret: secretFromEnv };
       }
       const cfg = await readSecretConfig(notionAuthConfig);
-      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard; readSecretConfig returns "" for unset secrets
+      // readSecretConfig returns "" for unset secrets, so a falsy value means unconfigured
       if (!cfg.clientId || !cfg.clientSecret) {
         throw new AuthCredentialsMissingError("notion");
       }

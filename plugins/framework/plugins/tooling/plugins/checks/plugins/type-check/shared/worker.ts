@@ -63,7 +63,11 @@ async function run(job: Job): Promise<Result> {
     };
   }
   const parsed = ts.parseJsonConfigFileContent(
-    cfg.config, ts.sys, dirname(job.tsconfigPath), undefined, job.tsconfigPath,
+    cfg.config,
+    ts.sys,
+    dirname(job.tsconfigPath),
+    undefined,
+    job.tsconfigPath,
   );
 
   // 2. Build ONE incremental program; gather diagnostics through the builder so
@@ -86,14 +90,19 @@ async function run(job: Job): Promise<Result> {
   ];
   // Persist the .tsbuildinfo (noEmit still writes it via the builder's emit).
   builder.emit(undefined, undefined, undefined, undefined, undefined);
-  const tscErrors = diags.map((d) => formatTscDiagnostic(job.root, d)).join("\n");
+  const tscErrors = diags
+    .map((d) => formatTscDiagnostic(job.root, d))
+    .join("\n");
 
   // 3. Type-aware lint, reusing the program just built (no second construction).
   let lintViolations = "";
   const failedLintFiles: string[] = [];
   if (job.lintFiles.length > 0) {
     const program = builder.getProgram();
-    const config = await buildLintConfig({ root: job.root, typeSource: { programs: [program] } });
+    const config = await buildLintConfig({
+      root: job.root,
+      typeSource: { programs: [program] },
+    });
     const linter = new Linter({ configType: "flat" });
     const lines: string[] = [];
     for (const file of job.lintFiles) {
@@ -106,7 +115,15 @@ async function run(job: Job): Promise<Result> {
       if (messages.length === 0) continue;
       failedLintFiles.push(file);
       for (const m of messages) {
-        lines.push(`${rel(job.root, file)}:${m.line}:${m.column}  ${m.ruleId ?? "(parse)"}  ${m.message}`);
+        // A null ruleId means the message came from the linter itself, not a
+        // rule — either a parse failure (fatal) or an unused-disable-directive
+        // report. Label them apart: with reportUnusedDisableDirectives on, the
+        // latter is common, and calling it a parse error sends the reader
+        // hunting for a syntax bug that isn't there.
+        const source = m.ruleId ?? (m.fatal ? "(parse)" : "(unused-disable)");
+        lines.push(
+          `${rel(job.root, file)}:${m.line}:${m.column}  ${source}  ${m.message}`,
+        );
       }
     }
     lintViolations = lines.join("\n");

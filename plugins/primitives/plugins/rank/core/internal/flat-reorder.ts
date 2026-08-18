@@ -40,11 +40,9 @@ export function computeFlatReorder(
   try {
     if (position === "before") {
       const prev = ordered[idx - 1];
-      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
       return Rank.between(prev?.rank ?? null, target.rank);
     }
     const next = ordered[idx + 1];
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
     return Rank.between(target.rank, next?.rank ?? null);
     // eslint-disable-next-line promise-safety/no-bare-catch, promise-safety/no-absorbed-failure -- Rank.between throws a plain Error on rank exhaustion/corruption; returning null aborts the reorder, the correct signal for an impossible drop position
   } catch {

@@ -1,5 +1,7 @@
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { MdArticle } from "react-icons/md";
+import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
+import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 import { StatusDot } from "@plugins/primitives/plugins/css/plugins/status-dot/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import type { EditedFileStatus } from "@plugins/conversations/plugins/conversation-view/plugins/code/core";
@@ -29,23 +31,24 @@ export function DocRow({
   const muted = status === "deleted";
 
   return (
-    <button
+    <Line
+      as="button"
       type="button"
       disabled={muted}
       onClick={onSelect}
       aria-pressed={selected}
       style={{ height: `${DOC_ROW_HEIGHT_REM}rem` }}
       className={cn(
-        "flex w-full items-center gap-xs px-sm text-left text-caption hover:bg-muted/60 disabled:cursor-not-allowed",
+        "w-full gap-xs px-sm text-left text-caption hover:bg-muted/60 disabled:cursor-not-allowed",
         muted && "opacity-60",
         selected && "bg-muted",
       )}
       title={`${status} — ${path}`}
     >
       <StatusDot colorClass={gitStatusDot(status)} />
-      <MdArticle className="size-3 shrink-0 text-muted-foreground" />
-      <Text className="truncate text-muted-foreground">{dir}</Text>
-      <Text className={cn("truncate", !muted && "font-medium")}>{basename}</Text>
-    </button>
+      <MdArticle className={cn("size-3 text-muted-foreground", rigidClass())} />
+      <Text className="text-muted-foreground">{dir}</Text>
+      <Text className={cn(!muted && "font-medium")}>{basename}</Text>
+    </Line>
   );
 }

@@ -1,4 +1,7 @@
-import { cn, ControlSizeProvider } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import {
+  cn,
+  ControlSizeProvider,
+} from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useMemo, useState, type ComponentType } from "react";
 import {
   MdAutoMode,
@@ -13,6 +16,9 @@ import { useSonata } from "@plugins/apps/plugins/sonata/plugins/shell/web";
 import { SonataAudio } from "@plugins/apps/plugins/sonata/plugins/audio/plugins/instruments/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { InlinePopover } from "@plugins/primitives/plugins/popover/web";
+import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
+import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
+import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
@@ -134,15 +140,19 @@ function InstrumentPicker({
       width="sm"
       padding="sm"
       trigger={
-        <button
+        <Line
+          as="button"
           type="button"
           aria-label="Track instrument"
-          className="flex min-w-0 items-center gap-xs rounded-md text-3xs text-muted-foreground transition-colors hover:text-foreground"
+          // eslint-disable-next-line layout/no-adhoc-layout -- the trigger must be allowed to shrink below its own content so the instrument label ellipsizes, but must NOT grow into the row's slack (that would push the sibling "· N notes" text to the far edge). Fill/fillClasses couple min-w-0 with flex-1, and there is no shrink-only primitive.
+          className="min-w-0 gap-xs rounded-md text-3xs text-muted-foreground transition-colors hover:text-foreground"
         >
-          {ResolvedIcon ? <ResolvedIcon className="size-3 shrink-0" /> : null}
+          {ResolvedIcon ? (
+            <ResolvedIcon className={cn("size-3", rigidClass())} />
+          ) : null}
           <span className="truncate">{resolvedLabel}</span>
-          <MdExpandMore className="size-3 shrink-0" />
-        </button>
+          <MdExpandMore className={cn("size-3", rigidClass())} />
+        </Line>
       }
     >
       <SearchInput
@@ -162,7 +172,9 @@ function InstrumentPicker({
           selected={!customized}
           icon={<MdAutoMode />}
           actions={
-            !customized ? <MdCheck className="size-3.5 text-primary" /> : undefined
+            !customized ? (
+              <MdCheck className="size-3.5 text-primary" />
+            ) : undefined
           }
           actionsAlwaysVisible
           onClick={() => select(null)}
@@ -233,14 +245,23 @@ function TrackRow({
     customized,
   } = entry;
   return (
-    <div className="flex items-center gap-sm py-xs">
+    <Stack direction="row" gap="sm" align="center" className="py-xs">
       <ColorSwatch songId={songId} trackId={trackId} color={color} />
 
-      <div className={cn("min-w-0 flex-1", hidden && "opacity-50")}>
-        <Text as="div" variant="caption" className="truncate font-medium text-foreground">
+      <Fill className={cn(hidden && "opacity-50")}>
+        <Text
+          as="div"
+          variant="caption"
+          className="truncate font-medium text-foreground"
+        >
           {name}
         </Text>
-        <Stack direction="row" align="center" gap="xs" className="text-3xs text-muted-foreground">
+        <Stack
+          direction="row"
+          align="center"
+          gap="xs"
+          className="text-3xs text-muted-foreground"
+        >
           <InstrumentPicker
             songId={songId}
             trackId={trackId}
@@ -253,7 +274,7 @@ function TrackRow({
             · {noteCount} {noteCount === 1 ? "note" : "notes"}
           </span>
         </Stack>
-      </div>
+      </Fill>
 
       <ControlSizeProvider size="sm">
         <Stack direction="row" align="center" gap="sm">
@@ -273,7 +294,7 @@ function TrackRow({
           />
         </Stack>
       </ControlSizeProvider>
-    </div>
+    </Stack>
   );
 }
 

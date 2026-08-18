@@ -20,6 +20,13 @@
     - `apps-core.Apps`
     - `apps-core/app-icon.mdAppIcon`
     - `primitives/bar.Bar`
+    - `primitives/css/clip.Clip`
+    - `primitives/css/clip.clipClasses`
+    - `primitives/css/fill.Fill`
+    - `primitives/css/line.Line`
+    - `primitives/css/rigid.rigidClass`
+    - `primitives/css/spacing.Stack`
+    - `primitives/css/ui-kit.cn`
     - `primitives/scoped-store.defineScopedStore`
     - `primitives/slot-render.defineMountSlot`
     - `primitives/slot-render.defineRenderSlot`

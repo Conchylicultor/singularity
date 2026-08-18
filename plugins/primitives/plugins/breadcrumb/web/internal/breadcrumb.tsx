@@ -1,5 +1,8 @@
 import type { ReactNode } from "react";
 import { RowActions } from "@plugins/primitives/plugins/row-actions/web";
+import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 
 export interface BreadcrumbSegment {
   key: string;
@@ -26,13 +29,32 @@ export function Breadcrumb({
   const active = segments[lastIndex]!;
 
   return (
-    <span className="flex min-w-0 items-baseline gap-2xs whitespace-nowrap [&_svg:not([class*='size-'])]:icon-auto">
+    <Stack
+      as="span"
+      direction="row"
+      gap="2xs"
+      align="baseline"
+      // eslint-disable-next-line layout/no-adhoc-layout -- shrink-only cell: the whole trail must fall below its content width so the prefix can truncate, but it must NOT grow into its parent's slack (a breadcrumb is left-packed chrome, and consumers place it beside other strip content). Fill bundles flex-1 with min-w-0, so bare min-w-0 has no primitive.
+      className="min-w-0 whitespace-nowrap [&_svg:not([class*='size-'])]:icon-auto"
+    >
       {prefix.length > 0 && (
-        <span className="flex min-w-0 shrink items-baseline truncate">
+        // `truncate`'s overflow-hidden already floors this flex item's automatic
+        // minimum size at 0, so it needs no min-w-0 of its own.
+        <Stack
+          as="span"
+          direction="row"
+          gap="none"
+          align="baseline"
+          className="truncate"
+        >
           {prefix.map((seg, i) => (
-            <span
+            <Stack
+              as="span"
               key={seg.key}
-              className="flex items-baseline whitespace-nowrap"
+              direction="row"
+              gap="none"
+              align="baseline"
+              className="whitespace-nowrap"
             >
               {onNavigate ? (
                 <button
@@ -50,11 +72,13 @@ export function Breadcrumb({
               <span className="font-normal text-muted-foreground/50">
                 {separator}
               </span>
-            </span>
+            </Stack>
           ))}
-        </span>
+        </Stack>
       )}
-      <span className="shrink-0 truncate font-medium">{active.label}</span>
+      <span className={cn(rigidClass(), "truncate font-medium")}>
+        {active.label}
+      </span>
       {actions && (
         // A trailing action cluster on a row-shaped strip is the `row-actions`
         // primitive, never raw JSX — one implementation owns the sizing, the
@@ -65,10 +89,10 @@ export function Breadcrumb({
         // and it is never hover-revealed because the trail is chrome, not a row
         // in a list. `shrink-0` keeps it out of the truncation the prefix and
         // the active label absorb.
-        <RowActions pin={null} alwaysVisible className="shrink-0">
+        <RowActions pin={null} alwaysVisible className={rigidClass()}>
           {actions}
         </RowActions>
       )}
-    </span>
+    </Stack>
   );
 }

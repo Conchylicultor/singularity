@@ -3,17 +3,26 @@ import {
   useEndpointMutation,
   getEndpointErrorMessage,
 } from "@plugins/infra/plugins/endpoints/web";
+import { fillClasses } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { createServer } from "../../shared/endpoints";
-import { FieldShell, fieldInputClass, fieldTextareaClass } from "./server-fields";
+import {
+  FieldShell,
+  fieldInputClass,
+  fieldTextareaClass,
+} from "./server-fields";
 
 /**
  * Create state of the unified server page: blank fields + an explicit "Add
  * Server" button (a row can't autosave until it exists). Renders the same
  * field layout as the edit form, so adding and editing look identical.
  */
-export function ServerCreateForm({ onCreated }: { onCreated: (id: string) => void }) {
+export function ServerCreateForm({
+  onCreated,
+}: {
+  onCreated: (id: string) => void;
+}) {
   const [name, setName] = useState("");
   const [host, setHost] = useState("");
   const [port, setPort] = useState("22");
@@ -65,8 +74,9 @@ export function ServerCreateForm({ onCreated }: { onCreated: (id: string) => voi
           autoFocus
         />
       </FieldShell>
-      <div className="flex gap-md">
-        <FieldShell label="SSH User" className="flex-1">
+      <Stack direction="row" gap="md">
+        {/* FieldShell owns its own element, so the grow cell arrives as a class. */}
+        <FieldShell label="SSH User" className={fillClasses("x")}>
           <input
             className={fieldInputClass}
             value={sshUser}
@@ -81,7 +91,7 @@ export function ServerCreateForm({ onCreated }: { onCreated: (id: string) => voi
             onChange={(e) => setPort(e.target.value)}
           />
         </FieldShell>
-      </div>
+      </Stack>
       <FieldShell
         label="Console URL"
         hint="Link to the provider's management console for this server."

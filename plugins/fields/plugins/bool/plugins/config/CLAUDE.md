@@ -20,6 +20,7 @@ a config_v2 `FieldDef<boolean>` carrying the canonical `fields/` bool token
     - `config_v2/fields.FieldHeader`
     - `config_v2/fields.FieldRendererComponent`
     - `config_v2/fields.Fields`
+    - `primitives/css/spacing.Stack`
 - Core:
   - Uses:
     - `fields.FieldDef`

@@ -1,5 +1,12 @@
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import { MdAdd } from "react-icons/md";
 import { ExpandAllButton } from "@plugins/primitives/plugins/collapsible/web";
 import { type DragEndEvent } from "@dnd-kit/core";
@@ -12,7 +19,10 @@ import {
   type ExpandChange,
   type TreeNode,
 } from "../../core";
-import { SearchInput, filterTree } from "@plugins/primitives/plugins/search/web";
+import {
+  SearchInput,
+  filterTree,
+} from "@plugins/primitives/plugins/search/web";
 import {
   MultiSelectProvider,
   SelectionBar,
@@ -308,7 +318,7 @@ export function TreeList<T extends TreeItem>(props: TreeListProps<T>) {
       cur = parent.parentId;
     }
     if (changes.length === 0) return;
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- reveal-on-select: expands the collapsed ancestors of selectedId in one batched call so the row is visible; `setExpanded` writes the host's expand map, so it is a controlled imperative side-effect, not derivable in render; the walk needs the full rows map and is gated idempotent by the lastRevealedId ref to avoid re-running
+    // reveal-on-select: expands the collapsed ancestors of selectedId in one batched call so the row is visible; `setExpanded` writes the host's expand map, so it is a controlled imperative side-effect, not derivable in render; the walk needs the full rows map and is gated idempotent by the lastRevealedId ref to avoid re-running
     void setExpanded(changes);
   }, [selectedId, rows, setExpanded]);
 
@@ -367,7 +377,12 @@ export function TreeList<T extends TreeItem>(props: TreeListProps<T>) {
               {hasToolbar && (
                 // eslint-disable-next-line spacing/no-adhoc-spacing -- mb separates the sticky toolbar from the tree rows below (no named margin utility)
                 <Sticky mask className="mb-1">
-                  <Stack direction="row" gap="xs" align="center" justify="between">
+                  <Stack
+                    direction="row"
+                    gap="xs"
+                    align="center"
+                    justify="between"
+                  >
                     <Stack direction="row" gap="xs" align="center">
                       {showSearchInput && (
                         <SearchInput
@@ -387,7 +402,10 @@ export function TreeList<T extends TreeItem>(props: TreeListProps<T>) {
                     </Stack>
                     <Stack direction="row" gap="xs" align="center">
                       {showExpandAll && (
-                        <ExpandAllButton allExpanded={allExpanded} onToggle={expandAll} />
+                        <ExpandAllButton
+                          allExpanded={allExpanded}
+                          onToggle={expandAll}
+                        />
                       )}
                     </Stack>
                   </Stack>
@@ -405,10 +423,14 @@ export function TreeList<T extends TreeItem>(props: TreeListProps<T>) {
                   // and dnd-kit cancels the drop.
                   keepMounted={activeId ? [activeId] : undefined}
                 >
-                  {(item) => <TreeRowSlot node={item.node} depth={item.depth} />}
+                  {(item) => (
+                    <TreeRowSlot node={item.node} depth={item.depth} />
+                  )}
                 </VirtualRows>
               ) : (
-                visibleTree.map((node) => <TreeRowSlot key={node.id} node={node} depth={0} />)
+                visibleTree.map((node) => (
+                  <TreeRowSlot key={node.id} node={node} depth={0} />
+                ))
               )}
               {showRootAdd && (
                 <Button
@@ -444,7 +466,9 @@ function MaybeMultiSelect({
 }) {
   if (!multiSelect) return <>{children}</>;
   return (
-    <MultiSelectProvider orderedIds={orderedIds}>{children}</MultiSelectProvider>
+    <MultiSelectProvider orderedIds={orderedIds}>
+      {children}
+    </MultiSelectProvider>
   );
 }
 

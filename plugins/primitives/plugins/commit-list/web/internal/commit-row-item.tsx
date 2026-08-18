@@ -1,5 +1,9 @@
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
+import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
+import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import type { CommitRow } from "../../core";
 import { CommitRail, COMMIT_ROW_HEIGHT } from "./commit-rail";
 
@@ -34,8 +38,12 @@ export function CommitRowItem({
   onClick?: (commit: CommitRow) => void;
 }) {
   return (
-    <li
-      className={`flex items-center gap-sm border-b border-border/50 pl-sm pr-md${onClick ? " cursor-pointer hover:bg-accent/50" : ""}`}
+    <Stack
+      as="li"
+      direction="row"
+      align="center"
+      gap="sm"
+      className={`border-b border-border/50 pl-sm pr-md${onClick ? " cursor-pointer hover:bg-accent/50" : ""}`}
       style={{ height: COMMIT_ROW_HEIGHT }}
       onClick={onClick ? () => onClick(commit) : undefined}
     >
@@ -48,11 +56,11 @@ export function CommitRowItem({
       >
         {commit.shortSha}
       </Text>
-      <span className="min-w-0 flex-1 truncate" title={commit.subject}>
+      <Fill as="span" className="truncate" title={commit.subject}>
         {commit.subject}
-      </span>
+      </Fill>
       {pushed && (
-        <Badge variant="success" className="shrink-0">
+        <Badge variant="success" className={rigidClass()}>
           pushed
         </Badge>
       )}
@@ -66,10 +74,10 @@ export function CommitRowItem({
       <Text
         as="span"
         variant="caption"
-        className="shrink-0 text-muted-foreground tabular-nums"
+        className={cn(rigidClass(), "text-muted-foreground tabular-nums")}
       >
         {formatRelative(commit.authoredAt)}
       </Text>
-    </li>
+    </Stack>
   );
 }

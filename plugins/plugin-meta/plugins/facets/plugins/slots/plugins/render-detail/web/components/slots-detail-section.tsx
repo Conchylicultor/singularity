@@ -41,17 +41,15 @@ export function SlotsDetailSection({ node }: { node: PluginNode }) {
     <Stack gap="2xs">
       {data.map((s) => (
         <Stack gap="2xs" key={s.slotId}>
-          <Text
-            as="div"
-            variant="caption"
-            className="flex items-center gap-sm px-sm py-2xs"
-          >
-            <code className="font-mono text-foreground">
-              {s.groupName}.{s.memberName}
-            </code>
-            <code className="ml-auto truncate font-mono text-muted-foreground/60">
-              {s.slotId}
-            </code>
+          <Text as="div" variant="caption" className="px-sm py-2xs">
+            <Stack direction="row" gap="sm" align="center">
+              <code className="font-mono text-foreground">
+                {s.groupName}.{s.memberName}
+              </code>
+              <code className="ml-auto truncate font-mono text-muted-foreground/60">
+                {s.slotId}
+              </code>
+            </Stack>
           </Text>
           {s.contributors.length > 0 && (
             <Cluster gap="xs" className="text-caption gap-y-2xs px-sm">

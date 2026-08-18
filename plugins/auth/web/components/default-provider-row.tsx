@@ -1,6 +1,8 @@
-import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { Button, cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useState } from "react";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
+import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Auth } from "../slots";
 import { useAccountStatus } from "../hooks";
@@ -88,10 +90,10 @@ export function DefaultProviderRow({ providerId }: Props) {
   const connected = status?.connected;
 
   return (
-    <div className="flex items-start gap-lg p-lg">
+    <Stack direction="row" gap="lg" align="start" className="p-lg">
       {/* eslint-disable-next-line spacing/no-adhoc-spacing -- top offset to baseline-align icon with adjacent text */}
-      <Icon className="mt-1 h-6 w-6 shrink-0" />
-      <div className="min-w-0 flex-1">
+      <Icon className={cn("mt-1 h-6 w-6", rigidClass())} />
+      <Fill>
         <Stack direction="row" align="center" gap="sm">
           <span className="font-medium">{provider.name}</span>
           <StatusPill
@@ -101,7 +103,11 @@ export function DefaultProviderRow({ providerId }: Props) {
           />
         </Stack>
         {status?.identity?.email ? (
-          <Text as="div" variant="body" className="text-muted-foreground truncate">
+          <Text
+            as="div"
+            variant="body"
+            className="text-muted-foreground truncate"
+          >
             {status.identity.email}
           </Text>
         ) : null}
@@ -109,12 +115,15 @@ export function DefaultProviderRow({ providerId }: Props) {
           // eslint-disable-next-line spacing/no-adhoc-spacing -- vertical offset from preceding sibling block
           <details className="mt-1 text-caption text-muted-foreground">
             <summary className="cursor-pointer">
-              {status.scopes.length} scope{status.scopes.length === 1 ? "" : "s"}
+              {status.scopes.length} scope
+              {status.scopes.length === 1 ? "" : "s"}
             </summary>
             {/* eslint-disable-next-line spacing/no-adhoc-spacing -- list offset below summary + indent for nested list */}
             <ul className="mt-1 list-disc pl-4">
               {status.scopes.map((s) => (
-                <li key={s} className="break-all">{s}</li>
+                <li key={s} className="break-all">
+                  {s}
+                </li>
               ))}
             </ul>
           </details>
@@ -129,8 +138,8 @@ export function DefaultProviderRow({ providerId }: Props) {
             <span className="font-mono">{status.lastRefreshError.message}</span>
           </Text>
         ) : null}
-      </div>
-      <div className="flex items-center gap-sm shrink-0">
+      </Fill>
+      <Stack direction="row" gap="sm" align="center" className={rigidClass()}>
         {credentialsMissing ? (
           <Button
             variant="outline"
@@ -145,33 +154,21 @@ export function DefaultProviderRow({ providerId }: Props) {
         ) : connected ? (
           <>
             {needsReconsent ? (
-              <Button
-                variant="default"
-                loading={busy}
-                onClick={handleConnect}
-              >
+              <Button variant="default" loading={busy} onClick={handleConnect}>
                 Reconnect
               </Button>
             ) : null}
-            <Button
-              variant="outline"
-              loading={busy}
-              onClick={handleDisconnect}
-            >
+            <Button variant="outline" loading={busy} onClick={handleDisconnect}>
               Disconnect
             </Button>
           </>
         ) : (
-          <Button
-            variant="default"
-            loading={busy}
-            onClick={handleConnect}
-          >
+          <Button variant="default" loading={busy} onClick={handleConnect}>
             Connect
           </Button>
         )}
-      </div>
-    </div>
+      </Stack>
+    </Stack>
   );
 }
 

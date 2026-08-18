@@ -59,6 +59,7 @@ defined in exactly one place. The distinct export buys two things:
     - `conversations/conversation-view/jsonl-viewer/tool-call/page-tools`
     - `conversations/conversation-view/jsonl-viewer/tool-call/workflow`
     - `conversations/conversation-view/prompt-templates`
+    - `debug/claude-cli-calls`
     - `debug/profiling/ops`
     - `debug/profiling/ops/op-gantt`
     - `debug/queue`

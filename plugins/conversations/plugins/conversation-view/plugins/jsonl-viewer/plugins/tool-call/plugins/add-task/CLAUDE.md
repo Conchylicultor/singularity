@@ -12,6 +12,7 @@
     - `conversations/conversation-view/jsonl-viewer/tool-call.ToolCallCard`
     - `primitives/css/badge.Badge`
     - `primitives/css/link-chip.LinkChip`
+    - `primitives/css/rigid.rigidClass`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
     - `primitives/live-state.useResource`

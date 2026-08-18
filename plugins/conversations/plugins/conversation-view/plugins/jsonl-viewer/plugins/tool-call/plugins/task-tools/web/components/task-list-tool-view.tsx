@@ -1,12 +1,23 @@
 import { useMemo } from "react";
 import type { ToolRendererProps } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/core";
 import { ToolCallCard } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/web";
-import { Badge, formatStatusLabel } from "@plugins/primitives/plugins/css/plugins/badge/web";
+import {
+  Badge,
+  formatStatusLabel,
+} from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
+import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
+import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
+import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
+import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 
-type TaskListResult = Array<{ id?: string; description?: string; status?: string }>;
+type TaskListResult = Array<{
+  id?: string;
+  description?: string;
+  status?: string;
+}>;
 
 function parseResult(event: ToolRendererProps["event"]): TaskListResult | null {
   if (!event.result?.content) return null;
@@ -24,7 +35,9 @@ export function TaskListToolView({ event }: ToolRendererProps) {
   const count = tasks?.length ?? 0;
 
   const summary = (
-    <span className="tabular-nums">{count} task{count !== 1 ? "s" : ""}</span>
+    <span className="tabular-nums">
+      {count} task{count !== 1 ? "s" : ""}
+    </span>
   );
 
   return (
@@ -36,20 +49,24 @@ export function TaskListToolView({ event }: ToolRendererProps) {
         >
           <Stack gap="xs">
             {tasks.map((t, i) => (
-              <div
+              <Line
                 key={t.id ?? i}
-                className="flex items-center gap-sm text-2xs text-muted-foreground"
+                className="gap-sm text-2xs text-muted-foreground"
               >
-                {t.id && <span className="shrink-0 font-mono">{t.id}</span>}
+                {t.id && (
+                  <span className={cn(rigidClass(), "font-mono")}>{t.id}</span>
+                )}
                 {t.status && (
-                  <Badge variant="muted" className="shrink-0">
+                  <Badge variant="muted" className={rigidClass()}>
                     {formatStatusLabel(t.status)}
                   </Badge>
                 )}
                 {t.description && (
-                  <span className="min-w-0 truncate">{t.description}</span>
+                  <Fill as="span" className="truncate">
+                    {t.description}
+                  </Fill>
                 )}
-              </div>
+              </Line>
             ))}
           </Stack>
         </Scroll>

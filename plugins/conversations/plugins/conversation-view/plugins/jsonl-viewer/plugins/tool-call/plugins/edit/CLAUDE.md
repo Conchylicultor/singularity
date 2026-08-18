@@ -13,6 +13,7 @@
     - `conversations/conversation-view/jsonl-viewer/file-path.FilePath`
     - `conversations/conversation-view/jsonl-viewer/tool-call.JsonlViewerTool`
     - `conversations/conversation-view/jsonl-viewer/tool-call.ToolCallCard`
+    - `primitives/css/fill.Fill`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
     - `primitives/diff-view.TextDiff`

@@ -10,7 +10,6 @@ export async function deleteAttempt(id: string): Promise<void> {
     .from(_attempts)
     .where(eq(_attempts.id, id))
     .limit(1);
-  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
   if (!row) return;
   await withTaskStatusChange(row.taskId, db, async () => {
     await db.delete(_attempts).where(eq(_attempts.id, id));

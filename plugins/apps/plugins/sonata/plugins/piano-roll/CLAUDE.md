@@ -30,7 +30,10 @@
     - `config_v2.useSetConfig`
     - `primitives/css/center.Center`
     - `primitives/css/clip.Clip`
+    - `primitives/css/fill.Fill`
+    - `primitives/css/line.Line`
     - `primitives/css/pin.Pin`
+    - `primitives/css/rigid.rigidClass`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.SectionLabel`
     - `primitives/css/text.Text`

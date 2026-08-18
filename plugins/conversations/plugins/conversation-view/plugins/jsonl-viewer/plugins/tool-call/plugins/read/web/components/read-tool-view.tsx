@@ -2,6 +2,7 @@ import type { ToolRendererProps } from "@plugins/conversations/plugins/conversat
 import { ToolCallCard } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/web";
 import { FilePath } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/file-path/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
+import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { useConversationById } from "@plugins/conversations/web";
@@ -47,17 +48,21 @@ function LineRangeBadge({
 }
 
 export function ReadToolView({ event }: ToolRendererProps) {
-  const { file_path = "", offset, limit } = (event.input ?? {}) as Partial<ReadInput>;
+  const {
+    file_path = "",
+    offset,
+    limit,
+  } = (event.input ?? {}) as Partial<ReadInput>;
   const { convId } = conversationPane.useParams();
   const conversation = useConversationById(convId);
 
   if (!conversation) return null;
 
   const aside = (
-    <span className="flex min-w-0 items-center gap-sm">
+    <Line as="span" className="gap-sm">
       <FilePath filePath={file_path} />
       <LineRangeBadge offset={offset} limit={limit} />
-    </span>
+    </Line>
   );
 
   const isImage = isImagePath(file_path);
@@ -68,7 +73,9 @@ export function ReadToolView({ event }: ToolRendererProps) {
         // eslint-disable-next-line spacing/no-adhoc-spacing -- mt-2 offsets the result block from the card header
         <div className="mt-2">
           {event.result.isError ? (
-            <Text as="p" variant="caption" className="text-destructive">{event.result.content}</Text>
+            <Text as="p" variant="caption" className="text-destructive">
+              {event.result.content}
+            </Text>
           ) : isImagePath(file_path) ? (
             <ReadImageView
               worktree={conversation.attemptId}

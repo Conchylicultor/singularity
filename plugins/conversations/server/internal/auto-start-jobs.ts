@@ -59,7 +59,6 @@ export const maybeLaunchTaskJob = defineJob({
     // dropped deps are non-blocking. Bail if the task itself is dropped/held.
     if (t.droppedAt || t.heldAt) return;
     const ext = await getTaskAutoStart(taskId);
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
     if (!ext) {
       console.warn(
         `[tasks.maybe-launch] task ${taskId} has no auto_start row; trigger fired but no launch (already launched, cancelled, or never armed)`,

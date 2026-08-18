@@ -19,7 +19,15 @@ export interface DrawSettings {
   width: number;
 }
 
-const COLORS = ["#ef4444", "#f59e0b", "#22c55e", "#3b82f6", "#a855f7", "#000000", "#ffffff"];
+const COLORS = [
+  "#ef4444",
+  "#f59e0b",
+  "#22c55e",
+  "#3b82f6",
+  "#a855f7",
+  "#000000",
+  "#ffffff",
+];
 
 interface Props {
   tool: Tool;
@@ -89,7 +97,12 @@ export function ToolsPane(props: Props) {
                   key={c}
                   type="button"
                   aria-label={`Color ${c}`}
-                  onClick={() => props.onDrawSettingsChange({ ...props.drawSettings, color: c })}
+                  onClick={() =>
+                    props.onDrawSettingsChange({
+                      ...props.drawSettings,
+                      color: c,
+                    })
+                  }
                   className={cn(
                     "size-6 rounded-full border-2 transition",
                     props.drawSettings.color === c
@@ -107,10 +120,17 @@ export function ToolsPane(props: Props) {
               variant="label"
               tone="muted"
               // eslint-disable-next-line spacing/no-adhoc-spacing -- single-edge offset below the width label row
-              className="mb-1 flex items-center justify-between"
+              className="mb-1"
             >
-              <span>Width</span>
-              <span>{props.drawSettings.width}px</span>
+              <Stack
+                direction="row"
+                gap="none"
+                align="center"
+                justify="between"
+              >
+                <span>Width</span>
+                <span>{props.drawSettings.width}px</span>
+              </Stack>
             </Text>
             <input
               type="range"

@@ -43,7 +43,10 @@ async function tick(): Promise<void> {
     convs = await listConversationsForInfra();
   } catch (err) {
     if (!isTransientDbError(err)) {
-      console.error("[conversations.turn-emitter] listConversationsForInfra failed", err);
+      console.error(
+        "[conversations.turn-emitter] listConversationsForInfra failed",
+        err,
+      );
     }
     return;
   }
@@ -94,7 +97,6 @@ function subscribeToConversation(conversationId: string): () => void {
       hasPrimed = true;
       if (endTurns.length > 0 && (await hasPendingTrigger(conversationId))) {
         const latest = endTurns[endTurns.length - 1];
-        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
         if (latest) await emitEndTurn(conversationId, latest);
       }
       return;
@@ -108,11 +110,16 @@ function subscribeToConversation(conversationId: string): () => void {
   }
 
   return watchTranscript(conversationId, ({ events }) => {
-    void runTracked("conversations:turn-emitter-events", () => handleEvents(events));
+    void runTracked("conversations:turn-emitter-events", () =>
+      handleEvents(events),
+    );
   });
 }
 
-async function emitEndTurn(conversationId: string, turn: EndTurnEvent): Promise<void> {
+async function emitEndTurn(
+  conversationId: string,
+  turn: EndTurnEvent,
+): Promise<void> {
   try {
     await conversationTurnCompleted.emit({
       conversationId,
@@ -120,9 +127,12 @@ async function emitEndTurn(conversationId: string, turn: EndTurnEvent): Promise<
       text: turn.text,
       messageId: turn.messageId,
     });
-  // eslint-disable-next-line promise-safety/no-bare-catch
+    // eslint-disable-next-line promise-safety/no-bare-catch
   } catch (err) {
-    console.error(`[conversations.turn-emitter] emit failed for ${conversationId}`, err);
+    console.error(
+      `[conversations.turn-emitter] emit failed for ${conversationId}`,
+      err,
+    );
   }
 }
 

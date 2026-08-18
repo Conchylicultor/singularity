@@ -32,8 +32,14 @@ export const handleUpdate = implement(updateAgent, async ({ params, body }) => {
     if (body.parentId === id) {
       throw new HttpError(400, "Cannot parent an agent to itself");
     }
-    if (body.parentId !== null && (await isAgentDescendant(id, body.parentId))) {
-      throw new HttpError(400, "Cannot parent an agent under its own descendant");
+    if (
+      body.parentId !== null &&
+      (await isAgentDescendant(id, body.parentId))
+    ) {
+      throw new HttpError(
+        400,
+        "Cannot parent an agent under its own descendant",
+      );
     }
     patch.parentId = body.parentId;
   }
@@ -42,7 +48,6 @@ export const handleUpdate = implement(updateAgent, async ({ params, body }) => {
     .set(patch)
     .where(eq(_agents.id, id))
     .returning({ id: _agents.id });
-  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
   if (!updated) throw new HttpError(404, "Not found");
   // No destination force-expand on a re-parent: expand/collapse is device-local
   // view state owned by the data-view primitive, not a column. `TreeList.
@@ -55,11 +60,17 @@ export const handleUpdate = implement(updateAgent, async ({ params, body }) => {
       .from(_agents)
       .where(eq(_agents.id, id))
       .limit(1);
-    await agentAttachments.set(id, Array.from(extractAttachmentIds(prompt ?? "")));
+    await agentAttachments.set(
+      id,
+      Array.from(extractAttachmentIds(prompt ?? "")),
+    );
   }
 
-  const [row] = await db.select().from(agents).where(eq(agents.id, id)).limit(1);
-  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
+  const [row] = await db
+    .select()
+    .from(agents)
+    .where(eq(agents.id, id))
+    .limit(1);
   if (!row) throw new HttpError(404, "Not found after update");
   return AgentSchema.parse(row);
 });

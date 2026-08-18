@@ -1,5 +1,15 @@
-import { cn, Select, SelectContent, SelectItem, SelectSeparator, SelectTrigger } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { hoverRevealGroup, hoverRevealTarget } from "@plugins/primitives/plugins/hover-reveal/web";
+import {
+  cn,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectSeparator,
+  SelectTrigger,
+} from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import {
+  hoverRevealGroup,
+  hoverRevealTarget,
+} from "@plugins/primitives/plugins/hover-reveal/web";
 import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { MdAutoAwesome } from "react-icons/md";
@@ -11,10 +21,22 @@ import {
 } from "@plugins/primitives/plugins/syntax-highlight/web";
 import { CopyButton } from "@plugins/primitives/plugins/copy-to-clipboard/web";
 import { useEditableField } from "@plugins/primitives/plugins/editable-field/web";
-import { Inset, Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { Clip } from "@plugins/primitives/plugins/css/plugins/clip/web";
+import {
+  Inset,
+  Stack,
+} from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import {
+  Clip,
+  clipClasses,
+} from "@plugins/primitives/plugins/css/plugins/clip/web";
 import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
-import { BLOCK_INSET, type BlockRendererProps } from "@plugins/page/plugins/editor/web";
+import { layerClasses } from "@plugins/primitives/plugins/css/plugins/layer/web";
+import { fillClasses } from "@plugins/primitives/plugins/css/plugins/fill/web";
+import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
+import {
+  BLOCK_INSET,
+  type BlockRendererProps,
+} from "@plugins/page/plugins/editor/web";
 import { codeBlock } from "../../core";
 import { detectLanguage } from "../detect-language";
 
@@ -52,7 +74,8 @@ export function CodeBlock({ block, isFocused, editor }: BlockRendererProps) {
 
   const field = useEditableField({
     value: parsed.code,
-    onSave: (next) => editor.update({ code: next, language: languageRef.current }),
+    onSave: (next) =>
+      editor.update({ code: next, language: languageRef.current }),
   });
   const code = field.value;
 
@@ -83,12 +106,13 @@ export function CodeBlock({ block, isFocused, editor }: BlockRendererProps) {
       // Indent with spaces instead of moving focus out of the block.
       e.preventDefault();
       const { selectionStart, selectionEnd } = ta;
-      const next = code.slice(0, selectionStart) + "  " + code.slice(selectionEnd);
+      const next =
+        code.slice(0, selectionStart) + "  " + code.slice(selectionEnd);
       field.onChange(next);
       requestAnimationFrame(() => {
         if (textareaRef.current) {
-          textareaRef.current.selectionStart = textareaRef.current.selectionEnd =
-            selectionStart + 2;
+          textareaRef.current.selectionStart =
+            textareaRef.current.selectionEnd = selectionStart + 2;
         }
       });
       return;
@@ -136,7 +160,9 @@ export function CodeBlock({ block, isFocused, editor }: BlockRendererProps) {
 
   return (
     <Inset x={BLOCK_INSET} y="xs">
-      <Clip className={cn(hoverRevealGroup, "group relative rounded-md bg-muted")}>
+      <Clip
+        className={cn(hoverRevealGroup, "group relative rounded-md bg-muted")}
+      >
         {/* Hover/focus toolbar: language picker + copy. */}
         <Pin to="top-right" offset="xs" layer="raised">
           <Stack
@@ -145,48 +171,62 @@ export function CodeBlock({ block, isFocused, editor }: BlockRendererProps) {
             align="center"
             className={hoverRevealTarget}
           >
-
-          <Select items={langItems} value={language ?? AUTO} onValueChange={onLanguageChange}>
-            <SelectTrigger
-              size="sm"
-              aria-label="Code language"
-              className="h-6 w-36 bg-background/80 text-caption backdrop-blur"
+            <Select
+              items={langItems}
+              value={language ?? AUTO}
+              onValueChange={onLanguageChange}
             >
-              {language === undefined ? (
-                <span className="flex min-w-0 items-center gap-xs">
-                  <MdAutoAwesome className="shrink-0 text-muted-foreground" />
+              <SelectTrigger
+                size="sm"
+                aria-label="Code language"
+                className="h-6 w-36 bg-background/80 text-caption backdrop-blur"
+              >
+                {language === undefined ? (
+                  <Stack
+                    as="span"
+                    direction="row"
+                    align="center"
+                    gap="xs"
+                    className={fillClasses("x")}
+                  >
+                    <MdAutoAwesome
+                      className={cn(rigidClass(), "text-muted-foreground")}
+                    />
+                    <span className="truncate">
+                      Auto
+                      {detected ? (
+                        <span className="text-muted-foreground">
+                          {" "}
+                          · {detected}
+                        </span>
+                      ) : null}
+                    </span>
+                  </Stack>
+                ) : (
                   <span className="truncate">
-                    Auto
-                    {detected ? (
-                      <span className="text-muted-foreground"> · {detected}</span>
-                    ) : null}
+                    {language === PLAIN ? "Plain text" : language}
                   </span>
-                </span>
-              ) : (
-                <span className="truncate">
-                  {language === PLAIN ? "Plain text" : language}
-                </span>
-              )}
-            </SelectTrigger>
-            <SelectContent align="end">
-              <SelectItem value={AUTO}>
-                <MdAutoAwesome />
-                Auto
-              </SelectItem>
-              <SelectItem value={PLAIN}>Plain text</SelectItem>
-              <SelectSeparator />
-              {SHIKI_LANGS.map((lang) => (
-                <SelectItem key={lang} value={lang}>
-                  {lang}
+                )}
+              </SelectTrigger>
+              <SelectContent align="end">
+                <SelectItem value={AUTO}>
+                  <MdAutoAwesome />
+                  Auto
                 </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <CopyButton
-            text={code}
-            title="Copy code"
-            className="bg-background/80 backdrop-blur"
-          />
+                <SelectItem value={PLAIN}>Plain text</SelectItem>
+                <SelectSeparator />
+                {SHIKI_LANGS.map((lang) => (
+                  <SelectItem key={lang} value={lang}>
+                    {lang}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <CopyButton
+              text={code}
+              title="Copy code"
+              className="bg-background/80 backdrop-blur"
+            />
           </Stack>
         </Pin>
 
@@ -222,9 +262,13 @@ export function CodeBlock({ block, isFocused, editor }: BlockRendererProps) {
           autoCorrect="off"
           autoCapitalize="off"
           placeholder="Code…"
-          // eslint-disable-next-line layout/no-adhoc-layout -- interactive full-bleed editor layer laid exactly over the sizing underlay; Overlay's `above` is pointer-events-none so it can't host the live textarea
+          // The interactive full-bleed editor layer laid exactly over the sizing
+          // underlay. `layerClasses()` (not `<Overlay above>`, which is
+          // pointer-events-none) because the layer IS this element.
           className={cn(
-            "absolute inset-0 h-full w-full resize-none overflow-hidden border-0 bg-transparent",
+            layerClasses(),
+            clipClasses({ axis: "both", fill: false }),
+            "h-full w-full resize-none border-0 bg-transparent",
             "text-transparent caret-foreground outline-none placeholder:text-muted-foreground",
             METRICS,
           )}

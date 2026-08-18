@@ -62,7 +62,9 @@ export async function applyPageBlockPatch(
       ? await db
           .select()
           .from(_blocks)
-          .where(and(inArray(_blocks.id, createIds), isNotNull(_blocks.deletedAt)))
+          .where(
+            and(inArray(_blocks.id, createIds), isNotNull(_blocks.deletedAt)),
+          )
       : [];
   const trashedById = new Map(trashedRows.map((r) => [r.id, r]));
   // A trashed PAGE shell is restored wholesale by the chokepoint below, which
@@ -93,7 +95,6 @@ export async function applyPageBlockPatch(
       .from(_trashEntries)
       .where(eq(_trashEntries.id, entryId))
       .limit(1);
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
     if (!entryRow) continue;
     await untrashBlocks(TrashEntrySchema.parse(entryRow));
     await db.delete(_trashEntries).where(eq(_trashEntries.id, entryId));
@@ -130,7 +131,12 @@ export async function applyPageBlockPatch(
     const deletedSet = new Set(patch.deleteIds);
     const deletedRows = rows
       .filter((r) => deletedSet.has(r.id))
-      .map((r) => ({ id: r.id, type: r.type, pageId: r.pageId, parentId: r.parentId }));
+      .map((r) => ({
+        id: r.id,
+        type: r.type,
+        pageId: r.pageId,
+        parentId: r.parentId,
+      }));
 
     // --- Page-type transition guard -----------------------------------------
     // A `page` row owns every row keyed `page_id = <its id>`. Flipping it to a
@@ -148,7 +154,11 @@ export async function applyPageBlockPatch(
           ? [{ id: u.id, from: stored.get(u.id)!.type, to: u.changes.type! }]
           : [],
       ),
-      ...overwrites.map((b) => ({ id: b.id, from: stored.get(b.id)!.type, to: b.type })),
+      ...overwrites.map((b) => ({
+        id: b.id,
+        from: stored.get(b.id)!.type,
+        to: b.type,
+      })),
     ];
     for (const t of typeWrites) {
       if (t.from === t.to) continue;

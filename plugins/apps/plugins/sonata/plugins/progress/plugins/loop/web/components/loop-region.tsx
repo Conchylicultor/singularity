@@ -91,12 +91,10 @@ export function LoopRegion({
       {/* Rail-aligned vertical guides at A and B, drawn through the rail band so
           they line up pixel-for-pixel with the bar ticks. */}
       <div
-        // eslint-disable-next-line layout/no-adhoc-layout -- JS fraction-positioned A guide on the shared rail band
         className={cn(railBandClass, "w-px bg-primary/60")}
         style={{ left: `${startF * 100}%` }}
       />
       <div
-        // eslint-disable-next-line layout/no-adhoc-layout -- JS fraction-positioned B guide on the shared rail band
         className={cn(railBandClass, "w-px bg-primary/60")}
         style={{ left: `${endF * 100}%` }}
       />

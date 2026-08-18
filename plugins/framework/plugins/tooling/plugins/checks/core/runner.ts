@@ -320,7 +320,7 @@ export async function runChecks(
                 snapshot.treeHash,
               ),
           });
-          // eslint-disable-next-line promise-safety/no-bare-catch -- fail-open contract: any validation error (grep replay spawn failure, malformed snapshot) degrades to a cache MISS (the body runs and re-verifies), which can never produce a false HIT; propagating would abort the whole check run
+          // fail-open contract: any validation error (grep replay spawn failure, malformed snapshot) degrades to a cache MISS (the body runs and re-verifies), which can never produce a false HIT; propagating would abort the whole check run
         } catch (err) {
           verdict = {
             hit: false,

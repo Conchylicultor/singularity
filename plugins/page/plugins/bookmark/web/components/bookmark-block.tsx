@@ -6,12 +6,24 @@ import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { Card } from "@plugins/primitives/plugins/css/plugins/card/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
-import { Stack, Inset } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import {
+  Stack,
+  Inset,
+} from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Clip } from "@plugins/primitives/plugins/css/plugins/clip/web";
 import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
-import { Button, Input, cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { hoverRevealGroup, hoverRevealTarget } from "@plugins/primitives/plugins/hover-reveal/web";
+import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
+import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
+import {
+  Button,
+  Input,
+  cn,
+} from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import {
+  hoverRevealGroup,
+  hoverRevealTarget,
+} from "@plugins/primitives/plugins/hover-reveal/web";
 import type { BlockRendererProps } from "@plugins/page/plugins/editor/web";
 import { bookmarkBlock, linkPreviewEndpoint } from "../../core";
 
@@ -29,7 +41,9 @@ export function BookmarkBlock({ block, editor }: BlockRendererProps) {
     bookmarkBlock.parse(block.data);
 
   if (!url) {
-    return <EmptyBookmarkBlock editor={editor} onArm={() => editor.onFocus()} />;
+    return (
+      <EmptyBookmarkBlock editor={editor} onArm={() => editor.onFocus()} />
+    );
   }
 
   if (!fetched) {
@@ -109,7 +123,11 @@ function FetchingBookmarkBlock({
 
     async function run() {
       try {
-        const meta = await fetchEndpoint(linkPreviewEndpoint, {}, { query: { url } });
+        const meta = await fetchEndpoint(
+          linkPreviewEndpoint,
+          {},
+          { query: { url } },
+        );
         editor.update({
           url,
           ...meta,
@@ -140,9 +158,11 @@ function FetchingBookmarkBlock({
 
   return (
     <Inset x="md" y="xs">
-      <Card className="flex items-center gap-md p-md">
-        <MdBookmark className="size-4 shrink-0 text-muted-foreground" />
-        <Stack gap="2xs" className="min-w-0 flex-1">
+      <Stack as={Card} direction="row" align="center" gap="md" className="p-md">
+        <MdBookmark
+          className={cn(rigidClass(), "size-4 text-muted-foreground")}
+        />
+        <Stack as={Fill} gap="2xs">
           <Text variant="label" className="truncate font-semibold">
             {hostname}
           </Text>
@@ -152,7 +172,7 @@ function FetchingBookmarkBlock({
             <Loading variant="text" label="Fetching preview…" />
           )}
         </Stack>
-      </Card>
+      </Stack>
     </Inset>
   );
 }
@@ -186,14 +206,24 @@ function FilledBookmarkBlock({
   return (
     <Inset x="md" y="xs">
       <div className={cn(hoverRevealGroup, "relative")}>
-        <Card as="a" interactive href={url} target="_blank" rel="noreferrer" className="p-none no-underline">
+        <Card
+          as="a"
+          interactive
+          href={url}
+          target="_blank"
+          rel="noreferrer"
+          className="p-none no-underline"
+        >
           <Clip>
             <Stack direction="row" gap="md" align="stretch">
-              {/* eslint-disable-next-line layout/no-adhoc-layout -- flexible truncating column beside a full-height stretched image; Frame's center-align can't express the items-stretch card */}
-              <Stack gap="2xs" className="min-w-0 flex-1 p-md">
+              <Stack as={Fill} gap="2xs" className="p-md">
                 <Stack direction="row" gap="2xs" align="center">
                   {faviconId ? (
-                    <img src={attachmentUrl(faviconId)} alt="" className="size-4 rounded-sm" />
+                    <img
+                      src={attachmentUrl(faviconId)}
+                      alt=""
+                      className="size-4 rounded-sm"
+                    />
                   ) : null}
                   {siteName ? (
                     <Text variant="caption" tone="muted" className="truncate">
@@ -228,7 +258,10 @@ function FilledBookmarkBlock({
             type="button"
             aria-label="Replace bookmark"
             onClick={() => editor.update({})}
-            className={cn(hoverRevealTarget, "size-6 rounded-full bg-black/50 text-white hover:bg-black/70")}
+            className={cn(
+              hoverRevealTarget,
+              "size-6 rounded-full bg-black/50 text-white hover:bg-black/70",
+            )}
           >
             <Center className="size-full">
               <MdRefresh className="size-4" />

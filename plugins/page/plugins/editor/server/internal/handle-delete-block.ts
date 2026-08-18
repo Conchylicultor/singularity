@@ -19,7 +19,6 @@ export const handleDeleteBlock = implement(
       .from(_blocks)
       .where(eq(_blocks.id, params.id))
       .limit(1);
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
     if (!target) throw new HttpError(404, "Not found");
 
     // The single delete chokepoint: a subtree containing a `type="page"` block is

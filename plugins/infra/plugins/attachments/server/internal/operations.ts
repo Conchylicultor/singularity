@@ -29,14 +29,16 @@ export async function createAttachment(
     })
     .returning();
 
-  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
   if (!row) throw new Error("failed to record attachment");
   return toAttachment(row);
 }
 
 export async function getAttachment(id: string): Promise<Attachment | null> {
-  const [row] = await db.select().from(_attachments).where(eq(_attachments.id, id)).limit(1);
-  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
+  const [row] = await db
+    .select()
+    .from(_attachments)
+    .where(eq(_attachments.id, id))
+    .limit(1);
   return row ? toAttachment(row) : null;
 }
 
@@ -45,7 +47,6 @@ export async function deleteAttachment(id: string): Promise<boolean> {
     .delete(_attachments)
     .where(eq(_attachments.id, id))
     .returning({ diskPath: _attachments.diskPath });
-  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
   if (!row) return false;
   // eslint-disable-next-line promise-safety/no-absorbed-failure -- best-effort disk cleanup after the DB row is already deleted; the awaited result is discarded (fire-and-forget), so undefined only prevents an unhandled rejection, never feeds a decision
   await unlink(row.diskPath).catch(() => undefined);

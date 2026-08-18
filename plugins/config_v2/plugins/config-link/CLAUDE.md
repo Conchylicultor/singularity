@@ -53,6 +53,9 @@ and the editor.
     - `apps-core/tabs.navigate`
     - `config_v2.useConfigRegistrations`
     - `config_v2/settings.configDetailRoute`
+    - `primitives/css/fill.Fill`
+    - `primitives/css/rigid.rigidClass`
+    - `primitives/css/spacing.Stack`
     - `primitives/css/text.SectionLabel`
     - `primitives/css/ui-kit.ControlSizeProvider`
     - `primitives/css/ui-kit.DropdownMenuContent`
