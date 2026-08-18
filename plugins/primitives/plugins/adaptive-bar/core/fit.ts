@@ -9,6 +9,8 @@
  * (§ "Measurement and fit").
  */
 
+import { isBarred, type BlockedRungs } from "./blocked-rungs";
+
 /** One item's participation in the row. */
 export interface FitItem {
   id: string;
@@ -46,8 +48,12 @@ export interface FitInput {
   triggerPx: number;
   hysteresisPx: number;
   items: readonly FitItem[];
-  /** Rungs an item may not re-enter until the row is wider. */
-  blocked?: ReadonlyMap<string, { rung: number; atWidth: number }>;
+  /**
+   * Rungs an item may not re-enter until the row is wider — H2. The rule (per
+   * rung, widest width wins, and a rejection at one rung implies one at every
+   * wider rung) lives in `./blocked-rungs`.
+   */
+  blocked?: BlockedRungs;
 }
 
 export interface FitResult {
@@ -253,15 +259,12 @@ export function assign(input: FitInput): FitResult {
 
   const rungCount = (p: Placed): number => p.item.inlineWidths.length;
 
-  const isBlocked = (p: Placed, rung: number): boolean => {
-    const bar = blocked?.get(p.item.id);
-    if (bar === undefined || bar.rung !== rung) return false;
-    // H2: the rung is barred until the row is genuinely wider than it was when
-    // the promotion into it was measured and failed. `>` not `>=`, and the
-    // hysteresis on top, so re-entry is never triggered by the same width that
-    // just rejected it.
-    return !(available > bar.atWidth + hysteresisPx);
-  };
+  // H2 in one line: the ledger owns the rule, including the monotone
+  // implication that makes a bar on a narrow rung also a bar on every wider
+  // one. See `./blocked-rungs`.
+  const isBlocked = (p: Placed, rung: number): boolean =>
+    blocked !== undefined &&
+    isBarred(blocked, p.item.id, rung, available, hysteresisPx);
 
   /** The next rung at or after `from` that H2 allows, or `null` if none. */
   const nextAllowedFrom = (p: Placed, from: number): number | null => {

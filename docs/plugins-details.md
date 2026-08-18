@@ -19720,6 +19720,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `reports/adaptive-bar`
       - Core:
         - Exports (types):
+          - `BlockedRungs`
           - `ConvergenceEvidence`
           - `DockMove`
           - `FitInput`
@@ -19738,11 +19739,14 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `WriteResult`
         - Exports (values):
           - `assign`
+          - `barRung`
           - `describeEvidence`
           - `dropItem`
+          - `emptyBlockedRungs`
           - `emptyWidthCache`
           - `estimate`
           - `inlineWidthsFor`
+          - `isBarred`
           - `isShifted`
           - `overflowPx`
           - `passBudget`
@@ -19752,6 +19756,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `recordMoves`
           - `staleOthers`
           - `summarizeRounds`
+          - `sweepBarred`
+          - `unbarItem`
           - `widthKey`
           - `widthKeyItemId`
           - `write`

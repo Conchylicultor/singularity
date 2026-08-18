@@ -45,9 +45,14 @@ says "these live behind a `⋯`". `overflow` is `"panel"` (default) | `"scroll"`
 > `slot-render` cell (and any wrapper the host adds inside it) a growing one.
 
 This is a contract, not a styling preference. The bar declares itself
-`min-w-0 flex-1`, so `barRoot.getBoundingClientRect().width` **is** the available
-width — no ancestor walk, no mutate-reflow-restore, no forced style
-recalculation per competing sibling. The primitive it replaces
+`min-w-0 flex-1`, so `barRoot.getBoundingClientRect().width` **is** the width it
+was given — no ancestor walk, no mutate-reflow-restore, no forced style
+recalculation per competing sibling. The fit's budget is that minus the root's
+own padding and border (`readRowMetrics`'s `insetPx`), because the occupants are
+laid out in the content box and `measureRowOverflow` judges them against that
+same box; a consumer `className` carrying padding is all it takes to make the two
+differ, so do not simplify the subtraction away. Pinned in
+`web/__tests__/row-inset.test.tsx`. The primitive it replaces
 (`responsive-overflow`) needed all of that machinery only because it chose a
 content-sized container and then had to go looking for the width it had given
 away.
@@ -333,6 +338,7 @@ No DOM, no React, so it is exercisable without a layout engine.
 |---|---|
 | `core/fit.ts` | which rung each item renders at, and who leaves the row |
 | `core/width-cache.ts` | what each item measured at each rung, and how much we trust it |
+| `core/blocked-rungs.ts` | which rungs a failed promotion barred, and until what width |
 | `core/dock-plan.ts` | the fewest DOM moves that turn one dock order into another |
 
 ### The five rules worth knowing before you touch this
@@ -417,6 +423,33 @@ contributed action that simply never appears. Pinned in
 measured as not fitting: that rung is barred until the row is genuinely wider
 than the width that rejected it.
 
+Both halves of it are **scoped, not kept**. The evidence (what the last
+committed pass promoted into, and the width it decided at) lives in `Episode`
+beside the counters, and a premise shift discards it — the shift check runs on
+every deciding pass, so it covers `reconcile`'s early returns without
+enumerating them. The bar is stamped with the width the *promotion* was decided
+at, never the current pass's.
+
+The ledger (`core/blocked-rungs.ts`) keeps the widest width per (item, rung), and
+a rung is barred when any rung *at or narrower than it* was rejected at a width
+the row has not beaten: inline widths are monotone, so a rejection at a narrow
+rung is one at every wider rung. An exact `rung === r` match would let the fit
+promote straight past the form it just learned does not fit. Three things end a
+bar:
+
+| when | why |
+|---|---|
+| the occupant's width moved at the rung it was sitting at (`staleOthers`) | the rejection was about content that has since changed size |
+| its ladder's rungs were re-declared, or it unregistered | a rung index only means anything against a ladder |
+| the row is genuinely wider than a recorded rejection (once per pass) | the bar's own terms are "until the row is wider" — met, so discharged rather than dormant |
+
+The ladder clause is gated on the rungs *really* changing, and the gate is
+load-bearing: an item's channel carries its assigned form, so its declaration
+effect re-runs on every rung change, and an ungated invalidation would drop the
+bar one passive effect after the pass that installed it — reopening the
+promote-measure-demote cycle, one converged episode at a time, with no counter
+able to see it.
+
 ### What the driver does with `fits` and `usedEstimate`
 
 Not a lot, deliberately, and the two are never collapsed into one boolean.
@@ -500,6 +533,7 @@ inline it.
     - `reports/adaptive-bar`
 - Core:
   - Exports (types):
+    - `BlockedRungs`
     - `ConvergenceEvidence`
     - `DockMove`
     - `FitInput`
@@ -518,11 +552,14 @@ inline it.
     - `WriteResult`
   - Exports (values):
     - `assign`
+    - `barRung`
     - `describeEvidence`
     - `dropItem`
+    - `emptyBlockedRungs`
     - `emptyWidthCache`
     - `estimate`
     - `inlineWidthsFor`
+    - `isBarred`
     - `isShifted`
     - `overflowPx`
     - `passBudget`
@@ -532,6 +569,8 @@ inline it.
     - `recordMoves`
     - `staleOthers`
     - `summarizeRounds`
+    - `sweepBarred`
+    - `unbarItem`
     - `widthKey`
     - `widthKeyItemId`
     - `write`

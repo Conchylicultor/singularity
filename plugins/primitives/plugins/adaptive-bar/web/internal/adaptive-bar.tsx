@@ -11,8 +11,10 @@ import {
 import { MdMoreHoriz } from "react-icons/md";
 import {
   assign,
+  barRung,
   describeEvidence,
   dropItem,
+  emptyBlockedRungs,
   emptyWidthCache,
   estimate,
   inlineWidthsFor,
@@ -24,7 +26,10 @@ import {
   recordMoves,
   staleOthers,
   summarizeRounds,
+  sweepBarred,
+  unbarItem,
   write,
+  type BlockedRungs,
   type FitItem,
   type MovedWidth,
   type Round,
@@ -114,9 +119,15 @@ export interface AdaptiveBarProps {
 
 /**
  * The bar DEFINES itself as the grow cell of its row, and that is a contract,
- * not a style choice: `barRoot.getBoundingClientRect().width` IS the available
- * width, with no ancestor-walking, no mutate-reflow-restore, and no forced
- * recalculation per sibling. A primitive that took a content-sized container
+ * not a style choice: `barRoot.getBoundingClientRect().width` is the width the
+ * bar was GIVEN, read with no ancestor-walking, no mutate-reflow-restore, and no
+ * forced recalculation per sibling. (The fit's budget is that minus the root's
+ * own padding and border — `readRowMetrics`'s `insetPx` — because the occupants
+ * are laid out in the content box and `measureRowOverflow` judges them against
+ * that same box. Do not "simplify" the subtraction away: it is the difference
+ * between a budget and a budget for room that does not exist, and a consumer
+ * `className` carrying padding is all it takes. Pinned in
+ * `web/__tests__/row-inset.test.tsx`.) A primitive that took a content-sized container
  * would have to go looking for the width; this one is handed it by the layout
  * engine.
  *
@@ -308,6 +319,24 @@ interface Episode {
    * what makes a transient fault cost the user their whole toolbar.
    */
   best: { placement: Placement; available: number } | null;
+  /**
+   * Rungs the last committed pass promoted INTO, and the width it decided at —
+   * H2's evidence.
+   *
+   * Episode state rather than a free ref, because it is scoped to exactly what
+   * the counters and the premise are: this row, this question. A promotion is
+   * evidence only against the width, the item set and the widths it was decided
+   * at, and {@link Episode} is where "a caller able to reset half of it" has no
+   * spelling. In its own ref it survived every early return in `reconcile` — a
+   * collapsed pane, a surrendered bar, a zero-width row — and the next pass then
+   * barred a rung at a width that had never rejected anything.
+   *
+   * It carries its own width for the same reason. Where the premise held, the
+   * recorded width and the current pass's `available` are the same number by
+   * construction; where a future early return is added they are not, and this is
+   * the spelling in which the wrong one cannot be named.
+   */
+  promoted: Map<string, { rung: number; atWidth: number }>;
 }
 
 function newEpisode(): Episode {
@@ -319,6 +348,7 @@ function newEpisode(): Episode {
     trace: [],
     moved: new Map(),
     best: null,
+    promoted: new Map(),
   };
 }
 
@@ -433,11 +463,7 @@ function AdaptiveBarShell({
 
   const cacheRef = useRef<WidthCache>(emptyWidthCache);
   /** H2: rungs a committed promotion measured as not fitting, barred until the row is wider. */
-  const blockedRef = useRef(
-    new Map<string, { rung: number; atWidth: number }>(),
-  );
-  /** Rungs we promoted INTO on the last committed pass — H2's evidence. */
-  const promotedRef = useRef(new Map<string, number>());
+  const blockedRef = useRef<BlockedRungs>(emptyBlockedRungs);
   const episodeRef = useRef<Episode>(newEpisode());
   const triggerWidthRef = useRef<number | null>(null);
   /** The slack probe costs a forced reflow, so it runs once per bar. */
@@ -467,6 +493,7 @@ function AdaptiveBarShell({
           id,
           container,
           ladder: entriesRef.current.get(id)?.ladder ?? DEFAULT_LADDER,
+          declaredRungs: null,
           holds: 0,
           popupOpen: false,
           pointerPinned: false,
@@ -482,8 +509,8 @@ function AdaptiveBarShell({
           // anything — unlike a rung the item merely is not sitting at, which is
           // deliberately kept.
           cacheRef.current = dropItem(cacheRef.current, id);
-          blockedRef.current.delete(id);
-          promotedRef.current.delete(id);
+          blockedRef.current = unbarItem(blockedRef.current, id);
+          episodeRef.current.promoted.delete(id);
           putLadder(id, null);
           bump();
         };
@@ -495,6 +522,25 @@ function AdaptiveBarShell({
         // A ladder change can change the rung count, which changes what the
         // cached widths mean — but only the widths for rungs that still exist
         // survive, and `inlineWidthsFor` reads exactly that many.
+        //
+        // H2's bookkeeping is not so lucky, and both halves of it go: a rung
+        // index only means anything against a ladder, so a bar recorded against
+        // the old one names a different form entirely — worse than stale.
+        //
+        // Gated on the rungs REALLY changing, and that gate is load-bearing
+        // rather than an optimisation. This runs again on every FORM change (the
+        // item's channel carries its assigned form, so its declaration effect
+        // re-runs whenever the bar moves it a rung) — so an ungated invalidation
+        // would tear H2's bar down one passive effect after the pass that
+        // installed it, and the promote-measure-demote cycle H2 exists to stop
+        // would run forever, one converged episode at a time, with no counter
+        // able to see it.
+        const rungs = inlineRungsOf(ladder).join(",");
+        if (entry.declaredRungs !== rungs) {
+          entry.declaredRungs = rungs;
+          blockedRef.current = unbarItem(blockedRef.current, id);
+          episodeRef.current.promoted.delete(id);
+        }
         putLadder(id, ladder);
         bump();
         return () => {
@@ -753,6 +799,11 @@ function AdaptiveBarShell({
         // rung 1 is only measurable at rung 1, so dropping the rest would strand
         // it there forever.
         cacheRef.current = staleOthers(cacheRef.current, id, rung);
+        // Its bars go outright, though. A bar says "this rung did not fit", and
+        // that was a statement about the content this occupant was rendering at
+        // the time — content whose size has just moved, so the rejection is
+        // about something that no longer exists.
+        blockedRef.current = unbarItem(blockedRef.current, id);
       }
       const result = write(cacheRef.current, {
         id,
@@ -798,10 +849,29 @@ function AdaptiveBarShell({
         episode.rounds = 0;
         episode.shifts += 1;
         recordMoves(episode.moved, shift.moved);
+        // And the promotion record goes with them. A promotion is evidence only
+        // against the width, the item set and the widths it was decided at —
+        // exactly what a shift says has moved. This is also the half that covers
+        // every early return above without enumerating any of them: a pane that
+        // collapses and reopens wider reads as a resize here, so the record from
+        // before the collapse can never bar a rung at the new width.
+        episode.promoted.clear();
       }
     }
 
     // ── 3. Decide ─────────────────────────────────────────────────────────
+    // A bar's own terms are "until the row is genuinely wider than the width
+    // that rejected this rung". Once it is, the bar is DISCHARGED rather than
+    // dormant — so it is dropped here, at the one moment the row's width is
+    // known, instead of being left to be re-evaluated months later against a row
+    // that has been re-laid-out and re-measured since. Not memory hygiene: the
+    // ledger is bounded by items × rungs either way.
+    blockedRef.current = sweepBarred(
+      blockedRef.current,
+      available,
+      HYSTERESIS_PX,
+    );
+
     const items: FitItem[] = order.map(({ id, entry }) => {
       const rungCount = inlineRungsOf(entry.ladder).length;
       return {
@@ -837,11 +907,21 @@ function AdaptiveBarShell({
     // row is genuinely wider than the width that rejected it — the failed
     // promotion measured the true width, so this costs at most one round trip
     // per (item, rung) per content change, not one per resize.
-    for (const [id, promotedRung] of promotedRef.current) {
+    //
+    // Stamped with the width the PROMOTION was decided at, never this pass's
+    // `available`. The two agree whenever the premise held, and where they do
+    // not, the promotion's own width is the only one that ever rejected
+    // anything.
+    for (const [id, promotion] of episode.promoted) {
       const now = result.placement.get(id);
       if (now === undefined) continue;
-      if (now === null || now > promotedRung) {
-        blockedRef.current.set(id, { rung: promotedRung, atWidth: available });
+      if (now === null || now > promotion.rung) {
+        blockedRef.current = barRung(
+          blockedRef.current,
+          id,
+          promotion.rung,
+          promotion.atWidth,
+        );
       }
     }
 
@@ -858,7 +938,6 @@ function AdaptiveBarShell({
       // belong to a search that has finished, and carrying them into the next
       // one would blame it for rounds it never ran.
       startEpisode(episode);
-      promotedRef.current.clear();
 
       // The row-overflow guard belongs HERE, and only here.
       //
@@ -949,12 +1028,15 @@ function AdaptiveBarShell({
       return;
     }
 
-    promotedRef.current.clear();
+    // The evidence for the NEXT pass: what this one is about to commit as a
+    // promotion, and the width it decided that at.
+    episode.promoted.clear();
     for (const { id } of order) {
       const from = rungOf(placement, id);
       const to = result.placement.get(id);
       if (to === undefined || to === null) continue;
-      if (from === null || to < from) promotedRef.current.set(id, to);
+      if (from === null || to < from)
+        episode.promoted.set(id, { rung: to, atWidth: available });
     }
     setPlacement(result.placement);
   }, [
@@ -1307,6 +1389,9 @@ function startEpisode(episode: Episode): void {
   episode.trace.length = 0;
   episode.moved.clear();
   episode.best = null;
+  // The promotion record goes too: it is H2's evidence about the search that
+  // has just finished, and the next one has not promoted anything yet.
+  episode.promoted.clear();
 }
 
 /** A placement as one comparable string — for spotting a repeat, not for equality. */

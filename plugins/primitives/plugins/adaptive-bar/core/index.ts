@@ -1,6 +1,15 @@
 export type { FitItem, FitInput, FitResult } from "./fit";
 export { assign, passBudget } from "./fit";
 
+export type { BlockedRungs } from "./blocked-rungs";
+export {
+  barRung,
+  emptyBlockedRungs,
+  isBarred,
+  sweepBarred,
+  unbarItem,
+} from "./blocked-rungs";
+
 export type {
   ConvergenceEvidence,
   MovedWidth,

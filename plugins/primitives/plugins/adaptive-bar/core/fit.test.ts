@@ -8,6 +8,7 @@
  */
 
 import { describe, expect, test } from "bun:test";
+import { barRung, emptyBlockedRungs } from "./blocked-rungs";
 import { assign, passBudget, type FitInput, type FitItem } from "./fit";
 
 function item(over: Partial<FitItem> & { id: string }): FitItem {
@@ -288,7 +289,7 @@ describe("assign — H2, a rung that failed once is barred until the row grows",
       fit({
         available,
         hysteresisPx: 8,
-        blocked: new Map([["a", { rung: 0, atWidth: 200 }]]),
+        blocked: barRung(emptyBlockedRungs, "a", 0, 200),
         items: [
           item({
             id: "a",
@@ -312,7 +313,7 @@ describe("assign — H2, a rung that failed once is barred until the row grows",
     const r = assign(
       fit({
         available: 30,
-        blocked: new Map([["a", { rung: 1, atWidth: 10_000 }]]),
+        blocked: barRung(emptyBlockedRungs, "a", 1, 10_000),
         items: [
           item({
             id: "a",
@@ -326,11 +327,33 @@ describe("assign — H2, a rung that failed once is barred until the row grows",
     expect(Object.fromEntries(r.placement)).toEqual({ a: 2 });
   });
 
+  test("barring a narrow rung bars the wider ones too, at any width", () => {
+    // The monotone implication, at the level that consumes it. Rung 0 is wider
+    // than rung 1, so a rung-1 rejection is a rung-0 rejection — and an exact
+    // `rung === r` match would seat the item at rung 0, promoting it straight
+    // past the form the row just learned does not fit.
+    const r = assign(
+      fit({
+        available: 1000,
+        blocked: barRung(emptyBlockedRungs, "a", 1, 10_000),
+        items: [
+          item({
+            id: "a",
+            inlineWidths: [100, 60, 20],
+            evictable: false,
+            currentRung: 2,
+          }),
+        ],
+      }),
+    );
+    expect(Object.fromEntries(r.placement)).toEqual({ a: 2 });
+  });
+
   test("a barred sole rung never unmounts a mandatory control", () => {
     const r = assign(
       fit({
         available: 1000,
-        blocked: new Map([["a", { rung: 0, atWidth: 10_000 }]]),
+        blocked: barRung(emptyBlockedRungs, "a", 0, 10_000),
         items: [item({ id: "a", inlineWidths: [100], evictable: false })],
       }),
     );

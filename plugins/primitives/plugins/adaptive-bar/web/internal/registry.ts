@@ -19,6 +19,23 @@ export interface BarItemEntry {
   /** The item's one stable portal target, created once and owned for its whole life. */
   readonly container: HTMLDivElement;
   ladder: Required<ShrinkLadder>;
+  /**
+   * The inline rungs this item last DECLARED, as one comparable string — what
+   * a rung index means for this item.
+   *
+   * Distinct from {@link BarItemEntry.ladder}, and it has to be: a declaration's
+   * own release resets `ladder` to the default, and that release runs on every
+   * FORM change, because the item's channel identity carries its assigned form.
+   * So `ladder` cannot answer "did the ladder actually change?" — it reads as
+   * changed every time the bar moves the item a rung.
+   *
+   * Anything invalidated by a ladder change (H2's bars, whose rung indices only
+   * mean anything against one ladder) has to key on this instead. Keyed on
+   * inline rungs alone rather than the whole ladder, because that is exactly
+   * what a rung index names; `yields` changes the demotion ORDER, not what any
+   * index means.
+   */
+  declaredRungs: string | null;
   /** Live `useHoldShrink` holds — what survives the pointer release (a fling's coast). */
   holds: number;
   /** A popover of this item's own is open, so its top-layer content must not move. */
