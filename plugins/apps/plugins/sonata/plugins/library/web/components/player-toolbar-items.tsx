@@ -1,7 +1,13 @@
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
+import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
+import { SectionLabel } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { usePaneStore } from "@plugins/primitives/plugins/pane/web";
-import { Sonata, useSonata } from "@plugins/apps/plugins/sonata/plugins/shell/web";
+import {
+  Sonata,
+  useSonata,
+} from "@plugins/apps/plugins/sonata/plugins/shell/web";
 import { Picker } from "./display-picker";
 
 /**
@@ -31,19 +37,25 @@ export function BackToLibrary() {
 export function DisplayPicker() {
   const { effectiveDisplayId, setActiveDisplay } = useSonata();
   const displays = Sonata.Display.useContributions();
-  // `w-full` gives the row a defined width to overflow against; below it, the
-  // chips collapse into the ⋯ menu (the active display is pinned inline).
+  // `<Fill>` is what hands the picker room: the contribution declares
+  // `fill: true`, so its slot cell grows, and `Fill` (`min-w-0 flex-1`) relays
+  // that grow — and the shrink — down to the row the bar decides against. The
+  // eyebrow stays rigid so the bar takes all of the slack.
   return (
-    <Stack direction="row" align="center" gap="sm" className="w-full">
-      <span className="text-2xs font-semibold uppercase tracking-wide text-muted-foreground">
-        Display
-      </span>
-      <Picker
-        items={displays.map((d) => ({ id: d.id, label: d.label, icon: d.icon }))}
-        activeId={effectiveDisplayId}
-        onSelect={setActiveDisplay}
-        empty="No displays"
-      />
-    </Stack>
+    <Fill>
+      <Stack direction="row" align="center" gap="sm">
+        <SectionLabel className={rigidClass()}>Display</SectionLabel>
+        <Picker
+          items={displays.map((d) => ({
+            id: d.id,
+            label: d.label,
+            icon: d.icon,
+          }))}
+          activeId={effectiveDisplayId}
+          onSelect={setActiveDisplay}
+          empty="No displays"
+        />
+      </Stack>
+    </Fill>
   );
 }

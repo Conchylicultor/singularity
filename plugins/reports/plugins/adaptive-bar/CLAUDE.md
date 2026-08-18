@@ -26,7 +26,11 @@ from that. Five of them, discriminated by `fault` in the payload:
   whenever the row gets narrower than the width it last verified at (bounded
   by a small probe budget), so this can be reported long after the bar's first
   laid-out pass, naming a host that broke later rather than one that was wrong
-  from mount.
+  from mount. Since 2026-08-18 a bar sitting in a `display: none` subtree — an
+  unfocused tab, a minimized window, a collapsed miller column — no longer
+  files: such a row generates no box, so its 0px is the absence of a width
+  rather than a width its host gave it, and rows filed before that date are
+  largely those false positives.
 - **`row-overflow`** — on a **converged** pass (rendered *is* what the fit
   decided) the fit blessed the row as fitting, and the union of the occupants'
   own boxes still sticks out of the bar's own content box on one side or the

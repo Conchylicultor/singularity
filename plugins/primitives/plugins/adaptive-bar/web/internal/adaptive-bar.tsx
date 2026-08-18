@@ -76,7 +76,7 @@ import {
   WIDTH_EPSILON_PX,
 } from "./diagnostics";
 import { DEFAULT_LADDER, formFor, inlineRungsOf, yieldRankOf } from "./ladder";
-import { readRowMetrics, useLayoutMeasured, useMeasureWidth } from "./measure";
+import { readRowMetrics, useLayoutMeasured, useMeasureBundle } from "./measure";
 import { OverflowPanel } from "./overflow-panel";
 import {
   BarFormsContext,
@@ -406,7 +406,7 @@ function AdaptiveBarShell({
   className?: string;
   children: ReactNode;
 }): ReactElement {
-  const measure = useMeasureWidth();
+  const { measure, isRendered } = useMeasureBundle();
   const layoutMeasured = useLayoutMeasured();
   const editMode = useEditMode();
 
@@ -740,18 +740,33 @@ function AdaptiveBarShell({
     // a pane being dragged, a second reading is a second drag step.
     const rowPx = measure(root);
     const available = rowPx - metrics.insetPx;
-    // Zero available width is "not laid out yet" — a collapsed pane, a
-    // display:none ancestor, a jsdom test with no measurement seam. Deciding
-    // from it would evict the whole row and then put it back, so we decide
-    // nothing and wait for a width.
+    // Zero available width is not a width. Deciding from it would evict the
+    // whole row and then put it back, so we decide nothing and wait for one.
     //
-    // That reading is only honest while the row still holds everything it was
-    // given. With occupants already OUT of it, a zero can be the bar's own
-    // doing — an empty row measures empty — and then waiting is waiting for a
-    // width that only re-admitting them could produce. That is the one
-    // absorbing state this primitive can reach, so it is a fault, not a pause.
+    // With occupants already OUT of the row, a zero CAN be the bar's own doing —
+    // an empty row measures empty — and then waiting is waiting for a width that
+    // only re-admitting them could produce. That is the one absorbing state this
+    // primitive can reach, so it is a fault rather than a pause.
+    //
+    // But only if the row generates a box at all. An element in a `display:
+    // none` subtree was never given a width: reading 0 off it is not a reading,
+    // it is the ABSENCE of one, and this app keeps whole surfaces mounted-but-
+    // not-rendered as a matter of course — an unfocused tab
+    // (`apps-core/plugins/surface/web/components/surface-body.tsx`), a minimized
+    // floating window (`apps-core/plugins/surface/plugins/floating/…`), a
+    // collapsed miller column (`layouts/plugins/miller/web/components/column.tsx`).
+    // That is a first-class state, not a broken host. Treating its 0 as a width
+    // is an absorbable failure value (root `CLAUDE.md`), and the act it triggers
+    // — `degraded` — latches for the life of the mount, so the surface pays for
+    // the mistake until it remounts. The quiet return keeps whatever placement
+    // the bar last committed, and the bar decides again from a real width the
+    // moment it is shown.
+    //
+    // `isRendered` costs nothing: it is asked only on the path that already read
+    // zero AND has evictions, after `measure(root)` flushed layout — so it
+    // forces no reflow of its own.
     if (available <= 0) {
-      if (evicted.length > 0) {
+      if (evicted.length > 0 && isRendered(root)) {
         setDegraded(true);
         failLoudly({
           kind: "no-slack",
@@ -759,7 +774,7 @@ function AdaptiveBarShell({
           overflow,
           ...originOf(root),
           message:
-            "the row measured 0px wide while occupants were relocated out of it, so the only width the bar can read is the one its own evictions produced. Re-admitted everything.",
+            "the row measured 0px wide while occupants were relocated out of it, and it does generate a box — so this is a width its host really gave it: either the ratchet's terminal state, where the only width left to read is the one the bar's own evictions produced, or a row so over-full that its flex-1 cell (base size 0) resolved to nothing. Re-admitted everything.",
         });
       }
       return;
@@ -1203,6 +1218,7 @@ function AdaptiveBarShell({
     overflow,
     label,
     measure,
+    isRendered,
     layoutMeasured,
   ]);
 

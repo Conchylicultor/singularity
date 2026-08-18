@@ -2994,9 +2994,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/fill.Fill`
               - `primitives/css/grid.Grid`
               - `primitives/css/line.Line`
+              - `primitives/css/rigid.rigidClass`
               - `primitives/css/scroll.Scroll`
               - `primitives/css/spacing.Inset`
               - `primitives/css/spacing.Stack`
+              - `primitives/css/text.SectionLabel`
               - `primitives/css/text.Text`
               - `primitives/css/ui-kit.Button`
               - `primitives/css/ui-kit.cn`
@@ -19887,6 +19889,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `AdaptiveBarItemProps`
           - `AdaptiveBarOverflow`
           - `AdaptiveBarProps`
+          - `IsRendered`
           - `MeasureWidth`
         - Exports (values):
           - `AdaptiveBar`
@@ -21483,6 +21486,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/agent-manager/welcome`
               - `apps/browser/shell`
               - `apps/pages/welcome/recent-pages`
+              - `apps/sonata/library`
               - `apps/sonata/piano-roll`
               - `apps/sonata/sources/midi`
               - `apps/sonata/track-mixer`

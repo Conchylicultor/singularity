@@ -280,3 +280,131 @@ describe("a premise verified per width rather than once per mount", () => {
     expect(faults).toEqual([]);
   });
 });
+
+/**
+ * A row that generates NO BOX has no width to have been given.
+ *
+ * This app keeps whole surfaces mounted but not rendered — an unfocused tab, a
+ * minimized floating window, a collapsed miller column are all `display: none`
+ * subtrees — and everything inside one measures 0px. A bar that had already
+ * evicted something while it was visible therefore read `available <= 0` with
+ * occupants parked outside the row, which is branch A's exact shape, and filed
+ * a fault against a host that had done nothing wrong. It was live in production
+ * for the conversation prompt bar.
+ *
+ * The 0 is not a width, it is the ABSENCE of one, and the act it triggered
+ * (`degraded`) latches for the life of the mount: the surface loses the
+ * relocation behaviour this primitive exists to provide until it remounts. So
+ * the distinction the bar now draws is between "no box" and "a box measuring
+ * nothing", asked through the measurement seam — jsdom returns `[]` from
+ * `getClientRects()` for every element, so a direct call would make this branch
+ * permanently dead here.
+ */
+
+/** What the host hands the row while it is on screen. */
+let hostPx = 0;
+/** Does the bar's root generate a box — i.e. is the surface holding it shown? */
+let hostRendered = true;
+/** Reads taken against an item container: the measurement loop's signature. */
+let itemMeasures = 0;
+let hiddenFaults: AdaptiveBarFault[] = [];
+
+function measureHiddenHost(el: Element): number {
+  if (el.hasAttribute("data-adaptive-bar-trigger"))
+    return hostRendered ? 30 : 0;
+  if (el.hasAttribute("data-adaptive-bar-item")) {
+    itemMeasures += 1;
+    if (!hostRendered) return 0;
+    return (el as HTMLElement).hidden ? 0 : ITEM_PX;
+  }
+  // A `display: none` ancestor zeroes every rect underneath it, root included.
+  return hostRendered ? hostPx : 0;
+}
+
+function HiddenHostRow(): ReactElement {
+  return (
+    // Fresh arrows every render, so a re-render moves the bundle's deps and the
+    // pass re-runs — the stand-in for the ResizeObserver, which in production is
+    // exactly what delivers the 0×0 observation on the transition to
+    // `display: none` and cannot fire in jsdom.
+    <AdaptiveBarMeasure
+      measure={(el) => measureHiddenHost(el)}
+      isRendered={() => hostRendered}
+    >
+      <AdaptiveBar gap="xs" label="Actions" overflow="clip">
+        {["alpha", "beta", "gamma"].map((id) => (
+          <AdaptiveBar.Item key={id} id={id}>
+            <Probe id={id} />
+          </AdaptiveBar.Item>
+        ))}
+      </AdaptiveBar>
+    </AdaptiveBarMeasure>
+  );
+}
+
+describe("a row that generates no box", () => {
+  beforeEach(() => {
+    hostPx = CAP_PX;
+    hostRendered = true;
+    itemMeasures = 0;
+    hiddenFaults = [];
+    // The production path is the one under test: in dev `failLoudly` throws,
+    // which unmounts the tree and hides what the bar does next.
+    vi.stubEnv("DEV", false);
+    adaptiveBarReportSink.register((fault) => hiddenFaults.push(fault));
+  });
+
+  it("stays silent while its host is hidden, and still overflows when shown again", () => {
+    const { rerender } = render(<HiddenHostRow />);
+
+    // Healthy and overflowing: 250px of row, 100px each, so the third is
+    // clipped out of it. This is what makes the hide interesting — with
+    // nothing evicted the branch is never reached.
+    expect(hiddenFaults).toEqual([]);
+    expect(inlineCount()).toBe(2);
+
+    // The tab loses focus: `display: none`, every rect zero, no box anywhere.
+    hostRendered = false;
+    rerender(<HiddenHostRow />);
+    expect(hiddenFaults).toEqual([]);
+
+    // Shown again at the width it had. The load-bearing assertion is this one
+    // rather than the silence above: `degraded` latches for the life of the
+    // mount, so a fix that merely suppressed the report while still calling
+    // `setDegraded` would pass the fault count and fail here — the bar would be
+    // holding all three inline for ever.
+    hostRendered = true;
+    rerender(<HiddenHostRow />);
+    expect(hiddenFaults).toEqual([]);
+    expect(inlineCount()).toBe(2);
+  });
+
+  it("still faults when a RENDERED row measures nothing with occupants parked outside it", () => {
+    const { rerender } = render(<HiddenHostRow />);
+    expect(inlineCount()).toBe(2);
+
+    // A box that really is zero wide: the ratchet's terminal state, or a row so
+    // over-full that its flex-1 cell (base size 0) resolved to nothing. Either
+    // way the host gave the bar that width, and the bar cannot decide from it.
+    hostPx = 0;
+    rerender(<HiddenHostRow />);
+
+    expect(hiddenFaults.map((f) => f.kind)).toEqual(["no-slack"]);
+    // The ceiling: everything back in the row, CSS clips. The negative control
+    // that stops a later "simplification" turning the branch off entirely.
+    expect(inlineCount()).toBe(3);
+  });
+
+  it("measures nothing at all while the host is hidden", () => {
+    render(<HiddenHostRow />);
+
+    hostRendered = false;
+    itemMeasures = 0;
+    render(<HiddenHostRow />);
+
+    // The early return sits ABOVE the measurement loop, so a hidden pass costs
+    // one root read and stops. Reading the occupants would be reading zeros
+    // into the width cache, where they are sticky.
+    expect(itemMeasures).toBe(0);
+  });
+});

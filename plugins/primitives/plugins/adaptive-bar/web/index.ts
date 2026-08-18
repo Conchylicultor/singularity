@@ -17,7 +17,11 @@ export {
   type AdaptiveBarFault,
   type AdaptiveBarFaultKind,
 } from "./internal/diagnostics";
-export { AdaptiveBarMeasure, type MeasureWidth } from "./internal/measure";
+export {
+  AdaptiveBarMeasure,
+  type MeasureWidth,
+  type IsRendered,
+} from "./internal/measure";
 
 export default {
   description:

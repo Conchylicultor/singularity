@@ -80,8 +80,22 @@ The four faults:
   `flex-grow` is `1` in the failing case (the bar sets it on itself), and a
   parent that shrink-wraps to its child can never be overshot by it — so the
   shape reads as healthy on every cheaper test. A row that measures 0px while
-  occupants are relocated out of it is the same fault: "not laid out yet" is
-  only honest while the row still holds everything it was given.
+  occupants are relocated out of it is the same fault — "not laid out yet" is
+  only honest while the row still holds everything it was given — but **only if
+  the row generates a box**. An element inside a `display: none` subtree
+  generates none, and this app keeps whole surfaces mounted-but-not-rendered
+  exactly that way in four places: an unfocused tab (`apps-core/surface`'s
+  `surface-body.tsx`), the keep-alive fallback body (`apps-core/tab-surface`), a
+  minimized or off-desktop floating window (`apps-core/surface/floating`), and a
+  collapsed miller column (`layouts/miller`). Such a row was never *given* a
+  width, so its 0 is not a reading at all — it is the absence of one, and the
+  predicate that tells the two apart is `getClientRects().length > 0`, asked
+  through the measurement seam (`isRendered`) and spelled exactly as
+  `measureRowOverflow` already spells it. `visibility: hidden` still faults:
+  layout is unchanged there, so the width is genuine. The distinction is not
+  pedantry — a 0 standing in for "there is no answer" is an absorbable failure
+  value (root `CLAUDE.md`), and this consumer's response to it latches
+  irreversibly.
 
   Asked **per width**, not once per mount: the premise is a property of the
   *host*, and a host changes under a mounted bar — a framing variant swaps, a
@@ -127,7 +141,12 @@ gated at all: it is a *differential* measurement taken through the measurement
 seam — two readings of the same row, one holding its occupants and one not — so
 two equal readings in jsdom say "the width does not follow the content", which
 is a true answer and the reason the jsdom suite can drive the guard
-deliberately (`web/__tests__/no-slack.test.tsx`).
+deliberately (`web/__tests__/no-slack.test.tsx`). Its 0px branch is drivable
+there for the same kind of reason: jsdom returns `[]` from `getClientRects()`
+for every element, so `AdaptiveBarMeasure` defaults `isRendered` to `() => true`
+— a supplied width IS a width something gave the row — and calling the DOM
+predicate directly instead of through the seam would have made that branch dead
+code in the one suite that can reach it.
 
 Every fault carries **who it is about**: `label` is the name the consumer gave
 the bar, and `origin` is the innermost UI-context node above the bar's root
@@ -347,6 +366,11 @@ itself triggers the pass, so "deferred forever" is unrepresentable.
   any other control density. The no-slack probe is the same hide-measure-restore
   discipline, and costs one reflow each time the row narrows past the width its
   premise was last verified at — up to `MAX_SLACK_PROBES` of them per bar.
+- **`degraded` latches per mount.** Nothing clears it but a remount, so a false
+  `no-slack` costs that surface the whole relocation behaviour until it is torn
+  down and rebuilt — which is why the 0px branch is held to a higher standard
+  than the others and asks whether the row generates a box before it accuses
+  anyone.
 - **`overflow="clip"` can silently drop a widget.** Kept because
   prompt-templates needs it and has a second route to the content. If it starts
   papering over layout bugs, the fix is a lint rule demanding a named reason, not
@@ -604,6 +628,7 @@ rendered.
     - `AdaptiveBarItemProps`
     - `AdaptiveBarOverflow`
     - `AdaptiveBarProps`
+    - `IsRendered`
     - `MeasureWidth`
   - Exports (values):
     - `AdaptiveBar`

@@ -1,6 +1,7 @@
 import {
   createContext,
   useContext,
+  useMemo,
   type ReactElement,
   type ReactNode,
 } from "react";
@@ -18,6 +19,56 @@ export type MeasureWidth = (el: Element) => number;
 const domMeasureWidth: MeasureWidth = (el) => el.getBoundingClientRect().width;
 
 /**
+ * Does this element generate a box at all?
+ *
+ * NOT "is it visible", and the difference is the whole point. An element in a
+ * `display: none` subtree generates no boxes, so it was never given a width and
+ * there is no reading to have — which is a different fact from a rendered box
+ * that measures zero, and the two are what the `no-slack` 0px branch has to
+ * tell apart.
+ *
+ * `getClientRects()` because it is already this file's neighbour's spelling for
+ * the same question: `measureRowOverflow` in `adaptive-bar.tsx` filters out
+ * elements generating NO boxes with the identical predicate, and a second
+ * spelling for one question is precisely the drift this primitive's docs spend
+ * paragraphs preventing. It also beats every alternative. `offsetParent` is an
+ * ancestor comparison the bar bans elsewhere and is `null` for the
+ * `fixed`-positioned solo placement. `isConnected` answers about the document,
+ * not about layout. `checkVisibility()` is newer than the WebKit `tauri/` ships
+ * and folds in `content-visibility`, whose skipped subtree still has a real
+ * width from its host.
+ *
+ * `visibility: hidden` deliberately still counts as rendered, and so still
+ * faults: it changes nothing about layout, so the width the row reads there is
+ * a width its host genuinely gave it.
+ */
+export type IsRendered = (el: Element) => boolean;
+
+const domIsRendered: IsRendered = (el) => el.getClientRects().length > 0;
+
+/** Everything the bar asks the layout engine, read for one decision. */
+export interface MeasureBundle {
+  measure: MeasureWidth;
+  isRendered: IsRendered;
+}
+
+/**
+ * The production bundle, frozen at module level so `useLayoutMeasured` can
+ * identify it by reference — the same trick as before, one level up.
+ */
+const DOM_MEASURE: MeasureBundle = {
+  measure: domMeasureWidth,
+  isRendered: domIsRendered,
+};
+
+/**
+ * Module level, NOT an inline default: the provider memoises its bundle on
+ * `[measure, isRendered]`, and a fresh `() => true` per render would move that
+ * dep on every render of every test that does not pass one.
+ */
+const alwaysRendered: IsRendered = () => true;
+
+/**
  * The measurement seam.
  *
  * There is one legitimate reason to replace it and it is not configurability:
@@ -31,10 +82,15 @@ const domMeasureWidth: MeasureWidth = (el) => el.getBoundingClientRect().width;
  * Nothing else may use this: a consumer that "adjusts" measurement is lying to
  * the layout engine about a number the layout engine owns.
  */
-const MeasureWidthContext = createContext<MeasureWidth>(domMeasureWidth);
+const MeasureContext = createContext<MeasureBundle>(DOM_MEASURE);
 
-export function useMeasureWidth(): MeasureWidth {
-  return useContext(MeasureWidthContext);
+/**
+ * One context read for both answers, because they are read at the same instant
+ * for the same decision — the argument {@link readRowMetrics} makes for reading
+ * gap and inset together.
+ */
+export function useMeasureBundle(): MeasureBundle {
+  return useContext(MeasureContext);
 }
 
 /**
@@ -48,21 +104,34 @@ export function useMeasureWidth(): MeasureWidth {
  * there would fail every test on a fact about jsdom rather than about the bar.
  */
 export function useLayoutMeasured(): boolean {
-  return useContext(MeasureWidthContext) === domMeasureWidth;
+  return useContext(MeasureContext) === DOM_MEASURE;
 }
 
-/** Test-only. See {@link MeasureWidth}. */
+/**
+ * Test-only. See {@link MeasureWidth}.
+ *
+ * `isRendered` defaults to `() => true` precisely so the `no-slack` 0px branch
+ * stays drivable from jsdom: jsdom returns `[]` from `getClientRects()` for
+ * every element, so the real predicate would answer "not rendered" everywhere
+ * and quietly make that branch dead code in the one suite that can reach it.
+ * A supplied width is by definition a width something gave the row, so a test
+ * that says nothing about rendered-ness means "rendered".
+ */
 export function AdaptiveBarMeasure({
   measure,
+  isRendered = alwaysRendered,
   children,
 }: {
   measure: MeasureWidth;
+  isRendered?: IsRendered;
   children: ReactNode;
 }): ReactElement {
+  const bundle = useMemo(
+    () => ({ measure, isRendered }),
+    [measure, isRendered],
+  );
   return (
-    <MeasureWidthContext.Provider value={measure}>
-      {children}
-    </MeasureWidthContext.Provider>
+    <MeasureContext.Provider value={bundle}>{children}</MeasureContext.Provider>
   );
 }
 
