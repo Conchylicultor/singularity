@@ -1,13 +1,13 @@
 import { existsSync, readFileSync, renameSync } from "node:fs";
 import { decrypt } from "./crypto";
-import { LEGACY_AUTH_BLOB, LEGACY_AUTH_KEY } from "./paths";
+import { legacyAuthBlob, legacyAuthKey } from "./paths";
 import { hasLocal, setLocal } from "./store";
 
 export const AUTH_TOKENS_NAMESPACE = "auth-tokens";
 export const AUTH_TOKENS_KEY = "blob-v1";
 
 /**
- * One-shot migration: read the legacy `~/.singularity/auth/tokens.json.enc`
+ * One-shot migration: read the legacy `~/.singularity/state/auth/tokens.json.enc`
  * blob with its own `.key`, write it into the secrets store under the
  * `auth-tokens` namespace, then rename both legacy files so they're recoverable
  * if something goes wrong. Idempotent (skips on subsequent boots).
@@ -15,7 +15,9 @@ export const AUTH_TOKENS_KEY = "blob-v1";
 export async function migrateLegacyAuthTokens(): Promise<
   "migrated" | "skipped" | "noop"
 > {
-  if (!existsSync(LEGACY_AUTH_BLOB) || !existsSync(LEGACY_AUTH_KEY)) {
+  const blobPath = legacyAuthBlob();
+  const keyFilePath = legacyAuthKey();
+  if (!existsSync(blobPath) || !existsSync(keyFilePath)) {
     return "noop";
   }
   if (hasLocal(AUTH_TOKENS_NAMESPACE, AUTH_TOKENS_KEY)) {
@@ -23,25 +25,30 @@ export async function migrateLegacyAuthTokens(): Promise<
     // or roll back if desired.
     return "skipped";
   }
-  const legacyKey = readFileSync(LEGACY_AUTH_KEY);
+  const legacyKey = readFileSync(keyFilePath);
   if (legacyKey.length !== 32) {
     throw new Error(
       `[secrets] legacy auth key has wrong length (${legacyKey.length} != 32); skipping migration`,
     );
   }
-  const plaintext = decrypt(readFileSync(LEGACY_AUTH_BLOB), legacyKey).toString(
-    "utf8",
-  );
-  const parsed = JSON.parse(plaintext) as { version?: unknown; providers?: unknown };
-  if (parsed.version !== 1 || typeof parsed.providers !== "object" || parsed.providers === null) {
+  const plaintext = decrypt(readFileSync(blobPath), legacyKey).toString("utf8");
+  const parsed = JSON.parse(plaintext) as {
+    version?: unknown;
+    providers?: unknown;
+  };
+  if (
+    parsed.version !== 1 ||
+    typeof parsed.providers !== "object" ||
+    parsed.providers === null
+  ) {
     throw new Error("[secrets] legacy auth blob has unexpected shape");
   }
   await setLocal(AUTH_TOKENS_NAMESPACE, AUTH_TOKENS_KEY, plaintext);
   const ts = Date.now();
   try {
-    renameSync(LEGACY_AUTH_BLOB, `${LEGACY_AUTH_BLOB}.migrated-${ts}`);
-    renameSync(LEGACY_AUTH_KEY, `${LEGACY_AUTH_KEY}.migrated-${ts}`);
-  // eslint-disable-next-line promise-safety/no-bare-catch
+    renameSync(blobPath, `${blobPath}.migrated-${ts}`);
+    renameSync(keyFilePath, `${keyFilePath}.migrated-${ts}`);
+    // eslint-disable-next-line promise-safety/no-bare-catch
   } catch (err) {
     console.warn(
       "[secrets] migration succeeded but failed to rename legacy files:",

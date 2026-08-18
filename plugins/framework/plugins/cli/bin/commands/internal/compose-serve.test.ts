@@ -35,21 +35,22 @@ function item(id: string, autoBuild: boolean) {
   };
 }
 
-// One fixture tree = one fake repo root + one fake ~/.singularity dir.
+// One fixture tree = one fake repo root + one fake user-config dir. The layout
+// under the user-config dir is the fixture's own choice: `readEffectiveConfigFromDisk`
+// is handed that directory already resolved, so the test never has to model
+// where the real one sits under the data root.
 function fixture(name: string) {
   const root = join(tmp, name, "repo");
-  const singularityDir = join(tmp, name, "singularity");
-  const worktreeName = "singularity";
+  const userConfigDir = join(tmp, name, "user-config");
   const gitDir = join(root, "config", HIER);
-  const userDir = join(singularityDir, "config", worktreeName, HIER);
+  const userDir = join(userConfigDir, HIER);
   const read = () =>
     readEffectiveConfigFromDisk(compositionsConfig, {
       root,
-      worktreeName,
-      singularityDir,
+      userConfigDir,
       hierarchyPath: HIER,
     });
-  return { root, singularityDir, gitDir, userDir, read };
+  return { root, userConfigDir, gitDir, userDir, read };
 }
 
 function writeLayer(

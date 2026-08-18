@@ -1,7 +1,6 @@
 import { readFileSync } from "node:fs";
-import { join } from "node:path";
 
-import { SINGULARITY_DIR } from "@plugins/infra/plugins/paths/core";
+import { dbConfigDir } from "../../data-dirs";
 
 export type DatabaseProvider = "embedded" | "system";
 
@@ -24,7 +23,7 @@ export interface DatabaseConfig {
   }>;
 }
 
-const CONFIG_PATH = join(SINGULARITY_DIR, "database.json");
+const CONFIG_PATH = dbConfigDir.file("database.json");
 
 const SYSTEM_PG_DEFAULTS: DatabaseConfig = {
   connection: {
@@ -38,10 +37,11 @@ const SYSTEM_PG_DEFAULTS: DatabaseConfig = {
 let cached: DatabaseConfig | null = null;
 
 /**
- * THE reader for `~/.singularity/database.json`. Memoized for the process
- * lifetime; `CONFIG_PATH` is resolved at module load from `SINGULARITY_DIR`, so
- * a process that wants a different location must set `SINGULARITY_DIR` in its
- * own environment before this module is first imported (see the co-located
+ * THE reader for `~/.singularity/state/db-config/database.json`. Memoized for
+ * the process lifetime; `CONFIG_PATH` is resolved at module load from the
+ * `state/db-config` declaration (and so from `SINGULARITY_DIR`), so a process
+ * that wants a different location must set `SINGULARITY_DIR` in its own
+ * environment before this module is first imported (see the co-located
  * `config.test.ts`, which spawns a child for exactly that reason).
  *
  * ENOENT / malformed JSON are TOLERATED and fall back to `SYSTEM_PG_DEFAULTS`

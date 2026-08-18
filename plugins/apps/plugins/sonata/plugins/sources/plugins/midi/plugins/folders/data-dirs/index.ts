@@ -24,12 +24,6 @@ export const sonataDir = defineDataDir({
     reason:
       "the Sonata app's own data namespace — what a future sub-plugin puts here need not be re-derivable, so the directory is not a sweeper's to claim",
   },
-  // Nothing moves on disk in this commit; the index must keep resolving to the
-  // file main has already written, or every backend would see a cold index.
-  legacyLocation: {
-    path: "sonata",
-    reason: "not yet moved; relocates in the layout migration",
-  },
 });
 
 export default [sonataDir];

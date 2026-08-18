@@ -1,7 +1,6 @@
 import type { Command } from "commander";
-import { join } from "path";
 import { getMainRepoRoot } from "@plugins/infra/plugins/spawn/core";
-import { SINGULARITY_DIR } from "../paths";
+import { gatewayLogs } from "@plugins/infra/plugins/launcher/data-dirs";
 import {
   assertSupportedHost,
   readPid,
@@ -12,8 +11,6 @@ import {
   spawnGatewayDaemon,
   awaitGatewayReady,
 } from "@plugins/infra/plugins/launcher/server";
-
-const LOGS_DIR = join(SINGULARITY_DIR, "logs");
 
 // The dev gateway always listens on the default port.
 const DEFAULT_PORT = 9000;
@@ -37,23 +34,25 @@ export function registerStart(program: Command) {
       const pidAlive = existingPid !== null && isRunning(existingPid);
 
       if (!pidAlive && (await isGatewayListening(DEFAULT_PORT))) {
-        console.log("Gateway is already running on port 9000 (started externally).");
+        console.log(
+          "Gateway is already running on port 9000 (started externally).",
+        );
         console.log("  Gateway: http://singularity.localhost:9000");
-        console.log(`  Logs:    ${LOGS_DIR}/`);
+        console.log(`  Logs:    ${gatewayLogs.path}/`);
         return;
       }
 
       if (pidAlive) {
         if (!opts.force) {
           console.log(`Gateway is already running (PID ${existingPid})`);
-          console.log(`  Logs:    ${LOGS_DIR}/`);
+          console.log(`  Logs:    ${gatewayLogs.path}/`);
           console.log(`  Gateway: http://singularity.localhost:9000`);
           return;
         }
         console.log(`Stopping existing gateway (PID ${existingPid})...`);
         try {
           process.kill(existingPid!, "SIGTERM");
-        // eslint-disable-next-line promise-safety/no-bare-catch
+          // eslint-disable-next-line promise-safety/no-bare-catch
         } catch {}
         // Wait for the old gateway to actually exit before spawning the
         // replacement. A fixed sleep let the old gateway keep tearing down its
@@ -102,7 +101,7 @@ export function registerStart(program: Command) {
       await awaitGatewayReady({ pid, port: DEFAULT_PORT });
 
       console.log(`Gateway started (PID ${pid})`);
-      console.log(`  Logs:    ${LOGS_DIR}/`);
+      console.log(`  Logs:    ${gatewayLogs.path}/`);
       console.log(`  Gateway: http://singularity.localhost:9000`);
     });
 }

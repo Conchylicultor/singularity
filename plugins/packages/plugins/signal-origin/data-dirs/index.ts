@@ -15,10 +15,6 @@ export const signalOriginNative = defineDataDir({
   description:
     "Compiled signal-tap dylibs, content-addressed on the C source and architecture",
   reclaim: { kind: "safe" },
-  legacyLocation: {
-    path: "native",
-    reason: "not yet moved; relocates in the layout migration",
-  },
 });
 
 export default [signalOriginNative];

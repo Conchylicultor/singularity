@@ -48,7 +48,7 @@ Each plugin's `web/` barrel (plus every statically or dynamically imported folde
 barrel — `core`, `fixtures`, …) builds into an independent, content-addressed
 ES-module artifact; the browser composes them via an inline import map in
 `dist/index.html`. Only changed plugins rebuild (typical warm step: a few
-seconds). Artifacts are stored in `~/.singularity/web-artifacts/` (`store/`
+seconds). Artifacts are stored in `~/.singularity/cache/web-artifacts/` (`store/`
 per-plugin artifacts, `vendors/` npm pre-bundles, `css/` cached global Tailwind
 passes, `fingerprints/` stat caches), shared across all worktrees, pruned by age.
 A **served** dist symlinks into that store; a **release** dist is composed with

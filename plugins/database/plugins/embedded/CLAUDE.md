@@ -5,7 +5,7 @@ Embedded Postgres for the host. One cluster per machine, multiple databases insi
 This plugin ships:
 
 - The `@embedded-postgres/<platform>` binary as an optionalDependency in `package.json` so `bun install` lands the binaries.
-- `scripts/start.ts` — standalone lifecycle script that handles binary resolution, dylib symlinks, initdb, and pg_ctl start. Invoked by the gateway's generic service supervisor via `~/.singularity/database.json`.
+- `scripts/start.ts` — standalone lifecycle script that handles binary resolution, dylib symlinks, initdb, and pg_ctl start. Invoked by the gateway's generic service supervisor via `~/.singularity/state/db-config/database.json`.
 - `shared/` constants (PG_PORT, PG_SOCKET_DIR, PG_USER, PG_DATA_DIR, ...) reused by worktree backends, the CLI, and the start script.
 - `server/` cluster-level DDL helpers (`dropDatabase`, `databaseExists`) for plugins that manage the worktree DB lifecycle.
 
@@ -20,7 +20,7 @@ This plugin ships:
 
 ## Connection routing (server-side)
 
-Worktree backends read connection params from `~/.singularity/database.json` (auto-generated on first `./singularity start`). The default config points at the embedded cluster's Unix socket on port 5433. To use system PG instead, edit the config file — see [`docs/setup.md`](../../../../docs/setup.md).
+Worktree backends read connection params from `~/.singularity/state/db-config/database.json` (auto-generated on first `./singularity start`). The default config points at the embedded cluster's Unix socket on port 5433. To use system PG instead, edit the config file — see [`docs/setup.md`](../../../../docs/setup.md).
 
 `db-fork.ts` and the build's `waitForDatabase` explicitly set `PGHOST`/`PGPORT` in subprocess env so libpq tools find the correct instance.
 

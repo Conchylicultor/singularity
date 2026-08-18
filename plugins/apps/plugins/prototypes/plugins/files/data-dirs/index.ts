@@ -26,13 +26,6 @@ export const prototypesDir = defineDataDir({
     reason:
       "authored prototypes are not in git — the folder on disk is the only copy",
   },
-  // Nothing moves on disk in this commit. A declaration resolving to the new
-  // `apps/prototypes` would point at a directory that does not exist yet, and
-  // the gallery would report every prototype gone.
-  legacyLocation: {
-    path: "prototypes",
-    reason: "not yet moved; relocates in the layout migration",
-  },
 });
 
 export default [prototypesDir];

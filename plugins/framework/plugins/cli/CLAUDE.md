@@ -131,7 +131,7 @@ Two rules that look wrong and are not:
   decide ownership. Do not reintroduce a `kill(pid, 0)` probe or a heartbeat: a
   heartbeat proves the event loop turns, not that the build is progressing, so a
   build wedged on a hung child looked healthy under the old scheme. "What is the
-  holder stuck in?" is answered instead from `~/.singularity/build-progress.jsonl`,
+  holder stuck in?" is answered instead from `~/.singularity/logs/build-progress/build-progress.jsonl`,
   which records the actual span.
 
 ## The deploy receipt (`bin/build-receipt.ts`)

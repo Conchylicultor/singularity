@@ -23,7 +23,8 @@ export type OpKind = "build" | "push" | "check";
  * starved by the rest of the fleet; `duress-valve` = held out of a storm by the
  * cluster sentinel.
  */
-export type WaitKind = "push-mutex" | "build-lock" | "host-grant" | "duress-valve";
+export type WaitKind =
+  "push-mutex" | "build-lock" | "host-grant" | "duress-valve";
 
 /**
  * One blocked interval. `startMs` is relative to the op's `requestedAt`, NOT to
@@ -75,7 +76,7 @@ export interface OpenWait {
 }
 
 /**
- * The wire shape — one JSON object per line in `~/.singularity/op-log.jsonl`.
+ * The wire shape — one JSON object per line in `~/.singularity/logs/op-log/op-log.jsonl`.
  * Every field but `phase`/`opId` is optional at the raw level: a non-terminal
  * record is partial by design, and a record written by an older CLI must never
  * make the reader throw.

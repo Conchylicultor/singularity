@@ -3,7 +3,7 @@ import type { RawOpRecord } from "@plugins/debug/plugins/profiling/plugins/op-lo
 import { createOpProfiler } from "./profiler";
 
 // These tests drive `createOpProfiler` against an in-memory sink instead of the
-// real `~/.singularity/op-log.jsonl`, so the profiler's record shape — and the
+// real `~/.singularity/logs/op-log/op-log.jsonl`, so the profiler's record shape — and the
 // one subtle clock-pairing invariant it maintains — has a regression test that
 // never touches the user's real op log.
 
@@ -12,14 +12,21 @@ const baseOpts = { opId: "op-test", branch: "feature", opSlug: "wt-test" };
 describe("createOpProfiler — injectable sink", () => {
   test("every phase lands on the injected sink, never the real op log", () => {
     const records: RawOpRecord[] = [];
-    const p = createOpProfiler("build", { ...baseOpts, sink: (r) => records.push(r) });
+    const p = createOpProfiler("build", {
+      ...baseOpts,
+      sink: (r) => records.push(r),
+    });
 
     p.markRequested();
     p.markGranted();
     p.complete("success");
     p.write();
 
-    expect(records.map((r) => r.phase)).toEqual(["requested", "granted", "completed"]);
+    expect(records.map((r) => r.phase)).toEqual([
+      "requested",
+      "granted",
+      "completed",
+    ]);
     const completed = records.find((r) => r.phase === "completed");
     expect(completed?.outcome).toBe("success");
   });
@@ -41,7 +48,10 @@ describe("recordStep — grantedAt-relative offset via the perf pairing", () => 
     // reimplementation could not reproduce these offsets.
     const perf = spyOn(performance, "now").mockReturnValue(10_000.5);
     try {
-      const p = createOpProfiler("check", { ...baseOpts, sink: (r) => records.push(r) });
+      const p = createOpProfiler("check", {
+        ...baseOpts,
+        sink: (r) => records.push(r),
+      });
       p.markRequested();
       p.markGranted(); // grantedPerfMs = 10_000.5
 
@@ -72,7 +82,10 @@ describe("recordStep — grantedAt-relative offset via the perf pairing", () => 
 
   test("a step recorded before markGranted pins to 0 (no reference instant yet)", () => {
     const records: RawOpRecord[] = [];
-    const p = createOpProfiler("check", { ...baseOpts, sink: (r) => records.push(r) });
+    const p = createOpProfiler("check", {
+      ...baseOpts,
+      sink: (r) => records.push(r),
+    });
 
     // No `markGranted` — there is no reference instant, so the offset is 0 rather
     // than a subtraction against an undefined `grantedPerfMs`.
@@ -81,6 +94,8 @@ describe("recordStep — grantedAt-relative offset via the perf pairing", () => 
     p.write();
 
     const completed = records.find((r) => r.phase === "completed");
-    expect(completed?.steps).toEqual([{ name: "orphan", startMs: 0, durationMs: 30 }]);
+    expect(completed?.steps).toEqual([
+      { name: "orphan", startMs: 0, durationMs: 30 },
+    ]);
   });
 });

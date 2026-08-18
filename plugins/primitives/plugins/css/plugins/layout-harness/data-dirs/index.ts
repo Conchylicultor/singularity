@@ -19,13 +19,6 @@ export const layoutLabDir = defineDataDir({
   description:
     "Pass markers for the layout-geometry check, keyed by css-subtree content signature",
   reclaim: { kind: "safe" },
-  // Nothing moves on disk in this commit, and the name deliberately differs from
-  // the current one (`layout-lab-cache`), so the legacy path is spelled exactly
-  // as it is today — otherwise every worktree would re-launch the suite once.
-  legacyLocation: {
-    path: "layout-lab-cache",
-    reason: "not yet moved; relocates in the layout migration",
-  },
 });
 
 export default [layoutLabDir];

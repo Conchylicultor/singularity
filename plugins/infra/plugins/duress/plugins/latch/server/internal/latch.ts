@@ -1,6 +1,13 @@
-import { mkdirSync, readFileSync, statSync, unlinkSync, utimesSync, writeFileSync } from "node:fs";
+import {
+  mkdirSync,
+  readFileSync,
+  statSync,
+  unlinkSync,
+  utimesSync,
+  writeFileSync,
+} from "node:fs";
 import { join } from "node:path";
-import { SINGULARITY_DIR } from "@plugins/infra/plugins/paths/server";
+import { duressLatchDir } from "../../data-dirs";
 
 // Host-global duress latch: a single sentinel process (the Phase-B cluster
 // sentinel on main) declares "the box is in trouble" by writing a file; every
@@ -27,7 +34,10 @@ export interface DuressLatch {
   reason: string;
 }
 
-let latchDir = SINGULARITY_DIR;
+// Null ⇒ the declared `locks/duress` directory. Only a test overrides it, and
+// it is resolved per call rather than frozen at module eval, because
+// `DataDir.path` is a getter over an env-overridable root (see its docblock).
+let latchDirOverride: string | null = null;
 let now: () => number = Date.now;
 let memo: { value: boolean; at: number } | null = null;
 let episodeMemo: { value: number | null; at: number } | null = null;
@@ -37,17 +47,23 @@ function invalidateMemos(): void {
   episodeMemo = null;
 }
 
+function latchDir(): string {
+  return latchDirOverride ?? duressLatchDir.path;
+}
+
 function latchPath(): string {
-  return join(latchDir, LATCH_FILENAME);
+  return join(latchDir(), LATCH_FILENAME);
 }
 
 function isEnoent(err: unknown): boolean {
-  return err instanceof Error && (err as NodeJS.ErrnoException).code === "ENOENT";
+  return (
+    err instanceof Error && (err as NodeJS.ErrnoException).code === "ENOENT"
+  );
 }
 
 /** Declare a duress episode: create (or overwrite) the latch. Writer: the sentinel only. */
 export function setDuress(reason: string): void {
-  mkdirSync(latchDir, { recursive: true });
+  mkdirSync(latchDir(), { recursive: true });
   const latch: DuressLatch = { setAt: now(), reason };
   writeFileSync(latchPath(), JSON.stringify(latch));
   invalidateMemos();
@@ -115,7 +131,8 @@ export function isUnderDuress(): boolean {
  */
 export function duressEpisode(): number | null {
   const t = now();
-  if (episodeMemo !== null && t - episodeMemo.at < MEMO_TTL_MS) return episodeMemo.value;
+  if (episodeMemo !== null && t - episodeMemo.at < MEMO_TTL_MS)
+    return episodeMemo.value;
   const value = readDuress()?.setAt ?? null;
   episodeMemo = { value, at: t };
   return value;
@@ -137,9 +154,9 @@ export function readDuress(): DuressLatch | null {
   return JSON.parse(raw) as DuressLatch;
 }
 
-/** Point the latch at a temp dir. Pass null to restore the real ~/.singularity. */
+/** Point the latch at a temp dir. Pass null to restore the declared dir. */
 export function _setLatchDirForTests(dir: string | null): void {
-  latchDir = dir ?? SINGULARITY_DIR;
+  latchDirOverride = dir;
   invalidateMemos();
 }
 

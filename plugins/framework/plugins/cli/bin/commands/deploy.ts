@@ -51,9 +51,9 @@ import { eq, or } from "drizzle-orm";
 import { drizzle, type NodePgDatabase } from "drizzle-orm/node-postgres";
 import {
   REPO_ROOT,
-  SINGULARITY_DIR,
   currentWorktreeName,
 } from "@plugins/infra/plugins/paths/server";
+import { configDir } from "@plugins/config_v2/data-dirs";
 import { openShortLivedClient } from "@plugins/database/plugins/admin/server";
 import {
   _deployServers,
@@ -476,8 +476,7 @@ interface ClosureContext {
 async function loadClosureContext(): Promise<ClosureContext> {
   const values = readEffectiveConfigFromDisk(compositionsConfig, {
     root: REPO_ROOT,
-    worktreeName: currentWorktreeName(),
-    singularityDir: SINGULARITY_DIR,
+    userConfigDir: configDir.file(currentWorktreeName()),
     hierarchyPath: COMPOSITIONS_HIERARCHY_PATH,
   });
   const tree = await buildPluginTree(join(REPO_ROOT, "plugins"), {

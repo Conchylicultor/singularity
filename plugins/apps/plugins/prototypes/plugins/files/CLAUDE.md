@@ -121,7 +121,7 @@ and the `listPrototypes` endpoint.
 
 ## Plugin reference
 
-- Description: Serves raw prototype files from the host-global prototypes data dir (PROTOTYPES_DIR — shared by every worktree and main, so a mock is visible without a build and without being committed), seeds the repo's _template/ into it, declares the list + version live-state resources, and watches the dir to auto-reload open iframes on edit.
+- Description: Serves raw prototype files from the host-global prototypes data dir (the `apps/prototypes` declaration — shared by every worktree and main, so a mock is visible without a build and without being committed), seeds the repo's _template/ into it, declares the list + version live-state resources, and watches the dir to auto-reload open iframes on edit.
 - Server:
   - Contributes:
     - `resource.declare` "prototypes.list"

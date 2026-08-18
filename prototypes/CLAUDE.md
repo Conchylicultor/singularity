@@ -3,9 +3,9 @@
 A prototype is a throwaway UI mockup: one folder, one `index.html`, nothing
 shared with anything else.
 
-## Where they live: `~/.singularity/prototypes/`, NOT this directory
+## Where they live: `~/.singularity/apps/prototypes/`, NOT this directory
 
-**Prototypes are not checked in.** Write them to `~/.singularity/prototypes/<name>/`
+**Prototypes are not checked in.** Write them to `~/.singularity/apps/prototypes/<name>/`
 and commit nothing. This directory holds only `_template/` and this file.
 
 Why: that one directory is shared by every worktree and by main. A mock you save
@@ -18,7 +18,7 @@ The server seeds `_template/` into that directory on boot, so the whole gesture
 happens in one place:
 
 ```bash
-cp -R ~/.singularity/prototypes/_template ~/.singularity/prototypes/<name>
+cp -R ~/.singularity/apps/prototypes/_template ~/.singularity/apps/prototypes/<name>
 ```
 
 `./singularity check` fails if a prototype folder appears in the repo.
@@ -38,7 +38,7 @@ the app's own components and tokens are not a starting point here.
 ## The folder
 
 ```
-~/.singularity/prototypes/
+~/.singularity/apps/prototypes/
   <name>/
     index.html     # the only required file
     styles.css     # optional
@@ -54,7 +54,7 @@ Reference your files relatively: `href="styles.css"`, `src="data.js"`.
 
 ## It must open by double-click
 
-**Open `~/.singularity/prototypes/<name>/index.html` in Finder. It has to
+**Open `~/.singularity/apps/prototypes/<name>/index.html` in Finder. It has to
 render.** No server,
 no build step. If it only works through the app, it is not a prototype.
 

@@ -18,13 +18,6 @@ export const thumbnailCacheDir = defineDataDir({
   owner: "apps/prototypes/thumbnails",
   description: "Rendered prototype gallery thumbnails, keyed by content hash",
   reclaim: { kind: "safe" },
-  // Nothing moves on disk in this commit, and the name deliberately differs from
-  // the current one (`prototype-thumbnails`), so the legacy path is spelled
-  // exactly as it is today — otherwise the gallery would re-render every card.
-  legacyLocation: {
-    path: "prototype-thumbnails",
-    reason: "not yet moved; relocates in the layout migration",
-  },
 });
 
 export default [thumbnailCacheDir];

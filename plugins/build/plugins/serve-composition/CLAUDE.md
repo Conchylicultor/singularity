@@ -88,7 +88,7 @@ serve shortcut) asks once and hands the same snapshot to the panel.
 Once a composition is served, the panel also shows a destructive **Reset** button
 next to the serve-URL chip. It opens a confirm dialog and, on confirm, `POST`s
 `resetCompositionData` (`/api/build/serve/reset`), which wipes *only that one
-composition's* Postgres DB `<id>` and config dir `~/.singularity/config/<id>/`
+composition's* Postgres DB `<id>` and config dir `~/.singularity/state/config/<id>/`
 back to exactly what `compose-serve` provisions on a fresh serve, then restarts
 its backend — so the author sees the genuine new-user experience. It is a
 **narrower `reapAttempt`**: the spec + dist + code are kept (the app stays
@@ -115,7 +115,7 @@ throws `CompositionResetError` (nothing touched) if any fails:
 - **In scope:** the composition's DB `<id>` and its config dir. Both are named by
   the composition id, so the reset is provably confined to that one namespace.
 - **Out of scope (deliberately ignored):** central secrets / auth tokens. They
-  live in one global encrypted store (`~/.singularity/secrets.json.enc`) shared by
+  live in one global encrypted store (`~/.singularity/state/secrets/secrets.json.enc`) shared by
   every namespace under the single-instance-per-user architecture
   ([ADR](../../../../research/2026-07-02-global-adr-single-instance-per-user.md)),
   carry no per-composition dimension, and are not part of this reset. Documented,
@@ -170,7 +170,6 @@ which is name-keyed throughout, looks the item up by `name` and then hands the
     - `infra/endpoints.implement`
     - `infra/paths.isMain`
     - `infra/paths.MAIN_WORKTREE_NAME`
-    - `infra/paths.SINGULARITY_DIR`
     - `infra/worktree.ensureMainWorktreeRoot`
     - `infra/worktree.hasCompositionMarker`
     - `infra/worktree.namespaceCollision`

@@ -168,16 +168,6 @@ Edit `plugins/{name}/server/internal/tables.ts` → run `./singularity build`. T
     - `currentTxId`
     - `db`
     - `isTransientDbError`
-- Core:
-  - Uses: `infra/paths.SINGULARITY_DIR`
-  - Exports (types):
-    - `DatabaseConfig`
-    - `DatabaseProvider`
-  - Exports (values):
-    - `buildConnectionString`
-    - `DATABASE_CONFIG_PATH`
-    - `libpqEnv`
-    - `readDatabaseConfig`
 - Cross-plugin:
   - Imported by:
     - `active-data`
@@ -269,6 +259,15 @@ Edit `plugins/{name}/server/internal/tables.ts` → run `./singularity build`. T
     - `tasks/tasks-core`
     - `ui/tweakcn`
     - `ui/tweakcn/community-browser`
+- Core:
+  - Exports (types):
+    - `DatabaseConfig`
+    - `DatabaseProvider`
+  - Exports (values):
+    - `buildConnectionString`
+    - `DATABASE_CONFIG_PATH`
+    - `libpqEnv`
+    - `readDatabaseConfig`
 - Sub-plugins:
   - **`admin`** — Admin operations for the database plugin — fork, backup, drop, list.
   - **`change-feed`** — L4 DB change-feed: STATEMENT-level Postgres triggers that pg_notify on every commit, plus a LISTEN consumer routing each change through the live-state recompute cascade — making missed invalidations structurally impossible and out-of-process writes visible.

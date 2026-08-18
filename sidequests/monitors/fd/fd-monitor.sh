@@ -34,8 +34,8 @@
 # Dumps have per-pid and system-wide cooldowns. lsof is sanity-checked before
 # incident detection so truncated output doesn't produce garbage forensics.
 
-LOG="$HOME/.singularity/logs/fd-monitor.log"
-INCIDENTS="$HOME/.singularity/logs/fd-monitor-incidents"
+LOG="$HOME/.singularity/logs/monitors/fd-monitor.log"
+INCIDENTS="$HOME/.singularity/logs/monitors/fd-monitor-incidents"
 MAX_LINES=200000  # rough rotation threshold for the main log
 
 # Heavy-tick / dump thresholds.

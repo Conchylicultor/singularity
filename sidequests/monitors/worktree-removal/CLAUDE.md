@@ -4,7 +4,7 @@ A root LaunchDaemon that streams Apple's Endpoint Security events (`eslogger`) a
 records **every process that deletes a file inside an agent worktree**, or that
 execs a command naming one.
 
-Output: `~/.singularity/logs/worktree-removal-monitor.jsonl` (one JSON per line).
+Output: `~/.singularity/logs/monitors/worktree-removal-monitor.jsonl` (one JSON per line).
 
 ## Why
 
@@ -124,7 +124,7 @@ sudo launchctl load /Library/LaunchDaemons/com.epot.worktree-removal-monitor.pli
 ```sh
 # 2. verify — expect a pid and a monitor-start line
 sudo launchctl list | grep worktree-removal-monitor
-tail -2 ~/.singularity/logs/worktree-removal-monitor.jsonl
+tail -2 ~/.singularity/logs/monitors/worktree-removal-monitor.jsonl
 cat /tmp/worktree-removal-monitor.err          # should be empty
 ```
 
@@ -134,7 +134,7 @@ cat /tmp/worktree-removal-monitor.err          # should be empty
 #    saw zero events. So always end-to-end test with a canary.
 C=/Users/epot/__A__/dev/singularity/.claude/worktrees/<any-live-worktree>/.monitor-canary
 echo hi > "$C" && rm -f "$C"
-sleep 25 && grep monitor-canary ~/.singularity/logs/worktree-removal-monitor.jsonl
+sleep 25 && grep monitor-canary ~/.singularity/logs/monitors/worktree-removal-monitor.jsonl
 ```
 
 A plain FILE, deliberately: the app's own removal audit diffs *directories*
@@ -158,15 +158,15 @@ a long hunt.
 
 ```sh
 # every recorded touch of a worktree, newest last
-jq -c 'select(.worktree)' ~/.singularity/logs/worktree-removal-monitor.jsonl
+jq -c 'select(.worktree)' ~/.singularity/logs/monitors/worktree-removal-monitor.jsonl
 
 # just the actors, deduped — the answer to "who"
 jq -r 'select(.worktree) | "\(.wallclock) \(.worktree) \(.signid // .exe) pid=\(.pid) resp=\(.resp)"' \
-  ~/.singularity/logs/worktree-removal-monitor.jsonl | sort -u
+  ~/.singularity/logs/monitors/worktree-removal-monitor.jsonl | sort -u
 ```
 
 Cross-check a hit against the app's own view: if `reapAttempt` ran, the fork DB
-`att-<id>` and `~/.singularity/config/att-<id>` are gone too. If those survive
+`att-<id>` and `~/.singularity/state/config/att-<id>` are gone too. If those survive
 while the checkout does not, it was **not** the app.
 
 ## Update

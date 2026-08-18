@@ -1000,16 +1000,19 @@ export function registerRelease(program: Command) {
         cpSync(join(root, "config"), join(out, "config"), { recursive: true });
 
         // (b) Resolved default-for-everyone seed for the composition (effective
-        //     values). propagateConfigToUser writes <singularityDir>/config/<worktree>/… ;
-        //     an empty staging root yields ONLY resolved origins (+ @app scoped
-        //     origins), no personal overrides/ancestors. discoverConfigs walks the
-        //     full config/ tree — shipping origins for plugins absent from the
-        //     composition is harmless (the backend only reads registered descriptors).
+        //     values). The destination is a BUNDLE path, not a data root — an
+        //     empty staging dir yields ONLY resolved origins (+ @app scoped
+        //     origins), no personal overrides/ancestors. This is the one caller
+        //     that does not write into `state/config`, which is why
+        //     propagateConfigToUser takes the resolved directory. `launcher`'s
+        //     `seedReleaseConfig` reads this same `config-seed/config/<name>`
+        //     layout back at first run. discoverConfigs walks the full config/
+        //     tree — shipping origins for plugins absent from the composition is
+        //     harmless (the backend only reads registered descriptors).
         console.log("  • resolved config defaults");
         await propagateConfigToUser({
           root,
-          worktreeName: opts.composition,
-          singularityDir: join(out, "config-seed"),
+          userConfigDir: join(out, "config-seed", "config", opts.composition),
         });
 
         // ── 4. Tauri target: wrap the staged bundle in the desktop shell ─────
@@ -1060,7 +1063,7 @@ export function registerRelease(program: Command) {
         const compDir = dirname(out);
         claimLatestPointer(compDir, runId, platform);
 
-        // A run dir is a whole staged app; `~/.singularity/releases/` has no
+        // A run dir is a whole staged app; `~/.singularity/state/releases/` has no
         // other retention. Runs a pointer names are never swept.
         const pruned = pruneReleaseRunDirs(
           currentWorktreeName(),

@@ -8,10 +8,6 @@ import { defineDataDir } from "@plugins/infra/plugins/paths/core";
  * one reclaim unit, so they are one declaration and the consumer joins the two
  * children off it.
  *
- * `legacyLocation` pins it to the name it occupies at the root today. Nothing
- * moves on disk in this commit, so the path stays byte-for-byte what
- * `join(SINGULARITY_DIR, "web-artifacts")` produced.
- *
  * @see plugins/framework/plugins/tooling/plugins/web-artifacts/core/internal/store.ts
  */
 export const webArtifactsDir = defineDataDir({
@@ -21,10 +17,6 @@ export const webArtifactsDir = defineDataDir({
   description:
     "Content-addressed per-plugin web build artifacts (a dir per artifact keyed by its inputs hash) plus the per-builder-identity fingerprint index, shared across worktrees",
   reclaim: { kind: "safe" },
-  legacyLocation: {
-    path: "web-artifacts",
-    reason: "not yet moved; relocates in the layout migration",
-  },
 });
 
 export default [webArtifactsDir];

@@ -123,7 +123,7 @@ export async function runChecks(
   ids: string[] | undefined,
   options: RunChecksOptions,
 ): Promise<boolean> {
-  // Durable, per-run progress records (~/.singularity/check-progress.jsonl).
+  // Durable, per-run progress records (~/.singularity/logs/check-progress/check-progress.jsonl).
   // These exist because a single hung check makes the whole run report NOTHING:
   // the print loop far below only reaches the console after `Promise.all` fully
   // resolves. Written as each unit of work starts and settles — never from that

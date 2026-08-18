@@ -4,10 +4,10 @@ Encrypted-at-rest key-value primitive. Consumers: `auth` (OAuth tokens / API key
 
 ## Topology
 
-- **Storage lives on the central runtime.** `~/.singularity/secrets.json.enc` (AES-256-GCM) is read and written by the singleton `central` backend (gateway-supervised, headless). Worktree backends never touch the file.
-- **OS keychain for the master key, file fallback.** Primary: `@napi-rs/keyring` (macOS Keychain / libsecret / Windows Credential Manager). Fallback: `~/.singularity/secrets/.key` mode 0600, when the native module is missing or fails at runtime. Either way the key is cached in-memory after first read.
-- **Worktrees call central over HTTP via the gateway.** `getSecret`/`setSecret`/`deleteSecret`/`hasSecret`/`getSecretMetadata`/`listKeysInNamespace` POST JSON to `http://localhost:9000/api/secrets/*`. The gateway routes those prefixes to `central` regardless of host (see `~/.singularity/central-routes.json`). The previous unix-socket RPC and `~/.singularity/secrets.sock` are gone.
-- **Boot is in central's `onReady`.** Central's plugin definition (`plugins/infra/plugins/secrets/central/index.ts`) loads the keychain, hydrates the encrypted blob, and runs the legacy `~/.singularity/auth/tokens.json.enc` migration before the HTTP handlers are reachable. The server-side `ready` promise resolves immediately — there's nothing to wait for in-process.
+- **Storage lives on the central runtime.** `~/.singularity/state/secrets/secrets.json.enc` (AES-256-GCM) is read and written by the singleton `central` backend (gateway-supervised, headless). Worktree backends never touch the file.
+- **OS keychain for the master key, file fallback.** Primary: `@napi-rs/keyring` (macOS Keychain / libsecret / Windows Credential Manager). Fallback: `~/.singularity/state/secrets/.key` mode 0600, when the native module is missing or fails at runtime. Either way the key is cached in-memory after first read.
+- **Worktrees call central over HTTP via the gateway.** `getSecret`/`setSecret`/`deleteSecret`/`hasSecret`/`getSecretMetadata`/`listKeysInNamespace` POST JSON to `http://localhost:9000/api/secrets/*`. The gateway routes those prefixes to `central` regardless of host (see `~/.singularity/state/gateway/central-routes.json`). The previous unix-socket RPC and `~/.singularity/secrets.sock` are gone.
+- **Boot is in central's `onReady`.** Central's plugin definition (`plugins/infra/plugins/secrets/central/index.ts`) loads the keychain, hydrates the encrypted blob, and runs the legacy `~/.singularity/state/auth/tokens.json.enc` migration before the HTTP handlers are reachable. The server-side `ready` promise resolves immediately — there's nothing to wait for in-process.
 
 ## Namespaces
 
@@ -37,7 +37,7 @@ The secrets plugin has no frontend. Plaintext secret values must never flow to a
 
 ## Migration from pre-secrets auth
 
-On central's first boot after upgrade, `migrateLegacyAuthTokens` decrypts `~/.singularity/auth/tokens.json.enc` with its own `.key`, writes the blob under `auth-tokens/blob-v1`, and renames both legacy files to `.migrated-<timestamp>`. Idempotent — subsequent boots see the secret already present and no-op.
+On central's first boot after upgrade, `migrateLegacyAuthTokens` decrypts `~/.singularity/state/auth/tokens.json.enc` with its own `.key`, writes the blob under `auth-tokens/blob-v1`, and renames both legacy files to `.migrated-<timestamp>`. Idempotent — subsequent boots see the secret already present and no-op.
 
 ## Explicit deferrals
 
@@ -49,7 +49,7 @@ On central's first boot after upgrade, `migrateLegacyAuthTokens` decrypts `~/.si
 
 ## Plugin reference
 
-- Description: Encrypted key-value primitive. AES-256-GCM blob at ~/.singularity/secrets.json.enc with the master key in the OS keychain (fallback to ~/.singularity/secrets/.key). Hosted on the central runtime; consumers (auth, config) call /api/secrets/* via the gateway.
+- Description: Encrypted key-value primitive. AES-256-GCM blob at ~/.singularity/state/secrets/secrets.json.enc with the master key in the OS keychain (fallback to the .key beside it). Hosted on the central runtime; consumers (auth, config) call /api/secrets/* via the gateway.
 - Load-bearing: yes
 - Core:
   - Uses: `infra/endpoints.defineEndpoint`

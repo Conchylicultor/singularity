@@ -2,7 +2,7 @@
 //
 // BOTH are `scope: "deploy"`: their subject is the local deployment `build`
 // produces — this checkout's served dist (`~/.singularity/worktrees/<name>/web`)
-// and the `~/.singularity/web-artifacts` store, both outside any repo — not the
+// and the `~/.singularity/cache/web-artifacts` store, both outside any repo — not the
 // tree. So neither is in the push payload,
 // and `push` (which asks for `--scope tree`) does not run them; `build`, a
 // standalone `./singularity check`, and main's post-push auto-build do. Each

@@ -1,7 +1,7 @@
 import { existsSync } from "node:fs";
 import { cp, readdir, stat } from "node:fs/promises";
 import { getConfig } from "@plugins/config_v2/server";
-import { PROTOTYPES_DIR } from "@plugins/infra/plugins/paths/server";
+import { prototypesDir } from "@plugins/apps/plugins/prototypes/plugins/files/data-dirs";
 import type { BackupSourceReport } from "@plugins/backup/core";
 import { prototypesSourceConfig } from "../../shared/config";
 
@@ -22,7 +22,7 @@ async function countFilesAndSize(
 }
 
 /**
- * Back up the throwaway UI mockups in `~/.singularity/prototypes/`.
+ * Back up the throwaway UI mockups in `~/.singularity/apps/prototypes/`.
  *
  * They are deliberately NOT in git — a prototype is user content, and keeping it
  * out of the repo is what lets every worktree and main serve the same set with
@@ -38,11 +38,11 @@ export async function assemblePrototypes(
     return { id: ID, name: NAME, skipped: true, items: [], sizeBytes: 0 };
   }
 
-  if (!existsSync(PROTOTYPES_DIR)) {
+  if (!existsSync(prototypesDir.path)) {
     return { id: ID, name: NAME, skipped: false, items: [], sizeBytes: 0 };
   }
 
-  await cp(PROTOTYPES_DIR, dir, { recursive: true });
+  await cp(prototypesDir.path, dir, { recursive: true });
   const { count, sizeBytes } = await countFilesAndSize(dir);
   const folders = (await readdir(dir, { withFileTypes: true })).filter((e) =>
     e.isDirectory(),

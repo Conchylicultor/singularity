@@ -84,7 +84,7 @@ answer, and consumer copy must say so rather than soften it.
 ## Retention
 
 `pruneReleaseRunDirs(namespace, comp, target, keep = 3)` keeps the newest `keep`
-run dirs plus every run some pointer names. `~/.singularity/releases/` had no
+run dirs plus every run some pointer names. `~/.singularity/state/releases/` had no
 retention at all (`pruneWorktreeReleaseArtifacts` prunes per-release *logs*, not
 run dirs) and a run dir is a whole staged app.
 

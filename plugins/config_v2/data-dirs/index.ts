@@ -1,4 +1,5 @@
-import { defineDataDir } from "@plugins/infra/plugins/paths/core";
+import { relative } from "node:path";
+import { dataRoot, defineDataDir } from "@plugins/infra/plugins/paths/core";
 
 /**
  * The user layer of the three-layer config model: one `<worktree>/` subtree per
@@ -23,12 +24,25 @@ export const configDir = defineDataDir({
     reason:
       "the user's own config overrides live here and exist nowhere else; deleting them silently reverts every customization",
   },
-  // TEMPORARY. Byte-for-byte where it is today; the layout migration relocates
-  // it under `state/`.
-  legacyLocation: {
-    path: "config",
-    reason: "not yet moved; relocates in the layout migration",
-  },
 });
+
+/**
+ * Where the user config layer sits *relative to a data root* —
+ * `"state/config"`.
+ *
+ * For the callers that must place this directory under a root that is NOT this
+ * process's own: a release bundle's seeded defaults are copied into a freshly
+ * installed app's data dir, which is not the dev root. They cannot use
+ * `configDir.path`, but they must not spell the directory a second time — a
+ * hand-written copy would go on naming the old spot after the layout migration
+ * moved the real one, so the seed would land where nothing reads it and the
+ * released app would silently fall back to hardcoded schema defaults.
+ *
+ * Derived from the declaration rather than written out, so the two cannot drift.
+ * Same shape (and same reason) as `assetMirrorRelativeToRoot()`.
+ */
+export function userConfigRelativeToRoot(): string {
+  return relative(dataRoot(), configDir.path);
+}
 
 export default [configDir];

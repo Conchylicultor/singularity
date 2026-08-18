@@ -1,10 +1,14 @@
 import type { Command } from "commander";
-import { join, resolve } from "path";
+import { resolve } from "path";
 import {
   REPO_ROOT,
   SINGULARITY_DIR,
 } from "@plugins/infra/plugins/paths/server";
-import { bootSelfContainedApp } from "@plugins/infra/plugins/launcher/server";
+import {
+  bootSelfContainedApp,
+  gatewayPidFile,
+} from "@plugins/infra/plugins/launcher/server";
+import { gatewayLogs } from "@plugins/infra/plugins/launcher/data-dirs";
 
 const DEFAULT_PORT = 9100;
 
@@ -82,13 +86,13 @@ export function registerServeApp(program: Command) {
           log: console.log,
         });
 
-        const pidFile = join(SINGULARITY_DIR, "gateway.pid");
+        const pidFile = gatewayPidFile(SINGULARITY_DIR);
         console.log("");
         console.log(`App "${opts.name}" is serving.`);
         console.log(`  URL:  http://${opts.name}.localhost:${port}`);
         console.log(`  Root: ${SINGULARITY_DIR}`);
         console.log(`  PID:  ${pidFile}`);
-        console.log(`  Logs: ${join(SINGULARITY_DIR, "logs")}/`);
+        console.log(`  Logs: ${gatewayLogs.path}/`);
       },
     );
 }

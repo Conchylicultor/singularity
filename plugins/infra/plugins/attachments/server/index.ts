@@ -13,13 +13,17 @@ import {
 import { listAttachmentsEndpoint } from "../core";
 
 export { _attachments } from "./internal/tables";
-export { createAttachment, deleteAttachment, getAttachment } from "./internal/operations";
+export {
+  createAttachment,
+  deleteAttachment,
+  getAttachment,
+} from "./internal/operations";
 export { Attachments } from "./internal/attachments";
 export type { AttachmentLink } from "./internal/define-link";
 
 export default {
   description:
-    "Attachments on disk (UUID-named under ~/.singularity/attachments/). Consumers declare ownership with Attachments.defineLink(ownerTable); orphan sweep reclaims unreferenced rows past TTL.",
+    "Attachments on disk (UUID-named under ~/.singularity/apps/attachments/). Consumers declare ownership with Attachments.defineLink(ownerTable); orphan sweep reclaims unreferenced rows past TTL.",
   loadBearing: true,
   httpRoutes: {
     [uploadAttachment.route]: handleUpload,

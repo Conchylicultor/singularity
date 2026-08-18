@@ -2,7 +2,6 @@ import {
   closeSync,
   cpSync,
   existsSync,
-  mkdirSync,
   openSync,
   readFileSync,
   writeFileSync,
@@ -11,6 +10,7 @@ import { execFileSync } from "node:child_process";
 import { join } from "node:path";
 import {
   SINGULARITY_DIR,
+  WORKTREES_DIR,
   setReleaseIdentity,
   type ReleaseIdentity,
 } from "@plugins/infra/plugins/paths/server";
@@ -45,7 +45,16 @@ import {
 // `zeroCache` block. The same predicate gates the cache-service install-time
 // provision, so the fence stays consistent across runtime and build time.
 import { zeroCacheEnabled } from "@plugins/database/plugins/zero/core";
-import { gatewayLogs } from "../../data-dirs";
+import { dbConfigDir } from "@plugins/database/data-dirs";
+import { userConfigRelativeToRoot } from "@plugins/config_v2/data-dirs";
+import {
+  CENTRAL_ROUTES_FILENAME,
+  gatewayLocks,
+  gatewayLogs,
+  gatewayPidFileRelativeToRoot,
+  gatewayState,
+  socketsDir,
+} from "../../data-dirs";
 import { listenFlag } from "./listen";
 
 // Progress sink. The launcher runs in a CLI process whose human-facing output
@@ -145,9 +154,13 @@ function gatewayLogTail(): string {
  * The gateway pidfile under an arbitrary install root. Used by teardown to find a
  * preview's gateway (rooted at its `/tmp/sgp-XXXXXX` data dir, not the dev
  * `SINGULARITY_DIR`). `PID_FILE` is the same path under this process's root.
+ *
+ * The subpath comes from the `locks/gateway` declaration rather than being
+ * spelled here — see `gatewayPidFileRelativeToRoot`'s docblock for why writing
+ * it out a second time is how a preview's gateway becomes un-killable.
  */
 export function gatewayPidFile(root: string): string {
-  return join(root, "gateway.pid");
+  return join(root, gatewayPidFileRelativeToRoot());
 }
 
 const PID_FILE = gatewayPidFile(SINGULARITY_DIR);
@@ -319,7 +332,7 @@ export function ensureDatabaseConfig(
         services: [],
       };
 
-  mkdirSync(SINGULARITY_DIR, { recursive: true });
+  dbConfigDir.ensure();
   writeFileSync(DATABASE_CONFIG_PATH, JSON.stringify(config, null, 2) + "\n");
   log(
     hasEmbedded
@@ -381,7 +394,7 @@ export function writeReleaseDatabaseConfig(
     ],
   };
 
-  mkdirSync(SINGULARITY_DIR, { recursive: true });
+  dbConfigDir.ensure();
   writeFileSync(DATABASE_CONFIG_PATH, JSON.stringify(config, null, 2) + "\n");
   log(
     `Generated release database config (embedded Postgres${hasPgBouncer ? " + PgBouncer" : ""})`,
@@ -458,6 +471,8 @@ export function spawnGatewayDaemon(opts: {
   defaultNamespace?: string;
 }): Bun.Subprocess {
   const logsDir = gatewayLogs.ensure();
+  gatewayState.ensure();
+  gatewayLocks.ensure();
   // Truncate ("w"): only holds raw stdout/stderr until slog takes over, plus
   // any panic. The gateway writes its own rotating logs under -log-dir.
   const logFd = openSync(GATEWAY_STDIO_LOG, "w");
@@ -469,8 +484,27 @@ export function spawnGatewayDaemon(opts: {
       listenFlag({ host: opts.bindHost ?? null, port: opts.port }),
       "-log-level",
       opts.logLevel,
+      // EVERY path the gateway reads or writes is passed explicitly, from the
+      // declaration that owns it. The Go side has its own defaults derived from
+      // the inherited SINGULARITY_DIR, and they are kept in step (gateway/main.go)
+      // — but a default is a SECOND derivation of this layout, and a second
+      // derivation is what silently keeps writing to the old spot when the
+      // layout moves. Passing them means the declaration is the only authority.
       "-log-dir",
       logsDir,
+      "-registry-dir",
+      WORKTREES_DIR,
+      "-sockets-dir",
+      // The one flag with an env arm: a release stages its data root at a long
+      // versioned path, which would blow the 104-byte AF_UNIX cap, so `launch.ts`
+      // reroots the backend sockets onto a short /tmp dir via this var. Reading
+      // it here keeps that escape hatch working now that the flag is explicit —
+      // passing the declaration unconditionally would override it.
+      process.env.SINGULARITY_SOCKETS_DIR ?? socketsDir.path,
+      "-central-routes-file",
+      gatewayState.file(CENTRAL_ROUTES_FILENAME),
+      "-db-config",
+      DATABASE_CONFIG_PATH,
       ...(opts.defaultNamespace
         ? ["-default-namespace", opts.defaultNamespace]
         : []),
@@ -886,16 +920,25 @@ export function seedReleaseAssetMirror(opts: {
  * first run (copy-if-absent), so a released app's config_v2 "default-for-everyone"
  * values resolve on first boot instead of falling back to hardcoded schema
  * defaults. `release.ts` vendored the propagated seed under
- * `<bundleRoot>/config-seed/config/<worktree>/…`; this copies it to
- * `<dataDir>/config/<worktree>/`, the exact path config_v2's config-dir.ts reads
- * (`CONFIG_DIR = SINGULARITY_DIR/config/<worktree>`).
+ * `<bundleRoot>/config-seed/config/<worktree>/…`; this copies it to the user
+ * config layer under `<dataDir>`, the exact path config_v2's config-dir.ts
+ * reads.
  *
- * The `config/<worktree>` formula is inlined here rather than imported from
- * config_v2, matching this file's / launch.ts's existing handling of the other
- * vendored trees (migrations, PG, PgBouncer, parcel-watcher): the launcher must
- * type-check under the DOM-free `tools` tsconfig, but the config_v2 barrels
- * transitively pull DOM-typed endpoint code that does not. Keep this formula in
- * lockstep with `config-dir.ts`.
+ * The destination comes from config_v2's OWN declaration, via
+ * `userConfigRelativeToRoot()` — the dir has to be named under a foreign root
+ * (a fresh install's data dir, not this process's), which is the same problem
+ * `assetMirrorRelativeToRoot()` solves. It was inlined as `config/<worktree>`
+ * with a comment asking a human to keep it in lockstep with `config-dir.ts`,
+ * and the layout migration is exactly the change that would have broken that
+ * lockstep silently: the seed would land at the old path while the app read the
+ * new one, and a released app would fall back to hardcoded schema defaults with
+ * nothing to fail. Note `@plugins/config_v2/data-dirs` is safe to import here
+ * where the config_v2 BARRELS are not — the launcher must type-check under the
+ * DOM-free `tools` tsconfig, and a `data-dirs` module reaches `paths/core` and
+ * nothing else.
+ *
+ * The bundle's own `config-seed/config/` layout is the release CLI's staging
+ * convention, unrelated to the data root, so it stays spelled out.
  */
 export function seedReleaseConfig(opts: {
   bundleRoot: string;
@@ -904,7 +947,11 @@ export function seedReleaseConfig(opts: {
   log?: LogFn;
 }): void {
   const src = join(opts.bundleRoot, "config-seed", "config", opts.worktreeName);
-  const dest = join(opts.dataDir, "config", opts.worktreeName);
+  const dest = join(
+    opts.dataDir,
+    userConfigRelativeToRoot(),
+    opts.worktreeName,
+  );
   if (!existsSync(src)) return; // dev / no seed baked → no-op
   if (existsSync(dest)) return; // already seeded (or user has a config dir) → don't clobber
   cpSync(src, dest, { recursive: true });

@@ -6,7 +6,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { randomBytes } from "node:crypto";
-import { SECRETS_DIR, KEY_PATH } from "./paths";
+import { keyPath, secretsDir } from "./paths";
 import { SecretsKeychainLockedError } from "@plugins/infra/plugins/secrets/core";
 
 const KEYCHAIN_SERVICE = "singularity";
@@ -24,7 +24,8 @@ async function loadKeychainModule(): Promise<any | null> {
     keychainModule = await import("@napi-rs/keyring");
   } catch (err) {
     const code = (err as NodeJS.ErrnoException).code;
-    if (code !== "MODULE_NOT_FOUND" && code !== "ERR_MODULE_NOT_FOUND") throw err;
+    if (code !== "MODULE_NOT_FOUND" && code !== "ERR_MODULE_NOT_FOUND")
+      throw err;
     keychainModule = null;
   }
   return keychainModule;
@@ -32,21 +33,25 @@ async function loadKeychainModule(): Promise<any | null> {
 
 function readOrCreateKeyFile(): Buffer {
   try {
-    if (!existsSync(SECRETS_DIR)) {
-      mkdirSync(SECRETS_DIR, { mode: 0o700, recursive: true });
+    // Not `secretsDir.ensure()`: the mode is load-bearing here — this
+    // directory holds the master key, so it must be 0700 (owner-only), and
+    // `ensure()` creates with the process umask.
+    if (!existsSync(secretsDir.path)) {
+      mkdirSync(secretsDir.path, { mode: 0o700, recursive: true });
     }
-    if (existsSync(KEY_PATH)) {
-      const buf = readFileSync(KEY_PATH);
+    const path = keyPath();
+    if (existsSync(path)) {
+      const buf = readFileSync(path);
       if (buf.length !== 32) {
         throw new Error(
-          `secrets key file ${KEY_PATH} has wrong length (${buf.length} != 32)`,
+          `secrets key file ${path} has wrong length (${buf.length} != 32)`,
         );
       }
       return buf;
     }
     const fresh = randomBytes(32);
-    writeFileSync(KEY_PATH, fresh, { mode: 0o600 });
-    chmodSync(KEY_PATH, 0o600);
+    writeFileSync(path, fresh, { mode: 0o600 });
+    chmodSync(path, 0o600);
     return fresh;
   } catch (err) {
     throw new SecretsKeychainLockedError(
@@ -62,7 +67,7 @@ function readOrCreateKeyFile(): Buffer {
  * Windows Credential Manager). Cached in-memory after first read so the OS
  * only prompts once per process lifetime.
  *
- * Fallback: `~/.singularity/secrets/.key` (mode 0600). Used when the native
+ * Fallback: `~/.singularity/state/secrets/.key` (mode 0600). Used when the native
  * keyring module is unavailable (CI, headless Linux without libsecret) or
  * fails at runtime. Functionally equivalent in the local-only threat model.
  */

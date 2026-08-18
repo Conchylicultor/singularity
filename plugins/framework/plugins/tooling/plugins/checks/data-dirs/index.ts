@@ -1,24 +1,9 @@
 import { defineDataDir } from "@plugins/infra/plugins/paths/core";
 
-// The two directories the check runner owns under the data root. Both are
+// The three directories the check runner owns under the data root. All are
 // HOST-GLOBAL rather than per-worktree, which is the property that makes them
 // worth declaring: every worktree's check run reads and writes the same entries,
 // so "who owns this?" had no answer before the registry existed.
-//
-// The check-progress log (`check-progress.jsonl` + its two rotations) is
-// deliberately NOT here. It is a loose FILE at the root, and a `DataDir` names a
-// directory; the three files move into `logs/check-progress/` together in the
-// layout migration and are declared then, as one family.
-//
-// Both declarations below carry a `legacyLocation` pinning them to the name they
-// occupy at the root TODAY. Nothing moves on disk in this commit — a declaration
-// resolving to its real `<kind>/<name>` home would point at a directory that does
-// not exist, and the consumer would silently read an empty cache. The paths
-// therefore stay byte-for-byte what `join(SINGULARITY_DIR, …)` produced; the
-// entries relocate in the layout migration, which drops these blocks in the same
-// commit that renames them.
-
-const NOT_YET_MOVED = "not yet moved; relocates in the layout migration";
 
 /** @see plugins/framework/plugins/tooling/plugins/checks/core/cache.ts */
 export const checkCacheDir = defineDataDir({
@@ -28,7 +13,6 @@ export const checkCacheDir = defineDataDir({
   description:
     "Recorded check verdicts, keyed by (working-tree hash, check id) so the main auto-build reuses passes an agent worktree already recorded",
   reclaim: { kind: "safe" },
-  legacyLocation: { path: "check-cache", reason: NOT_YET_MOVED },
 });
 
 /** @see plugins/framework/plugins/tooling/plugins/checks/core/warm-base.ts */
@@ -39,7 +23,29 @@ export const tsBuildInfoPoolDir = defineDataDir({
   description:
     "Recency-selected pool of published `.tsbuildinfo` warm bases, partitioned by (typescript version, tsconfig target)",
   reclaim: { kind: "safe" },
-  legacyLocation: { path: "tsbuildinfo", reason: NOT_YET_MOVED },
 });
 
-export default [checkCacheDir, tsBuildInfoPoolDir];
+/**
+ * The progress log family: `check-progress.jsonl` plus the two rotations
+ * `defineFileSink` keeps beside it.
+ *
+ * A directory rather than three loose files at the root, because the rotations
+ * ARE the history: a reader that opens only the live file silently truncates it
+ * at the last rotation. Keeping the family in one declared directory is what
+ * makes "read the log" and "read the whole log" the same operation.
+ *
+ * @see plugins/framework/plugins/tooling/plugins/checks/core/progress-log.ts
+ */
+export const checkProgressLogDir = defineDataDir({
+  kind: "logs",
+  name: "check-progress",
+  owner: "framework/tooling/checks",
+  description:
+    "Per-check-run progress log (`check-progress.jsonl` + rotations): one JSONL line per run open, per-check verdict and completion, host-global across worktrees",
+  // Observability output. Losing it costs the record of a past check run, never
+  // anything a future one needs — a dropped log re-runs the checks, it does not
+  // change their verdict.
+  reclaim: { kind: "safe" },
+});
+
+export default [checkCacheDir, tsBuildInfoPoolDir, checkProgressLogDir];

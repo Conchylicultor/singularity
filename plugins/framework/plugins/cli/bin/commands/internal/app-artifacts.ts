@@ -84,7 +84,7 @@ import { stampExperimentalMarker } from "./experimental-marker";
  *   - worktree-op markers (`markWorktreeOpStart` / `setWorktreeOpPhase`).
  *   - the compose-serve stage.
  *   - `propagateConfigToUser` — same function, different sink per caller (build
- *     targets `~/.singularity/config/<worktree>`, a release targets its own
+ *     targets `~/.singularity/state/config/<worktree>`, a release targets its own
  *     `config-seed`), so the sink IS the parameterization. Mirrors
  *     regen-pipeline.ts's own out-of-scope note.
  *   - `sweepDistLeftovers` — the caller sweeps its own dist dir right after
@@ -721,7 +721,8 @@ export interface BuildWebDistOptions {
    * Copy each artifact out of the shared content-addressed store instead of
    * symlinking it, so the produced dist is SELF-CONTAINED. Only the release
    * path (`build --hermetic`) wants this: its dist is `cpSync`'d into a
-   * shippable bundle, and symlinks into `~/.singularity/web-artifacts/` would
+   * shippable bundle, and symlinks into `~/.singularity/cache/web-artifacts/`
+   * would
    * ship as dangling links on any other machine.
    *
    * Materializing HERE rather than dereferencing at the copy site is deliberate:

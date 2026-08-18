@@ -1,6 +1,5 @@
-import { join } from "node:path";
-import { SINGULARITY_DIR } from "@plugins/infra/plugins/paths/core";
 import type { SignalOrigin } from "@plugins/packages/plugins/signal-origin/core";
+import { signalOriginLogDir } from "../../data-dirs";
 
 /**
  * The host-global record of who killed an op.
@@ -12,7 +11,9 @@ import type { SignalOrigin } from "@plugins/packages/plugins/signal-origin/core"
  * BEFORE it took the build lock, and an arm failure (not a death at all, but
  * still the reason a later death is unattributed).
  */
-export const SIGNAL_ORIGIN_FILE = join(SINGULARITY_DIR, "signal-origin.jsonl");
+export const SIGNAL_ORIGIN_FILE = signalOriginLogDir.file(
+  "signal-origin.jsonl",
+);
 
 /** Fields every line carries, whatever its `event`. */
 interface SignalOriginLineBase {
@@ -55,5 +56,4 @@ export type SignalOriginLine = SignalRecordedLine | ArmFailedLine;
  * union to its common keys, which would erase both `origin` and `reason`.
  */
 export type SignalOriginLineInput =
-  | Omit<SignalRecordedLine, "at">
-  | Omit<ArmFailedLine, "at">;
+  Omit<SignalRecordedLine, "at"> | Omit<ArmFailedLine, "at">;

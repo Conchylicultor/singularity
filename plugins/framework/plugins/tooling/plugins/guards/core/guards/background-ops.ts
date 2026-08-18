@@ -4,7 +4,7 @@ import type { BashInput } from "../types";
 
 /**
  * Subcommands that take a host slot and run for minutes. From
- * `~/.singularity/op-log.jsonl` over 14 days: build p50 9.8 min / p90 36.8 min,
+ * `~/.singularity/logs/op-log/op-log.jsonl` over 14 days: build p50 9.8 min / p90 36.8 min,
  * push p50 9.1 min / p90 35.7 min, check p50 3.8 min / p90 18 min.
  */
 const LONG_OPS = new Set(["build", "push", "check", "test", "release"]);

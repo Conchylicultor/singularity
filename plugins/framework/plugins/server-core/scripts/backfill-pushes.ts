@@ -16,7 +16,13 @@
 
 import { drizzle } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
-import { pgTable, text, timestamp, uniqueIndex, index } from "drizzle-orm/pg-core";
+import {
+  pgTable,
+  text,
+  timestamp,
+  uniqueIndex,
+  index,
+} from "drizzle-orm/pg-core";
 import { spawnExpectOk } from "@plugins/infra/plugins/spawn/core";
 
 const DRY_RUN = !process.argv.includes("--write");
@@ -32,7 +38,9 @@ const pushes = pgTable(
     sha: text("sha").notNull(),
     pushId: text("push_id").notNull(),
     message: text("message").notNull(),
-    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
   },
   (t) => [
     uniqueIndex("pushes_sha_unique").on(t.sha),
@@ -69,7 +77,10 @@ async function readAllCommits(cwd: string): Promise<CommitInfo[]> {
     "%(trailers:key=Singularity-Conversation,valueonly,separator=%x00)%x00" +
     "%(trailers:key=Singularity-Push,valueonly,separator=%x00)%x00" +
     "%s%x00";
-  const raw = await git(["log", "--no-color", `--format=${FORMAT}`, "main"], cwd);
+  const raw = await git(
+    ["log", "--no-color", `--format=${FORMAT}`, "main"],
+    cwd,
+  );
   const records = raw.split("\0\n").filter((r) => r.length > 0);
   return records
     .map((record) => {
@@ -95,13 +106,17 @@ interface WorktreeEntry {
 // Multiple worktrees can share the same SHA (e.g. worktrees created after a commit
 // landed on main will also start at that SHA). The caller resolves ambiguity by
 // picking the entry whose timestamp best matches the commit timestamp.
-async function buildWorktreeMap(cwd: string): Promise<Map<string, WorktreeEntry[]>> {
+async function buildWorktreeMap(
+  cwd: string,
+): Promise<Map<string, WorktreeEntry[]>> {
   const raw = await git(["worktree", "list", "--porcelain"], cwd);
   const map = new Map<string, WorktreeEntry[]>();
   const stanzas = raw.split("\n\n").filter(Boolean);
   for (const stanza of stanzas) {
     const headMatch = stanza.match(/^HEAD ([0-9a-f]+)$/m);
-    const branchMatch = stanza.match(/^branch refs\/heads\/claude-web\/(claude-(\d+)[^)]*?)$/m);
+    const branchMatch = stanza.match(
+      /^branch refs\/heads\/claude-web\/(claude-(\d+)[^)]*?)$/m,
+    );
     if (!headMatch?.[1] || !branchMatch?.[1] || !branchMatch[2]) continue;
     const sha = headMatch[1];
     const conversationId = branchMatch[1];
@@ -117,7 +132,10 @@ async function buildWorktreeMap(cwd: string): Promise<Map<string, WorktreeEntry[
 // value that is still ≤ commitTs (i.e. the conversation existed before the commit).
 // If all worktrees post-date the commit (shouldn't happen in practice), fall back
 // to the one with the smallest timestamp.
-function resolveConversation(entries: WorktreeEntry[], commitTs: number): string {
+function resolveConversation(
+  entries: WorktreeEntry[],
+  commitTs: number,
+): string {
   const before = entries.filter((e) => e.ts <= commitTs);
   if (before.length > 0) {
     return before.reduce((a, b) => (b.ts > a.ts ? b : a)).conversationId;
@@ -134,17 +152,19 @@ if (!worktree) {
 }
 
 import { readFileSync } from "node:fs";
-import { join } from "node:path";
-import { GIT, SINGULARITY_DIR } from "@plugins/infra/plugins/paths/server";
+import { GIT } from "@plugins/infra/plugins/paths/server";
+import { DATABASE_CONFIG_PATH } from "@plugins/database/core";
 
-const dbConfigPath = join(SINGULARITY_DIR, "database.json");
-let host = "localhost", port = "5432", user = process.env.USER ?? "postgres";
+const dbConfigPath = DATABASE_CONFIG_PATH;
+let host = "localhost",
+  port = "5432",
+  user = process.env.USER ?? "postgres";
 try {
   const cfg = JSON.parse(readFileSync(dbConfigPath, "utf-8"));
   host = cfg.connection?.host ?? host;
   port = String(cfg.connection?.port ?? port);
   user = cfg.connection?.user ?? user;
-// eslint-disable-next-line promise-safety/no-bare-catch
+  // eslint-disable-next-line promise-safety/no-bare-catch
 } catch {}
 host = process.env.PGHOST ?? host;
 port = process.env.PGPORT ?? port;
@@ -170,9 +190,13 @@ const [allCommits, worktreeMap] = await Promise.all([
 const missing = allCommits.filter((c) => c.pushId && !c.conversationId);
 
 console.log(`Commits on main:          ${allCommits.length}`);
-console.log(`  with both trailers:     ${allCommits.filter((c) => c.pushId && c.conversationId).length}`);
+console.log(
+  `  with both trailers:     ${allCommits.filter((c) => c.pushId && c.conversationId).length}`,
+);
 console.log(`  missing Conversation:   ${missing.length}`);
-console.log(`  missing both (manual):  ${allCommits.filter((c) => !c.pushId && !c.conversationId).length}`);
+console.log(
+  `  missing both (manual):  ${allCommits.filter((c) => !c.pushId && !c.conversationId).length}`,
+);
 console.log();
 
 if (missing.length === 0) {
@@ -192,15 +216,22 @@ console.log("Plan:\n");
 for (const commit of missing) {
   const entries = worktreeMap.get(commit.sha);
   const conversationId = entries
-    ? resolveConversation(entries, Math.floor(commit.committedAt.getTime() / 1000))
+    ? resolveConversation(
+        entries,
+        Math.floor(commit.committedAt.getTime() / 1000),
+      )
     : undefined;
   if (!conversationId) {
-    console.log(`  SKIP no-worktree-match  ${commit.sha.slice(0, 9)}  "${commit.subject}"`);
+    console.log(
+      `  SKIP no-worktree-match  ${commit.sha.slice(0, 9)}  "${commit.subject}"`,
+    );
     skipped++;
     continue;
   }
   if (existingShas.has(commit.sha)) {
-    console.log(`  SKIP already-in-db      ${commit.sha.slice(0, 9)}  "${commit.subject}"`);
+    console.log(
+      `  SKIP already-in-db      ${commit.sha.slice(0, 9)}  "${commit.subject}"`,
+    );
     skipped++;
     continue;
   }
@@ -213,7 +244,9 @@ for (const commit of missing) {
     message: commit.subject,
     createdAt: commit.committedAt,
   });
-  console.log(`  INSERT  ${commit.sha.slice(0, 9)}  conv=${conversationId}  push=${commit.pushId.slice(0, 8)}  "${commit.subject}"`);
+  console.log(
+    `  INSERT  ${commit.sha.slice(0, 9)}  conv=${conversationId}  push=${commit.pushId.slice(0, 8)}  "${commit.subject}"`,
+  );
 }
 
 console.log(`\nSummary: ${rows.length} to insert, ${skipped} skipped`);

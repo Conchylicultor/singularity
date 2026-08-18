@@ -69,11 +69,11 @@ import {
 } from "@plugins/database/plugins/admin/server";
 import type { BuildRunRecorder } from "@plugins/build/plugins/run-ledger/server";
 import {
-  SINGULARITY_DIR,
   WORKTREES_DIR,
   MAIN_WORKTREE_NAME,
   worktreeArtifacts,
 } from "../../paths";
+import { configDir } from "@plugins/config_v2/data-dirs";
 import type { SpanCollector } from "../../profiler";
 import type { StepLogCollector } from "../../build-logs-writer";
 import {
@@ -137,8 +137,7 @@ export interface ComposeServeResult {
 export function readCompositionItems(root: string): CompositionManifestItem[] {
   const values = readEffectiveConfigFromDisk(compositionsConfig, {
     root,
-    worktreeName: MAIN_WORKTREE_NAME,
-    singularityDir: SINGULARITY_DIR,
+    userConfigDir: configDir.file(MAIN_WORKTREE_NAME),
     hierarchyPath: COMPOSITIONS_HIERARCHY_PATH,
   });
   return values.manifests;
@@ -303,11 +302,7 @@ async function serveOne(opts: {
     );
 
     await compStage("config", "build:codegen", "propagate config", () =>
-      propagateConfigToUser({
-        root,
-        worktreeName: id,
-        singularityDir: SINGULARITY_DIR,
-      }),
+      propagateConfigToUser({ root, userConfigDir: configDir.file(id) }),
     );
 
     // Spec LAST — the gateway only discovers the namespace once DB + dist exist.

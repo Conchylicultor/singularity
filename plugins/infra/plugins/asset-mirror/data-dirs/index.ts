@@ -16,15 +16,10 @@ export const assetMirrorCache = defineDataDir({
   description:
     "Lazily-downloaded remote assets, served same-origin thereafter (offline-capable after one warm-up)",
   reclaim: { kind: "safe" },
-  legacyLocation: {
-    path: "asset-mirror",
-    reason: "not yet moved; relocates in the layout migration",
-  },
 });
 
 /**
- * Where the cache sits *relative to a data root* — `"asset-mirror"` today,
- * `"cache/asset-mirror"` once the layout migration runs.
+ * Where the cache sits *relative to a data root* — `"cache/asset-mirror"`.
  *
  * For the one caller that must place this directory under a root that is NOT
  * this process's own: `seedAssetMirrorCache` copies a release bundle's baked

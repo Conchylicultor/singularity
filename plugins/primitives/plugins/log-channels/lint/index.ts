@@ -43,11 +43,11 @@ export default {
       // terminal (the agent-visible channel — agents run `./singularity …` and
       // read stdout); the server/central daemon entrypoints are boot bootstrap
       // code whose stdout/stderr the gateway captures to
-      // ~/.singularity/logs/<name>.log. console is the right sink for all of them.
+      // ~/.singularity/logs/gateway/<name>.log. console is the right sink for all of them.
       "**/bin/**/*.{ts,tsx}",
       // central/ — the host-wide central runtime. The per-worktree `logs` plugin
       // (which serves the Logs pane + read_logs JSONL) does not run there, so
-      // console — captured to ~/.singularity/logs/central.log — is the sink.
+      // console — captured to ~/.singularity/logs/gateway/central.log — is the sink.
       "**/central/**/*.{ts,tsx}",
       // provision/ — install-time provisioning contributions, discovered by the
       // provision runner and executed during the `bun install` postinstall. Same

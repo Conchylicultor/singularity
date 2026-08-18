@@ -1,6 +1,5 @@
-import { join } from "path";
 import { defineFileSink } from "@plugins/infra/plugins/file-sink/core";
-import { SINGULARITY_DIR } from "@plugins/infra/plugins/paths/core";
+import { buildProgressLogDir } from "../data-dirs";
 
 // Host-global, exactly like the check-progress log next door
 // (checks/core/progress-log.ts) and for the same reason: an incident is
@@ -8,7 +7,7 @@ import { SINGULARITY_DIR } from "@plugins/infra/plugins/paths/core";
 // `runId` + `pid` + `worktree` on every line keep concurrent builds separable —
 // and this box routinely runs several builds at once, one of which can wedge and
 // pin the whole cpu-slot pool (see research/2026-07-21-global-cli-op-wedge-gc-sink.md).
-export const PROGRESS_FILE = join(SINGULARITY_DIR, "build-progress.jsonl");
+export const PROGRESS_FILE = buildProgressLogDir.file("build-progress.jsonl");
 
 // Same explicit 2 MB × keep 2 bound the check log chose (defineFileSink's 128 MB
 // default is a firehose budget for the live-state channel, absurd here): a full
@@ -45,8 +44,21 @@ interface RecordBase {
  */
 export type BuildProgressRecord =
   | (RecordBase & { phase: "run"; buildId: string | null; rssMb: number })
-  | (RecordBase & { phase: "enter"; token: number; id: string; step: string; label: string; rssMb: number })
-  | (RecordBase & { phase: "leave"; token: number; id: string; durationMs: number; rssMb: number })
+  | (RecordBase & {
+      phase: "enter";
+      token: number;
+      id: string;
+      step: string;
+      label: string;
+      rssMb: number;
+    })
+  | (RecordBase & {
+      phase: "leave";
+      token: number;
+      id: string;
+      durationMs: number;
+      rssMb: number;
+    })
   | (RecordBase & {
       phase: "pending";
       elapsedMs: number;
@@ -54,7 +66,12 @@ export type BuildProgressRecord =
       rssMb: number;
       peakRssMb: number;
     })
-  | (RecordBase & { phase: "done"; success: boolean; elapsedMs: number; peakRssMb: number });
+  | (RecordBase & {
+      phase: "done";
+      success: boolean;
+      elapsedMs: number;
+      peakRssMb: number;
+    });
 
 function rssMb(): number {
   return Math.round(process.memoryUsage().rss / (1024 * 1024));
@@ -108,7 +125,10 @@ function stamp(): RecordBase {
  * this log correlates with `ops/build.json` by worktree + pid). Idempotent: a
  * second call is ignored.
  */
-export function openBuildProgress(worktree: string, buildId: string | null): void {
+export function openBuildProgress(
+  worktree: string,
+  buildId: string | null,
+): void {
   if (current) return;
   const run: OpenRun = {
     runId: crypto.randomUUID(),
@@ -160,7 +180,15 @@ export function buildProgressSpanStart(
   const now = rssMb();
   if (now > run.peakRssMb) run.peakRssMb = now;
   run.inFlight.set(token, { label, startedAt: performance.now() });
-  writeRecord({ ...stamp(), phase: "enter", token, id, step, label, rssMb: now });
+  writeRecord({
+    ...stamp(),
+    phase: "enter",
+    token,
+    id,
+    step,
+    label,
+    rssMb: now,
+  });
 }
 
 /**
@@ -168,11 +196,22 @@ export function buildProgressSpanStart(
  * itself is called in a `finally`), so a throwing span still lands its `leave`.
  * The set difference `enter − leave` (by token) is the wedge suspect.
  */
-export function buildProgressSpanEnd(token: number, id: string, durationMs: number): void {
+export function buildProgressSpanEnd(
+  token: number,
+  id: string,
+  durationMs: number,
+): void {
   const run = current;
   if (!run) return;
   if (!run.inFlight.delete(token)) return;
-  writeRecord({ ...stamp(), phase: "leave", token, id, durationMs, rssMb: rssMb() });
+  writeRecord({
+    ...stamp(),
+    phase: "leave",
+    token,
+    id,
+    durationMs,
+    rssMb: rssMb(),
+  });
 }
 
 /**
@@ -219,7 +258,12 @@ export interface BuildRunProgress {
   /** `enter − leave`: empty for a healthy run, the culprit set for a hung one. */
   outstanding: OutstandingSpan[];
   /** Present iff the run reached its `done` record (any graceful exit, not a wedge). */
-  done: { at: string; success: boolean; elapsedMs: number; peakRssMb: number } | null;
+  done: {
+    at: string;
+    success: boolean;
+    elapsedMs: number;
+    peakRssMb: number;
+  } | null;
 }
 
 /**
@@ -238,7 +282,10 @@ export function readBuildProgress(): BuildRunProgress[] {
   if (result.kind === "missing") return [];
 
   const runs = new Map<string, BuildRunProgress>();
-  const openByRun = new Map<string, Map<number, { label: string; at: string; rssMb: number }>>();
+  const openByRun = new Map<
+    string,
+    Map<number, { label: string; at: string; rssMb: number }>
+  >();
 
   for (const record of result.records) {
     if (record.phase === "run") {
@@ -263,7 +310,11 @@ export function readBuildProgress(): BuildRunProgress[] {
     if (!open) continue;
     if (record.phase === "enter") {
       if (record.rssMb > run.peakRssMb) run.peakRssMb = record.rssMb;
-      open.set(record.token, { label: record.label, at: record.t, rssMb: record.rssMb });
+      open.set(record.token, {
+        label: record.label,
+        at: record.t,
+        rssMb: record.rssMb,
+      });
     } else if (record.phase === "leave") {
       open.delete(record.token);
     } else if (record.phase === "pending") {

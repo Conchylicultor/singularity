@@ -21,12 +21,6 @@ export const reportsBufferDir = defineDataDir({
     reason:
       "a buffered line is the only record of that crash until the next boot flushes it into the DB",
   },
-  // TEMPORARY. Byte-for-byte where it is today; the layout migration relocates
-  // it under `state/`.
-  legacyLocation: {
-    path: "reports",
-    reason: "not yet moved; relocates in the layout migration",
-  },
 });
 
 export default [reportsBufferDir];

@@ -1,7 +1,13 @@
 import { existsSync, readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { configFileOwner, APP_SCOPE_DIR } from "@plugins/config_v2/core";
-import type { ConfigDescriptor, OrphanEntry, OrphanFile, OrphanFileRole, OrphanReport } from "@plugins/config_v2/core";
+import type {
+  ConfigDescriptor,
+  OrphanEntry,
+  OrphanFile,
+  OrphanFileRole,
+  OrphanReport,
+} from "@plugins/config_v2/core";
 import { CONFIG_DIR } from "./config-dir";
 import { getAllDescriptors } from "./resource";
 
@@ -16,7 +22,8 @@ function isScoped(relPath: string): boolean {
 // layer only), so ancestor has no scoped variant.
 function fileRole(relPath: string): OrphanFileRole {
   const scoped = isScoped(relPath);
-  if (relPath.endsWith(".origin.jsonc")) return scoped ? "scoped-origin" : "origin";
+  if (relPath.endsWith(".origin.jsonc"))
+    return scoped ? "scoped-origin" : "origin";
   if (relPath.endsWith(".ancestor.jsonc")) return "ancestor";
   return scoped ? "scoped-override" : "override";
 }
@@ -29,12 +36,17 @@ function walkJsoncFiles(dir: string, baseDir: string, out: string[]): void {
     const full = join(dir, entry.name);
     if (entry.isDirectory()) walkJsoncFiles(full, baseDir, out);
     else if (entry.isFile() && entry.name.endsWith(".jsonc"))
-      out.push(full.slice(baseDir.length + 1).split("\\").join("/"));
+      out.push(
+        full
+          .slice(baseDir.length + 1)
+          .split("\\")
+          .join("/"),
+      );
   }
 }
 
 /**
- * Read-only audit of the USER-layer config dir (`~/.singularity/config/<worktree>`):
+ * Read-only audit of the USER-layer config dir (`~/.singularity/state/config/<worktree>`):
  * every on-disk config file whose owning `defineConfig` descriptor is no longer
  * live is an orphan. Unlike the git layer (`pruneOrphanedConfigFiles`), user-layer
  * files are unversioned so we never delete — we classify:
@@ -75,7 +87,10 @@ export function auditUserConfigOrphans(
   walkJsoncFiles(configDir, configDir, onDisk);
 
   // Group orphaned files by their base descriptor key.
-  const groups = new Map<string, { hier: string; name: string; files: OrphanFile[] }>();
+  const groups = new Map<
+    string,
+    { hier: string; name: string; files: OrphanFile[] }
+  >();
   for (const relPath of onDisk) {
     const owner = configFileOwner(relPath);
     if (!owner) continue;
@@ -83,7 +98,11 @@ export function auditUserConfigOrphans(
 
     const storeKey = `${owner.hier}/${owner.name}`;
     let group = groups.get(storeKey);
-    if (!group) groups.set(storeKey, (group = { hier: owner.hier, name: owner.name, files: [] }));
+    if (!group)
+      groups.set(
+        storeKey,
+        (group = { hier: owner.hier, name: owner.name, files: [] }),
+      );
 
     const stat = statSync(join(configDir, relPath));
     group.files.push({
@@ -97,7 +116,9 @@ export function auditUserConfigOrphans(
   const orphans: OrphanEntry[] = [];
   for (const [storeKey, group] of groups) {
     // Any real override document (base or scoped) means user data is stranded.
-    const riskClass = group.files.some((f) => f.role === "override" || f.role === "scoped-override")
+    const riskClass = group.files.some(
+      (f) => f.role === "override" || f.role === "scoped-override",
+    )
       ? "stranded-data"
       : "noise";
 
@@ -105,7 +126,9 @@ export function auditUserConfigOrphans(
     // Only an UNAMBIGUOUS single match is a credible target: a name shared by many
     // live descriptors (e.g. the default "config") can't be pinpointed to one
     // destination, so we report those as `removed` rather than assert a wrong hier.
-    const otherHiers = [...(hiersByName.get(group.name) ?? [])].filter((h) => h !== group.hier);
+    const otherHiers = [...(hiersByName.get(group.name) ?? [])].filter(
+      (h) => h !== group.hier,
+    );
     const relocatedToHier = otherHiers.length === 1 ? otherHiers[0] : undefined;
 
     orphans.push({
@@ -117,13 +140,17 @@ export function auditUserConfigOrphans(
       ...(relocatedToHier !== undefined ? { relocatedToHier } : {}),
       files: group.files,
       totalBytes: group.files.reduce((sum, f) => sum + f.bytes, 0),
-      newestMtimeMs: group.files.reduce((max, f) => Math.max(max, f.mtimeMs), 0),
+      newestMtimeMs: group.files.reduce(
+        (max, f) => Math.max(max, f.mtimeMs),
+        0,
+      ),
     });
   }
 
   // Deterministic: data-bearing orphans first, then by storeKey.
   orphans.sort((a, b) => {
-    if (a.riskClass !== b.riskClass) return a.riskClass === "stranded-data" ? -1 : 1;
+    if (a.riskClass !== b.riskClass)
+      return a.riskClass === "stranded-data" ? -1 : 1;
     return a.storeKey < b.storeKey ? -1 : a.storeKey > b.storeKey ? 1 : 0;
   });
 

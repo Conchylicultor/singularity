@@ -87,7 +87,7 @@ function PrototypeStage() {
 /**
  * What is wrong with this prototype's folder, above the prototype itself.
  *
- * Prototypes are user content in `~/.singularity/prototypes/`, not code, so the
+ * Prototypes are user content in `~/.singularity/apps/prototypes/`, not code, so the
  * self-contained contract can't be enforced by a push-time check any more. It is
  * enforced when the folder is read, and reported here — in front of the person
  * who just wrote it, next to the thing that isn't rendering right.

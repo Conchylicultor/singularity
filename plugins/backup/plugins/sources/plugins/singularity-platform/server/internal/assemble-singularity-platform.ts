@@ -2,10 +2,8 @@ import { existsSync } from "node:fs";
 import { cp, stat } from "node:fs/promises";
 import { join } from "node:path";
 import { getConfig } from "@plugins/config_v2/server";
-import {
-  LEGACY_AUTH_DIR,
-  SINGULARITY_DIR,
-} from "@plugins/infra/plugins/paths/server";
+import { legacyAuthDir } from "@plugins/infra/plugins/secrets/data-dirs";
+import { DATABASE_CONFIG_PATH } from "@plugins/database/core";
 import type { BackupSourceReport } from "@plugins/backup/core";
 import { singularityPlatformSourceConfig } from "../../shared/config";
 
@@ -40,9 +38,9 @@ export async function assembleSingularityPlatform(
   const items = [];
   let sizeBytes = 0;
 
-  // auth/ (recursive dir) — the pre-secrets-store token layout, which `paths`
-  // already names as the legacy location rather than this file re-deriving it.
-  const authDir = LEGACY_AUTH_DIR;
+  // The pre-secrets-store token layout (recursive dir), taken from the `secrets`
+  // plugin's own declaration rather than re-derived here.
+  const authDir = legacyAuthDir.path;
   if (existsSync(authDir)) {
     const dest = join(dir, "auth");
     await cp(authDir, dest, { recursive: true });
@@ -51,10 +49,9 @@ export async function assembleSingularityPlatform(
     items.push({ label: "auth", detail: `${count} files` });
   }
 
-  // database.json — a loose FILE at the data root, deliberately still joined by
-  // hand: a DataDir names a directory, and this file has no containing dir of
-  // its own to declare yet.
-  const databaseJsonPath = join(SINGULARITY_DIR, "database.json");
+  // database.json — named through the one path the `database` plugin's core
+  // barrel exports, which is derived from its `state/db-config` declaration.
+  const databaseJsonPath = DATABASE_CONFIG_PATH;
   if (existsSync(databaseJsonPath)) {
     const dest = join(dir, "database.json");
     await cp(databaseJsonPath, dest);

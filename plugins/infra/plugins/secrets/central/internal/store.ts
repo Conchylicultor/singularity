@@ -1,10 +1,9 @@
 import { existsSync, mkdirSync, readFileSync } from "node:fs";
 import { rename, writeFile, chmod, unlink } from "node:fs/promises";
 import { randomUUID } from "node:crypto";
-import path from "node:path";
 import { decrypt, encrypt } from "./crypto";
 import { getEncryptionKey } from "./key-store";
-import { SINGULARITY_DIR, STORE_PATH } from "./paths";
+import { secretsDir, storePath } from "./paths";
 import type { SecretMetadata } from "@plugins/infra/plugins/secrets/core";
 
 interface Entry {
@@ -23,9 +22,10 @@ let cached: StoreBlob | null = null;
 let writeChain: Promise<unknown> = Promise.resolve();
 
 async function loadFromDisk(): Promise<StoreBlob> {
-  if (!existsSync(STORE_PATH)) return { version: 1, namespaces: {} };
+  const store = storePath();
+  if (!existsSync(store)) return { version: 1, namespaces: {} };
   const key = await getEncryptionKey();
-  const blob = readFileSync(STORE_PATH);
+  const blob = readFileSync(store);
   const decrypted = decrypt(blob, key);
   const parsed = JSON.parse(decrypted.toString("utf8")) as StoreBlob;
   // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- forward-compat guard; parsed JSON may have any shape
@@ -36,13 +36,11 @@ async function loadFromDisk(): Promise<StoreBlob> {
 }
 
 export async function initStore(): Promise<void> {
-  const dir = path.dirname(STORE_PATH);
-  if (!existsSync(dir)) {
-    mkdirSync(dir, { mode: 0o700, recursive: true });
-  }
-  // Ensure the base ~/.singularity directory exists (it should, but be safe).
-  if (!existsSync(SINGULARITY_DIR)) {
-    mkdirSync(SINGULARITY_DIR, { mode: 0o700, recursive: true });
+  // Not `secretsDir.ensure()`: the mode is load-bearing here. This directory
+  // holds the fallback master key, so it must be 0700 — owner-only — and
+  // `ensure()` creates with the process umask.
+  if (!existsSync(secretsDir.path)) {
+    mkdirSync(secretsDir.path, { mode: 0o700, recursive: true });
   }
   await getEncryptionKey();
   cached = await loadFromDisk();
@@ -62,11 +60,12 @@ async function persist(): Promise<void> {
   const key = await getEncryptionKey();
   const json = Buffer.from(JSON.stringify(blob), "utf8");
   const encrypted = encrypt(json, key);
-  const tmpPath = `${STORE_PATH}.tmp-${randomUUID()}`;
+  const store = storePath();
+  const tmpPath = `${store}.tmp-${randomUUID()}`;
   try {
     await writeFile(tmpPath, encrypted, { mode: 0o600 });
     await chmod(tmpPath, 0o600);
-    await rename(tmpPath, STORE_PATH);
+    await rename(tmpPath, store);
   } catch (err) {
     try {
       await unlink(tmpPath);

@@ -112,7 +112,7 @@ State machine during restart: `Running → Restarting → Running`. During `Rest
 
 The gateway includes a generic service supervisor (`supervisor.go`) that manages long-lived daemons defined in the `-db-config` file. The gateway knows nothing about what services are — it just executes start commands, probes readiness, and runs watchdogs.
 
-### Config file: `-db-config` (default `~/.singularity/database.json`)
+### Config file: `-db-config` (default `~/.singularity/state/db-config/database.json`)
 
 Auto-generated on first `./singularity start`. Contains two sections:
 - `connection` — database host/port/user, read by the server and CLI (not by the gateway)
@@ -148,7 +148,7 @@ If `database.json` is missing or has an empty `services` array, the supervisor d
 
 ## Logging
 
-Each channel gets its own size-rotated file under `-log-dir` (default `~/.singularity/logs/`), so one channel's volume can't bury another:
+Each channel gets its own size-rotated file under `-log-dir` (default `~/.singularity/logs/gateway/`), so one channel's volume can't bury another:
 
 - `gateway.log` — the gateway's own `slog` output (lifecycle, routing, supervisor). Written directly by the Go process via a rotating writer.
 - `<name>.log` — one file per worktree, holding that backend's stdout/stderr (`central.log`, `<worktree>.log`, …). Each line is `<RFC3339> [stdout|stderr] <line>`. Backend output never lands in `gateway.log`. This is the durable counterpart to the in-memory `logRing` that feeds the live UI.

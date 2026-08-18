@@ -26,7 +26,7 @@ function runIdMs(runId: string): number {
  * Keep the `keep` newest run dirs of `<composition>-<target>` and delete the
  * rest, never touching a run some `latest-<platform>` pointer names.
  *
- * `~/.singularity/releases/` had no retention policy at all
+ * `~/.singularity/state/releases/` had no retention policy at all
  * (`pruneWorktreeReleaseArtifacts` prunes per-release LOGS, not run dirs), and a
  * run dir is a whole staged app — hundreds of megabytes. Invoked by the release
  * CLI right after the pointer write, so the pinned set is already current.

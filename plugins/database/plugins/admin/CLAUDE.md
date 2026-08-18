@@ -8,7 +8,6 @@
 - Server:
   - Uses:
     - `infra/host-admission.defineHostPool`
-    - `infra/paths.SINGULARITY_DIR`
     - `packages/spawn-priority.backgroundArgv`
   - Exports (types):
     - `BackupInfo`

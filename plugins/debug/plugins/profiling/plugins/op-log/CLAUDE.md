@@ -101,7 +101,7 @@ vocabulary rather than inventing a second one.
 
 ## Storage
 
-`~/.singularity/op-log.jsonl`, append-only. Append (never rewrite) is load-bearing
+`~/.singularity/logs/op-log/op-log.jsonl`, append-only. Append (never rewrite) is load-bearing
 even in the reconciler: concurrent CLI processes are writing the same file.
 
 A malformed final line is tolerated (a torn partial append), and **only** that:
@@ -116,8 +116,11 @@ a `SyntaxError` is skipped, anything else rethrows.
 ## Plugin reference
 
 - Description: Unified op log: the one durable record for every host-contending op (build / push / check), its per-resource wait list, the writer, the merged reader, and the single orphan reconciler.
+- Cross-plugin:
+  - Imported by:
+    - `debug/profiling/ops`
+    - `stats/pushes`
 - Server:
-  - Uses: `infra/paths.SINGULARITY_DIR`
   - Exports (types):
     - `OpProfiler`
     - `OpProfilerOptions`
@@ -126,10 +129,6 @@ a `SyntaxError` is skipped, anything else rethrows.
     - `finalizeOrphanedOps`
     - `OP_LOG_FILE`
     - `readOpRecords`
-- Cross-plugin:
-  - Imported by:
-    - `debug/profiling/ops`
-    - `stats/pushes`
 - Core:
   - Exports (types):
     - `OpenWait`

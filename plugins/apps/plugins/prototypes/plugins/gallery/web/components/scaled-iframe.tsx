@@ -72,7 +72,7 @@ export function ScaledIframe({
           // here exactly as it does when the file is opened off disk — without
           // it the frame is a null origin and every such fetch is blocked.
           // Safe here: prototypes are first-party files, authored on this
-          // machine and served from the user's own ~/.singularity/prototypes/.
+          // machine and served from the user's own ~/.singularity/apps/prototypes/.
           sandbox="allow-scripts allow-same-origin"
           width={meta.viewport.w}
           height={meta.viewport.h}

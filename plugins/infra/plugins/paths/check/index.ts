@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
-import { readdirSync } from "node:fs";
+import { lstatSync, readdirSync, readlinkSync } from "node:fs";
+import { isAbsolute, join, relative, resolve, sep } from "node:path";
 import type {
   Check,
   CheckContext,
@@ -18,6 +19,8 @@ import {
   getDataDirs,
 } from "../core/internal/data-dir";
 import type { DataDir } from "../core/internal/data-dir";
+import { legacyRootEntries } from "../core/internal/legacy-layout";
+import type { LegacyRootEntry } from "../core/internal/legacy-layout";
 
 function escapeRegExp(s: string): string {
   return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -55,11 +58,18 @@ const ALLOWED_PATHS = [
   // path family is source-of-truth territory; its consumers (the CLI's
   // `deploy.ts`, which generates the scripts) stay policed.
   "plugins/apps/plugins/deploy/plugins/deployments/core/derive.ts",
-  // Display-only strings (JSX text, plugin description metadata, log messages).
-  "plugins/auth/web/components/accounts-pane.tsx",
+  // Display-only strings — the `~/…` spelling inside a plugin's own description
+  // metadata, which is prose a person reads and never a path anything resolves.
+  //
+  // Entries LEAVE this list the moment their literal does. An exemption that
+  // outlives the string it was granted for is how an allowlist stops meaning
+  // anything: it reads as "this file is allowed to hardcode paths" rather than
+  // "this one line is prose". Two entries were dropped that way in the layout
+  // migration — `auth/web/components/accounts-pane.tsx` (its `~/.singularity/auth/`
+  // JSX moved to the `display` sub-plugin, and was wrong besides) and
+  // `infra/secrets/central/internal/boot.ts`.
   "plugins/infra/plugins/attachments/server/index.ts",
   "plugins/infra/plugins/secrets/central/index.ts",
-  "plugins/infra/plugins/secrets/central/internal/boot.ts",
 ];
 
 // Strings are split so this source file does not match its own grep patterns.
@@ -206,82 +216,53 @@ const noInlinedWorktreeArtifactsCheck: Check = {
 // SPELLS a path. This one polices the filesystem the repo WRITES TO, which is
 // state no tree scan can see. Hence `scope: "deploy"` — the verdict is not a
 // function of the working-tree hash, so it owes a `cacheSignature()` (asserted
-// at load in `checks/core/runner.ts`) that folds in the real root's listing.
+// at load in `checks/core/runner.ts`) that folds in everything it reads.
+//
+// Three rules, in one pass over one observation of the root:
+//
+//   1. **Top level.** Every entry is one of the closed set of KINDS, a
+//      permanently-grandfathered live service (a declaration carrying a
+//      `legacyLocation`), OS noise, or a name `LEGACY_LAYOUT` accounts for.
+//   2. **The legacy names are VERIFIED, not tolerated.** There is no
+//      hand-written allowlist any more: the grandfathered set is derived from
+//      `LEGACY_LAYOUT` (`core/internal/legacy-layout.ts`) — the same table the
+//      one-off migrate script executes, so the to-do list and the migration plan
+//      are literally the same fact and cannot drift. A legacy name passes only
+//      if it is the compatibility SYMLINK resolving to its declared target, or
+//      is absent (for a transient/quarantined row, and for any row whose shim
+//      the drop-legacy pass has already removed). A legacy name still sitting
+//      there as a real directory is a FAILURE — the old allowlist would have
+//      stayed green through exactly that, which is how a "shrinking to-do list"
+//      can shrink to nothing on paper while nothing has moved on disk.
+//   3. **Second level.** Every entry inside a kind directory is itself a
+//      declared `${kind}/${name}`. Without this the check goes vacuous the
+//      moment the top level is seven kind dirs: `state` is a kind, so a
+//      hand-made `state/foo` would pass rule 1 forever.
+//
+// Rules 2 and 3's second half are self-liquidating: when every legacy name has
+// drained, `LEGACY_LAYOUT`, the migrate script and rule 2 are deleted together.
 
 /**
  * Entries the OS mints that no plugin will ever own and nobody may declare.
- * Kept separate from `LEGACY_TOP_LEVEL` deliberately: that list is a to-do,
- * this one is permanent, and merging them would make the to-do list look like
- * it can never reach zero.
+ * Kept separate from the legacy table deliberately: that table is a to-do that
+ * liquidates itself, this set is permanent, and merging them would make the
+ * to-do list look like it can never reach zero.
  */
 const OS_NOISE = new Set([".DS_Store"]);
 
-/**
- * A SHRINKING TO-DO LIST. **Nothing may be added to it, ever.**
- *
- * Seeded with everything sitting at the root the day this check landed, so it
- * lands green and the migration can proceed name by name. Each entry is a
- * directory or loose file that predates the registry; a name LEAVES this list
- * when its owner declares it via `defineDataDir` (and, for the ones that move,
- * when the launcher migration relocates it under its kind).
- *
- * Adding a name here to make the check pass would defeat the entire point: an
- * undeclared entry is either something an owner must declare, or an orphan that
- * belongs in `deprecated/`. There is no third case, and "grandfather it" is not
- * an answer for anything minted after this list was written.
- *
- * Note the kind names (`logs`, `worktrees`, and the six kinds not yet on disk)
- * are absent by construction — they are allowed as KINDS below, not as legacy.
- * So are the grandfathered live services once their `legacyLocation`
- * declarations land; the run below says so out loud when it spots one.
- */
-const LEGACY_TOP_LEVEL = new Set([
-  "attachments",
-  "auth",
-  "backups",
-  "build-log.jsonl",
-  "build-progress.jsonl",
-  "build-progress.jsonl.1",
-  "build-progress.jsonl.2",
-  "build-slots",
-  "central-routes.json",
-  "check-progress.jsonl",
-  "check-progress.jsonl.1",
-  "check-progress.jsonl.2",
-  "check-progress.jsonl.preformat.bak",
-  "crashes",
-  "database.json",
-  // Transient: the sentinel mints it while the host is under duress and clears
-  // it after. Present or absent, it is the same undeclared root entry.
-  "duress.latch",
-  "eslint-closure-cache",
-  "forensics",
-  "gateway.pid",
-  "op-log.jsonl",
-  "op-wedge-captures.log",
-  "op-wedge-captures.log.1",
-  "op-wedge-captures.log.2",
-  "op-wedge-captures.log.3",
-  "push-8x3g-detached.log",
-  "push-8x3g-run.sh",
-  "push-contention.jsonl",
-  // Transient, like `duress.latch`: written while a push holds the mutex and
-  // cleared when it finishes, so a snapshot of the root taken between pushes
-  // does not see it. Seeded from the recorded pre-registry inventory rather
-  // than from a live listing, for exactly that reason.
-  "push-holder.json",
-  "push.lock",
-  "scripts",
-  "secrets.json.enc",
-  "signal-origin.jsonl",
-  "sockets",
-  "type-check-worker-background-slots",
-  "type-check-worker-interactive-slots",
-  "wedge-captures-manual",
-  "wedge-repro",
-]);
-
 const KIND_NAMES: ReadonlySet<string> = new Set<string>(DATA_DIR_KINDS);
+
+/**
+ * Kinds whose CONTENTS are not a declared set, exempt from the second-level rule.
+ *
+ * - `deprecated` IS the quarantine: its entries are precisely the things with no
+ *   owner, so demanding a declaration for each would invert the point of it.
+ * - `worktrees` is per-worktree and dynamic — one entry per live namespace,
+ *   minted and reaped at runtime. Its layout is owned by `paths.ts`
+ *   (`worktreeDataDir` / `worktreeArtifacts`) and policed by
+ *   `paths:no-inlined-worktree-artifacts` above, not by a registry of names.
+ */
+const OPEN_KINDS: ReadonlySet<string> = new Set(["deprecated", "worktrees"]);
 
 function isDataDir(value: unknown): value is DataDir {
   if (typeof value !== "object" || value === null) return false;
@@ -298,14 +279,39 @@ function isDataDir(value: unknown): value is DataDir {
   );
 }
 
+/** What actually sits at a path — never a boolean, so "absent" and "wrong shape" stay distinct. */
+type RootNode =
+  | { node: "absent" }
+  /** A symlink, with its target already resolved to a ROOT-RELATIVE `/`-path. */
+  | { node: "symlink"; target: string }
+  | { node: "dir" }
+  | { node: "file" };
+
+const ABSENT: RootNode = { node: "absent" };
+
+function inspect(root: string, name: string): RootNode {
+  const full = join(root, name);
+  const st = lstatSync(full, { throwIfNoEntry: false });
+  if (!st) return ABSENT;
+  if (st.isSymbolicLink()) {
+    const raw = readlinkSync(full);
+    const abs = isAbsolute(raw) ? raw : resolve(root, raw);
+    return {
+      node: "symlink",
+      target: relative(root, abs).split(sep).join("/"),
+    };
+  }
+  return st.isDirectory() ? { node: "dir" } : { node: "file" };
+}
+
 /**
- * The root's top-level entries, or `null` when the root does not exist yet — a
- * fresh machine that has never run a build. Nothing to police in that case; an
- * unreadable-for-any-other-reason root is a real fault and rethrows.
+ * A listing, or `null` when the directory does not exist — a fresh machine that
+ * has never run a build. Nothing to police in that case; an unreadable-for-any-
+ * other-reason path is a real fault and rethrows.
  */
-function readRootEntries(): string[] | null {
+function readEntries(path: string): string[] | null {
   try {
-    return readdirSync(dataRoot());
+    return readdirSync(path);
   } catch (err) {
     if ((err as NodeJS.ErrnoException).code === "ENOENT") return null;
     throw err;
@@ -313,42 +319,151 @@ function readRootEntries(): string[] | null {
 }
 
 /**
- * The top-level names covered by a `legacyLocation` declaration — the
- * grandfathered live services (`postgres`, `sockets`, `zero`, `node`), which
- * are declared where they already sit rather than moved under their kind.
+ * Everything the verdict is a function of, read ONCE.
  *
- * The FIRST segment only: a legacy path may reach deeper than the root's own
- * listing, and what is being cleared here is exactly one top-level entry.
+ * `cacheSignature()` and `run()` both consume this, so the signature cannot
+ * cover less than the verdict does — which is the failure mode a deploy-scoped
+ * check has: a cached PASS that outlives the state it was about.
  */
-function legacyDeclaredTopLevel(dirs: Iterable<DataDir>): Set<string> {
-  const names = new Set<string>();
-  for (const dir of dirs) {
-    const legacy = dir.spec.legacyLocation;
-    if (legacy) names.add(legacy.path.split("/")[0]!);
+interface RootObservation {
+  root: string;
+  /** Top-level listing, or `null` when the root does not exist yet. */
+  entries: string[] | null;
+  /** kind → its listing. Kinds with no directory on disk are absent from the map. */
+  kinds: Map<string, string[]>;
+  /** Every legacy name the table accounts for → what actually sits there. */
+  legacy: Map<string, RootNode>;
+  /**
+   * Kind names that are ALSO an un-migrated legacy directory → where that
+   * directory is going.
+   *
+   * `logs` is both a kind and the gateway's own log directory, and until the
+   * migration runs the second meaning is the true one. Its 1500 children are not
+   * undeclared kind-children somebody minted; they are gateway logs sitting
+   * where they have always sat, and they move wholesale into `logs/gateway/`.
+   * Enumerating them would produce 1500 near-identical lines all saying the
+   * same thing, and saying it wrongly.
+   */
+  unmigratedKinds: Map<string, string>;
+}
+
+function observeRoot(): RootObservation {
+  const root = dataRoot();
+  const entries = readEntries(root);
+  const kinds = new Map<string, string[]>();
+  const legacy = new Map<string, RootNode>();
+  const unmigratedKinds = new Map<string, string>();
+  if (entries === null)
+    return { root, entries, kinds, legacy, unmigratedKinds };
+
+  for (const kind of DATA_DIR_KINDS) {
+    if (OPEN_KINDS.has(kind)) continue;
+    const children = readEntries(join(root, kind));
+    if (children !== null) kinds.set(kind, children);
   }
-  return names;
+  for (const entry of legacyRootEntries()) {
+    legacy.set(entry.name, inspect(root, entry.name));
+    // A `kind-dir` row is a legacy directory whose name IS a kind. Its move has
+    // happened once its destination exists — the same signal the migration's own
+    // "already done" test uses.
+    if (entry.expect.kind !== "kind-dir" || entry.destination === null)
+      continue;
+    if (inspect(root, entry.destination).node !== "dir")
+      unmigratedKinds.set(entry.name, entry.destination);
+  }
+  return { root, entries, kinds, legacy, unmigratedKinds };
+}
+
+const SAMPLE_CAP = 10;
+
+/** A few names, then a count — a listing a person reads rather than scrolls. */
+function sample(names: readonly string[]): string {
+  const shown = [...names].sort().slice(0, SAMPLE_CAP);
+  const rest = names.length - shown.length;
+  return rest > 0
+    ? `${shown.join(", ")}, … and ${rest} more`
+    : shown.join(", ");
+}
+
+function describe(node: RootNode): string {
+  switch (node.node) {
+    case "absent":
+      return "absent";
+    case "symlink":
+      return `a symlink → ${node.target}`;
+    case "dir":
+      return "a real directory";
+    case "file":
+      return "a real file";
+  }
+}
+
+/**
+ * Verify ONE grandfathered legacy name against what the table says must be there.
+ *
+ * This is the whole difference between the old hand-written allowlist and this
+ * one. The allowlist said "tolerate this name"; the table says "tolerate this
+ * name IF it is the compatibility shim pointing at its declared target". A
+ * legacy directory that never moved, or a shim pointing somewhere else, is a
+ * failure — so the grandfathering can no longer hide the migration not having
+ * happened.
+ */
+function verifyLegacy(entry: LegacyRootEntry, node: RootNode): string | null {
+  switch (entry.expect.kind) {
+    // The name IS one of the kinds; the second-level rule below owns it.
+    case "kind-dir":
+      return null;
+    case "absent":
+      if (node.node === "absent") return null;
+      return (
+        `${entry.name} is ${describe(node)}; a "${entry.move}" row must leave nothing at the root ` +
+        `(it belongs at ${entry.destination ?? "deprecated/"})`
+      );
+    case "symlink": {
+      // Absent means the drop-legacy pass already ran for this row (or the entry
+      // never existed on this machine) — fully drained, nothing to police.
+      if (node.node === "absent") return null;
+      if (node.node === "symlink" && node.target === entry.expect.target)
+        return null;
+      return (
+        `${entry.name} is ${describe(node)}; after the layout migration it must be the compatibility ` +
+        `symlink → ${entry.expect.target}`
+      );
+    }
+  }
 }
 
 const noUndeclaredDataDirsCheck: Check = {
   id: "paths:no-undeclared-data-dirs",
   description:
-    "Every top-level entry under the singularity data root is a declared data dir (defineDataDir), one of the closed set of kinds, or a grandfathered legacy entry — nothing mints a directory at the root behind the registry's back.",
+    "Every top-level entry under the singularity data root is a declared data dir (defineDataDir), one of the closed set of kinds, or a legacy name verified as the compatibility symlink to its declared target — and every entry INSIDE a kind directory is itself a declared <kind>/<name>.",
   // The subject is the live filesystem, not the tree — see the block comment
   // above. A deploy-scoped check MUST supply a cacheSignature().
   scope: "deploy",
   cacheSignature(): string {
-    // The verdict is a function of the root's top-level listing (this) plus the
-    // declarations (tree content, already covered by the runner's tree hash).
-    // Cheap: one readdir, no stat pass.
-    const entries = readRootEntries();
-    if (entries === null) return "no-root";
-    return createHash("sha256")
-      .update([...entries].sort().join("\n"))
-      .digest("hex");
+    // Everything the verdict reads: the root's listing, each kind directory's
+    // listing (the second-level rule), and what each legacy name actually is
+    // (the symlink verification). Folding in less than this is how a cached PASS
+    // outlives the move it was recorded before.
+    const obs = observeRoot();
+    if (obs.entries === null) return "no-root";
+    const lines = [
+      `root:${[...obs.entries].sort().join(",")}`,
+      ...[...obs.kinds.entries()]
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(
+          ([kind, children]) => `${kind}/:${[...children].sort().join(",")}`,
+        ),
+      ...[...obs.legacy.entries()]
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([name, node]) => `${name}=${describe(node)}`),
+      `unmigrated:${[...obs.unmigratedKinds.keys()].sort().join(",")}`,
+    ];
+    return createHash("sha256").update(lines.join("\n")).digest("hex");
   },
   async run(ctx: CheckContext): Promise<CheckResult> {
-    const entries = readRootEntries();
-    if (entries === null) return { ok: true };
+    const obs = observeRoot();
+    if (obs.entries === null) return { ok: true };
 
     // Loading the collected dir EVALUATES each owner's `data-dirs/index.ts`, and
     // the `defineDataDir` calls in them are what populate the registry. Read the
@@ -359,37 +474,97 @@ const noUndeclaredDataDirsCheck: Check = {
       dedupeKey: (d) => `${d.spec.kind}/${d.spec.name}`,
       label: "data-dir",
     });
-    const declared = [...getDataDirs().values()];
-    const legacyDeclared = legacyDeclaredTopLevel(declared);
+    const declared = getDataDirs();
+    const declaredKeys = new Set(declared.keys());
 
-    const offenders = entries.filter(
+    // The grandfathered live services (postgres, sockets, zero, node): declared
+    // where they already sit rather than moved under their kind. The FIRST
+    // segment only — a legacy path may reach deeper than the root's own listing,
+    // and what is being cleared here is exactly one top-level entry.
+    const permanent = new Set<string>();
+    for (const dir of declared.values()) {
+      const legacy = dir.spec.legacyLocation;
+      if (legacy) permanent.add(legacy.path.split("/")[0]!);
+    }
+
+    const table = legacyRootEntries();
+    const tableNames = new Set(table.map((e) => e.name));
+    const offenders: string[] = [];
+
+    // Rule 1 — the top level. Every entry is a kind, a permanently-grandfathered
+    // service, OS noise, or a name the legacy table accounts for.
+    const undeclared = obs.entries.filter(
       (name) =>
         !OS_NOISE.has(name) &&
         !KIND_NAMES.has(name) &&
-        !legacyDeclared.has(name) &&
-        !LEGACY_TOP_LEVEL.has(name),
+        !permanent.has(name) &&
+        !tableNames.has(name),
     );
+    for (const name of undeclared.sort())
+      offenders.push(`${name} — undeclared entry at the data root`);
 
-    // The list is only a to-do list if somebody is told when an item is done.
-    // A name that is BOTH grandfathered here and covered by a real declaration
-    // is a line this file can now delete.
-    const redundant = [...legacyDeclared].filter((n) =>
-      LEGACY_TOP_LEVEL.has(n),
-    );
-    if (redundant.length > 0) {
-      ctx.log?.(
-        `paths:no-undeclared-data-dirs: ${redundant.length} LEGACY_TOP_LEVEL entr(ies) now carry a declaration and can be removed from the list: ${redundant.sort().join(", ")}`,
-        "stdout",
-      );
+    // Rule 2 — the legacy names are VERIFIED, not merely tolerated.
+    //
+    // `drainable` excludes rows whose `from` is a kind name (`logs`): that entry
+    // ends the migration as the kind directory, so counting it as never-drained
+    // would make the tally read as permanently incomplete and the table look
+    // undeletable.
+    let drainable = 0;
+    let drained = 0;
+    for (const entry of table) {
+      const node = obs.legacy.get(entry.name) ?? ABSENT;
+      if (entry.expect.kind !== "kind-dir") {
+        drainable++;
+        if (node.node === "absent") drained++;
+      }
+      const problem = verifyLegacy(entry, node);
+      if (problem !== null) offenders.push(problem);
     }
+
+    // Rule 3 — the second level. Without this the check goes vacuous the moment
+    // the top level is seven kind directories: a hand-made `state/foo` would
+    // never be seen, because `state` itself is a kind and always passes rule 1.
+    for (const [kind, children] of obs.kinds) {
+      // The kind directory IS a legacy directory that has not moved yet, so its
+      // contents are not kind-children and reporting them as undeclared would be
+      // false. One line, naming the real problem.
+      const destination = obs.unmigratedKinds.get(kind);
+      if (destination !== undefined) {
+        offenders.push(
+          `${kind}/ has not been migrated yet — it is still the legacy directory, and its ` +
+            `${children.length} entr(ies) move wholesale into ${destination}/ when the migration ` +
+            `runs (${sample(children)}). Run \`bun plugins/infra/plugins/paths/scripts/` +
+            `migrate-data-layout.ts\` to see the plan.`,
+        );
+        continue;
+      }
+      for (const child of children.sort()) {
+        if (OS_NOISE.has(child)) continue;
+        if (declaredKeys.has(`${kind}/${child}`)) continue;
+        offenders.push(
+          `${kind}/${child} — inside a kind directory but not a declared \`${kind}/${child}\``,
+        );
+      }
+    }
+
+    // The table is only a to-do list if somebody is told when an item is done.
+    // A drained row is one whose name has left the root entirely — the state
+    // `--drop-legacy` produces, and the point at which its row can be deleted.
+    ctx.log?.(
+      `paths:no-undeclared-data-dirs: ${drained}/${drainable} legacy name(s) fully drained from ${obs.root}` +
+        (drained === drainable
+          ? " — the whole LEGACY_LAYOUT table can now be deleted, along with this rule and the migrate script."
+          : ""),
+      "stdout",
+    );
 
     if (offenders.length === 0) return { ok: true };
 
     return {
       ok: false,
       message:
-        `${offenders.length} undeclared entr(ies) at the data root (${dataRoot()}):\n    ` +
-        offenders.sort().join("\n    "),
+        `${offenders.length} problem(s) under the data root (${obs.root}):\n    ` +
+        offenders.join("\n    "),
       hint:
         "Every directory under the data root has exactly one owning plugin. Declare it: create " +
         "`plugins/<owner>/data-dirs/index.ts` default-exporting a `DataDir[]` built with " +
@@ -397,8 +572,10 @@ const noUndeclaredDataDirsCheck: Check = {
         "`@plugins/infra/plugins/paths/core`, then read `.path` / `.file(…)` / `.ensure()` from it " +
         "instead of joining the root by hand (see plugins/infra/plugins/paths/CLAUDE.md). If nothing " +
         "owns the entry any more, move it into `deprecated/` by hand — it is an orphan, and that is " +
-        "the quarantine this check drains into. Do NOT add it to LEGACY_TOP_LEVEL: that list is a " +
-        "shrinking record of what predates the registry, and nothing may be added to it.",
+        "the quarantine this check drains into. A legacy name reported as a real directory means the " +
+        "layout migration has not run on this root: `bun plugins/infra/plugins/paths/scripts/" +
+        "migrate-data-layout.ts` (dry run), then `--apply`. Do NOT add a name to LEGACY_LAYOUT — that " +
+        "table is a self-liquidating record of what predates the registry, and nothing may be added to it.",
     };
   },
 };

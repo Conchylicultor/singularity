@@ -1,6 +1,6 @@
 import type { Command } from "commander";
 import os from "node:os";
-import { existsSync, mkdirSync, writeFileSync } from "fs";
+import { existsSync, writeFileSync } from "fs";
 import { rename } from "fs/promises";
 import { retryUntil, fixed } from "@plugins/packages/plugins/retry/core";
 import { adaptiveTimeoutMs } from "./adaptive-timeout";
@@ -56,9 +56,9 @@ import {
   worktreeDataDir,
   worktreeArtifacts,
   PG_LOG_FILE,
-  SINGULARITY_DIR,
   MAIN_WORKTREE_NAME,
 } from "../paths";
+import { configDir } from "@plugins/config_v2/data-dirs";
 import {
   buildProfilerStart,
   pushBuildSpan,
@@ -110,13 +110,17 @@ import {
   writeWorktreeSpec,
 } from "@plugins/infra/plugins/worktree/server";
 import { zeroCacheSpec } from "@plugins/infra/plugins/launcher/server";
+import {
+  CENTRAL_ROUTES_FILENAME,
+  gatewayState,
+} from "@plugins/infra/plugins/launcher/data-dirs";
 import { createBuildRunRecorder } from "@plugins/build/plugins/run-ledger/server";
 import { BUILD_EXIT_SUPERSEDED } from "@plugins/build/plugins/build-status/core";
 
 // Worktree names are gateway namespaces — same rule as composition ids (the
 // canonical TS copy lives in plugin-meta/composition/core/namespace.ts).
 const NAME_REGEX = COMPOSITION_NAME_RE;
-const CENTRAL_ROUTES_FILE = join(SINGULARITY_DIR, "central-routes.json");
+const CENTRAL_ROUTES_FILE = gatewayState.file(CENTRAL_ROUTES_FILENAME);
 
 interface CentralRoutesManifest {
   backend: string;
@@ -165,7 +169,7 @@ async function writeCentralRoutesManifest(root: string): Promise<void> {
     backend: "central",
     routes: await collectCentralRoutes(root),
   };
-  mkdirSync(SINGULARITY_DIR, { recursive: true });
+  gatewayState.ensure();
   const tmp = `${CENTRAL_ROUTES_FILE}.tmp.${process.pid}`;
   writeFileSync(tmp, JSON.stringify(manifest, null, 2) + "\n");
   await rename(tmp, CENTRAL_ROUTES_FILE);
@@ -276,7 +280,7 @@ async function databaseReady(name: string): Promise<boolean> {
  *
  * INTENTIONAL BEHAVIOR DELTA (recorded, not accidental): this used to call the
  * CLI's own ENOENT-throwing copy of `readDatabaseConfig`, so a missing
- * `~/.singularity/database.json` crashed HERE with a bare filesystem error.
+ * `~/.singularity/state/db-config/database.json` crashed HERE with a bare filesystem error.
  * Against the single tolerant reader it now falls through the
  * `services.length === 0` branch above ("externally managed DB") and the real,
  * actionable error comes from `waitForWorktreeDatabase` further down — which
@@ -792,7 +796,7 @@ export function registerBuild(program: Command) {
         // Open the durable, crash-safe build-progress log now that `name` (the same
         // basename(root) key the op marker and writeBuildProfile use) is known. Every
         // buildProfilerStart span from here on records an enter/leave + RSS to
-        // ~/.singularity/build-progress.jsonl, so a wedged build names its phase and
+        // ~/.singularity/logs/build-progress/build-progress.jsonl, so a wedged build names its phase and
         // heap trend even after SIGKILL. See research/2026-07-21-global-cli-op-wedge-gc-sink.md.
         openBuildProgress(name, process.env.SINGULARITY_BUILD_ID ?? null);
 
@@ -1358,7 +1362,7 @@ export function registerBuild(program: Command) {
         }
         endSpan();
 
-        // 4c. Propagate git config to user config dir (~/.singularity/config/<worktree>/)
+        // 4c. Propagate git config to user config dir (~/.singularity/state/config/<worktree>/)
         endSpan = buildProfilerStart(
           "propagateConfig",
           "build:codegen",
@@ -1367,8 +1371,7 @@ export function registerBuild(program: Command) {
         console.log("Propagating config to user...");
         await propagateConfigToUser({
           root,
-          worktreeName: name,
-          singularityDir: SINGULARITY_DIR,
+          userConfigDir: configDir.file(name),
         });
         endSpan();
 

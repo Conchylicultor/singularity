@@ -1,7 +1,7 @@
 // Reset a served composition to its genuine first-launch state — a NARROWER
 // `reapAttempt` (cf. debug/worktree-cleanup/server/internal/reap.ts). A served
 // composition (`autoBuild: true`) is live at http://<id>.localhost:9000 with its
-// own DB `<id>` and config dir ~/.singularity/config/<id>/. This keeps the spec +
+// own DB `<id>` and config dir ~/.singularity/state/config/<id>/. This keeps the spec +
 // dist + code (so it stays served) and wipes ONLY that one composition's DB +
 // config back to exactly what compose-serve provisions on a fresh serve, then
 // restarts the backend — so the author sees the real new-user experience.
@@ -13,7 +13,7 @@
 // first-launch config, not a code-default approximation.
 //
 // OUT OF SCOPE — central secrets / auth tokens: they live in one global encrypted
-// store (~/.singularity/secrets.json.enc) shared by every namespace by the
+// store (~/.singularity/state/secrets/) shared by every namespace by the
 // single-instance-per-user architecture, carry no per-composition dimension, and
 // are deliberately untouched here (see research/2026-07-02-global-adr-single-
 // instance-per-user.md).
@@ -23,7 +23,6 @@
 // prove the target is a compose-serve-owned namespace before any data is touched.
 
 import { rm } from "node:fs/promises";
-import { join } from "node:path";
 import {
   propagateConfigToUser,
   readEffectiveConfigFromDisk,
@@ -46,10 +45,8 @@ import {
   assertServableCompositionNamespace,
   compositionsConfig,
 } from "@plugins/plugin-meta/plugins/composition/core";
-import {
-  SINGULARITY_DIR,
-  MAIN_WORKTREE_NAME,
-} from "@plugins/infra/plugins/paths/server";
+import { MAIN_WORKTREE_NAME } from "@plugins/infra/plugins/paths/server";
+import { configDir } from "@plugins/config_v2/data-dirs";
 
 // The `compositions` config's owning-plugin path — its jsonc files live under
 // `config/<this>/` and the per-worktree user config dir (mirrors compose-serve).
@@ -101,8 +98,7 @@ export async function resetCompositionData(id: string): Promise<void> {
   // it is guarding.
   const values = readEffectiveConfigFromDisk(compositionsConfig, {
     root,
-    worktreeName: MAIN_WORKTREE_NAME,
-    singularityDir: SINGULARITY_DIR,
+    userConfigDir: configDir.file(MAIN_WORKTREE_NAME),
     hierarchyPath: COMPOSITIONS_HIERARCHY_PATH,
   });
   const activated = activatedCompositionIds(values.manifests);
@@ -122,15 +118,8 @@ export async function resetCompositionData(id: string): Promise<void> {
   await ensureDatabase(id);
 
   // Wipe the config dir and re-propagate the git-layer first-launch defaults.
-  await rm(join(SINGULARITY_DIR, "config", id), {
-    recursive: true,
-    force: true,
-  });
-  await propagateConfigToUser({
-    root,
-    worktreeName: id,
-    singularityDir: SINGULARITY_DIR,
-  });
+  await rm(configDir.file(id), { recursive: true, force: true });
+  await propagateConfigToUser({ root, userConfigDir: configDir.file(id) });
 
   await restartNamespace(id);
 }

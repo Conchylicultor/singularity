@@ -60,7 +60,7 @@ export interface Check {
    *     so the check is in the push payload and every caller can assert it.
    *   - "deploy" → the check verifies the local deployment that
    *     `./singularity build` produces (`~/.singularity/worktrees/<name>/web`,
-   *     the `~/.singularity/web-artifacts` store). That artifact NEVER lands on
+   *     the `~/.singularity/cache/web-artifacts` store). That artifact NEVER lands on
    *     main, and `push`'s own internal rebase invalidates it by construction
    *     (the tree moves past the deployed dist), so push cannot meaningfully
    *     assert it — no matter how it is scheduled. Its real homes are `build`

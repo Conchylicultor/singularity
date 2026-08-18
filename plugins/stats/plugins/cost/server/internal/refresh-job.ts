@@ -19,7 +19,7 @@ const log = Log.channel("stats-cost");
 //
 // `perWorktree` is OMITTED, so graphile's fleet-wide cron runs this once per tick
 // on MAIN. That is deliberate — the corpus index, the price table and the archive
-// are all host-global (`COST_USAGE_DIR`), and N worktree backends racing to write
+// are all host-global (`costUsageDir`), and N worktree backends racing to write
 // the same shards would be pure contention.
 //
 // KNOWN GAP (deferred, not an oversight): **the archive is dev-only today.**
@@ -52,6 +52,8 @@ export const costRefreshJob = defineJob({
     // same tick rather than reported as missing and resolved a day later.
     const { models } = await refreshPriceTable();
     await captureCostHistory();
-    log.publish(`price table refreshed (${models} models) and cost archive flushed`);
+    log.publish(
+      `price table refreshed (${models} models) and cost archive flushed`,
+    );
   },
 });

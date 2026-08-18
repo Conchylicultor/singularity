@@ -37,7 +37,7 @@ layout utilities).
 `NEW_PROTOTYPE_TEXT` and `improveText()` are the only instruction guaranteed to
 reach a prototype agent — they are always in its first user turn, unlike a
 `CLAUDE.md` it may never open. So they carry the rules that decide whether the
-result is an original design: **write to `~/.singularity/prototypes/` and commit
+result is an original design: **write to `~/.singularity/apps/prototypes/` and commit
 nothing, copy `_template/`, never open another prototype's folder, never read
 `plugins/`**, keep the folder self-contained.
 Keep them tight and let `prototypes/CLAUDE.md` hold the rest — but do not let

@@ -15,7 +15,7 @@ import {
 // server serves it, and that it reaches outside itself for nothing.
 //
 // Two callers, one rule set. Prototypes themselves are user content living in
-// `~/.singularity/prototypes/`, so their problems surface in the gallery, on the
+// `~/.singularity/apps/prototypes/`, so their problems surface in the gallery, on the
 // card, where the author is looking. The `_template/` seed IS code, ships in the
 // repo, and is checked by `prototypes:self-contained` at push time.
 

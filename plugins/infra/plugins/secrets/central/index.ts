@@ -26,7 +26,10 @@ export {
   listKeysInNamespace,
 } from "./internal/api";
 export { ready } from "./internal/boot";
-export type { SecretRef, SecretMetadata } from "@plugins/infra/plugins/secrets/core";
+export type {
+  SecretRef,
+  SecretMetadata,
+} from "@plugins/infra/plugins/secrets/core";
 export {
   SecretsError,
   SecretsKeychainLockedError,
@@ -34,7 +37,7 @@ export {
 
 export default {
   description:
-    "Encrypted key-value primitive. AES-256-GCM blob at ~/.singularity/secrets.json.enc with the master key in the OS keychain (fallback to ~/.singularity/secrets/.key). Hosted on the central runtime; consumers (auth, config) call /api/secrets/* via the gateway.",
+    "Encrypted key-value primitive. AES-256-GCM blob at ~/.singularity/state/secrets/secrets.json.enc with the master key in the OS keychain (fallback to the .key beside it). Hosted on the central runtime; consumers (auth, config) call /api/secrets/* via the gateway.",
   loadBearing: true,
   httpRoutes: {
     [secretsGet.route]: handleGet,

@@ -1,7 +1,7 @@
 # prototypes
 
 Prototypes app — a surface to browse, **Focus** on, **Compare**, and iterate on
-throwaway UI design mockups. The mockups live in `~/.singularity/prototypes/` —
+throwaway UI design mockups. The mockups live in `~/.singularity/apps/prototypes/` —
 host-global, shared by every worktree and main, and deliberately **not** in git,
 so a mock is live with no build and nothing to commit (the `prototypes` backup
 source is what makes it recoverable). Authored separately from this plugin:
@@ -37,9 +37,9 @@ whose app surface still stands).
 
 ## Plugin reference
 
-- Description: Prototypes — browse, focus, compare, and iterate on throwaway UI design mockups served from the host-global prototypes data dir (PROTOTYPES_DIR), outside any checkout.
+- Description: Prototypes — browse, focus, compare, and iterate on throwaway UI design mockups served from the host-global prototypes data dir (the `apps/prototypes` declaration), outside any checkout.
 - Sub-plugins:
-  - **`files`** — Serves raw prototype files from the host-global prototypes data dir (PROTOTYPES_DIR — shared by every worktree and main, so a mock is visible without a build and without being committed), seeds the repo's _template/ into it, declares the list + version live-state resources, and watches the dir to auto-reload open iframes on edit.
+  - **`files`** — Serves raw prototype files from the host-global prototypes data dir (the `apps/prototypes` declaration — shared by every worktree and main, so a mock is visible without a build and without being committed), seeds the repo's _template/ into it, declares the list + version live-state resources, and watches the dir to auto-reload open iframes on edit.
   - **`gallery`** — Prototypes gallery list pane and the Focus/Compare detail pane (scaled live iframes), with an Improve this prototype affordance.
   - **`present`** — Present a prototype without the app around it: filling this browser tab, filling the screen (Fullscreen API), or opened as its own document in a new browser tab. Contributed into the detail pane's Actions.
   - **`shell`** — App shell for Prototypes. Registers the /prototypes app entry and renders the gallery + Focus/Compare detail panes in a Miller layout.

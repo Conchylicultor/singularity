@@ -70,6 +70,7 @@ and appends it. Design:
     - `infra/paths.ReleaseIdentity`
     - `infra/paths.setReleaseIdentity`
     - `infra/paths.SINGULARITY_DIR`
+    - `infra/paths.WORKTREES_DIR`
     - `infra/worktree.writeWorktreeSpec`
     - `infra/worktree.ZeroCacheSpec`
   - Exports (types): `ListenAddress`

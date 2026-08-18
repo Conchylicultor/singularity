@@ -338,7 +338,7 @@ export async function generateMigration(opts: {
     // No PG* env: `generate` is a pure snapshot diff against ./data and opens no
     // connection, and drizzle.config.ts no longer reads the database config at
     // all. Passing libpqEnv() here is what made this step ENOENT on a host with
-    // no ~/.singularity/database.json. SINGULARITY_WORKTREE stays: the schema
+    // no ~/.singularity/state/db-config/database.json. SINGULARITY_WORKTREE stays: the schema
     // files are import-safe without it (client.ts defers the throw to the first
     // query), but keeping it leaves the dev loop byte-identical.
     env: {

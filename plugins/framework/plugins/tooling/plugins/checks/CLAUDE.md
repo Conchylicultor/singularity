@@ -30,7 +30,6 @@ is scan-tree-aware and untracked-aware (it shares the discovery plumbing behind
     - `infra/file-sink.defineFileSink`
     - `infra/paths.pruneWorktreeCheckArtifacts`
     - `infra/paths.REPO_ROOT`
-    - `infra/paths.SINGULARITY_DIR`
     - `infra/paths.worktreeArtifacts`
     - `infra/spawn.getWorktreeRoot`
     - `infra/spawn.spawnCaptured`

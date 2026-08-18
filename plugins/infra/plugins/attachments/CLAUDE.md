@@ -33,7 +33,7 @@ The handle does expose `.table` — but only as a same-plugin escape for live-st
 
 ## Plugin reference
 
-- Description: Polymorphic file attachments. Exposes uploadAttachment() helper; storage/serve on the server plugin. Attachments on disk (UUID-named under ~/.singularity/attachments/). Consumers declare ownership with Attachments.defineLink(ownerTable); orphan sweep reclaims unreferenced rows past TTL.
+- Description: Polymorphic file attachments. Exposes uploadAttachment() helper; storage/serve on the server plugin. Attachments on disk (UUID-named under ~/.singularity/apps/attachments/). Consumers declare ownership with Attachments.defineLink(ownerTable); orphan sweep reclaims unreferenced rows past TTL.
 - Load-bearing: yes
 - Web:
   - Uses: `infra/endpoints.fetchEndpoint`
@@ -47,7 +47,6 @@ The handle does expose `.table` — but only as a same-plugin escape for live-st
     - `infra/endpoints.HttpError`
     - `infra/endpoints.implement`
     - `infra/jobs.defineJob`
-    - `infra/paths.ATTACHMENTS_DIR`
     - `primitives/log-channels.Log`
   - DB schema:
     - `plugins/infra/plugins/attachments/server/internal/define-link.ts`

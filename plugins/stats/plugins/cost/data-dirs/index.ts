@@ -23,12 +23,6 @@ export const costUsageDir = defineDataDir({
     reason:
       "the year-sharded archive outlives the transcripts it was built from, so deleting it loses that spend history irrecoverably",
   },
-  // TEMPORARY. Byte-for-byte where it is today; the layout migration relocates
-  // it under `state/`.
-  legacyLocation: {
-    path: "cost-usage",
-    reason: "not yet moved; relocates in the layout migration",
-  },
 });
 
 export default [costUsageDir];

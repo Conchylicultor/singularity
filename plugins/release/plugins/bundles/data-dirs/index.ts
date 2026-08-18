@@ -16,12 +16,6 @@ export const releasesDir = defineDataDir({
   // plus every run a pointer names — the reclaim policy states that same rule,
   // rather than inventing a second one.
   reclaim: { kind: "keep", keep: 3 },
-  // TEMPORARY. Byte-for-byte where it is today; the layout migration relocates
-  // it under `state/`.
-  legacyLocation: {
-    path: "releases",
-    reason: "not yet moved; relocates in the layout migration",
-  },
 });
 
 export default [releasesDir];

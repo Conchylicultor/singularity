@@ -33,7 +33,7 @@ export interface ComposeOptions {
   /**
    * COPY each store dir into `dist/artifacts/<linkName>` instead of symlinking
    * it, making the dist self-contained (no reference to
-   * `~/.singularity/web-artifacts/` survives). Vendor sets ride the same `links`
+   * `~/.singularity/cache/web-artifacts/` survives). Vendor sets ride the same `links`
    * array, so they are covered too.
    *
    * For the RELEASE path only — its dist is copied into a shippable bundle, and

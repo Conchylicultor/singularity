@@ -20,7 +20,7 @@ export interface AssetMirrorSpec {
    *  the id the web consumer passes to `assetMirrorUrl`. */
   id: string;
   /** Remote base URL. Files are fetched as `<remoteBaseUrl>/<file>` on a cache
-   *  miss, then cached under `~/.singularity/asset-mirror/<id>/`. */
+   *  miss, then cached under `~/.singularity/cache/asset-mirror/<id>/`. */
   remoteBaseUrl: string;
 }
 

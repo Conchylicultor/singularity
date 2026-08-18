@@ -1,13 +1,13 @@
 import { statSync, watch } from "node:fs";
 import { join } from "node:path";
 import {
+  duressLatchDir,
   FRESHNESS_LEASE_MS,
   isUnderDuress,
   LATCH_FILENAME,
   MEMO_TTL_MS,
   readDuress,
 } from "@plugins/infra/plugins/duress/plugins/latch/server";
-import { SINGULARITY_DIR } from "@plugins/infra/plugins/paths/server";
 import type { Lane } from "@plugins/infra/plugins/host-admission/core";
 import { buildProfilerStart } from "./profiler";
 
@@ -27,8 +27,8 @@ import { buildProfilerStart } from "./profiler";
 // a fail-open hold never requeues (see gap (a) in
 // research/2026-07-12-global-host-admission-memory-dimension.md).
 //
-// Waiting is event-driven, never a poll loop: one fs.watch on ~/.singularity
-// scoped to the latch filename (catches clearDuress's unlink AND refresh's
+// Waiting is event-driven, never a poll loop: one fs.watch on the latch's own
+// directory scoped to the latch filename (catches clearDuress's unlink AND refresh's
 // mtime bump) plus a single computed deadline timer at latch mtime +
 // FRESHNESS_LEASE_MS (the lease guarantees a stale latch self-clears, so the
 // deadline is a real wake condition). Every wake re-checks; a refresh
@@ -151,7 +151,11 @@ export function createValveDeps(): ValveDeps {
       console.log(
         `build admission held: host under duress${reason ? ` (${reason})` : ""} — waiting for clear...`,
       );
-      endHoldSpan = buildProfilerStart("duressHold", "build:queue", "held: host under duress");
+      endHoldSpan = buildProfilerStart(
+        "duressHold",
+        "build:queue",
+        "held: host under duress",
+      );
     },
     onHoldEnd: (outcome) => {
       endHoldSpan?.();
@@ -169,7 +173,7 @@ export function createValveDeps(): ValveDeps {
 
 /**
  * Sleep until the latch plausibly changed state, at most `maxWaitMs`:
- * fs.watch on ~/.singularity scoped to the latch filename, plus one deadline
+ * fs.watch on the latch's own directory scoped to the latch filename, plus one deadline
  * timer at latch mtime + lease (+ε). When the latch is already gone or its
  * lease already lapsed, the latch's in-process stat memo may still report
  * duress for up to MEMO_TTL_MS — wait that long instead of spinning; the memo
@@ -177,20 +181,31 @@ export function createValveDeps(): ValveDeps {
  */
 function waitForLatchWake(maxWaitMs: number): Promise<void> {
   return new Promise((resolve) => {
+    // `fs.watch` throws ENOENT on a missing directory. The latch dir normally
+    // exists by now (a live episode's `setDuress` created it), but a clear
+    // between the duress check and this call could have left the CLI watching
+    // nothing — so mint it rather than turn a benign race into a crashed build.
+    const dir = duressLatchDir.ensure();
     let leaseLapsesInMs: number;
     try {
       leaseLapsesInMs =
-        statSync(join(SINGULARITY_DIR, LATCH_FILENAME)).mtimeMs +
+        statSync(join(dir, LATCH_FILENAME)).mtimeMs +
         FRESHNESS_LEASE_MS +
         LEASE_EPSILON_MS -
         Date.now();
     } catch (err) {
-      if (!(err instanceof Error && (err as NodeJS.ErrnoException).code === "ENOENT")) throw err;
+      if (!(
+        err instanceof Error && (err as NodeJS.ErrnoException).code === "ENOENT"
+      ))
+        throw err;
       leaseLapsesInMs = 0; // latch vanished between check and stat
     }
-    const waitMs = Math.min(leaseLapsesInMs > 0 ? leaseLapsesInMs : MEMO_TTL_MS, maxWaitMs);
+    const waitMs = Math.min(
+      leaseLapsesInMs > 0 ? leaseLapsesInMs : MEMO_TTL_MS,
+      maxWaitMs,
+    );
 
-    const watcher = watch(SINGULARITY_DIR, (_event, filename) => {
+    const watcher = watch(dir, (_event, filename) => {
       // A null filename is a platform edge; wake and let the caller re-check.
       if (filename === null || filename === LATCH_FILENAME) done();
     });

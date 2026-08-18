@@ -5,8 +5,8 @@ Centralized OAuth 2.0 / API key infrastructure for third-party services. Provide
 ## Topology
 
 - **Auth runs on the central runtime.** The OAuth flow handlers, token store, refresh loop, provider registry, and `authStateResource` all live under `plugins/auth/central/`. There is one auth process for the user, shared across every worktree.
-- **Tokens persist via the central secrets store.** Encrypted blob at `~/.singularity/secrets.json.enc`, keyed `{ namespace: "auth-tokens", key: "blob-v1" }`. Auth/central calls into secrets/central directly (same process; no HTTP round-trip). See [`plugins/infra/plugins/secrets/CLAUDE.md`](../infra/plugins/secrets/CLAUDE.md).
-- **Browsers reach auth through the gateway's central-routes manifest.** `/api/auth/*` and the live-state WebSocket `/ws/central-notifications` are listed in `~/.singularity/central-routes.json` and forwarded to the central backend regardless of which subdomain the request arrived on. The OAuth redirect URI stays at bare `http://localhost:9000/api/auth/callback/<provider>` — the manifest covers it.
+- **Tokens persist via the central secrets store.** Encrypted blob at `~/.singularity/state/secrets/secrets.json.enc`, keyed `{ namespace: "auth-tokens", key: "blob-v1" }`. Auth/central calls into secrets/central directly (same process; no HTTP round-trip). See [`plugins/infra/plugins/secrets/CLAUDE.md`](../infra/plugins/secrets/CLAUDE.md).
+- **Browsers reach auth through the gateway's central-routes manifest.** `/api/auth/*` and the live-state WebSocket `/ws/central-notifications` are listed in `~/.singularity/state/gateway/central-routes.json` and forwarded to the central backend regardless of which subdomain the request arrived on. The OAuth redirect URI stays at bare `http://localhost:9000/api/auth/callback/<provider>` — the manifest covers it.
 - **Cross-worktree sync is automatic.** When central mutates auth state (connect, disconnect, refresh) it calls `authStateResource.notify()` and central pushes updates to every browser tab subscribed to `/ws/central-notifications`. No fanout, no `~/.singularity/worktrees/*.json` enumeration.
 
 ## How a consumer plugin uses it

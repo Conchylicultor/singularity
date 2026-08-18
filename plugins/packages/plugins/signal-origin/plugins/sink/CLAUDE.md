@@ -1,6 +1,6 @@
 # sink
 
-The **contract** for `~/.singularity/signal-origin.jsonl` — the host-global
+The **contract** for `~/.singularity/logs/signal-origin/signal-origin.jsonl` — the host-global
 record of who killed a `./singularity build|check|push`: the path, the line
 shape, and the bounded read. One JSONL line per catchable fatal signal, plus one
 when the native tap could not be armed.
@@ -35,9 +35,7 @@ fatal signal, which is a legitimately empty history, not a failure.
 ## Plugin reference
 
 - Core:
-  - Uses:
-    - `infra/file-sink.readJsonlTail`
-    - `infra/paths.SINGULARITY_DIR`
+  - Uses: `infra/file-sink.readJsonlTail`
   - Exports (types):
     - `ArmFailedLine`
     - `SignalOriginLine`

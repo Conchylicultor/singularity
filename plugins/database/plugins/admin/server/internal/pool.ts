@@ -1,7 +1,6 @@
 import { readFileSync } from "node:fs";
-import { join } from "node:path";
 import { Pool } from "pg";
-import { SINGULARITY_DIR } from "@plugins/infra/plugins/paths/server";
+import { DATABASE_CONFIG_PATH } from "@plugins/database/core";
 
 // The worktree name is ONLY needed for the worktree (non-admin) connection
 // string. `getAdminPool()` talks exclusively to the `postgres` system DB, so it
@@ -24,13 +23,17 @@ interface ConnConfig {
 }
 
 function readConn(): ConnConfig {
-  const configPath = join(SINGULARITY_DIR, "database.json");
+  const configPath = DATABASE_CONFIG_PATH;
   try {
     const raw = JSON.parse(readFileSync(configPath, "utf-8"));
     return {
       host: process.env.PGHOST ?? raw.connection?.host ?? "localhost",
       port: Number(process.env.PGPORT ?? raw.connection?.port ?? 5432),
-      user: process.env.PGUSER ?? raw.connection?.user ?? process.env.USER ?? "postgres",
+      user:
+        process.env.PGUSER ??
+        raw.connection?.user ??
+        process.env.USER ??
+        "postgres",
     };
   } catch (err) {
     const code = (err as NodeJS.ErrnoException).code;

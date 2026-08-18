@@ -11,8 +11,8 @@
 # (Node/Bun fs.rm) or via a subprocess (git worktree remove, rm -rf), and it
 # survives the app restarting — which is exactly what the in-app audit cannot do.
 #
-# Output: ~/.singularity/logs/worktree-removal-monitor.jsonl   (one JSON per line)
-# Errors: ~/.singularity/logs/worktree-removal-monitor.err
+# Output: ~/.singularity/logs/monitors/worktree-removal-monitor.jsonl   (one JSON per line)
+# Errors: ~/.singularity/logs/monitors/worktree-removal-monitor.err
 #
 # Root-only (eslogger needs an Endpoint Security client), so unlike the other
 # monitors here this installs as a LaunchDaemon, not a LaunchAgent. That also
@@ -22,7 +22,7 @@
 
 set -uo pipefail
 
-OUT="${WORKTREE_MONITOR_OUT:-/Users/epot/.singularity/logs/worktree-removal-monitor.jsonl}"
+OUT="${WORKTREE_MONITOR_OUT:-/Users/epot/.singularity/logs/monitors/worktree-removal-monitor.jsonl}"
 ERR="${OUT%.jsonl}.err"
 WINDOW=300 # seconds; collapse repeat (worktree,pid,kind) hits inside this
 

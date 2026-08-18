@@ -39,10 +39,6 @@ function lockDir(id: string): DataDir {
     // holder is gone, and flock releases on process death anyway. Reclaimable
     // the moment nothing on the box is running — never while it is.
     reclaim: { kind: "restart" },
-    legacyLocation: {
-      path: `${id}-slots`,
-      reason: "not yet moved; relocates in the layout migration",
-    },
   });
 }
 

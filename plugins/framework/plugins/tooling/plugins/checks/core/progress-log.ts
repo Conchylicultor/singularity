@@ -1,12 +1,13 @@
-import { basename, join } from "path";
+import { basename } from "path";
 import { defineFileSink } from "@plugins/infra/plugins/file-sink/core";
-import { REPO_ROOT, SINGULARITY_DIR } from "@plugins/infra/plugins/paths/core";
+import { REPO_ROOT } from "@plugins/infra/plugins/paths/core";
+import { checkProgressLogDir } from "../data-dirs";
 
 // Host-global, exactly like the check-result cache next door (cache.ts:18) —
 // every worktree's check run appends to the SAME file, which is the point: an
 // incident is investigated from whichever shell is free, not from the wedged
 // worktree. `runId` + `pid` + `worktree` on every line keep the runs separable.
-const PROGRESS_FILE = join(SINGULARITY_DIR, "check-progress.jsonl");
+const PROGRESS_FILE = checkProgressLogDir.file("check-progress.jsonl");
 
 /**
  * The bound, explicit rather than defaulted. `defineFileSink`'s defaults are

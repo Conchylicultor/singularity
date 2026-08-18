@@ -5,12 +5,33 @@ import { reportInterruptedPredecessor } from "../build-receipt";
 import { ensureDeps } from "../ensure-deps";
 import { installFatalSignalExit } from "../fatal-signals";
 import { signalOriginTap } from "../signal-origin-tap";
-import { normalizeGeneratedArtifacts, SKIP_POST_REWRITE_ENV } from "../git/normalize-generated";
-import { createOpProfiler, type OpProfiler } from "@plugins/debug/plugins/profiling/plugins/op-log/server";
-import { pushPool, withHostGrant } from "@plugins/infra/plugins/host-admission/server";
-import { cpuBudget, type Grant } from "@plugins/infra/plugins/host-admission/core";
-import { markWorktreeOpStart, setWorktreeOpPhase, clearWorktreeOp, writePushHolder, clearPushHolder } from "@plugins/infra/plugins/worktree/server";
-import { spawnCaptured, spawnPassthrough } from "@plugins/infra/plugins/spawn/core";
+import {
+  normalizeGeneratedArtifacts,
+  SKIP_POST_REWRITE_ENV,
+} from "../git/normalize-generated";
+import {
+  createOpProfiler,
+  type OpProfiler,
+} from "@plugins/debug/plugins/profiling/plugins/op-log/server";
+import {
+  pushPool,
+  withHostGrant,
+} from "@plugins/infra/plugins/host-admission/server";
+import {
+  cpuBudget,
+  type Grant,
+} from "@plugins/infra/plugins/host-admission/core";
+import {
+  markWorktreeOpStart,
+  setWorktreeOpPhase,
+  clearWorktreeOp,
+  writePushHolder,
+  clearPushHolder,
+} from "@plugins/infra/plugins/worktree/server";
+import {
+  spawnCaptured,
+  spawnPassthrough,
+} from "@plugins/infra/plugins/spawn/core";
 
 // Exits-by-default spawn: a non-zero exit prints the command + captured
 // stderr and exits(1) like `exec`, so a caller can never read a failed git
@@ -41,7 +62,11 @@ async function runAllowFail(
   return { stdout: result.stdout.trim(), exitCode: result.exitCode };
 }
 
-async function exec(cmd: string[], cwd?: string, env?: Record<string, string | undefined>): Promise<void> {
+async function exec(
+  cmd: string[],
+  cwd?: string,
+  env?: Record<string, string | undefined>,
+): Promise<void> {
   const { exitCode } = await spawnPassthrough(cmd, { cwd, env });
   if (exitCode !== 0) {
     process.exit(1);
@@ -110,9 +135,18 @@ async function installRebasedDeps(root: string): Promise<void> {
 // reason the child exists at all: computing an id list in this process would
 // read the pre-rebase module cache. It is by property, never by id, and
 // hand-reproducible as `./singularity check --scope tree`.
-async function runChecksSubprocess(root: string, grant: Grant): Promise<boolean> {
+async function runChecksSubprocess(
+  root: string,
+  grant: Grant,
+): Promise<boolean> {
   const { exitCode } = await spawnPassthrough(
-    ["bun", "plugins/framework/plugins/cli/bin/index.ts", "check", "--scope", "tree"],
+    [
+      "bun",
+      "plugins/framework/plugins/cli/bin/index.ts",
+      "check",
+      "--scope",
+      "tree",
+    ],
     {
       cwd: root,
       // `process.env` values are `string | undefined`; the inferred spread type
@@ -137,7 +171,10 @@ async function runChecksSubprocess(root: string, grant: Grant): Promise<boolean>
 // wall clock, so a slow `checks` was indistinguishably queue time or real check
 // time. `grantHooks()` lands it as its own `host-grant` wait, nested inside the
 // step.
-async function runRebasedChecks(root: string, profiler: OpProfiler<"push">): Promise<boolean> {
+async function runRebasedChecks(
+  root: string,
+  profiler: OpProfiler<"push">,
+): Promise<boolean> {
   profiler.stepStart("checks");
   console.log("Running checks...");
   const ok = await withHostGrant(
@@ -156,7 +193,6 @@ async function getWorktreeRoot(): Promise<string> {
   }
   return stdout;
 }
-
 
 async function getMainWorktree(): Promise<string> {
   const stdout = await run(["git", "worktree", "list", "--porcelain"]);
@@ -184,7 +220,7 @@ async function getCurrentBranch(): Promise<string> {
 }
 
 // The push mutex is the `push` host-pool (host-admission): `pushPool.run(fn)`
-// holds its single slot file — `~/.singularity/push-slots/slot-0.lock`, the same
+// holds its single slot file — `~/.singularity/locks/push/slot-0.lock`, the same
 // file the server-side `pushLockHeld` probe reads — for the whole critical
 // section, so at most one push runs host-wide. This folds the last hand-rolled
 // FFI flock onto the shared primitive: the size-1 fan-out is a single
@@ -203,7 +239,10 @@ async function withPushLock<T>(
       onLockAcquired();
       return await fn();
     },
-    { onWaitStart: () => console.log("Another push is in progress — waiting for lock...") },
+    {
+      onWaitStart: () =>
+        console.log("Another push is in progress — waiting for lock..."),
+    },
   );
 }
 
@@ -211,7 +250,10 @@ export function registerPush(program: Command) {
   program
     .command("push")
     .description("Commit (if -m provided), merge into main, and push")
-    .option("-m, --message <msg>", "Commit message — stages and commits all changes before pushing")
+    .option(
+      "-m, --message <msg>",
+      "Commit message — stages and commits all changes before pushing",
+    )
     .option(
       "--from-main",
       "DANGER: commit and push directly from main, bypassing the worktree-merge flow. " +
@@ -219,10 +261,7 @@ export function registerPush(program: Command) {
         "Intended only when a human is driving and the worktree detour would be pure churn " +
         "(e.g. small fixes already staged on main). Still runs checks.",
     )
-    .action(async (opts: {
-      message?: string;
-      fromMain?: boolean;
-    }) => {
+    .action(async (opts: { message?: string; fromMain?: boolean }) => {
       const branch = await getCurrentBranch();
       const onMain = branch === "main";
 
@@ -242,7 +281,9 @@ export function registerPush(program: Command) {
         process.exit(1);
       }
       if (opts.fromMain && !onMain) {
-        console.error(`--from-main requires being on main (currently on ${branch}).`);
+        console.error(
+          `--from-main requires being on main (currently on ${branch}).`,
+        );
         process.exit(1);
       }
 
@@ -292,7 +333,9 @@ export function registerPush(program: Command) {
       // death — a push owns no deploy receipt. It is also the op where an
       // unattributed death costs the most: a push holds the host-wide push
       // mutex, so every agent on the box queues behind whoever killed it.
-      installFatalSignalExit(signalOriginTap({ opId: pushId, worktree: opSlug }));
+      installFatalSignalExit(
+        signalOriginTap({ opId: pushId, worktree: opSlug }),
+      );
       // Fires immediately BEFORE `pushPool.run` (see withPushLock), so a push
       // blocked on the mutex lands on disk as a live "waiting" row before it
       // ever holds the lock. A failure BEFORE this point writes no record at
@@ -326,7 +369,9 @@ export function registerPush(program: Command) {
       if (opts.message) {
         if (status) {
           const files = status.split("\n").map((l) => l.trim());
-          console.log(`Committing ${files.length} file(s)${opts.fromMain ? " on main" : ""}:`);
+          console.log(
+            `Committing ${files.length} file(s)${opts.fromMain ? " on main" : ""}:`,
+          );
           for (const f of files) console.log(`  ${f}`);
           await exec(["git", "add", "-A"]);
           await exec(["git", "commit", "-m", opts.message]);
@@ -359,57 +404,61 @@ export function registerPush(program: Command) {
       // flag combination on Apple Git (the --exec doesn't propagate to rebase).
       if (opts.fromMain) {
         try {
-          await withPushLock(async () => {
-            profiler.stepStart("fetch");
-            console.log("Pulling main...");
-            await exec(["git", "fetch", "origin", "main"]);
-            profiler.stepEnd("fetch");
+          await withPushLock(
+            async () => {
+              profiler.stepStart("fetch");
+              console.log("Pulling main...");
+              await exec(["git", "fetch", "origin", "main"]);
+              profiler.stepEnd("fetch");
 
-            profiler.stepStart("rebase");
-            await exec(
-              [
-                "git",
-                "rebase",
-                "origin/main",
-                "--exec",
-                `git -c trailer.ifexists=replace commit --amend --no-edit --trailer Singularity-Push=${pushId}`,
-              ],
-              undefined,
-              rebaseEnv(),
-            );
-            profiler.stepEnd("rebase");
-
-            const fromMainRoot = await getWorktreeRoot();
-
-            profiler.stepStart("bun-install");
-            await installRebasedDeps(fromMainRoot);
-            profiler.stepEnd("bun-install");
-
-            profiler.stepStart("normalize");
-            await normalizeGeneratedArtifacts(fromMainRoot, { pushId });
-            profiler.stepEnd("normalize");
-
-            const ok = await runRebasedChecks(fromMainRoot, profiler);
-            if (!ok) {
-              console.error(
-                "Checks failed after rebase. Fix the issue and re-run ./singularity push " +
-                  "(your commit is still on HEAD; use `git reset --soft HEAD~1` to unstage it if needed).\n\n" +
-                  "If the failure is unrelated to your commits (e.g. a pre-existing issue on main), " +
-                  "try rebasing onto the latest main (`git fetch origin main && git rebase origin/main`) and re-running — the issue may already be fixed upstream.\n\n" +
-                  "If you cannot fix the failing check(s): STOP, report the failure to the user, and wait for instructions. " +
-                  "Do NOT work around check failures — not by disabling checks, editing check code, " +
-                  "expanding skip lists, committing via raw git, or any other means.",
+              profiler.stepStart("rebase");
+              await exec(
+                [
+                  "git",
+                  "rebase",
+                  "origin/main",
+                  "--exec",
+                  `git -c trailer.ifexists=replace commit --amend --no-edit --trailer Singularity-Push=${pushId}`,
+                ],
+                undefined,
+                rebaseEnv(),
               );
-              profiler.complete("failed_checks");
-              profiler.write();
-              process.exit(1);
-            }
+              profiler.stepEnd("rebase");
 
-            profiler.stepStart("push-main");
-            console.log("Pushing main...");
-            await exec(["git", "push"]);
-            profiler.stepEnd("push-main");
-          }, onLockRequested, onLockAcquired);
+              const fromMainRoot = await getWorktreeRoot();
+
+              profiler.stepStart("bun-install");
+              await installRebasedDeps(fromMainRoot);
+              profiler.stepEnd("bun-install");
+
+              profiler.stepStart("normalize");
+              await normalizeGeneratedArtifacts(fromMainRoot, { pushId });
+              profiler.stepEnd("normalize");
+
+              const ok = await runRebasedChecks(fromMainRoot, profiler);
+              if (!ok) {
+                console.error(
+                  "Checks failed after rebase. Fix the issue and re-run ./singularity push " +
+                    "(your commit is still on HEAD; use `git reset --soft HEAD~1` to unstage it if needed).\n\n" +
+                    "If the failure is unrelated to your commits (e.g. a pre-existing issue on main), " +
+                    "try rebasing onto the latest main (`git fetch origin main && git rebase origin/main`) and re-running — the issue may already be fixed upstream.\n\n" +
+                    "If you cannot fix the failing check(s): STOP, report the failure to the user, and wait for instructions. " +
+                    "Do NOT work around check failures — not by disabling checks, editing check code, " +
+                    "expanding skip lists, committing via raw git, or any other means.",
+                );
+                profiler.complete("failed_checks");
+                profiler.write();
+                process.exit(1);
+              }
+
+              profiler.stepStart("push-main");
+              console.log("Pushing main...");
+              await exec(["git", "push"]);
+              profiler.stepEnd("push-main");
+            },
+            onLockRequested,
+            onLockAcquired,
+          );
         } catch (err) {
           profiler.complete("error");
           profiler.write();
@@ -426,125 +475,141 @@ export function registerPush(program: Command) {
       // critical section so no two pushes can race on main.
       const mainWorktree = await getMainWorktree();
       try {
-        await withPushLock(async () => {
-          // 2. Pull main to ensure it's up to date before merging.
-          // Use explicit fetch + merge instead of `git pull --ff-only` because FETCH_HEAD
-          // is shared across all worktrees; a prior fetch in another worktree can leave
-          // multiple "for-merge" entries, causing "Cannot fast-forward to multiple branches".
-          profiler.stepStart("fetch");
-          console.log("Pulling main...");
-          await exec(["git", "fetch", "origin", "main"], mainWorktree);
-          profiler.stepEnd("fetch");
+        await withPushLock(
+          async () => {
+            // 2. Pull main to ensure it's up to date before merging.
+            // Use explicit fetch + merge instead of `git pull --ff-only` because FETCH_HEAD
+            // is shared across all worktrees; a prior fetch in another worktree can leave
+            // multiple "for-merge" entries, causing "Cannot fast-forward to multiple branches".
+            profiler.stepStart("fetch");
+            console.log("Pulling main...");
+            await exec(["git", "fetch", "origin", "main"], mainWorktree);
+            profiler.stepEnd("fetch");
 
-          profiler.stepStart("ff-main");
-          await exec(["git", "merge", "--ff-only", "origin/main"], mainWorktree);
-          profiler.stepEnd("ff-main");
+            profiler.stepStart("ff-main");
+            await exec(
+              ["git", "merge", "--ff-only", "origin/main"],
+              mainWorktree,
+            );
+            profiler.stepEnd("ff-main");
 
-          // 3. Rebase onto main so the merge is always a fast-forward. `--exec`
-          //    runs after each replayed commit, amending it to carry a shared
-          //    Singularity-Push trailer so the server can group all commits in
-          //    this push as a single event.
-          profiler.stepStart("rebase");
-          const { exitCode: rebaseExit } = await runAllowFail(
-            [
-              "git",
-              "rebase",
-              "main",
-              "--exec",
-              `git -c trailer.ifexists=replace commit --amend --no-edit --trailer Singularity-Push=${pushId}`,
-            ],
-            undefined,
-            rebaseEnv(),
-          );
-          profiler.stepEnd("rebase");
-          if (rebaseExit !== 0) {
-            // Best-effort cleanup on the failure path; do not let an abort
-            // failure mask the actionable rebase-conflict message printed below.
-            await runAllowFail(["git", "rebase", "--abort"]);
-            console.error(
+            // 3. Rebase onto main so the merge is always a fast-forward. `--exec`
+            //    runs after each replayed commit, amending it to carry a shared
+            //    Singularity-Push trailer so the server can group all commits in
+            //    this push as a single event.
+            profiler.stepStart("rebase");
+            const { exitCode: rebaseExit } = await runAllowFail(
               [
-                `Rebase of ${branch} onto main failed (aborted).`,
-                ``,
-                `Conflicts during this rebase are routine when main has moved — resolve them yourself, don't bail out.`,
-                ``,
-                `To resolve:`,
-                `  1. git fetch origin main`,
-                `  2. git rebase origin/main     (NEVER 'git merge' — push re-rebases and a merge commit produces churn)`,
-                `  3. Resolve conflicts, then 'git add <files>' and 'git rebase --continue'`,
-                `     (or 'git rebase --abort' to bail out)`,
-                `  4. Re-run ./singularity push`,
-                ``,
-                `If main's shape has diverged so much your commit no longer applies, re-apply your`,
-                `changes by hand onto a fresh worktree branched from origin/main. Never 'git reset'`,
-                `your branch onto main — it stages a deletion of every commit that landed in between.`,
-              ].join("\n"),
+                "git",
+                "rebase",
+                "main",
+                "--exec",
+                `git -c trailer.ifexists=replace commit --amend --no-edit --trailer Singularity-Push=${pushId}`,
+              ],
+              undefined,
+              rebaseEnv(),
             );
-            profiler.complete("failed_rebase");
-            profiler.write();
-            process.exit(1);
-          }
+            profiler.stepEnd("rebase");
+            if (rebaseExit !== 0) {
+              // Best-effort cleanup on the failure path; do not let an abort
+              // failure mask the actionable rebase-conflict message printed below.
+              await runAllowFail(["git", "rebase", "--abort"]);
+              console.error(
+                [
+                  `Rebase of ${branch} onto main failed (aborted).`,
+                  ``,
+                  `Conflicts during this rebase are routine when main has moved — resolve them yourself, don't bail out.`,
+                  ``,
+                  `To resolve:`,
+                  `  1. git fetch origin main`,
+                  `  2. git rebase origin/main     (NEVER 'git merge' — push re-rebases and a merge commit produces churn)`,
+                  `  3. Resolve conflicts, then 'git add <files>' and 'git rebase --continue'`,
+                  `     (or 'git rebase --abort' to bail out)`,
+                  `  4. Re-run ./singularity push`,
+                  ``,
+                  `If main's shape has diverged so much your commit no longer applies, re-apply your`,
+                  `changes by hand onto a fresh worktree branched from origin/main. Never 'git reset'`,
+                  `your branch onto main — it stages a deletion of every commit that landed in between.`,
+                ].join("\n"),
+              );
+              profiler.complete("failed_rebase");
+              profiler.write();
+              process.exit(1);
+            }
 
-          // 3b. Ensure node_modules matches the rebased lockfile — main may
-          //     have added dependencies the worktree hasn't installed yet.
-          profiler.stepStart("bun-install");
-          await installRebasedDeps(await getWorktreeRoot());
-          profiler.stepEnd("bun-install");
+            // 3b. Ensure node_modules matches the rebased lockfile — main may
+            //     have added dependencies the worktree hasn't installed yet.
+            profiler.stepStart("bun-install");
+            await installRebasedDeps(await getWorktreeRoot());
+            profiler.stepEnd("bun-install");
 
-          // 3c. Post-rebase normalize: regenerate auto-generated artifacts
-          //     (docs, drizzle migrations) from the rebased source tree and
-          //     amend the head commit. The merge drivers in .gitattributes
-          //     accepted the upstream side during the rebase; this step makes
-          //     the final commit canonical. Aborts on hand-edited migrations
-          //     or on real conflict markers in CLAUDE.md prose.
-          profiler.stepStart("normalize");
-          await normalizeGeneratedArtifacts(await getWorktreeRoot(), { pushId });
-          profiler.stepEnd("normalize");
+            // 3c. Post-rebase normalize: regenerate auto-generated artifacts
+            //     (docs, drizzle migrations) from the rebased source tree and
+            //     amend the head commit. The merge drivers in .gitattributes
+            //     accepted the upstream side during the rebase; this step makes
+            //     the final commit canonical. Aborts on hand-edited migrations
+            //     or on real conflict markers in CLAUDE.md prose.
+            profiler.stepStart("normalize");
+            await normalizeGeneratedArtifacts(await getWorktreeRoot(), {
+              pushId,
+            });
+            profiler.stepEnd("normalize");
 
-          // 4. Run checks on the rebased tree — this is exactly what will land on
-          //    main, and the pass is scoped to exactly that (`--scope tree`).
-          //    Deploy-scoped checks verify the local gitignored dist/artifact
-          //    store, which never lands on main and which the rebase above
-          //    invalidates by construction; `build` and main's post-push
-          //    auto-build assert those for real.
-          //    Spawned as a subprocess so the check code comes from the rebased
-          //    tree, not the (potentially stale) module cache of this process.
-          const root = await getWorktreeRoot();
-          const ok = await runRebasedChecks(root, profiler);
-          if (!ok) {
-            console.error(
-              `Checks failed after rebasing ${branch} onto main. ` +
-                `Fix the issue and re-run ./singularity push ` +
-                `(your commits are on ${branch}; use \`git reset --soft HEAD~1\` to unstage the last one if needed).\n\n` +
-                `If the failure is unrelated to your commits (e.g. a pre-existing issue on main), ` +
-                `try rebasing onto the latest main (\`git fetch origin main && git rebase origin/main\`) and re-running — the issue may already be fixed upstream.\n\n` +
-                `If you cannot fix the failing check(s): STOP, report the failure to the user, and wait for instructions. ` +
-                `Do NOT work around check failures — not by disabling checks, editing check code, ` +
-                `expanding skip lists, committing via raw git, or any other means.`,
-            );
-            profiler.complete("failed_checks");
-            profiler.write();
-            process.exit(1);
-          }
+            // 4. Run checks on the rebased tree — this is exactly what will land on
+            //    main, and the pass is scoped to exactly that (`--scope tree`).
+            //    Deploy-scoped checks verify the local gitignored dist/artifact
+            //    store, which never lands on main and which the rebase above
+            //    invalidates by construction; `build` and main's post-push
+            //    auto-build assert those for real.
+            //    Spawned as a subprocess so the check code comes from the rebased
+            //    tree, not the (potentially stale) module cache of this process.
+            const root = await getWorktreeRoot();
+            const ok = await runRebasedChecks(root, profiler);
+            if (!ok) {
+              console.error(
+                `Checks failed after rebasing ${branch} onto main. ` +
+                  `Fix the issue and re-run ./singularity push ` +
+                  `(your commits are on ${branch}; use \`git reset --soft HEAD~1\` to unstage the last one if needed).\n\n` +
+                  `If the failure is unrelated to your commits (e.g. a pre-existing issue on main), ` +
+                  `try rebasing onto the latest main (\`git fetch origin main && git rebase origin/main\`) and re-running — the issue may already be fixed upstream.\n\n` +
+                  `If you cannot fix the failing check(s): STOP, report the failure to the user, and wait for instructions. ` +
+                  `Do NOT work around check failures — not by disabling checks, editing check code, ` +
+                  `expanding skip lists, committing via raw git, or any other means.`,
+              );
+              profiler.complete("failed_checks");
+              profiler.write();
+              process.exit(1);
+            }
 
-          // 5. Push the branch (force since rebase rewrites history — safe for single-owner worktree branches)
-          profiler.stepStart("push-branch");
-          console.log(`Pushing branch ${branch}...`);
-          await exec(["git", "push", "--force-with-lease", "-u", "origin", branch]);
-          profiler.stepEnd("push-branch");
+            // 5. Push the branch (force since rebase rewrites history — safe for single-owner worktree branches)
+            profiler.stepStart("push-branch");
+            console.log(`Pushing branch ${branch}...`);
+            await exec([
+              "git",
+              "push",
+              "--force-with-lease",
+              "-u",
+              "origin",
+              branch,
+            ]);
+            profiler.stepEnd("push-branch");
 
-          // 6. Fast-forward merge into main (guaranteed to succeed — we hold the
-          //    lock, so no other push can have advanced main since our rebase).
-          profiler.stepStart("ff-merge");
-          console.log(`Merging ${branch} into main...`);
-          await exec(["git", "merge", "--ff-only", branch], mainWorktree);
-          profiler.stepEnd("ff-merge");
+            // 6. Fast-forward merge into main (guaranteed to succeed — we hold the
+            //    lock, so no other push can have advanced main since our rebase).
+            profiler.stepStart("ff-merge");
+            console.log(`Merging ${branch} into main...`);
+            await exec(["git", "merge", "--ff-only", branch], mainWorktree);
+            profiler.stepEnd("ff-merge");
 
-          // 7. Push main
-          profiler.stepStart("push-main");
-          console.log("Pushing main...");
-          await exec(["git", "push"], mainWorktree);
-          profiler.stepEnd("push-main");
-        }, onLockRequested, onLockAcquired);
+            // 7. Push main
+            profiler.stepStart("push-main");
+            console.log("Pushing main...");
+            await exec(["git", "push"], mainWorktree);
+            profiler.stepEnd("push-main");
+          },
+          onLockRequested,
+          onLockAcquired,
+        );
       } catch (err) {
         profiler.complete("error");
         profiler.write();

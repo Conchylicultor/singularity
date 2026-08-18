@@ -62,8 +62,14 @@ func parseFlags() Config {
 	flag.StringVar(&cfg.LogFormat, "log-format", "text", "log format: text|json")
 	flag.IntVar(&cfg.LogBufferLines, "log-buffer-lines", 1000, "per-worktree backend log ring capacity")
 
+	// These defaults mirror the TypeScript `defineDataDir` declarations that own
+	// each location (`logs/gateway`, `state/gateway`, `state/db-config`, and the
+	// grandfathered-in-place `sockets` and `worktrees`). The launcher passes all
+	// five explicitly, so nothing in the normal path depends on them — they exist
+	// for a hand-run gateway, and they must be kept in step with
+	// plugins/infra/plugins/launcher/data-dirs/index.ts.
 	dataDir := dataRoot()
-	defaultLogDir := filepath.Join(dataDir, "logs")
+	defaultLogDir := filepath.Join(dataDir, "logs", "gateway")
 	flag.StringVar(&cfg.LogDir, "log-dir", defaultLogDir, "directory for the gateway and per-worktree log files")
 	defaultRegistry := filepath.Join(dataDir, "worktrees")
 	flag.StringVar(&cfg.RegistryDir, "registry-dir", defaultRegistry, "directory of worktree JSON files")
@@ -72,9 +78,9 @@ func parseFlags() Config {
 		defaultSockets = filepath.Join(dataDir, "sockets")
 	}
 	flag.StringVar(&cfg.SocketsDir, "sockets-dir", defaultSockets, "directory for per-worktree Unix sockets (env: SINGULARITY_SOCKETS_DIR; short /tmp dir for deep release roots)")
-	defaultCentralRoutes := filepath.Join(dataDir, "central-routes.json")
+	defaultCentralRoutes := filepath.Join(dataDir, "state", "gateway", "central-routes.json")
 	flag.StringVar(&cfg.CentralRoutesFile, "central-routes-file", defaultCentralRoutes, "path to the central routing manifest")
-	defaultDbConfig := filepath.Join(dataDir, "database.json")
+	defaultDbConfig := filepath.Join(dataDir, "state", "db-config", "database.json")
 	flag.StringVar(&cfg.DbConfigFile, "db-config", defaultDbConfig, "path to the managed-service (database) config the supervisor reads")
 	// Fallback namespace for subdomain-less requests. Empty ⇒ such requests 404
 	// (dev/multi-app). A packaged single-app build (desktop/Tauri, single-origin

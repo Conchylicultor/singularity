@@ -43,11 +43,9 @@ export async function onReady(): Promise<void> {
   try {
     const result = await migrateLegacyAuthTokens();
     if (result === "migrated") {
-      console.log(
-        "[secrets] migrated legacy ~/.singularity/auth tokens into secrets store",
-      );
+      console.log("[secrets] migrated legacy auth tokens into secrets store");
     }
-  // eslint-disable-next-line promise-safety/no-bare-catch
+    // eslint-disable-next-line promise-safety/no-bare-catch
   } catch (err) {
     console.error("[secrets] legacy auth-token migration failed:", err);
   }

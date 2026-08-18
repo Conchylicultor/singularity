@@ -28,7 +28,7 @@ If migration fails partway, the sentinel file `~/.singularity/postgres/.migratin
 
 ### Using system PG instead of embedded
 
-Edit `~/.singularity/database.json` (auto-generated on first `./singularity start`):
+Edit `~/.singularity/state/db-config/database.json` (auto-generated on first `./singularity start`):
 
 ```json
 {

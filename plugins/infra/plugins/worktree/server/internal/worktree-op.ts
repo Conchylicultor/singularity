@@ -17,9 +17,11 @@ import {
 } from "node:fs/promises";
 import { join } from "node:path";
 import { flockTry } from "@plugins/packages/plugins/flock/server";
-import { pushSlotPath } from "@plugins/infra/plugins/host-admission/server";
 import {
-  SINGULARITY_DIR,
+  pushPool,
+  pushSlotPath,
+} from "@plugins/infra/plugins/host-admission/server";
+import {
   WORKTREES_DIR,
   worktreeDataDir,
 } from "@plugins/infra/plugins/paths/server";
@@ -305,7 +307,8 @@ export async function listActiveWorktreeOps(): Promise<WorktreeOpInfo[]> {
 // trusted to say who holds the global push lock: a hard-killed push (SIGKILL/OOM)
 // leaves a stale "running" marker, and pid-liveness reaping is defeated by PID
 // reuse — so two markers can read "running" at once, or none can. The kernel
-// flock on `push.lock` (held only by the CLI push process, auto-released on death)
+// flock on the push pool's `slot-0.lock` (held only by the CLI push process,
+// auto-released on death)
 // is the ONLY crash-safe, PID-reuse-proof truth for "is a push running". This
 // module derives each push marker's displayed phase from two authoritative inputs:
 //
@@ -324,7 +327,12 @@ export async function listActiveWorktreeOps(): Promise<WorktreeOpInfo[]> {
 // comment to keep the two spellings equal. The CLI push acquires the pool; this
 // probes the same kernel flock it holds, keeping the op-status derivation
 // authoritative.
-const PUSH_HOLDER_PATH = join(SINGULARITY_DIR, "push-holder.json");
+//
+// The holder file sits in that SAME directory, for the same reason: it is the
+// identity companion to `slot-0.lock`, and one directory with one owner is what
+// keeps "is a push running" and "who is running it" from drifting apart. It is
+// not re-declared here — this reads host-admission's own declaration.
+const PUSH_HOLDER_PATH = pushPool.slots.file("push-holder.json");
 
 export interface PushHolder {
   slug: string;
@@ -339,7 +347,7 @@ export interface PushHolder {
 // file the CLI may be holding). When the lock is held the probe fails fast
 // without acquiring, so it never disturbs the real holder.
 export function pushLockHeld(lockPath: string = pushSlotPath()): boolean {
-  mkdirSync(SINGULARITY_DIR, { recursive: true });
+  pushPool.slots.ensure();
   let fd: number;
   try {
     fd = openSync(lockPath, "a");
@@ -363,7 +371,7 @@ export function pushLockHeld(lockPath: string = pushSlotPath()): boolean {
 async function pushLockHeldAsync(
   lockPath: string = pushSlotPath(),
 ): Promise<boolean> {
-  await mkdir(SINGULARITY_DIR, { recursive: true });
+  await mkdir(pushPool.slots.path, { recursive: true });
   let handle: FileHandle;
   try {
     handle = await open(lockPath, "a");
@@ -386,7 +394,7 @@ export function writePushHolder(
   holder: PushHolder,
   path: string = PUSH_HOLDER_PATH,
 ): void {
-  mkdirSync(SINGULARITY_DIR, { recursive: true });
+  pushPool.slots.ensure();
   const tmp = `${path}.${process.pid}.tmp`;
   writeFileSync(tmp, JSON.stringify(holder));
   renameSync(tmp, path);

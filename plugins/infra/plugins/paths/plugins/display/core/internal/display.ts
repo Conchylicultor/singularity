@@ -23,4 +23,20 @@
  * No trailing slash: consumers that want one write `${PROTOTYPES_DIR_DISPLAY}/`,
  * which is also how a `<slug>` or `_template` gets appended.
  */
-export const PROTOTYPES_DIR_DISPLAY = "~/.singularity/prototypes";
+export const PROTOTYPES_DIR_DISPLAY = "~/.singularity/apps/prototypes";
+
+/**
+ * Where the encrypted secrets blob lives, as prose — the prose twin of the
+ * `state/secrets` data dir (`secrets.json.enc` plus the `.key` fallback).
+ *
+ * Used by the Accounts pane, which tells the user where their connected-service
+ * tokens are kept. That copy used to name `~/.singularity/auth/` as a hardcoded
+ * literal, and it had been wrong since the secrets plugin took ownership:
+ * `migrateLegacyAuthTokens` moves the legacy blob into the secrets store, so
+ * `auth/` holds nothing but a stale key file. Naming the directory in one place
+ * is what keeps the answer true — a literal in a JSX string is a spelling
+ * nothing checks.
+ *
+ * No trailing slash, same convention as above.
+ */
+export const SECRETS_DIR_DISPLAY = "~/.singularity/state/secrets";

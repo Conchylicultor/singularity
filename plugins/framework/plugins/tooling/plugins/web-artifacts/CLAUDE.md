@@ -2,7 +2,7 @@
 
 Per-plugin web build artifacts: each plugin's `web/` barrel (and every imported
 folder barrel — `core`, `fixtures`, …) builds into an independent,
-content-addressed vite lib-mode artifact under `~/.singularity/web-artifacts/`;
+content-addressed vite lib-mode artifact under `~/.singularity/cache/web-artifacts/`;
 the compose step assembles `dist/` (inline import map + entry + preloads +
 links into the store). This is the ONLY frontend build — the monolithic vite
 build it replaced is gone (`web-core/vite.config.ts`, `--monolith`,

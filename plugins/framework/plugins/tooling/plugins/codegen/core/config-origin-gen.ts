@@ -523,13 +523,15 @@ export function fileConfigProxy(filePath: string): ConfigProxy {
  *
  * `hierarchyPath` is the config's owning-plugin path (`asPath(pluginId)`) —
  * the descriptor does not carry its plugin identity, so the caller supplies it.
+ *
+ * `userConfigDir` is the namespace's user-config directory, already resolved —
+ * see {@link propagateConfigToUser} for why it is not a data root plus a name.
  */
 export function readEffectiveConfigFromDisk<F extends FieldsRecord>(
   descriptor: ConfigDescriptor<F>,
   opts: {
     root: string;
-    worktreeName: string;
-    singularityDir: string;
+    userConfigDir: string;
     hierarchyPath: string;
   },
 ): ConfigValues<F> {
@@ -541,12 +543,7 @@ export function readEffectiveConfigFromDisk<F extends FieldsRecord>(
     join(gitDir, `${descriptor.name}.jsonc`),
   );
 
-  const userDir = join(
-    opts.singularityDir,
-    "config",
-    opts.worktreeName,
-    opts.hierarchyPath,
-  );
+  const userDir = join(opts.userConfigDir, opts.hierarchyPath);
   const userOrigin = fileConfigProxy(
     join(userDir, `${descriptor.name}.origin.jsonc`),
   );
@@ -652,13 +649,31 @@ export function readCompositionManifestsFromDisk(
   }).manifests;
 }
 
+/**
+ * Write the resolved git-layer config into one namespace's user config layer.
+ *
+ * Takes the user-config directory ALREADY RESOLVED, never a data root plus a
+ * worktree name. The pair form is what this function used to take, and it meant
+ * the location of the user config layer was spelled here — as
+ * `join(singularityDir, "config", worktreeName)` — a second, silently-drifting
+ * copy of a directory config_v2 declares (`state/config`) and reads through that
+ * declaration. When the layout moved, the writer kept naming the old path while
+ * the reader named the new one, with nothing to fail: on a fresh root the app
+ * would simply see no propagated config and fall back to code defaults.
+ *
+ * Handing in the resolved directory removes the spelling rather than duplicating
+ * it, and the derivation lands in callers that can reach the declaration:
+ * `configDir.file(<namespace>)`. The one caller that is NOT writing into a data
+ * root — `release` staging the resolved defaults into a bundle at
+ * `<out>/config-seed/config/<composition>` — is exactly why this is a directory
+ * and not a namespace: that path is the bundle's own layout, not the root's.
+ */
 export async function propagateConfigToUser(opts: {
   root: string;
-  worktreeName: string;
-  singularityDir: string;
+  userConfigDir: string;
 }): Promise<void> {
   const configs = await discoverConfigs(opts.root);
-  const userConfigDir = join(opts.singularityDir, "config", opts.worktreeName);
+  const { userConfigDir } = opts;
 
   for (const { hierarchyPath, descriptor } of configs) {
     const gitOrigin = fileConfigProxy(

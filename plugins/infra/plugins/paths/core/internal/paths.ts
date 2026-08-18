@@ -163,27 +163,19 @@ export function resolveDataRoot(): string {
 }
 
 export const SINGULARITY_DIR = resolveDataRoot();
+// OUTSIDE the data root on purpose (`~/.backups/singularity`), which is why it
+// is a plain constant here rather than a `defineDataDir` declaration: a backup
+// that lived inside the tree it backs up would be reclaimed by the same sweep.
 export const BACKUPS_DIR = join(HOME_DIR, ".backups/singularity");
-export const SECRETS_DIR = join(SINGULARITY_DIR, "secrets");
-export const STORE_PATH = join(SINGULARITY_DIR, "secrets.json.enc");
-export const KEY_PATH = join(SECRETS_DIR, ".key");
-export const LEGACY_AUTH_DIR = join(SINGULARITY_DIR, "auth");
-export const LEGACY_AUTH_BLOB = join(LEGACY_AUTH_DIR, "tokens.json.enc");
-export const LEGACY_AUTH_KEY = join(LEGACY_AUTH_DIR, ".key");
-export const ATTACHMENTS_DIR = join(SINGULARITY_DIR, "attachments");
-export const REPORTS_DIR = join(SINGULARITY_DIR, "reports");
-// Throwaway UI mockups (`prototypes/<slug>/index.html`). Host-global on purpose:
-// a prototype is user content, not source. Living here rather than in the repo
-// means one shared set every worktree AND main serve — so a mock an agent writes
-// is visible immediately on the always-running main app, with no build and
-// nothing to commit — and it outlives the worktree that authored it. Recoverable
-// through the `prototypes` backup source. The `_template/` seed is the one part
-// that IS code: it ships in the repo and is copied in here on boot.
-export const PROTOTYPES_DIR = join(SINGULARITY_DIR, "prototypes");
-// Host-global incremental usage index for stats/cost. The `~/.claude/projects`
-// corpus is shared by every backend, so its aggregate is identical across
-// worktrees — the cache lives under the host-global root, not a per-worktree DB.
-export const COST_USAGE_DIR = join(SINGULARITY_DIR, "cost-usage");
+
+// Everything else under the data root is a DECLARATION, not a constant here.
+// This module used to carry a second spelling of nine of those directories
+// (`SECRETS_DIR`, `ATTACHMENTS_DIR`, `PROTOTYPES_DIR`, …) as plain
+// `join(SINGULARITY_DIR, …)` consts. Two spellings of one directory is how the
+// registry gets quietly bypassed: the declaration moves and the const does not,
+// so half the code writes to the new home and half goes on writing to the old
+// one, with nothing to fail. Reach a directory through its owner's
+// `data-dirs/index.ts` declaration — never by joining the root again.
 
 // Root dir holding every worktree's per-worktree singularity state. Each
 // worktree owns `<WORKTREES_DIR>/<name>/` (build/release artifacts, logs,

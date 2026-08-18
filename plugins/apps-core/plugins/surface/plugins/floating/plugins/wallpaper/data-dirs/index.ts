@@ -19,13 +19,6 @@ export const wallpaperDir = defineDataDir({
     reason:
       "an uploaded wallpaper is the only copy of that image — deleting it loses the user's chosen desktop",
   },
-  // Nothing moves on disk in this commit: the declaration must keep resolving to
-  // the directory that already holds the image, or the desktop would silently
-  // read an empty dir and the user's wallpaper would appear to have vanished.
-  legacyLocation: {
-    path: "wallpaper",
-    reason: "not yet moved; relocates in the layout migration",
-  },
 });
 
 export default [wallpaperDir];

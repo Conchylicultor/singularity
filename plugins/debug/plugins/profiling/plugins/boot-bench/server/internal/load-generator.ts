@@ -9,7 +9,8 @@ import { runWithoutProfiling } from "@plugins/infra/plugins/runtime-profiler/cor
 // churning in microseconds (which the burst would slip through unimpeded).
 const OCCUPANT_HOLD_MS = 75;
 
-const delay = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
+const delay = (ms: number) =>
+  new Promise<void>((resolve) => setTimeout(resolve, ms));
 
 export interface HostGateLoad {
   /**
@@ -27,7 +28,7 @@ export interface HostGateLoad {
  * Occupants run on the LIVE `heavy-read` pool handle — `defineHostPool` is a
  * per-id registry, so occupying `"heavy-read"` returns the very pool
  * `host-read-pool` defined, contending for the IDENTICAL physical flock slot
- * files (`~/.singularity/heavy-read-slots/slot-N.lock`), not a separate gate.
+ * files (`~/.singularity/locks/heavy-read/slot-N.lock`), not a separate gate.
  * Each occupant CYCLES: acquire a slot, hold it for
  * `OCCUPANT_HOLD_MS`, release, immediately re-acquire — looping until stopped.
  * Cycling (rather than holding continuously until stop) is essential: the
@@ -49,12 +50,18 @@ export interface HostGateLoad {
  * not every occupant, so it never waits on a slot that physically cannot be
  * granted.
  */
-export async function startHostGateLoad(concurrency: number): Promise<HostGateLoad> {
+export async function startHostGateLoad(
+  concurrency: number,
+): Promise<HostGateLoad> {
   const slots = heavyReadSlotCount();
   // Per-id registry ⇒ this returns the live `heavy-read` handle (defined by
   // host-read-pool at load): the same physical slots, no second semaphore, no
   // duplicate gauge.
-  const sem = defineHostPool({ id: "heavy-read", size: slots, cost: RESERVED_POOLS["heavy-read"].cost });
+  const sem = defineHostPool({
+    id: "heavy-read",
+    size: slots,
+    cost: RESERVED_POOLS["heavy-read"].cost,
+  });
 
   // Barrier: resolve once the gate is first fully held (saturated). Capped at the
   // slot count because no more than that many occupants can hold a slot at once.

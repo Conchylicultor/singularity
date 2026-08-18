@@ -58,7 +58,7 @@ sees a delivery.
   `SINGULARITY_NO_SIGNAL_ORIGIN=1`.
 - **Not a `provision/` entry** — that runner fails loud, so a box without CLT
   would stop being able to `bun install`. The `.c` is compiled lazily to
-  `~/.singularity/native/signal-origin-<sha8>-<arch>.{dylib,so}`,
+  `~/.singularity/cache/signal-origin-native/signal-origin-<sha8>-<arch>.{dylib,so}`,
   content-addressed (so parallel worktrees compiling at once is harmless: same
   bytes, tmp+rename, last one wins) and `existsSync` in steady state.
 - **`core/` is the FFI-free half** — a surface that only renders a recorded

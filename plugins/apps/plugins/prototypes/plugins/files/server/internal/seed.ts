@@ -8,7 +8,7 @@ import { TEMPLATE_DIR_NAME, TEMPLATE_SEED_DIR } from "./paths";
  *
  * The template is the blank page every prototype starts from, and it is code —
  * it ships in the repo. The prototypes themselves are user content in
- * `~/.singularity/prototypes/`. Seeding closes that gap: an agent copies a
+ * `~/.singularity/apps/prototypes/`. Seeding closes that gap: an agent copies a
  * sibling folder inside the data dir instead of reaching back into a checkout
  * that a release doesn't even have.
  *

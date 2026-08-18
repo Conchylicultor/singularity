@@ -15,7 +15,7 @@
   - **`home`** — Home — app launcher and entry point.
   - **`mail`** — Mail — a Gmail-class client.
   - **`pages`** — Notion-like pages app.
-  - **`prototypes`** — Prototypes — browse, focus, compare, and iterate on throwaway UI design mockups served from the host-global prototypes data dir (PROTOTYPES_DIR), outside any checkout.
+  - **`prototypes`** — Prototypes — browse, focus, compare, and iterate on throwaway UI design mockups served from the host-global prototypes data dir (the `apps/prototypes` declaration), outside any checkout.
   - **`settings`** — Settings app.
   - **`sonata`** — Sonata — extensible piano and music app.
   - **`story`** — Story Builder — author a page as a block tree and render it through pluggable lenses.

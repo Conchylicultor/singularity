@@ -5,7 +5,7 @@ PgBouncer connection pooler for the embedded Postgres cluster. Fronts PG in tran
 This plugin ships:
 
 - The `@equin/pgbouncer-<platform>` binary as an optionalDependency in `package.json` so `bun install` lands the binary.
-- `scripts/start.ts` — standalone lifecycle script that handles binary resolution, config generation, and pgbouncer spawn. Invoked by the gateway's generic service supervisor via `~/.singularity/database.json`.
+- `scripts/start.ts` — standalone lifecycle script that handles binary resolution, config generation, and pgbouncer spawn. Invoked by the gateway's generic service supervisor via `~/.singularity/state/db-config/database.json`.
 - `shared/` constants (PGBOUNCER_PORT, PGBOUNCER_SOCKET_DIR, config/log/pid paths) reused by the database client layer.
 
 ## Connection routing
