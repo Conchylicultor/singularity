@@ -102,6 +102,38 @@ the falsification for any primitive whose contract is *a box I measure is the
 size of its own content, whatever else is in the row*, and it pairs with
 `rigidIntegrity` (adaptive-bar's `squeezable-occupants`).
 
+A fourth, **`shrinkWrapHost`**, is about the box ABOVE the primitive. It sets
+`width: max-content` on the element the fixture marked with `HOST_MARKER_ATTR`,
+so the host stops handing the primitive a width and starts taking its width from
+it. (That marker is exported from `core/`, unlike the rail's: the rail marker
+wraps children the harness itself supplies, while this one names a box in the
+fixture's own tree, and a fixture may import nothing but the core barrel.)
+
+It is the historical broken construct for every *measure-then-decide* primitive,
+not only the bar it was written for: the width such a primitive reads stops being
+an input and becomes an output of its own last decision, so each pass shrinks the
+number that decides the next one — a one-way ratchet ending wherever the content
+runs out. Nothing in the declaration says so (a `flex-1` child of a `w-fit`
+parent has grow 1 and no slack), which is exactly why proving a guard against it
+needs a real layout engine rather than a style assertion.
+
+Two things about it shape the fixture you write around it:
+
+- **It lands after the primitive has mounted and settled** — `applyMutation` runs
+  on the painted DOM. That is the fault's real shape in the app too (a framing
+  variant swaps, a wrapper's class flips, contributions arrive in a later plugin
+  wave), so what it falsifies is the *schedule* of a premise check as much as its
+  existence: a primitive that asks its host once at mount passes this mutation
+  while ratcheting itself empty afterwards.
+- **It freezes the row it finds.** It runs synchronously right after the render
+  commits, before any `ResizeObserver` has re-fitted anything, so `max-content`
+  sizes to the PREVIOUS width's content. A fixture must therefore sweep wide →
+  narrow: a mutated pass restarting narrower than the state it inherits clips on
+  the stale content alone, which is a falsification that would bite with the
+  guard removed and therefore proves nothing.
+  `adaptive-bar/host-stops-giving-room` is the worked example and states both
+  constraints at its `widths`.
+
 **Known limit:** two nested regions publishing the *same* value resolve to the
 outer one as publisher. Nesting is shadowing, so a correct inner region uses a
 different step; a fixture that genuinely needs identical nested rails is not
@@ -243,16 +275,25 @@ component's own diagnostic log is not a fixture that stopped rendering, and the
 measurer page mounts no error boundary, so React funnels every uncaught
 render/commit error through `reportError` and into `pageerror` anyway.
 
-**The gate does not see a primitive's dev-only assertions.**
-`build-fixtures-page.ts` calls Vite's `build()` with no `mode`, which defaults to
-production, so `import.meta.env.DEV` is statically `false` and a
-`if (import.meta.env.DEV) throw` is tree-shaken out of the bundle (verified by
-grepping the emitted chunks for the throw's template). A primitive that reports
-loudly in dev and degrades quietly in prod therefore reaches this gate only
-through its *quiet* branch — so a fixture must assert the degraded shape as
-geometry (adaptive-bar's strip fixtures use `rigidIntegrity` for exactly this:
-occupants floored into the panel disappear from the row) and must not rely on
-the page-error drain to notice.
+**The gate does not see a primitive's dev-only assertions — but only because
+`build-fixtures-page.ts` now pins it.** A primitive that reports loudly in dev
+and degrades quietly in prod reaches this gate through its *quiet* branch, so a
+fixture must assert the degraded shape as geometry (adaptive-bar's strip
+fixtures use `rigidIntegrity` for exactly this: occupants floored into the panel
+disappear from the row) and must not rely on the page-error drain to notice.
+
+That used to rest on "Vite's `build()` with no `mode` defaults to production", and
+that is **wrong in the one context that matters**. Vite resolves `isProduction`
+from the ambient `process.env.NODE_ENV` first and consults `mode` only when it is
+unset — and this page is built by a suite running under `bun test`, which sets
+`NODE_ENV=test`. So the gate was building a DEVELOPMENT page: `import.meta.env.DEV`
+was `true`, every `if (import.meta.env.DEV) throw` was live, and the first fixture
+to deliberately reproduce a construct a primitive asserts against (adaptive-bar's
+`host-stops-giving-room`) took the page down with a `fixture page error` instead
+of being measured. Building it by hand — no `NODE_ENV` — produced the opposite
+page, which is how the claim survived a hand-verification. The builder now pins
+`import.meta.env.DEV` / `PROD` and `process.env.NODE_ENV` in `define`, so the
+page is a production one whoever invokes it.
 
 ## The oracle (`core/oracle.ts`)
 
@@ -331,6 +372,7 @@ server-core tsconfig where `check`/`facet` live. The
     - `checkTruncationOnsetOrder`
     - `evaluateInvariant`
     - `fixturesCollectedDir`
+    - `HOST_MARKER_ATTR`
     - `isLayoutFixture`
     - `isRegionFixture`
     - `loadFixtures`

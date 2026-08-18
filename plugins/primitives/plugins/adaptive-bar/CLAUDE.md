@@ -60,17 +60,39 @@ away.
 Break the rule and you get told. Every fault throws in dev and files a report
 through `adaptiveBarReportSink` in prod (→ Debug → Reports via
 `reports/adaptive-bar`), because taking down a pane header over a layout
-disagreement is worse than a cramped row plus an alert:
+disagreement is worse than a cramped row plus an alert.
 
-- **no-slack** — once per bar, it hides everything the row is holding, re-reads
-  the row, and puts it back. A bar that was *given* its width measures the same
-  either way; one whose host shrink-wraps to it measures its own content twice.
-  That is the whole premise checked directly, and the reason it is not a style
-  proxy: `flex-grow` is `1` in the failing case (the bar sets it on itself), and
-  a parent that shrink-wraps to its child can never be overshot by it — so the
+"In dev" is narrower than it sounds, and worth knowing before you go looking for
+that throw in a browser: `import.meta.env.DEV` is compiled to `false` in every
+built web artifact (`ARTIFACT_DEFINE` in
+[`web-artifacts`](../../../framework/plugins/tooling/plugins/web-artifacts/core/internal/vite-builder.ts))
+and in the layout-harness measurer page, which is a production Vite build too.
+So the throw exists under vitest and nowhere else — in the deployed app, in the
+Layout Lab and in the geometry gate a fault is silent: `reportFault` plus
+whichever layout the remedy commits.
+
+The four faults:
+
+- **no-slack** — it hides everything the row is holding, re-reads the row, and
+  puts it back. A bar that was *given* its width measures the same either way;
+  one whose host shrink-wraps to it measures its own content twice. That is the
+  whole premise checked directly, and the reason it is not a style proxy:
+  `flex-grow` is `1` in the failing case (the bar sets it on itself), and a
+  parent that shrink-wraps to its child can never be overshot by it — so the
   shape reads as healthy on every cheaper test. A row that measures 0px while
   occupants are relocated out of it is the same fault: "not laid out yet" is
   only honest while the row still holds everything it was given.
+
+  Asked **per width**, not once per mount: the premise is a property of the
+  *host*, and a host changes under a mounted bar — a framing variant swaps, a
+  wrapper's class flips, contributions arrive in a later plugin wave, or a
+  shrink-to-content ancestor whose width was floored by a wider sibling stops
+  being floored once the bar's own content grows past it. So it is re-asked
+  whenever the row is narrower than the width it was last verified at, which is
+  the ratchet's own direction — an eviction only ever reduces what the row
+  holds — and bounded by `MAX_SLACK_PROBES`, because the probe is a forced
+  reflow and a narrowing drag produces one every frame. A report can therefore
+  arrive long after mount and name a host that broke later.
 - **row-overflow** — the fit says everything fits and the rendered row still
   overflows the box the bar was given. Measured as the union of the occupants'
   own boxes against the bar's own content box (`measureRowOverflow` +
@@ -99,8 +121,13 @@ disagreement is worse than a cramped row plus an alert:
   which is the same outcome its blank form was already producing, but worth
   knowing before reading a report from a `clip` bar.
 
-The two engine-facing guards (`no-slack`, `row-overflow`) are gated on a real
-layout engine, so neither fires in jsdom.
+Of the two engine-facing guards only **`row-overflow`** is gated on a real
+layout engine (`layoutMeasured`), so it never fires in jsdom. `no-slack` is not
+gated at all: it is a *differential* measurement taken through the measurement
+seam — two readings of the same row, one holding its occupants and one not — so
+two equal readings in jsdom say "the width does not follow the content", which
+is a true answer and the reason the jsdom suite can drive the guard
+deliberately (`web/__tests__/no-slack.test.tsx`).
 
 Every fault carries **who it is about**: `label` is the name the consumer gave
 the bar, and `origin` is the innermost UI-context node above the bar's root
@@ -317,8 +344,9 @@ itself triggers the pass, so "deferred forever" is unrepresentable.
   is evicted, so the first fit has nothing to read; it is un-hidden, measured and
   re-hidden inside one synchronous block. One forced reflow, once per bar — and
   still better than the `MORE_BTN_W = 32` it replaces, which is simply wrong at
-  any other control density. The no-slack probe costs a second one, on the same
-  hide-measure-restore discipline.
+  any other control density. The no-slack probe is the same hide-measure-restore
+  discipline, and costs one reflow each time the row narrows past the width its
+  premise was last verified at — up to `MAX_SLACK_PROBES` of them per bar.
 - **`overflow="clip"` can silently drop a widget.** Kept because
   prompt-templates needs it and has a second route to the content. If it starts
   papering over layout bugs, the fix is a lint rule demanding a named reason, not

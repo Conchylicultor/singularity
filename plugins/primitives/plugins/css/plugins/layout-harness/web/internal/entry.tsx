@@ -2,6 +2,7 @@ import { createRoot, type Root } from "react-dom/client";
 import { flushSync } from "react-dom";
 import { createElement } from "react";
 import {
+  HOST_MARKER_ATTR,
   loadFixtures,
   type FixtureMutation,
   type LayoutFixture,
@@ -280,6 +281,34 @@ function applyMutation(scope: HTMLElement, mutate: FixtureMutation): void {
         slot.style.flexShrink = "1";
         slot.style.minWidth = "0";
       }
+      break;
+    }
+    case "shrinkWrapHost": {
+      // Take the width away from the box the fixture named as the host and let
+      // it size to its content instead. Inline, so it wins over whatever the
+      // fixture's own `w-full` class said — the point is a host that CHANGED,
+      // not one that was authored wrong.
+      //
+      // The primitive is already mounted when this lands, so a primitive that
+      // only asks its question at mount has already asked it. That is not a
+      // limitation of the mutation but the fault's real shape: a host is a
+      // property of the tree above the primitive, and that tree keeps moving
+      // after the primitive mounts.
+      //
+      // It also lands one beat too early to see the CURRENT width: the render has
+      // committed, but a primitive that lays itself out from a `ResizeObserver`
+      // has not been told about the new width yet, so `max-content` freezes the
+      // layout the PREVIOUS width left behind. A fixture using this mutation
+      // therefore sweeps wide → narrow, so what gets frozen is always smaller
+      // than the container it is frozen inside — otherwise the stale layout
+      // overflows on its own and the falsification proves nothing.
+      const host = scope.querySelector<HTMLElement>(`[${HOST_MARKER_ATTR}]`);
+      if (!host) {
+        throw new Error(
+          `shrinkWrapHost mutation: no [${HOST_MARKER_ATTR}] in the fixture subtree — the fixture must mark the box that hands its primitive a width, since only the fixture knows which box that is`,
+        );
+      }
+      host.style.width = "max-content";
       break;
     }
   }

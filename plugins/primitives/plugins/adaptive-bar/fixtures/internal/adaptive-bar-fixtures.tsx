@@ -1,6 +1,9 @@
 import { useLayoutEffect, useRef, useState, type ReactElement } from "react";
 import { MdSearch, MdSettings, MdShare, MdVolumeUp } from "react-icons/md";
-import type { LayoutFixture } from "@plugins/primitives/plugins/css/plugins/layout-harness/core";
+import {
+  HOST_MARKER_ATTR,
+  type LayoutFixture,
+} from "@plugins/primitives/plugins/css/plugins/layout-harness/core";
 import {
   useActionForm,
   useHoldShrink,
@@ -425,11 +428,143 @@ function StripBarFixture({ align }: { align: AdaptiveBarAlign }): ReactElement {
   );
 }
 
+// Spread rather than written literally, so the box the fixture marks and the box
+// the mutation goes looking for cannot drift apart. Typed as a Record so the
+// spread is not a fresh object literal, which JSX would excess-property-check.
+const HOST_MARKER_PROPS: Record<string, string> = { [HOST_MARKER_ATTR]: "" };
+
+/**
+ * The four numbers the `host-stops-giving-room` sweep is built out of, and the
+ * one arithmetic they have to satisfy.
+ *
+ * The fixture proves a guard whose whole subject is *how much room the row was
+ * given versus how much it is using*, so the sweep cannot be a few plausible
+ * widths — each one has to put the bar in a specific state. At every swept width
+ * the row must (a) hold at least one occupant, since a probe that hides nothing
+ * measures nothing, (b) have evicted at least one, since a full row is not using
+ * less than it was given, and (c) still leave a band of UNUSED room wider than
+ * the primitive's own `HYSTERESIS_PX`, since that unused room is exactly how far
+ * the row narrows when the host stops handing it a width — and a narrowing
+ * smaller than the hysteresis band is not a resize as far as the bar is
+ * concerned.
+ *
+ * So the width is computed from the state it is meant to produce rather than
+ * picked: `n` occupants inline, each followed by a gap (the last one by the gap
+ * before the `⋯`), then the trigger, then the slack band. The occupants are a
+ * fixed pixel width for the same reason — a text-sized chip makes every number
+ * here a function of the font, and the row is being measured to the pixel.
+ *
+ * `ROOM_GAP_PX` and `ROOM_TRIGGER_PX` are measured off the harness's own seeded
+ * default density ramp (`gap="xs"`, one `IconButton`) rather than derived, which
+ * is the one thing in here that could go stale. `ROOM_SLACK_PX` is what absorbs
+ * that: it sits mid-way between the 8px floor the probe needs and the ~100px
+ * ceiling at which one more occupant would fit instead, so both constants can
+ * drift by tens of pixels before any of (a), (b) or (c) stops holding.
+ */
+const ROOM_OCCUPANT_PX = 96;
+const ROOM_GAP_PX = 4;
+const ROOM_TRIGGER_PX = 32;
+const ROOM_SLACK_PX = 40;
+
+function roomWidthFor(inlineOccupants: number): number {
+  return (
+    inlineOccupants * (ROOM_OCCUPANT_PX + ROOM_GAP_PX) +
+    ROOM_TRIGGER_PX +
+    ROOM_SLACK_PX
+  );
+}
+
+const ROOM_IDS = ["align", "colour", "layer", "share"] as const;
+
+/**
+ * A rigid, fixed-width occupant: one rung, and a width no font can move.
+ *
+ * It carries its own `data-geo`, rather than the fixture stamping the bar's item
+ * containers the way {@link useOccupantGeoSlots} does, because here an occupant
+ * has to be measurable the FIRST time it is ever in the row. A stamp applied by
+ * querying the row only ever finds what is already in it, and the occupant this
+ * fixture most needs to see is the one that was behind the `⋯` at every healthy
+ * width and comes back only when the bar degrades. Marking the widget itself
+ * means the marker travels with it: into the body-portaled panel, where it is
+ * outside the measured subtree and correctly invisible, and back.
+ */
+function RoomChip({ id }: { id: string }): ReactElement {
+  return (
+    <div
+      data-geo={id}
+      className="rounded-md border px-xs py-2xs"
+      style={{ width: ROOM_OCCUPANT_PX }}
+    >
+      {id}
+    </div>
+  );
+}
+
+/**
+ * An ordinary, healthy bar — inside a host that can be taken away from it.
+ *
+ * Nothing here is wrong, and that is the requirement rather than an aesthetic
+ * choice: this same catalog is what the live Layout Lab renders, inside the app,
+ * where the bar's report collector is registered. A fixture that simply IS badly
+ * hosted would file a real `no-slack` report every time a human opened Debug →
+ * Layout Lab — a permanent decoy in the alert funnel, for a fixture working as
+ * designed. Mutations are a gate-only concept; the gallery never applies one, so
+ * what the Lab shows is what is written here: a full-width row, four chips, and
+ * a `⋯` holding the rest.
+ *
+ * The marked wrapper is the whole apparatus. It is an ordinary full-width block
+ * that hands the row its width, until `shrinkWrapHost` reverses that — after the
+ * bar has mounted, settled, and evicted down to a fit, which is when the bar's
+ * own decisions start feeding back into the width that produced them.
+ *
+ * What that then proves is the SCHEDULE of the premise check, not the check
+ * itself. The bar verifies "my width is given to me, not taken from my content"
+ * by hiding the row's occupants and re-reading the row; a bar that asks only at
+ * mount has already asked, correctly, and passes this mutation while ratcheting
+ * itself empty afterwards. The two outcomes are told apart by geometry alone,
+ * which is all the gate can see (the measurer page is a production build, so the
+ * fault's dev throw is compiled out, and it registers no report collector):
+ *
+ * - **asked again** — the probe catches the reversal, the bar stops believing
+ *   its width and degrades to the CEILING: every occupant back in the row at its
+ *   widest, CSS clipping. The row is now content-wide, the four chips together
+ *   are wider than the container at every swept width, and `noClip` fails.
+ * - **asked once** — the bar goes on trusting a width that is now its own last
+ *   eviction's output, and the ratchet has already run: the row stays at the one
+ *   chip it had narrowed to, three chips stranded behind the `⋯`, with most of
+ *   the container's own room unused beside it and no width that can give them
+ *   back. Nothing sticks out of anything, so `noClip` passes and the gate
+ *   reports `falsification did not bite`. (Measured, with the re-probe removed.)
+ */
+function HostStopsGivingRoomFixture(): ReactElement {
+  const hostRef = useTriggerGeoSlot();
+  return (
+    // The host: full-width and growing normally, exactly as the bar's one rule
+    // for consumers asks. `w-full` is a class rather than an inline width so the
+    // mutation's inline `max-content` can win over it.
+    <div {...HOST_MARKER_PROPS} className="w-full">
+      <Line ref={hostRef} className="w-full">
+        <AdaptiveBar gap="xs" label="More tools">
+          {ROOM_IDS.map((id) => (
+            <AdaptiveBar.Item key={id} id={id}>
+              <RoomChip id={id} />
+            </AdaptiveBar.Item>
+          ))}
+        </AdaptiveBar>
+      </Line>
+    </div>
+  );
+}
+
 export const adaptiveBarFixtures: LayoutFixture[] = [
   {
     // The load-bearing one: a draggable `role="slider"` and a two-rung volume
     // control sharing a row with three plain actions, swept from roomy to
     // cramped. Nothing here is an action, an action-shaped thing, or a menu row.
+    //
+    // Its 220px end doubles as a no-slack negative control, for the reason
+    // spelled out at `actions-only` below — a false accusation would put the jog
+    // wheel and the full volume slider back in a 220px row and blow `noClip`.
     id: "adaptive-bar/rich-widgets",
     primitive: "adaptive-bar",
     dims: { contentLen: "long", withMeta: true, state: "idle" },
@@ -441,6 +576,21 @@ export const adaptiveBarFixtures: LayoutFixture[] = [
     // The ordinary case a pane header actually is: every occupant an
     // `IconButton`, so every one of them declares the `"row"` rung and the panel
     // fills with labelled rows.
+    //
+    // **Its narrow widths are also the no-slack guard's negative control — do
+    // not trim them.** This bar is hosted correctly (a `w-full` `Line`, the bar
+    // the growing cell), and the guard re-verifies that premise every time the
+    // row narrows past the width it last held at, so this sweep asks the
+    // question four times over, down to 60px. A guard that accused a healthy
+    // host would latch the degraded ceiling — every occupant back inline at its
+    // widest — and three `IconButton`s do not fit in 60px, so `noClip` above
+    // would fail. "The guard does not accuse a well-hosted bar" is therefore
+    // asserted here, against a real layout engine, rather than assumed;
+    // `rich-widgets` says the same thing at 220px with richer occupants, and
+    // `host-stops-giving-room` is the positive half of the same pair.
+    //
+    // The two `inside-horizontal-strip` fixtures are NOT controls: their card is
+    // 360px and roomy, so a false accusation there would still fit.
     id: "adaptive-bar/actions-only",
     primitive: "adaptive-bar",
     dims: { contentLen: "short", withMeta: false, state: "idle" },
@@ -542,6 +692,68 @@ export const adaptiveBarFixtures: LayoutFixture[] = [
       { kind: "rigidIntegrity", slot: "search" },
       { kind: "rigidIntegrity", slot: "share" },
       { kind: "rigidIntegrity", slot: "settings" },
+    ],
+  },
+  {
+    // The only fixture in the catalog that puts the `no-slack` guard in front of
+    // a real layout engine. Every other one hands the bar a proper growing cell,
+    // which is what a fixture SHOULD do — so the badly-hosted shape only ever
+    // existed in the jsdom suite, modelled through the primitive's measurement
+    // seam, and no browser had ever produced the ratchet it exists to catch.
+    //
+    // Unmutated it is an ordinary bar and asserts what its siblings assert; the
+    // falsification is the fixture's reason to exist. See
+    // {@link HostStopsGivingRoomFixture} for what the mutation does and how the
+    // two outcomes are told apart by geometry.
+    //
+    // The widths run WIDE → NARROW, and the order is load-bearing twice over.
+    // One mounted bar serves the whole run — the harness re-renders the same
+    // component per width, so the instance, its refs and the mutation's inline
+    // style all survive from one width to the next — and the mutated pass
+    // restarts at `widths[0]` carrying the state the healthy pass left behind.
+    //
+    // **It is what makes the un-degraded outcome fit.** The mutation is applied
+    // synchronously right after the render commits, before the resize observer
+    // has re-fitted the row for the new width, so `max-content` freezes the row
+    // holding the PREVIOUS width's occupants. Restarting narrower would freeze a
+    // wide row inside a narrow container and violate `noClip` on the spot —
+    // with or without the guard, which is a falsification that proves nothing.
+    // Restarting at the widest inherits the narrowest row instead: comfortably
+    // inside the container, so the degraded ceiling is the only thing left that
+    // can spill it.
+    //
+    // **And it is what leaves the premise stale in the direction the guard
+    // watches.** The re-probe follows the row NARROWING past the width the
+    // premise last held at; narrow → wide would leave that mark at the first
+    // width and the frozen row would be wider than it, which the guard is
+    // documented not to re-ask about. Descending drags the mark down to the
+    // narrowest width, and the frozen row lands below it.
+    //
+    // Two widths rather than the four or five its siblings sweep, because each
+    // narrowing spends one of the bar's budgeted probes (`MAX_SLACK_PROBES`)
+    // and the mutated pass needs one left. A longer sweep buys nothing here — the fault
+    // is latched at the first mutated width — and would spend the budget the
+    // proof runs on, reading as `falsification did not bite` while the guard is
+    // in fact working.
+    id: "adaptive-bar/host-stops-giving-room",
+    primitive: "adaptive-bar",
+    dims: { contentLen: "short", withMeta: false, state: "idle" },
+    widths: [roomWidthFor(3), roomWidthFor(1)],
+    render: () => <HostStopsGivingRoomFixture />,
+    invariants: [
+      { kind: "noOverlap" },
+      { kind: "noClip" },
+      // Last in the list, and it has to stay last. The healthy sweep is measured
+      // once up front, so it is safe wherever it sits — but this mutation is not
+      // undone by a re-render: the bar latches the degraded ceiling for the rest
+      // of the mount, and the harness keeps ONE mounted instance for the whole
+      // fixture. Anything measured after it would be measuring a bar that has
+      // already given up.
+      {
+        kind: "falsification",
+        mutate: { kind: "shrinkWrapHost" },
+        expectViolated: { kind: "noClip" },
+      },
     ],
   },
 ];

@@ -11,9 +11,22 @@ the primitive is *for*, and it never reports it. A fault means the premise
 underneath that width reading is false, and no amount of re-fitting can recover
 from that. Five of them, discriminated by `fault` in the payload:
 
-- **`no-slack`** — the bar's root computed `flex-grow: 0` at its first laid-out
-  pass, so the width it reads is a shrink-to-content box's, not "the room I was
-  given". The bar carries on, because there is no better number available to it.
+- **`no-slack`** — the bar hid every occupant it currently holds, re-read the
+  row's own width, and put them back: a bar that was truly given its width
+  reads the same number either way, and this one didn't, so the width it reads
+  is a shrink-to-content box's — its own content's — not "the room I was
+  given". Not a computed-style test: `flex-grow` reads `1` in the failing case
+  too, since the bar declares `flex-1` on itself, which is exactly why that
+  cheaper check can never catch it. The bar latches into `degraded` for the
+  rest of its mount: every occupant goes back into the row at its widest form,
+  and whatever does not fit is left for CSS to clip. That is the **ceiling**
+  rather than the floor `row-overflow` takes, because an eviction is precisely
+  what a bad width reading was already producing — pulling more occupants out
+  of the row cannot make a lying width more honest. The premise is re-verified
+  whenever the row gets narrower than the width it last verified at (bounded
+  by a small probe budget), so this can be reported long after the bar's first
+  laid-out pass, naming a host that broke later rather than one that was wrong
+  from mount.
 - **`row-overflow`** — on a **converged** pass (rendered *is* what the fit
   decided) the fit blessed the row as fitting, and the union of the occupants'
   own boxes still sticks out of the bar's own content box on one side or the

@@ -118,6 +118,20 @@ export type GeometryInvariant =
       expectViolated: GeometryInvariant;
     };
 
+/**
+ * The attribute a fixture puts on the box that HANDS ITS PRIMITIVE A WIDTH —
+ * the element `shrinkWrapHost` turns into a shrink-to-content one.
+ *
+ * It lives here, in core, and not beside `RAIL_MARKER_ATTR` in the harness's own
+ * `region-children.tsx`, because the two markers are authored by opposite sides.
+ * The rail marker is the harness's wrapper around children the harness itself
+ * supplies, so only harness code ever writes it; this one marks a box in the
+ * FIXTURE's own tree, and a fixture may import nothing but this core barrel. The
+ * mutation reads it back through the same constant, so the box the fixture
+ * marked and the box the mutation finds cannot drift apart.
+ */
+export const HOST_MARKER_ATTR = "data-geo-host";
+
 // A deliberate break the falsification case applies to the rendered construct,
 // proving the inner `expectViolated` invariant actually bites on the wrong shape.
 export type FixtureMutation =
@@ -143,7 +157,28 @@ export type FixtureMutation =
   // rail while every inheriting sibling stays put. One `value` goes to both
   // properties: `railAlignment` asserts the inline START only (the end is along
   // for the ride), which is where the bug class lives.
-  | { kind: "railOwedOverride"; value: string };
+  | { kind: "railOwedOverride"; value: string }
+  // Set `width: max-content` on the fixture's {@link HOST_MARKER_ATTR} box: the
+  // host stops handing this primitive a width and starts taking its width FROM
+  // it.
+  //
+  // The historical broken construct for every measure-then-decide primitive, not
+  // just the one that motivated it. Such a primitive reads the room it has been
+  // given, commits a decision, and reads again — sound only while the reading is
+  // an input. Under a shrink-to-content host the reading is an OUTPUT of the last
+  // decision, so each pass shrinks the number that decides the next one: a
+  // one-way ratchet ending wherever the content runs out. Nothing about the
+  // declaration says so — a `flex-1` child of a `w-fit` parent has grow 1 and no
+  // slack — which is why proving a guard bites here needs a real layout engine
+  // rather than a style assertion.
+  //
+  // Applied to the painted DOM of an ALREADY-MOUNTED primitive, which is the
+  // shape of the fault in the app too: a framing variant swaps, a wrapper's class
+  // flips, contributions arrive in a later plugin wave. So it falsifies the
+  // SCHEDULE of a premise check as much as its existence — a primitive that asks
+  // its host once at mount passes this mutation, and one that re-asks when the
+  // room narrows does not.
+  | { kind: "shrinkWrapHost" };
 
 // ── The fixture contribution ───────────────────────────────────────
 //

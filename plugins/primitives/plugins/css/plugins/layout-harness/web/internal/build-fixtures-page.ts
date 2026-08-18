@@ -25,6 +25,40 @@ export interface BuiltPage {
 
 export async function buildFixturesPage(): Promise<BuiltPage> {
   const outDir = await mkdtemp(join(tmpdir(), "layout-harness-"));
+  // A PRODUCTION page, whoever builds it — the gate's contract, not a preference.
+  //
+  // A primitive that throws on a broken construct in dev and degrades quietly in
+  // prod must reach this page through its QUIET branch. A fixture that
+  // reproduces such a construct deliberately (adaptive-bar's
+  // `host-stops-giving-room`) would otherwise crash the page, and a crashed
+  // fixture is a fatal `fixture page error` instead of the geometry it exists to
+  // assert.
+  //
+  // `mode` is NOT the lever. Vite resolves `isProduction` from the ambient
+  // `process.env.NODE_ENV` first and consults `mode` only when it is unset — and
+  // the suite that builds this page runs under `bun test`, which sets
+  // `NODE_ENV=test`. So the same source produced a production page when built by
+  // hand and a DEVELOPMENT one when built by the gate, with `import.meta.env.DEV`
+  // true and every dev-only assertion live.
+  //
+  // A `define` is not the lever either, and it fails loudly rather than subtly:
+  // replacing `import.meta.env.DEV` / `process.env.NODE_ENV` at compile time
+  // leaves the react plugin still compiling JSX for the dev runtime, so the page
+  // dies on `jsxDEV is not a function`. The flag has to be set BEFORE the config
+  // is resolved, which is one env var, restored in `finally` so a build cannot
+  // leak it into the suite that called it.
+  const priorNodeEnv = process.env.NODE_ENV;
+  process.env.NODE_ENV = "production";
+  try {
+    await buildPage(outDir);
+  } finally {
+    if (priorNodeEnv === undefined) delete process.env.NODE_ENV;
+    else process.env.NODE_ENV = priorNodeEnv;
+  }
+  return { html: join(outDir, "entry.html"), outDir };
+}
+
+async function buildPage(outDir: string): Promise<void> {
   await build({
     root: HERE,
     base: "./",
@@ -48,5 +82,4 @@ export async function buildFixturesPage(): Promise<BuiltPage> {
     },
     logLevel: "error",
   });
-  return { html: join(outDir, "entry.html"), outDir };
 }

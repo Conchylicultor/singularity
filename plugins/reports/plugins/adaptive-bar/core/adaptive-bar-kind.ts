@@ -64,9 +64,14 @@ const ConvergenceEvidenceSchema = z.object({
 });
 
 export const AdaptiveBarPayloadSchema = z.object({
-  // Which assumption broke. `no-slack` = the bar's root computed
-  // `flex-grow: 0` at first layout, so the width it reads is a
-  // shrink-to-content box's width and not "the room I was given";
+  // Which assumption broke. `no-slack` = hiding every occupant the bar
+  // currently holds and re-reading the row's own width moved the number, so
+  // the width it reads is a shrink-to-content box's — its own content's, not
+  // "the room I was given" (`flex-grow` alone reads `1` in this case too,
+  // since the bar sets `flex-1` on itself, which is why that cheaper check
+  // can never catch it); the bar then stops deciding for good, putting every
+  // occupant back at its widest form and leaving whatever does not fit for
+  // CSS to clip;
   // `row-overflow` = on a converged pass the fit blessed the row as fitting,
   // and the union of the occupants' boxes still sticks out of the bar's own
   // content box on one side or the other, so the widths the fit decided from

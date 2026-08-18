@@ -12,7 +12,7 @@ export {
   checkRailAlignment,
 } from "./oracle";
 export type { OracleResult } from "./oracle";
-export { isLayoutFixture, isRegionFixture } from "./types";
+export { isLayoutFixture, isRegionFixture, HOST_MARKER_ATTR } from "./types";
 export type {
   FixtureState,
   FixtureDims,

@@ -70,6 +70,7 @@ import {
   HARD_ROUND_CEILING,
   HYSTERESIS_PX,
   MAX_PREMISE_SHIFTS,
+  MAX_SLACK_PROBES,
   MAX_SURRENDERS,
   TRACE_ROUNDS,
   WIDTH_EPSILON_PX,
@@ -493,8 +494,14 @@ function AdaptiveBarShell({
   const absentRef = useRef<AbsentRungs>(noAbsentRungs);
   const episodeRef = useRef<Episode>(newEpisode());
   const triggerWidthRef = useRef<number | null>(null);
-  /** The slack probe costs a forced reflow, so it runs once per bar. */
-  const slackCheckedRef = useRef(false);
+  /**
+   * The width the grow-cell premise was last VERIFIED at, and the probes spent
+   * verifying it. The premise belongs to the host, so a host that changes after
+   * mount has to be caught — see {@link MAX_SLACK_PROBES} for why the re-ask
+   * follows the row narrowing and why it is budgeted.
+   */
+  const slackVerifiedAtRef = useRef<number | null>(null);
+  const slackProbesRef = useRef(0);
   /**
    * This bar has stopped deciding, and the width it stopped at. See
    * {@link commitFloor}: a fault-forced floor is the last placement computed
@@ -726,7 +733,13 @@ function AdaptiveBarShell({
     // budget for room that does not exist, and the fault it produced would be
     // the fit's arithmetic accusing the layout.
     const metrics = readRowMetrics(root);
-    const available = measure(root) - metrics.insetPx;
+    // Kept as read, not just as the budget: the slack probe compares the row
+    // holding its occupants against the row without them, and this IS the
+    // holding-them reading. Taking it twice would be a second forced reflow of
+    // a layout nothing has touched in between — and, in a test fake that models
+    // a pane being dragged, a second reading is a second drag step.
+    const rowPx = measure(root);
+    const available = rowPx - metrics.insetPx;
     // Zero available width is "not laid out yet" — a collapsed pane, a
     // display:none ancestor, a jsdom test with no measurement seam. Deciding
     // from it would evict the whole row and then put it back, so we decide
@@ -756,7 +769,16 @@ function AdaptiveBarShell({
     // when it decides. Tested against the layout engine rather than inferred
     // from a style — `flex-grow: 1` is no promise of slack when an ancestor
     // shrink-wraps, and that shape reads as healthy on every proxy.
-    if (!slackCheckedRef.current) {
+    //
+    // Asked again whenever the row is narrower than the width the premise last
+    // held at, because the premise is a property of the host and the host can
+    // change under a mounted bar. Narrowing is the ratchet's own direction and
+    // the moment a masked shrink-wrap first bites; `MAX_SLACK_PROBES` bounds
+    // what that costs during a drag.
+    const verifiedAt = slackVerifiedAtRef.current;
+    const unverified =
+      verifiedAt === null || available < verifiedAt - HYSTERESIS_PX;
+    if (unverified && slackProbesRef.current < MAX_SLACK_PROBES) {
       const inline = order
         .filter(
           ({ entry }) =>
@@ -764,9 +786,14 @@ function AdaptiveBarShell({
             entry.container.hidden !== true,
         )
         .map(({ entry }) => entry.container);
+      // A probe with nothing in the row proves nothing: hiding no occupants
+      // changes no width, and the two readings agree for the wrong reason.
       if (inline.length > 0) {
-        slackCheckedRef.current = true;
-        if (widthFollowsContent(root, inline, measure)) {
+        // Before the probe, not after: a dev throw must leave the probe spent,
+        // or the fault re-arms itself on the way back out.
+        slackProbesRef.current += 1;
+        slackVerifiedAtRef.current = available;
+        if (widthFollowsContent(root, inline, measure, rowPx)) {
           setDegraded(true);
           failLoudly({
             kind: "no-slack",
@@ -1345,10 +1372,11 @@ function measureTrigger(
  * Does this bar's width follow its own content?
  *
  * The one question the whole primitive rests on, asked of the layout engine
- * directly instead of inferred from a style. Hide everything the row is
- * currently holding, read the row again, put it back: a bar that was GIVEN its
- * width measures the same either way, and a bar sitting in a box that
- * shrink-wraps to it measures its own content twice.
+ * directly instead of inferred from a style. Take the reading the pass already
+ * has (`withContent`), hide everything the row is currently holding, read the
+ * row again, put it back: a bar that was GIVEN its width measures the same
+ * either way, and a bar sitting in a box that shrink-wraps to it measures its
+ * own content twice.
  *
  * Every cheaper proxy misses the shape that actually ships. `flex-grow: 0` is
  * false here — the bar sets `flex-1` on itself, so the failing case reads as
@@ -1356,10 +1384,11 @@ function measureTrigger(
  * grew to fit its own content is not overflowing that box. Both proxies describe
  * the bar's own declaration; only this one describes what the engine did with it.
  *
- * One forced reflow, once per bar, and invisible to React and to the paint:
- * the mutation is reverted inside the same synchronous block, so the shared
+ * One forced reflow per ask, and invisible to React and to the paint: the
+ * mutation is reverted inside the same synchronous block, so the shared
  * `ResizeObserver` compares against sizes that never changed. Same discipline
  * as {@link measureTrigger}, which reveals the hidden trigger to measure it.
+ * The caller decides how often to ask — see {@link MAX_SLACK_PROBES}.
  *
  * Goes through the measurement seam rather than `getBoundingClientRect`, so the
  * jsdom suite can model a shrink-wrapping host and drive this exact path —
@@ -1369,8 +1398,8 @@ function widthFollowsContent(
   root: HTMLElement,
   inline: readonly HTMLElement[],
   measure: (el: Element) => number,
+  withContent: number,
 ): boolean {
-  const withContent = measure(root);
   const wasHidden = inline.map((el) => el.hidden);
   for (const el of inline) el.hidden = true;
   const withoutContent = measure(root);

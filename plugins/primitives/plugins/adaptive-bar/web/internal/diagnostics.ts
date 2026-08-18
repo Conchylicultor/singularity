@@ -207,6 +207,40 @@ export const HARD_ROUND_CEILING = 20;
 export const MAX_SURRENDERS = 3;
 
 /**
+ * How many times one bar may ask the layout engine whether its width follows
+ * its own content.
+ *
+ * The probe hides the row's occupants, re-reads the row and puts them back, so
+ * it costs a forced reflow — and the premise it verifies belongs to the HOST,
+ * which can change after the bar mounts: a framing variant swaps, a wrapper's
+ * class flips, contributions arrive in a later plugin wave, or a shrink-to-
+ * content ancestor whose width was floored by a wider sibling stops being
+ * floored once the bar's own content grows past it. Asking once at mount spends
+ * the guard before any of that happens.
+ *
+ * So it is re-asked when the row NARROWS, which is the ratchet's own direction:
+ * an eviction can only ever reduce what the row holds, so a content-following
+ * row can only be dragged narrower by the bar's own decisions, and a masked
+ * shrink-wrap reveals itself on the first eviction that takes the content below
+ * its floor. A widening pane costs nothing.
+ *
+ * The budget is what keeps that from being one forced reflow per frame of a
+ * narrowing drag. Six rather than two or three, because a legitimate width
+ * SWEEP spends one on every step: the layout-geometry gate renders one bar
+ * across a range of widths, and any surface that steps through several widths
+ * in quick succession does the same — a budget tuned for "one or two host
+ * changes" is gone before a later onset could ever be observed. Six is the
+ * mount verification plus enough re-verifications to survive such a sweep, and
+ * still a handful of reflows rather than one per frame of a sustained drag.
+ * The trade, stated rather than hidden — after a long drag the bar is back to
+ * trusting its last verification, which is exactly today's behaviour and
+ * strictly better than it. Soundness is untouched either way: the probe is
+ * definitive, so the schedule changes only WHEN a true answer is obtained,
+ * never whether the answer is true.
+ */
+export const MAX_SLACK_PROBES = 6;
+
+/**
  * The promote band, in px — one `gap-sm`. A demotion is accepted the moment the
  * row overflows; a promotion needs this much headroom on top. The two
  * predicates are disjoint, so no single width both demands a demote and permits

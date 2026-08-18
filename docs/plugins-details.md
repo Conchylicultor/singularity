@@ -21150,6 +21150,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `checkTruncationOnsetOrder`
               - `evaluateInvariant`
               - `fixturesCollectedDir`
+              - `HOST_MARKER_ATTR`
               - `isLayoutFixture`
               - `isRegionFixture`
               - `loadFixtures`
