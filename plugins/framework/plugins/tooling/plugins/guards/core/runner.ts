@@ -38,11 +38,32 @@ function collectHints(
   ).map((h) => h.message);
 }
 
-export async function runHook(input: HookInput): Promise<void> {
+/**
+ * What the entry point must tell the runner, over and above the hook payload.
+ *
+ * REQUIRED, not defaulted: every field here is a fact `core/` cannot reach on
+ * its own, and a default would silently be the wrong answer. A new entry point
+ * that forgets `writableDataDirs` would start denying writes to the prototypes
+ * tree again — with a `= []` default that regression is invisible, as a
+ * required field it is a type error.
+ */
+export interface HookOptions {
+  /** See `GuardContext.writableDataDirs` — resolved, absolute. */
+  writableDataDirs: readonly string[];
+}
+
+export async function runHook(
+  input: HookInput,
+  options: HookOptions,
+): Promise<void> {
   const tool = input.tool_name;
   if (!tool) return;
   const cwd = input.cwd || process.cwd();
-  const ctx = createContext(cwd, input.session_id || "unknown");
+  const ctx = createContext(
+    cwd,
+    input.session_id || "unknown",
+    options.writableDataDirs,
+  );
   const toolInput = (input.tool_input ?? {}) as Record<string, unknown>;
 
   const guards = GUARDS.filter((g) => matches(g.matcher, tool));

@@ -1,5 +1,22 @@
 #!/usr/bin/env bun
+import { prototypesDir } from "@plugins/apps/plugins/prototypes/plugins/files/data-dirs";
 import { runHook } from "../core/runner";
+
+/**
+ * The directories outside the checkout an agent may write into, read from their
+ * owners' declarations at hook time.
+ *
+ * `bin/` is where this can happen at all: a `data-dirs` module is importable
+ * from `server`/`shared`/`bin`, never from `core/`, so the guards themselves
+ * cannot name a data dir (see `GuardContext.writableDataDirs`). Reading
+ * `.path` here — a getter, resolved per read — is what keeps the guard aligned
+ * with the declaration when the directory moves.
+ *
+ * Prototypes qualify precisely because they are NOT in git: `prototypes/CLAUDE.md`
+ * tells every agent to write its mock into this tree, and the declaration's
+ * `reclaim: never` says the folder on disk is the only copy of that work.
+ */
+const writableDataDirs = [prototypesDir.path];
 
 const chunks: Buffer[] = [];
 for await (const chunk of process.stdin) chunks.push(chunk as Buffer);
@@ -16,4 +33,4 @@ if (raw.trim()) {
   }
 }
 
-await runHook(input as Parameters<typeof runHook>[0]);
+await runHook(input as Parameters<typeof runHook>[0], { writableDataDirs });

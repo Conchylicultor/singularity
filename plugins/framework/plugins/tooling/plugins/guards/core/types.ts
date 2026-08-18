@@ -18,6 +18,22 @@ export interface GuardContext {
    * PreToolUse payload. Guards that carry state across calls key it on this.
    */
   sessionId: string;
+  /**
+   * Absolute directories OUTSIDE any checkout that an agent may still write
+   * into — host-global user content whose home is a `defineDataDir`
+   * declaration, not the repo (today: the prototypes tree).
+   *
+   * Supplied by the hook ENTRY POINT (`bin/guard.ts`) rather than read here,
+   * and this is the whole point of the field. A data dir's absolute path is
+   * only reachable from its owner's `data-dirs/index.ts`, which the boundary
+   * rules keep out of `core/` — so a guard that wanted to name one had no
+   * choice but to hardcode `~/.singularity/…`, and that literal would go
+   * silently wrong the next time the data root moves (it already has once, in
+   * the `apps/` layout migration). Passing the RESOLVED paths in means the
+   * guard compares against wherever the declaration says the directory is
+   * today, including under a `SINGULARITY_DIR` override.
+   */
+  writableDataDirs: readonly string[];
   hasBypass(token: string): boolean;
   allow(): AllowVerdict;
   deny(reason: string): DenyVerdict;

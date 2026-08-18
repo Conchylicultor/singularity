@@ -23,6 +23,20 @@ export const mainEditsGuard = defineGuard<FileInput>({
     // harness hands agents surfaces as its resolved `/private/tmp/...` form.
     if (/^\/(private\/)?tmp\//.test(f)) return null;
 
+    // Declared data dirs the entry point resolved for us — host-global user
+    // content that lives outside every checkout on purpose. The `/` in the
+    // prefix is load-bearing: without it a sibling named `<dir>-scratch` would
+    // pass the same test, the same reason `resolvePrototypeFile` compares
+    // against `root + sep`.
+    const target = f;
+    if (
+      ctx.writableDataDirs.some(
+        (d) => target === d || target.startsWith(`${d}/`),
+      )
+    ) {
+      return null;
+    }
+
     const projectsPrefix = `${HOME_DIR}/.claude/projects/`;
     if (f.startsWith(projectsPrefix)) {
       const rest = f.slice(projectsPrefix.length);
@@ -54,8 +68,17 @@ export const mainEditsGuard = defineGuard<FileInput>({
         ? f.slice(wt.repoRoot.length)
         : null;
 
+    // Built from the same values the checks above read, so the message can
+    // never advertise an allowlist the guard does not actually apply.
+    const allowlist = [
+      `worktree ${workRoot}`,
+      "~/.claude/projects/*/memory/",
+      "/tmp",
+      ...ctx.writableDataDirs,
+    ].join(", ");
+
     return {
-      blocked: `Refusing to edit ${f} — this path is not in the allowlist (worktree ${workRoot}, ~/.claude/projects/*/memory/, /tmp).`,
+      blocked: `Refusing to edit ${f} — this path is not in the allowlist (${allowlist}).`,
       hint: relPath
         ? `Edit \`${workRoot}${relPath}\` instead — your worktree IS your working copy of the repo.`
         : `Your worktree IS your working copy of the repo — it contains everything the main repo does, including .claude/skills/ and .claude/settings.json. Edit those files at ${workRoot}/.claude/** instead of the shared root.`,

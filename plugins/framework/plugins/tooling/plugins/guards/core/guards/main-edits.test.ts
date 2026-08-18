@@ -10,7 +10,10 @@ const OTHER_WT = `${REPO}/.claude/worktrees/att-999-zzzz`;
 
 function verdict(filePath: string, cwd: string): Verdict {
   // Synchronous check; the fake cwd never holds a bypass token file.
-  return mainEditsGuard.check({ file_path: filePath }, createContext(cwd)) as Verdict;
+  return mainEditsGuard.check(
+    { file_path: filePath },
+    createContext(cwd),
+  ) as Verdict;
 }
 const blocks = (f: string, cwd: string) => verdict(f, cwd).kind === "deny";
 function denyReason(f: string, cwd: string): string {
@@ -29,7 +32,12 @@ describe("main-edits guard", () => {
     });
 
     test("allows deep edits from a deep unrelated cwd inside the same worktree", () => {
-      expect(blocks(`${WT}/plugins/a/core/index.ts`, `${WT}/plugins/b/web/components`)).toBe(false);
+      expect(
+        blocks(
+          `${WT}/plugins/a/core/index.ts`,
+          `${WT}/plugins/b/web/components`,
+        ),
+      ).toBe(false);
     });
 
     test("outside a worktree, cwd itself is the boundary", () => {
@@ -45,7 +53,10 @@ describe("main-edits guard", () => {
     });
 
     test("blocked from a worktree subdirectory — hint re-bases onto the worktree ROOT, not cwd", () => {
-      const reason = denyReason(`${REPO}/plugins/foo/core/index.ts`, `${WT}/gateway`);
+      const reason = denyReason(
+        `${REPO}/plugins/foo/core/index.ts`,
+        `${WT}/gateway`,
+      );
       expect(reason).toContain(`Edit \`${WT}/plugins/foo/core/index.ts\``);
       // The old bug composed the suggestion onto cwd: <wt>/gateway/.claude/worktrees/...
       expect(reason).not.toContain(`${WT}/gateway/`);
@@ -68,9 +79,48 @@ describe("main-edits guard", () => {
     test("/private/tmp — macOS-resolved scratchpad (2026-07-08 false positive)", () => {
       // /tmp is a symlink to /private/tmp on macOS, so the harness scratchpad
       // surfaces as /private/tmp/claude-501/.../scratchpad/...
-      expect(blocks("/private/tmp/claude-501/session/scratchpad/gen_funk.py", `${WT}/gateway`)).toBe(
-        false,
+      expect(
+        blocks(
+          "/private/tmp/claude-501/session/scratchpad/gen_funk.py",
+          `${WT}/gateway`,
+        ),
+      ).toBe(false);
+    });
+  });
+
+  describe("declared data dirs handed in by the entry point", () => {
+    // Stands in for `prototypesDir.path`: the guard never spells the directory
+    // itself, so the test doesn't either — what it pins is the prefix rule.
+    const DATA = "/r/data/apps/prototypes";
+    const dirVerdict = (f: string): Verdict =>
+      mainEditsGuard.check(
+        { file_path: f },
+        createContext(`${WT}/gateway`, "test", [DATA]),
+      ) as Verdict;
+
+    test("allows a write inside the declared dir (2026-08-18 false positive)", () => {
+      // The block that started this: prototypes/CLAUDE.md sends every agent to
+      // this tree, and the guard refused every write into it.
+      expect(dirVerdict(`${DATA}/sketch-roll/index.html`).kind).toBe("allow");
+    });
+
+    test("allows the directory itself", () => {
+      expect(dirVerdict(DATA).kind).toBe("allow");
+    });
+
+    test("a sibling whose name merely starts with it stays blocked", () => {
+      expect(dirVerdict(`${DATA}-evil/index.html`).kind).toBe("deny");
+    });
+
+    test("with none handed in, the same path is blocked", () => {
+      expect(blocks(`${DATA}/sketch-roll/index.html`, `${WT}/gateway`)).toBe(
+        true,
       );
+    });
+
+    test("the denial names the dirs that WERE allowed", () => {
+      const v = dirVerdict(`${DATA}-evil/index.html`);
+      expect(v.kind === "deny" && v.reason).toContain(DATA);
     });
   });
 });

@@ -10,10 +10,12 @@ import type {
 export function createContext(
   cwd: string,
   sessionId = "unknown",
+  writableDataDirs: readonly string[] = [],
 ): GuardContext {
   return {
     cwd,
     sessionId,
+    writableDataDirs,
     hasBypass(token: string): boolean {
       return existsSync(join(cwd, token));
     },
