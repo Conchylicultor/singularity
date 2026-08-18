@@ -115,7 +115,6 @@ it("size is broader than a height-only control utility", () => {
 it("a rail beats the per-edge padding groups its own list widens into", () => {
   // `ps`/`pe`/`pbs`/`pbe` are real 3.5.0 groups that BuiltinGroupId cannot even
   // spell; the closure over tailwind-merge's own map covers them.
-  // eslint-disable-next-line spacing/no-adhoc-spacing -- test fixture: the raw ps-2 is the subject under test
   expect<string>(cn("ps-2", "rail-lg")).toBe("rail-lg");
 });
 
@@ -135,30 +134,25 @@ it("the axis families still compose — disjoint properties AND disjoint vars", 
 
 it("a caller's padding replaces a panel's rail rather than layering on it", () => {
   // OverlayPanel: cn(…, POPOVER_PADDING[padding], …, className).
-  // eslint-disable-next-line spacing/no-adhoc-spacing -- test fixture: the raw px-2 is the caller override under test
   expect<string>(cn("rail-lg", "px-2")).toBe("px-2");
 });
 
 it("a rail applied over a caller's padding replaces it, so what is published is applied", () => {
   // The reported bug: base-first / className-last used to keep BOTH, so the
   // element advertised --rail-start: lg while px-2 did the padding.
-  // eslint-disable-next-line spacing/no-adhoc-spacing -- test fixture: the raw px-2 is the subject under test
   expect<string>(cn("px-2", "rail-lg")).toBe("rail-lg");
 });
 
 it("Card: a caller's axis padding still overrides one axis of p-card", () => {
   // p-card publishes nothing, so this pair legitimately composes — the block
   // padding survives. Making sg-pad mutual with px would silently drop it.
-  // eslint-disable-next-line spacing/no-adhoc-spacing -- test fixture: the raw px-2 is the caller override under test
   const result = cn("p-card", "px-2");
   expect<string>(result).toContain("p-card");
   expect<string>(result).toContain("px-2");
 });
 
 it("Badge/Row: a caller's p-* replaces the density padding token", () => {
-  /* eslint-disable spacing/no-adhoc-spacing -- test fixture: the raw p-2 is the caller override under test */
   const result = cn("inline-flex gap-xs p-chip", "p-2");
-  /* eslint-enable spacing/no-adhoc-spacing */
   expect<string>(result).toBe("inline-flex gap-xs p-2");
 });
 
@@ -189,7 +183,6 @@ it("a variant-prefixed icon-auto never conflicts with a bare size-*", () => {
 it("a text role utility is NOT silently stripped — a trailing text-sm wins via font-size", () => {
   // text-caption extends font-size (not text-color), so the later text-sm (also
   // font-size) deduplicates it instead of both surviving / the role being dropped.
-  // eslint-disable-next-line text/no-adhoc-typography -- test fixture: the raw text-sm is the subject under test
   expect<string>(cn("text-caption", "text-sm")).toBe("text-sm");
 });
 
