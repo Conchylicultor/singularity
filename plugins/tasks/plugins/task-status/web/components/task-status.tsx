@@ -91,6 +91,16 @@ export const STATUS_META: Record<
     badgeClassName: cn("bg-muted text-muted-foreground"),
     dotClass: "bg-muted-foreground/60",
   },
+  // Same blocked task, with an agent running on it. Carries the running colour
+  // (info) so the live attempt is visible at a glance, and says so in the label
+  // rather than reading as a plain `Blocked` row nothing is happening on.
+  in_progress_blocked: {
+    icon: MdTimelapse,
+    iconClassName: cn("text-info"),
+    label: "In progress (blocked)",
+    badgeClassName: cn("bg-muted"),
+    dotClass: "bg-info",
+  },
 };
 
 export function StatusIcon({ status }: { status: TaskStatus }) {

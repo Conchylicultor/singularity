@@ -22,6 +22,7 @@ Single source of truth for `TaskStatus` display metadata. All plugins that rende
     - `StatusSignal`
 - Cross-plugin:
   - Imported by:
+    - `active-data/task-link`
     - `conversations/conversation-view/jsonl-viewer/tool-call/add-task`
     - `page/annotations/todo`
     - `page/annotations/todo/task-link`

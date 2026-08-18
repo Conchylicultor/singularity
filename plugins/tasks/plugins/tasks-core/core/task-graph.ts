@@ -10,17 +10,37 @@ import type { TaskListItem, TaskStatus } from "./internal/schema";
 //
 // This is the SQL-free embodiment of the same predicate `task_blocking_v` derives
 // from raw columns; both must agree.
-export const SETTLED_STATUSES: ReadonlySet<TaskStatus> = new Set<TaskStatus>(["done", "dropped"]);
+export const SETTLED_STATUSES: ReadonlySet<TaskStatus> = new Set<TaskStatus>([
+  "done",
+  "dropped",
+]);
 
 export function isSettled(status: TaskStatus): boolean {
   return SETTLED_STATUSES.has(status);
+}
+
+// The statuses that mean "this task has an unresolved prerequisite". Blocking is
+// one predicate reported as two statuses — `in_progress_blocked` is the same
+// blocked task with an agent running on it — so every consumer asking "is it
+// blocked?" reads this instead of comparing against `"blocked"`, which would
+// silently stop matching the running half.
+export const BLOCKED_STATUSES: ReadonlySet<TaskStatus> = new Set<TaskStatus>([
+  "blocked",
+  "in_progress_blocked",
+]);
+
+export function isBlockedStatus(status: TaskStatus): boolean {
+  return BLOCKED_STATUSES.has(status);
 }
 
 // Minimal node shape so both client `TaskListItem[]` rows and server `tasks_v`
 // rows satisfy it. The edge `dependencies` points dependent → dependency
 // ("this task depends on these"): so the *reverse* of a `dependencies` edge is
 // "tasks that depend on me" (my dependents).
-export type TaskNode = Pick<TaskListItem, "id" | "status" | "dependencies" | "groupId">;
+export type TaskNode = Pick<
+  TaskListItem,
+  "id" | "status" | "dependencies" | "groupId"
+>;
 
 type WalkDirection = "dependencies" | "dependents";
 
@@ -158,8 +178,13 @@ export class TaskGraph {
    * implementation behind every active-vs-settled traversal — the fix for the
    * old code that halted at settled intermediates.
    */
-  #walk(id: string, direction: WalkDirection, collect: (t: TaskNode) => boolean): TaskNode[] {
-    const adjacency = direction === "dependents" ? this.#reverse : this.#forward;
+  #walk(
+    id: string,
+    direction: WalkDirection,
+    collect: (t: TaskNode) => boolean,
+  ): TaskNode[] {
+    const adjacency =
+      direction === "dependents" ? this.#reverse : this.#forward;
     const visited = new Set<string>();
     const result: TaskNode[] = [];
     const stack = [...(adjacency.get(id) ?? [])];

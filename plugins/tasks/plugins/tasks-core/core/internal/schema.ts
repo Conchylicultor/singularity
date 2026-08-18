@@ -34,7 +34,14 @@ export const TaskStatusSchema = z.enum([
   "done",
   "held",
   "dropped",
+  // The two blocked states — a task with an unresolved prerequisite, split by
+  // whether an agent is running on it right now. `blocked` is at rest;
+  // `in_progress_blocked` has a live attempt (launched by hand, or the
+  // prerequisite edge was added after the launch). Consumers asking "does this
+  // task have an unresolved prerequisite?" must use `isBlockedStatus`, never a
+  // comparison against one of the two literals.
   "blocked",
+  "in_progress_blocked",
 ]);
 export type TaskStatus = z.infer<typeof TaskStatusSchema>;
 

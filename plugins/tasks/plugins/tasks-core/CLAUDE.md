@@ -243,6 +243,7 @@ the `fields.storage` contributions, unregistered in the browser). So
     - `attemptsResource`
     - `AttemptStatusSchema`
     - `AttemptWithConversationsSchema`
+    - `BLOCKED_STATUSES`
     - `buildTaskPrompt`
     - `ConversationKindSchema`
     - `conversationsActiveResource`
@@ -252,6 +253,7 @@ the `fields.storage` contributions, unregistered in the browser). So
     - `conversationsSystemResource`
     - `ConversationStatusSchema`
     - `ConversationSummarySchema`
+    - `isBlockedStatus`
     - `isSettled`
     - `pushesByAttemptResource`
     - `pushesResource`

@@ -21,9 +21,19 @@
  * (requires the running embedded cluster — `./singularity build` first).
  */
 
-import { describe, test, expect, beforeAll, afterAll, setDefaultTimeout } from "bun:test";
+import {
+  describe,
+  test,
+  expect,
+  beforeAll,
+  afterAll,
+  setDefaultTimeout,
+} from "bun:test";
 import { sql } from "drizzle-orm";
-import { createTestDb, type TestDb } from "@plugins/database/plugins/db-test-fixture/server";
+import {
+  createTestDb,
+  type TestDb,
+} from "@plugins/database/plugins/db-test-fixture/server";
 import { runMigrations } from "@plugins/database/plugins/migrations/server";
 import { compileCreateView } from "@plugins/database/plugins/derived-views/core";
 import { attemptConvAggSpec, attemptPushAggSpec } from "./rollup-spec";
@@ -44,8 +54,15 @@ beforeAll(async () => {
   // from before plain views became derived code, so drop whatever it left
   // behind before installing the current definitions (CASCADE: tasks_v reads
   // attempts_v). Mirrors rebuildDerivedViews' drop-in-reverse-dependency-order.
-  for (const name of ["tasks_v", "task_blocking_v", "conversations_v", "attempts_v"]) {
-    await t.db.execute(sql.raw(`DROP VIEW IF EXISTS "public"."${name}" CASCADE`));
+  for (const name of [
+    "tasks_v",
+    "task_blocking_v",
+    "conversations_v",
+    "attempts_v",
+  ]) {
+    await t.db.execute(
+      sql.raw(`DROP VIEW IF EXISTS "public"."${name}" CASCADE`),
+    );
   }
 
   // attempts_v LEFT JOINs the two trigger-maintained rollups; without them the
@@ -63,7 +80,9 @@ beforeAll(async () => {
     ["task_blocking_v", taskBlocking],
     ["tasks_v", tasks],
   ] as const) {
-    await t.db.execute(sql.raw(compileCreateView({ name, view, dependsOn: [] })));
+    await t.db.execute(
+      sql.raw(compileCreateView({ name, view, dependsOn: [] })),
+    );
   }
 });
 
@@ -78,7 +97,9 @@ afterAll(async () => {
 let seq = 0;
 const nextId = (kind: string): string => `${kind}-${++seq}`;
 
-async function seedTask(opts: { held?: boolean; dropped?: boolean } = {}): Promise<string> {
+async function seedTask(
+  opts: { held?: boolean; dropped?: boolean } = {},
+): Promise<string> {
   const id = nextId("task");
   await t.db.execute(sql`
     INSERT INTO tasks (id, title, rank, held_at, dropped_at)
@@ -98,7 +119,10 @@ async function seedAttempt(taskId: string): Promise<string> {
 }
 
 /** `status: 'done'` is a closed conversation; anything else counts as live. */
-async function seedConversation(attemptId: string, status: string): Promise<string> {
+async function seedConversation(
+  attemptId: string,
+  status: string,
+): Promise<string> {
   const id = nextId("conv");
   await t.db.execute(sql`
     INSERT INTO conversations (id, attempt_id, status, ended_at)
@@ -116,7 +140,10 @@ async function seedPush(attemptId: string): Promise<void> {
   `);
 }
 
-async function seedDependency(taskId: string, dependsOnTaskId: string): Promise<void> {
+async function seedDependency(
+  taskId: string,
+  dependsOnTaskId: string,
+): Promise<void> {
   await t.db.execute(sql`
     INSERT INTO task_dependencies (task_id, depends_on_task_id) VALUES (${taskId}, ${dependsOnTaskId})
   `);
@@ -129,11 +156,14 @@ async function seedPushedAndClosed(taskId: string): Promise<void> {
   await seedPush(attemptId);
 }
 
-async function taskStatus(id: string): Promise<{ status: string; finishedAt: Date | null }> {
+async function taskStatus(
+  id: string,
+): Promise<{ status: string; finishedAt: Date | null }> {
   const { rows } = await t.db.execute(
     sql`SELECT status, finished_at FROM tasks_v WHERE id = ${id}`,
   );
-  const row = rows[0] as { status: string; finished_at: Date | null } | undefined;
+  const row = rows[0] as
+    { status: string; finished_at: Date | null } | undefined;
   if (!row) throw new Error(`no tasks_v row for ${id}`);
   return { status: row.status, finishedAt: row.finished_at };
 }
@@ -236,5 +266,51 @@ describe("task_blocking_v — a held dependency keeps blocking", () => {
     await seedDependency(dependent, middle);
 
     expect(await isBlocked(dependent)).toBe(true);
+  });
+});
+
+// ── the two blocked statuses ─────────────────────────────────────────────────
+
+describe("tasks_v — a running agent on a blocked task reports in_progress_blocked", () => {
+  test("at rest, a blocked task is `blocked`", async () => {
+    const dep = await seedTask();
+    const dependent = await seedTask();
+    await seedDependency(dependent, dep);
+
+    expect((await taskStatus(dependent)).status).toBe("blocked");
+  });
+
+  test("with a live conversation it is `in_progress_blocked`, not `blocked`", async () => {
+    const dep = await seedTask();
+    const dependent = await seedTask();
+    await seedDependency(dependent, dep);
+    const attemptId = await seedAttempt(dependent);
+    await seedConversation(attemptId, "working");
+
+    // Still blocked (the prerequisite is unresolved) — but the live attempt is
+    // no longer hidden behind the plain `blocked` badge.
+    expect(await isBlocked(dependent)).toBe(true);
+    expect((await taskStatus(dependent)).status).toBe("in_progress_blocked");
+  });
+
+  test("blocking still outranks need_action, so a waiting agent reads as blocked", async () => {
+    const dep = await seedTask();
+    const dependent = await seedTask();
+    await seedDependency(dependent, dep);
+    const attemptId = await seedAttempt(dependent);
+    await seedConversation(attemptId, "waiting");
+
+    expect((await taskStatus(dependent)).status).toBe("in_progress_blocked");
+  });
+
+  test("resolving the prerequisite hands the running task back to in_progress", async () => {
+    const dep = await seedTask();
+    await seedPushedAndClosed(dep);
+    const dependent = await seedTask();
+    await seedDependency(dependent, dep);
+    const attemptId = await seedAttempt(dependent);
+    await seedConversation(attemptId, "working");
+
+    expect((await taskStatus(dependent)).status).toBe("in_progress");
   });
 });

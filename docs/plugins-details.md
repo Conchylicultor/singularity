@@ -211,6 +211,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/live-state.useResource`
           - `primitives/pane.useOpenPane`
           - `tasks/task-detail.taskDetailPane`
+          - `tasks/task-status.STATUS_META`
         - Exports (values): `TaskLinkChip`
 
 - **`apps`** — Container for the installed apps (agent-manager, pages, settings, …). The switcher infrastructure lives in apps-core.
@@ -28897,6 +28898,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `StatusSignal`
       - Cross-plugin:
         - Imported by:
+          - `active-data/task-link`
           - `conversations/conversation-view/jsonl-viewer/tool-call/add-task`
           - `page/annotations/todo`
           - `page/annotations/todo/task-link`
@@ -29129,6 +29131,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `attemptsResource`
           - `AttemptStatusSchema`
           - `AttemptWithConversationsSchema`
+          - `BLOCKED_STATUSES`
           - `buildTaskPrompt`
           - `ConversationKindSchema`
           - `conversationsActiveResource`
@@ -29138,6 +29141,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conversationsSystemResource`
           - `ConversationStatusSchema`
           - `ConversationSummarySchema`
+          - `isBlockedStatus`
           - `isSettled`
           - `pushesByAttemptResource`
           - `pushesResource`

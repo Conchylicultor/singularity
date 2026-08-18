@@ -1,6 +1,13 @@
 import { describe, expect, test } from "bun:test";
 import type { TaskStatus } from "./internal/schema";
-import { isSettled, SETTLED_STATUSES, TaskGraph, type TaskNode } from "./task-graph";
+import {
+  BLOCKED_STATUSES,
+  isBlockedStatus,
+  isSettled,
+  SETTLED_STATUSES,
+  TaskGraph,
+  type TaskNode,
+} from "./task-graph";
 
 // Minimal node factory. `deps` is `task.dependencies` (dependent → dependency).
 function node(
@@ -37,6 +44,22 @@ describe("isSettled / SETTLED_STATUSES", () => {
     expect(isSettled("held")).toBe(false);
     expect(isSettled("new")).toBe(false);
     expect(isSettled("blocked")).toBe(false);
+    expect(isSettled("in_progress_blocked")).toBe(false);
+  });
+});
+
+describe("isBlockedStatus / BLOCKED_STATUSES", () => {
+  test("both blocked statuses count; the running half is still blocked", () => {
+    expect([...BLOCKED_STATUSES].sort()).toEqual([
+      "blocked",
+      "in_progress_blocked",
+    ]);
+    expect(isBlockedStatus("blocked")).toBe(true);
+    // The whole point of the split: an agent running on it does not unblock it.
+    expect(isBlockedStatus("in_progress_blocked")).toBe(true);
+    expect(isBlockedStatus("in_progress")).toBe(false);
+    expect(isBlockedStatus("held")).toBe(false);
+    expect(isBlockedStatus("new")).toBe(false);
   });
 });
 
@@ -74,7 +97,9 @@ describe("closure — bidirectional, ignores status (returns settled nodes)", ()
   test("includeGroups pulls in the enclosing group anchor; off omits it", () => {
     // X is grouped under G; G is otherwise unconnected to X by deps.
     const g = TaskGraph.from([node("X", "new", [], "G"), node("G", "new", [])]);
-    expect(ids(g.closure("X", { includeGroups: true }))).toEqual(new Set(["G"]));
+    expect(ids(g.closure("X", { includeGroups: true }))).toEqual(
+      new Set(["G"]),
+    );
     expect(ids(g.closure("X", { includeGroups: false }))).toEqual(new Set());
   });
 });

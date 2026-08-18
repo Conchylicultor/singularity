@@ -270,6 +270,14 @@ export const tasks = pgView("tasks_v").as((qb) => {
       // tasks.maybe-launch-dependents fans out on, so the next task launched.
       // Hold is a user's explicit "not now": it wins over `done`.
       //
+      // The two blocked branches are the SAME predicate (an unresolved
+      // prerequisite) split by whether an agent is running: the top one keeps
+      // its precedence over `need_action` / `in_progress` — a blocked task must
+      // read as blocked wherever it is shown — but reports
+      // `in_progress_blocked` so the live attempt is not hidden behind it.
+      // Anything asking "is this blocked?" reads `isBlockedStatus`, which
+      // covers both.
+      //
       // It stays BELOW the three `hasActive` branches, mirroring the existing
       // active-overrides-dropped rule — holding a task whose agent is still
       // running reports the live truth (`in_progress`), not the intent. This is
@@ -284,12 +292,13 @@ export const tasks = pgView("tasks_v").as((qb) => {
         | "held"
         | "dropped"
         | "blocked"
+        | "in_progress_blocked"
       >`
         CASE
           WHEN ${_tasks.heldAt} IS NULL AND COALESCE(${attemptAgg.hasCompleted}, false)
                                                                             THEN 'done'
           WHEN COALESCE(${attemptAgg.hasActive}, false) AND COALESCE(${taskBlocking.hasBlockingDep}, false)
-                                                                            THEN 'blocked'
+                                                                            THEN 'in_progress_blocked'
           WHEN COALESCE(${attemptAgg.hasActive}, false) AND COALESCE(${waiting.hasWaiting}, false)
                                                                             THEN 'need_action'
           WHEN COALESCE(${attemptAgg.hasActive}, false)                     THEN 'in_progress'

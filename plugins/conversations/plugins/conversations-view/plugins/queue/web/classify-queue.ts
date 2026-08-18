@@ -1,4 +1,8 @@
-import type { Conversation, TaskListItem } from "@plugins/tasks/plugins/tasks-core/core";
+import { isBlockedStatus } from "@plugins/tasks/plugins/tasks-core/core";
+import type {
+  Conversation,
+  TaskListItem,
+} from "@plugins/tasks/plugins/tasks-core/core";
 import { Rank } from "@plugins/primitives/plugins/rank/core";
 import type { QueueData } from "../core/resources";
 
@@ -52,8 +56,17 @@ export function classifyQueue(data: {
   const noRank: Conversation[] = [];
 
   for (const c of active) {
-    if (c.status !== "waiting" && c.status !== "working" && c.status !== "starting") continue;
-    if (taskStatusMap.get(c.taskId) === "blocked") {
+    if (
+      c.status !== "waiting" &&
+      c.status !== "working" &&
+      c.status !== "starting"
+    )
+      continue;
+    // A live conversation's task reports the RUNNING half of blocked
+    // (`in_progress_blocked`), so this must ask the predicate — matching the
+    // `"blocked"` literal alone would mark nothing here.
+    const taskStatus = taskStatusMap.get(c.taskId);
+    if (taskStatus !== undefined && isBlockedStatus(taskStatus)) {
       blocked.add(c.id);
     }
     const row = ranks.get(c.id);
@@ -79,10 +92,19 @@ export function classifyQueue(data: {
   let waitingCount = 0;
   for (const [taskId, members] of taskMap) {
     if (members.length === 0) continue;
-    const workingMember = members.find((m) => m.status === "working" || m.status === "starting");
-    const mostRecent = members.reduce((a, b) => (b.createdAt > a.createdAt ? b : a));
+    const workingMember = members.find(
+      (m) => m.status === "working" || m.status === "starting",
+    );
+    const mostRecent = members.reduce((a, b) =>
+      b.createdAt > a.createdAt ? b : a,
+    );
     const selected = workingMember ?? mostRecent;
-    const group: TaskGroup = { taskId, selected, members, count: members.length };
+    const group: TaskGroup = {
+      taskId,
+      selected,
+      members,
+      count: members.length,
+    };
     if (workingMember) {
       working.push(group);
     } else {

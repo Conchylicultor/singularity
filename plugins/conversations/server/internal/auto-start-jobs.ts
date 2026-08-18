@@ -8,7 +8,11 @@ import {
   listArmedDependentsOf,
   listAttemptsForTask,
 } from "@plugins/tasks/plugins/tasks-core/server";
-import { buildTaskPrompt } from "@plugins/tasks/plugins/tasks-core/core";
+import {
+  buildTaskPrompt,
+  isBlockedStatus,
+  TaskStatusSchema,
+} from "@plugins/tasks/plugins/tasks-core/core";
 import {
   claimAutoStart,
   getTaskAutoStart,
@@ -103,8 +107,8 @@ export const maybeLaunchDependentsJob = defineJob({
     .object({
       taskId: z.string(),
       folderId: z.string().nullable(),
-      status: z.string(),
-      previousStatus: z.string(),
+      status: TaskStatusSchema,
+      previousStatus: TaskStatusSchema,
     })
     .passthrough(),
   run: async ({ event }) => {
@@ -113,15 +117,25 @@ export const maybeLaunchDependentsJob = defineJob({
     if (event.status === "done" || event.status === "dropped") {
       const dependents = await listArmedDependentsOf(event.taskId);
       await Promise.all(
-        dependents.map((taskId) => maybeLaunchTaskJob.enqueue({ taskId, cause: "dep-resolved" })),
+        dependents.map((taskId) =>
+          maybeLaunchTaskJob.enqueue({ taskId, cause: "dep-resolved" }),
+        ),
       );
       return;
     }
     // Case 2: the task itself just became unblocked (its last blocking edge was
     // removed) → re-check it directly. Nothing to fan out — the newly-launchable
     // node is the one whose status changed.
-    if (event.previousStatus === "blocked" && event.status !== "blocked") {
-      await maybeLaunchTaskJob.enqueue({ taskId: event.taskId, cause: "dep-unblocked" });
+    // Both blocked statuses count as blocked, so launching an agent by hand on a
+    // blocked task (`blocked` → `in_progress_blocked`) is not an unblock edge.
+    if (
+      isBlockedStatus(event.previousStatus) &&
+      !isBlockedStatus(event.status)
+    ) {
+      await maybeLaunchTaskJob.enqueue({
+        taskId: event.taskId,
+        cause: "dep-unblocked",
+      });
     }
   },
 });

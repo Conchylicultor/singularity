@@ -1,23 +1,20 @@
-import { useResource, matchResource } from "@plugins/primitives/plugins/live-state/web";
+import {
+  useResource,
+  matchResource,
+} from "@plugins/primitives/plugins/live-state/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { StatusDot } from "@plugins/primitives/plugins/css/plugins/status-dot/web";
 import { LinkChip } from "@plugins/primitives/plugins/css/plugins/link-chip/web";
 import { taskDetailPane } from "@plugins/tasks/plugins/task-detail/web";
 import { tasksResource } from "@plugins/tasks/plugins/tasks-core/core";
-import type { TaskStatus } from "@plugins/tasks/plugins/tasks-core/core";
+import { STATUS_META } from "@plugins/tasks/plugins/task-status/web";
 
-const TASK_STATUS_DOT: Record<TaskStatus, string> = {
-  new: "bg-muted-foreground/60",
-  in_progress: "bg-info",
-  need_action: "bg-warning",
-  attempted: "bg-info",
-  done: "bg-success",
-  held: "bg-warning/60",
-  dropped: "bg-muted-foreground/40",
-  blocked: "bg-destructive/60",
-};
-
-export function TaskLinkChip({ content }: { content: string; attrs: Record<string, string> }) {
+export function TaskLinkChip({
+  content,
+}: {
+  content: string;
+  attrs: Record<string, string>;
+}) {
   const taskId = content.trim();
   const result = useResource(tasksResource);
   const openPane = useOpenPane();
@@ -42,7 +39,11 @@ export function TaskLinkChip({ content }: { content: string; attrs: Record<strin
     ),
     ready: (data) => {
       const task = data.find((t) => t.id === taskId) ?? null;
-      const statusClass = task ? TASK_STATUS_DOT[task.status] : "bg-muted-foreground/40";
+      // The dot colour comes from the one status-display table (task-status), so
+      // this chip can never drift from the badge the task list shows.
+      const statusClass = task
+        ? STATUS_META[task.status].dotClass
+        : "bg-muted-foreground/40";
       return (
         <LinkChip
           onClick={handleClick}
