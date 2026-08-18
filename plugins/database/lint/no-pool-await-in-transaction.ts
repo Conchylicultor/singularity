@@ -59,8 +59,7 @@ const createRule = ESLintUtils.RuleCreator(
 );
 
 type FunctionLike =
-  | TSESTree.ArrowFunctionExpression
-  | TSESTree.FunctionExpression;
+  TSESTree.ArrowFunctionExpression | TSESTree.FunctionExpression;
 
 /**
  * A call whose CALLBACK body runs while one pooled connection is checked out.
@@ -110,6 +109,24 @@ const TX_SCOPE_OPENERS: readonly TxScopeOpener[] = [
     remedy:
       "queue it on `ctx.afterCommit(…)`, which runs it the moment the write " +
       "commits and the page lock is released",
+  },
+  // The tasks status batch. `withTaskStatusBatch(fn)` opens the transaction
+  // itself and hands `fn` the executor; `runStatusBatchOn(tx, fn)` joins a
+  // transaction the caller already opened. Both run their callback with one
+  // pooled connection checked out for its whole life, so both are openers —
+  // and neither was registered, which left every pool await inside a status
+  // batch unflagged.
+  {
+    kind: "free",
+    name: "withTaskStatusBatch",
+    callbackArg: 0,
+    remedy: "hoist it above the `withTaskStatusBatch()` call",
+  },
+  {
+    kind: "free",
+    name: "runStatusBatchOn",
+    callbackArg: 1,
+    remedy: "hoist it above the `runStatusBatchOn()` call",
   },
 ];
 
@@ -224,13 +241,15 @@ function isNode(value: unknown): value is TSESTree.Node {
  */
 function executorCarriers(body: TSESTree.Node, name: string): Set<string> {
   const carriers = new Set([name]);
-  for (let grew = true; grew; ) {
+  for (let grew = true; grew;) {
     grew = false;
     walk(body, (n) => {
-      if (n.type !== "VariableDeclarator" || n.id.type !== "Identifier") return true;
+      if (n.type !== "VariableDeclarator" || n.id.type !== "Identifier")
+        return true;
       const init = n.init;
       if (init === null || carriers.has(n.id.name)) return true;
-      if (init.type !== "ObjectExpression" && init.type !== "ArrayExpression") return true;
+      if (init.type !== "ObjectExpression" && init.type !== "ArrayExpression")
+        return true;
       if ([...carriers].some((c) => mentionsName(init, c))) {
         carriers.add(n.id.name);
         grew = true;
@@ -287,7 +306,8 @@ export default createRule({
           if (call.type !== "CallExpression") return true;
 
           const root = chainRoot(call.callee);
-          const rootedAtTx = root.type === "Identifier" && carriers.has(root.name);
+          const rootedAtTx =
+            root.type === "Identifier" && carriers.has(root.name);
           const threadsTx = call.arguments.some((a) =>
             [...carriers].some((c) => mentionsName(a, c)),
           );
@@ -297,7 +317,10 @@ export default createRule({
               messageId: "poolAwait",
               data: {
                 tx: name,
-                opener: opener.kind === "member" ? "transaction()" : `${opener.name}()`,
+                opener:
+                  opener.kind === "member"
+                    ? "transaction()"
+                    : `${opener.name}()`,
                 remedy: opener.remedy,
               },
             });

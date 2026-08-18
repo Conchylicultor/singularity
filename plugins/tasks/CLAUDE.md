@@ -22,6 +22,7 @@
     - `infra/worktree.ensureMainWorktreeRoot`
     - `primitives/rank.rankAdjacentTo`
     - `primitives/rank.rankAfterSibling`
+    - `tasks/auto-start.listArmedTaskIds`
     - `tasks/auto-start.setTaskAutoStart`
     - `tasks/launch-options.inheritLaunchOptions`
     - `tasks/launch-options.TaskLaunchServer`
@@ -36,7 +37,6 @@
     - `tasks/tasks-core.getConversation`
     - `tasks/tasks-core.getTask`
     - `tasks/tasks-core.getTaskDependencyIds`
-    - `tasks/tasks-core.hasBlockingDep`
     - `tasks/tasks-core.insertPush`
     - `tasks/tasks-core.isDescendant`
     - `tasks/tasks-core.listAttempts`
@@ -53,6 +53,7 @@
     - `mcpTool('add_task')`
     - `defineJob('tasks.push-ingest')`
     - `defineWarmup('tasks.push-reconcile')`
+    - `defineWarmup('tasks.auto-start-reconcile')`
   - Routes:
     - `GET /api/tasks`
     - `POST /api/tasks`

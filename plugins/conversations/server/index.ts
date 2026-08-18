@@ -23,7 +23,7 @@ import { startPoller } from "./internal/poller";
 import { startTurnEmitter } from "./internal/turn-emitter";
 import {
   maybeLaunchTaskJob,
-  maybeLaunchDependentsJob,
+  maybeLaunchOnStatusJob,
 } from "./internal/auto-start-jobs";
 import { notifyConversationCreatedJob } from "./internal/notify-created-job";
 import { spawnConversationJob } from "./internal/spawn-job";
@@ -86,7 +86,7 @@ export default {
     ConfigV2.Register({ descriptor: autoAnswerConfig }),
     Trigger({
       on: taskStatusChanged,
-      do: maybeLaunchDependentsJob,
+      do: maybeLaunchOnStatusJob,
       with: {},
       oneShot: false,
     }),
@@ -101,7 +101,7 @@ export default {
   ],
   register: [
     maybeLaunchTaskJob,
-    maybeLaunchDependentsJob,
+    maybeLaunchOnStatusJob,
     notifyConversationCreatedJob,
     spawnConversationJob,
     conversationCreated,

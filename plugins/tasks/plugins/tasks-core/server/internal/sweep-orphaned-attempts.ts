@@ -1,7 +1,7 @@
 import { db } from "@plugins/database/server";
 import { _attempts, _conversations } from "./tables";
 import { eq, isNull } from "drizzle-orm";
-import { emitStatusChangeIfChanged, readTaskStatus } from "./status-emit";
+import { withTaskStatusChange } from "./status-scope";
 
 export async function sweepOrphanedAttempts(): Promise<void> {
   const orphaned = await db
@@ -13,9 +13,9 @@ export async function sweepOrphanedAttempts(): Promise<void> {
   if (orphaned.length === 0) return;
 
   for (const attempt of orphaned) {
-    const before = await readTaskStatus(attempt.taskId);
-    await db.delete(_attempts).where(eq(_attempts.id, attempt.id));
-    await emitStatusChangeIfChanged(attempt.taskId, before);
+    await withTaskStatusChange(attempt.taskId, db, async () => {
+      await db.delete(_attempts).where(eq(_attempts.id, attempt.id));
+    });
     // This is always a symptom of a prior crash or bug: an attempt was
     // inserted but createConversation never reached insertConversation.
     console.error(

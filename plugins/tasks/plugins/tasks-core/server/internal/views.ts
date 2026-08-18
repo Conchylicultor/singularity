@@ -266,8 +266,8 @@ export const tasks = pgView("tasks_v").as((qb) => {
       // conversation whose attempt had ever pushed wrote held_at, closed the
       // last live conversation, flipped the attempt `pushed` → `completed`, and
       // resolved the task to `done` — silently discarding the hold AND emitting
-      // taskStatusChanged{status:'done'}, which is exactly what
-      // tasks.maybe-launch-dependents fans out on, so the next task launched.
+      // taskStatusChanged{status:'done'}, which unblocks everything downstream,
+      // so the next task launched.
       // Hold is a user's explicit "not now": it wins over `done`.
       //
       // The two blocked branches are the SAME predicate (an unresolved

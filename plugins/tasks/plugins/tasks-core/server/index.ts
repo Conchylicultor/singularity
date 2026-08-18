@@ -36,10 +36,11 @@ export { _tasks, _attempts, _conversations } from "./internal/tables";
 export { conversations as conversationsView } from "./internal/views";
 // The derived `tasks_v` relation. A task's `status` is COMPUTED there and exists
 // as no column of `tasks`, so a consumer that needs the status of a SET of tasks
-// in one query has nowhere else to read it: `readTaskStatus` answers for one id
-// at a time, which turns a page read into one round trip per linked task. Bound
-// to the same view the live resources read, for the same reason `conversationsView`
-// is. Today's consumer is `page/annotations/todo/task-link`'s markdown provider.
+// in one query has nowhere else to read it — and a `tasks_v` read costs the same
+// whether it asks for one id or fifty, so per-id reads turn a page read into one
+// full-graph round trip per linked task. Bound to the same view the live
+// resources read, for the same reason `conversationsView` is. Today's consumer
+// is `page/annotations/todo/task-link`'s markdown provider.
 export { tasks as tasksView } from "./internal/views";
 
 // Zod schemas and TS types
@@ -86,7 +87,6 @@ export {
   listBlockingDepIds,
   listDependentIds,
   getTaskDependencyIds,
-  listArmedDependentsOf,
   findNextRankInFolder,
   isDescendant,
   taskDependsOn,
@@ -189,18 +189,17 @@ export {
 } from "./internal/tables-events";
 export type { ConversationStatusChangedPayload } from "./internal/tables-events";
 
-// Helpers to read the derived status of a task and emit a status-change
-// event when it flips. Used internally by tasks-core mutations and exposed
-// for plugins that perform writes outside the core mutation surface.
-export {
-  readTaskStatus,
-  emitStatusChangeIfChanged,
-} from "./internal/status-emit";
-
 // Coalesce a multi-edge dependency mutation to one DB transaction and at most
 // one net tasks.statusChanged per affected task. Consumers thread the provided
-// `tx` (a DbExecutor) to the dependency mutations they call.
-export { withTaskStatusBatch } from "./internal/status-batch";
+// `tx` (a DbExecutor) to the dependency mutations they call. `runStatusBatchOn`
+// is the same batch joined onto a transaction the caller already owns.
+//
+// There is deliberately no exported "snapshot the status / emit if it changed"
+// pair any more: naming the affected tasks was the defect (an edge write can
+// only name its own endpoint), so the recording is now internal to
+// `withTaskStatusChange`, which derives the affected set from the graph and
+// brackets the write itself.
+export { withTaskStatusBatch, runStatusBatchOn } from "./internal/status-batch";
 export type { DbExecutor } from "./internal/status-batch";
 
 export {

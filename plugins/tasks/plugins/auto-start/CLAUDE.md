@@ -18,19 +18,29 @@
     - `TaskAutoStartRowSchema`
     - `useTaskAutoStart`
 - Server:
-  - Contributes: `resource.declare` "tasks-auto-start"
+  - Contributes:
+    - `resource.declare` "tasks-auto-start"
+    - `trigger` "tasks.auto-start-cancel-on-drop"
   - Uses:
     - `database.db`
     - `infra/entity-extensions.defineExtension`
+    - `infra/events.Trigger`
+    - `infra/jobs.defineJob`
     - `infra/query-resource.queryResource`
+    - `infra/warmup.defineWarmup`
     - `tasks/tasks-core._tasks`
+    - `tasks/tasks-core.taskStatusChanged`
   - DB schema: `plugins/tasks/plugins/auto-start/server/internal/tables.ts`
   - Entity extension of: `tasks/tasks-core` (table `tasks_ext_auto_start`)
   - Exports (values):
     - `claimAutoStart`
     - `getTaskAutoStart`
+    - `listArmedTaskIds`
     - `setTaskAutoStart`
     - `tasksAutoStartResource`
+  - Register:
+    - `defineJob('tasks.auto-start-cancel-on-drop')`
+    - `defineWarmup('tasks.auto-start-dropped-sweep')`
   - Resources: `tasks-auto-start` (keyed)
 - Cross-plugin:
   - Imported by:

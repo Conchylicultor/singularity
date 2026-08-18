@@ -5,12 +5,10 @@ import { isMain } from "@plugins/infra/plugins/paths/server";
 import {
   getTask,
   hasBlockingDep,
-  listArmedDependentsOf,
   listAttemptsForTask,
 } from "@plugins/tasks/plugins/tasks-core/server";
 import {
   buildTaskPrompt,
-  isBlockedStatus,
   TaskStatusSchema,
 } from "@plugins/tasks/plugins/tasks-core/core";
 import {
@@ -20,13 +18,20 @@ import {
 import { createConversation } from "./lifecycle";
 
 // Job that launches a queued task once all its dependencies are non-blocking.
-// Invoked by maybeLaunchDependentsJob (static trigger on taskStatusChanged)
-// or directly by armTaskAutoStart (no blocking deps at queue time).
+// Invoked by maybeLaunchOnStatusJob (static trigger on taskStatusChanged), by
+// armTaskAutoStart when a task is armed, and by the boot reconcile warm-up.
 //
 // Concurrency: triggers can fire concurrently (multiple deps flipping at
 // once, or retried jobs). The atomic claimAutoStart() acts as a CAS on
 // auto_start_at — exactly one runner wins and proceeds to launch; all
 // others see the marker already cleared and exit.
+//
+// Dedup on taskId: since the status event became closure-correct, one settle
+// on a task with many dependents can wake this job for the same task several
+// times over, and the boot reconcile enqueues it for every armed task at once.
+// Collapsing repeat wake-ups for ONE task onto one graphile row is safe
+// precisely because claimAutoStart is the exactly-once gate — the collapsed
+// row does the same single check the N rows would have done.
 export const maybeLaunchTaskJob = defineJob({
   name: "tasks.maybe-launch",
   input: z.object({
@@ -34,7 +39,7 @@ export const maybeLaunchTaskJob = defineJob({
     cause: z.string().default("dep-resolved"),
   }),
   event: z.never(),
-  dedup: "none",
+  dedup: { key: ({ taskId }) => taskId },
   run: async ({ input: { taskId, cause } }) => {
     // Main-only: a forked sub-worktree DB inherits the autoStart marker and
     // taskStatusChanged triggers from main at fork time, so the same job
@@ -88,19 +93,49 @@ export const maybeLaunchTaskJob = defineJob({
 });
 
 // Static trigger target: fires on every taskStatusChanged and re-checks the
-// auto-start eligibility of whatever tasks may have just become launchable.
-// Replaces the old per-dep oneShot triggers that armTaskAutoStart used to
-// create — the dependency graph now stays solely in task_dependencies.
+// auto-start eligibility of the task whose status changed. That is the whole
+// rule now — there is no fan-out to dependents any more.
 //
-// Two ways a task becomes launchable, both funnelled through this one event:
-//   1. An upstream dependency settles (done/dropped) — fan out to its armed
-//      dependents, which may now be unblocked.
-//   2. A task itself transitions *out of* `blocked` (e.g. one of its dependency
-//      edges was removed) — re-check that task directly.
-// maybeLaunchTaskJob is the exactly-once gate (armed? unblocked? unclaimed?
-// no existing attempt?), so enqueuing an ineligible task is a safe no-op.
-export const maybeLaunchDependentsJob = defineJob({
-  name: "tasks.maybe-launch-dependents",
+// Why one task is enough. `tasks.statusChanged` used to be emitted only for the
+// task ids a call site remembered to name, so it fired for the endpoint of an
+// edge write and never for the downstream tasks whose derived status that write
+// had just changed. It is now emitted for `{T} ∪ transitiveDependents(T)`,
+// derived from the graph inside the write itself
+// (tasks-core `withTaskStatusChange`). So a task that becomes launchable
+// because something upstream moved gets its OWN event.
+//
+// And for an armed, attempt-less, undropped, unheld task, `blocked` is exactly
+// the status it carries while it is not launchable. So "becomes launchable" and
+// "leaves blocked" are the same event once the event is closure-correct — which
+// is why the old two-case shape is gone: the armed-dependents fan-out has
+// nothing left to find, and the `previousStatus === "blocked"` condition on the
+// direct case would only re-exclude the un-dropped / un-held task it was meant
+// to catch.
+//
+// The fan-out was not merely redundant — it was UNABLE to cover the case that
+// motivated this: it walked `task_dependencies` for armed dependents of the
+// settled task, and when the unblocking write was an edge REMOVAL, the walk ran
+// over an edge that no longer existed and reached nobody.
+//
+// The armed-marker guard below is what keeps the now-wider event stream from
+// amplifying into launch jobs: a settle on a task with 47 dependents emits up
+// to 48 events, and all but the armed ones stop here on one indexed read.
+// maybeLaunchTaskJob remains the exactly-once gate (dropped/held? armed?
+// unblocked? unclaimed? no existing attempt?), so waking it for a task that
+// turns out to be ineligible is a safe no-op.
+//
+// A consequence worth naming: this rule keys on NO status at all, so a new
+// status is not something it has to be taught. `in_progress_blocked` arrived
+// while this change was in flight and needed an `isBlockedStatus` predicate in
+// the old `previousStatus === "blocked"` condition; here it needs nothing —
+// maybeLaunchTaskJob asks `hasBlockingDep` directly rather than reading a
+// status, so the gate cannot fall out of step with the status vocabulary.
+//
+// This intermediary job cannot be collapsed into maybeLaunchTaskJob itself: a
+// Trigger's `with` is a static input, and `taskId` arrives on the separate
+// `event` argument, so the launch job cannot bind to the event directly.
+export const maybeLaunchOnStatusJob = defineJob({
+  name: "tasks.maybe-launch-on-status",
   input: z.object({}),
   dedup: "none",
   event: z
@@ -113,29 +148,12 @@ export const maybeLaunchDependentsJob = defineJob({
     .passthrough(),
   run: async ({ event }) => {
     if (!event) return;
-    // Case 1: an upstream dependency settled → re-check its armed dependents.
-    if (event.status === "done" || event.status === "dropped") {
-      const dependents = await listArmedDependentsOf(event.taskId);
-      await Promise.all(
-        dependents.map((taskId) =>
-          maybeLaunchTaskJob.enqueue({ taskId, cause: "dep-resolved" }),
-        ),
-      );
-      return;
-    }
-    // Case 2: the task itself just became unblocked (its last blocking edge was
-    // removed) → re-check it directly. Nothing to fan out — the newly-launchable
-    // node is the one whose status changed.
-    // Both blocked statuses count as blocked, so launching an agent by hand on a
-    // blocked task (`blocked` → `in_progress_blocked`) is not an unblock edge.
-    if (
-      isBlockedStatus(event.previousStatus) &&
-      !isBlockedStatus(event.status)
-    ) {
-      await maybeLaunchTaskJob.enqueue({
-        taskId: event.taskId,
-        cause: "dep-unblocked",
-      });
-    }
+    // Cheap indexed guard: the overwhelming majority of status changes are on
+    // tasks nobody armed, and they cost one primary-key read each.
+    if (!(await getTaskAutoStart(event.taskId))) return;
+    await maybeLaunchTaskJob.enqueue({
+      taskId: event.taskId,
+      cause: "status-changed",
+    });
   },
 });

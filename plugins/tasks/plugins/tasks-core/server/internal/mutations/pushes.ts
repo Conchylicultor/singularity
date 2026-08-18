@@ -2,7 +2,7 @@ import { eq } from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import { _attempts, pushes } from "../tables";
 import { pushLanded } from "../tables-events";
-import { emitStatusChangeIfChanged, readTaskStatus } from "../status-emit";
+import { withTaskStatusChange } from "../status-scope";
 
 export interface InsertPushInput {
   id: string;
@@ -25,12 +25,15 @@ export async function insertPush(input: InsertPushInput): Promise<boolean> {
     .limit(1);
   // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
   const taskId = attemptRow?.taskId ?? null;
-  const before = taskId ? await readTaskStatus(taskId) : null;
-  const [row] = await db
-    .insert(pushes)
-    .values(input)
-    .onConflictDoNothing()
-    .returning();
+  // An orphan push (its attempt gone) seeds nothing — see insertConversation.
+  const row = await withTaskStatusChange(taskId ?? [], db, async () => {
+    const [inserted] = await db
+      .insert(pushes)
+      .values(input)
+      .onConflictDoNothing()
+      .returning();
+    return inserted;
+  });
   // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
   if (row) {
     // Emit after the INSERT has committed (auto-commit: no tx wraps this call).
@@ -41,7 +44,6 @@ export async function insertPush(input: InsertPushInput): Promise<boolean> {
       attemptId: input.attemptId,
       conversationId: input.conversationId,
     });
-    if (taskId) await emitStatusChangeIfChanged(taskId, before);
   }
   return !!row;
 }

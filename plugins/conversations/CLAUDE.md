@@ -27,7 +27,7 @@
 - Server:
   - Contributes:
     - `ConfigV2.Register` "auto-answer"
-    - `trigger` "tasks.maybe-launch-dependents"
+    - `trigger` "tasks.maybe-launch-on-status"
     - `trigger` "conversations.notify-created"
     - `taskCategory` "conversations"
     - `taskCategory` "system"
@@ -76,7 +76,6 @@
     - `tasks/tasks-core.getTask`
     - `tasks/tasks-core.hasBlockingDep`
     - `tasks/tasks-core.insertConversation`
-    - `tasks/tasks-core.listArmedDependentsOf`
     - `tasks/tasks-core.listAttemptsForTask`
     - `tasks/tasks-core.listConversationsForDisplay`
     - `tasks/tasks-core.listConversationsForInfra`
@@ -120,7 +119,7 @@
     - `userTurnSent`
   - Register:
     - `defineJob('tasks.maybe-launch')`
-    - `defineJob('tasks.maybe-launch-dependents')`
+    - `defineJob('tasks.maybe-launch-on-status')`
     - `defineJob('conversations.notify-created')`
     - `defineJob('conversations.spawn')`
     - `defineTriggerEvent('conversation.created')`

@@ -4,7 +4,8 @@ import type { ConversationModel } from "@plugins/conversations/plugins/model-pro
 import type { ConversationStatus } from "../../../core/conversation-status";
 import { _attempts, _conversations } from "../tables";
 import { conversations } from "../views";
-import { emitStatusChangeIfChanged, emitConversationStatusChange, readTaskStatus } from "../status-emit";
+import { emitConversationStatusChange } from "../status-emit";
+import { withTaskStatusChange } from "../status-scope";
 
 export interface InsertConversationInput {
   id: string;
@@ -61,47 +62,54 @@ async function taskIdForAttempt(attemptId: string): Promise<string | null> {
 
 export async function insertConversation(input: InsertConversationInput) {
   const taskId = await taskIdForAttempt(input.attemptId);
-  const before = taskId ? await readTaskStatus(taskId) : null;
-  await db.insert(_conversations).values({
-    id: input.id,
-    attemptId: input.attemptId,
-    runtime: input.runtime,
-    model: input.model,
-    spawnedBy: input.spawnedBy,
-    kind: input.kind ?? "user",
-    status: input.status ?? "starting",
-    title: input.title ?? null,
-  });
-  const [row] = await db
-    .select()
-    .from(conversations)
-    .where(eq(conversations.id, input.id))
-    .limit(1);
-  if (taskId) await emitStatusChangeIfChanged(taskId, before);
-  return row!;
-}
-
-export async function insertConversationOnConflictDoNothing(
-  input: InsertConversationInput & { status: "starting" | "working" | "waiting" | "gone" | "done" },
-) {
-  const taskId = await taskIdForAttempt(input.attemptId);
-  const before = taskId ? await readTaskStatus(taskId) : null;
-  const [row] = await db
-    .insert(_conversations)
-    .values({
+  // An orphan conversation (its attempt/task already deleted during teardown)
+  // seeds the scope with NOTHING: an empty seed set costs no query and emits
+  // nothing, which is the honest reading of "no task's status can have moved".
+  await withTaskStatusChange(taskId ?? [], db, async () => {
+    await db.insert(_conversations).values({
       id: input.id,
       attemptId: input.attemptId,
       runtime: input.runtime,
       model: input.model,
       spawnedBy: input.spawnedBy,
       kind: input.kind ?? "user",
-      status: input.status,
+      status: input.status ?? "starting",
       title: input.title ?? null,
-    })
-    .onConflictDoNothing()
-    .returning();
-  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
-  if (row && taskId) await emitStatusChangeIfChanged(taskId, before);
+    });
+  });
+  const [row] = await db
+    .select()
+    .from(conversations)
+    .where(eq(conversations.id, input.id))
+    .limit(1);
+  return row!;
+}
+
+export async function insertConversationOnConflictDoNothing(
+  input: InsertConversationInput & {
+    status: "starting" | "working" | "waiting" | "gone" | "done";
+  },
+) {
+  const taskId = await taskIdForAttempt(input.attemptId);
+  const row = await withTaskStatusChange(taskId ?? [], db, async () => {
+    // A conflict inserts nothing, so the status is unchanged and the scope emits
+    // nothing of its own accord — no `if (row)` guard needed here.
+    const [inserted] = await db
+      .insert(_conversations)
+      .values({
+        id: input.id,
+        attemptId: input.attemptId,
+        runtime: input.runtime,
+        model: input.model,
+        spawnedBy: input.spawnedBy,
+        kind: input.kind ?? "user",
+        status: input.status,
+        title: input.title ?? null,
+      })
+      .onConflictDoNothing()
+      .returning();
+    return inserted;
+  });
   // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
   return row ?? null;
 }
@@ -111,17 +119,24 @@ export async function updateConversation(
   patch: UpdateConversationPatch,
 ): Promise<void> {
   const { taskId, status: prevStatus } = await conversationContext(id);
-  const before = taskId ? await readTaskStatus(taskId) : null;
-  const dbPatch: Record<string, unknown> = { updatedAt: patch.updatedAt ?? new Date() };
+  const dbPatch: Record<string, unknown> = {
+    updatedAt: patch.updatedAt ?? new Date(),
+  };
   if (patch.status !== undefined) dbPatch.status = patch.status;
   if (patch.title !== undefined) dbPatch.title = patch.title;
-  if (patch.claudeSessionId !== undefined) dbPatch.claudeSessionId = patch.claudeSessionId;
+  if (patch.claudeSessionId !== undefined)
+    dbPatch.claudeSessionId = patch.claudeSessionId;
   if (patch.waitingFor !== undefined) dbPatch.waitingFor = patch.waitingFor;
   if (patch.endedAt !== undefined) dbPatch.endedAt = patch.endedAt;
-  if (patch.closeRequested !== undefined) dbPatch.closeRequested = patch.closeRequested;
+  if (patch.closeRequested !== undefined)
+    dbPatch.closeRequested = patch.closeRequested;
 
-  await db.update(_conversations).set(dbPatch).where(eq(_conversations.id, id));
-  if (taskId) await emitStatusChangeIfChanged(taskId, before);
+  await withTaskStatusChange(taskId ?? [], db, async () => {
+    await db
+      .update(_conversations)
+      .set(dbPatch)
+      .where(eq(_conversations.id, id));
+  });
   if (patch.status !== undefined)
     await emitConversationStatusChange(id, taskId, prevStatus, patch.status);
 }
@@ -141,14 +156,19 @@ export async function updateConversationsTitleForTask(
   await db
     .update(_conversations)
     .set({ title, updatedAt: new Date() })
-    .where(inArray(_conversations.id, rows.map((r) => r.id)));
+    .where(
+      inArray(
+        _conversations.id,
+        rows.map((r) => r.id),
+      ),
+    );
 }
 
 export async function deleteConversationRow(id: string): Promise<void> {
   const { taskId, status: prevStatus } = await conversationContext(id);
-  const before = taskId ? await readTaskStatus(taskId) : null;
-  await db.delete(_conversations).where(eq(_conversations.id, id));
-  if (taskId) await emitStatusChangeIfChanged(taskId, before);
+  await withTaskStatusChange(taskId ?? [], db, async () => {
+    await db.delete(_conversations).where(eq(_conversations.id, id));
+  });
   // A hard delete cascades away the conversation's queue rank row (entity
   // extension, FK CASCADE). Emit a terminal transition so the queue refreshes
   // its ranks and revalidates the pin — the conversation is no longer present.
@@ -161,20 +181,20 @@ export async function deleteConversationRow(id: string): Promise<void> {
 // Prevents the poller from overwriting a "done" set by the exit_clean flow.
 export async function markConversationGone(id: string): Promise<boolean> {
   const { taskId, status: prevStatus } = await conversationContext(id);
-  const before = taskId ? await readTaskStatus(taskId) : null;
   const now = new Date();
-  const result = await db
-    .update(_conversations)
-    .set({ status: "gone", endedAt: now, waitingFor: null, updatedAt: now })
-    .where(
-      and(
-        eq(_conversations.id, id),
-        notInArray(_conversations.status, ["gone", "done"]),
-      ),
-    )
-    .returning({ id: _conversations.id });
+  const result = await withTaskStatusChange(taskId ?? [], db, async () =>
+    db
+      .update(_conversations)
+      .set({ status: "gone", endedAt: now, waitingFor: null, updatedAt: now })
+      .where(
+        and(
+          eq(_conversations.id, id),
+          notInArray(_conversations.status, ["gone", "done"]),
+        ),
+      )
+      .returning({ id: _conversations.id }),
+  );
   if (result.length > 0) {
-    if (taskId) await emitStatusChangeIfChanged(taskId, before);
     await emitConversationStatusChange(id, taskId, prevStatus, "gone");
   }
   return result.length > 0;
@@ -209,11 +229,11 @@ export async function markConversationClosed(
   endedAt: Date = new Date(),
 ): Promise<void> {
   const { taskId, status: prevStatus } = await conversationContext(id);
-  const before = taskId ? await readTaskStatus(taskId) : null;
-  await db
-    .update(_conversations)
-    .set({ status: "done", endedAt, updatedAt: new Date() })
-    .where(eq(_conversations.id, id));
-  if (taskId) await emitStatusChangeIfChanged(taskId, before);
+  await withTaskStatusChange(taskId ?? [], db, async () => {
+    await db
+      .update(_conversations)
+      .set({ status: "done", endedAt, updatedAt: new Date() })
+      .where(eq(_conversations.id, id));
+  });
   await emitConversationStatusChange(id, taskId, prevStatus, "done");
 }

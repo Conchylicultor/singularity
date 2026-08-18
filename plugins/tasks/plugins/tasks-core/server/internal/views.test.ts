@@ -5,8 +5,8 @@
  * The bug this pins down: "Hold & close" wrote `held_at`, closed the last live
  * conversation, which flipped the attempt `pushed` → `completed`, which made
  * `tasks_v` resolve the task to `done` — discarding the hold and emitting
- * taskStatusChanged{status:'done'}, the exact event `tasks.maybe-launch-dependents`
- * fans out on. The next task launched itself ~40s after the user held this one.
+ * taskStatusChanged{status:'done'}, which unblocks everything downstream. The
+ * next task launched itself ~40s after the user held this one.
  *
  * Held now outranks a completed attempt in BOTH derived views, and the two must
  * stay in agreement (`task_blocking_v` re-derives "settled" from the raw columns

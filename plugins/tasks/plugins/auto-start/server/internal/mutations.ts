@@ -8,6 +8,17 @@ export async function getTaskAutoStart(id: string) {
   return tasksAutoStart.get(id);
 }
 
+// Every task id carrying an auto-start marker. Deliberately unfiltered — it is
+// the input to the boot reconcile, whose whole point is to let
+// `maybeLaunchTaskJob` be the ONE place that decides launchability. Bounded by
+// the marker set, which is small (~180) and shrinks as tasks launch.
+export async function listArmedTaskIds(): Promise<string[]> {
+  const rows = await db
+    .select({ parentId: _tasksAutoStartExt.parentId })
+    .from(_tasksAutoStartExt);
+  return rows.map((r) => r.parentId);
+}
+
 export async function setTaskAutoStart(
   id: string,
   autoStart: { model: ConversationModel } | null,

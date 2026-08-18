@@ -1,111 +1,63 @@
-import { eq } from "drizzle-orm";
-import { db } from "@plugins/database/server";
 import type { EmitTx } from "@plugins/infra/plugins/events/server";
-import { _tasks } from "./tables";
-import { tasks } from "./views";
 import type { TaskStatus } from "./schema";
 import type { ConversationStatus } from "../../core/conversation-status";
-import { taskStatusChanged, conversationStatusChanged } from "./tables-events";
-import { currentStatusBatch, type DbExecutor, type StatusBatch } from "./status-batch";
+import {
+  taskStatusChanged,
+  conversationStatusChanged,
+  type TaskStatusChangedPayload,
+} from "./tables-events";
+import { readTaskStatuses, type TaskStatusRow } from "./queries/tasks";
+import type { StatusBatch } from "./status-batch";
 
-// Status is computed from the `tasks_v` view (see schema.ts). There is no
-// stored status column to compare against, so callers that mutate
-// status-affecting state (drop/hold flags, attempts, conversations, pushes)
-// snapshot the status before the write and pass it back to
-// `emitStatusChangeIfChanged` after the write commits.
+// Status is computed from the `tasks_v` view (see views.ts). There is no stored
+// status column to compare against, so a status change is only observable as a
+// before→after pair around a write. `withTaskStatusChange` (status-scope.ts)
+// takes both readings and derives the affected set; this file owns the last two
+// steps: the pure before→after diff, and the batch flush that applies it once
+// per transaction.
 
-export async function readTaskStatus(
-  taskId: string,
-  exec: DbExecutor = db,
-): Promise<TaskStatus | null> {
-  const [row] = await exec
-    .select({ status: tasks.status })
-    .from(tasks)
-    .where(eq(tasks.id, taskId))
-    .limit(1);
-  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
-  return row?.status ?? null;
-}
-
-interface FolderSnapshot {
-  folderId: string | null;
-}
-
-async function readFolder(
-  taskId: string,
-  exec: DbExecutor = db,
-): Promise<FolderSnapshot | null> {
-  const [row] = await exec
-    .select({ folderId: _tasks.folderId })
-    .from(_tasks)
-    .where(eq(_tasks.id, taskId))
-    .limit(1);
-  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
-  return row ?? null;
-}
-
-// If the task's computed status changed since `previous`, emit
-// tasks.statusChanged. No-op when the task is gone (deleted) or status is
-// unchanged. Run after the mutation commits so subscribers see the new state
-// when they re-query.
+// One `tasks.statusChanged` payload per task whose derived status actually
+// moved. Pure — the two maps are read by the caller — which is what makes the
+// emission rule testable with no DB.
 //
-// When a `withTaskStatusBatch` is active, this only RECORDS the task's entry
-// status (earliest wins ⇒ = status at batch entry) and suppresses the per-edge
-// emit; `flushStatusBatch` emits one net trigger per task on commit. `exec`
-// lets non-batch callers read/emit on their own transaction handle so reads see
-// uncommitted writes and the trigger enqueue lives or dies with them.
-export async function emitStatusChangeIfChanged(
-  taskId: string,
-  previous: TaskStatus | null,
-  exec: DbExecutor = db,
-): Promise<void> {
-  const batch = currentStatusBatch();
-  if (batch) {
-    if (!batch.before.has(taskId)) batch.before.set(taskId, previous);
-    return;
-  }
-  const after = await readTaskStatus(taskId, exec);
-  if (after === null) return;
-  if (previous !== null && previous === after) return;
-  const folder = await readFolder(taskId, exec);
-  await taskStatusChanged.emit(
-    {
+// Two conventions, both older than this function and preserved exactly:
+//   - a task absent from `after` is GONE (deleted inside the scope) and emits
+//     nothing; there is no transition to report;
+//   - a first-time read (`before === null`: the task did not exist, or was not
+//     readable, at scope entry) reports `previousStatus = status` rather than
+//     lying about a transition. Subscribers that care compare the two fields.
+export function computeStatusEmits(
+  before: ReadonlyMap<string, TaskStatus | null>,
+  after: ReadonlyMap<string, TaskStatusRow>,
+): TaskStatusChangedPayload[] {
+  const emits: TaskStatusChangedPayload[] = [];
+  for (const [taskId, previous] of before) {
+    const row = after.get(taskId);
+    if (!row) continue;
+    if (previous === row.status) continue;
+    emits.push({
       taskId,
-      folderId: folder?.folderId ?? null,
-      status: after,
-      // First-time reads (previous null) report previousStatus = current to
-      // avoid lying about a non-existent transition; subscribers that care
-      // about the difference can compare the two fields.
-      previousStatus: previous ?? after,
-    },
-    // On a transaction handle, emit on the same connection so the trigger
-    // SELECT + emission audit + job INSERT commit atomically with the write.
-    // `exec` is a PgTransaction here (structurally an EmitTx / NodePgDatabase);
-    // this `{ tx }` path has no other caller, so the narrow cast reconciles the
-    // PgTransaction ⇄ EmitTx nominal mismatch that eventsDispatchJob.enqueue
-    // accepts at runtime.
-    exec === db ? undefined : { tx: exec as EmitTx },
-  );
+      folderId: row.folderId,
+      status: row.status,
+      previousStatus: previous ?? row.status,
+    });
+  }
+  return emits;
 }
 
-// Emit the NET tasks.statusChanged per recorded task at batch commit: read the
-// current status on the tx (sees all uncommitted edge writes), skip if the task
-// is gone or its status is unchanged from batch entry, else emit one trigger on
-// the tx so it commits atomically with the writes.
+// Emit the NET tasks.statusChanged per recorded task at batch commit: read every
+// recorded task's current status in ONE query on the tx (so it sees all the
+// batch's uncommitted writes), diff it against the entry statuses, and emit each
+// difference on the tx so the trigger SELECT, the emission audit and the job
+// INSERT commit atomically with the writes.
 export async function flushStatusBatch(batch: StatusBatch): Promise<void> {
-  for (const [taskId, before] of batch.before) {
-    const after = await readTaskStatus(taskId, batch.tx);
-    if (after === null) continue;
-    if (before === after) continue;
-    const folder = await readFolder(taskId, batch.tx);
+  const after = await readTaskStatuses([...batch.before.keys()], batch.tx);
+  for (const payload of computeStatusEmits(batch.before, after)) {
     await taskStatusChanged.emit(
-      {
-        taskId,
-        folderId: folder?.folderId ?? null,
-        status: after,
-        previousStatus: before ?? after,
-      },
-      // See emitStatusChangeIfChanged: narrow PgTransaction ⇄ EmitTx cast.
+      payload,
+      // `batch.tx` is a PgTransaction here (structurally an EmitTx /
+      // NodePgDatabase); the narrow cast reconciles the PgTransaction ⇄ EmitTx
+      // nominal mismatch that eventsDispatchJob.enqueue accepts at runtime.
       { tx: batch.tx as EmitTx },
     );
   }
@@ -113,8 +65,11 @@ export async function flushStatusBatch(batch: StatusBatch): Promise<void> {
 
 // Emit `conversation.statusChanged` when a single conversation's status column
 // actually changes. Callers snapshot the prior status before the write and pass
-// it here after the write commits (mirrors `emitStatusChangeIfChanged`). No-op
-// when the status is unchanged.
+// it here after the write commits. No-op when the status is unchanged.
+//
+// Deliberately NOT part of the task-status scope: this is a fact about one
+// conversation row's own stored column, not about a derived value with a
+// dependency closure, so there is nothing to walk and nothing to coalesce.
 export async function emitConversationStatusChange(
   conversationId: string,
   taskId: string | null,

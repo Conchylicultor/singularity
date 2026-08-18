@@ -137,7 +137,6 @@ the `fields.storage` contributions, unregistered in the browser). So
     - `deleteConversationRow`
     - `dropTaskIfNoActiveSibling`
     - `dropTaskTree`
-    - `emitStatusChangeIfChanged`
     - `findNextRankInFolder`
     - `getAttempt`
     - `getConversation`
@@ -152,7 +151,6 @@ the `fields.storage` contributions, unregistered in the browser). So
     - `insertPush`
     - `isDescendant`
     - `listActiveConversations`
-    - `listArmedDependentsOf`
     - `listAttempts`
     - `listAttemptsForTask`
     - `listBlockingDepIds`
@@ -175,9 +173,9 @@ the `fields.storage` contributions, unregistered in the browser). So
     - `pushesResource`
     - `pushLanded`
     - `PushSchema`
-    - `readTaskStatus`
     - `RECENT_GONE_LIMIT`
     - `removeTaskDependency`
+    - `runStatusBatchOn`
     - `setConversationHibernated`
     - `taskAttachments`
     - `taskDependsOn`

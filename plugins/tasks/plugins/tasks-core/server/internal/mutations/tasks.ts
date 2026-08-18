@@ -2,12 +2,16 @@ import { and, eq, inArray } from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import { _taskDependencies, _tasks } from "../tables";
 import { tasks } from "../views";
-import type { TaskStatus } from "../schema";
 import { TaskGraph } from "../../../core";
-import { findNextRankInFolder, isDescendant, listTasks, taskDependsOn } from "../queries/tasks";
-import { emitStatusChangeIfChanged, readTaskStatus } from "../status-emit";
+import {
+  findNextRankInFolder,
+  isDescendant,
+  listTasks,
+  taskDependsOn,
+} from "../queries/tasks";
+import { withTaskStatusChange } from "../status-scope";
 import { unionTaskClusters } from "./clusters";
-import type { DbExecutor } from "../status-batch";
+import { withTaskStatusBatch, type DbExecutor } from "../status-batch";
 import { Rank } from "@plugins/primitives/plugins/rank/core";
 
 export interface CreateTaskInput {
@@ -36,7 +40,10 @@ export interface UpdateTaskPatch {
   folderId?: string | null;
 }
 
-export async function createTask(input: CreateTaskInput, exec: DbExecutor = db) {
+export async function createTask(
+  input: CreateTaskInput,
+  exec: DbExecutor = db,
+) {
   // Handed the pool, run the whole creation in ONE transaction; handed a tx, join
   // it (the caller owns the boundary — `handle-insert-between` already calls this
   // under `withTaskStatusBatch`). The INSERT and the folder union must be atomic:
@@ -52,17 +59,24 @@ async function createTaskOn(input: CreateTaskInput, exec: DbExecutor) {
     input.id ?? `task-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
   const folderId = input.folderId ?? null;
   const rank = input.rank ?? (await findNextRankInFolder(folderId, exec));
-  // No `clusterId` here: it is derived from `folderId`, never an input, and it is
-  // written by the union below rather than computed inline.
-  await exec.insert(_tasks).values({
-    id,
-    folderId,
-    groupId: input.groupId ?? null,
-    title: input.title,
-    titleAuto: input.titleAuto ?? true,
-    author: input.author,
-    rank: rank.toJSON(),
-    description: input.description ?? null,
+  // The scope brackets the INSERT: the task does not exist yet, so its entry
+  // status reads null and the emit reports its first-ever status (typically
+  // "new"). Subscribers bound via `where({ taskId })` only register after
+  // creation, so that first emit is a no-op for them; emitting unconditionally
+  // keeps the mutation/event surface uniform with updateTask.
+  await withTaskStatusChange(id, exec, async () => {
+    // No `clusterId` here: it is derived from `folderId`, never an input, and it
+    // is written by the union below rather than computed inline.
+    await exec.insert(_tasks).values({
+      id,
+      folderId,
+      groupId: input.groupId ?? null,
+      title: input.title,
+      titleAuto: input.titleAuto ?? true,
+      author: input.author,
+      rank: rank.toJSON(),
+      description: input.description ?? null,
+    });
   });
   // Filing under a folder IS a membership edge, so the new task joins the
   // folder's cluster — routed through `unionTaskClusters` rather than an inline
@@ -77,12 +91,11 @@ async function createTaskOn(input: CreateTaskInput, exec: DbExecutor) {
   // owned by the data-view primitive, not a column. The tree reveals a new child
   // client-side (`useTreeRow.addChild` expands the row it created under), so the
   // folder's `updatedAt` no longer moves just because a child was filed into it.
-  const [full] = await exec.select().from(tasks).where(eq(tasks.id, id)).limit(1);
-  // New tasks emit their first-ever status (typically "new"). Subscribers
-  // bound via `where({ taskId })` only register after creation, so this
-  // first emit is a no-op for them; emitting unconditionally keeps the
-  // mutation/event surface uniform with updateTask.
-  await emitStatusChangeIfChanged(id, null, exec);
+  const [full] = await exec
+    .select()
+    .from(tasks)
+    .where(eq(tasks.id, id))
+    .limit(1);
   return full!;
 }
 
@@ -141,22 +154,28 @@ async function updateTaskOn(
     }
     dbPatch.folderId = patch.folderId;
   }
-  // Snapshot status before the write so we can detect a flip
-  // (typical: drop/hold transitions).
-  const before = await readTaskStatus(id, exec);
-  const [updated] = await exec
-    .update(_tasks)
-    .set(dbPatch)
-    .where(eq(_tasks.id, id))
-    .returning({ id: _tasks.id });
+  // The scope brackets the write (typical flip: a drop/hold transition) and
+  // covers the task's dependents too — dropping a task unblocks everything
+  // downstream of it, which no single-task snapshot could see.
+  const updated = await withTaskStatusChange(id, exec, async () => {
+    const [row] = await exec
+      .update(_tasks)
+      .set(dbPatch)
+      .where(eq(_tasks.id, id))
+      .returning({ id: _tasks.id });
+    return row;
+  });
   // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
   if (!updated) return null;
   // No destination force-expand on a re-file, for the same reason as in
   // `createTask`: the tree opens a collapsed drop target itself
   // (`TreeList.onDragEnd`), and the destination folder's `updatedAt` is not a
   // fact about the folder.
-  await emitStatusChangeIfChanged(id, before, exec);
-  const [row] = await exec.select().from(tasks).where(eq(tasks.id, id)).limit(1);
+  const [row] = await exec
+    .select()
+    .from(tasks)
+    .where(eq(tasks.id, id))
+    .limit(1);
   // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
   return row ?? null;
 }
@@ -171,12 +190,7 @@ export async function updateTaskTitle(
     // Haiku-generated label: keep titleAuto true so the title stays out of the
     // launch prompt (it is just a summary of the description).
     .set({ title, titleAuto: true, updatedAt: new Date() })
-    .where(
-      and(
-        eq(_tasks.id, id),
-        inArray(_tasks.title, onlyIfTitleIn),
-      ),
-    )
+    .where(and(eq(_tasks.id, id), inArray(_tasks.title, onlyIfTitleIn)))
     .returning({ id: _tasks.id });
   return !!updated;
 }
@@ -216,12 +230,16 @@ export async function addTaskDependency(
   // This is the only writer of `task_dependencies` — all 7 server and 6 web call
   // sites funnel through here — so this one line covers every edge creation.
   await unionTaskClusters(taskId, dependsOnTaskId, exec);
-  const prev = await readTaskStatus(taskId, exec);
-  await exec
-    .insert(_taskDependencies)
-    .values({ taskId, dependsOnTaskId })
-    .onConflictDoNothing();
-  await emitStatusChangeIfChanged(taskId, prev, exec);
+  // Seeded with the DEPENDENT end only. `dependsOnTaskId`'s own status is a
+  // function of ITS ancestors, which this edge does not touch, and everything
+  // downstream of `taskId` is already in `taskId`'s closure. The closure is the
+  // same either side of the write — see the edge theorem in status-scope.ts.
+  await withTaskStatusChange(taskId, exec, async () => {
+    await exec
+      .insert(_taskDependencies)
+      .values({ taskId, dependsOnTaskId })
+      .onConflictDoNothing();
+  });
 }
 
 export async function removeTaskDependency(
@@ -229,44 +247,54 @@ export async function removeTaskDependency(
   dependsOnTaskId: string,
   exec: DbExecutor = db,
 ): Promise<boolean> {
-  const prev = await readTaskStatus(taskId, exec);
-  const [row] = await exec
-    .delete(_taskDependencies)
-    .where(
-      and(
-        eq(_taskDependencies.taskId, taskId),
-        eq(_taskDependencies.dependsOnTaskId, dependsOnTaskId),
-      ),
-    )
-    .returning({ taskId: _taskDependencies.taskId });
+  // Same seed as `addTaskDependency`, for the same reason — and this direction
+  // is THE incident: detaching a blocker unblocks tasks several hops downstream,
+  // while the edge's own dependent end often shows no change at all (it already
+  // reads `done`/`dropped`), so naming only that end emitted nothing whatsoever.
+  const row = await withTaskStatusChange(taskId, exec, async () => {
+    const [deleted] = await exec
+      .delete(_taskDependencies)
+      .where(
+        and(
+          eq(_taskDependencies.taskId, taskId),
+          eq(_taskDependencies.dependsOnTaskId, dependsOnTaskId),
+        ),
+      )
+      .returning({ taskId: _taskDependencies.taskId });
+    return deleted;
+  });
   // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
   if (!row) return false;
-  await emitStatusChangeIfChanged(taskId, prev, exec);
   return true;
 }
 
 export async function dropTaskTree(id: string): Promise<number> {
-  // Drop `id` plus every task that TRANSITIVELY depends on it and is still
-  // active. The shared TaskGraph walk continues *through* settled (done/dropped)
-  // intermediates to reach active nodes behind them, but never re-acts on the
-  // settled nodes themselves — so already done/dropped descendants are left
-  // untouched while a deep active dependent gated behind one is still dropped.
-  const graph = TaskGraph.from(await listTasks());
-  const ids = [...new Set([id, ...graph.activeDependents(id).map((n) => n.id)])];
+  // One batch for the whole drop: the N per-task emits collapse into ONE flush
+  // (one batched status read, one emit per task that actually moved), and the
+  // update commits with them. `listTasks` reads the batch's own `tx` — reading
+  // the pool from inside a transaction is the hold-and-wait shape
+  // `database/no-pool-await-in-transaction` exists to prevent.
+  return withTaskStatusBatch(async (tx) => {
+    // Drop `id` plus every task that TRANSITIVELY depends on it and is still
+    // active. The shared TaskGraph walk continues *through* settled
+    // (done/dropped) intermediates to reach active nodes behind them, but never
+    // re-acts on the settled nodes themselves — so already done/dropped
+    // descendants are left untouched while a deep active dependent gated behind
+    // one is still dropped.
+    const graph = TaskGraph.from(await listTasks(tx));
+    const ids = [
+      ...new Set([id, ...graph.activeDependents(id).map((n) => n.id)]),
+    ];
 
-  const now = new Date();
-  const befores = new Map<string, TaskStatus | null>();
-  for (const tid of ids) {
-    befores.set(tid, await readTaskStatus(tid));
-  }
-
-  await db
-    .update(_tasks)
-    .set({ droppedAt: now, heldAt: null, updatedAt: now })
-    .where(inArray(_tasks.id, ids));
-
-  for (const tid of ids) {
-    await emitStatusChangeIfChanged(tid, befores.get(tid) ?? null);
-  }
-  return ids.length;
+    const now = new Date();
+    // ONE scope seeded with the whole id array: the dropped set and everything
+    // downstream of it is a single closure, read once.
+    await withTaskStatusChange(ids, tx, async () => {
+      await tx
+        .update(_tasks)
+        .set({ droppedAt: now, heldAt: null, updatedAt: now })
+        .where(inArray(_tasks.id, ids));
+    });
+    return ids.length;
+  });
 }

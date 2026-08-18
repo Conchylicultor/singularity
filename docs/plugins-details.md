@@ -7687,7 +7687,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
   - Server:
     - Contributes:
       - `ConfigV2.Register` "auto-answer"
-      - `trigger` "tasks.maybe-launch-dependents"
+      - `trigger` "tasks.maybe-launch-on-status"
       - `trigger` "conversations.notify-created"
       - `taskCategory` "conversations"
       - `taskCategory` "system"
@@ -7736,7 +7736,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `tasks/tasks-core.getTask`
       - `tasks/tasks-core.hasBlockingDep`
       - `tasks/tasks-core.insertConversation`
-      - `tasks/tasks-core.listArmedDependentsOf`
       - `tasks/tasks-core.listAttemptsForTask`
       - `tasks/tasks-core.listConversationsForDisplay`
       - `tasks/tasks-core.listConversationsForInfra`
@@ -7780,7 +7779,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `userTurnSent`
     - Register:
       - `defineJob('tasks.maybe-launch')`
-      - `defineJob('tasks.maybe-launch-dependents')`
+      - `defineJob('tasks.maybe-launch-on-status')`
       - `defineJob('conversations.notify-created')`
       - `defineJob('conversations.spawn')`
       - `defineTriggerEvent('conversation.created')`
@@ -15836,6 +15835,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `page/inline-date`
           - `page/links`
           - `tasks`
+          - `tasks/auto-start`
           - `tasks/task-title`
           - `tasks/tasks-core`
     - **`events-test`** — Dummy UI for exercising the events plugin end-to-end. Dummy plugin exercising the events and jobs APIs end-to-end.
@@ -16237,6 +16237,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `shell/notifications`
           - `stats/cost`
           - `tasks`
+          - `tasks/auto-start`
           - `tasks/task-title`
     - **`launcher`**
       - Server:
@@ -16846,6 +16847,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `reports`
           - `stats/cost`
           - `tasks`
+          - `tasks/auto-start`
     - **`worktree`**
       - Server:
         - Uses:
@@ -28115,6 +28117,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `infra/worktree.ensureMainWorktreeRoot`
       - `primitives/rank.rankAdjacentTo`
       - `primitives/rank.rankAfterSibling`
+      - `tasks/auto-start.listArmedTaskIds`
       - `tasks/auto-start.setTaskAutoStart`
       - `tasks/launch-options.inheritLaunchOptions`
       - `tasks/launch-options.TaskLaunchServer`
@@ -28129,7 +28132,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `tasks/tasks-core.getConversation`
       - `tasks/tasks-core.getTask`
       - `tasks/tasks-core.getTaskDependencyIds`
-      - `tasks/tasks-core.hasBlockingDep`
       - `tasks/tasks-core.insertPush`
       - `tasks/tasks-core.isDescendant`
       - `tasks/tasks-core.listAttempts`
@@ -28146,6 +28148,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `mcpTool('add_task')`
       - `defineJob('tasks.push-ingest')`
       - `defineWarmup('tasks.push-reconcile')`
+      - `defineWarmup('tasks.auto-start-reconcile')`
     - Routes:
       - `GET /api/tasks`
       - `POST /api/tasks`
@@ -28349,19 +28352,29 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `TaskAutoStartRowSchema`
           - `useTaskAutoStart`
       - Server:
-        - Contributes: `resource.declare` "tasks-auto-start"
+        - Contributes:
+          - `resource.declare` "tasks-auto-start"
+          - `trigger` "tasks.auto-start-cancel-on-drop"
         - Uses:
           - `database.db`
           - `infra/entity-extensions.defineExtension`
+          - `infra/events.Trigger`
+          - `infra/jobs.defineJob`
           - `infra/query-resource.queryResource`
+          - `infra/warmup.defineWarmup`
           - `tasks/tasks-core._tasks`
+          - `tasks/tasks-core.taskStatusChanged`
         - DB schema: `plugins/tasks/plugins/auto-start/server/internal/tables.ts`
         - Entity extension of: `tasks/tasks-core` (table `tasks_ext_auto_start`)
         - Exports (values):
           - `claimAutoStart`
           - `getTaskAutoStart`
+          - `listArmedTaskIds`
           - `setTaskAutoStart`
           - `tasksAutoStartResource`
+        - Register:
+          - `defineJob('tasks.auto-start-cancel-on-drop')`
+          - `defineWarmup('tasks.auto-start-dropped-sweep')`
         - Resources: `tasks-auto-start` (keyed)
       - Cross-plugin:
         - Imported by:
@@ -29033,7 +29046,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `deleteConversationRow`
           - `dropTaskIfNoActiveSibling`
           - `dropTaskTree`
-          - `emitStatusChangeIfChanged`
           - `findNextRankInFolder`
           - `getAttempt`
           - `getConversation`
@@ -29048,7 +29060,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `insertPush`
           - `isDescendant`
           - `listActiveConversations`
-          - `listArmedDependentsOf`
           - `listAttempts`
           - `listAttemptsForTask`
           - `listBlockingDepIds`
@@ -29071,9 +29082,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `pushesResource`
           - `pushLanded`
           - `PushSchema`
-          - `readTaskStatus`
           - `RECENT_GONE_LIMIT`
           - `removeTaskDependency`
+          - `runStatusBatchOn`
           - `setConversationHibernated`
           - `taskAttachments`
           - `taskDependsOn`

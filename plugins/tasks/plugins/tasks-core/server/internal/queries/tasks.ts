@@ -1,10 +1,13 @@
-import { and, asc, eq, sql } from "drizzle-orm";
-import { nextRankUnder, type RankExecutor } from "@plugins/primitives/plugins/rank/server";
+import { and, asc, eq, inArray, sql } from "drizzle-orm";
+import {
+  nextRankUnder,
+  type RankExecutor,
+} from "@plugins/primitives/plugins/rank/server";
 import type { Rank } from "@plugins/primitives/plugins/rank/core";
 import { db } from "@plugins/database/server";
 import { _taskDependencies, _tasks } from "../tables";
 import { directDepIsBlocking, taskBlocking, tasks } from "../views";
-import type { Task } from "../schema";
+import type { Task, TaskStatus } from "../schema";
 import { TaskGraph } from "../../../core";
 import type { DbExecutor } from "../status-batch";
 
@@ -16,7 +19,11 @@ export async function listTasks(exec: DbExecutor = db): Promise<Task[]> {
 }
 
 export async function getTask(id: string): Promise<Task | null> {
-  const [row] = (await db.select().from(tasks).where(eq(tasks.id, id)).limit(1)) as unknown as Task[];
+  const [row] = (await db
+    .select()
+    .from(tasks)
+    .where(eq(tasks.id, id))
+    .limit(1)) as unknown as Task[];
   // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
   return row ?? null;
 }
@@ -113,6 +120,81 @@ export async function listDependentIds(
   return rows.map((r) => r.taskId);
 }
 
+// The transitive-dependents CLOSURE of `seedIds`, the seeds themselves
+// included: exactly the set of tasks whose derived status a write recorded
+// against a seed can change. Influence in `tasks_v` flows downstream only — a
+// task's status reads its own drop/hold flags, its own attempts, and
+// `task_blocking_v.has_blocking_dep`, which is a function of its ANCESTORS —
+// so the dependents walk IS the affected set. See `status-scope.ts` for the
+// proof, and for why the closure is the same either side of an edge write.
+//
+// ONE recursive CTE for the whole seed array rather than one walk per seed: the
+// walk dedupes across seeds, and `UNION` (not `UNION ALL`) is also what makes a
+// cycle terminate. Cycles are barred on insert by `taskDependsOn`, but a
+// hand-written SQL edit is bound by nothing, and a non-terminating recursive CTE
+// inside an interactive transaction is not a failure mode worth leaving open.
+//
+// `exec` is REQUIRED for the same reason as `listBlockingDepIds` above.
+export async function listDependentClosure(
+  seedIds: readonly string[],
+  exec: DbExecutor,
+): Promise<string[]> {
+  if (seedIds.length === 0) return [];
+  // Drizzle expands a JS array inside a `sql` template into a comma-separated
+  // list of bound params, never a single array value, so the seed set is built
+  // as an explicit `ARRAY[…]` constructor (the idiom live-state-snapshot's
+  // `tables_read` uses). The seeds are unnested rather than selected back out of
+  // `tasks`, because a seed row need not exist yet: `createTask` records its own
+  // id before the INSERT that creates it.
+  const seeds = sql.join(
+    seedIds.map((id) => sql`${id}`),
+    sql`, `,
+  );
+  const result = await exec.execute<{ id: string }>(
+    sql`WITH RECURSIVE closure(id) AS (
+          SELECT unnest(ARRAY[${seeds}]::text[])
+          UNION
+          SELECT td.task_id
+            FROM ${_taskDependencies} td
+            JOIN closure c ON td.depends_on_task_id = c.id
+        )
+        SELECT id FROM closure`,
+  );
+  return result.rows.map((r) => r.id);
+}
+
+export interface TaskStatusRow {
+  status: TaskStatus;
+  folderId: string | null;
+}
+
+// The derived status (and folder) of a SET of tasks, in ONE read. Tasks that do
+// not exist are simply absent from the map — the caller distinguishes "gone"
+// from "unchanged" itself.
+//
+// Batching is not an optimization here, it is the whole reason a status scope is
+// affordable: a `tasks_v` status read is O(the whole dependency graph) no matter
+// how many ids it asks for, because `task_blocking_v`'s recursive ancestors CTE
+// takes no predicate pushdown. N single-id reads therefore cost N × O(graph).
+//
+// `folderId` rides along because `tasks_v` carries every base column, which is
+// why the emit path needs no separate folder read.
+export async function readTaskStatuses(
+  ids: readonly string[],
+  exec: DbExecutor,
+): Promise<Map<string, TaskStatusRow>> {
+  if (ids.length === 0) return new Map();
+  const rows = await exec
+    .select({ id: tasks.id, status: tasks.status, folderId: tasks.folderId })
+    .from(tasks)
+    .where(inArray(tasks.id, [...ids]));
+  return new Map(
+    rows.map(
+      (r) => [r.id, { status: r.status, folderId: r.folderId }] as const,
+    ),
+  );
+}
+
 export async function getTaskDependencyIds(
   taskId: string,
   exec: DbExecutor = db,
@@ -122,34 +204,6 @@ export async function getTaskDependencyIds(
     .from(_taskDependencies)
     .where(eq(_taskDependencies.taskId, taskId));
   return rows.map((r) => r.dependsOnTaskId);
-}
-
-// Armed tasks that TRANSITIVELY depend on `changedTaskId`. Used by the static
-// taskStatusChanged trigger to fan out maybeLaunchTaskJob enqueues. Must be
-// transitive to match hasBlockingDep: when a deep ancestor resolves, an armed
-// task gated on it may sit several hops down behind an already-dropped (and so
-// unarmed) intermediate — a single-hop fan-out would never re-wake it. The
-// recursive walk follows depends_on edges downstream; UNION dedupes so cycles
-// (barred on insert) terminate. Each wakened task still re-checks hasBlockingDep
-// before launching, so over-broad fan-out is harmless.
-export async function listArmedDependentsOf(
-  changedTaskId: string,
-): Promise<string[]> {
-  const result = await db.execute<{ task_id: string }>(
-    sql`WITH RECURSIVE dependents AS (
-          SELECT td.task_id AS task_id
-            FROM ${_taskDependencies} td
-           WHERE td.depends_on_task_id = ${changedTaskId}
-          UNION
-          SELECT td.task_id
-            FROM ${_taskDependencies} td
-            JOIN dependents d ON td.depends_on_task_id = d.task_id
-        )
-        SELECT DISTINCT d.task_id
-          FROM dependents d
-          JOIN tasks_ext_auto_start tas ON tas.parent_id = d.task_id`,
-  );
-  return result.rows.map((r) => r.task_id);
 }
 
 // True if `start` (transitively) depends on `target`. Used to prevent
