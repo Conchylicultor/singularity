@@ -67,8 +67,9 @@ the name; the reader and the writer change together.
 
 ## Provenance and `Staleness`
 
-`readGitProvenance()` is read **before** the artifact phase — `build-composition`
-writes generated files into the checkout, so a dirty read taken after it would
+`readGitProvenance()` is read **before** the artifact phase — the hermetic
+`build` it shells into writes generated files into the checkout, so a dirty read
+taken after it would
 report every release as dirty and say nothing about what the human left in the
 tree. `commitDirty` uses `git status --porcelain --untracked-files=normal`:
 untracked files count, because vite builds untracked files into the dist.

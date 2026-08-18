@@ -33,7 +33,7 @@
 // Consequence, by design: a namespace whose gateway registration predates its
 // first post-S4 build reaps nothing until the gateway has adopted the new path
 // (its next restart POST, reconcile tick, or a gateway restart). And on a bare
-// release host — `build-composition`, no gateway at all — the gate is closed
+// release host — `build --hermetic`, no gateway at all — the gate is closed
 // permanently, which costs nothing: a host with no gateway has no legacy served
 // dist to reclaim either.
 
@@ -47,7 +47,7 @@ import { distNames } from "./dist-publish";
 const GATEWAY_ORIGIN = "http://localhost:9000";
 
 /**
- * Short on purpose. `build-composition` must stay hermetic: on a bare release
+ * Short on purpose. A `--hermetic` build must stay hermetic: on a bare release
  * host nothing listens here, and the gate must cost that build ~nothing (a
  * refused connection is immediate; this bounds the pathological case of
  * something listening but not answering).

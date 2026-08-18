@@ -30,7 +30,8 @@ registration.)
   concurrent releases of *different* compositions are legitimate; a duplicate
   in-flight release of the *same* composition is rejected (23505 → no-op).
 - **The spawning backend is never restarted.** Phase 1 of the release CLI shells
-  into `./singularity build-composition`, the *hermetic* half of `build`: it
+  into `./singularity build --hermetic --composition <c>`, the *hermetic*
+  posture of `build`: it
   produces the artifact set (filtered registries, migration SQL, web dist) and
   structurally cannot deploy — no gateway spec, no restart, no health probe, no
   `build_runs` row. (It used to be `build --composition --no-restart

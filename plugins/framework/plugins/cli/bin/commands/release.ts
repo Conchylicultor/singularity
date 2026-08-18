@@ -699,7 +699,7 @@ export function registerRelease(program: Command) {
         console.log(`  Output: ${out}`);
 
         // ── 0. Provenance, read BEFORE anything touches the tree ─────────────
-        // Step 1 (`build-composition`) writes generated files into the checkout,
+        // Step 1 (`build --hermetic`) writes generated files into the checkout,
         // so a dirty read taken after it reports every release as dirty and says
         // nothing about what the human left behind. Untracked files count: vite
         // builds them into the dist, so they are part of the artifact.
@@ -709,15 +709,16 @@ export function registerRelease(program: Command) {
         );
 
         // ── 1. Composition artifact phase (hermetic) ─────────────────────────
-        // `build-composition` is the ARTIFACT half of `./singularity build`:
+        // `build --hermetic` is the ARTIFACT posture of `./singularity build`:
         // filtered composition registries, generated migration SQL and the web
         // dist — exactly the three outputs staged below — with the dev-cluster
         // DEPLOY half structurally absent (no Postgres readiness, no worktree DB
         // fork, no gateway spec/restart/health probe, no compose-serve, no
-        // `build_runs` ledger). Both commands drive the SAME module
+        // `build_runs` ledger). Both postures drive the SAME module
         // (commands/internal/app-artifacts.ts), so the phase a release runs and
         // the phase a dev build runs cannot drift. Rationale:
-        // research/2026-07-28-cli-hermetic-artifact-phase.md.
+        // research/2026-07-28-cli-hermetic-artifact-phase.md and
+        // research/2026-08-18-cli-one-build-verb-artifact-half.md.
         //
         // It is still SHELLED OUT TO rather than called in-process, and that is
         // the CORRECTNESS BOUNDARY, not an implementation detail: this module
@@ -729,7 +730,21 @@ export function registerRelease(program: Command) {
         // first barrel import; in a pre-frozen process that guard never fires,
         // `generateConfigOrigins` re-imports stale barrels and
         // `pruneOrphanedConfigFiles` deletes a freshly-authored config override.
-        // A fresh process is what makes that impossible.
+        // A fresh process is what makes that impossible. The mechanical
+        // enforcement is now process-level — `cli:codegen-manifests-not-frozen`
+        // asserts no module in the CLI's import closure reaches a registered
+        // pre-barrel/post-web manifest — rather than the old "keep this command
+        // file's import set a subset of build.ts's".
+        //
+        // ONE recorded behaviour delta from the `build-composition` command this
+        // replaces: `build` is in `orphan-guard.ts`'s `OP_COMMANDS` and
+        // `bin/index.ts` matches on `process.argv[2]` before any flag parsing, so
+        // the child now installs the orphan guard. Its ppid is THIS process, so
+        // the guard is inert unless `release` itself dies — in which case the
+        // child exiting, and dropping `.build.lock` with it, is exactly right.
+        // `build-composition` stayed out of `OP_COMMANDS` because op commands
+        // once re-exec'd under `bun --inspect`; that re-exec was removed
+        // 2026-07-28 with the op-wedge watchdog, so the reason is gone.
         //
         // Versus the nested `build --composition --no-restart --skip-checks
         // --allow-main` this replaces: no `--allow-main` (a release no longer has
@@ -747,7 +762,10 @@ export function registerRelease(program: Command) {
           [
             "bun",
             join(root, "plugins/framework/plugins/cli/bin/index.ts"),
-            "build-composition",
+            "build",
+            // `--hermetic` BEFORE `--composition`: the latter is variadic and
+            // commander consumes greedily up to the next flag.
+            "--hermetic",
             "--composition",
             opts.composition,
           ],

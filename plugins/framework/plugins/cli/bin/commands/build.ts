@@ -19,6 +19,10 @@ import {
   type WebDistTarget,
 } from "./internal/app-artifacts";
 import { runComposeServeStage } from "./internal/compose-serve";
+import {
+  hermeticFlagConflicts,
+  runHermeticBuild,
+} from "./internal/hermetic-build";
 import { reapLegacyCheckoutDist } from "./internal/legacy-dist-reap";
 import { WEB_CORE_RELATIVE } from "@plugins/infra/plugins/paths/server";
 import { basename, join, resolve } from "path";
@@ -600,7 +604,23 @@ export function registerBuild(program: Command) {
   program
     .command("build")
     .description(
-      "Build the frontend and register the worktree with the gateway",
+      "Build the app. Default posture: deploy THIS checkout into the live dev cluster " +
+        "(frontend + backend + gateway registration). With --hermetic --composition <name...>: " +
+        "produce those compositions' artifact sets and touch no cluster at all.",
+    )
+    .option(
+      "--hermetic",
+      "Produce artifacts only — filtered registries, generated migrations and one web dist per " +
+        "composition — with the whole deploy half structurally absent (no Postgres, no DB fork, " +
+        "no gateway, no run ledger), so it runs on a bare host from a fresh `git clone`. Requires " +
+        "--composition; refuses the deploy-only flags. The phase `release` runs.",
+    )
+    .option(
+      "--composition <name...>",
+      "Composition(s) to produce artifacts for (with --hermetic; one shared install/codegen/" +
+        "validation pass, one dist each). Names are read from the compositions manifest COMPILED " +
+        "INTO the code, not from the resolved layered config — a composition added only in a " +
+        "user-layer compositions.jsonc is not visible here.",
     )
     .option(
       "--migration-name <slug>",
@@ -637,6 +657,8 @@ export function registerBuild(program: Command) {
     )
     .action(
       async (opts: {
+        hermetic?: boolean;
+        composition?: string[];
         migrationName?: string;
         resetMigration?: boolean;
         customMigration?: boolean;
@@ -647,15 +669,76 @@ export function registerBuild(program: Command) {
         serveComposition?: string;
         minify: boolean;
       }) => {
+        // ── Posture branch, and it is the LITERAL FIRST STATEMENT on purpose ──
+        //
+        // `build` has two postures over one shared pipeline
+        // (./internal/app-artifacts.ts): DEPLOY this checkout into the live dev
+        // cluster (the default, everything below), or produce a composition's
+        // artifact set HERMETICALLY (--hermetic --composition, which is what
+        // `release` shells into).
+        //
+        // The hermetic body's defining property is that none of the deploy
+        // machinery this action arms — the build-progress log, the op profiler,
+        // the run-ledger recorder, the worktree-op marker, the exit hook, the
+        // verdict guard, the fatal-signal handler, the deploy receipt — is armed
+        // at all, so stage 2's exit 2 (drizzle prompt) / exit 1 (missing
+        // --migration-name) reaches `release` unrewritten and unburied. Branching
+        // BEFORE the first of them (`markBuildInProgress`, which
+        // `runHermeticBuild` calls itself) is what makes that structural instead
+        // of a claim maintained by ~20 scattered `if (!hermetic)` guards.
+        if (opts.hermetic) {
+          const conflicts = hermeticFlagConflicts(opts);
+          if (conflicts.length > 0) {
+            console.error(
+              [
+                "ERROR: incompatible flags for --hermetic.",
+                "",
+                ...conflicts.map((c) => `  - ${c}`),
+              ].join("\n"),
+            );
+            process.exit(1);
+          }
+          return await runHermeticBuild({
+            // Non-empty by `hermeticFlagConflicts` above.
+            compositions: opts.composition ?? [],
+            migration: {
+              name: opts.migrationName,
+              reset: opts.resetMigration,
+              custom: opts.customMigration,
+              answers: opts.migrationAnswers
+                ? parseMigrationAnswers(opts.migrationAnswers)
+                : undefined,
+            },
+            minify: opts.minify,
+          });
+        }
+
+        // `--composition` without `--hermetic` is the SERVE half — build this
+        // composition and serve it into the dev cluster from any checkout —
+        // which needs the namespace rule and the per-composition vendor set, and
+        // is Phase 4 of
+        // research/2026-08-17-global-composition-build-serve-model.md. The two
+        // flags stay orthogonal in meaning so Phase 4 deletes this guard rather
+        // than re-plumbing a flag whose meaning silently flipped.
+        if (opts.composition && opts.composition.length > 0) {
+          console.error(
+            [
+              "ERROR: --composition without --hermetic is not implemented yet.",
+              "",
+              "  Today: `build --hermetic --composition <name...>` produces the artifact set.",
+              "  Serving a composition into the dev cluster from an arbitrary checkout is Phase 4",
+              "  of research/2026-08-17-global-composition-build-serve-model.md.",
+              "",
+              "  (`--serve-composition` is a different, unrelated flag: it composes OTHER",
+              "  namespaces out of main's artifact fleet after main itself deploys.)",
+            ].join("\n"),
+          );
+          process.exit(1);
+        }
+
         // Mark this process as a build: dist-comparing checks (map-in-sync) skip
         // while the dist they'd inspect is the one this build replaces.
         markBuildInProgress();
-
-        // `build` deploys a CHECKOUT into the live dev cluster; it never builds a
-        // composition. (`--serve-composition` below is unrelated — it composes
-        // OTHER namespaces from main's artifact fleet after main itself deploys.)
-        // Producing a composition's artifact set is `./singularity
-        // build-composition`, which shares this module's stages.
 
         let endSpan = buildProfilerStart(
           "ensureHooksPath",
@@ -1119,18 +1202,19 @@ export function registerBuild(program: Command) {
         // Runs before central is spawned below (its plugins.generated.ts must be
         // in sync). See ./internal/app-artifacts.ts.
         //
-        // `composition: null` says "this build produces no filtered registry",
+        // `compositions: []` says "this build produces no filtered registry",
         // and that is now all it says — it used to additionally trigger a reaper
         // for the pre-S1 checkout-global SINGLETON registry, which S5 deleted.
         // Every filtered registry is per-name, and `plugins-active.ts` selects
         // one only under a matching namespace, so another namespace's file on
-        // disk cannot reconfigure this worktree's backend.
+        // disk cannot reconfigure this worktree's backend. The list is non-empty
+        // only on the hermetic path, which branched away long before here.
         //
         // `--serve-composition` is a different, unrelated flag: it composes
         // OTHER namespaces out of main's artifact fleet after main deploys.
         await prepareCompositionSources({
           root,
-          composition: null,
+          compositions: [],
           hooks,
         });
 

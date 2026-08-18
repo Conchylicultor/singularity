@@ -136,7 +136,7 @@ export function currentWorktreeName(): string {
  *   from the checkout it is operating on, never from the environment.
  *
  * Two processes that must agree on which checkout produced an artifact — a
- * `release` and the `build-composition` child it spawns with `cwd` at that same
+ * `release` and the `build --hermetic` child it spawns with `cwd` at that same
  * root — both call this on that root, so they cannot drift.
  */
 export function checkoutWorktreeName(root: string): string {

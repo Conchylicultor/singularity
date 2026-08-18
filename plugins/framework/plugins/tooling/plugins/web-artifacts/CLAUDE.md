@@ -7,8 +7,8 @@ the compose step assembles `dist/` (inline import map + entry + preloads +
 links into the store). This is the ONLY frontend build — the monolithic vite
 build it replaced is gone (`web-core/vite.config.ts`, `--monolith`,
 `SINGULARITY_WEB_MONOLITH`), so every dist producer runs this pipeline:
-`./singularity build`, the compose-serve stage, and `./singularity
-build-composition` (the release path). Design/history:
+`./singularity build`, the compose-serve stage, and `./singularity build
+--hermetic --composition <name…>` (the release path). Design/history:
 `research/2026-07-15-global-per-plugin-web-artifacts.md`,
 `research/2026-08-06-global-one-dist-per-namespace.md`.
 

@@ -7,10 +7,10 @@
 // `singularity`") painted the frame on compositions and releases too.
 //
 // The producer stamps it instead: a dist is experimental only because
-// `./singularity build` said so. Every other producer (compose-serve,
-// build-composition, the release/tauri bundles) is clean by DEFAULT rather than
-// by exclusion, so a new way of shipping a dist can never inherit the frame by
-// accident.
+// `./singularity build` said so — the DEPLOY posture, and only from a non-main
+// worktree. Every other producer (compose-serve, `build --hermetic`, the
+// release/tauri bundles) is clean by DEFAULT rather than by exclusion, so a new
+// way of shipping a dist can never inherit the frame by accident.
 //
 // The stamp is an inline head script that adds the `.experimental` class to
 // <html> — the same JS-sets / CSS-styles split as `.dark`. The rule itself

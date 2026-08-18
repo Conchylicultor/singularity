@@ -3,12 +3,22 @@ import { rm } from "node:fs/promises";
 import { builtinModules } from "node:module";
 import { tmpdir } from "node:os";
 import { join, relative, resolve } from "node:path";
+import {
+  postWebManifests,
+  preBarrelManifests,
+} from "@plugins/framework/plugins/tooling/plugins/codegen/core";
 import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
 import type { Check } from "@plugins/framework/plugins/tooling/core";
 
-const BUILD = "plugins/framework/plugins/cli/bin/commands/build.ts";
-const BUILD_COMPOSITION = "plugins/framework/plugins/cli/bin/commands/build-composition.ts";
 const BOOTSTRAP = "plugins/framework/plugins/cli/bin/index.ts";
+/**
+ * The same file as {@link BOOTSTRAP}, named for the OTHER subject it serves.
+ * The two checks below measure this one entrypoint with opposite dynamic-edge
+ * policies, and the names say which question is being asked: `BOOTSTRAP` is the
+ * pre-install HOISTING subject (dynamic edges cut), `CLI_ENTRY` is the whole CLI
+ * PROCESS (dynamic edges followed, so `await import("./cli")` is traversed).
+ */
+const CLI_ENTRY = BOOTSTRAP;
 const CLI_BODY = "plugins/framework/plugins/cli/bin/cli.ts";
 const TSCONFIG_BASE = "tsconfig.base.json";
 
@@ -19,10 +29,14 @@ const TSCONFIG_BASE = "tsconfig.base.json";
  * alias never silently becomes an "external package" below and drops a whole
  * subtree out of the measured closure.
  */
-function aliasSpecifiers(root: string): { prefixes: string[]; exact: string[] } {
+function aliasSpecifiers(root: string): {
+  prefixes: string[];
+  exact: string[];
+} {
   const raw = readFileSync(join(root, TSCONFIG_BASE), "utf8");
-  const paths = (JSON.parse(raw) as { compilerOptions?: { paths?: Record<string, unknown> } })
-    .compilerOptions?.paths;
+  const paths = (
+    JSON.parse(raw) as { compilerOptions?: { paths?: Record<string, unknown> } }
+  ).compilerOptions?.paths;
   if (!paths || Object.keys(paths).length === 0) {
     throw new Error(
       `${TSCONFIG_BASE} declares no path aliases — it is the repo's single alias owner, so this is not a legitimately empty result.`,
@@ -60,8 +74,9 @@ interface ClosureOptions {
    * Treat an `import()` edge as a traversal BOUNDARY: the specifier is neither
    * followed nor recorded in `external`.
    *
-   * Off by default, which is what the subset check wants — it measures everything
-   * that can be *reached*, dynamically or not. The bootstrap check wants the
+   * Off by default, which is what the manifest-freeze check wants — its subject is
+   * the whole PROCESS, so it measures everything that can be *reached*,
+   * dynamically or not (including `bin/index.ts`'s own `await import("./cli")`). The bootstrap check wants the
    * opposite, because its subject is the HOISTING rule specifically: only the
    * static graph is resolved before the entrypoint's first statement runs, so a
    * dynamic edge is exactly where "must resolve pre-install" stops applying. It is
@@ -83,14 +98,21 @@ interface ClosureOptions {
  * pulled in.
  *
  * npm packages are marked external and therefore absent from `modules`. For the
- * subset check that is the right scope, not a limitation: its invariant is about
- * plugin BARRELS, an npm package can never be one, and bundling `node_modules`
- * for real both fails (playwright's optional peer deps are not installed) and
- * would make the check a package-resolution test. The bootstrap check needs the
- * opposite half of the same measurement, which is why `external` is returned
- * alongside: the set the resolver declared external IS the answer to "what does
- * this entrypoint need `node_modules` for", with no second scanner to keep in
- * sync.
+ * manifest-freeze check that is the right scope, not a limitation: its invariant
+ * is about REPO-GENERATED files, an npm package can never be one, and bundling
+ * `node_modules` for real both fails (playwright's optional peer deps are not
+ * installed) and would make the check a package-resolution test. The bootstrap
+ * check needs the opposite half of the same measurement, which is why `external`
+ * is returned alongside: the set the resolver declared external IS the answer to
+ * "what does this entrypoint need `node_modules` for", with no second scanner to
+ * keep in sync.
+ *
+ * The module list is read off the SINGLE emitted `.map`, which is a complete
+ * reading only because `splitting` is off (the default): one entrypoint then
+ * yields exactly one output chunk and one sourcemap, so that map's `sources` is
+ * the whole closure. If a future Bun ever splits by default, `readdirSync(...)
+ * .find(...)` would pick one chunk's map and BOTH checks below would silently
+ * measure a subset — the failure mode is a shrinking subject, not an error.
  */
 async function importClosure(
   root: string,
@@ -113,16 +135,24 @@ async function importClosure(
             build.onResolve({ filter: /.*/ }, (args) => {
               const spec = args.path;
               // Cut the graph here, whatever the specifier resolves to.
-              if (opts.stopAtDynamicImport === true && args.kind === "dynamic-import") {
+              if (
+                opts.stopAtDynamicImport === true &&
+                args.kind === "dynamic-import"
+              ) {
                 return { path: spec, external: true };
               }
               // Relative / absolute → repo source; let Bun resolve it.
-              if (spec.startsWith(".") || spec.startsWith("/")) return undefined;
+              if (spec.startsWith(".") || spec.startsWith("/"))
+                return undefined;
               // A declared tsconfig alias → repo source; let Bun resolve it.
-              if (prefixes.some((p) => spec.startsWith(p)) || exact.includes(spec)) {
+              if (
+                prefixes.some((p) => spec.startsWith(p)) ||
+                exact.includes(spec)
+              ) {
                 return undefined;
               }
-              const importer = args.importer === "" ? entry : relative(root, args.importer);
+              const importer =
+                args.importer === "" ? entry : relative(root, args.importer);
               const importers = external.get(spec);
               if (importers === undefined) external.set(spec, [importer]);
               else if (!importers.includes(importer)) importers.push(importer);
@@ -145,10 +175,14 @@ async function importClosure(
       );
     }
     const sources = (
-      JSON.parse(readFileSync(join(out, mapFile), "utf8")) as { sources: string[] }
+      JSON.parse(readFileSync(join(out, mapFile), "utf8")) as {
+        sources: string[];
+      }
     ).sources;
     // Sourcemap `sources` are relative to the map file; re-root them on the repo.
-    const modules = new Set(sources.map((s) => relative(root, resolve(out, s))));
+    const modules = new Set(
+      sources.map((s) => relative(root, resolve(out, s))),
+    );
     // An entrypoint always contributes at least itself, so an empty module set is
     // never a legitimately-empty measurement — it means the sourcemap was read
     // wrong (or Bun changed its shape) and BOTH checks below would then compare
@@ -174,79 +208,149 @@ async function importClosure(
  * and stripping their prefix here would make a bare `import "test"` — a real npm
  * package name — look like a builtin.
  */
-const BARE_BUILTINS = new Set(builtinModules.filter((m) => !m.startsWith("node:")));
+const BARE_BUILTINS = new Set(
+  builtinModules.filter((m) => !m.startsWith("node:")),
+);
 
 /**
  * Resolvable with `node_modules` ABSENT: Bun/Node builtins are compiled into the
  * runtime. Everything else non-relative and non-aliased is an installed package.
  */
 function resolvesWithoutNodeModules(spec: string): boolean {
-  if (spec.startsWith("node:") || spec === "bun" || spec.startsWith("bun:")) return true;
+  if (spec.startsWith("node:") || spec === "bun" || spec.startsWith("bun:"))
+    return true;
   return BARE_BUILTINS.has(spec);
 }
 
 /**
- * `build-composition` (the hermetic artifact half of `build`, and the phase
- * `release` shells into) must never reach a module `build` does not already
- * reach.
+ * NO module in the CLI process's import closure may reach a registered
+ * pre-barrel or post-web codegen manifest.
  *
- * WHY, precisely — this is a correctness invariant, not tidiness. Bun's ESM
- * cache freezes a module on its first `import()`, and a later disk write cannot
- * invalidate it. Stage 2 of the shared pipeline (`generateAppSources` →
- * `regenerateManifestCodegen`) arms `setPreBarrelImportGuard` BEFORE the first
- * plugin-barrel import; that only works in a process which has not already
- * imported a barrel. In a pre-frozen process the guard never fires,
- * `generateConfigOrigins` re-imports stale barrels, and
- * `pruneOrphanedConfigFiles` DELETES a freshly-authored config override —
- * silent data loss, with no failing step to point at.
+ * WHY, precisely — this is a correctness invariant guarding authored user data,
+ * not tidiness. Bun's ESM cache freezes a module on its first `import()`, and a
+ * later disk write cannot invalidate it. Stage 2 of the build pipeline
+ * (`generateAppSources` → `regenerateManifestCodegen`) REGENERATES every
+ * pre-barrel manifest and then imports every plugin barrel to collect the
+ * config_v2 descriptors those barrels register at module-load. A manifest that
+ * the CLI already imported at load time is rewritten on disk and NEVER re-read:
+ * the barrels then register the PREVIOUS run's descriptor set,
+ * `generateConfigOrigins` records that stale set, and `pruneOrphanedConfigFiles`
+ * DELETES a freshly-authored config override as an orphan. Silent data loss,
+ * with no failing step to point at.
  *
- * `build.ts` has that property today. Keeping `build-composition.ts`'s module
- * set a SUBSET makes the property INHERITED rather than independently
- * re-derived — one thing to keep true instead of two. (It is also why
- * `release.ts`, which statically imports plugin barrels at module load, shells
- * out to a fresh process instead of calling the pipeline in-process.)
+ * THIS IS THE ONLY MECHANICAL PROTECTION against a load-time freeze. The two
+ * things that look like they cover it do not:
+ *   - `assertPreBarrelManifestsFresh` (the runtime freeze-point guard) re-renders
+ *     each manifest and compares TO DISK. On a load-time freeze the disk copy is
+ *     fresh — stage 2 just wrote it — so the guard passes green while the frozen
+ *     copy in memory is a run behind. It detects an ORDERING mistake inside the
+ *     pipeline, not a freeze that happened before the pipeline started.
+ *   - `pre-barrel-manifests-complete` answers a different question entirely: is a
+ *     barrel-reachable `*.generated.ts` registered as a manifest at all. It says
+ *     nothing about who else imported one.
+ * Nothing else in the repo can see a manifest frozen at CLI load.
  *
- * KNOWN LIMIT, stated rather than papered over: this measures the STATICALLY
- * reachable closure (static imports plus `import("<literal>")`). An `import()`
- * whose specifier is computed at runtime is invisible to the bundler — as it is
- * to every other static tool — so a barrel reached only that way would pass.
- * That shape is rare and already discouraged; the check covers the mechanism
- * that actually caused the bug.
+ * THE SUBJECT IS THE WHOLE CLI PROCESS, measured from `bin/index.ts` with
+ * dynamic edges FOLLOWED — not `build.ts`, and not any one command. It has to
+ * be: `release.ts` statically imports plugin barrels at module load and is in
+ * every CLI process's closure, so "this command is clean" is not a property the
+ * process has. `bin/index.ts` is the one entrypoint, and its
+ * `await import("./cli")` is a literal specifier the bundler follows, so one
+ * measurement covers both the bootstrap and the whole command surface. ~200 ms.
  *
- * Deliberately a MODULE-SET comparison, not a grep for named forbidden symbols:
- * the shared module's own docblock legitimately NAMES the dev-only steps it
- * excludes (`waitForPg`, `writeWorktreeSpec`, …), so any text scan false-positives
- * on the documentation of the very invariant it is checking. The import set is
- * the mechanical property; prose is not.
+ * This REPLACES `cli:build-composition-import-subset`, which compared two
+ * command files' module sets so that `build-composition` INHERITED the property
+ * from `build` rather than re-deriving it. That framing never measured the
+ * stated property at all: measured on this tree, `bin/cli.ts` already statically
+ * reaches 14 plugin server barrels (`release.ts` pulls `icon-picker/server`,
+ * `release/bundles/server`, `asset-mirror/server`, …), so "no plugin barrel in
+ * the CLI's static closure" was false then and is false now. A frozen BARREL is
+ * harmless while everything it reaches is stable; the hazard is its GENERATED
+ * INPUTS changing mid-run, which is what this check measures directly.
+ *
+ * SCOPE, stated rather than left implicit. The registry-phase outputs —
+ * `checks/core/check.generated.ts`, `paths/core/data-dirs.generated.ts`,
+ * `barrel-import/…/auto-stubs.generated.ts` — ARE in this closure and ARE
+ * rewritten in-process by stage 1, i.e. the same mechanism. They are out of
+ * scope deliberately: their staleness costs one run of registry content (a
+ * missing check or a missing stub — loud, or benign), never the silent deletion
+ * of authored data; and they arrive through `paths/server`, `checks/core` and
+ * `barrel-import/core`, which the CLI cannot stop importing without losing the
+ * ability to run checks or resolve its own data dirs. Reopening that is a
+ * separate task, not a hole in this one.
+ * `icon-picker/…/icon-svg-map.generated.ts` is produced by a hand-run script,
+ * never by a build stage, so no build run can invalidate a frozen copy of it.
+ *
+ * KNOWN LIMIT, stated rather than papered over: this is a STATIC measurement.
+ *   - An `import()` whose specifier is COMPUTED at runtime is invisible to the
+ *     bundler, as it is to every static tool. `compositionFleetSource` /
+ *     `defaultFleetSource` reach `web-tiers.generated.ts` exactly that way —
+ *     harmlessly, because that happens in stage 3, after the config-origins pass
+ *     has already run. A hazardous computed-specifier import would pass here.
+ *   - In the other direction the check is CONSERVATIVE on purpose: following
+ *     literal dynamic edges pulls every check module into the subject via
+ *     `check.generated.ts`'s loaders, so a CHECK that imported a manifest would
+ *     be flagged even though checks run in stage 3, after the origins pass. That
+ *     is deliberate — the remedy (read the manifest's bytes instead of importing
+ *     it) is cheap and independently right, so a false positive costs a small
+ *     correct edit rather than an argument about phases.
+ *
+ * `alwaysRun: true` — cheap (~200 ms), structural, codegen-coupled, and
+ * decisively: the hermetic build path runs stage 2 (and therefore
+ * `pruneOrphanedConfigFiles`) while running ONLY the always-run set. A check
+ * that guards stage 2 but is skipped whenever stage 2 runs without a full check
+ * pass guards nothing. The check this replaces was not `alwaysRun`; that was a
+ * gap, not a decision.
  */
-const importSubsetCheck: Check = {
-  id: "cli:build-composition-import-subset",
+const manifestFreezeCheck: Check = {
+  id: "cli:codegen-manifests-not-frozen",
   description:
-    "build-composition.ts's transitive repo-module set must be a subset of build.ts's — the ESM-freeze / pre-barrel-guard property is inherited from build, never re-derived",
+    "no module in the CLI process's import closure may reach a registered pre-barrel or post-web codegen manifest — a manifest frozen at CLI load is regenerated on disk but never re-read, and pruneOrphanedConfigFiles then deletes a freshly-authored config override",
+  alwaysRun: true,
   async run() {
     const root = await getWorktreeRoot();
-    const [{ modules: buildModules }, { modules: compositionModules }] = await Promise.all([
-      importClosure(root, BUILD),
-      importClosure(root, BUILD_COMPOSITION),
-    ]);
 
-    const extra = [...compositionModules]
-      .filter((m) => m !== BUILD_COMPOSITION && !buildModules.has(m))
+    // repo-relative manifest path -> manifest id, so a hit can name itself.
+    const hazards = new Map<string, string>();
+    for (const m of [...preBarrelManifests, ...postWebManifests]) {
+      hazards.set(relative(root, m.path(root)), m.id);
+    }
+    // Both lists are non-empty in every tree that has a build pipeline at all,
+    // so an empty hazard set means the import above resolved to something that
+    // is no longer the manifest registry — and an empty comparison would then
+    // report a green derived from measuring nothing. Fail loudly instead.
+    if (hazards.size === 0) {
+      throw new Error(
+        "preBarrelManifests + postWebManifests are EMPTY, so there is nothing to compare the CLI's " +
+          "import closure against. That is a broken read of codegen/core (registry moved or renamed?), " +
+          "not a repo with no codegen manifests — refusing to report a pass derived from it.",
+      );
+    }
+
+    const { modules } = await importClosure(root, CLI_ENTRY);
+
+    const reached = [...hazards]
+      .filter(([rel]) => modules.has(rel))
+      .map(([rel, id]) => `${rel}  (${id})`)
       .sort();
-    if (extra.length === 0) return { ok: true };
+    if (reached.length === 0) return { ok: true };
 
     return {
       ok: false,
       message:
-        `${BUILD_COMPOSITION} imports ${extra.length} module(s) that ${BUILD} does not:\n    ` +
-        extra.join("\n    "),
+        `The CLI process (${CLI_ENTRY}) reaches ${reached.length} codegen manifest(s) at module ` +
+        `load, freezing them before the build regenerates them:\n    ` +
+        reached.join("\n    "),
       hint:
-        "Either route the new dependency through a module build.ts already imports (usually " +
-        "commands/internal/app-artifacts.ts, which both commands drive), or add the same import to " +
-        "build.ts — deliberately, after checking it cannot reach a plugin barrel at module-eval time. " +
-        "A module build.ts does not import can be evaluated before stage 2 arms setPreBarrelImportGuard, " +
-        "and a frozen barrel there makes pruneOrphanedConfigFiles delete a freshly-authored config " +
-        "override. See the docblocks in build-composition.ts and commands/internal/app-artifacts.ts.",
+        "Read the manifest's BYTES instead of importing it — `readFileSync` plus the renderer " +
+        "exported next to it, which is exactly what the `*-in-sync` checks do — or move the import " +
+        "behind a dynamic `import()` with a COMPUTED specifier, which does not execute (and so does " +
+        "not freeze) until after stage 2. Bun freezes a module on first import() and no later disk " +
+        "write invalidates it: stage 2 regenerates these manifests and then imports every plugin " +
+        "barrel to collect config_v2 descriptors, so a copy frozen at CLI load makes " +
+        "generateConfigOrigins see the PREVIOUS run's descriptor set and pruneOrphanedConfigFiles " +
+        "delete a freshly-authored config override — silent data loss with no failing step. See " +
+        "codegen/core/pre-barrel-manifests.ts.",
     };
   },
 };
@@ -315,11 +419,16 @@ const bootstrapPackageFreeCheck: Check = {
     "the CLI bootstrap (bin/index.ts) must statically import no npm package — it is the process that RUNS bun install, so its import closure has to resolve with node_modules absent",
   async run() {
     const root = await getWorktreeRoot();
-    const { external } = await importClosure(root, BOOTSTRAP, { stopAtDynamicImport: true });
+    const { external } = await importClosure(root, BOOTSTRAP, {
+      stopAtDynamicImport: true,
+    });
 
     const offenders = [...external]
       .filter(([spec]) => !resolvesWithoutNodeModules(spec))
-      .map(([spec, importers]) => `${spec}  (imported by ${importers.sort().join(", ")})`)
+      .map(
+        ([spec, importers]) =>
+          `${spec}  (imported by ${importers.sort().join(", ")})`,
+      )
       .sort();
     if (offenders.length === 0) return { ok: true };
 
@@ -341,4 +450,4 @@ const bootstrapPackageFreeCheck: Check = {
   },
 };
 
-export default [importSubsetCheck, bootstrapPackageFreeCheck];
+export default [manifestFreezeCheck, bootstrapPackageFreeCheck];

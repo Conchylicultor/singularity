@@ -59,7 +59,7 @@ export function orderStepsForDisplay<T extends { success: boolean }>(
 }
 
 // The console half of the two renderers above, so every command that runs the
-// heavy section (`build`, `build-composition`) writes a byte-identical
+// heavy section (`build`, `build --hermetic`) writes a byte-identical
 // transcript instead of re-deriving the ordering + stream routing. Each line
 // keeps its own stream, so a step's stderr still reaches stderr.
 export function printStepBlocks(steps: readonly BuildStepLog[]): void {

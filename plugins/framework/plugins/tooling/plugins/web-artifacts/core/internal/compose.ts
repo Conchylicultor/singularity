@@ -39,7 +39,7 @@ export interface ComposeOptions {
    * For the RELEASE path only — its dist is copied into a shippable bundle, and
    * a symlink into this host's store either ships dangling or, if the copier
    * dereferenced, races the store: a release writes its dist in phase 1 (a
-   * `build-composition` child that drops `.build.lock` on exit) and copies it in
+   * `build --hermetic` child that drops `.build.lock` on exit) and copies it in
    * phase 3, and in that unlocked window a concurrent build's `pruneStore()` can
    * unlink the very artifact dirs the links point at. Materializing at
    * composition time closes the window instead of narrowing it: the produced

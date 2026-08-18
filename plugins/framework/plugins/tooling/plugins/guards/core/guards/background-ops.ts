@@ -7,14 +7,7 @@ import type { BashInput } from "../types";
  * `~/.singularity/op-log.jsonl` over 14 days: build p50 9.8 min / p90 36.8 min,
  * push p50 9.1 min / p90 35.7 min, check p50 3.8 min / p90 18 min.
  */
-const LONG_OPS = new Set([
-  "build",
-  "push",
-  "check",
-  "test",
-  "release",
-  "build-composition",
-]);
+const LONG_OPS = new Set(["build", "push", "check", "test", "release"]);
 
 /** Read-only flags that answer instantly and never take a slot. */
 const INSTANT_FLAGS = new Set(["--list", "--help", "-h", "--version", "-V"]);

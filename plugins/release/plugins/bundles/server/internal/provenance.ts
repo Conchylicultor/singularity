@@ -1,5 +1,8 @@
 import { GIT } from "@plugins/infra/plugins/paths/server";
-import { spawnCaptured, spawnExpectOk } from "@plugins/infra/plugins/spawn/core";
+import {
+  spawnCaptured,
+  spawnExpectOk,
+} from "@plugins/infra/plugins/spawn/core";
 import { DIRTY_WORKTREE_REASON } from "../../core";
 import type { Staleness } from "../../core";
 
@@ -16,16 +19,23 @@ export interface GitProvenance {
 }
 
 async function git(args: string[], cwd: string): Promise<string> {
-  const { stdout } = await spawnExpectOk([GIT, "--no-optional-locks", "-C", cwd, ...args]);
+  const { stdout } = await spawnExpectOk([
+    GIT,
+    "--no-optional-locks",
+    "-C",
+    cwd,
+    ...args,
+  ]);
   return stdout;
 }
 
 /**
  * Read the source state a release is about to be cut from.
  *
- * Must be called BEFORE the artifact phase: `build-composition` writes generated
- * files into the checkout, so a dirty read taken after it would report every
- * release as dirty and say nothing about what the human left in the tree.
+ * Must be called BEFORE the artifact phase: the `build --hermetic` child it
+ * shells into writes generated files into the checkout, so a dirty read taken
+ * after it would report every release as dirty and say nothing about what the
+ * human left in the tree.
  *
  * Throws (via `spawnExpectOk`) when git fails: a release runs from a full dev
  * checkout by construction, so "this is not a git repository" is a broken
@@ -36,7 +46,10 @@ export async function readGitProvenance(cwd: string): Promise<GitProvenance> {
   // `--untracked-files=normal` is git's default, spelled out so a repo- or
   // user-level `status.showUntrackedFiles=no` cannot silently make a dirty tree
   // read as clean.
-  const status = await git(["status", "--porcelain", "--untracked-files=normal"], cwd);
+  const status = await git(
+    ["status", "--porcelain", "--untracked-files=normal"],
+    cwd,
+  );
   return { commitSha, commitDirty: status.trim().length > 0 };
 }
 
@@ -64,7 +77,8 @@ export async function compareToHead(
   if (sha == null || sha.length === 0) {
     return {
       kind: "unknown",
-      reason: "this release recorded no commit — it was cut before provenance existed",
+      reason:
+        "this release recorded no commit — it was cut before provenance existed",
     };
   }
 
@@ -99,6 +113,8 @@ export async function compareToHead(
   ]);
   if (isAncestor.exitCode !== 0) return { kind: "diverged", sha };
 
-  const count = (await git(["rev-list", "--count", `${sha}..HEAD`], cwd)).trim();
+  const count = (
+    await git(["rev-list", "--count", `${sha}..HEAD`], cwd)
+  ).trim();
   return { kind: "behind", commits: Number(count) };
 }

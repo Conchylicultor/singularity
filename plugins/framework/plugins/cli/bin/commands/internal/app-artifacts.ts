@@ -59,7 +59,7 @@ import { stampExperimentalMarker } from "./experimental-marker";
  * into the live dev cluster*. Only the first is portable; the second needs a
  * provisioned dev box (embedded Postgres, a DB fork, the gateway, the run
  * ledger). Extracting job 1 here is what lets a second, process-isolated caller
- * (`build-composition`, which `release` shells into) cut an artifact on a bare
+ * (`build --hermetic`, which `release` shells into) cut an artifact on a bare
  * host from a fresh `git clone`, while `build` keeps its exact behaviour: it
  * calls these stages and gains ZERO new conditionals.
  *
@@ -122,11 +122,18 @@ import { stampExperimentalMarker } from "./experimental-marker";
  * barrel-reachable manifest and arms `setPreBarrelImportGuard` BEFORE the first
  * barrel import — which only works in a process that has not already imported a
  * plugin barrel. Otherwise `generateConfigOrigins` re-imports stale barrels and
- * `pruneOrphanedConfigFiles` deletes a freshly-authored override. Therefore any
- * NEW caller of `generateAppSources` must keep its transitive import set a
- * SUBSET of `build.ts`'s — the property is inherited, never re-derived. (This is
- * also why `release.ts`, which statically imports plugin barrels, must shell out
- * to a separate process rather than call this module in-process.)
+ * `pruneOrphanedConfigFiles` deletes a freshly-authored override. The property
+ * that has to hold is about the PROCESS, not about any one command file: no
+ * module in the CLI process's import closure may reach a registered pre-barrel
+ * or post-web codegen manifest, because such a manifest is frozen at CLI load,
+ * regenerated on disk here, and never re-read — so the codegen that follows
+ * reads the PREVIOUS run's descriptor set and prunes a config override that
+ * exists. `assertPreBarrelManifestsFresh` cannot see this (it compares against
+ * disk, which is fresh); the `cli:codegen-manifests-not-frozen` check is the
+ * only mechanical guard, and it is `alwaysRun` because the hermetic path reaches
+ * stage 2 while running only the always-run set. (This is also why `release.ts`,
+ * which statically imports plugin barrels, must shell out to a separate process
+ * rather than call this module in-process.)
  *
  * LOCK ORDERING (why there is no deadlock): the two locks a caller of this
  * module can hold are acquired in ONE direction only —
@@ -292,23 +299,48 @@ export async function acquireArtifactLock(webDir: string): Promise<void> {
 }
 
 /**
- * Stage 1 — dependencies + registry-level repo-tree codegen + (when building a
- * composition) that composition's filtered registries.
+ * Every id must name a manifest entry. Exported so a caller can reject a typo
+ * in MILLISECONDS — before `ensureDeps`, i.e. before the run has spent anything
+ * — instead of at the composition-registry step twenty minutes in. Throws ONCE
+ * naming every unknown id plus the known set: a caller fixing two typos should
+ * not have to run twice to find the second.
+ *
+ * The manifest list read here is the code seed
+ * (`compositionsConfig.fields.manifests.defaultValue`), NOT the resolved layered
+ * config — a composition a user added in their own `compositions.jsonc` is
+ * therefore unknown to this path.
+ */
+export function assertKnownCompositions(ids: readonly string[]): void {
+  const items = compositionsConfig.fields.manifests.defaultValue;
+  const known = new Set(items.map((m) => m.id));
+  const unknown = ids.filter((id) => !known.has(id));
+  if (unknown.length > 0) {
+    throw new Error(
+      `Unknown composition${unknown.length > 1 ? "s" : ""} ${unknown
+        .map((id) => `"${id}"`)
+        .join(", ")}. Known: ${items.map((m) => m.id).join(", ")}`,
+    );
+  }
+}
+
+/**
+ * Stage 1 — dependencies + registry-level repo-tree codegen + (when building
+ * compositions) each composition's filtered registries.
  */
 export async function prepareCompositionSources(opts: {
   root: string;
   /**
-   * The composition being built, or `null` for a plain build. Kept explicit
-   * (not optional) so a caller states which it is rather than defaulting into
-   * one: the two callers are `build` (always null) and `build-composition`
-   * (always a name), and stage 1 does the same deps + registry codegen either
-   * way. `null` no longer TRIGGERS anything — it just skips the filtered
-   * registries.
+   * The compositions being built; `[]` is a plain build. Kept explicit (not
+   * optional) so a caller states which it is rather than defaulting into one:
+   * the two callers are `build` (always `[]`) and `build --hermetic` (always at
+   * least one name), and stage 1 does the same deps + registry codegen either
+   * way. `[]` no longer TRIGGERS anything — every filtered registry is
+   * per-NAME, so an empty list simply emits none.
    */
-  composition: string | null;
+  compositions: readonly string[];
   hooks: ArtifactHooks;
 }): Promise<void> {
-  const { root, composition, hooks } = opts;
+  const { root, compositions, hooks } = opts;
   const codegenStep = codegenStepFor(hooks);
 
   // 1. Install dependencies. Required before the gateway can find the
@@ -320,7 +352,7 @@ export async function prepareCompositionSources(opts: {
   // `./singularity` bootstrap already ran moments ago. So for a dev build this
   // is normally a ~140 ms no-op reporting `installed: false`, and the old
   // double 10–25 s install per build (wrapper, then here) is gone. The call
-  // stays because `build-composition` on a bare host from a fresh `git clone`
+  // stays because `build --hermetic` on a bare host from a fresh `git clone`
   // is the caller that genuinely needs the install, and stage 1 is where the
   // ordering constraint above puts it.
   //
@@ -356,37 +388,51 @@ export async function prepareCompositionSources(opts: {
   hooks.log("Generating plugin registry...");
   await regenerateRegistryCodegen({ root, onStep: codegenStep });
 
-  // 2a'. Composition build-gating. With a composition, emit gitignored
+  // 2a'. Composition build-gating. For each named composition, emit gitignored
   // filtered registries (the bundle's hard closure) beside the committed
   // full ones, keyed by the composition NAME; the web/server import seams
-  // select the filtered file by that name. Without one there is nothing to do:
+  // select the filtered file by that name. With none there is nothing to do:
   // every filtered registry is per-name, so it belongs to another namespace and
   // is never selected under this checkout's own worktree name. The committed
   // `<dir>.generated.ts` files are never touched either way, so the build stays
   // byte-identical.
+  //
+  // The span opens UNCONDITIONALLY, with the `if` inside it: `build`'s profile
+  // is compared span-for-span across releases, so a plain build must keep
+  // emitting `compositionRegistry` (empty) exactly as it did.
   endSpan = hooks.span(
     "compositionRegistry",
     "build:codegen",
     "composition registry",
   );
-  if (composition) {
+  if (compositions.length > 0) {
+    // Re-checked here even though every caller is expected to have asserted
+    // already: this is the step that would otherwise fail with a resolver-level
+    // error, and one loud message naming the known set beats N of them.
+    assertKnownCompositions(compositions);
     const items = compositionsConfig.fields.manifests.defaultValue;
-    const item = items.find((m) => m.id === composition);
-    if (!item)
-      throw new Error(
-        `Unknown composition "${composition}". Known: ${items.map((m) => m.id).join(", ")}`,
-      );
     const allManifests = items.map(manifestItemToManifest);
-    const flat = flattenManifest(manifestItemToManifest(item), allManifests);
+    // ONE tree walk for N compositions — the whole reason the list is variadic.
+    // The walk is the expensive part (every plugin dir, faceted); resolving a
+    // closure against an already-built tree is cheap.
     const tree = await buildPluginTree(join(root, "plugins"), {
       skipBarrelImport: true,
       facets: true,
     });
-    const bundle = resolveComposition(tree, flat).bundle;
-    await generateCompositionRegistry({ root, bundle, name: composition });
-    hooks.log(
-      `Composition "${composition}": ${bundle.size} plugins in closure.`,
-    );
+    for (const composition of compositions) {
+      // Non-null by `assertKnownCompositions` above.
+      const item = items.find((m) => m.id === composition)!;
+      const flat = flattenManifest(manifestItemToManifest(item), allManifests);
+      const bundle = resolveComposition(tree, flat).bundle;
+      // All N registries land before stage 3 imports any of them —
+      // `compositionFleetSource` does a per-file `import(registryFile)`, so a
+      // registry written lazily per dist would be read for a composition whose
+      // turn had not come.
+      await generateCompositionRegistry({ root, bundle, name: composition });
+      hooks.log(
+        `Composition "${composition}": ${bundle.size} plugins in closure.`,
+      );
+    }
   }
   endSpan();
 }
@@ -612,20 +658,30 @@ export type ArtifactBuildResult =
  * pointed at the same tree by two independent path expressions. That is exactly
  * how a `release` came to publish over the checkout's live served dist.
  */
+/**
+ * A release's scratch dist — copied into a shippable bundle and served by
+ * nobody. Keyed by *(the worktree that BUILT it, composition)*: a release has
+ * no namespace of its own, and keying by the building checkout is what makes
+ * the existing per-checkout `.build.lock` sufficient to serialize it.
+ *
+ * Named rather than left inline in the union below because the hermetic posture
+ * holds a LIST of these and reads `.composition` off each one: against the bare
+ * union that read does not narrow, and the alternative — re-narrowing per access
+ * — would be a type dance around a set whose arm is known at construction.
+ */
+export interface ReleaseDistTarget {
+  kind: "release";
+  worktree: string;
+  composition: string;
+}
+
 export type WebDistTarget =
   /**
    * The dist the gateway SERVES at `<name>.localhost:9000`. `name` is a
    * *namespace*: a worktree slug or an auto-served composition id. Published
    * atomically because a live reader exists.
    */
-  | { kind: "served"; name: string }
-  /**
-   * A release's scratch dist — copied into a shippable bundle and served by
-   * nobody. Keyed by *(the worktree that BUILT it, composition)*: a release has
-   * no namespace of its own, and keying by the building checkout is what makes
-   * the existing per-checkout `.build.lock` sufficient to serialize it.
-   */
-  | { kind: "release"; worktree: string; composition: string };
+  { kind: "served"; name: string } | ReleaseDistTarget;
 
 /**
  * The ONE mapping from a dist identity to its live path. Exported because a
@@ -664,12 +720,12 @@ export interface BuildWebDistOptions {
   /**
    * Copy each artifact out of the shared content-addressed store instead of
    * symlinking it, so the produced dist is SELF-CONTAINED. Only the release
-   * path (`build-composition`) wants this: its dist is `cpSync`'d into a
+   * path (`build --hermetic`) wants this: its dist is `cpSync`'d into a
    * shippable bundle, and symlinks into `~/.singularity/web-artifacts/` would
    * ship as dangling links on any other machine.
    *
    * Materializing HERE rather than dereferencing at the copy site is deliberate:
-   * the release dist is written in release phase 1 (a `build-composition` child
+   * the release dist is written in release phase 1 (a `build --hermetic` child
    * process, which releases `.build.lock` when it exits) and read in phase 3, so
    * in that unlocked window a concurrent build's store pruning can dangle the
    * links — a `cpSync({ dereference: true })` in phase 3 would then fail or ship

@@ -14,9 +14,12 @@ import { join, resolve } from "path";
 // generation from a directory where the globs match nothing, and drizzle-kit
 // exits 0 having discovered no tables — a silent DROP, not an error. Safe to
 // import at module eval: migrations/core is a side-effect-free leaf (unlike
-// @plugins/database/server, which throws without SINGULARITY_WORKTREE), and this
-// module is reached by BOTH build.ts and build-composition.ts, so the two import
-// closures grow together and cli:build-composition-import-subset stays green.
+// @plugins/database/server, which throws without SINGULARITY_WORKTREE), and it
+// reaches no registered pre-barrel/post-web codegen manifest, which is the
+// property cli:codegen-manifests-not-frozen holds over the whole CLI process's
+// import closure: a manifest frozen at CLI load is regenerated on disk by stage
+// 2 but never re-read, and pruneOrphanedConfigFiles then deletes a
+// freshly-authored config override.
 // `drizzleGenerateArgv` comes from the same barrel and for the same reason: the
 // migrations plugin owns HOW its tool is invoked (argv) as well as from WHERE
 // (cwd), so neither can drift per call site.
@@ -55,7 +58,7 @@ export type {
  * Parse a `--migration-answers <json>` argv value into the answer list
  * `generateMigration` consumes. Lives HERE, beside `MigrationAnswer` itself,
  * rather than in one command: every command that can drive a migration
- * (`build`, `build-composition`) takes the same flag, and a second hand-rolled
+ * (`build`, `build --hermetic`) takes the same flag, and a second hand-rolled
  * copy of this validator is exactly how the three divergent `readDatabaseConfig`
  * readers this plan started by unifying came about.
  *
@@ -243,7 +246,7 @@ export interface GenerateMigrationResult {
  * bytes; a MISSING one is how a branch-local data migration ends up orphaned
  * after the `regen-migrations` merge driver resolves the journal in main's
  * favour during a rebase. This function is the single funnel every caller
- * (`build`, `build-composition`, `regen-migrations`) reaches that repair
+ * (`build`, `build --hermetic`, `regen-migrations`) reaches that repair
  * through.
  *
  * Regeneration is placed at explicit call sites rather than a `try/finally`:

@@ -65,8 +65,8 @@ target, materializes real bytes instead of symlinks, writes no `spec.json`,
 skips every cluster interaction (Postgres, DB fork, gateway, run ledger), and
 runs the fast validation set rather than the full checks pass.
 
-Removed: `build-composition`, `build --serve-composition`, and any standalone
-`--materialize`.
+Removed: the separate artifact-only verb (gone in Phase 2), `build
+--serve-composition`, and any standalone `--materialize`.
 
 **4. Vendor sets are per-composition, shared by content address.**
 
@@ -97,7 +97,7 @@ Already true:
 - Per-plugin, content-addressed, cached artifact builds, shared across worktrees
   (`web-artifacts/core/internal/store.ts`, `pipeline.ts`). Building N
   compositions builds the union once.
-- Composition-only builds that need no main build — `build-composition` plans
+- Composition-only builds that need no main build — the hermetic path plans
   from `compositionFleetSource()` and resolves its own vendor set, by design, so
   it runs on a bare host from a fresh clone. **The hermetic path already
   satisfies target-model point 4**; only the serve path reuses main's set.
@@ -138,34 +138,76 @@ registry-gen path in `tooling/plugins/codegen/core/`.
 **Risk to watch.** Adding an entry bumps the rendered config origin hash, which
 can stale an existing user-layer `compositions.jsonc`. Land alone.
 
-### Phase 2 — One build verb: the artifact half
+### Phase 2 — One build verb: the artifact half — **LANDED**
 
-Add `--composition <name...>` (variadic) and `--hermetic` to `build`; delete
-`build-composition`. Nothing here needs a namespace — hermetic writes no spec —
-and nothing here needs the vendor change, because the hermetic path already
-resolves its own set.
+`build` took `--composition <name...>` (variadic) and `--hermetic`, and the
+separate artifact-only command was deleted. Nothing here needed a namespace —
+hermetic writes no spec — and nothing needed the vendor change, because the
+hermetic path already resolves its own set. Plan:
+[`2026-08-18-cli-one-build-verb-artifact-half.md`](./2026-08-18-cli-one-build-verb-artifact-half.md).
 
-The behaviors that distinguish the two commands become `--hermetic`-conditional:
+The behaviors that distinguished the two commands are `--hermetic`-conditional:
 dist target, materialize, `experimental` marker, checks depth, branch guard,
 gateway restart/health probe, `build_runs` row + profile + progress log + verdict
-guard, Postgres readiness and DB fork.
+guard, Postgres readiness and DB fork. The branch is the literal first statement
+of `build`'s action, into `internal/hermetic-build.ts`, so "no deploy machinery
+is armed" is structural rather than ~20 scattered `if (!hermetic)` guards.
 
-Two contracts to preserve:
+Two contracts preserved:
 
 - **Migration exit codes.** `release` depends on stage 2 exiting `2` on a
-  drizzle rename/create prompt and `1` on a missing `--migration-name`.
+  drizzle rename/create prompt and `1` on a missing `--migration-name`. Nothing
+  on the hermetic path installs an exit hook, signal handler or verdict guard,
+  so nothing can rewrite or bury them.
 - **`release` keeps shelling out to a subprocess.** It statically imports plugin
-  barrels at module load, so it needs a fresh, unfrozen process.
+  barrels at module load, so it needs a fresh, unfrozen process. Only the argv
+  changed (`--hermetic` before `--composition`, because commander's variadic is
+  greedy to the next flag).
 
-**Replace, do not delete, the guard.** `cli:build-composition-import-subset`
-becomes vacuous once there is one file, but it is the only mechanical check
-protecting the ESM-freeze property — that nothing in the CLI's static closure
-imports a plugin barrel at module-eval time. A frozen barrel there makes
-`pruneOrphanedConfigFiles` delete a freshly-authored config override, silently.
-Re-express the check against that property directly.
+Decisions settled while landing it:
 
-**Files.** `cli/bin/commands/build.ts`, `build-composition.ts` (deleted),
-`cli/bin/cli.ts`, `cli/check/index.ts`.
+- **`--composition` without `--hermetic` refuses, exit 1, naming Phase 4.** The
+  two flags stay orthogonal *in meaning*, so Phase 4 deletes a guard rather than
+  re-plumbing a flag whose meaning silently flipped.
+- **`--hermetic --composition singularity` refuses, exit 1.** It would emit
+  `server.composition.singularity.generated.ts` into the checkout, and
+  `select-registry.ts` picks that file for main's backend on its next spawn
+  purely on file *presence*. Byte-identical today only by the equivalence
+  `plugins-registry-in-sync` proves — "safe by coincidence, created by a path
+  nobody expects" is how the pre-S1 checkout-global registry bug worked.
+  Consequence: **releasing the main app is currently impossible**, a real
+  capability gap Phase 3/4 must reopen (stop emitting into the checkout, or make
+  `selectRegistry` require more than presence).
+- **`--composition X Y` fails fast** — the first failure exits 1, naming what was
+  published, what failed, and that later compositions were not attempted.
+  Compositions in one invocation share a plugin union, so a second failure is
+  almost always the same failure re-derived, and nothing published is lost.
+- **The guard was replaced, not deleted** — but not with the property it claimed.
+  `cli:build-composition-import-subset` compared two command files' module sets;
+  measured on the tree, `bin/cli.ts` already statically reaches 14 plugin server
+  barrels through `release.ts`, so "no plugin barrel in the CLI's static closure"
+  was false then and always had been. A frozen *barrel* is harmless while
+  everything it reaches is stable; the hazard is its **generated inputs** changing
+  mid-run. `cli:codegen-manifests-not-frozen` (`alwaysRun`) therefore asserts that
+  no module in the CLI **process**'s import closure reaches a registered
+  pre-barrel or post-web codegen manifest — a manifest frozen at CLI load is
+  rewritten on disk by stage 2 and never re-read, so `generateConfigOrigins` sees
+  the previous run's descriptor set and `pruneOrphanedConfigFiles` deletes a
+  freshly-authored config override. Registry-phase outputs
+  (`check.generated.ts`, `data-dirs.generated.ts`, `auto-stubs.generated.ts`) are
+  in the closure and are rewritten by stage 1 — out of scope on purpose:
+  loud-or-benign, not silent data loss. Worth its own task.
+- **The hermetic child now installs the orphan guard**, because `build` is in
+  `OP_COMMANDS` and membership is keyed on `process.argv[2]` before flags are
+  parsed. Under `release` its ppid is release's, so it fires only if release
+  itself dies — exactly when dropping `.build.lock` is right. The original
+  justification for staying out was the `bun --inspect` re-exec, removed
+  2026-07-28.
+
+**Files.** `cli/bin/commands/build.ts`, `internal/hermetic-build.ts` (new), the
+deleted artifact-only command, `cli/bin/cli.ts`, `cli/check/index.ts`,
+`internal/app-artifacts.ts` (`prepareCompositionSources` went variadic;
+`compositions: []` is a plain build).
 
 ### Phase 3 — Namespace identity
 
@@ -282,8 +324,9 @@ Per phase, but the end-to-end target:
 5. A composition's `build_runs` row has no parent and its artifacts are named
    after its own id.
 6. `./singularity check` green throughout, in particular `migrations-in-sync`,
-   `plugins-registry-in-sync`, `web-artifacts:map-in-sync`, and whatever replaces
-   `cli:build-composition-import-subset`.
+   `plugins-registry-in-sync`, `web-artifacts:map-in-sync`, and
+   `cli:codegen-manifests-not-frozen` (Phase 2's replacement for the old
+   import-subset guard).
 
 ## Open decisions
 

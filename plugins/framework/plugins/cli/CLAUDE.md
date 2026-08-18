@@ -11,9 +11,8 @@ when it is an ordered *stage sequence* rather than a helper, in
 
 | command | what it does |
 |---|---|
-| `build` | **Deploy this checkout into the live dev cluster.** The inner loop: artifacts + Postgres readiness, the worktree DB fork, the `build_runs` ledger, gateway spec/restart/health probe, compose-serve. Needs a provisioned dev box. |
-| `build-composition` | **Produce one composition's artifact set, hermetically.** Filtered registries + generated migration SQL + the web dist, as a function of (source tree, composition) only. No cluster, no gateway, no ledger — runs on a bare host from a fresh `git clone`. |
-| `release` | Wraps `build-composition` and packs its output into a portable self-contained app (`--target web` / `tauri`). |
+| `build` | **Deploy this checkout into the live dev cluster**, *or* — `--hermetic --composition <name…>` — **produce one or more compositions' artifact sets on a bare host from a fresh `git clone`.** The deploy posture is the inner loop: artifacts + Postgres readiness, the worktree DB fork, the `build_runs` ledger, gateway spec/restart/health probe, compose-serve; it needs a provisioned dev box. The hermetic posture is filtered registries + generated migration SQL + the web dist, as a function of (source tree, compositions) only — no cluster, no gateway, no ledger. |
+| `release` | Wraps `build --hermetic` and packs its output into a portable self-contained app (`--target web` / `tauri`). |
 | `check` | Run the repo validation checks (also the first step of `push`, and mid-`build`). |
 | `test` | Run tests under the given paths (default: whole `plugins` tree) through **both** runners sequentially (`bun test`, then `vitest run`), then summarize both buckets — an empty one is stated, not implied, because either runner alone is green-but-partial. Paths only; no flag forwarding. |
 | `push` | Checks → merge the worktree branch back into main → push. |
@@ -27,8 +26,17 @@ when it is an ordered *stage sequence* rather than a helper, in
 `OP_COMMANDS`): long-running and host-lock-holding, so they install the orphan
 guard, which exits the op once its invoking shell dies — an orphaned op must
 never sit on a host lock (the push mutex, worst case). That is now the *only*
-effect of membership. Nothing else is an op command; `build-composition` is
-deliberately absent, see its docblock.
+effect of membership. Nothing else is an op command.
+
+Membership is keyed on `process.argv[2]` before any flag is parsed, so a
+**hermetic** build (`build --hermetic`) is inside an op command too and installs
+the orphan guard. That is the right behaviour and the only op machinery it gets:
+an orphaned hermetic build exits instead of sitting on `.build.lock`. Under
+`release` the guard is inert — the child's ppid is release's — so it fires only
+if release itself dies, which is exactly when dropping the lock is correct.
+Nothing else the deploy posture arms (progress file, op profiler, run recorder,
+worktree-op markers, exit hooks, verdict guard, deploy receipt) exists on that
+path; see `bin/commands/internal/hermetic-build.ts`.
 
 Op commands used to additionally re-exec themselves under `bun --inspect` so the
 op-wedge watchdog could attach a profiler. Both the watchdog and the re-exec were
@@ -161,14 +169,19 @@ must be armed strictly after that loop or it is silently overwritten.
 
 ## The artifact / deploy seam
 
-`build` used to be the only way to produce a composition, via a `--composition`
-flag — so cutting a release required a machine that was already a Singularity dev
-box, and the artifact was a function of the developer's environment rather than
-of the source. That flag is **gone**; `build-composition` replaced it.
+`--composition` once meant "deploy this checkout, but filtered" — so cutting a
+release required a machine that was already a Singularity dev box, and the
+artifact was a function of the developer's environment rather than of the source.
+The flag is back, and the split it was missing is now a **posture** of the one
+verb rather than a second command: `build --hermetic --composition <name…>` is
+the artifact half (bare host, fresh clone, no cluster contact, N compositions per
+invocation), plain `build` is the deploy half. `--composition` without
+`--hermetic` is refused — building a composition *into the dev cluster* is a
+later phase and needs a namespace rule the hermetic path does not.
 
-The ordered pipeline both commands drive is
+The ordered pipeline both postures drive is
 [`bin/commands/internal/app-artifacts.ts`](bin/commands/internal/app-artifacts.ts)
-— read its docblock before touching either command. It owns the three stages
+— read its docblock before touching either posture. It owns the three stages
 (`prepareCompositionSources` → `generateAppSources` → `buildAndPublishWebDist`),
 `fastValidationJobs` and `acquireArtifactLock`, plus the
 explicit list of what stays *out* (cluster readiness, the run ledger, gateway
@@ -181,21 +194,28 @@ Two consequences worth knowing before editing:
 - **Every filtered registry is per-name** (`<dir>.composition.<name>.generated.ts`)
   and `plugins-active.ts` selects one only under a matching
   `SINGULARITY_WORKTREE`, so another namespace's file cannot reconfigure this
-  worktree's backend — `build` passes `composition: null` simply to emit none.
-  `--serve-composition` is unrelated: it composes *other* namespaces out of
+  worktree's backend — a plain `build` passes `compositions: []` simply to emit
+  none. `--serve-composition` is unrelated: it composes *other* namespaces out of
   main's artifact fleet after main deploys.
-- **`build-composition`'s transitive import set must stay a SUBSET of
-  `build.ts`'s.** Bun freezes a module on first `import()`;
-  `regenerateManifestCodegen` must arm `setPreBarrelImportGuard` before any
-  plugin barrel is imported, or `pruneOrphanedConfigFiles` deletes a
-  freshly-authored config override — silent data loss. Keeping the set a subset
-  inherits that property from the caller that already has it. It is also why
-  `release.ts` (which statically imports plugin barrels) **shells out** to
-  `build-composition` instead of calling the module in-process: process
-  isolation is the correctness boundary, not an implementation detail.
+- **Nothing in the CLI *process*'s import closure may reach a registered
+  pre-barrel or post-web codegen manifest.** Bun freezes a module on first
+  `import()`, and stage 2 regenerates every such manifest and then re-reads it: a
+  manifest frozen at CLI load is rewritten on disk but never re-read, so
+  `generateConfigOrigins` sees the previous run's descriptor set and
+  `pruneOrphanedConfigFiles` deletes a freshly-authored config override — silent
+  data loss, no failing step. Enforced by `cli:codegen-manifests-not-frozen`,
+  which walks `bin/index.ts`'s closure against `preBarrelManifests` /
+  `postWebManifests`. The old subset-of-`build.ts` framing never measured this:
+  `bin/cli.ts` already statically reaches 14 plugin server barrels through
+  `release.ts`, and a frozen *barrel* is harmless — its frozen generated *inputs*
+  are not. It is still why `release.ts` **shells out** to a fresh `build
+  --hermetic` process instead of calling the module in-process: process isolation
+  is the correctness boundary, not an implementation detail.
 
 Design + rationale:
-[`research/2026-07-28-cli-hermetic-artifact-phase.md`](../../../../research/2026-07-28-cli-hermetic-artifact-phase.md).
+[`research/2026-07-28-cli-hermetic-artifact-phase.md`](../../../../research/2026-07-28-cli-hermetic-artifact-phase.md),
+then [`research/2026-08-18-cli-one-build-verb-artifact-half.md`](../../../../research/2026-08-18-cli-one-build-verb-artifact-half.md)
+for the fold back into one verb.
 
 ### A build names WHICH dist it produces; it never spells a path
 
@@ -210,7 +230,7 @@ through it too). Two consequences that look wrong and are not:
 - **The building worktree's name is `checkoutWorktreeName(root)`, never
   `currentWorktreeName()`** — the CLI never sets `SINGULARITY_WORKTREE` for
   itself, so the env-derived name answers `singularity` from every worktree.
-  `release` spawns `build-composition` with `cwd` at that root, so both resolve
+  `release` spawns `build --hermetic` with `cwd` at that root, so both resolve
   the same dist by construction.
 
 **No dist lives in a checkout.** Both arms resolve under
@@ -222,7 +242,7 @@ function, not a const. The pre-S4 in-checkout tree is reclaimed by
 new path (`GET /gateway/worktrees`), never on `spec.json` — the gateway serves
 from its own in-memory spec, so disk is no evidence about what is being served,
 and that gate was observed deleting a live tree. Every other answer (unreachable,
-unregistered, malformed) fails closed, which also keeps `build-composition`
+unregistered, malformed) fails closed, which also keeps a `--hermetic` build
 hermetic: a bare release host has no gateway and no served legacy dist either.
 [`research/2026-08-06-global-one-dist-per-namespace.md`](../../../../research/2026-08-06-global-one-dist-per-namespace.md).
 
