@@ -11,16 +11,9 @@ when it is an ordered *stage sequence* rather than a helper, in
 
 | command | what it does |
 |---|---|
-<<<<<<< .merge_file_RVXROF
 | `build` | **Deploy this checkout into the live dev cluster**, *or* — `--hermetic --composition <name…>` — **produce one or more compositions' artifact sets on a bare host from a fresh `git clone`.** The deploy posture is the inner loop: artifacts + Postgres readiness, the worktree DB fork, the `build_runs` ledger, gateway spec/restart/health probe, compose-serve; it needs a provisioned dev box. The hermetic posture is filtered registries + generated migration SQL + the web dist, as a function of (source tree, compositions) only — no cluster, no gateway, no ledger. |
 | `release` | Wraps `build --hermetic` and packs its output into a portable self-contained app (`--target web` / `tauri`). |
-| `check` | Run the repo validation checks (also the first step of `push`, and mid-`build`). |
-=======
-| `build` | **Deploy this checkout into the live dev cluster.** The inner loop: artifacts + Postgres readiness, the worktree DB fork, the `build_runs` ledger, gateway spec/restart/health probe, compose-serve. Needs a provisioned dev box. |
-| `build-composition` | **Produce one composition's artifact set, hermetically.** Filtered registries + generated migration SQL + the web dist, as a function of (source tree, composition) only. No cluster, no gateway, no ledger — runs on a bare host from a fresh `git clone`. |
-| `release` | Wraps `build-composition` and packs its output into a portable self-contained app (`--target web` / `tauri`). |
 | `check` | Run the repo validation checks. **The only in-process caller of `runChecks()`** — `build` and `push` both SPAWN this command via [`bin/check-subprocess.ts`](bin/check-subprocess.ts) (read its docblock), so their two `checks ✓` are one claim and the global cache stays honest. |
->>>>>>> .merge_file_x97AkK
 | `test` | Run tests under the given paths (default: whole `plugins` tree) through **both** runners sequentially (`bun test`, then `vitest run`), then summarize both buckets — an empty one is stated, not implied, because either runner alone is green-but-partial. Paths only; no flag forwarding. |
 | `push` | Checks → merge the worktree branch back into main → push. |
 | `format` | Prettier over the `.ts`/`.tsx` changed on this branch — the same pass `build` runs, in seconds. It exists because `push` never builds, so a `format-clean` failure would otherwise cost a full build. |

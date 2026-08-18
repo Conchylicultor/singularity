@@ -285,6 +285,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
             - **`bun-safety`** — bun-safety lint rule: no-declare-identifier
             - **`button-safety`** — button-safety lint rule: no-async-raw-button
             - **`caret-trigger-safety`** — caret-trigger-safety lint rule: no-adhoc-caret-trigger
+            - **`check-runner-safety`** — check-runner-safety lint rule: no-adhoc-check-runner
             - **`context-safety`** — context-safety lint rule: no-unstable-context-value
             - **`detached-work-safety`** — detached-work-safety lint rule: no-untracked-detached-work
             - **`dom-access-safety`** — dom-access-safety lint rule: no-module-scope-dom
