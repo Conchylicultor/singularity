@@ -1,5 +1,6 @@
 import { readdirSync, statSync, unlinkSync } from "node:fs";
 import { join } from "node:path";
+import type { Namespace } from "@plugins/infra/plugins/namespace/core";
 import { worktreeDataDir } from "./paths";
 
 /*
@@ -237,7 +238,7 @@ export function pruneCheckArtifactsInDir(dir: string, keep: number): void {
 
 /** Cap the per-build artifacts in one worktree's data dir to the newest `keep` build ids. */
 export function pruneWorktreeBuildArtifacts(
-  name: string,
+  name: Namespace,
   keep: number = BUILD_ARTIFACTS_RETENTION,
 ): void {
   pruneBuildArtifactsInDir(worktreeDataDir(name), keep);
@@ -245,7 +246,7 @@ export function pruneWorktreeBuildArtifacts(
 
 /** Cap the per-release fallback logs in one worktree's data dir to the newest `keep` release ids. */
 export function pruneWorktreeReleaseArtifacts(
-  name: string,
+  name: Namespace,
   keep: number = RELEASE_ARTIFACTS_RETENTION,
 ): void {
   pruneReleaseArtifactsInDir(worktreeDataDir(name), keep);
@@ -253,7 +254,7 @@ export function pruneWorktreeReleaseArtifacts(
 
 /** Cap the per-run check transcripts in one worktree's data dir to the newest `keep` run ids. */
 export function pruneWorktreeCheckArtifacts(
-  name: string,
+  name: Namespace,
   keep: number = CHECK_ARTIFACTS_RETENTION,
 ): void {
   pruneCheckArtifactsInDir(worktreeDataDir(name), keep);

@@ -1,6 +1,10 @@
 import { readFileSync } from "node:fs";
 import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
 import { worktreeArtifacts } from "@plugins/infra/plugins/paths/server";
+import {
+  asNamespace,
+  isNamespace,
+} from "@plugins/infra/plugins/namespace/core";
 import { getBuildRunProfileByWorktree } from "../../shared/endpoints";
 
 interface BuildProfile {
@@ -15,16 +19,17 @@ interface BuildProfile {
   totalDurationMs: number;
 }
 
-// Defensive: these come from URL params and are joined into a filesystem path.
+// Defensive: the build id comes from a URL param and is joined into a filesystem
+// path. The worktree is guarded by the namespace grammar instead, which is both
+// stricter and the rule the gateway itself applies.
 function sanitize(s: string): string {
   return s.replace(/[^a-zA-Z0-9._-]/g, "");
 }
 
 function readProfile(worktree: string, buildId: string): BuildProfile | null {
-  const name = sanitize(worktree);
   const id = sanitize(buildId);
-  if (!name || !id) return null;
-  const path = worktreeArtifacts.buildProfile(name, id);
+  if (!isNamespace(worktree) || !id) return null;
+  const path = worktreeArtifacts.buildProfile(asNamespace(worktree), id);
   try {
     return JSON.parse(readFileSync(path, "utf-8")) as BuildProfile;
   } catch (err) {

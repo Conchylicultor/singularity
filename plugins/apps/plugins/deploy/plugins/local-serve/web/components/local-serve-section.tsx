@@ -3,7 +3,10 @@ import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
-import { matchResource, useResource } from "@plugins/primitives/plugins/live-state/web";
+import {
+  matchResource,
+  useResource,
+} from "@plugins/primitives/plugins/live-state/web";
 import { useManifestItemByName } from "@plugins/plugin-meta/plugins/composition/web";
 import type { CompositionManifestItem } from "@plugins/plugin-meta/plugins/composition/core";
 import {
@@ -11,6 +14,14 @@ import {
   useServeStatus,
 } from "@plugins/build/plugins/serve-composition/web";
 import { deploymentsResource } from "@plugins/apps/plugins/deploy/plugins/deployments/core";
+import {
+  asNamespace,
+  namespaceHost,
+  MAIN_COMPOSITION_ID,
+} from "@plugins/infra/plugins/namespace/core";
+
+/** Where a serve build can actually be started — the main app's own host. */
+const MAIN_HOST = namespaceHost(asNamespace(MAIN_COMPOSITION_ID));
 
 /**
  * **Test locally** — the composition served on the shared gateway, next to the
@@ -21,7 +32,11 @@ import { deploymentsResource } from "@plugins/apps/plugins/deploy/plugins/deploy
  * build of the same closure, which is the only thing a macOS laptop can run when
  * the artifact is a `linux-x64` binary.
  */
-export function LocalServeSection({ deploymentId }: { deploymentId: string }): ReactNode {
+export function LocalServeSection({
+  deploymentId,
+}: {
+  deploymentId: string;
+}): ReactNode {
   const deployments = useResource(deploymentsResource);
 
   return matchResource(deployments, {
@@ -30,7 +45,11 @@ export function LocalServeSection({ deploymentId }: { deploymentId: string }): R
     ready: (rows) => {
       const deployment = rows.find((d) => d.id === deploymentId);
       if (!deployment) {
-        return <Placeholder tone="error">This deployment no longer exists.</Placeholder>;
+        return (
+          <Placeholder tone="error">
+            This deployment no longer exists.
+          </Placeholder>
+        );
       }
       return <LocalServe composition={deployment.compositionId} />;
     },
@@ -47,9 +66,9 @@ function LocalServe({ composition }: { composition: string }): ReactNode {
   if (!item) {
     return (
       <Placeholder tone="error">
-        No composition named “{composition}” in the compositions config, so there is
-        nothing to serve. The deployment was created against a name that has since
-        been renamed or removed.
+        No composition named “{composition}” in the compositions config, so
+        there is nothing to serve. The deployment was created against a name
+        that has since been renamed or removed.
       </Placeholder>
     );
   }
@@ -71,7 +90,7 @@ function ServeTarget({ item }: { item: CompositionManifestItem }): ReactNode {
           by the server. Saying so first is cheaper than a refused POST. */}
       {status.kind === "ready" && !status.canServe && (
         <Text as="p" variant="caption" tone="destructive">
-          Serve builds run on the main instance only — open singularity.localhost:9000.
+          Serve builds run on the main instance only — open {MAIN_HOST}.
         </Text>
       )}
 

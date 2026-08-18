@@ -13,9 +13,18 @@ import {
   isServableCompositionId,
   type CompositionManifestItem,
 } from "@plugins/plugin-meta/plugins/composition/core";
+import {
+  asNamespace,
+  namespaceHost,
+  namespaceUrl,
+  MAIN_COMPOSITION_ID,
+} from "@plugins/infra/plugins/namespace/core";
 import { useServeComposition } from "../internal/use-serve-composition";
 import type { ServeStatus } from "../internal/use-serve-status";
 import { resetCompositionData } from "../../shared/endpoints";
+
+/** Where a serve build can actually be started — the main app's own host. */
+const MAIN_HOST = namespaceHost(asNamespace(MAIN_COMPOSITION_ID));
 
 /**
  * The **Serve live** target panel — the one control for a composition's local
@@ -54,7 +63,9 @@ export function ServeTargetPanel({
 
   const live =
     status.kind === "ready" && status.live.served ? status.live : null;
-  const host = `${item.id}.localhost:9000`;
+  // Compose-serve runs on main only, where the checkout suffix elides and the
+  // namespace IS the composition id — Phase 4 is what makes the two a real pair.
+  const host = namespaceHost(asNamespace(item.id));
   // Where the refusal SENTENCE goes is a host question (see below), but whether
   // the control can work is not: off main, `serve` writes an intent this backend
   // will never act on and its POST is refused, and `stop` clears a flag main
@@ -82,10 +93,10 @@ export function ServeTargetPanel({
             !servable
               ? "The main app is built by ./singularity build — it is not compose-served."
               : !canServe
-                ? "Serve builds run on the main instance only — open singularity.localhost:9000."
+                ? `Serve builds run on the main instance only — open ${MAIN_HOST}.`
                 : item.autoBuild
                   ? "Auto-served — click to stop building & serving"
-                  : `Click to build & serve this composition at http://${host}`
+                  : `Click to build & serve this composition at ${namespaceUrl(asNamespace(item.id))}`
           }
           onClick={() => (item.autoBuild ? stop(item.id) : serve(item.id))}
         >

@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { defineEndpoint } from "@plugins/infra/plugins/endpoints/core";
+import { isNamespace } from "@plugins/infra/plugins/namespace/core";
 
 // Shared endpoint contracts for the serve capability — imported by BOTH this
 // plugin's own web (the controls) and its server (the handlers). A plugin
@@ -59,7 +60,11 @@ export type ServeStatusResponse = z.infer<typeof ServeStatusResponseSchema>;
  */
 export const serveStatusEndpoint = defineEndpoint({
   route: "GET /api/build/serve/status",
-  query: z.object({ composition: z.string().min(1) }),
+  // A served composition id IS a namespace, so the wire schema validates it as
+  // one: a malformed name is a 400 here rather than a throw in the handler.
+  query: z.object({
+    composition: z.string().refine(isNamespace, "not a valid namespace"),
+  }),
   response: ServeStatusResponseSchema,
   // Every deployment row and every composition row of the same namespace asks
   // the identical question; the answer is a stat + a small JSON read, so

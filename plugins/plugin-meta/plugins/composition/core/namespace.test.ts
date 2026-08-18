@@ -12,12 +12,12 @@
  */
 
 import { test, expect } from "bun:test";
+import { MAIN_COMPOSITION_ID } from "@plugins/infra/plugins/namespace/core";
 import {
   assertCompositionId,
   assertCompositionName,
   assertServableCompositionNamespace,
   isServableCompositionId,
-  MAIN_COMPOSITION_ID,
   RESERVED_COMPOSITION_NAMESPACES,
 } from "./namespace";
 

@@ -1,9 +1,17 @@
 import { SECRETS_DIR_DISPLAY } from "@plugins/infra/plugins/paths/plugins/display/core";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import {
+  asNamespace,
+  namespaceUrl,
+  MAIN_COMPOSITION_ID,
+} from "@plugins/infra/plugins/namespace/core";
 import { Auth } from "../slots";
 import { useAuthState } from "../hooks";
 import { DefaultProviderRow } from "./default-provider-row";
+
+/** The main app — where the shared token store lives. */
+const MAIN_URL = namespaceUrl(asNamespace(MAIN_COMPOSITION_ID));
 
 export function AccountsPane() {
   const authState = useAuthState();
@@ -35,11 +43,11 @@ export function AccountsPane() {
           back. Visit{" "}
           <a
             className="underline"
-            href="http://singularity.localhost:9000"
+            href={MAIN_URL}
             target="_blank"
             rel="noreferrer"
           >
-            http://singularity.localhost:9000
+            {MAIN_URL}
           </a>{" "}
           to start it.
         </Text>

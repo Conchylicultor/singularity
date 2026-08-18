@@ -1,5 +1,8 @@
 import { readFileSync } from "node:fs";
-import { worktreeArtifacts } from "@plugins/infra/plugins/paths/server";
+import {
+  currentWorktreeName,
+  worktreeArtifacts,
+} from "@plugins/infra/plugins/paths/server";
 import { implement } from "@plugins/infra/plugins/endpoints/server";
 import { getBuildProfiling } from "../../shared/endpoints";
 
@@ -16,8 +19,7 @@ interface BuildProfile {
 }
 
 function readBuildProfile(): BuildProfile | null {
-  const name = process.env.SINGULARITY_WORKTREE;
-  if (!name) return null;
+  const name = currentWorktreeName();
   const path = worktreeArtifacts.buildProfile(name);
   try {
     return JSON.parse(readFileSync(path, "utf-8")) as BuildProfile;

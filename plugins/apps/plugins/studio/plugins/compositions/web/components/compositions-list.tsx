@@ -20,8 +20,13 @@ import {
   useManifestActions,
 } from "@plugins/plugin-meta/plugins/composition/web";
 import {
-  isServableCompositionId,
+  asNamespace,
+  namespaceHost,
+  namespaceUrl,
   MAIN_COMPOSITION_ID,
+} from "@plugins/infra/plugins/namespace/core";
+import {
+  isServableCompositionId,
   type CompositionManifestItem,
 } from "@plugins/plugin-meta/plugins/composition/core";
 import { useServeComposition } from "@plugins/build/plugins/serve-composition/web";
@@ -221,7 +226,7 @@ function CompositionsDataView({
                   ? "The main app is built by ./singularity build — it is not compose-served."
                   : it.autoBuild
                     ? "Auto-served — click to stop building & serving"
-                    : "Click to build & serve this composition at http://<id>.localhost:9000"
+                    : `Click to build & serve this composition at ${namespaceUrl(asNamespace(it.id))}`
               }
               onClick={(e: { stopPropagation: () => void }) => {
                 e.stopPropagation();
@@ -239,7 +244,7 @@ function CompositionsDataView({
       {
         // Live serve URL — see `serveHost` for why main's is not keyed on
         // `autoBuild`. Namespace name == composition id, served by the gateway
-        // at <id>.localhost:9000.
+        // at that subdomain.
         id: "serveUrl",
         label: "Serve URL",
         type: "text",
@@ -296,7 +301,10 @@ function CompositionsDataView({
  * honest answer.
  */
 function serveHost(it: CompositionManifestItem): string | null {
+  // Compose-serve runs on the main checkout, where the checkout suffix elides
+  // and the namespace IS the composition id — Phase 4 is what makes namespace
+  // and composition id a genuine pair.
   if (it.id === MAIN_COMPOSITION_ID)
-    return `${MAIN_COMPOSITION_ID}.localhost:9000`;
-  return it.autoBuild ? `${it.id}.localhost:9000` : null;
+    return namespaceHost(asNamespace(MAIN_COMPOSITION_ID));
+  return it.autoBuild ? namespaceHost(asNamespace(it.id)) : null;
 }

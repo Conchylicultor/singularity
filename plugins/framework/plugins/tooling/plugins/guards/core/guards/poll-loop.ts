@@ -14,6 +14,10 @@ import {
   type WindowEntry,
 } from "../poll-detect";
 import type { BashInput, GuardContext } from "../types";
+import {
+  asNamespace,
+  isNamespace,
+} from "@plugins/infra/plugins/namespace/core";
 
 interface State {
   window: WindowEntry[];
@@ -82,10 +86,17 @@ function minutesSince(iso: string | undefined): string {
 }
 
 function receiptLiveness(worktree: string): Liveness {
+  // The name is parsed out of a watch-subject string, so it is untrusted input:
+  // one that is not a namespace names no receipt, which is the same answer as a
+  // receipt that isn't there.
+  if (!isNamespace(worktree)) return { kind: "unknown" };
   let raw: RawReceipt;
   try {
     raw = JSON.parse(
-      readFileSync(worktreeArtifacts.buildStatus(worktree), "utf8"),
+      readFileSync(
+        worktreeArtifacts.buildStatus(asNamespace(worktree)),
+        "utf8",
+      ),
     ) as RawReceipt;
   } catch (err) {
     if ((err as NodeJS.ErrnoException).code === "ENOENT")

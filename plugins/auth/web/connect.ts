@@ -1,5 +1,12 @@
-import { fetchEndpoint, EndpointError } from "@plugins/infra/plugins/endpoints/web";
+import {
+  fetchEndpoint,
+  EndpointError,
+} from "@plugins/infra/plugins/endpoints/web";
 import { disconnect as disconnectEndpoint } from "@plugins/auth/core";
+import {
+  MAIN_COMPOSITION_ID,
+  namespaceFromHost,
+} from "@plugins/infra/plugins/namespace/core";
 
 /**
  * Open the OAuth popup. Returns a promise that resolves on `singularity.auth.complete`
@@ -26,7 +33,9 @@ const MAIN_ORIGIN = "http://localhost:9000";
 const POPUP_TIMEOUT_MS = 5 * 60 * 1000;
 
 export function startConnectFlow(args: ConnectArgs): Promise<ConnectResult> {
-  const url = new URL(`${MAIN_ORIGIN}/api/auth/start/${encodeURIComponent(args.providerId)}`);
+  const url = new URL(
+    `${MAIN_ORIGIN}/api/auth/start/${encodeURIComponent(args.providerId)}`,
+  );
   url.searchParams.set("worktree", args.worktree);
   if (args.scopes && args.scopes.length > 0) {
     url.searchParams.set("scopes", args.scopes.join(","));
@@ -88,20 +97,24 @@ export async function disconnect(
   accountId?: string,
 ): Promise<void> {
   try {
-    await fetchEndpoint(disconnectEndpoint, { provider: providerId }, { body: { accountId } });
+    await fetchEndpoint(
+      disconnectEndpoint,
+      { provider: providerId },
+      { body: { accountId } },
+    );
   } catch (err) {
     if (err instanceof EndpointError) {
-      throw new Error(`disconnect ${providerId}: ${err.status} ${typeof err.body === "string" ? err.body : JSON.stringify(err.body)}`);
+      throw new Error(
+        `disconnect ${providerId}: ${err.status} ${typeof err.body === "string" ? err.body : JSON.stringify(err.body)}`,
+      );
     }
     throw err;
   }
 }
 
 export function currentWorktreeName(): string {
-  // The web app is served from `<worktree>.localhost:9000`. Strip `.localhost...`.
-  if (typeof window === "undefined") return "singularity";
-  const host = window.location.hostname;
-  if (host === "localhost" || host === "127.0.0.1") return "singularity";
-  const parts = host.split(".");
-  return parts[0] ?? "singularity";
+  // The web app is served from `<namespace>.localhost:9000`. Off such a host
+  // (no window, bare localhost) the main app is the right default.
+  if (typeof window === "undefined") return MAIN_COMPOSITION_ID;
+  return namespaceFromHost(window.location.host) ?? MAIN_COMPOSITION_ID;
 }

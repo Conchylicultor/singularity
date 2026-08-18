@@ -1,0 +1,146 @@
+/**
+ * The namespace identity, and in particular the two properties the rest of the
+ * system leans on:
+ *
+ *   - the ELISION is total and preserves every URL in use today
+ *     (`singularity`, `sonata`, `att-X` all still mint themselves);
+ *   - everything `namespaceFor` can produce is something `asNamespace` accepts,
+ *     so a minted namespace is always a legal path segment / DB name.
+ *
+ * The second is the one that matters most: `NAMESPACE_RE` is what the gateway's
+ * own regex is pinned to, and a namespace that escapes it would be a path
+ * hazard, not a display bug.
+ */
+
+import { test, expect } from "bun:test";
+import {
+  namespaceFor,
+  asNamespace,
+  isNamespace,
+  namespaceFromHost,
+  namespaceHost,
+  namespaceUrl,
+  MAIN_COMPOSITION_ID,
+  NAMESPACE_RE,
+  type CheckoutRef,
+} from "./namespace";
+
+const MAIN: CheckoutRef = { kind: "main" };
+const WT = (name: string): CheckoutRef => ({ kind: "worktree", name });
+
+test("the elision rule maps the four (composition, checkout) cases", () => {
+  // Main composition on main: the namespace IS the composition id.
+  expect(namespaceFor(MAIN_COMPOSITION_ID, MAIN)).toBe(
+    asNamespace("singularity"),
+  );
+  // Main composition on a worktree: the prefix elides — today's agent URL.
+  expect(namespaceFor(MAIN_COMPOSITION_ID, WT("att-x"))).toBe(
+    asNamespace("att-x"),
+  );
+  // A composition on main: the suffix elides — today's compose-serve URL.
+  expect(namespaceFor("sonata", MAIN)).toBe(asNamespace("sonata"));
+  // Neither elides: the one shape that needs the gateway change.
+  expect(namespaceFor("sonata", WT("att-x"))).toBe(asNamespace("sonata.att-x"));
+});
+
+test("every minted namespace is a legal namespace", () => {
+  const compositions = [
+    MAIN_COMPOSITION_ID,
+    "sonata",
+    "a",
+    "agent-manager-lean",
+  ];
+  const checkouts: CheckoutRef[] = [
+    MAIN,
+    WT("att-x"),
+    WT("att-1787064474-2qcq"),
+    WT(MAIN_COMPOSITION_ID),
+  ];
+  for (const composition of compositions) {
+    for (const checkout of checkouts) {
+      const ns = namespaceFor(composition, checkout);
+      expect(NAMESPACE_RE.test(ns)).toBe(true);
+      expect(() => asNamespace(ns)).not.toThrow();
+    }
+  }
+});
+
+test("namespaceFor refuses inputs that are not single labels", () => {
+  for (const bad of [
+    "",
+    "Sonata",
+    "so nata",
+    "-sonata",
+    "so/nata",
+    "so.nata",
+    "a".repeat(64),
+  ]) {
+    expect(() => namespaceFor(bad, MAIN)).toThrow("Invalid composition id");
+    expect(() => namespaceFor("sonata", WT(bad))).toThrow(
+      "Invalid checkout name",
+    );
+  }
+});
+
+test("asNamespace refuses the shapes that would stop being one safe path segment", () => {
+  for (const good of ["singularity", "att-x", "sonata.att-x", "a", "a-1.b-2"]) {
+    expect(() => asNamespace(good)).not.toThrow();
+    expect(isNamespace(good)).toBe(true);
+  }
+  // `..` / empty labels / leading + trailing dots are the path hazards; `a.b.c`
+  // is refused because the model has exactly two axes, not three.
+  for (const bad of [
+    "",
+    "..",
+    "a..b",
+    ".a",
+    "a.",
+    "a.b.c",
+    "A",
+    "a/b",
+    `${"a".repeat(64)}.b`,
+  ]) {
+    expect(() => asNamespace(bad)).toThrow("Invalid namespace");
+    expect(isNamespace(bad)).toBe(false);
+  }
+});
+
+test("namespaceFromHost round-trips namespaceHost and rejects the loopback hosts", () => {
+  for (const ns of ["singularity", "att-x", "sonata.att-x"] as const) {
+    expect(namespaceFromHost(namespaceHost(asNamespace(ns)))).toBe(
+      asNamespace(ns),
+    );
+  }
+  // Port optional, case-insensitive, trailing root dot tolerated.
+  expect(namespaceFromHost("sonata.att-x.localhost")).toBe(
+    asNamespace("sonata.att-x"),
+  );
+  expect(namespaceFromHost("SONATA.att-x.localhost:9000")).toBe(
+    asNamespace("sonata.att-x"),
+  );
+  expect(namespaceFromHost("sonata.att-x.localhost.:9000")).toBe(
+    asNamespace("sonata.att-x"),
+  );
+
+  // "No namespace here" — the gateway answers the same way for these.
+  for (const bare of [
+    "localhost",
+    "localhost:9000",
+    "127.0.0.1:9000",
+    "[::1]:9000",
+    "example.com",
+  ]) {
+    expect(namespaceFromHost(bare)).toBeNull();
+  }
+  // A host under .localhost whose name is not a legal namespace is not one.
+  expect(namespaceFromHost("a.b.c.localhost:9000")).toBeNull();
+});
+
+test("namespaceUrl builds an origin, and refuses a path that would double the slash", () => {
+  const ns = asNamespace("sonata.att-x");
+  expect(namespaceUrl(ns)).toBe("http://sonata.att-x.localhost:9000");
+  expect(namespaceUrl(ns, "/api/health")).toBe(
+    "http://sonata.att-x.localhost:9000/api/health",
+  );
+  expect(() => namespaceUrl(ns, "api/health")).toThrow('must start with "/"');
+});

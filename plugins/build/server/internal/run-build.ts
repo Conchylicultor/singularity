@@ -16,6 +16,7 @@ import {
   worktreeArtifacts,
   pruneWorktreeBuildArtifacts,
 } from "@plugins/infra/plugins/paths/server";
+import type { Namespace } from "@plugins/infra/plugins/namespace/core";
 import { recordNotification } from "@plugins/shell/plugins/notifications/server";
 import { getConfig } from "@plugins/config_v2/server";
 import { buildDetailRoute } from "@plugins/build/core";
@@ -192,7 +193,7 @@ const RECOVERED_HEADER =
  * then recovers the same value a later reconcile pass would have had to guess.
  */
 export function recoverBuildArtifacts(opts: {
-  worktree: string;
+  worktree: Namespace;
   buildId: string;
   lines: Array<{ text: string; stream: "stdout" | "stderr" }>;
   durationMs: number;
@@ -478,17 +479,14 @@ async function doRunBuild(
   const finishedAt = new Date();
 
   if (exitCode !== 0 && allLines.length > 0) {
-    const worktreeName = process.env.SINGULARITY_WORKTREE;
-    if (worktreeName) {
-      recoverBuildArtifacts({
-        worktree: worktreeName,
-        buildId,
-        lines: allLines,
-        durationMs: finishedAt.getTime() - buildStartMs,
-        finishedAt,
-        exitCode,
-      });
-    }
+    recoverBuildArtifacts({
+      worktree: currentWorktreeName(),
+      buildId,
+      lines: allLines,
+      durationMs: finishedAt.getTime() - buildStartMs,
+      finishedAt,
+      exitCode,
+    });
   }
 
   // The terminal outcome, written once and then READ BACK by the notification

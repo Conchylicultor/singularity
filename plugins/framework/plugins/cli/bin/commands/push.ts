@@ -1,5 +1,4 @@
 import type { Command } from "commander";
-import { basename } from "path";
 import { checkBroadcasts } from "../broadcasts";
 import { reportInterruptedPredecessor } from "../build-receipt";
 import { ensureDeps } from "../ensure-deps";
@@ -30,6 +29,11 @@ import {
   spawnCaptured,
   spawnPassthrough,
 } from "@plugins/infra/plugins/spawn/core";
+import { checkoutRef } from "@plugins/infra/plugins/paths/server";
+import {
+  MAIN_COMPOSITION_ID,
+  namespaceFor,
+} from "@plugins/infra/plugins/namespace/core";
 
 // Exits-by-default spawn: a non-zero exit prints the command + captured
 // stderr and exits(1) like `exec`, so a caller can never read a failed git
@@ -263,9 +267,13 @@ export function registerPush(program: Command) {
         process.exit(1);
       }
 
-      // basename(root0) is the op-marker slug (see markWorktreeOpStart below).
-      // The profiler carries it so the orphan reconciler can check push liveness.
-      const opSlug = basename(root0);
+      // The op-marker slug (see markWorktreeOpStart below) is this checkout's own
+      // namespace — `push` names the main composition, as `build` does. The
+      // profiler carries it so the orphan reconciler can check push liveness.
+      const opSlug = namespaceFor(
+        MAIN_COMPOSITION_ID,
+        await checkoutRef(root0),
+      );
 
       // An interrupted build prints no verdict and sets no exit code its caller
       // can see, so the next op is where it surfaces — and pushing work that was

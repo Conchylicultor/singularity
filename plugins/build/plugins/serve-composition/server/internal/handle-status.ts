@@ -1,6 +1,7 @@
 import { implement } from "@plugins/infra/plugins/endpoints/server";
 import { isMain } from "@plugins/infra/plugins/paths/server";
 import { readCompositionMarker } from "@plugins/infra/plugins/worktree/server";
+import { asNamespace } from "@plugins/infra/plugins/namespace/core";
 import { serveStatusEndpoint } from "../../shared/endpoints";
 
 /**
@@ -15,7 +16,7 @@ import { serveStatusEndpoint } from "../../shared/endpoints";
  * ANY backend can answer it — only *starting* a serve is main-only.
  */
 export const handleServeStatus = implement(serveStatusEndpoint, ({ query }) => {
-  const marker = readCompositionMarker(query.composition);
+  const marker = readCompositionMarker(asNamespace(query.composition));
   return {
     canServe: isMain(),
     liveness:

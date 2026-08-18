@@ -8,6 +8,10 @@ import {
   bootBenchRunResponseSchema,
   type BootBenchRunBody,
 } from "../../shared/endpoints";
+import {
+  asNamespace,
+  namespaceUrl,
+} from "@plugins/infra/plugins/namespace/core";
 import { buildReport } from "./aggregate";
 
 export const benchmarkBootTool = Mcp.tool({
@@ -50,7 +54,9 @@ Default: benchmarks the current conversation's worktree server. Pass \`worktree\
     conversationId: z
       .string()
       .optional()
-      .describe("Pin the edited-files conversation fixture (else auto-resolved)."),
+      .describe(
+        "Pin the edited-files conversation fixture (else auto-resolved).",
+      ),
     attemptId: z
       .string()
       .optional()
@@ -66,24 +72,35 @@ Default: benchmarks the current conversation's worktree server. Pass \`worktree\
     worktree: z
       .string()
       .optional()
-      .describe("Target worktree name. Defaults to the conversation's own worktree."),
+      .describe(
+        "Target worktree name. Defaults to the conversation's own worktree.",
+      ),
   },
   async handler(
-    { iterations, warmup, mode, conversationId, attemptId, loadConcurrency, worktree },
+    {
+      iterations,
+      warmup,
+      mode,
+      conversationId,
+      attemptId,
+      loadConcurrency,
+      worktree,
+    },
     { conversationId: ctxConversationId },
   ) {
-    let worktreeName: string;
+    let raw: string;
     if (worktree) {
-      worktreeName = worktree;
+      raw = worktree;
     } else {
       const conv = await getConversation(ctxConversationId);
       if (!conv) throw new Error(`Unknown conversation "${ctxConversationId}"`);
-      worktreeName = basename(conv.worktreePath);
+      raw = basename(conv.worktreePath);
     }
 
-    if (!/^[a-zA-Z0-9_-]+$/.test(worktreeName)) {
-      throw new Error(`Unsafe worktree name: "${worktreeName}"`);
-    }
+    // A tool argument is a serialization boundary, and the name goes into a URL
+    // the gateway resolves — so it is validated against the one grammar the
+    // gateway itself accepts, not a local approximation of it.
+    const worktreeName = asNamespace(raw);
 
     // Always run the benchmark through the gateway, which only ever proxies to
     // the worktree's live backend (`w.active`). Running it in this process's own
@@ -97,7 +114,7 @@ Default: benchmarks the current conversation's worktree server. Pass \`worktree\
       attemptId,
       loadConcurrency,
     };
-    const url = `http://${worktreeName}.localhost:9000${extractPath(bootBenchRun.route)}`;
+    const url = namespaceUrl(worktreeName, extractPath(bootBenchRun.route));
     const res = await fetch(url, {
       method: "POST",
       headers: { "content-type": "application/json" },

@@ -50,6 +50,10 @@ export { GIT, PGREP, PS, CLAUDE, TMUX } from "./internal/bins";
 
 export { listWorktreeDirs } from "./internal/worktree-dirs";
 
+// The checkout half of a namespace. Server-only because answering it means
+// asking git which root owns `.git`, not comparing a basename to a literal.
+export { checkoutRef } from "./internal/checkout-ref";
+
 export {
   pruneWorktreeBuildArtifacts,
   pruneWorktreeReleaseArtifacts,

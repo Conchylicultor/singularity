@@ -9,18 +9,22 @@
  * not at the type checker.
  *
  * The default here is DERIVED, never literal: the current checkout's own
- * gateway namespace. `basename(REPO_ROOT)` is the worktree directory name, which
- * is exactly the namespace the gateway serves this worktree's backend under —
- * the same derivation `test/bun-preload.ts` uses for `SINGULARITY_WORKTREE`. So
- * `bun plugins/<path>/e2e/<name>.ts` with no arguments at all hits the deploy
- * that `./singularity build` just produced, in every worktree, forever.
+ * gateway namespace. `checkoutWorktreeName(REPO_ROOT)` is the worktree directory
+ * name, which is exactly the namespace the gateway serves this worktree's
+ * backend under — the same derivation `test/bun-preload.ts` uses for
+ * `SINGULARITY_WORKTREE`. So `bun plugins/<path>/e2e/<name>.ts` with no
+ * arguments at all hits the deploy that `./singularity build` just produced, in
+ * every worktree, forever.
  */
-import { basename } from "node:path";
-import { REPO_ROOT } from "@plugins/infra/plugins/paths/core";
+import {
+  REPO_ROOT,
+  checkoutWorktreeName,
+} from "@plugins/infra/plugins/paths/core";
+import {
+  asNamespace,
+  namespaceUrl,
+} from "@plugins/infra/plugins/namespace/core";
 import { arg } from "./args";
-
-/** The gateway port every namespace is served behind. */
-const GATEWAY_PORT = 9000;
 
 /**
  * Resolution order: an explicit flag (`--base`, or the `--url` / `--origin`
@@ -36,8 +40,10 @@ export function baseUrl(): string {
 }
 
 function defaultWorktreeBase(): string {
-  const name = process.env.SINGULARITY_WORKTREE ?? basename(REPO_ROOT);
-  return `http://${name}.localhost:${GATEWAY_PORT}`;
+  const name = asNamespace(
+    process.env.SINGULARITY_WORKTREE ?? checkoutWorktreeName(REPO_ROOT),
+  );
+  return namespaceUrl(name);
 }
 
 /** `baseUrl()` joined to an app path, with exactly one slash between them. */

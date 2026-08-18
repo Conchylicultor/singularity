@@ -93,6 +93,13 @@ type staticFixture struct {
 // newStaticProxy registers a worktree with a real web dist dir (index.html +
 // one artifact file) and returns a proxy serving it — exercising handleStatic.
 func newStaticProxy(t *testing.T) staticFixture {
+	return newStaticProxyNamed(t, "alpha")
+}
+
+// Same fixture, under an arbitrary namespace — so the multi-label case can be
+// exercised through the SAME serving path as the single-label one rather than a
+// parallel one written to pass.
+func newStaticProxyNamed(t *testing.T, name string) staticFixture {
 	t.Helper()
 	regDir := t.TempDir()
 	sockDir, err := os.MkdirTemp("/tmp", "gwsta")
@@ -108,7 +115,7 @@ func newStaticProxy(t *testing.T) staticFixture {
 	}
 	reg := NewRegistry(cfg)
 
-	sub := filepath.Join(regDir, "alpha")
+	sub := filepath.Join(regDir, name)
 	server := filepath.Join(sub, "server")
 	if err := os.MkdirAll(server, 0o755); err != nil {
 		t.Fatal(err)
@@ -224,5 +231,87 @@ func TestRewrittenWebPathChangesWhatStaticServes(t *testing.T) {
 	rec = serve(f.proxy, "alpha.localhost:9000", "/")
 	if rec.Code != http.StatusOK || !strings.Contains(rec.Body.String(), "new-dist") {
 		t.Fatalf("removing the old dist must not break serving: status=%d body=%q", rec.Code, rec.Body.String())
+	}
+}
+
+// parseWorktree is the gateway's whole namespace surface: Host header in, spec-dir
+// key out. It is pinned directly (rather than only through ServeHTTP) because the
+// multi-label case is the one the composition model turns on, and because the
+// loopback short-circuit has to keep winning over the dot handling — `127.0.0.1`
+// and `::1` are dot- and colon-bearing hosts that must still mean "no namespace".
+func TestParseWorktree(t *testing.T) {
+	cases := []struct {
+		host string
+		want string
+	}{
+		// Today's two shapes, unchanged.
+		{"singularity.localhost:9000", "singularity"},
+		{"att-1787064474-2qcq.localhost:9000", "att-1787064474-2qcq"},
+		{"sonata.localhost", "sonata"},
+		// The shape this change exists for: <composition>.<checkout>.
+		{"sonata.att-x.localhost:9000", "sonata.att-x"},
+		{"sonata.att-x.localhost", "sonata.att-x"},
+		// Case-insensitive, trailing root dot tolerated.
+		{"SONATA.att-x.LOCALHOST:9000", "sonata.att-x"},
+		{"sonata.att-x.localhost.:9000", "sonata.att-x"},
+		// No namespace: loopback in every spelling, and non-.localhost hosts.
+		{"localhost:9000", ""},
+		{"localhost", ""},
+		{"127.0.0.1:9000", ""},
+		{"[::1]:9000", ""},
+		{"::1", ""},
+		{"example.com:9000", ""},
+		{"sonata.example.com", ""},
+		{".localhost:9000", ""},
+	}
+	for _, c := range cases {
+		if got := parseWorktree(c.host); got != c.want {
+			t.Errorf("parseWorktree(%q) = %q, want %q", c.host, got, c.want)
+		}
+	}
+}
+
+// The capability this whole change exists for: a `<composition>.<checkout>`
+// namespace is served, end to end, through the real routing + registry + static
+// path — not merely parsed.
+//
+// Before the change this returned the generic "Use <name>.localhost" 404,
+// because parseWorktree refused any name containing a dot. That exact
+// distinction is what the body assertions below pin: the generic message means
+// the ROUTER rejected the host, while "unknown worktree" means it resolved a
+// namespace and only the registry missed.
+func TestMultiLabelNamespaceServesStatic(t *testing.T) {
+	p := newStaticProxyNamed(t, "sonata.att-x").proxy
+
+	rec := serve(p, "sonata.att-x.localhost:9000", "/artifacts/tasks.web.abc123/index.js")
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200 (body %q)", rec.Code, rec.Body.String())
+	}
+	if !strings.Contains(rec.Body.String(), "export {}") {
+		t.Fatalf("expected artifact body, got %q", rec.Body.String())
+	}
+
+	// The SPA shell too, so this is not just the artifacts special case.
+	rec = serve(p, "sonata.att-x.localhost:9000", "/some/client/route")
+	if rec.Code != http.StatusOK || !strings.Contains(rec.Body.String(), "spa-shell") {
+		t.Fatalf("SPA fallback under a multi-label namespace: status %d body %q", rec.Code, rec.Body.String())
+	}
+}
+
+// A sibling namespace that does not exist must resolve as a NAMESPACE and miss
+// in the registry ("unknown worktree"), never be rejected by the router. This is
+// what proves the dot is being carried through rather than tolerated by accident.
+func TestMultiLabelUnknownNamespaceResolvesThenMisses(t *testing.T) {
+	p := newStaticProxyNamed(t, "sonata.att-x").proxy
+	rec := serve(p, "website.att-x.localhost:9000", "/")
+	if rec.Code != http.StatusNotFound {
+		t.Fatalf("status = %d, want 404", rec.Code)
+	}
+	body := rec.Body.String()
+	if !strings.Contains(body, "unknown worktree: website.att-x") {
+		t.Fatalf("expected the registry to miss on the full two-label name, got %q", body)
+	}
+	if strings.Contains(body, "Use <name>.localhost") {
+		t.Fatalf("router rejected the multi-label host instead of resolving it: %q", body)
 	}
 }

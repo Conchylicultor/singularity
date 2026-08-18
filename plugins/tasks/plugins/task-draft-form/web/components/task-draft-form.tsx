@@ -24,6 +24,10 @@ import {
   useLaunchOptionDefaults,
   type LaunchOptionValues,
 } from "@plugins/tasks/plugins/launch-options/web";
+import {
+  MAIN_COMPOSITION_ID,
+  namespaceFromHost,
+} from "@plugins/infra/plugins/namespace/core";
 import { useCaptureUrlDefault } from "../use-capture-url-default";
 
 export interface CardDraft {
@@ -73,11 +77,9 @@ export interface TaskDraftFormProps {
 
 function useIsAgentWorktree(): boolean {
   return useMemo(() => {
-    const host = window.location.hostname;
-    const wt = host.endsWith(".localhost")
-      ? host.replace(/\.localhost$/, "")
-      : "head";
-    return wt !== "head" && wt !== "singularity";
+    // No namespace at all (bare `localhost`) is not an agent worktree either.
+    const ns = namespaceFromHost(window.location.host);
+    return ns !== null && ns !== MAIN_COMPOSITION_ID;
   }, []);
 }
 

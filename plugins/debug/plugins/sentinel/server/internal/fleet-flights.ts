@@ -2,6 +2,11 @@ import { z } from "zod";
 import { defineTraceEventClass } from "@plugins/debug/plugins/trace/plugins/engine/server";
 import { createSemaphore } from "@plugins/packages/plugins/semaphore/core";
 import { currentWorktreeName } from "@plugins/infra/plugins/paths/server";
+import {
+  asNamespace,
+  namespaceUrl,
+  type Namespace,
+} from "@plugins/infra/plugins/namespace/core";
 
 // The fleet-flights event class: on a cluster-onset trip (and ONLY then —
 // enrich returns undefined for every other trigger, the engine's documented
@@ -40,14 +45,20 @@ const GatewayWorktreeSchema = z.object({
   state: z.string(),
 });
 
-async function fetchFlightWindow(name: string): Promise<FleetFlightCell> {
+async function fetchFlightWindow(name: Namespace): Promise<FleetFlightCell> {
   try {
     const res = await fetch(
-      `http://${name}.localhost:9000/api/debug/profiling/flight-window?windowMs=${FLIGHT_WINDOW_MS}`,
+      namespaceUrl(
+        name,
+        `/api/debug/profiling/flight-window?windowMs=${FLIGHT_WINDOW_MS}`,
+      ),
       { signal: AbortSignal.timeout(PER_BACKEND_TIMEOUT_MS) },
     );
     if (!res.ok) return { ok: false, error: `http ${res.status}` };
-    const body = (await res.json()) as { wallAnchor?: unknown; window?: unknown };
+    const body = (await res.json()) as {
+      wallAnchor?: unknown;
+      window?: unknown;
+    };
     const anchor = z
       .object({ atMs: z.number(), wallTime: z.string() })
       .safeParse(body.wallAnchor);
@@ -71,14 +82,22 @@ export const fleetFlightsClass = defineTraceEventClass({
       signal: AbortSignal.timeout(2_000),
     });
     if (!res.ok) throw new Error(`gateway worktrees responded ${res.status}`);
-    const fleet = z.array(GatewayWorktreeSchema.passthrough()).parse(await res.json());
+    const fleet = z
+      .array(GatewayWorktreeSchema.passthrough())
+      .parse(await res.json());
 
     const self = currentWorktreeName();
-    const targets = fleet.filter((w) => w.state === "running" && w.name !== self);
+    const targets = fleet.filter(
+      (w) => w.state === "running" && w.name !== self,
+    );
     const semaphore = createSemaphore(FANOUT_CONCURRENCY);
     const cells = await Promise.all(
       targets.map((w) =>
-        semaphore.run(async () => [w.name, await fetchFlightWindow(w.name)] as const),
+        semaphore.run(
+          async () =>
+            // The fleet list comes off the gateway's JSON — the asNamespace boundary.
+            [w.name, await fetchFlightWindow(asNamespace(w.name))] as const,
+        ),
       ),
     );
     return Object.fromEntries(cells);

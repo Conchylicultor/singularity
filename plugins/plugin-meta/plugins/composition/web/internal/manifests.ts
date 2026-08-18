@@ -1,10 +1,10 @@
 import { useCallback } from "react";
 import { useConfig, useSetConfig } from "@plugins/config_v2/web";
 import type { CompositionManifest } from "@plugins/plugin-meta/plugins/closure/core";
+import { MAIN_COMPOSITION_ID } from "@plugins/infra/plugins/namespace/core";
 import {
   compositionsConfig,
   isServableCompositionId,
-  MAIN_COMPOSITION_ID,
   type CompositionManifestItem,
 } from "@plugins/plugin-meta/plugins/composition/core";
 

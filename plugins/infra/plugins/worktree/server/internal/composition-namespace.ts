@@ -1,19 +1,42 @@
-// Composition-namespace provenance + collision guard. A compose-served
-// composition owns a namespace dir under `worktrees/<id>/` only if it carries
-// our `composition.json` marker — the decisive "this is a compose-serve
-// namespace, not main and not a real git worktree" signal. Single-sourced here
-// (rather than inside the CLI bin) so both the build-time compose-serve stage
-// and the runtime reset endpoint consume the exact same safety-critical logic;
-// a marker-name or collision-rule change can never drift between the two.
+// Namespace ownership: who may claim `worktrees/<ns>/`, and the provenance
+// marker that records who did.
+//
+// A namespace is `<composition>.<checkout>` with both sentinels elided
+// (`@plugins/infra/plugins/namespace/core`), so a SINGLE label is ambiguous:
+// `foo` could be composition `foo` on main, or the main composition on checkout
+// `foo`. That ambiguity is inherent to any encoding that preserves today's URLs,
+// so it is PREVENTED here rather than decoded downstream.
+//
+// And it is not merely an ambiguous URL. Both claimants would resolve to the
+// same spec dir, the same socket and the same Postgres database — a data
+// collision. So the rule is SYMMETRIC refusal: whichever side tries to claim an
+// already-occupied namespace fails loudly, composition or checkout. Neither wins.
+//
+// Single-sourced here (rather than inside the CLI bin) so the build-time
+// compose-serve stage, the runtime reset endpoint and worktree creation all
+// consume the exact same safety-critical logic; a marker-name or collision-rule
+// change can never drift between them.
 
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
+import type { Namespace } from "@plugins/infra/plugins/namespace/core";
 import { worktreesDir } from "@plugins/infra/plugins/paths/server";
 
 export const COMPOSITION_MARKER_FILE = "composition.json";
 
 export interface CompositionMarker {
   composition: string;
+  /**
+   * The checkout this namespace was composed from — `null` for the main
+   * checkout, whose suffix elides.
+   *
+   * This field is why there is no `parseNamespace`. Decomposing `foo` back into
+   * a (composition, checkout) pair would need the composition set at every
+   * reader; recording the pair where it is MINTED cannot be ambiguous. Optional
+   * because markers written before this field existed carry none — a reader
+   * reports that as unknown rather than guessing.
+   */
+  checkout?: string | null;
   builtAt: string;
   buildId: string;
   /**
@@ -24,32 +47,63 @@ export interface CompositionMarker {
   commit?: string | null;
 }
 
+/** Who is asking for the namespace. The refusal rules differ by side. */
+export type NamespaceClaimant =
+  { kind: "composition"; id: string } | { kind: "checkout"; name: string };
+
 export interface NamespaceProbe {
   specDirExists: boolean;
   hasCompositionMarker: boolean;
   gitWorktreeDirExists: boolean;
   branchExists: boolean;
+  /** A manifest row already carries this id — the checkout-side collision. */
+  compositionIdExists: boolean;
 }
 
 /**
- * Refuse to claim a namespace another owner already holds. A composition dir is
- * ours only if it carries our `composition.json` marker; a same-named git
- * worktree or branch would collide the moment that worktree builds.
+ * Refuse to claim a namespace another owner already holds.
+ *
+ * Composition side (the arms that existed before): a dir is ours only if it
+ * carries our `composition.json` marker; a same-named git worktree or branch
+ * would collide the moment that worktree builds.
+ *
+ * Checkout side (the mirror): a checkout may not take a name the composition
+ * manifest already uses, nor move into a dir a compose-serve namespace holds.
+ * Agent worktrees are always `att-<ts>-<slug>`, so in practice this only ever
+ * fires on a hand-named worktree — which is exactly the case that would
+ * otherwise silently share a database with a composition.
  */
 export function namespaceCollision(
-  id: string,
+  ns: Namespace,
+  claimant: NamespaceClaimant,
   probe: NamespaceProbe,
 ): string | null {
-  if (probe.gitWorktreeDirExists) {
-    return `a git worktree checkout named "${id}" exists under .claude/worktrees/ — rename the composition.`;
+  if (claimant.kind === "composition") {
+    if (probe.gitWorktreeDirExists) {
+      return `a git worktree checkout named "${ns}" exists under .claude/worktrees/ — rename the composition.`;
+    }
+    if (probe.branchExists) {
+      return `a git branch named "${ns}" exists — its worktree would collide with this namespace; rename the composition.`;
+    }
+    if (probe.specDirExists && !probe.hasCompositionMarker) {
+      return (
+        `the worktrees-registry dir for "${ns}" exists WITHOUT a ${COMPOSITION_MARKER_FILE} marker — ` +
+        `it belongs to a git worktree or foreign namespace; refusing to overwrite.`
+      );
+    }
+    return null;
   }
-  if (probe.branchExists) {
-    return `a git branch named "${id}" exists — its worktree would collide with this namespace; rename the composition.`;
-  }
-  if (probe.specDirExists && !probe.hasCompositionMarker) {
+
+  if (probe.compositionIdExists) {
     return (
-      `the worktrees-registry dir for "${id}" exists WITHOUT a ${COMPOSITION_MARKER_FILE} marker — ` +
-      `it belongs to a git worktree or foreign namespace; refusing to overwrite.`
+      `a composition named "${ns}" exists in the manifest — a checkout of that name would ` +
+      `resolve to the same namespace, spec dir and database; rename the worktree.`
+    );
+  }
+  if (probe.specDirExists && probe.hasCompositionMarker) {
+    return (
+      `the worktrees-registry dir for "${ns}" carries a ${COMPOSITION_MARKER_FILE} marker — ` +
+      `it belongs to a served composition; refusing to create a checkout that would collide with it.`
     );
   }
   return null;
@@ -63,19 +117,32 @@ function branchExists(root: string, name: string): boolean {
   return proc.exitCode === 0;
 }
 
-export function probeNamespace(root: string, id: string): NamespaceProbe {
-  const specDir = join(worktreesDir(), id);
+/**
+ * Gather the facts `namespaceCollision` judges.
+ *
+ * `compositionIds` is passed in rather than read here because the two callers
+ * live in different worlds: compose-serve runs in the CLI and already holds the
+ * manifest it read off disk, while worktree creation runs in a backend and reads
+ * it through the config registry. One prober, two suppliers.
+ */
+export function probeNamespace(
+  root: string,
+  ns: Namespace,
+  compositionIds: ReadonlySet<string>,
+): NamespaceProbe {
+  const specDir = join(worktreesDir(), ns);
   return {
     specDirExists: existsSync(specDir),
     hasCompositionMarker: existsSync(join(specDir, COMPOSITION_MARKER_FILE)),
-    gitWorktreeDirExists: existsSync(join(root, ".claude", "worktrees", id)),
-    branchExists: branchExists(root, id),
+    gitWorktreeDirExists: existsSync(join(root, ".claude", "worktrees", ns)),
+    branchExists: branchExists(root, ns),
+    compositionIdExists: compositionIds.has(ns),
   };
 }
 
-/** True when `worktrees/<id>/composition.json` exists — the namespace is compose-serve-owned. */
-export function hasCompositionMarker(id: string): boolean {
-  return existsSync(join(worktreesDir(), id, COMPOSITION_MARKER_FILE));
+/** True when `worktrees/<ns>/composition.json` exists — the namespace is compose-serve-owned. */
+export function hasCompositionMarker(ns: Namespace): boolean {
+  return existsSync(join(worktreesDir(), ns, COMPOSITION_MARKER_FILE));
 }
 
 /**
@@ -83,8 +150,8 @@ export function hasCompositionMarker(id: string): boolean {
  * marker, or `null` when the namespace carries no `composition.json` (not
  * compose-serve-owned).
  */
-export function readCompositionMarker(id: string): CompositionMarker | null {
-  const path = join(worktreesDir(), id, COMPOSITION_MARKER_FILE);
+export function readCompositionMarker(ns: Namespace): CompositionMarker | null {
+  const path = join(worktreesDir(), ns, COMPOSITION_MARKER_FILE);
   if (!existsSync(path)) return null;
   return JSON.parse(readFileSync(path, "utf8")) as CompositionMarker;
 }

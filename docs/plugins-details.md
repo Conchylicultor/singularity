@@ -7032,6 +7032,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses:
           - `infra/endpoints.HttpError`
           - `infra/endpoints.implement`
+          - `infra/paths.currentWorktreeName`
           - `infra/paths.worktreeArtifacts`
         - Routes: `GET /api/build/runs/:id/logs`
       - Core:
@@ -7065,6 +7066,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses:
           - `infra/endpoints.HttpError`
           - `infra/endpoints.implement`
+          - `infra/paths.currentWorktreeName`
           - `infra/paths.worktreeArtifacts`
         - Routes: `GET /api/build/runs/:id/profile`
       - Shared:
@@ -11952,6 +11954,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Uses:
               - `infra/endpoints.HttpError`
               - `infra/endpoints.implement`
+              - `infra/paths.currentWorktreeName`
               - `infra/paths.worktreeArtifacts`
             - Routes:
               - `GET /api/debug/profiling/build`
@@ -14967,6 +14970,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - **`guards`** — Claude Code PreToolUse guards: safety checks that intercept tool calls before execution
           - Core:
             - Uses:
+              - `infra/namespace.asNamespace`
+              - `infra/namespace.isNamespace`
               - `infra/paths.HOME_DIR`
               - `infra/paths.worktreeArtifacts`
             - Exports (types):
@@ -16442,6 +16447,28 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Routes: `POST /api/mcp/:conversationId`
       - Shared:
         - Exports (values): `mcpRequest`
+    - **`namespace`** — Canonical namespace identity: the branded Namespace type, the <composition>.<checkout> elision rule that mints one, and the URL/host encodings derived from it.
+      - Cross-plugin:
+        - Imported by:
+          - `framework/tooling/guards`
+          - `infra/paths`
+          - `plugin-meta/composition`
+      - Core:
+        - Exports (types):
+          - `CheckoutRef`
+          - `Namespace`
+        - Exports (values):
+          - `asNamespace`
+          - `GATEWAY_PORT`
+          - `isNamespace`
+          - `MAIN_COMPOSITION_ID`
+          - `NAMESPACE_HOST_SUFFIX`
+          - `NAMESPACE_LABEL_RE`
+          - `NAMESPACE_RE`
+          - `namespaceFor`
+          - `namespaceFromHost`
+          - `namespaceHost`
+          - `namespaceUrl`
     - **`ndjson-stream`** — Client NDJSON stream reader: an async generator yielding one parsed JSON frame per line from a streamed endpoint, guarding res.ok and reporting via EndpointError. NDJSON (application/x-ndjson) streaming Response builder: wrap a frame-emitting producer into a chunked stream that survives Bun's idle timeout and lets clients render rows progressively.
       - Web:
         - Uses:
@@ -16457,7 +16484,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports (values): `ndjsonResponse`
     - **`paths`**
       - Core:
-        - Uses: `framework/tooling/collected-dir.defineCollectedDir`
+        - Uses:
+          - `framework/tooling/collected-dir.defineCollectedDir`
+          - `infra/namespace.asNamespace`
+          - `infra/namespace.MAIN_COMPOSITION_ID`
+          - `infra/namespace.Namespace`
+          - `infra/namespace.namespaceFor`
         - Exports (types):
           - `DataDir`
           - `DataDirKind`
@@ -16564,6 +16596,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `BACKUPS_DIR`
           - `BUILD_ARTIFACTS_RETENTION`
           - `CHECK_ARTIFACTS_RETENTION`
+          - `checkoutRef`
           - `checkoutWorktreeName`
           - `CLAUDE`
           - `CLAUDE_DIR`
@@ -16977,6 +17010,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `CompositionMarker`
           - `DerivePushDeps`
           - `InAppRemovalRecord`
+          - `NamespaceClaimant`
           - `NamespaceProbe`
           - `PushHolder`
           - `RemovalBranch`
@@ -19072,6 +19106,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `fields/string-list/config.stringListField`
           - `fields/text/config.textField`
           - `infra/endpoints.defineEndpoint`
+          - `infra/namespace.MAIN_COMPOSITION_ID`
+          - `infra/namespace.NAMESPACE_LABEL_RE`
         - Exports (types):
           - `CompositionData`
           - `CompositionManifestItem`
@@ -19080,12 +19116,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `assertCompositionId`
           - `assertCompositionName`
           - `assertServableCompositionNamespace`
-          - `COMPOSITION_NAME_RE`
           - `compositionDataSchema`
           - `compositionsConfig`
           - `getCompositionData`
           - `isServableCompositionId`
-          - `MAIN_COMPOSITION_ID`
           - `manifestItemToManifest`
           - `RESERVED_COMPOSITION_NAMESPACES`
       - Cross-plugin:

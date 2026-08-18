@@ -54,6 +54,7 @@ import {
   currentWorktreeName,
 } from "@plugins/infra/plugins/paths/server";
 import { configDir } from "@plugins/config_v2/data-dirs";
+import { namespaceUrl } from "@plugins/infra/plugins/namespace/core";
 import { openShortLivedClient } from "@plugins/database/plugins/admin/server";
 import {
   _deployServers,
@@ -205,7 +206,7 @@ async function withDb<T>(fn: (db: NodePgDatabase) => Promise<T>): Promise<T> {
 
 /** This namespace's own backend, through the gateway. */
 function backendBase(): string {
-  return `http://${currentWorktreeName()}.localhost:9000`;
+  return namespaceUrl(currentWorktreeName());
 }
 
 /**

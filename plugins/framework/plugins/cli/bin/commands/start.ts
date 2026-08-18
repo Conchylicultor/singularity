@@ -1,6 +1,8 @@
 import type { Command } from "commander";
 import { getMainRepoRoot } from "@plugins/infra/plugins/spawn/core";
 import { gatewayLogs } from "@plugins/infra/plugins/launcher/data-dirs";
+import { MAIN_WORKTREE_NAME } from "@plugins/infra/plugins/paths/server";
+import { namespaceUrl } from "@plugins/infra/plugins/namespace/core";
 import {
   assertSupportedHost,
   readPid,
@@ -37,7 +39,7 @@ export function registerStart(program: Command) {
         console.log(
           "Gateway is already running on port 9000 (started externally).",
         );
-        console.log("  Gateway: http://singularity.localhost:9000");
+        console.log(`  Gateway: ${namespaceUrl(MAIN_WORKTREE_NAME)}`);
         console.log(`  Logs:    ${gatewayLogs.path}/`);
         return;
       }
@@ -46,7 +48,7 @@ export function registerStart(program: Command) {
         if (!opts.force) {
           console.log(`Gateway is already running (PID ${existingPid})`);
           console.log(`  Logs:    ${gatewayLogs.path}/`);
-          console.log(`  Gateway: http://singularity.localhost:9000`);
+          console.log(`  Gateway: ${namespaceUrl(MAIN_WORKTREE_NAME)}`);
           return;
         }
         console.log(`Stopping existing gateway (PID ${existingPid})...`);
@@ -102,6 +104,6 @@ export function registerStart(program: Command) {
 
       console.log(`Gateway started (PID ${pid})`);
       console.log(`  Logs:    ${gatewayLogs.path}/`);
-      console.log(`  Gateway: http://singularity.localhost:9000`);
+      console.log(`  Gateway: ${namespaceUrl(MAIN_WORKTREE_NAME)}`);
     });
 }

@@ -447,8 +447,9 @@ func streamBackendLogs(w http.ResponseWriter, r *http.Request, wt *Worktree) {
 
 // ─── pure helpers ────────────────────────────────────────────
 
-// parseWorktree extracts the worktree name from a Host header.
+// parseWorktree extracts the namespace from a Host header.
 // Returns "" for loopback hostnames or anything not matching <name>.localhost.
+// <name> may carry dots (`sonata.att-XXX`); see nameRegex in registry.go.
 func parseWorktree(host string) string {
 	h := host
 	// IPv6 with brackets: [::1]:9000
@@ -469,11 +470,13 @@ func parseWorktree(host string) string {
 	if !strings.HasSuffix(h, ".localhost") {
 		return ""
 	}
-	name := strings.TrimSuffix(h, ".localhost")
-	if strings.Contains(name, ".") {
-		return ""
-	}
-	return name
+	// Multi-label names are legal: a namespace is `<composition>.<checkout>`
+	// (`sonata.att-XXX.localhost`), with both sentinels elided so today's
+	// single-label URLs are unchanged. The name is returned verbatim and
+	// validated by `nameRegex` in Resolve/loadFile — the gateway never
+	// decomposes it. The loopback short-circuit above must stay ahead of this,
+	// since `127.0.0.1` and `::1` contain dots and colons of their own.
+	return strings.TrimSuffix(h, ".localhost")
 }
 
 func isBackendPath(p string) bool {

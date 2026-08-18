@@ -4,10 +4,8 @@ import { defineItemActions } from "@plugins/primitives/plugins/data-view/web";
 import type { ItemActionProps } from "@plugins/primitives/plugins/data-view/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { useManifestActions } from "@plugins/plugin-meta/plugins/composition/web";
-import {
-  MAIN_COMPOSITION_ID,
-  type CompositionManifestItem,
-} from "@plugins/plugin-meta/plugins/composition/core";
+import { MAIN_COMPOSITION_ID } from "@plugins/infra/plugins/namespace/core";
+import { type CompositionManifestItem } from "@plugins/plugin-meta/plugins/composition/core";
 
 /** Per-consumer trailing-action slot for the Compositions list rows. */
 export const CompositionItemActions =

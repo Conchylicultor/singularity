@@ -29,13 +29,17 @@ export function selectRegistry(
   name: string | undefined,
 ): string {
   if (name !== undefined && name !== "") {
-    // Same charset as the gateway's namespace regex (gateway/registry.go). A
-    // mismatch means a broken spawn env, not a missing registry — fail loudly
-    // rather than silently booting the full registry under a bogus identity.
-    // KEEP IN SYNC with the canonical TS copy, COMPOSITION_NAME_RE in
-    // plugin-meta/composition/core/namespace.ts — boot cannot import config_v2,
-    // which that module's barrel pulls in.
-    if (!/^[a-z0-9][a-z0-9-]{0,62}$/.test(name)) {
+    // `name` is a NAMESPACE — `<composition>.<checkout>` with both sentinels
+    // elided — so it is one or two dot-joined labels. A mismatch means a broken
+    // spawn env, not a missing registry: fail loudly rather than silently
+    // booting the full registry under a bogus identity.
+    //
+    // This is a hand-written copy of `NAMESPACE_RE`
+    // (plugins/infra/plugins/namespace/core/namespace.ts) because boot cannot
+    // import it — that module is reachable only through a barrel whose closure
+    // pulls in config_v2. The copy is asserted equal by the
+    // `namespace:grammar-in-sync` check, not by the comment you are reading.
+    if (!/^[a-z0-9][a-z0-9-]{0,62}(\.[a-z0-9][a-z0-9-]{0,62})?$/.test(name)) {
       throw new Error(
         `Invalid SINGULARITY_WORKTREE "${name}" — cannot select a plugin registry.`,
       );

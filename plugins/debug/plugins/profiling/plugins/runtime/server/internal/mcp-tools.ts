@@ -2,7 +2,15 @@ import { z } from "zod";
 import { basename } from "path";
 import { Mcp } from "@plugins/infra/plugins/mcp/server";
 import { getConversation } from "@plugins/tasks/plugins/tasks-core/server";
-import { type SpanKind, SPAN_KINDS, waitSplit } from "@plugins/infra/plugins/runtime-profiler/core";
+import {
+  type SpanKind,
+  SPAN_KINDS,
+  waitSplit,
+} from "@plugins/infra/plugins/runtime-profiler/core";
+import {
+  asNamespace,
+  namespaceUrl,
+} from "@plugins/infra/plugins/namespace/core";
 import { runtimeProfileSchema } from "../../shared/endpoints";
 
 // The filter enum is SPAN_KINDS + the "all" sentinel, derived from the single
@@ -71,31 +79,34 @@ Default: profiles the current conversation's worktree server. Pass \`worktree\` 
       ),
   },
   async handler({ kind = "all", limit = 15, worktree }, { conversationId }) {
-    let worktreeName: string;
+    let raw: string;
     if (worktree) {
-      worktreeName = worktree;
+      raw = worktree;
     } else {
       const conv = await getConversation(conversationId);
       if (!conv) throw new Error(`Unknown conversation "${conversationId}"`);
-      worktreeName = basename(conv.worktreePath);
+      raw = basename(conv.worktreePath);
     }
 
-    if (!/^[a-zA-Z0-9_-]+$/.test(worktreeName)) {
-      throw new Error(`Unsafe worktree name: "${worktreeName}"`);
-    }
+    // A tool argument is a serialization boundary, and the name goes into a URL
+    // the gateway resolves — so it is validated against the one grammar the
+    // gateway itself accepts, not a local approximation of it.
+    const worktreeName = asNamespace(raw);
 
     // Always read the profile through the gateway, which only ever proxies to
     // the worktree's live backend (`w.active`). Reading this process's own
     // in-memory recorder would silently report a stale/orphaned process
     // generation after a hot-swap restart.
-    const url = `http://${worktreeName}.localhost:9000/api/debug/profiling/runtime`;
+    const url = namespaceUrl(worktreeName, "/api/debug/profiling/runtime");
     const res = await fetch(url);
     if (!res.ok) {
       throw new Error(
         `runtime profile fetch failed (${res.status}) for worktree "${worktreeName}"`,
       );
     }
-    const profile = runtimeProfileSchema.parse(backfillStaleProfile(await res.json()));
+    const profile = runtimeProfileSchema.parse(
+      backfillStaleProfile(await res.json()),
+    );
     const targetKinds: readonly SpanKind[] =
       kind === "all" ? SPAN_KINDS : [kind as SpanKind];
 

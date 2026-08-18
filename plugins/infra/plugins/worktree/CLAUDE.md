@@ -21,6 +21,7 @@ Git worktree CRUD primitive: resolve the main worktree root, derive per-id paths
     - `CompositionMarker`
     - `DerivePushDeps`
     - `InAppRemovalRecord`
+    - `NamespaceClaimant`
     - `NamespaceProbe`
     - `PushHolder`
     - `RemovalBranch`

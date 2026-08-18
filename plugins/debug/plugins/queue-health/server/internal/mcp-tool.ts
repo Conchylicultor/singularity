@@ -2,6 +2,10 @@ import { z } from "zod";
 import { basename } from "path";
 import { Mcp } from "@plugins/infra/plugins/mcp/server";
 import { getConversation } from "@plugins/tasks/plugins/tasks-core/server";
+import {
+  asNamespace,
+  namespaceUrl,
+} from "@plugins/infra/plugins/namespace/core";
 import { QueueHealthSummarySchema } from "../../core";
 
 export const queueHealthTool = Mcp.tool({
@@ -27,23 +31,24 @@ Default: reads the current conversation's own worktree. Pass \`worktree\` to tar
       ),
   },
   async handler({ worktree }, { conversationId }) {
-    let worktreeName: string;
+    let raw: string;
     if (worktree) {
-      worktreeName = worktree;
+      raw = worktree;
     } else {
       const conv = await getConversation(conversationId);
       if (!conv) throw new Error(`Unknown conversation "${conversationId}"`);
-      worktreeName = basename(conv.worktreePath);
+      raw = basename(conv.worktreePath);
     }
 
-    if (!/^[a-zA-Z0-9_-]+$/.test(worktreeName)) {
-      throw new Error(`Unsafe worktree name: "${worktreeName}"`);
-    }
+    // A tool argument is a serialization boundary, and the name goes into a URL
+    // the gateway resolves — so it is validated against the one grammar the
+    // gateway itself accepts, not a local approximation of it.
+    const worktreeName = asNamespace(raw);
 
     // Always read through the gateway, which only ever proxies to the worktree's
     // live backend — reading this process's own DB would report the calling
     // worktree, not the requested target.
-    const url = `http://${worktreeName}.localhost:9000/api/debug/queue-health/summary`;
+    const url = namespaceUrl(worktreeName, "/api/debug/queue-health/summary");
     const res = await fetch(url);
     if (!res.ok) {
       throw new Error(

@@ -12,10 +12,10 @@ import {
   resolveComposition,
 } from "@plugins/plugin-meta/plugins/closure/core";
 import type { CompositionManifest } from "@plugins/plugin-meta/plugins/closure/core";
+import { MAIN_COMPOSITION_ID } from "@plugins/infra/plugins/namespace/core";
 import {
   assertCompositionId,
   manifestItemToManifest,
-  MAIN_COMPOSITION_ID,
 } from "@plugins/plugin-meta/plugins/composition/core";
 import type { PluginId } from "@plugins/framework/plugins/plugin-id/core";
 import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";

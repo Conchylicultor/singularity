@@ -71,6 +71,7 @@ import {
   offendingPackages,
   packagesInSourcemapSources,
 } from "./scan";
+import { asNamespace } from "@plugins/infra/plugins/namespace/core";
 
 const MARKER_NAME = ".web-artifacts.json";
 const BUILD_HINT =
@@ -94,7 +95,11 @@ function rootSync(): string {
  * `map-in-sync` would silently inspect MAIN's dist and pass or fail on it.
  */
 function distDir(root: string): string {
-  return worktreeArtifacts.webDist(checkoutWorktreeName(root));
+  // `asNamespace`, not `namespaceFor`: minting the namespace means asking git
+  // which root owns `.git`, and `cacheSignature` is synchronous. The served
+  // namespace of this checkout's main composition IS its directory name, so the
+  // cast is exact — and loud if a checkout is ever named something illegal.
+  return worktreeArtifacts.webDist(asNamespace(checkoutWorktreeName(root)));
 }
 
 function readIfExists(file: string): string | null {

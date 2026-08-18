@@ -9,12 +9,13 @@ import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "fs";
 import { tmpdir } from "os";
 import { join } from "path";
 import { worktreeArtifacts } from "@plugins/infra/plugins/paths/server";
+import { asNamespace } from "@plugins/infra/plugins/namespace/core";
 import { reapLegacyCheckoutDist } from "./legacy-dist-reap";
 
 const tmp = mkdtempSync(join(tmpdir(), "legacy-dist-reap-test-"));
 afterAll(() => rmSync(tmp, { recursive: true, force: true }));
 
-const NAMESPACE = "reap-test-ns";
+const NAMESPACE = asNamespace("reap-test-ns");
 const NEW_PATH = worktreeArtifacts.webDist(NAMESPACE);
 const LEGACY_PATH = "/some/checkout/plugins/framework/plugins/web-core/dist";
 

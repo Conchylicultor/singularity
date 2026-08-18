@@ -15,6 +15,10 @@ import { randomUUID } from "node:crypto";
 import { dlopen } from "bun:ffi";
 import { worktreeDataDir } from "@plugins/infra/plugins/paths/server";
 import {
+  asNamespace,
+  type Namespace,
+} from "@plugins/infra/plugins/namespace/core";
+import {
   clearPushHolder,
   clearWorktreeOp,
   derivePushPhases,
@@ -73,28 +77,31 @@ const phaseOf = (out: WorktreeOpInfo[], slug: string) =>
 //
 // The marker read/write functions resolve their path from the real
 // worktreeDataDir(slug); no path injection. So each test uses a throwaway random
-// slug (never a real worktree), writes under the real worktreesDir(), and reaps
+// slug (never a real worktree), writes under the real WORKTREES_DIR, and reaps
 // the whole slug dir in a finally.
 
-function markerPath(slug: string, op: WorktreeOp): string {
+function markerPath(slug: Namespace, op: WorktreeOp): string {
   return join(worktreeDataDir(slug), "ops", `${op}.json`);
 }
 function writeRawMarker(
-  slug: string,
+  slug: Namespace,
   op: WorktreeOp,
   data: Record<string, unknown>,
 ): void {
   mkdirSync(join(worktreeDataDir(slug), "ops"), { recursive: true });
   writeFileSync(markerPath(slug, op), JSON.stringify(data));
 }
-function readRawMarker(slug: string, op: WorktreeOp): Record<string, unknown> {
+function readRawMarker(
+  slug: Namespace,
+  op: WorktreeOp,
+): Record<string, unknown> {
   return JSON.parse(readFileSync(markerPath(slug, op), "utf8")) as Record<
     string,
     unknown
   >;
 }
-function withTempSlug(fn: (slug: string) => void): void {
-  const slug = `op-test-${randomUUID()}`;
+function withTempSlug(fn: (slug: Namespace) => void): void {
+  const slug = asNamespace(`op-test-${randomUUID()}`);
   try {
     fn(slug);
   } finally {
@@ -102,9 +109,9 @@ function withTempSlug(fn: (slug: string) => void): void {
   }
 }
 async function withTempSlugAsync(
-  fn: (slug: string) => Promise<void>,
+  fn: (slug: Namespace) => Promise<void>,
 ): Promise<void> {
-  const slug = `op-test-${randomUUID()}`;
+  const slug = asNamespace(`op-test-${randomUUID()}`);
   try {
     await fn(slug);
   } finally {

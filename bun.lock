@@ -2956,6 +2956,10 @@
         "@modelcontextprotocol/sdk": "^1.20.0",
       },
     },
+    "plugins/infra/plugins/namespace": {
+      "name": "@singularity/plugin-infra-namespace",
+      "version": "0.0.1",
+    },
     "plugins/infra/plugins/ndjson-stream": {
       "name": "@singularity/plugin-infra-ndjson-stream",
       "version": "0.0.1",
@@ -6920,6 +6924,8 @@
     "@singularity/plugin-infra-launcher": ["@singularity/plugin-infra-launcher@workspace:plugins/infra/plugins/launcher"],
 
     "@singularity/plugin-infra-mcp": ["@singularity/plugin-infra-mcp@workspace:plugins/infra/plugins/mcp"],
+
+    "@singularity/plugin-infra-namespace": ["@singularity/plugin-infra-namespace@workspace:plugins/infra/plugins/namespace"],
 
     "@singularity/plugin-infra-ndjson-stream": ["@singularity/plugin-infra-ndjson-stream@workspace:plugins/infra/plugins/ndjson-stream"],
 

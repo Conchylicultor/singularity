@@ -24,14 +24,23 @@ import {
   runHermeticBuild,
 } from "./internal/hermetic-build";
 import { reapLegacyCheckoutDist } from "./internal/legacy-dist-reap";
-import { WEB_CORE_RELATIVE } from "@plugins/infra/plugins/paths/server";
-import { basename, join, resolve } from "path";
+import {
+  WEB_CORE_RELATIVE,
+  checkoutRef,
+} from "@plugins/infra/plugins/paths/server";
+import {
+  MAIN_COMPOSITION_ID,
+  NAMESPACE_LABEL_RE,
+  namespaceFor,
+  namespaceUrl,
+  type Namespace,
+} from "@plugins/infra/plugins/namespace/core";
+import { join, resolve } from "path";
 import { parseMigrationAnswers } from "../migrations";
 import {
   collectAllPlugins,
   propagateConfigToUser,
 } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
-import { COMPOSITION_NAME_RE } from "@plugins/plugin-meta/plugins/composition/core";
 import { formatChangedSources } from "@plugins/framework/plugins/tooling/plugins/format/core";
 import { getFacet } from "@plugins/plugin-meta/plugins/facets/core";
 import { routesFacetDef } from "@plugins/plugin-meta/plugins/facets/plugins/routes/core";
@@ -115,9 +124,10 @@ import {
 import { createBuildRunRecorder } from "@plugins/build/plugins/run-ledger/server";
 import { BUILD_EXIT_SUPERSEDED } from "@plugins/build/plugins/build-status/core";
 
-// Worktree names are gateway namespaces — same rule as composition ids (the
-// canonical TS copy lives in plugin-meta/composition/core/namespace.ts).
-const NAME_REGEX = COMPOSITION_NAME_RE;
+// A checkout name is one LABEL of a namespace — the same rule a composition id
+// obeys, owned by the namespace plugin and pinned to the gateway's own regex by
+// `namespace:grammar-in-sync`.
+const NAME_REGEX = NAMESPACE_LABEL_RE;
 const CENTRAL_ROUTES_FILE = gatewayState.file(CENTRAL_ROUTES_FILENAME);
 
 interface CentralRoutesManifest {
@@ -425,9 +435,9 @@ async function getWorktreeState(
 // nothing is serving yet (cold start) or it's unreachable. The gateway only ever
 // routes to a backend past its ready barrier, so a change in this value across a
 // restart proves the NEW (ready) backend took over — not the stale old one.
-async function readHealthStartedAt(name: string): Promise<number | null> {
+async function readHealthStartedAt(name: Namespace): Promise<number | null> {
   try {
-    const resp = await fetch(`http://${name}.localhost:9000/api/health`, {
+    const resp = await fetch(namespaceUrl(name, "/api/health"), {
       signal: AbortSignal.timeout(5_000),
     });
     if (!resp.ok) return null;
@@ -454,7 +464,7 @@ async function readHealthStartedAt(name: string): Promise<number | null> {
 // clean pass. An unambiguous deploy failure (a hot restart whose new backend
 // never took over) routes through `onDeployFailure`, which never returns.
 async function probeHealth(
-  name: string,
+  name: Namespace,
   previousStartedAt: number | null,
   restartError: string | null,
   onDeployFailure: (reason: string[]) => Promise<never>,
@@ -464,8 +474,8 @@ async function probeHealth(
   console.log(
     `Probing /api/health... (deadline ${Math.round(deadline / 1000)}s)`,
   );
-  const url = `http://${name}.localhost:9000/api/health`;
-  const site = `http://${name}.localhost:9000`;
+  const url = namespaceUrl(name, "/api/health");
+  const site = namespaceUrl(name);
   let lastStatus: number | string = "no response";
   const result = await retryUntil<true, Promise<string | null>>(
     async () => {
@@ -790,10 +800,12 @@ export function registerBuild(program: Command) {
         endSpan();
 
         const root = await getWorktreeRoot();
-        const name = basename(root);
+        // This command builds the main composition only — Phase 4 is what makes
+        // the composition an argument. The checkout is the variable half.
+        const name = namespaceFor(MAIN_COMPOSITION_ID, await checkoutRef(root));
 
         // Open the durable, crash-safe build-progress log now that `name` (the same
-        // basename(root) key the op marker and writeBuildProfile use) is known. Every
+        // namespace key the op marker and writeBuildProfile use) is known. Every
         // buildProfilerStart span from here on records an enter/leave + RSS to
         // ~/.singularity/logs/build-progress/build-progress.jsonl, so a wedged build names its phase and
         // heap trend even after SIGKILL. See research/2026-07-21-global-cli-op-wedge-gc-sink.md.
@@ -1008,7 +1020,7 @@ export function registerBuild(program: Command) {
         // artifact is touched, so there is no deploy ambiguity for them to resolve.
         // Declared here rather than beside its first heavy use: the verdict guard,
         // the deploy receipt and the verdicts must all name the same URL.
-        const buildUrl = `http://${name}.localhost:9000`;
+        const buildUrl = namespaceUrl(name);
 
         installVerdictGuard({
           url: buildUrl,

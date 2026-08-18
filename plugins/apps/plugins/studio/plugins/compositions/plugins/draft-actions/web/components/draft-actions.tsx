@@ -17,7 +17,7 @@ import {
   updateActiveDraft,
   clearActive,
 } from "@plugins/plugin-meta/plugins/composition/web";
-import { MAIN_COMPOSITION_ID } from "@plugins/plugin-meta/plugins/composition/core";
+import { MAIN_COMPOSITION_ID } from "@plugins/infra/plugins/namespace/core";
 
 /**
  * Persistence actions for the active draft: an inline editable name plus Save /

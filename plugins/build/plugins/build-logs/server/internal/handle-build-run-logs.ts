@@ -1,6 +1,9 @@
 import { readFileSync } from "node:fs";
 import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
-import { worktreeArtifacts } from "@plugins/infra/plugins/paths/server";
+import {
+  currentWorktreeName,
+  worktreeArtifacts,
+} from "@plugins/infra/plugins/paths/server";
 import { getBuildRunLogs } from "../../shared/endpoints";
 
 interface BuildLogsFile {
@@ -14,8 +17,7 @@ interface BuildLogsFile {
 }
 
 function readBuildRunLogs(buildId: string): BuildLogsFile | null {
-  const name = process.env.SINGULARITY_WORKTREE;
-  if (!name) return null;
+  const name = currentWorktreeName();
   const path = worktreeArtifacts.buildLogs(name, buildId);
   try {
     return JSON.parse(readFileSync(path, "utf-8")) as BuildLogsFile;

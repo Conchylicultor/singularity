@@ -10,6 +10,10 @@ import {
   redirectUriFor,
 } from "../oauth-flow";
 import { AuthCredentialsMissingError } from "@plugins/auth/core";
+import {
+  asNamespace,
+  isNamespace,
+} from "@plugins/infra/plugins/namespace/core";
 
 /**
  * GET /api/auth/start/:provider
@@ -23,7 +27,8 @@ export const handleOAuthStart: HttpHandler = async (req, params) => {
   const url = new URL(req.url);
 
   const descriptor = tryGetProvider(providerId);
-  if (!descriptor) return new Response(`unknown provider: ${providerId}`, { status: 404 });
+  if (!descriptor)
+    return new Response(`unknown provider: ${providerId}`, { status: 404 });
   if (descriptor.kind !== "oauth2" || !descriptor.oauth) {
     return new Response("provider does not support OAuth", { status: 400 });
   }
@@ -35,28 +40,43 @@ export const handleOAuthStart: HttpHandler = async (req, params) => {
     if (err instanceof AuthCredentialsMissingError) {
       return new Response(
         renderErrorPage("Credentials not configured", err.message),
-        { status: 400, headers: { "Content-Type": "text/html; charset=utf-8" } },
+        {
+          status: 400,
+          headers: { "Content-Type": "text/html; charset=utf-8" },
+        },
       );
     }
     throw err;
   }
 
-  const worktree = url.searchParams.get("worktree") ?? "";
-  if (!worktree) {
+  const worktreeParam = url.searchParams.get("worktree") ?? "";
+  if (!worktreeParam) {
     return new Response("missing worktree query param", { status: 400 });
   }
+  // The caller's namespace ends up as the postMessage target origin of the
+  // callback page, so it is validated here rather than trusted downstream.
+  if (!isNamespace(worktreeParam)) {
+    return new Response(`invalid worktree query param: ${worktreeParam}`, {
+      status: 400,
+    });
+  }
+  const worktree = asNamespace(worktreeParam);
   const scopesParam = url.searchParams.get("scopes");
   const requested = scopesParam
     ? scopesParam.split(",").filter((s) => s.length > 0)
     : [];
   // Default scopes are always granted: a scoped (incremental-consent) request must
   // never drop the identity scopes the rest of the app relies on.
-  const scopes = [...new Set([...descriptor.oauth.defaultScopes, ...requested])];
+  const scopes = [
+    ...new Set([...descriptor.oauth.defaultScopes, ...requested]),
+  ];
 
   const nonce = generateNonce();
   const usePkce = descriptor.oauth.pkce !== false;
   const codeVerifier = usePkce ? generateCodeVerifier() : undefined;
-  const codeChallenge = codeVerifier ? codeChallengeFor(codeVerifier) : undefined;
+  const codeChallenge = codeVerifier
+    ? codeChallengeFor(codeVerifier)
+    : undefined;
 
   recordPendingState(nonce, {
     providerId,
@@ -74,7 +94,10 @@ export const handleOAuthStart: HttpHandler = async (req, params) => {
     codeChallenge,
   });
 
-  return new Response(null, { status: 302, headers: { Location: authorizeUrl } });
+  return new Response(null, {
+    status: 302,
+    headers: { Location: authorizeUrl },
+  });
 };
 
 function renderErrorPage(title: string, detail: string): string {

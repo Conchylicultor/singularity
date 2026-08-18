@@ -1,5 +1,11 @@
 import { homedir } from "node:os";
 import { basename, join, resolve } from "node:path";
+import {
+  asNamespace,
+  namespaceFor,
+  MAIN_COMPOSITION_ID,
+  type Namespace,
+} from "@plugins/infra/plugins/namespace/core";
 
 export const REPO_ROOT = resolve(
   import.meta.dir,
@@ -35,7 +41,16 @@ export function repoConfigDir(): string {
 // reap. It is NOT where a built frontend lives any more — see `webDistDir()`.
 export const WEB_CORE_RELATIVE = "plugins/framework/plugins/web-core";
 
-export const MAIN_WORKTREE_NAME = "singularity";
+/**
+ * The namespace the main app answers to.
+ *
+ * DERIVED, not a second literal: it is what the elision rule yields for the main
+ * composition on the main checkout. Spelling it as a constant here again is how
+ * "singularity" ended up meaning two different things in two files.
+ */
+export const MAIN_WORKTREE_NAME: Namespace = namespaceFor(MAIN_COMPOSITION_ID, {
+  kind: "main",
+});
 
 export function isMain(): boolean {
   return process.env.SINGULARITY_WORKTREE === MAIN_WORKTREE_NAME;
@@ -122,8 +137,12 @@ export function setReleaseIdentity(identity: ReleaseIdentity): void {
  * on main. Use to tag/scope per-namespace data so it can't leak across the
  * DB-fork boundary (a worktree DB is forked from main and inherits its rows).
  */
-export function currentWorktreeName(): string {
-  return process.env.SINGULARITY_WORKTREE ?? MAIN_WORKTREE_NAME;
+export function currentWorktreeName(): Namespace {
+  const raw = process.env.SINGULARITY_WORKTREE;
+  // A serialization boundary: the gateway wrote this env var from a spec-dir
+  // basename, so it is validated on the way in rather than trusted. A malformed
+  // namespace becomes a path and a database name, so being loud here is cheap.
+  return raw === undefined ? MAIN_WORKTREE_NAME : asNamespace(raw);
 }
 
 /**
@@ -148,6 +167,12 @@ export function currentWorktreeName(): string {
  * Two processes that must agree on which checkout produced an artifact — a
  * `release` and the `build --hermetic` child it spawns with `cwd` at that same
  * root — both call this on that root, so they cannot drift.
+ *
+ * Returns a plain `string`, NOT a {@link Namespace}, and that is the point. A
+ * checkout name is one INPUT to a namespace, not a namespace: they are equal for
+ * every agent worktree today and stop being equal the moment a composition is
+ * served from a non-main checkout. Mint the namespace with `namespaceFor` (or
+ * `checkoutRef` from the server barrel) instead of passing this through.
  */
 export function checkoutWorktreeName(root: string): string {
   return basename(root);
@@ -215,7 +240,7 @@ export function worktreesDir(): string {
 }
 
 /** The per-worktree data dir: `<worktreesDir()>/<name>/`. */
-export function worktreeDataDir(name: string): string {
+export function worktreeDataDir(name: Namespace): string {
   return join(worktreesDir(), name);
 }
 
@@ -243,19 +268,19 @@ export function worktreeDataDir(name: string): string {
  */
 export const worktreeArtifacts = {
   /** Build profiler spans. `build-profile.json` or `build-profile-<id>.json`. */
-  buildProfile: (name: string, buildId?: string): string =>
+  buildProfile: (name: Namespace, buildId?: string): string =>
     join(
       worktreeDataDir(name),
       buildId ? `build-profile-${buildId}.json` : "build-profile.json",
     ),
   /** Structured build transcript. `build-logs.json` or `build-logs-<id>.json`. */
-  buildLogs: (name: string, buildId?: string): string =>
+  buildLogs: (name: Namespace, buildId?: string): string =>
     join(
       worktreeDataDir(name),
       buildId ? `build-logs-${buildId}.json` : "build-logs.json",
     ),
   /** Human-readable build transcript. `build.log` or `build-<id>.log`. */
-  buildLogText: (name: string, buildId?: string): string =>
+  buildLogText: (name: Namespace, buildId?: string): string =>
     join(worktreeDataDir(name), buildId ? `build-${buildId}.log` : "build.log"),
   /**
    * The deploy receipt: this worktree's LAST build, whatever became of it.
@@ -268,7 +293,7 @@ export const worktreeArtifacts = {
    * `status: "running"` with a dead pid, and there is no older success for it to
    * be confused with. Do not add a `buildId` parameter.
    */
-  buildStatus: (name: string): string =>
+  buildStatus: (name: Namespace): string =>
     join(worktreeDataDir(name), "build-status.json"),
   /**
    * One check run's full, untruncated transcript. ALWAYS id-keyed (like
@@ -287,25 +312,28 @@ export const worktreeArtifacts = {
    * `opId` — never a fresh one: reusing it is what joins this file to the
    * `build-<id>.log` beside it and to the run's lines in `check-progress.jsonl`.
    */
-  checkLog: (name: string, runId: string): string =>
+  checkLog: (name: Namespace, runId: string): string =>
     join(worktreeDataDir(name), `check-${runId}.log`),
   /** Per-release fallback log. Always keyed to a release run id. */
-  releaseLogs: (name: string, releaseId: string): string =>
+  releaseLogs: (name: Namespace, releaseId: string): string =>
     join(worktreeDataDir(name), `release-logs-${releaseId}.json`),
   /**
    * DIRECTORY. The web dist SERVED for namespace `name` — the tree the gateway
    * points at for `<name>.localhost:9000`. `name` is a *namespace*: a worktree
    * slug (`singularity`, an agent branch) or an auto-served composition id.
    */
-  webDist: (name: string): string => join(worktreeDataDir(name), "web"),
+  webDist: (name: Namespace): string => join(worktreeDataDir(name), "web"),
   /**
    * DIRECTORY. A release's scratch web dist — copied into the shippable bundle
    * and served by nobody. Keyed by the worktree that BUILT it (not a namespace:
    * a release has none), so two checkouts releasing the same composition, or one
    * checkout releasing two, can never share a tree.
+   *
+   * The `asNamespace` below is not a namespace claim — it is the data dir's own
+   * grammar. Every subdirectory of `worktrees/` obeys it, checkout name or not.
    */
   releaseWebDist: (worktree: string, composition: string): string =>
-    join(worktreeDataDir(worktree), "release-web", composition),
+    join(worktreeDataDir(asNamespace(worktree)), "release-web", composition),
 } as const;
 
 /**

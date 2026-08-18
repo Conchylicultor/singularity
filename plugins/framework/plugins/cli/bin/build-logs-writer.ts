@@ -5,6 +5,7 @@ import {
   pruneWorktreeBuildArtifacts,
 } from "./paths";
 import { renderStepBlock, orderStepsForDisplay } from "./build-output";
+import type { Namespace } from "@plugins/infra/plugins/namespace/core";
 
 export interface BuildStepLog {
   id: string;
@@ -60,7 +61,12 @@ export interface StepLogCollector {
    * `exitCode` is the code the run ends on — the caller stamps it here and on the
    * run's ledger row from the same value, so artifact and row cannot disagree.
    */
-  write(name: string, runId: string, exitCode: number, trailer?: string): void;
+  write(
+    name: Namespace,
+    runId: string,
+    exitCode: number,
+    trailer?: string,
+  ): void;
 }
 
 /** Plain-text render of every step, mirroring the console layout. */
@@ -87,7 +93,7 @@ interface StepLogCollectorInternal extends StepLogCollector {
    * returning the text-log path for the failure-line pointer.
    */
   writeLogs(
-    name: string,
+    name: Namespace,
     buildId: string | undefined,
     exitCode: number,
     trailer?: string,
@@ -101,7 +107,7 @@ function makeStepLogCollector(): StepLogCollectorInternal {
   let currentStep: BuildStepLog | null = null;
 
   function writeLogs(
-    name: string,
+    name: Namespace,
     buildId: string | undefined,
     exitCode: number,
     trailer?: string,
@@ -189,7 +195,7 @@ export function pushBuildStepLog(step: BuildStepLog): void {
  * — which prints the pointer at that path — can call it from its exit handler.
  */
 export function writeBuildLogs(
-  name: string,
+  name: Namespace,
   trailer: string,
   exitCode: number,
 ): string {

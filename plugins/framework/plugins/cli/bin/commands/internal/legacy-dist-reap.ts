@@ -42,6 +42,7 @@ import { readdir, rm } from "node:fs/promises";
 import { join } from "node:path";
 import { worktreeArtifacts } from "@plugins/infra/plugins/paths/server";
 import { distNames } from "./dist-publish";
+import type { Namespace } from "@plugins/infra/plugins/namespace/core";
 
 /** Where the gateway's own API lives, same origin `build` POSTs its restart to. */
 const GATEWAY_ORIGIN = "http://localhost:9000";
@@ -157,7 +158,7 @@ export async function reapLegacyCheckoutDist(opts: {
   /** The checkout's web-core dir — the legacy dist's parent. */
   webDir: string;
   /** The namespace whose gateway registration is the gate (this checkout's own). */
-  namespace: string;
+  namespace: Namespace;
   /** Gateway origin override; tests only — production always asks the real one. */
   gatewayOrigin?: string;
 }): Promise<LegacyReapResult> {

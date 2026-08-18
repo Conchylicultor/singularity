@@ -2,6 +2,10 @@ import { MdRocketLaunch } from "react-icons/md";
 import { PaneIconAction } from "@plugins/primitives/plugins/pane/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { useConversationById } from "@plugins/conversations/web";
+import {
+  asNamespace,
+  namespaceUrl,
+} from "@plugins/infra/plugins/namespace/core";
 
 export function OpenAppButton() {
   const { convId } = conversationPane.useParams();
@@ -12,8 +16,10 @@ export function OpenAppButton() {
       label="Open app"
       icon={MdRocketLaunch}
       onClick={() =>
+        // An attempt id IS its worktree checkout name, and the main
+        // composition's prefix elides — so the attempt id is the namespace.
         window.open(
-          `http://${conversation.attemptId}.localhost:9000/`,
+          namespaceUrl(asNamespace(conversation.attemptId), "/"),
           "_blank",
         )
       }

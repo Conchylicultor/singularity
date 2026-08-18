@@ -1,4 +1,10 @@
-import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  renameSync,
+  writeFileSync,
+} from "node:fs";
 import { join } from "node:path";
 import { and, eq, isNull } from "drizzle-orm";
 import { db } from "@plugins/database/server";
@@ -101,7 +107,12 @@ export async function reconcileOrphanReleases(): Promise<void> {
   const unfinished = await db
     .select({ id: _releaseRuns.id, pid: _releaseRuns.pid })
     .from(_releaseRuns)
-    .where(and(isNull(_releaseRuns.finishedAt), eq(_releaseRuns.namespace, currentWorktreeName())));
+    .where(
+      and(
+        isNull(_releaseRuns.finishedAt),
+        eq(_releaseRuns.namespace, currentWorktreeName()),
+      ),
+    );
   const orphans = unfinished.filter((r) => !isPidAlive(r.pid));
   if (orphans.length === 0) return;
   const finishedAt = new Date();
@@ -109,7 +120,11 @@ export async function reconcileOrphanReleases(): Promise<void> {
     const exitCode = resolveOrphanExitCode(orphan.id);
     await db
       .update(_releaseRuns)
-      .set({ finishedAt, exitCode, status: exitCode === 0 ? "succeeded" : "failed" })
+      .set({
+        finishedAt,
+        exitCode,
+        status: exitCode === 0 ? "succeeded" : "failed",
+      })
       .where(eq(_releaseRuns.id, orphan.id));
   }
   // No hand-notify: the history resource declares identityTable "release_runs",
@@ -206,7 +221,9 @@ interface ReleaseManifest {
  * sequencing caller can stop with the engine's own words instead of guessing
  * from a log line.
  */
-export async function runRelease(opts: TriggerReleaseOptions): Promise<ReleaseOutcome> {
+export async function runRelease(
+  opts: TriggerReleaseOptions,
+): Promise<ReleaseOutcome> {
   const { composition, target, intent } = opts;
   const targetDef = releaseTargetById(target);
   // The endpoint validates the target before calling, but guard here too so a
@@ -305,11 +322,16 @@ export async function runRelease(opts: TriggerReleaseOptions): Promise<ReleaseOu
       stdout: "pipe",
       stderr: "pipe",
       detached: true,
-      env: Object.keys(extraEnv).length ? { ...process.env, ...extraEnv } : undefined,
+      env: Object.keys(extraEnv).length
+        ? { ...process.env, ...extraEnv }
+        : undefined,
     },
   );
 
-  await db.update(_releaseRuns).set({ pid: proc.pid }).where(eq(_releaseRuns.id, releaseId));
+  await db
+    .update(_releaseRuns)
+    .set({ pid: proc.pid })
+    .where(eq(_releaseRuns.id, releaseId));
 
   const allLines: Array<{ text: string; stream: "stdout" | "stderr" }> = [];
 
@@ -340,12 +362,15 @@ export async function runRelease(opts: TriggerReleaseOptions): Promise<ReleaseOu
   // platform, builtAt, port).
   let manifest: ReleaseManifest | null = null;
   try {
-    manifest = JSON.parse(readFileSync(join(out, "RELEASE.json"), "utf-8")) as ReleaseManifest;
+    manifest = JSON.parse(
+      readFileSync(join(out, "RELEASE.json"), "utf-8"),
+    ) as ReleaseManifest;
   } catch (err) {
     if (
       (err as NodeJS.ErrnoException).code !== "ENOENT" &&
       !(err instanceof SyntaxError)
-    ) throw err;
+    )
+      throw err;
   }
 
   const succeeded = exitCode === 0 && manifest != null;
@@ -357,21 +382,19 @@ export async function runRelease(opts: TriggerReleaseOptions): Promise<ReleaseOu
   // serve the captured logs after the live stream ends (mirror build's
   // writeFileSync+rename atomic write).
   if (!succeeded && allLines.length > 0) {
-    const worktreeName = process.env.SINGULARITY_WORKTREE;
-    if (worktreeName) {
-      const worktreeDir = worktreeDataDir(worktreeName);
-      mkdirSync(worktreeDir, { recursive: true });
-      const logPath = worktreeArtifacts.releaseLogs(worktreeName, releaseId);
-      if (!existsSync(logPath)) {
-        const tmp = `${logPath}.tmp.${process.pid}`;
-        writeFileSync(tmp, JSON.stringify({ exitCode, lines: allLines }) + "\n");
-        renameSync(tmp, logPath);
-      }
-      // Cap the per-release logs to a bounded window (mirror build's
-      // prune-on-write): writing a new fallback log trims the old ones, so a
-      // long-lived namespace can't accumulate them unbounded.
-      pruneWorktreeReleaseArtifacts(worktreeName);
+    const worktreeName = currentWorktreeName();
+    const worktreeDir = worktreeDataDir(worktreeName);
+    mkdirSync(worktreeDir, { recursive: true });
+    const logPath = worktreeArtifacts.releaseLogs(worktreeName, releaseId);
+    if (!existsSync(logPath)) {
+      const tmp = `${logPath}.tmp.${process.pid}`;
+      writeFileSync(tmp, JSON.stringify({ exitCode, lines: allLines }) + "\n");
+      renameSync(tmp, logPath);
     }
+    // Cap the per-release logs to a bounded window (mirror build's
+    // prune-on-write): writing a new fallback log trims the old ones, so a
+    // long-lived namespace can't accumulate them unbounded.
+    pruneWorktreeReleaseArtifacts(worktreeName);
   }
 
   // Computed unconditionally so the row's `error` column and this function's
@@ -402,5 +425,10 @@ export async function runRelease(opts: TriggerReleaseOptions): Promise<ReleaseOu
 
   return succeeded
     ? { ok: true, runId: releaseId, artifactPath: out }
-    : { ok: false, reason: "failed", runId: releaseId, message: failureMessage };
+    : {
+        ok: false,
+        reason: "failed",
+        runId: releaseId,
+        message: failureMessage,
+      };
 }

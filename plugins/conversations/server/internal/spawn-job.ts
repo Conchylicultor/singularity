@@ -1,7 +1,9 @@
 import { z } from "zod";
 import { defineJob } from "@plugins/infra/plugins/jobs/server";
 import { recordNotification } from "@plugins/shell/plugins/notifications/server";
+import { getConfig } from "@plugins/config_v2/server";
 import { setupWorktree } from "@plugins/infra/plugins/worktree/server";
+import { compositionsConfig } from "@plugins/plugin-meta/plugins/composition/core";
 import { ConversationModelSchema } from "@plugins/conversations/plugins/model-provider/core";
 import { EffortLevelSchema } from "@plugins/conversations/plugins/effort-provider/core";
 import { Runtime } from "./runtime";
@@ -40,14 +42,31 @@ export const spawnConversationJob = defineJob({
   dedup: { key: (input) => input.conversationId },
   maxAttempts: 5,
   run: async ({
-    input: { conversationId, attemptId, worktreePath, runtimeId, needsWorktreeSetup, create },
+    input: {
+      conversationId,
+      attemptId,
+      worktreePath,
+      runtimeId,
+      needsWorktreeSetup,
+      create,
+    },
   }) => {
     try {
       // `setupWorktree` (git worktree add) MUST precede `runtime.create`: tmux's
       // `-c <worktreePath>` needs the dir to exist. Both are idempotent, so a
       // mid-step crash re-runs the whole body safely.
       if (needsWorktreeSetup) {
-        await setupWorktree(attemptId, worktreePath);
+        // A checkout claims the namespace of its own name, so `setupWorktree`
+        // refuses one a composition already holds. The manifest is read through
+        // the config registry (the live view, so a Studio edit counts) here
+        // rather than inside `infra/worktree`, which must stay importable from
+        // the CLI — `config_v2/server` throws at module eval without a worktree
+        // identity.
+        await setupWorktree(
+          attemptId,
+          worktreePath,
+          new Set(getConfig(compositionsConfig).manifests.map((m) => m.id)),
+        );
       }
       await Runtime.get(runtimeId).create(conversationId, worktreePath, create);
     } catch (err) {

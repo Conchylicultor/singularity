@@ -8,6 +8,10 @@ import {
   gatewayPidFile,
   isRunning,
 } from "@plugins/infra/plugins/launcher/server";
+import {
+  asNamespace,
+  namespaceUrl,
+} from "@plugins/infra/plugins/namespace/core";
 import { _releaseRuns } from "./tables";
 import { releaseLog } from "./release-log";
 import { previews, previewStateResource } from "./preview-state-resource";
@@ -92,7 +96,8 @@ export async function startPreview(runId: string): Promise<void> {
     },
   });
 
-  const url = `http://${run.composition}.localhost:${port}`;
+  // The composition comes off a DB row, and a preview listens on its own port.
+  const url = namespaceUrl(asNamespace(run.composition), "", port);
   previews.set(runId, {
     runId,
     pid: proc.pid,

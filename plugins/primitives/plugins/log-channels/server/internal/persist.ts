@@ -3,6 +3,7 @@ import { join } from "node:path";
 import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
 import { sanitizeChannel } from "@plugins/infra/plugins/file-sink/core";
 import { worktreeDataDir } from "@plugins/infra/plugins/paths/server";
+import { asNamespace } from "@plugins/infra/plugins/namespace/core";
 import type { LogStream } from "./registry";
 
 // The READ half of the persistent log-channel substrate. The WRITE/rotation half
@@ -10,8 +11,10 @@ import type { LogStream } from "./registry";
 // themselves with a `defineFileSink` (see `log.ts` / `client-ingress.ts`), which
 // owns the bounded-append + rotation the agent reads back here with `tail`/`cat`.
 
+// The read path takes an ARBITRARY caller-supplied name (an MCP argument, a
+// report row), so this — the one place a name becomes a path — is its boundary.
 export function logsDirFor(worktree: string): string {
-  return join(worktreeDataDir(worktree), "logs");
+  return join(worktreeDataDir(asNamespace(worktree)), "logs");
 }
 
 // Resolve THIS worktree's logs dir. Throws loudly when SINGULARITY_WORKTREE is

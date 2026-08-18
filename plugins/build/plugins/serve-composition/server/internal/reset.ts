@@ -47,6 +47,7 @@ import {
 } from "@plugins/plugin-meta/plugins/composition/core";
 import { MAIN_WORKTREE_NAME } from "@plugins/infra/plugins/paths/server";
 import { configDir } from "@plugins/config_v2/data-dirs";
+import { asNamespace } from "@plugins/infra/plugins/namespace/core";
 
 // The `compositions` config's owning-plugin path — its jsonc files live under
 // `config/<this>/` and the per-worktree user config dir (mirrors compose-serve).
@@ -71,10 +72,13 @@ export async function resetCompositionData(id: string): Promise<void> {
   // Guard 1 — the explicit "never main/central" gate (rejects the reserved
   // {central, singularity, main} namespaces and enforces a valid name).
   assertServableCompositionNamespace(id);
+  // The endpoint's composition id, now known to be a legal name. Main-only
+  // today, so it IS the namespace — the same reading compose-serve takes.
+  const ns = asNamespace(id);
 
   // Guard 2 — the decisive provenance signal: only a compose-serve namespace
   // carries the composition.json marker.
-  if (!hasCompositionMarker(id)) {
+  if (!hasCompositionMarker(ns)) {
     throw new CompositionResetError(
       `reset "${id}": no composition.json marker — not a served composition`,
     );
@@ -82,25 +86,34 @@ export async function resetCompositionData(id: string): Promise<void> {
 
   const root = await ensureMainWorktreeRoot();
 
+  // MAIN's resolved manifest, read once and judged by both remaining guards —
+  // read main-authoritatively, regardless of which backend is executing. Two
+  // reads with different options would let the guards disagree about what the
+  // manifest says.
+  const values = readEffectiveConfigFromDisk(compositionsConfig, {
+    root,
+    userConfigDir: configDir.file(MAIN_WORKTREE_NAME),
+    hierarchyPath: COMPOSITIONS_HIERARCHY_PATH,
+  });
+
   // Guard 3 — no collision with a real git worktree dir, git branch, or a
-  // marker-less spec dir of that name.
-  const collision = namespaceCollision(id, probeNamespace(root, id));
+  // marker-less spec dir of that name. The composition side of the symmetric
+  // namespace guard; the checkout side runs in `setupWorktree`.
+  const collision = namespaceCollision(
+    ns,
+    { kind: "composition", id },
+    probeNamespace(root, ns, new Set(values.manifests.map((i) => i.id))),
+  );
   if (collision !== null) {
     throw new CompositionResetError(`reset "${id}": ${collision}`);
   }
 
   // Guard 4 — belt-and-suspenders: `id` must be currently activated
   // (`autoBuild: true`) in MAIN's resolved config. Deactivation sweeps the
-  // marker, so guard 2 already implies this; read main-authoritatively,
-  // regardless of which backend is executing. `activatedCompositionIds` is the
+  // marker, so guard 2 already implies this. `activatedCompositionIds` is the
   // SAME function compose-serve derives its activated set with — this used to
   // hand-roll the `autoBuild` filter, which is how a guard drifts from the stage
   // it is guarding.
-  const values = readEffectiveConfigFromDisk(compositionsConfig, {
-    root,
-    userConfigDir: configDir.file(MAIN_WORKTREE_NAME),
-    hierarchyPath: COMPOSITIONS_HIERARCHY_PATH,
-  });
   const activated = activatedCompositionIds(values.manifests);
   if (!activated.includes(id)) {
     throw new CompositionResetError(

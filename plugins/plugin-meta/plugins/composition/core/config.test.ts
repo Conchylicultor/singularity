@@ -14,7 +14,7 @@ import {
   manifestItemToManifest,
   type CompositionManifestItem,
 } from "./manifest-map";
-import { MAIN_COMPOSITION_ID } from "./namespace";
+import { MAIN_COMPOSITION_ID } from "@plugins/infra/plugins/namespace/core";
 
 const seeds = compositionsConfig.defaults
   .manifests as CompositionManifestItem[];

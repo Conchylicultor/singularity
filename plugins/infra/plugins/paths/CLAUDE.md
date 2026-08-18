@@ -115,7 +115,12 @@ run everywhere.
 ## Plugin reference
 
 - Core:
-  - Uses: `framework/tooling/collected-dir.defineCollectedDir`
+  - Uses:
+    - `framework/tooling/collected-dir.defineCollectedDir`
+    - `infra/namespace.asNamespace`
+    - `infra/namespace.MAIN_COMPOSITION_ID`
+    - `infra/namespace.Namespace`
+    - `infra/namespace.namespaceFor`
   - Exports (types):
     - `DataDir`
     - `DataDirKind`
@@ -222,6 +227,7 @@ run everywhere.
     - `BACKUPS_DIR`
     - `BUILD_ARTIFACTS_RETENTION`
     - `CHECK_ARTIFACTS_RETENTION`
+    - `checkoutRef`
     - `checkoutWorktreeName`
     - `CLAUDE`
     - `CLAUDE_DIR`

@@ -5,6 +5,10 @@ import {
   type ResourceResult,
 } from "@plugins/primitives/plugins/live-state/web";
 import { buildHistoryResource, type BuildRun } from "@plugins/build/core";
+import {
+  asNamespace,
+  namespaceUrl,
+} from "@plugins/infra/plugins/namespace/core";
 import { serveStatusEndpoint } from "../../shared/endpoints";
 
 /**
@@ -25,9 +29,16 @@ export type ServeStatus =
         | { served: true; url: string; commit: string | null; builtAt: string };
     };
 
-/** The namespace's live URL — the gateway routes it by subdomain. */
+/**
+ * The namespace's live URL — the gateway routes it by subdomain.
+ *
+ * `namespace` is a composition id. Compose-serve only ever runs on the main
+ * checkout, where the checkout suffix elides and the namespace IS the id — so
+ * the cast holds today. Phase 4 (serving a composition from a worktree) is what
+ * makes namespace and composition id a genuine pair.
+ */
 function serveUrl(namespace: string): string {
-  return `http://${namespace}.localhost:9000`;
+  return namespaceUrl(asNamespace(namespace));
 }
 
 /**
@@ -77,7 +88,11 @@ function buildSignature(
  * its display name.
  */
 export function useServeStatus(namespace: string): ServeStatus {
-  const query = useEndpoint(serveStatusEndpoint, {}, { query: { composition: namespace } });
+  const query = useEndpoint(
+    serveStatusEndpoint,
+    {},
+    { query: { composition: namespace } },
+  );
 
   const runsResult = useResource(buildHistoryResource);
   const signature = buildSignature(runsResult, namespace);
@@ -102,7 +117,9 @@ export function useServeStatus(namespace: string): ServeStatus {
   const { data, error } = query;
   return useMemo<ServeStatus>(() => {
     if (data === undefined) {
-      return error ? { kind: "error", message: error.message } : { kind: "pending" };
+      return error
+        ? { kind: "error", message: error.message }
+        : { kind: "pending" };
     }
     const { canServe, liveness } = data;
     return {

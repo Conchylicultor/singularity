@@ -23,6 +23,12 @@
  */
 import { dirname, join } from "node:path";
 import { existsSync, mkdtempSync, readFileSync } from "node:fs";
+// Zero-import and path-independent, so the ordering constraint above does not
+// apply to it — nothing here freezes a path constant.
+import {
+  asNamespace,
+  namespaceUrl,
+} from "@plugins/infra/plugins/namespace/core";
 
 // `process.execPath` is the compiled `launch` binary; its dir is the bundle
 // root (the extracted bundle dir when packed, or the staged dir for `--dev`).
@@ -139,7 +145,9 @@ async function main(): Promise<void> {
   assertSupportedHost();
 
   const manifest = readReleaseManifest();
-  const name = manifest.composition;
+  // RELEASE.json is a serialization boundary: validate before it becomes a
+  // subdomain, a spec dir and a database name.
+  const name = asNamespace(manifest.composition);
 
   // Where to listen: `SINGULARITY_LISTEN=host:port` if set, else the port baked
   // into RELEASE.json on a wildcard bind. That env var is the ONE runtime
@@ -209,7 +217,7 @@ async function main(): Promise<void> {
 
   console.log("");
   console.log(`App "${name}" is serving.`);
-  console.log(`  URL:  http://${name}.localhost:${port}`);
+  console.log(`  URL:  ${namespaceUrl(name, "", port)}`);
   console.log(`  Root: ${process.env.SINGULARITY_DIR}`);
 
   // ── Stay in the foreground. ────────────────────────────────────────────────

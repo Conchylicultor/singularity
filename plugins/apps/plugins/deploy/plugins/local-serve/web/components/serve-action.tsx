@@ -9,6 +9,15 @@ import {
   useServeStatus,
 } from "@plugins/build/plugins/serve-composition/web";
 import type { Deployment } from "@plugins/apps/plugins/deploy/plugins/deployments/core";
+import {
+  asNamespace,
+  namespaceHost,
+  namespaceUrl,
+  MAIN_COMPOSITION_ID,
+} from "@plugins/infra/plugins/namespace/core";
+
+/** Where a serve build can actually be started — the main app's own host. */
+const MAIN_HOST = namespaceHost(asNamespace(MAIN_COMPOSITION_ID));
 
 /**
  * The **serve** shortcut on a deployments row: one button that opens the
@@ -94,8 +103,10 @@ function ServeRowAction({
       label="Serve locally"
       tooltip={
         status.canServe
-          ? `Build & serve ${item.name} at http://${item.id}.localhost:9000`
-          : "Serve builds run on the main instance only — open singularity.localhost:9000."
+          ? // Compose-serve runs on main, where the checkout suffix elides and
+            // the namespace IS the composition id — Phase 4 makes it a real pair.
+            `Build & serve ${item.name} at ${namespaceUrl(asNamespace(item.id))}`
+          : `Serve builds run on the main instance only — open ${MAIN_HOST}.`
       }
       disabled={!status.canServe}
       onClick={(e) => {

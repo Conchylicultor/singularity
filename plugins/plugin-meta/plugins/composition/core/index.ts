@@ -8,8 +8,6 @@ export {
   assertCompositionName,
   assertServableCompositionNamespace,
   isServableCompositionId,
-  COMPOSITION_NAME_RE,
-  MAIN_COMPOSITION_ID,
   RESERVED_COMPOSITION_NAMESPACES,
 } from "./namespace";
 export { activatedCompositionIds } from "./activated";

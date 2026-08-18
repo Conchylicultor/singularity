@@ -363,3 +363,40 @@ func TestReconcileIgnoresFlatJSON(t *testing.T) {
 		t.Fatal("a flat legacy spec must no longer register (legacy scan retired)")
 	}
 }
+
+// A multi-label namespace must load from disk exactly like a flat one — the dir
+// name is the key, dots and all, and the gateway never decomposes it.
+func TestResolveLoadsMultiLabelSpecFromDisk(t *testing.T) {
+	reg, regDir := newTestRegistry(t)
+	writeSpec(t, regDir, "sonata.att-x")
+	if wt := reg.Get("sonata.att-x"); wt != nil {
+		t.Fatal("expected no in-memory registration before Resolve")
+	}
+	wt := reg.Resolve("sonata.att-x")
+	if wt == nil {
+		t.Fatal("Resolve did not load the multi-label spec from disk")
+	}
+	if wt.Name != "sonata.att-x" {
+		t.Fatalf("worktree name = %q, want %q", wt.Name, "sonata.att-x")
+	}
+}
+
+// The per-label grammar exists to keep a dotted name a single safe path segment.
+// These are the shapes that would stop being one.
+func TestNameRegexRejectsPathUnsafeNames(t *testing.T) {
+	for _, bad := range []string{
+		"", "..", ".", "a..b", ".a", "a.", "a/b", "a/../b", "A", "a_b",
+		"-a", "a b", "sonata..att-x", "sonata./att-x",
+	} {
+		if nameRegex.MatchString(bad) {
+			t.Errorf("nameRegex accepted %q; it must not", bad)
+		}
+	}
+	for _, good := range []string{
+		"a", "singularity", "att-1787064474-2qcq", "sonata.att-x", "a-1.b-2",
+	} {
+		if !nameRegex.MatchString(good) {
+			t.Errorf("nameRegex rejected %q; it must accept it", good)
+		}
+	}
+}

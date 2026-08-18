@@ -22,6 +22,10 @@ import {
   writeWorktreeSpec,
   type ZeroCacheSpec,
 } from "@plugins/infra/plugins/worktree/server";
+import {
+  namespaceUrl,
+  type Namespace,
+} from "@plugins/infra/plugins/namespace/core";
 import { seedAssetMirrorCache } from "@plugins/infra/plugins/asset-mirror/server";
 import { retryUntil, exponential } from "@plugins/packages/plugins/retry/core";
 // Canonical embedded-cluster constants — the single source of truth for where
@@ -690,8 +694,9 @@ const HEALTH_READY_TIMEOUT_MS = 120_000;
  * (spec not picked up) — kept distinct from ready so we never false-positive on
  * an unknown-namespace gateway 404. Fails loud on deadline.
  */
-async function awaitAppReady(name: string, port: number): Promise<void> {
-  const url = `http://${name}.localhost:${port}/api/health/ready`;
+async function awaitAppReady(name: Namespace, port: number): Promise<void> {
+  // A packaged app listens on its own port, not the dev gateway's.
+  const url = namespaceUrl(name, "/api/health/ready", port);
   let lastErr: unknown = null;
   await retryUntil(
     async () => {
@@ -740,7 +745,7 @@ async function awaitAppReady(name: string, port: number): Promise<void> {
  *   8. awaitAppReady — poll health/ready until the backend serves.
  */
 export async function bootSelfContainedApp(opts: {
-  name: string;
+  name: Namespace;
   server: string;
   web: string;
   port: number;

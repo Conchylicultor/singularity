@@ -2,10 +2,14 @@ import { resolve } from "node:path";
 import { markBuildInProgress } from "@plugins/framework/plugins/tooling/plugins/checks/core";
 import {
   WEB_CORE_RELATIVE,
+  checkoutRef,
   checkoutWorktreeName,
 } from "@plugins/infra/plugins/paths/server";
 import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
-import { MAIN_COMPOSITION_ID } from "@plugins/plugin-meta/plugins/composition/core";
+import {
+  MAIN_COMPOSITION_ID,
+  namespaceFor,
+} from "@plugins/infra/plugins/namespace/core";
 import { createValveDeps } from "../../admission-valve";
 import { printStepBlocks } from "../../build-output";
 import { type MigrationAnswer } from "../../migrations";
@@ -177,6 +181,11 @@ export async function runHermeticBuild(opts: {
   // same root — it spawns this command with `cwd` at that root — so the
   // producer and the consumer of the dist cannot land on different trees.
   const name = checkoutWorktreeName(root);
+  // The namespace a plain build of this checkout would serve — what the reap
+  // gate asks the gateway about and what the check transcript is keyed by. Equal
+  // to `name` for every agent worktree today; not equal once a composition is
+  // served from a non-main checkout, which is exactly what the brand catches.
+  const namespace = namespaceFor(MAIN_COMPOSITION_ID, await checkoutRef(root));
 
   // A release is NOT a build run, so `SINGULARITY_BUILD_ID` is deliberately
   // neither read nor written here: reading it would make a release adopt the
@@ -232,7 +241,7 @@ export async function runHermeticBuild(opts: {
   // namespace, so it cannot delete a served tree. A bare release host has
   // no gateway — the gate simply stays closed, and such a host has no
   // served legacy dist to reclaim either. See ./legacy-dist-reap.ts.
-  const reaped = await reapLegacyCheckoutDist({ webDir, namespace: name });
+  const reaped = await reapLegacyCheckoutDist({ webDir, namespace });
   if (reaped.kind === "skipped") {
     console.log(`Legacy in-checkout dist left in place: ${reaped.reason}`);
   } else if (reaped.entries.length > 0) {

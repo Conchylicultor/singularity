@@ -9,6 +9,10 @@ import {
 } from "../oauth-flow";
 import { setAccount } from "../token-store";
 import { emitAuthChanged } from "../actions";
+import {
+  namespaceUrl,
+  type Namespace,
+} from "@plugins/infra/plugins/namespace/core";
 
 /**
  * GET /api/auth/callback/:provider?code=...&state=...
@@ -130,14 +134,14 @@ function htmlResponse(html: string): Response {
 interface ResultPageArgs {
   ok: boolean;
   providerId?: string;
-  worktree: string | null;
+  worktree: Namespace | null;
   identity?: { accountId: string; email?: string; displayName?: string };
   message?: string;
 }
 
 function renderResultPage(args: ResultPageArgs): string {
   const targetOrigin = args.worktree
-    ? `http://${escapeAttr(args.worktree)}.localhost:9000`
+    ? escapeAttr(namespaceUrl(args.worktree))
     : "*";
   const payload = {
     type: "singularity.auth.complete",

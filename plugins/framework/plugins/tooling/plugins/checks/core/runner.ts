@@ -7,6 +7,7 @@ import type {
   CheckScope,
 } from "@plugins/framework/plugins/tooling/core";
 import type { Grant } from "@plugins/infra/plugins/host-admission/core";
+import type { Namespace } from "@plugins/infra/plugins/namespace/core";
 import { computeTreeHash } from "./tree-hash";
 import { openCheckCache } from "./cache";
 import { withScanView } from "./scan-context";
@@ -126,7 +127,7 @@ export interface RunChecksOptions {
    * being piped through `tail`). When set, the console truncation note points at
    * this file instead of telling the caller to re-run.
    */
-  logRun?: { worktree: string; runId: string };
+  logRun?: { worktree: Namespace; runId: string };
 }
 
 export async function runChecks(

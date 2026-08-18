@@ -1,5 +1,6 @@
 import { mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import { worktreeArtifacts, worktreeDataDir } from "./paths";
+import type { Namespace } from "@plugins/infra/plugins/namespace/core";
 
 /**
  * What became of a build. `running` is written once the build lock is granted;
@@ -62,7 +63,10 @@ export type ResolvedReceipt =
  * Atomic so a reader never sees a torn file — same tmp+rename shape as
  * `build-logs-writer.ts`.
  */
-export function writeBuildReceipt(name: string, receipt: BuildReceipt): void {
+export function writeBuildReceipt(
+  name: Namespace,
+  receipt: BuildReceipt,
+): void {
   const dir = worktreeDataDir(name);
   mkdirSync(dir, { recursive: true });
   const path = worktreeArtifacts.buildStatus(name);
@@ -72,7 +76,7 @@ export function writeBuildReceipt(name: string, receipt: BuildReceipt): void {
 }
 
 /** The raw receipt, or `null` when this worktree has never recorded a build. */
-export function readBuildReceipt(name: string): BuildReceipt | null {
+export function readBuildReceipt(name: Namespace): BuildReceipt | null {
   const path = worktreeArtifacts.buildStatus(name);
   let raw: string;
   try {
@@ -120,7 +124,7 @@ export function resolveReceipt(receipt: BuildReceipt | null): ResolvedReceipt {
 }
 
 /** Convenience: read + resolve in one call. */
-export function resolveBuildReceipt(name: string): ResolvedReceipt {
+export function resolveBuildReceipt(name: Namespace): ResolvedReceipt {
   return resolveReceipt(readBuildReceipt(name));
 }
 
@@ -129,7 +133,9 @@ export function resolveBuildReceipt(name: string): ResolvedReceipt {
  * completed, or `null` when there is nothing to say. Returned rather than
  * printed so the shape is testable and the caller owns the stream.
  */
-export function interruptedPredecessorWarning(resolved: ResolvedReceipt): string | null {
+export function interruptedPredecessorWarning(
+  resolved: ResolvedReceipt,
+): string | null {
   if (resolved.kind !== "interrupted") return null;
   const { buildId, startedAt, url, signal } = resolved.receipt;
   // A signal on an INTERRUPTED receipt means the death escalated: a catchable
@@ -153,7 +159,7 @@ export function interruptedPredecessorWarning(resolved: ResolvedReceipt): string
  * sets no exit code the caller can see), so the NEXT op is where it surfaces —
  * and the next op is very often the one about to verify against a stale deploy.
  */
-export function reportInterruptedPredecessor(name: string): void {
+export function reportInterruptedPredecessor(name: Namespace): void {
   const warning = interruptedPredecessorWarning(resolveBuildReceipt(name));
   if (warning !== null) console.warn(warning);
 }

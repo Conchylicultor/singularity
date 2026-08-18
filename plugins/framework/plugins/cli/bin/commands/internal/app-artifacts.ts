@@ -48,6 +48,7 @@ import { ensureDeps } from "../../ensure-deps";
 import { generateMigration, type MigrationAnswer } from "../../migrations";
 import { distStagingPath, publishDistAtomic } from "./dist-publish";
 import { stampExperimentalMarker } from "./experimental-marker";
+import type { Namespace } from "@plugins/infra/plugins/namespace/core";
 
 /**
  * Single source of truth for the ordered **app-artifact** pipeline: the part of
@@ -692,7 +693,7 @@ export type WebDistTarget =
    * *namespace*: a worktree slug or an auto-served composition id. Published
    * atomically because a live reader exists.
    */
-  { kind: "served"; name: string } | ReleaseDistTarget;
+  { kind: "served"; name: Namespace } | ReleaseDistTarget;
 
 /**
  * The ONE mapping from a dist identity to its live path. Exported because a

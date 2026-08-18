@@ -14,10 +14,8 @@ import {
   flattenManifest,
   resolveComposition,
 } from "@plugins/plugin-meta/plugins/closure/core";
-import {
-  manifestItemToManifest,
-  MAIN_COMPOSITION_ID,
-} from "@plugins/plugin-meta/plugins/composition/core";
+import { MAIN_COMPOSITION_ID } from "@plugins/infra/plugins/namespace/core";
+import { manifestItemToManifest } from "@plugins/plugin-meta/plugins/composition/core";
 import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
 
 type CheckResult = { ok: true } | { ok: false; message: string; hint?: string };

@@ -20,6 +20,10 @@ import {
   currentWorktreeName,
   worktreeArtifacts,
 } from "@plugins/infra/plugins/paths/server";
+import {
+  asNamespace,
+  namespaceUrl,
+} from "@plugins/infra/plugins/namespace/core";
 import { asFsPath } from "@plugins/framework/plugins/plugin-id/core";
 import {
   buildPluginTree,
@@ -1038,7 +1042,9 @@ export function registerRelease(program: Command) {
             "\nRun it (self-roots SINGULARITY_DIR under <out>/data):",
           );
           console.log(`  ${join(out, "launch")}`);
-          console.log(`\nThen: http://${opts.composition}.localhost:${port}`);
+          console.log(
+            `\nThen: ${namespaceUrl(asNamespace(opts.composition), "", port)}`,
+          );
           return;
         }
 
@@ -1079,7 +1085,9 @@ export function registerRelease(program: Command) {
         console.log("\n[done] Self-contained binary:");
         console.log(`  ${binaryPath}`);
         console.log(`\nRun it: ${binaryPath}`);
-        console.log(`Then: http://${opts.composition}.localhost:${port}`);
+        console.log(
+          `Then: ${namespaceUrl(asNamespace(opts.composition), "", port)}`,
+        );
       },
     );
 }

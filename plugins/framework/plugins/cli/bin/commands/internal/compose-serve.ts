@@ -67,6 +67,11 @@ import {
   ensureDatabase,
   getAdminPool,
 } from "@plugins/database/plugins/admin/server";
+import {
+  asNamespace,
+  namespaceUrl,
+  type Namespace,
+} from "@plugins/infra/plugins/namespace/core";
 import type { BuildRunRecorder } from "@plugins/build/plugins/run-ledger/server";
 import {
   worktreesDir,
@@ -231,7 +236,18 @@ async function serveOne(opts: {
   let ok = false;
   try {
     assertServableCompositionNamespace(id);
-    const collision = namespaceCollision(id, probeNamespace(root, id));
+    // Main-checkout-only stage, so the composition id IS its namespace — Phase 4
+    // is what makes the checkout half of the pair variable here.
+    const ns = asNamespace(id);
+    // The composition side of the symmetric namespace guard. `compositionIds` is
+    // supplied from the manifest this stage already read: the checkout side (in
+    // `setupWorktree`) reads it through the config registry instead, because it
+    // runs in a backend rather than the CLI.
+    const collision = namespaceCollision(
+      ns,
+      { kind: "composition", id },
+      probeNamespace(root, ns, new Set(opts.allManifests.map((m) => m.name))),
+    );
     if (collision !== null)
       throw new Error(`compose-serve "${id}": ${collision}`);
 
@@ -261,7 +277,7 @@ async function serveOne(opts: {
 
     // The served dist for this namespace. Derived from `worktreeArtifacts`
     // (byte-identical to `join(specDir, "web")`) so the layout has ONE owner.
-    const distDir = worktreeArtifacts.webDist(id);
+    const distDir = worktreeArtifacts.webDist(ns);
     await sweepDistLeftovers(distDir);
     const stagingPath = distStagingPath(distDir);
     const source = await compositionFleetSource({ root, name: id });
@@ -315,11 +331,11 @@ async function serveOne(opts: {
       "register + restart",
       async () => {
         writeWorktreeSpec({
-          name: id,
+          name: ns,
           server: resolve(root, "plugins/framework/plugins/server-core"),
           web: distDir,
         });
-        await restartNamespace(id, compLog);
+        await restartNamespace(ns, compLog);
       },
     );
     ok = true;
@@ -340,7 +356,7 @@ async function serveOne(opts: {
 // first request), connection refused / timeout = gateway down; anything else
 // unexpected is rethrown.
 async function restartNamespace(
-  id: string,
+  id: Namespace,
   log: (line: string) => void,
 ): Promise<void> {
   try {
@@ -438,7 +454,7 @@ export async function runComposeServeStage(
           );
           served.push(item.id);
           log(
-            `compose-serve "${item.id}": serving at http://${item.id}.localhost:9000`,
+            `compose-serve "${item.id}": serving at ${namespaceUrl(asNamespace(item.id))}`,
           );
         } catch (err) {
           const message =
@@ -462,7 +478,8 @@ export async function runComposeServeStage(
           // Namespace dir only when it carries OUR marker — a registry-only
           // leftover must never delete a same-named foreign namespace dir.
           if (markers.has(id)) {
-            await removeWorktreeSpec(id); // spec + dist + marker: the whole namespace dir
+            // `id` is a spec-dir basename read off disk — the asNamespace boundary.
+            await removeWorktreeSpec(asNamespace(id)); // spec + dist + marker: the whole namespace dir
           }
           for (const r of registries) {
             if (r.name === id) rmSync(r.file, { force: true });

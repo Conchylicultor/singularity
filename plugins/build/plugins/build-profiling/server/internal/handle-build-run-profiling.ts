@@ -1,6 +1,9 @@
 import { readFileSync } from "node:fs";
 import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
-import { worktreeArtifacts } from "@plugins/infra/plugins/paths/server";
+import {
+  currentWorktreeName,
+  worktreeArtifacts,
+} from "@plugins/infra/plugins/paths/server";
 import { getBuildRunProfile } from "../../shared/endpoints";
 
 interface BuildProfile {
@@ -15,8 +18,7 @@ interface BuildProfile {
 }
 
 function readBuildRunProfile(buildId: string): BuildProfile | null {
-  const name = process.env.SINGULARITY_WORKTREE;
-  if (!name) return null;
+  const name = currentWorktreeName();
   const path = worktreeArtifacts.buildProfile(name, buildId);
   try {
     return JSON.parse(readFileSync(path, "utf-8")) as BuildProfile;
@@ -30,13 +32,16 @@ function readBuildRunProfile(buildId: string): BuildProfile | null {
   }
 }
 
-export const handleBuildRunProfiling = implement(getBuildRunProfile, ({ params }) => {
-  const buildId = params.id;
-  if (!buildId) throw new HttpError(400, "Missing id");
+export const handleBuildRunProfiling = implement(
+  getBuildRunProfile,
+  ({ params }) => {
+    const buildId = params.id;
+    if (!buildId) throw new HttpError(400, "Missing id");
 
-  const profile = readBuildRunProfile(buildId);
-  return {
-    spans: profile?.spans ?? [],
-    totalMs: profile?.totalDurationMs ?? 0,
-  };
-});
+    const profile = readBuildRunProfile(buildId);
+    return {
+      spans: profile?.spans ?? [],
+      totalMs: profile?.totalDurationMs ?? 0,
+    };
+  },
+);

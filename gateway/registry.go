@@ -18,7 +18,24 @@ import (
 	"github.com/fsnotify/fsnotify"
 )
 
-var nameRegex = regexp.MustCompile(`^[a-z0-9][a-z0-9-]{0,62}$`)
+// A namespace is `<composition>.<checkout>` with both sentinels elided, so it is
+// one or more dot-joined DNS labels. Written as a per-label composition rather
+// than by adding `.` to the charset, because this shape structurally forbids the
+// only ways a dotted name could stop being a single safe path segment: `..`, an
+// empty label, a leading dot, a trailing dot. (`name` is used as one path
+// component — `filepath.Join(RegistryDir, name, "spec.json")` — and as a
+// filename stem, `name+".sock"`.)
+//
+// Deliberately NOT capped at two labels: the gateway validates path-safety, not
+// meaning. It treats a namespace as an opaque directory key and never
+// decomposes it, which is why the elision rule has exactly one implementation
+// (TypeScript's `namespaceFor`) and nothing here to drift from it. The semantic
+// two-label cap lives there, in `NAMESPACE_RE`.
+//
+// KEEP IN SYNC with `NAMESPACE_RE`'s label rule in
+// plugins/infra/plugins/namespace/core/namespace.ts — enforced by the
+// `namespace:grammar-in-sync` check, which reads this literal.
+var nameRegex = regexp.MustCompile(`^[a-z0-9][a-z0-9-]{0,62}(\.[a-z0-9][a-z0-9-]{0,62})*$`)
 
 // Registry is the in-memory collection of worktrees, populated from JSON
 // files in cfg.RegistryDir and kept in sync via fsnotify.

@@ -25,6 +25,7 @@ import {
   worktreesDir,
   worktreeDataDir,
 } from "@plugins/infra/plugins/paths/server";
+import { asNamespace } from "@plugins/infra/plugins/namespace/core";
 
 // A per-worktree, crash-safe marker for a long-running operation (build, push,
 // check) that will eventually finish and resume the agent. The conversation
@@ -71,8 +72,11 @@ export interface WorktreeOpInfo {
   runningAt: string | null;
 }
 
+// Op markers are keyed by the same slug the spec dir carries, and a slug reaches
+// here from a marker file or a directory listing — so this, the one place a slug
+// becomes a path, is where it is validated back into a namespace.
 function opsDir(slug: string): string {
-  return join(worktreeDataDir(slug), "ops");
+  return join(worktreeDataDir(asNamespace(slug)), "ops");
 }
 
 function opFile(slug: string, op: WorktreeOp): string {

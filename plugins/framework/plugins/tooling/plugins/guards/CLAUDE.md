@@ -7,6 +7,8 @@
 - Description: Claude Code PreToolUse guards: safety checks that intercept tool calls before execution
 - Core:
   - Uses:
+    - `infra/namespace.asNamespace`
+    - `infra/namespace.isNamespace`
     - `infra/paths.HOME_DIR`
     - `infra/paths.worktreeArtifacts`
   - Exports (types):

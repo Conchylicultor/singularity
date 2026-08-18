@@ -4,7 +4,7 @@ import { textField } from "@plugins/fields/plugins/text/plugins/config/core";
 import { enumField } from "@plugins/fields/plugins/enum/plugins/config/core";
 import { stringListField } from "@plugins/fields/plugins/string-list/plugins/config/core";
 import { boolField } from "@plugins/fields/plugins/bool/plugins/config/core";
-import { MAIN_COMPOSITION_ID } from "./namespace";
+import { MAIN_COMPOSITION_ID } from "@plugins/infra/plugins/namespace/core";
 
 // The composition manifest registry — plain editable data in config_v2 (no
 // codegen, no barrels). Each item is a `CompositionManifest`

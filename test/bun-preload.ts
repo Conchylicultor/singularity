@@ -1,5 +1,7 @@
-import { basename } from "node:path";
-import { REPO_ROOT } from "@plugins/infra/plugins/paths/core";
+import {
+  REPO_ROOT,
+  checkoutWorktreeName,
+} from "@plugins/infra/plugins/paths/core";
 
 // `bun test` preload (registered in the root bunfig.toml `[test]` section).
 //
@@ -17,12 +19,14 @@ import { REPO_ROOT } from "@plugins/infra/plugins/paths/core";
 // sensible identity is simply the checkout it runs from. The worktree name is the
 // basename of the checkout root by construction — the gateway derives
 // `SINGULARITY_WORKTREE` from the worktree dir name, and the main checkout is
-// "singularity" — so `basename(REPO_ROOT)` reproduces exactly what the hand-written
-// `SINGULARITY_WORKTREE=<worktree> bun test` used to supply. Suites that never touch
-// worktree-scoped code are unaffected either way.
+// "singularity" — so `checkoutWorktreeName(REPO_ROOT)` reproduces exactly what
+// the hand-written `SINGULARITY_WORKTREE=<worktree> bun test` used to supply.
+// Suites that never touch worktree-scoped code are unaffected either way. The
+// checkout basename, not a minted namespace: minting one means asking git which
+// root owns `.git`, and a test preload must stay synchronous.
 //
 // An explicitly-set value always wins (CI, or targeting main's DB with
 // `SINGULARITY_WORKTREE=singularity bun test`); we only fill the gap when unset.
 if (!process.env.SINGULARITY_WORKTREE) {
-  process.env.SINGULARITY_WORKTREE = basename(REPO_ROOT);
+  process.env.SINGULARITY_WORKTREE = checkoutWorktreeName(REPO_ROOT);
 }

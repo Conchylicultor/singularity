@@ -4,6 +4,7 @@ import type {
   OAuth2Config,
   ParsedTokenResponse,
 } from "@plugins/auth/core";
+import type { Namespace } from "@plugins/infra/plugins/namespace/core";
 
 const REDIRECT_HOST = "http://localhost:9000";
 
@@ -41,7 +42,7 @@ export interface AuthorizeRequest {
 
 export interface PendingState {
   providerId: string;
-  worktree: string;
+  worktree: Namespace;
   scopes: string[];
   codeVerifier?: string;
   createdAt: number;
@@ -112,9 +113,7 @@ interface RawTokenResponse {
   token_type?: string;
 }
 
-export function defaultParseTokenResponse(
-  raw: unknown,
-): ParsedTokenResponse {
+export function defaultParseTokenResponse(raw: unknown): ParsedTokenResponse {
   const r = raw as RawTokenResponse;
   // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard on external API response
   if (!r || typeof r.access_token !== "string") {

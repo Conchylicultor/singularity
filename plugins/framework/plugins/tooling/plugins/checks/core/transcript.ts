@@ -5,6 +5,7 @@ import {
   pruneWorktreeCheckArtifacts,
   worktreeArtifacts,
 } from "@plugins/infra/plugins/paths/core";
+import type { Namespace } from "@plugins/infra/plugins/namespace/core";
 
 /**
  * One settled check, as the transcript renders it. The runner's own outcome type
@@ -86,7 +87,7 @@ export interface CheckTranscript {
  * growth bound is the prune, as with every other per-run artifact.
  */
 export function openCheckTranscript(args: {
-  worktree: string;
+  worktree: Namespace;
   runId: string;
   scope: string | null;
   /** The ids the caller named, or null for "every check". */

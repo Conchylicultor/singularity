@@ -1,6 +1,9 @@
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useEffect, useRef, useState } from "react";
-import { JumpToBottomButton, useStickyScroll } from "@plugins/primitives/plugins/auto-scroll/web";
+import {
+  JumpToBottomButton,
+  useStickyScroll,
+} from "@plugins/primitives/plugins/auto-scroll/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
@@ -12,6 +15,7 @@ import {
   LiveLogChannel,
   LogEntryList,
 } from "@plugins/primitives/plugins/log-channels/web";
+import { namespaceFromHost } from "@plugins/infra/plugins/namespace/core";
 
 type ChannelRef =
   | { source: "backend"; id: string; label: string }
@@ -21,12 +25,10 @@ function channelKey(c: ChannelRef): string {
   return c.source === "backend" ? `backend:${c.id}` : `gateway:${c.worktree}`;
 }
 
+// `null` when this page is not served under a namespace, which is what
+// suppresses the gateway channel entry below.
 function currentWorktreeName(): string | null {
-  const host = window.location.hostname;
-  if (!host.endsWith(".localhost")) return null;
-  const name = host.slice(0, -".localhost".length);
-  if (!name || name.includes(".")) return null;
-  return name;
+  return namespaceFromHost(window.location.host);
 }
 
 export function LogViewer({ initialChannel }: { initialChannel?: string }) {
@@ -72,7 +74,13 @@ export function LogViewer({ initialChannel }: { initialChannel?: string }) {
 
   return (
     <Stack gap="lg" className="h-full p-xl">
-      <Stack role="tablist" direction="row" gap="xs" align="center" className="border-b">
+      <Stack
+        role="tablist"
+        direction="row"
+        gap="xs"
+        align="center"
+        className="border-b"
+      >
         {channels.map((c) => {
           const key = channelKey(c);
           const active = key === selectedKey;
@@ -133,10 +141,15 @@ function GatewayLogChannel({ worktree }: { worktree: string }) {
       events: ["history", "entry"],
       onMessage: (data, eventName) => {
         if (eventName === "history") {
-          const { entries: hist } = JSON.parse(data) as { entries: LogEntryWire[] };
+          const { entries: hist } = JSON.parse(data) as {
+            entries: LogEntryWire[];
+          };
           if (hist.length === 0) return;
           setEntries((prev) => [...prev, ...hist]);
-          lastSeqRef.current = Math.max(lastSeqRef.current, hist[hist.length - 1]!.seq);
+          lastSeqRef.current = Math.max(
+            lastSeqRef.current,
+            hist[hist.length - 1]!.seq,
+          );
         } else if (eventName === "entry") {
           const entry = JSON.parse(data) as LogEntryWire;
           if (entry.seq <= lastSeqRef.current) return;

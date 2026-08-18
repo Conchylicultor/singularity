@@ -6,6 +6,10 @@ import {
   gatewayPidFile,
 } from "@plugins/infra/plugins/launcher/server";
 import { gatewayLogs } from "@plugins/infra/plugins/launcher/data-dirs";
+import {
+  asNamespace,
+  namespaceUrl,
+} from "@plugins/infra/plugins/namespace/core";
 
 const DEFAULT_PORT = 9100;
 
@@ -68,13 +72,17 @@ export function registerServeApp(program: Command) {
           process.exit(1);
         }
 
+        // `--name` is operator input: validate before it becomes a subdomain, a
+        // spec dir and a database name.
+        const name = asNamespace(opts.name);
+
         const repoRoot = opts.repoRoot;
         const server =
           opts.server ??
           resolve(repoRoot, "plugins/framework/plugins/server-core");
 
         await bootSelfContainedApp({
-          name: opts.name,
+          name,
           server,
           web: opts.web,
           port,
@@ -90,7 +98,8 @@ export function registerServeApp(program: Command) {
         const pidFile = gatewayPidFile(root);
         console.log("");
         console.log(`App "${opts.name}" is serving.`);
-        console.log(`  URL:  http://${opts.name}.localhost:${port}`);
+        // A packaged app listens on its own port, not the dev gateway's.
+        console.log(`  URL:  ${namespaceUrl(name, "", port)}`);
         console.log(`  Root: ${root}`);
         console.log(`  PID:  ${pidFile}`);
         console.log(`  Logs: ${gatewayLogs.path}/`);

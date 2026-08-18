@@ -1,6 +1,11 @@
 import { mkdirSync, renameSync, writeFileSync } from "node:fs";
-import { worktreeDataDir, worktreeArtifacts, pruneWorktreeBuildArtifacts } from "./paths";
+import {
+  worktreeDataDir,
+  worktreeArtifacts,
+  pruneWorktreeBuildArtifacts,
+} from "./paths";
 import { buildProgressSpanStart, buildProgressSpanEnd } from "./build-progress";
+import type { Namespace } from "@plugins/infra/plugins/namespace/core";
 
 export interface BuildSpan {
   id: string;
@@ -29,10 +34,20 @@ export interface BuildProfile {
  * instance via the wrapper exports below.
  */
 export interface SpanCollector {
-  start(id: string, phase: string, label: string): (extra?: { maxRssBytes?: number }) => void;
-  push(id: string, phase: string, label: string, durationMs: number, wallStartMs?: number): void;
+  start(
+    id: string,
+    phase: string,
+    label: string,
+  ): (extra?: { maxRssBytes?: number }) => void;
+  push(
+    id: string,
+    phase: string,
+    label: string,
+    durationMs: number,
+    wallStartMs?: number,
+  ): void;
   /** Writes `build-profile-<runId>.json` under worktree `name`. */
-  write(name: string, runId: string): void;
+  write(name: Namespace, runId: string): void;
 }
 
 // Per-span unique token feeding the durable build-progress log. The human `id`
@@ -48,14 +63,14 @@ interface SpanCollectorInternal extends SpanCollector {
    * collector can still produce the unsuffixed `build-profile.json` for a manual
    * CLI build with no SINGULARITY_BUILD_ID.
    */
-  writeProfile(name: string, buildId: string | undefined): void;
+  writeProfile(name: Namespace, buildId: string | undefined): void;
 }
 
 function makeSpanCollector(): SpanCollectorInternal {
   const t0 = performance.now();
   const spans: BuildSpan[] = [];
 
-  function writeProfile(name: string, buildId: string | undefined): void {
+  function writeProfile(name: Namespace, buildId: string | undefined): void {
     const profile: BuildProfile = {
       spans,
       totalDurationMs:
@@ -91,7 +106,9 @@ function makeSpanCollector(): SpanCollectorInternal {
           label,
           startMs: Math.round(start - t0),
           durationMs,
-          ...(extra?.maxRssBytes != null ? { maxRssBytes: extra.maxRssBytes } : {}),
+          ...(extra?.maxRssBytes != null
+            ? { maxRssBytes: extra.maxRssBytes }
+            : {}),
         });
         buildProgressSpanEnd(token, id, durationMs);
       };
@@ -136,6 +153,6 @@ export function pushBuildSpan(
   defaultCollector.push(id, phase, label, durationMs, wallStartMs);
 }
 
-export function writeBuildProfile(name: string): void {
+export function writeBuildProfile(name: Namespace): void {
   defaultCollector.writeProfile(name, process.env.SINGULARITY_BUILD_ID);
 }

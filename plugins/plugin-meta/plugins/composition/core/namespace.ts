@@ -1,35 +1,27 @@
 // The composition-name vocabulary: what a composition may be CALLED, and which
 // of those names a composition may also be SERVED under.
 //
-// This file has ZERO imports on purpose. Build-time tooling (codegen, the CLI,
-// the checks), the server, and the browser all need to ask the same questions —
-// "is this a legal composition id?" and "may compose-serve provision a namespace
-// for it?" — and a module with no imports is reachable from every one of those
-// runtimes. The vocabulary used to live in codegen's `plugin-registry-gen.ts`,
-// which imports `fs` at module scope, so web and server could not reach it and
-// each hand-rolled its own approximation.
+// This file's only import is `@plugins/infra/plugins/namespace/core`, which is
+// itself zero-import — so the reachability that matters is preserved. Build-time
+// tooling (codegen, the CLI, the checks), the server, and the browser all need to
+// ask the same questions — "is this a legal composition id?" and "may
+// compose-serve provision a namespace for it?" — and a module whose closure
+// touches no runtime API is reachable from every one of those runtimes. The
+// vocabulary used to live in codegen's `plugin-registry-gen.ts`, which imports
+// `fs` at module scope, so web and server could not reach it and each
+// hand-rolled its own approximation.
 
-// Composition ids double as gateway namespaces and per-name registry file
-// segments — same charset as the gateway's name regex (gateway/registry.go),
-// which also makes them path-safe by construction. This is the canonical TS
-// copy of the gateway name rule; the one place that cannot import it
-// (`framework/server-core/bin/select-registry.ts` — boot cannot import
-// config_v2) carries a KEEP IN SYNC comment pointing here.
-export const COMPOSITION_NAME_RE = /^[a-z0-9][a-z0-9-]{0,62}$/;
-
-/**
- * The id of the composition the repo itself builds — the main app.
- *
- * It is spelled the same as `MAIN_WORKTREE_NAME`
- * (`@plugins/infra/plugins/paths/core`), but only by the elision rule of the
- * target model: the main app's composition happens to be served out of the main
- * checkout, so the two names coincide at that one point. They are two different
- * axes — a composition is a subset of plugins, a worktree is a checkout of the
- * repo — and a later phase owns the relation between them. Deliberately NOT
- * aliased to, or imported alongside, `MAIN_WORKTREE_NAME`: aliasing them would
- * assert an identity that does not hold in general.
- */
-export const MAIN_COMPOSITION_ID = "singularity";
+// A composition id is one LABEL of a namespace — `<composition>.<checkout>` joins
+// two of them — and it is also a per-name registry file segment, which is what
+// makes it path-safe by construction. So the grammar is NOT restated here: it is
+// `NAMESPACE_LABEL_RE`, owned by the namespace plugin and pinned to the
+// gateway's own regex by the `namespace:grammar-in-sync` check. Deliberately not
+// re-exported under a composition-flavoured alias either — a second name for one
+// rule is how the third copy got written last time.
+import {
+  MAIN_COMPOSITION_ID,
+  NAMESPACE_LABEL_RE,
+} from "@plugins/infra/plugins/namespace/core";
 
 /**
  * Namespaces a composition can never claim: the central runtime, the main app
@@ -48,9 +40,9 @@ export const RESERVED_COMPOSITION_NAMESPACES: ReadonlySet<string> = new Set([
 
 /** A name a composition may be called — the charset/length rule, nothing more. */
 export function assertCompositionName(name: string): void {
-  if (!COMPOSITION_NAME_RE.test(name)) {
+  if (!NAMESPACE_LABEL_RE.test(name)) {
     throw new Error(
-      `Invalid composition name "${name}" — must match ${COMPOSITION_NAME_RE}.`,
+      `Invalid composition name "${name}" — must match ${NAMESPACE_LABEL_RE}.`,
     );
   }
 }
@@ -63,7 +55,7 @@ export function assertCompositionName(name: string): void {
  */
 export function isServableCompositionId(id: string): boolean {
   return (
-    COMPOSITION_NAME_RE.test(id) && !RESERVED_COMPOSITION_NAMESPACES.has(id)
+    NAMESPACE_LABEL_RE.test(id) && !RESERVED_COMPOSITION_NAMESPACES.has(id)
   );
 }
 

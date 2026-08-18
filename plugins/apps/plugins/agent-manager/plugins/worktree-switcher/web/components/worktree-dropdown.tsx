@@ -9,20 +9,22 @@ import {
   attemptsResource,
   tasksResource,
 } from "@plugins/tasks/plugins/tasks-core/core";
-
-const currentWorktree = (() => {
-  const host = window.location.hostname;
-  return host.endsWith(".localhost")
-    ? host.replace(/\.localhost$/, "")
-    : "head";
-})();
-
-const isAgentWorktree =
-  currentWorktree !== "head" && currentWorktree !== "singularity";
+import {
+  MAIN_COMPOSITION_ID,
+  namespaceFromHost,
+} from "@plugins/infra/plugins/namespace/core";
 
 export function WorktreeDropdown() {
   const attemptsResult = useResource(attemptsResource);
   const tasksResult = useResource(tasksResource);
+
+  // Read here rather than at module scope, which would make this file
+  // unimportable without a DOM. `"head"` is what we render when the page is not
+  // served under a namespace at all (bare `localhost`, a dev server) —
+  // `namespaceFromHost` spells that `null`.
+  const currentWorktree = namespaceFromHost(window.location.host) ?? "head";
+  const isAgentWorktree =
+    currentWorktree !== "head" && currentWorktree !== MAIN_COMPOSITION_ID;
 
   const taskTitle = useMemo(() => {
     if (!isAgentWorktree) return null;
@@ -32,7 +34,7 @@ export function WorktreeDropdown() {
     );
     if (!attempt) return null;
     return tasksResult.data.find((t) => t.id === attempt.taskId)?.title ?? null;
-  }, [attemptsResult, tasksResult]);
+  }, [attemptsResult, tasksResult, currentWorktree, isAgentWorktree]);
 
   return (
     // The label is the action bar's one elastic item: it absorbs the slack and

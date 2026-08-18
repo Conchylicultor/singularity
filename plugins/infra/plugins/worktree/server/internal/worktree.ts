@@ -1,9 +1,11 @@
 import { existsSync } from "node:fs";
 import { rm } from "node:fs/promises";
 import { dirname, join } from "node:path";
+import { asNamespace } from "@plugins/infra/plugins/namespace/core";
 import { GIT } from "@plugins/infra/plugins/paths/server";
 import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
 import { attemptBranchName } from "../../core";
+import { namespaceCollision, probeNamespace } from "./composition-namespace";
 import { withWorktreeMutateSlot } from "./mutate-gate";
 import {
   beginInAppRemoval,
@@ -237,7 +239,23 @@ async function unlockWorktreeForRemoval(
   );
 }
 
-export async function setupWorktree(id: string, wtPath: string): Promise<void> {
+/**
+ * @param compositionIds the ids currently in the composition manifest — the
+ * checkout side of the namespace collision guard.
+ *
+ * REQUIRED, not read here, and both halves of that are deliberate. Required so
+ * the guard cannot be skipped by forgetting an argument; not read here because
+ * the manifest lives in `config_v2`, whose server barrel THROWS at module eval
+ * without `SINGULARITY_WORKTREE` — and the CLI statically reaches this barrel
+ * from four commands, so importing it would break every `./singularity` command.
+ * `infra/worktree` also has no business knowing what a composition is; the
+ * caller, which runs in a backend, does.
+ */
+export async function setupWorktree(
+  id: string,
+  wtPath: string,
+  compositionIds: ReadonlySet<string>,
+): Promise<void> {
   const repoRoot = await ensureMainWorktreeRoot();
   // Idempotent: an already-present worktree dir means the checkout already
   // landed, so a durable-job retry (or a caller reusing an existing worktree) is
@@ -251,6 +269,25 @@ export async function setupWorktree(id: string, wtPath: string): Promise<void> {
   if (existsSync(wtPath)) {
     await ensureWorktreeLocked(repoRoot, wtPath);
     return;
+  }
+
+  // A checkout's namespace is its own name (the main composition's prefix
+  // elides), so creating a checkout CLAIMS that namespace. Refuse before the
+  // checkout exists — after `git worktree add` the collision is two owners
+  // sharing one spec dir, one socket and one database, which is not something a
+  // later error can undo. Deliberately BELOW the idempotent early return: a
+  // checkout that already exists already holds its namespace, and refusing there
+  // would break both the durable-job retry and the lock re-assertion above. The
+  // composition side of this same guard runs in compose-serve; both call one
+  // function so the rule cannot drift.
+  const ns = asNamespace(id);
+  const collision = namespaceCollision(
+    ns,
+    { kind: "checkout", name: id },
+    probeNamespace(repoRoot, ns, compositionIds),
+  );
+  if (collision) {
+    throw new Error(`Cannot create worktree "${id}": ${collision}`);
   }
 
   const branch = attemptBranchName(id);

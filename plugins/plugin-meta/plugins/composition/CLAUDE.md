@@ -197,6 +197,8 @@ difference (via `flattenManifest`) is exactly that pack. Run with
     - `fields/string-list/config.stringListField`
     - `fields/text/config.textField`
     - `infra/endpoints.defineEndpoint`
+    - `infra/namespace.MAIN_COMPOSITION_ID`
+    - `infra/namespace.NAMESPACE_LABEL_RE`
   - Exports (types):
     - `CompositionData`
     - `CompositionManifestItem`
@@ -205,12 +207,10 @@ difference (via `flattenManifest`) is exactly that pack. Run with
     - `assertCompositionId`
     - `assertCompositionName`
     - `assertServableCompositionNamespace`
-    - `COMPOSITION_NAME_RE`
     - `compositionDataSchema`
     - `compositionsConfig`
     - `getCompositionData`
     - `isServableCompositionId`
-    - `MAIN_COMPOSITION_ID`
     - `manifestItemToManifest`
     - `RESERVED_COMPOSITION_NAMESPACES`
 - Cross-plugin:

@@ -1,4 +1,3 @@
-import { basename } from "path";
 import type { Command } from "commander";
 import { checkBroadcasts } from "../broadcasts";
 import { reportInterruptedPredecessor } from "../build-receipt";
@@ -14,6 +13,12 @@ import {
   type Lane,
 } from "@plugins/infra/plugins/host-admission/core";
 import { MAIN_WORKTREE_NAME, worktreeArtifacts } from "../paths";
+import { checkoutRef } from "@plugins/infra/plugins/paths/server";
+import {
+  MAIN_COMPOSITION_ID,
+  namespaceFor,
+  type Namespace,
+} from "@plugins/infra/plugins/namespace/core";
 import { publishLane } from "../lane";
 import {
   listAllChecks,
@@ -43,7 +48,7 @@ import { createOpProfiler } from "@plugins/debug/plugins/profiling/plugins/op-lo
 // helper (one spawn regardless of caller count); the branch is one more
 // `git rev-parse`. Mirrors the same two facts build.ts / push.ts read.
 async function getWorktreeIdentity(): Promise<{
-  slug: string;
+  slug: Namespace;
   branch: string;
 }> {
   const root = await getWorktreeRoot();
@@ -60,7 +65,12 @@ async function getWorktreeIdentity(): Promise<{
     );
     process.exit(1);
   }
-  return { slug: basename(root), branch };
+  // `check` runs against the main composition only — same reading as `build`,
+  // where the checkout is the variable half of the pair.
+  return {
+    slug: namespaceFor(MAIN_COMPOSITION_ID, await checkoutRef(root)),
+    branch,
+  };
 }
 
 /**
