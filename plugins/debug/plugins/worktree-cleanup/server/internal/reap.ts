@@ -38,10 +38,15 @@ export async function reapAttempt(
 ): Promise<void> {
   if (opts.worktreePath) {
     const root = await ensureMainWorktreeRoot();
-    if (
-      isCanonicalWorktreePath(opts.worktreePath, root) &&
-      (await dirExists(opts.worktreePath))
-    ) {
+    // Deliberately NOT gated on the directory still existing, which is what this
+    // used to check. Agent checkouts are now `git worktree lock`ed against Claude
+    // Code's sweep of `.claude/worktrees/`, and a lock outlives the directory: if
+    // something deletes the tree behind our back, `git worktree prune` SKIPS the
+    // locked registration — silently, forever — so a "the dir is already gone,
+    // nothing to do" early return would leak one `.git/worktrees/<name>` entry per
+    // external deletion. `removeWorktree` reclaims both states: it unlocks and
+    // removes a live registration, and falls through to prune when there is none.
+    if (isCanonicalWorktreePath(opts.worktreePath, root)) {
       opts.onStep?.("worktree");
       await removeWorktree(opts.worktreePath);
     }

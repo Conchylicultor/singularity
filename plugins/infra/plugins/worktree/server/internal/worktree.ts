@@ -45,6 +45,7 @@ const LIST_TIMEOUT_MS = 60_000; // ~640x the 94 ms p50
 const ADD_TIMEOUT_MS = 600_000; // ~160x the 3.8 s p50; its false positive is the destructive one
 const PRUNE_TIMEOUT_MS = 60_000; // metadata-only, same starvation exposure as list
 const REMOVE_TIMEOUT_MS = 300_000; // ~250x the 1.2 s p50; still frees the flock inside one hourly tick
+const LOCK_TIMEOUT_MS = 60_000; // metadata-only, same starvation exposure as prune
 const MISE_TRUST_TIMEOUT_MS = 30_000;
 
 // A git subprocess in this file blew its bound and was KILLED. Its own type,
@@ -151,14 +152,107 @@ export function isCanonicalWorktreePath(
   return dirname(path) === gitWorktreesDir(repoRoot);
 }
 
+// Stamped into `.git/worktrees/<name>/locked`, so `git worktree list` says who
+// locked it and why rather than leaving a bare marker for a human to explain.
+const WORKTREE_LOCK_REASON = "singularity agent worktree";
+
+/**
+ * Lock the checkout so an outside sweep cannot remove it.
+ *
+ * `<repo>/.claude/worktrees/` is Claude Code's OWN worktree directory, not ours:
+ * it sweeps that path periodically and removes any worktree holding no work —
+ * which is every one of ours the moment its branch merges. That is the observed
+ * cause of the `worktree-removed-externally` reports (16 checkouts, every one
+ * fully merged, all deleted by a git-aware remover on a cadence no job of ours
+ * runs on).
+ *
+ * A lock is the documented opt-out: the sweep skips a locked worktree and never
+ * releases a lock it did not set. So every checkout we create stays locked for
+ * its whole life, and `removeWorktree` is the only thing that unlocks it.
+ *
+ * Idempotent: re-locking an already-locked worktree exits 128 with "is already
+ * locked", which IS the state the caller asked for, so it counts as success.
+ * That is what lets `setupWorktree` re-assert the lock on every call and
+ * self-heal a checkout created before this existed.
+ *
+ * Any other failure is logged, not thrown — the same trade the prune calls in
+ * this file make, and for a sharper reason: this runs AFTER a successful
+ * checkout, so throwing would fail `setupWorktree`, and the durable job's retry
+ * would take the `existsSync` early return straight back to the same failing
+ * lock. An agent that never starts is a worse outcome than an unlocked
+ * worktree, which is merely the exposure we have lived with until now.
+ */
+async function ensureWorktreeLocked(
+  repoRoot: string,
+  wtPath: string,
+): Promise<void> {
+  const r = await spawnCaptured(
+    [
+      GIT,
+      "-C",
+      repoRoot,
+      "worktree",
+      "lock",
+      wtPath,
+      "--reason",
+      WORKTREE_LOCK_REASON,
+    ],
+    { timeoutMs: LOCK_TIMEOUT_MS },
+  );
+  if (r.exitCode === 0 || r.stderr.includes("is already locked")) return;
+  console.warn(
+    `[worktree] could not lock ${wtPath} ` +
+      `(${r.timedOut ? `timed out after ${LOCK_TIMEOUT_MS} ms` : `exit ${r.exitCode}`}): ` +
+      `${r.stderr.trim() || "<no stderr>"} — the checkout is exposed to Claude Code's worktree sweep`,
+  );
+}
+
+/**
+ * Release our own lock so the removal that follows can proceed.
+ *
+ * Mandatory, not tidiness: git refuses to remove a locked worktree even with
+ * `--force`, and `git worktree prune` SKIPS a locked registration whose
+ * directory is already gone — silently, forever. Without this, locking would
+ * trade an external-deletion problem for a leaked-registration one.
+ *
+ * Deliberately NOT `remove -f -f`, which would bulldoze any lock including one a
+ * human set by hand. Unlocking exactly what we locked keeps a lock we could not
+ * release loud: the `remove` below then fails and names the lock, rather than
+ * this call quietly deciding the lock did not matter.
+ */
+async function unlockWorktreeForRemoval(
+  repoRoot: string,
+  wtPath: string,
+): Promise<void> {
+  const r = await spawnCaptured(
+    [GIT, "-C", repoRoot, "worktree", "unlock", wtPath],
+    { timeoutMs: LOCK_TIMEOUT_MS },
+  );
+  // "is not locked" is the desired end state, not a failure.
+  if (r.exitCode === 0 || r.stderr.includes("is not locked")) return;
+  console.warn(
+    `[worktree] could not unlock ${wtPath} before removal ` +
+      `(${r.timedOut ? `timed out after ${LOCK_TIMEOUT_MS} ms` : `exit ${r.exitCode}`}): ` +
+      `${r.stderr.trim() || "<no stderr>"}`,
+  );
+}
+
 export async function setupWorktree(id: string, wtPath: string): Promise<void> {
+  const repoRoot = await ensureMainWorktreeRoot();
   // Idempotent: an already-present worktree dir means the checkout already
   // landed, so a durable-job retry (or a caller reusing an existing worktree) is
   // a no-op. `worktreePathFor` derives the path purely from the id, so the dir's
   // existence is an authoritative "already set up" signal.
-  if (existsSync(wtPath)) return;
+  //
+  // The lock is re-asserted rather than skipped: this is the path every reused
+  // and every pre-lock worktree takes, so making it the place the lock is
+  // guaranteed means a checkout cannot stay unlocked just because it predates
+  // this code or something released its lock.
+  if (existsSync(wtPath)) {
+    await ensureWorktreeLocked(repoRoot, wtPath);
+    return;
+  }
 
-  const repoRoot = await ensureMainWorktreeRoot();
   const branch = attemptBranchName(id);
   // Gate ONLY the heavy checkout subprocess host-wide (the 77 MB / 8385-file disk
   // offender). The idempotent existsSync early-return and `mise trust` stay
@@ -222,6 +316,11 @@ export async function setupWorktree(id: string, wtPath: string): Promise<void> {
         `git worktree add for ${id} failed (exit ${r.exitCode}): ${r.stderr.trim() || "<no stderr>"}`,
       );
     }
+    // Locked inside the same gate hold as the checkout that created it: the
+    // window between "the directory exists" and "the directory is protected" is
+    // exactly the window an outside sweep can take it, so it is closed here
+    // rather than after the gate is released.
+    await ensureWorktreeLocked(repoRoot, wtPath);
   });
   // Trust the mise config so agents can run build commands without hitting
   // "config file is not trusted" errors. No-op if mise is not installed.
@@ -322,6 +421,11 @@ async function removeWorktreeUnlogged(
       }
       return;
     }
+    // Our own lock, released immediately before the removal that needs it gone.
+    // Only on this branch: an unregistered leftover has no registration to hold
+    // a lock, and `git worktree unlock` on one fails with "is not a working
+    // tree" — a confusing warning for a state that cannot be locked.
+    await unlockWorktreeForRemoval(repoRoot, wtPath);
     setRemovalBranch(removal, "git-worktree-remove");
     // Demoted (`background: true` applies backgroundArgv/darwinbg): removal is
     // cleanup/reap work, never interactive.
