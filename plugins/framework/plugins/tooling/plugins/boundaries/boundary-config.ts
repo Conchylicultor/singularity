@@ -37,7 +37,15 @@ export default defineBoundaries({
     // helpers (the shared harness, the "open a blank Pages doc" flow), and are
     // denied `web`/`server`/`shared`: an end-to-end test asserts on the running
     // app through the browser, never by importing the code under test.
-    e2e: ["e2e", "core"],
+    //
+    // `data-dirs` is granted for the same reason `server` has it: an e2e script
+    // is a Node process on the host, and some of them assert on a file the app
+    // wrote under the data root (the config override a filter edit persists).
+    // Without the declaration the only way to name that file is to join the
+    // root by hand — an undeclared path, spelled a second time, which is the
+    // whole failure mode the registry exists to end. Importing a declaration
+    // reads a path; it does not import the code under test.
+    e2e: ["e2e", "core", "data-dirs"],
   },
 
   runtimeExceptions: [

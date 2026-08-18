@@ -36,7 +36,6 @@ export {
   readPushHolder,
   writePushHolder,
   clearPushHolder,
-  worktreesDir,
 } from "./internal/worktree-op";
 export {
   type WorktreeSpec,

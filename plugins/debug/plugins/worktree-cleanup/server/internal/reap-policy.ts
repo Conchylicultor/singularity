@@ -10,8 +10,8 @@ import {
   ensureMainWorktreeRoot,
   isCanonicalWorktreePath,
   worktreePathFor,
-  worktreesDir,
 } from "@plugins/infra/plugins/worktree/server";
+import { worktreesDir } from "@plugins/infra/plugins/paths/server";
 import { dirExists } from "./reap";
 import {
   canClassifyOrphans,

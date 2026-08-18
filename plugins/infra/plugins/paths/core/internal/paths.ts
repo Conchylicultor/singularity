@@ -12,13 +12,23 @@ export const REPO_ROOT = resolve(
 );
 export const PLUGINS_DIR = join(REPO_ROOT, "plugins");
 
-// The git-layer config tree (`config/<hier>/<name>.origin.jsonc`, overrides, and
-// `@app/<id>` scopes). Read directly at runtime by config_v2's raw-diff panel and
-// per-app un-fork check. In a release `REPO_ROOT` resolves into the compiled
-// binary's virtual FS (un-shipped, unreachable), so `launch.ts` points this at the
-// vendored tree via `SINGULARITY_REPO_CONFIG_DIR`; in dev it falls back to the repo.
-export const REPO_CONFIG_DIR =
-  process.env.SINGULARITY_REPO_CONFIG_DIR ?? join(REPO_ROOT, "config");
+/**
+ * The git-layer config tree (`config/<hier>/<name>.origin.jsonc`, overrides, and
+ * `@app/<id>` scopes). Read directly at runtime by config_v2's raw-diff panel and
+ * per-app un-fork check. In a release `REPO_ROOT` resolves into the compiled
+ * binary's virtual FS (un-shipped, unreachable), so `launch.ts` points this at the
+ * vendored tree via `SINGULARITY_REPO_CONFIG_DIR`; in dev it falls back to the repo.
+ *
+ * A FUNCTION for the same reason as {@link resolveDataRoot} and
+ * {@link worktreesDir}: `launch.ts` sets its env var, and a const would capture
+ * whatever the environment said when this module was first imported. With this
+ * one converted, NO constant in this module freezes an environment read — which
+ * is what retires `launch.ts`'s "do not statically import anything
+ * path-dependent" ordering discipline.
+ */
+export function repoConfigDir(): string {
+  return process.env.SINGULARITY_REPO_CONFIG_DIR ?? join(REPO_ROOT, "config");
+}
 
 // The web-core plugin dir, relative to a checkout root. Used for the
 // per-checkout `.build.lock` beside it and (until S5) the legacy served-dist
@@ -148,21 +158,27 @@ export const HOME_DIR = homedir();
 /**
  * The singularity data root, derived AT CALL TIME.
  *
- * THE single derivation of the root — `SINGULARITY_DIR` below is an eager
- * snapshot of it, kept for the call sites that still read the plain string, and
- * `dataRoot()` (`./data-dir.ts`) is its public spelling. Not exported from the
- * barrel on purpose: a consumer that wants the root gets the lazy function, and
- * a consumer that wants a directory under it gets a `DataDir`.
+ * THE single derivation of the root, and the ONLY read of `SINGULARITY_DIR` in
+ * this plugin. Not exported from the barrel on purpose: `dataRoot()`
+ * (`./data-dir.ts`) is its public spelling, so a consumer that wants the root
+ * gets the lazy function, and a consumer that wants a directory under it gets a
+ * `DataDir`.
  *
- * A function because `SINGULARITY_DIR` is env-overridable and the release
- * launcher sets it before importing anything path-dependent — the same reason
- * `webDistDir()` is a function. See its docblock below.
+ * There is deliberately no eager `SINGULARITY_DIR` const beside this any more.
+ * A frozen snapshot of the root was both the second spelling that let the
+ * registry be bypassed by hand (`join(SINGULARITY_DIR, "whatever")` minted an
+ * undeclared top-level entry that nothing failed on) and a value captured at
+ * whatever the environment said when this module was FIRST imported — while the
+ * release launcher sets `SINGULARITY_DIR` before importing anything
+ * path-dependent. `paths:data-root-not-joined` now fails on either way back.
+ *
+ * A function for that second reason, the same one that makes `webDistDir()` a
+ * function and `DataDir.path` a getter. See `webDistDir`'s docblock below.
  */
 export function resolveDataRoot(): string {
   return process.env.SINGULARITY_DIR ?? join(HOME_DIR, ".singularity");
 }
 
-export const SINGULARITY_DIR = resolveDataRoot();
 // OUTSIDE the data root on purpose (`~/.backups/singularity`), which is why it
 // is a plain constant here rather than a `defineDataDir` declaration: a backup
 // that lived inside the tree it backs up would be reclaimed by the same sweep.
@@ -177,16 +193,30 @@ export const BACKUPS_DIR = join(HOME_DIR, ".backups/singularity");
 // one, with nothing to fail. Reach a directory through its owner's
 // `data-dirs/index.ts` declaration — never by joining the root again.
 
-// Root dir holding every worktree's per-worktree singularity state. Each
-// worktree owns `<WORKTREES_DIR>/<name>/` (build/release artifacts, logs,
-// ops markers, the zero replica, …). THE single source of truth for the
-// `worktrees/<name>` layout — server plugins and the CLI both derive from it
-// so the base path can never diverge.
-export const WORKTREES_DIR = join(SINGULARITY_DIR, "worktrees");
+/**
+ * Root dir holding every worktree's per-worktree singularity state. Each
+ * worktree owns `<worktreesDir()>/<name>/` (build/release artifacts, logs, ops
+ * markers, the zero replica, …). THE single source of truth for the
+ * `worktrees/<name>` layout — server plugins and the CLI both derive from it so
+ * the base path can never diverge.
+ *
+ * `worktrees` is one of the eight `DATA_DIR_KINDS`, and this is the kind
+ * directory itself rather than an entry under one, which is why it is spelled
+ * here rather than declared with `defineDataDir`: its children are namespaces
+ * minted at runtime, not a fixed set anyone could declare.
+ *
+ * A FUNCTION, not a const, for the reason in {@link resolveDataRoot} — a const
+ * would freeze the root at whatever the environment said when this module was
+ * first imported, which is precisely the bug the eager `SINGULARITY_DIR` used
+ * to carry.
+ */
+export function worktreesDir(): string {
+  return join(resolveDataRoot(), "worktrees");
+}
 
-/** The per-worktree data dir: `<WORKTREES_DIR>/<name>/`. */
+/** The per-worktree data dir: `<worktreesDir()>/<name>/`. */
 export function worktreeDataDir(name: string): string {
-  return join(WORKTREES_DIR, name);
+  return join(worktreesDir(), name);
 }
 
 /**

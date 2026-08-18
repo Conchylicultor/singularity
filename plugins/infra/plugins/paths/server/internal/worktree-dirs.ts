@@ -1,13 +1,13 @@
 import { readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
-import { WORKTREES_DIR } from "../../core/internal/paths";
+import { worktreesDir } from "../../core/internal/paths";
 
-// Enumerate the real worktree directory names under WORKTREES_DIR. The dir
+// Enumerate the real worktree directory names under `worktreesDir()`. The dir
 // also holds non-directory entries (att-*.json sidecars, Finder .DS_Store) —
 // only directories have logs/, so anything else is skipped. A missing
-// WORKTREES_DIR means "no worktrees yet" and yields [].
+// worktrees dir means "no worktrees yet" and yields [].
 export function listWorktreeDirs(): string[] {
-  return listDirNames(WORKTREES_DIR);
+  return listDirNames(worktreesDir());
 }
 
 // Parameterized on dir only so the co-located test can run against a temp dir.

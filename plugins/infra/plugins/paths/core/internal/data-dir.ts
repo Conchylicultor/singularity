@@ -1,5 +1,5 @@
 import { mkdirSync, statSync } from "node:fs";
-import { join } from "node:path";
+import { join, relative } from "node:path";
 // Relative sibling import: this file lives INSIDE the `paths` plugin, so the
 // `@plugins/infra/plugins/paths/core` alias would cycle back through the barrel
 // that re-exports it.
@@ -140,6 +140,34 @@ const NAME_RE = /^[a-z0-9][a-z0-9-]*$/;
  */
 export function dataRoot(): string {
   return resolveDataRoot();
+}
+
+/**
+ * Where a declared directory — or a file inside it — sits RELATIVE to the data
+ * root: `relativeToDataRoot(gatewayLocks, "gateway.pid")` is
+ * `"locks/gateway/gateway.pid"`.
+ *
+ * For the callers that must name a declared location under a root that is NOT
+ * this process's own: teardown killing a release preview's gateway under its
+ * `/tmp/sgp-XXXXXX` data dir, a release bundle seeding config into a freshly
+ * installed app's data dir, the asset-mirror seed. They cannot read `.path`,
+ * which resolves against THIS process's root — but they must not spell the
+ * location a second time either, because a hand-written copy goes on naming the
+ * old spot after a layout change moves the real one. That failure is silent by
+ * construction: the seed lands where nothing reads it, the preview's gateway
+ * becomes un-killable.
+ *
+ * Takes a {@link DataDir}, not a path, so it cannot be used to relativise an
+ * arbitrary string — the only thing worth expressing relative to the root is
+ * something the registry already owns. This replaced three hand-written copies
+ * of `relative(dataRoot(), …)`, one per calling plugin, which were the only
+ * recurring reason a file outside this plugin called `dataRoot()` at all.
+ */
+export function relativeToDataRoot(
+  dir: DataDir,
+  ...segments: string[]
+): string {
+  return relative(dataRoot(), dir.file(...segments));
 }
 
 function makeDataDir(spec: DataDirSpec): DataDir {

@@ -1,11 +1,10 @@
 export {
   REPO_ROOT,
-  REPO_CONFIG_DIR,
+  repoConfigDir,
   PLUGINS_DIR,
   HOME_DIR,
-  SINGULARITY_DIR,
   BACKUPS_DIR,
-  WORKTREES_DIR,
+  worktreesDir,
   worktreeDataDir,
   worktreeArtifacts,
   CLAUDE_DIR,
@@ -22,15 +21,17 @@ export {
 } from "./internal/paths";
 export type { ReleaseIdentity } from "./internal/paths";
 
-// The declared-directory registry for the data root. `SINGULARITY_DIR` above is
-// still exported for the call sites not yet migrated; it is removed once every
-// owner declares its directories, leaving `dataRoot()` as the only way to name
-// the root and `defineDataDir` as the only way to name anything under it.
+// The declared-directory registry for the data root. `dataRoot()` is the ONLY
+// way to name the root and `defineDataDir` the only way to name anything under
+// it — the plain `SINGULARITY_DIR` string that used to sit above is gone, and
+// `paths:data-root-not-joined` fails on both ways back to it (joining the root,
+// or re-reading its environment variable).
 export {
   DATA_DIR_KINDS,
   dataRoot,
   defineDataDir,
   getDataDirs,
+  relativeToDataRoot,
 } from "./internal/data-dir";
 export type {
   DataDir,

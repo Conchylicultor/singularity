@@ -96,9 +96,9 @@ lock) was indistinguishable from the agent merely "working".
   - Uses:
     - `infra/file-watcher.createFileWatcher`
     - `infra/file-watcher.FileWatcher`
+    - `infra/paths.worktreesDir`
     - `infra/worktree.resolveActiveWorktreeOps`
     - `infra/worktree.WorktreeOp`
-    - `infra/worktree.worktreesDir`
   - Exports (values): `worktreeOpsResource`
   - Resources: `worktree-ops` (push)
 - Shared:

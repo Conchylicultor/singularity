@@ -214,7 +214,7 @@ pane's `GenericEventLane` fallback; a dedicated `Trace.Lane`
     - `infra/paths.isHostSingleton`
     - `infra/paths.listWorktreeDirs`
     - `infra/paths.MAIN_WORKTREE_NAME`
-    - `infra/paths.WORKTREES_DIR`
+    - `infra/paths.worktreesDir`
     - `primitives/log-channels.defineLogSink`
     - `primitives/log-channels.readChannelEntries`
     - `primitives/log-channels.readChannelJson`

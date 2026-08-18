@@ -9,8 +9,7 @@ import {
 import { execFileSync } from "node:child_process";
 import { join } from "node:path";
 import {
-  SINGULARITY_DIR,
-  WORKTREES_DIR,
+  worktreesDir,
   setReleaseIdentity,
   type ReleaseIdentity,
 } from "@plugins/infra/plugins/paths/server";
@@ -49,6 +48,7 @@ import { dbConfigDir } from "@plugins/database/data-dirs";
 import { userConfigRelativeToRoot } from "@plugins/config_v2/data-dirs";
 import {
   CENTRAL_ROUTES_FILENAME,
+  GATEWAY_PID_FILENAME,
   gatewayLocks,
   gatewayLogs,
   gatewayPidFileRelativeToRoot,
@@ -153,7 +153,7 @@ function gatewayLogTail(): string {
 /**
  * The gateway pidfile under an arbitrary install root. Used by teardown to find a
  * preview's gateway (rooted at its `/tmp/sgp-XXXXXX` data dir, not the dev
- * `SINGULARITY_DIR`). `PID_FILE` is the same path under this process's root.
+ * data root). {@link pidFile} is the same path under this process's own root.
  *
  * The subpath comes from the `locks/gateway` declaration rather than being
  * spelled here — see `gatewayPidFileRelativeToRoot`'s docblock for why writing
@@ -163,11 +163,22 @@ export function gatewayPidFile(root: string): string {
   return join(root, gatewayPidFileRelativeToRoot());
 }
 
-const PID_FILE = gatewayPidFile(SINGULARITY_DIR);
+/**
+ * The gateway pidfile under THIS process's data root.
+ *
+ * Read straight off the `locks/gateway` declaration this plugin owns, rather
+ * than by handing `gatewayPidFile` a root — the declaration IS the location, so
+ * there is nothing to keep in step. A FUNCTION, not the module-level const it
+ * used to be: that const froze the data root at first import, while the release
+ * launcher sets it before importing anything path-dependent.
+ */
+function pidFile(): string {
+  return gatewayLocks.file(GATEWAY_PID_FILENAME);
+}
 
 export function readPid(): number | null {
   try {
-    const n = parseInt(readFileSync(PID_FILE, "utf-8").trim(), 10);
+    const n = parseInt(readFileSync(pidFile(), "utf-8").trim(), 10);
     return isNaN(n) ? null : n;
   } catch (err) {
     if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
@@ -493,7 +504,7 @@ export function spawnGatewayDaemon(opts: {
       "-log-dir",
       logsDir,
       "-registry-dir",
-      WORKTREES_DIR,
+      worktreesDir(),
       "-sockets-dir",
       // The one flag with an env arm: a release stages its data root at a long
       // versioned path, which would blow the 104-byte AF_UNIX cap, so `launch.ts`
@@ -522,7 +533,7 @@ export function spawnGatewayDaemon(opts: {
   );
 
   closeSync(logFd);
-  writeFileSync(PID_FILE, String(gw.pid) + "\n");
+  writeFileSync(pidFile(), String(gw.pid) + "\n");
   // Detached by default: `./singularity start` and the preview/desktop bring-up
   // paths all outlive their launcher. A caller that means to SUPERVISE the
   // gateway (the release launcher under systemd) calls `.ref()` on the returned

@@ -8,7 +8,7 @@
 
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { worktreesDir } from "./worktree-op";
+import { worktreesDir } from "@plugins/infra/plugins/paths/server";
 
 export const COMPOSITION_MARKER_FILE = "composition.json";
 
@@ -36,7 +36,10 @@ export interface NamespaceProbe {
  * ours only if it carries our `composition.json` marker; a same-named git
  * worktree or branch would collide the moment that worktree builds.
  */
-export function namespaceCollision(id: string, probe: NamespaceProbe): string | null {
+export function namespaceCollision(
+  id: string,
+  probe: NamespaceProbe,
+): string | null {
   if (probe.gitWorktreeDirExists) {
     return `a git worktree checkout named "${id}" exists under .claude/worktrees/ — rename the composition.`;
   }

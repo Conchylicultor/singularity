@@ -1,5 +1,7 @@
-import { relative } from "node:path";
-import { dataRoot, defineDataDir } from "@plugins/infra/plugins/paths/core";
+import {
+  defineDataDir,
+  relativeToDataRoot,
+} from "@plugins/infra/plugins/paths/core";
 
 /**
  * The user layer of the three-layer config model: one `<worktree>/` subtree per
@@ -42,7 +44,7 @@ export const configDir = defineDataDir({
  * Same shape (and same reason) as `assetMirrorRelativeToRoot()`.
  */
 export function userConfigRelativeToRoot(): string {
-  return relative(dataRoot(), configDir.path);
+  return relativeToDataRoot(configDir);
 }
 
 export default [configDir];

@@ -22,7 +22,7 @@ import {
   pushSlotPath,
 } from "@plugins/infra/plugins/host-admission/server";
 import {
-  WORKTREES_DIR,
+  worktreesDir,
   worktreeDataDir,
 } from "@plugins/infra/plugins/paths/server";
 
@@ -69,12 +69,6 @@ export interface WorktreeOpInfo {
   // whatever the marker carries. Lets the UI clock work time separately from the
   // wait spent queued for the lock.
   runningAt: string | null;
-}
-
-// The root holding every worktree's per-worktree singularity state (the `ops/`
-// markers live under `<root>/<slug>/ops/`). Exposed so consumers can watch it.
-export function worktreesDir(): string {
-  return WORKTREES_DIR;
 }
 
 function opsDir(slug: string): string {

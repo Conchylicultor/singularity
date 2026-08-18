@@ -69,7 +69,7 @@ import {
 } from "@plugins/database/plugins/admin/server";
 import type { BuildRunRecorder } from "@plugins/build/plugins/run-ledger/server";
 import {
-  WORKTREES_DIR,
+  worktreesDir,
   MAIN_WORKTREE_NAME,
   worktreeArtifacts,
 } from "../../paths";
@@ -235,7 +235,7 @@ async function serveOne(opts: {
     if (collision !== null)
       throw new Error(`compose-serve "${id}": ${collision}`);
 
-    const specDir = join(WORKTREES_DIR, id);
+    const specDir = join(worktreesDir(), id);
     // Marker FIRST (right after the guard): from the moment we start writing into
     // the namespace dir it must read as compose-serve-owned, or a crash mid-build
     // would leave a marker-less dir the guard then refuses forever.
@@ -370,11 +370,11 @@ async function restartNamespace(
 }
 
 function markerNamespaces(): string[] {
-  if (!existsSync(WORKTREES_DIR)) return [];
+  if (!existsSync(worktreesDir())) return [];
   const out: string[] = [];
-  for (const entry of readdirSync(WORKTREES_DIR, { withFileTypes: true })) {
+  for (const entry of readdirSync(worktreesDir(), { withFileTypes: true })) {
     if (!entry.isDirectory()) continue;
-    if (existsSync(join(WORKTREES_DIR, entry.name, COMPOSITION_MARKER_FILE)))
+    if (existsSync(join(worktreesDir(), entry.name, COMPOSITION_MARKER_FILE)))
       out.push(entry.name);
   }
   return out;

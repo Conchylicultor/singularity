@@ -44,9 +44,21 @@ a reviewed edit to `DATA_DIR_KINDS`, and that friction is the point.
 
 `dataRoot()` returns the root, and its **only** legitimate use is handing that
 root to a child process as its `SINGULARITY_DIR` (the gateway spawn, a release
-launch, a remote deploy's env line). `join(dataRoot(), …)` is exactly what
-`defineDataDir` exists to replace: a joined root is an undeclared directory,
-which is the failure mode the registry is here to make impossible.
+launch, a remote deploy's env line) — or reporting it to a human.
+`join(dataRoot(), …)` is exactly what `defineDataDir` exists to replace: a
+joined root is an undeclared directory, which is the failure mode the registry
+is here to make impossible.
+
+`paths:data-root-not-joined` enforces it: no `join`/`resolve`/`` `${…}/` `` of
+`dataRoot()`, and no **read** of `process.env.SINGULARITY_DIR` outside a
+four-entry allowlist (a raw env read is a second derivation of the root).
+**Writing** that var — `=`, `??=`, an `env: {…}` key — is the handoff to a child
+and is never flagged; `*.test.ts` is exempt, since a test owning its own root is
+correct.
+
+To name a declared location under a root that is **not** this process's own (a
+preview's `/tmp` data dir, a fresh install's), use `relativeToDataRoot(dir, …)`.
+It takes a `DataDir`, so the answer comes from the declaration.
 
 `dataRoot()` is a **function**, and `DataDir.path` is a **getter** — never a
 value frozen at module eval. `SINGULARITY_DIR` is env-overridable and the release
@@ -133,14 +145,14 @@ run everywhere.
     - `planMigration`
     - `PLUGINS_DIR`
     - `pruneWorktreeCheckArtifacts`
+    - `relativeToDataRoot`
     - `releaseIdentity`
-    - `REPO_CONFIG_DIR`
     - `REPO_ROOT`
+    - `repoConfigDir`
     - `setReleaseIdentity`
-    - `SINGULARITY_DIR`
     - `worktreeArtifacts`
     - `worktreeDataDir`
-    - `WORKTREES_DIR`
+    - `worktreesDir`
 - Cross-plugin:
   - Imported by:
     - `apps/deploy/deployments`
@@ -160,6 +172,7 @@ run everywhere.
     - `config_v2`
     - `conversations`
     - `conversations/conversation-progress`
+    - `conversations/conversation-view/op-status`
     - `conversations/conversations-view/queue`
     - `conversations/hibernation`
     - `conversations/runtime-tmux`
@@ -232,18 +245,18 @@ run everywhere.
     - `pruneWorktreeCheckArtifacts`
     - `pruneWorktreeReleaseArtifacts`
     - `PS`
+    - `relativeToDataRoot`
     - `RELEASE_ARTIFACTS_RETENTION`
     - `releaseIdentity`
-    - `REPO_CONFIG_DIR`
     - `REPO_ROOT`
+    - `repoConfigDir`
     - `setReleaseIdentity`
-    - `SINGULARITY_DIR`
     - `TMUX`
     - `WEB_CORE_RELATIVE`
     - `webDistDir`
     - `worktreeArtifacts`
     - `worktreeDataDir`
-    - `WORKTREES_DIR`
+    - `worktreesDir`
 - Sub-plugins:
   - **`display`** — The human-facing spelling of the singularity data dirs (the `~/…` form a message, an empty state, or an agent prompt writes). Web-safe by construction: string literals only, no node:* and no homedir() — so the browser can name a directory the server resolves.
 

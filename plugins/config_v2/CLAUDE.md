@@ -250,8 +250,8 @@ The memo key comes from **the filesystem, not an event** — deliberately. `refr
     - `infra/file-watcher.createFileWatcher`
     - `infra/file-watcher.FileWatcher`
     - `infra/paths.MAIN_WORKTREE_NAME`
-    - `infra/paths.REPO_CONFIG_DIR`
     - `infra/paths.REPO_ROOT`
+    - `infra/paths.repoConfigDir`
   - Exports (types): `FieldStorageProvider`
   - Exports (values):
     - `acknowledgeConflictByPath`

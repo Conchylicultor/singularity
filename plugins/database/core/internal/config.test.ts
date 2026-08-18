@@ -6,17 +6,17 @@ import { HOME_DIR } from "@plugins/infra/plugins/paths/core";
 import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
 
 /**
- * `readDatabaseConfig()` resolves its path ONCE, at module load, from
- * `SINGULARITY_DIR` — which `@plugins/infra/plugins/paths/core` itself freezes at
- * ITS module load — and then memoizes the parsed result for the process lifetime.
+ * `readDatabaseConfig()` resolves its path ONCE, into a module-level
+ * `CONFIG_PATH` const, and then memoizes the parsed result for the process
+ * lifetime.
  *
  * That is a real constraint, not an accident: every consumer in a backend or a
  * CLI process wants one stable answer. It does mean an in-process test cannot
- * point the reader at a different directory — by the time a `bun test` file runs,
- * `test/bun-preload.ts` has already imported the paths barrel and frozen
- * `SINGULARITY_DIR` to the developer's real `~/.singularity`, which on any dev
- * host DOES contain `database.json`. The tolerant no-file fallback would then
- * never be exercised.
+ * point the reader at a different directory — by the time a `bun test` file
+ * runs, that const has already captured the developer's real `~/.singularity`,
+ * which on any dev host DOES contain `database.json`. The tolerant no-file
+ * fallback would then never be exercised. (The capture is this module's own:
+ * `paths` itself resolves the root lazily on every call.)
  *
  * So the probe runs in a CHILD process with `SINGULARITY_DIR` pointed at an empty
  * temp dir — the same technique the plan's bare-host simulation uses. The probe
@@ -34,7 +34,10 @@ afterAll(() => {
 });
 
 interface Probe {
-  config: { connection: { host: string; port: number; user: string }; services: unknown[] };
+  config: {
+    connection: { host: string; port: number; user: string };
+    services: unknown[];
+  };
   env: Record<string, string>;
 }
 
@@ -44,7 +47,10 @@ interface Probe {
  * the failure this test exists to detect (the deleted CLI copy threw ENOENT here).
  */
 async function probe(env: Record<string, string>): Promise<Probe> {
-  const file = join(probeDir, `probe-${Math.random().toString(36).slice(2)}.ts`);
+  const file = join(
+    probeDir,
+    `probe-${Math.random().toString(36).slice(2)}.ts`,
+  );
   writeFileSync(
     file,
     `import { readDatabaseConfig, libpqEnv } from ${JSON.stringify(CONFIG_MODULE)};\n` +
@@ -77,7 +83,11 @@ describe("readDatabaseConfig / libpqEnv with no database.json", () => {
   test("falls back to the system-Postgres defaults instead of throwing", async () => {
     const { config } = await probe({ ...baseEnv, USER: "probe-user" });
 
-    expect(config.connection).toEqual({ host: "localhost", port: 5432, user: "probe-user" });
+    expect(config.connection).toEqual({
+      host: "localhost",
+      port: 5432,
+      user: "probe-user",
+    });
     // An empty services list is what makes callers treat the DB as externally
     // managed (build.ts's waitForPg returns early on it) rather than crash.
     expect(config.services).toEqual([]);
@@ -91,7 +101,11 @@ describe("readDatabaseConfig / libpqEnv with no database.json", () => {
 
   test("libpqEnv derives PGHOST/PGPORT/PGUSER from the fallback config", async () => {
     const { env } = await probe({ ...baseEnv, USER: "probe-user" });
-    expect(env).toEqual({ PGHOST: "localhost", PGPORT: "5432", PGUSER: "probe-user" });
+    expect(env).toEqual({
+      PGHOST: "localhost",
+      PGPORT: "5432",
+      PGUSER: "probe-user",
+    });
   });
 
   test("an explicit PG* in the ambient environment wins over the config", async () => {
@@ -118,13 +132,27 @@ describe("readDatabaseConfig with a real database.json", () => {
         join(dir, "database.json"),
         JSON.stringify({
           connection: { host: "/var/run/pg", port: 5433, user: "singularity" },
-          services: [{ name: "postgres", start: ["true"], ready: { unix: "/var/run/pg/.s" } }],
+          services: [
+            {
+              name: "postgres",
+              start: ["true"],
+              ready: { unix: "/var/run/pg/.s" },
+            },
+          ],
         }),
       );
       const { config, env } = await probe({ ...baseEnv, SINGULARITY_DIR: dir });
-      expect(config.connection).toEqual({ host: "/var/run/pg", port: 5433, user: "singularity" });
+      expect(config.connection).toEqual({
+        host: "/var/run/pg",
+        port: 5433,
+        user: "singularity",
+      });
       expect(config.services).toHaveLength(1);
-      expect(env).toEqual({ PGHOST: "/var/run/pg", PGPORT: "5433", PGUSER: "singularity" });
+      expect(env).toEqual({
+        PGHOST: "/var/run/pg",
+        PGPORT: "5433",
+        PGUSER: "singularity",
+      });
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
@@ -134,8 +162,16 @@ describe("readDatabaseConfig with a real database.json", () => {
     const dir = mkdtempSync(join(tmpdir(), "singularity-bad-"));
     try {
       writeFileSync(join(dir, "database.json"), "{ not json");
-      const { config } = await probe({ ...baseEnv, USER: "probe-user", SINGULARITY_DIR: dir });
-      expect(config.connection).toEqual({ host: "localhost", port: 5432, user: "probe-user" });
+      const { config } = await probe({
+        ...baseEnv,
+        USER: "probe-user",
+        SINGULARITY_DIR: dir,
+      });
+      expect(config.connection).toEqual({
+        host: "localhost",
+        port: 5432,
+        user: "probe-user",
+      });
       expect(config.services).toEqual([]);
     } finally {
       rmSync(dir, { recursive: true, force: true });

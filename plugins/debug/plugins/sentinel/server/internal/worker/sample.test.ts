@@ -1,10 +1,10 @@
 import { afterAll, describe, expect, test } from "bun:test";
 import { mkdirSync, rmSync, utimesSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { WORKTREES_DIR } from "@plugins/infra/plugins/paths/server";
+import { worktreesDir } from "@plugins/infra/plugins/paths/server";
 import { readBackendP99Rollup, readHostCompressor } from "./sample";
 
-// The gatherers resolve worktree dirs through the import-frozen WORKTREES_DIR
+// The gatherers resolve worktree dirs through worktreesDir()
 // (the bun-test preload evaluates infra/paths before any test body runs, so an
 // env redirect cannot take effect in-process). So these tests plant throwaway,
 // uniquely-named fake worktrees inside the REAL worktrees dir and assert only
@@ -21,10 +21,14 @@ function envelope(line: string): string {
   return JSON.stringify({ t: Date.now(), stream: "stdout", line }) + "\n";
 }
 
-function plantChannelLine(worktree: string, channel: string, line: string): string {
-  const dir = join(WORKTREES_DIR, worktree, "logs");
+function plantChannelLine(
+  worktree: string,
+  channel: string,
+  line: string,
+): string {
+  const dir = join(worktreesDir(), worktree, "logs");
   mkdirSync(dir, { recursive: true });
-  created.push(join(WORKTREES_DIR, worktree));
+  created.push(join(worktreesDir(), worktree));
   const file = join(dir, `${channel}.jsonl`);
   writeFileSync(file, envelope(line));
   return file;
@@ -47,7 +51,9 @@ function healthSample(p99: number): string {
   });
 }
 
-function hostSample(overrides: Record<string, number | undefined> = {}): string {
+function hostSample(
+  overrides: Record<string, number | undefined> = {},
+): string {
   return JSON.stringify({
     sampledAt: Date.now(),
     freeMemMb: 512,
@@ -107,7 +113,11 @@ describe("readHostCompressor", () => {
   });
 
   test("wallJumpMs-stamped line (machine sleep) reads null — no measurement this window", () => {
-    plantChannelLine(HOST_WT, "health-host", hostSample({ wallJumpMs: 900_000 }));
+    plantChannelLine(
+      HOST_WT,
+      "health-host",
+      hostSample({ wallJumpMs: 900_000 }),
+    );
     expect(readHostCompressor(HOST_WT)).toEqual({
       decompressionsPerSec: null,
       compressorMb: null,

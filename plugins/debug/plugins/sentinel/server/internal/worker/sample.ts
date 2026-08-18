@@ -4,7 +4,7 @@ import { cpus, loadavg } from "node:os";
 import {
   listWorktreeDirs,
   MAIN_WORKTREE_NAME,
-  WORKTREES_DIR,
+  worktreesDir,
 } from "@plugins/infra/plugins/paths/server";
 import {
   HealthSampleSchema,
@@ -13,7 +13,11 @@ import {
 } from "@plugins/debug/plugins/health-monitor/server";
 import { readChannelEntries } from "@plugins/primitives/plugins/log-channels/server";
 import type { ClusterSample } from "../../../core";
-import { counterDelta, countBuildProcesses, mapPgStatsRow } from "../sample-math";
+import {
+  counterDelta,
+  countBuildProcesses,
+  mapPgStatsRow,
+} from "../sample-math";
 import type { SentinelPg } from "./pg";
 
 // The impure per-tick gatherers, moved verbatim out of the old main-loop
@@ -56,7 +60,7 @@ async function readFleetFromGateway(log: Logger): Promise<{
       runningBackends: running.length,
       totalActiveConns: running.reduce((sum, w) => sum + w.activeConns, 0),
     };
-  // eslint-disable-next-line promise-safety/no-absorbed-failure -- null IS the discriminated "fleet unreadable this tick" state: the sample schema marks the fleet fields nullable, the failure is logged to the sentinel channel, and losing the tick's pg/host vitals to a gateway hiccup would be worse than a null fleet reading
+    // eslint-disable-next-line promise-safety/no-absorbed-failure -- null IS the discriminated "fleet unreadable this tick" state: the sample schema marks the fleet fields nullable, the failure is logged to the sentinel channel, and losing the tick's pg/host vitals to a gateway hiccup would be worse than a null fleet reading
   } catch (err) {
     log(`gateway fleet read failed: ${String(err)}`);
     return null;
@@ -72,7 +76,7 @@ async function countBuilds(log: Logger): Promise<number | null> {
     const exit = await proc.exited;
     if (exit !== 0) throw new Error(`ps exited ${exit}`);
     return countBuildProcesses(text);
-  // eslint-disable-next-line promise-safety/no-absorbed-failure -- null IS the discriminated "scan unreadable this tick" state: inFlightBuilds is nullable in the sample schema and the failure is logged to the sentinel channel; a ps hiccup must not lose the tick's pg/host vitals
+    // eslint-disable-next-line promise-safety/no-absorbed-failure -- null IS the discriminated "scan unreadable this tick" state: inFlightBuilds is nullable in the sample schema and the failure is logged to the sentinel channel; a ps hiccup must not lose the tick's pg/host vitals
   } catch (err) {
     log(`build-process scan failed: ${String(err)}`);
     return null;
@@ -87,7 +91,7 @@ export function readBackendP99Rollup(): Record<string, number> {
   const names = listWorktreeDirs();
   const now = Date.now();
   for (const name of names) {
-    const file = join(WORKTREES_DIR, name, "logs", "health.jsonl");
+    const file = join(worktreesDir(), name, "logs", "health.jsonl");
     try {
       if (now - statSync(file).mtimeMs > ROLLUP_STALE_MS) continue;
     } catch (err) {
@@ -168,7 +172,10 @@ export interface SampleGatherer {
  * the cached rollup) — the module-level state of the old sampler, moved into
  * a closure so a respawned worker starts clean by construction.
  */
-export function createSampleGatherer(pg: SentinelPg, log: Logger): SampleGatherer {
+export function createSampleGatherer(
+  pg: SentinelPg,
+  log: Logger,
+): SampleGatherer {
   let tickCount = 0;
   let prevBlkReadTimeMs: number | null = null;
   let prevXactCommit: number | null = null;
@@ -188,9 +195,13 @@ export function createSampleGatherer(pg: SentinelPg, log: Logger): SampleGathere
       const pgRow = await pg.queryStats();
       const pgStats = pgRow === null ? null : mapPgStatsRow(pgRow);
       const blkDelta =
-        pgStats === null ? null : counterDelta(prevBlkReadTimeMs, pgStats.blkReadTimeMs);
+        pgStats === null
+          ? null
+          : counterDelta(prevBlkReadTimeMs, pgStats.blkReadTimeMs);
       const xactDelta =
-        pgStats === null ? null : counterDelta(prevXactCommit, pgStats.xactCommit);
+        pgStats === null
+          ? null
+          : counterDelta(prevXactCommit, pgStats.xactCommit);
       // A failed read resets the baselines: a delta spanning the gap would
       // read as a bogus spike, so the next good tick starts a fresh baseline.
       prevBlkReadTimeMs = pgStats?.blkReadTimeMs ?? null;
@@ -200,7 +211,8 @@ export function createSampleGatherer(pg: SentinelPg, log: Logger): SampleGathere
         readFleetFromGateway(log),
         countBuilds(log),
       ]);
-      if (tickCount % ROLLUP_EVERY_N_TICKS === 1) lastRollup = readBackendP99Rollup();
+      if (tickCount % ROLLUP_EVERY_N_TICKS === 1)
+        lastRollup = readBackendP99Rollup();
       const host = readHostCompressor(MAIN_WORKTREE_NAME);
 
       return {

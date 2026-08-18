@@ -69,8 +69,7 @@ and appends it. Design:
     - `infra/asset-mirror.seedAssetMirrorCache`
     - `infra/paths.ReleaseIdentity`
     - `infra/paths.setReleaseIdentity`
-    - `infra/paths.SINGULARITY_DIR`
-    - `infra/paths.WORKTREES_DIR`
+    - `infra/paths.worktreesDir`
     - `infra/worktree.writeWorktreeSpec`
     - `infra/worktree.ZeroCacheSpec`
   - Exports (types): `ListenAddress`

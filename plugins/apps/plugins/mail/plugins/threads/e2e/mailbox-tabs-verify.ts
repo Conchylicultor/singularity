@@ -24,9 +24,10 @@
  *   bun plugins/apps/plugins/mail/plugins/threads/e2e/mailbox-tabs-verify.ts [--headed]
  */
 import { existsSync, rmSync } from "node:fs";
-import { basename, join } from "node:path";
+import { basename } from "node:path";
 import type { Page } from "playwright";
-import { REPO_ROOT, SINGULARITY_DIR } from "@plugins/infra/plugins/paths/core";
+import { REPO_ROOT } from "@plugins/infra/plugins/paths/core";
+import { configDir } from "@plugins/config_v2/data-dirs";
 import {
   arg,
   boot,
@@ -70,11 +71,9 @@ const BOOT_TIMEOUT_MS = 120_000;
  */
 const STORE_PATH = "apps/mail/threads/mail-threads.jsonc";
 
-const USER_OVERRIDE = join(
-  SINGULARITY_DIR,
-  "config",
+const USER_OVERRIDE = configDir.file(
   process.env.SINGULARITY_WORKTREE ?? basename(REPO_ROOT),
-  "apps/mail/threads/mail-threads.jsonc",
+  STORE_PATH,
 );
 
 /**
@@ -104,7 +103,10 @@ async function awaitServerResolves(
     const res = await page.request.get(pathUrl("/api/config-v2/snapshot"));
     if (res.ok()) {
       const body = (await res.json()) as {
-        global: Record<string, { views?: { id: string; view: Record<string, unknown> }[] }>;
+        global: Record<
+          string,
+          { views?: { id: string; view: Record<string, unknown> }[] }
+        >;
       };
       const views = body.global[STORE_PATH]?.views ?? [];
       const inbox = views.find((v) => v.id === "inbox");
@@ -188,7 +190,11 @@ await withBrowser(async (h) => {
   );
 
   // ---- 1. one URL -------------------------------------------------------
-  await boot(page, pathUrl("/mail"), { marker: TABS_READY, timeoutMs: BOOT_TIMEOUT_MS, settleMs: 1500 });
+  await boot(page, pathUrl("/mail"), {
+    marker: TABS_READY,
+    timeoutMs: BOOT_TIMEOUT_MS,
+    settleMs: 1500,
+  });
   r.eq(
     "bare /mail lands on /mail/threads",
     new URL(page.url()).pathname,
@@ -206,7 +212,11 @@ await withBrowser(async (h) => {
   for (const name of ["Sent", "Spam"]) {
     await tab(page, name).click();
     await page.waitForTimeout(1500);
-    r.eq(`"${name}" carries exactly one scope rule`, await pillLabel(page), "1 rule");
+    r.eq(
+      `"${name}" carries exactly one scope rule`,
+      await pillLabel(page),
+      "1 rule",
+    );
   }
   const distinct = new Set(filtersSent.slice(beforeSwitch));
   r.ok(
@@ -273,13 +283,18 @@ await withBrowser(async (h) => {
   );
   r.ok(
     "no two of Inbox / Sent / Drafts returned an identical page",
-    new Set([inboxRows, sentRows, draftRows].map((x) => JSON.stringify(x))).size === 3,
+    new Set([inboxRows, sentRows, draftRows].map((x) => JSON.stringify(x)))
+      .size === 3,
   );
 
   // ---- 4. the scope is an ordinary, EDITABLE rule ------------------------
   await tab(page, "Inbox").click();
   await page.waitForTimeout(1200);
-  r.eq("Inbox's Filter pill counts its scope rule", await pillLabel(page), "1 rule");
+  r.eq(
+    "Inbox's Filter pill counts its scope rule",
+    await pillLabel(page),
+    "1 rule",
+  );
 
   await openFilter(page);
   r.ok(
@@ -326,7 +341,11 @@ await withBrowser(async (h) => {
     USER_OVERRIDE,
   );
 
-  await boot(page, pathUrl("/mail/threads"), { marker: TABS_READY, timeoutMs: BOOT_TIMEOUT_MS, settleMs: 2500 });
+  await boot(page, pathUrl("/mail/threads"), {
+    marker: TABS_READY,
+    timeoutMs: BOOT_TIMEOUT_MS,
+    settleMs: 2500,
+  });
   r.eq(
     "…and the removal SURVIVES a reload (config write-back)",
     await pillLabel(page),
@@ -345,7 +364,11 @@ await withBrowser(async (h) => {
     "the server falls back to the authored origin",
     await awaitServerResolves(page, (view) => "filter" in view),
   );
-  await boot(page, pathUrl("/mail/threads"), { marker: TABS_READY, timeoutMs: BOOT_TIMEOUT_MS, settleMs: 1500 });
+  await boot(page, pathUrl("/mail/threads"), {
+    marker: TABS_READY,
+    timeoutMs: BOOT_TIMEOUT_MS,
+    settleMs: 1500,
+  });
   r.eq(
     "dropping the override restores the authored scope",
     await pillLabel(page),

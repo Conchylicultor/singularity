@@ -15,7 +15,7 @@ Git worktree CRUD primitive: resolve the main worktree root, derive per-id paths
     - `infra/host-admission.pushSlotPath`
     - `infra/paths.GIT`
     - `infra/paths.worktreeDataDir`
-    - `infra/paths.WORKTREES_DIR`
+    - `infra/paths.worktreesDir`
     - `packages/flock.flockTry`
   - Exports (types):
     - `CompositionMarker`
@@ -57,7 +57,6 @@ Git worktree CRUD primitive: resolve the main worktree root, derive per-id paths
     - `WorktreeGitTimeoutError`
     - `worktreePathFor`
     - `worktreeRemovalSink`
-    - `worktreesDir`
     - `writePushHolder`
     - `writeWorktreeSpec`
 - Cross-plugin:

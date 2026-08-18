@@ -1,6 +1,6 @@
 /**
  * Regression test for `paths:no-inlined-worktree-artifacts`: re-inlining the
- * per-worktree data dir (`join(SINGULARITY_DIR, "worktrees", …)`) or a raw
+ * per-worktree data dir (`join(dataRoot(), "worktrees", …)`) or a raw
  * build/release artifact filename (build-profile*.json, build-logs*.json,
  * build*.log, release-logs-*.json) must be flagged, while lookalikes that are
  * NOT the artifact layout — block comments, route segments, the git-checkout
@@ -32,7 +32,10 @@ let root = "";
 // here carry no artifact filename `.json`/`.log` suffix, so they never
 // self-match when the real check scans this file.)
 const PATTERNS: { pattern: RegExp; grepArg: string }[] = [
-  { pattern: /SINGULARITY_DIR\s*(?:,\s*["'`]|\}?\/)worktrees/, grepArg: "worktrees" },
+  {
+    pattern: /dataRoot\s*\(\s*\)\s*(?:,\s*["'`]|\}?\/)worktrees/,
+    grepArg: "worktrees",
+  },
   { pattern: /["'`]build-profile[^"'`\s]*\.json/, grepArg: "build-profile" },
   { pattern: /["'`]build-logs[^"'`\s]*\.json/, grepArg: "build-logs" },
   { pattern: /["'`]release-logs[^"'`\s]*\.json/, grepArg: "release-logs" },
@@ -41,14 +44,14 @@ const PATTERNS: { pattern: RegExp; grepArg: string }[] = [
 
 // Split tokens: assembled below into the (contiguous) fixture lines written to
 // the temp repo, but never spelled contiguously in this source file.
-const SDIR = "SINGULARITY_" + "DIR"; // SINGULARITY_DIR
+const DROOT = "dataRoot" + "()"; // dataRoot()
 const BP = "build-" + "profile"; // build-profile
 const RL = "release-" + "logs"; // release-logs
 const BLOG = "build" + ".log"; // build.log
 const BT = "`"; // a literal backtick, kept out of nested-template soup
 
 // The 4 FLAGGED fixture lines (each a genuine inlined artifact path).
-const L1 = "const a = join(" + SDIR + ', "worktrees", name);';
+const L1 = "const a = join(" + DROOT + ', "worktrees", name);';
 const L2 = 'const b = join(dir, "' + BP + '.json");';
 // `-$` + `{id}.json` split avoids the no-template-curly-in-string lint on a
 // plain string that contains a `${…}` sequence; the assembled value is identical.
@@ -64,7 +67,7 @@ beforeAll(async () => {
     L4, // L4 — FLAGGED (build.log filename)
     "/* legacy artifact was " + BP + ".json in the shared dir */", // L5 — NOT flagged (block comment)
     'const seg = "' + BP + '/:worktree/:buildId";', // L6 — NOT flagged (route segment, no .json)
-    'const g = join(repoRoot, ".claude", "worktrees");', // L7 — NOT flagged (git-checkout path, no SINGULARITY_DIR)
+    'const g = join(repoRoot, ".claude", "worktrees");', // L7 — NOT flagged (git-checkout path, not the data root)
     'const imp = "@plugins/build/plugins/' + "build-logs" + '/core";', // L8 — NOT flagged (plugin import name, no .json)
   ].join("\n");
   writeFileSync(join(root, "fixture.ts"), fixture + "\n");

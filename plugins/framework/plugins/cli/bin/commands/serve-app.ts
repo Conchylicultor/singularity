@@ -1,9 +1,6 @@
 import type { Command } from "commander";
 import { resolve } from "path";
-import {
-  REPO_ROOT,
-  SINGULARITY_DIR,
-} from "@plugins/infra/plugins/paths/server";
+import { dataRoot, REPO_ROOT } from "@plugins/infra/plugins/paths/server";
 import {
   bootSelfContainedApp,
   gatewayPidFile,
@@ -47,16 +44,16 @@ export function registerServeApp(program: Command) {
         web: string;
         logLevel: string;
       }) => {
-        // The launcher is a release entry point: SINGULARITY_DIR must already be
-        // set in the environment, because every path constant is frozen at
-        // import time and re-roots the whole install. We never silently default
-        // to the dev ~/.singularity — that would pollute the developer's data
-        // root with a release cluster, spec, and registry.
+        // The launcher is a release entry point: SINGULARITY_DIR must already
+        // be set in the environment, because it re-roots the whole install. The
+        // check is on the ENV rather than on `dataRoot()` precisely because
+        // `dataRoot()` cannot express "explicitly set" — unset, it answers with
+        // the dev ~/.singularity, and silently defaulting to that would pollute
+        // the developer's data root with a release cluster, spec, and registry.
         if (!process.env.SINGULARITY_DIR) {
           console.error(
             "serve-app requires SINGULARITY_DIR to be set in its environment.\n" +
-              "Path constants are frozen at import time, so the data root cannot be\n" +
-              "changed mid-process. Invoke the launcher with an isolated root, e.g.:\n" +
+              "Invoke the launcher with an isolated root, e.g.:\n" +
               "\n" +
               "  SINGULARITY_DIR=$(mktemp -d /tmp/sonata-release.XXXX) \\\n" +
               "    bun plugins/framework/plugins/cli/bin/index.ts serve-app \\\n" +
@@ -86,11 +83,15 @@ export function registerServeApp(program: Command) {
           log: console.log,
         });
 
-        const pidFile = gatewayPidFile(SINGULARITY_DIR);
+        // One of `dataRoot()`'s two sanctioned uses: naming the root itself,
+        // here to report it and to reach a pidfile under it. Never to join a
+        // path under it — that is what `defineDataDir` is for.
+        const root = dataRoot();
+        const pidFile = gatewayPidFile(root);
         console.log("");
         console.log(`App "${opts.name}" is serving.`);
         console.log(`  URL:  http://${opts.name}.localhost:${port}`);
-        console.log(`  Root: ${SINGULARITY_DIR}`);
+        console.log(`  Root: ${root}`);
         console.log(`  PID:  ${pidFile}`);
         console.log(`  Logs: ${gatewayLogs.path}/`);
       },

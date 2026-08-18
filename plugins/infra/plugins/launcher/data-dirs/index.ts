@@ -1,5 +1,7 @@
-import { relative } from "node:path";
-import { dataRoot, defineDataDir } from "@plugins/infra/plugins/paths/core";
+import {
+  defineDataDir,
+  relativeToDataRoot,
+} from "@plugins/infra/plugins/paths/core";
 
 // Everything the gateway daemon owns under the data root. Four directories, and
 // each one is handed to the Go process as an explicit flag (`-log-dir`,
@@ -92,7 +94,8 @@ export const socketsDir = defineDataDir({
 /** The central routing manifest, inside {@link gatewayState}. */
 export const CENTRAL_ROUTES_FILENAME = "central-routes.json";
 
-const GATEWAY_PID_FILENAME = "gateway.pid";
+/** The pid file, inside {@link gatewayLocks}. */
+export const GATEWAY_PID_FILENAME = "gateway.pid";
 
 /**
  * Where the pid file sits *relative to a data root* — `"locks/gateway/gateway.pid"`.
@@ -108,7 +111,7 @@ const GATEWAY_PID_FILENAME = "gateway.pid";
  * Same shape (and same reason) as `assetMirrorRelativeToRoot()`.
  */
 export function gatewayPidFileRelativeToRoot(): string {
-  return relative(dataRoot(), gatewayLocks.file(GATEWAY_PID_FILENAME));
+  return relativeToDataRoot(gatewayLocks, GATEWAY_PID_FILENAME);
 }
 
 export default [gatewayLogs, gatewayState, gatewayLocks, socketsDir];

@@ -6,12 +6,20 @@
  * `RELEASE.json`. Running it brings up the whole self-contained app on a fresh
  * host with no bun, no Go toolchain, and no node_modules.
  *
- * CRITICAL ordering: every path constant under `@plugins/infra/plugins/paths`
- * is FROZEN at import time from `SINGULARITY_DIR` (+ the PG/PgBouncer bin-dir
- * overrides are read by the start scripts at spawn time). So this file must set
- * those env vars BEFORE importing anything path-dependent. We therefore do NOT
- * statically import the launcher boot code — we `await import(...)` it only
- * after the env is in place, so the constants freeze under the release root.
+ * CRITICAL ordering: some path constants are FROZEN at import time from the env
+ * vars set below, so this file must set them BEFORE importing anything
+ * path-dependent. We therefore do NOT statically import the launcher boot code —
+ * we `await import(...)` it only after the env is in place, so those constants
+ * freeze under the release root.
+ *
+ * `@plugins/infra/plugins/paths` no longer contributes to this: `dataRoot()`,
+ * `worktreesDir()`, `repoConfigDir()` and `webDistDir()` are all functions, and
+ * `DataDir.path` is a getter, so nothing there captures an env read. What still
+ * freezes is the embedded-PG family — `PG_PORT`, `PG_SOCKET_DIR` and the paths
+ * derived from them (`database/embedded/shared/internal/paths.ts`) are
+ * module-level consts over `SINGULARITY_PG_PORT` / `SINGULARITY_PG_SOCKET_DIR`.
+ * One frozen constant anywhere in the closure is enough to make the ordering
+ * load-bearing, so keep the dynamic import until that family is lazy too.
  */
 import { dirname, join } from "node:path";
 import { existsSync, mkdtempSync, readFileSync } from "node:fs";

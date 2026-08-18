@@ -7342,8 +7342,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `infra/file-watcher.createFileWatcher`
       - `infra/file-watcher.FileWatcher`
       - `infra/paths.MAIN_WORKTREE_NAME`
-      - `infra/paths.REPO_CONFIG_DIR`
       - `infra/paths.REPO_ROOT`
+      - `infra/paths.repoConfigDir`
     - Exports (types): `FieldStorageProvider`
     - Exports (values):
       - `acknowledgeConflictByPath`
@@ -9969,9 +9969,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Uses:
               - `infra/file-watcher.createFileWatcher`
               - `infra/file-watcher.FileWatcher`
+              - `infra/paths.worktreesDir`
               - `infra/worktree.resolveActiveWorktreeOps`
               - `infra/worktree.WorktreeOp`
-              - `infra/worktree.worktreesDir`
             - Exports (values): `worktreeOpsResource`
             - Resources: `worktree-ops` (push)
           - Shared:
@@ -12376,7 +12376,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `infra/paths.isHostSingleton`
           - `infra/paths.listWorktreeDirs`
           - `infra/paths.MAIN_WORKTREE_NAME`
-          - `infra/paths.WORKTREES_DIR`
+          - `infra/paths.worktreesDir`
           - `primitives/log-channels.defineLogSink`
           - `primitives/log-channels.readChannelEntries`
           - `primitives/log-channels.readChannelJson`
@@ -12999,6 +12999,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `infra/ndjson-stream.ndjsonResponse`
           - `infra/paths.GIT`
           - `infra/paths.isMain`
+          - `infra/paths.worktreesDir`
           - `infra/worktree.ensureMainWorktreeRoot`
           - `infra/worktree.gitWorktreesDir`
           - `infra/worktree.isCanonicalWorktreePath`
@@ -13006,7 +13007,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `infra/worktree.removeWorktreeSpec`
           - `infra/worktree.WorktreeGitTimeoutError`
           - `infra/worktree.worktreePathFor`
-          - `infra/worktree.worktreesDir`
           - `primitives/log-channels.defineLogSink`
           - `reports.recordReport`
           - `reports.ReportKind`
@@ -16391,8 +16391,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `infra/asset-mirror.seedAssetMirrorCache`
           - `infra/paths.ReleaseIdentity`
           - `infra/paths.setReleaseIdentity`
-          - `infra/paths.SINGULARITY_DIR`
-          - `infra/paths.WORKTREES_DIR`
+          - `infra/paths.worktreesDir`
           - `infra/worktree.writeWorktreeSpec`
           - `infra/worktree.ZeroCacheSpec`
         - Exports (types): `ListenAddress`
@@ -16488,14 +16487,14 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `planMigration`
           - `PLUGINS_DIR`
           - `pruneWorktreeCheckArtifacts`
+          - `relativeToDataRoot`
           - `releaseIdentity`
-          - `REPO_CONFIG_DIR`
           - `REPO_ROOT`
+          - `repoConfigDir`
           - `setReleaseIdentity`
-          - `SINGULARITY_DIR`
           - `worktreeArtifacts`
           - `worktreeDataDir`
-          - `WORKTREES_DIR`
+          - `worktreesDir`
       - Cross-plugin:
         - Imported by:
           - `apps/deploy/deployments`
@@ -16515,6 +16514,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `config_v2`
           - `conversations`
           - `conversations/conversation-progress`
+          - `conversations/conversation-view/op-status`
           - `conversations/conversations-view/queue`
           - `conversations/hibernation`
           - `conversations/runtime-tmux`
@@ -16587,18 +16587,18 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `pruneWorktreeCheckArtifacts`
           - `pruneWorktreeReleaseArtifacts`
           - `PS`
+          - `relativeToDataRoot`
           - `RELEASE_ARTIFACTS_RETENTION`
           - `releaseIdentity`
-          - `REPO_CONFIG_DIR`
           - `REPO_ROOT`
+          - `repoConfigDir`
           - `setReleaseIdentity`
-          - `SINGULARITY_DIR`
           - `TMUX`
           - `WEB_CORE_RELATIVE`
           - `webDistDir`
           - `worktreeArtifacts`
           - `worktreeDataDir`
-          - `WORKTREES_DIR`
+          - `worktreesDir`
       - Plugins:
         - **`display`** — The human-facing spelling of the singularity data dirs (the `~/…` form a message, an empty state, or an agent prompt writes). Web-safe by construction: string literals only, no node:* and no homedir() — so the browser can name a directory the server resolves.
           - Core:
@@ -16971,7 +16971,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `infra/host-admission.pushSlotPath`
           - `infra/paths.GIT`
           - `infra/paths.worktreeDataDir`
-          - `infra/paths.WORKTREES_DIR`
+          - `infra/paths.worktreesDir`
           - `packages/flock.flockTry`
         - Exports (types):
           - `CompositionMarker`
@@ -17013,7 +17013,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `WorktreeGitTimeoutError`
           - `worktreePathFor`
           - `worktreeRemovalSink`
-          - `worktreesDir`
           - `writePushHolder`
           - `writeWorktreeSpec`
       - Cross-plugin:

@@ -1,7 +1,7 @@
 import { mkdirSync, renameSync, writeFileSync } from "node:fs";
 import { rm } from "node:fs/promises";
 import { join } from "node:path";
-import { worktreesDir } from "./worktree-op";
+import { worktreesDir } from "@plugins/infra/plugins/paths/server";
 
 /**
  * Optional per-worktree zero-cache sidecar descriptor. Present ONLY when the

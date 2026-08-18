@@ -47,6 +47,7 @@
     - `infra/ndjson-stream.ndjsonResponse`
     - `infra/paths.GIT`
     - `infra/paths.isMain`
+    - `infra/paths.worktreesDir`
     - `infra/worktree.ensureMainWorktreeRoot`
     - `infra/worktree.gitWorktreesDir`
     - `infra/worktree.isCanonicalWorktreePath`
@@ -54,7 +55,6 @@
     - `infra/worktree.removeWorktreeSpec`
     - `infra/worktree.WorktreeGitTimeoutError`
     - `infra/worktree.worktreePathFor`
-    - `infra/worktree.worktreesDir`
     - `primitives/log-channels.defineLogSink`
     - `reports.recordReport`
     - `reports.ReportKind`

@@ -32,13 +32,34 @@ import {
 // --- helpers ---------------------------------------------------------------
 
 function pushMarker(slug: string): WorktreeOpInfo {
-  return { slug, op: "push", pid: 1234, startedAt: "2026-06-07T00:00:00.000Z", phase: "running", runningAt: null };
+  return {
+    slug,
+    op: "push",
+    pid: 1234,
+    startedAt: "2026-06-07T00:00:00.000Z",
+    phase: "running",
+    runningAt: null,
+  };
 }
 function buildMarker(slug: string): WorktreeOpInfo {
-  return { slug, op: "build", pid: 1234, startedAt: "2026-06-07T00:00:00.000Z", phase: "running", runningAt: null };
+  return {
+    slug,
+    op: "build",
+    pid: 1234,
+    startedAt: "2026-06-07T00:00:00.000Z",
+    phase: "running",
+    runningAt: null,
+  };
 }
 function checkMarker(slug: string): WorktreeOpInfo {
-  return { slug, op: "check", pid: 1234, startedAt: "2026-06-07T00:00:00.000Z", phase: "running", runningAt: null };
+  return {
+    slug,
+    op: "check",
+    pid: 1234,
+    startedAt: "2026-06-07T00:00:00.000Z",
+    phase: "running",
+    runningAt: null,
+  };
 }
 function holder(slug: string, pid = 1234, pushId = "p-1"): PushHolder {
   return { slug, pid, pushId, acquiredAt: "2026-06-07T00:00:00.000Z" };
@@ -52,18 +73,25 @@ const phaseOf = (out: WorktreeOpInfo[], slug: string) =>
 //
 // The marker read/write functions resolve their path from the real
 // worktreeDataDir(slug); no path injection. So each test uses a throwaway random
-// slug (never a real worktree), writes under the real WORKTREES_DIR, and reaps
+// slug (never a real worktree), writes under the real worktreesDir(), and reaps
 // the whole slug dir in a finally.
 
 function markerPath(slug: string, op: WorktreeOp): string {
   return join(worktreeDataDir(slug), "ops", `${op}.json`);
 }
-function writeRawMarker(slug: string, op: WorktreeOp, data: Record<string, unknown>): void {
+function writeRawMarker(
+  slug: string,
+  op: WorktreeOp,
+  data: Record<string, unknown>,
+): void {
   mkdirSync(join(worktreeDataDir(slug), "ops"), { recursive: true });
   writeFileSync(markerPath(slug, op), JSON.stringify(data));
 }
 function readRawMarker(slug: string, op: WorktreeOp): Record<string, unknown> {
-  return JSON.parse(readFileSync(markerPath(slug, op), "utf8")) as Record<string, unknown>;
+  return JSON.parse(readFileSync(markerPath(slug, op), "utf8")) as Record<
+    string,
+    unknown
+  >;
 }
 function withTempSlug(fn: (slug: string) => void): void {
   const slug = `op-test-${randomUUID()}`;
@@ -73,7 +101,9 @@ function withTempSlug(fn: (slug: string) => void): void {
     rmSync(worktreeDataDir(slug), { recursive: true, force: true });
   }
 }
-async function withTempSlugAsync(fn: (slug: string) => Promise<void>): Promise<void> {
+async function withTempSlugAsync(
+  fn: (slug: string) => Promise<void>,
+): Promise<void> {
   const slug = `op-test-${randomUUID()}`;
   try {
     await fn(slug);
@@ -88,33 +118,47 @@ const OTHER_LIVE_PID = 1;
 // --- derivePushPhases: the core correctness logic --------------------------
 
 test("exactly one push runs — the slug the holder names; two-running impossible", () => {
-  const out = derivePushPhases([pushMarker("A"), pushMarker("B")], holder("A"), {
-    isAlive: alive,
-    lockHeld: () => true,
-  });
+  const out = derivePushPhases(
+    [pushMarker("A"), pushMarker("B")],
+    holder("A"),
+    {
+      isAlive: alive,
+      lockHeld: () => true,
+    },
+  );
   expect(phaseOf(out, "A")).toBe("running");
   expect(phaseOf(out, "B")).toBe("waiting-for-lock");
   expect(out.filter((m) => m.phase === "running")).toHaveLength(1);
   // The running push carries the lock-acquired instant; the waiter does not.
-  expect(out.find((m) => m.slug === "A")?.runningAt).toBe("2026-06-07T00:00:00.000Z");
+  expect(out.find((m) => m.slug === "A")?.runningAt).toBe(
+    "2026-06-07T00:00:00.000Z",
+  );
   expect(out.find((m) => m.slug === "B")?.runningAt).toBeNull();
 });
 
 test("dead holder pid → nobody running, all waiting", () => {
-  const out = derivePushPhases([pushMarker("A"), pushMarker("B")], holder("A"), {
-    isAlive: dead,
-    lockHeld: () => true, // must be ignored once pid is dead
-  });
+  const out = derivePushPhases(
+    [pushMarker("A"), pushMarker("B")],
+    holder("A"),
+    {
+      isAlive: dead,
+      lockHeld: () => true, // must be ignored once pid is dead
+    },
+  );
   expect(phaseOf(out, "A")).toBe("waiting-for-lock");
   expect(phaseOf(out, "B")).toBe("waiting-for-lock");
 });
 
 test("PID-reuse ghost: holder pid alive but lock is free → all waiting", () => {
   // This is the case today's code displays as "running" forever.
-  const out = derivePushPhases([pushMarker("A"), pushMarker("B")], holder("A"), {
-    isAlive: alive,
-    lockHeld: () => false, // kernel says lock is free → holder is a ghost
-  });
+  const out = derivePushPhases(
+    [pushMarker("A"), pushMarker("B")],
+    holder("A"),
+    {
+      isAlive: alive,
+      lockHeld: () => false, // kernel says lock is free → holder is a ghost
+    },
+  );
   expect(phaseOf(out, "A")).toBe("waiting-for-lock");
   expect(phaseOf(out, "B")).toBe("waiting-for-lock");
 });
@@ -136,19 +180,27 @@ test("no holder file → all pushes waiting", () => {
 });
 
 test("build markers pass through untouched (no lock contention)", () => {
-  const out = derivePushPhases([buildMarker("A"), pushMarker("B")], holder("B"), {
-    isAlive: alive,
-    lockHeld: () => true,
-  });
+  const out = derivePushPhases(
+    [buildMarker("A"), pushMarker("B")],
+    holder("B"),
+    {
+      isAlive: alive,
+      lockHeld: () => true,
+    },
+  );
   expect(phaseOf(out, "A")).toBe("running"); // build unchanged
   expect(phaseOf(out, "B")).toBe("running"); // push is the holder
 });
 
 test("check markers pass through untouched (no lock contention)", () => {
-  const out = derivePushPhases([checkMarker("A"), pushMarker("B")], holder("B"), {
-    isAlive: alive,
-    lockHeld: () => true,
-  });
+  const out = derivePushPhases(
+    [checkMarker("A"), pushMarker("B")],
+    holder("B"),
+    {
+      isAlive: alive,
+      lockHeld: () => true,
+    },
+  );
   expect(out.find((m) => m.slug === "A")?.op).toBe("check"); // op preserved
   expect(phaseOf(out, "A")).toBe("running"); // check unchanged
   expect(phaseOf(out, "B")).toBe("running"); // push is the holder
@@ -303,6 +355,11 @@ test("derivePushPhases overrides a push marker's stored runningAt from the holde
     phase: "running",
     runningAt: "1999-01-01T00:00:00.000Z",
   };
-  const out = derivePushPhases([stale], holder("A"), { isAlive: alive, lockHeld: () => true });
-  expect(out.find((m) => m.slug === "A")?.runningAt).toBe("2026-06-07T00:00:00.000Z");
+  const out = derivePushPhases([stale], holder("A"), {
+    isAlive: alive,
+    lockHeld: () => true,
+  });
+  expect(out.find((m) => m.slug === "A")?.runningAt).toBe(
+    "2026-06-07T00:00:00.000Z",
+  );
 });

@@ -117,7 +117,7 @@ const noHardcodedPathsCheck: Check = {
     return {
       ok: false,
       message: `hardcoded path found in ${offenders.length} place(s):\n    ${offenders.join("\n    ")}`,
-      hint: "Import path constants from `@plugins/infra/plugins/paths/core` (e.g. HOME_DIR, SINGULARITY_DIR) or `@plugins/infra/plugins/paths/server` (e.g. GIT, CLAUDE, TMUX) instead of constructing paths from homedir() or hardcoding binary paths.",
+      hint: "Import path constants from `@plugins/infra/plugins/paths/core` (e.g. HOME_DIR, REPO_ROOT) or `@plugins/infra/plugins/paths/server` (e.g. GIT, CLAUDE, TMUX) instead of constructing paths from homedir() or hardcoding binary paths. For anything under the singularity data root, declare it with `defineDataDir` — there is no root constant to join.",
     };
   },
 };
@@ -130,13 +130,15 @@ const noHardcodedPathsCheck: Check = {
 //
 // This is DISTINCT from the git-checkout `.claude/worktrees` path (see
 // plugins/infra/plugins/worktree): that is a different concept and is
-// intentionally NOT matched here — pattern 1 is scoped to SINGULARITY_DIR-derived
+// intentionally NOT matched here — pattern 1 is scoped to data-root-derived
 // paths, so `join(repoRoot, ".claude", "worktrees")` never trips this check and
 // needs no allowlist entry.
 const WORKTREE_ARTIFACT_PATTERNS: { pattern: RegExp; grepArg: string }[] = [
-  // Base dir re-inline: join(SINGULARITY_DIR, "worktrees" or `${SINGULARITY_DIR}/worktrees`.
+  // Base dir re-inline: join(dataRoot(), "worktrees" or `${dataRoot()}/worktrees`.
+  // `paths:data-root-not-joined` also refuses any join of the root; this keeps
+  // the specific diagnostic, which names `worktreeDataDir` as the replacement.
   {
-    pattern: /SINGULARITY_DIR\s*(?:,\s*["'`]|\}?\/)worktrees/,
+    pattern: /dataRoot\s*\(\s*\)\s*(?:,\s*["'`]|\}?\/)worktrees/,
     grepArg: "worktrees",
   },
   // build-profile artifact filename.
@@ -615,8 +617,162 @@ const noUndeclaredDataDirsCheck: Check = {
   },
 };
 
+// ── data-root-not-joined ────────────────────────────────────────────────────
+//
+// The root has exactly one door, and this is what makes that true.
+//
+// `no-undeclared-data-dirs` above reads the real filesystem and fails on an
+// undeclared entry — but only AFTER something has created it, which means the
+// first report of a new orphan arrives with the orphan already on disk and
+// possibly already holding the only copy of something. This check is the same
+// invariant moved forward in time: it fails on the SPELLING that would mint one,
+// before any build runs.
+//
+// Two ways back to a joinable root, and both are closed here:
+//
+//   1. **Joining `dataRoot()`.** The root is reachable as a plain string —
+//      that is unavoidable, since a child process has to be handed one — so the
+//      constraint cannot live in the type. `join(dataRoot(), "whatever")` is
+//      precisely what `defineDataDir` exists to replace.
+//   2. **Re-reading `SINGULARITY_DIR` from the environment.** A second
+//      derivation of the root, in a plugin that owns none of it. This is the
+//      form the deleted `SINGULARITY_DIR` const would come back as: not an
+//      import (that is now a tsc error), but four characters of `process.env`.
+//
+// A WRITE to the env var is untouched — `??=`, `=`, and a `SINGULARITY_DIR:`
+// key inside an `env: {…}` object are how a root is handed to a child, which is
+// the sanctioned direction. Only reads are policed, which is why the pattern
+// carries a negative lookahead for an assignment rather than matching the name.
+//
+// Modelled on `checks/plugins/host-pools-declared`, the established way this
+// codebase makes a primitive the only door to a resource.
+
+const DATA_ROOT_PATTERNS: { pattern: RegExp; grepArg: string }[] = [
+  // join(dataRoot(), …) / resolve(dataRoot(), …)
+  {
+    pattern: /(?:join|resolve)\s*\(\s*dataRoot\s*\(\s*\)/,
+    grepArg: "dataRoot",
+  },
+  // `${dataRoot()}/…` — the same join, spelled as concatenation.
+  {
+    pattern: /\$\{\s*dataRoot\s*\(\s*\)\s*\}[/\\]/,
+    grepArg: "dataRoot",
+  },
+  // A READ of the env var. The lookahead lets an assignment through: `??=` and
+  // `=` are writes, while `==` / `===` / `!==` are comparisons, i.e. reads.
+  //
+  // The inter-token whitespace lives INSIDE the lookahead deliberately. Written
+  // as `…SINGULARITY_DIR\s*(?!…)` it matches every write instead: `\s*` is free
+  // to give back the space it consumed, so the lookahead re-runs hard against
+  // the name and sees " ??=" rather than "??=", finds no assignment, and the
+  // negative succeeds. Both writes in the co-located test failed exactly that
+  // way. `[ \t]` rather than `\s` because an assignment operator is always on
+  // its target's line, and `\s` would let the scan run into the next one.
+  {
+    pattern: /process\.env\.SINGULARITY_DIR(?![ \t]*(?:\?\?)?=[^=])/,
+    grepArg: "SINGULARITY_DIR",
+  },
+];
+
+/**
+ * The paths plugin owns the root, so it is the one tree that may name it: the
+ * single derivation (`resolveDataRoot`), the registry that joins kind and name
+ * onto it (`data-dir.ts`), and this check's own patterns.
+ */
+const DATA_ROOT_ALLOWED_PREFIXES = ["plugins/infra/plugins/paths/"];
+
+/**
+ * Files that legitimately read `SINGULARITY_DIR` from the environment, each for
+ * a reason `dataRoot()` cannot express. Entries LEAVE this list the moment their
+ * read does — an exemption that outlives its line is how an allowlist stops
+ * meaning anything (see `ALLOWED_PATHS` above, which lost two entries that way).
+ */
+const DATA_ROOT_ALLOWED_PATHS = [
+  // The release launcher and its teardown twin SET the root (`??=`) and read
+  // back what they just wrote, before anything path-dependent is imported.
+  // These are the processes that decide what the root IS.
+  "plugins/infra/plugins/launcher/bin/launch.ts",
+  "plugins/infra/plugins/launcher/bin/teardown.ts",
+  // The `serve-app` presence guard. It asserts the root was EXPLICITLY set,
+  // which `dataRoot()` cannot say: unset, it answers with the dev
+  // `~/.singularity`, and defaulting to that would boot a release cluster into
+  // the developer's own data root. The guard reads the env precisely because
+  // the env is the thing being checked; the command's actual path use goes
+  // through `dataRoot()`.
+  "plugins/framework/plugins/cli/bin/commands/serve-app.ts",
+];
+
+/**
+ * Tests are exempt categorically, not by name.
+ *
+ * A test that points the root at a temp dir is being hermetic — the correct
+ * thing for a test to do, and the alternative (running against the developer's
+ * real `~/.singularity`) is the actual bug. Naming each such file instead would
+ * grow the allowlist with every new hermetic test, which reads as "these files
+ * may bypass the registry" rather than "a test owns its own root". Mirrors
+ * `sink-safety`'s rule exemptions, for the same reason.
+ */
+function isTestFile(path: string): boolean {
+  return /\.test\.tsx?$/.test(path);
+}
+
+const dataRootNotJoinedCheck: Check = {
+  id: "paths:data-root-not-joined",
+  description:
+    "The data root has one door: `dataRoot()` names it and nothing joins it. No `join(dataRoot(), …)`, and no re-reading SINGULARITY_DIR from the environment — a directory under the root is declared with defineDataDir.",
+  async run() {
+    const root = await getWorktreeRoot();
+    const seen = new Set<string>();
+    const offenders: string[] = [];
+
+    for (const p of DATA_ROOT_PATTERNS) {
+      const matches = await grepCode({
+        root,
+        pattern: p.pattern,
+        grepArg: p.grepArg,
+        // Template-literal interiors carry `${dataRoot()}`, which is CODE —
+        // masking strings would hide exactly the concatenation form pattern 2
+        // exists to catch. Comments and regex literals are masked either way.
+        maskStrings: false,
+      });
+
+      for (const m of matches) {
+        const line = `${m.path}:${m.line}:${m.text}`;
+        if (seen.has(line)) continue;
+        seen.add(line);
+
+        if (DATA_ROOT_ALLOWED_PREFIXES.some((pre) => m.path.startsWith(pre)))
+          continue;
+        if (DATA_ROOT_ALLOWED_PATHS.includes(m.path)) continue;
+        if (isTestFile(m.path)) continue;
+        if (m.path.startsWith("research/")) continue;
+
+        offenders.push(line);
+      }
+    }
+
+    if (offenders.length === 0) return { ok: true };
+
+    return {
+      ok: false,
+      message: `the data root is named by hand in ${offenders.length} place(s):\n    ${offenders.join("\n    ")}`,
+      hint:
+        "A directory under the data root is a DECLARATION, not a join. Create " +
+        "`plugins/<owner>/data-dirs/index.ts` default-exporting a `DataDir[]` built with " +
+        "`defineDataDir({ kind, name, owner, description, reclaim })`, then read `.path` / " +
+        "`.file(…)` / `.ensure()` from it — see plugins/infra/plugins/paths/CLAUDE.md. " +
+        "`dataRoot()` names the ROOT ITSELF and its only use is handing that root to a child " +
+        "process (or reporting it); to express a declared location under a root that is not this " +
+        "process's own, use `relativeToDataRoot(dir, …)` rather than re-deriving the layout. " +
+        "Reading `process.env.SINGULARITY_DIR` is a second derivation of the root — WRITING it " +
+        "(`=`, `??=`, or an `env: {…}` key) is the sanctioned handoff and is not flagged.",
+    };
+  },
+};
+
 export default [
   noHardcodedPathsCheck,
   noInlinedWorktreeArtifactsCheck,
   noUndeclaredDataDirsCheck,
+  dataRootNotJoinedCheck,
 ];

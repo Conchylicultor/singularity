@@ -3,7 +3,7 @@ import { mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { z } from "zod";
 import { sanitizeChannel } from "@plugins/infra/plugins/file-sink/core";
-import { WORKTREES_DIR } from "@plugins/infra/plugins/paths/server";
+import { worktreesDir } from "@plugins/infra/plugins/paths/server";
 import { logsDirFor, readChannelJson } from "./persist";
 
 // Hermetic: a throwaway worktree name under the real SINGULARITY_DIR (mirrors
@@ -23,7 +23,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
-  rmSync(join(WORKTREES_DIR, worktree), { recursive: true, force: true });
+  rmSync(join(worktreesDir(), worktree), { recursive: true, force: true });
 });
 
 function envelope(line: string): string {
@@ -44,13 +44,19 @@ function seed(innerLines: string[]): void {
 describe("readChannelJson", () => {
   test("unwraps the envelope and returns schema-valid payloads", () => {
     seed([JSON.stringify({ n: 1 }), JSON.stringify({ n: 2 })]);
-    expect(readChannelJson(worktree, CHANNEL, 100, Schema)).toEqual([{ n: 1 }, { n: 2 }]);
+    expect(readChannelJson(worktree, CHANNEL, 100, Schema)).toEqual([
+      { n: 1 },
+      { n: 2 },
+    ]);
   });
 
   test("drops a torn inner-JSON line and keeps the rest", () => {
     // The middle payload is not valid JSON (a half-flushed inner append).
     seed([JSON.stringify({ n: 1 }), '{"n":', JSON.stringify({ n: 3 })]);
-    expect(readChannelJson(worktree, CHANNEL, 100, Schema)).toEqual([{ n: 1 }, { n: 3 }]);
+    expect(readChannelJson(worktree, CHANNEL, 100, Schema)).toEqual([
+      { n: 1 },
+      { n: 3 },
+    ]);
   });
 
   test("drops schema-invalid payloads (old shape / wrong type)", () => {

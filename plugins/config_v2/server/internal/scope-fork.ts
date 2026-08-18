@@ -2,11 +2,19 @@ import { existsSync, unlinkSync, rmdirSync } from "node:fs";
 import { join } from "node:path";
 import { APP_SCOPE_DIR, scopeAppId } from "../../core";
 import type { ConfigDescriptor, JsonValue } from "../../core";
-import { REPO_CONFIG_DIR } from "@plugins/infra/plugins/paths/server";
+import { repoConfigDir } from "@plugins/infra/plugins/paths/server";
 import { jsoncConfigProxy } from "./jsonc-proxy";
 import { userScopedDir } from "./scope-paths";
-import { getScopedDescriptors, getDescriptorByStorePath, getHierarchyPath } from "./resource";
-import { ensureScopeEntry, disposeScopeEntry, notifyDescriptorScopeChange } from "./registry";
+import {
+  getScopedDescriptors,
+  getDescriptorByStorePath,
+  getHierarchyPath,
+} from "./resource";
+import {
+  ensureScopeEntry,
+  disposeScopeEntry,
+  notifyDescriptorScopeChange,
+} from "./registry";
 import { buildScopeSnapshot } from "./scope-snapshot";
 
 // Fork ONE descriptor into a scope: snapshot its scope-effective value set into
@@ -15,10 +23,24 @@ import { buildScopeSnapshot } from "./scope-snapshot";
 // afterwards. The snapshot (scope-effective values, redacted secrets) is built
 // by the shared buildScopeSnapshot helper — the exact same writer setConfig's
 // fork-on-write uses, so the two paths can never drift.
-async function forkDescriptor(descriptor: ConfigDescriptor, hierarchyPath: string, scopeId: string): Promise<void> {
-  const { snapshot, hash, dir } = buildScopeSnapshot(descriptor, hierarchyPath, scopeId);
-  jsoncConfigProxy(join(dir, `${descriptor.name}.origin.jsonc`)).write(snapshot as JsonValue, hash);
-  jsoncConfigProxy(join(dir, `${descriptor.name}.jsonc`)).write(snapshot as JsonValue, hash);
+async function forkDescriptor(
+  descriptor: ConfigDescriptor,
+  hierarchyPath: string,
+  scopeId: string,
+): Promise<void> {
+  const { snapshot, hash, dir } = buildScopeSnapshot(
+    descriptor,
+    hierarchyPath,
+    scopeId,
+  );
+  jsoncConfigProxy(join(dir, `${descriptor.name}.origin.jsonc`)).write(
+    snapshot as JsonValue,
+    hash,
+  );
+  jsoncConfigProxy(join(dir, `${descriptor.name}.jsonc`)).write(
+    snapshot as JsonValue,
+    hash,
+  );
 
   await ensureScopeEntry(descriptor, scopeId);
 }
@@ -27,10 +49,16 @@ async function forkDescriptor(descriptor: ConfigDescriptor, hierarchyPath: strin
 // (config/<hier>/@app/<id>/<name>.jsonc in the repo). Such a scope must survive
 // un-forking — removal drops only the user's runtime override and falls back
 // to the committed scope, not to base.
-function gitBacksScope(hierarchyPath: string, scopeId: string, name: string): boolean {
+function gitBacksScope(
+  hierarchyPath: string,
+  scopeId: string,
+  name: string,
+): boolean {
   const appId = scopeAppId(scopeId);
   if (!appId) return false;
-  return existsSync(join(REPO_CONFIG_DIR, hierarchyPath, APP_SCOPE_DIR, appId, `${name}.jsonc`));
+  return existsSync(
+    join(repoConfigDir(), hierarchyPath, APP_SCOPE_DIR, appId, `${name}.jsonc`),
+  );
 }
 
 // Un-fork ONE descriptor: drop the user's runtime scoped override. For a scope
@@ -39,7 +67,11 @@ function gitBacksScope(hierarchyPath: string, scopeId: string, name: string): bo
 // live. For a git-backed scope, KEEP the propagated origin and rebuild the entry
 // so the app falls back to its committed per-app config (not global); the next
 // build re-propagates that origin regardless.
-async function removeDescriptor(descriptor: ConfigDescriptor, hierarchyPath: string, scopeId: string): Promise<void> {
+async function removeDescriptor(
+  descriptor: ConfigDescriptor,
+  hierarchyPath: string,
+  scopeId: string,
+): Promise<void> {
   const dir = userScopedDir(hierarchyPath, scopeId);
   const overridePath = join(dir, `${descriptor.name}.jsonc`);
   if (existsSync(overridePath)) unlinkSync(overridePath);
@@ -68,12 +100,17 @@ async function removeDescriptor(descriptor: ConfigDescriptor, hierarchyPath: str
 
 // Look up a descriptor + its hierarchyPath from a storePath, failing loudly when
 // unregistered (a genuine bug, not a benign miss).
-function resolveDescriptor(storePath: string): { descriptor: ConfigDescriptor; hierarchyPath: string } {
+function resolveDescriptor(storePath: string): {
+  descriptor: ConfigDescriptor;
+  hierarchyPath: string;
+} {
   const descriptor = getDescriptorByStorePath(storePath);
   if (!descriptor) throw new Error(`No descriptor for "${storePath}"`);
   const hierarchyPath = getHierarchyPath(descriptor);
   if (!hierarchyPath) {
-    throw new Error(`[config-v2] descriptor "${descriptor.name}" has no registered hierarchy path.`);
+    throw new Error(
+      `[config-v2] descriptor "${descriptor.name}" has no registered hierarchy path.`,
+    );
   }
   return { descriptor, hierarchyPath };
 }
@@ -82,7 +119,10 @@ function resolveDescriptor(storePath: string): { descriptor: ConfigDescriptor; h
 // customization for one config. After this, the scoped setConfig path works for
 // every subsequent edit. Notifies the scopes + conflicts + values + tiers
 // resources for this storePath/scope.
-export async function forkDescriptorScope(storePath: string, scopeId: string): Promise<void> {
+export async function forkDescriptorScope(
+  storePath: string,
+  scopeId: string,
+): Promise<void> {
   const { descriptor, hierarchyPath } = resolveDescriptor(storePath);
   await forkDescriptor(descriptor, hierarchyPath, scopeId);
   notifyDescriptorScopeChange(storePath, scopeId);
@@ -92,7 +132,10 @@ export async function forkDescriptorScope(storePath: string, scopeId: string): P
 // forkDescriptorScope. Distinct from delete-override (which only reverts edits to
 // the scoped origin): this removes the scope's own config entirely (unless
 // git-backed). Notifies the scopes resource for this storePath.
-export async function removeDescriptorScope(storePath: string, scopeId: string): Promise<void> {
+export async function removeDescriptorScope(
+  storePath: string,
+  scopeId: string,
+): Promise<void> {
   const { descriptor, hierarchyPath } = resolveDescriptor(storePath);
   await removeDescriptor(descriptor, hierarchyPath, scopeId);
   notifyDescriptorScopeChange(storePath, scopeId);
@@ -106,7 +149,10 @@ export async function removeDescriptorScope(storePath: string, scopeId: string):
 export async function forkScope(scopeId: string): Promise<void> {
   for (const { descriptor, hierarchyPath } of getScopedDescriptors("app")) {
     await forkDescriptor(descriptor, hierarchyPath, scopeId);
-    notifyDescriptorScopeChange(`${hierarchyPath}/${descriptor.name}.jsonc`, scopeId);
+    notifyDescriptorScopeChange(
+      `${hierarchyPath}/${descriptor.name}.jsonc`,
+      scopeId,
+    );
   }
 }
 
@@ -116,6 +162,9 @@ export async function forkScope(scopeId: string): Promise<void> {
 export async function deleteScope(scopeId: string): Promise<void> {
   for (const { descriptor, hierarchyPath } of getScopedDescriptors("app")) {
     await removeDescriptor(descriptor, hierarchyPath, scopeId);
-    notifyDescriptorScopeChange(`${hierarchyPath}/${descriptor.name}.jsonc`, scopeId);
+    notifyDescriptorScopeChange(
+      `${hierarchyPath}/${descriptor.name}.jsonc`,
+      scopeId,
+    );
   }
 }

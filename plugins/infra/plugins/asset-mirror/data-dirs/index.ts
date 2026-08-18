@@ -1,5 +1,7 @@
-import { relative } from "node:path";
-import { dataRoot, defineDataDir } from "@plugins/infra/plugins/paths/core";
+import {
+  defineDataDir,
+  relativeToDataRoot,
+} from "@plugins/infra/plugins/paths/core";
 
 /**
  * The mirror's on-disk cache: `<dir>/<mirrorId>/<file>`.
@@ -33,7 +35,7 @@ export const assetMirrorCache = defineDataDir({
  * Derived from the declaration rather than written out, so the two cannot drift.
  */
 export function assetMirrorRelativeToRoot(): string {
-  return relative(dataRoot(), assetMirrorCache.path);
+  return relativeToDataRoot(assetMirrorCache);
 }
 
 export default [assetMirrorCache];

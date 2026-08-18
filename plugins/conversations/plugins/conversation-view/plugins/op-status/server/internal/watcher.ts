@@ -1,7 +1,10 @@
 import { mkdirSync } from "node:fs";
 import { basename, dirname } from "node:path";
-import { createFileWatcher, type FileWatcher } from "@plugins/infra/plugins/file-watcher/server";
-import { worktreesDir } from "@plugins/infra/plugins/worktree/server";
+import {
+  createFileWatcher,
+  type FileWatcher,
+} from "@plugins/infra/plugins/file-watcher/server";
+import { worktreesDir } from "@plugins/infra/plugins/paths/server";
 import { worktreeOpsResource } from "./resource";
 
 let watcher: FileWatcher | null = null;

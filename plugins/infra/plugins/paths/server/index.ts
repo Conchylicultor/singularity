@@ -1,13 +1,12 @@
 export {
   REPO_ROOT,
-  REPO_CONFIG_DIR,
+  repoConfigDir,
   PLUGINS_DIR,
   WEB_CORE_RELATIVE,
   webDistDir,
   HOME_DIR,
-  SINGULARITY_DIR,
   BACKUPS_DIR,
-  WORKTREES_DIR,
+  worktreesDir,
   worktreeDataDir,
   worktreeArtifacts,
   CLAUDE_DIR,
@@ -30,13 +29,15 @@ export type { ReleaseIdentity } from "../core/internal/paths";
 // plugins are the bulk of the writers under the root, and a server file that
 // had to reach into `…/paths/core` for `defineDataDir` while taking every other
 // path from `…/paths/server` is the friction that keeps people joining the root
-// by hand. `SINGULARITY_DIR` above stays exported until every owner has
-// declared its directories.
+// by hand. There is no `SINGULARITY_DIR` above any more: `dataRoot()` is the
+// only spelling of the root, and `paths:data-root-not-joined` fails on joining
+// it or on re-reading its environment variable.
 export {
   DATA_DIR_KINDS,
   dataRoot,
   defineDataDir,
   getDataDirs,
+  relativeToDataRoot,
 } from "../core/internal/data-dir";
 export type {
   DataDir,
