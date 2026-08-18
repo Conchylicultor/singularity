@@ -51,42 +51,47 @@ function renderDescription(
   const lines: string[] = [];
   lines.push(
     `Conversation \`${d.conversationId}\` has a live Claude session ` +
-      `\`${d.liveSubtreeSessionId}\` running inside its tmux pane's process ` +
-      `subtree, but that session id is **absent from its recorded session ` +
-      `chain** (\`conversation_sessions\`). Its transcript is being written ` +
+      `\`${d.liveSessionId}\` reachable from its tmux pane — in the pane's ` +
+      `process subtree, or through a parked-job pointer out of it — but that ` +
+      `session id is **absent from its recorded session chain** ` +
+      `(\`conversation_sessions\`). Its transcript is being written ` +
       `**${formatLead(leadMs)} ahead** of the chain tail's ` +
       `(\`${d.chainTailSessionId}\`).`,
   );
   lines.push("");
   lines.push(
     `That means the agent is talking somewhere the UI cannot read: every turn ` +
-      `written to \`${d.liveSubtreeSessionId}.jsonl\` since the divergence began ` +
+      `written to \`${d.liveSessionId}.jsonl\` since the divergence began ` +
       `is missing from the conversation view, silently. This is the failure mode ` +
       `\`research/2026-07-09-conversations-session-chain.md\` was written to ` +
       `close — a standing report here means a **new handoff shape** is defeating ` +
-      `the fix, not that the fix regressed on the known one.`,
+      `the fix, not that the fix regressed on a known one.`,
   );
   lines.push("");
   lines.push(`**Triage**`);
   lines.push(
     `1. Confirm on the host: \`ps -axo pid=,ppid=\` from the pane pid down, then ` +
       `\`ls -l ~/.claude/sessions/<pid>.json\` for each descendant. Which pid owns ` +
-      `\`${d.liveSubtreeSessionId}\`, and how deep is it below \`pane_pid\`?`,
+      `\`${d.liveSessionId}\`? If none does, look for a pid whose file carries ` +
+      `\`jobId\` equal to some pane file's \`parkedJobId\` — that is the parked ` +
+      `shape, whose host launchd re-parents outside the subtree entirely.`,
   );
   lines.push(
-    `2. Ask why the poller never recorded it — \`resolveSessionState\` picks the ` +
-      `most recently written sessions file **within the subtree**, so either the ` +
-      `live session's file is not in the subtree (a new detachment shape), or it ` +
-      `is being written less recently than a tombstone (an mtime inversion).`,
+    `2. Ask why the poller never recorded it — \`resolveSessionState\` takes the ` +
+      `most recently written sessions file **within the subtree**, then follows ` +
+      `its \`parkedJobId\` if it has one. So either the live session is reachable ` +
+      `by neither route (a new detachment shape), or a tombstone inside the ` +
+      `subtree is being written more recently than the real session (an mtime ` +
+      `inversion).`,
   );
   lines.push(
-    `3. Recover the lost turns by appending \`${d.liveSubtreeSessionId}\` to this ` +
+    `3. Recover the lost turns by appending \`${d.liveSessionId}\` to this ` +
       `conversation's chain (mid-chain recovery is manual per incident, by design).`,
   );
   lines.push("");
   lines.push(`**Conversation:** \`${d.conversationId}\``);
   lines.push(`**Chain tail session:** \`${d.chainTailSessionId}\``);
-  lines.push(`**Live subtree session:** \`${d.liveSubtreeSessionId}\``);
+  lines.push(`**Live session:** \`${d.liveSessionId}\``);
   lines.push(
     `**Tail transcript mtime:** ${new Date(d.tailMtimeMs).toISOString()}`,
   );

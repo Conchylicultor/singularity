@@ -31,12 +31,12 @@ export const sessionDivergenceMonitorJob = defineJob({
         data: {
           conversationId: d.conversationId,
           chainTailSessionId: d.chainTailSessionId,
-          liveSubtreeSessionId: d.liveSubtreeSessionId,
+          liveSessionId: d.liveSessionId,
           tailMtimeMs: d.tailMtimeMs,
           liveMtimeMs: d.liveMtimeMs,
         },
         message:
-          `${d.conversationId} is talking in ${d.liveSubtreeSessionId}, ` +
+          `${d.conversationId} is talking in ${d.liveSessionId}, ` +
           `not the chain tail ${d.chainTailSessionId}`,
       });
     }

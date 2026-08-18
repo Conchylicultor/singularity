@@ -18,11 +18,21 @@ once, on 1 of 23 panes, correlating with a Claude CLI self-update — so this mo
 the only mechanism by which we learn whether the fix holds, or whether a future,
 deeper handoff shape defeats it. Silence here is the signal.
 
+On 2026-08-18 a second shape did defeat it — and this monitor stayed silent through the
+whole 10-hour outage, which is the more important half of the story. Claude Code
+*parked* a pane's session as a background job: it forked the conversation to a new
+session id, handed it to a `--bg-pty-host` process that launchd re-parented, and left a
+stub in the pane. The live session was **outside the pane's subtree entirely**, so the
+subtree walk found one id, matched it against the chain, and agreed with the resolver it
+exists to audit. Both now follow the pointer that links the two — the stub's
+`parkedJobId` to the host's `jobId` — and both do so independently. See the 2026-08-18
+addendum in the research doc.
+
 ## The predicate
 
 A per-worktree scheduled job (`debug.session-divergence-monitor`, every 5 min) takes
 ONE process-table snapshot and, for each active conversation that still owns a live
-tmux pane, flags a session id `s` found in that pane's process subtree when all of:
+tmux pane, flags a session id `s` **reachable from** that pane when all of:
 
 - **(a)** `s` is absent from the conversation's recorded chain — no turn of `s` can
   ever render;
@@ -38,6 +48,11 @@ the grace window — i.e. the poller had minutes of ticks and still never record
 A conversation whose chain is empty, or whose tail has no transcript yet, is skipped:
 there is no baseline to measure a lead against.
 
+**Reachable** means: named by a sessions file in the pane's process subtree, or — following
+`parkedJobId` → `jobId` transitively — by a file claiming a background job one of those points
+at. Reachability is the half that decides what the predicate can even see, so it is the half a
+new detachment shape breaks first; `reachableSessionIds` is pure and unit-tested for that reason.
+
 ## Why it does not reuse `resolveSessionState`
 
 The monitor shares `captureProcessTree` / `subtreePids` with `runtime-tmux` (exported
@@ -47,12 +62,17 @@ rather than calling `resolveSessionState`, because **that resolver is what is on
 trial**: if it picks the wrong id, a detector built on it agrees with it and stays
 silent. The process walk is shared; the session evidence is independent.
 
+The parked-job hop is duplicated here for the same reason, deliberately: sharing the
+resolver's implementation of it would mean one bug blinds both. What is shared is the
+*shape of the world* (the process tree); what is duplicated is every judgement about it.
+
 ## Layout
 
 - `core/config.ts` — `enabled` + `graceMinutes` (runtime-editable in Settings → Config).
 - `core/kinds.ts` — the report payload: the conversation, both session ids, both mtimes.
 - `server/internal/detect.ts` — the predicate, with its filesystem/DB reads behind an
-  injectable `DetectDeps` so it is unit-testable (`detect.test.ts`).
+  injectable `DetectDeps` so it is unit-testable (`detect.test.ts`); plus the pure
+  `reachableSessionIds` (subtree ids + parked-job hops) its IO shell wraps.
 - `server/internal/monitor-job.ts` — the scheduled job: read config, run the predicate,
   file a report per divergence. `perWorktree: true` because the chain rows it audits
   live in each worktree's own DB fork (same reason `queue-health` samples its own queue).
@@ -79,7 +99,7 @@ one `conversation-session-divergence` report — and zero rows for the healthy p
 
 ## Plugin reference
 
-- Description: Session-divergence report renderer: a one-line Debug → Reports summary for the conversation-session-divergence kind, plus the enabled/grace config registration. Session-divergence monitor: a per-worktree scheduled job that takes one process-table snapshot (sharing runtime-tmux's own captureProcessTree), reads the Claude session ids present in each live conversation pane's subtree, and files one deduped conversation-session-divergence report per conversation whose live session is absent from the recorded session chain while its transcript leads the chain tail's by more than the grace window — i.e. the agent is talking where the UI cannot see.
+- Description: Session-divergence report renderer: a one-line Debug → Reports summary for the conversation-session-divergence kind, plus the enabled/grace config registration. Session-divergence monitor: a per-worktree scheduled job that takes one process-table snapshot (sharing runtime-tmux's own captureProcessTree), reads every Claude session id reachable from each live conversation pane — its process subtree plus the parked-background-job pointers out of it — and files one deduped conversation-session-divergence report per conversation whose live session is absent from the recorded session chain while its transcript leads the chain tail's by more than the grace window — i.e. the agent is talking where the UI cannot see.
 - Web:
   - Contributes:
     - `ConfigV2.WebRegister`

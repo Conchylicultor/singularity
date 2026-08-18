@@ -328,3 +328,61 @@ Confirm exactly one report, and confirm silence (zero rows) for the healthy conv
   lines, which suggests a cold context — meaning "show the user every message" and "the agent
   remembers every message" are now different problems. We can only fix the first. Testable by asking
   that agent something answerable only from before `22:54`; not a blocker for this work.
+
+---
+
+## Addendum — 2026-08-18: the parked-job shape
+
+The subtree walk above closed the *daemon-descendant* shape. A second shape defeated it, on
+`conv-1786969506-7e03`: **10h25m of turns written where the UI could not read them**, with the
+pane showing "Working for 625m" and every message the user sent stuck at *"Not confirmed — the
+agent may not have received this message"* (the pending-turn deadline waits for the message to
+appear in the transcript it watches, and that transcript had stopped growing).
+
+### What is different about it
+
+Claude Code can **park** a pane's session as a background job. It forks the conversation to a new
+session id, hands it to a `--bg-pty-host` process, and leaves a stub behind in the pane that keeps
+rendering the job through the daemon socket — so the terminal advances and typed input reaches the
+real agent, while the app learns nothing.
+
+```
+9948   claude --resume 9fd24c8e…            ← pane_pid; sessions file frozen 13:05,
+ 27243  claude daemon run --origin transient   still naming 9fd24c8e, parkedJobId "baf9c302"
+  27538  claude bg-pty-host
+
+1 (launchd)
+ 11404  claude --bg-pty-host …
+  11536  versions/2.1.234 --session-id baf9c302… --fork-session --resume 9fd24c8e….jsonl
+         ← the real agent. kind "bg", status "busy", jobId "baf9c302"
+```
+
+The live session is **not below `pane_pid` at all** — its host is re-parented to launchd. So no
+walk of the pane's subtree can reach it, and no freshness comparison *within* the subtree helps:
+the only file in there is the stub, and the stub is stale by construction, because it stopped being
+written the instant it parked.
+
+Worse, `debug/session-divergence` — the monitor written specifically so a new handoff shape could
+not run unreported — was silent for the whole 10 hours, for the same reason: it gathered its
+evidence from the subtree, found exactly one id, saw that id in the chain, and agreed.
+
+### The fix
+
+The link the two processes share is a **pointer, not a topology**: the stub's file carries
+`parkedJobId`, and the host's file carries the matching `jobId`. Nothing else connects them.
+
+1. `resolveSessionState` picks the freshest sessions file in the subtree as before, then, if that
+   file names a `parkedJobId`, follows it to the sessions file claiming that `jobId` (scanning
+   `~/.claude/sessions/` — the host is by definition outside the tree). The pointer is
+   authoritative: no mtime comparison, since a stale-by-construction stub would win one.
+   Transitive, cycle-bounded, and it falls back to the stub's own id when the job has exited.
+   The directory scan is paid only by panes that actually parked something.
+2. `debug/session-divergence` widens the same way, independently (it still reads the files itself
+   rather than calling the resolver it audits) — so if a *third* shape defeats hop-following, the
+   monitor can still see the id and file the report.
+
+### Scope check, again
+
+Same measurement as the original: parking is rare (1 pane of 27 at the time of the incident), so
+the hop is off the path for every ordinary pane, and the stub-only fallback keeps a parked-then-
+exited job behaving exactly as it did before.

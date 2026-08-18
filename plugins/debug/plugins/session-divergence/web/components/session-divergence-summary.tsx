@@ -19,7 +19,7 @@ export function SessionDivergenceSummary({ report }: { report: Report }) {
         {d.conversationId}
       </Badge>
       <span>
-        talking in {shortId(d.liveSubtreeSessionId)} —{" "}
+        talking in {shortId(d.liveSessionId)} —{" "}
         {formatLead(d.liveMtimeMs - d.tailMtimeMs)} ahead of chain tail{" "}
         {shortId(d.chainTailSessionId)}
       </span>
