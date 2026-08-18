@@ -6156,6 +6156,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps-core/theme-scope.useChromeThemeScope`
           - `primitives/action-presentation.useActionForm`
           - `primitives/adaptive-bar.AdaptiveBar`
+          - `primitives/css/grow-relay.GrowRelay`
           - `primitives/css/line.Line`
           - `primitives/css/spacing.Stack`
           - `primitives/css/ui-kit.cn`
@@ -14928,6 +14929,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `page/url-paste`
               - `primitives/adaptive-bar`
               - `primitives/css/control-panel`
+              - `primitives/css/grow-relay`
               - `primitives/css/radio-group`
               - `primitives/css/ui-kit`
               - `primitives/data-view`
@@ -19836,6 +19838,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses:
           - `primitives/action-presentation.ActionFormProvider`
           - `primitives/action-presentation.ItemFormChannel`
+          - `primitives/css/grow-relay.useRequestGrow`
           - `primitives/css/spacing.SpaceStep`
           - `primitives/css/spacing.Stack`
           - `primitives/css/ui-kit.cn`
@@ -20986,6 +20989,20 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `ui/segmented-progress-bar/segmented`
               - `ui/theme-engine/theme-customizer`
               - `ui/tweakcn/community-browser`
+        - **`grow-relay`** — The grow request: a widget that sizes itself from the room it is given asks for that room (useRequestGrow), every box in between relays the ask upward (<GrowRelay>, render-prop), and the row stops it (<GrowRelay.Stop>). Replaces the fill flag a contribution had to declare three files away from the <AdaptiveBar> it was about — the ask travels with the widget, so there is nothing left to forget.
+          - Cross-plugin:
+            - Imported by:
+              - `apps-core/tab-bar`
+              - `primitives/adaptive-bar`
+              - `primitives/css/line`
+              - `primitives/prompt-editor`
+              - `primitives/slot-render`
+              - `reorder/editor`
+          - Web:
+            - Exports (types): `GrowGrant`
+            - Exports (values):
+              - `GrowRelay`
+              - `useRequestGrow`
         - **`icon-auto`** — icon-auto slot-icon sizing convention: the icon-auto @utility (em-based, in app.css) plus the no-adhoc-slot-icon-size lint rule.
         - **`inline`** — Inline-level flow layout primitive: <Inline gap> lays out a baseline-aligned inline-flex row for chips/icons that sit inline in a text run. The inline-level sibling of Stack, delegating to Stack.
           - Web:
@@ -21137,6 +21154,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - **`line`** — Single-line container primitive: <Line> pairs the structural single-line invariant (region-line) with the ambient SingleLineProvider so children never wrap and <Text> leaves truncate. The bare line-container contract composed by Row/Bar and bespoke strips.
           - Web:
             - Uses:
+              - `primitives/css/grow-relay.GrowRelay`
               - `primitives/css/ui-kit.cn`
               - `primitives/css/ui-kit.SingleLineProvider`
             - Exports (types): `LineProps`
@@ -25798,7 +25816,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Web:
         - Slots: `PromptEditorSlots.FloatingAction` ← `conversations.conversation-view.exit-menu`, `conversations.conversation-view.prompt-templates`, `conversations.conversation-view.push-and-exit`, `primitives.prompt-editor.voice-input`
         - Uses:
-          - `primitives/css/fill.Fill`
+          - `primitives/css/fill.fillClasses`
+          - `primitives/css/grow-relay.GrowRelay`
           - `primitives/css/spacing.Stack`
           - `primitives/css/ui-kit.cn`
           - `primitives/slot-render.defineRenderSlot`
@@ -26123,6 +26142,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`slot-render`** — Typed rendering primitive for visual slots with auto-applied middleware (error boundaries, reorder).
       - Web:
         - Uses:
+          - `primitives/css/grow-relay.GrowRelay`
           - `primitives/css/ui-kit.ControlSize`
           - `primitives/css/ui-kit.ControlSizeProvider`
         - Exports (types):
@@ -27400,6 +27420,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`editor`** — Presentational drag-and-drop reorder editor: sortable items, hide/restore, spacers, optional grouping zones. Display-only — no config_v2, catalog, or tree-format knowledge.
       - Web:
         - Uses:
+          - `primitives/css/grow-relay.GrowRelay`
           - `primitives/css/inline.Inline`
           - `primitives/css/pin.Pin`
           - `primitives/css/row.Row`

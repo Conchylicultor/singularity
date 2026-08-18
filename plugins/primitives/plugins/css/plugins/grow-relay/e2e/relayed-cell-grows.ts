@@ -86,24 +86,27 @@ await withBrowser(async (h) => {
     };
   }, WALK);
 
+  // if/else rather than an early `r.finish()`: it is declared `never`, but TS
+  // only narrows on that for an explicitly-annotated callee, and `r` is
+  // inferred — so the reads below would be `possibly null` to tsc.
   if (found === null) {
     r.fail(
       "find the prompt strip",
       "no AdaptiveBar with occupants on this route",
     );
-    r.finish();
+  } else {
+    r.note(JSON.stringify(found));
+    r.eq("the bar declares itself the grow cell", found.barGrow, "1");
+    r.ok(
+      "a box above the bar relayed the grow",
+      found.ancestors.some((a) => a.grow === "1"),
+      `no ancestor within ${String(WALK)} levels has flex-grow: 1 — the bar is reading its own content back as its width`,
+    );
+    r.ok(
+      "the bar was given more room than its content",
+      found.chips === 0 || found.barWidth > found.chipsWidth,
+      `${String(found.barWidth)}px holding ${String(found.chipsWidth)}px of chips — its width follows its content`,
+    );
   }
-  r.note(JSON.stringify(found));
-  r.eq("the bar declares itself the grow cell", found.barGrow, "1");
-  r.ok(
-    "a box above the bar relayed the grow",
-    found.ancestors.some((a) => a.grow === "1"),
-    `no ancestor within ${String(WALK)} levels has flex-grow: 1 — the bar is reading its own content back as its width`,
-  );
-  r.ok(
-    "the bar was given more room than its content",
-    found.chips === 0 || found.barWidth > found.chipsWidth,
-    `${String(found.barWidth)}px holding ${String(found.chipsWidth)}px of chips — its width follows its content`,
-  );
   r.finish();
 });

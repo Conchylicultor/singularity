@@ -76,6 +76,7 @@ rule keeps the broken shape from coming back.
     - `page/url-paste`
     - `primitives/adaptive-bar`
     - `primitives/css/control-panel`
+    - `primitives/css/grow-relay`
     - `primitives/css/radio-group`
     - `primitives/css/ui-kit`
     - `primitives/data-view`
