@@ -71,6 +71,18 @@ ruleTester.run(
       {
         code: `const x = <SomeView header={<ControlSizeProvider>x</ControlSizeProvider>} />;`,
       },
+      // A hoisted trigger whose root IS a DOM element, with the provider inside.
+      {
+        code: `
+          const trigger = <button><SingleLineProvider>x</SingleLineProvider></button>;
+          const x = <InlinePopover trigger={trigger} />;
+        `,
+      },
+      // A hoisted identifier we cannot resolve (a parameter) is not flagged —
+      // the rule follows a declaration, it does not guess.
+      {
+        code: `function View({ trigger }) { return <PopoverTrigger render={trigger} />; }`,
+      },
     ],
     invalid: [
       // The canonical bug: ControlSizeProvider wrapping IconButton.
@@ -97,6 +109,27 @@ ruleTester.run(
       // Any other host's render slot — the seam, not the host, is the hazard.
       {
         code: `const x = <SomeView render={<ControlSizeProvider>x</ControlSizeProvider>} />;`,
+        errors: [{ messageId: "providerAsTriggerRender" }],
+      },
+      // The shape that shipped the live bug: the trigger hoisted into a `const`,
+      // rooted at a provider. Reading only the attribute expression missed it.
+      {
+        code: `
+          const trigger = (
+            <SingleLineProvider value={true}>
+              <Inline as="button">x</Inline>
+            </SingleLineProvider>
+          );
+          const x = <InlinePopover trigger={trigger} tooltip="t" />;
+        `,
+        errors: [{ messageId: "providerAsTriggerRender" }],
+      },
+      // Same, through a plain `render` prop and a module-scope declaration.
+      {
+        code: `
+          const panel = <PortalForwardProvider><div /></PortalForwardProvider>;
+          function View() { return <PopoverPrimitive.Popup render={panel} />; }
+        `,
         errors: [{ messageId: "providerAsTriggerRender" }],
       },
     ],

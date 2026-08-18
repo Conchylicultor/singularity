@@ -72,25 +72,30 @@ export function UiContextChip({ meta }: { meta: UiContextMeta }) {
   // The chip is a single-line inline-level strip: `Inline` supplies the
   // inline-flex row, and the ambient single-line context makes the label `<Text>`
   // ellipsize against the chip's own max width.
+  //
+  // The single-line context sits INSIDE the button, never around it: this element
+  // is handed to `InlinePopover` as its trigger, and base-ui clones it with the
+  // open/close handlers and ref. A context provider accepts neither, so wrapping
+  // the button would silently drop them and the chip would stop opening.
   const trigger = (
-    <SingleLineProvider value={true}>
-      <Inline
-        as="button"
-        gap="2xs"
-        contentEditable={false}
-        className={cn(
-          insetClass({ x: "xs", y: "2xs" }),
-          "bg-muted border-border text-foreground hover:bg-accent max-w-40 cursor-pointer rounded-md border align-middle transition-colors",
-        )}
-      >
+    <Inline
+      as="button"
+      gap="2xs"
+      contentEditable={false}
+      className={cn(
+        insetClass({ x: "xs", y: "2xs" }),
+        "bg-muted border-border text-foreground hover:bg-accent max-w-40 cursor-pointer rounded-md border align-middle transition-colors",
+      )}
+    >
+      <SingleLineProvider value={true}>
         <MdAdsClick
           className={cn("text-muted-foreground size-3.5", rigidClass())}
         />
         <Text as="span" variant="label">
           {meta.element}
         </Text>
-      </Inline>
-    </SingleLineProvider>
+      </SingleLineProvider>
+    </Inline>
   );
 
   return (

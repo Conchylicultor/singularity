@@ -1,8 +1,11 @@
 import {
   AST_NODE_TYPES,
   ESLintUtils,
+  type TSESLint,
   type TSESTree,
 } from "@typescript-eslint/utils";
+
+type Scope = TSESLint.Scope.Scope;
 
 /**
  * no-provider-trigger-render
@@ -32,7 +35,10 @@ import {
  * Detection is purely structural (AST + name-based), like the sibling rules — no
  * type services. The check is ROOT-ONLY: cloneElement merges only onto the
  * render element's root, so a provider nested deeper is harmless and is NOT
- * flagged.
+ * flagged. A render element hoisted into a `const` (`const trigger = (<…/>)`,
+ * then `trigger={trigger}`) is followed to its declaration — that shape shipped
+ * a live bug (the UI-context chip's popover stopped opening) while the rule read
+ * only inline JSX.
  */
 
 const createRule = ESLintUtils.RuleCreator(
@@ -71,25 +77,63 @@ const RENDER_FORWARDING_WRAPPERS: Record<string, string> = {
 };
 
 /**
+ * Resolve an identifier to the JSX expression it was declared with, when it is a
+ * `const` with an initializer in scope. The element handed to a render slot is
+ * routinely hoisted (`const trigger = (<…/>); … trigger={trigger}`) — reading
+ * only the attribute's own expression would make the rule blind to exactly the
+ * shape a long trigger is written in.
+ */
+function resolveIdentifierInit(
+  node: TSESTree.Identifier,
+  scope: Scope,
+): TSESTree.Expression | undefined {
+  let current: Scope | null = scope;
+  while (current) {
+    const variable = current.variables.find((v) => v.name === node.name);
+    if (variable) {
+      // Only a single, never-reassigned declaration is safe to follow: with two
+      // writes we cannot say which one reaches the render slot.
+      const writes = variable.references.filter((r) => r.isWrite());
+      if (writes.length !== 1) return undefined;
+      const [def] = variable.defs;
+      if (!def || def.type !== "Variable") return undefined;
+      const init = def.node.init;
+      return init ?? undefined;
+    }
+    current = current.upper;
+  }
+  return undefined;
+}
+
+/**
  * Collect the candidate ROOT JSX elements from a render-slot expression. Only the
  * root of each rendered branch matters (base-ui merges onto the root), so we
  * descend through conditionals/logical operators but never into an element's
- * children.
+ * children. An identifier is followed to its declaration (see
+ * `resolveIdentifierInit`), so a hoisted trigger is read exactly like an inline one.
  */
 function collectRootElements(
   node: TSESTree.Expression,
+  scope: Scope,
+  seen: Set<TSESTree.Node> = new Set(),
 ): TSESTree.JSXElement[] {
+  if (seen.has(node)) return [];
+  seen.add(node);
   if (node.type === "JSXElement") return [node];
   if (node.type === "ConditionalExpression") {
     return [
-      ...collectRootElements(node.consequent),
-      ...collectRootElements(node.alternate),
+      ...collectRootElements(node.consequent, scope, seen),
+      ...collectRootElements(node.alternate, scope, seen),
     ];
   }
   if (node.type === "LogicalExpression") {
-    const roots = collectRootElements(node.right);
+    const roots = collectRootElements(node.right, scope, seen);
     if (node.left.type === "JSXElement") roots.push(node.left);
     return roots;
+  }
+  if (node.type === "Identifier") {
+    const init = resolveIdentifierInit(node, scope);
+    return init ? collectRootElements(init, scope, seen) : [];
   }
   return [];
 }
@@ -142,7 +186,8 @@ export default createRule({
         const expr = value.expression;
         if (expr.type === "JSXEmptyExpression") return;
 
-        for (const root of collectRootElements(expr)) {
+        const scope = context.sourceCode.getScope(node);
+        for (const root of collectRootElements(expr, scope)) {
           const provider = stringifyJSXName(root.openingElement.name);
           if (lastSegment(provider).endsWith("Provider")) {
             context.report({
