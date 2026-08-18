@@ -8,7 +8,7 @@
 - Web:
   - Contributes:
     - `Sonata.PitchAxis` "piano-keyboard" → `PianoKeyboard`
-    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister` "config"
     - `Sonata.ViewOption` "key-labels"
     - `Sonata.ViewOption` "key-style"
   - Uses:

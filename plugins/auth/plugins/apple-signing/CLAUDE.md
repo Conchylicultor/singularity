@@ -6,7 +6,7 @@
 
 - Description: Apple code-signing config registration (web). The Accounts provider row + setup wizard UI live in the setup-wizard sub-plugin. Apple code-signing credentials: config fields + certificate upload + Tauri release env provider.
 - Web:
-  - Contributes: `ConfigV2.WebRegister`
+  - Contributes: `ConfigV2.WebRegister` "apple-signing"
   - Uses: `config_v2.ConfigV2`
 - Server:
   - Contributes:

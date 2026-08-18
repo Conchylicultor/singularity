@@ -8,7 +8,7 @@
 - Web:
   - Contributes:
     - `PianoRollFx` "Note shatter" → `LazyBoundary`
-    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister` "config"
   - Uses:
     - `apps/sonata/piano-roll.PianoRollFx`
     - `config_v2.ConfigV2`

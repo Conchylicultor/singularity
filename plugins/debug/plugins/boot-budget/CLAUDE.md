@@ -95,7 +95,7 @@ half-building a loop sampler. See the plan's "Enforcement / visibility" section.
 - Description: Boot-budget report renderer: a one-line Debug → Reports summary for the boot-budget kind, plus the per-phase budget config registration. Boot-budget monitor: a cheap per-worktree scheduled job that reads the post-boot profile once and files a deduped boot-budget report per server boot hook (onReadyBlocking / onReady / onAllReady) or warmup span whose wall-time exceeds its per-phase budget, so a heavy boot hook is loud immediately instead of invisible-until-threshold.
 - Web:
   - Contributes:
-    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister` "boot-budget"
     - `Reports.KindView` → `BootBudgetSummary`
   - Uses:
     - `config_v2.ConfigV2`

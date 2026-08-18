@@ -286,23 +286,91 @@ export default createFacet<ContributionsFacetData>({
 
   renderDoc(data: ContributionsFacetData) {
     const facts: DocFact[] = [];
-    const fmt = (c: DocMetaContribution): string => {
-      const parts = [`\`${c.slotDisplayName ?? c.slotId}\``];
-      if (c.doc.label) parts.push(`"${c.doc.label}"`);
-      if (c.doc.detail) parts.push(`(${c.doc.detail})`);
-      if (c.componentName) parts.push(`→ \`${c.componentName}\``);
-      return parts.join(" ");
-    };
     const web = data.runtime.filter((c) => c.kind === "slot");
     const server = data.runtime.filter((c) => c.kind === "server");
     if (web.length > 0)
-      facts.push({ folder: "web", key: "Contributes", values: web.map(fmt) });
+      facts.push({
+        folder: "web",
+        key: "Contributes",
+        values: renderValues(web),
+      });
     if (server.length > 0)
       facts.push({
         folder: "server",
         key: "Contributes",
-        values: server.map(fmt),
+        values: renderValues(server),
       });
     return facts;
   },
 });
+
+/**
+ * How many same-slot entries it takes before the run is folded onto one line.
+ * Purely a readability threshold, NOT a correctness one: below it the output is
+ * per-line, above it the output is folded, and both spell exactly the same set.
+ * 12 is where a run stops reading as a list and starts reading as noise —
+ * reorder mints 212 config directives into one slot, sonata ~100 instruments.
+ */
+const FOLD_THRESHOLD = 12;
+
+/** One contribution, one line — the long-standing format. */
+const fmt = (c: DocMetaContribution): string => {
+  const parts = [`\`${c.slotDisplayName ?? c.slotId}\``];
+  if (c.doc.label) parts.push(`"${c.doc.label}"`);
+  if (c.doc.detail) parts.push(`(${c.doc.detail})`);
+  if (c.componentName) parts.push(`→ \`${c.componentName}\``);
+  return parts.join(" ");
+};
+
+/** The slot key a contribution renders under — what groups a run together. */
+const slotKeyOf = (c: DocMetaContribution): string =>
+  c.slotDisplayName ?? c.slotId;
+
+/**
+ * Render one runtime's contributions, folding a long run of same-slot entries
+ * onto a single line.
+ *
+ * The fold is gated on the group being **label-only** — every member has a
+ * `doc.label` and neither a `doc.detail` nor a `componentName` — because the
+ * folded line has room for exactly one field per member. A group carrying
+ * details or component names would have to drop them to fold, and a doc line
+ * that quietly loses the component name is worse than 200 repetitive ones. So
+ * the fold is only ever taken where it is lossless: same ids, same order, one
+ * line instead of N. Every id is listed in full, never truncated, so
+ * `grep <config-id> docs/plugins-details.md` still finds it.
+ */
+function renderValues(contributions: DocMetaContribution[]): string[] {
+  // Group by slot key, keeping each group anchored at its FIRST member's
+  // position and members in their original relative order. Nothing is sorted:
+  // the regenerated doc's diff must reflect what the plugin actually declares,
+  // not a re-ordering the renderer invented.
+  const groups = new Map<string, DocMetaContribution[]>();
+  for (const c of contributions) {
+    const key = slotKeyOf(c);
+    let group = groups.get(key);
+    if (!group) groups.set(key, (group = []));
+    group.push(c);
+  }
+
+  const values: string[] = [];
+  for (const [key, group] of groups) {
+    const foldable =
+      group.length > FOLD_THRESHOLD &&
+      group.every(
+        (c) =>
+          typeof c.doc.label === "string" &&
+          c.doc.label.length > 0 &&
+          !c.doc.detail &&
+          !c.componentName,
+      );
+    if (foldable) {
+      const labels = group.map((c) => `"${c.doc.label}"`).join(", ");
+      values.push(`\`${key}\` ×${group.length}: ${labels}`);
+    } else {
+      // Includes every group of 1 — 1 <= FOLD_THRESHOLD — so an ordinary
+      // plugin's output is byte-identical to what it has always been.
+      for (const c of group) values.push(fmt(c));
+    }
+  }
+  return values;
+}

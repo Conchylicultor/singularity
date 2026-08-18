@@ -10,7 +10,7 @@
   - Contributes:
     - `SidebarPalette.Preset` "Default"
     - `SidebarPalette.Preset` "Warm"
-    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister` "config"
     - `DynamicEnum.Options` "Sidebar Palette preset"
     - `ThemeEngine.TokenGroup` "Sidebar Palette"
     - `ThemeEngine.VariantGroup` "Sidebar Palette" → `SidebarPalettePicker`

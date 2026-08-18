@@ -108,7 +108,7 @@ type and the read schema cannot drift.
 
 - Description: Paging-probe web presence: registers the twin-probe config (enable, fat heap size, touch slice, GC cadence, QoS boost) for Settings -> Config. Twin-probe paging-victim discriminator: three main-only child processes with controlled heap shapes (lean / fat-idle / fat-touch) measure event-loop lag under host memory pressure, so divergence between them separates scheduling from cold-page-fault mechanisms. Config-gated, OFF by default; writes paging-probe-<variant>.jsonl.
 - Web:
-  - Contributes: `ConfigV2.WebRegister`
+  - Contributes: `ConfigV2.WebRegister` "paging-probe"
   - Uses: `config_v2.ConfigV2`
 - Server:
   - Contributes: `ConfigV2.Register` "paging-probe"

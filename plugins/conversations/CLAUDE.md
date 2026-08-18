@@ -7,7 +7,7 @@
 - Description: Conversation domain: shared hooks and client-side API. Conversation domain: shared server code and types; view plugins live under `plugins/`.
 - Load-bearing: yes
 - Web:
-  - Contributes: `ConfigV2.WebRegister`
+  - Contributes: `ConfigV2.WebRegister` "auto-answer"
   - Uses:
     - `config_v2.ConfigV2`
     - `infra/endpoints.EndpointError`

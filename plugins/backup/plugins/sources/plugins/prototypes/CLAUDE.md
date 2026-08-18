@@ -14,7 +14,7 @@ source is it. On by default.
 
 - Description: Config UI for the prototypes backup source. Backs up the throwaway UI prototypes into the backup archive — they live outside git on purpose, so this is what makes them recoverable.
 - Web:
-  - Contributes: `ConfigV2.WebRegister`
+  - Contributes: `ConfigV2.WebRegister` "config"
   - Uses: `config_v2.ConfigV2`
 - Server:
   - Contributes:

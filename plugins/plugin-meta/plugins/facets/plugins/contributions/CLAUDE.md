@@ -17,6 +17,15 @@ that contribute to each slot). That last write lives here, not on the slots
 facet, because the join needs both facets in scope and the reverse import edge
 would close a collected-dir dependency cycle.
 
+`renderDoc()` prints one line per contribution, except that a run of >12 entries
+into ONE slot, all of them label-only (a `doc.label`, no `doc.detail`, no
+`componentName`), folds onto a single `` `Slot` ×N: "label1", "label2", … `` —
+every label listed, never truncated, so each id stays greppable. The label-only
+gate is what keeps the fold lossless: the folded line holds one field per member,
+so a group carrying details or component names renders per-line instead. Groups
+keep their first member's position and original order; nothing is sorted, so the
+regenerated doc's diff stays honest.
+
 Browser rendering lives in the `render-diff` / `render-detail` / `render-catalog`
 sub-plugins, each reading `node.facets["contributions"]` and contributing to an
 existing web slot. The diff projection (`contributionsToComparable`) and the

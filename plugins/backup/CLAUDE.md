@@ -8,7 +8,7 @@
 - Web:
   - Slots: `backupPane.Actions`
   - Contributes:
-    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister` "config"
     - `Pane.Register` "backup"
     - `DebugApp.Sidebar` "Backup" → `component`
   - Uses:

@@ -193,7 +193,7 @@ expandable JSON.
   - Slots:
     - `Trace.Lane` ← `debug.trace.boot`, `debug.trace.client-boot`, `debug.trace.contention`, `debug.trace.gates`, `debug.trace.spans`, `debug.trace.stall`
     - `Trace.TriggerSummary`
-  - Contributes: `ConfigV2.WebRegister`
+  - Contributes: `ConfigV2.WebRegister` "trace"
   - Uses:
     - `config_v2.ConfigV2`
     - `primitives/css/spacing.Stack`

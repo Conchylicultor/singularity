@@ -7,7 +7,7 @@
 - Description: Config UI for Google Drive backup target. Uploads backup archives to Google Drive.
 - Web:
   - Contributes:
-    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister` "config"
     - `Auth.ScopeRequirement` "Back up to Google Drive"
   - Uses:
     - `auth.Auth`

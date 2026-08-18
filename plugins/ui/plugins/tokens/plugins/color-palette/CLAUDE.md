@@ -8,7 +8,7 @@
 - Web:
   - Slots: `ColorPalette.Preset` ← `ui.tokens.color-palette`
   - Contributes:
-    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister` "config"
     - `DynamicEnum.Options` "Color Palette preset"
     - `ColorPalette.Preset` "Default"
     - `ColorPalette.Preset` "Ocean"

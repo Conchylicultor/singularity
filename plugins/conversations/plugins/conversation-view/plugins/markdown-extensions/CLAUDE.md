@@ -20,9 +20,9 @@ safely detect whether they're inside a conversation (no-op outside):
 - Web:
   - Contributes:
     - `MarkdownEnhancerSlot`
+    - `MarkdownEnhancerSlot`
+    - `MarkdownEnhancerSlot`
     - `InlineTextWalkerSlot`
-    - `MarkdownEnhancerSlot`
-    - `MarkdownEnhancerSlot`
   - Uses:
     - `conversations.useConversationById`
     - `conversations/conversation-view.conversationPane`

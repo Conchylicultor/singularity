@@ -11,7 +11,7 @@
     - `Density.Preset` "Comfortable"
     - `Density.Preset` "Cozy"
     - `Density.Preset` "Compact"
-    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister` "config"
     - `DynamicEnum.Options` "Density preset"
     - `ThemeEngine.TokenGroup` "Density"
     - `ThemeEngine.VariantGroup` "Density" → `DensityPicker`

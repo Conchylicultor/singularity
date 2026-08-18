@@ -8,7 +8,7 @@
 - Web:
   - Slots: `ColorAdjust.Preset` ← `ui.tokens.color-adjust`
   - Contributes:
-    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister` "config"
     - `DynamicEnum.Options` "Color adjust preset"
     - `ColorAdjust.Preset` "Default"
     - `ColorAdjust.Preset` "Grayscale"

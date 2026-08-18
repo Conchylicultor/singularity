@@ -6,7 +6,7 @@
 
 - Description: Config UI for the project memory backup source. Backs up Claude Code project memory files into the backup archive.
 - Web:
-  - Contributes: `ConfigV2.WebRegister`
+  - Contributes: `ConfigV2.WebRegister` "config"
   - Uses: `config_v2.ConfigV2`
 - Server:
   - Contributes:

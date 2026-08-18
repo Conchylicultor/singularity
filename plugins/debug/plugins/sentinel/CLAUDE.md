@@ -180,7 +180,7 @@ pane's `GenericEventLane` fallback; a dedicated `Trace.Lane`
 - Description: Sentinel web presence: registers the sentinel config (sampler cadence + onset thresholds) for Settings → Config, plus the one-line duress-episode report summary for Debug → Reports. Cluster congestion sentinel: a main-only always-on sampler + onset detector + duress-latch lifecycle on a dedicated worker thread (host load, Postgres-side wait/lock/IO pressure, fleet state, per-backend health rollup, compressor pressure), feeding the 'cluster' trace ring so every trace gains a cluster-vitals lane, congestion onset is observable, and the latch lease survives a wedged main loop. Persists duress episodes as trip/clear lines on the duress-episodes channel (readDuressEpisodes).
 - Web:
   - Contributes:
-    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister` "sentinel"
     - `Reports.KindView` → `DuressEpisodeSummary`
   - Uses:
     - `config_v2.ConfigV2`

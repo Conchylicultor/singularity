@@ -40,7 +40,7 @@ Key mechanics:
 
 - Description: Boot-monitor web presence: registers the whole-boot budget config (enabled, totalBootBudgetMs) for Settings → Config. The minted signals flow through the existing slow-op report kind and the boot trace lane — no new renderer. Whole-boot monitor: a cheap per-worktree scheduled job that, once the boot profile is complete (drainWarmups present), mints ONE 'boot' slow-op row + coherent trace per over-budget server boot — evidence-first, deduped per boot epoch — folding in the gateway-observed readiness wait when the gateway POSTed /api/boot/gateway-report.
 - Web:
-  - Contributes: `ConfigV2.WebRegister`
+  - Contributes: `ConfigV2.WebRegister` "boot-monitor"
   - Uses: `config_v2.ConfigV2`
 - Server:
   - Contributes: `ConfigV2.Register` "boot-monitor"

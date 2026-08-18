@@ -8,7 +8,7 @@
 - Web:
   - Slots: `TabBarSlots.Variant` ← `ui.tab-bar.chip`, `ui.tab-bar.connected`, `ui.tab-bar.underline`
   - Contributes:
-    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister` "config"
     - `DynamicEnum.Options` "Tab bar variant"
   - Uses:
     - `config_v2.ConfigV2`

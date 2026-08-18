@@ -6,7 +6,7 @@
 
 - Description: Config UI for the Singularity platform backup source. Backs up Singularity platform files (auth, database config) into the backup archive.
 - Web:
-  - Contributes: `ConfigV2.WebRegister`
+  - Contributes: `ConfigV2.WebRegister` "config"
   - Uses: `config_v2.ConfigV2`
 - Server:
   - Contributes:

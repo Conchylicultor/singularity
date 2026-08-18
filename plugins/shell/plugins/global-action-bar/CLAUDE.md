@@ -18,7 +18,7 @@ imports `build` + `notifications`, which themselves contribute to
   - Contributes:
     - `Core.Root` → `FloatingActionBarHost`
     - `Apps.TabBarActions` "Tab bar actions" → `DockedActionBarHost`
-    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister` "config"
   - Uses:
     - `apps-core.Apps`
     - `apps-core/tabs.getSurfaceMode`

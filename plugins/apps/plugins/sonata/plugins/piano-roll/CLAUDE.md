@@ -10,7 +10,7 @@
   - Contributes:
     - `Sonata.Display` "Piano Roll" → `LazyBoundary`
     - `SonataToolbar.End` "spread" → `SpreadWheel`
-    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister` "config"
     - `Sonata.ViewOption` "piano-roll"
   - Uses:
     - `apps/sonata/primitives/inertial-drag.useInertialDrag`

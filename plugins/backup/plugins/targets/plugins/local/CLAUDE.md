@@ -6,7 +6,7 @@
 
 - Description: Config UI for local backup target. Stores backup archives on the local filesystem.
 - Web:
-  - Contributes: `ConfigV2.WebRegister`
+  - Contributes: `ConfigV2.WebRegister` "config"
   - Uses: `config_v2.ConfigV2`
 - Server:
   - Contributes:

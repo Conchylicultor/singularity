@@ -129,7 +129,7 @@ Settings → Config): `enabled`, `persistFirstN` (3), `bufferMaxEntries` (2000),
 
 - Description: Duress web presence: registers the shed-engine config (enabled, persist-first-N, buffer caps, flush delay) for Settings → Config. Host-global duress latch (a mtime-leased latch file the cluster sentinel sets while the box is in trouble; backends gate observability writes on the cheap synchronous isUnderDuress()) plus the shed engine: createShedBuffer routes durable observability writes through per-episode first-N persistence, a bounded in-memory buffer, and a flush-on-clear replay.
 - Web:
-  - Contributes: `ConfigV2.WebRegister`
+  - Contributes: `ConfigV2.WebRegister` "duress"
   - Uses: `config_v2.ConfigV2`
 - Server:
   - Contributes: `ConfigV2.Register` "duress"

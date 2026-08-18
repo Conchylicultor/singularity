@@ -150,7 +150,7 @@ difference (via `flattenManifest`) is exactly that pack. Run with
 
 - Description: Web hooks + active-composition store for the Studio closure visualization: fetches and deserializes the edge graph once, holds the working draft, and derives membership / inclusion / impact client-side. Owns the manifest read/write API over the compositions config_v2 config. Serves the classified edge graph for the Studio closure visualization; registers the runtime-editable compositions config.
 - Web:
-  - Contributes: `ConfigV2.WebRegister`
+  - Contributes: `ConfigV2.WebRegister` "compositions"
   - Uses:
     - `config_v2.ConfigV2`
     - `config_v2.useConfig`

@@ -115,7 +115,7 @@ live-state-churn's accumulator + scheduled job.)
 - Description: Op-rate + op-time report renderers: one-line Debug → Reports summaries for the op-rate (call-count) and op-time (aggregate-time, with View-trace chip) kinds, plus the per-kind threshold/budget config registration. Profiler-diff monitor: a cheap per-worktree scheduled job that diffs the runtime profiler's per-op call counts (op-rate) AND cumulative wall-clock time (op-time count×cost) each tick, files deduped reports per hot/over-budget op plus a per-kind aggregate-time rollup, and captures a coherent-instant trace on each op-time per-op trip — all through the existing reports engine.
 - Web:
   - Contributes:
-    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister` "op-rate"
     - `Reports.KindView` → `OpRateSummary`
     - `Reports.KindView` → `OpTimeSummary`
   - Uses:

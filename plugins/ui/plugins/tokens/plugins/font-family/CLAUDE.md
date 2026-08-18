@@ -9,7 +9,7 @@
   - Slots: `FontFamily.Preset` ← `ui.tokens.font-family`
   - Contributes:
     - `FontFamily.Preset` "Default"
-    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister` "config"
     - `DynamicEnum.Options` "Font preset"
     - `ThemeEngine.TokenGroup` "Fonts"
     - `ThemeEngine.VariantGroup` "Fonts" → `FontFamilyPicker`

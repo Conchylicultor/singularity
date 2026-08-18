@@ -9,7 +9,7 @@
   - Slots: `Chart.Preset` ← `ui.tokens.chart`
   - Contributes:
     - `Chart.Preset` "Default"
-    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister` "config"
     - `DynamicEnum.Options` "Chart preset"
     - `ThemeEngine.TokenGroup` "Chart"
     - `ThemeEngine.VariantGroup` "Chart" → `ChartPicker`

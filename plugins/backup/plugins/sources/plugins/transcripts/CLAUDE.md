@@ -6,7 +6,7 @@
 
 - Description: Config UI for the transcripts backup source. Backs up retained-conversation transcripts (active, plus every conversation of a held task) into the backup archive.
 - Web:
-  - Contributes: `ConfigV2.WebRegister`
+  - Contributes: `ConfigV2.WebRegister` "config"
   - Uses: `config_v2.ConfigV2`
 - Server:
   - Contributes:

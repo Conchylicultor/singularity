@@ -162,7 +162,7 @@ here — see above.
 - Description: Queue-health report renderers: one-line Debug → Reports summaries for the queue-wedged, queue-dead-job, queue-backlog, and queue-slot-hog kinds, plus the threshold config registration. Queue-health watchdog: a 30s interval on the backend's own event loop — deliberately NOT a scheduled job, which would queue behind the wedge it exists to detect — that samples the graphile queue and files deduped reports for a wedged queue (every slot held by the same live jobs while ready work starves), backlog/stall, slot-hogging jobs, and terminally-dead jobs, through the existing reports engine. All four kinds are duressExempt. Also exposes a queue-health summary endpoint + the get_queue_health MCP tool.
 - Web:
   - Contributes:
-    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister` "queue-health"
     - `Reports.KindView` → `DeadJobSummary`
     - `Reports.KindView` → `BacklogSummary`
     - `Reports.KindView` → `SlotHogSummary`

@@ -35,7 +35,7 @@ only binds it to db/config and to the main-only scope. Read
     - `Pane.Register` "build"
     - `Pane.Register` "build-detail"
     - `DebugApp.Sidebar` "Builds" → `component`
-    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister` "config"
   - Uses:
     - `apps-core/tabs.navigate`
     - `apps/debug/shell.DebugApp`

@@ -193,7 +193,7 @@ instrument grouping — while `convert` itself stays pure.
 - Web:
   - Contributes:
     - `Sonata.Display` "Notation" → `LazyBoundary`
-    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister` "config"
     - `Sonata.ViewOption` "notation"
   - Uses:
     - `apps/sonata/shell.Sonata`

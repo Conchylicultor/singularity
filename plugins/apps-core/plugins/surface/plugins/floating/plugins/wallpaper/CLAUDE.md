@@ -7,7 +7,7 @@
 - Description: Floating desktop wallpaper: the Wallpaper.Provider source registry, the picker dialog + shared search panel, the desktop right-click context menu, the corner attribution credit, and the global wallpaper config web registration. Floating desktop wallpaper: provider registry, search/import/upload endpoints, the machine-global wallpaper store, and the global wallpaper config registration.
 - Web:
   - Slots: `Wallpaper.Provider` ← `apps-core.surface.floating.wallpaper.from-url`, `apps-core.surface.floating.wallpaper.openverse`, `apps-core.surface.floating.wallpaper.upload`
-  - Contributes: `ConfigV2.WebRegister`
+  - Contributes: `ConfigV2.WebRegister` "wallpaper"
   - Uses:
     - `config_v2.ConfigV2`
     - `config_v2.useConfig`

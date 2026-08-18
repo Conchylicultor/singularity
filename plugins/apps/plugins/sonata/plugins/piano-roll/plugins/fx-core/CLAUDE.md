@@ -8,7 +8,7 @@
 - Web:
   - Contributes:
     - `PianoRollFx` "Note glow & sparks" → `LazyBoundary`
-    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister` "config"
   - Uses:
     - `apps/sonata/piano-roll.easeOutCubic`
     - `apps/sonata/piano-roll.FxContext`

@@ -31,7 +31,7 @@ on/off, subdivision, count-in bars, click volume, accent downbeat) live in the
     - `Sonata.Effect` "metronome" → `MetronomeEngine`
     - `SonataToolbar.End` "metronome" → `MetronomeButton`
     - `Sonata.Hud` "count-in" → `CountInOverlay`
-    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister` "sonata.metronome"
   - Uses:
     - `apps/sonata/audio/engine.LoopWindowBeats`
     - `apps/sonata/audio/engine.ScheduleHandle`

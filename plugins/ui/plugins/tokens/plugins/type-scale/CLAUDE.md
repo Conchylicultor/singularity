@@ -9,7 +9,7 @@
   - Slots: `TypeScale.Preset` ← `ui.tokens.type-scale`
   - Contributes:
     - `TypeScale.Preset` "Default"
-    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister` "config"
     - `DynamicEnum.Options` "Type scale preset"
     - `ThemeEngine.TokenGroup` "Type Scale"
     - `ThemeEngine.VariantGroup` "Type Scale" → `TypeScalePicker`

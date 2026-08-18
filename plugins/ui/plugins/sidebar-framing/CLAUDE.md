@@ -8,7 +8,7 @@
 - Web:
   - Slots: `SidebarFraming.Variant` ← `ui.sidebar-framing.floating`, `ui.sidebar-framing.flush`, `ui.sidebar-framing.inset`
   - Contributes:
-    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister` "sidebar-framing"
     - `DynamicEnum.Options` "Sidebar framing variant"
     - `ThemeEngine.VariantGroup` "Sidebar framing" → `Picker`
     - `AppShell.Framing` "Framing" → `Region`

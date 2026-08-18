@@ -24,7 +24,7 @@ The `live-state-noop` report kind renders a one-line Debug → Reports summary
 - Description: Live-state churn report renderer: a one-line Debug → Reports summary for the live-state-noop kind, plus the threshold config registration. Live-state churn monitor: an in-process accumulator fed by every keyed live-state push, plus a per-worktree scheduled job that files deduped reports for resources sustaining a high rate of no-op (empty-diff) pushes, through the existing reports engine.
 - Web:
   - Contributes:
-    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister` "live-state-churn"
     - `Reports.KindView` → `NoopSummary`
   - Uses:
     - `config_v2.ConfigV2`

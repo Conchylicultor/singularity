@@ -8,7 +8,7 @@
 - Web:
   - Slots: `TreeDisclosure.Variant` ← `ui.tree-disclosure.column`, `ui.tree-disclosure.dimmed-leaf`, `ui.tree-disclosure.merged`
   - Contributes:
-    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister` "tree-disclosure"
     - `DynamicEnum.Options` "Tree disclosure variant"
     - `ThemeEngine.VariantGroup` "Tree disclosure" → `Picker`
     - `Tree.Disclosure` "Disclosure" → `Region`

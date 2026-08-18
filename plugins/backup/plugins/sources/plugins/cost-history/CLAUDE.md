@@ -6,7 +6,7 @@
 
 - Description: Config UI for the cost-history backup source. Backs up the permanent cost-history archive (year-sharded session records and the merged price table) into the backup archive.
 - Web:
-  - Contributes: `ConfigV2.WebRegister`
+  - Contributes: `ConfigV2.WebRegister` "config"
   - Uses: `config_v2.ConfigV2`
 - Server:
   - Contributes:

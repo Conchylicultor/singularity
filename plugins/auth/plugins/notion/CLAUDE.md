@@ -8,7 +8,7 @@
 - Web:
   - Contributes:
     - `Auth.Provider` "Notion"
-    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister` "auth-notion"
   - Uses:
     - `auth.Auth`
     - `config_v2.ConfigV2`

@@ -7,7 +7,7 @@
 - Description: Rich-text color palette token group: the closed --rt-color-<token> vars backing inline text color in the page block editor.
 - Web:
   - Contributes:
-    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister` "config"
     - `ThemeEngine.TokenGroup` "Rich-text palette"
   - Uses:
     - `config_v2.ConfigV2`

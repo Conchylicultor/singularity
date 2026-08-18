@@ -8,7 +8,7 @@
 - Web:
   - Contributes:
     - `Auth.Provider` "Google"
-    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister` "auth-google"
   - Uses:
     - `auth.Auth`
     - `auth/google/setup-wizard.googleSetupPane`

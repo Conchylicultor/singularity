@@ -37,7 +37,7 @@ without changing those types.
 
 - Description: Web registration of the Sonata voicing config (realistic voice-leading, strategy, octave). Server registration of the Sonata voicing config (realistic voice-leading, strategy, octave).
 - Web:
-  - Contributes: `ConfigV2.WebRegister`
+  - Contributes: `ConfigV2.WebRegister` "config"
   - Uses: `config_v2.ConfigV2`
 - Server:
   - Contributes: `ConfigV2.Register` "config"

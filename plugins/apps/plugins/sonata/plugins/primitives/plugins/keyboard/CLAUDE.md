@@ -50,7 +50,7 @@ width, so that overdraw IS the pen pressure.
 
 - Description: Stateless piano keyboard: the single source of truth for laying out and drawing piano keys across a MIDI range, lighting given pitches (accent or per-key color) with optional per-key content. Composed by the full PianoKeyboard and the chord readout. Server registration of the keyboard style config (flat / realistic key rendering).
 - Web:
-  - Contributes: `ConfigV2.WebRegister`
+  - Contributes: `ConfigV2.WebRegister` "config"
   - Uses:
     - `config_v2.ConfigV2`
     - `config_v2.useConfig`

@@ -65,7 +65,7 @@ is drift repair, not a correctness dependency.
 - Description: Watched-folder UI for the MIDI source: registers the midi-folders config (settings pane renders it for free) and contributes the Source field (Library.Fields) that flags — and lets you filter for — folder-imported songs whose file has been deleted from disk. Watches configured folders for .mid/.midi files and mirrors them into the Sonata library: auto-imports on create/edit (via a per-file job), badges 'source deleted' on removal, and reconciles drift on boot and config change. The watched-folder list is a config_v2 listField rendered for free in the settings pane.
 - Web:
   - Contributes:
-    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister` "midi-folders"
     - `Library.Fields` "source-missing" → `SourceMissingField`
   - Uses:
     - `apps/sonata/library.Library`

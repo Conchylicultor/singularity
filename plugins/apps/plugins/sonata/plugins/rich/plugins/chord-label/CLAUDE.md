@@ -11,7 +11,7 @@ chord overlay and the progression strip so they label chords identically.
 - Description: Sonata chord-label preference: the single shared symbol/numeral/both display mode that drives the piano-roll overlay and the progression strip in lockstep, surfaced in the View popover. Server registration of the Sonata chord-label config (the shared symbol/numeral/both display mode).
 - Web:
   - Contributes:
-    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister` "config"
     - `Sonata.ViewOption` "chord-label"
   - Uses:
     - `apps/sonata/shell.Sonata`

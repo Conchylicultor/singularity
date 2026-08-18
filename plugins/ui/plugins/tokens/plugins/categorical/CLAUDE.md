@@ -9,7 +9,7 @@
   - Slots: `Categorical.Preset` ← `ui.tokens.categorical`
   - Contributes:
     - `Categorical.Preset` "Default"
-    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister` "config"
     - `DynamicEnum.Options` "Categorical preset"
     - `ThemeEngine.TokenGroup` "Categorical"
     - `ThemeEngine.VariantGroup` "Categorical" → `CategoricalPicker`

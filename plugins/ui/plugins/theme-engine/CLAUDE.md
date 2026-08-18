@@ -15,7 +15,7 @@
   - Contributes:
     - `Core.Root` → `ThemeInjector`
     - `Core.Root` → `AppScopeThemes`
-    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister` "config"
     - `DynamicEnum.Options` "Theme"
   - Uses:
     - `apps-core.Apps`

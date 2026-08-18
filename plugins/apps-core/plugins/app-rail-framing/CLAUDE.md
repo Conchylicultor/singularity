@@ -8,7 +8,7 @@
 - Web:
   - Slots: `AppRailFraming.Variant` ← `apps-core.app-rail-framing.hidden`, `apps-core.app-rail-framing.rail`
   - Contributes:
-    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister` "app-rail-framing"
     - `DynamicEnum.Options` "App rail variant"
     - `ThemeEngine.VariantGroup` "App rail" → `Picker`
     - `Apps.RailFraming` "Rail framing" → `Region`

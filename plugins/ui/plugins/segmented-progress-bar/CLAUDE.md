@@ -8,7 +8,7 @@
 - Web:
   - Slots: `SegmentedProgressBarSlots.Variant` ← `ui.segmented-progress-bar.dots`, `ui.segmented-progress-bar.segmented`
   - Contributes:
-    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister` "config"
     - `DynamicEnum.Options` "Progress bar variant"
     - `ThemeEngine.VariantGroup` "Segmented Progress Bar" → `VariantPicker`
   - Uses:

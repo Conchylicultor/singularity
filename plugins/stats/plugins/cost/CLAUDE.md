@@ -189,7 +189,7 @@ override where it survives.
 - Description: Token usage and dollar cost across Claude Code sessions, with per-conversation breakdown. Token usage and dollar cost across Claude Code sessions, priced from our own merge-only LiteLLM table and banked into a permanent year-sharded token archive so deleted transcripts stop rewriting the past.
 - Web:
   - Contributes:
-    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister` "config"
     - `Stats.Chart` "Cost & Tokens" → `CostSection`
     - `Stats.Chart` "Token mix per day" → `TokenMixChart`
     - `Stats.Chart` "Average cost per conversation" → `AvgCostPerConversationChart`

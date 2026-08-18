@@ -60,7 +60,7 @@ the `boot` channel stays classified as filing this report.
 - Description: Boot-wedge report renderer: a one-line Debug → Reports summary for the boot-wedge kind, plus the boot-watchdog budget/lookback config registration. Boot-watchdog monitor: a main-only per-minute scheduled job that sweeps every worktree's boot channel off the shared filesystem and files a deduped boot-wedge report for any backend that never reached its `ready` line within the boot budget — superseded (post-hoc, once) or open (gateway-confirmed wedged-now, re-filed each tick). Structurally main-only: a perWorktree job cannot observe its own wedged boot.
 - Web:
   - Contributes:
-    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister` "boot-watchdog"
     - `Reports.KindView` → `BootWedgeSummary`
   - Uses:
     - `config_v2.ConfigV2`

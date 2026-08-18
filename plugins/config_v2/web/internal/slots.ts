@@ -5,7 +5,11 @@ import type { ConfigDescriptor } from "../../core";
 export const ConfigV2 = {
   // `pluginId` is the optional DOT-form plugin-id override (mirrors the server
   // ConfigV2.Register contribution); the store path is derived via asPath(id).
-  WebRegister: defineSlot<{ descriptor: ConfigDescriptor; pluginId?: PluginId }>(
-    "config-v2.web-register",
-  ),
+  // `docLabel` mirrors the server twin's extractor so both runtimes name the
+  // same config id in the generated docs, instead of one half rendering as a
+  // run of identical, information-free `ConfigV2.WebRegister` lines.
+  WebRegister: defineSlot<{
+    descriptor: ConfigDescriptor;
+    pluginId?: PluginId;
+  }>("config-v2.web-register", { docLabel: (c) => c.descriptor.name }),
 };

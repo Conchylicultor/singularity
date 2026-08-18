@@ -38,7 +38,7 @@ table unconditionally and the persisted set stays a superset).
 - Description: Read-set shrink report renderer: a one-line Debug → Reports summary for the read-set-shrink kind, plus the enabled config registration. Read-set shrink monitor: a per-backend accumulator fed (via the live-state-snapshot seam) by every persist that sheds a table from a boot-critical resource's durable read-set, plus a per-worktree scheduled job that files one deduped read-set-shrink report per shedding resource so a human can confirm it is a legitimate code-change shed rather than a conditional query that didn't fire.
 - Web:
   - Contributes:
-    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister` "read-set-shrink"
     - `Reports.KindView` → `ShrinkSummary`
   - Uses:
     - `config_v2.ConfigV2`

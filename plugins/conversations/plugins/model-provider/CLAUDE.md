@@ -16,7 +16,7 @@ Consumers import the type/registry/`normalizeModel` from `@plugins/conversations
 - Description: Registry mapping logical ConversationModel IDs to pinned Claude CLI flags and display metadata. Registry mapping logical ConversationModel IDs to pinned Claude CLI flags and display metadata.
 - Web:
   - Contributes:
-    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister` "config"
     - `Core.Root` → `ModelCorruptionReporter`
   - Uses:
     - `config_v2.ConfigV2`

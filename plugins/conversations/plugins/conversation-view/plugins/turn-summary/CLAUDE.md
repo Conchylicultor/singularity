@@ -29,7 +29,7 @@ A persistent global trigger on `conversationTurnCompleted` (installed in this pl
 - Web:
   - Contributes:
     - `Conversation.AbovePromptInput` → `TurnSummaryCard`
-    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister` "config"
   - Uses:
     - `config_v2.ConfigV2`
     - `conversations/conversation-view.Conversation`

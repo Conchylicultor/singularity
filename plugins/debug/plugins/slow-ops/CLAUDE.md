@@ -63,7 +63,7 @@ the bar).
 - Description: Records slow client operations (page load, element appearance) into the durable slow-op store via the slow-ops client endpoint. Durable slow-op store: deduped per-operation aggregates with caller attribution, plus the slow-op report kind. Subscribes to runtime-profiler slow spans and client signals; files one deduped report per distinct slow operation (investigation task filed on demand).
 - Web:
   - Contributes:
-    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister` "slow-op"
     - `Core.Root` → `SlowOpCollector`
     - `Reports.KindView` → `SlowOpKindView`
   - Uses:

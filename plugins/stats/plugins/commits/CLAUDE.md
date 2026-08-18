@@ -9,7 +9,7 @@
   - Contributes:
     - `Stats.Chart` "Commits" → `CommitsSection`
     - `Stats.Chart` "Lines changed" → `LinesChartsSection`
-    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister` "config"
   - Uses:
     - `config_v2.ConfigV2`
     - `config_v2.useConfig`

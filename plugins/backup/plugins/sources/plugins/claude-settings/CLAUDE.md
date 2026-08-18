@@ -6,7 +6,7 @@
 
 - Description: Config UI for the Claude settings backup source. Backs up Claude CLI settings and history into the backup archive.
 - Web:
-  - Contributes: `ConfigV2.WebRegister`
+  - Contributes: `ConfigV2.WebRegister` "config"
   - Uses: `config_v2.ConfigV2`
 - Server:
   - Contributes:

@@ -88,7 +88,7 @@ a catch-all say so in the category's hint: *"if unsure, pick Other"*.
 - Web:
   - Contributes:
     - `Conversation.Header` → `CategoryChipToolbar`
-    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister` "config"
     - `DynamicEnum.Options` "Avatar category"
     - `Item.Avatar` → `CategoryAvatarRow`
   - Uses:

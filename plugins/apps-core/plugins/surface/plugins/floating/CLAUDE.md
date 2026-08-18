@@ -102,22 +102,9 @@ last desktop creates a new one; moving before the first clamps).
 - Web:
   - Contributes:
     - `Surface.Placement`
-    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister` "floating-chrome"
     - `ThemeEngine.VariantGroup` "Window titlebar" → `TitlebarStylePicker`
-    - `Shortcuts.Shortcut` "floating.snap-left (ctrl+alt+arrowleft)"
-    - `Shortcuts.Shortcut` "floating.snap-right (ctrl+alt+arrowright)"
-    - `Shortcuts.Shortcut` "floating.snap-up (ctrl+alt+arrowup)"
-    - `Shortcuts.Shortcut` "floating.snap-down (ctrl+alt+arrowdown)"
-    - `Shortcuts.Shortcut` "floating.minimize (mod+m)"
-    - `Shortcuts.Shortcut` "floating.toggle-pin (ctrl+alt+p)"
-    - `Shortcuts.Shortcut` "floating.close (mod+w)"
-    - `Shortcuts.Shortcut` "floating.cycle-next (mod+`)"
-    - `Shortcuts.Shortcut` "floating.cycle-prev (mod+shift+~)"
-    - `Shortcuts.Shortcut` "floating.cycle-prev-backquote (mod+shift+`)"
-    - `Shortcuts.Shortcut` "floating.desktop-next (ctrl+alt+pagedown)"
-    - `Shortcuts.Shortcut` "floating.desktop-prev (ctrl+alt+pageup)"
-    - `Shortcuts.Shortcut` "floating.window-to-next-desktop (ctrl+alt+shift+pagedown)"
-    - `Shortcuts.Shortcut` "floating.window-to-prev-desktop (ctrl+alt+shift+pageup)"
+    - `Shortcuts.Shortcut` ×14: "floating.snap-left (ctrl+alt+arrowleft)", "floating.snap-right (ctrl+alt+arrowright)", "floating.snap-up (ctrl+alt+arrowup)", "floating.snap-down (ctrl+alt+arrowdown)", "floating.minimize (mod+m)", "floating.toggle-pin (ctrl+alt+p)", "floating.close (mod+w)", "floating.cycle-next (mod+`)", "floating.cycle-prev (mod+shift+~)", "floating.cycle-prev-backquote (mod+shift+`)", "floating.desktop-next (ctrl+alt+pagedown)", "floating.desktop-prev (ctrl+alt+pageup)", "floating.window-to-next-desktop (ctrl+alt+shift+pagedown)", "floating.window-to-prev-desktop (ctrl+alt+shift+pageup)"
   - Uses:
     - `apps-core.Apps`
     - `apps-core/app-icon.appIconComponent`

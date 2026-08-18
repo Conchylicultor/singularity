@@ -34,7 +34,7 @@ for themselves.
 - Description: Gmail access toggle, Google scope requirement, and the shared 'fix my Gmail connection' affordance consumers render in place of routing the user to Settings. Surfaces the Gmail access toggle in Settings.
 - Web:
   - Contributes:
-    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister` "config"
     - `Auth.ScopeRequirement` "Read, send, and manage Gmail messages"
   - Uses:
     - `auth.Auth`
