@@ -15,7 +15,6 @@
     - `BoundaryConfig`
     - `DenyEdge`
     - `Edge`
-    - `RuntimeName`
     - `ZoneDefinition`
   - Exports (values):
     - `allow`

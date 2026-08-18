@@ -20,8 +20,6 @@ export interface DenyEdge {
 
 export type Edge = AllowEdge | DenyEdge;
 
-export type RuntimeName = "web" | "server" | "central" | "shared";
-
 export interface BoundaryConfig {
   zones: ZoneDefinition[];
 
