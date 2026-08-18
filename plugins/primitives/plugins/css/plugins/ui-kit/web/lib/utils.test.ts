@@ -11,8 +11,7 @@ import { CUSTOM_UTILITY_REGISTRY } from "@plugins/primitives/plugins/css/plugins
 // A real class from each built-in tailwind-merge group a synthetic group may name,
 // so the table below can exercise a relation without hardcoding which groups exist.
 // Raw utilities are the SUBJECT of these assertions — the point is how cn() treats
-// them next to a custom one — so the token rules are disabled for the map only.
-/* eslint-disable spacing/no-adhoc-spacing, text/no-adhoc-typography, control-size/no-adhoc-control, radius/no-adhoc-radius, z-layers/no-adhoc-zindex -- test fixture: raw built-in utilities are the subject under test; each is the representative member of one tailwind-merge group */
+// them next to a custom one.
 const REPRESENTATIVE: Record<string, string> = {
   p: "p-2",
   px: "px-2",
@@ -32,7 +31,6 @@ const REPRESENTATIVE: Record<string, string> = {
   z: "z-10",
   "font-size": "text-sm",
 };
-/* eslint-enable spacing/no-adhoc-spacing, text/no-adhoc-typography, control-size/no-adhoc-control, radius/no-adhoc-radius, z-layers/no-adhoc-zindex */
 
 function representativeFor(builtin: string, group: string): string {
   const sample = REPRESENTATIVE[builtin];
@@ -99,9 +97,7 @@ for (const entry of GROUP_ENTRIES) {
 it("a rail publishes on the inline axis only, so p keeps its block padding", () => {
   // `p` is broader than `sg-rail-x`: a later p replaces the region outright, but a
   // later rail-x must not delete p (its block half is legitimately still applied).
-  // eslint-disable-next-line spacing/no-adhoc-spacing -- test fixture: the raw p-2 is the subject under test
   expect<string>(cn("rail-x-lg", "p-2")).toBe("p-2");
-  // eslint-disable-next-line spacing/no-adhoc-spacing -- test fixture: the raw p-2 is the subject under test
   const both = cn("p-2", "rail-x-lg");
   expect<string>(both).toContain("p-2");
   expect<string>(both).toContain("rail-x-lg");
