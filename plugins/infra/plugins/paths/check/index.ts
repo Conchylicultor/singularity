@@ -228,9 +228,12 @@ const noInlinedWorktreeArtifactsCheck: Check = {
 //      `LEGACY_LAYOUT` (`core/internal/legacy-layout.ts`) — the same table the
 //      one-off migrate script executes, so the to-do list and the migration plan
 //      are literally the same fact and cannot drift. A legacy name passes only
-//      if it is the compatibility SYMLINK resolving to its declared target, or
-//      is absent (for a transient/quarantined row, and for any row whose shim
-//      the drop-legacy pass has already removed). A legacy name still sitting
+//      if it is what its own row says it must be: the compatibility SYMLINK
+//      resolving to its declared target; absent (for a quarantined row, for an
+//      `unshimmable` row whose writer unlinks, and for any row whose shim the
+//      drop-legacy pass has already removed); or the plain FILE pre-move code
+//      keeps putting back, for an `unshimmable` row whose writer replaces the
+//      name and where no shim can therefore hold. A legacy name still sitting
 //      there as a real directory is a FAILURE — the old allowlist would have
 //      stayed green through exactly that, which is how a "shrinking to-do list"
 //      can shrink to nothing on paper while nothing has moved on disk.
@@ -398,6 +401,10 @@ function describe(node: RootNode): string {
   }
 }
 
+/** The repair command, spelled once — three messages below hand it to a person. */
+const MIGRATE =
+  "bun plugins/infra/plugins/paths/scripts/migrate-data-layout.ts";
+
 /**
  * Verify ONE grandfathered legacy name against what the table says must be there.
  *
@@ -419,15 +426,42 @@ function verifyLegacy(entry: LegacyRootEntry, node: RootNode): string | null {
         `${entry.name} is ${describe(node)}; a "${entry.move}" row must leave nothing at the root ` +
         `(it belongs at ${entry.destination ?? "deprecated/"})`
       );
+    // No shim can hold here, because pre-move code REPLACES this name rather
+    // than writing through it. The file it keeps putting back is the expected
+    // steady state, not a fault — but a shim is: it cannot survive the next such
+    // write, so tolerating one would make the root's state depend on which
+    // process wrote last.
+    case "absent-or-file": {
+      if (node.node === "absent" || node.node === "file") return null;
+      if (node.node === "symlink")
+        return (
+          `${entry.name} is ${describe(node)}; no shim can hold at this name — pre-move code ` +
+          `replaces it rather than writing through it — so none may be planted here ` +
+          `(the live file is ${entry.destination}). \`${MIGRATE} --apply\` removes it.`
+        );
+      return (
+        `${entry.name} is ${describe(node)}; the table says it is a file ` +
+        `(the live one is ${entry.destination})`
+      );
+    }
     case "symlink": {
       // Absent means the drop-legacy pass already ran for this row (or the entry
       // never existed on this machine) — fully drained, nothing to police.
       if (node.node === "absent") return null;
       if (node.node === "symlink" && node.target === entry.expect.target)
         return null;
+      // Two readings, one repair. Either the migration never ran here and this
+      // is the original, or it ran and a pre-move writer REPLACED the shim it
+      // planted — an atomic `rename(tmp, name)`, or a rotation that moved the
+      // link one slot along. `--apply` covers both: it moves an original, and
+      // it rescues a stray beside its family before re-planting the shim.
       return (
         `${entry.name} is ${describe(node)}; after the layout migration it must be the compatibility ` +
-        `symlink → ${entry.expect.target}`
+        `symlink → ${entry.expect.target}. Either the migration has not run on this root, or a ` +
+        `pre-move writer replaced the shim (an atomic rename, or a log rotation, writes the NAME ` +
+        `rather than the bytes behind it). \`${MIGRATE}\` (dry run), then \`--apply\`, covers both: ` +
+        `it moves an original, and it rescues a stray beside its family before re-planting the shim. ` +
+        `Where the two are indistinguishable it stops and shows you the sizes instead of guessing.`
       );
     }
   }
@@ -572,10 +606,11 @@ const noUndeclaredDataDirsCheck: Check = {
         "`@plugins/infra/plugins/paths/core`, then read `.path` / `.file(…)` / `.ensure()` from it " +
         "instead of joining the root by hand (see plugins/infra/plugins/paths/CLAUDE.md). If nothing " +
         "owns the entry any more, move it into `deprecated/` by hand — it is an orphan, and that is " +
-        "the quarantine this check drains into. A legacy name reported as a real directory means the " +
-        "layout migration has not run on this root: `bun plugins/infra/plugins/paths/scripts/" +
-        "migrate-data-layout.ts` (dry run), then `--apply`. Do NOT add a name to LEGACY_LAYOUT — that " +
-        "table is a self-liquidating record of what predates the registry, and nothing may be added to it.",
+        "the quarantine this check drains into. A legacy name reported as a real directory or file " +
+        "where a shim belongs means either that the layout migration has not run on this root, or " +
+        `that a pre-move writer replaced the shim it planted: \`${MIGRATE}\` (dry run), then ` +
+        "`--apply`, which handles both. Do NOT add a name to LEGACY_LAYOUT — that table is a " +
+        "self-liquidating record of what predates the registry, and nothing may be added to it.",
     };
   },
 };

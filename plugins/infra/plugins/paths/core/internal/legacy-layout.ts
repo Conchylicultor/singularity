@@ -8,10 +8,11 @@ import type { DataDirKind } from "./data-dir";
 // goes — ONE table, with two consumers that cannot drift from each other:
 //
 //   1. `paths/check/index.ts` derives its grandfathering from these rows, and
-//      VERIFIES it: a legacy name passes only if it is the compatibility symlink
-//      pointing at its declared target (or, for a transient/quarantined row,
-//      absent). A legacy name sitting there as a real directory after the move
-//      is a failure, not a tolerated leftover.
+//      VERIFIES it: a legacy name passes only if it is what its own row says it
+//      must be — the compatibility symlink pointing at its declared target, or
+//      absent, or (for a name pre-move code keeps replacing) the plain file it
+//      leaves there. A legacy name sitting there as a real directory after the
+//      move is a failure, not a tolerated leftover.
 //   2. `paths/scripts/migrate-data-layout.ts` executes them.
 //
 // The migration cannot read its plan from the registry, because the same change
@@ -61,12 +62,33 @@ export type LegacyMove =
    */
   | { from: string; move: "file"; to: DataDirRef; keep: number }
   /**
-   * Exists only mid-operation, so a symlink is actively wrong (`unlink` would
-   * remove the shim, not the target). Nothing to move; old and new code write
-   * different paths for one release cycle, and `--drop-legacy` sweeps whatever
-   * the old side left behind. `reason` states the degradation.
+   * NO SHIM CAN HOLD at this name, so none is planted and none may be.
+   *
+   * A shim works only for a writer that writes the BYTES BEHIND the name. Every
+   * writer that writes the NAME ITSELF — `unlink`, an atomic `rename(tmp, name)`,
+   * a log rotation renaming `x` to `x.1` — removes or replaces the symlink
+   * instead of passing through it, so the shim is gone on the first write. Old
+   * and new code write different paths for one release cycle, and
+   * `--drop-legacy` sweeps whatever the old side left behind. `reason` states
+   * the degradation.
+   *
+   * `leaves` is what pre-move code leaves at the root once it has written, and
+   * it is why this is ONE arm rather than two: the check's expectation and the
+   * apply plan both derive from it, so a row cannot claim a steady state its
+   * writer does not produce.
+   *
+   *  - `"nothing"` — the writer creates and unlinks, so the name is normally
+   *    absent (`duress.latch`, `push-holder.json`).
+   *  - `"a file"` — the writer REPLACES the name, so a real file sits there
+   *    until pass 2 sweeps it (`central-routes.json`).
    */
-  | { from: string; move: "transient"; to: DataDirRef; reason: string }
+  | {
+      from: string;
+      move: "unshimmable";
+      to: DataDirRef;
+      leaves: "nothing" | "a file";
+      reason: string;
+    }
   /** No live owner. Move into `deprecated/<from>`. No shim, ever. */
   | { from: string; move: "quarantine"; reason: string };
 
@@ -91,7 +113,20 @@ export const LEGACY_LAYOUT: readonly LegacyMove[] = [
   { from: "secrets", move: "dir", to: "state/secrets" },
   { from: "secrets.json.enc", move: "file", to: "state/secrets", keep: 0 },
   { from: "auth", move: "dir", to: "state/auth" },
-  { from: "central-routes.json", move: "file", to: "state/gateway", keep: 0 },
+  {
+    from: "central-routes.json",
+    move: "unshimmable",
+    leaves: "a file",
+    to: "state/gateway",
+    reason:
+      "the build writes the manifest atomically — `writeFileSync(tmp)` then " +
+      "`rename(tmp, dest)` — and a rename onto the shim replaces it with a real file, so the " +
+      "shim does not survive the first build from a stale worktree. For one release cycle a " +
+      "stale worktree's build refreshes a manifest nothing reads: the gateway is handed " +
+      "`-central-routes-file` explicitly and reads only state/gateway/central-routes.json, so a " +
+      "central route added or removed by a stale checkout is not routed until a current-code " +
+      "build runs.",
+  },
   { from: "database.json", move: "file", to: "state/db-config", keep: 0 },
 
   // ── cache/ ───────────────────────────────────────────────────────────────
@@ -125,15 +160,17 @@ export const LEGACY_LAYOUT: readonly LegacyMove[] = [
   { from: "gateway.pid", move: "file", to: "locks/gateway", keep: 0 },
   {
     from: "duress.latch",
-    move: "transient",
+    move: "unshimmable",
     to: "locks/duress",
+    leaves: "nothing",
     reason:
       "created and unlinked at runtime by the cluster sentinel, so a shim would be removed by the first clear. For one release cycle a stale worktree does not observe a duress episode — it writes MORE observability, never less.",
   },
   {
     from: "push-holder.json",
-    move: "transient",
+    move: "unshimmable",
     to: "locks/push",
+    leaves: "nothing",
     reason:
       "written while a push holds the mutex and unlinked when it finishes, so a shim would be removed by the first release. For one release cycle a stale worktree's op-status still sees the push running (the flock probe reaches locks/push/slot-0.lock through the push-slots shim) but not who holds it.",
   },
@@ -295,7 +332,7 @@ export function rowRootNames(row: LegacyMove): string[] {
 
 /**
  * True when the row plants a backwards-compatibility symlink at the old name.
- * False for `transient` and `quarantine` (by contract) and for a row whose
+ * False for `unshimmable` and `quarantine` (by contract) and for a row whose
  * `from` is a KIND name — the root entry there must BE the kind directory.
  *
  * A TYPE PREDICATE, not a boolean: a shimmed row always has a `to`, and saying
@@ -306,7 +343,7 @@ export function rowRootNames(row: LegacyMove): string[] {
 export function rowIsShimmed(
   row: LegacyMove,
 ): row is Extract<LegacyMove, { move: "dir" | "file" }> {
-  if (row.move === "transient" || row.move === "quarantine") return false;
+  if (row.move === "unshimmable" || row.move === "quarantine") return false;
   return !isKindName(row.from);
 }
 
@@ -322,6 +359,14 @@ export type LegacyExpectation =
   | { kind: "symlink"; target: string }
   /** Nothing may sit at the root under this name — it moved, or it never persists. */
   | { kind: "absent" }
+  /**
+   * Absent, or the plain FILE pre-move code keeps putting back — an
+   * `unshimmable` row whose writer replaces the name. A symlink is a failure
+   * here rather than a tolerated extra: it cannot survive the next pre-move
+   * write, so leaving one planted would make the root's steady state depend on
+   * which process wrote last.
+   */
+  | { kind: "absent-or-file" }
   /** The name IS a kind directory (`logs`); the kind rule below covers it. */
   | { kind: "kind-dir" };
 
@@ -354,12 +399,17 @@ export function legacyRootEntries(): LegacyRootEntry[] {
         });
         continue;
       }
-      if (row.move === "transient") {
+      if (row.move === "unshimmable") {
         out.push({
           name,
           move: row.move,
           destination: `${row.to}/${name}`,
-          expect: { kind: "absent" },
+          // The row's own `leaves` decides this, so the check cannot expect a
+          // steady state the writer never produces.
+          expect:
+            row.leaves === "a file"
+              ? { kind: "absent-or-file" }
+              : { kind: "absent" },
         });
         continue;
       }
@@ -561,8 +611,8 @@ export function planMigration(
  */
 export function mustPrecede(a: LegacyMove, b: LegacyMove): boolean {
   if (a === b) return false;
-  // A transient row moves nothing, so nothing can depend on it.
-  if (a.move === "transient") return false;
+  // An unshimmable row moves nothing, so nothing can depend on it.
+  if (a.move === "unshimmable") return false;
   const bDest = b.move === "quarantine" ? `deprecated/${b.from}` : b.to;
 
   // (1) the directory that becomes the destination, before its contents
@@ -771,8 +821,22 @@ function planRowApply(
   switch (row.move) {
     // Never moved and never shimmed — old and new code simply write different
     // paths for one release cycle. Absent is "nothing to do", never an error.
-    case "transient":
+    //
+    // The one thing to plan is REMOVING a shim somebody planted here anyway: it
+    // is a link, so nothing can be lost, and leaving it would let the root's
+    // steady state depend on which process wrote last. A real file is pre-move
+    // code's own output and stays until pass 2.
+    case "unshimmable": {
+      const src = snap.at(row.from);
+      if (src?.node !== "symlink") return;
+      out.push({
+        action: "unlink",
+        row: row.from,
+        path: row.from,
+        reason: `a shim no writer can keep — ${row.from} is replaced, not written through`,
+      });
       return;
+    }
 
     case "quarantine": {
       if (!snap.at(row.from)) return; // already quarantined, or never existed
@@ -985,6 +1049,33 @@ function planFileApply(
   const { from, to } = row;
   let destDirPlanned = snap.occupied(to);
 
+  // Did pass 1 run for THIS row? The two causes of a real file at the root look
+  // identical on disk, and everything below turns on telling them apart:
+  //
+  //   not shimmed ⇒ the root file is the ORIGINAL and the destination beside it
+  //                 is new code's output. No safe merge; `blocked` keeps its
+  //                 numbers and its remedy.
+  //   shimmed     ⇒ the move ran and planted shims, so anything real at the root
+  //                 now is what a pre-move writer put BACK — see the
+  //                 `unshimmable` arm: an atomic rename onto the shim, or a
+  //                 rotation of it, replaces the link instead of writing through
+  //                 it. Both sides hold real bytes, so the stray is rescued.
+  //
+  // The evidence is a symlink at ANY slot pointing INTO this family's
+  // destination: only pass 1 creates one, and nothing on an un-migrated root
+  // does. Judged as a FAMILY, the same unit `preconditionViolations` uses — and
+  // deliberately not "this slot's own shim", because a rotation shuffles every
+  // slot's link one place along, so after one there is no slot left holding its
+  // own target. A `keep: 0` row has a single slot, so a clobber there leaves no
+  // evidence at all and falls to `blocked` — the cautious side, since the only
+  // other reading is that the file is the original.
+  const familyTargets = new Set(rowRootNames(row).map((n) => `${to}/${n}`));
+  const shimmed = rowRootNames(row).some((n) => {
+    const node = snap.at(n);
+    return node?.node === "symlink" && familyTargets.has(node.target);
+  });
+  const rescued = new Set<string>();
+
   for (const name of rowRootNames(row)) {
     const src = snap.at(name);
     // Absent ⇒ this rotation slot was never written, or pass 2 already ran.
@@ -993,6 +1084,20 @@ function planFileApply(
     const dest = `${to}/${name}`;
     if (src.node === "symlink") {
       if (src.target === dest) continue; // already shimmed
+      // A shim ROTATED ACROSS: pre-move code renamed `x` to `x.1`, which moves
+      // the LINK and not the bytes, so a shim now sits one slot along still
+      // pointing at another member of its own family. Removing a link loses
+      // nothing, and this slot's own shim goes back in its place.
+      if (familyTargets.has(src.target)) {
+        out.push({
+          action: "unlink",
+          row: from,
+          path: name,
+          reason: `a shim rotated across by pre-move code — it points at ${src.target}, not ${dest}`,
+        });
+        out.push({ action: "symlink", row: from, at: name, target: dest });
+        continue;
+      }
       out.push(
         blocked(
           from,
@@ -1015,9 +1120,24 @@ function planFileApply(
       continue;
     }
     if (snap.occupied(dest)) {
-      out.push(
-        blocked(from, dest, CONTAMINATED_DESTINATION, "discard-destination"),
-      );
+      if (!shimmed) {
+        out.push(
+          blocked(from, dest, CONTAMINATED_DESTINATION, "discard-destination"),
+        );
+        continue;
+      }
+      // RESCUE, then re-plant. The destination holds the history and the root
+      // holds what pre-move code has written since it replaced the shim, so
+      // neither may be dropped and there is no merge that could be right. The
+      // stray moves in beside its own family under a name that says where it
+      // came from, and the shim is planted again — bounded, lossless, and
+      // repeatable: a second clobber rescues to `.pre-move-2`.
+      let at = `${dest}.pre-move-1`;
+      for (let n = 2; snap.occupied(at) || rescued.has(at); n++)
+        at = `${dest}.pre-move-${n}`;
+      rescued.add(at);
+      out.push({ action: "rename", row: from, from: name, to: at });
+      out.push({ action: "symlink", row: from, at: name, target: dest });
       continue;
     }
     if (!destDirPlanned) {
@@ -1048,7 +1168,7 @@ function planRowDrop(
       return;
     }
 
-    case "transient": {
+    case "unshimmable": {
       const src = snap.at(row.from);
       if (!src) return;
       if (src.node === "dir") {
@@ -1066,7 +1186,7 @@ function planRowDrop(
         action: "unlink",
         row: row.from,
         path: row.from,
-        reason: `stale transient file left by pre-move code; the live one is ${row.to}/${row.from}`,
+        reason: `stale file left by pre-move code; the live one is ${row.to}/${row.from}`,
       });
       return;
     }

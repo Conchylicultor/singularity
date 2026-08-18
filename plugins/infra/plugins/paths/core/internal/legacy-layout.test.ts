@@ -238,6 +238,97 @@ test("a rotating log whose destination file exists stops the run rather than str
   ]);
 });
 
+// ── behaviour 2b: a shim a pre-move writer REPLACED is repaired, not resolved
+//    by discarding a side. Same shape on disk as the collision above — a real
+//    file at the root and a destination that already holds one — and the whole
+//    difference is whether pass 1 left a shim anywhere in the family ──────────
+
+test("a rotation across the shim is rescued beside its family, and the shim re-planted", () => {
+  // What a stale worktree's file-sink does at the rotation cap: it renames the
+  // NAME, so the LINK moves one slot along and the bytes it wrote land at the
+  // root as a fresh real file.
+  const before = fs(
+    file("op-log.jsonl"), // pre-move code's own live file, written since
+    link("op-log.jsonl.1", "logs/op-log/op-log.jsonl"), // the shim, rotated across
+    dir("logs/op-log", "op-log.jsonl", "op-log.jsonl.1"), // the real history
+  );
+  const steps = stepsFor(planMigration(before, "apply"), "op-log.jsonl");
+
+  expect(steps).toEqual([
+    {
+      action: "rename",
+      row: "op-log.jsonl",
+      from: "op-log.jsonl",
+      to: "logs/op-log/op-log.jsonl.pre-move-1",
+    },
+    {
+      action: "symlink",
+      row: "op-log.jsonl",
+      at: "op-log.jsonl",
+      target: "logs/op-log/op-log.jsonl",
+    },
+    {
+      action: "unlink",
+      row: "op-log.jsonl",
+      path: "op-log.jsonl.1",
+      reason:
+        "a shim rotated across by pre-move code — it points at logs/op-log/op-log.jsonl, not logs/op-log/op-log.jsonl.1",
+    },
+    {
+      action: "symlink",
+      row: "op-log.jsonl",
+      at: "op-log.jsonl.1",
+      target: "logs/op-log/op-log.jsonl.1",
+    },
+  ]);
+
+  // Nothing with bytes in it is removed: the one unlink is of a symlink.
+  for (const step of steps)
+    if (step.action === "unlink")
+      expect(before.find((e) => e.path === step.path)?.node).toBe("symlink");
+
+  // And the repair settles — re-planning against what it produced is a no-op.
+  expect(planMigration(simulateSteps(before, steps), "apply")).toEqual([]);
+});
+
+test("a second clobber rescues alongside the first rather than over it", () => {
+  const before = fs(
+    file("op-log.jsonl"),
+    link("op-log.jsonl.1", "logs/op-log/op-log.jsonl"),
+    dir("logs/op-log", "op-log.jsonl", "op-log.jsonl.pre-move-1"),
+  );
+  const steps = stepsFor(planMigration(before, "apply"), "op-log.jsonl");
+  expect(steps[0]).toEqual({
+    action: "rename",
+    row: "op-log.jsonl",
+    from: "op-log.jsonl",
+    to: "logs/op-log/op-log.jsonl.pre-move-2",
+  });
+});
+
+test("with no shim anywhere in the family, a real file is the ORIGINAL and still blocks", () => {
+  // The un-migrated root, one rotation slot along from the case above. The two
+  // are indistinguishable by shape, so the evidence has to be the family's shim
+  // — and with none, the cautious reading is the only safe one.
+  const before = fs(
+    file("op-log.jsonl"),
+    file("op-log.jsonl.1"),
+    dir("logs/op-log", "op-log.jsonl"),
+  );
+  const steps = stepsFor(planMigration(before, "apply"), "op-log.jsonl");
+  expect(steps[0]).toMatchObject({
+    action: "blocked",
+    path: "logs/op-log/op-log.jsonl",
+    remedy: "discard-destination",
+  });
+  // Nothing is planned FOR THE LIVE SLOT: it is not rescued aside, and it is
+  // not moved onto the destination either. (The untouched `.1` slot is still
+  // planned, as it always was — a plan holding a `blocked` step never runs.)
+  expect(
+    steps.some((s) => s.action === "rename" && s.from === "op-log.jsonl"),
+  ).toBe(false);
+});
+
 test("a lock-slot directory never half-moves — the shim is all-or-nothing", () => {
   // The quiet one: a merge that left cpu-slots non-empty would have suppressed
   // its shim, so old code flocks cpu-slots/* and new code flocks locks/cpu/*.
@@ -252,22 +343,49 @@ test("a lock-slot directory never half-moves — the shim is all-or-nothing", ()
   expect(steps.some((s) => s.action === "symlink")).toBe(false);
 });
 
-// ── behaviour 3: transient rows are never shimmed and never moved ────────────
+// ── behaviour 3: unshimmable rows are never shimmed and never moved ──────────
 
-test("a transient file present at the root produces no apply step at all", () => {
-  const before = fs(file("duress.latch"), file("push-holder.json"));
+test("an unshimmable file present at the root produces no apply step at all", () => {
+  const before = fs(
+    file("duress.latch"),
+    file("push-holder.json"),
+    file("central-routes.json"),
+  );
   const steps = planMigration(before, "apply");
 
   expect(stepsFor(steps, "duress.latch")).toEqual([]);
   expect(stepsFor(steps, "push-holder.json")).toEqual([]);
+  // `leaves: "a file"` — the build replaces this name on every run from a stale
+  // worktree, so a file sitting here is the steady state, not something to move.
+  expect(stepsFor(steps, "central-routes.json")).toEqual([]);
 });
 
-test("an absent transient file is nothing to do, never an error", () => {
+test("an absent unshimmable file is nothing to do, never an error", () => {
   expect(planMigration(fs(), "apply")).toEqual([]);
   expect(planMigration(fs(), "drop-legacy")).toEqual([]);
 });
 
-test("drop-legacy sweeps a stale transient file left by pre-move code", () => {
+test("apply removes a shim planted at an unshimmable name", () => {
+  // Nothing plants one now, but a hand-made link (or a row reclassified after
+  // one was planted) would leave the root's state depending on which process
+  // wrote last: the next stale build replaces the link with a real file.
+  const before = fs(
+    link("central-routes.json", "state/gateway/central-routes.json"),
+  );
+  expect(
+    stepsFor(planMigration(before, "apply"), "central-routes.json"),
+  ).toEqual([
+    {
+      action: "unlink",
+      row: "central-routes.json",
+      path: "central-routes.json",
+      reason:
+        "a shim no writer can keep — central-routes.json is replaced, not written through",
+    },
+  ]);
+});
+
+test("drop-legacy sweeps a stale unshimmable file left by pre-move code", () => {
   const steps = stepsFor(
     planMigration(fs(file("duress.latch")), "drop-legacy"),
     "duress.latch",
@@ -278,9 +396,20 @@ test("drop-legacy sweeps a stale transient file left by pre-move code", () => {
       row: "duress.latch",
       path: "duress.latch",
       reason:
-        "stale transient file left by pre-move code; the live one is locks/duress/duress.latch",
+        "stale file left by pre-move code; the live one is locks/duress/duress.latch",
     },
   ]);
+});
+
+test("what the check must find at an unshimmable name follows the row's `leaves`", () => {
+  const byName = new Map(legacyRootEntries().map((e) => [e.name, e]));
+  // The writer unlinks it, so the root is normally empty.
+  expect(byName.get("duress.latch")?.expect).toEqual({ kind: "absent" });
+  // The writer replaces it, so a plain file there is expected — and a shim is
+  // not, because it cannot survive the next such write.
+  expect(byName.get("central-routes.json")?.expect).toEqual({
+    kind: "absent-or-file",
+  });
 });
 
 // ── behaviour 4: idempotent, both ways ───────────────────────────────────────
@@ -308,10 +437,7 @@ test("re-planning against the state an apply produced yields zero steps", () => 
 });
 
 test("a shim planted by apply is exactly what the check expects to find", () => {
-  const before = fs(
-    dir("cost-usage", "index.json"),
-    file("central-routes.json"),
-  );
+  const before = fs(dir("cost-usage", "index.json"), file("database.json"));
   const after = simulateSteps(before, planMigration(before, "apply"));
   const byPath = new Map(after.map((e) => [e.path, e]));
 
@@ -324,10 +450,7 @@ test("a shim planted by apply is exactly what the check expects to find", () => 
 });
 
 test("drop-legacy removes the shims an apply planted, then is itself a no-op", () => {
-  const before = fs(
-    dir("cost-usage", "index.json"),
-    file("central-routes.json"),
-  );
+  const before = fs(dir("cost-usage", "index.json"), file("database.json"));
   const applied = simulateSteps(before, planMigration(before, "apply"));
 
   const drop = planMigration(applied, "drop-legacy");
@@ -340,9 +463,9 @@ test("drop-legacy removes the shims an apply planted, then is itself a no-op", (
     },
     {
       action: "unlink",
-      row: "central-routes.json",
-      path: "central-routes.json",
-      reason: "compatibility shim → state/gateway/central-routes.json",
+      row: "database.json",
+      path: "database.json",
+      reason: "compatibility shim → state/db-config/database.json",
     },
   ]);
 

@@ -77,7 +77,23 @@ check and by the one-off `bun plugins/infra/plugins/paths/scripts/migrate-data-l
 old path; `--drop-legacy` removes it once every worktree has rebuilt), so the
 to-do list and the migration plan can't drift. A legacy name passes only if
 it's a symlink resolving to its declared target — a real directory there is a
-failure, not a tolerated leftover. The check also polices the second level:
+failure, not a tolerated leftover.
+
+**A shim is only planted where one can hold.** It works by standing in for the
+BYTES BEHIND a name, so it survives a writer that appends or truncates in place
+— and not one that writes the NAME ITSELF: an `unlink`, an atomic
+`rename(tmp, name)`, a log rotation renaming `x` to `x.1`. Each of those removes
+or replaces the link on its first write, silently splitting old and new code
+onto two files. A row whose pre-move writer does that is `move: "unshimmable"`
+and states what it `leaves` at the root (`"nothing"` when the writer unlinks,
+`"a file"` when it replaces), and the check's expectation is derived from that —
+so a row cannot claim a steady state its writer does not produce. Where a shim
+IS held and a pre-move writer replaced it anyway, `--apply` rescues the stray
+beside its family as `<name>.pre-move-<n>` and re-plants the shim; it discards
+neither side, and stops with the sizes when the two readings (a replaced shim,
+or the original never moved) are indistinguishable.
+
+The check also polices the second level:
 every entry inside a kind directory must itself be a declared `${kind}/${name}`.
 Table, script and check rule are all deleted together once `--drop-legacy` has
 run everywhere.
