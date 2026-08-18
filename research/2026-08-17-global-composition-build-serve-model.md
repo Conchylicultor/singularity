@@ -15,6 +15,12 @@ design.
 Companion doc (the user-facing mental model this refines): the "Build, serving"
 page, block `block-b4f38ca7-b710-4003-a206-cd9b8d25d091`.
 
+> **Revision (same day).** The phase list was reshaped after review. Vendor
+> resolution caching has landed. The build-UI parent/child linkage phase was
+> dropped — it patched a symptom this model deletes — and became a cleanup at the
+> tail. The vendor-set decoupling and worktree-scoped serving were merged into
+> the serve phase, since all three rewrite the same code path.
+
 ---
 
 ## Target model
@@ -48,8 +54,8 @@ inventing.
 **3. One CLI verb.**
 
 ```
-build                                  # = build --composition singularity
-build --composition sonata             # deploy sonata into the dev cluster
+build                                   # = build --composition singularity
+build --composition sonata              # deploy sonata into the dev cluster
 build --composition sonata website      # union build; artifacts shared via the store
 build --composition sonata --hermetic   # portable artifact set, no cluster contact
 ```
@@ -73,6 +79,12 @@ sets are keyed by `setHash` under `~/.singularity/web-artifacts/vendors`.
 The existing dist, spec and database stay live until explicitly removed. There
 is no deactivation sweep.
 
+**6. A composition build has no parent.**
+
+`build --composition sonata` mints its own run: its own id, `target: "sonata"`,
+no parent, artifacts named after itself. The current parent/child shape exists
+only because compose-serve is a tail stage of a main build.
+
 ---
 
 ## Where we already are
@@ -87,10 +99,14 @@ Already true:
   compositions builds the union once.
 - Composition-only builds that need no main build — `build-composition` plans
   from `compositionFleetSource()` and resolves its own vendor set, by design, so
-  it runs on a bare host from a fresh clone.
+  it runs on a bare host from a fresh clone. **The hermetic path already
+  satisfies target-model point 4**; only the serve path reuses main's set.
 - Hermetic output (`materialize: true`), and its dist path
   `worktrees/<checkout>/release-web/<composition>`.
 - `worktrees/singularity/web`, `worktrees/sonata/web`, `worktrees/<worktree>/web`.
+- **Vendor resolution caching — landed.** It previously ran uncached and
+  sequential before the store check, costing 35–110 s on builds where nothing was
+  stale.
 
 Not true yet:
 
@@ -101,96 +117,38 @@ Not true yet:
   main's vendor set via `readFleetVendorMeta`, which throws unless the whole
   fleet is in the store.
 - Composition serving is main-only, gated in three places.
-- Vendor **resolution** is uncached and sequential, costing 35–110 s on builds
-  where nothing is stale.
 
 ---
 
 ## Phases
 
-Ordered by dependency. Phases 0 and A are independent of everything else and pay
-off immediately.
+Ordered by dependency. Phases 2 and 4 are the two halves of the CLI story and
+are deliberately split at the artifact/deployment seam: the hermetic half needs
+no namespace, the serve half does.
 
-### Phase 0 — Cache and parallelize vendor resolution
-
-**Problem.** `ensureVendorSet` calls `resolveVendorSet` *before* it checks the
-store, and `resolveVendors` loops sequentially, running a full `esbuild.build()`
-probe per specifier plus package.json walks and lexer passes. Measured on main
-with `artifacts:build (0 stale)`: `artifacts:vendors` = 35.7 s / 110.5 s /
-56.4 s / 37.5 s. It is the dominant cost of every warm build.
-
-**Shape.** Resolution maps `{specifier, resolveDir}` →
-`{entryFile, version, cjs, wrapper}`; that output is also the input to the set
-hash, which is why it cannot be skipped. Cache it keyed on
-`(bun.lock hash, esbuild.version, builder source digest)`, entry-keyed by
-`"<resolveDir>\0<specifier>"`, stored beside the existing
-`~/.singularity/web-artifacts/fingerprints/` (reuse the
-`loadFingerprintCache`/`saveFingerprintCache` idiom). Validate a hit with a
-`statSync` on the cached `entryFile` so a `bun link` or hand-edited
-`node_modules` cannot serve a stale result. Bound the loop with `Promise.all`
-independently of the cache.
-
-**Files.** `web-artifacts/core/internal/vendors.ts`.
-
-**Done when.** A warm build's `artifacts:vendors` span is small, and a cold one
-is unchanged in correctness.
-
-### Phase A — Link composition runs in the build UI
-
-**Problem.** Clicking "Serve sonata" opens a run labelled `main`, with no path
-to the sonata child run. The data exists — `build_runs.target` and
-`build_runs.parentId` — but only `build-commits` reads parentage.
-
-**Shape.** Point the toast and build button at the child run; render
-parent↔children in the detail pane.
-
-**Files.** `plugins/build/plugins/build-info/web/`, `plugins/build/web/components/`.
-
-### Phase 1 — Per-composition vendor sets
-
-Drop `vendors: await readFleetVendorMeta(...)` from the compose-serve path so a
-composition resolves its own set, matching what `build-composition` already
-does. This is the change that removes the main-first coupling.
-
-Note the reason the shortcut existed: a served dist *symlinks* the vendor set
-dir, so a superset costs nothing on disk, whereas a hermetic dist `cpSync`s it
-whole and a superset would ship every vendor bundle in the repo. With Phase 0
-landed, per-composition everywhere is both simpler and cheap.
-
-**Files.** `cli/bin/commands/internal/compose-serve.ts`.
-
-### Phase 2 — `singularity` becomes a composition
+### Phase 1 — `singularity` becomes a composition
 
 Add the manifest entry whose resolved closure equals today's full registry, and
 make `build` with no flag mean `--composition singularity`. Removes the special
-case at the root and unblocks Phases 3 and 7.
+case at the root and unblocks Phases 2, 4 and 7.
 
 **Files.** `plugins/plugin-meta/plugins/composition/core/config.ts`, the
 registry-gen path in `tooling/plugins/codegen/core/`.
 
-**Risk to watch.** Adding a field/entry bumps the rendered config origin hash,
-which can stale an existing user-layer `compositions.jsonc`. Land alone.
+**Risk to watch.** Adding an entry bumps the rendered config origin hash, which
+can stale an existing user-layer `compositions.jsonc`. Land alone.
 
-### Phase 3 — Namespace identity
-
-One function, `namespaceFor({ composition, checkout })`, owning the elision rule
-and the collision guard; every writer and reader derives from it. Then the
-gateway change: drop the dot rejection in `parseWorktree` and widen the name
-regex in `registry.go`.
-
-**Files.** a core plugin for the rule, `gateway/proxy.go`, `gateway/registry.go`.
-
-**Verify first.** That two-label `*.localhost` resolves in the browsers actually
-used. It is the one piece not under our control.
-
-### Phase 4 — Collapse the CLI to one verb
+### Phase 2 — One build verb: the artifact half
 
 Add `--composition <name...>` (variadic) and `--hermetic` to `build`; delete
-`build-composition` and `--serve-composition`. The behaviors that currently
-distinguish the two commands become `--hermetic`-conditional: dist target,
-materialize, `experimental` marker, checks depth, branch guard, gateway
-restart/health probe, `build_runs` row + profile + progress log + verdict guard,
-Postgres readiness and DB fork.
+`build-composition`. Nothing here needs a namespace — hermetic writes no spec —
+and nothing here needs the vendor change, because the hermetic path already
+resolves its own set.
+
+The behaviors that distinguish the two commands become `--hermetic`-conditional:
+dist target, materialize, `experimental` marker, checks depth, branch guard,
+gateway restart/health probe, `build_runs` row + profile + progress log + verdict
+guard, Postgres readiness and DB fork.
 
 Two contracts to preserve:
 
@@ -207,17 +165,55 @@ imports a plugin barrel at module-eval time. A frozen barrel there makes
 Re-express the check against that property directly.
 
 **Files.** `cli/bin/commands/build.ts`, `build-composition.ts` (deleted),
-`cli/bin/cli.ts`, `cli/check/index.ts`, `plugins/build/server/internal/`.
+`cli/bin/cli.ts`, `cli/check/index.ts`.
 
-### Phase 5 — Serve compositions from a worktree
+### Phase 3 — Namespace identity
 
-Drop the three main-only gates, read the *worktree's* resolved compositions
-config rather than `singularity`'s, and point the spec's `server` path at the
-worktree's server-core instead of main's. Databases become one per
-(composition × checkout).
+One function, `namespaceFor({ composition, checkout })`, owning the elision rule
+and the collision guard; every writer and reader derives from it. Then the
+gateway change: drop the dot rejection in `parseWorktree` and widen the name
+regex in `registry.go`.
 
-**Files.** `cli/bin/commands/build.ts` (preflight),
-`compose-serve.ts`, `plugins/build/server/internal/handle-serve-composition.ts`.
+**Files.** a core plugin for the rule, `gateway/proxy.go`, `gateway/registry.go`.
+
+**Verify first.** That two-label `*.localhost` resolves in the browsers actually
+used. It is the one piece not under our control, and it can change the design.
+
+### Phase 4 — One build verb: the serve half
+
+`build --composition sonata` (non-hermetic) builds and serves one composition on
+its own, from any checkout. Merges three previously-separate pieces that all
+rewrite the same path:
+
+- **Per-composition vendor set.** Drop `readFleetVendorMeta` reuse — the change
+  that removes the main-first coupling. Note why the shortcut existed: a served
+  dist *symlinks* the vendor set dir, so a superset costs nothing on disk,
+  whereas a hermetic dist copies it whole.
+- **Any checkout.** Drop the three main-only gates, read the *worktree's*
+  resolved compositions config rather than `singularity`'s, and point the spec's
+  `server` path at the worktree's server-core. Databases become one per
+  (composition × checkout).
+- **Delete `--serve-composition` and the compose-serve stage.** With
+  `--composition` doing the work directly, the tail-stage mechanism has no
+  remaining caller.
+
+Open question this phase owns: does `build --composition X Y Z` mint one run row
+or three? Three siblings of one invocation is a different relation from today's
+parent/child and may still want grouping in the UI.
+
+**Files.** `cli/bin/commands/build.ts`, `internal/compose-serve.ts` (deleted),
+`plugins/build/server/internal/handle-serve-composition.ts`.
+
+### Phase 5 — Reclaiming a composition namespace
+
+Nothing reclaims a composition's dist, spec and database. Deactivation
+deliberately keeps them (target-model point 5), and deleting a checkout strands
+the namespaces derived from it — `debug/worktree-cleanup` knows about git
+worktrees and DB forks, not namespaces named after them. Worse once namespaces
+are per (composition × checkout).
+
+Needs a decision on what the reclaim trigger actually is, given deactivation is
+explicitly not one.
 
 ### Phase 6 — Deploy triggers in the Composition UI
 
@@ -255,22 +251,36 @@ composition-scoped makes the committed registries composition-dependent.
 **Files.** `tooling/plugins/codegen/core/disabled-ids.ts`,
 `plugin-meta/plugins/closure/core/resolve-composition.ts`.
 
+### Phase 8 — Remove the vestigial parent/child concept
+
+Once compositions are first-class builds, the parent/child shape is dead
+residue. `build_runs.parentId` exists only to tie a composition build to the main
+run that spawned it (the compose-serve stage); the per-composition artifacts are
+named after the parent's id (`build-<parentId>-c-sonata.log`); and the build UI
+still special-cases `target === "main"` in several places.
+
+Mechanical, and last on purpose — it can only be done once nothing mints a child
+run.
+
+**Files.** `plugins/build/plugins/run-ledger/server/internal/tables.ts` (+
+migration), `cli/bin/` artifact naming, `plugins/build/web/`,
+`plugins/build/plugins/build-info/web/`.
+
 ---
 
 ## Verification
 
 Per phase, but the end-to-end target:
 
-1. `./singularity build --composition sonata` from an agent worktree, on a
-   machine where main has **not** been built, succeeds and serves
-   `http://sonata.att-XXX.localhost:9000`.
-2. `./singularity build --composition sonata website` builds both, and the
-   second's artifact count shows reuse rather than rebuild.
-3. `./singularity build --composition sonata --hermetic` on a fresh clone with a
-   cold store produces a relocatable dist containing only sonata's vendors.
-4. `./singularity build` with no flag is byte-equivalent to today's main build.
-5. A warm build's `artifacts:vendors` span is small (Phase 0), checked against
-   `~/.singularity/worktrees/<wt>/build-profile-<id>.json`.
+1. Building sonata alone from an agent worktree, on a machine where main has
+   **not** been built, succeeds and serves `http://sonata.att-XXX.localhost:9000`.
+2. Building sonata and website together builds both, and the second's artifact
+   count shows reuse rather than rebuild.
+3. A hermetic sonata build on a fresh clone with a cold store produces a
+   relocatable dist containing only sonata's vendors.
+4. A no-flag build is byte-equivalent to today's main build.
+5. A composition's `build_runs` row has no parent and its artifacts are named
+   after its own id.
 6. `./singularity check` green throughout, in particular `migrations-in-sync`,
    `plugins-registry-in-sync`, `web-artifacts:map-in-sync`, and whatever replaces
    `cli:build-composition-import-subset`.
@@ -280,7 +290,5 @@ Per phase, but the end-to-end target:
 - Namespace: elision (recommended, preserves every current URL) vs uniform
   `singularity.att-XXX`. Phase 3 blocks on this.
 - Phase 7's importer-cascade semantics.
-- Database lifecycle at (composition × checkout) cardinality — nothing currently
-  reaps a composition namespace when its checkout is deleted, and with no
-  deactivation sweep, nothing reaps it on deactivation either. May warrant its
-  own phase.
+- Phase 5's reclaim trigger, given deactivation is explicitly not one.
+- Whether `--composition X Y Z` mints one run row or three (Phase 4).
