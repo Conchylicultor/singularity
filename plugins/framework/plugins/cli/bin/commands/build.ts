@@ -26,8 +26,8 @@ import { parseMigrationAnswers } from "../migrations";
 import {
   collectAllPlugins,
   propagateConfigToUser,
-  COMPOSITION_NAME_RE,
 } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
+import { COMPOSITION_NAME_RE } from "@plugins/plugin-meta/plugins/composition/core";
 import { formatChangedSources } from "@plugins/framework/plugins/tooling/plugins/format/core";
 import { getFacet } from "@plugins/plugin-meta/plugins/facets/core";
 import { routesFacetDef } from "@plugins/plugin-meta/plugins/facets/plugins/routes/core";
@@ -110,7 +110,7 @@ import { createBuildRunRecorder } from "@plugins/build/plugins/run-ledger/server
 import { BUILD_EXIT_SUPERSEDED } from "@plugins/build/plugins/build-status/core";
 
 // Worktree names are gateway namespaces — same rule as composition ids (the
-// canonical TS copy lives in codegen's plugin-registry-gen.ts).
+// canonical TS copy lives in plugin-meta/composition/core/namespace.ts).
 const NAME_REGEX = COMPOSITION_NAME_RE;
 const CENTRAL_ROUTES_FILE = join(SINGULARITY_DIR, "central-routes.json");
 

@@ -24,7 +24,6 @@ import {
 } from "node:fs";
 import { join, resolve } from "node:path";
 import {
-  assertServableCompositionNamespace,
   buildRegistryGenContext,
   generateCompositionRegistry,
   listNamedCompositionRegistries,
@@ -39,6 +38,8 @@ import {
   type VendorSetMeta,
 } from "@plugins/framework/plugins/tooling/plugins/web-artifacts/core";
 import {
+  activatedCompositionIds,
+  assertServableCompositionNamespace,
   compositionsConfig,
   manifestItemToManifest,
   type CompositionManifestItem,
@@ -141,12 +142,6 @@ export function readCompositionItems(root: string): CompositionManifestItem[] {
     hierarchyPath: COMPOSITIONS_HIERARCHY_PATH,
   });
   return values.manifests;
-}
-
-export function activatedCompositionIds(
-  items: CompositionManifestItem[],
-): string[] {
-  return items.filter((i) => i.autoBuild).map((i) => i.id);
 }
 
 /** The namespaces to deactivate: everything present that is no longer activated. */

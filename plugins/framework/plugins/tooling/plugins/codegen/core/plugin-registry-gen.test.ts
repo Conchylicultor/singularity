@@ -13,8 +13,6 @@ import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from "fs";
 import { tmpdir } from "os";
 import { join } from "path";
 import {
-  assertCompositionName,
-  assertServableCompositionNamespace,
   collectedDirNamedCompositionRegistryPath,
   discoverCollectedDirs,
   listNamedCompositionRegistries,
@@ -56,36 +54,11 @@ test("discoverCollectedDirs ignores commented/stringified markers but finds real
 });
 
 // ── Per-name composition registries ────────────────────────────────
-
-test("composition name validation rejects namespace-unsafe names", () => {
-  expect(() => assertCompositionName("sonata")).not.toThrow();
-  expect(() => assertCompositionName("a-1")).not.toThrow();
-  for (const bad of [
-    "",
-    "Sonata",
-    "so nata",
-    "-sonata",
-    "so/nata",
-    "so.nata",
-    "a".repeat(64),
-  ]) {
-    expect(() => assertCompositionName(bad)).toThrow(
-      "Invalid composition name",
-    );
-  }
-});
-
-test("servable namespace validation additionally rejects the reserved namespaces", () => {
-  expect(() => assertServableCompositionNamespace("sonata")).not.toThrow();
-  for (const reserved of ["central", "singularity", "main"]) {
-    expect(() => assertServableCompositionNamespace(reserved)).toThrow(
-      "reserved namespace",
-    );
-  }
-  expect(() => assertServableCompositionNamespace("So nata")).toThrow(
-    "Invalid composition name",
-  );
-});
+//
+// The composition-name vocabulary itself (assertCompositionName, the
+// reserved/owned split) is tested beside its source, in
+// plugins/plugin-meta/plugins/composition/core/namespace.test.ts. What is tested
+// HERE is only that the registry path builder routes a name through it.
 
 test("per-name registry path renders and round-trips through parse", () => {
   const def: DiscoveredCollectedDir = {

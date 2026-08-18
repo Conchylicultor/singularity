@@ -19,11 +19,13 @@ export {
   type GenerateDocsOptions,
 } from "./docgen";
 
+// The composition-name vocabulary (COMPOSITION_NAME_RE, assertCompositionName,
+// RESERVED_COMPOSITION_NAMESPACES, assertServableCompositionNamespace) is NOT
+// re-exported here. It lives in `@plugins/plugin-meta/plugins/composition/core`,
+// a zero-import module web and server can reach too — this barrel imports `fs`
+// at module scope, so a pass-through from here would keep the vocabulary
+// unreachable from those runtimes while looking available.
 export {
-  assertCompositionName,
-  assertServableCompositionNamespace,
-  COMPOSITION_NAME_RE,
-  RESERVED_COMPOSITION_NAMESPACES,
   collectedDirRegistryPath,
   collectedDirNamedCompositionRegistryPath,
   collectBareSpecifiers,
@@ -61,7 +63,9 @@ export {
   fileConfigProxy,
   generateConfigOrigins,
   propagateConfigToUser,
+  readCompositionManifestsFromDisk,
   readEffectiveConfigFromDisk,
+  readGitLayerConfig,
   renderConfigOriginContent,
   loadConfigDescriptorsByOriginPath,
   resolveOriginAnnotations,

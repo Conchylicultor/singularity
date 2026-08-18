@@ -11,10 +11,17 @@
  */
 import { test, expect, beforeAll, setDefaultTimeout } from "bun:test";
 import { join } from "path";
-import { buildPluginTree, type PluginTree } from "@plugins/plugin-meta/plugins/plugin-tree/core";
+import {
+  buildPluginTree,
+  type PluginTree,
+} from "@plugins/plugin-meta/plugins/plugin-tree/core";
 import { asPluginId } from "@plugins/framework/plugins/plugin-id/core";
 import { classifyEdges } from "./classify-edges";
-import { resolveComposition, disabledClosure, expandEntrySeeds } from "./resolve-composition";
+import {
+  resolveComposition,
+  disabledClosure,
+  expandEntrySeeds,
+} from "./resolve-composition";
 import { parseEntryPattern, matchEntryPattern } from "./entry-pattern";
 import { flattenManifest } from "./flatten-manifest";
 import { explainInclusion } from "./explain";
@@ -48,7 +55,10 @@ setDefaultTimeout(60_000);
 
 beforeAll(async () => {
   const root = (await Bun.$`git rev-parse --show-toplevel`.text()).trim();
-  tree = await buildPluginTree(join(root, "plugins"), { skipBarrelImport: true, facets: true });
+  tree = await buildPluginTree(join(root, "plugins"), {
+    skipBarrelImport: true,
+    facets: true,
+  });
   graph = classifyEdges(tree);
 });
 
@@ -123,22 +133,102 @@ test("conservative: sonata's subtree is NOT bundled", () => {
 
 test("parseEntryPattern splits negation / base / subtree", () => {
   expect(parseEntryPattern("apps.website")).toMatchObject({
+    kind: "id",
     negate: false,
     base: "apps.website",
     subtree: false,
   });
   expect(parseEntryPattern("apps.website.**")).toMatchObject({
+    kind: "id",
     negate: false,
     base: "apps.website",
     subtree: true,
   });
   expect(parseEntryPattern("!apps.website.demos.**")).toMatchObject({
+    kind: "id",
     negate: true,
     base: "apps.website.demos",
     subtree: true,
   });
   // raw is preserved verbatim.
-  expect(parseEntryPattern("!apps.website.demos.**").raw).toBe("!apps.website.demos.**");
+  expect(parseEntryPattern("!apps.website.demos.**").raw).toBe(
+    "!apps.website.demos.**",
+  );
+});
+
+// ── the root `**` pattern: every plugin ──────────────────────────────────────
+
+test("parseEntryPattern recognises the root `**` form (and never throws on `!**`)", () => {
+  expect(parseEntryPattern("**")).toEqual({
+    kind: "root",
+    negate: false,
+    raw: "**",
+  });
+  // `!**` is a pathology the composition-closure check refuses — but PARSING it
+  // must stay total, because Studio renders user-typed patterns.
+  expect(parseEntryPattern("!**")).toEqual({
+    kind: "root",
+    negate: true,
+    raw: "!**",
+  });
+});
+
+test("matchEntryPattern on root covers every node in the graph", () => {
+  const matched = matchEntryPattern(parseEntryPattern("**"), graph);
+  expect(matched.size).toBe(tree.byDir.size);
+  for (const n of tree.byDir.values()) expect(matched.has(n.id)).toBe(true);
+});
+
+// THE LOAD-BEARING INVARIANT. `named` is the protected set the negative pass
+// refuses to trim. If `**` named everything, `!x.**` could never remove anything
+// and the composition-closure check would reject every negative under it as dead.
+// Root means "everything is in", not "everything is explicitly demanded".
+test("root seeds every id and NAMES NONE", () => {
+  const { seeds, named } = expandEntrySeeds([asPluginId("**")], graph);
+  expect(seeds.size).toBe(tree.byDir.size);
+  for (const n of tree.byDir.values()) expect(seeds.has(n.id)).toBe(true);
+  expect(named.size).toBe(0);
+});
+
+test("resolveComposition under `**`: everything bundled + required, nothing available", () => {
+  const comp = resolveComposition(graph, {
+    name: "everything",
+    entryPoints: [asPluginId("**")],
+    selectedContributors: [],
+  });
+  expect(comp.bundle.size).toBe(tree.byDir.size);
+  for (const n of tree.byDir.values()) {
+    expect(comp.bundle.has(n.id)).toBe(true);
+    // Nothing is `entry` — root names nothing — so every bundled node is `required`.
+    expect(comp.membership.get(n.id)).toBe("required");
+  }
+  // Nothing is outside the bundle, so the reviewable option frontier is empty.
+  expect(comp.available).toEqual([]);
+});
+
+// Phase-7 forward guard: `**` plus branch negatives is how `singularity.disabled`
+// is eventually replaced, so a negative MUST still bite under a root positive.
+test("a negative trims its subtree even under a root positive", () => {
+  const { seeds } = expandEntrySeeds(
+    [asPluginId("**"), asPluginId("!apps.sonata.**")],
+    graph,
+  );
+  const sonataIds = [...tree.byDir.values()]
+    .map((n) => n.id)
+    .filter((id) => id === SONATA || id.startsWith(`${SONATA}.`));
+  expect(sonataIds.length).toBeGreaterThan(1); // umbrella + sub-plugins
+  for (const id of sonataIds) expect(seeds.has(id)).toBe(false);
+  // Everything else is still seeded.
+  expect(seeds.size).toBe(tree.byDir.size - sonataIds.length);
+  expect(seeds.has(AGENT_MANAGER)).toBe(true);
+});
+
+// Documents the pathology `composition-closure` refuses: `!**` parses fine and
+// deletes every seed, leaving a composition that builds to nothing.
+test("a lone `!**` seeds nothing", () => {
+  const { seeds, named } = expandEntrySeeds([asPluginId("!**")], graph);
+  expect(seeds.size).toBe(0);
+  expect(named.size).toBe(0);
 });
 
 // (i) A bare id seeds ONLY the node + its hard closure — no implicit subtree.
@@ -158,9 +248,9 @@ test("bare entry seeds node + hard deps only (subtree NOT bundled)", () => {
   expect(comp.bundle.has(SHELL)).toBe(false);
 
   // matchEntryPattern on a bare pattern is just the base.
-  expect([...matchEntryPattern(parseEntryPattern("apps.agent-manager"), graph)]).toEqual([
-    AGENT_MANAGER,
-  ]);
+  expect([
+    ...matchEntryPattern(parseEntryPattern("apps.agent-manager"), graph),
+  ]).toEqual([AGENT_MANAGER]);
 });
 
 // (ii) `.**` seeds the whole subtree — shell present and required.
@@ -172,7 +262,10 @@ test(".** entry seeds the whole subtree (shell present, required)", () => {
   expect(comp.membership.get(SHELL)).toBe("required");
 
   // The subtree match includes the `.shell` sub-plugin.
-  const matched = matchEntryPattern(parseEntryPattern("apps.agent-manager.**"), graph);
+  const matched = matchEntryPattern(
+    parseEntryPattern("apps.agent-manager.**"),
+    graph,
+  );
   expect(matched.has(AGENT_MANAGER)).toBe(true);
   expect(matched.has(AGENT_MANAGER_SHELL)).toBe(true);
 });
@@ -181,11 +274,9 @@ test(".** entry seeds the whole subtree (shell present, required)", () => {
 // id survives (additivity: a named positive is protected from any negative).
 test("negation trims a .**-implicit id, but an explicit positive survives", () => {
   // root has two children a, b. `root.**` pulls both in implicitly.
-  const g = syntheticGraph(
-    ["root", "root.a", "root.b"],
-    [],
-    { root: ["root.a", "root.b"] },
-  );
+  const g = syntheticGraph(["root", "root.a", "root.b"], [], {
+    root: ["root.a", "root.b"],
+  });
 
   // `.**` then `!root.a` ⇒ a is trimmed (implicit only).
   const trimmed = expandEntrySeeds(
@@ -213,7 +304,10 @@ test("negation cannot sever a hard import: a kept sibling's dep still ships", ()
   const g = syntheticGraph(
     ["root", "root.keep", "root.drop", "root.drop.inner"],
     [["root.keep", "root.drop.inner"]], // keep imports an id under the negated branch
-    { root: ["root.keep", "root.drop", "root.drop.inner"], "root.drop": ["root.drop.inner"] },
+    {
+      root: ["root.keep", "root.drop", "root.drop.inner"],
+      "root.drop": ["root.drop.inner"],
+    },
   );
   const comp = resolveComposition(g, {
     name: "fail-loud",
@@ -257,7 +351,9 @@ test("website-shaped manifest: .** minus negatives drops the editor-toy branch",
   // Kept website ids ARE bundled.
   expect(comp.bundle.has(asPluginId("apps.website.shell"))).toBe(true);
   expect(comp.bundle.has(asPluginId("apps.website.landing"))).toBe(true);
-  expect(comp.bundle.has(asPluginId("apps.website.demos.app-gallery"))).toBe(true);
+  expect(comp.bundle.has(asPluginId("apps.website.demos.app-gallery"))).toBe(
+    true,
+  );
 });
 
 test("available frontier: reviewable soft options into the bundle", () => {
@@ -297,7 +393,10 @@ test("opt-in: selecting an available contributor pulls it into the bundle", () =
 });
 
 test("redundantSelections: selecting a required node is a surfaced no-op", () => {
-  const withRedundant: CompositionManifest = { ...manifest, selectedContributors: [SHELL] };
+  const withRedundant: CompositionManifest = {
+    ...manifest,
+    selectedContributors: [SHELL],
+  };
   const base = resolveComposition(graph, manifest);
   const comp = resolveComposition(graph, withRedundant);
 
@@ -340,7 +439,10 @@ test("flattenManifest unions an extended pack's contributors into the host", () 
   const pack: CompositionManifest = {
     name: "self-improvement",
     entryPoints: [],
-    selectedContributors: [asPluginId("review"), asPluginId("screenshot.draw-on-app")],
+    selectedContributors: [
+      asPluginId("review"),
+      asPluginId("screenshot.draw-on-app"),
+    ],
     extends: [],
   };
   const profile: CompositionManifest = {
@@ -395,7 +497,9 @@ test("flattenManifest ignores unknown extends references inertly", () => {
     extends: ["does-not-exist"],
   };
   const flat = flattenManifest(m, [m]);
-  expect([...flat.selectedContributors].map(String)).toEqual(["ui.theme-toggle"]);
+  expect([...flat.selectedContributors].map(String)).toEqual([
+    "ui.theme-toggle",
+  ]);
 });
 
 // ── disabledClosure: reverse + subtree fixpoint (direction is load-bearing) ───
@@ -411,7 +515,8 @@ function syntheticGraph(
   subtree: Record<string, string[]>,
 ): EdgeGraph {
   const ids = nodes.map(asPluginId);
-  const empty = () => new Map(ids.map((id) => [id, [] as ReturnType<typeof asPluginId>[]]));
+  const empty = () =>
+    new Map(ids.map((id) => [id, [] as ReturnType<typeof asPluginId>[]]));
   const hardForward = empty();
   const hardReverse = empty();
   const subtreeMap = empty();

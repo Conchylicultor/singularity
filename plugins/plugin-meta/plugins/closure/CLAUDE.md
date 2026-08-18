@@ -73,17 +73,29 @@ barrel re-exports only the umbrella's own symbols).
 | `apps.deploy` | that node only (+ its hard closure, as always). **No implicit subtree.** |
 | `apps.deploy.**` | node ∪ `subtree(node)` — opt into containment. |
 | `!apps.website.demos.**` | negative — subtracts from *this composition's* seed set. |
+| `**` | **every plugin in the graph.** The tree has no root node, so this is the only way to spell "everything". |
+| `!**` | parses, seeds nothing — refused by the `composition-closure` check (it would empty the bundle). |
+
+`ParsedPattern` is a discriminated union — `{kind:"root"}` (no base) vs
+`{kind:"id"}` — so `tsc` forces every consumer to handle the root form.
+`parseEntryPattern` **never throws**: Studio renders it on user-typed strings, so
+`!**` parses inertly and is refused by the *check*, not by a crash.
 
 `expandEntrySeeds(entryPoints, graph)` returns `{ seeds, named }`: positives
 seed their matches and record their exact base in `named`; negatives
 `seeds.delete()` each match **unless it is in `named`** (an explicitly-named
-positive is never removed). Two invariants this upholds: (1) a negative can never
+positive is never removed). Three invariants this upholds: (1) a negative can never
 sever a real dependency — it prunes containment *seeding*, not import edges, so a
 kept plugin's hard-import under a negated branch still ships via `hardClosure`
 (fail-loud); (2) additivity survives — negatives are applied *after*
 `flattenManifest`, and a positive from anywhere in the `extends` union shields its
-id, so union-of-compositions stays a pure union. Unknown bases pass inertly, as
-before.
+id, so union-of-compositions stays a pure union; (3) **root names nothing** — a
+positive `**` seeds every id but adds none to `named`. If it named everything, no
+negative could ever trim (every id would be protected) and `composition-closure`
+would reject `**` + `!x.**` as a dead negative. Root means "everything is in", not
+"everything is explicitly demanded". Consequences under `**`, all correct: no node
+classifies `entry`, every bundled node is `required`, `available` is empty, and any
+`selectedContributors` entry is redundant. Unknown bases pass inertly, as before.
 
 ## Resolution (`resolveComposition`)
 

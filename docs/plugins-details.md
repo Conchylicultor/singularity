@@ -14749,6 +14749,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `plugin-meta/barrel-import.setPreBarrelImportGuard`
               - `plugin-meta/closure.classifyEdges`
               - `plugin-meta/closure.disabledClosure`
+              - `plugin-meta/composition.assertCompositionName`
+              - `plugin-meta/composition.CompositionManifestItem`
+              - `plugin-meta/composition.compositionsConfig`
               - `plugin-meta/facets.DocFact`
               - `plugin-meta/facets.Facet`
               - `plugin-meta/facets.getFacet`
@@ -14787,8 +14790,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `ReorderableSlotEntry`
               - `WatchedSlotHit`
             - Exports (values):
-              - `assertCompositionName`
-              - `assertServableCompositionNamespace`
               - `assertSlotsDeclared`
               - `barrelStubsPath`
               - `buildBarrelFreeTree`
@@ -14802,7 +14803,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `collectEntriesWithDeps`
               - `collectFieldEagerBarrels`
               - `collectTokenGroupVars`
-              - `COMPOSITION_NAME_RE`
               - `computeDisabledIds`
               - `computeEagerTier`
               - `customUtilitiesManifestPath`
@@ -14837,7 +14837,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `postWebManifests`
               - `preBarrelManifests`
               - `propagateConfigToUser`
+              - `readCompositionManifestsFromDisk`
               - `readEffectiveConfigFromDisk`
+              - `readGitLayerConfig`
               - `regenerateManifestCodegen`
               - `regenerateRegistryCodegen`
               - `renderBarrelStubs`
@@ -14853,7 +14855,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `renderReorderableSlotsManifest`
               - `renderTokenGroupVarsManifest`
               - `reorderableSlotsManifestPath`
-              - `RESERVED_COMPOSITION_NAMESPACES`
               - `resolveImportSpecifier`
               - `resolveOriginAnnotations`
               - `resolveOriginDefaults`
@@ -19105,10 +19106,18 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `CompositionData`
           - `CompositionManifestItem`
         - Exports (values):
+          - `activatedCompositionIds`
+          - `assertCompositionId`
+          - `assertCompositionName`
+          - `assertServableCompositionNamespace`
+          - `COMPOSITION_NAME_RE`
           - `compositionDataSchema`
           - `compositionsConfig`
           - `getCompositionData`
+          - `isServableCompositionId`
+          - `MAIN_COMPOSITION_ID`
           - `manifestItemToManifest`
+          - `RESERVED_COMPOSITION_NAMESPACES`
       - Cross-plugin:
         - Imported by:
           - `apps/deploy/composition`
@@ -19124,6 +19133,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/studio/explorer/membership`
           - `apps/studio/graph`
           - `build/serve-composition`
+          - `framework/tooling/codegen`
           - `plugin-meta/plugin-view/dependencies`
           - `plugin-meta/plugin-view/inclusion`
     - **`contributions-table`** — Registry for the Studio Contributions aggregated-table surface: FacetTable + RowClick slots and factories.

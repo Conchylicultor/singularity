@@ -9,7 +9,10 @@ import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
 import { confirmDialog } from "@plugins/primitives/plugins/imperative-dialog/plugins/confirm/web";
 import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
 import { showToast } from "@plugins/shell/plugins/toast/web";
-import type { CompositionManifestItem } from "@plugins/plugin-meta/plugins/composition/core";
+import {
+  isServableCompositionId,
+  type CompositionManifestItem,
+} from "@plugins/plugin-meta/plugins/composition/core";
 import { useServeComposition } from "../internal/use-serve-composition";
 import type { ServeStatus } from "../internal/use-serve-status";
 import { resetCompositionData } from "../../shared/endpoints";
@@ -43,10 +46,14 @@ export function ServeTargetPanel({
   // its own toasts (success + failure) so `onError` suppresses the global one.
   const reset = useEndpointMutation(resetCompositionData, {
     onError: (err) =>
-      showToast({ description: `Reset failed: ${err.message}`, variant: "error" }),
+      showToast({
+        description: `Reset failed: ${err.message}`,
+        variant: "error",
+      }),
   });
 
-  const live = status.kind === "ready" && status.live.served ? status.live : null;
+  const live =
+    status.kind === "ready" && status.live.served ? status.live : null;
   const host = `${item.id}.localhost:9000`;
   // Where the refusal SENTENCE goes is a host question (see below), but whether
   // the control can work is not: off main, `serve` writes an intent this backend
@@ -55,7 +62,15 @@ export function ServeTargetPanel({
   // "upcoming step rendered inert" rule applied to a chip — and it is what kept
   // this toggle pressable while the list row's own shortcut was already
   // disabled, so two surfaces disagreed about the same fact.
-  const canServe = status.kind !== "ready" || status.canServe;
+  //
+  // `servable` is the second, permanent reason the control cannot work, and it
+  // is about the COMPOSITION rather than the backend: compose-serve may never
+  // provision main's namespace, because that namespace is where the main
+  // checkout's own `./singularity build` deploys. No backend, on any day, can
+  // act on this toggle for main — so it is inert everywhere, and its sentence
+  // is the one printed first.
+  const servable = isServableCompositionId(item.id);
+  const canServe = servable && (status.kind !== "ready" || status.canServe);
 
   return (
     <Stack gap="sm">
@@ -64,11 +79,13 @@ export function ServeTargetPanel({
           active={item.autoBuild}
           disabled={!canServe}
           title={
-            !canServe
-              ? "Serve builds run on the main instance only — open singularity.localhost:9000."
-              : item.autoBuild
-                ? "Auto-served — click to stop building & serving"
-                : `Click to build & serve this composition at http://${host}`
+            !servable
+              ? "The main app is built by ./singularity build — it is not compose-served."
+              : !canServe
+                ? "Serve builds run on the main instance only — open singularity.localhost:9000."
+                : item.autoBuild
+                  ? "Auto-served — click to stop building & serving"
+                  : `Click to build & serve this composition at http://${host}`
           }
           onClick={() => (item.autoBuild ? stop(item.id) : serve(item.id))}
         >
@@ -92,47 +109,63 @@ export function ServeTargetPanel({
             <Badge variant="muted">
               built <RelativeTime date={new Date(live.builtAt)} />
             </Badge>
-            <Button
-              variant="destructive"
-              aspect="text"
-              loading={reset.isPending}
-              title={`Wipe ${host}'s database and config back to first-launch (main is untouched)`}
-              onClick={() => {
-                // Fire-and-forget: confirmDialog owns the dialog lifetime and the
-                // keep-open-on-failure retry. `loading={reset.isPending}` reflects
-                // the actual reset instead of the dialog's open lifetime.
-                void confirmDialog({
-                  title: `Reset ${host} to first-launch?`,
-                  description: (
-                    <>
-                      This wipes this composition&apos;s database and config so you
-                      see exactly what a new user gets. The main app&apos;s data
-                      (the <code>singularity</code> database and its config) is not
-                      touched.
-                    </>
-                  ),
-                  confirmLabel: "Reset to first-launch",
-                  onConfirm: async () => {
-                    await reset.mutateAsync({ body: { id: item.id } });
-                    showToast({
-                      description: `Reset ${host} to first-launch.`,
-                      variant: "success",
-                    });
-                  },
-                });
-              }}
-            >
-              Reset
-            </Button>
+            {/* No Reset for a non-servable namespace. `resetCompositionData`
+                refuses it at its first guard (assertServableCompositionNamespace),
+                so the button could only ever produce an error toast — offering it
+                is worse than not offering it. */}
+            {servable && (
+              <Button
+                variant="destructive"
+                aspect="text"
+                loading={reset.isPending}
+                title={`Wipe ${host}'s database and config back to first-launch (main is untouched)`}
+                onClick={() => {
+                  // Fire-and-forget: confirmDialog owns the dialog lifetime and the
+                  // keep-open-on-failure retry. `loading={reset.isPending}` reflects
+                  // the actual reset instead of the dialog's open lifetime.
+                  void confirmDialog({
+                    title: `Reset ${host} to first-launch?`,
+                    description: (
+                      <>
+                        This wipes this composition&apos;s database and config
+                        so you see exactly what a new user gets. The main
+                        app&apos;s data (the <code>singularity</code> database
+                        and its config) is not touched.
+                      </>
+                    ),
+                    confirmLabel: "Reset to first-launch",
+                    onConfirm: async () => {
+                      await reset.mutateAsync({ body: { id: item.id } });
+                      showToast({
+                        description: `Reset ${host} to first-launch.`,
+                        variant: "success",
+                      });
+                    },
+                  });
+                }}
+              >
+                Reset
+              </Button>
+            )}
           </>
         )}
       </Stack>
       <ServeStatusNote item={item} status={status} />
       <Text as="p" variant="caption" tone="muted">
-        When on, every main build composes this composition into its own frontend
-        dist and empty database and serves it live at {host}. The stage reads
-        main’s config, so toggling from a non-main worktree has no effect until it
-        lands on main.
+        {servable ? (
+          <>
+            When on, every main build composes this composition into its own
+            frontend dist and empty database and serves it live at {host}. The
+            stage reads main’s config, so toggling from a non-main worktree has
+            no effect until it lands on main.
+          </>
+        ) : (
+          <>
+            This is the app this repo builds. It is deployed by{" "}
+            <code>./singularity build</code> into its own namespace, so there is
+            nothing here to switch on — the serve stage never composes it.
+          </>
+        )}
       </Text>
     </Stack>
   );

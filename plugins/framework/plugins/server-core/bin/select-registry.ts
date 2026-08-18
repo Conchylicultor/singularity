@@ -33,7 +33,8 @@ export function selectRegistry(
     // mismatch means a broken spawn env, not a missing registry — fail loudly
     // rather than silently booting the full registry under a bogus identity.
     // KEEP IN SYNC with the canonical TS copy, COMPOSITION_NAME_RE in
-    // codegen/core/plugin-registry-gen.ts — boot cannot import codegen.
+    // plugin-meta/composition/core/namespace.ts — boot cannot import config_v2,
+    // which that module's barrel pulls in.
     if (!/^[a-z0-9][a-z0-9-]{0,62}$/.test(name)) {
       throw new Error(
         `Invalid SINGULARITY_WORKTREE "${name}" — cannot select a plugin registry.`,

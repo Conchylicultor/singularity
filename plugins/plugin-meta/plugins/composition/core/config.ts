@@ -4,6 +4,7 @@ import { textField } from "@plugins/fields/plugins/text/plugins/config/core";
 import { enumField } from "@plugins/fields/plugins/enum/plugins/config/core";
 import { stringListField } from "@plugins/fields/plugins/string-list/plugins/config/core";
 import { boolField } from "@plugins/fields/plugins/bool/plugins/config/core";
+import { MAIN_COMPOSITION_ID } from "./namespace";
 
 // The composition manifest registry — plain editable data in config_v2 (no
 // codegen, no barrels). Each item is a `CompositionManifest`
@@ -61,6 +62,45 @@ export const compositionsConfig = defineConfig({
         autoBuild: boolField({ label: "Auto build & serve", default: false }),
       },
       default: [
+        // ── The main app ────────────────────────────────────────────────────────
+        // The app this repo builds is an ORDINARY entry in this registry, not a
+        // special case the closure engine has to know about. Every rule that holds
+        // for a composition now holds for main too, with no "except for main"
+        // clause — and `plugins-registry-in-sync` proves it mechanically: this
+        // composition's resolved closure must render the committed
+        // `<dir>.generated.ts` registries byte-for-byte.
+        //
+        // `entryPoints: ["**"]` is the ROOT pattern — "every plugin". It seeds
+        // every node and NAMES none, which is the load-bearing half: `named` is the
+        // protected set the negative pass refuses to trim, so a future
+        // `"!apps.sonata.**"` beside the `**` can still remove a branch. (If root
+        // named everything, every negative would be a self-cancelling no-op and
+        // `composition-closure` would reject it as contradictory.) That is exactly
+        // the spelling Phase 7 needs to replace the `singularity.disabled`
+        // package.json flags with composition negatives.
+        //
+        // `extends: []` is deliberate, NOT `["served-baseline"]`. `**` already
+        // covers everything served-baseline forces in, and extending it would push
+        // served-baseline's bases into `named` — permanently shielding them from
+        // any future negative, for no gain.
+        //
+        // Main is not compose-servable: `singularity` is a reserved namespace that
+        // belongs to the main checkout's own `./singularity build`, and
+        // `activatedCompositionIds` filters on servability, so `autoBuild` on THIS
+        // row is inert by construction — a stored `true` from any config layer has
+        // no path to compose-serve at all. `composition-closure` still pins it to
+        // `false` here so the seed says what is true.
+        {
+          id: MAIN_COMPOSITION_ID,
+          name: MAIN_COMPOSITION_ID,
+          category: "app" as const,
+          entryPoints: ["**"],
+          selectedContributors: [] as string[],
+          extends: [] as string[],
+          excludes: [] as string[],
+          autoBuild: false,
+        },
+
         // ── Profiles: the agent-manager worked example (full vs. lean) ──────────
         // Full = lean + the self-improvement PACK (first-class `extends`, replacing
         // the formerly-inlined ids). full \ lean is still exactly the pack's set —
@@ -70,10 +110,7 @@ export const compositionsConfig = defineConfig({
           name: "agent-manager",
           category: "profile",
           entryPoints: ["apps.agent-manager.**"],
-          selectedContributors: [
-            "tasks.attempt-view",
-            "ui.theme-toggle",
-          ],
+          selectedContributors: ["tasks.attempt-view", "ui.theme-toggle"],
           extends: ["self-improvement", "served-baseline"],
           excludes: [] as string[],
           autoBuild: false,
@@ -83,10 +120,7 @@ export const compositionsConfig = defineConfig({
           name: "agent-manager-lean",
           category: "profile",
           entryPoints: ["apps.agent-manager.**"],
-          selectedContributors: [
-            "tasks.attempt-view",
-            "ui.theme-toggle",
-          ],
+          selectedContributors: ["tasks.attempt-view", "ui.theme-toggle"],
           extends: ["served-baseline"],
           excludes: [] as string[],
           autoBuild: false,
@@ -159,10 +193,7 @@ export const compositionsConfig = defineConfig({
           id: "website",
           name: "website",
           category: "app" as const,
-          entryPoints: [
-            "apps.website.**",
-            "!apps.website.demos.editor-toy.**",
-          ],
+          entryPoints: ["apps.website.**", "!apps.website.demos.editor-toy.**"],
           selectedContributors: ["apps.sonata.audio.piano"],
           extends: ["served-baseline"],
           excludes: ["agent-runtime", "auth"],

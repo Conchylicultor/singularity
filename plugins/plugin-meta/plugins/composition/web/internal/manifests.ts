@@ -3,6 +3,8 @@ import { useConfig, useSetConfig } from "@plugins/config_v2/web";
 import type { CompositionManifest } from "@plugins/plugin-meta/plugins/closure/core";
 import {
   compositionsConfig,
+  isServableCompositionId,
+  MAIN_COMPOSITION_ID,
   type CompositionManifestItem,
 } from "@plugins/plugin-meta/plugins/composition/core";
 
@@ -49,15 +51,41 @@ export interface ManifestActions {
    * Returns the upserted item's `id` — `editingId` when replacing, the freshly
    * minted one when appending. The Studio list pane's "New" creates the row and
    * then navigates to `comp/:id`, so it needs the id the append just minted.
+   *
+   * Editing the MAIN composition's entry points is legitimate and stays
+   * allowed — that entry is what "main is a composition" means, and narrowing
+   * it is a real thing an author may want to try. The feedback loop for it is
+   * the `plugins-registry-in-sync` check, which proves main's closure renders
+   * the committed registries byte-for-byte and names the ids an edit dropped:
+   * a narrowing edit fails the next build loudly, which is the point. Refusing
+   * the edit here would only keep the experiment away from the one thing that
+   * can judge it.
    */
   save(draft: CompositionManifest, editingId?: string): string;
-  /** Remove the item with the given `id`. */
+  /**
+   * Remove the item with the given `id`.
+   *
+   * **Throws for {@link MAIN_COMPOSITION_ID}.** Deleting main's row from the
+   * user config layer takes the repo's own app out of the registry, and
+   * `composition-closure` fails when the manifest does not carry exactly one
+   * main entry — so the write leaves a repo that no longer checks, with no
+   * runtime path back to the committed default. The affordance is removed from
+   * main's row rather than left to fail, so this throw is the loud boundary
+   * beneath that, not the user-facing refusal: a silent no-op would leave a
+   * Delete button that looks like it worked and did nothing.
+   */
   remove(id: string): void;
   /**
    * Flip the `autoBuild` (auto build & serve) flag on the item with the given
    * `id`, preserving every other field. `autoBuild` is engine-opaque config
    * metadata (dropped by `manifestItemToManifest`), so this is a config-only
    * write — the CLI compose-serve stage reads it from MAIN's resolved config.
+   *
+   * **Throws for an id compose-serve may never provision a namespace for.**
+   * Main's namespace belongs to the main checkout's own build, so the flag
+   * means nothing there — `activatedCompositionIds` drops main whatever value
+   * is stored. Same shape as `remove`: the surfaces render the toggle inert,
+   * and this is the loud boundary under them.
    */
   setAutoBuild(id: string, on: boolean): void;
 }
@@ -110,6 +138,15 @@ export function useManifestActions(): ManifestActions {
 
   const remove = useCallback(
     (id: string) => {
+      // Keyed on main's id, not on servability: the reason this one row cannot
+      // go is "the repo's own app must stay in the registry", which is a fact
+      // about main specifically.
+      if (id === MAIN_COMPOSITION_ID) {
+        throw new Error(
+          `Cannot delete the "${MAIN_COMPOSITION_ID}" composition — it is the app this repo builds, ` +
+            `and the manifest must carry exactly one such entry.`,
+        );
+      }
       setConfig(
         "manifests",
         items.filter((item) => item.id !== id),
@@ -120,6 +157,15 @@ export function useManifestActions(): ManifestActions {
 
   const setAutoBuild = useCallback(
     (id: string, on: boolean) => {
+      // Keyed on servability, not on main's id: the reason the flag is
+      // meaningless is "compose-serve will never provision this namespace",
+      // which is exactly what this predicate answers — and it is the same
+      // predicate the inert toggles and `activatedCompositionIds` read.
+      if (!isServableCompositionId(id)) {
+        throw new Error(
+          `Cannot set autoBuild on "${id}" — it is not compose-served, so the flag has no effect.`,
+        );
+      }
       setConfig(
         "manifests",
         items.map((item) =>

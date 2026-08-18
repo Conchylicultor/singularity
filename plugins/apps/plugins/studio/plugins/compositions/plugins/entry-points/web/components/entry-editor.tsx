@@ -1,10 +1,16 @@
 import { useState } from "react";
 import { MdAdd, MdClose } from "react-icons/md";
-import { Button, ControlSizeProvider } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import {
+  Button,
+  ControlSizeProvider,
+} from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Cluster } from "@plugins/primitives/plugins/css/plugins/cluster/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
-import { SectionLabel, Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import {
+  SectionLabel,
+  Text,
+} from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { InlinePopover } from "@plugins/primitives/plugins/popover/web";
@@ -24,6 +30,10 @@ import type { PluginId } from "@plugins/framework/plugins/plugin-id/core";
 // deferred increment; this keeps the current chips honest.)
 function shortName(pattern: EntryPattern): string {
   const p = parseEntryPattern(pattern);
+  // The root `**` has no base to shorten — it means every plugin, so it is its own
+  // label. The add control below only ever authors bare ids, so `**` reaches this
+  // chip from a hand-written manifest, never from the picker.
+  if (p.kind === "root") return `${p.negate ? "!" : ""}**`;
   const s = String(p.base);
   const dot = s.lastIndexOf(".");
   const leaf = dot === -1 ? s : s.slice(dot + 1);
@@ -47,7 +57,9 @@ export function EntryEditor({
   const current = new Set<EntryPattern>(draft.entryPoints);
 
   function remove(pattern: EntryPattern): void {
-    updateActiveDraft({ entryPoints: draft.entryPoints.filter((x) => x !== pattern) });
+    updateActiveDraft({
+      entryPoints: draft.entryPoints.filter((x) => x !== pattern),
+    });
   }
   function add(id: PluginId): void {
     if (current.has(id)) return;
@@ -58,7 +70,9 @@ export function EntryEditor({
 
   const q = query.trim().toLowerCase();
   const candidates = allIds
-    .filter((id) => !current.has(id) && (!q || String(id).toLowerCase().includes(q)))
+    .filter(
+      (id) => !current.has(id) && (!q || String(id).toLowerCase().includes(q)),
+    )
     .slice(0, 50);
 
   return (

@@ -1,6 +1,11 @@
 import type { PluginId } from "@plugins/framework/plugins/plugin-id/core";
 import { resolveComposition, expandEntrySeeds } from "./resolve-composition";
-import type { CompositionManifest, EdgeGraph, InclusionPath, InclusionStep } from "./types";
+import type {
+  CompositionManifest,
+  EdgeGraph,
+  InclusionPath,
+  InclusionStep,
+} from "./types";
 
 /**
  * Explain why `target` is in the composition's bundle: the shortest chain of edges
@@ -27,6 +32,9 @@ export function explainInclusion(
   // The entry frontier is the expanded seeds (entries ∪ their subtrees): a
   // no-runtime umbrella entry has no hard imports of its own, so the hard chain to
   // `target` actually originates at a runtime-bearing sub-plugin of the entry.
+  // This reads `.seeds`, never `.named`, so the root `**` pattern needs no special
+  // case: every node is a seed, and the answer to "why is this bundled?" is
+  // correctly "it is its own entry" — a zero-step path.
   const { seeds: entrySet } = expandEntrySeeds(manifest.entryPoints, graph);
   // Contributor origins = the explicitly selected contributors that are bundled.
   const activeSet = new Set<PluginId>();
@@ -54,9 +62,19 @@ export function explainInclusion(
       return { target, state, origin: seed, originKind: "entry", steps };
     }
     // Active contributor seed: prepend its soft edge to a bundled owned slot.
-    const owner = (graph.softForward.get(seed) ?? []).find((b) => comp.bundle.has(b));
-    const softStep: InclusionStep[] = owner ? [{ from: seed, to: owner, kind: "soft" }] : [];
-    return { target, state, origin: seed, originKind: "contributor", steps: [...softStep, ...steps] };
+    const owner = (graph.softForward.get(seed) ?? []).find((b) =>
+      comp.bundle.has(b),
+    );
+    const softStep: InclusionStep[] = owner
+      ? [{ from: seed, to: owner, kind: "soft" }]
+      : [];
+    return {
+      target,
+      state,
+      origin: seed,
+      originKind: "contributor",
+      steps: [...softStep, ...steps],
+    };
   };
 
   // First pass: prefer an entry-origin path. Collect contributor seeds for fallback.

@@ -36,6 +36,9 @@
     - `plugin-meta/barrel-import.setPreBarrelImportGuard`
     - `plugin-meta/closure.classifyEdges`
     - `plugin-meta/closure.disabledClosure`
+    - `plugin-meta/composition.assertCompositionName`
+    - `plugin-meta/composition.CompositionManifestItem`
+    - `plugin-meta/composition.compositionsConfig`
     - `plugin-meta/facets.DocFact`
     - `plugin-meta/facets.Facet`
     - `plugin-meta/facets.getFacet`
@@ -74,8 +77,6 @@
     - `ReorderableSlotEntry`
     - `WatchedSlotHit`
   - Exports (values):
-    - `assertCompositionName`
-    - `assertServableCompositionNamespace`
     - `assertSlotsDeclared`
     - `barrelStubsPath`
     - `buildBarrelFreeTree`
@@ -89,7 +90,6 @@
     - `collectEntriesWithDeps`
     - `collectFieldEagerBarrels`
     - `collectTokenGroupVars`
-    - `COMPOSITION_NAME_RE`
     - `computeDisabledIds`
     - `computeEagerTier`
     - `customUtilitiesManifestPath`
@@ -124,7 +124,9 @@
     - `postWebManifests`
     - `preBarrelManifests`
     - `propagateConfigToUser`
+    - `readCompositionManifestsFromDisk`
     - `readEffectiveConfigFromDisk`
+    - `readGitLayerConfig`
     - `regenerateManifestCodegen`
     - `regenerateRegistryCodegen`
     - `renderBarrelStubs`
@@ -140,7 +142,6 @@
     - `renderReorderableSlotsManifest`
     - `renderTokenGroupVarsManifest`
     - `reorderableSlotsManifestPath`
-    - `RESERVED_COMPOSITION_NAMESPACES`
     - `resolveImportSpecifier`
     - `resolveOriginAnnotations`
     - `resolveOriginDefaults`

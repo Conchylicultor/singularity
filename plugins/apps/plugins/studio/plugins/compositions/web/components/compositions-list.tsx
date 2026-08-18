@@ -1,10 +1,16 @@
 import { useMemo, type ReactElement } from "react";
 import { MdAdd, MdCompare } from "react-icons/md";
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { Stack, Inset } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import {
+  Stack,
+  Inset,
+} from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
-import { DataView, defineDataView } from "@plugins/primitives/plugins/data-view/web";
+import {
+  DataView,
+  defineDataView,
+} from "@plugins/primitives/plugins/data-view/web";
 import type { FieldDef } from "@plugins/primitives/plugins/data-view/web";
 import { LinkChip } from "@plugins/primitives/plugins/css/plugins/link-chip/web";
 import { ToggleChip } from "@plugins/primitives/plugins/css/plugins/toggle-chip/web";
@@ -13,7 +19,11 @@ import {
   useManifestItems,
   useManifestActions,
 } from "@plugins/plugin-meta/plugins/composition/web";
-import type { CompositionManifestItem } from "@plugins/plugin-meta/plugins/composition/core";
+import {
+  isServableCompositionId,
+  MAIN_COMPOSITION_ID,
+  type CompositionManifestItem,
+} from "@plugins/plugin-meta/plugins/composition/core";
 import { useServeComposition } from "@plugins/build/plugins/serve-composition/web";
 import { compositionDetailPane, comparePane } from "../panes";
 import { CompositionItemActions } from "./composition-item-actions";
@@ -45,7 +55,11 @@ export function CompositionsList(): ReactElement {
       entryPoints: [],
       selectedContributors: [],
     });
-    openPane(compositionDetailPane, { id: newId }, { mode: "push", side: "right" });
+    openPane(
+      compositionDetailPane,
+      { id: newId },
+      { mode: "push", side: "right" },
+    );
   }
 
   return (
@@ -58,7 +72,9 @@ export function CompositionsList(): ReactElement {
           </Button>
           <Button
             variant="ghost"
-            onClick={() => openPane(comparePane, {}, { mode: "push", side: "right" })}
+            onClick={() =>
+              openPane(comparePane, {}, { mode: "push", side: "right" })
+            }
           >
             <MdCompare />
             Compare
@@ -189,46 +205,60 @@ function CompositionsDataView({
         type: "bool",
         value: (it) => it.autoBuild,
         align: "end",
-        cell: (it) => (
-          <ToggleChip
-            active={it.autoBuild}
-            title={
-              it.autoBuild
-                ? "Auto-served — click to stop building & serving"
-                : "Click to build & serve this composition at http://<id>.localhost:9000"
-            }
-            onClick={(e: { stopPropagation: () => void }) => {
-              e.stopPropagation();
-              if (it.autoBuild) onStop(it.id);
-              else onServe(it.id);
-            }}
-          >
-            {it.autoBuild ? "Serving" : "Serve"}
-          </ToggleChip>
-        ),
+        cell: (it) => {
+          // Main's row carries the flag like every other row and can never act
+          // on it: compose-serve may not provision main's namespace, so the
+          // toggle would write an intent nothing reads. Rendered inert rather
+          // than pressable — the same "a control that cannot succeed must not
+          // be pressable" rule the Serve panel applies to its `canServe`.
+          const servable = isServableCompositionId(it.id);
+          return (
+            <ToggleChip
+              active={it.autoBuild}
+              disabled={!servable}
+              title={
+                !servable
+                  ? "The main app is built by ./singularity build — it is not compose-served."
+                  : it.autoBuild
+                    ? "Auto-served — click to stop building & serving"
+                    : "Click to build & serve this composition at http://<id>.localhost:9000"
+              }
+              onClick={(e: { stopPropagation: () => void }) => {
+                e.stopPropagation();
+                if (it.autoBuild) onStop(it.id);
+                else onServe(it.id);
+              }}
+            >
+              {it.autoBuild ? "Serving" : "Serve"}
+            </ToggleChip>
+          );
+        },
         sortable: true,
         filterable: true,
       },
       {
-        // Live serve URL, shown only once a composition is activated. Namespace
-        // name == composition id, served by the gateway at <id>.localhost:9000.
+        // Live serve URL — see `serveHost` for why main's is not keyed on
+        // `autoBuild`. Namespace name == composition id, served by the gateway
+        // at <id>.localhost:9000.
         id: "serveUrl",
         label: "Serve URL",
         type: "text",
-        value: (it) => (it.autoBuild ? `${it.id}.localhost:9000` : ""),
-        cell: (it) =>
-          it.autoBuild ? (
+        value: (it) => serveHost(it) ?? "",
+        cell: (it) => {
+          const host = serveHost(it);
+          return host ? (
             <LinkChip
               mono
-              title={`Open http://${it.id}.localhost:9000`}
+              title={`Open http://${host}`}
               onClick={(e) => {
                 e.stopPropagation();
-                window.open(`http://${it.id}.localhost:9000`, "_blank", "noopener");
+                window.open(`http://${host}`, "_blank", "noopener");
               }}
             >
-              {it.id}.localhost:9000
+              {host}
             </LinkChip>
-          ) : null,
+          ) : null;
+        },
         align: "end",
       },
     ],
@@ -248,4 +278,25 @@ function CompositionsDataView({
       emptyState={<>No named compositions yet. Create one with New.</>}
     />
   );
+}
+
+/**
+ * The host a composition is reachable at, or `null` when nothing is served for
+ * it.
+ *
+ * Main is the one row deliberately NOT keyed on `autoBuild`. Its namespace is
+ * where `./singularity build` deploys the repo's own app, so the address is a
+ * standing fact of the setup rather than a consequence of a flag on this row —
+ * keying it on `autoBuild` would tie a URL that is already live to a toggle
+ * that can never move. Every other composition is only reachable once its
+ * serve intent is on.
+ *
+ * `autoBuild` remains intent rather than liveness here, exactly as before: the
+ * composition's own Serve panel reads the `composition.json` marker for the
+ * honest answer.
+ */
+function serveHost(it: CompositionManifestItem): string | null {
+  if (it.id === MAIN_COMPOSITION_ID)
+    return `${MAIN_COMPOSITION_ID}.localhost:9000`;
+  return it.autoBuild ? `${it.id}.localhost:9000` : null;
 }

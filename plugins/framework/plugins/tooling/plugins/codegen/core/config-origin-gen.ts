@@ -34,6 +34,10 @@ import {
   importBarrel,
 } from "@plugins/plugin-meta/plugins/barrel-import/core";
 import { asPath, asPluginId } from "@plugins/framework/plugins/plugin-id/core";
+import {
+  compositionsConfig,
+  type CompositionManifestItem,
+} from "@plugins/plugin-meta/plugins/composition/core";
 import { computeDisabledIds } from "./disabled-ids";
 import { writeGenerated } from "./write-generated";
 
@@ -556,6 +560,96 @@ export function readEffectiveConfigFromDisk<F extends FieldsRecord>(
     if (gitEff !== undefined) origin = readonlyProxy(gitEff);
   }
   return readTypedConfig(descriptor, origin, userOverwrites);
+}
+
+/**
+ * The same `// @hash`-header contract as {@link fileConfigProxy}, but STRICT: a
+ * file that exists without the header is a corrupt config, not an unhashed one,
+ * so reading it throws instead of quietly parsing the body with `hash: null`.
+ *
+ * The lenient proxy has to stay lenient — it is also the WRITE path, and it reads
+ * back files it may be about to create. A build-time *reader* has no such excuse:
+ * it is looking at a committed file that codegen wrote with a header, and a
+ * missing one means the file was hand-edited or truncated. Silently accepting it
+ * would let the reader compute a closure from half a config.
+ */
+function strictReadOnlyFileConfigProxy(filePath: string): ConfigProxy {
+  return {
+    read() {
+      if (!existsSync(filePath)) return null;
+      const raw = readFileSync(filePath, "utf-8");
+      const match = HASH_RE.exec(raw);
+      if (!match) {
+        throw new Error(
+          `Config file is missing its "// @hash" header: ${filePath}. ` +
+            `A hashless config file is corrupt — restore the header or delete the file.`,
+        );
+      }
+      return {
+        content: parseJsonc(raw.slice(match[0].length)) as JsonValue,
+        hash: match[1]!,
+      };
+    },
+    write() {
+      throw new Error(`readGitLayerConfig proxy is read-only: ${filePath}`);
+    },
+    exists() {
+      return existsSync(filePath);
+    },
+  };
+}
+
+/**
+ * The GIT-LAYER value of one config, read straight off disk with no server
+ * runtime — what the committed repo says, ignoring any per-worktree user edits.
+ *
+ * This is the read the build-time CHECKS need, and it is deliberately narrower
+ * than {@link readEffectiveConfigFromDisk}: a check adjudicates what is committed,
+ * so a runtime-only (user-layer) edit must not be able to turn a failing repo
+ * green — or a passing one red on one machine only.
+ *
+ * `readTypedConfig` returns `descriptor.defaults` when neither file exists, so a
+ * fresh checkout (before any `./singularity build` materializes the origin) still
+ * validates the SEEDED defaults. That is intentional — no existence guard.
+ *
+ * `hierarchyPath` is the config's owning-plugin path (`asPath(pluginId)`); the
+ * descriptor does not carry its plugin identity, so the caller supplies it.
+ */
+export function readGitLayerConfig<F extends FieldsRecord>(
+  descriptor: ConfigDescriptor<F>,
+  opts: { root: string; hierarchyPath: string },
+): ConfigValues<F> {
+  const gitDir = join(opts.root, "config", opts.hierarchyPath);
+  return readTypedConfig(
+    descriptor,
+    strictReadOnlyFileConfigProxy(
+      join(gitDir, `${descriptor.name}.origin.jsonc`),
+    ),
+    strictReadOnlyFileConfigProxy(join(gitDir, `${descriptor.name}.jsonc`)),
+  );
+}
+
+// The composition plugin's own id, from which its config directory is derived
+// (`config/<asPath(id)>/<name>.{origin.,}jsonc`) — the same relPath key
+// `renderConfigOriginContent` above emits. Derived through the canonical helpers
+// rather than hardcoding "plugin-meta/composition".
+const COMPOSITION_PLUGIN_ID = asPluginId("plugin-meta.composition");
+
+/**
+ * The committed composition manifests, off disk. Two build-time checks need this
+ * exact read — `composition-closure` (are the manifests valid?) and
+ * `plugins-registry-in-sync` (does main's closure render the committed
+ * registries?) — and a second hand-rolled copy of the path derivation plus the
+ * hash-header contract is precisely how the two would come to disagree about
+ * what the repo declares.
+ */
+export function readCompositionManifestsFromDisk(
+  root: string,
+): CompositionManifestItem[] {
+  return readGitLayerConfig(compositionsConfig, {
+    root,
+    hierarchyPath: asPath(COMPOSITION_PLUGIN_ID),
+  }).manifests;
 }
 
 export async function propagateConfigToUser(opts: {

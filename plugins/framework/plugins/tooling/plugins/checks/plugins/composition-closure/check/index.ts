@@ -1,7 +1,7 @@
-import { join } from "path";
-import { readFileSync, existsSync } from "node:fs";
-import { parse as parseJsonc } from "jsonc-parser";
-import { buildPluginTree } from "@plugins/plugin-meta/plugins/plugin-tree/core";
+import {
+  buildRegistryGenContext,
+  readCompositionManifestsFromDisk,
+} from "@plugins/framework/plugins/tooling/plugins/codegen/core";
 import {
   classifyEdges,
   expandEntrySeeds,
@@ -13,63 +13,21 @@ import {
 } from "@plugins/plugin-meta/plugins/closure/core";
 import type { CompositionManifest } from "@plugins/plugin-meta/plugins/closure/core";
 import {
-  compositionsConfig,
+  assertCompositionId,
   manifestItemToManifest,
+  MAIN_COMPOSITION_ID,
 } from "@plugins/plugin-meta/plugins/composition/core";
-import { readTypedConfig } from "@plugins/config_v2/core";
-import type { ConfigProxy, JsonValue } from "@plugins/config_v2/core";
-import { assertServableCompositionNamespace } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
-import { asPath, asPluginId } from "@plugins/framework/plugins/plugin-id/core";
 import type { PluginId } from "@plugins/framework/plugins/plugin-id/core";
 import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
 
 type CheckResult = { ok: true } | { ok: false; message: string; hint?: string };
 type Check = { id: string; description: string; run(): Promise<CheckResult> };
 
-const HASH_RE = /^\/\/ @hash ([a-f0-9]+)\n/;
-
-// Read-only fs-backed ConfigProxy for this build-time check. It runs in a Bun
-// process with NO server runtime, so the server's `jsoncConfigProxy` is
-// unavailable, and core can't host fs code (it is browser-bundled) — so we
-// mirror `jsoncConfigProxy.read()`'s `// @hash`-header contract inline.
-function fileConfigProxy(filePath: string): ConfigProxy {
-  return {
-    read() {
-      if (!existsSync(filePath)) return null;
-      const raw = readFileSync(filePath, "utf-8");
-      const match = HASH_RE.exec(raw);
-      if (!match) {
-        throw new Error(
-          `Config file is missing its "// @hash" header: ${filePath}. ` +
-            `A hashless config file is corrupt — restore the header or delete the file.`,
-        );
-      }
-      const body = raw.slice(match[0].length);
-      return { content: parseJsonc(body) as JsonValue, hash: match[1]! };
-    },
-    write() {
-      throw new Error("composition-closure fileConfigProxy is read-only");
-    },
-    exists() {
-      return existsSync(filePath);
-    },
-  };
-}
-
-// The composition manifest registry now lives in a config_v2 config rather than a
-// codegen barrel, so there is no `loadCompositions()` to call. This check runs in
-// a separate Bun process with NO server runtime (`getConfig` is unavailable), so
-// it reads the GIT-LAYER config straight off disk — the same off-server read path
-// `config-origins-in-sync` uses. The config files sit at
-// `config/<hierarchyPath>/<name>.{origin.,}jsonc`, where `hierarchyPath` is
-// `asPath(pluginId)` (dots→slashes) — exactly the relPath key codegen's
-// `renderConfigOriginContent` derives. The composition plugin's id is
-// `plugin-meta.composition` → `plugin-meta/composition`; the config name is
-// carried on the descriptor (`compositions`). We derive both via the canonical
-// helpers rather than hardcoding the path string.
-const COMPOSITION_PLUGIN_ID = asPluginId("plugin-meta.composition");
-
-const fail = (message: string, hint?: string): CheckResult => ({ ok: false, message, hint });
+const fail = (message: string, hint?: string): CheckResult => ({
+  ok: false,
+  message,
+  hint,
+});
 
 const check: Check = {
   id: "composition-closure",
@@ -77,39 +35,93 @@ const check: Check = {
     "Every declared composition is valid: unique name, all entry/contributor ids resolve, each selected contributor is a genuine load-bearing soft option (no redundant selections), and every `excludes` bundle stays disjoint from the composition's hard closure (self-containment guard).",
   async run() {
     const root = await getWorktreeRoot();
-    const tree = await buildPluginTree(join(root, "plugins"), { skipBarrelImport: true, facets: true });
+    // The barrel-free faceted tree, taken from the shared registry-gen context
+    // rather than built here. `buildRegistryGenContext` calls
+    // `buildBarrelFreeTree`, which memoizes exactly this
+    // `buildPluginTree(<root>/plugins, { skipBarrelImport: true, facets: true })`
+    // per root — the same node AND facet set this check needs for `classifyEdges`.
+    // Going through the memo means one 840-plugin faceted walk is shared with
+    // every other check in the run instead of a private duplicate.
+    const tree = (await buildRegistryGenContext(root)).tree;
     const graph = classifyEdges(tree);
     const allIds = new Set<PluginId>([...tree.byDir.values()].map((n) => n.id));
 
-    // Read the committed git-layer `compositions` config off disk. `readTypedConfig`
-    // returns `descriptor.defaults` when neither file exists, so a fresh checkout
-    // (before any `./singularity build` materializes the origin) still validates the
-    // SEEDED defaults — intentional, no existence guard. Runtime-only (user-layer)
-    // manifests are not closure-checked until promoted to the git layer.
-    const configDir = join(root, "config", asPath(COMPOSITION_PLUGIN_ID));
-    const originPath = join(configDir, `${compositionsConfig.name}.origin.jsonc`);
-    const overridePath = join(configDir, `${compositionsConfig.name}.jsonc`);
-    const values = readTypedConfig(
-      compositionsConfig,
-      fileConfigProxy(originPath),
-      fileConfigProxy(overridePath),
-    );
-    const manifests = values.manifests.map(manifestItemToManifest);
+    // The committed git-layer `compositions` config, off disk — this check runs in
+    // a separate Bun process with NO server runtime, so there is no `getConfig`.
+    // The path derivation and the `// @hash` contract live in codegen core, shared
+    // with `plugins-registry-in-sync`, so the two checks can never disagree about
+    // what the repo declares. Runtime-only (user-layer) manifests are not
+    // closure-checked until promoted to the git layer.
+    const items = readCompositionManifestsFromDisk(root);
+    const manifests = items.map(manifestItemToManifest);
 
     // 0. Every manifest id is a servable gateway namespace: the compose-serve
     //    stage uses the id verbatim as the subdomain / spec-dir / DB name, so
-    //    the gateway name rule (charset, ≤63 chars) and the reserved namespaces
-    //    (central / singularity / main) apply to every id — enforced via the
-    //    canonical helper, never a duplicated regex.
-    for (const item of values.manifests) {
+    //    the gateway name rule (charset, ≤63 chars) applies to every id, and the
+    //    reserved namespaces (central / main) apply to every id that could be
+    //    served — enforced via the canonical helper, never a duplicated regex.
+    //
+    //    `assertCompositionId`, not `assertServableCompositionNamespace`: main's
+    //    own composition is an ORDINARY manifest entry whose id is a reserved
+    //    namespace, because it is built by `./singularity build` into the main
+    //    checkout's namespace rather than provisioned by compose-serve. The two
+    //    questions — "may it be called this?" and "may a namespace be
+    //    provisioned for it?" — stopped being the same question here.
+    for (const item of items) {
       try {
-        assertServableCompositionNamespace(item.id);
+        assertCompositionId(item.id);
       } catch (err) {
         return fail(
-          `composition "${item.name}" has an unservable id "${item.id}": ${err instanceof Error ? err.message : String(err)}`,
+          `composition "${item.name}" has an unusable id "${item.id}": ${err instanceof Error ? err.message : String(err)}`,
           "Composition ids double as gateway namespaces (http://<id>.localhost:9000). Rename the composition.",
         );
       }
+    }
+
+    // 0b. Unique ids. Names have always been checked for uniqueness (rule 1), but
+    //     ids never were — they were a list-field identity nobody read. They are
+    //     now the load-bearing key: the id IS the gateway namespace, the
+    //     per-composition registry file segment, the spec dir and the DB name, and
+    //     the Studio detail route. Two rows sharing one id means two compositions
+    //     writing over each other's namespace, so this must be as hard a rule as
+    //     the name one.
+    const seenIds = new Set<string>();
+    for (const item of items) {
+      if (seenIds.has(item.id)) {
+        return fail(
+          `duplicate composition id "${item.id}"`,
+          "Composition ids are namespaces (http://<id>.localhost:9000), registry file segments and DB names — two rows cannot share one. Give the duplicate its own id.",
+        );
+      }
+      seenIds.add(item.id);
+    }
+
+    // 0c. The main app is present exactly once. `singularity` is an ordinary
+    //     manifest entry whose closure is every plugin, and
+    //     `plugins-registry-in-sync` proves that closure renders the committed
+    //     registries byte-for-byte. Delete the row (or duplicate it) and that
+    //     proof silently stops being about main — so the row's existence is
+    //     checked here rather than discovered as a confusing "no such
+    //     composition" failure in the other check.
+    const mainRows = items.filter((i) => i.id === MAIN_COMPOSITION_ID);
+    if (mainRows.length !== 1) {
+      return fail(
+        `expected exactly one composition with id "${MAIN_COMPOSITION_ID}", found ${mainRows.length}`,
+        `"${MAIN_COMPOSITION_ID}" is the main app's own composition — the one this repo builds. It must exist (entry points \`["**"]\`, meaning every plugin) so \`plugins-registry-in-sync\` can prove its closure renders the committed registries byte-for-byte. Restore it in plugins/plugin-meta/plugins/composition/core/config.ts.`,
+      );
+    }
+
+    // 0d. Main never opts into compose-serve. `activatedCompositionIds` already
+    //     makes a stored `true` INERT (it filters on servability, so main can
+    //     never reach the serve stage whatever the config layers say) — this rule
+    //     is about the committed seed telling the truth rather than about
+    //     preventing an effect. A seed reading `autoBuild: true` would describe a
+    //     serve that does not and cannot happen.
+    if (mainRows[0]!.autoBuild) {
+      return fail(
+        `composition "${MAIN_COMPOSITION_ID}" has \`autoBuild: true\``,
+        `The main app is built and served by \`./singularity build\` into the main checkout's own namespace — it is never compose-served, so \`autoBuild\` on this row would describe something that cannot happen. Set it back to \`false\`.`,
+      );
     }
 
     // 1. Unique names across all compositions (the config list does not de-dupe).
@@ -132,11 +144,14 @@ const check: Check = {
       //    patterns (a `!X` typo is as wrong as an `X` typo). Contributors carry
       //    no grammar and stay exact-id checks.
       for (const entry of m.entryPoints) {
-        const base = parseEntryPattern(entry).base;
-        if (!allIds.has(base)) {
+        const parsed = parseEntryPattern(entry);
+        // The root `**` form names no base — it means "every plugin", so there is
+        // nothing to resolve. (Its own validity is checked in 3c below.)
+        if (parsed.kind === "root") continue;
+        if (!allIds.has(parsed.base)) {
           return fail(
-            `composition "${m.name}" references unknown plugin id "${base}" in entry pattern "${entry}"`,
-            "Entry points are patterns: a dot-encoded PluginId with an optional leading `!` (trim) and trailing `.**` (subtree), e.g. `apps.website.**` or `!apps.website.demos.**`. The base id must resolve to a real plugin.",
+            `composition "${m.name}" references unknown plugin id "${parsed.base}" in entry pattern "${entry}"`,
+            "Entry points are patterns: a dot-encoded PluginId with an optional leading `!` (trim) and trailing `.**` (subtree), e.g. `apps.website.**` or `!apps.website.demos.**`; or a bare `**` meaning every plugin. The base id must resolve to a real plugin.",
           );
         }
       }
@@ -180,11 +195,25 @@ const check: Check = {
       const namedBases = new Set<PluginId>();
       for (const p of parsedEntries) {
         if (p.negate) continue;
-        namedBases.add(p.base);
+        // A root `**` seeds every id and NAMES none — same rule the engine's
+        // `expandEntrySeeds` follows, and it has to be the same here or this check
+        // would judge negatives against a seed set the engine never produces.
+        // Naming everything would make every negative "contradictory" below.
+        if (p.kind === "id") namedBases.add(p.base);
         for (const id of matchEntryPattern(p, graph)) positiveSeeds.add(id);
       }
       for (const p of parsedEntries) {
         if (!p.negate) continue;
+        // (c) Negated root: `!**` matches every plugin, so it deletes the entire
+        //     seed set and leaves an empty bundle. Nothing legitimate is spelled
+        //     that way — refuse it here rather than shipping a composition that
+        //     builds to nothing.
+        if (p.kind === "root") {
+          return fail(
+            `composition "${m.name}" has a negated root entry "${p.raw}", which would empty the bundle`,
+            "`**` means every plugin, so `!**` trims every seed and leaves nothing to build. Remove it — to build a subset, write the positives you want (optionally `**` plus `!<branch>.**` negatives).",
+          );
+        }
         // (b) Contradictory negative: its base is also an explicit positive entry.
         //     A negative can never cancel a named positive (positives are protected),
         //     so `!X` alongside `X` is a self-cancelling no-op — reject it loudly
@@ -227,7 +256,9 @@ const check: Check = {
       for (const id of flat.selectedContributors) {
         const without = resolveComposition(graph, {
           ...flat,
-          selectedContributors: flat.selectedContributors.filter((x) => x !== id),
+          selectedContributors: flat.selectedContributors.filter(
+            (x) => x !== id,
+          ),
         });
         if (!without.available.includes(id)) {
           return fail(
@@ -259,15 +290,18 @@ const check: Check = {
     // the `excludes` disjointness gate and the autoBuild warning below.
     const containmentOf = (target: CompositionManifest): Set<PluginId> => {
       const targetFlat = flattenManifest(target, manifests);
-      const containment = new Set<PluginId>(expandEntrySeeds(targetFlat.entryPoints, graph).seeds);
+      const containment = new Set<PluginId>(
+        expandEntrySeeds(targetFlat.entryPoints, graph).seeds,
+      );
       for (const id of targetFlat.selectedContributors) {
         containment.add(id);
-        for (const descendant of graph.subtree.get(id) ?? []) containment.add(descendant);
+        for (const descendant of graph.subtree.get(id) ?? [])
+          containment.add(descendant);
       }
       return containment;
     };
 
-    for (const item of values.manifests) {
+    for (const item of items) {
       const excludes = item.excludes ?? [];
       if (excludes.length === 0) continue;
 
@@ -285,12 +319,16 @@ const check: Check = {
         }
 
         const containment = containmentOf(target);
-        const offenders = [...appBundle].filter((p) => containment.has(p)).sort();
+        const offenders = [...appBundle]
+          .filter((p) => containment.has(p))
+          .sort();
         if (offenders.length > 0) {
           const offender = offenders[0]!;
           const path = explainInclusion(graph, appFlat, offender);
           const trail = path
-            ? path.steps.map((s) => `${s.from} →(${s.kind}) ${s.to}`).join("\n    ")
+            ? path.steps
+                .map((s) => `${s.from} →(${s.kind}) ${s.to}`)
+                .join("\n    ")
             : "(no path found)";
           return fail(
             `composition "${item.name}" excludes bundle "${ref}" but its closure includes ${offenders.length} plugin(s) from it: ${offenders.join(", ")}`,
@@ -308,12 +346,14 @@ const check: Check = {
     const agentRuntime = byName.get("agent-runtime");
     if (agentRuntime) {
       const agentRuntimeContainment = containmentOf(agentRuntime);
-      for (const item of values.manifests) {
+      for (const item of items) {
         if (!item.autoBuild) continue;
         if (item.excludes.includes("agent-runtime")) continue;
         const flat = flattenManifest(manifestItemToManifest(item), manifests);
         const bundle = resolveComposition(graph, flat).bundle;
-        const offenders = [...bundle].filter((p) => agentRuntimeContainment.has(p)).sort();
+        const offenders = [...bundle]
+          .filter((p) => agentRuntimeContainment.has(p))
+          .sort();
         console.warn(
           `[composition-closure] WARNING: auto-served composition "${item.name}" does not exclude "agent-runtime"` +
             (offenders.length > 0

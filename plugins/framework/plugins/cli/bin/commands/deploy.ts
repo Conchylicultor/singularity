@@ -75,8 +75,16 @@ import {
   type InstallLayout,
 } from "@plugins/apps/plugins/deploy/plugins/deployments/core";
 import { convergeScript, sq } from "./internal/converge-script";
-import { sshRun, sshUpload, type SshTarget } from "@plugins/infra/plugins/ssh/server";
-import { isLinuxTag, isPlatformTag, type PlatformTag } from "@plugins/release/core";
+import {
+  sshRun,
+  sshUpload,
+  type SshTarget,
+} from "@plugins/infra/plugins/ssh/server";
+import {
+  isLinuxTag,
+  isPlatformTag,
+  type PlatformTag,
+} from "@plugins/release/core";
 import { bundleRefusalMessage } from "@plugins/release/plugins/bundles/core";
 import { resolveBundle } from "@plugins/release/plugins/bundles/server";
 import {
@@ -85,20 +93,24 @@ import {
   flattenManifest,
   resolveComposition,
 } from "@plugins/plugin-meta/plugins/closure/core";
-import type { CompositionManifest, EdgeGraph } from "@plugins/plugin-meta/plugins/closure/core";
+import type {
+  CompositionManifest,
+  EdgeGraph,
+} from "@plugins/plugin-meta/plugins/closure/core";
 import { buildPluginTree } from "@plugins/plugin-meta/plugins/plugin-tree/core";
 import {
+  assertCompositionName,
   compositionsConfig,
   manifestItemToManifest,
   type CompositionManifestItem,
 } from "@plugins/plugin-meta/plugins/composition/core";
-import {
-  assertCompositionName,
-  readEffectiveConfigFromDisk,
-} from "@plugins/framework/plugins/tooling/plugins/codegen/core";
+import { readEffectiveConfigFromDisk } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
 import { asPath, asPluginId } from "@plugins/framework/plugins/plugin-id/core";
 import type { PluginId } from "@plugins/framework/plugins/plugin-id/core";
-import { extractMethod, extractPath } from "@plugins/infra/plugins/endpoints/core";
+import {
+  extractMethod,
+  extractPath,
+} from "@plugins/infra/plugins/endpoints/core";
 
 // ── Budgets ───────────────────────────────────────────────────────────────────
 //
@@ -134,7 +146,12 @@ const READY_INTERVAL_SEC = 4;
  * with no auth in front. Ordinary compositions in the `compositions` config, so
  * what counts as owner data stays editable data rather than a list in code.
  */
-const OWNER_DATA_BUNDLES = ["agent-runtime", "auth", "conversations", "tasks-domain"];
+const OWNER_DATA_BUNDLES = [
+  "agent-runtime",
+  "auth",
+  "conversations",
+  "tasks-domain",
+];
 
 /**
  * The secrets store is hosted on the CENTRAL runtime, which a released bundle
@@ -146,7 +163,9 @@ const OWNER_DATA_BUNDLES = ["agent-runtime", "auth", "conversations", "tasks-dom
 const SECRETS_PLUGIN_ID = asPluginId("infra.secrets");
 
 /** The `compositions` config's owning plugin — where its jsonc files live. */
-const COMPOSITIONS_HIERARCHY_PATH = asPath(asPluginId("plugin-meta.composition"));
+const COMPOSITIONS_HIERARCHY_PATH = asPath(
+  asPluginId("plugin-meta.composition"),
+);
 
 /**
  * A named refusal: the user's problem, stated once, with no stack trace. Every
@@ -209,7 +228,10 @@ async function callEndpoint(
       method: extractMethod(endpoint.route),
       ...(body === undefined
         ? {}
-        : { headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }),
+        : {
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(body),
+          }),
     });
   } catch (err) {
     if (!(err instanceof TypeError)) throw err;
@@ -220,7 +242,9 @@ async function callEndpoint(
   }
   if (!res.ok) {
     const text = await res.text().catch(() => "");
-    return refuse(`${extractMethod(endpoint.route)} ${url} → ${res.status}: ${text}`);
+    return refuse(
+      `${extractMethod(endpoint.route)} ${url} → ${res.status}: ${text}`,
+    );
   }
   return await res.json();
 }
@@ -253,7 +277,10 @@ async function ensureDeployment(
  * is the identity, but a NAME is accepted too: ids are uuids nobody types.
  * Ambiguity is a refusal, never a silent first-match.
  */
-async function resolveServer(db: NodePgDatabase, ref: string): Promise<ServerRow> {
+async function resolveServer(
+  db: NodePgDatabase,
+  ref: string,
+): Promise<ServerRow> {
   const rows = await db
     .select()
     .from(_deployServers)
@@ -472,14 +499,18 @@ async function loadClosureContext(): Promise<ClosureContext> {
  * keeps generic shared infra usable while the deep taproots listed as a
  * bundle's entries still catch transitive contamination.
  */
-function containmentOf(target: CompositionManifest, ctx: ClosureContext): Set<PluginId> {
+function containmentOf(
+  target: CompositionManifest,
+  ctx: ClosureContext,
+): Set<PluginId> {
   const flat = flattenManifest(target, ctx.manifests);
   const containment = new Set<PluginId>(
     expandEntrySeeds(flat.entryPoints, ctx.graph).seeds,
   );
   for (const id of flat.selectedContributors) {
     containment.add(id);
-    for (const descendant of ctx.graph.subtree.get(id) ?? []) containment.add(descendant);
+    for (const descendant of ctx.graph.subtree.get(id) ?? [])
+      containment.add(descendant);
   }
   return containment;
 }
@@ -764,18 +795,31 @@ export function registerDeploy(program: Command) {
     .description(
       "Make a server serve a composition: run user, dir layout, env file, Caddy site, systemd unit, firewall. Idempotent — re-run to repair drift.",
     )
-    .argument("<composition>", "Composition name (as in the `compositions` config)")
-    .requiredOption("--server <server>", "Registered deploy server (id, or its name)")
+    .argument(
+      "<composition>",
+      "Composition name (as in the `compositions` config)",
+    )
+    .requiredOption(
+      "--server <server>",
+      "Registered deploy server (id, or its name)",
+    )
     .action(async (composition: string, opts: { server: string }) => {
-      const target = await resolveTarget({ composition, serverRef: opts.server });
+      const target = await resolveTarget({
+        composition,
+        serverRef: opts.server,
+      });
       const { install, deployment, server } = target;
 
-      console.log(`Converging "${composition}" on ${server.name} (${server.host})`);
+      console.log(
+        `Converging "${composition}" on ${server.name} (${server.host})`,
+      );
       console.log(`  Install: ${install.installDir} as ${install.runUser}`);
       console.log(`  Listen:  ${listenAddress(deployment.loopbackPort)}`);
       console.log(
         `  Hosts:   ${
-          deployment.hostnames.length > 0 ? deployment.hostnames.join(", ") : "(none — loopback only)"
+          deployment.hostnames.length > 0
+            ? deployment.hostnames.join(", ")
+            : "(none — loopback only)"
         }`,
       );
 
@@ -788,7 +832,8 @@ export function registerDeploy(program: Command) {
             `Linux (it uses apt-get, systemd and ufw).`,
         );
       }
-      for (const hostname of deployment.hostnames) assertCaddySafeHostname(hostname);
+      for (const hostname of deployment.hostnames)
+        assertCaddySafeHostname(hostname);
       await assertClosureSafe(target);
 
       await runScript(target, {
@@ -805,7 +850,9 @@ export function registerDeploy(program: Command) {
       });
 
       console.log(`\n[done] ${server.name} is converged for "${composition}".`);
-      console.log(`  Ship a bundle: ./singularity deploy ship ${composition} --server ${opts.server}`);
+      console.log(
+        `  Ship a bundle: ./singularity deploy ship ${composition} --server ${opts.server}`,
+      );
     });
 
   deploy
@@ -813,15 +860,27 @@ export function registerDeploy(program: Command) {
     .description(
       "Upload a release bundle to a converged host and activate it behind a health gate (reverts on failure)",
     )
-    .argument("<composition>", "Composition name (as in the `compositions` config)")
-    .requiredOption("--server <server>", "Registered deploy server (id, or its name)")
+    .argument(
+      "<composition>",
+      "Composition name (as in the `compositions` config)",
+    )
+    .requiredOption(
+      "--server <server>",
+      "Registered deploy server (id, or its name)",
+    )
     .option(
       "--release <run-id>",
       "Release run to ship (default: the `latest-<platform>` symlink for <composition>-web, which only a packed run ever claims)",
     )
     .action(
-      async (composition: string, opts: { server: string; release?: string }) => {
-        const target = await resolveTarget({ composition, serverRef: opts.server });
+      async (
+        composition: string,
+        opts: { server: string; release?: string },
+      ) => {
+        const target = await resolveTarget({
+          composition,
+          serverRef: opts.server,
+        });
         const { install, deployment, server } = target;
 
         // The platform is taken from the server's health row, never a flag —
@@ -837,7 +896,9 @@ export function registerDeploy(program: Command) {
         const bundle = resolution;
         const dir = releaseDir(composition, bundle.runId);
 
-        console.log(`Shipping "${composition}" ${bundle.runId} to ${server.name} (${server.host})`);
+        console.log(
+          `Shipping "${composition}" ${bundle.runId} to ${server.name} (${server.host})`,
+        );
         console.log(`  Bundle:  ${bundle.localPath} (${target.platform})`);
         console.log(`  Target:  ${dir}/${bundle.binaryName}`);
 
@@ -902,7 +963,9 @@ export function registerDeploy(program: Command) {
           what: "activate",
         });
 
-        console.log(`\n[done] ${server.name} is serving "${composition}" ${bundle.runId}.`);
+        console.log(
+          `\n[done] ${server.name} is serving "${composition}" ${bundle.runId}.`,
+        );
         if (deployment.hostnames.length > 0) {
           for (const hostname of deployment.hostnames) {
             console.log(`  https://${hostname}`);

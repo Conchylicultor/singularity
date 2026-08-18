@@ -1,6 +1,18 @@
-// @hash 33b55824e728
+// @hash 441b89e7a9c4
 {
   "manifests": [
+    {
+      "id": "singularity",
+      "name": "singularity",
+      "category": "app",
+      "entryPoints": [
+        "**"
+      ],
+      "selectedContributors": [],
+      "extends": [],
+      "excludes": [],
+      "autoBuild": false
+    },
     {
       "id": "agent-manager",
       "name": "agent-manager",

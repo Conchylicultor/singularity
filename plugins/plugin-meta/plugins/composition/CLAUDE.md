@@ -201,10 +201,18 @@ difference (via `flattenManifest`) is exactly that pack. Run with
     - `CompositionData`
     - `CompositionManifestItem`
   - Exports (values):
+    - `activatedCompositionIds`
+    - `assertCompositionId`
+    - `assertCompositionName`
+    - `assertServableCompositionNamespace`
+    - `COMPOSITION_NAME_RE`
     - `compositionDataSchema`
     - `compositionsConfig`
     - `getCompositionData`
+    - `isServableCompositionId`
+    - `MAIN_COMPOSITION_ID`
     - `manifestItemToManifest`
+    - `RESERVED_COMPOSITION_NAMESPACES`
 - Cross-plugin:
   - Imported by:
     - `apps/deploy/composition`
@@ -220,6 +228,7 @@ difference (via `flattenManifest`) is exactly that pack. Run with
     - `apps/studio/explorer/membership`
     - `apps/studio/graph`
     - `build/serve-composition`
+    - `framework/tooling/codegen`
     - `plugin-meta/plugin-view/dependencies`
     - `plugin-meta/plugin-view/inclusion`
 

@@ -9,6 +9,7 @@ import {
 import { buildBarrelFreeTree } from "./barrel-free-tree";
 import type { CollectedDirDef } from "@plugins/framework/plugins/tooling/plugins/collected-dir/core";
 import { asPluginId } from "@plugins/framework/plugins/plugin-id/core";
+import { assertCompositionName } from "@plugins/plugin-meta/plugins/composition/core";
 import { computeDisabledIds } from "./disabled-ids";
 import { writeGenerated } from "./write-generated";
 
@@ -175,13 +176,66 @@ export interface RegistryGenContext {
   // `plugins-registry-in-sync` check (which never passes `bundle`) re-derives
   // the identical filtered output from the committed `package.json` flags.
   disabled: Set<string>;
+  // Per-`<dir>` filesystem scan (the collected entry list plus the raw
+  // import-derived dependency graph), memoized for this context's lifetime.
+  //
+  // Why it is safe to cache HERE rather than anywhere else: a `RegistryGenContext`
+  // is a SNAPSHOT of the tree — `tree` and `disabled` are already source-derived
+  // facts frozen at `buildRegistryGenContext` time, and a caller that needs a
+  // post-write view of the filesystem must build a fresh ctx to see it. A
+  // `<dir>` scan is a pure function of exactly the same inputs (`ctx.tree`,
+  // `ctx.root`, `dir`) and of nothing else — in particular NOT of the optional
+  // `bundle`, which only filters an already-scanned entry list — so hanging it
+  // off the ctx gives it precisely the lifetime it is valid for. Putting it in a
+  // module-level cache would instead outlive the snapshot and start answering
+  // with a stale filesystem.
+  //
+  // What it buys: the scan reads every `.ts`/`.tsx` file under every plugin's
+  // `<dir>/` tree, which is the expensive half of registry codegen, and the
+  // callers that already share ONE ctx re-render the same `<dir>` more than
+  // once. `regen-pipeline.ts` shares a ctx between the registry and eager-tier
+  // generators (the eager tier re-scanned `web` a second time); `compose-serve.ts`
+  // shares a ctx across every activated composition (N compositions × 3 runtime
+  // dirs collapse to 3 scans); and the composition-equivalence check renders each
+  // collected dir twice, once unfiltered and once bundle-filtered. Behaviour is
+  // unchanged — the cache holds the raw pre-filter scan, so the disabled filter,
+  // the bundle filter and the dep pruning still run per call.
+  dirScans: Map<string, DirEntryScan>;
+}
+
+/** The bundle-independent half of `collectEntriesWithDeps`: what one `<dir>`
+ *  scan of the tree found, before any disabled/bundle filtering. */
+interface DirEntryScan {
+  allEntries: CollectedRawEntry[];
+  rawDeps: Map<string, string[]>;
 }
 
 export async function buildRegistryGenContext(
   root: string,
 ): Promise<RegistryGenContext> {
   const tree = await buildBarrelFreeTree(root);
-  return { root, tree, disabled: computeDisabledIds(tree) };
+  return {
+    root,
+    tree,
+    disabled: computeDisabledIds(tree),
+    dirScans: new Map(),
+  };
+}
+
+/**
+ * The `<dir>` scan for this context, computed on first ask and reused after.
+ * See `RegistryGenContext.dirScans` for why a ctx is the right lifetime.
+ */
+function scanDir(ctx: RegistryGenContext, dir: string): DirEntryScan {
+  const cached = ctx.dirScans.get(dir);
+  if (cached !== undefined) return cached;
+  const allEntries = collectEntries(ctx.tree, dir);
+  const scan: DirEntryScan = {
+    allEntries,
+    rawDeps: buildDepsForDir(ctx.root, allEntries, dir),
+  };
+  ctx.dirScans.set(dir, scan);
+  return scan;
 }
 
 /**
@@ -354,8 +408,7 @@ export function collectEntriesWithDeps(
   bundle?: Set<string>,
 ): { entries: CollectedRawEntry[]; deps: Map<string, string[]> } {
   const { disabled } = ctx;
-  const allEntries = collectEntries(ctx.tree, dir);
-  const rawDeps = buildDepsForDir(ctx.root, allEntries, dir);
+  const { allEntries, rawDeps } = scanDir(ctx, dir);
   const entries = (
     bundle ? allEntries.filter((e) => bundle.has(e.id)) : allEntries
   ).filter((e) => !disabled.has(asPluginId(e.id)));
@@ -464,42 +517,6 @@ export async function generatePluginRegistry(opts: {
 // also means `listNamedCompositionRegistries` lists prewarm files, so
 // compose-serve's deactivation sweep reclaims them like any other.
 const COMPOSITION_RUNTIME_DIRS = new Set(["web", "server", "prewarm"]);
-
-// Composition ids double as gateway namespaces and per-name registry file
-// segments — same charset as the gateway's name regex (gateway/registry.go),
-// which also makes them path-safe by construction. This is the canonical TS
-// copy of the gateway name rule; the one place that cannot import it
-// (server-core/bin/plugins-active.ts — boot cannot import codegen) carries a
-// KEEP IN SYNC comment pointing here.
-export const COMPOSITION_NAME_RE = /^[a-z0-9][a-z0-9-]{0,62}$/;
-
-export function assertCompositionName(name: string): void {
-  if (!COMPOSITION_NAME_RE.test(name)) {
-    throw new Error(
-      `Invalid composition name "${name}" — must match ${COMPOSITION_NAME_RE}.`,
-    );
-  }
-}
-
-// Namespaces a composition can never claim: the central runtime, the main app
-// namespace, and the main git branch. Enforced by the compose-serve stage and
-// the `composition-closure` check.
-export const RESERVED_COMPOSITION_NAMESPACES: ReadonlySet<string> = new Set([
-  "central",
-  "singularity",
-  "main",
-]);
-
-/** A composition id that is also servable as a gateway namespace. */
-export function assertServableCompositionNamespace(name: string): void {
-  assertCompositionName(name);
-  if (RESERVED_COMPOSITION_NAMESPACES.has(name)) {
-    throw new Error(
-      `Composition name "${name}" is a reserved namespace ` +
-        `(${[...RESERVED_COMPOSITION_NAMESPACES].join(", ")}) — it can never be served.`,
-    );
-  }
-}
 
 export function collectedDirNamedCompositionRegistryPath(
   def: DiscoveredCollectedDir,

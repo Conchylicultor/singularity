@@ -2,7 +2,10 @@ import { useMemo, useState } from "react";
 import { MdAdd, MdRemove } from "react-icons/md";
 import type { PluginId } from "@plugins/framework/plugins/plugin-id/core";
 import { pluginIdSegments } from "@plugins/framework/plugins/plugin-id/core";
-import { Stack, Inset } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import {
+  Stack,
+  Inset,
+} from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Cluster } from "@plugins/primitives/plugins/css/plugins/cluster/web";
 import { Column } from "@plugins/primitives/plugins/css/plugins/column/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
@@ -39,10 +42,19 @@ export function GraphView({ paneFocusId }: { paneFocusId?: PluginId }) {
   const active = useActiveComposition();
 
   // Seed focus: pane param → active composition's first entry point → unset.
-  // Entry points are EntryPatterns (`id`, `id.**`, `!id.**`); strip a pattern down
-  // to its base id before using it as a focus node.
-  const firstEntry = active?.entryPoints[0];
-  const seed = paneFocusId ?? (firstEntry ? parseEntryPattern(firstEntry).base : null);
+  // Entry points are EntryPatterns (`id`, `id.**`, `!id.**`, or the root `**`);
+  // strip a pattern down to its base id before using it as a focus node. The root
+  // `**` has no base — a composition of every plugin has no meaningful single
+  // focus in an 840-node graph — so it seeds nothing and the pane falls back to
+  // the search prompt below, letting the reader pick where to start.
+  const firstEntryParsed = active?.entryPoints[0]
+    ? parseEntryPattern(active.entryPoints[0])
+    : null;
+  const seed =
+    paneFocusId ??
+    (firstEntryParsed && firstEntryParsed.kind === "id"
+      ? firstEntryParsed.base
+      : null);
   const [focusId, setFocusId] = useState<PluginId | null>(seed);
   const [depth, setDepth] = useState(DEFAULT_DEPTH);
   const [direction, setDirection] = useState<Direction>("both");
@@ -50,7 +62,11 @@ export function GraphView({ paneFocusId }: { paneFocusId?: PluginId }) {
 
   const { nodes, edges, hiddenCount } = useMemo(() => {
     if (!graph || !focusId) return { nodes: [], edges: [], hiddenCount: 0 };
-    const sub = focusSubgraph(graph, focusId, { depth, cap: NODE_CAP, direction });
+    const sub = focusSubgraph(graph, focusId, {
+      depth,
+      cap: NODE_CAP,
+      direction,
+    });
     const { nodes, edges } = toCanvas(sub, focusId, membership);
     return { nodes, edges, hiddenCount: sub.hiddenCount };
   }, [graph, focusId, depth, direction, membership]);
@@ -107,7 +123,9 @@ export function GraphView({ paneFocusId }: { paneFocusId?: PluginId }) {
 
             <ControlSizeProvider size="sm">
               <Stack direction="row" align="center" gap="2xs">
-                <Text variant="caption" tone="muted">Depth</Text>
+                <Text variant="caption" tone="muted">
+                  Depth
+                </Text>
                 <IconButton
                   icon={MdRemove}
                   label="Decrease depth"
@@ -130,7 +148,9 @@ export function GraphView({ paneFocusId }: { paneFocusId?: PluginId }) {
             />
 
             {hiddenCount > 0 && (
-              <Text variant="caption" tone="muted">+{hiddenCount} hidden</Text>
+              <Text variant="caption" tone="muted">
+                +{hiddenCount} hidden
+              </Text>
             )}
 
             {membership && <Legend />}
@@ -158,7 +178,9 @@ function Legend() {
             aria-hidden
             className={`inline-block size-3 rounded-sm border border-border ${tint ?? "bg-transparent"}`}
           />
-          <Text variant="caption" tone="muted">{label}</Text>
+          <Text variant="caption" tone="muted">
+            {label}
+          </Text>
         </Stack>
       ))}
     </Cluster>

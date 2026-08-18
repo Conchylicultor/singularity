@@ -1,15 +1,28 @@
 import type { PluginTree } from "@plugins/plugin-meta/plugins/plugin-tree/core";
 import type { PluginId } from "@plugins/framework/plugins/plugin-id/core";
 import { classifyEdges } from "./classify-edges";
-import { matchEntryPattern, parseEntryPattern, type EntryPattern } from "./entry-pattern";
-import type { Composition, CompositionManifest, EdgeGraph, MembershipState } from "./types";
+import {
+  allNodeIds,
+  matchEntryPattern,
+  parseEntryPattern,
+  type EntryPattern,
+} from "./entry-pattern";
+import type {
+  Composition,
+  CompositionManifest,
+  EdgeGraph,
+  MembershipState,
+} from "./types";
 
 /**
  * Transitive hard closure of a seed set over `hardForward`. The visited-set makes
  * it cycle- and self-edge-safe (a DAG is expected per the boundary rules; this is
  * defensive, not relied upon).
  */
-export function hardClosure(seeds: Iterable<PluginId>, graph: EdgeGraph): Set<PluginId> {
+export function hardClosure(
+  seeds: Iterable<PluginId>,
+  graph: EdgeGraph,
+): Set<PluginId> {
   const out = new Set<PluginId>();
   const stack = [...seeds];
   while (stack.length) {
@@ -32,7 +45,10 @@ export function hardClosure(seeds: Iterable<PluginId>, graph: EdgeGraph): Set<Pl
  * `hardForward` (what a plugin needs); here we walk the opposite direction (who
  * needs this plugin). The visited-set makes it cycle- and self-edge-safe.
  */
-export function disabledClosure(seeds: Iterable<PluginId>, graph: EdgeGraph): Set<PluginId> {
+export function disabledClosure(
+  seeds: Iterable<PluginId>,
+  graph: EdgeGraph,
+): Set<PluginId> {
   const out = new Set<PluginId>();
   const stack = [...seeds];
   while (stack.length) {
@@ -40,7 +56,8 @@ export function disabledClosure(seeds: Iterable<PluginId>, graph: EdgeGraph): Se
     if (out.has(x)) continue;
     out.add(x);
     for (const d of graph.subtree.get(x) ?? []) if (!out.has(d)) stack.push(d); // descendants
-    for (const r of graph.hardReverse.get(x) ?? []) if (!out.has(r)) stack.push(r); // importers
+    for (const r of graph.hardReverse.get(x) ?? [])
+      if (!out.has(r)) stack.push(r); // importers
   }
   return out;
 }
@@ -49,12 +66,15 @@ export function disabledClosure(seeds: Iterable<PluginId>, graph: EdgeGraph): Se
  * Expand declared entry patterns into the actual seed set under the glob grammar
  * (see {@link parseEntryPattern}). "Entry a node" means *that node alone* — its
  * hard dependencies are added later by {@link hardClosure}, never seeded here.
- * A whole subtree is opt-in via a trailing `.**`; a leading `!` trims ids.
+ * A whole subtree is opt-in via a trailing `.**`; the whole graph via a bare `**`;
+ * a leading `!` trims ids.
  *
  * Two passes:
- *  1. Positives (`!negate`): the exact `base` of every positive goes into `named`
- *     (the set that classifies as `entry` and drives `redundantSelections`);
- *     every id the pattern matches (`base` ∪ its `.**` subtree) goes into `seeds`.
+ *  1. Positives (`!negate`): the exact `base` of every positive ID pattern goes
+ *     into `named` (the set that classifies as `entry` and drives
+ *     `redundantSelections`); every id the pattern matches (`base` ∪ its `.**`
+ *     subtree, or every node for a root `**`) goes into `seeds`. A root `**`
+ *     contributes NOTHING to `named` — see the comment at the loop.
  *  2. Negatives: each matched id is `delete`d from `seeds` — UNLESS it is a `named`
  *     positive, which is protected. A negative may therefore only trim ids pulled
  *     in *implicitly* by some `.**` glob; it can never remove an explicitly-named
@@ -73,7 +93,13 @@ export function expandEntrySeeds(
   const parsed = [...entryPoints].map(parseEntryPattern);
   for (const p of parsed) {
     if (p.negate) continue;
-    named.add(p.base);
+    // A root `**` seeds every id and NAMES NONE. `named` is the protected set the
+    // negative pass below refuses to trim; if `**` named everything, `!x.**` could
+    // never remove anything, and `composition-closure` would then reject every
+    // such negative as dead. Root means "everything is in", NOT "everything is
+    // explicitly demanded" — that distinction is what keeps `**` plus negatives a
+    // usable way to spell "the whole app minus this branch".
+    if (p.kind === "id") named.add(p.base);
     for (const id of matchEntryPattern(p, graph)) seeds.add(id);
   }
   for (const p of parsed) {
@@ -86,8 +112,14 @@ export function expandEntrySeeds(
   return { seeds, named };
 }
 
-export function resolveComposition(graph: EdgeGraph, manifest: CompositionManifest): Composition;
-export function resolveComposition(tree: PluginTree, manifest: CompositionManifest): Composition;
+export function resolveComposition(
+  graph: EdgeGraph,
+  manifest: CompositionManifest,
+): Composition;
+export function resolveComposition(
+  tree: PluginTree,
+  manifest: CompositionManifest,
+): Composition;
 export function resolveComposition(
   graphOrTree: EdgeGraph | PluginTree,
   manifest: CompositionManifest,
@@ -99,15 +131,23 @@ export function resolveComposition(
   // `.**`; negatives trim `.**`-implicit ids (never a named positive). `named` is
   // the set of exact positive bases — it drives `entry` membership and
   // `redundantSelections`, so a `.**` base is `entry` while its implicit descendants
-  // are `required`.
-  const { seeds: entrySeeds, named } = expandEntrySeeds(manifest.entryPoints, graph);
+  // are `required`. A root `**` names nothing, so under it NO node classifies
+  // `entry` and every bundled node is `required` — correct: "everything" demands
+  // no particular plugin.
+  const { seeds: entrySeeds, named } = expandEntrySeeds(
+    manifest.entryPoints,
+    graph,
+  );
 
   // `required` = hard closure of the entry seeds ALONE — the locked set, unchanged.
   const required = hardClosure(entrySeeds, graph);
 
   // Conservative, single-pass bundle: NO fixpoint, NO auto-activation. The bundle is
   // exactly the hard closure of (entry seeds ∪ the explicitly selected contributors).
-  const bundle = hardClosure([...entrySeeds, ...manifest.selectedContributors], graph);
+  const bundle = hardClosure(
+    [...entrySeeds, ...manifest.selectedContributors],
+    graph,
+  );
 
   // `available` = the reviewable option frontier: ids NOT in the bundle that
   // soft-contribute to some bundled member. Use softReverse over the bundle, minus
@@ -152,9 +192,4 @@ export function resolveComposition(
 
 function isTree(x: EdgeGraph | PluginTree): x is PluginTree {
   return (x as PluginTree).byDir instanceof Map;
-}
-
-/** Every node id is a key of the four adjacency maps (classifyEdges seeds them all). */
-function allNodeIds(graph: EdgeGraph): Iterable<PluginId> {
-  return graph.hardForward.keys();
 }

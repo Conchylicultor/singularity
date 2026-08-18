@@ -2,17 +2,36 @@
 
 Validity gate for every declared composition (`./singularity check
 composition-closure`). Reads the committed git-layer `compositions` config_v2
-manifests straight off disk (`readTypedConfig(compositionsConfig,
-fileConfigProxy(config/plugin-meta/composition/compositions.origin.jsonc),
-fileConfigProxy(…/compositions.jsonc))` — no server runtime, falls back to the
-seeded defaults on a fresh checkout), builds the
-plugin tree + edge graph once, and for each composition enforces: unique `name`,
-every entry/contributor id resolves to a real plugin, every `extends` reference
+manifests straight off disk via `readCompositionManifestsFromDisk(root)` (codegen
+core — no server runtime, strict `// @hash` header contract, falls back to the
+seeded defaults on a fresh checkout). The same helper backs
+`plugins-registry-in-sync`, so the two checks can never disagree about what the
+repo declares. The plugin tree comes from `buildRegistryGenContext(root)`, whose
+memoized barrel-free faceted tree is shared with every other check in the run.
+
+For each composition it enforces: unique `name`, unique `id`, every
+entry/contributor id resolves to a real plugin, every `extends` reference
 resolves to a real composition name, no redundant selections (already locked by
 the entries' hard closure), every selected contributor is a genuine
 **load-bearing soft option** (deselecting it removes it from the bundle), and
 every `excludes` bundle stays **disjoint** from the composition's hard closure.
 Fails loudly naming the composition and offending id.
+
+## The main app's own row
+
+`singularity` (`MAIN_COMPOSITION_ID`) is an ordinary entry in the manifest whose
+entry points are the root pattern `["**"]` — every plugin. Two manifest-SHAPE
+rules protect it: it must be present **exactly once** (the id is a namespace, and
+`plugins-registry-in-sync` finds "the main composition" by that id to prove its
+closure renders the committed registries byte-for-byte), and it must carry
+`autoBuild: false`. Main is built and served by the build command into the main
+checkout's own namespace, never by compose-serve — `activatedCompositionIds`
+already filters on servability, so a stored `true` is inert; this rule is about
+the committed seed telling the truth, not about preventing an effect.
+
+Ids are checked for uniqueness because they are now load-bearing: an id is the
+gateway namespace, the per-composition registry file segment, the spec dir, the
+DB name and the Studio detail route.
 
 ## `excludes` — the self-containment guard
 

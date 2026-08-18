@@ -8,9 +8,12 @@ import {
   fileConfigProxy,
   readEffectiveConfigFromDisk,
 } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
-import { compositionsConfig } from "@plugins/plugin-meta/plugins/composition/core";
+import {
+  activatedCompositionIds,
+  compositionsConfig,
+} from "@plugins/plugin-meta/plugins/composition/core";
 import { asPath, asPluginId } from "@plugins/framework/plugins/plugin-id/core";
-import { activatedCompositionIds, sweepIds } from "./compose-serve";
+import { sweepIds } from "./compose-serve";
 
 const HIER = asPath(asPluginId("plugin-meta.composition"));
 
@@ -49,7 +52,12 @@ function fixture(name: string) {
   return { root, singularityDir, gitDir, userDir, read };
 }
 
-function writeLayer(dir: string, file: string, content: JsonValue, hash: string | null) {
+function writeLayer(
+  dir: string,
+  file: string,
+  content: JsonValue,
+  hash: string | null,
+) {
   fileConfigProxy(join(dir, file)).write(content, hash);
 }
 
@@ -63,35 +71,62 @@ describe("readEffectiveConfigFromDisk (layering against fixture jsonc)", () => {
 
   test("git origin only (no user layer) → git-layer value wins over code defaults", () => {
     const f = fixture("git-only");
-    const gitContent = { manifests: [item("sonata", true)] } as unknown as JsonValue;
-    writeLayer(f.gitDir, "compositions.origin.jsonc", gitContent, computeHash(gitContent));
+    const gitContent = {
+      manifests: [item("sonata", true)],
+    } as unknown as JsonValue;
+    writeLayer(
+      f.gitDir,
+      "compositions.origin.jsonc",
+      gitContent,
+      computeHash(gitContent),
+    );
     expect(activatedCompositionIds(f.read().manifests)).toEqual(["sonata"]);
   });
 
   test("non-stale user override wins over the propagated origin", () => {
     const f = fixture("user-override");
-    const origin = { manifests: [item("sonata", false)] } as unknown as JsonValue;
+    const origin = {
+      manifests: [item("sonata", false)],
+    } as unknown as JsonValue;
     const originHash = computeHash(origin);
     writeLayer(f.gitDir, "compositions.origin.jsonc", origin, originHash);
     writeLayer(f.userDir, "compositions.origin.jsonc", origin, originHash);
-    const override = { manifests: [item("sonata", true)] } as unknown as JsonValue;
+    const override = {
+      manifests: [item("sonata", true)],
+    } as unknown as JsonValue;
     writeLayer(f.userDir, "compositions.jsonc", override, originHash);
     expect(activatedCompositionIds(f.read().manifests)).toEqual(["sonata"]);
   });
 
   test("STALE user override (hash mismatch) falls back to the user origin", () => {
     const f = fixture("stale-override");
-    const origin = { manifests: [item("sonata", false)] } as unknown as JsonValue;
-    writeLayer(f.gitDir, "compositions.origin.jsonc", origin, computeHash(origin));
-    writeLayer(f.userDir, "compositions.origin.jsonc", origin, computeHash(origin));
-    const override = { manifests: [item("sonata", true)] } as unknown as JsonValue;
+    const origin = {
+      manifests: [item("sonata", false)],
+    } as unknown as JsonValue;
+    writeLayer(
+      f.gitDir,
+      "compositions.origin.jsonc",
+      origin,
+      computeHash(origin),
+    );
+    writeLayer(
+      f.userDir,
+      "compositions.origin.jsonc",
+      origin,
+      computeHash(origin),
+    );
+    const override = {
+      manifests: [item("sonata", true)],
+    } as unknown as JsonValue;
     writeLayer(f.userDir, "compositions.jsonc", override, "deadbeef");
     expect(activatedCompositionIds(f.read().manifests)).toEqual([]);
   });
 
   test("user override with no user origin still applies (override stands alone)", () => {
     const f = fixture("override-only");
-    const override = { manifests: [item("pages", true), item("sonata", false)] } as unknown as JsonValue;
+    const override = {
+      manifests: [item("pages", true), item("sonata", false)],
+    } as unknown as JsonValue;
     writeLayer(f.userDir, "compositions.jsonc", override, null);
     expect(activatedCompositionIds(f.read().manifests)).toEqual(["pages"]);
   });
@@ -103,11 +138,19 @@ describe("activated set / deactivation sweep arithmetic", () => {
     expect(activatedCompositionIds(items)).toEqual(["b", "c"]);
   });
 
+  test("activatedCompositionIds drops main's composition even at autoBuild: true", () => {
+    // Main's namespace belongs to main's own build, not to compose-serve, so
+    // its row can carry any `autoBuild` value — from the code seeds, the git
+    // layer, or a user override — and still never reach the serve stage.
+    // Containment lives in the derivation, not in a downstream throw.
+    const items = [item("singularity", true), item("sonata", true)];
+    expect(activatedCompositionIds(items)).toEqual(["sonata"]);
+  });
+
   test("sweepIds = present namespaces minus the activated set, deduped and sorted", () => {
-    expect(sweepIds(["sonata", "pages", "sonata", "website"], new Set(["pages"]))).toEqual([
-      "sonata",
-      "website",
-    ]);
+    expect(
+      sweepIds(["sonata", "pages", "sonata", "website"], new Set(["pages"])),
+    ).toEqual(["sonata", "website"]);
     expect(sweepIds([], new Set(["pages"]))).toEqual([]);
     expect(sweepIds(["pages"], new Set())).toEqual(["pages"]);
   });

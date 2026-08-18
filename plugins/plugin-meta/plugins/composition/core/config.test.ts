@@ -10,9 +10,14 @@
 import { test, expect } from "bun:test";
 import { flattenManifest } from "@plugins/plugin-meta/plugins/closure/core";
 import { compositionsConfig } from "./config";
-import { manifestItemToManifest, type CompositionManifestItem } from "./manifest-map";
+import {
+  manifestItemToManifest,
+  type CompositionManifestItem,
+} from "./manifest-map";
+import { MAIN_COMPOSITION_ID } from "./namespace";
 
-const seeds = compositionsConfig.defaults.manifests as CompositionManifestItem[];
+const seeds = compositionsConfig.defaults
+  .manifests as CompositionManifestItem[];
 const registry = seeds.map(manifestItemToManifest);
 
 const SELF_IMPROVEMENT = [
@@ -30,7 +35,9 @@ const byName = (name: string): CompositionManifestItem => {
 };
 
 test("the seeded default parses against the descriptor schema", () => {
-  const parsed = compositionsConfig.schema.safeParse(compositionsConfig.defaults);
+  const parsed = compositionsConfig.schema.safeParse(
+    compositionsConfig.defaults,
+  );
   expect(parsed.success).toBe(true);
 });
 
@@ -57,7 +64,9 @@ test("each seed maps to a valid CompositionManifest via the mapper", () => {
     expect(m.name.length).toBeGreaterThan(0);
     expect(Array.isArray(m.entryPoints)).toBe(true);
     expect(Array.isArray(m.selectedContributors)).toBe(true);
-    expect(m.selectedContributors.every((id) => typeof id === "string")).toBe(true);
+    expect(m.selectedContributors.every((id) => typeof id === "string")).toBe(
+      true,
+    );
     // Only packs (pure contributor sets) may omit entry points.
     if (item.category !== "pack") {
       expect(m.entryPoints.length).toBeGreaterThan(0);
@@ -159,7 +168,10 @@ test("anchor demo: flattened full \\ lean is exactly the self-improvement pack",
   // Full extends the self-improvement pack; lean does not. After flattening the
   // `extends` chain against the registry, the contributor set-difference is the
   // pack's contributors (order-independent).
-  const full = flattenManifest(manifestItemToManifest(byName("agent-manager")), registry);
+  const full = flattenManifest(
+    manifestItemToManifest(byName("agent-manager")),
+    registry,
+  );
   const lean = flattenManifest(
     manifestItemToManifest(byName("agent-manager-lean")),
     registry,
@@ -174,4 +186,26 @@ test("anchor demo: flattened full \\ lean is exactly the self-improvement pack",
   for (const c of lean.selectedContributors) {
     expect(full.selectedContributors).toContain(c);
   }
+});
+
+test("the main app is seeded exactly once, as the root composition", () => {
+  // `singularity` is an ORDINARY entry in this registry — that is the whole point
+  // of the seed. Exactly one row carries the id, because the id is a namespace and
+  // because `plugins-registry-in-sync` resolves "the main composition" by finding
+  // it: two rows (or none) and that equivalence proof stops being about main.
+  const mainRows = seeds.filter((s) => s.id === MAIN_COMPOSITION_ID);
+  expect(mainRows.length).toBe(1);
+  const main = mainRows[0]!;
+
+  // The ROOT pattern: every plugin. Spelled `**` rather than an enumeration of
+  // top-level ids (which would be a drift list — a new top-level plugin would
+  // silently fall out of main) and rather than a manifest boolean (which would put
+  // an "except for main" branch back inside the closure engine).
+  expect(main.entryPoints).toEqual(["**"]);
+
+  // Deliberately NOT `["served-baseline"]`. `**` already covers everything the
+  // baseline forces in, and extending it would push served-baseline's bases into
+  // the engine's `named` set — the set the negative pass refuses to trim — which
+  // would permanently shield them from any future `!x.**`, for no gain.
+  expect(main.extends).toEqual([]);
 });

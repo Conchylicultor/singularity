@@ -278,12 +278,17 @@ async function resolveCompositionIconKey(opts: {
     skipBarrelImport: true,
   });
 
-  // Each entry point is an EntryPattern (`id`, `id.**`, or `!id.**`); its base id
-  // is a dotted plugin id whose tree node is keyed by the fs-path encoding
-  // ("apps/plugins/sonata") in `byPath`. Negative patterns exclude a subtree from
-  // the bundle — they name no app node, so skip them when deriving the icon.
+  // Each entry point is an EntryPattern (`id`, `id.**`, `!id.**`, or the root
+  // `**`); its base id is a dotted plugin id whose tree node is keyed by the
+  // fs-path encoding ("apps/plugins/sonata") in `byPath`. Negative patterns
+  // exclude a subtree from the bundle — they name no app node, so skip them when
+  // deriving the icon. The root `**` names no node either: it means "every
+  // plugin", and a composition of everything has no single app to take an icon
+  // from. Skipping it falls through to the throw below, which is right — a
+  // release of the whole repo is not an app release.
   for (const entry of entryPoints) {
     const parsed = parseEntryPattern(entry);
+    if (parsed.kind === "root") continue;
     if (parsed.negate) continue;
     const node = tree.byPath.get(asFsPath(parsed.base));
     if (!node) continue;

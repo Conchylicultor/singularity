@@ -25,7 +25,6 @@
 import { rm } from "node:fs/promises";
 import { join } from "node:path";
 import {
-  assertServableCompositionNamespace,
   propagateConfigToUser,
   readEffectiveConfigFromDisk,
 } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
@@ -42,12 +41,21 @@ import {
   ensureDatabase,
 } from "@plugins/database/plugins/admin/server";
 import { dropZeroReplicationArtifacts } from "@plugins/database/plugins/zero/plugins/cache-service/server";
-import { compositionsConfig } from "@plugins/plugin-meta/plugins/composition/core";
-import { SINGULARITY_DIR, MAIN_WORKTREE_NAME } from "@plugins/infra/plugins/paths/server";
+import {
+  activatedCompositionIds,
+  assertServableCompositionNamespace,
+  compositionsConfig,
+} from "@plugins/plugin-meta/plugins/composition/core";
+import {
+  SINGULARITY_DIR,
+  MAIN_WORKTREE_NAME,
+} from "@plugins/infra/plugins/paths/server";
 
 // The `compositions` config's owning-plugin path — its jsonc files live under
 // `config/<this>/` and the per-worktree user config dir (mirrors compose-serve).
-const COMPOSITIONS_HIERARCHY_PATH = asPath(asPluginId("plugin-meta.composition"));
+const COMPOSITIONS_HIERARCHY_PATH = asPath(
+  asPluginId("plugin-meta.composition"),
+);
 
 /** A refused reset — a guard rejected the target before any data was touched. */
 export class CompositionResetError extends Error {
@@ -86,15 +94,18 @@ export async function resetCompositionData(id: string): Promise<void> {
 
   // Guard 4 — belt-and-suspenders: `id` must be currently activated
   // (`autoBuild: true`) in MAIN's resolved config. Deactivation sweeps the
-  // marker, so guard 2 already implies this; computed the same way compose-serve
-  // reads its activated set (main-authoritative, regardless of executing backend).
+  // marker, so guard 2 already implies this; read main-authoritatively,
+  // regardless of which backend is executing. `activatedCompositionIds` is the
+  // SAME function compose-serve derives its activated set with — this used to
+  // hand-roll the `autoBuild` filter, which is how a guard drifts from the stage
+  // it is guarding.
   const values = readEffectiveConfigFromDisk(compositionsConfig, {
     root,
     worktreeName: MAIN_WORKTREE_NAME,
     singularityDir: SINGULARITY_DIR,
     hierarchyPath: COMPOSITIONS_HIERARCHY_PATH,
   });
-  const activated = values.manifests.filter((i) => i.autoBuild).map((i) => i.id);
+  const activated = activatedCompositionIds(values.manifests);
   if (!activated.includes(id)) {
     throw new CompositionResetError(
       `reset "${id}": not an activated (autoBuild) composition in main's config`,
@@ -111,8 +122,15 @@ export async function resetCompositionData(id: string): Promise<void> {
   await ensureDatabase(id);
 
   // Wipe the config dir and re-propagate the git-layer first-launch defaults.
-  await rm(join(SINGULARITY_DIR, "config", id), { recursive: true, force: true });
-  await propagateConfigToUser({ root, worktreeName: id, singularityDir: SINGULARITY_DIR });
+  await rm(join(SINGULARITY_DIR, "config", id), {
+    recursive: true,
+    force: true,
+  });
+  await propagateConfigToUser({
+    root,
+    worktreeName: id,
+    singularityDir: SINGULARITY_DIR,
+  });
 
   await restartNamespace(id);
 }
@@ -135,7 +153,8 @@ async function restartNamespace(id: string): Promise<void> {
     // resp.ok / 404 / other status are all acceptable outcomes here: the backend
     // will (re)spawn against the fresh DB on the next request regardless.
   } catch (err) {
-    if (!(err instanceof TypeError) && !(err instanceof DOMException)) throw err;
+    if (!(err instanceof TypeError) && !(err instanceof DOMException))
+      throw err;
     // Gateway unreachable — the backend spawns on first request; nothing to do.
   }
 }

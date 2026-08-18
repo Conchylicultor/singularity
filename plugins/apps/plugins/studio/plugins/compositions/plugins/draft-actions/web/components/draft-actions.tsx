@@ -1,6 +1,9 @@
 import type { ReactElement } from "react";
 import { MdDeleteOutline, MdSave } from "react-icons/md";
-import { Button, Input } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import {
+  Button,
+  Input,
+} from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { openPane } from "@plugins/primitives/plugins/pane/web";
@@ -14,11 +17,18 @@ import {
   updateActiveDraft,
   clearActive,
 } from "@plugins/plugin-meta/plugins/composition/web";
+import { MAIN_COMPOSITION_ID } from "@plugins/plugin-meta/plugins/composition/core";
 
 /**
  * Persistence actions for the active draft: an inline editable name plus Save /
  * Delete / Clear. The pane's `:id` is the composition being edited, so Save is
- * always an in-place update and Delete is always available.
+ * always an in-place update.
+ *
+ * Delete is available for every composition except the one the repo itself
+ * builds — that entry must exist, so `remove` throws on it and the button is
+ * simply absent (see the list row's Delete for the same call). Save stays
+ * available: editing main's entry points is legitimate, and a narrowing edit is
+ * caught loudly by the registry-equivalence check on the next build.
  */
 export function DraftActions({ id }: { id: string }): ReactElement {
   const draft = useActiveComposition();
@@ -50,14 +60,20 @@ export function DraftActions({ id }: { id: string }): ReactElement {
         aria-label="Composition name"
       />
       <Stack direction="row" align="center" gap="xs">
-        <Button variant="default" disabled={!canSave} onClick={() => save(draft, id)}>
+        <Button
+          variant="default"
+          disabled={!canSave}
+          onClick={() => save(draft, id)}
+        >
           <MdSave />
           Save
         </Button>
-        <Button variant="ghost" onClick={onDelete}>
-          <MdDeleteOutline />
-          Delete
-        </Button>
+        {id !== MAIN_COMPOSITION_ID && (
+          <Button variant="ghost" onClick={onDelete}>
+            <MdDeleteOutline />
+            Delete
+          </Button>
+        )}
         <Button variant="ghost" onClick={() => clearActive()}>
           Clear
         </Button>
