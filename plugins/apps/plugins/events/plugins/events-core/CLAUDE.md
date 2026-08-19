@@ -280,11 +280,8 @@ Design: [`research/2026-08-03-apps-events-event-tracking-app.md`](../../../../..
     - `apps/events/sources`
     - `apps/events/sources/dmda`
     - `apps/events/sources/manual`
-<<<<<<< .merge_file_xxGkZ7
-    - `apps/events/sources/salsanueva`
-=======
     - `apps/events/sources/refresh-all`
->>>>>>> .merge_file_cDCSVg
+    - `apps/events/sources/salsanueva`
     - `apps/events/sources/source-detail/runs`
     - `apps/events/sources/source-detail/runs/caveats`
     - `apps/events/sources/source-detail/runs/extracted-events`

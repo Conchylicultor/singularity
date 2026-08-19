@@ -1135,6 +1135,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `useOpenEvent`
           - Server:
             - Uses:
+              - `apps/events/events-core._eventSources`
               - `apps/events/events-core.eventsTable`
               - `database.db`
               - `fields/server-capabilities-loader`
@@ -1187,6 +1188,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `useEventSourceRuns`
               - `useEventSources`
               - `useEventsRevision`
+              - `useRefreshAllEventSources`
               - `useRefreshEventSourceNow`
               - `useRunEvents`
               - `useSourceOriginUrl`
@@ -1244,6 +1246,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `PATCH /api/events/sources/:id`
               - `DELETE /api/events/sources/:id`
               - `POST /api/events/sources/:id/refresh`
+              - `POST /api/events/sources/refresh-all`
               - `GET /api/events/sources/:id/runs`
               - `GET /api/events/runs/:runId`
               - `GET /api/events/runs/:runId/events`
@@ -1272,6 +1275,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `EventSourceRunEvent`
               - `ExtractedEvent`
               - `ExtractionResult`
+              - `ExtractionStatus`
+              - `RefreshAllResult`
               - `RefreshCadence`
               - `RefreshSourceResult`
               - `RunEvent`
@@ -1296,7 +1301,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `eventSourcesResource`
               - `eventsRevisionResource`
               - `ExtractedEventSchema`
+              - `EXTRACTION_STATUSES`
               - `ExtractionResultSchema`
+              - `extractionStatus`
               - `getEventSource`
               - `getEventSourceRun`
               - `listEventSourceRuns`
@@ -1305,6 +1312,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `listRunEvents`
               - `ListRunEventsQuerySchema`
               - `REFRESH_CADENCES`
+              - `refreshAllEventSources`
+              - `RefreshAllResultSchema`
               - `refreshEventSourceNow`
               - `RefreshSourceResultSchema`
               - `RUN_EVENT_ACTIONS`
@@ -1320,6 +1329,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/events/sources`
               - `apps/events/sources/dmda`
               - `apps/events/sources/manual`
+              - `apps/events/sources/refresh-all`
               - `apps/events/sources/salsanueva`
               - `apps/events/sources/source-detail/runs`
               - `apps/events/sources/source-detail/runs/caveats`
@@ -1391,18 +1401,20 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Slots:
               - `EventSourceDetail.Section` ← `apps.events.sources.source-detail.runs`, `apps.events.sources.source-detail.schedule`, `apps.events.sources.source-detail.settings`, `apps.events.sources.source-detail.status`
               - `EventSourceActions` ← `apps.events.sources`
-              - `eventSourcesPane.Actions`
+              - `eventSourcesPane.Actions` ← `apps.events.sources.refresh-all`
               - `eventSourceDetailPane.Actions`
             - Contributes:
               - `Pane.Register` "event-sources"
               - `Pane.Register` "event-source-detail"
               - `Events.Sidebar` "Sources" → `component`
+              - `EventSourceActions` "enabled" → `SourceToggleAction`
               - `EventSourceActions` "delete" → `SourceDeleteAction`
             - Uses:
               - `apps/events/events-core.EventSources`
               - `apps/events/events-core.useCreateEventSource`
               - `apps/events/events-core.useDeleteEventSource`
               - `apps/events/events-core.useEventSources`
+              - `apps/events/events-core.useUpdateEventSource`
               - `apps/events/shell.Events`
               - `config_v2/fields.FieldRenderer`
               - `infra/endpoints.getEndpointErrorMessage`
@@ -1446,6 +1458,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `EventSourceDetail`
               - `eventSourceDetailPane`
               - `eventSourcesPane`
+              - `EXTRACTION_STATUS_HINT`
+              - `EXTRACTION_STATUS_LABEL`
+              - `EXTRACTION_STATUS_OPTIONS`
+              - `EXTRACTION_STATUS_VARIANT`
               - `formatDuration`
               - `initialConfigValues`
               - `readConfigValues`
@@ -1461,6 +1477,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `useEventSourceTypes`
           - Cross-plugin:
             - Imported by:
+              - `apps/events/sources/refresh-all`
               - `apps/events/sources/source-detail/runs`
               - `apps/events/sources/source-detail/schedule`
               - `apps/events/sources/source-detail/settings`
@@ -1501,6 +1518,16 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                 - Exports (values):
                   - `MANUAL_SOURCE_TYPE_ID`
                   - `manualSourceConfigFields`
+            - **`refresh-all`** — Refresh-all action in the Events sources pane toolbar: one request that enqueues a run for every ENABLED source, with the enqueued / already-running / skipped tally rendered arm by arm as a toast. Contributed into the pane's Actions, so the sources pane knows nothing about it.
+              - Web:
+                - Contributes: `eventSourcesPane.Actions` → `RefreshAllAction`
+                - Uses:
+                  - `apps/events/events-core.useRefreshAllEventSources`
+                  - `apps/events/sources.eventSourcesPane`
+                  - `primitives/css/spinner.Spinner`
+                  - `primitives/icon-button.IconButton`
+                  - `shell/toast.showToast`
+                  - `shell/toast.ToastArgs`
             - **`salsanueva`** — SalsaNueva source type in the Events `+` menu: contributes the `salsanueva` type with its dance / style / level / school / teacher / day filters. SalsaNueva event source type: probe reads the school's own courses API (SSRF-guarded) for the published term and groups the dated occurrences back into weekly courses; extract filters them by the source's own dance / level / school selection and publishes each course as ONE recurring event, with no model call.
               - Web:
                 - Contributes: `EventSources.Type` "SalsaNueva"
@@ -22385,6 +22412,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Cross-plugin:
             - Imported by:
               - `apps/browser/tabs`
+              - `apps/events/sources/refresh-all`
               - `apps/mail/attachments`
               - `apps/mail/sync-status`
               - `apps/sonata/sources/ultimate-guitar`
@@ -24699,6 +24727,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/deploy/local-serve`
           - `apps/deploy/servers`
           - `apps/events/sources`
+          - `apps/events/sources/refresh-all`
           - `apps/mail/reading-pane`
           - `apps/pages/history`
           - `apps/pages/page-tree`
@@ -28632,6 +28661,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports (values): `showToast`
       - Cross-plugin:
         - Imported by:
+          - `apps/events/sources/refresh-all`
           - `apps/pages/page-tree`
           - `build/serve-composition`
           - `config_v2/settings`
