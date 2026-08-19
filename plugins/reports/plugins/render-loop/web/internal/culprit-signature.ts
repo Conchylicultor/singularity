@@ -1,5 +1,5 @@
 import {
-  isMarkerSpan,
+  isBoxlessMarker,
   nearestOwner,
   nearestSource,
 } from "@plugins/primitives/plugins/ui-context/web";
@@ -11,9 +11,9 @@ import { RENDER_LOOP } from "../../core";
  * because they're keyed by plugin/slot/source identity, not React instance.
  *
  * Reading the lineage grammar is `primitives/ui-context`'s job, so the three
- * walks it owns (`isMarkerSpan`, `nearestSource`, `nearestOwner`) are imported
+ * walks it owns (`isBoxlessMarker`, `nearestSource`, `nearestOwner`) are imported
  * from its web barrel — it is the neutral leaf built for exactly this consumer.
- * The local copies that used to live here had drifted: their `isMarkerSpan` keyed
+ * The local copies that used to live here had drifted: their marker test keyed
  * on `data-slot-id`, which does not recognize `<UiRegion>`, so every culprit
  * inside a miller column or a full-pane resolved to `ui-region.tsx`.
  *
@@ -42,9 +42,11 @@ export interface CulpritMeta {
 }
 
 /** The nearest `[data-plugin-id]` marker span above the element (skipping ""). */
-function nearestMarker(
-  el: Element,
-): { pluginId?: string; slotId?: string; contributionId?: string } {
+function nearestMarker(el: Element): {
+  pluginId?: string;
+  slotId?: string;
+  contributionId?: string;
+} {
   let cur: Element | null = el;
   while (cur) {
     const m: HTMLElement | null = cur.closest<HTMLElement>("[data-plugin-id]");
@@ -85,7 +87,7 @@ function boundedPath(el: Element): string {
   const segments: string[] = [];
   let cur: Element | null = el;
   while (cur && segments.length < RENDER_LOOP.PATH_MAX_DEPTH) {
-    if (!isMarkerSpan(cur)) {
+    if (!isBoxlessMarker(cur)) {
       const tag = cur.tagName.toLowerCase();
       segments.unshift(`${tag}:nth-of-type(${nthOfType(cur)})`);
     }

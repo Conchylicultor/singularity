@@ -23,65 +23,100 @@ import {
   type SealedComponent,
 } from "@plugins/framework/plugins/web-sdk/core";
 import type { Contribution } from "@plugins/framework/plugins/web-sdk/core";
-import { getSlotItemMiddlewares, getSlotListMiddlewares } from "./registry";
+import {
+  getSlotItemAttrs,
+  getSlotItemMiddlewares,
+  getSlotListMiddlewares,
+} from "./registry";
 import { DispatchOutcomeContext } from "./dispatch-outcome";
 import { useSlotItemLayout } from "./item-layout";
 
 /**
- * The per-contribution cell. Horizontal hosts get a `min-w-0` flex cell that
- * relays the shrink-chain (so flexible text truncates instead of wrapping);
- * everything else gets `display:contents`, a layout-neutral box.
+ * The ONE element a slot draws around each contribution — its box.
  *
- * `horizontal` is what the slot MEASURED off its own host; a host that
- * relocates contributions into a different layout context (the `overflow` node
- * type's dropdown panel) DECLARES the truth via `<SlotItemLayout>`, and the
- * declaration wins. A component rather than a bare element for exactly that
- * reason: the override has to be read where the contribution renders, not where
- * its element was created.
+ * Two roles in one element, deliberately:
  *
- * The GROW half of the same chain is not declared — it is **asked for**. A cell
- * is rigid by default, which is right for the buttons and chips a chrome row is
- * usually made of and wrong for the one contribution meant to expand into the
- * row's slack: that contribution's box would shrink-wrap to its own content, so
- * anything inside it that sizes itself from the room it is given (an
- * `AdaptiveBar`, a truncating strip) reads its own content back as "the room I
- * have" — a measurement that moves with the answer it produces. So the cell is
- * a `GrowRelay`: the widget that needs the slack asks for it from where it is
- * rendered, and the cell grows because it was asked. Nothing about the widget's
- * need has to be restated on the contribution, several files away, for the two
- * to agree.
+ * 1. **Layout.** Horizontal hosts get a `min-w-0` flex cell that relays the
+ *    shrink-chain (so flexible text truncates instead of wrapping); everything
+ *    else gets `display:contents`, a layout-neutral box.
  *
- * `fill` remains as the explicit declaration — a contribution that wants the
- * slack with no such widget inside it, and reorder's own (block-axis) reading
- * of the same flag for its edit-mode wrapper.
+ *    `horizontal` is what the slot MEASURED off its own host; a host that
+ *    relocates contributions into a different layout context (the `overflow`
+ *    node type's dropdown panel) DECLARES the truth via `<SlotItemLayout>`, and
+ *    the declaration wins. A component rather than a bare element for exactly
+ *    that reason: the override has to be read where the contribution renders,
+ *    not where its element was created.
+ *
+ *    The GROW half of the same chain is not declared — it is **asked for**. A
+ *    cell is rigid by default, which is right for the buttons and chips a chrome
+ *    row is usually made of and wrong for the one contribution meant to expand
+ *    into the row's slack: that contribution's box would shrink-wrap to its own
+ *    content, so anything inside it that sizes itself from the room it is given
+ *    (an `AdaptiveBar`, a truncating strip) reads its own content back as "the
+ *    room I have" — a measurement that moves with the answer it produces. So the
+ *    cell is a `GrowRelay`: the widget that needs the slack asks for it from
+ *    where it is rendered, and the cell grows because it was asked. Nothing
+ *    about the widget's need has to be restated on the contribution, several
+ *    files away, for the two to agree.
+ *
+ *    `fill` remains as the explicit declaration — a contribution that wants the
+ *    slack with no such widget inside it, and reorder's own (block-axis) reading
+ *    of the same flag for its edit-mode wrapper.
+ *
+ * 2. **Identity.** It is where `registerSlotItemAttrs` consumers stamp what this
+ *    contribution IS. The box is drawn by the slot but belongs to the
+ *    contribution, and it is usually a little bigger than what the contribution
+ *    paints inside it — so anything describing a contribution has to describe
+ *    the box, or the slack around a small widget (most of what there is to point
+ *    at when the widget is a 4px bar in a 24px row) answers for nobody.
  *
  * Its element type is stable across the post-measure `horizontal` flip, so React
  * reconciles each contribution subtree in place instead of tearing it down and
  * rebuilding it on every (re)mount.
+ *
+ * With no layout role AND nothing to stamp there is no element at all — the
+ * paths that draw no cell (`.Mount`, `.Dispatch`) stay exactly as bare as they
+ * were before any of this existed.
  */
-function SlotItemCell({
-  horizontal,
-  fill,
+function ContributionBox({
+  slotId,
+  contribution,
+  cell,
   children,
 }: {
-  horizontal: boolean;
-  fill: boolean;
+  slotId: string;
+  contribution: Contribution;
+  cell?: { horizontal: boolean; fill: boolean };
   children: ReactNode;
 }) {
   const declared = useSlotItemLayout();
-  const isRow = declared !== null ? declared === "row" : horizontal;
-  // A `display:contents` cell generates no box, so it has nothing to grow and
-  // stays out of the chain entirely — an ask crosses it for free (context passes
+  // The cell ITSELF when it lays out as a row, so the row branch below needs no
+  // non-null assertion — `isRow` as a bare boolean tells the compiler nothing
+  // about `cell`.
+  const rowCell =
+    cell && (declared !== null ? declared === "row" : cell.horizontal)
+      ? cell
+      : null;
+  const attrs = getSlotItemAttrs({ slotId, contribution, boxless: !rowCell });
+  if (!cell && !attrs) return <>{children}</>;
+  // A `display:contents` box generates none, so it has nothing to grow and stays
+  // out of the chain entirely — an ask crosses it for free (context passes
   // through), and counting it as a relay would report a link that applied
   // nothing.
-  if (!isRow) return <div className="contents">{children}</div>;
+  if (!rowCell)
+    return (
+      <div className="contents" {...attrs}>
+        {children}
+      </div>
+    );
   return (
     <GrowRelay>
       {(asked) => (
         <div
+          {...attrs}
           // eslint-disable-next-line layout/no-adhoc-layout -- one box whose DISPLAY flips at runtime between a flex cell and `display:contents`, on a React element type that must stay `div` across the flip (see the docstring: swapping the type tears the contribution subtree down, and <Line>/<Fill> are not `div` to React). No container primitive can express that, and the rigid cell is `min-w-0` WITHOUT `flex-1` on purpose — it relays the shrink-chain but must not grow, so it is not a <Fill>.
           className={
-            fill || asked
+            rowCell.fill || asked
               ? "flex min-w-0 flex-1 items-center"
               : "flex min-w-0 items-center"
           }
@@ -109,12 +144,19 @@ export interface RenderSlotConfig<P> {
 
 /**
  * Wraps a rendered node in the registered item middlewares (error-boundary
- * isolation, reorder item handle, …). Shared by `.Render` and `.Dispatch`.
+ * isolation, reorder item handle, …) and then in the contribution's own box.
+ * Shared by `.Render`, `.Mount` and `.Dispatch`.
+ *
+ * The box goes OUTSIDE the middlewares and is applied here rather than by the
+ * caller, so that every contribution rendered anywhere in the app ends up with
+ * exactly one outermost element that the slot owns and that carries its
+ * identity. `cell` is that box's layout role, which only `.Render` has.
  */
 export function applyItemMiddlewares(
   node: ReactNode,
   slotId: string,
   contribution: Contribution,
+  cell?: { horizontal: boolean; fill: boolean },
 ): ReactNode {
   const itemMws = getSlotItemMiddlewares();
   for (let i = itemMws.length - 1; i >= 0; i--) {
@@ -126,7 +168,11 @@ export function applyItemMiddlewares(
       </Mw>
     );
   }
-  return node;
+  return (
+    <ContributionBox slotId={slotId} contribution={contribution} cell={cell}>
+      {node}
+    </ContributionBox>
+  );
 }
 
 /**
@@ -140,6 +186,7 @@ function renderContributionIsolated(
   clean: unknown,
   contribution: Contribution,
   slotId: string,
+  cell?: { horizontal: boolean; fill: boolean },
 ): ReactNode {
   const component = (clean as { component?: unknown }).component;
   const node: ReactNode =
@@ -148,7 +195,7 @@ function renderContributionIsolated(
           UNSAFE_unsealSlotComponent(component as unknown as SealedComponent),
         )
       : null;
-  return applyItemMiddlewares(node, slotId, contribution);
+  return applyItemMiddlewares(node, slotId, contribution, cell);
 }
 
 interface RenderProps<P> {
@@ -238,25 +285,27 @@ export function defineRenderSlot<P>(
         const clean = cleanById.get(cId as (P & { id: string })["id"]);
         if (!clean) return null;
 
+        // See `ContributionBox`: the measured host orientation (overridable by
+        // a host that relocates contributions elsewhere) plus the
+        // contribution's own claim on the row's slack.
+        const cell = {
+          horizontal,
+          fill: (clean as { fill?: boolean }).fill === true,
+        };
         const wrapped = children
           ? applyItemMiddlewares(
               children(clean as unknown as P & { id: string }),
               id,
               contribution,
+              cell,
             )
-          : renderContributionIsolated(clean, contribution, id);
-        // See `SlotItemCell`: the measured host orientation, overridable by a
-        // host that relocates contributions elsewhere, plus the contribution's
-        // own claim on the row's slack.
-        return (
-          <SlotItemCell
-            key={cId}
-            horizontal={horizontal}
-            fill={(clean as { fill?: boolean }).fill === true}
-          >
-            {wrapped}
-          </SlotItemCell>
-        );
+          : renderContributionIsolated(clean, contribution, id, cell);
+        // The key rides a Fragment rather than the box: the box is minted inside
+        // `applyItemMiddlewares` (it has to sit outside the middlewares), and
+        // `renderItem` returning a KEYED node is relied on by every caller that
+        // maps it over a list — the reorder list middleware's passthrough path
+        // included.
+        return <Fragment key={cId}>{wrapped}</Fragment>;
       },
       [cleanById, children, horizontal],
     );

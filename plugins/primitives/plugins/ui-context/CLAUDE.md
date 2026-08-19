@@ -26,11 +26,18 @@ A lineage node is stamped onto the DOM by exactly one of two mechanisms, and the
 split is deliberate:
 
 - **Contributions — opt-in, via the picker's slot-item middleware.** It wraps
-  *every* slot contribution repo-wide in a `display:contents` marker span. That
-  cost should only be paid when the element-picker is actually in the app
+  *every* slot contribution repo-wide. That cost should only be paid when the element-picker is actually in the app
   composition, so the middleware stays in `improve/element-picker` and registers
   itself there. This plugin supplies only the grammar it stamps
   (`contributionNodeAttrs`, `appendLineage`).
+
+  It hands slot-render **attributes** (`registerSlotItemAttrs`), which slot-render
+  stamps on the one element it draws around each contribution. Not a wrapper: a
+  wrapper lands wherever the plugin providing it sits, and this one sat inside the
+  layout cell a row slot draws — so the slack around a small widget, most of what
+  there is to point at, was attributed to whatever region enclosed the slot's
+  host. `boxless` comes back with the box, so the grammar can mark a
+  `display:contents` box as one the nearest-authored-element walks step through.
 - **Regions — always on, via `<UiRegion>`.** A handful of explicit call sites
   (miller columns, full-pane, tabs, floating windows), so there is no composition
   cost to gate. `<UiRegion>` therefore lives here and is unconditional.
@@ -197,11 +204,12 @@ marker is *additive* alongside it; nothing here reads or writes it.
     - `RegionNodeAttrs`
   - Exports (values):
     - `appendLineage`
+    - `BOXLESS_ATTR`
     - `collectLineage`
     - `collectLineageMeta`
     - `collectMeta`
     - `contributionNodeAttrs`
-    - `isMarkerSpan`
+    - `isBoxlessMarker`
     - `LINEAGE_ATTR`
     - `nearestOwner`
     - `nearestSource`

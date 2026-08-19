@@ -23,12 +23,17 @@ tag later appears (the sent user message, assistant text) because it is just an
   Read that plugin's `CLAUDE.md` for the grammar, the portal bridge, and why
   regions must supply their own position.
 - **What element-picker still owns: the interaction, and ONE producer.**
-  `internal/marker-middleware.tsx` registers a slot-item middleware
-  (`registerSlotItemMiddleware`) that wraps every contribution in a
-  layout-neutral `display:contents` span stamped with `contributionNodeAttrs`
+  `internal/marker-middleware.tsx` registers `contributionNodeAttrs`
   (`data-lineage="contribution"` + `data-plugin-id` / `data-slot-id` /
-  `data-contribution-id`) and appends the same node to the portal-forward bridge.
-  It stays **here, opt-in, on purpose**: it wraps *every* slot contribution
+  `data-contribution-id`) with `registerSlotItemAttrs`, and slot-render stamps
+  them on the one box it draws around each contribution — see `slot-render`'s
+  "The contribution box, and stamping it". Attributes, not a wrapper: the wrapper
+  this used to be sat inside the layout cell a row slot draws, so a pick anywhere
+  in the slack between a small widget and the edge of its cell climbed past the
+  whole contribution to the enclosing pane. The middleware that remains renders
+  no element — it only appends the same node to the portal-forward bridge, which
+  needs a provider.
+  It stays **here, opt-in, on purpose**: it describes *every* slot contribution
   repo-wide, so that cost should only be paid when the picker is in the app
   composition. The other producer, `<UiRegion>` (a handful of explicit call
   sites — miller columns, full-pane), has no such constraint and is unconditional
@@ -108,6 +113,7 @@ Two of its fields are stamped by **this** plugin's build transform
     - `primitives/css/viewport-overlay.ViewportOverlay`
     - `primitives/icon-button.IconButton`
     - `primitives/popover.InlinePopover`
+    - `primitives/slot-render.registerSlotItemAttrs`
     - `primitives/slot-render.registerSlotItemMiddleware`
     - `primitives/ui-context.appendLineage`
     - `primitives/ui-context.collectLineage`

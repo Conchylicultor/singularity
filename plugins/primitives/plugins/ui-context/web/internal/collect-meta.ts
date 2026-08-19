@@ -1,6 +1,6 @@
 import { formatLineagePath, type UiContextMeta } from "../../core";
 import { collectLineage } from "./collect-lineage";
-import { isMarkerSpan, nearestOwner, nearestSource } from "./marker-walk";
+import { isBoxlessMarker, nearestOwner, nearestSource } from "./marker-walk";
 
 const MAX_LABEL = 60;
 
@@ -52,7 +52,7 @@ function preciseSelector(el: Element): string {
   const segments: string[] = [];
   let cur: Element | null = el;
   while (cur && cur !== document.body && segments.length < 6) {
-    if (!isMarkerSpan(cur)) segments.unshift(segmentFor(cur));
+    if (!isBoxlessMarker(cur)) segments.unshift(segmentFor(cur));
     cur = cur.parentElement;
   }
   return segments.join(">");
@@ -66,7 +66,8 @@ export function collectMeta(el: Element): UiContextMeta {
   // the pane's owning plugin and no slot, instead of climbing past the region to
   // the app shell's Apps.App contribution. The full truth is always in `path`.
   const innermost = nodes[nodes.length - 1];
-  const contribution = innermost?.kind === "contribution" ? innermost : undefined;
+  const contribution =
+    innermost?.kind === "contribution" ? innermost : undefined;
   return {
     url: window.location.href,
     pluginId: innermost?.pluginId,

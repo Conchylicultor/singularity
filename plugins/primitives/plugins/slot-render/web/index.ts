@@ -28,8 +28,14 @@ export { SlotItemLayout } from "./internal/item-layout";
 export type { SlotItemOrientation } from "./internal/item-layout";
 export { useDispatchOutcome } from "./internal/dispatch-outcome";
 export type { DispatchOutcome } from "./internal/dispatch-outcome";
-export type { SlotItemMiddleware, SlotListMiddleware } from "./internal/types";
+export type {
+  SlotItemAttrsFn,
+  SlotItemBox,
+  SlotItemMiddleware,
+  SlotListMiddleware,
+} from "./internal/types";
 export {
+  registerSlotItemAttrs,
   registerSlotItemMiddleware,
   registerSlotListMiddleware,
 } from "./internal/registry";

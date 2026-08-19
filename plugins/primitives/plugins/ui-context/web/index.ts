@@ -6,6 +6,7 @@ export type {
 } from "./internal/lineage-attrs";
 export {
   appendLineage,
+  BOXLESS_ATTR,
   contributionNodeAttrs,
   LINEAGE_ATTR,
   NODE_ATTR,
@@ -17,7 +18,7 @@ export { collectLineage } from "./internal/collect-lineage";
 export { collectLineageMeta } from "./internal/collect-lineage-meta";
 export { collectMeta } from "./internal/collect-meta";
 export {
-  isMarkerSpan,
+  isBoxlessMarker,
   nearestOwner,
   nearestSource,
 } from "./internal/marker-walk";

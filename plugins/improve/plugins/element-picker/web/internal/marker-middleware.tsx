@@ -1,6 +1,9 @@
 import type { Contribution } from "@plugins/framework/plugins/web-sdk/core";
 import type { ReactNode } from "react";
-import { registerSlotItemMiddleware } from "@plugins/primitives/plugins/slot-render/web";
+import {
+  registerSlotItemAttrs,
+  registerSlotItemMiddleware,
+} from "@plugins/primitives/plugins/slot-render/web";
 import {
   PortalForwardProvider,
   usePortalForwardedAttrs,
@@ -12,24 +15,53 @@ import {
   LINEAGE_ATTR,
 } from "@plugins/primitives/plugins/ui-context/web";
 
+/** The lineage node one contribution IS. Shared by the two halves below so the
+ *  DOM stamp and the portal-forwarded chain can never describe it differently. */
+function contributionNode(
+  slotId: string,
+  contribution: Contribution,
+): ContributionNode {
+  const pluginId = contribution._pluginId ?? "";
+  const contributionId = contribution.id
+    ? contribution._pluginId
+      ? `${contribution._pluginId}:${contribution.id as string}`
+      : String(contribution.id)
+    : "";
+  return { kind: "contribution", pluginId, slotId, contributionId };
+}
+
 /**
- * Wraps every slot contribution in a layout-neutral `contribution` lineage node
- * carrying the owning plugin id and slot id (attribute grammar owned by
- * `primitives/ui-context`). `display:contents` generates no box (layout
- * identical to a Fragment), but the element stays in the DOM tree so the
- * `collectLineage` walk resolves the nearest (most specific) plugin — the
- * fine-grained attribution the element picker needs.
+ * Marks every slot contribution with the owning plugin id and slot id (attribute
+ * grammar owned by `primitives/ui-context`), so the `collectLineage` walk
+ * resolves the nearest — most specific — plugin for any element.
  *
- * The same node is *also* appended to the portal-forward lineage (React
- * context, which crosses portals) so a contribution that portals its content out
- * to `document.body` — popovers, dialogs, menus — re-stamps the full lineage on
- * the portaled positioner, where the DOM-ancestry walk can no longer reach the
- * span.
+ * The marks are **attributes, not a wrapper**: they are handed to slot-render as
+ * data and it stamps them on the one element it draws around each contribution.
+ * A wrapper would land wherever this plugin happened to put it, and that is
+ * exactly how the picker used to lie — the wrapper sat inside the layout cell a
+ * row slot draws, so a click on the cell (all the slack around a small widget:
+ * most of what there is to hit when the widget is a 4px progress bar in a 24px
+ * row) climbed past the whole contribution and answered with the enclosing pane.
+ * As data there is no placement to get right, here or in any future consumer.
  *
- * This middleware stays **here**, opt-in, rather than in `ui-context`: it wraps
- * *every* slot contribution repo-wide, so that cost is only paid when the
- * element-picker is actually in the app composition. `<UiRegion>` — a handful of
- * explicit call sites — has no such constraint and lives in the primitive.
+ * Registering here rather than in `ui-context` keeps it opt-in: it describes
+ * *every* slot contribution repo-wide, and that cost should only be paid when
+ * the element-picker is actually in the app composition. `<UiRegion>` — a
+ * handful of explicit call sites — has no such constraint and lives in the
+ * primitive.
+ */
+registerSlotItemAttrs(({ slotId, contribution, boxless }) =>
+  contributionNodeAttrs(contributionNode(slotId, contribution), { boxless }),
+);
+
+/**
+ * The portal half, which cannot be an attribute: a contribution that portals its
+ * content out to `document.body` — popovers, dialogs, menus — severs DOM
+ * ancestry, so the whole chain rides React context (which crosses portals) and
+ * is re-stamped on the portaled positioner as {@link LINEAGE_ATTR}.
+ *
+ * A middleware because a provider has to wrap the children it serves. It renders
+ * no element of its own.
  */
 export function PluginMarkerMiddleware({
   slotId,
@@ -40,25 +72,14 @@ export function PluginMarkerMiddleware({
   contribution: Contribution;
   children: ReactNode;
 }) {
-  const pluginId = contribution._pluginId ?? "";
-  const contributionId = contribution.id
-    ? contribution._pluginId
-      ? `${contribution._pluginId}:${contribution.id as string}`
-      : String(contribution.id)
-    : "";
-  const node: ContributionNode = {
-    kind: "contribution",
-    pluginId,
-    slotId,
-    contributionId,
-  };
   const inheritedLineage = usePortalForwardedAttrs()[LINEAGE_ATTR];
-  const lineage = appendLineage(inheritedLineage, node);
+  const lineage = appendLineage(
+    inheritedLineage,
+    contributionNode(slotId, contribution),
+  );
   return (
     <PortalForwardProvider name={LINEAGE_ATTR} value={lineage}>
-      <span style={{ display: "contents" }} {...contributionNodeAttrs(node)}>
-        {children}
-      </span>
+      {children}
     </PortalForwardProvider>
   );
 }

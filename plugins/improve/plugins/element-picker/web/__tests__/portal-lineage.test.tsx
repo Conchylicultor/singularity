@@ -1,6 +1,12 @@
 import { describe, it, expect, afterEach } from "vitest";
 import { cleanup, render } from "@testing-library/react";
-import type { Contribution } from "@plugins/framework/plugins/web-sdk/core";
+import type { ComponentType } from "react";
+import {
+  PluginProvider,
+  type Contribution,
+  type LoadedPlugin,
+} from "@plugins/framework/plugins/web-sdk/core";
+import { defineRenderSlot } from "@plugins/primitives/plugins/slot-render/web";
 import { ViewportOverlay } from "@plugins/primitives/plugins/css/plugins/viewport-overlay/web";
 import {
   appendLineage,
@@ -12,25 +18,37 @@ import { PluginMarkerMiddleware } from "../internal/marker-middleware";
 
 afterEach(cleanup);
 
+const appSlot = defineRenderSlot<{ component: ComponentType }>(
+  "element-picker-test.apps.app",
+);
+
 // A contribution that portals its content out to document.body — the popover /
 // dialog / menu case from the bug report. ViewportOverlay is a real portal that
 // re-stamps the forwarded `data-*` bag, so it stands in for any base-ui portal
 // surface here without needing open-state plumbing.
 function portaledContribution(): Contribution {
-  return { _pluginId: "my.plugin", id: "my.contrib" } as unknown as Contribution;
+  return {
+    _pluginId: "my.plugin",
+    id: "my.contrib",
+  } as unknown as Contribution;
 }
 
 describe("plugin lineage survives a portal", () => {
   it("resolves the owning plugin for an element portaled out of its slot", () => {
     render(
-      <PluginMarkerMiddleware slotId="test.slot" contribution={portaledContribution()}>
+      <PluginMarkerMiddleware
+        slotId="test.slot"
+        contribution={portaledContribution()}
+      >
         <ViewportOverlay>
           <button data-testid="target">Pick me</button>
         </ViewportOverlay>
       </PluginMarkerMiddleware>,
     );
     // The button is portaled to document.body, severed from the marker span.
-    const target = document.querySelector<HTMLElement>('[data-testid="target"]')!;
+    const target = document.querySelector<HTMLElement>(
+      '[data-testid="target"]',
+    )!;
     expect(target).not.toBeNull();
 
     const meta = collectMeta(target);
@@ -48,7 +66,9 @@ describe("plugin lineage survives a portal", () => {
         <button data-testid="orphan">No owner</button>
       </ViewportOverlay>,
     );
-    const orphan = document.querySelector<HTMLElement>('[data-testid="orphan"]')!;
+    const orphan = document.querySelector<HTMLElement>(
+      '[data-testid="orphan"]',
+    )!;
     expect(collectMeta(orphan).pluginId).toBeUndefined();
   });
 
@@ -58,7 +78,10 @@ describe("plugin lineage survives a portal", () => {
         slotId="outer.slot"
         contribution={{ _pluginId: "outer.plugin" } as unknown as Contribution}
       >
-        <PluginMarkerMiddleware slotId="inner.slot" contribution={portaledContribution()}>
+        <PluginMarkerMiddleware
+          slotId="inner.slot"
+          contribution={portaledContribution()}
+        >
           <ViewportOverlay>
             <button data-testid="nested">Deep</button>
           </ViewportOverlay>
@@ -83,7 +106,10 @@ describe("plugin lineage survives a portal", () => {
         label="column 3 of 3"
         pluginId="apps/deploy/deployments"
       >
-        <PluginMarkerMiddleware slotId="inner.slot" contribution={portaledContribution()}>
+        <PluginMarkerMiddleware
+          slotId="inner.slot"
+          contribution={portaledContribution()}
+        >
           <ViewportOverlay>
             <button data-testid="mixed">Deep</button>
           </ViewportOverlay>
@@ -104,20 +130,34 @@ describe("plugin lineage survives a portal", () => {
   it("reports the region's owning plugin (and no slot) for a pick in the pane's own markup", () => {
     // The (b) fix: without the region node the walk climbed past the pane to the
     // app shell's Apps.App contribution and reported the shell as the owner.
+    //
+    // Rendered through a REAL slot, not the middleware: the contribution node is
+    // a DOM stamp on the box slot-render draws (the middleware only carries the
+    // chain across portals), so DOM-ancestry cases have to compose the way the
+    // app does.
+    const plugin = {
+      id: "apps.deploy.shell",
+      description: "app shell fixture",
+      contributions: [
+        appSlot({
+          id: "shell",
+          component: () => (
+            <UiRegion
+              kind="pane"
+              id="deploy-deployment-detail"
+              label="column 3 of 3"
+              pluginId="apps/deploy/deployments"
+            >
+              <button data-testid="in-pane">Overview</button>
+            </UiRegion>
+          ),
+        }),
+      ],
+    } as unknown as LoadedPlugin;
     render(
-      <PluginMarkerMiddleware
-        slotId="apps.app"
-        contribution={{ _pluginId: "apps.deploy.shell" } as unknown as Contribution}
-      >
-        <UiRegion
-          kind="pane"
-          id="deploy-deployment-detail"
-          label="column 3 of 3"
-          pluginId="apps/deploy/deployments"
-        >
-          <button data-testid="in-pane">Overview</button>
-        </UiRegion>
-      </PluginMarkerMiddleware>,
+      <PluginProvider plugins={[plugin]}>
+        <appSlot.Render />
+      </PluginProvider>,
     );
     const meta = collectMeta(
       document.querySelector<HTMLElement>('[data-testid="in-pane"]')!,
@@ -126,7 +166,7 @@ describe("plugin lineage survives a portal", () => {
     expect(meta.slotId).toBeUndefined();
     expect(meta.contributionId).toBeUndefined();
     expect(meta.path).toBe(
-      "apps.deploy.shell@apps.app > apps/deploy/deployments#pane:deploy-deployment-detail[column 3 of 3]",
+      "apps.deploy.shell@element-picker-test.apps.app > apps/deploy/deployments#pane:deploy-deployment-detail[column 3 of 3]",
     );
   });
 });
@@ -145,11 +185,20 @@ describe("lineage serialization", () => {
       contributionId: "p2:c",
     });
     // A contribution with no plugin id leaves the chain untouched.
-    const c = appendLineage(b, { kind: "contribution", pluginId: "", slotId: "s3" });
+    const c = appendLineage(b, {
+      kind: "contribution",
+      pluginId: "",
+      slotId: "s3",
+    });
     expect(c).toBe(b);
     expect(parseLineage(c)).toEqual([
       { kind: "contribution", pluginId: "p1", slotId: "s1" },
-      { kind: "contribution", pluginId: "p2", slotId: "s2", contributionId: "p2:c" },
+      {
+        kind: "contribution",
+        pluginId: "p2",
+        slotId: "s2",
+        contributionId: "p2:c",
+      },
     ]);
   });
 

@@ -15292,6 +15292,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/css/viewport-overlay.ViewportOverlay`
           - `primitives/icon-button.IconButton`
           - `primitives/popover.InlinePopover`
+          - `primitives/slot-render.registerSlotItemAttrs`
           - `primitives/slot-render.registerSlotItemMiddleware`
           - `primitives/ui-context.appendLineage`
           - `primitives/ui-context.collectLineage`
@@ -26190,6 +26191,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `OrderedDispatchSlot`
           - `RenderSlot`
           - `RenderSlotConfig`
+          - `SlotItemAttrsFn`
+          - `SlotItemBox`
           - `SlotItemMiddleware`
           - `SlotItemOrientation`
           - `SlotListMiddleware`
@@ -26202,6 +26205,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `defineOrderedDispatchSlot`
           - `defineRenderSlot`
           - `defineWrapperSlot`
+          - `registerSlotItemAttrs`
           - `registerSlotItemMiddleware`
           - `registerSlotListMiddleware`
           - `renderIsolated`
@@ -26671,11 +26675,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `RegionNodeAttrs`
         - Exports (values):
           - `appendLineage`
+          - `BOXLESS_ATTR`
           - `collectLineage`
           - `collectLineageMeta`
           - `collectMeta`
           - `contributionNodeAttrs`
-          - `isMarkerSpan`
+          - `isBoxlessMarker`
           - `LINEAGE_ATTR`
           - `nearestOwner`
           - `nearestSource`
@@ -27791,7 +27796,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/css/badge.Badge`
           - `primitives/css/inline.Inline`
           - `primitives/log-channels.clientLog`
-          - `primitives/ui-context.isMarkerSpan`
+          - `primitives/ui-context.isBoxlessMarker`
           - `primitives/ui-context.nearestOwner`
           - `primitives/ui-context.nearestSource`
           - `reports.report`

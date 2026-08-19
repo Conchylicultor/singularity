@@ -26,7 +26,7 @@ does not own.
     - `primitives/css/badge.Badge`
     - `primitives/css/inline.Inline`
     - `primitives/log-channels.clientLog`
-    - `primitives/ui-context.isMarkerSpan`
+    - `primitives/ui-context.isBoxlessMarker`
     - `primitives/ui-context.nearestOwner`
     - `primitives/ui-context.nearestSource`
     - `reports.report`

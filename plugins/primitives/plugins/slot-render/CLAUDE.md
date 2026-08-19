@@ -105,6 +105,38 @@ shrink-wrapping flex item. Such a host wraps the relocated children in
 what was measured. Read at render position, so it applies to contributions whose
 elements were created upstream.
 
+## The contribution box, and stamping it
+
+Every contribution rendered by any path gets at most ONE element the slot owns —
+its **box** (`ContributionBox`). On `.Render` that box is the layout cell
+described above; `.Mount` / `.Dispatch` draw no cell, so their box exists only if
+something is stamped on it, and otherwise no element is emitted at all.
+
+`registerSlotItemAttrs(fn)` is how a plugin describes contributions: it returns
+**DOM attributes**, and slot-render puts them on the box. `fn` is handed
+`{ slotId, contribution, boxless }` and must be pure — it runs once per
+contribution per render.
+
+Attributes rather than a wrapper component, deliberately. The element picker used
+to describe contributions by wrapping them in a marker span, and a wrapper lands
+wherever the plugin providing it happens to sit — theirs sat *inside* the layout
+cell. The cell is normally a bit bigger than what the contribution paints in it,
+so the slack around a small widget (most of what there is to point at when the
+widget is a 4px progress bar in a 24px row) was described by nobody, and a click
+there reported the enclosing pane instead of the widget. As data there is no
+placement to get wrong — not for the picker, not for any future consumer.
+
+`boxless` tells the consumer whether this box generates a box (`display:contents`
+or a real cell), because walks that look for the nearest *authored* element have
+to step through the layout-neutral ones. The slot knows; the consumer never
+guesses.
+
+Item middlewares are unchanged and unconditional — they always wrap the
+contribution's content, inside the box, so an error boundary's fallback keeps the
+cell's layout role. `applyItemMiddlewares` mints the box itself (it has to be
+outermost), so `renderItem` returns a Fragment carrying the React key, which
+every caller mapping it over a list relies on.
+
 ## Dispatch outcome
 
 `.Dispatch` publishes what it did, so a descendant can react to *"nothing handled
@@ -177,6 +209,8 @@ the outcome too, with no separate code path.
     - `OrderedDispatchSlot`
     - `RenderSlot`
     - `RenderSlotConfig`
+    - `SlotItemAttrsFn`
+    - `SlotItemBox`
     - `SlotItemMiddleware`
     - `SlotItemOrientation`
     - `SlotListMiddleware`
@@ -189,6 +223,7 @@ the outcome too, with no separate code path.
     - `defineOrderedDispatchSlot`
     - `defineRenderSlot`
     - `defineWrapperSlot`
+    - `registerSlotItemAttrs`
     - `registerSlotItemMiddleware`
     - `registerSlotListMiddleware`
     - `renderIsolated`
