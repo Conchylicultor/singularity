@@ -16,6 +16,7 @@ const ctx = (
   importedModules: ExtractContext["importedModules"],
 ): ExtractContext => ({
   dir: "/nonexistent/plugin-dir-for-declaration-guard-test",
+  pluginId: "declaration.guard.test",
   importedModules,
 });
 

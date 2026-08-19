@@ -45,7 +45,7 @@ export const Place = {
    * and a second one turns the block's empty state into a picker with no edit
    * to the block.
    */
-  Provider: defineSlot<PlaceProviderContribution>("page.place-provider", {
+  Provider: defineSlot<PlaceProviderContribution>({
     docLabel: (p) => p.label,
   }),
 };

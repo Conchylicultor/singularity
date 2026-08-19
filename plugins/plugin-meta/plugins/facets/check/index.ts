@@ -3,7 +3,12 @@ import { declaredSlotId } from "@plugins/framework/plugins/slot-declaration/core
 import { existsSync } from "fs";
 import { join, relative } from "path";
 import { buildPluginTree } from "@plugins/plugin-meta/plugins/plugin-tree/core";
-import { declareSlotsFromBarrels } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
+import {
+  declarePluginSlots,
+  declaredSlotSources,
+  type SlotRecord,
+} from "@plugins/framework/plugins/slot-declaration/core";
+import type { PluginId } from "@plugins/framework/plugins/plugin-id/core";
 import { loadFacets } from "@plugins/plugin-meta/plugins/facets/core";
 import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
 import {
@@ -56,9 +61,23 @@ const check: Check = {
 
     // This check imports web barrels ITSELF (the tree above is structure-only),
     // so it must also declare their slots: a contribution names its slot by
-    // object, and that slot's id is derived from whichever plugin declares it.
-    // Without this every id is `undefined` and every surface reads as missing.
-    await declareSlotsFromBarrels(root);
+    // object, and that slot's id comes from whichever plugin declares it.
+    // Without a pass, every id is `undefined` and every surface reads as missing.
+    //
+    // The pass is INCLUSIVE of disabled plugins, which is why it is done here
+    // rather than through `declareSlotsFromBarrels` (that one models the live
+    // REGISTRY, so it skips them). This check asks a question about SOURCE —
+    // "does every facet have a renderer contributed" — and a disabled plugin's
+    // renderer slot is still a real declaration in the tree. Skipping it would
+    // report every facet as missing a diff renderer.
+    const declaring: { id: PluginId; slots: SlotRecord }[] = [];
+    for (const node of tree.byDir.values()) {
+      const barrel = join(node.dir, "web", "index.ts");
+      if (!existsSync(barrel)) continue;
+      const slots = declaredSlotSources(await importBarrel(barrel));
+      if (slots) declaring.push({ id: node.id, slots });
+    }
+    declarePluginSlots(declaring);
 
     const covered = new Map(
       RENDER_SURFACES.map((s) => [s.slotId, new Set<string>()]),

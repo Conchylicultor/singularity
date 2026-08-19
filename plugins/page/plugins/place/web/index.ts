@@ -20,5 +20,5 @@ export default {
       component: PlaceBlock,
     }),
   ],
-  slots: [Place],
+  slots: Place,
 } satisfies PluginDefinition;

@@ -4,6 +4,7 @@ import { existsSync } from "fs";
 import { join, relative } from "path";
 import { writeGenerated } from "./write-generated";
 import { buildBarrelFreeTree } from "./barrel-free-tree";
+import { declareSlotsFromBarrels } from "./slot-declaration-guard";
 import {
   registerBarrelStubs,
   importBarrel,
@@ -85,6 +86,11 @@ async function collectTokenGroupVarsUncached(
 ): Promise<Record<string, string[]>> {
   const tree = await buildBarrelFreeTree(root);
   registerBarrelStubs(root);
+  // Imports web barrels below, so it must also declare their slots: a
+  // contribution names its slot by object, and that slot's id comes from
+  // whichever plugin declares it. Without this every id is `undefined` and the
+  // token-group set reads as empty — a smaller, wrong answer that looks right.
+  await declareSlotsFromBarrels(root);
 
   const byGroup: Record<string, string[]> = {};
   for (const node of tree.byDir.values()) {

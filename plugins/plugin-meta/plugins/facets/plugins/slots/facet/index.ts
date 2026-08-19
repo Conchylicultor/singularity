@@ -246,7 +246,7 @@ export default createFacet<SlotDef[]>({
 
   extract(ctx) {
     // Two discovery modes:
-    //  - Imports present (the normal build): the plugin's own `slots: [...]`
+    //  - Imports present (the normal build): the plugin's own `slots: {…}`
     //    DECLARATION is the sole authoritative set, and each slot's `meta.kind`
     //    is read off the slot object. Nothing is sniffed and nothing is guessed:
     //    a slot is here because its owner said so, which is also what makes the

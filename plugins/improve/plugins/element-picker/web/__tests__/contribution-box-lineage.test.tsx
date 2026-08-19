@@ -12,12 +12,8 @@ import "../internal/marker-middleware";
 
 afterEach(cleanup);
 
-const rowSlot = defineRenderSlot<{ component: ComponentType }>(
-  "element-picker-test.row",
-);
-const listSlot = defineRenderSlot<{ component: ComponentType }>(
-  "element-picker-test.list",
-);
+const rowSlot = defineRenderSlot<{ component: ComponentType }>();
+const listSlot = defineRenderSlot<{ component: ComponentType }>();
 
 /** The progress-bar shape: a widget far smaller than the row that hosts it, so
  *  most of its own box is slack the user can point at. */
@@ -30,6 +26,8 @@ function plugin(slot: typeof rowSlot): LoadedPlugin {
     id: "ui.segmented-progress-bar",
     description: "lineage fixture",
     contributions: [slot({ id: "bar", component: TinyWidget })],
+    // A rendered slot must be a declared slot — its id derives from here.
+    slots: { row: slot },
   } as unknown as LoadedPlugin;
 }
 

@@ -77,7 +77,7 @@ interface ReorderableSlotsData {
 /**
  * The reorderable-slot SET — read from what each plugin DECLARES.
  *
- * Every plugin's `slots: [...]` is normalised through the same `collectSlots`
+ * Every plugin's `slots: {…}` record is normalised through the same `collectSlots`
  * the browser runs, and `meta.reorderable` (stamped by the slot's constructor)
  * decides membership. So the manifest states what the RUNTIME will do, and a
  * slot whose id is built at run time — `` `pane.${id}.actions` `` — is in it for

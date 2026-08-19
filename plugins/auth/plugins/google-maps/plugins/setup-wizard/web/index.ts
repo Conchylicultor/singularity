@@ -26,5 +26,5 @@ export default {
         openPane(googleMapsSetupPane, {}, { mode: "root" }),
     }),
   ],
-  slots: [googleMapsSetupPane],
+  slots: { "google-maps-setup": googleMapsSetupPane },
 } satisfies PluginDefinition;

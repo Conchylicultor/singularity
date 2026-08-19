@@ -18,9 +18,7 @@ import { PluginMarkerMiddleware } from "../internal/marker-middleware";
 
 afterEach(cleanup);
 
-const appSlot = defineRenderSlot<{ component: ComponentType }>(
-  "element-picker-test.apps.app",
-);
+const appSlot = defineRenderSlot<{ component: ComponentType }>();
 
 // A contribution that portals its content out to document.body — the popover /
 // dialog / menu case from the bug report. ViewportOverlay is a real portal that
@@ -153,6 +151,8 @@ describe("plugin lineage survives a portal", () => {
           ),
         }),
       ],
+      // A rendered slot must be a declared slot — its id derives from here.
+      slots: { app: appSlot },
     } as unknown as LoadedPlugin;
     render(
       <PluginProvider plugins={[plugin]}>

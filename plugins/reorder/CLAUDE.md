@@ -149,7 +149,225 @@ Edit mode inflates every item with chrome (ring, ×-badge, empty-item placeholde
 - Description: Generic reorder primitive: every defineRenderSlot is unconditionally reorderable; use defineMountSlot for headless slots. DnD is automatic via middleware. Generic reorder primitive: per-slot config_v2 directives for contribution order/visibility.
 - Load-bearing: yes
 - Web:
+<<<<<<< .merge_file_QWfhTN
   - Contributes: `ConfigV2.WebRegister` ×214: "action-bar.item", "agents.agent-actions", "agents.list", "agents.list-actions", "agents.system-agent", "agents.view", "apps.app", "apps.tab-bar-actions", "browser.actions", "browser.nav-controls", "browser.omnibox", "browser.start-page", "browser.sub-bar", "browser.tab-strip", "browser.viewport", "build-detail.section", "composition-detail.section", "conversation-item.chips", "conversation.above-prompt-input", "conversation.action-bar", "conversation.exit-menu.item", "conversation.header", "conversation.jsonl-viewer.overlay", "conversation.jsonl-viewer.pending-prompt-action", "conversation.jsonl-viewer.row-action", "conversation.jsonl-viewer.transcript-stat", "conversation.prompt-bar", "conversation.prompt-input", "conversations-sidebar-history-actions", "conversations-sidebar-queue-actions", "conversations-sidebar-sources", "debug-app.sidebar", "debug-app.toolbar", "deploy.deployments.fields", "deploy.deployments.item-actions", "deploy.server-detail.section", "deploy.servers.fields", "deploy.servers.item-actions", "deployment-detail.section", "event-source-detail.section", "event-source-run-detail.section", "events.list.fields", "events.sidebar", "events.source-runs.item-actions", "events.sources.item-actions", "file-explorer.sidebar", "file-explorer.toolbar", "home.section", "mail.banner", "mail.rail-badge", "mail.sidebar", "page.editor.block", "page.editor.format-action", "page.editor.turn-into", "page.reference.actions", "pages.detail.header-actions", "pages.detail.overlay", "pages.detail.section", "pages.sidebar", "pages.tree.fields", "pages.tree.row-actions", "pages.welcome.section", "pane.accounts.actions", "pane.agent-detail.actions", "pane.agent-report.actions", "pane.agent-side.actions", "pane.agent-system-detail.actions", "pane.agents-root.actions", "pane.all-conversations.actions", "pane.apple-setup.actions", "pane.attempt.actions", "pane.backup.actions", "pane.build-detail.actions", "pane.build.actions", "pane.claude-cli-calls.actions", "pane.commit-detail.actions", "pane.composition-compare.actions", "pane.composition-detail.actions", "pane.compositions.actions", "pane.config-orphans.actions", "pane.config-v2-detail.actions", "pane.config-v2-nav.actions", "pane.contributions.actions", "pane.conv-commits-graph.actions", "pane.conv-docs.actions", "pane.conv-file-tree.actions", "pane.conv-push-profiling.actions", "pane.conv-review.actions", "pane.conv-summary.actions", "pane.conv-terminal.actions", "pane.conversation.actions", "pane.conversations-recover.actions", "pane.debug-boot-profile-detail.actions", "pane.debug-boot-profile.actions", "pane.debug-boot-profiles-list.actions", "pane.debug-broadcasts.actions", "pane.debug-health-monitor.actions", "pane.debug-heap-snapshot.actions", "pane.debug-live-state-emit.actions", "pane.debug-memory.actions", "pane.debug-profiling-build-detail.actions", "pane.debug-profiling-op-detail.actions", "pane.debug-profiling.actions", "pane.debug-read-set.actions", "pane.deploy-deployment-detail.actions", "pane.deploy-server-detail.actions", "pane.deploy-servers.actions", "pane.event-list.actions", "pane.event-source-detail.actions", "pane.event-source-run.actions", "pane.event-sources.actions", "pane.events-root.actions", "pane.events-test.actions", "pane.explorer.actions", "pane.file-peek.actions", "pane.global-file-tree.actions", "pane.google-maps-setup.actions", "pane.google-setup.actions", "pane.graph.actions", "pane.layout-lab.actions", "pane.live-state-health.actions", "pane.logs-channel.actions", "pane.logs.actions", "pane.mail-message.actions", "pane.mail-root.actions", "pane.mail-search.actions", "pane.mail-thread.actions", "pane.mail-threads.actions", "pane.page-detail.actions", "pane.pages-root.actions", "pane.pages-tree.actions", "pane.plugin-conv-side.actions", "pane.plugin-view.actions", "pane.prototypes-detail.actions", "pane.prototypes-gallery.actions", "pane.queue.actions", "pane.release-detail.actions", "pane.render-profiler.actions", "pane.report-detail.actions", "pane.reports.actions", "pane.screenshot.actions", "pane.settings-config-index.actions", "pane.sonata-library.actions", "pane.sonata-player.actions", "pane.stats.actions", "pane.story-detail.actions", "pane.story-gallery.actions", "pane.table-detail.actions", "pane.task-detail.actions", "pane.tasks-root.actions", "pane.theme-customizer.actions", "pane.trace-detail.actions", "pane.traces.actions", "pane.website-agents.actions", "pane.website-apps.actions", "pane.website-downloads.actions", "pane.website-landing.actions", "pane.website-platform.actions", "pane.welcome.actions", "pane.workflow-node.actions", "pane.workflows-definition-detail.actions", "pane.workflows-definitions.actions", "pane.workflows-execution-detail.actions", "pane.worktree-cleanup.actions", "pane.zero-test.actions", "plugin-view.section", "primitives.data-view.field-extension", "primitives.data-view.row-order", "profiling.section", "prompt-editor.floating-action", "release-detail.section", "review.section", "settings.rail-badge", "settings.sidebar", "shell.sidebar", "shell.toolbar", "sonata.home", "sonata.hud", "sonata.library.fields", "sonata.library.song-actions", "sonata.section", "sonata.toolbar.end", "sonata.toolbar.start", "sonata.transport", "stats.chart", "story.toolbar.end", "story.toolbar.start", "studio.compositions.item-actions", "studio.explorer.tree-row-accent", "studio.explorer.tree-row-badge", "studio.sidebar", "studio.toolbar", "table-detail.section", "task-deps-tree-sources", "task-deps-tree.actions", "task-detail.section", "task-draft-form.action", "tasks.fields", "tasks.launch-option", "tasks.list-actions", "tasks.task-actions", "text-editor.plugin", "theme-customizer.section", "ui.theme-engine.quick-theme.section", "ui.theme-engine.variant-group", "website.agents.section", "website.apps.section", "website.platform.section", "website.section", "website.toolbar.end", "website.toolbar.start", "workflows-app.sidebar", "workflows-app.toolbar", "workflows.detail.section"
+=======
+  - Contributes:
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
+>>>>>>> .merge_file_4np0Wi
   - Uses:
     - `config_v2.ConfigV2`
     - `config_v2.useConfig`
@@ -182,221 +400,6 @@ Edit mode inflates every item with chrome (ring, ×-badge, empty-item placeholde
   - Contributes: `ConfigV2.Register` ×214: "action-bar.item", "agents.agent-actions", "agents.list", "agents.list-actions", "agents.system-agent", "agents.view", "apps.app", "apps.tab-bar-actions", "browser.actions", "browser.nav-controls", "browser.omnibox", "browser.start-page", "browser.sub-bar", "browser.tab-strip", "browser.viewport", "build-detail.section", "composition-detail.section", "conversation-item.chips", "conversation.above-prompt-input", "conversation.action-bar", "conversation.exit-menu.item", "conversation.header", "conversation.jsonl-viewer.overlay", "conversation.jsonl-viewer.pending-prompt-action", "conversation.jsonl-viewer.row-action", "conversation.jsonl-viewer.transcript-stat", "conversation.prompt-bar", "conversation.prompt-input", "conversations-sidebar-history-actions", "conversations-sidebar-queue-actions", "conversations-sidebar-sources", "debug-app.sidebar", "debug-app.toolbar", "deploy.deployments.fields", "deploy.deployments.item-actions", "deploy.server-detail.section", "deploy.servers.fields", "deploy.servers.item-actions", "deployment-detail.section", "event-source-detail.section", "event-source-run-detail.section", "events.list.fields", "events.sidebar", "events.source-runs.item-actions", "events.sources.item-actions", "file-explorer.sidebar", "file-explorer.toolbar", "home.section", "mail.banner", "mail.rail-badge", "mail.sidebar", "page.editor.block", "page.editor.format-action", "page.editor.turn-into", "page.reference.actions", "pages.detail.header-actions", "pages.detail.overlay", "pages.detail.section", "pages.sidebar", "pages.tree.fields", "pages.tree.row-actions", "pages.welcome.section", "pane.accounts.actions", "pane.agent-detail.actions", "pane.agent-report.actions", "pane.agent-side.actions", "pane.agent-system-detail.actions", "pane.agents-root.actions", "pane.all-conversations.actions", "pane.apple-setup.actions", "pane.attempt.actions", "pane.backup.actions", "pane.build-detail.actions", "pane.build.actions", "pane.claude-cli-calls.actions", "pane.commit-detail.actions", "pane.composition-compare.actions", "pane.composition-detail.actions", "pane.compositions.actions", "pane.config-orphans.actions", "pane.config-v2-detail.actions", "pane.config-v2-nav.actions", "pane.contributions.actions", "pane.conv-commits-graph.actions", "pane.conv-docs.actions", "pane.conv-file-tree.actions", "pane.conv-push-profiling.actions", "pane.conv-review.actions", "pane.conv-summary.actions", "pane.conv-terminal.actions", "pane.conversation.actions", "pane.conversations-recover.actions", "pane.debug-boot-profile-detail.actions", "pane.debug-boot-profile.actions", "pane.debug-boot-profiles-list.actions", "pane.debug-broadcasts.actions", "pane.debug-health-monitor.actions", "pane.debug-heap-snapshot.actions", "pane.debug-live-state-emit.actions", "pane.debug-memory.actions", "pane.debug-profiling-build-detail.actions", "pane.debug-profiling-op-detail.actions", "pane.debug-profiling.actions", "pane.debug-read-set.actions", "pane.deploy-deployment-detail.actions", "pane.deploy-server-detail.actions", "pane.deploy-servers.actions", "pane.event-list.actions", "pane.event-source-detail.actions", "pane.event-source-run.actions", "pane.event-sources.actions", "pane.events-root.actions", "pane.events-test.actions", "pane.explorer.actions", "pane.file-peek.actions", "pane.global-file-tree.actions", "pane.google-maps-setup.actions", "pane.google-setup.actions", "pane.graph.actions", "pane.layout-lab.actions", "pane.live-state-health.actions", "pane.logs-channel.actions", "pane.logs.actions", "pane.mail-message.actions", "pane.mail-root.actions", "pane.mail-search.actions", "pane.mail-thread.actions", "pane.mail-threads.actions", "pane.page-detail.actions", "pane.pages-root.actions", "pane.pages-tree.actions", "pane.plugin-conv-side.actions", "pane.plugin-view.actions", "pane.prototypes-detail.actions", "pane.prototypes-gallery.actions", "pane.queue.actions", "pane.release-detail.actions", "pane.render-profiler.actions", "pane.report-detail.actions", "pane.reports.actions", "pane.screenshot.actions", "pane.settings-config-index.actions", "pane.sonata-library.actions", "pane.sonata-player.actions", "pane.stats.actions", "pane.story-detail.actions", "pane.story-gallery.actions", "pane.table-detail.actions", "pane.task-detail.actions", "pane.tasks-root.actions", "pane.theme-customizer.actions", "pane.trace-detail.actions", "pane.traces.actions", "pane.website-agents.actions", "pane.website-apps.actions", "pane.website-downloads.actions", "pane.website-landing.actions", "pane.website-platform.actions", "pane.welcome.actions", "pane.workflow-node.actions", "pane.workflows-definition-detail.actions", "pane.workflows-definitions.actions", "pane.workflows-execution-detail.actions", "pane.worktree-cleanup.actions", "pane.zero-test.actions", "plugin-view.section", "primitives.data-view.field-extension", "primitives.data-view.row-order", "profiling.section", "prompt-editor.floating-action", "release-detail.section", "review.section", "settings.rail-badge", "settings.sidebar", "shell.sidebar", "shell.toolbar", "sonata.home", "sonata.hud", "sonata.library.fields", "sonata.library.song-actions", "sonata.section", "sonata.toolbar.end", "sonata.toolbar.start", "sonata.transport", "stats.chart", "story.toolbar.end", "story.toolbar.start", "studio.compositions.item-actions", "studio.explorer.tree-row-accent", "studio.explorer.tree-row-badge", "studio.sidebar", "studio.toolbar", "table-detail.section", "task-deps-tree-sources", "task-deps-tree.actions", "task-detail.section", "task-draft-form.action", "tasks.fields", "tasks.launch-option", "tasks.list-actions", "tasks.task-actions", "text-editor.plugin", "theme-customizer.section", "ui.theme-engine.quick-theme.section", "ui.theme-engine.variant-group", "website.agents.section", "website.apps.section", "website.platform.section", "website.section", "website.toolbar.end", "website.toolbar.start", "workflows-app.sidebar", "workflows-app.toolbar", "workflows.detail.section"
 =======
   - Contributes:
-<<<<<<< .merge_file_jJpg0p
-    - `ConfigV2.Register` "action-bar.item"
-    - `ConfigV2.Register` "agents.agent-actions"
-    - `ConfigV2.Register` "agents.list"
-    - `ConfigV2.Register` "agents.list-actions"
-    - `ConfigV2.Register` "agents.system-agent"
-    - `ConfigV2.Register` "agents.view"
-    - `ConfigV2.Register` "apps.app"
-    - `ConfigV2.Register` "apps.tab-bar-actions"
-    - `ConfigV2.Register` "browser.actions"
-    - `ConfigV2.Register` "browser.nav-controls"
-    - `ConfigV2.Register` "browser.omnibox"
-    - `ConfigV2.Register` "browser.start-page"
-    - `ConfigV2.Register` "browser.sub-bar"
-    - `ConfigV2.Register` "browser.tab-strip"
-    - `ConfigV2.Register` "browser.viewport"
-    - `ConfigV2.Register` "build-detail.section"
-    - `ConfigV2.Register` "composition-detail.section"
-    - `ConfigV2.Register` "conversation-item.chips"
-    - `ConfigV2.Register` "conversation.above-prompt-input"
-    - `ConfigV2.Register` "conversation.action-bar"
-    - `ConfigV2.Register` "conversation.exit-menu.item"
-    - `ConfigV2.Register` "conversation.header"
-    - `ConfigV2.Register` "conversation.jsonl-viewer.overlay"
-    - `ConfigV2.Register` "conversation.jsonl-viewer.pending-prompt-action"
-    - `ConfigV2.Register` "conversation.jsonl-viewer.row-action"
-    - `ConfigV2.Register` "conversation.jsonl-viewer.transcript-stat"
-    - `ConfigV2.Register` "conversation.prompt-bar"
-    - `ConfigV2.Register` "conversation.prompt-input"
-    - `ConfigV2.Register` "conversations-sidebar-history-actions"
-    - `ConfigV2.Register` "conversations-sidebar-queue-actions"
-    - `ConfigV2.Register` "conversations-sidebar-sources"
-    - `ConfigV2.Register` "debug-app.sidebar"
-    - `ConfigV2.Register` "debug-app.toolbar"
-    - `ConfigV2.Register` "deploy.deployments.fields"
-    - `ConfigV2.Register` "deploy.deployments.item-actions"
-    - `ConfigV2.Register` "deploy.server-detail.section"
-    - `ConfigV2.Register` "deploy.servers.fields"
-    - `ConfigV2.Register` "deploy.servers.item-actions"
-    - `ConfigV2.Register` "deployment-detail.section"
-    - `ConfigV2.Register` "event-source-detail.section"
-    - `ConfigV2.Register` "event-source-run-detail.section"
-    - `ConfigV2.Register` "events.list.fields"
-    - `ConfigV2.Register` "events.sidebar"
-    - `ConfigV2.Register` "events.source-runs.item-actions"
-    - `ConfigV2.Register` "events.sources.item-actions"
-    - `ConfigV2.Register` "file-explorer.sidebar"
-    - `ConfigV2.Register` "file-explorer.toolbar"
-    - `ConfigV2.Register` "home.section"
-    - `ConfigV2.Register` "mail.banner"
-    - `ConfigV2.Register` "mail.rail-badge"
-    - `ConfigV2.Register` "mail.sidebar"
-    - `ConfigV2.Register` "page.editor.block"
-    - `ConfigV2.Register` "page.editor.format-action"
-    - `ConfigV2.Register` "page.editor.turn-into"
-    - `ConfigV2.Register` "pages.detail.header-actions"
-    - `ConfigV2.Register` "pages.detail.overlay"
-    - `ConfigV2.Register` "pages.detail.section"
-    - `ConfigV2.Register` "pages.sidebar"
-    - `ConfigV2.Register` "pages.tree.fields"
-    - `ConfigV2.Register` "pages.tree.row-actions"
-    - `ConfigV2.Register` "pages.welcome.section"
-    - `ConfigV2.Register` "pane.accounts.actions"
-    - `ConfigV2.Register` "pane.agent-detail.actions"
-    - `ConfigV2.Register` "pane.agent-report.actions"
-    - `ConfigV2.Register` "pane.agent-side.actions"
-    - `ConfigV2.Register` "pane.agent-system-detail.actions"
-    - `ConfigV2.Register` "pane.agents-root.actions"
-    - `ConfigV2.Register` "pane.all-conversations.actions"
-    - `ConfigV2.Register` "pane.apple-setup.actions"
-    - `ConfigV2.Register` "pane.attempt.actions"
-    - `ConfigV2.Register` "pane.backup.actions"
-    - `ConfigV2.Register` "pane.build-detail.actions"
-    - `ConfigV2.Register` "pane.build.actions"
-    - `ConfigV2.Register` "pane.claude-cli-calls.actions"
-    - `ConfigV2.Register` "pane.commit-detail.actions"
-    - `ConfigV2.Register` "pane.composition-compare.actions"
-    - `ConfigV2.Register` "pane.composition-detail.actions"
-    - `ConfigV2.Register` "pane.compositions.actions"
-    - `ConfigV2.Register` "pane.config-orphans.actions"
-    - `ConfigV2.Register` "pane.config-v2-detail.actions"
-    - `ConfigV2.Register` "pane.config-v2-nav.actions"
-    - `ConfigV2.Register` "pane.contributions.actions"
-    - `ConfigV2.Register` "pane.conv-commits-graph.actions"
-    - `ConfigV2.Register` "pane.conv-docs.actions"
-    - `ConfigV2.Register` "pane.conv-file-tree.actions"
-    - `ConfigV2.Register` "pane.conv-push-profiling.actions"
-    - `ConfigV2.Register` "pane.conv-review.actions"
-    - `ConfigV2.Register` "pane.conv-summary.actions"
-    - `ConfigV2.Register` "pane.conv-terminal.actions"
-    - `ConfigV2.Register` "pane.conversation.actions"
-    - `ConfigV2.Register` "pane.conversations-recover.actions"
-    - `ConfigV2.Register` "pane.debug-boot-profile-detail.actions"
-    - `ConfigV2.Register` "pane.debug-boot-profile.actions"
-    - `ConfigV2.Register` "pane.debug-boot-profiles-list.actions"
-    - `ConfigV2.Register` "pane.debug-broadcasts.actions"
-    - `ConfigV2.Register` "pane.debug-health-monitor.actions"
-    - `ConfigV2.Register` "pane.debug-heap-snapshot.actions"
-    - `ConfigV2.Register` "pane.debug-live-state-emit.actions"
-    - `ConfigV2.Register` "pane.debug-memory.actions"
-    - `ConfigV2.Register` "pane.debug-profiling-build-detail.actions"
-    - `ConfigV2.Register` "pane.debug-profiling-op-detail.actions"
-    - `ConfigV2.Register` "pane.debug-profiling.actions"
-    - `ConfigV2.Register` "pane.debug-read-set.actions"
-    - `ConfigV2.Register` "pane.deploy-deployment-detail.actions"
-    - `ConfigV2.Register` "pane.deploy-server-detail.actions"
-    - `ConfigV2.Register` "pane.deploy-servers.actions"
-    - `ConfigV2.Register` "pane.event-list.actions"
-    - `ConfigV2.Register` "pane.event-source-detail.actions"
-    - `ConfigV2.Register` "pane.event-source-run.actions"
-    - `ConfigV2.Register` "pane.event-sources.actions"
-    - `ConfigV2.Register` "pane.events-root.actions"
-    - `ConfigV2.Register` "pane.events-test.actions"
-    - `ConfigV2.Register` "pane.explorer.actions"
-    - `ConfigV2.Register` "pane.file-peek.actions"
-    - `ConfigV2.Register` "pane.global-file-tree.actions"
-    - `ConfigV2.Register` "pane.google-maps-setup.actions"
-    - `ConfigV2.Register` "pane.google-setup.actions"
-    - `ConfigV2.Register` "pane.graph.actions"
-    - `ConfigV2.Register` "pane.layout-lab.actions"
-    - `ConfigV2.Register` "pane.live-state-health.actions"
-    - `ConfigV2.Register` "pane.logs-channel.actions"
-    - `ConfigV2.Register` "pane.logs.actions"
-    - `ConfigV2.Register` "pane.mail-message.actions"
-    - `ConfigV2.Register` "pane.mail-root.actions"
-    - `ConfigV2.Register` "pane.mail-search.actions"
-    - `ConfigV2.Register` "pane.mail-thread.actions"
-    - `ConfigV2.Register` "pane.mail-threads.actions"
-    - `ConfigV2.Register` "pane.page-detail.actions"
-    - `ConfigV2.Register` "pane.pages-root.actions"
-    - `ConfigV2.Register` "pane.pages-tree.actions"
-    - `ConfigV2.Register` "pane.plugin-conv-side.actions"
-    - `ConfigV2.Register` "pane.plugin-view.actions"
-    - `ConfigV2.Register` "pane.prototypes-detail.actions"
-    - `ConfigV2.Register` "pane.prototypes-gallery.actions"
-    - `ConfigV2.Register` "pane.queue.actions"
-    - `ConfigV2.Register` "pane.release-detail.actions"
-    - `ConfigV2.Register` "pane.render-profiler.actions"
-    - `ConfigV2.Register` "pane.report-detail.actions"
-    - `ConfigV2.Register` "pane.reports.actions"
-    - `ConfigV2.Register` "pane.screenshot.actions"
-    - `ConfigV2.Register` "pane.settings-config-index.actions"
-    - `ConfigV2.Register` "pane.sonata-library.actions"
-    - `ConfigV2.Register` "pane.sonata-player.actions"
-    - `ConfigV2.Register` "pane.stats.actions"
-    - `ConfigV2.Register` "pane.story-detail.actions"
-    - `ConfigV2.Register` "pane.story-gallery.actions"
-    - `ConfigV2.Register` "pane.table-detail.actions"
-    - `ConfigV2.Register` "pane.task-detail.actions"
-    - `ConfigV2.Register` "pane.tasks-root.actions"
-    - `ConfigV2.Register` "pane.theme-customizer.actions"
-    - `ConfigV2.Register` "pane.trace-detail.actions"
-    - `ConfigV2.Register` "pane.traces.actions"
-    - `ConfigV2.Register` "pane.website-agents.actions"
-    - `ConfigV2.Register` "pane.website-apps.actions"
-    - `ConfigV2.Register` "pane.website-downloads.actions"
-    - `ConfigV2.Register` "pane.website-landing.actions"
-    - `ConfigV2.Register` "pane.website-platform.actions"
-    - `ConfigV2.Register` "pane.welcome.actions"
-    - `ConfigV2.Register` "pane.workflow-node.actions"
-    - `ConfigV2.Register` "pane.workflows-definition-detail.actions"
-    - `ConfigV2.Register` "pane.workflows-definitions.actions"
-    - `ConfigV2.Register` "pane.workflows-execution-detail.actions"
-    - `ConfigV2.Register` "pane.worktree-cleanup.actions"
-    - `ConfigV2.Register` "pane.zero-test.actions"
-    - `ConfigV2.Register` "plugin-view.section"
-    - `ConfigV2.Register` "primitives.data-view.field-extension"
-    - `ConfigV2.Register` "primitives.data-view.row-order"
-    - `ConfigV2.Register` "profiling.section"
-    - `ConfigV2.Register` "prompt-editor.floating-action"
-    - `ConfigV2.Register` "release-detail.section"
-    - `ConfigV2.Register` "review.section"
-    - `ConfigV2.Register` "settings.rail-badge"
-    - `ConfigV2.Register` "settings.sidebar"
-    - `ConfigV2.Register` "shell.sidebar"
-    - `ConfigV2.Register` "shell.toolbar"
-    - `ConfigV2.Register` "sonata.home"
-    - `ConfigV2.Register` "sonata.hud"
-    - `ConfigV2.Register` "sonata.library.fields"
-    - `ConfigV2.Register` "sonata.library.song-actions"
-    - `ConfigV2.Register` "sonata.section"
-    - `ConfigV2.Register` "sonata.toolbar.end"
-    - `ConfigV2.Register` "sonata.toolbar.start"
-    - `ConfigV2.Register` "sonata.transport"
-    - `ConfigV2.Register` "stats.chart"
-    - `ConfigV2.Register` "story.toolbar.end"
-    - `ConfigV2.Register` "story.toolbar.start"
-    - `ConfigV2.Register` "studio.compositions.item-actions"
-    - `ConfigV2.Register` "studio.explorer.tree-row-accent"
-    - `ConfigV2.Register` "studio.explorer.tree-row-badge"
-    - `ConfigV2.Register` "studio.sidebar"
-    - `ConfigV2.Register` "studio.toolbar"
-    - `ConfigV2.Register` "table-detail.section"
-    - `ConfigV2.Register` "task-deps-tree-sources"
-    - `ConfigV2.Register` "task-deps-tree.actions"
-    - `ConfigV2.Register` "task-detail.section"
-    - `ConfigV2.Register` "task-draft-form.action"
-    - `ConfigV2.Register` "tasks.fields"
-    - `ConfigV2.Register` "tasks.launch-option"
-    - `ConfigV2.Register` "tasks.list-actions"
-    - `ConfigV2.Register` "tasks.task-actions"
-    - `ConfigV2.Register` "text-editor.plugin"
-    - `ConfigV2.Register` "theme-customizer.section"
-    - `ConfigV2.Register` "ui.theme-engine.quick-theme.section"
-    - `ConfigV2.Register` "ui.theme-engine.variant-group"
-    - `ConfigV2.Register` "website.agents.section"
-    - `ConfigV2.Register` "website.apps.section"
-    - `ConfigV2.Register` "website.platform.section"
-    - `ConfigV2.Register` "website.section"
-    - `ConfigV2.Register` "website.toolbar.end"
-    - `ConfigV2.Register` "website.toolbar.start"
-    - `ConfigV2.Register` "workflows-app.sidebar"
-    - `ConfigV2.Register` "workflows-app.toolbar"
-    - `ConfigV2.Register` "workflows.detail.section"
-=======
     - `ConfigV2.Register` "plugin-conv-side.actions"
     - `ConfigV2.Register` "app"
     - `ConfigV2.Register` "tab-bar-actions"
@@ -505,6 +508,7 @@ Edit mode inflates every item with chrome (ring, ×-badge, empty-item placeholde
     - `ConfigV2.Register` "toolbar"
     - `ConfigV2.Register` "accounts.actions"
     - `ConfigV2.Register` "apple-setup.actions"
+    - `ConfigV2.Register` "google-maps-setup.actions"
     - `ConfigV2.Register` "google-setup.actions"
     - `ConfigV2.Register` "backup.actions"
     - `ConfigV2.Register` "build-detail.actions"
@@ -609,8 +613,11 @@ Edit mode inflates every item with chrome (ring, ×-badge, empty-item placeholde
     - `ConfigV2.Register` "section"
     - `ConfigV2.Register` "theme-customizer.actions"
     - `ConfigV2.Register` "variant-group"
+<<<<<<< .merge_file_QWfhTN
 >>>>>>> .merge_file_4bWdtS
 >>>>>>> .merge_file_gnJat7
+=======
+>>>>>>> .merge_file_4np0Wi
   - Uses: `config_v2.ConfigV2`
   - Exports (values):
     - `reorderableSlots`

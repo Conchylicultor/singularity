@@ -37,7 +37,7 @@ property of the thing being filtered. Say it in the field's `description`.
 
 - Description: Tags field type: config-render capability. Contributes the multi-select chip renderer to the config-v2.fields.renderer slot.
 - Web:
-  - Contributes: `config-v2.fields.renderer` "tags" → `TagsRenderer`
+  - Contributes: `Fields.Renderer` "tags" → `TagsRenderer`
   - Uses:
     - `config_v2/fields.FieldHeader`
     - `config_v2/fields.FieldRendererComponent`
