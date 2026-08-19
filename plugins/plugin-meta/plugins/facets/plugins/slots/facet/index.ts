@@ -4,15 +4,15 @@ import {
   collectSlots,
   declaredSlotSources,
   isSlot,
+  seg,
 } from "@plugins/framework/plugins/slot-declaration/core";
-import type { SlotSource } from "@plugins/framework/plugins/slot-declaration/core";
+import type { SlotHandle } from "@plugins/framework/plugins/slot-declaration/core";
 import {
   readIfExists,
   stripTypes,
   maskSource,
   parseDefineGroup,
   markerCallSpans,
-  readStaticCallId,
   walkFiles,
 } from "@plugins/plugin-meta/plugins/parse-utils/core";
 import { type SlotDef, slotsFacetDef } from "../core";
@@ -21,13 +21,12 @@ import { type SlotDef, slotsFacetDef } from "../core";
  * Parse `defineRenderSlot(...)` / `defineMountSlot(...)` calls. Mirrors
  * `parseDefineGroup`, but these slots aren't always assigned inside a
  * `Member: builder(...)` group entry (some are standalone, e.g.
- * `VariantGroup: defineRenderSlot<T>("id", {...})`). So we scan each builder
+ * `VariantGroup: defineRenderSlot<T>({...})`). So we scan each builder
  * occurrence directly: take the first string literal as the id and the nearest
  * preceding `Member:` (or `const Member =`) as the member name. `kind` is fixed
  * by the builder — `"render"` (always reorderable) or `"mount"` (never).
  */
 function parseSlotCalls(
-  original: string,
   masked: string,
   builder:
     | "defineRenderSlot"
@@ -35,17 +34,13 @@ function parseSlotCalls(
     | "defineWrapperSlot"
     | "defineOrderedDispatchSlot",
   kind: "render" | "mount" | "wrap" | "ordered-dispatch",
+  pluginId: string,
 ): SlotDef[] {
   const out: SlotDef[] = [];
-  // Locate calls over the FULL mask so a `defineRenderSlot("x")` written inside a
+  // Locate calls over the FULL mask so a `defineRenderSlot()` written inside a
   // string/template literal is never matched; read the id back from the ORIGINAL
   // at the call's arg span.
   for (const span of markerCallSpans(masked, builder)) {
-    // Skip ids built from template/identifier expressions (e.g.
-    // `${id}.section` inside defineDetailSections) — not statically resolvable.
-    const slotId = readStaticCallId(original, span);
-    if (!slotId) continue;
-
     // The member/group name is the nearest `Word:` or `const Word =` before the
     // call, computed over the MASKED prefix so a `Word:` inside a string can't
     // invent a false member.
@@ -53,13 +48,20 @@ function parseSlotCalls(
     const nameMatch = /(\w+)\s*:\s*$|(?:export\s+)?const\s+(\w+)\s*=\s*$/.exec(
       prefix.replace(/<[^>]*>\s*$/, ""),
     );
-    const memberName = (nameMatch && (nameMatch[1] ?? nameMatch[2])) ?? slotId;
+    // No name in source ⇒ nothing this parse can identify. A slot minted inside
+    // a factory (a pane's Actions) is exactly that case; the barrel-import path
+    // is what sees those.
+    const memberName = nameMatch && (nameMatch[1] ?? nameMatch[2]);
+    if (!memberName) continue;
     // Group name: nearest enclosing `export const Group = {` if any, else member.
     const groupMatch = [
       ...prefix.matchAll(/export\s+const\s+([A-Z]\w*)\s*=\s*\{/g),
     ].pop();
     const groupName = groupMatch ? groupMatch[1]! : memberName;
 
+    // DERIVED, not read: the id is the declaring plugin plus the declaration
+    // key, and the key is what the member is called.
+    const slotId = `${pluginId}.${seg(memberName)}`;
     out.push({ memberName, slotId, groupName, kind, contributors: [] });
   }
   return out;
@@ -76,7 +78,7 @@ function parseSlotCalls(
  * runtime has erased. A slot the parse can't reach (a factory's templated id)
  * simply has no static name.
  */
-function parseSlotsFromSource(dir: string): SlotDef[] {
+function parseSlotsFromSource(dir: string, pluginId: string): SlotDef[] {
   const slots: SlotDef[] = [];
   const seen = new Set<string>();
   const files: string[] = [];
@@ -86,32 +88,33 @@ function parseSlotsFromSource(dir: string): SlotDef[] {
     const src = readIfExists(file);
     if (!src) continue;
     // stripTypes drops comments on the happy path; a FULL mask additionally
-    // defends the transpile-failure fallback — a `defineSlot("x")` written in a
+    // defends the transpile-failure fallback — a `defineSlot()` written in a
     // comment or string/template literal is blanked away and never parsed as a
-    // real slot, while each real id is read back from the original by offset.
+    // real slot. Nothing is read back from the original any more — a slot id is
+    // derived from its plugin and member name, not recovered from source text.
     const original = stripTypes(src, file);
     const masked = maskSource(original);
     // Render and mount slots first: scanned by builder name (distinct from
     // `defineSlot`, so the group parser below won't double-count them).
     const fileSlots: SlotDef[] = [
-      ...parseSlotCalls(original, masked, "defineRenderSlot", "render"),
-      ...parseSlotCalls(original, masked, "defineMountSlot", "mount"),
-      ...parseSlotCalls(original, masked, "defineWrapperSlot", "wrap"),
+      ...parseSlotCalls(masked, "defineRenderSlot", "render", pluginId),
+      ...parseSlotCalls(masked, "defineMountSlot", "mount", pluginId),
+      ...parseSlotCalls(masked, "defineWrapperSlot", "wrap", pluginId),
       // Before the `defineDispatchSlot` group pass: an ordered-dispatch slot is
       // usually a standalone `const`, which that pass (group members only) never
       // reaches — and first writer wins the dedupe below.
       ...parseSlotCalls(
-        original,
         masked,
         "defineOrderedDispatchSlot",
         "ordered-dispatch",
+        pluginId,
       ),
       ...parseDefineGroup(
         original,
         "defineSlot",
-        (memberName, slotId, groupName): SlotDef => ({
+        (memberName, groupName): SlotDef => ({
           memberName,
-          slotId,
+          slotId: `${pluginId}.${seg(memberName)}`,
           groupName,
           kind: "slot",
           contributors: [],
@@ -120,9 +123,9 @@ function parseSlotsFromSource(dir: string): SlotDef[] {
       ...parseDefineGroup(
         original,
         "defineDispatchSlot",
-        (memberName, slotId, groupName): SlotDef => ({
+        (memberName, groupName): SlotDef => ({
           memberName,
-          slotId,
+          slotId: `${pluginId}.${seg(memberName)}`,
           groupName,
           kind: "dispatch",
           contributors: [],
@@ -138,6 +141,16 @@ function parseSlotsFromSource(dir: string): SlotDef[] {
   return slots;
 }
 
+/**
+ * Display names for a declared slot, from the barrel's OWN top-level exports —
+ * ONE shallow pass, no recursion and no sniffing, because it decides nothing:
+ * the set comes from the declaration, this only spells each entry the way its
+ * author wrote it (`Shell.Sidebar`, `TaskDetailSections.Section`).
+ *
+ * A slot exported directly is `Key.Key`; a slot inside an exported group object
+ * is `ExportKey.MemberKey`. That covers a factory result assigned to an exported
+ * const too, which is the case source text cannot name (its id is templated).
+ */
 function safeEntries(obj: Record<string, unknown>): [string, unknown][] {
   try {
     return Object.entries(obj);
@@ -153,86 +166,73 @@ interface SlotName {
 }
 
 /**
- * Display names for a declared slot, from the barrel's OWN top-level exports —
- * ONE shallow pass, no recursion and no sniffing, because it decides nothing:
- * the set comes from the declaration, this only spells each entry the way its
- * author wrote it (`Shell.Sidebar`, `TaskDetailSections.Section`).
+ * Slot OBJECT → the `Group.Member` spelling a contribution site writes.
  *
- * A slot exported directly is `Key.Key`; a slot inside an exported group object
- * is `ExportKey.MemberKey`. That covers a factory result assigned to an exported
- * const too, which is the case source text cannot name (its id is templated).
+ * Keyed by identity, never by id: this runs while deciding what a plugin
+ * declares, and an undeclared slot (a disabled plugin's) has no id to key by.
+ *
+ * The names are NOT cosmetic and are NOT the declaration key. `classify-edges`
+ * matches `groupName` against the head segment of a static contribution
+ * reference — the literal `Shell` in `Shell.Sidebar` — to derive the SOFT
+ * dependency edges a composition's optional contributors are computed from. So
+ * this must stay the exported spelling even though the slot's id no longer
+ * derives from it.
  */
 function namesFromBarrelExports(
   mod: Record<string, unknown>,
-): Map<string, SlotName> {
-  const names = new Map<string, SlotName>();
+): Map<SlotHandle, SlotName> {
+  const names = new Map<SlotHandle, SlotName>();
   for (const [key, val] of safeEntries(mod)) {
     if (isSlot(val)) {
-      if (!names.has(val.id))
-        names.set(val.id, { memberName: key, groupName: key });
+      const real = val._slot ?? val;
+      if (!names.has(real))
+        names.set(real, { memberName: key, groupName: key });
       continue;
     }
     if (!val || (typeof val !== "object" && typeof val !== "function"))
       continue;
     for (const [member, inner] of safeEntries(val as Record<string, unknown>)) {
       if (!isSlot(inner)) continue;
-      if (!names.has(inner.id))
-        names.set(inner.id, { memberName: member, groupName: key });
+      const real = inner._slot ?? inner;
+      if (!names.has(real))
+        names.set(real, { memberName: member, groupName: key });
     }
   }
   return names;
 }
 
 /**
- * The slots a plugin DECLARES (`PluginDefinition.slots`), read off its imported
- * barrels — the authoritative set and the authoritative `kind` (each slot
- * carries its own `meta`, stamped by its constructor).
+ * The slots a plugin DECLARES (`PluginDefinition.slots`) — the authoritative
+ * set, the authoritative `kind` (each slot carries its own `meta`), and the
+ * authoritative ID, derived from this plugin plus the declaration key.
  *
- * `collectSlots` is the SAME normalisation `PluginProvider` runs, so the facet
- * and the runtime can never disagree about what a plugin declared. Names are
- * joined in from the barrel's exports, else the static parse; a declared slot
- * neither can spell (a pane's `pane.<id>.actions`) is named by its id, which is
- * honest — there is no `Group.Member` spelling to report.
+ * The id needs no runtime stamp: a facet describes SOURCE, and this tree imports
+ * disabled plugins' barrels too (their slots are never declared). `Group.Member`
+ * display names still come from the barrel's exports — see above for why they
+ * are load-bearing rather than decorative.
  */
 function collectDeclaredSlots(
   dir: string,
+  pluginId: string,
   importedModules: { mod: Record<string, unknown> }[],
 ): SlotDef[] {
-  const declaring: { sources: SlotSource[]; names: Map<string, SlotName> }[] =
-    [];
+  const out: SlotDef[] = [];
+  const seen = new Set<string>();
   for (const { mod } of importedModules) {
     const sources = declaredSlotSources(mod);
     if (!sources) continue;
-    declaring.push({ sources, names: namesFromBarrelExports(mod) });
-  }
-  if (declaring.length === 0) return [];
-
-  // Only parsed when a declared slot has no export-key name — the common case
-  // costs no source parse at all.
-  let parsedNames: Map<string, SlotName> | null = null;
-  const parsedName = (slotId: string): SlotName | undefined => {
-    if (!parsedNames) {
-      const map = new Map<string, SlotName>();
-      for (const def of parseSlotsFromSource(dir)) {
-        if (!map.has(def.slotId)) map.set(def.slotId, def);
-      }
-      parsedNames = map;
-    }
-    return parsedNames.get(slotId);
-  };
-
-  const out: SlotDef[] = [];
-  const seen = new Set<string>();
-  for (const { sources, names } of declaring) {
-    for (const slot of collectSlots(dir, sources)) {
-      if (seen.has(slot.id)) continue;
-      seen.add(slot.id);
-      const named = names.get(slot.id) ??
-        parsedName(slot.id) ?? { memberName: slot.id, groupName: slot.id };
+    const names = namesFromBarrelExports(mod);
+    for (const { slot, key } of collectSlots(dir, sources)) {
+      const slotId = `${pluginId}.${key}`;
+      if (seen.has(slotId)) continue;
+      seen.add(slotId);
+      // A slot nothing exports (a pane's `Actions`) has no `Group.Member`
+      // spelling; the key is the honest fallback.
+      const named = names.get(slot) ?? { memberName: key, groupName: key };
       out.push({
         memberName: named.memberName,
         groupName: named.groupName,
-        slotId: slot.id,
+        slotId,
         kind: slot.meta.kind,
         contributors: [],
       });
@@ -256,12 +256,12 @@ export default createFacet<SlotDef[]>({
     //  - No imports (`skipBarrelImport` build mode): fall back to the static
     //    text parse alone. Its one blind spot is a *dynamic* slot id — an id
     //    built from a template/identifier expression rather than a string
-    //    literal (e.g. a factory's `` `${id}.section` ``) — skipped in
-    //    `parseSlotCalls`.
+    //    a slot with no NAME in source (one minted inside a factory, such as a
+    //    pane's `Actions`) — those the barrel-import path sees instead.
     if (ctx.importedModules && ctx.importedModules.length > 0) {
-      return collectDeclaredSlots(ctx.dir, ctx.importedModules);
+      return collectDeclaredSlots(ctx.dir, ctx.pluginId, ctx.importedModules);
     }
-    return parseSlotsFromSource(ctx.dir);
+    return parseSlotsFromSource(ctx.dir, ctx.pluginId);
   },
 
   // The per-slot reverse index (`SlotDef.contributors`) is populated by the

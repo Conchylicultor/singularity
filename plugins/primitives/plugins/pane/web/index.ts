@@ -86,5 +86,5 @@ export default {
   description: "Unified pane primitive: Pane.define and chrome components.",
   loadBearing: true,
   contributions: [],
-  slots: [PaneSlots],
+  slots: PaneSlots,
 } satisfies PluginDefinition;

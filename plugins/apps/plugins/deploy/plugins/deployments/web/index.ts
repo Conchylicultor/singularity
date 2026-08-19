@@ -45,10 +45,10 @@ export default {
     DeploymentItemActions({ id: "ship", component: ShipAction }),
     DeploymentItemActions({ id: "delete", component: DeleteDeploymentAction }),
   ],
-  slots: [
-    DeploymentDetail,
-    Deployments,
-    DeploymentItemActions,
-    deploymentDetailPane,
-  ],
+  slots: {
+    ...DeploymentDetail,
+    ...Deployments,
+    itemActions: DeploymentItemActions,
+    "deploy-deployment-detail": deploymentDetailPane,
+  },
 } satisfies PluginDefinition;

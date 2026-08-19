@@ -37,8 +37,8 @@ export interface ItemActions<TRow>
  * once; every `<DataView>` view renders all contributions in its own trailing
  * affordance.
  */
-export function defineItemActions<TRow>(id: string): ItemActions<TRow> {
-  const slot = defineRenderSlot<ItemActionContribution<TRow>>(id, {
+export function defineItemActions<TRow>(): ItemActions<TRow> {
+  const slot = defineRenderSlot<ItemActionContribution<TRow>>({
     docLabel: (p) => p.id,
   });
   const Row = ({

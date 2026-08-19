@@ -21,5 +21,5 @@ export default {
       }),
     }),
   ],
-  slots: [layoutLabPane],
+  slots: { "layout-lab": layoutLabPane },
 } satisfies PluginDefinition;

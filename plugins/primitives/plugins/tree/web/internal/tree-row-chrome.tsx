@@ -191,7 +191,7 @@ export function TreeRowChrome({
         // (which unseals and applies the error-boundary middleware).
         disclosure ? (
           renderIsolated(
-            Tree.Disclosure.id,
+            Tree.Disclosure,
             disclosure as unknown as Contribution,
             disclosureProps,
           )

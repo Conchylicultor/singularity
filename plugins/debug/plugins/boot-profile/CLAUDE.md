@@ -68,9 +68,9 @@ unbounded.
 - Description: Browser boot profiler Gantt debug page: the request → first-paint timeline plus per-resource wait/work split, with shareable permalinks and a browsable list of saved snapshots. Persists captured browser boot traces under a unique id (POST), serves one snapshot (GET) and a metadata-only list (GET) for the permalink + browse panes, and sweeps snapshots older than 30 days via a scheduled job.
 - Web:
   - Slots:
-    - `pane.debug-boot-profile.actions`
-    - `pane.debug-boot-profile-detail.actions`
-    - `pane.debug-boot-profiles-list.actions`
+    - `debug-boot-profile.actions`
+    - `debug-boot-profile-detail.actions`
+    - `debug-boot-profiles-list.actions`
   - Contributes:
     - `Pane.Register` "debug-boot-profile"
     - `Pane.Register` "debug-boot-profile-detail"

@@ -25,5 +25,5 @@ export default {
         })),
     }),
   ],
-  slots: [TabBar],
+  slots: TabBar,
 } satisfies PluginDefinition;

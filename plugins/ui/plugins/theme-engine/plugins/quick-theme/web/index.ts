@@ -15,5 +15,5 @@ export default {
       component: QuickThemeButton,
     }),
   ],
-  slots: [QuickTheme],
+  slots: QuickTheme,
 } satisfies PluginDefinition;

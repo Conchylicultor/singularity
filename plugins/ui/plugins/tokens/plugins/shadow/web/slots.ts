@@ -10,7 +10,7 @@ export interface ShadowPresetContribution {
 }
 
 export const Shadow = {
-  Preset: defineSlot<ShadowPresetContribution>("ui.shadow.preset", {
+  Preset: defineSlot<ShadowPresetContribution>({
     docLabel: (p) => p.label,
   }),
 };

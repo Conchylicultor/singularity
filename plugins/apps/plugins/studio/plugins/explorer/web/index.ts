@@ -31,5 +31,5 @@ export default {
       }),
     }),
   ],
-  slots: [Explorer, explorerPane],
+  slots: { ...Explorer, explorer: explorerPane },
 } satisfies PluginDefinition;

@@ -17,5 +17,5 @@ export default {
   // The toolbar entry point lives in the sibling `quick-theme` plugin: the
   // palette button opens the quick-switch popover, whose footer navigates here.
   contributions: [Pane.Register({ pane: themeCustomizerPane })],
-  slots: [ThemeCustomizer, themeCustomizerPane],
+  slots: { ...ThemeCustomizer, "theme-customizer": themeCustomizerPane },
 } satisfies PluginDefinition;

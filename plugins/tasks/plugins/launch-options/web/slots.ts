@@ -1,6 +1,7 @@
 import type { ComponentType } from "react";
 import { defineRenderSlot } from "@plugins/primitives/plugins/slot-render/web";
 import type { LaunchOptionDef } from "../core/internal/define";
+import { defineSlotFacade } from "@plugins/framework/plugins/web-sdk/core";
 
 /**
  * What every launch control receives. Controlled on purpose: the HOST owns
@@ -62,14 +63,11 @@ export interface LaunchOptionInfo {
   summarize?: (value: unknown) => string | null;
 }
 
-const OptionSlot = defineRenderSlot<TaskLaunchOption<unknown>>(
-  "tasks.launch-option",
-  {
-    docLabel: (p) => p.label,
-    // Size-owning: every contributed control inherits `sm`, in both hosts.
-    controlSize: "sm",
-  },
-);
+const OptionSlot = defineRenderSlot<TaskLaunchOption<unknown>>({
+  docLabel: (p) => p.label,
+  // Size-owning: every contributed control inherits `sm`, in both hosts.
+  controlSize: "sm",
+});
 
 /**
  * The one erasure in the contract. `V` is what ties `def`, `component`,
@@ -78,9 +76,7 @@ const OptionSlot = defineRenderSlot<TaskLaunchOption<unknown>>(
  * declaring the slot over `unknown` and letting each contributor cast) keeps
  * every contribution internally type-checked.
  */
-function contributeOption<V>(
-  option: TaskLaunchOption<V> & { id: string },
-) {
+function contributeOption<V>(option: TaskLaunchOption<V> & { id: string }) {
   return OptionSlot(option as unknown as LaunchOptionEntry);
 }
 
@@ -92,5 +88,5 @@ function contributeOption<V>(
  * is contributed and how a host reads the set.
  */
 export const TaskLaunch = {
-  Option: Object.assign(contributeOption, OptionSlot),
+  Option: defineSlotFacade(contributeOption, OptionSlot),
 };

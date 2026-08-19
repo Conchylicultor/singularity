@@ -18,5 +18,5 @@ export default {
   description:
     "Universal app shell: opt-in sidebar + opt-in toolbar chrome wrapping an app-supplied main-area layout renderer (children). With neither slot it collapses to a transparent full-surface host.",
   contributions: [],
-  slots: [AppShell],
+  slots: AppShell,
 } satisfies PluginDefinition;

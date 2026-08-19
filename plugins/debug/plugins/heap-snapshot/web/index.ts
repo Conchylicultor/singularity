@@ -21,5 +21,5 @@ export default {
       }),
     }),
   ],
-  slots: [heapSnapshotPane],
+  slots: { "debug-heap-snapshot": heapSnapshotPane },
 } satisfies PluginDefinition;

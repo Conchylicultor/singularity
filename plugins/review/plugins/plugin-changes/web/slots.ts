@@ -13,10 +13,7 @@ export const PluginChanges = {
     component: ComponentType<PluginReviewProps>;
     summary?: ComponentType<PluginReviewProps>;
     hasContent?: (plugin: PluginChangeDiff) => boolean;
-  }>("review.plugin-changes.section"),
+  }>(),
 
-  DiffRenderer: defineSlot<DiffRenderer>(
-    "review.plugin-changes.diff-renderer",
-    { docLabel: (p) => p.label },
-  ),
+  DiffRenderer: defineSlot<DiffRenderer>({ docLabel: (p) => p.label }),
 };

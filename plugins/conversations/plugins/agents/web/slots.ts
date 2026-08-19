@@ -8,18 +8,18 @@ export const Agents = {
   List: defineRenderSlot<{
     id: string;
     component: ComponentType;
-  }>("agents.list", { docLabel: (p) => p.id }),
+  }>({ docLabel: (p) => p.id }),
   ListActions: defineRenderSlot<{
     id: string;
     component: ComponentType;
-  }>("agents.list-actions", { docLabel: (p) => p.id }),
+  }>({ docLabel: (p) => p.id }),
   View: defineRenderSlot<{
     id: string;
     title?: string;
     component: ComponentType<{ agentId: string }>;
-  }>("agents.view", { docLabel: (p) => p.title ?? p.id }),
-  AgentActions: defineItemActions<Agent>("agents.agent-actions"),
-  SystemAgent: defineRenderSlot<SystemAgentDescriptor>("agents.system-agent", {
+  }>({ docLabel: (p) => p.title ?? p.id }),
+  AgentActions: defineItemActions<Agent>(),
+  SystemAgent: defineRenderSlot<SystemAgentDescriptor>({
     docLabel: (p) => p.name,
   }),
 };

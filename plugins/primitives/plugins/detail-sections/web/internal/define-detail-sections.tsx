@@ -180,24 +180,13 @@ export interface DetailSections<EntityProps, Extra extends object = {}> {
 export function defineDetailSections<
   EntityProps extends Record<string, unknown>,
   Extra extends object = {},
->(
-  id: string,
-  options?: DetailSectionsOptions,
-): DetailSections<EntityProps, Extra> {
-  // The template is spelled out INLINE on purpose: the codegen scanner that
-  // builds the reorderable-slots manifest statically parses exactly
-  // `defineRenderSlot(`${<first param>}.<static suffix>`, …)`. Hoisting the id
-  // into a variable makes this slot invisible to it.
-  const Section = defineRenderSlot<DetailSection<EntityProps> & Extra>(
-    `${id}.section`,
+>(options?: DetailSectionsOptions): DetailSections<EntityProps, Extra> {
+  const Section = defineRenderSlot<DetailSection<EntityProps> & Extra>({
     // The human-readable title, not the id — this is what reorder's drag overlay
     // shows ("Tracks", not "track-mixer"). `label` is required on every section,
     // so it is always present.
-    { docLabel: (p) => p.label },
-  );
-  // Derived, never re-spelled — the persisted open-state key must track the slot
-  // id exactly (it is what keeps two panes' identically-named sections apart).
-  const slotId = Section.id;
+    docLabel: (p) => p.label,
+  });
   const inset = options?.inset ?? "lg";
 
   type SectionItem = DetailSection<EntityProps> & Extra & { id: string };
@@ -243,8 +232,11 @@ export function defineDetailSections<
     defaultOpen: boolean;
     Body: ComponentType<EntityProps>;
   }): ReactNode {
+    // Read at RENDER, never at factory time: a slot's id is derived from the
+    // plugin that declares it, so it does not exist while this module evaluates.
+    // It still keys two panes' identically-named sections apart.
     const [open, setOpen] = useDraft(
-      `${slotId}.${section.id}.open`,
+      `${Section.id}.${section.id}.open`,
       defaultOpen,
     );
     const Icon = section.icon;

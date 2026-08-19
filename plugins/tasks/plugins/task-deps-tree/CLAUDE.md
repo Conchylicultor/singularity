@@ -30,13 +30,13 @@ now"), the opposite of the monotone one here.
 - Description: Dependency tree section for the task detail: a merged DataView whose sources render task_dependencies as a nesting = runs-after tree (atomic drag-to-reorder, per-row detach, 'also after' fan-in chips) or the read-only creation tree.
 - Web:
   - Slots:
-    - `task-deps-tree.actions` ← `tasks.task-deps-tree`
-    - `task-deps-tree-sources` ← `tasks.task-deps-tree`
+    - `actions` ← `tasks.task-deps-tree`
+    - `sources` ← `tasks.task-deps-tree`
   - Contributes:
     - `TaskDetailSlots.Section` "Dependency tree" → `DepsTreeSection`
-    - `task-deps-tree.actions` "detach" → `DetachAction`
-    - `task-deps-tree-sources` "Dependencies" → `DepsSource`
-    - `task-deps-tree-sources` "Created" → `CreatedSource`
+    - `actions` "detach" → `DetachAction`
+    - `sources` "Dependencies" → `DepsSource`
+    - `sources` "Created" → `CreatedSource`
   - Uses:
     - `infra/endpoints.fetchEndpoint`
     - `primitives/css/badge.Badge`

@@ -18,5 +18,5 @@ export default {
     Pane.Register({ pane: mailSearchPane }),
     Pane.Register({ pane: mailMessagePane }),
   ],
-  slots: [mailSearchPane, mailMessagePane],
+  slots: { "mail-search": mailSearchPane, "mail-message": mailMessagePane },
 } satisfies PluginDefinition;

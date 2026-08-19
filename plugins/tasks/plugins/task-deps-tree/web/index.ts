@@ -49,5 +49,5 @@ export default {
       component: CreatedSource,
     }),
   ],
-  slots: [DepsActions, DepsSources],
+  slots: { actions: DepsActions, sources: DepsSources },
 } satisfies PluginDefinition;

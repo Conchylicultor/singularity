@@ -19,5 +19,5 @@ export default {
   description:
     "Reusable detail pane for inspecting a single plugin. Defines PluginView.Section slot for extensible sections.",
   contributions: [Pane.Register({ pane: pluginViewPane })],
-  slots: [PluginView, pluginViewPane],
+  slots: { ...PluginView, "plugin-view": pluginViewPane },
 } satisfies PluginDefinition;

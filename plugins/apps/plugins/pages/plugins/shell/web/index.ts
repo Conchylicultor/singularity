@@ -18,5 +18,5 @@ export default {
       component: PagesLayout,
     }),
   ],
-  slots: [Pages],
+  slots: Pages,
 } satisfies PluginDefinition;

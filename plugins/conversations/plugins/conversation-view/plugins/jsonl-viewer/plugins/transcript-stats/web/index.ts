@@ -19,5 +19,5 @@ export default {
       component: TranscriptStatsStrip,
     }),
   ],
-  slots: [TranscriptStatsSlots],
+  slots: TranscriptStatsSlots,
 } satisfies PluginDefinition;

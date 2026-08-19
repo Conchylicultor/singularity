@@ -290,6 +290,7 @@ An umbrella is a grouping shell that nests related sub-plugins under `plugins/`.
   - Exports (values):
     - `Core`
     - `defineSlot`
+    - `defineSlotFacade`
     - `getDeferredLoadState`
     - `hasLoadErrorUnder`
     - `isDeferredPluginPath`

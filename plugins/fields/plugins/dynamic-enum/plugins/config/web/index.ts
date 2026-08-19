@@ -13,5 +13,5 @@ export default {
   description:
     "Dynamic enum field type: config-render capability (options resolved at render time from slot contributions, for config-v2.fields.renderer) plus the dynamicEnumField factory.",
   contributions: [Fields.Renderer(DynamicEnumRenderer)],
-  slots: [DynamicEnum],
+  slots: DynamicEnum,
 } satisfies PluginDefinition;

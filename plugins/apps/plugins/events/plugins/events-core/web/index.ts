@@ -20,5 +20,5 @@ export default {
   description:
     "Contract layer for the Events app, web half: the EventSources.Type source-type slot plus the live sources / events-revision hooks and the source-CRUD mutations.",
   contributions: [],
-  slots: [EventSources],
+  slots: EventSources,
 } satisfies PluginDefinition;

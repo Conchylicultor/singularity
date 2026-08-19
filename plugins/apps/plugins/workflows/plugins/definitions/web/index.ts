@@ -22,5 +22,9 @@ export default {
     Pane.Register({ pane: definitionsRootPane }),
     Pane.Register({ pane: definitionDetailPane }),
   ],
-  slots: [WorkflowsDetail, definitionsRootPane, definitionDetailPane],
+  slots: {
+    ...WorkflowsDetail,
+    "workflows-definitions": definitionsRootPane,
+    "workflows-definition-detail": definitionDetailPane,
+  },
 } satisfies PluginDefinition;

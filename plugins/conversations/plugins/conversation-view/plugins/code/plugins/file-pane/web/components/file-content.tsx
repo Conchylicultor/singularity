@@ -17,7 +17,11 @@ export function FileContent({
 }) {
   if (!active) {
     return (
-      <Text as="div" variant="body" className="px-md py-sm text-muted-foreground">
+      <Text
+        as="div"
+        variant="body"
+        className="px-md py-sm text-muted-foreground"
+      >
         No renderer available for this file.
       </Text>
     );
@@ -28,7 +32,7 @@ export function FileContent({
   return (
     <ContentScope>
       {renderIsolated(
-        FilePane.Renderer.id,
+        FilePane.Renderer,
         active.contribution as unknown as Contribution,
         { worktree, path, line },
       )}

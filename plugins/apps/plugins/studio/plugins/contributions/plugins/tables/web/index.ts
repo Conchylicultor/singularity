@@ -30,5 +30,5 @@ export default {
       }),
     ),
   ],
-  slots: [TableDetail, tableDetailPane],
+  slots: { ...TableDetail, "table-detail": tableDetailPane },
 } satisfies PluginDefinition;

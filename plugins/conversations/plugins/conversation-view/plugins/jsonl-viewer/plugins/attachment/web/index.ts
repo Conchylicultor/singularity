@@ -15,5 +15,5 @@ export default {
       component: AttachmentRow,
     }),
   ],
-  slots: [JsonlViewerAttachmentSlots],
+  slots: JsonlViewerAttachmentSlots,
 } satisfies PluginDefinition;

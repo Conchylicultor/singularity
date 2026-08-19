@@ -12,8 +12,7 @@ export interface DynamicEnumOptionsContribution {
 }
 
 export const DynamicEnum = {
-  Options: defineSlot<DynamicEnumOptionsContribution>(
-    "fields.dynamic-enum.options",
-    { docLabel: (p) => p.field.meta.label ?? "dynamic-enum" },
-  ),
+  Options: defineSlot<DynamicEnumOptionsContribution>({
+    docLabel: (p) => p.field.meta.label ?? "dynamic-enum",
+  }),
 };

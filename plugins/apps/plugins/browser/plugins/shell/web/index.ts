@@ -33,5 +33,5 @@ export default {
       component: BrowserLayout,
     }),
   ],
-  slots: [Browser],
+  slots: Browser,
 } satisfies PluginDefinition;

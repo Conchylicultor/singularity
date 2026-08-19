@@ -50,5 +50,5 @@ export default {
       }),
     }),
   ],
-  slots: [Profiling, profilingPane],
+  slots: { ...Profiling, "debug-profiling": profilingPane },
 } satisfies PluginDefinition;

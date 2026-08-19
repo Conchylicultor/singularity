@@ -22,6 +22,7 @@
     - `framework/plugin-id.asPluginId`
     - `framework/plugin-id.PluginId`
     - `framework/plugin-id.UNDOCUMENTED_RUNTIME_FOLDERS`
+    - `framework/slot-declaration.declaredSlotId`
     - `framework/slot-declaration.declaredSlotSources`
     - `framework/slot-declaration.declarePluginSlots`
     - `framework/slot-declaration.findUndeclaredSlots`
@@ -47,10 +48,8 @@
     - `plugin-meta/parse-utils.findImports`
     - `plugin-meta/parse-utils.findMarkerCalls`
     - `plugin-meta/parse-utils.lineAt`
-    - `plugin-meta/parse-utils.MarkerCallSpan`
     - `plugin-meta/parse-utils.markerCallSpans`
     - `plugin-meta/parse-utils.maskSource`
-    - `plugin-meta/parse-utils.matchBracket`
     - `plugin-meta/parse-utils.parseBoolField`
     - `plugin-meta/parse-utils.parseStaticCallId`
     - `plugin-meta/parse-utils.readIfExists`

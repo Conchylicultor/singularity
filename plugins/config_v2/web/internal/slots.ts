@@ -11,5 +11,5 @@ export const ConfigV2 = {
   WebRegister: defineSlot<{
     descriptor: ConfigDescriptor;
     pluginId?: PluginId;
-  }>("config-v2.web-register", { docLabel: (c) => c.descriptor.name }),
+  }>({ docLabel: (c) => c.descriptor.name }),
 };

@@ -40,5 +40,10 @@ export default {
     PageTree.RowActions({ id: "delete", component: DeletePageAction }),
     PageTree.RowActions({ id: "add-below", component: AddPageBelowAction }),
   ],
-  slots: [PageDetail, PageTree, pageDetailPane, pagesTreePane],
+  slots: {
+    ...PageDetail,
+    ...PageTree,
+    "page-detail": pageDetailPane,
+    "pages-tree": pagesTreePane,
+  },
 } satisfies PluginDefinition;

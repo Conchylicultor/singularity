@@ -31,5 +31,5 @@ export default {
       component: LaunchAgentAction,
     }),
   ],
-  slots: [TasksSlots],
+  slots: TasksSlots,
 } satisfies PluginDefinition;

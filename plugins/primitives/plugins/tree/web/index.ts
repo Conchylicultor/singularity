@@ -39,5 +39,5 @@ export default {
   description:
     "Tree hierarchy utilities (buildTree, isDescendant, resolveDropParent) and a generic TreeList with composable row primitives (RowChrome, RenameInput, useTreeRow) for list plugins.",
   contributions: [],
-  slots: [Tree],
+  slots: Tree,
 } satisfies PluginDefinition;

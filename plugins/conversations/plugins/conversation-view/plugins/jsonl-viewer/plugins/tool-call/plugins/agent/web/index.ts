@@ -11,5 +11,5 @@ export default {
     JsonlViewerTool.Renderer({ match: "Agent", component: AgentToolView }),
     Pane.Register({ pane: agentReportPane }),
   ],
-  slots: [agentReportPane],
+  slots: { "agent-report": agentReportPane },
 } satisfies PluginDefinition;

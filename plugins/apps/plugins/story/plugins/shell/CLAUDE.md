@@ -9,8 +9,8 @@
   - Slots:
     - `StoryToolbar.Start` ← `apps.story.shell`
     - `StoryToolbar.End` ← `apps.story.shell`
-    - `pane.story-gallery.actions`
-    - `pane.story-detail.actions`
+    - `story-gallery.actions`
+    - `story-detail.actions`
   - Contributes:
     - `Apps.App` "Story" → `StoryLayout`
     - `StoryToolbar.Start` "back" → `BackToStories`

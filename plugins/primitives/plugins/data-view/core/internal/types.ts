@@ -1,3 +1,4 @@
+import type { SlotHandle } from "@plugins/framework/plugins/slot-declaration/core";
 import { type ComponentType, type ReactNode } from "react";
 import type { SealContributions } from "@plugins/framework/plugins/web-sdk/core";
 import type { Rank } from "@plugins/primitives/plugins/rank/core";
@@ -216,10 +217,7 @@ export interface FieldExtensionProps<TRow> {
  * `ItemActionsDescriptor`. The host (`CollectFieldExtensions`) reads
  * `useContributions()` and mounts each contribution isolated under `id`.
  */
-export interface FieldExtensionsDescriptor<TRow> {
-  /** Slot id — used as the `slotId` when the host mounts each contribution
-   *  isolated (error-boundary). */
-  id: string;
+export interface FieldExtensionsDescriptor<TRow> extends SlotHandle {
   /** All contributed field-extension components (sealed, like any slot). */
   useContributions: () => SealContributions<{
     id: string;

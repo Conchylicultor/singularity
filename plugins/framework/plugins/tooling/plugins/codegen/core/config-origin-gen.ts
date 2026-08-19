@@ -399,6 +399,37 @@ function removeEmptyDirs(dir: string, rootDir: string): void {
 }
 
 /**
+ * Whether a config file's bytes are GENERATED — reproducible from source on the
+ * next build, so deleting one costs nothing.
+ *
+ * `.origin.jsonc` is the rendered code/git default; `.ancestor.jsonc` is the
+ * transient three-way-merge base captured from an origin. Everything else is a
+ * bare `.jsonc` — a HAND-AUTHORED override, whose bytes exist nowhere but that
+ * file.
+ */
+function isGeneratedConfigFile(relPath: string): boolean {
+  return (
+    relPath.endsWith(".origin.jsonc") || relPath.endsWith(".ancestor.jsonc")
+  );
+}
+
+function renderStrandedReport(stranded: readonly string[]): string {
+  return [
+    `[config-v2] ${stranded.length} hand-authored config override(s) have no live ` +
+      `defineConfig descriptor:`,
+    "",
+    ...stranded.map((p) => `  config/${p}`),
+    "",
+    "Their contents exist nowhere else, so this build refuses to delete them.",
+    "",
+    "If the descriptor was RENAMED, move the file to its new name (and its",
+    "`.origin.jsonc` twin) before rebuilding — the hash is computed over content",
+    "alone, so a rename carries the `// @hash` header across unchanged.",
+    "If the descriptor was REMOVED for good, delete the file yourself and rebuild.",
+  ].join("\n");
+}
+
+/**
  * Delete config files (`config/`, git-committed layer) whose owning
  * `defineConfig` descriptor is no longer live — closing the footgun where
  * removing a descriptor left orphaned `.origin.jsonc`, `.jsonc`, and `@app/`
@@ -407,6 +438,19 @@ function removeEmptyDirs(dir: string, rootDir: string): void {
  * all-or-nothing (it throws on any barrel-import failure), so `liveOriginRelPaths`
  * is always the complete live set — never a partial view that could delete a real
  * config. Returns the pruned paths (relative to `config/`) for logging.
+ *
+ * ONLY GENERATED FILES ARE PRUNED. An orphaned hand-authored override is a
+ * THROW, not a delete: its bytes are the only copy of a human's decision, and a
+ * descriptor losing its name is far more often a rename in progress than a
+ * deliberate removal. Deleting it here would be silent, and it would be silent
+ * at the worst possible moment — the build deletes long before it runs any check
+ * (`app-artifacts.ts`: codegen → seedAuthoredOverrides → propagate → runChecks),
+ * and the same codegen runs from `.githooks/post-rewrite` after a rebase or
+ * amend, followed by `git add -A && git commit --amend`. So a delete here lands
+ * in a commit with nothing to object to it.
+ *
+ * Classification happens BEFORE any unlink, so a build that throws leaves the
+ * tree exactly as it found it and can simply be re-run after the fix.
  */
 export function pruneOrphanedConfigFiles(opts: {
   configDir: string;
@@ -427,17 +471,22 @@ export function pruneOrphanedConfigFiles(opts: {
   const onDisk: string[] = [];
   walkJsoncFiles(opts.configDir, opts.configDir, onDisk);
 
-  const pruned: string[] = [];
+  const prunable: string[] = [];
+  const stranded: string[] = [];
   for (const relPath of onDisk) {
     const owner = configFileOwner(relPath);
     if (!owner) continue;
     if (liveByHier.get(owner.hier)?.has(owner.name)) continue;
-    unlinkSync(join(opts.configDir, relPath));
-    pruned.push(relPath);
+    (isGeneratedConfigFile(relPath) ? prunable : stranded).push(relPath);
   }
 
-  if (pruned.length > 0) removeEmptyDirs(opts.configDir, opts.configDir);
-  return pruned;
+  // Decide the whole batch before touching the disk.
+  if (stranded.length > 0) throw new Error(renderStrandedReport(stranded));
+
+  for (const relPath of prunable) unlinkSync(join(opts.configDir, relPath));
+
+  if (prunable.length > 0) removeEmptyDirs(opts.configDir, opts.configDir);
+  return prunable;
 }
 
 export async function generateConfigOrigins(opts: {

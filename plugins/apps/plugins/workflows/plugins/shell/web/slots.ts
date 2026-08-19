@@ -5,11 +5,11 @@ import type {
 } from "@plugins/primitives/plugins/app-shell/web";
 
 export const WorkflowsApp = {
-  Sidebar: defineRenderSlot<AppShellSidebarItem>("workflows-app.sidebar", {
+  Sidebar: defineRenderSlot<AppShellSidebarItem>({
     docLabel: (p) => p.title,
   }),
 
-  Toolbar: defineRenderSlot<AppShellToolbarItem>("workflows-app.toolbar", {
+  Toolbar: defineRenderSlot<AppShellToolbarItem>({
     docLabel: (p) => ("label" in p ? p.label : undefined),
   }),
 };

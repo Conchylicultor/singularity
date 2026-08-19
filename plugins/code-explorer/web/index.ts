@@ -26,5 +26,8 @@ export default {
     }),
     Conversation.ActionBar({ id: "explorer", component: ConvTreeButton }),
   ],
-  slots: [globalFileTreePane, convFileTreePane],
+  slots: {
+    "global-file-tree": globalFileTreePane,
+    "conv-file-tree": convFileTreePane,
+  },
 } satisfies PluginDefinition;

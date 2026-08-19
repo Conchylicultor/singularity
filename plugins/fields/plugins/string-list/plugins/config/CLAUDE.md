@@ -27,7 +27,7 @@ and remove flush immediately. `FieldRendererComponent` comes from the slot owner
 
 - Description: String-list field type: config-render capability (drag-and-drop string list for config-v2.fields.renderer) plus the stringListField factory.
 - Web:
-  - Contributes: `config-v2.fields.renderer` "string-list" → `StringListRenderer`
+  - Contributes: `Fields.Renderer` "string-list" → `StringListRenderer`
   - Uses:
     - `config_v2/fields.Fields`
     - `primitives/css/fill.fillClasses`

@@ -147,6 +147,7 @@ tokens, so anything that imports the barrels back would cycle.
     - `infra/entities`
     - `infra/events`
     - `plugin-meta/plugin-health`
+    - `primitives/data-view`
     - `tasks/tasks-core`
 - Core:
   - Exports (types):

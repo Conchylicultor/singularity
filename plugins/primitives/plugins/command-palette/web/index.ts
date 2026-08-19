@@ -11,5 +11,5 @@ export default {
   description:
     "Cmd+K command palette primitive. Plugins contribute commands via CommandPalette.Item; the dialog renders them with fuzzy search and keyboard navigation.",
   contributions: [Core.Root({ component: CommandPaletteRoot })],
-  slots: [CommandPalette],
+  slots: CommandPalette,
 } satisfies PluginDefinition;

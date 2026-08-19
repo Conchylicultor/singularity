@@ -21,7 +21,7 @@ export function PitchAxisHost({ projection }: { projection: Projection }) {
       {decorations
         .filter((d) => d.requires.every((r) => projection.capabilities.has(r)))
         .map((d) =>
-          renderIsolated("sonata.pitch-axis", d as unknown as Contribution, {
+          renderIsolated(Sonata.PitchAxis, d as unknown as Contribution, {
             projection,
           }),
         )}

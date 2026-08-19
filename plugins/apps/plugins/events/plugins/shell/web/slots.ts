@@ -7,7 +7,7 @@ export const Events = {
    * Contributed by the feature sub-plugins; the shell names none of them, so a
    * new surface drops in with zero edits here.
    */
-  Sidebar: defineRenderSlot<AppShellSidebarItem>("events.sidebar", {
+  Sidebar: defineRenderSlot<AppShellSidebarItem>({
     docLabel: (p) => p.title,
   }),
 };

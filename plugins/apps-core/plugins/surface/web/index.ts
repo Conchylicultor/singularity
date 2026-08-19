@@ -27,5 +27,5 @@ export default {
       component: ActionBarPlacementControl,
     }),
   ],
-  slots: [Surface],
+  slots: Surface,
 } satisfies PluginDefinition;

@@ -18,5 +18,5 @@ export default {
       component: DebugLayout,
     }),
   ],
-  slots: [DebugApp],
+  slots: DebugApp,
 } satisfies PluginDefinition;

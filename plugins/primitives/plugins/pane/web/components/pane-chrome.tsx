@@ -314,7 +314,7 @@ export function PaneActionsSlot({
   if (contributions.length === 0 && extra == null) return null;
   const items = contributions.map((a) => (
     <AdaptiveBar.Item key={a.id} id={a.id}>
-      {renderIsolated(pane.Actions.id, a as unknown as Contribution)}
+      {renderIsolated(pane.Actions, a as unknown as Contribution)}
     </AdaptiveBar.Item>
   ));
   if (extra != null) {

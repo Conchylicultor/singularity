@@ -226,7 +226,7 @@ export function ProgressBar() {
         <div className="pointer-events-none absolute inset-0">
           {markers.map((m) =>
             renderIsolated(
-              "sonata.progress.marker",
+              SonataProgress.Marker,
               m as unknown as Contribution,
               {
                 score,

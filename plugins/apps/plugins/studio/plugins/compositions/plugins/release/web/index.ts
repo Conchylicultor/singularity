@@ -24,5 +24,5 @@ export default {
       component: ReleaseHistorySection,
     }),
   ],
-  slots: [ReleaseDetail, releaseDetailPane],
+  slots: { ...ReleaseDetail, "release-detail": releaseDetailPane },
 } satisfies PluginDefinition;

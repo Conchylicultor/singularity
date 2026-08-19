@@ -23,9 +23,7 @@ import type { ConversationSidebarProps } from "@plugins/conversations/plugins/co
 import type { QueueRow } from "./use-queue-rows";
 
 /** Per-consumer trailing-action slot for the Queue source's rows. */
-export const QueueItemActions = defineItemActions<QueueRow>(
-  "conversations-sidebar-queue-actions",
-);
+export const QueueItemActions = defineItemActions<QueueRow>();
 
 /**
  * The per-render close handler cannot ride on `itemActions` props (item-action

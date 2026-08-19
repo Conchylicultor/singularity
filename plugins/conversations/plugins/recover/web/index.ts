@@ -21,5 +21,5 @@ export default {
       }),
     }),
   ],
-  slots: [recoveryPane],
+  slots: { "conversations-recover": recoveryPane },
 } satisfies PluginDefinition;

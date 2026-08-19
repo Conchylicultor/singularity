@@ -65,7 +65,7 @@ export function TabSurface({ tab }: { tab: Tab }) {
               INSIDE whatever box the placement hands the tab, that overlay
               lands correctly under docked, floating-window and solo alike. */}
           <SurfaceOverlayHost>
-            {renderIsolated(Apps.App.id, app as unknown as Contribution)}
+            {renderIsolated(Apps.App, app as unknown as Contribution)}
             <SyncStatusIndicator />
           </SurfaceOverlayHost>
         </UndoRedoProvider>

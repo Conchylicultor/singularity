@@ -11,5 +11,5 @@ export default {
     ...sidebarFramingWeb.contributions,
     AppShell.Framing({ component: sidebarFramingWeb.Region }),
   ],
-  slots: [sidebarFramingWeb],
+  slots: { sidebarFramingWeb: sidebarFramingWeb },
 } satisfies PluginDefinition;

@@ -7,7 +7,11 @@ import {
   type OriginAnnotationsProvider,
 } from "./config-origin-gen";
 import { getFacet } from "@plugins/plugin-meta/plugins/facets/core";
-import { getCreatedSlots } from "@plugins/framework/plugins/slot-declaration/core";
+import {
+  getCreatedSlots,
+  declaredSlotId,
+} from "@plugins/framework/plugins/slot-declaration/core";
+import { asPath, asPluginId } from "@plugins/framework/plugins/plugin-id/core";
 import { declareSlotsFromBarrels } from "./slot-declaration-guard";
 import { contributionsFacetDef } from "@plugins/plugin-meta/plugins/facets/plugins/contributions/core";
 import { computeDisabledIds } from "./disabled-ids";
@@ -50,6 +54,14 @@ const MANIFEST_HEADER = [
 export interface ReorderableSlotEntry {
   slotId: string;
   pluginId: string;
+  /**
+   * The slot's config file basename — its DECLARATION KEY, not its id.
+   *
+   * The file already lives under the owning plugin's directory
+   * (`config/<asPath(pluginId)>/`), so repeating the hierarchy in the basename
+   * spelled the plugin twice. `<hier>/<configName>` re-joins to the slot id.
+   */
+  configName: string;
 }
 
 interface CatalogItem {
@@ -97,11 +109,16 @@ async function collectReorderableSlotSet(
   // derivation of one set rather than two filters that can drift apart.
   for (const slot of getCreatedSlots()) {
     if (!slot.meta.reorderable) continue;
-    if (seen.has(slot.id)) continue;
-    const pluginId = owners.get(slot.id);
-    if (pluginId === undefined) continue;
-    seen.add(slot.id);
-    entries.push({ slotId: slot.id, pluginId });
+    // Ask whether it HAS a name before asking what the name is: a disabled
+    // plugin's slots are never declared, and an undeclared slot's `id` throws
+    // rather than inventing one. `owners` is that same pass's map, so the two
+    // agree by construction.
+    const slotId = declaredSlotId(slot);
+    if (slotId === undefined || seen.has(slotId)) continue;
+    const pluginId = owners.get(slotId);
+    if (pluginId === undefined || slot._key === undefined) continue;
+    seen.add(slotId);
+    entries.push({ slotId, pluginId, configName: slot._key });
   }
   return entries.sort((a, b) => a.slotId.localeCompare(b.slotId));
 }
@@ -128,6 +145,17 @@ async function collectReorderableSlots(
   // (1) The reorderable-slot set — the declarations (barrels already primed).
   const slots = await collectReorderableSlotSet(root);
   const reorderableIds = new Set(slots.map((s) => s.slotId));
+  // slotId -> the descriptor's address, `<hierarchyPath>/<configName>`. The
+  // catalog is keyed by that address rather than by the slot id because the
+  // LOOKUP side only ever holds a descriptor and its hierarchy — and a lookup
+  // that misses does not fail, it silently yields an empty catalog, which
+  // rewrites every origin to `items: []` and re-marks every authored override.
+  const addressOf = new Map(
+    slots.map((s) => [
+      s.slotId,
+      `${asPath(asPluginId(s.pluginId))}/${s.configName}`,
+    ]),
+  );
 
   // (2) Catalog: every runtime contribution targeting a reorderable slot.
   const catalog = new Map<string, CatalogItem[]>();
@@ -139,10 +167,12 @@ async function collectReorderableSlots(
       if (!reorderableIds.has(c.slotId)) continue;
       if (!c.id) continue;
       const entryKey = c.pluginId ? `${c.pluginId}:${c.id}` : c.id;
-      let items = catalog.get(c.slotId);
+      const address = addressOf.get(c.slotId);
+      if (address === undefined) continue;
+      let items = catalog.get(address);
       if (!items) {
         items = [];
-        catalog.set(c.slotId, items);
+        catalog.set(address, items);
       }
       items.push({ entryKey });
     }
@@ -158,6 +188,7 @@ function renderManifest(slots: ReorderableSlotEntry[]): string {
   lines.push("export interface ReorderableSlot {");
   lines.push("  slotId: string;");
   lines.push("  pluginId: string;");
+  lines.push("  configName: string;");
   lines.push("}");
   lines.push("");
   if (slots.length === 0) {
@@ -166,7 +197,7 @@ function renderManifest(slots: ReorderableSlotEntry[]): string {
     lines.push("export const reorderableSlots: ReorderableSlot[] = [");
     for (const s of slots) {
       lines.push(
-        `  { slotId: ${JSON.stringify(s.slotId)}, pluginId: ${JSON.stringify(s.pluginId)} },`,
+        `  { slotId: ${JSON.stringify(s.slotId)}, pluginId: ${JSON.stringify(s.pluginId)}, configName: ${JSON.stringify(s.configName)} },`,
       );
     }
     lines.push("];");
@@ -202,9 +233,12 @@ export async function renderReorderableSlotsManifest(
 function buildOriginAnnotationsProvider(
   catalog: Map<string, CatalogItem[]>,
 ): OriginAnnotationsProvider {
-  return (descriptor: ConfigDescriptor): string[] => {
-    // The directive descriptor's `name` is the slotId.
-    const items = catalog.get(descriptor.name);
+  return (descriptor: ConfigDescriptor, hierarchyPath: string): string[] => {
+    // Addressed exactly as the file is: `<hier>/<name>`. Keying on `name` alone
+    // was safe only while a name was globally unique (it was the slot id); a
+    // declaration key is unique per PLUGIN, so the hierarchy is now part of the
+    // address, on both sides.
+    const items = catalog.get(`${hierarchyPath}/${descriptor.name}`);
     if (!items || items.length === 0) return [];
     return [...REORDER_NODE_LEGEND];
   };
@@ -235,8 +269,8 @@ setDefaultOriginAnnotationsPreparer(async (root: string) => {
  */
 setDefaultOriginDefaultsPreparer(async (root: string) => {
   const { catalog } = await collectReorderableSlots(root);
-  return (descriptor: ConfigDescriptor) => {
-    const items = catalog.get(descriptor.name);
+  return (descriptor: ConfigDescriptor, hierarchyPath: string) => {
+    const items = catalog.get(`${hierarchyPath}/${descriptor.name}`);
     return items ? { items: items.map((c) => c.entryKey) } : undefined;
   };
 });

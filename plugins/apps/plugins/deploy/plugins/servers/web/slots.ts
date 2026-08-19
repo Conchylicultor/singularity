@@ -18,9 +18,7 @@ import type { Server } from "../shared";
  * single-contributor micro-slots that existed only because the identity form was
  * not itself a contribution; once it is, they collapse into peers of it.
  */
-export const ServerDetail = defineDetailSections<{ server: Server }>(
-  "deploy.server-detail",
-);
+export const ServerDetail = defineDetailSections<{ server: Server }>();
 
 export const Servers = {
   /**
@@ -29,5 +27,5 @@ export const Servers = {
    * capture hook-loaded data — e.g. `status` reads the health plugin's own
    * live resource and yields a `status` enum field. Mirrors `Tasks.Fields`.
    */
-  Fields: defineFieldExtensions<Server>("deploy.servers.fields"),
+  Fields: defineFieldExtensions<Server>(),
 };

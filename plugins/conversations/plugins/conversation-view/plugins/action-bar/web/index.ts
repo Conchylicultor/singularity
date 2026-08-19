@@ -8,5 +8,5 @@ export default {
   description:
     "Hosts the Conversation.ActionBar slot — action buttons rendered in the JSONL viewer header.",
   contributions: [],
-  slots: [ConversationSlots],
+  slots: ConversationSlots,
 } satisfies PluginDefinition;

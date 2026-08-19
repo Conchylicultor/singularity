@@ -5,5 +5,5 @@ export const Profiling = {
   Section: defineRenderSlot<{
     order: number;
     component: ComponentType;
-  }>("profiling.section"),
+  }>(),
 };

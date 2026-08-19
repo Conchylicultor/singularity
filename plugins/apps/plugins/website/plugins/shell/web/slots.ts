@@ -9,7 +9,7 @@ import { definePaneToolbar } from "@plugins/primitives/plugins/pane-toolbar/web"
  * contribute their nav links into End (use `<WebsiteNavLink/>` for the
  * standard look).
  */
-export const WebsiteToolbar = definePaneToolbar("website.toolbar");
+export const WebsiteToolbar = definePaneToolbar();
 
 export const Website = {
   /**
@@ -17,8 +17,7 @@ export const Website = {
    * `/website` (hero, features, demos, CTA…). Order via the standard
    * contribution `order`; each section owns its full-width band.
    */
-  Section: defineRenderSlot<{ label: string; component: ComponentType }>(
-    "website.section",
-    { docLabel: (p) => p.label },
-  ),
+  Section: defineRenderSlot<{ label: string; component: ComponentType }>({
+    docLabel: (p) => p.label,
+  }),
 };

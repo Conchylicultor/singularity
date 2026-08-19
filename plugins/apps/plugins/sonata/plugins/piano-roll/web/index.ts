@@ -65,5 +65,5 @@ export default {
       fields: ["showNoteNames"],
     }),
   ],
-  slots: [PianoRollFx],
+  slots: { fx: PianoRollFx },
 } satisfies PluginDefinition;

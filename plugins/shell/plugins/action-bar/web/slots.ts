@@ -13,7 +13,7 @@ export const ActionBar = {
   // Size-owning: both surfaces (agent-manager toolbar + floating bar) render this
   // slot, so declaring `sm` here keeps every action button one consistent height.
   // Contributions should omit `size` and inherit.
-  Item: defineRenderSlot<{ component: ComponentType }>("action-bar.item", {
+  Item: defineRenderSlot<{ component: ComponentType }>({
     controlSize: "sm",
   }),
 };

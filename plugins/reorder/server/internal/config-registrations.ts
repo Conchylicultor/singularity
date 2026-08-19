@@ -13,7 +13,7 @@ import { reorderableSlots } from "../../shared/reorderable-slots.generated";
  */
 export const reorderConfigRegistrations = reorderableSlots.map((s) =>
   ConfigV2.Register({
-    descriptor: reorderDirectiveDescriptor(s.slotId),
+    descriptor: reorderDirectiveDescriptor(s.configName),
     pluginId: asPluginId(s.pluginId),
   }),
 );

@@ -103,7 +103,7 @@ export type ActiveDataContribution =
   | ActiveDataCodeContribution;
 
 export const ActiveData = {
-  Tag: defineSlot<ActiveDataContribution>("active-data.tag", {
+  Tag: defineSlot<ActiveDataContribution>({
     docLabel: (p) =>
       p.display === "block"
         ? p.tag

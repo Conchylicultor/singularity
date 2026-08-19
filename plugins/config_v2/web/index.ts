@@ -14,5 +14,5 @@ export default {
   description:
     "Reactive useConfig hook for reading typed JSONC config in the browser.",
   contributions: [configBootTask],
-  slots: [ConfigV2],
+  slots: ConfigV2,
 } satisfies PluginDefinition;

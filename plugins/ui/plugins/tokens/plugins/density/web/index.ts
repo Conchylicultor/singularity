@@ -49,5 +49,5 @@ export default {
         tokenGroupMatchesSearch(densityGroup, search),
     }),
   ],
-  slots: [Density],
+  slots: Density,
 } satisfies PluginDefinition;

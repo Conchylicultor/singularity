@@ -43,5 +43,5 @@ export default {
     },
   ],
   contributions: [],
-  slots: [ErrorBoundary],
+  slots: ErrorBoundary,
 } satisfies PluginDefinition;

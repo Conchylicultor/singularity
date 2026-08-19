@@ -25,5 +25,5 @@ export default {
       }),
     }),
   ],
-  slots: [backupPane],
+  slots: { backup: backupPane },
 } satisfies PluginDefinition;

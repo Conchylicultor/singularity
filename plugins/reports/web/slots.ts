@@ -14,7 +14,7 @@ export interface KindViewProps {
 }
 
 export const Reports = {
-  KindView: defineDispatchSlot<KindViewProps, string>("reports.kind-view", {
+  KindView: defineDispatchSlot<KindViewProps, string>({
     key: (props) => props.report.kind,
     fallback: ReportSummaryFallback,
   }),

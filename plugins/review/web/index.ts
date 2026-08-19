@@ -16,5 +16,5 @@ export default {
     Pane.Register({ pane: convReviewPane }),
     Conversation.ActionBar({ id: "review", component: ReviewButton }),
   ],
-  slots: [Review, convReviewPane],
+  slots: { ...Review, "conv-review": convReviewPane },
 } satisfies PluginDefinition;

@@ -1,3 +1,5 @@
+import type { SlotHandle } from "@plugins/framework/plugins/slot-declaration/core";
+import { declaredSlotId } from "@plugins/framework/plugins/slot-declaration/core";
 import { join } from "path";
 import type {
   PluginTree,
@@ -125,7 +127,7 @@ export default createFacet<ContributionsFacetData>({
         const rawContributions = def.contributions as
           | Array<
               Record<string, unknown> & {
-                _slotId?: string;
+                _slot?: SlotHandle;
                 _kind?: symbol;
                 id?: string;
                 _doc?: { label?: string; detail?: string };
@@ -135,7 +137,10 @@ export default createFacet<ContributionsFacetData>({
         if (!rawContributions) continue;
 
         for (const c of rawContributions) {
-          if (typeof c._slotId === "string") {
+          // Resolved ONCE: a contribution to an undeclared slot (a disabled
+          // plugin's) has no id, and that absence is the discriminator.
+          const slotId = declaredSlotId(c._slot);
+          if (slotId !== undefined) {
             // web slot contribution (existing behavior)
             const comp = c.component;
             const componentName =
@@ -144,7 +149,7 @@ export default createFacet<ContributionsFacetData>({
                 : undefined;
             runtimeContributions.push({
               kind: "slot",
-              slotId: c._slotId,
+              slotId,
               // slotDisplayName + pluginId filled in by relate()
               componentName,
               doc: c._doc ?? {},

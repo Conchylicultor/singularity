@@ -15,5 +15,5 @@ export default {
   description:
     "Field type registry. Sub-plugins contribute field types with core factories and web renderers.",
   contributions: [],
-  slots: [fieldRendererSlot],
+  slots: { fieldRendererSlot: fieldRendererSlot },
 } satisfies PluginDefinition;

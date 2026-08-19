@@ -15,7 +15,7 @@ export interface CommandPaletteItem {
 }
 
 export const CommandPalette = {
-  Item: defineSlot<CommandPaletteItem>("command-palette.item", {
+  Item: defineSlot<CommandPaletteItem>({
     docLabel: (p) => p.label,
   }),
 };

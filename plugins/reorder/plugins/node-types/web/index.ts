@@ -8,5 +8,5 @@ export default {
   description:
     "Reorder node-type registry: owns the reorder.node-type slot and the useReorderNodeTypes() read hook. Slot owner only — contributes no node types itself.",
   contributions: [],
-  slots: [ReorderNodes],
+  slots: ReorderNodes,
 } satisfies PluginDefinition;

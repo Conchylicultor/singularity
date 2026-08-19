@@ -4,6 +4,7 @@ import type { PluginId } from "@plugins/framework/plugins/plugin-id/core";
 import { pluginIdSegments } from "@plugins/framework/plugins/plugin-id/core";
 import type { ConfigDescriptor } from "@plugins/config_v2/core";
 import { storePathOf, storePluginId } from "./store-path";
+import { ConfigV2 } from "./slots";
 
 export interface ConfigRegistration {
   descriptor: ConfigDescriptor;
@@ -21,9 +22,10 @@ export interface ConfigRegistration {
 
 export function useConfigRegistrations(): ConfigRegistration[] {
   const ctx = useContext(PluginRuntimeContext);
-  if (!ctx) throw new Error("useConfigRegistrations must be inside PluginProvider");
+  if (!ctx)
+    throw new Error("useConfigRegistrations must be inside PluginProvider");
 
-  const raw = ctx.bySlot.get("config-v2.web-register");
+  const raw = ctx.bySlot.get(ConfigV2.WebRegister);
   return useMemo(
     () =>
       (raw ?? [])

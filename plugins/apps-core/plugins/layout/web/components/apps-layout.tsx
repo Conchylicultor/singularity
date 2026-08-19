@@ -263,7 +263,7 @@ function NoSuchRouteSurface({
 function TabBarHost() {
   const tabBar = Apps.TabBar.useContributions()[0];
   return tabBar
-    ? renderIsolated(Apps.TabBar.id, tabBar as unknown as Contribution, {})
+    ? renderIsolated(Apps.TabBar, tabBar as unknown as Contribution, {})
     : null;
 }
 
@@ -274,17 +274,13 @@ function FramedSurface() {
   // The `surface` plugin owns the multi-placement body; with no contributor,
   // `apps` degrades to its built-in docked-only strip.
   const body = surface ? (
-    renderIsolated(Apps.Surface.id, surface as unknown as Contribution, {})
+    renderIsolated(Apps.Surface, surface as unknown as Contribution, {})
   ) : (
     <AppTabsBody />
   );
   const props: RailFramingProps = { body };
   return framing ? (
-    renderIsolated(
-      Apps.RailFraming.id,
-      framing as unknown as Contribution,
-      props,
-    )
+    renderIsolated(Apps.RailFraming, framing as unknown as Contribution, props)
   ) : (
     <RaillessFraming {...props} />
   );

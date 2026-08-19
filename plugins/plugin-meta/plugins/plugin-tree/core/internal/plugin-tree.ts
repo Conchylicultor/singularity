@@ -1,3 +1,7 @@
+import {
+  declarePluginSlots,
+  declaredSlotSources,
+} from "@plugins/framework/plugins/slot-declaration/core";
 import { existsSync } from "fs";
 import { readdir, readFile } from "node:fs/promises";
 import { basename, join, relative } from "path";
@@ -5,8 +9,15 @@ import {
   registerBarrelStubs,
   importBarrel,
 } from "@plugins/plugin-meta/plugins/barrel-import/core";
-import { loadFacets, setFacet, type Facet } from "@plugins/plugin-meta/plugins/facets/core";
-import { asPluginId, type PluginId } from "@plugins/framework/plugins/plugin-id/core";
+import {
+  loadFacets,
+  setFacet,
+  type Facet,
+} from "@plugins/plugin-meta/plugins/facets/core";
+import {
+  asPluginId,
+  type PluginId,
+} from "@plugins/framework/plugins/plugin-id/core";
 import { runWithFsSnapshot } from "@plugins/plugin-meta/plugins/parse-utils/core";
 import { buildFsSnapshot } from "./fs-snapshot";
 import { parsePluginBarrel, type BarrelMeta } from "./barrel-meta";
@@ -119,7 +130,11 @@ async function hasPluginContent(dir: string): Promise<boolean> {
   }
   for (const e of entries) {
     if (e.isFile()) return true;
-    if (e.isDirectory() && isWalkable(e.name) && (await hasPluginContent(join(dir, e.name)))) {
+    if (
+      e.isDirectory() &&
+      isWalkable(e.name) &&
+      (await hasPluginContent(join(dir, e.name)))
+    ) {
       return true;
     }
   }
@@ -180,7 +195,10 @@ interface CollectedPlugin {
   parentDir: string | null;
 }
 
-async function collectCoreFields(dir: string, pluginsRoot: string): Promise<CollectedPlugin> {
+async function collectCoreFields(
+  dir: string,
+  pluginsRoot: string,
+): Promise<CollectedPlugin> {
   const [webIndex, serverIndex, centralIndex, pkgSrc] = await Promise.all([
     readIfExistsAsync(join(dir, "web", "index.ts")),
     readIfExistsAsync(join(dir, "server", "index.ts")),
@@ -212,8 +230,9 @@ async function collectCoreFields(dir: string, pluginsRoot: string): Promise<Coll
   if (!description && pkgSrc) {
     try {
       const pkg = JSON.parse(pkgSrc);
-      if (typeof pkg.description === "string" && pkg.description) description = pkg.description;
-    // eslint-disable-next-line promise-safety/no-bare-catch
+      if (typeof pkg.description === "string" && pkg.description)
+        description = pkg.description;
+      // eslint-disable-next-line promise-safety/no-bare-catch
     } catch {}
   }
 
@@ -235,7 +254,7 @@ async function collectCoreFields(dir: string, pluginsRoot: string): Promise<Coll
       if (pkg.singularity?.collapsed === true) collapsed = true;
       if (pkg.singularity?.compositionRoot === true) compositionRoot = true;
       if (pkg.singularity?.disabled === true) disabled = true;
-    // eslint-disable-next-line promise-safety/no-bare-catch
+      // eslint-disable-next-line promise-safety/no-bare-catch
     } catch {}
   }
 
@@ -294,7 +313,9 @@ export async function buildPluginTree(
   const byPath = new Map<string, PluginNode>();
   const parentDirs = new Map<string, string | null>();
 
-  const collected = await Promise.all(dirs.map((d) => collectCoreFields(d, pluginsRoot)));
+  const collected = await Promise.all(
+    dirs.map((d) => collectCoreFields(d, pluginsRoot)),
+  );
   for (const c of collected) {
     byDir.set(c.node.dir, c.node);
     byPath.set(c.node.path, c.node);
@@ -335,12 +356,18 @@ export async function buildPluginTree(
   // before, skippable within a facet build via `skipBarrelImport`). Only the 2
   // runtime facets (contributions runtime part, registrations) need imported
   // modules. The other 7 facets parse files from disk and populate without barrels.
-  const importedModules = new Map<string, { mod: Record<string, unknown>; runtime: "web" | "server" | "central" }[]>();
+  const importedModules = new Map<
+    string,
+    { mod: Record<string, unknown>; runtime: "web" | "server" | "central" }[]
+  >();
   if (opts?.facets && !opts?.skipBarrelImport) {
     registerBarrelStubs(join(pluginsRoot, ".."));
 
     // Seed web-sdk core barrel (defines Core.Root etc. — needed for slot display names)
-    const webSdkCoreBarrel = join(pluginsRoot, "framework/plugins/web-sdk/core/index.ts");
+    const webSdkCoreBarrel = join(
+      pluginsRoot,
+      "framework/plugins/web-sdk/core/index.ts",
+    );
     if (existsSync(webSdkCoreBarrel)) {
       const coreMod = await importBarrel(webSdkCoreBarrel);
       const webSdkDir = join(pluginsRoot, "framework/plugins/web-sdk");
@@ -383,21 +410,52 @@ export async function buildPluginTree(
     // snapshot, then run the (still-synchronous) extract/relate against it via the
     // ambient-snapshot hook in parse-utils — so the loops touch zero disk. The
     // snapshot build runs in parallel with the (async) facet-module load.
-    const [facets, fsSnapshot] = await Promise.all([loadFacets(), buildFsSnapshot(dirs)]);
+    const [facets, fsSnapshot] = await Promise.all([
+      loadFacets(),
+      buildFsSnapshot(dirs),
+    ]);
     tree.facets = facets;
+
+    // IMPORTING THE BARRELS IS WHAT DECLARES THE SLOTS. A slot's id is derived
+    // from the plugin that declares it, so a slot nobody has declared has no id
+    // at all — and a facet that reads one off a contribution (`contributions`
+    // names the slot each contribution targets) would silently see nothing and
+    // report an empty set, which reads downstream as "this plugin contributes
+    // nothing" rather than as the tooling failure it is.
+    //
+    // Running the pass HERE, over exactly the modules just imported, is what
+    // makes that impossible: any consumer holding an enriched tree holds
+    // declared slots. Disabled plugins are included deliberately — their barrels
+    // were imported too, and a facet describes source, not the live registry
+    // (the runtime sets filter on `disabled` separately).
+    declarePluginSlots(
+      [...byDir.values()].flatMap((node) => {
+        const mods = importedModules.get(node.dir) ?? [];
+        return mods.flatMap((m) => {
+          const slots = declaredSlotSources(m.mod);
+          return slots ? [{ id: node.id, slots }] : [];
+        });
+      }),
+    );
     let extracted = 0;
     for (const node of byDir.values()) {
       const nodeModules = importedModules.get(node.dir) ?? [];
       runWithFsSnapshot(fsSnapshot, () => {
         for (const facet of facets) {
-          const data = facet.extract({ dir: node.dir, importedModules: nodeModules, fs: fsSnapshot });
+          const data = facet.extract({
+            dir: node.dir,
+            pluginId: node.id,
+            importedModules: nodeModules,
+            fs: fsSnapshot,
+          });
           setFacet(node, facet.def, data);
         }
       });
       // CPU safety belt: yield to the event loop every 16 nodes so even a
       // pathological facet can't monopolize the loop. The reads are now in-memory,
       // so this is the residual cost, not the primary mechanism.
-      if ((++extracted & 15) === 0) await new Promise<void>((resolve) => setImmediate(resolve));
+      if ((++extracted & 15) === 0)
+        await new Promise<void>((resolve) => setImmediate(resolve));
     }
 
     // Step 4c: facet relate. `relate` (e.g. routes/cross-refs) also walks every

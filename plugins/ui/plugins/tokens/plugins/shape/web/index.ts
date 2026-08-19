@@ -48,5 +48,5 @@ export default {
       useAvailable: ({ search }) => tokenGroupMatchesSearch(shapeGroup, search),
     }),
   ],
-  slots: [Shape],
+  slots: Shape,
 } satisfies PluginDefinition;

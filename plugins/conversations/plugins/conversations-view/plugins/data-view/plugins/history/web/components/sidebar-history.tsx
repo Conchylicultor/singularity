@@ -22,9 +22,7 @@ import type { Conversation } from "@plugins/tasks/plugins/tasks-core/core";
 
 // Per-consumer trailing-action slot. The close action contribution lives in this
 // plugin's `web/index.ts`.
-export const HistoryItemActions = defineItemActions<Conversation>(
-  "conversations-sidebar-history-actions",
-);
+export const HistoryItemActions = defineItemActions<Conversation>();
 
 /**
  * The per-render close handler cannot ride on `itemActions` props (item-action

@@ -9,23 +9,14 @@ import { webEntries } from "@plugins/framework/plugins/web-sdk/core/web.generate
 // (content, providers, the pane layout renderer, localStorage, ...), so bare
 // `<Component />` rendering is architecturally meaningless. Render correctness
 // belongs to per-component tests with proper scaffolding, not a blanket loop.
-it(
-  "all web plugins load without errors and every contribution is well-formed",
-  async () => {
-    const { plugins, errors } = await loadPlugins(webEntries);
-    expect(errors).toEqual([]);
-    expect(plugins.length).toBeGreaterThan(0);
-    for (const plugin of plugins) {
-      for (const contribution of plugin.contributions ?? []) {
-        // every contribution must declare the slot it targets
-        expect((contribution as Record<string, unknown>)._slotId).toBeTruthy();
-      }
+it("all web plugins load without errors and every contribution is well-formed", async () => {
+  const { plugins, errors } = await loadPlugins(webEntries);
+  expect(errors).toEqual([]);
+  expect(plugins.length).toBeGreaterThan(0);
+  for (const plugin of plugins) {
+    for (const contribution of plugin.contributions ?? []) {
+      // every contribution must declare the slot it targets
+      expect((contribution as Record<string, unknown>)._slot).toBeTruthy();
     }
-  },
-  // Generous on purpose, and NOT a performance budget: this test imports the
-  // ENTIRE web plugin graph, so vite's cold transform of every barrel happens
-  // inside the timed window (~25s warm, more cold or on a loaded host). At the
-  // old 30s it passed warm and failed cold — a red suite that says nothing about
-  // the invariant it guards (every plugin loads, every contribution well-formed).
-  180_000,
-);
+  }
+}, 180_000); // the invariant it guards (every plugin loads, every contribution well-formed). // old 30s it passed warm and failed cold — a red suite that says nothing about // inside the timed window (~25s warm, more cold or on a loaded host). At the // ENTIRE web plugin graph, so vite's cold transform of every barrel happens // Generous on purpose, and NOT a performance budget: this test imports the

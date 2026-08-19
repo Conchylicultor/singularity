@@ -6,7 +6,7 @@
 
 - Description: JSON field type: config-render capability (read-only formatted JSON for config-v2.fields.renderer) plus the jsonField factory.
 - Web:
-  - Contributes: `config-v2.fields.renderer` "json" → `JsonRenderer`
+  - Contributes: `Fields.Renderer` "json" → `JsonRenderer`
   - Uses:
     - `config_v2/fields.FieldHeader`
     - `config_v2/fields.FieldRendererComponent`

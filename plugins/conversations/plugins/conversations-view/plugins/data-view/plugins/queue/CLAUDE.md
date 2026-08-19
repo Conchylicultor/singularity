@@ -6,15 +6,15 @@
 
 - Description: Contributes the priority Queue (pin/status group-by sections, task-group aggregation, and neighbor-based manual-order drag over the queue's live data/mutation layer) as the Queue source of the merged conversation-sidebar DataView.
 - Web:
-  - Slots: `conversations-sidebar-queue-actions` ← `conversations.conversations-view.data-view.queue`
+  - Slots: `queue-actions` ← `conversations.conversations-view.data-view.queue`
   - Contributes:
     - `SidebarSources` "Queue" → `QueueSource`
-    - `conversations-sidebar-queue-actions` "pin" → `PinAction`
-    - `conversations-sidebar-queue-actions` "promote" → `PromoteAction`
-    - `conversations-sidebar-queue-actions` "step-down" → `StepDownAction`
-    - `conversations-sidebar-queue-actions` "demote" → `DemoteAction`
-    - `conversations-sidebar-queue-actions` "add-to-queue" → `AddToQueueAction`
-    - `conversations-sidebar-queue-actions` "close" → `CloseAction`
+    - `queue-actions` "pin" → `PinAction`
+    - `queue-actions` "promote" → `PromoteAction`
+    - `queue-actions` "step-down" → `StepDownAction`
+    - `queue-actions` "demote" → `DemoteAction`
+    - `queue-actions` "add-to-queue" → `AddToQueueAction`
+    - `queue-actions` "close" → `CloseAction`
   - Uses:
     - `conversations/all-conversations.conversationFieldDefs`
     - `conversations/conversation-ui/item.ConversationItem`

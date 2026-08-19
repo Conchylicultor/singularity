@@ -25,7 +25,7 @@ export function TransportOverlayHost() {
         .filter((o) => o.requires.every((r) => projection.capabilities.has(r)))
         .map((o) =>
           renderIsolated(
-            "sonata.transport-overlay",
+            Sonata.TransportOverlay,
             o as unknown as Contribution,
             { projection },
           ),

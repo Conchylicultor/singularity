@@ -5,5 +5,5 @@ export const Home = {
   Section: defineRenderSlot<{
     label: string;
     component: ComponentType;
-  }>("home.section", { docLabel: (p) => p.label }),
+  }>({ docLabel: (p) => p.label }),
 };

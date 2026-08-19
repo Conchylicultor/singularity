@@ -11,5 +11,5 @@ export default {
     ...appRailFramingWeb.contributions,
     Apps.RailFraming({ component: appRailFramingWeb.Region }),
   ],
-  slots: [appRailFramingWeb],
+  slots: { appRailFramingWeb: appRailFramingWeb },
 } satisfies PluginDefinition;

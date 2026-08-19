@@ -37,6 +37,8 @@ const plugin = {
   contributions: [
     DataViewSlots.CellEditor({ match: "text", component: LocalTextEditor }),
   ],
+  // The rendered slots must be declared for their ids to exist.
+  slots: DataViewSlots,
 } as unknown as LoadedPlugin;
 
 type Row = { id: string; name?: string };
@@ -66,7 +68,13 @@ describe("data-view gallery inline cell editing", () => {
       <PluginProvider plugins={[plugin]}>
         <GalleryView
           {...(renderProps([
-            { id: "name", label: "Name", type: "text", value: (r) => r.name, onEdit },
+            {
+              id: "name",
+              label: "Name",
+              type: "text",
+              value: (r) => r.name,
+              onEdit,
+            },
           ]) as DataViewRenderProps<unknown>)}
         />
       </PluginProvider>,

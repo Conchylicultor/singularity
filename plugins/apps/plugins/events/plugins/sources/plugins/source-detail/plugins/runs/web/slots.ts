@@ -8,9 +8,7 @@ import type { EventSourceRun } from "@plugins/apps/plugins/events/plugins/events
  * one action it owns (open the run) and anything else a run grows — a re-run, a
  * copy-id — is a contribution, not a branch here.
  */
-export const RunActions = defineItemActions<EventSourceRun>(
-  "events.source-runs.item-actions",
-);
+export const RunActions = defineItemActions<EventSourceRun>();
 
 /**
  * The run pane, as ONE render slot. The pane body is a run summary plus this
@@ -26,6 +24,4 @@ export const RunActions = defineItemActions<EventSourceRun>(
  * through `useEventSourceRun` (one shared query key), so each owns its own
  * freshness and can mount before the pane has resolved anything.
  */
-export const EventSourceRunDetail = defineDetailSections<{ runId: string }>(
-  "event-source-run-detail",
-);
+export const EventSourceRunDetail = defineDetailSections<{ runId: string }>();

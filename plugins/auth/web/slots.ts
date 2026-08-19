@@ -30,7 +30,7 @@ export const Auth = {
    * The web-side contribution is purely presentational; provider behavior
    * (OAuth URLs, identity fetch) lives in the server-side descriptor.
    */
-  Provider: defineSlot<AuthProviderContribution>("auth.provider", {
+  Provider: defineSlot<AuthProviderContribution>({
     docLabel: (p) => p.name,
   }),
   /**
@@ -38,7 +38,7 @@ export const Auth = {
    * The Accounts pane aggregates requirements per provider, diffs against the
    * granted scopes, and surfaces a "Grant access" affordance for missing ones.
    */
-  ScopeRequirement: defineSlot<AuthScopeRequirement>("auth.scope-requirement", {
+  ScopeRequirement: defineSlot<AuthScopeRequirement>({
     docLabel: (r) => r.reason,
   }),
 };

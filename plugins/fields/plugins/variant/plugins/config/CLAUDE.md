@@ -29,7 +29,7 @@ absent → a read-only display of the current `type`. `FieldRenderer` /
 
 - Description: Variant field type: config-render capability (type-dispatched renderer for config-v2.fields.renderer) plus the variantField factory.
 - Web:
-  - Contributes: `config-v2.fields.renderer` "variant" → `VariantRenderer`
+  - Contributes: `Fields.Renderer` "variant" → `VariantRenderer`
   - Uses:
     - `config_v2/fields.FieldHeader`
     - `config_v2/fields.FieldRenderer`

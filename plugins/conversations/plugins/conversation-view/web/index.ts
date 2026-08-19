@@ -18,5 +18,5 @@ export default {
     Pane.Register({ pane: conversationPane }),
     ConversationHeader.Header({ id: "title", component: ConversationTitle }),
   ],
-  slots: [ConversationSlots, conversationPane],
+  slots: { ...ConversationSlots, conversation: conversationPane },
 } satisfies PluginDefinition;

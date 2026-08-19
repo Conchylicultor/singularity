@@ -104,8 +104,8 @@ the title — a chord-grid save endpoint physically cannot carry one.
     - `Library.Source` ← `apps.sonata.sources.chord-grid`, `apps.sonata.sources.midi`, `apps.sonata.sources.ultimate-guitar`
     - `Library.SongActions` ← `apps.sonata.library`
     - `Library.Fields` ← `apps.sonata.playback-history`, `apps.sonata.sources.midi`, `apps.sonata.sources.midi.folders`
-    - `pane.sonata-library.actions`
-    - `pane.sonata-player.actions`
+    - `sonata-library.actions`
+    - `sonata-player.actions`
   - Contributes:
     - `Sonata.Home` "library" → `SongLibrary`
     - `SonataToolbar.Start` "back" → `BackToLibrary`

@@ -4,7 +4,7 @@ import { defineRenderSlot } from "@plugins/primitives/plugins/slot-render/web";
 
 export const Settings = {
   /** Left-rail entries — one per settings surface (account, config, …). */
-  Sidebar: defineRenderSlot<AppShellSidebarItem>("settings.sidebar", {
+  Sidebar: defineRenderSlot<AppShellSidebarItem>({
     docLabel: (p) => p.title,
   }),
 
@@ -14,7 +14,5 @@ export const Settings = {
    * or `null` otherwise. Keeps the rail icon's attention state aggregated from
    * the surfaces themselves rather than the shell naming any one of them.
    */
-  RailBadge: defineRenderSlot<{ component: ComponentType }>(
-    "settings.rail-badge",
-  ),
+  RailBadge: defineRenderSlot<{ component: ComponentType }>(),
 };

@@ -12,5 +12,5 @@ export default {
   contributions: [
     Sonata.Transport({ id: "progress-bar", component: ProgressBar }),
   ],
-  slots: [SonataProgress],
+  slots: SonataProgress,
 } satisfies PluginDefinition;

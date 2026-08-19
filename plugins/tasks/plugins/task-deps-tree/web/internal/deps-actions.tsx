@@ -15,7 +15,7 @@ import type { DepsTreeRow } from "@plugins/tasks/plugins/task-deps-tree/core";
 // The deps-tree row-action slot. Contributed into by web/index.ts and passed to
 // the DataView via `itemActions`; every view renders its contributions in the
 // row's trailing affordance.
-export const DepsActions = defineItemActions<DepsTreeRow>("task-deps-tree.actions");
+export const DepsActions = defineItemActions<DepsTreeRow>();
 
 /**
  * Detach: remove the edge to this row's rendered (primary) parent, so the task

@@ -50,5 +50,5 @@ export default {
         tokenGroupMatchesSearch(categoricalGroup, search),
     }),
   ],
-  slots: [Categorical],
+  slots: Categorical,
 } satisfies PluginDefinition;

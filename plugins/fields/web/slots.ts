@@ -7,7 +7,7 @@ export const Fields = {
   // contravariant in `T`, so `FieldIdentity<number>` is not assignable to
   // `FieldIdentity<unknown>`; `<any>` is the standard variance-erasing form for
   // a registry slot prop (readers always treat the value as `unknown`).
-  Identity: defineSlot<{ identity: FieldIdentity<any> }>("fields.identity", {
+  Identity: defineSlot<{ identity: FieldIdentity<any> }>({
     docLabel: (p) => p.identity.type.id,
   }),
 };

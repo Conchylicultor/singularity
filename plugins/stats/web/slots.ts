@@ -5,5 +5,5 @@ export const Stats = {
   Chart: defineRenderSlot<{
     title: string;
     component: ComponentType;
-  }>("stats.chart", { docLabel: (p) => p.title }),
+  }>({ docLabel: (p) => p.title }),
 };

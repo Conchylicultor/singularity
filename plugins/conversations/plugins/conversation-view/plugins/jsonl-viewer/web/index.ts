@@ -25,5 +25,5 @@ export default {
     JsonlRowActions.Item({ id: "timestamp", component: TimestampAction }),
     JsonlRowActions.Item({ id: "raw-json", component: RawJsonAction }),
   ],
-  slots: [JsonlViewerSlots],
+  slots: JsonlViewerSlots,
 } satisfies PluginDefinition;

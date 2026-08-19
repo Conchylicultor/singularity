@@ -1,12 +1,19 @@
 import { createContext, useMemo, type ReactNode } from "react";
 import { topoSortPlugins } from "@plugins/framework/plugins/plugin-loader/core";
 import { declarePluginSlots } from "@plugins/framework/plugins/slot-declaration/core";
+import type { SlotHandle } from "@plugins/framework/plugins/slot-declaration/core";
 import type { Contribution, LoadedPlugin } from "./types";
 
 export interface PluginRuntime {
   plugins: LoadedPlugin[];
   contributions: Contribution[];
-  bySlot: Map<string, Contribution[]>;
+  /**
+   * Keyed by the slot OBJECT. A contribution names its slot by identity (see
+   * `Contribution._slot`), so this map never needs an id — which is what lets a
+   * slot's id be derived from its declaring plugin rather than captured when the
+   * contribution was minted.
+   */
+  bySlot: Map<SlotHandle, Contribution[]>;
 }
 
 export const PluginRuntimeContext = createContext<PluginRuntime | null>(null);
@@ -68,12 +75,12 @@ export function PluginProvider({
         _pluginDescription: p.description,
       })),
     );
-    const bySlot = new Map<string, Contribution[]>();
+    const bySlot = new Map<SlotHandle, Contribution[]>();
     for (const c of contributions) {
-      let list = bySlot.get(c._slotId);
+      let list = bySlot.get(c._slot);
       if (!list) {
         list = [];
-        bySlot.set(c._slotId, list);
+        bySlot.set(c._slot, list);
       }
       list.push(c);
     }

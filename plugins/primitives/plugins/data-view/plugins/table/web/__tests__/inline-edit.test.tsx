@@ -59,6 +59,8 @@ const plugin = {
     DataViewSlots.Cell({ match: "multi", component: LocalMultiCell }),
     DataViewSlots.CellEditor({ match: "multi", component: LocalMultiEditor }),
   ],
+  // The rendered slots must be declared for their ids to exist.
+  slots: DataViewSlots,
 } as unknown as LoadedPlugin;
 
 type Row = { id: string; name?: string; tags?: string[] };
@@ -88,7 +90,13 @@ describe("data-view table inline cell editing", () => {
       <PluginProvider plugins={[plugin]}>
         <TableView
           {...(renderProps([
-            { id: "name", label: "Name", type: "text", value: (r) => r.name, onEdit },
+            {
+              id: "name",
+              label: "Name",
+              type: "text",
+              value: (r) => r.name,
+              onEdit,
+            },
           ]) as DataViewRenderProps<unknown>)}
         />
       </PluginProvider>,
@@ -175,7 +183,10 @@ describe("data-view table inline cell editing", () => {
     fireEvent.click(getByLabelText("multi-cell-editor"));
 
     expect(onEditValues).toHaveBeenCalledTimes(1);
-    expect(onEditValues).toHaveBeenCalledWith({ id: "1", tags: ["a"] }, ["a", "added"]);
+    expect(onEditValues).toHaveBeenCalledWith({ id: "1", tags: ["a"] }, [
+      "a",
+      "added",
+    ]);
   });
 
   it("edits an EMPTY multi-value cell via its 'Empty' hint affordance", () => {

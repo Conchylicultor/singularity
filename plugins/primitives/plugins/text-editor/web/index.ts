@@ -13,5 +13,5 @@ export default {
   description:
     "Generic Lexical-based rich text editor primitive. Plugins inject behaviors via the Plugin slot and registerNodeExtension.",
   contributions: [],
-  slots: [TextEditorSlots],
+  slots: TextEditorSlots,
 } satisfies PluginDefinition;

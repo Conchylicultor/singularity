@@ -21,5 +21,5 @@ export default {
       }),
     }),
   ],
-  slots: [broadcastsPane],
+  slots: { "debug-broadcasts": broadcastsPane },
 } satisfies PluginDefinition;

@@ -1,3 +1,5 @@
+import type { SlotHandle } from "@plugins/framework/plugins/slot-declaration/core";
+import { declaredSlotId } from "@plugins/framework/plugins/slot-declaration/core";
 import { existsSync } from "fs";
 import { join, relative } from "path";
 import { buildPluginTree } from "@plugins/plugin-meta/plugins/plugin-tree/core";
@@ -7,7 +9,10 @@ import {
   registerBarrelStubs,
   importBarrel,
 } from "@plugins/plugin-meta/plugins/barrel-import/core";
-import { declareSlotsFromBarrels } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
+import {
+  computeDisabledIds,
+  declareSlotsFromBarrels,
+} from "@plugins/framework/plugins/tooling/plugins/codegen/core";
 
 type CheckResult = { ok: true } | { ok: false; message: string; hint?: string };
 type Check = { id: string; description: string; run(): Promise<CheckResult> };
@@ -27,7 +32,7 @@ function storePathFor(
 }
 
 type BarrelContribution = Record<string, unknown> & {
-  _slotId?: string;
+  _slot?: SlotHandle;
   _kind?: symbol;
   pluginId?: string;
   descriptor?: { name?: string };
@@ -57,6 +62,16 @@ const check: Check = {
     const webPaths = new Set<string>();
     const serverPaths = new Set<string>();
 
+    // A DISABLED plugin registers on neither runtime: it is absent from the web
+    // registry the browser loads, and `discoverConfigs` skips it server-side. So
+    // it must be absent from BOTH sides here — and the test is the descriptor's
+    // OWNING plugin, not the barrel it was found in: reorder registers every
+    // slot's directive from its own node with an explicit `pluginId`, so a
+    // disabled plugin's directive arrives via an enabled barrel.
+    const disabled = computeDisabledIds(tree);
+    const ownerDisabled = (override: string | undefined, fallback: string) =>
+      disabled.has(asPluginId(override ?? fallback));
+
     for (const node of tree.byDir.values()) {
       const fallbackId = node.id;
 
@@ -74,9 +89,13 @@ const check: Check = {
         const def = mod.default as
           { contributions?: BarrelContribution[] } | undefined;
         for (const c of def?.contributions ?? []) {
-          if (c._slotId !== "config-v2.web-register") continue;
+          // Derived: the plugin directory is `config_v2` (underscore) and the slot is
+          // declared under the key `WebRegister`, so the id is `config_v2.web-register`
+          // — NOT the old hand-authored `config-v2.web-register`.
+          if (declaredSlotId(c._slot) !== "config_v2.web-register") continue;
           const name = c.descriptor?.name;
           if (typeof name !== "string") continue;
+          if (ownerDisabled(c.pluginId, fallbackId)) continue;
           webPaths.add(storePathFor(c.pluginId, fallbackId, name));
         }
       }
@@ -102,6 +121,7 @@ const check: Check = {
           if (c._kind?.description !== "ConfigV2.Register") continue;
           const name = c.descriptor?.name;
           if (typeof name !== "string") continue;
+          if (ownerDisabled(c.pluginId, fallbackId)) continue;
           serverPaths.add(storePathFor(c.pluginId, fallbackId, name));
         }
       }

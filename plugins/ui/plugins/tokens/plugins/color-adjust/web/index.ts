@@ -57,5 +57,5 @@ export default {
       useAvailable: useColorAdjustMatchesSearch,
     }),
   ],
-  slots: [ColorAdjust],
+  slots: ColorAdjust,
 } satisfies PluginDefinition;

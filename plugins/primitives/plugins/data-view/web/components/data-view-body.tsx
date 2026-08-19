@@ -395,7 +395,7 @@ function DataViewBodyInner<TRow>(props: DataViewBodyProps<TRow>): ReactNode {
                     />
                   ))
                 : renderIsolated(
-                    DataViewSlots.View.id,
+                    DataViewSlots.View,
                     activeInstance.viewType as unknown as Contribution,
                     renderProps,
                   )}

@@ -7,13 +7,13 @@ import type { TaskListItem } from "@plugins/tasks/plugins/tasks-core/core";
 import type { ComponentType } from "react";
 
 export const Tasks = {
-  TaskActions: defineItemActions<TaskListItem>("tasks.task-actions"),
+  TaskActions: defineItemActions<TaskListItem>(),
   ListActions: defineRenderSlot<{
     component: ComponentType;
-  }>("tasks.list-actions", { docLabel: (p) => p.id }),
+  }>({ docLabel: (p) => p.id }),
   // Extra DataView `FieldDef<TaskListItem>[]` injected by other plugins. A field
   // extension is a *component* (not plain data) so its `value` closure can
   // capture hook-loaded data — e.g. `category` reads its own live resource and
   // yields a `category` enum field. Mirrors the page-tree `PageTree.Fields` seam.
-  Fields: defineFieldExtensions<TaskListItem>("tasks.fields"),
+  Fields: defineFieldExtensions<TaskListItem>(),
 };

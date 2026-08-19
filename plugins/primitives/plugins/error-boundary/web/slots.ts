@@ -8,5 +8,5 @@ export const ErrorBoundary = {
       report: BoundaryErrorReport;
       context: unknown;
     }>;
-  }>("error-boundary.action"),
+  }>(),
 };

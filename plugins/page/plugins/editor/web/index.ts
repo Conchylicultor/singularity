@@ -72,5 +72,5 @@ export type { PageIconProps } from "./components/page-icon";
 
 export default {
   description: "Block-based document editor component and slot system.",
-  slots: [EditorSlots],
+  slots: EditorSlots,
 } satisfies PluginDefinition;

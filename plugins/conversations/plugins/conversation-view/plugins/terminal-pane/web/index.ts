@@ -17,5 +17,5 @@ export default {
       component: OpenTerminalButton,
     }),
   ],
-  slots: [convTerminalPane],
+  slots: { "conv-terminal": convTerminalPane },
 } satisfies PluginDefinition;

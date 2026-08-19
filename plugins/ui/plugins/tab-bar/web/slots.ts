@@ -29,7 +29,7 @@ export interface TabVariantContribution {
 }
 
 export const TabBar = {
-  Variant: defineSlot<TabVariantContribution>("ui.tab-bar.variant", {
+  Variant: defineSlot<TabVariantContribution>({
     docLabel: (p) => p.label,
   }),
 };

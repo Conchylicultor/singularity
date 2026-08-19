@@ -14,7 +14,9 @@ import { maskSource, markerCallSpans, findMarkerCalls } from "./index";
 /** Convenience: the args interior of each span, sliced from the (masked) src. */
 function spanArgs(src: string, marker: string): string[] {
   const masked = maskSource(src, { strings: false });
-  return markerCallSpans(masked, marker).map((s) => masked.slice(s.open + 1, s.close));
+  return markerCallSpans(masked, marker).map((s) =>
+    masked.slice(s.open + 1, s.close),
+  );
 }
 
 // === markerCallSpans =========================================================
@@ -81,7 +83,10 @@ test("a stray `)` inside a string in the args does not end the span early", () =
 
 test("finds multiple independent calls in one file", () => {
   const src = `defineResource<A>({ key: "a" });\ndefineResource({ key: "b" });`;
-  expect(spanArgs(src, "defineResource")).toEqual([`{ key: "a" }`, `{ key: "b" }`]);
+  expect(spanArgs(src, "defineResource")).toEqual([
+    `{ key: "a" }`,
+    `{ key: "b" }`,
+  ]);
 });
 
 // === findMarkerCalls (now generic-tolerant) ==================================

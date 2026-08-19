@@ -9,7 +9,7 @@ export interface ColorAdjustPresetContribution {
 }
 
 export const ColorAdjust = {
-  Preset: defineSlot<ColorAdjustPresetContribution>("ui.color-adjust.preset", {
+  Preset: defineSlot<ColorAdjustPresetContribution>({
     docLabel: (p) => p.label,
   }),
 };

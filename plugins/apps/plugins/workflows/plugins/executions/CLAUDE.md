@@ -6,7 +6,7 @@
 
 - Description: Executions section (run list + Run button) for the Workflows detail pane, plus the execution-detail pane rendering the per-step trace.
 - Web:
-  - Slots: `pane.workflows-execution-detail.actions`
+  - Slots: `workflows-execution-detail.actions`
   - Contributes:
     - `WorkflowsDetail.Section` "Executions" → `ExecutionsSection`
     - `Pane.Register` "workflows-execution-detail"

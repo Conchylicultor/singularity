@@ -25,11 +25,13 @@ export interface TabbedView<ViewProps> {
 export function defineTabbedView<ViewProps extends object>(
   id: string,
 ): TabbedView<ViewProps> {
-  const View = defineSlot<TabContribution<ViewProps>>(`${id}.view`, {
+  const View = defineSlot<TabContribution<ViewProps>>({
     docLabel: (p) => p.title,
   });
 
-  function Host(props: ViewProps & { header?: ReactNode; className?: string }): ReactNode {
+  function Host(
+    props: ViewProps & { header?: ReactNode; className?: string },
+  ): ReactNode {
     const { header, className, ...viewProps } = props;
     const views = View.useContributions();
 
@@ -69,7 +71,7 @@ export function defineTabbedView<ViewProps extends object>(
         body={
           activeView &&
           renderIsolated(
-            View.id,
+            View,
             activeView as unknown as Contribution,
             viewProps as ViewProps,
           )

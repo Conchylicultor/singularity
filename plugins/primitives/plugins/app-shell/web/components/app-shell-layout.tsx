@@ -15,6 +15,7 @@ import {
   PluginRuntimeContext,
   type Contribution,
 } from "@plugins/framework/plugins/web-sdk/core";
+import type { SlotHandle } from "@plugins/framework/plugins/slot-declaration/core";
 import {
   renderIsolated,
   type RenderSlot,
@@ -99,9 +100,9 @@ function ToolbarItem(item: AppShellToolbarItem) {
  * *real* contributions instead of merely whether a slot object was passed —
  * an app that wires a toolbar slot with zero contributors gets no empty bar.
  */
-function useSlotHasContributions(slot: { id: string } | undefined): boolean {
+function useSlotHasContributions(slot: SlotHandle | undefined): boolean {
   const ctx = useContext(PluginRuntimeContext);
-  return !!slot && (ctx?.bySlot.get(slot.id)?.length ?? 0) > 0;
+  return !!slot && (ctx?.bySlot.get(slot)?.length ?? 0) > 0;
 }
 
 /**
@@ -273,7 +274,7 @@ export function AppShellLayout({
   const framing = framings[0];
   return framing ? (
     renderIsolated(
-      AppShell.Framing.id,
+      AppShell.Framing,
       framing as unknown as Contribution,
       framingProps,
     )

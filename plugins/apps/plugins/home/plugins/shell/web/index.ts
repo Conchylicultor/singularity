@@ -19,5 +19,5 @@ export default {
       default: true,
     }),
   ],
-  slots: [Home],
+  slots: Home,
 } satisfies PluginDefinition;

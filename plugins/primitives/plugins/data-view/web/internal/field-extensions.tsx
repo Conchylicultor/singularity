@@ -5,6 +5,7 @@ import {
   renderIsolated,
   type RenderSlot,
 } from "@plugins/primitives/plugins/slot-render/web";
+import type { SlotHandle } from "@plugins/framework/plugins/slot-declaration/core";
 import type {
   DataViewId,
   FieldDef,
@@ -26,8 +27,9 @@ export interface FieldExtensionContribution<TRow> {
  * slot is structurally assignable to `FieldExtensionsDescriptor`, which is all the
  * `fieldExtensions` prop needs.
  */
-export interface FieldExtensions<TRow>
-  extends RenderSlot<FieldExtensionContribution<TRow>> {}
+export interface FieldExtensions<TRow> extends RenderSlot<
+  FieldExtensionContribution<TRow>
+> {}
 
 /**
  * Mint a per-consumer field-extension slot. The returned value is **callable for
@@ -41,8 +43,8 @@ export interface FieldExtensions<TRow>
  * controllers, so contributed fields appear in the Sort/Filter pills and table
  * columns for free.
  */
-export function defineFieldExtensions<TRow>(id: string): FieldExtensions<TRow> {
-  return defineRenderSlot<FieldExtensionContribution<TRow>>(id, {
+export function defineFieldExtensions<TRow>(): FieldExtensions<TRow> {
+  return defineRenderSlot<FieldExtensionContribution<TRow>>({
     docLabel: (p) => p.id,
   });
 }
@@ -141,7 +143,7 @@ function FieldExtensionFold(props: {
   const contributions = descriptor.useContributions();
   return (
     <FieldExtensionStep
-      slotId={descriptor.id}
+      slot={descriptor}
       contributions={contributions}
       index={0}
       acc={base}
@@ -155,7 +157,7 @@ function FieldExtensionFold(props: {
 /** One fold level: mount contribution `index` isolated; its `render` recurses to
  *  the next level with the accumulated fields. Base case → emit the merged set. */
 function FieldExtensionStep(props: {
-  slotId: string;
+  slot: SlotHandle;
   contributions: ReturnType<
     FieldExtensionsDescriptor<unknown>["useContributions"]
   >;
@@ -165,7 +167,7 @@ function FieldExtensionStep(props: {
   rowKey: (row: unknown, index: number) => string;
   emit: (fields: FieldDef<unknown>[]) => ReactNode;
 }): ReactNode {
-  const { slotId, contributions, index, acc, storageKey, rowKey, emit } = props;
+  const { slot, contributions, index, acc, storageKey, rowKey, emit } = props;
   // Every contributor has mounted and folded its fields into `acc` → emit.
   if (index >= contributions.length) return <>{emit(acc)}</>;
 
@@ -177,7 +179,7 @@ function FieldExtensionStep(props: {
     rowKey,
     render: (fields) => (
       <FieldExtensionStep
-        slotId={slotId}
+        slot={slot}
         contributions={contributions}
         index={index + 1}
         acc={[...acc, ...fields]}
@@ -191,7 +193,7 @@ function FieldExtensionStep(props: {
   // error-boundary item middleware, so a broken contributor never crashes the
   // whole DataView (and never poisons the merged schema).
   return renderIsolated(
-    slotId,
+    slot,
     contribution as unknown as Contribution,
     renderProps,
   );

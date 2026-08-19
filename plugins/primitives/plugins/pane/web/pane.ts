@@ -2057,9 +2057,7 @@ function define(
   // discovery was a source-text scan that could not read a templated id; slots
   // now declare themselves at runtime, so the id no longer has to be spellable
   // in source.)
-  const actionsSlot = defineRenderSlot<PaneActionContribution>(
-    `pane.${id}.actions`,
-  );
+  const actionsSlot = defineRenderSlot<PaneActionContribution>();
 
   const resolve =
     "resolve" in args ? (args.resolve as PaneInternal["resolve"]) : undefined;

@@ -16,5 +16,5 @@ export default {
     }),
     Pane.Register({ pane: buildProfileDetailPane }),
   ],
-  slots: [buildProfileDetailPane],
+  slots: { "debug-profiling-build-detail": buildProfileDetailPane },
 } satisfies PluginDefinition;

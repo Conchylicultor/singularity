@@ -154,7 +154,7 @@ export interface PlacementDef {
  * derived capabilities back through the apps-owned placement-capability registry.
  */
 export const Surface = {
-  Placement: defineSlot<PlacementDef>("apps.surface.placement"),
+  Placement: defineSlot<PlacementDef>(),
 };
 
 /**

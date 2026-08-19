@@ -21,5 +21,5 @@ export default {
       }),
     }),
   ],
-  slots: [claudeCliCallsPane],
+  slots: { "claude-cli-calls": claudeCliCallsPane },
 } satisfies PluginDefinition;

@@ -1,5 +1,8 @@
 import type { ComponentType } from "react";
-import type { Contribution, Slot } from "@plugins/framework/plugins/web-sdk/core";
+import type {
+  Contribution,
+  Slot,
+} from "@plugins/framework/plugins/web-sdk/core";
 import { defineSlot } from "@plugins/framework/plugins/web-sdk/core";
 import { ConfigV2 } from "@plugins/config_v2/web";
 import { DynamicEnum } from "@plugins/fields/plugins/dynamic-enum/plugins/config/web";
@@ -26,10 +29,9 @@ export interface VariantRegionWeb<Props> {
 export function defineVariantRegionWeb<Props>(
   core: VariantRegionCore<Props>,
 ): VariantRegionWeb<Props> {
-  const Variant = defineSlot<VariantContribution<Props>>(
-    `ui.variant-region.${core.id}.variant`,
-    { docLabel: (p) => p.label },
-  );
+  const Variant = defineSlot<VariantContribution<Props>>({
+    docLabel: (p) => p.label,
+  });
 
   const Region = createRegion(core, Variant);
   const Picker = createPicker(core, Variant);

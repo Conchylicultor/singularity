@@ -26,5 +26,5 @@ export default {
     WebsiteToolbar.Start({ id: "wordmark", component: WebsiteWordmark }),
     Pane.Register({ pane: landingPane }),
   ],
-  slots: [Website, WebsiteToolbar, landingPane],
+  slots: { ...Website, ...WebsiteToolbar, "website-landing": landingPane },
 } satisfies PluginDefinition;

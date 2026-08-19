@@ -37,6 +37,8 @@ const plugin = {
   contributions: [
     DataViewSlots.CellEditor({ match: "text", component: LocalTextEditor }),
   ],
+  // The rendered slots must be declared for their ids to exist.
+  slots: DataViewSlots,
 } as unknown as LoadedPlugin;
 
 type Row = { id: string; name?: string; status?: string };
@@ -66,7 +68,14 @@ describe("data-view list inline cell editing", () => {
       <PluginProvider plugins={[plugin]}>
         <ListView
           {...(renderProps([
-            { id: "name", label: "Name", type: "text", value: (r) => r.name, primary: true, onEdit },
+            {
+              id: "name",
+              label: "Name",
+              type: "text",
+              value: (r) => r.name,
+              primary: true,
+              onEdit,
+            },
           ]) as DataViewRenderProps<unknown>)}
         />
       </PluginProvider>,
@@ -78,7 +87,10 @@ describe("data-view list inline cell editing", () => {
     fireEvent.keyDown(input, { key: "Enter" });
 
     expect(onEdit).toHaveBeenCalledTimes(1);
-    expect(onEdit).toHaveBeenCalledWith({ id: "1", name: "alpha", status: "todo" }, "beta");
+    expect(onEdit).toHaveBeenCalledWith(
+      { id: "1", name: "alpha", status: "todo" },
+      "beta",
+    );
   });
 
   it("edits a trailing (align:end) field whose field declares onEdit", () => {
@@ -87,8 +99,21 @@ describe("data-view list inline cell editing", () => {
       <PluginProvider plugins={[plugin]}>
         <ListView
           {...(renderProps([
-            { id: "name", label: "Name", type: "text", value: (r) => r.name, primary: true },
-            { id: "status", label: "Status", type: "text", value: (r) => r.status, align: "end", onEdit },
+            {
+              id: "name",
+              label: "Name",
+              type: "text",
+              value: (r) => r.name,
+              primary: true,
+            },
+            {
+              id: "status",
+              label: "Status",
+              type: "text",
+              value: (r) => r.status,
+              align: "end",
+              onEdit,
+            },
           ]) as DataViewRenderProps<unknown>)}
         />
       </PluginProvider>,
@@ -100,7 +125,10 @@ describe("data-view list inline cell editing", () => {
     fireEvent.keyDown(input, { key: "Enter" });
 
     expect(onEdit).toHaveBeenCalledTimes(1);
-    expect(onEdit).toHaveBeenCalledWith({ id: "1", name: "alpha", status: "todo" }, "done");
+    expect(onEdit).toHaveBeenCalledWith(
+      { id: "1", name: "alpha", status: "todo" },
+      "done",
+    );
   });
 
   it("does not enter edit mode for a field without onEdit", () => {
@@ -108,7 +136,13 @@ describe("data-view list inline cell editing", () => {
       <PluginProvider plugins={[plugin]}>
         <ListView
           {...(renderProps([
-            { id: "name", label: "Name", type: "text", value: (r) => r.name, primary: true },
+            {
+              id: "name",
+              label: "Name",
+              type: "text",
+              value: (r) => r.name,
+              primary: true,
+            },
           ]) as DataViewRenderProps<unknown>)}
         />
       </PluginProvider>,

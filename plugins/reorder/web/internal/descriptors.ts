@@ -24,10 +24,14 @@ import { reorderDirectiveDescriptor } from "../../shared/directive";
 const descriptorBySlot = new Map<string, ConfigDescriptor>();
 const ownerBySlot = new Map<string, PluginId>();
 
-function descriptorFor(slotId: string): ConfigDescriptor {
+// Memoized by slot id (globally unique) while the descriptor is NAMED by the
+// declaration key — the config file's basename, under the owning plugin's
+// directory. Two plugins may key a slot `sidebar`; their descriptors are still
+// distinct objects because the memo key is the full id.
+function descriptorFor(slotId: string, configName: string): ConfigDescriptor {
   let descriptor = descriptorBySlot.get(slotId);
   if (!descriptor) {
-    descriptor = reorderDirectiveDescriptor(slotId);
+    descriptor = reorderDirectiveDescriptor(configName);
     descriptorBySlot.set(slotId, descriptor);
   }
   return descriptor;
@@ -62,17 +66,22 @@ export const reorderDescriptorEntries: ReorderDescriptorEntry[] = [];
  * what makes "never declared" impossible to ship.
  */
 export function syncReorderDescriptors(
-  owners: ReadonlyMap<string, PluginId>,
+  _owners: ReadonlyMap<string, PluginId>,
 ): void {
   reorderDescriptorEntries.length = 0;
   for (const slot of getCreatedSlots()) {
     if (!slot.meta.reorderable) continue;
-    const pluginId = owners.get(slot.id);
-    if (pluginId === undefined) continue;
-    ownerBySlot.set(slot.id, pluginId);
+    // The STAMP, not a lookup by id — an undeclared slot HAS no id (it is
+    // derived from the declaring plugin), so asking the owners map about one
+    // would have to read the id to ask, and reading it is exactly what throws.
+    // The stamp is the same pass's result, reachable without naming the slot.
+    const pluginId = slot._pluginId;
+    if (pluginId === undefined || slot._key === undefined) continue;
+    const slotId = slot.id;
+    ownerBySlot.set(slotId, pluginId);
     reorderDescriptorEntries.push({
-      slotId: slot.id,
-      descriptor: descriptorFor(slot.id),
+      slotId,
+      descriptor: descriptorFor(slotId, slot._key),
       pluginId,
     });
   }

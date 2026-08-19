@@ -14,5 +14,5 @@ export default {
       component: PushProfilingButton,
     }),
   ],
-  slots: [convPushProfilingPane],
+  slots: { "conv-push-profiling": convPushProfilingPane },
 } satisfies PluginDefinition;

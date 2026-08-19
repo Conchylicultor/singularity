@@ -23,13 +23,14 @@ afterEach(cleanup);
 
 describe("AppShellLayout drives the chrome toolbar bar off real contributions", () => {
   it("renders no toolbar bar (content owns chrome) when the wired slot has zero contributions", () => {
-    const toolbarSlot = defineRenderSlot<AppShellToolbarItem>(
-      "app-shell-test.toolbar.empty",
-    );
+    const toolbarSlot = defineRenderSlot<AppShellToolbarItem>();
     const plugin = {
       id: "app-shell-test-empty",
       description: "empty toolbar fixture",
       contributions: [],
+      // A rendered slot must be a DECLARED slot — its id derives from the
+      // declaring plugin, exactly as in the app.
+      slots: { toolbar: toolbarSlot },
     } as unknown as LoadedPlugin;
 
     const { getByTestId, container } = render(
@@ -47,15 +48,16 @@ describe("AppShellLayout drives the chrome toolbar bar off real contributions", 
   });
 
   it("renders the toolbar bar (toolbar owns chrome) when the slot has a contribution", () => {
-    const toolbarSlot = defineRenderSlot<AppShellToolbarItem>(
-      "app-shell-test.toolbar.full",
-    );
+    const toolbarSlot = defineRenderSlot<AppShellToolbarItem>();
     const plugin = {
       id: "app-shell-test-full",
       description: "populated toolbar fixture",
       contributions: [
         toolbarSlot({ id: "btn", label: "ToolbarBtn", onClick: () => {} }),
       ],
+      // A rendered slot must be a DECLARED slot — its id derives from the
+      // declaring plugin, exactly as in the app.
+      slots: { toolbar: toolbarSlot },
     } as unknown as LoadedPlugin;
 
     const { getByText, getByTestId, container } = render(
@@ -74,9 +76,7 @@ describe("AppShellLayout drives the chrome toolbar bar off real contributions", 
   });
 
   it("renders a component-form contribution as its custom widget", () => {
-    const toolbarSlot = defineRenderSlot<AppShellToolbarItem>(
-      "app-shell-test.toolbar.component",
-    );
+    const toolbarSlot = defineRenderSlot<AppShellToolbarItem>();
     const plugin = {
       id: "app-shell-test-component",
       description: "component toolbar fixture",
@@ -86,6 +86,9 @@ describe("AppShellLayout drives the chrome toolbar bar off real contributions", 
           component: () => <div data-testid="widget">Widget</div>,
         }),
       ],
+      // A rendered slot must be a DECLARED slot — its id derives from the
+      // declaring plugin, exactly as in the app.
+      slots: { toolbar: toolbarSlot },
     } as unknown as LoadedPlugin;
 
     const { getByTestId } = render(
@@ -100,9 +103,7 @@ describe("AppShellLayout drives the chrome toolbar bar off real contributions", 
   });
 
   it("fails loudly on a malformed item with no renderable form", () => {
-    const toolbarSlot = defineRenderSlot<AppShellToolbarItem>(
-      "app-shell-test.toolbar.malformed",
-    );
+    const toolbarSlot = defineRenderSlot<AppShellToolbarItem>();
     const plugin = {
       id: "app-shell-test-malformed",
       description: "malformed toolbar fixture",
@@ -110,12 +111,13 @@ describe("AppShellLayout drives the chrome toolbar bar off real contributions", 
         // The union forbids this at the type level; only an `as any` cast (or
         // an untyped JS contribution) can force it in. It must throw, not paint
         // an invisible nothing.
-        toolbarSlot(
-          { id: "bad", label: "Ghost" } as unknown as Parameters<
-            typeof toolbarSlot
-          >[0],
-        ),
+        toolbarSlot({ id: "bad", label: "Ghost" } as unknown as Parameters<
+          typeof toolbarSlot
+        >[0]),
       ],
+      // A rendered slot must be a DECLARED slot — its id derives from the
+      // declaring plugin, exactly as in the app.
+      slots: { toolbar: toolbarSlot },
     } as unknown as LoadedPlugin;
 
     // Rendering surfaces the throw loudly rather than silently painting an

@@ -21,7 +21,7 @@ export function Tab(props: TabProps) {
   const active = useActiveTabVariant();
   if (!active) return null;
   return renderIsolated(
-    Slots.Variant.id,
+    Slots.Variant,
     active as unknown as Contribution,
     props as TabProps,
   );

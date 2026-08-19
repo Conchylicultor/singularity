@@ -31,5 +31,9 @@ export default {
     Pane.Register({ pane: storyGalleryPane }),
     Pane.Register({ pane: storyDetailPane }),
   ],
-  slots: [StoryToolbar, storyGalleryPane, storyDetailPane],
+  slots: {
+    ...StoryToolbar,
+    "story-gallery": storyGalleryPane,
+    "story-detail": storyDetailPane,
+  },
 } satisfies PluginDefinition;

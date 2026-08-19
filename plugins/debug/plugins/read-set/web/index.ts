@@ -21,5 +21,5 @@ export default {
       }),
     }),
   ],
-  slots: [readSetPane],
+  slots: { "debug-read-set": readSetPane },
 } satisfies PluginDefinition;

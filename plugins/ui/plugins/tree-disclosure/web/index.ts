@@ -11,5 +11,5 @@ export default {
     ...treeDisclosureWeb.contributions,
     Tree.Disclosure({ component: treeDisclosureWeb.Region }),
   ],
-  slots: [treeDisclosureWeb],
+  slots: { treeDisclosureWeb: treeDisclosureWeb },
 } satisfies PluginDefinition;

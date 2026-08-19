@@ -31,7 +31,7 @@ export function useGroupedInsertableBlocks(): BlockSection[] {
   const contributions = Editor.Block.useContributions();
   const enabled = useEnabledBlockTypes();
   // The clean contributions carry `_pluginId` + `id`, which is all the reorder
-  // entryKey needs; they lack `_slotId`, so widen through `unknown`.
+  // entryKey needs; they lack `_slot`, so widen through `unknown`.
   const { entries } = useReorderedEntries(
     "page.editor.block",
     contributions as unknown as Contribution[],
@@ -133,7 +133,9 @@ function BlockTypeRow({
     <Row
       ref={revealRef}
       selected={active}
-      icon={Icon ? <Icon className="text-muted-foreground size-4" /> : undefined}
+      icon={
+        Icon ? <Icon className="text-muted-foreground size-4" /> : undefined
+      }
       onMouseEnter={onHover}
       {...pressProps}
     >
@@ -173,7 +175,11 @@ export function BlockTypeList({
   const flatCount = sections.reduce((n, s) => n + s.blocks.length, 0);
   if (flatCount === 0) {
     return (
-      <Text as="div" variant="body" className="text-muted-foreground px-sm py-xs">
+      <Text
+        as="div"
+        variant="body"
+        className="text-muted-foreground px-sm py-xs"
+      >
         No block types
       </Text>
     );

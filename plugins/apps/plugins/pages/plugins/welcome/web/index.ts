@@ -9,5 +9,5 @@ export default {
   description:
     "Landing surface for the Pages app (shown at bare `/pages`): a quick-create + recent-pages launchpad rendered through the PagesWelcome.Section slot.",
   contributions: [Pane.Register({ pane: pagesRootPane })],
-  slots: [PagesWelcome, pagesRootPane],
+  slots: { ...PagesWelcome, "pages-root": pagesRootPane },
 } satisfies PluginDefinition;

@@ -8,5 +8,5 @@ export default {
   description:
     "Hosts the Conversation.Header slot — all header segments (title, chips) rendered in the PaneChrome title area.",
   contributions: [],
-  slots: [ConversationSlots],
+  slots: ConversationSlots,
 } satisfies PluginDefinition;

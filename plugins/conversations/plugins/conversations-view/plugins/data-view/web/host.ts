@@ -25,9 +25,7 @@ export interface ConversationSidebarProps {
  * `MergedDataView` host resolves ONE unified view model over them — one config
  * file, one `EditableViewSwitcher`, a source-grouped `+` add-view menu.
  */
-export const SidebarSources = defineDataViewSources<ConversationSidebarProps>(
-  "conversations-sidebar-sources",
-);
+export const SidebarSources = defineDataViewSources<ConversationSidebarProps>();
 
 // The merged DataView surface id — the config lives under this plugin's tree at
 // `config/conversations/conversations-view/data-view/conversations-sidebar.jsonc`.

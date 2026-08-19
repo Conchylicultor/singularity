@@ -18,5 +18,5 @@ export default {
       }),
     }),
   ],
-  slots: [contributionsPane],
+  slots: { contributions: contributionsPane },
 } satisfies PluginDefinition;

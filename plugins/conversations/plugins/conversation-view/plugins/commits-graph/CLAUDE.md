@@ -25,7 +25,7 @@ The chip renders a muted `—` (reason as tooltip) both for an unresolved payloa
 
 - Description: Toolbar chip showing commits ahead/behind main; opens a side pane with the chain of commits between merge-base and HEAD. Toolbar chip showing commits ahead/behind main; opens a side pane with the chain of commits between merge-base and HEAD.
 - Web:
-  - Slots: `pane.conv-commits-graph.actions`
+  - Slots: `conv-commits-graph.actions`
   - Contributes:
     - `Pane.Register` "conv-commits-graph"
     - `Conversation.ActionBar` → `CommitsChip`

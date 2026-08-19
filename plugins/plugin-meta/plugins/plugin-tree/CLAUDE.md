@@ -48,6 +48,8 @@ dynamic value.
   - Uses:
     - `framework/plugin-id.asPluginId`
     - `framework/plugin-id.PluginId`
+    - `framework/slot-declaration.declaredSlotSources`
+    - `framework/slot-declaration.declarePluginSlots`
     - `plugin-meta/barrel-import.importBarrel`
     - `plugin-meta/barrel-import.registerBarrelStubs`
     - `plugin-meta/facets.Facet`

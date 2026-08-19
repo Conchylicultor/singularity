@@ -1,0 +1,1062 @@
+[
+  {
+    "hier": "active-data/plugin-link",
+    "from": "pane.plugin-conv-side.actions",
+    "to": "plugin-conv-side.actions"
+  },
+  {
+    "hier": "apps-core",
+    "from": "apps.app",
+    "to": "app"
+  },
+  {
+    "hier": "apps-core",
+    "from": "apps.tab-bar-actions",
+    "to": "tab-bar-actions"
+  },
+  {
+    "hier": "apps/agent-manager/welcome",
+    "from": "pane.welcome.actions",
+    "to": "welcome.actions"
+  },
+  {
+    "hier": "apps/browser/shell",
+    "from": "browser.actions",
+    "to": "actions"
+  },
+  {
+    "hier": "apps/browser/shell",
+    "from": "browser.nav-controls",
+    "to": "nav-controls"
+  },
+  {
+    "hier": "apps/browser/shell",
+    "from": "browser.omnibox",
+    "to": "omnibox"
+  },
+  {
+    "hier": "apps/browser/shell",
+    "from": "browser.start-page",
+    "to": "start-page"
+  },
+  {
+    "hier": "apps/browser/shell",
+    "from": "browser.sub-bar",
+    "to": "sub-bar"
+  },
+  {
+    "hier": "apps/browser/shell",
+    "from": "browser.tab-strip",
+    "to": "tab-strip"
+  },
+  {
+    "hier": "apps/browser/shell",
+    "from": "browser.viewport",
+    "to": "viewport"
+  },
+  {
+    "hier": "apps/debug/shell",
+    "from": "debug-app.sidebar",
+    "to": "sidebar"
+  },
+  {
+    "hier": "apps/debug/shell",
+    "from": "debug-app.toolbar",
+    "to": "toolbar"
+  },
+  {
+    "hier": "apps/deploy/deployments",
+    "from": "deploy.deployments.fields",
+    "to": "fields"
+  },
+  {
+    "hier": "apps/deploy/deployments",
+    "from": "deploy.deployments.item-actions",
+    "to": "item-actions"
+  },
+  {
+    "hier": "apps/deploy/deployments",
+    "from": "deployment-detail.section",
+    "to": "section"
+  },
+  {
+    "hier": "apps/deploy/deployments",
+    "from": "pane.deploy-deployment-detail.actions",
+    "to": "deploy-deployment-detail.actions"
+  },
+  {
+    "hier": "apps/deploy/servers",
+    "from": "deploy.server-detail.section",
+    "to": "section"
+  },
+  {
+    "hier": "apps/deploy/servers",
+    "from": "deploy.servers.fields",
+    "to": "fields"
+  },
+  {
+    "hier": "apps/deploy/servers",
+    "from": "deploy.servers.item-actions",
+    "to": "item-actions"
+  },
+  {
+    "hier": "apps/deploy/servers",
+    "from": "pane.deploy-server-detail.actions",
+    "to": "deploy-server-detail.actions"
+  },
+  {
+    "hier": "apps/deploy/servers",
+    "from": "pane.deploy-servers.actions",
+    "to": "deploy-servers.actions"
+  },
+  {
+    "hier": "apps/events/event-list",
+    "from": "events.list.fields",
+    "to": "fields"
+  },
+  {
+    "hier": "apps/events/event-list",
+    "from": "pane.event-list.actions",
+    "to": "event-list.actions"
+  },
+  {
+    "hier": "apps/events/shell",
+    "from": "events.sidebar",
+    "to": "sidebar"
+  },
+  {
+    "hier": "apps/events/shell",
+    "from": "pane.events-root.actions",
+    "to": "events-root.actions"
+  },
+  {
+    "hier": "apps/events/sources",
+    "from": "event-source-detail.section",
+    "to": "section"
+  },
+  {
+    "hier": "apps/events/sources",
+    "from": "events.sources.item-actions",
+    "to": "item-actions"
+  },
+  {
+    "hier": "apps/events/sources",
+    "from": "pane.event-source-detail.actions",
+    "to": "event-source-detail.actions"
+  },
+  {
+    "hier": "apps/events/sources",
+    "from": "pane.event-sources.actions",
+    "to": "event-sources.actions"
+  },
+  {
+    "hier": "apps/events/sources/source-detail/runs",
+    "from": "event-source-run-detail.section",
+    "to": "section"
+  },
+  {
+    "hier": "apps/events/sources/source-detail/runs",
+    "from": "events.source-runs.item-actions",
+    "to": "item-actions"
+  },
+  {
+    "hier": "apps/events/sources/source-detail/runs",
+    "from": "pane.event-source-run.actions",
+    "to": "event-source-run.actions"
+  },
+  {
+    "hier": "apps/file-explorer/shell",
+    "from": "file-explorer.sidebar",
+    "to": "sidebar"
+  },
+  {
+    "hier": "apps/file-explorer/shell",
+    "from": "file-explorer.toolbar",
+    "to": "toolbar"
+  },
+  {
+    "hier": "apps/home/shell",
+    "from": "home.section",
+    "to": "section"
+  },
+  {
+    "hier": "apps/mail/reading-pane",
+    "from": "pane.mail-thread.actions",
+    "to": "mail-thread.actions"
+  },
+  {
+    "hier": "apps/mail/search",
+    "from": "pane.mail-message.actions",
+    "to": "mail-message.actions"
+  },
+  {
+    "hier": "apps/mail/search",
+    "from": "pane.mail-search.actions",
+    "to": "mail-search.actions"
+  },
+  {
+    "hier": "apps/mail/shell",
+    "from": "mail.banner",
+    "to": "banner"
+  },
+  {
+    "hier": "apps/mail/shell",
+    "from": "mail.rail-badge",
+    "to": "rail-badge"
+  },
+  {
+    "hier": "apps/mail/shell",
+    "from": "mail.sidebar",
+    "to": "sidebar"
+  },
+  {
+    "hier": "apps/mail/shell",
+    "from": "pane.mail-root.actions",
+    "to": "mail-root.actions"
+  },
+  {
+    "hier": "apps/mail/threads",
+    "from": "pane.mail-threads.actions",
+    "to": "mail-threads.actions"
+  },
+  {
+    "hier": "apps/pages/page-tree",
+    "from": "pages.detail.header-actions",
+    "to": "header-actions"
+  },
+  {
+    "hier": "apps/pages/page-tree",
+    "from": "pages.detail.overlay",
+    "to": "overlay"
+  },
+  {
+    "hier": "apps/pages/page-tree",
+    "from": "pages.detail.section",
+    "to": "section"
+  },
+  {
+    "hier": "apps/pages/page-tree",
+    "from": "pages.tree.fields",
+    "to": "fields"
+  },
+  {
+    "hier": "apps/pages/page-tree",
+    "from": "pages.tree.row-actions",
+    "to": "row-actions"
+  },
+  {
+    "hier": "apps/pages/page-tree",
+    "from": "pane.page-detail.actions",
+    "to": "page-detail.actions"
+  },
+  {
+    "hier": "apps/pages/page-tree",
+    "from": "pane.pages-tree.actions",
+    "to": "pages-tree.actions"
+  },
+  {
+    "hier": "apps/pages/shell",
+    "from": "pages.sidebar",
+    "to": "sidebar"
+  },
+  {
+    "hier": "apps/pages/welcome",
+    "from": "pages.welcome.section",
+    "to": "section"
+  },
+  {
+    "hier": "apps/pages/welcome",
+    "from": "pane.pages-root.actions",
+    "to": "pages-root.actions"
+  },
+  {
+    "hier": "apps/prototypes/gallery",
+    "from": "pane.prototypes-detail.actions",
+    "to": "prototypes-detail.actions"
+  },
+  {
+    "hier": "apps/prototypes/gallery",
+    "from": "pane.prototypes-gallery.actions",
+    "to": "prototypes-gallery.actions"
+  },
+  {
+    "hier": "apps/settings/config",
+    "from": "pane.settings-config-index.actions",
+    "to": "settings-config-index.actions"
+  },
+  {
+    "hier": "apps/settings/shell",
+    "from": "settings.rail-badge",
+    "to": "rail-badge"
+  },
+  {
+    "hier": "apps/settings/shell",
+    "from": "settings.sidebar",
+    "to": "sidebar"
+  },
+  {
+    "hier": "apps/sonata/library",
+    "from": "pane.sonata-library.actions",
+    "to": "sonata-library.actions"
+  },
+  {
+    "hier": "apps/sonata/library",
+    "from": "pane.sonata-player.actions",
+    "to": "sonata-player.actions"
+  },
+  {
+    "hier": "apps/sonata/library",
+    "from": "sonata.library.fields",
+    "to": "fields"
+  },
+  {
+    "hier": "apps/sonata/library",
+    "from": "sonata.library.song-actions",
+    "to": "song-actions"
+  },
+  {
+    "hier": "apps/sonata/shell",
+    "from": "sonata.home",
+    "to": "home"
+  },
+  {
+    "hier": "apps/sonata/shell",
+    "from": "sonata.hud",
+    "to": "hud"
+  },
+  {
+    "hier": "apps/sonata/shell",
+    "from": "sonata.section",
+    "to": "section"
+  },
+  {
+    "hier": "apps/sonata/shell",
+    "from": "sonata.toolbar.end",
+    "to": "end"
+  },
+  {
+    "hier": "apps/sonata/shell",
+    "from": "sonata.toolbar.start",
+    "to": "start"
+  },
+  {
+    "hier": "apps/sonata/shell",
+    "from": "sonata.transport",
+    "to": "transport"
+  },
+  {
+    "hier": "apps/story/shell",
+    "from": "pane.story-detail.actions",
+    "to": "story-detail.actions"
+  },
+  {
+    "hier": "apps/story/shell",
+    "from": "pane.story-gallery.actions",
+    "to": "story-gallery.actions"
+  },
+  {
+    "hier": "apps/story/shell",
+    "from": "story.toolbar.end",
+    "to": "end"
+  },
+  {
+    "hier": "apps/story/shell",
+    "from": "story.toolbar.start",
+    "to": "start"
+  },
+  {
+    "hier": "apps/studio/compositions",
+    "from": "composition-detail.section",
+    "to": "section"
+  },
+  {
+    "hier": "apps/studio/compositions",
+    "from": "pane.composition-compare.actions",
+    "to": "composition-compare.actions"
+  },
+  {
+    "hier": "apps/studio/compositions",
+    "from": "pane.composition-detail.actions",
+    "to": "composition-detail.actions"
+  },
+  {
+    "hier": "apps/studio/compositions",
+    "from": "pane.compositions.actions",
+    "to": "compositions.actions"
+  },
+  {
+    "hier": "apps/studio/compositions/release",
+    "from": "pane.release-detail.actions",
+    "to": "release-detail.actions"
+  },
+  {
+    "hier": "apps/studio/compositions/release",
+    "from": "release-detail.section",
+    "to": "section"
+  },
+  {
+    "hier": "apps/studio/compositions",
+    "from": "studio.compositions.item-actions",
+    "to": "item-actions"
+  },
+  {
+    "hier": "apps/studio/contributions",
+    "from": "pane.contributions.actions",
+    "to": "contributions.actions"
+  },
+  {
+    "hier": "apps/studio/contributions/tables",
+    "from": "pane.table-detail.actions",
+    "to": "table-detail.actions"
+  },
+  {
+    "hier": "apps/studio/contributions/tables",
+    "from": "table-detail.section",
+    "to": "section"
+  },
+  {
+    "hier": "apps/studio/explorer",
+    "from": "pane.explorer.actions",
+    "to": "explorer.actions"
+  },
+  {
+    "hier": "apps/studio/explorer",
+    "from": "studio.explorer.tree-row-accent",
+    "to": "tree-row-accent"
+  },
+  {
+    "hier": "apps/studio/explorer",
+    "from": "studio.explorer.tree-row-badge",
+    "to": "tree-row-badge"
+  },
+  {
+    "hier": "apps/studio/graph",
+    "from": "pane.graph.actions",
+    "to": "graph.actions"
+  },
+  {
+    "hier": "apps/studio/shell",
+    "from": "studio.sidebar",
+    "to": "sidebar"
+  },
+  {
+    "hier": "apps/studio/shell",
+    "from": "studio.toolbar",
+    "to": "toolbar"
+  },
+  {
+    "hier": "apps/website/downloads",
+    "from": "pane.website-downloads.actions",
+    "to": "website-downloads.actions"
+  },
+  {
+    "hier": "apps/website/pillars/agents",
+    "from": "pane.website-agents.actions",
+    "to": "website-agents.actions"
+  },
+  {
+    "hier": "apps/website/pillars/agents",
+    "from": "website.agents.section",
+    "to": "section"
+  },
+  {
+    "hier": "apps/website/pillars/apps",
+    "from": "pane.website-apps.actions",
+    "to": "website-apps.actions"
+  },
+  {
+    "hier": "apps/website/pillars/apps",
+    "from": "website.apps.section",
+    "to": "section"
+  },
+  {
+    "hier": "apps/website/pillars/platform",
+    "from": "pane.website-platform.actions",
+    "to": "website-platform.actions"
+  },
+  {
+    "hier": "apps/website/pillars/platform",
+    "from": "website.platform.section",
+    "to": "section"
+  },
+  {
+    "hier": "apps/website/shell",
+    "from": "pane.website-landing.actions",
+    "to": "website-landing.actions"
+  },
+  {
+    "hier": "apps/website/shell",
+    "from": "website.section",
+    "to": "section"
+  },
+  {
+    "hier": "apps/website/shell",
+    "from": "website.toolbar.end",
+    "to": "end"
+  },
+  {
+    "hier": "apps/website/shell",
+    "from": "website.toolbar.start",
+    "to": "start"
+  },
+  {
+    "hier": "apps/workflows/definitions",
+    "from": "pane.workflows-definition-detail.actions",
+    "to": "workflows-definition-detail.actions"
+  },
+  {
+    "hier": "apps/workflows/definitions",
+    "from": "pane.workflows-definitions.actions",
+    "to": "workflows-definitions.actions"
+  },
+  {
+    "hier": "apps/workflows/definitions",
+    "from": "workflows.detail.section",
+    "to": "section"
+  },
+  {
+    "hier": "apps/workflows/executions",
+    "from": "pane.workflows-execution-detail.actions",
+    "to": "workflows-execution-detail.actions"
+  },
+  {
+    "hier": "apps/workflows/shell",
+    "from": "workflows-app.sidebar",
+    "to": "sidebar"
+  },
+  {
+    "hier": "apps/workflows/shell",
+    "from": "workflows-app.toolbar",
+    "to": "toolbar"
+  },
+  {
+    "hier": "auth/apple-signing/setup-wizard",
+    "from": "pane.apple-setup.actions",
+    "to": "apple-setup.actions"
+  },
+  {
+    "hier": "auth/google/setup-wizard",
+    "from": "pane.google-setup.actions",
+    "to": "google-setup.actions"
+  },
+  {
+    "hier": "auth",
+    "from": "pane.accounts.actions",
+    "to": "accounts.actions"
+  },
+  {
+    "hier": "backup",
+    "from": "pane.backup.actions",
+    "to": "backup.actions"
+  },
+  {
+    "hier": "build",
+    "from": "build-detail.section",
+    "to": "section"
+  },
+  {
+    "hier": "build",
+    "from": "pane.build-detail.actions",
+    "to": "build-detail.actions"
+  },
+  {
+    "hier": "build",
+    "from": "pane.build.actions",
+    "to": "build.actions"
+  },
+  {
+    "hier": "code-explorer/commit-detail",
+    "from": "pane.commit-detail.actions",
+    "to": "commit-detail.actions"
+  },
+  {
+    "hier": "code-explorer",
+    "from": "pane.conv-file-tree.actions",
+    "to": "conv-file-tree.actions"
+  },
+  {
+    "hier": "code-explorer",
+    "from": "pane.global-file-tree.actions",
+    "to": "global-file-tree.actions"
+  },
+  {
+    "hier": "config_v2/settings",
+    "from": "pane.config-v2-detail.actions",
+    "to": "config-v2-detail.actions"
+  },
+  {
+    "hier": "config_v2/settings",
+    "from": "pane.config-v2-nav.actions",
+    "to": "config-v2-nav.actions"
+  },
+  {
+    "hier": "conversations/agents",
+    "from": "agents.agent-actions",
+    "to": "agent-actions"
+  },
+  {
+    "hier": "conversations/agents",
+    "from": "agents.list",
+    "to": "list"
+  },
+  {
+    "hier": "conversations/agents",
+    "from": "agents.list-actions",
+    "to": "list-actions"
+  },
+  {
+    "hier": "conversations/agents",
+    "from": "agents.system-agent",
+    "to": "system-agent"
+  },
+  {
+    "hier": "conversations/agents",
+    "from": "agents.view",
+    "to": "view"
+  },
+  {
+    "hier": "conversations/agents",
+    "from": "pane.agent-detail.actions",
+    "to": "agent-detail.actions"
+  },
+  {
+    "hier": "conversations/agents",
+    "from": "pane.agent-side.actions",
+    "to": "agent-side.actions"
+  },
+  {
+    "hier": "conversations/agents",
+    "from": "pane.agent-system-detail.actions",
+    "to": "agent-system-detail.actions"
+  },
+  {
+    "hier": "conversations/agents",
+    "from": "pane.agents-root.actions",
+    "to": "agents-root.actions"
+  },
+  {
+    "hier": "conversations/all-conversations",
+    "from": "pane.all-conversations.actions",
+    "to": "all-conversations.actions"
+  },
+  {
+    "hier": "conversations/conversation-ui/item",
+    "from": "conversation-item.chips",
+    "to": "chips"
+  },
+  {
+    "hier": "conversations/conversation-view/action-bar",
+    "from": "conversation.action-bar",
+    "to": "action-bar"
+  },
+  {
+    "hier": "conversations/conversation-view/code/docs-button",
+    "from": "pane.conv-docs.actions",
+    "to": "conv-docs.actions"
+  },
+  {
+    "hier": "conversations/conversation-view/code/file-pane",
+    "from": "pane.file-peek.actions",
+    "to": "file-peek.actions"
+  },
+  {
+    "hier": "conversations/conversation-view/commits-graph",
+    "from": "pane.conv-commits-graph.actions",
+    "to": "conv-commits-graph.actions"
+  },
+  {
+    "hier": "conversations/conversation-view",
+    "from": "conversation.above-prompt-input",
+    "to": "above-prompt-input"
+  },
+  {
+    "hier": "conversations/conversation-view",
+    "from": "conversation.prompt-bar",
+    "to": "prompt-bar"
+  },
+  {
+    "hier": "conversations/conversation-view",
+    "from": "conversation.prompt-input",
+    "to": "prompt-input"
+  },
+  {
+    "hier": "conversations/conversation-view/exit-menu",
+    "from": "conversation.exit-menu.item",
+    "to": "item"
+  },
+  {
+    "hier": "conversations/conversation-view/header",
+    "from": "conversation.header",
+    "to": "header"
+  },
+  {
+    "hier": "conversations/conversation-view/jsonl-viewer",
+    "from": "conversation.jsonl-viewer.overlay",
+    "to": "overlay"
+  },
+  {
+    "hier": "conversations/conversation-view/jsonl-viewer",
+    "from": "conversation.jsonl-viewer.pending-prompt-action",
+    "to": "pending-prompt-action"
+  },
+  {
+    "hier": "conversations/conversation-view/jsonl-viewer/row-actions",
+    "from": "conversation.jsonl-viewer.row-action",
+    "to": "item"
+  },
+  {
+    "hier": "conversations/conversation-view/jsonl-viewer/tool-call/agent",
+    "from": "pane.agent-report.actions",
+    "to": "agent-report.actions"
+  },
+  {
+    "hier": "conversations/conversation-view/jsonl-viewer/tool-call/workflow",
+    "from": "pane.workflow-node.actions",
+    "to": "workflow-node.actions"
+  },
+  {
+    "hier": "conversations/conversation-view/jsonl-viewer/transcript-stats",
+    "from": "conversation.jsonl-viewer.transcript-stat",
+    "to": "item"
+  },
+  {
+    "hier": "conversations/conversation-view",
+    "from": "pane.conversation.actions",
+    "to": "conversation.actions"
+  },
+  {
+    "hier": "conversations/conversation-view/push-profiling",
+    "from": "pane.conv-push-profiling.actions",
+    "to": "conv-push-profiling.actions"
+  },
+  {
+    "hier": "conversations/conversation-view/terminal-pane",
+    "from": "pane.conv-terminal.actions",
+    "to": "conv-terminal.actions"
+  },
+  {
+    "hier": "conversations/conversations-view/data-view",
+    "from": "conversations-sidebar-sources",
+    "to": "sources"
+  },
+  {
+    "hier": "conversations/conversations-view/data-view/history",
+    "from": "conversations-sidebar-history-actions",
+    "to": "history-actions"
+  },
+  {
+    "hier": "conversations/conversations-view/data-view/queue",
+    "from": "conversations-sidebar-queue-actions",
+    "to": "queue-actions"
+  },
+  {
+    "hier": "conversations/recover",
+    "from": "pane.conversations-recover.actions",
+    "to": "conversations-recover.actions"
+  },
+  {
+    "hier": "conversations/summary",
+    "from": "pane.conv-summary.actions",
+    "to": "conv-summary.actions"
+  },
+  {
+    "hier": "debug/boot-profile",
+    "from": "pane.debug-boot-profile-detail.actions",
+    "to": "debug-boot-profile-detail.actions"
+  },
+  {
+    "hier": "debug/boot-profile",
+    "from": "pane.debug-boot-profile.actions",
+    "to": "debug-boot-profile.actions"
+  },
+  {
+    "hier": "debug/boot-profile",
+    "from": "pane.debug-boot-profiles-list.actions",
+    "to": "debug-boot-profiles-list.actions"
+  },
+  {
+    "hier": "debug/broadcasts",
+    "from": "pane.debug-broadcasts.actions",
+    "to": "debug-broadcasts.actions"
+  },
+  {
+    "hier": "debug/claude-cli-calls",
+    "from": "pane.claude-cli-calls.actions",
+    "to": "claude-cli-calls.actions"
+  },
+  {
+    "hier": "debug/config-orphans",
+    "from": "pane.config-orphans.actions",
+    "to": "config-orphans.actions"
+  },
+  {
+    "hier": "debug/health-monitor",
+    "from": "pane.debug-health-monitor.actions",
+    "to": "debug-health-monitor.actions"
+  },
+  {
+    "hier": "debug/heap-snapshot",
+    "from": "pane.debug-heap-snapshot.actions",
+    "to": "debug-heap-snapshot.actions"
+  },
+  {
+    "hier": "debug/live-state-churn/emit",
+    "from": "pane.debug-live-state-emit.actions",
+    "to": "debug-live-state-emit.actions"
+  },
+  {
+    "hier": "debug/live-state-health",
+    "from": "pane.live-state-health.actions",
+    "to": "live-state-health.actions"
+  },
+  {
+    "hier": "debug/logs",
+    "from": "pane.logs-channel.actions",
+    "to": "logs-channel.actions"
+  },
+  {
+    "hier": "debug/logs",
+    "from": "pane.logs.actions",
+    "to": "logs.actions"
+  },
+  {
+    "hier": "debug/memory",
+    "from": "pane.debug-memory.actions",
+    "to": "debug-memory.actions"
+  },
+  {
+    "hier": "debug/profiling/build",
+    "from": "pane.debug-profiling-build-detail.actions",
+    "to": "debug-profiling-build-detail.actions"
+  },
+  {
+    "hier": "debug/profiling/ops",
+    "from": "pane.debug-profiling-op-detail.actions",
+    "to": "debug-profiling-op-detail.actions"
+  },
+  {
+    "hier": "debug/profiling",
+    "from": "pane.debug-profiling.actions",
+    "to": "debug-profiling.actions"
+  },
+  {
+    "hier": "debug/profiling",
+    "from": "profiling.section",
+    "to": "section"
+  },
+  {
+    "hier": "debug/queue",
+    "from": "pane.queue.actions",
+    "to": "queue.actions"
+  },
+  {
+    "hier": "debug/read-set",
+    "from": "pane.debug-read-set.actions",
+    "to": "debug-read-set.actions"
+  },
+  {
+    "hier": "debug/render-profiler",
+    "from": "pane.render-profiler.actions",
+    "to": "render-profiler.actions"
+  },
+  {
+    "hier": "debug/reports",
+    "from": "pane.report-detail.actions",
+    "to": "report-detail.actions"
+  },
+  {
+    "hier": "debug/reports",
+    "from": "pane.reports.actions",
+    "to": "reports.actions"
+  },
+  {
+    "hier": "debug/trace/pane",
+    "from": "pane.trace-detail.actions",
+    "to": "trace-detail.actions"
+  },
+  {
+    "hier": "debug/trace/pane",
+    "from": "pane.traces.actions",
+    "to": "traces.actions"
+  },
+  {
+    "hier": "debug/worktree-cleanup",
+    "from": "pane.worktree-cleanup.actions",
+    "to": "worktree-cleanup.actions"
+  },
+  {
+    "hier": "debug/zero-test",
+    "from": "pane.zero-test.actions",
+    "to": "zero-test.actions"
+  },
+  {
+    "hier": "infra/events-test",
+    "from": "pane.events-test.actions",
+    "to": "events-test.actions"
+  },
+  {
+    "hier": "page/editor",
+    "from": "page.editor.block",
+    "to": "block"
+  },
+  {
+    "hier": "page/editor",
+    "from": "page.editor.format-action",
+    "to": "format-action"
+  },
+  {
+    "hier": "page/editor",
+    "from": "page.editor.turn-into",
+    "to": "turn-into"
+  },
+  {
+    "hier": "plugin-meta/plugin-view",
+    "from": "pane.plugin-view.actions",
+    "to": "plugin-view.actions"
+  },
+  {
+    "hier": "plugin-meta/plugin-view",
+    "from": "plugin-view.section",
+    "to": "section"
+  },
+  {
+    "hier": "primitives/css/layout-harness",
+    "from": "pane.layout-lab.actions",
+    "to": "layout-lab.actions"
+  },
+  {
+    "hier": "primitives/data-view",
+    "from": "primitives.data-view.field-extension",
+    "to": "field-extension"
+  },
+  {
+    "hier": "primitives/data-view",
+    "from": "primitives.data-view.row-order",
+    "to": "row-order"
+  },
+  {
+    "hier": "primitives/prompt-editor",
+    "from": "prompt-editor.floating-action",
+    "to": "floating-action"
+  },
+  {
+    "hier": "primitives/text-editor",
+    "from": "text-editor.plugin",
+    "to": "plugin"
+  },
+  {
+    "hier": "review",
+    "from": "pane.conv-review.actions",
+    "to": "conv-review.actions"
+  },
+  {
+    "hier": "review",
+    "from": "review.section",
+    "to": "section"
+  },
+  {
+    "hier": "screenshot",
+    "from": "pane.screenshot.actions",
+    "to": "screenshot.actions"
+  },
+  {
+    "hier": "shell/action-bar",
+    "from": "action-bar.item",
+    "to": "item"
+  },
+  {
+    "hier": "shell",
+    "from": "shell.sidebar",
+    "to": "sidebar"
+  },
+  {
+    "hier": "shell",
+    "from": "shell.toolbar",
+    "to": "toolbar"
+  },
+  {
+    "hier": "stats",
+    "from": "pane.stats.actions",
+    "to": "stats.actions"
+  },
+  {
+    "hier": "stats",
+    "from": "stats.chart",
+    "to": "chart"
+  },
+  {
+    "hier": "tasks/attempt-view",
+    "from": "pane.attempt.actions",
+    "to": "attempt.actions"
+  },
+  {
+    "hier": "tasks/launch-options",
+    "from": "tasks.launch-option",
+    "to": "option"
+  },
+  {
+    "hier": "tasks/task-deps-tree",
+    "from": "task-deps-tree-sources",
+    "to": "sources"
+  },
+  {
+    "hier": "tasks/task-deps-tree",
+    "from": "task-deps-tree.actions",
+    "to": "actions"
+  },
+  {
+    "hier": "tasks/task-detail",
+    "from": "pane.task-detail.actions",
+    "to": "task-detail.actions"
+  },
+  {
+    "hier": "tasks/task-detail",
+    "from": "pane.tasks-root.actions",
+    "to": "tasks-root.actions"
+  },
+  {
+    "hier": "tasks/task-detail",
+    "from": "task-detail.section",
+    "to": "section"
+  },
+  {
+    "hier": "tasks/task-draft-form",
+    "from": "task-draft-form.action",
+    "to": "action"
+  },
+  {
+    "hier": "tasks/task-list",
+    "from": "tasks.fields",
+    "to": "fields"
+  },
+  {
+    "hier": "tasks/task-list",
+    "from": "tasks.list-actions",
+    "to": "list-actions"
+  },
+  {
+    "hier": "tasks/task-list",
+    "from": "tasks.task-actions",
+    "to": "task-actions"
+  },
+  {
+    "hier": "ui/theme-engine/quick-theme",
+    "from": "ui.theme-engine.quick-theme.section",
+    "to": "section"
+  },
+  {
+    "hier": "ui/theme-engine/theme-customizer",
+    "from": "pane.theme-customizer.actions",
+    "to": "theme-customizer.actions"
+  },
+  {
+    "hier": "ui/theme-engine/theme-customizer",
+    "from": "theme-customizer.section",
+    "to": "section"
+  },
+  {
+    "hier": "ui/theme-engine",
+    "from": "ui.theme-engine.variant-group",
+    "to": "variant-group"
+  }
+]

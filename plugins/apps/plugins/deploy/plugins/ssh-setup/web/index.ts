@@ -32,5 +32,5 @@ export default {
       component: SshSetupSection,
     }),
   ],
-  slots: [SshProvider],
+  slots: { provider: SshProvider },
 } satisfies PluginDefinition;

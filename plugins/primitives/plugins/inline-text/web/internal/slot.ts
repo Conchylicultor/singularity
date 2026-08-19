@@ -10,4 +10,4 @@ export const InlineTextWalkerSlot: Slot<{
   id: string;
   order: number;
   Component: ComponentType<{ children: ReactNode }>;
-}> = defineSlot("inline-text.walker");
+}> = defineSlot();

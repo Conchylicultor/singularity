@@ -22,5 +22,5 @@ export default {
       }),
     }),
   ],
-  slots: [reportsPane, reportDetailPane],
+  slots: { reports: reportsPane, "report-detail": reportDetailPane },
 } satisfies PluginDefinition;

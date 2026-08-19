@@ -8,5 +8,5 @@ export default {
   description:
     "Interactive setup wizard for Google OAuth credentials. Replaces the Settings redirect with a guided step-by-step pane.",
   contributions: [Pane.Register({ pane: googleSetupPane })],
-  slots: [googleSetupPane],
+  slots: { "google-setup": googleSetupPane },
 } satisfies PluginDefinition;

@@ -5,11 +5,11 @@ import type {
 import { defineRenderSlot } from "@plugins/primitives/plugins/slot-render/web";
 
 export const Studio = {
-  Sidebar: defineRenderSlot<AppShellSidebarItem>("studio.sidebar", {
+  Sidebar: defineRenderSlot<AppShellSidebarItem>({
     docLabel: (p) => p.title,
   }),
 
-  Toolbar: defineRenderSlot<AppShellToolbarItem>("studio.toolbar", {
+  Toolbar: defineRenderSlot<AppShellToolbarItem>({
     docLabel: (p) => ("label" in p ? p.label : undefined),
   }),
 };

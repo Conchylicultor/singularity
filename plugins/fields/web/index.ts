@@ -7,5 +7,5 @@ export default {
   description:
     "Type-dimension registry: owns the fields.identity slot where each field type registers its identity (token, label, icon, extends, coerce).",
   contributions: [],
-  slots: [Fields],
+  slots: Fields,
 } satisfies PluginDefinition;

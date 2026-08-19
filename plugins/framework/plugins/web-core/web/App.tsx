@@ -46,7 +46,7 @@ const DEFERRED_BATCH_SIZE = 24;
 // degrade to their own fallbacks and self-heal via the WS shortly after.
 async function runBootTasks(plugins: LoadedPlugin[]): Promise<void> {
   const tasks = plugins.flatMap((p) =>
-    (p.contributions ?? []).filter((c) => c._slotId === Core.Boot.id),
+    (p.contributions ?? []).filter((c) => c._slot === Core.Boot),
   );
   if (tasks.length === 0) return;
   const results = await Promise.allSettled(
@@ -78,11 +78,17 @@ function resolveActiveAppPrefix(
     const pluginPath = idToPath.get(p.id);
     if (!pluginPath) continue;
     for (const c of p.contributions ?? []) {
-      if (c._slotId !== "apps.app") continue;
+      // Identified by SHAPE, not by slot id. This runs before `PluginProvider`,
+      // so no declaration pass has settled any slot's id yet — and it is also
+      // what removes the last hand-typed slot id from the framework, along with
+      // the `web-core` → `apps-core` coupling that string stood for.
+      //
       // An `Apps.App` contribution carries the app's whole `AppRef` (`{ id,
       // name, basePath, iconKey }`) and restates nothing about it, so the base
-      // path is read off `c.app`. Kept defensive (`unknown` narrowing rather
-      // than a cast): this runs pre-boot on raw, unstamped, untyped values.
+      // path is read off `c.app`. Nothing else contributes an `app` carrying a
+      // `basePath` (a pane registration carries `pane`), so the narrowing below
+      // IS the identification. Kept defensive (`unknown` narrowing rather than a
+      // cast): this runs pre-boot on raw, unstamped, untyped values.
       const app = c.app as { basePath?: unknown } | undefined;
       if (typeof app?.basePath === "string") {
         apps.push({ path: app.basePath, pluginPath });

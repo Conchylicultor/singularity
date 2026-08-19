@@ -15,5 +15,5 @@ export default {
   description:
     "Registry for the Studio Contributions aggregated-table surface: FacetTable + RowClick slots and factories.",
   contributions: [],
-  slots: [Contributions],
+  slots: Contributions,
 } satisfies PluginDefinition;

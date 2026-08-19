@@ -9,9 +9,7 @@ import { type CompositionManifestItem } from "@plugins/plugin-meta/plugins/compo
 
 /** Per-consumer trailing-action slot for the Compositions list rows. */
 export const CompositionItemActions =
-  defineItemActions<CompositionManifestItem>(
-    "studio.compositions.item-actions",
-  );
+  defineItemActions<CompositionManifestItem>();
 
 /**
  * Delete a stored composition from the config registry. Independent of the draft

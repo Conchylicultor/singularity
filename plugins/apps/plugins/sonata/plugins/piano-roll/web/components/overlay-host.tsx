@@ -26,7 +26,7 @@ export function OverlayHost({ score }: { score: Score }) {
           score.annotations.some((a) => a.type === o.annotationType),
         )
         .map((o) =>
-          renderIsolated("sonata.overlay", o as unknown as Contribution, {
+          renderIsolated(Sonata.Overlay, o as unknown as Contribution, {
             projection,
             annotations: score.annotations.filter(
               (a) => a.type === o.annotationType,

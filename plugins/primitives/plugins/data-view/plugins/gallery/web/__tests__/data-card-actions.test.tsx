@@ -116,7 +116,7 @@ describe("gallery view item-action zones", () => {
     // The exact regression the old all-or-nothing `renderCard` caused: a
     // consumer that had ALREADY declared `itemActions` lost them by supplying an
     // unrelated option.
-    const Actions = defineItemActions<Row>("gallery-test.body-actions");
+    const Actions = defineItemActions<Row>();
     const plugin = {
       id: "gallery-body-actions-test",
       description: "gallery custom-body fixture",
@@ -126,6 +126,7 @@ describe("gallery view item-action zones", () => {
           component: () => <button data-testid="action">act</button>,
         }),
       ],
+      slots: { actions: Actions },
     } as unknown as LoadedPlugin;
 
     const { getByTestId, getByText } = renderGallery(
@@ -140,7 +141,7 @@ describe("gallery view item-action zones", () => {
   });
 
   it("paints a persistent action at rest in the card footer, revealed ones in the pinned cluster", () => {
-    const Actions = defineItemActions<Row>("gallery-test.zoned-actions");
+    const Actions = defineItemActions<Row>();
     const plugin = {
       id: "gallery-zoned-actions-test",
       description: "gallery action-zone fixture",
@@ -155,6 +156,7 @@ describe("gallery view item-action zones", () => {
           component: () => <button data-testid="delete">delete</button>,
         }),
       ],
+      slots: { actions: Actions },
     } as unknown as LoadedPlugin;
 
     const { getByTestId } = renderGallery([plugin], renderProps(Actions, {}));

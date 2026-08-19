@@ -21,5 +21,5 @@ export default {
         openPane(appleSetupPane, {}, { mode: "root" }),
     }),
   ],
-  slots: [appleSetupPane],
+  slots: { "apple-setup": appleSetupPane },
 } satisfies PluginDefinition;

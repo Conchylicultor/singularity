@@ -21,17 +21,34 @@ const EMPTY: Contribution[] = [];
  * no registry to keep in sync. Each richer constructor overwrites `meta.kind`
  * (and `reorderable`) with its own.
  */
-export function defineSlot<P>(
-  id: string,
-  opts?: { docLabel?: (props: P) => string | undefined },
-): Slot<P> {
+export function defineSlot<P>(opts?: {
+  docLabel?: (props: P) => string | undefined;
+}): Slot<P> {
   const slot = ((props: P) => ({
-    _slotId: id,
+    _slot: slot,
     _doc: { label: opts?.docLabel?.(props) },
     ...props,
   })) as unknown as Slot<P>;
-  slot.id = id;
   slot.meta = { kind: "slot", reorderable: false };
+  // DERIVED, never given. There is no id parameter, so a computed id — the
+  // `` `pane.${paneId}.actions` `` that build-time scanners could not read, and
+  // that no rule could keep in step with its owner — has no spelling. Reading it
+  // before the declaration pass THROWS rather than yielding a plausible
+  // placeholder, because a slot genuinely has no name until a plugin gives it one.
+  Object.defineProperty(slot, "id", {
+    enumerable: false,
+    configurable: true,
+    get(): string {
+      if (slot._pluginId === undefined || slot._key === undefined) {
+        throw new Error(
+          "[slots] slot id read before any plugin declared this slot. An id is " +
+            "derived from the declaring plugin's id plus its `slots` key, so it " +
+            "does not exist at module eval — read it at render or build time.",
+        );
+      }
+      return `${slot._pluginId}.${slot._key}`;
+    },
+  });
   recordCreatedSlot(slot);
 
   slot.useContributions = () => {
@@ -40,13 +57,12 @@ export function defineSlot<P>(
     if (!ctx) {
       throw new Error("useContributions must be used within PluginProvider");
     }
-    const raw = ctx.bySlot.get(id) ?? EMPTY;
+    const raw = ctx.bySlot.get(slot) ?? EMPTY;
     // eslint-disable-next-line react-hooks/rules-of-hooks -- same as above
     return useMemo(
       () =>
         raw.map(
-          ({ _slotId: _, ...rest }: Contribution) =>
-            rest as SealContributions<P>,
+          ({ _slot: _, ...rest }: Contribution) => rest as SealContributions<P>,
         ),
       [raw],
     );
@@ -55,8 +71,53 @@ export function defineSlot<P>(
   return slot;
 }
 
+/**
+ * Present a slot behind a hand-built callable — a facade that mints the same
+ * contributions while deriving a field the caller should not have to restate
+ * (`Apps.App` deriving the contribution id from the `AppRef`).
+ *
+ * Use this instead of `Object.assign(fn, { id: slot.id, … })`. Copying `id`
+ * captures it at module eval, which is *before* the declaration pass that
+ * settles a slot's identity — so a copied id is a snapshot of a value that was
+ * not final. Worse, a facade carrying its own id looks to the declaration guard
+ * like a slot in its own right, leaving the real slot behind it undeclared and
+ * matched only by the coincidence that the two strings agreed.
+ *
+ * So the facade forwards `id` through a getter and points at its target via
+ * `_slot`, which `collectSlots` follows — the plugin declares the facade, and
+ * the REAL slot is what gets stamped.
+ */
+export function defineSlotFacade<F extends object, S extends SlotHandle>(
+  fn: F,
+  slot: S,
+): F & S {
+  // Own ENUMERABLE keys are exactly what the constructors assigned (`meta`,
+  // `useContributions`, `Render`/`Dispatch`/…), never a function's intrinsic
+  // `name`/`length`/`prototype`.
+  for (const key of Object.keys(slot)) {
+    if (key === "id") continue;
+    Object.defineProperty(fn, key, {
+      value: (slot as Record<string, unknown>)[key],
+      enumerable: true,
+      configurable: true,
+      writable: true,
+    });
+  }
+  Object.defineProperty(fn, "id", {
+    get: () => slot.id,
+    enumerable: false,
+    configurable: true,
+  });
+  Object.defineProperty(fn, "_slot", {
+    value: slot,
+    enumerable: false,
+    configurable: true,
+  });
+  return fn as F & S;
+}
+
 export const Core = {
-  Root: defineSlot<{ component: ComponentType }>("core.root"),
+  Root: defineSlot<{ component: ComponentType }>(),
   // Async boot-readiness tasks. App awaits every Core.Boot `run()` once, before
   // the first render, so plugins can hydrate caches (e.g. config) that the
   // initial paint depends on — replacing per-component Suspense fallbacks.
@@ -65,7 +126,7 @@ export const Core = {
   // lifecycle hook: readiness/hydration only, run once, and a failing or hung
   // task must never brick boot (App uses allSettled + log-and-skip). For
   // per-phase behavior, use React's own lifecycle inside a contributed component.
-  Boot: defineSlot<{ run: () => Promise<void> }>("core.boot"),
+  Boot: defineSlot<{ run: () => Promise<void> }>(),
 };
 
 /**
@@ -74,4 +135,4 @@ export const Core = {
  * on the module the plugin system loads it from (its core barrel), and the same
  * collectors that read a plugin barrel's `default.slots` read this.
  */
-export const slots = [Core];
+export const slots = Core;

@@ -21,7 +21,7 @@ export function DataViewControlPanel({
   control: DataViewControl;
 }): ReactNode {
   return renderIsolated(
-    DataViewSlots.Control.id,
+    DataViewSlots.Control,
     control as unknown as Contribution,
     {},
   );

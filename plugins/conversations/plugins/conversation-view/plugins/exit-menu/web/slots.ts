@@ -11,7 +11,7 @@ export const ExitMenu = {
    */
   Item: defineRenderSlot<{
     component: ComponentType<{ conversation: ConversationRecord }>;
-  }>("conversation.exit-menu.item", {
+  }>({
     docLabel: (p) => p.id,
   }),
 };

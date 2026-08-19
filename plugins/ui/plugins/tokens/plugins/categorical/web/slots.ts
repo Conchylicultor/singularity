@@ -9,7 +9,7 @@ export interface CategoricalPresetContribution {
 }
 
 export const Categorical = {
-  Preset: defineSlot<CategoricalPresetContribution>("ui.categorical.preset", {
+  Preset: defineSlot<CategoricalPresetContribution>({
     docLabel: (p) => p.label,
   }),
 };

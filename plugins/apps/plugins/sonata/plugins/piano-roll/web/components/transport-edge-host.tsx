@@ -26,11 +26,9 @@ export function TransportEdgeHost({ projection }: { projection: Projection }) {
       {overlays
         .filter((o) => o.requires.every((r) => projection.capabilities.has(r)))
         .map((o) =>
-          renderIsolated(
-            "sonata.transport-edge",
-            o as unknown as Contribution,
-            { projection },
-          ),
+          renderIsolated(Sonata.TransportEdge, o as unknown as Contribution, {
+            projection,
+          }),
         )}
     </div>
   );

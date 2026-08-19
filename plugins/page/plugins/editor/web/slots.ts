@@ -1,4 +1,5 @@
 import { useMemo, type ComponentType } from "react";
+import { defineSlotFacade } from "@plugins/framework/plugins/web-sdk/core";
 import {
   defineDispatchSlot,
   defineOrderedDispatchSlot,
@@ -106,7 +107,7 @@ const blockSlot = defineOrderedDispatchSlot<
   BlockRendererProps,
   string,
   BlockMeta
->("page.editor.block", {
+>({
   key: (props) => props.block.type,
   fallback: UnknownBlock,
   docLabel: (c) => c.block?.type,
@@ -167,7 +168,7 @@ export const Editor = {
    * facet walk and every reading consumer; only the CALL signature is narrowed,
    * to `BlockRegistration`'s union.
    */
-  Block: Object.assign(
+  Block: defineSlotFacade(
     (reg: BlockRegistration) =>
       blockSlot({
         ...reg,
@@ -177,14 +178,7 @@ export const Editor = {
         // what keeps a type change chrome-only.
         component: reg.component ?? BlockTextRenderer,
       } as BlockContribution),
-    {
-      id: blockSlot.id,
-      // `meta` too: it is what makes this facade a SLOT to every collector
-      // (declaration, docs) rather than a callable that merely resembles one.
-      meta: blockSlot.meta,
-      useContributions: blockSlot.useContributions,
-      Dispatch: blockSlot.Dispatch,
-    },
+    blockSlot,
   ),
   /**
    * A block type's CONTAINER FRAME: the decorated box painted around the
@@ -200,13 +194,10 @@ export const Editor = {
    * block type) — the membership set is read off it, so a RegExp or predicate
    * contribution would paint but never be grouped.
    */
-  BlockFrame: defineDispatchSlot<BlockFrameProps, string, BlockFrameMeta>(
-    "page.editor.block-frame",
-    {
-      key: (props) => props.type,
-      docLabel: (c) => (typeof c.match === "string" ? c.match : undefined),
-    },
-  ),
+  BlockFrame: defineDispatchSlot<BlockFrameProps, string, BlockFrameMeta>({
+    key: (props) => props.type,
+    docLabel: (c) => (typeof c.match === "string" ? c.match : undefined),
+  }),
   /**
    * Extra "Turn into" targets in the block-actions menu, contributed by plugins
    * that span more than the editor can know (e.g. turn-into-page, which creates
@@ -219,7 +210,7 @@ export const Editor = {
       api: BlockEditorAPI;
       close: () => void;
     }>;
-  }>("page.editor.turn-into"),
+  }>(),
   /**
    * Toolbar controls for the floating selection format bar. Each contribution
    * renders one control (typically a `<MarkButton/>` reading `useFormatToolbar()`
@@ -228,9 +219,7 @@ export const Editor = {
    * directly — they dispatch Lexical commands through the context. Reorder
    * middleware applies automatically (the bar is reorderable, by design).
    */
-  FormatAction: defineRenderSlot<{ component: ComponentType }>(
-    "page.editor.format-action",
-  ),
+  FormatAction: defineRenderSlot<{ component: ComponentType }>(),
 };
 
 /**

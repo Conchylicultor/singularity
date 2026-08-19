@@ -21,5 +21,5 @@ export default {
       }),
     }),
   ],
-  slots: [graphCanvasPane],
+  slots: { graph: graphCanvasPane },
 } satisfies PluginDefinition;

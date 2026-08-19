@@ -39,7 +39,6 @@ export interface SshProviderDescriptor {
 }
 
 /** Registry slot (mirrors `Auth.Provider`): descriptor lookup, not a render list. */
-export const SshProvider = defineSlot<SshProviderDescriptor>(
-  "deploy.ssh-provider",
-  { docLabel: (p) => p.name },
-);
+export const SshProvider = defineSlot<SshProviderDescriptor>({
+  docLabel: (p) => p.name,
+});

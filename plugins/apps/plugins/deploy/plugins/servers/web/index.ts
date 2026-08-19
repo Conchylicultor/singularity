@@ -42,11 +42,11 @@ export default {
     }),
     ServerItemActions({ id: "open-console", component: OpenConsoleAction }),
   ],
-  slots: [
-    ServerDetail,
-    Servers,
-    ServerItemActions,
-    serversRootPane,
-    serverDetailPane,
-  ],
+  slots: {
+    ...ServerDetail,
+    ...Servers,
+    itemActions: ServerItemActions,
+    "deploy-servers": serversRootPane,
+    "deploy-server-detail": serverDetailPane,
+  },
 } satisfies PluginDefinition;

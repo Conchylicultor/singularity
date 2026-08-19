@@ -15,7 +15,7 @@ export interface TreeDisclosureContribution {
  * back to its inline default merged disclosure.
  */
 export const Tree = {
-  Disclosure: defineSlot<TreeDisclosureContribution>("tree.disclosure", {
+  Disclosure: defineSlot<TreeDisclosureContribution>({
     docLabel: () => "Disclosure",
   }),
 };

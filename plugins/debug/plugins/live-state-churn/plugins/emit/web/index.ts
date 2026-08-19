@@ -26,5 +26,5 @@ export default {
     }),
     Core.Root({ component: EmitInstaller }),
   ],
-  slots: [liveStateEmitPane],
+  slots: { "debug-live-state-emit": liveStateEmitPane },
 } satisfies PluginDefinition;

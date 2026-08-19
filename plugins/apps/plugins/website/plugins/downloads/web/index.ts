@@ -13,5 +13,5 @@ export default {
     Pane.Register({ pane: downloadsPane }),
     WebsiteToolbar.End({ id: "download", component: DownloadNavItem }),
   ],
-  slots: [downloadsPane],
+  slots: { "website-downloads": downloadsPane },
 } satisfies PluginDefinition;

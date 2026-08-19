@@ -38,5 +38,9 @@ export default {
       }),
     }),
   ],
-  slots: [bootProfilePane, bootProfileDetailPane, bootProfileListPane],
+  slots: {
+    "debug-boot-profile": bootProfilePane,
+    "debug-boot-profile-detail": bootProfileDetailPane,
+    "debug-boot-profiles-list": bootProfileListPane,
+  },
 } satisfies PluginDefinition;

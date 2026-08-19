@@ -9,7 +9,7 @@ export interface TypeScalePresetContribution {
 }
 
 export const TypeScale = {
-  Preset: defineSlot<TypeScalePresetContribution>("ui.type-scale.preset", {
+  Preset: defineSlot<TypeScalePresetContribution>({
     docLabel: (p) => p.label,
   }),
 };

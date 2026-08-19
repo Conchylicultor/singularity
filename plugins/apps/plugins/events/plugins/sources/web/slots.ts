@@ -16,15 +16,11 @@ import type { EventSource } from "@plugins/apps/plugins/events/plugins/events-co
  * Slot id is `event-source-detail.section` verbatim — renaming it silently
  * resets every user's persisted section order.
  */
-export const EventSourceDetail = defineDetailSections<{ sourceId: string }>(
-  "event-source-detail",
-);
+export const EventSourceDetail = defineDetailSections<{ sourceId: string }>();
 
 /**
  * Per-row actions on the sources list. A slot rather than a hardcoded button so
  * a source type (or a future plugin) can add a row action without this file
  * naming it — the same shape `deploy/servers` uses for its console action.
  */
-export const EventSourceActions = defineItemActions<EventSource>(
-  "events.sources.item-actions",
-);
+export const EventSourceActions = defineItemActions<EventSource>();

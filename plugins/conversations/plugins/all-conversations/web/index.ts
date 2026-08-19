@@ -22,5 +22,5 @@ export default {
       }),
     }),
   ],
-  slots: [allConversationsPane],
+  slots: { "all-conversations": allConversationsPane },
 } satisfies PluginDefinition;

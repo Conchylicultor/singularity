@@ -5,7 +5,7 @@ import type { AnyPane } from "./pane";
 // matching the convention used by Shell.Sidebar, Code.ToolbarButton, etc.
 // Imported and re-exposed on the runtime `Pane` namespace in pane.ts.
 export const Pane = {
-  Register: defineSlot<{ pane: AnyPane }>("pane.register", {
+  Register: defineSlot<{ pane: AnyPane }>({
     // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- pane may be undefined at docgen time
     docLabel: (p) => p.pane?.id,
   }),

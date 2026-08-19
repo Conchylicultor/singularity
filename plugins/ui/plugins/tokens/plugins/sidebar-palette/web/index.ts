@@ -51,5 +51,5 @@ export default {
         tokenGroupMatchesSearch(sidebarPaletteGroup, search),
     }),
   ],
-  slots: [SidebarPalette],
+  slots: SidebarPalette,
 } satisfies PluginDefinition;

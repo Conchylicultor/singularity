@@ -20,5 +20,5 @@ export default {
     }),
     Pane.Register({ pane: executionDetailPane }),
   ],
-  slots: [executionDetailPane],
+  slots: { "workflows-execution-detail": executionDetailPane },
 } satisfies PluginDefinition;

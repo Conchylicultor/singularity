@@ -1,12 +1,20 @@
+import type { SlotHandle } from "@plugins/framework/plugins/slot-declaration/core";
+import { declaredSlotId } from "@plugins/framework/plugins/slot-declaration/core";
 import { existsSync } from "fs";
 import { dirname, join, relative, sep } from "path";
 import { buildEnrichedTree } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
 import { getFacet } from "@plugins/plugin-meta/plugins/facets/core";
 import { contributionsFacetDef } from "@plugins/plugin-meta/plugins/facets/plugins/contributions/core";
-import { importBarrel, registerBarrelStubs } from "@plugins/plugin-meta/plugins/barrel-import/core";
+import {
+  importBarrel,
+  registerBarrelStubs,
+} from "@plugins/plugin-meta/plugins/barrel-import/core";
 import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
 import type { BlockHandle } from "@plugins/page/plugins/editor/core";
-import type { Check, CheckResult } from "@plugins/framework/plugins/tooling/core";
+import type {
+  Check,
+  CheckResult,
+} from "@plugins/framework/plugins/tooling/core";
 
 // The web dispatch slot every block type registers its handle on
 // (`Editor.Block`, `page/editor/web/slots.ts`). A block TYPE exists, as far as
@@ -105,8 +113,8 @@ const audienceDeclared: Check = {
       const def = mod.default as { contributions?: unknown } | undefined;
       if (!Array.isArray(def?.contributions)) continue;
       for (const raw of def.contributions) {
-        const c = raw as { _slotId?: string; block?: BlockHandle<unknown> };
-        if (c._slotId !== WEB_BLOCK_SLOT || !c.block) continue;
+        const c = raw as { _slot?: SlotHandle; block?: BlockHandle<unknown> };
+        if (declaredSlotId(c._slot) !== WEB_BLOCK_SLOT || !c.block) continue;
         if (c.block.audience === undefined) {
           unmarked.push(`${tree.byDir.get(dir)?.id ?? dir} (${c.block.type})`);
         }

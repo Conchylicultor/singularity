@@ -19,5 +19,5 @@ export const Wallpaper = {
     label: string;
     icon?: IconType;
     Panel: ComponentType<{ onPick: (candidate: WallpaperCandidate) => void }>;
-  }>("floating.wallpaper-provider", { docLabel: (p) => p.label }),
+  }>({ docLabel: (p) => p.label }),
 };

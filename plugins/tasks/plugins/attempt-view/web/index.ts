@@ -16,5 +16,5 @@ export default {
       component: AttemptSwitchButton,
     }),
   ],
-  slots: [attemptPane],
+  slots: { attempt: attemptPane },
 } satisfies PluginDefinition;

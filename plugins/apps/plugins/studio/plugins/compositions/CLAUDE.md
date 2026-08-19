@@ -89,7 +89,7 @@ are no per-interaction round-trips.
 - Web:
   - Slots:
     - `CompositionDetail.Section` ← `apps.studio.compositions.closure-tree`, `apps.studio.compositions.contributors`, `apps.studio.compositions.draft-actions`, `apps.studio.compositions.entry-points`, `apps.studio.compositions.membership-summary`, `apps.studio.compositions.release`
-    - `studio.compositions.item-actions` ← `apps.studio.compositions`
+    - `item-actions` ← `apps.studio.compositions`
     - `compositionsPane.Actions`
     - `compositionDetailPane.Actions`
     - `comparePane.Actions`
@@ -97,7 +97,7 @@ are no per-interaction round-trips.
     - `Pane.Register` "compositions"
     - `Pane.Register` "composition-detail"
     - `Pane.Register` "composition-compare"
-    - `studio.compositions.item-actions` "delete" → `DeleteAction`
+    - `item-actions` "delete" → `DeleteAction`
     - `Studio.Sidebar` "Compositions" → `component`
   - Uses:
     - `apps/studio/explorer/membership.DIFF_LEGEND`

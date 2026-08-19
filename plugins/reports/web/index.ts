@@ -9,5 +9,5 @@ export default {
   collapsed: true,
   description: "Reports uncaught browser errors to the server.",
   contributions: [],
-  slots: [Reports],
+  slots: Reports,
 } satisfies PluginDefinition;

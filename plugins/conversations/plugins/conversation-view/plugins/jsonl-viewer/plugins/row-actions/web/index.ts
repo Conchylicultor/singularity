@@ -18,5 +18,5 @@ export default {
   description:
     "Owns WHICH actions a JSONL transcript row carries: the JsonlRowActions.Item slot, the per-event context, and the shared action-button styling. The cluster itself (reveal, guards, popup-hold) is primitives/row-actions, which EventRowActions wraps. Sits below collapsible-card so card chrome can host the strip without a cycle.",
   contributions: [],
-  slots: [JsonlRowActionsSlots],
+  slots: JsonlRowActionsSlots,
 } satisfies PluginDefinition;

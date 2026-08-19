@@ -21,5 +21,5 @@ export default {
       }),
     }),
   ],
-  slots: [configOrphansPane],
+  slots: { "config-orphans": configOrphansPane },
 } satisfies PluginDefinition;

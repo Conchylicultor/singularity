@@ -66,7 +66,7 @@ export function SettingsControlPanel(): ReactNode {
         // the settings would lose both their spacing and their hairlines.
         <Fragment key={c.id}>
           {renderIsolated(
-            DataViewSlots.Setting.id,
+            DataViewSlots.Setting,
             c as unknown as Contribution,
             {},
           )}

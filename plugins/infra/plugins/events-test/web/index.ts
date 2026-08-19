@@ -20,5 +20,5 @@ export default {
       }),
     }),
   ],
-  slots: [eventsTestPane],
+  slots: { "events-test": eventsTestPane },
 } satisfies PluginDefinition;

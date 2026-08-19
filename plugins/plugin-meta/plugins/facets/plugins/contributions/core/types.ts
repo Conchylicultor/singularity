@@ -16,7 +16,7 @@ export interface Contribution {
 }
 
 export interface DocMetaContribution {
-  /** "slot" = web slot contribution (`_slotId`); "server" = server registration (`_kind`). */
+  /** "slot" = web slot contribution (`_slot`); "server" = server registration (`_kind`). */
   kind: "slot" | "server";
   slotId: string;
   slotDisplayName?: string;
@@ -42,4 +42,5 @@ export interface ContributionsFacetData {
   runtime: DocMetaContribution[];
 }
 
-export const contributionsFacetDef = defineFacet<ContributionsFacetData>("contributions");
+export const contributionsFacetDef =
+  defineFacet<ContributionsFacetData>("contributions");

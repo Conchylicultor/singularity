@@ -20,10 +20,7 @@ export interface FileRendererContribution {
 }
 
 export const FilePane = {
-  Renderer: defineSlot<FileRendererContribution>(
-    "conversation.code.file-pane.renderer",
-    { docLabel: (p) => p.label },
-  ),
+  Renderer: defineSlot<FileRendererContribution>({ docLabel: (p) => p.label }),
 };
 
 const TIER: Record<Exclude<RendererMatch, false>, number> = {

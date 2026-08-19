@@ -25,7 +25,7 @@ The **secret** type's config capability, spanning all four runtimes:
 
 - Description: Secret field type: config-render capability (password input for config-v2.fields.renderer) plus the secretField factory. Secret field type: encrypted storage with set/not-set metadata. Central-side secret config reader for auth providers.
 - Web:
-  - Contributes: `config-v2.fields.renderer` "secret" → `SecretRenderer`
+  - Contributes: `Fields.Renderer` "secret" → `SecretRenderer`
   - Uses:
     - `config_v2/fields.ConfigFieldContext`
     - `config_v2/fields.Fields`

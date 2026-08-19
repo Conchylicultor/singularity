@@ -25,5 +25,5 @@ export default {
       }),
     }),
   ],
-  slots: [Stats, statsPane],
+  slots: { ...Stats, stats: statsPane },
 } satisfies PluginDefinition;

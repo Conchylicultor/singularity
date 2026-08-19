@@ -16,7 +16,7 @@ import { useFieldIdentities } from "./internal/use-field-identities";
  * Resolution is custom (`useResolveCell`) so it can walk the `extends` chain —
  * `defineDispatchSlot`'s built-in `.Dispatch` can't.
  */
-const Cell = defineDispatchSlot<TableCellProps>("data-view.cell", {
+const Cell = defineDispatchSlot<TableCellProps>({
   key: (p) => p.field.type ?? "text",
   docLabel: (c) => (typeof c.match === "string" ? c.match : undefined),
 });
@@ -30,7 +30,7 @@ export function useResolveCell(): (
 ) => ReactNode | undefined {
   const ctx = useContext(PluginRuntimeContext);
   const identities = useFieldIdentities();
-  const raw0 = ctx?.bySlot.get("data-view.cell");
+  const raw0 = ctx?.bySlot.get(Cell);
   return useCallback(
     (field, value, row, values) => {
       const chain = resolveTypeChain(field.type ?? "text", identities);
@@ -39,7 +39,7 @@ export function useResolveCell(): (
           (c) => (c as { match?: unknown }).match === typeId,
         ) as Contribution | undefined;
         if (contribution) {
-          return renderIsolated("data-view.cell", contribution, {
+          return renderIsolated(Cell, contribution, {
             value,
             values,
             field,

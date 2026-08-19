@@ -20,5 +20,5 @@ export default {
       badge: SettingsRailBadge,
     }),
   ],
-  slots: [Settings],
+  slots: Settings,
 } satisfies PluginDefinition;

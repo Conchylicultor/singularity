@@ -23,5 +23,5 @@ export default {
     "Shared authentication infrastructure (OAuth 2.0, API keys). Exposes the accounts pane + Auth.Provider slot; the Settings app surfaces the Account entry.",
   loadBearing: true,
   contributions: [],
-  slots: [Auth, accountsPane],
+  slots: { ...Auth, accounts: accountsPane },
 } satisfies PluginDefinition;

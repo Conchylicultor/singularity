@@ -21,5 +21,5 @@ export default {
       }),
     }),
   ],
-  slots: [logsPane, logChannelPane],
+  slots: { logs: logsPane, "logs-channel": logChannelPane },
 } satisfies PluginDefinition;

@@ -16,5 +16,5 @@ export const EventList = {
    * projects (`sourceId`) is already bound in the server `COLUMN_MAP`, so
    * filtering and sorting on it compile to SQL with no edit to this plugin.
    */
-  Fields: defineFieldExtensions<EventRecord>("events.list.fields"),
+  Fields: defineFieldExtensions<EventRecord>(),
 };

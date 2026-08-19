@@ -11,6 +11,4 @@ import { defineDetailSections } from "@plugins/primitives/plugins/detail-section
  * name. `workflows.detail.section` is what this pane's persisted section order
  * is already keyed by; changing the string would silently reset it.
  */
-export const WorkflowsDetail = defineDetailSections<{ definitionId: string }>(
-  "workflows.detail",
-);
+export const WorkflowsDetail = defineDetailSections<{ definitionId: string }>();

@@ -43,10 +43,10 @@ import { REORDER_NODE_LEGEND } from "@plugins/fields/plugins/reorder-tree/core";
  * instance for both registration and reads.
  */
 export function reorderDirectiveDescriptor(
-  slotId: string,
+  configName: string,
 ): ConfigDescriptor<{ items: ReorderTreeFieldDef }> {
   return defineConfig({
-    name: slotId,
+    name: configName,
     source: "reorder",
     // A slot's on-screen order must be a deliberate, committed layout — never
     // the natural order contributions happen to load in. `./singularity build`

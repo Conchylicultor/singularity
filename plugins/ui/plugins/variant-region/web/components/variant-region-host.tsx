@@ -1,5 +1,8 @@
 import type { ComponentType } from "react";
-import type { Contribution, Slot } from "@plugins/framework/plugins/web-sdk/core";
+import type {
+  Contribution,
+  Slot,
+} from "@plugins/framework/plugins/web-sdk/core";
 import { useConfig } from "@plugins/config_v2/web";
 import { useCurrentAppId } from "@plugins/apps-core/web";
 import { renderIsolated } from "@plugins/primitives/plugins/slot-render/web";
@@ -18,8 +21,7 @@ export function createRegion<Props>(
   function Region(props: Props) {
     const contributions = slot.useContributions();
     const appId = useCurrentAppId();
-    const scopeId =
-      core.scope === "app" && appId ? `app:${appId}` : undefined;
+    const scopeId = core.scope === "app" && appId ? `app:${appId}` : undefined;
     const { variant: activeId } = useConfig(core.config, { scopeId });
     const active =
       contributions.find((c) => c.match === activeId) ??
@@ -27,7 +29,7 @@ export function createRegion<Props>(
       null;
     if (!active) return null;
     return renderIsolated(
-      slot.id,
+      slot,
       active as unknown as Contribution,
       props as object,
     );

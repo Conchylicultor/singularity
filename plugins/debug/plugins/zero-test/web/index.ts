@@ -21,5 +21,5 @@ export default {
       }),
     }),
   ],
-  slots: [zeroTestPane],
+  slots: { "zero-test": zeroTestPane },
 } satisfies PluginDefinition;

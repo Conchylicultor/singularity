@@ -9,7 +9,7 @@ import { useFieldIdentities } from "./internal/use-field-identities";
  * type: the set of named operators (predicate + optional value editor) the
  * filter builder offers for that type.
  */
-const Filter = defineSlot<FilterOperatorSet>("data-view.filter", {
+const Filter = defineSlot<FilterOperatorSet>({
   docLabel: (c) => c.match,
 });
 

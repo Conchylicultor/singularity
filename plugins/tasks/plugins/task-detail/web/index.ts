@@ -26,5 +26,9 @@ export default {
       }),
     }),
   ],
-  slots: [TaskDetailSectionSlots, tasksRootPane, taskDetailPane],
+  slots: {
+    ...TaskDetailSectionSlots,
+    "tasks-root": tasksRootPane,
+    "task-detail": taskDetailPane,
+  },
 } satisfies PluginDefinition;

@@ -1,10 +1,13 @@
 import type { PluginId } from "@plugins/framework/plugins/plugin-id/core";
-import type { SlotSource } from "@plugins/framework/plugins/slot-declaration/core";
+import type {
+  SlotHandle,
+  SlotRecord,
+} from "@plugins/framework/plugins/slot-declaration/core";
 
 /**
  * Auto-documentable metadata attached to contributions and registration tokens.
  * The `kind` is never stored here — it is always derived from structural
- * identity (`_slotId` for slot contributions, `_kind` for registrations).
+ * identity (`_slot` for slot contributions, `_kind` for registrations).
  */
 export interface DocMeta {
   /** Human-readable label for this specific contribution. */
@@ -14,7 +17,20 @@ export interface DocMeta {
 }
 
 export type Contribution = {
-  _slotId: string;
+  /**
+   * The slot this contribution targets — the SLOT OBJECT, not its id.
+   *
+   * A contribution is minted when a barrel's `contributions: [...]` array
+   * literal evaluates, which is at MODULE EVAL — before any declaration pass has
+   * run, and (for `App.tsx`'s boot-task and app-prefix reads) before
+   * `PluginProvider` exists at all. A slot's id is derived from its declaring
+   * plugin, so at that moment there is no id to capture. The object, on the other
+   * hand, is already itself.
+   *
+   * Dispatch therefore keys on identity, and the id string is left to be what it
+   * actually is: a persistence and documentation key, read later.
+   */
+  _slot: SlotHandle;
   /**
    * Injected by PluginProvider from the enclosing plugin's `id` — the
    * dotted plugin id (e.g. `conversations.conversation-view`).
@@ -64,25 +80,29 @@ export interface PluginDefinition {
   collapsed?: boolean;
   contributions?: Contribution[];
   /**
-   * The slots this plugin OWNS — the exact sibling of `contributions`, and the
-   * only thing that makes a slot discoverable and attributable.
+   * The slots this plugin OWNS, keyed by the name each one gets — the exact
+   * sibling of `contributions`, and the only thing that makes a slot
+   * discoverable, attributable AND named.
    *
-   * An entry is a slot, or an object whose own values are slots, so a slot group
-   * (`export const Studio = {…}`), a `definePaneToolbar()` result and a pane
-   * (its `Actions` slot) all work:
+   * A slot has no id of its own: its id is `${pluginId}.${key}`, so the key here
+   * is where the name comes into existence and the plugin prefix is why it can
+   * never disagree with its owner. A value is a slot, or an object whose own
+   * values are slots — so a slot group needs no keys of its own, while a pane
+   * gets one:
    *
    * ```ts
-   * slots: [StoryToolbar, storyDetailPane, storyGalleryPane],
+   * slots: Studio,                             // → apps.studio.shell.sidebar, .toolbar
+   * slots: { canvas: canvasPane },             // → …graph.canvas.actions
+   * slots: { ...Studio, detail: detailPane },
    * ```
    *
-   * Entries are read ONE level deep. That shortcut cannot degrade into a blind
+   * Values are read ONE level deep. That shortcut cannot degrade into a blind
    * spot: every slot ever constructed is recorded at construction, and the
    * build-time guard fails naming any that no plugin declared — so a slot nested
-   * deeper is reported, not lost. Declaring the same slot from two plugins is
-   * also an error; ownership (used for the slot's config path) is read off the
-   * declaration, not off whichever module imported it first.
+   * deeper is reported, not lost. Two plugins declaring one slot is an error, and
+   * so is one plugin's two slots landing on one key.
    */
-  slots?: SlotSource[];
+  slots?: SlotRecord;
   /**
    * Plugins this plugin's `register` array must run after. Mirror of the
    * server field with the same name; rarely needed on web because

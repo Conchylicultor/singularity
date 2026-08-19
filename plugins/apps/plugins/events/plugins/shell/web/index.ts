@@ -21,5 +21,5 @@ export default {
     }),
     Pane.Register({ pane: eventsRootPane }),
   ],
-  slots: [Events, eventsRootPane],
+  slots: { ...Events, "events-root": eventsRootPane },
 } satisfies PluginDefinition;

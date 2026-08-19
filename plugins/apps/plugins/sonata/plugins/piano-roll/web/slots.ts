@@ -18,7 +18,10 @@ import type { EmitterOptions, ParticleEmitter } from "./internal/fx/particles";
 import { defineSlot } from "@plugins/framework/plugins/web-sdk/core";
 import type { ConfigDescriptor } from "@plugins/config_v2/core";
 import type { BoolFieldDef } from "@plugins/fields/plugins/bool/plugins/config/core";
-import type { Note, Projection } from "@plugins/apps/plugins/sonata/plugins/score/core";
+import type {
+  Note,
+  Projection,
+} from "@plugins/apps/plugins/sonata/plugins/score/core";
 
 /** Icon component convention used across the platform (react-icons/md style). */
 type IconType = ComponentType<{ className?: string }>;
@@ -123,4 +126,4 @@ export const PianoRollFx = defineSlot<{
   tier: "ambient" | "fancy";
   config: FxToggleConfig;
   component: ComponentType<{ fx: FxContext }>;
-}>("piano-roll.fx", { docLabel: (p) => p.label });
+}>({ docLabel: (p) => p.label });

@@ -21,5 +21,5 @@ export default {
     }),
     HistoryItemActions({ id: "close", component: CloseConvAction }),
   ],
-  slots: [HistoryItemActions],
+  slots: { historyActions: HistoryItemActions },
 } satisfies PluginDefinition;

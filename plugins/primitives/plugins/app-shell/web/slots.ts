@@ -15,7 +15,7 @@ export interface FramingContribution {
  * With no contribution, app-shell falls back to its inline default flush framing.
  */
 export const AppShell = {
-  Framing: defineSlot<FramingContribution>("app-shell.framing", {
+  Framing: defineSlot<FramingContribution>({
     docLabel: () => "Framing",
   }),
 };

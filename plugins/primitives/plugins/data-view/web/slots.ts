@@ -198,7 +198,7 @@ export interface GlobalRowOrderContribution {
 }
 
 export const DataViewSlots = {
-  View: defineSlot<DataViewContribution>("primitives.data-view.view", {
+  View: defineSlot<DataViewContribution>({
     docLabel: (p) => p.title,
   }),
   /**
@@ -212,9 +212,7 @@ export const DataViewSlots = {
    * the host importing it — as opposed to the per-consumer `fieldExtensions` prop
    * (Sonata's typed/scoped fields). Both share one contribution shape and one fold.
    */
-  FieldExtension: defineFieldExtensions<unknown>(
-    "primitives.data-view.field-extension",
-  ),
+  FieldExtension: defineFieldExtensions<unknown>(),
   /**
    * Global, always-on row-order slot: every DataView eligible for a manual order
    * (list/table, no consumer `manualOrder`, no `dataSource`/`aggregate`/group-by)
@@ -224,27 +222,20 @@ export const DataViewSlots = {
    * a consumer-supplied `DataViewProps.manualOrder` still outranks every
    * contributor.
    */
-  RowOrder: defineRenderSlot<GlobalRowOrderContribution>(
-    "primitives.data-view.row-order",
-    { docLabel: (p) => p.id },
-  ),
+  RowOrder: defineRenderSlot<GlobalRowOrderContribution>({
+    docLabel: (p) => p.id,
+  }),
   /** Contributable DataView settings menu entries (group-by, future per-view /
    *  surface-wide settings). Plain data slot, read by the host's settings menu. */
-  Setting: defineSlot<DataViewSettingContribution>(
-    "primitives.data-view.setting",
-    {
-      docLabel: (p) => p.id,
-    },
-  ),
+  Setting: defineSlot<DataViewSettingContribution>({
+    docLabel: (p) => p.id,
+  }),
   /** Contributable toolbar controls (filter, sort, settings, and anything a
    *  plugin adds). Plain data slot: the toolbar reads each contribution's
    *  metadata to build its trigger and mounts only the open panel. */
-  Control: defineSlot<DataViewControlContribution>(
-    "primitives.data-view.control",
-    {
-      docLabel: (p) => p.label,
-    },
-  ),
+  Control: defineSlot<DataViewControlContribution>({
+    docLabel: (p) => p.label,
+  }),
   /** Per-type table cell. Contribute `{ match, component }`. */
   Cell,
   /** Per-type inline cell editor. Contribute `{ match, component }`. */

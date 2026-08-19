@@ -16,8 +16,5 @@ export const TranscriptStats = {
    * the whole contract: a stat never touches the scroller, the resource, or the
    * filter set, and it gets its scroll-anchored behaviour for free.
    */
-  Item: defineRenderSlot<TranscriptStatContribution>(
-    "conversation.jsonl-viewer.transcript-stat",
-    { docLabel: (p) => p.id },
-  ),
+  Item: defineRenderSlot<TranscriptStatContribution>({ docLabel: (p) => p.id }),
 };

@@ -21,5 +21,5 @@ export default {
       }),
     }),
   ],
-  slots: [healthMonitorPane],
+  slots: { "debug-health-monitor": healthMonitorPane },
 } satisfies PluginDefinition;

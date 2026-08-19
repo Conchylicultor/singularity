@@ -8,4 +8,4 @@ import { definePaneToolbar } from "@plugins/primitives/plugins/pane-toolbar/web"
  * `PaneChrome` renders the zones as the standard pane header. Hand-rolling a
  * toolbar `<div>` is banned by the `no-adhoc-pane-toolbar` lint rule.
  */
-export const StoryToolbar = definePaneToolbar("story.toolbar");
+export const StoryToolbar = definePaneToolbar();

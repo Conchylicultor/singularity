@@ -493,10 +493,12 @@ export function readStaticCallId(
 export function parseDefineGroup<T>(
   src: string,
   builder: "defineSlot" | "defineDispatchSlot",
-  make: (memberName: string, id: string, groupName: string) => T,
+  // No `id` argument: a slot id is DERIVED from the declaring plugin and the
+  // member name, so there is no literal in the source to read one from.
+  make: (memberName: string, groupName: string) => T,
 ): T[] {
   const out: T[] = [];
-  // FULL-mask the source so a `defineSlot("x")` written inside a comment,
+  // FULL-mask the source so a `defineSlot()` written inside a comment,
   // string, or template literal (a test fixture, docs snippet, codegen template)
   // is blanked away and never matched; each real id is read back from the
   // ORIGINAL `src` by offset. The mask is the same length as `src`, so every
@@ -520,9 +522,7 @@ export function parseDefineGroup<T>(
         masked.slice(0, span.identifier),
       );
       if (!memberMatch) continue;
-      const id = readStaticCallId(src, span);
-      if (!id) continue;
-      out.push(make(memberMatch[1]!, id, groupName));
+      out.push(make(memberMatch[1]!, groupName));
     }
   }
   return out;

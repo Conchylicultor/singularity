@@ -21,5 +21,5 @@ export const Workflows = {
       step: WorkflowExecutionStep;
       execution: WorkflowExecution;
     }>;
-  }>("workflows.step-type", { docLabel: (p) => p.label }),
+  }>({ docLabel: (p) => p.label }),
 };

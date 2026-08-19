@@ -22,5 +22,5 @@ export { useFileContent, type FileContentState } from "./use-file-content";
 export default {
   description: "Hosts the file-peek pane and the FilePane.Renderer slot.",
   contributions: [Pane.Register({ pane: filePeekPane })],
-  slots: [FilePaneSlots, filePeekPane],
+  slots: { ...FilePaneSlots, "file-peek": filePeekPane },
 } satisfies PluginDefinition;

@@ -123,69 +123,63 @@ async function runDeclarationPass(
  * is generated, is what keeps a declaration mistake from costing authored files.
  */
 export async function assertSlotsDeclared(root: string): Promise<void> {
-  const owners = await declareSlotsFromBarrels(root);
-  const orphans = findUndeclaredSlots(owners);
+  // Runs (and memoizes) the one declaration pass; the stamps it writes are
+  // what the guard reads back off each created slot.
+  await declareSlotsFromBarrels(root);
+  const orphans = findUndeclaredSlots();
   if (orphans.length === 0) return;
   throw new Error(await renderOrphanReport(root, orphans));
 }
 
 /**
- * Where each orphan was CONSTRUCTED, from the barrel-free tree's static parse —
- * the one thing source text knows and the runtime has erased. Built lazily, only
- * on failure.
+ * How many slots each plugin directory constructed, from the barrel-free tree's
+ * static parse. Built lazily, only on failure.
+ *
+ * It can no longer be a slotId → dir map: an orphan is precisely a slot with NO
+ * id (an id is derived from the declaration this slot is missing), so there is
+ * no key to look one up by. The directories that constructed slots are still
+ * exactly where an author has to go, so that is what the report names.
  */
-async function constructedIn(root: string): Promise<Map<string, string>> {
+async function slotBearingDirs(root: string): Promise<string[]> {
   const tree = await buildBarrelFreeTree(root);
-  const bySlotId = new Map<string, string>();
+  const dirs: string[] = [];
   for (const node of tree.byDir.values()) {
-    for (const slot of getFacet(node, slotsFacetDef) ?? []) {
-      if (!bySlotId.has(slot.slotId)) {
-        bySlotId.set(slot.slotId, relative(root, node.dir));
-      }
-    }
+    const slots = getFacet(node, slotsFacetDef) ?? [];
+    if (slots.length > 0) dirs.push(relative(root, node.dir));
   }
-  return bySlotId;
+  return dirs.sort();
 }
 
 async function renderOrphanReport(
   root: string,
   orphans: readonly SlotHandle[],
 ): Promise<string> {
-  const sources = await constructedIn(root);
-  const rows = orphans
-    .map((slot) => ({
-      id: slot.id,
-      kind: slot.meta.kind,
-      where: sources.get(slot.id),
-    }))
-    .sort((a, b) => a.id.localeCompare(b.id));
-
-  const idWidth = Math.max(...rows.map((r) => r.id.length));
-  const kindWidth = Math.max(...rows.map((r) => r.kind.length));
-  const lines = rows.map(
-    (r) =>
-      `  ${r.id.padEnd(idWidth)}  ${r.kind.padEnd(kindWidth)}  ` +
-      (r.where ?? "(runtime id)"),
-  );
-  const anyRuntimeId = rows.some((r) => r.where === undefined);
+  const byKind = new Map<string, number>();
+  for (const slot of orphans) {
+    byKind.set(slot.meta.kind, (byKind.get(slot.meta.kind) ?? 0) + 1);
+  }
+  const lines = [...byKind.entries()]
+    .sort((a, b) => a[0].localeCompare(b[0]))
+    .map(([kind, n]) => `  ${n} × ${kind}`);
+  const dirs = await slotBearingDirs(root);
 
   return [
     `[slots] ${orphans.length} slot(s) exist that no plugin declares.`,
     "",
-    "Add each one to the `slots: [...]` array of the plugin listed beside it —",
-    "the exact sibling of `contributions` in that plugin's `web/index.ts`. An",
-    "entry may be a slot, or an object whose own values are slots, so",
-    "`slots: [Shell, storyDetailPane]` covers a slot group and a pane in one line.",
-    "",
-    "  slot id / kind / plugin directory whose source constructed it",
+    "An undeclared slot has no id to name it by — an id is DERIVED from the",
+    "declaration it is missing — so they are listed by kind:",
     ...lines,
-    ...(anyRuntimeId
-      ? [
-          "",
-          "A `(runtime id)` row has no static call site: its id is built at run time,",
-          "by a factory or a pane. Declare the OBJECT that owns it — the pane, the",
-          "factory's result — on the plugin that creates it.",
-        ]
-      : []),
+    "",
+    "Add each one under a KEY in the `slots: {…}` record of the plugin that owns",
+    "it — the exact sibling of `contributions` in that plugin's `web/index.ts`.",
+    "The key NAMES the slot: its id becomes `<pluginId>.<key>`. A value may be a",
+    "slot or an object whose own values are slots, so",
+    "`slots: { ...Shell, storyDetail: storyDetailPane }` covers a slot group",
+    "(whose own keys name its slots) and a pane in one line.",
+    "",
+    `Slot-constructing plugin directories (${dirs.length}); the culprit is one`,
+    "whose `slots` record you just changed:",
+    ...dirs.slice(0, 40).map((d) => `  ${d}`),
+    ...(dirs.length > 40 ? [`  … ${dirs.length - 40} more`] : []),
   ].join("\n");
 }

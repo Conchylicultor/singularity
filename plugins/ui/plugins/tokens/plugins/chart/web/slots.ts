@@ -9,7 +9,7 @@ export interface ChartPresetContribution {
 }
 
 export const Chart = {
-  Preset: defineSlot<ChartPresetContribution>("ui.chart.preset", {
+  Preset: defineSlot<ChartPresetContribution>({
     docLabel: (p) => p.label,
   }),
 };

@@ -16,7 +16,7 @@ import { useFieldIdentities } from "./internal/use-field-identities";
  * Resolution is custom (`useResolveCellEditor`) so it can walk the `extends` chain —
  * `defineDispatchSlot`'s built-in `.Dispatch` can't.
  */
-const CellEditor = defineDispatchSlot<CellEditorProps>("data-view.cell-editor", {
+const CellEditor = defineDispatchSlot<CellEditorProps>({
   key: (p) => p.field.type ?? "text",
   docLabel: (c) => (typeof c.match === "string" ? c.match : undefined),
 });
@@ -37,7 +37,7 @@ export function useResolveCellEditor(): (
 ) => ReactNode | undefined {
   const ctx = useContext(PluginRuntimeContext);
   const identities = useFieldIdentities();
-  const raw0 = ctx?.bySlot.get("data-view.cell-editor");
+  const raw0 = ctx?.bySlot.get(CellEditor);
   return useCallback(
     ({ field, value, values, raw, onCommit, onCommitValues, onCancel }) => {
       const chain = resolveTypeChain(field.type ?? "text", identities);
@@ -46,7 +46,7 @@ export function useResolveCellEditor(): (
           (c) => (c as { match?: unknown }).match === typeId,
         ) as Contribution | undefined;
         if (contribution) {
-          return renderIsolated("data-view.cell-editor", contribution, {
+          return renderIsolated(CellEditor, contribution, {
             value,
             values,
             field,

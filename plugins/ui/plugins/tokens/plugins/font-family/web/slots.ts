@@ -9,7 +9,7 @@ export interface FontFamilyPresetContribution {
 }
 
 export const FontFamily = {
-  Preset: defineSlot<FontFamilyPresetContribution>("ui.font-family.preset", {
+  Preset: defineSlot<FontFamilyPresetContribution>({
     docLabel: (p) => p.label,
   }),
 };

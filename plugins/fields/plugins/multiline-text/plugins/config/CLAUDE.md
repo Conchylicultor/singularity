@@ -19,7 +19,7 @@ table/filter capabilities from `text` via the identity `extends` chain.
 
 - Description: Long-text field type: config-render capability (textarea for config-v2.fields.renderer) plus the multilineTextField factory.
 - Web:
-  - Contributes: `config-v2.fields.renderer` "multiline-text" → `MultilineTextRenderer`
+  - Contributes: `Fields.Renderer` "multiline-text" → `MultilineTextRenderer`
   - Uses:
     - `config_v2/fields.FieldHeader`
     - `config_v2/fields.FieldRendererComponent`

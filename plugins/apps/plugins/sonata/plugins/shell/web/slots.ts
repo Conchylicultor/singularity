@@ -57,7 +57,7 @@ export type SonataSection = DetailSection<SonataSectionProps> &
 const sonataSections = defineDetailSections<
   SonataSectionProps,
   SonataSectionArea
->("sonata");
+>();
 
 /**
  * The per-section chrome, for the section column's host (`library`'s
@@ -100,7 +100,7 @@ export const Sonata = {
       onRaw: (raw: unknown) => void;
     }>;
     compile: (raw: unknown) => Score;
-  }>("sonata.source", { docLabel: (p) => p.label }),
+  }>({ docLabel: (p) => p.label }),
 
   // DISPLAY — single-active selector. `Extra` carries the metadata the picker
   // enumerates (collection-consumer clean — never names a contributor). The
@@ -128,7 +128,7 @@ export const Sonata = {
        *  pick the default-flagged display, never naming a contributor. */
       default?: boolean;
     }
-  >("sonata.display", {
+  >({
     key: (props) => props.activeDisplayId,
     fallback: NoDisplay,
     docLabel: (c) => c.label,
@@ -138,7 +138,7 @@ export const Sonata = {
   Analyzer: defineSlot<{
     id: string;
     analyze: (score: Score) => Annotation[];
-  }>("sonata.analyzer", { docLabel: (p) => p.id }),
+  }>({ docLabel: (p) => p.id }),
 
   // RICH VISUAL — geometry-anchored overlays, capability-filtered. The host
   // renders an overlay only when `requires ⊆ display.capabilities` and the Score
@@ -151,7 +151,7 @@ export const Sonata = {
       projection: Projection;
       annotations: Annotation[];
     }>;
-  }>("sonata.overlay", { docLabel: (p) => p.id }),
+  }>({ docLabel: (p) => p.id }),
 
   // STATE OVERLAY — projection-anchored, scroll-synced overlays driven by
   // transport / shared state rather than score annotations (the A–B practice
@@ -165,7 +165,7 @@ export const Sonata = {
     id: string;
     requires: Capability[];
     component: ComponentType<{ projection: Projection }>;
-  }>("sonata.transport-overlay", { docLabel: (p) => p.id }),
+  }>({ docLabel: (p) => p.id }),
 
   // EDGE INDICATOR — screen-anchored (NOT scroll-synced) transport-state overlays
   // clamped to the lane edges. Unlike TransportOverlay (which scrolls glued to the
@@ -178,7 +178,7 @@ export const Sonata = {
     id: string;
     requires: Capability[];
     component: ComponentType<{ projection: Projection }>;
-  }>("sonata.transport-edge", { docLabel: (p) => p.id }),
+  }>({ docLabel: (p) => p.id }),
 
   // PITCH AXIS — decorations rendered in a display's pitch-axis gutter (the
   // piano keyboard, future fretboards / pitch rulers). Capability-filtered like
@@ -188,11 +188,11 @@ export const Sonata = {
     id: string;
     requires: Capability[];
     component: ComponentType<{ projection: Projection }>;
-  }>("sonata.pitch-axis", { docLabel: (p) => p.id }),
+  }>({ docLabel: (p) => p.id }),
 
   // HOME — the app landing surface (song library). Single render slot; the
   // library plugin contributes its gallery here. Shell shows it when view==="library".
-  Home: defineRenderSlot<{ component: ComponentType }>("sonata.home", {
+  Home: defineRenderSlot<{ component: ComponentType }>({
     docLabel: (p) => p.id,
   }),
 
@@ -203,18 +203,18 @@ export const Sonata = {
   // different slot branches (e.g. an audio engine and its volume control) share
   // one per-surface context. Contributions nest outside-in in contribution
   // order; the slot paints nothing itself.
-  SurfaceProvider: defineWrapperSlot("sonata.surface-provider"),
+  SurfaceProvider: defineWrapperSlot(),
 
   // EFFECT — headless, always-mounted Sonata-scoped side effects. Components
   // contributed here render nothing; they observe shared context (current song,
   // playback state) and run effects (e.g. recording a play, scrobbling). Mounted
   // once inside SonataProvider so contributors can `useSonata()`.
-  Effect: defineMountSlot("sonata.effect", {
+  Effect: defineMountSlot({
     docLabel: (p) => p.id,
   }),
 
   // TRANSPORT — full-width horizontal strip below the toolbar (progress bar, …).
-  Transport: defineRenderSlot<{ component: ComponentType }>("sonata.transport", {
+  Transport: defineRenderSlot<{ component: ComponentType }>({
     docLabel: (p) => p.id,
   }),
 
@@ -223,7 +223,7 @@ export const Sonata = {
   // projection's geometry and scrolls with the content, a HUD stays fixed and
   // reads shared cursor/Score context via `useSonata()`. Display-agnostic: any
   // display hosts it with `.Render`; capability-free since it needs no projection.
-  Hud: defineRenderSlot<{ component: ComponentType }>("sonata.hud", {
+  Hud: defineRenderSlot<{ component: ComponentType }>({
     docLabel: (p) => p.id,
   }),
 
@@ -249,7 +249,7 @@ export const Sonata = {
     config: ConfigDescriptor;
     /** Optional subset/order of field keys; default = all descriptor fields. */
     fields?: string[];
-  }>("sonata.view-option", {
+  }>({
     docLabel: (p) => p.id,
   }),
 
@@ -276,4 +276,4 @@ export const Sonata = {
  * `.Start`/`.End` are discovered as reorderable whether this lives top-level or
  * nested under a group.
  */
-export const SonataToolbar = definePaneToolbar("sonata.toolbar");
+export const SonataToolbar = definePaneToolbar();

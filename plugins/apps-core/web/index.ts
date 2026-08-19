@@ -31,5 +31,5 @@ export default {
   description:
     "App switcher rail. Wraps per-app shells; plugins contribute via Apps.App.",
   loadBearing: true,
-  slots: [Apps],
+  slots: Apps,
 } satisfies PluginDefinition;

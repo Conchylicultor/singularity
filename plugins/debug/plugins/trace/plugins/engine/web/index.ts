@@ -21,5 +21,5 @@ export default {
   description:
     "Trace-engine web surface: the Trace.Lane / Trace.TriggerSummary dispatch slots (with generic fallbacks so a new event class or trigger kind is visible by default), plus the trace config registration for Settings → Config.",
   contributions: [ConfigV2.WebRegister({ descriptor: traceConfig })],
-  slots: [Trace],
+  slots: Trace,
 } satisfies PluginDefinition;

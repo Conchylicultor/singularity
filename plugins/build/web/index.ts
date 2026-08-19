@@ -38,5 +38,5 @@ export default {
     }),
     ConfigV2.WebRegister({ descriptor: buildConfig }),
   ],
-  slots: [BuildDetail, buildPane, buildDetailPane],
+  slots: { ...BuildDetail, build: buildPane, "build-detail": buildDetailPane },
 } satisfies PluginDefinition;

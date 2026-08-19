@@ -50,5 +50,5 @@ export default {
         tokenGroupMatchesSearch(typeScaleGroup, search),
     }),
   ],
-  slots: [TypeScale],
+  slots: TypeScale,
 } satisfies PluginDefinition;

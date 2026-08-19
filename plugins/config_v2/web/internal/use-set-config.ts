@@ -5,6 +5,7 @@ import { setConfigField } from "../../core";
 import type { ConfigDescriptor } from "../../core";
 import type { FieldsRecord } from "@plugins/fields/core";
 import { storePathOf } from "./store-path";
+import { ConfigV2 } from "./slots";
 
 export function useSetConfig<F extends FieldsRecord>(
   descriptor: ConfigDescriptor<F>,
@@ -17,7 +18,7 @@ export function useSetConfig<F extends FieldsRecord>(
   const { mutate } = useEndpointMutation(setConfigField);
   if (!ctx) throw new Error("useSetConfig must be inside PluginProvider");
 
-  const registrations = ctx.bySlot.get("config-v2.web-register") ?? [];
+  const registrations = ctx.bySlot.get(ConfigV2.WebRegister) ?? [];
   const reg = registrations.find((c) => c.descriptor === descriptor);
   const storePath = reg ? storePathOf(reg) : null;
 
@@ -33,7 +34,9 @@ export function useSetConfig<F extends FieldsRecord>(
   return useCallback(
     (key: keyof F & string, value: unknown) => {
       mutate({
-        body: scopeId ? { storePath, key, value, scopeId } : { storePath, key, value },
+        body: scopeId
+          ? { storePath, key, value, scopeId }
+          : { storePath, key, value },
       });
     },
     [mutate, storePath, scopeId],

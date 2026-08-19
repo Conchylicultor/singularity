@@ -18,7 +18,9 @@ import { renderIsolated } from "@plugins/primitives/plugins/slot-render/web";
 import type { Contribution } from "@plugins/framework/plugins/web-sdk/core";
 import { PianoRollFx, type FxContext } from "../../slots";
 
-type FxContributionItem = ReturnType<typeof PianoRollFx.useContributions>[number];
+type FxContributionItem = ReturnType<
+  typeof PianoRollFx.useContributions
+>[number];
 
 export function FxHost({ fx }: { fx: FxContext }) {
   const effects = PianoRollFx.useContributions();
@@ -35,6 +37,8 @@ function FxGate({ effect, fx }: { effect: FxContributionItem; fx: FxContext }) {
   const { enabled } = useConfig(effect.config);
   if (!enabled) return null;
   return (
-    <>{renderIsolated(PianoRollFx.id, effect as unknown as Contribution, { fx })}</>
+    <>
+      {renderIsolated(PianoRollFx, effect as unknown as Contribution, { fx })}
+    </>
   );
 }

@@ -21,5 +21,5 @@ export default {
       }),
     }),
   ],
-  slots: [worktreeCleanupPane],
+  slots: { "worktree-cleanup": worktreeCleanupPane },
 } satisfies PluginDefinition;

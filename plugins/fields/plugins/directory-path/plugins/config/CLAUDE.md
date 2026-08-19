@@ -20,7 +20,7 @@ from the slot owner (`@plugins/config_v2/plugins/fields/web`).
 
 - Description: Directory-path field type: config-render capability (folder picker for config-v2.fields.renderer) plus the dirPathField factory.
 - Web:
-  - Contributes: `config-v2.fields.renderer` "directory-path" → `DirPathRenderer`
+  - Contributes: `Fields.Renderer` "directory-path" → `DirPathRenderer`
   - Uses:
     - `config_v2/fields.FieldHeader`
     - `config_v2/fields.FieldRendererComponent`

@@ -52,5 +52,5 @@ export default {
         })),
     }),
   ],
-  slots: [ThemeEngine],
+  slots: ThemeEngine,
 } satisfies PluginDefinition;

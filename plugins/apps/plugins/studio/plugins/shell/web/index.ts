@@ -18,5 +18,5 @@ export default {
       component: StudioLayout,
     }),
   ],
-  slots: [Studio],
+  slots: Studio,
 } satisfies PluginDefinition;

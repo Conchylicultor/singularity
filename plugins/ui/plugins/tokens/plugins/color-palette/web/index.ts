@@ -51,5 +51,5 @@ export default {
         tokenGroupMatchesSearch(colorPaletteGroup, search),
     }),
   ],
-  slots: [ColorPalette],
+  slots: ColorPalette,
 } satisfies PluginDefinition;

@@ -79,5 +79,5 @@ export default {
         ]),
     }),
   ],
-  slots: [Shadow],
+  slots: Shadow,
 } satisfies PluginDefinition;

@@ -30,11 +30,11 @@ export default {
       }),
     }),
   ],
-  slots: [
-    CompositionDetail,
-    CompositionItemActions,
-    compositionsPane,
-    compositionDetailPane,
-    comparePane,
-  ],
+  slots: {
+    ...CompositionDetail,
+    itemActions: CompositionItemActions,
+    compositions: compositionsPane,
+    "composition-detail": compositionDetailPane,
+    "composition-compare": comparePane,
+  },
 } satisfies PluginDefinition;

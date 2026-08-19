@@ -36,8 +36,7 @@ export interface DepsHostProps {
  * building blocks, which is the supported reuse path: a source's `render(bundle)`
  * IS the inner DataView, so a component that owns its own cannot be a source).
  */
-export const DepsSources =
-  defineDataViewSources<DepsHostProps>("task-deps-tree-sources");
+export const DepsSources = defineDataViewSources<DepsHostProps>();
 
 // Every `task_dependencies` edge is a literal tree edge, so the tree's shape IS
 // the dependency relation. The drop's anchor is read as an edge intent rather

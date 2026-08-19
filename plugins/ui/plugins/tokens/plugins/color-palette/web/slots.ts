@@ -9,8 +9,7 @@ export interface ColorPalettePresetContribution {
 }
 
 export const ColorPalette = {
-  Preset: defineSlot<ColorPalettePresetContribution>(
-    "ui.color-palette.preset",
-    { docLabel: (p) => p.label },
-  ),
+  Preset: defineSlot<ColorPalettePresetContribution>({
+    docLabel: (p) => p.label,
+  }),
 };

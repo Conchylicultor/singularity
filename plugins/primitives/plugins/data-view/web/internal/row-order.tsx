@@ -88,8 +88,15 @@ function RowOrderFold(
     emit: (order: ManualOrderConfig<unknown> | null) => ReactNode;
   },
 ): ReactNode {
-  const { rows, fields, state, resolveOperatorSet, searchAccessor, emit, ...ids } =
-    props;
+  const {
+    rows,
+    fields,
+    state,
+    resolveOperatorSet,
+    searchAccessor,
+    emit,
+    ...ids
+  } = props;
   // Only `filter` survives into the ordered set, so key the memo on it alone —
   // `stateFor()` mints a fresh `ViewState` object every render, and spreading it
   // here would bust `useFlatRows`' memo on every render.
@@ -150,7 +157,7 @@ function RowOrderStep(
   // error-boundary item middleware, so a broken contributor never crashes the
   // whole DataView (and never poisons the resolved order).
   return renderIsolated(
-    DataViewSlots.RowOrder.id,
+    DataViewSlots.RowOrder,
     contribution as unknown as Contribution,
     renderProps,
   );

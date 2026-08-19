@@ -1,3 +1,5 @@
+import type { SlotHandle } from "@plugins/framework/plugins/slot-declaration/core";
+import { declaredSlotId } from "@plugins/framework/plugins/slot-declaration/core";
 import { existsSync } from "fs";
 import { join } from "path";
 import { buildEnrichedTree } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
@@ -22,9 +24,9 @@ import type {
 // server/internal/block-registry.ts}). Both sides carry the block TYPE as their
 // contribution's doc label — web `docLabel: (c) => c.block?.type`, server
 // `docLabel: (h) => h.type` — which is the join key this check is built on.
-const WEB_BLOCK_SLOT = "page.editor.block"; // Editor.Block  (web dispatch _slotId)
+const WEB_BLOCK_SLOT = "page.editor.block"; // Editor.Block  (web dispatch slot id)
 const SERVER_BLOCK_DATA_SLOT = "page.block-data"; // Editor.BlockData (server _kind)
-const WEB_BLOCK_FRAME_SLOT = "page.editor.block-frame"; // Editor.BlockFrame (web dispatch _slotId)
+const WEB_BLOCK_FRAME_SLOT = "page.editor.block-frame"; // Editor.BlockFrame (web dispatch slot id)
 
 // The `editor` plugin ITSELF registers `Editor.BlockData("page")` (page rows are
 // written by editor server code directly, so page creation must not depend on the
@@ -209,19 +211,19 @@ const anchorHasDecoration: Check = {
       if (!Array.isArray(contributions)) continue;
       for (const raw of contributions) {
         const c = raw as {
-          _slotId?: string;
+          _slot?: SlotHandle;
           match?: unknown;
           anchor?: unknown;
           block?: { type?: unknown; anchor?: unknown };
         };
-        if (c._slotId === WEB_BLOCK_SLOT) {
+        if (declaredSlotId(c._slot) === WEB_BLOCK_SLOT) {
           const type = c.block?.type;
           if (typeof type === "string" && c.block?.anchor === true) {
             const list = anchorTypes.get(type) ?? [];
             list.push(tree.byDir.get(dir)?.id ?? dir);
             anchorTypes.set(type, list);
           }
-        } else if (c._slotId === WEB_BLOCK_FRAME_SLOT) {
+        } else if (declaredSlotId(c._slot) === WEB_BLOCK_FRAME_SLOT) {
           if (typeof c.match === "string" && c.anchor) decorated.add(c.match);
         }
       }
@@ -306,8 +308,8 @@ const markdownTagNamesUnique: Check = {
       const def = mod.default as { contributions?: unknown } | undefined;
       if (!Array.isArray(def?.contributions)) continue;
       for (const raw of def.contributions) {
-        const c = raw as { _slotId?: string; block?: BlockHandle<unknown> };
-        if (c._slotId !== WEB_BLOCK_SLOT || !c.block) continue;
+        const c = raw as { _slot?: SlotHandle; block?: BlockHandle<unknown> };
+        if (declaredSlotId(c._slot) !== WEB_BLOCK_SLOT || !c.block) continue;
         const name = markdownParseTagName(c.block);
         if (name === null) continue;
         const list = claimants.get(name) ?? [];

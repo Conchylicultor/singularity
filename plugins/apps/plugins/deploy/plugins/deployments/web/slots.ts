@@ -12,9 +12,9 @@ import type { Deployment } from "../core";
  * a closed, ordered sequence the server runs, and the UI only reports which leg
  * is live. The sections are the open set.
  */
-export const DeploymentDetail = defineDetailSections<{ deploymentId: string }>(
-  "deployment-detail",
-);
+export const DeploymentDetail = defineDetailSections<{
+  deploymentId: string;
+}>();
 
 export const Deployments = {
   /**
@@ -23,5 +23,5 @@ export const Deployments = {
    * lets the `Release` column exist without this plugin ever naming the release
    * feature: remove `remote-deploy` and the column simply disappears.
    */
-  Fields: defineFieldExtensions<Deployment>("deploy.deployments.fields"),
+  Fields: defineFieldExtensions<Deployment>(),
 };

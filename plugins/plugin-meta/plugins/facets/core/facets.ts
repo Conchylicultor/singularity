@@ -7,9 +7,21 @@ export interface FacetDef<T> {
 
 export interface ExtractContext {
   dir: string;
+  /**
+   * The plugin this extraction describes, as its dotted id.
+   *
+   * A facet describing SOURCE (what a plugin declares) can need a slot's id
+   * without the runtime having stamped one — a disabled plugin's barrel is still
+   * read here, and its slots are never declared. `${pluginId}.${key}` is the id
+   * either way, so the facet derives it rather than depending on a stamp.
+   */
+  pluginId: string;
   // Barrel-imported modules for this plugin (populated by buildPluginTree when skipBarrelImport is not set).
   // Undefined for facets that only need static file access.
-  importedModules?: { mod: Record<string, unknown>; runtime: "web" | "server" | "central" }[];
+  importedModules?: {
+    mod: Record<string, unknown>;
+    runtime: "web" | "server" | "central";
+  }[];
   // Build-scoped, read-once in-memory FS snapshot in effect for this extraction.
   // When present, the parse-utils `readIfExists` / `walkFiles` helpers read from
   // it instead of disk (wired ambiently by buildPluginTree's extract loop), so
@@ -48,10 +60,17 @@ export function createFacet<T>(impl: {
   return impl as Facet;
 }
 
-export function getFacet<T>(node: { facets: Record<string, unknown> }, def: FacetDef<T>): T | undefined {
+export function getFacet<T>(
+  node: { facets: Record<string, unknown> },
+  def: FacetDef<T>,
+): T | undefined {
   return node.facets[def.id] as T | undefined;
 }
 
-export function setFacet<T>(node: { facets: Record<string, unknown> }, def: FacetDef<T>, data: T): void {
+export function setFacet<T>(
+  node: { facets: Record<string, unknown> },
+  def: FacetDef<T>,
+  data: T,
+): void {
   node.facets[def.id] = data;
 }

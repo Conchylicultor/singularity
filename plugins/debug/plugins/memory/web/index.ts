@@ -20,5 +20,5 @@ export default {
       }),
     }),
   ],
-  slots: [memoryPane],
+  slots: { "debug-memory": memoryPane },
 } satisfies PluginDefinition;

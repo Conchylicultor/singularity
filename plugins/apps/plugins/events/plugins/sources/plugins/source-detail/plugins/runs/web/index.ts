@@ -24,5 +24,9 @@ export default {
     }),
     Pane.Register({ pane: eventSourceRunPane }),
   ],
-  slots: [RunActions, EventSourceRunDetail, eventSourceRunPane],
+  slots: {
+    itemActions: RunActions,
+    ...EventSourceRunDetail,
+    "event-source-run": eventSourceRunPane,
+  },
 } satisfies PluginDefinition;

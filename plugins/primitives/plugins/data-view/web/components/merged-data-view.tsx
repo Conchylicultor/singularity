@@ -100,7 +100,7 @@ export function MergedDataView<THostProps>(
           );
         }
         return renderIsolated(
-          sources.id,
+          sources,
           activeSource as unknown as Contribution,
           {
             hostProps,

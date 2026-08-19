@@ -54,5 +54,5 @@ export default {
       useExtensions: useActiveDataNodeExtensions,
     }),
   ],
-  slots: [ActiveDataSlots],
+  slots: ActiveDataSlots,
 } satisfies PluginDefinition;

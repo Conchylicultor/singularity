@@ -13,12 +13,14 @@ export type SealedComponent<P = unknown> = {
 /**
  * Loader-injected contribution metadata, stamped onto every contribution at
  * runtime by `PluginProvider` (`_pluginId = p.id`, etc.). Sealed contributions
- * carry it too, so a consumer can read the owning plugin id / slot id off a
+ * carry it too, so a consumer can read the owning plugin id off a
  * `useContributions()` result — the value exists at runtime; this makes it
  * type-visible. Mirrors the metadata fields on {@link Contribution}.
+ *
+ * `_slot` is deliberately absent: `useContributions()` strips it, because a
+ * contribution reached through a slot needs no field naming that same slot.
  */
 export interface SealedMeta {
-  readonly _slotId?: string;
   readonly _pluginId?: PluginId;
   readonly _pluginDescription?: string;
   readonly _doc?: DocMeta;
@@ -26,7 +28,7 @@ export interface SealedMeta {
 
 /** Maps a contribution's `component: ComponentType<X>` field → SealedComponent<X>;
  *  every other declared field is untouched (so `id`, `order`, `match`, `icon`, …
- *  stay readable) and the loader-injected metadata (`_pluginId`, `_slotId`, …)
+ *  stay readable) and the loader-injected metadata (`_pluginId`, `_doc`, …)
  *  stays type-visible via {@link SealedMeta}. */
 export type SealContributions<P> = {
   [K in keyof P]: K extends "component"

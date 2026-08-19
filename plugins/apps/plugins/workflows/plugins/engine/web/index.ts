@@ -10,5 +10,5 @@ export { ValueBlock, CollapsibleValue } from "./internal/value-block";
 export default {
   description:
     "Core engine infrastructure. Defines the Workflows.StepType slot.",
-  slots: [Workflows],
+  slots: Workflows,
 } satisfies PluginDefinition;

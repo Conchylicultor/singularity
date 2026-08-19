@@ -46,16 +46,13 @@ export interface PaneToolbarOptions {
  *   // contribute: Toolbar.Start({ id: "back", component: BackButton })
  *   // wire up:    Pane.define({ …, chrome: { header: Toolbar } })
  */
-export function definePaneToolbar(
-  idBase: string,
-  options?: PaneToolbarOptions,
-): PaneToolbar {
+export function definePaneToolbar(options?: PaneToolbarOptions): PaneToolbar {
   const config = {
     controlSize: options?.controlSize,
     docLabel: (p: PaneToolbarItem & { id: string }) => p.label ?? p.id,
   };
-  const Start = defineRenderSlot<PaneToolbarItem>(`${idBase}.start`, config);
-  const End = defineRenderSlot<PaneToolbarItem>(`${idBase}.end`, config);
+  const Start = defineRenderSlot<PaneToolbarItem>(config);
+  const End = defineRenderSlot<PaneToolbarItem>(config);
 
   return { Start, End, controlSize: options?.controlSize };
 }

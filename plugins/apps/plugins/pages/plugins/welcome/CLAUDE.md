@@ -8,7 +8,7 @@
 - Web:
   - Slots:
     - `PagesWelcome.Section` ← `apps.pages.welcome.quick-create`, `apps.pages.welcome.recent-pages`
-    - `pane.pages-root.actions`
+    - `pages-root.actions`
   - Contributes: `Pane.Register` "pages-root"
   - Uses:
     - `primitives/css/spacing.Inset`

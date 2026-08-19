@@ -8,8 +8,5 @@ export interface RowActionContribution {
 }
 
 export const JsonlRowActions = {
-  Item: defineRenderSlot<RowActionContribution>(
-    "conversation.jsonl-viewer.row-action",
-    { docLabel: (p) => p.id },
-  ),
+  Item: defineRenderSlot<RowActionContribution>({ docLabel: (p) => p.id }),
 };

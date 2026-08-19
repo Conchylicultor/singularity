@@ -9,8 +9,7 @@ export interface SidebarPalettePresetContribution {
 }
 
 export const SidebarPalette = {
-  Preset: defineSlot<SidebarPalettePresetContribution>(
-    "ui.sidebar-palette.preset",
-    { docLabel: (p) => p.label },
-  ),
+  Preset: defineSlot<SidebarPalettePresetContribution>({
+    docLabel: (p) => p.label,
+  }),
 };

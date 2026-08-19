@@ -999,6 +999,7 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
   - Uses:
     - `config_v2.useConfig`
     - `config_v2.useSetConfig`
+    - `fields.Fields`
     - `primitives/collapsible.CollapsibleContent`
     - `primitives/collapsible.CollapsibleProvider`
     - `primitives/css/control-panel.ControlPanel`

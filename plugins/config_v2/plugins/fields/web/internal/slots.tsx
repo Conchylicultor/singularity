@@ -1,5 +1,8 @@
 import type { FieldDef, FieldType } from "@plugins/fields/core";
-import type { Contribution } from "@plugins/framework/plugins/web-sdk/core";
+import {
+  defineSlotFacade,
+  type Contribution,
+} from "@plugins/framework/plugins/web-sdk/core";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 import { defineDispatchSlot } from "@plugins/primitives/plugins/slot-render/web";
 
@@ -19,24 +22,20 @@ export interface FieldRendererComponent<T = unknown> {
  * because the plugin declares the slots it owns in its `slots: [...]`, and
  * `Renderer` is a typed contribution helper — not a slot object.
  */
-export const fieldRendererSlot = defineDispatchSlot<FieldRendererProps>(
-  "config-v2.fields.renderer",
-  {
-    key: (props) => props.field.type.id,
-    fallback: ({ field }) => (
-      <Placeholder>Unknown field type: {field.type.id}</Placeholder>
-    ),
-    docLabel: (c) => (typeof c.match === "string" ? c.match : undefined),
-  },
-);
+export const fieldRendererSlot = defineDispatchSlot<FieldRendererProps>({
+  key: (props) => props.field.type.id,
+  fallback: ({ field }) => (
+    <Placeholder>Unknown field type: {field.type.id}</Placeholder>
+  ),
+  docLabel: (c) => (typeof c.match === "string" ? c.match : undefined),
+});
 
-function Renderer<T>(component: FieldRendererComponent<T>): Contribution {
+function renderer<T>(component: FieldRendererComponent<T>): Contribution {
   return fieldRendererSlot({
     match: component.type.id,
     component: component as FieldRendererComponent,
   });
 }
-Renderer.id = fieldRendererSlot.id;
-Renderer.Dispatch = fieldRendererSlot.Dispatch;
+const Renderer = defineSlotFacade(renderer, fieldRendererSlot);
 
 export const Fields = { Renderer } as const;

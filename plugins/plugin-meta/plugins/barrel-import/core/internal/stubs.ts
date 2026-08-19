@@ -47,7 +47,9 @@ export function registerBarrelStubs(_repoRoot: string): void {
   // evaluate; pg.Pool connections are lazy so no real DB connect happens.
   process.env.SINGULARITY_WORKTREE ??= "__barrel_import_stub__";
 
-  if (typeof globalThis.window === "undefined") {
+  // `globalThis` carries no DOM typing in every tsconfig target that reaches
+  // this file, so the probe reads the property structurally.
+  if (typeof (globalThis as { window?: unknown }).window === "undefined") {
     const loc = {
       protocol: "http:",
       host: "localhost",

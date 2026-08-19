@@ -23,10 +23,8 @@ export interface NodeExtensionSource {
 export const TextEditorSlots = {
   Plugin: defineRenderSlot<{
     component: ComponentType<TextEditorPluginProps>;
-  }>("text-editor.plugin"),
-  NodeExtensions: defineSlot<NodeExtensionSource>(
-    "text-editor.node-extensions",
-  ),
+  }>(),
+  NodeExtensions: defineSlot<NodeExtensionSource>(),
 };
 
 // Merges the static module-level extensions (registerNodeExtension) with the

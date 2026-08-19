@@ -18,5 +18,5 @@ export const SonataProgress = {
       /** beat → [0,1] position along the track. */
       beatToFraction: (beat: number) => number;
     }>;
-  }>("sonata.progress.marker", { docLabel: (p) => p.id }),
+  }>({ docLabel: (p) => p.id }),
 };

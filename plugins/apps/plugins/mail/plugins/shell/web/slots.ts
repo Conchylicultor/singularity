@@ -4,7 +4,7 @@ import { defineRenderSlot } from "@plugins/primitives/plugins/slot-render/web";
 
 export const Mail = {
   /** Left-rail entries — one per mail surface (mailboxes, labels, …). */
-  Sidebar: defineRenderSlot<AppShellSidebarItem>("mail.sidebar", {
+  Sidebar: defineRenderSlot<AppShellSidebarItem>({
     docLabel: (p) => p.title,
   }),
   /**
@@ -13,12 +13,12 @@ export const Mail = {
    * is free to render `null` when it has nothing to show, so the strip collapses
    * to zero height when the mailbox is healthy.
    */
-  Banner: defineRenderSlot<{ component: ComponentType }>("mail.banner"),
+  Banner: defineRenderSlot<{ component: ComponentType }>(),
   /**
    * Attention overlays for the Mail app's rail icon. Each contributor renders a
    * dot when the mailbox needs attention (e.g. an unhealthy sync), or `null`
    * otherwise. Keeps the rail icon's attention state aggregated from the
    * surfaces themselves rather than the shell naming any one of them.
    */
-  RailBadge: defineRenderSlot<{ component: ComponentType }>("mail.rail-badge"),
+  RailBadge: defineRenderSlot<{ component: ComponentType }>(),
 };

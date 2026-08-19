@@ -52,8 +52,9 @@ export interface DataViewSourceContribution<THostProps> {
  * `useContributions`) is ALREADY provided by `RenderSlot`, so this only extends
  * `RenderSlot`.
  */
-export interface DataViewSources<THostProps>
-  extends RenderSlot<DataViewSourceContribution<THostProps>> {}
+export interface DataViewSources<THostProps> extends RenderSlot<
+  DataViewSourceContribution<THostProps>
+> {}
 
 /**
  * Mint a per-consumer data-view source slot. The returned value is **callable
@@ -67,10 +68,10 @@ export interface DataViewSources<THostProps>
  * unified view model over ONE config file, and mounts only the active
  * instance's source component.
  */
-export function defineDataViewSources<THostProps>(
-  id: string,
-): DataViewSources<THostProps> {
-  return defineRenderSlot<DataViewSourceContribution<THostProps>>(id, {
+export function defineDataViewSources<
+  THostProps,
+>(): DataViewSources<THostProps> {
+  return defineRenderSlot<DataViewSourceContribution<THostProps>>({
     docLabel: (p) => p.title,
   });
 }

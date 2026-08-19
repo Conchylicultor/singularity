@@ -46,13 +46,13 @@ export const Library = {
      * imperatively (create + `openSongImperative`), no React hooks.
      */
     createOption?: CreateOption;
-  }>("sonata.library.source", { docLabel: (c) => c.sourceId }),
+  }>({ docLabel: (c) => c.sourceId }),
   /**
    * Per-row actions for the library (Play/Pause, Delete). Minted here,
    * contributed in `web/index.ts`, and passed to the one `DataView` as
    * `itemActions`, so the gallery card and the table row show the same set —
    * Play painted at rest (`zone: "persistent"`), Delete on hover.
    */
-  SongActions: defineItemActions<Song>("sonata.library.song-actions"),
-  Fields: defineFieldExtensions<Song>("sonata.library.fields"),
+  SongActions: defineItemActions<Song>(),
+  Fields: defineFieldExtensions<Song>(),
 };

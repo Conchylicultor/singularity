@@ -6,7 +6,7 @@
 
 - Description: Reorder-tree field type: config-render capability (read-only tree list for config-v2.fields.renderer) plus the reorderTreeField factory.
 - Web:
-  - Contributes: `config-v2.fields.renderer` "reorder-tree" → `ReorderTreeRenderer`
+  - Contributes: `Fields.Renderer` "reorder-tree" → `ReorderTreeRenderer`
   - Uses:
     - `config_v2/fields.FieldHeader`
     - `config_v2/fields.FieldRendererComponent`

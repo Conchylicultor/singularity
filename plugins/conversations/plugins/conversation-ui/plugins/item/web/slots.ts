@@ -1,4 +1,7 @@
-import { defineRenderSlot, defineDispatchSlot } from "@plugins/primitives/plugins/slot-render/web";
+import {
+  defineRenderSlot,
+  defineDispatchSlot,
+} from "@plugins/primitives/plugins/slot-render/web";
 import type { ComponentType } from "react";
 import type { ConversationItemConv } from "./components/conversation-item";
 import { AvatarFallback } from "./components/avatar-fallback";
@@ -17,15 +20,12 @@ import { AvatarFallback } from "./components/avatar-fallback";
 export const Item = {
   Chips: defineRenderSlot<{
     component: ComponentType<{ conv: ConversationItemConv }>;
-  }>("conversation-item.chips"),
-  Avatar: defineDispatchSlot<{ conv: ConversationItemConv }, string>(
-    "conversation-item.avatar",
-    {
-      // No string/regexp keys are used — all contributions match via predicate.
-      // The id is a stable, unique string so the dispatch mechanism has a key
-      // to pass to exact/regexp passes (they won't match; predicate path wins).
-      key: (props) => props.conv.id,
-      fallback: AvatarFallback,
-    },
-  ),
+  }>(),
+  Avatar: defineDispatchSlot<{ conv: ConversationItemConv }, string>({
+    // No string/regexp keys are used — all contributions match via predicate.
+    // The id is a stable, unique string so the dispatch mechanism has a key
+    // to pass to exact/regexp passes (they won't match; predicate path wins).
+    key: (props) => props.conv.id,
+    fallback: AvatarFallback,
+  }),
 };

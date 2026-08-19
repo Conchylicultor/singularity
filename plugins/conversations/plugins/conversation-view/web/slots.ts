@@ -7,13 +7,13 @@ export const Conversation = {
     section: string;
     sectionOrder?: number;
     component: ComponentType<{ conversation: ConversationRecord }>;
-  }>("conversation.prompt-bar", {
+  }>({
     docLabel: (p) => p.section,
   }),
   PromptInput: defineRenderSlot<{
     component: ComponentType<{ conversation: ConversationRecord }>;
-  }>("conversation.prompt-input"),
+  }>(),
   AbovePromptInput: defineRenderSlot<{
     component: ComponentType<{ conversation: ConversationRecord }>;
-  }>("conversation.above-prompt-input"),
+  }>(),
 };

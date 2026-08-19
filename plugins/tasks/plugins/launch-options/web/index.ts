@@ -20,5 +20,5 @@ export default {
   description:
     "Registry of task launch options — the controls that configure HOW an agent launches. Owns the tasks.launch-option slot rendered by BOTH the task detail's Prompt card and the task-draft popover, so an option is one plugin folder and appears on both surfaces.",
   contributions: [],
-  slots: [TaskLaunchSlots],
+  slots: TaskLaunchSlots,
 } satisfies PluginDefinition;

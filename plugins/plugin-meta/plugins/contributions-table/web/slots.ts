@@ -1,5 +1,8 @@
 import { defineSlot } from "@plugins/framework/plugins/web-sdk/core";
-import type { ContributionsFacetTable, ContributionsRowClick } from "./facet-table";
+import type {
+  ContributionsFacetTable,
+  ContributionsRowClick,
+} from "./facet-table";
 
 export const Contributions = {
   /**
@@ -8,7 +11,7 @@ export const Contributions = {
    * contributions generically (facet-blind), slicing `node.facets[facetId]` for
    * every plugin.
    */
-  FacetTable: defineSlot<ContributionsFacetTable>("contributions.facet-table", {
+  FacetTable: defineSlot<ContributionsFacetTable>({
     docLabel: (t) => t.label,
   }),
   /**
@@ -16,7 +19,7 @@ export const Contributions = {
    * app-side owner of the target pane so a facet renderer (meta) never imports an
    * app pane — decoupling "what a row shows" (FacetTable) from "what a click does".
    */
-  RowClick: defineSlot<ContributionsRowClick>("contributions.row-click", {
+  RowClick: defineSlot<ContributionsRowClick>({
     docLabel: (r) => r.facetId,
   }),
 };

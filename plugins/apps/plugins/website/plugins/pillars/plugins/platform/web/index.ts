@@ -33,5 +33,5 @@ export default {
       component: PlatformClosing,
     }),
   ],
-  slots: [WebsitePlatform, platformPane],
+  slots: { ...WebsitePlatform, "website-platform": platformPane },
 } satisfies PluginDefinition;

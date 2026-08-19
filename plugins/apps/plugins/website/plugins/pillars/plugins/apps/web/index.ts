@@ -29,5 +29,5 @@ export default {
       component: AppsClosing,
     }),
   ],
-  slots: [WebsiteApps, appsPane],
+  slots: { ...WebsiteApps, "website-apps": appsPane },
 } satisfies PluginDefinition;

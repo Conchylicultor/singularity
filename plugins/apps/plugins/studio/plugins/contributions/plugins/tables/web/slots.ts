@@ -3,4 +3,4 @@ import { defineDetailSections } from "@plugins/primitives/plugins/detail-section
 export const TableDetail = defineDetailSections<{
   tableName: string;
   pluginId: string;
-}>("table-detail");
+}>();

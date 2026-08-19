@@ -15,7 +15,7 @@ export function SegmentedProgressBar<T extends string>(
     contributions.find((c) => c.match === activeId) ?? contributions[0] ?? null;
   if (!active) return null;
   return renderIsolated(
-    Slots.Variant.id,
+    Slots.Variant,
     active as unknown as Contribution,
     props as SegmentedProgressBarProps,
   );

@@ -1,6 +1,7 @@
 import type { ComponentType } from "react";
 import {
   defineSlot,
+  defineSlotFacade,
   type Contribution,
 } from "@plugins/framework/plugins/web-sdk/core";
 import {
@@ -55,7 +56,7 @@ export interface AppEntry {
   badge?: ComponentType<{ className?: string }>;
 }
 
-const appSlot = defineRenderSlot<AppEntry>("apps.app", {
+const appSlot = defineRenderSlot<AppEntry>({
   docLabel: (p) => p.app.name,
 });
 
@@ -82,42 +83,36 @@ export interface AppSlot {
 /** The contribution restates nothing about the app, so the framework-required
  *  contribution id is derived from the `AppRef` here — the one place it can be,
  *  and therefore the one value it can ever have. */
-const App: AppSlot = Object.assign(
+const App: AppSlot = defineSlotFacade(
   (entry: AppEntry) => appSlot({ ...entry, id: entry.app.id }),
-  {
-    id: appSlot.id,
-    useContributions: appSlot.useContributions,
-    Render: appSlot.Render,
-    meta: appSlot.meta,
-  },
-);
+  appSlot,
+) as unknown as AppSlot;
 
 export const Apps = {
   App,
   /** The far-left app-rail framing (rail / hidden). The active variant owns the
    * outer wrapper and the `--app-rail-width` var (the rail's own width); the
    * rail sits as a flex sibling of the app body. */
-  RailFraming: defineSlot<RailFramingContribution>("apps.rail-framing", {
+  RailFraming: defineSlot<RailFramingContribution>({
     docLabel: () => "Rail framing",
   }),
   /** The surface body that lays out every open tab by its per-tab placement. A
    * single-contribution render slot (the `surface` plugin); `apps` falls back to
    * its built-in docked-only strip when no contributor is present. */
-  Surface: defineSlot<SurfaceContribution>("apps.surface", {
+  Surface: defineSlot<SurfaceContribution>({
     docLabel: () => "Surface",
   }),
   /** The top tab strip. A single-contribution slot (the `tab-bar` plugin);
    * `apps` renders nothing here when no contributor is present (chrome-less
    * surface). Distinct from `TabBarActions` (the trailing action zone inside
    * the strip); this slot hosts the strip itself. */
-  TabBar: defineSlot<TabBarContribution>("apps.tab-bar", {
+  TabBar: defineSlot<TabBarContribution>({
     docLabel: () => "Tab bar",
   }),
   /** Trailing tab-bar action zone (next to `+`), where the `surface` plugin
    * drops its in-strip placement control. `apps` owns only the seam; the control
    * stays plugin-owned. */
-  TabBarActions: defineRenderSlot<{ component: ComponentType }>(
-    "apps.tab-bar-actions",
-    { docLabel: () => "Tab bar actions" },
-  ),
+  TabBarActions: defineRenderSlot<{ component: ComponentType }>({
+    docLabel: () => "Tab bar actions",
+  }),
 };

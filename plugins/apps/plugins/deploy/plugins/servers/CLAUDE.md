@@ -24,14 +24,14 @@ contributing a section, never by wrapping the pane.
   - Slots:
     - `ServerDetail.Section` ← `apps.deploy.deployments`, `apps.deploy.health`, `apps.deploy.servers`, `apps.deploy.ssh-setup`
     - `Servers.Fields` ← `apps.deploy.health`
-    - `deploy.servers.item-actions` ← `apps.deploy.servers`
+    - `item-actions` ← `apps.deploy.servers`
     - `serversRootPane.Actions`
     - `serverDetailPane.Actions`
   - Contributes:
     - `Pane.Register` "deploy-servers"
     - `Pane.Register` "deploy-server-detail"
     - `ServerDetail.Section` "Server" → `ServerEditForm`
-    - `deploy.servers.item-actions` "open-console" → `OpenConsoleAction`
+    - `item-actions` "open-console" → `OpenConsoleAction`
   - Uses:
     - `infra/endpoints.EndpointError`
     - `infra/endpoints.fetchEndpoint`

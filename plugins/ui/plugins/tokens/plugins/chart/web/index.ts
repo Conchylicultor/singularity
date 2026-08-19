@@ -49,5 +49,5 @@ export default {
       useAvailable: ({ search }) => tokenGroupMatchesSearch(chartGroup, search),
     }),
   ],
-  slots: [Chart],
+  slots: Chart,
 } satisfies PluginDefinition;

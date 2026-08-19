@@ -22,7 +22,7 @@ via `FieldRenderer` — nested `objectField` instances recurse automatically.
 
 - Description: Object field type: config-render capability (collapsible sub-field renderer for config-v2.fields.renderer) plus the objectField factory.
 - Web:
-  - Contributes: `config-v2.fields.renderer` "object" → `ObjectRenderer`
+  - Contributes: `Fields.Renderer` "object" → `ObjectRenderer`
   - Uses:
     - `config_v2/fields.FieldRenderer`
     - `config_v2/fields.FieldRendererComponent`

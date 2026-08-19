@@ -30,5 +30,5 @@ export default {
       }),
     }),
   ],
-  slots: [EventList, eventListPane],
+  slots: { ...EventList, "event-list": eventListPane },
 } satisfies PluginDefinition;

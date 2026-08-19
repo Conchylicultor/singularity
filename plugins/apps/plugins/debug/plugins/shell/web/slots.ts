@@ -5,11 +5,11 @@ import type {
 } from "@plugins/primitives/plugins/app-shell/web";
 
 export const DebugApp = {
-  Sidebar: defineRenderSlot<AppShellSidebarItem>("debug-app.sidebar", {
+  Sidebar: defineRenderSlot<AppShellSidebarItem>({
     docLabel: (p) => p.title,
   }),
 
-  Toolbar: defineRenderSlot<AppShellToolbarItem>("debug-app.toolbar", {
+  Toolbar: defineRenderSlot<AppShellToolbarItem>({
     docLabel: (p) => ("label" in p ? p.label : undefined),
   }),
 };

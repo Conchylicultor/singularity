@@ -16,7 +16,7 @@ its table/filter capabilities from `number` via the identity `extends` chain.
 
 - Description: Integer field type: config-render capability (number stepper for config-v2.fields.renderer) plus the intField factory.
 - Web:
-  - Contributes: `config-v2.fields.renderer` "int" → `IntRenderer`
+  - Contributes: `Fields.Renderer` "int" → `IntRenderer`
   - Uses:
     - `config_v2/fields.FieldHeader`
     - `config_v2/fields.FieldRendererComponent`

@@ -20,5 +20,5 @@ export default {
       component: CopyToolResultAction,
     }),
   ],
-  slots: [JsonlViewerToolSlots],
+  slots: JsonlViewerToolSlots,
 } satisfies PluginDefinition;

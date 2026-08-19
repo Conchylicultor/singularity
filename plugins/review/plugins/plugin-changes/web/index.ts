@@ -19,5 +19,5 @@ export default {
       summary: PluginChangesSummary,
     }),
   ],
-  slots: [PluginChanges],
+  slots: PluginChanges,
 } satisfies PluginDefinition;

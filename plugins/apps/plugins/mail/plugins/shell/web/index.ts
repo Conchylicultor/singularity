@@ -23,5 +23,5 @@ export default {
     }),
     Pane.Register({ pane: mailRootPane }),
   ],
-  slots: [Mail, mailRootPane],
+  slots: { ...Mail, "mail-root": mailRootPane },
 } satisfies PluginDefinition;

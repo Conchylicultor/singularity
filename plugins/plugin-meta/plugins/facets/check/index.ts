@@ -1,6 +1,9 @@
+import type { SlotHandle } from "@plugins/framework/plugins/slot-declaration/core";
+import { declaredSlotId } from "@plugins/framework/plugins/slot-declaration/core";
 import { existsSync } from "fs";
 import { join, relative } from "path";
 import { buildPluginTree } from "@plugins/plugin-meta/plugins/plugin-tree/core";
+import { declareSlotsFromBarrels } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
 import { loadFacets } from "@plugins/plugin-meta/plugins/facets/core";
 import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
 import {
@@ -26,13 +29,13 @@ const RENDER_SURFACES = [
   },
   {
     surface: "detail",
-    slotId: "plugin-view.section",
+    slotId: "plugin-meta.plugin-view.section",
     facetKey: "id" as const,
     explicit: false,
   },
   {
     surface: "contributions",
-    slotId: "contributions.facet-table",
+    slotId: "plugin-meta.contributions-table.facet-table",
     facetKey: "facetId" as const,
     explicit: true,
   },
@@ -50,6 +53,12 @@ const check: Check = {
 
     const tree = await buildPluginTree(pluginsRoot, { skipBarrelImport: true });
     registerBarrelStubs(join(pluginsRoot, ".."));
+
+    // This check imports web barrels ITSELF (the tree above is structure-only),
+    // so it must also declare their slots: a contribution names its slot by
+    // object, and that slot's id is derived from whichever plugin declares it.
+    // Without this every id is `undefined` and every surface reads as missing.
+    await declareSlotsFromBarrels(root);
 
     const covered = new Map(
       RENDER_SURFACES.map((s) => [s.slotId, new Set<string>()]),
@@ -69,12 +78,18 @@ const check: Check = {
         };
       }
       const def = mod.default as
-        | { contributions?: Array<Record<string, unknown> & { _slotId?: string }> }
+        | {
+            contributions?: Array<
+              Record<string, unknown> & { _slot?: SlotHandle }
+            >;
+          }
         | undefined;
       const contributions = def?.contributions;
       if (!contributions) continue;
       for (const c of contributions) {
-        const surface = RENDER_SURFACES.find((s) => s.slotId === c._slotId);
+        const surface = RENDER_SURFACES.find(
+          (s) => s.slotId === declaredSlotId(c._slot),
+        );
         if (!surface) continue;
         const fid = c[surface.facetKey];
         if (typeof fid !== "string") continue;

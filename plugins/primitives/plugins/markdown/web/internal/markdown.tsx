@@ -6,7 +6,7 @@ export const MarkdownEnhancerSlot: Slot<{
   id: string;
   order: number;
   Component: ComponentType<{ children: ReactNode }>;
-}> = defineSlot("markdown.enhancer");
+}> = defineSlot();
 
 // The heavy renderer (react-markdown + remark-gfm + the syntax-highlighter base
 // map) is code-split into its own chunk so it never rides the eager plugin-boot
@@ -14,7 +14,10 @@ export const MarkdownEnhancerSlot: Slot<{
 // because markdown is inline in transcripts: a spinner would be jarring, so it
 // just pops in once the chunk resolves (only the first render suspends).
 const MarkdownRenderer = lazyComponent<{ children: string }>(
-  () => import("./markdown-renderer").then((m) => ({ default: m.MarkdownRenderer })),
+  () =>
+    import("./markdown-renderer").then((m) => ({
+      default: m.MarkdownRenderer,
+    })),
   { fallback: null },
 );
 

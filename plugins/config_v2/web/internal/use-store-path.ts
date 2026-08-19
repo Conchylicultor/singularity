@@ -3,6 +3,7 @@ import { PluginRuntimeContext } from "@plugins/framework/plugins/web-sdk/core";
 import type { ConfigDescriptor } from "@plugins/config_v2/core";
 import type { FieldsRecord } from "@plugins/fields/core";
 import { storePathOf } from "./store-path";
+import { ConfigV2 } from "./slots";
 
 // Resolve a descriptor's canonical storePath from its `ConfigV2.WebRegister`
 // contribution — the same key `useConfig` and the server's storePath derive from
@@ -15,7 +16,7 @@ export function useStorePath<F extends FieldsRecord>(
   const ctx = useContext(PluginRuntimeContext);
   if (!ctx) throw new Error("config-v2 hooks must be inside PluginProvider");
 
-  const registrations = ctx.bySlot.get("config-v2.web-register") ?? [];
+  const registrations = ctx.bySlot.get(ConfigV2.WebRegister) ?? [];
   const reg = registrations.find((c) => c.descriptor === descriptor);
   const path = reg ? storePathOf(reg) : null;
   if (!path) {

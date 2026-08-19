@@ -5,20 +5,20 @@ import {
 import type { ToolRendererProps } from "../core";
 import { GenericToolView } from "./components/generic-tool-view";
 
-export type ToolRendererContribution = DispatchContribution<ToolRendererProps, string>;
+export type ToolRendererContribution = DispatchContribution<
+  ToolRendererProps,
+  string
+>;
 
 export const JsonlViewerTool = {
-  Renderer: defineDispatchSlot<ToolRendererProps, string>(
-    "conversation.jsonl-viewer.tool-renderer",
-    {
-      key: (p) => p.event.name,
-      fallback: GenericToolView,
-      docLabel: (c) =>
-        typeof c.match === "string"
-          ? c.match
-          : c.match instanceof RegExp
-            ? c.match.source
-            : undefined,
-    },
-  ),
+  Renderer: defineDispatchSlot<ToolRendererProps, string>({
+    key: (p) => p.event.name,
+    fallback: GenericToolView,
+    docLabel: (c) =>
+      typeof c.match === "string"
+        ? c.match
+        : c.match instanceof RegExp
+          ? c.match.source
+          : undefined,
+  }),
 };

@@ -6,9 +6,7 @@ import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import type { Server } from "../../shared";
 
 /** Per-consumer trailing-action slot for the deploy Servers list rows. */
-export const ServerItemActions = defineItemActions<Server>(
-  "deploy.servers.item-actions",
-);
+export const ServerItemActions = defineItemActions<Server>();
 
 /**
  * Opens the server's provider management console in a new tab. Rendered only

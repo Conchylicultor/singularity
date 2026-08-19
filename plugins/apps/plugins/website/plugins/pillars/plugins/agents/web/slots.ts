@@ -8,8 +8,7 @@ export const WebsiteAgents = {
    * owns its full-width band. Demo plugins under `website/demos` contribute
    * their interactive bands here.
    */
-  Section: defineRenderSlot<{ label: string; component: ComponentType }>(
-    "website.agents.section",
-    { docLabel: (p) => p.label },
-  ),
+  Section: defineRenderSlot<{ label: string; component: ComponentType }>({
+    docLabel: (p) => p.label,
+  }),
 };

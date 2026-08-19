@@ -18,5 +18,5 @@ export default {
       component: FileExplorerLayout,
     }),
   ],
-  slots: [FileExplorer],
+  slots: FileExplorer,
 } satisfies PluginDefinition;

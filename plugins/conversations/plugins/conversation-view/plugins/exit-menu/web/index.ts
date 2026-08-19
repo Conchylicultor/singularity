@@ -15,5 +15,5 @@ export default {
       alwaysActive: true,
     }),
   ],
-  slots: [ExitMenuSlots],
+  slots: ExitMenuSlots,
 } satisfies PluginDefinition;

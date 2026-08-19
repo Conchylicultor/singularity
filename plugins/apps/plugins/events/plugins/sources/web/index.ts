@@ -63,10 +63,10 @@ export default {
     EventSourceActions({ id: "enabled", component: SourceToggleAction }),
     EventSourceActions({ id: "delete", component: SourceDeleteAction }),
   ],
-  slots: [
-    EventSourceDetail,
-    EventSourceActions,
-    eventSourcesPane,
-    eventSourceDetailPane,
-  ],
+  slots: {
+    ...EventSourceDetail,
+    itemActions: EventSourceActions,
+    "event-sources": eventSourcesPane,
+    "event-source-detail": eventSourceDetailPane,
+  },
 } satisfies PluginDefinition;

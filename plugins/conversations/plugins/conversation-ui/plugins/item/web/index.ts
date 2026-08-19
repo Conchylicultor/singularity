@@ -17,5 +17,5 @@ export default {
   description:
     "Visual primitive for rendering a Conversation as a row or inline chip. Used by every surface that lists conversations.",
   contributions: [],
-  slots: [ItemSlots],
+  slots: ItemSlots,
 } satisfies PluginDefinition;

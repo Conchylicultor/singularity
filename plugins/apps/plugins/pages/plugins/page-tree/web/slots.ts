@@ -21,9 +21,10 @@ import type { PageRow } from "@plugins/page/plugins/editor/core";
  * slot id verbatim as its config_v2 config name. `pages.detail.section` is what
  * this pane's persisted section order is already keyed by.
  */
-const pageDetailSections = defineDetailSections<{ pageId: string }>(
-  "pages.detail",
-  // `PageContentColumn` already places sections at the page's block inset — the
+const pageDetailSections = defineDetailSections<{
+  pageId: string;
+}> // `PageContentColumn` already places sections at the page's block inset — the
+(
   // documented invariant that the title, icon, and section list share one
   // content edge with the blocks (see `page/editor/internal/page-column.ts`).
   // The stack must not inset them a second time or the cards would sit visibly
@@ -43,7 +44,7 @@ export const PageDetail = {
    */
   HeaderActions: defineRenderSlot<{
     component: ComponentType<{ pageId: string }>;
-  }>("pages.detail.header-actions"),
+  }>(),
   /**
    * A widget floating OVER the open page — an outline rail, a reading-progress
    * indicator. The host gives it a positioning context and nothing else: a
@@ -61,7 +62,7 @@ export const PageDetail = {
    */
   Overlay: defineRenderSlot<{
     component: ComponentType<{ pageId: string }>;
-  }>("pages.detail.overlay", { docLabel: (p) => p.id }),
+  }>({ docLabel: (p) => p.id }),
 };
 
 /**
@@ -79,6 +80,6 @@ export const PageDetail = {
  *    filtered `list` view over the `starred` field rather than a bespoke sidebar.
  */
 export const PageTree = {
-  RowActions: defineItemActions<PageRow>("pages.tree.row-actions"),
-  Fields: defineFieldExtensions<PageRow>("pages.tree.fields"),
+  RowActions: defineItemActions<PageRow>(),
+  Fields: defineFieldExtensions<PageRow>(),
 };

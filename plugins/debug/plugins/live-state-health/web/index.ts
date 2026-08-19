@@ -21,5 +21,5 @@ export default {
       }),
     }),
   ],
-  slots: [liveStateHealthPane],
+  slots: { "live-state-health": liveStateHealthPane },
 } satisfies PluginDefinition;

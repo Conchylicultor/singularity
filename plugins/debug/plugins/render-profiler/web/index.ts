@@ -26,5 +26,5 @@ export default {
     }),
     Core.Root({ component: ProfilerInstaller }),
   ],
-  slots: [renderProfilerPane],
+  slots: { "render-profiler": renderProfilerPane },
 } satisfies PluginDefinition;

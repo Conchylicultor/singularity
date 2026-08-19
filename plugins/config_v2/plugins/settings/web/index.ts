@@ -17,5 +17,8 @@ export default {
     Pane.Register({ pane: configNavPane }),
     Pane.Register({ pane: configDetailPane }),
   ],
-  slots: [configNavPane, configDetailPane],
+  slots: {
+    "config-v2-nav": configNavPane,
+    "config-v2-detail": configDetailPane,
+  },
 } satisfies PluginDefinition;

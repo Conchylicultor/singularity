@@ -9,5 +9,5 @@ export interface TaskDraftActionProps {
 export const TaskDraftFormSlots = {
   Action: defineRenderSlot<{
     component: ComponentType<TaskDraftActionProps>;
-  }>("task-draft-form.action"),
+  }>(),
 };

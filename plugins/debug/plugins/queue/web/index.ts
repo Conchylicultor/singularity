@@ -21,5 +21,5 @@ export default {
       }),
     }),
   ],
-  slots: [queuePane],
+  slots: { queue: queuePane },
 } satisfies PluginDefinition;

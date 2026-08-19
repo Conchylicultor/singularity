@@ -11,37 +11,35 @@ import {
  */
 export const Browser = {
   /** In-app tab strip (one entry per navigation stack); rendered above the chrome bar. */
-  TabStrip: defineRenderSlot<{ component: ComponentType }>("browser.tab-strip", {
+  TabStrip: defineRenderSlot<{ component: ComponentType }>({
     docLabel: () => "Tab strip",
   }),
   /** Leading navigation buttons (back/forward/reload/home) in the chrome bar. */
-  NavControls: defineRenderSlot<{ component: ComponentType }>(
-    "browser.nav-controls",
-    { docLabel: () => "Navigation controls" },
-  ),
+  NavControls: defineRenderSlot<{ component: ComponentType }>({
+    docLabel: () => "Navigation controls",
+  }),
   /** The address bar; rendered center (flex-1) in the chrome bar. */
-  Omnibox: defineRenderSlot<{ component: ComponentType }>("browser.omnibox", {
+  Omnibox: defineRenderSlot<{ component: ComponentType }>({
     docLabel: () => "Omnibox",
   }),
   /** Trailing chrome-bar actions (open-external, bookmark star). */
-  Actions: defineRenderSlot<{ component: ComponentType }>("browser.actions", {
+  Actions: defineRenderSlot<{ component: ComponentType }>({
     docLabel: () => "Chrome actions",
   }),
   /** Second row below the chrome bar (e.g. bookmarks bar). Empty → nothing. */
-  SubBar: defineRenderSlot<{ component: ComponentType }>("browser.sub-bar", {
+  SubBar: defineRenderSlot<{ component: ComponentType }>({
     docLabel: () => "Sub bar",
   }),
   /** The main content area — the webview iframe viewport. */
-  Viewport: defineRenderSlot<{ component: ComponentType }>("browser.viewport", {
+  Viewport: defineRenderSlot<{ component: ComponentType }>({
     docLabel: () => "Viewport",
   }),
   /** Start page, rendered by the webview when `current === ""`. */
-  StartPage: defineRenderSlot<{ component: ComponentType }>(
-    "browser.start-page",
-    { docLabel: () => "Start page" },
-  ),
+  StartPage: defineRenderSlot<{ component: ComponentType }>({
+    docLabel: () => "Start page",
+  }),
   /** Headless effects (e.g. history recorder); mounts for side effects only. */
-  Effects: defineMountSlot("browser.effects", {
+  Effects: defineMountSlot({
     docLabel: () => "Effects",
   }),
 };

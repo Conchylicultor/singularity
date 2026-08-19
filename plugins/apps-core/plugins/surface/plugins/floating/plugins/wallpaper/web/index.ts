@@ -14,5 +14,5 @@ export default {
   description:
     "Floating desktop wallpaper: the Wallpaper.Provider source registry, the picker dialog + shared search panel, the desktop right-click context menu, the corner attribution credit, and the global wallpaper config web registration.",
   contributions: [ConfigV2.WebRegister({ descriptor: wallpaperConfig })],
-  slots: [Wallpaper],
+  slots: Wallpaper,
 } satisfies PluginDefinition;

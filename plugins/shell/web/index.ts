@@ -6,5 +6,5 @@ export default {
   description:
     "Foundational app layout; defines the slots and commands most other plugins extend.",
   loadBearing: true,
-  slots: [Shell],
+  slots: Shell,
 } satisfies PluginDefinition;

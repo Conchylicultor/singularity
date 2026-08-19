@@ -14,5 +14,5 @@ export default {
     Pane.Register({ pane: screenshotPane }),
     ActionBar.Item({ id: "screenshot", component: ScreenshotButton }),
   ],
-  slots: [screenshotPane],
+  slots: { screenshot: screenshotPane },
 } satisfies PluginDefinition;

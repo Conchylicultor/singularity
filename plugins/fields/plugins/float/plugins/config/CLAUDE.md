@@ -18,7 +18,7 @@ capabilities from `number` via the identity `extends` chain.
 
 - Description: Float field type: config-render capability (number stepper for config-v2.fields.renderer) plus the floatField factory.
 - Web:
-  - Contributes: `config-v2.fields.renderer` "float" → `FloatRenderer`
+  - Contributes: `Fields.Renderer` "float" → `FloatRenderer`
   - Uses:
     - `config_v2/fields.FieldHeader`
     - `config_v2/fields.FieldRendererComponent`

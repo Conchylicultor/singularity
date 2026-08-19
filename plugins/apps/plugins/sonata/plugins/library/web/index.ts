@@ -44,5 +44,9 @@ export default {
     Pane.Register({ pane: sonataLibraryPane }),
     Pane.Register({ pane: sonataPlayerPane }),
   ],
-  slots: [Library, sonataLibraryPane, sonataPlayerPane],
+  slots: {
+    ...Library,
+    "sonata-library": sonataLibraryPane,
+    "sonata-player": sonataPlayerPane,
+  },
 } satisfies PluginDefinition;

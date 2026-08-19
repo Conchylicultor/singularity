@@ -7,5 +7,5 @@ import { defineRenderSlot } from "@plugins/primitives/plugins/slot-render/web";
  * (quick-create, recent pages, …) and the landing pane renders them in order.
  */
 export const PagesWelcome = {
-  Section: defineRenderSlot<{ component: ComponentType }>("pages.welcome.section"),
+  Section: defineRenderSlot<{ component: ComponentType }>(),
 };

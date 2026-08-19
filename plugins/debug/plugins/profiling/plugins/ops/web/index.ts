@@ -19,5 +19,5 @@ export default {
     }),
     Pane.Register({ pane: opDetailPane }),
   ],
-  slots: [opDetailPane],
+  slots: { "debug-profiling-op-detail": opDetailPane },
 } satisfies PluginDefinition;

@@ -12,7 +12,7 @@ export const Story = {
     { story: StoryNode[]; pageId: string; activeRendererId: string },
     string,
     { id: string; label: string; icon?: IconType }
-  >("story.renderer", {
+  >({
     key: (p) => p.activeRendererId,
     fallback: NoRenderer,
     docLabel: (c) => c.label,
@@ -21,7 +21,7 @@ export const Story = {
   // CONTENT — per-block widget; dispatch key is the block's type. Renderers call
   // <Story.Content node={node}/> for each content node; unsupported types fall
   // through to the visible UnsupportedContent placeholder (fail-loud).
-  Content: defineDispatchSlot<{ node: StoryNode }, string>("story.content", {
+  Content: defineDispatchSlot<{ node: StoryNode }, string>({
     key: (p) => p.node.type,
     fallback: UnsupportedContent,
   }),

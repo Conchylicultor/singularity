@@ -23,5 +23,5 @@ export default {
     "Central keyboard shortcut registry. Plugins contribute shortcuts via defineShortcut(); a single keydown listener dispatches to the active handler.",
   loadBearing: true,
   contributions: [Core.Root({ component: ShortcutManager })],
-  slots: [Shortcuts],
+  slots: Shortcuts,
 } satisfies PluginDefinition;

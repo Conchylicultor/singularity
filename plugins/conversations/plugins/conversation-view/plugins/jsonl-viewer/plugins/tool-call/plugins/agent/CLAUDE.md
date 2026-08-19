@@ -6,7 +6,7 @@
 
 - Description: Renders Agent tool calls with subagent type, model badge, prompt (markdown), and report (markdown).
 - Web:
-  - Slots: `pane.agent-report.actions`
+  - Slots: `agent-report.actions`
   - Contributes:
     - `JsonlViewerTool.Renderer` "Agent" → `AgentToolView`
     - `Pane.Register` "agent-report"

@@ -18,5 +18,5 @@ export default {
       component: WorkflowsLayout,
     }),
   ],
-  slots: [WorkflowsApp],
+  slots: WorkflowsApp,
 } satisfies PluginDefinition;

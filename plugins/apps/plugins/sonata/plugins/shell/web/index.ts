@@ -59,5 +59,5 @@ export default {
       component: SonataLayout,
     }),
   ],
-  slots: [Sonata, SonataToolbar],
+  slots: { ...Sonata, ...SonataToolbar },
 } satisfies PluginDefinition;

@@ -16,8 +16,7 @@ export interface QuickThemeSectionContribution {
  * different component each time.
  */
 export const QuickTheme = {
-  Section: defineRenderSlot<QuickThemeSectionContribution>(
-    "ui.theme-engine.quick-theme.section",
-    { docLabel: (p) => p.label },
-  ),
+  Section: defineRenderSlot<QuickThemeSectionContribution>({
+    docLabel: (p) => p.label,
+  }),
 };

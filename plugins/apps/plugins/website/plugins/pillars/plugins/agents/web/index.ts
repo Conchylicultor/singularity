@@ -29,5 +29,5 @@ export default {
       component: AgentsClosing,
     }),
   ],
-  slots: [WebsiteAgents, agentsPane],
+  slots: { ...WebsiteAgents, "website-agents": agentsPane },
 } satisfies PluginDefinition;

@@ -23,6 +23,7 @@ import {
   type SealedComponent,
 } from "@plugins/framework/plugins/web-sdk/core";
 import type { Contribution } from "@plugins/framework/plugins/web-sdk/core";
+import type { SlotHandle } from "@plugins/framework/plugins/slot-declaration/core";
 import {
   getSlotItemAttrs,
   getSlotItemMiddlewares,
@@ -219,12 +220,11 @@ export const RenderSlotSubIdContext = createContext<string | undefined>(
 );
 
 export function defineRenderSlot<P>(
-  id: string,
   config?: RenderSlotConfig<P>,
 ): RenderSlot<P> {
   const slot = defineSlot<
     P & { id: string; excludeFromReorder?: boolean; fill?: boolean }
-  >(id, { docLabel: config?.docLabel });
+  >({ docLabel: config?.docLabel });
 
   const renderSlot = slot as unknown as RenderSlot<P>;
   // A render slot is visible and renders every contribution, so its order is
@@ -242,7 +242,7 @@ export function defineRenderSlot<P>(
       throw new Error("SlotRender must be used within PluginProvider");
     }
 
-    const rawContributions = ctx.bySlot.get(id) ?? [];
+    const rawContributions = ctx.bySlot.get(slot) ?? [];
     const cleanItems = slot.useContributions();
 
     const cleanById = useMemo(
@@ -295,11 +295,11 @@ export function defineRenderSlot<P>(
         const wrapped = children
           ? applyItemMiddlewares(
               children(clean as unknown as P & { id: string }),
-              id,
+              slot.id,
               contribution,
               cell,
             )
-          : renderContributionIsolated(clean, contribution, id, cell);
+          : renderContributionIsolated(clean, contribution, slot.id, cell);
         // The key rides a Fragment rather than the box: the box is minted inside
         // `applyItemMiddlewares` (it has to sit outside the middlewares), and
         // `renderItem` returning a KEYED node is relied on by every caller that
@@ -319,7 +319,7 @@ export function defineRenderSlot<P>(
       const captured = result;
       result = (
         <Mw
-          slotId={id}
+          slotId={slot.id}
           contributions={rawContributions}
           renderItem={renderItem}
         >
@@ -395,13 +395,11 @@ export interface MountSlot<P> extends Slot<
  * compile.
  */
 export function defineMountSlot<P = {}>(
-  id: string,
   config?: MountSlotConfig<P>,
 ): MountSlot<P> {
-  const slot = defineSlot<{ id: string; component: MountComponent<P> } & P>(
-    id,
-    { docLabel: config?.docLabel },
-  );
+  const slot = defineSlot<{ id: string; component: MountComponent<P> } & P>({
+    docLabel: config?.docLabel,
+  });
 
   const mountSlot = slot as unknown as MountSlot<P>;
   // Headless: its contributions paint nothing, so order is meaningless.
@@ -413,7 +411,7 @@ export function defineMountSlot<P = {}>(
       throw new Error("SlotMount must be used within PluginProvider");
     }
 
-    const rawContributions = ctx.bySlot.get(id) ?? [];
+    const rawContributions = ctx.bySlot.get(slot) ?? [];
     const cleanItems = slot.useContributions();
 
     const cleanById = useMemo(
@@ -430,7 +428,7 @@ export function defineMountSlot<P = {}>(
           if (!clean) return null;
           return (
             <Fragment key={cId}>
-              {renderContributionIsolated(clean, contribution, id)}
+              {renderContributionIsolated(clean, contribution, slot.id)}
             </Fragment>
           );
         })}
@@ -487,10 +485,9 @@ export interface WrapperSlot<P extends object = {}> extends Slot<
  * also ends up outermost.
  */
 export function defineWrapperSlot<P extends object = {}>(
-  id: string,
   config?: WrapperSlotConfig<P>,
 ): WrapperSlot<P> {
-  const slot = defineSlot<WrapContribution & P>(id, {
+  const slot = defineSlot<WrapContribution & P>({
     docLabel: config?.docLabel ? (c) => config.docLabel!(c) : undefined,
   });
 
@@ -556,10 +553,9 @@ export function defineDispatchSlot<
   Key extends string = string,
   Extra extends object = {},
 >(
-  id: string,
   config: DispatchSlotConfig<Props, Key, Extra>,
 ): DispatchSlot<Props, Key, Extra> {
-  const slot = defineSlot<DispatchContribution<Props, Key> & Extra>(id, {
+  const slot = defineSlot<DispatchContribution<Props, Key> & Extra>({
     docLabel: config.docLabel ? (c) => config.docLabel!(c) : undefined,
   });
 
@@ -574,7 +570,7 @@ export function defineDispatchSlot<
       throw new Error("SlotDispatch must be used within PluginProvider");
     }
 
-    const rawContributions = ctx.bySlot.get(id) ?? [];
+    const rawContributions = ctx.bySlot.get(slot) ?? [];
     const cleanItems = slot.useContributions();
 
     const key = config.key(props);
@@ -602,14 +598,14 @@ export function defineDispatchSlot<
         )
       : config.fallback;
     // Index correspondence: both `cleanItems` and `rawContributions` come from
-    // `ctx.bySlot.get(id)` (clean is a positional `.map` of raw — slots.ts:33-36),
+    // `ctx.bySlot.get(slot)` (clean is a positional `.map` of raw — slots.ts:33-36),
     // so `rawContributions[matchedIndex]` is the stamped Contribution carrying
     // `_pluginId` for the error-boundary middleware. The fallback path has no
     // contribution, so synthesize a minimal one with a generic boundary label.
     const contribution: Contribution =
       matchedIndex >= 0
         ? rawContributions[matchedIndex]!
-        : ({ _slotId: id } as Contribution);
+        : ({ _slot: slot } as Contribution);
 
     const node: ReactNode = Component
       ? createElement(Component as ComponentType<object>, props as object)
@@ -623,14 +619,14 @@ export function defineDispatchSlot<
     // outcome is still readable from inside an error-boundary fallback.
     const matched = matchedIndex >= 0;
     const outcome = useMemo(
-      () => ({ slotId: id, key, matched }),
+      () => ({ slotId: slot.id, key, matched }),
       [key, matched],
     );
 
     return createElement(
       DispatchOutcomeContext.Provider,
       { value: outcome },
-      applyItemMiddlewares(node, id, contribution),
+      applyItemMiddlewares(node, slot.id, contribution),
     );
   };
 
@@ -685,11 +681,9 @@ export function defineOrderedDispatchSlot<
   Key extends string = string,
   Extra extends object = {},
 >(
-  id: string,
   config: DispatchSlotConfig<Props, Key, Extra & { id: string }>,
 ): OrderedDispatchSlot<Props, Key, Extra> {
   const slot = defineDispatchSlot<Props, Key, Extra & { id: string }>(
-    id,
     config,
   ) as unknown as OrderedDispatchSlot<Props, Key, Extra>;
   slot.meta = { kind: "ordered-dispatch", reorderable: true };
@@ -703,7 +697,7 @@ export function defineOrderedDispatchSlot<
  * escape from isolation.
  */
 export function renderIsolated(
-  slotId: string,
+  slot: SlotHandle,
   contribution: Contribution,
   props?: object,
 ): ReactNode {
@@ -712,7 +706,7 @@ export function renderIsolated(
   );
   return applyItemMiddlewares(
     createElement(Component as ComponentType<object>, props),
-    slotId,
+    slot.id,
     contribution,
   );
 }

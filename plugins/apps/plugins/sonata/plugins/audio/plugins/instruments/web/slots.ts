@@ -6,18 +6,18 @@ type IconType = ComponentType<{ className?: string }>;
 
 /** One note to sound, timed against the AudioContext clock (absolute seconds). */
 export interface ScheduledNote {
-  pitch: number;     // MIDI 0-127
-  velocity: number;  // MIDI 0-127
-  when: number;      // absolute AudioContext.currentTime-based start
-  duration: number;  // seconds
+  pitch: number; // MIDI 0-127
+  velocity: number; // MIDI 0-127
+  when: number; // absolute AudioContext.currentTime-based start
+  duration: number; // seconds
 }
 
 /** A live, audio-context-bound voice manager produced by an Instrument. */
 export interface InstrumentVoices {
-  loaded: Promise<void>;          // resolves when samples are ready to sound
+  loaded: Promise<void>; // resolves when samples are ready to sound
   schedule(note: ScheduledNote): void;
-  allOff(): void;                 // cancel everything scheduled/sounding (stop/seek)
-  dispose(): void;                // release audio resources
+  allOff(): void; // cancel everything scheduled/sounding (stop/seek)
+  dispose(): void; // release audio resources
   /** Live, interactive note-on for hand-played keys: starts a sustaining voice
    *  immediately (no scheduled when/duration) and returns a note-off fn that
    *  releases it. Optional — instruments that cannot sustain on demand omit it. */
@@ -48,6 +48,9 @@ export const SonataAudio = {
     /** Fallback timbre for tracks with no program/override (exactly one). */
     default?: boolean;
     /** Create a voice manager bound to `ctx`, routed into `destination`. */
-    createVoices: (ctx: AudioContext, destination: AudioNode) => InstrumentVoices;
-  }>("sonata.instrument", { docLabel: (p) => p.label }),
+    createVoices: (
+      ctx: AudioContext,
+      destination: AudioNode,
+    ) => InstrumentVoices;
+  }>({ docLabel: (p) => p.label }),
 };

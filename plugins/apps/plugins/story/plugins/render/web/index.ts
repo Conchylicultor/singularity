@@ -9,5 +9,5 @@ export default {
   description:
     "Owns the Story.Renderer + Story.Content dispatch slots, the <StoryRender pageId rendererId/> surface, RendererPicker, and visible unsupported-block / no-renderer fallbacks.",
   contributions: [], // inert: no contributors land in this task
-  slots: [Story],
+  slots: Story,
 } satisfies PluginDefinition;

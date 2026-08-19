@@ -51,5 +51,5 @@ export default {
         tokenGroupMatchesSearch(fontFamilyGroup, search),
     }),
   ],
-  slots: [FontFamily],
+  slots: FontFamily,
 } satisfies PluginDefinition;

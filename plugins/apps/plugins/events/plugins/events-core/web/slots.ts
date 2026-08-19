@@ -40,5 +40,5 @@ export const EventSources = {
      */
     originUrl?: (config: Record<string, unknown>) => string | null;
     Extra?: ComponentType<{ sourceId: string }>;
-  }>("events.source-type", { docLabel: (p) => p.label }),
+  }>({ docLabel: (p) => p.label }),
 };

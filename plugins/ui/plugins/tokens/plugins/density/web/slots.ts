@@ -9,7 +9,7 @@ export interface DensityPresetContribution {
 }
 
 export const Density = {
-  Preset: defineSlot<DensityPresetContribution>("ui.density.preset", {
+  Preset: defineSlot<DensityPresetContribution>({
     docLabel: (p) => p.label,
   }),
 };

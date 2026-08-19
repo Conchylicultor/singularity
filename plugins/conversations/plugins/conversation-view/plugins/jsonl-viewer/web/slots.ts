@@ -1,4 +1,7 @@
-import { defineRenderSlot, defineDispatchSlot } from "@plugins/primitives/plugins/slot-render/web";
+import {
+  defineRenderSlot,
+  defineDispatchSlot,
+} from "@plugins/primitives/plugins/slot-render/web";
 import { defineSlot } from "@plugins/framework/plugins/web-sdk/core";
 import type { ComponentType } from "react";
 import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-watcher/core";
@@ -38,32 +41,22 @@ export interface EventFilterContribution {
 }
 
 export const JsonlViewer = {
-  EventRenderer: defineDispatchSlot<{ event: JsonlEvent }, JsonlEvent["kind"]>(
-    "conversation.jsonl-viewer.event-renderer",
-    {
-      key: (p) => p.event.kind,
-      fallback: UnknownEventRow,
-      docLabel: (c) => String(c.match),
-    },
-  ),
-  PendingPrompt: defineDispatchSlot<{ conversationId: string; waitingFor: string }, string>(
-    "conversation.jsonl-viewer.pending-prompt",
-    {
-      key: (p) => p.waitingFor,
-      fallback: PendingContentIndicator,
-      docLabel: (c) => String(c.match),
-    },
-  ),
-  EventFilter: defineSlot<EventFilterContribution>(
-    "conversation.jsonl-viewer.event-filter",
-    { docLabel: (p) => p.id },
-  ),
-  Overlay: defineRenderSlot<OverlayContribution>(
-    "conversation.jsonl-viewer.overlay",
-    { docLabel: (p) => p.id },
-  ),
-  PendingPromptAction: defineRenderSlot<PendingPromptActionContribution>(
-    "conversation.jsonl-viewer.pending-prompt-action",
-    { docLabel: (p) => p.id },
-  ),
+  EventRenderer: defineDispatchSlot<{ event: JsonlEvent }, JsonlEvent["kind"]>({
+    key: (p) => p.event.kind,
+    fallback: UnknownEventRow,
+    docLabel: (c) => String(c.match),
+  }),
+  PendingPrompt: defineDispatchSlot<
+    { conversationId: string; waitingFor: string },
+    string
+  >({
+    key: (p) => p.waitingFor,
+    fallback: PendingContentIndicator,
+    docLabel: (c) => String(c.match),
+  }),
+  EventFilter: defineSlot<EventFilterContribution>({ docLabel: (p) => p.id }),
+  Overlay: defineRenderSlot<OverlayContribution>({ docLabel: (p) => p.id }),
+  PendingPromptAction: defineRenderSlot<PendingPromptActionContribution>({
+    docLabel: (p) => p.id,
+  }),
 };

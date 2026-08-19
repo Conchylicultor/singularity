@@ -1,3 +1,5 @@
+import type { SlotHandle } from "@plugins/framework/plugins/slot-declaration/core";
+import { declaredSlotId } from "@plugins/framework/plugins/slot-declaration/core";
 import { existsSync } from "fs";
 import { join, relative } from "path";
 import { writeGenerated } from "./write-generated";
@@ -98,13 +100,15 @@ async function collectTokenGroupVarsUncached(
     }
     const def = mod.default as
       | {
-          contributions?: Array<Record<string, unknown> & { _slotId?: string }>;
+          contributions?: Array<
+            Record<string, unknown> & { _slot?: SlotHandle }
+          >;
         }
       | undefined;
     const contributions = def?.contributions;
     if (!contributions) continue;
     for (const c of contributions) {
-      if (c._slotId !== TOKEN_GROUP_SLOT_ID) continue;
+      if (declaredSlotId(c._slot) !== TOKEN_GROUP_SLOT_ID) continue;
       const id = c.id;
       const descriptor = c.descriptor as
         { vars?: Record<string, string> } | undefined;

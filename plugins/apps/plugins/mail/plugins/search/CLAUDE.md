@@ -55,8 +55,8 @@ composes primitives.
 - Description: Mail on-demand search: a Search sidebar entry opening a query surface over GET /api/mail/search (Gmail relevance order, reaching mail older than the sync window), plus a lazily-hydrated reader pane for a selected message.
 - Web:
   - Slots:
-    - `pane.mail-search.actions`
-    - `pane.mail-message.actions`
+    - `mail-search.actions`
+    - `mail-message.actions`
   - Contributes:
     - `Mail.Sidebar` "Search" → `MailSearchSidebar`
     - `Pane.Register` "mail-search"

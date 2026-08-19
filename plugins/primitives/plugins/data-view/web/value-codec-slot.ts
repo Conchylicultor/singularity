@@ -12,10 +12,9 @@ import { useFieldIdentities } from "./internal/use-field-identities";
  * `extends` chain (`useResolveValueCodec`). Types whose value is already a
  * string (text/enum) contribute nothing and fall back to `IDENTITY_CODEC`.
  */
-const ValueCodecSlot = defineSlot<{ match: string; codec: ValueCodec }>(
-  "data-view.value-codec",
-  { docLabel: (c) => c.match },
-);
+const ValueCodecSlot = defineSlot<{ match: string; codec: ValueCodec }>({
+  docLabel: (c) => c.match,
+});
 
 /** Resolve a field type id → its ValueCodec, honoring `extends`; identity default. */
 export function useResolveValueCodec(): (typeId: string) => ValueCodec {

@@ -22,9 +22,7 @@ import { runningOnServer } from "../internal/deploy-runs";
 import { DeleteDeploymentDialog } from "./delete-deployment-dialog";
 
 /** Trailing-action slot for the Deployments list rows. */
-export const DeploymentItemActions = defineItemActions<Deployment>(
-  "deploy.deployments.item-actions",
-);
+export const DeploymentItemActions = defineItemActions<Deployment>();
 
 /**
  * Why a verb cannot be launched right now, as the sentence to put in the tooltip

@@ -8,8 +8,7 @@ export const WebsitePlatform = {
    * owns its full-width band. Demo plugins under `website/demos` contribute
    * their interactive bands here (the pyramid composer, the theme toy).
    */
-  Section: defineRenderSlot<{ label: string; component: ComponentType }>(
-    "website.platform.section",
-    { docLabel: (p) => p.label },
-  ),
+  Section: defineRenderSlot<{ label: string; component: ComponentType }>({
+    docLabel: (p) => p.label,
+  }),
 };

@@ -35,7 +35,7 @@ external keys** (the DataView `views` list is the example — its ids key
 
 - Description: List field type: config-render capability (sortable drag-and-drop list for config-v2.fields.renderer) plus the listField factory.
 - Web:
-  - Contributes: `config-v2.fields.renderer` "list" → `ListRenderer`
+  - Contributes: `Fields.Renderer` "list" → `ListRenderer`
   - Uses:
     - `config_v2/fields.FieldRenderer`
     - `config_v2/fields.Fields`

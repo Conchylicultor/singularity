@@ -14,8 +14,6 @@ import { resolveTypeChain } from "@plugins/fields/core";
 import type { ColumnConfigDerive, ColumnConfigProps, FieldDef } from "../core";
 import { useFieldIdentities } from "./internal/use-field-identities";
 
-const SLOT_ID = "data-view.column-config";
-
 /**
  * Per-type add-time column-config capability. A plain slot carrying, per field
  * type (keyed by `match`, the type token), the two halves of "this type has an
@@ -31,7 +29,7 @@ const ColumnConfig = defineSlot<{
   match: string;
   component: ComponentType<ColumnConfigProps>;
   derive?: ColumnConfigDerive;
-}>(SLOT_ID, { docLabel: (c) => c.match });
+}>({ docLabel: (c) => c.match });
 
 /**
  * Returns a renderer that resolves a field type's config editor (honoring
@@ -46,7 +44,7 @@ export function useResolveColumnConfig(): (
 ) => ReactNode | null {
   const ctx = useContext(PluginRuntimeContext);
   const identities = useFieldIdentities();
-  const raw0 = ctx?.bySlot.get(SLOT_ID);
+  const raw0 = ctx?.bySlot.get(ColumnConfig);
   return useCallback(
     (typeId, props) => {
       const chain = resolveTypeChain(typeId, identities);
@@ -54,7 +52,8 @@ export function useResolveColumnConfig(): (
         const contribution = (raw0 ?? []).find(
           (c) => (c as { match?: unknown }).match === type,
         ) as Contribution | undefined;
-        if (contribution) return renderIsolated(SLOT_ID, contribution, props);
+        if (contribution)
+          return renderIsolated(ColumnConfig, contribution, props);
       }
       return null;
     },

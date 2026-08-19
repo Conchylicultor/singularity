@@ -14,5 +14,5 @@ export default {
     }),
     Pane.Register({ pane: workflowNodePane }),
   ],
-  slots: [workflowNodePane],
+  slots: { "workflow-node": workflowNodePane },
 } satisfies PluginDefinition;

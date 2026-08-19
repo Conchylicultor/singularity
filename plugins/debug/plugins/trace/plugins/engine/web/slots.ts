@@ -39,17 +39,14 @@ export interface TraceTriggerSummaryProps {
 }
 
 export const Trace = {
-  Lane: defineDispatchSlot<TraceLaneProps, string>("trace.lane", {
+  Lane: defineDispatchSlot<TraceLaneProps, string>({
     key: (p) => p.classId,
     fallback: GenericEventLane,
   }),
   // Optional richer summary block in the detail header, dispatched by trigger
   // kind. Falls back to the generic trigger facts.
-  TriggerSummary: defineDispatchSlot<TraceTriggerSummaryProps, string>(
-    "trace.trigger-summary",
-    {
-      key: (p) => p.trace.trigger.kind,
-      fallback: GenericTriggerSummary,
-    },
-  ),
+  TriggerSummary: defineDispatchSlot<TraceTriggerSummaryProps, string>({
+    key: (p) => p.trace.trigger.kind,
+    fallback: GenericTriggerSummary,
+  }),
 };

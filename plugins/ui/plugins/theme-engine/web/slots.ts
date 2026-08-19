@@ -102,24 +102,17 @@ export function useTokenGroupPresetOptions(
 }
 
 export const ThemeEngine = {
-  VariantGroup: defineRenderSlot<VariantGroupContribution>(
-    "ui.theme-engine.variant-group",
-    { docLabel: (p) => p.componentLabel },
-  ),
-  TokenGroup: defineSlot<TokenGroupContribution>(
-    "ui.theme-engine.token-group",
-    { docLabel: (p) => p.label },
-  ),
-  GlobalPreset: defineSlot<GlobalPresetContribution>(
-    "ui.theme-engine.global-preset",
-    { docLabel: (p) => p.label },
-  ),
-  ColorTransform: defineSlot<ColorTransformContribution>(
-    "ui.theme-engine.color-transform",
-    { docLabel: () => "Color Transform" },
-  ),
-  PresetSource: defineSlot<PresetSourceContribution>(
-    "ui.theme-engine.preset-source",
-    { docLabel: () => "Preset Source" },
-  ),
+  VariantGroup: defineRenderSlot<VariantGroupContribution>({
+    docLabel: (p) => p.componentLabel,
+  }),
+  TokenGroup: defineSlot<TokenGroupContribution>({ docLabel: (p) => p.label }),
+  GlobalPreset: defineSlot<GlobalPresetContribution>({
+    docLabel: (p) => p.label,
+  }),
+  ColorTransform: defineSlot<ColorTransformContribution>({
+    docLabel: () => "Color Transform",
+  }),
+  PresetSource: defineSlot<PresetSourceContribution>({
+    docLabel: () => "Preset Source",
+  }),
 };
