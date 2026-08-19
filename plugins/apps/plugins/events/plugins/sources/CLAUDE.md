@@ -11,8 +11,13 @@ the umbrella for the *source types* themselves.
   `readConfigValues`, the label maps).
 - **`plugins/source-detail/`** — the side-pane's regions, one sub-plugin each.
 - **`plugins/source-field/`** — the `source` dimension of the *events* DataView.
+<<<<<<< .merge_file_IxFQof
 - **`plugins/url-extract/`, `plugins/manual/`, `plugins/dmda/`,
   `plugins/salsanueva/`** — the source types.
+=======
+- **`plugins/refresh-all/`** — the pane's Refresh-all button.
+- **`plugins/url-extract/`, `plugins/manual/`, …** — the source types.
+>>>>>>> .merge_file_CRiGWj
 
 Naming: a **source** is a configured instance (a row in `event_sources`); a
 **source type** is the plugin that knows how to read that kind of thing.
@@ -29,6 +34,23 @@ contributes `Extra` instead.
 The one exception is deliberate and generic: an *unregistered* type (its plugin
 uninstalled) is rendered as an explicit "not installed" state rather than an
 empty form, in both the row and the Settings section.
+
+## The list: one chip, and a derived dimension
+
+`extraction` (never / ok / empty / failed, from `extractionStatus`) is a field
+with **no column behind it** — legal here only because this DataView is
+client-side over a bounded live window, so filter/sort/group-by need no server
+binding. It is the dimension that answers "which sources are silently returning
+nothing"; `status` cannot.
+
+The row paints ONE chip: `running` while a run is in flight, the extraction
+status otherwise. `idle` is a constant on a healthy source and `error` is
+subsumed (a terminal failure also writes a failed run; a transient one leaves
+`status: idle` while the extraction status still says `failed`).
+
+Row actions are a slot, ordered non-destructive-first: `enabled` (toggle) then
+`delete`. Disabling now also drops the source's events out of the events list —
+a query-time default in `event-list`, not a delete, so re-enabling restores them.
 
 ## Source-type wiring (unchanged)
 
@@ -72,18 +94,20 @@ Design: [`research/2026-08-03-apps-events-event-tracking-app.md`](../../../../..
   - Slots:
     - `EventSourceDetail.Section` ← `apps.events.sources.source-detail.runs`, `apps.events.sources.source-detail.schedule`, `apps.events.sources.source-detail.settings`, `apps.events.sources.source-detail.status`
     - `EventSourceActions` ← `apps.events.sources`
-    - `eventSourcesPane.Actions`
+    - `eventSourcesPane.Actions` ← `apps.events.sources.refresh-all`
     - `eventSourceDetailPane.Actions`
   - Contributes:
     - `Pane.Register` "event-sources"
     - `Pane.Register` "event-source-detail"
     - `Events.Sidebar` "Sources" → `component`
+    - `EventSourceActions` "enabled" → `SourceToggleAction`
     - `EventSourceActions` "delete" → `SourceDeleteAction`
   - Uses:
     - `apps/events/events-core.EventSources`
     - `apps/events/events-core.useCreateEventSource`
     - `apps/events/events-core.useDeleteEventSource`
     - `apps/events/events-core.useEventSources`
+    - `apps/events/events-core.useUpdateEventSource`
     - `apps/events/shell.Events`
     - `config_v2/fields.FieldRenderer`
     - `infra/endpoints.getEndpointErrorMessage`
@@ -127,6 +151,10 @@ Design: [`research/2026-08-03-apps-events-event-tracking-app.md`](../../../../..
     - `EventSourceDetail`
     - `eventSourceDetailPane`
     - `eventSourcesPane`
+    - `EXTRACTION_STATUS_HINT`
+    - `EXTRACTION_STATUS_LABEL`
+    - `EXTRACTION_STATUS_OPTIONS`
+    - `EXTRACTION_STATUS_VARIANT`
     - `formatDuration`
     - `initialConfigValues`
     - `readConfigValues`
@@ -142,6 +170,7 @@ Design: [`research/2026-08-03-apps-events-event-tracking-app.md`](../../../../..
     - `useEventSourceTypes`
 - Cross-plugin:
   - Imported by:
+    - `apps/events/sources/refresh-all`
     - `apps/events/sources/source-detail/runs`
     - `apps/events/sources/source-detail/schedule`
     - `apps/events/sources/source-detail/settings`
@@ -149,7 +178,11 @@ Design: [`research/2026-08-03-apps-events-event-tracking-app.md`](../../../../..
 - Sub-plugins:
   - **`dmda`** — Des Mots et Des Arts source type in the Events `+` menu: contributes the `dmda` type with its generic category picker. Des Mots et Des Arts event source type: probe reads the site's own paginated JSON listing (SSRF-guarded) and fingerprints its identity fields; extract maps the rows to events with no model call, resolving the year the site omits from the weekday it publishes.
   - **`manual`** — Manual event source type: contributes the hand-entry option to the Events `+` source menu. Zero-config — the user is the extractor, so there is nothing to point it at. Hand-entry event source type: probe reports a constant fingerprint (nothing upstream can change) and extract vouches for the source's own live rows, so a refresh can never bury events the user typed.
+<<<<<<< .merge_file_IxFQof
   - **`salsanueva`** — SalsaNueva source type in the Events `+` menu: contributes the `salsanueva` type with its dance / style / level / school / teacher / day filters. SalsaNueva event source type: probe reads the school's own courses API (SSRF-guarded) for the published term and groups the dated occurrences back into weekly courses; extract filters them by the source's own dance / level / school selection and publishes each course as ONE recurring event, with no model call.
+=======
+  - **`refresh-all`** — Refresh-all action in the Events sources pane toolbar: one request that enqueues a run for every ENABLED source, with the enqueued / already-running / skipped tally rendered arm by arm as a toast. Contributed into the pane's Actions, so the sources pane knows nothing about it.
+>>>>>>> .merge_file_CRiGWj
   - **`source-detail`** — Umbrella for the source side-pane's sections — one sub-plugin per region of a configured source (settings, schedule, status, runs).
   - **`source-field`** — Contributes the `source` dimension into the events DataView: a `sourceId` enum field whose options are the live configured sources, so events can be filtered, sorted and grouped by source with no edit to event-list.
   - **`url-extract`** — Web-page source type in the Events `+` menu: contributes the `url` type with its generic URL + extraction-hint form. Web-page event source type: probe reads the URL through one transport-blind pipeline (SSRF-guarded plain fetch, or a real browser when the source's Fetch mode says so or the site answers a bot challenge), refuses a page it cannot read whole or that has no readable text at all, and fingerprints its normalized visible text; extract turns that text into structured events with a one-shot Sonnet call, validated against ExtractedEventSchema.

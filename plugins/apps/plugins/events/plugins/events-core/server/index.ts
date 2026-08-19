@@ -10,6 +10,7 @@ import {
   listEventSourceRuns,
   listEventSources,
   listRunEvents,
+  refreshAllEventSources,
   refreshEventSourceNow,
   updateEventSource,
 } from "../core";
@@ -21,6 +22,7 @@ import {
   handleListRunEvents,
   handleListRuns,
   handleListSources,
+  handleRefreshAll,
   handleRefreshSource,
   handleUpdateSource,
 } from "./internal/handlers";
@@ -88,6 +90,7 @@ export default {
     [updateEventSource.route]: handleUpdateSource,
     [deleteEventSource.route]: handleDeleteSource,
     [refreshEventSourceNow.route]: handleRefreshSource,
+    [refreshAllEventSources.route]: handleRefreshAll,
     [listEventSourceRuns.route]: handleListRuns,
     [getEventSourceRun.route]: handleGetRun,
     [listRunEvents.route]: handleListRunEvents,

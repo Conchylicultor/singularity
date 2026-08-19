@@ -1,6 +1,10 @@
 import { describe, expect, test } from "bun:test";
 import type { FilterGroup } from "@plugins/primitives/plugins/data-view/core";
-import { filterMentionsField, shouldHideDisappeared } from "./scope";
+import {
+  filterMentionsField,
+  shouldHideDisappeared,
+  shouldHideInactiveSources,
+} from "./scope";
 
 function group(children: FilterGroup["children"]): FilterGroup {
   return { kind: "group", id: "g", conjunction: "and", children };
@@ -17,28 +21,56 @@ describe("filterMentionsField", () => {
 
   test("a top-level rule on the field", () => {
     const f = group([
-      { kind: "rule", id: "r1", fieldId: "disappearedAt", operatorId: "is-empty" },
+      {
+        kind: "rule",
+        id: "r1",
+        fieldId: "disappearedAt",
+        operatorId: "is-empty",
+      },
     ]);
     expect(filterMentionsField(f, "disappearedAt")).toBe(true);
   });
 
   test("a rule on another field does not count", () => {
     const f = group([
-      { kind: "rule", id: "r1", fieldId: "city", operatorId: "is", value: "Paris" },
+      {
+        kind: "rule",
+        id: "r1",
+        fieldId: "city",
+        operatorId: "is",
+        value: "Paris",
+      },
     ]);
     expect(filterMentionsField(f, "disappearedAt")).toBe(false);
   });
 
   test("finds the rule nested in a sub-group", () => {
     const f = group([
-      { kind: "rule", id: "r1", fieldId: "city", operatorId: "is", value: "Paris" },
+      {
+        kind: "rule",
+        id: "r1",
+        fieldId: "city",
+        operatorId: "is",
+        value: "Paris",
+      },
       {
         kind: "group",
         id: "g2",
         conjunction: "or",
         children: [
-          { kind: "rule", id: "r2", fieldId: "category", operatorId: "is", value: "club" },
-          { kind: "rule", id: "r3", fieldId: "disappearedAt", operatorId: "is-not-empty" },
+          {
+            kind: "rule",
+            id: "r2",
+            fieldId: "category",
+            operatorId: "is",
+            value: "club",
+          },
+          {
+            kind: "rule",
+            id: "r3",
+            fieldId: "disappearedAt",
+            operatorId: "is-not-empty",
+          },
         ],
       },
     ]);
@@ -52,7 +84,15 @@ describe("shouldHideDisappeared", () => {
     expect(shouldHideDisappeared(group([]))).toBe(true);
     expect(
       shouldHideDisappeared(
-        group([{ kind: "rule", id: "r", fieldId: "city", operatorId: "is", value: "Lyon" }]),
+        group([
+          {
+            kind: "rule",
+            id: "r",
+            fieldId: "city",
+            operatorId: "is",
+            value: "Lyon",
+          },
+        ]),
       ),
     ).toBe(true);
   });
@@ -61,9 +101,64 @@ describe("shouldHideDisappeared", () => {
     for (const operatorId of ["is-empty", "is-not-empty"]) {
       expect(
         shouldHideDisappeared(
-          group([{ kind: "rule", id: "r", fieldId: "disappearedAt", operatorId }]),
+          group([
+            { kind: "rule", id: "r", fieldId: "disappearedAt", operatorId },
+          ]),
         ),
       ).toBe(false);
     }
+  });
+});
+
+describe("shouldHideInactiveSources", () => {
+  test("hides by default", () => {
+    expect(shouldHideInactiveSources(null)).toBe(true);
+    expect(shouldHideInactiveSources(group([]))).toBe(true);
+    expect(
+      shouldHideInactiveSources(
+        group([
+          {
+            kind: "rule",
+            id: "r",
+            fieldId: "city",
+            operatorId: "is",
+            value: "Lyon",
+          },
+        ]),
+      ),
+    ).toBe(true);
+  });
+
+  test("any rule on sourceId yields the default — whichever operator", () => {
+    for (const operatorId of ["is", "is-not", "is-not-empty"]) {
+      expect(
+        shouldHideInactiveSources(
+          group([
+            {
+              kind: "rule",
+              id: "r",
+              fieldId: "sourceId",
+              operatorId,
+              value: "s1",
+            },
+          ]),
+        ),
+      ).toBe(false);
+    }
+  });
+
+  // The two defaults are independent: naming one dimension must not disarm the
+  // other's.
+  test("a disappearedAt rule does not disarm this default", () => {
+    const f = group([
+      {
+        kind: "rule",
+        id: "r",
+        fieldId: "disappearedAt",
+        operatorId: "is-not-empty",
+      },
+    ]);
+    expect(shouldHideInactiveSources(f)).toBe(true);
+    expect(shouldHideDisappeared(f)).toBe(false);
   });
 });

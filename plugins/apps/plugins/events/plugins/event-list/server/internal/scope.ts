@@ -40,3 +40,30 @@ export function filterMentionsField(
 export function shouldHideDisappeared(filter: FilterGroup | null): boolean {
   return !filterMentionsField(filter, DISAPPEARED_FIELD_ID);
 }
+
+/** The contributed `source` dimension's field id — see `COLUMN_MAP`. */
+export const SOURCE_FIELD_ID = "sourceId";
+
+/**
+ * Should the query hide events belonging to a DISABLED source?
+ *
+ * Disabling a source is the user saying "I don't care about this any more". It
+ * already means the scheduler skips it and `Refresh now` refuses; it must also
+ * mean its events stop cluttering the list — without deleting anything, so the
+ * toggle stays a one-click, fully reversible decision.
+ *
+ * Same shape as {@link shouldHideDisappeared}, and for the same reason: a
+ * DEFAULT, never a fixed predicate. `sourceId` is a real filterable dimension
+ * (contributed by the `sources` plugin), so a view that names it AT ALL — with
+ * any operator, "source is X" as much as "source is-not-empty" — is explicitly
+ * asking about sources and must get exactly what it asked for, a disabled
+ * source's events included. A hard predicate would instead make a disabled
+ * source's whole history unreachable.
+ *
+ * That reversibility is the whole reason this is a query-time scope and not a
+ * write: the events are not stamped, not moved and not deleted, so re-enabling
+ * the source brings every one of them straight back with nothing to undo.
+ */
+export function shouldHideInactiveSources(filter: FilterGroup | null): boolean {
+  return !filterMentionsField(filter, SOURCE_FIELD_ID);
+}

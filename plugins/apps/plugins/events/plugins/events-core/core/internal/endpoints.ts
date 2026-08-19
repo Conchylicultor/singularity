@@ -94,6 +94,34 @@ export const refreshEventSourceNow = defineEndpoint({
   response: RefreshSourceResultSchema,
 });
 
+/**
+ * The outcome of "Refresh all" — a TALLY of the very same per-source
+ * `RefreshSourceResult` arms, never a boolean, for the reason that union exists:
+ * "we did not start 3 of them" has to be sayable. A caller renders it arm by
+ * arm; a resolved promise is not "everything refreshed".
+ *
+ * DISABLED sources are not candidates and are therefore counted NOWHERE — they
+ * are not a "skip", because nothing was asked of them. `skipped` can still be
+ * non-zero: a source disabled between the listing and its own enqueue is a
+ * genuine refusal of a request we did make.
+ */
+export const RefreshAllResultSchema = z.object({
+  enqueued: z.number().int().nonnegative(),
+  alreadyRunning: z.number().int().nonnegative(),
+  skipped: z.number().int().nonnegative(),
+});
+export type RefreshAllResult = z.infer<typeof RefreshAllResultSchema>;
+
+/**
+ * Refresh every enabled source. Cannot collide with
+ * `POST /api/events/sources/:id/refresh` — that route has one more path
+ * segment, so `refresh-all` is never mistaken for a source id.
+ */
+export const refreshAllEventSources = defineEndpoint({
+  route: "POST /api/events/sources/refresh-all",
+  response: RefreshAllResultSchema,
+});
+
 export const ListEventSourceRunsQuerySchema = z.object({
   limit: z.coerce.number().int().positive().max(200).optional(),
 });

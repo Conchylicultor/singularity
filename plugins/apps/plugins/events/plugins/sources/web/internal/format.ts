@@ -1,9 +1,11 @@
 import type { BadgeVariant } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import {
+  EXTRACTION_STATUSES,
   REFRESH_CADENCES,
   RUN_OUTCOMES,
   SOURCE_STATUSES,
   type EventSourceRun,
+  type ExtractionStatus,
   type RefreshCadence,
   type RunOutcome,
   type SourceStatus,
@@ -46,6 +48,60 @@ export const SOURCE_STATUS_VARIANT: Record<SourceStatus, BadgeVariant> = {
   idle: "muted",
   running: "info",
   error: "destructive",
+};
+
+/**
+ * The derived "is this source working?" vocabulary (`extractionStatus`), as
+ * chip text. Read alongside `SOURCE_STATUS_*`, which answers a different
+ * question: that one is what the source is doing *right now*, this one is what
+ * came out of it last time.
+ */
+export const EXTRACTION_STATUS_LABEL: Record<ExtractionStatus, string> = {
+  never: "Never run",
+  ok: "OK",
+  empty: "Empty",
+  failed: "Failed",
+};
+
+export const EXTRACTION_STATUS_OPTIONS = EXTRACTION_STATUSES.map((s) => ({
+  value: s,
+  label: EXTRACTION_STATUS_LABEL[s],
+}));
+
+/**
+ * `empty` is `warning`, NOT `success` — the one colour decision in this file
+ * worth arguing about, so it is argued here.
+ *
+ * An empty extraction is a *successful run* with a *broken outcome*: the fetch
+ * worked, the extraction worked, and zero events came back. That is exactly how
+ * a scraped source dies quietly — the site changes its markup and every run
+ * from then on is a green tick over an empty list. Colouring it `success`
+ * because the run succeeded is precisely the hiding this status exists to undo.
+ * It is not `destructive` either: a venue with nothing on is a legitimate
+ * answer, and crying failure over it would train the user to ignore the chip.
+ */
+export const EXTRACTION_STATUS_VARIANT: Record<ExtractionStatus, BadgeVariant> =
+  {
+    never: "muted",
+    ok: "success",
+    empty: "warning",
+    failed: "destructive",
+  };
+
+/**
+ * One sentence per arm, rendered as the chip's `title`. A four-value status
+ * chip is only self-explaining if hovering it says what the word means — and
+ * `empty` in particular has to spell out that the run itself was fine, or the
+ * user reads a warning colour as "the fetch broke" and goes looking in the
+ * wrong place.
+ */
+export const EXTRACTION_STATUS_HINT: Record<ExtractionStatus, string> = {
+  never:
+    "No run has finished yet, so this source has never been asked anything.",
+  ok: "The last extraction succeeded and found events.",
+  empty:
+    "The last extraction succeeded but found no events — the page may have changed.",
+  failed: "The last run failed, so this source's events may be out of date.",
 };
 
 export const RUN_OUTCOME_LABEL: Record<RunOutcome, string> = {

@@ -318,6 +318,10 @@
       "name": "@singularity/plugin-apps-events-sources-manual",
       "version": "0.0.1",
     },
+    "plugins/apps/plugins/events/plugins/sources/plugins/refresh-all": {
+      "name": "@singularity/plugin-apps-events-sources-refresh-all",
+      "version": "0.0.1",
+    },
     "plugins/apps/plugins/events/plugins/sources/plugins/salsanueva": {
       "name": "@singularity/plugin-apps-events-sources-salsanueva",
       "version": "0.0.1",
@@ -5703,6 +5707,8 @@
     "@singularity/plugin-apps-events-sources-dmda": ["@singularity/plugin-apps-events-sources-dmda@workspace:plugins/apps/plugins/events/plugins/sources/plugins/dmda"],
 
     "@singularity/plugin-apps-events-sources-manual": ["@singularity/plugin-apps-events-sources-manual@workspace:plugins/apps/plugins/events/plugins/sources/plugins/manual"],
+
+    "@singularity/plugin-apps-events-sources-refresh-all": ["@singularity/plugin-apps-events-sources-refresh-all@workspace:plugins/apps/plugins/events/plugins/sources/plugins/refresh-all"],
 
     "@singularity/plugin-apps-events-sources-salsanueva": ["@singularity/plugin-apps-events-sources-salsanueva@workspace:plugins/apps/plugins/events/plugins/sources/plugins/salsanueva"],
 

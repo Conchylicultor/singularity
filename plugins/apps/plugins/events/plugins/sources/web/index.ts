@@ -6,6 +6,7 @@ import { Events } from "@plugins/apps/plugins/events/plugins/shell/web";
 import { eventSourcesPane, eventSourceDetailPane } from "./panes";
 import { EventSourceActions, EventSourceDetail } from "./slots";
 import { SourceDeleteAction } from "./components/source-delete-action";
+import { SourceToggleAction } from "./components/source-toggle-action";
 
 export { eventSourcesPane, eventSourceDetailPane } from "./panes";
 export { EventSourceDetail, EventSourceActions } from "./slots";
@@ -32,6 +33,10 @@ export {
   SOURCE_STATUS_LABEL,
   SOURCE_STATUS_OPTIONS,
   SOURCE_STATUS_VARIANT,
+  EXTRACTION_STATUS_LABEL,
+  EXTRACTION_STATUS_OPTIONS,
+  EXTRACTION_STATUS_VARIANT,
+  EXTRACTION_STATUS_HINT,
   RUN_OUTCOME_LABEL,
   RUN_OUTCOME_OPTIONS,
   RUN_OUTCOME_VARIANT,
@@ -53,6 +58,9 @@ export default {
         onClick: () => openPane(eventSourcesPane, {}, { mode: "root" }),
       }),
     }),
+    // Ahead of delete on purpose: a reversible action must not sit where the
+    // user's muscle memory has put the destructive one (the rightmost button).
+    EventSourceActions({ id: "enabled", component: SourceToggleAction }),
     EventSourceActions({ id: "delete", component: SourceDeleteAction }),
   ],
   slots: [

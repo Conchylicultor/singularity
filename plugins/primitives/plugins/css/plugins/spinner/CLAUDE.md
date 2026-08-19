@@ -12,6 +12,7 @@
 - Cross-plugin:
   - Imported by:
     - `apps/browser/tabs`
+    - `apps/events/sources/refresh-all`
     - `apps/mail/attachments`
     - `apps/mail/sync-status`
     - `apps/sonata/sources/ultimate-guitar`

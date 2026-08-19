@@ -20,6 +20,7 @@
   - Exports (values): `showToast`
 - Cross-plugin:
   - Imported by:
+    - `apps/events/sources/refresh-all`
     - `apps/pages/page-tree`
     - `build/serve-composition`
     - `config_v2/settings`

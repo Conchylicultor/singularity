@@ -46,6 +46,23 @@ export const RUN_OUTCOMES = ["unchanged", "extracted", "failed"] as const;
 export type RunOutcome = (typeof RUN_OUTCOMES)[number];
 
 /**
+ * What the sources list answers when the user asks "is this source working?".
+ *
+ * DERIVED from the source row's `lastOutcome` + `lastEventCount` (see
+ * `./extraction-status.ts`) and NEVER stored: one fact — the run ledger's
+ * outcome and count, written atomically with the run row — with one derivation
+ * on top of it, so there is no stored copy that can drift from the ledger.
+ *
+ * `empty` is deliberately its own arm and NOT an error: a successful extraction
+ * that found nothing is the single most common way a source goes silently broken
+ * (the site changed its markup, the scrape still "succeeds", zero events land),
+ * and folding it into `ok` is exactly what hides it. It is also a legitimate
+ * answer — a venue with nothing on — which is why it is not `failed` either.
+ */
+export const EXTRACTION_STATUSES = ["never", "ok", "empty", "failed"] as const;
+export type ExtractionStatus = (typeof EXTRACTION_STATUSES)[number];
+
+/**
  * What ONE run did to ONE event — the per-event detail behind the run row's
  * four counts.
  *

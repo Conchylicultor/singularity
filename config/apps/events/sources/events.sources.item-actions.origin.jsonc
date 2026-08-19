@@ -1,4 +1,4 @@
-// @hash 9aa5a3d53e16
+// @hash d4cc6b7a7168
 {
   // Item: "<key>" (terse; <key> is "<pluginId>:<id>")
   // Hide: { "item": "<key>", "hidden": true }
@@ -6,6 +6,7 @@
   // Group: { "type": "header", "label": "<title>", "collapsed": false, "items": [ "<key>", … ] }
   // Overflow (⋯ menu): { "type": "overflow", "id": "<unique-id>", "items": [ "<key>", … ] }
   "items": [
+    "apps.events.sources:enabled",
     "apps.events.sources:delete"
   ]
 }

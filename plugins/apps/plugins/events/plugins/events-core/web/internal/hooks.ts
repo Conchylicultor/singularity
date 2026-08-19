@@ -17,6 +17,7 @@ import {
   getEventSourceRun,
   listEventSourceRuns,
   listRunEvents,
+  refreshAllEventSources,
   refreshEventSourceNow,
   updateEventSource,
   type EventSource,
@@ -134,4 +135,19 @@ export function useDeleteEventSource() {
  */
 export function useRefreshEventSourceNow() {
   return useEndpointMutation(refreshEventSourceNow);
+}
+
+/**
+ * "Refresh all" — every enabled source in one request. The response is a TALLY
+ * the caller must render arm by arm, for the same reason `useRefreshEventSourceNow`
+ * returns a discriminated result: a resolved promise is not "all refreshed", and
+ * a tally reading `0 enqueued / 4 already-running` is a legitimate, useful answer.
+ *
+ * It invalidates nothing, for the same reason that one does not: this resolves at
+ * enqueue time, before any run has started, so a refetch here could only re-read
+ * the list unchanged. The runs appear as they land, off the
+ * `events.runs-revision` tick.
+ */
+export function useRefreshAllEventSources() {
+  return useEndpointMutation(refreshAllEventSources);
 }

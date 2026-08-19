@@ -48,8 +48,13 @@ type that stands for no page (`manual`).
 Four `defineEntity` tables, field records in `core/internal/fields.ts`:
 
 - `event_sources` — one row per *configured instance*. Runtime/derived state
-  (`status`, `lastFingerprint`, `lastRunAt`/`nextRunAt`, the classified error)
-  lives here, never in `config` — the `mail_accounts` + `mail_sync_state` split.
+  (`status`, `lastFingerprint`, `lastRunAt`/`nextRunAt`, the classified error,
+  `last_outcome`/`last_event_count`) lives here, never in `config` — the
+  `mail_accounts` + `mail_sync_state` split. `extractionStatus(source)` (`core/`)
+  derives never/ok/empty/failed from the last two and is **never stored**: one
+  fact, one derivation, nothing to drift. `empty` is its own arm on purpose — a
+  successful extraction that found nothing is how a source goes silently broken,
+  and folding it into `ok` is what hides it.
 - `events` — one row per event *or series*: `date` (jsonb, `event-date`) states
   recurrence once, and `starts_at`/`ends_at`/`all_day`/`recurring`/
   `recurrence_label` are its projections, written only via `eventDateProjection`.
@@ -88,6 +93,14 @@ the stamp, the barrel exports `events` only as the read handle `eventsTable`,
 and the plugin's own `events/no-raw-events-write` lint rule fails any
 `db.insert/update/delete(eventsTable)` elsewhere. Don't add a second write path.
 
+That tick means "the events QUERY's result may have moved", so it also folds in
+an md5 of the **enabled source ids** — the query hides events of a disabled
+source, so toggling one changes the result with no `events` write. Ids only,
+never `event_sources.updated_at`: a run flips `status` several times, which would
+pulse every open list for a change it cannot see. The loader reading
+`event_sources` is what puts it in the resource's read-set (that, not
+`identityTable`, is what decides which tables recompute it).
+
 Retention (`events` disappeared > 90 d, runs > 30 d) belongs to the `refresh`
 plugin, which owns the sweeps.
 
@@ -97,6 +110,11 @@ plugin, which owns the sweeps.
 "Refresh now" endpoint dispatches through `registerRefreshRunner` — a single
 handler the engine installs in its `register` phase. Absent handler is a loud
 503, not a swallowed no-op.
+
+"Refresh all" (`POST /api/events/sources/refresh-all`) is that same seam in a
+sequential loop over the ENABLED sources, answering a **tally** of the per-source
+result arms — a disabled source is no candidate and is counted nowhere, and a
+resolved promise is not "all refreshed".
 
 Design: [`research/2026-08-03-apps-events-event-tracking-app.md`](../../../../../research/2026-08-03-apps-events-event-tracking-app.md).
 
@@ -121,6 +139,7 @@ Design: [`research/2026-08-03-apps-events-event-tracking-app.md`](../../../../..
     - `useEventSourceRuns`
     - `useEventSources`
     - `useEventsRevision`
+    - `useRefreshAllEventSources`
     - `useRefreshEventSourceNow`
     - `useRunEvents`
     - `useSourceOriginUrl`
@@ -178,6 +197,7 @@ Design: [`research/2026-08-03-apps-events-event-tracking-app.md`](../../../../..
     - `PATCH /api/events/sources/:id`
     - `DELETE /api/events/sources/:id`
     - `POST /api/events/sources/:id/refresh`
+    - `POST /api/events/sources/refresh-all`
     - `GET /api/events/sources/:id/runs`
     - `GET /api/events/runs/:runId`
     - `GET /api/events/runs/:runId/events`
@@ -206,6 +226,8 @@ Design: [`research/2026-08-03-apps-events-event-tracking-app.md`](../../../../..
     - `EventSourceRunEvent`
     - `ExtractedEvent`
     - `ExtractionResult`
+    - `ExtractionStatus`
+    - `RefreshAllResult`
     - `RefreshCadence`
     - `RefreshSourceResult`
     - `RunEvent`
@@ -230,7 +252,9 @@ Design: [`research/2026-08-03-apps-events-event-tracking-app.md`](../../../../..
     - `eventSourcesResource`
     - `eventsRevisionResource`
     - `ExtractedEventSchema`
+    - `EXTRACTION_STATUSES`
     - `ExtractionResultSchema`
+    - `extractionStatus`
     - `getEventSource`
     - `getEventSourceRun`
     - `listEventSourceRuns`
@@ -239,6 +263,8 @@ Design: [`research/2026-08-03-apps-events-event-tracking-app.md`](../../../../..
     - `listRunEvents`
     - `ListRunEventsQuerySchema`
     - `REFRESH_CADENCES`
+    - `refreshAllEventSources`
+    - `RefreshAllResultSchema`
     - `refreshEventSourceNow`
     - `RefreshSourceResultSchema`
     - `RUN_EVENT_ACTIONS`
@@ -254,7 +280,11 @@ Design: [`research/2026-08-03-apps-events-event-tracking-app.md`](../../../../..
     - `apps/events/sources`
     - `apps/events/sources/dmda`
     - `apps/events/sources/manual`
+<<<<<<< .merge_file_xxGkZ7
     - `apps/events/sources/salsanueva`
+=======
+    - `apps/events/sources/refresh-all`
+>>>>>>> .merge_file_cDCSVg
     - `apps/events/sources/source-detail/runs`
     - `apps/events/sources/source-detail/runs/caveats`
     - `apps/events/sources/source-detail/runs/extracted-events`

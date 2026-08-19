@@ -7,6 +7,7 @@ import {
   listEventSourceRuns,
   listEventSources,
   listRunEvents,
+  refreshAllEventSources,
   refreshEventSourceNow,
   updateEventSource,
 } from "../../core";
@@ -56,6 +57,49 @@ export const handleRefreshSource = implement(
     return requestSourceRefresh(params.id);
   },
 );
+
+/**
+ * "Refresh all" — every ENABLED source, tallied by the same arms one source
+ * would have answered with.
+ *
+ * A disabled source is not a candidate at all, so it is skipped before the
+ * engine is asked and counted nowhere; `skipped` only ever holds a refusal of a
+ * request we actually made (the row was disabled between this listing and its
+ * own enqueue).
+ *
+ * Sequential `for`/`await`, deliberately not `Promise.all`: an enqueue is cheap
+ * and ordered, so there is nothing to win by fanning out, and a throw must
+ * surface loudly as a failed request rather than being folded into a
+ * settled-results array nobody inspects. A partial enqueue is harmless —
+ * `refreshSourceJob` dedups per source, so the sources already enqueued simply
+ * run, and pressing the button again picks up the rest.
+ */
+export const handleRefreshAll = implement(refreshAllEventSources, async () => {
+  const tally = { enqueued: 0, alreadyRunning: 0, skipped: 0 };
+  for (const source of await listSources()) {
+    if (!source.enabled) continue;
+    const result = await requestSourceRefresh(source.id);
+    // Exhaustive on purpose: a new arm in `RefreshSourceResult` becomes a tsc
+    // error right here instead of being silently uncounted, which is the one
+    // way a tally can lie without anything looking broken.
+    switch (result.status) {
+      case "enqueued":
+        tally.enqueued += 1;
+        break;
+      case "already-running":
+        tally.alreadyRunning += 1;
+        break;
+      case "skipped":
+        tally.skipped += 1;
+        break;
+      default: {
+        const _exhaustive: never = result;
+        throw new Error(`unhandled refresh result: ${String(_exhaustive)}`);
+      }
+    }
+  }
+  return tally;
+});
 
 export const handleListRuns = implement(
   listEventSourceRuns,

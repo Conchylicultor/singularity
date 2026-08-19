@@ -51,6 +51,30 @@ filter tree mentions the field *at all*: naming it, with any operator, is the
 view saying "I know about disappearance — here is what I want". Contrast
 mail-inbox, whose INBOX predicate is a genuinely fixed scope with no field.
 
+## A disabled source's events are hidden by DEFAULT too
+
+Disabling a source is the user saying "I don't care about this any more", so its
+events stop cluttering the list — but nothing is deleted or stamped, so
+re-enabling the source brings every one of them straight back. That
+reversibility is exactly why this is a query-time scope and not a write.
+
+It follows the disappearance rule above, file for file: `scope.ts` exposes
+`shouldHideInactiveSources`, and `handle-query.ts` restricts to events whose
+source row is `enabled` only when the caller's filter tree does *not* mention
+`sourceId` at all. Naming the `source` dimension — with any operator, "source is
+X" as much as "source is-not-empty" — is the view saying "I am asking about
+sources", and it then gets exactly what it asked for, a disabled source's events
+included; a fixed predicate would instead make that history unreachable.
+
+The predicate is a subquery over `event_sources` (a small user-grown table),
+stated positively as "the source is active". Not a denormalized `enabled` copy on
+the event row: that duplicates a *mutable* FK attribute across an unbounded
+table, and every flip of the toggle would owe a backfill.
+
+Freshness when the toggle flips is not this plugin's problem: `events-core`'s
+`events.revision` tick folds in the active-source set, so the open list refetches
+in place like any other event change.
+
 ## The gallery cover is an accessor, not a field
 
 The poster comes from `viewOptions.gallery.cover` in `web/panes.tsx`, not from
@@ -126,6 +150,7 @@ part of the query key.
     - `useOpenEvent`
 - Server:
   - Uses:
+    - `apps/events/events-core._eventSources`
     - `apps/events/events-core.eventsTable`
     - `database.db`
     - `fields/server-capabilities-loader`

@@ -12,6 +12,7 @@ export {
   useUpdateEventSource,
   useDeleteEventSource,
   useRefreshEventSourceNow,
+  useRefreshAllEventSources,
 } from "./internal/hooks";
 export { useSourceOriginUrl } from "./internal/source-origin";
 

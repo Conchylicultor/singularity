@@ -9,7 +9,10 @@ export {
   type RunOutcome,
   RUN_EVENT_ACTIONS,
   type RunEventAction,
+  EXTRACTION_STATUSES,
+  type ExtractionStatus,
 } from "./internal/vocab";
+export { extractionStatus } from "./internal/extraction-status";
 export {
   eventSourceFields,
   eventFields,
@@ -52,6 +55,9 @@ export {
   ListEventSourceRunsQuerySchema,
   RefreshSourceResultSchema,
   type RefreshSourceResult,
+  refreshAllEventSources,
+  RefreshAllResultSchema,
+  type RefreshAllResult,
 } from "./internal/endpoints";
 export {
   eventSourcesResource,

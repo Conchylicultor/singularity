@@ -9,12 +9,16 @@ import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder
 import { matchResource } from "@plugins/primitives/plugins/live-state/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { useEventSources } from "@plugins/apps/plugins/events/plugins/events-core/web";
-import type { EventSource } from "@plugins/apps/plugins/events/plugins/events-core/core";
+import {
+  extractionStatus,
+  type EventSource,
+} from "@plugins/apps/plugins/events/plugins/events-core/core";
 import { eventSourceDetailPane } from "../panes";
 import { EventSourceActions } from "../slots";
 import { useEventSourceTypes } from "../internal/source-types";
 import {
   CADENCE_OPTIONS,
+  EXTRACTION_STATUS_OPTIONS,
   SOURCE_STATUS_OPTIONS,
 } from "../internal/format";
 import { openAddSourceDialog } from "./add-source-dialog";
@@ -67,6 +71,23 @@ export function SourcesList(): ReactNode {
         options: SOURCE_STATUS_OPTIONS,
         value: (s) => s.status,
       },
+      // A DERIVED dimension: there is no `extraction` column — it is computed
+      // by `extractionStatus` from the two the run ledger writes. Fine exactly
+      // here — this DataView is client-side over a bounded live window, so
+      // filter / sort / group-by run over the rows already in hand and need no
+      // server binding. (A server-delegated view, like `event-list`, could not
+      // do this: its filters compile to SQL against real columns.)
+      //
+      // It is the dimension that answers the question `status` cannot —
+      // "which of my sources are silently returning nothing" — so it is what
+      // the `Needs attention` view should be filtering on.
+      {
+        id: "extraction",
+        label: "Extraction",
+        type: "enum",
+        options: EXTRACTION_STATUS_OPTIONS,
+        value: (s) => extractionStatus(s),
+      },
       {
         id: "enabled",
         label: "Enabled",
@@ -103,7 +124,10 @@ export function SourcesList(): ReactNode {
     [types, openPane],
   );
 
-  const renderList = (sources: EventSource[], loading: boolean): ReactElement => (
+  const renderList = (
+    sources: EventSource[],
+    loading: boolean,
+  ): ReactElement => (
     <DataView<EventSource>
       storageKey={SOURCES_VIEW}
       rows={sources}
@@ -118,7 +142,10 @@ export function SourcesList(): ReactNode {
         openPane(eventSourceDetailPane, { sourceId: s.id }, { mode: "push" })
       }
       viewOptions={{
-        list: { size: "md", renderRow: (s: EventSource) => <SourceRow source={s} /> },
+        list: {
+          size: "md",
+          renderRow: (s: EventSource) => <SourceRow source={s} />,
+        },
       }}
       emptyState={
         types.length === 0

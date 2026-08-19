@@ -6,6 +6,13 @@
   // one-click answer to the only urgent question. `By type` is the same set
   // partitioned by kind — useful once several source types are installed, and
   // it names none of them: the sections come from the live registry.
+  //
+  // `Needs attention` filters on `extraction` (the derived last-extraction
+  // status), NOT on `status`. `status` is what the source is doing right now,
+  // and its `error` value only ever holds a TERMINAL failure — so a source
+  // whose runs keep failing transiently, and a source that succeeds every run
+  // while finding zero events (a site that changed its markup), were both
+  // invisible here. Those two are exactly what needs attention.
   "views": [
     { "id": "all", "name": "All", "view": { "type": "list" } },
     {
@@ -15,15 +22,15 @@
         "type": "list",
         "filter": {
           "kind": "group",
-          "id": "f-errored",
+          "id": "f-unhealthy",
           "conjunction": "and",
           "children": [
             {
               "kind": "rule",
-              "id": "r-status-error",
-              "fieldId": "status",
-              "operatorId": "is",
-              "value": "error"
+              "id": "r-extraction-unhealthy",
+              "fieldId": "extraction",
+              "operatorId": "is-any-of",
+              "value": ["failed", "empty"]
             }
           ]
         }

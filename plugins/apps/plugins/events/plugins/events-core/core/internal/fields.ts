@@ -88,6 +88,29 @@ export const eventSourceFields = {
    * stand.
    */
   lastFlags: jsonField<string[]>({ schema: z.array(z.string()), default: [] }),
+  /**
+   * How the LAST RUN ended — ANY run, including the cheap `unchanged` ones, so
+   * this is the newest thing the engine knows rather than the newest thing it
+   * re-read.
+   *
+   * Derived runtime state like `lastFingerprint`, written by the run ledger in
+   * the same transaction as the run row it comes from. `null` means no run has
+   * completed yet — a real state the sources list renders as "never run", NOT an
+   * error and never to be defaulted into looking like one (hence no DB default
+   * in `server/internal/tables.ts`).
+   */
+  lastOutcome: nullable(enumTextField(RUN_OUTCOMES)),
+  /**
+   * How many events the last EXTRACTION found — the count that answers "is this
+   * source still working?", which is why it is worth denormalizing off the run
+   * ledger at all.
+   *
+   * Same rule as `lastFlags`, for the same reason: only an `extracted` run
+   * writes it. An `unchanged` run never re-read the page and a `failed` one
+   * never got there, so clearing or zeroing it on those runs would replace a
+   * true count with a lie. `null` until the first extraction.
+   */
+  lastEventCount: nullable(intField()),
   createdAt: dateField(),
   updatedAt: dateField(),
 } satisfies FieldsRecord;

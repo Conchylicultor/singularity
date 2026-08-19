@@ -1,0 +1,6 @@
+{
+  "name": "@singularity/plugin-apps-events-sources-refresh-all",
+  "description": "Refresh every enabled source from the sources pane toolbar, rendering the enqueue tally arm by arm.",
+  "private": true,
+  "version": "0.0.1"
+}

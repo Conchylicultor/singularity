@@ -125,6 +125,13 @@ async function completeRun(
         // a backlog of overdue ticks.
         nextRunAt: computeNextRunAt(source.refresh, run.finishedAt),
         updatedAt: run.finishedAt,
+        // In the BASE patch, not per-arm: `outcome` is already on the run row
+        // being inserted three statements up, so every ending writes it here by
+        // construction and no arm can forget to. It is the newest thing the
+        // engine knows — including the cheap `unchanged` runs — which is what
+        // makes the sources list's derived status answer "how is it NOW"
+        // rather than "how did it last go well".
+        lastOutcome: run.outcome,
         ...sourceState,
       })
       .where(eq(_eventSources.id, source.id));
@@ -200,6 +207,15 @@ export async function finishExtracted(
       // that reported nothing is the positive statement "the caveats are gone",
       // not an absence of news.
       lastFlags: args.flags,
+      // Written even when 0, for exactly the reason above: this run read the
+      // page, so "it really does list nothing" is a positive statement — and
+      // the one the sources list must surface, since a scrape that keeps
+      // succeeding at zero events is what a site changing its markup looks
+      // like. `finishUnchanged` and `finishFailed` leave this column alone for
+      // the same reason they leave `lastFlags` alone: neither of them read the
+      // page, so neither has a count to state, and writing 0 there would
+      // replace a true count with a lie.
+      lastEventCount: args.counts.found,
       // A `null` fingerprint is stored verbatim: the source declared it cannot
       // be fingerprinted cheaply, so the next run must extract again. Writing a
       // placeholder here would silently turn that into a permanent cache hit.

@@ -74,6 +74,7 @@ icon+count button it stands in for — carries a per-site
     - `apps/deploy/local-serve`
     - `apps/deploy/servers`
     - `apps/events/sources`
+    - `apps/events/sources/refresh-all`
     - `apps/mail/reading-pane`
     - `apps/pages/history`
     - `apps/pages/page-tree`

@@ -115,6 +115,13 @@ same transaction; `finishUnchanged`/`finishFailed` write `flags: []` on their ow
 row and leave `lastFlags` **alone** — neither re-read the page, so the last
 extraction's caveats still stand.
 
+`lastEventCount` follows the same rule for the same reason: only
+`finishExtracted` writes it — even at 0, because "the page really does list
+nothing" is a positive statement — and zeroing it on a run that never read the
+page would replace a true count with a lie. `lastOutcome` is the opposite case
+and sits in `completeRun`'s base patch: EVERY ending writes it (the cheap
+`unchanged` ones included), so no arm can forget to.
+
 ## The ledger is written at the end, not the start
 
 `run-ledger.ts` is the only writer of `event_source_runs` and of a source row's

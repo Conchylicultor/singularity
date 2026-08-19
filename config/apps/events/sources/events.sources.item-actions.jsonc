@@ -1,11 +1,13 @@
-// @hash 9aa5a3d53e16
+// @hash d4cc6b7a7168
 {
   // Hide: { "item": "<key>", "hidden": true }
   // Spacer (gap): { "type": "spacer", "id": "<unique-id>" }
   // Group: { "type": "header", "label": "<title>", "collapsed": false, "items": [ "<key>", … ] }
   //
-  // Delete is the only row action today and sits last by convention, so a
-  // future non-destructive action (Refresh, Open page) lands ahead of it rather
-  // than under the user's muscle memory for the rightmost button.
-  "items": ["apps.events.sources:delete"]
+  // A hover-revealed row cluster, read left to right. Delete stays last by
+  // convention — the rightmost button is where the user's muscle memory puts
+  // the destructive one — so the reversible enable/disable toggle lands ahead
+  // of it, which is exactly the placement this file anticipated when delete was
+  // the only action here.
+  "items": ["apps.events.sources:enabled", "apps.events.sources:delete"]
 }

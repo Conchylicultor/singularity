@@ -5,7 +5,11 @@
   // Spacer (gap): { "type": "spacer", "id": "<unique-id>" }
   // Group: { "type": "header", "label": "<title>", "collapsed": false, "items": [ "<key>", … ] }
   // Overflow (⋯ menu): { "type": "overflow", "id": "<unique-id>", "items": [ "<key>", … ] }
-  "items": [
-    "apps.events.sources.refresh-all:refresh-all"
-  ]
+  // At most one spacer per slot.
+  //
+  // The Sources pane header: a horizontal strip of icon buttons at the end of
+  // the title bar. "Refresh all" is the only action here and is a set operation
+  // over the whole list — per-source actions live on the rows themselves
+  // (events.sources.item-actions), not up here.
+  "items": ["apps.events.sources.refresh-all:refresh-all"]
 }
