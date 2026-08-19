@@ -274,6 +274,7 @@ the outcome too, with no separate code path.
     - `debug/trace/engine`
     - `improve/element-picker`
     - `page/editor`
+    - `page/page-reference`
     - `primitives/app-shell`
     - `primitives/data-view`
     - `primitives/detail-sections`

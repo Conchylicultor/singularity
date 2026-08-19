@@ -162,10 +162,6 @@ export interface BlockEditorHandle extends CaretSurface {
 }
 
 /**
- * `onOpenPage` is an optional navigation callback for link/mention block
- * renderers. Decoupled from any host app's pane (mirrors file-links'
- * `onFileOpen`); the host wires it when mounting `<BlockEditor>`.
- *
  * `contentClassName` is applied to the centered block-content wrapper (e.g. a
  * reading measure like `mx-auto max-w-4xl px-lg`). The pointer/marquee surface
  * always fills the full host width, so drag-selecting and click-to-edit work
@@ -181,7 +177,6 @@ export interface BlockEditorHandle extends CaretSurface {
  * keystrokes simply do nothing.
  */
 type BlockEditorProps = {
-  onOpenPage?: (pageId: string) => void;
   contentClassName?: ClassName;
   ref?: Ref<BlockEditorHandle>;
   caretBefore?: CaretSurfaceRef;
@@ -216,7 +211,6 @@ export function BlockEditor({ ref, ...props }: BlockEditorProps) {
       <MemoryBlockEditor
         initialContent={props.initialContent}
         enabledBlockTypes={props.enabledBlockTypes}
-        onOpenPage={props.onOpenPage}
         contentClassName={props.contentClassName}
         caretBefore={props.caretBefore}
         caretAfter={props.caretAfter}
@@ -231,7 +225,6 @@ export function BlockEditor({ ref, ...props }: BlockEditorProps) {
     // they drop when this editor unmounts.
     <BlockEditorProvider
       pageId={props.pageId}
-      onOpenPage={props.onOpenPage}
       caretBefore={props.caretBefore}
       caretAfter={props.caretAfter}
     >
@@ -253,7 +246,6 @@ export function BlockEditor({ ref, ...props }: BlockEditorProps) {
 function MemoryBlockEditor({
   initialContent,
   enabledBlockTypes,
-  onOpenPage,
   contentClassName,
   caretBefore,
   caretAfter,
@@ -261,7 +253,6 @@ function MemoryBlockEditor({
 }: {
   initialContent?: SerializedBlock[];
   enabledBlockTypes?: readonly string[];
-  onOpenPage?: (pageId: string) => void;
   contentClassName?: ClassName;
   caretBefore?: CaretSurfaceRef;
   caretAfter?: CaretSurfaceRef;
@@ -290,7 +281,6 @@ function MemoryBlockEditor({
       pageId={pageId}
       initialBlocks={initialBlocks}
       enabledBlockTypes={enabledBlockTypes}
-      onOpenPage={onOpenPage}
       caretBefore={caretBefore}
       caretAfter={caretAfter}
     >

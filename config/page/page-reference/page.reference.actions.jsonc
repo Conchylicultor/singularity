@@ -1,0 +1,11 @@
+// @hash 18105e49d0bd
+// The hover-revealed action cluster on a page reference (a sub-page row, a link
+// block): a short horizontal strip of icon buttons pinned to the row's right
+// edge, read left to right. One action today — open the referenced page in a
+// column beside this one. Anything added later belongs after it: opening the
+// page is the primary intent, so it stays closest to the row's own click.
+{
+  "items": [
+    "page.page-reference.open-aside:open-aside"
+  ]
+}

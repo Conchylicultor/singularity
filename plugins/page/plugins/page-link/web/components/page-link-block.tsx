@@ -11,12 +11,15 @@ import { SearchInput } from "@plugins/primitives/plugins/search/web";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 import { pagesResource, pageData } from "@plugins/page/plugins/editor/core";
 import {
-  useBlockEditor,
   usePageOptions,
   PageOptionsList,
   PageIcon,
   type BlockRendererProps,
 } from "@plugins/page/plugins/editor/web";
+import {
+  usePageNavigation,
+  usePageReferenceActions,
+} from "@plugins/page/plugins/page-reference/web";
 import { pageLinkBlock } from "../../core";
 
 // A small page-picker popover: filterable list of pages fed by the live
@@ -75,7 +78,10 @@ function PagePicker({
 
 export function PageLinkBlock({ block, editor }: BlockRendererProps) {
   const { pageId } = pageLinkBlock.parse(block.data);
-  const { onOpenPage } = useBlockEditor();
+  const nav = usePageNavigation();
+  // Only the RESOLVED link below gets actions: the picker row and the
+  // not-found row name no page, so there is nothing for an action to open.
+  const actions = usePageReferenceActions(pageId);
   const result = useResource(pagesResource);
 
   // Freshly inserted (empty) block: render the picker affordance, opened.
@@ -125,15 +131,21 @@ export function PageLinkBlock({ block, editor }: BlockRendererProps) {
     );
   }
 
-  // Resolved link: a clickable chip/row that navigates via the host callback.
+  // Resolved link: a clickable row that opens the page through the host's
+  // declared navigation, with the contributed reference actions on hover.
   return (
     <div className="px-md py-xs">
       <Row
         hover="muted"
-        onClick={() => onOpenPage?.(pageId)}
+        onClick={() => nav?.open(pageId)}
+        actions={actions}
         icon={
           <Center as="span" className="size-4 text-muted-foreground">
-            <PageIcon nodes={targetData?.iconSvgNodes} fallback={MdLink} className="size-4" />
+            <PageIcon
+              nodes={targetData?.iconSvgNodes}
+              fallback={MdLink}
+              className="size-4"
+            />
           </Center>
         }
       >

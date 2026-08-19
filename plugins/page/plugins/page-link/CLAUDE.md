@@ -12,8 +12,9 @@
     - `page/editor.Editor`
     - `page/editor.PageIcon`
     - `page/editor.PageOptionsList`
-    - `page/editor.useBlockEditor`
     - `page/editor.usePageOptions`
+    - `page/page-reference.usePageNavigation`
+    - `page/page-reference.usePageReferenceActions`
     - `primitives/css/center.Center`
     - `primitives/css/placeholder.Placeholder`
     - `primitives/css/row.Row`

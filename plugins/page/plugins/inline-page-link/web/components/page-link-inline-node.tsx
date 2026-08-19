@@ -6,7 +6,8 @@ import { LinkChip } from "@plugins/primitives/plugins/css/plugins/link-chip/web"
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 import { pagesResource, pageData } from "@plugins/page/plugins/editor/core";
-import { useBlockEditor, PageIcon } from "@plugins/page/plugins/editor/web";
+import { PageIcon } from "@plugins/page/plugins/editor/web";
+import { usePageNavigation } from "@plugins/page/plugins/page-reference/web";
 
 type SerializedPageLinkInlineNode = {
   type: "page-link-inline";
@@ -69,7 +70,7 @@ export class PageLinkInlineNode extends DecoratorNode<ReactNode> {
 }
 
 function PageLinkInlineView({ pageId }: { pageId: string }) {
-  const { onOpenPage } = useBlockEditor();
+  const nav = usePageNavigation();
   const result = useResource(pagesResource);
 
   // Gate: render nothing while the pages resource is loading.
@@ -99,7 +100,7 @@ function PageLinkInlineView({ pageId }: { pageId: string }) {
       }
       onClick={(e) => {
         e.stopPropagation();
-        onOpenPage?.(pageId);
+        nav?.open(pageId);
       }}
     >
       {data?.title || "Untitled"}

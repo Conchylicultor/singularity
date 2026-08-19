@@ -10,6 +10,10 @@ import {
   useBlockEditor,
   type BlockRendererProps,
 } from "@plugins/page/plugins/editor/web";
+import {
+  usePageNavigation,
+  usePageReferenceActions,
+} from "@plugins/page/plugins/page-reference/web";
 
 /**
  * A sub-page rendered inline in its parent's content flow: icon + title, click
@@ -26,7 +30,11 @@ import {
  * — the hazard the reducer's guards then backstop.
  */
 export function SubPageBlock({ block, isFocused, editor }: BlockRendererProps) {
-  const { registerFocusHandle, onOpenPage } = useBlockEditor();
+  const { registerFocusHandle } = useBlockEditor();
+  const nav = usePageNavigation();
+  // The row's own click opens in place; everything else the user can do with the
+  // referenced page (open it beside this one, …) is a contributed action.
+  const actions = usePageReferenceActions(block.id);
   const ref = useRef<HTMLElement>(null);
   const { title, iconSvgNodes } = pageData(block);
 
@@ -60,11 +68,15 @@ export function SubPageBlock({ block, isFocused, editor }: BlockRendererProps) {
   return (
     <Inset x="md" y="xs">
       <Row
-        ref={ref}
+        // The row's FOCUSABLE control, not its outer box: carrying `actions`
+        // splits `Row` into a plain container plus an inner button, and it is
+        // the button that takes focus and that the handlers below sit on.
+        interactiveRef={ref}
         hover="muted"
-        onClick={() => onOpenPage?.(block.id)}
+        onClick={() => nav?.open(block.id)}
         onKeyDown={onKeyDown}
         onFocus={() => editor.onFocus()}
+        actions={actions}
         className={cn("outline-none", isFocused && "ring-primary/30 ring-1")}
         icon={
           <Center as="span" className="text-muted-foreground size-4">

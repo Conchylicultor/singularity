@@ -462,12 +462,6 @@ interface BlockEditorContextValue {
   requestBlockMenu: (id: string) => void;
   /** Clear the draft menu — unconditionally, or only if it is still on `id`. */
   clearBlockMenu: (id?: string) => void;
-  /**
-   * Optional navigation callback so link/mention block renderers can open a
-   * page without hardcoding any host app's pane. Undefined when the host did
-   * not provide one.
-   */
-  onOpenPage?: (pageId: string) => void;
 }
 
 const BlockEditorContext = createContext<BlockEditorContextValue | null>(null);
@@ -495,7 +489,6 @@ export function useEnabledBlockTypes(): readonly string[] | undefined {
  * network, no DB rows).
  */
 type BlockEditorProviderProps = {
-  onOpenPage?: (pageId: string) => void;
   /** Optional allowlist of insertable block types (see the context field). */
   enabledBlockTypes?: readonly string[];
   /** See `BlockEditor`'s props — the caret surfaces flanking the block list. */
@@ -516,7 +509,6 @@ export function BlockEditorProvider(props: BlockEditorProviderProps) {
         pageId={props.pageId}
         initialBlocks={props.initialBlocks}
         enabledBlockTypes={props.enabledBlockTypes}
-        onOpenPage={props.onOpenPage}
         caretBefore={props.caretBefore}
         caretAfter={props.caretAfter}
       >
@@ -531,7 +523,6 @@ export function BlockEditorProvider(props: BlockEditorProviderProps) {
     <CompositeServerProviderHost
       pageId={props.pageId}
       enabledBlockTypes={props.enabledBlockTypes}
-      onOpenPage={props.onOpenPage}
       caretBefore={props.caretBefore}
       caretAfter={props.caretAfter}
     >
@@ -550,7 +541,6 @@ function MemoryProviderHost({
   pageId,
   initialBlocks,
   enabledBlockTypes,
-  onOpenPage,
   caretBefore,
   caretAfter,
   children,
@@ -558,7 +548,6 @@ function MemoryProviderHost({
   pageId: string;
   initialBlocks: Block[];
   enabledBlockTypes?: readonly string[];
-  onOpenPage?: (pageId: string) => void;
   children: ReactNode;
 } & ProviderHostCaretProps) {
   const store = useMemoryBlockStore({ initialBlocks });
@@ -568,7 +557,6 @@ function MemoryProviderHost({
       pageId={pageId}
       serverSync={false}
       enabledBlockTypes={enabledBlockTypes}
-      onOpenPage={onOpenPage}
       caretBefore={caretBefore}
       caretAfter={caretAfter}
     >
@@ -585,7 +573,6 @@ export function BlockEditorProviderInner({
   pageId,
   serverSync,
   enabledBlockTypes,
-  onOpenPage,
   caretBefore,
   caretAfter,
   children,
@@ -600,7 +587,6 @@ export function BlockEditorProviderInner({
    */
   serverSync: boolean;
   enabledBlockTypes?: readonly string[];
-  onOpenPage?: (pageId: string) => void;
   /** See `BlockEditor`'s props — the caret surfaces flanking the block list. */
   caretBefore?: CaretSurfaceRef;
   caretAfter?: CaretSurfaceRef;
@@ -1943,7 +1929,6 @@ export function BlockEditorProviderInner({
       blockMenuDraftId,
       requestBlockMenu,
       clearBlockMenu,
-      onOpenPage,
     }),
     [
       pageId,
@@ -1982,7 +1967,6 @@ export function BlockEditorProviderInner({
       blockMenuDraftId,
       requestBlockMenu,
       clearBlockMenu,
-      onOpenPage,
     ],
   );
 

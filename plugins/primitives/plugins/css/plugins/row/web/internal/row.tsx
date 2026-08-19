@@ -1,3 +1,4 @@
+import { useCallback } from "react";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
 import {
@@ -8,6 +9,15 @@ import type React from "react";
 
 export type RowSize = "sm" | "md";
 export type RowHover = "accent" | "muted";
+
+/** Write one node into a ref of either form (callback or object). */
+function setRef(
+  ref: React.Ref<HTMLElement> | undefined,
+  el: HTMLElement | null,
+) {
+  if (typeof ref === "function") ref(el);
+  else if (ref) ref.current = el;
+}
 
 export interface RowProps {
   /** Persistent selection → bg-accent; aria-current on buttons. */
@@ -30,6 +40,21 @@ export interface RowProps {
    * divergence from ToggleChip (tree DnD / scroll-into-view depend on it).
    */
   ref?: React.Ref<HTMLElement>;
+  /**
+   * Forwarded to the row's focusable CONTROL — the `<button>`/`<a>` inferred
+   * from `onClick`/`href`, falling back to the row box when the row renders no
+   * control.
+   *
+   * The same node as `ref` right up until the row carries `actions`, and then
+   * not: the control has to become a SIBLING of the action buttons (nesting
+   * interactive elements is invalid DOM), so the box `ref` points at stops being
+   * focusable and stops being where the row's own handlers sit. A host that
+   * moves focus into its row programmatically — keyboard navigation landing on a
+   * void editor block — wants this ref, and would otherwise silently start
+   * calling `.focus()` on an unfocusable `<div>` the day someone gave the row an
+   * action.
+   */
+  interactiveRef?: React.Ref<HTMLElement>;
   disabled?: boolean;
   className?: string;
   title?: string;
@@ -54,11 +79,35 @@ export function Row({
   actions,
   actionsAlwaysVisible,
   ref,
+  interactiveRef,
   disabled,
   className,
   children,
   ...rest
 }: RowProps) {
+  // The box and the control are the same node on every path but the split one,
+  // so the two refs collapse onto it there. Composed only when a caller asked
+  // for both — with `interactiveRef` unset (every existing call site) `ref` is
+  // handed to the element untouched.
+  const bothRefs = useCallback(
+    (el: HTMLElement | null) => {
+      setRef(ref, el);
+      setRef(interactiveRef, el);
+    },
+    [ref, interactiveRef],
+  );
+  const collapsedRef = interactiveRef ? (ref ? bothRefs : interactiveRef) : ref;
+  // The split path writes the control ref through a CALLBACK rather than handing
+  // the caller's ref object straight to `<Tag>`. `Tag` is an `ElementType`, so
+  // its `ref` prop types as the INTERSECTION of every element it could be — a
+  // `Ref<HTMLElement>` satisfies none of them, while a callback taking the
+  // supertype satisfies all of them. Memoised on the caller's ref so React does
+  // not detach and re-attach it on every render.
+  const setInteractive = useCallback(
+    (el: HTMLElement | null) => setRef(interactiveRef, el),
+    [interactiveRef],
+  );
+
   // The element is inferred, never authored: a row with `href` is a link, a row
   // with `onClick`/`disabled` is a button, anything else is a plain container.
   // This removes the `as` footgun — a clickable row can no longer be declared as
@@ -171,6 +220,7 @@ export function Row({
         style={style}
       >
         <Tag
+          ref={interactiveRef ? setInteractive : undefined}
           type={isButton ? "button" : undefined}
           disabled={isButton ? disabled : undefined}
           aria-current={isButton && selected ? true : undefined}
@@ -197,7 +247,7 @@ export function Row({
   return (
     <Line
       as={Tag}
-      ref={ref}
+      ref={collapsedRef}
       type={isButton ? "button" : undefined}
       disabled={isButton ? disabled : undefined}
       aria-current={isButton && selected ? true : undefined}

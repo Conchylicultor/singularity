@@ -10,7 +10,7 @@ import { PageIcon } from "@plugins/page/plugins/editor/web";
  * Read-only equivalent of the editor's inline page-link chip
  * (`PageLinkInlineView`). Resolves the linked page's title + icon from the live
  * `pagesResource` and renders the same `LinkChip` shape — but never navigates
- * (no `onOpenPage` editor context in a static render), so `onClick` is a pure
+ * (a static render declares no page navigation), so `onClick` is a pure
  * `stopPropagation`. A consumer that wants navigation can wrap the rendered
  * output in its own click handler; the preview layer stays inert by design.
  */
@@ -42,7 +42,11 @@ export function PageLinkChip({ pageId }: { pageId: string }) {
     <LinkChip
       leading={
         <Center as="span" className="size-3.5">
-          <PageIcon nodes={data?.iconSvgNodes} fallback={MdLink} className="size-3.5" />
+          <PageIcon
+            nodes={data?.iconSvgNodes}
+            fallback={MdLink}
+            className="size-3.5"
+          />
         </Center>
       }
       onClick={(e) => e.stopPropagation()}

@@ -8,14 +8,13 @@ import {
   type FieldDef,
 } from "@plugins/primitives/plugins/data-view/web";
 import { PageIcon } from "@plugins/page/plugins/editor/web";
+import { usePageNavigation } from "@plugins/page/plugins/page-reference/web";
 import { backlinksResource } from "../../core/resources";
 import type { BacklinkRow } from "../../core/schemas";
 
 export interface BacklinksProps {
   /** The target page whose backlinks (referencing pages) to show. */
   documentId: string;
-  /** Invoked with a referencing page's id when its row is clicked. */
-  onOpenPage?: (pageId: string) => void;
 }
 
 const BACKLINKS_VIEW = defineDataView("page.links.backlinks");
@@ -26,8 +25,10 @@ const BACKLINKS_VIEW = defineDataView("page.links.backlinks");
 // inbound links shows no DataView toolbar either. Title-less on purpose: this is
 // a body, and whatever hosts it (the Pages page-detail section, whose host paints
 // the "Linked from" card) owns the heading. No coupling to the pages app or any
-// block type — navigation is the injected `onOpenPage`.
-export function Backlinks({ documentId, onOpenPage }: BacklinksProps) {
+// block type — navigation is whatever the surrounding host declared through
+// `page-reference`, the same seam the reference blocks inside a page read.
+export function Backlinks({ documentId }: BacklinksProps) {
+  const nav = usePageNavigation();
   const result = useResource(backlinksResource, { pageId: documentId });
 
   const fields = useMemo<FieldDef<BacklinkRow>[]>(
@@ -54,12 +55,16 @@ export function Backlinks({ documentId, onOpenPage }: BacklinksProps) {
       rowKey={(row) => row.id}
       views={["list"]}
       storageKey={BACKLINKS_VIEW}
-      onRowActivate={(row) => onOpenPage?.(row.id)}
+      onRowActivate={(row) => nav?.open(row.id)}
       viewOptions={{
         list: {
           leading: (row: BacklinkRow) => (
             <Center as="span" className="size-4 text-muted-foreground">
-              <PageIcon nodes={row.iconSvgNodes} fallback={MdLink} className="size-4" />
+              <PageIcon
+                nodes={row.iconSvgNodes}
+                fallback={MdLink}
+                className="size-4"
+              />
             </Center>
           ),
         },

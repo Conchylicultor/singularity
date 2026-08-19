@@ -1,20 +1,14 @@
-import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { Backlinks } from "@plugins/page/plugins/links/web";
 import { backlinksResource } from "@plugins/page/plugins/links/core";
-import { pageDetailPane } from "../panes";
 
 // "Linked from" section contributed into PageDetail.Section. The slot passes
-// `{ pageId }` and owns the card + title; navigation is injected so the pure
-// Backlinks domain component stays decoupled from this app's panes.
+// `{ pageId }` and owns the card + title. Navigation is not passed down: the
+// section renders inside the pane's own `PageNavigationProvider`, the same seam
+// the page's reference blocks read, so a backlink row and a sub-page row open a
+// page the same way by construction.
 export function BacklinksSection({ pageId }: { pageId: string }) {
-  const openPane = useOpenPane();
-  return (
-    <Backlinks
-      documentId={pageId}
-      onOpenPage={(id) => openPane(pageDetailPane, { pageId: id }, { mode: "swap" })}
-    />
-  );
+  return <Backlinks documentId={pageId} />;
 }
 
 /**

@@ -127,6 +127,7 @@ icon+count button it stands in for — carries a per-site
     - `page/editor`
     - `page/formatting/color`
     - `page/formatting/link`
+    - `page/page-reference/open-aside`
     - `primitives/adaptive-bar`
     - `primitives/collapsible-wrap`
     - `primitives/css/control-panel`

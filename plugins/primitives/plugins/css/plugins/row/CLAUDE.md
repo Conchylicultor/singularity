@@ -33,7 +33,11 @@ don't fire in a DataView list". If you catch yourself hoisting body content out
 to `actions` to make it hoverable again, that's the bug, not the fix.
 
 `ref` forwards to the row's outermost element (the row box) for DnD /
-scroll-into-view.
+scroll-into-view. `interactiveRef` forwards to the focusable control instead —
+the same node until the split above happens, and a different one after it, so a
+host that calls `.focus()` on its row (keyboard navigation into a void editor
+block) must use this one or it starts focusing an unfocusable `<div>` the day
+the row gains an action.
 
 ## Row is not a data list
 

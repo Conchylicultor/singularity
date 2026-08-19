@@ -72,6 +72,7 @@ rule keeps the broken shape from coming back.
     - `page/editor-collab`
     - `page/image`
     - `page/inline-date`
+    - `page/page-reference`
     - `page/place`
     - `page/prompt/block`
     - `page/quote`

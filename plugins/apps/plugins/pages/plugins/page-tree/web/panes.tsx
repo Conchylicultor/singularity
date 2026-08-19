@@ -1,5 +1,5 @@
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { useRef, type ReactElement } from "react";
+import { useMemo, useRef, type ReactElement } from "react";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import {
   Pane,
@@ -20,6 +20,10 @@ import {
   type BlockEditorHandle,
   type CaretSurface,
 } from "@plugins/page/plugins/editor/web";
+import {
+  PageNavigationProvider,
+  type PageNavigation,
+} from "@plugins/page/plugins/page-reference/web";
 import { PageHeader } from "./components/page-header";
 import { PageBreadcrumb } from "./components/page-breadcrumb";
 import { PageCover } from "./components/page-cover";
@@ -104,6 +108,19 @@ function usePageTitle({ pageId }: { pageId: string }): string | undefined {
 function PageDetailBody(): ReactElement {
   const { pageId } = pageDetailPane.useParams();
   const openPane = useOpenPane();
+  // What "open that page" means on THIS surface, declared once for every page
+  // reference below — the sub-page rows and link blocks inside the editor, and
+  // the backlinks list beside it. `swap` replaces this column (clicking a
+  // reference has always navigated in place); `push` appends one to the right
+  // of this pane, which is the Miller spelling of a side pane.
+  const nav = useMemo<PageNavigation>(
+    () => ({
+      open: (id) => openPane(pageDetailPane, { pageId: id }, { mode: "swap" }),
+      openAside: (id) =>
+        openPane(pageDetailPane, { pageId: id }, { mode: "push" }),
+    }),
+    [openPane],
+  );
   // The title renders above (outside) the editor's provider, so the two exchange
   // the caret through refs rather than a shared context: each is a `CaretSurface`
   // holding a ref to the other. Arrow keys — and Backspace at the top of the body
@@ -134,49 +151,48 @@ function PageDetailBody(): ReactElement {
         </PageDetail.Overlay.Render>
       }
     >
-      {/* Full-bleed cover scrolls away with the page (Notion-style). Below it,
-          the header and section list are centered on the shared reading measure,
-          while the block editor spans the full pane width (centering only its
-          own content via the same measure) so a marquee drag can begin from the
-          whitespace beside the column. Neither the header nor the section list is
-          a block, so each wraps itself in `PageContentColumn` — the editor's own
-          declaration of where a block's *content* starts. That is the single
-          owner of the column geometry: the icon, title, sections, and every block
-          land on one left edge, and this file never names the rail width. */}
-      <Stack gap="none">
-        <PageCover pageId={pageId} />
-        <Stack gap="lg" className="pb-2xl">
-          {/* Title + body form one tight unit (no flex gap between them): the
-              only space under the title is the editor's own top padding, which
-              is click-to-edit — so there's no dead strip between title and
-              content. */}
-          <Stack gap="none">
+      <PageNavigationProvider value={nav}>
+        {/* Full-bleed cover scrolls away with the page (Notion-style). Below it,
+            the header and section list are centered on the shared reading measure,
+            while the block editor spans the full pane width (centering only its
+            own content via the same measure) so a marquee drag can begin from the
+            whitespace beside the column. Neither the header nor the section list is
+            a block, so each wraps itself in `PageContentColumn` — the editor's own
+            declaration of where a block's *content* starts. That is the single
+            owner of the column geometry: the icon, title, sections, and every block
+            land on one left edge, and this file never names the rail width. */}
+        <Stack gap="none">
+          <PageCover pageId={pageId} />
+          <Stack gap="lg" className="pb-2xl">
+            {/* Title + body form one tight unit (no flex gap between them): the
+                only space under the title is the editor's own top padding, which
+                is click-to-edit — so there's no dead strip between title and
+                content. */}
+            <Stack gap="none">
+              <div className={READING_MEASURE}>
+                <PageContentColumn>
+                  <PageHeader
+                    pageId={pageId}
+                    body={bodyRef}
+                    titleRef={titleRef}
+                  />
+                </PageContentColumn>
+              </div>
+              <BlockEditor
+                ref={bodyRef}
+                caretBefore={titleRef}
+                pageId={pageId}
+                contentClassName={READING_MEASURE}
+              />
+            </Stack>
             <div className={READING_MEASURE}>
               <PageContentColumn>
-                <PageHeader
-                  pageId={pageId}
-                  body={bodyRef}
-                  titleRef={titleRef}
-                />
+                <PageDetail.Host pageId={pageId} />
               </PageContentColumn>
             </div>
-            <BlockEditor
-              ref={bodyRef}
-              caretBefore={titleRef}
-              pageId={pageId}
-              contentClassName={READING_MEASURE}
-              onOpenPage={(id) =>
-                openPane(pageDetailPane, { pageId: id }, { mode: "swap" })
-              }
-            />
           </Stack>
-          <div className={READING_MEASURE}>
-            <PageContentColumn>
-              <PageDetail.Host pageId={pageId} />
-            </PageContentColumn>
-          </div>
         </Stack>
-      </Stack>
+      </PageNavigationProvider>
     </PaneChrome>
   );
 }

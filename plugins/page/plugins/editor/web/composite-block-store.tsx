@@ -7,7 +7,14 @@
 // with the page boundary as data, not component structure. See
 // `research/2026-07-23-page-inline-nested-page-expansion.md`.
 
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { enqueueResourceWrite } from "@plugins/primitives/plugins/optimistic-mutation/web";
 import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
@@ -78,14 +85,12 @@ function PageFeedMount({
 export function CompositeServerProviderHost({
   pageId: basePageId,
   enabledBlockTypes,
-  onOpenPage,
   caretBefore,
   caretAfter,
   children,
 }: {
   pageId: string;
   enabledBlockTypes?: readonly string[];
-  onOpenPage?: (pageId: string) => void;
   caretBefore?: CaretSurfaceRef;
   caretAfter?: CaretSurfaceRef;
   children: ReactNode;
@@ -205,7 +210,10 @@ export function CompositeServerProviderHost({
    * something to order.
    */
   const moveAcrossPages = useCallback(
-    (sourcePageId: string, op: Extract<BlockOverlayOp, { tag: "op" }>["op"]) => {
+    (
+      sourcePageId: string,
+      op: Extract<BlockOverlayOp, { tag: "op" }>["op"],
+    ) => {
       if (op.kind !== "move") throw new Error(`Not a move op: ${op.kind}`);
       const parentId = translateUnionParentId(op.parentId, mountsRef.current);
       void enqueueResourceWrite(blocksResource, { pageId: sourcePageId }, () =>
@@ -229,7 +237,9 @@ export function CompositeServerProviderHost({
         // cumulative index (rows that left with a collapse).
         const rows = dataRef.current;
         const ownerOf = (id: string) =>
-          rows.find((b) => b.id === id)?.pageId ?? seenOwnersRef.current.get(id) ?? null;
+          rows.find((b) => b.id === id)?.pageId ??
+          seenOwnersRef.current.get(id) ??
+          null;
         for (const [owner, group] of groupPatchByOwnerPage(v.patch, ownerOf)) {
           const patch = translatePatchForStore(group, seenAnchorsRef.current);
           const feed = feedsRef.current.get(owner);
@@ -254,7 +264,12 @@ export function CompositeServerProviderHost({
       if (v.op.kind === "move") {
         const rows = dataRef.current;
         const sourcePageId = rowOwnerPage(rows, v.op.blockId);
-        const destPageId = insertOwnerPage(rows, v.op.parentId, curMounts, basePageId);
+        const destPageId = insertOwnerPage(
+          rows,
+          v.op.parentId,
+          curMounts,
+          basePageId,
+        );
         if (sourcePageId !== destPageId) {
           moveAcrossPages(sourcePageId, v.op);
           return;
@@ -303,7 +318,6 @@ export function CompositeServerProviderHost({
         pageId={basePageId}
         serverSync
         enabledBlockTypes={enabledBlockTypes}
-        onOpenPage={onOpenPage}
         caretBefore={caretBefore}
         caretAfter={caretAfter}
       >

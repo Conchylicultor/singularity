@@ -3360,6 +3360,14 @@
       "name": "@singularity/plugin-page-page-link",
       "version": "0.0.1",
     },
+    "plugins/page/plugins/page-reference": {
+      "name": "@singularity/plugin-page-page-reference",
+      "version": "0.0.1",
+    },
+    "plugins/page/plugins/page-reference/plugins/open-aside": {
+      "name": "@singularity/plugin-page-page-reference-open-aside",
+      "version": "0.0.1",
+    },
     "plugins/page/plugins/place": {
       "name": "@singularity/plugin-page-place",
       "version": "0.0.1",
@@ -7167,6 +7175,10 @@
     "@singularity/plugin-page-numbered-list": ["@singularity/plugin-page-numbered-list@workspace:plugins/page/plugins/numbered-list"],
 
     "@singularity/plugin-page-page-link": ["@singularity/plugin-page-page-link@workspace:plugins/page/plugins/page-link"],
+
+    "@singularity/plugin-page-page-reference": ["@singularity/plugin-page-page-reference@workspace:plugins/page/plugins/page-reference"],
+
+    "@singularity/plugin-page-page-reference-open-aside": ["@singularity/plugin-page-page-reference-open-aside@workspace:plugins/page/plugins/page-reference/plugins/open-aside"],
 
     "@singularity/plugin-page-place": ["@singularity/plugin-page-place@workspace:plugins/page/plugins/place"],
 

@@ -75,6 +75,8 @@ a flat `list` view, so that is the normal non-tree case, not a failure.
     - `page/editor.PageContentColumn`
     - `page/editor.PageIcon`
     - `page/links.Backlinks`
+    - `page/page-reference.PageNavigation`
+    - `page/page-reference.PageNavigationProvider`
     - `primitives/breadcrumb.Breadcrumb`
     - `primitives/breadcrumb.BreadcrumbSegment`
     - `primitives/css/center.Center`

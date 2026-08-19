@@ -42,8 +42,8 @@ namespace can help it and it genuinely parses shape, pinned the same way.
     - `page/editor.PageOption`
     - `page/editor.PageOptionsList`
     - `page/editor.registerBlockTextExtension`
-    - `page/editor.useBlockEditor`
     - `page/editor.usePageOptions`
+    - `page/page-reference.usePageNavigation`
     - `primitives/css/center.Center`
     - `primitives/css/link-chip.LinkChip`
     - `primitives/css/placeholder.Placeholder`

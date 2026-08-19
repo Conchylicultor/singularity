@@ -35,6 +35,7 @@
 - Web:
   - Uses:
     - `page/editor.PageIcon`
+    - `page/page-reference.usePageNavigation`
     - `primitives/css/center.Center`
     - `primitives/data-view.DataView`
     - `primitives/data-view.defineDataView`

@@ -12,6 +12,8 @@
     - `page/editor.Editor`
     - `page/editor.PageIcon`
     - `page/editor.useBlockEditor`
+    - `page/page-reference.usePageNavigation`
+    - `page/page-reference.usePageReferenceActions`
     - `primitives/css/center.Center`
     - `primitives/css/row.Row`
     - `primitives/css/spacing.Inset`
