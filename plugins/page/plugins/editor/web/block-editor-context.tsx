@@ -33,9 +33,12 @@ import {
   withMintedIds,
   newBlockId,
   namesField,
+  hasTextKey,
+  rowDataOf,
   type Block,
   type BlockNode,
   type BlockOp,
+  type BlockOpContext,
   type BlockPatch,
   type RichText,
   type RowData,
@@ -66,10 +69,9 @@ import type {
   CaretSurface,
   CaretSurfaceRef,
 } from "./caret-surface";
-import { useAnchorTypes, useBlockHandles } from "./internal/block-handles";
+import { useBlockHandles, useBlockOpContext } from "./internal/block-handles";
 import { useMemoryBlockStore, type BlockStore } from "./block-store";
 import { CompositeServerProviderHost } from "./composite-block-store";
-import { Editor } from "./slots";
 import type { BlockEditorAPI } from "./types";
 
 /** Human labels for the structural-undo history (tooltips / menus). */
@@ -133,9 +135,9 @@ function opFocusId(op: BlockOp, before: Block[]): string | null {
 function fromOpResult(
   before: Block[],
   op: BlockOp,
-  anchorTypes: ReadonlySet<string>,
+  ctx: BlockOpContext,
 ): Block[] {
-  return fromNodes(applyBlockOp(toNodes(before), op, { anchorTypes }), before);
+  return fromNodes(applyBlockOp(toNodes(before), op, ctx), before);
 }
 
 /**
@@ -205,7 +207,7 @@ function derivePatchEntry(
 export type { BlockFocusHandle } from "./internal/caret-authority";
 
 /**
- * The ONE place in the row-write pipeline permitted to name `text`.
+ * Carry the row's existing text projection across a row write.
  *
  * A row write states the fields it owns; `text` is not one of them — it is a
  * ~1 s-debounced projection of the block's content doc, whose sole writer is
@@ -214,19 +216,21 @@ export type { BlockFocusHandle } from "./internal/caret-authority";
  * untouched rather than restating (or dropping) it. Everywhere else the key is
  * unrepresentable — that is what {@link RowData} buys.
  *
- * `targetAcceptsText` is the one case where the projection must NOT survive: a
- * conversion into a text-less type (divider, image, …) whose strict schema
- * rejects a stray `text` key at the write boundary with a 400.
+ * It carries the key UNCONDITIONALLY, including into a text-less target. Whether
+ * the key may survive on the resulting row is not this function's question:
+ * `conformRowText` answers it for every row write at the funnel, so a caller
+ * cannot get it wrong by forgetting to ask (which is exactly how the projection
+ * — a writer that never called through here — shipped a rejected patch on every
+ * text-to-void conversion).
  */
-function preserveText(
-  prev: unknown,
-  next: RowData,
-  targetAcceptsText: boolean,
-): Record<string, unknown> {
+function preserveText(prev: unknown, next: RowData): Record<string, unknown> {
   const text = (prev as Record<string, unknown> | null)?.text;
-  if (!targetAcceptsText || text === undefined) return { ...next };
+  if (text === undefined) return { ...next };
   return { ...next, text };
 }
+
+/** Empty type set — the `BlockOpContext` default, hoisted so it is stable. */
+const EMPTY_TYPES: ReadonlySet<string> = new Set<string>();
 
 interface BlockEditorContextValue {
   pageId: string;
@@ -605,10 +609,11 @@ export function BlockEditorProviderInner({
   const [focusedBlockId, setFocusedBlockId] = useState<string | null>(null);
   const [blockMenuDraftId, setBlockMenuDraftId] = useState<string | null>(null);
   // Block-type facts the pure reducer and `convertTo` cannot derive from the
-  // forest: which types are container anchors (the reducer's `BlockOpContext` —
-  // the store passes the SAME set, and so does the server) and the handle
-  // registry `convertTo` reads `wrapOnConvert`/`empty()` off.
-  const anchorTypes = useAnchorTypes();
+  // forest: the reducer's `BlockOpContext` (the store passes the SAME context,
+  // and so does the server — all three mint it through `blockOpContextOf`) and
+  // the handle registry `convertTo` reads `wrapOnConvert`/`empty()` off.
+  const opCtx = useBlockOpContext();
+  const anchorTypes = opCtx.anchorTypes ?? EMPTY_TYPES;
   // The same fact in the shape the visibility helpers take. A container borrows
   // its first child's line, so `prevVisibleLine`/`nextVisibleLine` cannot resolve
   // a merge target without it — pass anything else and the executor's target
@@ -618,20 +623,9 @@ export function BlockEditorProviderInner({
     [anchorTypes],
   );
   const blockHandles = useBlockHandles();
-
-  // `type ⇒ does this type carry text`, read generically off the dispatch slot
-  // (never a hardcoded list). The row-write pipeline is the one place that must
-  // know: `preserveText` carries the projection across a conversion, EXCEPT into
-  // a text-less type whose schema rejects the key. Resolving it here rather than
-  // at each call site is what lets `convertTo` callers stop hand-branching on
-  // `acceptsText`. An unregistered type is assumed text-bearing — the same
-  // "trust the intent, let the write boundary reject loudly" stance the keyboard
-  // ladder takes.
-  const blockContributions = Editor.Block.useContributions();
-  const acceptsTextRef = useLatestRef((type: string) => {
-    const handle = blockContributions.find((c) => c.block.type === type)?.block;
-    return handle ? handle.acceptsText : true;
-  });
+  // Read only inside `conformRowText`, which runs per row inside `commitRows` —
+  // a ref keeps that callback's identity stable across registry churn.
+  const blockHandlesRef = useLatestRef(blockHandles);
   // The flanking surfaces are read only inside imperative callbacks, so mirror
   // them into refs rather than threading them through `makeBlockAPI`'s deps.
   const caretBeforeRef = useLatestRef(caretBefore);
@@ -953,6 +947,56 @@ export function BlockEditorProviderInner({
     [recordTextEdit],
   );
 
+  // The row model's ONE text rule, enforced where every direct row write lands:
+  //
+  //     `data.text` is present on a row IFF its type accepts text.
+  //
+  // Both halves are a 400 at the write boundary otherwise — the key is
+  // unrecognized on a void type's strict schema, and its ABSENCE is a missing
+  // required field on a text-bearing one. Stating it here rather than at each
+  // call site is the point: it used to live in `preserveText` alone, so
+  // `projectText` (a writer that never calls through it) posted `text` at rows
+  // it had just watched become dividers, and `convertTo` into a text type wrote
+  // a row the server refused whole — losing the conversion.
+  //
+  // Writers state their intent; this is where that intent meets the row model.
+  const conformRowText = useCallback(
+    (row: Block): Block => {
+      const handle = blockHandlesRef.current.get(row.type);
+      // No registered handle, NO OPINION — deliberately NOT the same branch as a
+      // void handle. A type can be missing because it was renamed or removed
+      // while its rows live on, because this host mounted a subset of the block
+      // plugins, or because the row belongs to another page in the composite
+      // union. Stripping those rows' `text` would delete content; filling them
+      // would invent the very key this exists to keep out. An unknown type still
+      // reaches the write boundary and is still rejected there, loudly.
+      if (!handle) return row;
+      // `hasTextKey` / `rowDataOf` (`core/row-data.ts`) are the reader and the
+      // stripper for exactly this key, so the branded blob is never widened with
+      // a cast here. PRESENCE, not emptiness: `[]` is a legitimate value for a
+      // text-bearing row, and the key itself is what either schema accepts or
+      // rejects.
+      const carries = hasTextKey(row.data);
+      // `handle.text` is the declared text lens, present IFF the type is
+      // text-bearing — the same fact `acceptsText` is derived from, and the same
+      // discriminator `markdown-apply`'s `survivorData` uses for this rule on the
+      // agent-facing write path.
+      if (!handle.text) {
+        return carries ? { ...row, data: rowDataOf(row.data) } : row;
+      }
+      return carries
+        ? row
+        : {
+            ...row,
+            data: {
+              ...rowDataOf(row.data),
+              text: handle.text(handle.empty?.() ?? {}),
+            },
+          };
+    },
+    [blockHandlesRef],
+  );
+
   // THE single chokepoint for any DIRECT row-set mutation (everything that is not
   // a `BlockOp`). Snapshot the current rows, apply `transform` to the whole array,
   // diff into a minimal forward/reverse patch pair, optionally `record` it on the
@@ -994,7 +1038,22 @@ export function BlockEditorProviderInner({
       // projection flush fires from the unmount cleanup — BEFORE the effect
       // refreshes `rowsRef`.
       const before = liveRowsRef.current;
-      const after = transform(before);
+      // Conform only rows this write AUTHORED. `after` is the WHOLE row set —
+      // over the composite host, the union of several pages — and every writer
+      // here returns `b` unchanged for rows it did not touch, so identity is an
+      // exact test. Conforming the rest would sweep an unrelated row into this
+      // write's patch under this write's undo label, or (for `setExpanded`,
+      // `record: false`) as an unrecorded, unundoable data write.
+      //
+      // `after` ONLY. `before` stays untouched, so `patchesFromDiff`'s undo
+      // update restores the pre-conversion row WITH its `text`. Conforming
+      // `before` too — or conforming inside `diffBlocks` — would make undo of a
+      // text-to-void conversion restore a text row with no `text`, which the
+      // write boundary rejects just as loudly in the other direction.
+      const byId = new Map(before.map((b) => [b.id, b]));
+      const after = transform(before).map((row) =>
+        byId.get(row.id) === row ? row : conformRowText(row),
+      );
       const { undo: undoPatch, redo: redoPatch } = patchesFromDiff(
         diffBlocks(before, after),
       );
@@ -1026,7 +1085,14 @@ export function BlockEditorProviderInner({
       }
       dispatchPatch(redoPatch);
     },
-    [record, dispatchPatch, focusBlock, liveRowsRef, advanceRows],
+    [
+      record,
+      dispatchPatch,
+      focusBlock,
+      liveRowsRef,
+      advanceRows,
+      conformRowText,
+    ],
   );
 
   // The one-row case of `commitRows`: rewrite exactly the target row and land
@@ -1093,7 +1159,7 @@ export function BlockEditorProviderInner({
   const dispatchOp = useCallback(
     (op: BlockOp) => {
       const before = rowsRef.current;
-      const after = fromOpResult(before, op, anchorTypes);
+      const after = fromOpResult(before, op, opCtx);
       // An op the reducer fully refused (Tab on a first child, Shift+Tab at top
       // level, a bulk indent whose whole run is blocked) changes nothing. Drop it
       // here rather than dispatching: an empty-effect overlay would read as
@@ -1114,9 +1180,9 @@ export function BlockEditorProviderInner({
         OP_LABELS[op.kind],
         opFocusId(op, before),
       );
-      store.dispatch(buildOverlayOp(op, before, anchorTypes));
+      store.dispatch(buildOverlayOp(op, before, opCtx));
     },
-    [store, recordStructural, anchorTypes, advanceRows],
+    [store, recordStructural, opCtx, advanceRows],
   );
 
   // The three drag/selection writers are ORDINARY OPS, which is the whole point:
@@ -1275,12 +1341,12 @@ export function BlockEditorProviderInner({
   const applyOverlay = useCallback(
     (op: BlockOp): { before: Block[]; after: Block[] } => {
       const before = rowsRef.current;
-      const after = fromOpResult(before, op, anchorTypes);
+      const after = fromOpResult(before, op, opCtx);
       advanceRows(after);
-      store.dispatch(buildOverlayOp(op, before, anchorTypes));
+      store.dispatch(buildOverlayOp(op, before, opCtx));
       return { before, after };
     },
-    [store, anchorTypes, advanceRows],
+    [store, opCtx, advanceRows],
   );
 
   // Move the caret into a freshly-minted block by its known id. The block does
@@ -1441,7 +1507,7 @@ export function BlockEditorProviderInner({
         // `applyOverlay`) precisely because its ordering is deferred.
         const append = targetHandle.appendRunsAtEnd;
         const before = rowsRef.current;
-        const after = fromOpResult(before, op, anchorTypes);
+        const after = fromOpResult(before, op, opCtx);
         queueMicrotask(() => {
           // `captureBlockDocEdit` runs `append` synchronously (surgery uses
           // `discrete: true`), so a throw propagates out of the microtask
@@ -1449,7 +1515,7 @@ export function BlockEditorProviderInner({
           const docEdit = captureBlockDocEdit(blockDocOwnerOf(target.id), () =>
             append(mergingRuns),
           );
-          store.dispatch(buildOverlayOp(op, before, anchorTypes));
+          store.dispatch(buildOverlayOp(op, before, opCtx));
           recordStructuralWithDocEdit(
             before,
             after,
@@ -1516,7 +1582,7 @@ export function BlockEditorProviderInner({
       store,
       applyOverlay,
       recordStructuralWithDocEdit,
-      anchorTypes,
+      opCtx,
       isAnchorNode,
       authority,
     ],
@@ -1552,13 +1618,13 @@ export function BlockEditorProviderInner({
         (b) => ({
           ...b,
           type,
-          data: preserveText(b.data, data, acceptsTextRef.current(type)),
+          data: preserveText(b.data, data),
           expanded: expanded ?? b.expanded,
         }),
         { label: "Change block type" },
       );
     },
-    [commitRow, acceptsTextRef, blockHandles, wrapInContainer],
+    [commitRow, blockHandles, wrapInContainer],
   );
 
   const convertStrippingText = useCallback(
@@ -1616,7 +1682,7 @@ export function BlockEditorProviderInner({
           blockId,
           (b) => ({
             ...b,
-            data: preserveText(b.data, data, acceptsTextRef.current(b.type)),
+            data: preserveText(b.data, data),
           }),
           { label: "Edit block", coalesceKey: blockId },
         );

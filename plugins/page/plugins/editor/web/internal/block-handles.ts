@@ -14,8 +14,30 @@
 // consumer with zero code changes.
 
 import { useMemo } from "react";
-import type { BlockHandle } from "../../core";
+import {
+  blockOpContextOf,
+  type BlockHandle,
+  type BlockOpContext,
+} from "../../core";
 import { Editor } from "../slots";
+
+/**
+ * The reducer's type facts as ONE object, derived from this runtime's registry
+ * through the shared `blockOpContextOf`. The server mints its own from its own
+ * registry through the SAME function, which is what makes "both sides pass the
+ * same context" structural rather than a convention two filters have to keep.
+ *
+ * Stable across renders, so the optimistic overlay's `apply` closure does not
+ * churn. A new reducer fact costs one field here, not one parameter on each of
+ * the seams between this hook and `applyBlockOp`.
+ */
+export function useBlockOpContext(): BlockOpContext {
+  const contributions = Editor.Block.useContributions();
+  return useMemo(
+    () => blockOpContextOf(contributions.map((c) => c.block)),
+    [contributions],
+  );
+}
 
 /** Every registered block type's handle, keyed by `type`. */
 export function useBlockHandles(): ReadonlyMap<string, BlockHandle<unknown>> {
@@ -34,7 +56,10 @@ export function useBlockHandles(): ReadonlyMap<string, BlockHandle<unknown>> {
 export function useAnchorTypes(): ReadonlySet<string> {
   const contributions = Editor.Block.useContributions();
   return useMemo(
-    () => new Set(contributions.filter((c) => c.block.anchor).map((c) => c.block.type)),
+    () =>
+      new Set(
+        contributions.filter((c) => c.block.anchor).map((c) => c.block.type),
+      ),
     [contributions],
   );
 }

@@ -311,6 +311,26 @@ producer of a `PageForestTx`, and every export of
   answers "which of these were pages" with `row.type` — no DB round-trip, nothing
   predicted. Anything else it needs pre-delete it reads on `tx`.
 
+### The context both runtimes must agree on
+
+`applyBlockOp` takes a `BlockOpContext` carrying the type facts the forest cannot
+supply — which types are container anchors, and which carry text. The client
+predicts the forest with it and the server commits with it, so a disagreement
+makes an op apply differently on each side and never confirm.
+
+That parity is **structural, not conventional**: both sides mint the context from
+their own registry through the one shared `blockOpContextOf(handles)`
+(`core/block-ops.ts`) — `useBlockOpContext()` on the web, `blockOpCtx()` in
+`handle-apply-block-op.ts`. The registries differ; the derivation cannot. Every
+seam in between passes the CONTEXT rather than a bare `anchorTypes` set, which is
+what makes a new reducer fact one field instead of one parameter on each of six
+signatures — and the reason `textBearingTypes` reached both sides at once.
+
+One asymmetry worth knowing: an ABSENT `textBearingTypes` means *no opinion*, not
+*nothing accepts text*. The empty-set default that is right for `anchorTypes`
+would refuse every merge on the page, so the refusal gates on presence and a
+context-free caller gets the pre-context behaviour.
+
 ### B — order (client)
 
 > One writer's structural mutations reach the server in the order it issued them.
@@ -1477,13 +1497,78 @@ both exist to keep the projection out of everyone else's hands:
 - **`preserveText`** (`block-editor-context.tsx`) — carries the row's existing
   projection across an `update`/`convertTo` untouched. A conversion keeps the
   block's id, hence its doc, hence its text, so the row must neither restate nor
-  drop it. It DOES drop it when the target type is text-less (divider, image, …),
-  whose strict schema rejects a stray `text` key with a 400 — resolved generically
-  off the `Editor.Block` dispatch slot, so no call site branches on `acceptsText`.
+  drop it. It carries the key UNCONDITIONALLY: whether it may SURVIVE on the
+  resulting row is `conformRowText`'s question, below.
 - **`rowDataOf(data)`** (`core/row-data.ts`) — a stored blob minus `text`, for a
   control that must restate the block's OTHER fields (`update` replaces the blob).
   `handle.emptyRowData()` is the same derivation over `empty()`, and is what every
   convert site seeds from, so none of them hand-strips.
+
+### The rule is a BICONDITIONAL, and it lives at the funnel
+
+> `data.text` is present on a row **iff** its type accepts text.
+
+Both halves are a 400 at the write boundary: the key is an unrecognized key on a
+void type's strict schema, and its ABSENCE is a missing required field on a
+text-bearing one (`parse-block-data.ts` refuses to invent either).
+
+It used to live in `preserveText` alone — i.e. at a CALL SITE — and both halves
+were therefore broken for anyone who did not call through it:
+
+- **text → void.** `projectText` is a third writer that names `text` and never
+  called `preserveText`. Its flush fires from the text editor's UNMOUNT, which is
+  exactly what a conversion into a void type causes, and it gated only on the row
+  still existing — so every `/divider`, `/image`, `/place` and *Turn into → Page*
+  posted a patch carrying `text` at a row the server already knew was void. The
+  conversion itself is a different, successful write, so nothing looked broken;
+  what it left was a durable HTTP failure that is **never retried and never
+  resolves** (`use-optimistic-resource.ts` — failed ops are immune to
+  confirm/cascade/denial, and only NETWORK failures auto-retry), parking the
+  page's save indicator on an error with a Retry that re-fails. **No user action
+  clears it short of a reload.**
+- **void → text.** `emptyRowData()` is the target's defaults minus `text`, and a
+  void row has no prior projection to carry — so *Turn into → Text* off a divider
+  wrote `{}` against a schema that requires `text`. That patch is the ONLY
+  carrier of the conversion, so the conversion was rejected whole and lost on
+  reload (the overlay renders a rejected write exactly like an accepted one).
+
+`conformRowText`, applied in `commitRows`, is where the rule now lives. Three
+things about it are load-bearing:
+
+- **Rows this write AUTHORED, not the whole set.** `after` is every row — over the
+  composite host, the union of several pages — and every writer returns `b`
+  unchanged for rows it did not touch, so object identity against `before` is an
+  exact test. Conforming the rest would sweep an unrelated row into this write's
+  patch under this write's undo label, or (for `setExpanded`, `record: false`) as
+  an unrecorded, unundoable data write.
+- **`after` only, never `before`.** `patchesFromDiff`'s undo update is
+  `fieldsOf(u.before, u.changes)`, so leaving `before` alone is what keeps undo of
+  a text→void conversion restoring a text row WITH its text. Conforming `before`
+  too, or conforming inside `diffBlocks`, reintroduces the bug in the other
+  direction.
+- **No registered handle ⇒ no opinion**, which is deliberately NOT the void
+  branch. A type can be missing because it was renamed or removed while its rows
+  live on, because the host mounted a subset of the block plugins, or because the
+  row belongs to another page in the union. Stripping those rows' `text` deletes
+  content. (`markdown-apply`'s `survivorData` enforces the same rule off the same
+  `handle.text` lens and CAN collapse the two branches — because it never strips,
+  only passes through. Do not copy its spelling here.)
+
+Because the conform runs before the diff, the text→void projection now diffs to
+nothing and `isEmptyPatch` drops it: the redundant write is not rejected, it is
+never sent.
+
+**This covers DIRECT row writes — not ops.** `dispatchOp` / `applyOverlay` /
+`mergeBlock` diff raw `applyBlockOp` output through `recordPatchEntry` /
+`recordStructuralWithDocEdit`, which reach the same strict endpoint without
+passing through `commitRows`. Their half of the same rule is enforced in the
+reducer instead (see *A page's structural writes are one ordered stream*):
+`applyMerge` refuses a text-less merge target, and `page.editor:split-targets-are-text-bearing`
+fails the build on a declared split target that cannot hold text. Conforming op
+output client-side would be WRONG — the server runs the same reducer and then
+400s rather than conforming, so a silent client conform would predict a forest
+the server refuses to produce, trading a loud 400 for a permanently unconfirmable
+overlay op.
 
 **Stripping text a conversion consumed is a content-doc edit, in this order.**
 `convertStrippingText({ blockId, from, to, type, data })` is the ONE primitive
@@ -2456,6 +2541,7 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
     - `applyBlockOp`
     - `applyBlockOpEndpoint`
     - `BlockFieldChangesSchema`
+    - `blockOpContextOf`
     - `BlockOpSchema`
     - `BlockPageSchema`
     - `BlockPatchSchema`
@@ -2478,6 +2564,7 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
     - `deleteBlock`
     - `diffBlocks`
     - `getBlockPage`
+    - `hasTextKey`
     - `IdentifiedBlockSchema`
     - `inDocumentOrder`
     - `INLINE_SYNTAXES`

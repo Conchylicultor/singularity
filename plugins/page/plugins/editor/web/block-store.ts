@@ -29,7 +29,7 @@ import {
   sameOverlayTarget,
   type BlockOverlayOp,
 } from "./internal/optimistic-block-ops";
-import { useAnchorTypes } from "./internal/block-handles";
+import { useBlockOpContext } from "./internal/block-handles";
 
 /**
  * The full read/write surface the provider needs. Recording for undo stays in
@@ -72,16 +72,21 @@ export function useServerBlockStore(pageId: string): BlockStore {
   // reconciled by the WS push. The captured `effect` drives both the idempotency
   // apply-guard (in `applyOverlayOp`) and content-based confirmation here.
   const params = useMemo(() => ({ pageId }), [pageId]);
-  // The reducer's type facts, derived from the block-handle registry. The SERVER
-  // derives the same set from its own registry and passes it to the same
-  // `applyBlockOp`; if the two ever disagreed, an op would predict one forest
-  // here and commit another there, and could never confirm.
-  const anchorTypes = useAnchorTypes();
+  // The reducer's type facts, minted from the block-handle registry. The SERVER
+  // mints the same context from its own registry through the same
+  // `blockOpContextOf` and passes it to the same `applyBlockOp`; if the two ever
+  // disagreed, an op would predict one forest here and commit another there, and
+  // could never confirm.
+  const opCtx = useBlockOpContext();
   const apply = useCallback(
-    (blocks: Block[], v: BlockOverlayOp) => applyOverlayOp(blocks, v, anchorTypes),
-    [anchorTypes],
+    (blocks: Block[], v: BlockOverlayOp) => applyOverlayOp(blocks, v, opCtx),
+    [opCtx],
   );
-  const optimistic = useOptimisticResource<Block[], BlockOverlayOp, { pageId: string }>({
+  const optimistic = useOptimisticResource<
+    Block[],
+    BlockOverlayOp,
+    { pageId: string }
+  >({
     resource: blocksResource,
     params,
     apply,
@@ -92,12 +97,16 @@ export function useServerBlockStore(pageId: string): BlockStore {
     // causally dependent writes in issue order on the wire.
     mutate: (v) =>
       v.tag === "patch"
-        ? fetchEndpoint(patchBlocks, { pageId }, { body: v.patch }).then((r) => ({
-            watermark: r.watermark,
-          }))
-        : fetchEndpoint(applyBlockOpEndpoint, { pageId }, { body: v.op }).then((r) => ({
-            watermark: r.watermark,
-          })),
+        ? fetchEndpoint(patchBlocks, { pageId }, { body: v.patch }).then(
+            (r) => ({
+              watermark: r.watermark,
+            }),
+          )
+        : fetchEndpoint(applyBlockOpEndpoint, { pageId }, { body: v.op }).then(
+            (r) => ({
+              watermark: r.watermark,
+            }),
+          ),
     isConfirmedBy: (serverData, v) =>
       v.tag === "patch"
         ? isPatchReflected(serverData, v.patch)
@@ -132,7 +141,11 @@ export function useServerBlockStore(pageId: string): BlockStore {
 // Takes no `pageId`: the memory document is one synthetic page whose rows already
 // carry it, and the only write that ever needed the page's own id was `paste`
 // (now the provider's, which knows it).
-export function useMemoryBlockStore({ initialBlocks }: { initialBlocks: Block[] }): BlockStore {
+export function useMemoryBlockStore({
+  initialBlocks,
+}: {
+  initialBlocks: Block[];
+}): BlockStore {
   const [rows, setRowsState] = useState<Block[]>(initialBlocks);
   // The authoritative rows are also mirrored into a ref updated synchronously by
   // every write, so writes chained within one event compose against the latest
@@ -140,7 +153,7 @@ export function useMemoryBlockStore({ initialBlocks }: { initialBlocks: Block[] 
   const rowsRef = useRef<Block[]>(initialBlocks);
   // Same reducer facts as the server path — an in-memory document must apply an
   // op exactly as a persisted one does (see `useServerBlockStore`).
-  const anchorTypes = useAnchorTypes();
+  const opCtx = useBlockOpContext();
   const commit = useCallback((next: Block[]) => {
     rowsRef.current = next;
     setRowsState(next);
@@ -152,13 +165,13 @@ export function useMemoryBlockStore({ initialBlocks }: { initialBlocks: Block[] 
       // apply-guard throws `OpNoLongerApplies` when the base already reflects the
       // op/patch — in memory that means a no-op replay, so keep the current rows.
       try {
-        commit(applyOverlayOp(rowsRef.current, v, anchorTypes));
+        commit(applyOverlayOp(rowsRef.current, v, opCtx));
       } catch (err) {
         if (err instanceof OpNoLongerApplies) return;
         throw err;
       }
     },
-    [commit, anchorTypes],
+    [commit, opCtx],
   );
 
   return {

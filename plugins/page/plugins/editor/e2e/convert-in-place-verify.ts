@@ -57,6 +57,23 @@ interface Row {
   data: unknown;
 }
 
+/**
+ * Does the row's `data` CARRY a `text` key at all?
+ *
+ * Deliberately not expressible through `rowPlain`, which answers `""` for a
+ * missing `text` and for `text: []` alike — the two states this whole phase is
+ * about. A void row must have no key (its strict schema rejects one); a
+ * text-bearing row must have one (its schema requires it). Absence and emptiness
+ * are different facts here, so they need different readers.
+ */
+function hasTextKey(row: Row): boolean {
+  return (
+    row.data !== null &&
+    typeof row.data === "object" &&
+    Object.prototype.hasOwnProperty.call(row.data, "text")
+  );
+}
+
 /** Plain text of a row's `data.text` runs (the `RichText` array), NBSP-normalised. */
 function rowPlain(row: Row): string {
   const text = (row.data as { text?: unknown } | null)?.text;
@@ -66,6 +83,51 @@ function rowPlain(row: Row): string {
     .join("")
     .replace(/ /g, " ")
     .trim();
+}
+
+/**
+ * Open a block's rail actions menu and pick one "Turn into" target.
+ *
+ * The hover is a real mouse move at a point inside the row rather than
+ * `locator.hover()`: the rail is hover-REVEALED, and its controls stay
+ * `pointer-events-none` until the row is genuinely hovered — the same reason
+ * `container/e2e/container-rail-verify.ts` moves the mouse by hand, whose HANDLE
+ * selector and popover scoping this borrows verbatim.
+ *
+ * The target rows are `Row` primitives with an `onMouseDown` commit and no
+ * `onClick`, so they render as plain `div`s — no role to select by, which is why
+ * this scopes an exact-text match to the popover's own content box instead of
+ * reaching for `getByRole`. Returns false when the affordance never appeared:
+ * "the menu has no such entry" is a real answer the caller reports.
+ */
+async function turnInto(
+  page: Page,
+  blockId: string,
+  label: string,
+): Promise<boolean> {
+  const box = await page.evaluate((id: string) => {
+    const el = document.querySelector<HTMLElement>(`[data-block-id="${id}"]`);
+    if (!el) return null;
+    const b = el.getBoundingClientRect();
+    return { x: b.left + b.width * 0.6, y: b.top + Math.min(12, b.height / 2) };
+  }, blockId);
+  if (!box) return false;
+  await page.mouse.move(box.x, box.y);
+  await page.waitForTimeout(300);
+
+  const handle = page
+    .locator('button[aria-label="Reorder or open block actions"]')
+    .first();
+  if (!(await handle.isVisible())) return false;
+  await handle.click();
+  await page.waitForTimeout(400);
+
+  const popover = page.locator('[data-slot="popover-content"]');
+  const entry = popover.getByText(label, { exact: true }).first();
+  if (!(await entry.isVisible())) return false;
+  await entry.click();
+  await page.waitForTimeout(400);
+  return true;
 }
 
 /** Fetch the page's rows from inside the app (same origin, same session). */
@@ -194,7 +256,7 @@ const cases: Case[] = [
 ];
 
 await withBrowser(async (h) => {
-  const { page } = await h.session({ label: "A" });
+  const { page, captured } = await h.session({ label: "A" });
 
   for (const c of cases) {
     const doc = await openBlankPage(page, base, { settleMs: 3000 });
@@ -243,8 +305,11 @@ await withBrowser(async (h) => {
     // 4. the caret survived, collapsed, inside the same block.
     const caret = await page.evaluate((id: string) => {
       const sel = window.getSelection();
-      if (!sel || sel.rangeCount === 0) return { has: false, collapsed: false, inside: false };
-      const el = document.querySelector(`[data-block-id="${id}"] [contenteditable="true"]`);
+      if (!sel || sel.rangeCount === 0)
+        return { has: false, collapsed: false, inside: false };
+      const el = document.querySelector(
+        `[data-block-id="${id}"] [contenteditable="true"]`,
+      );
       return {
         has: true,
         collapsed: sel.isCollapsed,
@@ -252,7 +317,11 @@ await withBrowser(async (h) => {
       };
     }, blockId);
     const caretOk = caret.has && caret.collapsed && caret.inside;
-    r.ok(`${c.label}: caret collapsed inside the block`, caretOk, JSON.stringify(caret));
+    r.ok(
+      `${c.label}: caret collapsed inside the block`,
+      caretOk,
+      JSON.stringify(caret),
+    );
   }
 
   // --- DOM-node identity across a /quote wrap and a /prompt round trip --------
@@ -296,14 +365,21 @@ await withBrowser(async (h) => {
       page.evaluate(
         ({ el, s }) => {
           const live = document.querySelector(s);
-          return { same: live === el, connected: (el as Element).isConnected, present: !!live };
+          return {
+            same: live === el,
+            connected: (el as Element).isConnected,
+            present: !!live,
+          };
         },
         { el: held, s: sel },
       );
     // `isVisible()` resolves false for a missing element — it does not throw —
     // so absence is a real answer here, not a swallowed failure.
     const launchVisible = () =>
-      page.getByRole("button", { name: /^Launch / }).first().isVisible();
+      page
+        .getByRole("button", { name: /^Launch / })
+        .first()
+        .isVisible();
     /** Commit a slash-menu conversion from the end of the block's text. */
     const convertVia = async (query: string) => {
       await page.locator(sel).first().click();
@@ -320,12 +396,31 @@ await withBrowser(async (h) => {
 
     for (const step of [
       // A WRAP: the row stays `text` and is reparented under a fresh quote anchor.
-      { label: "→ quote (wrap)", query: "/quote", wantType: "text", wantLaunch: false },
-      { label: "→ prompt", query: "/prompt", wantType: "prompt", wantLaunch: true },
-      { label: "prompt → text", query: "/text", wantType: "text", wantLaunch: false },
+      {
+        label: "→ quote (wrap)",
+        query: "/quote",
+        wantType: "text",
+        wantLaunch: false,
+      },
+      {
+        label: "→ prompt",
+        query: "/prompt",
+        wantType: "prompt",
+        wantLaunch: true,
+      },
+      {
+        label: "prompt → text",
+        query: "/text",
+        wantType: "text",
+        wantLaunch: false,
+      },
     ]) {
       await convertVia(step.query);
-      await snap(page, out, `identity-${step.query.replace(/\W+/g, "")}-${step.wantType}`);
+      await snap(
+        page,
+        out,
+        `identity-${step.query.replace(/\W+/g, "")}-${step.wantType}`,
+      );
 
       const node = await stillSame(held);
       r.ok(
@@ -363,14 +458,116 @@ await withBrowser(async (h) => {
     // test is that the keystrokes landed in this block, not the space count.
     const collapse = (s: string) => s.replace(/\s+/g, " ").trim();
     const domAfter = await blockText(page.locator(sel).first());
-    r.eq("identity: the keystrokes landed in the same block", collapse(domAfter), "hello world");
-    const finalRow = await rowWhenProjected(page, doc.pageId, blockId, domAfter);
+    r.eq(
+      "identity: the keystrokes landed in the same block",
+      collapse(domAfter),
+      "hello world",
+    );
+    const finalRow = await rowWhenProjected(
+      page,
+      doc.pageId,
+      blockId,
+      domAfter,
+    );
     r.eq(
       "identity: data.text agrees after the round trip",
       finalRow ? collapse(rowPlain(finalRow)) : null,
       "hello world",
     );
     await snap(page, out, "identity-final");
+  }
+
+  // --- void SWAP targets: both directions of the row text rule ---------------
+  // Not a case in the table above: that loop's first assertion is that the block
+  // still has a `[contenteditable]`, which a void row by definition does not —
+  // and `rowPlain` cannot tell a missing `text` from an empty one. The table
+  // covers text→text swaps and wraps; this covers the swap into and back out of
+  // a type that carries no text at all, which is where both halves of the rule
+  // used to fail at the write boundary.
+  {
+    const doc = await openBlankPage(page, base, { settleMs: 3000 });
+    const blockId = doc.blockId;
+    r.note(`void swap: page ${doc.pageId} block ${blockId}`);
+    // Console errors are captured for the whole run, so read a DELTA over this
+    // phase and filter to the signature. A global "no console errors" assertion
+    // would fail on unrelated reconnect/asset noise and stop meaning anything.
+    const errorsBefore = captured.consoleErrors.length;
+
+    await page.keyboard.type("hello /divider", { delay: 25 });
+    await page.waitForTimeout(600);
+    await page.keyboard.press("Enter");
+    // Well past the ~1 s projection debounce: the rejected write this phase
+    // exists for was posted BY that flush, so a shorter wait would miss it.
+    await page.waitForTimeout(2500);
+    await snap(page, out, "void-swap-divider");
+
+    const afterSwap = (await fetchRows(page, doc.pageId)).find(
+      (b) => b.id === blockId,
+    );
+    if (!afterSwap) {
+      r.fail("void swap: row present", `no row for ${blockId}`);
+    } else {
+      r.eq("void swap: row type", afterSwap.type, "divider");
+      r.ok(
+        "void swap: the row carries NO `text` key",
+        !hasTextKey(afterSwap),
+        `data=${JSON.stringify(afterSwap.data)}`,
+      );
+    }
+    const editables = await page
+      .locator(`[data-block-id="${blockId}"] [contenteditable="true"]`)
+      .count();
+    r.eq("void swap: no text surface on a void row", editables, 0);
+
+    // …and back. `emptyRowData()` hands `convertTo` the target's defaults MINUS
+    // `text`, and a divider has no projection to carry across — so this write
+    // used to be `{}` against a schema that REQUIRES `text`, rejected whole,
+    // taking the conversion with it.
+    const turned = await turnInto(page, blockId, "Text");
+    if (!turned) {
+      r.fail(
+        "void swap back: the rail menu offers Turn into \u2192 Text",
+        `no reachable entry for ${blockId} \u2014 a divider is \`convertible\`, so this is a real regression`,
+      );
+    } else {
+      await page.waitForTimeout(1500);
+      await snap(page, out, "void-swap-back-to-text");
+
+      const back = (await fetchRows(page, doc.pageId)).find(
+        (b) => b.id === blockId,
+      );
+      r.eq("void swap back: row type", back?.type, "text");
+      r.ok(
+        "void swap back: the row carries a `text` key",
+        back !== undefined && hasTextKey(back),
+        `data=${JSON.stringify(back?.data)}`,
+      );
+
+      // The conversion must survive a reload — the optimistic overlay renders a
+      // rejected write exactly like an accepted one, so the client's own idea of
+      // the row proves nothing about what was persisted.
+      await page.reload({ waitUntil: "domcontentloaded" });
+      await page.waitForTimeout(3000);
+      const reloaded = (await fetchRows(page, doc.pageId)).find(
+        (b) => b.id === blockId,
+      );
+      r.eq(
+        "void swap back: still `text` after a reload",
+        reloaded?.type,
+        "text",
+      );
+    }
+
+    const rejected = captured.consoleErrors
+      .slice(errorsBefore)
+      .filter((line) =>
+        /blocks\/patch|Invalid data for block type|Unrecognized key/.test(line),
+      );
+    r.ok(
+      "void swap: neither direction posted a row write the server rejected",
+      rejected.length === 0,
+      JSON.stringify(rejected),
+    );
   }
 
   // --- the spread leak: a non-text control must not write text ----------------
@@ -386,12 +583,16 @@ await withBrowser(async (h) => {
     await page.waitForTimeout(600);
     await page.keyboard.type("buy milk", { delay: 25 });
     // Deliberately NO wait: the checkbox flip must race the pending projection.
-    const checkbox = page.locator(`[data-block-id="${blockId}"] input[type="checkbox"]`).first();
+    const checkbox = page
+      .locator(`[data-block-id="${blockId}"] input[type="checkbox"]`)
+      .first();
     await checkbox.click();
     await page.waitForTimeout(1500);
     await snap(page, out, "todo-checkbox");
 
-    const block = page.locator(`[data-block-id="${blockId}"] [contenteditable="true"]`).first();
+    const block = page
+      .locator(`[data-block-id="${blockId}"] [contenteditable="true"]`)
+      .first();
     const domText = await blockText(block);
     const row = await rowWhenProjected(page, doc.pageId, blockId, "buy milk");
     if (!row) {
@@ -400,7 +601,11 @@ await withBrowser(async (h) => {
       const plain = rowPlain(row);
       r.note(`dom=${JSON.stringify(domText)} data=${JSON.stringify(row.data)}`);
       r.eq("to-do checkbox: row type", row.type, "to-do");
-      r.eq("to-do checkbox: checked was written", (row.data as { checked?: unknown }).checked, true);
+      r.eq(
+        "to-do checkbox: checked was written",
+        (row.data as { checked?: unknown }).checked,
+        true,
+      );
       r.eq("to-do checkbox: DOM text intact", domText, "buy milk");
       r.eq("to-do checkbox: data.text not reverted", plain, "buy milk");
     }

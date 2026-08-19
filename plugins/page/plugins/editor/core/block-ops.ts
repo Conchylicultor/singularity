@@ -6,6 +6,7 @@ import {
   selectionRoots,
   subtreeIds,
 } from "@plugins/primitives/plugins/tree/core";
+import type { BlockHandle } from "./define-block";
 import { PAGE_BLOCK_TYPE, type Block } from "./schemas";
 import { planForestInsert, positionalRank, rankWindow } from "./block-forest";
 import {
@@ -256,6 +257,42 @@ export interface BlockOpContext {
    * types are anchors.
    */
   anchorTypes?: ReadonlySet<string>;
+  /**
+   * Block types whose schema declares `text` (`BlockHandle.acceptsText`). The
+   * reducer needs them for one thing: refusing to merge INTO a text-less row,
+   * which would write `data.text` onto a void schema and 400 at the write
+   * boundary. `anchorTypes` already covers the container half of that; this
+   * covers the rest (divider, image, embed, place, …).
+   *
+   * ABSENT MEANS "NO OPINION", NOT "NOTHING ACCEPTS TEXT" — and unlike
+   * `anchorTypes` the empty-set default would be catastrophic here (it would
+   * refuse EVERY merge), which is why the refusal below gates on presence. A
+   * caller that cannot resolve the registry gets today's behavior, and the write
+   * boundary stays the thing that rejects loudly. Same stance the row-write
+   * funnel takes for a type with no registered handle.
+   */
+  textBearingTypes?: ReadonlySet<string>;
+}
+
+/**
+ * The one derivation of a {@link BlockOpContext} from a block-handle set.
+ *
+ * Both runtimes MUST hand `applyBlockOp` the same context: the client predicts
+ * the forest with it (the optimistic overlay) and the server commits with it, so
+ * a disagreement makes an op apply differently on each side and never confirm.
+ * That parity used to be a convention — two filters, one per runtime, that had
+ * to be kept in step by hand. Deriving both from this function makes it
+ * structural: the registries differ, the derivation cannot.
+ */
+export function blockOpContextOf(
+  handles: readonly BlockHandle<unknown>[],
+): BlockOpContext {
+  return {
+    anchorTypes: new Set(handles.filter((h) => h.anchor).map((h) => h.type)),
+    textBearingTypes: new Set(
+      handles.filter((h) => h.acceptsText).map((h) => h.type),
+    ),
+  };
 }
 
 /** The default context: no anchor types, i.e. today's behavior exactly. */
@@ -756,9 +793,10 @@ export function opBlockIds(op: BlockOp): string[] {
  * mutates `blocks` (returns a new array with new node objects for changed
  * nodes), and never changes a surviving node's `pageId` (in-page invariant).
  *
- * `ctx` carries the type facts the forest cannot supply (today: which types are
- * container anchors). It defaults to `{}`, which is byte-identical to a
- * context-free call — see `BlockOpContext`.
+ * `ctx` carries the type facts the forest cannot supply (which types are
+ * container anchors, and which carry text). It defaults to `{}`, which is
+ * byte-identical to a context-free call — see `BlockOpContext`, and mint it with
+ * `blockOpContextOf` rather than by hand.
  */
 export function applyBlockOp(
   blocks: BlockNode[],
@@ -766,7 +804,7 @@ export function applyBlockOp(
   ctx: BlockOpContext = {},
 ): BlockNode[] {
   const anchorTypes = ctx.anchorTypes ?? NO_ANCHORS;
-  const next = applyOp(blocks, op, anchorTypes);
+  const next = applyOp(blocks, op, anchorTypes, ctx.textBearingTypes);
   return pruneEmptyAnchors(next, anchorTypes);
 }
 
@@ -774,12 +812,13 @@ function applyOp(
   blocks: BlockNode[],
   op: BlockOp,
   anchorTypes: ReadonlySet<string>,
+  textBearingTypes: ReadonlySet<string> | undefined,
 ): BlockNode[] {
   switch (op.kind) {
     case "split":
       return applySplit(blocks, op, anchorTypes);
     case "merge":
-      return applyMerge(blocks, op, anchorTypes);
+      return applyMerge(blocks, op, anchorTypes, textBearingTypes);
     case "indent":
       return foldIndent(blocks, op.blockIds).next;
     case "outdent":
@@ -1018,6 +1057,7 @@ function applyMerge(
   blocks: BlockNode[],
   op: Extract<BlockOp, { kind: "merge" }>,
   anchorTypes: ReadonlySet<string>,
+  textBearingTypes: ReadonlySet<string> | undefined,
 ): BlockNode[] {
   const block = byId(blocks, op.blockId);
   if (!block) return blocks;
@@ -1047,6 +1087,16 @@ function applyMerge(
   // returns an anchor, so Delete at the end of the line ABOVE a container
   // resolves here. Refusing demotes it to a plain caret move.
   if (anchorTypes.has(prev.type)) return blocks;
+  // The rest of the void types (divider, image, embed, place, …). The guard
+  // above covers only the CONTAINER half of "carries no text", and the reason it
+  // gives — writing `data.text` onto a void schema is a 400 at the write
+  // boundary — is exactly as true for a divider, which is not an anchor. Only a
+  // client-side intent gate (`keystroke-intent.ts`) kept this unreachable, and
+  // that gate's own comment records the 400 shipping once already; the reducer
+  // is where client and server can agree, so the refusal belongs here too.
+  // Presence-gated: see `BlockOpContext.textBearingTypes` on why an absent set
+  // means "no opinion" rather than "refuse everything".
+  if (textBearingTypes && !textBearingTypes.has(prev.type)) return blocks;
 
   // Concatenate runs into prev (coalescing the seam). `op.runs` is the live
   // merging runs on the live path; `runsOfNode` (lagged projection) is only the

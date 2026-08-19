@@ -57,6 +57,7 @@ export {
   textOf,
   runsOfNode,
   withRuns,
+  blockOpContextOf,
 } from "./block-ops";
 export type { BlockOp, BlockOpContext, BlockNode, IsAnchor } from "./block-ops";
 
@@ -138,7 +139,7 @@ export type {
   BlockTextVariant,
 } from "./define-block";
 
-export { rowDataOf } from "./row-data";
+export { hasTextKey, rowDataOf } from "./row-data";
 export type { RowData } from "./row-data";
 
 export {

@@ -17,6 +17,7 @@ import { PAGE_BLOCK_TYPE } from "./schemas";
 import {
   applyBlockOp,
   applyBulkMove,
+  blockOpContextOf,
   canIndent,
   canOutdent,
   childrenOf,
@@ -33,8 +34,18 @@ import {
   type BlockOpContext,
   type IsAnchor,
 } from "./block-ops";
-import { coalesce, mergeRuns, runsLength, splitRuns, type RichText } from "./rich-text";
-import { withMintedIds, type IdentifiedBlock, type SerializedBlock } from "./serialized-block";
+import {
+  coalesce,
+  mergeRuns,
+  runsLength,
+  splitRuns,
+  type RichText,
+} from "./rich-text";
+import {
+  withMintedIds,
+  type IdentifiedBlock,
+  type SerializedBlock,
+} from "./serialized-block";
 
 // ---------------------------------------------------------------------------
 // Test factory + invariant helpers
@@ -48,7 +59,12 @@ function mk(
   id: string,
   parentId: string | null,
   rank: string,
-  opts: { text?: string; expanded?: boolean; type?: string; pageId?: string | null } = {},
+  opts: {
+    text?: string;
+    expanded?: boolean;
+    type?: string;
+    pageId?: string | null;
+  } = {},
 ): BlockNode {
   return {
     id,
@@ -78,7 +94,12 @@ function assertRankOrdering(blocks: BlockNode[]): void {
   for (const list of byParent.values()) {
     const sorted = childrenOf(blocks, list[0]!.parentId);
     for (let i = 1; i < sorted.length; i++) {
-      expect(Rank.compare(Rank.from(sorted[i - 1]!.rank), Rank.from(sorted[i]!.rank))).toBe(-1);
+      expect(
+        Rank.compare(
+          Rank.from(sorted[i - 1]!.rank),
+          Rank.from(sorted[i]!.rank),
+        ),
+      ).toBe(-1);
     }
   }
 }
@@ -99,7 +120,11 @@ function assertPageIdInvariant(before: BlockNode[], after: BlockNode[]): void {
  * Returns the result for op-specific assertions. `ctx` is omitted by every
  * pre-anchor case — the default is byte-identical to a context-free call.
  */
-function run(blocks: BlockNode[], op: BlockOp, ctx?: BlockOpContext): BlockNode[] {
+function run(
+  blocks: BlockNode[],
+  op: BlockOp,
+  ctx?: BlockOpContext,
+): BlockNode[] {
   const snapshot = structuredClone(blocks);
   Object.freeze(blocks);
   blocks.forEach((b) => Object.freeze(b));
@@ -336,7 +361,12 @@ describe("split", () => {
       mk("A", null, r1, { text: "helloworld" }),
       mk("B", null, r2, { text: "next" }),
     ];
-    const out = run(blocks, { kind: "split", blockId: "A", position: 5, newId: "NEW" });
+    const out = run(blocks, {
+      kind: "split",
+      blockId: "A",
+      position: 5,
+      newId: "NEW",
+    });
     const aNode = out.find((x) => x.id === "A")!;
     const newNode = out.find((x) => x.id === "NEW")!;
     expect(textOf(aNode)).toBe("hello");
@@ -349,7 +379,12 @@ describe("split", () => {
 
   test("no next sibling → new sibling appended at end", () => {
     const blocks = [mk("A", null, a, { text: "abcdef" })];
-    const out = run(blocks, { kind: "split", blockId: "A", position: 3, newId: "NEW" });
+    const out = run(blocks, {
+      kind: "split",
+      blockId: "A",
+      position: 3,
+      newId: "NEW",
+    });
     expect(ids(out, null)).toEqual(["A", "NEW"]);
     const newNode = out.find((x) => x.id === "NEW")!;
     expect(textOf(newNode)).toBe("def");
@@ -372,7 +407,12 @@ describe("split", () => {
 
   test("without siblingType the new sibling keeps the original type", () => {
     const blocks = [mk("H", null, a, { text: "Title", type: "heading-1" })];
-    const out = run(blocks, { kind: "split", blockId: "H", position: 5, newId: "NEW" });
+    const out = run(blocks, {
+      kind: "split",
+      blockId: "H",
+      position: 5,
+      newId: "NEW",
+    });
     expect(out.find((x) => x.id === "NEW")!.type).toBe("heading-1");
   });
 
@@ -388,7 +428,12 @@ describe("split", () => {
       mk("K1", "P", k1),
       mk("K2", "P", k2),
     ];
-    const out = run(blocks, { kind: "split", blockId: "P", position: 5, newId: "NEW" });
+    const out = run(blocks, {
+      kind: "split",
+      blockId: "P",
+      position: 5,
+      newId: "NEW",
+    });
 
     // Tail is the immediate next sibling of the head, at the head's own depth.
     expect(ids(out, null)).toEqual(["P", "NEW"]);
@@ -418,7 +463,12 @@ describe("split", () => {
       mk("P", null, a, { text: "helloworld", expanded: false }),
       mk("K1", "P", k1),
     ];
-    const out = run(blocks, { kind: "split", blockId: "P", position: 5, newId: "NEW" });
+    const out = run(blocks, {
+      kind: "split",
+      blockId: "P",
+      position: 5,
+      newId: "NEW",
+    });
     expect(ids(out, "P")).toEqual(["K1"]);
     const tail = out.find((b) => b.id === "NEW")!;
     expect(ids(out, "NEW")).toEqual([]);
@@ -427,7 +477,12 @@ describe("split", () => {
 
   test("adoption predicate needs BOTH: expanded but zero children → plain sibling split", () => {
     const blocks = [mk("P", null, a, { text: "helloworld", expanded: true })];
-    const out = run(blocks, { kind: "split", blockId: "P", position: 5, newId: "NEW" });
+    const out = run(blocks, {
+      kind: "split",
+      blockId: "P",
+      position: 5,
+      newId: "NEW",
+    });
     expect(ids(out, null)).toEqual(["P", "NEW"]);
     const tail = out.find((b) => b.id === "NEW")!;
     expect(ids(out, "NEW")).toEqual([]);
@@ -439,7 +494,12 @@ describe("split", () => {
     const k2 = after(k1);
     const origin = mk("P", null, a, { text: "helloworld", expanded: true });
     const blocks = [origin, mk("K1", "P", k1), mk("K2", "P", k2)];
-    const out = run(blocks, { kind: "split", blockId: "P", position: 0, newId: "NEW" });
+    const out = run(blocks, {
+      kind: "split",
+      blockId: "P",
+      position: 0,
+      newId: "NEW",
+    });
 
     // The empty sibling is minted ABOVE the origin, at the same depth.
     expect(ids(out, null)).toEqual(["NEW", "P"]);
@@ -461,7 +521,12 @@ describe("split", () => {
 
   test("identity: EMPTY-block position-0 split keeps the plain empty-sibling-BELOW behavior", () => {
     const blocks = [mk("P", null, a, { text: "", expanded: false })];
-    const out = run(blocks, { kind: "split", blockId: "P", position: 0, newId: "NEW" });
+    const out = run(blocks, {
+      kind: "split",
+      blockId: "P",
+      position: 0,
+      newId: "NEW",
+    });
     // afterRuns is empty, so the identity branch does not fire: a plain empty
     // sibling is minted BELOW, as before.
     expect(ids(out, null)).toEqual(["P", "NEW"]);
@@ -469,7 +534,15 @@ describe("split", () => {
   });
 
   test("identity: position-0 split honors tailData → empty UNCHECKED to-do above, origin data literally unchanged", () => {
-    const origin: BlockNode = { id: "A", pageId: "page-1", parentId: null, type: "to-do", data: { checked: true, text: "helloworld" }, rank: a, expanded: false };
+    const origin: BlockNode = {
+      id: "A",
+      pageId: "page-1",
+      parentId: null,
+      type: "to-do",
+      data: { checked: true, text: "helloworld" },
+      rank: a,
+      expanded: false,
+    };
     const out = run([origin], {
       kind: "split",
       blockId: "A",
@@ -478,9 +551,15 @@ describe("split", () => {
       tailData: { checked: false },
     });
     // The empty sibling above inherits tailData with an empty text.
-    expect(out.find((b) => b.id === "NEW")!.data).toEqual({ checked: false, text: [] });
+    expect(out.find((b) => b.id === "NEW")!.data).toEqual({
+      checked: false,
+      text: [],
+    });
     // The origin keeps its data literally (still checked, full text).
-    expect(out.find((b) => b.id === "A")!.data).toEqual({ checked: true, text: "helloworld" });
+    expect(out.find((b) => b.id === "A")!.data).toEqual({
+      checked: true,
+      text: "helloworld",
+    });
   });
 
   test("identity: position-0 split of a FIRST child inserts a new first child under the parent", () => {
@@ -491,7 +570,12 @@ describe("split", () => {
       mk("C1", "P", c1, { text: "helloworld" }),
       mk("C2", "P", c2),
     ];
-    const out = run(blocks, { kind: "split", blockId: "C1", position: 0, newId: "NEW" });
+    const out = run(blocks, {
+      kind: "split",
+      blockId: "C1",
+      position: 0,
+      newId: "NEW",
+    });
     // NEW lands before C1 as the parent's new first child.
     expect(ids(out, "P")).toEqual(["NEW", "C1", "C2"]);
     expect(out.find((b) => b.id === "NEW")!.parentId).toBe("P");
@@ -548,7 +632,12 @@ describe("split", () => {
       content("K1", "P", k1),
       subPage("S1", "P", k2),
     ];
-    const out = run(blocks, { kind: "split", blockId: "P", position: 5, newId: "NEW" });
+    const out = run(blocks, {
+      kind: "split",
+      blockId: "P",
+      position: 5,
+      newId: "NEW",
+    });
     // Both children (including the sub-page) reparent to the tail, order preserved.
     expect(ids(out, "NEW")).toEqual(["K1", "S1"]);
     const s1 = out.find((b) => b.id === "S1")!;
@@ -560,7 +649,15 @@ describe("split", () => {
 
   test("tailData present → tail data = tailData spread + afterRuns text; head data untouched", () => {
     const blocks: BlockNode[] = [
-      { id: "A", pageId: "page-1", parentId: null, type: "to-do", data: { checked: true, text: "helloworld" }, rank: a, expanded: false },
+      {
+        id: "A",
+        pageId: "page-1",
+        parentId: null,
+        type: "to-do",
+        data: { checked: true, text: "helloworld" },
+        rank: a,
+        expanded: false,
+      },
     ];
     const out = run(blocks, {
       kind: "split",
@@ -570,17 +667,39 @@ describe("split", () => {
       tailData: { checked: false },
     });
     // The tail gets the per-type-transformed payload; `.text` is always afterRuns.
-    expect(out.find((b) => b.id === "NEW")!.data).toEqual({ checked: false, text: [{ text: "world" }] });
+    expect(out.find((b) => b.id === "NEW")!.data).toEqual({
+      checked: false,
+      text: [{ text: "world" }],
+    });
     // Head keeps its own data (still checked), text truncated to the head runs.
-    expect(out.find((b) => b.id === "A")!.data).toEqual({ checked: true, text: [{ text: "hello" }] });
+    expect(out.find((b) => b.id === "A")!.data).toEqual({
+      checked: true,
+      text: [{ text: "hello" }],
+    });
   });
 
   test("tailData absent → the tail INHERITS the origin's data (checked:true carries — today's fallback, now explicit)", () => {
     const blocks: BlockNode[] = [
-      { id: "A", pageId: "page-1", parentId: null, type: "to-do", data: { checked: true, text: "helloworld" }, rank: a, expanded: false },
+      {
+        id: "A",
+        pageId: "page-1",
+        parentId: null,
+        type: "to-do",
+        data: { checked: true, text: "helloworld" },
+        rank: a,
+        expanded: false,
+      },
     ];
-    const out = run(blocks, { kind: "split", blockId: "A", position: 5, newId: "NEW" });
-    expect(out.find((b) => b.id === "NEW")!.data).toEqual({ checked: true, text: [{ text: "world" }] });
+    const out = run(blocks, {
+      kind: "split",
+      blockId: "A",
+      position: 5,
+      newId: "NEW",
+    });
+    expect(out.find((b) => b.id === "NEW")!.data).toEqual({
+      checked: true,
+      text: [{ text: "world" }],
+    });
   });
 });
 
@@ -601,7 +720,10 @@ describe("prevVisibleLine", () => {
       mk("yy0", "xx", k1),
       mk("yy1", "xx", k2),
     ];
-    const leaf = prevVisibleLine(blocks, blocks.find((b) => b.id === "zz")!);
+    const leaf = prevVisibleLine(
+      blocks,
+      blocks.find((b) => b.id === "zz")!,
+    );
     expect(leaf?.id).toBe("yy1");
   });
 
@@ -615,7 +737,10 @@ describe("prevVisibleLine", () => {
       mk("zz", null, r2),
       mk("yy0", "xx", k1),
     ];
-    const leaf = prevVisibleLine(blocks, blocks.find((b) => b.id === "zz")!);
+    const leaf = prevVisibleLine(
+      blocks,
+      blocks.find((b) => b.id === "zz")!,
+    );
     expect(leaf?.id).toBe("xx");
   });
 
@@ -630,9 +755,19 @@ describe("prevVisibleLine", () => {
       mk("C0", "P", k1),
       mk("C1", "P", k2),
     ];
-    expect(prevVisibleLine(blocks, blocks.find((b) => b.id === "C0")!)?.id).toBe("P");
+    expect(
+      prevVisibleLine(
+        blocks,
+        blocks.find((b) => b.id === "C0")!,
+      )?.id,
+    ).toBe("P");
     // A first top-level block has no parent inside the forest → null (root).
-    expect(prevVisibleLine(blocks, blocks.find((b) => b.id === "P")!)).toBe(null);
+    expect(
+      prevVisibleLine(
+        blocks,
+        blocks.find((b) => b.id === "P")!,
+      ),
+    ).toBe(null);
   });
 
   test("a lone top-level block → null", () => {
@@ -658,7 +793,12 @@ describe("nextVisibleLine", () => {
       mk("C0", "P", k1),
       mk("C1", "P", k2),
     ];
-    expect(nextVisibleLine(blocks, blocks.find((b) => b.id === "P")!)?.id).toBe("C0");
+    expect(
+      nextVisibleLine(
+        blocks,
+        blocks.find((b) => b.id === "P")!,
+      )?.id,
+    ).toBe("C0");
   });
 
   test("a collapsed parent skips its subtree, landing on the next sibling", () => {
@@ -670,24 +810,36 @@ describe("nextVisibleLine", () => {
       mk("Q", null, r2),
       mk("C0", "P", k1),
     ];
-    expect(nextVisibleLine(blocks, blocks.find((b) => b.id === "P")!)?.id).toBe("Q");
+    expect(
+      nextVisibleLine(
+        blocks,
+        blocks.find((b) => b.id === "P")!,
+      )?.id,
+    ).toBe("Q");
   });
 
   test("an expanded-but-childless block falls through to its next sibling", () => {
     const r1 = a;
     const r2 = after(r1);
-    const blocks = [
-      mk("P", null, r1, { expanded: true }),
-      mk("Q", null, r2),
-    ];
-    expect(nextVisibleLine(blocks, blocks.find((b) => b.id === "P")!)?.id).toBe("Q");
+    const blocks = [mk("P", null, r1, { expanded: true }), mk("Q", null, r2)];
+    expect(
+      nextVisibleLine(
+        blocks,
+        blocks.find((b) => b.id === "P")!,
+      )?.id,
+    ).toBe("Q");
   });
 
   test("the next sibling of a leaf", () => {
     const r1 = a;
     const r2 = after(r1);
     const blocks = [mk("A", null, r1), mk("B", null, r2)];
-    expect(nextVisibleLine(blocks, blocks.find((b) => b.id === "A")!)?.id).toBe("B");
+    expect(
+      nextVisibleLine(
+        blocks,
+        blocks.find((b) => b.id === "A")!,
+      )?.id,
+    ).toBe("B");
   });
 
   test("a last child resolves to its uncle via the upward walk", () => {
@@ -701,18 +853,25 @@ describe("nextVisibleLine", () => {
       mk("U", null, r2),
       mk("C", "P", k1),
     ];
-    expect(nextVisibleLine(blocks, blocks.find((b) => b.id === "C")!)?.id).toBe("U");
+    expect(
+      nextVisibleLine(
+        blocks,
+        blocks.find((b) => b.id === "C")!,
+      )?.id,
+    ).toBe("U");
   });
 
   test("the last visible line → null", () => {
     const r1 = a;
     const k1 = a;
-    const blocks = [
-      mk("P", null, r1, { expanded: true }),
-      mk("C", "P", k1),
-    ];
+    const blocks = [mk("P", null, r1, { expanded: true }), mk("C", "P", k1)];
     // C is the deepest last line; nothing follows it anywhere up the tree.
-    expect(nextVisibleLine(blocks, blocks.find((b) => b.id === "C")!)).toBe(null);
+    expect(
+      nextVisibleLine(
+        blocks,
+        blocks.find((b) => b.id === "C")!,
+      ),
+    ).toBe(null);
   });
 });
 
@@ -826,9 +985,22 @@ describe("rich-text runs", () => {
       { text: "barbaz", color: "red" },
     ];
     const blocks: BlockNode[] = [
-      { id: "A", pageId: "page-1", parentId: null, type: "text", data: { text: runs }, rank: a, expanded: false },
+      {
+        id: "A",
+        pageId: "page-1",
+        parentId: null,
+        type: "text",
+        data: { text: runs },
+        rank: a,
+        expanded: false,
+      },
     ];
-    const out = run(blocks, { kind: "split", blockId: "A", position: 5, newId: "NEW" });
+    const out = run(blocks, {
+      kind: "split",
+      blockId: "A",
+      position: 5,
+      newId: "NEW",
+    });
     // "foo"(bold) + "ba"(red) | "rbaz"(red)
     expect(runsOfNode(out.find((b) => b.id === "A")!)).toEqual([
       { text: "foo", marks: ["bold"] },
@@ -842,9 +1014,19 @@ describe("rich-text runs", () => {
   test("op.runs authoritative payload overrides stored data", () => {
     const blocks = [mk("A", null, a, { text: "stale" })];
     const liveRuns: RichText = [{ text: "live", marks: ["italic"] }];
-    const out = run(blocks, { kind: "split", blockId: "A", position: 2, newId: "NEW", runs: liveRuns });
-    expect(runsOfNode(out.find((b) => b.id === "A")!)).toEqual([{ text: "li", marks: ["italic"] }]);
-    expect(runsOfNode(out.find((b) => b.id === "NEW")!)).toEqual([{ text: "ve", marks: ["italic"] }]);
+    const out = run(blocks, {
+      kind: "split",
+      blockId: "A",
+      position: 2,
+      newId: "NEW",
+      runs: liveRuns,
+    });
+    expect(runsOfNode(out.find((b) => b.id === "A")!)).toEqual([
+      { text: "li", marks: ["italic"] },
+    ]);
+    expect(runsOfNode(out.find((b) => b.id === "NEW")!)).toEqual([
+      { text: "ve", marks: ["italic"] },
+    ]);
   });
 
   test("merge concatenates runs and coalesces the seam", () => {
@@ -853,12 +1035,30 @@ describe("rich-text runs", () => {
     const r1 = a;
     const r2 = after(r1);
     const blocks: BlockNode[] = [
-      { id: "PREV", pageId: "page-1", parentId: null, type: "text", data: { text: prevRuns }, rank: r1, expanded: false },
-      { id: "CUR", pageId: "page-1", parentId: null, type: "text", data: { text: curRuns }, rank: r2, expanded: false },
+      {
+        id: "PREV",
+        pageId: "page-1",
+        parentId: null,
+        type: "text",
+        data: { text: prevRuns },
+        rank: r1,
+        expanded: false,
+      },
+      {
+        id: "CUR",
+        pageId: "page-1",
+        parentId: null,
+        type: "text",
+        data: { text: curRuns },
+        rank: r2,
+        expanded: false,
+      },
     ];
     const out = run(blocks, { kind: "merge", blockId: "CUR" });
     // Same marks ⇒ one coalesced run.
-    expect(runsOfNode(out.find((b) => b.id === "PREV")!)).toEqual([{ text: "foobar", marks: ["bold"] }]);
+    expect(runsOfNode(out.find((b) => b.id === "PREV")!)).toEqual([
+      { text: "foobar", marks: ["bold"] },
+    ]);
   });
 });
 
@@ -903,19 +1103,30 @@ function fourSiblings(): BlockNode[] {
   const r2 = after(r1);
   const r3 = after(r2);
   const r4 = after(r3);
-  return [mk("Z", null, r1), mk("A", null, r2), mk("B", null, r3), mk("C", null, r4)];
+  return [
+    mk("Z", null, r1),
+    mk("A", null, r2),
+    mk("B", null, r3),
+    mk("C", null, r4),
+  ];
 }
 
 describe("bulk indent", () => {
   test("a run of siblings all nest under the block above, keeping their order", () => {
-    const out = run(fourSiblings(), { kind: "indent", blockIds: ["A", "B", "C"] });
+    const out = run(fourSiblings(), {
+      kind: "indent",
+      blockIds: ["A", "B", "C"],
+    });
     expect(ids(out, null)).toEqual(["Z"]);
     expect(ids(out, "Z")).toEqual(["A", "B", "C"]);
     expect(out.find((b) => b.id === "Z")!.expanded).toBe(true);
   });
 
   test("order of `blockIds` is irrelevant — the fold runs in document order", () => {
-    const out = run(fourSiblings(), { kind: "indent", blockIds: ["C", "A", "B"] });
+    const out = run(fourSiblings(), {
+      kind: "indent",
+      blockIds: ["C", "A", "B"],
+    });
     expect(ids(out, "Z")).toEqual(["A", "B", "C"]);
   });
 
@@ -1035,7 +1246,9 @@ describe("pasteAnchorId", () => {
 
   test("array order is irrelevant — the anchor comes from document order", () => {
     // `selectionRoots` preserves the row array's order, which is not the forest's.
-    expect(pasteAnchorId(fourSiblings().reverse(), new Set(["A", "B"]), null)).toBe("B");
+    expect(
+      pasteAnchorId(fourSiblings().reverse(), new Set(["A", "B"]), null),
+    ).toBe("B");
   });
 
   test("a selected parent anchors on the parent, not on its last descendant", () => {
@@ -1061,7 +1274,12 @@ describe("insert", () => {
     const r1 = a;
     const r2 = after(r1);
     const blocks = [mk("A", null, r1), mk("B", null, r2)];
-    const out = run(blocks, { kind: "insert", newId: "NEW", type: "text", afterId: "A" });
+    const out = run(blocks, {
+      kind: "insert",
+      newId: "NEW",
+      type: "text",
+      afterId: "A",
+    });
     expect(ids(out, null)).toEqual(["A", "NEW", "B"]);
     const newNode = out.find((b) => b.id === "NEW")!;
     expect(newNode.parentId).toBe(null);
@@ -1072,14 +1290,24 @@ describe("insert", () => {
     const r1 = a;
     const r2 = after(r1);
     const blocks = [mk("A", null, r1), mk("B", null, r2)];
-    const out = run(blocks, { kind: "insert", newId: "NEW", type: "text", beforeId: "B" });
+    const out = run(blocks, {
+      kind: "insert",
+      newId: "NEW",
+      type: "text",
+      beforeId: "B",
+    });
     expect(ids(out, null)).toEqual(["A", "NEW", "B"]);
     expect(out.find((b) => b.id === "NEW")!.parentId).toBe(null);
   });
 
   test("beforeId on the first sibling → becomes the new first child", () => {
     const blocks = [mk("A", "PAGE", a, { pageId: "PAGE" })];
-    const out = run(blocks, { kind: "insert", newId: "NEW", type: "text", beforeId: "A" });
+    const out = run(blocks, {
+      kind: "insert",
+      newId: "NEW",
+      type: "text",
+      beforeId: "A",
+    });
     expect(ids(out, "PAGE")).toEqual(["NEW", "A"]);
     expect(out.find((b) => b.id === "NEW")!.pageId).toBe("PAGE");
   });
@@ -1100,11 +1328,13 @@ describe("insert", () => {
 
   test("append under parentId → after the last child, opens parent", () => {
     const k1 = a;
-    const blocks = [
-      mk("P", null, a, { expanded: false }),
-      mk("K1", "P", k1),
-    ];
-    const out = run(blocks, { kind: "insert", newId: "NEW", type: "text", parentId: "P" });
+    const blocks = [mk("P", null, a, { expanded: false }), mk("K1", "P", k1)];
+    const out = run(blocks, {
+      kind: "insert",
+      newId: "NEW",
+      type: "text",
+      parentId: "P",
+    });
     expect(ids(out, "P")).toEqual(["K1", "NEW"]);
     const parent = out.find((b) => b.id === "P")!;
     expect(parent.expanded).toBe(true);
@@ -1126,7 +1356,12 @@ describe("insert", () => {
     // parentId. Using `parent.pageId` (parent not found → null) hid the block
     // from the page-scoped query on reload.
     const blocks = [mk("A", "PAGE", a, { pageId: "PAGE" })];
-    const out = run(blocks, { kind: "insert", newId: "NEW", type: "text", parentId: "PAGE" });
+    const out = run(blocks, {
+      kind: "insert",
+      newId: "NEW",
+      type: "text",
+      parentId: "PAGE",
+    });
     expect(out.find((b) => b.id === "NEW")!.pageId).toBe("PAGE");
   });
 
@@ -1135,7 +1370,12 @@ describe("insert", () => {
     // children are scoped to the sub-page itself (parent.id), mirroring
     // computePageId / insertForest.
     const blocks = [mk("SUB", null, a, { type: "page", pageId: "PAGE" })];
-    const out = run(blocks, { kind: "insert", newId: "NEW", type: "text", parentId: "SUB" });
+    const out = run(blocks, {
+      kind: "insert",
+      newId: "NEW",
+      type: "text",
+      parentId: "SUB",
+    });
     expect(out.find((b) => b.id === "NEW")!.pageId).toBe("SUB");
   });
 });
@@ -1181,7 +1421,10 @@ describe("paste", () => {
     const blocks = [mk("A", "PAGE", a, { pageId: "PAGE" })];
     const out = run(blocks, {
       kind: "paste",
-      forest: [node("SUB", [node("KID")], PAGE_BLOCK_TYPE), node("PLAIN", [node("K2")])],
+      forest: [
+        node("SUB", [node("KID")], PAGE_BLOCK_TYPE),
+        node("PLAIN", [node("K2")]),
+      ],
       afterId: "A",
     });
     expect(out.find((b) => b.id === "KID")!.pageId).toBe("SUB");
@@ -1222,13 +1465,19 @@ describe("paste", () => {
 
   test("a missing anchor refuses the whole paste rather than guessing a home", () => {
     const blocks = [mk("A", null, a)];
-    const out = run(blocks, { kind: "paste", forest: [node("N1")], afterId: "GONE" });
+    const out = run(blocks, {
+      kind: "paste",
+      forest: [node("N1")],
+      afterId: "GONE",
+    });
     expect(out).toEqual(blocks);
   });
 
   test("an empty forest is an identity no-op", () => {
     const blocks = [mk("A", null, a)];
-    expect(run(blocks, { kind: "paste", forest: [], afterId: "A" })).toEqual(blocks);
+    expect(run(blocks, { kind: "paste", forest: [], afterId: "A" })).toEqual(
+      blocks,
+    );
   });
 });
 
@@ -1264,7 +1513,9 @@ describe("duplicate", () => {
     const root = blocks.find((b) => b.id === rootId)!;
     return [
       `${"·".repeat(depth)}${root.type}:${textOf(root)}${root.expanded ? " ▾" : ""}`,
-      ...childrenOf(blocks, rootId).flatMap((c) => shapeOf(blocks, c.id, depth + 1)),
+      ...childrenOf(blocks, rootId).flatMap((c) =>
+        shapeOf(blocks, c.id, depth + 1),
+      ),
     ];
   }
 
@@ -1286,7 +1537,9 @@ describe("duplicate", () => {
         {
           afterId: "A",
           forest: withMintedIds([
-            ser("A", [ser("A1", [ser("A1a")], { expanded: true })], { expanded: true }),
+            ser("A", [ser("A1", [ser("A1a")], { expanded: true })], {
+              expanded: true,
+            }),
           ]),
         },
       ],
@@ -1323,10 +1576,18 @@ describe("duplicate", () => {
     const blocks = [mk("A", null, a), mk("B", null, after(a))];
     const cloneA = { afterId: "A", forest: withMintedIds([ser("A")]) };
     const cloneB = { afterId: "B", forest: withMintedIds([ser("B")]) };
-    const out = run(blocks, { kind: "duplicate", placements: [cloneA, cloneB] });
+    const out = run(blocks, {
+      kind: "duplicate",
+      placements: [cloneA, cloneB],
+    });
 
     // Each clone in its OWN source's slot, not appended after the selection.
-    expect(ids(out, null)).toEqual(["A", cloneA.forest[0]!.id, "B", cloneB.forest[0]!.id]);
+    expect(ids(out, null)).toEqual([
+      "A",
+      cloneA.forest[0]!.id,
+      "B",
+      cloneB.forest[0]!.id,
+    ]);
     const ranks = childrenOf(out, null).map((b) => b.rank);
     expect(new Set(ranks).size).toBe(ranks.length);
   });
@@ -1341,7 +1602,10 @@ describe("duplicate", () => {
       { afterId: "A", forest: withMintedIds([ser("A*", [ser("A1*")])]) },
       { afterId: "B", forest: withMintedIds([ser("B*")]) },
     ];
-    const forward = run(blocks, { kind: "duplicate", placements: placements() });
+    const forward = run(blocks, {
+      kind: "duplicate",
+      placements: placements(),
+    });
     const reversed = run(blocks, {
       kind: "duplicate",
       placements: placements().reverse(),
@@ -1378,7 +1642,10 @@ describe("duplicate", () => {
     const forest = withMintedIds([
       ser("SUB", [ser("KID", [ser("GRANDKID")])], { type: PAGE_BLOCK_TYPE }),
     ]);
-    const out = run(blocks, { kind: "duplicate", placements: [{ afterId: "A", forest }] });
+    const out = run(blocks, {
+      kind: "duplicate",
+      placements: [{ afterId: "A", forest }],
+    });
 
     const subId = forest[0]!.id;
     expect(out.find((b) => b.id === subId)!.pageId).toBe("PAGE");
@@ -1420,10 +1687,7 @@ describe("move", () => {
   test("in-page move sets parentId/rank and opens the new parent", () => {
     const r1 = a;
     const r2 = after(r1);
-    const blocks = [
-      mk("A", null, r1, { expanded: false }),
-      mk("B", null, r2),
-    ];
+    const blocks = [mk("A", null, r1, { expanded: false }), mk("B", null, r2)];
     // Positional intent with no target: "after" the (empty) child list of A.
     const out = run(blocks, {
       kind: "move",
@@ -1439,10 +1703,7 @@ describe("move", () => {
 
   test("cycle guard: moving a block under its own descendant → no-op", () => {
     const k1 = a;
-    const blocks = [
-      mk("A", null, a),
-      mk("CHILD", "A", k1),
-    ];
+    const blocks = [mk("A", null, a), mk("CHILD", "A", k1)];
     // Try to move A under CHILD (its own descendant).
     const out = run(blocks, {
       kind: "move",
@@ -1504,14 +1765,22 @@ describe("planBulkMove", () => {
     // `inDocumentOrder` sort, which moved root gets which minted rank is
     // arbitrary and the two sides disagree.
     const selected = ["A", "B", "C"];
-    const base = planBulkMove(forest(), { ids: selected, parentId: "D", afterId: null });
+    const base = planBulkMove(forest(), {
+      ids: selected,
+      parentId: "D",
+      afterId: null,
+    });
     expect(base.roots).toEqual(["A", "B", "C"]);
 
     const rawOrders = new Set<string>();
     for (let seed = 1; seed <= 40; seed++) {
       const rows = shuffled(forest(), seed);
       rawOrders.add(selectionRoots(rows, new Set(selected)).join(","));
-      const plan = planBulkMove(rows, { ids: selected, parentId: "D", afterId: null });
+      const plan = planBulkMove(rows, {
+        ids: selected,
+        parentId: "D",
+        afterId: null,
+      });
       expect(plan.placements).toEqual(base.placements);
       expect(plan.roots).toEqual(base.roots);
     }
@@ -1522,15 +1791,25 @@ describe("planBulkMove", () => {
   });
 
   test("selecting a parent AND its child plans only the root (the child rides along)", () => {
-    const plan = planBulkMove(forest(), { ids: ["A1", "A"], parentId: "D", afterId: null });
+    const plan = planBulkMove(forest(), {
+      ids: ["A1", "A"],
+      parentId: "D",
+      afterId: null,
+    });
     expect(plan.roots).toEqual(["A"]);
     expect(plan.placements.map((p) => p.id)).toEqual(["A"]);
   });
 
   test("placements carry the CURRENT parent (what `parkRanks` needs) and the destination", () => {
-    const plan = planBulkMove(forest(), { ids: ["A1", "B"], parentId: "D", afterId: null });
+    const plan = planBulkMove(forest(), {
+      ids: ["A1", "B"],
+      parentId: "D",
+      afterId: null,
+    });
     expect(plan.roots).toEqual(["A1", "B"]);
-    expect(plan.placements.map((p) => [p.id, p.currentParentId, p.parentId])).toEqual([
+    expect(
+      plan.placements.map((p) => [p.id, p.currentParentId, p.parentId]),
+    ).toEqual([
       ["A1", "A", "D"],
       ["B", null, "D"],
     ]);
@@ -1540,7 +1819,11 @@ describe("planBulkMove", () => {
 
   test("refusal: an empty selection, and a selection naming only absent ids", () => {
     for (const selected of [[], ["ghost"]]) {
-      const plan = planBulkMove(forest(), { ids: selected, parentId: "D", afterId: null });
+      const plan = planBulkMove(forest(), {
+        ids: selected,
+        parentId: "D",
+        afterId: null,
+      });
       expect(plan.refusal).toBe("empty-selection");
       expect(plan.placements).toEqual([]);
       expect(plan.roots).toEqual([]);
@@ -1548,21 +1831,33 @@ describe("planBulkMove", () => {
   });
 
   test("refusal: dropping the selection INTO the selection", () => {
-    const plan = planBulkMove(forest(), { ids: ["A", "B"], parentId: "B", afterId: null });
+    const plan = planBulkMove(forest(), {
+      ids: ["A", "B"],
+      parentId: "B",
+      afterId: null,
+    });
     expect(plan.refusal).toBe("into-selection");
     expect(plan.placements).toEqual([]);
   });
 
   test("refusal: dropping a root into its OWN subtree", () => {
     // A1 is A's child and is NOT selected, so this is not `into-selection`.
-    const plan = planBulkMove(forest(), { ids: ["A"], parentId: "A1", afterId: null });
+    const plan = planBulkMove(forest(), {
+      ids: ["A"],
+      parentId: "A1",
+      afterId: null,
+    });
     expect(plan.refusal).toBe("into-own-subtree");
     expect(plan.placements).toEqual([]);
   });
 
   test("a refused plan is the identity under `applyBulkMove`", () => {
     const blocks = forest();
-    const plan = planBulkMove(blocks, { ids: ["A", "B"], parentId: "B", afterId: null });
+    const plan = planBulkMove(blocks, {
+      ids: ["A", "B"],
+      parentId: "B",
+      afterId: null,
+    });
     expect(applyBulkMove(blocks, plan)).toEqual(blocks);
   });
 
@@ -1573,7 +1868,11 @@ describe("planBulkMove", () => {
     // problem, not the planner's: the FINAL keys must simply be ascending and
     // land after C.
     const blocks = forest();
-    const plan = planBulkMove(blocks, { ids: ["B", "D"], parentId: null, afterId: "C" });
+    const plan = planBulkMove(blocks, {
+      ids: ["B", "D"],
+      parentId: null,
+      afterId: "C",
+    });
     expect(plan.refusal).toBeNull();
     expect(plan.roots).toEqual(["B", "D"]);
 
@@ -1593,8 +1892,16 @@ describe("planBulkMove", () => {
       mk("HIDDEN", "D", a, { pageId: "sub-page" }),
     ];
 
-    const blind = planBulkMove(blocks, { ids: ["B"], parentId: "D", afterId: null });
-    const seeing = planBulkMove(blocks, { ids: ["B"], parentId: "D", afterId: null }, hidden);
+    const blind = planBulkMove(blocks, {
+      ids: ["B"],
+      parentId: "D",
+      afterId: null,
+    });
+    const seeing = planBulkMove(
+      blocks,
+      { ids: ["B"], parentId: "D", afterId: null },
+      hidden,
+    );
 
     // The blind plan collides head-on with the row it cannot see.
     expect(blind.placements[0]!.rank).toBe(a);
@@ -1611,7 +1918,11 @@ describe("planBulkMove", () => {
     Object.freeze(blocks);
     blocks.forEach((b) => Object.freeze(b));
 
-    const plan = planBulkMove(blocks, { ids: ["B", "C"], parentId: "D", afterId: null });
+    const plan = planBulkMove(blocks, {
+      ids: ["B", "C"],
+      parentId: "D",
+      afterId: null,
+    });
     const out = applyBulkMove(blocks, plan);
 
     // Input untouched.
@@ -1622,7 +1933,9 @@ describe("planBulkMove", () => {
     // The destination was opened (it was collapsed).
     expect(out.find((b) => b.id === "D")!.expanded).toBe(true);
     // Untouched rows are the very same objects.
-    expect(out.find((b) => b.id === "A1")).toBe(blocks.find((b) => b.id === "A1"));
+    expect(out.find((b) => b.id === "A1")).toBe(
+      blocks.find((b) => b.id === "A1"),
+    );
     assertRankOrdering(out);
     // `pageId` is deliberately NOT recomputed here — the server owns that.
     assertPageIdInvariant(snapshot, out);
@@ -1630,7 +1943,11 @@ describe("planBulkMove", () => {
 
   test("a top-level drop expands nothing", () => {
     const blocks = forest();
-    const plan = planBulkMove(blocks, { ids: ["A1"], parentId: null, afterId: "B" });
+    const plan = planBulkMove(blocks, {
+      ids: ["A1"],
+      parentId: null,
+      afterId: "B",
+    });
     expect(plan.expandParentId).toBeNull();
     const out = applyBulkMove(blocks, plan);
     expect(ids(out, null)).toEqual(["A", "B", "A1", "C", "D"]);
@@ -1681,27 +1998,69 @@ describe("move — positional intent", () => {
   });
 
   test("zone resolves against the target, both directions", () => {
-    expect(landedOrder({ kind: "move", blockId: "T", parentId: "P", targetId: "Y", zone: "after" }))
-      .toEqual(["X", "Y", "T", "Z"]);
-    expect(landedOrder({ kind: "move", blockId: "T", parentId: "P", targetId: "Y", zone: "before" }))
-      .toEqual(["X", "T", "Y", "Z"]);
+    expect(
+      landedOrder({
+        kind: "move",
+        blockId: "T",
+        parentId: "P",
+        targetId: "Y",
+        zone: "after",
+      }),
+    ).toEqual(["X", "Y", "T", "Z"]);
+    expect(
+      landedOrder({
+        kind: "move",
+        blockId: "T",
+        parentId: "P",
+        targetId: "Y",
+        zone: "before",
+      }),
+    ).toEqual(["X", "T", "Y", "Z"]);
     // Before the FIRST child is the list's start, not "after nothing".
-    expect(landedOrder({ kind: "move", blockId: "T", parentId: "P", targetId: "X", zone: "before" }))
-      .toEqual(["T", "X", "Y", "Z"]);
+    expect(
+      landedOrder({
+        kind: "move",
+        blockId: "T",
+        parentId: "P",
+        targetId: "X",
+        zone: "before",
+      }),
+    ).toEqual(["T", "X", "Y", "Z"]);
   });
 
   test("a null target addresses the sibling-list BOUNDARY (append / prepend)", () => {
-    expect(landedOrder({ kind: "move", blockId: "T", parentId: "P", targetId: null, zone: "after" }))
-      .toEqual(["X", "Y", "Z", "T"]);
-    expect(landedOrder({ kind: "move", blockId: "T", parentId: "P", targetId: null, zone: "before" }))
-      .toEqual(["T", "X", "Y", "Z"]);
+    expect(
+      landedOrder({
+        kind: "move",
+        blockId: "T",
+        parentId: "P",
+        targetId: null,
+        zone: "after",
+      }),
+    ).toEqual(["X", "Y", "Z", "T"]);
+    expect(
+      landedOrder({
+        kind: "move",
+        blockId: "T",
+        parentId: "P",
+        targetId: null,
+        zone: "before",
+      }),
+    ).toEqual(["T", "X", "Y", "Z"]);
   });
 
   test("a same-parent reorder does not let the mover bound its own window", () => {
     // X moving after Y must land BETWEEN Y and Z, which is only possible if X's
     // own rank is excluded from the window it is minting into.
-    expect(landedOrder({ kind: "move", blockId: "X", parentId: "P", targetId: "Y", zone: "after" }))
-      .toEqual(["Y", "X", "Z"]);
+    expect(
+      landedOrder({
+        kind: "move",
+        blockId: "X",
+        parentId: "P",
+        targetId: "Y",
+        zone: "after",
+      }),
+    ).toEqual(["Y", "X", "Z"]);
   });
 
   test("the destination parent is opened, as every other insert path does", () => {
@@ -1721,7 +2080,13 @@ describe("move — positional intent", () => {
     // user never pointed at.
     const blocks = forest();
     for (const targetId of ["ghost", "T"]) {
-      const out = run(blocks, { kind: "move", blockId: "X", parentId: "P", targetId, zone: "after" });
+      const out = run(blocks, {
+        kind: "move",
+        blockId: "X",
+        parentId: "P",
+        targetId,
+        zone: "after",
+      });
       expect(out).toEqual(blocks);
     }
   });
@@ -1745,20 +2110,27 @@ describe("delete — a set operation", () => {
   });
 
   test("a single Backspace-delete is simply the one-element case", () => {
-    expect(run(forest(), { kind: "delete", blockIds: ["A"] }).map((b) => b.id))
-      .toEqual(["B", "C"]);
+    expect(
+      run(forest(), { kind: "delete", blockIds: ["A"] }).map((b) => b.id),
+    ).toEqual(["B", "C"]);
   });
 
   test("absent ids are skipped, not refused; an all-absent set is the identity", () => {
     const blocks = forest();
-    expect(run(blocks, { kind: "delete", blockIds: ["ghost", "B"] }).map((b) => b.id))
-      .toEqual(["A", "A1", "C"]);
-    expect(run(blocks, { kind: "delete", blockIds: ["ghost"] })).toEqual(blocks);
+    expect(
+      run(blocks, { kind: "delete", blockIds: ["ghost", "B"] }).map(
+        (b) => b.id,
+      ),
+    ).toEqual(["A", "A1", "C"]);
+    expect(run(blocks, { kind: "delete", blockIds: ["ghost"] })).toEqual(
+      blocks,
+    );
   });
 
   test("selecting a parent AND its child deletes each once (subtrees overlap)", () => {
-    expect(run(forest(), { kind: "delete", blockIds: ["A", "A1"] }).map((b) => b.id))
-      .toEqual(["B", "C"]);
+    expect(
+      run(forest(), { kind: "delete", blockIds: ["A", "A1"] }).map((b) => b.id),
+    ).toEqual(["B", "C"]);
   });
 });
 
@@ -1801,10 +2173,22 @@ describe("bulkMove op", () => {
     // into-selection, into-own-subtree, empty-selection — the three the planner
     // distinguishes. The op arm collapses all of them to "nothing happened",
     // which `dispatchOp`'s empty-diff rule then drops before dispatch.
-    expect(run(blocks, { kind: "bulkMove", ids: ["A", "B"], parentId: "B", afterId: null }))
-      .toEqual(blocks);
-    expect(run(blocks, { kind: "bulkMove", ids: ["ghost"], parentId: "D", afterId: null }))
-      .toEqual(blocks);
+    expect(
+      run(blocks, {
+        kind: "bulkMove",
+        ids: ["A", "B"],
+        parentId: "B",
+        afterId: null,
+      }),
+    ).toEqual(blocks);
+    expect(
+      run(blocks, {
+        kind: "bulkMove",
+        ids: ["ghost"],
+        parentId: "D",
+        afterId: null,
+      }),
+    ).toEqual(blocks);
   });
 
   test("a same-parent reorder lands the run after its anchor", () => {
@@ -1855,25 +2239,146 @@ function isVisibleLine(
     // top level off a `PAGE` sentinel that is not itself a row) — the same
     // "absent parent ⇒ top" reading `prevVisibleLine` takes.
     if (!parent) return true;
-    if (!visibleChildrenOf(rows, parent, isAnchor).some((k) => k.id === cur.id)) return false;
+    if (!visibleChildrenOf(rows, parent, isAnchor).some((k) => k.id === cur.id))
+      return false;
     cur = parent;
   }
   return true;
 }
 
-function anchorNode(id: string, parentId: string | null, rank: string): BlockNode {
+function anchorNode(
+  id: string,
+  parentId: string | null,
+  rank: string,
+): BlockNode {
   // Void payload: an anchor's schema carries appearance only, never `text`.
-  return { ...mk(id, parentId, rank, { expanded: true, type: ANCHOR }), data: { color: "info" } };
+  return {
+    ...mk(id, parentId, rank, { expanded: true, type: ANCHOR }),
+    data: { color: "info" },
+  };
 }
 
 function pageRow(id: string, parentId: string | null, rank: string): BlockNode {
-  return { ...mk(id, parentId, rank, { type: PAGE_BLOCK_TYPE }), data: { title: id, icon: null } };
+  return {
+    ...mk(id, parentId, rank, { type: PAGE_BLOCK_TYPE }),
+    data: { title: id, icon: null },
+  };
 }
+
+// ---------------------------------------------------------------------------
+// Text-less merge targets (`BlockOpContext.textBearingTypes`)
+// ---------------------------------------------------------------------------
+
+/**
+ * `anchorTypes` covers only the CONTAINER half of "carries no text". The reason
+ * it gives for refusing — writing `data.text` onto a void schema is a 400 at the
+ * write boundary — is exactly as true for a divider, which is not a container
+ * and renders a line of its own.
+ *
+ * Made-up type names again: if any of these pass because the reducer recognised
+ * `"divider"`, the abstraction has leaked.
+ */
+const VOID_LINE = "rule";
+const TEXTY = "para";
+const withTextTypes: BlockOpContext = {
+  anchorTypes: new Set([ANCHOR]),
+  textBearingTypes: new Set([TEXTY, "text"]),
+};
+
+function voidLine(
+  id: string,
+  parentId: string | null,
+  rank: string,
+): BlockNode {
+  // A void row that IS a visible line — no children, no text, empty payload.
+  return { ...mk(id, parentId, rank, { type: VOID_LINE }), data: {} };
+}
+
+describe("blockOpContextOf", () => {
+  // The one derivation both runtimes call. Parity used to be a convention —
+  // two filters, one per runtime, kept in step by hand — and this is what
+  // replaced it: the registries differ, the derivation cannot.
+  const handles = [
+    { type: "para", acceptsText: true, anchor: undefined },
+    { type: "rule", acceptsText: false, anchor: undefined },
+    { type: "box", acceptsText: false, anchor: true },
+  ] as unknown as Parameters<typeof blockOpContextOf>[0];
+
+  test("derives both sets from the handles' own declared facts", () => {
+    const ctx = blockOpContextOf(handles);
+    expect([...(ctx.anchorTypes ?? [])].sort()).toEqual(["box"]);
+    expect([...(ctx.textBearingTypes ?? [])].sort()).toEqual(["para"]);
+  });
+
+  test("both fields are always PRESENT, so a real registry never reads as `no opinion`", () => {
+    // `textBearingTypes: undefined` means "cannot resolve the registry" and
+    // disables the refusal. A mint that produced it for an empty registry would
+    // silently turn the guard off rather than turn it on with nothing in it.
+    const ctx = blockOpContextOf([]);
+    expect(ctx.anchorTypes).toBeDefined();
+    expect(ctx.textBearingTypes).toBeDefined();
+  });
+});
+
+describe("merge — text-less targets", () => {
+  test("merge refuses a text-less NON-anchor as the resolved target", () => {
+    // Backspace at the start of the line below a `/divider`. `prevVisibleLine`
+    // returns the divider (it is a real visible line, unlike a container), and
+    // merging into it would write `data.text` onto a schema with no `text` key.
+    const r1 = a;
+    const r2 = after(r1);
+    const blocks = [
+      voidLine("D", null, r1),
+      mk("T", null, r2, { text: "below" }),
+    ];
+    const op: BlockOp = { kind: "merge", blockId: "T" };
+    expect(run(blocks, op, withTextTypes)).toBe(blocks);
+    // Same op with the fact withheld: the merge fires. The refusal comes from
+    // the CONTEXT, not from a type name — and this is the behaviour every
+    // context-free caller (and every pre-existing seed below) still gets.
+    expect(run(blocks, op).find((b) => b.id === "T")).toBeUndefined();
+  });
+
+  test("the refusal is not blanket — a text-bearing target still merges", () => {
+    const r1 = a;
+    const r2 = after(r1);
+    const blocks = [
+      { ...mk("P", null, r1, { text: "above" }), type: TEXTY },
+      mk("T", null, r2, { text: "below" }),
+    ];
+    const out = run(blocks, { kind: "merge", blockId: "T" }, withTextTypes);
+    expect(out.find((b) => b.id === "T")).toBeUndefined();
+    expect(textOf(out.find((b) => b.id === "P")!)).toBe("abovebelow");
+  });
+
+  test("an ABSENT textBearingTypes means no opinion, never `nothing accepts text`", () => {
+    // The empty-set default that is right for `anchorTypes` would be
+    // catastrophic here: it would refuse EVERY merge on the page. A caller that
+    // cannot resolve the registry must get today's behaviour instead, with the
+    // write boundary left to reject loudly.
+    const r1 = a;
+    const r2 = after(r1);
+    const blocks = [
+      mk("P", null, r1, { text: "above" }),
+      mk("T", null, r2, { text: "below" }),
+    ];
+    const op: BlockOp = { kind: "merge", blockId: "T" };
+    expect(
+      run(blocks, op, { anchorTypes: new Set() }).find((b) => b.id === "T"),
+    ).toBeUndefined();
+    expect(run(blocks, op, {}).find((b) => b.id === "T")).toBeUndefined();
+  });
+});
 
 describe("anchors — split / merge refusals", () => {
   test("split refuses an anchor as origin, and it is the CONTEXT that refuses", () => {
     const blocks = [anchorNode("A", null, a), mk("C1", "A", a)];
-    const op: BlockOp = { kind: "split", blockId: "A", position: 0, newId: "NEW" };
+    const op: BlockOp = {
+      kind: "split",
+      blockId: "A",
+      position: 0,
+      newId: "NEW",
+    };
     expect(run(blocks, op, withAnchors)).toBe(blocks);
     // Same op, no context: an ordinary split. The refusal is not a type-name
     // special case — drop `anchorTypes` and the reducer is exactly as before.
@@ -1886,7 +2391,11 @@ describe("anchors — split / merge refusals", () => {
     // container out from under its children on one keypress.
     const r1 = a;
     const r2 = after(r1);
-    const blocks = [mk("T0", null, r1, { text: "above" }), anchorNode("A", null, r2), mk("C1", "A", a)];
+    const blocks = [
+      mk("T0", null, r1, { text: "above" }),
+      anchorNode("A", null, r2),
+      mk("C1", "A", a),
+    ];
     const op: BlockOp = { kind: "merge", blockId: "A" };
     expect(run(blocks, op, withAnchors)).toBe(blocks);
     expect(run(blocks, op).find((b) => b.id === "A")).toBeUndefined(); // unguarded: gone
@@ -1898,7 +2407,11 @@ describe("anchors — split / merge refusals", () => {
     // box. Escaping a container is `unwrap`, not `merge`.
     const r1 = a;
     const r2 = after(r1);
-    const blocks = [mk("T0", null, r1), anchorNode("A", null, r2), mk("C1", "A", a, { text: "first" })];
+    const blocks = [
+      mk("T0", null, r1),
+      anchorNode("A", null, r2),
+      mk("C1", "A", a, { text: "first" }),
+    ];
     const op: BlockOp = { kind: "merge", blockId: "C1" };
     expect(run(blocks, op, withAnchors)).toBe(blocks);
     expect(run(blocks, op).find((b) => b.id === "C1")).toBeUndefined(); // unguarded: merged into A
@@ -1930,7 +2443,6 @@ describe("anchors — split / merge refusals", () => {
     // must not dissolve the box or disturb what it folded away.
     expect(ids(out, "A")).toEqual(["C1", "C2"]);
   });
-
 });
 
 describe("anchors — content lands where it can be seen", () => {
@@ -1944,7 +2456,11 @@ describe("anchors — content lands where it can be seen", () => {
       mk("C1", "A", a, { text: "helloworld" }),
       mk("C2", "A", after(a), { text: "hidden" }),
     ];
-    const out = run(blocks, { kind: "split", blockId: "C1", position: 5, newId: "NEW" }, withAnchors);
+    const out = run(
+      blocks,
+      { kind: "split", blockId: "C1", position: 5, newId: "NEW" },
+      withAnchors,
+    );
 
     expect(out.find((b) => b.id === "A")!.expanded).toBe(true);
     expect(ids(out, "A")).toEqual(["C1", "NEW", "C2"]);
@@ -1952,7 +2468,13 @@ describe("anchors — content lands where it can be seen", () => {
     expect(textOf(out.find((b) => b.id === "NEW")!)).toBe("world");
     // The whole point: every line of the container is now a VISIBLE line.
     for (const id of ["C1", "NEW", "C2"]) {
-      expect(isVisibleLine(out, out.find((b) => b.id === id)!, isAnchorFn)).toBe(true);
+      expect(
+        isVisibleLine(
+          out,
+          out.find((b) => b.id === id)!,
+          isAnchorFn,
+        ),
+      ).toBe(true);
     }
   });
 
@@ -1963,26 +2485,46 @@ describe("anchors — content lands where it can be seen", () => {
       mk("C1", "B", a, { text: "helloworld" }),
       mk("C2", "B", after(a), { text: "hidden" }),
     ];
-    const out = run(blocks, { kind: "split", blockId: "C1", position: 5, newId: "NEW" }, withAnchors);
+    const out = run(
+      blocks,
+      { kind: "split", blockId: "C1", position: 5, newId: "NEW" },
+      withAnchors,
+    );
     expect(out.find((b) => b.id === "A")!.expanded).toBe(true);
     expect(out.find((b) => b.id === "B")!.expanded).toBe(true);
-    expect(isVisibleLine(out, out.find((b) => b.id === "NEW")!, isAnchorFn)).toBe(true);
+    expect(
+      isVisibleLine(
+        out,
+        out.find((b) => b.id === "NEW")!,
+        isAnchorFn,
+      ),
+    ).toBe(true);
   });
 
   test("a REFUSED split stays an exact identity no-op, reveal included", () => {
     // Refusals run before the reveal, so a split that cannot apply never leaves a
     // half-effect behind — `dispatchOp` drops empty diffs, and an op that only
     // toggled `expanded` would slip past that and reach the undo stack.
-    const blocks = [{ ...anchorNode("A", null, a), expanded: false }, mk("C1", "A", a)];
-    expect(run(blocks, { kind: "split", blockId: "A", position: 0, newId: "NEW" }, withAnchors)).toBe(
-      blocks,
-    );
+    const blocks = [
+      { ...anchorNode("A", null, a), expanded: false },
+      mk("C1", "A", a),
+    ];
+    expect(
+      run(
+        blocks,
+        { kind: "split", blockId: "A", position: 0, newId: "NEW" },
+        withAnchors,
+      ),
+    ).toBe(blocks);
   });
 });
 
 describe("anchors — the empty-anchor prune", () => {
   test("outdenting an anchor's only child leaves it childless, and the prune removes it", () => {
-    const blocks = [anchorNode("A", null, a), mk("C1", "A", a, { text: "only" })];
+    const blocks = [
+      anchorNode("A", null, a),
+      mk("C1", "A", a, { text: "only" }),
+    ];
     const op: BlockOp = { kind: "outdent", blockIds: ["C1"] };
 
     const out = run(blocks, op, withAnchors);
@@ -1998,16 +2540,32 @@ describe("anchors — the empty-anchor prune", () => {
   test("deleting the last child prunes the container; a container that still has one survives", () => {
     const c1 = a;
     const c2 = after(c1);
-    const blocks = [anchorNode("A", null, a), mk("C1", "A", c1), mk("C2", "A", c2)];
-    const oneLeft = run(blocks, { kind: "delete", blockIds: ["C1"] }, withAnchors);
+    const blocks = [
+      anchorNode("A", null, a),
+      mk("C1", "A", c1),
+      mk("C2", "A", c2),
+    ];
+    const oneLeft = run(
+      blocks,
+      { kind: "delete", blockIds: ["C1"] },
+      withAnchors,
+    );
     expect(ids(oneLeft, "A")).toEqual(["C2"]);
-    const emptied = run(oneLeft, { kind: "delete", blockIds: ["C2"] }, withAnchors);
+    const emptied = run(
+      oneLeft,
+      { kind: "delete", blockIds: ["C2"] },
+      withAnchors,
+    );
     expect(emptied).toEqual([]);
   });
 
   test("the prune runs to a fixed point through NESTED containers", () => {
     // A1 > A2 > C1. Removing C1 empties A2, which empties A1.
-    const blocks = [anchorNode("A1", null, a), anchorNode("A2", "A1", a), mk("C1", "A2", a)];
+    const blocks = [
+      anchorNode("A1", null, a),
+      anchorNode("A2", "A1", a),
+      mk("C1", "A2", a),
+    ];
     const out = run(blocks, { kind: "delete", blockIds: ["C1"] }, withAnchors);
     expect(out).toEqual([]);
   });
@@ -2019,12 +2577,23 @@ describe("anchors — the empty-anchor prune", () => {
     const r1 = a;
     const r2 = after(r1);
     const r3 = after(r2);
-    const blocks = [pageRow("PG", null, r1), anchorNode("A", null, r2), mk("T", null, r3)];
-    const out = run(blocks, { kind: "insert", newId: "NEW", type: "text", afterId: "T" }, {
-      anchorTypes: new Set([PAGE_BLOCK_TYPE, ANCHOR]),
-    });
+    const blocks = [
+      pageRow("PG", null, r1),
+      anchorNode("A", null, r2),
+      mk("T", null, r3),
+    ];
+    const out = run(
+      blocks,
+      { kind: "insert", newId: "NEW", type: "text", afterId: "T" },
+      {
+        anchorTypes: new Set([PAGE_BLOCK_TYPE, ANCHOR]),
+      },
+    );
     expect(out.find((b) => b.id === "PG")).toBeDefined();
-    expect(out.find((b) => b.id === "PG")!.data).toEqual({ title: "PG", icon: null });
+    expect(out.find((b) => b.id === "PG")!.data).toEqual({
+      title: "PG",
+      icon: null,
+    });
     // Non-vacuous: the ordinary empty anchor in the same forest WAS pruned, by
     // the same pass, on an op that named neither of them.
     expect(out.find((b) => b.id === "A")).toBeUndefined();
@@ -2129,13 +2698,26 @@ describe("unwrap", () => {
 /** The page whose content forest these fixtures describe. Never a member of it. */
 const PAGE = "PAGE";
 
-function content(id: string, parentId: string, rank: string, text?: string): BlockNode {
-  return mk(id, parentId, rank, { text: text ?? id, expanded: true, pageId: PAGE });
+function content(
+  id: string,
+  parentId: string,
+  rank: string,
+  text?: string,
+): BlockNode {
+  return mk(id, parentId, rank, {
+    text: text ?? id,
+    expanded: true,
+    pageId: PAGE,
+  });
 }
 
 function subPage(id: string, parentId: string, rank: string): BlockNode {
   return {
-    ...mk(id, parentId, rank, { expanded: true, pageId: PAGE, type: PAGE_BLOCK_TYPE }),
+    ...mk(id, parentId, rank, {
+      expanded: true,
+      pageId: PAGE,
+      type: PAGE_BLOCK_TYPE,
+    }),
     data: { title: id, icon: null },
   };
 }
@@ -2148,12 +2730,21 @@ describe("page rows — split", () => {
     const r1 = a;
     const r2 = after(r1);
     const r3 = after(r2);
-    return [content("T1", PAGE, r1, "helloworld"), subPage("S1", PAGE, r2), content("T2", PAGE, r3)];
+    return [
+      content("T1", PAGE, r1, "helloworld"),
+      subPage("S1", PAGE, r2),
+      content("T2", PAGE, r3),
+    ];
   };
 
   test("splitting a text block whose next sibling is a page row mints a rank strictly inside the gap", () => {
     const blocks = forest();
-    const out = run(blocks, { kind: "split", blockId: "T1", position: 5, newId: "NEW" });
+    const out = run(blocks, {
+      kind: "split",
+      blockId: "T1",
+      position: 5,
+      newId: "NEW",
+    });
 
     // `run` already asserts strictly-ascending (⇒ distinct) sibling ranks.
     expect(ids(out, PAGE)).toEqual(["T1", "NEW", "S1", "T2"]);
@@ -2165,7 +2756,12 @@ describe("page rows — split", () => {
 
   test("splitting a page row → no-op", () => {
     const blocks = forest();
-    const out = run(blocks, { kind: "split", blockId: "S1", position: 0, newId: "NEW" });
+    const out = run(blocks, {
+      kind: "split",
+      blockId: "S1",
+      position: 0,
+      newId: "NEW",
+    });
     expect(out).toEqual(blocks);
   });
 
@@ -2189,7 +2785,11 @@ describe("page rows — indent", () => {
     const r1 = a;
     const r2 = after(r1);
     const r3 = after(r2);
-    const blocks = [content("T1", PAGE, r1), subPage("S1", PAGE, r2), content("T2", PAGE, r3)];
+    const blocks = [
+      content("T1", PAGE, r1),
+      subPage("S1", PAGE, r2),
+      content("T2", PAGE, r3),
+    ];
     const out = run(blocks, { kind: "indent", blockIds: ["T2"] });
     expect(out).toEqual(blocks);
     expect(ids(out, "S1")).toEqual([]);
@@ -2199,7 +2799,11 @@ describe("page rows — indent", () => {
     const r1 = a;
     const r2 = after(r1);
     const r3 = after(r2);
-    const blocks = [content("T1", PAGE, r1), content("T2", PAGE, r2), subPage("S1", PAGE, r3)];
+    const blocks = [
+      content("T1", PAGE, r1),
+      content("T2", PAGE, r2),
+      subPage("S1", PAGE, r3),
+    ];
     const out = run(blocks, { kind: "indent", blockIds: ["T2"] });
     expect(out.find((b) => b.id === "T2")!.parentId).toBe("T1");
     expect(ids(out, PAGE)).toEqual(["T1", "S1"]);
@@ -2225,7 +2829,10 @@ describe("page rows — merge", () => {
     const out = run(blocks, { kind: "merge", blockId: "T1" });
     expect(out).toEqual(blocks);
     // No bogus `data.text` written onto a PageDataSchema-shaped payload.
-    expect(out.find((b) => b.id === "S1")!.data).toEqual({ title: "S1", icon: null });
+    expect(out.find((b) => b.id === "S1")!.data).toEqual({
+      title: "S1",
+      icon: null,
+    });
   });
 
   test("the page row is caught as prevVisibleLine, not merely as prevSibling", () => {
@@ -2233,7 +2840,11 @@ describe("page rows — merge", () => {
     // sub-page S1. The guard must inspect the LEAF the caret would land on.
     const r1 = a;
     const r2 = after(r1);
-    const blocks = [content("T0", PAGE, r1), subPage("S1", "T0", a), content("T1", PAGE, r2, "tail")];
+    const blocks = [
+      content("T0", PAGE, r1),
+      subPage("S1", "T0", a),
+      content("T1", PAGE, r2, "tail"),
+    ];
     const out = run(blocks, { kind: "merge", blockId: "T1" });
     expect(out).toEqual(blocks);
   });
@@ -2302,10 +2913,16 @@ function randomForest(rand: () => number, n: number): BlockNode[] {
     lastRankUnder.set(parentId, rank);
 
     if (rand() < 0.3) {
-      rows.push({ ...subPage(id, parentId, rank.toJSON()), expanded: rand() < 0.5 });
+      rows.push({
+        ...subPage(id, parentId, rank.toJSON()),
+        expanded: rand() < 0.5,
+      });
     } else {
       contentIds.push(id);
-      rows.push({ ...content(id, parentId, rank.toJSON()), expanded: rand() < 0.8 });
+      rows.push({
+        ...content(id, parentId, rank.toJSON()),
+        expanded: rand() < 0.8,
+      });
     }
   }
   return rows;
@@ -2316,7 +2933,13 @@ function pageRowChildren(blocks: BlockNode[]): Map<string, string[]> {
   const out = new Map<string, string[]>();
   for (const b of blocks) {
     if (b.type !== PAGE_BLOCK_TYPE) continue;
-    out.set(b.id, blocks.filter((c) => c.parentId === b.id).map((c) => c.id).sort());
+    out.set(
+      b.id,
+      blocks
+        .filter((c) => c.parentId === b.id)
+        .map((c) => c.id)
+        .sort(),
+    );
   }
   return out;
 }
@@ -2327,12 +2950,25 @@ function pageRowChildren(blocks: BlockNode[]): Map<string, string[]> {
  * rank strings — merge mints fresh ranks, so a split∘merge round-trip is
  * structurally (not byte-) identical. Used to assert that invariant.
  */
-function canonicalForest(
-  blocks: BlockNode[],
-): Record<string, { parentId: string | null; type: string; expanded: boolean; childIds: string[]; runs: RichText }> {
+function canonicalForest(blocks: BlockNode[]): Record<
+  string,
+  {
+    parentId: string | null;
+    type: string;
+    expanded: boolean;
+    childIds: string[];
+    runs: RichText;
+  }
+> {
   const out: Record<
     string,
-    { parentId: string | null; type: string; expanded: boolean; childIds: string[]; runs: RichText }
+    {
+      parentId: string | null;
+      type: string;
+      expanded: boolean;
+      childIds: string[];
+      runs: RichText;
+    }
   > = {};
   for (const b of blocks) {
     out[b.id] = {
@@ -2347,8 +2983,20 @@ function canonicalForest(
 }
 
 /** One op of every kind, instantiated against a random node of `rows`. */
-function randomOp(rand: () => number, rows: BlockNode[], nonce: number): BlockOp {
-  const kinds = ["split", "merge", "indent", "outdent", "insert", "delete", "move"] as const;
+function randomOp(
+  rand: () => number,
+  rows: BlockNode[],
+  nonce: number,
+): BlockOp {
+  const kinds = [
+    "split",
+    "merge",
+    "indent",
+    "outdent",
+    "insert",
+    "delete",
+    "move",
+  ] as const;
   const kind = kinds[Math.floor(rand() * kinds.length)]!;
   const target = rows[Math.floor(rand() * rows.length)]!;
   const newId = `x${nonce}`;
@@ -2374,8 +3022,20 @@ function randomOp(rand: () => number, rows: BlockNode[], nonce: number): BlockOp
       return { kind: "delete", blockIds: [target.id] };
     case "insert":
       return rand() < 0.5
-        ? { kind: "insert", newId, type: "text", data: { text: "" }, afterId: target.id }
-        : { kind: "insert", newId, type: "text", data: { text: "" }, parentId: target.id };
+        ? {
+            kind: "insert",
+            newId,
+            type: "text",
+            data: { text: "" },
+            afterId: target.id,
+          }
+        : {
+            kind: "insert",
+            newId,
+            type: "text",
+            data: { text: "" },
+            parentId: target.id,
+          };
     case "move": {
       // POSITIONAL intent: the REDUCER mints the rank against the destination's
       // sibling set. Page rows are not destinations (a move into a sub-page is a
@@ -2383,7 +3043,8 @@ function randomOp(rand: () => number, rows: BlockNode[], nonce: number): BlockOp
       const dest =
         target.type === PAGE_BLOCK_TYPE || rand() < 0.3 ? PAGE : target.id;
       const kids = childrenOf(rows, dest);
-      const anchor = kids.length > 0 ? kids[Math.floor(rand() * kids.length)]! : null;
+      const anchor =
+        kids.length > 0 ? kids[Math.floor(rand() * kids.length)]! : null;
       const moved = rows[Math.floor(rand() * rows.length)]!;
       return {
         kind: "move",
@@ -2445,7 +3106,9 @@ describe("page rows — property (no minted rank collides with a live sibling)",
         // sibling — the PARENT (the upward branch `prevVisibleLine` gained).
         let leaf: BlockNode | null;
         if (!prev) {
-          leaf = b.parentId ? (rows.find((r) => r.id === b.parentId) ?? null) : null;
+          leaf = b.parentId
+            ? (rows.find((r) => r.id === b.parentId) ?? null)
+            : null;
         } else {
           leaf = prev;
           while (leaf?.expanded) {
@@ -2455,7 +3118,12 @@ describe("page rows — property (no minted rank collides with a live sibling)",
           }
         }
 
-        const split = applyBlockOp(rows, { kind: "split", blockId: b.id, position: 0, newId: "x" });
+        const split = applyBlockOp(rows, {
+          kind: "split",
+          blockId: b.id,
+          position: 0,
+          newId: "x",
+        });
         const indent = applyBlockOp(rows, { kind: "indent", blockIds: [b.id] });
         const merge = applyBlockOp(rows, { kind: "merge", blockId: b.id });
 
@@ -2473,7 +3141,11 @@ describe("page rows — property (no minted rank collides with a live sibling)",
           expect(indent.find((r) => r.id === b.id)!.parentId).toBe(prev.id);
         }
 
-        if (b.type === PAGE_BLOCK_TYPE || leaf === null || leaf.type === PAGE_BLOCK_TYPE) {
+        if (
+          b.type === PAGE_BLOCK_TYPE ||
+          leaf === null ||
+          leaf.type === PAGE_BLOCK_TYPE
+        ) {
           expect(merge).toBe(rows);
           if (leaf?.type === PAGE_BLOCK_TYPE) mergeGuarded++;
         } else {
@@ -2622,14 +3294,27 @@ describe("split ∘ merge round-trip", () => {
       // randomForest seeds every content block with non-empty text (its id).
       expect(runsLength(runsOfNode(origin))).toBeGreaterThan(0);
 
-      const split = applyBlockOp(rows, { kind: "split", blockId: origin.id, position: 0, newId: "RT" });
+      const split = applyBlockOp(rows, {
+        kind: "split",
+        blockId: origin.id,
+        position: 0,
+        newId: "RT",
+      });
       // The new sibling is empty and sits immediately ABOVE the untouched origin.
       const above = split.find((b) => b.id === "RT")!;
       expect(textOf(above)).toBe("");
-      expect(prevVisibleLine(split, split.find((b) => b.id === origin.id)!)?.id).toBe("RT");
+      expect(
+        prevVisibleLine(
+          split,
+          split.find((b) => b.id === origin.id)!,
+        )?.id,
+      ).toBe("RT");
 
       // Deleting RT restores the original forest exactly.
-      const inverted = applyBlockOp(split, { kind: "delete", blockIds: ["RT"] });
+      const inverted = applyBlockOp(split, {
+        kind: "delete",
+        blockIds: ["RT"],
+      });
       expect(inverted).toEqual(rows);
       rounds++;
     }
@@ -2677,10 +3362,14 @@ describe("split ∘ merge round-trip", () => {
     let collapsedAnchorSeeds = 0;
     for (let seed = 1; seed <= 1500; seed++) {
       const rand = rng(seed);
-      const rows = anchorize(randomForest(rand, 4 + Math.floor(rand() * 15)), rand).map((b) =>
+      const rows = anchorize(
+        randomForest(rand, 4 + Math.floor(rand() * 15)),
+        rand,
+      ).map((b) =>
         b.type === ANCHOR && rand() < 0.5 ? { ...b, expanded: false } : b,
       );
-      if (rows.some((b) => b.type === ANCHOR && !b.expanded)) collapsedAnchorSeeds++;
+      if (rows.some((b) => b.type === ANCHOR && !b.expanded))
+        collapsedAnchorSeeds++;
       for (const x of rows) {
         if (!isVisibleLine(rows, x, isAnchorFn)) continue;
         const next = nextVisibleLine(rows, x, isAnchorFn);
@@ -2701,9 +3390,10 @@ describe("split ∘ merge round-trip", () => {
     // fold is always visible and always reversible.
     for (let seed = 1; seed <= 400; seed++) {
       const rand = rng(seed);
-      const rows = anchorize(randomForest(rand, 4 + Math.floor(rand() * 15)), rand).map((b) =>
-        b.type === ANCHOR ? { ...b, expanded: false } : b,
-      );
+      const rows = anchorize(
+        randomForest(rand, 4 + Math.floor(rand() * 15)),
+        rand,
+      ).map((b) => (b.type === ANCHOR ? { ...b, expanded: false } : b));
       for (const anchor of rows.filter((b) => b.type === ANCHOR)) {
         if (!isVisibleLine(rows, anchor, isAnchorFn)) continue;
         if (childrenOf(rows, anchor.id).length === 0) continue;
@@ -2723,7 +3413,10 @@ describe("split ∘ merge round-trip", () => {
     let withAnchorRounds = 0;
     for (let seed = 1; seed <= 300; seed++) {
       const rand = rng(seed);
-      const rows = anchorize(randomForest(rand, 4 + Math.floor(rand() * 15)), rand);
+      const rows = anchorize(
+        randomForest(rand, 4 + Math.floor(rand() * 15)),
+        rand,
+      );
       if (rows.some((b) => b.type === ANCHOR)) withAnchorRounds++;
       // A page row is not a legal split target (guarded), and neither is an
       // anchor — it hosts no text surface. The BORROWED line of a collapsed
@@ -2743,11 +3436,19 @@ describe("split ∘ merge round-trip", () => {
       const len = runsLength(runsOfNode(target));
       const position = len === 0 ? 0 : 1 + Math.floor(rand() * len);
 
-      const split = applyBlockOp(rows, { kind: "split", blockId: target.id, position, newId: "RT" }, withAnchors);
+      const split = applyBlockOp(
+        rows,
+        { kind: "split", blockId: target.id, position, newId: "RT" },
+        withAnchors,
+      );
       const tail = split.find((b) => b.id === "RT")!;
       expect(prevVisibleLine(split, tail)?.id).toBe(target.id);
 
-      const merged = applyBlockOp(split, { kind: "merge", blockId: "RT" }, withAnchors);
+      const merged = applyBlockOp(
+        split,
+        { kind: "merge", blockId: "RT" },
+        withAnchors,
+      );
       expect(merged.find((b) => b.id === "RT")).toBeUndefined();
       expect(canonicalForest(merged)).toEqual(canonicalForest(rows));
       rounds++;
@@ -2797,7 +3498,9 @@ describe("BlockOpContext", () => {
       const rand = rng(seed);
       const rows = randomForest(rand, 3 + Math.floor(rand() * 15));
       const op = randomOp(rand, rows, seed);
-      expect(applyBlockOp(rows, op, withAnchors)).toEqual(applyBlockOp(rows, op));
+      expect(applyBlockOp(rows, op, withAnchors)).toEqual(
+        applyBlockOp(rows, op),
+      );
     }
   });
 });

@@ -9,7 +9,11 @@
 // honest end of this script is the "not set up" affordance — not a result list.
 //
 // A transcript tool, not a gate: it logs what it saw and fails only when the
-// block cannot be created at all.
+// block cannot be created at all — and when the conversion posts a row write the
+// server rejects, which is the one thing the transcript reported for months
+// (`Invalid data for block type "place": … 'text'`) without anyone reading it as
+// a failure. See `research/2026-08-19-page-row-text-invariant-at-the-write-funnel.md`;
+// `page/editor/e2e/convert-in-place-verify.ts` is the real gate for that rule.
 //
 // Usage:
 //   bun plugins/page/plugins/place/e2e/place-block.ts [--base http://<worktree>.localhost:9000] [--headed]
@@ -26,7 +30,7 @@ const BASE = baseUrl();
 const OUT = "/tmp/place-block";
 
 await withBrowser(async (h) => {
-  const { page } = await h.session({ colorScheme: "dark" });
+  const { page, captured } = await h.session({ colorScheme: "dark" });
 
   const doc = await openBlankPage(page, BASE, { settleMs: 500 });
   console.log(`[1] blank page ${doc.pageUrl}`);
@@ -66,6 +70,19 @@ await withBrowser(async (h) => {
   console.log(
     `[3] block ${doc.blockId} kept its id and has ${editables} text surface(s) — a ${PLACE_TYPE} block should have 0`,
   );
+  // The conversion's OTHER write: the `doc \u2192 data.text` projection flushes from
+  // the text editor's unmount, which is exactly what converting to a void type
+  // causes. Filtered to the signature rather than "any console error" \u2014 an
+  // unrelated reconnect must not fail this.
+  const rejected = captured.consoleErrors.filter((line) =>
+    /blocks\/patch|Invalid data for block type|Unrecognized key/.test(line),
+  );
+  if (rejected.length > 0) {
+    throw new Error(
+      `converting to ${PLACE_TYPE} posted a row write the server rejected: ${JSON.stringify(rejected)}`,
+    );
+  }
+
   if ((await row.count()) === 0 || editables > 0) {
     throw new Error(
       `block ${doc.blockId} did not convert to a void ${PLACE_TYPE} block`,

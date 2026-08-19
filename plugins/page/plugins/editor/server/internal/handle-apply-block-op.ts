@@ -2,7 +2,13 @@ import { and, asc, eq, isNull } from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
 import { applyBlockOpEndpoint } from "../../core/endpoints";
-import { applyBlockOp, opBlockIds, type BlockNode } from "../../core/block-ops";
+import {
+  applyBlockOp,
+  blockOpContextOf,
+  opBlockIds,
+  type BlockNode,
+  type BlockOpContext,
+} from "../../core/block-ops";
 import { BlockSchema, PAGE_BLOCK_TYPE } from "../../core/schemas";
 import { _blocks } from "./tables";
 import { Editor as BlockRegistry } from "./block-registry";
@@ -20,23 +26,21 @@ import { deleteBlocksSubtree } from "./trash-blocks";
  * notifies. Replaces the per-keystroke split/merge/indent/outdent handlers.
  */
 /**
- * The reducer's type facts, derived from the server's OWN block registry — the
- * mirror of the web side's `useAnchorTypes()` over `Editor.Block`. Both runtimes
- * must hand `applyBlockOp` the same set: the client predicts the forest with it
- * (the optimistic overlay) and this handler commits with it, so a disagreement
- * would make an op apply differently on each side and never confirm.
+ * The reducer's type facts, minted from the server's OWN block registry — the
+ * mirror of the web side's `useBlockOpContext()` over `Editor.Block`. Both
+ * runtimes must hand `applyBlockOp` the same context: the client predicts the
+ * forest with it (the optimistic overlay) and this handler commits with it, so a
+ * disagreement would make an op apply differently on each side and never
+ * confirm. The two registries differ; `blockOpContextOf` is why the DERIVATION
+ * cannot, so a new reducer fact reaches both sides at once.
  *
  * Recomputed per request rather than memoized at module eval: contributions are
- * collected at boot, well after this module is evaluated, and the set is a
- * filter over a couple of dozen handles (see `block-registry.ts` on why no eager
- * mirror lives there).
+ * collected at boot, well after this module is evaluated, and it is a couple of
+ * filters over a couple of dozen handles (see `block-registry.ts` on why no
+ * eager mirror lives there).
  */
-function anchorTypes(): ReadonlySet<string> {
-  return new Set(
-    BlockRegistry.BlockData.getContributions()
-      .filter((h) => h.anchor)
-      .map((h) => h.type),
-  );
+function blockOpCtx(): BlockOpContext {
+  return blockOpContextOf(BlockRegistry.BlockData.getContributions());
 }
 
 /**
@@ -61,7 +65,8 @@ function assertDestinationInPage(
   parentId: string | null,
 ): void {
   if (parentId === pageId) return;
-  const parent = parentId === null ? undefined : rows.find((r) => r.id === parentId);
+  const parent =
+    parentId === null ? undefined : rows.find((r) => r.id === parentId);
   if (!parent || parent.type === PAGE_BLOCK_TYPE) {
     throw new HttpError(
       400,
@@ -71,77 +76,87 @@ function assertDestinationInPage(
   }
 }
 
-export const handleApplyBlockOp = implement(applyBlockOpEndpoint, async ({ params, body }) => {
-  // ONE locked transaction spans the load, the reduce and the writes, because
-  // this handler is a read-modify-write over the whole forest and its UPDATE
-  // reasserts every column of every changed row. `withPageForest` is what makes
-  // "the read is under the lock" true by construction — `ctx.forest()` is the
-  // only way to read, and it exists only inside the transaction. Everything that
-  // must NOT hold the lock (the delete hooks' re-push callbacks, the notify
-  // fan-out, the page-delete chokepoint, the final read-back) runs after it.
-  const { value, watermark } = await withPageForest(params.pageId, async (ctx) => {
-    const rows = await ctx.forest();
-    const before = rows.map(rowToNode);
-    if (body.kind === "move" || body.kind === "bulkMove") {
-      assertDestinationInPage(before, params.pageId, body.parentId);
+export const handleApplyBlockOp = implement(
+  applyBlockOpEndpoint,
+  async ({ params, body }) => {
+    // ONE locked transaction spans the load, the reduce and the writes, because
+    // this handler is a read-modify-write over the whole forest and its UPDATE
+    // reasserts every column of every changed row. `withPageForest` is what makes
+    // "the read is under the lock" true by construction — `ctx.forest()` is the
+    // only way to read, and it exists only inside the transaction. Everything that
+    // must NOT hold the lock (the delete hooks' re-push callbacks, the notify
+    // fan-out, the page-delete chokepoint, the final read-back) runs after it.
+    const { value, watermark } = await withPageForest(
+      params.pageId,
+      async (ctx) => {
+        const rows = await ctx.forest();
+        const before = rows.map(rowToNode);
+        if (body.kind === "move" || body.kind === "bulkMove") {
+          assertDestinationInPage(before, params.pageId, body.parentId);
+        }
+        const after = applyBlockOp(before, body, blockOpCtx());
+
+        // Reconciles, persists, and dispatches `OnDelete` over the AUTHORITATIVE
+        // delete set — the one this transaction really removes. There is no longer a
+        // predicted set read outside the lock, so there is nothing for the two to
+        // disagree about.
+        const write = await writeForestTarget(ctx, before, after);
+
+        // pageId invariant: NO op reachable through this endpoint crosses a page
+        // boundary, so surviving nodes keep their pageId and new nodes inherit it
+        // from their parent/sibling — and the hot keystroke path can skip
+        // `recomputePageIdSubtree` entirely (it is a `WITH RECURSIVE` per edit).
+        //
+        // That is ENFORCED, not assumed, and re-check both halves before relying on
+        // it: the reducer no-ops when a `page` row would be crossed (`applyIndent`
+        // and `applyMerge` on a `page` previous sibling, `applySplit` on a `page`
+        // row, `applyOutdent` on a `page` parent), and the reparenting ops (`move`,
+        // `bulkMove`) are refused above unless their destination is inside this
+        // page. A cross-page move is `handleMoveBlock`'s, which locks both forests
+        // and does recompute.
+
+        return { before, after, write };
+      },
+    );
+    const { before, after, write } = value;
+
+    // Route a page-containing delete through the trash chokepoint (soft delete +
+    // OnTrash hooks). Runs after the write transaction so the reducer's other
+    // diffs land first; the delete set is disjoint from the insert/update set, and
+    // the chokepoint takes the page locks it needs itself.
+    if (write.deferredPageDelete && write.deleteRootIds.length > 0) {
+      await deleteBlocksSubtree(write.deleteRootIds);
     }
-    const after = applyBlockOp(before, body, { anchorTypes: anchorTypes() });
 
-    // Reconciles, persists, and dispatches `OnDelete` over the AUTHORITATIVE
-    // delete set — the one this transaction really removes. There is no longer a
-    // predicted set read outside the lock, so there is nothing for the two to
-    // disagree about.
-    const write = await writeForestTarget(ctx, before, after);
+    // --- Notify (shared with the patch handler) --------------------------------
+    // The op's blocks lived on this page; derive a `type` from them (page vs
+    // content) so a page edit also refreshes the sidebar; default to a content
+    // type otherwise. An op can name SEVERAL blocks (a bulk indent/outdent), and a
+    // sub-page row can sit anywhere in the run — so prefer `page` over position.
+    // The shared helper notifies the content resource, emits `blocksChanged`, and
+    // fans out per emptied sub-page in the deleted subtree.
+    const touchedTypes = opBlockIds(body).flatMap((id) => {
+      const type =
+        before.find((b) => b.id === id)?.type ??
+        after.find((b) => b.id === id)?.type;
+      return type ? [type] : [];
+    });
+    const primaryType =
+      touchedTypes.find((t) => t === PAGE_BLOCK_TYPE) ??
+      touchedTypes[0] ??
+      "block";
+    await notifyStructuralChange({
+      pageId: params.pageId,
+      primaryType,
+      deletedRows: write.deletedRows,
+    });
 
-    // pageId invariant: NO op reachable through this endpoint crosses a page
-    // boundary, so surviving nodes keep their pageId and new nodes inherit it
-    // from their parent/sibling — and the hot keystroke path can skip
-    // `recomputePageIdSubtree` entirely (it is a `WITH RECURSIVE` per edit).
-    //
-    // That is ENFORCED, not assumed, and re-check both halves before relying on
-    // it: the reducer no-ops when a `page` row would be crossed (`applyIndent`
-    // and `applyMerge` on a `page` previous sibling, `applySplit` on a `page`
-    // row, `applyOutdent` on a `page` parent), and the reparenting ops (`move`,
-    // `bulkMove`) are refused above unless their destination is inside this
-    // page. A cross-page move is `handleMoveBlock`'s, which locks both forests
-    // and does recompute.
-
-    return { before, after, write };
-  });
-  const { before, after, write } = value;
-
-  // Route a page-containing delete through the trash chokepoint (soft delete +
-  // OnTrash hooks). Runs after the write transaction so the reducer's other
-  // diffs land first; the delete set is disjoint from the insert/update set, and
-  // the chokepoint takes the page locks it needs itself.
-  if (write.deferredPageDelete && write.deleteRootIds.length > 0) {
-    await deleteBlocksSubtree(write.deleteRootIds);
-  }
-
-  // --- Notify (shared with the patch handler) --------------------------------
-  // The op's blocks lived on this page; derive a `type` from them (page vs
-  // content) so a page edit also refreshes the sidebar; default to a content
-  // type otherwise. An op can name SEVERAL blocks (a bulk indent/outdent), and a
-  // sub-page row can sit anywhere in the run — so prefer `page` over position.
-  // The shared helper notifies the content resource, emits `blocksChanged`, and
-  // fans out per emptied sub-page in the deleted subtree.
-  const touchedTypes = opBlockIds(body).flatMap((id) => {
-    const type = before.find((b) => b.id === id)?.type ?? after.find((b) => b.id === id)?.type;
-    return type ? [type] : [];
-  });
-  const primaryType =
-    touchedTypes.find((t) => t === PAGE_BLOCK_TYPE) ?? touchedTypes[0] ?? "block";
-  await notifyStructuralChange({
-    pageId: params.pageId,
-    primaryType,
-    deletedRows: write.deletedRows,
-  });
-
-  // Return the reloaded LIVE page rows (mirrors the live push payload).
-  const finalRows = await db
-    .select()
-    .from(_blocks)
-    .where(and(eq(_blocks.pageId, params.pageId), isNull(_blocks.deletedAt)))
-    .orderBy(asc(_blocks.rank), asc(_blocks.createdAt));
-  return { blocks: finalRows.map((r) => BlockSchema.parse(r)), watermark };
-});
+    // Return the reloaded LIVE page rows (mirrors the live push payload).
+    const finalRows = await db
+      .select()
+      .from(_blocks)
+      .where(and(eq(_blocks.pageId, params.pageId), isNull(_blocks.deletedAt)))
+      .orderBy(asc(_blocks.rank), asc(_blocks.createdAt));
+    return { blocks: finalRows.map((r) => BlockSchema.parse(r)), watermark };
+  },
+);

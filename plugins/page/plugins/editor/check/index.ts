@@ -3,10 +3,20 @@ import { join } from "path";
 import { buildEnrichedTree } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
 import { getFacet } from "@plugins/plugin-meta/plugins/facets/core";
 import { contributionsFacetDef } from "@plugins/plugin-meta/plugins/facets/plugins/contributions/core";
-import { importBarrel, registerBarrelStubs } from "@plugins/plugin-meta/plugins/barrel-import/core";
+import {
+  importBarrel,
+  registerBarrelStubs,
+} from "@plugins/plugin-meta/plugins/barrel-import/core";
 import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
-import { conversionPrefixesOf, markdownParseTagName, type BlockHandle } from "../core";
-import type { Check, CheckResult } from "@plugins/framework/plugins/tooling/core";
+import {
+  conversionPrefixesOf,
+  markdownParseTagName,
+  type BlockHandle,
+} from "../core";
+import type {
+  Check,
+  CheckResult,
+} from "@plugins/framework/plugins/tooling/core";
 
 // Canonical slot tokens (see plugins/page/plugins/editor/{web/slots.ts,
 // server/internal/block-registry.ts}). Both sides carry the block TYPE as their
@@ -316,7 +326,10 @@ const markdownTagNamesUnique: Check = {
       message:
         `${conflicts.length} markdown tag name(s) are claimed by more than one block type, so ` +
         `every markdown paste would throw:\n${conflicts
-          .map(([name, list]) => `  <${name}> ← ${[...new Set(list)].sort().join(", ")}`)
+          .map(
+            ([name, list]) =>
+              `  <${name}> ← ${[...new Set(list)].sort().join(", ")}`,
+          )
           .join("\n")}`,
       hint:
         "Either rename one type's tag (`markdown.tag.name`), or mark the one that only EMITS it " +
@@ -340,27 +353,148 @@ const markdownTagNamesUnique: Check = {
  * runtime uses, so the check cannot drift from what it checks — both prefix
  * fields are covered, and a prefix moved between them stays covered.
  */
+/**
+ * Every registered block handle, with the plugin id that declared it.
+ *
+ * The three handle-reading checks below all need the same thing: import each web
+ * barrel that contributes `Editor.Block` and read the handles off it. A static
+ * source scan cannot recover a handle's fields from
+ * `Editor.Block({ match: fooBlock.type, block: fooBlock })`, and ad-hoc marker
+ * scanning is banned outright — so importing is the only way, and doing it once
+ * is what keeps a new check from re-deriving "which dirs" and drifting on the
+ * empty-set failure mode. Barrel modules are Bun-cached, so the repeat imports
+ * across checks cost nothing.
+ *
+ * Returns a `degraded` message instead of an empty list when the facet yielded
+ * nothing: a check that verified NOTHING must fail loudly rather than pass
+ * vacuously, and each caller words that failure in its own terms.
+ */
+async function collectBlockHandles(): Promise<
+  | { ok: true; handles: { pluginId: string; handle: BlockHandle<unknown> }[] }
+  | { ok: false }
+> {
+  const root = await getWorktreeRoot();
+  const tree = await buildEnrichedTree(root);
+  registerBarrelStubs(root);
+
+  const candidateDirs = new Set<string>();
+  for (const [dir, node] of tree.byDir) {
+    const facet = getFacet(node, contributionsFacetDef);
+    if (!facet) continue;
+    for (const c of facet.runtime) {
+      if (c.kind === "slot" && c.slotId === WEB_BLOCK_SLOT) {
+        if (existsSync(join(dir, "web", "index.ts"))) candidateDirs.add(dir);
+        break;
+      }
+    }
+  }
+  if (candidateDirs.size === 0) return { ok: false };
+
+  const handles: { pluginId: string; handle: BlockHandle<unknown> }[] = [];
+  for (const dir of candidateDirs) {
+    const mod = await importBarrel(join(dir, "web", "index.ts"));
+    const def = mod.default as { contributions?: unknown } | undefined;
+    if (!Array.isArray(def?.contributions)) continue;
+    for (const raw of def.contributions) {
+      const c = raw as { _slotId?: string; block?: BlockHandle<unknown> };
+      if (c._slotId !== WEB_BLOCK_SLOT || !c.block) continue;
+      handles.push({
+        pluginId: tree.byDir.get(dir)?.id ?? dir,
+        handle: c.block,
+      });
+    }
+  }
+  return { ok: true, handles };
+}
+
+/**
+ * A declared SPLIT TARGET must be a text-bearing type.
+ *
+ * `applySplit` writes the post-caret runs onto the tail row it mints, whose type
+ * is `op.siblingType ?? block.type` (from `BlockHandle.splitInto`) or
+ * `op.childType ?? block.type` (from `splitChildWhenExpanded.childType`). Point
+ * either at a void type and every Enter in that block writes `data.text` onto a
+ * schema that has no `text` key — a 400 at the write boundary, on a keystroke.
+ *
+ * A CHECK rather than a reducer refusal, because unlike the merge target (which
+ * is whatever row happens to sit above the caret, and so is refused at runtime
+ * in `applyMerge`) the split target is DECLARED: the set is closed at build
+ * time, so the strongest form the constraint can take is a build failure rather
+ * than a keystroke that silently does nothing.
+ */
+const splitTargetsAreTextBearing: Check = {
+  id: "page.editor:split-targets-are-text-bearing",
+  description:
+    "every declared split target (`splitInto`, `splitChildWhenExpanded.childType`) names a text-bearing block type, so the tail row the reducer mints can carry the text it splits off",
+  async run(): Promise<CheckResult> {
+    const collected = await collectBlockHandles();
+    if (!collected.ok) {
+      return {
+        ok: false,
+        message:
+          "No web `Editor.Block` contributions found in the enriched plugin tree — the " +
+          "barrel-imported contributions facet is empty, so split targets could not be " +
+          "verified. This is a check/tooling failure, not a clean pass.",
+      };
+    }
+
+    const textBearing = new Set(
+      collected.handles
+        .filter((h) => h.handle.acceptsText)
+        .map((h) => h.handle.type),
+    );
+    const known = new Set(collected.handles.map((h) => h.handle.type));
+
+    const bad: string[] = [];
+    for (const { pluginId, handle } of collected.handles) {
+      const targets: [string, string][] = [];
+      if (handle.splitInto) targets.push(["splitInto", handle.splitInto]);
+      if (handle.splitChildWhenExpanded) {
+        targets.push([
+          "splitChildWhenExpanded.childType",
+          handle.splitChildWhenExpanded.childType,
+        ]);
+      }
+      for (const [field, target] of targets) {
+        // An UNKNOWN target is a different defect (a typo'd or removed type) and
+        // is reported as its own line rather than folded into "not text-bearing",
+        // which would send the reader looking at the wrong schema.
+        if (!known.has(target)) {
+          bad.push(
+            `  "${handle.type}" (${pluginId}) declares \`${field}: "${target}"\`, but no block ` +
+              "type by that name is registered",
+          );
+        } else if (!textBearing.has(target)) {
+          bad.push(
+            `  "${handle.type}" (${pluginId}) declares \`${field}: "${target}"\`, but "${target}" ` +
+              "is a void type — its schema has no `text` key",
+          );
+        }
+      }
+    }
+
+    if (bad.length === 0) return { ok: true };
+    return {
+      ok: false,
+      message:
+        `${bad.length} declared split target(s) cannot hold the text a split hands them, so every ` +
+        `Enter in the declaring block would 400 at the write boundary:\n${bad.join("\n")}`,
+      hint:
+        "Point the target at a text-bearing type (`page/text` is what every current declaration " +
+        "uses). A void type cannot be a split target at all: splitting means moving the runs after " +
+        "the caret into the new row, and a type whose schema declares no `text` has nowhere to put " +
+        "them.",
+    };
+  },
+};
+
 const blockPrefixesUnique: Check = {
   id: "page.editor:block-prefixes-unique",
   description:
     "no two block handles declare the same conversion prefix (`markdownPrefixes` ∪ `typingPrefixes`), which the typing shortcut would resolve by registration order",
   async run(): Promise<CheckResult> {
-    const root = await getWorktreeRoot();
-    const tree = await buildEnrichedTree(root);
-    registerBarrelStubs(root);
-
-    const candidateDirs = new Set<string>();
-    for (const [dir, node] of tree.byDir) {
-      const facet = getFacet(node, contributionsFacetDef);
-      if (!facet) continue;
-      for (const c of facet.runtime) {
-        if (c.kind === "slot" && c.slotId === WEB_BLOCK_SLOT) {
-          if (existsSync(join(dir, "web", "index.ts"))) candidateDirs.add(dir);
-          break;
-        }
-      }
-    }
-    if (candidateDirs.size === 0) {
+    const collected = await collectBlockHandles();
+    if (!collected.ok) {
       return {
         ok: false,
         message:
@@ -372,18 +506,11 @@ const blockPrefixesUnique: Check = {
 
     // prefix -> "<plugin id> (<block type>)" for each declaring handle.
     const claimants = new Map<string, string[]>();
-    for (const dir of candidateDirs) {
-      const mod = await importBarrel(join(dir, "web", "index.ts"));
-      const def = mod.default as { contributions?: unknown } | undefined;
-      if (!Array.isArray(def?.contributions)) continue;
-      for (const raw of def.contributions) {
-        const c = raw as { _slotId?: string; block?: BlockHandle<unknown> };
-        if (c._slotId !== WEB_BLOCK_SLOT || !c.block) continue;
-        for (const prefix of conversionPrefixesOf(c.block)) {
-          const list = claimants.get(prefix) ?? [];
-          list.push(`${tree.byDir.get(dir)?.id ?? dir} (${c.block.type})`);
-          claimants.set(prefix, list);
-        }
+    for (const { pluginId, handle } of collected.handles) {
+      for (const prefix of conversionPrefixesOf(handle)) {
+        const list = claimants.get(prefix) ?? [];
+        list.push(`${pluginId} (${handle.type})`);
+        claimants.set(prefix, list);
       }
     }
 
@@ -397,7 +524,10 @@ const blockPrefixesUnique: Check = {
       message:
         `${conflicts.length} conversion prefix(es) are declared by more than one block type, so ` +
         `which one a user's keystroke converts into is decided by registration order:\n${conflicts
-          .map(([prefix, list]) => `  "${prefix}" ← ${[...new Set(list)].sort().join(", ")}`)
+          .map(
+            ([prefix, list]) =>
+              `  "${prefix}" ← ${[...new Set(list)].sort().join(", ")}`,
+          )
           .join("\n")}`,
       hint:
         "Give one of the types a different prefix. A prefix is a scarce, global namespace: `> ` " +
@@ -408,4 +538,10 @@ const blockPrefixesUnique: Check = {
   },
 };
 
-export default [check, anchorHasDecoration, markdownTagNamesUnique, blockPrefixesUnique];
+export default [
+  check,
+  anchorHasDecoration,
+  markdownTagNamesUnique,
+  blockPrefixesUnique,
+  splitTargetsAreTextBearing,
+];

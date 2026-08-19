@@ -18343,6 +18343,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `applyBlockOp`
           - `applyBlockOpEndpoint`
           - `BlockFieldChangesSchema`
+          - `blockOpContextOf`
           - `BlockOpSchema`
           - `BlockPageSchema`
           - `BlockPatchSchema`
@@ -18365,6 +18366,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `deleteBlock`
           - `diffBlocks`
           - `getBlockPage`
+          - `hasTextKey`
           - `IdentifiedBlockSchema`
           - `inDocumentOrder`
           - `INLINE_SYNTAXES`

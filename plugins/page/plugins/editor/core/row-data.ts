@@ -25,6 +25,24 @@ export type RowData = Record<string, unknown> & { text?: never };
  * i.e. it can drop text the user typed in the last second. This is the sanctioned
  * way to spread a block's existing data: `update({ ...rowDataOf(block.data), color })`.
  */
+/**
+ * Does this stored blob CARRY a `text` key?
+ *
+ * The presence reader beside the stripper, and deliberately not
+ * `runsOf(data.text).length > 0`: absent and empty are DIFFERENT facts at the
+ * write boundary — a void type's strict schema rejects the key's presence, a
+ * text-bearing type's rejects its absence, and `[]` is a legitimate value for
+ * the latter. The row-write funnel's conform asks exactly this question, and
+ * asking it here is what keeps it from reaching for a cast on the branded blob.
+ */
+export function hasTextKey(data: unknown): boolean {
+  return (
+    data !== null &&
+    typeof data === "object" &&
+    Object.prototype.hasOwnProperty.call(data, "text")
+  );
+}
+
 export function rowDataOf(data: unknown): RowData {
   const record = data as Record<string, unknown> | null | undefined;
   const { text: _text, ...rest } = record ?? {};

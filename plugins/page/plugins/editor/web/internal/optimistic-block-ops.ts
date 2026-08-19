@@ -394,15 +394,15 @@ export function fromNodes(nodes: BlockNode[], prev: Block[]): Block[] {
  * Otherwise apply: a structural `op` through the shared reducer (node adapter),
  * or a `patch` directly onto the rows.
  *
- * `anchorTypes` is the reducer's `BlockOpContext` — it MUST be the same set the
- * server passes (both derive it from their own block-handle registry), or the op
- * applies differently on each side and can never confirm. Defaulting to none is
- * byte-identical to a context-free call.
+ * `ctx` is the reducer's `BlockOpContext` — it MUST be the same context the
+ * server passes (both mint it from their own block-handle registry through the
+ * shared `blockOpContextOf`), or the op applies differently on each side and can
+ * never confirm. Defaulting to `{}` is byte-identical to a context-free call.
  */
 export function applyOverlayOp(
   blocks: Block[],
   v: BlockOverlayOp,
-  anchorTypes?: ReadonlySet<string>,
+  ctx: BlockOpContext = {},
 ): Block[] {
   if (v.tag === "patch") {
     // `isPatchAbsorbed`, NOT the confirmation predicate: the guard asks "would
@@ -411,15 +411,7 @@ export function applyOverlayOp(
     return applyPatch(blocks, v.patch);
   }
   if (isReflected(blocks, v.effect)) throw new OpNoLongerApplies();
-  return fromNodes(
-    applyBlockOp(toNodes(blocks), v.op, opCtx(anchorTypes)),
-    blocks,
-  );
-}
-
-/** `BlockOpContext` from the optional anchor-type set (`{}` when absent). */
-function opCtx(anchorTypes: ReadonlySet<string> | undefined): BlockOpContext {
-  return anchorTypes ? { anchorTypes } : {};
+  return fromNodes(applyBlockOp(toNodes(blocks), v.op, ctx), blocks);
 }
 
 /**
@@ -448,13 +440,13 @@ export function buildPatchOverlayOp(patch: BlockPatch): BlockOverlayOp {
 /**
  * Build the overlay op for `op`, capturing its effect from the CURRENT
  * optimistic `rows` (post prior-pending ops) — this is what makes chained ops
- * compose. `anchorTypes` must match what `applyOverlayOp` (and the server) use;
- * it is read here because the prediction runs the reducer.
+ * compose. `ctx` must match what `applyOverlayOp` (and the server) use; it is
+ * read here because the prediction runs the reducer.
  */
 export function buildOverlayOp(
   op: BlockOp,
   rows: Block[],
-  anchorTypes?: ReadonlySet<string>,
+  ctx: BlockOpContext = {},
 ): BlockOverlayOp {
   switch (op.kind) {
     case "split":
@@ -475,7 +467,7 @@ export function buildOverlayOp(
       // them off the pre-op forest.
       const nodes = toNodes(rows);
       const promoted = childrenOf(nodes, op.blockId).map((c) => c.id);
-      const moves = predictMoves(nodes, op, promoted, anchorTypes);
+      const moves = predictMoves(nodes, op, promoted, ctx);
       return {
         tag: "op",
         op,
@@ -494,7 +486,7 @@ export function buildOverlayOp(
       // read the op as already-absorbed. A `bulkMove`'s `opBlockIds` is the whole
       // selection, so the same filter reduces it to the roots that really moved.
       const nodes = toNodes(rows);
-      const moves = predictMoves(nodes, op, opBlockIds(op), anchorTypes);
+      const moves = predictMoves(nodes, op, opBlockIds(op), ctx);
       return { tag: "op", op, effect: { kind: "reparent", moves } };
     }
   }
@@ -509,12 +501,10 @@ function predictMoves(
   nodes: BlockNode[],
   op: BlockOp,
   ids: readonly string[],
-  anchorTypes: ReadonlySet<string> | undefined,
+  ctx: BlockOpContext,
 ): PredictedMove[] {
   const before = new Map(nodes.map((b) => [b.id, b]));
-  const after = new Map(
-    applyBlockOp(nodes, op, opCtx(anchorTypes)).map((b) => [b.id, b]),
-  );
+  const after = new Map(applyBlockOp(nodes, op, ctx).map((b) => [b.id, b]));
   return ids.flatMap((id) => {
     const next = after.get(id);
     const prev = before.get(id);

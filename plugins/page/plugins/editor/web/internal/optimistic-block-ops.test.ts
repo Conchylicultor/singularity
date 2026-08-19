@@ -41,7 +41,12 @@ function mk(
   id: string,
   parentId: string | null,
   rank: string,
-  opts: { text?: string; expanded?: boolean; type?: string; pageId?: string | null } = {},
+  opts: {
+    text?: string;
+    expanded?: boolean;
+    type?: string;
+    pageId?: string | null;
+  } = {},
 ): Block {
   return {
     id,
@@ -71,9 +76,13 @@ describe("isReflected", () => {
   test("remove: true when every id is absent, false when any is present", () => {
     expect(isReflected(blocks, { kind: "remove", ids: ["GONE"] })).toBe(true);
     expect(isReflected(blocks, { kind: "remove", ids: ["A"] })).toBe(false);
-    expect(isReflected(blocks, { kind: "remove", ids: ["GONE", "ALSO-GONE"] })).toBe(true);
+    expect(
+      isReflected(blocks, { kind: "remove", ids: ["GONE", "ALSO-GONE"] }),
+    ).toBe(true);
     // A bulk delete is only absorbed once the WHOLE set is gone.
-    expect(isReflected(blocks, { kind: "remove", ids: ["GONE", "A"] })).toBe(false);
+    expect(isReflected(blocks, { kind: "remove", ids: ["GONE", "A"] })).toBe(
+      false,
+    );
   });
 
   test("reparent: matches on id + parentId + rank; rank mismatch → false", () => {
@@ -83,11 +92,17 @@ describe("isReflected", () => {
     expect(isReflected(blocks, e)).toBe(true);
     // Same parent, different rank ⇒ not yet reflected (a reorder is distinct).
     expect(
-      isReflected(blocks, { kind: "reparent", moves: [{ ...move, rank: after(rank) }] }),
+      isReflected(blocks, {
+        kind: "reparent",
+        moves: [{ ...move, rank: after(rank) }],
+      }),
     ).toBe(false);
     // Different parent ⇒ not reflected.
     expect(
-      isReflected(blocks, { kind: "reparent", moves: [{ ...move, parentId: "A" }] }),
+      isReflected(blocks, {
+        kind: "reparent",
+        moves: [{ ...move, parentId: "A" }],
+      }),
     ).toBe(false);
   });
 
@@ -102,7 +117,9 @@ describe("isReflected", () => {
     };
     expect(isReflected(blocks, e)).toBe(true);
     // Container still present ⇒ not absorbed, even though the child is placed.
-    expect(isReflected([...blocks, mk("C", null, after(rankB))], e)).toBe(false);
+    expect(isReflected([...blocks, mk("C", null, after(rankB))], e)).toBe(
+      false,
+    );
     // Container gone but the child NOT promoted (another client hard-deleted the
     // subtree) ⇒ not absorbed either. This is why a bare `remove` under-describes
     // the op: it would drop a replay whose promotion never happened.
@@ -162,7 +179,9 @@ describe("applyOverlayOp", () => {
     // Origin text truncated; new node carries the trailing text (runs model).
     const aNode = out.find((b) => b.id === "A")!;
     expect((aNode.data as { text: unknown }).text).toEqual([{ text: "hello" }]);
-    expect((newNode.data as { text: unknown }).text).toEqual([{ text: "world" }]);
+    expect((newNode.data as { text: unknown }).text).toEqual([
+      { text: "world" },
+    ]);
   });
 
   test("preserves timestamps from the matching prev row by id", () => {
@@ -216,11 +235,16 @@ describe("chained compose", () => {
       base,
     );
     const afterSplit = applyOverlayOp(base, splitOp);
-    const outdentOp = buildOverlayOp({ kind: "outdent", blockIds: ["NEW"] }, afterSplit);
+    const outdentOp = buildOverlayOp(
+      { kind: "outdent", blockIds: ["NEW"] },
+      afterSplit,
+    );
 
     // Simulate a base that already absorbed the split (server push landed):
     // re-running splitOp on it must drop (throw), while outdentOp still applies.
-    expect(() => applyOverlayOp(afterSplit, splitOp)).toThrow(OpNoLongerApplies);
+    expect(() => applyOverlayOp(afterSplit, splitOp)).toThrow(
+      OpNoLongerApplies,
+    );
 
     const outdented = applyOverlayOp(afterSplit, outdentOp);
     const moved = outdented.find((b) => b.id === "NEW")!;
@@ -231,25 +255,41 @@ describe("chained compose", () => {
   test("buildOverlayOp captures the right effect per kind", () => {
     const r1 = a;
     const r2 = after(r1);
-    const rows = [mk("P1", null, r1, { text: "one" }), mk("P2", null, r2, { text: "two" })];
+    const rows = [
+      mk("P1", null, r1, { text: "one" }),
+      mk("P2", null, r2, { text: "two" }),
+    ];
 
     // `buildOverlayOp` always yields the `op`-tagged variant; assert + narrow.
-    const expectOp = (v: BlockOverlayOp): Extract<BlockOverlayOp, { tag: "op" }> => {
+    const expectOp = (
+      v: BlockOverlayOp,
+    ): Extract<BlockOverlayOp, { tag: "op" }> => {
       expect(v.tag).toBe("op");
       if (v.tag !== "op") throw new Error("expected op variant");
       return v;
     };
 
-    const split = expectOp(buildOverlayOp({ kind: "split", blockId: "P1", position: 1, newId: "S" }, rows));
+    const split = expectOp(
+      buildOverlayOp(
+        { kind: "split", blockId: "P1", position: 1, newId: "S" },
+        rows,
+      ),
+    );
     expect(split.effect).toEqual({ kind: "create", ids: ["S"] });
 
-    const ins = expectOp(buildOverlayOp({ kind: "insert", newId: "I", type: "text" }, rows));
+    const ins = expectOp(
+      buildOverlayOp({ kind: "insert", newId: "I", type: "text" }, rows),
+    );
     expect(ins.effect).toEqual({ kind: "create", ids: ["I"] });
 
-    const merge = expectOp(buildOverlayOp({ kind: "merge", blockId: "P2" }, rows));
+    const merge = expectOp(
+      buildOverlayOp({ kind: "merge", blockId: "P2" }, rows),
+    );
     expect(merge.effect).toEqual({ kind: "remove", ids: ["P2"] });
 
-    const del = expectOp(buildOverlayOp({ kind: "delete", blockIds: ["P1"] }, rows));
+    const del = expectOp(
+      buildOverlayOp({ kind: "delete", blockIds: ["P1"] }, rows),
+    );
     expect(del.effect).toEqual({ kind: "remove", ids: ["P1"] });
 
     expect(merge.op.kind).toBe("merge");
@@ -268,9 +308,10 @@ describe("chained compose", () => {
       mk("X", "CA", k1, { text: "x" }),
       mk("Y", "CA", k2, { text: "y" }),
     ];
-    const anchors = new Set(["callout"]);
+    const anchors = { anchorTypes: new Set(["callout"]) };
     const v = buildOverlayOp({ kind: "unwrap", blockId: "CA" }, rows, anchors);
-    if (v.tag !== "op" || v.effect.kind !== "unwrap") throw new Error("expected an unwrap effect");
+    if (v.tag !== "op" || v.effect.kind !== "unwrap")
+      throw new Error("expected an unwrap effect");
     expect(v.effect.id).toBe("CA");
     expect(v.effect.moves.map((m) => m.id)).toEqual(["X", "Y"]);
     expect(v.effect.moves.every((m) => m.parentId === null)).toBe(true);
@@ -280,7 +321,9 @@ describe("chained compose", () => {
     const applied = applyOverlayOp(rows, v, anchors);
     expect(isReflected(applied, v.effect)).toBe(true);
     // Idempotency guard: replaying it onto that base drops the entry.
-    expect(() => applyOverlayOp(applied, v, anchors)).toThrow(OpNoLongerApplies);
+    expect(() => applyOverlayOp(applied, v, anchors)).toThrow(
+      OpNoLongerApplies,
+    );
   });
 });
 
@@ -290,18 +333,28 @@ describe("chained compose", () => {
 
 describe("applyPatch", () => {
   test("creates insert new + replace existing, deletes drop ids", () => {
-    const blocks = [mk("A", null, a, { text: "a" }), mk("B", null, after(a), { text: "b" })];
+    const blocks = [
+      mk("A", null, a, { text: "a" }),
+      mk("B", null, after(a), { text: "b" }),
+    ];
     const out = applyPatch(blocks, {
-      creates: [mk("A", null, a, { text: "A!" }), mk("C", null, after(after(a)), { text: "c" })],
+      creates: [
+        mk("A", null, a, { text: "A!" }),
+        mk("C", null, after(after(a)), { text: "c" }),
+      ],
       updates: [],
       deleteIds: ["B"],
     });
     expect(out.map((b) => b.id).sort()).toEqual(["A", "C"]);
-    expect((out.find((b) => b.id === "A")!.data as { text: string }).text).toBe("A!");
+    expect((out.find((b) => b.id === "A")!.data as { text: string }).text).toBe(
+      "A!",
+    );
   });
 
   test("an update MERGES its named fields — never a whole-row swap", () => {
-    const blocks = [mk("A", "P", a, { text: "keep me", type: "callout", expanded: true })];
+    const blocks = [
+      mk("A", "P", a, { text: "keep me", type: "callout", expanded: true }),
+    ];
     const out = applyPatch(blocks, {
       creates: [],
       updates: [{ id: "A", changes: { expanded: false } }],
@@ -321,7 +374,11 @@ describe("applyPatch", () => {
       mk("C1", "P", after(a)),
       mk("C2", "C1", after(after(a))),
     ];
-    const out = applyPatch(blocks, { creates: [], updates: [], deleteIds: ["P"] });
+    const out = applyPatch(blocks, {
+      creates: [],
+      updates: [],
+      deleteIds: ["P"],
+    });
     expect(out.length).toBe(0);
   });
 
@@ -351,9 +408,13 @@ describe("isPatchReflected", () => {
     };
     expect(isPatchReflected(base, patch)).toBe(true);
     // A create whose column differs ⇒ not yet reflected.
-    expect(isPatchReflected([mk("A", null, a, { type: "text" })], patch)).toBe(false);
+    expect(isPatchReflected([mk("A", null, a, { type: "text" })], patch)).toBe(
+      false,
+    );
     // A delete id still present ⇒ not reflected.
-    expect(isPatchReflected([...base, mk("B", null, after(a))], patch)).toBe(false);
+    expect(isPatchReflected([...base, mk("B", null, after(a))], patch)).toBe(
+      false,
+    );
   });
 
   // Confirmation is deliberately data-BLIND (server truth legitimately differs:
@@ -366,8 +427,12 @@ describe("isPatchReflected", () => {
       updates: [{ id: "A", changes: { data: { text: "projected" } } }],
       deleteIds: [],
     };
-    expect(isPatchReflected([mk("A", null, a, { text: "stale" })], patch)).toBe(true);
-    expect(isPatchReflected([mk("A", null, a, { text: "projected" })], patch)).toBe(true);
+    expect(isPatchReflected([mk("A", null, a, { text: "stale" })], patch)).toBe(
+      true,
+    );
+    expect(
+      isPatchReflected([mk("A", null, a, { text: "projected" })], patch),
+    ).toBe(true);
   });
 
   test("only the NAMED fields are compared", () => {
@@ -378,9 +443,14 @@ describe("isPatchReflected", () => {
     };
     // `data`/`type`/`parentId` all differ from anything — irrelevant, unnamed.
     expect(
-      isPatchReflected([mk("A", "Z", a, { expanded: true, type: "quote", text: "x" })], patch),
+      isPatchReflected(
+        [mk("A", "Z", a, { expanded: true, type: "quote", text: "x" })],
+        patch,
+      ),
     ).toBe(true);
-    expect(isPatchReflected([mk("A", "Z", a, { expanded: false })], patch)).toBe(false);
+    expect(
+      isPatchReflected([mk("A", "Z", a, { expanded: false })], patch),
+    ).toBe(false);
   });
 
   test("applyOverlayOp on a patch that the base already reflects throws", () => {
@@ -424,9 +494,13 @@ describe("isPatchAbsorbed", () => {
 
   test("applyOverlayOp APPLIES a data-only patch instead of swallowing it", () => {
     const out = applyOverlayOp(base, buildPatchOverlayOp(dataOnly));
-    expect((out.find((b) => b.id === "A")!.data as { text: string }).text).toBe("new");
+    expect((out.find((b) => b.id === "A")!.data as { text: string }).text).toBe(
+      "new",
+    );
     // …and re-applying it onto the result is a genuine no-op ⇒ guard trips.
-    expect(() => applyOverlayOp(out, buildPatchOverlayOp(dataOnly))).toThrow(OpNoLongerApplies);
+    expect(() => applyOverlayOp(out, buildPatchOverlayOp(dataOnly))).toThrow(
+      OpNoLongerApplies,
+    );
   });
 
   test("`data` equality is by VALUE, not reference (a re-serialized identical payload is absorbed)", () => {
@@ -439,19 +513,70 @@ describe("isPatchAbsorbed", () => {
   });
 
   test("the structural cases behave identically under both predicates", () => {
-    const cases: { patch: Parameters<typeof isPatchAbsorbed>[1]; expected: boolean }[] = [
+    const cases: {
+      patch: Parameters<typeof isPatchAbsorbed>[1];
+      expected: boolean;
+    }[] = [
       // Every named field already matches.
-      { patch: { creates: [], updates: [{ id: "A", changes: { data: { text: "old" } } }], deleteIds: [] }, expected: true },
+      {
+        patch: {
+          creates: [],
+          updates: [{ id: "A", changes: { data: { text: "old" } } }],
+          deleteIds: [],
+        },
+        expected: true,
+      },
       // A named structural field differs.
-      { patch: { creates: [], updates: [{ id: "A", changes: { type: "heading" } }], deleteIds: [] }, expected: false },
-      { patch: { creates: [], updates: [{ id: "A", changes: { parentId: "B" } }], deleteIds: [] }, expected: false },
-      { patch: { creates: [], updates: [{ id: "A", changes: { rank: Rank.from(after(a)) } }], deleteIds: [] }, expected: false },
-      { patch: { creates: [], updates: [{ id: "A", changes: { expanded: true } }], deleteIds: [] }, expected: false },
+      {
+        patch: {
+          creates: [],
+          updates: [{ id: "A", changes: { type: "heading" } }],
+          deleteIds: [],
+        },
+        expected: false,
+      },
+      {
+        patch: {
+          creates: [],
+          updates: [{ id: "A", changes: { parentId: "B" } }],
+          deleteIds: [],
+        },
+        expected: false,
+      },
+      {
+        patch: {
+          creates: [],
+          updates: [{ id: "A", changes: { rank: Rank.from(after(a)) } }],
+          deleteIds: [],
+        },
+        expected: false,
+      },
+      {
+        patch: {
+          creates: [],
+          updates: [{ id: "A", changes: { expanded: true } }],
+          deleteIds: [],
+        },
+        expected: false,
+      },
       // A row the patch would CREATE is missing.
-      { patch: { creates: [mk("C", null, after(after(a)))], updates: [], deleteIds: [] }, expected: false },
+      {
+        patch: {
+          creates: [mk("C", null, after(after(a)))],
+          updates: [],
+          deleteIds: [],
+        },
+        expected: false,
+      },
       // A delete id still present / already gone.
-      { patch: { creates: [], updates: [], deleteIds: ["B"] }, expected: false },
-      { patch: { creates: [], updates: [], deleteIds: ["GONE"] }, expected: true },
+      {
+        patch: { creates: [], updates: [], deleteIds: ["B"] },
+        expected: false,
+      },
+      {
+        patch: { creates: [], updates: [], deleteIds: ["GONE"] },
+        expected: true,
+      },
     ];
     for (const { patch, expected } of cases) {
       expect(isPatchAbsorbed(base, patch)).toBe(expected);
@@ -504,9 +629,14 @@ describe("updates never create", () => {
   };
 
   test("applyPatch updates a present row", () => {
-    const out = applyPatch([mk("A", null, a, { text: "old" }), mk("B", null, after(a))], projected);
+    const out = applyPatch(
+      [mk("A", null, a, { text: "old" }), mk("B", null, after(a))],
+      projected,
+    );
     expect(out.map((b) => b.id)).toEqual(["A", "B"]);
-    expect((out.find((b) => b.id === "A")!.data as { text: string }).text).toBe("projected");
+    expect((out.find((b) => b.id === "A")!.data as { text: string }).text).toBe(
+      "projected",
+    );
   });
 
   test("applyPatch NEVER re-creates an absent row (no resurrection)", () => {
@@ -546,7 +676,11 @@ describe("updates never create", () => {
 
 describe("sameOverlayTarget", () => {
   const patchOn = (ids: string[], deleteIds: string[] = []): BlockOverlayOp =>
-    buildPatchOverlayOp({ creates: ids.map((id) => mk(id, null, a)), updates: [], deleteIds });
+    buildPatchOverlayOp({
+      creates: ids.map((id) => mk(id, null, a)),
+      updates: [],
+      deleteIds,
+    });
 
   test("an update's target counts as a written row", () => {
     const upd = buildPatchOverlayOp({
@@ -566,7 +700,9 @@ describe("sameOverlayTarget", () => {
 
   test("patches on disjoint blocks are unrelated (a projectText on another block never cascades)", () => {
     expect(sameOverlayTarget(patchOn(["A"]), patchOn(["B"]))).toBe(false);
-    expect(sameOverlayTarget(patchOn([], ["A"]), patchOn(["B"], ["C"]))).toBe(false);
+    expect(sameOverlayTarget(patchOn([], ["A"]), patchOn(["B"], ["C"]))).toBe(
+      false,
+    );
   });
 
   test("structural ops target the rows the BlockOp names", () => {
