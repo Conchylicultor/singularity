@@ -20,7 +20,8 @@ export type UnitState = {
   instruction: string | null;
 };
 
-export type GenerationOverall = "none" | "partial" | "generating" | "ready" | "error";
+export type GenerationOverall =
+  "none" | "partial" | "generating" | "ready" | "error";
 
 export type UseGeneratedUnitsResult = {
   /** True while the resource is still loading — distinct from "genuinely empty". */
@@ -58,10 +59,15 @@ export function useGeneratedUnits({
   kind: string;
   units: { unitId: string; currentHash: string }[];
 }): UseGeneratedUnitsResult {
-  const result = useResource(storyGeneratedUnitsResource);
+  // Subscribed per (pageId, kind): the resource ships only THIS artifact's
+  // units, so an open page never loads the app-wide table.
+  const result = useResource(storyGeneratedUnitsResource, { pageId, kind });
   const mutation = useEndpointMutation(generateUnit);
 
-  const generate = async (unitId: string, turn: GenerationTurn): Promise<void> => {
+  const generate = async (
+    unitId: string,
+    turn: GenerationTurn,
+  ): Promise<void> => {
     await mutation.mutateAsync({
       params: { pageId, kind, unitId },
       body: {
@@ -79,11 +85,11 @@ export function useGeneratedUnits({
   }
   const rows = result.data;
 
+  const rowByUnitId = new Map(rows.map((r) => [r.unitId, r]));
+
   const byUnit = new Map<string, UnitState>();
   for (const u of units) {
-    const row = rows.find(
-      (r) => r.pageId === pageId && r.kind === kind && r.unitId === u.unitId,
-    );
+    const row = rowByUnitId.get(u.unitId);
     if (!row) {
       byUnit.set(u.unitId, NONE_STATE);
       continue;
