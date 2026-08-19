@@ -1660,6 +1660,13 @@
       "tag": "20260819_090206_d49ecc8a__add_source_last_extraction",
       "hash": "d49ecc8a",
       "breakpoints": true
+    },
+    {
+      "version": "7",
+      "when": 1787135319000,
+      "tag": "20260819_102839_7add02ae__repair_conv_7e03_foreign_session",
+      "hash": "7add02ae",
+      "breakpoints": true
     }
   ]
 }

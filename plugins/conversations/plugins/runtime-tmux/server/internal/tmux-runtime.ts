@@ -14,7 +14,11 @@ import { isWorktreeOpActive } from "@plugins/infra/plugins/worktree/server";
 import { backgroundPrefix } from "@plugins/packages/plugins/spawn-priority/server";
 import { recordReport } from "@plugins/reports/server";
 import { basename } from "node:path";
-import { resolveSessionState, type SessionState } from "./claude-session";
+import {
+  resolveSessionState,
+  type PaneRef,
+  type SessionState,
+} from "./claude-session";
 import { parseInputDraft } from "./input-draft";
 import { captureProcessTree } from "./process-tree";
 // Sessions we manage: new ones use `conv-…`; `claude-…` is the pre-rename
@@ -480,6 +484,21 @@ async function escapeUntilPromptCleared(conversationId: string): Promise<void> {
 }
 
 /**
+ * One live pane as `listPanes` reports it. It extends `PaneRef`, so a pane can
+ * be handed straight to `resolveSessionState` — the resolver's inputs are a
+ * strict subset of what listing a pane already tells us, and there is nothing
+ * to assemble (or mis-assemble) at the call site.
+ *
+ * `#{pane_id}` is the pane's identity for its whole life. `#{window_id}` is
+ * deliberately not carried: it moves under `break-pane` / `move-window`, and
+ * matching on it would buy nothing that `%pane_id` does not already settle.
+ */
+export interface TmuxPane extends PaneRef {
+  rawTitle: string;
+  dead: boolean;
+}
+
+/**
  * Live tmux panes we manage, keyed by conversation id (the tmux session name).
  *
  * Exported so out-of-plugin observers (the session-divergence monitor) can join
@@ -487,19 +506,14 @@ async function escapeUntilPromptCleared(conversationId: string): Promise<void> {
  * re-deriving `tmux list-panes` — including its "no server running" empty-state
  * nuance, which a second copy would inevitably get wrong.
  */
-export async function listPanes(): Promise<
-  Map<
-    string,
-    { rawTitle: string; panePid: number; dead: boolean; worktreePath: string }
-  >
-> {
+export async function listPanes(): Promise<Map<string, TmuxPane>> {
   const proc = Bun.spawn(
     [
       TMUX,
       "list-panes",
       "-a",
       "-F",
-      `#{session_name}${SEP}#{pane_pid}${SEP}#{pane_dead}${SEP}#{pane_start_path}${SEP}#{pane_title}`,
+      `#{session_name}${SEP}#{pane_pid}${SEP}#{pane_id}${SEP}#{pane_dead}${SEP}#{pane_start_path}${SEP}#{pane_title}`,
       "-f",
       `#{r:^(conv|claude)-,#{session_name}}`,
     ],
@@ -510,10 +524,7 @@ export async function listPanes(): Promise<
     new Response(proc.stderr).text(),
   ]);
   const exit = await proc.exited;
-  const map = new Map<
-    string,
-    { rawTitle: string; panePid: number; dead: boolean; worktreePath: string }
-  >();
+  const map = new Map<string, TmuxPane>();
   if (exit !== 0) {
     // "no server running" is a legitimate empty state — tmux had no sessions
     // so it could not start a server to query. Any other non-zero exit
@@ -526,13 +537,14 @@ export async function listPanes(): Promise<
     );
   }
   for (const line of stdout.trim().split("\n").filter(Boolean)) {
-    const [name, pidStr, deadStr, startPath, ...rest] = line.split(SEP);
-    if (!name || !pidStr) continue;
+    const [name, pidStr, paneId, deadStr, startPath, ...rest] = line.split(SEP);
+    if (!name || !pidStr || !paneId) continue;
     if (map.has(name)) continue;
     const pid = Number(pidStr);
     if (!Number.isFinite(pid)) continue;
     map.set(name, {
       panePid: pid,
+      paneId,
       dead: deadStr === "1",
       worktreePath: startPath ?? "",
       rawTitle: rest.join(SEP),
@@ -559,7 +571,7 @@ export const tmuxRuntime: ConversationRuntime = {
     const states = await Promise.all(
       ids.map(async (id) => {
         try {
-          return await resolveSessionState(panes.get(id)!.panePid, tree);
+          return await resolveSessionState(panes.get(id)!, tree);
         } catch (err) {
           void recordReport({
             kind: "crash",

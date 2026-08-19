@@ -1,6 +1,7 @@
 import { listSessionChain } from "@plugins/conversations/plugins/session-chain/server";
 import { getConversationClaudeSessionId } from "@plugins/tasks/plugins/tasks-core/server";
-import { findTranscriptPath } from "./find-transcript-path";
+import { resolveAnchoredChain } from "./anchor";
+import { reportForeignSession } from "./foreign-session-report";
 
 /**
  * The on-disk transcript files backing a conversation, oldest → newest.
@@ -28,6 +29,15 @@ import { findTranscriptPath } from "./find-transcript-path";
  * *history* rather than a prerequisite for rendering anything at all, and means
  * a chain wiped by hand degrades to today's single-file behaviour instead of a
  * blank pane.
+ *
+ * **A chain entry from another conversation is dropped, not merged.**
+ * `resolveAnchoredChain` anchors the conversation to the projects dir of its
+ * first resolvable session and refuses everything resolving elsewhere. A foreign
+ * entry that survived to here would be merged into the rendered transcript, and
+ * — worse — could be `paths.at(-1)`, which is what `rewindLastUserTurn`
+ * truncates: the Stop button would destroy another agent's live transcript. Each
+ * refusal is reported (debounced), because the DB row stays wrong until somebody
+ * removes it. See `research/2026-08-19-global-pane-session-ownership.md`.
  */
 export async function resolveConversationTranscriptPaths(
   conversationId: string,
@@ -41,10 +51,22 @@ export async function resolveConversationTranscriptPaths(
     if (tail) sessionIds.push(tail);
   }
 
-  const paths: string[] = [];
-  for (const sessionId of sessionIds) {
-    const path = await findTranscriptPath(sessionId);
-    if (path) paths.push(path);
+  const { anchorDir, kept, foreign } = await resolveAnchoredChain(sessionIds);
+
+  // `foreign` is empty whenever nothing anchored, so this guard never actually
+  // skips a report — it is how the compiler sees that `anchorDir` is a string
+  // inside the loop, rather than a runtime branch.
+  if (anchorDir !== null) {
+    for (const entry of foreign) {
+      reportForeignSession({
+        reason: "directory-mismatch",
+        conversationId,
+        foreignSessionId: entry.sessionId,
+        foreignDir: entry.dir,
+        anchorDir,
+      });
+    }
   }
-  return paths;
+
+  return kept.map((entry) => entry.path);
 }

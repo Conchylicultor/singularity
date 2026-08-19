@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { asc, desc, eq } from "drizzle-orm";
+import { asc, desc, eq, sql } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { db } from "@plugins/database/server";
 import { _conversationSessions } from "./tables";
@@ -70,4 +70,48 @@ export async function listSessionChain(
     .from(_conversationSessions)
     .where(eq(_conversationSessions.conversationId, conversationId))
     .orderBy(asc(_conversationSessions.seenAt));
+}
+
+/** One Claude session id recorded on more than one conversation. */
+export interface SharedSessionId {
+  claudeSessionId: string;
+  /** Every conversation whose chain holds it — always at least two, sorted. */
+  conversationIds: string[];
+}
+
+/**
+ * Every `claude_session_id` that appears in MORE THAN ONE conversation's chain.
+ *
+ * A Claude session belongs to exactly one conversation, so any row here is
+ * corruption: two conversations recorded the same id, and at most one of them
+ * really ran it. The `UNIQUE (conversation_id, claude_session_id)` index makes a
+ * chain internally consistent, but says nothing across conversations — which is
+ * exactly the gap the 2026-08-19 cross-talk incident fell through (a lent
+ * background spare's id was adopted by the pane hosting the daemon, 0.5 s after
+ * its real owner recorded it).
+ *
+ * Pure SQL, deliberately. It touches no filesystem and no process table, so it
+ * sees a **hibernated** conversation whose pane is long gone and whose
+ * transcripts have been swept — the cases every other detector in this area is
+ * structurally blind to. It also assumes nothing about how Claude encodes a cwd
+ * into a projects directory, so it cannot be defeated by that encoding changing.
+ *
+ * An empty array is the healthy answer, not an absorbed failure: a DB error
+ * propagates. `conn` is injectable so a DB-backed test can drive a throwaway
+ * database.
+ */
+export async function listSharedClaudeSessionIds(
+  conn: NodePgDatabase = db,
+): Promise<SharedSessionId[]> {
+  return await conn
+    .select({
+      claudeSessionId: _conversationSessions.claudeSessionId,
+      conversationIds: sql<
+        string[]
+      >`array_agg(DISTINCT ${_conversationSessions.conversationId} ORDER BY ${_conversationSessions.conversationId})`,
+    })
+    .from(_conversationSessions)
+    .groupBy(_conversationSessions.claudeSessionId)
+    .having(sql`count(DISTINCT ${_conversationSessions.conversationId}) > 1`)
+    .orderBy(asc(_conversationSessions.claudeSessionId));
 }

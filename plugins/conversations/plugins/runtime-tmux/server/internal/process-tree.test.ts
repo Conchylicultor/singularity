@@ -1,14 +1,20 @@
 import { describe, expect, test } from "bun:test";
-import { captureProcessTree, subtreePids, type ProcessTree } from "./process-tree";
+import {
+  captureProcessTree,
+  subtreePids,
+  type ProcessTree,
+} from "./process-tree";
 
 function treeOf(...edges: Array<[pid: number, ppid: number]>): ProcessTree {
   const children = new Map<number, number[]>();
+  const pids = new Set<number>();
   for (const [pid, ppid] of edges) {
+    pids.add(pid);
     const siblings = children.get(ppid);
     if (siblings) siblings.push(pid);
     else children.set(ppid, [pid]);
   }
-  return { children };
+  return { children, pids };
 }
 
 describe("subtreePids", () => {
@@ -47,6 +53,16 @@ describe("captureProcessTree", () => {
     expect(tree.children.get(99082)).toEqual([5302, 5303]);
     expect(tree.children.get(5302)).toEqual([5330]);
     expect(tree.children.get(5330)).toBeUndefined();
+  });
+
+  test("records every pid in the snapshot, not only the parents", async () => {
+    // The liveness oracle for pids found OUTSIDE the tree: a parked job's host
+    // is re-parented to launchd, so it is live but unreachable from any pane.
+    const tree = await captureProcessTree(async () => [
+      { pid: 5302, ppid: 99082 },
+      { pid: 5330, ppid: 5302 },
+    ]);
+    expect(tree.pids).toEqual(new Set([5302, 5330]));
   });
 
   test("propagates a lister failure rather than yielding an empty tree", async () => {

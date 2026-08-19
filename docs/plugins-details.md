@@ -7881,10 +7881,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `config_v2.getConfig`
       - `conversations/all-conversations.handleQuery`
       - `conversations/preprompts.resolvePreprompt`
+      - `conversations/session-chain.listSessionChain`
       - `conversations/session-chain.recordSessionId`
       - `conversations/transcript-watcher.findTranscriptPath`
       - `conversations/transcript-watcher.readChainLines`
       - `conversations/transcript-watcher.refreshConversationChain`
+      - `conversations/transcript-watcher.resolveAnchoredChain`
       - `conversations/transcript-watcher.resolveConversationTranscriptPaths`
       - `conversations/transcript-watcher.watchTranscript`
       - `database.db`
@@ -10776,10 +10778,14 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `infra/paths.TMUX`
           - `infra/worktree.isWorktreeOpActive`
           - `packages/spawn-priority.backgroundPrefix`
+          - `reports.DEFAULT_REPORT_DEBOUNCE_MS`
           - `reports.recordReport`
+          - `reports.recordReportDebounced`
         - Exports (types):
+          - `PaneRef`
           - `ProcessLister`
           - `ProcessTree`
+          - `TmuxPane`
         - Exports (values):
           - `captureProcessTree`
           - `listPanes`
@@ -10793,9 +10799,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `infra/entities.defaultNow`
           - `infra/entities.defineEntity`
         - DB schema: `plugins/conversations/plugins/session-chain/server/internal/tables.ts`
-        - Exports (types): `SessionChainEntry`
+        - Exports (types):
+          - `SessionChainEntry`
+          - `SharedSessionId`
         - Exports (values):
           - `listSessionChain`
+          - `listSharedClaudeSessionIds`
           - `recordSessionId`
       - Cross-plugin:
         - Imported by:
@@ -10881,21 +10890,35 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/log-channels.Log`
           - `tasks/tasks-core.listRetainedConversations`
         - Register: `defineJob('conversations.transcript-touch')`
-    - **`transcript-watcher`** — Single @parcel/watcher-based JSONL transcript watcher. Replaces two independent 500ms pollers with one fan-out subscription.
+    - **`transcript-watcher`** — Foreign-session report renderer: a one-line Debug, Reports summary for the conversation-foreign-session kind — which conversation holds a session id that belongs to another, and how it was seen. Single @parcel/watcher-based JSONL transcript watcher. Replaces two independent 500ms pollers with one fan-out subscription.
+      - Web:
+        - Contributes: `Reports.KindView` → `ForeignSessionSummary`
+        - Uses:
+          - `primitives/css/badge.Badge`
+          - `primitives/css/inline.Inline`
+          - `reports.Reports`
       - Server:
+        - Contributes: `report-kind` "conversation-foreign-session"
         - Uses:
           - `conversations/session-chain.listSessionChain`
           - `infra/file-watcher.createFileWatcher`
           - `infra/file-watcher.FileWatcher`
           - `infra/paths.CLAUDE_PROJECTS_DIR`
+          - `reports.DEFAULT_REPORT_DEBOUNCE_MS`
+          - `reports.recordReportDebounced`
+          - `reports.ReportKind`
           - `tasks/tasks-core.getConversationClaudeSessionId`
-        - Exports (types): `TranscriptSnapshot`
+        - Exports (types):
+          - `AnchoredChain`
+          - `AnchoredEntry`
+          - `TranscriptSnapshot`
         - Exports (values):
           - `findTranscriptPath`
           - `readChainLines`
           - `readJsonlEvents`
           - `readJsonlEventsFromChain`
           - `refreshConversationChain`
+          - `resolveAnchoredChain`
           - `resolveConversationTranscriptPaths`
           - `transcriptChainSignature`
           - `watchTranscript`
@@ -10909,6 +10932,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `debug/session-divergence`
       - Core:
         - Exports (types):
+          - `ForeignSessionPayload`
           - `JsonlEvent`
           - `TeammateMessage`
           - `TokenUsage`
@@ -10918,6 +10942,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `activeLineUuids`
           - `extractPreprompt`
           - `extractTeammateMessages`
+          - `ForeignSessionPayloadSchema`
           - `isInterruptContent`
           - `JsonlEventSchema`
           - `PREPROMPT_TAG`
@@ -12559,7 +12584,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conversations/runtime-tmux.ProcessTree`
           - `conversations/runtime-tmux.subtreePids`
           - `conversations/session-chain.listSessionChain`
+          - `conversations/session-chain.listSharedClaudeSessionIds`
+          - `conversations/session-chain.SharedSessionId`
+          - `conversations/transcript-watcher.AnchoredChain`
           - `conversations/transcript-watcher.findTranscriptPath`
+          - `conversations/transcript-watcher.resolveAnchoredChain`
           - `infra/jobs.defineJob`
           - `infra/paths.CLAUDE_SESSIONS_DIR`
           - `reports.recordReport`
@@ -20750,6 +20779,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `conversations/conversation-view/model`
               - `conversations/conversation-view/status`
               - `conversations/summary`
+              - `conversations/transcript-watcher`
               - `debug/boot-budget`
               - `debug/boot-watchdog`
               - `debug/broadcasts`
@@ -21383,6 +21413,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `conversations/conversation-view/jsonl-viewer/file-path`
               - `conversations/conversation-view/jsonl-viewer/tool-call/page-tools/edit-page`
               - `conversations/conversation-view/op-status`
+              - `conversations/transcript-watcher`
               - `debug/boot-budget`
               - `debug/boot-watchdog`
               - `debug/duress-shed`
@@ -27904,7 +27935,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
 
 - **`reports`** — Reports uncaught browser errors to the server. Records server/frontend crashes as deduped reports; investigation tasks are filed on demand.
   - Web:
-    - Slots: `Reports.KindView` ← `debug.boot-budget`, `debug.boot-watchdog`, `debug.duress-shed`, `debug.live-state-churn.monitor`, `debug.op-rate`, `debug.queue-health`, `debug.read-set-shrink`, `debug.sentinel`, `debug.session-divergence`, `debug.slow-ops`, `debug.stall-monitor`, `reports.adaptive-bar`, `reports.caret-flight`, `reports.collab-hydration`, `reports.crash`, `reports.live-state-stale-drop`, `reports.optimistic-divergence`, `reports.render-loop`, `reports.turn-unconfirmed`, `reports.viewport-escape`
+    - Slots: `Reports.KindView` ← `conversations.transcript-watcher`, `debug.boot-budget`, `debug.boot-watchdog`, `debug.duress-shed`, `debug.live-state-churn.monitor`, `debug.op-rate`, `debug.queue-health`, `debug.read-set-shrink`, `debug.sentinel`, `debug.session-divergence`, `debug.slow-ops`, `debug.stall-monitor`, `reports.adaptive-bar`, `reports.caret-flight`, `reports.collab-hydration`, `reports.crash`, `reports.live-state-stale-drop`, `reports.optimistic-divergence`, `reports.render-loop`, `reports.turn-unconfirmed`, `reports.viewport-escape`
     - Uses:
       - `infra/endpoints.fetchEndpoint`
       - `primitives/slot-render.defineDispatchSlot`
@@ -27940,7 +27971,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `ReportRow`
     - Exports (values):
       - `_reports`
+      - `DEFAULT_REPORT_DEBOUNCE_MS`
       - `recordReport`
+      - `recordReportDebounced`
       - `reportInvestigationSink`
       - `ReportKind`
       - `ReportNoiseRule`
@@ -27973,6 +28006,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `conversations/model-provider`
       - `conversations/pane-restore`
       - `conversations/runtime-tmux`
+      - `conversations/transcript-watcher`
       - `debug/boot-budget`
       - `debug/boot-watchdog`
       - `debug/duress-shed`

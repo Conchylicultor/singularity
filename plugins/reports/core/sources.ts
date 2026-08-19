@@ -16,6 +16,7 @@ export const SERVER_REPORT_SOURCES = [
   "server-boot-monitor",
   "server-boot-watchdog",
   "server-session-monitor",
+  "server-transcript-watcher",
   "server-duress-shed",
   "server-duress-monitor",
   "server-stall-monitor",

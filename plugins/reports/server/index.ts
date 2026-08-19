@@ -1,4 +1,7 @@
-import { Resource, setErrorReporter } from "@plugins/framework/plugins/server-core/core";
+import {
+  Resource,
+  setErrorReporter,
+} from "@plugins/framework/plugins/server-core/core";
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
 import { handleReport } from "./internal/handle-report";
 import { handleInvestigate } from "./internal/handle-investigate";
@@ -8,7 +11,10 @@ import { ExcludeFromChangeFeed } from "@plugins/database/plugins/change-feed/ser
 import { _reports } from "./internal/tables";
 import { backfillNoiseWarmup } from "./internal/backfill-noise";
 import { reportsRetention } from "./internal/retention";
-import { flushBufferedReports, installProcessHooks } from "./internal/process-hooks";
+import {
+  flushBufferedReports,
+  installProcessHooks,
+} from "./internal/process-hooks";
 import { submitReport, investigateReport } from "../shared/endpoints";
 
 export { _reports } from "./internal/tables";
@@ -16,10 +22,19 @@ export { reportsResource } from "./internal/resources";
 export { reportInvestigationSink } from "./internal/investigation-sink";
 export type { InvestigationTaskRequest } from "./internal/investigation-sink";
 export { recordReport } from "./internal/record-report";
+export { recordReportDebounced } from "./internal/record-report-debounced";
+export { DEFAULT_REPORT_DEBOUNCE_MS } from "./internal/debounce";
 export { ReportNoiseRule } from "./internal/noise-rules";
-export type { ReportNoiseRuleSpec, ReportNoiseInput } from "./internal/noise-rules";
+export type {
+  ReportNoiseRuleSpec,
+  ReportNoiseInput,
+} from "./internal/noise-rules";
 export { ReportKind } from "./internal/report-kinds";
-export type { ReportKindSpec, ReportKindVariant, ReportRow } from "./internal/report-kinds";
+export type {
+  ReportKindSpec,
+  ReportKindVariant,
+  ReportRow,
+} from "./internal/report-kinds";
 
 export default {
   description:

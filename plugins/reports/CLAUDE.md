@@ -6,7 +6,7 @@
 
 - Description: Reports uncaught browser errors to the server. Records server/frontend crashes as deduped reports; investigation tasks are filed on demand.
 - Web:
-  - Slots: `Reports.KindView` ← `debug.boot-budget`, `debug.boot-watchdog`, `debug.duress-shed`, `debug.live-state-churn.monitor`, `debug.op-rate`, `debug.queue-health`, `debug.read-set-shrink`, `debug.sentinel`, `debug.session-divergence`, `debug.slow-ops`, `debug.stall-monitor`, `reports.adaptive-bar`, `reports.caret-flight`, `reports.collab-hydration`, `reports.crash`, `reports.live-state-stale-drop`, `reports.optimistic-divergence`, `reports.render-loop`, `reports.turn-unconfirmed`, `reports.viewport-escape`
+  - Slots: `Reports.KindView` ← `conversations.transcript-watcher`, `debug.boot-budget`, `debug.boot-watchdog`, `debug.duress-shed`, `debug.live-state-churn.monitor`, `debug.op-rate`, `debug.queue-health`, `debug.read-set-shrink`, `debug.sentinel`, `debug.session-divergence`, `debug.slow-ops`, `debug.stall-monitor`, `reports.adaptive-bar`, `reports.caret-flight`, `reports.collab-hydration`, `reports.crash`, `reports.live-state-stale-drop`, `reports.optimistic-divergence`, `reports.render-loop`, `reports.turn-unconfirmed`, `reports.viewport-escape`
   - Uses:
     - `infra/endpoints.fetchEndpoint`
     - `primitives/slot-render.defineDispatchSlot`
@@ -42,7 +42,9 @@
     - `ReportRow`
   - Exports (values):
     - `_reports`
+    - `DEFAULT_REPORT_DEBOUNCE_MS`
     - `recordReport`
+    - `recordReportDebounced`
     - `reportInvestigationSink`
     - `ReportKind`
     - `ReportNoiseRule`
@@ -75,6 +77,7 @@
     - `conversations/model-provider`
     - `conversations/pane-restore`
     - `conversations/runtime-tmux`
+    - `conversations/transcript-watcher`
     - `debug/boot-budget`
     - `debug/boot-watchdog`
     - `debug/duress-shed`

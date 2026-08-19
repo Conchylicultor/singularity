@@ -12,6 +12,38 @@ One `parcel.subscribe(CLAUDE_PROJECTS_DIR)` covers all active conversations. A p
 
 **Restart recovery**: room creation triggers an immediate seed read, so any events that landed during server downtime are delivered to subscribers on reconnect. `turn-emitter`'s `hasPendingTrigger` logic hooks into this seed callback.
 
+## One conversation, one projects directory
+
+A chain is a list of session ids *someone else* recorded, and it can name another
+conversation's session. `resolveAnchoredChain(sessionIds)` (`anchor.ts`) is the
+guard: the **first id that resolves anchors** the conversation to that
+`~/.claude/projects/<dir>/`, and anything resolving elsewhere is `foreign`.
+`resolveConversationTranscriptPaths` returns only `kept`, so a foreign entry can
+neither be merged into the transcript nor become the write tail (which
+`rewindLastUserTurn` truncates — a foreign tail is a Stop button that destroys
+another agent's live file).
+
+The invariant: **all of a conversation's sessions run in one worktree** — enforced
+by `createConversation`'s `forkFromConversationId` branch
+(`conversations/server/internal/lifecycle.ts`), which rejects a fork whose
+`attemptId` differs from the source's and then takes the source's attempt.
+
+**Do not replace the anchor with a derivation.** Deriving the expected dir from
+`attempts.worktree_path` through Claude's cwd→dirname encoding (`/`, `_`, `.` →
+`-`) looks tighter, but nothing in this repo re-implements that encoding, so
+nothing would notice if Claude changed it — and the day it did, it would match
+nothing and blank *every* conversation. The anchor's worst failure is resolving
+one fewer id, which this path already does daily for GC'd transcripts.
+
+A refusal files a `conversation-foreign-session` report (kind + emitter in
+`server/internal/`, schema in `core/`, renderer in `web/`), debounced 5 min per
+`(conversation, session)` — the read path runs on every push, so the debounce is
+in *front* of `recordReport`, and the emitter never throws into the read. The
+read self-heals; the DB row does not, which is what the report is for. Its
+`shared-session-id` arm is filed by `debug/session-divergence`'s pure-SQL
+detector — same corruption, two discovery routes. Design:
+[`research/2026-08-19-global-pane-session-ownership.md`](../../../../research/2026-08-19-global-pane-session-ownership.md).
+
 ## The chain signature, and why a listener gets `{ events, signature }`
 
 `transcriptChainSignature(paths)` (`chain-signature.ts`) is the **single definition of
@@ -44,21 +76,35 @@ memo degrades to a full chain re-read on every push.
 
 ## Plugin reference
 
-- Description: Single @parcel/watcher-based JSONL transcript watcher. Replaces two independent 500ms pollers with one fan-out subscription.
+- Description: Foreign-session report renderer: a one-line Debug, Reports summary for the conversation-foreign-session kind — which conversation holds a session id that belongs to another, and how it was seen. Single @parcel/watcher-based JSONL transcript watcher. Replaces two independent 500ms pollers with one fan-out subscription.
+- Web:
+  - Contributes: `Reports.KindView` → `ForeignSessionSummary`
+  - Uses:
+    - `primitives/css/badge.Badge`
+    - `primitives/css/inline.Inline`
+    - `reports.Reports`
 - Server:
+  - Contributes: `report-kind` "conversation-foreign-session"
   - Uses:
     - `conversations/session-chain.listSessionChain`
     - `infra/file-watcher.createFileWatcher`
     - `infra/file-watcher.FileWatcher`
     - `infra/paths.CLAUDE_PROJECTS_DIR`
+    - `reports.DEFAULT_REPORT_DEBOUNCE_MS`
+    - `reports.recordReportDebounced`
+    - `reports.ReportKind`
     - `tasks/tasks-core.getConversationClaudeSessionId`
-  - Exports (types): `TranscriptSnapshot`
+  - Exports (types):
+    - `AnchoredChain`
+    - `AnchoredEntry`
+    - `TranscriptSnapshot`
   - Exports (values):
     - `findTranscriptPath`
     - `readChainLines`
     - `readJsonlEvents`
     - `readJsonlEventsFromChain`
     - `refreshConversationChain`
+    - `resolveAnchoredChain`
     - `resolveConversationTranscriptPaths`
     - `transcriptChainSignature`
     - `watchTranscript`
@@ -72,6 +118,7 @@ memo degrades to a full chain re-read on every push.
     - `debug/session-divergence`
 - Core:
   - Exports (types):
+    - `ForeignSessionPayload`
     - `JsonlEvent`
     - `TeammateMessage`
     - `TokenUsage`
@@ -81,6 +128,7 @@ memo degrades to a full chain re-read on every push.
     - `activeLineUuids`
     - `extractPreprompt`
     - `extractTeammateMessages`
+    - `ForeignSessionPayloadSchema`
     - `isInterruptContent`
     - `JsonlEventSchema`
     - `PREPROMPT_TAG`

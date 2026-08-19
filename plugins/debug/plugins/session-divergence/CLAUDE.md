@@ -28,7 +28,7 @@ exists to audit. Both now follow the pointer that links the two — the stub's
 `parkedJobId` to the host's `jobId` — and both do so independently. See the 2026-08-18
 addendum in the research doc.
 
-## The predicate
+## The predicate — omission
 
 A per-worktree scheduled job (`debug.session-divergence-monitor`, every 5 min) takes
 ONE process-table snapshot and, for each active conversation that still owns a live
@@ -38,20 +38,91 @@ tmux pane, flags a session id `s` **reachable from** that pane when all of:
   ever render;
 - **(b)** `s` has a transcript file on disk — the agent really is talking there,
   rather than `s` being a launcher tombstone that never ran a turn;
-- **(c)** `s`'s transcript mtime leads the chain **tail's** transcript mtime by more
+- **(c)** `s`'s transcript mtime leads the **baseline's** transcript mtime by more
   than `graceMinutes` — the conversation has actually moved there.
 
 `(c)` is what keeps the monitor quiet in the ordinary fork: a freshly-spawned session
 writes its transcript a moment before the 1s poller appends it to the chain, so for
 that instant it trivially satisfies (a) and (b). It trips only once the lead outlives
 the grace window — i.e. the poller had minutes of ticks and still never recorded it.
-A conversation whose chain is empty, or whose tail has no transcript yet, is skipped:
-there is no baseline to measure a lead against.
+A conversation whose chain is empty, or none of whose entries resolve to a transcript,
+is skipped: there is no baseline to measure a lead against.
+
+**The baseline is the last *anchored* entry, not `chain.at(-1)`.** A chain corrupted by
+cross-talk has a foreign id as its tail — that is how the 2026-08-19 incident presented
+— so `chain.at(-1)`'s transcript is an unrelated worktree's file, and its mtime is an
+unrelated agent's typing speed. Measuring a lead against that measures noise: a busy
+stranger hides a genuine divergence, an idle one invents a fake one.
+`resolveAnchoredChain` (from `transcript-watcher`) partitions the chain into the entries
+that live in this conversation's own `~/.claude/projects/<dir>/` and the ones that do
+not, and the last of the former is the newest transcript the UI can actually render.
+
+Note (a) still tests the **whole** chain, foreign entries included: an id already
+recorded is not an omission, whatever else is wrong with it. That is commission's job,
+below.
 
 **Reachable** means: named by a sessions file in the pane's process subtree, or — following
 `parkedJobId` → `jobId` transitively — by a file claiming a background job one of those points
 at. Reachability is the half that decides what the predicate can even see, so it is the half a
 new detachment shape breaks first; `reachableSessionIds` is pure and unit-tested for that reason.
+
+### The two exclusions, and the asymmetry that keeps them safe
+
+Proximity is not ownership. Claude Code runs ONE background daemon per machine, parented
+under whichever pane happened to start it, and lends its pre-warmed spares to any
+conversation — so an unrelated agent's process really does sit in this pane's subtree,
+writing a transcript hours ahead of the pane's own. Two kinds of subtree link are
+therefore dropped before they can count as evidence:
+
+1. **Foreign claim** — the record's `tmux` stamp names a *different* pane that
+   `listPanes` knows about. Somebody else has said, on the record, that it is theirs.
+2. **Background host** — `kind: "bg"`. A background session reaches a pane only through
+   that pane's own `parkedJobId` → `jobId` hop, an explicit pointer rather than an
+   accident of process parentage.
+
+Without these the monitor would fire on the daemon-hosting pane every 5 minutes forever
+the moment the resolver (correctly) stopped adopting the lent spare's id: absent from
+the chain ✓, has a transcript ✓, leads the tail ✓. An alarm that always fires is an
+alarm that is off — which is why this had to land with the resolver fix, not after it.
+
+**These are not the resolver's inclusion rule, and must never become it.** The resolver
+admits a record only when it claims the pane (by stamp, or by being unstamped, non-`bg`
+and local to the pane's worktree). This detector excludes only what *somebody else* has
+claimed. Everything merely **unclaimed** — unstamped, wrong `cwd`, a stamp naming a pane
+that no longer exists — stays evidence here even though the resolver refuses it. That
+gap **is** the monitor: the shapes the resolver deliberately declines to guess at are
+the shapes that froze a transcript for 747 minutes in July 2026 and for 10h25m on
+2026-08-18.
+
+## The other predicate — commission
+
+The predicate above is one-directional by construction: its first test is
+`if (recorded.has(sessionId)) continue`, so an id the resolver wrongly **adopted** is
+skipped *because* it was adopted. Cross-talk corruption is self-concealing to it, which
+is why the 2026-08-19 incident was found by a human reading a transcript. Two detectors
+in `detect-commission.ts` close that direction:
+
+- **directory-mismatch** — a chain entry whose transcript resolves outside its own
+  conversation's anchor directory. Scoped to active conversations (resolving every id
+  of every conversation that ever existed is an unbounded glob on a 5-minute job).
+- **shared-session-id** — one `claude_session_id` recorded on two or more conversations
+  (`listSharedClaudeSessionIds`, owned by `session-chain`). Pure SQL: no process tree,
+  no filesystem, no assumption about how Claude encodes a cwd into a directory name. It
+  therefore answers for a **hibernated** conversation whose pane died days ago and whose
+  transcripts have been swept, and it would have caught the 2026-08-19 incident the
+  minute it happened. It reports the fact to *every* holder of the id — it cannot see
+  which one is the impostor, and guessing is not its job.
+
+Both file `conversation-foreign-session`, the kind owned by `transcript-watcher` (the
+read path files it too when it refuses to merge a foreign transcript): same condition,
+same answer — go delete that `conversation_sessions` row — two discovery routes, one
+deduped task per corrupt row.
+
+They are kept **out of** `detectDivergences` on purpose. The two predicates do not take
+the same inputs (one needs the live process tree and pane list; the other works with no
+pane at all) and do not cover the same conversations, so merging them would mean either
+running the process walk for rows that do not need it, or wrapping the carefully
+specified (a)/(b)/(c) contract in branches until it no longer has one answer.
 
 ## Why it does not reuse `resolveSessionState`
 
@@ -70,20 +141,30 @@ resolver's implementation of it would mean one bug blinds both. What is shared i
 
 - `core/config.ts` — `enabled` + `graceMinutes` (runtime-editable in Settings → Config).
 - `core/kinds.ts` — the report payload: the conversation, both session ids, both mtimes.
-- `server/internal/detect.ts` — the predicate, with its filesystem/DB reads behind an
-  injectable `DetectDeps` so it is unit-testable (`detect.test.ts`); plus the pure
-  `reachableSessionIds` (subtree ids + parked-job hops) its IO shell wraps.
-- `server/internal/monitor-job.ts` — the scheduled job: read config, run the predicate,
-  file a report per divergence. `perWorktree: true` because the chain rows it audits
+- `server/internal/detect.ts` — the omission predicate, with its filesystem/DB reads
+  behind an injectable `DetectDeps` so it is unit-testable (`detect.test.ts`); plus the
+  pure `reachableSessionIds` (subtree ids, claim exclusions, parked-job hops) its IO
+  shell wraps.
+- `server/internal/detect-commission.ts` — the two commission detectors, behind their own
+  `CommissionDeps` (`detect-commission.test.ts`). They return
+  `ForeignSessionPayload` directly, so a detector cannot report a shape it did not
+  observe.
+- `server/internal/monitor-job.ts` — the scheduled job: read config, run all three
+  predicates, file a report each. `perWorktree: true` because the chain rows it audits
   live in each worktree's own DB fork (same reason `queue-health` samples its own queue).
-- `server/internal/divergence-kind.ts` — the report kind, deduped one row per
-  conversation, `warning` variant with a 6h notification re-arm.
+- `server/internal/divergence-kind.ts` — the omission report kind, deduped one row per
+  conversation, `warning` variant with a 6h notification re-arm. The commission kind
+  (`conversation-foreign-session`) lives in `transcript-watcher`, which also files it
+  from the read path.
 - `web/` — the one-line Debug → Reports summary and the config registration.
 
 > The config `name` `session-divergence`, the job name
 > `debug.session-divergence-monitor`, and the report kind
 > `conversation-session-divergence` are load-bearing explicit literals — persisted
-> config and report dedup depend on them; do not rename.
+> config and report dedup depend on them; do not rename. `SessionDivergencePayload`
+> stays scoped to the omission case: the commission arms have their own union
+> (`ForeignSessionPayloadSchema`), and forcing one schema to carry both would make each
+> arm fabricate the other's fields.
 
 ## Testing
 
@@ -94,6 +175,10 @@ bun test plugins/debug/plugins/session-divergence
 To exercise it end-to-end, force a synthetic divergence by inserting an older tail into
 `conversation_sessions` for a live conversation, wait one cron tick, and confirm exactly
 one `conversation-session-divergence` report — and zero rows for the healthy panes.
+
+For commission, insert a live conversation's `claude_session_id` into a second
+conversation's chain and confirm one `conversation-foreign-session` row per holder. A
+standing row for a pane nobody corrupted means an exclusion above has stopped working.
 
 <!-- AUTOGENERATED:BEGIN — do not edit; regenerated by `./singularity build` -->
 
@@ -121,7 +206,11 @@ one `conversation-session-divergence` report — and zero rows for the healthy p
     - `conversations/runtime-tmux.ProcessTree`
     - `conversations/runtime-tmux.subtreePids`
     - `conversations/session-chain.listSessionChain`
+    - `conversations/session-chain.listSharedClaudeSessionIds`
+    - `conversations/session-chain.SharedSessionId`
+    - `conversations/transcript-watcher.AnchoredChain`
     - `conversations/transcript-watcher.findTranscriptPath`
+    - `conversations/transcript-watcher.resolveAnchoredChain`
     - `infra/jobs.defineJob`
     - `infra/paths.CLAUDE_SESSIONS_DIR`
     - `reports.recordReport`

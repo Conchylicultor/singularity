@@ -1,3 +1,4 @@
+import { dirname } from "node:path";
 import {
   listConversationsForInfra,
   listExistingConversationIds,
@@ -20,8 +21,12 @@ import { decideMissingProcessAction } from "./hibernation-decision";
 import {
   findTranscriptPath,
   refreshConversationChain,
+  resolveAnchoredChain,
 } from "@plugins/conversations/plugins/transcript-watcher/server";
-import { recordSessionId } from "@plugins/conversations/plugins/session-chain/server";
+import {
+  listSessionChain,
+  recordSessionId,
+} from "@plugins/conversations/plugins/session-chain/server";
 import type { ConversationStatus } from "@plugins/tasks/plugins/tasks-core/core";
 
 function liveStatusFor(info: RuntimeInfo): ConversationStatus {
@@ -88,6 +93,56 @@ const UNINFORMATIVE_TITLES = [
   "Untitled conversation",
   "Claude Code",
 ];
+
+/**
+ * Should this conversation adopt `candidate` as its live session id?
+ *
+ * Two gates, in cost order — this runs only on the rare tick where the runtime
+ * reports an id different from the stored one (see the call site), never on the
+ * steady-state path.
+ *
+ * 1. **A transcript must exist.** Otherwise a freshly-resumed session that dies
+ *    before the user types anything would overwrite the (still-resumable) id
+ *    with one that has no transcript on disk, breaking the next Resume.
+ *
+ * 2. **That transcript must sit in THIS conversation's projects directory.**
+ *    Gate 1 alone only asks whether a transcript exists *somewhere on the host*
+ *    — `findTranscriptPath` globs every `~/.claude/projects/<dir>/`, so another
+ *    conversation's session id in another worktree passes it cleanly. That is
+ *    exactly how `conv-1786969506-7e03` adopted a stranger's session on
+ *    2026-08-19 (`research/2026-08-19-global-pane-session-ownership.md`). All of
+ *    a conversation's sessions run in one worktree, hence in one projects dir,
+ *    so an id resolving elsewhere is somebody else's.
+ *
+ * A null anchor — nothing in the known chain resolves yet, i.e. the
+ * conversation's first session — accepts, and the candidate becomes the anchor.
+ *
+ * Defense in depth, deliberately **not** load-bearing: the runtime resolver is
+ * what must stop offering a foreign id in the first place. So this refuses
+ * SILENTLY, exactly like "no transcript yet" always has — a broken pane would
+ * hand us the same wrong id every second, and a 1 Hz report loop is noise, not
+ * an alarm. Standing corruption is the periodic monitor's signal to raise.
+ */
+async function acceptsSessionId(
+  conversationId: string,
+  storedSessionId: string | null,
+  candidate: string,
+): Promise<boolean> {
+  const candidatePath = await findTranscriptPath(candidate);
+  if (!candidatePath) return false;
+
+  // What we already believe about this conversation: its full chain, or — before
+  // the chain has any row — the stored tail on its own.
+  const chain = await listSessionChain(conversationId);
+  const known = chain.length
+    ? chain.map((entry) => entry.claudeSessionId)
+    : storedSessionId
+      ? [storedSessionId]
+      : [];
+
+  const { anchorDir } = await resolveAnchoredChain(known);
+  return anchorDir === null || dirname(candidatePath) === anchorDir;
+}
 
 async function tick(): Promise<void> {
   const [{ next, failedRuntimes }, rows] = await Promise.all([
@@ -182,14 +237,16 @@ async function tick(): Promise<void> {
     const desiredTitle = informativeNew ? info.title : dbRow.title;
     const desiredStatus = liveStatusFor(info);
     const titleChanged = desiredTitle !== dbRow.title;
-    // Only adopt a new claudeSessionId once Claude has actually persisted a
-    // transcript for it. Otherwise a freshly-resumed session that dies before
-    // the user types anything would overwrite the (still-resumable) id with
-    // one that has no transcript on disk, breaking the next Resume.
+    // Only adopt a new claudeSessionId once Claude has persisted a transcript
+    // for it, IN THIS CONVERSATION'S OWN projects directory — see
+    // `acceptsSessionId` for both halves of that rule and why each exists. The
+    // `&&` chain matters: the gate's reads (a glob, a chain SELECT) happen only
+    // on the rare tick where the runtime reports a different id, never on the
+    // steady-state path this 1s loop spends all its time in.
     const sessionCandidate =
       info.claudeSessionId &&
       info.claudeSessionId !== dbRow.claudeSessionId &&
-      (await findTranscriptPath(info.claudeSessionId))
+      (await acceptsSessionId(id, dbRow.claudeSessionId, info.claudeSessionId))
         ? info.claudeSessionId
         : dbRow.claudeSessionId;
     const sessionChanged = sessionCandidate !== dbRow.claudeSessionId;
@@ -218,8 +275,9 @@ async function tick(): Promise<void> {
     // `conversations.claude_session_id` is the live TAIL (what `claude --resume`
     // hands back); the chain is the full ordered history the transcript readers
     // merge. Every id the poller adopts — including the first, since `null → sid`
-    // flows through this same branch — is appended here, behind the transcript
-    // gate above, so a session with no file on disk never enters the chain.
+    // flows through this same branch — is appended here, behind the adoption
+    // gate above, so neither a session with no file on disk nor one whose file
+    // lives in another conversation's directory ever enters the chain.
     //
     // Chain ORDER comes from `seenAt` = the DB's `now()`, which is TRANSACTION
     // START time. Safe here: each call is its own implicit transaction, and ticks

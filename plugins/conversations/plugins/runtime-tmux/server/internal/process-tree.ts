@@ -6,6 +6,14 @@ export type ProcessLister = () => Promise<Array<{ pid: number; ppid: number }>>;
 /** Parent → direct children adjacency, from one point-in-time process snapshot. */
 export interface ProcessTree {
   children: Map<number, number[]>;
+  /**
+   * Every pid in the same snapshot — the liveness oracle for pids reached
+   * OUTSIDE the tree. A parked job's host is re-parented to launchd, so it is
+   * found by scanning `~/.claude/sessions/` rather than by walking children;
+   * without this set a leaked file from an exited host is indistinguishable
+   * from a second live claimant of the same job.
+   */
+  pids: Set<number>;
 }
 
 async function psLister(): Promise<Array<{ pid: number; ppid: number }>> {
@@ -49,12 +57,14 @@ export async function captureProcessTree(
   lister: ProcessLister = psLister,
 ): Promise<ProcessTree> {
   const children = new Map<number, number[]>();
+  const pids = new Set<number>();
   for (const { pid, ppid } of await lister()) {
+    pids.add(pid);
     const siblings = children.get(ppid);
     if (siblings) siblings.push(pid);
     else children.set(ppid, [pid]);
   }
-  return { children };
+  return { children, pids };
 }
 
 /**

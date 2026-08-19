@@ -90,6 +90,7 @@ same threshold and can't desync in a row.
     - `conversations/conversation-view/model`
     - `conversations/conversation-view/status`
     - `conversations/summary`
+    - `conversations/transcript-watcher`
     - `debug/boot-budget`
     - `debug/boot-watchdog`
     - `debug/broadcasts`

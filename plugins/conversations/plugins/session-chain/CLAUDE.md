@@ -69,9 +69,12 @@ bun test plugins/conversations/plugins/session-chain/server/internal
     - `infra/entities.defaultNow`
     - `infra/entities.defineEntity`
   - DB schema: `plugins/conversations/plugins/session-chain/server/internal/tables.ts`
-  - Exports (types): `SessionChainEntry`
+  - Exports (types):
+    - `SessionChainEntry`
+    - `SharedSessionId`
   - Exports (values):
     - `listSessionChain`
+    - `listSharedClaudeSessionIds`
     - `recordSessionId`
 - Cross-plugin:
   - Imported by:

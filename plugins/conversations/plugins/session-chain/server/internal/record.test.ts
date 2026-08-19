@@ -8,14 +8,25 @@
  * (requires the running embedded cluster — `./singularity build` first).
  */
 
-import { describe, test, expect, beforeAll, afterAll, beforeEach } from "bun:test";
+import {
+  describe,
+  test,
+  expect,
+  beforeAll,
+  afterAll,
+  beforeEach,
+} from "bun:test";
 import { sql } from "drizzle-orm";
 import {
   createTestDb,
   type TestDb,
 } from "@plugins/database/plugins/db-test-fixture/server";
 import { runMigrations } from "@plugins/database/plugins/migrations/server";
-import { recordSessionId, listSessionChain } from "./record";
+import {
+  recordSessionId,
+  listSessionChain,
+  listSharedClaudeSessionIds,
+} from "./record";
 
 let t: TestDb;
 
@@ -125,5 +136,67 @@ describe("listSessionChain", () => {
 
     expect(await ids("conv-a")).toEqual(["sid-shared"]);
     expect(await ids("conv-b")).toEqual(["sid-shared"]);
+  });
+});
+
+// The table permits the shape above — the UNIQUE index is per conversation, so
+// nothing at the DB level stops two chains from claiming one session. That is
+// the gap the 2026-08-19 cross-talk incident fell through, and this query is how
+// a monitor sees it. GROUP BY / HAVING / array_agg all live in SQL, so like the
+// suites above it is exercised against the real database.
+describe("listSharedClaudeSessionIds", () => {
+  test("a healthy database reports nothing", async () => {
+    await recordSessionId("conv-a", "sid-1", t.db);
+    await recordSessionId("conv-a", "sid-2", t.db);
+    await recordSessionId("conv-b", "sid-3", t.db);
+
+    expect(await listSharedClaudeSessionIds(t.db)).toEqual([]);
+  });
+
+  test("names the shared id and every conversation holding it", async () => {
+    await recordSessionId("conv-a", "sid-own", t.db);
+    await recordSessionId("conv-a", "sid-shared", t.db);
+    await recordSessionId("conv-b", "sid-shared", t.db);
+
+    expect(await listSharedClaudeSessionIds(t.db)).toEqual([
+      {
+        claudeSessionId: "sid-shared",
+        conversationIds: ["conv-a", "conv-b"],
+      },
+    ]);
+  });
+
+  test("one conversation recording an id twice is not a share", async () => {
+    // The second call is a no-op (the id is already the tail), so there is one
+    // row — but the point is the DISTINCT: even two rows for one conversation
+    // must not read as two conversations.
+    await recordSessionId("conv-a", "sid-1", t.db);
+    await recordSessionId("conv-a", "sid-1", t.db);
+
+    expect(await listSharedClaudeSessionIds(t.db)).toEqual([]);
+  });
+
+  test("a three-way share lists all three, sorted", async () => {
+    await recordSessionId("conv-c", "sid-shared", t.db);
+    await recordSessionId("conv-a", "sid-shared", t.db);
+    await recordSessionId("conv-b", "sid-shared", t.db);
+
+    expect(await listSharedClaudeSessionIds(t.db)).toEqual([
+      {
+        claudeSessionId: "sid-shared",
+        conversationIds: ["conv-a", "conv-b", "conv-c"],
+      },
+    ]);
+  });
+
+  test("several shared ids come back sorted by session id", async () => {
+    await recordSessionId("conv-a", "sid-x", t.db);
+    await recordSessionId("conv-b", "sid-x", t.db);
+    await recordSessionId("conv-a", "sid-b", t.db);
+    await recordSessionId("conv-c", "sid-b", t.db);
+
+    expect(
+      (await listSharedClaudeSessionIds(t.db)).map((r) => r.claudeSessionId),
+    ).toEqual(["sid-b", "sid-x"]);
   });
 });
