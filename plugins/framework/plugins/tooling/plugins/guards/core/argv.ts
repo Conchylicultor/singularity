@@ -485,13 +485,20 @@ export function parseArgv(call: ShellCall): ParsedArgv {
  * The files a call's redirections open for writing, resolved against its cwd.
  * A redirection target is always a local path — there is no remote spelling —
  * and an empty target names nothing.
+ *
+ * Only the `file` arm reaches here. A `fd` one (`2>&1`, `>&-`) names a
+ * descriptor, and the parser gives it no path to resolve.
  */
 export function redirectionTargets(call: ShellCall): FileOperand[] {
-  return call.redirections
-    .filter((r) => r.target !== "")
-    .map((r) => ({
-      kind: "local" as const,
-      raw: r.target,
-      path: resolve(call.cwd, r.target),
-    }));
+  return call.redirections.flatMap((r) =>
+    r.kind === "file" && r.path !== ""
+      ? [
+          {
+            kind: "local" as const,
+            raw: r.path,
+            path: resolve(call.cwd, r.path),
+          },
+        ]
+      : [],
+  );
 }

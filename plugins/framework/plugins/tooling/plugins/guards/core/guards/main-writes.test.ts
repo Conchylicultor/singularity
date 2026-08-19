@@ -41,6 +41,62 @@ describe("main-writes guard", () => {
     });
   });
 
+  // A file descriptor is not a path. Resolving the word after `>` as one blocked
+  // every read-only command that merged stderr into stdout while the shell sat
+  // in the main checkout — and the deny told the agent to stop and ask.
+  describe("a redirection that names no file is not a write", () => {
+    test("2>&1", () => {
+      expect(blocks(`cd ${REPO} && git worktree list 2>&1`, WT)).toBe(false);
+    });
+
+    test("&>/dev/null", () => {
+      expect(blocks(`cd ${REPO} && ls -la &>/dev/null`, WT)).toBe(false);
+    });
+
+    test(">&- closes a fd", () => {
+      expect(blocks(`cd ${REPO} && ls >&-`, WT)).toBe(false);
+    });
+
+    test("a process substitution arg", () => {
+      expect(blocks(`cd ${REPO} && tee >(cat)`, WT)).toBe(false);
+    });
+
+    test("an input redirection is not the destination of a cp", () => {
+      // The destination is /tmp/b; `c` is what cp READS. Reading `c` as the last
+      // positional made it the destination, and resolved it into main.
+      expect(blocks(`cd ${REPO} && cp a /tmp/b < c`, WT)).toBe(false);
+    });
+
+    test("`[[ a > b ]]` compares strings", () => {
+      expect(blocks(`cd ${REPO} && [[ "$a" > "$b" ]] && echo y`, WT)).toBe(
+        false,
+      );
+    });
+  });
+
+  // The same broken grammar hid real writes. Each of these reached main unseen.
+  describe("redirections into main that used to slip past", () => {
+    test("a quoted target", () => {
+      expect(blocks(`echo x > "${REPO}/notes.txt"`, WT)).toBe(true);
+    });
+
+    test(">| overriding noclobber", () => {
+      expect(blocks(`echo x >| ${REPO}/notes.txt`, WT)).toBe(true);
+    });
+
+    test(">& to a path sends both streams there", () => {
+      expect(blocks(`echo x >&${REPO}/notes.txt`, WT)).toBe(true);
+    });
+
+    test("&> to a path", () => {
+      expect(blocks(`echo x &> ${REPO}/notes.txt`, WT)).toBe(true);
+    });
+
+    test("a command hidden inside a process substitution", () => {
+      expect(blocks(`tee >(rm ${REPO}/x)`, WT)).toBe(true);
+    });
+  });
+
   describe("stays inert where it should", () => {
     test("non-worktree session (cwd in the main checkout)", () => {
       expect(blocks(`cp a.ts ${REPO}/plugins/a.ts`, REPO)).toBe(false);

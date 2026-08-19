@@ -15,6 +15,7 @@ const blocksIn = (
 ) =>
   (guard.check({ command } as never, createContext(cwd) as never) as Verdict)
     .kind === "deny";
+const args = (cmd: string) => parseShell(cmd).calls.map((c) => c.args);
 const blocks = (
   guard: { check: (i: never, c: never) => unknown },
   command: string,
@@ -112,6 +113,112 @@ describe("parseShell reaches inside block structure", () => {
     });
   });
 
+  // The words and the redirections come out of ONE pass. These cases are the
+  // ways the two older derivations — a regex over a quote-masked copy, another
+  // over the unquoted tokens — disagreed with each other and with bash.
+  describe("a redirection that names no file", () => {
+    test("2>&1 duplicates a fd (it is not a write to `&1`)", () => {
+      expect(redirections("git worktree lock x 2>&1")).toEqual([
+        { kind: "fd", op: ">", toFd: "1" },
+      ]);
+      expect(args("git worktree lock x 2>&1")).toEqual([
+        ["worktree", "lock", "x"],
+      ]);
+    });
+
+    test(">&2 and >&- are fd forms too", () => {
+      expect(redirections("echo hi >&2")).toEqual([
+        { kind: "fd", op: ">", toFd: "2" },
+      ]);
+      expect(redirections("cmd >&-")).toEqual([
+        { kind: "fd", op: ">", toFd: "-" },
+      ]);
+    });
+
+    test("a process substitution is a command, not a target", () => {
+      expect(names("tee >(cat) < f")).toEqual(["tee", "cat"]);
+      expect(args("tee >(cat) < f")).toEqual([[], []]);
+      expect(redirections("tee >(cat) < f")).toEqual([]);
+    });
+
+    test("a command hidden in a process substitution still surfaces", () => {
+      expect(names(`tee >(sh -c "x") <(rm main/f)`)).toEqual([
+        "tee",
+        "sh",
+        "rm",
+      ]);
+    });
+
+    test("`[[ a > b ]]` compares strings — it writes nothing", () => {
+      expect(redirections(`[[ "$a" > "$b" ]] && echo y`)).toEqual([]);
+    });
+  });
+
+  describe("a redirection that does name a file", () => {
+    test("a quoted target is not erased by the quote mask", () => {
+      expect(redirections('echo x > "my file"')).toEqual([
+        { kind: "file", op: ">", path: "my file" },
+      ]);
+    });
+
+    test(">| overrides noclobber and still writes", () => {
+      expect(names("echo x >| main/file")).toEqual(["echo"]);
+      expect(redirections("echo x >| main/file")).toEqual([
+        { kind: "file", op: ">", path: "main/file" },
+      ]);
+    });
+
+    test(">&<path> sends BOTH streams to that file", () => {
+      expect(redirections("ls >&/tmp/out")).toEqual([
+        { kind: "file", op: ">", path: "/tmp/out" },
+      ]);
+    });
+
+    test("&> and &>> are writes, and never survive as args", () => {
+      expect(args("rm x &>/dev/null")).toEqual([["x"]]);
+      expect(redirections("rm x &>/dev/null")).toEqual([
+        { kind: "file", op: ">", path: "/dev/null" },
+      ]);
+      expect(redirections("rm x &>>log")).toEqual([
+        { kind: "file", op: ">>", path: "log" },
+      ]);
+    });
+
+    test("a glued fd is part of the operator, not an arg", () => {
+      expect(args("cmd 2>log")).toEqual([[]]);
+      expect(redirections("cmd 2>log")).toEqual([
+        { kind: "file", op: ">", path: "log" },
+      ]);
+      expect(args("cmd {fd}>f")).toEqual([[]]);
+    });
+
+    test("an operator needs no space around it", () => {
+      expect(names("echo a>b")).toEqual(["echo"]);
+      expect(args("echo a>b")).toEqual([["a"]]);
+      expect(redirections("echo a>b")).toEqual([
+        { kind: "file", op: ">", path: "b" },
+      ]);
+    });
+
+    test("a quoted operator is data", () => {
+      expect(args('echo ">" > out')).toEqual([[">"]]);
+      expect(redirections('echo ">" > out')).toEqual([
+        { kind: "file", op: ">", path: "out" },
+      ]);
+    });
+  });
+
+  describe("input redirections are consumed, never args", () => {
+    test("`cp a b < c` does not make c the destination", () => {
+      expect(args("cp a b < c")).toEqual([["a", "b"]]);
+      expect(redirections("cp a b < c")).toEqual([]);
+    });
+
+    test("a here-string is not an arg either", () => {
+      expect(args('rg foo <<< "$x"')).toEqual([["foo"]]);
+    });
+  });
+
   describe("cwd folding", () => {
     test("cd moves the calls that follow it", () => {
       const calls = parseShell("cd /tmp && rm -rf x", "/base").calls;
@@ -159,7 +266,9 @@ describe("heredoc bodies are data, not commands", () => {
       const parsed = parseShell("cat > f <<'EOF'\nbody\nEOF");
       expect(parsed.calls).toHaveLength(1);
       expect(parsed.calls[0]!.args).toEqual([]);
-      expect(parsed.calls[0]!.redirections).toEqual([{ op: ">", target: "f" }]);
+      expect(parsed.calls[0]!.redirections).toEqual([
+        { kind: "file", op: ">", path: "f" },
+      ]);
     });
 
     test("code holds neither the body nor the operator", () => {
@@ -361,44 +470,58 @@ describe("existing guards now see inside loops and substitutions", () => {
 
 describe("a redirection reports a file, or nothing at all", () => {
   test("2>&1 duplicates a descriptor and opens no file", () => {
-    expect(redirections("cmd 2>&1")).toEqual([]);
+    expect(redirections("cmd 2>&1")).toEqual([
+      { kind: "fd", op: ">", toFd: "1" },
+    ]);
   });
 
   test(">&2 duplicates a descriptor and opens no file", () => {
-    expect(redirections("cmd >&2")).toEqual([]);
+    expect(redirections("cmd >&2")).toEqual([
+      { kind: "fd", op: ">", toFd: "2" },
+    ]);
   });
 
   test("2>&- closes a descriptor and opens no file", () => {
-    expect(redirections("cmd 2>&-")).toEqual([]);
+    expect(redirections("cmd 2>&-")).toEqual([
+      { kind: "fd", op: ">", toFd: "-" },
+    ]);
   });
 
   test("a real target survives the 2>&1 that follows it", () => {
     expect(redirections("cmd > out 2>&1")).toEqual([
-      { op: ">", target: "out" },
+      { kind: "file", op: ">", path: "out" },
+      { kind: "fd", op: ">", toFd: "1" },
     ]);
   });
 
   test("&> names the file both streams go to", () => {
-    expect(redirections("cmd &> f")).toEqual([{ op: ">", target: "f" }]);
+    expect(redirections("cmd &> f")).toEqual([
+      { kind: "file", op: ">", path: "f" },
+    ]);
   });
 
   test(">&word is that same operator, so the file is kept", () => {
-    expect(redirections("cmd >&f.txt")).toEqual([{ op: ">", target: "f.txt" }]);
+    expect(redirections("cmd >&f.txt")).toEqual([
+      { kind: "file", op: ">", path: "f.txt" },
+    ]);
   });
 
   test("… and bash allows a space before that word", () => {
     expect(redirections("cmd >& out.txt")).toEqual([
-      { op: ">", target: "out.txt" },
+      { kind: "file", op: ">", path: "out.txt" },
     ]);
   });
 
   test("the spaced fd dup is still no file", () => {
-    expect(redirections("cmd 2>& 1")).toEqual([]);
+    expect(redirections("cmd 2>& 1")).toEqual([
+      { kind: "fd", op: ">", toFd: "1" },
+    ]);
   });
 
   test("an append target survives the 2>&1 that follows it", () => {
     expect(redirections("cmd >> log 2>&1")).toEqual([
-      { op: ">>", target: "log" },
+      { kind: "file", op: ">>", path: "log" },
+      { kind: "fd", op: ">", toFd: "1" },
     ]);
   });
 

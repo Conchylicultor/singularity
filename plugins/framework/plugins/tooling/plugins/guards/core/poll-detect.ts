@@ -1,4 +1,8 @@
-import { parseShell, type ShellParseResult } from "./parse-shell";
+import {
+  parseShell,
+  type ShellParseResult,
+  type ShellRedirection,
+} from "./parse-shell";
 
 /**
  * Polling detection, as pure functions over a command string and a window.
@@ -149,16 +153,20 @@ const MUTATORS = new Set([
 
 /**
  * Does this redirection actually persist anything? `>/dev/null` discards, and
- * treating that as a write would classify every `pgrep … >/dev/null 2>&1`
- * waiter as progress.
+ * treating that as a write would classify every `pgrep … >/dev/null 2>&1` waiter
+ * as progress.
+ *
+ * Fd duplication is no longer this function's problem: the parser gives it its
+ * own arm, so there is nothing here to remember. This used to test the target
+ * for a leading `&` — knowledge one consumer held and the main-writes guard did
+ * not, which is exactly how it came to block `… 2>&1`.
  */
-function writesAFile(target: string): boolean {
-  // A file-descriptor dup (`2>&1`) reaches no target at all: `scanRedirections`
-  // in `parse-shell.ts` owns that, and emits no redirection for one.
+function writesAFile(r: ShellRedirection): boolean {
+  if (r.kind !== "file") return false;
   return (
-    target !== "/dev/null" &&
-    target !== "/dev/stderr" &&
-    target !== "/dev/stdout"
+    r.path !== "/dev/null" &&
+    r.path !== "/dev/stderr" &&
+    r.path !== "/dev/stdout"
   );
 }
 
@@ -174,7 +182,7 @@ function writesAFile(target: string): boolean {
 export function classify(cmd: string): CommandClass {
   const parsed = parseShell(cmd);
   const { calls, redirections } = parsed;
-  if (redirections.some((r) => writesAFile(r.target))) return "mutate";
+  if (redirections.some(writesAFile)) return "mutate";
 
   let allReadOnly = calls.length > 0;
   for (const call of calls) {

@@ -11,14 +11,32 @@ export interface ShellCall {
    * <rel>` slips past. Equals `baseCwd` when no `baseCwd` was supplied.
    */
   cwd: string;
-  /** Redirections local to this sub-command (resolve targets against `cwd`). */
+  /**
+   * Output redirections local to this sub-command. Resolve the `path` of a
+   * `kind: "file"` one against `cwd`; the others name no file at all.
+   */
   redirections: ShellRedirection[];
 }
 
-export interface ShellRedirection {
-  op: ">" | ">>";
-  target: string;
-}
+/**
+ * One OUTPUT redirection.
+ *
+ * The two arms are the whole point: `2>&1` duplicates a file descriptor and
+ * `>&-` closes one — neither names a path, and resolving the word after the
+ * operator as if it did is what falsely blocked every read-only command run
+ * with a cwd in the main checkout. A consumer must narrow on `kind` before it
+ * can reach a path, so that mistake no longer compiles.
+ *
+ * INPUT redirections (`<`, `<<`, `<<<`, `<&`) never surface here: they write
+ * nothing, and left in the token stream they pose as positional args — which
+ * made `c` the destination of `cp a b < c`.
+ *
+ * The left-hand fd is deliberately absent: `2>log` and `>log` write the same
+ * file, and no consumer has ever needed to tell them apart.
+ */
+export type ShellRedirection =
+  | { kind: "file"; op: ">" | ">>"; path: string }
+  | { kind: "fd"; op: ">" | ">>"; toFd: string };
 
 export interface ShellParseResult {
   calls: ShellCall[];
@@ -160,8 +178,12 @@ function collectSegment(
   }
 
   let cur = cwd;
-  const tokens = stripGroupParens(stripRedirections(shellSplit(head)));
-  const redirections = scanRedirections(head);
+  // Words and redirections come out of ONE walk of the text. Deriving them
+  // separately — a regex over a quote-masked copy for the redirections, another
+  // over the quote-erased tokens for the args — is what let the two disagree:
+  // a quoted `> "<path>"` vanished from both, and `&>file` survived as an arg.
+  const { words, redirections } = splitCommand(head);
+  const tokens = stripGroupParens(words);
   // A wrapper (`nohup`, `env`, `sudo`, `xargs`, `timeout`, …) carries the real
   // command in its args, hiding it from every name-matching predicate the same
   // way a loop body did — `nohup git push` would otherwise walk past git-push.
@@ -375,7 +397,7 @@ function splitHeredocs(text: string): { code: string; docs: HeredocDoc[] } {
       if (doc) {
         // Drop the operator's own text: the pre-pass knows its exact offsets,
         // where a token-level rule could not tell `<<EOF` from a quoted `"<<x>>"`
-        // argument, `shellSplit` having already erased the quotes.
+        // argument, the word reader having already erased the quotes.
         code = code.replace(/\d+$/, "");
         pending.push({ ...doc, at: code.length });
         i = doc.end;
@@ -642,6 +664,19 @@ function extractSubstitutions(s: string): {
         continue;
       }
     }
+    // `>(cmd)` / `<(cmd)` RUN a command and expand to a `/dev/fd/N` word.
+    // Lifting the body here does three jobs at once: the inner command becomes a
+    // real call (`tee >(sh -c "rm <main>/x")` was invisible to every guard), its
+    // text can never be read as a redirection target, and it can never pose as
+    // an arg.
+    if (mode === "none" && (c === ">" || c === "<") && next === "(") {
+      const end = matchParen(s, i + 1);
+      if (end !== -1) {
+        inner.push(s.slice(i + 2, end));
+        i = end;
+        continue;
+      }
+    }
     if (c === "`") {
       const end = s.indexOf("`", i + 1);
       if (end !== -1) {
@@ -704,25 +739,6 @@ function applyCd(cwd: string, args: string[]): string {
   return resolve(cwd, target);
 }
 
-/**
- * Drop redirection operators and their targets from a token list so they don't
- * masquerade as positional args (e.g. `echo x > f` → `["x"]`, not `["x",">","f"]`).
- * Redirections are surfaced separately on `ShellCall.redirections`.
- */
-function stripRedirections(tokens: string[]): string[] {
-  const out: string[] = [];
-  for (let i = 0; i < tokens.length; i++) {
-    const t = tokens[i]!;
-    if (/^\d*>>?$/.test(t)) {
-      i++;
-      continue;
-    } // bare operator: skip its target too
-    if (/^\d*>>?/.test(t)) continue; // operator glued to target (`>foo`, `2>>foo`)
-    out.push(t);
-  }
-  return out;
-}
-
 function basename(p: string): string {
   const i = p.lastIndexOf("/");
   return i === -1 ? p : p.slice(i + 1);
@@ -751,6 +767,13 @@ function splitOnOperators(s: string): ShellPart[] {
   // subshell's `cd` in the parent scope.
   let depth = 0;
   let inBacktick = false;
+  /**
+   * The last character emitted OUTSIDE quotes, which is how a redirection's own
+   * `&`/`|` is told from a separator. Reading `s[i - 1]` instead would let a
+   * quoted or escaped `>` (`echo "x>" | tail`) absorb the pipe and swallow the
+   * rest of the command into a single segment.
+   */
+  let prev = "";
   for (let i = 0; i < s.length; i++) {
     const c = s[i];
     const next = s[i + 1];
@@ -758,46 +781,60 @@ function splitOnOperators(s: string): ShellPart[] {
       if (c === "'") {
         mode = "single";
         cur += c;
+        prev = "";
         continue;
       }
       if (c === '"') {
         mode = "double";
         cur += c;
+        prev = "";
         continue;
       }
 
       if (c === "\\" && next !== undefined) {
         cur += c + next;
+        prev = "";
         i++;
         continue;
       }
       if (c === "`") {
         inBacktick = !inBacktick;
         cur += c;
+        prev = "";
         continue;
       }
       if (c === "(") {
         depth++;
         cur += c;
+        prev = c;
         continue;
       }
       if (c === ")") {
         if (depth > 0) depth--;
         cur += c;
+        prev = c;
         continue;
       }
       if (depth > 0 || inBacktick) {
         cur += c;
+        prev = c!;
         continue;
       }
-      // `2>&1` / `&>file`: the `&` belongs to the redirection, not to us.
-      if (c === "&" && (s[i - 1] === ">" || next === ">")) {
+      // `2>&1` / `&>file` / `>|file`: the `&` or `|` belongs to the redirection,
+      // not to us. Splitting on the `|` of `>|` lost the redirection outright and
+      // minted a phantom call named after the file — a write to main nothing saw.
+      if (
+        (c === "&" || c === "|") &&
+        (prev === ">" || (c === "&" && next === ">"))
+      ) {
         cur += c;
+        prev = c;
         continue;
       }
       if ((c === "&" && next === "&") || (c === "|" && next === "|")) {
         parts.push({ text: cur, end: i, sep: c + next });
         cur = "";
+        prev = "";
         i++;
         continue;
       }
@@ -809,11 +846,14 @@ function splitOnOperators(s: string): ShellPart[] {
       if (c === ";" || c === "|" || c === "&" || c === "\n" || c === "\r") {
         parts.push({ text: cur, end: i, sep: c });
         cur = "";
+        prev = "";
         continue;
       }
       cur += c;
+      prev = c!;
     } else if (mode === "single") {
       cur += c;
+      prev = "";
       if (c === "'") mode = "none";
     } else {
       if (c === "\\" && next !== undefined) {
@@ -822,6 +862,7 @@ function splitOnOperators(s: string): ShellPart[] {
         continue;
       }
       cur += c;
+      prev = "";
       if (c === '"') mode = "none";
     }
   }
@@ -829,144 +870,185 @@ function splitOnOperators(s: string): ShellPart[] {
   return parts;
 }
 
-function shellSplit(s: string): string[] {
-  const tokens: string[] = [];
+/**
+ * A word that is really the left-hand fd of the redirection glued to it (`2>f`,
+ * `{fd}>f`) — never an argument.
+ */
+const FD_PREFIX = /^(?:\d+|\{[A-Za-z_]\w*\})$/;
+
+/** The words naming a file descriptor rather than a file: `1`, `2-`, `-`. */
+const FD_WORD = /^(?:\d+-?|-)$/;
+
+/**
+ * A redirection operator: the text it spans, and whether it writes.
+ *
+ * A `writes: false` (input) operator still consumes its word. That word is not
+ * an argument, and leaving it in the token stream is what made `c` the
+ * destination of `cp a b < c`.
+ */
+type RedirOp =
+  | { len: number; writes: true; op: ">" | ">>"; dup: boolean }
+  | { len: number; writes: false };
+
+/** The redirection operator at `i`, or null when there is none. */
+function matchRedirOp(s: string, i: number): RedirOp | null {
+  const at = (t: string) => s.startsWith(t, i);
+  // `>(cmd)` / `<(cmd)` is a process substitution: a command that expands to a
+  // `/dev/fd/N` word, never a redirection. `extractSubstitutions` lifts it before
+  // we get here; this covers a nesting it declined to lift.
+  if (at(">(") || at("<(")) return null;
+  if (at("&>>")) return { len: 3, writes: true, op: ">>", dup: false };
+  if (at("&>")) return { len: 2, writes: true, op: ">", dup: false };
+  if (at(">>")) return { len: 2, writes: true, op: ">>", dup: false };
+  // `>|` overrides noclobber — still a plain write to the word that follows.
+  if (at(">|")) return { len: 2, writes: true, op: ">", dup: false };
+  if (at(">&")) return { len: 2, writes: true, op: ">", dup: true };
+  // `<>` opens for read AND write: err toward reporting the write.
+  if (at("<>")) return { len: 2, writes: true, op: ">", dup: false };
+  if (at(">")) return { len: 1, writes: true, op: ">", dup: false };
+  if (at("<<<")) return { len: 3, writes: false };
+  if (at("<<")) return { len: 2, writes: false };
+  if (at("<&")) return { len: 2, writes: false };
+  if (at("<")) return { len: 1, writes: false };
+  return null;
+}
+
+/** One word read off a segment, plus where it ended. */
+interface ShellWord {
+  /** The word with its quotes removed, exactly as the shell would pass it on. */
+  text: string;
+  /** Any part of it was quoted or escaped, so `&1` there is a filename. */
+  quoted: boolean;
+  /** Offset just past the word. */
+  end: number;
+}
+
+/**
+ * Read one word starting at `i`, stopping at whitespace or at an UNQUOTED
+ * redirection operator — `echo a>b` is the word `a` then a redirection, exactly
+ * as bash reads it. Returns null when no word starts there.
+ */
+function readWord(s: string, i: number): ShellWord | null {
   let cur = "";
   let started = false;
+  let quoted = false;
   let mode: Mode = "none";
-  const flush = () => {
-    if (started) {
-      tokens.push(cur);
-      cur = "";
-      started = false;
-    }
-  };
-  for (let i = 0; i < s.length; i++) {
+  while (i < s.length) {
     const c = s[i]!;
     const next = s[i + 1];
     if (mode === "none") {
-      if (c === "'") {
-        mode = "single";
+      if (/\s/.test(c)) break;
+      if (matchRedirOp(s, i)) break;
+      if (c === "'" || c === '"') {
+        mode = c === "'" ? "single" : "double";
         started = true;
-        continue;
-      }
-      if (c === '"') {
-        mode = "double";
-        started = true;
+        quoted = true;
+        i++;
         continue;
       }
       if (c === "\\" && next !== undefined) {
         cur += next;
         started = true;
-        i++;
-        continue;
-      }
-      if (/\s/.test(c)) {
-        flush();
+        quoted = true;
+        i += 2;
         continue;
       }
       cur += c;
       started = true;
-    } else if (mode === "single") {
-      if (c === "'") {
-        mode = "none";
-        continue;
-      }
-      cur += c;
-    } else {
-      if (c === '"') {
-        mode = "none";
-        continue;
-      }
-
-      if (c === "\\" && next !== undefined) {
-        cur += next;
-        i++;
-        continue;
-      }
-      cur += c;
+      i++;
+      continue;
     }
+    if (mode === "single") {
+      if (c === "'") mode = "none";
+      else cur += c;
+      i++;
+      continue;
+    }
+    if (c === '"') {
+      mode = "none";
+      i++;
+      continue;
+    }
+    if (c === "\\" && next !== undefined) {
+      cur += next;
+      i += 2;
+      continue;
+    }
+    cur += c;
+    i++;
   }
-  flush();
-  return tokens;
+  return started ? { text: cur, quoted, end: i } : null;
 }
 
 /**
- * The redirections of one segment — only the ones that name a file.
+ * Split one simple command into its words and its output redirections, in a
+ * SINGLE quote-aware pass.
  *
- * `2>&1`, `>&2` and `2>&-` duplicate or close a file descriptor. They open
- * nothing, so reporting `&1` / `&2` / `&-` as a target hands every guard a path
- * that was never written. That one `&1` token is what made `main-writes` deny
- * `cd <main> && <read-only command> 2>&1`: replaying 30 days of Bash calls, it
- * accounted for 55 of that guard's 60 denials against 3 real ones. A guard whose
- * blocks are overwhelmingly noise is one agents learn to work around.
+ * One pass is the whole point. The words and the redirections used to be derived
+ * separately — a regex over a copy with quoted regions masked out for the
+ * redirections, another over the already-unquoted tokens for the words — and two
+ * re-derivations of one grammar disagree. Every way they disagreed was a bug in
+ * a guard: `2>&1` reported a write to a file named `&1`, `> "<path>"` reported no
+ * redirection at all (a write to main nothing saw), and `&>file` survived as a
+ * positional arg.
  *
- * The `&`-leading word must not be dropped wholesale, though. When the word is
- * not a descriptor, `>&word` is a different operator — bash's synonym for
- * `&>word`, which truncates that file and sends both streams into it. Dropping
- * the arm would read `cmd >&out.txt` as writing nothing, which is exactly the
- * hole the local `startsWith("&")` patch in `poll-detect.ts` carried. Keep the
- * file.
+ * The `&1` one was not a curiosity. Replaying 30 days of Bash calls, it
+ * accounted for 55 of `main-writes`' 60 denials against 3 real ones — a guard
+ * whose blocks are overwhelmingly noise is one agents learn to work around.
  *
- * So the `&` is matched as its own group rather than trimmed off the front of
- * the word. bash lets a space follow it (`ls >& out.txt`, `cmd 2>& 1` are both
- * valid), and a word-prefix test reads the bare `&` of the spaced form as the
- * whole target — which strips to the empty string, and `resolve(cwd, "")` is the
- * cwd itself. That is the same denial on the main checkout, one spelling over.
+ * `>&word` keeps its file when the word is not a descriptor: there it is bash's
+ * synonym for `&>word`, which truncates that file and sends both streams into
+ * it. Dropping every `&`-leading word would read `cmd >&out.txt` as writing
+ * nothing.
  */
-function scanRedirections(cmd: string): ShellRedirection[] {
-  // Mask quoted regions so `>` inside strings doesn't count as redirection.
-  let masked = "";
-  let mode: Mode = "none";
-  for (let i = 0; i < cmd.length; i++) {
-    const c = cmd[i];
-    const next = cmd[i + 1];
-    if (mode === "none") {
-      if (c === "'") {
-        mode = "single";
-        masked += " ";
-        continue;
-      }
-      if (c === '"') {
-        mode = "double";
-        masked += " ";
-        continue;
-      }
-
-      if (c === "\\" && next !== undefined) {
-        masked += "  ";
-        i++;
-        continue;
-      }
-      masked += c;
-    } else if (mode === "single") {
-      if (c === "'") {
-        mode = "none";
-        masked += " ";
-        continue;
-      }
-      masked += " ";
-    } else {
-      if (c === '"') {
-        mode = "none";
-        masked += " ";
-        continue;
-      }
-
-      if (c === "\\" && next !== undefined) {
-        masked += "  ";
-        i++;
-        continue;
-      }
-      masked += " ";
+function splitCommand(s: string): {
+  words: string[];
+  redirections: ShellRedirection[];
+} {
+  const words: string[] = [];
+  const redirections: ShellRedirection[] = [];
+  // Inside `[[ … ]]`, `<` and `>` compare strings: reading them as redirections
+  // minted a phantom path (`[[ "$a" > "$b" ]]` reported a write to `]]`).
+  let comparison = false;
+  let i = 0;
+  while (i < s.length) {
+    if (/\s/.test(s[i]!)) {
+      i++;
+      continue;
     }
+    const op = comparison ? null : matchRedirOp(s, i);
+    if (op) {
+      // `> f` and `>f` are the same redirection: the blanks between an operator
+      // and its word are not a word boundary the way they are between args.
+      let at = i + op.len;
+      while (s[at] === " " || s[at] === "\t") at++;
+      const target = readWord(s, at);
+      // A dangling operator: bash errors, and nothing is written anywhere.
+      if (!target) break;
+      i = target.end;
+      if (!op.writes) continue;
+      // `>&1` is a fd, `>&file` sends BOTH streams to that file: either way the
+      // `&` belongs to the operator and is never part of a path.
+      const amp = !target.quoted && target.text.startsWith("&");
+      const word = amp ? target.text.slice(1) : target.text;
+      if ((op.dup || amp) && !target.quoted && FD_WORD.test(word)) {
+        redirections.push({ kind: "fd", op: op.op, toFd: word });
+      } else {
+        redirections.push({ kind: "file", op: op.op, path: word });
+      }
+      continue;
+    }
+    const word = readWord(s, i);
+    if (!word) {
+      i++;
+      continue;
+    }
+    i = word.end;
+    // A bare fd glued to an operator (`2>f`, `{fd}>f`) belongs to the operator.
+    if (!word.quoted && FD_PREFIX.test(word.text) && matchRedirOp(s, i))
+      continue;
+    if (words.length === 0 && word.text === "[[") comparison = true;
+    words.push(word.text);
   }
-  const out: ShellRedirection[] = [];
-  for (const m of masked.matchAll(/(>>|>)\s*(&?)\s*(\S+)/g)) {
-    const [, op, amp, word] = m;
-    // `2>&1` / `>&2` / `2>&-` duplicate or close a descriptor: no file is opened.
-    if (amp && /^(\d+|-)$/.test(word!)) continue;
-    out.push({ op: op as ">" | ">>", target: word! });
-  }
-  return out;
+  return { words, redirections };
 }

@@ -227,3 +227,13 @@ describe("detectPoll", () => {
     expect(firstTrip([`cat ${TASK}`, `cat ${TASK}`, `cat ${TASK}`])).toBeNull();
   });
 });
+
+describe("classify reads redirections, not the word after `>`", () => {
+  test("a fd duplication is not a write, so a waiter stays a waiter", () => {
+    expect(classify("ls >&2")).not.toBe("mutate");
+  });
+
+  test("`>|` writes a file, so the command is a mutation", () => {
+    expect(classify(`cat ${TASK} >| /tmp/saved.txt`)).toBe("mutate");
+  });
+});
