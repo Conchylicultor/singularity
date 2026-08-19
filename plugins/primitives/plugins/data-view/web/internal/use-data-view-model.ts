@@ -25,11 +25,20 @@ export interface ViewActions {
   duplicateView: (id: string) => void;
   deleteView: (id: string) => void;
   reorderView: (id: string, toIndex: number) => void;
-  updateView: (id: string, view: VariantValue, opts?: { merge?: boolean }) => void;
+  updateView: (
+    id: string,
+    view: VariantValue,
+    opts?: { merge?: boolean },
+  ) => void;
 }
 
-/** The unified host contract — the exact shape `data-view.tsx` consumes. */
-export interface ViewModel {
+/**
+ * The SETTLED host contract — the model once the surface's authored views are
+ * known. Everything downstream of the shell (`DataViewBody`, the controls
+ * context) takes this, never the union below, so the loading arm cannot reach a
+ * renderer that has no way to express it.
+ */
+export interface ReadyViewModel {
   instances: ResolvedViewInstance<DataViewContribution>[];
   activeId: string;
   setActiveView: (id: string) => void;
@@ -52,6 +61,17 @@ export interface ViewModel {
   /** Instance actions for the editable switcher (always present). */
   actions: ViewActions;
 }
+
+/**
+ * What `useDataViewModel` returns: either "the views are not known yet" or the
+ * settled model. A UNION, not a `ready` flag beside the data, because the two
+ * states are otherwise indistinguishable — an unknown surface and a surface
+ * with no views both have zero instances, and the host that renders
+ * "No views configured" for the second one has no way to notice it is looking
+ * at the first. Narrowing is the enforcement: nothing downstream accepts the
+ * loading arm, so a host must answer it before it can render anything.
+ */
+export type ViewModel = { ready: false } | (ReadyViewModel & { ready: true });
 
 /**
  * Read the host-managed sort rules off a row's raw variant value, coercing every
@@ -174,10 +194,13 @@ export function useDataViewModel(
       // A null filter or an empty group is semantically "no filter" — omit the
       // key rather than persist `filter: null` / `filter: { children: [] }`.
       const isEmptyFilter =
-        filter == null || (isFilterGroup(filter) && filter.children.length === 0);
+        filter == null ||
+        (isFilterGroup(filter) && filter.children.length === 0);
       core.updateView(
         id,
-        { filter: isEmptyFilter ? undefined : filter } as unknown as VariantValue,
+        {
+          filter: isEmptyFilter ? undefined : filter,
+        } as unknown as VariantValue,
         { merge: true },
       );
     },
@@ -186,9 +209,13 @@ export function useDataViewModel(
 
   const setGroupBy = useCallback(
     (id: string, fieldId: string | null) => {
-      core.updateView(id, { groupBy: fieldId ?? undefined } as unknown as VariantValue, {
-        merge: true,
-      });
+      core.updateView(
+        id,
+        { groupBy: fieldId ?? undefined } as unknown as VariantValue,
+        {
+          merge: true,
+        },
+      );
     },
     [core],
   );
@@ -227,8 +254,8 @@ export function useDataViewModel(
     [core.actions],
   );
 
-  return useMemo(
-    () => ({
+  const model = useMemo(
+    (): ReadyViewModel => ({
       instances: core.instances,
       activeId: core.activeId,
       setActiveView: core.setActiveView,
@@ -256,5 +283,15 @@ export function useDataViewModel(
       ephemeral,
       actions,
     ],
+  );
+
+  // The union is minted here, at the ONE place that knows whether the authored
+  // views are known: `core.ready` is false only while the config document has
+  // not arrived. Every hook above ran unconditionally, so this is a pure
+  // narrowing of an already-built model, not a second code path.
+  return useMemo(
+    (): ViewModel =>
+      core.ready ? { ready: true, ...model } : { ready: false },
+    [core.ready, model],
   );
 }

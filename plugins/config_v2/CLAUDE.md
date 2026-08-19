@@ -31,7 +31,16 @@ renders them automatically. Field types live under `plugins/fields/plugins/`; se
 
 ## Reading config
 
-**Web:** `useConfig(myConfig)` returns reactive values that update live.
+**Web:** `useConfig(myConfig)` returns reactive values that update live. It answers the
+(normally unreachable) window where the document is not known yet with
+`descriptor.defaults` — fine for a cosmetic read, WRONG whenever the value decides what the
+surface asserts (which views/items exist, whether a mode is on): defaults are a legitimate
+answer, so a consumer cannot tell "the user configured nothing" from "we don't know yet".
+Those reads use **`useConfigResult(myConfig)`**, which returns live-state's
+`{ pending: true } | { pending: false, data }` and makes the unknown window a state to
+render (`live-state/no-pending-data-collapse` lints the collapse). Both resources are
+`resident`, so the boot hydration is never evicted and `pending` after a successful boot is
+unreachable rather than merely rare.
 
 **Server:** `getConfig(myConfig)` reads the current value from the in-memory
 cache. `watchConfig(myConfig, cb)` notifies on changes.
@@ -236,6 +245,7 @@ The memo key comes from **the filesystem, not an event** — deliberately. `refr
     - `ConfigV2`
     - `useConfig`
     - `useConfigRegistrations`
+    - `useConfigResult`
     - `useScopeMembership`
     - `useSetConfig`
 - Server:

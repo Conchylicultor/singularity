@@ -2,7 +2,7 @@ import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { configBootTask } from "./internal/boot";
 import { ConfigV2 } from "./internal/slots";
 
-export { useConfig } from "./internal/use-config";
+export { useConfig, useConfigResult } from "./internal/use-config";
 export { useSetConfig } from "./internal/use-set-config";
 export { useScopeMembership } from "./internal/use-scope-membership";
 export { useConfigRegistrations } from "./internal/use-config-registrations";

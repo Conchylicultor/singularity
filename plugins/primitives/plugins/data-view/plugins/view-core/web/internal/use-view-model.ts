@@ -26,7 +26,11 @@ export interface ViewActionsCore {
   duplicateView: (id: string) => void;
   deleteView: (id: string) => void;
   reorderView: (id: string, toIndex: number) => void;
-  updateView: (id: string, view: VariantValue, opts?: { merge?: boolean }) => void;
+  updateView: (
+    id: string,
+    view: VariantValue,
+    opts?: { merge?: boolean },
+  ) => void;
 }
 
 /**
@@ -36,13 +40,20 @@ export interface ViewActionsCore {
  * render concerns on top.
  */
 export interface ViewModelCore<T extends ViewTypeMeta = ViewTypeMeta> {
+  /** Is the authored config known yet? See `ViewsConfigHandle.ready` — while
+   *  `false`, `instances` is "we don't know", never "there are none". */
+  ready: boolean;
   instances: ResolvedViewInstance<T>[];
   activeId: string;
   setActiveView: (id: string) => void;
   /** Raw `view` value for one instance (the variant blob), or the seed `{type}`
    *  for a not-yet-materialized default. `undefined` only for an unknown id. */
   viewFor: (id: string) => VariantValue | undefined;
-  updateView: (id: string, view: VariantValue, opts?: { merge?: boolean }) => void;
+  updateView: (
+    id: string,
+    view: VariantValue,
+    opts?: { merge?: boolean },
+  ) => void;
   actions: ViewActionsCore;
   /** Capability-gated add menu, grouped per source entry. */
   availableSources: AddableSource[];
@@ -138,6 +149,7 @@ export function useViewModel<T extends ViewTypeMeta>(
 
   return useMemo(
     () => ({
+      ready: cfg.ready,
       instances: cfg.instances as ResolvedViewInstance<T>[],
       activeId,
       setActiveView: active.setActiveView,

@@ -1,6 +1,6 @@
 import { createContext, useContext, useMemo, type ReactNode } from "react";
 import type { DataViewId, FieldDef, ViewState } from "../../../core";
-import type { ViewModel } from "../../internal/use-data-view-model";
+import type { ReadyViewModel } from "../../internal/use-data-view-model";
 import type { FilterController } from "../../internal/use-filter-controller";
 import type { SortController } from "../../internal/use-sort-controller";
 
@@ -31,7 +31,7 @@ export interface DataViewControlsContextValue {
   fields: FieldDef<unknown>[];
   activeViewId: string;
   activeState: ViewState;
-  viewModel: ViewModel;
+  viewModel: ReadyViewModel;
   /** Whether the active view supports group-by (false → group-by control hides). */
   activeSupportsGroupBy: boolean;
   /** Whether the active view honors `ViewState.sort` (false → no Sort control). */

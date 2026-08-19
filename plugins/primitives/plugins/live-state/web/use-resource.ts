@@ -281,6 +281,11 @@ export function useResource<T, S, P extends ResourceParams = ResourceParams>(
     // on every push), defeating the documented slice-selector dedup. This is
     // strictly stronger dedup, never weaker.
     structuralSharing: dateAwareReplaceEqualDeep,
+    // A `resident` resource is never garbage-collected (see the descriptor
+    // field): its boot-hydrated value must survive the windows where nothing
+    // observes it, otherwise the next mount reads `initialData` at
+    // `dataUpdatedAt === 0` — pending again, long after boot said it was known.
+    ...(resource.resident ? { gcTime: Infinity } : {}),
     // With a selector, narrow re-renders to the selected slice: structural
     // sharing keeps a deeply-equal slice's reference, and limiting
     // notifyOnChangeProps to data/error stops the per-push `dataUpdatedAt`

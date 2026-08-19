@@ -40,7 +40,11 @@
  * matchResource(...), combineResources(...) for multi-resource views, or
  * DataView's `loading` prop. See plugins/primitives/plugins/live-state/CLAUDE.md.
  */
-import { AST_NODE_TYPES, ESLintUtils, type TSESTree } from "@typescript-eslint/utils";
+import {
+  AST_NODE_TYPES,
+  ESLintUtils,
+  type TSESTree,
+} from "@typescript-eslint/utils";
 import type { TSESLint } from "@typescript-eslint/utils";
 
 const createRule = ESLintUtils.RuleCreator(
@@ -52,9 +56,16 @@ const RESOURCE_HOOKS = new Set([
   "useOptimisticResource",
   "combineResources",
   "useCombinedResources",
+  // config_v2's readiness-carrying read returns the same `ResourceResult` shape,
+  // and collapsing ITS pending arm is the same bug with a worse disguise: a
+  // config's empty defaults read as a legitimate answer, so the wrong state is
+  // indistinguishable from a real one.
+  "useConfigResult",
 ]);
 
-type Ctx = Readonly<TSESLint.RuleContext<"pendingCollapse" | "pendingCollapseReturn", []>>;
+type Ctx = Readonly<
+  TSESLint.RuleContext<"pendingCollapse" | "pendingCollapseReturn", []>
+>;
 
 function resolveVariable(
   context: Ctx,
@@ -94,9 +105,12 @@ function unwrap(node: TSESTree.Node): TSESTree.Node {
 function isEmptyDefaultLiteral(node: TSESTree.Node): boolean {
   const n = unwrap(node);
   if (n.type === AST_NODE_TYPES.ArrayExpression) return n.elements.length === 0;
-  if (n.type === AST_NODE_TYPES.ObjectExpression) return n.properties.length === 0;
+  if (n.type === AST_NODE_TYPES.ObjectExpression)
+    return n.properties.length === 0;
   if (n.type === AST_NODE_TYPES.Literal) {
-    return n.value === null || n.value === false || n.value === 0 || n.value === "";
+    return (
+      n.value === null || n.value === false || n.value === 0 || n.value === ""
+    );
   }
   if (n.type === AST_NODE_TYPES.Identifier) return n.name === "undefined";
   return false;
@@ -123,7 +137,8 @@ function isEmptyDefault(context: Ctx, node: TSESTree.Node): boolean {
 function isEmptyDefaultLiteralNonNull(node: TSESTree.Node): boolean {
   const n = unwrap(node);
   if (n.type === AST_NODE_TYPES.ArrayExpression) return n.elements.length === 0;
-  if (n.type === AST_NODE_TYPES.ObjectExpression) return n.properties.length === 0;
+  if (n.type === AST_NODE_TYPES.ObjectExpression)
+    return n.properties.length === 0;
   if (n.type === AST_NODE_TYPES.Literal) {
     return n.value === false || n.value === 0 || n.value === "";
   }
@@ -134,7 +149,10 @@ function isEmptyDefaultLiteralNonNull(node: TSESTree.Node): boolean {
 function propKeyName(p: TSESTree.ObjectLiteralElement): string | null {
   if (p.type !== AST_NODE_TYPES.Property || p.computed) return null;
   if (p.key.type === AST_NODE_TYPES.Identifier) return p.key.name;
-  if (p.key.type === AST_NODE_TYPES.Literal && typeof p.key.value === "string") {
+  if (
+    p.key.type === AST_NODE_TYPES.Literal &&
+    typeof p.key.value === "string"
+  ) {
     return p.key.value;
   }
   return null;
@@ -178,7 +196,8 @@ function isTypedEmptyStandIn(
       const dp = d.properties.find((x) => propKeyName(x) === key);
       if (!dp || dp.type !== AST_NODE_TYPES.Property) return false;
       return (
-        isEmptyDefaultLiteralNonNull(pp.value) && referencesData(dp.value, objName)
+        isEmptyDefaultLiteralNonNull(pp.value) &&
+        referencesData(dp.value, objName)
       );
     });
   }
@@ -259,7 +278,11 @@ function findDataReturn(
     ) {
       return;
     }
-    if (node.type === AST_NODE_TYPES.ReturnStatement && node !== exclude && node.argument) {
+    if (
+      node.type === AST_NODE_TYPES.ReturnStatement &&
+      node !== exclude &&
+      node.argument
+    ) {
       const arg = unwrap(node.argument);
       const isJsx =
         arg.type === AST_NODE_TYPES.JSXElement ||
@@ -319,7 +342,10 @@ function referencesData(node: TSESTree.Node, objName: string): boolean {
   return false;
 }
 
-function isResourceResultBinding(context: Ctx, ident: TSESTree.Identifier): boolean {
+function isResourceResultBinding(
+  context: Ctx,
+  ident: TSESTree.Identifier,
+): boolean {
   const init = initializerOf(context, ident);
   if (!init) return false;
   const call = unwrap(init);
@@ -343,8 +369,10 @@ function isResourceResultBinding(context: Ctx, ident: TSESTree.Identifier): bool
         (p) =>
           p.type === AST_NODE_TYPES.Property &&
           !p.computed &&
-          ((p.key.type === AST_NODE_TYPES.Identifier && p.key.name === "select") ||
-            (p.key.type === AST_NODE_TYPES.Literal && p.key.value === "select")),
+          ((p.key.type === AST_NODE_TYPES.Identifier &&
+            p.key.name === "select") ||
+            (p.key.type === AST_NODE_TYPES.Literal &&
+              p.key.value === "select")),
       )
     ) {
       return false;
@@ -380,12 +408,12 @@ export default createRule({
     messages: {
       pendingCollapse:
         "`{{name}}.pending ? <default> : {{name}}.data` collapses loading into a fake empty/default state — downstream code can no " +
-        "longer tell \"still loading\" from \"genuinely empty\" (the wrong-state-while-loading bug class). Gate instead: early-return on " +
+        'longer tell "still loading" from "genuinely empty" (the wrong-state-while-loading bug class). Gate instead: early-return on ' +
         "`.pending`, wrap in <ResourceView>/matchResource(…), combine multiple resources with combineResources(…), or pass `loading` to " +
         "DataView. See plugins/primitives/plugins/live-state/CLAUDE.md.",
       pendingCollapseReturn:
         "`if ({{name}}.pending) return <typed-empty>` returns a fake empty/default value while loading, then later returns " +
-        "`{{name}}.data` — collapsing \"still loading\" into \"genuinely empty\" for every caller (the wrong-state-while-loading bug class). " +
+        '`{{name}}.data` — collapsing "still loading" into "genuinely empty" for every caller (the wrong-state-while-loading bug class). ' +
         "This function produces a VALUE, so don't bake a fake-empty into it: expose the raw `ResourceResult` and gate at the caller (for a " +
         "hook/derivation), early-return `<Loading/>` (for a component), or combine multiple resources with `combineResources(…)`. " +
         "See plugins/primitives/plugins/live-state/CLAUDE.md.",
@@ -403,7 +431,8 @@ export default createRule({
           dataBranch = node.alternate;
         } else {
           const t = unwrap(node.test);
-          if (t.type !== AST_NODE_TYPES.UnaryExpression || t.operator !== "!") return;
+          if (t.type !== AST_NODE_TYPES.UnaryExpression || t.operator !== "!")
+            return;
           obj = pendingAccessOf(t.argument);
           if (!obj) return;
           pendingBranch = node.alternate;
@@ -412,7 +441,11 @@ export default createRule({
         if (!isEmptyDefault(context, pendingBranch)) return;
         if (!referencesData(dataBranch, obj.name)) return;
         if (!isResourceResultBinding(context, obj)) return;
-        context.report({ node, messageId: "pendingCollapse", data: { name: obj.name } });
+        context.report({
+          node,
+          messageId: "pendingCollapse",
+          data: { name: obj.name },
+        });
       },
       // Statement form: `if (X.pending) return <typed-empty>; … return …X.data…`.
       // Only the DIRECT `if (X.pending)` shape is handled; the inverted
@@ -430,11 +463,21 @@ export default createRule({
         if (!fn) return;
         const dataReturn = findDataReturn(fn, obj.name, consReturn);
         if (!dataReturn?.argument) return;
-        if (!isTypedEmptyStandIn(consReturn.argument, dataReturn.argument, obj.name)) {
+        if (
+          !isTypedEmptyStandIn(
+            consReturn.argument,
+            dataReturn.argument,
+            obj.name,
+          )
+        ) {
           return;
         }
         if (!isResourceResultBinding(context, obj)) return;
-        context.report({ node, messageId: "pendingCollapseReturn", data: { name: obj.name } });
+        context.report({
+          node,
+          messageId: "pendingCollapseReturn",
+          data: { name: obj.name },
+        });
       },
     };
   },

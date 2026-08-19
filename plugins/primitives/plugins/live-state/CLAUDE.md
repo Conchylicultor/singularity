@@ -9,6 +9,16 @@ anywhere in the app** — a genuinely suspending read (`React.lazy`,
 default values, seed the cache **before render** with `hydrateResource(resource,
 params, value)` (canonical use: config_v2's `Core.Boot` task).
 
+**Hydration expires unless the resource says otherwise.** React Query garbage-collects a
+query with no mounted observer after `gcTime` (5 min), so a boot-hydrated value for a
+surface the user has not opened yet is dropped, and the next mount reads `initialData` at
+`dataUpdatedAt === 0` — `pending` again, long after boot said the value was known. That is
+not a theoretical window: it is why a `<DataView>` opened mid-session could claim
+"No views configured" for the seconds until its sub-ack landed. A descriptor that is
+hydrated at boot and read by late-mounting surfaces declares **`resident: true`**
+(`gcTime: Infinity`) — config's values + scopes resources do. Only for values small and
+universally-read enough to hold for the tab's lifetime; never for large collections.
+
 For non-resource query data there is `hydrateQuery(queryKey, data)` — a raw
 seeder on the same default client. Don't call it with a hand-built key; go
 through a typed wrapper that owns the key shape. `hydrateEndpoint(endpoint,
@@ -482,6 +492,11 @@ renders a confidently-wrong state (empty lists, zero counts, destructive default
 button modes) during the load window. The `live-state/no-pending-data-collapse`
 lint rule bans the idiom; its allowlist in `lint/index.ts` is empty — never add
 an entry, fix the collapse instead.
+
+The rule covers **`useConfigResult`** (config_v2) too: it returns this same union, and a
+config's defaults are a *legitimate* value, so collapsing its pending arm produces a wrong
+state that looks exactly like a right one. The plain `useConfig` IS that collapse, kept for
+cosmetic reads — anything deciding what a surface asserts reads `useConfigResult`.
 
 Sanctioned patterns, in order of preference:
 

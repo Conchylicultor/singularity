@@ -61,6 +61,11 @@ There is **no code synthesis** of default view-instances (view-core owns the
 resolver — see its CLAUDE.md). The displayed instances come **only** from the
 authored `config.views` rows; zero rows → `<DataView>` renders a `Placeholder`
 ("No views configured — author `config/<plugin>/<id>.jsonc`") instead of crashing.
+**That placeholder is only reachable once the config is KNOWN.** `useDataViewModel` returns
+a union (`{ ready: false } | (ReadyViewModel & { ready: true })`), and the shell renders a
+`Loading` skeleton on the loading arm — a surface whose config has not arrived has zero
+instances too, and claiming it is unconfigured is a wrong answer the user then watches get
+rewritten.
 The forcing function that an agent compose the views in config rather than rely on
 a code fallback is the views descriptor's config_v2 **`requiresAuthoredOverride`**
 opt-in (in `view-core`'s `views-descriptor.ts`, carrying the authoring guidance as

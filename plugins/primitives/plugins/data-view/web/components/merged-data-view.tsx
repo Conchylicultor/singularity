@@ -7,7 +7,7 @@ import type { DataViewId } from "../../core";
 import { DataViewSlots, type DataViewContribution } from "../slots";
 import {
   useDataViewModel,
-  type ViewModel,
+  type ReadyViewModel,
 } from "../internal/use-data-view-model";
 import type {
   DataViewSourceBundle,
@@ -54,7 +54,8 @@ export function MergedDataView<THostProps>(
   // declared `order` (the add menu's section order and entry precedence), the
   // same explicit sort the tabbed-view host applied.
   const sourceContribs = useMemo(
-    () => [...rawSourceContribs].sort((a, b) => (a.order ?? 0) - (b.order ?? 0)),
+    () =>
+      [...rawSourceContribs].sort((a, b) => (a.order ?? 0) - (b.order ?? 0)),
     [rawSourceContribs],
   );
 
@@ -84,7 +85,7 @@ export function MergedDataView<THostProps>(
       title={title}
       actions={actions}
     >
-      {(activeInstance, chrome) => {
+      {(activeInstance, chrome, readyModel) => {
         // Always found: a row whose `source` matches no contribution never
         // resolves into an instance (`buildInstanceFromRow` fail-softs), so an
         // active instance's source is a live contribution by construction.
@@ -98,23 +99,27 @@ export function MergedDataView<THostProps>(
               `"${activeInstance.instance.source ?? ""}"`,
           );
         }
-        return renderIsolated(sources.id, activeSource as unknown as Contribution, {
-          hostProps,
-          // The host consumes the bundle at `unknown` row space — the same
-          // documented cast boundary as field extensions (the contributor keeps
-          // full `TRow` typing; the shared body machinery is row-type-erased).
-          render: (bundle) => (
-            <MergedSourceBody
-              storageKey={storageKey}
-              viewModel={viewModel}
-              activeInstance={activeInstance}
-              chrome={chrome}
-              sourceId={activeSource.id}
-              declaredHasHierarchy={activeSource.hasHierarchy ?? false}
-              bundle={bundle as unknown as DataViewSourceBundle<unknown>}
-            />
-          ),
-        } satisfies DataViewSourceProps<THostProps>);
+        return renderIsolated(
+          sources.id,
+          activeSource as unknown as Contribution,
+          {
+            hostProps,
+            // The host consumes the bundle at `unknown` row space — the same
+            // documented cast boundary as field extensions (the contributor keeps
+            // full `TRow` typing; the shared body machinery is row-type-erased).
+            render: (bundle) => (
+              <MergedSourceBody
+                storageKey={storageKey}
+                viewModel={readyModel}
+                activeInstance={activeInstance}
+                chrome={chrome}
+                sourceId={activeSource.id}
+                declaredHasHierarchy={activeSource.hasHierarchy ?? false}
+                bundle={bundle as unknown as DataViewSourceBundle<unknown>}
+              />
+            ),
+          } satisfies DataViewSourceProps<THostProps>,
+        );
       }}
     </DataViewShellFrame>
   );
@@ -128,7 +133,7 @@ export function MergedDataView<THostProps>(
  */
 function MergedSourceBody(props: {
   storageKey: DataViewId;
-  viewModel: ViewModel;
+  viewModel: ReadyViewModel;
   activeInstance: ResolvedViewInstance<DataViewContribution>;
   chrome: DataViewShellChrome;
   sourceId: string;

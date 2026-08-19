@@ -7406,6 +7406,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `ConfigV2`
       - `useConfig`
       - `useConfigRegistrations`
+      - `useConfigResult`
       - `useScopeMembership`
       - `useSetConfig`
   - Server:
@@ -24160,7 +24161,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Web:
             - Uses:
               - `config_v2.ConfigV2`
-              - `config_v2.useConfig`
+              - `config_v2.useConfigResult`
               - `config_v2.useSetConfig`
               - `config_v2/fields.FieldRenderer`
               - `primitives/css/control-panel.ControlPanel`

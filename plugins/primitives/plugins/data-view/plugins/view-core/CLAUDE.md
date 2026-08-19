@@ -12,7 +12,10 @@ render contract) on top.
 
 There is **no code synthesis** of default view-instances. `useViewsConfig` reads
 the authored `config.views` rows **only** — an empty config means **no
-instances** (the consumer renders a placeholder). Authored rows may be **terse**
+instances** (the consumer renders a placeholder). It reads them through
+`useConfigResult` (not `useConfig`) and exposes **`ready`**: while the config document has
+not arrived, zero instances means "we don't know", not "there are none", and the consumer
+must render a loading state instead of an empty-state claim. Authored rows may be **terse**
 (`{ name, view }`): `normalizeRows` derives `id` (explicit `id` ?? slug(name) ??
 `view-${index}`) and `rank` (explicit ?? a generated `Rank.between` sequence
 following array order) on read, and the same normalization runs in the reconcile
@@ -162,7 +165,7 @@ by the consumer's id list (`buildViewDescriptors(ids)`), contributions
 - Web:
   - Uses:
     - `config_v2.ConfigV2`
-    - `config_v2.useConfig`
+    - `config_v2.useConfigResult`
     - `config_v2.useSetConfig`
     - `config_v2/fields.FieldRenderer`
     - `primitives/css/control-panel.ControlPanel`

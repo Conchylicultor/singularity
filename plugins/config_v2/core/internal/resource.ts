@@ -4,11 +4,16 @@ import { resourceDescriptor } from "@plugins/primitives/plugins/live-state/core"
 export const configV2ValuesSchema = z.record(z.unknown());
 export type ConfigV2Values = z.infer<typeof configV2ValuesSchema>;
 
-export const configV2Resource = resourceDescriptor<ConfigV2Values, { path: string; scopeId?: string }>(
-  "config-v2.values",
-  configV2ValuesSchema,
-  {},
-);
+// `resident`: every descriptor's resolved document is hydrated once, before
+// first paint (the config boot task). Config surfaces mount at any point in the
+// session — a sidebar toggled open an hour in — so an evicted cache entry would
+// put `useConfig` back in `pending` there, and a config read has no honest
+// stand-in for "unknown" (its defaults are a legitimate value). Small documents,
+// read by everything: hold them for the tab's lifetime.
+export const configV2Resource = resourceDescriptor<
+  ConfigV2Values,
+  { path: string; scopeId?: string }
+>("config-v2.values", configV2ValuesSchema, {}, { resident: true });
 
 // A single structured validation failure. `path` is the zod issue path as an
 // array (`["items", 6]`) so consumers can drill the offending value out of the
@@ -17,7 +22,9 @@ export const configV2ValidationIssueSchema = z.object({
   path: z.array(z.union([z.string(), z.number()])),
   message: z.string(),
 });
-export type ConfigV2ValidationIssue = z.infer<typeof configV2ValidationIssueSchema>;
+export type ConfigV2ValidationIssue = z.infer<
+  typeof configV2ValidationIssueSchema
+>;
 
 export const configV2ConflictEntrySchema = z.object({
   // "hash"    — the override's @hash is stale vs its origin (upstream defaults
@@ -54,20 +61,18 @@ export type ConfigV2Conflicts = z.infer<typeof configV2ConflictsSchema>;
 // for the selected scope, or null when it has no conflict. Keying by path means
 // a change to one descriptor recomputes only that descriptor — the detail page
 // subscribes to exactly the path it shows, never the whole ~180-descriptor map.
-export const configV2ConflictResource = resourceDescriptor<ConfigV2ConflictEntry | null, { path: string; scopeId?: string }>(
-  "config-v2.conflicts",
-  configV2ConflictEntrySchema.nullable(),
-  null,
-);
+export const configV2ConflictResource = resourceDescriptor<
+  ConfigV2ConflictEntry | null,
+  { path: string; scopeId?: string }
+>("config-v2.conflicts", configV2ConflictEntrySchema.nullable(), null);
 
 export const configV2TiersSchema = z.record(z.enum(["default", "git", "user"]));
 export type ConfigV2Tiers = z.infer<typeof configV2TiersSchema>;
 
-export const configV2TiersResource = resourceDescriptor<ConfigV2Tiers, { path: string; scopeId?: string }>(
-  "config-v2.tiers",
-  configV2TiersSchema,
-  {},
-);
+export const configV2TiersResource = resourceDescriptor<
+  ConfigV2Tiers,
+  { path: string; scopeId?: string }
+>("config-v2.tiers", configV2TiersSchema, {});
 
 // The list of scopeIds a single descriptor is customized for (has its own
 // config — a propagated git scope or a runtime fork). This is the per-descriptor
@@ -86,10 +91,14 @@ export type ConfigV2Scopes = z.infer<typeof configV2ScopesSchema>;
 export const configV2ScopesMapSchema = z.record(configV2ScopesSchema);
 export type ConfigV2ScopesMap = z.infer<typeof configV2ScopesMapSchema>;
 
+// Resident for the same reason as the values resource above: it is the
+// authoritative scoped-vs-global decision every `useConfig` read keys off, so
+// losing it re-introduces the global→scoped flash the boot hydration removed.
 export const configV2ScopesResource = resourceDescriptor<ConfigV2ScopesMap, {}>(
   "config-v2.scopes",
   configV2ScopesMapSchema,
   {},
+  { resident: true },
 );
 
 // storePaths with a conflict in the base scope OR any app scope. Keyed by `{}`
@@ -100,11 +109,10 @@ export const configV2ScopesResource = resourceDescriptor<ConfigV2ScopesMap, {}>(
 export const configV2ConflictPathsSchema = z.array(z.string());
 export type ConfigV2ConflictPaths = z.infer<typeof configV2ConflictPathsSchema>;
 
-export const configV2ConflictPathsResource = resourceDescriptor<ConfigV2ConflictPaths, {}>(
-  "config-v2.conflict-paths",
-  configV2ConflictPathsSchema,
-  [],
-);
+export const configV2ConflictPathsResource = resourceDescriptor<
+  ConfigV2ConflictPaths,
+  {}
+>("config-v2.conflict-paths", configV2ConflictPathsSchema, []);
 
 // storePaths whose effective BASE config differs from the schema defaults,
 // mapped to the count of modified fields (only paths with ≥1 modified field are
@@ -113,10 +121,11 @@ export const configV2ConflictPathsResource = resourceDescriptor<ConfigV2Conflict
 // computed once server-side, structurally (JSON equality) so an object/list
 // field sitting at its default never falsely counts as modified.
 export const configV2ModifiedCountsSchema = z.record(z.number());
-export type ConfigV2ModifiedCounts = z.infer<typeof configV2ModifiedCountsSchema>;
+export type ConfigV2ModifiedCounts = z.infer<
+  typeof configV2ModifiedCountsSchema
+>;
 
-export const configV2ModifiedCountsResource = resourceDescriptor<ConfigV2ModifiedCounts, {}>(
-  "config-v2.modified-counts",
-  configV2ModifiedCountsSchema,
-  {},
-);
+export const configV2ModifiedCountsResource = resourceDescriptor<
+  ConfigV2ModifiedCounts,
+  {}
+>("config-v2.modified-counts", configV2ModifiedCountsSchema, {});

@@ -5,6 +5,7 @@ import { Sticky } from "@plugins/primitives/plugins/css/plugins/sticky/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
+import { Loading } from "@plugins/primitives/plugins/loading/web";
 import {
   DATA_VIEW_HEADER_OFFSET_VAR,
   type CreateOption,
@@ -20,6 +21,7 @@ import type { ViewSourceEntry } from "@plugins/primitives/plugins/data-view/plug
 import { DataViewSlots, type DataViewContribution } from "../slots";
 import {
   useDataViewModel,
+  type ReadyViewModel,
   type ViewModel,
 } from "../internal/use-data-view-model";
 import type { DataViewShellChrome } from "../internal/body-types";
@@ -66,10 +68,10 @@ export function DataView<TRow>(props: DataViewProps<TRow>): ReactNode {
       actions={props.actions}
       creators={props.creators}
     >
-      {(activeInstance, chrome) => (
+      {(activeInstance, chrome, readyModel) => (
         <DataViewBody<TRow>
           {...props}
-          viewModel={viewModel}
+          viewModel={readyModel}
           activeInstance={activeInstance}
           chrome={chrome}
         />
@@ -96,9 +98,13 @@ export function DataViewShellFrame(props: {
   title?: ReactNode;
   actions?: ReactNode;
   creators?: CreateOption[];
+  /** Renders the per-active-instance body. Receives the SETTLED model — the
+   *  shell is the one place that narrowed the union, so a host never re-derives
+   *  (or forgets) that narrowing at its own call site. */
   children: (
     activeInstance: ResolvedViewInstance<DataViewContribution>,
     chrome: DataViewShellChrome,
+    viewModel: ReadyViewModel,
   ) => ReactNode;
 }): ReactNode {
   const {
@@ -127,6 +133,25 @@ export function DataViewShellFrame(props: {
 
   const viewVariants = useViewVariants(contributions);
 
+  // The surface's own views are not known yet (the config document has not
+  // arrived — a cold boot whose snapshot failed, a WS still catching up). We
+  // cannot say whether this surface has views, so we say exactly that: a
+  // skeleton, not an answer. Rendering the "No views configured" branch here is
+  // what used to make a DataView state, confidently and wrongly, that a fully
+  // configured surface had nothing in it for the seconds before its config
+  // landed. `Loading` fades in only after ~120ms, so the normal (already
+  // hydrated) case still paints nothing at all.
+  if (!viewModel.ready) {
+    return (
+      <Stack gap="none" ref={rootRef}>
+        <ShellToolbar title={title} actions={actions} creators={creators} />
+        <div className="rail-follow py-md">
+          <Loading variant="rows" />
+        </div>
+      </Stack>
+    );
+  }
+
   const { instances, activeId } = viewModel;
   const activeInstance =
     instances.find((r) => r.instance.id === activeId) ?? instances[0] ?? null;
@@ -134,31 +159,17 @@ export function DataViewShellFrame(props: {
   const activeViewId = activeInstance?.instance.id ?? "";
 
   // Config is the single source of truth: zero authored view-instances → render
-  // an honest placeholder rather than an empty shell. The build-time
-  // `config:overrides-authored` check is the real forcing function (the views
-  // descriptor sets `requiresAuthoredOverride`, so the build seeds the config
-  // and marks it for review); this keeps the pane from crashing if a config is
-  // authored-but-empty. Early-returning here (before the body mounts) is the
-  // body's only gate.
+  // an honest placeholder rather than an empty shell. Reachable ONLY once the
+  // config is known (the branch above), so this claim is always true when it is
+  // made. The build-time `config:overrides-authored` check is the real forcing
+  // function (the views descriptor sets `requiresAuthoredOverride`, so the build
+  // seeds the config and marks it for review); this keeps the pane from crashing
+  // if a config is authored-but-empty. Early-returning here (before the body
+  // mounts) is the body's only gate.
   if (!activeInstance) {
     return (
       <Stack gap="none" ref={rootRef}>
-        <Sticky
-          edge="top"
-          // eslint-disable-next-line layout/no-adhoc-layout -- horizontal toolbar row of variable-content controls; no named-slot primitive maps
-          className="bg-background flex items-center gap-sm py-sm rail-follow"
-        >
-          {title ? (
-            <Text as="div" variant="label">
-              {title}
-            </Text>
-          ) : null}
-          {/* eslint-disable-next-line row-actions/no-raw-actions-slot -- surface-level toolbar actions, one per DataView, not a per-row cluster */}
-          {actions ? <div className="ml-auto">{actions}</div> : null}
-          <div className={actions ? undefined : "ml-auto"}>
-            <CreatorsControl creators={creators} />
-          </div>
-        </Sticky>
+        <ShellToolbar title={title} actions={actions} creators={creators} />
         <div className="rail-follow py-md">
           <Placeholder>
             No views configured — author{" "}
@@ -202,7 +213,40 @@ export function DataViewShellFrame(props: {
         } as CSSProperties
       }
     >
-      {children(activeInstance, chrome)}
+      {children(activeInstance, chrome, viewModel)}
     </Stack>
+  );
+}
+
+/**
+ * The toolbar the shell paints while it has no active instance to render a body
+ * for — shared by the loading and the confirmed-empty branches so the surface's
+ * chrome (title, actions, create affordances) does not appear, disappear and
+ * reappear as the config settles. The real toolbar (switcher + controls) lives
+ * in `DataViewBody`, which only mounts once an instance exists.
+ */
+function ShellToolbar(props: {
+  title?: ReactNode;
+  actions?: ReactNode;
+  creators?: CreateOption[];
+}): ReactNode {
+  const { title, actions, creators } = props;
+  return (
+    <Sticky
+      edge="top"
+      // eslint-disable-next-line layout/no-adhoc-layout -- horizontal toolbar row of variable-content controls; no named-slot primitive maps
+      className="bg-background flex items-center gap-sm py-sm rail-follow"
+    >
+      {title ? (
+        <Text as="div" variant="label">
+          {title}
+        </Text>
+      ) : null}
+      {/* eslint-disable-next-line row-actions/no-raw-actions-slot -- surface-level toolbar actions, one per DataView, not a per-row cluster */}
+      {actions ? <div className="ml-auto">{actions}</div> : null}
+      <div className={actions ? undefined : "ml-auto"}>
+        <CreatorsControl creators={creators} />
+      </div>
+    </Sticky>
   );
 }

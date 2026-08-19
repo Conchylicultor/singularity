@@ -7,14 +7,20 @@ import type { VariantValue } from "@plugins/fields/plugins/variant/core";
 import { useViewsConfig } from "../internal/use-views-config";
 import type { ViewConfigRow, ViewSourceEntry, ViewTypeMeta } from "../../core";
 
-// The engine reads rows off `useConfig(descriptor).views` and persists via
-// `useSetConfig(descriptor)(key, value)`. Mock both: `useConfig` returns a fixed
-// doc (so the reconcile effect's JSON identity stays stable and the optimistic
-// mirror is the source of truth for assertions), `useSetConfig` a spy.
+// The engine reads rows off `useConfigResult(descriptor)` — the readiness-carrying
+// read — and persists via `useSetConfig(descriptor)(key, value)`. Mock both:
+// `useConfigResult` returns a fixed settled result (so the reconcile effect's JSON
+// identity stays stable and the optimistic mirror is the source of truth for
+// assertions), `useSetConfig` a spy. `configPending` flips it to the not-yet-known
+// arm, which is what the loading tests exercise.
 const setConfigSpy = vi.fn();
 let configDoc: { views: unknown[] } = { views: [] };
+let configPending = false;
 vi.mock("@plugins/config_v2/web", () => ({
-  useConfig: () => configDoc,
+  useConfigResult: () =>
+    configPending
+      ? { pending: true, error: null, refetch: async () => {} }
+      : { pending: false, data: configDoc, refetch: async () => {} },
   useSetConfig: () => setConfigSpy,
 }));
 
@@ -43,6 +49,7 @@ const descriptorMap = new Map<string, ConfigDescriptor>([
 
 beforeEach(() => {
   setConfigSpy.mockClear();
+  configPending = false;
 });
 
 function renderViews(
@@ -50,7 +57,9 @@ function renderViews(
   entries: ViewSourceEntry<ViewTypeMeta>[] = singleSource,
 ) {
   configDoc = { views };
-  return renderHook(() => useViewsConfig<ViewTypeMeta>("k", descriptorMap, entries));
+  return renderHook(() =>
+    useViewsConfig<ViewTypeMeta>("k", descriptorMap, entries),
+  );
 }
 
 function ids(result: { current: ReturnType<typeof useViewsConfig> }): string[] {
@@ -214,7 +223,9 @@ describe("useViewsConfig — source preservation through every mutator", () => {
     act(() => {
       result.current.updateView(
         "q",
-        { sort: [{ fieldId: "x", direction: "asc" }] } as unknown as VariantValue,
+        {
+          sort: [{ fieldId: "x", direction: "asc" }],
+        } as unknown as VariantValue,
         { merge: true },
       );
     });
@@ -237,5 +248,34 @@ describe("useViewsConfig — source preservation through every mutator", () => {
     expect(rows[0]!.source).toBe("queue");
     expect(rows[0]!.name).toBe("Table"); // seed title from the source's contributions
     expect("source" in rows[1]!).toBe(false);
+  });
+});
+
+describe("useViewsConfig — loading is not empty", () => {
+  it("reports ready:false while the config document is unknown", () => {
+    configPending = true;
+    configDoc = { views: [] };
+    const { result } = renderHook(() =>
+      useViewsConfig<ViewTypeMeta>("k", descriptorMap, singleSource),
+    );
+    // Zero instances AND not ready: the host must render a loading state, not
+    // "No views configured" — the two are indistinguishable from the row list
+    // alone, which is exactly the bug this flag exists to prevent.
+    expect(result.current.ready).toBe(false);
+    expect(result.current.instances).toEqual([]);
+  });
+
+  it("reports ready:true for a settled, genuinely empty config", () => {
+    const { result } = renderViews([]);
+    expect(result.current.ready).toBe(true);
+    expect(result.current.instances).toEqual([]);
+  });
+
+  it("reports ready:true once rows have arrived", () => {
+    const { result } = renderViews([
+      { id: "a", name: "A", view: { type: "table" } },
+    ]);
+    expect(result.current.ready).toBe(true);
+    expect(ids(result)).toEqual(["a"]);
   });
 });

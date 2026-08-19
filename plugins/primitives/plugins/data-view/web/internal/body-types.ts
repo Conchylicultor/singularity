@@ -2,7 +2,7 @@ import type { ReactNode, Ref } from "react";
 import type { ResolvedViewInstance } from "@plugins/primitives/plugins/data-view/plugins/view-core/web";
 import type { DataViewId, DataViewProps } from "../../core";
 import type { DataViewContribution } from "../slots";
-import type { ViewModel } from "./use-data-view-model";
+import type { ReadyViewModel } from "./use-data-view-model";
 
 /**
  * Per-surface chrome the shell builds once and hands to the body. The body
@@ -37,7 +37,7 @@ export type DataViewSourceBundle<TRow> = Omit<
 /** Props of the per-active-instance body (`DataViewBody`). */
 export interface DataViewBodyProps<TRow> extends DataViewSourceBundle<TRow> {
   storageKey: DataViewId;
-  viewModel: ViewModel;
+  viewModel: ReadyViewModel;
   activeInstance: ResolvedViewInstance<DataViewContribution>;
   chrome: DataViewShellChrome;
   /** Scopes the server-page cache per source; `""` (the default) on the

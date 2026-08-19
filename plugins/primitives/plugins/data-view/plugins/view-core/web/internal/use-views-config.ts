@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { ConfigDescriptor } from "@plugins/config_v2/core";
-import { useConfig, useSetConfig } from "@plugins/config_v2/web";
+import { useConfigResult, useSetConfig } from "@plugins/config_v2/web";
 import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
 import type { VariantValue } from "@plugins/fields/plugins/variant/core";
 import type { ViewConfigRow, ViewSourceEntry, ViewTypeMeta } from "../../core";
@@ -14,6 +14,14 @@ const WRITE_DEBOUNCE_MS = 400;
 /** What the config engine exposes to the host. Opaque about the per-instance
  *  `options` blob — it never names `sort`/`filter`; the host layers those on. */
 export interface ViewsConfigHandle {
+  /**
+   * Is the authored config KNOWN yet? `false` means the document has not
+   * arrived — `instances` is empty because we cannot say what is in it, NOT
+   * because the surface has no views. The two are indistinguishable in the row
+   * list itself, so the host must branch on this before rendering an empty
+   * state (see `DataViewShellFrame`).
+   */
+  ready: boolean;
   /** Resolved, ordered instances (fail-soft skip of orphan / hierarchical rows). */
   instances: ResolvedViewInstance[];
   /** The RAW `view` value for one instance (the variant blob `{ type, ...opts }`),
@@ -94,13 +102,26 @@ export function useViewsConfig<T extends ViewTypeMeta>(
   // config is ever wanted, thread a `scopeId` in as a prop (config_v2 scoped
   // read/write is symmetric now — fork-on-write makes the scope exist on first
   // write — so a threaded scopeId would persist and read back correctly).
-  const config = useConfig(descriptor);
+  // READINESS-CARRYING read (`useConfigResult`, not `useConfig`): this document
+  // decides whether the surface has any views AT ALL, and `useConfig` answers
+  // the not-yet-known window with the descriptor's defaults — an empty `views`
+  // list, indistinguishable from a genuinely unconfigured surface. That is what
+  // made a DataView flash "No views configured" for the seconds before its
+  // config arrived. Here the unknown window is reported as `ready: false` and
+  // the host renders a loading state instead of an answer.
+  //
+  // `stale` (a value the server previously vouched for, held through a
+  // transient error) counts as KNOWN — showing the last-known views beats
+  // showing a skeleton over data we still have.
+  const configRes = useConfigResult(descriptor);
+  const knownConfig = configRes.pending ? configRes.stale : configRes.data;
+  const ready = knownConfig !== undefined;
   const setConfig = useSetConfig(descriptor);
 
   // Raw (possibly terse) rows straight off the config doc. `id` is derived on
   // read so the authored file can stay terse (`{ name, view }`); order is the
   // array position.
-  const configRows = (config.views as RawViewRow[] | undefined) ?? [];
+  const configRows = (knownConfig?.views as RawViewRow[] | undefined) ?? [];
 
   // Optimistic mirror of the normalized persisted rows. Config is the single
   // source — an empty config means **no views** (the host renders a
@@ -313,6 +334,7 @@ export function useViewsConfig<T extends ViewTypeMeta>(
 
   return useMemo(
     () => ({
+      ready,
       instances,
       viewFor,
       updateView,
@@ -323,6 +345,7 @@ export function useViewsConfig<T extends ViewTypeMeta>(
       reorderView,
     }),
     [
+      ready,
       instances,
       viewFor,
       updateView,

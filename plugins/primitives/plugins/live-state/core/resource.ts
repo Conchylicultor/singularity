@@ -46,6 +46,21 @@ export interface ResourceDescriptor<
    */
   bootCritical?: true;
   /**
+   * Keep this resource's cached value RESIDENT: never garbage-collected while
+   * the tab lives, even with zero mounted observers (`gcTime: Infinity`).
+   *
+   * Declare it on any resource whose value is **hydrated once at boot and read
+   * by surfaces that mount late** — config is the canonical case. Without it,
+   * React Query evicts an observer-less query after `gcTime` (5 min) and the
+   * NEXT mount reads `initialData` at `dataUpdatedAt === 0`, i.e. `pending`
+   * again: the boot hydration silently expires and a surface opened later in
+   * the session re-enters a loading window it was designed never to have.
+   *
+   * Only for values small and universally-read enough that holding them for the
+   * tab's lifetime is cheaper than the re-fetch — never for large collections.
+   */
+  resident?: true;
+  /**
    * Default params tuple boot paths use when a caller names none — e.g. a
    * windowed resource's default window (`windowResourceDescriptor` sets it to
    * the encoded `defaultLimit`). Read generically by boot-snapshot on BOTH
@@ -95,7 +110,7 @@ export function resourceDescriptor<
   key: string,
   schema: ZodParser<T>,
   initialData: T,
-  opts?: { bootCritical?: true },
+  opts?: { bootCritical?: true; resident?: true },
 ): ResourceDescriptor<T, P> & { keyed?: never } {
   const d = { key, schema, initialData, ...opts };
   registerDescriptor(d as ResourceDescriptor<unknown>);
@@ -118,7 +133,7 @@ export function keyedResourceDescriptor<
   schema: ZodParser<T>,
   initialData: T,
   keyOf: (row: unknown) => string,
-  opts?: { bootCritical?: true },
+  opts?: { bootCritical?: true; resident?: true },
 ): ResourceDescriptor<T, P> & { keyed: { keyOf: (row: unknown) => string } } {
   const d = { key, schema, initialData, keyed: { keyOf }, ...opts };
   registerDescriptor(d as ResourceDescriptor<unknown>);
@@ -137,7 +152,7 @@ export function centralResourceDescriptor<
   key: string,
   schema: ZodParser<T>,
   initialData: T,
-  opts?: { bootCritical?: true },
+  opts?: { bootCritical?: true; resident?: true },
 ): ResourceDescriptor<T, P> & { keyed?: never } {
   const d = { key, origin: "central" as const, schema, initialData, ...opts };
   registerDescriptor(d as ResourceDescriptor<unknown>);
