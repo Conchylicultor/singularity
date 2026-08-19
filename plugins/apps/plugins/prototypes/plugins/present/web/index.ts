@@ -4,7 +4,7 @@ import { PresentMenu } from "./components/present-menu";
 
 export default {
   description:
-    "Present a prototype without the app around it: filling this browser tab, filling the screen (Fullscreen API), or opened as its own document in a new browser tab. Contributed into the detail pane's Actions.",
+    "Present a prototype without the app around it, in four sizes: filling this app tab's surface (the tab bar stays, so the user can keep switching tabs), filling this browser tab, filling the screen (Fullscreen API), or opened as its own document in a new browser tab. Contributed into the detail pane's Actions.",
   contributions: [
     prototypeDetailPane.Actions({ id: "present", component: PresentMenu }),
   ],

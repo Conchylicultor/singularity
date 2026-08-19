@@ -19,8 +19,9 @@ in sub-plugins:
   list + version resources, and the file-watcher that auto-reloads open iframes
   on edit. Owns the `/api/prototypes` route contract.
 - **`shell`** — the `Apps.App` rail entry, the app layout, and pane registration.
-- **`present`** — the Present menu (in this tab / fullscreen / new tab), a
-  contribution into the detail pane's `Actions`.
+- **`present`** — the Present menu (this app tab / this browser tab /
+  fullscreen / new browser tab), a contribution into the detail pane's
+  `Actions`.
 - **`gallery`** — the gallery list pane and the Focus/Compare detail pane. Also
   owns the two launch prompts (New prototype / Improve this prototype) — the
   always-taken path by which prototype agents are launched, and therefore where
@@ -41,7 +42,7 @@ whose app surface still stands).
 - Sub-plugins:
   - **`files`** — Serves raw prototype files from the host-global prototypes data dir (the `apps/prototypes` declaration — shared by every worktree and main, so a mock is visible without a build and without being committed), seeds the repo's _template/ into it, declares the list + version live-state resources, and watches the dir to auto-reload open iframes on edit.
   - **`gallery`** — Prototypes gallery list pane and the Focus/Compare detail pane (scaled live iframes), with an Improve this prototype affordance.
-  - **`present`** — Present a prototype without the app around it: filling this browser tab, filling the screen (Fullscreen API), or opened as its own document in a new browser tab. Contributed into the detail pane's Actions.
+  - **`present`** — Present a prototype without the app around it, in four sizes: filling this app tab's surface (the tab bar stays, so the user can keep switching tabs), filling this browser tab, filling the screen (Fullscreen API), or opened as its own document in a new browser tab. Contributed into the detail pane's Actions.
   - **`shell`** — App shell for Prototypes. Registers the /prototypes app entry and renders the gallery + Focus/Compare detail panes in a Miller layout.
   - **`thumbnails`** — The rendered-preview cover for a prototype card: the cached PNG, the caller's fallback while it renders, and a visible 'Preview failed' marker carrying the reason. Rendered PNG previews for the prototypes gallery: a content-addressed disk cache, a headless-chromium render job driven by the files watcher, the push state resource the cards read, and the immutable serving route.
 

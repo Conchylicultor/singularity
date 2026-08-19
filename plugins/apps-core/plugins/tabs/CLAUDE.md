@@ -59,6 +59,16 @@ middle-click cold-boots a whole second SPA in a browser tab instead.
 pane that declares a home app can be promoted into it. Pane sits below tabs and
 cannot import it, hence the sink.
 
+## Keep-alive means a background tab still has listeners
+
+Every open tab stays MOUNTED — unfocused ones are `display: none`, and the
+floating placement shows several at once. So a `window`-level `keydown` a pane
+registers is live in background tabs too, and one Escape reaches all of them.
+`useSurfaceFocused()` is the gate: it compares the caller's `useSurfaceTabId()`
+against `focusedTabId`, and answers `true` outside any surface (chrome has no
+background-tab ambiguity, and returning `false` there would kill the handlers
+the hook exists to keep honest).
+
 ## App instances: three different things called a "tab"
 
 Keep these apart — they are three layers, and the persisted state hangs off the
@@ -169,6 +179,7 @@ same browser tab from finding the blob. Both call sites are marked for removal.
     - `primitives/pane.setLiveStore`
     - `primitives/pane.stripBasePath`
     - `primitives/shortcuts.setFocusedSurfaceId`
+    - `primitives/surface-id.useSurfaceTabId`
   - Exports (types):
     - `NavigateOptions`
     - `PlacementCapabilities`
@@ -190,6 +201,7 @@ same browser tab from finding the blob. Both call sites are marked for removal.
     - `TabsProvider`
     - `useDefaultPlacement`
     - `usePlacementCapabilities`
+    - `useSurfaceFocused`
     - `useSurfaceMode`
     - `useTabs`
 - Cross-plugin:
@@ -206,6 +218,7 @@ same browser tab from finding the blob. Both call sites are marked for removal.
     - `apps/deploy/composition`
     - `apps/home/app-cards`
     - `apps/mail/shell`
+    - `apps/prototypes/present`
     - `apps/story/pages-integration`
     - `build`
     - `config_v2/config-link`

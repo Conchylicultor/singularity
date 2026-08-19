@@ -1,4 +1,4 @@
-// Verifies the Present menu on a prototype's detail pane: each of the three
+// Verifies the Present menu on a prototype's detail pane: each of the four
 // destinations actually takes the prototype somewhere, and Escape brings it
 // back. Manual only — nothing runs this automatically.
 //
@@ -39,26 +39,52 @@ await withBrowser(async (h) => {
 
   const present = page.getByRole("button", { name: "Present" });
   const dialog = page.getByRole("dialog");
+  // One chip of the app tab strip — the thing "In this app tab" must NOT
+  // cover, and the thing every other destination does cover.
+  const tabChip = page.locator("[data-app-tab]").first();
 
-  // --- In this tab -------------------------------------------------------
+  // --- In this app tab ---------------------------------------------------
   await present.click();
-  await page.getByRole("menuitem", { name: "In this tab" }).click();
+  await page.getByRole("menuitem", { name: "In this app tab" }).click();
   await dialog.waitFor({ state: "visible", timeout: 5000 });
-  const box = await dialog.boundingBox();
+  const surfaceBox = await dialog.boundingBox();
   const viewport = page.viewportSize();
   r.ok(
-    "in-this-tab fills the viewport",
+    "in-this-app-tab fills the surface, not the viewport",
+    surfaceBox != null &&
+      viewport != null &&
+      // Starts strictly below the top of the page: the tab bar is still on
+      // screen above it. Width may legitimately equal the viewport's (the rail
+      // can be hidden), so height/top is the load-bearing assertion.
+      surfaceBox.y > 1 &&
+      surfaceBox.height < viewport.height - 1,
+    `dialog ${JSON.stringify(surfaceBox)} viewport ${JSON.stringify(viewport)}`,
+  );
+  r.ok(
+    "presented stage shows the prototype",
+    (await dialog.locator("iframe").count()) === 1,
+  );
+  r.ok("the app tab bar is still visible", await tabChip.isVisible());
+  await snap(page, out, "in-this-app-tab");
+
+  await page.keyboard.press("Escape");
+  await dialog.waitFor({ state: "detached", timeout: 5000 });
+  r.ok("Escape leaves the surface presentation", (await dialog.count()) === 0);
+
+  // --- In this browser tab -----------------------------------------------
+  await present.click();
+  await page.getByRole("menuitem", { name: "In this browser tab" }).click();
+  await dialog.waitFor({ state: "visible", timeout: 5000 });
+  const box = await dialog.boundingBox();
+  r.ok(
+    "in-this-browser-tab fills the viewport",
     box != null &&
       viewport != null &&
       box.width >= viewport.width - 1 &&
       box.height >= viewport.height - 1,
     `dialog ${JSON.stringify(box)} viewport ${JSON.stringify(viewport)}`,
   );
-  r.ok(
-    "presented stage shows the prototype",
-    (await dialog.locator("iframe").count()) === 1,
-  );
-  await snap(page, out, "in-this-tab");
+  await snap(page, out, "in-this-browser-tab");
 
   await page.keyboard.press("Escape");
   await dialog.waitFor({ state: "detached", timeout: 5000 });
@@ -88,10 +114,10 @@ await withBrowser(async (h) => {
     (await dialog.count()) === 0,
   );
 
-  // --- New tab -----------------------------------------------------------
+  // --- New browser tab ---------------------------------------------------
   await present.click();
   const opened = context.waitForEvent("page", { timeout: 5000 });
-  await page.getByRole("menuitem", { name: "New tab" }).click();
+  await page.getByRole("menuitem", { name: "New browser tab" }).click();
   const tab = await opened;
   await tab.waitForLoadState("domcontentloaded");
   r.ok(

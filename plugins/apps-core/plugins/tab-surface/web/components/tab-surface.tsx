@@ -13,6 +13,7 @@ import {
   SyncStatusProvider,
   SyncStatusIndicator,
 } from "@plugins/primitives/plugins/sync-status/web";
+import { SurfaceOverlayHost } from "@plugins/primitives/plugins/surface-overlay/web";
 import {
   UndoRedoProvider,
   useUndoRedoShortcuts,
@@ -56,12 +57,17 @@ export function TabSurface({ tab }: { tab: Tab }) {
       <SyncStatusProvider>
         <UndoRedoProvider>
           <UndoRedoKeys />
-          {/* `relative` so the indicator's Pin anchors to this surface's corner;
-              `size-full` so the app render still fills the surface. */}
-          <div className="relative size-full">
+          {/* Owns the surface's outer box — `relative` so the indicator's Pin
+              anchors to this surface's corner, `size-full` so the app render
+              still fills it. It is also every surface's overlay host, so a pane
+              can fill its own tab (leaving the tab bar and rail on screen)
+              instead of escaping to the viewport — and because the host sits
+              INSIDE whatever box the placement hands the tab, that overlay
+              lands correctly under docked, floating-window and solo alike. */}
+          <SurfaceOverlayHost>
             {renderIsolated(Apps.App.id, app as unknown as Contribution)}
             <SyncStatusIndicator />
-          </div>
+          </SurfaceOverlayHost>
         </UndoRedoProvider>
       </SyncStatusProvider>
     </PaneSurfaceProvider>

@@ -120,6 +120,7 @@ per-site via `// eslint-disable-next-line spacing/no-adhoc-spacing -- reason`.
     - `apps/pages/welcome/quick-create`
     - `apps/pages/welcome/recent-pages`
     - `apps/prototypes/gallery`
+    - `apps/prototypes/present`
     - `apps/sonata/audio/engine`
     - `apps/sonata/audio/metronome`
     - `apps/sonata/library`

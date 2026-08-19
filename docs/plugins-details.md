@@ -2617,13 +2617,15 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `usePrototypeDetail`
           - Cross-plugin:
             - Imported by: `apps/prototypes/present`
-        - **`present`** — Present a prototype without the app around it: filling this browser tab, filling the screen (Fullscreen API), or opened as its own document in a new browser tab. Contributed into the detail pane's Actions.
+        - **`present`** — Present a prototype without the app around it, in four sizes: filling this app tab's surface (the tab bar stays, so the user can keep switching tabs), filling this browser tab, filling the screen (Fullscreen API), or opened as its own document in a new browser tab. Contributed into the detail pane's Actions.
           - Web:
             - Contributes: `prototypeDetailPane.Actions` → `PresentMenu`
             - Uses:
+              - `apps-core/tabs.useSurfaceFocused`
               - `apps/prototypes/gallery.prototypeDetailPane`
               - `apps/prototypes/gallery.ScaledIframe`
               - `primitives/css/pin.Pin`
+              - `primitives/css/spacing.Stack`
               - `primitives/css/text.Text`
               - `primitives/css/ui-kit.Button`
               - `primitives/css/ui-kit.cn`
@@ -2639,6 +2641,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/live-state.useCombinedResources`
               - `primitives/live-state.useResource`
               - `primitives/loading.Loading`
+              - `primitives/surface-overlay.SurfaceOverlay`
         - **`shell`** — App shell for Prototypes. Registers the /prototypes app entry and renders the gallery + Focus/Compare detail panes in a Miller layout.
           - Web:
             - Contributes: `Apps.App` "Prototypes" → `PrototypesLayout`
@@ -6220,6 +6223,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/pane.useRoute`
           - `primitives/pane.useRouteState`
           - `primitives/slot-render.renderIsolated`
+          - `primitives/surface-overlay.SurfaceOverlayHost`
           - `primitives/sync-status.SyncStatusIndicator`
           - `primitives/sync-status.SyncStatusProvider`
           - `primitives/undo-redo.UndoRedoProvider`
@@ -6268,6 +6272,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/pane.setLiveStore`
           - `primitives/pane.stripBasePath`
           - `primitives/shortcuts.setFocusedSurfaceId`
+          - `primitives/surface-id.useSurfaceTabId`
         - Exports (types):
           - `NavigateOptions`
           - `PlacementCapabilities`
@@ -6289,6 +6294,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `TabsProvider`
           - `useDefaultPlacement`
           - `usePlacementCapabilities`
+          - `useSurfaceFocused`
           - `useSurfaceMode`
           - `useTabs`
       - Cross-plugin:
@@ -6305,6 +6311,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/deploy/composition`
           - `apps/home/app-cards`
           - `apps/mail/shell`
+          - `apps/prototypes/present`
           - `apps/story/pages-integration`
           - `build`
           - `config_v2/config-link`
@@ -22068,6 +22075,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/pages/welcome/quick-create`
               - `apps/pages/welcome/recent-pages`
               - `apps/prototypes/gallery`
+              - `apps/prototypes/present`
               - `apps/sonata/audio/engine`
               - `apps/sonata/audio/metronome`
               - `apps/sonata/library`
@@ -23346,6 +23354,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/section-card`
               - `primitives/setup-steps`
               - `primitives/slot-render`
+              - `primitives/surface-overlay`
               - `primitives/text-editor`
               - `primitives/text-editor/paste-images`
               - `primitives/tooltip`
@@ -23440,6 +23449,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/pin`
               - `primitives/css/sticky`
               - `primitives/css/viewport-overlay`
+              - `primitives/surface-overlay`
           - Web:
             - Exports (types):
               - `InTreeLayer`
@@ -26579,6 +26589,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`surface-id`** — Stable per-surface-instance id context (the tab's tabId): SurfaceIdContext + useSurfaceTabId. A leaf so low-level primitives (shortcuts, scoped-store) can read which surface they're rendered in without importing pane.
       - Cross-plugin:
         - Imported by:
+          - `apps-core/tabs`
           - `apps/home/app-cards`
           - `apps/sonata/controls`
           - `conversations/conversation-view`
@@ -26590,6 +26601,21 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports (values):
           - `SurfaceIdContext`
           - `useSurfaceTabId`
+    - **`surface-overlay`** — Surface-filling overlay primitive: <SurfaceOverlay> portals into the nearest <SurfaceOverlayHost> so its absolute inset-0 box fills the app tab's surface — escaping the pane layout in between without escaping to the viewport, so the tab bar and app rail stay visible. A missing host throws.
+      - Web:
+        - Uses:
+          - `primitives/css/ui-kit.cn`
+          - `primitives/css/ui-kit.usePortalForwardedAttrs`
+          - `primitives/css/z-layers.InTreeLayer`
+          - `primitives/css/z-layers.zLayerClass`
+        - Exports (types): `SurfaceOverlayProps`
+        - Exports (values):
+          - `SurfaceOverlay`
+          - `SurfaceOverlayHost`
+      - Cross-plugin:
+        - Imported by:
+          - `apps-core/tab-surface`
+          - `apps/prototypes/present`
     - **`sync-status`** — Per-surface forced sync-status indicator: optimistic/autosave surfaces report {phase,label,retry} via useReportSync; the universal SyncStatusIndicator (mounted once per surface) renders a Google-Keep-style cloud (saving → saved → error+retry). Scoped per surface via scoped-store; tolerates no Provider.
       - Web:
         - Uses:

@@ -71,6 +71,7 @@ to neither tier.
     - `primitives/css/pin`
     - `primitives/css/sticky`
     - `primitives/css/viewport-overlay`
+    - `primitives/surface-overlay`
 - Web:
   - Exports (types):
     - `InTreeLayer`

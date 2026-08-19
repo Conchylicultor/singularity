@@ -681,6 +681,7 @@ guard: `confirmDialog` (`imperative-dialog/plugins/confirm`); native
     - `primitives/section-card`
     - `primitives/setup-steps`
     - `primitives/slot-render`
+    - `primitives/surface-overlay`
     - `primitives/text-editor`
     - `primitives/text-editor/paste-images`
     - `primitives/tooltip`

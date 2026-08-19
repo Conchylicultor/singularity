@@ -18,6 +18,7 @@ export {
   type Tab,
 } from "./internal/tabs-store";
 export { loadScopePrefixFor } from "./internal/load-scope";
+export { useSurfaceFocused } from "./internal/use-surface-focused";
 export {
   registerPlacementCapabilities,
   peekDefaultPlacement,
