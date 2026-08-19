@@ -65,6 +65,7 @@ way text enters the editor, so an extension is never wired per-entry-point:
     - `TextEditorSlots.NodeExtensions` ← `active-data`
   - Uses:
     - `primitives/css/ui-kit.cn`
+    - `primitives/css/yield.yieldClass`
     - `primitives/latest-ref.useLatestRef`
     - `primitives/lazy-component.lazyComponent`
     - `primitives/slot-render.defineRenderSlot`

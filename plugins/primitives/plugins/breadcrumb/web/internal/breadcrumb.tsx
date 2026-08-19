@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { RowActions } from "@plugins/primitives/plugins/row-actions/web";
 import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
+import { yieldClass } from "@plugins/primitives/plugins/css/plugins/yield/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 
@@ -34,8 +35,14 @@ export function Breadcrumb({
       direction="row"
       gap="2xs"
       align="baseline"
-      // eslint-disable-next-line layout/no-adhoc-layout -- shrink-only cell: the whole trail must fall below its content width so the prefix can truncate, but it must NOT grow into its parent's slack (a breadcrumb is left-packed chrome, and consumers place it beside other strip content). Fill bundles flex-1 with min-w-0, so bare min-w-0 has no primitive.
-      className="min-w-0 whitespace-nowrap [&_svg:not([class*='size-'])]:icon-auto"
+      // Yields, never grows: the whole trail must fall below its content width so
+      // the prefix can truncate, but it must NOT grow into its parent's slack — a
+      // breadcrumb is left-packed chrome, and consumers place it beside other
+      // strip content that would be pushed.
+      className={cn(
+        yieldClass("x"),
+        "whitespace-nowrap [&_svg:not([class*='size-'])]:icon-auto",
+      )}
     >
       {prefix.length > 0 && (
         // `truncate`'s overflow-hidden already floors this flex item's automatic

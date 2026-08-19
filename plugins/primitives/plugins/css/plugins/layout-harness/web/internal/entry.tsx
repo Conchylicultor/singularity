@@ -283,6 +283,41 @@ function applyMutation(scope: HTMLElement, mutate: FixtureMutation): void {
       }
       break;
     }
+    case "swapSlotRole": {
+      // Re-declare ONE measured slot as a different space-sharing role. The four
+      // roles are the closed set the css primitives own; each is written here as
+      // the longhand of the class those primitives emit, so a role gains a
+      // spelling in exactly one more place than it already had.
+      //
+      // `flex` longhand rather than the `flex-1` shorthand because the BASIS is
+      // the whole point: `fill`/`grow` are basis 0 (a claimant that shares the
+      // row by grow factor), `yield`/`rigid` are basis auto (content-sized). It
+      // is the basis, not the min-width, that makes a Fill squeeze its sibling
+      // alone — writing `flex-grow: 1` and leaving the basis would silently
+      // falsify nothing.
+      const el = scope.querySelector<HTMLElement>(
+        `[data-geo="${mutate.slot}"]`,
+      );
+      if (!el) {
+        throw new Error(
+          `swapSlotRole mutation: no [data-geo="${mutate.slot}"] box in the fixture subtree`,
+        );
+      }
+      const ROLES = {
+        // grow 0, shrink 0, basis auto — `shrink-0`
+        rigid: { flex: "0 0 auto", minWidth: "auto" },
+        // grow 0, shrink 1, basis auto, floor removed — `min-w-0`
+        yield: { flex: "0 1 auto", minWidth: "0px" },
+        // grow 1, shrink 1, basis 0, floor kept — `flex-1`
+        grow: { flex: "1 1 0%", minWidth: "auto" },
+        // both — `min-w-0 flex-1`
+        fill: { flex: "1 1 0%", minWidth: "0px" },
+      } as const;
+      const role = ROLES[mutate.role];
+      el.style.flex = role.flex;
+      el.style.minWidth = role.minWidth;
+      break;
+    }
     case "shrinkWrapHost": {
       // Take the width away from the box the fixture named as the host and let
       // it size to its content instead. Inline, so it wins over whatever the

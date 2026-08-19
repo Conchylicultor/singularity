@@ -22,6 +22,7 @@
     - `primitives/css/ui-kit.DialogDescription`
     - `primitives/css/ui-kit.DialogTitle`
     - `primitives/css/ui-kit.ScrollArea`
+    - `primitives/css/yield.yieldClass`
     - `primitives/loading.Loading`
     - `primitives/relative-time.RelativeTime`
     - `shell/notifications.toast`

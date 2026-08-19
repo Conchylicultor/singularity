@@ -25,6 +25,7 @@
     - `primitives/css/ui-kit.SidebarMenuItem`
     - `primitives/css/ui-kit.SidebarProvider`
     - `primitives/css/ui-kit.SidebarTrigger`
+    - `primitives/css/yield.yieldClass`
     - `primitives/pane.SurfaceChromeContext`
     - `primitives/slot-render.renderIsolated`
     - `primitives/slot-render.RenderSlot`

@@ -9,6 +9,7 @@ import { Cluster } from "@plugins/primitives/plugins/css/plugins/cluster/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
+import { yieldClass } from "@plugins/primitives/plugins/css/plugins/yield/web";
 import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { HighlightedCode } from "@plugins/primitives/plugins/syntax-highlight/web";
@@ -121,8 +122,10 @@ export function WorkflowToolView({ event }: ToolRendererProps) {
 
   const agentCount = graph?.nodes.length ?? 0;
   const summary = (
-    // eslint-disable-next-line layout/no-adhoc-layout -- shrink-only cell: this summary rides CollapsibleCard's own <Fill>, so it must fall BELOW its content width (letting the description Text ellipsize) but must NOT grow, or it would squeeze the card's sibling aside. Fill and Text are the only owners of min-w-0 and both bundle grow/truncate with it, so bare min-w-0 has no primitive (same gap collapsible-card documents).
-    <Line as="span" className="min-w-0 gap-sm">
+    // Yields, never grows: this summary rides CollapsibleCard's own <Fill>, so it
+    // must fall BELOW its content width (letting the description Text ellipsize)
+    // while leaving the card's sibling aside its share of the row.
+    <Line as="span" className={cn(yieldClass("x"), "gap-sm")}>
       <Badge
         colorClass="bg-categorical-6/15 text-categorical-6"
         icon={<MdAccountTree />}

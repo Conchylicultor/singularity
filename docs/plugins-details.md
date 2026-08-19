@@ -4050,6 +4050,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/text.Text`
               - `primitives/css/ui-kit.cn`
               - `primitives/css/ui-kit.ControlSizeProvider`
+              - `primitives/css/yield.yieldClass`
               - `primitives/icon-button.IconButton`
               - `primitives/live-state.useResource`
               - `primitives/popover.InlinePopover`
@@ -9304,6 +9305,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `primitives/css/spacing.Stack`
                   - `primitives/css/text.Text`
                   - `primitives/css/ui-kit.cn`
+                  - `primitives/css/yield.yieldClass`
                 - Exports (types): `CollapsibleCardProps`
                 - Exports (values):
                   - `CardHeaderAction`
@@ -9792,6 +9794,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                       - `primitives/css/spacing.Stack`
                       - `primitives/css/text.Text`
                       - `primitives/css/ui-kit.cn`
+                      - `primitives/css/yield.yieldClass`
                       - `primitives/live-state.useResource`
                       - `primitives/loading.Loading`
                       - `primitives/markdown.Markdown`
@@ -12148,6 +12151,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/spacing.Stack`
               - `primitives/css/text.Text`
               - `primitives/css/ui-kit.Button`
+              - `primitives/css/yield.yieldClass`
               - `primitives/data-view.DataView`
               - `primitives/data-view.defineDataView`
               - `primitives/data-view.FieldDef`
@@ -12614,6 +12618,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/text.SectionLabel`
               - `primitives/css/text.Text`
               - `primitives/css/ui-kit.Button`
+              - `primitives/css/yield.yieldClass`
               - `primitives/data-view.DataView`
               - `primitives/data-view.defineDataView`
               - `primitives/data-view.FieldDef`
@@ -12637,6 +12642,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/link-chip.LinkChip`
               - `primitives/css/spacing.Stack`
               - `primitives/css/text.Text`
+              - `primitives/css/yield.yieldClass`
               - `primitives/data-view.DataView`
               - `primitives/data-view.defineDataView`
               - `primitives/data-view.FieldDef`
@@ -15299,6 +15305,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/css/ui-kit.DialogDescription`
           - `primitives/css/ui-kit.DialogTitle`
           - `primitives/css/ui-kit.ScrollArea`
+          - `primitives/css/yield.yieldClass`
           - `primitives/loading.Loading`
           - `primitives/relative-time.RelativeTime`
           - `shell/notifications.toast`
@@ -20251,6 +20258,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/css/ui-kit.SidebarMenuItem`
           - `primitives/css/ui-kit.SidebarProvider`
           - `primitives/css/ui-kit.SidebarTrigger`
+          - `primitives/css/yield.yieldClass`
           - `primitives/pane.SurfaceChromeContext`
           - `primitives/slot-render.renderIsolated`
           - `primitives/slot-render.RenderSlot`
@@ -20425,6 +20433,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/css/rigid.rigidClass`
           - `primitives/css/spacing.Stack`
           - `primitives/css/ui-kit.cn`
+          - `primitives/css/yield.yieldClass`
           - `primitives/row-actions.RowActions`
         - Exports (types):
           - `BreadcrumbProps`
@@ -21131,7 +21140,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - **`control-size`** — Control-size standard: the shared control-* height scale and its enforcing lint rule (no-adhoc-control).
         - **`fill`** — Flexible-cell layout primitive: <Fill axis> is the single grow+shrink cell of a Line/Row (min-w-0 flex-1). The one home for the slack-absorbing, truncation-enabling cell, so a stray flex-1 never strands the grow slot.
           - Web:
-            - Uses: `primitives/css/ui-kit.cn`
+            - Uses:
+              - `primitives/css/grow.growClass`
+              - `primitives/css/ui-kit.cn`
+              - `primitives/css/yield.yieldClass`
             - Exports (types):
               - `FillAxis`
               - `FillProps`
@@ -21243,6 +21255,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `tasks/task-draft-form`
               - `tasks/task-events`
               - `tasks/task-header`
+              - `ui/sidebar-framing/floating`
+              - `ui/sidebar-framing/flush`
+              - `ui/sidebar-framing/inset`
               - `ui/theme-engine/theme-customizer`
               - `ui/tokens/color-adjust`
               - `ui/tokens/shadow`
@@ -21275,6 +21290,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `ui/segmented-progress-bar/segmented`
               - `ui/theme-engine/theme-customizer`
               - `ui/tweakcn/community-browser`
+        - **`grow`** — Growing-cell layout primitive: growClass() is the flex child that takes the row's slack (flex-1) while staying floored at its own content width. The half of <Fill> that grows, without the half that gives.
+          - Cross-plugin:
+            - Imported by:
+              - `primitives/css/fill`
+              - `primitives/data-view/view-core`
+          - Web:
+            - Exports (values): `growClass`
         - **`grow-relay`** — The grow request: a widget that sizes itself from the room it is given asks for that room (useRequestGrow), every box in between relays the ask upward (<GrowRelay>, render-prop), and the row stops it (<GrowRelay.Stop>). Replaces the fill flag a contribution had to declare three files away from the <AdaptiveBar> it was about — the ask travels with the widget, so there is nothing left to forget.
           - Cross-plugin:
             - Imported by:
@@ -21432,6 +21454,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `checkPinnedRight`
               - `checkRailAlignment`
               - `checkRigidIntegrity`
+              - `checkTruncatesTogether`
               - `checkTruncationOnsetOrder`
               - `evaluateInvariant`
               - `fixturesCollectedDir`
@@ -23453,6 +23476,29 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/text-editor/paste-images`
               - `reports/viewport-escape`
               - `screenshot/draw-on-app`
+        - **`yield`** — Yielding-cell layout primitive: yieldClass(axis) is the flex child that falls below its own content width (min-w-0) but never takes slack. The half of <Fill> that gives, without the half that grows.
+          - Cross-plugin:
+            - Imported by:
+              - `apps/sonata/track-mixer`
+              - `conversations/conversation-view/jsonl-viewer/collapsible-card`
+              - `conversations/conversation-view/jsonl-viewer/tool-call/workflow`
+              - `debug/profiling/runtime`
+              - `debug/slow-ops/cluster`
+              - `debug/slow-ops/pane`
+              - `history/dialog`
+              - `primitives/app-shell`
+              - `primitives/breadcrumb`
+              - `primitives/css/fill`
+              - `primitives/pane`
+              - `primitives/prompt-editor`
+              - `primitives/text-editor`
+              - `search/quick-find`
+              - `ui/sidebar-framing/floating`
+              - `ui/sidebar-framing/flush`
+              - `ui/sidebar-framing/inset`
+          - Web:
+            - Exports (types): `YieldAxis`
+            - Exports (values): `yieldClass`
         - **`z-layers`** — Semantic z-layer scale (z-base..z-max) and its enforcing lint rule (no-adhoc-zindex).
           - Cross-plugin:
             - Imported by:
@@ -24098,6 +24144,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `config_v2/fields.FieldRenderer`
               - `primitives/css/control-panel.ControlPanel`
               - `primitives/css/control-panel.ControlPanelPopover`
+              - `primitives/css/grow.growClass`
               - `primitives/css/spacing.Stack`
               - `primitives/css/toggle-chip.ToggleChip`
               - `primitives/css/ui-kit.ControlSizeProvider`
@@ -25679,6 +25726,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/css/ui-kit.cn`
           - `primitives/css/ui-kit.ControlSize`
           - `primitives/css/ui-kit.SingleLineProvider`
+          - `primitives/css/yield.yieldClass`
           - `primitives/icon-button.IconButton`
           - `primitives/install-sink.defineInstallSink`
           - `primitives/latest-ref.useLatestRef`
@@ -26074,6 +26122,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/css/grow-relay.GrowRelay`
           - `primitives/css/spacing.Stack`
           - `primitives/css/ui-kit.cn`
+          - `primitives/css/yield.yieldClass`
           - `primitives/slot-render.defineRenderSlot`
           - `primitives/text-editor.TextEditor`
           - `primitives/text-editor.useInsertMarkdown`
@@ -26653,6 +26702,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `TextEditorSlots.NodeExtensions` ← `active-data`
         - Uses:
           - `primitives/css/ui-kit.cn`
+          - `primitives/css/yield.yieldClass`
           - `primitives/latest-ref.useLatestRef`
           - `primitives/lazy-component.lazyComponent`
           - `primitives/slot-render.defineRenderSlot`
@@ -27952,6 +28002,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/css/ui-kit.Dialog`
           - `primitives/css/ui-kit.DialogContent`
           - `primitives/css/ui-kit.ScrollArea`
+          - `primitives/css/yield.yieldClass`
           - `primitives/loading.Loading`
           - `primitives/scroll-reveal.revealElement`
           - `primitives/search.SearchInput`
@@ -29633,31 +29684,37 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Web:
             - Contributes: `SidebarFraming.Variant` "Floating" → `FloatingFraming`
             - Uses:
+              - `primitives/css/fill.fillClasses`
               - `primitives/css/spacing.Stack`
               - `primitives/css/ui-kit.Sidebar`
               - `primitives/css/ui-kit.SidebarHeader`
               - `primitives/css/ui-kit.SidebarInset`
               - `primitives/css/ui-kit.SidebarProvider`
+              - `primitives/css/yield.yieldClass`
               - `ui/sidebar-framing.SidebarFraming`
         - **`flush`** — Flush sidebar framing — the default, pixel-identical to the original app shell.
           - Web:
             - Contributes: `SidebarFraming.Variant` "Flush" → `FlushFraming`
             - Uses:
+              - `primitives/css/fill.fillClasses`
               - `primitives/css/spacing.Stack`
               - `primitives/css/ui-kit.Sidebar`
               - `primitives/css/ui-kit.SidebarHeader`
               - `primitives/css/ui-kit.SidebarInset`
               - `primitives/css/ui-kit.SidebarProvider`
+              - `primitives/css/yield.yieldClass`
               - `ui/sidebar-framing.SidebarFraming`
         - **`inset`** — Inset sidebar framing — the main area floats as a rounded inset card.
           - Web:
             - Contributes: `SidebarFraming.Variant` "Inset" → `InsetFraming`
             - Uses:
+              - `primitives/css/fill.fillClasses`
               - `primitives/css/spacing.Stack`
               - `primitives/css/ui-kit.Sidebar`
               - `primitives/css/ui-kit.SidebarHeader`
               - `primitives/css/ui-kit.SidebarInset`
               - `primitives/css/ui-kit.SidebarProvider`
+              - `primitives/css/yield.yieldClass`
               - `ui/sidebar-framing.SidebarFraming`
     - **`tab-bar`** — Themable tab bar: chip / underline / connected variants.
       - Web:

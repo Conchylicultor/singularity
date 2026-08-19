@@ -7,6 +7,7 @@ import {
   ScrollArea,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { yieldClass } from "@plugins/primitives/plugins/css/plugins/yield/web";
 import { SearchInput } from "@plugins/primitives/plugins/search/web";
 import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
@@ -183,8 +184,7 @@ function QuickFindDialogBody({
                 onMouseEnter={() => setActiveIdx(idx)}
                 onClick={() => select(result)}
               >
-                {/* eslint-disable-next-line layout/no-adhoc-layout -- flexible leaf of Row's flex so the title truncates */}
-                <Stack gap="2xs" align="start" className="min-w-0">
+                <Stack gap="2xs" align="start" className={yieldClass("x")}>
                   <Text as="span" variant="body" className="truncate">
                     {result.title || "Untitled"}
                   </Text>

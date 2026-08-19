@@ -11,6 +11,7 @@ import {
 } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { yieldClass } from "@plugins/primitives/plugins/css/plugins/yield/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
@@ -69,8 +70,7 @@ export function ClusterView(): ReactElement {
         width: "minmax(0,1fr)",
         value: (r) => r.operation,
         cell: (r) => (
-          // eslint-disable-next-line layout/no-adhoc-layout -- flexible leaf of the data-view cell's grid; min-w-0 lets the truncating rows shrink
-          <Stack gap="2xs" className="min-w-0">
+          <Stack gap="2xs" className={yieldClass("x")}>
             <Text
               as="span"
               variant="caption"

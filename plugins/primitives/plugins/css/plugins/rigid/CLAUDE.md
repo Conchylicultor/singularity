@@ -4,10 +4,17 @@ The **rigid flex child** — a leaf that keeps its size while its siblings absor
 the pressure. `shrink-0`, named once. 38 call sites wrote it as their only banned
 token because nothing owned it.
 
-## The missing half of `<Fill>`
+## One of four space-sharing roles
 
-`<Fill>` owns `min-w-0 flex-1` — the cell that gives. `<Rigid>` owns `shrink-0` —
-the cell that doesn't. Same row, opposite roles.
+A flex child answers **does it take slack?** and **does it give below its own
+content?** Rigid is no to both.
+
+| role | classes | axis? | |
+| --- | --- | --- | --- |
+| **`rigidClass()`** | `shrink-0` | **no** | won't give at all |
+| [`yieldClass(axis)`](../yield/CLAUDE.md) | `min-w-0` \| `min-h-0` | yes | gives only |
+| [`growClass()`](../grow/CLAUDE.md) | `flex-1` | no | takes only |
+| [`fillClasses(axis)`](../fill/CLAUDE.md) | `flex-1 min-w-0` | yes | both (= grow + yield) |
 
 **A sibling plugin, not a prop on `fill`.** The governing precedent is
 [`clip`](../clip/CLAUDE.md) / [`scroll`](../scroll/CLAUDE.md): two halves of one
@@ -17,11 +24,12 @@ data at all.
 
 ## No axis prop — and that asymmetry is deliberate
 
-`fillClasses(axis)` needs an axis because its two halves are two **different CSS
-properties** (`min-width:0` vs `min-height:0`), and only one is right for a given
-container. `flex-shrink` is **one** property that already applies along whichever
-axis the container declared as its main axis. An axis argument here could only be
-ignored — or, worse, believed. Don't add one.
+Only the `min-*-0` half of the family takes an axis, because `min-width:0` and
+`min-height:0` are two **different CSS properties** and only one is right for a
+given container. `flex-shrink` (here) and `flex-grow` (`growClass()`) are single
+properties that already apply along whichever axis the container declared as its
+main axis. An axis argument here could only be ignored — or, worse, believed.
+Don't add one.
 
 ## Take the class, keep the element
 

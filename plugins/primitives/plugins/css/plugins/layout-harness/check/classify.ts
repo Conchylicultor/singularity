@@ -22,6 +22,7 @@ export const ORACLE_INVARIANT_KINDS = [
   "pinnedRight",
   "neverTruncatesWhenRoomy",
   "truncationOnsetOrder",
+  "truncatesTogether",
   "railAlignment",
 ] as const;
 

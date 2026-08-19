@@ -275,6 +275,65 @@ export function checkTruncationOnsetOrder(
   return { ok: true };
 }
 
+// ── truncatesTogether ──────────────────────────────────────────────
+// At EVERY swept width, either all listed slots truncate or none does — the
+// contract of a row whose cells yield in proportion to their content.
+//
+// Deliberately not expressible as `truncationOnsetOrder`, which asserts STRICT
+// priority (`onset(first) > onset(last)`) — the opposite of yielding together.
+// The two are the two halves of the shrink hierarchy: a row either ranks its
+// cells (one gives up characters first) or shares the deficit among them, and a
+// fixture says which it is.
+//
+// A slot missing at a given width is skipped, matching the other checks. A width
+// at which the listed slots disagree names the width and who truncated, because
+// "they diverge somewhere" is not actionable on its own.
+export function checkTruncatesTogether(
+  measuredByWidth: Record<number, MeasuredFixture>,
+  slots: string[],
+): OracleResult {
+  if (slots.length < 2) {
+    return {
+      ok: false,
+      detail: `truncatesTogether: needs at least two slots to compare, got ${slots.length}`,
+    };
+  }
+  let sawAny = false;
+  for (const width of widthsOf(measuredByWidth)) {
+    const m = measuredByWidth[width]!;
+    // A slot absent at this width is skipped, matching every other check —
+    // `__measure` omits a box that generates none, and asking a non-participant
+    // whether it truncates has no answer.
+    const present: { id: string; truncates: boolean }[] = [];
+    for (const id of slots) {
+      const slot = m.slots[id];
+      if (!slot) continue;
+      present.push({ id, truncates: slot.truncates });
+    }
+    if (present.length < 2) continue;
+    sawAny = true;
+    const truncating = present.filter((s) => s.truncates);
+    if (truncating.length > 0 && truncating.length < present.length) {
+      const yes = truncating.map((s) => s.id).join(", ");
+      const no = present
+        .filter((s) => !s.truncates)
+        .map((s) => s.id)
+        .join(", ");
+      return {
+        ok: false,
+        detail: `truncatesTogether: at container ${width}px the slots disagree — [${yes}] truncate while [${no}] do not. These cells are supposed to share the row's deficit; one being squeezed alone is what a basis-0 grow (fillClasses) on one of them produces.`,
+      };
+    }
+  }
+  if (!sawAny) {
+    return {
+      ok: false,
+      detail: `truncatesTogether: slots [${slots.join(", ")}] were never measured together at any width`,
+    };
+  }
+  return { ok: true };
+}
+
 // ── railAlignment ──────────────────────────────────────────────────
 //
 // At every measured width, EVERY measured slot's content starts on the rail the
@@ -367,6 +426,8 @@ export function evaluateInvariant(
       return checkNeverTruncatesWhenRoomy(measuredByWidth, inv.slots);
     case "truncationOnsetOrder":
       return checkTruncationOnsetOrder(measuredByWidth, inv.first, inv.last);
+    case "truncatesTogether":
+      return checkTruncatesTogether(measuredByWidth, inv.slots);
     case "railAlignment":
       return checkRailAlignment(measuredByWidth, inv.epsilon);
     case "falsification":

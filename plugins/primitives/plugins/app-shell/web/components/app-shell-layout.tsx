@@ -21,6 +21,7 @@ import {
 } from "@plugins/primitives/plugins/slot-render/web";
 import type { SidebarFramingProps } from "../../core";
 import { AppShell } from "../slots";
+import { yieldClass } from "@plugins/primitives/plugins/css/plugins/yield/web";
 export type AppShellSidebarItem = {
   title: string;
   icon: React.ComponentType<{ className?: string }>;
@@ -129,8 +130,7 @@ function DefaultFlushFraming({
         </Stack>
       </Sidebar>
 
-      {/* eslint-disable-next-line layout/no-adhoc-layout -- min-w-0 on shadcn SidebarInset lets the main area truncate within the not-yet-drained SidebarProvider flex row */}
-      <SidebarInset className="min-w-0">{body}</SidebarInset>
+      <SidebarInset className={yieldClass("x")}>{body}</SidebarInset>
     </SidebarProvider>
   );
 }

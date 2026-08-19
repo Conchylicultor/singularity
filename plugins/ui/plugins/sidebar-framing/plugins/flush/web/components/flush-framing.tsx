@@ -1,6 +1,13 @@
-import { Sidebar, SidebarHeader, SidebarInset, SidebarProvider } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import {
+  Sidebar,
+  SidebarHeader,
+  SidebarInset,
+  SidebarProvider,
+} from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import type { SidebarFramingProps } from "@plugins/primitives/plugins/app-shell/core";
+import { yieldClass } from "@plugins/primitives/plugins/css/plugins/yield/web";
+import { fillClasses } from "@plugins/primitives/plugins/css/plugins/fill/web";
 
 /**
  * The default flush framing — extracted byte-for-byte from app-shell's original
@@ -20,12 +27,15 @@ export function FlushFraming({
             {header}
           </SidebarHeader>
         )}
-        {/* eslint-disable-next-line layout/no-adhoc-layout -- flexible leaf of shadcn Sidebar's internal flex column */}
-        <Stack gap="none" className="min-h-0 flex-1">{sidebarContent}</Stack>
+        {/* Fills shadcn Sidebar's internal flex column: takes the leftover
+            height AND gives below its content, so a long tree scrolls instead of
+            pushing the header off. */}
+        <Stack gap="none" className={fillClasses("y")}>
+          {sidebarContent}
+        </Stack>
       </Sidebar>
 
-      {/* eslint-disable-next-line layout/no-adhoc-layout -- min-w-0 lets shadcn SidebarInset shrink within its flex row instead of overflowing */}
-      <SidebarInset className="min-w-0">{body}</SidebarInset>
+      <SidebarInset className={yieldClass("x")}>{body}</SidebarInset>
     </SidebarProvider>
   );
 }

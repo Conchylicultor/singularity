@@ -23,11 +23,35 @@ rules. Compose layout through the primitives instead — one per mechanic:
 | --- | --- |
 | rows / flow | `<Line>` (bare single-line strip) · `<Row>` (interactive row) · `<Stack direction="row">` · `<Cluster>` (wrapping chips) · `<Inline>` (chips mid-sentence) |
 | columns / panes | `<Column header body footer>` — rigid \| flexible \| rigid, scrolling body |
-| space-sharing | `<Fill>` — THE grow+shrink cell (`min-w-0 flex-1`) · `<Rigid>` — THE leaf that never shrinks (`shrink-0`) · `<Text>` in a line container — THE truncation leaf |
+| space-sharing | the four roles below · `<Text>` in a line container — THE truncation leaf |
 | grids / centring | `<Grid minCellWidth>` · `<Center axis>` |
 | overflow | `<Scroll>` (scrolls) · `<Clip>` (clips, no scroll) |
 | positioning | `<Overlay>` (in-flow full-bleed layers, as props) · `<Layer>` (ONE standalone `absolute inset-0` child) · `<Pin to>` (point-anchored) · `<Sticky edge>` · `ViewportOverlay` (true `fixed inset-0`) |
 | padding / gap | `<Inset pad>` · `<Stack gap>` (`spacing`) |
+
+### Space-sharing: two questions, four roles
+
+A flex child answers **does it take slack?** and **does it give below its own
+content?** — independently. All four answers have a name; nothing else is legal.
+
+| role | classes | axis? | |
+| --- | --- | --- | --- |
+| `rigidClass()` / `<Rigid>` | `shrink-0` | no | won't give at all |
+| `yieldClass(axis)` | `min-w-0` \| `min-h-0` | **yes** | gives below its content, never takes slack |
+| `growClass()` | `flex-1` | no | takes slack, floors at its own content |
+| `fillClasses(axis)` / `<Fill>` | `flex-1 min-w-0` | yes | **= grow + yield** (derived, so it cannot drift) |
+| *(no class — the default)* | — | — | gives down to its content, takes nothing |
+
+Only `yield`/`fill` take an axis: `min-width:0` and `min-height:0` are two
+properties, `flex-shrink`/`flex-grow` are one each and already follow the
+container's main axis.
+
+`yield` and `grow` are helper-**only** (no component): they annotate how a box
+you already have shares space, so there is nothing to wrap. Two traps worth
+knowing — `growClass()` keeps the `min-width:auto` floor, so a `truncate` inside
+it is **dead** (you wanted `fillClasses`); and `fillClasses`' basis-0 grow, put
+on one of two siblings that must both yield, hands the other its full content
+width and squeezes that one alone (you wanted `yieldClass` on both).
 
 A widget that sizes itself from the room it is given cannot be handed that room
 by a flag somewhere else, so it **asks**: `useRequestGrow()`
@@ -39,7 +63,8 @@ reason no contribution declares `fill: true` for an `AdaptiveBar` any more.
 **When you cannot wrap the element** — a third-party `className`-only prop, a
 Lexical `<ContentEditable>`, a raw `<img>`/`<svg>`/`<button>` leaf that must
 itself be the box — take the class string instead of the component:
-`fillClasses(axis)`, `rigidClass()`, `layerClasses({layer,decorative})`,
+`fillClasses(axis)`, `rigidClass()`, `yieldClass(axis)`, `growClass()`,
+`layerClasses({layer,decorative})`,
 `insetClass(step)`. The question is *do you own the element?* Own it ⇒ the
 component; don't ⇒ the helper. Neither supersedes the other, and a raw `<div>` +
 `eslint-disable` is not the third answer.
@@ -75,6 +100,7 @@ genuinely-fixed one-off escapes per-site via
   - **`control-size`** — Control-size standard: the shared control-* height scale and its enforcing lint rule (no-adhoc-control).
   - **`fill`** — Flexible-cell layout primitive: <Fill axis> is the single grow+shrink cell of a Line/Row (min-w-0 flex-1). The one home for the slack-absorbing, truncation-enabling cell, so a stray flex-1 never strands the grow slot.
   - **`grid`** — Responsive/uniform grid layout primitive: <Grid minCellWidth> lays out a wrapping, equal-width card grid via a closed prop surface — not a raw grid-template passthrough.
+  - **`grow`** — Growing-cell layout primitive: growClass() is the flex child that takes the row's slack (flex-1) while staying floored at its own content width. The half of <Fill> that grows, without the half that gives.
   - **`grow-relay`** — The grow request: a widget that sizes itself from the room it is given asks for that room (useRequestGrow), every box in between relays the ask upward (<GrowRelay>, render-prop), and the row stops it (<GrowRelay.Stop>). Replaces the fill flag a contribution had to declare three files away from the <AdaptiveBar> it was about — the ask travels with the widget, so there is nothing left to forget.
   - **`icon-auto`** — icon-auto slot-icon sizing convention: the icon-auto @utility (em-based, in app.css) plus the no-adhoc-slot-icon-size lint rule.
   - **`inline`** — Inline-level flow layout primitive: <Inline gap> lays out a baseline-aligned inline-flex row for chips/icons that sit inline in a text run. The inline-level sibling of Stack, delegating to Stack.
@@ -103,6 +129,7 @@ genuinely-fixed one-off escapes per-site via
   - **`toggle-chip`** — Toggle-chip control: a stateful solid/ghost pill (composes Badge) with active state, button-height matching, polymorphic `as`, plus a SegmentedControl single-select group helper.
   - **`ui-kit`** — Global UI kit: the cn() class-merge util, the 14 shadcn/ui primitives, the theme/app.css global stylesheet, and the ControlSize affordance-sizing context.
   - **`viewport-overlay`** — Viewport-filling overlay primitive: self-portals to document.body + z-layer + theme-scope so fixed inset-0 fills the real viewport, never a transformed ancestor. Also owns the runtime auditor for the same invariant — the containing-block + stacking-context ancestor walk (assertViewportEscape / useViewportEscape), which reports the two ways a fixed box silently stops being viewport-relative.
+  - **`yield`** — Yielding-cell layout primitive: yieldClass(axis) is the flex child that falls below its own content width (min-w-0) but never takes slack. The half of <Fill> that gives, without the half that grows.
   - **`z-layers`** — Semantic z-layer scale (z-base..z-max) and its enforcing lint rule (no-adhoc-zindex).
 
 <!-- AUTOGENERATED:END -->

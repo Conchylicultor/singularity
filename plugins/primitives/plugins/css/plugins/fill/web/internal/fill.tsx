@@ -1,22 +1,39 @@
+import { growClass } from "@plugins/primitives/plugins/css/plugins/grow/web";
+import { yieldClass } from "@plugins/primitives/plugins/css/plugins/yield/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import type React from "react";
 
-/** Which axis the cell flexes along (which `min-*-0` pairs with `flex-1`). */
+/**
+ * Which axis the cell flexes along (which `min-*-0` pairs with `flex-1`).
+ *
+ * Structurally identical to `yield`'s `YieldAxis`, and declared here rather than
+ * imported because `fill` imports `yield` (not the other way round) — pulling
+ * the type back would cycle. The drift that would matter is already a compile
+ * error: widening `FillAxis` breaks the `yieldClass()` call below.
+ */
 export type FillAxis = "x" | "y";
 
 /**
  * The pure fill class map — single source of truth, exported so the component
  * and the pure test share one definition.
  *
- * A flexible cell needs BOTH halves, always together:
- * - `flex-1` — grow into slack AND shrink under pressure.
- * - the axis-matched `min-*-0` — CSS floors a flex item at its content size
- *   (`min-width:auto`), so without it the cell refuses to shrink and overflows
- *   (and, worse, can collapse a rigid `shrink-0` sibling). This is the exact
- *   pair `Scroll`/`Clip` already emit for a filling pane.
+ * A flexible cell is exactly the composition of the two space-sharing halves,
+ * and is DERIVED from them so the pair cannot drift from its parts:
+ * - `growClass()` (`flex-1`) — take the row's slack.
+ * - `yieldClass(axis)` (the axis-matched `min-*-0`) — give below its own
+ *   content. CSS floors a flex item at its content size (`min-width:auto`), so
+ *   without this half the cell refuses to shrink and overflows (and, worse, can
+ *   collapse a rigid `shrink-0` sibling).
+ *
+ * Yield first, grow second — the emitted string stays byte-identical to the
+ * hand-written `"min-w-0 flex-1"` this replaced, so nothing rendered moves.
+ *
+ * Reach for ONE half when only one is wanted: two siblings that must yield
+ * *together* both take `yieldClass` (this basis-0 grow would squeeze one of them
+ * alone), and a cell whose content must not be crushed takes `growClass`.
  */
 export function fillClasses(axis: FillAxis): string {
-  return axis === "y" ? "min-h-0 flex-1" : "min-w-0 flex-1";
+  return `${yieldClass(axis)} ${growClass()}`;
 }
 
 export interface FillProps extends React.HTMLAttributes<HTMLElement> {

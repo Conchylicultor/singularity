@@ -37,6 +37,7 @@ timeline.
     - `primitives/css/link-chip.LinkChip`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
+    - `primitives/css/yield.yieldClass`
     - `primitives/data-view.DataView`
     - `primitives/data-view.defineDataView`
     - `primitives/data-view.FieldDef`

@@ -9,6 +9,7 @@ export {
   checkPinnedRight,
   checkNeverTruncatesWhenRoomy,
   checkTruncationOnsetOrder,
+  checkTruncatesTogether,
   checkRailAlignment,
 } from "./oracle";
 export type { OracleResult } from "./oracle";

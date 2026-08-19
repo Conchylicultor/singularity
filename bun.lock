@@ -3755,6 +3755,10 @@
       "name": "@singularity/plugin-primitives-css-grid",
       "version": "0.0.1",
     },
+    "plugins/primitives/plugins/css/plugins/grow": {
+      "name": "@singularity/plugin-primitives-css-grow",
+      "version": "0.0.1",
+    },
     "plugins/primitives/plugins/css/plugins/grow-relay": {
       "name": "@singularity/plugin-primitives-css-grow-relay",
       "version": "0.0.1",
@@ -3884,6 +3888,10 @@
     },
     "plugins/primitives/plugins/css/plugins/viewport-overlay": {
       "name": "@singularity/plugin-primitives-css-viewport-overlay",
+      "version": "0.0.1",
+    },
+    "plugins/primitives/plugins/css/plugins/yield": {
+      "name": "@singularity/plugin-primitives-css-yield",
       "version": "0.0.1",
     },
     "plugins/primitives/plugins/css/plugins/z-layers": {
@@ -7350,6 +7358,8 @@
 
     "@singularity/plugin-primitives-css-grid": ["@singularity/plugin-primitives-css-grid@workspace:plugins/primitives/plugins/css/plugins/grid"],
 
+    "@singularity/plugin-primitives-css-grow": ["@singularity/plugin-primitives-css-grow@workspace:plugins/primitives/plugins/css/plugins/grow"],
+
     "@singularity/plugin-primitives-css-grow-relay": ["@singularity/plugin-primitives-css-grow-relay@workspace:plugins/primitives/plugins/css/plugins/grow-relay"],
 
     "@singularity/plugin-primitives-css-icon-auto": ["@singularity/plugin-primitives-css-icon-auto@workspace:plugins/primitives/plugins/css/plugins/icon-auto"],
@@ -7407,6 +7417,8 @@
     "@singularity/plugin-primitives-css-ui-kit": ["@singularity/plugin-primitives-css-ui-kit@workspace:plugins/primitives/plugins/css/plugins/ui-kit"],
 
     "@singularity/plugin-primitives-css-viewport-overlay": ["@singularity/plugin-primitives-css-viewport-overlay@workspace:plugins/primitives/plugins/css/plugins/viewport-overlay"],
+
+    "@singularity/plugin-primitives-css-yield": ["@singularity/plugin-primitives-css-yield@workspace:plugins/primitives/plugins/css/plugins/yield"],
 
     "@singularity/plugin-primitives-css-z-layers": ["@singularity/plugin-primitives-css-z-layers@workspace:plugins/primitives/plugins/css/plugins/z-layers"],
 

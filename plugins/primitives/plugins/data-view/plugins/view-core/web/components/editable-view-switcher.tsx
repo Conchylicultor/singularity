@@ -25,6 +25,7 @@ import type { ViewTypeMeta } from "../../core";
 import type { ResolvedViewInstance } from "../internal/resolve-instances";
 import type { ViewActionsCore } from "../internal/use-view-model";
 import { ViewSettingsPopover } from "./view-settings-popover";
+import { growClass } from "@plugins/primitives/plugins/css/plugins/grow/web";
 
 /**
  * Config-mode switcher: drag-reorderable ghost chips (matching the read-only
@@ -64,8 +65,13 @@ export function EditableViewSwitcher<T extends ViewTypeMeta>({
       direction="row"
       align="center"
       gap="xs"
-      // eslint-disable-next-line layout/no-adhoc-layout -- flex-1 grows the switcher to absorb the toolbar's leading slack so its hover-reveal group (which carries groupProps) spans the empty gap up to the next control, making the `+` add button surface when the pointer is anywhere in that space — not just over the chips. min-width stays auto (no min-w-0), so the view chips never truncate; they hug their content and only the trailing empty space grows.
-      className="flex-1"
+      // Grows, never yields — `growClass()`, deliberately NOT `fillClasses()`.
+      // It absorbs the toolbar's leading slack so the hover-reveal group (which
+      // carries groupProps) spans the empty gap up to the next control, making
+      // the `+` add button surface when the pointer is anywhere in that space,
+      // not just over the chips. No `min-w-0`, so the chips keep their content
+      // floor and never truncate: only the trailing empty space grows.
+      className={growClass()}
       {...groupProps}
     >
       <SortableList items={ids} onMove={onMove} orientation="horizontal">

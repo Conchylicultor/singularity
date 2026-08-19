@@ -170,6 +170,7 @@ by the consumer's id list (`buildViewDescriptors(ids)`), contributions
     - `config_v2/fields.FieldRenderer`
     - `primitives/css/control-panel.ControlPanel`
     - `primitives/css/control-panel.ControlPanelPopover`
+    - `primitives/css/grow.growClass`
     - `primitives/css/spacing.Stack`
     - `primitives/css/toggle-chip.ToggleChip`
     - `primitives/css/ui-kit.ControlSizeProvider`

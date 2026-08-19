@@ -10,6 +10,7 @@
     - `primitives/css/rigid.rigidClass`
     - `primitives/css/spacing.Stack`
     - `primitives/css/ui-kit.cn`
+    - `primitives/css/yield.yieldClass`
     - `primitives/row-actions.RowActions`
   - Exports (types):
     - `BreadcrumbProps`

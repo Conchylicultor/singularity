@@ -110,6 +110,7 @@ export type GeometryInvariant =
   | { kind: "rigidIntegrity"; slot: string; epsilon?: number }
   | { kind: "pinnedRight"; slot: string; epsilon?: number }
   | { kind: "truncationOnsetOrder"; first: string; last: string }
+  | { kind: "truncatesTogether"; slots: string[] }
   | { kind: "neverTruncatesWhenRoomy"; slots: string[] }
   | { kind: "railAlignment"; epsilon?: number }
   | {
@@ -158,6 +159,24 @@ export type FixtureMutation =
   // properties: `railAlignment` asserts the inline START only (the end is along
   // for the ride), which is where the bug class lives.
   | { kind: "railOwedOverride"; value: string }
+  // Re-declare ONE measured slot as a different space-sharing role — the four
+  // roles being the closed set `rigid | yield | grow | fill` (see
+  // `css/plugins/{rigid,yield,grow,fill}`). Role-shaped rather than
+  // mechanic-shaped on purpose: every wrong-role falsification in the family is
+  // one mutation, and the fixture states the mistake it is reproducing
+  // ("someone reached for Fill here") rather than the CSS that mistake emits.
+  //
+  // The motivating case is `yield` vs `fill`. Both let a cell fall below its
+  // content, so a style assertion cannot tell them apart; what separates them is
+  // `flex-1`'s basis ZERO, which resolves the fill'd cell to 0 and hands its
+  // sibling (basis `auto`) full content width — so the deficit comes out of one
+  // cell instead of being shared. Only a real layout engine across a width sweep
+  // shows that, which is why it is a mutation here and not a unit test.
+  | {
+      kind: "swapSlotRole";
+      slot: string;
+      role: "rigid" | "yield" | "grow" | "fill";
+    }
   // Set `width: max-content` on the fixture's {@link HOST_MARKER_ATTR} box: the
   // host stops handing this primitive a width and starts taking its width FROM
   // it.

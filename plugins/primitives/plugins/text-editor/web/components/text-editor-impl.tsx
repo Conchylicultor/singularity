@@ -21,6 +21,7 @@ import {
   $selectMarkdownRange,
 } from "../internal/markdown";
 import { useInsertMarkdown } from "../internal/use-insert-markdown";
+import { yieldClass } from "@plugins/primitives/plugins/css/plugins/yield/web";
 
 export interface TextEditorProps {
   value: string;
@@ -186,9 +187,11 @@ function EditorShell({
 
   return (
     <div
-      // eslint-disable-next-line layout/no-adhoc-layout -- min-w-0 lets the self-contained editor box shrink below its content width inside an arbitrary external flex parent
+      // Yields, never grows: the self-contained editor box falls below its
+      // content width inside an arbitrary external flex parent.
       className={cn(
-        "focus-ring-within w-full min-w-0 rounded-md border transition-colors",
+        yieldClass("x"),
+        "focus-ring-within w-full rounded-md border transition-colors",
         "border-input",
         disabled
           ? "bg-input/50 dark:bg-input/80"

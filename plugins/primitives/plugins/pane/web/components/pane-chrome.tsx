@@ -1,5 +1,8 @@
 import { linkGestureProps } from "@plugins/primitives/plugins/link-gesture/web";
-import { SingleLineProvider } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import {
+  cn,
+  SingleLineProvider,
+} from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Bar } from "@plugins/primitives/plugins/bar/web";
 import { useContext, type ReactNode } from "react";
 import { AdaptiveBar } from "@plugins/primitives/plugins/adaptive-bar/web";
@@ -17,6 +20,7 @@ import { ToolbarItem, type PaneHeaderZones } from "./pane-header-item";
 import { usePaneMatch, type PaneMatch, type AnyPane } from "../pane";
 import { PaneLayoutContext } from "../maximize-context";
 import { SurfaceChromeContext } from "../surface-chrome-context";
+import { yieldClass } from "@plugins/primitives/plugins/css/plugins/yield/web";
 
 interface PaneChromeProps {
   pane: AnyPane;
@@ -130,8 +134,13 @@ export function PaneChrome({
               {resolvedTitle != null &&
                 resolvedTitle !== "" &&
                 (typeof resolvedTitle === "string" ? (
-                  // eslint-disable-next-line layout/no-adhoc-layout -- string pane title: min-w-0 truncate leaf inside Bar's flex row so a long title ellipsizes rather than crushing siblings
-                  <Text as="span" variant="label" className="min-w-0 truncate">
+                  // String pane title: yields inside Bar's flex row so a long
+                  // title ellipsizes rather than crushing its siblings.
+                  <Text
+                    as="span"
+                    variant="label"
+                    className={cn(yieldClass("x"), "truncate")}
+                  >
                     {resolvedTitle}
                   </Text>
                 ) : headerSpill ? (

@@ -1,6 +1,9 @@
 import { useMemo, type ReactElement } from "react";
 import { MdBolt } from "react-icons/md";
-import { useResource, ResourceView } from "@plugins/primitives/plugins/live-state/web";
+import {
+  useResource,
+  ResourceView,
+} from "@plugins/primitives/plugins/live-state/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import {
   DataView,
@@ -9,6 +12,7 @@ import {
 } from "@plugins/primitives/plugins/data-view/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { yieldClass } from "@plugins/primitives/plugins/css/plugins/yield/web";
 import { LinkChip } from "@plugins/primitives/plugins/css/plugins/link-chip/web";
 import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
 import { navigate } from "@plugins/apps-core/plugins/tabs/web";
@@ -27,7 +31,11 @@ function newestTraceId(op: SlowOp): string | undefined {
 
 const SLOW_OPS_LOCAL = defineDataView("debug.slow-ops.local");
 
-function CallerBreakdownLines({ callers }: { callers: CallerBreakdown[] }): ReactElement {
+function CallerBreakdownLines({
+  callers,
+}: {
+  callers: CallerBreakdown[];
+}): ReactElement {
   const sorted = [...callers].sort((a, b) => b.totalMs - a.totalMs);
   return (
     <Stack gap="2xs" className="pl-md">
@@ -46,7 +54,11 @@ function CallerBreakdownLines({ callers }: { callers: CallerBreakdown[] }): Reac
 
 // The durable wait-vs-work split beneath an operation: ⏳ heavy-read-acquire
 // 3500ms. Surfaces head-of-line blocking / lock-vs-work without manual repro.
-function WaitBreakdownLines({ waits }: { waits: Record<string, number> }): ReactElement {
+function WaitBreakdownLines({
+  waits,
+}: {
+  waits: Record<string, number>;
+}): ReactElement {
   const sorted = Object.entries(waits).sort((a, b) => b[1] - a[1]);
   return (
     <Stack gap="2xs" className="pl-md">
@@ -78,7 +90,10 @@ export function SlowOpsView() {
 function SlowOpsViewInner({ ops }: { ops: SlowOp[] }) {
   // Default ranking: aggregate impact (total time across all occurrences). A
   // structural bottleneck — one query draining many routes — surfaces at the top.
-  const data = useMemo(() => [...ops].sort((a, b) => b.totalMs - a.totalMs), [ops]);
+  const data = useMemo(
+    () => [...ops].sort((a, b) => b.totalMs - a.totalMs),
+    [ops],
+  );
 
   const fields = useMemo<FieldDef<SlowOp>[]>(() => {
     const kinds = Array.from(new Set(data.map((r) => r.operationKind)));
@@ -99,20 +114,32 @@ function SlowOpsViewInner({ ops }: { ops: SlowOp[] }) {
         value: (r) => r.operation,
         width: "minmax(0,1fr)",
         cell: (r) => (
-          // eslint-disable-next-line layout/no-adhoc-layout -- flexible leaf of the data-view cell's grid; min-w-0 lets the truncating operation row shrink
-          <Stack gap="2xs" className="min-w-0">
-            <Text as="span" variant="caption" className="truncate font-mono" title={r.operation}>
+          <Stack gap="2xs" className={yieldClass("x")}>
+            <Text
+              as="span"
+              variant="caption"
+              className="truncate font-mono"
+              title={r.operation}
+            >
               {r.operation}
             </Text>
-            {r.callers.length > 0 && <CallerBreakdownLines callers={r.callers} />}
-            {Object.keys(r.waits).length > 0 && <WaitBreakdownLines waits={r.waits} />}
+            {r.callers.length > 0 && (
+              <CallerBreakdownLines callers={r.callers} />
+            )}
+            {Object.keys(r.waits).length > 0 && (
+              <WaitBreakdownLines waits={r.waits} />
+            )}
             {newestTraceId(r) && (
               <Stack direction="row" gap="2xs" align="start">
                 <LinkChip
                   leading={<MdBolt className="icon-auto" />}
                   onClick={(e) => {
                     e.stopPropagation();
-                    navigate(traceDetailRoute.link(debugApp, { id: newestTraceId(r)! }));
+                    navigate(
+                      traceDetailRoute.link(debugApp, {
+                        id: newestTraceId(r)!,
+                      }),
+                    );
                   }}
                 >
                   trace

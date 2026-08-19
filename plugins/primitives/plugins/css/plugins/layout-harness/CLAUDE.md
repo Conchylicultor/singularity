@@ -134,6 +134,16 @@ Two things about it shape the fixture you write around it:
   `adaptive-bar/host-stops-giving-room` is the worked example and states both
   constraints at its `widths`.
 
+A fifth, **`swapSlotRole`**, re-declares ONE `[data-geo]` box as a different
+space-sharing role — the closed set `rigid | yield | grow | fill` the css
+primitives own. Role-shaped rather than mechanic-shaped, so a fixture states the
+mistake it reproduces ("someone reached for Fill here") and one mutation covers
+every wrong-role falsification in the family. It writes `flex` LONGHAND because
+the basis is the point: `fill`/`grow` are basis 0 (a claimant that shares the row
+by grow factor), `yield`/`rigid` are basis auto (content-sized). `yield` vs
+`fill` is the motivating pair — both carry `min-width: 0`, so only a real layout
+engine across a width sweep separates them (`yield/siblings-yield-together`).
+
 **Known limit:** two nested regions publishing the *same* value resolve to the
 outer one as publisher. Nesting is shadowing, so a correct inner region uses a
 different step; a fixture that genuinely needs identical nested rails is not
@@ -299,7 +309,11 @@ page is a production one whoever invokes it.
 
 Pure, DOM-free functions — one per `GeometryInvariant` kind (`noOverlap`,
 `noClip`, `leftPack`, `rigidIntegrity`, `pinnedRight`, `neverTruncatesWhenRoomy`,
-`truncationOnsetOrder`, `railAlignment`), dispatched by `evaluateInvariant`. A
+`truncationOnsetOrder`, `truncatesTogether`, `railAlignment`), dispatched by
+`evaluateInvariant`. The last two are the two halves of the shrink hierarchy and
+neither can express the other: `truncationOnsetOrder` asserts STRICT priority
+(one cell gives up characters first), `truncatesTogether` asserts the row shares
+its deficit (at every width, all listed slots truncate or none does). A
 new kind MUST also be listed in `check/classify.ts`'s `ORACLE_INVARIANT_KINDS`,
 or a real regression is misclassified as an environmental timeout and passes
 non-fatally. The math is ported
@@ -369,6 +383,7 @@ server-core tsconfig where `check`/`facet` live. The
     - `checkPinnedRight`
     - `checkRailAlignment`
     - `checkRigidIntegrity`
+    - `checkTruncatesTogether`
     - `checkTruncationOnsetOrder`
     - `evaluateInvariant`
     - `fixturesCollectedDir`

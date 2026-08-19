@@ -30,9 +30,12 @@ const createRule = ESLintUtils.RuleCreator(
  *                       row) · `<Stack direction="row">` · `<Cluster>` (wrapping
  *                       chips) · `<Inline>` (chips mid-sentence)
  *   - columns / panes:  `<Column header body footer>` — rigid | flexible | rigid
- *   - space-sharing:    `<Fill>` — THE grow+shrink cell (`min-w-0 flex-1`) ·
- *                       `<Rigid>` — THE leaf that never shrinks (`shrink-0`) ·
- *                       `<Text>` inside a line container — THE truncation leaf
+ *   - space-sharing:    two independent questions — does the cell TAKE slack, and
+ *                       does it GIVE below its own content. `<Fill>` answers yes
+ *                       to both (`min-w-0 flex-1`) · `<Rigid>` no to both
+ *                       (`shrink-0`) · `yieldClass(axis)` gives only (`min-w-0`)
+ *                       · `growClass()` takes only (`flex-1`) · `<Text>` inside a
+ *                       line container — THE truncation leaf
  *   - grids / centring: `<Grid minCellWidth>` · `<Center axis>`
  *   - overflow:         `<Scroll>` (scrolls) · `<Clip>` (clips, no scroll)
  *   - positioning:      `<Overlay>` (in-flow full-bleed layers) · `<Layer>` (ONE
@@ -44,9 +47,11 @@ const createRule = ESLintUtils.RuleCreator(
  * When the element cannot be WRAPPED (a third-party `className`-only prop, a
  * Lexical `<ContentEditable>`, a raw `<img>`/`<svg>`/`<button>` leaf that must
  * ITSELF be the box), take the class string instead of the component:
- * `fillClasses(axis)`, `rigidClass()`, `layerClasses(opts)`, `insetClass(step)`.
- * Own the element ⇒ the component; don't own it ⇒ the class helper. Neither
- * supersedes the other.
+ * `fillClasses(axis)`, `rigidClass()`, `yieldClass(axis)`, `growClass()`,
+ * `layerClasses(opts)`, `insetClass(step)`. Own the element ⇒ the component;
+ * don't own it ⇒ the class helper. Neither supersedes the other. `yield`/`grow`
+ * are helper-ONLY: they annotate how a box you already have shares space with
+ * its siblings, so there is never anything to wrap.
  *
  * NOT banned (deliberately): `relative` / `static` (positioning *context* is
  * benign — Overlay establishes it), sizing (`w-*`, `h-*`, `size-*`, `min-w-*`
@@ -202,13 +207,15 @@ export default createRule({
         "Pick the primitive that owns the mechanic (all under @plugins/primitives/plugins/css/plugins/<name>/web):\n" +
         '  rows / flow       <Line> single-line strip · <Row> interactive row · <Stack direction="row"> · <Cluster> wrapping chips · <Inline> chips mid-sentence\n' +
         "  columns / panes   <Column header body footer> — rigid | flexible | rigid, scrolling body\n" +
-        "  space-sharing     <Fill> — THE grow+shrink cell (min-w-0 flex-1) · <Rigid> — THE leaf that never shrinks (shrink-0) · <Text> in a line container — THE truncation leaf\n" +
+        "  space-sharing     two questions — does it TAKE slack, does it GIVE below its own content:\n" +
+        "                    <Fill> both (min-w-0 flex-1) · <Rigid> neither (shrink-0) · yieldClass(axis) gives only (min-w-0) · growClass() takes only (flex-1) · <Text> in a line container — THE truncation leaf\n" +
         "  grids / centring  <Grid minCellWidth> · <Center axis>\n" +
         "  overflow          <Scroll axis fill> scrolls · <Clip axis> clips, no scroll\n" +
         "  positioning       <Overlay> in-flow full-bleed layers · <Layer> ONE standalone absolute inset-0 child · <Pin to> point-anchored child · <Sticky edge> · ViewportOverlay for true fixed inset-0\n" +
         "  padding / gap     <Inset pad> · <Stack gap>  (css/plugins/spacing/web)\n" +
         "When you cannot wrap the element (a third-party `className` prop, a Lexical `ContentEditable`, a raw <img>/<svg>/<button> leaf that must ITSELF be the box), " +
-        "take the class string instead: fillClasses(axis), rigidClass(), layerClasses({layer,decorative}), insetClass(step).\n" +
+        "take the class string instead: fillClasses(axis), rigidClass(), yieldClass(axis) [css/plugins/yield], growClass() [css/plugins/grow], layerClasses({layer,decorative}), insetClass(step).\n" +
+        "yield/grow ship NO component on purpose — they annotate a box you already have (a Stack/Line/Text), so there is nothing to wrap.\n" +
         "A genuine one-off escapes per-site with `// eslint-disable-next-line layout/no-adhoc-layout -- <reason>`.",
       adhocStylePosition:
         'Inline `position: "{{value}}"` is banned — anchor a cursor menu via CursorAnchoredMenu ' +

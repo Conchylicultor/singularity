@@ -543,6 +543,7 @@ See "Open questions" in the design doc.
     - `primitives/css/ui-kit.cn`
     - `primitives/css/ui-kit.ControlSize`
     - `primitives/css/ui-kit.SingleLineProvider`
+    - `primitives/css/yield.yieldClass`
     - `primitives/icon-button.IconButton`
     - `primitives/install-sink.defineInstallSink`
     - `primitives/latest-ref.useLatestRef`

@@ -12,6 +12,7 @@ import {
   Stack,
   Inset,
 } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { yieldClass } from "@plugins/primitives/plugins/css/plugins/yield/web";
 import { Column } from "@plugins/primitives/plugins/css/plugins/column/web";
 import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
 import {
@@ -74,8 +75,7 @@ function TimelineRow({
         </Button>
       }
     >
-      {/* eslint-disable-next-line layout/no-adhoc-layout -- flexible truncating label column inside Row; min-w-0 lets both lines ellipsize */}
-      <Stack gap="2xs" className="min-w-0">
+      <Stack gap="2xs" className={yieldClass("x")}>
         <Text as="span" variant="body" className="truncate">
           {version.label || "Version"}
         </Text>

@@ -26,6 +26,7 @@ editing surfaces use `TextEditor` directly.
     - `primitives/css/grow-relay.GrowRelay`
     - `primitives/css/spacing.Stack`
     - `primitives/css/ui-kit.cn`
+    - `primitives/css/yield.yieldClass`
     - `primitives/slot-render.defineRenderSlot`
     - `primitives/text-editor.TextEditor`
     - `primitives/text-editor.useInsertMarkdown`

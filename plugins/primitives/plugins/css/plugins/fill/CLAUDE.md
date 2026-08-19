@@ -21,10 +21,27 @@ Fill adds NO truncation/overflow itself — that is the `<Text>` leaf's job (box
 clipping is `<Clip>`'s). It is purely the flex-cell mechanic; `className`
 composes last.
 
-The opposite role — the leaf that must **not** give — is
-[`rigid`](../rigid/CLAUDE.md) (`shrink-0`), a sibling plugin. It takes no axis:
-`flex-shrink` is one property that follows the container's main axis, whereas
-Fill's `min-w-0`/`min-h-0` are two different ones.
+## Fill is its two halves
+
+A flex child answers **does it take slack?** and **does it give below its own
+content?** Fill is yes to both, and is DERIVED from the two halves so the pair
+cannot drift from them: `fillClasses(axis) === yieldClass(axis) + " " + growClass()`,
+pinned by a test.
+
+| role | classes | axis? | |
+| --- | --- | --- | --- |
+| [`rigidClass()`](../rigid/CLAUDE.md) | `shrink-0` | no | won't give at all |
+| [`yieldClass(axis)`](../yield/CLAUDE.md) | `min-w-0` \| `min-h-0` | yes | gives only |
+| [`growClass()`](../grow/CLAUDE.md) | `flex-1` | no | takes only |
+| **`fillClasses(axis)`** | `flex-1 min-w-0` | yes | both |
+
+**When Fill is the wrong answer.** `flex-1` is `flex: 1 1 0%` — basis zero. Put
+it on one of two siblings that must both yield and the engine resolves this cell
+to 0, hands the other (basis `auto`) its full content width, and takes the whole
+deficit out of this one: one cell crushed beside a neighbour that never
+truncated. Two cells that must yield *together* both take `yieldClass`. And a
+cell that must grow while its content stays intact takes `growClass` — Fill's
+`min-*-0` would let its chips crush.
 
 ## When you only have a `className`
 
@@ -52,7 +69,10 @@ primitive exists to name.
 
 - Description: Flexible-cell layout primitive: <Fill axis> is the single grow+shrink cell of a Line/Row (min-w-0 flex-1). The one home for the slack-absorbing, truncation-enabling cell, so a stray flex-1 never strands the grow slot.
 - Web:
-  - Uses: `primitives/css/ui-kit.cn`
+  - Uses:
+    - `primitives/css/grow.growClass`
+    - `primitives/css/ui-kit.cn`
+    - `primitives/css/yield.yieldClass`
   - Exports (types):
     - `FillAxis`
     - `FillProps`
@@ -164,6 +184,9 @@ primitive exists to name.
     - `tasks/task-draft-form`
     - `tasks/task-events`
     - `tasks/task-header`
+    - `ui/sidebar-framing/floating`
+    - `ui/sidebar-framing/flush`
+    - `ui/sidebar-framing/inset`
     - `ui/theme-engine/theme-customizer`
     - `ui/tokens/color-adjust`
     - `ui/tokens/shadow`

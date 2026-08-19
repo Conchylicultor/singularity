@@ -1,6 +1,7 @@
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { GrowRelay } from "@plugins/primitives/plugins/css/plugins/grow-relay/web";
 import { fillClasses } from "@plugins/primitives/plugins/css/plugins/fill/web";
+import { yieldClass } from "@plugins/primitives/plugins/css/plugins/yield/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { useCallback, useEffect, useState } from "react";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
@@ -99,8 +100,9 @@ function ToolbarRow() {
       return (
         <GrowRelay>
           {(asked) => (
-            // eslint-disable-next-line layout/no-adhoc-layout -- wrapper relaying the slot cell's shrink chain (and, on request, its grow) onto an arbitrary contributed action component
-            <div className={cn(asked ? fillClasses("x") : "min-w-0", dimmed)}>
+            <div
+              className={cn(asked ? fillClasses("x") : yieldClass("x"), dimmed)}
+            >
               {action}
             </div>
           )}

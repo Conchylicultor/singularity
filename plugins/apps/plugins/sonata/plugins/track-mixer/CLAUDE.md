@@ -70,6 +70,7 @@ plus a per-song reset.
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.cn`
     - `primitives/css/ui-kit.ControlSizeProvider`
+    - `primitives/css/yield.yieldClass`
     - `primitives/icon-button.IconButton`
     - `primitives/live-state.useResource`
     - `primitives/popover.InlinePopover`

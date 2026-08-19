@@ -9,6 +9,7 @@ import { Overlay } from "@plugins/primitives/plugins/css/plugins/overlay/web";
 import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
+import { yieldClass } from "@plugins/primitives/plugins/css/plugins/yield/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { EventRowActions } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/row-actions/web";
@@ -174,8 +175,11 @@ export function CollapsibleCard({
               ml-auto role) and is the ONE place truncation happens. Holds the
               click-through `summary` (ellipsizes via the ambient single-line
               <Text>) and/or the interactive `aside` (e.g. a FilePath with its own
-              start-ellipsis); min-w-0 on the aside lets it shrink below its
-              content width instead of overflowing the card. */}
+              start-ellipsis). The aside takes `yieldClass` — NOT a second <Fill>:
+              it must fall below its content width so the FilePath can
+              start-ellipsize, but must not grow. Fill's basis-0 grow would hand
+              the summary <Text> its full content width and squeeze the aside
+              alone, instead of the two yielding together. */}
           <Fill>
             {/* Inner single-line row arranging summary + aside; <Fill> owns the
                 grow/shrink, <Line> the row mechanics. */}
@@ -186,8 +190,7 @@ export function CollapsibleCard({
                 </Text>
               )}
               {sideContent && (
-                // eslint-disable-next-line layout/no-adhoc-layout -- shrink-only cell: the aside must fall below its content width so the FilePath inside can start-ellipsize, but must NOT grow. <Fill>'s flex-1 (basis 0) would hand the summary <Text> its full content width and squeeze the aside alone, instead of the two yielding together as they do today. Fill and Text are the only owners of min-w-0 and both bundle grow/truncate with it, so bare min-w-0 has no primitive.
-                <CardHeaderAction className="min-w-0">
+                <CardHeaderAction className={yieldClass("x")}>
                   {sideContent}
                 </CardHeaderAction>
               )}

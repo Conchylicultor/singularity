@@ -36,6 +36,7 @@ import {
 } from "../actions";
 import { useTrackMixerEntries, type TrackMixerEntry } from "../hooks";
 import { TRACK_PALETTE, blackKeyColor } from "../palette";
+import { yieldClass } from "@plugins/primitives/plugins/css/plugins/yield/web";
 
 type IconType = ComponentType<{ className?: string }>;
 
@@ -144,8 +145,10 @@ function InstrumentPicker({
           as="button"
           type="button"
           aria-label="Track instrument"
-          // eslint-disable-next-line layout/no-adhoc-layout -- the trigger must be allowed to shrink below its own content so the instrument label ellipsizes, but must NOT grow into the row's slack (that would push the sibling "· N notes" text to the far edge). Fill/fillClasses couple min-w-0 with flex-1, and there is no shrink-only primitive.
-          className="min-w-0 gap-xs rounded-md text-3xs text-muted-foreground transition-colors hover:text-foreground"
+          className={cn(
+            yieldClass("x"),
+            "gap-xs rounded-md text-3xs text-muted-foreground transition-colors hover:text-foreground",
+          )}
         >
           {ResolvedIcon ? (
             <ResolvedIcon className={cn("size-3", rigidClass())} />

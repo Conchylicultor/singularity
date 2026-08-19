@@ -15,6 +15,7 @@
     - `primitives/css/ui-kit.Dialog`
     - `primitives/css/ui-kit.DialogContent`
     - `primitives/css/ui-kit.ScrollArea`
+    - `primitives/css/yield.yieldClass`
     - `primitives/loading.Loading`
     - `primitives/scroll-reveal.revealElement`
     - `primitives/search.SearchInput`

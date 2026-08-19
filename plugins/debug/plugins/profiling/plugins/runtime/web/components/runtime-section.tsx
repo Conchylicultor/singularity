@@ -1,6 +1,9 @@
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useMemo, type ReactElement } from "react";
-import { useEndpoint, useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
+import {
+  useEndpoint,
+  useEndpointMutation,
+} from "@plugins/infra/plugins/endpoints/web";
 import {
   DataView,
   defineDataView,
@@ -8,15 +11,22 @@ import {
 } from "@plugins/primitives/plugins/data-view/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { yieldClass } from "@plugins/primitives/plugins/css/plugins/yield/web";
 import { formatDuration } from "@plugins/debug/plugins/profiling/web";
-import {
-  getRuntimeProfile,
-  resetRuntimeProfile,
-} from "../../shared/endpoints";
+import { getRuntimeProfile, resetRuntimeProfile } from "../../shared/endpoints";
 
 const RUNTIME_VIEW = defineDataView("debug.profiling.runtime");
 
-type RuntimeKind = "http" | "db" | "loader" | "sub" | "push" | "flush" | "job" | "cascade" | "bg";
+type RuntimeKind =
+  | "http"
+  | "db"
+  | "loader"
+  | "sub"
+  | "push"
+  | "flush"
+  | "job"
+  | "cascade"
+  | "bg";
 
 interface ParentRow {
   kind: RuntimeKind;
@@ -94,7 +104,11 @@ function CallerBreakdown({ parents }: { parents: ParentRow[] }): ReactElement {
 
 // The per-layer wait split beneath an entry's label: ⏳ background-acquire 1700ms.
 // Makes head-of-line blocking visible inline (which gate, how long).
-function WaitBreakdownLines({ waits }: { waits: Record<string, number> }): ReactElement {
+function WaitBreakdownLines({
+  waits,
+}: {
+  waits: Record<string, number>;
+}): ReactElement {
   return (
     <Stack gap="2xs" className="pl-md">
       {Object.entries(waits).map(([layer, ms]) => (
@@ -176,13 +190,19 @@ const RUNTIME_FIELDS: FieldDef<RuntimeRow>[] = [
     // Renders the per-caller attribution breakdown inline (empty for HTTP,
     // which has no parent).
     cell: (row) => (
-      // eslint-disable-next-line layout/no-adhoc-layout -- min-w-0 lets this column shrink within its data-table label track so the label + caller-breakdown lines truncate instead of forcing the cell wide
-      <Stack gap="2xs" className="min-w-0">
-        <Text as="span" variant="caption" className="truncate font-mono" title={row.label}>
+      <Stack gap="2xs" className={yieldClass("x")}>
+        <Text
+          as="span"
+          variant="caption"
+          className="truncate font-mono"
+          title={row.label}
+        >
           {row.label}
         </Text>
         {row.byParent.length > 0 && <CallerBreakdown parents={row.byParent} />}
-        {Object.keys(row.waits).length > 0 && <WaitBreakdownLines waits={row.waits} />}
+        {Object.keys(row.waits).length > 0 && (
+          <WaitBreakdownLines waits={row.waits} />
+        )}
       </Stack>
     ),
   },

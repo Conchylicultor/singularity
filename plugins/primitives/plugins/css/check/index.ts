@@ -78,7 +78,7 @@ const NOT_A_LAYOUT_MECHANIC: Record<string, string> = {
     "the vocabulary of ONE surface (a data-control panel's sections/rows/fields), not a general arrangement mechanic",
   "control-size": "a token standard (control heights) + its own lint rule",
   "grow-relay":
-    "the grow-request handshake — who asks the row for its slack and who relays the ask — a contract BETWEEN boxes, not a box to reach for. The box you reach for is Fill, which the message already names.",
+    "the grow-request handshake — who asks the row for its slack and who relays the ask — a contract BETWEEN boxes, not a box to reach for. The box you reach for is Fill (or growClass() when the content floor is wanted), both of which the message already names. Note `\\bGrow\\b` does not match inside `GrowRelay`, so the sibling `grow` plugin and this entry cannot collide.",
   "icon-auto": "a token standard (slot-icon sizing) + its own lint rule",
   "layout-harness":
     "the geometry test harness for the primitives, not a primitive",

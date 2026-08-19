@@ -29,6 +29,7 @@
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.cn`
+    - `primitives/css/yield.yieldClass`
     - `primitives/live-state.useResource`
     - `primitives/loading.Loading`
     - `primitives/markdown.Markdown`
