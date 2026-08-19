@@ -1,13 +1,38 @@
-import { asc, desc, eq, inArray } from "drizzle-orm";
+import { asc, desc, eq } from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import { pushes } from "../tables";
+import { ensurePushLedgerFresh } from "../push-ledger/freshness";
 import type { Push } from "../schema";
 
+/**
+ * The push accessors whose EMPTINESS a consumer could misread, each guaranteed
+ * to see a ledger that covers `main` before it reads.
+ *
+ * `pushes` is a projection of `main`'s trailer-bearing history, not the output of
+ * a background job (see ../push-ledger/). Putting the guarantee inside the reader
+ * is what keeps it from being a rule every future consumer has to remember: there
+ * is no accessor on the barrel that can hand back a ledger that has not caught
+ * up. The ungated reads the projection itself needs live in
+ * ../push-ledger/raw-reads.ts and are not exported from the plugin.
+ *
+ * The guarantee is about COMPLETENESS. Interpretation is still governed by I3
+ * (`tasks/attempt-work/CLAUDE.md`): a row proves a push happened, and even a
+ * complete ledger cannot see a commit that carries no trailer, so its absence
+ * still may not be read as proof that nothing landed.
+ */
+
+/**
+ * The whole table, for `pushesResource` — the server-side cascade carrier that
+ * maps changed push ids to their attempts. Deliberately UNGATED: its only caller
+ * is a recompute triggered BY the projection's own inserts, so refreshing here
+ * would be asking a write to wait on itself.
+ */
 export async function listPushes(): Promise<Push[]> {
   return db.select().from(pushes).orderBy(desc(pushes.createdAt));
 }
 
 export async function listPushesForAttempt(attemptId: string): Promise<Push[]> {
+  await ensurePushLedgerFresh();
   return db
     .select()
     .from(pushes)
@@ -16,27 +41,10 @@ export async function listPushesForAttempt(attemptId: string): Promise<Push[]> {
 }
 
 export async function listPushesByPushId(pushId: string): Promise<Push[]> {
+  await ensurePushLedgerFresh();
   return db
     .select()
     .from(pushes)
     .where(eq(pushes.pushId, pushId))
     .orderBy(asc(pushes.createdAt));
-}
-
-export async function getLatestPush(): Promise<Push | null> {
-  const [row] = await db
-    .select()
-    .from(pushes)
-    .orderBy(desc(pushes.createdAt))
-    .limit(1);
-  return row ?? null;
-}
-
-export async function listPushShasIn(shas: string[]): Promise<Set<string>> {
-  if (shas.length === 0) return new Set();
-  const rows = await db
-    .select({ sha: pushes.sha })
-    .from(pushes)
-    .where(inArray(pushes.sha, shas));
-  return new Set(rows.map((r) => r.sha));
 }

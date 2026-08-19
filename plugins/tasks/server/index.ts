@@ -14,10 +14,7 @@ import {
 import { handleInsertBetween } from "./internal/handle-insert-between";
 import { handleDepsMove } from "./internal/handle-deps-move";
 import { handleRepoInfo } from "./internal/handle-repo-info";
-import { pushIngestJob, pushReconcileWarmup } from "./internal/push-watcher";
 import { autoStartReconcileWarmup } from "./internal/auto-start-reconcile";
-import { Trigger } from "@plugins/infra/plugins/events/server";
-import { refAdvanced } from "@plugins/infra/plugins/git-watcher/server";
 import { addTaskTool } from "./internal/mcp-tools";
 import {
   listTasks,
@@ -54,21 +51,10 @@ export default {
     [moveTaskInDepsTree.route]: handleDepsMove,
     [getRepoInfo.route]: handleRepoInfo,
   },
-  register: [
-    addTaskTool,
-    pushIngestJob,
-    pushReconcileWarmup,
-    autoStartReconcileWarmup,
-  ],
-  contributions: [
-    Trigger({
-      on: refAdvanced.where({ refName: "refs/heads/main" }),
-      do: pushIngestJob,
-      with: {},
-      oneShot: false,
-    }),
-  ],
-  // The one-shot boot reconcile runs as the host-scoped `tasks.push-reconcile`
-  // warm-up (main-only, deferred + throttled). The git-watcher trigger keeps
-  // ingestion live from this point forward.
+  register: [addTaskTool, autoStartReconcileWarmup],
+  // The `pushes` ledger used to be filled from here, by a `tasks.push-ingest`
+  // job hung off the `git.refAdvanced` trigger plus a host-scoped boot warm-up.
+  // Both are gone: the ledger is a projection of `main` owned by `tasks-core`,
+  // refreshed by an in-process ref reaction and guaranteed on read. See
+  // `research/2026-08-18-global-push-ledger-git-projection.md`.
 } satisfies ServerPluginDefinition;

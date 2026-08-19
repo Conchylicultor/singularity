@@ -2,10 +2,16 @@
  * The READER half of the commit-trailer grammar: the two trailer key names, the
  * `git log --format=` fragment that emits them, and the parse of that output.
  *
- * One home instead of two copies. Both readers — the pushes ledger's ingest
- * (`tasks/server/internal/push-watcher.ts`) and the git-measured landed set
- * (`attempt-work/server/internal/measure.ts`) — ask git the same question, so the
- * format string and the parse that consumes it must move together.
+ * One home instead of two copies. Both readers — the pushes ledger's projection
+ * (`tasks-core/server/internal/push-ledger/reconcile.ts`) and the git-measured
+ * landed set (`attempt-work/server/internal/measure.ts`) — ask git the same
+ * question, so the format string and the parse that consumes it must move
+ * together.
+ *
+ * It lives in `tasks-core`, the plugin that owns the `pushes` table this grammar
+ * fills, rather than in `attempt-work`: the projection has to sit beside
+ * `insertPush`, and `tasks-core` cannot import `attempt-work` (which imports
+ * `tasks-core/server`).
  *
  * The WRITER half (`.githooks/prepare-commit-msg` and `cli/bin/commands/push.ts`)
  * keeps its own literals; the pre-push `conversation-trailer` check is what binds

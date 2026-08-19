@@ -1,6 +1,6 @@
 /**
  * `parseTrailerLog` — the reader half of the trailer grammar, ported (with its
- * behaviour) from `push-watcher.ts`'s `parseLog`. The records here are exactly
+ * behaviour) from the ledger ingest's original `parseLog`. The records here are exactly
  * what `git log --format=TRAILER_LOG_FORMAT` emits: NUL-separated fields, each
  * record terminated by a NUL then a newline.
  */

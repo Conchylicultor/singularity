@@ -1,4 +1,7 @@
-import { createFileWatcher, type FileWatcher } from "@plugins/infra/plugins/file-watcher/server";
+import {
+  createFileWatcher,
+  type FileWatcher,
+} from "@plugins/infra/plugins/file-watcher/server";
 import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";
 import { isMain } from "@plugins/infra/plugins/paths/server";
 import { currentBranchRef } from "./current-branch-ref";
@@ -6,6 +9,7 @@ import { gitCommonDir } from "./git-common-dir";
 import { readSha } from "./read-sha";
 import { refAdvanced } from "./tables-ref-advanced";
 import { refHeadResource } from "./ref-head-resource";
+import { runRefReactions } from "./reactions";
 
 // Refs whose movement we surface via refHeadResource. Always `refs/heads/main`
 // (the refAdvanced trigger event keys off it) plus, in a worktree, that
@@ -75,15 +79,22 @@ export async function startGitWatcher(): Promise<void> {
   // the safety net for packed-refs-only movement.
   watcher = await createFileWatcher({
     dirs: [`${commonDir}/refs`],
-    onChange: () => { void runTracked("git-watcher:recompute", () => recompute()); },
-    onReconcile: () => { void runTracked("git-watcher:recompute", () => recompute()); },
+    onChange: () => {
+      void runTracked("git-watcher:recompute", () => recompute());
+    },
+    onReconcile: () => {
+      void runTracked("git-watcher:recompute", () => recompute());
+    },
   });
 }
 
 export async function stopGitWatcher(): Promise<void> {
   if (!started) return;
   started = false;
-  if (watcher) { await watcher.stop(); watcher = null; }
+  if (watcher) {
+    await watcher.stop();
+    watcher = null;
+  }
 }
 
 async function recompute(): Promise<void> {
@@ -99,10 +110,17 @@ async function recompute(): Promise<void> {
     if (sha === previousSha) continue;
     lastKnownSha.set(refName, sha);
     refHeadResource.notify({ refName });
-    if (sha && isMain()) {
+    if (!sha) continue;
+    // In-process reactions run in EVERY backend, before the durable emit. That
+    // difference is load-bearing: `emit` is main-only, so anything that reacts
+    // through the trigger event is structurally absent from every worktree
+    // backend. Reactions are also the only path with nothing queued between the
+    // ref moving and the work — see ./reactions.ts for when to use which.
+    await runRefReactions({ refName, sha, previousSha });
+    if (isMain()) {
       try {
         await refAdvanced.emit({ refName, sha, previousSha });
-      // eslint-disable-next-line promise-safety/no-bare-catch
+        // eslint-disable-next-line promise-safety/no-bare-catch
       } catch (err) {
         console.error(`[git-watcher] emit refAdvanced(${refName}) failed`, err);
       }

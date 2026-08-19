@@ -18,10 +18,12 @@ import type { Conversation } from "@plugins/tasks/plugins/tasks-core/core";
  *   is recoverable by a human; dropping work we cannot account for is not.
  * - **The standing is git-measured, so it cannot lag behind a background job.**
  *   This guard used to live in `tasks-core` and read the `pushes` ledger, where
- *   an empty result was taken as proof that nothing was pushed. That ledger is
- *   written by the `tasks.push-ingest` job; when the job lags, the table is
- *   empty for work already merged into `main`, and an agent that pushed and then
- *   exited cleanly had its task dropped with no UI involved.
+ *   an empty result was taken as proof that nothing was pushed. That ledger was
+ *   written by a background job, and while the job lagged the table was empty for
+ *   work already merged into `main` — so an agent that pushed and then exited
+ *   cleanly had its task dropped with no UI involved. (The ledger is a git-derived
+ *   projection now, but its emptiness still is not evidence: it records only what
+ *   landed, and only commits that carry a trailer.)
  * - **`standingOf` is a discriminated value, not a count.** There is no array
  *   here whose emptiness could be misread, and the drop is reachable only from a
  *   measured `"none"`.

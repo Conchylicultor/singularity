@@ -212,8 +212,8 @@ async function getCurrentBranch(): Promise<string> {
 }
 
 // Self-heal `core.hooksPath`. `.githooks/prepare-commit-msg` is how each
-// commit gets its Singularity-Conversation trailer, which in turn is how
-// push-watcher attributes commits back to the originating task;
+// commit gets its Singularity-Conversation trailer, which in turn is how the
+// pushes ledger attributes commits back to the originating task;
 // `.githooks/post-rewrite` is what normalizes generated artifacts after a
 // manual rebase. Drift here is silent in both cases — orphaned pushes, or a
 // checkout carrying main's registry — so check on every build and reset to the

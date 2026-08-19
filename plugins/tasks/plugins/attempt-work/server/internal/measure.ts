@@ -17,7 +17,12 @@ import {
 } from "@plugins/primitives/plugins/commit-list/server";
 import { lastKnownMainSha } from "@plugins/infra/plugins/git-watcher/server";
 import type { AttemptPending } from "../../core/protocol";
-import { TRAILER_LOG_FORMAT, parseTrailerLog } from "../../core/trailers";
+// The trailer grammar lives with the `pushes` table it fills, so the ledger's
+// own projection and this git-measured landed set read one definition.
+import {
+  TRAILER_LOG_FORMAT,
+  parseTrailerLog,
+} from "@plugins/tasks/plugins/tasks-core/core";
 
 const MAIN = "main";
 

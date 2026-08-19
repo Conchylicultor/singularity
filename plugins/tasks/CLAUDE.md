@@ -5,17 +5,24 @@
 ## Plugin reference
 
 - Description: Nested tasks with attempts linking to conversations. Nested tasks with attempts linking to conversations.
+- Web:
+  - Uses:
+    - `infra/endpoints.fetchEndpoint`
+    - `primitives/live-state.useResource`
+  - Exports (types):
+    - `AutoStartModel`
+    - `TaskPatch`
+  - Exports (values):
+    - `patchTask`
+    - `setAutoStart`
+    - `useTask`
 - Server:
-  - Contributes: `trigger` "tasks.push-ingest"
   - Uses:
     - `conversations.maybeLaunchTaskJob`
     - `database.db`
     - `infra/attachments.getAttachment`
     - `infra/endpoints.HttpError`
     - `infra/endpoints.implement`
-    - `infra/events.Trigger`
-    - `infra/git-watcher.refAdvanced`
-    - `infra/jobs.defineJob`
     - `infra/mcp.Mcp`
     - `infra/paths.GIT`
     - `infra/warmup.defineWarmup`
@@ -37,11 +44,8 @@
     - `tasks/tasks-core.getConversation`
     - `tasks/tasks-core.getTask`
     - `tasks/tasks-core.getTaskDependencyIds`
-    - `tasks/tasks-core.insertPush`
     - `tasks/tasks-core.isDescendant`
-    - `tasks/tasks-core.listAttempts`
     - `tasks/tasks-core.listDependentIds`
-    - `tasks/tasks-core.listPushShasIn`
     - `tasks/tasks-core.listTasks`
     - `tasks/tasks-core.removeTaskDependency`
     - `tasks/tasks-core.taskAttachments`
@@ -51,8 +55,6 @@
   - Exports (values): `armTaskAutoStart`
   - Register:
     - `mcpTool('add_task')`
-    - `defineJob('tasks.push-ingest')`
-    - `defineWarmup('tasks.push-reconcile')`
     - `defineWarmup('tasks.auto-start-reconcile')`
   - Routes:
     - `GET /api/tasks`
@@ -68,17 +70,6 @@
     - `DELETE /api/tasks/:id/dependencies/:depId`
     - `POST /api/tasks/:id/deps-move`
     - `GET /api/repo-info`
-- Web:
-  - Uses:
-    - `infra/endpoints.fetchEndpoint`
-    - `primitives/live-state.useResource`
-  - Exports (types):
-    - `AutoStartModel`
-    - `TaskPatch`
-  - Exports (values):
-    - `patchTask`
-    - `setAutoStart`
-    - `useTask`
 - Core:
   - Uses:
     - `conversations/model-provider.ConversationModelSchema`

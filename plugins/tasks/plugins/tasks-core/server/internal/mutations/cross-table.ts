@@ -21,10 +21,10 @@ import path from "path";
 //
 // The other half — "does this attempt have work at stake?" — deliberately does
 // NOT live here. It used to: this function read `listPushesForAttempt` and
-// treated an empty result as proof that nothing was pushed, which is false
-// whenever the `tasks.push-ingest` job lags (observed 40+ minutes behind a
-// wedged queue). An agent that pushed and then exited cleanly got its task
-// dropped. That fact is now git-measured by `tasks/attempt-work`, and the whole
+// treated an empty result as proof that nothing was pushed, which was false
+// whenever the ledger's background ingest lagged (observed 40+ minutes behind a
+// wedged queue) and is still false for an attempt whose commits are not pushed
+// yet. An agent that pushed and then exited cleanly got its task dropped. That fact is now git-measured by `tasks/attempt-work`, and the whole
 // policy lives in the plugin named for it, `conversation-view/drop-and-exit`,
 // as `dropTaskOnExit` — the only thing callers should reach for. tasks-core has
 // no business guessing at an attempt's standing, and an honest name here cannot

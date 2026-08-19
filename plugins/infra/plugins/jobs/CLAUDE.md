@@ -212,7 +212,6 @@ replay; a plain `Error` remains the right choice for anything retry could fix.
     - `page/links`
     - `shell/notifications`
     - `stats/cost`
-    - `tasks`
     - `tasks/auto-start`
     - `tasks/task-title`
 

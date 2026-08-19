@@ -13,13 +13,23 @@ so there is no cycle.
 
 ## Why not the `pushes` table
 
-The `pushes` table is an **event ledger**, written by the `tasks.push-ingest` job
-reacting to `git.refAdvanced`. When that job lags — it has been observed 40+
-minutes behind a wedged queue — the table is empty for work that is fully merged
-into `main`. So `pushes.length === 0` conflated two different facts: *"nothing was
+The `pushes` table was an **event ledger**, written by a `tasks.push-ingest` job
+reacting to `git.refAdvanced`. When that job lagged — it was observed 40+ minutes
+behind a wedged queue — the table was empty for work that is fully merged into
+`main`. So `pushes.length === 0` conflated two different facts: *"nothing was
 pushed"* and *"nothing has been ingested yet"*. Read as the former, it offered
 **Drop & Close** over landed work, and `maybeDropTaskOnExit` actually performed the
 drop.
+
+That lag is now closed at the source: the ledger is a projection of `main`,
+re-derived in-process on every ref advance and guaranteed on read (I5,
+`tasks/tasks-core/CLAUDE.md`,
+`research/2026-08-18-global-push-ledger-git-projection.md`). **This plugin still
+does not read it as an authority**, and the reason is no longer freshness — it is
+that the ledger answers a different question. It records what LANDED; the standing
+also has to account for commits that have not been pushed yet (D2), which no row
+in that table will ever describe. A complete ledger also still cannot see a commit
+that carries no trailer. So I3 below stands unchanged.
 
 Git has no such lag. Every commit that lands via `./singularity push` carries
 `Singularity-Conversation: <convId>` and `Singularity-Push: <uuid>`, and the
@@ -82,11 +92,12 @@ Everything that could make the standing merely *unknown* is kept out of that arm
 
 - `core/protocol.ts` — the wire payload (`AttemptWork`, wrapped in `Resolvable`).
 - `core/standing.ts` — `standingOf`, the decision layer.
-- `core/trailers.ts` — the reader half of the trailer grammar (key names, the
-  `git log --format=` fragment, `parseTrailerLog`), shared with the ledger's own
-  ingest in `tasks/server/internal/push-watcher.ts` so the format string and its
-  parse have one home. The writer half (the shell hook, the push CLI) keeps its
-  literals, bound to these readers by the `conversation-trailer` check.
+- The reader half of the trailer grammar (key names, the `git log --format=`
+  fragment, `parseTrailerLog`) lives in `tasks-core/core`, with the `pushes` table
+  it fills, and is imported from there — so the format string, its parse, and the
+  ledger's own projection have one home. The writer half (the shell hook, the push
+  CLI) keeps its literals, bound to these readers by the `conversation-trailer`
+  check.
 - `server/internal/measure.ts` — the git reads, deliberately **DB-free** so
   `measure.test.ts` can reproduce each behaviour against a throwaway repo with no
   database and no plugin runtime. `commits-graph` shares these helpers rather than
@@ -150,17 +161,12 @@ Everything that could make the standing merely *unknown* is kept out of that arm
     - `AttemptWork`
     - `AttemptWorkPayload`
     - `Standing`
-    - `TrailerCommit`
   - Exports (values):
     - `AttemptPendingSchema`
     - `AttemptWorkPayloadSchema`
     - `attemptWorkResource`
     - `AttemptWorkSchema`
-    - `CONVERSATION_TRAILER_KEY`
-    - `parseTrailerLog`
-    - `PUSH_TRAILER_KEY`
     - `standingOf`
-    - `TRAILER_LOG_FORMAT`
 - Cross-plugin:
   - Imported by:
     - `conversations/conversation-view/commits-graph`

@@ -15985,7 +15985,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `page/editor`
           - `page/inline-date`
           - `page/links`
-          - `tasks`
           - `tasks/auto-start`
           - `tasks/task-title`
           - `tasks/tasks-core`
@@ -16119,6 +16118,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `plugin-meta/plugin-tree`
           - `review/plugin-changes`
           - `tasks/attempt-work`
+          - `tasks/tasks-core`
       - Server:
         - Exports (types):
           - `GitStateMemo`
@@ -16126,7 +16126,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports (values):
           - `createGitStateMemo`
           - `createSignedMemo`
-    - **`git-watcher`** — Watches local git refs (refs/heads/main plus the current worktree's own branch) via @parcel/watcher. Emits the git.refAdvanced trigger event (main only) and notifies the refHeadResource live-state resource on every advance.
+    - **`git-watcher`** — Watches local git refs (refs/heads/main plus the current worktree's own branch) via @parcel/watcher. On every advance it notifies the refHeadResource live-state resource, runs the registered in-process ref reactions (every backend, nothing queued in between), and emits the durable git.refAdvanced trigger event (main only).
       - Server:
         - Contributes: `resource.declare` "git-watcher.refHead"
         - Uses:
@@ -16143,8 +16143,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports (types):
           - `RefAdvancedPayload`
           - `RefHead`
+          - `RefReactionSpec`
         - Exports (values):
           - `_refAdvancedTriggers`
+          - `defineRefReaction`
           - `lastKnownMainSha`
           - `refAdvanced`
           - `refHeadResource`
@@ -16156,8 +16158,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `build`
           - `conversations/conversation-view/commits-graph`
           - `review/plugin-changes`
-          - `tasks`
           - `tasks/attempt-work`
+          - `tasks/tasks-core`
     - **`health`** — Surfaces server restarts as a toast; exposes /api/health helpers. Liveness endpoint used by clients to detect server restarts.
       - Web:
         - Contributes:
@@ -16258,6 +16260,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `plugin-meta/plugin-tree`
           - `review/plugin-changes`
           - `tasks/attempt-work`
+          - `tasks/tasks-core`
     - **`html-decode`** — Decode HTML character references in raw markup source: decodeHtmlText for text, readHtmlAttr for an HTMLRewriter attribute read. Bun's HTMLRewriter decodes nothing, so every scraped value needs decoding exactly once.
       - Cross-plugin:
         - Imported by: `apps/prototypes/files`
@@ -16388,7 +16391,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `page/links`
           - `shell/notifications`
           - `stats/cost`
-          - `tasks`
           - `tasks/auto-start`
           - `tasks/task-title`
     - **`launcher`**
@@ -20348,6 +20350,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `infra/git-watcher`
           - `review/plugin-changes`
           - `tasks/attempt-work`
+          - `tasks/tasks-core`
       - Core:
         - Exports (types): `CommitRow`
         - Exports (values): `CommitRowSchema`
@@ -28602,17 +28605,24 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `getTasksDaily`
 
 - **`tasks`** — Nested tasks with attempts linking to conversations. Nested tasks with attempts linking to conversations.
+  - Web:
+    - Uses:
+      - `infra/endpoints.fetchEndpoint`
+      - `primitives/live-state.useResource`
+    - Exports (types):
+      - `AutoStartModel`
+      - `TaskPatch`
+    - Exports (values):
+      - `patchTask`
+      - `setAutoStart`
+      - `useTask`
   - Server:
-    - Contributes: `trigger` "tasks.push-ingest"
     - Uses:
       - `conversations.maybeLaunchTaskJob`
       - `database.db`
       - `infra/attachments.getAttachment`
       - `infra/endpoints.HttpError`
       - `infra/endpoints.implement`
-      - `infra/events.Trigger`
-      - `infra/git-watcher.refAdvanced`
-      - `infra/jobs.defineJob`
       - `infra/mcp.Mcp`
       - `infra/paths.GIT`
       - `infra/warmup.defineWarmup`
@@ -28634,11 +28644,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `tasks/tasks-core.getConversation`
       - `tasks/tasks-core.getTask`
       - `tasks/tasks-core.getTaskDependencyIds`
-      - `tasks/tasks-core.insertPush`
       - `tasks/tasks-core.isDescendant`
-      - `tasks/tasks-core.listAttempts`
       - `tasks/tasks-core.listDependentIds`
-      - `tasks/tasks-core.listPushShasIn`
       - `tasks/tasks-core.listTasks`
       - `tasks/tasks-core.removeTaskDependency`
       - `tasks/tasks-core.taskAttachments`
@@ -28648,8 +28655,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Exports (values): `armTaskAutoStart`
     - Register:
       - `mcpTool('add_task')`
-      - `defineJob('tasks.push-ingest')`
-      - `defineWarmup('tasks.push-reconcile')`
       - `defineWarmup('tasks.auto-start-reconcile')`
     - Routes:
       - `GET /api/tasks`
@@ -28665,17 +28670,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `DELETE /api/tasks/:id/dependencies/:depId`
       - `POST /api/tasks/:id/deps-move`
       - `GET /api/repo-info`
-  - Web:
-    - Uses:
-      - `infra/endpoints.fetchEndpoint`
-      - `primitives/live-state.useResource`
-    - Exports (types):
-      - `AutoStartModel`
-      - `TaskPatch`
-    - Exports (values):
-      - `patchTask`
-      - `setAutoStart`
-      - `useTask`
   - Core:
     - Uses:
       - `conversations/model-provider.ConversationModelSchema`
@@ -28829,17 +28823,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `AttemptWork`
           - `AttemptWorkPayload`
           - `Standing`
-          - `TrailerCommit`
         - Exports (values):
           - `AttemptPendingSchema`
           - `AttemptWorkPayloadSchema`
           - `attemptWorkResource`
           - `AttemptWorkSchema`
-          - `CONVERSATION_TRAILER_KEY`
-          - `parseTrailerLog`
-          - `PUSH_TRAILER_KEY`
           - `standingOf`
-          - `TRAILER_LOG_FORMAT`
       - Cross-plugin:
         - Imported by:
           - `conversations/conversation-view/commits-graph`
@@ -29493,11 +29482,16 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `infra/entities.defaultNow`
           - `infra/entities.defineEntity`
           - `infra/events.defineTriggerEvent`
+          - `infra/git-read-cache.createSignedMemo`
+          - `infra/git-watcher.defineRefReaction`
+          - `infra/git-watcher.lastKnownMainSha`
+          - `infra/host-read-pool.withHeavyReadSlot`
           - `infra/query-resource.compileEdges`
           - `infra/query-resource.queryResource`
           - `infra/query-resource.rel`
           - `infra/worktree.ensureMainWorktreeRoot`
           - `infra/worktree.isCanonicalWorktreePath`
+          - `primitives/commit-list.runGit`
           - `primitives/rank.nextRankUnder`
           - `primitives/rank.RankExecutor`
         - DB schema:
@@ -29559,12 +29553,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `deleteConversationRow`
           - `dropTaskIfNoActiveSibling`
           - `dropTaskTree`
+          - `ensurePushLedgerFresh`
           - `findNextRankInFolder`
           - `getAttempt`
           - `getConversation`
           - `getConversationClaudeSessionId`
           - `getConversationRuntime`
-          - `getLatestPush`
           - `getTask`
           - `getTaskDependencyIds`
           - `hasBlockingDep`
@@ -29586,7 +29580,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `listPushes`
           - `listPushesByPushId`
           - `listPushesForAttempt`
-          - `listPushShasIn`
           - `listRetainedConversations`
           - `listTasks`
           - `markConversationClosed`
@@ -29619,6 +29612,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `defineTriggerEvent('pushes.landed')`
           - `defineTriggerEvent('tasks.statusChanged')`
           - `defineTriggerEvent('conversation.statusChanged')`
+          - `defineRefReaction('tasks.push-ledger (refs/heads/main)')`
         - Resources:
           - `attempts` (keyed)
           - `conversations-active` (keyed)
@@ -29658,6 +29652,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `TaskListItem`
           - `TaskNode`
           - `TaskStatus`
+          - `TrailerCommit`
         - Exports (values):
           - `AttemptSchema`
           - `attemptsResource`
@@ -29665,6 +29660,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `AttemptWithConversationsSchema`
           - `BLOCKED_STATUSES`
           - `buildTaskPrompt`
+          - `CONVERSATION_TRAILER_KEY`
           - `ConversationKindSchema`
           - `conversationsActiveResource`
           - `ConversationSchema`
@@ -29675,6 +29671,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `ConversationSummarySchema`
           - `isBlockedStatus`
           - `isSettled`
+          - `parseTrailerLog`
+          - `PUSH_TRAILER_KEY`
           - `pushesByAttemptResource`
           - `pushesResource`
           - `PushSchema`
@@ -29688,6 +29686,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `tasksResource`
           - `tasksRootRoute`
           - `TaskStatusSchema`
+          - `TRAILER_LOG_FORMAT`
       - Cross-plugin:
         - Imported by:
           - `active-data`

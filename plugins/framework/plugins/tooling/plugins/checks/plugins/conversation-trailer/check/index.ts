@@ -23,7 +23,9 @@ async function currentBranch(): Promise<string> {
   return stdout;
 }
 
-async function commitsAheadOfMain(): Promise<{ sha: string; trailer: string }[]> {
+async function commitsAheadOfMain(): Promise<
+  { sha: string; trailer: string }[]
+> {
   const { stdout, exitCode } = await run([
     "git",
     "log",
@@ -69,7 +71,7 @@ const check: Check = {
         message:
           `${missing.length} commit(s) ahead of main lack a Singularity-Conversation trailer:\n${list}\n` +
           `The prepare-commit-msg hook did not fire for these commits (env missing at commit time, or committed from outside the pane). ` +
-          `Without the trailer, push-watcher cannot attribute the push and the task will stay 'attempted'.`,
+          `Without the trailer, the pushes ledger cannot attribute the push and the task will stay 'attempted'.`,
         hint: STOP_MESSAGE,
       };
     }
@@ -83,8 +85,7 @@ const check: Check = {
         .join("\n");
       return {
         ok: false,
-        message:
-          `${mismatched.length} commit(s) carry a Singularity-Conversation trailer that does not match this pane (SINGULARITY_CONVERSATION_ID=${envId}):\n${list}`,
+        message: `${mismatched.length} commit(s) carry a Singularity-Conversation trailer that does not match this pane (SINGULARITY_CONVERSATION_ID=${envId}):\n${list}`,
         hint:
           "If the commit was created by another conversation sharing this worktree, " +
           "you can safely uncommit (git reset HEAD~1) while keeping the changes, " +

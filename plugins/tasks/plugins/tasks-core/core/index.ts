@@ -18,6 +18,16 @@ export type {
   Conversation,
   ConversationKind,
 } from "./internal/schema";
+// The reader half of the commit-trailer grammar. Lives with the `pushes` table
+// it fills; `attempt-work` reads it from here. See ./internal/trailers.ts.
+export {
+  CONVERSATION_TRAILER_KEY,
+  PUSH_TRAILER_KEY,
+  TRAILER_LOG_FORMAT,
+  parseTrailerLog,
+} from "./internal/trailers";
+export type { TrailerCommit } from "./internal/trailers";
+
 export { ConversationStatusSchema } from "./conversation-status";
 export type { ConversationStatus } from "./conversation-status";
 export {

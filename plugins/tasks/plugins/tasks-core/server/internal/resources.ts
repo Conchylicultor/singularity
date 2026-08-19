@@ -134,11 +134,13 @@ export const conversationsGoneStatsResource = defineResource(
 // param-less: its `map` was value-aware. It no longer subscribes — its landed set
 // is measured from git via `tasks/attempt-work` rather than read off this ledger
 // (research/2026-08-17-global-attempt-work-git-derived-standing.md) — so the only
-// remaining consumer is the attempts edge. Note what that means and is a known
-// gap: an attempt's DERIVED STATUS still comes from `attempt_push_agg`, so a
-// stalled `tasks.push-ingest` still leaves landed work looking unfinished. That
-// is non-destructive and self-heals when ingest catches up; the destructive
-// decisions no longer read this table at all.
+// remaining consumer is the attempts edge.
+//
+// An attempt's DERIVED STATUS still comes from `attempt_push_agg`, and that is
+// now sound rather than a known gap: `pushes` is a projection of `main` (I5, see
+// ../push-ledger/), re-derived in-process the instant the ref advances and
+// guaranteed on read, so `attempts_v.status` no longer depends on a background
+// job's liveness.
 export const pushesResource = defineResource(pushesDescriptor, {
   mode: "push",
   loader: async () => db.select().from(pushes).orderBy(desc(pushes.createdAt)),

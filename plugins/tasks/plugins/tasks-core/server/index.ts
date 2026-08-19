@@ -21,6 +21,8 @@ import {
   conversationStatusChanged,
 } from "./internal/tables-events";
 import { sweepOrphanedAttempts } from "./internal/sweep-orphaned-attempts";
+import { pushLedgerReaction } from "./internal/push-ledger/reaction";
+import { ensurePushLedgerFresh } from "./internal/push-ledger/freshness";
 
 // Per-domain attachment link handles (FK cascade on owner deletion). In their
 // own file so they don't leak server-only imports into tasks-core/shared.
@@ -114,13 +116,15 @@ export {
   RECENT_GONE_LIMIT,
 } from "./internal/queries/conversations";
 
+// Only the accessors that guarantee a ledger covering `main` before they read.
+// The projection's own ungated reads stay internal by construction — see
+// ./internal/push-ledger/raw-reads.ts.
 export {
   listPushes,
   listPushesForAttempt,
   listPushesByPushId,
-  getLatestPush,
-  listPushShasIn,
 } from "./internal/queries/pushes";
+export { ensurePushLedgerFresh } from "./internal/push-ledger/freshness";
 
 // Mutation functions — writes (live-state invalidation is DB-feed-driven)
 export {
@@ -233,6 +237,18 @@ export default {
       identityTable: "tasks",
     }),
   ],
-  register: [pushLanded, taskStatusChanged, conversationStatusChanged],
-  onReady: sweepOrphanedAttempts,
+  register: [
+    pushLanded,
+    taskStatusChanged,
+    conversationStatusChanged,
+    pushLedgerReaction,
+  ],
+  onReady: async () => {
+    // The ledger's boot catch-up: whatever landed on `main` while this backend
+    // was down. `onReady` and not a warm-up, because a warm-up is contractually
+    // an OPTIMIZATION the executor may skip — and this is the cold half of a
+    // correctness guarantee. Bounded by the ledger's own high-water mark, so a
+    // steady-state boot walks a day of commits and inserts nothing.
+    await Promise.all([sweepOrphanedAttempts(), ensurePushLedgerFresh()]);
+  },
 } satisfies ServerPluginDefinition;

@@ -145,7 +145,6 @@ queue-health); only the wasted retry churn is removed.
     - `page/editor`
     - `page/inline-date`
     - `page/links`
-    - `tasks`
     - `tasks/auto-start`
     - `tasks/task-title`
     - `tasks/tasks-core`

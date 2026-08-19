@@ -41,6 +41,7 @@
     - `infra/git-watcher`
     - `review/plugin-changes`
     - `tasks/attempt-work`
+    - `tasks/tasks-core`
 - Core:
   - Exports (types): `CommitRow`
   - Exports (values): `CommitRowSchema`
