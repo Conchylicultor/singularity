@@ -1,12 +1,11 @@
-// `core/` here means RUNTIME-NEUTRAL NODE, not web-safe: `ensureChromium`
-// reaches `node:fs` / `node:child_process`. This plugin must NEVER be imported
-// from `web/`.
+// `core/` here is pure: it reaches no node builtin and no browser global, so a
+// consumer that only wants the mitigation predicate pays nothing for it.
 //
-// Nothing in this barrel imports `playwright` at module eval — the one function
-// that needs it loads it lazily — so a consumer that only wants the mitigation
-// predicate does not pay ~3 s of Playwright module evaluation at backend boot.
+// Nothing here imports `playwright` — not even lazily. The chromium binary is
+// provisioned at INSTALL time (`../provision`), never from a runtime path, so
+// the function that downloads it is not reachable from `web/`, `server/` or
+// `core/` at all; `boundary-config.ts` enforces that.
 
-export { ensureChromium } from "./internal/ensure-chromium";
 export { detectBotMitigation } from "./internal/bot-mitigation";
 export type {
   BotMitigation,

@@ -32,6 +32,25 @@ export default defineBoundaries({
     // pgbouncer writing into the embedded cluster's dir — import the single
     // declaration rather than each joining the root).
     "data-dirs": ["data-dirs", "core"],
+    // provision/ — install-time provisioning steps (postinstall). A step may
+    // read `core` and other plugins' `provision` barrels; NOTHING may read a
+    // `provision` barrel back, because provisioning DOWNLOADS AND INSTALLS —
+    // work no request path may ever start. That is not hypothetical: the
+    // chromium installer used to sit in `browser-fetch/core`, and a thumbnail
+    // render called it, so a missing binary blocked a backend's event loop for
+    // a ~150 MB download (see that plugin's `provision/index.ts`).
+    //
+    // Listing it here does a second thing: `checkRuntime` returns true when the
+    // source runtime is null, and every `provision/` file resolved to null
+    // before this row — so a provisioning step could import `@plugins/x/web`
+    // and nothing would say a word. Now it is policed in both directions.
+    //
+    // `runtimeNames` derives from these keys, so `@plugins/<p>/provision` also
+    // becomes a legal cross-plugin barrel (plugin-boundaries R4) — which is how
+    // two plugins share ONE installer instead of copying it. Its R6 DAG edges
+    // are tagged `provision` and fall outside the web/server/central cycle
+    // graphs; a provisioning graph is a handful of leaf steps, not a lattice.
+    provision: ["provision", "core"],
     // e2e/ — Playwright scripts that drive the deployed app from OUTSIDE it.
     // They may use other plugins' `core` types and other plugins' `e2e` flow
     // helpers (the shared harness, the "open a blank Pages doc" flow), and are

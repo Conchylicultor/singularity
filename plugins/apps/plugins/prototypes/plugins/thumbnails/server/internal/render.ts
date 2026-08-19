@@ -1,6 +1,5 @@
 import { pathToFileURL } from "node:url";
 import type { Browser } from "playwright";
-import { ensureChromium } from "@plugins/infra/plugins/safe-fetch/plugins/browser-fetch/core";
 import { prototypesDir } from "@plugins/apps/plugins/prototypes/plugins/files/server";
 import type { PrototypeMeta } from "@plugins/apps/plugins/prototypes/plugins/files/core";
 import { classifyRenderOutcome } from "./decide";
@@ -156,11 +155,18 @@ async function closeBrowser(browser: Browser, name: string): Promise<void> {
  * Every `await` below is bounded. That is not tidiness — this runs inside a job
  * handler, and an unbounded wait there holds a worker slot for as long as it
  * lasts.
+ *
+ * It also never PROVISIONS. This used to open with `ensureChromium()`, which
+ * downloaded the binary synchronously when it was missing — blocking the whole
+ * backend's event loop for ~150 MB — and, being an unbounded
+ * `await import("playwright")` of its own, ran ahead of `loadPlaywright()` so
+ * that function's 30 s bound never armed. A missing binary is now what it
+ * always was for `browserFetch`: an operator problem, reported as
+ * `browser-unavailable` with the one command that fixes it.
  */
 export async function renderThumbnail(
   meta: PrototypeMeta,
 ): Promise<Uint8Array> {
-  await ensureChromium();
   const { chromium } = await loadPlaywright();
 
   let browser: Browser | undefined;
@@ -182,7 +188,8 @@ export async function renderThumbnail(
   } catch (err) {
     throw new ThumbnailRenderError(
       "browser-unavailable",
-      `could not launch chromium: ${String(err)}`,
+      `could not launch chromium — run \`bunx playwright install chromium\` ` +
+        `to provision it: ${String(err)}`,
       { cause: err },
     );
   }

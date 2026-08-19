@@ -1,15 +1,16 @@
 /**
  * Install-time provisioning: the chromium binary the `e2e/` scripts launch.
  *
- * The implementation moved to `browser-fetch`'s `core` (`ensureChromium`) when a
- * *backend* gained a runtime need for the same binary. A backend's correctness
- * must not silently depend on a tooling plugin's install step, so the primitive
- * that needs chromium at runtime owns the provisioning and this harness calls
- * the same function. The runner is idempotent, so the second contribution is a
- * single `existsSync` in steady state.
+ * The implementation lives in `browser-fetch`'s `provision/`
+ * (`provisionChromium`) — a *backend* has a runtime need for the same binary,
+ * and a backend's correctness must not silently depend on a tooling plugin's
+ * install step, so the primitive that needs chromium at runtime owns the
+ * provisioning and this harness calls the same function. The check is
+ * idempotent, so the second contribution is a single `existsSync` in steady
+ * state. See that file for why the installer is install-time-only.
  */
-import { ensureChromium } from "@plugins/infra/plugins/safe-fetch/plugins/browser-fetch/core";
+import { provisionChromium } from "@plugins/infra/plugins/safe-fetch/plugins/browser-fetch/provision";
 
 export default async function provision(): Promise<void> {
-  await ensureChromium();
+  await provisionChromium();
 }

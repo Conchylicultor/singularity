@@ -24,6 +24,14 @@ import { ESLintUtils, type TSESTree } from "@typescript-eslint/utils";
  * need belongs in `core/`, and exempting types would leave the invariant
  * readable as "sometimes".
  *
+ * It also bans every runtime importing its own `provision/`. Provisioning
+ * downloads and installs — work no request path may ever start. `boundary-config`
+ * says the same thing for the cross-plugin case, but its evaluator short-circuits
+ * when source and target are the SAME plugin, so a plugin reaching into its own
+ * install step is exactly the edge only this rule can see. That is not
+ * hypothetical: the chromium installer sat in `browser-fetch/core` and a render
+ * path called it, blocking a backend's event loop on a ~150 MB download.
+ *
  * Scope is INTRA-plugin only. A cross-plugin `@plugins/other/server` import is a
  * different question, decided by the boundary config, and this rule ignores it.
  */
@@ -34,9 +42,10 @@ const createRule = ESLintUtils.RuleCreator(
 
 /** Which sibling runtime folders a given runtime folder may not import from. */
 const FORBIDDEN: Record<string, ReadonlySet<string>> = {
-  web: new Set(["server"]),
-  core: new Set(["server"]),
-  server: new Set(["web"]),
+  web: new Set(["server", "provision"]),
+  core: new Set(["server", "provision"]),
+  server: new Set(["web", "provision"]),
+  central: new Set(["web", "provision"]),
 };
 
 /** Normalize a path to `/` separators (the rule reasons in posix segments). */
@@ -113,7 +122,9 @@ export default createRule({
     docs: {
       description:
         "Disallow a plugin's web/ or core/ importing its own server/ (and server/ " +
-        "importing its own web/) — the cross-runtime channels are core/ and shared/.",
+        "importing its own web/) — the cross-runtime channels are core/ and shared/ — " +
+        "and disallow any runtime importing its own provision/, which is install-time " +
+        "only.",
     },
     schema: [],
     messages: {
@@ -124,6 +135,12 @@ export default createRule({
         "that never hashed it, so the artifact fossilised. Move the symbol to `core/` " +
         "(public) or `shared/` (plugin-private). Type-only imports included: a type both " +
         "runtimes need belongs in core/.",
+      provisionEdge:
+        '`{{from}}/` must not import this plugin\'s own `provision/` (import "{{specifier}}"). ' +
+        "A provisioning step downloads and installs; it runs once at postinstall, with no " +
+        "backend alive. Calling one from a runtime is how a request path came to block a " +
+        "whole event loop on a ~150 MB browser download. If the binary or asset is missing " +
+        "at runtime, FAIL and name the command that provisions it.",
     },
   },
   defaultOptions: [],
@@ -139,7 +156,7 @@ export default createRule({
       if (folder === null || !forbidden.has(folder)) return;
       context.report({
         node,
-        messageId: "crossRuntime",
+        messageId: folder === "provision" ? "provisionEdge" : "crossRuntime",
         data: { from: source.folder, to: folder, specifier },
       });
     };

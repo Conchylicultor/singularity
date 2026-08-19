@@ -56,8 +56,15 @@ dependency**. Do not "fix" this by adding one.
 
 **Playwright is imported dynamically and memoized.** Its module evaluation costs
 seconds, which a backend must never pay at boot just because something in its
-graph *can* start a browser. `ensureChromium()` comes from `browser-fetch/core`,
-already provisioned at install — add no provisioning step here.
+graph *can* start a browser.
+
+**A render never provisions.** The chromium binary is installed at *install*
+time, by `browser-fetch`'s `provision/` step — add no provisioning step here,
+and never call one from this path. It was called from here once
+(`ensureChromium()`, then in `browser-fetch/core`), and a missing binary meant
+this backend downloading ~150 MB with the event loop blocked, ahead of every
+bound in `render.ts`. A binary missing at render time is an operator problem:
+fail `browser-unavailable`, naming `bunx playwright install chromium`.
 
 ## Never cache a lie
 

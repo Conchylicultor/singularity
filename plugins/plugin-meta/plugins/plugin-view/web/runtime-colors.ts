@@ -23,5 +23,6 @@ export const RUNTIME_COLORS: Record<ExportRuntime, string> = {
   core: "bg-categorical-3/10 text-categorical-3",
   shared: "bg-categorical-9/10 text-categorical-9",
   e2e: "bg-categorical-7/10 text-categorical-7",
+  provision: "bg-categorical-6/10 text-categorical-6",
   "data-dirs": "bg-categorical-4/10 text-categorical-4",
 };

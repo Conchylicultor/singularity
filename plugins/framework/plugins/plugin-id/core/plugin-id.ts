@@ -23,7 +23,15 @@ export const pluginIdSegments = (id: PluginId): string[] => id.split(".");
  *  imports another's domain flow helpers) and it carries its own isolation policy
  *  — `e2e` may reach `core` and other `e2e` barrels, never `web`/`server`, since
  *  an end-to-end test drives the deployed app through the browser rather than
- *  importing the code under test. */
+ *  importing the code under test.
+ *
+ *  `provision` holds a plugin's install-time provisioning step (postinstall).
+ *  Same two reasons: its `provision/index.ts` is genuine cross-plugin API (the
+ *  e2e harness and `browser-fetch` share ONE chromium installer rather than
+ *  copying it), and it carries its own isolation policy — a provisioning step
+ *  may reach `core` and other `provision` barrels, and NOTHING may reach back
+ *  into it, because provisioning downloads and installs: work no request path
+ *  may ever start. */
 export const RUNTIME_FOLDERS = [
   "web",
   "server",
@@ -31,6 +39,7 @@ export const RUNTIME_FOLDERS = [
   "core",
   "shared",
   "e2e",
+  "provision",
   "data-dirs",
 ] as const;
 export type RuntimeFolder = (typeof RUNTIME_FOLDERS)[number];
@@ -53,6 +62,12 @@ const RUNTIME_FOLDER_DOCUMENTED: Record<RuntimeFolder, boolean> = {
   core: true,
   shared: true,
   e2e: false,
+  // `provision` is undocumented for the same reason as `e2e`: the barrel is
+  // real cross-plugin API, but only to other provisioning steps — no
+  // `web`/`server`/`core` caller may import it (that is the whole point), so
+  // its `Uses`/`Exports` facts would spend every agent's context on a surface
+  // none of them can depend on.
+  provision: false,
   // `data-dirs` holds a plugin's declarations of the directories it owns under
   // the singularity data root. Undocumented not because the facts are private —
   // the folder IS a legal cross-plugin barrel, so two plugins sharing one
