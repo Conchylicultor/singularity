@@ -12,6 +12,14 @@ The Prototypes app's two panes:
   `CoverSwatch` — the slug-tinted gradient — stays here as the stand-in the
   thumbnail falls back to before its picture exists, or when rendering it
   failed. This pane owns the stand-in; `thumbnails` owns the picture.
+
+  **Both resources are subscribed here, together** (`useCombinedResources` over
+  `prototypesResource` + `usePrototypeThumbnails()`), and the cards wait for
+  both. A resource primes over HTTP when its first subscriber mounts, so
+  subscribing to the thumbnails down inside a card would put that request
+  strictly after the list had painted — a guaranteed swatch-then-screenshot
+  swap on every load. Side by side they prime in parallel, and the cover is
+  right the first time it is painted.
 - **Detail pane** (`proto/:name`) — a Focus | Compare toggle over scaled live iframes.
   - **The pane header IS the action bar.** Every control in it (Focus/Compare,
     Improve, and the sibling `present` plugin's Present menu) is a contribution
@@ -60,6 +68,7 @@ they said before and is why every prototype looked alike.
     - `prototypeDetailPane.Actions` → `ImproveButton`
   - Uses:
     - `apps/prototypes/thumbnails.PrototypeThumbnail`
+    - `apps/prototypes/thumbnails.usePrototypeThumbnails`
     - `primitives/css/badge.Badge`
     - `primitives/css/column.Column`
     - `primitives/css/overlay.Overlay`

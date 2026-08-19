@@ -1,18 +1,10 @@
 import type { ReactNode } from "react";
 import { MdWarningAmber } from "react-icons/md";
-import {
-  matchResource,
-  useResource,
-} from "@plugins/primitives/plugins/live-state/web";
 import { Overlay } from "@plugins/primitives/plugins/css/plugins/overlay/web";
 import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { WithTooltip } from "@plugins/primitives/plugins/tooltip/web";
-import {
-  prototypeThumbnailsResource,
-  prototypeThumbnailUrl,
-  type ThumbnailState,
-} from "../../core";
+import { prototypeThumbnailUrl, type ThumbnailState } from "../../core";
 
 /**
  * A prototype's rendered preview, for use as a gallery card's cover.
@@ -27,26 +19,13 @@ import {
  * The `fallback` is the caller's art, not this plugin's: the gallery already
  * owns a cover for a prototype with no picture, and there is no reason for two
  * plugins to have an opinion about what that looks like.
+ *
+ * It takes the `state`, it does not fetch it — see `usePrototypeThumbnails`.
+ * A cover with no pending arm cannot paint a stand-in and then swap in a
+ * picture, so the flicker has nowhere left to live: by the time this renders,
+ * which of the three arms is true is already known.
  */
 export function PrototypeThumbnail({
-  name,
-  fallback,
-}: {
-  name: string;
-  fallback: ReactNode;
-}) {
-  const result = useResource(prototypeThumbnailsResource);
-
-  return matchResource(result, {
-    pending: () => <>{fallback}</>,
-    error: () => <>{fallback}</>,
-    ready: (states) => (
-      <ThumbnailCover state={states[name]} fallback={fallback} />
-    ),
-  });
-}
-
-function ThumbnailCover({
   state,
   fallback,
 }: {
@@ -58,6 +37,12 @@ function ThumbnailCover({
       <img
         src={prototypeThumbnailUrl(state.key)}
         alt=""
+        // The URL carries the content fingerprint and is served `immutable`, so
+        // a revisit is a cache hit. `sync` decoding is what turns that hit into
+        // the SAME frame as the card: left to decode asynchronously, an
+        // already-downloaded picture still lands a frame or two later, which on
+        // a grid of cards reads as the covers popping in one by one.
+        decoding="sync"
         className="h-full w-full object-cover"
       />
     );

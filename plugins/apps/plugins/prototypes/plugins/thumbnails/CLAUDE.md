@@ -100,11 +100,25 @@ short; if galleries get opened across many worktrees at once the fix is a
 
 ## The card
 
-`<PrototypeThumbnail name fallback />` renders the three arms. `fallback` is the
+`<PrototypeThumbnail state fallback />` renders the three arms. `fallback` is the
 **caller's** art (the gallery's `CoverSwatch`) — the gallery already owns what a
 prototype looks like without a picture. The failure marker sits in an
 `Overlay`'s `behind` slot, not `above`: `above` is click-through by design and
 would swallow the hover its tooltip needs.
+
+**The card takes the state; it never fetches it.** A resource primes over HTTP
+when its FIRST subscriber mounts, so a card that read the resource itself could
+only start that request after the list it belongs to had painted — every load
+showed the swatch for one round trip and then swapped in the picture, which is
+the flicker a user reads as "the thumbnails aren't cached" (they are: the URL is
+a content fingerprint served `immutable`). So the surface that owns the cards
+subscribes to both at once — `usePrototypeThumbnails()` beside the list, joined
+with `combineResources` — and the cover is right the first time it is painted.
+A card with no pending arm has nowhere to put a stand-in-then-swap.
+
+The `<img>` is `decoding="sync"`: a cache hit that decodes asynchronously still
+lands a frame or two later, which across a grid reads as the covers popping in
+one by one.
 
 Design: `research/2026-08-16-apps-prototype-gallery-thumbnails.md`.
 
@@ -129,10 +143,12 @@ Design: `research/2026-08-16-apps-prototype-gallery-thumbnails.md`.
     - `primitives/css/badge.Badge`
     - `primitives/css/overlay.Overlay`
     - `primitives/css/pin.Pin`
-    - `primitives/live-state.matchResource`
+    - `primitives/live-state.ResourceResult`
     - `primitives/live-state.useResource`
     - `primitives/tooltip.WithTooltip`
-  - Exports (values): `PrototypeThumbnail`
+  - Exports (values):
+    - `PrototypeThumbnail`
+    - `usePrototypeThumbnails`
 - Core:
   - Uses: `primitives/live-state.resourceDescriptor`
   - Exports (types):

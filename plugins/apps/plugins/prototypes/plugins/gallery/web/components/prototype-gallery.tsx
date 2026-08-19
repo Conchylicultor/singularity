@@ -6,6 +6,7 @@ import {
 } from "@plugins/primitives/plugins/data-view/web";
 import {
   matchResource,
+  useCombinedResources,
   useResource,
 } from "@plugins/primitives/plugins/live-state/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
@@ -16,13 +17,17 @@ import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
 import { LaunchAgentPopover } from "@plugins/primitives/plugins/launch/web";
 import { toast } from "@plugins/shell/plugins/notifications/web";
 import { PROTOTYPES_DIR_DISPLAY } from "@plugins/infra/plugins/paths/plugins/display/core";
+import type { ThumbnailState } from "@plugins/apps/plugins/prototypes/plugins/thumbnails/core";
 import { conversationRoute } from "@plugins/conversations/core";
 import { agentManagerApp } from "@plugins/apps/plugins/agent-manager/plugins/shell/core";
 import {
   prototypesResource,
   type PrototypeMeta,
 } from "@plugins/apps/plugins/prototypes/plugins/files/core";
-import { PrototypeThumbnail } from "@plugins/apps/plugins/prototypes/plugins/thumbnails/web";
+import {
+  PrototypeThumbnail,
+  usePrototypeThumbnails,
+} from "@plugins/apps/plugins/prototypes/plugins/thumbnails/web";
 import { prototypeDetailPane } from "../panes";
 
 const PROTOTYPES_VIEW = defineDataView("prototypes.gallery");
@@ -98,7 +103,17 @@ const NEW_PROTOTYPE_TEXT = [
  * launch-agent popover that fires a background agent to scaffold a new mock.
  */
 export function PrototypeGallery() {
-  const result = useResource(prototypesResource);
+  // Both subscriptions are taken HERE, side by side, and the cards wait for
+  // both. A resource primes over HTTP when its first subscriber mounts, so a
+  // card that subscribed to its own thumbnail could not start that request
+  // until the list had already painted — every load showed the stand-in swatch
+  // for one round trip and then swapped in the picture. Asking for both at once
+  // costs no extra wait (they prime in parallel) and the cover is right the
+  // first time it is painted.
+  const result = useCombinedResources({
+    prototypes: useResource(prototypesResource),
+    thumbnails: usePrototypeThumbnails(),
+  });
   const openPane = useOpenPane();
   const selectedName = prototypeDetailPane.useRouteEntry()?.params.name;
 
@@ -147,7 +162,11 @@ export function PrototypeGallery() {
     />
   );
 
-  const renderList = (rows: PrototypeMeta[], loading: boolean) => (
+  const renderList = (
+    rows: PrototypeMeta[],
+    thumbnails: Record<string, ThumbnailState>,
+    loading: boolean,
+  ) => (
     <DataView<PrototypeMeta>
       rows={rows}
       fields={fields}
@@ -173,7 +192,7 @@ export function PrototypeGallery() {
             kind: "node",
             node: (
               <PrototypeThumbnail
-                name={p.name}
+                state={thumbnails[p.name]}
                 fallback={<CoverSwatch meta={p} />}
               />
             ),
@@ -184,8 +203,9 @@ export function PrototypeGallery() {
   );
 
   return matchResource(result, {
-    pending: () => renderList([], true),
-    error: () => renderList([], true),
-    ready: (rows) => renderList(rows, false),
+    pending: () => renderList([], {}, true),
+    error: () => renderList([], {}, true),
+    ready: ({ prototypes, thumbnails }) =>
+      renderList(prototypes, thumbnails, false),
   });
 }

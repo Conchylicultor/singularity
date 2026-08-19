@@ -2553,6 +2553,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `prototypeDetailPane.Actions` → `ImproveButton`
             - Uses:
               - `apps/prototypes/thumbnails.PrototypeThumbnail`
+              - `apps/prototypes/thumbnails.usePrototypeThumbnails`
               - `primitives/css/badge.Badge`
               - `primitives/css/column.Column`
               - `primitives/css/overlay.Overlay`
@@ -2635,10 +2636,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/badge.Badge`
               - `primitives/css/overlay.Overlay`
               - `primitives/css/pin.Pin`
-              - `primitives/live-state.matchResource`
+              - `primitives/live-state.ResourceResult`
               - `primitives/live-state.useResource`
               - `primitives/tooltip.WithTooltip`
-            - Exports (values): `PrototypeThumbnail`
+            - Exports (values):
+              - `PrototypeThumbnail`
+              - `usePrototypeThumbnails`
           - Core:
             - Uses: `primitives/live-state.resourceDescriptor`
             - Exports (types):
