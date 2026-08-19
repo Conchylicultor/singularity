@@ -1,38 +1,17 @@
 import {
+  rampClass,
+  type SpaceStep,
+} from "@plugins/primitives/plugins/css/plugins/space-ramp/core";
+import {
   cn,
   SingleLineProvider,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import type React from "react";
 
-/**
- * The closed 8-step spacing ramp. Each step maps to a `gap-<step>` / `p-<step>`
- * `@utility` backed by the density token group's `--space-*` runtime vars, so
- * every gap/inset scales together with the active density preset. Pick a step,
- * never a raw `gap-2`/`p-3` — the `no-adhoc-spacing` lint rule enforces this
- * repo-wide.
- */
-export type SpaceStep = "none" | "2xs" | "xs" | "sm" | "md" | "lg" | "xl" | "2xl";
-
-const GAP_CLASS: Record<SpaceStep, string> = {
-  none: "gap-none",
-  "2xs": "gap-2xs",
-  xs: "gap-xs",
-  sm: "gap-sm",
-  md: "gap-md",
-  lg: "gap-lg",
-  xl: "gap-xl",
-  "2xl": "gap-2xl",
-};
-
 export type StackDirection = "col" | "row";
 export type StackAlign = "start" | "center" | "end" | "stretch" | "baseline";
 export type StackJustify =
-  | "start"
-  | "center"
-  | "end"
-  | "between"
-  | "around"
-  | "evenly";
+  "start" | "center" | "end" | "between" | "around" | "evenly";
 
 const ALIGN_CLASS: Record<StackAlign, string> = {
   start: "items-start",
@@ -109,7 +88,7 @@ export function Stack({
       className={cn(
         "flex",
         direction === "col" ? "flex-col" : "flex-row",
-        GAP_CLASS[gap],
+        rampClass("gap", gap),
         align && ALIGN_CLASS[align],
         justify && JUSTIFY_CLASS[justify],
         wrap && "flex-wrap",

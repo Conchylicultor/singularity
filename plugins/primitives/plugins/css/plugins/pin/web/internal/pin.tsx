@@ -1,4 +1,7 @@
-import type { SpaceStep } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import {
+  spaceLength,
+  type SpaceStep,
+} from "@plugins/primitives/plugins/css/plugins/space-ramp/core";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import {
   type InTreeLayer,
@@ -22,15 +25,13 @@ export type PinAnchor =
   | "center";
 
 /**
- * Resolve a `SpaceStep` inset distance to a CSS length, optionally negated for an
- * `outset` (the badge that overhangs its corner, `-top-1 -right-1`). The semantic
- * ramp has no inset utilities, so — like `sticky` — the distance is an inline
- * style reading the density `--space-*` var. `none` is a literal `0`.
+ * A `SpaceStep` inset distance, negated for an `outset` (the badge that overhangs
+ * its corner, `-top-1 -right-1`). The ramp declares no inset utilities, so — like
+ * `sticky` — the distance is an inline style reading the density `--space-*` var.
  */
 function edgeLength(step: SpaceStep, outset: boolean): string {
-  if (step === "none") return "0";
-  const v = `var(--space-${step})`;
-  return outset ? `calc(${v} * -1)` : v;
+  const v = spaceLength(step);
+  return outset && step !== "none" ? `calc(${v} * -1)` : v;
 }
 
 /**
@@ -69,7 +70,9 @@ function scrimDecor(to: PinAnchor, len: string): React.CSSProperties {
   };
   const gradients: string[] = [];
   if (to.includes("right")) {
-    gradients.push(`linear-gradient(to right, transparent, black ${SCRIM_FADE})`);
+    gradients.push(
+      `linear-gradient(to right, transparent, black ${SCRIM_FADE})`,
+    );
     style.paddingRight = len;
     style.paddingLeft = `calc(${len} + ${SCRIM_FADE})`;
   }

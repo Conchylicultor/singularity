@@ -528,6 +528,7 @@
  * @twmerge group sg-rail excludes: p px py pt pr pb pl
  * @twmerge group sg-rail-x excludes: px pr pl
  * @twmerge group sg-rail-y excludes: py pt pb */
+/* @ramp families: rail rail-x rail-y rail-owe */
 @utility rail-none { --rail-start: 0px;              --rail-end: 0px;              --rail-block-start: 0px;              --rail-block-end: 0px;              --rail-owed-start: 0px; --rail-owed-end: 0px; padding-block: var(--rail-block-start) var(--rail-block-end); padding-inline: var(--rail-start) var(--rail-end); } /* twmerge: sg-rail */
 @utility rail-2xs  { --rail-start: var(--space-2xs); --rail-end: var(--space-2xs); --rail-block-start: var(--space-2xs); --rail-block-end: var(--space-2xs); --rail-owed-start: 0px; --rail-owed-end: 0px; padding-block: var(--rail-block-start) var(--rail-block-end); padding-inline: var(--rail-start) var(--rail-end); } /* twmerge: sg-rail */
 @utility rail-xs   { --rail-start: var(--space-xs);  --rail-end: var(--space-xs);  --rail-block-start: var(--space-xs);  --rail-block-end: var(--space-xs);  --rail-owed-start: 0px; --rail-owed-end: 0px; padding-block: var(--rail-block-start) var(--rail-block-end); padding-inline: var(--rail-start) var(--rail-end); } /* twmerge: sg-rail */
@@ -951,7 +952,17 @@
  * `no-adhoc-spacing` lint rule (spacing plugin) bans raw gap-/p-/m-/space- numerics
  * so every spacing decision routes through these named steps. The generated
  * custom-utilities registry is derived from the per-utility `/* twmerge: … *\/`
- * markers below; the app-css-utilities-in-sync check guards the generated file. */
+ * markers below; the app-css-utilities-in-sync check guards the generated file.
+ *
+ * The steps themselves are declared ONCE, here, and every step-keyed family is
+ * declared beside its own utilities. `space-ramp-gen` reads both to generate
+ * primitives/css/space-ramp — the ramp's one TypeScript declaration, which every
+ * consumer (Stack, Inset, Column, railClass, Sticky, Pin) reads instead of
+ * re-spelling the steps or the class names. Every declared family must carry
+ * every declared step, so adding a step means adding its @utility to each family
+ * here; the space-ramp-in-sync check fails otherwise. */
+/* @ramp steps: none 2xs xs sm md lg xl 2xl */
+/* @ramp families: gap gap-x gap-y p px py pt pr pb pl */
 @utility gap-none { gap: 0; }                 /* twmerge: extend gap */
 @utility gap-2xs  { gap: var(--space-2xs); }  /* twmerge: extend gap */
 @utility gap-xs   { gap: var(--space-xs); }   /* twmerge: extend gap */

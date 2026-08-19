@@ -1,9 +1,7 @@
 import type { ComponentType, ReactNode } from "react";
 import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
-import {
-  Stack,
-  type SpaceStep,
-} from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { type SpaceStep } from "@plugins/primitives/plugins/css/plugins/space-ramp/core";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { railClass } from "@plugins/primitives/plugins/css/plugins/rail/core";
 import { useDraft } from "@plugins/primitives/plugins/persistent-draft/web";
 import { SectionCard } from "@plugins/primitives/plugins/section-card/web";

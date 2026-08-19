@@ -44,7 +44,6 @@ line, it's also the fix for a multi-contribution chip slot (`<Inline><Slot.Rende
 - Description: Inline-level flow layout primitive: <Inline gap> lays out a baseline-aligned inline-flex row for chips/icons that sit inline in a text run. The inline-level sibling of Stack, delegating to Stack.
 - Web:
   - Uses:
-    - `primitives/css/spacing.SpaceStep`
     - `primitives/css/spacing.Stack`
     - `primitives/css/spacing.StackAlign`
     - `primitives/css/spacing.StackJustify`

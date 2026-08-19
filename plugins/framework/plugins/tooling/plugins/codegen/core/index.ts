@@ -144,6 +144,14 @@ export {
   parseCustomUtilities,
 } from "./custom-utilities-gen";
 
+export {
+  generateSpaceRamp,
+  renderSpaceRamp,
+  spaceRampManifestPath,
+  parseSpaceRamp,
+  type RampDecl,
+} from "./space-ramp-gen";
+
 // Single source of truth for the ordered, non-migration repo-tree codegen
 // pipeline shared by `./singularity build` and the push-time `regen-generated`
 // normalize step, so the two can never drift apart.

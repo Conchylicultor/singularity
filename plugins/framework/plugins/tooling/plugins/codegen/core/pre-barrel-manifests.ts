@@ -11,6 +11,7 @@ import {
   customUtilitiesManifestPath,
   renderCustomUtilities,
 } from "./custom-utilities-gen";
+import { spaceRampManifestPath, renderSpaceRamp } from "./space-ramp-gen";
 import {
   fieldsEagerManifestPath,
   renderFieldsEagerManifest,
@@ -45,6 +46,9 @@ import {
  *   - customUtilities: reads `app.css` by path only (no plugin tree); reachable
  *     at module-load via the ui-kit web barrel (`cn` → `lib/utils.ts` iterates
  *     `CUSTOM_UTILITY_REGISTRY` at top level).
+ *   - spaceRamp: reads `app.css` by path only, same as customUtilities;
+ *     reachable at module-load via the spacing web barrel (`<Stack>` resolves its
+ *     gap class off `RAMP_CLASSES` at top level).
  *   - fieldsEager / eagerTier: barrel-free `skipBarrelImport` tree scans.
  *
  * A manifest whose renderer NEEDS barrels cannot satisfy that rule and does not
@@ -66,6 +70,11 @@ export const preBarrelManifests: readonly PreBarrelManifest[] = [
     id: "customUtilities",
     path: customUtilitiesManifestPath,
     render: renderCustomUtilities,
+  },
+  {
+    id: "spaceRamp",
+    path: spaceRampManifestPath,
+    render: renderSpaceRamp,
   },
   {
     // Side-effect imports of the fields storage/filter-sql server barrels. The

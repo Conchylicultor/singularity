@@ -6,8 +6,4 @@ export {
   RAIL_OWED_START_VAR,
   RAIL_OWED_END_VAR,
 } from "./internal/vars";
-export {
-  railClass,
-  type RailSides,
-  type RailStep,
-} from "./internal/rail-class";
+export { railClass, type RailSides } from "./internal/rail-class";

@@ -56,10 +56,8 @@ import {
   cn,
   SingleLineProvider,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import {
-  Stack,
-  type SpaceStep,
-} from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { type SpaceStep } from "@plugins/primitives/plugins/css/plugins/space-ramp/core";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { useRequestGrow } from "@plugins/primitives/plugins/css/plugins/grow-relay/web";
 import { useResizeObserver } from "@plugins/primitives/plugins/element-size/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";

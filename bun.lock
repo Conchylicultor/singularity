@@ -2625,6 +2625,10 @@
       "name": "@singularity/plugin-framework-tooling-checks-snapshot-chain-intact",
       "version": "0.0.1",
     },
+    "plugins/framework/plugins/tooling/plugins/checks/plugins/space-ramp-in-sync": {
+      "name": "@singularity/plugin-framework-tooling-checks-space-ramp-in-sync",
+      "version": "0.0.1",
+    },
     "plugins/framework/plugins/tooling/plugins/checks/plugins/table-defs-in-schema-glob": {
       "name": "@singularity/plugin-framework-tooling-checks-table-defs-in-schema-glob",
       "version": "0.0.1",
@@ -3772,6 +3776,10 @@
     },
     "plugins/primitives/plugins/css/plugins/selection-indicator": {
       "name": "@singularity/plugin-primitives-css-selection-indicator",
+      "version": "0.0.1",
+    },
+    "plugins/primitives/plugins/css/plugins/space-ramp": {
+      "name": "@singularity/plugin-primitives-css-space-ramp",
       "version": "0.0.1",
     },
     "plugins/primitives/plugins/css/plugins/spacing": {
@@ -6777,6 +6785,8 @@
 
     "@singularity/plugin-framework-tooling-checks-snapshot-chain-intact": ["@singularity/plugin-framework-tooling-checks-snapshot-chain-intact@workspace:plugins/framework/plugins/tooling/plugins/checks/plugins/snapshot-chain-intact"],
 
+    "@singularity/plugin-framework-tooling-checks-space-ramp-in-sync": ["@singularity/plugin-framework-tooling-checks-space-ramp-in-sync@workspace:plugins/framework/plugins/tooling/plugins/checks/plugins/space-ramp-in-sync"],
+
     "@singularity/plugin-framework-tooling-checks-table-defs-in-schema-glob": ["@singularity/plugin-framework-tooling-checks-table-defs-in-schema-glob@workspace:plugins/framework/plugins/tooling/plugins/checks/plugins/table-defs-in-schema-glob"],
 
     "@singularity/plugin-framework-tooling-checks-tailwind-scan-covers-classes": ["@singularity/plugin-framework-tooling-checks-tailwind-scan-covers-classes@workspace:plugins/framework/plugins/tooling/plugins/checks/plugins/tailwind-scan-covers-classes"],
@@ -7300,6 +7310,8 @@
     "@singularity/plugin-primitives-css-scroll": ["@singularity/plugin-primitives-css-scroll@workspace:plugins/primitives/plugins/css/plugins/scroll"],
 
     "@singularity/plugin-primitives-css-selection-indicator": ["@singularity/plugin-primitives-css-selection-indicator@workspace:plugins/primitives/plugins/css/plugins/selection-indicator"],
+
+    "@singularity/plugin-primitives-css-space-ramp": ["@singularity/plugin-primitives-css-space-ramp@workspace:plugins/primitives/plugins/css/plugins/space-ramp"],
 
     "@singularity/plugin-primitives-css-spacing": ["@singularity/plugin-primitives-css-spacing@workspace:plugins/primitives/plugins/css/plugins/spacing"],
 

@@ -72,6 +72,7 @@
     - `OriginDefaultsPreparer`
     - `OriginDefaultsProvider`
     - `PreBarrelManifest`
+    - `RampDecl`
     - `RegenCodegenOptions`
     - `RegistryGenContext`
     - `ReorderableSlotEntry`
@@ -111,6 +112,7 @@
     - `generatePluginDocs`
     - `generatePluginRegistry`
     - `generateReorderableSlots`
+    - `generateSpaceRamp`
     - `generateTokenGroupVars`
     - `isAppContent`
     - `listNamedCompositionRegistries`
@@ -118,6 +120,7 @@
     - `loadConfigDescriptorsByOriginPath`
     - `parseCustomUtilities`
     - `parseNamedCompositionRegistryFileName`
+    - `parseSpaceRamp`
     - `pluginClaudeMdPath`
     - `pluginCompactDocPath`
     - `pluginDetailsDocPath`
@@ -140,6 +143,7 @@
     - `renderFieldsEagerManifest`
     - `renderPluginClaudeMd`
     - `renderReorderableSlotsManifest`
+    - `renderSpaceRamp`
     - `renderTokenGroupVarsManifest`
     - `reorderableSlotsManifestPath`
     - `resolveImportSpecifier`
@@ -150,6 +154,7 @@
     - `setDefaultOriginAnnotationsPreparer`
     - `setDefaultOriginDefaults`
     - `setDefaultOriginDefaultsPreparer`
+    - `spaceRampManifestPath`
     - `standardPluginDirs`
     - `tokenGroupVarsManifestPath`
     - `writeGenerated`

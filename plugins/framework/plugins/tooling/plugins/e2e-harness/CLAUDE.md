@@ -78,6 +78,7 @@ rule keeps the broken shape from coming back.
     - `primitives/css/control-panel`
     - `primitives/css/grow-relay`
     - `primitives/css/radio-group`
+    - `primitives/css/space-ramp`
     - `primitives/css/ui-kit`
     - `primitives/data-view`
     - `primitives/date-picker`

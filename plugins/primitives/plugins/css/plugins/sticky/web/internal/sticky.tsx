@@ -1,4 +1,7 @@
-import type { SpaceStep } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import {
+  spaceLength,
+  type SpaceStep,
+} from "@plugins/primitives/plugins/css/plugins/space-ramp/core";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import {
   type InTreeLayer,
@@ -8,18 +11,6 @@ import type React from "react";
 
 /** Which edge of the scroll container the element sticks to. */
 export type StickyEdge = "top" | "bottom" | "left" | "right";
-
-/**
- * Resolve a `SpaceStep` to a CSS length. The semantic spacing ramp defines no
- * inset (`top-*`/`left-*`) utilities — only gap/padding — so the offset distance
- * is applied as an inline style reading the density `--space-*` var (the same
- * `gridTemplateColumns`-style escape `Grid` uses for what classes can't express).
- * `none` is a literal `0` (the ramp has no `--space-none` var; flush is the norm
- * for a sticky header).
- */
-function spaceLength(step: SpaceStep): string {
-  return step === "none" ? "0" : `var(--space-${step})`;
-}
 
 /**
  * Pure class + style map for a sticky element — single source of truth, exported
@@ -105,7 +96,11 @@ export function Sticky({
   return (
     <As
       ref={ref}
-      className={cn(active && sticky.className, mask && "bg-chrome-mask", className)}
+      className={cn(
+        active && sticky.className,
+        mask && "bg-chrome-mask",
+        className,
+      )}
       style={{ ...(active ? sticky.style : null), ...style }}
       {...rest}
     >

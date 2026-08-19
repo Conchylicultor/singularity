@@ -676,7 +676,6 @@ rendered.
     - `primitives/action-presentation.ActionFormProvider`
     - `primitives/action-presentation.ItemFormChannel`
     - `primitives/css/grow-relay.useRequestGrow`
-    - `primitives/css/spacing.SpaceStep`
     - `primitives/css/spacing.Stack`
     - `primitives/css/ui-kit.cn`
     - `primitives/css/ui-kit.OverlayPanel`

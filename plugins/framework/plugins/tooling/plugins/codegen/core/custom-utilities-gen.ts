@@ -1,6 +1,7 @@
 import { readFileSync } from "fs";
 import { join } from "path";
 import { writeGenerated } from "./write-generated";
+import { appCssPath, collectUtilityDecls } from "./app-css-utilities";
 
 /**
  * Generates `custom-utilities.generated.ts` — the twMerge registry consumed by
@@ -28,9 +29,6 @@ import { writeGenerated } from "./write-generated";
  * owns its own copy of the builtin-group-id allow-list (kept in sync with
  * `BuiltinGroupId` in custom-utilities-types.ts).
  */
-
-const APP_CSS_REL_PATH =
-  "plugins/primitives/plugins/css/plugins/ui-kit/web/theme/app.css";
 
 const MANIFEST_REL_PATH =
   "plugins/primitives/plugins/css/plugins/ui-kit/web/theme/custom-utilities.generated.ts";
@@ -255,20 +253,6 @@ function collectGroupDecls(css: string): Map<string, GroupDecl> {
 }
 
 /**
- * Replace every CSS block-comment's *body* with same-length spaces, leaving the
- * `/*` `*\/` delimiters and all non-comment text at their original byte offsets.
- * Used to locate REAL `@utility` declarations (an `@utility …` mention inside a
- * prose comment must not be mistaken for one) while preserving indices so the
- * original text can still be sliced for the markers (which ARE comments).
- */
-function maskCommentBodies(css: string): string {
-  return css.replace(
-    /\/\*[\s\S]*?\*\//g,
-    (m) => "/*" + " ".repeat(m.length - 4) + "*/",
-  );
-}
-
-/**
  * Parse app.css into the ordered registry. Brace-counting-free: locate each real
  * `@utility` declaration (ignoring prose mentions inside comments), then read its
  * marker as the first `/* twmerge: … *\/` comment in the slice between that
@@ -278,13 +262,10 @@ function maskCommentBodies(css: string): string {
 export function parseCustomUtilities(css: string): RegistryEntry[] {
   const groupDecls = collectGroupDecls(css);
 
-  // Find real @utility declaration offsets on the comment-masked text, then slice
-  // the ORIGINAL css between consecutive declarations to recover each marker.
-  const masked = maskCommentBodies(css);
-  const decls: Array<{ name: string; start: number }> = [];
-  for (const m of masked.matchAll(/@utility\s+([\w-]+)/g)) {
-    decls.push({ name: m[1]!, start: m.index! });
-  }
+  // Real @utility declaration offsets (comment-masked scan, shared with the
+  // other app.css-derived generators), then slice the ORIGINAL css between
+  // consecutive declarations to recover each marker.
+  const decls = collectUtilityDecls(css);
 
   type Record = { name: string; marker: Marker };
   const records: Record[] = [];
@@ -394,11 +375,6 @@ function renderManifest(entries: RegistryEntry[]): string {
   );
   lines.push("");
   return lines.join("\n");
-}
-
-/** Path to the app.css source the registry is derived from. */
-export function appCssPath(root: string): string {
-  return join(root, APP_CSS_REL_PATH);
 }
 
 /** Path to the committed generated manifest file. */

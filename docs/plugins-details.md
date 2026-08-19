@@ -14708,6 +14708,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - **`pre-barrel-manifests-complete`**
             - **`reorderable-slots-in-sync`**
             - **`snapshot-chain-intact`**
+            - **`space-ramp-in-sync`**
             - **`table-defs-in-schema-glob`**
             - **`tailwind-scan-covers-classes`**
             - **`token-group-vars-in-sync`**
@@ -14781,6 +14782,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `OriginDefaultsPreparer`
               - `OriginDefaultsProvider`
               - `PreBarrelManifest`
+              - `RampDecl`
               - `RegenCodegenOptions`
               - `RegistryGenContext`
               - `ReorderableSlotEntry`
@@ -14820,6 +14822,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `generatePluginDocs`
               - `generatePluginRegistry`
               - `generateReorderableSlots`
+              - `generateSpaceRamp`
               - `generateTokenGroupVars`
               - `isAppContent`
               - `listNamedCompositionRegistries`
@@ -14827,6 +14830,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `loadConfigDescriptorsByOriginPath`
               - `parseCustomUtilities`
               - `parseNamedCompositionRegistryFileName`
+              - `parseSpaceRamp`
               - `pluginClaudeMdPath`
               - `pluginCompactDocPath`
               - `pluginDetailsDocPath`
@@ -14849,6 +14853,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `renderFieldsEagerManifest`
               - `renderPluginClaudeMd`
               - `renderReorderableSlotsManifest`
+              - `renderSpaceRamp`
               - `renderTokenGroupVarsManifest`
               - `reorderableSlotsManifestPath`
               - `resolveImportSpecifier`
@@ -14859,6 +14864,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `setDefaultOriginAnnotationsPreparer`
               - `setDefaultOriginDefaults`
               - `setDefaultOriginDefaultsPreparer`
+              - `spaceRampManifestPath`
               - `standardPluginDirs`
               - `tokenGroupVarsManifestPath`
               - `writeGenerated`
@@ -14934,6 +14940,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/control-panel`
               - `primitives/css/grow-relay`
               - `primitives/css/radio-group`
+              - `primitives/css/space-ramp`
               - `primitives/css/ui-kit`
               - `primitives/data-view`
               - `primitives/date-picker`
@@ -19873,7 +19880,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/action-presentation.ActionFormProvider`
           - `primitives/action-presentation.ItemFormChannel`
           - `primitives/css/grow-relay.useRequestGrow`
-          - `primitives/css/spacing.SpaceStep`
           - `primitives/css/spacing.Stack`
           - `primitives/css/ui-kit.cn`
           - `primitives/css/ui-kit.OverlayPanel`
@@ -20723,7 +20729,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - **`cluster`** — Wrap-friendly chip group layout primitive: <Cluster> lays out a wrapping row of rigid identity chips that never individually shrink, delegating to Stack.
           - Web:
             - Uses:
-              - `primitives/css/spacing.SpaceStep`
               - `primitives/css/spacing.Stack`
               - `primitives/css/spacing.StackAlign`
               - `primitives/css/spacing.StackJustify`
@@ -21041,7 +21046,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - **`inline`** — Inline-level flow layout primitive: <Inline gap> lays out a baseline-aligned inline-flex row for chips/icons that sit inline in a text run. The inline-level sibling of Stack, delegating to Stack.
           - Web:
             - Uses:
-              - `primitives/css/spacing.SpaceStep`
               - `primitives/css/spacing.Stack`
               - `primitives/css/spacing.StackAlign`
               - `primitives/css/spacing.StackJustify`
@@ -21474,16 +21478,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `fields/enum/config`
         - **`radius`** — Corner-radius standard: the token-driven rounded-* scale and its enforcing lint rule (no-adhoc-radius).
         - **`rail`** — Web half of the rail contract: useRailGuard, the dev-only structural guard a region owner attaches to its own box. It measures every child's content edge against the rail the region published and names whoever applied an inset on top of it — the double-inset that looks reasonable at every call site and is only visible as content indented twice.
-          - Cross-plugin:
-            - Imported by:
-              - `primitives/css/control-panel`
-              - `primitives/css/ui-kit`
-          - Web:
-            - Exports (values): `useRailGuard`
           - Core:
-            - Exports (types):
-              - `RailSides`
-              - `RailStep`
+            - Uses:
+              - `primitives/css/space-ramp.rampClass`
+              - `primitives/css/space-ramp.SpaceStep`
+            - Exports (types): `RailSides`
             - Exports (values):
               - `RAIL_BLOCK_END_VAR`
               - `RAIL_BLOCK_START_VAR`
@@ -21492,6 +21491,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `RAIL_OWED_START_VAR`
               - `RAIL_START_VAR`
               - `railClass`
+          - Cross-plugin:
+            - Imported by:
+              - `primitives/css/control-panel`
+              - `primitives/css/ui-kit`
+          - Web:
+            - Exports (values): `useRailGuard`
         - **`rigid`** — Rigid-leaf layout primitive: <Rigid> / rigidClass() is the flex child that never shrinks (shrink-0). The missing half of <Fill>, kept a sibling the way <Clip> is to <Scroll>.
           - Web:
             - Uses: `primitives/css/ui-kit.cn`
@@ -21741,7 +21746,19 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `conversations/conversation-view/jsonl-viewer/tool-call/ask-user-question`
               - `page/read-only-view`
               - `primitives/css/control-panel`
-        - **`spacing`** — Layout spacing primitives: <Stack gap> (flex + gap) and <Inset pad> (padding) draw from the closed density spacing ramp (none|2xs|xs|sm|md|lg|xl|2xl), plus insetClass() — the same padding resolver as a class string, for consumers that only accept a className. The sanctioned home for layout rhythm; raw gap-/p-/m-/space- Tailwind is banned by no-adhoc-spacing.
+        - **`space-ramp`** — The spacing ramp's one declaration: the closed step set and the literal class each step-keyed @utility family gives each step, generated from app.css so a step that exists in TypeScript but has no @utility behind it is unspellable. Read by every consumer (Stack, Inset, Column, railClass, Sticky, Pin) instead of re-spelling the steps.
+          - Cross-plugin:
+            - Imported by: `primitives/css/rail`
+          - Core:
+            - Exports (types):
+              - `RampFamily`
+              - `SpaceStep`
+            - Exports (values):
+              - `RAMP_CLASSES`
+              - `rampClass`
+              - `SPACE_STEPS`
+              - `spaceLength`
+        - **`spacing`** — Layout spacing primitives: <Stack gap> (flex + gap) and <Inset pad> (padding) draw from the closed density spacing ramp declared in primitives/css/space-ramp, plus insetClass() — the same padding resolver as a class string, for consumers that only accept a className. The sanctioned home for layout rhythm; raw gap-/p-/m-/space- Tailwind is banned by no-adhoc-spacing.
           - Web:
             - Uses:
               - `primitives/css/ui-kit.cn`
@@ -21749,7 +21766,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Exports (types):
               - `InsetProps`
               - `InsetSides`
-              - `SpaceStep`
               - `StackAlign`
               - `StackDirection`
               - `StackJustify`
@@ -24035,7 +24051,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Web:
         - Uses:
           - `primitives/css/inline.Inline`
-          - `primitives/css/spacing.SpaceStep`
           - `primitives/css/spacing.Stack`
           - `primitives/persistent-draft.useDraft`
           - `primitives/section-card.SectionCard`
@@ -24266,7 +24281,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Web:
         - Uses:
           - `primitives/css/spacing.insetClass`
-          - `primitives/css/spacing.SpaceStep`
           - `primitives/css/spacing.StackAlign`
           - `primitives/css/spacing.StackDirection`
           - `primitives/css/ui-kit.cn`

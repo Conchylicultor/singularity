@@ -1,21 +1,13 @@
+import {
+  rampClass,
+  type SpaceStep,
+} from "@plugins/primitives/plugins/css/plugins/space-ramp/core";
 import type {
-  SpaceStep,
   StackAlign,
   StackJustify,
 } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import type React from "react";
-
-const GAP_CLASS: Record<SpaceStep, string> = {
-  none: "gap-none",
-  "2xs": "gap-2xs",
-  xs: "gap-xs",
-  sm: "gap-sm",
-  md: "gap-md",
-  lg: "gap-lg",
-  xl: "gap-xl",
-  "2xl": "gap-2xl",
-};
 
 const ALIGN_CLASS: Record<StackAlign, string> = {
   start: "items-start",
@@ -140,7 +132,7 @@ export function Grid({
       ref={ref}
       className={cn(
         "grid",
-        GAP_CLASS[gap],
+        rampClass("gap", gap),
         align && ALIGN_CLASS[align],
         justify && JUSTIFY_CLASS[justify],
         className,

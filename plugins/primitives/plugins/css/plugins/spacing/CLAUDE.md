@@ -6,25 +6,10 @@ the lint rule that keeps them the single source of truth.
 
 ## The scale
 
-Spacing is **runtime-themeable** (it tightens with the density preset), so the
-8-step ramp lives in the `density` token group as `--space-{2xs,xs,sm,md,lg,xl,2xl}`
-runtime vars, exposed as the `gap-<step>` / `p-<step>` `@utility` families in
-`plugins/primitives/plugins/css/plugins/ui-kit/web/theme/app.css`. `none` is the constant 0.
-
-| Step  | Comfortable | Replaces (raw) |
-| ----- | ----------- | -------------- |
-| `none`| 0           | `*-0`          |
-| `2xs` | 0.125rem    | `*-0.5`        |
-| `xs`  | 0.25rem     | `*-1`          |
-| `sm`  | 0.5rem      | `*-2`          |
-| `md`  | 0.75rem     | `*-3`          |
-| `lg`  | 1rem        | `*-4`          |
-| `xl`  | 1.5rem      | `*-6`          |
-| `2xl` | 2rem        | `*-8`          |
-
-The values seed 1:1 with today's dominant raw usage at Comfortable, but diverge
-at Cozy/Compact — so gaps and insets finally scale together with controls and
-pads instead of staying fixed.
+The 8-step ramp (`none | 2xs | xs | sm | md | lg | xl | 2xl`) is declared in
+[`primitives/css/space-ramp`](../space-ramp/CLAUDE.md) — its steps, its values,
+and the `gap-<step>` / `p-<step>` classes each step names. Import `SpaceStep`
+from there, not from here.
 
 ## The primitives
 
@@ -41,16 +26,13 @@ you don't want to wrap.
 ### Reaching the ramp from a `className`
 
 - **`insetClass({pad,x,y,t,r,b,l})`** — the same resolver `<Inset>` uses (same
-  records, same general→specific order), returning a class string. Use it when
-  you can only pass a `className` and cannot wrap the element: Lexical's
-  `<ContentEditable>`, `<Text>`, any third-party `className` prop. Use `<Inset>`
-  whenever you own the element.
+  general→specific order), returning a class string. Use it when you can only
+  pass a `className` and cannot wrap the element: Lexical's `<ContentEditable>`,
+  `<Text>`, any third-party `className` prop. Use `<Inset>` whenever you own the
+  element.
 
-`insetClass` also exists so a step can be a **variable**. Tailwind emits an
-`@utility` only when its literal token is found by the source scanner, so
-`` `pl-${STEP}` `` compiles to nothing scannable and works only by accident
-(some other file happens to spell `pl-md`). The step→class records live inside
-this plugin as literals; call sites pass the step, never build the class.
+`insetClass` also exists so a step can be a **variable** — see space-ramp on why
+a call site passes the step and never builds the class.
 
 ## Enforcement
 
@@ -72,7 +54,7 @@ per-site via `// eslint-disable-next-line spacing/no-adhoc-spacing -- reason`.
 
 ## Plugin reference
 
-- Description: Layout spacing primitives: <Stack gap> (flex + gap) and <Inset pad> (padding) draw from the closed density spacing ramp (none|2xs|xs|sm|md|lg|xl|2xl), plus insetClass() — the same padding resolver as a class string, for consumers that only accept a className. The sanctioned home for layout rhythm; raw gap-/p-/m-/space- Tailwind is banned by no-adhoc-spacing.
+- Description: Layout spacing primitives: <Stack gap> (flex + gap) and <Inset pad> (padding) draw from the closed density spacing ramp declared in primitives/css/space-ramp, plus insetClass() — the same padding resolver as a class string, for consumers that only accept a className. The sanctioned home for layout rhythm; raw gap-/p-/m-/space- Tailwind is banned by no-adhoc-spacing.
 - Web:
   - Uses:
     - `primitives/css/ui-kit.cn`
@@ -80,7 +62,6 @@ per-site via `// eslint-disable-next-line spacing/no-adhoc-spacing -- reason`.
   - Exports (types):
     - `InsetProps`
     - `InsetSides`
-    - `SpaceStep`
     - `StackAlign`
     - `StackDirection`
     - `StackJustify`

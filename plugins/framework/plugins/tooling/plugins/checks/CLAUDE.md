@@ -213,6 +213,7 @@ entries it was raised to abandon. To undo `v2`, go to `v3`.
   - **`pre-barrel-manifests-complete`**
   - **`reorderable-slots-in-sync`**
   - **`snapshot-chain-intact`**
+  - **`space-ramp-in-sync`**
   - **`table-defs-in-schema-glob`**
   - **`tailwind-scan-covers-classes`**
   - **`token-group-vars-in-sync`**

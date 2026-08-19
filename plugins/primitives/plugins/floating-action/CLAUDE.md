@@ -43,7 +43,6 @@ written there is a lint error, not a silent override.
 - Web:
   - Uses:
     - `primitives/css/spacing.insetClass`
-    - `primitives/css/spacing.SpaceStep`
     - `primitives/css/spacing.StackAlign`
     - `primitives/css/spacing.StackDirection`
     - `primitives/css/ui-kit.cn`

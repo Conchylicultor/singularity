@@ -1,22 +1,14 @@
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
-import type { SpaceStep } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import {
+  rampClass,
+  type SpaceStep,
+} from "@plugins/primitives/plugins/css/plugins/space-ramp/core";
 import {
   cn,
   SingleLineProvider,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import type React from "react";
 import type { ReactNode } from "react";
-
-const GAP_CLASS: Record<SpaceStep, string> = {
-  none: "gap-none",
-  "2xs": "gap-2xs",
-  xs: "gap-xs",
-  sm: "gap-sm",
-  md: "gap-md",
-  lg: "gap-lg",
-  xl: "gap-xl",
-  "2xl": "gap-2xl",
-};
 
 export interface ColumnProps extends React.HTMLAttributes<HTMLElement> {
   /** Rigid top region — never shrinks (`shrink-0`). */
@@ -83,7 +75,7 @@ export function Column({
         ref={ref}
         className={cn(
           "flex flex-col whitespace-normal",
-          GAP_CLASS[gap],
+          rampClass("gap", gap),
           fill && "min-h-0 flex-1",
           className,
         )}

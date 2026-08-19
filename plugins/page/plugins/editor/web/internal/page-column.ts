@@ -1,4 +1,4 @@
-import type { SpaceStep } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import type { SpaceStep } from "@plugins/primitives/plugins/css/plugins/space-ramp/core";
 
 /**
  * The single declaration site for the page column's horizontal geometry.

@@ -32,7 +32,6 @@ defined in exactly one place. The distinct export buys two things:
 - Description: Wrap-friendly chip group layout primitive: <Cluster> lays out a wrapping row of rigid identity chips that never individually shrink, delegating to Stack.
 - Web:
   - Uses:
-    - `primitives/css/spacing.SpaceStep`
     - `primitives/css/spacing.Stack`
     - `primitives/css/spacing.StackAlign`
     - `primitives/css/spacing.StackJustify`

@@ -1,4 +1,4 @@
-import type { SpaceStep } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import type { SpaceStep } from "@plugins/primitives/plugins/css/plugins/space-ramp/core";
 
 /**
  * The depth ramp is a closed 3 steps, and anything deeper clamps to the last

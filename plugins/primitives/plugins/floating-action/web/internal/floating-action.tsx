@@ -1,6 +1,9 @@
 import {
-  insetClass,
+  rampClass,
   type SpaceStep,
+} from "@plugins/primitives/plugins/css/plugins/space-ramp/core";
+import {
+  insetClass,
   type StackAlign,
   type StackDirection,
 } from "@plugins/primitives/plugins/css/plugins/spacing/web";
@@ -47,21 +50,6 @@ const ALIGN_CLASS: Record<StackAlign, string> = {
   end: "items-end",
   stretch: "items-stretch",
   baseline: "items-baseline",
-};
-
-// The ramp's gap classes as literals, mirroring `<Grid>`: Tailwind emits a
-// `@utility` only for a token its source scanner can see, so the step→class
-// record lives here and the call site passes the step. (Padding needs no copy —
-// `insetClass()` is the exported resolver for exactly this case.)
-const GAP_CLASS: Record<SpaceStep, string> = {
-  none: "gap-none",
-  "2xs": "gap-2xs",
-  xs: "gap-xs",
-  sm: "gap-sm",
-  md: "gap-md",
-  lg: "gap-lg",
-  xl: "gap-xl",
-  "2xl": "gap-2xl",
 };
 
 export interface FloatingActionProps extends Omit<
@@ -159,7 +147,7 @@ export function FloatingAction({
             "flex overflow-hidden rounded-md",
             FLOW_CLASS[direction][triggerAt],
             align && ALIGN_CLASS[align],
-            gap && GAP_CLASS[gap],
+            gap && rampClass("gap", gap),
             pad && insetClass({ pad }),
             "transition-[width,max-width,max-height,padding,background-color,box-shadow,border-color] duration-200 ease-out",
             variant === "outlined" && [

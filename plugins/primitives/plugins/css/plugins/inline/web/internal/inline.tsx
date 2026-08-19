@@ -1,6 +1,6 @@
+import { type SpaceStep } from "@plugins/primitives/plugins/css/plugins/space-ramp/core";
 import {
   Stack,
-  type SpaceStep,
   type StackAlign,
   type StackJustify,
 } from "@plugins/primitives/plugins/css/plugins/spacing/web";
