@@ -262,8 +262,16 @@ No `select` projection needed (select-all from the view matches
 
 ## Follow-ups (file, don't do)
 
-- Sweep `scopedMembership` onto the remaining SIMPLE-SELECT keyed resources
-  once the conversation scans bake.
+- ~~Sweep `scopedMembership` onto the remaining SIMPLE-SELECT keyed resources
+  once the conversation scans bake.~~ **DONE (2026-08-18).** Full audit + decision
+  record: `research/2026-08-18-global-scoped-membership-sweep.md`. Outcome: the
+  mutable-`where` archetype (`notifications`) was solved instead by the later
+  bounded-working-set `windowQueryResource` migration; zero un-migrated
+  `recompute:{full, where-filtered}` resources remained. Two genuinely
+  domain-bounded whole-list scans (`browser-bookmarks`, `plugin-health-reviews`)
+  were opted in. The remaining candidates are per-parent point-shaped side tables
+  — the correct fix is a `point` migration under the bounded-working-set contract,
+  not `scopedMembership`; filed as follow-ups there.
 - Seed `entry.snapshots` from the persisted L2 value at boot (kills the
   one-FULL-per-boot for persisted sm entries).
 - Catch-up could replay D scoped for sm entries (currently FULL — safe).

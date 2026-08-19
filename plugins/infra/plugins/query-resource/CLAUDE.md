@@ -9,16 +9,19 @@ the client keyField — producing exactly the object the existing two-arg
 
 ```ts
 // shared/core (web-safe descriptor — NO drizzle):
-export const notificationsResource = queryResourceDescriptor(
-  "notifications", NotificationSchema, "id", { bootCritical: true });
+export const browserBookmarksResource = queryResourceDescriptor(
+  "browser-bookmarks", BookmarkRowSchema, "id");
 
 // server:
-export const notificationsResource = queryResource(notificationsDescriptor, {
-  from: notifications,                       // PgTable | PgView | Entity
-  where: eq(notifications.dismissed, false),
-  orderBy: desc(notifications.createdAt),
+export const browserBookmarksServerResource = queryResource(browserBookmarksResource, {
+  from: _browserBookmarks,                   // PgTable | PgView | Entity
+  orderBy: asc(_browserBookmarks.createdAt),
+  scopedMembership: true,                    // INSERT/DELETE ship incremental deltas (§ scopedMembership)
 });
 ```
+
+> `where` (and mutable-column filtering) is covered in the RULE section below.
+> The former `notifications` example moved to `windowQueryResource` (last section).
 
 ## What it derives
 
