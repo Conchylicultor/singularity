@@ -362,6 +362,7 @@ Edit mode inflates every item with chrome (ring, ×-badge, empty-item placeholde
     - `ConfigV2.WebRegister`
     - `ConfigV2.WebRegister`
     - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister`
   - Uses:
     - `config_v2.ConfigV2`
     - `config_v2.useConfig`
@@ -506,6 +507,7 @@ Edit mode inflates every item with chrome (ring, ×-badge, empty-item placeholde
     - `ConfigV2.Register` "pane.explorer.actions"
     - `ConfigV2.Register` "pane.file-peek.actions"
     - `ConfigV2.Register` "pane.global-file-tree.actions"
+    - `ConfigV2.Register` "pane.google-maps-setup.actions"
     - `ConfigV2.Register` "pane.google-setup.actions"
     - `ConfigV2.Register` "pane.graph.actions"
     - `ConfigV2.Register` "pane.layout-lab.actions"

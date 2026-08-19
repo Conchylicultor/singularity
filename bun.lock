@@ -1110,6 +1110,14 @@
       "name": "@singularity/plugin-auth-google",
       "version": "0.0.1",
     },
+    "plugins/auth/plugins/google-maps": {
+      "name": "@singularity/plugin-auth-google-maps",
+      "version": "0.0.1",
+    },
+    "plugins/auth/plugins/google-maps/plugins/setup-wizard": {
+      "name": "@singularity/plugin-auth-google-maps-setup-wizard",
+      "version": "0.0.1",
+    },
     "plugins/auth/plugins/google/plugins/setup-wizard": {
       "name": "@singularity/plugin-auth-google-setup-wizard",
       "version": "0.0.1",
@@ -3036,6 +3044,14 @@
       "name": "@singularity/plugin-integrations-gmail",
       "version": "0.0.1",
     },
+    "plugins/integrations/plugins/google-maps": {
+      "name": "@singularity/plugin-integrations-google-maps",
+      "version": "0.0.1",
+    },
+    "plugins/integrations/plugins/google-maps/plugins/places-api": {
+      "name": "@singularity/plugin-integrations-google-maps-places-api",
+      "version": "0.0.1",
+    },
     "plugins/layouts": {
       "name": "@singularity/plugin-layouts",
       "version": "0.0.1",
@@ -3318,6 +3334,14 @@
     },
     "plugins/page/plugins/page-link": {
       "name": "@singularity/plugin-page-page-link",
+      "version": "0.0.1",
+    },
+    "plugins/page/plugins/place": {
+      "name": "@singularity/plugin-page-place",
+      "version": "0.0.1",
+    },
+    "plugins/page/plugins/place/plugins/google": {
+      "name": "@singularity/plugin-page-place-google",
       "version": "0.0.1",
     },
     "plugins/page/plugins/prompt": {
@@ -6049,6 +6073,10 @@
 
     "@singularity/plugin-auth-google": ["@singularity/plugin-auth-google@workspace:plugins/auth/plugins/google"],
 
+    "@singularity/plugin-auth-google-maps": ["@singularity/plugin-auth-google-maps@workspace:plugins/auth/plugins/google-maps"],
+
+    "@singularity/plugin-auth-google-maps-setup-wizard": ["@singularity/plugin-auth-google-maps-setup-wizard@workspace:plugins/auth/plugins/google-maps/plugins/setup-wizard"],
+
     "@singularity/plugin-auth-google-setup-wizard": ["@singularity/plugin-auth-google-setup-wizard@workspace:plugins/auth/plugins/google/plugins/setup-wizard"],
 
     "@singularity/plugin-auth-notion": ["@singularity/plugin-auth-notion@workspace:plugins/auth/plugins/notion"],
@@ -6971,6 +6999,10 @@
 
     "@singularity/plugin-integrations-gmail": ["@singularity/plugin-integrations-gmail@workspace:plugins/integrations/plugins/gmail"],
 
+    "@singularity/plugin-integrations-google-maps": ["@singularity/plugin-integrations-google-maps@workspace:plugins/integrations/plugins/google-maps"],
+
+    "@singularity/plugin-integrations-google-maps-places-api": ["@singularity/plugin-integrations-google-maps-places-api@workspace:plugins/integrations/plugins/google-maps/plugins/places-api"],
+
     "@singularity/plugin-layouts": ["@singularity/plugin-layouts@workspace:plugins/layouts"],
 
     "@singularity/plugin-layouts-full-pane": ["@singularity/plugin-layouts-full-pane@workspace:plugins/layouts/plugins/full-pane"],
@@ -7090,6 +7122,10 @@
     "@singularity/plugin-page-numbered-list": ["@singularity/plugin-page-numbered-list@workspace:plugins/page/plugins/numbered-list"],
 
     "@singularity/plugin-page-page-link": ["@singularity/plugin-page-page-link@workspace:plugins/page/plugins/page-link"],
+
+    "@singularity/plugin-page-place": ["@singularity/plugin-page-place@workspace:plugins/page/plugins/place"],
+
+    "@singularity/plugin-page-place-google": ["@singularity/plugin-page-place-google@workspace:plugins/page/plugins/place/plugins/google"],
 
     "@singularity/plugin-page-prompt": ["@singularity/plugin-page-prompt@workspace:plugins/page/plugins/prompt"],
 

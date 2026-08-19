@@ -186,6 +186,7 @@ per-site via `// eslint-disable-next-line spacing/no-adhoc-spacing -- reason`.
     - `apps/workflows/steps/user-input`
     - `auth`
     - `auth/apple-signing/setup-wizard`
+    - `auth/google-maps/setup-wizard`
     - `auth/google/setup-wizard`
     - `backup`
     - `build`
@@ -320,6 +321,7 @@ per-site via `// eslint-disable-next-line spacing/no-adhoc-spacing -- reason`.
     - `page/inline-date`
     - `page/math/inline`
     - `page/page-link`
+    - `page/place`
     - `page/prompt/block`
     - `page/read-only-view`
     - `page/sub-page`

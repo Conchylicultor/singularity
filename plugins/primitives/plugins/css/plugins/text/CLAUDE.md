@@ -251,6 +251,7 @@ fixed raw size escapes per-site via
     - `apps/workflows/steps/user-input`
     - `auth`
     - `auth/apple-signing/setup-wizard`
+    - `auth/google-maps/setup-wizard`
     - `auth/google/setup-wizard`
     - `backup`
     - `build`
@@ -381,6 +382,7 @@ fixed raw size escapes per-site via
     - `page/inline-date`
     - `page/math/equation`
     - `page/math/inline`
+    - `page/place`
     - `page/prompt/block`
     - `page/read-only-view`
     - `page/sub-page`

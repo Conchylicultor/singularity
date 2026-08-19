@@ -6303,7 +6303,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
 - **`auth`** — Shared authentication infrastructure (OAuth 2.0, API keys). Exposes the accounts pane + Auth.Provider slot; the Settings app surfaces the Account entry. Worktree-side auth helpers. Provides getTokenFromCentral() for worktree plugins that need OAuth tokens. Centralized OAuth/API-key infrastructure for third-party services. Tokens persist via the central secrets store; auth runs on the central runtime so all worktrees share one connected state.
   - Web:
     - Slots:
-      - `Auth.Provider` ← `auth.apple-signing.setup-wizard`, `auth.google`, `auth.notion`
+      - `Auth.Provider` ← `auth.apple-signing.setup-wizard`, `auth.google`, `auth.google-maps.setup-wizard`, `auth.notion`
       - `Auth.ScopeRequirement` ← `backup.targets.google-drive`, `integrations.gmail`
       - `accountsPane.Actions`
     - Uses:
@@ -6427,11 +6427,14 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `apps/settings/accounts`
       - `auth/apple-signing/setup-wizard`
       - `auth/google`
+      - `auth/google-maps`
+      - `auth/google-maps/setup-wizard`
       - `auth/google/setup-wizard`
       - `auth/notion`
       - `backup`
       - `backup/targets/google-drive`
       - `integrations/gmail`
+      - `integrations/google-maps`
     - Endpoint callers: `setup-wizard`
   - Server:
     - Exports (types):
@@ -6544,6 +6547,38 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Exports (values): `googleSetupPane`
           - Cross-plugin:
             - Imported by: `auth/google`
+    - **`google-maps`** — Google Maps Platform API-key provider. The key is stored in the central auth token store (encrypted, shared across worktrees) and verified against the Places API before it is accepted.
+      - Central:
+        - Uses: `auth.registerAuthProvider`
+      - Core:
+        - Exports (values): `GOOGLE_MAPS_PROVIDER_ID`
+      - Plugins:
+        - **`setup-wizard`** — Guided setup pane for the Google Maps Platform API key: project → Places API → billing → key → paste. Also contributes the Accounts provider row.
+          - Web:
+            - Slots: `googleMapsSetupPane.Actions`
+            - Contributes:
+              - `Pane.Register` "google-maps-setup"
+              - `Auth.Provider` "Google Maps Platform"
+            - Uses:
+              - `auth.accountsPane`
+              - `auth.Auth`
+              - `auth.useAccountStatus`
+              - `infra/endpoints.fetchEndpoint`
+              - `infra/endpoints.getEndpointErrorMessage`
+              - `primitives/css/spacing.Stack`
+              - `primitives/css/text.Text`
+              - `primitives/css/ui-kit.Button`
+              - `primitives/css/ui-kit.Input`
+              - `primitives/pane.openPane`
+              - `primitives/pane.Pane`
+              - `primitives/setup-steps.Step`
+              - `primitives/setup-steps.StepDone`
+              - `primitives/setup-steps.StepLink`
+              - `primitives/setup-steps.StepNote`
+              - `primitives/setup-steps.Steps`
+            - Exports (values): `googleMapsSetupPane`
+          - Cross-plugin:
+            - Imported by: `integrations/google-maps`
     - **`notion`** — Notion OAuth provider (scaffold). Adds the Notion row to the Accounts pane and a credentials section to Settings. Notion OAuth provider (scaffold). Surfaces in Accounts pane; end-to-end smoke not yet validated.
       - Web:
         - Contributes:
@@ -14933,6 +14968,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `page/editor-collab`
               - `page/image`
               - `page/inline-date`
+              - `page/place`
               - `page/prompt/block`
               - `page/quote`
               - `page/url-paste`
@@ -15659,6 +15695,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `auth`
           - `auth/apple-signing`
           - `auth/apple-signing/setup-wizard`
+          - `auth/google-maps/setup-wizard`
           - `auth/google/setup-wizard`
           - `backup`
           - `build`
@@ -15747,6 +15784,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `page/editor-collab`
           - `page/inline-page-link`
           - `page/markdown-apply`
+          - `page/place`
           - `page/prompt/link`
           - `page/turn-into-page`
           - `plugin-meta/composition`
@@ -17160,6 +17198,43 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports (values):
           - `GMAIL_SCOPES`
           - `GOOGLE_PROVIDER_ID`
+    - **`google-maps`** — Google Maps Platform access broker (web): reactive readiness state plus the 'set up Google Maps' affordance consumers render in place of routing the user to Settings. Google Maps Platform access broker (server): getMapsKey() reads the stored API key via the shared auth/central store, so consumers never import @plugins/auth.
+      - Web:
+        - Uses:
+          - `auth.useAuthState`
+          - `auth/google-maps/setup-wizard.googleMapsSetupPane`
+          - `primitives/css/ui-kit.Button`
+          - `primitives/pane.openPane`
+        - Exports (types):
+          - `MapsAccess`
+          - `MapsAccessBlocker`
+        - Exports (values):
+          - `MAPS_BLOCKER_BODY`
+          - `MapsAccessAction`
+          - `useMapsAccess`
+      - Server:
+        - Uses: `auth.getTokenFromCentral`
+        - Exports (types): `MapsKeyResult`
+        - Exports (values): `getMapsKey`
+      - Cross-plugin:
+        - Imported by: `page/place/google`
+      - Plugins:
+        - **`places-api`** — Stateless typed Google Places API (New) client: places:autocomplete and place details, mapped to the neutral PlaceSuggestion / PlaceSnapshot shapes. Takes the API key per call; never touches auth or storage.
+          - Cross-plugin:
+            - Imported by: `page/place/google`
+          - Server:
+            - Exports (values):
+              - `autocomplete`
+              - `PLACE_DETAILS_FIELD_MASK`
+              - `placeDetails`
+          - Core:
+            - Exports (types):
+              - `PlaceSnapshot`
+              - `PlaceSuggestion`
+            - Exports (values):
+              - `PlacesApiError`
+              - `PlaceSnapshotSchema`
+              - `PlaceSuggestionSchema`
 
 - **`layouts`** — Umbrella for layout renderers that map the pane chain to a visible arrangement (columns, tabs, grid, overlays).
   - Plugins:
@@ -17811,7 +17886,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`editor`** — Block-based document editor component and slot system. Block-based document editor — tables, routes, and live state.
       - Web:
         - Slots:
-          - `Editor.Block` ← `page.annotations.agent-notes`, `page.annotations.context`, `page.annotations.private-notes`, `page.annotations.todo`, `page.audio`, `page.bookmark`, `page.bulleted-list`, `page.callout`, `page.code-block`, `page.divider`, `page.embed`, `page.file`, `page.heading.heading-1`, `page.heading.heading-2`, `page.heading.heading-3`, `page.image`, `page.math.equation`, `page.numbered-list`, `page.page-link`, `page.prompt.block`, `page.quote`, `page.sub-page`, `page.text`, `page.to-do`, `page.toggle`, `page.video`
+          - `Editor.Block` ← `page.annotations.agent-notes`, `page.annotations.context`, `page.annotations.private-notes`, `page.annotations.todo`, `page.audio`, `page.bookmark`, `page.bulleted-list`, `page.callout`, `page.code-block`, `page.divider`, `page.embed`, `page.file`, `page.heading.heading-1`, `page.heading.heading-2`, `page.heading.heading-3`, `page.image`, `page.math.equation`, `page.numbered-list`, `page.page-link`, `page.place`, `page.prompt.block`, `page.quote`, `page.sub-page`, `page.text`, `page.to-do`, `page.toggle`, `page.video`
           - `Editor.BlockFrame` ← `page.annotations.agent-notes`, `page.annotations.context`, `page.annotations.private-notes`, `page.annotations.todo`, `page.callout`, `page.quote`
           - `Editor.TurnInto` ← `page.turn-into-page`
           - `Editor.FormatAction` ← `page.formatting.bold`, `page.formatting.code`, `page.formatting.color`, `page.formatting.italic`, `page.formatting.link`, `page.formatting.strikethrough`, `page.formatting.underline`
@@ -18204,6 +18279,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `page/math/inline`
           - `page/numbered-list`
           - `page/page-link`
+          - `page/place`
           - `page/prompt/block`
           - `page/quote`
           - `page/read-only-view`
@@ -18758,6 +18834,97 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Core:
         - Uses: `page/editor.defineBlock`
         - Exports (values): `pageLinkBlock`
+    - **`place`** — Place block type: search an address or business through a registered place provider and render it as a card (name, address, category, link out to the provider's map). Owns the Place.Provider registry, so the block names no provider. Place block server half: the definePlaceProvider registry plus the two provider-agnostic lookup endpoints (search, resolve), which dispatch by `providerId` and name no provider. Also registers the place `data` schema at the server write boundary.
+      - Web:
+        - Slots: `Place.Provider` ← `page.place.google`
+        - Contributes: `Editor.Block` "place" → `PlaceBlock`
+        - Uses:
+          - `infra/endpoints.fetchEndpoint`
+          - `infra/endpoints.getEndpointErrorMessage`
+          - `infra/endpoints.useEndpoint`
+          - `page/editor.BLOCK_INSET`
+          - `page/editor.BlockRendererProps`
+          - `page/editor.Editor`
+          - `primitives/css/badge.Badge`
+          - `primitives/css/card.Card`
+          - `primitives/css/center.Center`
+          - `primitives/css/cluster.Cluster`
+          - `primitives/css/fill.Fill`
+          - `primitives/css/line.Line`
+          - `primitives/css/pin.Pin`
+          - `primitives/css/placeholder.Placeholder`
+          - `primitives/css/rigid.rigidClass`
+          - `primitives/css/row.Row`
+          - `primitives/css/scroll.Scroll`
+          - `primitives/css/spacing.Inset`
+          - `primitives/css/spacing.Stack`
+          - `primitives/css/surface.Surface`
+          - `primitives/css/text.Text`
+          - `primitives/css/toggle-chip.SegmentedControl`
+          - `primitives/css/ui-kit.cn`
+          - `primitives/css/ui-kit.Input`
+          - `primitives/hover-reveal.hoverRevealGroup`
+          - `primitives/hover-reveal.hoverRevealTarget`
+          - `primitives/loading.Loading`
+        - Exports (types): `PlaceProviderContribution`
+        - Exports (values):
+          - `Place`
+          - `PLACE_TYPE`
+          - `placeBlock`
+          - `usePlaceProviders`
+      - Server:
+        - Contributes: `page.block-data` "place"
+        - Uses:
+          - `infra/endpoints.HttpError`
+          - `infra/endpoints.implement`
+          - `page/editor.Editor`
+        - Exports (types): `PlaceProvider`
+        - Exports (values):
+          - `definePlaceProvider`
+          - `getPlaceProvider`
+        - Routes:
+          - `GET /api/place/search`
+          - `GET /api/place/resolve`
+      - Core:
+        - Uses:
+          - `infra/endpoints.defineEndpoint`
+          - `page/editor.defineBlock`
+        - Exports (types):
+          - `PlaceData`
+          - `PlaceSnapshot`
+          - `PlaceSnapshotState`
+          - `PlaceSuggestion`
+        - Exports (values):
+          - `PLACE_SNAPSHOT_TTL_MS`
+          - `PLACE_TYPE`
+          - `placeBlock`
+          - `placeDataFromSnapshot`
+          - `PlaceDataSchema`
+          - `placeNeedsResolve`
+          - `placeResolveEndpoint`
+          - `placeSearchEndpoint`
+          - `PlaceSnapshotSchema`
+          - `placeSnapshotState`
+          - `PlaceSuggestionSchema`
+      - Cross-plugin:
+        - Imported by: `page/place/google`
+      - Plugins:
+        - **`google`** — Google Maps as a place-lookup source for the /place block: contributes the provider's name, icon, required attribution, and the 'set up Google Maps' affordance the block renders while no API key is configured. Google Places provider for the /place block: adapts the Places API client (autocomplete + details) onto the place-provider registry, reading the API key through the Google Maps integration.
+          - Web:
+            - Contributes: `Place.Provider` "Google Maps"
+            - Uses:
+              - `integrations/google-maps.MapsAccessAction`
+              - `integrations/google-maps.useMapsAccess`
+              - `page/place.Place`
+          - Server:
+            - Uses:
+              - `integrations/google-maps.getMapsKey`
+              - `integrations/google-maps/places-api.autocomplete`
+              - `integrations/google-maps/places-api.placeDetails`
+              - `page/place.definePlaceProvider`
+            - Register: `definePlaceProvider('google')`
+          - Shared:
+            - Exports (values): `GOOGLE_PLACE_PROVIDER_ID`
     - **`prompt`** — Umbrella for the `/prompt` page block: the task↔block link data layer and the block type that launches agents from a page.
       - Plugins:
         - **`block`** — Prompt block type: block text plus a launch control that turns it into an agent run, and chips for the conversations it launched. Prompt block type: registers its `data` schema (plain block text) at the server write boundary.
@@ -20490,6 +20657,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `fields/tags/table`
               - `infra/events-test`
               - `page/editor`
+              - `page/place`
               - `plugin-meta/facets/exports/render-contributions`
               - `plugin-meta/facets/exports/render-detail`
               - `plugin-meta/facets/structure/render-detail`
@@ -20574,6 +20742,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `debug/trace/contention`
               - `page/bookmark`
               - `page/file`
+              - `page/place`
               - `primitives/css/layout-harness`
               - `primitives/data-view/gallery`
               - `primitives/section-card`
@@ -20648,6 +20817,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `page/math/equation`
               - `page/math/inline`
               - `page/page-link`
+              - `page/place`
               - `page/read-only-view`
               - `page/sub-page`
               - `page/video`
@@ -20772,6 +20942,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `debug/trace/contention`
               - `debug/trace/gates`
               - `fields/tags/inline`
+              - `page/place`
               - `page/prompt/block`
               - `plugin-meta/facets/cross-refs/render-detail`
               - `plugin-meta/facets/routes/render-detail`
@@ -20975,6 +21146,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `page/code-block`
               - `page/file`
               - `page/inline-date`
+              - `page/place`
               - `page/prompt/block`
               - `plugin-meta/facets/registrations/render-detail`
               - `plugin-meta/facets/resources/render-detail`
@@ -21238,6 +21410,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `debug/timeline`
               - `page/annotations/todo/task-link`
               - `page/inline-date`
+              - `page/place`
               - `page/prompt/block`
               - `plugin-meta/facets/db-schema/render-detail`
               - `plugin-meta/facets/registrations/render-detail`
@@ -21366,6 +21539,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `page/editor`
               - `page/file`
               - `page/image`
+              - `page/place`
               - `page/read-only-view`
               - `page/video`
               - `primitives/data-view/gallery`
@@ -21457,6 +21631,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `page/bookmark`
               - `page/inline-page-link`
               - `page/page-link`
+              - `page/place`
               - `page/read-only-view`
               - `primitives/cursor-pagination`
               - `primitives/data-view`
@@ -21554,6 +21729,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `page/bookmark`
               - `page/code-block`
               - `page/file`
+              - `page/place`
               - `plugin-meta/facets/db-schema/render-detail`
               - `plugin-meta/facets/registrations/render-detail`
               - `plugin-meta/facets/resources/render-detail`
@@ -21627,6 +21803,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `page/editor`
               - `page/inline-date`
               - `page/page-link`
+              - `page/place`
               - `page/sub-page`
               - `page/turn-into-page`
               - `page/url-paste`
@@ -21720,6 +21897,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `infra/claude-cli`
               - `infra/events-test`
               - `page/page-link`
+              - `page/place`
               - `plugin-meta/plugin-health`
               - `plugin-meta/plugin-view`
               - `plugin-meta/plugin-view/file-tree`
@@ -21895,6 +22073,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/workflows/steps/user-input`
               - `auth`
               - `auth/apple-signing/setup-wizard`
+              - `auth/google-maps/setup-wizard`
               - `auth/google/setup-wizard`
               - `backup`
               - `build`
@@ -22029,6 +22208,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `page/inline-date`
               - `page/math/inline`
               - `page/page-link`
+              - `page/place`
               - `page/prompt/block`
               - `page/read-only-view`
               - `page/sub-page`
@@ -22260,6 +22440,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `fields/json/config`
               - `infra/events-test`
               - `page/editor`
+              - `page/place`
               - `page/read-only-view`
               - `primitives/collapsible-wrap`
               - `primitives/css/card`
@@ -22403,6 +22584,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/workflows/steps/user-input`
               - `auth`
               - `auth/apple-signing/setup-wizard`
+              - `auth/google-maps/setup-wizard`
               - `auth/google/setup-wizard`
               - `backup`
               - `build`
@@ -22533,6 +22715,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `page/inline-date`
               - `page/math/equation`
               - `page/math/inline`
+              - `page/place`
               - `page/prompt/block`
               - `page/read-only-view`
               - `page/sub-page`
@@ -22677,6 +22860,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `fields/enum/inline`
               - `fields/tags/inline`
               - `page/inline-date`
+              - `page/place`
               - `page/prompt/block`
               - `primitives/data-view`
               - `primitives/data-view/view-core`
@@ -22901,6 +23085,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/workflows/steps/user-input`
               - `auth`
               - `auth/apple-signing/setup-wizard`
+              - `auth/google-maps/setup-wizard`
               - `auth/google/setup-wizard`
               - `backup`
               - `build`
@@ -22989,6 +23174,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `improve/element-picker`
               - `infra/events-test`
               - `integrations/gmail`
+              - `integrations/google-maps`
               - `layouts/full-pane`
               - `layouts/miller`
               - `layouts/route-fallback`
@@ -23009,6 +23195,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `page/inline-date`
               - `page/math/equation`
               - `page/math/inline`
+              - `page/place`
               - `page/prompt/block`
               - `page/read-only-view`
               - `page/sub-page`
@@ -24401,6 +24588,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `page/embed`
           - `page/file`
           - `page/image`
+          - `page/place`
           - `page/video`
           - `primitives/data-view/view-core`
           - `primitives/text-editor/paste-images`
@@ -25155,6 +25343,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `page/editor`
           - `page/inline-page-link`
           - `page/page-link`
+          - `page/place`
           - `plugin-meta/plugin-view`
           - `plugin-meta/plugin-view/dependencies`
           - `primitives/css/layout-harness`
@@ -25464,7 +25653,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Contributes: `Core.Root` → `OverscrollHintController`
     - **`pane`** — Unified pane primitive: Pane.define and chrome components.
       - Web:
-        - Slots: `Pane.Register` ← `active-data.plugin-link`, `apps.agent-manager.welcome`, `apps.deploy.deployments`, `apps.deploy.servers`, `apps.events.event-list`, `apps.events.shell`, `apps.events.sources`, `apps.events.sources.source-detail.runs`, `apps.mail.reading-pane`, `apps.mail.search`, `apps.mail.shell`, `apps.mail.threads`, `apps.pages.page-tree`, `apps.pages.welcome`, `apps.prototypes.gallery`, `apps.settings.accounts`, `apps.settings.config`, `apps.sonata.library`, `apps.story.shell`, `apps.studio.compositions`, `apps.studio.compositions.release`, `apps.studio.contributions`, `apps.studio.contributions.tables`, `apps.studio.explorer`, `apps.studio.graph`, `apps.website.downloads`, `apps.website.pillars.agents`, `apps.website.pillars.apps`, `apps.website.pillars.platform`, `apps.website.shell`, `apps.workflows.definitions`, `apps.workflows.executions`, `auth.apple-signing.setup-wizard`, `auth.google.setup-wizard`, `backup`, `build`, `code-explorer`, `code-explorer.commit-detail`, `config_v2.settings`, `conversations.agents`, `conversations.all-conversations`, `conversations.conversation-view`, `conversations.conversation-view.code.docs-button`, `conversations.conversation-view.code.file-pane`, `conversations.conversation-view.commits-graph`, `conversations.conversation-view.jsonl-viewer.tool-call.agent`, `conversations.conversation-view.jsonl-viewer.tool-call.workflow`, `conversations.conversation-view.push-profiling`, `conversations.conversation-view.terminal-pane`, `conversations.recover`, `conversations.summary`, `debug.boot-profile`, `debug.broadcasts`, `debug.claude-cli-calls`, `debug.config-orphans`, `debug.health-monitor`, `debug.heap-snapshot`, `debug.live-state-churn.emit`, `debug.live-state-health`, `debug.logs`, `debug.memory`, `debug.profiling`, `debug.profiling.build`, `debug.profiling.ops`, `debug.queue`, `debug.read-set`, `debug.render-profiler`, `debug.reports`, `debug.trace.pane`, `debug.worktree-cleanup`, `debug.zero-test`, `infra.events-test`, `plugin-meta.plugin-view`, `primitives.css.layout-harness`, `review`, `screenshot`, `stats`, `tasks.attempt-view`, `tasks.task-detail`, `ui.theme-engine.theme-customizer`
+        - Slots: `Pane.Register` ← `active-data.plugin-link`, `apps.agent-manager.welcome`, `apps.deploy.deployments`, `apps.deploy.servers`, `apps.events.event-list`, `apps.events.shell`, `apps.events.sources`, `apps.events.sources.source-detail.runs`, `apps.mail.reading-pane`, `apps.mail.search`, `apps.mail.shell`, `apps.mail.threads`, `apps.pages.page-tree`, `apps.pages.welcome`, `apps.prototypes.gallery`, `apps.settings.accounts`, `apps.settings.config`, `apps.sonata.library`, `apps.story.shell`, `apps.studio.compositions`, `apps.studio.compositions.release`, `apps.studio.contributions`, `apps.studio.contributions.tables`, `apps.studio.explorer`, `apps.studio.graph`, `apps.website.downloads`, `apps.website.pillars.agents`, `apps.website.pillars.apps`, `apps.website.pillars.platform`, `apps.website.shell`, `apps.workflows.definitions`, `apps.workflows.executions`, `auth.apple-signing.setup-wizard`, `auth.google-maps.setup-wizard`, `auth.google.setup-wizard`, `backup`, `build`, `code-explorer`, `code-explorer.commit-detail`, `config_v2.settings`, `conversations.agents`, `conversations.all-conversations`, `conversations.conversation-view`, `conversations.conversation-view.code.docs-button`, `conversations.conversation-view.code.file-pane`, `conversations.conversation-view.commits-graph`, `conversations.conversation-view.jsonl-viewer.tool-call.agent`, `conversations.conversation-view.jsonl-viewer.tool-call.workflow`, `conversations.conversation-view.push-profiling`, `conversations.conversation-view.terminal-pane`, `conversations.recover`, `conversations.summary`, `debug.boot-profile`, `debug.broadcasts`, `debug.claude-cli-calls`, `debug.config-orphans`, `debug.health-monitor`, `debug.heap-snapshot`, `debug.live-state-churn.emit`, `debug.live-state-health`, `debug.logs`, `debug.memory`, `debug.profiling`, `debug.profiling.build`, `debug.profiling.ops`, `debug.queue`, `debug.read-set`, `debug.render-profiler`, `debug.reports`, `debug.trace.pane`, `debug.worktree-cleanup`, `debug.zero-test`, `infra.events-test`, `plugin-meta.plugin-view`, `primitives.css.layout-harness`, `review`, `screenshot`, `stats`, `tasks.attempt-view`, `tasks.task-detail`, `ui.theme-engine.theme-customizer`
         - Uses:
           - `primitives/adaptive-bar.AdaptiveBar`
           - `primitives/bar.Bar`
@@ -25642,6 +25831,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `auth`
           - `auth/apple-signing/setup-wizard`
           - `auth/google`
+          - `auth/google-maps/setup-wizard`
           - `auth/google/setup-wizard`
           - `backup`
           - `build`
@@ -25694,6 +25884,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `debug/worktree-cleanup`
           - `debug/zero-test`
           - `infra/events-test`
+          - `integrations/google-maps`
           - `layouts/full-pane`
           - `layouts/host`
           - `layouts/miller`
@@ -26160,6 +26351,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/deploy/ssh-setup`
           - `apps/deploy/ssh-setup/hetzner`
           - `auth/apple-signing/setup-wizard`
+          - `auth/google-maps/setup-wizard`
           - `auth/google/setup-wizard`
     - **`shortcuts`** — Central keyboard shortcut registry. Plugins contribute shortcuts via defineShortcut(); a single keydown listener dispatches to the active handler.
       - Web:
@@ -27207,6 +27399,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `ConfigV2.WebRegister`
       - `ConfigV2.WebRegister`
       - `ConfigV2.WebRegister`
+      - `ConfigV2.WebRegister`
     - Uses:
       - `config_v2.ConfigV2`
       - `config_v2.useConfig`
@@ -27351,6 +27544,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `ConfigV2.Register` "pane.explorer.actions"
       - `ConfigV2.Register` "pane.file-peek.actions"
       - `ConfigV2.Register` "pane.global-file-tree.actions"
+      - `ConfigV2.Register` "pane.google-maps-setup.actions"
       - `ConfigV2.Register` "pane.google-setup.actions"
       - `ConfigV2.Register` "pane.graph.actions"
       - `ConfigV2.Register` "pane.layout-lab.actions"

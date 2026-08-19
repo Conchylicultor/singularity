@@ -136,6 +136,7 @@ primitive exists to name.
     - `page/code-block`
     - `page/file`
     - `page/inline-date`
+    - `page/place`
     - `page/prompt/block`
     - `plugin-meta/facets/registrations/render-detail`
     - `plugin-meta/facets/resources/render-detail`

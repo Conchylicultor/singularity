@@ -65,6 +65,7 @@ specifically — the dedicated card-surface token — not the broader `bg-muted`
     - `debug/trace/contention`
     - `page/bookmark`
     - `page/file`
+    - `page/place`
     - `primitives/css/layout-harness`
     - `primitives/data-view/gallery`
     - `primitives/section-card`

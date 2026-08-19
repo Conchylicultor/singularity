@@ -1,4 +1,4 @@
-// @hash 96c8493f6b9e
+// @hash 1a357941d250
 {
   // Item: "<key>" (terse; <key> is "<pluginId>:<id>")
   // Hide: { "item": "<key>", "hidden": true }
@@ -25,6 +25,7 @@
     "page.math.equation:equation",
     "page.numbered-list:numbered-list",
     "page.page-link:page-link",
+    "page.place:place",
     "page.prompt.block:prompt",
     "page.quote:quote",
     "page.sub-page:page",

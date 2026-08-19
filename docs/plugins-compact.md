@@ -168,7 +168,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`tabs`** — Tab manager for the app switcher: the open-tab set, focus model, cross-app navigate(), the focused-placement module store, and the surface-written placement-capabilities registry.
     - **`theme-scope`** — Theme-scope helpers: the single definition of the focused full-surface app's theme scope, shared by the cross-app chrome (rail, tab bar, toaster) and the :root token layer.
 
-- **`auth`** [load-bearing] [5 sub-plugins] — Shared authentication infrastructure (OAuth 2.0, API keys). Exposes the accounts pane + Auth.Provider slot; the Settings app surfaces the Account entry. Worktree-side auth helpers. Provides getTokenFromCentral() for worktree plugins that need OAuth tokens. Centralized OAuth/API-key infrastructure for third-party services. Tokens persist via the central secrets store; auth runs on the central runtime so all worktrees share one connected state.
+- **`auth`** [load-bearing] [7 sub-plugins] — Shared authentication infrastructure (OAuth 2.0, API keys). Exposes the accounts pane + Auth.Provider slot; the Settings app surfaces the Account entry. Worktree-side auth helpers. Provides getTokenFromCentral() for worktree plugins that need OAuth tokens. Centralized OAuth/API-key infrastructure for third-party services. Tokens persist via the central secrets store; auth runs on the central runtime so all worktrees share one connected state.
 
 - **`backup`** [14 sub-plugins] — Backup orchestrator UI: run backups, view history, configure targets. Backup orchestrator: assembles archives from registered backup sources, dispatches to registered storage targets.
 
@@ -376,6 +376,9 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
 - **`integrations`** — Umbrella for third-party service integrations that consume an auth connection (Gmail, …).
   - Plugins:
     - **`gmail`** — Gmail access toggle, Google scope requirement, and the shared 'fix my Gmail connection' affordance consumers render in place of routing the user to Settings. Surfaces the Gmail access toggle in Settings.
+    - **`google-maps`** — Google Maps Platform access broker (web): reactive readiness state plus the 'set up Google Maps' affordance consumers render in place of routing the user to Settings. Google Maps Platform access broker (server): getMapsKey() reads the stored API key via the shared auth/central store, so consumers never import @plugins/auth.
+      - Plugins:
+        - **`places-api`** — Stateless typed Google Places API (New) client: places:autocomplete and place details, mapped to the neutral PlaceSuggestion / PlaceSnapshot shapes. Takes the API key per call; never touches auth or storage.
 
 - **`layouts`** — Umbrella for layout renderers that map the pane chain to a visible arrangement (columns, tabs, grid, overlays).
   - Plugins:
@@ -397,7 +400,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`spawn-priority`** — OS scheduling-priority isolation: backgroundArgv/backgroundPrefix wrap heavy background work (DB forks, agent sessions, builds, worktree checkouts, type-check workers) in darwinbg (taskpolicy -b) so it yields host CPU/IO to the interactive backends; boostInteractiveQos raises the calling thread to user-interactive QoS (main backend's event loop only).
     - **`zod-parser`** — ZodParser<T> — the type of a schema that parses untrusted input into a T — and its enforcing lint rule (no-narrow-zodtype), which bans the one-argument ZodType<T> whose Input silently defaults to Output.
 
-- **`page`** [56 sub-plugins] — Block-based page editor.
+- **`page`** [58 sub-plugins] — Block-based page editor.
 
 - **`plugin-meta`** — Plugins about the plugin system itself — browsing, inspecting, and publishing.
   - Plugins:

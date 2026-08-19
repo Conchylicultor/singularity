@@ -133,6 +133,7 @@ export const reorderableSlots: ReorderableSlot[] = [
   { slotId: "pane.explorer.actions", pluginId: "apps.studio.explorer" },
   { slotId: "pane.file-peek.actions", pluginId: "conversations.conversation-view.code.file-pane" },
   { slotId: "pane.global-file-tree.actions", pluginId: "code-explorer" },
+  { slotId: "pane.google-maps-setup.actions", pluginId: "auth.google-maps.setup-wizard" },
   { slotId: "pane.google-setup.actions", pluginId: "auth.google.setup-wizard" },
   { slotId: "pane.graph.actions", pluginId: "apps.studio.graph" },
   { slotId: "pane.layout-lab.actions", pluginId: "primitives.css.layout-harness" },

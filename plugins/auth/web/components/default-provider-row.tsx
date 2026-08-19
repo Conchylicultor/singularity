@@ -4,6 +4,7 @@ import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import type { AuthProviderKind } from "@plugins/auth/core";
 import { Auth } from "../slots";
 import { useAccountStatus } from "../hooks";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
@@ -89,6 +90,25 @@ export function DefaultProviderRow({ providerId }: Props) {
   const needsReconsent = status?.needsReconsent;
   const connected = status?.connected;
 
+  // An api-key provider has no OAuth popup to open: `handleOAuthStart` rejects
+  // a non-oauth2 provider with a 400, so `startConnectFlow` must never be
+  // reached from here. Its one action is "give me the key", which is whatever
+  // the provider registered as `configureCredentials` (normally a setup pane).
+  //
+  // Two limits are real and deliberate, not oversights:
+  //  - an api-key account reads `connected: true` from the moment the key is
+  //    stored, and nothing ever marks it stale — the refresh loop only walks
+  //    oauth2 providers. A key revoked upstream still shows Connected until a
+  //    call using it fails.
+  //  - Disconnect deletes the local entry only; it does not revoke the key at
+  //    the provider. The user must delete it in the provider's own console.
+  const isApiKey = status?.kind === "apikey";
+
+  function openCredentialSetup() {
+    if (provider?.configureCredentials) provider.configureCredentials();
+    else openPane(configNavPane, {}, { mode: "push" });
+  }
+
   return (
     <Stack direction="row" gap="lg" align="start" className="p-lg">
       {/* eslint-disable-next-line spacing/no-adhoc-spacing -- top offset to baseline-align icon with adjacent text */}
@@ -97,6 +117,7 @@ export function DefaultProviderRow({ providerId }: Props) {
         <Stack direction="row" align="center" gap="sm">
           <span className="font-medium">{provider.name}</span>
           <StatusPill
+            kind={status?.kind}
             connected={connected}
             needsReconsent={needsReconsent}
             credentialsMissing={!!credentialsMissing}
@@ -140,15 +161,26 @@ export function DefaultProviderRow({ providerId }: Props) {
         ) : null}
       </Fill>
       <Stack direction="row" gap="sm" align="center" className={rigidClass()}>
-        {credentialsMissing ? (
-          <Button
-            variant="outline"
-            onClick={() =>
-              provider.configureCredentials
-                ? provider.configureCredentials()
-                : openPane(configNavPane, {}, { mode: "push" })
-            }
-          >
+        {isApiKey ? (
+          <>
+            <Button
+              variant={connected ? "outline" : "default"}
+              onClick={openCredentialSetup}
+            >
+              {connected ? "Replace key" : "Add key"}
+            </Button>
+            {connected ? (
+              <Button
+                variant="outline"
+                loading={busy}
+                onClick={handleDisconnect}
+              >
+                Disconnect
+              </Button>
+            ) : null}
+          </>
+        ) : credentialsMissing ? (
+          <Button variant="outline" onClick={openCredentialSetup}>
             Configure credentials
           </Button>
         ) : connected ? (
@@ -173,14 +205,26 @@ export function DefaultProviderRow({ providerId }: Props) {
 }
 
 function StatusPill({
+  kind,
   connected,
   needsReconsent,
   credentialsMissing,
 }: {
+  kind: AuthProviderKind | undefined;
   connected: boolean | undefined;
   needsReconsent: boolean | undefined;
   credentialsMissing: boolean;
 }) {
+  if (kind === "apikey") {
+    // `credentialsConfigured` is hardcoded `true` for every non-oauth2 provider
+    // (auth/central/internal/auth-state.ts), so "Setup required" can never fire
+    // here. Whether a key has been stored is the only real signal.
+    return connected ? (
+      <Badge variant="success">Connected</Badge>
+    ) : (
+      <Badge variant="muted">Not set up</Badge>
+    );
+  }
   if (credentialsMissing) {
     return <Badge variant="muted">Setup required</Badge>;
   }

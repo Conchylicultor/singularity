@@ -70,6 +70,7 @@ defined in exactly one place. The distinct export buys two things:
     - `debug/trace/contention`
     - `debug/trace/gates`
     - `fields/tags/inline`
+    - `page/place`
     - `page/prompt/block`
     - `plugin-meta/facets/cross-refs/render-detail`
     - `plugin-meta/facets/routes/render-detail`

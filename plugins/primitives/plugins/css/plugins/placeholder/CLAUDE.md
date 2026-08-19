@@ -72,6 +72,7 @@
     - `page/bookmark`
     - `page/inline-page-link`
     - `page/page-link`
+    - `page/place`
     - `page/read-only-view`
     - `primitives/cursor-pagination`
     - `primitives/data-view`

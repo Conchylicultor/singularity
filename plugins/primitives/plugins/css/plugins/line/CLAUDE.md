@@ -61,6 +61,7 @@ case) and intentionally does not compose it.
     - `debug/timeline`
     - `page/annotations/todo/task-link`
     - `page/inline-date`
+    - `page/place`
     - `page/prompt/block`
     - `plugin-meta/facets/db-schema/render-detail`
     - `plugin-meta/facets/registrations/render-detail`

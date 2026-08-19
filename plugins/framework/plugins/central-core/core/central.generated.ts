@@ -14,6 +14,7 @@ export interface CollectedEntry {
 
 export const centralEntries: CollectedEntry[] = [
   { pluginPath: "auth", id: "auth", loader: () => import("@plugins/auth/central"), dependsOn: ["infra/plugins/secrets"] },
+  { pluginPath: "auth/plugins/google-maps", id: "auth.google-maps", loader: () => import("@plugins/auth/plugins/google-maps/central"), dependsOn: ["auth"] },
   { pluginPath: "auth/plugins/google", id: "auth.google", loader: () => import("@plugins/auth/plugins/google/central"), dependsOn: ["auth", "fields/plugins/secret/plugins/config"] },
   { pluginPath: "auth/plugins/notion", id: "auth.notion", loader: () => import("@plugins/auth/plugins/notion/central"), dependsOn: ["auth", "fields/plugins/secret/plugins/config"] },
   { pluginPath: "fields/plugins/secret/plugins/config", id: "fields.secret.config", loader: () => import("@plugins/fields/plugins/secret/plugins/config/central"), dependsOn: ["infra/plugins/secrets"] },

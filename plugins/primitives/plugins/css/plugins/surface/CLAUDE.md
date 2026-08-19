@@ -127,6 +127,7 @@ a real density-scaling utility backed by `--pad-card`), or
     - `fields/json/config`
     - `infra/events-test`
     - `page/editor`
+    - `page/place`
     - `page/read-only-view`
     - `primitives/collapsible-wrap`
     - `primitives/css/card`

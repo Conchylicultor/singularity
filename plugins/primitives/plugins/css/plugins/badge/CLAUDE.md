@@ -127,6 +127,7 @@ same threshold and can't desync in a row.
     - `fields/tags/table`
     - `infra/events-test`
     - `page/editor`
+    - `page/place`
     - `plugin-meta/facets/exports/render-contributions`
     - `plugin-meta/facets/exports/render-detail`
     - `plugin-meta/facets/structure/render-detail`

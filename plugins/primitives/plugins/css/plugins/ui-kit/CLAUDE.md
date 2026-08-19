@@ -483,6 +483,7 @@ guard: `confirmDialog` (`imperative-dialog/plugins/confirm`); native
     - `apps/workflows/steps/user-input`
     - `auth`
     - `auth/apple-signing/setup-wizard`
+    - `auth/google-maps/setup-wizard`
     - `auth/google/setup-wizard`
     - `backup`
     - `build`
@@ -571,6 +572,7 @@ guard: `confirmDialog` (`imperative-dialog/plugins/confirm`); native
     - `improve/element-picker`
     - `infra/events-test`
     - `integrations/gmail`
+    - `integrations/google-maps`
     - `layouts/full-pane`
     - `layouts/miller`
     - `layouts/route-fallback`
@@ -591,6 +593,7 @@ guard: `confirmDialog` (`imperative-dialog/plugins/confirm`); native
     - `page/inline-date`
     - `page/math/equation`
     - `page/math/inline`
+    - `page/place`
     - `page/prompt/block`
     - `page/read-only-view`
     - `page/sub-page`

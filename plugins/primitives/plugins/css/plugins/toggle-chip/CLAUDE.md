@@ -61,6 +61,7 @@
     - `fields/enum/inline`
     - `fields/tags/inline`
     - `page/inline-date`
+    - `page/place`
     - `page/prompt/block`
     - `primitives/data-view`
     - `primitives/data-view/view-core`

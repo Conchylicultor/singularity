@@ -101,6 +101,7 @@ genuine transient-chrome list escapes with
     - `page/editor`
     - `page/inline-date`
     - `page/page-link`
+    - `page/place`
     - `page/sub-page`
     - `page/turn-into-page`
     - `page/url-paste`

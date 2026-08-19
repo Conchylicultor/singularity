@@ -56,6 +56,9 @@
       - **`render`** — Shared KaTeX renderer leaf for the page math plugins: <KatexMath/> plus the single home for KaTeX config and CSS.
   - **`numbered-list`** — Numbered-list block type for the page editor. Numbered-list block type: registers its `data` schema at the server write boundary.
   - **`page-link`** — Link-to-page block type: references another page as a clickable block; feeds the backlinks index. Link-to-page block type: references another page as a clickable block; feeds the backlinks index. Also registers the page-link `data` schema at the server write boundary.
+  - **`place`** — Place block type: search an address or business through a registered place provider and render it as a card (name, address, category, link out to the provider's map). Owns the Place.Provider registry, so the block names no provider. Place block server half: the definePlaceProvider registry plus the two provider-agnostic lookup endpoints (search, resolve), which dispatch by `providerId` and name no provider. Also registers the place `data` schema at the server write boundary.
+    - Plugins:
+      - **`google`** — Google Maps as a place-lookup source for the /place block: contributes the provider's name, icon, required attribution, and the 'set up Google Maps' affordance the block renders while no API key is configured. Google Places provider for the /place block: adapts the Places API client (autocomplete + details) onto the place-provider registry, reading the API key through the Google Maps integration.
   - **`prompt`** — Umbrella for the `/prompt` page block: the task↔block link data layer and the block type that launches agents from a page.
     - Plugins:
       - **`block`** — Prompt block type: block text plus a launch control that turns it into an agent run, and chips for the conversations it launched. Prompt block type: registers its `data` schema (plain block text) at the server write boundary.

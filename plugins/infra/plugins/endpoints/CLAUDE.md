@@ -259,6 +259,7 @@ const { mutateAsync } = useEndpointMutation(deleteTask, { meta: { suppressError:
     - `auth`
     - `auth/apple-signing`
     - `auth/apple-signing/setup-wizard`
+    - `auth/google-maps/setup-wizard`
     - `auth/google/setup-wizard`
     - `backup`
     - `build`
@@ -347,6 +348,7 @@ const { mutateAsync } = useEndpointMutation(deleteTask, { meta: { suppressError:
     - `page/editor-collab`
     - `page/inline-page-link`
     - `page/markdown-apply`
+    - `page/place`
     - `page/prompt/link`
     - `page/turn-into-page`
     - `plugin-meta/composition`
