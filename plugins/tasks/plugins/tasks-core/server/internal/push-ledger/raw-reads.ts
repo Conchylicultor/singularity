@@ -63,6 +63,5 @@ export async function existingAttemptIds(
  */
 export async function newestPushCommittedAt(): Promise<Date | null> {
   const [row] = await db.select({ newest: max(pushes.createdAt) }).from(pushes);
-  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
   return row?.newest ?? null;
 }

@@ -87,7 +87,6 @@ export async function runRefReactions(
       await runTracked(`ref-reaction:${reaction.name}`, () =>
         reaction.run(advance),
       );
-      // eslint-disable-next-line promise-safety/no-bare-catch -- reported below, not swallowed; the pull path is what keeps a failed reaction from being a correctness bug
     } catch (err) {
       const error = err instanceof Error ? err : new Error(String(err));
       reportServerError({

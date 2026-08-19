@@ -31,7 +31,6 @@ export function planLedgerRows(
 ): InsertPushInput[] {
   const rows: InsertPushInput[] = [];
   for (let i = commits.length - 1; i >= 0; i--) {
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- index is in range by construction
     const commit = commits[i]!;
     if (state.have.has(commit.sha)) continue;
     const attemptId = state.attemptByConversation.get(commit.conversationId);
