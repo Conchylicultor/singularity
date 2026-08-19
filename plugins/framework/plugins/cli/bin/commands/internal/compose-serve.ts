@@ -98,6 +98,12 @@ export interface ComposeServeOptions {
   root: string;
   minify: boolean;
   buildId: string;
+  /**
+   * The commit MAIN's build answered for — its pre-build `HEAD` sample, not a
+   * fresh read. This stage composes from main's checkout inside main's build, so
+   * that is the tree every composition here is built from too. `""` when git
+   * could not answer.
+   */
   buildCommit: string;
   /**
    * `--serve-composition`: force this one composition through the stage
@@ -286,6 +292,9 @@ async function serveOne(opts: {
       stagingDir: stagingPath,
       minify: stage.minify,
       buildId: stage.buildId,
+      // Main's own pre-build sample, handed down: this stage runs inside main's
+      // build, from main's checkout, so the tree it composes from is main's.
+      buildCommit: stage.buildCommit || null,
       source,
       vendors: opts.vendors,
       log: (line) => compLog(`compose-serve "${id}": ${line}`),
@@ -302,12 +311,23 @@ async function serveOne(opts: {
 
     // Same trailer files as main's dist, so the served backend reports drift and
     // stale tabs identically.
+    //
+    // The commit and the run id are main's, and honestly so — this composition
+    // was composed from main's tree by main's build. The GRAPH is not: each
+    // composition's closure is a different set of plugins, so it composes
+    // different bytes. Writing main's identity here (as the `.build-id` trailer
+    // alone once had to) told every composition namespace it was serving the
+    // same artifact as every other one.
     if (stage.buildCommit) {
       writeFileSync(
         resolve(stagingPath, ".build-commit"),
         stage.buildCommit + "\n",
       );
     }
+    writeFileSync(
+      resolve(stagingPath, ".build-graph"),
+      result.graphHash + "\n",
+    );
     writeFileSync(resolve(stagingPath, ".build-id"), stage.buildId + "\n");
     await publishDistAtomic({ dir: distDir, stagingPath });
 

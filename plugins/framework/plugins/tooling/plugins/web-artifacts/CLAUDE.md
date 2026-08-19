@@ -67,6 +67,17 @@ Key invariants:
   a compose link failure against an hour-old fossil, and the `prewarm` barrels
   inlined an unhashed `shared/` (`…/mirror`) the same way.
   (`research/2026-08-17-global-artifact-address-covers-content.md`)
+- **A dist names itself by its content, not by its run.** Compose injects two
+  globals into `index.html` — `__SINGULARITY_GRAPH__` (`computeGraphHash`: a pure
+  function of the import map, entry, global CSS and preload closure, every one of
+  them already content-addressed) and `__SINGULARITY_COMMIT__` (the tree the
+  caller sampled BEFORE it read a source file). The graph hash is what the
+  caller writes to `.build-graph` and what a tab compares itself against, so two
+  builds of an unchanged tree don't ask every open tab to reload. The run id
+  (`buildId`) stays out of the bundle: it changes on every build by construction,
+  which is exactly what made the old `__SINGULARITY_BUILD_ID__` nonce useless as
+  an identity — and it also gave every compose-serve composition the SAME pin
+  despite each composing a different closure.
 - **Expected vs deployed cannot drift**: the pipeline and the
   `web-artifacts:map-in-sync` check share the same planning code
   (`core/internal/plan.ts`).

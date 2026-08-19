@@ -66,6 +66,7 @@ line, it's also the fix for a multi-contribution chip slot (`<Inline><Slot.Rende
     - `apps/studio/contributions/tables/row-count`
     - `apps/studio/explorer`
     - `build/build-status`
+    - `build/deployment`
     - `conversations/all-conversations`
     - `conversations/conversation-preprompt`
     - `conversations/conversation-progress`

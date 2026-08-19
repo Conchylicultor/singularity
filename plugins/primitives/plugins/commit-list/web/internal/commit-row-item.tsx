@@ -4,6 +4,7 @@ import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import type React from "react";
 import type { CommitRow } from "../../core";
 import { CommitRail, COMMIT_ROW_HEIGHT } from "./commit-rail";
 
@@ -28,6 +29,7 @@ export function CommitRowItem({
   isLast,
   color,
   pushed = false,
+  markers,
   onClick,
 }: {
   commit: CommitRow;
@@ -35,6 +37,16 @@ export function CommitRowItem({
   isLast: boolean;
   color: string;
   pushed?: boolean;
+  /**
+   * Free-form chips pinned to this commit — "who is sitting on this commit".
+   * The general form of `pushed`, which is one such marker hard-coded; both are
+   * rendered, in their own track between the subject and the author.
+   *
+   * The caller owns the grouping (a `<Inline gap="2xs" className={rigidClass()}>`
+   * of `<Badge>`s is the usual shape), so a row can carry one marker or five
+   * without this primitive learning anything about what they mean.
+   */
+  markers?: React.ReactNode;
   onClick?: (commit: CommitRow) => void;
 }) {
   return (
@@ -59,6 +71,7 @@ export function CommitRowItem({
       <Fill as="span" className="truncate" title={commit.subject}>
         {commit.subject}
       </Fill>
+      {markers}
       {pushed && (
         <Badge variant="success" className={rigidClass()}>
           pushed

@@ -32,8 +32,8 @@
     - `WorktreeGoneError`
 - Cross-plugin:
   - Imported by:
-    - `build`
     - `build/build-commits`
+    - `build/deployment`
     - `code-explorer`
     - `code-explorer/code-api`
     - `conversations/conversation-view/code`

@@ -59,6 +59,7 @@ the durable emit that follows.
 - Cross-plugin:
   - Imported by:
     - `build`
+    - `build/deployment`
     - `conversations/conversation-view/commits-graph`
     - `review/plugin-changes`
     - `tasks/attempt-work`

@@ -37,18 +37,12 @@ import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
 import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 import {
-  Collapsible,
-  CollapsibleTrigger,
-  CollapsibleContent,
-  CollapsibleChevron,
-} from "@plugins/primitives/plugins/collapsible/web";
-import { CommitRowItem } from "@plugins/primitives/plugins/commit-list/web";
-import {
   DataView,
   defineDataView,
 } from "@plugins/primitives/plugins/data-view/web";
 import type { FieldDef } from "@plugins/primitives/plugins/data-view/web";
-import { buildHistoryResource, mainAheadCountResource } from "../../shared";
+import { DeploymentChain } from "@plugins/build/plugins/deployment/web";
+import { buildHistoryResource } from "../../shared";
 import type { BuildRun } from "../../shared";
 import type {
   ClientMessage,
@@ -68,39 +62,6 @@ function formatDuration(start: Date, end: Date | null): string {
   if (s < 60) return `${s}s`;
   const m = Math.floor(s / 60);
   return `${m}m ${s % 60}s`;
-}
-
-const BRANCH_COLOR = "var(--warning)";
-
-function MainAheadSection() {
-  const result = useResource(mainAheadCountResource);
-  if (result.pending) return null;
-  const { count, commits } = result.data;
-  if (count === 0) return null;
-
-  return (
-    <Collapsible className="border-b">
-      <CollapsibleTrigger className="gap-sm px-md py-sm hover:bg-accent/50">
-        <CollapsibleChevron className="size-4 text-muted-foreground" />
-        <Text as="span" variant="label">
-          main is {count} commit{count !== 1 ? "s" : ""} ahead
-        </Text>
-      </CollapsibleTrigger>
-      <CollapsibleContent>
-        <ol>
-          {commits.map((commit, idx) => (
-            <CommitRowItem
-              key={commit.sha}
-              commit={commit}
-              isFirst={idx === 0}
-              isLast={idx === commits.length - 1}
-              color={BRANCH_COLOR}
-            />
-          ))}
-        </ol>
-      </CollapsibleContent>
-    </Collapsible>
-  );
 }
 
 function BuildControls({
@@ -488,7 +449,12 @@ function BuildPopoverContentInner({
 
   return (
     <Stack gap="none" className={cn(variant === "pane" && "h-full")}>
-      <MainAheadSection />
+      {/* What is actually deployed, above the control that changes it: the
+          commit chain with a chip per carrier on the commit it is really on.
+          Its verdict is the SAME `convergenceOf` answer the auto-build
+          reconciler acts on, so a wrong badge here and a missed rebuild are
+          one bug rather than two. */}
+      <DeploymentChain />
       <BuildControls building={building} onBuild={handleBuild} />
       {variant === "popover" ? (
         <>

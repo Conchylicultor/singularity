@@ -17,7 +17,7 @@
 - Server:
   - Contributes: `report-kind` "crash"
   - Uses:
-    - `build/server-build-id.getServerBuildId`
+    - `build/server-build-id.getServerGraphHash`
     - `reports.ReportKind`
 - Core:
   - Uses: `primitives/ui-context.UiContextMetaSchema`

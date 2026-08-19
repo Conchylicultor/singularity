@@ -44,6 +44,7 @@ case) and intentionally does not compose it.
     - `apps/sonata/sources/midi`
     - `apps/sonata/track-mixer`
     - `apps/studio/compositions/release/release-logs`
+    - `build/deployment`
     - `code-explorer/commit-detail`
     - `conversations/conversation-ui/item`
     - `conversations/conversation-view/code/docs-button`

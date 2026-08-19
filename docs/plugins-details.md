@@ -6946,17 +6946,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `build/build-status.BUILD_STATUS_OPTIONS`
       - `build/build-status.BuildStatusChip`
       - `build/build-status.BuildStatusDot`
+      - `build/deployment.DeploymentChain`
       - `config_v2.ConfigV2`
       - `infra/endpoints.EndpointError`
       - `infra/endpoints.fetchEndpoint`
       - `primitives/app-shell.sidebarNavItem`
       - `primitives/auto-scroll.JumpToBottomButton`
       - `primitives/auto-scroll.useStickyScroll`
-      - `primitives/collapsible.Collapsible`
-      - `primitives/collapsible.CollapsibleChevron`
-      - `primitives/collapsible.CollapsibleContent`
-      - `primitives/collapsible.CollapsibleTrigger`
-      - `primitives/commit-list.CommitRowItem`
       - `primitives/css/badge.Badge`
       - `primitives/css/pin.Pin`
       - `primitives/css/rigid.rigidClass`
@@ -6995,13 +6991,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
   - Server:
     - Contributes:
       - `ConfigV2.Register` "config"
-      - `resource.declare` "build.mainAheadCount"
       - `resource.declare` "build.history"
-      - `resource.declare` "build.frontendHash"
       - `trigger` "build.run"
     - Uses:
+      - `build/deployment.deploymentResource`
+      - `build/deployment.readDeployment`
       - `build/run-ledger._buildRuns`
-      - `build/server-build-id.getServerBuildId`
       - `config_v2.ConfigV2`
       - `config_v2.getConfig`
       - `database.db`
@@ -7011,28 +7006,20 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `infra/file-watcher.createFileWatcher`
       - `infra/file-watcher.FileWatcher`
       - `infra/git-watcher.refAdvanced`
-      - `infra/git-watcher.refHeadResource`
       - `infra/jobs.defineJob`
       - `infra/paths.currentWorktreeName`
       - `infra/paths.isMain`
       - `infra/paths.pruneWorktreeBuildArtifacts`
       - `infra/paths.REPO_ROOT`
-      - `infra/paths.webDistDir`
       - `infra/paths.worktreeArtifacts`
       - `infra/paths.worktreeDataDir`
       - `infra/query-resource.queryResource`
-      - `primitives/commit-list.LOG_FORMAT`
-      - `primitives/commit-list.parseGitLog`
-      - `primitives/commit-list.runGit`
       - `primitives/log-channels.Log`
       - `shell/notifications.recordNotification`
     - Register:
       - `defineJob('build.run')`
       - `defineJob('build.run.debounced')`
-    - Resources:
-      - `build.frontendHash` (push)
-      - `build.history` (keyed)
-      - `build.mainAheadCount` (push)
+    - Resources: `build.history` (keyed)
     - Routes:
       - `POST /api/build`
       - `POST /api/build/serve`
@@ -7040,22 +7027,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Uses:
       - `infra/endpoints.defineEndpoint`
       - `infra/query-resource.queryResourceDescriptor`
-      - `primitives/commit-list.CommitRowSchema`
-      - `primitives/live-state.resourceDescriptor`
       - `primitives/pane.defineRoute`
-    - Exports (types):
-      - `BuildRun`
-      - `FrontendHash`
-      - `MainAheadCount`
+    - Exports (types): `BuildRun`
     - Exports (values):
       - `buildDetailRoute`
       - `buildHistoryResource`
       - `buildRoute`
       - `BuildRunSchema`
-      - `frontendHashResource`
-      - `FrontendHashSchema`
-      - `mainAheadCountResource`
-      - `MainAheadCountSchema`
       - `serveCompositionEndpoint`
       - `triggerBuildEndpoint`
   - Cross-plugin:
@@ -7066,19 +7044,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `build/build-logs`
       - `build/build-profiling`
       - `debug/reports`
+      - `shell/global-action-bar`
   - Shared:
-    - Exports (types):
-      - `BuildRun`
-      - `FrontendHash`
-      - `MainAheadCount`
+    - Exports (types): `BuildRun`
     - Exports (values):
       - `buildConfig`
       - `buildHistoryResource`
       - `BuildRunSchema`
-      - `frontendHashResource`
-      - `FrontendHashSchema`
-      - `mainAheadCountResource`
-      - `MainAheadCountSchema`
   - Plugins:
     - **`build-commits`** — Commits included since the previous build, shown in the build detail pane. Per-run commit list data endpoint.
       - Web:
@@ -7245,6 +7217,75 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `BuildTerminationSchema`
           - `describeTermination`
           - `getBuildRunTermination`
+    - **`deployment`** — The client half of the deployment description: `useDeployment()` composes THIS tab's own baked pin in beside the server's two deployable carriers, and `<DeploymentChain/>` renders the four arms — one commit row when converged, the chain with a carrier chip on each carrier's own commit when behind, and the raw pins plus the reason when there is no line to draw. Also eagerly registers the boot-critical build.deployment resource descriptor so boot-snapshot can hydrate it before first paint. The deployment description: this checkout's HEAD (the target) plus a pin per deployable carrier — the backend process and the frontend bundle it serves — and the one derived verdict (converged / behind / diverged / unknown) both the Build button and the auto-build decision read. A leaf: it never imports build/server, so the reconciler that owns triggerBuild can import DOWN into it.
+      - Server:
+        - Contributes: `resource.declare` "build.deployment"
+        - Uses:
+          - `build/server-build-id.getServerCommit`
+          - `build/server-build-id.getServerGraphHash`
+          - `infra/git-read-cache.createSignedMemo`
+          - `infra/git-watcher.refHeadResource`
+          - `infra/paths.currentWorktreeName`
+          - `infra/paths.GIT`
+          - `infra/paths.REPO_ROOT`
+          - `primitives/commit-list.LOG_FORMAT`
+          - `primitives/commit-list.parseGitLog`
+          - `primitives/commit-list.runGit`
+          - `primitives/commit-list.tryRunGit`
+          - `primitives/commit-list.WorktreeGoneError`
+        - Exports (values):
+          - `deploymentResource`
+          - `readDeployment`
+          - `readDeploymentState`
+          - `serverPin`
+        - Resources: `build.deployment` (push)
+      - Web:
+        - Uses:
+          - `primitives/commit-list.COMMIT_ROW_HEIGHT`
+          - `primitives/commit-list.CommitRail`
+          - `primitives/commit-list.CommitRowItem`
+          - `primitives/css/badge.Badge`
+          - `primitives/css/fill.Fill`
+          - `primitives/css/inline.Inline`
+          - `primitives/css/line.Line`
+          - `primitives/css/placeholder.Placeholder`
+          - `primitives/css/rigid.rigidClass`
+          - `primitives/css/scroll.Scroll`
+          - `primitives/css/spacing.Stack`
+          - `primitives/css/text.Text`
+          - `primitives/live-state.useResource`
+          - `primitives/loading.Loading`
+        - Exports (types): `DeploymentReading`
+        - Exports (values):
+          - `DeploymentChain`
+          - `useDeployment`
+      - Core:
+        - Uses:
+          - `primitives/commit-list.CommitRowSchema`
+          - `primitives/live-state.Resolvable`
+          - `primitives/live-state.resolvableSchema`
+          - `primitives/live-state.resolved`
+          - `primitives/live-state.resourceDescriptor`
+          - `primitives/live-state.unresolved`
+        - Exports (types):
+          - `BuildAttempt`
+          - `Carrier`
+          - `CarrierId`
+          - `ConvergenceKind`
+          - `Deployment`
+          - `DeploymentState`
+        - Exports (values):
+          - `CARRIER_IDS`
+          - `CarrierIdSchema`
+          - `CarrierSchema`
+          - `convergenceOf`
+          - `deploymentOf`
+          - `deploymentResource`
+          - `DeploymentStateSchema`
+          - `sameCommit`
+          - `wantsBuild`
+      - Cross-plugin:
+        - Imported by: `build`
     - **`run-ledger`** — Lean build-runs ledger leaf: the build_runs table def + the CLI build-run recorder, importable by the `./singularity build` CLI without the heavy build barrel (which pulls config_v2/notifications).
       - Server:
         - Uses: `database/admin.openShortLivedClient`
@@ -7301,13 +7342,15 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/deploy/local-serve`
           - `apps/studio/compositions`
           - `apps/studio/compositions/release`
-    - **`server-build-id`** — Server build-id leaf: reads the .build-id baked into the served bundle. A leaf so stale-tab detection reads it without importing the heavy build barrel (which pulls git-watcher/worktree).
+    - **`server-build-id`** — Served-bundle pin leaf: reads the .build-commit (the tree the bundle was built from) and .build-graph (content identity of the served web graph) trailers out of the served dist, fresh on every call. A leaf so the deployment description and stale-tab detection read them without importing the heavy build barrel (which pulls git-watcher/worktree).
       - Server:
         - Uses: `infra/paths.webDistDir`
-        - Exports (values): `getServerBuildId`
+        - Exports (values):
+          - `getServerCommit`
+          - `getServerGraphHash`
       - Cross-plugin:
         - Imported by:
-          - `build`
+          - `build/deployment`
           - `reports`
           - `reports/crash`
 
@@ -16308,6 +16351,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`git-read-cache`** — Git-state-keyed result memos: skip a gated git recompute when a cheap ungated signature is unchanged; single-flight + coalesce per worktree. createGitStateMemo takes signature/compute per call; createSignedMemo binds them at construction so a resource's revalidate and loader cannot drift.
       - Cross-plugin:
         - Imported by:
+          - `build/deployment`
           - `conversations/conversation-view/code`
           - `conversations/conversation-view/jsonl-viewer`
           - `plugin-meta/plugin-tree`
@@ -16351,6 +16395,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Cross-plugin:
         - Imported by:
           - `build`
+          - `build/deployment`
           - `conversations/conversation-view/commits-graph`
           - `review/plugin-changes`
           - `tasks/attempt-work`
@@ -16747,6 +16792,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `build/build-commits`
           - `build/build-logs`
           - `build/build-profiling`
+          - `build/deployment`
           - `build/serve-composition`
           - `build/server-build-id`
           - `code-explorer`
@@ -20573,7 +20619,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/deploy/ssh-setup`
           - `apps/mail/reading-pane`
           - `apps/workflows/engine`
-          - `build`
           - `build/build-logs`
           - `code-explorer/commit-detail`
           - `conversations/agents`
@@ -20667,8 +20712,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `WorktreeGoneError`
       - Cross-plugin:
         - Imported by:
-          - `build`
           - `build/build-commits`
+          - `build/deployment`
           - `code-explorer`
           - `code-explorer/code-api`
           - `conversations/conversation-view/code`
@@ -20758,6 +20803,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `build`
               - `build/build-info`
               - `build/build-status`
+              - `build/deployment`
               - `build/serve-composition`
               - `config_v2/settings`
               - `conversations/conversation-category`
@@ -21264,6 +21310,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `auth`
               - `auth/apple-signing/setup-wizard`
               - `backup`
+              - `build/deployment`
               - `code-explorer/commit-detail`
               - `config_v2/config-link`
               - `config_v2/settings`
@@ -21406,6 +21453,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/studio/contributions/tables/row-count`
               - `apps/studio/explorer`
               - `build/build-status`
+              - `build/deployment`
               - `conversations/all-conversations`
               - `conversations/conversation-preprompt`
               - `conversations/conversation-progress`
@@ -21556,6 +21604,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/sonata/sources/midi`
               - `apps/sonata/track-mixer`
               - `apps/studio/compositions/release/release-logs`
+              - `build/deployment`
               - `code-explorer/commit-detail`
               - `conversations/conversation-ui/item`
               - `conversations/conversation-view/code/docs-button`
@@ -21762,6 +21811,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/studio/contributions/tables/row-count`
               - `apps/studio/contributions/tables/sample-rows`
               - `build/build-commits`
+              - `build/deployment`
               - `code-explorer/commit-detail`
               - `config_v2/fields`
               - `config_v2/settings`
@@ -21863,6 +21913,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `build`
               - `build/build-info`
               - `build/build-logs`
+              - `build/deployment`
               - `code-explorer/commit-detail`
               - `config_v2/config-link`
               - `config_v2/settings`
@@ -22023,6 +22074,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/workflows/definitions`
               - `build`
               - `build/build-logs`
+              - `build/deployment`
               - `code-explorer/file-resolve`
               - `config_v2/settings`
               - `conversations/conversation-preprompt`
@@ -22243,6 +22295,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `build`
               - `build/build-info`
               - `build/build-logs`
+              - `build/deployment`
               - `build/serve-composition`
               - `code-explorer/commit-detail`
               - `code-explorer/file-resolve`
@@ -22756,6 +22809,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `build`
               - `build/build-info`
               - `build/build-logs`
+              - `build/deployment`
               - `build/serve-composition`
               - `code-explorer`
               - `code-explorer/commit-detail`
@@ -25299,6 +25353,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `build/build-commits`
           - `build/build-fix`
           - `build/build-info`
+          - `build/deployment`
           - `build/serve-composition`
           - `code-explorer/code-api`
           - `config_v2`
@@ -25482,6 +25537,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `build`
           - `build/build-commits`
           - `build/build-info`
+          - `build/deployment`
           - `code-explorer`
           - `code-explorer/commit-detail`
           - `config_v2/settings`
@@ -27950,7 +28006,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `resource.declare` "reports"
       - `change-feed-exclusion` "reports"
     - Uses:
-      - `build/server-build-id.getServerBuildId`
+      - `build/server-build-id.getServerGraphHash`
       - `database.db`
       - `database/change-feed.ExcludeFromChangeFeed`
       - `infra/duress.createShedBuffer`
@@ -28109,7 +28165,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Server:
         - Contributes: `report-kind` "crash"
         - Uses:
-          - `build/server-build-id.getServerBuildId`
+          - `build/server-build-id.getServerGraphHash`
           - `reports.ReportKind`
       - Core:
         - Uses: `primitives/ui-context.UiContextMetaSchema`
@@ -28600,6 +28656,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps-core/tabs.getSurfaceMode`
           - `apps-core/tabs.setSurfaceMode`
           - `apps-core/tabs.useSurfaceMode`
+          - `build.useStaleFrontend`
           - `config_v2.ConfigV2`
           - `config_v2.useConfig`
           - `primitives/css/center.Center`
@@ -28611,7 +28668,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/floating-action.FloatingActionFadeIn`
           - `primitives/icon-button.IconButton`
           - `primitives/live-state.useNotificationsChannelStatuses`
-          - `primitives/live-state.useResource`
           - `primitives/live-state.useWindowResource`
           - `primitives/persistent-draft.useDraft`
           - `primitives/tooltip.WithTooltip`

@@ -257,6 +257,7 @@ fixed raw size escapes per-site via
     - `build`
     - `build/build-info`
     - `build/build-logs`
+    - `build/deployment`
     - `build/serve-composition`
     - `code-explorer`
     - `code-explorer/commit-detail`

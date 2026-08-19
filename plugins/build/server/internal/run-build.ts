@@ -11,24 +11,22 @@ import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";
 import {
   REPO_ROOT,
   currentWorktreeName,
-  isMain,
   worktreeDataDir,
   worktreeArtifacts,
   pruneWorktreeBuildArtifacts,
 } from "@plugins/infra/plugins/paths/server";
 import type { Namespace } from "@plugins/infra/plugins/namespace/core";
 import { recordNotification } from "@plugins/shell/plugins/notifications/server";
-import { getConfig } from "@plugins/config_v2/server";
 import { buildDetailRoute } from "@plugins/build/core";
 import {
   BUILD_EXIT_SUPERSEDED,
   buildStatusOf,
   killedSignalName,
 } from "@plugins/build/plugins/build-status/core";
-import { buildConfig } from "../../shared";
 import { agentManagerApp } from "@plugins/apps/plugins/agent-manager/plugins/shell/core";
 import { _buildRuns } from "@plugins/build/plugins/run-ledger/server";
-import { frontendHashResource } from "./frontend-hash-resource";
+import { deploymentResource } from "@plugins/build/plugins/deployment/server";
+import { reconcileDeployment } from "./reconcile";
 import { buildLog } from "./build-log";
 
 // In-process re-entry guard only. The authoritative, restart-durable lock lives
@@ -74,26 +72,6 @@ export async function hasLiveInflightBuild(): Promise<boolean> {
       ),
     );
   return rows.some((r) => isPidAlive(r.pid));
-}
-
-/**
- * The commit a live in-flight build was claimed for, or `null` if none is live.
- *
- * Read by the boot-adopted watch: a build that restarts this backend outlives
- * the `triggerBuild` call that knew its commit, so the freshly-booted process
- * recovers that baseline from the row in order to converge when the build ends.
- */
-export async function liveInflightBuildCommit(): Promise<string | null> {
-  const rows = await db
-    .select({ pid: _buildRuns.pid, commitHash: _buildRuns.commitHash })
-    .from(_buildRuns)
-    .where(
-      and(
-        isNull(_buildRuns.finishedAt),
-        eq(_buildRuns.namespace, currentWorktreeName()),
-      ),
-    );
-  return rows.find((r) => isPidAlive(r.pid))?.commitHash ?? null;
 }
 
 /**
@@ -295,9 +273,12 @@ export function triggerBuild(
 ): void {
   if (inflight) return;
   inflight = true;
-  // Sampled here, outside the async body, so the commit stamped on the ledger
-  // row and the baseline `convergeMain` compares against are literally the same
-  // value on every exit path below.
+  // The commit this run is claimed for, stamped on the ledger row. Sampled
+  // outside the async body so the row names the tree the build started on, not
+  // whatever the checkout moved to while it queued. It is NOT a baseline anyone
+  // carries: the convergence decision is re-derived from durable state at every
+  // terminal edge (see reconcileDeployment), which is what survives this process
+  // being killed by its own build.
   const forCommit = getHeadCommit();
   void runTracked("build:run", async () => {
     let ran = false;
@@ -312,69 +293,30 @@ export function triggerBuild(
       );
     } finally {
       inflight = false;
-      // Only after a build we actually RAN. Converging on the dropped-request
+      // Only after a build we actually RAN. Reconciling on the dropped-request
       // path instead would recurse: that path re-enters `triggerBuild`, which
-      // drops again (a build is still live), which would converge again. The
-      // live build converges for us when it ends.
-      if (ran) await convergeMain(forCommit);
+      // drops again (a build is still live), which would reconcile again. The
+      // live build reconciles for us when it ends.
+      if (ran) await reconcileDeployment();
     }
   });
 }
 
+/**
+ * The commit this checkout is on, stamped onto the ledger row a build claims.
+ *
+ * FULL sha, deliberately. `build_runs.commitHash` is compared against the dist's
+ * `.build-commit` and against the checkout's HEAD — both full — to decide
+ * whether a target has already been attempted, and an abbreviated form makes
+ * that comparison silently always-false. Every display of the column truncates
+ * at render, which is where truncation belongs.
+ */
 export function getHeadCommit(): string | null {
-  const proc = Bun.spawnSync(["git", "rev-parse", "--short", "HEAD"], {
+  const proc = Bun.spawnSync(["git", "rev-parse", "HEAD"], {
     cwd: REPO_ROOT,
   });
   if (proc.exitCode !== 0) return null;
   return proc.stdout.toString().trim() || null;
-}
-
-/**
- * Auto-build is a CONVERGENCE loop on "main is deployed at refs/heads/main", not
- * a queue of push events. `triggerBuild` DROPS a request that arrives while a
- * build is in flight — and a push landing mid-build is precisely when one does —
- * so the request cannot be remembered, it has to be re-derived. This is that
- * re-derivation, run at every edge where a build reaches terminal.
- *
- * The comparison is against the commit the finished build was FOR, not against
- * the deployed commit, and that is what makes it loop-free in both directions:
- *
- *   - a build that FAILED leaves the deployed commit behind permanently, so
- *     "deployed != head" would rebuild the same failing commit for ever;
- *   - a build that PASSED across a mid-run merge stamps `.build-commit` with the
- *     POST-merge head, so "deployed != head" would call it current when its
- *     artifact was in fact assembled from two different trees.
- *
- * Both are answered by asking whether the tree moved since this build claimed
- * it: it did ⇒ rebuild exactly once from the tip; it didn't ⇒ the verdict stands.
- */
-export async function convergeMain(builtCommit: string | null): Promise<void> {
-  if (!isMain()) return;
-  if (!getConfig(buildConfig).autoBuild) return;
-  const head = getHeadCommit();
-  if (!needsRebuild(builtCommit, head)) return;
-  buildLog.publish(
-    `main advanced ${builtCommit} → ${head} during the last build — rebuilding`,
-  );
-  triggerBuild("auto");
-}
-
-/**
- * `convergeMain`'s decision, extracted pure so the property the whole design
- * rests on — that it cannot loop — is testable without the db/config singletons
- * the caller binds. Every re-trigger this returns true for consumes a commit
- * that a subsequent build will then match, so the chain always terminates.
- *
- * An unreadable commit on either side means "cannot tell", which must read as
- * converged: manufacturing a difference from a missing value would mint builds
- * for ever on a checkout where git cannot answer.
- */
-export function needsRebuild(
-  builtCommit: string | null,
-  head: string | null,
-): boolean {
-  if (builtCommit === null || head === null) return false;
-  return head !== builtCommit;
 }
 
 async function doRunBuild(
@@ -497,7 +439,9 @@ async function doRunBuild(
     .update(_buildRuns)
     .set(outcome)
     .where(and(eq(_buildRuns.id, buildId), isNull(_buildRuns.finishedAt)));
-  frontendHashResource.notify();
+  // The dist has been republished and the ledger row is closed, so the
+  // deployment description has changed on both axes it can change on.
+  deploymentResource.notify();
   const linkTo = buildDetailRoute.link(agentManagerApp, { runId: buildId });
   if (exitCode === 0) {
     await recordNotification({
@@ -510,11 +454,11 @@ async function doRunBuild(
     });
   } else if (exitCode === BUILD_EXIT_SUPERSEDED) {
     // Not a failure and not an alarm: the tree moved under this build, so it had
-    // nothing left to be a verdict about. `convergeMain` below mints the rebuild.
+    // nothing left to be a verdict about. The reconcile below mints the rebuild.
     await recordNotification({
       type: "build",
       title: "Build superseded",
-      description: `${commitHash ?? "the built commit"} was replaced mid-build — rebuilding`,
+      description: `${commitHash?.slice(0, 9) ?? "the built commit"} was replaced mid-build — rebuilding`,
       variant: "info",
       linkTo,
       dedupeKey: `build-finish:${buildId}`,

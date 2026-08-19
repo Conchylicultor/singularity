@@ -1,30 +1,5 @@
 import { z } from "zod";
-import { resourceDescriptor } from "@plugins/primitives/plugins/live-state/core";
 import { queryResourceDescriptor } from "@plugins/infra/plugins/query-resource/core";
-import { CommitRowSchema } from "@plugins/primitives/plugins/commit-list/core";
-
-export const MainAheadCountSchema = z.object({
-  count: z.number().int(),
-  commits: z.array(CommitRowSchema),
-});
-
-export type MainAheadCount = z.infer<typeof MainAheadCountSchema>;
-
-export const mainAheadCountResource = resourceDescriptor<MainAheadCount>(
-  "build.mainAheadCount",
-  MainAheadCountSchema,
-  { count: 0, commits: [] },
-  { bootCritical: true },
-);
-
-export const FrontendHashSchema = z.object({ hash: z.string(), buildId: z.string() });
-export type FrontendHash = z.infer<typeof FrontendHashSchema>;
-export const frontendHashResource = resourceDescriptor<FrontendHash>(
-  "build.frontendHash",
-  FrontendHashSchema,
-  { hash: "", buildId: "" },
-  { bootCritical: true },
-);
 
 export const BuildRunSchema = z.object({
   id: z.string(),

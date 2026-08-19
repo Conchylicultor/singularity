@@ -44,17 +44,25 @@ export interface ArtifactBuildTarget {
   inputsHash: string;
 }
 
-// The build-id is NOT baked into artifacts (it would churn every hash every
-// build). `import.meta.env.VITE_BUILD_ID` compiles to the plain global
-// identifier below, declared by an inline script the compose step injects into
-// index.html — so the stale-tab hook keeps working with content-addressed code.
-export const BUILD_ID_GLOBAL = "__SINGULARITY_BUILD_ID__";
+// Neither pin is baked into artifacts (either would churn every hash every
+// build). `import.meta.env.VITE_BUILD_GRAPH` / `VITE_BUILD_COMMIT` compile to
+// the plain global identifiers below, declared by an inline script the compose
+// step injects into index.html — so a bundle can name itself while its code
+// stays content-addressed.
+//
+// The graph hash is the bundle's CONTENT identity (a pure function of the
+// composed module graph), not the id of the run that produced it: two builds of
+// an unchanged tree compose the same graph, so a tab holding it is not stale.
+// The commit is the tree the graph was built from.
+export const GRAPH_GLOBAL = "__SINGULARITY_GRAPH__";
+export const COMMIT_GLOBAL = "__SINGULARITY_COMMIT__";
 
 const ARTIFACT_DEFINE: Record<string, string> = {
   "import.meta.env.DEV": "false",
   "import.meta.env.PROD": "true",
   "import.meta.env.MODE": JSON.stringify("production"),
-  "import.meta.env.VITE_BUILD_ID": BUILD_ID_GLOBAL,
+  "import.meta.env.VITE_BUILD_GRAPH": GRAPH_GLOBAL,
+  "import.meta.env.VITE_BUILD_COMMIT": COMMIT_GLOBAL,
   // Vite's APP build replaces this automatically, but LIB mode deliberately
   // preserves it — and `process` does not exist in the browser, so any
   // first-party or inlined npm code branching on NODE_ENV would crash at

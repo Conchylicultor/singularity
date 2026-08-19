@@ -72,6 +72,7 @@ slots-as-props, which is what `<Frame>` did before it was deleted.
     - `build`
     - `build/build-info`
     - `build/build-logs`
+    - `build/deployment`
     - `code-explorer/commit-detail`
     - `config_v2/config-link`
     - `config_v2/settings`

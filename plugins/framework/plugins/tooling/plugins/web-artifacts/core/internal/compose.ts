@@ -18,13 +18,21 @@ import {
   findUnmappedSpecifiers,
   type ImportMapEntry,
 } from "../import-map";
-import { BUILD_ID_GLOBAL } from "./vite-builder";
+import { sha256Hex } from "../hash";
+import { COMMIT_GLOBAL, GRAPH_GLOBAL } from "./vite-builder";
 
 export interface ComposeOptions {
   stagingDir: string;
   /** web-core/web dir (index.html + public/). */
   webSrcDir: string;
+  /** The run that produced this dist — recorded in the manifest, never served. */
   buildId: string;
+  /**
+   * The commit this dist was composed FROM, baked into index.html so the served
+   * bundle can name its own tree. `null` when git could not answer — an unknown
+   * commit reads as unknown, never as a plausible-looking sha.
+   */
+  buildCommit: string | null;
   /** Recorded in the marker so map-in-sync recomputes with the dist's own flag. */
   minify: boolean;
   cssHref: string;
@@ -91,9 +99,60 @@ export function computePreloadClosure(opts: {
   return [...seen].sort();
 }
 
+/**
+ * The CONTENT identity of everything a loaded tab is frozen on — a pure function
+ * of the shell it booted from and the module graph that shell wires up:
+ *
+ * - `shell` — the SOURCE `index.html`, whose head carries executable inline
+ *   scripts (the theme replay, the DevTools hook). Those run once at load and
+ *   live in the tab from then on, so editing one changes the served bytes with
+ *   no effect on any URL. Hashed as its own tagged line; without it a tab could
+ *   hold a genuinely different bundle and still read as fresh.
+ * - `entry` / `css` / `map` / `preload` — the module graph. Every value is
+ *   already content-addressed, so a code change moves a URL and therefore the
+ *   digest.
+ *
+ * NOT covered, deliberately: the `public/` static files copied verbatim beside
+ * index.html (icons, manifest). They are served bytes but nothing freezes them
+ * into a running tab — the browser refetches them by URL under its own cache
+ * rules — so an icon edit would cost every open tab a reload and buy nothing.
+ * If a `public/` file ever becomes something the tab executes at boot, it joins
+ * the `shell` line and this paragraph is wrong.
+ *
+ * Also NOT the COMPOSED html: the commit injected into it moves with the tree
+ * even when the graph does not, and hashing the output would reintroduce exactly
+ * the per-build churn this replaced — the run-id nonce that made two byte-
+ * identical deploys look like different bundles.
+ *
+ * Entries are tagged and key-sorted so neither object-literal order nor a
+ * URL that happens to look like a tag can shift the digest. 16 hex chars, the
+ * same width the store uses for an artifact's address.
+ */
+export function computeGraphHash(graph: {
+  /** The SOURCE index.html, verbatim — never the composed output. */
+  htmlSrc: string;
+  importMap: { imports: Record<string, string> };
+  preloads: string[];
+  entryUrl: string;
+  cssHref: string;
+}): string {
+  const lines = [
+    `shell\t${sha256Hex(graph.htmlSrc)}`,
+    `entry\t${graph.entryUrl}`,
+    `css\t${graph.cssHref}`,
+    ...Object.keys(graph.importMap.imports)
+      .sort()
+      .map((spec) => `map\t${spec}\t${graph.importMap.imports[spec]}`),
+    ...[...graph.preloads].sort().map((url) => `preload\t${url}`),
+  ];
+  return sha256Hex(lines.join("\n") + "\n").slice(0, 16);
+}
+
 export function composeDist(opts: ComposeOptions): {
   importMap: { imports: Record<string, string> };
   preloads: string[];
+  /** Content identity of the composed graph — see {@link computeGraphHash}. */
+  graphHash: string;
 } {
   const { stagingDir } = opts;
   mkdirSync(stagingDir, { recursive: true });
@@ -139,9 +198,20 @@ export function composeDist(opts: ComposeOptions): {
   });
 
   // 5. index.html: keep the source head (theme replay + DevTools-hook inline
-  // scripts, icons, title), inject build-id global + import map + global CSS +
-  // preloads, and swap the /main.tsx module script for the entry artifact.
+  // scripts, icons, title), inject the two bundle pins + import map + global CSS
+  // + preloads, and swap the /main.tsx module script for the entry artifact.
+  //
+  // Read BEFORE the graph hash, which covers the source shell: its inline
+  // scripts are code the tab runs and keeps, and they belong to no URL, so
+  // nothing else in the digest would move when one of them changes.
   const htmlSrc = readFileSync(join(opts.webSrcDir, "index.html"), "utf8");
+  const graphHash = computeGraphHash({
+    htmlSrc,
+    importMap,
+    preloads,
+    entryUrl: opts.entryUrl,
+    cssHref: opts.cssHref,
+  });
   if (!htmlSrc.includes(MAIN_SCRIPT_TAG)) {
     throw new Error(
       `compose: ${MAIN_SCRIPT_TAG} not found in web-core index.html`,
@@ -152,8 +222,12 @@ export function composeDist(opts: ComposeOptions): {
   }
   const headInject = [
     // `var` in a classic script creates a global binding module code can read —
-    // artifacts compile `import.meta.env.VITE_BUILD_ID` to this identifier.
-    `<script>var ${BUILD_ID_GLOBAL} = ${JSON.stringify(opts.buildId)}; window.${BUILD_ID_GLOBAL} = ${BUILD_ID_GLOBAL};</script>`,
+    // artifacts compile `import.meta.env.VITE_BUILD_GRAPH` / `VITE_BUILD_COMMIT`
+    // to these identifiers. An unresolvable commit is injected as "" rather than
+    // omitted, so the global always exists and reads as "unknown" instead of
+    // throwing at a consumer that expected it.
+    `<script>var ${GRAPH_GLOBAL} = ${JSON.stringify(graphHash)}; window.${GRAPH_GLOBAL} = ${GRAPH_GLOBAL};` +
+      ` var ${COMMIT_GLOBAL} = ${JSON.stringify(opts.buildCommit ?? "")}; window.${COMMIT_GLOBAL} = ${COMMIT_GLOBAL};</script>`,
     `<script type="importmap">${JSON.stringify(importMap)}</script>`,
     `<link rel="stylesheet" href="${opts.cssHref}" />`,
     ...preloads.map((p) => `<link rel="modulepreload" href="${p}" />`),
@@ -196,6 +270,8 @@ export function composeDist(opts: ComposeOptions): {
     JSON.stringify(
       {
         buildId: opts.buildId,
+        graph: graphHash,
+        commit: opts.buildCommit,
         minify: opts.minify,
         linkCount: opts.links.length,
         preloadCount: preloads.length,
@@ -206,5 +282,5 @@ export function composeDist(opts: ComposeOptions): {
     ),
   );
 
-  return { importMap, preloads };
+  return { importMap, preloads, graphHash };
 }

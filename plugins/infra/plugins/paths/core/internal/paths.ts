@@ -339,9 +339,10 @@ export const worktreeArtifacts = {
 /**
  * The built frontend THIS BACKEND is serving — the tree the gateway hands the
  * browser for this backend's namespace. The one source of truth for the runtime
- * readers of the served bundle: the frontend-hash stale-tab signal
- * (`index.html`), the "N commits behind main" base (`.build-commit`) and the
- * report-tagging build id (`.build-id`).
+ * readers of the served bundle: the stale-tab signal (`.build-graph`, the
+ * bundle's content identity — also what tags a report's originating tab), the
+ * "N commits behind main" base (`.build-commit`) and the producing run
+ * (`.build-id`).
  *
  * A FUNCTION, not a const, for two independent reasons — do not re-freeze it at
  * module eval:

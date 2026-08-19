@@ -1,7 +1,14 @@
-import { createFileWatcher, type FileWatcher } from "@plugins/infra/plugins/file-watcher/server";
+import {
+  createFileWatcher,
+  type FileWatcher,
+} from "@plugins/infra/plugins/file-watcher/server";
 import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";
-import { currentWorktreeName, worktreeDataDir } from "@plugins/infra/plugins/paths/server";
-import { convergeMain, hasLiveInflightBuild, liveInflightBuildCommit, reconcileOrphanBuilds } from "./run-build";
+import {
+  currentWorktreeName,
+  worktreeDataDir,
+} from "@plugins/infra/plugins/paths/server";
+import { hasLiveInflightBuild, reconcileOrphanBuilds } from "./run-build";
+import { reconcileDeployment } from "./reconcile";
 
 // A single boot-adopted watch per backend. `./singularity build` restarts the
 // very backend that spawned it; the freshly-booted process adopts the still-live
@@ -28,10 +35,6 @@ export async function watchInflightBuild(): Promise<void> {
   if (watcher != null || !(await hasLiveInflightBuild())) return;
 
   const name = currentWorktreeName();
-  // Captured before the watch arms: this is the only path on which a build ends
-  // without the `triggerBuild` call that started it still being alive to
-  // converge, so the baseline has to come off the row instead.
-  const adoptedCommit = await liveInflightBuildCommit();
 
   // Reconcile, then dispose the watcher once no live in-flight build remains.
   async function settle(): Promise<void> {
@@ -41,8 +44,11 @@ export async function watchInflightBuild(): Promise<void> {
       watcher = null;
       await w.stop();
       // The adopted build has reached terminal — the same edge `triggerBuild`
-      // converges on for a build whose owner survived.
-      await convergeMain(adoptedCommit);
+      // reconciles on for a build whose owner survived. Nothing is carried from
+      // before the watch armed: `reconcileDeployment` re-derives the decision
+      // from durable state, which is why this watcher no longer has to recover a
+      // baseline off the row.
+      await reconcileDeployment();
     }
   }
 

@@ -40,6 +40,7 @@
     - `apps/studio/contributions/tables/row-count`
     - `apps/studio/contributions/tables/sample-rows`
     - `build/build-commits`
+    - `build/deployment`
     - `code-explorer/commit-detail`
     - `config_v2/fields`
     - `config_v2/settings`

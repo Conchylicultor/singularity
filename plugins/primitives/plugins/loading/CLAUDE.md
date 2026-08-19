@@ -114,6 +114,7 @@ which is what the `no-adhoc-loading-text` lint rule enforces.
     - `build`
     - `build/build-commits`
     - `build/build-info`
+    - `build/deployment`
     - `code-explorer`
     - `code-explorer/commit-detail`
     - `config_v2/settings`

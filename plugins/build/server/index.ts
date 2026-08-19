@@ -2,23 +2,32 @@ import { Resource } from "@plugins/framework/plugins/server-core/core";
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
 import { Trigger } from "@plugins/infra/plugins/events/server";
 import { refAdvanced } from "@plugins/infra/plugins/git-watcher/server";
-import { isMain } from "@plugins/infra/plugins/paths/server";
-import { ConfigV2, getConfig } from "@plugins/config_v2/server";
+import { ConfigV2 } from "@plugins/config_v2/server";
 import { handleBuild } from "./internal/handle-build";
 import { handleServeComposition } from "./internal/handle-serve-composition";
 import { reconcileOrphanBuilds } from "./internal/run-build";
 import { watchInflightBuild } from "./internal/watch-inflight-build";
 import { buildRunJob } from "./internal/build-run-job";
 import { buildRunDebouncedJob } from "./internal/build-run-debounced-job";
-import { getMainAhead } from "./internal/git-status";
-import { mainAheadCountResource } from "./internal/main-ahead-resource";
+import { reconcileDeployment } from "./internal/reconcile";
 import { buildHistoryResource } from "./internal/build-history-resource";
-import { frontendHashResource } from "./internal/frontend-hash-resource";
 import { buildConfig } from "../shared";
-import { triggerBuildEndpoint, serveCompositionEndpoint } from "../core/endpoints";
+import {
+  triggerBuildEndpoint,
+  serveCompositionEndpoint,
+} from "../core/endpoints";
 
 export default {
-  contributions: [ConfigV2.Register({ descriptor: buildConfig }), Resource.Declare(mainAheadCountResource), Resource.Declare(buildHistoryResource), Resource.Declare(frontendHashResource), Trigger({ on: refAdvanced.where({ refName: "refs/heads/main" }), do: buildRunJob, with: {}, oneShot: false })],
+  contributions: [
+    ConfigV2.Register({ descriptor: buildConfig }),
+    Resource.Declare(buildHistoryResource),
+    Trigger({
+      on: refAdvanced.where({ refName: "refs/heads/main" }),
+      do: buildRunJob,
+      with: {},
+      oneShot: false,
+    }),
+  ],
   httpRoutes: {
     [triggerBuildEndpoint.route]: handleBuild,
     [serveCompositionEndpoint.route]: handleServeComposition,
@@ -36,17 +45,14 @@ export default {
     // Per-namespace, like the reconcile above — not isMain-gated.
     await watchInflightBuild();
 
-    if (!isMain()) return;
-
-    const { autoBuild } = getConfig(buildConfig);
-    if (autoBuild) {
-      const { count } = await getMainAhead();
-      if (count > 0) {
-        // On boot we already know main is ahead — build immediately (no runAt).
-        // There is no push burst to coalesce here, and routing through
-        // buildRunJob would only add a pointless DEBOUNCE_MS delay.
-        await buildRunDebouncedJob.enqueue({});
-      }
-    }
+    // The "observer starts" edge. It exists because the other two edges both run
+    // in a process a build can kill: if a push lands while a build is finishing,
+    // the reconcile that would have caught it can die with the backend. This one
+    // asks the same question from durable state after the restart, so the answer
+    // survives. In the 2026-08-19 incident this edge alone would have caught it.
+    //
+    // Both the main-only scope and the autoBuild kill switch live inside
+    // reconcileDeployment, so every edge is gated identically by construction.
+    await reconcileDeployment();
   },
 } satisfies ServerPluginDefinition;

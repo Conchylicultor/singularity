@@ -1,5 +1,8 @@
 import { useMemo } from "react";
-import { useResource, matchResource } from "@plugins/primitives/plugins/live-state/web";
+import {
+  useResource,
+  matchResource,
+} from "@plugins/primitives/plugins/live-state/web";
 import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { getTabId } from "@plugins/primitives/plugins/tab-id/web";
@@ -7,7 +10,10 @@ import { useStaleFrontend } from "@plugins/build/web";
 import { reportsResource } from "@plugins/reports/core";
 import type { Report } from "@plugins/reports/core";
 import { Reports } from "@plugins/reports/web";
-import { DataView, defineDataView } from "@plugins/primitives/plugins/data-view/web";
+import {
+  DataView,
+  defineDataView,
+} from "@plugins/primitives/plugins/data-view/web";
 import type { FieldDef } from "@plugins/primitives/plugins/data-view/web";
 
 // Marker scraped by codegen (data-views.generated.ts). Must live in web/**.
@@ -26,10 +32,20 @@ export function ReportsView({
   // schema is still built from the (empty) rows.
   return matchResource(result, {
     pending: () => (
-      <ReportsTable rows={[]} loading selectedId={selectedId} onSelect={onSelect} />
+      <ReportsTable
+        rows={[]}
+        loading
+        selectedId={selectedId}
+        onSelect={onSelect}
+      />
     ),
     error: () => (
-      <ReportsTable rows={[]} loading selectedId={selectedId} onSelect={onSelect} />
+      <ReportsTable
+        rows={[]}
+        loading
+        selectedId={selectedId}
+        onSelect={onSelect}
+      />
     ),
     ready: (rows) => (
       <ReportsTable
@@ -106,7 +122,9 @@ function ReportsTable({
         type: "bool",
         value: (r) => r.rateLimited,
         cell: (r) =>
-          r.rateLimited ? <Badge variant="destructive">rate-limited</Badge> : null,
+          r.rateLimited ? (
+            <Badge variant="destructive">rate-limited</Badge>
+          ) : null,
         sortable: false,
         filterable: true,
         width: "8rem",
@@ -118,7 +136,9 @@ function ReportsTable({
         value: (r) => r.count,
         cell: (r) =>
           r.count > 1 ? (
-            <span className="tabular-nums text-muted-foreground">×{r.count}</span>
+            <span className="tabular-nums text-muted-foreground">
+              ×{r.count}
+            </span>
           ) : null,
         sortable: true,
         align: "end",
@@ -188,7 +208,7 @@ function ReportsTable({
  */
 function AttributionBadges({ report: c }: { report: Report }) {
   const tabId = getTabId();
-  const { serverBuildId } = useStaleFrontend();
+  const { serverGraph } = useStaleFrontend();
   return (
     <>
       {c.lastClientId != null &&
@@ -198,8 +218,8 @@ function AttributionBadges({ report: c }: { report: Report }) {
           <Badge variant="muted">another tab</Badge>
         ))}
       {c.lastBuildId != null &&
-        serverBuildId != null &&
-        c.lastBuildId !== serverBuildId && (
+        serverGraph != null &&
+        c.lastBuildId !== serverGraph && (
           <Badge variant="warning">outdated tab</Badge>
         )}
     </>

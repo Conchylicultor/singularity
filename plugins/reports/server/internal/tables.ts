@@ -40,21 +40,37 @@ export const _reports = pgTable(
     // and skips the resource notify. (Was `crash_loop`.)
     rateLimited: boolean("rate_limited").notNull().default(false),
     noise: boolean("noise").notNull().default(false),
-    // Attribution (last-writer-wins): the tab + bundle build id of the most
+    // Attribution (last-writer-wins): the tab + bundle identity of the most
     // recent report for this fingerprint. NOT part of the dedup key.
+    // `last_build_id` holds the bundle's GRAPH HASH — the artifact's content
+    // identity, which is what "did this come from the bundle we serve?" actually
+    // asks. It carried the per-run build id until the run id left the browser;
+    // the column name is the older spelling, kept because renaming it would be a
+    // migration for no behavioural gain.
     lastClientId: text("last_client_id"),
     lastBuildId: text("last_build_id"),
     // Soft reference to tasks.id — the cross-plugin FK would cross a plugin
     // boundary, so we validate integrity in code via getTask() instead. A
     // deleted task just surfaces as `needsTask` on the next report.
     taskId: text("task_id"),
-    firstSeenAt: timestamp("first_seen_at", { withTimezone: true }).defaultNow().notNull(),
-    lastSeenAt: timestamp("last_seen_at", { withTimezone: true }).defaultNow().notNull(),
-    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
-    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+    firstSeenAt: timestamp("first_seen_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    lastSeenAt: timestamp("last_seen_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
   },
   (t) => [
-    uniqueIndex("reports_fingerprint_worktree_idx").on(t.fingerprint, t.worktree),
+    uniqueIndex("reports_fingerprint_worktree_idx").on(
+      t.fingerprint,
+      t.worktree,
+    ),
     index("reports_task_id_idx").on(t.taskId),
   ],
 );

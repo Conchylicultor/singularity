@@ -34,7 +34,6 @@ import {
 } from "@plugins/infra/plugins/paths/server";
 import {
   isPidAlive,
-  needsRebuild,
   readBuildTerminal,
   recoverBuildArtifacts,
 } from "./run-build";
@@ -293,38 +292,5 @@ describe("reconcile close condition (composition)", () => {
 
   test("running build (no artifact, pid alive) ⇒ left open", () => {
     expect(decide(uniqueBuildId("running"), process.pid)).toBe("leave-open");
-  });
-});
-
-/**
- * `convergeMain` re-derives the dropped auto-build request rather than
- * remembering it, so it runs after EVERY build — which makes "does it ever
- * re-trigger itself without end" the property that matters. Its decision is the
- * pure `needsRebuild`, so the whole loop question is decidable here.
- */
-describe("needsRebuild — the convergence decision", () => {
-  test("a build for the current tip does not re-trigger", () => {
-    // The failure loop this exists to prevent: a build that FAILED never updates
-    // the deployed commit, so a deployed-vs-head test would rebuild the same
-    // failing commit for ever. Comparing against what the build was FOR does not.
-    expect(needsRebuild("abc1234", "abc1234")).toBe(false);
-  });
-
-  test("a tree that moved during the build re-triggers", () => {
-    expect(needsRebuild("abc1234", "def5678")).toBe(true);
-  });
-
-  test("the re-triggered build then converges — the chain terminates", () => {
-    // Round 1 rebuilds at the new tip; round 2 is a build FOR that tip, so it
-    // matches and stops. Termination after exactly one extra build.
-    const head = "def5678";
-    expect(needsRebuild("abc1234", head)).toBe(true);
-    expect(needsRebuild(head, head)).toBe(false);
-  });
-
-  test("an unreadable commit on either side reads as converged, never as a difference", () => {
-    expect(needsRebuild(null, "abc1234")).toBe(false);
-    expect(needsRebuild("abc1234", null)).toBe(false);
-    expect(needsRebuild(null, null)).toBe(false);
   });
 });

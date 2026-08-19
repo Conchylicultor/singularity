@@ -62,6 +62,11 @@ export interface WebArtifactsPipelineOptions {
   stagingDir: string;
   minify: boolean;
   buildId: string;
+  /**
+   * The commit this dist is composed FROM — the caller's own pre-build sample,
+   * baked into index.html. `null` when git could not answer.
+   */
+  buildCommit: string | null;
   /** Fleet source (entry set + registry); defaults to the committed full registry. */
   source?: FleetSource;
   /**
@@ -94,6 +99,12 @@ export interface WebArtifactsPipelineResult {
   reusedArtifacts: number;
   vendorSpecs: number;
   preloads: number;
+  /**
+   * Content identity of the composed graph. The caller writes it into the dist
+   * (`.build-graph`) — it is what tells a tab whether the bundle it is running
+   * is still the one being served.
+   */
+  graphHash: string;
 }
 
 export async function runWebArtifactsPipeline(
@@ -358,10 +369,11 @@ export async function runWebArtifactsPipeline(
         ...eagerSeeds,
       ];
 
-      const { importMap, preloads } = composeDist({
+      const { importMap, preloads, graphHash } = composeDist({
         stagingDir: opts.stagingDir,
         webSrcDir,
         buildId: opts.buildId,
+        buildCommit: opts.buildCommit,
         minify: opts.minify,
         cssHref: css.href,
         links,
@@ -428,7 +440,7 @@ export async function runWebArtifactsPipeline(
       log(
         `compose: ${links.length} links, ${mapEntries.length} map entries, ${preloads.length} preloads`,
       );
-      return { preloads };
+      return { preloads, graphHash };
     },
   );
 
@@ -439,5 +451,6 @@ export async function runWebArtifactsPipeline(
     reusedArtifacts: buildOut.reused,
     vendorSpecs: Object.keys(vendors.entries).length,
     preloads: composed.preloads.length,
+    graphHash: composed.graphHash,
   };
 }

@@ -21,7 +21,7 @@
     - `resource.declare` "reports"
     - `change-feed-exclusion` "reports"
   - Uses:
-    - `build/server-build-id.getServerBuildId`
+    - `build/server-build-id.getServerGraphHash`
     - `database.db`
     - `database/change-feed.ExcludeFromChangeFeed`
     - `infra/duress.createShedBuffer`

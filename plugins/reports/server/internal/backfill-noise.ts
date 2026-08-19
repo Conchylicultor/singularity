@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
 import { db } from "@plugins/database/server";
-import { getServerBuildId } from "@plugins/build/plugins/server-build-id/server";
+import { getServerGraphHash } from "@plugins/build/plugins/server-build-id/server";
 import { setMutedByMetadata } from "@plugins/shell/plugins/notifications/server";
 import { defineWarmup } from "@plugins/infra/plugins/warmup/server";
 import { _reports } from "./tables";
@@ -18,7 +18,7 @@ import { isNoiseReport } from "./noise-rules";
 // touches only rows whose classification actually flips. After the first
 // reconcile a steady-state boot does a single SELECT and zero writes.
 export async function backfillNoiseClassification(): Promise<void> {
-  const serverBuildId = getServerBuildId();
+  const serverGraph = getServerGraphHash();
   const rows = await db
     .select({
       id: _reports.id,
@@ -37,8 +37,8 @@ export async function backfillNoiseClassification(): Promise<void> {
     // identically to how a fresh occurrence would be classified right now.
     const staleOrigin =
       row.lastBuildId != null &&
-      serverBuildId != null &&
-      row.lastBuildId !== serverBuildId;
+      serverGraph != null &&
+      row.lastBuildId !== serverGraph;
     // Crash-shaped noise fields live in the kind's generic `data` payload.
     const errorType =
       typeof row.data.errorType === "string" ? row.data.errorType : null;

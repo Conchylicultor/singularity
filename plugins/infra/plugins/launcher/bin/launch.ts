@@ -88,10 +88,10 @@ process.env.SINGULARITY_SENTINEL_WORKER_JS ??= join(
 process.env.SINGULARITY_REPO_CONFIG_DIR ??= join(bundleRoot, "config");
 // The served frontend. In dev this derives from the namespace
 // (`~/.singularity/worktrees/<name>/web`); a release ships one bundle whose web
-// tree is vendored at `<bundleRoot>/web` (already carrying `.build-id` /
-// `.build-commit`, copied by release.ts), so point the backend's readers —
-// the stale-tab frontend hash, the build-commit base, the report build id — at
-// it. Inherited launch → gateway → backend, like every var above.
+// tree is vendored at `<bundleRoot>/web` (already carrying `.build-graph` /
+// `.build-commit` / `.build-id`, copied by release.ts), so point the backend's
+// readers — the stale-tab graph pin, the build-commit base, the producing run —
+// at it. Inherited launch → gateway → backend, like every var above.
 process.env.SINGULARITY_WEB_DIST ??= join(bundleRoot, "web");
 // Reroot the embedded-PG / PgBouncer sockets AND the gateway's per-worktree
 // backend sockets onto short `/tmp` paths (each reads a single env override).

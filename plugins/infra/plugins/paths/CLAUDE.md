@@ -170,6 +170,7 @@ run everywhere.
     - `build/build-commits`
     - `build/build-logs`
     - `build/build-profiling`
+    - `build/deployment`
     - `build/serve-composition`
     - `build/server-build-id`
     - `code-explorer`

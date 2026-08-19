@@ -1307,7 +1307,12 @@ export function registerBuild(program: Command) {
           const claim = await recorder.insertMainRun({
             id: buildId,
             trigger: "manual",
-            commitHash: shortCommit || null,
+            // `headAtStart`, not the abbreviated `shortCommit` used for the build
+            // id above: this is the same full sha stamped into the dist as
+            // `.build-commit` and onto the receipt, so the ledger row and the
+            // pin name the same commit in the same spelling by construction —
+            // which is what lets the convergence decision compare them at all.
+            commitHash: headAtStart,
             pid: process.pid,
           });
           if (claim === "lost") {
@@ -1527,6 +1532,10 @@ export function registerBuild(program: Command) {
           webDir,
           target: distTarget,
           buildId,
+          // The commit the dist gets stamped with. Sampled at the top of this
+          // build, before any source was read, so `.build-commit` names the tree
+          // these bytes came from even when the checkout moves underneath us.
+          headAtStart,
           composition: null,
           minify: opts.minify,
           // A served dist links into the shared content-addressed store; only the
@@ -1668,9 +1677,10 @@ export function registerBuild(program: Command) {
         // A build that PASSED across a mid-run tree swap still deployed an
         // artifact assembled from two trees, so it is deployed-but-not-current
         // rather than wrong-and-loud. Say so instead of claiming a clean deploy of
-        // either commit; `convergeMain` rebuilds from the tip regardless, and it
-        // compares against the commit this build STARTED on precisely because
-        // `.build-commit` below records the post-swap head and would look current.
+        // either commit; `reconcileDeployment` rebuilds from the tip regardless. The
+        // dist's `.build-commit` names `headAtStart` — the commit this build
+        // answered for — so the pin agrees with this note instead of contradicting
+        // it by recording the post-swap head.
         const okHead = await supersededBy();
         if (okHead !== null)
           softNotes.push(

@@ -1,10 +1,8 @@
-import { useEffect, useRef, useState } from "react";
 import {
   useNotificationsChannelStatuses,
-  useResource,
   useWindowResource,
 } from "@plugins/primitives/plugins/live-state/web";
-import { frontendHashResource } from "@plugins/build/core";
+import { useStaleFrontend } from "@plugins/build/web";
 import { notificationsResource } from "@plugins/shell/plugins/notifications/web";
 
 export type StatusTone = "ok" | "warning" | "destructive";
@@ -28,22 +26,12 @@ export interface ActionBarStatus {
 export function useActionBarStatus(): ActionBarStatus {
   const { worktree, central } = useNotificationsChannelStatuses();
 
-  // Stale-tab detection — frontend rebuilt since this tab loaded.
-  // (Same initial-hash-ref pattern as build/web/components/build-button.tsx.)
-  const hashResult = useResource(frontendHashResource);
-  const initialHashRef = useRef<string | null>(null);
-  const [staleTab, setStaleTab] = useState(false);
-  // Read the hash inside the effect, narrowing via pending so TypeScript can see
-  // that data is defined. The empty-string default is genuinely correct here:
-  // when pending the effect returns early and never uses the hash for a staleTab decision.
-  useEffect(() => {
-    if (hashResult.pending) return;
-    const currentHash = hashResult.data.hash;
-    if (!currentHash) return;
-    if (initialHashRef.current === null) initialHashRef.current = currentHash;
-    else if (currentHash !== initialHashRef.current) setStaleTab(true);
-    // hashResult identity changes on each push; depend on the result object
-  }, [hashResult]);
+  // Stale-tab detection — the served bundle is no longer the one this tab is
+  // running. The SAME hook the Build button uses: this used to keep its own
+  // weaker detector (remember the first hash seen, warn when it drifts), which
+  // could only ever notice a change that happened while the tab was open — a tab
+  // that loaded an already-stale index.html was invisible to it forever.
+  const { stale: staleTab } = useStaleFrontend();
 
   // Unread error/warning notifications (same filter as the bell button).
   // No hook calls after this point, so we can gate with an early return

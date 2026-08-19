@@ -14,7 +14,10 @@ import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Cluster } from "@plugins/primitives/plugins/css/plugins/cluster/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { Button, ControlSizeProvider } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import {
+  Button,
+  ControlSizeProvider,
+} from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { LaunchAgentPopover } from "@plugins/primitives/plugins/launch/web";
 import { toast } from "@plugins/shell/plugins/notifications/web";
 import { conversationRoute } from "@plugins/conversations/core";
@@ -26,7 +29,7 @@ import { reportDetailPane } from "../panes";
 export function ReportDetail() {
   const { reportId } = reportDetailPane.useParams();
   const result = useResource(reportsResource);
-  const { serverBuildId } = useStaleFrontend();
+  const { serverGraph } = useStaleFrontend();
 
   if (result.pending) {
     return (
@@ -54,9 +57,13 @@ export function ReportDetail() {
       <ControlSizeProvider size="xs">
         <Scroll axis="both" fill>
           <Stack gap="lg" className="p-md">
-            <HeaderBadges report={report} serverBuildId={serverBuildId} />
+            <HeaderBadges report={report} serverGraph={serverGraph} />
 
-            <Text as="div" variant="body" className="whitespace-pre-wrap break-words text-foreground">
+            <Text
+              as="div"
+              variant="body"
+              className="whitespace-pre-wrap break-words text-foreground"
+            >
               {report.message}
             </Text>
 
@@ -68,7 +75,9 @@ export function ReportDetail() {
               <Field label="Worktree" value={report.worktree} mono />
               <Field label="Fingerprint" value={report.fingerprint} mono />
               {report.url && <Field label="URL" value={report.url} mono />}
-              {report.userAgent && <Field label="User agent" value={report.userAgent} />}
+              {report.userAgent && (
+                <Field label="User agent" value={report.userAgent} />
+              )}
               <TimeField label="First seen" date={report.firstSeenAt} />
               <TimeField label="Last seen" date={report.lastSeenAt} />
             </Stack>
@@ -85,7 +94,11 @@ export function ReportDetail() {
               <Text as="div" variant="label" tone="muted">
                 Raw data
               </Text>
-              <Scroll as="pre" axis="both" className="rounded-md bg-muted p-sm text-caption">
+              <Scroll
+                as="pre"
+                axis="both"
+                className="rounded-md bg-muted p-sm text-caption"
+              >
                 {JSON.stringify(report.data, null, 2)}
               </Scroll>
             </Stack>
@@ -98,10 +111,11 @@ export function ReportDetail() {
 
 function HeaderBadges({
   report: c,
-  serverBuildId,
+  serverGraph,
 }: {
   report: Report;
-  serverBuildId: string | null;
+  /** The bundle graph this server is serving; `lastBuildId` holds the reporting tab's. */
+  serverGraph: string | null;
 }) {
   const tabId = getTabId();
   return (
@@ -121,9 +135,13 @@ function HeaderBadges({
           <Badge variant="muted">another tab</Badge>
         ))}
       {c.lastBuildId != null &&
-        serverBuildId != null &&
-        c.lastBuildId !== serverBuildId && <Badge variant="warning">outdated tab</Badge>}
-      {c.count > 1 && <span className="tabular-nums text-muted-foreground">×{c.count}</span>}
+        serverGraph != null &&
+        c.lastBuildId !== serverGraph && (
+          <Badge variant="warning">outdated tab</Badge>
+        )}
+      {c.count > 1 && (
+        <span className="tabular-nums text-muted-foreground">×{c.count}</span>
+      )}
       <span className="text-muted-foreground">
         <RelativeTime date={c.lastSeenAt} />
       </span>
@@ -131,7 +149,15 @@ function HeaderBadges({
   );
 }
 
-function Field({ label, value, mono }: { label: string; value: string; mono?: boolean }) {
+function Field({
+  label,
+  value,
+  mono,
+}: {
+  label: string;
+  value: string;
+  mono?: boolean;
+}) {
   return (
     <Stack gap="2xs">
       <Text as="div" variant="caption" tone="muted">
@@ -140,7 +166,11 @@ function Field({ label, value, mono }: { label: string; value: string; mono?: bo
       <Text
         as="div"
         variant="body"
-        className={mono ? "font-mono break-all text-foreground" : "break-words text-foreground"}
+        className={
+          mono
+            ? "font-mono break-all text-foreground"
+            : "break-words text-foreground"
+        }
       >
         {value}
       </Text>
@@ -168,7 +198,9 @@ function Investigate({ report }: { report: Report }) {
       <Stack align="start" gap="none">
         <Button
           variant="outline"
-          onClick={() => navigate(taskDetailRoute.link(agentManagerApp, { taskId }))}
+          onClick={() =>
+            navigate(taskDetailRoute.link(agentManagerApp, { taskId }))
+          }
           className="gap-xs"
         >
           <MdOpenInNew className="size-4" />
@@ -187,36 +219,41 @@ function Investigate({ report }: { report: Report }) {
             Launch an agent to investigate
           </Button>
         }
-      title="Investigate this report"
-      description={
-        <>
-          {report.kind}: {report.message}
-        </>
-      }
-      placeholder="Extra context (optional) — e.g. what you were doing, expected behaviour…"
-      align="start"
-      onLaunched={(conv) => {
-        toast({
-          type: "crash",
-          title: "Investigating report",
-          description: "Agent launched in the background — open it from here or the bell.",
-          variant: "info",
-          linkTo: conversationRoute.link(agentManagerApp, { convId: conv.id }),
-        });
-      }}
-      getRequest={async (userText) => {
-        const { taskId } = await investigate(report.id);
-        const parts: string[] = [];
-        parts.push(`## Report (${report.kind})\n`);
-        parts.push(`**Source:** ${report.source}`);
-        parts.push(`**Message:** ${report.message}`);
-        parts.push(`\n\`\`\`json\n${JSON.stringify(report.data, null, 2)}\n\`\`\``);
-        const extra = userText.trim();
-        if (extra) {
-          parts.push(`\n## Context\n\n${extra}`);
+        title="Investigate this report"
+        description={
+          <>
+            {report.kind}: {report.message}
+          </>
         }
-        return { taskId, prompt: parts.join("\n") };
-      }}
+        placeholder="Extra context (optional) — e.g. what you were doing, expected behaviour…"
+        align="start"
+        onLaunched={(conv) => {
+          toast({
+            type: "crash",
+            title: "Investigating report",
+            description:
+              "Agent launched in the background — open it from here or the bell.",
+            variant: "info",
+            linkTo: conversationRoute.link(agentManagerApp, {
+              convId: conv.id,
+            }),
+          });
+        }}
+        getRequest={async (userText) => {
+          const { taskId } = await investigate(report.id);
+          const parts: string[] = [];
+          parts.push(`## Report (${report.kind})\n`);
+          parts.push(`**Source:** ${report.source}`);
+          parts.push(`**Message:** ${report.message}`);
+          parts.push(
+            `\n\`\`\`json\n${JSON.stringify(report.data, null, 2)}\n\`\`\``,
+          );
+          const extra = userText.trim();
+          if (extra) {
+            parts.push(`\n## Context\n\n${extra}`);
+          }
+          return { taskId, prompt: parts.join("\n") };
+        }}
       />
     </Stack>
   );

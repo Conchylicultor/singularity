@@ -93,6 +93,7 @@ primitive exists to name.
     - `auth`
     - `auth/apple-signing/setup-wizard`
     - `backup`
+    - `build/deployment`
     - `code-explorer/commit-detail`
     - `config_v2/config-link`
     - `config_v2/settings`

@@ -62,6 +62,7 @@ className="max-h-96">` and a full-height one is `<Scroll className="h-full">`.
     - `apps/workflows/definitions`
     - `build`
     - `build/build-logs`
+    - `build/deployment`
     - `code-explorer/file-resolve`
     - `config_v2/settings`
     - `conversations/conversation-preprompt`

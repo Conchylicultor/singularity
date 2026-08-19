@@ -69,6 +69,7 @@ same threshold and can't desync in a row.
     - `build`
     - `build/build-info`
     - `build/build-status`
+    - `build/deployment`
     - `build/serve-composition`
     - `config_v2/settings`
     - `conversations/conversation-category`

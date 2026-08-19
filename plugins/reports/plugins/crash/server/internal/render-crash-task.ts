@@ -1,4 +1,4 @@
-import { getServerBuildId } from "@plugins/build/plugins/server-build-id/server";
+import { getServerGraphHash } from "@plugins/build/plugins/server-build-id/server";
 import { serializeUiContext } from "@plugins/primitives/plugins/ui-context/core";
 import type { ReportRow } from "@plugins/reports/server";
 import { CrashPayloadSchema } from "../../core";
@@ -25,12 +25,15 @@ function crashOf(row: ReportRow): CrashPayload {
   return CrashPayloadSchema.parse(row.data);
 }
 
+// Same derivation as record-report's `staleOrigin`, against the same pin: the
+// bundle graph hash `reports.last_build_id` holds versus the graph this server
+// is serving.
 function isStaleOrigin(row: ReportRow): boolean {
-  const serverBuildId = getServerBuildId();
+  const serverGraph = getServerGraphHash();
   return (
     row.lastBuildId != null &&
-    serverBuildId != null &&
-    row.lastBuildId !== serverBuildId
+    serverGraph != null &&
+    row.lastBuildId !== serverGraph
   );
 }
 
@@ -54,7 +57,7 @@ function renderTitle(row: ReportRow): string {
 
 function renderDescription(row: ReportRow): string {
   const data = crashOf(row);
-  const serverBuildId = getServerBuildId();
+  const serverGraph = getServerGraphHash();
   const staleOrigin = isStaleOrigin(row);
   const recurrence = row.taskId != null;
   const stack = data.stack != null ? clamp(data.stack, STACK_MAX) : null;
@@ -66,7 +69,7 @@ function renderDescription(row: ReportRow): string {
   const lines: string[] = [];
   if (staleOrigin) {
     lines.push(
-      `**Origin:** stale frontend tab (build ${row.lastBuildId} vs current ${serverBuildId}) — likely benign version-skew, not a live bug.`,
+      `**Origin:** stale frontend tab (bundle ${row.lastBuildId} vs current ${serverGraph}) — likely benign version-skew, not a live bug.`,
     );
     lines.push("");
   }

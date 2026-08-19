@@ -658,8 +658,17 @@ export type ArtifactBuildResult =
        * to the fresh release. Equal to `webDistPath(opts.target)`.
        */
       livePath: string;
-      /** `git rev-parse HEAD` at publish time; `""` when git could not answer. */
+      /**
+       * The commit this build answered for (`opts.headAtStart`), echoed back for
+       * the callers that report it; `""` when git could not answer.
+       */
       buildCommit: string;
+      /**
+       * Content identity of the published web graph, stamped into the dist as
+       * `.build-graph`. Unlike `buildId` it is a function of the bytes, so an
+       * unchanged tree republishes the same value.
+       */
+      graphHash: string;
     }
   | { ok: false; steps: StepResult[]; failedLabels: string[] };
 
@@ -727,6 +736,16 @@ export interface BuildWebDistOptions {
   /** WHICH dist to publish. Derives `livePath`; see {@link WebDistTarget}. */
   target: WebDistTarget;
   buildId: string;
+  /**
+   * The commit this build ANSWERS FOR — the caller's own sample, taken before
+   * it read a single source file. It is what gets stamped into the dist as
+   * `.build-commit`, and the caller has to supply it because only the caller
+   * knows when its reads began: sampling `HEAD` here, after the compile, records
+   * whatever the checkout moved to meanwhile rather than the tree these bytes
+   * came from. `null` when git could not answer, which is written as no pin at
+   * all — an unknown commit must not read as a commit.
+   */
+  headAtStart: string | null;
   composition: string | null;
   minify: boolean;
   /**
@@ -796,6 +815,12 @@ export async function buildAndPublishWebDist(
     "Running checks, type-checking, and building frontend in parallel...",
   );
 
+  // The composed graph's content hash, produced by the pipeline inside the heavy
+  // job below and needed by the publish code after it. A `let` rather than a
+  // return value because the job's shape is `StepResult` — the transcript row —
+  // and the pin is not part of that.
+  let graphHash: string | null = null;
+
   const webArtifactsJob: HeavyJob = async (grant) => {
     // Per-plugin artifact pipeline, in-process, into a staging dir the
     // atomic publish below then swaps in.
@@ -831,6 +856,7 @@ export async function buildAndPublishWebDist(
           stagingDir: stagingPath,
           minify: opts.minify,
           buildId,
+          buildCommit: opts.headAtStart,
           source,
           materialize: opts.materialize,
           log: (line) => lines.push({ text: line, stream: "stdout" }),
@@ -844,6 +870,7 @@ export async function buildAndPublishWebDist(
           },
         }),
       );
+      graphHash = result.graphHash;
       lines.push({
         text:
           `web artifacts: ${result.builtArtifacts} built, ${result.reusedArtifacts} reused ` +
@@ -873,9 +900,11 @@ export async function buildAndPublishWebDist(
   // tsc + the artifact fleet), running on the grant it is handed. Extracted so
   // the acquire around it can be a retry loop (below) without the body moving.
   //
-  // buildId is baked into the bundle (VITE_BUILD_ID) and written to
-  // dist/.build-id below — bundle and server agree by construction (no
-  // chicken-and-egg).
+  // buildId identifies the RUN (the build_runs row, the log files, the profile)
+  // and is written to dist/.build-id below. It is deliberately not in the bundle
+  // any more: what a tab needs to know is whether the bytes it is running are
+  // still the bytes being served, which is `.build-graph`, not which run last
+  // produced them.
   const runHeavySection = async (grant: Grant): Promise<StepResult[]> => {
     const parallel: Array<Promise<StepResult>> = [];
     for (const job of companions) parallel.push(job(grant));
@@ -955,17 +984,29 @@ export async function buildAndPublishWebDist(
     return { ok: false, steps, failedLabels };
   }
 
-  // Write the commit hash at build time so the server can report drift.
-  const commitProc = Bun.spawnSync(["git", "rev-parse", "HEAD"], {
-    cwd: root,
-    stdout: "pipe",
-  });
-  const buildCommit = commitProc.stdout.toString().trim();
+  // The two pins that describe what was just built, so a server can say what it
+  // is serving.
+  //
+  // The commit is the caller's PRE-BUILD sample, not a fresh `git rev-parse`
+  // here: a checkout that moves mid-build (a `push` merging into main while this
+  // runs) would otherwise stamp the dist with a commit whose code is not in it —
+  // the exact reading that once made a stale frontend look current and cost a
+  // catch-up build. Missing means unknown, so no file is written at all.
+  const buildCommit = opts.headAtStart ?? "";
   if (buildCommit) {
     writeFileSync(resolve(stagingPath, ".build-commit"), buildCommit + "\n");
   }
 
-  // The build id baked into the bundle, so the server can detect stale tabs.
+  // The graph's content identity — what a tab compares itself against. Always
+  // present on a successful build (the pipeline composed a graph to get here).
+  if (graphHash === null) {
+    throw new Error(
+      "buildAndPublishWebDist: the artifact pipeline reported success without a graph hash",
+    );
+  }
+  writeFileSync(resolve(stagingPath, ".build-graph"), graphHash + "\n");
+
+  // The run that produced this dist — build_runs / logs / profile, not identity.
   writeFileSync(resolve(stagingPath, ".build-id"), buildId + "\n");
 
   // The experimental frame, stamped into the staged index.html by the producer
@@ -985,5 +1026,5 @@ export async function buildAndPublishWebDist(
   await publishDistAtomic({ dir: livePath, stagingPath });
   endPublish();
 
-  return { ok: true, steps, stagingPath, livePath, buildCommit };
+  return { ok: true, steps, stagingPath, livePath, buildCommit, graphHash };
 }

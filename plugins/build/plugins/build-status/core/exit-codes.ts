@@ -9,8 +9,8 @@
  * That is not a failure, and must never be reported as one: the build simply no
  * longer has a subject. It exits with this code, which the run ledger renders as
  * its own `superseded` status rather than red. The rebuild is guaranteed
- * separately — `convergeMain` (build/server) re-derives "is main deployed at
- * refs/heads/main" the moment any build reaches terminal.
+ * separately — `reconcileDeployment` (build/server) re-derives "is this
+ * checkout's HEAD what is deployed" the moment any build reaches terminal.
  *
  * 75 is EX_TEMPFAIL from sysexits.h: "temporary failure, the user is invited to
  * retry" — exactly this. Deliberately not 0 (nothing was deployed, so a caller

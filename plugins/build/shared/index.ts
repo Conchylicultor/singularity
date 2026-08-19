@@ -1,3 +1,3 @@
 export { buildConfig } from "./config";
-export { MainAheadCountSchema, mainAheadCountResource, BuildRunSchema, buildHistoryResource, FrontendHashSchema, frontendHashResource } from "../core/resources";
-export type { MainAheadCount, BuildRun, FrontendHash } from "../core/resources";
+export { BuildRunSchema, buildHistoryResource } from "../core/resources";
+export type { BuildRun } from "../core/resources";

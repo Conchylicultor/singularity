@@ -191,9 +191,8 @@ export async function runHermeticBuild(opts: {
   // neither read nor written here: reading it would make a release adopt the
   // id of whatever build spawned it (and, through the profiler/log writers,
   // append to that build's artifacts); writing it would leak this id into
-  // every child. The id exists only to be baked into the bundle
-  // (VITE_BUILD_ID) and written to `dist/.build-id`, so bundle and server
-  // agree by construction.
+  // every child. The id exists only to name this run's artifacts and to be
+  // written to `dist/.build-id`.
   const shortCommitProc = Bun.spawnSync(
     ["git", "rev-parse", "--short", "HEAD"],
     {
@@ -203,6 +202,18 @@ export async function runHermeticBuild(opts: {
   );
   const shortCommit = shortCommitProc.stdout.toString().trim();
   const buildId = `${shortCommit || "nocommit"}-${Date.now()}`;
+
+  // The commit every dist this run publishes is stamped with. Sampled HERE —
+  // before stage 1 reads or rewrites a single file — for the same reason
+  // `release.ts` reads its git provenance before spawning this child: a sample
+  // taken after the compile names whatever the checkout moved to meanwhile, not
+  // the tree the bytes came from. `null` when git could not answer; unknown must
+  // read as unknown, and the release transcript below already says "(unknown)".
+  const headProc = Bun.spawnSync(["git", "rev-parse", "HEAD"], {
+    cwd: root,
+    stdout: "pipe",
+  });
+  const headAtStart = headProc.stdout.toString().trim() || null;
 
   // The per-checkout artifact lock. REQUIRED, and the one non-obvious
   // hermetic step: it is the only thing serializing this run against a
@@ -331,6 +342,7 @@ export async function runHermeticBuild(opts: {
       webDir,
       target,
       buildId,
+      headAtStart,
       composition: target.composition,
       minify: opts.minify,
       // Self-contained dist: `release` copies this tree into the shippable

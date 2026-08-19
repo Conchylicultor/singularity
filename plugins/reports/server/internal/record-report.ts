@@ -5,7 +5,7 @@ import {
   runInBackgroundLane,
   runWithoutProfiling,
 } from "@plugins/infra/plugins/runtime-profiler/core";
-import { getServerBuildId } from "@plugins/build/plugins/server-build-id/server";
+import { getServerGraphHash } from "@plugins/build/plugins/server-build-id/server";
 import {
   createShedBuffer,
   type ShedSummary,
@@ -164,11 +164,13 @@ export async function recordReport(
   const worktree = process.env.SINGULARITY_WORKTREE ?? "unknown";
   const message = clamp(rawMessage ?? "", MESSAGE_MAX);
   const limited = bumpWindowAndCheck(fp);
-  // A report whose originating bundle's build id differs from the server's
-  // current build id came from an outdated frontend tab — benign version-skew.
-  const serverBuildId = getServerBuildId();
+  // A report whose originating bundle's graph hash differs from the graph this
+  // server is serving came from an outdated frontend tab — benign version-skew.
+  // Both sides are the artifact's content identity, so a rebuild that composed
+  // the same graph does not make every open tab's reports look stale.
+  const serverGraph = getServerGraphHash();
   const staleOrigin =
-    buildId != null && serverBuildId != null && buildId !== serverBuildId;
+    buildId != null && serverGraph != null && buildId !== serverGraph;
   const { errorType, stack } = noiseFieldsFrom(data);
   const noise = isNoiseReport({
     source,

@@ -193,6 +193,7 @@ per-site via `// eslint-disable-next-line spacing/no-adhoc-spacing -- reason`.
     - `build`
     - `build/build-info`
     - `build/build-logs`
+    - `build/deployment`
     - `build/serve-composition`
     - `code-explorer/commit-detail`
     - `code-explorer/file-resolve`

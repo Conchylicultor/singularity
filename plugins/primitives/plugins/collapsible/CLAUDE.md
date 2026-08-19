@@ -66,7 +66,6 @@ element to put it on. `CollapsibleTrigger` / `CollapsibleContent` /
     - `apps/deploy/ssh-setup`
     - `apps/mail/reading-pane`
     - `apps/workflows/engine`
-    - `build`
     - `build/build-logs`
     - `code-explorer/commit-detail`
     - `conversations/agents`

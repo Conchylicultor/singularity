@@ -4,12 +4,15 @@ import { readSha } from "./read-sha";
 
 type Params = { refName: string };
 
-export const refHeadResource = defineExternalResource<{ sha: string | null }, Params>({
+export const refHeadResource = defineExternalResource<
+  { sha: string | null },
+  Params
+>({
   key: "git-watcher.refHead",
   mode: "push",
   schema: RefHeadSchema,
   // A rebase rewrites refs/heads/main many times in quick succession; the
-  // watcher notifies per distinct sha, cascading to mainAheadCount +
+  // watcher notifies per distinct sha, cascading to build.deployment +
   // commitDelta/commitsGraph (git subprocesses) in every worktree. A fixed-window
   // trailing debounce collapses a rebase's rewrites into one flush per worktree —
   // the cross-worktree storm relief. Source is push (not keyed), so debouncing it

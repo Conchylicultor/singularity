@@ -24,6 +24,7 @@ imports `build` + `notifications`, which themselves contribute to
     - `apps-core/tabs.getSurfaceMode`
     - `apps-core/tabs.setSurfaceMode`
     - `apps-core/tabs.useSurfaceMode`
+    - `build.useStaleFrontend`
     - `config_v2.ConfigV2`
     - `config_v2.useConfig`
     - `primitives/css/center.Center`
@@ -35,7 +36,6 @@ imports `build` + `notifications`, which themselves contribute to
     - `primitives/floating-action.FloatingActionFadeIn`
     - `primitives/icon-button.IconButton`
     - `primitives/live-state.useNotificationsChannelStatuses`
-    - `primitives/live-state.useResource`
     - `primitives/live-state.useWindowResource`
     - `primitives/persistent-draft.useDraft`
     - `primitives/tooltip.WithTooltip`
