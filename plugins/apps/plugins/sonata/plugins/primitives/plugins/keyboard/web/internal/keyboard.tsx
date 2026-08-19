@@ -3,8 +3,15 @@ import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Clip } from "@plugins/primitives/plugins/css/plugins/clip/web";
 import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
 import { useConfig } from "@plugins/config_v2/web";
+import {
+  asSonataLook,
+  SONATA_LOOK_STYLES,
+  sonataLookConfig,
+} from "@plugins/apps/plugins/sonata/plugins/look/core";
 import { keyboardStyleConfig, type KeyStyle } from "../../shared/config";
-import { type KeyLane, keyLayout } from "./key-layout";
+import { litKeyColor, mix } from "./key-color";
+import { BLACK_KEY_HEIGHT_PCT, type KeyLane, keyLayout } from "./key-layout";
+import { SketchKeys } from "./sketch-skin";
 import {
   usePlayableKeyboard,
   type KeyboardInteraction,
@@ -21,13 +28,22 @@ import {
  * className-only `no-hardcoded-colors` check (the sanctioned escape hatch for
  * physical-object colors).
  *
- * Two variants, selected by the keyboard's `keyStyle` config and applied to
- * EVERY keyboard render (full roll + readout chips):
+ * THREE skins, applied to EVERY keyboard render (full roll + readout chips).
+ * Two of them are the `keyStyle` config's own variants:
  *  - `realistic` — skeuomorphic ivory/ebony: gradients + box-shadow bevels, a
  *    pressed-key depression, and a lit key tinted (translucent) over the ivory.
  *  - `flat` — Synthesia-style: solid fills, no gloss/gradients, strong dark
  *    white-key borders, and a lit key painted in the note's ACTUAL color (the
  *    same color it fell in — no translucent tint washing it out).
+ *
+ * The third, `drawn`, comes from a DIFFERENT switch — Sonata's look — and takes
+ * precedence: when the look's palette says its keys are drawn, `keyStyle` is not
+ * consulted at all. That is what makes "paper lane under glossy ivory keys"
+ * unreachable rather than merely discouraged, and it is why the skin is a local
+ * union (`KeySkin`) rather than a third member of `KeyStyle`: the config keeps
+ * its two options and its store path, so no persisted preference resets. The
+ * drawn skin itself is an SVG layer (`sketch-skin.tsx`); here it only means the
+ * key divs go transparent and the felt strip stands down.
  *
  * Realism (realistic variant) is pure CSS — gradients + box-shadows only,
  * expressed in percentages and 1–2px values so the same chrome scales from an
@@ -52,10 +68,6 @@ const KEY_BOTTOM_RADIUS: CSSProperties = {
   borderBottomRightRadius: "3.5px",
 };
 
-/** `color` at `pct`% opacity, for tint/glow layers over the key chrome. */
-const mix = (color: string, pct: number) =>
-  `color-mix(in srgb, ${color} ${pct}%, transparent)`;
-
 /**
  * Red felt strip at the top of the keybed — the dampening felt visible where
  * the keys meet the fallboard on a real piano. Flat keeps the line as a solid
@@ -69,6 +81,21 @@ const FELT_REALISTIC: CSSProperties = {
 const FELT_FLAT: CSSProperties = { height: "2px", background: "#7a1f2b" };
 const feltStyle = (style: KeyStyle): CSSProperties =>
   style === "flat" ? FELT_FLAT : FELT_REALISTIC;
+
+/**
+ * Which skin draws the keys. The two `KeyStyle` variants plus `drawn`, which the
+ * look imposes over them — one union so every per-key style function has to
+ * answer for all three, and `tsc` says so if a new one appears.
+ */
+type KeySkin = KeyStyle | "drawn";
+
+/**
+ * Under the drawn skin the key div holds no chrome at all: `sketch-skin.tsx`
+ * paints the key as a path beneath it, and the div stays purely as the
+ * `data-pitch` hit target and the host for `renderKey` labels. Transparent, not
+ * absent — removing it would take glissando and multi-touch with it.
+ */
+const DRAWN_CHROME: CSSProperties = { background: "transparent" };
 
 /* ---- Realistic variant -------------------------------------------------- */
 
@@ -131,9 +158,10 @@ function flatWhiteCarve(isFirst: boolean): string {
 
 function whiteKeyStyle(
   litColor: string | undefined,
-  style: KeyStyle,
+  style: KeySkin,
   isFirst: boolean,
 ): CSSProperties {
+  if (style === "drawn") return DRAWN_CHROME;
   if (style === "flat") {
     return {
       background: litColor ?? FLAT_WHITE_BG,
@@ -159,9 +187,15 @@ function whiteKeyStyle(
 
 function blackKeyStyle(
   litColor: string | undefined,
-  style: KeyStyle,
+  style: KeySkin,
 ): CSSProperties {
-  const base: CSSProperties = { height: "62%", transition: PRESS_TRANSITION };
+  // The height is the ONE thing the drawn skin still needs from here: it is what
+  // makes the transparent hit target the same shape as the path drawn under it.
+  const base: CSSProperties = {
+    height: `${BLACK_KEY_HEIGHT_PCT}%`,
+    transition: PRESS_TRANSITION,
+  };
+  if (style === "drawn") return { ...base, ...DRAWN_CHROME };
   if (style === "flat") {
     return { ...base, background: litColor ?? FLAT_BLACK_BG };
   }
@@ -251,9 +285,11 @@ export interface KeyboardProps {
  * pitches; knows nothing about chords, scores, or playback — the caller supplies
  * the range, which pitches to light (and in what color), and any per-key
  * content. The full projection-driven `PianoKeyboard` and the chord readout both
- * compose this. The visual style (flat / realistic) is read from the keyboard's
- * own config so the choice applies everywhere a keyboard renders. Height is set
- * by the caller via `className` (e.g. `h-16`); keys fill it.
+ * compose this. The skin is read from config so the choice applies everywhere a
+ * keyboard renders: Sonata's look decides first (its palette either draws the
+ * keys or does not), and only when it does not is the keyboard's own flat /
+ * realistic style consulted. Height is set by the caller via `className` (e.g.
+ * `h-16`); keys fill it.
  */
 export function Keyboard({
   low,
@@ -265,7 +301,12 @@ export function Keyboard({
   className,
 }: KeyboardProps) {
   const { keyStyle } = useConfig(keyboardStyleConfig);
-  const style = keyStyle as KeyStyle;
+  const { look } = useConfig(sonataLookConfig);
+  // The look wins. When its palette draws the keys, `keyStyle` never reaches the
+  // render — the mismatched combination is not validated away, it has nowhere to
+  // be expressed.
+  const keys = SONATA_LOOK_STYLES[asSonataLook(look)].keys;
+  const style: KeySkin = keys.drawn ? "drawn" : (keyStyle as KeyStyle);
   const lanes = useMemo(() => keyLayout(low, high), [low, high]);
   // Pointer handlers when playable; `{}` (no listeners) otherwise.
   const playProps = usePlayableKeyboard(interaction);
@@ -280,8 +321,11 @@ export function Keyboard({
     return m;
   }, [lit]);
 
-  const whites = lanes.filter((k) => !k.isBlack);
-  const blacks = lanes.filter((k) => k.isBlack);
+  // Memoized, not filtered inline: the drawn skin memoizes every key's path
+  // string on the lane array's identity, so a fresh array each render would
+  // rebuild all 88 outlines on every note-on.
+  const whites = useMemo(() => lanes.filter((k) => !k.isBlack), [lanes]);
+  const blacks = useMemo(() => lanes.filter((k) => k.isBlack), [lanes]);
   const firstWhitePitch = whites[0]?.pitch;
 
   const renderLane = (k: KeyLane) => {
@@ -289,7 +333,7 @@ export function Keyboard({
     const isLit = raw !== undefined;
     // One inline-style path for both highlight forms: the accent is just an
     // explicit color of `var(--primary)`.
-    const litColor = raw === undefined ? undefined : raw || "var(--primary)";
+    const litColor = litKeyColor(raw);
     // A lit black key takes the darker accidental shade in the flat style (where
     // the key IS the fill color); realistic builds its own darkness from the
     // gradient over near-black, so it keeps the base color (see `accidentalColor`).
@@ -345,12 +389,37 @@ export function Keyboard({
         ...(interaction ? { touchAction: "none", cursor: "pointer" } : null),
       }}
     >
+      {/* Drawn skin (back layer of its group) — the keys AS DRAWN, under key
+          divs that carry no chrome of their own under this skin. Painted per
+          group so each one sits directly beneath its own divs, and
+          pointer-events-none throughout so `data-pitch` hit-testing is
+          untouched. Absent entirely under flat / realistic. */}
+      {style === "drawn" && (
+        <SketchKeys
+          lanes={whites}
+          group="white"
+          palette={keys}
+          litColors={litColors}
+        />
+      )}
       {/* White keys (back layer). */}
       {whites.map(renderLane)}
       {/* Red felt strip across the keybed top — above whites, below blacks.
           `decorative` makes it pointer-events-none, so playable-keyboard
-          hit-tests fall through to the key beneath it. */}
-      <Pin to="top" stretch decorative aria-hidden style={feltStyle(style)} />
+          hit-tests fall through to the key beneath it. The drawn skin has no
+          felt: it draws a pencil rule in the same place instead (a red bar
+          across a pencil drawing reads as a sticker), so it stands down here. */}
+      {style !== "drawn" && (
+        <Pin to="top" stretch decorative aria-hidden style={feltStyle(style)} />
+      )}
+      {style === "drawn" && (
+        <SketchKeys
+          lanes={blacks}
+          group="black"
+          palette={keys}
+          litColors={litColors}
+        />
+      )}
       {/* Black keys (front layer), ~62% height. */}
       {blacks.map(renderLane)}
     </Clip>

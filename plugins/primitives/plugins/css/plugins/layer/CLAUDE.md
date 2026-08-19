@@ -84,6 +84,7 @@ has the vocabulary for it.
 - Cross-plugin:
   - Imported by:
     - `apps-core/surface/floating`
+    - `apps/sonata/primitives/keyboard`
     - `page/code-block`
     - `primitives/tree`
 

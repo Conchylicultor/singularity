@@ -13,6 +13,16 @@
 
 /** Black keys are this fraction of a white key's width. */
 const BLACK_WIDTH_RATIO = 0.62;
+
+/**
+ * How far down the keyboard a black key reaches, as a percentage of the white
+ * keys' height. Every renderer of a black key reads THIS — the key div's own
+ * height and the drawn skin's path both — so the decorative art can never drift
+ * off the div that hit-tests for it. Kept as a percentage (not a 0..1 ratio)
+ * because the div spells it as one, and `0.62 * 100` is not 62 in floating
+ * point.
+ */
+export const BLACK_KEY_HEIGHT_PCT = 62;
 /** White pitch classes (C D E F G A B). */
 const WHITE_PCS = new Set([0, 2, 4, 5, 7, 9, 11]);
 
@@ -59,7 +69,12 @@ export function keyLayout(low: number, high: number): KeyLane[] {
       whiteIndex++;
     } else {
       // The boundary between the white key just below and the next one.
-      lanes.push({ pitch, isBlack: true, center: whiteIndex * whiteW, width: blackW });
+      lanes.push({
+        pitch,
+        isBlack: true,
+        center: whiteIndex * whiteW,
+        width: blackW,
+      });
     }
   }
   return lanes;

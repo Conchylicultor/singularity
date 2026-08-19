@@ -589,6 +589,10 @@
       "name": "@singularity/plugin-apps-sonata-library",
       "version": "0.0.1",
     },
+    "plugins/apps/plugins/sonata/plugins/look": {
+      "name": "@singularity/plugin-apps-sonata-look",
+      "version": "0.0.1",
+    },
     "plugins/apps/plugins/sonata/plugins/notation": {
       "name": "@singularity/plugin-apps-sonata-notation",
       "version": "0.0.1",
@@ -5839,6 +5843,8 @@
     "@singularity/plugin-apps-sonata-controls": ["@singularity/plugin-apps-sonata-controls@workspace:plugins/apps/plugins/sonata/plugins/controls"],
 
     "@singularity/plugin-apps-sonata-library": ["@singularity/plugin-apps-sonata-library@workspace:plugins/apps/plugins/sonata/plugins/library"],
+
+    "@singularity/plugin-apps-sonata-look": ["@singularity/plugin-apps-sonata-look@workspace:plugins/apps/plugins/sonata/plugins/look"],
 
     "@singularity/plugin-apps-sonata-notation": ["@singularity/plugin-apps-sonata-notation@workspace:plugins/apps/plugins/sonata/plugins/notation"],
 

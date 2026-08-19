@@ -22,6 +22,11 @@ import {
 } from "@plugins/apps/plugins/sonata/plugins/score/core";
 import { useConfig, useSetConfig } from "@plugins/config_v2/web";
 import {
+  asSonataLook,
+  sonataLookConfig,
+  SONATA_LOOK_STYLES,
+} from "@plugins/apps/plugins/sonata/plugins/look/core";
+import {
   LaneInsetsProvider,
   Sonata,
   useCursorApi,
@@ -70,13 +75,6 @@ export interface PianoRollProps {
 
 /** Height of the pitch-axis gutter (the piano keyboard) at the bottom. */
 const KEYBOARD_HEIGHT = 112;
-
-/**
- * Fixed Synthesia-dark lane background. Deliberately theme-independent (not a
- * `bg-background` token): the falling-notes roll is a dark "stage" in every
- * theme, so the opaque note colors read exactly as Synthesia's, light or dark.
- */
-const ROLL_BG = "#262626";
 
 /**
  * Wheel-zoom sensitivity: spread is multiplied by `exp(-deltaY * k)` per wheel
@@ -163,6 +161,14 @@ function PianoRollInner({ score, tempoScale }: PianoRollProps) {
   // scroll gestures drive.
   const { showNoteNames, spread: persistedSpread } = useConfig(pianoRollConfig);
   const setConfig = useSetConfig(pianoRollConfig);
+
+  // How the roll is DRAWN — one switch behind the lane ground, the grid ink, the
+  // note pen and the key skin. Deliberately theme-independent: the roll is a
+  // fixed stage (Synthesia-dark under `digital`, cream paper under `sketch`) in
+  // every theme, so the opaque note colors read the same light or dark. A look
+  // is not a theme; it only picks WHICH fixed palette the surfaces are pinned to.
+  const look = asSonataLook(useConfig(sonataLookConfig).look);
+  const lookStyle = SONATA_LOOK_STYLES[look];
   const {
     spread,
     setSpread,
@@ -315,7 +321,10 @@ function PianoRollInner({ score, tempoScale }: PianoRollProps) {
       fractionalKeyLayout(KEYBOARD_LOW, KEYBOARD_HIGH)
         .map((k) => ({ pc: ((k.pitch % 12) + 12) % 12, k }))
         .filter(({ pc }) => pc === 0 || pc === 5)
-        .map(({ pc, k }) => ({ frac: k.center - k.width / 2, strong: pc === 0 })),
+        .map(({ pc, k }) => ({
+          frac: k.center - k.width / 2,
+          strong: pc === 0,
+        })),
     [],
   );
 
@@ -429,7 +438,8 @@ function PianoRollInner({ score, tempoScale }: PianoRollProps) {
       // song too) — only in-range zooms write back.
       if (zoomed) {
         zoomed = false;
-        if (spreadRef.current >= SPREAD_MIN) setConfig("spread", spreadRef.current);
+        if (spreadRef.current >= SPREAD_MIN)
+          setConfig("spread", spreadRef.current);
       }
       if (pausedByWheel) {
         pausedByWheel = false;
@@ -516,7 +526,14 @@ function PianoRollInner({ score, tempoScale }: PianoRollProps) {
         fill
         ref={laneRef}
         {...(hasNotes ? handlers : null)}
-        style={{ backgroundColor: ROLL_BG }}
+        // The look's ground, plus its optional paper grain as a background-image
+        // on the SAME div — over the color, under the transparent canvas. No
+        // overlay element and no blend mode: a multiply layer would have to sit
+        // above the canvas to reach the lane, and would dull the notes with it.
+        style={{
+          backgroundColor: lookStyle.laneBg,
+          backgroundImage: lookStyle.laneGrain ?? undefined,
+        }}
         className={cn(
           "relative touch-none select-none",
           hasNotes
@@ -544,6 +561,7 @@ function PianoRollInner({ score, tempoScale }: PianoRollProps) {
             showLabels={showNoteNames}
             tempoScale={tempoScale}
             spread={spread}
+            look={look}
             onSceneReady={setPixi}
             onContextLost={handleContextLost}
           />
@@ -574,7 +592,13 @@ function PianoRollInner({ score, tempoScale }: PianoRollProps) {
               shared cursor via useSonata(); collection-consumer clean (renders the
               generic Sonata.Hud slot, never naming a contributor). The ref feeds
               `topInset` so an edge chip tucks just below this cluster. */}
-          <Pin to="top-right" offset="sm" layer="float" decorative ref={hudSizeRef}>
+          <Pin
+            to="top-right"
+            offset="sm"
+            layer="float"
+            decorative
+            ref={hudSizeRef}
+          >
             <Stack gap="xs" align="end">
               <Sonata.Hud.Render>
                 {(h) => <h.component key={h.id} />}
@@ -593,7 +617,11 @@ function PianoRollInner({ score, tempoScale }: PianoRollProps) {
             // eslint-disable-next-line layout/no-adhoc-layout -- full-bleed positioning context layered over the lane (sibling of the canvas/scroll layers); centers the empty-state message
             <div className="pointer-events-none absolute inset-0">
               <Center className="h-full w-full">
-                <Text as="span" variant="body" className="text-muted-foreground">
+                <Text
+                  as="span"
+                  variant="body"
+                  className="text-muted-foreground"
+                >
                   No notes to display. Load a source to see the piano roll.
                 </Text>
               </Center>

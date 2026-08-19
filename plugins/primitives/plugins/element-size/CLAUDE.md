@@ -59,6 +59,7 @@ different need, extend the primitive rather than allowlisting a copy.
     - `apps/prototypes/gallery`
     - `apps/sonata/notation`
     - `apps/sonata/piano-roll`
+    - `apps/sonata/primitives/keyboard`
     - `primitives/adaptive-bar`
     - `primitives/collapsible-wrap`
     - `primitives/css/sticky/stack`

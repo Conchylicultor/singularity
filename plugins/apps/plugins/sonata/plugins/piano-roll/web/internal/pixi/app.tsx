@@ -14,8 +14,9 @@
  * `disposed` immediately (so the init continuation becomes a no-op) and chains
  * the actual destroy AFTER the init promise settles.
  *
- * The canvas is transparent (`backgroundAlpha: 0` — the lane's `bg-background`
- * shows through, making the background theme-reactive for free) and inert
+ * The canvas is transparent (`backgroundAlpha: 0` — the lane div's own ground
+ * shows through, which is what lets the active LOOK paint the lane in CSS,
+ * paper grain and all, without a Pixi layer under the notes) and inert
  * (`pointer-events: none`, all Pixi event features off) — drag-to-scrub and
  * every other interaction stays on the DOM lane wrapper.
  */
@@ -24,6 +25,7 @@ import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
 import { Application } from "pixi.js";
 import { clientLog } from "@plugins/primitives/plugins/log-channels/web";
 import type { Note } from "@plugins/apps/plugins/sonata/plugins/score/core";
+import type { SonataLook } from "@plugins/apps/plugins/sonata/plugins/look/core";
 import type { NoteVisual } from "../../components/geometry";
 import type { BarMarker, PitchLine } from "./grid";
 import { createPianoRollScene, type PianoRollScene } from "./scene";
@@ -43,12 +45,17 @@ export interface PianoRollCanvasProps {
   tempoScale: number;
   /** Vertical zoom (1 = base). Pushed to the scene as one rescale. */
   spread: number;
+  /** How the roll is drawn (see the look plugin). Pushed to the scene as one
+   *  palette fan-out — never a rebuild. */
+  look: SonataLook;
   /**
    * Fired with the live scene + app pair once init settles, and with null on
    * teardown. The app rides along because the FX context needs its ticker and
    * renderer (texture generation) — see fx-context.ts.
    */
-  onSceneReady: (pixi: { scene: PianoRollScene; app: Application } | null) => void;
+  onSceneReady: (
+    pixi: { scene: PianoRollScene; app: Application } | null,
+  ) => void;
   /**
    * Fired when the GPU context/device is lost AFTER a successful init (a sleep/
    * wake, GPU-process reset, or driver hiccup on a long-lived tab). Pixi v8 does
@@ -96,7 +103,9 @@ function watchContextLoss(app: Application, onLost: () => void): () => void {
   // WebGPU device-loss: `renderer.gpu` holds `{ adapter, device }` on the WebGPU
   // backend and is undefined on WebGL — the optional chain guards both.
   const device = (
-    app.renderer as { gpu?: { device?: { lost?: Promise<{ reason: string }> } } }
+    app.renderer as {
+      gpu?: { device?: { lost?: Promise<{ reason: string }> } };
+    }
   ).gpu?.device;
   if (device?.lost) {
     void device.lost.then((info) => {
@@ -118,6 +127,7 @@ export function PianoRollCanvas(props: PianoRollCanvasProps) {
     showLabels,
     tempoScale,
     spread,
+    look,
   } = props;
 
   const hostRef = useRef<HTMLDivElement | null>(null);
@@ -157,7 +167,9 @@ export function PianoRollCanvas(props: PianoRollCanvasProps) {
         if (disposed) return;
         const host = hostRef.current;
         if (!host) {
-          throw new Error("PianoRollCanvas: host div vanished before init settled");
+          throw new Error(
+            "PianoRollCanvas: host div vanished before init settled",
+          );
         }
         // Backend visibility: headless e2e exercises the WebGL fallback, real
         // Chrome should pick WebGPU — log which one actually initialized.
@@ -206,9 +218,22 @@ export function PianoRollCanvas(props: PianoRollCanvasProps) {
     scene.resize(width, height, window.devicePixelRatio);
   }, [scene, width, height]);
 
+  // The look. After resize so the grid's screen-space rules redraw at the real
+  // lane size; before the score, whose layers then paint with the stored ink.
   useLayoutEffect(() => {
     if (!scene) return;
-    scene.setScore({ notes: visuals, bars, pitchLines, scoreNotes, tempoScale });
+    scene.setLook(look);
+  }, [scene, look]);
+
+  useLayoutEffect(() => {
+    if (!scene) return;
+    scene.setScore({
+      notes: visuals,
+      bars,
+      pitchLines,
+      scoreNotes,
+      tempoScale,
+    });
   }, [scene, visuals, bars, pitchLines, scoreNotes, tempoScale]);
 
   // No per-frame cursor effect and no seek-reset effect here: the parent

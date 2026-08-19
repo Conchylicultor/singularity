@@ -45,6 +45,7 @@ string. `FieldHeader` comes from the slot owner
     - `apps-core/surface/floating/wallpaper`
     - `apps/events/sources/dmda`
     - `apps/events/sources/url-extract`
+    - `apps/sonata/look`
     - `plugin-meta/composition`
     - `ui/theme-engine`
 

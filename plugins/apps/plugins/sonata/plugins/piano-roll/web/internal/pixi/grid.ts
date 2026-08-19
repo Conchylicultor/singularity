@@ -17,13 +17,19 @@
  *    left-edge fraction × laneWidth, full lane height. Octave (B–C) lines render
  *    stronger than the mid-octave (E–F) lines. Redrawn on resize only.
  *
- * Color: both layers draw WHITE geometry and carry a FIXED faint-light tint —
- * the lane is a Synthesia-dark stage in every theme (see `ROLL_BG`), so the grid
- * is a theme-independent low-alpha white, not the `var(--border)` token (which
- * would vanish on the dark lane under a dark theme). `refreshColors` is still a
- * tint write (no retessellation).
+ * Color: both layers draw WHITE geometry and carry a tint + per-layer alpha
+ * taken from the active LOOK (`SonataLookStyle["grid"]`), never from the theme.
+ * The lane is a fixed stage — Synthesia-dark under `digital`, cream paper under
+ * `sketch` — in every theme, so the grid is theme-independent by design and not
+ * the `var(--border)` token (which would vanish on the dark lane under a dark
+ * theme). A look is NOT a theme: it swaps which fixed palette this handle is
+ * pinned to, which is why the ink is STORED here — `refreshColors` (a theme
+ * flip) re-resolves the stored expression and cannot clobber an active look.
+ * Both remain tint/alpha writes plus, for a dashed rule, one pitch-line redraw.
  */
 import { Graphics } from "pixi.js";
+import type { SonataLookStyle } from "@plugins/apps/plugins/sonata/plugins/look/core";
+import { SONATA_LOOK_STYLES } from "@plugins/apps/plugins/sonata/plugins/look/core";
 import { PX_PER_SECOND } from "../../components/geometry";
 
 /** One bar marker, in authored seconds (built by the host from `bars(score)`). */
@@ -43,14 +49,6 @@ export interface PitchLine {
   strong: boolean;
 }
 
-/** Fixed faint-white grid color on the Synthesia-dark lane (theme-independent). */
-const BORDER_COLOR_EXPR = "#ffffff";
-const BAR_LINE_ALPHA = 0.1;
-/** Octave (B–C) pitch line alpha — the strong reference line. */
-const OCTAVE_LINE_ALPHA = 0.24;
-/** Mid-octave (E–F) pitch line alpha — a regular, lighter reference line. */
-const PITCH_LINE_ALPHA = 0.09;
-
 export interface GridHandle {
   /** Bar lines — mount under the CONTENT-SCALED container. */
   barLines: Graphics;
@@ -65,17 +63,29 @@ export interface GridHandle {
   setSpread(spread: number): void;
   /** Redraw the screen-space pitch lines for a new lane size. */
   resize(laneWidth: number, laneHeight: number): void;
-  /** Re-tint both layers from the (re-resolved) border token. */
+  /** New look: store its grid ink and repaint. Never rebuilds the handle — the
+   *  scene (and the FX plugins holding its layers) outlives every look change. */
+  setLook(
+    ink: SonataLookStyle["grid"],
+    resolveColor: (expr: string) => number,
+  ): void;
+  /** Re-tint both layers from the STORED look ink, re-resolved. */
   refreshColors(resolveColor: (expr: string) => number): void;
   destroy(): void;
 }
 
 export function createGrid(): GridHandle {
   const barLines = new Graphics();
-  barLines.alpha = BAR_LINE_ALPHA;
-  // Per-line alpha is baked into each fill (octave vs mid-octave), so the
-  // container stays at full opacity and only carries the shared tint.
+  // Per-pitch-line alpha is baked into each fill (octave vs mid-octave), so that
+  // container stays at full opacity and only carries the shared tint; the bar
+  // lines carry theirs on the container.
   const pitchLines = new Graphics();
+
+  // The active look's grid ink. Seeded with the default look so a grid drawn
+  // before the first `setLook` is the digital one — the same constants this
+  // module used to hold literally.
+  let ink: SonataLookStyle["grid"] = SONATA_LOOK_STYLES.digital.grid;
+  barLines.alpha = ink.barLineAlpha;
 
   let lines: readonly PitchLine[] = [];
   let laneWidth = 0;
@@ -92,7 +102,9 @@ export function createGrid(): GridHandle {
       // (toward earlier time). y = -startSec; height = 1px after the content
       // scale.y = PX_PER_SECOND * spread, so the authored-seconds height is
       // 1 / (PX_PER_SECOND * spread) to stay exactly 1px at any zoom.
-      barLines.rect(0, -b.startSec, 1, 1 / (PX_PER_SECOND * spread)).fill(0xffffff);
+      barLines
+        .rect(0, -b.startSec, 1, 1 / (PX_PER_SECOND * spread))
+        .fill(0xffffff);
     }
   };
 
@@ -102,10 +114,34 @@ export function createGrid(): GridHandle {
     for (const { frac, strong } of lines) {
       // 1px vertical line whose LEFT edge sits on the boundary key's left edge —
       // matching the DOM's `border-l` at `left: center - width/2`.
-      pitchLines
-        .rect(frac * laneWidth, 0, 1, laneHeight)
-        .fill({ color: 0xffffff, alpha: strong ? OCTAVE_LINE_ALPHA : PITCH_LINE_ALPHA });
+      const x = frac * laneWidth;
+      const alpha = strong ? ink.octaveLineAlpha : ink.pitchLineAlpha;
+      const dash = strong ? ink.octaveDash : null;
+      // A zero-length period would never advance `y` — treat it as solid.
+      if (!dash || dash[0] + dash[1] <= 0) {
+        pitchLines.rect(x, 0, 1, laneHeight).fill({ color: 0xffffff, alpha });
+        continue;
+      }
+      // Pixi Graphics has no dash, so a dashed rule IS a run of rects. At [7,6]
+      // over an 800px lane that's ~60 per octave line, emitted only on resize or
+      // a look change — nothing next to the note mesh's per-frame draw.
+      const [on, off] = dash;
+      const period = on + off;
+      for (let y = 0; y < laneHeight; y += period) {
+        const h = Math.min(on, laneHeight - y);
+        pitchLines.rect(x, y, 1, h).fill({ color: 0xffffff, alpha });
+      }
     }
+  };
+
+  /** Push the stored ink onto both layers: the tint + the bar-line container
+   *  alpha are writes, the per-fill pitch-line alphas need the redraw. */
+  const applyInk = (resolveColor: (expr: string) => number): void => {
+    const color = resolveColor(ink.colorExpr);
+    barLines.tint = color;
+    barLines.alpha = ink.barLineAlpha;
+    pitchLines.tint = color;
+    redrawPitchLines();
   };
 
   return {
@@ -133,10 +169,15 @@ export function createGrid(): GridHandle {
       redrawPitchLines();
     },
 
+    setLook(nextInk, resolveColor) {
+      ink = nextInk;
+      applyInk(resolveColor);
+    },
+
     refreshColors(resolveColor) {
-      const border = resolveColor(BORDER_COLOR_EXPR);
-      barLines.tint = border;
-      pitchLines.tint = border;
+      // A theme flip re-resolves the STORED look expression — a look survives
+      // it untouched (see the header note).
+      applyInk(resolveColor);
     },
 
     destroy() {

@@ -36,12 +36,13 @@
  */
 import { Container, type Application } from "pixi.js";
 import type { Note } from "@plugins/apps/plugins/sonata/plugins/score/core";
+import {
+  SONATA_LOOK_STYLES,
+  type SonataLook,
+} from "@plugins/apps/plugins/sonata/plugins/look/core";
 import type { FxNoteEvent } from "../../slots";
 import { PX_PER_SECOND, type NoteVisual } from "../../components/geometry";
-import {
-  createOnsetTracker,
-  type OnsetTracker,
-} from "../fx/onset-tracker";
+import { createOnsetTracker, type OnsetTracker } from "../fx/onset-tracker";
 import { resolveCssColor } from "./css-color";
 import { createGrid, type BarMarker, type PitchLine } from "./grid";
 import { createLabelLayer } from "./labels";
@@ -71,6 +72,20 @@ export interface PianoRollScene {
   /** Seek/jump: re-anchor the onset tracker and tell FX to drop in-flight state. */
   reset(): void;
   setShowLabels(on: boolean): void;
+  /**
+   * Switch the LOOK (how the roll is drawn: pen, grid ink, text face). Fans the
+   * look's palette out to the three layers, each of which STORES its own slice —
+   * so a later theme flip (`refreshColors`) re-resolves the look's expressions
+   * instead of clobbering them.
+   *
+   * Never rebuild the scene to change look: `createPianoRollScene` runs once per
+   * Pixi mount, and the FX plugins hold direct references to `fxLayers` through
+   * a context memoized on the pixi pair — a rebuilt scene would leave every
+   * mounted effect parenting into destroyed containers. Nothing here touches
+   * note buffers, note colours, the onset tracker, the label pool identities, or
+   * the colour cache.
+   */
+  setLook(look: SonataLook): void;
   /** Theme flip: re-resolve every CSS color expression and rewrite tints. */
   refreshColors(): void;
   /** Mount points for FX plugins (see slots.ts — FxContext.layers). */
@@ -224,6 +239,13 @@ export function createPianoRollScene(app: Application): PianoRollScene {
 
     setShowLabels(on) {
       labels.setVisible(on);
+    },
+
+    setLook(look) {
+      const style = SONATA_LOOK_STYLES[look];
+      mesh.setLook(style.pen);
+      grid.setLook(style.grid, resolveColor);
+      labels.setLook(style.labels, resolveColor);
     },
 
     refreshColors() {
