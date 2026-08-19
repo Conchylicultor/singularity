@@ -20,6 +20,7 @@
  * player parses the MIDI, boots Pixi and installs three bitmap fonts before the
  * first frame.
  */
+import { errors } from "playwright";
 import {
   arg,
   numArg,
@@ -32,7 +33,11 @@ import {
 const out = arg("out") ?? "/tmp/sonata-look";
 /** Rachmaninoff — dense enough that notes are always on screen. */
 const song = arg("song") ?? "ea7bdc72-1ea0-41cb-a05e-96d506e2a948";
-const settleMs = numArg("settle", 30_000);
+// A cold player under a loaded host regularly needs ~25s before the first
+// frame, so the default is generous on purpose: a too-short wait here reports
+// "the roll never mounted", which is exactly the alarm this script exists to
+// raise and the last one you want crying wolf.
+const settleMs = numArg("settle", 60_000);
 
 await withBrowser(async (h) => {
   const r = report("sonata-look");
@@ -45,10 +50,18 @@ await withBrowser(async (h) => {
   // Wait for the canvas itself rather than sleeping: it IS the subject, and its
   // absence is the failure worth naming. A crashed display still renders the
   // toolbar and the section column, so a screenshot alone reads as "slow".
-  const painted = await page
-    .waitForSelector("canvas", { timeout: settleMs })
-    .then(() => true)
-    .catch(() => false);
+  //
+  // Only a TIMEOUT means "it never painted" — that is this script's verdict, and
+  // it is reported rather than thrown so the run still captures the shots that
+  // show WHY. Anything else (a closed page, a bad selector) is a broken script,
+  // not a failing app, and rethrows.
+  let painted = true;
+  try {
+    await page.waitForSelector("canvas", { timeout: settleMs });
+  } catch (err) {
+    if (!(err instanceof errors.TimeoutError)) throw err;
+    painted = false;
+  }
   r.ok("roll canvas mounted", painted, `no <canvas> after ${settleMs}ms`);
   await page.waitForTimeout(2_000);
   await snap(page, out, "roll");

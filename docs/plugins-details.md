@@ -3156,6 +3156,29 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/sonata/rich/rhythm-controls` (table `sonata_songs_ext_rhythm`)
               - `apps/sonata/transpose` (table `sonata_songs_ext_transpose`)
               - `apps/sonata/sources/ultimate-guitar` (table `sonata_songs_ext_ultimate_guitar`)
+        - **`look`** — Web registration of the Sonata look config (digital / sketch) plus its View-popover switch. The palette itself is plain data in core/. Server registration of the Sonata look config (digital / sketch).
+          - Web:
+            - Contributes:
+              - `ConfigV2.WebRegister`
+              - `Sonata.ViewOption` "look"
+            - Uses:
+              - `apps/sonata/shell.Sonata`
+              - `config_v2.ConfigV2`
+          - Server:
+            - Contributes: `ConfigV2.Register` "config"
+            - Uses: `config_v2.ConfigV2`
+          - Core:
+            - Uses:
+              - `config_v2.defineConfig`
+              - `fields/enum/config.enumField`
+            - Exports (types):
+              - `SonataLook`
+              - `SonataLookStyle`
+            - Exports (values):
+              - `asSonataLook`
+              - `SONATA_LOOK_STYLES`
+              - `SONATA_LOOKS`
+              - `sonataLookConfig`
         - **`notation`** — Sonata Display: standard staff notation. Engraves the score as a grand staff (treble + bass) with clefs, key/time signatures, barlines, accidentals and rests, following playback with a moving playhead, active-note highlight and auto-scroll. A reading view (no time-axis / pitch-plane capabilities); click a note to seek. Server registration of the notation config (chord-symbol toggle + treble/bass split pitch).
           - Web:
             - Contributes:
@@ -3406,8 +3429,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `config_v2.ConfigV2`
                   - `config_v2.useConfig`
                   - `primitives/css/clip.Clip`
+                  - `primitives/css/layer.Layer`
                   - `primitives/css/pin.Pin`
                   - `primitives/css/ui-kit.cn`
+                  - `primitives/element-size.useElementSize`
                   - `primitives/latest-ref.useEventCallback`
                 - Exports (types):
                   - `KeyboardProps`
@@ -3790,7 +3815,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `Sonata.Effect` ← `apps.sonata.audio.engine`, `apps.sonata.audio.live-play`, `apps.sonata.audio.metronome`, `apps.sonata.controls`, `apps.sonata.playback-history`, `apps.sonata.progress.loop`, `apps.sonata.rich.key-mode`, `apps.sonata.rich.rhythm-controls`, `apps.sonata.sources.chord-grid`, `apps.sonata.sources.ultimate-guitar`, `apps.sonata.transpose`
               - `Sonata.Transport` ← `apps.sonata.progress.scrubber`
               - `Sonata.Hud` ← `apps.sonata.audio.metronome`, `apps.sonata.rich.key-chip`, `apps.sonata.view-options`
-              - `Sonata.ViewOption` ← `apps.sonata.notation`, `apps.sonata.piano-keyboard`, `apps.sonata.piano-roll`, `apps.sonata.rich.chord-label`
+              - `Sonata.ViewOption` ← `apps.sonata.look`, `apps.sonata.notation`, `apps.sonata.piano-keyboard`, `apps.sonata.piano-roll`, `apps.sonata.rich.chord-label`
               - `Sonata.Section` ← `apps.sonata.rich.chord-progression`, `apps.sonata.rich.chord-readout`, `apps.sonata.rich.circle-of-fifths`, `apps.sonata.rich.key-readout`, `apps.sonata.rich.rhythm-controls`, `apps.sonata.rich.voicing-controls`, `apps.sonata.sources.chord-grid`, `apps.sonata.sources.ultimate-guitar`, `apps.sonata.track-mixer`
               - `SonataToolbar.Start` ← `apps.sonata.library`
               - `SonataToolbar.End` ← `apps.sonata.audio.engine`, `apps.sonata.audio.metronome`, `apps.sonata.pedal.indicator`, `apps.sonata.piano-roll`, `apps.sonata.progress.loop`, `apps.sonata.transport-bar`, `apps.sonata.transpose`
@@ -3857,6 +3882,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/sonata/audio/metronome`
               - `apps/sonata/controls`
               - `apps/sonata/library`
+              - `apps/sonata/look`
               - `apps/sonata/notation`
               - `apps/sonata/pedal/indicator`
               - `apps/sonata/pedal/lane`
@@ -7421,7 +7447,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
 
 - **`config_v2`** — Reactive useConfig hook for reading typed JSONC config in the browser. Typed JSONC config handles for server plugins.
   - Web:
-    - Slots: `ConfigV2.WebRegister` ← `apps-core.app-rail-framing`, `apps-core.surface.floating`, `apps-core.surface.floating.wallpaper`, `apps.sonata.audio.metronome`, `apps.sonata.notation`, `apps.sonata.piano-keyboard`, `apps.sonata.piano-roll`, `apps.sonata.piano-roll.fx-comets`, `apps.sonata.piano-roll.fx-core`, `apps.sonata.piano-roll.fx-ripples`, `apps.sonata.piano-roll.fx-shatter`, `apps.sonata.primitives.keyboard`, `apps.sonata.rich.chord-label`, `apps.sonata.sources.midi.folders`, `apps.sonata.voicing`, `auth.apple-signing`, `auth.google`, `auth.notion`, `backup`, `backup.sources.attachments`, `backup.sources.claude-settings`, `backup.sources.config`, `backup.sources.cost-history`, `backup.sources.databases`, `backup.sources.project-memory`, `backup.sources.prototypes`, `backup.sources.secrets`, `backup.sources.singularity-platform`, `backup.sources.transcripts`, `backup.targets.google-drive`, `backup.targets.local`, `build`, `conversations`, `conversations.conversation-category`, `conversations.conversation-view.launch-prompts`, `conversations.conversation-view.prompt-templates`, `conversations.conversation-view.push-and-exit`, `conversations.conversation-view.turn-summary`, `conversations.hibernation`, `conversations.model-provider`, `conversations.preprompts`, `debug.boot-budget`, `debug.boot-monitor`, `debug.boot-watchdog`, `debug.live-state-churn.monitor`, `debug.op-rate`, `debug.paging-probe`, `debug.queue-health`, `debug.read-set-shrink`, `debug.sentinel`, `debug.session-divergence`, `debug.slow-ops`, `debug.stall-monitor`, `debug.trace.engine`, `infra.duress`, `integrations.gmail`, `plugin-meta.composition`, `primitives.data-view`, `reorder`, `review.code-review`, `shell.global-action-bar`, `stats.commits`, `stats.cost`, `tasks.task-draft-form`, `ui.segmented-progress-bar`, `ui.sidebar-framing`, `ui.tab-bar`, `ui.theme-engine`, `ui.tokens.categorical`, `ui.tokens.chart`, `ui.tokens.color-adjust`, `ui.tokens.color-palette`, `ui.tokens.density`, `ui.tokens.font-family`, `ui.tokens.rich-text-palette`, `ui.tokens.shadow`, `ui.tokens.shape`, `ui.tokens.sidebar-palette`, `ui.tokens.type-scale`, `ui.tree-disclosure`
+    - Slots: `ConfigV2.WebRegister` ← `apps-core.app-rail-framing`, `apps-core.surface.floating`, `apps-core.surface.floating.wallpaper`, `apps.sonata.audio.metronome`, `apps.sonata.look`, `apps.sonata.notation`, `apps.sonata.piano-keyboard`, `apps.sonata.piano-roll`, `apps.sonata.piano-roll.fx-comets`, `apps.sonata.piano-roll.fx-core`, `apps.sonata.piano-roll.fx-ripples`, `apps.sonata.piano-roll.fx-shatter`, `apps.sonata.primitives.keyboard`, `apps.sonata.rich.chord-label`, `apps.sonata.sources.midi.folders`, `apps.sonata.voicing`, `auth.apple-signing`, `auth.google`, `auth.notion`, `backup`, `backup.sources.attachments`, `backup.sources.claude-settings`, `backup.sources.config`, `backup.sources.cost-history`, `backup.sources.databases`, `backup.sources.project-memory`, `backup.sources.prototypes`, `backup.sources.secrets`, `backup.sources.singularity-platform`, `backup.sources.transcripts`, `backup.targets.google-drive`, `backup.targets.local`, `build`, `conversations`, `conversations.conversation-category`, `conversations.conversation-view.launch-prompts`, `conversations.conversation-view.prompt-templates`, `conversations.conversation-view.push-and-exit`, `conversations.conversation-view.turn-summary`, `conversations.hibernation`, `conversations.model-provider`, `conversations.preprompts`, `debug.boot-budget`, `debug.boot-monitor`, `debug.boot-watchdog`, `debug.live-state-churn.monitor`, `debug.op-rate`, `debug.paging-probe`, `debug.queue-health`, `debug.read-set-shrink`, `debug.sentinel`, `debug.session-divergence`, `debug.slow-ops`, `debug.stall-monitor`, `debug.trace.engine`, `infra.duress`, `integrations.gmail`, `plugin-meta.composition`, `primitives.data-view`, `reorder`, `review.code-review`, `shell.global-action-bar`, `stats.commits`, `stats.cost`, `tasks.task-draft-form`, `ui.segmented-progress-bar`, `ui.sidebar-framing`, `ui.tab-bar`, `ui.theme-engine`, `ui.tokens.categorical`, `ui.tokens.chart`, `ui.tokens.color-adjust`, `ui.tokens.color-palette`, `ui.tokens.density`, `ui.tokens.font-family`, `ui.tokens.rich-text-palette`, `ui.tokens.shadow`, `ui.tokens.shape`, `ui.tokens.sidebar-palette`, `ui.tokens.type-scale`, `ui.tree-disclosure`
     - Contributes: `Core.Boot`
     - Uses:
       - `infra/endpoints.fetchEndpoint`
@@ -7563,6 +7589,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `apps-core/surface/floating/wallpaper`
       - `apps/deploy/deployments`
       - `apps/sonata/audio/metronome`
+      - `apps/sonata/look`
       - `apps/sonata/notation`
       - `apps/sonata/piano-keyboard`
       - `apps/sonata/piano-roll`
@@ -13650,6 +13677,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps-core/surface/floating/wallpaper`
               - `apps/events/sources/dmda`
               - `apps/events/sources/url-extract`
+              - `apps/sonata/look`
               - `plugin-meta/composition`
               - `ui/theme-engine`
         - **`filter`** — Enum (select) field type: data-view filter operator set (is / is-any-of / is-empty …).
@@ -15039,6 +15067,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/pages/page-tree`
               - `apps/prototypes/present`
               - `apps/prototypes/thumbnails`
+              - `apps/sonata/look`
               - `code-explorer`
               - `conversations/conversation-category`
               - `conversations/conversation-view/jsonl-viewer`
@@ -21412,6 +21441,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Cross-plugin:
             - Imported by:
               - `apps-core/surface/floating`
+              - `apps/sonata/primitives/keyboard`
               - `page/code-block`
               - `primitives/tree`
         - **`layout-harness`** — Live Layout Lab gallery: renders the layout-primitive fixture catalog across its width sweep, opened from the Debug sidebar.
@@ -24482,6 +24512,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/prototypes/gallery`
           - `apps/sonata/notation`
           - `apps/sonata/piano-roll`
+          - `apps/sonata/primitives/keyboard`
           - `primitives/adaptive-bar`
           - `primitives/collapsible-wrap`
           - `primitives/css/sticky/stack`
