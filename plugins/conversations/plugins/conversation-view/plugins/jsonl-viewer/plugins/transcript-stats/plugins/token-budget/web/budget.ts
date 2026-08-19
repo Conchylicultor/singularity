@@ -5,9 +5,22 @@ import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-watch
  * session, each carrying one number wrapped in prose:
  * `<total_tokens>15000000 tokens left</total_tokens>`.
  *
- * As transcript ROWS these are pure noise — dozens of near-identical lines whose
- * number barely moves. As a status reading they are exactly what a reader wants,
- * so this plugin hides the rows and folds the whole series into one stat instead.
+ * That number is a **work allowance handed to the agent**, not a measurement of
+ * the conversation: the harness writes it into the model's own prompt so the
+ * model can judge how much room it has, re-anchors it to the full value at the
+ * start of every user request, and pads it far above what any real request
+ * spends. Read as "left" it is therefore a constant — the readings sit within a
+ * fraction of a percent of the ceiling, and every new request puts them back on
+ * it.
+ *
+ * What the series does carry is the harness's own charge accounting, which
+ * counts work no other row in the transcript can account for (a subagent's or a
+ * workflow's output is charged here but recorded in its own transcript). So
+ * this folds the whole series into the one reading that moves: the total
+ * charged, summed across the re-anchors.
+ *
+ * As transcript ROWS the reminders are pure noise — dozens of near-identical
+ * lines whose number barely moves — so the plugin hides them too.
  */
 
 export const TOTAL_TOKENS_SUBTYPE = "total_tokens_reminder";
@@ -48,23 +61,28 @@ export function isTotalTokensReminder(
 }
 
 export interface BudgetStatus {
-  /** What the last reading in this stretch said was left. */
-  remaining: number;
   /**
-   * The ceiling the share is measured against: the largest reading seen.
-   * Derived rather than assumed, because a transcript chain can start mid-budget
-   * and the harness never states the full budget anywhere.
-   */
-  budget: number;
-  /** `remaining / budget`, 0..1. */
-  share: number;
-  /**
-   * Everything the session has burned through here — the sum of the DROPS
-   * between consecutive readings, not `first - last`. The two differ whenever
-   * the budget is refreshed mid-transcript (a resumed chain, a new window),
-   * which really happens; summing drops keeps the answer true across one.
+   * Everything charged against the allowance across this stretch: the sum of
+   * the DROPS between consecutive readings, never `first - last`. The harness
+   * re-anchors the allowance in full on each new request, so `first - last`
+   * would forget every request but the one in progress — and read as zero the
+   * moment a request has only just started.
    */
   spent: number;
+  /** The part of `spent` charged since the last re-anchor. */
+  spentThisRequest: number;
+  /**
+   * How many requests this stretch covers: the opening reading, plus one for
+   * each re-anchor after it.
+   */
+  requests: number;
+  /**
+   * The allowance a request starts from: the largest reading seen. Derived
+   * rather than assumed, because the harness never states the ceiling except by
+   * handing it out — and a transcript can start mid-request, where the largest
+   * reading is all there is to go on.
+   */
+  allowance: number;
 }
 
 /**
@@ -73,28 +91,35 @@ export interface BudgetStatus {
  * which the stat renders as nothing at all.
  */
 export function readBudget(events: JsonlEvent[]): BudgetStatus | null {
-  let remaining: number | null = null;
-  let budget = 0;
+  let previous: number | null = null;
+  let allowance = 0;
   let spent = 0;
+  let spentThisRequest = 0;
+  let requests = 0;
 
   for (const event of events) {
     if (!isTotalTokensReminder(event)) continue;
     const parsed = parseBudgetAttachment(event.attachment);
     if (!parsed.ok) continue;
-    if (remaining !== null && parsed.remaining < remaining) {
-      spent += remaining - parsed.remaining;
+
+    if (previous === null) {
+      requests = 1;
+    } else if (parsed.remaining > previous) {
+      // Back up: the allowance was re-anchored, which the harness does at the
+      // start of a user request and nowhere else. A new request has spent
+      // nothing yet, but the conversation's total keeps everything before it.
+      requests += 1;
+      spentThisRequest = 0;
+    } else {
+      const drop = previous - parsed.remaining;
+      spent += drop;
+      spentThisRequest += drop;
     }
-    remaining = parsed.remaining;
-    if (parsed.remaining > budget) budget = parsed.remaining;
+
+    previous = parsed.remaining;
+    if (parsed.remaining > allowance) allowance = parsed.remaining;
   }
 
-  if (remaining === null) return null;
-  return {
-    remaining,
-    budget,
-    // `budget >= remaining >= 0` by construction; a zero budget means the
-    // harness reported zero left, which is a share of nothing — exhausted.
-    share: budget > 0 ? remaining / budget : 0,
-    spent,
-  };
+  if (previous === null) return null;
+  return { spent, spentThisRequest, requests, allowance };
 }

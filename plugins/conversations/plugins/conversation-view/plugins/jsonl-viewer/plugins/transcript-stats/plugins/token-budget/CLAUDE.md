@@ -4,7 +4,7 @@
 
 ## Plugin reference
 
-- Description: The session's token budget as a transcript stat: how much of the harness's total_tokens budget is left as of the reading position, louder as it drains. Owns both halves of the move — the stat, and the filter that takes the harness's repeated reminder rows out of the transcript flow they were cluttering.
+- Description: The agent's work allowance as a transcript stat: how many tokens the harness has charged against it up to the reading position, summed across the re-anchor it performs on every new request. Reports the total spent rather than the number the harness prints, which is a padded per-request allowance handed to the model and so reads as a constant. Owns both halves of the move — the stat, and the filter that takes the harness's repeated reminder rows out of the transcript flow they were cluttering.
 - Web:
   - Contributes:
     - `TranscriptStats.Item` "token-budget" → `TokenBudgetStat`
@@ -13,7 +13,6 @@
     - `conversations/conversation-view/jsonl-viewer.formatTokenCount`
     - `conversations/conversation-view/jsonl-viewer.JsonlViewer`
     - `conversations/conversation-view/jsonl-viewer/transcript-stats.StatBadge`
-    - `conversations/conversation-view/jsonl-viewer/transcript-stats.StatTone`
     - `conversations/conversation-view/jsonl-viewer/transcript-stats.TranscriptStats`
     - `conversations/conversation-view/jsonl-viewer/transcript-stats.useTranscriptRead`
 

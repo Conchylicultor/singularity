@@ -72,27 +72,27 @@ describe("readBudget", () => {
     expect(readBudget([{ kind: "user-text", at: "t", text: "hi" }])).toBeNull();
   });
 
-  test("reports the last reading, the ceiling, and what got spent", () => {
+  test("reports what got charged, and against which allowance", () => {
     expect(readBudget([reminder(1000), reminder(900), reminder(250)])).toEqual({
-      remaining: 250,
-      budget: 1000,
-      share: 0.25,
       spent: 750,
+      spentThisRequest: 750,
+      requests: 1,
+      allowance: 1000,
     });
   });
 
   test("the first reading has spent nothing yet", () => {
     expect(readBudget([reminder(1000)])).toEqual({
-      remaining: 1000,
-      budget: 1000,
-      share: 1,
       spent: 0,
+      spentThisRequest: 0,
+      requests: 1,
+      allowance: 1000,
     });
   });
 
-  test("a mid-transcript refresh does not erase what was already spent", () => {
-    // 1000 → 250 (750 spent), budget refreshed to 1000, → 900 (100 more).
-    // `first - last` would claim 100; summing the drops keeps both stretches.
+  test("a re-anchor does not erase what earlier requests already spent", () => {
+    // 1000 → 250 (750 charged), allowance re-anchored to 1000, → 900 (100 more).
+    // `first - last` would claim 100; summing the drops keeps both requests.
     expect(
       readBudget([
         reminder(1000),
@@ -100,7 +100,25 @@ describe("readBudget", () => {
         reminder(1000),
         reminder(900),
       ]),
-    ).toEqual({ remaining: 900, budget: 1000, share: 0.9, spent: 850 });
+    ).toEqual({
+      spent: 850,
+      spentThisRequest: 100,
+      requests: 2,
+      allowance: 1000,
+    });
+  });
+
+  test("a request that has only just started still reports the total", () => {
+    // The very state that made "left" useless: back on the ceiling, nothing
+    // spent in this request, and 750 spent by the conversation all the same.
+    expect(readBudget([reminder(1000), reminder(250), reminder(1000)])).toEqual(
+      {
+        spent: 750,
+        spentThisRequest: 0,
+        requests: 2,
+        allowance: 1000,
+      },
+    );
   });
 
   test("unreadable reminders are skipped, not counted as zero left", () => {
@@ -111,14 +129,30 @@ describe("readBudget", () => {
       attachment: { type: "total_tokens_reminder", text: "who knows" },
     };
     expect(readBudget([reminder(1000), broken, reminder(400)])).toEqual({
-      remaining: 400,
-      budget: 1000,
-      share: 0.4,
       spent: 600,
+      spentThisRequest: 600,
+      requests: 1,
+      allowance: 1000,
     });
   });
 
-  test("an exhausted budget is a zero share, never a divide-by-zero", () => {
-    expect(readBudget([reminder(0)])?.share).toBe(0);
+  test("a transcript starting mid-request measures against what it can see", () => {
+    // No re-anchor in view, so the largest reading is the only ceiling there is
+    // — and what this request spent before the stretch began is unknowable.
+    expect(readBudget([reminder(400), reminder(150)])).toEqual({
+      spent: 250,
+      spentThisRequest: 250,
+      requests: 1,
+      allowance: 400,
+    });
+  });
+
+  test("an exhausted allowance is a full charge, never a divide-by-zero", () => {
+    expect(readBudget([reminder(1000), reminder(0)])).toEqual({
+      spent: 1000,
+      spentThisRequest: 1000,
+      requests: 1,
+      allowance: 1000,
+    });
   });
 });
