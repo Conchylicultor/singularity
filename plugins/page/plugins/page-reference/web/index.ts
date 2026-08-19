@@ -13,5 +13,5 @@ export default {
   description:
     "The shared contract for a reference to another page rendered inside a page (sub-page row, link block, inline mention): the PageNavigation context a host declares once so no callback is threaded through the composite block store, and the PageReference.Actions frontier whose contributions become the reference row's hover actions. Owns no reference and no action of its own.",
   contributions: [],
-  slots: [PageReference],
+  slots: PageReference,
 } satisfies PluginDefinition;

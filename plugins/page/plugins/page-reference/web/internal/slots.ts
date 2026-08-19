@@ -38,5 +38,5 @@ export const PageReference = {
      * loop.
      */
     available?: (nav: PageNavigation | undefined) => boolean;
-  }>("page.reference.actions"),
+  }>(),
 };

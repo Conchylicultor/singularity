@@ -154,7 +154,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports (values): `PageLinkChip`
     - **`plugin-link`** — Renders plugin IDs in backtick-wrapped inline code as clickable chips that open the plugin-view pane. Models emit the plugin's dotted id (e.g. `tasks`, `active-data.conv`) and the chip validates and resolves it at render time.
       - Web:
-        - Slots: `pane.plugin-conv-side.actions`
+        - Slots: `plugin-conv-side.actions`
         - Contributes:
           - `ActiveData.Tag` "plugin-link"
           - `Pane.Register` "plugin-conv-side"
@@ -906,14 +906,14 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Slots:
               - `ServerDetail.Section` ← `apps.deploy.deployments`, `apps.deploy.health`, `apps.deploy.servers`, `apps.deploy.ssh-setup`
               - `Servers.Fields` ← `apps.deploy.health`
-              - `deploy.servers.item-actions` ← `apps.deploy.servers`
+              - `item-actions` ← `apps.deploy.servers`
               - `serversRootPane.Actions`
               - `serverDetailPane.Actions`
             - Contributes:
               - `Pane.Register` "deploy-servers"
               - `Pane.Register` "deploy-server-detail"
               - `ServerDetail.Section` "Server" → `ServerEditForm`
-              - `deploy.servers.item-actions` "open-console" → `OpenConsoleAction`
+              - `item-actions` "open-console" → `OpenConsoleAction`
             - Uses:
               - `infra/endpoints.EndpointError`
               - `infra/endpoints.fetchEndpoint`
@@ -1372,7 +1372,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Web:
             - Slots:
               - `Events.Sidebar` ← `apps.events.event-list`, `apps.events.sources`
-              - `pane.events-root.actions`
+              - `events-root.actions`
             - Contributes:
               - `Apps.App` "Events" → `EventsLayout`
               - `Pane.Register` "events-root"
@@ -2015,8 +2015,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - **`search`** — Mail on-demand search: a Search sidebar entry opening a query surface over GET /api/mail/search (Gmail relevance order, reaching mail older than the sync window), plus a lazily-hydrated reader pane for a selected message.
           - Web:
             - Slots:
-              - `pane.mail-search.actions`
-              - `pane.mail-message.actions`
+              - `mail-search.actions`
+              - `mail-message.actions`
             - Contributes:
               - `Mail.Sidebar` "Search" → `MailSearchSidebar`
               - `Pane.Register` "mail-search"
@@ -2054,7 +2054,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `Mail.Sidebar` ← `apps.mail.search`
               - `Mail.Banner` ← `apps.mail.sync-status`
               - `Mail.RailBadge` ← `apps.mail.sync-status`
-              - `pane.mail-root.actions`
+              - `mail-root.actions`
             - Contributes:
               - `Apps.App` "Mail" → `MailLayout`
               - `Pane.Register` "mail-root"
@@ -2514,7 +2514,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Web:
             - Slots:
               - `PagesWelcome.Section` ← `apps.pages.welcome.quick-create`, `apps.pages.welcome.recent-pages`
-              - `pane.pages-root.actions`
+              - `pages-root.actions`
             - Contributes: `Pane.Register` "pages-root"
             - Uses:
               - `primitives/css/spacing.Inset`
@@ -2744,7 +2744,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `ui/theme-engine/theme-customizer.themeCustomizerPane`
         - **`config`** — Config settings surface: the config nav as the Settings app's default pane, its sidebar entry, and the rail-icon conflict dot.
           - Web:
-            - Slots: `pane.settings-config-index.actions`
+            - Slots: `settings-config-index.actions`
             - Contributes:
               - `Pane.Register` "settings-config-index"
               - `Settings.Sidebar` "Config" → `ConfigSidebarButton`
@@ -2908,8 +2908,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `Library.Source` ← `apps.sonata.sources.chord-grid`, `apps.sonata.sources.midi`, `apps.sonata.sources.ultimate-guitar`
               - `Library.SongActions` ← `apps.sonata.library`
               - `Library.Fields` ← `apps.sonata.playback-history`, `apps.sonata.sources.midi`, `apps.sonata.sources.midi.folders`
-              - `pane.sonata-library.actions`
-              - `pane.sonata-player.actions`
+              - `sonata-library.actions`
+              - `sonata-player.actions`
             - Contributes:
               - `Sonata.Home` "library" → `SongLibrary`
               - `SonataToolbar.Start` "back" → `BackToLibrary`
@@ -4370,8 +4370,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Slots:
               - `StoryToolbar.Start` ← `apps.story.shell`
               - `StoryToolbar.End` ← `apps.story.shell`
-              - `pane.story-gallery.actions`
-              - `pane.story-detail.actions`
+              - `story-gallery.actions`
+              - `story-detail.actions`
             - Contributes:
               - `Apps.App` "Story" → `StoryLayout`
               - `StoryToolbar.Start` "back" → `BackToStories`
@@ -4438,7 +4438,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Web:
             - Slots:
               - `CompositionDetail.Section` ← `apps.studio.compositions.closure-tree`, `apps.studio.compositions.contributors`, `apps.studio.compositions.draft-actions`, `apps.studio.compositions.entry-points`, `apps.studio.compositions.membership-summary`, `apps.studio.compositions.release`
-              - `studio.compositions.item-actions` ← `apps.studio.compositions`
+              - `item-actions` ← `apps.studio.compositions`
               - `compositionsPane.Actions`
               - `compositionDetailPane.Actions`
               - `comparePane.Actions`
@@ -4446,7 +4446,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `Pane.Register` "compositions"
               - `Pane.Register` "composition-detail"
               - `Pane.Register` "composition-compare"
-              - `studio.compositions.item-actions` "delete" → `DeleteAction`
+              - `item-actions` "delete" → `DeleteAction`
               - `Studio.Sidebar` "Compositions" → `component`
             - Uses:
               - `apps/studio/explorer/membership.DIFF_LEGEND`
@@ -4581,7 +4581,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - Web:
                 - Slots:
                   - `ReleaseDetail.Section` ← `apps.studio.compositions.release.release-artifact`, `apps.studio.compositions.release.release-info`, `apps.studio.compositions.release.release-logs`
-                  - `pane.release-detail.actions`
+                  - `release-detail.actions`
                 - Contributes:
                   - `Pane.Register` "release-detail"
                   - `CompositionDetail.Section` "Build & serve" → `ReleaseSection`
@@ -4662,7 +4662,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                       - `shell/notifications.toast`
         - **`contributions`** — Central view of all plugin contributions aggregated by type.
           - Web:
-            - Slots: `pane.contributions.actions`
+            - Slots: `contributions.actions`
             - Contributes:
               - `Pane.Register` "contributions"
               - `Studio.Sidebar` "Contributions" → `component`
@@ -5520,7 +5520,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/workflows/steps/user-input`
         - **`executions`** — Executions section (run list + Run button) for the Workflows detail pane, plus the execution-detail pane rendering the per-step trace.
           - Web:
-            - Slots: `pane.workflows-execution-detail.actions`
+            - Slots: `workflows-execution-detail.actions`
             - Contributes:
               - `WorkflowsDetail.Section` "Executions" → `ExecutionsSection`
               - `Pane.Register` "workflows-execution-detail"
@@ -7222,8 +7222,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
 - **`code-explorer`** — Worktree-scoped file browser: sidebar entry opens the main worktree; conversation toolbar opens the agent's worktree. Worktree-scoped file browser and viewer: tree listing plus raw/diff/image content by attempt id or the reserved `main` sentinel.
   - Web:
     - Slots:
-      - `pane.global-file-tree.actions`
-      - `pane.conv-file-tree.actions`
+      - `global-file-tree.actions`
+      - `conv-file-tree.actions`
     - Contributes:
       - `Pane.Register` "global-file-tree"
       - `Pane.Register` "conv-file-tree"
@@ -7631,7 +7631,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `stats/commits`
     - **`fields`** — Field type registry. Sub-plugins contribute field types with core factories and web renderers.
       - Web:
-        - Slots: `config-v2.fields.renderer` ← `fields.avatar.config`, `fields.bool.config`, `fields.color.config`, `fields.directory-path.config`, `fields.dynamic-enum.config`, `fields.enum.config`, `fields.float.config`, `fields.int.config`, `fields.json.config`, `fields.list.config`, `fields.multiline-text.config`, `fields.object.config`, `fields.reorder-tree.config`, `fields.secret.config`, `fields.string-list.config`, `fields.tags.config`, `fields.text.config`, `fields.variant.config`
+        - Slots: `Fields.Renderer` ← `fields.avatar.config`, `fields.bool.config`, `fields.color.config`, `fields.directory-path.config`, `fields.dynamic-enum.config`, `fields.enum.config`, `fields.float.config`, `fields.int.config`, `fields.json.config`, `fields.list.config`, `fields.multiline-text.config`, `fields.object.config`, `fields.reorder-tree.config`, `fields.secret.config`, `fields.string-list.config`, `fields.tags.config`, `fields.text.config`, `fields.variant.config`
         - Uses:
           - `primitives/css/placeholder.Placeholder`
           - `primitives/css/spacing.Stack`
@@ -8676,7 +8676,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Plugins:
             - **`docs-button`** — Toolbar button that opens a sidebar listing edited markdown design docs in the conversation worktree.
               - Web:
-                - Slots: `pane.conv-docs.actions`
+                - Slots: `conv-docs.actions`
                 - Contributes:
                   - `Pane.Register` "conv-docs"
                   - `Conversation.ActionBar` → `DocsButton`
@@ -8796,7 +8796,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                       - `primitives/syntax-highlight.useHighlightedHtml`
         - **`commits-graph`** — Toolbar chip showing commits ahead/behind main; opens a side pane with the chain of commits between merge-base and HEAD. Toolbar chip showing commits ahead/behind main; opens a side pane with the chain of commits between merge-base and HEAD.
           - Web:
-            - Slots: `pane.conv-commits-graph.actions`
+            - Slots: `conv-commits-graph.actions`
             - Contributes:
               - `Pane.Register` "conv-commits-graph"
               - `Conversation.ActionBar` → `CommitsChip`
@@ -9553,7 +9553,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                       - `tasks/task-status.StatusIcon`
                 - **`agent`** — Renders Agent tool calls with subagent type, model badge, prompt (markdown), and report (markdown).
                   - Web:
-                    - Slots: `pane.agent-report.actions`
+                    - Slots: `agent-report.actions`
                     - Contributes:
                       - `JsonlViewerTool.Renderer` "Agent" → `AgentToolView`
                       - `Pane.Register` "agent-report"
@@ -9775,7 +9775,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                       - `primitives/live-state.useResource`
                 - **`workflow`** — Renders Workflow tool calls as a swimlane DAG of agent nodes (recovered by trace-executing the script), with per-node prompts in a side pane, a collapsible script, and the launched run/task ids.
                   - Web:
-                    - Slots: `pane.workflow-node.actions`
+                    - Slots: `workflow-node.actions`
                     - Contributes:
                       - `JsonlViewerTool.Renderer` "Workflow" → `WorkflowToolView`
                       - `Pane.Register` "workflow-node"
@@ -10170,7 +10170,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - **`push-counter`**
         - **`push-profiling`** — Toolbar button showing the build/push/check op Gantt scoped to the conversation's worktree.
           - Web:
-            - Slots: `pane.conv-push-profiling.actions`
+            - Slots: `conv-push-profiling.actions`
             - Contributes:
               - `Pane.Register` "conv-push-profiling"
               - `Conversation.ActionBar` → `PushProfilingButton`
@@ -10227,7 +10227,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `tasks/task-detail.taskDetailPane`
         - **`terminal-pane`** — Toolbar button that opens a right pane attaching to the conversation's tmux session.
           - Web:
-            - Slots: `pane.conv-terminal.actions`
+            - Slots: `conv-terminal.actions`
             - Contributes:
               - `Pane.Register` "conv-terminal"
               - `Conversation.ActionBar` → `TerminalButton`
@@ -10350,10 +10350,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Plugins:
             - **`history`** — Contributes the History list (a server-delegated bundle reusing the all-conversations query infra) as the History source of the merged conversation-sidebar DataView.
               - Web:
-                - Slots: `conversations-sidebar-history-actions` ← `conversations.conversations-view.data-view.history`
+                - Slots: `history-actions` ← `conversations.conversations-view.data-view.history`
                 - Contributes:
                   - `SidebarSources` "History" → `HistorySource`
-                  - `conversations-sidebar-history-actions` "close" → `CloseConvAction`
+                  - `history-actions` "close" → `CloseConvAction`
                 - Uses:
                   - `conversations/all-conversations.conversationFieldDefs`
                   - `conversations/conversation-ui/item.ConversationItem`
@@ -10365,15 +10365,15 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `primitives/live-state.useResource`
             - **`queue`** — Contributes the priority Queue (pin/status group-by sections, task-group aggregation, and neighbor-based manual-order drag over the queue's live data/mutation layer) as the Queue source of the merged conversation-sidebar DataView.
               - Web:
-                - Slots: `conversations-sidebar-queue-actions` ← `conversations.conversations-view.data-view.queue`
+                - Slots: `queue-actions` ← `conversations.conversations-view.data-view.queue`
                 - Contributes:
                   - `SidebarSources` "Queue" → `QueueSource`
-                  - `conversations-sidebar-queue-actions` "pin" → `PinAction`
-                  - `conversations-sidebar-queue-actions` "promote" → `PromoteAction`
-                  - `conversations-sidebar-queue-actions` "step-down" → `StepDownAction`
-                  - `conversations-sidebar-queue-actions` "demote" → `DemoteAction`
-                  - `conversations-sidebar-queue-actions` "add-to-queue" → `AddToQueueAction`
-                  - `conversations-sidebar-queue-actions` "close" → `CloseAction`
+                  - `queue-actions` "pin" → `PinAction`
+                  - `queue-actions` "promote" → `PromoteAction`
+                  - `queue-actions` "step-down" → `StepDownAction`
+                  - `queue-actions` "demote" → `DemoteAction`
+                  - `queue-actions` "add-to-queue" → `AddToQueueAction`
+                  - `queue-actions` "close" → `CloseAction`
                 - Uses:
                   - `conversations/all-conversations.conversationFieldDefs`
                   - `conversations/conversation-ui/item.ConversationItem`
@@ -10723,7 +10723,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `debug/session-divergence`
     - **`summary`** — Toolbar button that opens a side pane with the Summarise action and the latest structured Sonnet summary (phase, flags, next action). On-demand structured summaries of conversations: phase, flags, next action. Curated by Sonnet via MCP. Append-only history.
       - Web:
-        - Slots: `pane.conv-summary.actions`
+        - Slots: `conv-summary.actions`
         - Contributes: `Pane.Register` "conv-summary"
         - Uses:
           - `conversations/conversation-view.conversationPane`
@@ -11312,9 +11312,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`boot-profile`** — Browser boot profiler Gantt debug page: the request → first-paint timeline plus per-resource wait/work split, with shareable permalinks and a browsable list of saved snapshots. Persists captured browser boot traces under a unique id (POST), serves one snapshot (GET) and a metadata-only list (GET) for the permalink + browse panes, and sweeps snapshots older than 30 days via a scheduled job.
       - Web:
         - Slots:
-          - `pane.debug-boot-profile.actions`
-          - `pane.debug-boot-profile-detail.actions`
-          - `pane.debug-boot-profiles-list.actions`
+          - `debug-boot-profile.actions`
+          - `debug-boot-profile-detail.actions`
+          - `debug-boot-profiles-list.actions`
         - Contributes:
           - `Pane.Register` "debug-boot-profile"
           - `Pane.Register` "debug-boot-profile-detail"
@@ -13194,6 +13194,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `infra/entities`
       - `infra/events`
       - `plugin-meta/plugin-health`
+      - `primitives/data-view`
       - `tasks/tasks-core`
   - Core:
     - Exports (types):
@@ -13234,7 +13235,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Plugins:
         - **`config`** — Avatar field type: config-render capability (icon + color picker for config-v2.fields.renderer) plus the avatarField factory.
           - Web:
-            - Contributes: `config-v2.fields.renderer` "avatar" → `AvatarRenderer`
+            - Contributes: `Fields.Renderer` "avatar" → `AvatarRenderer`
             - Uses:
               - `config_v2/fields.FieldHeader`
               - `config_v2/fields.FieldRendererComponent`
@@ -13271,7 +13272,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Plugins:
         - **`config`** — Boolean field type: config-render capability (checkbox for config-v2.fields.renderer) plus the boolField factory.
           - Web:
-            - Contributes: `config-v2.fields.renderer` "bool" → `BoolRenderer`
+            - Contributes: `Fields.Renderer` "bool" → `BoolRenderer`
             - Uses:
               - `config_v2/fields.FieldHeader`
               - `config_v2/fields.FieldRendererComponent`
@@ -13360,7 +13361,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Plugins:
         - **`config`** — Color field type: config-render capability (hex/oklch popover picker for config-v2.fields.renderer) plus the colorField factory.
           - Web:
-            - Contributes: `config-v2.fields.renderer` "color" → `ColorRenderer`
+            - Contributes: `Fields.Renderer` "color" → `ColorRenderer`
             - Uses:
               - `config_v2/fields.FieldHeader`
               - `config_v2/fields.FieldRendererComponent`
@@ -13496,7 +13497,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Plugins:
         - **`config`** — Directory-path field type: config-render capability (folder picker for config-v2.fields.renderer) plus the dirPathField factory.
           - Web:
-            - Contributes: `config-v2.fields.renderer` "directory-path" → `DirPathRenderer`
+            - Contributes: `Fields.Renderer` "directory-path" → `DirPathRenderer`
             - Uses:
               - `config_v2/fields.FieldHeader`
               - `config_v2/fields.FieldRendererComponent`
@@ -13528,7 +13529,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - **`config`** — Dynamic enum field type: config-render capability (options resolved at render time from slot contributions, for config-v2.fields.renderer) plus the dynamicEnumField factory.
           - Web:
             - Slots: `DynamicEnum.Options` ← `apps-core.app-rail-framing`, `conversations.conversation-category`, `ui.segmented-progress-bar`, `ui.sidebar-framing`, `ui.tab-bar`, `ui.theme-engine`, `ui.tokens.categorical`, `ui.tokens.chart`, `ui.tokens.color-adjust`, `ui.tokens.color-palette`, `ui.tokens.density`, `ui.tokens.font-family`, `ui.tokens.shadow`, `ui.tokens.shape`, `ui.tokens.sidebar-palette`, `ui.tokens.type-scale`, `ui.tree-disclosure`
-            - Contributes: `config-v2.fields.renderer` "dynamic-enum" → `DynamicEnumRenderer`
+            - Contributes: `Fields.Renderer` "dynamic-enum" → `DynamicEnumRenderer`
             - Uses:
               - `config_v2/fields.Fields`
               - `primitives/css/radio-group.RadioGroup`
@@ -13593,7 +13594,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/icon-button.IconButton`
         - **`config`** — Enum field type: config-render capability. Contributes the radio/dropdown renderer to the config-v2.fields.renderer slot.
           - Web:
-            - Contributes: `config-v2.fields.renderer` "enum" → `EnumRenderer`
+            - Contributes: `Fields.Renderer` "enum" → `EnumRenderer`
             - Uses:
               - `config_v2/fields.Fields`
               - `primitives/css/radio-group.RadioGroup`
@@ -13666,7 +13667,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Plugins:
         - **`config`** — Float field type: config-render capability (number stepper for config-v2.fields.renderer) plus the floatField factory.
           - Web:
-            - Contributes: `config-v2.fields.renderer` "float" → `FloatRenderer`
+            - Contributes: `Fields.Renderer` "float" → `FloatRenderer`
             - Uses:
               - `config_v2/fields.FieldHeader`
               - `config_v2/fields.FieldRendererComponent`
@@ -13729,7 +13730,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Plugins:
         - **`config`** — Integer field type: config-render capability (number stepper for config-v2.fields.renderer) plus the intField factory.
           - Web:
-            - Contributes: `config-v2.fields.renderer` "int" → `IntRenderer`
+            - Contributes: `Fields.Renderer` "int" → `IntRenderer`
             - Uses:
               - `config_v2/fields.FieldHeader`
               - `config_v2/fields.FieldRendererComponent`
@@ -13788,7 +13789,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Plugins:
         - **`config`** — JSON field type: config-render capability (read-only formatted JSON for config-v2.fields.renderer) plus the jsonField factory.
           - Web:
-            - Contributes: `config-v2.fields.renderer` "json" → `JsonRenderer`
+            - Contributes: `Fields.Renderer` "json" → `JsonRenderer`
             - Uses:
               - `config_v2/fields.FieldHeader`
               - `config_v2/fields.FieldRendererComponent`
@@ -13839,7 +13840,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Plugins:
         - **`config`** — List field type: config-render capability (sortable drag-and-drop list for config-v2.fields.renderer) plus the listField factory.
           - Web:
-            - Contributes: `config-v2.fields.renderer` "list" → `ListRenderer`
+            - Contributes: `Fields.Renderer` "list" → `ListRenderer`
             - Uses:
               - `config_v2/fields.FieldRenderer`
               - `config_v2/fields.Fields`
@@ -13887,7 +13888,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Plugins:
         - **`config`** — Long-text field type: config-render capability (textarea for config-v2.fields.renderer) plus the multilineTextField factory.
           - Web:
-            - Contributes: `config-v2.fields.renderer` "multiline-text" → `MultilineTextRenderer`
+            - Contributes: `Fields.Renderer` "multiline-text" → `MultilineTextRenderer`
             - Uses:
               - `config_v2/fields.FieldHeader`
               - `config_v2/fields.FieldRendererComponent`
@@ -13967,7 +13968,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Plugins:
         - **`config`** — Object field type: config-render capability (collapsible sub-field renderer for config-v2.fields.renderer) plus the objectField factory.
           - Web:
-            - Contributes: `config-v2.fields.renderer` "object" → `ObjectRenderer`
+            - Contributes: `Fields.Renderer` "object" → `ObjectRenderer`
             - Uses:
               - `config_v2/fields.FieldRenderer`
               - `config_v2/fields.FieldRendererComponent`
@@ -14049,7 +14050,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Plugins:
         - **`config`** — Reorder-tree field type: config-render capability (read-only tree list for config-v2.fields.renderer) plus the reorderTreeField factory.
           - Web:
-            - Contributes: `config-v2.fields.renderer` "reorder-tree" → `ReorderTreeRenderer`
+            - Contributes: `Fields.Renderer` "reorder-tree" → `ReorderTreeRenderer`
             - Uses:
               - `config_v2/fields.FieldHeader`
               - `config_v2/fields.FieldRendererComponent`
@@ -14090,7 +14091,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Plugins:
         - **`config`** — Secret field type: config-render capability (password input for config-v2.fields.renderer) plus the secretField factory. Secret field type: encrypted storage with set/not-set metadata. Central-side secret config reader for auth providers.
           - Web:
-            - Contributes: `config-v2.fields.renderer` "secret" → `SecretRenderer`
+            - Contributes: `Fields.Renderer` "secret" → `SecretRenderer`
             - Uses:
               - `config_v2/fields.ConfigFieldContext`
               - `config_v2/fields.Fields`
@@ -14212,7 +14213,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Plugins:
         - **`config`** — String-list field type: config-render capability (drag-and-drop string list for config-v2.fields.renderer) plus the stringListField factory.
           - Web:
-            - Contributes: `config-v2.fields.renderer` "string-list" → `StringListRenderer`
+            - Contributes: `Fields.Renderer` "string-list" → `StringListRenderer`
             - Uses:
               - `config_v2/fields.Fields`
               - `primitives/css/fill.fillClasses`
@@ -14251,7 +14252,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Plugins:
         - **`config`** — Tags field type: config-render capability. Contributes the multi-select chip renderer to the config-v2.fields.renderer slot.
           - Web:
-            - Contributes: `config-v2.fields.renderer` "tags" → `TagsRenderer`
+            - Contributes: `Fields.Renderer` "tags" → `TagsRenderer`
             - Uses:
               - `config_v2/fields.FieldHeader`
               - `config_v2/fields.FieldRendererComponent`
@@ -14330,7 +14331,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Plugins:
         - **`config`** — Text field type: config-render capability (single-line input for config-v2.fields.renderer) plus the textField factory.
           - Web:
-            - Contributes: `config-v2.fields.renderer` "text" → `TextRenderer`
+            - Contributes: `Fields.Renderer` "text" → `TextRenderer`
             - Uses:
               - `config_v2/fields.FieldHeader`
               - `config_v2/fields.FieldRendererComponent`
@@ -14452,7 +14453,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Plugins:
         - **`config`** — Variant field type: config-render capability (type-dispatched renderer for config-v2.fields.renderer) plus the variantField factory.
           - Web:
-            - Contributes: `config-v2.fields.renderer` "variant" → `VariantRenderer`
+            - Contributes: `Fields.Renderer` "variant" → `VariantRenderer`
             - Uses:
               - `config_v2/fields.FieldHeader`
               - `config_v2/fields.FieldRenderer`
@@ -14654,21 +14655,26 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Imported by:
           - `framework/tooling/codegen`
           - `framework/web-sdk`
+          - `plugin-meta/plugin-tree`
       - Core:
         - Exports (types):
+          - `SlotDeclaration`
           - `SlotDeclarationListener`
           - `SlotDeclaringPlugin`
           - `SlotHandle`
           - `SlotMeta`
+          - `SlotRecord`
           - `SlotSource`
         - Exports (values):
           - `collectSlots`
+          - `declaredSlotId`
           - `declaredSlotSources`
           - `declarePluginSlots`
           - `findUndeclaredSlots`
           - `getCreatedSlots`
           - `isSlot`
           - `recordCreatedSlot`
+          - `seg`
           - `slotDeclarationPasses`
           - `subscribeSlotsDeclared`
     - **`tooling`** — Umbrella for build-time tooling: boundary checker, lint rules, checks, guards, codegen
@@ -14831,6 +14837,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `framework/plugin-id.asPluginId`
               - `framework/plugin-id.PluginId`
               - `framework/plugin-id.UNDOCUMENTED_RUNTIME_FOLDERS`
+              - `framework/slot-declaration.declaredSlotId`
               - `framework/slot-declaration.declaredSlotSources`
               - `framework/slot-declaration.declarePluginSlots`
               - `framework/slot-declaration.findUndeclaredSlots`
@@ -14856,10 +14863,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `plugin-meta/parse-utils.findImports`
               - `plugin-meta/parse-utils.findMarkerCalls`
               - `plugin-meta/parse-utils.lineAt`
-              - `plugin-meta/parse-utils.MarkerCallSpan`
               - `plugin-meta/parse-utils.markerCallSpans`
               - `plugin-meta/parse-utils.maskSource`
-              - `plugin-meta/parse-utils.matchBracket`
               - `plugin-meta/parse-utils.parseBoolField`
               - `plugin-meta/parse-utils.parseStaticCallId`
               - `plugin-meta/parse-utils.readIfExists`
@@ -15264,6 +15269,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports (values):
           - `Core`
           - `defineSlot`
+          - `defineSlotFacade`
           - `getDeferredLoadState`
           - `hasLoadErrorUnder`
           - `isDeferredPluginPath`
@@ -19952,6 +19958,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses:
           - `framework/plugin-id.asPluginId`
           - `framework/plugin-id.PluginId`
+          - `framework/slot-declaration.declaredSlotSources`
+          - `framework/slot-declaration.declarePluginSlots`
           - `plugin-meta/barrel-import.importBarrel`
           - `plugin-meta/barrel-import.registerBarrelStubs`
           - `plugin-meta/facets.Facet`
@@ -23660,6 +23668,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses:
           - `config_v2.useConfig`
           - `config_v2.useSetConfig`
+          - `fields.Fields`
           - `primitives/collapsible.CollapsibleContent`
           - `primitives/collapsible.CollapsibleProvider`
           - `primitives/css/control-panel.ControlPanel`
@@ -27306,7 +27315,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
 
 - **`reorder`** — Generic reorder primitive: every defineRenderSlot is unconditionally reorderable; use defineMountSlot for headless slots. DnD is automatic via middleware. Generic reorder primitive: per-slot config_v2 directives for contribution order/visibility.
   - Web:
-    - Contributes: `ConfigV2.WebRegister` ×214: "action-bar.item", "agents.agent-actions", "agents.list", "agents.list-actions", "agents.system-agent", "agents.view", "apps.app", "apps.tab-bar-actions", "browser.actions", "browser.nav-controls", "browser.omnibox", "browser.start-page", "browser.sub-bar", "browser.tab-strip", "browser.viewport", "build-detail.section", "composition-detail.section", "conversation-item.chips", "conversation.above-prompt-input", "conversation.action-bar", "conversation.exit-menu.item", "conversation.header", "conversation.jsonl-viewer.overlay", "conversation.jsonl-viewer.pending-prompt-action", "conversation.jsonl-viewer.row-action", "conversation.jsonl-viewer.transcript-stat", "conversation.prompt-bar", "conversation.prompt-input", "conversations-sidebar-history-actions", "conversations-sidebar-queue-actions", "conversations-sidebar-sources", "debug-app.sidebar", "debug-app.toolbar", "deploy.deployments.fields", "deploy.deployments.item-actions", "deploy.server-detail.section", "deploy.servers.fields", "deploy.servers.item-actions", "deployment-detail.section", "event-source-detail.section", "event-source-run-detail.section", "events.list.fields", "events.sidebar", "events.source-runs.item-actions", "events.sources.item-actions", "file-explorer.sidebar", "file-explorer.toolbar", "home.section", "mail.banner", "mail.rail-badge", "mail.sidebar", "page.editor.block", "page.editor.format-action", "page.editor.turn-into", "page.reference.actions", "pages.detail.header-actions", "pages.detail.overlay", "pages.detail.section", "pages.sidebar", "pages.tree.fields", "pages.tree.row-actions", "pages.welcome.section", "pane.accounts.actions", "pane.agent-detail.actions", "pane.agent-report.actions", "pane.agent-side.actions", "pane.agent-system-detail.actions", "pane.agents-root.actions", "pane.all-conversations.actions", "pane.apple-setup.actions", "pane.attempt.actions", "pane.backup.actions", "pane.build-detail.actions", "pane.build.actions", "pane.claude-cli-calls.actions", "pane.commit-detail.actions", "pane.composition-compare.actions", "pane.composition-detail.actions", "pane.compositions.actions", "pane.config-orphans.actions", "pane.config-v2-detail.actions", "pane.config-v2-nav.actions", "pane.contributions.actions", "pane.conv-commits-graph.actions", "pane.conv-docs.actions", "pane.conv-file-tree.actions", "pane.conv-push-profiling.actions", "pane.conv-review.actions", "pane.conv-summary.actions", "pane.conv-terminal.actions", "pane.conversation.actions", "pane.conversations-recover.actions", "pane.debug-boot-profile-detail.actions", "pane.debug-boot-profile.actions", "pane.debug-boot-profiles-list.actions", "pane.debug-broadcasts.actions", "pane.debug-health-monitor.actions", "pane.debug-heap-snapshot.actions", "pane.debug-live-state-emit.actions", "pane.debug-memory.actions", "pane.debug-profiling-build-detail.actions", "pane.debug-profiling-op-detail.actions", "pane.debug-profiling.actions", "pane.debug-read-set.actions", "pane.deploy-deployment-detail.actions", "pane.deploy-server-detail.actions", "pane.deploy-servers.actions", "pane.event-list.actions", "pane.event-source-detail.actions", "pane.event-source-run.actions", "pane.event-sources.actions", "pane.events-root.actions", "pane.events-test.actions", "pane.explorer.actions", "pane.file-peek.actions", "pane.global-file-tree.actions", "pane.google-maps-setup.actions", "pane.google-setup.actions", "pane.graph.actions", "pane.layout-lab.actions", "pane.live-state-health.actions", "pane.logs-channel.actions", "pane.logs.actions", "pane.mail-message.actions", "pane.mail-root.actions", "pane.mail-search.actions", "pane.mail-thread.actions", "pane.mail-threads.actions", "pane.page-detail.actions", "pane.pages-root.actions", "pane.pages-tree.actions", "pane.plugin-conv-side.actions", "pane.plugin-view.actions", "pane.prototypes-detail.actions", "pane.prototypes-gallery.actions", "pane.queue.actions", "pane.release-detail.actions", "pane.render-profiler.actions", "pane.report-detail.actions", "pane.reports.actions", "pane.screenshot.actions", "pane.settings-config-index.actions", "pane.sonata-library.actions", "pane.sonata-player.actions", "pane.stats.actions", "pane.story-detail.actions", "pane.story-gallery.actions", "pane.table-detail.actions", "pane.task-detail.actions", "pane.tasks-root.actions", "pane.theme-customizer.actions", "pane.trace-detail.actions", "pane.traces.actions", "pane.website-agents.actions", "pane.website-apps.actions", "pane.website-downloads.actions", "pane.website-landing.actions", "pane.website-platform.actions", "pane.welcome.actions", "pane.workflow-node.actions", "pane.workflows-definition-detail.actions", "pane.workflows-definitions.actions", "pane.workflows-execution-detail.actions", "pane.worktree-cleanup.actions", "pane.zero-test.actions", "plugin-view.section", "primitives.data-view.field-extension", "primitives.data-view.row-order", "profiling.section", "prompt-editor.floating-action", "release-detail.section", "review.section", "settings.rail-badge", "settings.sidebar", "shell.sidebar", "shell.toolbar", "sonata.home", "sonata.hud", "sonata.library.fields", "sonata.library.song-actions", "sonata.section", "sonata.toolbar.end", "sonata.toolbar.start", "sonata.transport", "stats.chart", "story.toolbar.end", "story.toolbar.start", "studio.compositions.item-actions", "studio.explorer.tree-row-accent", "studio.explorer.tree-row-badge", "studio.sidebar", "studio.toolbar", "table-detail.section", "task-deps-tree-sources", "task-deps-tree.actions", "task-detail.section", "task-draft-form.action", "tasks.fields", "tasks.launch-option", "tasks.list-actions", "tasks.task-actions", "text-editor.plugin", "theme-customizer.section", "ui.theme-engine.quick-theme.section", "ui.theme-engine.variant-group", "website.agents.section", "website.apps.section", "website.platform.section", "website.section", "website.toolbar.end", "website.toolbar.start", "workflows-app.sidebar", "workflows-app.toolbar", "workflows.detail.section"
+    - Contributes: `ConfigV2.WebRegister` ×215: "above-prompt-input", "accounts.actions", "action", "action-bar", "actions", "actions", "actions", "agent-actions", "agent-detail.actions", "agent-report.actions", "agent-side.actions", "agent-system-detail.actions", "agents-root.actions", "all-conversations.actions", "app", "apple-setup.actions", "attempt.actions", "backup.actions", "banner", "block", "build-detail.actions", "build.actions", "chart", "chips", "claude-cli-calls.actions", "commit-detail.actions", "composition-compare.actions", "composition-detail.actions", "compositions.actions", "config-orphans.actions", "config-v2-detail.actions", "config-v2-nav.actions", "contributions.actions", "conv-commits-graph.actions", "conv-docs.actions", "conv-file-tree.actions", "conv-push-profiling.actions", "conv-review.actions", "conv-summary.actions", "conv-terminal.actions", "conversation.actions", "conversations-recover.actions", "debug-boot-profile-detail.actions", "debug-boot-profile.actions", "debug-boot-profiles-list.actions", "debug-broadcasts.actions", "debug-health-monitor.actions", "debug-heap-snapshot.actions", "debug-live-state-emit.actions", "debug-memory.actions", "debug-profiling-build-detail.actions", "debug-profiling-op-detail.actions", "debug-profiling.actions", "debug-read-set.actions", "deploy-deployment-detail.actions", "deploy-server-detail.actions", "deploy-servers.actions", "end", "end", "end", "event-list.actions", "event-source-detail.actions", "event-source-run.actions", "event-sources.actions", "events-root.actions", "events-test.actions", "explorer.actions", "field-extension", "fields", "fields", "fields", "fields", "fields", "fields", "file-peek.actions", "floating-action", "format-action", "global-file-tree.actions", "google-maps-setup.actions", "google-setup.actions", "graph.actions", "header", "header-actions", "history-actions", "home", "hud", "item", "item", "item", "item", "item-actions", "item-actions", "item-actions", "item-actions", "item-actions", "layout-lab.actions", "list", "list-actions", "list-actions", "live-state-health.actions", "logs-channel.actions", "logs.actions", "mail-message.actions", "mail-root.actions", "mail-search.actions", "mail-thread.actions", "mail-threads.actions", "nav-controls", "omnibox", "option", "overlay", "overlay", "page-detail.actions", "pages-root.actions", "pages-tree.actions", "pending-prompt-action", "plugin", "plugin-conv-side.actions", "plugin-view.actions", "prompt-bar", "prompt-input", "prototypes-detail.actions", "prototypes-gallery.actions", "queue-actions", "queue.actions", "rail-badge", "rail-badge", "release-detail.actions", "render-profiler.actions", "report-detail.actions", "reports.actions", "row-actions", "row-order", "screenshot.actions", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "settings-config-index.actions", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sonata-library.actions", "sonata-player.actions", "song-actions", "sources", "sources", "start", "start", "start", "start-page", "stats.actions", "story-detail.actions", "story-gallery.actions", "sub-bar", "system-agent", "tab-bar-actions", "tab-strip", "table-detail.actions", "task-actions", "task-detail.actions", "tasks-root.actions", "theme-customizer.actions", "toolbar", "toolbar", "toolbar", "toolbar", "toolbar", "trace-detail.actions", "traces.actions", "transport", "tree-row-accent", "tree-row-badge", "turn-into", "variant-group", "view", "viewport", "website-agents.actions", "website-apps.actions", "website-downloads.actions", "website-landing.actions", "website-platform.actions", "welcome.actions", "workflow-node.actions", "workflows-definition-detail.actions", "workflows-definitions.actions", "workflows-execution-detail.actions", "worktree-cleanup.actions", "zero-test.actions"
     - Uses:
       - `config_v2.ConfigV2`
       - `config_v2.useConfig`
@@ -27335,7 +27344,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `ReorderLayoutContext`
       - `useReorderedEntries`
   - Server:
-    - Contributes: `ConfigV2.Register` ×214: "action-bar.item", "agents.agent-actions", "agents.list", "agents.list-actions", "agents.system-agent", "agents.view", "apps.app", "apps.tab-bar-actions", "browser.actions", "browser.nav-controls", "browser.omnibox", "browser.start-page", "browser.sub-bar", "browser.tab-strip", "browser.viewport", "build-detail.section", "composition-detail.section", "conversation-item.chips", "conversation.above-prompt-input", "conversation.action-bar", "conversation.exit-menu.item", "conversation.header", "conversation.jsonl-viewer.overlay", "conversation.jsonl-viewer.pending-prompt-action", "conversation.jsonl-viewer.row-action", "conversation.jsonl-viewer.transcript-stat", "conversation.prompt-bar", "conversation.prompt-input", "conversations-sidebar-history-actions", "conversations-sidebar-queue-actions", "conversations-sidebar-sources", "debug-app.sidebar", "debug-app.toolbar", "deploy.deployments.fields", "deploy.deployments.item-actions", "deploy.server-detail.section", "deploy.servers.fields", "deploy.servers.item-actions", "deployment-detail.section", "event-source-detail.section", "event-source-run-detail.section", "events.list.fields", "events.sidebar", "events.source-runs.item-actions", "events.sources.item-actions", "file-explorer.sidebar", "file-explorer.toolbar", "home.section", "mail.banner", "mail.rail-badge", "mail.sidebar", "page.editor.block", "page.editor.format-action", "page.editor.turn-into", "page.reference.actions", "pages.detail.header-actions", "pages.detail.overlay", "pages.detail.section", "pages.sidebar", "pages.tree.fields", "pages.tree.row-actions", "pages.welcome.section", "pane.accounts.actions", "pane.agent-detail.actions", "pane.agent-report.actions", "pane.agent-side.actions", "pane.agent-system-detail.actions", "pane.agents-root.actions", "pane.all-conversations.actions", "pane.apple-setup.actions", "pane.attempt.actions", "pane.backup.actions", "pane.build-detail.actions", "pane.build.actions", "pane.claude-cli-calls.actions", "pane.commit-detail.actions", "pane.composition-compare.actions", "pane.composition-detail.actions", "pane.compositions.actions", "pane.config-orphans.actions", "pane.config-v2-detail.actions", "pane.config-v2-nav.actions", "pane.contributions.actions", "pane.conv-commits-graph.actions", "pane.conv-docs.actions", "pane.conv-file-tree.actions", "pane.conv-push-profiling.actions", "pane.conv-review.actions", "pane.conv-summary.actions", "pane.conv-terminal.actions", "pane.conversation.actions", "pane.conversations-recover.actions", "pane.debug-boot-profile-detail.actions", "pane.debug-boot-profile.actions", "pane.debug-boot-profiles-list.actions", "pane.debug-broadcasts.actions", "pane.debug-health-monitor.actions", "pane.debug-heap-snapshot.actions", "pane.debug-live-state-emit.actions", "pane.debug-memory.actions", "pane.debug-profiling-build-detail.actions", "pane.debug-profiling-op-detail.actions", "pane.debug-profiling.actions", "pane.debug-read-set.actions", "pane.deploy-deployment-detail.actions", "pane.deploy-server-detail.actions", "pane.deploy-servers.actions", "pane.event-list.actions", "pane.event-source-detail.actions", "pane.event-source-run.actions", "pane.event-sources.actions", "pane.events-root.actions", "pane.events-test.actions", "pane.explorer.actions", "pane.file-peek.actions", "pane.global-file-tree.actions", "pane.google-maps-setup.actions", "pane.google-setup.actions", "pane.graph.actions", "pane.layout-lab.actions", "pane.live-state-health.actions", "pane.logs-channel.actions", "pane.logs.actions", "pane.mail-message.actions", "pane.mail-root.actions", "pane.mail-search.actions", "pane.mail-thread.actions", "pane.mail-threads.actions", "pane.page-detail.actions", "pane.pages-root.actions", "pane.pages-tree.actions", "pane.plugin-conv-side.actions", "pane.plugin-view.actions", "pane.prototypes-detail.actions", "pane.prototypes-gallery.actions", "pane.queue.actions", "pane.release-detail.actions", "pane.render-profiler.actions", "pane.report-detail.actions", "pane.reports.actions", "pane.screenshot.actions", "pane.settings-config-index.actions", "pane.sonata-library.actions", "pane.sonata-player.actions", "pane.stats.actions", "pane.story-detail.actions", "pane.story-gallery.actions", "pane.table-detail.actions", "pane.task-detail.actions", "pane.tasks-root.actions", "pane.theme-customizer.actions", "pane.trace-detail.actions", "pane.traces.actions", "pane.website-agents.actions", "pane.website-apps.actions", "pane.website-downloads.actions", "pane.website-landing.actions", "pane.website-platform.actions", "pane.welcome.actions", "pane.workflow-node.actions", "pane.workflows-definition-detail.actions", "pane.workflows-definitions.actions", "pane.workflows-execution-detail.actions", "pane.worktree-cleanup.actions", "pane.zero-test.actions", "plugin-view.section", "primitives.data-view.field-extension", "primitives.data-view.row-order", "profiling.section", "prompt-editor.floating-action", "release-detail.section", "review.section", "settings.rail-badge", "settings.sidebar", "shell.sidebar", "shell.toolbar", "sonata.home", "sonata.hud", "sonata.library.fields", "sonata.library.song-actions", "sonata.section", "sonata.toolbar.end", "sonata.toolbar.start", "sonata.transport", "stats.chart", "story.toolbar.end", "story.toolbar.start", "studio.compositions.item-actions", "studio.explorer.tree-row-accent", "studio.explorer.tree-row-badge", "studio.sidebar", "studio.toolbar", "table-detail.section", "task-deps-tree-sources", "task-deps-tree.actions", "task-detail.section", "task-draft-form.action", "tasks.fields", "tasks.launch-option", "tasks.list-actions", "tasks.task-actions", "text-editor.plugin", "theme-customizer.section", "ui.theme-engine.quick-theme.section", "ui.theme-engine.variant-group", "website.agents.section", "website.apps.section", "website.platform.section", "website.section", "website.toolbar.end", "website.toolbar.start", "workflows-app.sidebar", "workflows-app.toolbar", "workflows.detail.section"
+    - Contributes: `ConfigV2.Register` ×214: "above-prompt-input", "accounts.actions", "action", "action-bar", "actions", "actions", "actions", "agent-actions", "agent-detail.actions", "agent-report.actions", "agent-side.actions", "agent-system-detail.actions", "agents-root.actions", "all-conversations.actions", "app", "apple-setup.actions", "attempt.actions", "backup.actions", "banner", "block", "build-detail.actions", "build.actions", "chart", "chips", "claude-cli-calls.actions", "commit-detail.actions", "composition-compare.actions", "composition-detail.actions", "compositions.actions", "config-orphans.actions", "config-v2-detail.actions", "config-v2-nav.actions", "contributions.actions", "conv-commits-graph.actions", "conv-docs.actions", "conv-file-tree.actions", "conv-push-profiling.actions", "conv-review.actions", "conv-summary.actions", "conv-terminal.actions", "conversation.actions", "conversations-recover.actions", "debug-boot-profile-detail.actions", "debug-boot-profile.actions", "debug-boot-profiles-list.actions", "debug-broadcasts.actions", "debug-health-monitor.actions", "debug-heap-snapshot.actions", "debug-live-state-emit.actions", "debug-memory.actions", "debug-profiling-build-detail.actions", "debug-profiling-op-detail.actions", "debug-profiling.actions", "debug-read-set.actions", "deploy-deployment-detail.actions", "deploy-server-detail.actions", "deploy-servers.actions", "end", "end", "end", "event-list.actions", "event-source-detail.actions", "event-source-run.actions", "event-sources.actions", "events-root.actions", "events-test.actions", "explorer.actions", "field-extension", "fields", "fields", "fields", "fields", "fields", "fields", "file-peek.actions", "floating-action", "format-action", "global-file-tree.actions", "google-maps-setup.actions", "google-setup.actions", "graph.actions", "header", "header-actions", "history-actions", "home", "hud", "item", "item", "item", "item", "item-actions", "item-actions", "item-actions", "item-actions", "item-actions", "layout-lab.actions", "list", "list-actions", "list-actions", "live-state-health.actions", "logs-channel.actions", "logs.actions", "mail-message.actions", "mail-root.actions", "mail-search.actions", "mail-thread.actions", "mail-threads.actions", "nav-controls", "omnibox", "option", "overlay", "overlay", "page-detail.actions", "pages-root.actions", "pages-tree.actions", "pending-prompt-action", "plugin", "plugin-conv-side.actions", "plugin-view.actions", "prompt-bar", "prompt-input", "prototypes-detail.actions", "prototypes-gallery.actions", "queue-actions", "queue.actions", "rail-badge", "rail-badge", "release-detail.actions", "render-profiler.actions", "report-detail.actions", "reports.actions", "row-actions", "row-order", "screenshot.actions", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "settings-config-index.actions", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sonata-library.actions", "sonata-player.actions", "song-actions", "sources", "sources", "start", "start", "start", "start-page", "stats.actions", "story-detail.actions", "story-gallery.actions", "sub-bar", "system-agent", "tab-bar-actions", "tab-strip", "table-detail.actions", "task-actions", "task-detail.actions", "tasks-root.actions", "theme-customizer.actions", "toolbar", "toolbar", "toolbar", "toolbar", "toolbar", "trace-detail.actions", "traces.actions", "transport", "tree-row-accent", "tree-row-badge", "turn-into", "variant-group", "view", "viewport", "website-agents.actions", "website-apps.actions", "website-downloads.actions", "website-landing.actions", "website-platform.actions", "welcome.actions", "workflow-node.actions", "workflows-definition-detail.actions", "workflows-definitions.actions", "workflows-execution-detail.actions", "worktree-cleanup.actions", "zero-test.actions"
     - Uses: `config_v2.ConfigV2`
     - Exports (values):
       - `reorderableSlots`
@@ -28914,13 +28923,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`task-deps-tree`** — Dependency tree section for the task detail: a merged DataView whose sources render task_dependencies as a nesting = runs-after tree (atomic drag-to-reorder, per-row detach, 'also after' fan-in chips) or the read-only creation tree.
       - Web:
         - Slots:
-          - `task-deps-tree.actions` ← `tasks.task-deps-tree`
-          - `task-deps-tree-sources` ← `tasks.task-deps-tree`
+          - `actions` ← `tasks.task-deps-tree`
+          - `sources` ← `tasks.task-deps-tree`
         - Contributes:
           - `TaskDetailSlots.Section` "Dependency tree" → `DepsTreeSection`
-          - `task-deps-tree.actions` "detach" → `DetachAction`
-          - `task-deps-tree-sources` "Dependencies" → `DepsSource`
-          - `task-deps-tree-sources` "Created" → `CreatedSource`
+          - `actions` "detach" → `DetachAction`
+          - `sources` "Dependencies" → `DepsSource`
+          - `sources` "Created" → `CreatedSource`
         - Uses:
           - `infra/endpoints.fetchEndpoint`
           - `primitives/css/badge.Badge`
