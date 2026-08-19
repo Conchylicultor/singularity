@@ -27,6 +27,11 @@ import { buildPageSearchDoc, SOURCE } from "./reindex-page";
 // entire corpus every boot.
 export const backfillPagesSearchJob = defineJob({
   name: "pages.search.backfill",
+  // instant despite sweeping the whole corpus: every step is an indexed read
+  // or an upsert — no network, no spawn, no model call. If the loop ever does
+  // exceed the class ceiling, `queue-slot-hog` names the real defect (a
+  // per-page round trip) rather than a bigger class blessing it.
+  hold: "instant",
   input: z.object({}).default({}),
   event: z.never(),
   dedup: "singleton",
@@ -42,7 +47,9 @@ export const backfillPagesSearchJob = defineJob({
     const indexed = new Map(
       (await getSourceDocMetadata(SOURCE)).map((d) => [
         d.entityId,
-        typeof d.metadata.contentHash === "string" ? d.metadata.contentHash : undefined,
+        typeof d.metadata.contentHash === "string"
+          ? d.metadata.contentHash
+          : undefined,
       ]),
     );
 

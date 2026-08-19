@@ -23,6 +23,7 @@ const PageShape = z.object({ title: z.string() });
  */
 export const reminderFireJob = defineJob({
   name: "page.reminders.fire",
+  hold: "instant",
   input: z.object({ reminderId: z.string() }),
   event: z.never(),
   dedup: { key: (i) => i.reminderId },
@@ -44,9 +45,12 @@ export const reminderFireJob = defineJob({
         .where(and(eq(_blocks.id, row.pageId), isNull(_blocks.deletedAt)));
 
       const pageParsed = PageShape.safeParse(page?.data);
-      const pageTitle = (pageParsed.success && pageParsed.data.title) || "Untitled";
+      const pageTitle =
+        (pageParsed.success && pageParsed.data.title) || "Untitled";
       const blockParsed = block ? TextShape.safeParse(block.data) : undefined;
-      const snippet = blockParsed?.success ? stripInlineTokens(plainOf(blockParsed.data.text)) : "";
+      const snippet = blockParsed?.success
+        ? stripInlineTokens(plainOf(blockParsed.data.text))
+        : "";
 
       await recordNotification({
         type: "page.reminder",

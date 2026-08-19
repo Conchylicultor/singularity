@@ -2,7 +2,12 @@ import { onSlowSpan } from "@plugins/infra/plugins/runtime-profiler/core";
 import type { SlowSpan } from "@plugins/infra/plugins/runtime-profiler/core";
 import { captureTrace } from "@plugins/debug/plugins/trace/plugins/engine/server";
 import { recordSlowOp } from "./record-slow-op";
-import { resolveSlowThreshold, type Thresholds } from "./resolve-threshold";
+import {
+  perfFloorMs,
+  resolveSlowThreshold,
+  slowSpanMs,
+  type Thresholds,
+} from "./resolve-threshold";
 
 // The current onSlowSpan subscription. Reinstalled on every config change so the
 // perf-floor (the static `thresholdMs` guard) tracks the lowest configured
@@ -20,20 +25,24 @@ export function installSlowSpanHook(thresholds: Thresholds): void {
 
   // Perf floor: the profiler only calls back for spans at least this long, so a
   // fast span never reaches our handler. The handler then applies the precise
-  // per-kind threshold.
-  const floor = Math.min(
-    thresholds.loaderMs,
-    thresholds.httpMs,
-    thresholds.dbMs,
-    thresholds.jobMs,
-  );
+  // per-kind threshold. Config knobs are no longer the only source of
+  // thresholds — a job's bar is its hold class's ceiling — so the floor is
+  // computed where both live (`perfFloorMs`), never re-derived here.
+  const floor = perfFloorMs(thresholds);
 
   // The handler runs SYNCHRONOUSLY in the profiler hot path — it must only
   // schedule, never block or throw.
   disposer = onSlowSpan(
     (span: SlowSpan) => {
       const threshold = resolveSlowThreshold(span, thresholds);
-      if (span.durationMs < threshold) return;
+      // Wall-clock for every kind except `job`, which is judged on work time
+      // (`durationMs − waitMs`) — see `slowSpanMs`. A job's slot-hold is
+      // substantially not a property of the job: `jobs.dead-gc` was measured
+      // holding a worker slot 77 s to do 254 ms of work, the rest blocked on an
+      // admission gate entered AFTER graphile had handed it a slot. Comparing
+      // hold would file a report against a correctly-classified job every time
+      // that gate got busy.
+      if (slowSpanMs(span) < threshold) return;
       // 1. Evidence FIRST, synchronously: captureTrace's admission + the sync
       // coherent-instant capture must run before any await so the flight window
       // (open spans, gate occupancy) describes THIS trip's instant. Admission is

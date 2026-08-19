@@ -1,5 +1,6 @@
 import { ReportKind } from "@plugins/reports/server";
 import type { ReportRow } from "@plugins/reports/server";
+import { reachableSlots } from "@plugins/infra/plugins/jobs/server";
 import {
   QueueSlotHogPayloadSchema,
   type QueueSlotHogPayload,
@@ -15,8 +16,17 @@ const SLOT_HOG_NOTIF_COOLDOWN_MS = 600_000;
 // The `queue-slot-hog` report kind. Dedups per distinct `jobName` (fingerprint
 // `queue-slot-hog:<jobName>`), so one long-running job collapses onto a single
 // report while distinct hogs get distinct reports. Variant `warning`: a job holding
-// a shared worker slot for too long starves the queue — the exact case the
+// a worker slot for too long starves the queue — the exact case the
 // backlog `stalled` signal (which only trips at 0 locked) cannot see.
+//
+// "Too long" is PER HOLD CLASS: the threshold is the class's declared work
+// ceiling times the configured headroom factor, so a `minutes` job holding a
+// slot for six minutes is doing what it declared while an `instant` job holding
+// one for six minutes has wedged a reserved floor slot. The threshold is
+// measured on HOLD (the only quantity a locked graphile row exposes) against a
+// ceiling defined on WORK, which is why the headroom factor exists — see the
+// long comment on `checkSlotHogs` in `watchdog.ts`. When the excess is wait
+// rather than work, `queue-slot-blocked` names the gate exactly.
 export const slotHogKind = ReportKind({
   kind: "queue-slot-hog",
   schema: QueueSlotHogPayloadSchema,
@@ -43,15 +53,30 @@ export const slotHogKind = ReportKind({
 function renderDescription(row: ReportRow, d: QueueSlotHogPayload): string {
   const lines: string[] = [];
   lines.push(
-    `The job \`${d.jobName}\` has held a worker slot from the shared pool for ` +
-      `${formatDurationMs(d.lockedForMs)}. While it holds the slot, other ready ` +
-      "jobs wait behind it — the queue is saturated even though the worker is " +
-      "running (so the backlog stall signal, which only trips at 0 locked, " +
-      "stays silent).",
+    `The job \`${d.jobName}\` has held a worker slot for ` +
+      `${formatDurationMs(d.lockedForMs)}${
+        d.hold ? `, far beyond what its \`${d.hold}\` hold class declares` : ""
+      }. While it holds the slot, other ready jobs wait behind it — the queue is ` +
+      "saturated even though the worker is running (so the backlog stall " +
+      "signal, which only trips at 0 locked, stays silent).",
   );
+  if (d.hold) {
+    lines.push("");
+    lines.push(
+      `A \`${d.hold}\` row can be picked up by ${reachableSlots(
+        d.hold,
+      )} of the worker slots, so this hold is occupying one of them. If the ` +
+        "time is really being spent WAITING on an admission gate rather than " +
+        "working, `queue-slot-blocked` names the gate — check for a report on " +
+        "this job there before reclassifying it.",
+    );
+  }
   lines.push("");
   lines.push(`**Job:** \`${d.jobName}\``);
+  if (d.hold) lines.push(`**Hold class:** \`${d.hold}\``);
   lines.push(`**Held for:** ${formatDurationMs(d.lockedForMs)}`);
+  if (d.thresholdMs !== undefined)
+    lines.push(`**Threshold:** ${formatDurationMs(d.thresholdMs)}`);
   lines.push(`**Running rows (this job):** ${d.runningCount}`);
   if (d.sampleJobId) lines.push(`**Sample job id:** ${d.sampleJobId}`);
   lines.push("");

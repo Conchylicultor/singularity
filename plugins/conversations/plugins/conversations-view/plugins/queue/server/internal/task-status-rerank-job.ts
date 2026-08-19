@@ -28,6 +28,7 @@ const LIVE_STATUSES = ["waiting", "working", "starting"] as const;
 // became unblocked returns to the top.
 export const taskStatusRerankJob = defineJob({
   name: "queue.task-status-rerank",
+  hold: "instant",
   input: z.object({}).passthrough(),
   event: z
     .object({

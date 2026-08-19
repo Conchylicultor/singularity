@@ -62,8 +62,7 @@ export interface RetentionSpec {
 // scratch database. The plain `NodePgDatabase` branch (doc-store's executor
 // precedent) accepts both the global proxy and a fixture DB.
 export type RetentionExecutor =
-  | NodePgDatabase
-  | Parameters<Parameters<typeof db.transaction>[0]>[0];
+  NodePgDatabase | Parameters<Parameters<typeof db.transaction>[0]>[0];
 
 /**
  * One sweep tick's body, extracted from the job for direct testing (the
@@ -104,9 +103,9 @@ export async function sweepExpired(
 export function defineRetention(spec: RetentionSpec): RetentionJob {
   const tableName = getTableName(spec.table);
   const columnKey = spec.column ?? DEFAULT_COLUMN;
-  const column = (spec.table as unknown as Record<string, PgColumn | undefined>)[
-    columnKey
-  ];
+  const column = (
+    spec.table as unknown as Record<string, PgColumn | undefined>
+  )[columnKey];
   if (!column) {
     throw new Error(
       `[retention] table "${tableName}" has no column "${columnKey}" — pass a valid \`column\` to defineRetention`,
@@ -115,10 +114,20 @@ export function defineRetention(spec: RetentionSpec): RetentionJob {
 
   const job = defineJob({
     name: `retention.${tableName}`,
+    // Every sweep is one bounded `DELETE ... WHERE <column> < cutoff` against an
+    // indexed column — no network, no spawn — so the wrapper decides the class
+    // and `RetentionSpec` deliberately has no `hold` for a consumer to get wrong.
+    // That extends to `beforeDelete`: a teardown hook that spawns, uploads, or
+    // calls a model does not belong in a sweep, and `queue-slot-hog` names this
+    // job if one ever appears.
+    hold: "instant",
     input: RETENTION_INPUT,
     event: RETENTION_EVENT,
     dedup: "singleton",
-    schedule: { cron: spec.cron ?? DEFAULT_CRON, perWorktree: spec.perWorktree ?? false },
+    schedule: {
+      cron: spec.cron ?? DEFAULT_CRON,
+      perWorktree: spec.perWorktree ?? false,
+    },
     maxAttempts: MAX_ATTEMPTS,
     run: async () => {
       // Cutoff computed per tick (not captured at define time) so a long-lived

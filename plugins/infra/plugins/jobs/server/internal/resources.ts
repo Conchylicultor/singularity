@@ -1,6 +1,9 @@
 import { desc, sql } from "drizzle-orm";
 import { db } from "@plugins/database/server";
-import { defineResource, defineExternalResource } from "@plugins/framework/plugins/server-core/core";
+import {
+  defineResource,
+  defineExternalResource,
+} from "@plugins/framework/plugins/server-core/core";
 import {
   DeadJobsPayloadSchema,
   JobsPayloadSchema,
@@ -8,13 +11,15 @@ import {
   type JobsPayload,
   type JobState,
 } from "../../core/resources";
-import { JOB_TASK } from "./constants";
-import { jobLockHeldExpr } from "./introspection";
+import type { HoldClass } from "../../core/hold";
+import { jobHoldExpr, jobLockHeldExpr, jobTaskScope } from "./introspection";
 import { _deadJobs } from "./tables";
 
 interface GraphileJobRow {
   id: string;
   task_identifier: string;
+  // The row's duration class, read off its task identifier by `jobHoldExpr`.
+  hold: HoldClass;
   payload: { jobName?: string; input?: unknown } | null;
   queue_name: string | null;
   priority: number;
@@ -51,6 +56,7 @@ export async function loadJobsList(limit = 500): Promise<JobsPayload> {
   const result = await db.execute(
     sql`SELECT j.id::text,
                t.identifier AS task_identifier,
+               ${jobHoldExpr} AS hold,
                j.payload,
                q.queue_name,
                j.priority,
@@ -61,7 +67,7 @@ export async function loadJobsList(limit = 500): Promise<JobsPayload> {
           FROM graphile_worker._private_jobs j
           JOIN graphile_worker._private_tasks t ON t.id = j.task_id
      LEFT JOIN graphile_worker._private_job_queues q ON q.id = j.job_queue_id
-         WHERE t.identifier = ${JOB_TASK}
+         WHERE ${jobTaskScope}
          ORDER BY j.run_at DESC
          LIMIT ${limit}`,
   );
@@ -69,6 +75,7 @@ export async function loadJobsList(limit = 500): Promise<JobsPayload> {
   const rows = (result.rows as unknown as GraphileJobRow[]).map((r) => ({
     id: r.id,
     jobName: r.payload?.jobName ?? "(unknown)",
+    hold: r.hold,
     input: r.payload?.input ?? null,
     state: deriveState(r),
     attempts: r.attempts,
@@ -106,7 +113,9 @@ export async function loadDeadJobsList(limit = 2000): Promise<DeadJobsPayload> {
       lastError: r.lastError,
       diedAt: r.diedAt instanceof Date ? r.diedAt.toISOString() : r.diedAt,
       archivedAt:
-        r.archivedAt instanceof Date ? r.archivedAt.toISOString() : String(r.archivedAt),
+        r.archivedAt instanceof Date
+          ? r.archivedAt.toISOString()
+          : String(r.archivedAt),
     })),
   };
 }

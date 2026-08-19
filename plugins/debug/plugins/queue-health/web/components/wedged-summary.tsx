@@ -5,7 +5,7 @@ import { QueueWedgedPayloadSchema } from "../../core";
 import { formatDurationMs } from "../../shared/format-duration";
 
 // One-line wedge summary for the Debug → Reports list, e.g.
-// "[wedged] 4/4 slots held ≥14m 03s · 690 ready" followed by the jobs sitting
+// "[wedged] 8/8 slots held ≥14m 03s · 690 ready" followed by the jobs sitting
 // on the slots as mono chips. The leading destructive chip is what separates
 // this at a glance from the routine `queue-backlog` / `queue-slot-hog` rows:
 // those say the queue is deep or slow, this one says it has stopped.

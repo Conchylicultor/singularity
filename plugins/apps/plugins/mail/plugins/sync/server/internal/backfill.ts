@@ -1,7 +1,10 @@
 import { z } from "zod";
 import { eq } from "drizzle-orm";
 import { db } from "@plugins/database/server";
-import { defineJob, NonRetryableError } from "@plugins/infra/plugins/jobs/server";
+import {
+  defineJob,
+  NonRetryableError,
+} from "@plugins/infra/plugins/jobs/server";
 import {
   getProfile,
   listMessages,
@@ -11,10 +14,7 @@ import {
   _mailSyncState,
   requireGmailToken,
 } from "@plugins/apps/plugins/mail/plugins/mail-core/server";
-import {
-  BACKFILL_WINDOW_DAYS,
-  MAX_BACKFILL_MESSAGES,
-} from "../../core";
+import { BACKFILL_WINDOW_DAYS, MAX_BACKFILL_MESSAGES } from "../../core";
 import { upsertMessageEnvelope } from "./store";
 import { fetchEnvelopes } from "./fetch-envelopes";
 import { mailSyncLog } from "./sink";
@@ -46,6 +46,9 @@ import { recordSyncError } from "./record-error";
 
 export const backfillJob = defineJob({
   name: "mail.backfill",
+  // seconds: ONE Gmail list page plus its envelope fetches per run — the chain
+  // continues by re-enqueue, so the backfill spans many runs, none long.
+  hold: "seconds",
   input: z.object({
     accountId: z.string(),
     pageToken: z.string().optional(),

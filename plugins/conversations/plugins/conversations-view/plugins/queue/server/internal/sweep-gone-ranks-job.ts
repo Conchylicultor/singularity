@@ -28,6 +28,7 @@ const GONE_RANK_TTL_DAYS = 30;
 // `hibernateIdleJob`: only main owns the canonical conversation rows.
 export const sweepGoneRanksJob = defineJob({
   name: "queue.sweep-gone-ranks",
+  hold: "instant",
   input: z.object({}),
   event: z.never(),
   dedup: "singleton",
@@ -38,7 +39,12 @@ export const sweepGoneRanksJob = defineJob({
     const goneIds = db
       .select({ id: _conversations.id })
       .from(_conversations)
-      .where(and(eq(_conversations.status, "gone" as const), lt(_conversations.endedAt, cutoff)));
+      .where(
+        and(
+          eq(_conversations.status, "gone" as const),
+          lt(_conversations.endedAt, cutoff),
+        ),
+      );
     await db
       .delete(conversationsQueue.table)
       .where(inArray(conversationsQueue.table.parentId, goneIds));

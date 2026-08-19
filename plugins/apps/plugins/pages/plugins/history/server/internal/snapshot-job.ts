@@ -11,6 +11,7 @@ import { recordVersion } from "@plugins/history/plugins/engine/server";
  */
 export const pageSnapshotJob = defineJob({
   name: "pages.history.snapshot",
+  hold: "instant",
   input: z.object({ pageId: z.string() }),
   event: z.never(),
   dedup: { key: ({ pageId }) => pageId },

@@ -156,6 +156,7 @@ needed, extend it to fall back across `channel.jsonl.1…N`.
     - `debug/worktree-cleanup`
     - `infra/attachments`
     - `infra/duress`
+    - `infra/jobs`
     - `infra/worktree/removal-audit`
     - `primitives/live-state`
     - `release`

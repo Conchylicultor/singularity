@@ -17,6 +17,10 @@ const log = Log.channel("attachments");
 // running this per-worktree would race N sweeps over the same global dir.
 export const orphanSweepJob = defineJob({
   name: "attachments.orphan-sweep",
+  // instant: one bounded DELETE plus an unlink per reclaimed file. The 2.2s hold
+  // this shows in the profile is almost entirely admission-gate wait — 62ms of it
+  // is work — and the class is declared from the work.
+  hold: "instant",
   input: z.object({}),
   event: z.never(),
   dedup: "singleton",
@@ -43,8 +47,21 @@ export const orphanSweepJob = defineJob({
       .delete(_attachments)
       .where(and(lt(_attachments.createdAt, cutoff), unreferenced))
       .returning({ diskPath: _attachments.diskPath });
-    // eslint-disable-next-line promise-safety/no-absorbed-failure -- best-effort disk cleanup after the DB rows are already deleted; per-file unlink failures must not abort the sweep of the remaining orphans (result discarded, never a data decision)
-    await Promise.all(rows.map((r) => unlink(r.diskPath).catch(() => undefined)));
+    // Best-effort disk cleanup, AFTER the DB rows are already deleted: a
+    // per-file unlink failure must not abort the sweep of the remaining
+    // orphans. The absorbed result is never read and never a data decision.
+    //
+    // The directive sits on the `unlink` line itself rather than above the
+    // whole statement: `eslint-disable-next-line` binds to a LINE, and a
+    // one-line `await Promise.all(...)` here is long enough that formatting
+    // wraps it — which would slide the `.catch()` out from under the
+    // suppression and re-fire the rule on a line nobody wrote.
+    await Promise.all(
+      rows.map((r) =>
+        // eslint-disable-next-line promise-safety/no-absorbed-failure -- see above
+        unlink(r.diskPath).catch(() => undefined),
+      ),
+    );
     if (rows.length > 0) {
       log.publish(`orphan sweep removed ${rows.length} files`);
     }

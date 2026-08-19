@@ -13,6 +13,7 @@ import { conversationsQueue } from "./tables";
 
 export const seedRankJob = defineJob({
   name: "queue.seed-rank",
+  hold: "instant",
   input: z.object({}).passthrough(),
   event: z.object({ conversationId: z.string() }).passthrough(),
   dedup: "none",

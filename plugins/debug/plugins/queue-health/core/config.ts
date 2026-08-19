@@ -34,19 +34,26 @@ export const queueHealthConfig = defineConfig({
       description:
         "File a queue-backlog report when the oldest ready job has been overdue longer than this many minutes (a stall signal).",
     }),
-    runningJobMinutes: intField({
-      default: 5,
-      min: 0,
-      label: "Slot-hog threshold (minutes)",
+    slotHogHoldFactor: intField({
+      default: 3,
+      min: 1,
+      label: "Slot-hog hold factor (× the class ceiling)",
       description:
-        "File a queue-slot-hog report when a job has held a worker slot (locked/running) longer than this many minutes.",
+        "File a queue-slot-hog report when a job has held a worker slot (locked/running) for more than this many times its hold class's work ceiling — 10s for instant, 2min for seconds, 30min for minutes. One factor rather than one duration, so the alarm scales with what the job declared instead of restating a number the class already owns.",
+    }),
+    slotBlockedWaitSeconds: intField({
+      default: 5,
+      min: 1,
+      label: "Slot-blocked wait floor (seconds)",
+      description:
+        "File a queue-slot-blocked report when a job's average run spends at least this many seconds waiting on an admission gate AND more than half its slot hold is that wait — i.e. it is holding a worker slot to wait, not to work.",
     }),
     wedgeMinutes: intField({
       default: 3,
       min: 1,
       label: "Wedge threshold (minutes)",
       description:
-        "File a queue-wedged report when every worker slot has been held by the same set of live jobs, with ready work waiting behind them, continuously for this many minutes.",
+        "File a queue-wedged report when every worker slot has been held by the same set of live jobs, with ready work waiting behind them, continuously for this many minutes. Also the floor of the queue-class-starved window (a class's own window is the longer of this and its work ceiling).",
     }),
   },
 });

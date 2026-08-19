@@ -39,6 +39,11 @@ async function pMap<T>(
 // retries whatever this run could not reap.
 export const worktreeReapJob = defineJob({
   name: "worktree-cleanup.reap-stale",
+  // minutes: drives `git worktree remove` subprocesses (3 at a time) under the
+  // host-wide worktree-mutate flock and drops Postgres fork DBs. Orthogonal to
+  // the `serial: true` below — that bounds how many ticks may hold a slot at
+  // once; this declares how long one of them holds it.
+  hold: "minutes",
   input: z.object({}),
   event: z.never(),
   dedup: "singleton",

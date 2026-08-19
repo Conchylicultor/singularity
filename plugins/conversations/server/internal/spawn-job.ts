@@ -22,6 +22,10 @@ import { Runtime } from "./runtime";
 // and `pg_restore` run in parallel keyed by the same natural id.
 export const spawnConversationJob = defineJob({
   name: "conversations.spawn",
+  // minutes: `setupWorktree` is a `git worktree add` checkout and
+  // `runtime.create` opens a tmux session running the `claude` CLI. Nothing
+  // shorter than the work bounds either.
+  hold: "minutes",
   input: z.object({
     conversationId: z.string(),
     attemptId: z.string(),

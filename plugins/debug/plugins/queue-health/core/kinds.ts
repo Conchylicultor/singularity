@@ -1,4 +1,21 @@
 import { z } from "zod";
+import { HoldClassSchema } from "@plugins/infra/plugins/jobs/core";
+
+// The per-class occupancy snapshot carried by the wedge and class-starvation
+// reports. `reachableSlots` is the ladder's own number for this class (8 / 6 /
+// 4) — read from the jobs class table, never restated here.
+//
+// `lockedCount` is how many LOCKED ROWS of this class exist, which is NOT the
+// same as "how many slots this tier is holding": three runners share one
+// `_private_jobs` table and graphile records no runner id per row, so the DB
+// cannot say which runner holds a given row. Reading it as "rows of this class
+// currently running" is exact; reading it as per-runner saturation would not be.
+const ClassOccupancySchema = z.object({
+  hold: HoldClassSchema,
+  reachableSlots: z.number().int(),
+  readyCount: z.number().int(),
+  lockedCount: z.number().int(),
+});
 
 // The jsonb payload for a `queue-dead-job` report. One report per distinct
 // `jobName` (a retry-storm of one broken job collapses to a single task), so the
@@ -16,11 +33,14 @@ export const QueueDeadJobPayloadSchema = z.object({
 export type QueueDeadJobPayload = z.infer<typeof QueueDeadJobPayloadSchema>;
 
 // The top-N per-jobName ready-queue attribution, shared verbatim by the backlog
-// rollup and the wedge report — both answer "who is waiting behind this" from
-// the same `queryBacklogByJobName()` rows, so they carry the same shape.
+// rollup, the wedge report and the class-starvation report — all three answer
+// "who is waiting behind this" from the same `queryBacklogByJobName()` rows, so
+// they carry the same shape. `hold` is optional: reports stored before hold
+// classes existed still parse.
 const TopReadySchema = z.array(
   z.object({
     jobName: z.string(),
+    hold: HoldClassSchema.optional(),
     readyCount: z.number().int(),
     oldestOverdueMs: z.number().int(),
   }),
@@ -46,13 +66,66 @@ export type QueueBacklogPayload = z.infer<typeof QueueBacklogPayloadSchema>;
 // a worker slot from the shared pool longer than the configured threshold —
 // starving the queue even while `lockedCount > 0` (the exact wedge the backlog
 // `stalled` signal, which only trips at `lockedCount === 0`, cannot see).
+//
+// `hold` / `thresholdMs` are OPTIONAL so reports filed before hold classes
+// existed still parse. `thresholdMs` is carried rather than recomputed at render
+// time because it is `ceilingMs(hold) × slotHogHoldFactor` at the moment of the
+// trip — a later config edit must not silently rewrite what the report claimed.
 export const QueueSlotHogPayloadSchema = z.object({
   jobName: z.string(),
+  hold: HoldClassSchema.optional(),
+  thresholdMs: z.number().int().optional(),
   lockedForMs: z.number().int(),
   runningCount: z.number().int(),
   sampleJobId: z.string().nullable(),
 });
 export type QueueSlotHogPayload = z.infer<typeof QueueSlotHogPayloadSchema>;
+
+// The jsonb payload for a `queue-slot-blocked` report: a job that holds a worker
+// slot to WAIT rather than to work. One report per distinct `jobName`.
+//
+// Every duration here is a PER-RUN AVERAGE over the runs that completed in the
+// measurement window (`windowMs`), because that is what the runtime profiler's
+// cumulative aggregates can answer exactly: `holdMs` is the span's wall clock,
+// `waitMs` the union of admission-gate waits charged inside it, and
+// `workMs = holdMs − waitMs` the job's own time. `layer`/`layerMs` name the
+// single gate that contributed the most of that wait; `layers` carries the rest.
+export const QueueSlotBlockedPayloadSchema = z.object({
+  jobName: z.string(),
+  runs: z.number().int(),
+  windowMs: z.number().int(),
+  holdMs: z.number().int(),
+  waitMs: z.number().int(),
+  workMs: z.number().int(),
+  layer: z.string(),
+  layerMs: z.number().int(),
+  layers: z.array(z.object({ layer: z.string(), ms: z.number().int() })),
+});
+export type QueueSlotBlockedPayload = z.infer<
+  typeof QueueSlotBlockedPayloadSchema
+>;
+
+// The jsonb payload for a `queue-class-starved` report: ONE hold class of the
+// runner ladder has ready work whose head has not moved for the whole window —
+// nothing in that class drained. One rolling report per class per worktree.
+//
+// `windowMs` is the class's own starvation window (the longer of `wedgeMinutes`
+// and the class's work ceiling), carried so the report states the bar it cleared
+// rather than leaving a reader to guess which of the two applied.
+export const QueueClassStarvedPayloadSchema = z.object({
+  hold: HoldClassSchema,
+  reachableSlots: z.number().int(),
+  readyCount: z.number().int(),
+  lockedCount: z.number().int(),
+  oldestOverdueMs: z.number().int(),
+  starvedForMs: z.number().int(),
+  windowMs: z.number().int(),
+  classes: z.array(ClassOccupancySchema).optional(),
+  topReady: TopReadySchema.optional(),
+});
+export type QueueClassStarvedPayload = z.infer<
+  typeof QueueClassStarvedPayloadSchema
+>;
 
 // The jsonb payload for a `queue-wedged` report — the queue has STOPPED
 // DRAINING, which is a different claim from either of the two above.
@@ -79,5 +152,8 @@ export const QueueWedgedPayloadSchema = z.object({
     }),
   ),
   topReady: TopReadySchema.optional(),
+  // Which tier of the runner ladder the frozen rows belong to. OPTIONAL —
+  // reports filed before hold classes existed still parse.
+  classes: z.array(ClassOccupancySchema).optional(),
 });
 export type QueueWedgedPayload = z.infer<typeof QueueWedgedPayloadSchema>;

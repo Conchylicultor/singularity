@@ -114,6 +114,12 @@ function holdGate(label: string): Promise<boolean> {
 
 export const serialProbe = defineJob({
   name: "events_test.serial",
+  // seconds: the handler's own GATE_CAP_MS wait is real work time — it blocks
+  // inside `run`, not on an admission gate entered after dispatch — so a held run
+  // occupies its slot for up to 20s. That is a timeout this handler passes
+  // itself, which is exactly what `seconds` means; `instant` would trip the 10s
+  // work ceiling every time the harness holds a gate.
+  hold: "seconds",
   input: z.object({
     run: z.string(),
     label: z.string(),

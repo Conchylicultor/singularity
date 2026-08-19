@@ -50,6 +50,9 @@ export async function scanAttachmentFlags(
 
 export const attachmentScanJob = defineJob({
   name: "mail.attachment-scan",
+  // seconds: bounded Gmail `messages.list` paging (capped at
+  // MAX_ATTACHMENT_SCAN_PAGES), each request under `gmailRequest`'s deadline.
+  hold: "seconds",
   input: z.object({ accountId: z.string(), windowDays: z.number() }),
   event: z.never(),
   dedup: { key: ({ accountId }) => accountId },

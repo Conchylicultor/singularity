@@ -2,16 +2,21 @@
 // them here means registry→worker and worker→registry remain a one-way edge
 // each (both depending on constants, never on each other's transitive shape).
 
-// Single shared Graphile task. Each job's own name lives in the payload, so
-// adding a new job at module load never requires restarting the worker. See
-// research/2026-04-24-global-jobs-events-split.md §"Layer 1".
-export const JOB_TASK = "jobs.run";
+// The Graphile task identifiers live in `../../core/hold` — one per hold class,
+// plus `LEGACY_JOB_TASK` (the old single `jobs.run`). They are in `core/` because
+// the Debug → Queue UI renders a row's class too. Each job's own name still lives
+// in the payload, so adding a new job at module load never requires restarting
+// the worker. See research/2026-04-24-global-jobs-events-split.md §"Layer 1" and
+// research/2026-08-19-global-job-hold-class-reserved-slots.md.
 
-// Size of the shared worker slot pool: at most this many jobs run concurrently
-// per worktree backend. The single source for the pool size — the worker passes
-// it to graphile's `run({ concurrency })`, and queue-health reports
-// `lockedCount / concurrency` saturation against it.
-export const JOB_CONCURRENCY = 4;
+// The size of the worker slot pool is no longer one number here: it is the sum
+// of the runner ladder in `../../core/hold` (`TOTAL_JOB_SLOTS`), because a slot
+// now belongs to a runner and a runner serves a set of hold classes. The old
+// single-pool concurrency constant that used to live on this line was DELETED
+// rather than aliased, so "size this by the old number" has no spelling —
+// `job-lock.ts`'s connection pool and queue-health's saturation both read
+// `TOTAL_JOB_SLOTS`, and a reader who wants a per-class ceiling reaches for
+// `reachableSlots(hold)` instead.
 
 // Small default so permanently-broken handlers don't thrash Graphile forever.
 // Callers override per-job via `defineJob({ maxAttempts })` or per-enqueue via

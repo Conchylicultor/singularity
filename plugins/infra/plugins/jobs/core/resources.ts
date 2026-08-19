@@ -1,12 +1,28 @@
 import { z } from "zod";
 import { resourceDescriptor } from "@plugins/primitives/plugins/live-state/core";
+import { HoldClassSchema } from "./hold";
 
-export const JobStateSchema = z.enum(["pending", "running", "retrying", "dead"]);
+export const JobStateSchema = z.enum([
+  "pending",
+  "running",
+  "retrying",
+  "dead",
+]);
 export type JobState = z.infer<typeof JobStateSchema>;
 
 export const JobRowSchema = z.object({
   id: z.string(),
   jobName: z.string(),
+  /**
+   * The row's duration class — which tier of the runner ladder can fetch it.
+   * Derived from the graphile task the row sits on, not from the payload.
+   *
+   * OPTIONAL on purpose, and it must stay that way. During a rolling restart a
+   * client can still be holding a live-state payload produced by a backend from
+   * before hold classes existed; making this required would fail that parse and
+   * blank the Debug → Queue pane for the length of the deploy.
+   */
+  hold: HoldClassSchema.optional(),
   input: z.unknown(),
   state: JobStateSchema,
   attempts: z.number(),

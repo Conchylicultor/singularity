@@ -38,7 +38,9 @@
     - `infra/events.deleteTrigger`
     - `infra/events.deleteTriggersFor`
     - `infra/events.trigger`
+    - `infra/jobs.ALL_JOB_TASKS`
     - `infra/jobs.defineJob`
+    - `infra/jobs.LEGACY_JOB_TASK`
     - `infra/jobs.queryRunningJobs`
     - `infra/jobs.UNSAFE_sweepStuckLocks`
   - DB schema: `plugins/infra/plugins/events-test/server/internal/tables.ts`

@@ -16,8 +16,8 @@ import {
 } from "./internal/stuck-lock-sweeper";
 import {
   installScheduledCronItems,
-  startWorker,
-  stopWorker,
+  startWorkers,
+  stopWorkers,
 } from "./internal/worker";
 import { listJobs, listDeadJobs, retryJob, cancelJob } from "../core/endpoints";
 
@@ -27,6 +27,7 @@ export {
   getAllRegisteredJobNames,
   DEFAULT_MAX_ATTEMPTS,
   getJobSlowThresholdMs,
+  getJobHold,
 } from "./internal/registry";
 export { sweepOnce as UNSAFE_sweepStuckLocks } from "./internal/stuck-lock-sweeper";
 export type {
@@ -56,10 +57,25 @@ export {
 export type {
   DeadJobStat,
   QueueBacklogStat,
+  QueueClassBacklogStat,
   BacklogJobStat,
   RunningJobStat,
 } from "./internal/introspection";
-export { JOB_CONCURRENCY } from "./internal/constants";
+export {
+  HOLD_CLASSES,
+  HoldClassSchema,
+  HOLD_SPECS,
+  RUNNERS,
+  TOTAL_JOB_SLOTS,
+  ALL_JOB_TASKS,
+  LEGACY_JOB_TASK,
+  taskFor,
+  priorityFor,
+  ceilingMsFor,
+  reachableSlots,
+  holdForTask,
+} from "../core/hold";
+export type { HoldClass, HoldClassSpec, RunnerSpec } from "../core/hold";
 
 export default {
   description:
@@ -77,7 +93,7 @@ export default {
     Resource.Declare(deadJobsResource),
   ],
   onReady: async () => {
-    await startWorker();
+    await startWorkers();
     startStuckLockSweeper();
     // Immediate boot purge of the permanently-failed backlog (idempotent; the
     // scheduled deadJobGcJob keeps it bounded thereafter). Runs after the
@@ -93,6 +109,6 @@ export default {
   },
   onShutdown: async () => {
     stopStuckLockSweeper();
-    await stopWorker();
+    await stopWorkers();
   },
 } satisfies ServerPluginDefinition;

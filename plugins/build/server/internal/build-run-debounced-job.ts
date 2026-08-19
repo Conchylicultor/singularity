@@ -8,6 +8,10 @@ import { triggerBuild } from "./run-build";
 // one run that fires once the window goes quiet.
 export const buildRunDebouncedJob = defineJob({
   name: "build.run.debounced",
+  // instant, despite causing a multi-minute build: `triggerBuild` returns
+  // `void` after starting a detached `runTracked` root, so the build outlives
+  // this run() and never occupies the worker slot.
+  hold: "instant",
   input: z.object({}),
   event: z.never(),
   dedup: "singleton",

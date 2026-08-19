@@ -23,6 +23,7 @@ const RETENTION = "24 hours";
 // research/2026-06-22-global-live-state-l2-persisted-materialization.md §3.7.
 export const liveStateChangelogPruneJob = defineJob({
   name: "database.live-state-changelog-prune",
+  hold: "instant",
   input: z.object({}),
   event: z.never(),
   dedup: "singleton",

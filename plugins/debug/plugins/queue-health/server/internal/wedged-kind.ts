@@ -21,10 +21,15 @@ const WEDGED_NOTIF_COOLDOWN_MS = 600_000;
 // start. Different urgency (variant `error`, not `warning`), different renderer,
 // different re-arm.
 //
+// It stays GLOBAL now that the worker drains a ladder of three runners rather
+// than one pool: this kind means every slot on every runner is frozen, so
+// nothing of ANY hold class can start. The weaker per-tier claim — one class
+// stopped draining while the pool churns — is `queue-class-starved`, a separate
+// kind with its own evidence. The payload carries the per-class occupancy so an
+// operator can see which tier the frozen rows belong to without a second query.
+//
 // One rolling report per worktree (fixed fingerprint — the reports unique index
-// is (fingerprint, worktree), so worktrees never collide). No lane dimension
-// yet: the queue is one shared pool today, and per-lane wedges arrive with the
-// lane runtime (`research/2026-08-17-global-bounded-job-execution.md`, Phase 5).
+// is (fingerprint, worktree), so worktrees never collide).
 //
 // `duressExempt: true` — see the comment on the flag below.
 export const wedgedKind = ReportKind({
@@ -78,6 +83,23 @@ function renderDescription(row: ReportRow, d: QueueWedgedPayload): string {
     `**Held for (every slot, at least):** ${formatDurationMs(d.heldForMs)}`,
   );
   lines.push(`**Ready jobs waiting:** ${d.readyCount}`);
+  if (d.classes && d.classes.length > 0) {
+    lines.push("");
+    lines.push("**Queue by hold class:**");
+    for (const c of d.classes) {
+      lines.push(
+        `- \`${c.hold}\` — ${c.readyCount} ready, ${c.lockedCount} running, ` +
+          `${c.reachableSlots} slots reachable`,
+      );
+    }
+    lines.push("");
+    lines.push(
+      "*`running` counts locked ROWS of each class, not slots held by that " +
+        "tier: the three runners share one graphile job table and no runner id " +
+        "is recorded per row, so a locked row cannot be attributed to the " +
+        "runner holding it.*",
+    );
+  }
   lines.push("");
   lines.push("**Slot holders:**");
   for (const h of d.holders) {

@@ -12219,13 +12219,15 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/pane.Pane`
           - `shell/notifications.toast`
         - Exports (values): `queuePane`
-    - **`queue-health`** — Queue-health report renderers: one-line Debug → Reports summaries for the queue-wedged, queue-dead-job, queue-backlog, and queue-slot-hog kinds, plus the threshold config registration. Queue-health watchdog: a 30s interval on the backend's own event loop — deliberately NOT a scheduled job, which would queue behind the wedge it exists to detect — that samples the graphile queue and files deduped reports for a wedged queue (every slot held by the same live jobs while ready work starves), backlog/stall, slot-hogging jobs, and terminally-dead jobs, through the existing reports engine. All four kinds are duressExempt. Also exposes a queue-health summary endpoint + the get_queue_health MCP tool.
+    - **`queue-health`** — Queue-health report renderers: one-line Debug → Reports summaries for the queue-wedged, queue-class-starved, queue-dead-job, queue-backlog, queue-slot-hog, and queue-slot-blocked kinds, plus the threshold config registration. Queue-health watchdog: a 30s interval on the backend's own event loop — deliberately NOT a scheduled job, which would queue behind the wedge it exists to detect — that samples the graphile queue and files deduped reports for a wedged queue (every slot on every runner held by the same live jobs while ready work starves), a starved hold class (one tier of the runner ladder whose head has not moved for its own window, which is how the reserved-slot ladder is verified in production), a job holding a slot to WAIT on an admission gate rather than to work (read off the runtime profiler's job spans, which carry the wait/work split a graphile row cannot), backlog/stall, per-class slot-hogging, and terminally-dead jobs, through the existing reports engine. All six kinds are duressExempt. Also exposes a per-class queue-health summary endpoint + the get_queue_health MCP tool.
       - Web:
         - Contributes:
           - `ConfigV2.WebRegister` "queue-health"
           - `Reports.KindView` → `DeadJobSummary`
           - `Reports.KindView` → `BacklogSummary`
           - `Reports.KindView` → `SlotHogSummary`
+          - `Reports.KindView` → `SlotBlockedSummary`
+          - `Reports.KindView` → `ClassStarvedSummary`
           - `Reports.KindView` → `WedgedSummary`
         - Uses:
           - `config_v2.ConfigV2`
@@ -12238,18 +12240,28 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `report-kind` "queue-dead-job"
           - `report-kind` "queue-backlog"
           - `report-kind` "queue-slot-hog"
+          - `report-kind` "queue-slot-blocked"
+          - `report-kind` "queue-class-starved"
           - `report-kind` "queue-wedged"
         - Uses:
           - `config_v2.ConfigV2`
           - `config_v2.getConfig`
           - `infra/endpoints.implement`
-          - `infra/jobs.JOB_CONCURRENCY`
+          - `infra/jobs.ceilingMsFor`
+          - `infra/jobs.HOLD_CLASSES`
+          - `infra/jobs.HOLD_SPECS`
+          - `infra/jobs.HoldClass`
+          - `infra/jobs.LEGACY_JOB_TASK`
           - `infra/jobs.queryBacklogByJobName`
           - `infra/jobs.queryDeadJobStats`
           - `infra/jobs.queryQueueBacklog`
           - `infra/jobs.queryRunningJobs`
           - `infra/jobs.QueueBacklogStat`
+          - `infra/jobs.QueueClassBacklogStat`
+          - `infra/jobs.reachableSlots`
+          - `infra/jobs.RUNNERS`
           - `infra/jobs.RunningJobStat`
+          - `infra/jobs.TOTAL_JOB_SLOTS`
           - `infra/mcp.Mcp`
           - `reports.recordReport`
           - `reports.ReportKind`
@@ -12263,18 +12275,23 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `fields/bool/config.boolField`
           - `fields/int/config.intField`
           - `infra/endpoints.defineEndpoint`
+          - `infra/jobs.HoldClassSchema`
         - Exports (types):
           - `QueueBacklogPayload`
+          - `QueueClassStarvedPayload`
           - `QueueDeadJobPayload`
           - `QueueHealthSummary`
+          - `QueueSlotBlockedPayload`
           - `QueueSlotHogPayload`
           - `QueueWedgedPayload`
         - Exports (values):
           - `QueueBacklogPayloadSchema`
+          - `QueueClassStarvedPayloadSchema`
           - `QueueDeadJobPayloadSchema`
           - `queueHealthConfig`
           - `queueHealthSummaryEndpoint`
           - `QueueHealthSummarySchema`
+          - `QueueSlotBlockedPayloadSchema`
           - `QueueSlotHogPayloadSchema`
           - `QueueWedgedPayloadSchema`
     - **`read-set`** — Read-set capture debug pane: the automatic loader→table dependency index plus a diff against the hand-drawn dependsOn graph.
@@ -12554,7 +12571,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `infra/entities.defaultNow`
           - `infra/entities.defaultRandom`
           - `infra/entities.defineEntity`
+          - `infra/jobs.ceilingMsFor`
+          - `infra/jobs.getJobHold`
           - `infra/jobs.getJobSlowThresholdMs`
+          - `infra/jobs.HOLD_CLASSES`
           - `infra/retention.defineRetention`
           - `primitives/log-channels.defineLogSink`
           - `primitives/log-channels.readChannelJson`
@@ -16142,7 +16162,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `infra/events.deleteTrigger`
           - `infra/events.deleteTriggersFor`
           - `infra/events.trigger`
+          - `infra/jobs.ALL_JOB_TASKS`
           - `infra/jobs.defineJob`
+          - `infra/jobs.LEGACY_JOB_TASK`
           - `infra/jobs.queryRunningJobs`
           - `infra/jobs.UNSAFE_sweepStuckLocks`
         - DB schema: `plugins/infra/plugins/events-test/server/internal/tables.ts`
@@ -16401,6 +16423,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `database/admin.connectionString`
           - `infra/endpoints.HttpError`
           - `infra/endpoints.implement`
+          - `primitives/log-channels.Log`
         - DB schema: `plugins/infra/plugins/jobs/server/internal/tables.ts`
         - Exports (types):
           - `BacklogJobStat`
@@ -16409,28 +16432,44 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `DurableHooks`
           - `EnqueueOpts`
           - `EnqueueTx`
+          - `HoldClass`
+          - `HoldClassSpec`
           - `JobCtx`
           - `JobFactory`
           - `QueueBacklogStat`
+          - `QueueClassBacklogStat`
           - `RegisteredJob`
+          - `RunnerSpec`
           - `RunningJobStat`
           - `ScheduleSpec`
           - `SerialSpec`
         - Exports (values):
           - `abortDurableRun`
+          - `ALL_JOB_TASKS`
+          - `ceilingMsFor`
           - `deadJobsResource`
           - `DEFAULT_MAX_ATTEMPTS`
           - `defineJob`
           - `getAllRegisteredJobNames`
+          - `getJobHold`
           - `getJobSlowThresholdMs`
+          - `HOLD_CLASSES`
+          - `HOLD_SPECS`
+          - `HoldClassSchema`
+          - `holdForTask`
           - `isSuspendSignal`
-          - `JOB_CONCURRENCY`
           - `jobsListResource`
+          - `LEGACY_JOB_TASK`
           - `NonRetryableError`
+          - `priorityFor`
           - `queryBacklogByJobName`
           - `queryDeadJobStats`
           - `queryQueueBacklog`
           - `queryRunningJobs`
+          - `reachableSlots`
+          - `RUNNERS`
+          - `taskFor`
+          - `TOTAL_JOB_SLOTS`
           - `UNSAFE_getRegisteredJob`
           - `UNSAFE_installDurableHooks`
           - `UNSAFE_sweepStuckLocks`
@@ -16452,21 +16491,36 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports (types):
           - `DeadJobRow`
           - `DeadJobsPayload`
+          - `HoldClass`
+          - `HoldClassSpec`
           - `JobRow`
           - `JobsPayload`
           - `JobState`
+          - `RunnerSpec`
         - Exports (values):
+          - `ALL_JOB_TASKS`
           - `cancelJob`
+          - `ceilingMsFor`
           - `DeadJobRowSchema`
           - `DeadJobsPayloadSchema`
           - `deadJobsResource`
+          - `HOLD_CLASSES`
+          - `HOLD_SPECS`
+          - `HoldClassSchema`
+          - `holdForTask`
           - `JobRowSchema`
           - `jobsListResource`
           - `JobsPayloadSchema`
           - `JobStateSchema`
+          - `LEGACY_JOB_TASK`
           - `listDeadJobs`
           - `listJobs`
+          - `priorityFor`
+          - `reachableSlots`
           - `retryJob`
+          - `RUNNERS`
+          - `taskFor`
+          - `TOTAL_JOB_SLOTS`
       - Cross-plugin:
         - Imported by:
           - `apps/events/refresh`
@@ -25574,6 +25628,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `debug/worktree-cleanup`
           - `infra/attachments`
           - `infra/duress`
+          - `infra/jobs`
           - `infra/worktree/removal-audit`
           - `primitives/live-state`
           - `release`

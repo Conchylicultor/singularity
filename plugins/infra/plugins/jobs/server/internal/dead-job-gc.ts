@@ -78,6 +78,16 @@ export async function reconcileDeadJobs(): Promise<void> {
 // and satisfies the no-polling rule.
 export const deadJobGcJob = defineJob({
   name: "jobs.dead-gc",
+  // One transaction of bounded indexed statements against the queue and the
+  // archive.
+  //
+  // DO NOT "correct" this to `minutes` on the strength of its measured hold.
+  // This job was profiled holding a slot for 77 SECONDS while doing 254 ms of
+  // work — the other 76.8 s was blocked on `background-tx-acquire`, an admission
+  // gate entered AFTER graphile had already handed it a slot. The class
+  // describes the WORK, not the hold; the hold is a separate defect, and it is
+  // the one `queue-slot-blocked` exists to name.
+  hold: "instant",
   input: z.object({}),
   event: z.never(),
   dedup: "singleton",

@@ -4,13 +4,18 @@ import { scheduleTaskTitleUpgrade } from "./generate-title";
 
 export const titleOnConversationCreatedJob = defineJob({
   name: "task-title.on-conversation-created",
+  // instant: `scheduleTaskTitleUpgrade` is fire-and-forget — the Haiku call it
+  // starts runs detached, so it never holds this slot.
+  hold: "instant",
   input: z.object({}).passthrough(),
   dedup: "none",
-  event: z.object({
-    taskId: z.string(),
-    prompt: z.string().optional(),
-    kind: z.string().optional(),
-  }).passthrough(),
+  event: z
+    .object({
+      taskId: z.string(),
+      prompt: z.string().optional(),
+      kind: z.string().optional(),
+    })
+    .passthrough(),
   maxAttempts: 2,
   run: async ({ event }) => {
     if (!event?.prompt || event.kind === "system") return;
@@ -20,12 +25,16 @@ export const titleOnConversationCreatedJob = defineJob({
 
 export const titleOnUserTurnSentJob = defineJob({
   name: "task-title.on-user-turn-sent",
+  // instant: same fire-and-forget schedule as the job above.
+  hold: "instant",
   input: z.object({}).passthrough(),
   dedup: "none",
-  event: z.object({
-    taskId: z.string(),
-    text: z.string(),
-  }).passthrough(),
+  event: z
+    .object({
+      taskId: z.string(),
+      text: z.string(),
+    })
+    .passthrough(),
   maxAttempts: 2,
   run: async ({ event }) => {
     if (!event?.text) return;

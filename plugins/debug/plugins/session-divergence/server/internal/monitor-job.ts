@@ -33,6 +33,11 @@ import {
 // than let the tick report a partial picture as if it were the whole one.
 export const sessionDivergenceMonitorJob = defineJob({
   name: "debug.session-divergence-monitor",
+  // seconds: the detector captures the process table and the tmux pane list
+  // through subprocesses it does not time out, then stats a transcript per
+  // reachable session. Its measured 25.6s mean is 21.4s of background-acquire
+  // WAIT over ~4.2s of work — the class is read off the work.
+  hold: "seconds",
   input: z.object({}),
   event: z.never(),
   dedup: "singleton",

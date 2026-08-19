@@ -12,13 +12,18 @@ import {
 // spawnedBy values that mean "a conversation was launched on the user's behalf"
 // and should surface a one-time notification. Mirrors the old client-side
 // AutoLaunchWatcher filter set; anything else (e.g. forks, system) is silent.
-const CAUSALITY_VALUES = new Set(["user-launch", "dep-resolved", "mcp-add-task"]);
+const CAUSALITY_VALUES = new Set([
+  "user-launch",
+  "dep-resolved",
+  "mcp-add-task",
+]);
 
 // Fires once per conversation.created (server-side) so the new-conversation
 // notification is recorded a single time, regardless of how many browser tabs
 // are open. Replaces the per-tab AutoLaunchWatcher useEffect.
 export const notifyConversationCreatedJob = defineJob({
   name: "conversations.notify-created",
+  hold: "instant",
   input: z.object({}),
   dedup: "none",
   event: z
@@ -37,7 +42,9 @@ export const notifyConversationCreatedJob = defineJob({
     const task = await getTask(event.taskId);
     const taskTitle = task?.title ?? "";
     const title =
-      event.spawnedBy === "dep-resolved" ? "Task unblocked" : "Conversation started";
+      event.spawnedBy === "dep-resolved"
+        ? "Task unblocked"
+        : "Conversation started";
     const description = taskTitle ? `${taskTitle} · ${model}` : model;
 
     await recordNotification({
@@ -45,7 +52,9 @@ export const notifyConversationCreatedJob = defineJob({
       title,
       description,
       variant: "info",
-      linkTo: conversationRoute.link(agentManagerApp, { convId: event.conversationId }),
+      linkTo: conversationRoute.link(agentManagerApp, {
+        convId: event.conversationId,
+      }),
       dedupeKey: `conversation-created:${event.conversationId}`,
     });
   },

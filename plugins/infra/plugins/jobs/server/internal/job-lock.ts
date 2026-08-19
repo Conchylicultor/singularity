@@ -1,7 +1,7 @@
 import { Pool } from "pg";
 import { connectionString } from "@plugins/database/plugins/admin/server";
 import { reportServerError } from "@plugins/framework/plugins/server-core/core";
-import { JOB_CONCURRENCY } from "./constants";
+import { TOTAL_JOB_SLOTS } from "../../core/hold";
 
 // Exact liveness for a running job, maintained by Postgres itself.
 //
@@ -44,17 +44,25 @@ import { JOB_CONCURRENCY } from "./constants";
 //    assumes those leases are transaction-scoped; a handful of long jobs would
 //    exhaust the lane and wedge every background transaction in the backend.
 //
-// Sized `max: JOB_CONCURRENCY` — at most one held connection per in-flight job, so
+// Sized `max: TOTAL_JOB_SLOTS` — at most one held connection per in-flight job, so
 // this pool is structurally bounded by the worker's own slot count and a backend
 // adds at most that many direct connections (measured headroom at design time:
 // `max_connections = 500`, 57 in use).
+//
+// It must be the TOTAL across every runner in the ladder, not any one runner's
+// concurrency. Every in-flight job holds one of these connections for its whole
+// handler lifetime, so a pool smaller than the slot count would park handlers
+// inside `pool.connect()` **while they already hold graphile slots** — a wedge
+// with no symptom, since graphile sees the slots as busy and the DB sees no
+// query. Reading the sum from `core/hold` is what keeps the two undriftable:
+// adding a runner raises this automatically.
 let pool: Pool | null = null;
 
 function lockPool(): Pool {
   if (!pool) {
     pool = new Pool({
       connectionString: connectionString(),
-      max: JOB_CONCURRENCY,
+      max: TOTAL_JOB_SLOTS,
       // Only ever reaps connections sitting IDLE in the pool; a checked-out
       // client holding a lock is not idle and is never touched by this.
       idleTimeoutMillis: 30_000,

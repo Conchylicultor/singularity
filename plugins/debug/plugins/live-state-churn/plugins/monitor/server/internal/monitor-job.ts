@@ -15,6 +15,7 @@ import { snapshot } from "./accumulator";
 // thresholds (silent when healthy).
 export const liveStateChurnMonitorJob = defineJob({
   name: "debug.live-state-churn-monitor",
+  hold: "instant",
   input: z.object({}),
   event: z.never(),
   dedup: "singleton",

@@ -9,6 +9,7 @@ const AUTO_DISMISS_TTL_MS = 24 * 3_600_000;
 
 export const ttlCleanupJob = defineJob({
   name: "notifications.ttl-cleanup",
+  hold: "instant",
   input: z.object({}),
   event: z.never(),
   dedup: "singleton",
@@ -17,7 +18,12 @@ export const ttlCleanupJob = defineJob({
     const dismissedCutoff = new Date(Date.now() - DISMISSED_TTL_MS);
     await db
       .delete(_notifications)
-      .where(and(eq(_notifications.dismissed, true), lt(_notifications.createdAt, dismissedCutoff)));
+      .where(
+        and(
+          eq(_notifications.dismissed, true),
+          lt(_notifications.createdAt, dismissedCutoff),
+        ),
+      );
 
     const autoDismissCutoff = new Date(Date.now() - AUTO_DISMISS_TTL_MS);
     // Auto-dismiss notifications that have gone quiet, so the undismissed set

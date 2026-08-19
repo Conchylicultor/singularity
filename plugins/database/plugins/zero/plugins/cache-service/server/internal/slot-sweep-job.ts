@@ -18,6 +18,7 @@ import { worktreeReplicaFile } from "./slot-lifecycle";
 // database.fork-temp-sweep's registration/runtime-gating shape.
 export const zeroSlotSweepJob = defineJob({
   name: "database.zero-slot-sweep",
+  hold: "instant",
   input: z.object({}),
   event: z.never(),
   dedup: "singleton",

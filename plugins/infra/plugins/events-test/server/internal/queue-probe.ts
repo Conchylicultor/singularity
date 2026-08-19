@@ -1,5 +1,6 @@
 import { sql as drizzleSql } from "drizzle-orm";
 import { db } from "@plugins/database/server";
+import { ALL_JOB_TASKS } from "@plugins/infra/plugins/jobs/server";
 
 // Raw reads of graphile's own tables, shared by the two queue-level endpoints.
 //
@@ -10,6 +11,21 @@ import { db } from "@plugins/database/server";
 // queue is locked — are read here, in one place, rather than re-typed per
 // endpoint. `crash-recovery.ts` already reaches into `_private_jobs` the same way
 // to find the row it just enqueued.
+
+/**
+ * Every graphile task identifier a Singularity job row can sit on, as a SQL list
+ * for an `IN (…)`.
+ *
+ * Composed from the jobs plugin's own `ALL_JOB_TASKS`, never spelled here. Since
+ * hold classes landed there is one task per class (`jobs.run.instant` / …) plus
+ * the legacy `jobs.run`, so a harness scoping on the single legacy identifier —
+ * which is how all three of these queries were written — silently matches NO
+ * rows at all, and every assertion built on it reads an empty set as a pass.
+ */
+export const jobTaskList = drizzleSql.join(
+  ALL_JOB_TASKS.map((task) => drizzleSql`${task}`),
+  drizzleSql`, `,
+);
 
 /** One `events_test.serial` row, plus the queue it was filed under. */
 export interface SerialJobRow {
@@ -48,9 +64,9 @@ export async function readSerialRows(run: string): Promise<SerialJobRow[]> {
            (q.locked_at IS NOT NULL)     AS queue_locked
       FROM graphile_worker._private_jobs j
       LEFT JOIN graphile_worker._private_job_queues q ON q.id = j.job_queue_id
-     WHERE j.task_id = (
+     WHERE j.task_id IN (
              SELECT id FROM graphile_worker._private_tasks
-              WHERE identifier = 'jobs.run'
+              WHERE identifier IN (${jobTaskList})
            )
        AND j.payload->'input'->>'run' = ${run}
      ORDER BY j.id

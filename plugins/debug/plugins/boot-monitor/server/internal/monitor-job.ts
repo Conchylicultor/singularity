@@ -28,6 +28,7 @@ let minted = false;
 // record-slow-op.ts — so the row and report can deep-link the trace id.
 export const bootMonitorJob = defineJob({
   name: "debug.boot-monitor",
+  hold: "instant",
   input: z.object({}),
   event: z.never(),
   dedup: "singleton",

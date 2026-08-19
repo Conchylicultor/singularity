@@ -4,7 +4,13 @@ import type { TaskSpec } from "graphile-worker";
 import type { PoolClient } from "pg";
 import type { z } from "zod";
 import type { Registration } from "@plugins/framework/plugins/server-core/core";
-import { DEFAULT_MAX_ATTEMPTS, JOB_TASK } from "./constants";
+import {
+  ceilingMsFor,
+  priorityFor,
+  taskFor,
+  type HoldClass,
+} from "../../core/hold";
+import { DEFAULT_MAX_ATTEMPTS } from "./constants";
 import type { WaitForOptions } from "./step-ctx";
 import { getWorkerUtils } from "./worker";
 
@@ -120,6 +126,11 @@ export interface JobCtx {
 
 export interface RegisteredJob {
   name: string;
+  /** Duration class declared via `defineJob({ hold })` — see the field's doc on
+   * {@link DefineJobSpec}. Read by the worker to pick the graphile task and
+   * priority a row is inserted on, and by the slow-op pipeline for the class's
+   * work-time ceiling. */
+  hold: HoldClass;
   inputSchema: z.ZodType;
   /**
    * Schema for the event payload delivered alongside `input` when the job
@@ -267,6 +278,27 @@ interface BaseJobSpec<
 > {
   name: N;
   /**
+   * The timescale one RUN of this handler occupies a worker slot. Not workflow
+   * duration: `ctx.waitFor` / `ctx.sleep` RETURN from `run` and release the slot,
+   * so a workflow may span days while every one of its runs is `instant`.
+   *
+   * **Declared from what BOUNDS the handler, not from its observed mean.** A
+   * model call with a 30s timeout is `seconds` however fast it usually returns.
+   * - `instant` — no blocking I/O: indexed reads/writes, in-memory work. Check
+   *   it by asking: no network, no spawn, no model call?
+   * - `seconds` — a timeout the handler passes itself (`grep timeoutMs` in the
+   *   handler).
+   * - `minutes` — nothing short of the work bounds it: does it spawn, render,
+   *   or upload?
+   *
+   * This is the only declaration of a job's duration class. It picks the
+   * reservation tier today and, when
+   * `research/2026-08-17-global-bounded-job-execution.md` Phase 2 lands, the
+   * deadline that aborts `ctx.signal`. There is deliberately no second field, so
+   * a lane and a budget cannot disagree.
+   */
+  hold: HoldClass;
+  /**
    * Schema for `input` — the value passed to direct `.enqueue()` calls and
    * baked into a trigger row's `with` for event-driven invocations. Parsed
    * exactly ONCE per workflow at the original `enqueue()` call; the
@@ -388,18 +420,27 @@ export interface JobTaskPayload {
 // A serialized job that is enqueued WITHOUT its queue name escapes its own
 // serialization — the row lands with `job_queue_id IS NULL`, graphile fetches it
 // regardless of who else is running, and the guarantee silently evaporates for
-// that one path. There are five places a `jobs.run` row is inserted (this file's
+// that one path. There are five places a job row is inserted (this file's
 // two enqueue paths, `resume-job.ts`'s target re-enqueue, `worker.ts`'s
 // `scheduleResume`, and `worker.ts`'s cron items), so "remember to pass the
 // queue name" is five chances to be wrong and no way to notice.
 //
 // Hence: the queue name is derived from the REGISTERED JOB and is never a caller
 // argument. `queueNameFor` is the single derivation; `graphileSpecFor` is the
-// single assembly of a graphile `TaskSpec` around it, and the raw-SQL enqueue
+// single assembly of a graphile insertion around it, and the raw-SQL enqueue
 // path reads its columns off that same spec rather than composing its own. The
 // `jobs:no-raw-addjob` check (`../../check/index.ts`) bans `utils.addJob(` and
 // `graphile_worker.add_job` everywhere but this file, so a sixth insertion site
 // cannot be written without going through here.
+//
+// The job's TASK IDENTIFIER and PRIORITY join the queue name under exactly the
+// same argument, and for exactly the same reason. Which graphile task a row sits
+// on is what decides which runners can ever fetch it (`worker.ts`'s ladder), and
+// the priority is what makes a runner prefer the longest class it may serve. A
+// row inserted on the wrong task is not slow — it is unreachable by the runners
+// that were supposed to reserve capacity for it, or reachable by ones that were
+// not. Both are properties of the REGISTERED JOB (its `hold`), never caller
+// arguments, so they flow through this one assembly with the queue name.
 
 /** `sg:` namespaces our queue names inside graphile's global queue-name space,
  * so they are recognizable in `_private_job_queues` and cannot collide with a
@@ -424,20 +465,36 @@ export function queueNameFor(job: {
   return `${QUEUE_PREFIX}lane:${job.serial.with}`;
 }
 
+/** Everything one insertion of a job row is made of: the graphile task the row
+ * sits on, and the `TaskSpec` carrying the rest of its columns. The two travel
+ * together because both are derived from the job, and an insertion that took the
+ * spec but re-typed the identifier would be exactly the drift this file exists
+ * to prevent. */
+export interface GraphileInsertion {
+  /** The graphile task identifier — the job's hold-class task (`taskFor`). */
+  readonly task: string;
+  readonly spec: TaskSpec;
+}
+
 /**
- * Build the graphile `TaskSpec` for one insertion of `job`. Everything a caller
+ * Build the graphile insertion for one row of `job`. Everything a caller
  * legitimately varies per enqueue (`jobKey`, `runAt`, `maxAttempts`) is an
- * argument; the queue name deliberately is NOT — it comes from the job.
+ * argument; the task identifier, the priority and the queue name deliberately
+ * are NOT — they come from the job.
  */
 export function graphileSpecFor(
-  job: { name: string; serial?: SerialSpec },
+  job: { name: string; hold: HoldClass; serial?: SerialSpec },
   opts: GraphileInsertOpts,
-): TaskSpec {
+): GraphileInsertion {
   return {
-    queueName: queueNameFor(job),
-    jobKey: opts.jobKey ?? undefined,
-    runAt: opts.runAt ?? undefined,
-    maxAttempts: opts.maxAttempts,
+    task: taskFor(job.hold),
+    spec: {
+      queueName: queueNameFor(job),
+      priority: priorityFor(job.hold),
+      jobKey: opts.jobKey ?? undefined,
+      runAt: opts.runAt ?? undefined,
+      maxAttempts: opts.maxAttempts,
+    },
   };
 }
 
@@ -448,8 +505,8 @@ export interface GraphileInsertOpts {
 }
 
 /**
- * Insert one `jobs.run` row for an already-resolved {@link RegisteredJob},
- * bypassing `enqueue`'s input parse and its per-job-name job-key namespacing.
+ * Insert one job row for an already-resolved {@link RegisteredJob}, bypassing
+ * `enqueue`'s input parse and its per-job-name job-key namespacing.
  *
  * `UNSAFE_` because both bypasses matter: the payload is stored verbatim (the
  * caller is responsible for it already being in post-transform shape — see
@@ -464,16 +521,13 @@ export interface GraphileInsertOpts {
  * cannot. `jobs:no-raw-addjob` enforces the exclusivity.
  */
 export async function UNSAFE_insertJobRow(
-  job: { name: string; serial?: SerialSpec },
+  job: { name: string; hold: HoldClass; serial?: SerialSpec },
   payload: JobTaskPayload,
   opts: GraphileInsertOpts,
 ): Promise<{ jobId: string }> {
   const utils = await getWorkerUtils();
-  const added = await utils.addJob(
-    JOB_TASK,
-    payload,
-    graphileSpecFor(job, opts),
-  );
+  const insertion = graphileSpecFor(job, opts);
+  const added = await utils.addJob(insertion.task, payload, insertion.spec);
   return { jobId: String(added.id) };
 }
 
@@ -524,7 +578,7 @@ export function defineJob<
     };
 
     if (opts?.tx) {
-      const graphileSpec = graphileSpecFor(spec, graphileOpts);
+      const insertion = graphileSpecFor(spec, graphileOpts);
       // Shared-tx path: write into graphile_worker.jobs on the caller's
       // transaction client by calling Graphile's documented public SQL
       // function. Rollback drops the row alongside the caller's writes.
@@ -540,19 +594,28 @@ export function defineJob<
            run_at       := $3,
            max_attempts := $4,
            job_key      := $5,
-           queue_name   := $6
+           queue_name   := $6,
+           priority     := $7
          )).id::text AS id`,
         [
-          JOB_TASK,
+          // The hold class's task, from the same spec the `addJob` path uses —
+          // never a constant. A row inserted here on the legacy task would be
+          // fetchable only by the wide runner, silently forfeiting the
+          // reservation for every job enqueued inside a transaction.
+          insertion.task,
           JSON.stringify(payload),
-          graphileSpec.runAt ?? null,
-          graphileSpec.maxAttempts ?? null,
-          graphileSpec.jobKey ?? null,
+          insertion.spec.runAt ?? null,
+          insertion.spec.maxAttempts ?? null,
+          insertion.spec.jobKey ?? null,
           // NULL ⇒ unnamed queue, which is what graphile's own default is and
           // what every non-`serial` job gets. `add_job` takes queue_name as a
           // named argument (sql/000016.sql:8), so passing NULL explicitly is
           // identical to omitting it.
-          graphileSpec.queueName ?? null,
+          insertion.spec.queueName ?? null,
+          // `priority` is likewise a named argument of `add_job`
+          // (sql/000018.sql:4, `priority integer DEFAULT NULL`), coalesced to 0
+          // when NULL. Always present here, since it is derived from the class.
+          insertion.spec.priority ?? null,
         ],
       );
       const id = result.rows[0]?.id;
@@ -575,8 +638,24 @@ export function defineJob<
       if (jobRegistry.has(spec.name)) {
         throw new Error(`[jobs] duplicate job name: ${spec.name}`);
       }
+      // Both numbers are right here, and disagreeing is a wiring bug: a job that
+      // expects to run longer than its class's ceiling has declared the wrong
+      // class. Module-eval time, so it fails the boot loudly rather than filing
+      // a slot-hog report on every tick forever.
+      const ceilingMs = ceilingMsFor(spec.hold);
+      if (
+        spec.slowThresholdMs !== undefined &&
+        spec.slowThresholdMs > ceilingMs
+      ) {
+        throw new Error(
+          `[jobs] ${spec.name}: slowThresholdMs ${spec.slowThresholdMs}ms exceeds ` +
+            `the "${spec.hold}" hold class ceiling of ${ceilingMs}ms — ` +
+            `declare a longer \`hold\`, or lower \`slowThresholdMs\``,
+        );
+      }
       jobRegistry.set(spec.name, {
         name: spec.name,
+        hold: spec.hold,
         inputSchema: spec.input,
         eventSchema: spec.event,
         dedup:
@@ -616,6 +695,13 @@ export function getAllRegisteredJobNames(): Set<string> {
  * or `undefined` when the job declared none (callers fall back to the config default). */
 export function getJobSlowThresholdMs(name: string): number | undefined {
   return jobRegistry.get(name)?.slowThresholdMs;
+}
+
+/** The duration class declared via `defineJob({ hold })`, or `undefined` for a
+ * job name that is not registered in this backend (a queue row written by a
+ * plugin this composition does not load). */
+export function getJobHold(name: string): HoldClass | undefined {
+  return jobRegistry.get(name)?.hold;
 }
 
 // Every registered job that declared a recurring `schedule`. The worker reads

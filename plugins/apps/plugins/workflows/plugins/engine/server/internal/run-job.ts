@@ -21,40 +21,51 @@ interface InitResult {
 
 export const workflowRunJob = defineJob({
   name: "workflows.run",
+  // minutes: an open-ended step machine driving arbitrary registered
+  // executors. Nothing here bounds a step. (A suspend is not part of it —
+  // `ctx.waitFor` returns from `run` and releases the slot.)
+  hold: "minutes",
   input: z.object({ executionId: z.string() }),
   event: z.never(),
   dedup: { key: (input) => input.executionId },
   run: async ({ input, ctx }) => {
-    const initResult = await ctx.step("init", async (): Promise<InitResult | null> => {
-      const [execution] = await db
-        .select()
-        .from(_workflowExecutions)
-        .where(eq(_workflowExecutions.id, input.executionId));
-      if (!execution) return null;
-      if (execution.status === "completed" || execution.status === "failed") return null;
+    const initResult = await ctx.step(
+      "init",
+      async (): Promise<InitResult | null> => {
+        const [execution] = await db
+          .select()
+          .from(_workflowExecutions)
+          .where(eq(_workflowExecutions.id, input.executionId));
+        if (!execution) return null;
+        if (execution.status === "completed" || execution.status === "failed")
+          return null;
 
-      const [definition] = await db
-        .select()
-        .from(_workflowDefinitions)
-        .where(eq(_workflowDefinitions.id, execution.definitionId));
-      if (!definition) return null;
+        const [definition] = await db
+          .select()
+          .from(_workflowDefinitions)
+          .where(eq(_workflowDefinitions.id, execution.definitionId));
+        if (!definition) return null;
 
-      if (execution.status === "pending") {
-        await updateExecution(input.executionId, { status: "running" });
-      }
+        if (execution.status === "pending") {
+          await updateExecution(input.executionId, { status: "running" });
+        }
 
-      return {
-        definitionId: execution.definitionId,
-        stepsMap: (definition.steps ?? {}) as Record<string, DefinitionStep>,
-        entryStepId: definition.entryStepId,
-      };
-    });
+        return {
+          definitionId: execution.definitionId,
+          stepsMap: (definition.steps ?? {}) as Record<string, DefinitionStep>,
+          entryStepId: definition.entryStepId,
+        };
+      },
+    );
 
     if (!initResult) return;
     const { definitionId, stepsMap, entryStepId } = initResult;
 
     if (!entryStepId) {
-      await updateExecution(input.executionId, { status: "completed", completedAt: new Date() });
+      await updateExecution(input.executionId, {
+        status: "completed",
+        completedAt: new Date(),
+      });
       return;
     }
 
@@ -72,11 +83,15 @@ export const workflowRunJob = defineJob({
         .select({ status: _workflowExecutions.status })
         .from(_workflowExecutions)
         .where(eq(_workflowExecutions.id, input.executionId));
-      if (live && (live.status === "cancelled" || live.status === "expired")) return;
+      if (live && (live.status === "cancelled" || live.status === "expired"))
+        return;
 
       const stepDef: DefinitionStep | undefined = stepsMap[currentStepId];
       if (!stepDef) {
-        await updateExecution(input.executionId, { status: "failed", completedAt: new Date() });
+        await updateExecution(input.executionId, {
+          status: "failed",
+          completedAt: new Date(),
+        });
         return;
       }
 

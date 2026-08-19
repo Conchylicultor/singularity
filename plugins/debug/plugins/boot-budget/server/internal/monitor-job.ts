@@ -33,6 +33,7 @@ const reported = new Set<string>();
 // hook / warmup span whose wall-time exceeds its per-phase budget.
 export const bootBudgetMonitorJob = defineJob({
   name: "debug.boot-budget-monitor",
+  hold: "instant",
   input: z.object({}),
   event: z.never(),
   dedup: "singleton",

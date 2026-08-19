@@ -13,6 +13,7 @@ import { drainShrinks } from "./accumulator";
 // files a deduped report per shed when enabled.
 export const readSetShrinkMonitorJob = defineJob({
   name: "debug.read-set-shrink-monitor",
+  hold: "instant",
   input: z.object({}),
   event: z.never(),
   dedup: "singleton",

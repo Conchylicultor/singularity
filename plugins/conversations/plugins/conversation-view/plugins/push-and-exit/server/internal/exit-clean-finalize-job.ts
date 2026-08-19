@@ -20,6 +20,12 @@ const FINALIZE_TIMEOUT_MS = 60_000;
 // missed event) shouldn't strand the conversation.
 export const exitCleanFinalizeJob = defineJob({
   name: "push_and_exit.exit_clean_finalize",
+  // seconds — and NOT `minutes`, despite FINALIZE_TIMEOUT_MS being 60s: that
+  // number bounds a `ctx.waitFor`, which RETURNS from `run` and releases the
+  // slot. The wait costs no hold at all. What this classifies is the resumed
+  // dispatch: `dropTaskOnExit` (git-measured attempt standing) plus one untimed
+  // `tmux kill-session`, both bounded local subprocesses.
+  hold: "seconds",
   input: z.object({ conversationId: z.string() }),
   // Direct-enqueue only (spawned by the exit_clean MCP tool).
   event: z.never(),

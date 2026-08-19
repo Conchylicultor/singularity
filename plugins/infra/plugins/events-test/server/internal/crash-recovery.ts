@@ -9,6 +9,7 @@ import {
 import { retryUntil, fixed } from "@plugins/packages/plugins/retry/core";
 import { db } from "@plugins/database/server";
 import { logEntries, logPing, resetLog } from "./log-job";
+import { jobTaskList } from "./queue-probe";
 
 // End-to-end check that job liveness is EXACT — both halves of it.
 //
@@ -80,9 +81,9 @@ export async function handleCrashRecovery(): Promise<Response> {
   // Find the row by payload — addJob doesn't return the private-table id.
   const result = await db.execute<{ id: string }>(drizzleSql`
     SELECT id FROM graphile_worker._private_jobs
-     WHERE task_id = (
+     WHERE task_id IN (
        SELECT id FROM graphile_worker._private_tasks
-        WHERE identifier = 'jobs.run'
+        WHERE identifier IN (${jobTaskList})
      )
        AND payload->'input'->>'label' = ${label}
      LIMIT 1

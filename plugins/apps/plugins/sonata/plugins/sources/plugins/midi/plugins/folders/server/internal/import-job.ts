@@ -13,6 +13,10 @@ import {
 // or restored file.
 export const importMidiFileJob = defineJob({
   name: "sonata.midi.import",
+  // instant: a local file read, an in-memory MIDI parse and indexed writes —
+  // no network, no spawn, no model call. "Heavy" above is relative to the
+  // watcher callback it was moved off, not to a worker slot.
+  hold: "instant",
   input: z.object({ sourcePath: z.string() }),
   event: z.never(),
   // Coalesce a burst of events for the same file (e.g. create+update) into one

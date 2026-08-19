@@ -81,6 +81,12 @@ type PerOpTrip =
 // per-kind threshold/budget trips (silent when healthy).
 export const opRateMonitorJob = defineJob({
   name: "debug.op-rate-monitor",
+  // seconds, and NOT instant despite touching only memory and the DB: the tick
+  // fans out over every profiler label across every span kind and then files up
+  // to TOP_N reports, each a DB round-trip and (for op-time) a coherent-instant
+  // captureTrace. Measured at ~34s per run with ZERO gate wait — 34s of real
+  // work, so instant's 10s ceiling would be a lie the watchdog reports every tick.
+  hold: "seconds",
   input: z.object({}),
   event: z.never(),
   dedup: "singleton",

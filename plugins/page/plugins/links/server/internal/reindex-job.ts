@@ -9,6 +9,7 @@ import { reindexPage } from "./reindex";
 // may retry, but `reindexPage` is idempotent (diff-based).
 export const reindexLinksJob = defineJob({
   name: "page.links.reindex",
+  hold: "instant",
   input: z.object({}).default({}),
   event: z.object({ pageId: z.string() }),
   dedup: "none",

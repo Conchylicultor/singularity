@@ -21,6 +21,9 @@ const HOUR_MS = 60 * 60 * 1000;
 // (it finds a waiting+resumable row with a missing session and hibernates it).
 export const hibernateIdleJob = defineJob({
   name: "conversations.hibernate-idle",
+  // seconds: `deleteConversation` spawns one untimed `tmux kill-session` per
+  // idle candidate, and the candidate count is not bounded up front.
+  hold: "seconds",
   input: z.object({}),
   event: z.never(),
   dedup: "singleton",

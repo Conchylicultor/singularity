@@ -46,6 +46,9 @@ function buildPrompt(userText: string, assistantText: string): string {
 // re-emission after server restart.
 export const generateTurnSummaryJob = defineJob({
   name: "turn-summary.generate",
+  // seconds: bounded by the 12s HAIKU_TIMEOUT_MS the runClaudePrint call below
+  // passes itself.
+  hold: "seconds",
   input: z.object({}).passthrough(),
   event: z
     .object({

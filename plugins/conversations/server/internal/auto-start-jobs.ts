@@ -34,6 +34,11 @@ import { createConversation } from "./lifecycle";
 // row does the same single check the N rows would have done.
 export const maybeLaunchTaskJob = defineJob({
   name: "tasks.maybe-launch",
+  // instant: indexed reads plus the atomic claim. `createConversation` on this
+  // path only writes rows and ENQUEUES `database.fork` + `conversations.spawn`
+  // (no attemptId ⇒ never the synchronous reuse branch), so the agent launch
+  // itself is those jobs' hold, not this one's.
+  hold: "instant",
   input: z.object({
     taskId: z.string(),
     cause: z.string().default("dep-resolved"),
@@ -135,6 +140,7 @@ export const maybeLaunchTaskJob = defineJob({
 // `event` argument, so the launch job cannot bind to the event directly.
 export const maybeLaunchOnStatusJob = defineJob({
   name: "tasks.maybe-launch-on-status",
+  hold: "instant",
   input: z.object({}),
   dedup: "none",
   event: z

@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import {
   makeWorkerUtils,
   parseCronItem,
@@ -6,9 +6,12 @@ import {
   type JobHelpers,
   type ParsedCronItem,
   type Runner,
+  type TaskList,
   type WorkerUtils,
 } from "graphile-worker";
+import { Pool } from "pg";
 import { db } from "@plugins/database/server";
+import { Log } from "@plugins/primitives/plugins/log-channels/server";
 import { connectionString } from "@plugins/database/plugins/admin/server";
 import { isMain } from "@plugins/infra/plugins/paths/core";
 import { reportServerError } from "@plugins/framework/plugins/server-core/core";
@@ -16,9 +19,19 @@ import {
   recordEntrySpan,
   runInBackgroundLane,
 } from "@plugins/infra/plugins/runtime-profiler/core";
-import { JOB_TASK, JOB_CONCURRENCY } from "./constants";
+import {
+  ALL_JOB_TASKS,
+  HOLD_CLASSES,
+  LEGACY_JOB_TASK,
+  priorityFor,
+  RUNNERS,
+  taskFor,
+  TOTAL_JOB_SLOTS,
+  type HoldClass,
+} from "../../core/hold";
 import {
   getScheduledJobs,
+  jobRegistry,
   queueNameFor,
   UNSAFE_getRegisteredJob,
   UNSAFE_insertJobRow,
@@ -30,10 +43,39 @@ import { isNonRetryableError } from "./non-retryable";
 import { markJobPermanentlyFailed } from "./introspection";
 import { _jobSteps, _jobWaits } from "./tables";
 
-let runner: Runner | null = null;
+const log = Log.channel("jobs");
+
+// One runner per entry in the ladder (`RUNNERS`), all sharing one pg pool.
+let runners: Runner[] | null = null;
+
+// The ONE connection pool behind every runner. graphile only `.end()`s a pool it
+// created itself (`dist/lib.js:180-200` — the `releasers.push(() => pgPool.end())`
+// lines sit in the `connectionString` / `PGDATABASE` branches, never in the
+// `_rawOptions.pgPool` branch), so a caller-supplied pool survives `runner.stop()`
+// and three runners can safely share it. `stopWorkers()` ends it explicitly.
+//
+// Sized `TOTAL_JOB_SLOTS + RUNNERS.length`: one connection per worker slot plus
+// one per runner for its own LISTEN/poll client. Three runners left to build
+// their own default pools would be 30 connections per backend, against a cluster
+// with ~16 live backends — the reason the shared pool is not an optimization.
+//
+// NOTE `pgPool` and `connectionString` are mutually exclusive in graphile's own
+// assertion (`dist/lib.js:182-186`), so the runner options below pass neither
+// `connectionString` nor `maxPoolSize`.
+let runnerPool: Pool | null = null;
+
+function getRunnerPool(): Pool {
+  if (!runnerPool) {
+    runnerPool = new Pool({
+      connectionString: connectionString(),
+      max: TOTAL_JOB_SLOTS + RUNNERS.length,
+    });
+  }
+  return runnerPool;
+}
 
 // Lazy singleton. The first `enqueue()` call (which may land before
-// `startWorker()` in the onReady cycle) initializes this; `makeWorkerUtils`
+// `startWorkers()` in the onReady cycle) initializes this; `makeWorkerUtils`
 // runs Graphile's own migrations, which are idempotent and safe to race with
 // the runner's init.
 let workerUtilsPromise: Promise<WorkerUtils> | null = null;
@@ -62,9 +104,11 @@ export function installScheduledCronItems(): void {
 
 // Build graphile-worker cron items from every job that declared a `schedule`.
 // Resolver-form schedules are evaluated here so a job can derive its crontab
-// from config or disable itself by returning null. All scheduled jobs route
-// through the single JOB_TASK; the per-tick payload carries the job name and
-// its default input, and graphile injects `_cron`.
+// from config or disable itself by returning null. A tick lands on the job's own
+// hold-class task at that class's priority — the same derivation every enqueue
+// path uses, so a scheduled job is reachable by exactly the runners its class
+// says it is. The per-tick payload carries the job name and its default input,
+// and graphile injects `_cron`.
 function buildCronItems(): ParsedCronItem[] {
   const items: ParsedCronItem[] = [];
   const main = isMain();
@@ -84,7 +128,7 @@ function buildCronItems(): ParsedCronItem[] {
     const input = job.inputSchema.parse({});
     items.push(
       parseCronItem({
-        task: JOB_TASK,
+        task: taskFor(job.hold),
         match: cron.trim(),
         identifier: `cron:${job.name}`,
         payload: { jobName: job.name, input } satisfies JobTaskPayload,
@@ -92,6 +136,14 @@ function buildCronItems(): ParsedCronItem[] {
           // backfillPeriod 0 ⇒ no catch-up flood on boot.
           backfillPeriod: 0,
           maxAttempts: job.maxAttempts,
+          // The class's fetch priority, alongside its task above. graphile's
+          // cron path passes this straight into the tick's job spec, and the
+          // `jobKey` upsert below re-stamps both columns from `excluded`
+          // (`sql/000018.sql`, `add_jobs`: `task_id = excluded.task_id,
+          // priority = excluded.priority`) — so a pending tick row inserted by
+          // an older backend is re-pointed by the very next tick, without
+          // waiting for a boot.
+          priority: priorityFor(job.hold),
           // Without a jobKey the cron path ignored `dedup` entirely — every
           // tick INSERTed a brand-new row, forever. On 2026-08-17 main's queue
           // wedged for 70 min and had accumulated 57 copies each of six
@@ -161,48 +213,207 @@ function buildCronItems(): ParsedCronItem[] {
   return items;
 }
 
-export async function startWorker(): Promise<Runner> {
-  if (runner) return runner;
-  runner = await run(
-    {
-      connectionString: connectionString(),
-      concurrency: JOB_CONCURRENCY,
-      taskList: {
-        // `helpers` is graphile's real `JobHelpers` and must stay that way — do
-        // NOT loosen it back to `any` for the two fields we read. It WAS `any`,
-        // and that is exactly how a read of `helpers.workerId` (a field
-        // `JobHelpers` does not have) survived three months as the literal string
-        // `"undefined"` instead of being a tsc error, silently disabling the
-        // keepalive that was supposed to stop jobs double-running.
-        [JOB_TASK]: async (payload: unknown, helpers: JobHelpers) => {
-          const p = payload as JobTaskPayload;
-          await dispatch(p, {
-            jobId: String(helpers.job.id),
-            attempt: Number(helpers.job.attempts),
-          });
-        },
-      },
-    },
-    // Hand graphile the live (initially empty) cron-item array; it re-reads
-    // this reference each tick. Items are installed after the onAllReady
-    // barrier via installScheduledCronItems(). Passing an explicit array also
-    // skips graphile's crontab-file discovery.
-    undefined,
-    scheduledCronItems,
-  );
-  return runner;
+// The one handler behind every task identifier. Which graphile task a row sits
+// on decides WHICH SLOTS can fetch it — never which code runs it, which is
+// always this. `helpers` is graphile's real `JobHelpers` and must stay that way
+// — do NOT loosen it back to `any` for the two fields we read. It WAS `any`, and
+// that is exactly how a read of `helpers.workerId` (a field `JobHelpers` does not
+// have) survived three months as the literal string `"undefined"` instead of
+// being a tsc error, silently disabling the keepalive that was supposed to stop
+// jobs double-running.
+async function handleJobTask(
+  payload: unknown,
+  helpers: JobHelpers,
+): Promise<void> {
+  const p = payload as JobTaskPayload;
+  await dispatch(p, {
+    jobId: String(helpers.job.id),
+    attempt: Number(helpers.job.attempts),
+  });
 }
 
-export async function stopWorker(): Promise<void> {
-  if (runner) {
-    await runner.stop();
-    runner = null;
+/**
+ * Start one graphile runner per entry in the {@link RUNNERS} ladder, all sharing
+ * one pool, all dispatching into the same handler.
+ *
+ * The reservation lives in the `taskList` and nowhere else: graphile's fetch
+ * query filters `task_id = any($2::int[])` (`dist/sql/getJob.js`), so a runner
+ * physically cannot see a task identifier absent from its own list. The floor
+ * runner serves only `instant`, so nothing that can run for minutes can ever
+ * hold its two slots — a guarantee an in-process gate entered after dispatch
+ * could not give (it would turn one stuck job into N stuck slots, the lesson
+ * `serial` exists to encode).
+ */
+export async function startWorkers(): Promise<Runner[]> {
+  if (runners) return runners;
+
+  // Graphile's schema must exist before `repointHoldTasks` can UPDATE its tables.
+  // `makeWorkerUtils` runs graphile's own (idempotent) migrations
+  // (`dist/lib.js` `getUtilsAndReleasersFromOptions`), so awaiting it here is
+  // what makes the re-point safe on a first-ever boot.
+  await getWorkerUtils();
+  await repointHoldTasks();
+
+  const pgPool = getRunnerPool();
+  const started: Runner[] = [];
+  for (const spec of RUNNERS) {
+    const taskList: TaskList = {};
+    for (const hold of spec.serves) taskList[taskFor(hold)] = handleJobTask;
+    // The legacy `jobs.run` task stays registered in exactly one runner,
+    // FOREVER. It costs one taskList entry and makes a stranded row impossible
+    // by construction: a row not re-pointed — written mid-deploy, or by an older
+    // backend — still runs, in the most conservative tier.
+    if (spec.legacy) taskList[LEGACY_JOB_TASK] = handleJobTask;
+
+    started.push(
+      await run(
+        {
+          // No `connectionString` here: graphile asserts the two are mutually
+          // exclusive, and the shared pool is the whole point.
+          pgPool,
+          concurrency: spec.concurrency,
+          // `onShutdown` stops every runner explicitly. Three runners each
+          // installing their own process signal handlers would be three
+          // independent shutdown paths racing one another.
+          noHandleSignals: true,
+          taskList,
+        },
+        // Hand graphile the live (initially empty) cron-item array; it re-reads
+        // this reference each tick. Items are installed after the onAllReady
+        // barrier via installScheduledCronItems(). Passing an explicit array also
+        // skips graphile's crontab-file discovery.
+        //
+        // THE SHARPEST EDGE IN THIS FILE: the cron items go to ONE runner, and
+        // the others get an empty array. graphile's cron scheduler is
+        // per-runner, so three runners would be three schedulers ticking every
+        // minute over the same crontab.
+        //
+        // Being precise about what that would and would not break, because the
+        // temptation is to hand the same array to all three and see nothing go
+        // wrong: graphile's `scheduleCronJobs` gates each insert on a
+        // `_private_known_crontabs` upsert (`dist/cron.js`,
+        // `where known_crontabs.last_execution < excluded.last_execution`) whose
+        // documented purpose is exactly "jobs already scheduled via a different
+        // Worker instance will be skipped". So the ticks would MOSTLY dedupe.
+        // That is a guard to be grateful for, not a design to lean on — three
+        // schedulers racing one row every minute for no gain, with correctness
+        // resting on a race resolving the way it usually does.
+        //
+        // WHICH runner holds them does not affect where a tick RUNS — the tick
+        // is an ordinary insert on the job's own class task, fetched by whatever
+        // runner serves that class. It rides on `legacy` because that flag
+        // already means "the one runner carrying the cross-cutting duties", so
+        // the ladder has one such marker rather than two.
+        undefined,
+        spec.legacy ? scheduledCronItems : [],
+      ),
+    );
+  }
+  runners = started;
+  return runners;
+}
+
+export async function stopWorkers(): Promise<void> {
+  if (runners) {
+    await Promise.all(runners.map((r) => r.stop()));
+    runners = null;
   }
   if (workerUtilsPromise) {
     const utils = await workerUtilsPromise;
     await utils.release();
     workerUtilsPromise = null;
   }
+  if (runnerPool) {
+    // Ours to create, ours to end — graphile never ends a caller-supplied pool.
+    await runnerPool.end();
+    runnerPool = null;
+  }
+}
+
+/**
+ * A STANDING INVARIANT, not a one-shot migration: on every boot, every PENDING
+ * row sits on the graphile task and priority that its `jobName`'s CURRENT hold
+ * class declares.
+ *
+ * Written as an invariant so reclassifying a job is safe by construction — flip
+ * a `defineJob({ hold })` and the rows already queued under the old class move
+ * on the next boot, with nothing to remember and no migration to write. It is
+ * also what carries rows across the deploy that introduced the classes: they
+ * were all written on `LEGACY_JOB_TASK`.
+ *
+ * **Locked rows are untouched, deliberately.** `locked_at IS NULL` is the whole
+ * guard. A locked row has a worker running it right now; moving it under the
+ * running handler would be a write against live state for no benefit, and it is
+ * already reachable (the legacy task lives in the wide runner). If it fails, its
+ * retry lands re-pointed on the next boot. Nothing here infers anything from how
+ * long a row has been locked — this is presence, not age. See the liveness
+ * doctrine in this plugin's CLAUDE.md.
+ */
+async function repointHoldTasks(): Promise<void> {
+  const namesByHold = new Map<HoldClass, string[]>(
+    HOLD_CLASSES.map((hold) => [hold, [] as string[]]),
+  );
+  // The registry is fully populated at the register phase, which runs before
+  // `onReady` — so every job this composition loads is already here.
+  for (const job of jobRegistry.values()) {
+    namesByHold.get(job.hold)?.push(job.name);
+  }
+
+  await runInBackgroundLane(async () => {
+    // A `_private_tasks` row appears either on the first `add_job` for that
+    // identifier, or when a runner starts and registers its own task list
+    // (`dist/taskIdentifiers.js`: `insert into … _private_tasks … select
+    // unnest($1::text[]) on conflict do nothing`). Both are LATER than this: the
+    // re-point deliberately runs before any `run()`, so on a first boot the
+    // class tasks do not exist yet and the join below would silently move
+    // nothing. Minting them here is what makes the invariant hold on boot #1.
+    //
+    // The explicit `ARRAY[…]::text[]` constructor is not decoration: drizzle
+    // expands a JS array inside a `sql` template into a comma-separated list of
+    // bound params, which is right for `IN (…)` and malformed for anything
+    // wanting ONE array value.
+    await db.execute(sql`
+      INSERT INTO graphile_worker._private_tasks (identifier)
+      SELECT unnest(ARRAY[${sql.join(
+        ALL_JOB_TASKS.map((t) => sql`${t}`),
+        sql`, `,
+      )}]::text[])
+      ON CONFLICT DO NOTHING
+    `);
+
+    const moved: string[] = [];
+    for (const hold of HOLD_CLASSES) {
+      const names = namesByHold.get(hold) ?? [];
+      if (names.length === 0) continue;
+      const priority = priorityFor(hold);
+      // One statement per class. `t` supplies the task's integer id by join
+      // rather than by a re-typed subquery, and the last predicate keeps the
+      // steady-state boot a no-op write. `RETURNING` + `rows.length` makes the
+      // moved count robust regardless of the driver's `rowCount` typing.
+      const result = await db.execute<{ id: string }>(sql`
+        UPDATE graphile_worker._private_jobs j
+           SET task_id = t.id, priority = ${priority}
+          FROM graphile_worker._private_tasks t
+         WHERE t.identifier = ${taskFor(hold)}
+           AND j.locked_at IS NULL
+           AND j.payload->>'jobName' IN (${sql.join(names, sql`, `)})
+           AND (j.task_id <> t.id OR j.priority <> ${priority})
+        RETURNING j.id::text AS id
+      `);
+      if (result.rows.length > 0) {
+        moved.push(`${result.rows.length} → ${hold}`);
+      }
+    }
+
+    // Only ever published when rows actually moved, which after the deploy that
+    // introduces a class is exactly "someone reclassified a job" — the one time
+    // you want to see it. A steady-state boot is silent.
+    if (moved.length > 0) {
+      log.publish(
+        `re-pointed pending rows onto hold tasks: ${moved.join(", ")}`,
+      );
+    }
+  });
 }
 
 // Layer 1 failure policy: fail-loud. Unknown job or input-schema drift → throw;

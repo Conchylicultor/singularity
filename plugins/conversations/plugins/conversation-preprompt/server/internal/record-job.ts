@@ -15,6 +15,7 @@ import { recordConversationPreprompt } from "./record";
 // trusting the event payload) for robustness against payload drift.
 export const recordPrepromptJob = defineJob({
   name: "conversation-preprompt.record",
+  hold: "instant",
   input: z.object({
     conversationId: z.string().optional(),
   }),
@@ -43,7 +44,8 @@ export const recordPrepromptJob = defineJob({
     }
 
     const prepromptId =
-      event?.prepromptId ?? (await getTaskPreprompt(conversation.taskId))?.prepromptId;
+      event?.prepromptId ??
+      (await getTaskPreprompt(conversation.taskId))?.prepromptId;
     const item = resolvePrepromptItem(prepromptId);
     if (!item) return;
 

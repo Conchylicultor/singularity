@@ -4,7 +4,7 @@ import { chargeWait } from "@plugins/infra/plugins/runtime-profiler/core";
 
 // A DEDICATED host-wide gate for the DB fork's `pg_dump | pg_restore` pipeline —
 // until this gate, the fork was the ONLY heavy launch step with zero admission
-// control (JOB_CONCURRENCY=4 alone permitted 4 concurrent dump|restore pairs).
+// control (the job pool alone permitted 4 concurrent dump|restore pairs).
 //
 // Why a gate at all when the dump/restore CLIENTS are darwinbg-demoted
 // (spawn-priority): the heavy server-side work — COPY parsing, index builds —

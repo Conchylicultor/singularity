@@ -31,6 +31,12 @@ import { triggerTableRegistry } from "./registry";
 // maxAttempts retries on every emission.
 export const eventsDispatchJob = defineJob({
   name: "events.dispatch",
+  // instant: routing only — resolve the target, validate the payload, enqueue.
+  // Measured at 26ms of work over 1405 runs. The target's EXECUTION lands in
+  // whatever class the target itself declares, so a heavy target never makes the
+  // hop that reaches it heavy. This is what keeps event delivery out of the queue
+  // behind long work; see the plan's Context on the two unprioritised hops.
+  hold: "instant",
   input: z.object({
     eventName: z.string(),
     triggerId: z.string().uuid(),

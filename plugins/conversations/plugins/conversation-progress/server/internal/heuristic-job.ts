@@ -22,7 +22,9 @@ async function gitRun(args: string[], cwd: string): Promise<string | null> {
 // - design:        only research/** files modified
 // - implementation: any non-research file modified
 async function detectPhase(worktreePath: string): Promise<ConversationPhase> {
-  const base = (await gitRun(["merge-base", "main", "HEAD"], worktreePath))?.trim();
+  const base = (
+    await gitRun(["merge-base", "main", "HEAD"], worktreePath)
+  )?.trim();
   if (!base) return "research";
 
   // Committed + staged + unstaged changes vs merge-base in one pass
@@ -47,6 +49,10 @@ async function detectPhase(worktreePath: string): Promise<ConversationPhase> {
 // worktree's git state — no LLM call needed.
 export const classifyProgressJob = defineJob({
   name: "conversation-progress.classify",
+  // seconds: three git subprocesses (merge-base / diff / ls-files) it does not
+  // time out. They are bounded local reads over one worktree — not an
+  // open-ended step machine — so this is the class below `minutes`.
+  hold: "seconds",
   input: z.object({}).passthrough(),
   event: z.object({ conversationId: z.string() }).passthrough(),
   dedup: "none",

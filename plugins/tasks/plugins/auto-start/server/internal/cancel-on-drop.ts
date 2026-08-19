@@ -24,6 +24,7 @@ import { _tasksAutoStartExt } from "./tables";
 // auto-start marker would invert that dependency.
 export const cancelAutoStartOnDropJob = defineJob({
   name: "tasks.auto-start-cancel-on-drop",
+  hold: "instant",
   input: z.object({}),
   dedup: "none",
   event: z

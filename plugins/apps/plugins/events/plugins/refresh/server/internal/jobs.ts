@@ -26,6 +26,11 @@ import { refreshLog } from "./sink";
  */
 export const refreshSourceJob = defineJob({
   name: "events.refresh-source",
+  // minutes: a URL source may read the page through a real headless browser
+  // (`browserFetch`) before the model call. A browser launch is bounded by
+  // nothing shorter than the work — and `slowThresholdMs` below is 180s,
+  // above the `seconds` ceiling.
+  hold: "minutes",
   input: z.object({ sourceId: z.string() }),
   event: z.never(),
   dedup: { key: (input) => input.sourceId },
@@ -54,10 +59,7 @@ async function selectDueSources(now: Date): Promise<{ id: string }[]> {
       and(
         eq(_eventSources.enabled, true),
         ne(_eventSources.refresh, "manual"),
-        or(
-          isNull(_eventSources.nextRunAt),
-          lte(_eventSources.nextRunAt, now),
-        ),
+        or(isNull(_eventSources.nextRunAt), lte(_eventSources.nextRunAt, now)),
       ),
     );
 }
@@ -80,6 +82,9 @@ async function selectDueSources(now: Date): Promise<{ id: string }[]> {
  */
 export const refreshTickJob = defineJob({
   name: "events.refresh-tick",
+  // instant: the body only selects due sources and enqueues one
+  // `refreshSourceJob` each. The fetching and extracting happen there.
+  hold: "instant",
   // Cron payloads are built from `input.parse({})`, so this must parse `{}`.
   input: z.object({}),
   event: z.never(),

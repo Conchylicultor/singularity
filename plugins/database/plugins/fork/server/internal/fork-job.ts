@@ -13,6 +13,8 @@ import { forkDatabase } from "@plugins/database/plugins/admin/server";
 // putting a `defineJob` consumer back in `admin` would form an import cycle.
 export const databaseForkJob = defineJob({
   name: "database.fork",
+  // minutes: `pg_dump | pg_restore` subprocesses; nothing shorter bounds them.
+  hold: "minutes",
   input: z.object({ source: z.string(), target: z.string() }),
   // Direct-enqueue only (kicked off when a conversation/worktree is created).
   event: z.never(),

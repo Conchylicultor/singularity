@@ -10,6 +10,9 @@ import { _backupRuns } from "./tables";
 
 export const backupRunJob = defineJob({
   name: "backup.run",
+  // minutes: assembles the archive through a `tar` subprocess, then uploads it
+  // to every configured target. Nothing shorter than the work bounds it.
+  hold: "minutes",
   input: z.object({
     // Defaulted so cron ticks (which carry no caller input) run as "periodic".
     trigger: z.enum(["manual", "periodic"]).default("periodic"),
@@ -24,9 +27,7 @@ export const backupRunJob = defineJob({
   },
   run: async ({ input }) => {
     const runId = crypto.randomUUID();
-    await db
-      .insert(_backupRuns)
-      .values({ id: runId, trigger: input.trigger });
+    await db.insert(_backupRuns).values({ id: runId, trigger: input.trigger });
 
     let archive;
     try {

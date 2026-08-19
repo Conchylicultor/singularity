@@ -1,7 +1,7 @@
 import { sql as drizzleSql } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@plugins/database/server";
-import { defineJob } from "@plugins/infra/plugins/jobs/server";
+import { defineJob, LEGACY_JOB_TASK } from "@plugins/infra/plugins/jobs/server";
 import { fail } from "./queue-probe";
 
 // End-to-end check of the cron path's dedup: repeated ticks of one scheduled job
@@ -50,10 +50,17 @@ import { fail } from "./queue-probe";
 //
 // NOTE: not using implement() — the assertions return raw Response objects.
 
-/** Every Singularity job is stored under this single graphile task; the real job
- * name lives in the payload. Spelled out here as it is in `crash-recovery.ts` —
- * the constant is internal to the jobs plugin. */
-const JOB_TASK = "jobs.run";
+/** The graphile task the rows below are inserted on. Imported, never spelled: a
+ * hand-typed identifier is exactly what `jobs:no-raw-addjob` now forbids, since
+ * a job's task is a property of its hold class (`taskFor(job.hold)`) and a bare
+ * `jobs.run` puts the row in the widest tier.
+ *
+ * Which identifier it is happens to be immaterial to what this file asserts —
+ * graphile's keyed upsert collapses on `job_key` alone, whatever task the row
+ * sits on. The legacy one is used because it is the identifier that is always
+ * served by a runner, so a row this harness somehow leaked can still be
+ * dispatched rather than stranding on a task nobody fetches. */
+const JOB_TASK = LEGACY_JOB_TASK;
 
 const JOB_NAME = "events_test.cron-dedup";
 
@@ -75,6 +82,7 @@ const MAX_ATTEMPTS = 5;
  * makes `enqueue()` derive the same job key the cron path uses. */
 export const cronDedupProbe = defineJob({
   name: JOB_NAME,
+  hold: "instant",
   input: z.object({}),
   event: z.never(),
   dedup: "singleton",

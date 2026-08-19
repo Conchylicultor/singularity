@@ -27,6 +27,10 @@ const log = Log.channel("transcript-retention");
 // erase the history it contributes.
 export const transcriptTouchJob = defineJob({
   name: "conversations.transcript-touch",
+  // seconds: filesystem metadata only, but N is the whole retained set and
+  // resolving each session chain glob-scans the Claude projects dir on a cache
+  // miss — nothing bounds it to the `instant` ceiling.
+  hold: "seconds",
   input: z.object({}),
   event: z.never(),
   dedup: "singleton",
@@ -44,6 +48,8 @@ export const transcriptTouchJob = defineJob({
       }
       conversations++;
     }
-    log.publish(`touched ${files} transcript file(s) across ${conversations} retained conversation(s)`);
+    log.publish(
+      `touched ${files} transcript file(s) across ${conversations} retained conversation(s)`,
+    );
   },
 });

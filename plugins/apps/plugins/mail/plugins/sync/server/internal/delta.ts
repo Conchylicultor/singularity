@@ -1,7 +1,10 @@
 import { z } from "zod";
 import { eq } from "drizzle-orm";
 import { db } from "@plugins/database/server";
-import { defineJob, NonRetryableError } from "@plugins/infra/plugins/jobs/server";
+import {
+  defineJob,
+  NonRetryableError,
+} from "@plugins/infra/plugins/jobs/server";
 import {
   getProfile,
   listLabels,
@@ -29,6 +32,11 @@ import { recordSyncError } from "./record-error";
 
 export const deltaJob = defineJob({
   name: "mail.delta",
+  // seconds: paginated Gmail calls, no spawn and no render. The bound is
+  // `gmailRequest`'s 120s retry deadline, which caps the RETRY LOOP — it is
+  // checked between attempts, and the `fetch` under it carries no signal, so a
+  // single hung socket is not bounded by it.
+  hold: "seconds",
   input: z.object({ accountId: z.string() }),
   event: z.never(),
   dedup: { key: ({ accountId }) => accountId },

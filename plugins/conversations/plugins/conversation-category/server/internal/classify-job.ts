@@ -52,6 +52,9 @@ function selectTargets(
 // direct-enqueued from the re-classify HTTP route.
 export const classifyConversationJob = defineJob({
   name: "conversation-category.classify",
+  // seconds: bounded by the 30s HAIKU_TIMEOUT_MS the runClaudePrint call below
+  // passes itself.
+  hold: "seconds",
   input: z.object({
     conversationId: z.string().optional(),
     categoryIds: z.array(z.string()).optional(),

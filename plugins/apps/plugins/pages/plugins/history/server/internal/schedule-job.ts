@@ -18,6 +18,9 @@ const DEBOUNCE_MS = 4000;
  */
 export const pageHistoryScheduleJob = defineJob({
   name: "pages.history.schedule",
+  // instant: the body only re-enqueues the snapshot job. The debounce is a
+  // future `runAt` on that row, not a wait held here.
+  hold: "instant",
   input: z.object({}).default({}),
   event: z.object({ pageId: z.string() }),
   dedup: "none",

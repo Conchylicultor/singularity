@@ -1,6 +1,9 @@
 import { z } from "zod";
 import { defineJob } from "@plugins/infra/plugins/jobs/server";
-import { runClaudePrint, ClaudeCliError } from "@plugins/infra/plugins/claude-cli/server";
+import {
+  runClaudePrint,
+  ClaudeCliError,
+} from "@plugins/infra/plugins/claude-cli/server";
 import { completeUnitGeneration, failUnitGeneration } from "./mutations";
 
 // Strip a single leading ```lang fence and trailing ``` if the whole output is
@@ -14,6 +17,8 @@ function stripCodeFences(text: string): string {
 
 export const storyGenerationGenerateJob = defineJob({
   name: "story-generation.generate",
+  // seconds: bounded by the 60s `runClaudePrint` timeout passed below.
+  hold: "seconds",
   input: z.object({
     pageId: z.string(),
     kind: z.string(),
@@ -31,7 +36,11 @@ export const storyGenerationGenerateJob = defineJob({
         timeoutMs: 60_000,
         source: {
           name: "story-generation.generate",
-          context: { pageId: input.pageId, kind: input.kind, unitId: input.unitId },
+          context: {
+            pageId: input.pageId,
+            kind: input.kind,
+            unitId: input.unitId,
+          },
         },
       });
       output = stripCodeFences(output).trim();

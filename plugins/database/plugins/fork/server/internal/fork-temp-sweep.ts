@@ -15,12 +15,18 @@ const TEMP_SUFFIX = "__forking";
 // so a single sweep covers all worktrees.
 export const forkTempSweepJob = defineJob({
   name: "database.fork-temp-sweep",
+  // instant: catalog queries plus a `DROP DATABASE` per orphan — no subprocess,
+  // no dump/restore. The sweep runs beside `database.fork`, but it does none of
+  // that job's work.
+  hold: "instant",
   input: z.object({}),
   event: z.never(),
   dedup: "singleton",
   schedule: { cron: "*/15 * * * *" },
   async run() {
-    const temps = (await listDatabases()).filter((d) => d.endsWith(TEMP_SUFFIX));
+    const temps = (await listDatabases()).filter((d) =>
+      d.endsWith(TEMP_SUFFIX),
+    );
     for (const temp of temps) {
       // A live fork's pg_restore holds a connection to the temp — protect it.
       // Only drop temps with zero active connections.

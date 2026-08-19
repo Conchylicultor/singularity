@@ -8,6 +8,7 @@ import { reconcileReminders } from "./reconcile";
 // graphile may retry, but `reconcileReminders` is idempotent (diff-based).
 export const reminderReconcileJob = defineJob({
   name: "page.reminders.reconcile",
+  hold: "instant",
   input: z.object({}).default({}),
   event: z.object({ pageId: z.string() }),
   dedup: "none",
