@@ -2846,7 +2846,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `Sonata.Effect` "metronome" → `MetronomeEngine`
                   - `SonataToolbar.End` "metronome" → `MetronomeButton`
                   - `Sonata.Hud` "count-in" → `CountInOverlay`
-                  - `ConfigV2.WebRegister`
+                  - `ConfigV2.WebRegister` "sonata.metronome"
                 - Uses:
                   - `apps/sonata/audio/engine.LoopWindowBeats`
                   - `apps/sonata/audio/engine.ScheduleHandle`
@@ -2881,134 +2881,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                 - Uses: `infra/asset-mirror.defineAssetMirror`
             - **`soundfont`** — Sonata Instruments: the full General MIDI melodic set (programs 1-127) backed by smplr's Soundfont, served same-origin via the asset-mirror (offline after first warm-up). Program 0 (acoustic grand) is owned by the dedicated sampled-piano plugin. Registers the gm-soundfont asset mirror so the General MIDI instruments' samples are served same-origin (offline-capable) rather than streamed from the remote gleitz CDN.
               - Web:
-                - Contributes:
-                  - `SonataAudio.Instrument` "Bright Acoustic Piano"
-                  - `SonataAudio.Instrument` "Electric Grand Piano"
-                  - `SonataAudio.Instrument` "Honky-tonk Piano"
-                  - `SonataAudio.Instrument` "Electric Piano 1"
-                  - `SonataAudio.Instrument` "Electric Piano 2"
-                  - `SonataAudio.Instrument` "Harpsichord"
-                  - `SonataAudio.Instrument` "Clavinet"
-                  - `SonataAudio.Instrument` "Celesta"
-                  - `SonataAudio.Instrument` "Glockenspiel"
-                  - `SonataAudio.Instrument` "Music Box"
-                  - `SonataAudio.Instrument` "Vibraphone"
-                  - `SonataAudio.Instrument` "Marimba"
-                  - `SonataAudio.Instrument` "Xylophone"
-                  - `SonataAudio.Instrument` "Tubular Bells"
-                  - `SonataAudio.Instrument` "Dulcimer"
-                  - `SonataAudio.Instrument` "Drawbar Organ"
-                  - `SonataAudio.Instrument` "Percussive Organ"
-                  - `SonataAudio.Instrument` "Rock Organ"
-                  - `SonataAudio.Instrument` "Church Organ"
-                  - `SonataAudio.Instrument` "Reed Organ"
-                  - `SonataAudio.Instrument` "Accordion"
-                  - `SonataAudio.Instrument` "Harmonica"
-                  - `SonataAudio.Instrument` "Tango Accordion"
-                  - `SonataAudio.Instrument` "Acoustic Guitar (nylon)"
-                  - `SonataAudio.Instrument` "Acoustic Guitar (steel)"
-                  - `SonataAudio.Instrument` "Electric Guitar (jazz)"
-                  - `SonataAudio.Instrument` "Electric Guitar (clean)"
-                  - `SonataAudio.Instrument` "Electric Guitar (muted)"
-                  - `SonataAudio.Instrument` "Overdriven Guitar"
-                  - `SonataAudio.Instrument` "Distortion Guitar"
-                  - `SonataAudio.Instrument` "Guitar Harmonics"
-                  - `SonataAudio.Instrument` "Acoustic Bass"
-                  - `SonataAudio.Instrument` "Electric Bass (finger)"
-                  - `SonataAudio.Instrument` "Electric Bass (pick)"
-                  - `SonataAudio.Instrument` "Fretless Bass"
-                  - `SonataAudio.Instrument` "Slap Bass 1"
-                  - `SonataAudio.Instrument` "Slap Bass 2"
-                  - `SonataAudio.Instrument` "Synth Bass 1"
-                  - `SonataAudio.Instrument` "Synth Bass 2"
-                  - `SonataAudio.Instrument` "Violin"
-                  - `SonataAudio.Instrument` "Viola"
-                  - `SonataAudio.Instrument` "Cello"
-                  - `SonataAudio.Instrument` "Contrabass"
-                  - `SonataAudio.Instrument` "Tremolo Strings"
-                  - `SonataAudio.Instrument` "Pizzicato Strings"
-                  - `SonataAudio.Instrument` "Orchestral Harp"
-                  - `SonataAudio.Instrument` "Timpani"
-                  - `SonataAudio.Instrument` "String Ensemble 1"
-                  - `SonataAudio.Instrument` "String Ensemble 2"
-                  - `SonataAudio.Instrument` "Synth Strings 1"
-                  - `SonataAudio.Instrument` "Synth Strings 2"
-                  - `SonataAudio.Instrument` "Choir Aahs"
-                  - `SonataAudio.Instrument` "Voice Oohs"
-                  - `SonataAudio.Instrument` "Synth Choir"
-                  - `SonataAudio.Instrument` "Orchestra Hit"
-                  - `SonataAudio.Instrument` "Trumpet"
-                  - `SonataAudio.Instrument` "Trombone"
-                  - `SonataAudio.Instrument` "Tuba"
-                  - `SonataAudio.Instrument` "Muted Trumpet"
-                  - `SonataAudio.Instrument` "French Horn"
-                  - `SonataAudio.Instrument` "Brass Section"
-                  - `SonataAudio.Instrument` "Synth Brass 1"
-                  - `SonataAudio.Instrument` "Synth Brass 2"
-                  - `SonataAudio.Instrument` "Soprano Sax"
-                  - `SonataAudio.Instrument` "Alto Sax"
-                  - `SonataAudio.Instrument` "Tenor Sax"
-                  - `SonataAudio.Instrument` "Baritone Sax"
-                  - `SonataAudio.Instrument` "Oboe"
-                  - `SonataAudio.Instrument` "English Horn"
-                  - `SonataAudio.Instrument` "Bassoon"
-                  - `SonataAudio.Instrument` "Clarinet"
-                  - `SonataAudio.Instrument` "Piccolo"
-                  - `SonataAudio.Instrument` "Flute"
-                  - `SonataAudio.Instrument` "Recorder"
-                  - `SonataAudio.Instrument` "Pan Flute"
-                  - `SonataAudio.Instrument` "Blown Bottle"
-                  - `SonataAudio.Instrument` "Shakuhachi"
-                  - `SonataAudio.Instrument` "Whistle"
-                  - `SonataAudio.Instrument` "Ocarina"
-                  - `SonataAudio.Instrument` "Lead 1 (square)"
-                  - `SonataAudio.Instrument` "Lead 2 (sawtooth)"
-                  - `SonataAudio.Instrument` "Lead 3 (calliope)"
-                  - `SonataAudio.Instrument` "Lead 4 (chiff)"
-                  - `SonataAudio.Instrument` "Lead 5 (charang)"
-                  - `SonataAudio.Instrument` "Lead 6 (voice)"
-                  - `SonataAudio.Instrument` "Lead 7 (fifths)"
-                  - `SonataAudio.Instrument` "Lead 8 (bass + lead)"
-                  - `SonataAudio.Instrument` "Pad 1 (new age)"
-                  - `SonataAudio.Instrument` "Pad 2 (warm)"
-                  - `SonataAudio.Instrument` "Pad 3 (polysynth)"
-                  - `SonataAudio.Instrument` "Pad 4 (choir)"
-                  - `SonataAudio.Instrument` "Pad 5 (bowed)"
-                  - `SonataAudio.Instrument` "Pad 6 (metallic)"
-                  - `SonataAudio.Instrument` "Pad 7 (halo)"
-                  - `SonataAudio.Instrument` "Pad 8 (sweep)"
-                  - `SonataAudio.Instrument` "FX 1 (rain)"
-                  - `SonataAudio.Instrument` "FX 2 (soundtrack)"
-                  - `SonataAudio.Instrument` "FX 3 (crystal)"
-                  - `SonataAudio.Instrument` "FX 4 (atmosphere)"
-                  - `SonataAudio.Instrument` "FX 5 (brightness)"
-                  - `SonataAudio.Instrument` "FX 6 (goblins)"
-                  - `SonataAudio.Instrument` "FX 7 (echoes)"
-                  - `SonataAudio.Instrument` "FX 8 (sci-fi)"
-                  - `SonataAudio.Instrument` "Sitar"
-                  - `SonataAudio.Instrument` "Banjo"
-                  - `SonataAudio.Instrument` "Shamisen"
-                  - `SonataAudio.Instrument` "Koto"
-                  - `SonataAudio.Instrument` "Kalimba"
-                  - `SonataAudio.Instrument` "Bagpipe"
-                  - `SonataAudio.Instrument` "Fiddle"
-                  - `SonataAudio.Instrument` "Shanai"
-                  - `SonataAudio.Instrument` "Tinkle Bell"
-                  - `SonataAudio.Instrument` "Agogo"
-                  - `SonataAudio.Instrument` "Steel Drums"
-                  - `SonataAudio.Instrument` "Woodblock"
-                  - `SonataAudio.Instrument` "Taiko Drum"
-                  - `SonataAudio.Instrument` "Melodic Tom"
-                  - `SonataAudio.Instrument` "Synth Drum"
-                  - `SonataAudio.Instrument` "Reverse Cymbal"
-                  - `SonataAudio.Instrument` "Guitar Fret Noise"
-                  - `SonataAudio.Instrument` "Breath Noise"
-                  - `SonataAudio.Instrument` "Seashore"
-                  - `SonataAudio.Instrument` "Bird Tweet"
-                  - `SonataAudio.Instrument` "Telephone Ring"
-                  - `SonataAudio.Instrument` "Helicopter"
-                  - `SonataAudio.Instrument` "Applause"
-                  - `SonataAudio.Instrument` "Gunshot"
+                - Contributes: `SonataAudio.Instrument` ×127: "Accordion", "Acoustic Bass", "Acoustic Guitar (nylon)", "Acoustic Guitar (steel)", "Agogo", "Alto Sax", "Applause", "Bagpipe", "Banjo", "Baritone Sax", "Bassoon", "Bird Tweet", "Blown Bottle", "Brass Section", "Breath Noise", "Bright Acoustic Piano", "Celesta", "Cello", "Choir Aahs", "Church Organ", "Clarinet", "Clavinet", "Contrabass", "Distortion Guitar", "Drawbar Organ", "Dulcimer", "Electric Bass (finger)", "Electric Bass (pick)", "Electric Grand Piano", "Electric Guitar (clean)", "Electric Guitar (jazz)", "Electric Guitar (muted)", "Electric Piano 1", "Electric Piano 2", "English Horn", "FX 1 (rain)", "FX 2 (soundtrack)", "FX 3 (crystal)", "FX 4 (atmosphere)", "FX 5 (brightness)", "FX 6 (goblins)", "FX 7 (echoes)", "FX 8 (sci-fi)", "Fiddle", "Flute", "French Horn", "Fretless Bass", "Glockenspiel", "Guitar Fret Noise", "Guitar Harmonics", "Gunshot", "Harmonica", "Harpsichord", "Helicopter", "Honky-tonk Piano", "Kalimba", "Koto", "Lead 1 (square)", "Lead 2 (sawtooth)", "Lead 3 (calliope)", "Lead 4 (chiff)", "Lead 5 (charang)", "Lead 6 (voice)", "Lead 7 (fifths)", "Lead 8 (bass + lead)", "Marimba", "Melodic Tom", "Music Box", "Muted Trumpet", "Oboe", "Ocarina", "Orchestra Hit", "Orchestral Harp", "Overdriven Guitar", "Pad 1 (new age)", "Pad 2 (warm)", "Pad 3 (polysynth)", "Pad 4 (choir)", "Pad 5 (bowed)", "Pad 6 (metallic)", "Pad 7 (halo)", "Pad 8 (sweep)", "Pan Flute", "Percussive Organ", "Piccolo", "Pizzicato Strings", "Recorder", "Reed Organ", "Reverse Cymbal", "Rock Organ", "Seashore", "Shakuhachi", "Shamisen", "Shanai", "Sitar", "Slap Bass 1", "Slap Bass 2", "Soprano Sax", "Steel Drums", "String Ensemble 1", "String Ensemble 2", "Synth Bass 1", "Synth Bass 2", "Synth Brass 1", "Synth Brass 2", "Synth Choir", "Synth Drum", "Synth Strings 1", "Synth Strings 2", "Taiko Drum", "Tango Accordion", "Telephone Ring", "Tenor Sax", "Timpani", "Tinkle Bell", "Tremolo Strings", "Trombone", "Trumpet", "Tuba", "Tubular Bells", "Vibraphone", "Viola", "Violin", "Voice Oohs", "Whistle", "Woodblock", "Xylophone"
                 - Uses: `apps/sonata/audio/instruments.SonataAudio`
               - Server:
                 - Uses: `infra/asset-mirror.defineAssetMirror`
@@ -3159,7 +3032,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - **`look`** — Web registration of the Sonata look config (digital / sketch) plus its View-popover switch. The palette itself is plain data in core/. Server registration of the Sonata look config (digital / sketch).
           - Web:
             - Contributes:
-              - `ConfigV2.WebRegister`
+              - `ConfigV2.WebRegister` "config"
               - `Sonata.ViewOption` "look"
             - Uses:
               - `apps/sonata/shell.Sonata`
@@ -3183,7 +3056,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Web:
             - Contributes:
               - `Sonata.Display` "Notation" → `LazyBoundary`
-              - `ConfigV2.WebRegister`
+              - `ConfigV2.WebRegister` "config"
               - `Sonata.ViewOption` "notation"
             - Uses:
               - `apps/sonata/shell.Sonata`
@@ -3226,7 +3099,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Web:
             - Contributes:
               - `Sonata.PitchAxis` "piano-keyboard" → `PianoKeyboard`
-              - `ConfigV2.WebRegister`
+              - `ConfigV2.WebRegister` "config"
               - `Sonata.ViewOption` "key-labels"
               - `Sonata.ViewOption` "key-style"
             - Uses:
@@ -3251,7 +3124,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Contributes:
               - `Sonata.Display` "Piano Roll" → `LazyBoundary`
               - `SonataToolbar.End` "spread" → `SpreadWheel`
-              - `ConfigV2.WebRegister`
+              - `ConfigV2.WebRegister` "config"
               - `Sonata.ViewOption` "piano-roll"
             - Uses:
               - `apps/sonata/primitives/inertial-drag.useInertialDrag`
@@ -3310,7 +3183,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - Web:
                 - Contributes:
                   - `PianoRollFx` "Pitch comets" → `LazyBoundary`
-                  - `ConfigV2.WebRegister`
+                  - `ConfigV2.WebRegister` "config"
                 - Uses:
                   - `apps/sonata/piano-roll.PianoRollFx`
                   - `config_v2.ConfigV2`
@@ -3322,7 +3195,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - Web:
                 - Contributes:
                   - `PianoRollFx` "Note glow & sparks" → `LazyBoundary`
-                  - `ConfigV2.WebRegister`
+                  - `ConfigV2.WebRegister` "config"
                 - Uses:
                   - `apps/sonata/piano-roll.easeOutCubic`
                   - `apps/sonata/piano-roll.FxContext`
@@ -3337,7 +3210,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - Web:
                 - Contributes:
                   - `PianoRollFx` "Sound-wave ripples" → `LazyBoundary`
-                  - `ConfigV2.WebRegister`
+                  - `ConfigV2.WebRegister` "config"
                 - Uses:
                   - `apps/sonata/piano-roll.easeOutCubic`
                   - `apps/sonata/piano-roll.FxContext`
@@ -3351,7 +3224,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - Web:
                 - Contributes:
                   - `PianoRollFx` "Note shatter" → `LazyBoundary`
-                  - `ConfigV2.WebRegister`
+                  - `ConfigV2.WebRegister` "config"
                 - Uses:
                   - `apps/sonata/piano-roll.PianoRollFx`
                   - `config_v2.ConfigV2`
@@ -3424,7 +3297,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `apps/sonata/transport-bar`
             - **`keyboard`** — Stateless piano keyboard: the single source of truth for laying out and drawing piano keys across a MIDI range, lighting given pitches (accent or per-key color) with optional per-key content. Composed by the full PianoKeyboard and the chord readout. Server registration of the keyboard style config (flat / realistic key rendering).
               - Web:
-                - Contributes: `ConfigV2.WebRegister`
+                - Contributes: `ConfigV2.WebRegister` "config"
                 - Uses:
                   - `config_v2.ConfigV2`
                   - `config_v2.useConfig`
@@ -3578,7 +3451,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - **`chord-label`** — Sonata chord-label preference: the single shared symbol/numeral/both display mode that drives the piano-roll overlay and the progression strip in lockstep, surfaced in the View popover. Server registration of the Sonata chord-label config (the shared symbol/numeral/both display mode).
               - Web:
                 - Contributes:
-                  - `ConfigV2.WebRegister`
+                  - `ConfigV2.WebRegister` "config"
                   - `Sonata.ViewOption` "chord-label"
                 - Uses:
                   - `apps/sonata/shell.Sonata`
@@ -4014,7 +3887,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                 - **`folders`** — Watched-folder UI for the MIDI source: registers the midi-folders config (settings pane renders it for free) and contributes the Source field (Library.Fields) that flags — and lets you filter for — folder-imported songs whose file has been deleted from disk. Watches configured folders for .mid/.midi files and mirrors them into the Sonata library: auto-imports on create/edit (via a per-file job), badges 'source deleted' on removal, and reconciles drift on boot and config change. The watched-folder list is a config_v2 listField rendered for free in the settings pane.
                   - Web:
                     - Contributes:
-                      - `ConfigV2.WebRegister`
+                      - `ConfigV2.WebRegister` "midi-folders"
                       - `Library.Fields` "source-missing" → `SourceMissingField`
                     - Uses:
                       - `apps/sonata/library.Library`
@@ -4281,7 +4154,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/popover.InlinePopover`
         - **`voicing`** — Web registration of the Sonata voicing config (realistic voice-leading, strategy, octave). Server registration of the Sonata voicing config (realistic voice-leading, strategy, octave).
           - Web:
-            - Contributes: `ConfigV2.WebRegister`
+            - Contributes: `ConfigV2.WebRegister` "config"
             - Uses: `config_v2.ConfigV2`
           - Server:
             - Contributes: `ConfigV2.Register` "config"
@@ -5927,7 +5800,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Web:
         - Slots: `AppRailFraming.Variant` ← `apps-core.app-rail-framing.hidden`, `apps-core.app-rail-framing.rail`
         - Contributes:
-          - `ConfigV2.WebRegister`
+          - `ConfigV2.WebRegister` "app-rail-framing"
           - `DynamicEnum.Options` "App rail variant"
           - `ThemeEngine.VariantGroup` "App rail" → `Picker`
           - `Apps.RailFraming` "Rail framing" → `Region`
@@ -6027,22 +5900,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Web:
             - Contributes:
               - `Surface.Placement`
-              - `ConfigV2.WebRegister`
+              - `ConfigV2.WebRegister` "floating-chrome"
               - `ThemeEngine.VariantGroup` "Window titlebar" → `TitlebarStylePicker`
-              - `Shortcuts.Shortcut` "floating.snap-left (ctrl+alt+arrowleft)"
-              - `Shortcuts.Shortcut` "floating.snap-right (ctrl+alt+arrowright)"
-              - `Shortcuts.Shortcut` "floating.snap-up (ctrl+alt+arrowup)"
-              - `Shortcuts.Shortcut` "floating.snap-down (ctrl+alt+arrowdown)"
-              - `Shortcuts.Shortcut` "floating.minimize (mod+m)"
-              - `Shortcuts.Shortcut` "floating.toggle-pin (ctrl+alt+p)"
-              - `Shortcuts.Shortcut` "floating.close (mod+w)"
-              - `Shortcuts.Shortcut` "floating.cycle-next (mod+`)"
-              - `Shortcuts.Shortcut` "floating.cycle-prev (mod+shift+~)"
-              - `Shortcuts.Shortcut` "floating.cycle-prev-backquote (mod+shift+`)"
-              - `Shortcuts.Shortcut` "floating.desktop-next (ctrl+alt+pagedown)"
-              - `Shortcuts.Shortcut` "floating.desktop-prev (ctrl+alt+pageup)"
-              - `Shortcuts.Shortcut` "floating.window-to-next-desktop (ctrl+alt+shift+pagedown)"
-              - `Shortcuts.Shortcut` "floating.window-to-prev-desktop (ctrl+alt+shift+pageup)"
+              - `Shortcuts.Shortcut` ×14: "floating.close (mod+w)", "floating.cycle-next (mod+`)", "floating.cycle-prev (mod+shift+~)", "floating.cycle-prev-backquote (mod+shift+`)", "floating.desktop-next (ctrl+alt+pagedown)", "floating.desktop-prev (ctrl+alt+pageup)", "floating.minimize (mod+m)", "floating.snap-down (ctrl+alt+arrowdown)", "floating.snap-left (ctrl+alt+arrowleft)", "floating.snap-right (ctrl+alt+arrowright)", "floating.snap-up (ctrl+alt+arrowup)", "floating.toggle-pin (ctrl+alt+p)", "floating.window-to-next-desktop (ctrl+alt+shift+pagedown)", "floating.window-to-prev-desktop (ctrl+alt+shift+pageup)"
             - Uses:
               - `apps-core.Apps`
               - `apps-core/app-icon.appIconComponent`
@@ -6109,7 +5969,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - **`wallpaper`** — Floating desktop wallpaper: the Wallpaper.Provider source registry, the picker dialog + shared search panel, the desktop right-click context menu, the corner attribution credit, and the global wallpaper config web registration. Floating desktop wallpaper: provider registry, search/import/upload endpoints, the machine-global wallpaper store, and the global wallpaper config registration.
               - Web:
                 - Slots: `Wallpaper.Provider` ← `apps-core.surface.floating.wallpaper.from-url`, `apps-core.surface.floating.wallpaper.openverse`, `apps-core.surface.floating.wallpaper.upload`
-                - Contributes: `ConfigV2.WebRegister`
+                - Contributes: `ConfigV2.WebRegister` "wallpaper"
                 - Uses:
                   - `config_v2.ConfigV2`
                   - `config_v2.useConfig`
@@ -6543,7 +6403,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
   - Plugins:
     - **`apple-signing`** — Apple code-signing config registration (web). The Accounts provider row + setup wizard UI live in the setup-wizard sub-plugin. Apple code-signing credentials: config fields + certificate upload + Tauri release env provider.
       - Web:
-        - Contributes: `ConfigV2.WebRegister`
+        - Contributes: `ConfigV2.WebRegister` "apple-signing"
         - Uses: `config_v2.ConfigV2`
       - Server:
         - Contributes:
@@ -6596,7 +6456,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Web:
         - Contributes:
           - `Auth.Provider` "Google"
-          - `ConfigV2.WebRegister`
+          - `ConfigV2.WebRegister` "auth-google"
         - Uses:
           - `auth.Auth`
           - `auth/google/setup-wizard.googleSetupPane`
@@ -6677,7 +6537,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Web:
         - Contributes:
           - `Auth.Provider` "Notion"
-          - `ConfigV2.WebRegister`
+          - `ConfigV2.WebRegister` "auth-notion"
         - Uses:
           - `auth.Auth`
           - `config_v2.ConfigV2`
@@ -6695,7 +6555,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
   - Web:
     - Slots: `backupPane.Actions`
     - Contributes:
-      - `ConfigV2.WebRegister`
+      - `ConfigV2.WebRegister` "config"
       - `Pane.Register` "backup"
       - `DebugApp.Sidebar` "Backup" → `component`
     - Uses:
@@ -6769,7 +6629,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Plugins:
         - **`attachments`** — Config UI for the attachments backup source. Backs up file attachments into the backup archive.
           - Web:
-            - Contributes: `ConfigV2.WebRegister`
+            - Contributes: `ConfigV2.WebRegister` "config"
             - Uses: `config_v2.ConfigV2`
           - Server:
             - Contributes:
@@ -6781,7 +6641,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `config_v2.getConfig`
         - **`claude-settings`** — Config UI for the Claude settings backup source. Backs up Claude CLI settings and history into the backup archive.
           - Web:
-            - Contributes: `ConfigV2.WebRegister`
+            - Contributes: `ConfigV2.WebRegister` "config"
             - Uses: `config_v2.ConfigV2`
           - Server:
             - Contributes:
@@ -6794,7 +6654,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `infra/paths.CLAUDE_DIR`
         - **`config`** — Config UI for the config backup source. Backs up Singularity config files into the backup archive.
           - Web:
-            - Contributes: `ConfigV2.WebRegister`
+            - Contributes: `ConfigV2.WebRegister` "config"
             - Uses: `config_v2.ConfigV2`
           - Server:
             - Contributes:
@@ -6806,7 +6666,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `config_v2.getConfig`
         - **`cost-history`** — Config UI for the cost-history backup source. Backs up the permanent cost-history archive (year-sharded session records and the merged price table) into the backup archive.
           - Web:
-            - Contributes: `ConfigV2.WebRegister`
+            - Contributes: `ConfigV2.WebRegister` "config"
             - Uses: `config_v2.ConfigV2`
           - Server:
             - Contributes:
@@ -6818,7 +6678,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `config_v2.getConfig`
         - **`databases`** — Config UI for the databases backup source. Backs up worktree databases into the backup archive.
           - Web:
-            - Contributes: `ConfigV2.WebRegister`
+            - Contributes: `ConfigV2.WebRegister` "config"
             - Uses: `config_v2.ConfigV2`
           - Server:
             - Contributes:
@@ -6833,7 +6693,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `database/admin.listDatabases`
         - **`project-memory`** — Config UI for the project memory backup source. Backs up Claude Code project memory files into the backup archive.
           - Web:
-            - Contributes: `ConfigV2.WebRegister`
+            - Contributes: `ConfigV2.WebRegister` "config"
             - Uses: `config_v2.ConfigV2`
           - Server:
             - Contributes:
@@ -6846,7 +6706,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `infra/paths.CLAUDE_PROJECTS_DIR`
         - **`prototypes`** — Config UI for the prototypes backup source. Backs up the throwaway UI prototypes into the backup archive — they live outside git on purpose, so this is what makes them recoverable.
           - Web:
-            - Contributes: `ConfigV2.WebRegister`
+            - Contributes: `ConfigV2.WebRegister` "config"
             - Uses: `config_v2.ConfigV2`
           - Server:
             - Contributes:
@@ -6858,7 +6718,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `config_v2.getConfig`
         - **`secrets`** — Config UI for the secrets backup source. Backs up encrypted secrets into the backup archive.
           - Web:
-            - Contributes: `ConfigV2.WebRegister`
+            - Contributes: `ConfigV2.WebRegister` "config"
             - Uses: `config_v2.ConfigV2`
           - Server:
             - Contributes:
@@ -6870,7 +6730,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `config_v2.getConfig`
         - **`singularity-platform`** — Config UI for the Singularity platform backup source. Backs up Singularity platform files (auth, database config) into the backup archive.
           - Web:
-            - Contributes: `ConfigV2.WebRegister`
+            - Contributes: `ConfigV2.WebRegister` "config"
             - Uses: `config_v2.ConfigV2`
           - Server:
             - Contributes:
@@ -6882,7 +6742,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `config_v2.getConfig`
         - **`transcripts`** — Config UI for the transcripts backup source. Backs up retained-conversation transcripts (active, plus every conversation of a held task) into the backup archive.
           - Web:
-            - Contributes: `ConfigV2.WebRegister`
+            - Contributes: `ConfigV2.WebRegister` "config"
             - Uses: `config_v2.ConfigV2`
           - Server:
             - Contributes:
@@ -6899,7 +6759,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - **`google-drive`** — Config UI for Google Drive backup target. Uploads backup archives to Google Drive.
           - Web:
             - Contributes:
-              - `ConfigV2.WebRegister`
+              - `ConfigV2.WebRegister` "config"
               - `Auth.ScopeRequirement` "Back up to Google Drive"
             - Uses:
               - `auth.Auth`
@@ -6916,7 +6776,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `config_v2.getConfig`
         - **`local`** — Config UI for local backup target. Stores backup archives on the local filesystem.
           - Web:
-            - Contributes: `ConfigV2.WebRegister`
+            - Contributes: `ConfigV2.WebRegister` "config"
             - Uses: `config_v2.ConfigV2`
           - Server:
             - Contributes:
@@ -6939,7 +6799,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `Pane.Register` "build"
       - `Pane.Register` "build-detail"
       - `DebugApp.Sidebar` "Builds" → `component`
-      - `ConfigV2.WebRegister`
+      - `ConfigV2.WebRegister` "config"
     - Uses:
       - `apps-core/tabs.navigate`
       - `apps/debug/shell.DebugApp`
@@ -7894,7 +7754,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
 
 - **`conversations`** — Conversation domain: shared hooks and client-side API. Conversation domain: shared server code and types; view plugins live under `plugins/`.
   - Web:
-    - Contributes: `ConfigV2.WebRegister`
+    - Contributes: `ConfigV2.WebRegister` "auto-answer"
     - Uses:
       - `config_v2.ConfigV2`
       - `infra/endpoints.EndpointError`
@@ -8378,7 +8238,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Web:
         - Contributes:
           - `Conversation.Header` → `CategoryChipToolbar`
-          - `ConfigV2.WebRegister`
+          - `ConfigV2.WebRegister` "config"
           - `DynamicEnum.Options` "Avatar category"
           - `Item.Avatar` → `CategoryAvatarRow`
         - Uses:
@@ -10027,7 +9887,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Web:
             - Contributes:
               - `Conversation.PromptBar` "Launch" → `LaunchPromptsButton`
-              - `ConfigV2.WebRegister`
+              - `ConfigV2.WebRegister` "config"
             - Uses:
               - `config_v2.ConfigV2`
               - `config_v2.useConfig`
@@ -10052,9 +9912,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Web:
             - Contributes:
               - `MarkdownEnhancerSlot`
+              - `MarkdownEnhancerSlot`
+              - `MarkdownEnhancerSlot`
               - `InlineTextWalkerSlot`
-              - `MarkdownEnhancerSlot`
-              - `MarkdownEnhancerSlot`
             - Uses:
               - `conversations.useConversationById`
               - `conversations/conversation-view.conversationPane`
@@ -10220,7 +10080,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Web:
             - Contributes:
               - `PromptEditorSlots.FloatingAction` → `FloatingTemplateChips`
-              - `ConfigV2.WebRegister`
+              - `ConfigV2.WebRegister` "config"
             - Uses:
               - `config_v2.ConfigV2`
               - `config_v2.useConfig`
@@ -10251,7 +10111,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Web:
             - Contributes:
               - `PromptEditorSlots.FloatingAction` → `PushAndExitButton`
-              - `ConfigV2.WebRegister`
+              - `ConfigV2.WebRegister` "config"
             - Uses:
               - `config_v2.ConfigV2`
               - `config_v2.useConfig`
@@ -10380,7 +10240,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Web:
             - Contributes:
               - `Conversation.AbovePromptInput` → `TurnSummaryCard`
-              - `ConfigV2.WebRegister`
+              - `ConfigV2.WebRegister` "config"
             - Uses:
               - `config_v2.ConfigV2`
               - `conversations/conversation-view.Conversation`
@@ -10641,7 +10501,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `tasks/task-effort`
     - **`hibernation`** — Records conversation selection so idle hibernation can reset the idle timer and transparently resume. Idle-conversation hibernation policy: a scheduled idle-kill job, the viewed/resume endpoint, and the global hibernation config.
       - Web:
-        - Contributes: `ConfigV2.WebRegister`
+        - Contributes: `ConfigV2.WebRegister` "conversation-hibernation"
         - Uses:
           - `config_v2.ConfigV2`
           - `infra/endpoints.fetchEndpoint`
@@ -10666,7 +10526,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`model-provider`** — Registry mapping logical ConversationModel IDs to pinned Claude CLI flags and display metadata. Registry mapping logical ConversationModel IDs to pinned Claude CLI flags and display metadata.
       - Web:
         - Contributes:
-          - `ConfigV2.WebRegister`
+          - `ConfigV2.WebRegister` "config"
           - `Core.Root` → `ModelCorruptionReporter`
         - Uses:
           - `config_v2.ConfigV2`
@@ -10741,7 +10601,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Imported by: `conversations/conversations-view`
     - **`preprompts`** — Settings library of system-prompt snippets and a reusable picker for selecting a task's preprompt. Library of named instruction snippets prepended to a task's agent first user turn as a <special_instructions> block.
       - Web:
-        - Contributes: `ConfigV2.WebRegister`
+        - Contributes: `ConfigV2.WebRegister` "config"
         - Uses:
           - `config_v2.ConfigV2`
           - `config_v2.useConfig`
@@ -11377,7 +11237,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`boot-budget`** — Boot-budget report renderer: a one-line Debug → Reports summary for the boot-budget kind, plus the per-phase budget config registration. Boot-budget monitor: a cheap per-worktree scheduled job that reads the post-boot profile once and files a deduped boot-budget report per server boot hook (onReadyBlocking / onReady / onAllReady) or warmup span whose wall-time exceeds its per-phase budget, so a heavy boot hook is loud immediately instead of invisible-until-threshold.
       - Web:
         - Contributes:
-          - `ConfigV2.WebRegister`
+          - `ConfigV2.WebRegister` "boot-budget"
           - `Reports.KindView` → `BootBudgetSummary`
         - Uses:
           - `config_v2.ConfigV2`
@@ -11423,7 +11283,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `debug/timeline`
     - **`boot-monitor`** — Boot-monitor web presence: registers the whole-boot budget config (enabled, totalBootBudgetMs) for Settings → Config. The minted signals flow through the existing slow-op report kind and the boot trace lane — no new renderer. Whole-boot monitor: a cheap per-worktree scheduled job that, once the boot profile is complete (drainWarmups present), mints ONE 'boot' slow-op row + coherent trace per over-budget server boot — evidence-first, deduped per boot epoch — folding in the gateway-observed readiness wait when the gateway POSTed /api/boot/gateway-report.
       - Web:
-        - Contributes: `ConfigV2.WebRegister`
+        - Contributes: `ConfigV2.WebRegister` "boot-monitor"
         - Uses: `config_v2.ConfigV2`
       - Server:
         - Contributes: `ConfigV2.Register` "boot-monitor"
@@ -11531,7 +11391,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`boot-watchdog`** — Boot-wedge report renderer: a one-line Debug → Reports summary for the boot-wedge kind, plus the boot-watchdog budget/lookback config registration. Boot-watchdog monitor: a main-only per-minute scheduled job that sweeps every worktree's boot channel off the shared filesystem and files a deduped boot-wedge report for any backend that never reached its `ready` line within the boot budget — superseded (post-hoc, once) or open (gateway-confirmed wedged-now, re-filed each tick). Structurally main-only: a perWorktree job cannot observe its own wedged boot.
       - Web:
         - Contributes:
-          - `ConfigV2.WebRegister`
+          - `ConfigV2.WebRegister` "boot-watchdog"
           - `Reports.KindView` → `BootWedgeSummary`
         - Uses:
           - `config_v2.ConfigV2`
@@ -11834,7 +11694,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - **`monitor`** — Live-state churn report renderer: a one-line Debug → Reports summary for the live-state-noop kind, plus the threshold config registration. Live-state churn monitor: an in-process accumulator fed by every keyed live-state push, plus a per-worktree scheduled job that files deduped reports for resources sustaining a high rate of no-op (empty-diff) pushes, through the existing reports engine.
           - Web:
             - Contributes:
-              - `ConfigV2.WebRegister`
+              - `ConfigV2.WebRegister` "live-state-churn"
               - `Reports.KindView` → `NoopSummary`
             - Uses:
               - `config_v2.ConfigV2`
@@ -11964,7 +11824,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`op-rate`** — Op-rate + op-time report renderers: one-line Debug → Reports summaries for the op-rate (call-count) and op-time (aggregate-time, with View-trace chip) kinds, plus the per-kind threshold/budget config registration. Profiler-diff monitor: a cheap per-worktree scheduled job that diffs the runtime profiler's per-op call counts (op-rate) AND cumulative wall-clock time (op-time count×cost) each tick, files deduped reports per hot/over-budget op plus a per-kind aggregate-time rollup, and captures a coherent-instant trace on each op-time per-op trip — all through the existing reports engine.
       - Web:
         - Contributes:
-          - `ConfigV2.WebRegister`
+          - `ConfigV2.WebRegister` "op-rate"
           - `Reports.KindView` → `OpRateSummary`
           - `Reports.KindView` → `OpTimeSummary`
         - Uses:
@@ -12002,7 +11862,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `OpTimePayloadSchema`
     - **`paging-probe`** — Paging-probe web presence: registers the twin-probe config (enable, fat heap size, touch slice, GC cadence, QoS boost) for Settings -> Config. Twin-probe paging-victim discriminator: three main-only child processes with controlled heap shapes (lean / fat-idle / fat-touch) measure event-loop lag under host memory pressure, so divergence between them separates scheduling from cold-page-fault mechanisms. Config-gated, OFF by default; writes paging-probe-<variant>.jsonl.
       - Web:
-        - Contributes: `ConfigV2.WebRegister`
+        - Contributes: `ConfigV2.WebRegister` "paging-probe"
         - Uses: `config_v2.ConfigV2`
       - Server:
         - Contributes: `ConfigV2.Register` "paging-probe"
@@ -12354,7 +12214,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`queue-health`** — Queue-health report renderers: one-line Debug → Reports summaries for the queue-wedged, queue-dead-job, queue-backlog, and queue-slot-hog kinds, plus the threshold config registration. Queue-health watchdog: a 30s interval on the backend's own event loop — deliberately NOT a scheduled job, which would queue behind the wedge it exists to detect — that samples the graphile queue and files deduped reports for a wedged queue (every slot held by the same live jobs while ready work starves), backlog/stall, slot-hogging jobs, and terminally-dead jobs, through the existing reports engine. All four kinds are duressExempt. Also exposes a queue-health summary endpoint + the get_queue_health MCP tool.
       - Web:
         - Contributes:
-          - `ConfigV2.WebRegister`
+          - `ConfigV2.WebRegister` "queue-health"
           - `Reports.KindView` → `DeadJobSummary`
           - `Reports.KindView` → `BacklogSummary`
           - `Reports.KindView` → `SlotHogSummary`
@@ -12435,7 +12295,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`read-set-shrink`** — Read-set shrink report renderer: a one-line Debug → Reports summary for the read-set-shrink kind, plus the enabled config registration. Read-set shrink monitor: a per-backend accumulator fed (via the live-state-snapshot seam) by every persist that sheds a table from a boot-critical resource's durable read-set, plus a per-worktree scheduled job that files one deduped read-set-shrink report per shedding resource so a human can confirm it is a legitimate code-change shed rather than a conditional query that didn't fire.
       - Web:
         - Contributes:
-          - `ConfigV2.WebRegister`
+          - `ConfigV2.WebRegister` "read-set-shrink"
           - `Reports.KindView` → `ShrinkSummary`
         - Uses:
           - `config_v2.ConfigV2`
@@ -12544,7 +12404,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`sentinel`** — Sentinel web presence: registers the sentinel config (sampler cadence + onset thresholds) for Settings → Config, plus the one-line duress-episode report summary for Debug → Reports. Cluster congestion sentinel: a main-only always-on sampler + onset detector + duress-latch lifecycle on a dedicated worker thread (host load, Postgres-side wait/lock/IO pressure, fleet state, per-backend health rollup, compressor pressure), feeding the 'cluster' trace ring so every trace gains a cluster-vitals lane, congestion onset is observable, and the latch lease survives a wedged main loop. Persists duress episodes as trip/clear lines on the duress-episodes channel (readDuressEpisodes).
       - Web:
         - Contributes:
-          - `ConfigV2.WebRegister`
+          - `ConfigV2.WebRegister` "sentinel"
           - `Reports.KindView` → `DuressEpisodeSummary`
         - Uses:
           - `config_v2.ConfigV2`
@@ -12608,7 +12468,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`session-divergence`** — Session-divergence report renderer: a one-line Debug → Reports summary for the conversation-session-divergence kind, plus the enabled/grace config registration. Session-divergence monitor: a per-worktree scheduled job that takes one process-table snapshot (sharing runtime-tmux's own captureProcessTree), reads every Claude session id reachable from each live conversation pane — its process subtree plus the parked-background-job pointers out of it — and files one deduped conversation-session-divergence report per conversation whose live session is absent from the recorded session chain while its transcript leads the chain tail's by more than the grace window — i.e. the agent is talking where the UI cannot see.
       - Web:
         - Contributes:
-          - `ConfigV2.WebRegister`
+          - `ConfigV2.WebRegister` "session-divergence"
           - `Reports.KindView` → `SessionDivergenceSummary`
         - Uses:
           - `config_v2.ConfigV2`
@@ -12650,7 +12510,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`slow-ops`** — Records slow client operations (page load, element appearance) into the durable slow-op store via the slow-ops client endpoint. Durable slow-op store: deduped per-operation aggregates with caller attribution, plus the slow-op report kind. Subscribes to runtime-profiler slow spans and client signals; files one deduped report per distinct slow operation (investigation task filed on demand).
       - Web:
         - Contributes:
-          - `ConfigV2.WebRegister`
+          - `ConfigV2.WebRegister` "slow-op"
           - `Core.Root` → `SlowOpCollector`
           - `Reports.KindView` → `SlowOpKindView`
         - Uses:
@@ -12787,7 +12647,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`stall-monitor`** — Event-loop stall report renderer: a one-line Debug → Reports summary for the event-loop-stall kind (hot frame + View-trace chip), plus the enabled config registration. Files a report when the health-monitor sampler detects a main-thread event-loop stall: captures the coherent-instant stall trace and files a deduped event-loop-stall report (fingerprinted on the dominant caller stack) so a frozen backend reaches the bell + Debug → Reports, linked to its trace.
       - Web:
         - Contributes:
-          - `ConfigV2.WebRegister`
+          - `ConfigV2.WebRegister` "stall-monitor"
           - `Reports.KindView` → `StallSummary`
         - Uses:
           - `apps-core/tabs.navigate`
@@ -12954,7 +12814,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Slots:
               - `Trace.Lane` ← `debug.trace.boot`, `debug.trace.client-boot`, `debug.trace.contention`, `debug.trace.gates`, `debug.trace.spans`, `debug.trace.stall`
               - `Trace.TriggerSummary`
-            - Contributes: `ConfigV2.WebRegister`
+            - Contributes: `ConfigV2.WebRegister` "trace"
             - Uses:
               - `config_v2.ConfigV2`
               - `primitives/css/spacing.Stack`
@@ -15756,7 +15616,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `stats/cost`
     - **`duress`** — Duress web presence: registers the shed-engine config (enabled, persist-first-N, buffer caps, flush delay) for Settings → Config. Host-global duress latch (a mtime-leased latch file the cluster sentinel sets while the box is in trouble; backends gate observability writes on the cheap synchronous isUnderDuress()) plus the shed engine: createShedBuffer routes durable observability writes through per-episode first-N persistence, a bounded in-memory buffer, and a flush-on-clear replay.
       - Web:
-        - Contributes: `ConfigV2.WebRegister`
+        - Contributes: `ConfigV2.WebRegister` "duress"
         - Uses: `config_v2.ConfigV2`
       - Server:
         - Contributes: `ConfigV2.Register` "duress"
@@ -17363,7 +17223,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`gmail`** — Gmail access toggle, Google scope requirement, and the shared 'fix my Gmail connection' affordance consumers render in place of routing the user to Settings. Surfaces the Gmail access toggle in Settings.
       - Web:
         - Contributes:
-          - `ConfigV2.WebRegister`
+          - `ConfigV2.WebRegister` "config"
           - `Auth.ScopeRequirement` "Read, send, and manage Gmail messages"
         - Uses:
           - `auth.Auth`
@@ -19445,7 +19305,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Imported by: `framework/tooling/codegen`
     - **`composition`** — Web hooks + active-composition store for the Studio closure visualization: fetches and deserializes the edge graph once, holds the working draft, and derives membership / inclusion / impact client-side. Owns the manifest read/write API over the compositions config_v2 config. Serves the classified edge graph for the Studio closure visualization; registers the runtime-editable compositions config.
       - Web:
-        - Contributes: `ConfigV2.WebRegister`
+        - Contributes: `ConfigV2.WebRegister` "compositions"
         - Uses:
           - `config_v2.ConfigV2`
           - `config_v2.useConfig`
@@ -23704,46 +23564,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `DataViewSlots.ValueCodec` ← `fields.bool.data-view-codec`, `fields.date.data-view-codec`, `fields.number.data-view-codec`
           - `DataViewSlots.ColumnConfig` ← `fields.enum.column-config`
         - Contributes:
-          - `ConfigV2.WebRegister`
-          - `ConfigV2.WebRegister`
-          - `ConfigV2.WebRegister`
-          - `ConfigV2.WebRegister`
-          - `ConfigV2.WebRegister`
-          - `ConfigV2.WebRegister`
-          - `ConfigV2.WebRegister`
-          - `ConfigV2.WebRegister`
-          - `ConfigV2.WebRegister`
-          - `ConfigV2.WebRegister`
-          - `ConfigV2.WebRegister`
-          - `ConfigV2.WebRegister`
-          - `ConfigV2.WebRegister`
-          - `ConfigV2.WebRegister`
-          - `ConfigV2.WebRegister`
-          - `ConfigV2.WebRegister`
-          - `ConfigV2.WebRegister`
-          - `ConfigV2.WebRegister`
-          - `ConfigV2.WebRegister`
-          - `ConfigV2.WebRegister`
-          - `ConfigV2.WebRegister`
-          - `ConfigV2.WebRegister`
-          - `ConfigV2.WebRegister`
-          - `ConfigV2.WebRegister`
-          - `ConfigV2.WebRegister`
-          - `ConfigV2.WebRegister`
-          - `ConfigV2.WebRegister`
-          - `ConfigV2.WebRegister`
-          - `ConfigV2.WebRegister`
-          - `ConfigV2.WebRegister`
-          - `ConfigV2.WebRegister`
-          - `ConfigV2.WebRegister`
-          - `ConfigV2.WebRegister`
-          - `ConfigV2.WebRegister`
-          - `ConfigV2.WebRegister`
-          - `ConfigV2.WebRegister`
-          - `ConfigV2.WebRegister`
-          - `ConfigV2.WebRegister`
-          - `ConfigV2.WebRegister`
-          - `ConfigV2.WebRegister`
+          - `ConfigV2.WebRegister` ×40: "agent-launches", "agents-list", "all-conversations", "build.history", "code-explorer.file-tree", "config_v2.settings.nav", "conversations-sidebar", "debug.boot-profiles", "debug.config-orphans", "debug.profiling.runtime", "debug.reports", "debug.slow-ops.cluster-aggregate", "debug.slow-ops.cluster-timeline", "debug.slow-ops.local", "debug.trace.events", "deploy.deployment.history", "deploy.deployments", "deploy.servers", "events.list", "events.run-events", "events.source-runs", "events.sources", "home.apps", "mail-threads", "page.links.backlinks", "pages-sidebar", "plugin-view.file-tree", "prototypes.gallery", "sonata.library", "story.gallery", "studio.compositions", "studio.compositions.closure-tree", "studio.explorer.tree", "studio.release.history", "task-deps-tree", "tasks-list", "tweakcn.community-browser", "tweakcn.quick-theme", "workflows.definitions", "workflows.executions"
           - `DataViewSlots.Setting` "data-view.properties" → `PropertiesControl`
           - `DataViewSlots.Setting` "data-view.group-by" → `GroupByControl`
           - `DataViewSlots.Control` "Filter" → `FilterControlPanel`
@@ -23900,47 +23721,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `useServerDataSource`
           - `useSortController`
       - Server:
-        - Contributes:
-          - `ConfigV2.Register` "agent-launches"
-          - `ConfigV2.Register` "agents-list"
-          - `ConfigV2.Register` "all-conversations"
-          - `ConfigV2.Register` "build.history"
-          - `ConfigV2.Register` "code-explorer.file-tree"
-          - `ConfigV2.Register` "config_v2.settings.nav"
-          - `ConfigV2.Register` "conversations-sidebar"
-          - `ConfigV2.Register` "debug.boot-profiles"
-          - `ConfigV2.Register` "debug.config-orphans"
-          - `ConfigV2.Register` "debug.profiling.runtime"
-          - `ConfigV2.Register` "debug.reports"
-          - `ConfigV2.Register` "debug.slow-ops.cluster-aggregate"
-          - `ConfigV2.Register` "debug.slow-ops.cluster-timeline"
-          - `ConfigV2.Register` "debug.slow-ops.local"
-          - `ConfigV2.Register` "debug.trace.events"
-          - `ConfigV2.Register` "deploy.deployment.history"
-          - `ConfigV2.Register` "deploy.deployments"
-          - `ConfigV2.Register` "deploy.servers"
-          - `ConfigV2.Register` "events.list"
-          - `ConfigV2.Register` "events.run-events"
-          - `ConfigV2.Register` "events.source-runs"
-          - `ConfigV2.Register` "events.sources"
-          - `ConfigV2.Register` "home.apps"
-          - `ConfigV2.Register` "mail-threads"
-          - `ConfigV2.Register` "page.links.backlinks"
-          - `ConfigV2.Register` "pages-sidebar"
-          - `ConfigV2.Register` "plugin-view.file-tree"
-          - `ConfigV2.Register` "prototypes.gallery"
-          - `ConfigV2.Register` "sonata.library"
-          - `ConfigV2.Register` "story.gallery"
-          - `ConfigV2.Register` "studio.compositions"
-          - `ConfigV2.Register` "studio.compositions.closure-tree"
-          - `ConfigV2.Register` "studio.explorer.tree"
-          - `ConfigV2.Register` "studio.release.history"
-          - `ConfigV2.Register` "task-deps-tree"
-          - `ConfigV2.Register` "tasks-list"
-          - `ConfigV2.Register` "tweakcn.community-browser"
-          - `ConfigV2.Register` "tweakcn.quick-theme"
-          - `ConfigV2.Register` "workflows.definitions"
-          - `ConfigV2.Register` "workflows.executions"
+        - Contributes: `ConfigV2.Register` ×40: "agent-launches", "agents-list", "all-conversations", "build.history", "code-explorer.file-tree", "config_v2.settings.nav", "conversations-sidebar", "debug.boot-profiles", "debug.config-orphans", "debug.profiling.runtime", "debug.reports", "debug.slow-ops.cluster-aggregate", "debug.slow-ops.cluster-timeline", "debug.slow-ops.local", "debug.trace.events", "deploy.deployment.history", "deploy.deployments", "deploy.servers", "events.list", "events.run-events", "events.source-runs", "events.sources", "home.apps", "mail-threads", "page.links.backlinks", "pages-sidebar", "plugin-view.file-tree", "prototypes.gallery", "sonata.library", "story.gallery", "studio.compositions", "studio.compositions.closure-tree", "studio.explorer.tree", "studio.release.history", "task-deps-tree", "tasks-list", "tweakcn.community-browser", "tweakcn.quick-theme", "workflows.definitions", "workflows.executions"
         - Uses:
           - `config_v2.getConfig`
           - `primitives/data-view/view-core.buildViewConfigRegistrations`
@@ -27431,220 +27212,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
 
 - **`reorder`** — Generic reorder primitive: every defineRenderSlot is unconditionally reorderable; use defineMountSlot for headless slots. DnD is automatic via middleware. Generic reorder primitive: per-slot config_v2 directives for contribution order/visibility.
   - Web:
-    - Contributes:
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
-      - `ConfigV2.WebRegister`
+    - Contributes: `ConfigV2.WebRegister` ×213: "action-bar.item", "agents.agent-actions", "agents.list", "agents.list-actions", "agents.system-agent", "agents.view", "apps.app", "apps.tab-bar-actions", "browser.actions", "browser.nav-controls", "browser.omnibox", "browser.start-page", "browser.sub-bar", "browser.tab-strip", "browser.viewport", "build-detail.section", "composition-detail.section", "conversation-item.chips", "conversation.above-prompt-input", "conversation.action-bar", "conversation.exit-menu.item", "conversation.header", "conversation.jsonl-viewer.overlay", "conversation.jsonl-viewer.pending-prompt-action", "conversation.jsonl-viewer.row-action", "conversation.jsonl-viewer.transcript-stat", "conversation.prompt-bar", "conversation.prompt-input", "conversations-sidebar-history-actions", "conversations-sidebar-queue-actions", "conversations-sidebar-sources", "debug-app.sidebar", "debug-app.toolbar", "deploy.deployments.fields", "deploy.deployments.item-actions", "deploy.server-detail.section", "deploy.servers.fields", "deploy.servers.item-actions", "deployment-detail.section", "event-source-detail.section", "event-source-run-detail.section", "events.list.fields", "events.sidebar", "events.source-runs.item-actions", "events.sources.item-actions", "file-explorer.sidebar", "file-explorer.toolbar", "home.section", "mail.banner", "mail.rail-badge", "mail.sidebar", "page.editor.block", "page.editor.format-action", "page.editor.turn-into", "pages.detail.header-actions", "pages.detail.overlay", "pages.detail.section", "pages.sidebar", "pages.tree.fields", "pages.tree.row-actions", "pages.welcome.section", "pane.accounts.actions", "pane.agent-detail.actions", "pane.agent-report.actions", "pane.agent-side.actions", "pane.agent-system-detail.actions", "pane.agents-root.actions", "pane.all-conversations.actions", "pane.apple-setup.actions", "pane.attempt.actions", "pane.backup.actions", "pane.build-detail.actions", "pane.build.actions", "pane.claude-cli-calls.actions", "pane.commit-detail.actions", "pane.composition-compare.actions", "pane.composition-detail.actions", "pane.compositions.actions", "pane.config-orphans.actions", "pane.config-v2-detail.actions", "pane.config-v2-nav.actions", "pane.contributions.actions", "pane.conv-commits-graph.actions", "pane.conv-docs.actions", "pane.conv-file-tree.actions", "pane.conv-push-profiling.actions", "pane.conv-review.actions", "pane.conv-summary.actions", "pane.conv-terminal.actions", "pane.conversation.actions", "pane.conversations-recover.actions", "pane.debug-boot-profile-detail.actions", "pane.debug-boot-profile.actions", "pane.debug-boot-profiles-list.actions", "pane.debug-broadcasts.actions", "pane.debug-health-monitor.actions", "pane.debug-heap-snapshot.actions", "pane.debug-live-state-emit.actions", "pane.debug-memory.actions", "pane.debug-profiling-build-detail.actions", "pane.debug-profiling-op-detail.actions", "pane.debug-profiling.actions", "pane.debug-read-set.actions", "pane.deploy-deployment-detail.actions", "pane.deploy-server-detail.actions", "pane.deploy-servers.actions", "pane.event-list.actions", "pane.event-source-detail.actions", "pane.event-source-run.actions", "pane.event-sources.actions", "pane.events-root.actions", "pane.events-test.actions", "pane.explorer.actions", "pane.file-peek.actions", "pane.global-file-tree.actions", "pane.google-maps-setup.actions", "pane.google-setup.actions", "pane.graph.actions", "pane.layout-lab.actions", "pane.live-state-health.actions", "pane.logs-channel.actions", "pane.logs.actions", "pane.mail-message.actions", "pane.mail-root.actions", "pane.mail-search.actions", "pane.mail-thread.actions", "pane.mail-threads.actions", "pane.page-detail.actions", "pane.pages-root.actions", "pane.pages-tree.actions", "pane.plugin-conv-side.actions", "pane.plugin-view.actions", "pane.prototypes-detail.actions", "pane.prototypes-gallery.actions", "pane.queue.actions", "pane.release-detail.actions", "pane.render-profiler.actions", "pane.report-detail.actions", "pane.reports.actions", "pane.screenshot.actions", "pane.settings-config-index.actions", "pane.sonata-library.actions", "pane.sonata-player.actions", "pane.stats.actions", "pane.story-detail.actions", "pane.story-gallery.actions", "pane.table-detail.actions", "pane.task-detail.actions", "pane.tasks-root.actions", "pane.theme-customizer.actions", "pane.trace-detail.actions", "pane.traces.actions", "pane.website-agents.actions", "pane.website-apps.actions", "pane.website-downloads.actions", "pane.website-landing.actions", "pane.website-platform.actions", "pane.welcome.actions", "pane.workflow-node.actions", "pane.workflows-definition-detail.actions", "pane.workflows-definitions.actions", "pane.workflows-execution-detail.actions", "pane.worktree-cleanup.actions", "pane.zero-test.actions", "plugin-view.section", "primitives.data-view.field-extension", "primitives.data-view.row-order", "profiling.section", "prompt-editor.floating-action", "release-detail.section", "review.section", "settings.rail-badge", "settings.sidebar", "shell.sidebar", "shell.toolbar", "sonata.home", "sonata.hud", "sonata.library.fields", "sonata.library.song-actions", "sonata.section", "sonata.toolbar.end", "sonata.toolbar.start", "sonata.transport", "stats.chart", "story.toolbar.end", "story.toolbar.start", "studio.compositions.item-actions", "studio.explorer.tree-row-accent", "studio.explorer.tree-row-badge", "studio.sidebar", "studio.toolbar", "table-detail.section", "task-deps-tree-sources", "task-deps-tree.actions", "task-detail.section", "task-draft-form.action", "tasks.fields", "tasks.launch-option", "tasks.list-actions", "tasks.task-actions", "text-editor.plugin", "theme-customizer.section", "ui.theme-engine.quick-theme.section", "ui.theme-engine.variant-group", "website.agents.section", "website.apps.section", "website.platform.section", "website.section", "website.toolbar.end", "website.toolbar.start", "workflows-app.sidebar", "workflows-app.toolbar", "workflows.detail.section"
     - Uses:
       - `config_v2.ConfigV2`
       - `config_v2.useConfig`
@@ -27673,220 +27241,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `ReorderLayoutContext`
       - `useReorderedEntries`
   - Server:
-    - Contributes:
-      - `ConfigV2.Register` "action-bar.item"
-      - `ConfigV2.Register` "agents.agent-actions"
-      - `ConfigV2.Register` "agents.list"
-      - `ConfigV2.Register` "agents.list-actions"
-      - `ConfigV2.Register` "agents.system-agent"
-      - `ConfigV2.Register` "agents.view"
-      - `ConfigV2.Register` "apps.app"
-      - `ConfigV2.Register` "apps.tab-bar-actions"
-      - `ConfigV2.Register` "browser.actions"
-      - `ConfigV2.Register` "browser.nav-controls"
-      - `ConfigV2.Register` "browser.omnibox"
-      - `ConfigV2.Register` "browser.start-page"
-      - `ConfigV2.Register` "browser.sub-bar"
-      - `ConfigV2.Register` "browser.tab-strip"
-      - `ConfigV2.Register` "browser.viewport"
-      - `ConfigV2.Register` "build-detail.section"
-      - `ConfigV2.Register` "composition-detail.section"
-      - `ConfigV2.Register` "conversation-item.chips"
-      - `ConfigV2.Register` "conversation.above-prompt-input"
-      - `ConfigV2.Register` "conversation.action-bar"
-      - `ConfigV2.Register` "conversation.exit-menu.item"
-      - `ConfigV2.Register` "conversation.header"
-      - `ConfigV2.Register` "conversation.jsonl-viewer.overlay"
-      - `ConfigV2.Register` "conversation.jsonl-viewer.pending-prompt-action"
-      - `ConfigV2.Register` "conversation.jsonl-viewer.row-action"
-      - `ConfigV2.Register` "conversation.jsonl-viewer.transcript-stat"
-      - `ConfigV2.Register` "conversation.prompt-bar"
-      - `ConfigV2.Register` "conversation.prompt-input"
-      - `ConfigV2.Register` "conversations-sidebar-history-actions"
-      - `ConfigV2.Register` "conversations-sidebar-queue-actions"
-      - `ConfigV2.Register` "conversations-sidebar-sources"
-      - `ConfigV2.Register` "debug-app.sidebar"
-      - `ConfigV2.Register` "debug-app.toolbar"
-      - `ConfigV2.Register` "deploy.deployments.fields"
-      - `ConfigV2.Register` "deploy.deployments.item-actions"
-      - `ConfigV2.Register` "deploy.server-detail.section"
-      - `ConfigV2.Register` "deploy.servers.fields"
-      - `ConfigV2.Register` "deploy.servers.item-actions"
-      - `ConfigV2.Register` "deployment-detail.section"
-      - `ConfigV2.Register` "event-source-detail.section"
-      - `ConfigV2.Register` "event-source-run-detail.section"
-      - `ConfigV2.Register` "events.list.fields"
-      - `ConfigV2.Register` "events.sidebar"
-      - `ConfigV2.Register` "events.source-runs.item-actions"
-      - `ConfigV2.Register` "events.sources.item-actions"
-      - `ConfigV2.Register` "file-explorer.sidebar"
-      - `ConfigV2.Register` "file-explorer.toolbar"
-      - `ConfigV2.Register` "home.section"
-      - `ConfigV2.Register` "mail.banner"
-      - `ConfigV2.Register` "mail.rail-badge"
-      - `ConfigV2.Register` "mail.sidebar"
-      - `ConfigV2.Register` "page.editor.block"
-      - `ConfigV2.Register` "page.editor.format-action"
-      - `ConfigV2.Register` "page.editor.turn-into"
-      - `ConfigV2.Register` "pages.detail.header-actions"
-      - `ConfigV2.Register` "pages.detail.overlay"
-      - `ConfigV2.Register` "pages.detail.section"
-      - `ConfigV2.Register` "pages.sidebar"
-      - `ConfigV2.Register` "pages.tree.fields"
-      - `ConfigV2.Register` "pages.tree.row-actions"
-      - `ConfigV2.Register` "pages.welcome.section"
-      - `ConfigV2.Register` "pane.accounts.actions"
-      - `ConfigV2.Register` "pane.agent-detail.actions"
-      - `ConfigV2.Register` "pane.agent-report.actions"
-      - `ConfigV2.Register` "pane.agent-side.actions"
-      - `ConfigV2.Register` "pane.agent-system-detail.actions"
-      - `ConfigV2.Register` "pane.agents-root.actions"
-      - `ConfigV2.Register` "pane.all-conversations.actions"
-      - `ConfigV2.Register` "pane.apple-setup.actions"
-      - `ConfigV2.Register` "pane.attempt.actions"
-      - `ConfigV2.Register` "pane.backup.actions"
-      - `ConfigV2.Register` "pane.build-detail.actions"
-      - `ConfigV2.Register` "pane.build.actions"
-      - `ConfigV2.Register` "pane.claude-cli-calls.actions"
-      - `ConfigV2.Register` "pane.commit-detail.actions"
-      - `ConfigV2.Register` "pane.composition-compare.actions"
-      - `ConfigV2.Register` "pane.composition-detail.actions"
-      - `ConfigV2.Register` "pane.compositions.actions"
-      - `ConfigV2.Register` "pane.config-orphans.actions"
-      - `ConfigV2.Register` "pane.config-v2-detail.actions"
-      - `ConfigV2.Register` "pane.config-v2-nav.actions"
-      - `ConfigV2.Register` "pane.contributions.actions"
-      - `ConfigV2.Register` "pane.conv-commits-graph.actions"
-      - `ConfigV2.Register` "pane.conv-docs.actions"
-      - `ConfigV2.Register` "pane.conv-file-tree.actions"
-      - `ConfigV2.Register` "pane.conv-push-profiling.actions"
-      - `ConfigV2.Register` "pane.conv-review.actions"
-      - `ConfigV2.Register` "pane.conv-summary.actions"
-      - `ConfigV2.Register` "pane.conv-terminal.actions"
-      - `ConfigV2.Register` "pane.conversation.actions"
-      - `ConfigV2.Register` "pane.conversations-recover.actions"
-      - `ConfigV2.Register` "pane.debug-boot-profile-detail.actions"
-      - `ConfigV2.Register` "pane.debug-boot-profile.actions"
-      - `ConfigV2.Register` "pane.debug-boot-profiles-list.actions"
-      - `ConfigV2.Register` "pane.debug-broadcasts.actions"
-      - `ConfigV2.Register` "pane.debug-health-monitor.actions"
-      - `ConfigV2.Register` "pane.debug-heap-snapshot.actions"
-      - `ConfigV2.Register` "pane.debug-live-state-emit.actions"
-      - `ConfigV2.Register` "pane.debug-memory.actions"
-      - `ConfigV2.Register` "pane.debug-profiling-build-detail.actions"
-      - `ConfigV2.Register` "pane.debug-profiling-op-detail.actions"
-      - `ConfigV2.Register` "pane.debug-profiling.actions"
-      - `ConfigV2.Register` "pane.debug-read-set.actions"
-      - `ConfigV2.Register` "pane.deploy-deployment-detail.actions"
-      - `ConfigV2.Register` "pane.deploy-server-detail.actions"
-      - `ConfigV2.Register` "pane.deploy-servers.actions"
-      - `ConfigV2.Register` "pane.event-list.actions"
-      - `ConfigV2.Register` "pane.event-source-detail.actions"
-      - `ConfigV2.Register` "pane.event-source-run.actions"
-      - `ConfigV2.Register` "pane.event-sources.actions"
-      - `ConfigV2.Register` "pane.events-root.actions"
-      - `ConfigV2.Register` "pane.events-test.actions"
-      - `ConfigV2.Register` "pane.explorer.actions"
-      - `ConfigV2.Register` "pane.file-peek.actions"
-      - `ConfigV2.Register` "pane.global-file-tree.actions"
-      - `ConfigV2.Register` "pane.google-maps-setup.actions"
-      - `ConfigV2.Register` "pane.google-setup.actions"
-      - `ConfigV2.Register` "pane.graph.actions"
-      - `ConfigV2.Register` "pane.layout-lab.actions"
-      - `ConfigV2.Register` "pane.live-state-health.actions"
-      - `ConfigV2.Register` "pane.logs-channel.actions"
-      - `ConfigV2.Register` "pane.logs.actions"
-      - `ConfigV2.Register` "pane.mail-message.actions"
-      - `ConfigV2.Register` "pane.mail-root.actions"
-      - `ConfigV2.Register` "pane.mail-search.actions"
-      - `ConfigV2.Register` "pane.mail-thread.actions"
-      - `ConfigV2.Register` "pane.mail-threads.actions"
-      - `ConfigV2.Register` "pane.page-detail.actions"
-      - `ConfigV2.Register` "pane.pages-root.actions"
-      - `ConfigV2.Register` "pane.pages-tree.actions"
-      - `ConfigV2.Register` "pane.plugin-conv-side.actions"
-      - `ConfigV2.Register` "pane.plugin-view.actions"
-      - `ConfigV2.Register` "pane.prototypes-detail.actions"
-      - `ConfigV2.Register` "pane.prototypes-gallery.actions"
-      - `ConfigV2.Register` "pane.queue.actions"
-      - `ConfigV2.Register` "pane.release-detail.actions"
-      - `ConfigV2.Register` "pane.render-profiler.actions"
-      - `ConfigV2.Register` "pane.report-detail.actions"
-      - `ConfigV2.Register` "pane.reports.actions"
-      - `ConfigV2.Register` "pane.screenshot.actions"
-      - `ConfigV2.Register` "pane.settings-config-index.actions"
-      - `ConfigV2.Register` "pane.sonata-library.actions"
-      - `ConfigV2.Register` "pane.sonata-player.actions"
-      - `ConfigV2.Register` "pane.stats.actions"
-      - `ConfigV2.Register` "pane.story-detail.actions"
-      - `ConfigV2.Register` "pane.story-gallery.actions"
-      - `ConfigV2.Register` "pane.table-detail.actions"
-      - `ConfigV2.Register` "pane.task-detail.actions"
-      - `ConfigV2.Register` "pane.tasks-root.actions"
-      - `ConfigV2.Register` "pane.theme-customizer.actions"
-      - `ConfigV2.Register` "pane.trace-detail.actions"
-      - `ConfigV2.Register` "pane.traces.actions"
-      - `ConfigV2.Register` "pane.website-agents.actions"
-      - `ConfigV2.Register` "pane.website-apps.actions"
-      - `ConfigV2.Register` "pane.website-downloads.actions"
-      - `ConfigV2.Register` "pane.website-landing.actions"
-      - `ConfigV2.Register` "pane.website-platform.actions"
-      - `ConfigV2.Register` "pane.welcome.actions"
-      - `ConfigV2.Register` "pane.workflow-node.actions"
-      - `ConfigV2.Register` "pane.workflows-definition-detail.actions"
-      - `ConfigV2.Register` "pane.workflows-definitions.actions"
-      - `ConfigV2.Register` "pane.workflows-execution-detail.actions"
-      - `ConfigV2.Register` "pane.worktree-cleanup.actions"
-      - `ConfigV2.Register` "pane.zero-test.actions"
-      - `ConfigV2.Register` "plugin-view.section"
-      - `ConfigV2.Register` "primitives.data-view.field-extension"
-      - `ConfigV2.Register` "primitives.data-view.row-order"
-      - `ConfigV2.Register` "profiling.section"
-      - `ConfigV2.Register` "prompt-editor.floating-action"
-      - `ConfigV2.Register` "release-detail.section"
-      - `ConfigV2.Register` "review.section"
-      - `ConfigV2.Register` "settings.rail-badge"
-      - `ConfigV2.Register` "settings.sidebar"
-      - `ConfigV2.Register` "shell.sidebar"
-      - `ConfigV2.Register` "shell.toolbar"
-      - `ConfigV2.Register` "sonata.home"
-      - `ConfigV2.Register` "sonata.hud"
-      - `ConfigV2.Register` "sonata.library.fields"
-      - `ConfigV2.Register` "sonata.library.song-actions"
-      - `ConfigV2.Register` "sonata.section"
-      - `ConfigV2.Register` "sonata.toolbar.end"
-      - `ConfigV2.Register` "sonata.toolbar.start"
-      - `ConfigV2.Register` "sonata.transport"
-      - `ConfigV2.Register` "stats.chart"
-      - `ConfigV2.Register` "story.toolbar.end"
-      - `ConfigV2.Register` "story.toolbar.start"
-      - `ConfigV2.Register` "studio.compositions.item-actions"
-      - `ConfigV2.Register` "studio.explorer.tree-row-accent"
-      - `ConfigV2.Register` "studio.explorer.tree-row-badge"
-      - `ConfigV2.Register` "studio.sidebar"
-      - `ConfigV2.Register` "studio.toolbar"
-      - `ConfigV2.Register` "table-detail.section"
-      - `ConfigV2.Register` "task-deps-tree-sources"
-      - `ConfigV2.Register` "task-deps-tree.actions"
-      - `ConfigV2.Register` "task-detail.section"
-      - `ConfigV2.Register` "task-draft-form.action"
-      - `ConfigV2.Register` "tasks.fields"
-      - `ConfigV2.Register` "tasks.launch-option"
-      - `ConfigV2.Register` "tasks.list-actions"
-      - `ConfigV2.Register` "tasks.task-actions"
-      - `ConfigV2.Register` "text-editor.plugin"
-      - `ConfigV2.Register` "theme-customizer.section"
-      - `ConfigV2.Register` "ui.theme-engine.quick-theme.section"
-      - `ConfigV2.Register` "ui.theme-engine.variant-group"
-      - `ConfigV2.Register` "website.agents.section"
-      - `ConfigV2.Register` "website.apps.section"
-      - `ConfigV2.Register` "website.platform.section"
-      - `ConfigV2.Register` "website.section"
-      - `ConfigV2.Register` "website.toolbar.end"
-      - `ConfigV2.Register` "website.toolbar.start"
-      - `ConfigV2.Register` "workflows-app.sidebar"
-      - `ConfigV2.Register` "workflows-app.toolbar"
-      - `ConfigV2.Register` "workflows.detail.section"
+    - Contributes: `ConfigV2.Register` ×213: "action-bar.item", "agents.agent-actions", "agents.list", "agents.list-actions", "agents.system-agent", "agents.view", "apps.app", "apps.tab-bar-actions", "browser.actions", "browser.nav-controls", "browser.omnibox", "browser.start-page", "browser.sub-bar", "browser.tab-strip", "browser.viewport", "build-detail.section", "composition-detail.section", "conversation-item.chips", "conversation.above-prompt-input", "conversation.action-bar", "conversation.exit-menu.item", "conversation.header", "conversation.jsonl-viewer.overlay", "conversation.jsonl-viewer.pending-prompt-action", "conversation.jsonl-viewer.row-action", "conversation.jsonl-viewer.transcript-stat", "conversation.prompt-bar", "conversation.prompt-input", "conversations-sidebar-history-actions", "conversations-sidebar-queue-actions", "conversations-sidebar-sources", "debug-app.sidebar", "debug-app.toolbar", "deploy.deployments.fields", "deploy.deployments.item-actions", "deploy.server-detail.section", "deploy.servers.fields", "deploy.servers.item-actions", "deployment-detail.section", "event-source-detail.section", "event-source-run-detail.section", "events.list.fields", "events.sidebar", "events.source-runs.item-actions", "events.sources.item-actions", "file-explorer.sidebar", "file-explorer.toolbar", "home.section", "mail.banner", "mail.rail-badge", "mail.sidebar", "page.editor.block", "page.editor.format-action", "page.editor.turn-into", "pages.detail.header-actions", "pages.detail.overlay", "pages.detail.section", "pages.sidebar", "pages.tree.fields", "pages.tree.row-actions", "pages.welcome.section", "pane.accounts.actions", "pane.agent-detail.actions", "pane.agent-report.actions", "pane.agent-side.actions", "pane.agent-system-detail.actions", "pane.agents-root.actions", "pane.all-conversations.actions", "pane.apple-setup.actions", "pane.attempt.actions", "pane.backup.actions", "pane.build-detail.actions", "pane.build.actions", "pane.claude-cli-calls.actions", "pane.commit-detail.actions", "pane.composition-compare.actions", "pane.composition-detail.actions", "pane.compositions.actions", "pane.config-orphans.actions", "pane.config-v2-detail.actions", "pane.config-v2-nav.actions", "pane.contributions.actions", "pane.conv-commits-graph.actions", "pane.conv-docs.actions", "pane.conv-file-tree.actions", "pane.conv-push-profiling.actions", "pane.conv-review.actions", "pane.conv-summary.actions", "pane.conv-terminal.actions", "pane.conversation.actions", "pane.conversations-recover.actions", "pane.debug-boot-profile-detail.actions", "pane.debug-boot-profile.actions", "pane.debug-boot-profiles-list.actions", "pane.debug-broadcasts.actions", "pane.debug-health-monitor.actions", "pane.debug-heap-snapshot.actions", "pane.debug-live-state-emit.actions", "pane.debug-memory.actions", "pane.debug-profiling-build-detail.actions", "pane.debug-profiling-op-detail.actions", "pane.debug-profiling.actions", "pane.debug-read-set.actions", "pane.deploy-deployment-detail.actions", "pane.deploy-server-detail.actions", "pane.deploy-servers.actions", "pane.event-list.actions", "pane.event-source-detail.actions", "pane.event-source-run.actions", "pane.event-sources.actions", "pane.events-root.actions", "pane.events-test.actions", "pane.explorer.actions", "pane.file-peek.actions", "pane.global-file-tree.actions", "pane.google-maps-setup.actions", "pane.google-setup.actions", "pane.graph.actions", "pane.layout-lab.actions", "pane.live-state-health.actions", "pane.logs-channel.actions", "pane.logs.actions", "pane.mail-message.actions", "pane.mail-root.actions", "pane.mail-search.actions", "pane.mail-thread.actions", "pane.mail-threads.actions", "pane.page-detail.actions", "pane.pages-root.actions", "pane.pages-tree.actions", "pane.plugin-conv-side.actions", "pane.plugin-view.actions", "pane.prototypes-detail.actions", "pane.prototypes-gallery.actions", "pane.queue.actions", "pane.release-detail.actions", "pane.render-profiler.actions", "pane.report-detail.actions", "pane.reports.actions", "pane.screenshot.actions", "pane.settings-config-index.actions", "pane.sonata-library.actions", "pane.sonata-player.actions", "pane.stats.actions", "pane.story-detail.actions", "pane.story-gallery.actions", "pane.table-detail.actions", "pane.task-detail.actions", "pane.tasks-root.actions", "pane.theme-customizer.actions", "pane.trace-detail.actions", "pane.traces.actions", "pane.website-agents.actions", "pane.website-apps.actions", "pane.website-downloads.actions", "pane.website-landing.actions", "pane.website-platform.actions", "pane.welcome.actions", "pane.workflow-node.actions", "pane.workflows-definition-detail.actions", "pane.workflows-definitions.actions", "pane.workflows-execution-detail.actions", "pane.worktree-cleanup.actions", "pane.zero-test.actions", "plugin-view.section", "primitives.data-view.field-extension", "primitives.data-view.row-order", "profiling.section", "prompt-editor.floating-action", "release-detail.section", "review.section", "settings.rail-badge", "settings.sidebar", "shell.sidebar", "shell.toolbar", "sonata.home", "sonata.hud", "sonata.library.fields", "sonata.library.song-actions", "sonata.section", "sonata.toolbar.end", "sonata.toolbar.start", "sonata.transport", "stats.chart", "story.toolbar.end", "story.toolbar.start", "studio.compositions.item-actions", "studio.explorer.tree-row-accent", "studio.explorer.tree-row-badge", "studio.sidebar", "studio.toolbar", "table-detail.section", "task-deps-tree-sources", "task-deps-tree.actions", "task-detail.section", "task-draft-form.action", "tasks.fields", "tasks.launch-option", "tasks.list-actions", "tasks.task-actions", "text-editor.plugin", "theme-customizer.section", "ui.theme-engine.quick-theme.section", "ui.theme-engine.variant-group", "website.agents.section", "website.apps.section", "website.platform.section", "website.section", "website.toolbar.end", "website.toolbar.start", "workflows-app.sidebar", "workflows-app.toolbar", "workflows.detail.section"
     - Uses: `config_v2.ConfigV2`
     - Exports (values):
       - `reorderableSlots`
@@ -28340,7 +27695,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Web:
         - Contributes:
           - `ReviewSlots.Section` "Code Review" → `CodeReviewSection`
-          - `ConfigV2.WebRegister`
+          - `ConfigV2.WebRegister` "config"
         - Uses:
           - `config_v2.ConfigV2`
           - `config_v2.useConfig`
@@ -28652,7 +28007,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Contributes:
           - `Core.Root` → `FloatingActionBarHost`
           - `Apps.TabBarActions` "Tab bar actions" → `DockedActionBarHost`
-          - `ConfigV2.WebRegister`
+          - `ConfigV2.WebRegister` "config"
         - Uses:
           - `apps-core.Apps`
           - `apps-core/tabs.getSurfaceMode`
@@ -28840,7 +28195,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Contributes:
           - `Stats.Chart` "Commits" → `CommitsSection`
           - `Stats.Chart` "Lines changed" → `LinesChartsSection`
-          - `ConfigV2.WebRegister`
+          - `ConfigV2.WebRegister` "config"
         - Uses:
           - `config_v2.ConfigV2`
           - `config_v2.useConfig`
@@ -28905,7 +28260,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`cost`** — Token usage and dollar cost across Claude Code sessions, with per-conversation breakdown. Token usage and dollar cost across Claude Code sessions, priced from our own merge-only LiteLLM table and banked into a permanent year-sharded token archive so deleted transcripts stop rewriting the past.
       - Web:
         - Contributes:
-          - `ConfigV2.WebRegister`
+          - `ConfigV2.WebRegister` "config"
           - `Stats.Chart` "Cost & Tokens" → `CostSection`
           - `Stats.Chart` "Token mix per day" → `TokenMixChart`
           - `Stats.Chart` "Average cost per conversation" → `AvgCostPerConversationChart`
@@ -29579,7 +28934,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`task-draft-form`** — Reusable popover + chain form for drafting one or more tasks. Powers the Improve toolbar button and the conversation new-child-task button. Reusable popover + chain form for drafting one or more tasks. Powers the Improve toolbar button and the conversation new-child-task button.
       - Web:
         - Slots: `TaskDraftFormSlots.Action` ← `improve.element-picker`
-        - Contributes: `ConfigV2.WebRegister`
+        - Contributes: `ConfigV2.WebRegister` "config"
         - Uses:
           - `apps-core.useCurrentAppId`
           - `config_v2.ConfigV2`
@@ -30197,7 +29552,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Web:
         - Slots: `SegmentedProgressBarSlots.Variant` ← `ui.segmented-progress-bar.dots`, `ui.segmented-progress-bar.segmented`
         - Contributes:
-          - `ConfigV2.WebRegister`
+          - `ConfigV2.WebRegister` "config"
           - `DynamicEnum.Options` "Progress bar variant"
           - `ThemeEngine.VariantGroup` "Segmented Progress Bar" → `VariantPicker`
         - Uses:
@@ -30254,7 +29609,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Web:
         - Slots: `SidebarFraming.Variant` ← `ui.sidebar-framing.floating`, `ui.sidebar-framing.flush`, `ui.sidebar-framing.inset`
         - Contributes:
-          - `ConfigV2.WebRegister`
+          - `ConfigV2.WebRegister` "sidebar-framing"
           - `DynamicEnum.Options` "Sidebar framing variant"
           - `ThemeEngine.VariantGroup` "Sidebar framing" → `Picker`
           - `AppShell.Framing` "Framing" → `Region`
@@ -30308,7 +29663,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Web:
         - Slots: `TabBarSlots.Variant` ← `ui.tab-bar.chip`, `ui.tab-bar.connected`, `ui.tab-bar.underline`
         - Contributes:
-          - `ConfigV2.WebRegister`
+          - `ConfigV2.WebRegister` "config"
           - `DynamicEnum.Options` "Tab bar variant"
         - Uses:
           - `config_v2.ConfigV2`
@@ -30400,7 +29755,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Contributes:
           - `Core.Root` → `ThemeInjector`
           - `Core.Root` → `AppScopeThemes`
-          - `ConfigV2.WebRegister`
+          - `ConfigV2.WebRegister` "config"
           - `DynamicEnum.Options` "Theme"
         - Uses:
           - `apps-core.Apps`
@@ -30580,7 +29935,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Slots: `Categorical.Preset` ← `ui.tokens.categorical`
             - Contributes:
               - `Categorical.Preset` "Default"
-              - `ConfigV2.WebRegister`
+              - `ConfigV2.WebRegister` "config"
               - `DynamicEnum.Options` "Categorical preset"
               - `ThemeEngine.TokenGroup` "Categorical"
               - `ThemeEngine.VariantGroup` "Categorical" → `CategoricalPicker`
@@ -30615,7 +29970,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Slots: `Chart.Preset` ← `ui.tokens.chart`
             - Contributes:
               - `Chart.Preset` "Default"
-              - `ConfigV2.WebRegister`
+              - `ConfigV2.WebRegister` "config"
               - `DynamicEnum.Options` "Chart preset"
               - `ThemeEngine.TokenGroup` "Chart"
               - `ThemeEngine.VariantGroup` "Chart" → `ChartPicker`
@@ -30649,7 +30004,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Web:
             - Slots: `ColorAdjust.Preset` ← `ui.tokens.color-adjust`
             - Contributes:
-              - `ConfigV2.WebRegister`
+              - `ConfigV2.WebRegister` "config"
               - `DynamicEnum.Options` "Color adjust preset"
               - `ColorAdjust.Preset` "Default"
               - `ColorAdjust.Preset` "Grayscale"
@@ -30687,7 +30042,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Web:
             - Slots: `ColorPalette.Preset` ← `ui.tokens.color-palette`
             - Contributes:
-              - `ConfigV2.WebRegister`
+              - `ConfigV2.WebRegister` "config"
               - `DynamicEnum.Options` "Color Palette preset"
               - `ColorPalette.Preset` "Default"
               - `ColorPalette.Preset` "Ocean"
@@ -30731,7 +30086,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `Density.Preset` "Comfortable"
               - `Density.Preset` "Cozy"
               - `Density.Preset` "Compact"
-              - `ConfigV2.WebRegister`
+              - `ConfigV2.WebRegister` "config"
               - `DynamicEnum.Options` "Density preset"
               - `ThemeEngine.TokenGroup` "Density"
               - `ThemeEngine.VariantGroup` "Density" → `DensityPicker`
@@ -30766,7 +30121,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Slots: `FontFamily.Preset` ← `ui.tokens.font-family`
             - Contributes:
               - `FontFamily.Preset` "Default"
-              - `ConfigV2.WebRegister`
+              - `ConfigV2.WebRegister` "config"
               - `DynamicEnum.Options` "Font preset"
               - `ThemeEngine.TokenGroup` "Fonts"
               - `ThemeEngine.VariantGroup` "Fonts" → `FontFamilyPicker`
@@ -30812,7 +30167,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - **`rich-text-palette`** — Rich-text color palette token group: the closed --rt-color-<token> vars backing inline text color in the page block editor.
           - Web:
             - Contributes:
-              - `ConfigV2.WebRegister`
+              - `ConfigV2.WebRegister` "config"
               - `ThemeEngine.TokenGroup` "Rich-text palette"
             - Uses:
               - `config_v2.ConfigV2`
@@ -30834,7 +30189,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `Shadow.Preset` "Elevated"
               - `Shadow.Preset` "Heavy"
               - `DynamicEnum.Options` "Shadow preset"
-              - `ConfigV2.WebRegister`
+              - `ConfigV2.WebRegister` "config"
               - `ThemeEngine.TokenGroup` "Shadow"
               - `ThemeEngine.VariantGroup` "Shadow" → `ShadowPicker`
               - `ThemeCustomizer.Section` "Shadow" → `ShadowSection`
@@ -30883,7 +30238,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `Shape.Preset` "Sharp"
               - `Shape.Preset` "Rounded"
               - `Shape.Preset` "Pill"
-              - `ConfigV2.WebRegister`
+              - `ConfigV2.WebRegister` "config"
               - `DynamicEnum.Options` "Shape preset"
               - `ThemeEngine.TokenGroup` "Shape"
               - `ThemeEngine.VariantGroup` "Shape" → `ShapePicker`
@@ -30920,7 +30275,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Contributes:
               - `SidebarPalette.Preset` "Default"
               - `SidebarPalette.Preset` "Warm"
-              - `ConfigV2.WebRegister`
+              - `ConfigV2.WebRegister` "config"
               - `DynamicEnum.Options` "Sidebar Palette preset"
               - `ThemeEngine.TokenGroup` "Sidebar Palette"
               - `ThemeEngine.VariantGroup` "Sidebar Palette" → `SidebarPalettePicker`
@@ -30958,7 +30313,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Slots: `TypeScale.Preset` ← `ui.tokens.type-scale`
             - Contributes:
               - `TypeScale.Preset` "Default"
-              - `ConfigV2.WebRegister`
+              - `ConfigV2.WebRegister` "config"
               - `DynamicEnum.Options` "Type scale preset"
               - `ThemeEngine.TokenGroup` "Type Scale"
               - `ThemeEngine.VariantGroup` "Type Scale" → `TypeScalePicker`
@@ -30993,7 +30348,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Web:
         - Slots: `TreeDisclosure.Variant` ← `ui.tree-disclosure.column`, `ui.tree-disclosure.dimmed-leaf`, `ui.tree-disclosure.merged`
         - Contributes:
-          - `ConfigV2.WebRegister`
+          - `ConfigV2.WebRegister` "tree-disclosure"
           - `DynamicEnum.Options` "Tree disclosure variant"
           - `ThemeEngine.VariantGroup` "Tree disclosure" → `Picker`
           - `Tree.Disclosure` "Disclosure" → `Region`

@@ -415,8 +415,15 @@ export function registerPush(program: Command) {
               await installRebasedDeps(fromMainRoot);
               profiler.stepEnd("bun-install");
 
+              // Forced for the same reason as the worktree path's 3c below:
+              // this is a post-rebase repair whose result is what the checks
+              // read, so it must not be skippable by a marker that never
+              // arrived.
               profiler.stepStart("normalize");
-              await normalizeGeneratedArtifacts(fromMainRoot, { pushId });
+              await normalizeGeneratedArtifacts(fromMainRoot, {
+                pushId,
+                force: true,
+              });
               profiler.stepEnd("normalize");
 
               const ok = await runRebasedChecks(fromMainRoot, profiler);
@@ -533,9 +540,21 @@ export function registerPush(program: Command) {
             //     accepted the upstream side during the rebase; this step makes
             //     the final commit canonical. Aborts on hand-edited migrations
             //     or on real conflict markers in CLAUDE.md prose.
+            //
+            //     `force` — regenerate whether or not a merge marker reached
+            //     us. A missing marker is supposed to mean "the drivers never
+            //     fired", but it is equally what a marker written where nobody
+            //     reads it looks like, and the two cost wildly different
+            //     amounts to confuse: the commit that lands on main is checked
+            //     four lines below, and for a branch that edits a doc GENERATOR
+            //     the upstream side the drivers took is wrong for the sources
+            //     git just merged. Push already runs for minutes, so it buys
+            //     the certainty; the `post-rewrite` hook, which fires after
+            //     every rebase anyone does, stays marker-gated.
             profiler.stepStart("normalize");
             await normalizeGeneratedArtifacts(await getWorktreeRoot(), {
               pushId,
+              force: true,
             });
             profiler.stepEnd("normalize");
 

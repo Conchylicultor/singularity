@@ -61,6 +61,17 @@ regenerating everything and clearing the markers itself. `core/` holds the marke
 names + conflict scan so the `generated-artifacts-normalized` check reads the
 same facts.
 
+**Push's post-rebase call passes `force`, and skips the marker gate.** No marker
+is supposed to mean the drivers never fired, but it is equally what a marker
+delivered somewhere unread looks like — and for an ordinary branch the two are
+indistinguishable in effect (main's artifact already matches the merged sources),
+while for a branch that edits a GENERATOR the second one hands the checks a
+commit whose doc contradicts its own code
+([`research/2026-08-19-global-push-normalize-generated-doc-drift.md`](../../../../research/2026-08-19-global-push-normalize-generated-doc-drift.md)).
+The hook stays marker-gated: it fires after every rebase anyone does and has to
+stay cheap, whereas push is already minutes long and has to be right. Forced, the
+marker list also can't say which pipelines to run, so both do.
+
 **`data/meta/_journal.json` is derived but stays TRACKED, on purpose.** A merge
 driver only runs when a path is modified on both sides. Every other artifact
 under the `regen-migrations` patterns is named `<ts>_<sha8>__<slug>`, so two

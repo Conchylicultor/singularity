@@ -335,15 +335,15 @@ const slotKeyOf = (c: DocMetaContribution): string =>
  * folded line has room for exactly one field per member. A group carrying
  * details or component names would have to drop them to fold, and a doc line
  * that quietly loses the component name is worse than 200 repetitive ones. So
- * the fold is only ever taken where it is lossless: same ids, same order, one
- * line instead of N. Every id is listed in full, never truncated, so
+ * the fold is only ever taken where it is lossless: same ids, one line instead
+ * of N, listed in sorted order. Every id is listed in full, never truncated, so
  * `grep <config-id> docs/plugins-details.md` still finds it.
  */
 function renderValues(contributions: DocMetaContribution[]): string[] {
   // Group by slot key, keeping each group anchored at its FIRST member's
-  // position and members in their original relative order. Nothing is sorted:
-  // the regenerated doc's diff must reflect what the plugin actually declares,
-  // not a re-ordering the renderer invented.
+  // position and members in their original relative order: the per-line output
+  // must reflect what the plugin actually declares, not a re-ordering the
+  // renderer invented. (The folded line is the one exception — see below.)
   const groups = new Map<string, DocMetaContribution[]>();
   for (const c of contributions) {
     const key = slotKeyOf(c);
@@ -364,7 +364,21 @@ function renderValues(contributions: DocMetaContribution[]): string[] {
           !c.componentName,
       );
     if (foldable) {
-      const labels = group.map((c) => `"${c.doc.label}"`).join(", ");
+      // The folded line collapses N entries whose only distinguishing content
+      // is the label, so it denotes a SET — and a set has to be spelled in a
+      // canonical order. The array order it would otherwise inherit is a
+      // runtime DECLARATION order (reorder mints one config directive per
+      // reorderable slot from a `subscribeSlotsDeclared` callback, in whatever
+      // order barrels happened to be imported in that process), which is not
+      // stable across processes. Unsorted, the generated doc stops being a pure
+      // function of the checkout: `plugins-doc-in-sync` passes when run alone
+      // and FAILS inside a full check/build run, on bytes that record process
+      // history rather than any edit. `map` already yields a fresh array, so
+      // the sort never touches the grouped one the per-line path renders.
+      const labels = group
+        .map((c) => `"${c.doc.label}"`)
+        .sort()
+        .join(", ");
       values.push(`\`${key}\` ×${group.length}: ${labels}`);
     } else {
       // Includes every group of 1 — 1 <= FOLD_THRESHOLD — so an ordinary

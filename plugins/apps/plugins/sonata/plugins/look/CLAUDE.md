@@ -41,7 +41,7 @@ consumers narrow through `asSonataLook()` rather than casting.
 - Description: Web registration of the Sonata look config (digital / sketch) plus its View-popover switch. The palette itself is plain data in core/. Server registration of the Sonata look config (digital / sketch).
 - Web:
   - Contributes:
-    - `ConfigV2.WebRegister`
+    - `ConfigV2.WebRegister` "config"
     - `Sonata.ViewOption` "look"
   - Uses:
     - `apps/sonata/shell.Sonata`

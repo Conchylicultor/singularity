@@ -104,7 +104,7 @@ last desktop creates a new one; moving before the first clamps).
     - `Surface.Placement`
     - `ConfigV2.WebRegister` "floating-chrome"
     - `ThemeEngine.VariantGroup` "Window titlebar" → `TitlebarStylePicker`
-    - `Shortcuts.Shortcut` ×14: "floating.snap-left (ctrl+alt+arrowleft)", "floating.snap-right (ctrl+alt+arrowright)", "floating.snap-up (ctrl+alt+arrowup)", "floating.snap-down (ctrl+alt+arrowdown)", "floating.minimize (mod+m)", "floating.toggle-pin (ctrl+alt+p)", "floating.close (mod+w)", "floating.cycle-next (mod+`)", "floating.cycle-prev (mod+shift+~)", "floating.cycle-prev-backquote (mod+shift+`)", "floating.desktop-next (ctrl+alt+pagedown)", "floating.desktop-prev (ctrl+alt+pageup)", "floating.window-to-next-desktop (ctrl+alt+shift+pagedown)", "floating.window-to-prev-desktop (ctrl+alt+shift+pageup)"
+    - `Shortcuts.Shortcut` ×14: "floating.close (mod+w)", "floating.cycle-next (mod+`)", "floating.cycle-prev (mod+shift+~)", "floating.cycle-prev-backquote (mod+shift+`)", "floating.desktop-next (ctrl+alt+pagedown)", "floating.desktop-prev (ctrl+alt+pageup)", "floating.minimize (mod+m)", "floating.snap-down (ctrl+alt+arrowdown)", "floating.snap-left (ctrl+alt+arrowleft)", "floating.snap-right (ctrl+alt+arrowright)", "floating.snap-up (ctrl+alt+arrowup)", "floating.toggle-pin (ctrl+alt+p)", "floating.window-to-next-desktop (ctrl+alt+shift+pagedown)", "floating.window-to-prev-desktop (ctrl+alt+shift+pageup)"
   - Uses:
     - `apps-core.Apps`
     - `apps-core/app-icon.appIconComponent`

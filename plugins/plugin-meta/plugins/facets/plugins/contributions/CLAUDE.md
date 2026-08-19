@@ -22,9 +22,13 @@ into ONE slot, all of them label-only (a `doc.label`, no `doc.detail`, no
 `componentName`), folds onto a single `` `Slot` ×N: "label1", "label2", … `` —
 every label listed, never truncated, so each id stays greppable. The label-only
 gate is what keeps the fold lossless: the folded line holds one field per member,
-so a group carrying details or component names renders per-line instead. Groups
-keep their first member's position and original order; nothing is sorted, so the
-regenerated doc's diff stays honest.
+so a group carrying details or component names renders per-line instead. The
+folded line's ids are **sorted**, because that line denotes a set and the array
+order behind it is a runtime declaration order that varies between processes —
+left unsorted it would make the generated doc depend on process history rather
+than on the checkout, so `plugins-doc-in-sync` would pass alone and fail in a
+full run. Groups keep their first member's position, and the per-line path keeps
+its original order, so the regenerated doc's diff stays honest.
 
 Browser rendering lives in the `render-diff` / `render-detail` / `render-catalog`
 sub-plugins, each reading `node.facets["contributions"]` and contributing to an
