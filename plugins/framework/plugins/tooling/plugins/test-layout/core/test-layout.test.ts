@@ -7,7 +7,9 @@
 import { describe, expect, test } from "bun:test";
 import {
   BUN_TEST_IGNORE,
+  DOM_TEST_CLOCK_PIN,
   DOM_TEST_INCLUDE,
+  DOM_TEST_SETUP_FILE,
   isBunTestPath,
   isDomTestPath,
   isTestFilePath,
@@ -23,14 +25,28 @@ const PLUGINS = "plugins";
 
 describe("isDomTestPath", () => {
   test("co-located pure-logic tests are NOT dom tests", () => {
-    expect(isDomTestPath("plugins/page/plugins/editor/core/block-ops.test.ts")).toBe(false);
-    expect(isDomTestPath("plugins/primitives/plugins/pane/web/internal/route.test.ts")).toBe(false);
+    expect(
+      isDomTestPath("plugins/page/plugins/editor/core/block-ops.test.ts"),
+    ).toBe(false);
+    expect(
+      isDomTestPath(
+        "plugins/primitives/plugins/pane/web/internal/route.test.ts",
+      ),
+    ).toBe(false);
     expect(isDomTestPath("cli/commands/build.test.ts")).toBe(false);
   });
 
   test("web/__tests__ paths under plugins ARE dom tests", () => {
-    expect(isDomTestPath("plugins/primitives/plugins/pane/web/__tests__/pane.test.tsx")).toBe(true);
-    expect(isDomTestPath("plugins/primitives/plugins/pane/web/__tests__/deep/nested/x.test.ts")).toBe(true);
+    expect(
+      isDomTestPath(
+        "plugins/primitives/plugins/pane/web/__tests__/pane.test.tsx",
+      ),
+    ).toBe(true);
+    expect(
+      isDomTestPath(
+        "plugins/primitives/plugins/pane/web/__tests__/deep/nested/x.test.ts",
+      ),
+    ).toBe(true);
     // `plugins/**/web/…` — the `**` may match zero segments. Assembled rather
     // than written as one literal because no plugin lives at `plugins/web`, so
     // the shape is unrepresentable with a real plugin name and a bare literal
@@ -43,7 +59,9 @@ describe("isDomTestPath", () => {
     expect(isDomTestPath("plugins/page/web/__tests__/x.test.tsx")).toBe(true);
     expect(isDomTestPath("plugins/page/web/__tests__/x.test.ts")).toBe(true);
     expect(isDomTestPath("plugins/page/web/__tests__/helpers.ts")).toBe(false);
-    expect(isDomTestPath("plugins/page/web/__tests__/fixture.test.json")).toBe(false);
+    expect(isDomTestPath("plugins/page/web/__tests__/fixture.test.json")).toBe(
+      false,
+    );
     expect(isTestFilePath("plugins/page/core/x.test.tsx")).toBe(true);
     expect(isTestFilePath("plugins/page/core/x.ts")).toBe(false);
   });
@@ -56,8 +74,12 @@ describe("isDomTestPath", () => {
 
   test("a __tests__ dir that is not web/__tests__ is not a dom test", () => {
     // The stray-suite case: ignored by neither scope's intent, caught by the check.
-    expect(isDomTestPath("plugins/page/core/__tests__/foo.test.ts")).toBe(false);
-    expect(isDomTestPath("plugins/page/server/__tests__/foo.test.ts")).toBe(false);
+    expect(isDomTestPath("plugins/page/core/__tests__/foo.test.ts")).toBe(
+      false,
+    );
+    expect(isDomTestPath("plugins/page/server/__tests__/foo.test.ts")).toBe(
+      false,
+    );
   });
 
   test("web/__tests__ OUTSIDE plugins/ is not a dom test (vitest's include is anchored)", () => {
@@ -104,14 +126,18 @@ describe("partitionTestPaths", () => {
   });
 
   test("a path in neither scope lands in orphan, never silently in bun", () => {
-    const { bun, dom, orphan } = partitionTestPaths(["cli/web/__tests__/x.test.ts"]);
+    const { bun, dom, orphan } = partitionTestPaths([
+      "cli/web/__tests__/x.test.ts",
+    ]);
     expect(bun).toEqual([]);
     expect(dom).toEqual([]);
     expect(orphan).toEqual(["cli/web/__tests__/x.test.ts"]);
   });
 
   test("non-test files are never claimed by either runner", () => {
-    const { bun, dom, orphan } = partitionTestPaths(["plugins/page/core/index.ts"]);
+    const { bun, dom, orphan } = partitionTestPaths([
+      "plugins/page/core/index.ts",
+    ]);
     expect(bun).toEqual([]);
     expect(dom).toEqual([]);
     expect(orphan).toEqual(["plugins/page/core/index.ts"]);
@@ -131,5 +157,17 @@ describe("the scope literals", () => {
     expect(BUN_TEST_IGNORE).toContain("web/__tests__/");
     expect(DOM_TEST_INCLUDE.startsWith("plugins/")).toBe(true);
     expect(BUN_TEST_IGNORE.startsWith("**/")).toBe(true);
+  });
+
+  test("the setup file is inside vitest's setup, and the pin literal is a call", () => {
+    // Rule (f) reads the setup file by this repo-relative path and looks for
+    // this exact substring. Both are asserted here only for shape: the file
+    // sitting outside `plugins/` is what makes rule (f) read it directly rather
+    // than through the test-file sweep, and the pin has to be the CALL — a bare
+    // `vi.setSystemTime` would also match a mention of the function in prose.
+    expect(DOM_TEST_SETUP_FILE.startsWith("plugins/")).toBe(false);
+    expect(DOM_TEST_SETUP_FILE.endsWith(".ts")).toBe(true);
+    expect(DOM_TEST_CLOCK_PIN).toContain("vi.setSystemTime(");
+    expect(DOM_TEST_CLOCK_PIN.endsWith(")")).toBe(true);
   });
 });

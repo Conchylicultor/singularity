@@ -15056,7 +15056,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Exports (types): `FakeDomInstall`
             - Exports (values):
               - `BUN_TEST_IGNORE`
+              - `DOM_TEST_CLOCK_PIN`
               - `DOM_TEST_INCLUDE`
+              - `DOM_TEST_SETUP_FILE`
               - `FAKE_DOM_GLOBALS`
               - `fakeDomInstalls`
               - `isBunTestPath`

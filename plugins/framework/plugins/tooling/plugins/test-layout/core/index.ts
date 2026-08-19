@@ -1,6 +1,8 @@
 export {
   DOM_TEST_INCLUDE,
   BUN_TEST_IGNORE,
+  DOM_TEST_SETUP_FILE,
+  DOM_TEST_CLOCK_PIN,
   TEST_FILE_GLOB,
   isTestFilePath,
   isDomTestPath,

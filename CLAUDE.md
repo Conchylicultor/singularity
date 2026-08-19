@@ -274,8 +274,12 @@ source is pure logic; `web/__tests__/` is jsdom/React (auto-discovered by the
 root `vitest.config.ts`, no per-plugin config). Never run a bare `bun test` /
 `vitest` — invoking a runner directly has caveats the CLI handles.
 
-The split itself (which runner owns which path, and the `test-layout:runner-split`
-check binding it) lives in
+Every jsdom test starts on a pinned clock (fixed instant, `Date` only, still
+ticking), so a suite can never depend on the day it runs on — a suite needing a
+specific "today" pins its own.
+
+The split itself (which runner owns which path, the pinned clock, and the
+`test-layout:runner-split` check binding them) lives in
 [`plugins/framework/plugins/tooling/plugins/test-layout`](plugins/framework/plugins/tooling/plugins/test-layout).
 
 ### Coding Style

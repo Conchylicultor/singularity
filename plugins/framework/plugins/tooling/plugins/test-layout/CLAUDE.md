@@ -41,15 +41,40 @@ The detector reads `maskSource`d text, so an install inside a comment or a strin
 is not code and is not reported — which is what lets `core/fake-dom.test.ts`
 spell out the banned idiom as fixtures without reporting itself.
 
+## The jsdom clock is pinned (rule f)
+
+Every vitest suite starts on a fixed instant — Monday 15 June 2026, local noon —
+pinned in the shared setup `test/setup.ts`, which runs before the test module is
+evaluated, so module-scope `new Date()` constants are pinned too. A jsdom test
+must not be able to depend on the day it runs on: such a suite is green for a
+month and red the next, for everyone, with nothing in the diff to blame.
+
+Only `Date` is faked and it still ticks (`shouldAdvanceTime`) — timers,
+`waitFor`, real async and React's scheduling are untouched. The origin is pinned,
+not the flow of time. It goes through `vi.useFakeTimers` and not a bare
+`vi.setSystemTime`, because the latter swaps in a `Date` subclass with no
+`Symbol.hasInstance`, and every `Date` built before the swap then stops being
+`instanceof Date`.
+
+The pin is a **floor**. A suite asserting on "today" (`aria-current="date"`, the
+Today/Tomorrow presets) still pins its own instant with `vi.setSystemTime(...)`,
+as `date-picker`'s `calendar-grid.test.tsx` does; a file installing its own fake
+timers overrides the shared pin entirely.
+
+Rule **f** keeps the pin from being deleted: the setup file exists and still
+contains `vi.setSystemTime(TEST_NOW)` — the same comment-stripped substring
+assert as **d**, so it guards the statement and not the prose explaining it.
+
 **Why a check, not a lint rule.** Rule files are dual-loaded under jiti, which
 cannot resolve `@plugins/*` — a rule could not import `core/` and would have to
 duplicate the two literals plus add an in-sync check to keep the copies honest.
 Rule **d** (the config files still contain the literals; each failure message
 names the *other* file) is out of ESLint's reach anyway, and it is the
-load-bearing one: a–c guard today's files, **d** stops the fix from being
-quietly deleted later. Rule **d** strips comments before the substring assert —
-both config files explain the pair in a comment that quotes the literal, so a
-whole-file `includes` would keep passing after the live directive was deleted.
+load-bearing one: a–c guard today's files, while **d** and **f** stop the fixes
+themselves from being quietly deleted later. Rule **d** strips comments before
+the substring assert — both config files explain the pair in a comment that
+quotes the literal, so a whole-file `includes` would keep passing after the live
+directive was deleted.
 
 The check is **not** `inputKeyed` — it discovers files via `git ls-files` and
 reads the two config files directly, so its reads bypass the recording
@@ -65,7 +90,9 @@ reads the two config files directly, so its reads bypass the recording
   - Exports (types): `FakeDomInstall`
   - Exports (values):
     - `BUN_TEST_IGNORE`
+    - `DOM_TEST_CLOCK_PIN`
     - `DOM_TEST_INCLUDE`
+    - `DOM_TEST_SETUP_FILE`
     - `FAKE_DOM_GLOBALS`
     - `fakeDomInstalls`
     - `isBunTestPath`

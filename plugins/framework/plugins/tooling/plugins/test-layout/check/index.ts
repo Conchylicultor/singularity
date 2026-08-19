@@ -14,7 +14,9 @@ import {
 import { fakeDomInstalls } from "../core/fake-dom";
 import {
   BUN_TEST_IGNORE,
+  DOM_TEST_CLOCK_PIN,
   DOM_TEST_INCLUDE,
+  DOM_TEST_SETUP_FILE,
   isBunTestPath,
   isDomTestPath,
 } from "../core/test-layout";
@@ -32,7 +34,7 @@ const VITEST_CONFIG = "vitest.config.ts";
  * vitest-only jsdom suites and produced a wall of failures indistinguishable
  * from real ones.
  *
- * Five rules, every offender reported:
+ * Six rules, every offender reported:
  *   (a) no bun:test file imports `vitest`      — the direct guard on that bug
  *   (b) no vitest file imports `bun:test`      — the mirror direction
  *   (c) no test file sits under a `__tests__/` dir that is not
@@ -42,6 +44,11 @@ const VITEST_CONFIG = "vitest.config.ts";
  *   (d) both scope literals are still present in their config files — this is
  *       what makes the fix structural instead of deletable
  *   (e) no bun:test file builds itself a fake DOM — see {@link FAKE_DOM_GLOBALS}
+ *   (f) the shared vitest setup file still pins the clock — same spirit as (d):
+ *       a jsdom test must not be able to depend on what day it runs on, and the
+ *       pin is a few lines in a file otherwise full of DOM stubs, easy to delete
+ *       while chasing something else. The bill arrives much later, as a suite
+ *       that goes red for everyone on a date nobody edited.
  *
  * NOT `inputKeyed`: unlike the `grepCode`-only pattern checks, this one
  * discovers files via `git ls-files` and reads `bunfig.toml` /
@@ -52,7 +59,7 @@ const VITEST_CONFIG = "vitest.config.ts";
 const check: Check = {
   id: "test-layout:runner-split",
   description:
-    "bun:test and vitest scopes stay exact complements: no test file imports the other runner, no stray `__tests__/` suite, and both scope literals survive in bunfig.toml / vitest.config.ts",
+    "bun:test and vitest scopes stay exact complements: no test file imports the other runner, no stray `__tests__/` suite, both scope literals survive in bunfig.toml / vitest.config.ts, and the shared vitest setup still pins the clock",
   async run(): Promise<CheckResult> {
     const root = REPO_ROOT;
     const sections: string[] = [];
@@ -137,12 +144,16 @@ const check: Check = {
     const scopeDrift = await checkScopeLiterals(root);
     if (scopeDrift !== null) sections.push(scopeDrift);
 
+    // ---- rule (f): the pinned jsdom clock ---------------------------------
+    const clockDrift = await checkClockPin(root);
+    if (clockDrift !== null) sections.push(clockDrift);
+
     if (sections.length === 0) return { ok: true };
 
     return {
       ok: false,
       message: `test-runner layout violations:\n  ${sections.join("\n  ")}`,
-      hint: "The runner is chosen by where the file lives: pure-logic tests are `*.test.ts(x)` next to their source and run under `bun:test`; jsdom/React tests live in the plugin's `web/__tests__/` and run under vitest. Move the file to the folder that matches its runner rather than swapping the import (or stubbing the DOM it lacks) — and never introduce a `__tests__/` dir outside `web/`. The two scope literals in `bunfig.toml` and `vitest.config.ts` are a complementary pair; edit neither alone.",
+      hint: `The runner is chosen by where the file lives: pure-logic tests are \`*.test.ts(x)\` next to their source and run under \`bun:test\`; jsdom/React tests live in the plugin's \`web/__tests__/\` and run under vitest. Move the file to the folder that matches its runner rather than swapping the import (or stubbing the DOM it lacks) — and never introduce a \`__tests__/\` dir outside \`web/\`. The two scope literals in \`bunfig.toml\` and \`vitest.config.ts\` are a complementary pair; edit neither alone. And \`${DOM_TEST_SETUP_FILE}\` must keep pinning the clock: every jsdom suite starts on a fixed instant so none of them can depend on the day it is run on — a suite that reads the wall clock is green until the calendar moves, then red for everyone with no code change. Change the pinned instant if you must, but keep the pin.`,
     };
   },
 };
@@ -264,6 +275,30 @@ async function checkScopeLiterals(root: string): Promise<string | null> {
     return `(d) \`${BUNFIG}\` no longer contains the bun:test ignore \`${BUN_TEST_IGNORE}\`, but \`${VITEST_CONFIG}\` still scopes vitest to \`${DOM_TEST_INCLUDE}\`. That asymmetry IS the bug: with only the vitest half in place, \`bun test <plugin-dir>\` re-loads the jsdom suites it must never run.`;
   }
   return `(d) \`${VITEST_CONFIG}\` no longer contains the include \`${DOM_TEST_INCLUDE}\`, but \`${BUNFIG}\` still ignores \`${BUN_TEST_IGNORE}\`. With only the bun:test half in place, the \`web/__tests__/\` suites are excluded from bun:test and no longer claimed by vitest — they run under no runner at all.`;
+}
+
+/**
+ * Rule (f). The same substring assert as (d), for the same reason: the point is
+ * that the exact string a human would delete is still there, not that the file
+ * parses to something equivalent.
+ *
+ * Comments are stripped first — the setup file explains the pin at length, and
+ * that prose quotes the call — so this guards the live statement and not the
+ * paragraph about it. The setup file lives outside `plugins/`, hence a plain
+ * repo-relative read.
+ */
+async function checkClockPin(root: string): Promise<string | null> {
+  const setupPath = join(root, DOM_TEST_SETUP_FILE);
+  if (!existsSync(setupPath)) {
+    return `(f) \`${DOM_TEST_SETUP_FILE}\` is missing — it is the shared vitest setup named by \`setupFiles\` in \`${VITEST_CONFIG}\`, and the one place the jsdom clock is pinned.`;
+  }
+
+  const setup = maskSource(await Bun.file(setupPath).text(), {
+    strings: false,
+  });
+  if (setup.includes(DOM_TEST_CLOCK_PIN)) return null;
+
+  return `(f) \`${DOM_TEST_SETUP_FILE}\` no longer pins the clock — \`${DOM_TEST_CLOCK_PIN}\` is gone. Every jsdom suite now reads the ambient wall clock again, so a test may quietly depend on the day it runs on: green today, red on some later date, for everyone, with no code change to point at.`;
 }
 
 /**

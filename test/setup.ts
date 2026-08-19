@@ -1,5 +1,50 @@
-// Shared vitest setup: stub browser APIs missing from jsdom (loaded by every
-// DOM suite via the root vitest.config.ts `setupFiles`).
+// Shared vitest setup: pin the clock and stub browser APIs missing from jsdom
+// (loaded by every DOM suite via the root vitest.config.ts `setupFiles`).
+
+import { afterEach, beforeEach, vi } from "vitest";
+
+// The instant every jsdom test starts at. A test must not be able to depend on
+// what day it is run on — the failure mode is a suite that is green for a month
+// and red the next, for everyone, with no code change at all. That is not
+// hypothetical: the date-editor integration suite rendered a real calendar and
+// reasoned about which cell carried which number, an argument that only held
+// while "today" stayed outside the month under test.
+//
+// Only `Date` is faked, and `shouldAdvanceTime` keeps it ticking forward in real
+// time. `setTimeout`, `setInterval` and `performance` stay real, so `waitFor`,
+// React's scheduling and every genuinely async path behave exactly as before:
+// the ORIGIN is pinned, not the flow of time.
+//
+// The sinon-backed `useFakeTimers` path is deliberate. A bare `vi.setSystemTime`
+// with no fake timers installed takes vitest's own date-mock path, which swaps
+// `globalThis.Date` for a subclass carrying no `Symbol.hasInstance` — every
+// `Date` built before the swap then stops being `instanceof Date`. Sinon's
+// `ClockDate` defines that symbol against the native constructor, so dates from
+// either side of the install still answer `instanceof` correctly. Trading a time
+// bomb for a footgun would not be a fix.
+//
+// This is a FLOOR, not a value to assert against. A suite whose assertions
+// depend on "today" — `aria-current="date"`, the Today/Tomorrow presets — still
+// pins its own instant explicitly, the way
+// `plugins/primitives/plugins/date-picker/web/__tests__/calendar-grid.test.tsx`
+// does; and a file installing its own fake timers overrides this completely,
+// since each `vi.useFakeTimers()` uninstalls the clock before it.
+const TEST_NOW = new Date(2026, 5, 15, 12, 0, 0); // Monday 15 June 2026, local noon
+
+function pinTestClock(): void {
+  vi.useFakeTimers({ toFake: ["Date"], shouldAdvanceTime: true });
+  vi.setSystemTime(TEST_NOW);
+}
+
+// Once at setup-evaluation time — setup files run BEFORE the test module, so a
+// module-scope `new Date()` constant in a suite is pinned too — and again per
+// test, to re-assert the pin for a file that hands the clock back in its own
+// `afterEach`.
+pinTestClock();
+beforeEach(pinTestClock);
+afterEach(() => {
+  vi.useRealTimers();
+});
 
 Object.defineProperty(window, "matchMedia", {
   value: (query: string) => ({
@@ -67,5 +112,11 @@ class MemoryStorage implements Storage {
 }
 
 const memoryStorage = new MemoryStorage();
-Object.defineProperty(window, "localStorage", { value: memoryStorage, configurable: true });
-Object.defineProperty(globalThis, "localStorage", { value: memoryStorage, configurable: true });
+Object.defineProperty(window, "localStorage", {
+  value: memoryStorage,
+  configurable: true,
+});
+Object.defineProperty(globalThis, "localStorage", {
+  value: memoryStorage,
+  configurable: true,
+});

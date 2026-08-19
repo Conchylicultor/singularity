@@ -29,6 +29,24 @@ export const DOM_TEST_INCLUDE = "plugins/**/web/__tests__/**/*.test.{ts,tsx}";
 /** Verbatim `[test] pathIgnorePatterns` entry from `bunfig.toml`. Asserted by the check. */
 export const BUN_TEST_IGNORE = "**/web/__tests__/**";
 
+/**
+ * The shared vitest setup file, repo-relative — the one module every jsdom suite
+ * evaluates before its own. It is where the clock is pinned. Asserted by the
+ * check.
+ */
+export const DOM_TEST_SETUP_FILE = "test/setup.ts";
+
+/**
+ * Verbatim pin call from {@link DOM_TEST_SETUP_FILE}. Asserted by the check.
+ *
+ * A jsdom test must not be able to depend on what day it runs on, and the pin is
+ * one small block in a file otherwise full of DOM stubs — exactly the kind of
+ * line that gets deleted while chasing an unrelated failure, with the cost
+ * arriving weeks later as a suite that turns red on a date nobody changed. This
+ * literal is what rule (f) looks for.
+ */
+export const DOM_TEST_CLOCK_PIN = "vi.setSystemTime(TEST_NOW)";
+
 /** Every test file, either runner. The enumeration glob used to build a bucket list. */
 export const TEST_FILE_GLOB = "**/*.test.{ts,tsx}";
 
