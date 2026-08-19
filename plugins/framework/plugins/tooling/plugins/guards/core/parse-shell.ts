@@ -49,12 +49,18 @@ type Mode = "none" | "single" | "double";
  * the first name-match short-circuits. Folding the whole condition into a single
  * predicate makes that class of bug structurally impossible — which is why every
  * Bash guard routes call selection through here.
+ *
+ * Pass `baseCwd` whenever the predicate resolves a path. Without it each call's
+ * `cwd` is `""`, and `resolve("", rel)` quietly falls back to the guard
+ * PROCESS's own directory — an answer that happens to be right today and has no
+ * reason to stay right.
  */
 export function findCall(
   cmd: string,
   predicate: (call: ShellCall) => boolean,
+  baseCwd = "",
 ): ShellCall | undefined {
-  return parseShell(cmd).calls.find(predicate);
+  return parseShell(cmd, baseCwd).calls.find(predicate);
 }
 
 export function parseShell(cmd: string, baseCwd = ""): ShellParseResult {
@@ -885,6 +891,29 @@ function shellSplit(s: string): string[] {
   return tokens;
 }
 
+/**
+ * The redirections of one segment — only the ones that name a file.
+ *
+ * `2>&1`, `>&2` and `2>&-` duplicate or close a file descriptor. They open
+ * nothing, so reporting `&1` / `&2` / `&-` as a target hands every guard a path
+ * that was never written. That one `&1` token is what made `main-writes` deny
+ * `cd <main> && <read-only command> 2>&1`: replaying 30 days of Bash calls, it
+ * accounted for 55 of that guard's 60 denials against 3 real ones. A guard whose
+ * blocks are overwhelmingly noise is one agents learn to work around.
+ *
+ * The `&`-leading word must not be dropped wholesale, though. When the word is
+ * not a descriptor, `>&word` is a different operator — bash's synonym for
+ * `&>word`, which truncates that file and sends both streams into it. Dropping
+ * the arm would read `cmd >&out.txt` as writing nothing, which is exactly the
+ * hole the local `startsWith("&")` patch in `poll-detect.ts` carried. Keep the
+ * file.
+ *
+ * So the `&` is matched as its own group rather than trimmed off the front of
+ * the word. bash lets a space follow it (`ls >& out.txt`, `cmd 2>& 1` are both
+ * valid), and a word-prefix test reads the bare `&` of the spaced form as the
+ * whole target — which strips to the empty string, and `resolve(cwd, "")` is the
+ * cwd itself. That is the same denial on the main checkout, one spelling over.
+ */
 function scanRedirections(cmd: string): ShellRedirection[] {
   // Mask quoted regions so `>` inside strings doesn't count as redirection.
   let masked = "";
@@ -933,8 +962,11 @@ function scanRedirections(cmd: string): ShellRedirection[] {
     }
   }
   const out: ShellRedirection[] = [];
-  for (const m of masked.matchAll(/(>>|>)\s*(\S+)/g)) {
-    out.push({ op: m[1] as ">" | ">>", target: m[2]! });
+  for (const m of masked.matchAll(/(>>|>)\s*(&?)\s*(\S+)/g)) {
+    const [, op, amp, word] = m;
+    // `2>&1` / `>&2` / `2>&-` duplicate or close a descriptor: no file is opened.
+    if (amp && /^(\d+|-)$/.test(word!)) continue;
+    out.push({ op: op as ">" | ">>", target: word! });
   }
   return out;
 }

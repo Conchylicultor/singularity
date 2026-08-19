@@ -1,12 +1,21 @@
-import { resolve } from "node:path";
+import { canonicalCommand, parseArgv, redirectionTargets } from "../argv";
+import type { FileOperand, KnownCommand } from "../argv";
 import { defineGuard } from "../define-guard";
 import { parseShell } from "../parse-shell";
 import type { ShellCall } from "../parse-shell";
 import type { BashInput } from "../types";
 import { worktreeContextOf } from "../worktree-root";
 
-const DEST_LAST_CMDS = new Set(["cp", "mv", "rsync", "install"]);
-const ALL_ARGS_CMDS = new Set([
+/**
+ * Every command this guard polices must have an entry in the argv grammar —
+ * policing one without a grammar is a TYPE ERROR, not a silent fallback to the
+ * old "any token that is not flag-shaped is a path" guess. That is what keeps
+ * the two lists from drifting apart as either one grows.
+ */
+type Policed = KnownCommand;
+
+const DEST_LAST_CMDS = new Set<Policed>(["cp", "mv", "rsync", "install"]);
+const ALL_ARGS_CMDS = new Set<Policed>([
   "rm",
   "rmdir",
   "tee",
@@ -20,7 +29,7 @@ const ALL_ARGS_CMDS = new Set([
   "ln",
   "unlink",
 ]);
-const INPLACE_FLAG_CMDS = new Set(["sed", "perl"]);
+const INPLACE_CMDS = new Set<Policed>(["sed", "perl"]);
 const GIT_MUTATING_SUBCMDS = new Set([
   "rm",
   "add",
@@ -37,15 +46,9 @@ const GIT_MUTATING_SUBCMDS = new Set([
   "push",
 ]);
 
-/**
- * The directory a `git` call mutates: its effective cwd, unless an explicit
- * `-C <dir>` redirects it. git always touches the repo containing this dir,
- * regardless of any path args.
- */
-function gitDir(call: ShellCall): string {
-  const i = call.args.indexOf("-C");
-  const target = i !== -1 ? call.args[i + 1] : undefined;
-  return target ? resolve(call.cwd, target) : call.cwd;
+/** Only a local operand names a path on this machine; a remote spec does not. */
+function localPaths(operands: readonly FileOperand[]): string[] {
+  return operands.flatMap((o) => (o.kind === "local" ? [o.path] : []));
 }
 
 /**
@@ -54,23 +57,35 @@ function gitDir(call: ShellCall): string {
  * when the call writes nothing we police.
  */
 function writeTargets(call: ShellCall): string[] {
-  const nonFlag = call.args.filter((a) => !a.startsWith("-"));
-  const resolveAll = (ps: string[]) => ps.map((p) => resolve(call.cwd, p));
+  const name = canonicalCommand(call.name);
+  if (!name) return [];
+  const argv = parseArgv(call);
 
-  if (DEST_LAST_CMDS.has(call.name)) {
-    // cp/mv/rsync/install only write their last positional (the destination).
-    const dest = nonFlag[nonFlag.length - 1];
-    return nonFlag.length >= 2 && dest ? resolveAll([dest]) : [];
+  if (DEST_LAST_CMDS.has(name)) {
+    // `install -d` creates directories: every operand is a destination, and the
+    // last-operand rule would have skipped `install -d <dir>` entirely.
+    if (name === "install" && argv.flags.has("d"))
+      return localPaths(argv.files);
+    // An explicit destination beats position. Reading the last operand under
+    // `cp -t <dir> a b` named a SOURCE file and missed the real write.
+    if (argv.targetDir) return localPaths([argv.targetDir]);
+    const dest = argv.files[argv.files.length - 1];
+    return argv.files.length >= 2 && dest ? localPaths([dest]) : [];
   }
-  if (ALL_ARGS_CMDS.has(call.name)) return resolveAll(nonFlag);
-  if (INPLACE_FLAG_CMDS.has(call.name)) {
-    const hasInplace = call.args.some((a) => a === "-i" || a.startsWith("-i"));
-    return hasInplace ? resolveAll(nonFlag) : [];
+  if (ALL_ARGS_CMDS.has(name)) return localPaths(argv.files);
+  if (INPLACE_CMDS.has(name)) {
+    // Read the flag SET, never `startsWith("-i")`: that probe missed `perl -pi`
+    // and `sed --in-place`, and matched an `-i` that was another flag's value.
+    const inPlace = argv.flags.has("i") || argv.flags.has("in-place");
+    return inPlace ? localPaths(argv.files) : [];
   }
-  if (call.name === "git") {
-    // Skip a leading `-C <dir>` global option to reach the subcommand.
-    const subcmd = call.args[0] === "-C" ? call.args[2] : call.args[0];
-    return subcmd && GIT_MUTATING_SUBCMDS.has(subcmd) ? [gitDir(call)] : [];
+  if (name === "git") {
+    // git always touches the repo containing its working directory, regardless
+    // of any path args — so the subcommand decides IF, and `-C` decides WHERE.
+    const subcmd = argv.leading;
+    if (!subcmd || !GIT_MUTATING_SUBCMDS.has(subcmd)) return [];
+    const dir = argv.targetDir;
+    return dir?.kind === "local" ? [dir.path] : [call.cwd];
   }
   return [];
 }
@@ -100,15 +115,22 @@ export const mainWritesGuard = defineGuard<BashInput>({
       !p.startsWith(`${worktreeRoot}/`);
 
     for (const call of parseShell(cmd, ctx.cwd).calls) {
-      for (const r of call.redirections) {
-        const target = resolve(call.cwd, r.target);
-        if (isMainBranch(target)) {
-          return violation(`redirection target '${r.target}'`, repoRoot, worktreeRoot);
+      for (const r of redirectionTargets(call)) {
+        if (r.kind === "local" && isMainBranch(r.path)) {
+          return violation(
+            `redirection target '${r.raw}'`,
+            repoRoot,
+            worktreeRoot,
+          );
         }
       }
       for (const target of writeTargets(call)) {
         if (isMainBranch(target)) {
-          return violation(`${call.name} target '${target}'`, repoRoot, worktreeRoot);
+          return violation(
+            `${call.name} target '${target}'`,
+            repoRoot,
+            worktreeRoot,
+          );
         }
       }
     }

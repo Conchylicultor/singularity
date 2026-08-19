@@ -11,6 +11,8 @@ export type {
 } from "./types";
 export { defineGuard } from "./define-guard";
 export { parseShell } from "./parse-shell";
+export { parseArgv, redirectionTargets } from "./argv";
+export type { ParsedArgv, FileOperand, KnownCommand } from "./argv";
 export { createContext } from "./context";
 export {
   classify,

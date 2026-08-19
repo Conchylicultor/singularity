@@ -53,12 +53,20 @@ const FLOOR_SESSIONS = 60;
 const FLOOR_PREVENTED = 1000;
 
 /**
- * Floors for `--guards --assert`. Measured 2026-08-18 over 30 days: 1309 denials
- * across 23.5k Bash calls, 28 of them on a command carrying a heredoc.
+ * Floors for `--guards --assert`. Measured 2026-08-19 over 30 days: 1361 denials
+ * across 28k Bash calls, 21 of them on a command carrying a heredoc.
  *
  * These two catch the opposite failure from the ceiling: a pre-pass that
  * swallows real commands, blinding every guard at once, shows up as a collapse
  * here long before anyone notices the guards have gone quiet.
+ *
+ * That figure fell from 1415 the same day, and the drop was the POINT: teaching
+ * the guards to parse a command's file arguments instead of scanning its argv
+ * for path-shaped tokens took `main-writes` from 60 denials to 4, of which 56
+ * were `2>&1` read as a file named `&1`. Every other guard's count was
+ * unchanged. A false-positive purge is the one legitimate reason for this number
+ * to move down, which is why it is recorded here rather than left to look like
+ * drift — and why the floors themselves were not lowered to match.
  */
 const FLOOR_BASH_DENIES = 1000;
 const FLOOR_HEREDOC_DENIALS = 10;

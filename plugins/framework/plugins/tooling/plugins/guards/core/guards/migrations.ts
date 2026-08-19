@@ -1,16 +1,39 @@
+import { parseArgv } from "../argv";
+import type { FileOperand } from "../argv";
 import { defineGuard } from "../define-guard";
 import { findCall } from "../parse-shell";
 import type { BashInput } from "../types";
 
+/**
+ * A migration-data file, or the directory holding them.
+ *
+ * The `endsWith` arm is a deliberate small broadening: `rm -rf …/migrations/data`
+ * deletes the whole directory and is missed by a substring test that requires the
+ * trailing slash.
+ */
+function isMigrationData(operand: FileOperand): boolean {
+  return (
+    operand.kind === "local" &&
+    (operand.path.includes("/migrations/data/") ||
+      operand.path.endsWith("/migrations/data"))
+  );
+}
+
 export const migrationsGuard = defineGuard<BashInput>({
   name: "migrations",
   matcher: "Bash",
-  check(input) {
+  check(input, ctx) {
     const cmd = input.command;
     if (!cmd) return null;
+    // Operands, not "every arg that contains the substring": `rm` has no value
+    // flags and no leading operand, so this cannot weaken, and it gains the
+    // post-`--` operands the old filter dropped as flags. `ctx.cwd` is what
+    // makes `cd plugins/x && rm -rf migrations/data` resolve to the same path
+    // the absolute spelling does.
     const rmMigration = findCall(
       cmd,
-      (c) => c.name === "rm" && c.args.some((a) => a.includes("migrations/data/")),
+      (c) => c.name === "rm" && parseArgv(c).files.some(isMigrationData),
+      ctx.cwd,
     );
     if (rmMigration) {
       return {

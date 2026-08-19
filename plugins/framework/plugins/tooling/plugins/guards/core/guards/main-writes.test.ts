@@ -11,7 +11,8 @@ function verdict(command: string, cwd: string): Verdict {
   // Synchronous check; the fake cwd never holds a bypass token file.
   return mainWritesGuard.check({ command }, createContext(cwd)) as Verdict;
 }
-const blocks = (command: string, cwd: string) => verdict(command, cwd).kind === "deny";
+const blocks = (command: string, cwd: string) =>
+  verdict(command, cwd).kind === "deny";
 
 describe("main-writes guard", () => {
   describe("boundaries derive from the worktree marker, not raw cwd", () => {
@@ -20,11 +21,15 @@ describe("main-writes guard", () => {
     });
 
     test("still blocks it when cwd is a worktree SUBDIRECTORY (old code mis-derived the repo root and let it through)", () => {
-      expect(blocks(`cp file.ts ${REPO}/plugins/file.ts`, `${WT}/gateway`)).toBe(true);
+      expect(
+        blocks(`cp file.ts ${REPO}/plugins/file.ts`, `${WT}/gateway`),
+      ).toBe(true);
     });
 
     test("allows writes to a sibling dir of the agent's own worktree from a subdirectory cwd (old false positive)", () => {
-      expect(blocks(`cp notes.md ../research/notes.md`, `${WT}/gateway`)).toBe(false);
+      expect(blocks(`cp notes.md ../research/notes.md`, `${WT}/gateway`)).toBe(
+        false,
+      );
     });
 
     test("blocks a redirection into the main checkout from a subdirectory cwd", () => {
@@ -46,7 +51,110 @@ describe("main-writes guard", () => {
     });
 
     test("writes within the worktree", () => {
-      expect(blocks(`mkdir -p research && touch research/x.md`, WT)).toBe(false);
+      expect(blocks(`mkdir -p research && touch research/x.md`, WT)).toBe(
+        false,
+      );
+    });
+  });
+
+  describe("parses operands, not path-shaped substrings", () => {
+    test("a sed script whose text contains `..` sequences (the reported false positive)", () => {
+      // `path.resolve` used to normalise the `..` inside the SCRIPT and land it
+      // under the repo root; the file actually edited is in the worktree.
+      const cmd = `sed -i '' 's|resolve(HERE, "../../../..");|const REPO_ROOT = resolve(HERE, "..");|' cli/singularity.ts`;
+      expect(blocks(cmd, WT)).toBe(false);
+    });
+
+    test("touch -r reads its reference file, it does not write it", () => {
+      expect(
+        blocks(`touch -r ../../../plugins/a.ts research/x`, `${WT}/a/b`),
+      ).toBe(false);
+    });
+
+    test("a chmod mode is not a path", () => {
+      expect(blocks(`chmod 755 f`, WT)).toBe(false);
+    });
+
+    test("a mkdir mode is not a path", () => {
+      expect(blocks(`mkdir -m 755 d`, WT)).toBe(false);
+    });
+
+    test("a truncate size is not a path", () => {
+      expect(blocks(`truncate -s 0 f`, WT)).toBe(false);
+    });
+
+    test("an install mode is not a path", () => {
+      expect(blocks(`install -m 755 a b`, WT)).toBe(false);
+    });
+
+    test("an rsync remote destination writes nothing on this machine", () => {
+      expect(blocks(`rsync -a src/ user@host:/tmp/dst/`, WT)).toBe(false);
+    });
+  });
+
+  describe("does not weaken", () => {
+    test("BSD sed -i into the main checkout", () => {
+      expect(blocks(`sed -i '' 's|a|b|' ${REPO}/x.ts`, WT)).toBe(true);
+    });
+
+    test("GNU sed -i into the main checkout", () => {
+      expect(blocks(`sed -i 's|a|b|' ${REPO}/x.ts`, WT)).toBe(true);
+    });
+  });
+
+  describe("closes the under-blocks the positional grammar had", () => {
+    test("rm past a `--` terminator (the operand was filtered away as a flag)", () => {
+      expect(blocks(`cd ${REPO} && rm -- -weird`, WT)).toBe(true);
+    });
+
+    test("perl -pi (the startsWith('-i') probe never saw the cluster)", () => {
+      expect(blocks(`perl -pi -e 's/a/b/' ${REPO}/x.ts`, WT)).toBe(true);
+    });
+
+    test("sed --in-place (the long form was missed entirely)", () => {
+      expect(blocks(`sed --in-place 's/a/b/' ${REPO}/x.ts`, WT)).toBe(true);
+    });
+
+    test("cp -t <dir> (the destination read as a flag, the last operand as a source)", () => {
+      expect(blocks(`cp -t ${REPO} a.ts`, WT)).toBe(true);
+    });
+
+    test("rsync with a trailing value flag (it stole the last-operand slot)", () => {
+      expect(blocks(`rsync -a src/ ${REPO}/dst/ --exclude foo`, WT)).toBe(true);
+    });
+
+    test("git -c before -C (the args[0] === '-C' probe saw only -c)", () => {
+      expect(blocks(`git -c user.name=x -C ${REPO} commit -m y`, WT)).toBe(
+        true,
+      );
+    });
+
+    test("install -d (dest-last bailed out on a single operand)", () => {
+      expect(blocks(`install -d ${REPO}/newdir`, WT)).toBe(true);
+    });
+
+    test("git --git-dir reaches the main repo without naming it as an operand", () => {
+      expect(blocks(`git --git-dir=${REPO}/.git commit -m x`, WT)).toBe(true);
+    });
+
+    test("git --work-tree does the same in the separate-token spelling", () => {
+      expect(blocks(`git --work-tree ${REPO} checkout .`, WT)).toBe(true);
+    });
+  });
+
+  describe("documented residual gap", () => {
+    test("BSD sed -i with a NON-EMPTY separate suffix over-blocks a worktree file", () => {
+      // BSD spells the backup suffix as its own token (`-i .bak`), so `.bak`
+      // fills the script slot and the script itself stays in the operand list.
+      // A script carrying `..` sequences then resolves out of the worktree, and
+      // the guard denies a command that only ever edits `local.ts`.
+      //
+      // We keep the over-block deliberately. The alternative is to let `-i`
+      // reach for the next token, and that breaks GNU's spelling
+      // (`sed -i 's/a/b/' f`) by eating the script — an UNDER-block on the far
+      // more common form. Over-blocking is this guard's safe direction, and the
+      // file it really edits is caught either way.
+      expect(blocks(`sed -i .bak 's|../../../x|y|' local.ts`, WT)).toBe(true);
     });
   });
 });

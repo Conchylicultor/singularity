@@ -296,6 +296,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
             - **`entity-projection-safety`** — entity-projection-safety lint rule: no-hand-rolled-entity-projection
             - **`format-safety`** — format-safety lint rule: no-adhoc-prettier
             - **`git-grep-safety`** — git-grep-safety lint rule: no-adhoc-git-grep
+            - **`guard-path-safety`** — guard-path-safety lint rule: no-adhoc-path-resolve
             - **`hover-reveal-safety`** — hover-reveal-safety lint rule: no-uncoupled-hover-reveal
             - **`icon-safety`** — icon-safety lint rules: no-lucide-react
             - **`import-scan-safety`** — import-scan-safety lint rule: no-adhoc-import-scan

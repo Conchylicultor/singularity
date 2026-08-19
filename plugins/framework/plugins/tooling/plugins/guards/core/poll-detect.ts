@@ -149,12 +149,12 @@ const MUTATORS = new Set([
 
 /**
  * Does this redirection actually persist anything? `>/dev/null` discards, and
- * `2>&1` duplicates a file descriptor (the scanner reports its target as `&1`) —
- * neither writes a file, and treating them as writes would classify every
- * `pgrep … >/dev/null 2>&1` waiter as progress.
+ * treating that as a write would classify every `pgrep … >/dev/null 2>&1`
+ * waiter as progress.
  */
 function writesAFile(target: string): boolean {
-  if (target.startsWith("&")) return false;
+  // A file-descriptor dup (`2>&1`) reaches no target at all: `scanRedirections`
+  // in `parse-shell.ts` owns that, and emits no redirection for one.
   return (
     target !== "/dev/null" &&
     target !== "/dev/stderr" &&

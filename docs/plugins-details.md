@@ -15116,9 +15116,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `CommandClass`
               - `DenyVerdict`
               - `FileHint`
+              - `FileOperand`
               - `Guard`
               - `GuardContext`
               - `InformVerdict`
+              - `KnownCommand`
+              - `ParsedArgv`
               - `PollDecision`
               - `ToolMatcher`
               - `Verdict`
@@ -15130,7 +15133,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `defineGuard`
               - `detectPoll`
               - `GUARDS`
+              - `parseArgv`
               - `parseShell`
+              - `redirectionTargets`
               - `THRESHOLD`
               - `watchSubjects`
               - `WINDOW_MS`
@@ -15158,6 +15163,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - **`entity-projection-safety`** — entity-projection-safety lint rule: no-hand-rolled-entity-projection
             - **`format-safety`** — format-safety lint rule: no-adhoc-prettier
             - **`git-grep-safety`** — git-grep-safety lint rule: no-adhoc-git-grep
+            - **`guard-path-safety`** — guard-path-safety lint rule: no-adhoc-path-resolve
             - **`hover-reveal-safety`** — hover-reveal-safety lint rule: no-uncoupled-hover-reveal
             - **`icon-safety`** — icon-safety lint rules: no-lucide-react
             - **`import-scan-safety`** — import-scan-safety lint rule: no-adhoc-import-scan

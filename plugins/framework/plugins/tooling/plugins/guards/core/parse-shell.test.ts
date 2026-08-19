@@ -2,16 +2,23 @@ import { describe, expect, test } from "bun:test";
 import { createContext } from "./context";
 import { gitPushGuard } from "./guards/git-push";
 import { gitResetMainGuard } from "./guards/git-reset-main";
+import { mainWritesGuard } from "./guards/main-writes";
 import { parseShell } from "./parse-shell";
 import type { Verdict } from "./types";
 
 const names = (cmd: string) => parseShell(cmd).calls.map((c) => c.name);
+const redirections = (cmd: string) => parseShell(cmd).redirections;
+const blocksIn = (
+  guard: { check: (i: never, c: never) => unknown },
+  command: string,
+  cwd: string,
+) =>
+  (guard.check({ command } as never, createContext(cwd) as never) as Verdict)
+    .kind === "deny";
 const blocks = (
   guard: { check: (i: never, c: never) => unknown },
   command: string,
-) =>
-  (guard.check({ command } as never, createContext("/tmp") as never) as Verdict)
-    .kind === "deny";
+) => blocksIn(guard, command, "/tmp");
 
 describe("parseShell reaches inside block structure", () => {
   describe("loop bodies", () => {
@@ -349,5 +356,65 @@ describe("existing guards now see inside loops and substitutions", () => {
     expect(blocks(gitPushGuard, "until [ -f done ]; do sleep 5; done")).toBe(
       false,
     );
+  });
+});
+
+describe("a redirection reports a file, or nothing at all", () => {
+  test("2>&1 duplicates a descriptor and opens no file", () => {
+    expect(redirections("cmd 2>&1")).toEqual([]);
+  });
+
+  test(">&2 duplicates a descriptor and opens no file", () => {
+    expect(redirections("cmd >&2")).toEqual([]);
+  });
+
+  test("2>&- closes a descriptor and opens no file", () => {
+    expect(redirections("cmd 2>&-")).toEqual([]);
+  });
+
+  test("a real target survives the 2>&1 that follows it", () => {
+    expect(redirections("cmd > out 2>&1")).toEqual([
+      { op: ">", target: "out" },
+    ]);
+  });
+
+  test("&> names the file both streams go to", () => {
+    expect(redirections("cmd &> f")).toEqual([{ op: ">", target: "f" }]);
+  });
+
+  test(">&word is that same operator, so the file is kept", () => {
+    expect(redirections("cmd >&f.txt")).toEqual([{ op: ">", target: "f.txt" }]);
+  });
+
+  test("… and bash allows a space before that word", () => {
+    expect(redirections("cmd >& out.txt")).toEqual([
+      { op: ">", target: "out.txt" },
+    ]);
+  });
+
+  test("the spaced fd dup is still no file", () => {
+    expect(redirections("cmd 2>& 1")).toEqual([]);
+  });
+
+  test("an append target survives the 2>&1 that follows it", () => {
+    expect(redirections("cmd >> log 2>&1")).toEqual([
+      { op: ">>", target: "log" },
+    ]);
+  });
+
+  describe("what main-writes makes of that", () => {
+    const worktree = "/r/repo/.claude/worktrees/wt";
+
+    test("a read-only command in main with 2>&1 is allowed", () => {
+      expect(blocksIn(mainWritesGuard, "cd /r/repo && ls 2>&1", worktree)).toBe(
+        false,
+      );
+    });
+
+    test("but a redirection that really writes into main is blocked", () => {
+      expect(
+        blocksIn(mainWritesGuard, "cd /r/repo && ls > out", worktree),
+      ).toBe(true);
+    });
   });
 });
