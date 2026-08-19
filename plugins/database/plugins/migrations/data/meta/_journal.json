@@ -1667,6 +1667,13 @@
       "tag": "20260819_102839_7add02ae__repair_conv_7e03_foreign_session",
       "hash": "7add02ae",
       "breakpoints": true
+    },
+    {
+      "version": "7",
+      "when": 1787146947000,
+      "tag": "20260819_134227_2433665c__backfill_source_last_extraction",
+      "hash": "2433665c",
+      "breakpoints": true
     }
   ]
 }
