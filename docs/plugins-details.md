@@ -17032,15 +17032,15 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `BrowserFetchError`
               - `browserFetchQueueDepth`
           - Cross-plugin:
-            - Imported by: `apps/events/sources/url-extract`
+            - Imported by:
+              - `apps/events/sources/url-extract`
+              - `framework/tooling/e2e-harness`
           - Core:
             - Exports (types):
               - `BotMitigation`
               - `HeaderReader`
               - `HeaderSource`
-            - Exports (values):
-              - `detectBotMitigation`
-              - `ensureChromium`
+            - Exports (values): `detectBotMitigation`
     - **`secrets`** — Encrypted key-value primitive. AES-256-GCM blob at ~/.singularity/state/secrets/secrets.json.enc with the master key in the OS keychain (fallback to the .key beside it). Hosted on the central runtime; consumers (auth, config) call /api/secrets/* via the gateway.
       - Core:
         - Uses: `infra/endpoints.defineEndpoint`

@@ -59,8 +59,8 @@ export async function provisionChromium(): Promise<void> {
 
   // Install-time: no backend is running, so the structured logger (which
   // persists over HTTP to a live server) is unreachable — console is the sink,
-  // exactly as the rule's own `provision/**` exemption says.
-  // eslint-disable-next-line log-channels/no-console-log -- install-time, no backend to log to
+  // which is exactly why `log-channels`' rule ignores `provision/**` outright.
+  // (No `eslint-disable` needed here, and one would itself be a lint error.)
   console.log(`Playwright chromium not found at ${exe} — installing…`);
 
   // `spawnPassthrough` inherits stdout/stderr, so the download's own progress
