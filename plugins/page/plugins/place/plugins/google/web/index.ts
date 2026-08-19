@@ -9,7 +9,7 @@ import { GOOGLE_PLACE_PROVIDER_ID } from "../shared";
 
 export default {
   description:
-    "Google Maps as a place-lookup source for the /place block: contributes the provider's name, icon, required attribution, and the 'set up Google Maps' affordance the block renders while no API key is configured.",
+    "Google Maps as a place-lookup source for the /place block: contributes the provider's name, icon, and the 'set up Google Maps' affordance the block renders while no API key is configured.",
   contributions: [
     Place.Provider({
       id: GOOGLE_PLACE_PROVIDER_ID,
@@ -20,9 +20,6 @@ export default {
       // the provider says will fix it.
       AccessAction: MapsAccessAction,
       useReady: () => useMapsAccess().ready,
-      // Required by the Places policy whenever Places content is shown outside
-      // a Google map — which is exactly this card, since v1 has no embedded map.
-      attribution: "Powered by Google",
     }),
   ],
 } satisfies PluginDefinition;

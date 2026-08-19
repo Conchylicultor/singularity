@@ -12,7 +12,7 @@ import { PlaceSnapshotSchema, PlaceSuggestionSchema } from "./schemas";
  * carries it.
  *
  * The response is an OBJECT, not a bare array: a suggestion list is a thing that
- * will grow attributes (a "more results" cursor, per-round attribution), and an
+ * will grow attributes (a "more results" cursor, a per-round notice), and an
  * array response has nowhere to put them.
  */
 export const placeSearchEndpoint = defineEndpoint({

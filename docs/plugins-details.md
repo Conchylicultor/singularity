@@ -18910,7 +18910,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Cross-plugin:
         - Imported by: `page/place/google`
       - Plugins:
-        - **`google`** — Google Maps as a place-lookup source for the /place block: contributes the provider's name, icon, required attribution, and the 'set up Google Maps' affordance the block renders while no API key is configured. Google Places provider for the /place block: adapts the Places API client (autocomplete + details) onto the place-provider registry, reading the API key through the Google Maps integration.
+        - **`google`** — Google Maps as a place-lookup source for the /place block: contributes the provider's name, icon, and the 'set up Google Maps' affordance the block renders while no API key is configured. Google Places provider for the /place block: adapts the Places API client (autocomplete + details) onto the place-provider registry, reading the API key through the Google Maps integration.
           - Web:
             - Contributes: `Place.Provider` "Google Maps"
             - Uses:

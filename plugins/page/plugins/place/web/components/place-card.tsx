@@ -78,11 +78,6 @@ export function PlaceCard({
             </Cluster>
           ) : null}
           {notice}
-          {provider?.attribution ? (
-            <Text variant="caption" tone="muted">
-              {provider.attribution}
-            </Text>
-          ) : null}
         </Stack>
       </Card>
       <Pin to="top-right" offset="xs">

@@ -162,12 +162,6 @@ export function PlaceSearch({
           <Placeholder>No place matched “{debounced}”.</Placeholder>
         )
       ) : null}
-
-      {provider.attribution ? (
-        <Text variant="caption" tone="muted">
-          {provider.attribution}
-        </Text>
-      ) : null}
     </Stack>
   );
 }

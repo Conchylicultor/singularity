@@ -36,8 +36,6 @@ export interface PlaceProviderContribution {
    * keep both arms rules-of-hooks clean.
    */
   useReady?: () => boolean;
-  /** Attribution line this provider's terms require on the rendered card. */
-  attribution?: string;
 }
 
 export const Place = {
