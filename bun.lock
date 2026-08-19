@@ -4538,9 +4538,6 @@
     "plugins/tasks/plugins/task-draft-form": {
       "name": "@singularity/plugin-tasks-task-draft-form",
       "version": "0.0.1",
-      "dependencies": {
-        "modern-screenshot": "^4.6.0",
-      },
     },
     "plugins/tasks/plugins/task-effort": {
       "name": "@singularity/plugin-tasks-task-effort",

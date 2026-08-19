@@ -15,14 +15,18 @@ which applies each value through the option's own server half. Adding a launch
 setting is a plugin folder; a new field on `CardDraft` means the abstraction
 leaked.
 
-The head card honors a few extra knobs:
+The head card honors one extra knob:
 
 - `relate?: { taskId, defaultMode }` — adds a `prerequisite | follow-up` toggle.
   `follow-up` makes the new task wait on `relate.taskId`. `prerequisite` makes
   `relate.taskId` wait on the new task.
-- `captures` — which context toggles to render: `url` (window.location.href),
-  `screenshot` (DOM-to-blob via `modern-screenshot`, lazy-imported),
-  `parentTask` (server inlines the parent task title + id + description).
+
+Every card carries one context toggle — **URL**, which attaches
+`window.location.href` to the filed task. It is not configurable per host: every
+surface that drafts a task is somewhere, and that somewhere is worth recording.
+Whether the box starts checked is per-app config (`captureUrlByDefault`, read
+through `useCaptureUrlDefault`), re-seeded on each popover open so the value
+tracks the app the form is rendered in rather than the stale localStorage draft.
 
 Submits to `POST /api/tasks/chain` (handler in `plugins/tasks/server`).
 
@@ -50,7 +54,6 @@ silently destroy work in progress — hence a request type rather than an `initi
     - `apps-core.useCurrentAppId`
     - `config_v2.ConfigV2`
     - `config_v2.useConfig`
-    - `infra/attachments.uploadAttachment`
     - `infra/endpoints.fetchEndpoint`
     - `infra/endpoints.getEndpointErrorMessage`
     - `primitives/css/center.Center`
@@ -85,7 +88,6 @@ silently destroy work in progress — hence a request type rather than an `initi
     - `tasks/launch-options.useLaunchOptionDefaults`
   - Exports (types):
     - `ActiveRelateContext`
-    - `CaptureKind`
     - `CardDraft`
     - `TaskDraftActionProps`
     - `TaskDraftInsert`

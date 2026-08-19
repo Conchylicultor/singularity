@@ -11,12 +11,16 @@ export function NewChildTaskAction() {
   return (
     <TaskDraftPopover
       trigger={
-        <Button variant="ghost" aspect="icon" aria-label="New child task" title="New child task">
+        <Button
+          variant="ghost"
+          aspect="icon"
+          aria-label="New child task"
+          title="New child task"
+        >
           <MdAdd />
         </Button>
       }
       target={{ kind: "folder", folderTaskId: conversation.taskId }}
-      captures={["url"]}
       relate={{ taskId: conversation.taskId, defaultMode: "followup" }}
       heading="Create child task"
     />

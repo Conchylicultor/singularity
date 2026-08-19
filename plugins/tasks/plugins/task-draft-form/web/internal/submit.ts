@@ -1,6 +1,7 @@
-import { flushSync } from "react-dom";
-import { uploadAttachment } from "@plugins/infra/plugins/attachments/web";
-import { fetchEndpoint, getEndpointErrorMessage } from "@plugins/infra/plugins/endpoints/web";
+import {
+  fetchEndpoint,
+  getEndpointErrorMessage,
+} from "@plugins/infra/plugins/endpoints/web";
 import { extractAttachmentIds } from "@plugins/primitives/plugins/text-editor/plugins/paste-images/web";
 import type { CardDraft } from "../components/task-draft-form";
 import {
@@ -26,8 +27,6 @@ export interface SubmitArgs {
    * pure function of an explicit list.
    */
   options: readonly LaunchOptionInfo[];
-  // Optional hook so the popover can close before screenshot capture.
-  beforeScreenshot?: () => void;
 }
 
 export interface SubmitOutcome {
@@ -45,37 +44,11 @@ export async function submitChain(args: SubmitArgs): Promise<SubmitOutcome> {
     return { ok: false, errorMessage: "All cards need text", totalCount };
   }
 
-  // One screenshot per submission, shared across cards that requested it.
-  const needsScreenshot = trimmed.some((c) => c.includeScreenshot);
-  let screenshotAttachmentId: string | null = null;
-  if (needsScreenshot) {
-    if (args.beforeScreenshot) flushSync(() => args.beforeScreenshot!());
-    await new Promise<void>((r) =>
-      requestAnimationFrame(() => requestAnimationFrame(() => r())),
-    );
-    // Lazy-import modern-screenshot so plugins that don't enable the
-    // screenshot capture don't pull it into their bundle.
-    const { domToBlob } = await import("modern-screenshot");
-    const blob = await domToBlob(document.documentElement, {
-      scale: window.devicePixelRatio || 1,
-    });
-    if (!blob) {
-      return { ok: false, errorMessage: "Screenshot failed", totalCount };
-    }
-    const uploaded = await uploadAttachment(blob, "page.png", "image/png");
-    screenshotAttachmentId = uploaded.id;
-  }
-
   const body: TaskChainSubmitBody = {
     target: args.target,
     relate: args.relate,
     cards: trimmed.map((c, i) => {
-      const idSet = new Set<string>();
-      for (const id of extractAttachmentIds(c.text)) idSet.add(id);
-      if (c.includeScreenshot && screenshotAttachmentId) {
-        idSet.add(screenshotAttachmentId);
-      }
-      const attachmentIds = Array.from(idSet);
+      const attachmentIds = Array.from(new Set(extractAttachmentIds(c.text)));
       return {
         text: c.text,
         // Values whose option is no longer registered are dropped rather than
@@ -134,9 +107,15 @@ export function describeOutcome(
   if (cards.length === 1) {
     const card = cards[0]!;
     const parts = [cardSummary(card.text), ...optionSummaries(card, options)];
-    return { title: "Task created", description: parts.filter(Boolean).join(" · ") };
+    return {
+      title: "Task created",
+      description: parts.filter(Boolean).join(" · "),
+    };
   }
-  const summaries = cards.map((c) => cardSummary(c.text)).filter(Boolean).join(" → ");
+  const summaries = cards
+    .map((c) => cardSummary(c.text))
+    .filter(Boolean)
+    .join(" → ");
   return {
     title: `${outcome.totalCount} tasks created`,
     description: summaries,

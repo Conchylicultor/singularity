@@ -8,22 +8,20 @@ import {
   useState,
 } from "react";
 import { toast } from "@plugins/shell/plugins/notifications/web";
-import { useResource, ResourceView } from "@plugins/primitives/plugins/live-state/web";
+import {
+  useResource,
+  ResourceView,
+} from "@plugins/primitives/plugins/live-state/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { useDraft } from "@plugins/primitives/plugins/persistent-draft/web";
-import { tasksResource, type TaskListItem } from "@plugins/tasks/plugins/tasks-core/core";
-import { InlinePopover } from "@plugins/primitives/plugins/popover/web";
 import {
-  TaskDraftForm,
-  makeCard,
-  type CardDraft,
-  type CaptureKind,
-} from "./task-draft-form";
+  tasksResource,
+  type TaskListItem,
+} from "@plugins/tasks/plugins/tasks-core/core";
+import { InlinePopover } from "@plugins/primitives/plugins/popover/web";
+import { TaskDraftForm, makeCard, type CardDraft } from "./task-draft-form";
 import { describeOutcome, submitChain } from "../internal/submit";
-import type {
-  TaskChainRelateMode,
-  TaskChainTarget,
-} from "@plugins/tasks/core";
+import type { TaskChainRelateMode, TaskChainTarget } from "@plugins/tasks/core";
 import {
   TaskLaunch,
   useLaunchOptionDefaults,
@@ -60,7 +58,6 @@ export interface TaskDraftPopoverProps {
   trigger: ReactElement;
   tooltip?: ReactNode;
   target: TaskChainTarget;
-  captures?: CaptureKind[];
   relate?: TaskDraftRelate;
   /**
    * One-shot request to insert markdown into the head card, minted by
@@ -97,7 +94,6 @@ function TaskDraftFormContent({
   setAmbientRelateMode,
   standalone,
   setStandalone,
-  captures,
   target,
   heading,
   footerStart,
@@ -123,7 +119,6 @@ function TaskDraftFormContent({
   setAmbientRelateMode: (v: TaskChainRelateMode | undefined) => void;
   standalone: boolean;
   setStandalone: (v: boolean) => void;
-  captures: CaptureKind[];
   target: TaskChainTarget;
   heading: string | undefined;
   footerStart: ReactNode;
@@ -132,7 +127,11 @@ function TaskDraftFormContent({
 }) {
   const effectiveRelateTaskId =
     relate?.taskId ?? (hasAmbientRelate ? activeRelate?.taskId : null) ?? null;
-  const effectiveRelateMode = relate ? relateMode : hasAmbientRelate ? ambientRelateMode : undefined;
+  const effectiveRelateMode = relate
+    ? relateMode
+    : hasAmbientRelate
+      ? ambientRelateMode
+      : undefined;
 
   const relateTaskChildren = useMemo(
     () =>
@@ -145,7 +144,8 @@ function TaskDraftFormContent({
   );
 
   const relateTaskHasDeps = useMemo(() => {
-    if (!effectiveRelateTaskId || effectiveRelateMode !== "prerequisite") return false;
+    if (!effectiveRelateTaskId || effectiveRelateMode !== "prerequisite")
+      return false;
     const t = tasks.find((t) => t.id === effectiveRelateTaskId);
     return t ? t.dependencies.length > 0 : false;
   }, [tasks, effectiveRelateTaskId, effectiveRelateMode]);
@@ -180,7 +180,6 @@ function TaskDraftFormContent({
       setAmbientRelateMode={setAmbientRelateMode}
       standalone={standalone}
       setStandalone={setStandalone}
-      captures={captures}
       target={target}
       relateTaskChildren={relateTaskChildren}
       relateTaskHasDeps={relateTaskHasDeps}
@@ -214,7 +213,6 @@ function InsertBeforeForm({
   setAmbientRelateMode,
   standalone,
   setStandalone,
-  captures,
   target,
   relateTaskChildren,
   relateTaskHasDeps,
@@ -241,7 +239,6 @@ function InsertBeforeForm({
   setAmbientRelateMode: (v: TaskChainRelateMode | undefined) => void;
   standalone: boolean;
   setStandalone: (v: boolean) => void;
-  captures: CaptureKind[];
   target: TaskChainTarget;
   relateTaskChildren: { id: string; title: string }[];
   relateTaskHasDeps: boolean;
@@ -270,15 +267,21 @@ function InsertBeforeForm({
           ? {
               taskId: relate.taskId,
               mode: relateMode,
-              insertBefore: relateMode === "followup" ? insertBefore : undefined,
-              standalone: relateMode === "prerequisite" && standalone ? true : undefined,
+              insertBefore:
+                relateMode === "followup" ? insertBefore : undefined,
+              standalone:
+                relateMode === "prerequisite" && standalone ? true : undefined,
             }
           : hasAmbientRelate && ambientRelateMode
             ? {
                 taskId: activeRelate!.taskId,
                 mode: ambientRelateMode,
-                insertBefore: ambientRelateMode === "followup" ? insertBefore : undefined,
-                standalone: ambientRelateMode === "prerequisite" && standalone ? true : undefined,
+                insertBefore:
+                  ambientRelateMode === "followup" ? insertBefore : undefined,
+                standalone:
+                  ambientRelateMode === "prerequisite" && standalone
+                    ? true
+                    : undefined,
               }
             : undefined;
 
@@ -293,7 +296,6 @@ function InsertBeforeForm({
         relate: effectiveRelate,
         url,
         options: launchOptions,
-        beforeScreenshot: () => setOpen(false),
       });
       if (!outcome.ok) {
         toast({
@@ -333,7 +335,6 @@ function InsertBeforeForm({
       submitting={submitting}
       onSubmit={submit}
       onCancel={() => setOpen(false)}
-      captures={captures}
       relateMode={
         relate ? relateMode : hasAmbientRelate ? ambientRelateMode : undefined
       }
@@ -362,7 +363,6 @@ export function TaskDraftPopover({
   trigger,
   tooltip,
   target,
-  captures = ["url"],
   relate,
   insert,
   open: controlledOpen,
@@ -375,8 +375,7 @@ export function TaskDraftPopover({
   const isControlled = controlledOpen !== undefined;
   const open = isControlled ? controlledOpen : uncontrolledOpen;
 
-  const appCaptureUrlDefault = useCaptureUrlDefault();
-  const captureUrlDefault = captures.includes("url") && appCaptureUrlDefault;
+  const captureUrlDefault = useCaptureUrlDefault();
   const optionDefaults = useLaunchOptionDefaults();
   // `:v2` — `CardDraft` traded `model`/`prepromptId` for the open `options` map.
   // `readDraft` blind-casts, so a pre-refactor card would deserialize with the
@@ -468,7 +467,9 @@ export function TaskDraftPopover({
   useEffect(() => {
     if (open && !wasOpenRef.current) {
       setUrl(window.location.href);
-      setCards((prev) => prev.map((c) => ({ ...c, includeUrl: captureUrlDefault })));
+      setCards((prev) =>
+        prev.map((c) => ({ ...c, includeUrl: captureUrlDefault })),
+      );
       seenIdsRef.current = new Set();
     }
     wasOpenRef.current = open;
@@ -498,7 +499,10 @@ export function TaskDraftPopover({
       trigger={trigger}
       tooltip={tooltip}
     >
-      <ResourceView resource={tasksResult} fallback={<Loading variant="rows" />}>
+      <ResourceView
+        resource={tasksResult}
+        fallback={<Loading variant="rows" />}
+      >
         {(tasks) => (
           <TaskDraftFormContent
             tasks={tasks}
@@ -520,7 +524,6 @@ export function TaskDraftPopover({
             setAmbientRelateMode={setAmbientRelateMode}
             standalone={standalone}
             setStandalone={setStandalone}
-            captures={captures}
             target={target}
             heading={heading}
             footerStart={footerStart}

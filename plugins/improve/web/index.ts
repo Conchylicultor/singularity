@@ -6,7 +6,7 @@ export { insertIntoImproveDraft } from "./internal/open-store";
 
 export default {
   description:
-    'Toolbar button for app-improvement feedback. Files a task under "Improvements" with URL + optional screenshot.',
+    'Toolbar button for app-improvement feedback. Files a task under "Improvements" with the current URL.',
   contributions: [
     ActionBar.Item({
       id: "improve",

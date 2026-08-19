@@ -90,7 +90,6 @@ The handle does expose `.table` — but only as a same-plugin escape for live-st
     - `primitives/text-editor/paste-images`
     - `screenshot/draw-on-app`
     - `tasks`
-    - `tasks/task-draft-form`
     - `tasks/tasks-core`
   - Endpoint callers: `task-attachments`
 

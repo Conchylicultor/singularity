@@ -38,11 +38,8 @@ export interface CardDraft {
   // option needs no field here.
   options: LaunchOptionValues;
   includeUrl: boolean;
-  includeScreenshot: boolean;
   linkedToPrev: boolean;
 }
-
-export type CaptureKind = "url" | "screenshot";
 
 export interface TaskDraftFormProps {
   cards: CardDraft[];
@@ -52,7 +49,6 @@ export interface TaskDraftFormProps {
   submitting: boolean;
   onSubmit: () => void;
   onCancel: () => void;
-  captures: CaptureKind[];
   // Head-card relate toggle (only rendered when both are supplied).
   relateMode?: TaskChainRelateMode | undefined;
   onRelateModeChange?: (next: TaskChainRelateMode | undefined) => void;
@@ -92,7 +88,6 @@ export function makeCard(
     text: "",
     options,
     includeUrl,
-    includeScreenshot: false,
     linkedToPrev: true,
   };
 }
@@ -105,7 +100,6 @@ export function TaskDraftForm({
   submitting,
   onSubmit,
   onCancel,
-  captures,
   relateMode,
   onRelateModeChange,
   showIndependentRelate,
@@ -135,11 +129,8 @@ export function TaskDraftForm({
   const isMulti = cards.length > 1;
   const hasEmpty = cards.some((c) => !c.text.trim());
   const disabled = hasEmpty || submitting;
-  const appCaptureUrlDefault = useCaptureUrlDefault();
+  const captureUrlDefault = useCaptureUrlDefault();
   const optionDefaults = useLaunchOptionDefaults();
-  const supportsUrl = captures.includes("url");
-  const supportsScreenshot = captures.includes("screenshot");
-  const captureUrlDefault = supportsUrl && appCaptureUrlDefault;
 
   const updateCard = (idx: number, patch: Partial<CardDraft>) => {
     const next = cards.slice();
@@ -258,20 +249,8 @@ export function TaskDraftForm({
                     onSubmitChord={() => {
                       if (!disabled) onSubmit();
                     }}
-                    includeUrl={supportsUrl ? card.includeUrl : undefined}
-                    onToggleUrl={
-                      supportsUrl
-                        ? (v) => updateCard(idx, { includeUrl: v })
-                        : undefined
-                    }
-                    includeScreenshot={
-                      supportsScreenshot ? card.includeScreenshot : undefined
-                    }
-                    onToggleScreenshot={
-                      supportsScreenshot
-                        ? (v) => updateCard(idx, { includeScreenshot: v })
-                        : undefined
-                    }
+                    includeUrl={card.includeUrl}
+                    onToggleUrl={(v) => updateCard(idx, { includeUrl: v })}
                     relateMode={isHead ? relateMode : undefined}
                     onRelateModeChange={isHead ? onRelateModeChange : undefined}
                     showIndependentRelate={

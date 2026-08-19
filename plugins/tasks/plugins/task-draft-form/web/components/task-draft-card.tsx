@@ -6,7 +6,10 @@ import { CSS } from "@dnd-kit/utilities";
 import { TextEditor } from "@plugins/primitives/plugins/text-editor/web";
 import { HeadToolbar } from "./head-toolbar";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
-import { Stack, Inset } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import {
+  Stack,
+  Inset,
+} from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
 import type { LaunchOptionValues } from "@plugins/tasks/plugins/launch-options/web";
@@ -38,15 +41,12 @@ export interface TaskDraftCardProps {
    * action slot uses; omitted, the card keeps the handle to itself.
    */
   insertRef?:
-    | React.MutableRefObject<((snippet: string) => void) | null>
-    | undefined;
+    React.MutableRefObject<((snippet: string) => void) | null> | undefined;
 
-  // Capture-context toggles. Each is rendered iff the corresponding
-  // capability is enabled by the host (omitted handlers = capability off).
-  includeUrl?: boolean;
-  onToggleUrl?: (v: boolean) => void;
-  includeScreenshot?: boolean;
-  onToggleScreenshot?: (v: boolean) => void;
+  // Whether this card attaches the current page URL to the filed task. Every
+  // card has the toggle — it is not a per-host capability.
+  includeUrl: boolean;
+  onToggleUrl: (v: boolean) => void;
 
   // Head-card-only relate toggle.
   relateMode?: TaskChainRelateMode | undefined;
@@ -62,54 +62,35 @@ export interface TaskDraftCardProps {
   showStandalone?: boolean;
 }
 
-function ContextRow({
+function UrlToggle({
   includeUrl,
   onToggleUrl,
-  includeScreenshot,
-  onToggleScreenshot,
   disabled,
 }: {
-  includeUrl?: boolean;
-  onToggleUrl?: (v: boolean) => void;
-  includeScreenshot?: boolean;
-  onToggleScreenshot?: (v: boolean) => void;
+  includeUrl: boolean;
+  onToggleUrl: (v: boolean) => void;
   disabled: boolean;
 }) {
-  const showUrl = !!onToggleUrl;
-  const showScreenshot = !!onToggleScreenshot;
-  if (!showUrl && !showScreenshot) return null;
   return (
-    // eslint-disable-next-line layout/no-adhoc-layout -- wrapping checkbox row with asymmetric wrap gaps (gap-x-md horizontal, gap-y-xs vertical); no single-gap layout primitive expresses two-axis wrap spacing
-    <div className="flex flex-wrap items-center gap-x-md gap-y-xs pt-xs">
-      {showUrl && (
-        <Text as="label" variant="caption" tone="muted" className="cursor-pointer">
-          <Stack direction="row" align="center" gap="xs">
-            <input
-              type="checkbox"
-              className="h-3 w-3 cursor-pointer"
-              checked={!!includeUrl}
-              disabled={disabled}
-              onChange={(e) => onToggleUrl!(e.target.checked)}
-            />
-            URL
-          </Stack>
-        </Text>
-      )}
-      {showScreenshot && (
-        <Text as="label" variant="caption" tone="muted" className="cursor-pointer">
-          <Stack direction="row" align="center" gap="xs">
-            <input
-              type="checkbox"
-              className="h-3 w-3 cursor-pointer"
-              checked={!!includeScreenshot}
-              disabled={disabled}
-              onChange={(e) => onToggleScreenshot!(e.target.checked)}
-            />
-            Screenshot
-          </Stack>
-        </Text>
-      )}
-    </div>
+    <Inset t="xs">
+      <Text
+        as="label"
+        variant="caption"
+        tone="muted"
+        className="cursor-pointer"
+      >
+        <Stack direction="row" align="center" gap="xs">
+          <input
+            type="checkbox"
+            className="h-3 w-3 cursor-pointer"
+            checked={includeUrl}
+            disabled={disabled}
+            onChange={(e) => onToggleUrl(e.target.checked)}
+          />
+          URL
+        </Stack>
+      </Text>
+    </Inset>
   );
 }
 
@@ -129,8 +110,6 @@ export function TaskDraftCard({
   insertRef: hostInsertRef,
   includeUrl,
   onToggleUrl,
-  includeScreenshot,
-  onToggleScreenshot,
   relateMode,
   onRelateModeChange,
   showIndependentRelate,
@@ -184,7 +163,11 @@ export function TaskDraftCard({
       )}
     >
       {/* Drag handle hint pinned to the card's top-right; off-ramp 0.375rem inset (not on the spacing ramp). */}
-      <Pin to="top-right" decorative style={{ top: "0.375rem", right: "0.375rem" }}>
+      <Pin
+        to="top-right"
+        decorative
+        style={{ top: "0.375rem", right: "0.375rem" }}
+      >
         <MdDragIndicator className="pointer-events-none size-3 text-muted-foreground/30 opacity-0 transition-opacity group-hover:opacity-100" />
       </Pin>
       <div onPointerDown={(e) => e.stopPropagation()} className="cursor-auto">
@@ -203,7 +186,14 @@ export function TaskDraftCard({
         />
       </div>
       {isHead && <HeadToolbar insertText={insertText} />}
-      <Stack direction="row" wrap align="center" justify="between" gap="sm" className="pt-xs">
+      <Stack
+        direction="row"
+        wrap
+        align="center"
+        justify="between"
+        gap="sm"
+        className="pt-xs"
+      >
         <Stack direction="row" wrap align="center" gap="md">
           <LaunchOptionChips
             values={launchOptions}
@@ -234,11 +224,9 @@ export function TaskDraftCard({
           </button>
         )}
       </Stack>
-      <ContextRow
+      <UrlToggle
         includeUrl={includeUrl}
         onToggleUrl={onToggleUrl}
-        includeScreenshot={includeScreenshot}
-        onToggleScreenshot={onToggleScreenshot}
         disabled={disabled}
       />
       {relateTaskChildren &&
@@ -254,7 +242,12 @@ export function TaskDraftCard({
         )}
       {showStandalone && onStandaloneChange && (
         <Inset x="sm" y="xs">
-          <Text as="label" variant="caption" tone="muted" className="cursor-pointer">
+          <Text
+            as="label"
+            variant="caption"
+            tone="muted"
+            className="cursor-pointer"
+          >
             <Stack direction="row" align="center" gap="xs">
               <input
                 type="checkbox"

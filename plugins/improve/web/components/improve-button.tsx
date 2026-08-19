@@ -2,11 +2,18 @@ import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useSyncExternalStore } from "react";
 import { MdAutoAwesome } from "react-icons/md";
 import { TaskDraftPopover } from "@plugins/tasks/plugins/task-draft-form/web";
-import { getImproveOpenState, setImproveOpen, subscribeImproveOpen } from "../internal/open-store";
+import {
+  getImproveOpenState,
+  setImproveOpen,
+  subscribeImproveOpen,
+} from "../internal/open-store";
 import { IMPROVEMENTS_CATEGORY_ID } from "../../shared/constants";
 
 export function ImproveButton() {
-  const { open, insert } = useSyncExternalStore(subscribeImproveOpen, getImproveOpenState);
+  const { open, insert } = useSyncExternalStore(
+    subscribeImproveOpen,
+    getImproveOpenState,
+  );
 
   return (
     <TaskDraftPopover
@@ -20,7 +27,6 @@ export function ImproveButton() {
       }
       tooltip="Improve"
       target={{ kind: "category", categoryId: IMPROVEMENTS_CATEGORY_ID }}
-      captures={["url", "screenshot"]}
       insert={insert}
       heading="Improve this app"
     />

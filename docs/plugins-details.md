@@ -15281,7 +15281,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Cross-plugin:
         - Imported by: `apps/pages/history`
 
-- **`improve`** — Toolbar button for app-improvement feedback. Files a task under "Improvements" with URL + optional screenshot. Toolbar button and category for app-improvement feedback. Files tasks stamped "Improvements" via the shared task-draft-form primitive.
+- **`improve`** — Toolbar button for app-improvement feedback. Files a task under "Improvements" with the current URL. Toolbar button and category for app-improvement feedback. Files tasks stamped "Improvements" via the shared task-draft-form primitive.
   - Web:
     - Contributes: `ActionBar.Item` → `ImproveButton`
     - Uses:
@@ -15431,7 +15431,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/text-editor/paste-images`
           - `screenshot/draw-on-app`
           - `tasks`
-          - `tasks/task-draft-form`
           - `tasks/tasks-core`
         - Endpoint callers: `task-attachments`
     - **`boot-snapshot`** — Hydrates all boot-critical resources from a single boot snapshot before first paint. Single-request boot snapshot of all boot-critical resources, hydrated client-side before first paint.
@@ -29335,7 +29334,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps-core.useCurrentAppId`
           - `config_v2.ConfigV2`
           - `config_v2.useConfig`
-          - `infra/attachments.uploadAttachment`
           - `infra/endpoints.fetchEndpoint`
           - `infra/endpoints.getEndpointErrorMessage`
           - `primitives/css/center.Center`
@@ -29370,7 +29368,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `tasks/launch-options.useLaunchOptionDefaults`
         - Exports (types):
           - `ActiveRelateContext`
-          - `CaptureKind`
           - `CardDraft`
           - `TaskDraftActionProps`
           - `TaskDraftInsert`

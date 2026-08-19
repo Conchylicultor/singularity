@@ -4,7 +4,7 @@
 
 ## Plugin reference
 
-- Description: Toolbar button for app-improvement feedback. Files a task under "Improvements" with URL + optional screenshot. Toolbar button and category for app-improvement feedback. Files tasks stamped "Improvements" via the shared task-draft-form primitive.
+- Description: Toolbar button for app-improvement feedback. Files a task under "Improvements" with the current URL. Toolbar button and category for app-improvement feedback. Files tasks stamped "Improvements" via the shared task-draft-form primitive.
 - Web:
   - Contributes: `ActionBar.Item` → `ImproveButton`
   - Uses:

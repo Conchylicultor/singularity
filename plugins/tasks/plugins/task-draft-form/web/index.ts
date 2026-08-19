@@ -8,7 +8,7 @@ export type {
   TaskDraftPopoverProps,
   TaskDraftRelate,
 } from "./components/task-draft-popover";
-export type { CardDraft, CaptureKind } from "./components/task-draft-form";
+export type { CardDraft } from "./components/task-draft-form";
 
 export {
   setActiveRelateContext,
