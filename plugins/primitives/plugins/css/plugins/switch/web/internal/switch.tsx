@@ -75,14 +75,24 @@ export function Switch({
   onCheckedChange,
   disabled,
   className,
-  id,
   ref,
-  ...aria
+  ...rest
 }: SwitchProps): ReactElement {
   return (
     <button
+      // The passthrough goes FIRST, so nothing handed in from outside can take
+      // over what makes this a switch — its role, its `aria-checked`, or the
+      // click that flips it. It is not a hypothetical: a render-prop host such
+      // as a tooltip trigger clones its own props (handlers included) onto the
+      // element it wraps, and those arrive here as ordinary props. Spread last,
+      // one of them would silently replace this button's own `onClick` and the
+      // switch would stop toggling exactly while its tooltip is open.
+      //
+      // `id` rides the spread rather than being pulled out and re-applied: such
+      // a host also assigns the trigger an id of its own, and re-applying an
+      // absent one after the spread would erase it.
+      {...rest}
       ref={ref}
-      id={id}
       type="button"
       role="switch"
       aria-checked={checked}
@@ -92,7 +102,6 @@ export function Switch({
         "focus-ring inline-flex rounded-full disabled:pointer-events-none",
         className,
       )}
-      {...aria}
     >
       <SwitchIndicator checked={checked} disabled={disabled} />
     </button>

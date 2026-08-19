@@ -1424,6 +1424,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/line.Line`
               - `primitives/css/placeholder.Placeholder`
               - `primitives/css/spacing.Stack`
+              - `primitives/css/switch.Switch`
               - `primitives/css/text.Text`
               - `primitives/css/toggle-chip.SegmentedControl`
               - `primitives/css/ui-kit.Button`
@@ -1444,6 +1445,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/pane.PaneChrome`
               - `primitives/pane.useOpenPane`
               - `primitives/relative-time.RelativeTime`
+              - `primitives/tooltip.WithTooltip`
             - Exports (types):
               - `ConfigValues`
               - `EventSourceTypeContribution`
@@ -22560,7 +22562,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `Switch`
               - `SwitchIndicator`
           - Cross-plugin:
-            - Imported by: `primitives/css/control-panel`
+            - Imported by:
+              - `apps/events/sources`
+              - `primitives/css/control-panel`
         - **`text`** — Semantic typography primitive: <Text variant tone as> picks a frozen size/line-height/weight role from the typography token group (incl. the eyebrow/section-label role). The single sanctioned home for text hierarchy; raw text-size/leading-* is banned by no-adhoc-typography.
           - Web:
             - Uses:
@@ -26842,6 +26846,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps-core/surface/floating`
           - `apps-core/tab-bar`
           - `apps/agent-manager/worktree-switcher`
+          - `apps/events/sources`
           - `apps/prototypes/thumbnails`
           - `apps/sonata/primitives/toolbar-control`
           - `apps/workflows/editor`

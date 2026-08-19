@@ -13,6 +13,12 @@
   // whose runs keep failing transiently, and a source that succeeds every run
   // while finding zero events (a site that changed its markup), were both
   // invisible here. Those two are exactly what needs attention.
+  //
+  // ANDed with that: the source must still be enabled. A disabled source's
+  // extraction status is a fact about the past — you switched the source off,
+  // which is the user's own answer to whatever it was doing wrong, so keeping
+  // it in a list titled `Needs attention` is nagging about a decision already
+  // made. Its history is untouched and `All` still shows it.
   "views": [
     { "id": "all", "name": "All", "view": { "type": "list" } },
     {
@@ -31,6 +37,13 @@
               "fieldId": "extraction",
               "operatorId": "is-any-of",
               "value": ["failed", "empty"]
+            },
+            {
+              "kind": "rule",
+              "id": "r-enabled",
+              "fieldId": "enabled",
+              "operatorId": "is",
+              "value": true
             }
           ]
         }

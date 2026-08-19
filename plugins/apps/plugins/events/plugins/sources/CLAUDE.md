@@ -39,14 +39,29 @@ client-side over a bounded live window, so filter/sort/group-by need no server
 binding. It is the dimension that answers "which sources are silently returning
 nothing"; `status` cannot.
 
-The row paints ONE chip: `running` while a run is in flight, the extraction
-status otherwise. `idle` is a constant on a healthy source and `error` is
-subsumed (a terminal failure also writes a failed run; a transient one leaves
-`status: idle` while the extraction status still says `failed`).
+The row paints ONE chip, with a three-way precedence: `Disabled` > `Running` >
+the extraction status. `Disabled` wins because a switched-off source's
+extraction status describes a past the row no longer lives in — `Failed` on a
+source you turned off last month is asking for attention you already gave.
+Below it, `running` wins while a run is in flight. `idle` and `error` are never
+painted: `idle` is a constant on a healthy source, and `error` is subsumed (a
+terminal failure also writes a failed run; a transient one leaves `status: idle`
+while the extraction status still says `failed`). A disabled row also mutes its
+name, so it reads "off" before anything is read at all.
 
-Row actions are a slot, ordered non-destructive-first: `enabled` (toggle) then
-`delete`. Disabling now also drops the source's events out of the events list —
-a query-time default in `event-list`, not a delete, so re-enabling restores them.
+For the same reason the `Needs attention` view (authored in
+`config/apps/events/sources/events.sources.jsonc`) ANDs `enabled is true` onto
+its unhealthy-extraction filter: you switched it off, so it is not a complaint.
+
+Row actions are a slot, ordered non-destructive-first: `enabled` then `delete`.
+The `enabled` action is a real `role="switch"` — the control shows its own state
+(knob and filled track), where the pause/play glyph it replaced left the reader
+guessing whether the icon described the source or the click. That matters here
+because row actions only appear on hover, so a state the control can only state
+through its label is a state nobody sees at rest; the chip and the muted name
+carry it the rest of the time. Disabling also drops the source's events out of
+the events list — a query-time default in `event-list`, not a delete, so
+re-enabling restores them.
 
 ## Source-type wiring (unchanged)
 
@@ -113,6 +128,7 @@ Design: [`research/2026-08-03-apps-events-event-tracking-app.md`](../../../../..
     - `primitives/css/line.Line`
     - `primitives/css/placeholder.Placeholder`
     - `primitives/css/spacing.Stack`
+    - `primitives/css/switch.Switch`
     - `primitives/css/text.Text`
     - `primitives/css/toggle-chip.SegmentedControl`
     - `primitives/css/ui-kit.Button`
@@ -133,6 +149,7 @@ Design: [`research/2026-08-03-apps-events-event-tracking-app.md`](../../../../..
     - `primitives/pane.PaneChrome`
     - `primitives/pane.useOpenPane`
     - `primitives/relative-time.RelativeTime`
+    - `primitives/tooltip.WithTooltip`
   - Exports (types):
     - `ConfigValues`
     - `EventSourceTypeContribution`

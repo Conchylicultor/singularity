@@ -9,10 +9,14 @@
  * the toolbar DO, and each step is written against a claim about the design
  * rather than against a pixel:
  *
- *   1. the row toggle is an ACTION, not a navigation — the button lives beside
- *      the row's own primary button and stops the click, so disabling a source
- *      never also opens its detail pane, and the very same button (relabelled)
- *      puts it back. That reversibility is why the action carries no confirm;
+ *   1. the row toggle is a SWITCH, and an ACTION rather than a navigation. It
+ *      is a real `role="switch"` beside the row's own primary button, inside a
+ *      cluster that stops the click — so disabling a source never also opens
+ *      its detail pane, and the very same switch (relabelled) puts it back.
+ *      That reversibility is why the action carries no confirm. Being a switch
+ *      is also what makes the state machine-readable: every step below asserts
+ *      `aria-checked`, so "the row says what it is at rest" is checked, not
+ *      merely looked at;
  *   2. a disabled source's events leave the events list as a query-time
  *      DEFAULT, never a delete. Three assertions, because that one word is the
  *      whole design: the unfiltered list drops by exactly the source's own
@@ -177,12 +181,12 @@ await withBrowser(async (h) => {
   // ---------------------------------------------------------------------------
 
   /**
-   * The action button belonging to the row whose label reads {@link name}.
+   * The action control belonging to the row whose label reads {@link name}.
    *
    * Every row's actions are in the DOM at all times — the reveal is a per-row
    * hover that couples opacity with pointer-events — so a page-wide
-   * `getByRole("button", { name: "Disable source" }).first()` resolves to some
-   * OTHER row's invisible, `pointer-events: none` button. Playwright then
+   * `getByRole("switch", { name: "Disable source" }).first()` resolves to some
+   * OTHER row's invisible, `pointer-events: none` switch. Playwright then
    * clicks the point it occupies, the click lands on the row underneath, and
    * the "toggle" merely opens that row's detail pane. Green script, nothing
    * toggled.
@@ -192,9 +196,11 @@ await withBrowser(async (h) => {
    * hovering it hovers the container that owns the reveal), then pick the
    * action whose vertical centre is inside that row's band.
    *
-   * `exact: true` on the name, for the reason `sources-verify.ts` documents: a
-   * row `<button>` takes its accessible name from its whole subtree, so the
-   * default substring match can resolve to the row rather than the action.
+   * `switch`, not `button`: the toggle is now a `role="switch"`, which does
+   * NOT match `getByRole("button")` — a switch is its own role, not a button
+   * with an extra attribute. Its accessible name is the `aria-label` the
+   * control carries, and `exact: true` is kept for the reason
+   * `sources-verify.ts` documents.
    */
   const rowAction = async (
     name: string,
@@ -210,7 +216,7 @@ await withBrowser(async (h) => {
     await page.waitForTimeout(600);
     const centre = labelBox.y + labelBox.height / 2;
     for (const candidate of await page
-      .getByRole("button", { name: action, exact: true })
+      .getByRole("switch", { name: action, exact: true })
       .all()) {
       const box = await candidate.boundingBox();
       if (box === null) continue;
@@ -282,6 +288,15 @@ await withBrowser(async (h) => {
       const disable = await rowAction(target.name, "Disable source");
       r.ok(`the row offers "Disable source"`, disable !== null);
       if (disable !== null) {
+        // The control now states its own position. This is the assertion the
+        // old icon button could not carry: a glyph has no `aria-checked`, so
+        // whether the source was on could only be inferred from the name of the
+        // action being offered — a label, read backwards.
+        r.eq(
+          "the enabled row's switch reads on",
+          await disable.getAttribute("aria-checked"),
+          "true",
+        );
         await disable.click();
         switchedOff.add(target.id);
         await page.waitForTimeout(1500);
@@ -336,13 +351,27 @@ await withBrowser(async (h) => {
       if (disable !== null) {
         const enable = await rowAction(target.name, "Enable source");
         r.ok(
-          'the disabled row offers "Enable source" — the same button, relabelled',
+          'the disabled row offers "Enable source" — the same switch, relabelled',
           enable !== null,
         );
         if (enable !== null) {
+          r.eq(
+            "the disabled row's switch reads off",
+            await enable.getAttribute("aria-checked"),
+            "false",
+          );
           await enable.click();
           await page.waitForTimeout(2000);
           await snap(page, OUT, "3-re-enabled");
+          // …and all the way back: the switch is re-located by the name it now
+          // carries, so this reads the element the row is actually rendering
+          // rather than a stale handle to the one that was there before.
+          const backOn = await rowAction(target.name, "Disable source");
+          r.eq(
+            "and re-enabling puts the switch back on",
+            backOn === null ? null : await backOn.getAttribute("aria-checked"),
+            "true",
+          );
           const deadline = Date.now() + 10_000;
           let restored = await countEvents(null);
           while (Date.now() < deadline && restored !== baseline) {
