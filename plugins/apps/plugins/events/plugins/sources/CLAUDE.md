@@ -11,7 +11,8 @@ the umbrella for the *source types* themselves.
   `readConfigValues`, the label maps).
 - **`plugins/source-detail/`** — the side-pane's regions, one sub-plugin each.
 - **`plugins/source-field/`** — the `source` dimension of the *events* DataView.
-- **`plugins/url-extract/`, `plugins/manual/`, …** — the source types.
+- **`plugins/url-extract/`, `plugins/manual/`, `plugins/dmda/`,
+  `plugins/salsanueva/`** — the source types.
 
 Naming: a **source** is a configured instance (a row in `event_sources`); a
 **source type** is the plugin that knows how to read that kind of thing.
@@ -148,6 +149,7 @@ Design: [`research/2026-08-03-apps-events-event-tracking-app.md`](../../../../..
 - Sub-plugins:
   - **`dmda`** — Des Mots et Des Arts source type in the Events `+` menu: contributes the `dmda` type with its generic category picker. Des Mots et Des Arts event source type: probe reads the site's own paginated JSON listing (SSRF-guarded) and fingerprints its identity fields; extract maps the rows to events with no model call, resolving the year the site omits from the weekday it publishes.
   - **`manual`** — Manual event source type: contributes the hand-entry option to the Events `+` source menu. Zero-config — the user is the extractor, so there is nothing to point it at. Hand-entry event source type: probe reports a constant fingerprint (nothing upstream can change) and extract vouches for the source's own live rows, so a refresh can never bury events the user typed.
+  - **`salsanueva`** — SalsaNueva source type in the Events `+` menu: contributes the `salsanueva` type with its dance / style / level / school / teacher / day filters. SalsaNueva event source type: probe reads the school's own courses API (SSRF-guarded) for the published term and groups the dated occurrences back into weekly courses; extract filters them by the source's own dance / level / school selection and publishes each course as ONE recurring event, with no model call.
   - **`source-detail`** — Umbrella for the source side-pane's sections — one sub-plugin per region of a configured source (settings, schedule, status, runs).
   - **`source-field`** — Contributes the `source` dimension into the events DataView: a `sourceId` enum field whose options are the live configured sources, so events can be filtered, sorted and grouped by source with no edit to event-list.
   - **`url-extract`** — Web-page source type in the Events `+` menu: contributes the `url` type with its generic URL + extraction-hint form. Web-page event source type: probe reads the URL through one transport-blind pipeline (SSRF-guarded plain fetch, or a real browser when the source's Fetch mode says so or the site answers a bot challenge), refuses a page it cannot read whole or that has no readable text at all, and fingerprints its normalized visible text; extract turns that text into structured events with a one-shot Sonnet call, validated against ExtractedEventSchema.

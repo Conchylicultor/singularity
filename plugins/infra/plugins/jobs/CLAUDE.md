@@ -170,6 +170,7 @@ replay; a plain `Error` remains the right choice for anything retry could fix.
   - Imported by:
     - `apps/events/refresh`
     - `apps/events/sources/dmda`
+    - `apps/events/sources/salsanueva`
     - `apps/events/sources/url-extract`
     - `apps/mail/sync`
     - `apps/pages/content-search`

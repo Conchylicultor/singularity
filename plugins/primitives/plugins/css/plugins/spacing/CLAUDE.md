@@ -296,6 +296,7 @@ per-site via `// eslint-disable-next-line spacing/no-adhoc-spacing -- reason`.
     - `fields/reorder-tree/config`
     - `fields/secret/config`
     - `fields/string-list/config`
+    - `fields/tags/config`
     - `fields/tags/inline`
     - `fields/tags/table`
     - `fields/text/config`

@@ -59,6 +59,7 @@
     - `debug/queue`
     - `debug/timeline`
     - `fields/enum/inline`
+    - `fields/tags/config`
     - `fields/tags/inline`
     - `page/inline-date`
     - `page/place`

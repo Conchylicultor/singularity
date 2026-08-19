@@ -318,6 +318,10 @@
       "name": "@singularity/plugin-apps-events-sources-manual",
       "version": "0.0.1",
     },
+    "plugins/apps/plugins/events/plugins/sources/plugins/salsanueva": {
+      "name": "@singularity/plugin-apps-events-sources-salsanueva",
+      "version": "0.0.1",
+    },
     "plugins/apps/plugins/events/plugins/sources/plugins/source-detail": {
       "name": "@singularity/plugin-apps-events-sources-source-detail",
       "version": "0.0.1",
@@ -2322,6 +2326,10 @@
     },
     "plugins/fields/plugins/tags": {
       "name": "@singularity/plugin-fields-tags",
+      "version": "0.0.1",
+    },
+    "plugins/fields/plugins/tags/plugins/config": {
+      "name": "@singularity/plugin-fields-tags-config",
       "version": "0.0.1",
     },
     "plugins/fields/plugins/tags/plugins/filter": {
@@ -5692,6 +5700,8 @@
 
     "@singularity/plugin-apps-events-sources-manual": ["@singularity/plugin-apps-events-sources-manual@workspace:plugins/apps/plugins/events/plugins/sources/plugins/manual"],
 
+    "@singularity/plugin-apps-events-sources-salsanueva": ["@singularity/plugin-apps-events-sources-salsanueva@workspace:plugins/apps/plugins/events/plugins/sources/plugins/salsanueva"],
+
     "@singularity/plugin-apps-events-sources-source-detail": ["@singularity/plugin-apps-events-sources-source-detail@workspace:plugins/apps/plugins/events/plugins/sources/plugins/source-detail"],
 
     "@singularity/plugin-apps-events-sources-source-detail-runs": ["@singularity/plugin-apps-events-sources-source-detail-runs@workspace:plugins/apps/plugins/events/plugins/sources/plugins/source-detail/plugins/runs"],
@@ -6665,6 +6675,8 @@
     "@singularity/plugin-fields-string-list-config": ["@singularity/plugin-fields-string-list-config@workspace:plugins/fields/plugins/string-list/plugins/config"],
 
     "@singularity/plugin-fields-tags": ["@singularity/plugin-fields-tags@workspace:plugins/fields/plugins/tags"],
+
+    "@singularity/plugin-fields-tags-config": ["@singularity/plugin-fields-tags-config@workspace:plugins/fields/plugins/tags/plugins/config"],
 
     "@singularity/plugin-fields-tags-filter": ["@singularity/plugin-fields-tags-filter@workspace:plugins/fields/plugins/tags/plugins/filter"],
 

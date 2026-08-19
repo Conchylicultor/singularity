@@ -11,6 +11,7 @@
     - `apps-core/surface/floating/wallpaper/openverse`
     - `apps/browser/proxy`
     - `apps/events/sources/dmda`
+    - `apps/events/sources/salsanueva`
     - `apps/events/sources/url-extract`
     - `apps/mail/remote-images`
     - `apps/sonata/sources/ultimate-guitar`

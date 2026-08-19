@@ -1172,7 +1172,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/events/sources/source-field`
         - **`events-core`** — Contract layer for the Events app, web half: the EventSources.Type source-type slot plus the live sources / events-revision hooks and the source-CRUD mutations. Contract layer for the Events app: the event_sources / events / event_source_runs entities, the defineEventSourceType two-phase registry, source CRUD endpoints, and the live sources window + events revision tick.
           - Web:
-            - Slots: `EventSources.Type` ← `apps.events.sources.dmda`, `apps.events.sources.manual`, `apps.events.sources.url-extract`
+            - Slots: `EventSources.Type` ← `apps.events.sources.dmda`, `apps.events.sources.manual`, `apps.events.sources.salsanueva`, `apps.events.sources.url-extract`
             - Uses:
               - `infra/endpoints.useEndpoint`
               - `infra/endpoints.useEndpointMutation`
@@ -1320,6 +1320,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/events/sources`
               - `apps/events/sources/dmda`
               - `apps/events/sources/manual`
+              - `apps/events/sources/salsanueva`
               - `apps/events/sources/source-detail/runs`
               - `apps/events/sources/source-detail/runs/caveats`
               - `apps/events/sources/source-detail/runs/extracted-events`
@@ -1500,6 +1501,36 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                 - Exports (values):
                   - `MANUAL_SOURCE_TYPE_ID`
                   - `manualSourceConfigFields`
+            - **`salsanueva`** — SalsaNueva source type in the Events `+` menu: contributes the `salsanueva` type with its dance / style / level / school / teacher / day filters. SalsaNueva event source type: probe reads the school's own courses API (SSRF-guarded) for the published term and groups the dated occurrences back into weekly courses; extract filters them by the source's own dance / level / school selection and publishes each course as ONE recurring event, with no model call.
+              - Web:
+                - Contributes: `EventSources.Type` "SalsaNueva"
+                - Uses: `apps/events/events-core.EventSources`
+              - Server:
+                - Uses:
+                  - `apps/events/events-core.defineEventSourceType`
+                  - `infra/jobs.NonRetryableError`
+                  - `infra/safe-fetch.parsePublicUrl`
+                  - `infra/safe-fetch.safeFetch`
+                - Register: `defineEventSourceType('salsanueva')`
+              - Core:
+                - Uses: `fields/tags/config.tagsField`
+                - Exports (types):
+                  - `SalsanuevaFilterKey`
+                  - `SalsanuevaSourceConfig`
+                - Exports (values):
+                  - `SALSANUEVA_ACTIVITIES`
+                  - `SALSANUEVA_COACHES`
+                  - `SALSANUEVA_DAYS`
+                  - `SALSANUEVA_FILTER_KEYS`
+                  - `SALSANUEVA_LEVELS`
+                  - `SALSANUEVA_LOCATIONS`
+                  - `SALSANUEVA_ORIGIN`
+                  - `SALSANUEVA_PLANNING_PATH`
+                  - `SALSANUEVA_SOURCE_TYPE_ID`
+                  - `SALSANUEVA_SUB_ACTIVITIES`
+                  - `SALSANUEVA_TYPES`
+                  - `salsanuevaPlanningUrl`
+                  - `salsanuevaSourceConfigFields`
             - **`source-detail`** — Umbrella for the source side-pane's sections — one sub-plugin per region of a configured source (settings, schedule, status, runs).
               - Plugins:
                 - **`runs`** — Runs section of the Events source side-pane: the run ledger as a DataView (outcome, event counts, duration, error), including the cheap `unchanged` runs — the record that makes 'why did nothing happen' answerable. A row drills into the run's own pane, whose regions are contributions.
@@ -7630,7 +7661,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `stats/commits`
     - **`fields`** — Field type registry. Sub-plugins contribute field types with core factories and web renderers.
       - Web:
-        - Slots: `config-v2.fields.renderer` ← `fields.avatar.config`, `fields.bool.config`, `fields.color.config`, `fields.directory-path.config`, `fields.dynamic-enum.config`, `fields.enum.config`, `fields.float.config`, `fields.int.config`, `fields.json.config`, `fields.list.config`, `fields.multiline-text.config`, `fields.object.config`, `fields.reorder-tree.config`, `fields.secret.config`, `fields.string-list.config`, `fields.text.config`, `fields.variant.config`
+        - Slots: `config-v2.fields.renderer` ← `fields.avatar.config`, `fields.bool.config`, `fields.color.config`, `fields.directory-path.config`, `fields.dynamic-enum.config`, `fields.enum.config`, `fields.float.config`, `fields.int.config`, `fields.json.config`, `fields.list.config`, `fields.multiline-text.config`, `fields.object.config`, `fields.reorder-tree.config`, `fields.secret.config`, `fields.string-list.config`, `fields.tags.config`, `fields.text.config`, `fields.variant.config`
         - Uses:
           - `primitives/css/placeholder.Placeholder`
           - `primitives/css/spacing.Stack`
@@ -7666,6 +7697,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `fields/reorder-tree/config`
           - `fields/secret/config`
           - `fields/string-list/config`
+          - `fields/tags/config`
           - `fields/text/config`
           - `fields/variant/config`
           - `primitives/data-view/view-core`
@@ -13147,6 +13179,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `fields/string-list`
       - `fields/string-list/config`
       - `fields/tags`
+      - `fields/tags/config`
       - `fields/text`
       - `fields/text/config`
       - `fields/uuid`
@@ -14208,7 +14241,31 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports (values):
           - `tagsFieldType`
           - `tagsIdentity`
+      - Cross-plugin:
+        - Imported by: `fields/tags/config`
       - Plugins:
+        - **`config`** — Tags field type: config-render capability. Contributes the multi-select chip renderer to the config-v2.fields.renderer slot.
+          - Web:
+            - Contributes: `config-v2.fields.renderer` "tags" → `TagsRenderer`
+            - Uses:
+              - `config_v2/fields.FieldHeader`
+              - `config_v2/fields.FieldRendererComponent`
+              - `config_v2/fields.Fields`
+              - `primitives/css/cluster.Cluster`
+              - `primitives/css/spacing.Stack`
+              - `primitives/css/toggle-chip.ToggleChip`
+          - Core:
+            - Uses:
+              - `fields.FieldDef`
+              - `fields.FieldMeta`
+              - `fields/tags.tagsFieldType`
+            - Exports (types):
+              - `TagsFieldDef`
+              - `TagsOption`
+              - `TagsOptionInput`
+            - Exports (values): `tagsField`
+          - Cross-plugin:
+            - Imported by: `apps/events/sources/salsanueva`
         - **`filter`** — Tags (multi-value) field type: data-view filter operator set (contains / contains-any-of …).
           - Web:
             - Contributes: `DataViewSlots.Filter` "tags"
@@ -16388,6 +16445,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Imported by:
           - `apps/events/refresh`
           - `apps/events/sources/dmda`
+          - `apps/events/sources/salsanueva`
           - `apps/events/sources/url-extract`
           - `apps/mail/sync`
           - `apps/pages/content-search`
@@ -16837,6 +16895,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps-core/surface/floating/wallpaper/openverse`
           - `apps/browser/proxy`
           - `apps/events/sources/dmda`
+          - `apps/events/sources/salsanueva`
           - `apps/events/sources/url-extract`
           - `apps/mail/remote-images`
           - `apps/sonata/sources/ultimate-guitar`
@@ -20942,6 +21001,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `debug/trace/boot`
               - `debug/trace/contention`
               - `debug/trace/gates`
+              - `fields/tags/config`
               - `fields/tags/inline`
               - `page/place`
               - `page/prompt/block`
@@ -22184,6 +22244,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `fields/reorder-tree/config`
               - `fields/secret/config`
               - `fields/string-list/config`
+              - `fields/tags/config`
               - `fields/tags/inline`
               - `fields/tags/table`
               - `fields/text/config`
@@ -22859,6 +22920,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `debug/queue`
               - `debug/timeline`
               - `fields/enum/inline`
+              - `fields/tags/config`
               - `fields/tags/inline`
               - `page/inline-date`
               - `page/place`

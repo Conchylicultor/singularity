@@ -1,0 +1,6 @@
+{
+  "name": "@singularity/plugin-apps-events-sources-salsanueva",
+  "description": "SalsaNueva event source type: read the school's own courses API and publish each weekly course as one recurring event.",
+  "private": true,
+  "version": "0.0.1"
+}

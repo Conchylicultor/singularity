@@ -28,6 +28,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
           - Plugins:
             - **`dmda`** — Des Mots et Des Arts source type in the Events `+` menu: contributes the `dmda` type with its generic category picker. Des Mots et Des Arts event source type: probe reads the site's own paginated JSON listing (SSRF-guarded) and fingerprints its identity fields; extract maps the rows to events with no model call, resolving the year the site omits from the weekday it publishes.
             - **`manual`** — Manual event source type: contributes the hand-entry option to the Events `+` source menu. Zero-config — the user is the extractor, so there is nothing to point it at. Hand-entry event source type: probe reports a constant fingerprint (nothing upstream can change) and extract vouches for the source's own live rows, so a refresh can never bury events the user typed.
+            - **`salsanueva`** — SalsaNueva source type in the Events `+` menu: contributes the `salsanueva` type with its dance / style / level / school / teacher / day filters. SalsaNueva event source type: probe reads the school's own courses API (SSRF-guarded) for the published term and groups the dated occurrences back into weekly courses; extract filters them by the source's own dance / level / school selection and publishes each course as ONE recurring event, with no model call.
             - **`source-detail`** — Umbrella for the source side-pane's sections — one sub-plugin per region of a configured source (settings, schedule, status, runs).
               - Plugins:
                 - **`runs`** — Runs section of the Events source side-pane: the run ledger as a DataView (outcome, event counts, duration, error), including the cheap `unchanged` runs — the record that makes 'why did nothing happen' answerable. A row drills into the run's own pane, whose regions are contributions.
@@ -259,7 +260,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`worktree-cleanup`** — Audit and remove stale git worktrees and their Postgres DB forks. Audit and remove stale git worktrees and their Postgres DB forks.
     - **`zero-test`** — Temporary verification harness: a Debug → Zero Test pane that renders the pilot tasks slice live through the Zero client adapter. Deleted once a real migration begins.
 
-- **`fields`** [87 sub-plugins] — Type-dimension registry: owns the fields.identity slot where each field type registers its identity (token, label, icon, extends, coerce).
+- **`fields`** [88 sub-plugins] — Type-dimension registry: owns the fields.identity slot where each field type registers its identity (token, label, icon, extends, coerce).
 
 - **`framework`** — Umbrella for framework primitives: web plugin SDK, server, central
   - Plugins:

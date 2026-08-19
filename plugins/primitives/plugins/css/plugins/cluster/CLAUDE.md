@@ -69,6 +69,7 @@ defined in exactly one place. The distinct export buys two things:
     - `debug/trace/boot`
     - `debug/trace/contention`
     - `debug/trace/gates`
+    - `fields/tags/config`
     - `fields/tags/inline`
     - `page/place`
     - `page/prompt/block`
