@@ -57,7 +57,6 @@ import {
   planForestInsert,
   withMintedIds,
   newBlockId,
-  serializeForestToMarkdown,
   parseMarkdownToForest,
   defaultTextHandle,
   plainOf,
@@ -91,6 +90,7 @@ import {
   type BlockPasteHandler,
 } from "../internal/block-paste-handlers";
 import { BLOCKS_MIME } from "../internal/clipboard";
+import { writeForestToClipboard } from "../internal/clipboard-write";
 import { blockTextProtectedSpans } from "../internal/block-text-extensions";
 
 /**
@@ -593,14 +593,7 @@ function SelectionLayer({
       const clipboardData = e.clipboardData;
       if (clipboardData === null) return false;
       const forest = serializeForest(rowsRef.current, roots);
-      clipboardData.setData(BLOCKS_MIME, JSON.stringify(forest));
-      clipboardData.setData(
-        "text/plain",
-        serializeForestToMarkdown(forest, {
-          handles,
-          protectedSpans: blockTextProtectedSpans(),
-        }),
-      );
+      writeForestToClipboard(clipboardData, forest, handles);
       e.preventDefault();
       return true;
     },

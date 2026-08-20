@@ -1356,6 +1356,54 @@ two bulk endpoints are deleted. What each one had to keep:
   `planBulkMove`; a refusal is the identity, so a refused drag never reaches the
   undo stack or the network. Cross-page selection drags are refused loudly.
 
+## With nothing selected, the caret's block IS the selection
+
+The clipboard has two surfaces — block-selection mode's container
+(`block-editor.tsx`) and the caret inside one block (the two Lexical plugins) —
+and the caret one used to be paste-only. A `copy` with a collapsed caret reached
+`@lexical/rich-text`, which had nothing selected to copy, and did nothing at all.
+
+`BlockForestCopyPlugin` states the missing half as one rule:
+
+> With NOTHING selected, the caret's own block IS the selection.
+
+So Cmd+C copies that block and its subtree, Cmd+X copies and removes it, and
+`BlockForestPastePlugin` already lands the payload after the block the caret is
+in — which makes "copy, paste, duplicated" two keystrokes without leaving the
+text. **A non-collapsed selection declines** (`return false`), so a real text
+range is still the browser's own inline copy, marks and all; the only case
+claimed is the one where the native gesture was a silent no-op. Both plugins sit
+at `COMMAND_PRIORITY_NORMAL`, above rich-text's `COMMAND_PRIORITY_EDITOR`
+handlers.
+
+- **One encoding, two surfaces.** `writeForestToClipboard`
+  (`internal/clipboard-write.ts`) is the sole writer of a copied forest —
+  `BLOCKS_MIME` for the structural round-trip plus a `text/plain` markdown
+  fallback — so the container copy and the caret copy produce byte-identical
+  payloads by construction rather than by two implementations agreeing. It is
+  the inverse of `decidePaste`'s `forest` arm and lives beside it, but NOT in
+  `internal/clipboard.ts`: that module stays loadable with no Lexical in the
+  path, which is what lets `clipboard.test.ts` unit-test the decision.
+- **A cut deletes only on the branch that copied.** `CUT_COMMAND` runs the same
+  writer and calls `editor.remove()` — the rail menu's own Delete op, so the
+  caret lands where a delete always lands and the cut is one undo entry — but
+  only when the write returned `true`. A cut that never reached the clipboard
+  must not destroy the block.
+- **It copies the block the CARET is in, never the container around it.** The
+  rail's menu resolves to `RailSeat.owner` instead (a callout's borrowed line
+  acts on the callout); the keyboard acts on the line you are standing in. The
+  split is deliberate — copying a whole container is what selecting it as a
+  block is for.
+- **`serializeForest` reads the ROW, not the live `Y.Doc`**, so a copy fired
+  inside the ~1s `data.text` projection window carries the pre-keystroke text.
+  Inherited from duplicate, which has the same bound; `e2e/caret-clipboard-verify.ts`
+  waits it out rather than pretending it isn't there.
+
+`e2e/caret-clipboard-verify.ts` is the executable spec: the bare-caret copy
+against a sentinel clipboard (a stale value IS the pre-change symptom), the
+paste-duplicates-it pair, the subtree travelling with its parent, the text-range
+copy staying inline, and the cut.
+
 ## Paste is an op (`{ kind: "paste", forest, afterId, parentId }`)
 
 Paste was once the ONE editor mutation outside the optimistic pipeline — a

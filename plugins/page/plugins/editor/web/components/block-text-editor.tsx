@@ -44,6 +44,7 @@ import { InlineMarkdownPlugin } from "./inline-markdown-plugin";
 import { FormatToolbarPlugin } from "./format-toolbar-plugin";
 import { FormatShortcutsPlugin } from "./format-shortcuts-plugin";
 import { BlockPastePlugin } from "./block-paste-plugin";
+import { BlockForestCopyPlugin } from "./block-forest-copy-plugin";
 import { BlockForestPastePlugin } from "./block-forest-paste-plugin";
 import {
   blockTextNodes,
@@ -428,6 +429,7 @@ export function BlockTextEditor({
       <FormatToolbarPlugin />
       <BlockPastePlugin block={block} editor={editor} />
       <BlockForestPastePlugin block={block} editor={editor} />
+      <BlockForestCopyPlugin block={block} editor={editor} />
       {getBlockTextExtensions().map((ext) =>
         ext.Plugin ? (
           <ext.Plugin key={ext.id} block={block} editor={editor} />
