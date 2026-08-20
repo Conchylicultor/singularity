@@ -16,9 +16,9 @@
     - `page/page-reference.usePageReferenceActions`
     - `primitives/css/center.Center`
     - `primitives/css/row.Row`
+    - `primitives/css/row.RowFocus`
     - `primitives/css/spacing.Inset`
     - `primitives/css/text.Text`
-    - `primitives/css/ui-kit.cn`
   - Exports (values): `subPageBlock`
 - Core:
   - Uses:

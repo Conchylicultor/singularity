@@ -19314,9 +19314,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `page/page-reference.usePageReferenceActions`
           - `primitives/css/center.Center`
           - `primitives/css/row.Row`
+          - `primitives/css/row.RowFocus`
           - `primitives/css/spacing.Inset`
           - `primitives/css/text.Text`
-          - `primitives/css/ui-kit.cn`
         - Exports (values): `subPageBlock`
       - Core:
         - Uses:
@@ -22019,6 +22019,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/row-actions.RowActions`
               - `primitives/row-actions.rowActionsAnchor`
             - Exports (types):
+              - `RowFocus`
               - `RowHover`
               - `RowProps`
               - `RowSize`
@@ -23464,7 +23465,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `page/place`
               - `page/prompt/block`
               - `page/read-only-view`
-              - `page/sub-page`
               - `page/video`
               - `plugin-meta/facets/cross-refs/render-detail`
               - `plugin-meta/facets/db-schema/render-detail`

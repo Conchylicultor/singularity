@@ -32,12 +32,43 @@ silently ate every pointer event aimed at the body, which read as "tooltips just
 don't fire in a DataView list". If you catch yourself hoisting body content out
 to `actions` to make it hoverable again, that's the bug, not the fix.
 
-`ref` forwards to the row's outermost element (the row box) for DnD /
-scroll-into-view. `interactiveRef` forwards to the focusable control instead —
-the same node until the split above happens, and a different one after it, so a
-host that calls `.focus()` on its row (keyboard navigation into a void editor
-block) must use this one or it starts focusing an unfocusable `<div>` the day
-the row gains an action.
+## Focus is the row's, not the caller's
+
+Because the control is *synthesized*, a caller cannot predict which node it is,
+cannot predict the day it appears (someone adds `actions`), and therefore may
+not style it. So `Row` paints the app's canonical focus ring itself, on the ROW
+BOX, on both paths: `focus-ring` fires when the box IS the control, the new
+`focus-ring-from` fires when the box holds a control it nominated with
+`data-focus-ring`, and the split path's inner button carries `outline-none` so
+the UA outline never draws a second, tighter indicator inside the ring. One
+indicator, identical whether or not the row carries actions, covering the whole
+`p-row` padding ring that a `flex-1` control can never reach. (`focus-ring-within`
+is deliberately unused: it would also fire when a row ACTION takes focus,
+restoring the double indicator on top of that button's own ring.)
+
+**Callers author no focus styling on a `Row`** — no `outline-*`, no `ring-*`, no
+`focus:`/`focus-visible:`/`focus-within:` variant in its `className`, enforced by
+`row/no-row-focus-class`. Such a class lands on the BOX, which stops being the
+focused node the day the row splits; that is how a page row ended up drawing its
+own ring around the container while the browser drew one around the button
+inside it. What callers *do* have vocabulary for is **`selected`** — "this is the
+current row" (the editor's caret is here, this list item is the open one). It is
+a background tint, a different question from focus, and the two layer.
+
+`ref` is the ROW ELEMENT — the outermost box — for DnD / scroll-into-view /
+measurement. It is never the thing you focus: on a row with `actions` it is a
+plain `<div>` that cannot take focus at all. To move focus into a row (keyboard
+navigation landing on a void editor block) use **`focusRef`**, which is
+`Ref<RowFocus>` — a `{ focus(): void }` capability and deliberately NOT a node.
+Handing out the node is what the old `interactiveRef` did, and it failed
+silently: a second ref you had to know to reach for, whose omission left you
+calling `.focus()` on an unfocusable `<div>` — no throw, no focus. A capability
+cannot be measured, dragged, or compared against `document.activeElement`, so it
+cannot be mistaken for `ref`, and `Row` stays free to move the focus target
+between paths. `focus()` is synchronous (the page editor's `CaretSurface`
+contract is `focus: () => void`, which is why this is not a declarative `focused`
+prop) and THROWS on a row that renders no control at all — a loud caller bug
+instead of a silent no-op.
 
 ## Row is not a data list
 
@@ -64,6 +95,7 @@ genuine transient-chrome list escapes with
     - `primitives/row-actions.RowActions`
     - `primitives/row-actions.rowActionsAnchor`
   - Exports (types):
+    - `RowFocus`
     - `RowHover`
     - `RowProps`
     - `RowSize`

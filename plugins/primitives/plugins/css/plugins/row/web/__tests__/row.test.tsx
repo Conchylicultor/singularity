@@ -1,6 +1,7 @@
 import { describe, it, expect, afterEach, vi } from "vitest";
 import { cleanup, render, screen, fireEvent } from "@testing-library/react";
-import { Row } from "../internal/row";
+import { createRef } from "react";
+import { Row, type RowFocus } from "../internal/row";
 
 afterEach(cleanup);
 
@@ -136,5 +137,124 @@ describe("Row — element inference (no `as` prop)", () => {
     expect(root.tagName).toBe("BUTTON");
     // No inner button wrapper — the row IS the button.
     expect(root.querySelector("button")).toBeNull();
+  });
+});
+
+// Pins who owns the row's focus indicator. The control a `Row` renders is
+// SYNTHESIZED — it is the row box until the row gains `actions` and an inner
+// <button> after that — so the ring is painted by the BOX on every path and the
+// inner control's own UA outline is suppressed. Without these, the split path
+// silently regresses to two indicators (the box's ring plus the control's
+// outline) or to none at all.
+describe("Row — the row owns its focus ring", () => {
+  it("carries both focus utilities on the box, on every path", () => {
+    // Non-interactive <div>, interactive <button>, and the split container:
+    // same two classes, because each one is inert where it cannot match rather
+    // than branched away.
+    for (const row of [
+      <Row key="plain">plain</Row>,
+      <Row key="btn" onClick={() => {}}>
+        btn
+      </Row>,
+      <Row key="split" onClick={() => {}} actions={<button>x</button>}>
+        split
+      </Row>,
+    ]) {
+      const { container } = render(row);
+      const box = container.firstElementChild!;
+      expect(box.className).toContain("focus-ring");
+      expect(box.className).toContain("focus-ring-from");
+      cleanup();
+    }
+  });
+
+  it("nominates the split path's control and suppresses its own outline", () => {
+    render(
+      <Row onClick={() => {}} actions={<button data-testid="act">x</button>}>
+        label
+      </Row>,
+    );
+    const control = screen.getByRole("button", { name: "label" });
+    // `focus-ring-from` is `:has(> [data-focus-ring]:focus-visible)`, so the
+    // marker has to be on the box's direct child — the control itself.
+    expect(control.getAttribute("data-focus-ring")).toBe("");
+    expect(control.parentElement).toBe(control.closest(".focus-ring-from"));
+    // The box paints the ring, so the UA outline would be a second indicator.
+    expect(control.className).toContain("outline-none");
+  });
+
+  it("never marks the box itself, so `:has(> …)` cannot match on the single path", () => {
+    const { container } = render(<Row onClick={() => {}}>solo</Row>);
+    const box = container.firstElementChild!;
+    expect(box.hasAttribute("data-focus-ring")).toBe(false);
+    expect(box.querySelector("[data-focus-ring]")).toBeNull();
+  });
+});
+
+// Pins the capability contract: callers get `focus()`, never the node. The
+// point is that the SAME call lands on the right element on both paths — which
+// is exactly what the old node-handing ref could not do, because on the split
+// path the node it handed out was an unfocusable <div>.
+describe("Row — focusRef is a capability, not a node", () => {
+  it("focuses the row's own button on the single-element path", () => {
+    const focusRef = createRef<RowFocus>();
+    render(
+      <Row focusRef={focusRef} onClick={() => {}}>
+        solo
+      </Row>,
+    );
+    focusRef.current!.focus();
+    expect(document.activeElement).toBe(
+      screen.getByRole("button", { name: "solo" }),
+    );
+  });
+
+  it("focuses the inner control on the split path", () => {
+    const focusRef = createRef<RowFocus>();
+    render(
+      <Row
+        focusRef={focusRef}
+        onClick={() => {}}
+        actions={<button data-testid="act">x</button>}
+      >
+        label
+      </Row>,
+    );
+    focusRef.current!.focus();
+    expect(document.activeElement).toBe(
+      screen.getByRole("button", { name: "label" }),
+    );
+  });
+
+  it("hands `ref` the row box while `focusRef` focuses a different node", () => {
+    const ref = createRef<HTMLElement>();
+    const focusRef = createRef<RowFocus>();
+    const { container } = render(
+      <Row
+        ref={ref}
+        focusRef={focusRef}
+        onClick={() => {}}
+        actions={<button data-testid="act">x</button>}
+      >
+        label
+      </Row>,
+    );
+    // `ref` is the outermost element — what a drag source or a
+    // scroll-into-view measures.
+    expect(ref.current).toBe(container.firstElementChild);
+    focusRef.current!.focus();
+    // …and it is emphatically not what took focus.
+    expect(document.activeElement).not.toBe(ref.current);
+    expect(document.activeElement).toBe(
+      screen.getByRole("button", { name: "label" }),
+    );
+  });
+
+  it("throws when the row renders no control at all", () => {
+    const focusRef = createRef<RowFocus>();
+    render(<Row focusRef={focusRef}>plain</Row>);
+    // The old ref quietly called `.focus()` on an unfocusable <div>; a caller
+    // bug that does nothing and says nothing is the failure this replaces.
+    expect(() => focusRef.current!.focus()).toThrow(/focusable control/);
   });
 });

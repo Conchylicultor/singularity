@@ -1,9 +1,11 @@
 import { useEffect, useRef } from "react";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
-import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
+import {
+  Row,
+  type RowFocus,
+} from "@plugins/primitives/plugins/css/plugins/row/web";
 import { Inset } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
-import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { pageData } from "@plugins/page/plugins/editor/core";
 import {
   PageIcon,
@@ -35,20 +37,27 @@ export function SubPageBlock({ block, isFocused, editor }: BlockRendererProps) {
   // The row's own click opens in place; everything else the user can do with the
   // referenced page (open it beside this one, …) is a contributed action.
   const actions = usePageReferenceActions(block.id);
-  const ref = useRef<HTMLElement>(null);
+  // The capability to focus the row, never the row's node: `Row` synthesizes its
+  // own control and moves it the moment the row carries `actions` (which this
+  // one does), so there is no node here worth holding.
+  const focusRef = useRef<RowFocus>(null);
   const { title, iconSvgNodes } = pageData(block);
 
   useEffect(
-    () => registerFocusHandle(block.id, { focus: () => ref.current?.focus() }),
+    () =>
+      registerFocusHandle(block.id, {
+        focus: () => focusRef.current?.focus(),
+      }),
     [block.id, registerFocusHandle],
   );
 
   // Pull focus to the row when the editor considers this block focused (e.g.
   // after an arrow-key navigation landed here).
+  // No "is it already focused?" guard: `.focus()` on the already-focused element
+  // fires no focus event, so the guard bought nothing — and it is unspellable
+  // now that this holds a capability rather than a node, which is the point.
   useEffect(() => {
-    if (isFocused && ref.current && document.activeElement !== ref.current) {
-      ref.current.focus();
-    }
+    if (isFocused) focusRef.current?.focus();
   }, [isFocused]);
 
   // Arrows hand focus on to the neighbouring block, so the caret never strands
@@ -68,16 +77,18 @@ export function SubPageBlock({ block, isFocused, editor }: BlockRendererProps) {
   return (
     <Inset x="md" y="xs">
       <Row
-        // The row's FOCUSABLE control, not its outer box: carrying `actions`
-        // splits `Row` into a plain container plus an inner button, and it is
-        // the button that takes focus and that the handlers below sit on.
-        interactiveRef={ref}
+        focusRef={focusRef}
+        // The editor's caret being on this block IS `Row`'s `selected` — this is
+        // the current row. The bespoke ring that used to live here was a SECOND
+        // focus indicator, drawn on the row box while the browser drew its own
+        // on the inner control; `Row` now owns the focus ring, and this owns
+        // "current".
+        selected={isFocused}
         hover="muted"
         onClick={() => nav?.open(block.id)}
         onKeyDown={onKeyDown}
         onFocus={() => editor.onFocus()}
         actions={actions}
-        className={cn("outline-none", isFocused && "ring-primary/30 ring-1")}
         icon={
           <Center as="span" className="text-muted-foreground size-4">
             <PageIcon nodes={iconSvgNodes} className="size-4" />

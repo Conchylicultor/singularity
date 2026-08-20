@@ -180,6 +180,29 @@
   }
 }
 
+/* The third answer to "whose focus rings me?", and the only one that is a
+ * CHOICE rather than a fact about the DOM. `focus-ring` says *my own* focus
+ * rings me; `focus-ring-within` says *any* focus under me rings me;
+ * `focus-ring-from` says only the focus of the ONE descendant I nominated with
+ * `data-focus-ring` rings me.
+ *
+ * It exists for a wrapper that holds a primary control BESIDE other focusable
+ * chrome — a `Row` whose clickable body had to become a sibling of its action
+ * buttons, so the ring must be painted by the box while the focus lands on the
+ * inner control. `focus-ring-within` cannot express that: focusing a row ACTION
+ * would light the wrapper too, on top of the action's own `focus-ring` — two
+ * indicators for one focus, which is the exact bug this utility exists to make
+ * unrepresentable. The child selector is deliberate (`> `), not descendant: it
+ * is the nominated control that rings the box, not anything that control in turn
+ * contains. Pair it with `outline-none` on the nominated control — the box paints
+ * the indicator, so the UA outline would be the second one. */
+@utility focus-ring-from {
+  /* twmerge: standalone -- Additive box-shadow/outline; no single-value built-in group to conflict with. */
+  &:has(> [data-focus-ring]:focus-visible) {
+    @apply ring-3 ring-ring/50;
+  }
+}
+
 /* Checkbox corner — a square-ish shape that stays square under every Shape
  * preset, peer of rounded-none / rounded-full. Caps --radius at 3px rather than
  * freezing a flat literal: it honors a sharp / 0-radius theme (→ hard corner) but

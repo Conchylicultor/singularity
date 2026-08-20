@@ -596,7 +596,6 @@ guard: `confirmDialog` (`imperative-dialog/plugins/confirm`); native
     - `page/place`
     - `page/prompt/block`
     - `page/read-only-view`
-    - `page/sub-page`
     - `page/video`
     - `plugin-meta/facets/cross-refs/render-detail`
     - `plugin-meta/facets/db-schema/render-detail`

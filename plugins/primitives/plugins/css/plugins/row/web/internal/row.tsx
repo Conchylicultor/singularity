@@ -1,4 +1,4 @@
-import { useCallback } from "react";
+import { useCallback, useImperativeHandle, useRef } from "react";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
 import {
@@ -9,6 +9,17 @@ import type React from "react";
 
 export type RowSize = "sm" | "md";
 export type RowHover = "accent" | "muted";
+
+/**
+ * The row's focusable control, as a capability rather than a node. `Row` decides
+ * WHICH element that is — the row box, or the inner button of the split path
+ * below — and deliberately never says, so a holder can focus it and do nothing
+ * else with it.
+ */
+export interface RowFocus {
+  /** Move DOM focus onto the row's control. */
+  focus(): void;
+}
 
 /** Write one node into a ref of either form (callback or object). */
 function setRef(
@@ -36,25 +47,41 @@ export interface RowProps {
   actions?: React.ReactNode;
   actionsAlwaysVisible?: boolean;
   /**
-   * Forwarded to the row's outermost element (the row box) — the one intentional
+   * Forwarded to the ROW ELEMENT — the row's outermost box — the one intentional
    * divergence from ToggleChip (tree DnD / scroll-into-view depend on it).
+   *
+   * It is the node you measure, drag, or scroll into view. It is never the node
+   * you focus: on a row carrying `actions` the box is a plain `<div>` that
+   * cannot take focus at all. Reach for `focusRef`, which hands out the
+   * capability instead of the node.
    */
   ref?: React.Ref<HTMLElement>;
   /**
-   * Forwarded to the row's focusable CONTROL — the `<button>`/`<a>` inferred
-   * from `onClick`/`href`, falling back to the row box when the row renders no
-   * control.
+   * The capability to move focus onto the row's control — NOT that control's
+   * node. A host that lands focus on a row programmatically (keyboard
+   * navigation arriving at a void editor block) calls `focusRef.current.focus()`
+   * and is told nothing else about the element it focused.
    *
-   * The same node as `ref` right up until the row carries `actions`, and then
-   * not: the control has to become a SIBLING of the action buttons (nesting
-   * interactive elements is invalid DOM), so the box `ref` points at stops being
-   * focusable and stops being where the row's own handlers sit. A host that
-   * moves focus into its row programmatically — keyboard navigation landing on a
-   * void editor block — wants this ref, and would otherwise silently start
-   * calling `.focus()` on an unfocusable `<div>` the day someone gave the row an
-   * action.
+   * Handing out the node is the bug this replaces. The control is SYNTHESIZED by
+   * `Row`: it is the row box right up until the row carries `actions`, and from
+   * that moment on it is an inner `<button>`/`<a>` rendered as a SIBLING of the
+   * action cluster (nesting interactive elements is invalid DOM). So a caller
+   * holding the node held one that changed identity the day someone added an
+   * action, and the old `interactiveRef` — a second ref you had to know to reach
+   * for — failed SILENTLY when you didn't: `.focus()` on an unfocusable `<div>`
+   * neither throws nor focuses anything. A capability cannot be measured,
+   * dragged, or compared against `document.activeElement`, so it cannot be
+   * confused with `ref`, and `Row` stays free to move the focus target between
+   * paths because that is now an internal detail.
+   *
+   * `focus()` is synchronous, and has to stay that way: the page editor's
+   * `CaretSurface` contract is `focus: () => void` invoked imperatively from a
+   * keydown handler, so a declarative `focused` prop would make the landing
+   * async and break it. On a row that renders no control it THROWS — a
+   * `focusRef` on a non-interactive row is a caller bug, and a loud one is
+   * debuggable where the old silent no-op was not.
    */
-  interactiveRef?: React.Ref<HTMLElement>;
+  focusRef?: React.Ref<RowFocus>;
   disabled?: boolean;
   className?: string;
   title?: string;
@@ -79,45 +106,73 @@ export function Row({
   actions,
   actionsAlwaysVisible,
   ref,
-  interactiveRef,
+  focusRef,
   disabled,
   className,
   children,
   ...rest
 }: RowProps) {
-  // The box and the control are the same node on every path but the split one,
-  // so the two refs collapse onto it there. Composed only when a caller asked
-  // for both — with `interactiveRef` unset (every existing call site) `ref` is
-  // handed to the element untouched.
-  const bothRefs = useCallback(
-    (el: HTMLElement | null) => {
-      setRef(ref, el);
-      setRef(interactiveRef, el);
-    },
-    [ref, interactiveRef],
-  );
-  const collapsedRef = interactiveRef ? (ref ? bothRefs : interactiveRef) : ref;
-  // The split path writes the control ref through a CALLBACK rather than handing
-  // the caller's ref object straight to `<Tag>`. `Tag` is an `ElementType`, so
-  // its `ref` prop types as the INTERSECTION of every element it could be — a
-  // `Ref<HTMLElement>` satisfies none of them, while a callback taking the
-  // supertype satisfies all of them. Memoised on the caller's ref so React does
-  // not detach and re-attach it on every render.
-  const setInteractive = useCallback(
-    (el: HTMLElement | null) => setRef(interactiveRef, el),
-    [interactiveRef],
-  );
-
   // The element is inferred, never authored: a row with `href` is a link, a row
   // with `onClick`/`disabled` is a button, anything else is a plain container.
   // This removes the `as` footgun — a clickable row can no longer be declared as
-  // a `<button>` that then nests its `actions` buttons (invalid DOM).
+  // a `<button>` that then nests its `actions` buttons (invalid DOM). Inferred
+  // FIRST because the focus handle below has to know whether this row renders a
+  // control at all, and a hook cannot be moved past the conditional return.
   const href = (rest as { href?: unknown }).href;
   const onClick = (rest as { onClick?: unknown }).onClick;
   const Tag: React.ElementType =
     href != null ? "a" : onClick != null || disabled != null ? "button" : "div";
   const isButton = Tag === "button";
   const interactive = Tag !== "div";
+
+  // WHICH node takes the focus is `Row`'s business, so it keeps a private handle
+  // on it — the row box itself on the single-element path, the inner
+  // `<button>`/`<a>` on the split path — and publishes only the capability to
+  // focus whatever that is (see `focusRef`).
+  const controlRef = useRef<HTMLElement | null>(null);
+  useImperativeHandle(
+    focusRef,
+    () => ({
+      focus() {
+        // A non-interactive row renders a plain `<div>`, and focusing it would
+        // do nothing while looking like it worked — exactly how the ref this
+        // replaces failed. So it throws instead: the caller either meant to make
+        // the row clickable, or meant not to hold a `focusRef` at all.
+        if (!interactive) {
+          throw new Error(
+            "Row: focusRef.focus() on a row that renders no focusable control. A Row " +
+              "is only focusable when it infers one from its props (`href` → <a>, " +
+              "`onClick`/`disabled` → <button>); with neither it is a plain <div>. Give " +
+              "the row an `onClick`/`href`, or drop the `focusRef`.",
+          );
+        }
+        // Unreachable-null: the handle is published by the same commit that
+        // attaches the ref below, so anyone holding it holds a mounted row.
+        controlRef.current?.focus();
+      },
+    }),
+    [interactive],
+  );
+
+  // SINGLE-ELEMENT PATH refs — the one element is both the box and the control,
+  // so the caller's `ref` and the private control handle collapse onto it.
+  // Memoised on the caller's ref so React does not detach and re-attach it on
+  // every render.
+  const setBoxAndControl = useCallback(
+    (el: HTMLElement | null) => {
+      setRef(ref, el);
+      controlRef.current = el;
+    },
+    [ref],
+  );
+  // SPLIT PATH — `ref` still goes to the box untouched, and the control handle
+  // is written through a CALLBACK rather than a ref object handed straight to
+  // `<Tag>`. `Tag` is an `ElementType`, so its `ref` prop types as the
+  // INTERSECTION of every element it could be — a `Ref<HTMLElement>` satisfies
+  // none of them, while a callback taking the supertype satisfies all of them.
+  const setControl = useCallback((el: HTMLElement | null) => {
+    controlRef.current = el;
+  }, []);
 
   // The single-line contract (region-line + SingleLineProvider) comes from
   // <Line>; Row layers its interactive row chrome (width, padding, hover) on top.
@@ -128,8 +183,22 @@ export function Row({
   // `relative` a pinned cluster anchors to. Both are inert on a row with no
   // actions, and pinning them to `actions ? …` would only make the row's
   // positioning context depend on which slots the caller filled.
+  //
+  // The two focus utilities are UNCONDITIONAL because each is inert on the path
+  // where it cannot match, and a branch would only re-state the path split in a
+  // second place. On the single-element path the box IS the control, so
+  // `focus-ring` fires and `focus-ring-from`'s `:has(> …)` can never match (the
+  // box is not its own child). On the split path the box is a `<div>` that can
+  // never be focused, so `focus-ring` never fires and `focus-ring-from` picks up
+  // the inner control's focus instead. Either way the ring is painted by the
+  // BOX: one indicator, identical whether or not the row carries actions, and
+  // covering the whole `p-row` padding ring that the control — a `flex-1` child
+  // of an `items-center` line — can never reach. `focus-ring-within` is
+  // deliberately not what this uses: it would also fire when a row ACTION takes
+  // focus, stacking the row's ring on top of that button's own.
   const chromeClass = cn(
     "group w-full rounded-md p-row text-left transition-colors [&_svg:not([class*='size-'])]:icon-auto",
+    "focus-ring focus-ring-from",
     rowActionsAnchor,
     "disabled:pointer-events-none disabled:opacity-50",
     size === "sm" && "gap-xs text-caption",
@@ -220,12 +289,18 @@ export function Row({
         style={style}
       >
         <Tag
-          ref={interactiveRef ? setInteractive : undefined}
+          ref={setControl}
           type={isButton ? "button" : undefined}
           disabled={isButton ? disabled : undefined}
           aria-current={isButton && selected ? true : undefined}
+          // Nominates THIS node as the one whose focus rings the box
+          // (`focus-ring-from` above). Written `=""` like the other marker
+          // attributes in the repo — presence is the whole signal.
+          data-focus-ring=""
           className={cn(
-            "flex min-w-0 flex-1 items-center text-left",
+            // `outline-none`: the ring is painted by the box, so the UA outline
+            // would be a second, tighter indicator hugging the label inside it.
+            "flex min-w-0 flex-1 items-center text-left outline-none",
             size === "sm" ? "gap-xs" : "gap-sm",
             "disabled:pointer-events-none disabled:opacity-50",
           )}
@@ -247,7 +322,7 @@ export function Row({
   return (
     <Line
       as={Tag}
-      ref={collapsedRef}
+      ref={setBoxAndControl}
       type={isButton ? "button" : undefined}
       disabled={isButton ? disabled : undefined}
       aria-current={isButton && selected ? true : undefined}
