@@ -39,6 +39,7 @@ capabilities from `number` via the identity `extends` chain.
     - `apps/sonata/library`
     - `apps/sonata/voicing`
     - `debug/live-state-churn/monitor`
+    - `debug/queue-health`
     - `debug/sentinel`
     - `debug/slow-ops`
     - `debug/trace/engine`

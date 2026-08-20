@@ -167,6 +167,7 @@ The server itself is spawned and supervised by the gateway; never start it manua
     - `ServerContribution`
     - `ServerContributionToken`
     - `ServerErrorReport`
+    - `ServerFatalReport`
     - `ServerPluginDefinition`
     - `ServerResourceOptions`
     - `Span`
@@ -194,10 +195,12 @@ The server itself is spawned and supervised by the gateway; never start it manua
     - `recomputeResource`
     - `recordMemoryCheckpoint`
     - `reportServerError`
+    - `reportServerFatalSync`
     - `Resource`
     - `scopedResourceIdentities`
     - `serverCollectedDir`
     - `setErrorReporter`
+    - `setFatalReporter`
     - `setFeedExemptTables`
     - `setLiveStateSnapshotHooks`
     - `setProfilerHooks`

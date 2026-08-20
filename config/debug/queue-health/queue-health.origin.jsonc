@@ -1,4 +1,4 @@
-// @hash bbcb1708674a
+// @hash 01974192c298
 {
   // When off, the watchdog tick returns early and files no queue-health reports.
   "enabled": true,
@@ -6,8 +6,8 @@
   "backlogDepthThreshold": 200,
   // File a queue-backlog report when the oldest ready job has been overdue longer than this many minutes (a stall signal).
   "oldestOverdueMinutes": 10,
-  // File a queue-slot-hog report when a job has held a worker slot (locked/running) for more than this many times its hold class's work ceiling — 10s for instant, 2min for seconds, 30min for minutes. One factor rather than one duration, so the alarm scales with what the job declared instead of restating a number the class already owns.
-  "slotHogHoldFactor": 3,
+  // File a queue-slot-hog report when a job has held a worker slot (locked/running) for more than this fraction of its hold class's deadline — the wall-clock point at which a run of that class is aborted. A fraction rather than a duration, so the alarm scales with what the job declared; strictly below 1, so the warning always precedes the kill.
+  "slotHogDeadlineFraction": 0.5,
   // File a queue-slot-blocked report when a job's average run spends at least this many seconds waiting on an admission gate AND more than half its slot hold is that wait — i.e. it is holding a worker slot to wait, not to work.
   "slotBlockedWaitSeconds": 5,
   // File a queue-wedged report when every worker slot has been held by the same set of live jobs, with ready work waiting behind them, continuously for this many minutes. Also the floor of the queue-class-starved window (a class's own window is the longer of this and its work ceiling).

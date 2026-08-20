@@ -95,6 +95,7 @@
     - `debug/trace/engine`
     - `debug/worktree-cleanup`
     - `infra/boot-snapshot`
+    - `infra/jobs/deadline-audit`
     - `infra/worktree/removal-audit`
     - `reports/adaptive-bar`
     - `reports/caret-flight`

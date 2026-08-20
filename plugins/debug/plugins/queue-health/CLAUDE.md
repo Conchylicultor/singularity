@@ -333,6 +333,7 @@ them to include 1, which would put the warning on the same instant as the abort.
     - `config_v2.getConfig`
     - `infra/endpoints.implement`
     - `infra/jobs.ceilingMsFor`
+    - `infra/jobs.deadlineMsFor`
     - `infra/jobs.HOLD_CLASSES`
     - `infra/jobs.HOLD_SPECS`
     - `infra/jobs.HoldClass`
@@ -358,6 +359,7 @@ them to include 1, which would put the warning on the same instant as the abort.
   - Uses:
     - `config_v2.defineConfig`
     - `fields/bool/config.boolField`
+    - `fields/float/config.floatField`
     - `fields/int/config.intField`
     - `infra/endpoints.defineEndpoint`
     - `infra/jobs.HoldClassSchema`
