@@ -28,6 +28,7 @@
     - `primitives/css/row.Row`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
+    - `primitives/css/ui-kit.Separator`
     - `primitives/detail-sections.defineDetailSections`
     - `primitives/pane.Pane`
     - `primitives/pane.PaneChrome`

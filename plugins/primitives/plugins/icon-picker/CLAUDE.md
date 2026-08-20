@@ -13,6 +13,22 @@ server-side SVG resolution. The `avatar` primitive composes it.
   job. `onSelect` fires with `{ key, svgNodes }`: the MD icon key plus its
   extracted SVG child-tree, ready to store and render.
 
+## It applies NO content inset
+
+The block used to pad itself (`px-xs` on the header and the grid, `mx-1` on the
+search field) on top of whatever its host padded. Inside a `ControlPanel` that
+is a second inset owner: the panel already insets its content to the icon rail,
+so the picker's own label, search field and grid landed 8px right of every other
+block in the panel — the exact misalignment
+[`control-panel`](../css/plugins/control-panel/CLAUDE.md)'s single-owner rule
+exists to delete.
+
+So the root is a plain `<Stack gap="xs">` with no padding, and the host supplies
+the inset — for all three consumers today (the avatar picker, the page icon
+button, the callout appearance panel) that host is a `ControlPanel.Section`, so
+the picker lands on the panel's rail by doing nothing. A caller with no such
+host owns its own inset, through `className`.
+
 ## The `SvgNode` storage format
 
 `SvgNode` (in `core/`) is the JSON-serializable shape of an icon's `<svg>`

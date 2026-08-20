@@ -5,6 +5,10 @@ import {
   PopoverTrigger,
   type PopoverWidth,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import {
+  ControlPanelPopover,
+  type ControlPanelSize,
+} from "@plugins/primitives/plugins/css/plugins/control-panel/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import type { BlockEditorAPI } from "@plugins/page/plugins/editor/web";
 
@@ -29,13 +33,36 @@ type ContainerAppearance =
        * is where a user looks for block actions, the glyph is where they look
        * for the glyph.
        */
-      sections: (ctx: { editor: BlockEditorAPI; close: () => void }) => ReactNode;
+      sections: (ctx: {
+        editor: BlockEditorAPI;
+        close: () => void;
+      }) => ReactNode;
       /** The trigger's accessible name, e.g. `"Callout icon and color"`. */
       triggerLabel: string;
       /** Popover width role. Defaults to `"sm"`. */
       width?: PopoverWidth;
+      panel?: never;
     }
-  | { sections?: never; triggerLabel?: never; width?: never };
+  | {
+      /**
+       * The same sections, when they are built from the CONTROL-PANEL
+       * vocabulary (`ControlPanel.Section` / `.Row` / …). Those members need a
+       * `cp-panel` ancestor to inherit their inset and hang their hairlines
+       * from, and the panel body owns its own padding — so this arm opens a
+       * `ControlPanelPopover` instead of a raw padded `PopoverContent`, and the
+       * value is the panel's width ROLE rather than a t-shirt size.
+       *
+       * Mutually exclusive with `width` by type: a panel has no width to pick.
+       */
+      sections: (ctx: {
+        editor: BlockEditorAPI;
+        close: () => void;
+      }) => ReactNode;
+      triggerLabel: string;
+      panel: ControlPanelSize;
+      width?: never;
+    }
+  | { sections?: never; triggerLabel?: never; width?: never; panel?: never };
 
 export type ContainerAnchorProps = {
   /**
@@ -94,9 +121,14 @@ export function ContainerAnchor(props: ContainerAnchorProps) {
       sections={props.sections}
       triggerLabel={props.triggerLabel}
       width={props.width}
+      panel={props.panel}
     />
   );
 }
+
+/** The glyph's own chrome, shared by both surfaces below. */
+const TRIGGER_CLASS =
+  "hover:bg-accent size-full rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring";
 
 /**
  * The interactive arm: the glyph as a popover trigger over the container's own
@@ -113,22 +145,51 @@ function ContainerAppearancePopover({
   glyph,
   triggerLabel,
   width = "sm",
+  panel,
   sections,
 }: {
   editor: BlockEditorAPI;
   glyph: ReactNode;
   triggerLabel: string;
   width?: PopoverWidth;
+  panel?: ControlPanelSize;
   sections: (ctx: { editor: BlockEditorAPI; close: () => void }) => ReactNode;
 }) {
   const [open, setOpen] = useState(false);
   const close = () => setOpen(false);
 
+  // Panel-shaped sections open through the vocabulary's own surface: the body
+  // brings its own inset and its bands draw their own hairlines, so a
+  // `PopoverContent padding="sm"` around it would be a second padding role.
+  if (panel !== undefined) {
+    return (
+      <ControlPanelPopover
+        open={open}
+        onOpenChange={setOpen}
+        size={panel}
+        label={triggerLabel}
+        align="start"
+        trigger={
+          <button
+            type="button"
+            onMouseDown={(e) => e.preventDefault()}
+            className={TRIGGER_CLASS}
+            aria-label={triggerLabel}
+          >
+            <Center className="size-full">{glyph}</Center>
+          </button>
+        }
+      >
+        {sections({ editor, close })}
+      </ControlPanelPopover>
+    );
+  }
+
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger
         onMouseDown={(e) => e.preventDefault()}
-        className="hover:bg-accent size-full rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        className={TRIGGER_CLASS}
         aria-label={triggerLabel}
       >
         <Center className="size-full">{glyph}</Center>

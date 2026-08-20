@@ -243,3 +243,54 @@ describe("Calendar — keyboard navigation", () => {
     expect(focusedDay()).toBe("2026-08-14");
   });
 });
+
+describe("Calendar — adjacent-month cells", () => {
+  /**
+   * A leading/trailing cell shows a day of the PREVIOUS/NEXT month, and August
+   * 2026 has both: the grid opens on Sunday July 26 and runs past August 31 into
+   * September. The cell must carry the day it displays — not the day number
+   * pasted onto the month being viewed, which is how a picker ends up selecting
+   * August 3 when the user clicked September 3.
+   *
+   * Nothing in `Calendar` builds an ISO day by concatenation today (every cell
+   * is a real `Date` from `buildMonthGrid`, serialized by `toISODay`), and this
+   * is the test that keeps it that way.
+   */
+  it("labels leading and trailing cells with their OWN month", () => {
+    render(<Calendar value={SELECTED} locale="en-US" />);
+    // First cell: Sunday July 26 2026 — July, not August 26.
+    expect(dayButtons()[0]!.getAttribute("data-day")).toBe("2026-07-26");
+    // Last cell: Saturday September 5 2026.
+    expect(dayButtons().at(-1)!.getAttribute("data-day")).toBe("2026-09-05");
+    expect(dayButton("2026-09-03").textContent).toBe("3");
+    expect(dayButton("2026-09-03").getAttribute("aria-label")).toBe(
+      "Thursday, September 3, 2026",
+    );
+  });
+
+  it("selects the day a trailing cell SHOWS, not the same number in the viewed month", () => {
+    const onSelect = vi.fn();
+    render(<Calendar value={SELECTED} onSelect={onSelect} locale="en-US" />);
+    fireEvent.click(dayButton("2026-09-03"));
+
+    expect(onSelect).toHaveBeenCalledTimes(1);
+    const picked = onSelect.mock.calls[0]![0] as Date;
+    expect(picked.getFullYear()).toBe(2026);
+    expect(picked.getMonth()).toBe(8); // September
+    expect(picked.getDate()).toBe(3);
+    // …and the view follows the selection into its own month, so the picked day
+    // is not left off-screen.
+    expect(gridName()).toBe("September 2026");
+  });
+
+  it("selects the day a leading cell SHOWS", () => {
+    const onSelect = vi.fn();
+    render(<Calendar value={SELECTED} onSelect={onSelect} locale="en-US" />);
+    fireEvent.click(dayButton("2026-07-28"));
+
+    const picked = onSelect.mock.calls[0]![0] as Date;
+    expect(picked.getMonth()).toBe(6); // July
+    expect(picked.getDate()).toBe(28);
+    expect(gridName()).toBe("July 2026");
+  });
+});

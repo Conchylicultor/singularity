@@ -52,16 +52,14 @@ row (incomplete rule), mirroring the scalar operators.
 - Web:
   - Contributes: `DataViewSlots.Filter` "date"
   - Uses:
-    - `primitives/css/row.Row`
+    - `primitives/css/control-panel.ControlPanel`
+    - `primitives/css/control-panel.ControlPanelPopover`
     - `primitives/css/spacing.Inset`
     - `primitives/css/spacing.Stack`
-    - `primitives/css/text.SectionLabel`
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.Button`
-    - `primitives/css/ui-kit.Separator`
     - `primitives/data-view.DataViewSlots`
     - `primitives/date-picker.Calendar`
-    - `primitives/popover.InlinePopover`
 - Core:
   - Exports (types):
     - `DateAnchor`

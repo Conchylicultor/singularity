@@ -1,8 +1,14 @@
 import { MdLightbulb } from "react-icons/md";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { PageIcon, type BlockAnchorProps } from "@plugins/page/plugins/editor/web";
+import {
+  PageIcon,
+  type BlockAnchorProps,
+} from "@plugins/page/plugins/editor/web";
 import { ContainerAnchor } from "@plugins/page/plugins/container/web";
-import { CalloutAppearanceFor, readCalloutAppearance } from "./callout-appearance";
+import {
+  CalloutAppearanceFor,
+  readCalloutAppearance,
+} from "./callout-appearance";
 import { COLOR_TEXT } from "./callout-colors";
 
 /**
@@ -19,8 +25,9 @@ import { COLOR_TEXT } from "./callout-colors";
  * reachable from both.
  *
  * The static-vs-interactive branch on `editor`, the `preventDefault`ed trigger
- * and the popover all still belong to `ContainerAnchor`; `width="xl"` is the
- * callout's own, because its sections host the full icon picker.
+ * and the popover all still belong to `ContainerAnchor`; `panel="picker"` is the
+ * callout's own, because its sections are a control panel whose body hosts the
+ * full icon picker's grid.
  */
 export function CalloutAnchor({ data, editor }: BlockAnchorProps) {
   const { iconSvgNodes, color } = readCalloutAppearance(data);
@@ -29,7 +36,9 @@ export function CalloutAnchor({ data, editor }: BlockAnchorProps) {
     <ContainerAnchor
       editor={editor}
       triggerLabel="Callout icon and color"
-      width="xl"
+      // Its sections are a CONTROL PANEL whose body is an icon grid — the
+      // `picker` role (320px, the width this popover already had as `xl`).
+      panel="picker"
       glyph={
         <PageIcon
           nodes={iconSvgNodes}

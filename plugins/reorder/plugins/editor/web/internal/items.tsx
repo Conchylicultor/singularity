@@ -20,6 +20,7 @@ import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
 import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { SortableItem } from "@plugins/primitives/plugins/sortable-list/web";
 import { GrowRelay } from "@plugins/primitives/plugins/css/plugins/grow-relay/web";
 
@@ -374,88 +375,99 @@ export function RestoreButton({
       width="sm"
       padding="none"
     >
-      {hasHidden && (
-        <div className="p-xs">
-          {hiddenItems.map((item) => (
-            <Row
-              key={item.key}
-              size="sm"
-              hover="accent"
-              icon={<MdAdd className="text-muted-foreground" />}
-              onClick={() => {
-                handleRestore(item.key);
-                if (hiddenItems.length <= 1) setOpen(false);
-              }}
-            >
-              {item.label}
-            </Row>
-          ))}
-        </div>
-      )}
+      {/*
+        The popover is a stack of BANDS, and the rule between two of them belongs
+        to the stack, not to a band. Each band used to draw its own leading
+        `border-t`, so which bands exist decided whether the first rule had
+        anything above it — with nothing hidden and no inserts, the Marketplace
+        band was first and still painted a rule against the popover's top edge.
+        `divide-y` draws only BETWEEN siblings (`& > * + *`), so a leading rule is
+        not something a band can forget to suppress: it cannot be drawn at all.
+      */}
+      <Stack gap="none" className="divide-y divide-border">
+        {hasHidden && (
+          <div className="p-xs">
+            {hiddenItems.map((item) => (
+              <Row
+                key={item.key}
+                size="sm"
+                hover="accent"
+                icon={<MdAdd className="text-muted-foreground" />}
+                onClick={() => {
+                  handleRestore(item.key);
+                  if (hiddenItems.length <= 1) setOpen(false);
+                }}
+              >
+                {item.label}
+              </Row>
+            ))}
+          </div>
+        )}
 
-      {inserts.length > 0 && (
-        <div className="border-t border-border p-xs">
-          {inserts.map((insert) => (
-            <Row
-              key={insert.label}
-              size="sm"
-              hover="accent"
-              icon={<MdAdd className="text-muted-foreground" />}
-              onClick={() => {
-                insert.onInsert();
-                setOpen(false);
-              }}
-            >
-              {insert.label}
-            </Row>
-          ))}
-        </div>
-      )}
+        {inserts.length > 0 && (
+          <div className="p-xs">
+            {inserts.map((insert) => (
+              <Row
+                key={insert.label}
+                size="sm"
+                hover="accent"
+                icon={<MdAdd className="text-muted-foreground" />}
+                onClick={() => {
+                  insert.onInsert();
+                  setOpen(false);
+                }}
+              >
+                {insert.label}
+              </Row>
+            ))}
+          </div>
+        )}
 
-      <div className="border-t border-border px-sm py-sm">
-        <Inline
-          as="div"
-          gap="xs"
-          // eslint-disable-next-line spacing/no-adhoc-spacing -- bottom offset separating the Marketplace label from the search input
-          className="text-muted-foreground mb-1.5"
-        >
-          <MdStorefront className="size-3.5" />
-          <Text as="span" variant="label">
-            Marketplace
-          </Text>
-        </Inline>
-        <div className="relative">
-          {/* Decorative search glyph pinned to the input's left edge, vertically centered. `left-2` (0.5rem) is off the density ramp → inline-style offset. */}
-          <Pin
-            to="left"
-            decorative
-            style={{ left: "0.5rem" }}
-            className="size-3.5 text-muted-foreground"
+        <div className="px-sm py-sm">
+          <Inline
+            as="div"
+            gap="xs"
+            // eslint-disable-next-line spacing/no-adhoc-spacing -- bottom offset separating the Marketplace label from the search input
+            className="text-muted-foreground mb-1.5"
           >
-            <MdSearch className="size-3.5" />
-          </Pin>
-          <Input
-            placeholder="Search..."
-            // eslint-disable-next-line spacing/no-adhoc-spacing -- precise left padding clearing the absolutely-positioned search icon
-            className="h-7 pl-7 text-caption"
-            disabled
-          />
+            <MdStorefront className="size-3.5" />
+            <Text as="span" variant="label">
+              Marketplace
+            </Text>
+          </Inline>
+          <div className="relative">
+            {/* Decorative search glyph pinned to the input's left edge, vertically centered. `left-2` (0.5rem) is off the density ramp → inline-style offset. */}
+            <Pin
+              to="left"
+              decorative
+              style={{ left: "0.5rem" }}
+              className="size-3.5 text-muted-foreground"
+            >
+              <MdSearch className="size-3.5" />
+            </Pin>
+            <Input
+              placeholder="Search..."
+              // eslint-disable-next-line spacing/no-adhoc-spacing -- precise left padding clearing the absolutely-positioned search icon
+              className="h-7 pl-7 text-caption"
+              disabled
+            />
+          </div>
+          <Text
+            as="p"
+            variant="caption"
+            // eslint-disable-next-line spacing/no-adhoc-spacing -- top offset separating the empty-state text from the search input above
+            className="mt-1.5 text-center text-muted-foreground/60"
+          >
+            No items
+          </Text>
         </div>
-        <Text
-          as="p"
-          variant="caption"
-          // eslint-disable-next-line spacing/no-adhoc-spacing -- top offset separating the empty-state text from the search input above
-          className="mt-1.5 text-center text-muted-foreground/60"
-        >
-          No items
-        </Text>
-      </div>
 
-      <div className="border-t border-border p-xs">
-        <Row size="sm" hover="accent" disabled icon={<MdAdd />}>
-          Create custom plugin
-        </Row>
-      </div>
+        <div className="p-xs">
+          <Row size="sm" hover="accent" disabled icon={<MdAdd />}>
+            Create custom plugin
+          </Row>
+        </div>
+      </Stack>
     </InlinePopover>
   );
 }

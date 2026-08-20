@@ -89,8 +89,13 @@ export function ControlPanelRuleRow({
         className,
       )}
     >
+      {/* `data-cp-handle` is the occupancy mark `cp-panel` scans for: a builder
+          whose rules cannot be reordered reserves no gutter track, and the cell
+          is then hidden so it cannot auto-place into the prefix track. */}
       <span
         {...handleProps}
+        data-cp-cell="gutter"
+        data-cp-handle={handle ? "" : undefined}
         className={cn(
           "flex items-center justify-center text-muted-foreground",
           handle ? cn("cursor-grab", HANDLE_REVEAL) : "pointer-events-none",

@@ -10,14 +10,15 @@ import { MdCallSplit, MdClose, MdSort, MdVisibility } from "react-icons/md";
 
 // ── The control-panel geometry gate ─────────────────────────────────
 //
-// One region fixture plus one layout fixture per invariant the vocabulary exists
+// One region fixture plus one layout fixture per property the vocabulary exists
 // to hold. They render the REAL components with real Tailwind in a real browser
 // and measure boxes, so "every label starts at one x" stops being a review note
 // and becomes a number the build compares.
 //
-// Two widths everywhere: 262px and 524px — the `menu` and `builder` width roles
-// from `popover-width.ts`. A panel is only ever one of those two widths, so
-// sweeping them is sweeping the whole real range rather than an invented one.
+// Every width everywhere: 262 / 320 / 524px — the `menu`, `picker` and `builder`
+// width roles from `popover-width.ts`. A panel is only ever one of those three
+// widths, so sweeping them is sweeping the whole real range rather than an
+// invented one.
 //
 // ### How a fixture reaches inside the primitive
 //
@@ -31,16 +32,19 @@ import { MdCallSplit, MdClose, MdSort, MdVisibility } from "react-icons/md";
 //     its left/right edges ARE the cell's, which is what makes "the label starts
 //     at the text rail" measurable. Measuring the glyph or the text itself would
 //     report a couple of centering pixels instead of the track.
-//   - the rail markers — a zero-width box placed as LOOSE panel content, so it
-//     sits wherever the panel's own inset puts it, offset by the named rail.
-//     `cp-rail-icon` hangs it back one column (the same negative offset a
-//     section label uses); the text rail needs no class at all, because the
-//     panel's content inset IS the text rail. Either way the marker's edges
-//     sit exactly on the rail, so `leftPack(after: rail, gap: 0)` reads "this
-//     cell begins where the rail says it does" — comparing two INDEPENDENT
-//     mechanisms: the `calc()` tokens the panel and the section label are
-//     built from versus the grid tracks the row is built from. That is the
-//     whole of invariant #1, and it is the pair that can actually drift.
+//   - `<RailMarker>` — a zero-width box placed as LOOSE panel content, so it
+//     sits wherever the panel's own inset puts it. It carries NO class: the
+//     panel's content inset IS the rail, which is the property half these
+//     fixtures exist to gate. Its edges therefore sit exactly on the rail, so
+//     `leftPack(after: rail, gap: 0)` reads "this cell begins where the rail
+//     says it does" — comparing two INDEPENDENT mechanisms: the `calc()` tokens
+//     the panel's padding is built from versus the grid tracks the row is built
+//     from. That is the whole of invariant #1, and it is the pair that can
+//     actually drift.
+//     There is only ONE marker kind now. v1 had two, because the panel's inset
+//     was the TEXT rail and a section label hung back to the icon rail through a
+//     `cp-rail-icon` class; the inset IS the icon rail today, that offset is
+//     zero, and the class is gone.
 
 /** A probe that fills its cell, so the measured box IS the cell's box. */
 function Fills({ id, children }: { id: string; children?: ReactNode }) {
@@ -71,29 +75,22 @@ function Leaf({ id, children }: { id: string; children?: ReactNode }) {
 }
 
 /**
- * A zero-height, zero-width box sitting on the named rail, dropped into the
- * panel as ordinary loose content. `w-0` keeps both its edges ON the rail — a
- * plain block would stretch and put the right edge at the panel's far side.
+ * A zero-height, zero-width box sitting on the panel's rail, dropped in as
+ * ordinary loose content. `w-0` keeps both its edges ON the rail — a plain block
+ * would stretch and put the right edge at the panel's far side.
  *
- * The text rail carries no class BECAUSE the panel's content inset is the text
- * rail: an unmarked box lands there, which is exactly the property the
- * mixed-content fixture below exists to gate. The icon rail is one class, the
- * same negative hang a section label uses.
+ * It carries no class at all, and that IS the assertion: the panel's content
+ * inset is the rail, so content that does nothing lands on it.
  */
-function RailMarker({ id, rail }: { id: string; rail: "icon" | "text" }) {
-  return (
-    <span
-      data-geo={id}
-      className={`${rail === "icon" ? "cp-rail-icon " : ""}block h-0 w-0`}
-    />
-  );
+function RailMarker({ id }: { id: string }) {
+  return <span data-geo={id} className="block h-0 w-0" />;
 }
 
 /**
- * A zero-width probe placed FIRST inside a row's label, so its edges are the
- * text rail as the ROW GRID computes it — the grid tracks, not the panel's
- * padding. That independence is the point: an assertion comparing loose panel
- * content against this marker compares two genuinely different mechanisms.
+ * A zero-width probe placed FIRST inside a row's cell, so its edges are that
+ * cell's left edge as the ROW GRID computes it — the grid tracks, not the
+ * panel's padding. That independence is the point: an assertion comparing one
+ * grid's cell against another's compares two genuinely different mechanisms.
  */
 function RowRail({ id }: { id: string }) {
   return <span data-geo={id} className="inline-block h-0 w-0 align-middle" />;
@@ -101,10 +98,13 @@ function RowRail({ id }: { id: string }) {
 
 /** The `menu` width role, in px — the width a control panel actually opens at. */
 const MENU_ROLE_WIDTH = 262;
+/** The `picker` width role, in px — a panel whose body is a grid. */
+const PICKER_ROLE_WIDTH = 320;
 /** The `builder` width role, in px. */
 const BUILDER_ROLE_WIDTH = 524;
 
-const WIDTHS = [MENU_ROLE_WIDTH, BUILDER_ROLE_WIDTH];
+/** Every width role a `ControlPanelPopover` can open at — the whole real range. */
+const WIDTHS = [MENU_ROLE_WIDTH, PICKER_ROLE_WIDTH, BUILDER_ROLE_WIDTH];
 
 export const controlPanelFixtures: HarnessFixture[] = [
   // ── Invariant #1, gated by children the fixture cannot choose ─────
@@ -126,12 +126,12 @@ export const controlPanelFixtures: HarnessFixture[] = [
   // The children go inside a `Section` because that is how content actually
   // reaches a panel, and because the band is claimed to be inset-transparent:
   // `cp-panel` is the one box that pays, `cp-band` adds nothing, so a child
-  // lands on the text rail through it by doing nothing at all. Both halves of
-  // that claim are under test here.
+  // lands on the rail through it by doing nothing at all. Both halves of that
+  // claim are under test here.
   //
-  // Swept at the two width ROLES (262 / 524) like everything else in this file:
-  // a panel is only ever one of those two widths, and `cp-panel`'s rail is an
-  // asymmetric `calc()` pair (chrome pad + text rail on the start, chrome pad +
+  // Swept at every width ROLE (262 / 320 / 524) like everything else in this
+  // file: a panel is only ever one of those widths, and `cp-panel`'s rail is an
+  // asymmetric `calc()` pair (chrome pad + icon rail on the start, chrome pad +
   // row pad on the end) rather than a step off the ramp — so this is also the
   // fixture that proves a hand-built rail publishes what it actually applies.
   {
@@ -165,8 +165,7 @@ export const controlPanelFixtures: HarnessFixture[] = [
         <ControlPanel.Section
           label={<span data-geo="section-label">Group by</span>}
         >
-          <RailMarker id="rail-icon" rail="icon" />
-          <RailMarker id="rail-text" rail="text" />
+          <RailMarker id="rail-icon" />
           <ControlPanel.Row
             icon={
               <Fills id="icon-row-cell">
@@ -174,6 +173,11 @@ export const controlPanelFixtures: HarnessFixture[] = [
               </Fills>
             }
           >
+            {/* The text rail has no token to name it — it is an interior column
+                of this grid — so the row publishes it: a zero-width probe first
+                in the label cell. Every other row's label is then measured
+                against a rail one of them actually computed. */}
+            <RowRail id="rail-text" />
             <Fills id="icon-row-label">Visibility</Fills>
           </ControlPanel.Row>
           <ControlPanel.Row select="check" checked>
@@ -192,11 +196,11 @@ export const controlPanelFixtures: HarnessFixture[] = [
       </ControlPanel>
     ),
     invariants: [
-      // The icon rail: the section label and a row's icon cell begin at the same
-      // x. These are the two mechanisms that can drift — `cp-rail-icon`'s
-      // `calc(row-pad-x + gutter + icon-gap)` versus the row grid's own gutter
-      // track plus its column gap. `gap: 0` because the marker's right edge IS
-      // the rail.
+      // The rail: loose panel content, the section label and a row's icon cell
+      // all begin at the same x. These are the two mechanisms that can drift —
+      // the panel's own `calc(panel-pad + rail-icon)` padding versus the row
+      // grid's gutter track plus its column gap. `gap: 0` because the marker's
+      // right edge IS the rail.
       { kind: "leftPack", after: "rail-icon", slot: "section-label", gap: 0 },
       { kind: "leftPack", after: "rail-icon", slot: "icon-row-cell", gap: 0 },
       // The text rail: every row's LABEL begins at the same x, whatever the row
@@ -237,6 +241,13 @@ export const controlPanelFixtures: HarnessFixture[] = [
   // the one box that applies the content inset, so content that does nothing
   // lands on the rail, and only a Row (which cancels the inset to bleed its
   // hover fill full-width) has to do anything at all.
+  //
+  // The rail is the ICON rail. v1 measured loose content against a row's LABEL,
+  // and that was the defect this fixture could not see: an interior column of the
+  // row grid was handed to every search field and swatch grid in the app, which
+  // indented them 26px past the section label above them. The comparison is now
+  // loose content versus the row's leading CELL — and the panel here has no drag
+  // handle in it, so that cell is also the first track the grid draws.
   {
     id: "control-panel/mixed-content",
     primitive: "control-panel",
@@ -247,18 +258,22 @@ export const controlPanelFixtures: HarnessFixture[] = [
         <ControlPanel.Section
           label={<span data-geo="section-label">Name</span>}
         >
-          <RailMarker id="rail-icon" rail="icon" />
+          <RailMarker id="rail-icon" />
           {/* A raw form control, exactly as a consumer drops one in. The
               measured box is the wrapper's, which fills the section, so its
               left edge IS where loose content lands. */}
           <Fills id="free-input">
             <Input defaultValue="My view" aria-label="View name" />
           </Fills>
-          {/* The row whose label defines the rail everything else is compared
-              against. The probe is zero-width and sits first in the label
-              cell, so its edges are the grid's answer, not the panel's. */}
-          <ControlPanel.Row icon={<MdVisibility />}>
-            <RowRail id="row-rail" />
+          {/* The row whose leading cell defines the rail everything else is
+              compared against — the grid's answer, not the panel's. */}
+          <ControlPanel.Row
+            icon={
+              <Fills id="row-icon-cell">
+                <MdVisibility />
+              </Fills>
+            }
+          >
             Duplicate
           </ControlPanel.Row>
         </ControlPanel.Section>
@@ -272,14 +287,15 @@ export const controlPanelFixtures: HarnessFixture[] = [
       </ControlPanel>
     ),
     invariants: [
-      // THE assertion. Loose content begins exactly where a row's label begins
-      // — one rail, measured across two independent mechanisms (the panel's
-      // content inset versus the row grid's tracks).
-      { kind: "leftPack", after: "row-rail", slot: "free-input", gap: 0 },
+      // THE assertion. Loose content begins exactly where a row's leading cell
+      // begins — one rail, measured across two independent mechanisms (the
+      // panel's content inset versus the row grid's tracks).
+      { kind: "leftPack", after: "rail-icon", slot: "row-icon-cell", gap: 0 },
+      { kind: "leftPack", after: "rail-icon", slot: "free-input", gap: 0 },
       // And it holds in a section that has no row of its own to copy from.
-      { kind: "leftPack", after: "row-rail", slot: "free-control", gap: 0 },
-      // The section labels stay one column left, on the icon rail — the
-      // hanging-header treatment the vocabulary chose, unchanged by any of it.
+      { kind: "leftPack", after: "rail-icon", slot: "free-control", gap: 0 },
+      // …and the section labels are on that same one edge, rather than hanging
+      // back to a rail of their own.
       { kind: "leftPack", after: "rail-icon", slot: "section-label", gap: 0 },
       { kind: "leftPack", after: "rail-icon", slot: "options-label", gap: 0 },
       { kind: "noClip" },
@@ -583,6 +599,102 @@ export const controlPanelFixtures: HarnessFixture[] = [
         mutate: { kind: "swapLeafDisplay", value: "absolute-pad" },
         expectViolated: { kind: "noOverlap" },
       },
+    ],
+  },
+
+  // ── The leading tracks are derived from the panel's content ───────
+  //
+  // A track exists only when something in the PANEL occupies it. Nothing here
+  // measures a width, because the point is not that a track is 16px — it is
+  // that a panel with nothing to put in a column does not indent everything
+  // past it. The two panels below are the two cases the rail-alignment fixture
+  // (which has both a handle and icons) cannot reach.
+  //
+  // NOT a Row-only fixture, deliberately: the panel `CLAUDE.md` rule exists
+  // because rows were the one child kind the gate ever drew, and the property
+  // being gated here is precisely that NON-row content — a section label, a raw
+  // `<Input>` — shares the rail with the row grid's first cell.
+  {
+    id: "control-panel/derived-tracks",
+    primitive: "control-panel",
+    dims: { contentLen: "short", withMeta: true, state: "idle" },
+    widths: WIDTHS,
+    render: () => (
+      <>
+        {/* Neither a drag handle nor an icon anywhere in this panel, so it has
+            NEITHER leading track: a two-track row, a five-track rule, and every
+            piece of content — the label, the input, the row's own text, the
+            builder's prefix — flush on the panel's one content edge. Before the
+            tracks were derived, all four sat 32px right of it, reserving a
+            gutter and an icon column that nothing in the panel ever painted. */}
+        <ControlPanel aria-label="Derived tracks, no leading columns">
+          <ControlPanel.Section label={<span data-geo="bare-label">Name</span>}>
+            <RailMarker id="bare-rail" />
+            <Fills id="bare-input">
+              <Input defaultValue="My view" aria-label="View name" />
+            </Fills>
+            <ControlPanel.Row>
+              <Fills id="bare-row-label">Assignee</Fills>
+            </ControlPanel.Row>
+            <ControlPanel.RuleList>
+              <ControlPanel.RuleRow
+                prefix={<Fills id="bare-rule-prefix">Where</Fills>}
+                field={<ControlPanel.Field label="Status" />}
+                operator={<ControlPanel.Field label="Is" />}
+                value={<ControlPanel.Field label="Todo" />}
+              />
+            </ControlPanel.RuleList>
+          </ControlPanel.Section>
+        </ControlPanel>
+        {/* A handle, but still no icon: the gutter track stays and the icon
+            column goes. The row's LABEL and the builder's PREFIX then both land
+            on the icon rail — one column in from the panel's edge — which is
+            the shared-rail property that makes a settings menu and a filter
+            builder read as one family. Two different grids computing the same
+            x, which is the pair that can actually drift. */}
+        <ControlPanel aria-label="Derived tracks, gutter only">
+          <ControlPanel.Section>
+            <ControlPanel.Row handle>
+              <RowRail id="gutter-row-rail" />
+              Priority
+            </ControlPanel.Row>
+            <ControlPanel.RuleList>
+              <ControlPanel.RuleRow
+                handle
+                prefix={
+                  <span data-geo="gutter-rule-prefix" className="block w-0" />
+                }
+                field={<ControlPanel.Field label="Updated" />}
+                value={<ControlPanel.Field label="Newest first" />}
+              />
+            </ControlPanel.RuleList>
+          </ControlPanel.Section>
+        </ControlPanel>
+      </>
+    ),
+    invariants: [
+      // Panel one: everything on one edge, whatever mechanism computed it —
+      // the panel's padding (the marker), the section label, the row grid's
+      // first track, the rule grid's first track.
+      { kind: "leftPack", after: "bare-rail", slot: "bare-label", gap: 0 },
+      { kind: "leftPack", after: "bare-rail", slot: "bare-input", gap: 0 },
+      { kind: "leftPack", after: "bare-rail", slot: "bare-row-label", gap: 0 },
+      {
+        kind: "leftPack",
+        after: "bare-rail",
+        slot: "bare-rule-prefix",
+        gap: 0,
+      },
+      // Panel two: with the gutter kept and the icon column dropped, the row's
+      // label and the builder's prefix share one rail — `cp-row`'s
+      // gutter + column-gap versus `cp-rule`'s compensated gutter + rule-gap.
+      {
+        kind: "leftPack",
+        after: "gutter-row-rail",
+        slot: "gutter-rule-prefix",
+        gap: 0,
+      },
+      { kind: "noClip" },
     ],
   },
 ];

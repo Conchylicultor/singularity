@@ -12,6 +12,7 @@ import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Column } from "@plugins/primitives/plugins/css/plugins/column/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
+import { Separator } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { commitDetailPane } from "@plugins/code-explorer/plugins/commit-detail/web";
 import { commitsGraphResource } from "../../shared/resources";
 
@@ -161,20 +162,10 @@ function BehindSeparator({
   hasAgentWork: boolean;
 }) {
   return (
-    <Stack
-      as="li"
-      direction="row"
-      gap="sm"
-      align="center"
-      className="border-b border-border/50 px-md py-xs"
-    >
-      {/* The two hairline rules are empty grow cells flanking the label: each
-          <Fill> absorbs half the slack, so the label stays centred. */}
-      <Fill className="h-px bg-border/60" />
-      <Text as="span" variant="caption" className="text-muted-foreground/60">
-        {hasAgentWork ? `↓${count} on main` : `${count} commits on main`}
-      </Text>
-      <Fill className="h-px bg-border/60" />
-    </Stack>
+    <li className="border-b border-border/50 px-md py-xs">
+      <Separator
+        label={hasAgentWork ? `↓${count} on main` : `${count} commits on main`}
+      />
+    </li>
   );
 }

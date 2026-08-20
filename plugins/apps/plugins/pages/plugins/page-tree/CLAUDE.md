@@ -81,19 +81,17 @@ a flat `list` view, so that is the normal non-tree case, not a failure.
     - `primitives/breadcrumb.BreadcrumbSegment`
     - `primitives/css/center.Center`
     - `primitives/css/clip.Clip`
+    - `primitives/css/control-panel.ControlPanel`
+    - `primitives/css/control-panel.ControlPanelPopover`
     - `primitives/css/inline.Inline`
     - `primitives/css/pin.Pin`
     - `primitives/css/placeholder.Placeholder`
-    - `primitives/css/row.Row`
     - `primitives/css/scroll.Scroll`
     - `primitives/css/spacing.Stack`
-    - `primitives/css/text.SectionLabel`
+    - `primitives/css/spinner.Spinner`
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.Button`
     - `primitives/css/ui-kit.cn`
-    - `primitives/css/ui-kit.Popover`
-    - `primitives/css/ui-kit.PopoverContent`
-    - `primitives/css/ui-kit.PopoverTrigger`
     - `primitives/data-view.CreateOption`
     - `primitives/data-view.DataView`
     - `primitives/data-view.defineDataView`

@@ -2301,6 +2301,9 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
     - `primitives/copy-to-clipboard.useCopyToClipboard`
     - `primitives/css/badge.Badge`
     - `primitives/css/center.Center`
+    - `primitives/css/control-panel.ControlPanel`
+    - `primitives/css/control-panel.ControlPanelPopover`
+    - `primitives/css/control-panel.ControlPanelPopoverProps`
     - `primitives/css/inline.Inline`
     - `primitives/css/overlay.Overlay`
     - `primitives/css/pin.Pin`
@@ -2332,8 +2335,6 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
     - `primitives/optimistic-mutation.enqueueResourceWrite`
     - `primitives/optimistic-mutation.OpNoLongerApplies`
     - `primitives/optimistic-mutation.useOptimisticResource`
-    - `primitives/popover.InlinePopover`
-    - `primitives/popover.InlinePopoverProps`
     - `primitives/scroll-reveal.useRevealOnActive`
     - `primitives/select-scope.ContentScope`
     - `primitives/slot-render.defineDispatchSlot`

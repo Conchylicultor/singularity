@@ -32,6 +32,15 @@ import noAdhocPanelBody from "./no-adhoc-panel-body";
  *
  *        // eslint-disable-next-line control-panel/no-adhoc-panel-body -- <reason>
  *
+ * Three files left this tier by ceasing to be violations rather than by being
+ * migrated: `commits-graph-body.tsx`, `summary-row.tsx` and
+ * `theme-customizer.tsx` each hand-drew a CENTERED LABEL FLANKED BY HAIRLINES,
+ * which was never a control panel — it is a labelled `<Separator>`, and now that
+ * the primitive carries the variant, the hand-drawn `h-px` the rule fired on is
+ * gone. `separator.tsx` is deliberately NOT listed in exchange: it carries two
+ * per-site disables with their own reasons, which says more than a whole-file
+ * exemption would.
+ *
  * Two shapes that looked like violations are NOT listed, deliberately, because
  * they were the rule's fault and were fixed in the rule: a separator emitted
  * from an inline `.map()` callback inside a `DropdownMenuContent`
@@ -57,20 +66,24 @@ export default {
       // police the component.
       "plugins/primitives/plugins/css/plugins/control-panel/web/internal/control-panel-popover.tsx",
 
-      // ── BURNDOWN: hand-rolled panel bodies awaiting migration ────────────
-      // Popover bodies with hand-drawn hairlines or borrowed menu separators.
-      "plugins/ui/plugins/theme-engine/plugins/theme-customizer/web/components/theme-customizer.tsx",
-      "plugins/page/plugins/callout/web/components/callout-appearance.tsx",
-      "plugins/page/plugins/editor/web/components/block-actions-menu.tsx",
-      "plugins/primitives/plugins/avatar/web/components/avatar-picker.tsx",
-      "plugins/conversations/plugins/conversation-category/web/components/category-chip.tsx",
-      "plugins/fields/plugins/date/plugins/filter/web/components/date-filter.tsx",
-      "plugins/apps/plugins/sonata/plugins/audio/plugins/metronome/web/components/metronome-button.tsx",
-      "plugins/apps/plugins/pages/plugins/page-tree/web/components/page-icon-button.tsx",
-      // Labelled rules drawn by hand outside a panel — these want the
-      // `<Separator>` primitive rather than the control-panel vocabulary.
-      "plugins/conversations/plugins/conversation-view/plugins/commits-graph/web/components/commits-graph-body.tsx",
-      "plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/summary/web/components/summary-row.tsx",
+      // ── BURNDOWN: EMPTY ─────────────────────────────────────────────────
+      // It drained on 2026-08-19. Every panel that was here now goes through
+      // `ControlPanelPopover`: callout-appearance, block-actions-menu,
+      // avatar-picker, category-chip, date-filter, metronome-button,
+      // page-icon-button — plus three the rule never saw at all
+      // (change-cover-popover, quick-theme-panel, view-options-toggle,
+      // fx-toggle), which is the interesting half: they hand-rolled a panel
+      // with no divider, and the rule's signals only fire on a divider.
+      //
+      // Keep this tier EMPTY. An entry here is a promise to migrate, and the
+      // list only ever shrank because someone kept that promise. If a new
+      // hand-rolled panel appears, migrate it — do not park it.
+      //
+      // The rule still cannot see the whole class: a body built from Stack +
+      // SectionLabel + a grid, with no hairline anywhere, is invisible to all
+      // four signals. That gap is what the four files above slipped through,
+      // and closing it is tracked in
+      // research/2026-08-19-global-control-panel-vocabulary-v2.md.
     ],
   },
 };

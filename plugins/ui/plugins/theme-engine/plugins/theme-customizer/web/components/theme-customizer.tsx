@@ -24,6 +24,7 @@ import { Grid } from "@plugins/primitives/plugins/css/plugins/grid/web";
 import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
 import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
+import { Separator } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { themeEngineConfig } from "@plugins/ui/plugins/theme-engine/core";
 import {
   ThemeEngine,
@@ -84,13 +85,7 @@ function GlobalPresetPicker() {
 
   return (
     <Stack gap="md">
-      <Stack direction="row" align="center" gap="md">
-        <Fill className="h-px bg-border" />
-        <span className="text-3xs font-semibold uppercase tracking-widest text-muted-foreground">
-          Theme
-        </span>
-        <Fill className="h-px bg-border" />
-      </Stack>
+      <Separator label="Theme" />
       <Cluster gap="sm" justify="start">
         {globalPresets.map((p) => (
           <button

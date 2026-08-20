@@ -201,6 +201,159 @@ describe("ControlPanel — the container draws the hairline", () => {
   });
 });
 
+// The two leading tracks are derived from what the PANEL puts in them. jsdom
+// applies no stylesheet, so what is asserted here is the CONTRACT the CSS reads:
+// which cells declare themselves occupied. The rendered geometry is gated by
+// `fixtures/control-panel/derived-tracks` in a real browser.
+describe("ControlPanel — the leading tracks are derived from content", () => {
+  it("publishes no occupancy marks when no row has a handle or an icon", () => {
+    const { container } = render(
+      <ControlPanel>
+        <ControlPanel.Section label="Properties">
+          <ControlPanel.Row>Assignee</ControlPanel.Row>
+          <ControlPanel.Row trailing="3">Status</ControlPanel.Row>
+        </ControlPanel.Section>
+      </ControlPanel>,
+    );
+    // Neither track is claimed, so the panel's `:has()` scan finds nothing and
+    // both columns drop: a two-track row, flush on the panel's own content
+    // inset, with no reserved gutter and no reserved icon column.
+    expect(container.querySelectorAll("[data-cp-handle]").length).toBe(0);
+    expect(container.querySelectorAll("[data-cp-icon]").length).toBe(0);
+    // The cells are still all there — the CSS hides the two that lost their
+    // track. An unhidden empty cell would auto-place into the track that took
+    // its place and shove the label one column over, which is why each is
+    // named rather than inferred by position.
+    const row = container.querySelector(".cp-row")!;
+    expect(
+      [...row.children].map((c) => c.getAttribute("data-cp-cell")),
+    ).toEqual(["gutter", "icon", "label", "trailing"]);
+  });
+
+  it("marks the gutter occupied when a row hangs a drag handle", () => {
+    const { container } = render(
+      <ControlPanel>
+        <ControlPanel.Section label="Properties">
+          <ControlPanel.Row handle>Priority</ControlPanel.Row>
+          <ControlPanel.Row>Assignee</ControlPanel.Row>
+        </ControlPanel.Section>
+      </ControlPanel>,
+    );
+    // ONE row claims it and the whole panel keeps the track — which is the
+    // point: derive it per row and the handle-less row's label would sit one
+    // column left of its neighbour's.
+    const gutters = container.querySelectorAll('[data-cp-cell="gutter"]');
+    expect(gutters.length).toBe(2);
+    expect(container.querySelectorAll("[data-cp-handle]").length).toBe(1);
+  });
+
+  it("marks the icon column occupied by an icon OR a selection indicator", () => {
+    const { container: withIcon } = render(
+      <ControlPanel>
+        <ControlPanel.Row icon={<span>i</span>}>Visibility</ControlPanel.Row>
+      </ControlPanel>,
+    );
+    expect(withIcon.querySelectorAll("[data-cp-icon]").length).toBe(1);
+
+    cleanup();
+    // A selection row occupies that column exactly as a glyph does, so a panel
+    // of checkboxes reserves it and every label in it still shares one x.
+    const { container: withSelect } = render(
+      <ControlPanel>
+        <ControlPanel.Row select="check" checked onSelect={vi.fn()}>
+          Status
+        </ControlPanel.Row>
+      </ControlPanel>,
+    );
+    expect(withSelect.querySelectorAll("[data-cp-icon]").length).toBe(1);
+  });
+
+  it("does NOT count a switch — its indicator is in the trailing cell", () => {
+    const { container } = render(
+      <ControlPanel>
+        <ControlPanel.Section label="Effects">
+          <ControlPanel.Row select="switch" checked onSelect={vi.fn()}>
+            Reverb
+          </ControlPanel.Row>
+          <ControlPanel.Row select="switch" checked={false} onSelect={vi.fn()}>
+            Chorus
+          </ControlPanel.Row>
+        </ControlPanel.Section>
+      </ControlPanel>,
+    );
+    // A switch-only panel reserves NOTHING in front of its labels: no handle, no
+    // icon, so a two-track row (label | trailing) flush on the panel's own
+    // inset. Reserving the column here cost every label in the panel 26px for a
+    // track that painted nothing.
+    expect(container.querySelectorAll("[data-cp-icon]").length).toBe(0);
+    expect(container.querySelectorAll("[data-cp-handle]").length).toBe(0);
+    // The indicator really is in the trailing cell, which is WHY the leading
+    // one is free — the two facts are one fact.
+    const row = screen.getByRole("switch", { name: "Reverb" });
+    const cells = [...row.children];
+    expect(
+      cells.find((c) => c.getAttribute("data-cp-cell") === "icon")?.textContent,
+    ).toBe("");
+    expect(
+      cells
+        .find((c) => c.getAttribute("data-cp-cell") === "trailing")
+        ?.querySelector('[data-state="checked"]'),
+    ).not.toBeNull();
+  });
+
+  it("lets a switch row carry an icon, and counts THAT", () => {
+    const { container } = render(
+      <ControlPanel>
+        <ControlPanel.Section label="Effects">
+          <ControlPanel.Row
+            select="switch"
+            checked
+            icon={<span data-testid="glyph">fx</span>}
+            onSelect={vi.fn()}
+          >
+            Reverb
+          </ControlPanel.Row>
+        </ControlPanel.Section>
+      </ControlPanel>,
+    );
+    // Both cells are occupied, and by different things — the icon leads, the
+    // switch trails. Before the union was split this row was unspellable, so the
+    // one surface that wanted it put its glyph in the LABEL cell, where it
+    // shifted that row's text off the rail every other row sits on.
+    const row = screen.getByRole("switch", { name: "Reverb" });
+    const cells = [...row.children];
+    const leading = cells.find(
+      (c) => c.getAttribute("data-cp-cell") === "icon",
+    );
+    expect(leading?.querySelector('[data-testid="glyph"]')).not.toBeNull();
+    expect(container.querySelectorAll("[data-cp-icon]").length).toBe(1);
+    expect(
+      cells
+        .find((c) => c.getAttribute("data-cp-cell") === "trailing")
+        ?.querySelector('[data-state="checked"]'),
+    ).not.toBeNull();
+  });
+
+  it("marks a rule row's gutter, so a builder derives the same track", () => {
+    const { container } = render(
+      <ControlPanel>
+        <ControlPanel.RuleList>
+          <ControlPanel.RuleRow
+            handle
+            prefix="Where"
+            field={<span>Status</span>}
+            operator={<span>is</span>}
+          />
+        </ControlPanel.RuleList>
+      </ControlPanel>,
+    );
+    const gutter = container.querySelector(
+      '.cp-rule > [data-cp-cell="gutter"]',
+    );
+    expect(gutter?.hasAttribute("data-cp-handle")).toBe(true);
+  });
+});
+
 // One grid, shared by every builder — including the one with no operator.
 describe("ControlPanel.RuleRow", () => {
   it("sets data-span=field when no operator is given", () => {

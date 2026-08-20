@@ -15,6 +15,7 @@
     - `apps/events/sources/refresh-all`
     - `apps/mail/attachments`
     - `apps/mail/sync-status`
+    - `apps/pages/page-tree`
     - `apps/sonata/sources/ultimate-guitar`
     - `build`
     - `conversations/conversation-view/op-status`

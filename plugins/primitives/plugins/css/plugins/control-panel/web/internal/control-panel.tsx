@@ -39,19 +39,29 @@ export interface ControlPanelProps {
  *
  * The inset is the first inversion, and it has ONE owner: this box applies it as
  * padding, so content that does nothing at all — a raw `<Input>` inside a
- * Section, a contributed `FieldRenderer` — lands on the text rail next to every
- * row's label. A `Row` is not an exception to that, it is the CANCELLING case:
- * it bleeds the inset back out so its fill reaches the panel's inner edge, then
- * re-inserts its own padding, landing its label on the very inset it cancelled.
- * Nothing inherits AND pads.
+ * Section, a contributed `FieldRenderer`, a section label — lands on the rail
+ * this box published. A `Row` is not an exception to that, it is the CANCELLING
+ * case: it bleeds the rail back out so its fill reaches the panel's inner edge,
+ * then re-inserts its own padding, landing its leading cell on the very rail it
+ * cancelled. Nothing inherits AND pads.
  *
  * That is not a panel rule — it is the repo-wide rail contract, of which this
  * panel was the prototype: the model lives in
  * [`primitives/css/rail`](../../../rail/CLAUDE.md), the utilities that carry it
  * in `app.css`, and `cp-panel` is simply the region owner that publishes an
  * asymmetric pair. `useRailGuard` below is the same rule read back off the
- * rendered DOM in dev, so a child that pads on top of the panel's inset names
+ * rendered DOM in dev, so a child that pads on top of the panel's rail names
  * itself instead of merely looking a little indented.
+ *
+ * The rail is the ICON rail — the same x every row's icon, indicator and drag
+ * handle begins at — and that is the correction v2 made: it used to be the TEXT
+ * rail — an interior column of the row grid — so a search field
+ * landed 26px right of the section label above it, the panel padded 62px left
+ * against 12px right, and one leading glyph on one footer row moved every block
+ * in the panel. Which leading tracks exist is now derived from what the panel
+ * actually puts in them (`data-cp-handle` / `data-cp-icon` on the rows), so a
+ * panel with no handles and no icons has neither column and its content sits
+ * flush on one edge.
  *
  * The hairline is the second — the container draws the separators, so an author
  * never places one.
@@ -91,7 +101,7 @@ export function ControlPanel({
 }
 
 export interface ControlPanelSectionProps {
-  /** Small-caps label hung on the ICON rail, one column left of the row labels. */
+  /** Small-caps label on the panel's own content rail — the icon rail. */
   label?: React.ReactNode;
   className?: string;
   children: React.ReactNode;
@@ -106,13 +116,15 @@ export interface ControlPanelSectionProps {
  * It applies NO inset either, and that is the second half of the same
  * inversion. The PANEL owns the content inset, so whatever a caller drops in
  * here — a raw `<Input>`, a `FieldRenderer`, arbitrary JSX — inherits it and
- * lands on the text rail beside the row labels, with no wrapper here and no
- * opt-in at the call site.
+ * lands on the panel's rail beside every row's leading cell, with no wrapper
+ * here and no opt-in at the call site.
  *
- * The label is the one thing that does not: it hangs BACK to the icon rail
- * (`cp-rail-icon` is a negative offset), so the eye reads one left edge down
- * the whole panel — label, icon, indicator and drag handle all start their
- * column at the same x.
+ * The label is no exception, and it used to be the only one: it carried a
+ * `cp-rail-icon` class that hung it BACK one column, because the panel's inset
+ * was the text rail and the label wanted the icon rail. Now the inset IS the
+ * icon rail, that offset computes to zero — so the class was deleted rather
+ * than defaulted, and the label lands on one left edge with every icon,
+ * indicator, drag handle and loose control in the panel by doing nothing.
  */
 export function ControlPanelSection({
   label,
@@ -122,7 +134,7 @@ export function ControlPanelSection({
   return (
     <div className={cn("cp-band", className)}>
       {label != null ? (
-        <SectionLabel className="flex control-min-xs items-center cp-rail-icon">
+        <SectionLabel className="flex control-min-xs items-center">
           {label}
         </SectionLabel>
       ) : null}
@@ -141,9 +153,17 @@ export interface ControlPanelFooterProps {
  * on the same rails, never ghost buttons pinned to opposite corners.
  *
  * It carries no chrome, and that is the point: its separating hairline comes from
- * being a BAND (`cp-band`), exactly like a section's. The component exists to say
- * what the band IS at the call site, and to give the footer treatment one home
- * should it ever need more than that.
+ * being a BAND (`cp-band`), exactly like a section's. `data-cp-footer` is the
+ * only thing that distinguishes it, and everything the marker buys is CSS: the
+ * band PINS to the bottom of the scrolling surface (the actions the panel was
+ * opened for stay reachable while a long body scrolls under them), pays its own
+ * inset back so its fill covers what scrolls under it, and covers the panel's
+ * bottom padding with ink. All of it lives at `cp-band` in `app.css`.
+ *
+ * One convention the marker cannot enforce: FOOTER ACTIONS TAKE `trailing`, NOT
+ * `icon`. A footer row is still a row, so a leading glyph here reserves the icon
+ * column for every row in the panel — measured, six theme rows indented 26px for
+ * a single ✕ on the seventh.
  */
 export function ControlPanelFooter({
   className,
@@ -162,12 +182,12 @@ export interface ControlPanelEmptyProps {
 }
 
 /**
- * The "nothing here yet" line — on the TEXT rail so it reads as a row that has
- * no icon, rather than as loose prose floating in the panel.
+ * The "nothing here yet" line — on the panel's own rail, so it reads as part of
+ * the section it closes rather than as loose prose floating in the panel.
  *
- * It carries NO rail class to get there. The panel's content box starts on the
- * text rail (the inset-ownership rule in `app.css`), so this lands there by
- * being ordinary content — the same way a consumer's own `<Input>` does.
+ * It carries NO rail class to get there. The panel's content box starts on that
+ * rail (the inset-ownership rule in `app.css`), so this lands there by being
+ * ordinary content — the same way a consumer's own `<Input>` does.
  */
 export function ControlPanelEmpty({
   className,

@@ -16,10 +16,21 @@ const QUICK_THEME_VIEW = defineDataView("tweakcn.quick-theme");
 
 /**
  * The community catalog as a quick picker for the theme popover: the same
- * DataView surface the pane's gallery is, rendered with the compact
- * `QuickThemeSwatch` card instead of the pane's 64px preview panel. Search,
+ * DataView surface the pane's gallery is, rendered as a compact LIST of
+ * `QuickThemeSwatch` rows instead of the pane's 64px preview cards. Search,
  * tag filtering, sort and named views therefore come from the primitive — this
- * section owns only the rows, the field schema, and the card.
+ * section owns only the rows, the field schema, and the row body.
+ *
+ * **A list, not a gallery, because this band lives in a `picker` panel.** The
+ * quick-theme panel is 320px, so a 190px-min card grid resolves to ONE column
+ * of 272px cards showing four dots and a short name — the width is spent on
+ * card chrome rather than on themes. Measured in the deployed panel: ~3.5 cards
+ * visible in this section's 288px scroller, against ~7 in the 480px popover it
+ * replaced. A row is ~32px to a card's ~82, so the same scroller shows ~9 —
+ * denser than either. The view TYPE authored in
+ * `config/ui/tweakcn/community-browser/tweakcn.quick-theme.jsonc` must move
+ * with this prop: config is the single source of truth for view instances, and
+ * an instance naming a type the surface no longer offers resolves to null.
  *
  * **Bounded, unlike the pane.** A DataView is natural-height and never owns a
  * scroller; here that would let a 500-theme catalog push the popover's Variants
@@ -77,13 +88,13 @@ export function QuickThemeSection() {
         rows={rows}
         fields={fields}
         rowKey={(t) => t.id}
-        views={["gallery"]}
+        views={["list"]}
         defaultView="themes"
         loading={isLoading}
         searchAccessor={(t) => `${t.name} ${t.tags.join(" ")}`}
         // Picking a swatch applies its theme. It lives here rather than inside
-        // the swatch because the swatch is now only a body — the DataCard the
-        // gallery builds owns the click and the Enter/Space handling.
+        // the swatch because the swatch is only a body — the Row the list
+        // builds owns the click and the Enter/Space handling.
         onRowActivate={(t) => applyTheme(t.id)}
         emptyState={
           <Text as="p" variant="body" tone="muted">
@@ -91,12 +102,11 @@ export function QuickThemeSection() {
           </Text>
         }
         viewOptions={{
-          gallery: {
-            minCardWidth: 190,
-            // The picker's rows are one line each, so the card takes the dense
-            // density rather than the pane gallery's roomy default.
+          list: {
+            // Each swatch is ALREADY one line (dots + name), so a row is its
+            // natural shape and the card chrome around it only bought padding.
             size: "sm",
-            renderBody: (t: CatalogTheme) => (
+            renderRow: (t: CatalogTheme) => (
               <QuickThemeSwatch theme={t} isPending={applyingId === t.id} />
             ),
           },

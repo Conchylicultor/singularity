@@ -2372,19 +2372,17 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/breadcrumb.BreadcrumbSegment`
               - `primitives/css/center.Center`
               - `primitives/css/clip.Clip`
+              - `primitives/css/control-panel.ControlPanel`
+              - `primitives/css/control-panel.ControlPanelPopover`
               - `primitives/css/inline.Inline`
               - `primitives/css/pin.Pin`
               - `primitives/css/placeholder.Placeholder`
-              - `primitives/css/row.Row`
               - `primitives/css/scroll.Scroll`
               - `primitives/css/spacing.Stack`
-              - `primitives/css/text.SectionLabel`
+              - `primitives/css/spinner.Spinner`
               - `primitives/css/text.Text`
               - `primitives/css/ui-kit.Button`
               - `primitives/css/ui-kit.cn`
-              - `primitives/css/ui-kit.Popover`
-              - `primitives/css/ui-kit.PopoverContent`
-              - `primitives/css/ui-kit.PopoverTrigger`
               - `primitives/data-view.CreateOption`
               - `primitives/data-view.DataView`
               - `primitives/data-view.defineDataView`
@@ -2870,16 +2868,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `config_v2.useConfig`
                   - `config_v2.useSetConfig`
                   - `primitives/css/center.Center`
-                  - `primitives/css/spacing.Stack`
-                  - `primitives/css/text.SectionLabel`
-                  - `primitives/css/text.Text`
+                  - `primitives/css/control-panel.ControlPanel`
+                  - `primitives/css/control-panel.ControlPanelPopover`
                   - `primitives/css/toggle-chip.SegmentedControl`
-                  - `primitives/css/toggle-chip.ToggleChip`
-                  - `primitives/css/ui-kit.Separator`
                   - `primitives/css/viewport-overlay.ViewportOverlay`
                   - `primitives/icon-button.IconButton`
                   - `primitives/latest-ref.useLatestRef`
-                  - `primitives/popover.InlinePopover`
               - Server:
                 - Contributes: `ConfigV2.Register` "sonata.metronome"
                 - Uses: `config_v2.ConfigV2`
@@ -3155,12 +3149,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `config_v2.useSetConfig`
               - `primitives/css/center.Center`
               - `primitives/css/clip.Clip`
-              - `primitives/css/fill.Fill`
-              - `primitives/css/line.Line`
+              - `primitives/css/control-panel.ControlPanel`
+              - `primitives/css/control-panel.ControlPanelPopover`
               - `primitives/css/pin.Pin`
-              - `primitives/css/rigid.rigidClass`
               - `primitives/css/spacing.Stack`
-              - `primitives/css/text.SectionLabel`
               - `primitives/css/text.Text`
               - `primitives/css/toggle-chip.ToggleChip`
               - `primitives/css/ui-kit.cn`
@@ -3168,7 +3160,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/latest-ref.useLatestRef`
               - `primitives/lazy-component.lazyComponent`
               - `primitives/log-channels.clientLog`
-              - `primitives/popover.InlinePopover`
               - `primitives/slot-render.renderIsolated`
             - Exports (types):
               - `EmitterOptions`
@@ -4153,10 +4144,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `config_v2.useConfig`
               - `config_v2.useSetConfig`
               - `config_v2/fields.FieldRenderer`
-              - `primitives/css/spacing.Stack`
+              - `primitives/css/control-panel.ControlPanel`
+              - `primitives/css/control-panel.ControlPanelPopover`
               - `primitives/css/toggle-chip.ToggleChip`
               - `primitives/css/ui-kit.cn`
-              - `primitives/popover.InlinePopover`
         - **`voicing`** — Web registration of the Sonata voicing config (realistic voice-leading, strategy, octave). Server registration of the Sonata voicing config (realistic voice-leading, strategy, octave).
           - Web:
             - Contributes: `ConfigV2.WebRegister` "config"
@@ -8253,7 +8244,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses:
           - `config_v2.ConfigV2`
           - `config_v2.useConfig`
-          - `config_v2/config-link.ConfigPopoverHeader`
+          - `config_v2/config-link.ConfigGearButton`
           - `conversations.useConversationById`
           - `conversations/conversation-ui/item.CONV_STATUS_DOT`
           - `conversations/conversation-ui/item.ConversationItemConv`
@@ -8264,10 +8255,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `infra/endpoints.fetchEndpoint`
           - `primitives/avatar.Avatar`
           - `primitives/css/badge.Badge`
-          - `primitives/css/center.Center`
-          - `primitives/css/row.Row`
+          - `primitives/css/control-panel.ControlPanel`
+          - `primitives/css/control-panel.ControlPanelPopover`
+          - `primitives/css/spacing.Stack`
+          - `primitives/css/text.Text`
           - `primitives/live-state.usePointResources`
-          - `primitives/popover.InlinePopover`
           - `shell/notifications.toast`
         - Exports (types):
           - `Category`
@@ -8817,6 +8809,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/spacing.Stack`
               - `primitives/css/text.Text`
               - `primitives/css/ui-kit.Button`
+              - `primitives/css/ui-kit.Separator`
               - `primitives/live-state.useResource`
               - `primitives/loading.Loading`
               - `primitives/pane.Pane`
@@ -9469,8 +9462,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                 - Contributes: `JsonlViewer.EventRenderer` "summary" → `SummaryRow`
                 - Uses:
                   - `conversations/conversation-view/jsonl-viewer.JsonlViewer`
-                  - `primitives/css/spacing.Stack`
-                  - `primitives/css/text.Text`
+                  - `primitives/css/ui-kit.Separator`
             - **`system`** — Renders system events in the JSONL viewer.
               - Web:
                 - Contributes: `JsonlViewer.EventRenderer` "system" → `SystemRow`
@@ -13487,16 +13479,14 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Web:
             - Contributes: `DataViewSlots.Filter` "date"
             - Uses:
-              - `primitives/css/row.Row`
+              - `primitives/css/control-panel.ControlPanel`
+              - `primitives/css/control-panel.ControlPanelPopover`
               - `primitives/css/spacing.Inset`
               - `primitives/css/spacing.Stack`
-              - `primitives/css/text.SectionLabel`
               - `primitives/css/text.Text`
               - `primitives/css/ui-kit.Button`
-              - `primitives/css/ui-kit.Separator`
               - `primitives/data-view.DataViewSlots`
               - `primitives/date-picker.Calendar`
-              - `primitives/popover.InlinePopover`
           - Core:
             - Exports (types):
               - `DateAnchor`
@@ -17960,9 +17950,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `page/editor.BlockAnchorProps`
           - `page/editor.Editor`
           - `page/editor.PageIcon`
-          - `primitives/css/row.Row`
+          - `primitives/css/control-panel.ControlPanel`
           - `primitives/css/spacing.Stack`
-          - `primitives/css/text.SectionLabel`
           - `primitives/css/ui-kit.cn`
           - `primitives/icon-picker.IconPicker`
         - Exports (values): `calloutBlock`
@@ -18019,6 +18008,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Web:
         - Uses:
           - `primitives/css/center.Center`
+          - `primitives/css/control-panel.ControlPanelPopover`
+          - `primitives/css/control-panel.ControlPanelSize`
           - `primitives/css/ui-kit.cn`
           - `primitives/css/ui-kit.Popover`
           - `primitives/css/ui-kit.PopoverContent`
@@ -18089,6 +18080,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/copy-to-clipboard.useCopyToClipboard`
           - `primitives/css/badge.Badge`
           - `primitives/css/center.Center`
+          - `primitives/css/control-panel.ControlPanel`
+          - `primitives/css/control-panel.ControlPanelPopover`
+          - `primitives/css/control-panel.ControlPanelPopoverProps`
           - `primitives/css/inline.Inline`
           - `primitives/css/overlay.Overlay`
           - `primitives/css/pin.Pin`
@@ -18120,8 +18114,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/optimistic-mutation.enqueueResourceWrite`
           - `primitives/optimistic-mutation.OpNoLongerApplies`
           - `primitives/optimistic-mutation.useOptimisticResource`
-          - `primitives/popover.InlinePopover`
-          - `primitives/popover.InlinePopoverProps`
           - `primitives/scroll-reveal.useRevealOnActive`
           - `primitives/select-scope.ContentScope`
           - `primitives/slot-render.defineDispatchSlot`
@@ -20531,14 +20523,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Web:
         - Uses:
           - `primitives/css/cluster.Cluster`
-          - `primitives/css/row.Row`
-          - `primitives/css/text.SectionLabel`
+          - `primitives/css/control-panel.ControlPanel`
+          - `primitives/css/control-panel.ControlPanelPopover`
           - `primitives/css/ui-kit.cn`
           - `primitives/css/ui-kit.ControlSize`
           - `primitives/css/ui-kit.DensityControlled`
-          - `primitives/css/ui-kit.Popover`
-          - `primitives/css/ui-kit.PopoverContent`
-          - `primitives/css/ui-kit.PopoverTrigger`
           - `primitives/css/ui-kit.useControlSize`
           - `primitives/icon-picker.IconPicker`
           - `primitives/icon-picker.SvgIcon`
@@ -21018,7 +21007,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `code-explorer`
               - `config_v2/settings`
               - `conversations/agents`
-              - `conversations/conversation-category`
               - `conversations/conversation-view`
               - `conversations/conversation-view/code/file-pane/image`
               - `conversations/conversation-view/dependencies`
@@ -21263,6 +21251,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/ui-kit.cn`
               - `primitives/css/ui-kit.Popover`
               - `primitives/css/ui-kit.PopoverContent`
+              - `primitives/css/ui-kit.PopoverMaxHeight`
               - `primitives/css/ui-kit.PopoverTrigger`
               - `primitives/icon-button.IconButton`
               - `primitives/row-actions.RowActions`
@@ -21289,9 +21278,20 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `usePanelStack`
           - Cross-plugin:
             - Imported by:
+              - `apps/pages/page-tree`
+              - `apps/sonata/audio/metronome`
+              - `apps/sonata/piano-roll`
+              - `apps/sonata/view-options`
+              - `conversations/conversation-category`
+              - `fields/date/filter`
+              - `page/callout`
+              - `page/container`
+              - `page/editor`
+              - `primitives/avatar`
               - `primitives/data-view`
               - `primitives/data-view/custom-columns`
               - `primitives/data-view/view-core`
+              - `ui/theme-engine/quick-theme`
         - **`control-size`** — Control-size standard: the shared control-* height scale and its enforcing lint rule (no-adhoc-control).
         - **`fill`** — Flexible-cell layout primitive: <Fill axis> is the single grow+shrink cell of a Line/Row (min-w-0 flex-1). The one home for the slack-absorbing, truncation-enabling cell, so a stray flex-1 never strands the grow slot.
           - Web:
@@ -21326,7 +21326,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/mail/threads`
               - `apps/pages/welcome/recent-pages`
               - `apps/sonata/library`
-              - `apps/sonata/piano-roll`
               - `apps/sonata/sources/ultimate-guitar`
               - `apps/sonata/track-mixer`
               - `apps/story/shell`
@@ -21643,7 +21642,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/mail/threads`
               - `apps/pages/history`
               - `apps/sonata/library`
-              - `apps/sonata/piano-roll`
               - `apps/sonata/sources/midi`
               - `apps/sonata/track-mixer`
               - `apps/studio/compositions/release/release-logs`
@@ -21947,7 +21945,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/browser/shell`
               - `apps/pages/welcome/recent-pages`
               - `apps/sonata/library`
-              - `apps/sonata/piano-roll`
               - `apps/sonata/sources/midi`
               - `apps/sonata/track-mixer`
               - `apps/story/shell`
@@ -22037,7 +22034,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/mail/reading-pane`
               - `apps/mail/search`
               - `apps/pages/content-search`
-              - `apps/pages/page-tree`
               - `apps/pages/trash`
               - `apps/sonata/sources/ultimate-guitar`
               - `apps/sonata/track-mixer`
@@ -22047,16 +22043,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `code-explorer/file-resolve`
               - `config_v2/settings`
               - `conversations/agents`
-              - `conversations/conversation-category`
               - `conversations/conversation-view/dependencies`
               - `conversations/conversation-view/jsonl-viewer/tool-call/agent`
               - `debug/trace/pane`
               - `debug/zero-test`
-              - `fields/date/filter`
               - `history/dialog`
               - `page/annotations/agent-notes/authorship`
               - `page/annotations/todo/task-link`
-              - `page/callout`
               - `page/editor`
               - `page/inline-date`
               - `page/page-link`
@@ -22068,7 +22061,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `plugin-meta/plugin-view/dependencies`
               - `plugin-meta/plugin-view/sub-plugins`
               - `primitives/action-presentation`
-              - `primitives/avatar`
               - `primitives/data-view`
               - `primitives/data-view/list`
               - `primitives/data-view/table`
@@ -22172,7 +22164,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `review/code-review`
               - `shell/notifications`
               - `stats/cost`
-              - `ui/theme-engine/quick-theme`
               - `ui/tweakcn/community-browser`
         - **`selection-indicator`** — Presentational checkbox / radio indicator boxes (border + fill + glyph) with the correct preset-independent fixed shape baked in (rounded-checkbox for the checkbox, rounded-full for the radio). The sanctioned home for styled selection indicators so the fixed shape lives in one place and consumers never write radius classes.
           - Web:
@@ -22267,7 +22258,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/prototypes/gallery`
               - `apps/prototypes/present`
               - `apps/sonata/audio/engine`
-              - `apps/sonata/audio/metronome`
               - `apps/sonata/library`
               - `apps/sonata/notation`
               - `apps/sonata/piano-roll`
@@ -22285,7 +22275,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/sonata/sources/ultimate-guitar`
               - `apps/sonata/track-mixer`
               - `apps/sonata/transport-bar`
-              - `apps/sonata/view-options`
               - `apps/story/pages-integration`
               - `apps/story/render`
               - `apps/story/renderers/blog`
@@ -22346,6 +22335,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `config_v2/fields`
               - `config_v2/settings`
               - `conversations/agents`
+              - `conversations/conversation-category`
               - `conversations/conversation-ui/item`
               - `conversations/conversation-view`
               - `conversations/conversation-view/action-bar`
@@ -22367,7 +22357,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `conversations/conversation-view/jsonl-viewer/attachment/task-reminder`
               - `conversations/conversation-view/jsonl-viewer/collapsible-card`
               - `conversations/conversation-view/jsonl-viewer/fields-card`
-              - `conversations/conversation-view/jsonl-viewer/summary`
               - `conversations/conversation-view/jsonl-viewer/tool-call/add-task`
               - `conversations/conversation-view/jsonl-viewer/tool-call/agent`
               - `conversations/conversation-view/jsonl-viewer/tool-call/ask-user-question`
@@ -22523,6 +22512,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/setup-steps`
               - `primitives/tabbed-view`
               - `primitives/tree`
+              - `reorder/editor`
               - `reorder/node-types/header`
               - `reorder/node-types/overflow`
               - `reports/launch-fix`
@@ -22578,6 +22568,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/events/sources/refresh-all`
               - `apps/mail/attachments`
               - `apps/mail/sync-status`
+              - `apps/pages/page-tree`
               - `apps/sonata/sources/ultimate-guitar`
               - `build`
               - `conversations/conversation-view/op-status`
@@ -22785,7 +22776,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/pages/welcome/recent-pages`
               - `apps/prototypes/gallery`
               - `apps/prototypes/present`
-              - `apps/sonata/audio/metronome`
               - `apps/sonata/library`
               - `apps/sonata/piano-roll`
               - `apps/sonata/primitives/jog-wheel`
@@ -22864,6 +22854,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `config_v2/settings`
               - `conversations/agents`
               - `conversations/all-conversations`
+              - `conversations/conversation-category`
               - `conversations/conversation-preprompt`
               - `conversations/conversation-ui/item`
               - `conversations/conversation-view`
@@ -22896,7 +22887,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `conversations/conversation-view/jsonl-viewer/meta-prompt`
               - `conversations/conversation-view/jsonl-viewer/preprompt`
               - `conversations/conversation-view/jsonl-viewer/queued-prompt-card`
-              - `conversations/conversation-view/jsonl-viewer/summary`
               - `conversations/conversation-view/jsonl-viewer/teammate-message`
               - `conversations/conversation-view/jsonl-viewer/tool-call`
               - `conversations/conversation-view/jsonl-viewer/tool-call/add-task`
@@ -22972,7 +22962,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `page/annotations/agent-notes/authorship`
               - `page/annotations/todo/task-link`
               - `page/bookmark`
-              - `page/callout`
               - `page/editor`
               - `page/embed`
               - `page/file`
@@ -22997,7 +22986,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `plugin-meta/plugin-view/inclusion`
               - `plugin-meta/plugin-view/sub-plugins`
               - `primitives/action-presentation`
-              - `primitives/avatar`
               - `primitives/command-palette`
               - `primitives/commit-list`
               - `primitives/css/color-picker`
@@ -23301,7 +23289,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/pages/welcome/recent-pages`
               - `apps/prototypes/gallery`
               - `apps/prototypes/present`
-              - `apps/sonata/audio/metronome`
               - `apps/sonata/library`
               - `apps/sonata/piano-roll`
               - `apps/sonata/primitives/jog-wheel`
@@ -23381,6 +23368,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `conversations/conversation-view/jsonl-viewer/file-path`
               - `conversations/conversation-view/jsonl-viewer/queued-prompt-card`
               - `conversations/conversation-view/jsonl-viewer/row-actions`
+              - `conversations/conversation-view/jsonl-viewer/summary`
               - `conversations/conversation-view/jsonl-viewer/tool-call`
               - `conversations/conversation-view/jsonl-viewer/tool-call/ask-user-question`
               - `conversations/conversation-view/jsonl-viewer/tool-call/flag-raise`
@@ -23592,7 +23580,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `ui/tab-bar/connected`
               - `ui/tab-bar/underline`
               - `ui/theme-engine`
-              - `ui/theme-engine/quick-theme`
+              - `ui/theme-engine/theme-customizer`
               - `ui/tokens/shadow`
               - `ui/tree-disclosure/column`
               - `ui/tree-disclosure/dimmed-leaf`
@@ -26240,23 +26228,17 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports (values): `InlinePopover`
       - Cross-plugin:
         - Imported by:
-          - `apps/sonata/audio/metronome`
-          - `apps/sonata/piano-roll`
           - `apps/sonata/track-mixer`
-          - `apps/sonata/view-options`
           - `apps/studio/compositions/entry-points`
           - `build`
           - `config_v2/settings`
-          - `conversations/conversation-category`
           - `conversations/conversation-preprompt`
           - `conversations/conversation-view/branch`
           - `conversations/conversation-view/dependencies`
           - `conversations/conversation-view/jsonl-viewer`
-          - `fields/date/filter`
           - `fields/enum/inline`
           - `fields/tags/inline`
           - `improve/element-picker`
-          - `page/editor`
           - `page/formatting/color`
           - `page/formatting/link`
           - `page/inline-date`
@@ -26270,7 +26252,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `reorder/editor`
           - `shell/notifications`
           - `tasks/task-draft-form`
-          - `ui/theme-engine/quick-theme`
     - **`popup-open`** — Typed 'is a popup open inside me' signal: PopupOpenScope aggregates every popup opened under it and hands the boolean to its render-prop child; ui-kit's Root wrappers publish it via useReportPopupOpen. Replaces CSS selectors that named a popup library's own attribute contract. Sits below ui-kit (imports only react) so ui-kit can consume it without a cycle.
       - Cross-plugin:
         - Imported by:
@@ -27494,6 +27475,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/css/inline.Inline`
           - `primitives/css/pin.Pin`
           - `primitives/css/row.Row`
+          - `primitives/css/spacing.Stack`
           - `primitives/css/text.Text`
           - `primitives/css/ui-kit.Button`
           - `primitives/css/ui-kit.cn`
@@ -30071,14 +30053,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps-core.useActiveApp`
               - `apps-core/tabs.navigate`
               - `config_v2.useScopeMembership`
-              - `primitives/css/scroll.Scroll`
-              - `primitives/css/spacing.Inset`
+              - `primitives/css/control-panel.ControlPanel`
+              - `primitives/css/control-panel.ControlPanelPopover`
               - `primitives/css/spacing.Stack`
-              - `primitives/css/text.SectionLabel`
               - `primitives/css/text.Text`
-              - `primitives/css/ui-kit.Button`
               - `primitives/icon-button.IconButton`
-              - `primitives/popover.InlinePopover`
               - `primitives/slot-render.defineRenderSlot`
               - `shell/action-bar.ActionBar`
               - `ui/theme-engine.ThemeEngine`
@@ -30112,6 +30091,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/row.Row`
               - `primitives/css/spacing.Stack`
               - `primitives/css/text.Text`
+              - `primitives/css/ui-kit.Separator`
               - `primitives/detail-sections.defineDetailSections`
               - `primitives/pane.Pane`
               - `primitives/pane.PaneChrome`

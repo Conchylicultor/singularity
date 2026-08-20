@@ -433,7 +433,6 @@ guard: `confirmDialog` (`imperative-dialog/plugins/confirm`); native
     - `apps/pages/welcome/recent-pages`
     - `apps/prototypes/gallery`
     - `apps/prototypes/present`
-    - `apps/sonata/audio/metronome`
     - `apps/sonata/library`
     - `apps/sonata/piano-roll`
     - `apps/sonata/primitives/jog-wheel`
@@ -513,6 +512,7 @@ guard: `confirmDialog` (`imperative-dialog/plugins/confirm`); native
     - `conversations/conversation-view/jsonl-viewer/file-path`
     - `conversations/conversation-view/jsonl-viewer/queued-prompt-card`
     - `conversations/conversation-view/jsonl-viewer/row-actions`
+    - `conversations/conversation-view/jsonl-viewer/summary`
     - `conversations/conversation-view/jsonl-viewer/tool-call`
     - `conversations/conversation-view/jsonl-viewer/tool-call/ask-user-question`
     - `conversations/conversation-view/jsonl-viewer/tool-call/flag-raise`
@@ -724,7 +724,7 @@ guard: `confirmDialog` (`imperative-dialog/plugins/confirm`); native
     - `ui/tab-bar/connected`
     - `ui/tab-bar/underline`
     - `ui/theme-engine`
-    - `ui/theme-engine/quick-theme`
+    - `ui/theme-engine/theme-customizer`
     - `ui/tokens/shadow`
     - `ui/tree-disclosure/column`
     - `ui/tree-disclosure/dimmed-leaf`

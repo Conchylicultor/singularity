@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { MdPalette } from "react-icons/md";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
-import { InlinePopover } from "@plugins/primitives/plugins/popover/web";
+import { ControlPanelPopover } from "@plugins/primitives/plugins/css/plugins/control-panel/web";
 import { useActiveApp } from "@plugins/apps-core/web";
 import { navigate } from "@plugins/apps-core/plugins/tabs/web";
 import { themeCustomizerRoute } from "@plugins/ui/plugins/theme-engine/plugins/theme-customizer/web";
@@ -31,13 +31,16 @@ export function QuickThemeButton() {
   };
 
   return (
-    <InlinePopover
+    <ControlPanelPopover
       open={open}
       onOpenChange={setOpen}
       align="end"
       side="bottom"
-      width="3xl"
-      padding="none"
+      // The body is a GRID of theme swatches — the `picker` role. There is no
+      // width prop to smuggle a measurement through, which is the point: the
+      // panel used to be 480px because that is what the catalog gallery wanted.
+      size="picker"
+      label="Theme"
       trigger={
         <IconButton
           icon={MdPalette}
@@ -47,6 +50,6 @@ export function QuickThemeButton() {
       }
     >
       <QuickThemePanel onOpenEditor={openEditor} />
-    </InlinePopover>
+    </ControlPanelPopover>
   );
 }

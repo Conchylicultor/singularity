@@ -2,10 +2,10 @@
  * FxToggle — the host-owned FX popover button in the lane's HUD cluster.
  *
  * Lists every PianoRollFx contribution grouped by tier ("Ambient" first —
- * the always-tasteful defaults — then the opt-in "Fancy" spectacle), each row
- * a label + icon + switch wired to the effect's own `{ enabled }` config via
- * useConfig/useSetConfig. Collection-consumer clean: only generic slot fields
- * are read, so every new fx plugin auto-appears here with zero edits.
+ * the always-tasteful defaults — then the opt-in "Fancy" spectacle), each a
+ * control-panel row whose switch is wired to the effect's own `{ enabled }`
+ * config via useConfig/useSetConfig. Collection-consumer clean: only generic
+ * slot fields are read, so every new fx plugin auto-appears here with zero edits.
  *
  * Each row is its own component so the config hooks stay stable per component
  * (the contribution list length never changes a component's hook count).
@@ -17,16 +17,11 @@
 import { useState } from "react";
 import { MdAutoAwesome } from "react-icons/md";
 import { useConfig, useSetConfig } from "@plugins/config_v2/web";
-import { InlinePopover } from "@plugins/primitives/plugins/popover/web";
-import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import {
-  SectionLabel,
-  Text,
-} from "@plugins/primitives/plugins/css/plugins/text/web";
+  ControlPanel,
+  ControlPanelPopover,
+} from "@plugins/primitives/plugins/css/plugins/control-panel/web";
 import { ToggleChip } from "@plugins/primitives/plugins/css/plugins/toggle-chip/web";
-import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
-import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
-import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { PianoRollFx } from "../slots";
 
@@ -50,19 +45,24 @@ export function FxToggle() {
       className="pointer-events-auto"
       onPointerDown={(e) => e.stopPropagation()}
     >
-      <InlinePopover
+      <ControlPanelPopover
         open={open}
         onOpenChange={setOpen}
         align="end"
         side="bottom"
-        tooltip="Visual effects"
-        width="sm"
-        padding="sm"
+        // A list of on/off choices — the `menu` role. The panel owns its own
+        // inset and the hairline between the two tiers; this file draws neither.
+        size="menu"
+        label="Visual effects"
         trigger={
           <ToggleChip
             active={open}
             icon={<MdAutoAwesome />}
             aria-label="Visual effects"
+            // `ControlPanelPopover` has no tooltip prop (the trigger owns its
+            // own), and a ToggleChip carries none — so the hover hint is the
+            // native one.
+            title="Visual effects"
             className={cn(
               // Match the HUD pill look (key-chip): translucent + blurred.
               !open && "bg-background/90 shadow-sm backdrop-blur-sm",
@@ -72,15 +72,13 @@ export function FxToggle() {
           </ToggleChip>
         }
       >
-        <Stack gap="sm">
-          {ambient.length > 0 ? (
-            <FxTierSection label="Ambient" effects={ambient} />
-          ) : null}
-          {fancy.length > 0 ? (
-            <FxTierSection label="Fancy" effects={fancy} />
-          ) : null}
-        </Stack>
-      </InlinePopover>
+        {ambient.length > 0 ? (
+          <FxTierSection label="Ambient" effects={ambient} />
+        ) : null}
+        {fancy.length > 0 ? (
+          <FxTierSection label="Fancy" effects={fancy} />
+        ) : null}
+      </ControlPanelPopover>
     </div>
   );
 }
@@ -93,12 +91,11 @@ function FxTierSection({
   effects: FxItem[];
 }) {
   return (
-    <Stack gap="2xs">
-      <SectionLabel className="p-xs">{label}</SectionLabel>
+    <ControlPanel.Section label={label}>
       {effects.map((e) => (
         <FxToggleRow key={e.id} effect={e} />
       ))}
-    </Stack>
+    </ControlPanel.Section>
   );
 }
 
@@ -107,37 +104,18 @@ function FxToggleRow({ effect }: { effect: FxItem }) {
   const setConfig = useSetConfig(effect.config);
   const Icon = effect.icon;
   return (
-    <Line
-      as="button"
-      type="button"
-      role="switch"
-      aria-checked={enabled}
-      onClick={() => setConfig("enabled", !enabled)}
-      className="w-full gap-sm rounded-sm p-xs text-left transition-colors hover:bg-muted"
+    // `select="switch"` IS the row's on/off language — the switch owns the
+    // trailing cell and the row itself is the control, so the hand-rolled track
+    // and knob (two nested spans) are gone. The effect's glyph takes the `icon`
+    // slot: a switch row's leading cell is free (its indicator is trailing),
+    // which is why the row type lets THAT selection language carry one.
+    <ControlPanel.Row
+      select="switch"
+      checked={enabled}
+      icon={Icon ? <Icon /> : undefined}
+      onSelect={() => setConfig("enabled", !enabled)}
     >
-      {Icon ? (
-        <Icon className={cn("icon-auto text-muted-foreground", rigidClass())} />
-      ) : null}
-      <Fill as="span">
-        <Text variant="body">{effect.label}</Text>
-      </Fill>
-      {/* Switch visual — the whole row is the actual control (role="switch"). */}
-      <span
-        aria-hidden
-        className={cn(
-          "relative h-4 w-7 rounded-full transition-colors",
-          rigidClass(),
-          enabled ? "bg-primary" : "bg-muted-foreground/30",
-        )}
-      >
-        <span
-          // eslint-disable-next-line layout/no-adhoc-layout -- toggle knob: 0.5 base offset is off the spacing ramp and translate-x-3 is the value-driven slide
-          className={cn(
-            "absolute left-0.5 top-0.5 size-3 rounded-full bg-background shadow-sm transition-transform",
-            enabled && "translate-x-3",
-          )}
-        />
-      </span>
-    </Line>
+      {effect.label}
+    </ControlPanel.Row>
   );
 }

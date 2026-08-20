@@ -40,7 +40,6 @@ case) and intentionally does not compose it.
     - `apps/mail/threads`
     - `apps/pages/history`
     - `apps/sonata/library`
-    - `apps/sonata/piano-roll`
     - `apps/sonata/sources/midi`
     - `apps/sonata/track-mixer`
     - `apps/studio/compositions/release/release-logs`

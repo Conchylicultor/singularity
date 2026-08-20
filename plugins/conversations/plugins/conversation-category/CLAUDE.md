@@ -94,7 +94,7 @@ a catch-all say so in the category's hint: *"if unsure, pick Other"*.
   - Uses:
     - `config_v2.ConfigV2`
     - `config_v2.useConfig`
-    - `config_v2/config-link.ConfigPopoverHeader`
+    - `config_v2/config-link.ConfigGearButton`
     - `conversations.useConversationById`
     - `conversations/conversation-ui/item.CONV_STATUS_DOT`
     - `conversations/conversation-ui/item.ConversationItemConv`
@@ -105,10 +105,11 @@ a catch-all say so in the category's hint: *"if unsure, pick Other"*.
     - `infra/endpoints.fetchEndpoint`
     - `primitives/avatar.Avatar`
     - `primitives/css/badge.Badge`
-    - `primitives/css/center.Center`
-    - `primitives/css/row.Row`
+    - `primitives/css/control-panel.ControlPanel`
+    - `primitives/css/control-panel.ControlPanelPopover`
+    - `primitives/css/spacing.Stack`
+    - `primitives/css/text.Text`
     - `primitives/live-state.usePointResources`
-    - `primitives/popover.InlinePopover`
     - `shell/notifications.toast`
   - Exports (types):
     - `Category`

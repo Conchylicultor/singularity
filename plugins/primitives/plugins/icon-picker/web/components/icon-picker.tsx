@@ -1,7 +1,10 @@
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useState, useRef, useEffect } from "react";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
-import { SectionLabel, Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import {
+  SectionLabel,
+  Text,
+} from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Grid } from "@plugins/primitives/plugins/css/plugins/grid/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
@@ -37,6 +40,12 @@ export interface IconPickerProps {
  * picker is visible (e.g. inside an open popover). Renders just the icon block
  * (header + search + grid) — surface chrome (popover, color rows) is the
  * caller's responsibility.
+ *
+ * That includes the CONTENT INSET: this block applies none of its own, so it
+ * lands on whatever rail its host establishes. Inside a `ControlPanel` that is
+ * the panel's icon rail, which is what puts the "Icon" label, the search field
+ * and the grid on the same x as every other block in the panel — a second inset
+ * here is exactly the double-ownership the panel's inset rule exists to stop.
  */
 export function IconPicker({ value, onSelect, className }: IconPickerProps) {
   const [query, setQuery] = useState("");
@@ -52,31 +61,30 @@ export function IconPicker({ value, onSelect, className }: IconPickerProps) {
   };
 
   const isSearching = query.trim().length > 0;
-  const searchResults: FullIconEntry[] = isSearching && fullSet ? fullSet.search(query) : [];
+  const searchResults: FullIconEntry[] =
+    isSearching && fullSet ? fullSet.search(query) : [];
   const iconCount = fullSet
     ? fullSet.categories.reduce((n, cat) => n + cat.entries.length, 0)
     : 0;
 
   return (
-    <div className={className}>
+    <Stack gap="xs" className={className}>
       {/* Header + search */}
-      <Stack
-        direction="row"
-        align="center"
-        justify="between"
-        gap="none"
-        className="px-xs pt-xs pb-xs"
-      >
-        <SectionLabel as="span" className="text-3xs">
+      <Stack direction="row" align="center" justify="between" gap="none">
+        {/* No size override: this heading reads as a band label beside the
+            panel's own (`ControlPanel.Section label`), so it takes the eyebrow
+            role the primitive gives that one. */}
+        <SectionLabel as="span">
           {/* eslint-disable-next-line spacing/no-adhoc-spacing -- inline left offset on the "loading…" suffix next to the label text */}
           Icon{!fullSet && <span className="ml-1 opacity-50">· loading…</span>}
         </SectionLabel>
         {fullSet && (
-          <span className="text-3xs text-muted-foreground/50">{iconCount} icons</span>
+          <span className="text-3xs text-muted-foreground/50">
+            {iconCount} icons
+          </span>
         )}
       </Stack>
-      {/* eslint-disable-next-line spacing/no-adhoc-spacing -- one-off horizontal inset + bottom offset on the search box within the picker block */}
-      <div className="relative mx-1 mb-2">
+      <div className="relative">
         <Pin to="left" offset="sm" decorative>
           <MdSearch className="size-3.5 text-muted-foreground" />
         </Pin>
@@ -92,7 +100,10 @@ export function IconPicker({ value, onSelect, className }: IconPickerProps) {
           <Pin to="right" offset="sm">
             <button
               type="button"
-              onClick={() => { setQuery(""); searchRef.current?.focus(); }}
+              onClick={() => {
+                setQuery("");
+                searchRef.current?.focus();
+              }}
               className="text-muted-foreground hover:text-foreground"
             >
               <MdClose className="size-3.5" />
@@ -102,19 +113,28 @@ export function IconPicker({ value, onSelect, className }: IconPickerProps) {
       </div>
 
       {/* Icon grid */}
-      {/* eslint-disable-next-line spacing/no-adhoc-spacing -- space-y between conditional category blocks inside a padded scroll container; not a plain flex stack */}
-      <Scroll className="max-h-64 px-xs pb-xs space-y-2">
+      {/* eslint-disable-next-line spacing/no-adhoc-spacing -- space-y between conditional category blocks inside a scroll container; not a plain flex stack */}
+      <Scroll className="max-h-64 space-y-2">
         {!fullSet ? (
           <Loading label="Loading icons…" className="py-2xl text-center" />
         ) : isSearching ? (
           searchResults.length > 0 ? (
             <Grid cols={9} gap="xs">
               {searchResults.map((entry) => (
-                <IconBtn key={entry.key} entry={entry} selected={value === entry.key} onPick={pickIcon} />
+                <IconBtn
+                  key={entry.key}
+                  entry={entry}
+                  selected={value === entry.key}
+                  onPick={pickIcon}
+                />
               ))}
             </Grid>
           ) : (
-            <Text as="p" variant="caption" className="py-lg text-center text-muted-foreground">
+            <Text
+              as="p"
+              variant="caption"
+              className="py-lg text-center text-muted-foreground"
+            >
               No icons match &ldquo;{query}&rdquo;
             </Text>
           )
@@ -127,18 +147,31 @@ export function IconPicker({ value, onSelect, className }: IconPickerProps) {
               </SectionLabel>
               <Grid cols={9} gap="xs">
                 {cat.entries.map((entry) => (
-                  <IconBtn key={entry.key} entry={entry} selected={value === entry.key} onPick={pickIcon} />
+                  <IconBtn
+                    key={entry.key}
+                    entry={entry}
+                    selected={value === entry.key}
+                    onPick={pickIcon}
+                  />
                 ))}
               </Grid>
             </div>
           ))
         )}
       </Scroll>
-    </div>
+    </Stack>
   );
 }
 
-function IconBtn({ entry, selected, onPick }: { entry: FullIconEntry; selected: boolean; onPick: (e: FullIconEntry) => void }) {
+function IconBtn({
+  entry,
+  selected,
+  onPick,
+}: {
+  entry: FullIconEntry;
+  selected: boolean;
+  onPick: (e: FullIconEntry) => void;
+}) {
   return (
     <button
       type="button"

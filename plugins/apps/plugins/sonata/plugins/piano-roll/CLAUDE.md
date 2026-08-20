@@ -30,12 +30,10 @@
     - `config_v2.useSetConfig`
     - `primitives/css/center.Center`
     - `primitives/css/clip.Clip`
-    - `primitives/css/fill.Fill`
-    - `primitives/css/line.Line`
+    - `primitives/css/control-panel.ControlPanel`
+    - `primitives/css/control-panel.ControlPanelPopover`
     - `primitives/css/pin.Pin`
-    - `primitives/css/rigid.rigidClass`
     - `primitives/css/spacing.Stack`
-    - `primitives/css/text.SectionLabel`
     - `primitives/css/text.Text`
     - `primitives/css/toggle-chip.ToggleChip`
     - `primitives/css/ui-kit.cn`
@@ -43,7 +41,6 @@
     - `primitives/latest-ref.useLatestRef`
     - `primitives/lazy-component.lazyComponent`
     - `primitives/log-channels.clientLog`
-    - `primitives/popover.InlinePopover`
     - `primitives/slot-render.renderIsolated`
   - Exports (types):
     - `EmitterOptions`

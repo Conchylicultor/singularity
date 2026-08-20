@@ -1,15 +1,13 @@
 import { useRef, useState, type ReactElement } from "react";
 import { MdUpload } from "react-icons/md";
+import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-  Button,
-  cn,
-} from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+  ControlPanel,
+  ControlPanelPopover,
+} from "@plugins/primitives/plugins/css/plugins/control-panel/web";
 import { uploadAttachment } from "@plugins/infra/plugins/attachments/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { SectionLabel } from "@plugins/primitives/plugins/css/plugins/text/web";
+import { Spinner } from "@plugins/primitives/plugins/css/plugins/spinner/web";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 import type { PageCover } from "@plugins/page/plugins/editor/core";
 import { COVER_GRADIENTS } from "./cover-presets";
@@ -18,6 +16,13 @@ import { COVER_GRADIENTS } from "./cover-presets";
  * The cover chooser: a gradient gallery plus an image upload. Picking either
  * commits a new {@link PageCover} via `onPick` and closes the popover. Mirrors
  * the image-block upload funnel (mime-validate → uploadAttachment).
+ *
+ * A `ControlPanelPopover size="picker"`: the gradient tiles land on the same
+ * left edge as the "Gradient" label above them because the panel owns the
+ * content inset, and Upload is a FOOTER ROW rather than a button in the body,
+ * with a leading `icon` like every footer in the vocabulary (invariant #4). It
+ * costs nothing here: the footer is the only row in this panel, so the icon
+ * column it opens is the column that row itself paints in.
  */
 export function ChangeCoverPopover({
   trigger,
@@ -59,54 +64,59 @@ export function ChangeCoverPopover({
   };
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger render={trigger} />
-      <PopoverContent width="xl" padding="sm" align="start">
-        <Stack gap="sm">
-          <input
-            ref={inputRef}
-            type="file"
-            accept="image/*"
-            className="hidden"
-            onChange={(e) => {
-              const file = e.target.files?.[0];
-              e.target.value = "";
-              if (file) void ingest(file);
-            }}
-          />
-          <SectionLabel>Gradient</SectionLabel>
-          <Stack direction="row" gap="xs" wrap>
-            {COVER_GRADIENTS.map((g) => {
-              const selected = g.id === selectedPreset;
-              return (
-                <button
-                  key={g.id}
-                  type="button"
-                  aria-label={g.label}
-                  aria-pressed={selected}
-                  title={g.label}
-                  onClick={() => commit({ type: "gradient", preset: g.id })}
-                  style={{ background: g.css }}
-                  className={cn(
-                    "h-10 w-12 rounded-md border border-border transition-transform hover:scale-105",
-                    selected && "ring-2 ring-ring ring-offset-1 ring-offset-background",
-                  )}
-                />
-              );
-            })}
-          </Stack>
-          <SectionLabel>Upload</SectionLabel>
-          <Button
-            variant="secondary"
-            loading={uploading}
-            onClick={() => inputRef.current?.click()}
-          >
-            <MdUpload />
-            {uploading ? "Uploading…" : "Upload an image"}
-          </Button>
-          {error ? <Placeholder tone="error">{error}</Placeholder> : null}
+    <ControlPanelPopover
+      open={open}
+      onOpenChange={setOpen}
+      size="picker"
+      align="start"
+      label="Change cover"
+      trigger={trigger}
+    >
+      <ControlPanel.Section label="Gradient">
+        <Stack direction="row" gap="xs" wrap>
+          {COVER_GRADIENTS.map((g) => {
+            const selected = g.id === selectedPreset;
+            return (
+              <button
+                key={g.id}
+                type="button"
+                aria-label={g.label}
+                aria-pressed={selected}
+                title={g.label}
+                onClick={() => commit({ type: "gradient", preset: g.id })}
+                style={{ background: g.css }}
+                className={cn(
+                  "h-10 w-12 rounded-md border border-border transition-transform hover:scale-105",
+                  selected &&
+                    "ring-2 ring-ring ring-offset-1 ring-offset-background",
+                )}
+              />
+            );
+          })}
         </Stack>
-      </PopoverContent>
-    </Popover>
+      </ControlPanel.Section>
+
+      <ControlPanel.Footer>
+        <input
+          ref={inputRef}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            e.target.value = "";
+            if (file) void ingest(file);
+          }}
+        />
+        <ControlPanel.Row
+          disabled={uploading}
+          onSelect={() => inputRef.current?.click()}
+          icon={uploading ? <Spinner /> : <MdUpload />}
+        >
+          {uploading ? "Uploading…" : "Upload an image"}
+        </ControlPanel.Row>
+        {error ? <Placeholder tone="error">{error}</Placeholder> : null}
+      </ControlPanel.Footer>
+    </ControlPanelPopover>
   );
 }

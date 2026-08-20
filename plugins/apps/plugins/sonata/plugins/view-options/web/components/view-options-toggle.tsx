@@ -10,6 +10,10 @@
  * read, so any plugin surfacing a new display option auto-appears here with zero
  * edits.
  *
+ * Each contribution is one BAND of the control panel, so the hairline between
+ * two contributions is drawn by the panel rather than by this file — and a
+ * contribution that renders nothing leaves no orphan rule behind it.
+ *
  * Each contribution is its own component (`ViewOptionGroup`) so the per-config
  * `useConfig`/`useSetConfig` hooks stay stable per component — the contribution
  * list length never changes a component's hook count.
@@ -22,13 +26,20 @@ import { useState } from "react";
 import { MdTune } from "react-icons/md";
 import { useConfig, useSetConfig } from "@plugins/config_v2/web";
 import { FieldRenderer } from "@plugins/config_v2/plugins/fields/web";
-import { InlinePopover } from "@plugins/primitives/plugins/popover/web";
-import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import {
+  ControlPanel,
+  ControlPanelPopover,
+} from "@plugins/primitives/plugins/css/plugins/control-panel/web";
 import { ToggleChip } from "@plugins/primitives/plugins/css/plugins/toggle-chip/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { Sonata, useSonata } from "@plugins/apps/plugins/sonata/plugins/shell/web";
+import {
+  Sonata,
+  useSonata,
+} from "@plugins/apps/plugins/sonata/plugins/shell/web";
 
-type ViewOptionItem = ReturnType<typeof Sonata.ViewOption.useContributions>[number];
+type ViewOptionItem = ReturnType<
+  typeof Sonata.ViewOption.useContributions
+>[number];
 
 export function ViewOptionsToggle() {
   const options = Sonata.ViewOption.useContributions();
@@ -59,19 +70,24 @@ export function ViewOptionsToggle() {
       className="pointer-events-auto"
       onPointerDown={(e) => e.stopPropagation()}
     >
-      <InlinePopover
+      <ControlPanelPopover
         open={open}
         onOpenChange={setOpen}
         align="end"
         side="bottom"
-        tooltip="Display options"
-        width="sm"
-        padding="sm"
+        // A list of display choices — the `menu` role. The panel owns its inset,
+        // so nothing here pads itself.
+        size="menu"
+        label="Display options"
         trigger={
           <ToggleChip
             active={open}
             icon={<MdTune />}
             aria-label="Display options"
+            // `ControlPanelPopover` has no tooltip prop (the trigger owns its
+            // own), and a ToggleChip carries none — so the hover hint is the
+            // native one.
+            title="Display options"
             className={cn(
               // Match the HUD pill look (key-chip): translucent + blurred.
               !open && "bg-background/90 shadow-sm backdrop-blur-sm",
@@ -81,12 +97,10 @@ export function ViewOptionsToggle() {
           </ToggleChip>
         }
       >
-        <Stack gap="2xs">
-          {visible.map((o) => (
-            <ViewOptionGroup key={o.id} option={o} />
-          ))}
-        </Stack>
-      </InlinePopover>
+        {visible.map((o) => (
+          <ViewOptionGroup key={o.id} option={o} />
+        ))}
+      </ControlPanelPopover>
     </div>
   );
 }
@@ -97,7 +111,7 @@ function ViewOptionGroup({ option }: { option: ViewOptionItem }) {
   const keys = option.fields ?? Object.keys(option.config.fields);
 
   return (
-    <>
+    <ControlPanel.Section>
       {keys.map((key) => {
         const field = option.config.fields[key];
         if (!field) return null;
@@ -110,6 +124,6 @@ function ViewOptionGroup({ option }: { option: ViewOptionItem }) {
           />
         );
       })}
-    </>
+    </ControlPanel.Section>
   );
 }

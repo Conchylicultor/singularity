@@ -142,8 +142,19 @@ are the two users today.
   (`preventDefault`ed mousedown, because the click lands beside a live caret) and
   the popover. The consumer supplies the `glyph` and optionally `sections` — its
   own appearance controls, handed `{ editor, close }` — with `triggerLabel` and
-  `width` typed as travelling WITH `sections`, so "a glyph with no appearance but
+  the width typed as travelling WITH `sections`, so "a glyph with no appearance but
   a trigger label" is unrepresentable.
+
+  The width is one of TWO mutually exclusive props, and which one a consumer
+  passes says what its sections ARE. `panel: ControlPanelSize` means they are
+  built from the control-panel vocabulary (`ControlPanel.Section` / `.Row` / …),
+  which the shell then opens with a `ControlPanelPopover`: those members need a
+  `cp-panel` ancestor to inherit their inset from and hang their hairlines off,
+  and the body already owns its padding, so a `PopoverContent padding="sm"`
+  around it would be a second inset. `width: PopoverWidth` is the other case —
+  arbitrary content in an ordinary padded popover (the TODO card's launch form,
+  the agent-notes authorship list). Neither is a default for the other: a panel
+  has no measurement to pick, and a launch form has no band to separate.
 
   With no `sections` there is nothing to open, so the shell renders a plain
   non-interactive glyph on **both** surfaces (the context card's state). With
@@ -203,6 +214,8 @@ they describe.
 - Web:
   - Uses:
     - `primitives/css/center.Center`
+    - `primitives/css/control-panel.ControlPanelPopover`
+    - `primitives/css/control-panel.ControlPanelSize`
     - `primitives/css/ui-kit.cn`
     - `primitives/css/ui-kit.Popover`
     - `primitives/css/ui-kit.PopoverContent`

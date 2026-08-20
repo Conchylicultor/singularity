@@ -314,7 +314,19 @@
  *    compositing spends most of a linear ramp already near-invisible.
  *  - Painted ONLY where content actually exists, via `data-fade-top` /
  *    `data-fade-bottom` set from the host's measured scroll metrics. An always-on
- *    fade would be a lie, and worse than no signal at all. */
+ *    fade would be a lie, and worse than no signal at all.
+ *  - PARKED BELOW THE HOST'S OWN STICKY CHROME, via
+ *    `--scroll-fade-inset-top` / `--scroll-fade-inset-bottom` (0 when the host
+ *    has none). A sticky header inside the scroller is opaque and paints later
+ *    in tree order than `::before`, so it covered the strip's whole solid lip
+ *    and left only its near-transparent tail showing below itself — measured on
+ *    a config menu: 39 of the 46px strip hidden, so a row emerging from under
+ *    the header did so with a hard edge and no dissolve at all. Offsetting the
+ *    sticky inset is safe where GROWING the box is not: a sticky shift is not
+ *    folded into the scrollable overflow region (measured — zeroing both insets
+ *    left `scrollHeight` unchanged to the pixel), which is exactly why the
+ *    padded edge below is covered by ink instead. The host measures its own
+ *    chrome and publishes the two lengths; nothing here assumes a height. */
 @utility scroll-fade {
   /* twmerge: standalone -- Additive ::before/::after gradient overlays gated on data-fade-*; pseudo-element paint has no single-value built-in group to conflict with. */
   /* The visible ramp, above the host's own padding. */
@@ -711,14 +723,20 @@
  * READ density tokens, and a custom property that reads a themed var freezes its
  * computed value wherever it is declared.
  *
- * Six utilities, and between them they hold the five panel invariants:
+ * Five utilities, and between them they hold the five panel invariants:
  *
  *   - `cp-panel` — THE REGION OWNER: the panel's chrome pad PLUS the content
- *     inset every non-row child lands on, published as the shared rail (the
- *     full rule is in its own comment below). Must sit on the SAME element as
- *     `cp-body`: a band's
- *     rule bleeds back out through this inset, and `cp-body`'s cancellation of
- *     the first rule is anchored on this box's own padding-box edge.
+ *     inset every non-row child lands on — the ICON RAIL, so a section label, a
+ *     search field and a swatch grid share one left edge with every row's icon.
+ *     It publishes both as the shared rail (the full rule is in its own comment
+ *     below). It also DECLARES `--cp-rail-icon`'s handle-less case itself, and
+ *     that placement is load-bearing: a custom property declared in terms of
+ *     another is substituted where it is DECLARED, so a rail published at the
+ *     root would freeze on the root's `--cp-rail-icon` and the derived-track
+ *     rule below — which moves `--cp-rail-icon` ON THIS BOX — would never reach
+ *     it. Must sit on the SAME element as `cp-body`: a band's rule bleeds back
+ *     out through this inset, and `cp-body`'s cancellation of the first rule is
+ *     anchored on this box's own padding-box edge.
  *   - `cp-body`  — THE BAND CONTAINER: it spaces the panel's bands with `gap`,
  *     and cancels the rule of whichever band came first. Read it together with
  *     `cp-band` — the two are one mechanism, and the comments at each explain the
@@ -734,6 +752,16 @@
  *     and a long label truncates in its own column instead of sliding under the
  *     trailing control (the `pr-2xl` + `absolute right-2` bug ui-kit's CLAUDE.md
  *     documents).
+ *     The two LEADING tracks are DERIVED, per panel: a track is reserved only
+ *     when something in the panel occupies it — the gutter by a drag handle
+ *     (`data-cp-handle`), the icon column by an icon, a checkbox or a radio
+ *     mark (`data-cp-icon`) — never by a switch, which is drawn in the TRAILING
+ *     cell and so leaves the leading one free. Per PANEL, never per row: a per-row rule is exactly the
+ *     conditional leading cell invariant #1 exists to delete. Dropping a track
+ *     DROPS it (each case is its own template) rather than zeroing its width,
+ *     because a zero-width track keeps the column gap that follows it — and the
+ *     cell that would have sat in it is `display: none`d, or it would auto-place
+ *     into the track that took its place.
  *   - `cp-rule`  — the 6-track builder grid: gutter | prefix | field | operator |
  *     value | remove. It shares `--cp-icon-gap` as its column gap with `cp-row`,
  *     which is what puts the prefix cell on exactly the same rail as a row's icon
@@ -744,10 +772,16 @@
  *     trailing track is the one ELASTIC rigid track (`minmax`): it grows for
  *     extra `actions` beside the built-in remove, so keep a rule list's `actions`
  *     uniform or the value column will step between rows.
- *   - `cp-rail-icon` — the icon rail, for content that is not itself a row (a
- *     section label). It hangs BACK out of the content inset, because the
- *     panel's content box already starts on the text rail. There is no
- *     `cp-rail-text` twin: the text rail is where loose content already is.
+ *     …and `cp-rule` derives its gutter track the same way, from the same
+ *     per-panel `data-cp-handle` scan, so a builder with no reorderable rules
+ *     starts its prefix cell on the panel's own content inset.
+ *
+ * There is no `cp-rail-icon` utility and no `--cp-rail-text` token, and the two
+ * absences are one fact. Loose content lands on the ICON rail by doing nothing,
+ * because the rail the panel publishes IS the icon rail — so the hanging class a
+ * section label used to carry computes to zero and was deleted rather than
+ * defaulted. The TEXT rail is an interior column of the row grid, reached by the
+ * row's own tracks, and nothing outside a row has any business naming it.
  *
  * Nested `& > * + *` / `&[data-span]` selectors inside `@utility` are supported
  * (verified against tailwindcss 4.2.2: both compile to the same nested rule the
@@ -759,27 +793,36 @@
      Every other participant either INHERITS the rail or CANCELS it, never
      both:
 
-       - inherits — a raw <Input>, a FieldRenderer, any loose JSX. It lands on
-         the rail by doing NOTHING, which is the point: content needs no
-         wrapper and no opt-in to be aligned.
-       - cancels — `cp-row` / `cp-rule` (negative inline margins, so the row
-         BOX bleeds back out and its fill reads as a row) and `cp-rail-icon`
-         (a section label hangs back one column). Each then re-inserts its own
-         padding, landing its content back on a rail. A canceller never also
-         inherits, and an inheritor never pads.
+       - inherits — a raw <Input>, a FieldRenderer, a section label, any loose
+         JSX. It lands on the rail by doing NOTHING, which is the point:
+         content needs no wrapper and no opt-in to be aligned. There is no rail
+         class left to forget — the hanging `cp-rail-icon` a section label used
+         to carry computed to zero the moment the rail BECAME the icon rail, so
+         it was deleted rather than defaulted.
+       - cancels — `cp-row` / `cp-rule`, and only they (negative inline
+         margins, so the row BOX bleeds back out and its fill reads as a row).
+         Each then re-inserts its own padding, landing its leading cell back on
+         the rail. A canceller never also inherits, and an inheritor never pads.
 
-     The values make the panel's CONTENT BOX exactly a row's CONTENT BAND: it
-     starts on the TEXT rail — where every row label starts — and ends where a
-     row's trailing cell ends. So loose content lines up on the left with the
-     row labels above and below it, and on the right with their trailing
-     cells, with nothing at any call site to get wrong. Before this, a panel
-     had THREE left edges (section label ~36px, row content 12px, loose
-     content 4px) and only the two row kinds were ever measured.
+     THE START RAIL IS THE ICON RAIL — where every row's icon, indicator and
+     drag handle begins, and where a section label already sat. So a heading, a
+     search field and a swatch grid share ONE left edge with the rows' leading
+     column, and only a row's LABEL indents past the icon column that is
+     actually there.
+     This is a deliberate trade against the TEXT rail it replaced. On the text
+     rail the panel's content box was exactly a row's content BAND — aligned on
+     BOTH sides, ending at the row's trailing cell — which is a real property
+     and was not wrong; it answered a different question. It bought that
+     right-side symmetry by handing loose content an interior column of the row
+     grid: a search field indented 26px past the heading above it, the heading
+     alone escaping by hanging back through `cp-rail-icon`, and the panel
+     padding 62px left against 12px right. We take the left-edge symmetry
+     instead, and keep the end rail where it was.
 
      It publishes that inset as the SHARED rail (`--rail-start`/`--rail-end`,
      see THE RAIL above) rather than a panel-private pair, so a row's escape
      names no panel and a `ControlPanel.Row` is droppable anywhere. The values
-     are asymmetric — the start rail is the chrome pad plus the text rail, the
+     are asymmetric — the start rail is the chrome pad plus the icon rail, the
      end rail the chrome pad plus the row's own pad — so this sets the vars
      directly instead of taking a step off the `rail-<step>` ramp; that is the
      documented custom-value case.
@@ -791,7 +834,7 @@
      the lie this contract exists to make impossible. The chrome pad is
      recovered where it is actually needed, by the two cancellers below, which
      deliberately stop short of the panel's inner edge. */
-  --rail-start: calc(var(--cp-panel-pad) + var(--cp-rail-text));
+  --rail-start: calc(var(--cp-panel-pad) + var(--cp-rail-icon));
   --rail-end: calc(var(--cp-panel-pad) + var(--cp-row-pad-x));
   /* The panel PAYS its own rail, so nothing inside it owes one — without this a
      `rail-follow` band dropped in a panel would inset itself a second time. */
@@ -799,6 +842,22 @@
   --rail-owed-end: 0px;
   padding-block: var(--cp-panel-pad);
   padding-inline: var(--rail-start) var(--rail-end);
+  /* DERIVED TRACK #1 — the gutter. Nothing in this panel hangs a drag handle,
+     so there is no gutter track, and the icon rail collapses to the row's own
+     inline padding. `cp-row` / `cp-rule` drop the track itself below; this is
+     the same fact stated to everything that reads the rail — the panel's own
+     padding first of all, which is why this declaration and `--rail-start`
+     must land on ONE box: `--rail-start` is substituted where it is declared,
+     so it reads the `--cp-rail-icon` computed HERE. Measured: root-declared, a
+     handle-less panel pads 36px left against 12px right; declared here, 12/12.
+     A PANEL-wide scan, deliberately: derive it per row and a row with a handle
+     would indent its label past a row without one, which is the conditional
+     leading cell invariant #1 exists to delete. `:has()` sees through the
+     `display: contents` lineage spans `renderIsolated` wraps contributions in,
+     the same way `cp-body`'s flex layout does. */
+  &:not(:has([data-cp-handle])) {
+    --cp-rail-icon: var(--cp-row-pad-x);
+  }
 }
 
 @utility cp-body {
@@ -890,10 +949,10 @@
        - it stops `--cp-panel-pad` SHORT of the rail's origin. The chrome gap is
          the breathing room a row's fill keeps from the panel's edge; a full
          escape would paint the fill flush against it.
-       - it re-applies its OWN `--cp-row-pad-x`, not the rail. A row's label x
-         comes from the grid tracks (pad + gutter + gap + icon + gap = the text
-         rail), so re-applying the rail would push every label a whole text rail
-         further in.
+       - it re-applies its OWN `--cp-row-pad-x`, not the rail. A row's leading
+         cell x comes from the grid tracks (pad + gutter + gap = the icon rail,
+         and one icon column further on, the label's text rail), so re-applying
+         the rail would push every row a whole icon rail further in.
      `min()` is what keeps the row droppable OUTSIDE a panel: with no rail
      published there is nothing to hang back out of, and the row must not
      indent itself by a chrome gap it is not inside. */
@@ -905,6 +964,34 @@
   padding-inline: var(--cp-row-pad-x);
   border-radius: var(--radius-md);
   text-align: left;
+
+  /* THE DERIVED LEADING TRACKS. A track is reserved only when something in the
+     PANEL occupies it — the gutter by a drag handle, the icon column by an icon
+     or a check / radio mark (a switch draws in the TRAILING cell, so it
+     occupies nothing here). The row marks its own occupants
+     (`data-cp-handle` / `data-cp-icon`, stamped by `ControlPanel.Row`), and the
+     panel's `:has()` scan turns that into one template for every row in it.
+     Each case is its OWN template, never a zeroed width: a `0px` track keeps
+     the column gap that follows it, so the rail would land 8px right of where
+     the panel's own inset put it. And the cell that would have sat in the
+     dropped track is `display: none`d, or it would auto-place into the track
+     that took its place and shove the label one column over.
+     Nested here rather than in `@layer base` because Tailwind's utilities layer
+     comes AFTER base: a base rule loses to `cp-row`'s own template no matter
+     how specific it is. */
+  .cp-panel:not(:has([data-cp-handle])) & {
+    grid-template-columns: var(--cp-icon-col) minmax(0, 1fr) auto;
+  }
+  .cp-panel:not(:has([data-cp-icon])) & {
+    grid-template-columns: var(--cp-gutter) minmax(0, 1fr) auto;
+  }
+  .cp-panel:not(:has([data-cp-handle])):not(:has([data-cp-icon])) & {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+  .cp-panel:not(:has([data-cp-handle])) & > [data-cp-cell="gutter"],
+  .cp-panel:not(:has([data-cp-icon])) & > [data-cp-cell="icon"] {
+    display: none;
+  }
 }
 
 @utility cp-rule {
@@ -953,18 +1040,33 @@
       repeat(2, minmax(0, 1fr))
       minmax(var(--cp-remove-col), auto);
   }
-}
 
-/* The icon rail, for content that is not a row — a section label, and nothing
- * else today. It CANCELS part of the panel's content inset rather than adding to
- * it: the panel's content box already starts on the TEXT rail, so reaching the
- * icon rail means hanging BACK one column, and the offset is negative by
- * construction (`--cp-rail-icon` < `--cp-rail-text`, always, since the text rail
- * is the icon rail plus the icon column and its gap). That hang is what puts a
- * section label on the same x as every row's icon, indicator and drag handle.
- * There is no `cp-rail-text` twin: the text rail IS the panel's content inset,
- * so content reaches it by doing nothing at all. */
-@utility cp-rail-icon { margin-inline-start: calc(var(--cp-rail-icon) - var(--cp-rail-text)); } /* twmerge: standalone -- A negative hanging offset (margin-inline-start); the built-in margin groups are outside the allowed extend set, and nothing should selectively override half of a rail. */
+  /* The DERIVED gutter track, from the same per-panel handle scan `cp-row`
+     reads — so a builder whose rules cannot be reordered starts its prefix cell
+     on the panel's own content inset, exactly where a row's leading cell lands. The
+     track goes away WITH the gap that followed it (that is the whole reason
+     each case is a fresh template), and the empty gutter cell is hidden or it
+     would auto-place into the prefix track.
+     Both shapes need their own rule: `&[data-span="field"]` above is (0,2,0),
+     while a panel-scoped rule here is (0,3,0) — so without the pair below, a
+     handle-less SORT builder would take the three-cell template and grow a
+     phantom operator column. */
+  .cp-panel:not(:has([data-cp-handle])) & {
+    grid-template-columns:
+      var(--cp-prefix-col)
+      repeat(3, minmax(0, 1fr))
+      minmax(var(--cp-remove-col), auto);
+  }
+  .cp-panel:not(:has([data-cp-handle])) &[data-span="field"] {
+    grid-template-columns:
+      var(--cp-prefix-col)
+      repeat(2, minmax(0, 1fr))
+      minmax(var(--cp-remove-col), auto);
+  }
+  .cp-panel:not(:has([data-cp-handle])) & > [data-cp-cell="gutter"] {
+    display: none;
+  }
+}
 
 /* Spacing scale utilities — the single source of truth for layout gap + padding
  * rhythm (<Stack gap> / <Inset pad> primitives, plugins/primitives/plugins/spacing).
@@ -1203,18 +1305,26 @@
     --cp-remove-col: 1.5rem;
     --cp-row-h: var(--control-height-md);
     --cp-rule-h: var(--control-height-lg);
-    /* The two rails, measured from the panel's padding box. `--cp-rail-icon` is
-       the LEFT EDGE OF THE ICON CELL, so it includes the gap that follows the
-       gutter track — a section label hung on it lands exactly on the icon
-       column, which is what makes invariant #1 measurable rather than
-       approximate. */
+    /* THE rail, measured from the panel's padding box: the LEFT EDGE OF THE ICON
+       CELL, so it includes the gap that follows the gutter track. It is the
+       panel's own content inset (below), so a section label, a search field and
+       a card grid land on it by doing nothing at all — which is what makes
+       invariant #1 measurable rather than approximate.
+       `cp-panel` REDECLARES it when nothing in the panel hangs a drag handle
+       (no gutter track ⇒ the rail is the row's own inline padding), which is
+       also why the `--rail-start` that reads it must be published on that same
+       box.
+       There is no `--cp-rail-text` twin. The text rail — where a row's LABEL
+       starts — is an interior column of the row grid, and handing it to loose
+       content indented a search field 26px past the section label above it
+       while the panel padded 62px left against 12px right. Nothing outside a
+       row has any business naming it. */
     --cp-rail-icon: calc(var(--cp-row-pad-x) + var(--cp-gutter) + var(--cp-icon-gap));
-    --cp-rail-text: calc(var(--cp-rail-icon) + var(--cp-icon-col) + var(--cp-icon-gap));
     /* The panel's own content inset is NOT a token here: it is the rail
        `cp-panel` publishes (`--rail-start`/`--rail-end`, THE RAIL above), and a
        rail belongs to the box that opened the region, never to the document
-       root. The ownership rule that used to sit beside those two tokens now
-       sits on `cp-panel` itself, where it can be read next to the padding it
+       root. The ownership rule that used to sit beside these tokens now sits on
+       `cp-panel` itself, where it can be read next to the padding it
        describes. */
     }
   body {

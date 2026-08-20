@@ -37,10 +37,18 @@ interface ControlPanelRowCommon {
 }
 
 /**
- * `icon` and `select` are MUTUALLY EXCLUSIVE, and `checked` is required the
- * moment `select` is set. That is what makes the settings panel's three stacked
- * "on" languages — a filled checkbox, a highlighted row with a leading ✓, and a
- * raw select — a type error rather than a review note.
+ * `checked` is required the moment `select` is set, and `icon` is excluded from
+ * exactly the two selections that OWN the leading cell. That is what makes the
+ * settings panel's three stacked "on" languages — a filled checkbox, a
+ * highlighted row with a leading ✓, and a raw select — a type error rather than
+ * a review note.
+ *
+ * The switch is a third arm rather than a third exclusion, because its leading
+ * cell is empty BY CONSTRUCTION: the indicator lives in the trailing cell (see
+ * `trailingContent` below), so nothing there competes with an icon. Collapsing
+ * it into the check/radio arm made an icon + switch row unspellable, and the one
+ * surface that wanted one moved a real glyph into the label cell instead —
+ * misaligning its text against every other row in the panel.
  */
 export type ControlPanelRowProps =
   | (ControlPanelRowCommon & {
@@ -49,9 +57,14 @@ export type ControlPanelRowProps =
       checked?: never;
     })
   | (ControlPanelRowCommon & {
-      select: ControlPanelRowSelect;
+      select: "check" | "radio";
       checked: boolean;
       icon?: never;
+    })
+  | (ControlPanelRowCommon & {
+      select: "switch";
+      checked: boolean;
+      icon?: React.ReactNode;
     });
 
 /**
@@ -69,6 +82,17 @@ const HANDLE_REVEAL =
  * so every label in every panel starts at the same x whether or not this
  * particular row has an icon, and a long label truncates in its own column
  * instead of sliding under the trailing control.
+ *
+ * The two leading tracks are reserved only when the PANEL has something to put
+ * in them, which is why each row marks its own occupants: `data-cp-handle` when
+ * it hangs a drag handle, `data-cp-icon` when its leading cell is actually
+ * occupied — an icon, a checkbox or a radio mark, never a switch (which is
+ * drawn in the trailing cell). A panel with neither is a two-track grid, and
+ * its rows sit flush against the panel's own content inset — no reserved
+ * columns nothing paints in.
+ * The scan is per PANEL, never per row: derive it per row and a row with an icon
+ * would indent its label past a row without one, which is the conditional
+ * leading cell invariant #1 exists to delete.
  *
  * It is its own grid rather than a composed `css/row`'s `Row` on purpose. `Row`
  * is a `<Line>`-based FLEX row whose `icon` is a leading flex child, so the
@@ -122,9 +146,10 @@ export function ControlPanelRow({
 
   // Leading cell. A single-select row shows a CHECKMARK AND NOTHING ELSE — no
   // background fill, because a filled row already means hover, and a panel that
-  // says "selected" one way and "hovered" the same way says neither. The switch
-  // takes the trailing cell instead, so its leading cell stays empty and the
-  // rail holds.
+  // says "selected" one way and "hovered" the same way says neither.
+  // A SWITCH FALLS THROUGH TO `icon`: it owns the TRAILING cell, so its leading
+  // cell holds whatever the row itself carries — nothing, usually, or a real
+  // glyph for a row that has one.
   const leading =
     select === "check" ? (
       <CheckboxIndicator checked={checked ?? false} />
@@ -132,9 +157,21 @@ export function ControlPanelRow({
       checked ? (
         <MdCheck className="text-primary" />
       ) : null
-    ) : select === "switch" ? null : (
+    ) : (
       icon
     );
+
+  // …and the occupancy mark follows the CELL, not the row's props. A switch
+  // reserves nothing here (it is drawn in the trailing cell), so a panel whose
+  // only selections are switches has no icon column at all — before this it
+  // reserved 18px that painted nothing and indented every label in the panel by
+  // 26px, which is what the fx-toggle and metronome panels looked like.
+  // NOT `leading != null`, deliberately: an UNCHECKED radio renders nothing yet
+  // still owns the column — its mark is state, the track is not — so deriving
+  // the marker from the rendered node would make the whole panel re-flow the
+  // first time someone ticked a row.
+  const occupiesLeadingCell =
+    icon != null || select === "check" || select === "radio";
 
   const trailingContent =
     select === "switch" ? (
@@ -164,10 +201,21 @@ export function ControlPanelRow({
     ? { role: SELECT_ROLE[select], "aria-checked": checked ?? false }
     : undefined;
 
+  // Each cell names itself (`data-cp-cell`), and the two LEADING cells also
+  // declare whether they are OCCUPIED (`data-cp-handle` / `data-cp-icon`). The
+  // occupancy marks are what `cp-panel` scans with `:has()` to decide whether
+  // the panel reserves a gutter and an icon column at all — per panel, so every
+  // row in it keeps one rail; the cell names are how the dropped cells are then
+  // hidden, since an unhidden empty cell would auto-place into the track that
+  // took its place. A check or radio indicator counts as an icon — it occupies
+  // that column exactly as a glyph does — but a switch does not, because its
+  // indicator is in the trailing cell.
   const cells = (
     <>
       <span
         {...handleProps}
+        data-cp-cell="gutter"
+        data-cp-handle={handle ? "" : undefined}
         className={cn(
           "flex items-center justify-center text-muted-foreground",
           handle ? cn("cursor-grab", HANDLE_REVEAL) : "pointer-events-none",
@@ -179,11 +227,21 @@ export function ControlPanelRow({
       {/* Hidden from the accessibility tree: the indicator is a VISUAL restatement
           of `aria-checked`, and the icon is decorative — leaving them exposed
           would prefix the row's accessible name with the checkbox's own "✓". */}
-      <span aria-hidden className="flex items-center justify-center">
+      <span
+        aria-hidden
+        data-cp-cell="icon"
+        data-cp-icon={occupiesLeadingCell ? "" : undefined}
+        className="flex items-center justify-center"
+      >
         {leading}
       </span>
-      <span className="truncate">{children}</span>
-      <span className="flex items-center gap-2xs text-caption text-muted-foreground">
+      <span data-cp-cell="label" className="truncate">
+        {children}
+      </span>
+      <span
+        data-cp-cell="trailing"
+        className="flex items-center gap-2xs text-caption text-muted-foreground"
+      >
         {trailingContent}
       </span>
     </>

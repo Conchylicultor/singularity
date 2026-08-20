@@ -39,15 +39,23 @@
 // just the anchor term. Surfaces that publish no anchor at all (a dialog) then
 // degrade to the floor rather than to nothing.
 
-// Two roles size a panel by WHAT IT IS rather than by a tier — the control-panel
-// vocabulary's only width dial (`ControlPanelPopover size`). `menu` is a list of
-// choices; `builder` is a six-track rule row. They are new roles rather than
-// aliases of `md` (256px) / `3xl` (480px) on purpose: reusing a t-shirt size
-// re-imports the thing the vocabulary exists to delete — a panel width chosen
-// because some measurement was nearby, which is how the filter panel ended up
-// 481px wide (its FOOTER was the widest row) and resized every time a rule was
-// added. The ramp already carries role names beside its sizes (`fit`, `snug`,
-// `anchor`, `anchor-min`); these two join them.
+// Three roles size a panel by WHAT IT IS rather than by a tier — the
+// control-panel vocabulary's only width dial (`ControlPanelPopover size`).
+// `menu` is a list of choices; `builder` is a six-track rule row; `picker` is a
+// panel whose body is a GRID (swatches, icons, cover thumbnails). They are new
+// roles rather than aliases of `md` (256px) / `xl` (320px) / `3xl` (480px) on
+// purpose: reusing a t-shirt size re-imports the thing the vocabulary exists to
+// delete — a panel width chosen because some measurement was nearby, which is
+// how the filter panel ended up 481px wide (its FOOTER was the widest row) and
+// resized every time a rule was added. The ramp already carries role names
+// beside its sizes (`fit`, `snug`, `anchor`, `anchor-min`); these three join
+// them.
+//
+// `picker` earns its place on evidence a single content set could not give: THREE
+// shipped panels arrived at 320px independently (the avatar picker, the page icon
+// button, the change-cover popover). One panel at a width is a measurement; three
+// unrelated ones is a role. Forcing them onto `menu` = 262px is what wraps the
+// avatar picker's ten colour swatches onto a second row.
 export type PopoverWidth =
   | "content"
   | "fit"
@@ -56,6 +64,7 @@ export type PopoverWidth =
   | "anchor-min"
   | "menu"
   | "builder"
+  | "picker"
   | "xs"
   | "sm"
   | "md"
@@ -75,6 +84,7 @@ export const POPOVER_WIDTH: Record<PopoverWidth, string> = {
     "w-max min-w-[max(8rem,var(--anchor-width,0px))] max-w-(--available-width)",
   menu: "w-[16.375rem] max-w-(--available-width)", // 262px — a list of choices
   builder: "w-[32.75rem] max-w-(--available-width)", // 524px — a six-track rule row
+  picker: "w-80 max-w-(--available-width)", // 320px — a panel whose body is a grid
   xs: "w-48 max-w-(--available-width)",
   sm: "w-56 max-w-(--available-width)",
   md: "w-64 max-w-(--available-width)",

@@ -188,7 +188,6 @@ fixed raw size escapes per-site via
     - `apps/pages/welcome/recent-pages`
     - `apps/prototypes/gallery`
     - `apps/prototypes/present`
-    - `apps/sonata/audio/metronome`
     - `apps/sonata/library`
     - `apps/sonata/piano-roll`
     - `apps/sonata/primitives/jog-wheel`
@@ -267,6 +266,7 @@ fixed raw size escapes per-site via
     - `config_v2/settings`
     - `conversations/agents`
     - `conversations/all-conversations`
+    - `conversations/conversation-category`
     - `conversations/conversation-preprompt`
     - `conversations/conversation-ui/item`
     - `conversations/conversation-view`
@@ -299,7 +299,6 @@ fixed raw size escapes per-site via
     - `conversations/conversation-view/jsonl-viewer/meta-prompt`
     - `conversations/conversation-view/jsonl-viewer/preprompt`
     - `conversations/conversation-view/jsonl-viewer/queued-prompt-card`
-    - `conversations/conversation-view/jsonl-viewer/summary`
     - `conversations/conversation-view/jsonl-viewer/teammate-message`
     - `conversations/conversation-view/jsonl-viewer/tool-call`
     - `conversations/conversation-view/jsonl-viewer/tool-call/add-task`
@@ -375,7 +374,6 @@ fixed raw size escapes per-site via
     - `page/annotations/agent-notes/authorship`
     - `page/annotations/todo/task-link`
     - `page/bookmark`
-    - `page/callout`
     - `page/editor`
     - `page/embed`
     - `page/file`
@@ -400,7 +398,6 @@ fixed raw size escapes per-site via
     - `plugin-meta/plugin-view/inclusion`
     - `plugin-meta/plugin-view/sub-plugins`
     - `primitives/action-presentation`
-    - `primitives/avatar`
     - `primitives/command-palette`
     - `primitives/commit-list`
     - `primitives/css/color-picker`

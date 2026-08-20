@@ -122,7 +122,6 @@ per-site via `// eslint-disable-next-line spacing/no-adhoc-spacing -- reason`.
     - `apps/prototypes/gallery`
     - `apps/prototypes/present`
     - `apps/sonata/audio/engine`
-    - `apps/sonata/audio/metronome`
     - `apps/sonata/library`
     - `apps/sonata/notation`
     - `apps/sonata/piano-roll`
@@ -140,7 +139,6 @@ per-site via `// eslint-disable-next-line spacing/no-adhoc-spacing -- reason`.
     - `apps/sonata/sources/ultimate-guitar`
     - `apps/sonata/track-mixer`
     - `apps/sonata/transport-bar`
-    - `apps/sonata/view-options`
     - `apps/story/pages-integration`
     - `apps/story/render`
     - `apps/story/renderers/blog`
@@ -201,6 +199,7 @@ per-site via `// eslint-disable-next-line spacing/no-adhoc-spacing -- reason`.
     - `config_v2/fields`
     - `config_v2/settings`
     - `conversations/agents`
+    - `conversations/conversation-category`
     - `conversations/conversation-ui/item`
     - `conversations/conversation-view`
     - `conversations/conversation-view/action-bar`
@@ -222,7 +221,6 @@ per-site via `// eslint-disable-next-line spacing/no-adhoc-spacing -- reason`.
     - `conversations/conversation-view/jsonl-viewer/attachment/task-reminder`
     - `conversations/conversation-view/jsonl-viewer/collapsible-card`
     - `conversations/conversation-view/jsonl-viewer/fields-card`
-    - `conversations/conversation-view/jsonl-viewer/summary`
     - `conversations/conversation-view/jsonl-viewer/tool-call/add-task`
     - `conversations/conversation-view/jsonl-viewer/tool-call/agent`
     - `conversations/conversation-view/jsonl-viewer/tool-call/ask-user-question`
@@ -378,6 +376,7 @@ per-site via `// eslint-disable-next-line spacing/no-adhoc-spacing -- reason`.
     - `primitives/setup-steps`
     - `primitives/tabbed-view`
     - `primitives/tree`
+    - `reorder/editor`
     - `reorder/node-types/header`
     - `reorder/node-types/overflow`
     - `reports/launch-fix`

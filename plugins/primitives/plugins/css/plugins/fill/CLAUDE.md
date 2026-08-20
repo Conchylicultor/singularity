@@ -100,7 +100,6 @@ primitive exists to name.
     - `apps/mail/threads`
     - `apps/pages/welcome/recent-pages`
     - `apps/sonata/library`
-    - `apps/sonata/piano-roll`
     - `apps/sonata/sources/ultimate-guitar`
     - `apps/sonata/track-mixer`
     - `apps/story/shell`

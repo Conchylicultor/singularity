@@ -22,6 +22,20 @@ The panel body is assembled from three generic sources, naming no contributor:
    user's next click silently overwrites. The full pane still renders both.
 3. A footer that navigates to `themeCustomizerRoute` in the active app.
 
+Each of the three is a BAND of a `ControlPanelPopover` (`size="picker"` — a
+panel whose body is a grid of theme swatches). The panel paints no surface of
+its own, so this plugin no longer hand-builds one: no `Inset pad="md"` (the
+panel owns the single content inset, which is why the search field and the cards
+finally line up with the `THEME` heading above them), no `Scroll max-h-[60vh]`
+(the popover is the scroll owner; the catalog section still bounds ITSELF,
+because a 500-entry catalog is unbounded by nature), and no `border-t` band for
+the footer — a `ControlPanel.Footer` is separated because it IS a band. Its
+action takes a leading `icon`, like every other footer in the vocabulary
+(invariant #4). This is the one panel where that costs something visible: a
+footer row is still a row, so the ⚙ down there opens the icon column and the six
+variant rows above it indent their labels by 26px. Uniformity across every panel
+won that trade — the alternative was three different treatments of one thing.
+
 `selects` is a required field on `VariantGroupContribution` rather than a
 default, so a new token-group picker cannot silently inherit `"component"` and
 reappear in every compact surface — the filter here names no contributor and
@@ -44,14 +58,11 @@ itself stays a pane concern — this surface only follows the choice made there.
     - `apps-core.useActiveApp`
     - `apps-core/tabs.navigate`
     - `config_v2.useScopeMembership`
-    - `primitives/css/scroll.Scroll`
-    - `primitives/css/spacing.Inset`
+    - `primitives/css/control-panel.ControlPanel`
+    - `primitives/css/control-panel.ControlPanelPopover`
     - `primitives/css/spacing.Stack`
-    - `primitives/css/text.SectionLabel`
     - `primitives/css/text.Text`
-    - `primitives/css/ui-kit.Button`
     - `primitives/icon-button.IconButton`
-    - `primitives/popover.InlinePopover`
     - `primitives/slot-render.defineRenderSlot`
     - `shell/action-bar.ActionBar`
     - `ui/theme-engine.ThemeEngine`

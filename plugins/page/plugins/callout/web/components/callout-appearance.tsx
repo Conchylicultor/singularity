@@ -1,6 +1,5 @@
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { SectionLabel } from "@plugins/primitives/plugins/css/plugins/text/web";
-import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
+import { ControlPanel } from "@plugins/primitives/plugins/css/plugins/control-panel/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { IconPicker } from "@plugins/primitives/plugins/icon-picker/web";
 import type { SvgNode } from "@plugins/primitives/plugins/icon-picker/core";
@@ -88,49 +87,54 @@ export function CalloutAppearance({
 }) {
   return (
     <>
-      {/* Color row */}
-      <SectionLabel className="px-xs pt-xs pb-xs text-3xs">Color</SectionLabel>
-      <Stack direction="row" gap="xs" wrap className="px-xs pb-sm">
-        {CALLOUT_COLORS.map((key) => (
-          <button
-            key={key}
-            type="button"
-            aria-label={key}
-            aria-pressed={color === key}
-            onMouseDown={(e) => e.preventDefault()}
-            onClick={() => onChange({ color: key })}
-            className={cn(
-              "size-5 rounded-full border border-border transition-transform",
-              COLOR_SWATCH[key],
-              color === key && "scale-110 ring-2 ring-ring ring-offset-1 ring-offset-background",
-            )}
-          />
-        ))}
-      </Stack>
+      <ControlPanel.Section label="Color">
+        <Stack direction="row" gap="xs" wrap>
+          {CALLOUT_COLORS.map((key) => (
+            <button
+              key={key}
+              type="button"
+              aria-label={key}
+              aria-pressed={color === key}
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => onChange({ color: key })}
+              className={cn(
+                "size-5 rounded-full border border-border transition-transform",
+                COLOR_SWATCH[key],
+                color === key &&
+                  "scale-110 ring-2 ring-ring ring-offset-1 ring-offset-background",
+              )}
+            />
+          ))}
+        </Stack>
+      </ControlPanel.Section>
 
-      {/* Icon picker */}
-      <IconPicker
-        value={icon}
-        onSelect={({ key, svgNodes }) => {
-          onChange({ icon: key, iconSvgNodes: svgNodes });
-          close();
-        }}
-      />
+      {/* The picker draws its own "Icon" heading, so this band takes no label. */}
+      <ControlPanel.Section>
+        <IconPicker
+          value={icon}
+          onSelect={({ key, svgNodes }) => {
+            onChange({ icon: key, iconSvgNodes: svgNodes });
+            close();
+          }}
+        />
+      </ControlPanel.Section>
 
-      {/* Reset */}
-      {/* eslint-disable-next-line spacing/no-adhoc-spacing -- one-off vertical offset on a hairline divider, matching avatar-picker / page-icon-button */}
-      <div className="my-1 h-px bg-border" />
-      <Row
-        size="sm"
-        hover="accent"
-        onClick={() => {
-          onChange({ icon: null, iconSvgNodes: null, color: "default" });
-          close();
-        }}
-        className="text-muted-foreground"
-      >
-        Reset
-      </Row>
+      {/* Reset is a band of its own, so the rule above it is the panel's — the
+          hand-drawn `h-px bg-border` this file used to place is gone. It is NOT
+          a `Footer`: these sections also render as the top half of the rail's
+          block-actions panel, where a sticky footer in the middle of the panel
+          would pin over the structural actions below it. */}
+      <ControlPanel.Section>
+        <ControlPanel.Row
+          muted
+          onSelect={() => {
+            onChange({ icon: null, iconSvgNodes: null, color: "default" });
+            close();
+          }}
+        >
+          Reset
+        </ControlPanel.Row>
+      </ControlPanel.Section>
     </>
   );
 }

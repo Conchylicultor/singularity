@@ -6,24 +6,20 @@ import {
   MdUnfoldLess,
   MdUnfoldMore,
 } from "react-icons/md";
-import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
-import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { useCopyToClipboard } from "@plugins/primitives/plugins/copy-to-clipboard/web";
 import { showToast } from "@plugins/shell/plugins/toast/web";
-import { InlinePopover, type InlinePopoverProps } from "@plugins/primitives/plugins/popover/web";
+import {
+  ControlPanel,
+  ControlPanelPopover,
+  type ControlPanelPopoverProps,
+} from "@plugins/primitives/plugins/css/plugins/control-panel/web";
 import { PAGE_BLOCK_TYPE, type Block } from "../../core";
 import type { BlockEditorAPI } from "../types";
 import { Editor, useBlockFrameMenus } from "../slots";
 import { useBlockHandles } from "../internal/block-handles";
 import { useBlockEditor } from "../block-editor-context";
 import { useInsertableBlocks, BlockTypeList } from "./block-type-list";
-
-/** The menu's own hairline separator between two zones. Shared by both arms. */
-function Separator() {
-  // eslint-disable-next-line spacing/no-adhoc-spacing -- my-0.5 is a hairline separator's own inset between the menu's two zones; not a Stack-gap rhythm (the surrounding gap-xs is intentionally tighter)
-  return <div className="bg-border my-0.5 h-px" />;
-}
 
 /**
  * Per-block actions popover, opened from the gutter drag handle — the ONE rail
@@ -64,8 +60,8 @@ export function BlockActionsMenu({
    * necessarily the row that rendered it, so this component has no forest to ask.
    */
   childCount: number;
-  align?: InlinePopoverProps["align"];
-  side?: InlinePopoverProps["side"];
+  align?: ControlPanelPopoverProps["align"];
+  side?: ControlPanelPopoverProps["side"];
 }) {
   const [open, setOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(-1);
@@ -109,7 +105,7 @@ export function BlockActionsMenu({
   };
 
   return (
-    <InlinePopover
+    <ControlPanelPopover
       open={open}
       onOpenChange={(next) => {
         setOpen(next);
@@ -118,33 +114,35 @@ export function BlockActionsMenu({
       align={align}
       side={side}
       // Contributed sections host arbitrary controls — today a full icon picker
-      // — so a menu carrying them takes the wide role; the structural actions
-      // and the turn-into list both fit the narrow one.
-      width={ContainerMenu ? "xl" : "sm"}
-      padding="xs"
+      // — so a menu carrying them takes the `picker` role (a panel whose body is
+      // a grid); the structural actions and the turn-into list are a list of
+      // choices, which is `menu`. There is no width prop to smuggle a
+      // measurement through, and no `padding` either: the panel body owns its
+      // own inset, and each zone below is a BAND, so the hairlines between them
+      // are the container's rather than two hand-drawn `h-px` divs.
+      size={ContainerMenu ? "picker" : "menu"}
       // The SAME comfort cap the `/` menu takes (`CaretTriggerMenu`'s
       // `maxHeight="lg"`) — the two render the same `BlockTypeList` and must
       // open the same size. Fitting the viewport is already unconditional; the
       // cap is what stops a full-height wall of block types under the cursor,
-      // with the pointer travel and the covered-content that implies.
+      // with the pointer travel and the covered content that implies.
       maxHeight="lg"
+      label="Block actions"
       trigger={trigger}
     >
-      <Stack gap="xs">
-        {isContainer ? (
-          <>
-            {/* The container's own appearance, contributed by its plugin. The
-                SAME component also renders in the glyph's popover: appearance is
-                deliberately reachable from both, because the rail is where a
-                user looks for block actions and the glyph is where they look for
-                the glyph. */}
-            {ContainerMenu ? (
-              <>
-                {/* eslint-disable-next-line react-hooks/static-components -- not a component CREATED during render: `ContainerMenu` is a registry LOOKUP into the memoized `useBlockFrameMenus()` map, whose values are module-level slot contributions. Its identity is stable across renders, so no state can reset. */}
-                <ContainerMenu block={block} api={api} close={close} />
-                <Separator />
-              </>
-            ) : null}
+      {isContainer ? (
+        <>
+          {/* The container's own appearance, contributed by its plugin. The
+              SAME component also renders in the glyph's popover: appearance is
+              deliberately reachable from both, because the rail is where a
+              user looks for block actions and the glyph is where they look for
+              the glyph. It contributes its OWN bands, so a container with no
+              appearance leaves no orphan rule behind. */}
+          {ContainerMenu ? (
+            // eslint-disable-next-line react-hooks/static-components -- not a component CREATED during render: `ContainerMenu` is a registry LOOKUP into the memoized `useBlockFrameMenus()` map, whose values are module-level slot contributions. Its identity is stable across renders, so no state can reset.
+            <ContainerMenu block={block} api={api} close={close} />
+          ) : null}
+          <ControlPanel.Section>
             {/* Collapse/Expand is the fold's FALLBACK. The primary affordance is
                 the chevron on the container's borrowed line, which cannot always
                 serve it: nested containers share one line so only the outermost
@@ -172,43 +170,37 @@ export function BlockActionsMenu({
             >
               {`Remove ${containerName}`}
             </Row>
-          </>
-        ) : convertible ? (
-          <>
-            <Text
-              as="div"
-              variant="caption"
-              className="text-muted-foreground px-sm pt-xs font-medium uppercase tracking-wide"
-            >
-              Turn into
-            </Text>
-            <BlockTypeList
-              sections={sections}
-              activeIndex={activeIndex}
-              onHoverIndex={setActiveIndex}
-              // `target`, not `handle`: the container arm above already binds
-              // `handle` to the OWNER's handle, and a parameter shadowing it here
-              // would read as the same value while being the conversion target.
-              onSelect={(target) => {
-                // Only the target's NON-text defaults: the block keeps its id,
-                // hence its content doc, so `convertTo` carries its text over.
-                api.convertTo(target.type, target.emptyRowData());
-                close();
-              }}
-            />
-            {/* A `TurnInto` contribution converts a block into something the
-                editor's own pure `convertTo` cannot express — a server-backed
-                transition (today: into a sub-page, re-partitioning `page_id`
-                across a page boundary). None of that exists without rows, so the
-                whole zone is gated on `serverSync` rather than per-contributor. */}
-            {serverSync ? (
-              <Editor.TurnInto.Render>
-                {(a) => <a.component block={block} api={api} close={close} />}
-              </Editor.TurnInto.Render>
-            ) : null}
-            <Separator />
-          </>
-        ) : null}
+          </ControlPanel.Section>
+        </>
+      ) : convertible ? (
+        <ControlPanel.Section label="Turn into">
+          <BlockTypeList
+            sections={sections}
+            activeIndex={activeIndex}
+            onHoverIndex={setActiveIndex}
+            // `target`, not `handle`: the container arm above already binds
+            // `handle` to the OWNER's handle, and a parameter shadowing it here
+            // would read as the same value while being the conversion target.
+            onSelect={(target) => {
+              // Only the target's NON-text defaults: the block keeps its id,
+              // hence its content doc, so `convertTo` carries its text over.
+              api.convertTo(target.type, target.emptyRowData());
+              close();
+            }}
+          />
+          {/* A `TurnInto` contribution converts a block into something the
+              editor's own pure `convertTo` cannot express — a server-backed
+              transition (today: into a sub-page, re-partitioning `page_id`
+              across a page boundary). None of that exists without rows, so the
+              whole zone is gated on `serverSync` rather than per-contributor. */}
+          {serverSync ? (
+            <Editor.TurnInto.Render>
+              {(a) => <a.component block={block} api={api} close={close} />}
+            </Editor.TurnInto.Render>
+          ) : null}
+        </ControlPanel.Section>
+      ) : null}
+      <ControlPanel.Section>
         {/* The popover closes on commit, so the hook's own `copied` flash is
             never seen — the toast is the feedback. */}
         <Row
@@ -227,7 +219,7 @@ export function BlockActionsMenu({
         >
           Delete
         </Row>
-      </Stack>
-    </InlinePopover>
+      </ControlPanel.Section>
+    </ControlPanelPopover>
   );
 }

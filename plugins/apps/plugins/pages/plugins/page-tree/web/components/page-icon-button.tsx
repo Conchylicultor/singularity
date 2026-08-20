@@ -1,9 +1,13 @@
-import { Popover, PopoverContent, PopoverTrigger, cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { MdClose } from "react-icons/md";
+import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useState, type ReactElement } from "react";
+import {
+  ControlPanel,
+  ControlPanelPopover,
+} from "@plugins/primitives/plugins/css/plugins/control-panel/web";
 import { IconPicker } from "@plugins/primitives/plugins/icon-picker/web";
 import type { SvgNode } from "@plugins/primitives/plugins/icon-picker/core";
 import { PageIcon } from "@plugins/page/plugins/editor/web";
-import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 
 export interface PageIconValue {
@@ -17,6 +21,10 @@ export interface PageIconValue {
  * (only offered when an icon is set). The `trigger` is any element — a large
  * page icon or a small "Add icon" affordance — so both entry points share one
  * picker.
+ *
+ * It is a `ControlPanelPopover size="picker"`, so the icon block's label, search
+ * field and grid inherit the panel's one content inset, and the rule above the
+ * Remove footer is drawn by the container rather than placed here.
  */
 export function PageIconPicker({
   value,
@@ -31,9 +39,16 @@ export function PageIconPicker({
   const hasIcon = value.iconSvgNodes != null && value.iconSvgNodes.length > 0;
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger render={trigger} />
-      <PopoverContent width="xl" padding="sm" align="start">
+    <ControlPanelPopover
+      open={open}
+      onOpenChange={setOpen}
+      size="picker"
+      align="start"
+      label="Page icon"
+      trigger={trigger}
+    >
+      {/* No section label: the icon block renders its own header (label + count). */}
+      <ControlPanel.Section>
         <IconPicker
           value={value.icon}
           onSelect={({ key, svgNodes }) => {
@@ -41,25 +56,22 @@ export function PageIconPicker({
             setOpen(false);
           }}
         />
-        {hasIcon && (
-          <>
-            {/* eslint-disable-next-line spacing/no-adhoc-spacing -- vertical breathing room around a 1px divider rule in the popover */}
-            <div className="my-1 h-px bg-border" />
-            <Row
-              size="sm"
-              hover="accent"
-              onClick={() => {
-                void onChange({ icon: null, iconSvgNodes: null });
-                setOpen(false);
-              }}
-              className="text-muted-foreground"
-            >
-              Remove
-            </Row>
-          </>
-        )}
-      </PopoverContent>
-    </Popover>
+      </ControlPanel.Section>
+      {hasIcon && (
+        <ControlPanel.Footer>
+          <ControlPanel.Row
+            muted
+            icon={<MdClose />}
+            onSelect={() => {
+              void onChange({ icon: null, iconSvgNodes: null });
+              setOpen(false);
+            }}
+          >
+            Remove
+          </ControlPanel.Row>
+        </ControlPanel.Footer>
+      )}
+    </ControlPanelPopover>
   );
 }
 

@@ -72,7 +72,6 @@ layout set orthogonal (each primitive owns one distinct mechanic, no overlap).
     - `code-explorer`
     - `config_v2/settings`
     - `conversations/agents`
-    - `conversations/conversation-category`
     - `conversations/conversation-view`
     - `conversations/conversation-view/code/file-pane/image`
     - `conversations/conversation-view/dependencies`

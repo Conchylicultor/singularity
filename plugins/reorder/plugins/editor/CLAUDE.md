@@ -109,6 +109,7 @@ prop (middleware auto-detects; field is always `"vertical"`).
     - `primitives/css/inline.Inline`
     - `primitives/css/pin.Pin`
     - `primitives/css/row.Row`
+    - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.Button`
     - `primitives/css/ui-kit.cn`

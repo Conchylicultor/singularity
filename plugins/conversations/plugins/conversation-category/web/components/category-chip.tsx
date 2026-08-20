@@ -1,10 +1,13 @@
 import { useState } from "react";
-import { MdAutoAwesome, MdCheck, MdClose } from "react-icons/md";
-import { ConfigPopoverHeader } from "@plugins/config_v2/plugins/config-link/web";
+import { MdAutoAwesome, MdClose } from "react-icons/md";
+import { ConfigGearButton } from "@plugins/config_v2/plugins/config-link/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
-import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
-import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
-import { InlinePopover } from "@plugins/primitives/plugins/popover/web";
+import {
+  ControlPanel,
+  ControlPanelPopover,
+} from "@plugins/primitives/plugins/css/plugins/control-panel/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { toast } from "@plugins/shell/plugins/notifications/web";
 import { conversationCategoryConfig } from "../../shared";
 import type { Category } from "../internal/use-categories";
@@ -23,6 +26,13 @@ type Busy = "classify" | "set" | "clear" | null;
  *
  * The assignment arrives as a prop: the whole header shares ONE subscription, so
  * a chip never opens its own.
+ *
+ * The chip opens a CONTROL PANEL. Which item is set is a single choice, so the
+ * rows speak the one radio language (`select="radio"`) instead of the checkmark
+ * this file used to fade in and out by opacity; the rule between the items and
+ * the actions is the panel's own, drawn because the actions are a `Footer` band
+ * rather than because a `h-px` div was placed there; and those footer actions
+ * take `trailing` glyphs, so one ✕ down there cannot indent every item above it.
  */
 export function CategoryChip({
   conversationId,
@@ -64,9 +74,12 @@ export function CategoryChip({
   const label = item ?? categoryName;
 
   return (
-    <InlinePopover
+    <ControlPanelPopover
       open={open}
       onOpenChange={setOpen}
+      // A list of choices — the `menu` role.
+      size="menu"
+      label={categoryName}
       trigger={
         <Badge
           as="button"
@@ -87,109 +100,103 @@ export function CategoryChip({
           {label}
         </Badge>
       }
-      width="sm"
-      padding="xs"
     >
-      <ConfigPopoverHeader
-        label={categoryName}
-        descriptor={conversationCategoryConfig}
-      />
-      <ul className="space-y-px">
-        {category.items.map((option) => {
-          const selected = option.name === item;
-          return (
-            <li key={option.id}>
-              <Row
-                size="sm"
-                hover="accent"
-                onClick={() =>
-                  run(
-                    "set",
-                    () =>
-                      setCategoryItem(conversationId, category.id, option.name),
-                    `Failed to set ${categoryName}`,
-                  )
-                }
-                disabled={busy !== null}
-                title={option.hint || undefined}
-                icon={
-                  <Center
-                    as="span"
-                    className={`size-3 ${selected ? "opacity-100" : "opacity-0"}`}
-                  >
-                    <MdCheck className="size-3" />
-                  </Center>
-                }
-              >
-                {option.name}
-                {option.hint ? (
-                  <span className="truncate text-muted-foreground">
-                    {" "}
-                    — {option.hint}
-                  </span>
-                ) : null}
-              </Row>
-            </li>
-          );
-        })}
-      </ul>
-      {/* eslint-disable-next-line spacing/no-adhoc-spacing -- one-off vertical offset on a 1px divider between the item list and the actions */}
-      <div className="my-1 h-px bg-border" />
-      {item ? (
-        <Row
-          size="sm"
-          hover="accent"
-          onClick={() =>
-            run(
-              "clear",
-              () => clearCategory(conversationId, category.id),
-              `Failed to clear ${categoryName}`,
-            )
+      <ControlPanel.Section
+        // The band's own label, with the "configure this category" gear beside
+        // it — the pair `ConfigPopoverHeader` used to draw as a padded row of
+        // its own, which would have brought a second inset into a panel that
+        // already owns one.
+        label={
+          <Stack
+            direction="row"
+            gap="sm"
+            align="center"
+            justify="between"
+            className="w-full"
+          >
+            {categoryName}
+            <ConfigGearButton
+              descriptor={conversationCategoryConfig}
+              label={`Configure: ${categoryName}`}
+            />
+          </Stack>
+        }
+      >
+        {category.items.map((option) => (
+          <ControlPanel.Row
+            key={option.id}
+            select="radio"
+            checked={option.name === item}
+            disabled={busy !== null}
+            onSelect={() =>
+              void run(
+                "set",
+                () => setCategoryItem(conversationId, category.id, option.name),
+                `Failed to set ${categoryName}`,
+              )
+            }
+          >
+            {option.name}
+            {option.hint ? (
+              <Text as="span" variant="body" tone="muted">
+                {" "}
+                — {option.hint}
+              </Text>
+            ) : null}
+          </ControlPanel.Row>
+        ))}
+      </ControlPanel.Section>
+      <ControlPanel.Footer>
+        {item ? (
+          <ControlPanel.Row
+            trailing={<MdClose />}
+            disabled={busy !== null}
+            onSelect={() =>
+              void run(
+                "clear",
+                () => clearCategory(conversationId, category.id),
+                `Failed to clear ${categoryName}`,
+              )
+            }
+          >
+            Clear
+          </ControlPanel.Row>
+        ) : null}
+        <ControlPanel.Row
+          trailing={
+            <MdAutoAwesome
+              className={busy === "classify" ? "animate-pulse" : undefined}
+            />
           }
           disabled={busy !== null}
-          icon={<MdClose />}
+          onSelect={() =>
+            void run(
+              "classify",
+              () => reclassify(conversationId, [category.id]),
+              "Re-classify failed",
+            )
+          }
         >
-          Clear
-        </Row>
-      ) : null}
-      <Row
-        size="sm"
-        hover="accent"
-        onClick={() =>
-          run(
-            "classify",
-            () => reclassify(conversationId, [category.id]),
-            "Re-classify failed",
-          )
-        }
-        disabled={busy !== null}
-        icon={
-          <MdAutoAwesome
-            className={busy === "classify" ? "animate-pulse" : undefined}
-          />
-        }
-      >
-        {busy === "classify"
-          ? "Re-classifying…"
-          : `Re-classify ${categoryName}`}
-      </Row>
-      {/* Every category in one Haiku call — the alternative, clicking each chip
-          in turn, spawns one `claude` process per category. */}
-      <Row
-        size="sm"
-        hover="accent"
-        onClick={() =>
-          run(
-            "classify",
-            () => reclassify(conversationId),
-            "Re-classify failed",
-          )
-        }
-        disabled={busy !== null}
-        icon={<MdAutoAwesome />}
-      >
-        Re-classify all categories
-      </Row>
-    </InlinePopover>
+          {busy === "classify"
+            ? "Re-classifying…"
+            : `Re-classify ${categoryName}`}
+        </ControlPanel.Row>
+        {/* Every category in one Haiku call — the alternative, clicking each chip
+            in turn, spawns one `claude` process per category. */}
+        <ControlPanel.Row
+          trailing={<MdAutoAwesome />}
+          disabled={busy !== null}
+          onSelect={() =>
+            void run(
+              "classify",
+              () => reclassify(conversationId),
+              "Re-classify failed",
+            )
+          }
+        >
+          Re-classify all categories
+        </ControlPanel.Row>
+      </ControlPanel.Footer>
+    </ControlPanelPopover>
   );
 }

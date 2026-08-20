@@ -4,14 +4,11 @@ import { scoreEndBeat } from "@plugins/apps/plugins/sonata/plugins/score/core";
 import { useSonata } from "@plugins/apps/plugins/sonata/plugins/shell/web";
 import { useConfig, useSetConfig } from "@plugins/config_v2/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
-import { InlinePopover } from "@plugins/primitives/plugins/popover/web";
-import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { SectionLabel, Text } from "@plugins/primitives/plugins/css/plugins/text/web";
-import { Separator } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import {
-  SegmentedControl,
-  ToggleChip,
-} from "@plugins/primitives/plugins/css/plugins/toggle-chip/web";
+  ControlPanel,
+  ControlPanelPopover,
+} from "@plugins/primitives/plugins/css/plugins/control-panel/web";
+import { SegmentedControl } from "@plugins/primitives/plugins/css/plugins/toggle-chip/web";
 import { metronomeConfig } from "../../shared/config";
 import "./metronome-button.css";
 
@@ -34,12 +31,18 @@ const SUBDIVISION_OPTIONS = [
 
 /**
  * The metronome toolbar control (`SonataToolbar.End`): a single button that opens
- * the metronome popover. The button itself reflects the click-track state (filled
- * = on, like the Loop toggle) at a glance; opening it reveals a master on/off
- * toggle at the top plus the count-in length, click volume, and downbeat-accent
- * settings. All values are the `sonata.metronome` config (read via `useConfig`,
- * written via `useSetConfig`), so they persist and stay in sync with the Settings
- * pane.
+ * the metronome control panel. The button itself reflects the click-track state
+ * (filled = on, like the Loop toggle) at a glance; opening it reveals a master
+ * on/off switch at the top plus the count-in length, click volume, and downbeat-
+ * accent settings. All values are the `sonata.metronome` config (read via
+ * `useConfig`, written via `useSetConfig`), so they persist and stay in sync with
+ * the Settings pane.
+ *
+ * The panel is a `ControlPanelPopover`: the two on/off controls speak the ONE
+ * switch language (`select="switch"` — they used to be a `ToggleChip` reading
+ * "On"/"Off" and another reading its own label), each setting is a BAND so the
+ * hairlines between them are the container's, and the width is the `menu` role
+ * rather than whatever the widest segmented control happened to measure.
  */
 export function MetronomeButton() {
   const { score } = useSonata();
@@ -49,10 +52,13 @@ export function MetronomeButton() {
   const hasScore = scoreEndBeat(score) > 0;
 
   return (
-    <InlinePopover
-      tooltip="Metronome"
+    <ControlPanelPopover
       align="end"
+      size="menu"
+      label="Metronome"
       trigger={
+        // The trigger owns its own tooltip (`label`), which is why the panel has
+        // no tooltip prop to duplicate it with.
         <IconButton
           icon={MdAvTimer}
           label="Metronome"
@@ -61,63 +67,59 @@ export function MetronomeButton() {
         />
       }
     >
-      <Stack gap="md">
-        <Stack direction="row" gap="md" align="center" justify="between">
-          <Text variant="label">Metronome</Text>
-          <ToggleChip
-            active={continuous}
-            variant="solid"
-            onClick={() => setConfig("continuous", !continuous)}
-          >
-            {continuous ? "On" : "Off"}
-          </ToggleChip>
-        </Stack>
+      <ControlPanel.Section>
+        <ControlPanel.Row
+          select="switch"
+          checked={continuous}
+          onSelect={() => setConfig("continuous", !continuous)}
+        >
+          Metronome
+        </ControlPanel.Row>
+      </ControlPanel.Section>
 
-        <Separator />
-
-        <Stack gap="xs">
-          <SectionLabel>Subdivision</SectionLabel>
-          <SegmentedControl
-            options={SUBDIVISION_OPTIONS}
-            value={String(subdivision)}
-            onChange={(id) => setConfig("subdivision", Number(id))}
-            variant="ghost"
-          />
-        </Stack>
-
-        <Stack gap="xs">
-          <SectionLabel>Count-in</SectionLabel>
-          <SegmentedControl
-            options={COUNT_IN_OPTIONS}
-            value={String(countInBars)}
-            onChange={(id) => setConfig("countInBars", Number(id))}
-            variant="ghost"
-          />
-        </Stack>
-
-        <Stack gap="xs">
-          <SectionLabel>Click volume</SectionLabel>
-          <input
-            type="range"
-            min={0}
-            max={1}
-            step={0.01}
-            value={volume}
-            onChange={(e) => setConfig("volume", Number(e.target.value))}
-            aria-label="Click volume"
-            className="metronome-slider w-40"
-            style={{ "--fill": volume * 100 } as CSSProperties}
-          />
-        </Stack>
-
-        <ToggleChip
-          active={accentDownbeat}
+      <ControlPanel.Section label="Subdivision">
+        <SegmentedControl
+          options={SUBDIVISION_OPTIONS}
+          value={String(subdivision)}
+          onChange={(id) => setConfig("subdivision", Number(id))}
           variant="ghost"
-          onClick={() => setConfig("accentDownbeat", !accentDownbeat)}
+        />
+      </ControlPanel.Section>
+
+      <ControlPanel.Section label="Count-in">
+        <SegmentedControl
+          options={COUNT_IN_OPTIONS}
+          value={String(countInBars)}
+          onChange={(id) => setConfig("countInBars", Number(id))}
+          variant="ghost"
+        />
+      </ControlPanel.Section>
+
+      <ControlPanel.Section label="Click volume">
+        <input
+          type="range"
+          min={0}
+          max={1}
+          step={0.01}
+          value={volume}
+          onChange={(e) => setConfig("volume", Number(e.target.value))}
+          aria-label="Click volume"
+          // Full width of the panel's content box: the panel's width is a role
+          // now, so the slider follows it instead of naming its own measurement.
+          className="metronome-slider w-full"
+          style={{ "--fill": volume * 100 } as CSSProperties}
+        />
+      </ControlPanel.Section>
+
+      <ControlPanel.Section>
+        <ControlPanel.Row
+          select="switch"
+          checked={accentDownbeat}
+          onSelect={() => setConfig("accentDownbeat", !accentDownbeat)}
         >
           Accent downbeat
-        </ToggleChip>
-      </Stack>
-    </InlinePopover>
+        </ControlPanel.Row>
+      </ControlPanel.Section>
+    </ControlPanelPopover>
   );
 }

@@ -1,14 +1,12 @@
+import { MdClose } from "react-icons/md";
 import type { ClassName } from "@plugins/primitives/plugins/css/plugins/ui-kit/core";
-import {
-  cn,
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useState, type ReactNode } from "react";
-import { SectionLabel } from "@plugins/primitives/plugins/css/plugins/text/web";
+import {
+  ControlPanel,
+  ControlPanelPopover,
+} from "@plugins/primitives/plugins/css/plugins/control-panel/web";
 import { Cluster } from "@plugins/primitives/plugins/css/plugins/cluster/web";
-import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
 import { IconPicker } from "@plugins/primitives/plugins/icon-picker/web";
 import type { SvgNode } from "@plugins/primitives/plugins/icon-picker/core";
 import {
@@ -31,6 +29,15 @@ export interface AvatarPickerProps {
   triggerLabel?: string;
 }
 
+/**
+ * Colour swatches over the icon grid, with a Clear footer once either is set.
+ *
+ * It is a `ControlPanelPopover size="picker"` rather than a hand-rolled popover:
+ * the swatch cluster, the icon block's own label / search / grid, and the Clear
+ * row all land on one left edge because the panel owns the content inset, and
+ * the rule between the colour band, the icon band and the footer is drawn by the
+ * container — there is no hairline here to place, forget or double.
+ */
 export function AvatarPicker({
   value,
   onChange,
@@ -43,22 +50,27 @@ export function AvatarPicker({
   const pickColor = (color: AvatarColor) => void onChange({ ...value, color });
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger
-        className={cn(
-          "rounded-full outline-none focus-visible:ring-2 focus-visible:ring-ring",
-          triggerClassName,
-        )}
-        aria-label={triggerLabel ?? "Pick avatar"}
-      >
-        {children}
-      </PopoverTrigger>
-      <PopoverContent width="xl" padding="sm" align="start">
-        {/* Color row */}
-        <SectionLabel className="px-xs pt-xs pb-xs text-3xs">
-          Color
-        </SectionLabel>
-        <Cluster gap="xs" className="px-xs pb-sm">
+    <ControlPanelPopover
+      open={open}
+      onOpenChange={setOpen}
+      size="picker"
+      align="start"
+      label={triggerLabel ?? "Pick avatar"}
+      trigger={
+        <button
+          type="button"
+          aria-label={triggerLabel ?? "Pick avatar"}
+          className={cn(
+            "rounded-full outline-none focus-visible:ring-2 focus-visible:ring-ring",
+            triggerClassName,
+          )}
+        >
+          {children}
+        </button>
+      }
+    >
+      <ControlPanel.Section label="Color">
+        <Cluster gap="xs">
           {AVATAR_COLOR_KEYS.map((key) => (
             <button
               key={key}
@@ -75,33 +87,31 @@ export function AvatarPicker({
             />
           ))}
         </Cluster>
+      </ControlPanel.Section>
 
-        {/* Icon picker */}
+      {/* No section label: the icon block renders its own header (label + count). */}
+      <ControlPanel.Section>
         <IconPicker
           value={value.icon}
           onSelect={({ key, svgNodes }) =>
             void onChange({ ...value, icon: key, svgNodes })
           }
         />
+      </ControlPanel.Section>
 
-        {/* Clear */}
-        {(value.icon || value.color) && (
-          <>
-            {/* eslint-disable-next-line spacing/no-adhoc-spacing -- one-off vertical offset on a hairline divider */}
-            <div className="my-1 h-px bg-border" />
-            <Row
-              size="sm"
-              hover="accent"
-              onClick={() =>
-                void onChange({ icon: null, color: null, svgNodes: null })
-              }
-              className="text-muted-foreground"
-            >
-              Clear
-            </Row>
-          </>
-        )}
-      </PopoverContent>
-    </Popover>
+      {(value.icon || value.color) && (
+        <ControlPanel.Footer>
+          <ControlPanel.Row
+            muted
+            icon={<MdClose />}
+            onSelect={() =>
+              void onChange({ icon: null, color: null, svgNodes: null })
+            }
+          >
+            Clear
+          </ControlPanel.Row>
+        </ControlPanel.Footer>
+      )}
+    </ControlPanelPopover>
   );
 }

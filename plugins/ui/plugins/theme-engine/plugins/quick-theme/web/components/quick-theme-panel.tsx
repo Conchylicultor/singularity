@@ -1,8 +1,7 @@
 import { MdTune } from "react-icons/md";
-import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { Stack, Inset } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
-import { Text, SectionLabel } from "@plugins/primitives/plugins/css/plugins/text/web";
+import { ControlPanel } from "@plugins/primitives/plugins/css/plugins/control-panel/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { useActiveApp } from "@plugins/apps-core/web";
 import { useScopeMembership } from "@plugins/config_v2/web";
 import { themeEngineConfig } from "@plugins/ui/plugins/theme-engine/core";
@@ -29,26 +28,38 @@ function ComponentVariantSection() {
   );
   if (!hasAny) return null;
   return (
-    <Stack gap="md">
-      <SectionLabel>Variants</SectionLabel>
-      <ThemeEngine.VariantGroup.Render>
-        {(g) =>
-          g.selects === "component" ? (
-            <Stack gap="2xs">
-              <Text variant="label">{g.componentLabel}</Text>
-              <g.component />
-            </Stack>
-          ) : null
-        }
-      </ThemeEngine.VariantGroup.Render>
-    </Stack>
+    <ControlPanel.Section label="Variants">
+      <Stack gap="md">
+        <ThemeEngine.VariantGroup.Render>
+          {(g) =>
+            g.selects === "component" ? (
+              <Stack gap="2xs">
+                <Text variant="label">{g.componentLabel}</Text>
+                <g.component />
+              </Stack>
+            ) : null
+          }
+        </ThemeEngine.VariantGroup.Render>
+      </Stack>
+    </ControlPanel.Section>
   );
 }
 
 /**
- * The quick-switch popover body: contributed quick sections (the community
- * theme picker) on top, every component variant picker below, and a footer that
- * hands off to the full customizer pane.
+ * The quick-switch panel body: contributed quick sections (the community theme
+ * picker) on top, every component variant picker below, and a footer that hands
+ * off to the full customizer pane.
+ *
+ * It is a CONTROL PANEL body and therefore paints nothing of its own — no
+ * padding, no scroll region, no bordered footer band. The `ControlPanelPopover`
+ * that opens it owns the surface (and the scrolling), and the panel draws the
+ * hairline above each band, which is why the footer here is a `Footer` rather
+ * than an `Inset` with a `border-t`. Its action takes a leading `icon`, like
+ * every footer in the vocabulary (invariant #4) — and this is the one panel
+ * where that is visible: a footer row is still a row, so the ⚙ down here opens
+ * the icon column and the variant rows above indent their labels 26px. The
+ * alternative was three different treatments of one footer glyph across the
+ * app, and uniformity won that trade.
  *
  * Scope resolution mirrors the customizer pane exactly — edits target the active
  * app's own theme once that app has been forked ("Customize for <App>" in the
@@ -68,34 +79,24 @@ export function QuickThemePanel({
 
   return (
     <ThemeScopeProvider scopeId={effectiveScopeId}>
-      <Stack gap="none">
-        {/* The popover is the scroll owner: sections render at natural height, so
-            the panel's overall length is what scrolls here. The one sanctioned
-            exception is a section whose content is unbounded by nature (the
-            500-entry theme catalog) — it bounds itself so the sections below it
-            stay reachable. */}
-        <Scroll axis="y" className="max-h-[60vh]">
-          <Inset pad="md">
-            <Stack gap="lg">
-              <QuickTheme.Section.Render>
-                {(s) => (
-                  <Stack gap="sm">
-                    <SectionLabel>{s.label}</SectionLabel>
-                    <s.component />
-                  </Stack>
-                )}
-              </QuickTheme.Section.Render>
-              <ComponentVariantSection />
-            </Stack>
-          </Inset>
-        </Scroll>
-        <Inset pad="2xs" className="border-t border-border">
-          <Button variant="ghost" onClick={onOpenEditor} className="w-full">
-            <MdTune />
-            Open theme editor
-          </Button>
-        </Inset>
-      </Stack>
+      {/* The popover is the scroll owner: sections render at natural height, so
+          the panel's overall length is what scrolls. The one sanctioned
+          exception is a section whose content is unbounded by nature (the
+          500-entry theme catalog) — it bounds itself so the sections below it
+          stay reachable. */}
+      <QuickTheme.Section.Render>
+        {(s) => (
+          <ControlPanel.Section label={s.label}>
+            <s.component />
+          </ControlPanel.Section>
+        )}
+      </QuickTheme.Section.Render>
+      <ComponentVariantSection />
+      <ControlPanel.Footer>
+        <ControlPanel.Row icon={<MdTune />} onSelect={onOpenEditor}>
+          Open theme editor
+        </ControlPanel.Row>
+      </ControlPanel.Footer>
     </ThemeScopeProvider>
   );
 }

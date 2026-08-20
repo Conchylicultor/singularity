@@ -1,12 +1,12 @@
 // @hash 6ec84829688d
 {
   "views": [
-    { "id": "themes", "name": "Themes", "view": { "type": "gallery" } },
+    { "id": "themes", "name": "Themes", "view": { "type": "list" } },
     {
       "id": "professional",
       "name": "Professional",
       "view": {
-        "type": "gallery",
+        "type": "list",
         "filter": {
           "kind": "group",
           "id": "professional",

@@ -83,9 +83,18 @@ The popover's open state belongs to whoever hosts it, so the sections dismiss
 through the `close()` they are given rather than holding a second copy; the
 swatches deliberately do not close (picking colours in a row is a comparison, not
 a commit). The trigger `preventDefault`s its mousedown (the click lands beside a
-live caret), and commits fire on `onMouseDown` — the same shape
-`BlockActionsMenu` uses, for the same reason. `width="xl"` is the callout's own:
-its sections host the full icon picker.
+live caret), and the structural commits in `BlockActionsMenu` fire on
+`onMouseDown` for the same reason.
+
+The sections are a **control panel**: colour, icon and Reset are three
+`ControlPanel.Section` bands, so the rule between them is the container's rather
+than the `h-px bg-border` div this file used to place, and the panel's own inset
+is the only one — the swatch cluster and the picker land on the same left edge
+as the band labels by doing nothing. Reset is a band and NOT a `Footer`, because
+these sections also render as the top half of the rail's block-actions panel,
+where a sticky footer in the middle would pin over the structural actions below
+it. `panel="picker"` is the callout's own width role (320px — what this popover
+already measured as `xl`): a panel whose body is a grid.
 
 ## What is deliberately NOT here
 
@@ -130,9 +139,8 @@ keeps the origin's id and caret; the wrap is ONE undo entry).
     - `page/editor.BlockAnchorProps`
     - `page/editor.Editor`
     - `page/editor.PageIcon`
-    - `primitives/css/row.Row`
+    - `primitives/css/control-panel.ControlPanel`
     - `primitives/css/spacing.Stack`
-    - `primitives/css/text.SectionLabel`
     - `primitives/css/ui-kit.cn`
     - `primitives/icon-picker.IconPicker`
   - Exports (values): `calloutBlock`

@@ -34,6 +34,12 @@ The no-provider default is `md`.
   a clear row. Calls `onChange` immediately on selection (no submit). The
   trigger is whatever you pass as children (typically an `<Avatar>`).
 
+  It is a `ControlPanelPopover size="picker"`, not a hand-rolled `Popover`: the
+  swatch cluster, the icon block and the Clear row inherit ONE content inset
+  from the panel, and the rules between the three bands are the container's —
+  there is no `h-px bg-border` here to place, forget or double. The swatch grid
+  itself is unchanged: `ControlPanel` owns geometry, never content layout.
+
 ## Relationship to `icon-picker`
 
 The icon registry, search grid, `SvgNode` storage format, and server-side SVG
@@ -58,14 +64,11 @@ color palette.
 - Web:
   - Uses:
     - `primitives/css/cluster.Cluster`
-    - `primitives/css/row.Row`
-    - `primitives/css/text.SectionLabel`
+    - `primitives/css/control-panel.ControlPanel`
+    - `primitives/css/control-panel.ControlPanelPopover`
     - `primitives/css/ui-kit.cn`
     - `primitives/css/ui-kit.ControlSize`
     - `primitives/css/ui-kit.DensityControlled`
-    - `primitives/css/ui-kit.Popover`
-    - `primitives/css/ui-kit.PopoverContent`
-    - `primitives/css/ui-kit.PopoverTrigger`
     - `primitives/css/ui-kit.useControlSize`
     - `primitives/icon-picker.IconPicker`
     - `primitives/icon-picker.SvgIcon`

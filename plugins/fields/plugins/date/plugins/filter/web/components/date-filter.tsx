@@ -1,12 +1,20 @@
 import { useState, type ReactNode } from "react";
 import { MdCalendarToday, MdExpandMore } from "react-icons/md";
 import type { FilterValueInputProps } from "@plugins/primitives/plugins/data-view/web";
-import { InlinePopover } from "@plugins/primitives/plugins/popover/web";
-import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
-import { Stack, Inset } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { SectionLabel, Text } from "@plugins/primitives/plugins/css/plugins/text/web";
-import { Button, Separator } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { fromISODay, toISODay } from "@plugins/primitives/plugins/date-picker/core";
+import {
+  ControlPanel,
+  ControlPanelPopover,
+} from "@plugins/primitives/plugins/css/plugins/control-panel/web";
+import {
+  Stack,
+  Inset,
+} from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import {
+  fromISODay,
+  toISODay,
+} from "@plugins/primitives/plugins/date-picker/core";
 import { Calendar } from "@plugins/primitives/plugins/date-picker/web";
 import {
   formatAnchor,
@@ -58,7 +66,11 @@ function RelativeAnchorBuilder({
   const magnitude = relative ? Math.abs(relative.amount) : 1;
   const direction = relative && relative.amount < 0 ? "ago" : "from-now";
 
-  function emit(next: { magnitude?: number; unit?: DateUnit; direction?: string }) {
+  function emit(next: {
+    magnitude?: number;
+    unit?: DateUnit;
+    direction?: string;
+  }) {
     const m = next.magnitude ?? magnitude;
     const u = next.unit ?? unit;
     const d = next.direction ?? direction;
@@ -72,7 +84,9 @@ function RelativeAnchorBuilder({
         min={1}
         className={`${NATIVE_CONTROL} w-16`}
         value={magnitude}
-        onChange={(e) => emit({ magnitude: Math.max(1, Number(e.target.value) || 1) })}
+        onChange={(e) =>
+          emit({ magnitude: Math.max(1, Number(e.target.value) || 1) })
+        }
       />
       <select
         className={NATIVE_CONTROL}
@@ -121,13 +135,15 @@ function AnchorChooser({
   }
 
   return (
-    <InlinePopover
+    <ControlPanelPopover
       open={open}
       onOpenChange={setOpen}
-      // `fit` (not a fixed role) so the 7-column month grid sizes the panel
-      // naturally; `min-w-64` keeps the pre-calendar floor and
-      // `max-w-(--available-width)` caps it, so it can neither clip nor sprawl.
-      width="fit"
+      // The body is a month GRID — the `picker` role, at a fixed 320px. It used
+      // to be `fit`, which sized the panel to whichever operand row was showing:
+      // the panel resized under the user as the operator changed, which is
+      // exactly what a width ROLE exists to delete.
+      size="picker"
+      label="Choose a date"
       trigger={
         <Button variant="outline">
           <MdCalendarToday />
@@ -142,41 +158,30 @@ function AnchorChooser({
         </Button>
       }
     >
-      <Inset pad="sm">
-        <Stack gap="sm">
-          <Stack gap="2xs">
-            <SectionLabel>Relative</SectionLabel>
-            {/* eslint-disable-next-line data-view/no-adhoc-row-list -- fixed 3-preset option list inside the filter popover */}
-            {PRESETS.map((p) => (
-              <Row
-                key={p.label}
-                size="sm"
-                hover="muted"
-                onClick={() => pick(p.anchor)}
-              >
-                {p.label}
-              </Row>
-            ))}
-            <Inset y="2xs">
-              <RelativeAnchorBuilder anchor={anchor} onChange={onChange} />
-            </Inset>
-          </Stack>
-          <Separator />
-          <Stack gap="2xs">
-            <SectionLabel>Exact date</SectionLabel>
-            {/*
-              `toISODay` is local-midnight, so the emitted operand stays the bare
-              `yyyy-mm-dd` calendar day `resolveAnchorDay` (and its server
-              filter-sql twin) already resolve — never a full ISO instant.
-            */}
-            <Calendar
-              value={fromISODay(exactIso)}
-              onSelect={(d) => pick({ kind: "date", iso: toISODay(d) })}
-            />
-          </Stack>
-        </Stack>
-      </Inset>
-    </InlinePopover>
+      <ControlPanel.Section label="Relative">
+        {PRESETS.map((p) => (
+          <ControlPanel.Row key={p.label} onSelect={() => pick(p.anchor)}>
+            {p.label}
+          </ControlPanel.Row>
+        ))}
+        {/* Vertical breathing room only — the inline inset is the panel's, and
+            this control inherits it by doing nothing. */}
+        <Inset y="2xs">
+          <RelativeAnchorBuilder anchor={anchor} onChange={onChange} />
+        </Inset>
+      </ControlPanel.Section>
+      <ControlPanel.Section label="Exact date">
+        {/*
+          `toISODay` is local-midnight, so the emitted operand stays the bare
+          `yyyy-mm-dd` calendar day `resolveAnchorDay` (and its server
+          filter-sql twin) already resolve — never a full ISO instant.
+        */}
+        <Calendar
+          value={fromISODay(exactIso)}
+          onSelect={(d) => pick({ kind: "date", iso: toISODay(d) })}
+        />
+      </ControlPanel.Section>
+    </ControlPanelPopover>
   );
 }
 
@@ -240,7 +245,9 @@ export function RelativeRangeInput(props: FilterValueInputProps): ReactNode {
         min={1}
         className={`${NATIVE_CONTROL} w-16`}
         value={amount}
-        onChange={(e) => emit({ amount: Math.max(1, Number(e.target.value) || 1) })}
+        onChange={(e) =>
+          emit({ amount: Math.max(1, Number(e.target.value) || 1) })
+        }
       />
       <select
         className={NATIVE_CONTROL}

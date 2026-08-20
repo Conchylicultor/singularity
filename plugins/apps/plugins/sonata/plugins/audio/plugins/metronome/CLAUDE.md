@@ -45,16 +45,12 @@ on/off, subdivision, count-in bars, click volume, accent downbeat) live in the
     - `config_v2.useConfig`
     - `config_v2.useSetConfig`
     - `primitives/css/center.Center`
-    - `primitives/css/spacing.Stack`
-    - `primitives/css/text.SectionLabel`
-    - `primitives/css/text.Text`
+    - `primitives/css/control-panel.ControlPanel`
+    - `primitives/css/control-panel.ControlPanelPopover`
     - `primitives/css/toggle-chip.SegmentedControl`
-    - `primitives/css/toggle-chip.ToggleChip`
-    - `primitives/css/ui-kit.Separator`
     - `primitives/css/viewport-overlay.ViewportOverlay`
     - `primitives/icon-button.IconButton`
     - `primitives/latest-ref.useLatestRef`
-    - `primitives/popover.InlinePopover`
 - Server:
   - Contributes: `ConfigV2.Register` "sonata.metronome"
   - Uses: `config_v2.ConfigV2`
