@@ -20,21 +20,8 @@ import {
   type SessionState,
 } from "./claude-session";
 import { parseInputDraft } from "./input-draft";
+import { resolvePaneStatus } from "./pane-status";
 import { captureProcessTree } from "./process-tree";
-// Sessions we manage: new ones use `conv-…`; `claude-…` is the pre-rename
-// legacy prefix kept so zombie sessions still get picked up by the poller.
-const SESSION_NAME_RE = /^(conv|claude)-\d+(-[a-z0-9]+)?$/;
-
-// Busy frames the CLI animates in the terminal title. Two generations coexist:
-// braille (≤ 2.1.226) and the half-circles CLI 2.1.228 switched to ("Updated
-// terminal title busy-spinner glyphs to reduce tab-bar jitter"). Both are kept
-// because a machine can be running either version — and an unknown frame is not
-// a cosmetic miss: SPINNER_RE is the freshest `working` signal, so a frame we
-// don't recognise silently demotes status resolution to the lagging session
-// file AND leaves the glyph in the title we mirror into `conversations.title`.
-const SPINNER_RE = /^[⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏⠐⠂⠄⠠⠈◐◑◒◓]\s*/;
-const READY_RE = /^✳\s*/;
-const STATUS_PREFIX_RE = /^[⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏⠐⠂⠄⠠⠈◐◑◒◓✳]\s*/;
 
 // AskUserQuestion menus must be detected regardless of how the pane otherwise
 // reads, because the CLI signature changed across versions:
@@ -195,72 +182,6 @@ async function isProbeWaiting(id: string): Promise<boolean> {
 const FORM_CLEAR_POLL_INTERVAL_MS = 100;
 const ESCAPE_MIN_GAP_MS = 1_500;
 const FORM_CLEAR_TIMEOUT_MS = 6_000;
-
-interface ResolvedPaneStatus {
-  title: string;
-  working: boolean;
-  waitingFor: string | null;
-}
-
-/**
- * Merge the two status sources for a tmux pane into a single verdict.
- *
- * 1. Tmux pane title prefix (real-time):
- *    - Spinner glyph → working
- *    - ✳ ready mark  → not working
- *    - Neither       → no signal (startup race, bare hostname, etc.)
- *
- * 2. Pid JSON session file (~/.claude/sessions/<pid>.json):
- *    - status: "busy" | "idle" | "shell" | "waiting" (can lag behind the TUI)
- *    - waitingFor: human-readable reason (only meaningful when not busy)
- *
- * The pane title is the freshest signal for busy/idle because it updates
- * on every TUI render frame. The session file provides `waitingFor`
- * context (permission prompt, user input, etc.) that the title lacks,
- * and acts as a fallback when the title carries no prefix.
- */
-function resolvePaneStatus(
-  rawTitle: string,
-  session: SessionState,
-  opActive: boolean,
-): ResolvedPaneStatus {
-  const trimmed = rawTitle.replace(/^_ /, "").trim();
-
-  // Extract display title (strip status prefix).
-  const titleText = trimmed.replace(STATUS_PREFIX_RE, "").trim();
-  const isDefault =
-    !titleText ||
-    /^[a-zA-Z0-9-]+\.(local|internal|lan|home)$/.test(titleText) ||
-    SESSION_NAME_RE.test(titleText);
-  const title = isDefault ? "" : titleText;
-
-  // Resolve working status.
-  let working: boolean;
-  if (session.status === "shell" && opActive) {
-    // A background subprocess is attached (the CLI reports "shell" while any
-    // background task runs) AND Singularity knows a build or push is in flight
-    // for this worktree. That operation will finish and resume the agent, so
-    // this is real work — but the TUI keeps rendering the ✳ ready mark in the
-    // title throughout, so we must override the title here. Without opActive we
-    // deliberately do NOT special-case "shell": a never-ending background shell
-    // (a dev server, `tail -f`, or a build whose completion marker never
-    // matched) falls through to the title's ready mark below and reads as
-    // waiting, so a stalled agent surfaces in the needs-input queue instead of
-    // looking busy forever.
-    working = true;
-  } else if (SPINNER_RE.test(trimmed)) {
-    working = true;
-  } else if (READY_RE.test(trimmed)) {
-    working = false;
-  } else {
-    // No title signal — fall back to session file.
-    // null = file not written yet (startup race) → treat as working.
-    working = session.status == null || session.status === "busy";
-  }
-
-  const waitingFor = working ? null : (session.waitingFor ?? null);
-  return { title, working, waitingFor };
-}
 
 // Field separator: tab (not present in pane paths or titles) keeps splits
 // unambiguous even though pane titles can contain arbitrary characters.
