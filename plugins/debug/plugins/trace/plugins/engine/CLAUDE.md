@@ -214,10 +214,12 @@ expandable JSON.
   - Contributes:
     - `ConfigV2.Register` "trace"
     - `change-feed-exclusion` "traces"
+    - `fork-data-exclusion` "traces"
   - Uses:
     - `config_v2.ConfigV2`
     - `config_v2.getConfig`
     - `database.db`
+    - `database/admin.ExcludeFromFork`
     - `database/change-feed.ExcludeFromChangeFeed`
     - `infra/duress.createShedBuffer`
     - `infra/duress.ShedSummary`

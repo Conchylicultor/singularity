@@ -5,6 +5,8 @@ import {
   type ServerPluginDefinition,
 } from "@plugins/framework/plugins/server-core/core";
 import { db } from "@plugins/database/server";
+import { ExcludeFromFork } from "@plugins/database/plugins/admin/server";
+import { LIVE_STATE_CHANGELOG_TABLE } from "@plugins/database/plugins/derived-views/core";
 import { relationIdentityBase } from "@plugins/database/plugins/derived-views/server";
 import { feedExemptTables } from "@plugins/database/plugins/derived-tables/server";
 import { rebuildTriggers, getCoveredTables } from "./internal/triggers";
@@ -31,6 +33,25 @@ export { routeChange } from "./internal/route-change";
 export default {
   description:
     "L4 DB change-feed: STATEMENT-level Postgres triggers that pg_notify on every commit, plus a LISTEN consumer routing each change through the live-state recompute cascade — making missed invalidations structurally impossible and out-of-process writes visible.",
+  contributions: [
+    // The changelog is this feed's transactional OUTBOX — a bounded replay
+    // buffer the L2 cold-boot catch-up reads to find what changed while a
+    // backend was down. Its entries describe commits against the database that
+    // produced them, and it is pruned against that database's own snapshot
+    // watermark, so a fork inherits replay instructions for a history it does
+    // not share. It is excluded together with `live_state_snapshot` (declared by
+    // live-state-snapshot, which owns that table): catch-up compares the two, so
+    // emptying one and not the other would leave the pair disagreeing.
+    //
+    // A table name string rather than a table object: the changelog is created
+    // inside this plugin's own trigger-rebuild transaction, not by a drizzle
+    // migration, so there is no table object to pass.
+    ExcludeFromFork({
+      table: LIVE_STATE_CHANGELOG_TABLE,
+      reason:
+        "Replay outbox describing commits against the source database, pruned against its own watermark; excluded together with live_state_snapshot.",
+    }),
+  ],
   // Triggers are deterministic, data-less DDL rebuilt from the live schema on
   // every boot (like derived-views), NOT a migration. This runs in the blocking
   // barrier so the feed's triggers exist before any traffic — and the listener

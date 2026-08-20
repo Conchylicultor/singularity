@@ -20,9 +20,11 @@
   - Contributes:
     - `resource.declare` "reports"
     - `change-feed-exclusion` "reports"
+    - `fork-data-exclusion` "reports"
   - Uses:
     - `build/server-build-id.getServerGraphHash`
     - `database.db`
+    - `database/admin.ExcludeFromFork`
     - `database/change-feed.ExcludeFromChangeFeed`
     - `infra/duress.createShedBuffer`
     - `infra/duress.ShedSummary`

@@ -8,6 +8,7 @@ import { handleInvestigate } from "./internal/handle-investigate";
 import { reportsResource } from "./internal/resources";
 import { recordReport } from "./internal/record-report";
 import { ExcludeFromChangeFeed } from "@plugins/database/plugins/change-feed/server";
+import { ExcludeFromFork } from "@plugins/database/plugins/admin/server";
 import { _reports } from "./internal/tables";
 import { backfillNoiseWarmup } from "./internal/backfill-noise";
 import { reportsRetention } from "./internal/retention";
@@ -54,6 +55,15 @@ export default {
       table: _reports,
       reason:
         "High-churn deduped crash/report counter; live-ticking it amplifies load during the exact crash storms it records. Pane hydrates on open.",
+    }),
+    // A report records a crash on the machine that crashed, and its
+    // investigation link points at a task in the SAME database. A fresh
+    // worktree inheriting main's crash history gets a bell full of failures it
+    // did not cause and links into main's tasks.
+    ExcludeFromFork({
+      table: _reports,
+      reason:
+        "Host-local crash history; inherited rows surface main's failures in a fresh worktree and link to tasks it cannot resolve.",
     }),
   ],
   register: [backfillNoiseWarmup, reportsRetention],

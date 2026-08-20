@@ -6,8 +6,10 @@
 
 - Description: L2 persisted live-state materialization: durable snapshot + xmin watermark for instant cold boot, with a bounded changelog catch-up that recomputes only the resources whose tables changed during downtime.
 - Server:
+  - Contributes: `fork-data-exclusion` "live_state_snapshot"
   - Uses:
     - `database.db`
+    - `database/admin.ExcludeFromFork`
     - `database/change-feed.routeChange`
     - `infra/jobs.defineJob`
     - `primitives/log-channels.defineLogSink`

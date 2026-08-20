@@ -304,6 +304,7 @@ const { mutateAsync } = useEndpointMutation(deleteTask, { meta: { suppressError:
     - `conversations/recover`
     - `conversations/summary`
     - `conversations/transcript-api`
+    - `database/fork`
     - `debug/boot-monitor`
     - `debug/boot-profile`
     - `debug/broadcasts`

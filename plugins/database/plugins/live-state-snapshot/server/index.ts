@@ -1,6 +1,8 @@
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
 import { recomputeResource } from "@plugins/framework/plugins/server-core/core";
 import { db } from "@plugins/database/server";
+import { ExcludeFromFork } from "@plugins/database/plugins/admin/server";
+import { LIVE_STATE_SNAPSHOT_TABLE } from "@plugins/database/plugins/derived-views/core";
 import { initSnapshotSubsystem } from "./internal/boot-init";
 import { readPersistedReadSets, bootCriticalKeys } from "./internal/persist";
 import { runCatchUp } from "./internal/catch-up";
@@ -35,6 +37,27 @@ export default {
   description:
     "L2 persisted live-state materialization: durable snapshot + xmin watermark for instant cold boot, with a bounded changelog catch-up that recomputes only the resources whose tables changed during downtime.",
   loadBearing: false,
+  contributions: [
+    // The snapshot is a cold-boot ACCELERATOR, not a correctness prerequisite —
+    // `initSnapshotSubsystem` degrades to a full recompute when it is absent, so
+    // a fork loses startup latency and nothing else.
+    //
+    // It must not be inherited, because a persisted value is computed FROM other
+    // tables and the fork empties several of them (notifications, mail, the
+    // observability set). Keeping the snapshot while emptying its sources would
+    // make a fresh worktree serve a value that disagrees with the rows behind it
+    // — and for a boot-critical resource that stale value is what the very first
+    // paint renders. Emptying both makes that mismatch unrepresentable.
+    //
+    // A table name string rather than a table object: this table is created with
+    // `CREATE TABLE IF NOT EXISTS` (see derived-views/core's imperative-tables),
+    // not by a drizzle migration, so there is no table object to pass.
+    ExcludeFromFork({
+      table: LIVE_STATE_SNAPSHOT_TABLE,
+      reason:
+        "Cold-boot accelerator computed from tables the fork empties; an inherited value would disagree with the rows behind it on first paint.",
+    }),
+  ],
   register: [liveStateChangelogPruneJob],
   // Create the snapshot table and INJECT the persist hooks into the resource
   // runtime here — before the ready barrier flips and before any flush could try

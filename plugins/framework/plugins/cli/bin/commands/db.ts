@@ -1,21 +1,87 @@
 import type { Command } from "commander";
 import { basename } from "node:path";
 import { forkDatabase } from "@plugins/database/plugins/admin/server";
+import type { ForkExclusions } from "@plugins/database/plugins/admin/server";
+import {
+  getForkExclusions,
+  forkExclusionsSchema,
+} from "@plugins/database/plugins/fork/core";
 import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
+import { MAIN_WORKTREE_NAME } from "@plugins/infra/plugins/paths/server";
+import {
+  asNamespace,
+  namespaceUrl,
+} from "@plugins/infra/plugins/namespace/core";
+
+// What a fork must not copy is DECLARED by the plugins that own the tables
+// (`ExcludeFromFork` / `ExcludeSchemaFromFork`), and those declarations are
+// collected at server boot. A CLI process never boots the server, and it cannot
+// load the plugin registry to collect them either — that imports
+// `@plugins/database/server`, whose pool is built at module load and throws
+// without `SINGULARITY_WORKTREE`.
+//
+// So we ask a backend that HAS booted. Candidates in order:
+//
+//   1. This checkout's own backend, when one is up. The exclusion set is a
+//      function of the CODE — a checkout that adds or removes a declaration has
+//      a different set — so the backend running this checkout is the only one
+//      guaranteed to answer for it.
+//   2. Main. A worktree freshly made with `git worktree add` has no database and
+//      therefore no backend of its own, which is the whole reason this command
+//      exists; main is the one backend we can count on. Its answer can be stale
+//      if this checkout changed the declarations, which is why it is the
+//      fallback and not the first choice.
+//
+// If neither answers we FAIL rather than fork with an empty exclusion set: that
+// would silently produce a ~1 GB database full of main's traces and
+// notifications and look like it worked.
+async function fetchForkExclusions(worktree: string): Promise<ForkExclusions> {
+  const candidates = [asNamespace(worktree), MAIN_WORKTREE_NAME].filter(
+    (ns, i, all) => all.indexOf(ns) === i,
+  );
+  const failures: string[] = [];
+  for (const ns of candidates) {
+    const url = namespaceUrl(ns, getForkExclusions.path);
+    try {
+      const response = await fetch(url);
+      if (response.ok) {
+        return forkExclusionsSchema.parse(await response.json());
+      }
+      failures.push(`${url} → ${response.status}`);
+    } catch (err) {
+      failures.push(
+        `${url} → ${err instanceof Error ? err.message : String(err)}`,
+      );
+    }
+  }
+  throw new Error(
+    `Could not read the fork exclusion set from any running backend:\n  ${failures.join(
+      "\n  ",
+    )}\nStart Singularity and retry — forking without the exclusions would copy ` +
+      `every debug table (~1 GB of traces and notifications).`,
+  );
+}
 
 export function registerDb(program: Command) {
   const db = program.command("db").description("Worktree database operations");
   db.command("fork")
-    .argument("[target]", "database to create (defaults to the current worktree)")
+    .argument(
+      "[target]",
+      "database to create (defaults to the current worktree)",
+    )
     .description(
       "Fork the main 'singularity' DB into [target]. For worktrees created " +
         "outside Singularity (git worktree add), which get no fork on creation. " +
-        "Idempotent: a no-op if the DB already exists.",
+        "Idempotent: a no-op if the DB already exists. Requires a running " +
+        "backend (this worktree's, else main's) to read which tables must not " +
+        "be copied.",
     )
     .action(async (target?: string) => {
-      const name = target ?? basename(await getWorktreeRoot());
+      const worktree = basename(await getWorktreeRoot());
+      const name = target ?? worktree;
+      const exclusions = await fetchForkExclusions(worktree);
       console.log(`Forking "singularity" → "${name}"...`);
-      await forkDatabase("singularity", name);
+      await forkDatabase("singularity", name, exclusions);
       console.log(`DB "${name}" ready.`);
     });
 }

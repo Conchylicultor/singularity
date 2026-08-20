@@ -33,9 +33,12 @@
     - `notificationsResource`
     - `toast`
 - Server:
-  - Contributes: `resource.declare` "notifications"
+  - Contributes:
+    - `resource.declare` "notifications"
+    - `fork-data-exclusion` "notifications"
   - Uses:
     - `database.db`
+    - `database/admin.ExcludeFromFork`
     - `database/live-state-snapshot.reconcileReadSetTable`
     - `infra/endpoints.HttpError`
     - `infra/endpoints.implement`

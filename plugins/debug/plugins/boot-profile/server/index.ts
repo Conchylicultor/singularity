@@ -1,4 +1,6 @@
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
+import { ExcludeFromFork } from "@plugins/database/plugins/admin/server";
+import { _bootTraces } from "./internal/tables";
 import {
   saveBootTrace,
   getSavedBootTrace,
@@ -21,5 +23,15 @@ export default {
     [getSavedBootTrace.route]: handleGetSavedBootTrace,
     [listBootTraces.route]: handleListBootTraces,
   },
+  contributions: [
+    // A saved boot trace is a permalink someone minted by clicking "copy link"
+    // in one browser tab against one backend. The id only means anything to the
+    // database that issued it, so a fork inherits URLs nobody will ever open.
+    ExcludeFromFork({
+      table: _bootTraces,
+      reason:
+        "Host-local boot-profile permalinks; the ids are only meaningful to the database that issued them.",
+    }),
+  ],
   register: [bootTraceRetention],
 } satisfies ServerPluginDefinition;

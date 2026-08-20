@@ -32,13 +32,21 @@ retries. It skips any temp with active connections so an in-flight fork's
     - `database/admin.countActiveConnections`
     - `database/admin.dropDatabase`
     - `database/admin.forkDatabase`
+    - `database/admin.forkExclusions`
     - `database/admin.listDatabases`
+    - `infra/endpoints.implement`
     - `infra/jobs.defineJob`
     - `shell/notifications.recordNotification`
   - Exports (values): `databaseForkJob`
   - Register:
     - `defineJob('database.fork')`
     - `defineJob('database.fork-temp-sweep')`
+  - Routes: `GET /api/db/fork-exclusions`
+- Core:
+  - Uses: `infra/endpoints.defineEndpoint`
+  - Exports (values):
+    - `forkExclusionsSchema`
+    - `getForkExclusions`
 - Cross-plugin:
   - Imported by: `conversations`
 

@@ -104,10 +104,12 @@ bar).
     - `ConfigV2.Register` "slow-op"
     - `report-kind` "slow-op"
     - `change-feed-exclusion` "slow_ops"
+    - `fork-data-exclusion` "slow_ops"
   - Uses:
     - `config_v2.ConfigV2`
     - `config_v2.watchConfig`
     - `database.db`
+    - `database/admin.ExcludeFromFork`
     - `database/change-feed.ExcludeFromChangeFeed`
     - `debug/trace/engine.captureTrace`
     - `infra/contention.ContentionSnapshot`

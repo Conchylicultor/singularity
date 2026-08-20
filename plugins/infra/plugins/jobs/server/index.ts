@@ -1,6 +1,7 @@
 import { Resource } from "@plugins/framework/plugins/server-core/core";
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
 import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";
+import { ExcludeSchemaFromFork } from "@plugins/database/plugins/admin/server";
 import {
   handleCancelJob,
   handleListDeadJobs,
@@ -91,6 +92,26 @@ export default {
   contributions: [
     Resource.Declare(jobsListResource),
     Resource.Declare(deadJobsResource),
+    // Graphile's own bookkeeping — queued jobs, worker locks, and the crontab's
+    // last-execution watermarks. Inheriting it is actively wrong for a fresh
+    // worktree: it would adopt main's pending jobs and, worse, main's
+    // `known_crontabs.last_execution`, silently skipping the first run of every
+    // scheduled job. Graphile re-migrates the schema idempotently on first
+    // worker start, so dropping it costs nothing.
+    //
+    // The fork used to copy this schema and then `DROP SCHEMA ... CASCADE` it
+    // afterwards. Excluding it at dump time reaches the same end state without
+    // the copy.
+    ExcludeSchemaFromFork({
+      schema: "graphile_worker",
+      // The whole schema, not just its rows: Graphile re-runs its own migrations
+      // on first worker start, and inherited empty tables would collide with the
+      // CREATE TABLEs those migrations issue. Nothing outside the schema
+      // references into it, so removing it dangles nothing.
+      drop: "schema",
+      reason:
+        "Queue bookkeeping for the source database; inheriting main's crontab watermarks would skip the first run of every scheduled job. Re-migrated on first worker start.",
+    }),
   ],
   onReady: async () => {
     await startWorkers();

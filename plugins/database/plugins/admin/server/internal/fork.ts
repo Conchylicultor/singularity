@@ -1,8 +1,9 @@
 import { backgroundArgv } from "@plugins/packages/plugins/spawn-priority/server";
-import { getAdminPool, openShortLivedClient, libpqSubprocessEnv } from "./pool";
+import { getAdminPool, libpqSubprocessEnv } from "./pool";
 import { databaseExists, dropDatabase } from "./databases";
 import { withDbForkSlot } from "./fork-gate";
 import { forkTempName } from "./temp-name";
+import type { ForkExclusions } from "./fork-exclusion";
 
 // Deliberately NOT the namespace grammar `databases.ts` uses, and deliberately
 // not shared with it. A fork's source and target are always MAIN-composition
@@ -31,9 +32,17 @@ function assertSafeName(name: string): void {
 //
 // Idempotent: a completed fork (canonical exists) is a no-op. This is the
 // precondition that makes durable retry (the `database.fork` job) safe.
+//
+// `exclusions` is REQUIRED rather than read from the contribution registry here.
+// `getContributions()` answers `[]` in any process that never booted the server,
+// so a registry read inside this function would make `./singularity db fork`
+// silently produce a full ~1 GB fork that looks like it worked. A required
+// parameter forces every caller to name where its exclusion set came from; see
+// `forkExclusions()` in ./fork-exclusion, which fails loudly on the empty case.
 export async function forkDatabase(
   source: string,
   target: string,
+  exclusions: ForkExclusions,
 ): Promise<void> {
   assertSafeName(source);
   assertSafeName(target);
@@ -57,26 +66,16 @@ export async function forkDatabase(
     // db-fork gate).
     PGOPTIONS: "-c max_parallel_maintenance_workers=0",
   };
-  // Fork schema-only for large, worktree-irrelevant app-data tables. The main
-  // DB's mail_messages corpus (Gmail sync, ~800MB) dwarfs everything a worktree
-  // agent needs (~170MB), and streaming it through pg_dump|pg_restore made the
-  // fork slow enough to be reliably interrupted mid-COPY (see the failures that
-  // motivated this). Mail sync is main-only, so a forked worktree never needs —
-  // nor would ever re-populate — these rows. We keep the table *schemas* (no
-  // --exclude-table) so the DDL still exists; only the DATA is skipped.
+  // What NOT to copy comes from the caller, assembled from the `ExcludeFromFork`
+  // / `ExcludeSchemaFromFork` contributions each owning plugin declares (see
+  // ./fork-exclusion). This file names no consumer table: `--exclude-table-data`
+  // keeps a table's DDL and drops its rows, `--exclude-schema` drops a schema
+  // outright. Between them they take the fork from ~970 MB of mostly
+  // observability data down to the ~35 MB a worktree actually reads.
   //
-  // QUICK FIX: this hardcodes mail's table names into the generic fork path, a
-  // knowledge leak the database plugin shouldn't own. The clean design (a slot
-  // where a plugin declares "don't fork my data") is tracked as a follow-up.
-  const EXCLUDE_TABLE_DATA = [
-    "public.mail_messages",
-    "public.mail_threads",
-    "public.mail_message_labels",
-    "public.mail_attachments",
-  ];
-  // Gate ONLY the heavy dump|restore pipeline host-wide (the ~18.5 s step whose
+  // Gate ONLY the heavy dump|restore pipeline host-wide (the step whose
   // server-side restore work spawn-priority cannot demote); the cheap admin-pool
-  // ops (exists/drop/CREATE/graphile-drop/RENAME) stay outside the slot. The
+  // ops (exists/drop/CREATE/RENAME) stay outside the slot. The
   // clients are additionally darwinbg-demoted (backgroundArgv) so their own
   // CPU/IO (compression, COPY streaming) yields to the interactive backends.
   await withDbForkSlot(async () => {
@@ -84,7 +83,8 @@ export async function forkDatabase(
       backgroundArgv([
         "pg_dump",
         "-Fc",
-        ...EXCLUDE_TABLE_DATA.map((t) => `--exclude-table-data=${t}`),
+        ...exclusions.tableData.map((t) => `--exclude-table-data=${t}`),
+        ...exclusions.schemas.map((s) => `--exclude-schema=${s}`),
         source,
       ]),
       {
@@ -110,23 +110,15 @@ export async function forkDatabase(
     }
   });
 
-  // The dump copies the Graphile Worker schema along with everything else.
-  // Inheriting the parent's jobs, known_crontabs.last_execution, and
-  // worker-lock rows is actively wrong for a fresh worktree — at minimum, a
-  // forked crontab would silently skip recent runs. Drop the whole schema on
-  // the temp; Graphile re-migrates (idempotent) on the first worker start.
-  const shortPool = openShortLivedClient(temp);
-  try {
-    await shortPool.query(`DROP SCHEMA IF EXISTS graphile_worker CASCADE`);
-  } finally {
-    await shortPool.end();
-  }
+  // The Graphile Worker schema used to be copied by the dump and then dropped
+  // from the temp here. `infra/jobs` now declares it via `ExcludeSchemaFromFork`,
+  // so it is excluded at DUMP time instead — the same end state (Graphile
+  // re-migrates idempotently on first worker start), without paying to copy it.
 
   // Atomic publish: rename the fully-populated temp to the canonical name as
   // the last step. ALTER DATABASE … RENAME requires no active connections to
-  // the temp — the pg_restore connection is gone and the graphile-drop pool is
-  // .end()ed above, and admin connections go direct to Postgres (not through
-  // pgbouncer), so nothing blocks the rename.
+  // the temp — the pg_restore connection is gone, and admin connections go
+  // direct to Postgres (not through pgbouncer), so nothing blocks the rename.
   //
   // First-writer-wins arbiter: a concurrent caller may have already renamed its
   // own temp to `<target>`, so this RENAME can raise 42P04 (duplicate_database).

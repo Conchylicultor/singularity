@@ -2,6 +2,7 @@ import { Resource } from "@plugins/framework/plugins/server-core/core";
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
 import { ConfigV2, watchConfig } from "@plugins/config_v2/server";
 import { ExcludeFromChangeFeed } from "@plugins/database/plugins/change-feed/server";
+import { ExcludeFromFork } from "@plugins/database/plugins/admin/server";
 import { slowOpConfig } from "../core";
 import { submitClientSlowOp } from "../shared/endpoints";
 import { _slowOps } from "./internal/tables";
@@ -34,6 +35,16 @@ export default {
       table: _slowOps,
       reason:
         "High-churn deduped observability counter; live-ticking it amplifies the very slowness it records. Pane hydrates on open.",
+    }),
+    // A slow-op row aggregates operations observed on the machine that recorded
+    // them. `worktree` is a label for the cross-worktree Cluster view, not a
+    // scope: the single-worktree pane selects without filtering on it, so
+    // inherited rows surface in a fresh fork's own Slow Ops pane as if they were
+    // its own until the 30-day sweep ages them out.
+    ExcludeFromFork({
+      table: _slowOps,
+      reason:
+        "Host-local operation aggregates; the single-worktree pane does not filter on `worktree`, so inherited rows read as the fork's own.",
     }),
   ],
   httpRoutes: {

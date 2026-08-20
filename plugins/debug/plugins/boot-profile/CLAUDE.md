@@ -121,8 +121,10 @@ unbounded.
     - `shell/notifications.toast`
   - Exports (values): `BootProfileGantt`
 - Server:
+  - Contributes: `fork-data-exclusion` "boot_traces"
   - Uses:
     - `database.db`
+    - `database/admin.ExcludeFromFork`
     - `infra/endpoints.HttpError`
     - `infra/endpoints.implement`
     - `infra/entities.defaultNow`

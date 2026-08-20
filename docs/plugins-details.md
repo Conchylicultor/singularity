@@ -1857,9 +1857,15 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `GmailHistoryExpiredError`
         - **`mail-core`** — Schema + token wiring for the mail app (accounts, threads, messages, labels, attachments, drafts, sync-state, outbox), plus the shared user-labels live resource.
           - Server:
-            - Contributes: `resource.declare` "mail-labels"
+            - Contributes:
+              - `resource.declare` "mail-labels"
+              - `fork-data-exclusion` "mail_messages"
+              - `fork-data-exclusion` "mail_threads"
+              - `fork-data-exclusion` "mail_message_labels"
+              - `fork-data-exclusion` "mail_attachments"
             - Uses:
               - `database.db`
+              - `database/admin.ExcludeFromFork`
               - `infra/attachments.Attachments`
               - `infra/entities.defaultNow`
               - `infra/entities.defineEntity`
@@ -10981,6 +10987,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `packages/spawn-priority.backgroundArgv`
         - Exports (types):
           - `BackupInfo`
+          - `ForkExclusions`
           - `TableStat`
         - Exports (values):
           - `backupDatabase`
@@ -10990,7 +10997,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `databaseExists`
           - `dropDatabase`
           - `ensureDatabase`
+          - `ExcludeFromFork`
+          - `ExcludeSchemaFromFork`
           - `forkDatabase`
+          - `forkExclusions`
           - `forkTempPrefix`
           - `getAdminPool`
           - `inspectBackup`
@@ -10998,26 +11008,36 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `openShortLivedClient`
       - Cross-plugin:
         - Imported by:
+          - `apps/mail/mail-core`
           - `backup/sources/databases`
           - `build/run-ledger`
           - `build/serve-composition`
           - `database/change-feed`
           - `database/db-test-fixture`
           - `database/fork`
+          - `database/live-state-snapshot`
           - `database/query`
           - `database/zero/cache-service`
+          - `debug/boot-profile`
           - `debug/profiling/ops`
+          - `debug/slow-ops`
           - `debug/slow-ops/cluster`
           - `debug/timeline`
+          - `debug/trace/engine`
           - `debug/worktree-cleanup`
+          - `infra/claude-cli`
           - `infra/events-test`
           - `infra/jobs`
           - `infra/launcher`
+          - `reports`
+          - `shell/notifications`
     - **`change-feed`** — L4 DB change-feed: STATEMENT-level Postgres triggers that pg_notify on every commit, plus a LISTEN consumer routing each change through the live-state recompute cascade — making missed invalidations structurally impossible and out-of-process writes visible.
       - Server:
+        - Contributes: `fork-data-exclusion` "live_state_changelog"
         - Uses:
           - `database.db`
           - `database/admin.connectionString`
+          - `database/admin.ExcludeFromFork`
           - `database/derived-tables.feedExemptTables`
           - `database/derived-views.relationIdentityBase`
           - `primitives/log-channels.defineLogSink`
@@ -11122,19 +11142,29 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `database/admin.countActiveConnections`
           - `database/admin.dropDatabase`
           - `database/admin.forkDatabase`
+          - `database/admin.forkExclusions`
           - `database/admin.listDatabases`
+          - `infra/endpoints.implement`
           - `infra/jobs.defineJob`
           - `shell/notifications.recordNotification`
         - Exports (values): `databaseForkJob`
         - Register:
           - `defineJob('database.fork')`
           - `defineJob('database.fork-temp-sweep')`
+        - Routes: `GET /api/db/fork-exclusions`
+      - Core:
+        - Uses: `infra/endpoints.defineEndpoint`
+        - Exports (values):
+          - `forkExclusionsSchema`
+          - `getForkExclusions`
       - Cross-plugin:
         - Imported by: `conversations`
     - **`live-state-snapshot`** — L2 persisted live-state materialization: durable snapshot + xmin watermark for instant cold boot, with a bounded changelog catch-up that recomputes only the resources whose tables changed during downtime.
       - Server:
+        - Contributes: `fork-data-exclusion` "live_state_snapshot"
         - Uses:
           - `database.db`
+          - `database/admin.ExcludeFromFork`
           - `database/change-feed.routeChange`
           - `infra/jobs.defineJob`
           - `primitives/log-channels.defineLogSink`
@@ -11209,7 +11239,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Plugins:
         - **`cache-service`** — zero-cache sidecar service: the supervised Node process that replicates the main Postgres DB into Zero's SQLite replica. Schema-agnostic.
           - Server:
+            - Contributes: `fork-schema-exclusion` "zero*"
             - Uses:
+              - `database/admin.ExcludeSchemaFromFork`
               - `database/admin.getAdminPool`
               - `database/admin.openShortLivedClient`
               - `infra/jobs.defineJob`
@@ -11365,8 +11397,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `shell/notifications.toast`
         - Exports (values): `BootProfileGantt`
       - Server:
+        - Contributes: `fork-data-exclusion` "boot_traces"
         - Uses:
           - `database.db`
+          - `database/admin.ExcludeFromFork`
           - `infra/endpoints.HttpError`
           - `infra/endpoints.implement`
           - `infra/entities.defaultNow`
@@ -12557,10 +12591,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `ConfigV2.Register` "slow-op"
           - `report-kind` "slow-op"
           - `change-feed-exclusion` "slow_ops"
+          - `fork-data-exclusion` "slow_ops"
         - Uses:
           - `config_v2.ConfigV2`
           - `config_v2.watchConfig`
           - `database.db`
+          - `database/admin.ExcludeFromFork`
           - `database/change-feed.ExcludeFromChangeFeed`
           - `debug/trace/engine.captureTrace`
           - `infra/contention.ContentionSnapshot`
@@ -12865,10 +12901,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Contributes:
               - `ConfigV2.Register` "trace"
               - `change-feed-exclusion` "traces"
+              - `fork-data-exclusion` "traces"
             - Uses:
               - `config_v2.ConfigV2`
               - `config_v2.getConfig`
               - `database.db`
+              - `database/admin.ExcludeFromFork`
               - `database/change-feed.ExcludeFromChangeFeed`
               - `infra/duress.createShedBuffer`
               - `infra/duress.ShedSummary`
@@ -15047,6 +15085,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `conversations/conversation-view/jsonl-viewer/transcript-stats`
               - `conversations/conversation-view/prompt-templates`
               - `conversations/conversations-view/data-view/queue`
+              - `database/admin`
               - `debug/live-state-churn/emit`
               - `debug/render-profiler`
               - `improve/element-picker`
@@ -15564,9 +15603,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `live-state-stale-drop`
     - **`claude-cli`** — Consumer half of the claude-cli call log: useClaudeCliCalls({correlationId, occurredAt}) answers 'which model calls produced this record?' as a calls / none / not-retained result, and <ClaudeCliCallDetail> is the one rendering of a recorded call (system, prompt, output or error, meta). One-shot Claude CLI helper (`claude --print`) for short, latency-tolerant generations. Reuses the user's local Claude CLI auth — no API key plumbing.
       - Server:
-        - Contributes: `resource.declare` "claude-cli-calls"
+        - Contributes:
+          - `resource.declare` "claude-cli-calls"
+          - `fork-data-exclusion` "claude_cli_calls"
         - Uses:
           - `database.db`
+          - `database/admin.ExcludeFromFork`
           - `infra/endpoints.implement`
           - `infra/entities.defaultNow`
           - `infra/entities.defaultRandom`
@@ -15842,6 +15884,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conversations/recover`
           - `conversations/summary`
           - `conversations/transcript-api`
+          - `database/fork`
           - `debug/boot-monitor`
           - `debug/boot-profile`
           - `debug/broadcasts`
@@ -16418,9 +16461,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Contributes:
           - `resource.declare` "jobs-list"
           - `resource.declare` "dead-jobs"
+          - `fork-schema-exclusion` "graphile_worker"
         - Uses:
           - `database.db`
           - `database/admin.connectionString`
+          - `database/admin.ExcludeSchemaFromFork`
           - `infra/endpoints.HttpError`
           - `infra/endpoints.implement`
           - `primitives/log-channels.Log`
@@ -27531,9 +27576,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Contributes:
       - `resource.declare` "reports"
       - `change-feed-exclusion` "reports"
+      - `fork-data-exclusion` "reports"
     - Uses:
       - `build/server-build-id.getServerGraphHash`
       - `database.db`
+      - `database/admin.ExcludeFromFork`
       - `database/change-feed.ExcludeFromChangeFeed`
       - `infra/duress.createShedBuffer`
       - `infra/duress.ShedSummary`
@@ -28232,9 +28279,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `notificationsResource`
           - `toast`
       - Server:
-        - Contributes: `resource.declare` "notifications"
+        - Contributes:
+          - `resource.declare` "notifications"
+          - `fork-data-exclusion` "notifications"
         - Uses:
           - `database.db`
+          - `database/admin.ExcludeFromFork`
           - `database/live-state-snapshot.reconcileReadSetTable`
           - `infra/endpoints.HttpError`
           - `infra/endpoints.implement`

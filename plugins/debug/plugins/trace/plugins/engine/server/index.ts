@@ -1,6 +1,7 @@
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
 import { ConfigV2 } from "@plugins/config_v2/server";
 import { ExcludeFromChangeFeed } from "@plugins/database/plugins/change-feed/server";
+import { ExcludeFromFork } from "@plugins/database/plugins/admin/server";
 import { traceConfig } from "../core";
 import { listTraces, getTrace, testTrigger } from "../shared/endpoints";
 import { handleListTraces, handleGetTrace } from "./internal/handlers";
@@ -9,10 +10,7 @@ import { traceRetention } from "./internal/retention";
 import { _traces } from "./internal/tables";
 
 // The generic perf-event trace registry + captureTrace entry point.
-export {
-  defineTraceEventClass,
-  TraceEventClass,
-} from "./internal/registry";
+export { defineTraceEventClass, TraceEventClass } from "./internal/registry";
 export type {
   TraceEventClassSpec,
   TraceEventClassHandle,
@@ -35,6 +33,16 @@ export default {
       table: _traces,
       reason:
         "Written exactly when the system is slow; live-ticking it amplifies the very slowness it records. Slow Events list hydrates on open.",
+    }),
+    // A trace is 7-day debugging evidence about the machine that produced it,
+    // reachable only from a report/timeline row filed in the SAME database. A
+    // forked worktree inherits neither those pointers nor any reason to read
+    // main's traces — and this is by far the largest table in the fork (722 MB
+    // of a ~970 MB copy), so inheriting it is what made forking take minutes.
+    ExcludeFromFork({
+      table: _traces,
+      reason:
+        "Host-local 7-day debugging evidence; nothing in a fresh worktree points at main's traces, and it is the bulk of the fork's bytes.",
     }),
   ],
   httpRoutes: {

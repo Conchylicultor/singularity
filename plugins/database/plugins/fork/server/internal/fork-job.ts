@@ -1,7 +1,10 @@
 import { z } from "zod";
 import { defineJob } from "@plugins/infra/plugins/jobs/server";
 import { recordNotification } from "@plugins/shell/plugins/notifications/server";
-import { forkDatabase } from "@plugins/database/plugins/admin/server";
+import {
+  forkDatabase,
+  forkExclusions,
+} from "@plugins/database/plugins/admin/server";
 
 // Durable, self-healing worktree DB fork. The enqueue is a committed row in
 // graphile-worker; if the worker dies mid-fork the job is never marked complete
@@ -23,7 +26,11 @@ export const databaseForkJob = defineJob({
   maxAttempts: 5,
   run: async ({ input: { source, target } }) => {
     try {
-      await forkDatabase(source, target);
+      // Read the declared exclusion set here, inside a booted backend, where
+      // server contributions have been collected. `forkExclusions()` throws
+      // rather than returning an empty set, so a process that never booted can
+      // never quietly fork everything.
+      await forkDatabase(source, target, forkExclusions());
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       await recordNotification({

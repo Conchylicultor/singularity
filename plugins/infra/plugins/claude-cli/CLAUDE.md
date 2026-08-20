@@ -73,9 +73,12 @@ collapsed header; callers supply their own chrome (card, indent, collapse).
 
 - Description: Consumer half of the claude-cli call log: useClaudeCliCalls({correlationId, occurredAt}) answers 'which model calls produced this record?' as a calls / none / not-retained result, and <ClaudeCliCallDetail> is the one rendering of a recorded call (system, prompt, output or error, meta). One-shot Claude CLI helper (`claude --print`) for short, latency-tolerant generations. Reuses the user's local Claude CLI auth — no API key plumbing.
 - Server:
-  - Contributes: `resource.declare` "claude-cli-calls"
+  - Contributes:
+    - `resource.declare` "claude-cli-calls"
+    - `fork-data-exclusion` "claude_cli_calls"
   - Uses:
     - `database.db`
+    - `database/admin.ExcludeFromFork`
     - `infra/endpoints.implement`
     - `infra/entities.defaultNow`
     - `infra/entities.defaultRandom`
