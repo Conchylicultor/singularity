@@ -13,8 +13,8 @@ export type CompositionManifestItem =
 
 /**
  * Drop the list field's `id` identity (and the engine-opaque metadata the
- * closure engine never reads — `category`, `excludes`, and `autoBuild`, the last
- * being the declared serve intent) and present a stored config item
+ * closure engine never reads — `category`, `excludes`, and `serve`, the last
+ * being the declared serve mode) and present a stored config item
  * as the engine's {@link CompositionManifest}. The id arrays are stored as plain
  * `string[]` (config_v2's string-list field), so we cast at the config boundary
  * to the branded `PluginId[]` exactly like `endpoints.ts` validates the wire

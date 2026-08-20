@@ -138,14 +138,14 @@ export async function resetCompositionData(id: string): Promise<void> {
     throw new CompositionResetError(`reset "${id}": ${collision}`);
   }
 
-  // Guard 4 — belt-and-suspenders: `id` must be currently activated
-  // (`autoBuild: true`) in this checkout's resolved config. Guard 2 (the marker)
-  // is the decisive one; this is the second opinion, and it now reads the same
-  // document the Serve toggle writes on this instance.
+  // Guard 4 — belt-and-suspenders: `id` must currently be meant to be served
+  // (its `serve` mode is anything but `off`) in this checkout's resolved config.
+  // Guard 2 (the marker) is the decisive one; this is the second opinion, and it
+  // reads the same document the Serve toggle writes on this instance.
   const activated = activatedCompositionIds(values.manifests);
   if (!activated.includes(id)) {
     throw new CompositionResetError(
-      `reset "${id}": not an activated (autoBuild) composition in main's config`,
+      `reset "${id}": its serve mode is off in this checkout's config`,
     );
   }
 

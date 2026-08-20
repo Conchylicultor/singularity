@@ -1,5 +1,5 @@
 import { buildRunDebouncedJob } from "./build-run-debounced-job";
-import { deploymentWantsBuild } from "./wants-build";
+import { decideBuilds } from "./wants-build";
 
 /**
  * Trailing-debounce window: coalesce a burst of near-sequential pushes into one
@@ -26,17 +26,26 @@ const DEBOUNCE_MS = 5_000;
  * the baseline died with it. Here there is nothing to carry, so nothing can be
  * lost.
  *
- * Called at three edges — the target moving (`buildRunJob`, on the durable
+ * Called at five edges — the target moving (`buildRunJob`, on the durable
  * `refAdvanced` trigger), a build reaching terminal (`triggerBuild`'s `finally`
- * and `watchInflightBuild`'s `settle`), and this backend starting (`onReady`).
+ * and `watchInflightBuild`'s `settle`), this backend starting (`onReady`), the
+ * `compositions` config changing, and the `build.composition-tick` cron.
  * Because the decision is stateless and idempotent (the
  * `build_runs_inflight_uniq` partial index already makes a redundant trigger a
  * no-op), an extra edge is free and a missed edge degrades to "converges at the
  * next edge". Under the old design every net was load-bearing, which is why all
  * three failing at once produced a permanent miss (2026-08-19).
+ *
+ * The loop now covers the compositions this checkout SERVES as well as its own
+ * app: a served namespace runs the dist and the server tree of whatever commit
+ * last happened to build it, so without this it drifts silently. It converges by
+ * the same mechanism and inherits the same guarantees — the two extra edges
+ * above exist only because a cadence has no push to hang off, and the last
+ * clause the compositions add is a rate limit, never a queue.
  */
 export async function reconcileDeployment(): Promise<void> {
-  if (!(await deploymentWantsBuild())) return;
+  const decision = await decideBuilds(new Date());
+  if (!decision.main && decision.compositions.length === 0) return;
   await buildRunDebouncedJob.enqueue(
     {},
     { runAt: new Date(Date.now() + DEBOUNCE_MS) },

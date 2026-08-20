@@ -63,6 +63,7 @@ Git worktree CRUD primitive: resolve the main worktree root, derive per-id paths
     - `writeWorktreeSpec`
 - Cross-plugin:
   - Imported by:
+    - `build`
     - `build/serve-composition`
     - `code-explorer`
     - `conversations`

@@ -27,7 +27,7 @@ is future work.
 Manifests live in a [`config_v2`](../../../config_v2/CLAUDE.md) config named
 `compositions` (`core/config.ts`, `defineConfig` + a `listField` of
 `{ name, category (enum), entryPoints (string-list), selectedContributors
-(string-list), extends (string-list) }`). This replaces
+(string-list), extends (string-list), serve (enum) }`). This replaces
 the former collected-dir / barrel registry: there is **no**
 `composition.generated.ts`, `loadCompositions()`, or
 `<plugin>/composition/index.ts` — creating or editing a manifest is now a plain
@@ -88,6 +88,24 @@ worktree / git-watcher / claude-cli taproots and the agent-manager shell via
 `extends`) — so what counts as forbidden infra is plain editable data, never
 hardcoded in the check.
 
+## `serve` — one enum, because two fields admit a meaningless state
+
+`serve` (`core/serve-mode.ts`) says **whether** a composition is meant to be live
+here and, for the automatic modes, **how often** it may be rebuilt:
+`off | manual | push | hourly | daily | weekly`. One field rather than a
+served-flag plus a mode, so "rebuild on push but not served" has no spelling.
+
+A mode's whole content is a rate limit — `autoRebuildIntervalMs`, a total
+`Record` so a new mode is a tsc error rather than one that silently never fires
+(`null` = never automatic, `push` = 0). That is what lets every edge of the build
+convergence loop evaluate every mode through one predicate. `SERVE_MODE_OPTIONS`
+is the single source the config field and every picker read, so the set and its
+labels cannot drift apart.
+
+Still **intent, never liveness** — `activatedCompositionIds` answers "who did
+someone say should be live", the `composition.json` marker answers "what is". And
+engine-opaque, like `category` / `excludes`: `manifestItemToManifest` drops it.
+
 ## Studio data: server + web runtimes
 
 Beyond the registry, this plugin ships the **Studio closure data**:
@@ -106,7 +124,8 @@ Beyond the registry, this plugin ships the **Studio closure data**:
 - **`web/`** owns the **manifest read/write API** over the config:
   `useManifestItems()` returns the raw config items (`{ id, rank, name,
   entryPoints, selectedContributors }[]`) for the Studio list + editing;
-  `useManifestActions()` returns `{ save(draft, editingId?), remove(id) }` built
+  `useManifestActions()` returns `{ save(draft, editingId?), remove(id),
+  setServeMode(id, mode) }` built
   on `useSetConfig` — `save` upserts (replace by `editingId`, else append a new
   item with a fresh `id` + `rank` via `crypto.randomUUID()` + `Rank.between`,
   mirroring the `list` field renderer). Consumers go through this API so they
@@ -191,7 +210,6 @@ difference (via `flattenManifest`) is exactly that pack. Run with
 - Core:
   - Uses:
     - `config_v2.defineConfig`
-    - `fields/bool/config.boolField`
     - `fields/enum/config.enumField`
     - `fields/list/config.listField`
     - `fields/string-list/config.stringListField`
@@ -202,17 +220,24 @@ difference (via `flattenManifest`) is exactly that pack. Run with
   - Exports (types):
     - `CompositionData`
     - `CompositionManifestItem`
+    - `ServeMode`
+    - `ServeModeOption`
   - Exports (values):
     - `activatedCompositionIds`
     - `assertCompositionId`
     - `assertCompositionName`
     - `assertServableCompositionNamespace`
+    - `autoRebuildIntervalMs`
     - `compositionDataSchema`
     - `compositionsConfig`
     - `getCompositionData`
     - `isServableCompositionId`
+    - `isServed`
     - `manifestItemToManifest`
     - `RESERVED_COMPOSITION_NAMESPACES`
+    - `SERVE_MODE_OPTIONS`
+    - `SERVE_MODES`
+    - `serveModeLabel`
 - Cross-plugin:
   - Imported by:
     - `apps/deploy/composition`

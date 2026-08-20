@@ -2,13 +2,16 @@ import { Resource } from "@plugins/framework/plugins/server-core/core";
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
 import { Trigger } from "@plugins/infra/plugins/events/server";
 import { refAdvanced } from "@plugins/infra/plugins/git-watcher/server";
-import { ConfigV2 } from "@plugins/config_v2/server";
+import { ConfigV2, watchConfig } from "@plugins/config_v2/server";
+import { compositionsConfig } from "@plugins/plugin-meta/plugins/composition/core";
+import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";
 import { handleBuild } from "./internal/handle-build";
 import { handleServeComposition } from "./internal/handle-serve-composition";
 import { reconcileOrphanBuilds } from "./internal/run-build";
 import { watchInflightBuild } from "./internal/watch-inflight-build";
 import { buildRunJob } from "./internal/build-run-job";
 import { buildRunDebouncedJob } from "./internal/build-run-debounced-job";
+import { compositionTickJob } from "./internal/composition-tick-job";
 import { reconcileDeployment } from "./internal/reconcile";
 import { buildHistoryResource } from "./internal/build-history-resource";
 import { buildConfig } from "../shared";
@@ -32,7 +35,7 @@ export default {
     [triggerBuildEndpoint.route]: handleBuild,
     [serveCompositionEndpoint.route]: handleServeComposition,
   },
-  register: [buildRunJob, buildRunDebouncedJob],
+  register: [buildRunJob, buildRunDebouncedJob, compositionTickJob],
   onReady: async () => {
     // Close any build left unfinished by a crashed owner (scoped to this
     // namespace so inherited main rows aren't reaped into a phantom "Build
@@ -54,5 +57,22 @@ export default {
     // Both the main-only scope and the autoBuild kill switch live inside
     // reconcileDeployment, so every edge is gated identically by construction.
     await reconcileDeployment();
+
+    // The "what should be served changed" edge. Switching a composition to `push`
+    // should act at once rather than at the next quarter-hour tick, and this is
+    // the only signal that says so — the tree has not moved, so no ref advances.
+    //
+    // watchConfig fires immediately on registration too, which is a second
+    // `onReady` reconcile; harmless, because the debounce coalesces it with the
+    // one above and with the burst a Studio edit produces. And an extra edge can
+    // never cause a wrong build: `decideBuilds` re-derives the whole decision
+    // from durable state, so an edge only ever asks the question again.
+    watchConfig(compositionsConfig, () => {
+      // Detached on purpose: a config subscriber is synchronous, so there is no
+      // caller to await this. Through `runTracked` so the reconcile's cost lands
+      // on a span of its own instead of inflating whichever span happened to be
+      // open when the config write landed.
+      void runTracked("build:reconcile-on-config", () => reconcileDeployment());
+    });
   },
 } satisfies ServerPluginDefinition;

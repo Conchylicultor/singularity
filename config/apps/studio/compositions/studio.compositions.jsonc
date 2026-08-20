@@ -7,7 +7,7 @@
       "view": {
         "type": "list",
         "groupBy": "category",
-        "visibleFields": ["name", "autoBuild", "serveUrl", "entryCount", "contributorCount", "extendsCount"]
+        "visibleFields": ["name", "serve", "serveUrl", "entryCount", "contributorCount", "extendsCount"]
       }
     }
   ]

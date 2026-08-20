@@ -144,15 +144,16 @@ test("every seed carries `excludes` and each ref resolves to a real bundle", () 
   }
 });
 
-test("every seed carries `autoBuild` (default off) and the mapper drops it", () => {
+test("every seed carries `serve` (default off) and the mapper drops it", () => {
   for (const s of seeds) {
-    // The serve-intent flag is present on every seed, defaulting off.
-    expect(typeof s.autoBuild).toBe("boolean");
-    expect(s.autoBuild).toBe(false);
+    // The serve mode is present on every seed, and nothing ships served: a
+    // committed seed that named a cadence would rebuild a namespace on a clean
+    // checkout that never asked for one.
+    expect(s.serve).toBe("off");
     // Engine-opaque: `manifestItemToManifest` drops it exactly like `category` /
     // `excludes`, so the resolved `CompositionManifest` never carries it.
     const m = manifestItemToManifest(s);
-    expect("autoBuild" in m).toBe(false);
+    expect("serve" in m).toBe(false);
   }
 });
 

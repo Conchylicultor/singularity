@@ -1,5 +1,9 @@
 import { implement } from "@plugins/infra/plugins/endpoints/server";
-import { REPO_ROOT, checkoutRef } from "@plugins/infra/plugins/paths/server";
+import {
+  REPO_ROOT,
+  checkoutRef,
+  isMain,
+} from "@plugins/infra/plugins/paths/server";
 import { readCompositionMarker } from "@plugins/infra/plugins/worktree/server";
 import {
   namespaceFor,
@@ -24,6 +28,13 @@ import { serveStatusEndpoint } from "../../shared/endpoints";
  * has acted on yet. `readCompositionMarker` reads the shared
  * `~/.singularity/worktrees/` tree, so a backend can answer for a namespace it
  * does not itself serve.
+ *
+ * The third answer is about this BACKEND rather than the composition:
+ * `autoTriggersHere` says whether the automatic serve modes are acted on here at
+ * all. They run on main only — the durable `git.refAdvanced` event is emitted
+ * only from main, and a per-worktree schedule would have every live agent
+ * worktree rebuilding the same compositions — so a worktree's panel would
+ * otherwise offer "On every push" and silently never act on it.
  *
  * There is no `canServe` any more. It answered "is this backend main?", because
  * the serve stage ran inside main's build; a serve is now an ordinary build of
@@ -50,6 +61,7 @@ export const handleServeStatus = implement(
               commit: marker.commit ?? null,
               builtAt: marker.builtAt,
             } as const),
+      autoTriggersHere: isMain(),
     };
   },
 );

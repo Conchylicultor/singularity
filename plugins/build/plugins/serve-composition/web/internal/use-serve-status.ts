@@ -14,7 +14,7 @@ import { serveStatusEndpoint } from "../../shared/endpoints";
 /**
  * What a surface may claim about a composition's live serve. A discriminated
  * result, so "we have not been told yet" and "nothing is served" can never be
- * rendered as the same thing — the whole point of the read: `autoBuild` is an
+ * rendered as the same thing — the whole point of the read: `serve` is an
  * intent, and a link built from an intent points at a namespace that 502s.
  */
 export type ServeStatus =
@@ -37,6 +37,13 @@ export type ServeStatus =
       live:
         | { served: false }
         | { served: true; commit: string | null; builtAt: string };
+      /**
+       * Whether the automatic serve modes are acted on by the backend that
+       * answered — a fact about THAT BACKEND, not about this composition. They
+       * run on main only, so a worktree's panel must say so rather than offer
+       * "On every push" and never act on it.
+       */
+      autoTriggersHere: boolean;
     };
 
 /**
@@ -121,7 +128,7 @@ export function useServeStatus(composition: string): ServeStatus {
         ? { kind: "error", message: error.message }
         : { kind: "pending" };
     }
-    const { namespace, url, liveness } = data;
+    const { namespace, url, liveness, autoTriggersHere } = data;
     return {
       kind: "ready",
       namespace,
@@ -130,6 +137,7 @@ export function useServeStatus(composition: string): ServeStatus {
       // into the string a chip shows; the origin comes back as `url`.
       host: namespaceHost(asNamespace(namespace)),
       url,
+      autoTriggersHere,
       live: liveness.served
         ? {
             served: true,

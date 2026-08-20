@@ -27,7 +27,7 @@ export const ServeLivenessSchema = z.discriminatedUnion("served", [
   z.object({
     served: z.literal(true),
     /**
-     * The commit `compose-serve` composed this namespace from. `null` for a
+     * The commit the serve build composed this namespace from. `null` for a
      * marker written before the field existed, or for a build whose HEAD did not
      * resolve — unknown, never guessed.
      */
@@ -50,15 +50,28 @@ export const ServeStatusResponseSchema = z.object({
   /** `http://<namespace>.localhost:9000` — resolved beside the namespace it belongs to. */
   url: z.string(),
   liveness: ServeLivenessSchema,
+  /**
+   * Whether the automatic serve modes (`push` and the cadences) are actually
+   * acted on by the backend that answered. A fact about THIS BACKEND, like
+   * `namespace` and unlike `liveness`: the composition arm of the build
+   * convergence loop runs on main only, because the durable `git.refAdvanced`
+   * event is emitted only from main and a per-worktree schedule would have every
+   * live agent worktree rebuilding the same compositions.
+   *
+   * The surface must not promise a trigger this backend does not run: offering
+   * "On every push" from a worktree, where nothing will ever act on it, is the
+   * same class of lie as linking at a namespace that 502s.
+   */
+  autoTriggersHere: z.boolean(),
 });
 export type ServeStatusResponse = z.infer<typeof ServeStatusResponseSchema>;
 
 /**
- * The *truth* about a served composition, as opposed to the `autoBuild` intent
- * stored in config: the `composition.json` marker a serve build writes into the
+ * The *truth* about a served composition, as opposed to the `serve` mode stored
+ * in config: the `composition.json` marker a serve build writes into the
  * namespace dir. Intent can be on with nothing built yet (the enabling build has
- * not run, or it failed), so a surface reading `autoBuild` as liveness offers
- * links to namespaces that 502.
+ * not run, or it failed), so a surface reading `serve` as liveness offers links
+ * to namespaces that 502.
  *
  * `composition` is the manifest item's **id**, not its display name (the two
  * diverge for UI-created compositions) and no longer the namespace either: a

@@ -20,7 +20,7 @@ import {
   type Namespace,
 } from "@plugins/infra/plugins/namespace/core";
 import { recordNotification } from "@plugins/shell/plugins/notifications/server";
-import { buildDetailRoute } from "@plugins/build/core";
+import { buildDetailRoute, isMainCompositionBuild } from "@plugins/build/core";
 import {
   BUILD_EXIT_SUPERSEDED,
   buildStatusOf,
@@ -276,10 +276,29 @@ function isUniqueViolation(err: unknown): boolean {
   return (err as { code?: string } | null)?.code === "23505";
 }
 
+/**
+ * Start one `./singularity build`, optionally for a set of compositions instead
+ * of this checkout's own app.
+ *
+ * `compositions` is a SET because one invocation is one shared build — one
+ * install, one codegen, one checks pass, one transcript, one `build_runs` row
+ * with N chips. Rebuilding three drifted compositions is therefore one call,
+ * not three queued behind each other's `.build.lock`.
+ */
 export function triggerBuild(
   trigger: "manual" | "auto",
-  opts?: { composition?: string },
+  opts?: { compositions?: readonly string[] },
 ): void {
+  // An empty set is a caller bug, not "build the main app": it would spawn
+  // `--composition` with no ids and mint a row whose `targets` is `{}` — a run
+  // that is an attempt for nothing, so no composition's termination clause could
+  // ever see it. Loud here, where the caller is, rather than as a commander
+  // parse error inside a detached child.
+  if (opts?.compositions !== undefined && opts.compositions.length === 0) {
+    throw new Error(
+      "triggerBuild: `compositions` was an empty set — omit the option to build this checkout's own app.",
+    );
+  }
   if (inflight) return;
   inflight = true;
   // The commit this run is claimed for, stamped on the ledger row. Sampled
@@ -331,7 +350,7 @@ export function getHeadCommit(): string | null {
 async function doRunBuild(
   trigger: "manual" | "auto",
   commitHash: string | null,
-  opts?: { composition?: string },
+  opts?: { compositions?: readonly string[] },
 ): Promise<void> {
   // A crashed prior owner can leave an unfinished row that the partial unique
   // index treats as a live claim and that would block every future build. Close
@@ -340,6 +359,9 @@ async function doRunBuild(
 
   const buildStartMs = Date.now();
   const buildId = `build-${buildStartMs}-${Math.random().toString(36).slice(2, 8)}`;
+  // WHAT this invocation builds, decided once and then used by the ledger row,
+  // the argv and the notification alike — so the three cannot disagree about it.
+  const targets = [...(opts?.compositions ?? [MAIN_COMPOSITION_ID])];
 
   // Claim the single in-flight slot atomically. Insert *before* spawning so the
   // claiming INSERT — guarded by the build_runs_inflight_uniq partial unique index
@@ -355,10 +377,10 @@ async function doRunBuild(
       trigger,
       commitHash,
       // WHAT this invocation builds, stated at the claim rather than left to the
-      // column default: a serve request names its composition, a plain build
-      // names this checkout's own app. The CLI is handed the same id on argv, so
-      // the row and the process cannot disagree about what ran.
-      targets: [opts?.composition ?? MAIN_COMPOSITION_ID],
+      // column default: a serve or auto-rebuild request names its compositions,
+      // a plain build names this checkout's own app. The CLI is handed the same
+      // ids on argv, so the row and the process cannot disagree about what ran.
+      targets,
       pid: process.pid,
       namespace: currentWorktreeName(),
     });
@@ -367,8 +389,11 @@ async function doRunBuild(
     throw err;
   }
 
+  // `--allow-main` stays BEFORE `--composition`: commander's variadic option is
+  // greedy up to the next flag, so a flag placed after it would be swallowed as
+  // another composition id.
   const args = ["./singularity", "build", "--allow-main"];
-  if (opts?.composition) args.push("--composition", opts.composition);
+  if (!isMainCompositionBuild(targets)) args.push("--composition", ...targets);
   const proc = Bun.spawn(args, {
     cwd: REPO_ROOT,
     stdout: "pipe",
@@ -386,10 +411,17 @@ async function doRunBuild(
     .set({ pid: proc.pid })
     .where(eq(_buildRuns.id, buildId));
   if (trigger === "auto") {
+    // An auto-run is no longer always a push rebuilding this checkout's own app:
+    // a served composition drifting past its rate limit mints one too, and a bell
+    // that said "triggered by a new push" for a weekly cadence would be a lie.
+    // The distinction is `isMainCompositionBuild`, never a literal.
+    const plain = isMainCompositionBuild(targets);
     await recordNotification({
       type: "build",
-      title: "Auto-build started",
-      description: `Triggered by a new push (${buildId})`,
+      title: plain ? "Auto-build started" : "Auto-rebuild started",
+      description: plain
+        ? `Triggered by a new push (${buildId})`
+        : `Rebuilding ${targets.join(", ")} (${buildId})`,
       variant: "info",
       dedupeKey: `build-start:${buildId}`,
     });

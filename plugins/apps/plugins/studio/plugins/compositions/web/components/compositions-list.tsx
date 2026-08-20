@@ -27,6 +27,9 @@ import {
 } from "@plugins/infra/plugins/namespace/core";
 import {
   isServableCompositionId,
+  isServed,
+  serveModeLabel,
+  SERVE_MODE_OPTIONS,
   type CompositionManifestItem,
 } from "@plugins/plugin-meta/plugins/composition/core";
 import { useServeComposition } from "@plugins/build/plugins/serve-composition/web";
@@ -47,7 +50,7 @@ export function CompositionsList(): ReactElement {
   const { isLoading } = useCompositionData();
   const items = useManifestItems();
   const { save } = useManifestActions();
-  const { serve, stop } = useServeComposition();
+  const { setMode } = useServeComposition();
   const openPane = useOpenPane();
   // The URL is the selection — there is no local `editingId` state to drift.
   const selectedId = compositionDetailPane.useRouteEntry()?.params.id;
@@ -92,8 +95,7 @@ export function CompositionsList(): ReactElement {
           <CompositionsDataView
             items={items}
             selectedId={selectedId ?? null}
-            onServe={serve}
-            onStop={stop}
+            onSetMode={setMode}
             onSelect={(item) =>
               openPane(
                 compositionDetailPane,
@@ -124,14 +126,12 @@ function CompositionsDataView({
   items,
   selectedId,
   onSelect,
-  onServe,
-  onStop,
+  onSetMode,
 }: {
   items: CompositionManifestItem[];
   selectedId: string | null;
   onSelect: (item: CompositionManifestItem) => void;
-  onServe: (id: string) => void;
-  onStop: (id: string) => void;
+  onSetMode: (id: string, mode: string) => void;
 }) {
   const fields = useMemo<FieldDef<CompositionManifestItem>[]>(
     () => [
@@ -201,40 +201,56 @@ function CompositionsDataView({
         sortable: true,
       },
       {
-        // Opt-in auto build & serve. `value` keeps the field sortable and gives a
-        // yes/no Filter pill for free; the trailing cell is a one-click ToggleChip
-        // that writes MAIN's compositions config, which the CLI compose-serve
-        // stage reads to compose + serve the composition at build time.
-        id: "autoBuild",
-        label: "Auto-serve",
-        type: "bool",
-        value: (it) => it.autoBuild,
+        // The serve mode: whether the composition is meant to be live here and,
+        // for the automatic modes, how often it may be rebuilt. An enum, so
+        // group / filter / sort come for free. The trailing cell stays a
+        // one-click switch between the two ends a list can meaningfully offer —
+        // `off` and `manual`; the cadences are picked in the composition's own
+        // Build & serve panel, and the chip shows the one in force.
+        id: "serve",
+        label: "Serve",
+        type: "enum",
+        value: (it) => it.serve,
+        options: [...SERVE_MODE_OPTIONS],
         align: "end",
         cell: (it) => {
-          // Main's row carries the flag like every other row and can never act
-          // on it: compose-serve may not provision main's namespace, so the
-          // toggle would write an intent nothing reads. Rendered inert rather
-          // than pressable — the same "a control that cannot succeed must not
-          // be pressable" rule the Serve panel applies to its `canServe`.
+          // Main's row carries the mode like every other row and can never act
+          // on it: no serve build may provision main's namespace, so the switch
+          // would write an intent nothing reads. Rendered inert rather than
+          // pressable — the same "a control that cannot succeed must not be
+          // pressable" rule the Serve panel applies to its `canServe`.
           const servable = isServableCompositionId(it.id);
+          const served = isServed(it.serve);
+          // Off and `manual` are the two states this chip can WRITE, so they
+          // read as the plain switch they are. Any other mode is one the chip
+          // cannot produce — name it, rather than flattening the cadences into
+          // a single "Serving".
+          const label = !served
+            ? "Serve"
+            : it.serve === "manual"
+              ? "Serving"
+              : serveModeLabel(it.serve);
           return (
             <ToggleChip
-              active={it.autoBuild}
+              active={served}
               disabled={!servable}
               title={
                 !servable
-                  ? "The main app is built by ./singularity build — it is not compose-served."
-                  : it.autoBuild
-                    ? "Auto-served — click to stop building & serving"
+                  ? "The main app is built by ./singularity build — it is never served as a composition."
+                  : served
+                    ? `${serveModeLabel(it.serve)} — click to stop serving`
                     : `Click to build & serve this composition at ${namespaceUrl(asNamespace(it.id))}`
               }
               onClick={(e: { stopPropagation: () => void }) => {
                 e.stopPropagation();
-                if (it.autoBuild) onStop(it.id);
-                else onServe(it.id);
+                // Writing `manual` rather than restoring whatever cadence the
+                // row last had: this chip only ever wrote one "on", and the
+                // mode a cadence row comes back to is a decision that belongs
+                // on the panel that can show it.
+                onSetMode(it.id, served ? "off" : "manual");
               }}
             >
-              {it.autoBuild ? "Serving" : "Serve"}
+              {label}
             </ToggleChip>
           );
         },
@@ -243,7 +259,7 @@ function CompositionsDataView({
       },
       {
         // Live serve URL — see `serveHost` for why main's is not keyed on
-        // `autoBuild`. Namespace name == composition id, served by the gateway
+        // `serve`. Namespace name == composition id, served by the gateway
         // at that subdomain.
         id: "serveUrl",
         label: "Serve URL",
@@ -267,7 +283,7 @@ function CompositionsDataView({
         align: "end",
       },
     ],
-    [onServe, onStop],
+    [onSetMode],
   );
 
   return (
@@ -289,14 +305,14 @@ function CompositionsDataView({
  * The host a composition is reachable at, or `null` when nothing is served for
  * it.
  *
- * Main is the one row deliberately NOT keyed on `autoBuild`. Its namespace is
+ * Main is the one row deliberately NOT keyed on `serve`. Its namespace is
  * where `./singularity build` deploys the repo's own app, so the address is a
- * standing fact of the setup rather than a consequence of a flag on this row —
- * keying it on `autoBuild` would tie a URL that is already live to a toggle
- * that can never move. Every other composition is only reachable once its
- * serve intent is on.
+ * standing fact of the setup rather than a consequence of a mode on this row —
+ * keying it on `serve` would tie a URL that is already live to a control that
+ * can never move. Every other composition is only reachable once its serve mode
+ * is anything but `off`.
  *
- * `autoBuild` remains intent rather than liveness here, exactly as before: the
+ * `serve` remains intent rather than liveness here, exactly as before: the
  * composition's own Serve panel reads the `composition.json` marker for the
  * honest answer.
  */
@@ -309,8 +325,8 @@ function serveHost(it: CompositionManifestItem): string | null {
   // per-row round-trip; the composition's own Serve panel asks
   // `serveStatusEndpoint` and shows the resolved host, which is the surface to
   // trust. Giving this column the true answer means a batched resolve — filed
-  // with Phase 5/6 rather than faked here.
+  // as its own change rather than faked here.
   if (it.id === MAIN_COMPOSITION_ID)
     return namespaceHost(asNamespace(MAIN_COMPOSITION_ID));
-  return it.autoBuild ? namespaceHost(asNamespace(it.id)) : null;
+  return isServed(it.serve) ? namespaceHost(asNamespace(it.id)) : null;
 }

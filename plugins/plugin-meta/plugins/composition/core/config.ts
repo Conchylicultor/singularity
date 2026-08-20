@@ -3,8 +3,8 @@ import { listField } from "@plugins/fields/plugins/list/plugins/config/core";
 import { textField } from "@plugins/fields/plugins/text/plugins/config/core";
 import { enumField } from "@plugins/fields/plugins/enum/plugins/config/core";
 import { stringListField } from "@plugins/fields/plugins/string-list/plugins/config/core";
-import { boolField } from "@plugins/fields/plugins/bool/plugins/config/core";
 import { MAIN_COMPOSITION_ID } from "@plugins/infra/plugins/namespace/core";
+import { SERVE_MODE_OPTIONS } from "./serve-mode";
 
 // The composition manifest registry — plain editable data in config_v2 (no
 // codegen, no barrels). Each item is a `CompositionManifest`
@@ -51,20 +51,31 @@ export const compositionsConfig = defineConfig({
         // enforces disjointness against each named bundle's containment. Lets an
         // app declare it is self-contained (e.g. excludes `agent-runtime`/`auth`).
         excludes: stringListField({ label: "Excludes" }),
-        // The declared serve intent: "this composition is meant to be live
-        // here". Nothing acts on it automatically — a serve is an explicit
-        // `./singularity build --composition <id>`, which composes a
-        // per-composition frontend dist + empty DB served at
-        // http://<id>.<checkout>.localhost:9000 — so this records what a surface
-        // shows as "Serving", not what is served (the composition.json marker
-        // answers that). Re-wiring it to a trigger is Phase 6 of
-        // research/2026-08-17-global-composition-build-serve-model.md.
-        // Engine-opaque — like
-        // `category` / `excludes`, `manifestItemToManifest` DROPS it (the closure
-        // engine never sees it). The name intentionally collides with the build
-        // plugin's own `autoBuild` (main's rebuild-on-push toggle): different
-        // configs, distinct labels — keep this field name.
-        autoBuild: boolField({ label: "Auto build & serve", default: false }),
+        // WHEN this composition should be built and served. Anything but `off`
+        // declares "this composition is meant to be live here" — a build of it
+        // composes a per-composition frontend dist + empty DB served at
+        // http://<id>.<checkout>.localhost:9000. Still intent, not liveness:
+        // what is actually served is what the composition.json marker says.
+        //
+        // The mode is BOTH halves of the intent — that it is served at all, and
+        // for the automatic modes the rate limit at which the build convergence
+        // loop may rebuild it (`autoRebuildIntervalMs`, core/serve-mode.ts).
+        // One enum rather than a flag plus a mode, so "rebuild on push but not
+        // served" has no spelling. An explicit rebuild stays available in every
+        // mode.
+        //
+        // Main's row can never be served: `singularity` is a reserved namespace
+        // belonging to the checkout's own build, and `activatedCompositionIds`
+        // filters on servability — so a stored non-`off` on that row is inert by
+        // construction, from any config layer.
+        //
+        // Engine-opaque — like `category` / `excludes`, `manifestItemToManifest`
+        // DROPS it (the closure engine never sees it).
+        serve: enumField({
+          label: "Serve",
+          options: [...SERVE_MODE_OPTIONS],
+          default: "off",
+        }),
       },
       default: [
         // ── The main app ────────────────────────────────────────────────────────
@@ -91,10 +102,10 @@ export const compositionsConfig = defineConfig({
         //
         // Main is not servable as a composition: `singularity` is a reserved
         // namespace that belongs to the checkout's own `./singularity build`, and
-        // `activatedCompositionIds` filters on servability, so `autoBuild` on THIS
-        // row is inert by construction — a stored `true` from any config layer can
+        // `activatedCompositionIds` filters on servability, so `serve` on THIS
+        // row is inert by construction — a stored mode from any config layer can
         // never name a namespace to provision. `composition-closure` still pins it
-        // to `false` here so the seed says what is true.
+        // to `"off"` here so the seed says what is true.
         {
           id: MAIN_COMPOSITION_ID,
           name: MAIN_COMPOSITION_ID,
@@ -103,7 +114,7 @@ export const compositionsConfig = defineConfig({
           selectedContributors: [] as string[],
           extends: [] as string[],
           excludes: [] as string[],
-          autoBuild: false,
+          serve: "off",
         },
 
         // ── Profiles: the agent-manager worked example (full vs. lean) ──────────
@@ -118,7 +129,7 @@ export const compositionsConfig = defineConfig({
           selectedContributors: ["tasks.attempt-view", "ui.theme-toggle"],
           extends: ["self-improvement", "served-baseline"],
           excludes: [] as string[],
-          autoBuild: false,
+          serve: "off",
         },
         {
           id: "agent-manager-lean",
@@ -128,7 +139,7 @@ export const compositionsConfig = defineConfig({
           selectedContributors: ["tasks.attempt-view", "ui.theme-toggle"],
           extends: ["served-baseline"],
           excludes: [] as string[],
-          autoBuild: false,
+          serve: "off",
         },
 
         // ── Apps: lean baseline (entry only) for every other top-level app ──────
@@ -202,7 +213,7 @@ export const compositionsConfig = defineConfig({
           selectedContributors: ["apps.sonata.audio.piano"],
           extends: ["served-baseline"],
           excludes: ["agent-runtime", "auth"],
-          autoBuild: false,
+          serve: "off",
         },
 
         // ── Subsystems: infra closures as building blocks / inspection lenses ───
@@ -242,7 +253,7 @@ export const compositionsConfig = defineConfig({
           selectedContributors: [] as string[],
           extends: ["conversations", "tasks-domain"],
           excludes: [] as string[],
-          autoBuild: false,
+          serve: "off",
         },
         subsystem("page-editor", ["page"]),
         subsystem("fields", ["fields"]),
@@ -398,7 +409,7 @@ function app(
     selectedContributors: [] as string[],
     extends: ["served-baseline", ...extraExtends],
     excludes,
-    autoBuild: false,
+    serve: "off",
   };
 }
 
@@ -412,7 +423,7 @@ function subsystem(name: string, entries: string[]) {
     selectedContributors: [] as string[],
     extends: [] as string[],
     excludes: [] as string[],
-    autoBuild: false,
+    serve: "off",
   };
 }
 
@@ -426,6 +437,6 @@ function pack(name: string, contributors: string[]) {
     selectedContributors: contributors,
     extends: [] as string[],
     excludes: [] as string[],
-    autoBuild: false,
+    serve: "off",
   };
 }

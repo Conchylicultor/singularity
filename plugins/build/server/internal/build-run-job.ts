@@ -4,9 +4,10 @@ import { reconcileDeployment } from "./reconcile";
 
 export const buildRunJob = defineJob({
   name: "build.run",
-  // instant: this handler re-derives the build decision (two indexed reads in
-  // `deploymentWantsBuild`) and at most re-enqueues the debounced job. The build
-  // it eventually causes runs in `build.run.debounced`, not in this slot.
+  // instant: this handler re-derives the build decision (a memoized deployment
+  // read plus one indexed ledger read per SERVED composition, in `decideBuilds`)
+  // and at most re-enqueues the debounced job. The build it eventually causes
+  // runs in `build.run.debounced`, not in this slot.
   hold: "instant",
   input: z.object({}),
   event: z.never(),

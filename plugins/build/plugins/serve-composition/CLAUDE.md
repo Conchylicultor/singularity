@@ -7,15 +7,19 @@ checkout is main, where the suffix elides. It owns no surface of its own — it
 exports the pieces its hosts render:
 
 - `ServeTargetPanel({ item, status })` — the **Serve live** target panel: the
-  `Serve`/`Serving` `ToggleChip`, and — only when the composition is genuinely
-  served — the live-URL `LinkChip`, its commit + build time, and **Reset**.
-- `useServeComposition()` — `{ serve, stop }`. `serve(id)` persists the intent
-  (`setAutoBuild(id, true)`) **and** POSTs `serveCompositionEndpoint`
-  (`@plugins/build/core`), which runs `./singularity build --composition <id>` in
-  THIS checkout — so the live URL is ready without waiting for anything else.
-  `stop(id)` is flag-only (`setAutoBuild(id, false)`) and, since auto-serve was
-  deleted, that flag now stops nothing — deactivating is deliberately never a
-  reclaim trigger, and the namespace keeps serving its last dist.
+  `Serve`/`Serving` `ToggleChip`, the rebuild-mode picker, **Rebuild now**, and —
+  only when the composition is genuinely served — the live-URL `LinkChip`, its
+  commit + build time, and **Reset**.
+- `useServeComposition()` — `{ setMode, rebuildNow }`. `setMode(id, mode)` writes
+  the `serve` mode, and POSTs `serveCompositionEndpoint` (`@plugins/build/core`)
+  ONLY on the `off` → served edge — that is the first claim of the namespace, and
+  nothing is there yet. Moving between two served modes writes config only: the
+  namespace is already live and the mode says only when it may be refreshed, so
+  building there would rebuild on every click of the picker. `rebuildNow(id)`
+  POSTs unconditionally, and every mode offers it — see below.
+  Turning the mode to `off` stops nothing: deactivating is deliberately never a
+  reclaim trigger, so the namespace keeps serving its last dist until the
+  composition is deleted.
 - `useServeStatus(compositionId)` — the liveness read (below).
 - `useDeleteComposition()` — `{ deleteComposition }`. Deleting a composition,
   including everything it is serving (below).
@@ -47,15 +51,31 @@ edges all run inward (`studio/compositions → serve-composition`,
 `studio/compositions/release → serve-composition`,
 `deploy/local-serve → serve-composition`).
 
+## Rebuild now exists in every mode, on purpose
+
+The automatic modes (`push`, `hourly`, `daily`, `weekly`) are one clause of the
+build convergence loop — see `plugins/build/CLAUDE.md`. Two of its properties
+shape this UI:
+
+- Its gate compares this checkout's HEAD against the commit the marker records,
+  so it is **blind to an edit of the composition's own manifest row**
+  (contributors, entry points, `extends`), which changes what should be served
+  without moving HEAD. **Rebuild now** is that escape hatch, which is why no mode
+  hides it. It doubles as the retry for a first serve build that failed.
+- The automatic edges run on **main only**, so the status read carries
+  `autoTriggersHere` and a worktree's panel says so instead of offering a trigger
+  nothing here will act on.
+
 ## Intent is not liveness
 
-`autoBuild` is a **declared intent** stored in the `compositions` config. The
-truth is the `composition.json` **marker** a serve build writes into the
+The `serve` mode is a **declared intent** stored in the `compositions` config.
+The truth is the `composition.json` **marker** a serve build writes into the
 namespace dir before it composes anything. The two disagree routinely — the
-enabling build has not run yet, or it failed — and a surface that reads
-`autoBuild` as liveness offers a link to a namespace that 502s.
+enabling build has not run yet, or it failed — and a surface that reads the mode
+as liveness offers a link to a namespace that 502s.
 
-So `GET /api/build/serve/status?composition=<id>` answers two questions at once:
+So `GET /api/build/serve/status?composition=<id>` answers three questions at
+once:
 
 - `namespace` + `url` — WHERE this composition is (or would be) served from the
   backend that answered: `namespaceFor(id, <that backend's checkout>)`. Server
@@ -63,6 +83,9 @@ So `GET /api/build/serve/status?composition=<id>` answers two questions at once:
 - `liveness` — `{ served: false }` or `{ served: true, commit, builtAt }`. A
   discriminated union, so a missing commit cannot be read as a live serve. The
   marker is on the shared filesystem, so **any** backend can answer this.
+- `autoTriggersHere` — whether the automatic modes are acted on by the backend
+  that answered. Like `namespace`, a fact about THIS BACKEND rather than about
+  the composition.
 
 There is **no `canServe`** any more. It used to answer "is this backend main?",
 because the serve stage ran inside main's build and every other namespace could
@@ -117,7 +140,7 @@ throws `CompositionResetError` (nothing touched) if any fails:
    MAIN checkout, not this backend's: everything else here reads this checkout's
    own manifest and config, but `.claude/worktrees/` exists only in main, so a
    worktree backend probing its own root could never see that arm at all.
-4. `id` is currently `autoBuild: true` in **this checkout's** resolved config
+4. `id`'s `serve` mode is not `off` in **this checkout's** resolved config
    (belt-and-suspenders; guard 2 is the decisive one).
 
 ### In scope vs out of scope
@@ -182,7 +205,7 @@ and `hasCompositionMarker` do, both enforced inside `reclaimNamespace`.
 `namespaceCollision` does not — it answers "may this owner *claim* this name?"
 and is already enforced at both claim sites, so re-running it at reclaim time
 would mean refusing to give back a name a collision made unreachable.
-**"must be currently `autoBuild: true`" must not** — you delete a composition
+**"must be currently served" must not** — you delete a composition
 precisely when its serve intent is already off, so that guard would refuse
 exactly the namespaces most in need of reclaiming.
 
@@ -219,10 +242,13 @@ code, that is the bug this section exists to prevent.
     - `infra/endpoints.useEndpoint`
     - `infra/endpoints.useEndpointMutation`
     - `plugin-meta/composition.useManifestActions`
+    - `plugin-meta/composition.useManifestItems`
     - `primitives/css/badge.Badge`
     - `primitives/css/link-chip.LinkChip`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
+    - `primitives/css/toggle-chip.SegmentedControl`
+    - `primitives/css/toggle-chip.SegmentedOption`
     - `primitives/css/toggle-chip.ToggleChip`
     - `primitives/css/ui-kit.Button`
     - `primitives/imperative-dialog/confirm.confirmDialog`
@@ -248,6 +274,7 @@ code, that is the bug this section exists to prevent.
     - `infra/endpoints.implement`
     - `infra/paths.checkoutRef`
     - `infra/paths.currentWorktreeName`
+    - `infra/paths.isMain`
     - `infra/paths.REPO_ROOT`
     - `infra/worktree.ensureMainWorktreeRoot`
     - `infra/worktree.hasCompositionMarker`

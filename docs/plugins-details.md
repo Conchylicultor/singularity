@@ -6858,6 +6858,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `build/run-ledger._buildRuns`
       - `config_v2.ConfigV2`
       - `config_v2.getConfig`
+      - `config_v2.watchConfig`
       - `database.db`
       - `infra/endpoints.HttpError`
       - `infra/endpoints.implement`
@@ -6866,6 +6867,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `infra/file-watcher.FileWatcher`
       - `infra/git-watcher.refAdvanced`
       - `infra/jobs.defineJob`
+      - `infra/paths.checkoutRef`
       - `infra/paths.currentWorktreeName`
       - `infra/paths.isMain`
       - `infra/paths.pruneWorktreeBuildArtifacts`
@@ -6873,11 +6875,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `infra/paths.worktreeArtifacts`
       - `infra/paths.worktreeDataDir`
       - `infra/query-resource.queryResource`
+      - `infra/worktree.readCompositionMarker`
       - `primitives/log-channels.Log`
       - `shell/notifications.recordNotification`
     - Register:
       - `defineJob('build.run')`
       - `defineJob('build.run.debounced')`
+      - `defineJob('build.composition-tick')`
     - Resources: `build.history` (keyed)
     - Routes:
       - `POST /api/build`
@@ -7173,10 +7177,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `infra/endpoints.useEndpoint`
           - `infra/endpoints.useEndpointMutation`
           - `plugin-meta/composition.useManifestActions`
+          - `plugin-meta/composition.useManifestItems`
           - `primitives/css/badge.Badge`
           - `primitives/css/link-chip.LinkChip`
           - `primitives/css/spacing.Stack`
           - `primitives/css/text.Text`
+          - `primitives/css/toggle-chip.SegmentedControl`
+          - `primitives/css/toggle-chip.SegmentedOption`
           - `primitives/css/toggle-chip.ToggleChip`
           - `primitives/css/ui-kit.Button`
           - `primitives/imperative-dialog/confirm.confirmDialog`
@@ -7202,6 +7209,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `infra/endpoints.implement`
           - `infra/paths.checkoutRef`
           - `infra/paths.currentWorktreeName`
+          - `infra/paths.isMain`
           - `infra/paths.REPO_ROOT`
           - `infra/worktree.ensureMainWorktreeRoot`
           - `infra/worktree.hasCompositionMarker`
@@ -13400,7 +13408,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `debug/stall-monitor`
               - `debug/trace/engine`
               - `infra/duress`
-              - `plugin-meta/composition`
               - `tasks/tasks-core`
         - **`data-view-codec`** — Boolean field type: data-view custom-column value codec (native boolean ↔ canonical text).
           - Web:
@@ -17334,6 +17341,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `writeWorktreeSpec`
       - Cross-plugin:
         - Imported by:
+          - `build`
           - `build/serve-composition`
           - `code-explorer`
           - `conversations`
@@ -19575,7 +19583,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Core:
         - Uses:
           - `config_v2.defineConfig`
-          - `fields/bool/config.boolField`
           - `fields/enum/config.enumField`
           - `fields/list/config.listField`
           - `fields/string-list/config.stringListField`
@@ -19586,17 +19593,24 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports (types):
           - `CompositionData`
           - `CompositionManifestItem`
+          - `ServeMode`
+          - `ServeModeOption`
         - Exports (values):
           - `activatedCompositionIds`
           - `assertCompositionId`
           - `assertCompositionName`
           - `assertServableCompositionNamespace`
+          - `autoRebuildIntervalMs`
           - `compositionDataSchema`
           - `compositionsConfig`
           - `getCompositionData`
           - `isServableCompositionId`
+          - `isServed`
           - `manifestItemToManifest`
           - `RESERVED_COMPOSITION_NAMESPACES`
+          - `SERVE_MODE_OPTIONS`
+          - `SERVE_MODES`
+          - `serveModeLabel`
       - Cross-plugin:
         - Imported by:
           - `apps/deploy/composition`

@@ -1,35 +1,56 @@
-import { useManifestActions } from "@plugins/plugin-meta/plugins/composition/web";
+import {
+  useManifestActions,
+  useManifestItems,
+} from "@plugins/plugin-meta/plugins/composition/web";
+import { isServed } from "@plugins/plugin-meta/plugins/composition/core";
 import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
 import { serveCompositionEndpoint } from "@plugins/build/core";
 import { showToast } from "@plugins/shell/plugins/toast/web";
 
 /**
- * The serve capability for a composition: persist the `autoBuild` intent AND run
- * the build that makes it true.
+ * The serve capability for a composition: persist the `serve` mode, and run the
+ * builds that make it true.
  *
- * `serve` writes the intent via `setAutoBuild(id, true)` and POSTs the serve
- * endpoint, which runs `./singularity build --composition <id>` in the checkout
- * this backend belongs to — so the live URL is
- * `<id>.<checkout>.localhost:9000` and it is ready when that build ends.
- * `useEndpointMutation` auto-toasts endpoint errors (e.g. the server's 400 for a
- * composition that can never be served), so there is no onError.
- *
- * `stop` is flag-only, and since auto-serve was deleted the flag stops NOTHING:
- * clearing it records that the composition is no longer meant to be live, but the
- * namespace keeps serving its last dist until something reclaims it. Reclaiming
- * is Phase 5 of
- * research/2026-08-17-global-composition-build-serve-model.md; the panel says so
- * rather than implying a stop that does not happen.
+ * Both actions POST the same endpoint, which runs
+ * `./singularity build --composition <id>` in the checkout this backend belongs
+ * to — so the live URL is `<id>.<checkout>.localhost:9000` and it is ready when
+ * that build ends. `useEndpointMutation` auto-toasts endpoint errors (e.g. the
+ * server's 400 for a composition that can never be served), so there is no
+ * `onError`.
  */
 export function useServeComposition(): {
-  serve: (id: string) => void;
-  stop: (id: string) => void;
+  setMode: (id: string, mode: string) => void;
+  rebuildNow: (id: string) => void;
 } {
-  const { setAutoBuild } = useManifestActions();
+  const items = useManifestItems();
+  const { setServeMode } = useManifestActions();
   const build = useEndpointMutation(serveCompositionEndpoint);
 
-  const serve = (id: string): void => {
-    setAutoBuild(id, true);
+  /**
+   * Write the mode, and build only on the edge that mints the namespace.
+   *
+   * Coming off `"off"` is the FIRST claim of the namespace: nothing is there
+   * yet, so the mode alone would leave a serve intent pointing at an address
+   * that 502s. Moving between two served modes writes config only — the
+   * namespace is already live, and the mode says nothing about the dist it is
+   * serving, only about when it may be refreshed. Building there would rebuild
+   * on every click of the picker.
+   *
+   * Turning it OFF stops nothing by itself: it records that the composition is
+   * no longer meant to be live, and the namespace keeps serving its last dist —
+   * deliberately, since deactivation is never a reclaim trigger. Deleting the
+   * composition is what reclaims it (`useDeleteComposition`).
+   */
+  const setMode = (id: string, mode: string): void => {
+    const item = items.find((it) => it.id === id);
+    if (item === undefined) {
+      // A mode written for a row that is not in the manifest is a broken
+      // invariant, not an input: every caller holds the item it is acting on.
+      throw new Error(`No composition "${id}" in the manifest.`);
+    }
+    const claimsNamespace = !isServed(item.serve) && isServed(mode);
+    setServeMode(id, mode);
+    if (!claimsNamespace) return;
     build.mutate({ body: { composition: id } });
     showToast({
       title: `Building & serving “${id}”…`,
@@ -39,7 +60,25 @@ export function useServeComposition(): {
     });
   };
 
-  const stop = (id: string): void => setAutoBuild(id, false);
+  /**
+   * Build this composition now, whatever the mode says — including `push` and
+   * the cadences.
+   *
+   * The automatic gate compares this checkout's HEAD against the commit the
+   * namespace was built from, so it is blind to an edit of the composition's OWN
+   * manifest row: changing its contributors, entry points or `extends` changes
+   * what should be served without moving HEAD. This button is the escape hatch
+   * for exactly that, which is why no mode hides it.
+   */
+  const rebuildNow = (id: string): void => {
+    build.mutate({ body: { composition: id } });
+    showToast({
+      title: `Rebuilding “${id}”…`,
+      description:
+        "Running a build of this checkout; the live URL updates when it ends.",
+      variant: "info",
+    });
+  };
 
-  return { serve, stop };
+  return { setMode, rebuildNow };
 }

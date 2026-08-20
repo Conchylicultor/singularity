@@ -11,3 +11,11 @@ export {
   RESERVED_COMPOSITION_NAMESPACES,
 } from "./namespace";
 export { activatedCompositionIds } from "./activated";
+export {
+  SERVE_MODES,
+  SERVE_MODE_OPTIONS,
+  autoRebuildIntervalMs,
+  serveModeLabel,
+  isServed,
+} from "./serve-mode";
+export type { ServeMode, ServeModeOption } from "./serve-mode";

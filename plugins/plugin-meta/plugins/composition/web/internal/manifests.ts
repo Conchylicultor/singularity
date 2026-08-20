@@ -85,19 +85,19 @@ export interface ManifestActions {
    */
   remove(id: string): void;
   /**
-   * Flip the `autoBuild` (auto build & serve) flag on the item with the given
-   * `id`, preserving every other field. `autoBuild` is engine-opaque config
-   * metadata (dropped by `manifestItemToManifest`), so this is a config-only
-   * write — the declared serve intent (a build of this checkout is what acts
-   * on it).
+   * Set the `serve` mode on the item with the given `id`, preserving every
+   * other field. `serve` is engine-opaque config metadata (dropped by
+   * `manifestItemToManifest`), so this is a config-only write: it records
+   * whether the composition is meant to be live and how often it may be rebuilt
+   * automatically, never a build of its own.
    *
    * **Throws for an id no serve build may ever provision a namespace for.**
-   * Main's namespace belongs to the main checkout's own build, so the flag
+   * Main's namespace belongs to the main checkout's own build, so the mode
    * means nothing there — `activatedCompositionIds` drops main whatever value
-   * is stored. Same shape as `remove`: the surfaces render the toggle inert,
+   * is stored. Same shape as `remove`: the surfaces render the control inert,
    * and this is the loud boundary under them.
    */
-  setAutoBuild(id: string, on: boolean): void;
+  setServeMode(id: string, mode: string): void;
 }
 
 export function useManifestActions(): ManifestActions {
@@ -133,8 +133,8 @@ export function useManifestActions(): ManifestActions {
           // draft yet — seed it empty; set it via config edit. The edit path above
           // preserves any existing `excludes` through the `...item` spread.
           excludes: [] as string[],
-          // New drafts are not auto-served; activate via the Studio toggle.
-          autoBuild: false,
+          // New drafts are not served; pick a mode via the Studio control.
+          serve: "off",
           ...fields,
         };
         next = [...items, newItem];
@@ -165,26 +165,24 @@ export function useManifestActions(): ManifestActions {
     [items, setConfig],
   );
 
-  const setAutoBuild = useCallback(
-    (id: string, on: boolean) => {
-      // Keyed on servability, not on main's id: the reason the flag is
+  const setServeMode = useCallback(
+    (id: string, mode: string) => {
+      // Keyed on servability, not on main's id: the reason the mode is
       // meaningless is "no serve build will ever provision this namespace",
       // which is exactly what this predicate answers — and it is the same
-      // predicate the inert toggles and `activatedCompositionIds` read.
+      // predicate the inert controls and `activatedCompositionIds` read.
       if (!isServableCompositionId(id)) {
         throw new Error(
-          `Cannot set autoBuild on "${id}" — it is never served as a composition, so the flag has no effect.`,
+          `Cannot set the serve mode on "${id}" — it is never served as a composition, so the mode has no effect.`,
         );
       }
       setConfig(
         "manifests",
-        items.map((item) =>
-          item.id === id ? { ...item, autoBuild: on } : item,
-        ),
+        items.map((item) => (item.id === id ? { ...item, serve: mode } : item)),
       );
     },
     [items, setConfig],
   );
 
-  return { save, remove, setAutoBuild };
+  return { save, remove, setServeMode };
 }

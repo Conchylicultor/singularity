@@ -15,6 +15,7 @@ import type { CompositionManifest } from "@plugins/plugin-meta/plugins/closure/c
 import { MAIN_COMPOSITION_ID } from "@plugins/infra/plugins/namespace/core";
 import {
   assertCompositionId,
+  isServed,
   manifestItemToManifest,
 } from "@plugins/plugin-meta/plugins/composition/core";
 import type { PluginId } from "@plugins/framework/plugins/plugin-id/core";
@@ -113,15 +114,16 @@ const check: Check = {
     }
 
     // 0d. Main never opts into being served. `activatedCompositionIds` already
-    //     makes a stored `true` INERT (it filters on servability, so main can
+    //     makes a stored mode INERT (it filters on servability, so main can
     //     never reach the serve stage whatever the config layers say) — this rule
     //     is about the committed seed telling the truth rather than about
-    //     preventing an effect. A seed reading `autoBuild: true` would describe a
+    //     preventing an effect. A seed reading anything but `off` would describe a
     //     serve that does not and cannot happen.
-    if (mainRows[0]!.autoBuild) {
+    const mainServe = mainRows[0]!.serve;
+    if (mainServe !== "off") {
       return fail(
-        `composition "${MAIN_COMPOSITION_ID}" has \`autoBuild: true\``,
-        `The main app is built and served by \`./singularity build\` into the checkout's own namespace — it is never served as a composition, so \`autoBuild\` on this row would describe something that cannot happen. Set it back to \`false\`.`,
+        `composition "${MAIN_COMPOSITION_ID}" has \`serve: "${mainServe}"\``,
+        `The main app is built and served by \`./singularity build\` into the checkout's own namespace — it is never served as a composition, so any \`serve\` mode on this row would describe something that cannot happen. Set it back to \`"off"\`.`,
       );
     }
 
@@ -288,7 +290,7 @@ const check: Check = {
     // written `.**`, minus negatives — so containment tracks what the bundle
     // actually ships, never a blind subtree of every entry. Contributor side has
     // no grammar: selecting a contributor ships it + its whole subtree. Shared by
-    // the `excludes` disjointness gate and the autoBuild warning below.
+    // the `excludes` disjointness gate and the serve warning below.
     const containmentOf = (target: CompositionManifest): Set<PluginId> => {
       const targetFlat = flattenManifest(target, manifests);
       const containment = new Set<PluginId>(
@@ -348,15 +350,15 @@ const check: Check = {
     //    with no git worktree behind it, whichever checkout's tree it is reading.
     //    Declaring the exclude upgrades this to the hard disjointness gate above.
     //
-    //    Still keyed on `autoBuild` — the declared serve intent — even though
-    //    nothing acts on that flag automatically any more: it remains the only
-    //    thing in the repo that says "this composition is meant to be served",
-    //    which is exactly the population this warning is about.
+    //    Keyed on `serve` — the declared serve mode — which is the only thing in
+    //    the repo that says "this composition is meant to be served", whatever
+    //    rate its automatic rebuilds run at. That is exactly the population this
+    //    warning is about.
     const agentRuntime = byName.get("agent-runtime");
     if (agentRuntime) {
       const agentRuntimeContainment = containmentOf(agentRuntime);
       for (const item of items) {
-        if (!item.autoBuild) continue;
+        if (!isServed(item.serve)) continue;
         if (item.excludes.includes("agent-runtime")) continue;
         const flat = flattenManifest(manifestItemToManifest(item), manifests);
         const bundle = resolveComposition(graph, flat).bundle;

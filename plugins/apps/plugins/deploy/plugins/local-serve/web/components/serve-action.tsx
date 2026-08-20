@@ -9,7 +9,10 @@ import {
   useServeStatus,
 } from "@plugins/build/plugins/serve-composition/web";
 import type { Deployment } from "@plugins/apps/plugins/deploy/plugins/deployments/core";
-import { isServableCompositionId } from "@plugins/plugin-meta/plugins/composition/core";
+import {
+  isServableCompositionId,
+  isServed,
+} from "@plugins/plugin-meta/plugins/composition/core";
 
 /**
  * The **serve** shortcut on a deployments row: one button that opens the
@@ -20,7 +23,7 @@ import { isServableCompositionId } from "@plugins/plugin-meta/plugins/compositio
  * anyone wants — *look at this app locally* — and whether that costs a build is
  * a fact the row already knows. It never links to a namespace that is not
  * actually served: the state comes from the `composition.json` marker, not from
- * the `autoBuild` intent.
+ * the `serve` mode, which is intent.
  */
 export function ServeAction({
   row,
@@ -52,7 +55,7 @@ function ServeRowAction({
   item: CompositionManifestItem;
 }): ReactElement {
   const status = useServeStatus(item.id);
-  const { serve } = useServeComposition();
+  const { setMode, rebuildNow } = useServeComposition();
 
   if (status.kind === "pending") {
     return (
@@ -111,9 +114,16 @@ function ServeRowAction({
       disabled={!canServe}
       onClick={(e) => {
         e.stopPropagation();
-        // `serve` persists the intent, kicks the main build AND toasts that the
-        // build is running — the row adds no toast of its own.
-        serve(item.id);
+        // Two ways to reach the same wanted end state — the app live locally —
+        // and which one applies is whether the serve mode is already on. Off:
+        // `setMode` records the intent and runs the build that claims the
+        // namespace. Already on with nothing served (the enabling build failed,
+        // or its namespace was reclaimed): the mode is already what it should
+        // be, so writing it again would build nothing — this is exactly the
+        // case `rebuildNow` exists for. Both toast the running build, so the row
+        // adds no toast of its own.
+        if (isServed(item.serve)) rebuildNow(item.id);
+        else setMode(item.id, "manual");
       }}
     />
   );

@@ -257,19 +257,44 @@ are per (composition × checkout).
 Needs a decision on what the reclaim trigger actually is, given deactivation is
 explicitly not one.
 
-### Phase 6 — Deploy triggers in the Composition UI
+### Phase 6 — Deploy triggers in the Composition UI — **LANDED**
 
-One-off, on-push, and scheduled. The change signal already exists — the plan's
-inputs hash; if nothing in the closure changed every artifact is a cache hit and
-there is nothing to publish. The schedule must be a `defineJob` with a schedule,
-never a timer (no-polling rule). On-push exists today for main only
-(`git.refAdvanced` → debounced `build.run`) and now needs to fan out over the
-activated set, which `--composition X Y Z` makes a single invocation.
+`autoBuild: bool` became `serve: enum(off | manual | push | hourly | daily |
+weekly)`, so "rebuild on push but not served" has no spelling. A mode's whole
+content is a **rate limit**, which is what lets every edge evaluate every mode
+through one predicate — no push-specific plumbing, no cadence-specific edge. Plan:
+[`2026-08-20-global-composition-deploy-triggers.md`](./2026-08-20-global-composition-deploy-triggers.md).
 
-Also update the serve panel copy: with no deactivation sweep, "Still live from an
-earlier build; the next main build stops serving it" is no longer true.
+Decisions settled while landing it:
 
-**Files.** `plugins/build/plugins/serve-composition/`,
+- **The change signal is the deployed commit vs HEAD, not the inputs hash.** The
+  marker already records the commit its build ran from, so the gate is free,
+  never skips a needed build, and covers everything a rebuild moves — dist,
+  server tree, migrations, config. A closure-scoped inputs-hash gate would have
+  been a second implementation of "what is in this composition", drifting from
+  the build's own, and blind to server/migration changes: a served composition
+  would keep running old server code after a push. The inputs hash still does its
+  job INSIDE the build, where an unchanged closure means every artifact is a
+  cache hit.
+- **A composition reuses `wantsBuild` verbatim**, with the marker as its single
+  `web` carrier — so converged-⇒-no-build and termination are one policy, tested
+  once. The rate limit is the only clause the mode adds.
+- **An automatic trigger never MINTS a namespace.** A marker-less composition is
+  skipped; pressing Serve is the only thing that may claim one.
+- **Main only**, both halves of the loop, matching `refAdvanced`'s own scope.
+- **Rebuild now is available in every mode.** The commit gate is blind to an edit
+  of the composition's own manifest row (contributors, entry points, `extends`),
+  which changes what should be served without moving HEAD. Closing that needs a
+  second termination axis (`BuildAttempt` records a commit, not a digest) — a
+  follow-up, not this phase.
+
+The stale panel copy this phase was to fix ("the next main build stops serving
+it") had already gone in Phase 4; what was left was prose still naming Phase 5's
+reclaim as future work.
+
+**Files.** `plugins/plugin-meta/plugins/composition/core/serve-mode.ts` (new),
+`plugins/build/server/internal/{composition-trigger,wants-build,composition-tick-job}.ts`,
+`plugins/build/plugins/serve-composition/`,
 `plugins/apps/plugins/studio/plugins/compositions/`.
 
 ### Phase 7 — Deprecate plugin disabling

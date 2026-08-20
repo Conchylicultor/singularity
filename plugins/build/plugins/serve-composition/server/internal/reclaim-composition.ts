@@ -82,14 +82,14 @@ export async function ownedNamespacesFor(
  *    scan.
  * 3. `namespaceCollision` — **deliberately not applied.** It answers "may this
  *    owner CLAIM this name?", and it is enforced symmetrically at both claim
- *    sites: compose-serve refuses a composition whose name a git worktree or
+ *    sites: a serve build refuses a composition whose name a git worktree or
  *    branch already holds, and `setupWorktree` refuses a checkout whose name a
  *    marked namespace already holds. So a marked namespace and a same-named
  *    checkout cannot coexist, and the one remaining arm (a spec dir with no
  *    marker) is guard 2's job. Re-running it at reclaim time would mean refusing
  *    to give back a name a collision made unreachable — backwards — at the cost
  *    of a manifest read and a `git show-ref` spawn per namespace.
- * 4. **"must be currently activated (`autoBuild: true`)" — must NOT apply.** You
+ * 4. **"its `serve` mode must not be `off`" — must NOT apply.** You
  *    delete a composition precisely when its serve intent is already off, and
  *    deactivating is deliberately never a reclaim trigger, so the namespaces
  *    most in need of reclaiming are exactly the ones that guard would refuse.

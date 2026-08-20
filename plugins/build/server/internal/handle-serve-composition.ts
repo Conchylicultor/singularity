@@ -28,6 +28,6 @@ export const handleServeComposition = implement(
           `this checkout's own build, so a serve build never provisions it.`,
       );
     }
-    triggerBuild("manual", { composition: body.composition });
+    triggerBuild("manual", { compositions: [body.composition] });
   },
 );

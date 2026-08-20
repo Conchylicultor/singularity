@@ -7,7 +7,7 @@ registries in whatever checkout composed it.
 ## The trigger is ownership, never intent
 
 A namespace is reclaimed when the thing that OWNS it disappears — never because
-someone stopped serving it. Deactivating a composition (`autoBuild: false`) is
+someone stopped serving it. Deactivating a composition (`serve: "off"`) is
 deliberately not a trigger: the dist, spec and database stay live.
 
 Ownership is recorded at mint time in the `composition.json` marker; this plugin
