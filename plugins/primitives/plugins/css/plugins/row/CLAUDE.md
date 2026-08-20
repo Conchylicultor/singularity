@@ -72,21 +72,29 @@ instead of a silent no-op.
 
 ## The passthrough goes where `ref` goes
 
+The rule itself is no longer Row's — it lives in
+[the passthrough contract](../../../passthrough/CLAUDE.md), which every primitive
+that accepts props it does not name now spells `extends Passthrough`. Row is
+where it was learned, and the one primitive with a genuine SECOND destination.
+
 Everything you spread on a `Row` — `data-*`, `id`, `title`, `style`, mouse /
 pointer / drag handlers, anything else — lands on the **row box**, the same node
 `ref` hands out, on **both** paths. The exception is a closed, named set that
 describes the row's **control**: `onClick`, `href` / `target` / `rel` /
 `download`, `role`, `tabIndex`, `autoFocus`, the keyboard and focus handlers, and
-any `aria-*`. Those `Row` routes onto whichever node it synthesized.
+any `aria-*`. Those `Row` routes onto whichever node it synthesized, through
+`splitPassthrough(rest, isControlKey)` — the sanctioned split, where saying the
+second destination out loud is what tells a deliberate routing apart from an
+accidental one.
 
-The caller states **meaning**; `Row` decides the node. That is the same move as
+The caller states **meaning**; `Row` decides the node — the same move as
 `focusRef` (a capability, not a node) and `className` (the treatment, owned by
-the row) — this is the third face of one defect. `rest` used to be spread on "the
-rendered element", which is one node until the row is given `actions` and two
-afterwards. So a `data-*` attribute a caller used as a selector target moved from
-the row box to an inner button the day someone added an action — at a call site
-nobody edited, with no throw, no lint and no type error. Now nothing about a
-caller's attribute changes when the row splits.
+the row). The incident behind it: `rest` used to be spread on "the rendered
+element", which is one node until the row is given `actions` and two afterwards.
+So a `data-*` attribute a caller used as a selector target moved from the row box
+to an inner button the day someone added an action — at a call site nobody
+edited, with no throw, no lint and no type error. Now nothing about a caller's
+attribute changes when the row splits.
 
 Both destinations are real, which is why this is not a matter of picking one
 node. `onClick` has to be on the control (a `disabled` `<button>` must swallow

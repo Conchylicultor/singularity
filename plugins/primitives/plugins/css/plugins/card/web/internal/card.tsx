@@ -4,6 +4,7 @@ import {
   type ControlSize,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Surface } from "@plugins/primitives/plugins/css/plugins/surface/web";
+import type { Passthrough } from "@plugins/primitives/plugins/passthrough/core";
 import type React from "react";
 
 /**
@@ -31,15 +32,13 @@ const HOVER =
   "hover:[--scrim:color-mix(in_srgb,var(--muted)_40%,var(--card))]";
 const SEL = "border-primary";
 
-export interface CardProps {
+export interface CardProps extends Passthrough {
   /** Element to render. Default "div"; "button"/"a"/"li" for interactive or list cards. */
   as?: React.ElementType;
   /** Clickable affordance: pointer cursor + hover border/bg. */
   interactive?: boolean;
   /** Persistent selection emphasis (border-primary). */
   selected?: boolean;
-  /** Forwarded to the rendered element — DnD consumers depend on it (mirrors Row). */
-  ref?: React.Ref<HTMLElement>;
   /** Composed with Surface's baked-in select-scope handler; see below. */
   onKeyDown?: React.KeyboardEventHandler<HTMLElement>;
   /** Overrides the scope's default `-1` (e.g. `0` for keyboard-focusable cards). */
@@ -48,8 +47,6 @@ export interface CardProps {
   controlSize?: ControlSize;
   className?: string;
   children: React.ReactNode;
-  /** Permissive passthrough for the rendered element (onClick, href, role, type, …). */
-  [key: string]: unknown;
 }
 
 /**

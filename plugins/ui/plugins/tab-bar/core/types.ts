@@ -1,6 +1,12 @@
+import type { Passthrough } from "@plugins/primitives/plugins/passthrough/core";
 import type { ComponentType } from "react";
 
-export interface TabProps {
+/**
+ * The props every tab variant takes. The passthrough ({@link Passthrough}) — the
+ * consumer's drag handlers and `data-*` attributes — lands on the variant's
+ * root, which is the `<Line>` each variant renders.
+ */
+export interface TabProps extends Passthrough {
   icon?: ComponentType<{ className?: string }>;
   label: string;
   active: boolean;
@@ -16,6 +22,4 @@ export interface TabProps {
   badge?: ComponentType<{ className?: string }>;
   /** Merged onto the variant root (e.g. a consumer's drag-state opacity). */
   className?: string;
-  /** Passthrough for drag handlers + data-* attrs the consumer puts on the root. */
-  [key: string]: unknown;
 }

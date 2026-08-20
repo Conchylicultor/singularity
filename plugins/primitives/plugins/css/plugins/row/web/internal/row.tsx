@@ -5,6 +5,10 @@ import {
   RowActions,
   rowActionsAnchor,
 } from "@plugins/primitives/plugins/row-actions/web";
+import {
+  splitPassthrough,
+  type Passthrough,
+} from "@plugins/primitives/plugins/passthrough/core";
 import type React from "react";
 
 export type RowSize = "sm" | "md";
@@ -85,7 +89,19 @@ export type RowControlProps = Pick<
 > &
   Omit<React.AriaAttributes, "aria-current">;
 
-export interface RowProps extends RowControlProps {
+/**
+ * `Row`'s passthrough ({@link Passthrough}) lands on the **row box** — the node
+ * `ref` gives you — on BOTH paths, with ONE named exception:
+ * {@link RowControlProps}, the closed set of attributes that describe the row's
+ * CONTROL (`onClick`, the link attributes, `role`, `tabIndex`, the
+ * keyboard/focus handlers, and any `aria-*`). Those `Row` routes onto whichever
+ * node it synthesized, through `splitPassthrough` below.
+ *
+ * So the caller states MEANING and `Row` decides the node — the same move as
+ * `focusRef` (a capability, not a node) and `className` (the treatment, owned by
+ * the row).
+ */
+export interface RowProps extends RowControlProps, Passthrough {
   /** Persistent selection → bg-accent; aria-current on buttons. */
   selected?: boolean;
   /** Text+gap density only; PADDING is always p-row. sm=text-xs gap-1.5, md=text-sm gap-2. Default "md". */
@@ -102,13 +118,12 @@ export interface RowProps extends RowControlProps {
   actions?: React.ReactNode;
   actionsAlwaysVisible?: boolean;
   /**
-   * Forwarded to the ROW ELEMENT — the row's outermost box — the one intentional
-   * divergence from ToggleChip (tree DnD / scroll-into-view depend on it).
+   * The ROW ELEMENT — the row's outermost box, on both paths.
    *
-   * It is the node you measure, drag, or scroll into view. It is never the node
-   * you focus: on a row carrying `actions` the box is a plain `<div>` that
-   * cannot take focus at all. Reach for `focusRef`, which hands out the
-   * capability instead of the node.
+   * Concretely, what {@link Passthrough} means by "never the node you focus":
+   * on a row carrying `actions` the box is a plain `<div>` that cannot take
+   * focus at all. Reach for `focusRef`, which hands out the capability instead
+   * of the node.
    */
   ref?: React.Ref<HTMLElement>;
   /**
@@ -155,26 +170,6 @@ export interface RowProps extends RowControlProps {
    * inside someone's form.
    */
   type?: never;
-  /**
-   * Permissive passthrough — and it lands on the **row box**, the same node `ref`
-   * gives you, on BOTH paths. `data-*` selector targets, `id`, `title`, mouse /
-   * pointer / drag handlers: whatever you spread addresses the row.
-   *
-   * The exception is {@link RowControlProps} — the closed, named set of
-   * attributes that describe the row's CONTROL (`onClick`, `href` and the link
-   * attributes, `role`, `tabIndex`, the keyboard/focus handlers, and any
-   * `aria-*`). `Row` routes those onto whichever node it synthesized.
-   *
-   * This is the same lesson as `focusRef` and `className`, in the shape the
-   * passthrough needs: the caller states MEANING, `Row` decides the node. It used
-   * to spread `rest` on "the rendered element", which is one node until the row
-   * is given `actions` and two afterwards — so a `data-*` attribute a caller used
-   * as a selector target moved from the row box to an inner button the day
-   * someone added an action, at a call site nobody edited, with no throw, no lint
-   * and no type error. Now nothing about a caller's attribute changes when the
-   * row splits.
-   */
-  [key: string]: unknown;
 }
 
 export function Row({
@@ -195,14 +190,19 @@ export function Row({
   ...rest
 }: RowProps) {
   // ONE pass splits the passthrough by DESTINATION, which is the whole contract:
-  // the control bag goes to whichever node `Row` synthesized, everything else to
+  // the routed bag goes to whichever node `Row` synthesized, the anchored one to
   // the row box — the node `ref` hands out — on BOTH paths. Nothing a caller
   // spreads changes node the day the row grows an `actions` slot.
-  const controlProps: Record<string, unknown> = {};
-  const boxProps: Record<string, unknown> = {};
-  for (const [key, value] of Object.entries(rest)) {
-    (isControlKey(key) ? controlProps : boxProps)[key] = value;
-  }
+  //
+  // `splitPassthrough` is the split as a NAMED act (it lives in the passthrough
+  // plugin, beside the contract it serves): saying out loud that a second
+  // destination exists is what tells a deliberate routing apart from the
+  // accidental one, both to a reader and to the lint rule. `isControlKey` stays
+  // here — WHICH keys describe the control is `Row`'s own vocabulary.
+  const { anchored: boxProps, routed: controlProps } = splitPassthrough(
+    rest,
+    isControlKey,
+  );
 
   // The element is inferred, never authored: a row with `href` is a link, a row
   // with `onClick`/`disabled` is a button, anything else is a plain container.

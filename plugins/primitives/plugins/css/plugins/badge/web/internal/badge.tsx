@@ -4,15 +4,11 @@ import {
   textStepFor,
   type DensityControlled,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import type { Passthrough } from "@plugins/primitives/plugins/passthrough/core";
 import type React from "react";
 
 export type BadgeVariant =
-  | "muted"
-  | "primary"
-  | "warning"
-  | "destructive"
-  | "success"
-  | "info";
+  "muted" | "primary" | "warning" | "destructive" | "success" | "info";
 /** Corner treatment. "rect" = status-label rounded rectangle; "pill" = filter/toggle pill. */
 export type BadgeShape = "rect" | "pill";
 
@@ -25,7 +21,13 @@ const VARIANT_CLASS: Record<BadgeVariant, string> = {
   info: "bg-info/15 text-info",
 };
 
-export interface BadgeProps extends DensityControlled {
+/**
+ * A badge renders TWO elements — the chip shell and the truncating label span
+ * inside it. `ref` and everything spread beside it land on the SHELL, the outer
+ * one: it is the chip as far as a caller is concerned, and the inner span is an
+ * implementation detail of how a long label ellipsizes. See {@link Passthrough}.
+ */
+export interface BadgeProps extends DensityControlled, Passthrough {
   /** Semantic color variant. Default "muted". Ignored when `colorClass` is set. */
   variant?: BadgeVariant;
   /** Corner treatment. Default "rect" (rounded rectangle); "pill" → fully rounded. */
@@ -41,8 +43,6 @@ export interface BadgeProps extends DensityControlled {
   className?: string;
   title?: string;
   children: React.ReactNode;
-  /** Permissive passthrough for the rendered element (onClick, type, disabled, …). */
-  [key: string]: unknown;
 }
 
 export function Badge({
@@ -61,7 +61,9 @@ export function Badge({
   // (textStepFor, shared with Button + Text): the compact `xs` density drops one
   // rung to text-caption-compact; every other density (incl. the no-provider
   // default "md") reads text-caption.
-  const textClass = textStepFor(density) ? "text-caption-compact" : "text-caption";
+  const textClass = textStepFor(density)
+    ? "text-caption-compact"
+    : "text-caption";
   return (
     <As
       className={cn(

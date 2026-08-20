@@ -540,6 +540,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`overscroll-hint`** — Wasted-scroll hint: a single invisible global controller (mounted via Core.Root) that plays a small native-feeling rubber-band bounce on a surface when a wheel/trackpad/touch gesture scrolls nothing (not scrollable, or already at the edge). Detects 'wasted' gestures by checking whether a real scroll event fired within one animation frame of the gesture.
     - **`pane`** [load-bearing] — Unified pane primitive: Pane.define and chrome components.
     - **`pane-toolbar`** — Factory for a pane's custom header: reorderable start/end render-slot zones wired into PaneChrome via chrome.header. Use instead of hand-rolling a header bar.
+    - **`passthrough`** — The open-passthrough contract: a primitive that accepts props it does not name promises they land on ONE node, and `ref` is that node's name. Owns the Passthrough props marker, the splitPassthrough router for the rare second destination, and the two lint rules that keep the promise true.
     - **`perfs`** — Umbrella for client-side performance primitives.
       - Plugins:
         - **`boot-trace`** — Module-level boot-span store imported eagerly by the framework boot path. Captures one-clock boot spans (startBootSpan/markBootInstant/recordBootSpan) and folds in Navigation/Paint Timing plus the first React commit; getBootTrace() assembles the trace.

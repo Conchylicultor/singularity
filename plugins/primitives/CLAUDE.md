@@ -66,6 +66,7 @@
   - **`overscroll-hint`** — Wasted-scroll hint: a single invisible global controller (mounted via Core.Root) that plays a small native-feeling rubber-band bounce on a surface when a wheel/trackpad/touch gesture scrolls nothing (not scrollable, or already at the edge). Detects 'wasted' gestures by checking whether a real scroll event fired within one animation frame of the gesture.
   - **`pane`** — Unified pane primitive: Pane.define and chrome components.
   - **`pane-toolbar`** — Factory for a pane's custom header: reorderable start/end render-slot zones wired into PaneChrome via chrome.header. Use instead of hand-rolling a header bar.
+  - **`passthrough`** — The open-passthrough contract: a primitive that accepts props it does not name promises they land on ONE node, and `ref` is that node's name. Owns the Passthrough props marker, the splitPassthrough router for the rare second destination, and the two lint rules that keep the promise true.
   - **`perfs`** — Umbrella for client-side performance primitives.
   - **`persistent-draft`** — Generic localStorage-backed persistence with optional entity scope and TTL auto-expiry: useDraft is the reactive useState drop-in (all calls on one key stay in sync within and across tabs); readDraft/writeDraft are the render-free imperative twin for callers writing at input frequency.
   - **`popover`** — Single-import wrapper for the Popover + Trigger + Content pattern with sensible defaults.

@@ -16,6 +16,7 @@ import { scopeSelectAllKeyDown } from "@plugins/primitives/plugins/select-scope/
 import { useRailGuard } from "@plugins/primitives/plugins/css/plugins/rail/web";
 import { OverlayBoundary } from "@plugins/primitives/plugins/overlay-boundary/web";
 import { useScrollFade } from "@plugins/primitives/plugins/css/plugins/ui-kit/web/components/use-scroll-fade";
+import type { Passthrough } from "@plugins/primitives/plugins/passthrough/core";
 
 /**
  * THE floating panel — the one definition of the box every overlay surface
@@ -32,7 +33,10 @@ import { useScrollFade } from "@plugins/primitives/plugins/css/plugins/ui-kit/we
  * Composed into a state machine through base-ui's `render` prop, which
  * `cloneElement`s this element with the popup's merged props — so the ROOT here
  * must be a real host element that spreads `{...rest}`; a root that emits no DOM
- * node would silently swallow the popup's `ref`, handlers and aria wiring.
+ * node would silently swallow the popup's `ref`, handlers and aria wiring. Those
+ * merged props ARE this panel's passthrough ({@link Passthrough}), `ref`
+ * included: the panel composes the popup's ref with its own measurement and rail
+ * refs onto the one root, rather than picking one of them.
  *
  * Two things are INVARIANTS, not props — a call site cannot forget them:
  *
@@ -57,7 +61,7 @@ import { useScrollFade } from "@plugins/primitives/plugins/css/plugins/ui-kit/we
  *    stamps one on every popup, and focus is inside the panel already, so the
  *    keydown reaches the root by bubbling.
  */
-export interface OverlayPanelProps {
+export interface OverlayPanelProps extends Passthrough<HTMLDivElement> {
   /** Closed width role; default size-to-content. */
   width?: PopoverWidth;
   /** Padding role; default `md`. */
@@ -69,14 +73,10 @@ export interface OverlayPanelProps {
   /** Landing spot for a consumer override — always the LAST `cn()` argument. */
   className?: string;
   children?: React.ReactNode;
-  /** Forwarded to the root (base-ui merges the popup's own ref into it). */
-  ref?: React.Ref<HTMLDivElement>;
   /** Composed with the baked-in select-scope handler (consumer runs first). */
   onKeyDown?: React.KeyboardEventHandler<HTMLDivElement>;
   /** Composed with the baked-in scroll-fade measurement (consumer runs first). */
   onScroll?: React.UIEventHandler<HTMLDivElement>;
-  /** Permissive passthrough for the rendered root (base-ui's merged popup props). */
-  [key: string]: unknown;
 }
 
 export function OverlayPanel({

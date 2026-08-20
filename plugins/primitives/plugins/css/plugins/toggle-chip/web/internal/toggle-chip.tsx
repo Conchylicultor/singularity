@@ -1,5 +1,11 @@
-import { cn, type ControlSize, type DensityControlled, useControlSize } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import {
+  cn,
+  type ControlSize,
+  type DensityControlled,
+  useControlSize,
+} from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
+import type { Passthrough } from "@plugins/primitives/plugins/passthrough/core";
 import type React from "react";
 
 export type ToggleChipVariant = "solid" | "ghost";
@@ -31,7 +37,12 @@ const VARIANT_CLASS: Record<
   },
 };
 
-export interface ToggleChipProps extends DensityControlled {
+/**
+ * A toggle chip IS a `Badge`, so its passthrough lands where Badge's does — the
+ * chip shell, never the truncating label span inside it. See
+ * {@link Passthrough}.
+ */
+export interface ToggleChipProps extends DensityControlled, Passthrough {
   /** Whether the chip reads as selected/on. Drives the active vs inactive color pair. */
   active: boolean;
   /** Color treatment. "solid" = filled-primary (controls); "ghost" = accent (filters). Default "solid". */
@@ -44,8 +55,6 @@ export interface ToggleChipProps extends DensityControlled {
   className?: string;
   title?: string;
   children: React.ReactNode;
-  /** Permissive passthrough for the rendered element (onClick, href, …). */
-  [key: string]: unknown;
 }
 
 export function ToggleChip({
@@ -64,8 +73,7 @@ export function ToggleChip({
   const isButton = As === "button";
   // Auto toggle semantics for plain buttons; defer to the caller's role
   // (e.g. SegmentedControl's role="radio" + aria-checked) when one is supplied.
-  const ariaPressed =
-    isButton && rest.role === undefined ? active : undefined;
+  const ariaPressed = isButton && rest.role === undefined ? active : undefined;
   return (
     <Badge
       as={As}
@@ -100,7 +108,9 @@ export interface SegmentedOption<T extends string> {
   title?: string;
 }
 
-export interface SegmentedControlProps<T extends string> extends DensityControlled {
+export interface SegmentedControlProps<
+  T extends string,
+> extends DensityControlled {
   options: readonly SegmentedOption<T>[];
   value: T;
   onChange: (id: T) => void;
@@ -118,7 +128,10 @@ export function SegmentedControl<T extends string>({
   className,
 }: SegmentedControlProps<T>) {
   return (
-    <div role="radiogroup" className={cn("flex shrink-0 flex-nowrap gap-xs", className)}>
+    <div
+      role="radiogroup"
+      className={cn("flex shrink-0 flex-nowrap gap-xs", className)}
+    >
       {options.map((opt) => (
         <ToggleChip
           key={opt.id}

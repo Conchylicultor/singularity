@@ -8,6 +8,7 @@ import {
   type InTreeLayer,
   zLayerClass,
 } from "@plugins/primitives/plugins/css/plugins/z-layers/web";
+import type { Passthrough } from "@plugins/primitives/plugins/passthrough/core";
 import { SurfaceOverlayHostContext } from "./surface-overlay-host";
 
 // The surface-fill recipe lives in a module const (not an inline className
@@ -17,7 +18,14 @@ import { SurfaceOverlayHostContext } from "./surface-overlay-host";
 // lint.
 const SURFACE_OVERLAY_ROOT = "absolute inset-0";
 
-export interface SurfaceOverlayProps {
+/**
+ * The passthrough ({@link Passthrough}) lands on the portal root div, `ref`
+ * included — mirrors `<ViewportOverlay>`. The `absolute inset-0` + z-layer are
+ * owned by the primitive and cannot be overridden away. (The `display: contents`
+ * container the root portals INTO is not that node: it generates no box, so
+ * there is nothing there to address.)
+ */
+export interface SurfaceOverlayProps extends Passthrough<HTMLDivElement> {
   /** Stacking layer, within the surface. Defaults to "overlay" (the top in-tree
    *  level) — an overlay that covers the surface must out-stack the pane chrome
    *  it covers, but stays UNDER every portaled layer, so dialogs and menus
@@ -26,13 +34,6 @@ export interface SurfaceOverlayProps {
   /** Extra classes for the overlay root (background, flex layout, etc.). */
   className?: string;
   children: ReactNode;
-  /**
-   * Permissive passthrough applied to the portal root div (onClick, role,
-   * aria-*, data-*, style, …) — mirrors `<ViewportOverlay>`. The
-   * `absolute inset-0` + z-layer are owned by the primitive and cannot be
-   * overridden away.
-   */
-  [key: string]: unknown;
 }
 
 /**

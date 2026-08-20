@@ -1,8 +1,16 @@
-import { cn, SURFACE_LEVELS, type SurfaceLevel } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { selectScopeProps, scopeSelectAllKeyDown } from "@plugins/primitives/plugins/select-scope/web";
+import {
+  cn,
+  SURFACE_LEVELS,
+  type SurfaceLevel,
+} from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import {
+  selectScopeProps,
+  scopeSelectAllKeyDown,
+} from "@plugins/primitives/plugins/select-scope/web";
+import type { Passthrough } from "@plugins/primitives/plugins/passthrough/core";
 import type React from "react";
 
-export interface SurfaceProps {
+export interface SurfaceProps extends Passthrough {
   /**
    * Semantic elevation role — picks the frozen background (+ border / radius /
    * shadow) bundle from SURFACE_LEVELS. The whole point of the closed set: every
@@ -19,16 +27,12 @@ export interface SurfaceProps {
    * an inline-by-default tag like "a" still paints as a proper box.
    */
   as?: React.ElementType;
-  /** Forwarded to the rendered element — DnD consumers depend on it (mirrors Card/Row). */
-  ref?: React.Ref<HTMLElement>;
   /** Composed with the baked-in select-scope handler (consumer runs first). */
   onKeyDown?: React.KeyboardEventHandler<HTMLElement>;
   /** Overrides the scope's default `-1` (e.g. `0` for keyboard-focusable surfaces). */
   tabIndex?: number;
   className?: string;
   children?: React.ReactNode;
-  /** Permissive passthrough for the rendered element (onClick, href, role, style, …). */
-  [key: string]: unknown;
 }
 
 /**

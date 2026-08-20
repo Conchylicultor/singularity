@@ -1,9 +1,10 @@
-import { useRef, type ReactNode } from "react";
+import { useCallback, useRef, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import {
   cn,
   usePortalForwardedAttrs,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import type { Passthrough } from "@plugins/primitives/plugins/passthrough/core";
 import {
   type PortaledLayer,
   zLayerClass,
@@ -16,18 +17,17 @@ import { useViewportEscape } from "./use-viewport-escape";
 // owns it. Same trick `<Card>`/`<Surface>` use to stay clear of their own lint.
 const OVERLAY_ROOT = "fixed inset-0";
 
-export interface ViewportOverlayProps {
+/**
+ * The passthrough ({@link Passthrough}) lands on the portal root div, `ref`
+ * included. The `fixed inset-0` + z-layer + `data-theme-scope` are owned by the
+ * primitive and cannot be overridden away.
+ */
+export interface ViewportOverlayProps extends Passthrough<HTMLDivElement> {
   /** Stacking layer. Defaults to "popover" (the documented portaled-layer). */
   layer?: PortaledLayer;
   /** Extra classes for the overlay root (background, flex layout, etc.). */
   className?: string;
   children: ReactNode;
-  /**
-   * Permissive passthrough applied to the portal root div (onClick, role,
-   * aria-*, data-*, style, …) — mirrors `<Card>`. The `fixed inset-0` + z-layer +
-   * `data-theme-scope` are owned by the primitive and cannot be overridden away.
-   */
-  [key: string]: unknown;
 }
 
 /**
@@ -61,10 +61,23 @@ export function ViewportOverlay({
   layer = "popover",
   className,
   children,
+  ref,
   ...rest
 }: ViewportOverlayProps) {
   const forwarded = usePortalForwardedAttrs();
+  // The audit below needs a real ref OBJECT to read after commit, and the caller
+  // needs the same node — so the two compose onto one callback rather than one
+  // of them winning. (`ref` used to be written after `{...rest}`, which quietly
+  // threw the caller's away: the primitive kept the node it addressed.)
   const rootRef = useRef<HTMLDivElement>(null);
+  const setRoot = useCallback(
+    (el: HTMLDivElement | null) => {
+      rootRef.current = el;
+      if (typeof ref === "function") ref(el);
+      else if (ref) ref.current = el;
+    },
+    [ref],
+  );
 
   // The one failure this primitive's design cannot make impossible. Portaling to
   // `<body>` escapes every ancestor INSIDE the app — that is the whole point —
@@ -91,9 +104,11 @@ export function ViewportOverlay({
       {...forwarded}
       className={cn(OVERLAY_ROOT, zLayerClass(layer), className)}
       {...rest}
-      // After the passthrough, like the class recipe above it: the primitive's
-      // own audit is not something a caller can spread away.
-      ref={rootRef}
+      // After the passthrough, like the class recipe above it — but the caller's
+      // `ref` is not lost to that, it is COMPOSED into `setRoot`. The primitive's
+      // own audit cannot be spread away, and the caller still reaches the node
+      // its attributes landed on.
+      ref={setRoot}
     >
       {children}
     </div>,

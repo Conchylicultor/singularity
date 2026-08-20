@@ -11,13 +11,16 @@ import type { TabProps } from "../../core";
  * to the first registered variant), rendered via `renderIsolated` so each tab
  * carries the error-boundary middleware.
  *
- * Refs are intentionally NOT forwarded here: a dynamically-dispatched (sealed)
- * component can't forward a root ref through the isolation middleware, and doing
- * so trips the React Compiler ref/static-component rules. A consumer that needs a
- * DOM handle (e.g. `AppTabBar`'s tooltip anchor + `scrollIntoView`) wraps `<Tab>`
- * in its own element instead.
+ * `ref` is spelled `never` here, so putting one on `<Tab>` is a type error rather
+ * than a ref that lands nowhere. The three variants honour {@link TabProps}'
+ * passthrough — bag and `ref` both reach the `<Line>` they render — but this
+ * dispatcher cannot: a dynamically-dispatched (sealed) component can't forward a
+ * root ref through the isolation middleware, and doing so trips the React
+ * Compiler ref/static-component rules. A consumer that needs a DOM handle (e.g.
+ * `AppTabBar`'s tooltip anchor + `scrollIntoView`) wraps `<Tab>` in its own
+ * element instead.
  */
-export function Tab(props: TabProps) {
+export function Tab(props: TabProps & { ref?: never }) {
   const active = useActiveTabVariant();
   if (!active) return null;
   return renderIsolated(

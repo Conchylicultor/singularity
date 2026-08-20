@@ -1,4 +1,5 @@
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import type { Passthrough } from "@plugins/primitives/plugins/passthrough/core";
 import type React from "react";
 import {
   CollapsibleChevron,
@@ -14,7 +15,14 @@ const VARIANT_CLASS: Record<SectionHeaderVariant, string> = {
   title: "text-body font-semibold",
 };
 
-export interface SectionHeaderRowProps {
+/**
+ * The passthrough ({@link Passthrough}) is handed straight to `Row`, which
+ * routes it by DESTINATION: the row box, except the control's own attributes.
+ * The `aria-expanded` / `aria-controls` written below ride that same rule, which
+ * is why they reach the disclosure control whether or not the header carries
+ * `actions`.
+ */
+export interface SectionHeaderRowProps extends Passthrough {
   /**
    * Rotates the chevron and feeds aria-expanded. Optional: when omitted, falls
    * back to the surrounding <Collapsible> context.
@@ -37,15 +45,6 @@ export interface SectionHeaderRowProps {
   collapsible?: boolean;
   className?: string;
   children: React.ReactNode;
-  /**
-   * Permissive passthrough, forwarded to `Row` — which routes it by
-   * DESTINATION, not by which path it happens to render: everything lands on
-   * the row box (the node `ref` gives you) except the control's own attributes
-   * (`onClick`, `href`, `role`, `tabIndex`, `aria-*`, …). The
-   * `aria-expanded`/`aria-controls` below ride that same rule, which is why they
-   * reach the disclosure control whether or not the header carries `actions`.
-   */
-  [key: string]: unknown;
 }
 
 /**

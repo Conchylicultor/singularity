@@ -3,17 +3,21 @@ import {
   SingleLineProvider,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { GrowRelay } from "@plugins/primitives/plugins/css/plugins/grow-relay/web";
+import type { Passthrough } from "@plugins/primitives/plugins/passthrough/core";
 import type React from "react";
 
-export interface LineProps extends React.HTMLAttributes<HTMLElement> {
+/**
+ * `Line` renders whatever `as` names, so its passthrough is open ON TOP of
+ * `HTMLAttributes`: an interactive line container — `Row` — forwards
+ * element-specific props (`href`, `type`, `disabled`, …) that no shared
+ * attribute type carries. See {@link Passthrough} for what that promises.
+ */
+export interface LineProps
+  extends React.HTMLAttributes<HTMLElement>, Passthrough {
   /** Host element/component. Defaults to a `div`. */
   as?: React.ElementType;
-  /** Forwarded to the rendered element (mirrors Clip/Surface/Row). */
+  /** The rendered element — mirrors Clip/Surface/Row. */
   ref?: React.Ref<HTMLElement>;
-  /** Permissive passthrough for the rendered element (onClick, href, type,
-   *  disabled, aria-current, …) so interactive line containers — Row — can
-   *  forward element-specific props that aren't on `HTMLAttributes`. */
-  [key: string]: unknown;
 }
 
 /**

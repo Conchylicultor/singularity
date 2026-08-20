@@ -26252,6 +26252,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/sonata/shell`
           - `apps/story/shell`
           - `apps/website/shell`
+    - **`passthrough`** — The open-passthrough contract: a primitive that accepts props it does not name promises they land on ONE node, and `ref` is that node's name. Owns the Passthrough props marker, the splitPassthrough router for the rare second destination, and the two lint rules that keep the promise true.
+      - Core:
+        - Exports (types): `Passthrough`
+        - Exports (values): `splitPassthrough`
     - **`perfs`** — Umbrella for client-side performance primitives.
       - Plugins:
         - **`boot-trace`** — Module-level boot-span store imported eagerly by the framework boot path. Captures one-clock boot spans (startBootSpan/markBootInstant/recordBootSpan) and folds in Navigation/Paint Timing plus the first React commit; getBootTrace() assembles the trace.
