@@ -65,6 +65,8 @@ line, it's also the fix for a multi-contribution chip slot (`<Inline><Slot.Rende
     - `apps/sonata/sources/ultimate-guitar`
     - `apps/studio/contributions/tables/row-count`
     - `apps/studio/explorer`
+    - `build`
+    - `build/build-info`
     - `build/build-status`
     - `build/deployment`
     - `conversations/all-conversations`

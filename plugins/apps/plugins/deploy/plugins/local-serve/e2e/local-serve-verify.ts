@@ -30,7 +30,10 @@ await withBrowser(async (h) => {
 
   const deployment = deployments[0];
   if (!deployment) {
-    r.fail("a deployment exists", "no deployment rows — add one in the Deploy app first");
+    r.fail(
+      "a deployment exists",
+      "no deployment rows — add one in the Deploy app first",
+    );
     r.finish();
     return;
   }
@@ -40,17 +43,27 @@ await withBrowser(async (h) => {
   //    with nothing served cannot show on screen.
   const status = (await (
     await fetch(
-      pathUrl(`/api/build/serve/status?composition=${encodeURIComponent(deployment.compositionId)}`),
+      pathUrl(
+        `/api/build/serve/status?composition=${encodeURIComponent(deployment.compositionId)}`,
+      ),
     )
-  ).json()) as { canServe: boolean; liveness: { served: boolean } };
+  ).json()) as {
+    namespace: string;
+    url: string;
+    liveness: { served: boolean };
+  };
   r.ok(
-    "serve status answers canServe + a discriminated liveness",
-    typeof status.canServe === "boolean" && typeof status.liveness.served === "boolean",
+    "serve status answers a server-resolved namespace + url + a discriminated liveness",
+    typeof status.namespace === "string" &&
+      status.url.includes(status.namespace) &&
+      typeof status.liveness.served === "boolean",
     JSON.stringify(status),
   );
 
   // 2. The section is in the pane, ahead of the remote one — rehearse, then ship.
-  await page.goto(pathUrl(`/deploy/server/${deployment.serverId}/dep/${deployment.id}`));
+  await page.goto(
+    pathUrl(`/deploy/server/${deployment.serverId}/dep/${deployment.id}`),
+  );
   await page.waitForTimeout(3000);
   const order = await page.evaluate(() => document.body.innerText);
   r.ok(
@@ -68,19 +81,23 @@ await withBrowser(async (h) => {
     (await page.getByText(/does not exercise packaging/i).count()) > 0,
   );
 
-  // 4. Off main, the refusal is up front rather than after a refused POST.
-  const refusal = await page.getByText(/Serve builds run on the main instance only/).count();
+  // 4. No main-only refusal anywhere: a serve is an ordinary build of whichever
+  //    checkout is being looked at, so the sentence that used to lead this pane
+  //    would now be false in exactly the case it was written for.
+  const refusal = await page.getByText(/run on the main instance only/).count();
   r.ok(
-    "the main-only refusal matches the backend's own answer",
-    status.canServe ? refusal === 0 : refusal > 0,
-    `canServe=${status.canServe} refusalCount=${refusal}`,
+    "the retired main-only refusal is gone from the pane",
+    refusal === 0,
+    `refusalCount=${refusal}`,
   );
 
   // 5. The live-only affordances (the URL chip's neighbours — Reset is the
   //    unambiguous one) appear if and ONLY if the marker says served. This is
   //    the regression the honest-liveness read exists to prevent: `autoBuild`
   //    alone used to be enough to paint them.
-  const resetButtons = await page.getByRole("button", { name: "Reset" }).count();
+  const resetButtons = await page
+    .getByRole("button", { name: "Reset" })
+    .count();
   r.ok(
     "live-only affordances track the marker, not the autoBuild intent",
     status.liveness.served ? resetButtons > 0 : resetButtons === 0,

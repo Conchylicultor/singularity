@@ -6,7 +6,7 @@ import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
 // Own-plugin, so relative — the `@plugins/infra/plugins/namespace/core` alias
 // would name this plugin from inside itself. Same shape as `paths/check`
 // importing `../core/internal/paths`.
-import { NAMESPACE_LABEL_RE, NAMESPACE_RE } from "../core/namespace";
+import { NAMESPACE_LABEL_RE, NAMESPACE_MAX_BYTES } from "../core/namespace";
 
 // Files allowed to spell the namespace host suffix themselves. Each is either
 // the owner of the rule, or asking a question that is not namespace identity.
@@ -103,29 +103,38 @@ const noHandBuiltNamespaceUrlCheck: Check = {
 };
 
 /**
- * The namespace grammar exists in three languages, and only one of them can
- * import another's copy.
+ * The namespace vocabulary exists in two languages, and only one of them can
+ * import the other's copy.
  *
- * `NAMESPACE_LABEL_RE` here is the source of truth. The gateway's `nameRegex` is
- * Go, and `select-registry.ts`'s copy is inline because boot cannot import
- * `config_v2`. Neither copy can be deleted, so the agreement between them is
- * asserted instead — a check (rung 3) rather than the KEEP IN SYNC comments this
- * replaces (rung 5).
+ * `namespace/core/namespace.ts` is the source of truth, and every TypeScript
+ * caller imports it — including `server-core/bin/select-registry.ts`, which runs
+ * before anything else a backend does. It used to carry inline copies, justified
+ * by a `config_v2` closure that predates the namespace plugin being extracted;
+ * the owner is a zero-import module today and `paths/core` (already in the boot
+ * closure) imports it, so the copies were deleted rather than pinned. That is
+ * rung 1 — there is nothing to keep in sync — where this check is rung 3.
  *
- * The two copies are matched against DIFFERENT expected patterns, on purpose.
- * The gateway composes the label into an UNCAPPED multi-label name because it
- * validates path-safety, not meaning; `select-registry` validates a whole
- * namespace, so it carries the two-label cap. What must not drift across all
- * three is the label rule itself — the charset and the length.
+ * What remains is the gateway, in Go, which cannot import TypeScript. Its copy
+ * cannot be deleted, so the agreement is asserted instead.
+ *
+ * The Go copy is matched against a DIFFERENT expected pattern than the owner's
+ * own `NAMESPACE_RE`, on purpose: the gateway composes the label into an
+ * UNCAPPED multi-label name, because it validates path-safety, not meaning. Its
+ * 63-byte cap is a separate constant rather than a regex clause, because Go's
+ * RE2 has no lookahead.
+ *
+ * What must not drift is the label rule itself — the charset and the length —
+ * plus the byte cap, which is the difference between two namespaces having two
+ * databases and silently sharing one.
  */
 const grammarInSyncCheck: Check = {
   id: "namespace:grammar-in-sync",
   description:
-    "The gateway's nameRegex and select-registry.ts's inline copy must use the same label rule as NAMESPACE_LABEL_RE",
+    "The gateway's Go copy of the namespace grammar and byte cap must match the namespace plugin's",
   async run() {
     const root = await getWorktreeRoot();
     // The label rule as it appears inside a regex literal, anchors stripped —
-    // the part all three copies share.
+    // the part both spellings share.
     const label = NAMESPACE_LABEL_RE.source
       .replace(/^\^/, "")
       .replace(/\$$/, "");
@@ -138,11 +147,9 @@ const grammarInSyncCheck: Check = {
         what: "nameRegex",
       },
       {
-        path: "plugins/framework/plugins/server-core/bin/select-registry.ts",
-        // The whole namespace: it validates the raw `SINGULARITY_WORKTREE` a
-        // backend was spawned with, which may carry a checkout suffix.
-        expect: "/" + NAMESPACE_RE.source + "/",
-        what: "the inline namespace regex",
+        path: "gateway/registry.go",
+        expect: `maxNamespaceBytes = ${NAMESPACE_MAX_BYTES}`,
+        what: "the namespace byte cap",
       },
     ];
 
@@ -162,9 +169,10 @@ const grammarInSyncCheck: Check = {
       ok: false,
       message: `namespace grammar out of sync in ${offenders.length} place(s):\n    ${offenders.join("\n    ")}`,
       hint:
-        "`NAMESPACE_LABEL_RE` in plugins/infra/plugins/namespace/core/namespace.ts is the source of truth. " +
-        "The other two copies exist because Go cannot import it, and because `select-registry.ts` runs before `config_v2` is importable. " +
-        "Update them to match — a namespace the gateway rejects is a 404 that cannot be debugged from the TypeScript side.",
+        "plugins/infra/plugins/namespace/core/namespace.ts is the source of truth for both of these. " +
+        "The gateway's copy exists only because Go cannot import it — every TypeScript caller imports the owner instead. " +
+        "Update gateway/registry.go to match: a namespace the gateway rejects is a 404 that cannot be debugged from the TypeScript side, " +
+        "and a byte cap the two sides disagree on is two apps silently sharing one Postgres database.",
     };
   },
 };

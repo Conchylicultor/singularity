@@ -31,6 +31,7 @@ import {
 import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
 import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
+import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
@@ -42,7 +43,8 @@ import {
 } from "@plugins/primitives/plugins/data-view/web";
 import type { FieldDef } from "@plugins/primitives/plugins/data-view/web";
 import { DeploymentChain } from "@plugins/build/plugins/deployment/web";
-import { buildHistoryResource } from "../../shared";
+import { buildHistoryResource, isMainCompositionBuild } from "../../shared";
+import { MAIN_COMPOSITION_ID } from "@plugins/infra/plugins/namespace/core";
 import type { BuildRun } from "../../shared";
 import type {
   ClientMessage,
@@ -239,6 +241,18 @@ function BuildHistoryDataView({
   selectedRunId?: string;
   onRunClick?: (runId: string) => void;
 }) {
+  // The filter's chips come from the rows, because the option set is genuinely
+  // open: a composition id is whatever someone put in the manifest, and the
+  // window is the last 50 runs. Derived rather than enumerated, so a newly-served
+  // composition is filterable the moment its first build lands.
+  const targetOptions = useMemo(
+    () =>
+      [...new Set(runs.flatMap((r) => r.targets))]
+        .sort()
+        .map((t) => ({ value: t, label: t })),
+    [runs],
+  );
+
   const fields = useMemo<FieldDef<BuildRun>[]>(
     () => [
       {
@@ -283,20 +297,32 @@ function BuildHistoryDataView({
         filterable: true,
       },
       {
-        id: "target",
-        label: "Target",
-        // Free-text, not an enum: composition ids are an open-ended set, so we
-        // can't enumerate `options`.
-        type: "text",
-        value: (r) => r.target,
+        id: "targets",
+        label: "Targets",
+        // `tags`, not `text`: one invocation builds N compositions, so the cell
+        // is a SET of ids. The tags field type carries its values through
+        // `values` and filters array-aware (match-any), which is exactly the
+        // question a reader has — "which runs touched sonata?" — and it comes
+        // free rather than being hand-rolled here. No `options`: composition ids
+        // are an open-ended set, so the filter derives its chips from the rows.
+        type: "tags",
+        values: (r) => r.targets,
+        options: targetOptions,
         cell: (r) => (
-          <Badge variant={r.target === "main" ? "muted" : "info"}>
-            {r.target}
-          </Badge>
+          <Inline gap="2xs">
+            {r.targets.map((t) => (
+              <Badge
+                key={t}
+                variant={t === MAIN_COMPOSITION_ID ? "muted" : "info"}
+              >
+                {t}
+              </Badge>
+            ))}
+          </Inline>
         ),
-        sortable: true,
+        sortable: false,
         filterable: true,
-        width: "9rem",
+        width: "12rem",
       },
       {
         id: "duration",
@@ -322,7 +348,7 @@ function BuildHistoryDataView({
         width: "7rem",
       },
     ],
-    [],
+    [targetOptions],
   );
 
   return (
@@ -394,9 +420,12 @@ function BuildHistoryExcerpt({
             <Badge variant={run.trigger === "auto" ? "info" : "muted"}>
               {run.trigger}
             </Badge>
-            {run.target !== "main" && (
-              <Badge variant="info">{run.target}</Badge>
-            )}
+            {!isMainCompositionBuild(run.targets) &&
+              run.targets.map((t) => (
+                <Badge key={t} variant="info">
+                  {t}
+                </Badge>
+              ))}
           </Row>
         ))}
       </Stack>

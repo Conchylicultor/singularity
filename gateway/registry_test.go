@@ -3,6 +3,7 @@ package main
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -382,21 +383,28 @@ func TestResolveLoadsMultiLabelSpecFromDisk(t *testing.T) {
 }
 
 // The per-label grammar exists to keep a dotted name a single safe path segment.
-// These are the shapes that would stop being one.
+// These are the shapes that would stop being one. Asserted through
+// validNamespace, not nameRegex, because validNamespace IS the rule — the regex
+// is only half of it.
 func TestNameRegexRejectsPathUnsafeNames(t *testing.T) {
 	for _, bad := range []string{
 		"", "..", ".", "a..b", ".a", "a.", "a/b", "a/../b", "A", "a_b",
 		"-a", "a b", "sonata..att-x", "sonata./att-x",
+		// 64 bytes: one over the datname cap, so its database would be a
+		// different (truncated) name than the one being routed.
+		strings.Repeat("a", 32) + "." + strings.Repeat("b", 31),
 	} {
-		if nameRegex.MatchString(bad) {
-			t.Errorf("nameRegex accepted %q; it must not", bad)
+		if validNamespace(bad) {
+			t.Errorf("validNamespace accepted %q; it must not", bad)
 		}
 	}
 	for _, good := range []string{
 		"a", "singularity", "att-1787064474-2qcq", "sonata.att-x", "a-1.b-2",
+		// Exactly 63 bytes — the longest namespace Postgres stores intact.
+		strings.Repeat("a", 31) + "." + strings.Repeat("b", 31),
 	} {
-		if !nameRegex.MatchString(good) {
-			t.Errorf("nameRegex rejected %q; it must accept it", good)
+		if !validNamespace(good) {
+			t.Errorf("validNamespace rejected %q; it must accept it", good)
 		}
 	}
 }

@@ -51,10 +51,15 @@ export const compositionsConfig = defineConfig({
         // enforces disjointness against each named bundle's containment. Lets an
         // app declare it is self-contained (e.g. excludes `agent-runtime`/`auth`).
         excludes: stringListField({ label: "Excludes" }),
-        // Opt-in auto-build & serve. Read by the CLI compose-serve stage from
-        // MAIN's (`singularity`) resolved config: only compositions with this on
-        // are composed into a per-composition frontend dist + empty DB and
-        // served live at http://<id>.localhost:9000. Engine-opaque — like
+        // The declared serve intent: "this composition is meant to be live
+        // here". Nothing acts on it automatically — a serve is an explicit
+        // `./singularity build --composition <id>`, which composes a
+        // per-composition frontend dist + empty DB served at
+        // http://<id>.<checkout>.localhost:9000 — so this records what a surface
+        // shows as "Serving", not what is served (the composition.json marker
+        // answers that). Re-wiring it to a trigger is Phase 6 of
+        // research/2026-08-17-global-composition-build-serve-model.md.
+        // Engine-opaque — like
         // `category` / `excludes`, `manifestItemToManifest` DROPS it (the closure
         // engine never sees it). The name intentionally collides with the build
         // plugin's own `autoBuild` (main's rebuild-on-push toggle): different
@@ -84,12 +89,12 @@ export const compositionsConfig = defineConfig({
         // served-baseline's bases into `named` — permanently shielding them from
         // any future negative, for no gain.
         //
-        // Main is not compose-servable: `singularity` is a reserved namespace that
-        // belongs to the main checkout's own `./singularity build`, and
+        // Main is not servable as a composition: `singularity` is a reserved
+        // namespace that belongs to the checkout's own `./singularity build`, and
         // `activatedCompositionIds` filters on servability, so `autoBuild` on THIS
-        // row is inert by construction — a stored `true` from any config layer has
-        // no path to compose-serve at all. `composition-closure` still pins it to
-        // `false` here so the seed says what is true.
+        // row is inert by construction — a stored `true` from any config layer can
+        // never name a namespace to provision. `composition-closure` still pins it
+        // to `false` here so the seed says what is true.
         {
           id: MAIN_COMPOSITION_ID,
           name: MAIN_COMPOSITION_ID,

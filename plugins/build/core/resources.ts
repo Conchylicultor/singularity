@@ -5,9 +5,13 @@ export const BuildRunSchema = z.object({
   id: z.string(),
   trigger: z.enum(["manual", "auto"]),
   commitHash: z.string().nullable(),
-  // "main" for a normal deploy, or a composition id (sonata, website, …) for a
-  // compose-serve child; `parentId` points a child back at its main run.
-  target: z.string(),
+  // WHICH COMPOSITIONS this one invocation built: `[MAIN_COMPOSITION_ID]` for a
+  // plain deploy, or the composition ids of a `build --composition a b` run. One
+  // invocation is one shared build (one install, codegen, checks pass,
+  // transcript, profile and verdict), so it is one row with N target chips.
+  targets: z.array(z.string()),
+  // Always null. Composition builds used to be child rows of a main run; nothing
+  // writes a parent any more, and the column goes in the Phase 8 cleanup.
   parentId: z.string().nullable(),
   startedAt: z.coerce.date(),
   finishedAt: z.coerce.date().nullable(),

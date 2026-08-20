@@ -66,6 +66,29 @@ type Spec struct {
 	Command   []string       `json:"command,omitempty"`   // optional: argv to spawn (release: compiled server binary). When empty, falls back to the bun convention.
 	ZeroCache *ZeroCacheSpec `json:"zeroCache,omitempty"` // optional: per-worktree zero-cache sidecar. Absent when the feature is off.
 
+	// Composition names WHICH APP this namespace serves. The gateway neither
+	// interprets it nor hands it on: the BACKEND reads it back off this same
+	// spec.json at boot (server-core/bin/spec-composition.ts) and picks its
+	// plugin registry from it. Absent means "no composition was declared",
+	// which the backend reads as the main app — never as "look on disk and see
+	// what turns up", which is the presence-keyed selection this field replaced.
+	//
+	// It is on this struct because it is part of the on-disk contract and the
+	// gateway round-trips a spec: dropping an unknown field here would erase it.
+	// Carried, not decomposed — exactly like Name.
+	//
+	// Deliberately NOT passed as an env var to the spawned backend. `singularity
+	// build` does not rebuild this Go binary (only `singularity start` does), so
+	// a running gateway is routinely older than the backend it spawns; a backend
+	// that depended on a new env line would silently fall back to the full
+	// registry and boot the whole app under a composition's own namespace and
+	// database. Reading the file the gateway already read removes the hop that
+	// could drop the value, and the two cannot drift.
+	//
+	// Omitted from the JSON when empty so a spec that declares no composition
+	// serializes as it always did.
+	Composition string `json:"composition,omitempty"`
+
 	// rev identifies the spec.json revision this value was parsed from. It rides
 	// INSIDE Spec — rather than as a sibling field on Worktree — so a spec and
 	// the fingerprint asserting "this is what's on disk" travel through the same

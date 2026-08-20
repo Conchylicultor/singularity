@@ -1,8 +1,24 @@
 import { afterAll, describe, expect, test } from "bun:test";
-import { existsSync, lstatSync, mkdirSync, mkdtempSync, readFileSync, readlinkSync, rmSync, symlinkSync, writeFileSync } from "fs";
+import {
+  existsSync,
+  lstatSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  readlinkSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from "fs";
 import { tmpdir } from "os";
 import { join } from "path";
-import { distNames, distStagingPath, publishDistAtomic, sweepDistLeftovers } from "./dist-publish";
+import { WORKTREE_SPEC_FILE } from "@plugins/infra/plugins/paths/server";
+import {
+  distNames,
+  distStagingPath,
+  publishDistAtomic,
+  sweepDistLeftovers,
+} from "./dist-publish";
 
 const tmp = mkdtempSync(join(tmpdir(), "dist-publish-test-"));
 afterAll(() => rmSync(tmp, { recursive: true, force: true }));
@@ -17,7 +33,12 @@ describe("distNames (path arithmetic)", () => {
       releaseName: "dist.live.42",
       releasePath: "/x/web-core/web/dist.live.42",
       swapPath: "/x/web-core/web/dist.swap.42",
-      prefixes: { staging: "dist.staging.", live: "dist.live.", swap: "dist.swap.", old: "dist.old." },
+      prefixes: {
+        staging: "dist.staging.",
+        live: "dist.live.",
+        swap: "dist.swap.",
+        old: "dist.old.",
+      },
     });
   });
 
@@ -25,9 +46,9 @@ describe("distNames (path arithmetic)", () => {
     const names = distNames("/home/u/.singularity/worktrees/sonata/web", 7);
     expect(names.parent).toBe("/home/u/.singularity/worktrees/sonata");
     expect(names.releaseName).toBe("web.live.7");
-    expect(distStagingPath("/home/u/.singularity/worktrees/sonata/web", 7)).toBe(
-      "/home/u/.singularity/worktrees/sonata/web.staging.7",
-    );
+    expect(
+      distStagingPath("/home/u/.singularity/worktrees/sonata/web", 7),
+    ).toBe("/home/u/.singularity/worktrees/sonata/web.staging.7");
   });
 });
 
@@ -88,20 +109,32 @@ describe("sweepDistLeftovers", () => {
   test("restores the newest surviving release and reclaims every other leftover", async () => {
     const parent = join(tmp, "sweep");
     const dir = join(parent, "web");
-    for (const name of ["web.live.100", "web.live.200", "web.staging.300", "web.swap.400", "web.old.500"]) {
+    for (const name of [
+      "web.live.100",
+      "web.live.200",
+      "web.staging.300",
+      "web.swap.400",
+      "web.old.500",
+    ]) {
       mkdirSync(join(parent, name), { recursive: true });
       writeFileSync(join(parent, name, "index.html"), name);
     }
-    writeFileSync(join(parent, "spec.json"), "{}"); // non-prefixed sibling must survive
+    // The real non-prefixed sibling in a worktree data dir: its spec.
+    writeFileSync(join(parent, WORKTREE_SPEC_FILE), "{}");
 
     await sweepDistLeftovers(dir);
 
     expect(readlinkSync(dir)).toBe("web.live.200");
     expect(readFileSync(join(dir, "index.html"), "utf8")).toBe("web.live.200");
-    for (const gone of ["web.live.100", "web.staging.300", "web.swap.400", "web.old.500"]) {
+    for (const gone of [
+      "web.live.100",
+      "web.staging.300",
+      "web.swap.400",
+      "web.old.500",
+    ]) {
       expect(existsSync(join(parent, gone))).toBe(false);
     }
-    expect(existsSync(join(parent, "spec.json"))).toBe(true);
+    expect(existsSync(join(parent, WORKTREE_SPEC_FILE))).toBe(true);
   });
 
   test("keeps the healthy current release, drops a dangling symlink's leftovers", async () => {

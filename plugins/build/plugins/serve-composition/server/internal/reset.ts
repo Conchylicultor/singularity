@@ -1,10 +1,18 @@
 // Reset a served composition to its genuine first-launch state — a NARROWER
 // `reapAttempt` (cf. debug/worktree-cleanup/server/internal/reap.ts). A served
-// composition (`autoBuild: true`) is live at http://<id>.localhost:9000 with its
-// own DB `<id>` and config dir ~/.singularity/state/config/<id>/. This keeps the spec +
-// dist + code (so it stays served) and wipes ONLY that one composition's DB +
-// config back to exactly what compose-serve provisions on a fresh serve, then
-// restarts the backend — so the author sees the real new-user experience.
+// composition is live at http://<namespace>.localhost:9000 with its own DB and
+// config dir, both named by that namespace. This keeps the spec + dist + code
+// (so it stays served) and wipes ONLY that one namespace's DB + config back to
+// exactly what a serve build provisions on a fresh serve, then restarts the
+// backend — so the author sees the real new-user experience.
+//
+// EVERYTHING here is scoped to THIS BACKEND'S CHECKOUT, and has to be: a
+// composition is served from whichever checkout built it, so the id `sonata`
+// names `sonata` from main and `sonata.att-x` from a worktree — two namespaces,
+// two databases, two config dirs. `REPO_ROOT` is the checkout this backend runs
+// out of, so `namespaceFor(id, checkoutRef(REPO_ROOT))` is the one this surface
+// is talking about, and the git layer the config is re-propagated from is the
+// same tree that composed it.
 //
 // Why config is RE-PROPAGATED, not just deleted: a bare `rm -rf` of the config
 // dir would fall back to *code* defaults, not a genuine first-launch. Re-running
@@ -45,9 +53,16 @@ import {
   assertServableCompositionNamespace,
   compositionsConfig,
 } from "@plugins/plugin-meta/plugins/composition/core";
-import { MAIN_WORKTREE_NAME } from "@plugins/infra/plugins/paths/server";
+import {
+  REPO_ROOT,
+  checkoutRef,
+  currentWorktreeName,
+} from "@plugins/infra/plugins/paths/server";
 import { configDir } from "@plugins/config_v2/data-dirs";
-import { asNamespace } from "@plugins/infra/plugins/namespace/core";
+import {
+  namespaceFor,
+  type Namespace,
+} from "@plugins/infra/plugins/namespace/core";
 
 // The `compositions` config's owning-plugin path — its jsonc files live under
 // `config/<this>/` and the per-worktree user config dir (mirrors compose-serve).
@@ -72,9 +87,10 @@ export async function resetCompositionData(id: string): Promise<void> {
   // Guard 1 — the explicit "never main/central" gate (rejects the reserved
   // {central, singularity, main} namespaces and enforces a valid name).
   assertServableCompositionNamespace(id);
-  // The endpoint's composition id, now known to be a legal name. Main-only
-  // today, so it IS the namespace — the same reading compose-serve takes.
-  const ns = asNamespace(id);
+  // The namespace this composition occupies WHEN SERVED FROM HERE — the same
+  // mint the serve build made, so the DB, config dir and marker this reset
+  // touches are the ones that build created.
+  const ns = namespaceFor(id, await checkoutRef(REPO_ROOT));
 
   // Guard 2 — the decisive provenance signal: only a compose-serve namespace
   // carries the composition.json marker.
@@ -84,36 +100,48 @@ export async function resetCompositionData(id: string): Promise<void> {
     );
   }
 
-  const root = await ensureMainWorktreeRoot();
+  const root = REPO_ROOT;
 
-  // MAIN's resolved manifest, read once and judged by both remaining guards —
-  // read main-authoritatively, regardless of which backend is executing. Two
-  // reads with different options would let the guards disagree about what the
-  // manifest says.
+  // THIS CHECKOUT's resolved manifest, read once and judged by both remaining
+  // guards. It used to be read main-authoritatively, because the serve stage ran
+  // inside main's build and main's config was the only one that mattered; a
+  // serve build now reads the manifest of the checkout it runs in, so a guard
+  // reading main's would judge the wrong document. Two reads with different
+  // options would let the guards disagree about what the manifest says.
   const values = readEffectiveConfigFromDisk(compositionsConfig, {
     root,
-    userConfigDir: configDir.file(MAIN_WORKTREE_NAME),
+    userConfigDir: configDir.file(currentWorktreeName()),
     hierarchyPath: COMPOSITIONS_HIERARCHY_PATH,
   });
 
   // Guard 3 — no collision with a real git worktree dir, git branch, or a
   // marker-less spec dir of that name. The composition side of the symmetric
   // namespace guard; the checkout side runs in `setupWorktree`.
+  //
+  // Probed against the MAIN checkout, not `root`. Everything else here is a fact
+  // about the checkout this backend runs out of — its manifest, its config — but
+  // the probe reads git state, and `.claude/worktrees/` exists only in the main
+  // checkout: probing a linked one looks at a path that is never there, so the
+  // "a git worktree of that name already owns this namespace" arm could never
+  // fire from a worktree backend. `build-targets.ts` resolves the same root for
+  // the same reason, and both are memoized, so this is one spawn at most.
   const collision = namespaceCollision(
     ns,
     { kind: "composition", id },
-    probeNamespace(root, ns, new Set(values.manifests.map((i) => i.id))),
+    probeNamespace(
+      await ensureMainWorktreeRoot(),
+      ns,
+      new Set(values.manifests.map((i) => i.id)),
+    ),
   );
   if (collision !== null) {
     throw new CompositionResetError(`reset "${id}": ${collision}`);
   }
 
   // Guard 4 — belt-and-suspenders: `id` must be currently activated
-  // (`autoBuild: true`) in MAIN's resolved config. Deactivation sweeps the
-  // marker, so guard 2 already implies this. `activatedCompositionIds` is the
-  // SAME function compose-serve derives its activated set with — this used to
-  // hand-roll the `autoBuild` filter, which is how a guard drifts from the stage
-  // it is guarding.
+  // (`autoBuild: true`) in this checkout's resolved config. Guard 2 (the marker)
+  // is the decisive one; this is the second opinion, and it now reads the same
+  // document the Serve toggle writes on this instance.
   const activated = activatedCompositionIds(values.manifests);
   if (!activated.includes(id)) {
     throw new CompositionResetError(
@@ -124,17 +152,17 @@ export async function resetCompositionData(id: string): Promise<void> {
   // Recipe — guards passed; the target is provably this one namespace.
   // Drop + recreate the DB (fresh empty; the backend's boot migrator rebuilds the
   // schema on next spawn). Zero replication artifacts must go before the drop.
-  if (await databaseExists(id)) {
-    await dropZeroReplicationArtifacts(id);
-    await dropDatabase(id);
+  if (await databaseExists(ns)) {
+    await dropZeroReplicationArtifacts(ns);
+    await dropDatabase(ns);
   }
-  await ensureDatabase(id);
+  await ensureDatabase(ns);
 
   // Wipe the config dir and re-propagate the git-layer first-launch defaults.
-  await rm(configDir.file(id), { recursive: true, force: true });
-  await propagateConfigToUser({ root, userConfigDir: configDir.file(id) });
+  await rm(configDir.file(ns), { recursive: true, force: true });
+  await propagateConfigToUser({ root, userConfigDir: configDir.file(ns) });
 
-  await restartNamespace(id);
+  await restartNamespace(ns);
 }
 
 /**
@@ -146,9 +174,9 @@ export async function resetCompositionData(id: string): Promise<void> {
  * Deliberately does NOT call `getAdminPool().end()` — that is a CLI-exit concern;
  * the server's admin pool is long-lived.
  */
-async function restartNamespace(id: string): Promise<void> {
+async function restartNamespace(ns: Namespace): Promise<void> {
   try {
-    await fetch(`http://localhost:9000/gateway/worktrees/${id}/restart`, {
+    await fetch(`http://localhost:9000/gateway/worktrees/${ns}/restart`, {
       method: "POST",
       signal: AbortSignal.timeout(30_000),
     });

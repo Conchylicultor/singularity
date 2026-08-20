@@ -44,9 +44,19 @@ composition is this?" is answered from provenance, which cannot be ambiguous.
   `sonata.singularity`.
 - `namespaceUrl` / `namespaceHost` / `namespaceFromHost` — the only sanctioned
   spellings of `.localhost`, enforced by the `namespace:no-hand-built-url` check.
-- `NAMESPACE_RE` — the grammar, pinned to the gateway's `nameRegex` and to
-  `server-core/bin/select-registry.ts`'s inline copy by the
-  `namespace:grammar-in-sync` check.
+- `NAMESPACE_RE` — the grammar. Every TypeScript caller imports it, boot
+  included (`server-core/bin/select-registry.ts`): this module has zero imports
+  and `paths/core` already reaches it, so naming it costs boot nothing. The only
+  copy is the gateway's Go `nameRegex`, pinned by `namespace:grammar-in-sync`.
+- The **63-byte cap**, in that grammar and as a throw in `namespaceFor`. A
+  namespace IS a Postgres database name and `datname` truncates at
+  `NAMEDATALEN - 1` = 63 bytes *silently*, so two long namespaces would share one
+  database while both appeared to work. Only the join of (composition, checkout)
+  knows the resulting length — the checkout half is a worktree name invented at
+  runtime — so it is enforced at the minter, not by a check over the manifest.
+  `plugins/database/plugins/admin`'s `assertSafeName` reuses `NAMESPACE_RE`
+  itself rather than a lookalike, so the DB-name rule and the namespace rule are
+  one rule.
 
 ## The gateway is deliberately dumb about this
 
@@ -67,7 +77,10 @@ Design: `research/2026-08-18-global-namespace-identity.md`.
 - Description: Canonical namespace identity: the branded Namespace type, the <composition>.<checkout> elision rule that mints one, and the URL/host encodings derived from it.
 - Cross-plugin:
   - Imported by:
+    - `build`
+    - `framework/tooling/codegen`
     - `framework/tooling/guards`
+    - `framework/tooling/web-artifacts`
     - `infra/paths`
     - `plugin-meta/composition`
 - Core:

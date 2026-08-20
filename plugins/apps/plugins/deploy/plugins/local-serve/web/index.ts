@@ -8,7 +8,7 @@ import { ServeAction } from "./components/serve-action";
 
 export default {
   description:
-    "Test locally: the deployment pane's section for the composition served on the shared gateway (its live URL, what it does and does not prove, and the main-only refusal off main), plus the one-button serve/open shortcut on the deployments list row.",
+    "Test locally: the deployment pane's section for the composition served on the shared gateway (its live URL and what it does and does not prove), plus the one-button serve/open shortcut on the deployments list row.",
   contributions: [
     DeploymentDetail.Section({
       id: "serve",

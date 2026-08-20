@@ -27,6 +27,15 @@ export function registerServeApp(program: Command) {
       REPO_ROOT,
     )
     .option("--server <path>", "Absolute path to the backend working dir")
+    // Which app the backend boots. Defaults to `--name`, which is what the
+    // namespace meant back when the backend picked its registry by looking for
+    // a `server.composition.<name>.generated.ts` on disk; naming it explicitly
+    // is what replaced that guess. Separate from `--name` because a namespace is
+    // `<composition>.<checkout>` and only a single-label one is also an id.
+    .option(
+      "--composition <id>",
+      "Composition whose filtered server registry the backend boots (default: --name)",
+    )
     // REQUIRED, with no default. `serve-app` boots under an isolated
     // SINGULARITY_DIR (see the action), and every derivable dist path
     // (`worktreeArtifacts.webDist(...)`) resolves inside THAT root — which holds
@@ -45,6 +54,7 @@ export function registerServeApp(program: Command) {
         port: string;
         repoRoot: string;
         server?: string;
+        composition?: string;
         web: string;
         logLevel: string;
       }) => {
@@ -85,6 +95,7 @@ export function registerServeApp(program: Command) {
           name,
           server,
           web: opts.web,
+          composition: opts.composition ?? opts.name,
           port,
           repoRoot,
           logLevel: opts.logLevel,

@@ -146,7 +146,7 @@ test("every seed carries `excludes` and each ref resolves to a real bundle", () 
 
 test("every seed carries `autoBuild` (default off) and the mapper drops it", () => {
   for (const s of seeds) {
-    // The compose-serve opt-in flag is present on every seed, defaulting off.
+    // The serve-intent flag is present on every seed, defaulting off.
     expect(typeof s.autoBuild).toBe("boolean");
     expect(s.autoBuild).toBe(false);
     // Engine-opaque: `manifestItemToManifest` drops it exactly like `category` /

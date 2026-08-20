@@ -11,7 +11,7 @@ when it is an ordered *stage sequence* rather than a helper, in
 
 | command | what it does |
 |---|---|
-| `build` | **Deploy this checkout into the live dev cluster**, *or* — `--hermetic --composition <name…>` — **produce one or more compositions' artifact sets on a bare host from a fresh `git clone`.** The deploy posture is the inner loop: artifacts + Postgres readiness, the worktree DB fork, the `build_runs` ledger, gateway spec/restart/health probe, compose-serve; it needs a provisioned dev box. The hermetic posture is filtered registries + generated migration SQL + the web dist, as a function of (source tree, compositions) only — no cluster, no gateway, no ledger. |
+| `build` | **Deploy this checkout into the live dev cluster** — its own app, or the compositions named by `--composition <name…>`, each at `http://<composition>.<checkout>.localhost:9000` — *or* — `--hermetic --composition <name…>` — **produce those compositions' artifact sets on a bare host from a fresh `git clone`.** The deploy posture is the inner loop: artifacts + Postgres readiness, the DB (the worktree fork for the checkout's own app, an empty one per composition), the `build_runs` ledger, gateway spec/restart/health probe; it needs a provisioned dev box. The hermetic posture is filtered registries + generated migration SQL + the web dist, as a function of (source tree, compositions) only — no cluster, no gateway, no ledger. |
 | `release` | Wraps `build --hermetic` and packs its output into a portable self-contained app (`--target web` / `tauri`). |
 | `check` | Run the repo validation checks. **The only in-process caller of `runChecks()`** — `build` and `push` both SPAWN this command via [`bin/check-subprocess.ts`](bin/check-subprocess.ts) (read its docblock), so their two `checks ✓` are one claim and the global cache stays honest. |
 | `test` | Run tests under the given paths (default: whole `plugins` tree) through **both** runners sequentially (`bun test`, then `vitest run`), then summarize both buckets — an empty one is stated, not implied, because either runner alone is green-but-partial. Paths only; no flag forwarding. |
@@ -35,7 +35,7 @@ an orphaned hermetic build exits instead of sitting on `.build.lock`. Under
 `release` the guard is inert — the child's ppid is release's — so it fires only
 if release itself dies, which is exactly when dropping the lock is correct.
 Nothing else the deploy posture arms (progress file, op profiler, run recorder,
-worktree-op markers, exit hooks, verdict guard, deploy receipt) exists on that
+worktree-op markers, exit hooks, verdict guard, deploy receipts) exists on that
 path; see `bin/commands/internal/hermetic-build.ts`.
 
 Op commands used to additionally re-exec themselves under `bun --inspect` so the
@@ -183,12 +183,84 @@ must be armed strictly after that loop or it is silently overwritten.
 `--composition` once meant "deploy this checkout, but filtered" — so cutting a
 release required a machine that was already a Singularity dev box, and the
 artifact was a function of the developer's environment rather than of the source.
-The flag is back, and the split it was missing is now a **posture** of the one
-verb rather than a second command: `build --hermetic --composition <name…>` is
-the artifact half (bare host, fresh clone, no cluster contact, N compositions per
-invocation), plain `build` is the deploy half. `--composition` without
-`--hermetic` is refused — building a composition *into the dev cluster* is a
-later phase and needs a namespace rule the hermetic path does not.
+The flag is back, and the split it was missing is a **posture** of the one verb
+rather than a second command: `build --hermetic --composition <name…>` is the
+artifact half (bare host, fresh clone, no cluster contact, N compositions per
+invocation), plain `build --composition <name…>` is the deploy half — it builds
+those compositions AND serves them into the dev cluster from whatever checkout
+you are standing in, at `http://<composition>.<checkout>.localhost:9000`, each
+with its own dist and its own empty database.
+
+The two postures read DIFFERENT manifest documents, and that divergence is
+deliberate: hermetic validates against the **code seed**
+(`compositionsConfig.fields.manifests.defaultValue`, `assertKnownCompositions`)
+because a release is a function of the source tree, while the deploy posture
+reads this checkout's **resolved layered config**
+(`bin/commands/internal/build-targets.ts`) because a composition created in
+Studio lives only in a user layer and must still be servable. Both call sites say
+so.
+
+### One invocation, N targets
+
+The deploy posture mirrors `hermetic-build.ts`: **a shared prefix once, then a
+loop over targets.**
+
+```
+per invocation:  preflight → resolve targets → lock → stage 1 (deps + every
+                 target's registry) → stage 2 (migrations + codegen) → format →
+                 validation → central → ONE verdict
+per target:      marker → build+publish dist → DB → propagate config → spec →
+                 restart → health probe → receipt
+```
+
+The loop does NOT live inside `build.ts`'s terminal funnel — that closure already
+holds eleven invocation-scoped values, and fanning out inside it is how the file
+reached 1900 lines. `bin/commands/internal/build-targets.ts` decides what a
+target IS (id → manifest row → namespace → collision guard);
+`bin/commands/internal/deploy-namespace.ts` deploys one, returning a
+discriminated result and never calling `process.exit`. `build.ts` keeps the
+funnel, the guard, the receipts, the recorder and the verdict.
+
+What is per-invocation and what is per-target is not a matter of taste — six
+module globals decide it. `openBuildProgress` (one `current`; a second call is a
+silent no-op), the op profiler, the worktree-op marker, `installVerdictGuard`
+(one `emittedVerdict`, exactly one verdict per process), `installFatalSignalExit`
+(armed once, before the loop, because Bun installs its `sigaction` lazily on the
+first `process.on(sig)` and does not chain), the build profile and step log, and
+the **single `build_runs` row** are all keyed on the CHECKOUT's own namespace.
+The deploy receipt is the one that is genuinely per-namespace — it is the file
+the gateway-facing deploy answers for — so it is a `Map`, and a target that
+publishes closes its own entry immediately, so a later failure can never rewrite
+it as `failed`.
+
+Three orderings that look incidental and are not:
+
+- **Every target's `sweepDistLeftovers` runs up front**, before any staging dir
+  exists. Sweeping inside the loop deletes target 2's staging dir while target
+  1's is live.
+- **The `composition.json` marker is written TWICE** for a composition target,
+  and both are load-bearing. FIRST, before anything else touches the namespace
+  dir — a crash mid-build otherwise leaves a marker-less dir the collision guard
+  refuses forever. AGAIN in the same breath as `spec.json`, because the claim
+  alone does not survive: a build spends most of its wall time parked on the host
+  CPU grant, and one namespace dir was removed underneath a waiting build
+  (2026-08-19), which recreated every other artifact at the end and came up live
+  with no marker — unre-servable, unresettable, reported as not served. The write
+  (`stampCompositionMarker`, `infra/worktree`) is atomic, idempotent and reads
+  itself back, so the second call is a no-op when nothing went wrong and the
+  build fails loudly rather than publishing a spec for a namespace with no
+  provenance. The checkout's own app writes no marker at all: that namespace
+  belongs to the checkout, and a marker there would make the next same-named
+  worktree refuse to be created.
+- **The database is two opposite operations, not one function with a flag.** The
+  checkout's own app runs on the worktree FORK (which carries main's data —
+  creating it empty would be wrong), every other composition gets an EMPTY
+  database the backend's boot migrator fills. The fork wait is hoisted into the
+  invocation prefix because the ledger row lives in that database.
+
+`hasLiveInflightBuild` (the backend's durable lock) is deliberately target-blind,
+so a live composition build makes the UI drop a main auto-build request in the
+same checkout. Correct: the per-checkout `.build.lock` serializes them anyway.
 
 The ordered pipeline both postures drive is
 [`bin/commands/internal/app-artifacts.ts`](bin/commands/internal/app-artifacts.ts)
@@ -196,18 +268,30 @@ The ordered pipeline both postures drive is
 (`prepareCompositionSources` → `generateAppSources` → `buildAndPublishWebDist`),
 `fastValidationJobs` and `acquireArtifactLock`, plus the
 explicit list of what stays *out* (cluster readiness, the run ledger, gateway
-HTTP, worktree-op markers, compose-serve, `propagateConfigToUser`). It is split
+HTTP, worktree-op markers, the provenance marker, `propagateConfigToUser`). It is split
 into three functions rather than one because `build`'s dev-only steps interleave
 *between* them. Same shape, one level up, as codegen's `regen-pipeline.ts`.
 
 Two consequences worth knowing before editing:
 
-- **Every filtered registry is per-name** (`<dir>.composition.<name>.generated.ts`)
-  and `plugins-active.ts` selects one only under a matching
-  `SINGULARITY_WORKTREE`, so another namespace's file cannot reconfigure this
-  worktree's backend — a plain `build` passes `compositions: []` simply to emit
-  none. `--serve-composition` is unrelated: it composes *other* namespaces out of
-  main's artifact fleet after main deploys.
+- **Every filtered registry is per-composition**
+  (`<dir>.composition.<id>.generated.ts`) and `plugins-active.ts` selects one
+  only under a matching `composition` — the field the backend reads back off its
+  own `~/.singularity/worktrees/<namespace>/spec.json`, the same file the gateway
+  read to spawn it (`bin/spec-composition.ts`; deliberately not an env var,
+  because `build` does not rebuild the Go gateway and a dropped variable would
+  boot the full app under a composition's namespace) — so a file on disk cannot
+  reconfigure a backend that was not told to load it, and a missing one throws
+  rather than quietly booting the full app. A plain `build` names the MAIN
+  composition, which emits no filtered file at all, because its registry IS the
+  committed `<dir>.generated.ts` — so stage 1 skips the plugin-tree walk entirely
+  for it.
+
+  **Filtered registries are never swept.** They used to be, by the compose-serve
+  deactivation stage; with that stage deleted they accumulate in every checkout
+  that has ever served something. Gitignored, but they are `tsc` input. Phase 5
+  of `research/2026-08-17-global-composition-build-serve-model.md` owns the
+  reclaim trigger.
 - **Nothing in the CLI *process*'s import closure may reach a registered
   pre-barrel or post-web codegen manifest.** Bun freezes a module on first
   `import()`, and stage 2 regenerates every such manifest and then re-reads it: a
@@ -264,8 +348,10 @@ The red agent-worktree border is stamped into the staged `index.html` by
 ([`bin/commands/internal/experimental-marker.ts`](bin/commands/internal/experimental-marker.ts)),
 never inferred in the browser: `<name>.localhost` is equally the grammar for
 worktree deploys, composition namespaces and release previews, so no client-side
-rule can tell them apart. Only `build` from a non-main worktree passes `true` —
-every other dist producer is clean by default, not by exclusion. CSS rule in
+rule can tell them apart. Only `build` from a non-main CHECKOUT passes `true` —
+a fact about the checkout, not about the composition, so every namespace a
+worktree publishes carries the frame and main's publishes none. Every other dist
+producer is clean by default, not by exclusion. CSS rule in
 ui-kit's `theme/app.css` (JS-sets / CSS-styles split, as with `.dark`).
 
 <!-- AUTOGENERATED:BEGIN — do not edit; regenerated by `./singularity build` -->

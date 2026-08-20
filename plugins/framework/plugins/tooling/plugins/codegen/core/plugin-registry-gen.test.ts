@@ -14,6 +14,8 @@ import { tmpdir } from "os";
 import { join } from "path";
 import {
   collectedDirNamedCompositionRegistryPath,
+  compositionRegistryFileName,
+  compositionRegistryPath,
   discoverCollectedDirs,
   listNamedCompositionRegistries,
   parseNamedCompositionRegistryFileName,
@@ -81,6 +83,41 @@ test("per-name registry path renders and round-trips through parse", () => {
   expect(() =>
     collectedDirNamedCompositionRegistryPath(def, "../evil"),
   ).toThrow("Invalid composition name");
+});
+
+/**
+ * The one place that knows main's registry is the committed file.
+ *
+ * `singularity` is an ordinary composition — it just happens to be the one whose
+ * closure is the whole tree, which is exactly what `plugins-registry-in-sync`
+ * re-derives and asserts on every build. So asking for its registry must hand
+ * back `<dir>.generated.ts`, and nothing may ever emit a
+ * `<dir>.composition.singularity.generated.ts` for a backend to pick up by
+ * presence.
+ */
+test("the main composition resolves to the committed registry, every other to a filtered one", () => {
+  const def: DiscoveredCollectedDir = {
+    dir: "server",
+    _brand: "CollectedDirDef",
+    ownerDir: "/repo/plugins/framework/plugins/server-core",
+  };
+  expect(compositionRegistryPath(def, "singularity")).toBe(
+    "/repo/plugins/framework/plugins/server-core/core/server.generated.ts",
+  );
+  expect(compositionRegistryPath(def, "sonata")).toBe(
+    "/repo/plugins/framework/plugins/server-core/core/server.composition.sonata.generated.ts",
+  );
+  // The filename half, which `release` asks directly (it holds a repo-relative
+  // path, not a DiscoveredCollectedDir).
+  expect(compositionRegistryFileName("web", "singularity")).toBe(
+    "web.generated.ts",
+  );
+  expect(compositionRegistryFileName("web", "sonata")).toBe(
+    "web.composition.sonata.generated.ts",
+  );
+  expect(() => compositionRegistryFileName("web", "../evil")).toThrow(
+    "Invalid composition name",
+  );
 });
 
 // The pre-S1 checkout-global singleton spelling is gone (S5): nothing writes,

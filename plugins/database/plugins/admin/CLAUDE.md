@@ -14,6 +14,7 @@
     - `TableStat`
   - Exports (values):
     - `backupDatabase`
+    - `closeAdminPool`
     - `connectionString`
     - `countActiveConnections`
     - `databaseExists`

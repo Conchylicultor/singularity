@@ -559,7 +559,7 @@ export function fileConfigProxy(filePath: string): ConfigProxy {
 /**
  * The RESOLVED value a worktree's backend would read for one config, computed
  * off disk with no server runtime — for build-time consumers (the CLI's
- * compose-serve stage) that must see git-layer defaults AND user-layer edits,
+ * build's target resolver) that must see git-layer defaults AND user-layer edits,
  * not `descriptor.fields.<x>.defaultValue` (the code-defaults-only bug-shape).
  *
  * Precedence is NEVER reimplemented here: the runtime reads the USER layer via

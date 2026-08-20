@@ -764,10 +764,24 @@ export async function bootSelfContainedApp(opts: {
    * falls back to `bun bin/index.ts`.
    */
   command?: string[];
+  /**
+   * Which composition this app IS, threaded into the spec so the backend selects
+   * its plugin registry by identity.
+   *
+   * Inert for a real release, whose `command` is a compiled binary: `release`
+   * repoints the `@composition-server-registry` alias at compile time, so the
+   * bundled closure IS the composition closure and there is no runtime selection
+   * left to steer. It matters for the uncompiled path (`serve-app` with no
+   * `--command`, which runs the checkout's `bun bin/index.ts`), and it is worth
+   * recording either way: the spec is the one durable statement of which app a
+   * namespace serves.
+   */
+  composition?: string;
   logLevel?: string;
   log?: LogFn;
 }): Promise<{ gateway: Bun.Subprocess }> {
-  const { name, server, web, command, port, bindHost, repoRoot } = opts;
+  const { name, server, web, command, composition, port, bindHost, repoRoot } =
+    opts;
   const logLevel = opts.logLevel ?? "info";
   const log = opts.log ?? noop;
 
@@ -804,6 +818,7 @@ export async function bootSelfContainedApp(opts: {
     server,
     web,
     command,
+    composition,
     zeroCache: zeroCacheSpec({ name, repoRoot }),
   });
   log(`Registered app "${name}"; waiting for backend to become ready...`);

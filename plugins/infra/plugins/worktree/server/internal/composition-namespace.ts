@@ -17,7 +17,13 @@
 // consume the exact same safety-critical logic; a marker-name or collision-rule
 // change can never drift between them.
 
-import { existsSync, readFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  renameSync,
+  writeFileSync,
+} from "node:fs";
 import { join } from "node:path";
 import type { Namespace } from "@plugins/infra/plugins/namespace/core";
 import { worktreesDir } from "@plugins/infra/plugins/paths/server";
@@ -138,6 +144,59 @@ export function probeNamespace(
     branchExists: branchExists(root, ns),
     compositionIdExists: compositionIds.has(ns),
   };
+}
+
+/**
+ * Stamp the provenance marker for a compose-serve namespace, and PROVE it
+ * landed. Idempotent — safe, and meant, to be called more than once per build.
+ *
+ * The writer lives here, next to the readers and next to the filename itself,
+ * because it started life as a private copy inside the build CLI: one module
+ * spelled the path to write it and another spelled the path to read it, which
+ * is the drift this plugin exists to prevent. Nothing outside can name the file.
+ *
+ * ATOMIC (temp + rename). A torn marker reads as a foreign dir and would fail
+ * the namespace-collision guard forever.
+ *
+ * VERIFIED. The write is followed by a read-back, and a marker that is not on
+ * disk afterwards throws. A silent no-op here is not cosmetic: the marker is the
+ * only proof the namespace is a served composition, so its absence makes the
+ * next build of the same composition REFUSE the namespace (`namespaceCollision`
+ * reads a marker-less dir as foreign), makes the Serve status report a live
+ * composition as not served, and makes Reset refuse it. Missing provenance is a
+ * permanently-stuck namespace, so it fails loudly at the instant it is written
+ * rather than at the next build, in another process, a day later.
+ *
+ * CALL IT AGAIN AT THE COMMIT POINT. Claiming the namespace up front is not
+ * enough on its own: a build spends most of its wall time waiting for a host CPU
+ * grant, and the namespace dir is a shared-filesystem location that can be
+ * removed while it waits — this is not hypothetical, it is what happened on
+ * 2026-08-19 (dir created 19:42:38, gone before 19:57:31, recreated by the dist
+ * compose). Every other artifact in that dir is (re)written at the end of the
+ * build and so healed itself; the marker was written only in the prefix and did
+ * not. So the marker is stamped twice: once to CLAIM the dir before anything
+ * else writes into it, and once as part of the COMMIT that makes the namespace
+ * live. The second write carries the same bytes, so in the normal case it
+ * changes nothing.
+ */
+export function stampCompositionMarker(
+  ns: Namespace,
+  marker: CompositionMarker,
+): void {
+  const dir = join(worktreesDir(), ns);
+  const path = join(dir, COMPOSITION_MARKER_FILE);
+  mkdirSync(dir, { recursive: true });
+  const tmp = `${path}.${process.pid}.tmp`;
+  writeFileSync(tmp, JSON.stringify(marker, null, 2) + "\n");
+  renameSync(tmp, path);
+  const landed = readCompositionMarker(ns);
+  if (landed === null || landed.composition !== marker.composition) {
+    throw new Error(
+      `composition marker for "${ns}" did not land at ${path} ` +
+        `(read back: ${landed === null ? "absent" : `composition "${landed.composition}"`}). ` +
+        `Without it the namespace cannot be re-served, reset, or reported as served.`,
+    );
+  }
 }
 
 /** True when `worktrees/<ns>/composition.json` exists — the namespace is compose-serve-owned. */

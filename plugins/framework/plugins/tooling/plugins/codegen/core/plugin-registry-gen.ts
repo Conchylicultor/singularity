@@ -10,6 +10,7 @@ import { buildBarrelFreeTree } from "./barrel-free-tree";
 import type { CollectedDirDef } from "@plugins/framework/plugins/tooling/plugins/collected-dir/core";
 import { asPluginId } from "@plugins/framework/plugins/plugin-id/core";
 import { assertCompositionName } from "@plugins/plugin-meta/plugins/composition/core";
+import { MAIN_COMPOSITION_ID } from "@plugins/infra/plugins/namespace/core";
 import { computeDisabledIds } from "./disabled-ids";
 import { writeGenerated } from "./write-generated";
 
@@ -194,9 +195,10 @@ export interface RegistryGenContext {
   // `<dir>/` tree, which is the expensive half of registry codegen, and the
   // callers that already share ONE ctx re-render the same `<dir>` more than
   // once. `regen-pipeline.ts` shares a ctx between the registry and eager-tier
-  // generators (the eager tier re-scanned `web` a second time); `compose-serve.ts`
-  // shares a ctx across every activated composition (N compositions × 3 runtime
-  // dirs collapse to 3 scans); and the composition-equivalence check renders each
+  // generators (the eager tier re-scanned `web` a second time); the build's
+  // stage 1 shares a ctx across every composition one invocation names
+  // (N compositions × 3 runtime dirs collapse to 3 scans); and the
+  // composition-equivalence check renders each
   // collected dir twice, once unfiltered and once bundle-filtered. Behaviour is
   // unchanged — the cache holds the raw pre-filter scan, so the disabled filter,
   // the bundle filter and the dep pruning still run per call.
@@ -515,7 +517,9 @@ export async function generatePluginRegistry(opts: {
 // `prewarm` is in this ONE set (rather than a released-only sibling set)
 // because release is its only consumer and release is now per-name too — which
 // also means `listNamedCompositionRegistries` lists prewarm files, so
-// compose-serve's deactivation sweep reclaims them like any other.
+// a future reclaim sweep would list prewarm files like any other. (Nothing
+// sweeps today — the compose-serve deactivation stage that used to was deleted
+// with the serve fan-out; Phase 5 owns the replacement.)
 const COMPOSITION_RUNTIME_DIRS = new Set(["web", "server", "prewarm"]);
 
 export function collectedDirNamedCompositionRegistryPath(
@@ -523,11 +527,47 @@ export function collectedDirNamedCompositionRegistryPath(
   name: string,
 ): string {
   assertCompositionName(name);
-  return join(
-    def.ownerDir,
-    "core",
-    `${def.dir}.composition.${name}.generated.ts`,
-  );
+  return join(def.ownerDir, "core", compositionRegistryFileName(def.dir, name));
+}
+
+/**
+ * The registry FILE NAME for one `<dir>` and one composition — the single fact
+ * that `singularity`'s registry is the committed `<dir>.generated.ts` and every
+ * other composition's is the gitignored `<dir>.composition.<id>.generated.ts`.
+ *
+ * That equality is not a carve-out for main. It is exactly what Phase 1's
+ * `plugins-registry-in-sync` check proves: the committed registry IS the
+ * `singularity` composition's registry, re-derived from the filesystem on every
+ * build and asserted byte-identical. So `singularity` is an ordinary composition
+ * here, and `build` and `build --composition singularity` are identical by
+ * construction rather than by two code paths that agree.
+ *
+ * Every consumer asks THIS — the codegen writer, the backend's boot-time
+ * selector, the web fleet planner, `release`'s compile-time alias — so no caller
+ * can arrive at "the composition's registry" by spelling a filename and get main
+ * wrong. Filename-shaped (rather than path-shaped) because `release` names the
+ * file relative to the repo root and holds no `DiscoveredCollectedDir`;
+ * `compositionRegistryPath` is the def-shaped wrapper for everyone else.
+ */
+export function compositionRegistryFileName(
+  dir: string,
+  composition: string,
+): string {
+  assertCompositionName(composition);
+  return composition === MAIN_COMPOSITION_ID
+    ? `${dir}.generated.ts`
+    : `${dir}.composition.${composition}.generated.ts`;
+}
+
+/** Where composition `composition`'s `<dir>` registry lives — see
+ *  `compositionRegistryFileName` for why main resolves to the committed file. */
+export function compositionRegistryPath(
+  def: DiscoveredCollectedDir,
+  composition: string,
+): string {
+  return composition === MAIN_COMPOSITION_ID
+    ? collectedDirRegistryPath(def)
+    : collectedDirNamedCompositionRegistryPath(def, composition);
 }
 
 export async function generateCompositionRegistry(opts: {
@@ -543,6 +583,15 @@ export async function generateCompositionRegistry(opts: {
   ctx?: RegistryGenContext;
 }): Promise<void> {
   assertCompositionName(opts.name);
+  // The main composition's registry is the COMMITTED `<dir>.generated.ts`
+  // (`compositionRegistryFileName`), which `generatePluginRegistry` already
+  // wrote this build. Writing a `<dir>.composition.singularity.generated.ts`
+  // beside it would mint a second, gitignored spelling of the same registry —
+  // the file that used to reconfigure main's backend on its next spawn purely by
+  // being present, and the reason `--hermetic --composition singularity` was
+  // refused. Nothing may produce it, so the skip is here, at the one writer,
+  // rather than as a guard at each caller.
+  if (opts.name === MAIN_COMPOSITION_ID) return;
   const ctx = opts.ctx ?? (await buildRegistryGenContext(opts.root));
   const defs = discoverCollectedDirs(opts.root);
   for (const def of defs) {

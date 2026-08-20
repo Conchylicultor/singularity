@@ -7,15 +7,77 @@ can record rows without evaluating that graph — importing `build/server` pulls
 `config_v2` (whose module eval throws `SINGULARITY_WORKTREE must be set`) and
 `shell/notifications`, neither of which exists in an env-less terminal build.
 
-The recorder writes to **main's** DB via a short-lived pool
-(`openShortLivedClient(MAIN_WORKTREE_NAME)` + drizzle), because compose-serve is
-main-only and the CLI has no worktree identity — it cannot use the env-bound `db`.
-Rows are stamped first-writer-wins (`where(isNull(finishedAt))`) so the backend's
-`proc.exited` writer and the orphan reconciler in `build/server` never overwrite
-the CLI's authoritative close.
+The recorder writes to the DB of the namespace it is HANDED
+(`createBuildRunRecorder(ns)` → `openShortLivedClient(ns)` + drizzle), because the
+CLI has no worktree identity of its own and cannot use the env-bound `db`. That
+namespace is the BUILDING CHECKOUT's — a build's row belongs with the transcript
+and profile the same checkout's backend serves. It used to be hardcoded to main's,
+which was right while the only rows written were main's deploy and its
+compose-serve children. Rows are stamped first-writer-wins
+(`where(isNull(finishedAt))`) so the backend's `proc.exited` writer and the orphan
+reconciler in `build/server` never overwrite the CLI's authoritative close.
+
+## One invocation is one row, with N targets
+
+`targets text[]` — `./singularity build --composition sonata website` is ONE
+shared build (one install, one codegen, one migration pass, one checks pass, one
+transcript, one profile, one verdict), so it is one row rendering
+`[sonata] [website]`, not two rows pointing at the same three artifacts. A plain
+build is `{singularity}`; the default is derived from `MAIN_COMPOSITION_ID`, and
+the `"main"` literal it replaced was a spelling the table itself contradicted
+(`namespace` already defaulted to `"singularity"`).
+
+## The CLI's INSERT names its own columns
+
+`insertRun` is a hand-written parameterised `INSERT`, not
+`db.insert(_buildRuns).values({…})`. That is deliberate and load-bearing.
+
+The CLI mints this row (`bin/commands/build.ts`, just before
+`generateAppSources`) and the migration that call GENERATES is not APPLIED until
+the backend restarts at the very end of the build. So the CLI always runs NEW
+code against the schema the PREVIOUS build left behind. And drizzle's
+`.values()` names **every** column in the table definition, passing `DEFAULT`
+for the ones you omitted — measured with `.toSQL()`:
+
+```
+insert into "build_runs" ("id","trigger","commit_hash","namespace","targets",
+                          "parent_id","started_at","finished_at","exit_code","pid")
+values ($1,$2,$3,$4,default,default,default,default,default,$5)
+```
+
+So the hazard is the TABLE, not the field: **the CLI cannot use the ORM insert
+on a table whose drizzle definition has gained any column the deployed schema
+lacks** — leaving the field out of `.values()` does not leave the column out of
+the statement. That is what produced `42703 column "targets" does not exist`
+twice. Naming our own columns makes the write immune to every future column
+addition here, so this is the fix, not a workaround.
+
+`closeRun` stays on drizzle: `.set()` names only the assigned columns, so an
+UPDATE is already immune (verified the same way).
+
+`targets` is named in the INSERT now that its migration is applied, so a terminal
+`--composition sonata` build lands `{sonata}`. That is the standing discipline
+for this statement: **add the column, deploy it, and only then name it here** —
+one release later, never in the build that creates it.
+
+An array column must be bound with **`sql.param(value)`**, never `${value}`. A
+bare array in a `sql` template is drizzle's `in (…)` list form — one placeholder
+per element wrapped in parens (`($5, $6)`), a row expression, which Postgres
+rejects with `42804 … is of type text[] but expression is of type record`.
+`sql.param()` binds it as ONE parameter; the type is then inferred from the
+column, so no `::text[]` cast is needed.
+
+`parentId` is a column nothing writes. Composition builds were child rows of a
+main run until the serve fan-out made one invocation one row; the column goes in
+the Phase 8 cleanup.
+
+`insertRun` has THREE outcomes, not two. `"unavailable"` (Postgres 3D000) means
+the checkout has no database yet — a fresh checkout running a composition-only
+build is a legitimate way to reach that, and the missing ledger must degrade to a
+note rather than fail a deploy it only observes.
 
 This leaf's whole import graph is intentionally minimal: drizzle,
-`database/admin/server`, and `paths/core` only. **Never add a `config_v2`,
+`database/admin/server`, and `namespace/core` only. **Never add a `config_v2`,
 `shell/notifications`, env-bound `database/server`, `jobs`, or `events` import
 here** — that eval-safety is the entire reason the leaf exists.
 

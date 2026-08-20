@@ -245,12 +245,37 @@ export function worktreeDataDir(name: Namespace): string {
 }
 
 /**
- * Canonical on-disk paths for per-worktree build/release artifacts.
+ * The gateway's registration record for a namespace: `spec.json`, inside that
+ * namespace's own data dir.
+ *
+ * THREE processes share this one file, which is why the name has to have one
+ * owner. `writeWorktreeSpec` (`infra/worktree/server/internal/spec.ts`)
+ * publishes it — atomically, via a temp file it renames from, beside it. The Go
+ * gateway watches `worktrees/*` for it and spawns a backend from what it says.
+ * That backend then reads the SAME bytes back at boot to learn which
+ * composition it serves (`server-core/bin/spec-composition.ts`), rather than
+ * being told over a hop a stale gateway binary could drop.
+ *
+ * Exported as the bare filename as well as through `worktreeArtifacts.spec`
+ * below, because the boot reader is HANDED its worktrees dir (so it stays a
+ * pure function of (dir, namespace) with a tmpdir test) and therefore cannot
+ * resolve this process's own root. It joins the name itself; the name is still
+ * written down once.
+ *
+ * The gateway spells it a fourth time in Go, which cannot import this and is
+ * out of the `paths:no-inlined-worktree-artifacts` check's reach.
+ */
+export const WORKTREE_SPEC_FILE = "spec.json";
+
+/**
+ * Canonical on-disk paths for the per-worktree files: the namespace's
+ * registration record and its build/release artifacts.
  *
  * THE single source of truth for these filenames: every reader (the profiling /
- * build / release server plugins) and writer (the build/release CLI plus the
- * server-side orphan-recovery fallback) derives its path from here, so a layout
- * change is one edit and readers can never drift from writers.
+ * build / release server plugins, and the backend reading back its own spec)
+ * and writer (the build/release CLI plus the server-side orphan-recovery
+ * fallback) derives its path from here, so a layout change is one edit and
+ * readers can never drift from writers.
  *
  * Most entries are FILES, and for those the `id`-less variant is the "most
  * recent / manual CLI" artifact while passing a build/release run id yields the
@@ -267,6 +292,14 @@ export function worktreeDataDir(name: Namespace): string {
  * `worktreeDataDir(name)` (`infra/worktree/server/internal/spec.ts`).
  */
 export const worktreeArtifacts = {
+  /**
+   * The namespace's registration record — see {@link WORKTREE_SPEC_FILE} for
+   * who writes it and who reads it back. Not a build artifact (neither is
+   * `buildStatus`), and it has no `<id>` variant: a namespace has exactly one
+   * spec, and the file's whole job is to be found at a fixed, watched path.
+   */
+  spec: (name: Namespace): string =>
+    join(worktreeDataDir(name), WORKTREE_SPEC_FILE),
   /** Build profiler spans. `build-profile.json` or `build-profile-<id>.json`. */
   buildProfile: (name: Namespace, buildId?: string): string =>
     join(

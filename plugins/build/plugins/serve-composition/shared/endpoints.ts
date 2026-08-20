@@ -1,6 +1,9 @@
 import { z } from "zod";
 import { defineEndpoint } from "@plugins/infra/plugins/endpoints/core";
-import { isNamespace } from "@plugins/infra/plugins/namespace/core";
+import {
+  isNamespace,
+  NAMESPACE_LABEL_RE,
+} from "@plugins/infra/plugins/namespace/core";
 
 // Shared endpoint contracts for the serve capability — imported by BOTH this
 // plugin's own web (the controls) and its server (the handlers). A plugin
@@ -36,34 +39,40 @@ export type ServeLiveness = z.infer<typeof ServeLivenessSchema>;
 
 export const ServeStatusResponseSchema = z.object({
   /**
-   * Whether a serve build can be STARTED from this backend at all: the
-   * `compose-serve` stage reads MAIN's config and runs inside MAIN's build, so
-   * every other namespace can only observe. Server truth (`isMain()`) rather
-   * than a hostname the client sniffs, so a surface can refuse up front instead
-   * of after the POST that would be refused anyway.
+   * WHERE this composition is — or would be — served from the backend that
+   * answered: `namespaceFor(composition, <this backend's checkout>)`. Server
+   * truth, and it has to be: a namespace is `<composition>.<checkout>` with both
+   * sentinels elided, and the browser knows only the namespace it is talking to,
+   * which does not decompose back into a checkout. A client that composed this
+   * itself would name `sonata` from every worktree and link at main's namespace.
    */
-  canServe: z.boolean(),
+  namespace: z.string().refine(isNamespace, "not a valid namespace"),
+  /** `http://<namespace>.localhost:9000` — resolved beside the namespace it belongs to. */
+  url: z.string(),
   liveness: ServeLivenessSchema,
 });
 export type ServeStatusResponse = z.infer<typeof ServeStatusResponseSchema>;
 
 /**
  * The *truth* about a served composition, as opposed to the `autoBuild` intent
- * stored in config: the `composition.json` marker `compose-serve` writes into
- * the namespace dir. Intent can be on with nothing built yet (the enabling build
- * has not run, or it failed), so a surface reading `autoBuild` as liveness
- * offers links to namespaces that 502.
+ * stored in config: the `composition.json` marker a serve build writes into the
+ * namespace dir. Intent can be on with nothing built yet (the enabling build has
+ * not run, or it failed), so a surface reading `autoBuild` as liveness offers
+ * links to namespaces that 502.
  *
- * `composition` is the manifest item's **id** — the namespace `compose-serve`
- * owns and serves at `http://<id>.localhost:9000` — not the item's display name,
- * which diverges from the id for UI-created compositions.
+ * `composition` is the manifest item's **id**, not its display name (the two
+ * diverge for UI-created compositions) and no longer the namespace either: a
+ * composition is served from whichever checkout built it, so the namespace is
+ * the ANSWER this endpoint returns rather than the question it is asked.
  */
 export const serveStatusEndpoint = defineEndpoint({
   route: "GET /api/build/serve/status",
-  // A served composition id IS a namespace, so the wire schema validates it as
-  // one: a malformed name is a 400 here rather than a throw in the handler.
+  // A composition id is one LABEL of a namespace — validated as such here, so a
+  // malformed id is a 400 rather than a throw inside `namespaceFor`.
   query: z.object({
-    composition: z.string().refine(isNamespace, "not a valid namespace"),
+    composition: z
+      .string()
+      .refine((v) => NAMESPACE_LABEL_RE.test(v), "not a valid composition id"),
   }),
   response: ServeStatusResponseSchema,
   // Every deployment row and every composition row of the same namespace asks

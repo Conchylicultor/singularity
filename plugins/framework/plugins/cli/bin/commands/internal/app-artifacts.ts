@@ -27,6 +27,7 @@ import {
 import {
   compositionsConfig,
   manifestItemToManifest,
+  type CompositionManifestItem,
 } from "@plugins/plugin-meta/plugins/composition/core";
 import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
 import { worktreeArtifacts } from "@plugins/infra/plugins/paths/server";
@@ -48,7 +49,10 @@ import { ensureDeps } from "../../ensure-deps";
 import { generateMigration, type MigrationAnswer } from "../../migrations";
 import { distStagingPath, publishDistAtomic } from "./dist-publish";
 import { stampExperimentalMarker } from "./experimental-marker";
-import type { Namespace } from "@plugins/infra/plugins/namespace/core";
+import {
+  MAIN_COMPOSITION_ID,
+  type Namespace,
+} from "@plugins/infra/plugins/namespace/core";
 
 /**
  * Single source of truth for the ordered **app-artifact** pipeline: the part of
@@ -82,7 +86,8 @@ import type { Namespace } from "@plugins/infra/plugins/namespace/core";
  *   - the `build_runs` run-ledger (mint + close) and build-progress log.
  *   - every gateway HTTP call (`writeWorktreeSpec`, restart, health probes).
  *   - worktree-op markers (`markWorktreeOpStart` / `setWorktreeOpPhase`).
- *   - the compose-serve stage.
+ *   - the per-namespace deploy sequence (`./deploy-namespace.ts`): the
+ *     `composition.json` provenance marker, the database, the spec, the restart.
  *   - `propagateConfigToUser` — same function, different sink per caller (build
  *     targets `~/.singularity/state/config/<worktree>`, a release targets its own
  *     `config-seed`), so the sink IS the parameterization. Mirrors
@@ -330,12 +335,17 @@ export function assertKnownCompositions(ids: readonly string[]): void {
 export async function prepareCompositionSources(opts: {
   root: string;
   /**
-   * The compositions being built; `[]` is a plain build. Kept explicit (not
-   * optional) so a caller states which it is rather than defaulting into one:
-   * the two callers are `build` (always `[]`) and `build --hermetic` (always at
-   * least one name), and stage 1 does the same deps + registry codegen either
-   * way. `[]` no longer TRIGGERS anything — every filtered registry is
-   * per-NAME, so an empty list simply emits none.
+   * The manifest DOCUMENT `compositions` is resolved against, and the document
+   * `extends` references resolve within. Supplied by the caller because the two
+   * postures read genuinely different documents: the hermetic one reads the CODE
+   * SEED (a release is cut from what the source tree declares), the deploy one
+   * reads the checkout's RESOLVED config (a Studio-created composition exists
+   * only in a user layer, and it must be servable). Stated at both call sites.
+   */
+  manifest: readonly CompositionManifestItem[];
+  /**
+   * The composition ids being built; `[]` emits no filtered registry at all.
+   * Every id must name a row in `manifest`.
    */
   compositions: readonly string[];
   hooks: ArtifactHooks;
@@ -391,11 +401,14 @@ export async function prepareCompositionSources(opts: {
   // 2a'. Composition build-gating. For each named composition, emit gitignored
   // filtered registries (the bundle's hard closure) beside the committed
   // full ones, keyed by the composition NAME; the web/server import seams
-  // select the filtered file by that name. With none there is nothing to do:
-  // every filtered registry is per-name, so it belongs to another namespace and
-  // is never selected under this checkout's own worktree name. The committed
-  // `<dir>.generated.ts` files are never touched either way, so the build stays
-  // byte-identical.
+  // select the filtered file by that name. The committed `<dir>.generated.ts`
+  // files are never touched either way, so the build stays byte-identical.
+  //
+  // The MAIN composition is filtered out first, and that is not a carve-out: its
+  // registry IS the committed one (`compositionRegistryFileName`), so
+  // `generateCompositionRegistry` would return without writing anything anyway —
+  // dropping it here is what keeps a plain `./singularity build` from paying for
+  // the faceted plugin-tree walk below to produce nothing.
   //
   // The span opens UNCONDITIONALLY, with the `if` inside it: `build`'s profile
   // is compared span-for-span across releases, so a plain build must keep
@@ -405,13 +418,18 @@ export async function prepareCompositionSources(opts: {
     "build:codegen",
     "composition registry",
   );
-  if (compositions.length > 0) {
-    // Re-checked here even though every caller is expected to have asserted
-    // already: this is the step that would otherwise fail with a resolver-level
-    // error, and one loud message naming the known set beats N of them.
-    assertKnownCompositions(compositions);
-    const items = compositionsConfig.fields.manifests.defaultValue;
-    const allManifests = items.map(manifestItemToManifest);
+  const byId = new Map(opts.manifest.map((i) => [i.id, i]));
+  const unknown = compositions.filter((id) => !byId.has(id));
+  if (unknown.length > 0) {
+    throw new Error(
+      `Unknown composition${unknown.length > 1 ? "s" : ""} ` +
+        `${unknown.map((id) => `"${id}"`).join(", ")}. ` +
+        `Known: ${opts.manifest.map((i) => i.id).join(", ")}`,
+    );
+  }
+  const filtered = compositions.filter((id) => id !== MAIN_COMPOSITION_ID);
+  if (filtered.length > 0) {
+    const allManifests = opts.manifest.map(manifestItemToManifest);
     // ONE tree walk for N compositions — the whole reason the list is variadic.
     // The walk is the expensive part (every plugin dir, faceted); resolving a
     // closure against an already-built tree is cheap.
@@ -419,9 +437,9 @@ export async function prepareCompositionSources(opts: {
       skipBarrelImport: true,
       facets: true,
     });
-    for (const composition of compositions) {
-      // Non-null by `assertKnownCompositions` above.
-      const item = items.find((m) => m.id === composition)!;
+    for (const composition of filtered) {
+      // Non-null by the `unknown` check above.
+      const item = byId.get(composition)!;
       const flat = flattenManifest(manifestItemToManifest(item), allManifests);
       const bundle = resolveComposition(tree, flat).bundle;
       // All N registries land before stage 3 imports any of them —
@@ -840,13 +858,15 @@ export async function buildAndPublishWebDist(
       // failure. The per-name `web.composition.<name>.generated.ts` this reads
       // was emitted by stage 1 moments ago.
       //
-      // `vendors` is deliberately NOT passed. compose-serve reuses main's
-      // full-fleet vendor set via `readFleetVendorMeta`, and copying that here
-      // is the obvious wrong optimization: `readFleetVendorMeta` THROWS unless
-      // the full non-composition fleet is already in this host's artifact store,
-      // which is exactly what a hermetic release host (fresh `git clone`, cold
-      // store) does not have. Omitted, the pipeline resolves the vendor set from
-      // this fleet's own requests — correct on any host.
+      // `vendors` is deliberately NOT passed. The old compose-serve stage
+      // reused MAIN's full-fleet vendor set via `readFleetVendorMeta`, and
+      // copying that here is the obvious wrong optimization: it THROWS unless
+      // the full non-composition fleet is already in this host's artifact store
+      // — which a hermetic release host (fresh `git clone`, cold store) does not
+      // have, and neither does a worktree that has never built main. That throw
+      // is exactly the main-first coupling the serve fan-out exists to remove.
+      // Omitted, the pipeline resolves the vendor set from this fleet's own
+      // requests — correct on any host.
       const source = composition
         ? await compositionFleetSource({ root, name: composition })
         : undefined;

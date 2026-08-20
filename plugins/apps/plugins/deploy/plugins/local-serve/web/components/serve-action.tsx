@@ -9,15 +9,7 @@ import {
   useServeStatus,
 } from "@plugins/build/plugins/serve-composition/web";
 import type { Deployment } from "@plugins/apps/plugins/deploy/plugins/deployments/core";
-import {
-  asNamespace,
-  namespaceHost,
-  namespaceUrl,
-  MAIN_COMPOSITION_ID,
-} from "@plugins/infra/plugins/namespace/core";
-
-/** Where a serve build can actually be started — the main app's own host. */
-const MAIN_HOST = namespaceHost(asNamespace(MAIN_COMPOSITION_ID));
+import { isServableCompositionId } from "@plugins/plugin-meta/plugins/composition/core";
 
 /**
  * The **serve** shortcut on a deployments row: one button that opens the
@@ -84,7 +76,9 @@ function ServeRowAction({
   }
 
   if (status.live.served) {
-    const { url } = status.live;
+    // The url is a property of the STATUS, not of the liveness arm: the server
+    // resolves it from its own checkout whether anything is served there or not.
+    const { url } = status;
     return (
       <IconButton
         icon={MdOpenInNew}
@@ -97,18 +91,24 @@ function ServeRowAction({
       />
     );
   }
+  // The only composition that can never be served: main's, whose namespace is
+  // where this checkout's own `./singularity build` deploys. Every other one is
+  // servable from wherever you are — a serve is an ordinary build of THIS
+  // checkout now, not a stage inside main's, so there is no backend-shaped
+  // refusal left to render.
+  const canServe = isServableCompositionId(item.id);
   return (
     <IconButton
       icon={MdBolt}
       label="Serve locally"
       tooltip={
-        status.canServe
-          ? // Compose-serve runs on main, where the checkout suffix elides and
-            // the namespace IS the composition id — Phase 4 makes it a real pair.
-            `Build & serve ${item.name} at ${namespaceUrl(asNamespace(item.id))}`
-          : `Serve builds run on the main instance only — open ${MAIN_HOST}.`
+        canServe
+          ? // `status.url` is server-resolved: a composition served from a
+            // worktree lives at `<id>.<checkout>.localhost:9000`.
+            `Build & serve ${item.name} at ${status.url}`
+          : "The main app is built by ./singularity build — it is not served as a composition."
       }
-      disabled={!status.canServe}
+      disabled={!canServe}
       onClick={(e) => {
         e.stopPropagation();
         // `serve` persists the intent, kicks the main build AND toasts that the

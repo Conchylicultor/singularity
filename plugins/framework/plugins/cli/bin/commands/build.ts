@@ -1,13 +1,10 @@
 import type { Command } from "commander";
-import os from "node:os";
 import { existsSync, writeFileSync } from "fs";
 import { rename } from "fs/promises";
 import { retryUntil, fixed } from "@plugins/packages/plugins/retry/core";
-import { adaptiveTimeoutMs } from "./adaptive-timeout";
 import { sweepDistLeftovers } from "./internal/dist-publish";
 import {
   acquireArtifactLock,
-  buildAndPublishWebDist,
   fastValidationJobs,
   generateAppSources,
   maxRssLine,
@@ -16,9 +13,9 @@ import {
   type ArtifactHooks,
   type HeavyJob,
   type StepResult,
-  type WebDistTarget,
 } from "./internal/app-artifacts";
-import { runComposeServeStage } from "./internal/compose-serve";
+import { resolveBuildTargets } from "./internal/build-targets";
+import { deployNamespace } from "./internal/deploy-namespace";
 import {
   hermeticFlagConflicts,
   runHermeticBuild,
@@ -30,17 +27,14 @@ import {
 } from "@plugins/infra/plugins/paths/server";
 import {
   MAIN_COMPOSITION_ID,
-  NAMESPACE_LABEL_RE,
+  NAMESPACE_RE,
   namespaceFor,
   namespaceUrl,
   type Namespace,
 } from "@plugins/infra/plugins/namespace/core";
 import { join, resolve } from "path";
 import { parseMigrationAnswers } from "../migrations";
-import {
-  collectAllPlugins,
-  propagateConfigToUser,
-} from "@plugins/framework/plugins/tooling/plugins/codegen/core";
+import { collectAllPlugins } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
 import { formatChangedSources } from "@plugins/framework/plugins/tooling/plugins/format/core";
 import { getFacet } from "@plugins/plugin-meta/plugins/facets/core";
 import { routesFacetDef } from "@plugins/plugin-meta/plugins/facets/plugins/routes/core";
@@ -55,22 +49,16 @@ import { clearMergeMarkers } from "../../core";
 import { markBuildInProgress } from "@plugins/framework/plugins/tooling/plugins/checks/core";
 import { runCheckSubprocess } from "../check-subprocess";
 import {
+  closeAdminPool,
   listDatabases,
   forkTempPrefix,
 } from "@plugins/database/plugins/admin/server";
 import { libpqEnv, readDatabaseConfig } from "@plugins/database/core";
-import {
-  worktreeDataDir,
-  worktreeArtifacts,
-  PG_LOG_FILE,
-  MAIN_WORKTREE_NAME,
-} from "../paths";
-import { configDir } from "@plugins/config_v2/data-dirs";
+import { worktreeArtifacts, PG_LOG_FILE } from "../paths";
 import {
   buildProfilerStart,
   pushBuildSpan,
   writeBuildProfile,
-  createSpanCollector,
 } from "../profiler";
 import { openBuildProgress, finishBuildProgress } from "../build-progress";
 import {
@@ -86,11 +74,7 @@ import {
   type ValveDeps,
 } from "../admission-valve";
 import { laneFor, publishLane } from "../lane";
-import {
-  pushBuildStepLog,
-  writeBuildLogs,
-  createStepLogCollector,
-} from "../build-logs-writer";
+import { pushBuildStepLog, writeBuildLogs } from "../build-logs-writer";
 import {
   printStepBlocks,
   renderVerdict,
@@ -116,7 +100,6 @@ import {
   clearWorktreeOp,
   writeWorktreeSpec,
 } from "@plugins/infra/plugins/worktree/server";
-import { zeroCacheSpec } from "@plugins/infra/plugins/launcher/server";
 import {
   CENTRAL_ROUTES_FILENAME,
   gatewayState,
@@ -124,10 +107,12 @@ import {
 import { createBuildRunRecorder } from "@plugins/build/plugins/run-ledger/server";
 import { BUILD_EXIT_SUPERSEDED } from "@plugins/build/plugins/build-status/core";
 
-// A checkout name is one LABEL of a namespace — the same rule a composition id
-// obeys, owned by the namespace plugin and pinned to the gateway's own regex by
-// `namespace:grammar-in-sync`.
-const NAME_REGEX = NAMESPACE_LABEL_RE;
+// A namespace is one or two dot-joined labels, capped at 63 bytes — owned by the
+// namespace plugin and pinned to the gateway's own regex by
+// `namespace:grammar-in-sync`. It used to be the single-LABEL rule here, which
+// was right while a checkout's namespace was the only one this command could
+// mint; `--composition` in a worktree mints `<composition>.<checkout>`.
+const NAME_REGEX = NAMESPACE_RE;
 const CENTRAL_ROUTES_FILE = gatewayState.file(CENTRAL_ROUTES_FILENAME);
 
 interface CentralRoutesManifest {
@@ -401,183 +386,6 @@ async function waitForWorktreeDatabase(name: string): Promise<void> {
   process.exit(1);
 }
 
-// Reads the gateway's authoritative state for one worktree. Returns null when
-// the gateway is unreachable (connection refused / timeout) or the worktree is
-// absent from the snapshot. Only connection/timeout errors are swallowed;
-// anything unexpected is rethrown so it fails loudly.
-async function getWorktreeState(
-  name: string,
-): Promise<{ state: string; lastSpawnErr: string } | null> {
-  try {
-    const resp = await fetch("http://localhost:9000/gateway/worktrees", {
-      signal: AbortSignal.timeout(5_000),
-    });
-    if (!resp.ok) return null;
-    const entries = (await resp.json()) as Array<{
-      name?: string;
-      state?: string;
-      lastSpawnErr?: string;
-    }>;
-    if (!Array.isArray(entries)) return null;
-    const entry = entries.find((e) => e.name === name);
-    if (!entry) return null;
-    return { state: entry.state ?? "", lastSpawnErr: entry.lastSpawnErr ?? "" };
-  } catch (err) {
-    // Gateway not running (TypeError/connection refused) or request timed out
-    // (DOMException AbortError). Anything else is unexpected — rethrow.
-    if (!(err instanceof TypeError) && !(err instanceof DOMException))
-      throw err;
-    return null;
-  }
-}
-
-// Per-process identity of the backend currently served for `name`, or null when
-// nothing is serving yet (cold start) or it's unreachable. The gateway only ever
-// routes to a backend past its ready barrier, so a change in this value across a
-// restart proves the NEW (ready) backend took over — not the stale old one.
-async function readHealthStartedAt(name: Namespace): Promise<number | null> {
-  try {
-    const resp = await fetch(namespaceUrl(name, "/api/health"), {
-      signal: AbortSignal.timeout(5_000),
-    });
-    if (!resp.ok) return null;
-    const body = (await resp.json()) as { startedAt?: unknown };
-    return typeof body.startedAt === "number" ? body.startedAt : null;
-  } catch (err) {
-    if (!(err instanceof TypeError) && !(err instanceof DOMException))
-      throw err;
-    return null;
-  }
-}
-
-// Verifies the freshly-restarted backend actually took over. `previousStartedAt`
-// is the per-process identity of the backend serving BEFORE the restart POST
-// (null on a cold start, where nothing was serving yet). On a hot restart the
-// gateway is blue/green: it swaps `w.active` to the new backend only once that
-// backend clears its ready barrier, so a served `startedAt` greater than
-// `previousStartedAt` proves the NEW (ready) backend is live. Reading only
-// `resp.ok` is not enough — a failed hot-restart leaves the OLD backend
-// answering `{ok:true}` with stale code and the build would falsely pass.
-// `restartError` carries the gateway's 500 body, if any, for the failure message.
-// Returns a soft-degrade note when the server was still booting under host load
-// but the artifacts are valid (folded into the success verdict), or null on a
-// clean pass. An unambiguous deploy failure (a hot restart whose new backend
-// never took over) routes through `onDeployFailure`, which never returns.
-async function probeHealth(
-  name: Namespace,
-  previousStartedAt: number | null,
-  restartError: string | null,
-  onDeployFailure: (reason: string[]) => Promise<never>,
-): Promise<string | null> {
-  const isRestart = previousStartedAt != null;
-  const deadline = adaptiveTimeoutMs(20_000, 120_000);
-  console.log(
-    `Probing /api/health... (deadline ${Math.round(deadline / 1000)}s)`,
-  );
-  const url = namespaceUrl(name, "/api/health");
-  const site = namespaceUrl(name);
-  let lastStatus: number | string = "no response";
-  const result = await retryUntil<true, Promise<string | null>>(
-    async () => {
-      try {
-        const resp = await fetch(url, { signal: AbortSignal.timeout(5_000) });
-        if (resp.ok) {
-          // Cold start: any healthy backend is the one we just built.
-          if (!isRestart) return true;
-          // Hot restart: the gateway swaps `w.active` to the new backend only
-          // after it passes `waitReady`, so a served `startedAt` past the old
-          // one proves the new backend is live AND ready. Without this a failed
-          // hot-restart leaves the old backend answering ok and the build
-          // falsely passes.
-          // Block form: the declaration below exceeds the print width, so the
-          // format pass splits it and a positional directive would land on the
-          // fragment instead of the statement. A PAIR is a line range.
-          /* eslint-disable promise-safety/no-absorbed-failure -- health-probe body read; null means "no/unparseable startedAt", handled below as "stale backend, keep polling" — not a data result the caller trusts */
-          const body = (await resp.json().catch(() => null)) as {
-            startedAt?: unknown;
-          } | null;
-          /* eslint-enable promise-safety/no-absorbed-failure */
-          const startedAt =
-            typeof body?.startedAt === "number" ? body.startedAt : null;
-          if (startedAt != null && startedAt > previousStartedAt) return true;
-          lastStatus = `stale backend (startedAt ${startedAt} <= ${previousStartedAt})`;
-          return null;
-        }
-        lastStatus = resp.status;
-      } catch (err) {
-        // A per-attempt abort (DOMException) is just a slow request — record it
-        // and let retryUntil try again like any other failed attempt.
-        lastStatus = err instanceof Error ? err.message : String(err);
-      }
-      return null;
-    },
-    {
-      delay: fixed(250),
-      deadline,
-      // On deadline we ask the gateway for the worktree's authoritative state
-      // instead of blindly declaring a crash. A stopwatch expiring is not the
-      // same as a boot failure under host load.
-      onDeadline: async () => {
-        // A hot restart whose new backend never became the served backend is an
-        // unambiguous deploy failure: the gateway SIGKILLed it (state reverts to
-        // "running", never "broken") and is still serving the previous backend's
-        // stale code. There is no lenient interpretation for this path — fail the
-        // build. finalizeBuild runs via the process.on("exit") handler.
-        if (isRestart) {
-          const detail = restartError
-            ? `Gateway restart error: ${restartError}`
-            : "";
-          await onDeployFailure([
-            `NOT DEPLOYED. ${site} still serves the previous backend (stale code).`,
-            `The freshly-built backend never became ready within ${Math.round(deadline / 1000)}s — ` +
-              `it failed its onReadyBlocking ready barrier (last: ${lastStatus}).`,
-            ...(detail ? [detail] : []),
-            `Inspect the backend log at ${join(worktreeDataDir(name), "logs")} for the throw.`,
-          ]);
-        }
-        const load1 = Math.round((os.loadavg()[0] ?? 0) * 10) / 10;
-        const info = await getWorktreeState(name);
-        if (!info) {
-          console.warn(
-            `Server didn't respond on /api/health within ${Math.round(deadline / 1000)}s ` +
-              `(last: ${lastStatus}) and the gateway is unreachable. ` +
-              `Build artifacts are valid; not blocking the build.`,
-          );
-          return "server still booting (gateway unreachable)";
-        }
-        switch (info.state) {
-          case "broken":
-            return await onDeployFailure([
-              `Server crashed during boot (state: broken): ${info.lastSpawnErr || "no error reported"}.`,
-              `NOT DEPLOYED. ${site} still serves the previous build.`,
-              `Inspect the backend log at ${join(worktreeDataDir(name), "logs")} for the throw.`,
-            ]);
-          case "running":
-            console.log("Server is up.");
-            return null;
-          case "starting":
-          case "restarting":
-          case "idle":
-            console.warn(
-              `Server still booting after ${Math.round(deadline / 1000)}s under host load ` +
-                `(load avg ${load1}). Build artifacts are valid; the gateway will finish ` +
-                `bringing it up on demand. Not blocking the build.`,
-            );
-            return "server still booting under host load";
-          default:
-            console.warn(
-              `Server didn't respond on /api/health within ${Math.round(deadline / 1000)}s ` +
-                `(gateway state: ${info.state || "unknown"}, last: ${lastStatus}). ` +
-                `Build artifacts are valid; not blocking the build.`,
-            );
-            return "server still booting";
-        }
-      },
-    },
-  );
-  return result === true ? null : result;
-}
-
 // `/gateway/worktrees` is the gateway's own API and exists on every gateway
 // version — a 200 here proves the gateway is alive. Central's own readiness
 // is covered by the gateway's waitReady on its Unix socket; no separate
@@ -617,8 +425,9 @@ export function registerBuild(program: Command) {
     .command("build")
     .description(
       "Build the app. Default posture: deploy THIS checkout into the live dev cluster " +
-        "(frontend + backend + gateway registration). With --hermetic --composition <name...>: " +
-        "produce those compositions' artifact sets and touch no cluster at all.",
+        "(frontend + backend + gateway registration) — the checkout's own app, or the " +
+        "compositions named by --composition. With --hermetic: produce those compositions' " +
+        "artifact sets and touch no cluster at all.",
     )
     .option(
       "--hermetic",
@@ -629,10 +438,12 @@ export function registerBuild(program: Command) {
     )
     .option(
       "--composition <name...>",
-      "Composition(s) to produce artifacts for (with --hermetic; one shared install/codegen/" +
-        "validation pass, one dist each). Names are read from the compositions manifest COMPILED " +
-        "INTO the code, not from the resolved layered config — a composition added only in a " +
-        "user-layer compositions.jsonc is not visible here.",
+      "Composition(s) to build INSTEAD of this checkout's own app: one shared install/codegen/" +
+        "validation pass, one dist each. Deploying, each is served at " +
+        "http://<composition>.<checkout>.localhost:9000 with its own empty database. With " +
+        "--hermetic the names come from the compositions manifest COMPILED INTO THE CODE; " +
+        "deploying, they come from THIS CHECKOUT'S resolved config, so a composition created in " +
+        "Studio is servable but not releasable.",
     )
     .option(
       "--migration-name <slug>",
@@ -661,10 +472,6 @@ export function registerBuild(program: Command) {
       "DANGER: allow running build from the main branch. Agents MUST NOT pass this flag without explicit user approval in the current conversation.",
     )
     .option(
-      "--serve-composition <name>",
-      "Force ONE composition through the compose-serve stage regardless of its autoBuild toggle (main checkout only; artifact mode only; skips the deactivation sweep). Composes a per-composition dist + empty DB served at http://<name>.localhost:9000.",
-    )
-    .option(
       "--no-minify",
       "Skip esbuild minification (debugging). The minify flag is an artifact-hash input.",
     )
@@ -679,7 +486,6 @@ export function registerBuild(program: Command) {
         restart: boolean;
         skipChecks?: boolean;
         allowMain?: boolean;
-        serveComposition?: string;
         minify: boolean;
       }) => {
         // ── Posture branch, and it is the LITERAL FIRST STATEMENT on purpose ──
@@ -724,29 +530,6 @@ export function registerBuild(program: Command) {
             },
             minify: opts.minify,
           });
-        }
-
-        // `--composition` without `--hermetic` is the SERVE half — build this
-        // composition and serve it into the dev cluster from any checkout —
-        // which needs the namespace rule and the per-composition vendor set, and
-        // is Phase 4 of
-        // research/2026-08-17-global-composition-build-serve-model.md. The two
-        // flags stay orthogonal in meaning so Phase 4 deletes this guard rather
-        // than re-plumbing a flag whose meaning silently flipped.
-        if (opts.composition && opts.composition.length > 0) {
-          console.error(
-            [
-              "ERROR: --composition without --hermetic is not implemented yet.",
-              "",
-              "  Today: `build --hermetic --composition <name...>` produces the artifact set.",
-              "  Serving a composition into the dev cluster from an arbitrary checkout is Phase 4",
-              "  of research/2026-08-17-global-composition-build-serve-model.md.",
-              "",
-              "  (`--serve-composition` is a different, unrelated flag: it composes OTHER",
-              "  namespaces out of main's artifact fleet after main itself deploys.)",
-            ].join("\n"),
-          );
-          process.exit(1);
         }
 
         // Mark this process as a build: dist-comparing checks (map-in-sync) skip
@@ -800,35 +583,47 @@ export function registerBuild(program: Command) {
         endSpan();
 
         const root = await getWorktreeRoot();
-        // This command builds the main composition only — Phase 4 is what makes
-        // the composition an argument. The checkout is the variable half.
-        const name = namespaceFor(MAIN_COMPOSITION_ID, await checkoutRef(root));
+        // The checkout half of every namespace this invocation touches — minted
+        // once, because every target of one build is built from one tree.
+        const checkout = await checkoutRef(root);
+        // THIS CHECKOUT's own namespace. It is not necessarily a target (a
+        // composition-only build publishes nobody else's namespace and not this
+        // one), but it is the key everything INVOCATION-scoped is filed under:
+        // the progress log, the op marker, the op profiler, the build profile,
+        // the transcript and the `build_runs` row. Those must live where the
+        // backend that serves this checkout can read them — see the artifact
+        // locality note in the phase plan.
+        const name = namespaceFor(MAIN_COMPOSITION_ID, checkout);
+
+        // WHAT this invocation deploys, decided before anything is spent: an
+        // unknown composition, an illegal id or an occupied namespace costs
+        // milliseconds here rather than ten minutes at the step that would
+        // otherwise have noticed. Throws; `runCli` renders it.
+        const { manifest, targets } = await resolveBuildTargets({
+          root,
+          requested: opts.composition ?? [],
+          checkout,
+        });
 
         // Open the durable, crash-safe build-progress log now that `name` (the same
         // namespace key the op marker and writeBuildProfile use) is known. Every
         // buildProfilerStart span from here on records an enter/leave + RSS to
         // ~/.singularity/logs/build-progress/build-progress.jsonl, so a wedged build names its phase and
         // heap trend even after SIGKILL. See research/2026-07-21-global-cli-op-wedge-gc-sink.md.
+        //
+        // ONE progress run per PROCESS, keyed on the checkout's namespace: the
+        // module holds a single `current`, so a second `openBuildProgress` would
+        // be a silent no-op rather than a second log.
         openBuildProgress(name, process.env.SINGULARITY_BUILD_ID ?? null);
 
         // Report a predecessor that never completed, BEFORE this build overwrites
         // its receipt. Self-healing on purpose: the previous build was SIGKILLed, so
         // it printed no verdict and set no exit code — this line is the only place
         // that fact ever surfaces without someone thinking to go looking for it.
-        reportInterruptedPredecessor(name);
-
-        // --serve-composition preflight. The compose-serve stage composes over
-        // main's artifact fleet (vendor set + store), so it needs the MAIN
-        // checkout — fail before any work, not after the build.
-        if (opts.serveComposition !== undefined) {
-          if (root !== (await getMainRepoRoot())) {
-            console.error(
-              "ERROR: --serve-composition only runs from the MAIN checkout — " +
-                "compositions are served from main's code and main's resolved config.",
-            );
-            process.exit(1);
-          }
-        }
+        // Per TARGET: the receipt is per-namespace, so an interrupted predecessor
+        // is a fact about the namespace this build is about to overwrite.
+        for (const target of targets)
+          reportInterruptedPredecessor(target.namespace);
 
         // Every build needs ONE stable id, shared by its build-log record, its
         // build-profile-<id>.json, its build-logs, and the bundle's .build-id —
@@ -884,13 +679,16 @@ export function registerBuild(program: Command) {
         });
         profiler.markRequested();
 
-        // The CLI-side build_runs ledger writer. It targets main's DB (compose-serve
-        // is main-only) and is used to mint/close main's own row (decisions 1 + 3)
-        // and each composition child row in the compose-serve stage. The pool is
-        // opened lazily on the first write, so this is free for agent worktree
-        // builds — they never write through it. Released in finalizeBuild so every
-        // graceful exit drops the pool.
-        const recorder = createBuildRunRecorder();
+        // The CLI-side build_runs ledger writer, against THIS CHECKOUT's own
+        // database. ONE row per invocation, whatever it built: the transcript,
+        // the profile and the verdict are already one-per-process, so N rows
+        // would each point at the same three artifacts. It used to be hardcoded
+        // to main's DB and gated to main builds, because the only rows it wrote
+        // were main's deploy and its compose-serve children; an agent worktree
+        // now mints rows too, which is visible in every worktree's Build UI and
+        // is the honest record. Released in finalizeBuild so every graceful exit
+        // drops the pool.
+        const recorder = createBuildRunRecorder(name);
 
         // Mark this worktree as having a build in flight so the conversation
         // status poller keeps the agent's pane reading as "working" while the
@@ -910,12 +708,34 @@ export function registerBuild(program: Command) {
         // which can't run handlers — legitimately leaves a record open; those are
         // the orphans `finalizeOrphanedOps` closes as "interrupted".
         // Mirrors the on-exit lock release in acquireBuildLock above.
-        // The deploy receipt for THIS build, populated once the build lock is
-        // granted (below) and rewritten with its terminal status here. Null until
-        // then, and deliberately so: a build that dies before it owns the lock
-        // published nothing and was never the build this worktree was running, so
-        // it must not overwrite the previous build's receipt.
-        let receipt: BuildReceipt | null = null;
+        //
+        // The deploy receipts this build owns, ONE PER TARGET NAMESPACE. A receipt
+        // is per-namespace by definition — it is the file the gateway-facing
+        // deploy answers for, and `build --composition sonata website` answers for
+        // two — so this is a Map rather than the single value it used to be. Each
+        // entry is opened `running` just before its target deploys, and a target
+        // that finishes closes its own; whatever is still open when the process
+        // ends is closed here. Empty until the build lock is granted, and
+        // deliberately so: a build that dies before it owns the lock published
+        // nothing and must not overwrite its predecessor's receipts.
+        const receipts = new Map<Namespace, BuildReceipt>();
+        /** Stamp one namespace's receipt terminal, and remember that it is. */
+        const closeReceipt = (
+          ns: Namespace,
+          status: BuildReceiptStatus,
+          exitCode: number,
+        ): void => {
+          const open = receipts.get(ns);
+          if (open === undefined || open.finishedAt !== null) return;
+          const closed: BuildReceipt = {
+            ...open,
+            status,
+            finishedAt: new Date().toISOString(),
+            exitCode,
+          };
+          receipts.set(ns, closed);
+          writeBuildReceipt(ns, closed);
+        };
         let buildFinalized = false;
         const finalizeBuild = async (
           success: boolean,
@@ -924,20 +744,27 @@ export function registerBuild(program: Command) {
           if (buildFinalized) return;
           buildFinalized = true;
           clearWorktreeOp(name, "build");
-          // Stamp the receipt's terminal status. Synchronous, so the exit-hook
-          // backstop lands it too — and a SIGKILL, which runs no hook at all, is
-          // exactly what leaves the receipt at `running` with a dead pid. That
-          // absence IS the "did not complete" signal; nothing else has to detect it.
+          // Stamp every STILL-OPEN receipt's terminal status. Synchronous, so the
+          // exit-hook backstop lands it too — and a SIGKILL, which runs no hook at
+          // all, is exactly what leaves a receipt at `running` with a dead pid.
+          // That absence IS the "did not complete" signal; nothing else has to
+          // detect it.
           //
-          // The spread carries `signal` through: recordSignal reassigns `receipt`
-          // when a catchable signal arrives, so a killed build's terminal record is
-          // `failed` + the real exit code + the signal — never confusable with a
-          // `failed` + exit 1 from the build's own checks. Every caller now supplies
-          // `terminal` on the failure paths (the exit hook included), so the
-          // `exitCode: null` fallback is reachable only from `finalizeBuild(true)`,
-          // where the `success ? 0` arm wins.
-          if (receipt !== null) {
-            writeBuildReceipt(name, {
+          // Already-closed entries are skipped rather than re-stamped: a target
+          // that published before a LATER target failed is deployed, and saying
+          // `failed` on its namespace's receipt would be a plain lie about the app
+          // now serving there.
+          //
+          // The spread carries `signal` through: recordSignal restamps every open
+          // receipt when a catchable signal arrives, so a killed build's terminal
+          // record is `failed` + the real exit code + the signal — never confusable
+          // with a `failed` + exit 1 from the build's own checks. Every caller now
+          // supplies `terminal` on the failure paths (the exit hook included), so
+          // the `exitCode: null` fallback is reachable only from
+          // `finalizeBuild(true)`, where the `success ? 0` arm wins.
+          for (const [ns, receipt] of receipts) {
+            if (receipt.finishedAt !== null) continue;
+            writeBuildReceipt(ns, {
               ...receipt,
               status: terminal?.status ?? (success ? "ok" : "failed"),
               finishedAt: new Date().toISOString(),
@@ -951,11 +778,17 @@ export function registerBuild(program: Command) {
           finishBuildProgress(success);
           profiler.complete(success ? "success" : "failed");
           profiler.write();
-          // Release the build_runs recorder pool LAST, after every synchronous
-          // durable write above. The process.on("exit") backstop below can run this
-          // sync body but cannot await — that's fine: the profile / log / op record
-          // is already flushed by the sync writes, and the pool's sockets are
+          // Release the DB pools LAST, after every synchronous durable write
+          // above. The process.on("exit") backstop below can run this sync body
+          // but cannot await — that's fine: the profile / log / op record is
+          // already flushed by the sync writes, and the pools' sockets are
           // OS-reaped on process exit.
+          //
+          // `closeAdminPool` used to be the compose-serve stage's own `finally`,
+          // as "the build's last DB user". In a loop that reading is wrong: the
+          // first target's close would end the pool the SECOND target's
+          // `ensureDatabase` needs. The build's last DB user is the build.
+          await closeAdminPool();
           await recorder.close();
         };
         // The exit backstop can only run synchronous work; the recorder.close()
@@ -978,8 +811,8 @@ export function registerBuild(program: Command) {
         );
 
         // What ended this process, when a catchable fatal signal did. Recorded on
-        // the signal, read on the exit path — by the receipt (via `receipt` below)
-        // and by the verdict guard, which pulls it lazily.
+        // the signal, read on the exit path — by the receipts (below) and by the
+        // verdict guard, which pulls it lazily.
         let termination: SignalTermination | null = null;
         const recordSignal = (
           signal: FatalSignal,
@@ -998,19 +831,22 @@ export function registerBuild(program: Command) {
               ? {}
               : { attribution: formatSignalOrigin(origin) }),
           };
-          // Nothing to stamp before the build owns the receipt (a build that dies
+          // Nothing to stamp before the build owns a receipt (a build that dies
           // while still queuing must not overwrite its predecessor's — see above),
-          // and nothing to stamp after finalizeBuild wrote the terminal status:
-          // `receipt` still says `running`, so rewriting it here would undo that.
-          if (buildFinalized || receipt === null) return;
-          // Stamp NOW rather than only in finalizeBuild. An escalating kill —
-          // SIGTERM then SIGKILL, which is what `timeout -k` and most supervisors
-          // send — never reaches the exit hooks, so this synchronous write is the
-          // only record that a catchable signal arrived at all. It keeps
-          // `status: "running"`, so the receipt still resolves as `interrupted`;
-          // it just now says what interrupted it.
-          receipt = { ...receipt, signal };
-          writeBuildReceipt(name, receipt);
+          // and nothing to stamp after finalizeBuild wrote a terminal status.
+          if (buildFinalized) return;
+          // Stamp NOW rather than only in finalizeBuild, on every receipt still
+          // open. An escalating kill — SIGTERM then SIGKILL, which is what
+          // `timeout -k` and most supervisors send — never reaches the exit hooks,
+          // so this synchronous write is the only record that a catchable signal
+          // arrived at all. It keeps `status: "running"`, so the receipt still
+          // resolves as `interrupted`; it just now says what interrupted it.
+          for (const [ns, open] of receipts) {
+            if (open.finishedAt !== null) continue;
+            const stamped: BuildReceipt = { ...open, signal };
+            receipts.set(ns, stamped);
+            writeBuildReceipt(ns, stamped);
+          }
         };
 
         // The build cannot terminate without printing its own verdict. Registered
@@ -1019,11 +855,14 @@ export function registerBuild(program: Command) {
         // guards, parseMigrationAnswers) fire before this point and before any
         // artifact is touched, so there is no deploy ambiguity for them to resolve.
         // Declared here rather than beside its first heavy use: the verdict guard,
-        // the deploy receipt and the verdicts must all name the same URL.
-        const buildUrl = namespaceUrl(name);
+        // the deploy receipts and the verdicts must all name the same URLs. One
+        // per target — a killed multi-target build published nothing, so every
+        // namespace it named is still on its previous dist and the banner has to
+        // say so about all of them.
+        const targetUrls = targets.map((t) => namespaceUrl(t.namespace));
 
         installVerdictGuard({
-          url: buildUrl,
+          urls: targetUrls,
           buildLogPath: worktreeArtifacts.buildLogText(name, buildId),
           // Pulled at exit time, not passed by value: the signal can arrive at any
           // point after this call. With it the guard prints BUILD ABORTED rather
@@ -1101,34 +940,46 @@ export function registerBuild(program: Command) {
         // `supersededBy` at the verdict funnels below.
         const headAtStart = await readHead(root);
 
-        // Open the deploy receipt. AFTER the lock, not before: the lock serializes
-        // builds in this checkout, so exactly one build owns the receipt at a time
-        // and a queued build cannot overwrite a live one's. `headAtStart` is the
-        // commit it answers for, which is why this sits just below it.
-        receipt = {
-          status: "running",
-          buildId,
-          commit: headAtStart,
-          pid: process.pid,
-          startedAt: new Date().toISOString(),
-          finishedAt: null,
-          exitCode: null,
-          url: buildUrl,
-          logPath: worktreeArtifacts.buildLogText(name, buildId),
+        /**
+         * Open one target's deploy receipt. AFTER the lock, not before: the lock
+         * serializes builds in this checkout, so exactly one build owns a
+         * namespace's receipt at a time and a queued build cannot overwrite a live
+         * one's. `headAtStart` is the commit it answers for.
+         *
+         * Its `logPath` points into THIS CHECKOUT's artifacts, not the target's:
+         * one invocation writes one transcript, and every receipt it opens points
+         * a reader at that same file.
+         */
+        const openReceipt = (ns: Namespace): void => {
+          const receipt: BuildReceipt = {
+            status: "running",
+            buildId,
+            commit: headAtStart,
+            pid: process.pid,
+            startedAt: new Date().toISOString(),
+            finishedAt: null,
+            exitCode: null,
+            url: namespaceUrl(ns),
+            logPath: worktreeArtifacts.buildLogText(name, buildId),
+          };
+          receipts.set(ns, receipt);
+          writeBuildReceipt(ns, receipt);
         };
-        writeBuildReceipt(name, receipt);
-
-        // WHICH dist this build publishes: the one SERVED for this namespace. The
-        // sweep below and stage 3's publish both resolve this one identity, so
-        // they cannot be aimed at different trees.
-        const distTarget: WebDistTarget = { kind: "served", name };
 
         endSpan = buildProfilerStart(
           "sweepStaging",
           "build:setup",
           "sweep staging leftovers",
         );
-        await sweepDistLeftovers(webDistPath(distTarget));
+        // Sweep EVERY target's dist leftovers up front, before any staging dir
+        // exists — the same reason `hermetic-build.ts` does it this way.
+        // Sweeping inside the deploy loop would delete target 2's staging dir
+        // while target 1's is still live.
+        for (const target of targets) {
+          await sweepDistLeftovers(
+            webDistPath({ kind: "served", name: target.namespace }),
+          );
+        }
         // One-shot migration: reclaim the served dist that used to live inside the
         // checkout. Gated on the RUNNING GATEWAY already reporting the new
         // location for this namespace — the only authority on what it is serving
@@ -1214,23 +1065,24 @@ export function registerBuild(program: Command) {
           recordFootprint,
         };
 
-        // Stage 1 — dependencies + registry-level codegen + composition registry.
-        // Runs before central is spawned below (its plugins.generated.ts must be
-        // in sync). See ./internal/app-artifacts.ts.
+        // Stage 1 — dependencies + registry-level codegen + every target's
+        // filtered registry. Runs before central is spawned below (its
+        // plugins.generated.ts must be in sync). See ./internal/app-artifacts.ts.
         //
-        // `compositions: []` says "this build produces no filtered registry",
-        // and that is now all it says — it used to additionally trigger a reaper
-        // for the pre-S1 checkout-global SINGLETON registry, which S5 deleted.
-        // Every filtered registry is per-name, and `plugins-active.ts` selects
-        // one only under a matching namespace, so another namespace's file on
-        // disk cannot reconfigure this worktree's backend. The list is non-empty
-        // only on the hermetic path, which branched away long before here.
+        // The manifest handed over is THIS CHECKOUT's resolved `compositions`
+        // config, already read by `resolveBuildTargets` — the same document the
+        // targets came from, so `extends` resolves against what this checkout
+        // declares. Deliberately different from the hermetic posture, which reads
+        // the code seed; see `readCheckoutCompositions`.
         //
-        // `--serve-composition` is a different, unrelated flag: it composes
-        // OTHER namespaces out of main's artifact fleet after main deploys.
+        // A plain build passes the main composition's id, which emits NO filtered
+        // registry: the main composition's registry IS the committed
+        // `<dir>.generated.ts`, so stage 1 has nothing to write and skips the
+        // plugin-tree walk entirely.
         await prepareCompositionSources({
           root,
-          compositions: [],
+          manifest,
+          compositions: targets.map((t) => t.composition),
           hooks,
         });
 
@@ -1256,16 +1108,14 @@ export function registerBuild(program: Command) {
           "central.json",
         );
         const mainRoot = await getMainRepoRoot();
-        // Only the main checkout owns a build_runs row (the CLI ledger is
-        // main-only, same gating as the central restart + compose-serve stages
-        // below). Reused by the row mint just below and every closeRun on the
-        // deploy / failure paths.
-        const isMainBuild = root === mainRoot;
         const centralDir = resolve(
           mainRoot,
           "plugins/framework/plugins/central-core",
         );
         if (existsSync(join(centralDir, "bin", "index.ts"))) {
+          // No `composition`: central is not an app. It is a singleton API
+          // runtime with its own registry (`central.generated.ts`), which no
+          // composition filters, so there is nothing for one to select.
           writeWorktreeSpec({ name: "central", server: centralDir });
         }
         endSpan();
@@ -1281,31 +1131,43 @@ export function registerBuild(program: Command) {
         await waitForPg();
         endSpan();
 
-        // 2d. Ensure the worktree's DB fork has completed (forked asynchronously
-        // during conversation creation).
-        endSpan = buildProfilerStart(
-          "waitForDatabase",
-          "build:database",
-          "wait for DB fork",
-        );
-        await waitForWorktreeDatabase(name);
-        endSpan();
+        // 2d. Ensure this checkout's own DB fork has completed (forked
+        // asynchronously during conversation creation).
+        //
+        // This IS the main-composition target's database step, HOISTED out of the
+        // per-target loop, and for two reasons worth naming: the `build_runs` row
+        // this invocation opens a few lines below lives in that database, and a
+        // missing fork must fail in seconds rather than after the frontend build.
+        // Skipped entirely for a composition-only build — that invocation neither
+        // publishes this checkout's app nor needs its data, and on a fresh
+        // checkout the fork may legitimately not exist yet (the ledger degrades
+        // to a note; see `insertRun`).
+        if (targets.some((t) => t.isMainComposition)) {
+          endSpan = buildProfilerStart(
+            "waitForDatabase",
+            "build:database",
+            "wait for DB fork",
+          );
+          await waitForWorktreeDatabase(name);
+          endSpan();
+        }
 
         // Soft-degrade notes folded into the final OK verdict headline (server
-        // still booting under host load, gateway starting, a lost build-runs
-        // claim). Declared here so the row mint just below can report a lost claim.
+        // still booting under host load, gateway starting, a lost or missing
+        // build-runs row). Declared here so the row mint just below can report one.
         const softNotes: string[] = [];
 
-        // Mint main's build_runs row for a manual terminal build (decision 3): a
-        // UI/auto build's backend already minted it (uiTriggered), and only the
-        // main checkout owns a row. Deferred to here — NOT right after the build
-        // lock — on purpose: the recorder writes to main's DB, so the mint must
-        // land after waitForPg above, or a cold manual build would race Postgres
-        // startup. The row is closed at main's deploy below (decision 1), which
-        // fixes the eternal "Building…" spinner.
-        if (!uiTriggered && isMainBuild) {
-          const claim = await recorder.insertMainRun({
+        // Mint THIS INVOCATION's single build_runs row for a manual terminal
+        // build: a UI/auto build's backend already minted it (uiTriggered) and
+        // stamped its own `targets` there. Deferred to here — NOT right after the
+        // build lock — on purpose: the recorder writes to a database, so the mint
+        // must land after waitForPg above, or a cold manual build would race
+        // Postgres startup. The row is closed once every target has deployed,
+        // which is what keeps the UI's "Building…" spinner honest.
+        if (!uiTriggered) {
+          const claim = await recorder.insertRun({
             id: buildId,
+            targets: targets.map((t) => t.composition),
             trigger: "manual",
             // `headAtStart`, not the abbreviated `shortCommit` used for the build
             // id above: this is the same full sha stamped into the dist as
@@ -1317,7 +1179,15 @@ export function registerBuild(program: Command) {
           });
           if (claim === "lost") {
             softNotes.push(
-              "build-runs: main slot already held — no ledger row minted",
+              `build-runs: ${name} already has a build in flight — no ledger row minted`,
+            );
+          } else if (claim === "unavailable") {
+            // A checkout that has never been deployed has no database of its own.
+            // A composition-only build is a legitimate way to reach that state, so
+            // the missing ledger is a note, never a failure: nothing about the
+            // deploy depends on it.
+            softNotes.push(
+              `build-runs: no database for ${name} yet — this build is not in the ledger`,
             );
           }
         }
@@ -1379,18 +1249,10 @@ export function registerBuild(program: Command) {
         }
         endSpan();
 
-        // 4c. Propagate git config to user config dir (~/.singularity/state/config/<worktree>/)
-        endSpan = buildProfilerStart(
-          "propagateConfig",
-          "build:codegen",
-          "propagate config to user",
-        );
-        console.log("Propagating config to user...");
-        await propagateConfigToUser({
-          root,
-          userConfigDir: configDir.file(name),
-        });
-        endSpan();
+        // 4c. Config propagation is PER TARGET now — each namespace gets its own
+        //     `~/.singularity/state/config/<namespace>/` — so it lives inside
+        //     `deployNamespace` rather than here. It still runs after the
+        //     freshly-seeded git layer above, because every target's deploy does.
 
         // 3c–5. Run validation (checks) and the frontend build in parallel, then
         // publish — the shared app-artifact pipeline's stage 3
@@ -1521,47 +1383,18 @@ export function registerBuild(program: Command) {
           },
         };
 
-        // Stage 3 — the heavy section under ONE host CPU grant, then the atomic
-        // dist publish. `onSteps` fires the instant the section completes (before
-        // the failure check and before anything is published), which is exactly
-        // where this action used to push + print them, so `stepResults` is
-        // populated for the verdict funnels below on BOTH paths.
+        // The transcript, the step roster and the profile are ONE per invocation,
+        // so `stepResults` is refreshed by whichever target is currently in stage
+        // 3 and the verdict's roster names that target's steps — the failing one
+        // on a failure, the last one on success. Every target's steps are pushed
+        // into the shared step log, so the transcript carries all of them in
+        // order.
         let stepResults: StepResult[] = [];
-        const artifact = await buildAndPublishWebDist({
-          root,
-          webDir,
-          target: distTarget,
-          buildId,
-          // The commit the dist gets stamped with. Sampled at the top of this
-          // build, before any source was read, so `.build-commit` names the tree
-          // these bytes came from even when the checkout moves underneath us.
-          headAtStart,
-          composition: null,
-          minify: opts.minify,
-          // A served dist links into the shared content-addressed store; only the
-          // release path materializes real copies.
-          materialize: false,
-          // Every dev deploy that isn't main is an agent worktree — the one
-          // producer of an experimental app. Composition namespaces are published
-          // by the compose-serve stage, which never stamps.
-          experimental: name !== MAIN_WORKTREE_NAME,
-          lane,
-          background: backgroundBuild,
-          companions,
-          admission: {
-            gated,
-            deps: valveDeps,
-            grantHooks: profiler.grantHooks(),
-          },
-          onSteps: (steps) => {
-            stepResults = steps;
-            for (const result of steps) {
-              pushBuildStepLog(result);
-            }
-            printStepBlocks(steps);
-          },
-          hooks,
-        });
+        const onSteps = (steps: StepResult[]): void => {
+          stepResults = steps;
+          for (const result of steps) pushBuildStepLog(result);
+          printStepBlocks(steps);
+        };
 
         const stepRoster = (): Verdict["steps"] =>
           stepResults.map((r) => ({ label: r.label, success: r.success }));
@@ -1578,6 +1411,13 @@ export function registerBuild(program: Command) {
           return head !== null && head !== headAtStart ? head : null;
         };
 
+        // How far the fan-out got, for a verdict that has to be honest about a
+        // partial deploy. `deployedIndex` is the index of the target currently
+        // being deployed (-1 before the loop), so everything after it was never
+        // attempted.
+        const deployedUrls: string[] = [];
+        let deployingIndex = -1;
+
         // The single fatal funnel. Every post-steps failure routes through here so
         // the build's own verdict — with the failing step last, the full step
         // roster, the NOT DEPLOYED consequence, and the log pointers as the literal
@@ -1590,15 +1430,36 @@ export function registerBuild(program: Command) {
         ): Promise<never> => {
           flushFootprint();
           const buildLogPath = worktreeArtifacts.buildLogText(name, buildId);
-          const pointers = [
-            `Full output: ${buildLogPath}`,
-            `Deploy receipt: ${worktreeArtifacts.buildStatus(name)}`,
-          ];
+          const pointers = [`Full output: ${buildLogPath}`];
+          // One receipt pointer per namespace this invocation opened — the file
+          // that answers "did MY app land?" for each of them.
+          for (const ns of receipts.keys()) {
+            pointers.push(
+              `Deploy receipt: ${worktreeArtifacts.buildStatus(ns)}`,
+            );
+          }
           if (stepResults.some((r) => r.id === "checks" && !r.success)) {
             pointers.push(
               `Check logs:  ${worktreeArtifacts.checkLog(name, buildId)}`,
             );
           }
+          // What a multi-target invocation owes its reader, in the same shape
+          // `hermetic-build.ts` reports it: fail-fast means everything already
+          // published stays published, and everything after the failure was never
+          // attempted. Silent on a single-target build, where both are empty.
+          const notAttempted = targets
+            .slice(deployingIndex + 1)
+            .map((t) => t.namespace);
+          const fanOut = [
+            ...(deployedUrls.length > 0
+              ? [
+                  `Already deployed: ${deployedUrls.join(", ")} (left in place).`,
+                ]
+              : []),
+            ...(notAttempted.length > 0
+              ? [`Not attempted: ${notAttempted.join(", ")}.`]
+              : []),
+          ];
           // Asked here, at the ONE funnel every failure routes through, so no
           // failure path can forget to ask. A build whose tree was replaced mid-run
           // has no subject: reporting it as a failure blames whichever check
@@ -1610,11 +1471,12 @@ export function registerBuild(program: Command) {
                   ok: false,
                   headline: `BUILD SUPERSEDED — ${headAtStart!.slice(0, 9)} → ${newHead.slice(0, 9)}`,
                   reason: [
-                    `NOT DEPLOYED. Nothing was published; ${buildUrl} still serves the previous build.`,
+                    `NOT DEPLOYED. ${targetUrls.join(", ")} still ${targetUrls.length === 1 ? "serves its" : "serve their"} previous build.`,
                     `This checkout moved to ${newHead.slice(0, 9)} while the build was reading it, so`,
                     `the steps below straddle two different trees and their verdict is void —`,
                     `${failedLabels.length > 0 ? failedLabels.join(", ") : "the failure"} above is NOT a real failure.`,
                     `A build of ${newHead.slice(0, 9)} follows automatically.`,
+                    ...fanOut,
                   ],
                   pointers,
                   steps: stepRoster(),
@@ -1622,23 +1484,19 @@ export function registerBuild(program: Command) {
               : {
                   ok: false,
                   headline: `BUILD FAILED — ${failedLabels.length > 0 ? failedLabels.join(", ") : "deploy"}`,
-                  reason,
+                  reason: [...reason, ...fanOut],
                   pointers,
                   steps: stepRoster(),
                 };
           // The one code this failure ends on. Resolved here rather than beside
-          // closeRun below so the artifact, main's ledger row and the receipt are
+          // closeRun below so the artifact, the ledger row and the receipts are
           // all stamped from the same value and cannot disagree.
           const exitCode = newHead !== null ? BUILD_EXIT_SUPERSEDED : 1;
           writeBuildLogs(name, renderVerdict(v), exitCode);
-          // Close main's build_runs row as failed, BEFORE finalizeBuild releases the
-          // recorder pool. Main-target only: an agent worktree's row lives in its
-          // own DB (the recorder always targets main's), so this is scoped to avoid
-          // a pointless cross-DB write. The compose-serve failBuild — which fires
-          // only after main's row was already closed 0 at deploy — hits closeRun's
-          // isNull(finishedAt) guard as a no-op, so main's row keeps reflecting the
-          // successful main deploy (decision 1).
-          if (isMainBuild) await recorder.closeRun(buildId, exitCode);
+          // Close this invocation's build_runs row, BEFORE finalizeBuild releases
+          // the recorder pool. One row, one exit code — honest, because the
+          // invocation is the unit of work even when several namespaces published.
+          await recorder.closeRun(buildId, exitCode);
           // `superseded` is its own receipt status, not a flavour of `failed`:
           // the tree moved mid-build, so this build answers for no coherent tree —
           // reporting it as a failure would blame the check that straddled the swap.
@@ -1656,53 +1514,70 @@ export function registerBuild(program: Command) {
             softNotes.length > 0
               ? `BUILD OK — deployed (${softNotes.join("; ")})`
               : "BUILD OK — deployed",
-          notes: [buildUrl],
-          pointers: [`Deploy receipt: ${worktreeArtifacts.buildStatus(name)}`],
+          notes: deployedUrls,
+          pointers: [...receipts.keys()].map(
+            (ns) => `Deploy receipt: ${worktreeArtifacts.buildStatus(ns)}`,
+          ),
           steps: stepRoster(),
         });
 
-        // Stage 3 removed its own staging dir before returning, so nothing was
-        // published and there is nothing left to reclaim here.
-        if (!artifact.ok) {
-          return await failBuild(
-            [
-              `NOT DEPLOYED. Nothing was published; ${buildUrl} still serves the previous build.`,
-              `The frontend compiled, but the artifact was discarded.`,
-            ],
-            artifact.failedLabels,
-          );
+        // ── The fan-out: one deploy per target, FAIL-FAST ────────────────────
+        //
+        // Everything above this line was a function of the SOURCE TREE and ran
+        // once; everything inside is a function of one (composition, checkout)
+        // pair. The first failure ends the invocation — compositions in one build
+        // share a plugin union, so a second failure is almost always the same
+        // failure re-derived at ~10 min a go, and what already published stays
+        // published (which the verdict says).
+        for (const [i, target] of targets.entries()) {
+          deployingIndex = i;
+          // Namespaces are the only thing separating N otherwise identical step
+          // blocks in the transcript.
+          if (targets.length > 1) {
+            console.log(
+              `\n── ${target.namespace} (${i + 1}/${targets.length}) ──────────────`,
+            );
+          }
+          openReceipt(target.namespace);
+          const deployed = await deployNamespace({
+            target,
+            root,
+            webDir,
+            buildId,
+            commit: headAtStart,
+            checkout,
+            minify: opts.minify,
+            // The red frame marks an agent-worktree deploy, and that is a fact
+            // about the CHECKOUT, not about the composition — so every namespace
+            // a worktree publishes carries it, and main's publishes none.
+            experimental: checkout.kind === "worktree",
+            lane,
+            background: backgroundBuild,
+            // Validation belongs to the SOURCE TREE, which every target shares,
+            // so it runs with the first target only — early enough that a broken
+            // tree fails before burning N artifact builds, and once rather than N
+            // times. Reads like a bug at a glance; it is the opposite, and it is
+            // exactly what `hermetic-build.ts` does.
+            companions: i === 0 ? companions : [],
+            admission: {
+              gated,
+              deps: valveDeps,
+              grantHooks: profiler.grantHooks(),
+            },
+            restart: opts.restart,
+            onSteps,
+            hooks,
+          });
+          if (!deployed.ok) {
+            return await failBuild(deployed.reason, deployed.failedLabels);
+          }
+          softNotes.push(...deployed.notes);
+          // This namespace IS deployed. Its receipt is stamped terminal NOW rather
+          // than at finalizeBuild, so a later target's failure — or a kill — can
+          // never rewrite a published namespace's receipt as `failed`.
+          closeReceipt(target.namespace, "ok", 0);
+          deployedUrls.push(namespaceUrl(target.namespace));
         }
-        const { livePath, buildCommit } = artifact;
-
-        // A build that PASSED across a mid-run tree swap still deployed an
-        // artifact assembled from two trees, so it is deployed-but-not-current
-        // rather than wrong-and-loud. Say so instead of claiming a clean deploy of
-        // either commit; `reconcileDeployment` rebuilds from the tip regardless. The
-        // dist's `.build-commit` names `headAtStart` — the commit this build
-        // answered for — so the pin agrees with this note instead of contradicting
-        // it by recording the post-swap head.
-        const okHead = await supersededBy();
-        if (okHead !== null)
-          softNotes.push(
-            `superseded — main moved to ${okHead.slice(0, 9)} mid-build, rebuild follows`,
-          );
-
-        // 6. Write registry JSON
-        endSpan = buildProfilerStart(
-          "registerWorktree",
-          "build:deploy",
-          "register worktree",
-        );
-        console.log("Registering worktree...");
-        writeWorktreeSpec({
-          name,
-          server: resolve(root, "plugins/framework/plugins/server-core"),
-          web: livePath,
-          // Per-worktree zero-cache sidecar — present only under the
-          // SINGULARITY_ZERO_CACHE opt-in. `root` is this worktree's repo root.
-          zeroCache: zeroCacheSpec({ name, repoRoot: root }),
-        });
-        endSpan();
 
         // 6b. Emit the central routing manifest. The gateway watches this file
         // and forwards listed paths to the central backend regardless of host.
@@ -1712,7 +1587,17 @@ export function registerBuild(program: Command) {
 
         // 6c. Re-register the `central` worktree spec for idempotency. Path is
         // always main's central-core/ — see comment at the early write above.
+        //
+        // Invocation-scoped, so it sits OUTSIDE the loop: central is a singleton
+        // API runtime shared by every namespace, and restarting it once per
+        // target would drop every WS connection N times. After the loop rather
+        // than before it, because the alternative is worse: central runs main's
+        // code, so restarting it early would leave the live app on its old dist
+        // talking to a new central for the whole ~10-minute heavy section. Here
+        // the only cost is that the backends just restarted above reconnect once
+        // — which the networking primitive does on its own.
         if (existsSync(join(centralDir, "bin", "index.ts"))) {
+          // No `composition` — see the early central write above.
           writeWorktreeSpec({ name: "central", server: centralDir });
 
           // 6d. Restart central so it picks up freshly-merged main code. Only
@@ -1745,172 +1630,22 @@ export function registerBuild(program: Command) {
           }
         }
 
-        // 6e. Compose-serve stage: activated compositions (autoBuild in main's
-        // resolved `compositions` config, or the one forced by
-        // --serve-composition) get per-composition dists + empty DBs served at
-        // http://<id>.localhost:9000. Main-checkout builds only (same gating as
-        // the central restart above); the stage composes over the artifact fleet
-        // this build just produced. Per-composition failures
-        // are collected and fail the build AFTER main's own deploy completes —
-        // main IS deployed either way; a failed composition keeps serving its
-        // previous dist.
-        const runComposeServe = async (): Promise<void> => {
-          if (root !== mainRoot) return;
-          endSpan = buildProfilerStart(
-            "composeServe",
-            "build:deploy",
-            "compose-serve compositions",
+        // A build that PASSED across a mid-run tree swap still deployed artifacts
+        // assembled from two trees, so it is deployed-but-not-current rather than
+        // wrong-and-loud. Say so instead of claiming a clean deploy of either
+        // commit; `convergeMain` rebuilds from the tip regardless, and it compares
+        // against the commit this build STARTED on precisely because
+        // `.build-commit` records the post-swap head and would look current.
+        const okHead = await supersededBy();
+        if (okHead !== null)
+          softNotes.push(
+            `superseded — main moved to ${okHead.slice(0, 9)} mid-build, rebuild follows`,
           );
-          let result;
-          try {
-            result = await runComposeServeStage({
-              root,
-              minify: opts.minify,
-              buildId,
-              buildCommit,
-              force: opts.serveComposition,
-              // Per-composition build_runs rows + their own profile / step-log
-              // artifacts are owned by the stage. parentBuildId ties each child row
-              // to main's row; the collector factories give each composition a
-              // fresh SpanCollector / StepLogCollector re-based to its own start.
-              recorder,
-              parentBuildId: buildId,
-              createProfile: createSpanCollector,
-              createLogs: createStepLogCollector,
-              log: (line) => console.log(line),
-              onStage: async (sid, label, run) => {
-                const end = buildProfilerStart(sid, "build:deploy", label);
-                try {
-                  return await run();
-                } finally {
-                  end();
-                }
-              },
-            });
-          } finally {
-            endSpan();
-          }
-          if (result.failures.length > 0) {
-            // Main is already deployed (row closed 0 at the health probe above), so
-            // failBuild's closeRun(buildId, 1) here is an intended no-op via the
-            // isNull(finishedAt) guard — main's row keeps reflecting the successful
-            // main deploy. Each failed composition's OWN row was already closed 1 by
-            // the stage. This failBuild exists to surface the failure as the build's
-            // verdict, not to re-stamp main's row.
-            await failBuild(
-              [
-                `Compose-serve failed for: ${result.failures.map((f) => f.id).join(", ")}.`,
-                `Main itself IS deployed — ${buildUrl} serves the new build; each failed composition keeps serving its previous dist.`,
-                ...result.failures.flatMap((f) => [`--- ${f.id} ---`, f.error]),
-              ],
-              ["compose-serve"],
-            );
-          }
-        };
 
-        // 4. Restart the backend if the gateway has it running
-        if (!opts.restart) {
-          // Main's artifacts are published — close its build_runs row before the
-          // compose-serve tail (decision 1), same as the restart path below.
-          if (isMainBuild) await recorder.closeRun(buildId, 0);
-          await runComposeServe();
-          softNotes.push("restart skipped");
-          flushFootprint();
-          writeBuildProfile(name);
-          const okV = buildOkVerdict();
-          writeBuildLogs(name, renderVerdict(okV), 0);
-          await finalizeBuild(true);
-          emitVerdict(okV);
-          return;
-        }
-        endSpan = buildProfilerStart(
-          "restartBackend",
-          "build:deploy",
-          "restart backend",
-        );
-        console.log("Restarting backend...");
-        let gatewayUp = true;
-        // Snapshot the currently-served backend's per-process identity BEFORE the
-        // restart. probeHealth compares against it to prove the NEW backend took
-        // over, rather than the old one still answering ok with stale code.
-        const previousStartedAt = await readHealthStartedAt(name);
-        let restartError: string | null = null;
-        try {
-          const resp = await fetch(
-            `http://localhost:9000/gateway/worktrees/${name}/restart`,
-            {
-              method: "POST",
-              signal: AbortSignal.timeout(adaptiveTimeoutMs(30_000, 130_000)),
-            },
-          );
-          if (resp.ok) {
-            console.log("Backend restarted");
-          } else if (resp.status === 404) {
-            console.log("No running backend to restart");
-          } else if (resp.status === 500) {
-            // A 500 can be a real boot crash or a still-in-progress readiness
-            // timeout under load. Capture the gateway's error body, then ask it
-            // for the authoritative state before deciding to hard-fail; otherwise
-            // let probeHealth make the final call by comparing startedAt.
-            restartError = (await resp.text().catch(() => "")).trim() || null;
-            const info = await getWorktreeState(name);
-            if (info?.state === "broken") {
-              await failBuild(
-                [
-                  `Server crashed during boot (state: broken): ${info.lastSpawnErr || "no error reported"}` +
-                    `${restartError ? `: ${restartError}` : ""}.`,
-                  `NOT DEPLOYED. ${buildUrl} still serves the previous build. Check server logs.`,
-                ],
-                ["backend crashed"],
-              );
-            }
-            console.warn(
-              `Backend restart returned 500${restartError ? `: ${restartError}` : ""} — verifying the new backend took over…`,
-            );
-          } else {
-            console.warn(`Backend restart returned ${resp.status}`);
-          }
-        } catch (err) {
-          // Gateway not running (TypeError/connection refused) or request timed out (DOMException AbortError)
-          if (!(err instanceof TypeError) && !(err instanceof DOMException))
-            throw err;
-          // Gateway not running — that's fine, backend will start on first request
-          gatewayUp = false;
-          console.log("Gateway not reachable, skipping backend restart");
-        }
-        endSpan();
-
-        // Smoke-test the server boot. tsc catches static import errors but the
-        // server can still fail to evaluate (missing env, init-time cycle, etc.)
-        // and surface as a 502 on first request. Hit /api/health to force a boot
-        // and fail the build if the server can't come up.
-        if (gatewayUp) {
-          endSpan = buildProfilerStart(
-            "probeHealth",
-            "build:deploy",
-            "health probe",
-          );
-          const note = await probeHealth(
-            name,
-            previousStartedAt,
-            restartError,
-            (reason) => failBuild(reason, ["backend never ready"]),
-          );
-          if (note) softNotes.push(note);
-          endSpan();
-        }
-
-        // Main is deployed and (when the gateway is up) verified healthy — close
-        // its build_runs row NOW (decision 1), before the long compose-serve tail.
-        // This is the spinner fix: main's row previously stayed open until a later
-        // reconcile because the CLI pid outlives the restarted backend through
-        // compose-serve. Fires on both the gateway-up and gateway-unreachable
-        // success paths; guarded + main-only like the failure closes.
-        if (isMainBuild) await recorder.closeRun(buildId, 0);
-
-        // Compositions AFTER main is verified healthy — a broken main build must
-        // never half-update composition namespaces.
-        await runComposeServe();
+        // Every target published and (when the gateway is up) verified healthy —
+        // close the invocation's one build_runs row. This is the spinner fix: the
+        // row must not outlive the work it describes.
+        await recorder.closeRun(buildId, 0);
 
         flushFootprint();
         writeBuildProfile(name);

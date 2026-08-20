@@ -4,6 +4,13 @@ import { databaseExists, dropDatabase } from "./databases";
 import { withDbForkSlot } from "./fork-gate";
 import { forkTempName } from "./temp-name";
 
+// Deliberately NOT the namespace grammar `databases.ts` uses, and deliberately
+// not shared with it. A fork's source and target are always MAIN-composition
+// namespaces (`singularity` and a checkout's own name), which are single labels
+// — a composition's database is created empty by `ensureDatabase`, never forked
+// — so the dotted two-label form has no way to arrive here. The temp in between
+// never reaches this guard either: `forkTempName` hashes the target to
+// `f_<sha8>_<rand8>__forking`, and it is `databases.ts` that validates it.
 function assertSafeName(name: string): void {
   if (!/^[a-zA-Z0-9_-]+$/.test(name)) {
     throw new Error(`Unsafe database name: ${name}`);

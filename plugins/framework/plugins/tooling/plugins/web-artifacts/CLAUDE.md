@@ -7,7 +7,7 @@ the compose step assembles `dist/` (inline import map + entry + preloads +
 links into the store). This is the ONLY frontend build — the monolithic vite
 build it replaced is gone (`web-core/vite.config.ts`, `--monolith`,
 `SINGULARITY_WEB_MONOLITH`), so every dist producer runs this pipeline:
-`./singularity build`, the compose-serve stage, and `./singularity build
+`./singularity build` (once per target namespace) and `./singularity build
 --hermetic --composition <name…>` (the release path). Design/history:
 `research/2026-07-15-global-per-plugin-web-artifacts.md`,
 `research/2026-08-06-global-one-dist-per-namespace.md`.
@@ -109,6 +109,7 @@ Key invariants:
   - Uses:
     - `framework/web-core.findViteContributions`
     - `framework/web-core.loadBabelContributions`
+    - `infra/namespace.MAIN_COMPOSITION_ID`
     - `packages/semaphore.createSemaphore`
   - Exports (types):
     - `ArtifactKind`

@@ -4,17 +4,22 @@ import { serveCompositionEndpoint } from "@plugins/build/core";
 import { showToast } from "@plugins/shell/plugins/toast/web";
 
 /**
- * The serve capability for a composition: persist the `autoBuild` intent AND
- * kick an immediate main build so the live URL is ready without waiting for the
- * next full build.
+ * The serve capability for a composition: persist the `autoBuild` intent AND run
+ * the build that makes it true.
  *
- * `serve` writes MAIN's config via `setAutoBuild(id, true)` (so the compose-serve
- * stage keeps serving it on every subsequent main build) and POSTs the serve
- * endpoint to run the build now. `useEndpointMutation` auto-toasts endpoint
- * errors (e.g. the server's 400 when invoked off-main), so there is no onError.
+ * `serve` writes the intent via `setAutoBuild(id, true)` and POSTs the serve
+ * endpoint, which runs `./singularity build --composition <id>` in the checkout
+ * this backend belongs to — so the live URL is
+ * `<id>.<checkout>.localhost:9000` and it is ready when that build ends.
+ * `useEndpointMutation` auto-toasts endpoint errors (e.g. the server's 400 for a
+ * composition that can never be served), so there is no onError.
  *
- * `stop` is flag-only: clearing `autoBuild` stops the composition being served on
- * the next full build; there is nothing to build immediately.
+ * `stop` is flag-only, and since auto-serve was deleted the flag stops NOTHING:
+ * clearing it records that the composition is no longer meant to be live, but the
+ * namespace keeps serving its last dist until something reclaims it. Reclaiming
+ * is Phase 5 of
+ * research/2026-08-17-global-composition-build-serve-model.md; the panel says so
+ * rather than implying a stop that does not happen.
  */
 export function useServeComposition(): {
   serve: (id: string) => void;
@@ -28,7 +33,8 @@ export function useServeComposition(): {
     build.mutate({ body: { composition: id } });
     showToast({
       title: `Building & serving “${id}”…`,
-      description: "Running a main build; the live URL will be ready shortly.",
+      description:
+        "Running a build of this checkout; the live URL will be ready shortly.",
       variant: "info",
     });
   };

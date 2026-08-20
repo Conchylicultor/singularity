@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "answers": [
+    {
+      "key": "column:build_runs.targets",
+      "entityType": "column",
+      "entityName": "targets",
+      "action": "create"
+    }
+  ]
+}

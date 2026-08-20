@@ -59,7 +59,22 @@ export const MAIN_COMPOSITION_ID = "singularity";
 export const NAMESPACE_LABEL_RE = /^[a-z0-9][a-z0-9-]{0,62}$/;
 
 /**
- * A whole namespace: one label, or two joined by a dot.
+ * The longest a whole namespace may be, in bytes.
+ *
+ * A namespace IS a Postgres database name, and Postgres truncates `datname` at
+ * `NAMEDATALEN - 1` = 63 bytes without complaining. Two namespaces that agree on
+ * their first 63 bytes would therefore share ONE database — the worst possible
+ * failure, because both apps keep working while writing over each other. The
+ * charset is ASCII-only, so bytes and characters are the same count here.
+ *
+ * Per-label the cap is already implied (a label is at most 63), so it only bites
+ * on the two-label form, where `<composition>.<checkout>` can reach 127.
+ */
+export const NAMESPACE_MAX_BYTES = 63;
+
+/**
+ * A whole namespace: one label, or two joined by a dot, at most
+ * `NAMESPACE_MAX_BYTES` long.
  *
  * Written as a per-label composition rather than by adding `.` to the charset,
  * because this shape structurally forbids the only ways a dotted name could stop
@@ -70,9 +85,15 @@ export const NAMESPACE_LABEL_RE = /^[a-z0-9][a-z0-9-]{0,62}$/;
  * checkout — so a third label is not a thing that can be meant. The gateway's
  * own regex is deliberately looser (it validates path-safety, not meaning); the
  * semantic cap belongs here, where the axes are known.
+ *
+ * The leading lookahead is the byte cap — see `NAMESPACE_MAX_BYTES`. It lives in
+ * the regex as well as in `namespaceFor`'s throw so that every VALIDATING
+ * boundary (`asNamespace`, `isNamespace`, `namespaceFromHost`) gets it too: a
+ * 90-byte name arriving on a Host header is as much a collided database as one
+ * that was minted.
  */
 export const NAMESPACE_RE =
-  /^[a-z0-9][a-z0-9-]{0,62}(\.[a-z0-9][a-z0-9-]{0,62})?$/;
+  /^(?=.{1,63}$)[a-z0-9][a-z0-9-]{0,62}(\.[a-z0-9][a-z0-9-]{0,62})?$/;
 
 /**
  * Mint the namespace for a (composition, checkout) pair — THE elision rule.
@@ -124,7 +145,21 @@ export function namespaceFor(
     // agent worktree has today (`att-XXX`).
     return checkout.name as Namespace;
   }
-  return `${composition}.${checkout.name}` as Namespace;
+  const ns = `${composition}.${checkout.name}`;
+  if (ns.length > NAMESPACE_MAX_BYTES) {
+    // Enforced HERE, at the minter, rather than by a check over the manifest:
+    // a check only sees the compositions someone wrote down, while the checkout
+    // half is a git worktree basename an agent invents at runtime. Only the
+    // place that joins the two can see the length that results, and the failure
+    // it prevents is silent — see `NAMESPACE_MAX_BYTES`.
+    throw new Error(
+      `Namespace "${ns}" is ${ns.length} bytes — the limit is ${NAMESPACE_MAX_BYTES}, ` +
+        `because a namespace is a Postgres database name and Postgres truncates ` +
+        `datname at 63 bytes, so a longer one would silently share a database with ` +
+        `another namespace. Shorten the composition id or the checkout name.`,
+    );
+  }
+  return ns as Namespace;
 }
 
 /**

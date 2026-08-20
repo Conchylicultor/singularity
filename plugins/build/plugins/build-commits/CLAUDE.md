@@ -12,7 +12,6 @@
     - `infra/endpoints.useEndpoint`
     - `primitives/commit-list.CommitRowItem`
     - `primitives/css/placeholder.Placeholder`
-    - `primitives/live-state.useResource`
     - `primitives/loading.Loading`
 - Server:
   - Uses:

@@ -46,7 +46,7 @@ Location: `~/.singularity/worktrees/<name>/spec.json`. Directory name = worktree
 
 Two fields, both required, both absolute paths. The gateway hardcodes the launch convention (`bun bin/index.ts`, `SOCKET_PATH` env var, escalating readiness timeout — see "Backend Contract"). No per-worktree overrides in v1. Other per-worktree files (build logs, profiling data) also live in the same subdirectory.
 
-Composition namespaces (`http://<composition>.localhost:9000`, the build CLI's compose-serve stage) are ordinary spec dirs written by the build — `server` points at main's checkout, `web` at a composed dist, plus a `composition.json` provenance marker the gateway ignores. No gateway changes; namespace identity flows the same way (dir name → `SINGULARITY_WORKTREE`).
+Composition namespaces (`http://<composition>.<checkout>.localhost:9000`, or `http://<composition>.localhost:9000` when the checkout is main — `./singularity build --composition <name>`) are ordinary spec dirs written by the build: `server` points at the checkout that built it, `web` at a composed dist, plus a `composition.json` provenance marker the gateway ignores. No gateway changes; namespace identity flows the same way (dir name → `SINGULARITY_WORKTREE`). The `composition` field on the spec is carried through the gateway's round-trip but never interpreted or forwarded — the backend reads it back off the same file.
 
 ### Discovery: dir-level watch + lazy resolve + periodic reconcile
 

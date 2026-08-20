@@ -29,24 +29,18 @@ describe("hermeticFlagConflicts", () => {
     }
   });
 
-  test("--composition singularity is refused, naming the mechanism", () => {
-    const conflicts = hermeticFlagConflicts({
-      ...ok,
-      composition: ["singularity"],
-    });
-    expect(conflicts).toHaveLength(1);
-    // The refusal has to state WHY, or it reads as an arbitrary reserved word:
-    // select-registry.ts adopts the emitted file for main's backend on presence.
-    expect(conflicts[0]).toContain("select-registry.ts");
-    expect(conflicts[0]).toContain(
-      "server.composition.singularity.generated.ts",
-    );
-  });
-
-  test("`singularity` is caught anywhere in the variadic list", () => {
+  test("--composition singularity is an ORDINARY composition, not a refusal", () => {
+    // It was refused while the backend picked its registry by file presence: the
+    // emitted `server.composition.singularity.generated.ts` would reconfigure
+    // main's own backend on its next spawn. Selection is by identity now, the
+    // main composition's registry IS the committed one and nothing emits a
+    // second spelling of it, so releasing the main app is a normal build.
+    expect(
+      hermeticFlagConflicts({ ...ok, composition: ["singularity"] }),
+    ).toEqual([]);
     expect(
       hermeticFlagConflicts({ ...ok, composition: ["sonata", "singularity"] }),
-    ).toHaveLength(1);
+    ).toEqual([]);
   });
 
   test.each([
@@ -55,7 +49,6 @@ describe("hermeticFlagConflicts", () => {
     // commander stores `--no-restart` as `restart: false`; `undefined` is not a
     // spelling of it, so the check must be for `false` specifically.
     ["--no-restart", { restart: false }],
-    ["--serve-composition", { serveComposition: "sonata" }],
   ])("%s is deploy-only and refused", (flag, patch) => {
     const conflicts = hermeticFlagConflicts({ ...ok, ...patch });
     expect(conflicts).toHaveLength(1);
@@ -68,7 +61,6 @@ describe("hermeticFlagConflicts", () => {
         ...ok,
         allowMain: false,
         skipChecks: false,
-        serveComposition: undefined,
       }),
     ).toEqual([]);
   });
@@ -79,8 +71,7 @@ describe("hermeticFlagConflicts", () => {
       restart: false,
       allowMain: true,
       skipChecks: true,
-      serveComposition: "sonata",
     });
-    expect(conflicts).toHaveLength(5);
+    expect(conflicts).toHaveLength(4);
   });
 });

@@ -99,10 +99,38 @@ test("asNamespace refuses the shapes that would stop being one safe path segment
     "A",
     "a/b",
     `${"a".repeat(64)}.b`,
+    // 64 bytes: both labels are legal, the whole is one over the datname cap.
+    `${"a".repeat(32)}.${"b".repeat(31)}`,
   ]) {
     expect(() => asNamespace(bad)).toThrow("Invalid namespace");
     expect(isNamespace(bad)).toBe(false);
   }
+  // Exactly at the cap is fine — 63 bytes is what Postgres stores intact.
+  expect(isNamespace(`${"a".repeat(31)}.${"b".repeat(31)}`)).toBe(true);
+});
+
+/**
+ * The 63-byte cap, at the minter.
+ *
+ * Both halves can be individually legal labels and still compose past what
+ * Postgres keeps: `datname` is `NAMEDATALEN - 1` = 63 bytes and truncates
+ * silently, so two long namespaces sharing a 63-byte prefix would share ONE
+ * database while both kept appearing to work. It throws here rather than being
+ * caught by a check because only the join of (composition, checkout) knows the
+ * resulting length, and the checkout half is a worktree name invented at
+ * runtime.
+ */
+test("namespaceFor refuses a composed namespace over the 63-byte cap", () => {
+  const c = "c".repeat(32);
+  const w = "w".repeat(31); // 32 + 1 + 31 = 64
+  expect(() => namespaceFor(c, WT(w))).toThrow("the limit is 63");
+  // One byte shorter is exactly the cap, and must still mint.
+  const ns = namespaceFor(c, WT("w".repeat(30)));
+  expect(ns).toHaveLength(63);
+  expect(NAMESPACE_RE.test(ns)).toBe(true);
+  // The elided forms are single labels, so the cap can never bite there.
+  expect(namespaceFor(MAIN_COMPOSITION_ID, WT(w))).toBe(asNamespace(w));
+  expect(namespaceFor(c, MAIN)).toBe(asNamespace(c));
 });
 
 test("namespaceFromHost round-trips namespaceHost and rejects the loopback hosts", () => {

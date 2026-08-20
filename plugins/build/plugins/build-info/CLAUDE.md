@@ -12,6 +12,7 @@
     - `build/build-status.BuildStatusBadge`
     - `infra/endpoints.useEndpoint`
     - `primitives/css/badge.Badge`
+    - `primitives/css/inline.Inline`
     - `primitives/css/rigid.rigidClass`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`

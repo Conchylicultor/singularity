@@ -835,7 +835,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `serverHealthResource`
               - `ServerHealthRowSchema`
               - `SshCheckResultSchema`
-        - **`local-serve`** — Test locally: the deployment pane's section for the composition served on the shared gateway (its live URL, what it does and does not prove, and the main-only refusal off main), plus the one-button serve/open shortcut on the deployments list row.
+        - **`local-serve`** — Test locally: the deployment pane's section for the composition served on the shared gateway (its live URL and what it does and does not prove), plus the one-button serve/open shortcut on the deployments list row.
           - Web:
             - Contributes:
               - `DeploymentDetail.Section` "Test locally" → `LocalServeSection`
@@ -6819,6 +6819,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `primitives/auto-scroll.JumpToBottomButton`
       - `primitives/auto-scroll.useStickyScroll`
       - `primitives/css/badge.Badge`
+      - `primitives/css/inline.Inline`
       - `primitives/css/pin.Pin`
       - `primitives/css/rigid.rigidClass`
       - `primitives/css/row.Row`
@@ -6891,6 +6892,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
   - Core:
     - Uses:
       - `infra/endpoints.defineEndpoint`
+      - `infra/namespace.MAIN_COMPOSITION_ID`
       - `infra/query-resource.queryResourceDescriptor`
       - `primitives/pane.defineRoute`
     - Exports (types): `BuildRun`
@@ -6899,6 +6901,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `buildHistoryResource`
       - `buildRoute`
       - `BuildRunSchema`
+      - `isMainCompositionBuild`
       - `serveCompositionEndpoint`
       - `triggerBuildEndpoint`
   - Cross-plugin:
@@ -6916,6 +6919,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `buildConfig`
       - `buildHistoryResource`
       - `BuildRunSchema`
+      - `isMainCompositionBuild`
   - Plugins:
     - **`build-commits`** — Commits included since the previous build, shown in the build detail pane. Per-run commit list data endpoint.
       - Web:
@@ -6925,7 +6929,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `infra/endpoints.useEndpoint`
           - `primitives/commit-list.CommitRowItem`
           - `primitives/css/placeholder.Placeholder`
-          - `primitives/live-state.useResource`
           - `primitives/loading.Loading`
       - Server:
         - Uses:
@@ -6963,6 +6966,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `build/build-status.BuildStatusBadge`
           - `infra/endpoints.useEndpoint`
           - `primitives/css/badge.Badge`
+          - `primitives/css/inline.Inline`
           - `primitives/css/rigid.rigidClass`
           - `primitives/css/spacing.Stack`
           - `primitives/css/text.Text`
@@ -7163,7 +7167,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Imported by:
           - `build`
           - `build/build-commits`
-    - **`serve-composition`** — Serve capability for a composition: the live-serve toggle panel, the enable→build hook, and the served-liveness read (the composition.json marker, not the autoBuild intent). Consumed by Studio's Build & serve section and compositions list, and by the deploy pane's Test locally section. Serve-liveness read for a composition namespace (is it actually served, and can this backend start one) plus the reset-to-first-launch endpoint: wipes ONLY that composition's DB + config back to what compose-serve provisions on a fresh serve, then restarts its backend. Never touches main.
+    - **`serve-composition`** — Serve capability for a composition: the live-serve toggle panel, the enable→build hook (a `build --composition <id>` of THIS checkout), and the served-liveness read (the server-resolved namespace plus the composition.json marker, not the autoBuild intent). Consumed by Studio's Build & serve section and compositions list, and by the deploy pane's Test locally section. Serve-liveness read for a composition: WHERE this backend's checkout serves it (the server-resolved namespace + url) and whether anything is actually there (the composition.json marker), plus the reset-to-first-launch endpoint — wipes ONLY that namespace's DB + config back to what a serve build provisions on a fresh serve, then restarts its backend. Never touches the checkout's own app.
       - Web:
         - Uses:
           - `infra/endpoints.useEndpoint`
@@ -7192,8 +7196,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `database/admin.ensureDatabase`
           - `database/zero/cache-service.dropZeroReplicationArtifacts`
           - `infra/endpoints.implement`
-          - `infra/paths.isMain`
-          - `infra/paths.MAIN_WORKTREE_NAME`
+          - `infra/paths.checkoutRef`
+          - `infra/paths.currentWorktreeName`
+          - `infra/paths.REPO_ROOT`
           - `infra/worktree.ensureMainWorktreeRoot`
           - `infra/worktree.hasCompositionMarker`
           - `infra/worktree.namespaceCollision`
@@ -10985,6 +10990,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `TableStat`
         - Exports (values):
           - `backupDatabase`
+          - `closeAdminPool`
           - `connectionString`
           - `countActiveConnections`
           - `databaseExists`
@@ -14844,6 +14850,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `framework/slot-declaration.getCreatedSlots`
               - `framework/tooling/format.formatIfFormattable`
               - `framework/tooling/format.SourceBytes`
+              - `infra/namespace.MAIN_COMPOSITION_ID`
               - `plugin-meta/barrel-import.AUTO_STUB_CSS`
               - `plugin-meta/barrel-import.AUTO_STUB_PACKAGES`
               - `plugin-meta/barrel-import.AutoStubEntry`
@@ -14905,6 +14912,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `collectEntriesWithDeps`
               - `collectFieldEagerBarrels`
               - `collectTokenGroupVars`
+              - `compositionRegistryFileName`
+              - `compositionRegistryPath`
               - `computeDisabledIds`
               - `computeEagerTier`
               - `customUtilitiesManifestPath`
@@ -15184,6 +15193,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Uses:
               - `framework/web-core.findViteContributions`
               - `framework/web-core.loadBabelContributions`
+              - `infra/namespace.MAIN_COMPOSITION_ID`
               - `packages/semaphore.createSemaphore`
             - Exports (types):
               - `ArtifactKind`
@@ -16581,7 +16591,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`namespace`** — Canonical namespace identity: the branded Namespace type, the <composition>.<checkout> elision rule that mints one, and the URL/host encodings derived from it.
       - Cross-plugin:
         - Imported by:
+          - `build`
+          - `framework/tooling/codegen`
           - `framework/tooling/guards`
+          - `framework/tooling/web-artifacts`
           - `infra/paths`
           - `plugin-meta/composition`
       - Core:
@@ -16655,6 +16668,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `REPO_ROOT`
           - `repoConfigDir`
           - `setReleaseIdentity`
+          - `WORKTREE_SPEC_FILE`
           - `worktreeArtifacts`
           - `worktreeDataDir`
           - `worktreesDir`
@@ -16761,6 +16775,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `TMUX`
           - `WEB_CORE_RELATIVE`
           - `webDistDir`
+          - `WORKTREE_SPEC_FILE`
           - `worktreeArtifacts`
           - `worktreeDataDir`
           - `worktreesDir`
@@ -17136,6 +17151,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `infra/host-admission.pushPool`
           - `infra/host-admission.pushSlotPath`
           - `infra/paths.GIT`
+          - `infra/paths.worktreeArtifacts`
           - `infra/paths.worktreeDataDir`
           - `infra/paths.worktreesDir`
           - `packages/flock.flockTry`
@@ -17156,7 +17172,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports (values):
           - `clearPushHolder`
           - `clearWorktreeOp`
-          - `COMPOSITION_MARKER_FILE`
           - `derivePushPhases`
           - `ensureMainWorktreeRoot`
           - `gitWorktreesDir`
@@ -17176,6 +17191,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `resolveActiveWorktreeOps`
           - `setupWorktree`
           - `setWorktreeOpPhase`
+          - `stampCompositionMarker`
           - `withWorktreeMutateSlot`
           - `WorktreeGitTimeoutError`
           - `worktreePathFor`
@@ -21383,6 +21399,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/sonata/sources/ultimate-guitar`
               - `apps/studio/contributions/tables/row-count`
               - `apps/studio/explorer`
+              - `build`
+              - `build/build-info`
               - `build/build-status`
               - `build/deployment`
               - `conversations/all-conversations`
@@ -25231,7 +25249,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `auth/apple-signing/setup-wizard`
           - `auth/google/setup-wizard`
           - `build`
-          - `build/build-commits`
           - `build/build-fix`
           - `build/build-info`
           - `build/deployment`

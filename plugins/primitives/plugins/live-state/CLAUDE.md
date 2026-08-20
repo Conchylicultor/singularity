@@ -715,7 +715,6 @@ This narrows re-renders, not the WS subscription: N callers of the same
     - `auth/apple-signing/setup-wizard`
     - `auth/google/setup-wizard`
     - `build`
-    - `build/build-commits`
     - `build/build-fix`
     - `build/build-info`
     - `build/deployment`

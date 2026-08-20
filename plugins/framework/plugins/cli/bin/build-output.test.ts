@@ -163,7 +163,7 @@ describe("renderVerdict — success", () => {
 
 describe("fallbackVerdict", () => {
   const ctx = {
-    url: URL,
+    urls: [URL],
     buildLogPath: "/home/x/.singularity/worktrees/att-x/build.log",
   };
 
@@ -230,7 +230,7 @@ describe("fallbackVerdict", () => {
 // pointer and a write, bound in one test.
 describe("runVerdictGuard — the pointer and the file it names", () => {
   const ctx = {
-    url: URL,
+    urls: [URL],
     buildLogPath: "/home/x/.singularity/worktrees/att-x/build.log",
   };
 
@@ -293,7 +293,7 @@ describe("runVerdictGuard — the pointer and the file it names", () => {
 // It must never read as a code defect.
 describe("fallbackVerdict — terminated from outside", () => {
   const ctx = {
-    url: URL,
+    urls: [URL],
     buildLogPath: "/home/x/.singularity/worktrees/att-x/build.log",
   };
 
@@ -361,7 +361,7 @@ describe("fallbackVerdict — terminated from outside", () => {
 // something.
 describe("fallbackVerdict — crashed on an unhandled exception", () => {
   const ctx = {
-    url: "http://main.localhost:9000",
+    urls: ["http://main.localhost:9000"],
     buildLogPath: "/tmp/build.log",
   };
   const crash =

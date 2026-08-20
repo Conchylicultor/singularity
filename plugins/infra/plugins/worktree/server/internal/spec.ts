@@ -1,7 +1,11 @@
 import { mkdirSync, renameSync, writeFileSync } from "node:fs";
 import { rm } from "node:fs/promises";
-import { join } from "node:path";
-import { worktreesDir } from "@plugins/infra/plugins/paths/server";
+import { dirname, join } from "node:path";
+import { asNamespace } from "@plugins/infra/plugins/namespace/core";
+import {
+  worktreeArtifacts,
+  worktreesDir,
+} from "@plugins/infra/plugins/paths/server";
 
 /**
  * Optional per-worktree zero-cache sidecar descriptor. Present ONLY when the
@@ -39,6 +43,30 @@ export interface WorktreeSpec {
    * byte-for-byte as before.
    */
   zeroCache?: ZeroCacheSpec;
+  /**
+   * WHICH APP this namespace serves. The BACKEND reads it back off this same
+   * file at boot (`server-core/bin/spec-composition.ts`) and
+   * `server-core/bin/select-registry.ts` picks the plugin registry from it. The
+   * gateway carries the field through its own spec round-trip but never passes
+   * it on: it reads this file, and so does the backend, so the two cannot
+   * disagree and there is no second hop that could drop the value. (It also
+   * means the field works against a stale gateway binary — `singularity build`
+   * rebuilds the backend but not the Go gateway.)
+   *
+   * Absent means "no composition declared", which the backend reads as the main
+   * app — the shape `central` and every pre-composition spec have, so an absent
+   * value serializes byte-for-byte as before. It is deliberately NOT the same as
+   * an empty string, which would arrive as a composition id and be rejected as
+   * one.
+   *
+   * This field exists because identity may not be inferred from the checkout's
+   * files. The backend used to pick a filtered registry if one happened to be
+   * sitting in `server-core/core/`, which meant a `git clean` silently demoted a
+   * composition to the full app, and a main-composition build silently promoted
+   * main to somebody else's filtered registry. The spec is the one thing that
+   * knows, so the spec says it.
+   */
+  composition?: string;
 }
 
 /**
@@ -48,10 +76,11 @@ export interface WorktreeSpec {
  *
  * This is the single seam shared by the dev build (identity derived from the git
  * worktree) and the release launcher (a fixed name, no git operation). The spec
- * is pure identity — composition filtering is baked into the `server`/`web`
- * trees the spec points at (a present `server.composition.<name>.generated.ts`,
- * selected by the backend's own `SINGULARITY_WORKTREE`, gives the filtered
- * server), never carried here.
+ * is pure identity, and `composition` is part of that identity: a namespace is
+ * `<composition>.<checkout>` with both sentinels elided, so the name alone
+ * cannot say which of the two axes it came from. The `web` tree it points at is
+ * already composition-filtered; the `server` tree is shared, so the backend is
+ * TOLD which registry to load rather than left to find one.
  */
 export function writeWorktreeSpec({
   name,
@@ -59,10 +88,17 @@ export function writeWorktreeSpec({
   web,
   command,
   zeroCache,
+  composition,
 }: WorktreeSpec): string {
-  const dir = join(worktreesDir(), name);
-  mkdirSync(dir, { recursive: true });
-  const path = join(dir, "spec.json");
+  // The path comes from `paths` (`worktreeArtifacts.spec`), not from a join
+  // here: the backend this spec spawns reads the same file back at boot
+  // (`server-core/bin/spec-composition.ts`), so the name has more than one
+  // caller and therefore exactly one owner. `asNamespace` at the join is the
+  // same boundary cast `worktree-op.ts` makes for its markers — `name` IS a
+  // namespace by contract, and a malformed one would mint a spec dir the
+  // gateway can never route to.
+  const path = worktreeArtifacts.spec(asNamespace(name));
+  mkdirSync(dirname(path), { recursive: true });
   // Build the spec object additively so absent keys are omitted entirely —
   // a dev spec must serialize byte-for-byte as before (no `web`/`command`/
   // `zeroCache` when unset), since the gateway treats a missing `command` as
@@ -73,10 +109,12 @@ export function writeWorktreeSpec({
     web?: string;
     command?: string[];
     zeroCache?: ZeroCacheSpec;
+    composition?: string;
   } = { server };
   if (web) spec.web = web;
   if (command) spec.command = command;
   if (zeroCache) spec.zeroCache = zeroCache;
+  if (composition) spec.composition = composition;
   // Atomically publish the spec (temp + rename in the same dir) so a concurrent
   // reader — the gateway registry's loadFile, its periodic reconcile, or a lazy
   // resolve — never observes a truncated/partial spec.json and skips

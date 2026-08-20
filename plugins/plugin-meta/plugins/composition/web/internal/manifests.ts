@@ -79,9 +79,10 @@ export interface ManifestActions {
    * Flip the `autoBuild` (auto build & serve) flag on the item with the given
    * `id`, preserving every other field. `autoBuild` is engine-opaque config
    * metadata (dropped by `manifestItemToManifest`), so this is a config-only
-   * write — the CLI compose-serve stage reads it from MAIN's resolved config.
+   * write — the declared serve intent (a build of this checkout is what acts
+   * on it).
    *
-   * **Throws for an id compose-serve may never provision a namespace for.**
+   * **Throws for an id no serve build may ever provision a namespace for.**
    * Main's namespace belongs to the main checkout's own build, so the flag
    * means nothing there — `activatedCompositionIds` drops main whatever value
    * is stored. Same shape as `remove`: the surfaces render the toggle inert,
@@ -158,12 +159,12 @@ export function useManifestActions(): ManifestActions {
   const setAutoBuild = useCallback(
     (id: string, on: boolean) => {
       // Keyed on servability, not on main's id: the reason the flag is
-      // meaningless is "compose-serve will never provision this namespace",
+      // meaningless is "no serve build will ever provision this namespace",
       // which is exactly what this predicate answers — and it is the same
       // predicate the inert toggles and `activatedCompositionIds` read.
       if (!isServableCompositionId(id)) {
         throw new Error(
-          `Cannot set autoBuild on "${id}" — it is not compose-served, so the flag has no effect.`,
+          `Cannot set autoBuild on "${id}" — it is never served as a composition, so the flag has no effect.`,
         );
       }
       setConfig(

@@ -28,6 +28,8 @@ export {
 export {
   collectedDirRegistryPath,
   collectedDirNamedCompositionRegistryPath,
+  compositionRegistryFileName,
+  compositionRegistryPath,
   collectBareSpecifiers,
   collectEntriesWithDeps,
   discoverCollectedDirs,

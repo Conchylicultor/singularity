@@ -15,7 +15,10 @@ import {
   worktreeArtifacts,
   pruneWorktreeBuildArtifacts,
 } from "@plugins/infra/plugins/paths/server";
-import type { Namespace } from "@plugins/infra/plugins/namespace/core";
+import {
+  MAIN_COMPOSITION_ID,
+  type Namespace,
+} from "@plugins/infra/plugins/namespace/core";
 import { recordNotification } from "@plugins/shell/plugins/notifications/server";
 import { buildDetailRoute } from "@plugins/build/core";
 import {
@@ -60,6 +63,12 @@ export function isPidAlive(pid: number | null): boolean {
  *
  * Also read by the boot-adopted watch (watch-inflight-build) to know when the
  * build it adopted has finished and the watcher may self-dispose.
+ *
+ * Deliberately TARGET-BLIND: a live `build --composition sonata` in this
+ * checkout makes an auto-build request here be dropped. That is correct, not an
+ * oversight — the per-checkout `.build.lock` serializes the two anyway, so the
+ * second would only queue behind the first and then rebuild a tree that has not
+ * moved. Do not "fix" it by scoping the lock per target.
  */
 export async function hasLiveInflightBuild(): Promise<boolean> {
   const rows = await db
@@ -269,7 +278,7 @@ function isUniqueViolation(err: unknown): boolean {
 
 export function triggerBuild(
   trigger: "manual" | "auto",
-  opts?: { serveComposition?: string },
+  opts?: { composition?: string },
 ): void {
   if (inflight) return;
   inflight = true;
@@ -322,7 +331,7 @@ export function getHeadCommit(): string | null {
 async function doRunBuild(
   trigger: "manual" | "auto",
   commitHash: string | null,
-  opts?: { serveComposition?: string },
+  opts?: { composition?: string },
 ): Promise<void> {
   // A crashed prior owner can leave an unfinished row that the partial unique
   // index treats as a live claim and that would block every future build. Close
@@ -345,6 +354,11 @@ async function doRunBuild(
       id: buildId,
       trigger,
       commitHash,
+      // WHAT this invocation builds, stated at the claim rather than left to the
+      // column default: a serve request names its composition, a plain build
+      // names this checkout's own app. The CLI is handed the same id on argv, so
+      // the row and the process cannot disagree about what ran.
+      targets: [opts?.composition ?? MAIN_COMPOSITION_ID],
       pid: process.pid,
       namespace: currentWorktreeName(),
     });
@@ -354,8 +368,7 @@ async function doRunBuild(
   }
 
   const args = ["./singularity", "build", "--allow-main"];
-  if (opts?.serveComposition)
-    args.push("--serve-composition", opts.serveComposition);
+  if (opts?.composition) args.push("--composition", opts.composition);
   const proc = Bun.spawn(args, {
     cwd: REPO_ROOT,
     stdout: "pipe",

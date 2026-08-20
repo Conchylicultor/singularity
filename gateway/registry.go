@@ -37,6 +37,30 @@ import (
 // `namespace:grammar-in-sync` check, which reads this literal.
 var nameRegex = regexp.MustCompile(`^[a-z0-9][a-z0-9-]{0,62}(\.[a-z0-9][a-z0-9-]{0,62})*$`)
 
+// maxNamespaceBytes caps a whole namespace, mirroring NAMESPACE_MAX_BYTES in
+// plugins/infra/plugins/namespace/core/namespace.ts (also read by the
+// `namespace:grammar-in-sync` check).
+//
+// A namespace is also the app's Postgres database name, and NAMEDATALEN is 64,
+// so Postgres truncates `datname` at 63 bytes without complaining: two
+// namespaces agreeing on their first 63 bytes would share ONE database. The cap
+// is enforced at the TypeScript minter, which is where a name is invented; it is
+// mirrored here because the gateway validates names it did not mint — read off
+// the registry directory and off a Host header — and admitting one it cannot
+// serve a coherent database for is a 404 nobody can explain.
+//
+// A length test rather than a regex clause: Go's RE2 has no lookahead, so the
+// cap cannot ride inside `nameRegex` the way it does in NAMESPACE_RE.
+const maxNamespaceBytes = 63
+
+// validNamespace is the ONLY way to ask "is this string a namespace?" in the
+// gateway. `nameRegex` alone is not the rule — a call site that matched the
+// regex and forgot the length would admit a name whose database is a DIFFERENT
+// name — so the two halves are joined here rather than at four call sites.
+func validNamespace(name string) bool {
+	return len(name) <= maxNamespaceBytes && nameRegex.MatchString(name)
+}
+
 // Registry is the in-memory collection of worktrees, populated from JSON
 // files in cfg.RegistryDir and kept in sync via fsnotify.
 type Registry struct {
@@ -81,7 +105,7 @@ func (r *Registry) Resolve(name string) *Worktree {
 	if wt := r.Get(name); wt != nil {
 		return wt
 	}
-	if r.cfg.RegistryDir == "" || !nameRegex.MatchString(name) {
+	if r.cfg.RegistryDir == "" || !validNamespace(name) {
 		return nil
 	}
 	specPath := filepath.Join(r.cfg.RegistryDir, name, "spec.json")
@@ -107,7 +131,7 @@ func (r *Registry) Resolve(name string) *Worktree {
 // Never evicts and never errors out: an absent or unreadable spec leaves the
 // worktree exactly as it is (see loadFile).
 func (r *Registry) RefreshSpec(name string) {
-	if r.cfg.RegistryDir == "" || !nameRegex.MatchString(name) {
+	if r.cfg.RegistryDir == "" || !validNamespace(name) {
 		return
 	}
 	specPath := filepath.Join(r.cfg.RegistryDir, name, "spec.json")
@@ -354,7 +378,7 @@ func (r *Registry) StopAll(ctx context.Context) error {
 
 func (r *Registry) loadFile(path string) {
 	name := nameFromPath(path)
-	if !nameRegex.MatchString(name) {
+	if !validNamespace(name) {
 		slog.Warn("invalid worktree name", "name", name, "path", path)
 		return
 	}

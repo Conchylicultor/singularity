@@ -25,7 +25,7 @@ rules protect it: it must be present **exactly once** (the id is a namespace, an
 `plugins-registry-in-sync` finds "the main composition" by that id to prove its
 closure renders the committed registries byte-for-byte), and it must carry
 `autoBuild: false`. Main is built and served by the build command into the main
-checkout's own namespace, never by compose-serve — `activatedCompositionIds`
+checkout's own namespace, never as a served composition — `activatedCompositionIds`
 already filters on servability, so a stored `true` is inert; this rule is about
 the committed seed telling the truth, not about preventing an effect.
 

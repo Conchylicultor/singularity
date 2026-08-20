@@ -17,7 +17,11 @@ import { clientLog } from "@plugins/primitives/plugins/log-channels/web";
 import { debugApp } from "@plugins/apps/plugins/debug/plugins/shell/core";
 import { buildRoute, buildDetailRoute } from "@plugins/build/core";
 import { buildStatusOf } from "@plugins/build/plugins/build-status/core";
-import { buildHistoryResource, type BuildRun } from "../../shared";
+import {
+  buildHistoryResource,
+  isMainCompositionBuild,
+  type BuildRun,
+} from "../../shared";
 import { useStaleFrontend } from "../hooks/use-stale-frontend";
 import { BuildPopoverContent } from "./build-popover-content";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
@@ -56,15 +60,17 @@ function BuildButtonInner({
             ? "failed"
             : "idle";
 
-  // During the compose-serve tail the latest open row is a composition child
-  // (target !== "main"), so name it: "Building sonata…".
+  // A composition build names what it is building: "Building sonata…", or
+  // "Building sonata, website…" for a multi-target invocation. A plain build of
+  // this checkout's own app has nothing to name. Joined once, and read as a
+  // STRING below: `targets` is a fresh array on every push, so depending on it
+  // directly would re-fire the trace on every no-op recompute.
+  const targetsLabel = latestRun ? latestRun.targets.join(", ") : null;
   const buildingComposition =
-    building && latestRun != null && latestRun.target !== "main";
+    building && latestRun != null && !isMainCompositionBuild(latestRun.targets);
   const label = {
     idle: "Builds",
-    building: buildingComposition
-      ? `Building ${latestRun!.target}…`
-      : "Building…",
+    building: buildingComposition ? `Building ${targetsLabel}…` : "Building…",
     restarting: "Server restarting…",
     updated: "Server updated",
     failed: "Build failed",
@@ -82,7 +88,7 @@ function BuildButtonInner({
         building,
         wsStatus,
         staleTab,
-        target: latestRun?.target,
+        targets: targetsLabel,
         finishedAt: latestRun?.finishedAt,
       }),
     );
@@ -91,7 +97,7 @@ function BuildButtonInner({
     building,
     wsStatus,
     staleTab,
-    latestRun?.target,
+    targetsLabel,
     latestRun?.finishedAt,
   ]);
 

@@ -2,13 +2,13 @@
 //
 // Whether an app is experimental is a fact the BUILD knows and the browser
 // cannot infer. `<name>.localhost` is the namespace grammar for git-worktree
-// deploys, for composition namespaces (compose-serve), and for local release
+// deploys, for composition namespaces, and for local release
 // previews alike — so the old client-side rule ("any subdomain that isn't
 // `singularity`") painted the frame on compositions and releases too.
 //
 // The producer stamps it instead: a dist is experimental only because
 // `./singularity build` said so — the DEPLOY posture, and only from a non-main
-// worktree. Every other producer (compose-serve, `build --hermetic`, the
+// worktree. Every other producer (`build --hermetic`, the
 // release/tauri bundles) is clean by DEFAULT rather than by exclusion, so a new
 // way of shipping a dist can never inherit the frame by accident.
 //

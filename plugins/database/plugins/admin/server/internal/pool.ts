@@ -91,6 +91,26 @@ export function getAdminPool(): Pool {
   return adminPool;
 }
 
+/**
+ * Release the admin pool's idle client, if one was ever opened.
+ *
+ * A NO-OP when nothing called `getAdminPool()` — which is the whole reason this
+ * exists rather than callers writing `getAdminPool().end()`. That spelling
+ * CREATES the pool in order to close it, so a process that never touched the
+ * admin database would open a connection to `postgres` on its way out (and,
+ * on a host with no database config, throw while doing it).
+ *
+ * The caller is a long-lived process ending: `./singularity build` calls it from
+ * its terminal funnel so the CLI exits immediately instead of waiting out the
+ * pool's 20s idle timeout.
+ */
+export async function closeAdminPool(): Promise<void> {
+  if (adminPool === null) return;
+  const pool = adminPool;
+  adminPool = null;
+  await pool.end();
+}
+
 export function openShortLivedClient(dbName: string): Pool {
   return new Pool({
     connectionString: buildConnString(getConn(), dbName),

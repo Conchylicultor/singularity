@@ -116,6 +116,19 @@ export function emitVerdict(v: Verdict): void {
   writeSync(1, `\n${renderVerdict(v)}\n`);
 }
 
+/**
+ * "…still serves the previous build", for however many namespaces this
+ * invocation was going to publish. One build can now name several
+ * (`build --composition sonata website`), and the sentence has to stay true for
+ * both arities: a killed build published nothing, so EVERY namespace it named is
+ * still on its previous dist.
+ */
+function stillServing(urls: string[]): string {
+  return urls.length === 1
+    ? `${urls[0]} still serves the previous build`
+    : `${urls.join(", ")} still serve their previous builds`;
+}
+
 // Pure. Given what (if anything) was emitted, the actual exit code and — when
 // one arrived — the signal that ended the process, returns the fallback verdict
 // the exit-time guard should print, or `null` when the emitted verdict already
@@ -133,7 +146,7 @@ export function emitVerdict(v: Verdict): void {
 export function fallbackVerdict(
   emitted: { ok: boolean } | null,
   code: number,
-  ctx: { url: string; buildLogPath: string },
+  ctx: { urls: string[]; buildLogPath: string },
   termination?: SignalTermination | null,
   crash?: string | null,
 ): Verdict | null {
@@ -146,7 +159,7 @@ export function fallbackVerdict(
   if (emitted === null && code !== 0 && termination != null) {
     headline = `BUILD ABORTED — terminated by ${termination.signal}`;
     reason = [
-      `NOT DEPLOYED. Nothing was published; ${ctx.url} still serves the previous build.`,
+      `NOT DEPLOYED. Nothing was published; ${stillServing(ctx.urls)}.`,
       `This build did NOT fail — it was ended from outside by ${termination.signal} ` +
         `at ${termination.at} (exit ${code}).`,
       // Unset until the SA_SIGINFO tap lands; `process.on(sig)` names no sender.
@@ -167,7 +180,7 @@ export function fallbackVerdict(
         ? `BUILD FAILED — crashed before completing (exit ${code})`
         : `BUILD FAILED — aborted before completing (exit ${code})`;
     reason = [
-      `NOT DEPLOYED. Nothing was published; ${ctx.url} still serves the previous build.`,
+      `NOT DEPLOYED. Nothing was published; ${stillServing(ctx.urls)}.`,
       ...(crash == null
         ? [`The build aborted before printing its own verdict.`]
         : [
@@ -191,14 +204,20 @@ export function fallbackVerdict(
     headline = `BUILD FAILED — reported success but exited ${code}. This is a bug in build.ts.`;
     reason = [
       `The build printed an OK verdict but the process exited ${code}.`,
-      `The deploy state is ambiguous — verify ${ctx.url} manually.`,
+      `The deploy state is ambiguous — verify ${ctx.urls.join(", ")} manually.`,
     ];
   }
   return { ok: false, headline, reason, pointers, steps: [] };
 }
 
 export interface VerdictGuardCtx {
-  url: string;
+  /**
+   * Every namespace this invocation set out to publish — one for a plain build,
+   * N for `build --composition a b`. A list rather than a string because the
+   * fallback verdict's whole job is to say what was NOT deployed, and a
+   * multi-target build that dies leaves every one of them on its previous dist.
+   */
+  urls: string[];
   buildLogPath: string;
   /**
    * Read LAZILY, at exit time — a signal can arrive at any point after this

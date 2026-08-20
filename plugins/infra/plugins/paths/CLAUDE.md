@@ -155,6 +155,7 @@ run everywhere.
     - `REPO_ROOT`
     - `repoConfigDir`
     - `setReleaseIdentity`
+    - `WORKTREE_SPEC_FILE`
     - `worktreeArtifacts`
     - `worktreeDataDir`
     - `worktreesDir`
@@ -261,6 +262,7 @@ run everywhere.
     - `TMUX`
     - `WEB_CORE_RELATIVE`
     - `webDistDir`
+    - `WORKTREE_SPEC_FILE`
     - `worktreeArtifacts`
     - `worktreeDataDir`
     - `worktreesDir`

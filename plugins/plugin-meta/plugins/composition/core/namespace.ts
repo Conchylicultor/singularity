@@ -5,7 +5,7 @@
 // itself zero-import — so the reachability that matters is preserved. Build-time
 // tooling (codegen, the CLI, the checks), the server, and the browser all need to
 // ask the same questions — "is this a legal composition id?" and "may
-// compose-serve provision a namespace for it?" — and a module whose closure
+// a serve build provision a namespace for it?" — and a module whose closure
 // touches no runtime API is reachable from every one of those runtimes. The
 // vocabulary used to live in codegen's `plugin-registry-gen.ts`, which imports
 // `fs` at module scope, so web and server could not reach it and each
@@ -25,12 +25,12 @@ import {
 
 /**
  * Namespaces a composition can never claim: the central runtime, the main app
- * namespace, and the main git branch. Enforced by the compose-serve stage, the
- * serve-composition reset guard and the `composition-closure` check.
+ * namespace, and the main git branch. Enforced by the build's target resolver,
+ * the serve-composition reset guard and the `composition-closure` check.
  *
  * `MAIN_COMPOSITION_ID` is in here and stays in here. Main IS a composition —
- * `assertCompositionId` accepts it — but its namespace belongs to main's own
- * build, so compose-serve may never provision it.
+ * `assertCompositionId` accepts it — but its namespace belongs to the
+ * checkout's own build, so a serve build may never provision it.
  */
 export const RESERVED_COMPOSITION_NAMESPACES: ReadonlySet<string> = new Set([
   "central",
@@ -48,7 +48,7 @@ export function assertCompositionName(name: string): void {
 }
 
 /**
- * Non-throwing "may compose-serve provision a namespace for this id?". The
+ * Non-throwing "may a serve build provision a namespace for this id?". The
  * predicate form is what a render path needs — the Studio compositions list
  * disables main's serve toggle rather than crashing on it — and what the
  * activated-set derivation filters with.
@@ -75,10 +75,10 @@ export function assertServableCompositionNamespace(name: string): void {
  * function.
  *
  * Every composition must have a valid name. Every composition EXCEPT main's must
- * additionally own a servable namespace, because compose-serve will provision
- * one for it the moment its `autoBuild` is on. Main's composition is the sole
- * exception: it is built by `./singularity build` into the main checkout's own
- * namespace, never compose-served, so it may carry a reserved id.
+ * additionally own a servable namespace, because a serve build will provision
+ * one for it. Main's composition is the sole exception: it is built by
+ * `./singularity build` into the checkout's own namespace, never served as a
+ * composition, so it may carry a reserved id.
  *
  * Use this wherever an id is being validated as a manifest entry. Use
  * `assertServableCompositionNamespace` only where a namespace is about to be

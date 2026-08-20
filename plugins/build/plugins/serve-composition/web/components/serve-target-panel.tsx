@@ -13,18 +13,9 @@ import {
   isServableCompositionId,
   type CompositionManifestItem,
 } from "@plugins/plugin-meta/plugins/composition/core";
-import {
-  asNamespace,
-  namespaceHost,
-  namespaceUrl,
-  MAIN_COMPOSITION_ID,
-} from "@plugins/infra/plugins/namespace/core";
 import { useServeComposition } from "../internal/use-serve-composition";
 import type { ServeStatus } from "../internal/use-serve-status";
 import { resetCompositionData } from "../../shared/endpoints";
-
-/** Where a serve build can actually be started — the main app's own host. */
-const MAIN_HOST = namespaceHost(asNamespace(MAIN_COMPOSITION_ID));
 
 /**
  * The **Serve live** target panel — the one control for a composition's local
@@ -33,11 +24,11 @@ const MAIN_HOST = namespaceHost(asNamespace(MAIN_COMPOSITION_ID));
  * Two facts are deliberately kept apart here, because collapsing them is what
  * produced links to namespaces that 502:
  *
- * - **intent** — `item.autoBuild`, the config flag the `ToggleChip` writes. The
- *   CLI compose-serve stage reads it from MAIN's resolved config and composes a
- *   per-composition frontend dist + empty DB on every main build.
+ * - **intent** — `item.autoBuild`, the config flag the `ToggleChip` writes.
  * - **liveness** — the `status` prop, resolved from the `composition.json`
- *   marker compose-serve actually wrote. Only this may produce a link.
+ *   marker a serve build actually wrote. Only this may produce a link, and only
+ *   it knows the namespace: a composition is served from whichever checkout
+ *   built it, so the host is server-resolved rather than composed here.
  *
  * `status` is a prop rather than a hook call so a host that already needs the
  * answer for an affordance of its own (a list row's shortcut, say) asks once and
@@ -62,26 +53,27 @@ export function ServeTargetPanel({
   });
 
   const live =
-    status.kind === "ready" && status.live.served ? status.live : null;
-  // Compose-serve runs on main only, where the checkout suffix elides and the
-  // namespace IS the composition id — Phase 4 is what makes the two a real pair.
-  const host = namespaceHost(asNamespace(item.id));
-  // Where the refusal SENTENCE goes is a host question (see below), but whether
-  // the control can work is not: off main, `serve` writes an intent this backend
-  // will never act on and its POST is refused, and `stop` clears a flag main
-  // never reads. A live button whose only outcome is an error toast is the
-  // "upcoming step rendered inert" rule applied to a chip — and it is what kept
-  // this toggle pressable while the list row's own shortcut was already
-  // disabled, so two surfaces disagreed about the same fact.
+    status.kind === "ready" && status.live.served
+      ? { ...status.live, url: status.url }
+      : null;
+  // The namespace this composition is served under, as the SERVER resolved it
+  // from its own checkout — `sonata` from main, `sonata.att-x` from a worktree.
+  // Null while the read is in flight, which is the honest state: the panel does
+  // not know the address yet and must not invent one, so the copy below falls
+  // back to the composition's own name.
+  const host = status.kind === "ready" ? status.host : null;
+  // The one permanent reason the control cannot work, and it is about the
+  // COMPOSITION rather than the backend: a serve may never provision main's
+  // namespace, because that namespace is where the checkout's own
+  // `./singularity build` deploys. A live button whose only outcome is an error
+  // toast is the "upcoming step rendered inert" rule applied to a chip.
   //
-  // `servable` is the second, permanent reason the control cannot work, and it
-  // is about the COMPOSITION rather than the backend: compose-serve may never
-  // provision main's namespace, because that namespace is where the main
-  // checkout's own `./singularity build` deploys. No backend, on any day, can
-  // act on this toggle for main — so it is inert everywhere, and its sentence
-  // is the one printed first.
-  const servable = isServableCompositionId(item.id);
-  const canServe = servable && (status.kind !== "ready" || status.canServe);
+  // There is no longer a second, backend-shaped reason. Serving used to run
+  // inside MAIN's build, so every other backend could only observe and the
+  // server answered `canServe` for it; a serve is now an ordinary build of this
+  // checkout, so the question collapses into this one — synchronous, and true
+  // before the liveness read has even settled.
+  const canServe = isServableCompositionId(item.id);
 
   return (
     <Stack gap="sm">
@@ -90,19 +82,19 @@ export function ServeTargetPanel({
           active={item.autoBuild}
           disabled={!canServe}
           title={
-            !servable
-              ? "The main app is built by ./singularity build — it is not compose-served."
-              : !canServe
-                ? `Serve builds run on the main instance only — open ${MAIN_HOST}.`
-                : item.autoBuild
-                  ? "Auto-served — click to stop building & serving"
-                  : `Click to build & serve this composition at ${namespaceUrl(asNamespace(item.id))}`
+            !canServe
+              ? "The main app is built by ./singularity build — it is not served as a composition."
+              : item.autoBuild
+                ? "Serving — click to clear the serve intent"
+                : host !== null
+                  ? `Click to build & serve this composition at ${host}`
+                  : "Click to build & serve this composition from this checkout"
           }
           onClick={() => (item.autoBuild ? stop(item.id) : serve(item.id))}
         >
           {item.autoBuild ? "Serving" : "Serve"}
         </ToggleChip>
-        {live && (
+        {live && host !== null && (
           <>
             <LinkChip
               mono
@@ -124,7 +116,7 @@ export function ServeTargetPanel({
                 refuses it at its first guard (assertServableCompositionNamespace),
                 so the button could only ever produce an error toast — offering it
                 is worse than not offering it. */}
-            {servable && (
+            {canServe && (
               <Button
                 variant="destructive"
                 aspect="text"
@@ -163,18 +155,19 @@ export function ServeTargetPanel({
       </Stack>
       <ServeStatusNote item={item} status={status} />
       <Text as="p" variant="caption" tone="muted">
-        {servable ? (
+        {canServe ? (
           <>
-            When on, every main build composes this composition into its own
-            frontend dist and empty database and serves it live at {host}. The
-            stage reads main’s config, so toggling from a non-main worktree has
-            no effect until it lands on main.
+            Serving runs{" "}
+            <code>./singularity build --composition {item.id}</code> in THIS
+            checkout: its own frontend dist and empty database, live at{" "}
+            {host ?? `${item.id}.<this checkout>`}. Two checkouts serving the
+            same composition get two namespaces and two databases.
           </>
         ) : (
           <>
             This is the app this repo builds. It is deployed by{" "}
-            <code>./singularity build</code> into its own namespace, so there is
-            nothing here to switch on — the serve stage never composes it.
+            <code>./singularity build</code> into this checkout’s own namespace,
+            so there is nothing here to switch on.
           </>
         )}
       </Text>
@@ -209,21 +202,23 @@ function ServeStatusNote({
       </Text>
     );
   }
-  // `status.canServe` is deliberately NOT rendered here. It is a fact about the
-  // BACKEND, not about this composition, so where the refusal belongs is a
-  // question about the host surface — the deploy pane leads with it, while the
-  // panel's own caption below already states the main-authoritative rule.
   if (item.autoBuild && !status.live.served) {
     return (
       <Text as="p" variant="caption" tone="muted">
-        Enabled, but nothing is served yet — the next main build composes it.
+        Enabled, but nothing is served at {status.host} yet — the serve build
+        has not finished (or it failed).
       </Text>
     );
   }
   if (!item.autoBuild && status.live.served) {
+    // Deliberately NOT "the next main build stops serving it": auto-serve and
+    // its deactivation sweep are gone, so nothing takes a served namespace down
+    // on its own any more. Reclaiming one is Phase 5 of
+    // research/2026-08-17-global-composition-build-serve-model.md.
     return (
       <Text as="p" variant="caption" tone="muted">
-        Still live from an earlier build; the next main build stops serving it.
+        The serve intent is off, but {status.host} is still live from an earlier
+        build.
       </Text>
     );
   }

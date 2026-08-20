@@ -25,6 +25,7 @@ import {
   type ArtifactHooks,
   type ReleaseDistTarget,
 } from "./app-artifacts";
+import { compositionsConfig } from "@plugins/plugin-meta/plugins/composition/core";
 import { sweepDistLeftovers } from "./dist-publish";
 import { reapLegacyCheckoutDist } from "./legacy-dist-reap";
 
@@ -53,7 +54,7 @@ import { reapLegacyCheckoutDist } from "./legacy-dist-reap";
  *     self-heals and an agent-facing message channel, both dev-workstation
  *     concerns nobody watches on a release host,
  *   - Postgres readiness, the worktree DB fork, gateway specs/restarts/health
- *     probes, the compose-serve stage,
+ *     probes, the per-namespace deploy sequence,
  *   - the `build_runs` ledger, worktree-op markers, the build-progress log, the
  *     build profile and the verdict guard. A release already has its own durable
  *     artifact (`release-logs-<id>.json`); emitting build records for a run that
@@ -93,7 +94,6 @@ export function hermeticFlagConflicts(opts: {
   allowMain?: boolean;
   skipChecks?: boolean;
   restart: boolean;
-  serveComposition?: string;
 }): string[] {
   const conflicts: string[] = [];
 
@@ -104,18 +104,7 @@ export function hermeticFlagConflicts(opts: {
     );
   }
 
-  if (opts.composition?.includes(MAIN_COMPOSITION_ID)) {
-    conflicts.push(
-      `--composition ${MAIN_COMPOSITION_ID} is refused: it would emit ` +
-        `server.composition.${MAIN_COMPOSITION_ID}.generated.ts into the checkout, and ` +
-        "plugins/framework/plugins/server-core/bin/select-registry.ts picks that file for main's " +
-        "backend on its next spawn purely on FILE PRESENCE. It is byte-identical to the committed " +
-        "registry today only by the equivalence `plugins-registry-in-sync` proves — a file nobody " +
-        "expects, silently reconfiguring main, is exactly the pre-S1 checkout-global registry bug.",
-    );
-  }
-
-  // The four deploy-only flags. Each is inert on this path, and a silently-inert
+  // The three deploy-only flags. Each is inert on this path, and a silently-inert
   // flag is worse than a refused one: `--skip-checks` in particular would read
   // as "I skipped validation" when the hermetic path runs the fast validation
   // set unconditionally.
@@ -138,13 +127,6 @@ export function hermeticFlagConflicts(opts: {
         "there is nothing to restart.",
     );
   }
-  if (opts.serveComposition !== undefined) {
-    conflicts.push(
-      "--serve-composition is deploy-only: it composes OTHER namespaces out of main's artifact " +
-        "fleet after main deploys, which is the deploy half --hermetic exists to omit.",
-    );
-  }
-
   return conflicts;
 }
 
@@ -275,8 +257,15 @@ export async function runHermeticBuild(opts: {
 
   // Stage 1 — dependencies + registry-level codegen + every composition's
   // filtered registries, off ONE plugin-tree walk.
+  //
+  // The manifest handed over is the CODE SEED, matching `assertKnownCompositions`
+  // above: a release is a function of the source tree, so a composition that
+  // exists only in someone's user-layer `compositions.jsonc` is deliberately not
+  // releasable. The deploy posture reads the checkout's RESOLVED config instead
+  // (`./build-targets.ts`) — the divergence is stated at both ends.
   await prepareCompositionSources({
     root,
+    manifest: compositionsConfig.fields.manifests.defaultValue,
     compositions: opts.compositions,
     hooks,
   });

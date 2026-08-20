@@ -9,6 +9,7 @@ export {
   worktreesDir,
   worktreeDataDir,
   worktreeArtifacts,
+  WORKTREE_SPEC_FILE,
   CLAUDE_DIR,
   CLAUDE_PROJECTS_DIR,
   CLAUDE_SESSIONS_DIR,

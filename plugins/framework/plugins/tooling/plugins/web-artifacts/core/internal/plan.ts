@@ -13,6 +13,7 @@ import {
   isBareSpecifier,
   isBrowserUnreachableDynamic,
 } from "../constants";
+import { MAIN_COMPOSITION_ID } from "@plugins/infra/plugins/namespace/core";
 import { computeInputsHash, sha256Hex } from "../hash";
 import type { ImportMapEntry } from "../import-map";
 import type { ArtifactKind } from "../own-roots";
@@ -84,11 +85,26 @@ export async function defaultFleetSource(root: string): Promise<FleetSource> {
  * with the FULL deferred-tier set — eager-seed selection is a membership test
  * (filtered targets minus deferred paths), so a superset is exact on the
  * filtered entries and needs no per-composition tier codegen.
+ *
+ * The MAIN composition is not a special case, it is the base case: its registry
+ * IS the committed `web.generated.ts`, so this hands back `defaultFleetSource`.
+ * Nothing else can be true — `generateCompositionRegistry` refuses to write a
+ * `web.composition.singularity.generated.ts`, because a second spelling of the
+ * committed registry is the file that used to reconfigure main by merely
+ * existing. The same equality is stated for the server registry in codegen's
+ * `compositionRegistryFileName`.
+ *
+ * Consequently `registrySlug` keeps its `web-registry-<composition>` form for
+ * every other composition (the artifact is content-addressed and dedups across
+ * checkouts, so it is keyed by composition, never by namespace) while main keeps
+ * the `composition-web-registry` slug it has always had — which is what makes
+ * `build` and `build --composition singularity` produce the same artifact.
  */
 export async function compositionFleetSource(opts: {
   root: string;
   name: string;
 }): Promise<FleetSource> {
+  if (opts.name === MAIN_COMPOSITION_ID) return defaultFleetSource(opts.root);
   const registryFile = join(
     opts.root,
     WEB_SDK_CORE_REL,

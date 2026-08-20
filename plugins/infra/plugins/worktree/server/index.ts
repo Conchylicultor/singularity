@@ -47,9 +47,9 @@ export {
   type CompositionMarker,
   type NamespaceProbe,
   type NamespaceClaimant,
-  COMPOSITION_MARKER_FILE,
   probeNamespace,
   namespaceCollision,
+  stampCompositionMarker,
   readCompositionMarker,
   hasCompositionMarker,
 } from "./internal/composition-namespace";

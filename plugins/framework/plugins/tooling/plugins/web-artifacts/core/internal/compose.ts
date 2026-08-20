@@ -53,7 +53,7 @@ export interface ComposeOptions {
    * composition time closes the window instead of narrowing it: the produced
    * tree never referenced the store at all.
    *
-   * Served dists (`build`, `compose-serve`) leave this off — the symlinks are
+   * Served dists (every `build` target) leave this off — the symlinks are
    * the whole point of the shared content-addressed store there.
    */
   materialize?: boolean;

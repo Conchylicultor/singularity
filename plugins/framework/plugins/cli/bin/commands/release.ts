@@ -37,7 +37,10 @@ import {
 import { resolveIconSvgNodes } from "@plugins/primitives/plugins/icon-picker/server";
 import { appIconToSvg } from "@plugins/apps-core/plugins/app-icon/core";
 import { runAssetMirrorPrewarm } from "@plugins/infra/plugins/asset-mirror/server";
-import { propagateConfigToUser } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
+import {
+  compositionRegistryFileName,
+  propagateConfigToUser,
+} from "@plugins/framework/plugins/tooling/plugins/codegen/core";
 import { spawnPassthrough } from "@plugins/infra/plugins/spawn/core";
 import {
   PLATFORM_TAGS,
@@ -100,14 +103,20 @@ const TEARDOWN_ENTRY = "plugins/infra/plugins/launcher/bin/teardown.ts";
 const SENTINEL_WORKER_ENTRY =
   "plugins/debug/plugins/sentinel/server/internal/worker/entry.ts";
 
-// The filtered registry the compiled backend's `@composition-server-registry`
-// alias is repointed at, so the bundler's closure IS the composition closure.
-// Keyed by composition NAME: filtered registries have no checkout-global
-// flavour, so a release can never reconfigure another namespace's backend.
+// The registry the compiled backend's `@composition-server-registry` alias is
+// repointed at, so the bundler's closure IS the composition closure. Keyed by
+// composition NAME: filtered registries have no checkout-global flavour, so a
+// release can never reconfigure another namespace's backend.
+//
+// The file name comes from `compositionRegistryFileName`, never spelled here,
+// because the main composition's registry is the COMMITTED `<dir>.generated.ts`
+// — nothing emits a `*.composition.singularity.*` sibling. Spelling the filtered
+// form inline is what would make `release --composition singularity` fail on a
+// file that is never written, rather than release the main app.
 const FILTERED_SERVER_REGISTRY = (composition: string): string =>
-  `plugins/framework/plugins/server-core/core/server.composition.${composition}.generated.ts`;
+  `plugins/framework/plugins/server-core/core/${compositionRegistryFileName("server", composition)}`;
 const FILTERED_WEB_REGISTRY = (composition: string): string =>
-  `plugins/framework/plugins/web-sdk/core/web.composition.${composition}.generated.ts`;
+  `plugins/framework/plugins/web-sdk/core/${compositionRegistryFileName("web", composition)}`;
 
 /** The tag of the machine cutting the release, or a loud failure. */
 function hostTagOrThrow(): PlatformTag {
@@ -717,7 +726,7 @@ export function registerRelease(program: Command) {
         // filtered composition registries, generated migration SQL and the web
         // dist — exactly the three outputs staged below — with the dev-cluster
         // DEPLOY half structurally absent (no Postgres readiness, no worktree DB
-        // fork, no gateway spec/restart/health probe, no compose-serve, no
+        // fork, no gateway spec/restart/health probe, no namespace deploy, no
         // `build_runs` ledger). Both postures drive the SAME module
         // (commands/internal/app-artifacts.ts), so the phase a release runs and
         // the phase a dev build runs cannot drift. Rationale:
@@ -754,7 +763,7 @@ export function registerRelease(program: Command) {
         // --allow-main` this replaces: no `--allow-main` (a release no longer has
         // to routinise the DANGER flag on every cut from main — the branch guard
         // it defeated exists to stop agents DEPLOYING from main, and there is no
-        // deploy here), no compose-serve pass, and no build_runs row /
+        // deploy here), no namespace deploy, and no build_runs row /
         // worktree-op marker / build-progress entry — a release is not a build
         // run and no longer shows up in the build Gantt as one. The old
         // `--skip-checks` validation set (always-run checks + one incremental tsc

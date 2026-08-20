@@ -301,9 +301,15 @@ function CompositionsDataView({
  * honest answer.
  */
 function serveHost(it: CompositionManifestItem): string | null {
-  // Compose-serve runs on the main checkout, where the checkout suffix elides
-  // and the namespace IS the composition id — Phase 4 is what makes namespace
-  // and composition id a genuine pair.
+  // THE MAIN-CHECKOUT SPELLING, and knowingly so. A composition is served from
+  // whichever checkout built it, so its real namespace is
+  // `<id>.<checkout>` — which only the SERVER can resolve (the browser knows the
+  // namespace it is talking to, and that does not decompose back into a pair).
+  // This column is a list-wide, intent-derived hint and cannot afford a
+  // per-row round-trip; the composition's own Serve panel asks
+  // `serveStatusEndpoint` and shows the resolved host, which is the surface to
+  // trust. Giving this column the true answer means a batched resolve — filed
+  // with Phase 5/6 rather than faked here.
   if (it.id === MAIN_COMPOSITION_ID)
     return namespaceHost(asNamespace(MAIN_COMPOSITION_ID));
   return it.autoBuild ? namespaceHost(asNamespace(it.id)) : null;

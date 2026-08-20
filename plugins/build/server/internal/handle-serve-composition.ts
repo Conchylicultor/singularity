@@ -1,31 +1,33 @@
 import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
-import { isMain } from "@plugins/infra/plugins/paths/server";
 import { isServableCompositionId } from "@plugins/plugin-meta/plugins/composition/core";
 import { serveCompositionEndpoint } from "../../core/endpoints";
 import { triggerBuild } from "./run-build";
 
+/**
+ * Build and serve one composition from THIS checkout.
+ *
+ * There is no `isMain()` gate any more. Serving used to be a tail stage of
+ * main's own build — it composed over main's artifact fleet and read main's
+ * config — so every other backend had to refuse. A serve is now an ordinary
+ * `./singularity build --composition <id>` of the checkout this backend runs
+ * out of, publishing `<id>.<checkout>.localhost:9000`; refusing it off main
+ * would refuse the case the fan-out exists for.
+ */
 export const handleServeComposition = implement(
   serveCompositionEndpoint,
   ({ body }) => {
-    if (!isMain()) {
-      throw new HttpError(
-        400,
-        "Serve builds run on the main instance only — open singularity.localhost:9000.",
-      );
-    }
-    // The loud boundary under the inert toggles. Compose-serve provisions a
-    // gateway namespace named after the composition id, and the main app's
-    // namespace already belongs to the main checkout's own build — serving a
-    // composition into it would have this build overwrite the app running it.
-    // The UI renders those toggles disabled; this is what answers a request that
-    // reaches the endpoint anyway.
+    // The loud boundary under the inert toggles. A serve build provisions a
+    // gateway namespace for the composition, and the main composition's
+    // namespace already belongs to this checkout's own build — serving it would
+    // have the build overwrite the app running it. The UI renders those toggles
+    // disabled; this is what answers a request that reaches the endpoint anyway.
     if (!isServableCompositionId(body.composition)) {
       throw new HttpError(
         400,
         `"${body.composition}" is not a servable composition — its namespace belongs to ` +
-          `the main checkout's own build, so compose-serve never provisions it.`,
+          `this checkout's own build, so a serve build never provisions it.`,
       );
     }
-    triggerBuild("manual", { serveComposition: body.composition });
+    triggerBuild("manual", { composition: body.composition });
   },
 );

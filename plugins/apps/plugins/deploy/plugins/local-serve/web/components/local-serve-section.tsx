@@ -14,14 +14,6 @@ import {
   useServeStatus,
 } from "@plugins/build/plugins/serve-composition/web";
 import { deploymentsResource } from "@plugins/apps/plugins/deploy/plugins/deployments/core";
-import {
-  asNamespace,
-  namespaceHost,
-  MAIN_COMPOSITION_ID,
-} from "@plugins/infra/plugins/namespace/core";
-
-/** Where a serve build can actually be started — the main app's own host. */
-const MAIN_HOST = namespaceHost(asNamespace(MAIN_COMPOSITION_ID));
 
 /**
  * **Test locally** — the composition served on the shared gateway, next to the
@@ -85,15 +77,11 @@ function ServeTarget({ item }: { item: CompositionManifestItem }): ReactNode {
 
   return (
     <Stack gap="sm">
-      {/* Up front, before any control: on a worktree backend the toggle writes
-          an intent nothing here will act on, and the immediate build is refused
-          by the server. Saying so first is cheaper than a refused POST. */}
-      {status.kind === "ready" && !status.canServe && (
-        <Text as="p" variant="caption" tone="destructive">
-          Serve builds run on the main instance only — open {MAIN_HOST}.
-        </Text>
-      )}
-
+      {/* No up-front refusal any more. This pane used to lead with "serve builds
+          run on the main instance only", because the serve stage ran inside
+          MAIN's build; a serve is now an ordinary build of whichever checkout
+          you are looking at, so there is nothing to refuse — and the panel's own
+          caption states which checkout that is. */}
       <ServeTargetPanel item={item} status={status} />
 
       <Text as="p" variant="caption" tone="muted">

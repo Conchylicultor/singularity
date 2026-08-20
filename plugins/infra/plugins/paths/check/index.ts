@@ -122,11 +122,12 @@ const noHardcodedPathsCheck: Check = {
   },
 };
 
-// Guards the per-worktree ARTIFACT layout owned by paths.ts: the
-// `worktrees/<name>` data dir (worktreeDataDir) and the build/release artifact
-// filenames (worktreeArtifacts). Re-inlining any of these re-couples a reader
-// to a writer behind paths.ts's back, exactly the drift the single source of
-// truth exists to prevent.
+// Guards the per-worktree FILE layout owned by paths.ts: the `worktrees/<name>`
+// data dir (worktreeDataDir), the namespace's registration record
+// (WORKTREE_SPEC_FILE) and the build/release artifact filenames
+// (worktreeArtifacts). Re-inlining any of these re-couples a reader to a writer
+// behind paths.ts's back, exactly the drift the single source of truth exists
+// to prevent.
 //
 // This is DISTINCT from the git-checkout `.claude/worktrees` path (see
 // plugins/infra/plugins/worktree): that is a different concept and is
@@ -149,6 +150,14 @@ const WORKTREE_ARTIFACT_PATTERNS: { pattern: RegExp; grepArg: string }[] = [
   { pattern: /["'`]release-logs[^"'`\s]*\.json/, grepArg: "release-logs" },
   // build.log human-readable artifact filename.
   { pattern: /["'`]build(?:-[^"'`\s]*)?\.log/, grepArg: ".log" },
+  // spec.json — the namespace's registration record. Its absence here is what
+  // let the backend's own boot reader compute the path from its parts, a second
+  // TypeScript spelling of the file its writer publishes; the filename is
+  // `WORKTREE_SPEC_FILE` in the core. The leading quote class keeps unrelated
+  // `*.spec.json` files out (the release command's `appdmg.spec.json`), and the
+  // Go gateway — a third reader, in a language that cannot import the core — is
+  // out of this check's reach by construction: it only scans TS.
+  { pattern: /["'`]spec\.json/, grepArg: "spec.json" },
   // check.log check-transcript filename. Its absence here is what let four
   // separate `join(worktreeDataDir(name), "check.log")` call sites be written by
   // hand — and stay in sync with each other but not with the artifact layout.
@@ -167,7 +176,7 @@ const WORKTREE_ARTIFACT_ALLOWED_PREFIXES = ["plugins/infra/plugins/paths/"];
 const noInlinedWorktreeArtifactsCheck: Check = {
   id: "paths:no-inlined-worktree-artifacts",
   description:
-    "The per-worktree artifact layout (the worktrees/<name> data dir and the build/release artifact filenames) must come from worktreeDataDir()/worktreeArtifacts in @plugins/infra/plugins/paths; never re-inline the base dir or a raw artifact filename.",
+    "The per-worktree file layout (the worktrees/<name> data dir, the namespace's spec.json, and the build/release artifact filenames) must come from worktreeDataDir()/worktreeArtifacts/WORKTREE_SPEC_FILE in @plugins/infra/plugins/paths; never re-inline the base dir or a raw filename.",
   async run() {
     const root = await getWorktreeRoot();
     const seen = new Set<string>();
@@ -202,7 +211,7 @@ const noInlinedWorktreeArtifactsCheck: Check = {
     return {
       ok: false,
       message: `inlined worktree-artifact path found in ${offenders.length} place(s):\n    ${offenders.join("\n    ")}`,
-      hint: "Import `worktreeDataDir` / `worktreeArtifacts` from `@plugins/infra/plugins/paths/core` (or `/server`) instead of reconstructing the ~/.singularity/worktrees/<name> dir or hardcoding artifact filenames (build-profile*.json, build-logs*.json, build*.log, check*.log, release-logs-*.json). Note: the git-checkout `.claude/worktrees` path (plugins/infra/plugins/worktree) is a different concept and intentionally out of scope.",
+      hint: "Import `worktreeDataDir` / `worktreeArtifacts` / `WORKTREE_SPEC_FILE` from `@plugins/infra/plugins/paths/core` (or `/server`) instead of reconstructing the ~/.singularity/worktrees/<name> dir or hardcoding a per-worktree filename (spec.json, build-profile*.json, build-logs*.json, build*.log, check*.log, release-logs-*.json). Note: the git-checkout `.claude/worktrees` path (plugins/infra/plugins/worktree) is a different concept and intentionally out of scope.",
     };
   },
 };

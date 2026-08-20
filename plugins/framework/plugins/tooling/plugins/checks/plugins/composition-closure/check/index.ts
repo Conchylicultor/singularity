@@ -55,16 +55,17 @@ const check: Check = {
     const items = readCompositionManifestsFromDisk(root);
     const manifests = items.map(manifestItemToManifest);
 
-    // 0. Every manifest id is a servable gateway namespace: the compose-serve
-    //    stage uses the id verbatim as the subdomain / spec-dir / DB name, so
-    //    the gateway name rule (charset, ≤63 chars) applies to every id, and the
-    //    reserved namespaces (central / main) apply to every id that could be
-    //    served — enforced via the canonical helper, never a duplicated regex.
+    // 0. Every manifest id is a servable gateway namespace: a serve build uses
+    //    the id as one LABEL of the namespace it provisions (and as the whole
+    //    namespace from main, where the checkout suffix elides), so the gateway
+    //    name rule (charset, ≤63 chars) applies to every id, and the reserved
+    //    namespaces (central / main) apply to every id that could be served —
+    //    enforced via the canonical helper, never a duplicated regex.
     //
     //    `assertCompositionId`, not `assertServableCompositionNamespace`: main's
     //    own composition is an ORDINARY manifest entry whose id is a reserved
     //    namespace, because it is built by `./singularity build` into the main
-    //    checkout's namespace rather than provisioned by compose-serve. The two
+    //    checkout's namespace rather than provisioned as a composition. The two
     //    questions — "may it be called this?" and "may a namespace be
     //    provisioned for it?" — stopped being the same question here.
     for (const item of items) {
@@ -111,7 +112,7 @@ const check: Check = {
       );
     }
 
-    // 0d. Main never opts into compose-serve. `activatedCompositionIds` already
+    // 0d. Main never opts into being served. `activatedCompositionIds` already
     //     makes a stored `true` INERT (it filters on servability, so main can
     //     never reach the serve stage whatever the config layers say) — this rule
     //     is about the committed seed telling the truth rather than about
@@ -120,7 +121,7 @@ const check: Check = {
     if (mainRows[0]!.autoBuild) {
       return fail(
         `composition "${MAIN_COMPOSITION_ID}" has \`autoBuild: true\``,
-        `The main app is built and served by \`./singularity build\` into the main checkout's own namespace — it is never compose-served, so \`autoBuild\` on this row would describe something that cannot happen. Set it back to \`false\`.`,
+        `The main app is built and served by \`./singularity build\` into the checkout's own namespace — it is never served as a composition, so \`autoBuild\` on this row would describe something that cannot happen. Set it back to \`false\`.`,
       );
     }
 
@@ -338,11 +339,19 @@ const check: Check = {
       }
     }
 
-    // 7. WARNING (never a failure): an auto-served composition that does not
-    //    exclude `agent-runtime` may run worktree-assuming plugins against
-    //    main's checkout under a non-worktree namespace — unvalidated
-    //    territory. Declaring the exclude upgrades this to the hard
-    //    disjointness gate above.
+    // 7. WARNING (never a failure): a served composition that does not exclude
+    //    `agent-runtime` may run worktree-assuming plugins under a namespace
+    //    that is NOT the checkout's own — unvalidated territory. Which checkout
+    //    it runs against is now variable (a serve build publishes
+    //    `<composition>.<checkout>`), which makes the mismatch broader rather
+    //    than narrower: the plugin's `SINGULARITY_WORKTREE` names a namespace
+    //    with no git worktree behind it, whichever checkout's tree it is reading.
+    //    Declaring the exclude upgrades this to the hard disjointness gate above.
+    //
+    //    Still keyed on `autoBuild` — the declared serve intent — even though
+    //    nothing acts on that flag automatically any more: it remains the only
+    //    thing in the repo that says "this composition is meant to be served",
+    //    which is exactly the population this warning is about.
     const agentRuntime = byName.get("agent-runtime");
     if (agentRuntime) {
       const agentRuntimeContainment = containmentOf(agentRuntime);
@@ -355,9 +364,9 @@ const check: Check = {
           .filter((p) => agentRuntimeContainment.has(p))
           .sort();
         console.warn(
-          `[composition-closure] WARNING: auto-served composition "${item.name}" does not exclude "agent-runtime"` +
+          `[composition-closure] WARNING: served composition "${item.name}" does not exclude "agent-runtime"` +
             (offenders.length > 0
-              ? ` and its closure includes ${offenders.length} plugin(s) from it (${offenders.slice(0, 5).join(", ")}${offenders.length > 5 ? ", …" : ""}) — these would run against main's checkout under a non-worktree namespace.`
+              ? ` and its closure includes ${offenders.length} plugin(s) from it (${offenders.slice(0, 5).join(", ")}${offenders.length > 5 ? ", …" : ""}) — these would run under a namespace that has no git worktree behind it.`
               : ` — add \`excludes: ["agent-runtime"]\` to lock in its self-containment.`),
         );
       }

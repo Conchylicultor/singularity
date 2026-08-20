@@ -199,6 +199,9 @@ async function main(): Promise<void> {
     // Which build is serving, for /api/health to report — see setReleaseIdentity.
     // `runId` is absent on a bundle built outside a tracked release run.
     releaseIdentity: { runId: manifest.runId ?? null, composition: name },
+    // For a release the app's namespace IS its composition id (`name`), which is
+    // also what `releaseIdentity` and `seedReleaseConfig` above are keyed by.
+    composition: name,
     // The compiled backend's cwd. The binary is self-contained (closure bundled
     // by `bun --compile`), so cwd is not load-bearing — bundleRoot is a stable
     // existing dir.

@@ -9,6 +9,8 @@ import {
   getBuildRunTermination,
 } from "@plugins/build/plugins/build-termination/core";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
+import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
+import { MAIN_COMPOSITION_ID } from "@plugins/infra/plugins/namespace/core";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
@@ -116,10 +118,17 @@ export function BuildInfo({ runId }: { runId: string }) {
       </Stack>
 
       <Stack gap="sm">
-        <Row label="Target">
-          <Badge variant={run.target === "main" ? "muted" : "info"}>
-            {run.target}
-          </Badge>
+        <Row label={run.targets.length > 1 ? "Targets" : "Target"}>
+          <Inline gap="2xs">
+            {run.targets.map((t) => (
+              <Badge
+                key={t}
+                variant={t === MAIN_COMPOSITION_ID ? "muted" : "info"}
+              >
+                {t}
+              </Badge>
+            ))}
+          </Inline>
         </Row>
         {run.commitHash && (
           <Row label="Commit">

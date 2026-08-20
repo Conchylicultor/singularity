@@ -29,6 +29,7 @@
     - `framework/slot-declaration.getCreatedSlots`
     - `framework/tooling/format.formatIfFormattable`
     - `framework/tooling/format.SourceBytes`
+    - `infra/namespace.MAIN_COMPOSITION_ID`
     - `plugin-meta/barrel-import.AUTO_STUB_CSS`
     - `plugin-meta/barrel-import.AUTO_STUB_PACKAGES`
     - `plugin-meta/barrel-import.AutoStubEntry`
@@ -90,6 +91,8 @@
     - `collectEntriesWithDeps`
     - `collectFieldEagerBarrels`
     - `collectTokenGroupVars`
+    - `compositionRegistryFileName`
+    - `compositionRegistryPath`
     - `computeDisabledIds`
     - `computeEagerTier`
     - `customUtilitiesManifestPath`
