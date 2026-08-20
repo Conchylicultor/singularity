@@ -38,7 +38,7 @@ import { _attemptConvAgg, _attemptPushAgg } from "./rollup-table";
 // by STATEMENT triggers on the source tables, so the FULL recompute collapses to a
 // flat LEFT JOIN over two tiny pre-rolled tables. The status / active / finished_at
 // logic below is UNCHANGED — a missing rollup row reads as NULL via the LEFT JOIN,
-// exactly as a missing CTE group did (preserving the pending / abandoned / active
+// exactly as a missing CTE group did (preserving the pending / closed / active
 // semantics for attempts with no conversations / pushes). tasks_v aggregates over
 // attempts_v and inherits the same cheap join. See
 // plugins/database/plugins/derived-tables/CLAUDE.md and the agent-launches rollup.
@@ -46,15 +46,54 @@ export const attempts = pgView("attempts_v").as((qb) => {
   return qb
     .select({
       ...getTableColumns(_attempts),
+      // I6 — EVERY ARM NAMES A FACT THE ROW PROVES. A `pushes` row may only
+      // ever PROMOTE an attempt to a landed claim (`pushed` / `completed`); its
+      // absence may never select a claim of its own. With no landed evidence the
+      // status reports how the SESSION ended — which the conversation rollup does
+      // prove — and says nothing about what did or did not land.
+      //
+      // This arm used to be `ELSE 'abandoned'`, the one verdict in the whole
+      // derivation reached from missing evidence. `has_push IS NULL` means at
+      // least four different things — never pushed / finished with nothing to
+      // push / landed on a commit carrying no attributable trailer (`--from-main`,
+      // a hand-merge) / the ledger has not caught up — and it picked the most
+      // damning. 1014 attempts read "Abandoned"; 128 of them sat on a task that
+      // was neither dropped nor held.
+      //
+      // It also swallowed a case that has nothing to do with pushes at all:
+      // hibernation writes `gone` on an idle pane, `gone` is not live but IS open
+      // (and is exactly the status `resumeConversation` requires), so a live,
+      // resumable attempt that had not pushed yet fell through to `abandoned`.
+      // `has_open_conv` — already materialised by the rollup — is what tells the
+      // two apart, and the CASE simply never read it.
+      //
+      // Ordering: `dormant` sits BELOW the landed arms on purpose. It exists to
+      // stop ABSENCE reading as abandonment, not to outrank a true claim — when
+      // there is evidence, the evidence wins.
+      //
+      // Consequence, and the reason this is the view-layer twin of attempt-work's
+      // I3: `attempts_v.status` can no longer contradict `standingOf`. The only
+      // landed-claiming arm is backed by the very rows `standingOf` ORs into
+      // "landed", and no arm claims "nothing landed" at all. See
+      // research/2026-08-20-tasks-attempt-status-positive-evidence.md.
       status: sql<
-        "pending" | "in_progress" | "pushed" | "completed" | "abandoned"
+        | "pending"
+        | "in_progress"
+        | "pushed"
+        | "completed"
+        | "dormant"
+        | "closed"
       >`
         CASE
           WHEN ${_attemptConvAgg.hasConv} IS NULL                              THEN 'pending'
           WHEN ${_attemptConvAgg.hasLiveConv} AND ${_attemptPushAgg.hasPush} IS NULL    THEN 'in_progress'
           WHEN ${_attemptConvAgg.hasLiveConv} AND ${_attemptPushAgg.hasPush}           THEN 'pushed'
           WHEN ${_attemptPushAgg.hasPush}                                       THEN 'completed'
-          ELSE                                                               'abandoned'
+          -- No live conversation, but one is still open (a gone conversation):
+          -- the process is not running and the attempt is RESUMABLE.
+          WHEN ${_attemptConvAgg.hasOpenConv}                                   THEN 'dormant'
+          -- Every conversation was explicitly closed: the session is over.
+          ELSE                                                               'closed'
         END
       `.as("status"),
       // PROGRESS: "an agent is expected to be running on this attempt". Reads the
@@ -89,10 +128,23 @@ export const attempts = pgView("attempts_v").as((qb) => {
         sql<boolean>`(${_attemptConvAgg.hasConv} IS NULL OR ${_attemptConvAgg.hasOpenConv})`.as(
           "retained",
         ),
+      // EXACTLY the two statuses that are over carry a finish instant:
+      // `completed` (first arm) and `closed` (second). Both qualifiers below exist
+      // to hold that equivalence, and views.test.ts asserts it over the whole
+      // status truth table rather than arm by arm:
+      //
+      //  - `has_conv` on the first arm keeps `pending` out. An attempt with a push
+      //    row but no conversation row cannot arise from the ledger (it attributes
+      //    a commit THROUGH a conversation), but the arm read as true for it, so
+      //    the row claimed both "nothing has run" and a finish time.
+      //  - `NOT has_open_conv` on the second keeps `dormant` out. A hibernated
+      //    attempt is resumable, not finished, and stamping it would make every
+      //    consumer reading this as "when did this end" wrong about a live one.
       finishedAt: sql<Date | null>`
         CASE
-          WHEN ${_attemptPushAgg.hasPush} AND NOT COALESCE(${_attemptConvAgg.hasLiveConv}, false)   THEN ${_attemptPushAgg.minPushAt}
-          WHEN ${_attemptConvAgg.hasConv} AND NOT COALESCE(${_attemptConvAgg.hasLiveConv}, false)
+          WHEN ${_attemptConvAgg.hasConv} AND ${_attemptPushAgg.hasPush}
+            AND NOT COALESCE(${_attemptConvAgg.hasLiveConv}, false)                    THEN ${_attemptPushAgg.minPushAt}
+          WHEN ${_attemptConvAgg.hasConv} AND NOT COALESCE(${_attemptConvAgg.hasOpenConv}, false)
             AND ${_attemptPushAgg.hasPush} IS NULL                                          THEN ${_attemptConvAgg.maxEndedAt}
           ELSE                                                                           NULL
         END

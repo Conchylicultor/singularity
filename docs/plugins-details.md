@@ -106,6 +106,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/live-state.matchResource`
           - `primitives/live-state.useResource`
           - `primitives/pane.useOpenPane`
+          - `tasks/attempt-status.ATTEMPT_STATUS_META`
+          - `tasks/attempt-status.attemptStatusLabel`
           - `tasks/attempt-view.attemptPane`
         - Exports (values): `AttemptChip`
     - **`commit-link`** — Renders commit shas in backtick-wrapped inline code as clickable chips that open the commit-detail pane, with the subject, author and date on hover. Resolves the sha against the main checkout's object database and declines when it names no commit.
@@ -28819,7 +28821,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `tasks/task-header`
       - `tasks/task-list`
   - Plugins:
-    - **`attempt-status`** — Single source of truth for Attempt status display metadata — badge color and sentence-case label.
+    - **`attempt-status`** — Single source of truth for Attempt status display metadata — badge tint, dot tint and sentence-case label, so a chip and a badge for the same attempt cannot disagree.
       - Web:
         - Uses:
           - `primitives/css/badge.Badge`
@@ -28828,8 +28830,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports (values):
           - `ATTEMPT_STATUS_META`
           - `AttemptStatusBadge`
+          - `attemptStatusLabel`
       - Cross-plugin:
         - Imported by:
+          - `active-data/attempt`
           - `active-data/task`
           - `tasks/task-events`
     - **`attempt-view`** — Main pane at /a/:id showing an attempt's conversations on the left and the selected conversation on the right. Adds a toolbar button to the conversation view to switch into it.

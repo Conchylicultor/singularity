@@ -52,6 +52,11 @@ is everything that is *about one specific recorded push* (`task-events`,
 `push-profiling`, the per-push diff, the review pane, the `pushes.landed` trigger)
 — those are display-only or self-healing.
 
+`attempts_v.status` also reads the ledger, and now holds the same discipline: I6
+(`tasks-core/CLAUDE.md`) makes every arm a fact the row proves, so no status claims
+"nothing landed" and none can contradict `standingOf`. The badge and this plugin's
+buttons agree by construction rather than by coincidence.
+
 ## I4 — the standing is a discriminated value, not a count
 
 `standingOf(work)` returns `"none" | "pending" | "landed"`, and it is the **only**

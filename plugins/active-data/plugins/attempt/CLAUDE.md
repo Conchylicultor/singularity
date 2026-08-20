@@ -35,6 +35,8 @@ The id pattern matches attempt ids derived from the worktree basename
     - `primitives/live-state.matchResource`
     - `primitives/live-state.useResource`
     - `primitives/pane.useOpenPane`
+    - `tasks/attempt-status.ATTEMPT_STATUS_META`
+    - `tasks/attempt-status.attemptStatusLabel`
     - `tasks/attempt-view.attemptPane`
   - Exports (values): `AttemptChip`
 

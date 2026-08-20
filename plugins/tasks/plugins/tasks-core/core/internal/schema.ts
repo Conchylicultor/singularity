@@ -45,12 +45,24 @@ export const TaskStatusSchema = z.enum([
 ]);
 export type TaskStatus = z.infer<typeof TaskStatusSchema>;
 
+// Every value names a fact the attempt's row PROVES (invariant I6, see the
+// status CASE in server/internal/views.ts). `pushed` / `completed` are the only
+// two that claim anything about work landing, and both require a `pushes` row;
+// `dormant` / `closed` report how the SESSION ended and claim nothing either way.
+//
+// There is deliberately no `abandoned`. It used to be the CASE's `ELSE`, i.e. a
+// verdict reached from the ABSENCE of a ledger row — which conflated "never
+// pushed", "finished with nothing to push", "landed untrailered" and "the ledger
+// has not caught up", and additionally swallowed every hibernated (`gone`)
+// attempt. Absence of evidence has no spelling here on purpose: removing the
+// value is what makes the claim unwritable rather than merely discouraged.
 export const AttemptStatusSchema = z.enum([
   "pending",
   "in_progress",
   "pushed",
   "completed",
-  "abandoned",
+  "dormant",
+  "closed",
 ]);
 export type AttemptStatus = z.infer<typeof AttemptStatusSchema>;
 

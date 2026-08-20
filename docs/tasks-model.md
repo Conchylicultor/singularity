@@ -49,27 +49,42 @@ The only stored status. Owned by the runtime:
 
 Derived: `active = status <> 'gone'`.
 
-### Attempt — `pending` · `in_progress` · `pushed` · `completed` · `abandoned`
+### Attempt — `pending` · `in_progress` · `pushed` · `completed` · `dormant` · `closed`
 
 Purely derived from conversations and pushes:
 
 ```
 has_conv      = any conversation exists for this attempt
-has_live_conv = any conversation exists and is NOT gone
+has_live_conv = any conversation exists whose status is NOT gone and NOT done
+has_open_conv = any conversation exists whose status is NOT done
 has_push      = any push row exists for this attempt
 ```
 
 ```
 pending      = no conversation yet (attempt was created, nothing ran)
-in_progress  = a live conversation is running, no push yet
-pushed       = a live conversation is running AND a push has landed
-completed    = every conversation is gone AND a push has landed  (shipped)
-abandoned    = every conversation is gone AND no push            (stalled)
+in_progress  = a live conversation is running, no push recorded
+pushed       = a live conversation is running AND a push is recorded
+completed    = no live conversation AND a push is recorded          (shipped)
+dormant      = no live conversation, but one is still open (`gone`)  (resumable)
+closed       = every conversation was explicitly closed, no push recorded
 ```
 
-Derived: `active = pending | in_progress | pushed` (everything pre-terminal).
+**Invariant I6 — every arm names a fact the row proves.** A `pushes` row may only
+*promote* an attempt to a landed claim (`pushed` / `completed`); its absence may
+never select a claim of its own. `dormant` and `closed` report how the *session*
+ended and say nothing about what did or did not land — which is why there is no
+`abandoned`, and why a task whose work landed on an untrailered commit reads
+`attempted` rather than something that asserts failure. See
+`tasks/tasks-core/CLAUDE.md` § I6.
 
-`finished_at` = earliest push time for completed attempts, else the latest conversation `ended_at` for abandoned ones, else NULL.
+Derived: `active = pending | in_progress | pushed` (an agent is expected to be
+running). Separately, `retained = has_conv IS NULL OR has_open_conv` — the
+retention guard destructive consumers must read, which `dormant` is exactly the
+visible name of.
+
+`finished_at` = earliest push time when a push is recorded, else the latest
+conversation `ended_at` once every conversation is closed, else NULL — so a
+`dormant` attempt never carries one.
 
 ### Task — `new` · `in_progress` · `attempted` · `done` · `dropped`
 
@@ -87,14 +102,19 @@ Derived: `active = status = 'in_progress'`.
 
 `finished_at` = `dropped_at` for dropped tasks, earliest push time for done tasks, else NULL.
 
-### Why `dropped` (task) vs `abandoned` (attempt)?
+### Why nothing is called "abandoned"
 
-Two different mechanisms, different words on purpose:
+Abandonment is a **user intent**, and the only place it is recorded is
+`_tasks.dropped_at` — an explicit action meaning "this isn't worth pursuing",
+which wins over any attempt state, so a dropped task stays dropped even if a
+lingering attempt later produces a push.
 
-- **Abandoned** is auto-derived: "all conversations on this attempt went gone without a push." Can happen silently when someone just closes a tmux pane.
-- **Dropped** is an explicit user action on a task: "this isn't worth pursuing." Wins over any attempt state, so a dropped task stays dropped even if a lingering attempt later produces a push.
-
-The distinct vocabulary keeps the UX unambiguous.
+No *attempt* status claims it. An attempt with no push row could have never
+pushed, or finished with nothing to push (a research task), or landed on a commit
+carrying no attributable trailer, or be waiting on a ledger that has not caught
+up — so deriving "abandoned" from the missing row was a verdict the data does not
+support (I6). The attempt statuses say how the session ended; the task's
+`dropped_at` says what the user decided.
 
 ## Cascade
 
@@ -115,7 +135,7 @@ attemptsResource        (loader: SELECT * FROM attempts_v)
 tasksResource           (loader: SELECT * FROM tasks_v)
 ```
 
-A conversation going `gone` → `recentConversationsResource.notify()` → `attemptsResource` re-loads (attempt flips `in_progress → abandoned` or `pushed → completed`) → `tasksResource` re-loads (task flips to `attempted` or `done`). Every badge downstream updates from one trigger.
+A conversation going `gone` → `recentConversationsResource.notify()` → `attemptsResource` re-loads (attempt flips `in_progress → dormant` or `pushed → completed`) → `tasksResource` re-loads (task flips to `attempted` or `done`). Every badge downstream updates from one trigger.
 
 ## Schema layout
 

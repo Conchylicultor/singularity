@@ -1,6 +1,12 @@
 /**
- * Real-DB semantics suite for the derived task views (`views.ts`) — specifically
- * the STATUS PRECEDENCE rules, which are pure SQL and were otherwise unguarded.
+ * Real-DB semantics suite for the derived task views (`views.ts`) — the pure-SQL
+ * rules that are otherwise unguarded. Two families:
+ *
+ * 1. STATUS PRECEDENCE in `tasks_v` / `task_blocking_v` (the "Hold & close" bug,
+ *    below).
+ * 2. I6 in `attempts_v` — every status arm names a fact the row PROVES, and a
+ *    `pushes` row may only promote an attempt to a landed claim, never select one
+ *    by its absence. The last describe block is that truth table.
  *
  * The bug this pins down: "Hold & close" wrote `held_at`, closed the last live
  * conversation, which flipped the attempt `pushed` → `completed`, which made
@@ -168,6 +174,52 @@ async function taskStatus(
   return { status: row.status, finishedAt: row.finished_at };
 }
 
+async function attemptRow(id: string): Promise<{
+  status: string;
+  active: boolean;
+  retained: boolean;
+  finishedAt: Date | null;
+}> {
+  const { rows } = await t.db.execute(
+    sql`SELECT status, active, retained, finished_at FROM attempts_v WHERE id = ${id}`,
+  );
+  const row = rows[0] as
+    | {
+        status: string;
+        active: boolean;
+        retained: boolean;
+        finished_at: Date | null;
+      }
+    | undefined;
+  if (!row) throw new Error(`no attempts_v row for ${id}`);
+  return {
+    status: row.status,
+    active: row.active,
+    retained: row.retained,
+    finishedAt: row.finished_at,
+  };
+}
+
+/**
+ * One attempt per truth-table cell: the conversation shape it holds, and whether
+ * a ledger row exists for it.
+ *
+ * `convStatus: null` seeds no conversation at all. `"working"` is live-and-open,
+ * `"gone"` is open-but-not-live (the process vanished — usually hibernation),
+ * `"done"` is neither (explicitly closed).
+ */
+async function seedCell(opts: {
+  convStatus: string | null;
+  push: boolean;
+}): Promise<string> {
+  const attemptId = await seedAttempt(await seedTask());
+  if (opts.convStatus !== null) {
+    await seedConversation(attemptId, opts.convStatus);
+  }
+  if (opts.push) await seedPush(attemptId);
+  return attemptId;
+}
+
 async function isBlocked(id: string): Promise<boolean> {
   const { rows } = await t.db.execute(
     sql`SELECT has_blocking_dep FROM task_blocking_v WHERE task_id = ${id}`,
@@ -312,5 +364,185 @@ describe("tasks_v — a running agent on a blocked task reports in_progress_bloc
     await seedConversation(attemptId, "working");
 
     expect((await taskStatus(dependent)).status).toBe("in_progress");
+  });
+});
+
+// ── I6: every attempt status names a fact the row proves ─────────────────────
+//
+// The CASE used to end in `ELSE 'abandoned'` — the one verdict in the whole
+// derivation reached from MISSING evidence. `has_push IS NULL` means at least
+// four different things (never pushed / finished with nothing to push / landed on
+// an untrailered commit / the ledger has not caught up), and it also caught every
+// hibernated attempt, because `gone` is not live. The table below is the pin:
+// every cell's status is selected by a column that is TRUE, and the two coherence
+// assertions below it are I6 itself, stated so a future edit has to break a test
+// rather than a comment.
+
+type Cell = {
+  name: string;
+  convStatus: string | null;
+  push: boolean;
+  status: string;
+  /** A landed claim — the only kind a `pushes` row may produce. */
+  landedClaim: boolean;
+  finished: boolean;
+};
+
+const STATUS_TRUTH_TABLE: Cell[] = [
+  // No conversation yet: nothing has run, whatever the ledger says.
+  {
+    name: "no conversation",
+    convStatus: null,
+    push: false,
+    status: "pending",
+    landedClaim: false,
+    finished: false,
+  },
+  {
+    name: "no conversation, ledger row",
+    convStatus: null,
+    push: true,
+    status: "pending",
+    landedClaim: false,
+    finished: false,
+  },
+  // Live conversation: the push only decides in_progress vs pushed.
+  {
+    name: "live conversation",
+    convStatus: "working",
+    push: false,
+    status: "in_progress",
+    landedClaim: false,
+    finished: false,
+  },
+  {
+    name: "live conversation + ledger row",
+    convStatus: "working",
+    push: true,
+    status: "pushed",
+    landedClaim: true,
+    finished: false,
+  },
+  // Open but not live (`gone`): the process vanished, the attempt is resumable.
+  {
+    name: "gone conversation",
+    convStatus: "gone",
+    push: false,
+    status: "dormant",
+    landedClaim: false,
+    finished: false,
+  },
+  {
+    name: "gone conversation + ledger row",
+    convStatus: "gone",
+    push: true,
+    status: "completed",
+    landedClaim: true,
+    finished: true,
+  },
+  // Explicitly closed.
+  {
+    name: "closed conversation",
+    convStatus: "done",
+    push: false,
+    status: "closed",
+    landedClaim: false,
+    finished: true,
+  },
+  {
+    name: "closed conversation + ledger row",
+    convStatus: "done",
+    push: true,
+    status: "completed",
+    landedClaim: true,
+    finished: true,
+  },
+];
+
+describe("attempts_v status — I6, a claim only where a fact proves it", () => {
+  for (const cell of STATUS_TRUTH_TABLE) {
+    test(`${cell.name} reads ${cell.status}`, async () => {
+      const attemptId = await seedCell(cell);
+      const row = await attemptRow(attemptId);
+
+      expect(row.status).toBe(cell.status);
+      // A status that is over carries a finish instant; one that is still
+      // resumable or has not started must not.
+      expect(row.finishedAt !== null).toBe(cell.finished);
+    });
+  }
+
+  test("finished_at is set for exactly the two statuses that are over", async () => {
+    // The equivalence, stated over the whole table rather than arm by arm:
+    // `completed` and `closed` are finished, and NOTHING else may carry an
+    // instant — not `dormant` (resumable) and not `pending` (never ran).
+    const OVER = new Set(["completed", "closed"]);
+    for (const cell of STATUS_TRUTH_TABLE) {
+      const row = await attemptRow(await seedCell(cell));
+      expect(row.finishedAt !== null).toBe(OVER.has(row.status));
+    }
+  });
+
+  test("no status is `abandoned` — the verdict has no spelling", async () => {
+    for (const cell of STATUS_TRUTH_TABLE) {
+      const row = await attemptRow(await seedCell(cell));
+      expect(row.status).not.toBe("abandoned");
+    }
+  });
+
+  test("only a ledger row can produce a landed claim", async () => {
+    for (const cell of STATUS_TRUTH_TABLE) {
+      const row = await attemptRow(await seedCell(cell));
+      const claimsLanded =
+        row.status === "pushed" || row.status === "completed";
+      expect(claimsLanded).toBe(cell.landedClaim);
+      // The whole of I6 in one line: a landed claim implies the evidence.
+      if (claimsLanded) expect(cell.push).toBe(true);
+    }
+  });
+
+  test("adding the ledger row only ever moves a cell UP, never sideways", async () => {
+    // The negative arms must be functions of the conversation rollup alone, so
+    // that a lagging or untrailered push can downgrade the badge but can never
+    // change WHICH non-landed story it tells.
+    for (const convStatus of [null, "working", "gone", "done"]) {
+      const without = await attemptRow(
+        await seedCell({ convStatus, push: false }),
+      );
+      const withPush = await attemptRow(
+        await seedCell({ convStatus, push: true }),
+      );
+      const landed = (s: string) => s === "pushed" || s === "completed";
+      if (!landed(withPush.status)) {
+        expect(withPush.status).toBe(without.status);
+      }
+    }
+  });
+
+  test("a hibernated attempt is dormant and retained, not finished", async () => {
+    // The regression that had nothing to do with push lag: hibernation parks an
+    // idle pane as `gone`, which is not live but IS open — and `gone` is exactly
+    // the status `resumeConversation` requires. It used to read `abandoned`.
+    const attemptId = await seedCell({ convStatus: "gone", push: false });
+    const row = await attemptRow(attemptId);
+
+    expect(row.status).toBe("dormant");
+    expect(row.active).toBe(false); // no agent is running
+    expect(row.retained).toBe(true); // but the worktree is still the user's
+    expect(row.finishedAt).toBeNull();
+  });
+
+  test("tasks_v still resolves `done` from a landed attempt only", async () => {
+    // tasks_v is deliberately untouched by the split: `hasCompleted` compares
+    // against 'completed', which the new arms cannot reach.
+    const closedTask = await seedTask();
+    const closedAttempt = await seedAttempt(closedTask);
+    await seedConversation(closedAttempt, "done");
+
+    const doneTask = await seedTask();
+    await seedPushedAndClosed(doneTask);
+
+    expect((await taskStatus(closedTask)).status).toBe("attempted");
+    expect((await taskStatus(doneTask)).status).toBe("done");
   });
 });

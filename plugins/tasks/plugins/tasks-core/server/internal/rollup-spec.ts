@@ -14,7 +14,7 @@ import {
 // tables. The view's status / active / finished_at logic is unchanged — only the
 // SOURCE of has_conv / has_live_conv / max_ended_at and has_push / min_push_at
 // moves from CTE to rollup table. A missing rollup row reads as NULL via the LEFT
-// JOIN, exactly as a missing CTE group did (preserving pending / abandoned /
+// JOIN, exactly as a missing CTE group did (preserving pending / closed /
 // active semantics for attempts with no conversations / pushes). See the
 // agent-launches precedent (conversations/agents/server/internal/rollup-spec.ts)
 // and plugins/database/plugins/derived-tables/CLAUDE.md.
