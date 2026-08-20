@@ -2,7 +2,11 @@ export { webCollectedDir } from "./collected-dir";
 export { defineSlot, defineSlotFacade, Core, slots } from "./slots";
 export type { Slot } from "./slots";
 export { UNSAFE_unsealSlotComponent } from "./sealed-component";
-export type { SealedComponent, SealContributions } from "./sealed-component";
+export type {
+  SealedComponent,
+  SealContributions,
+  SealedMeta,
+} from "./sealed-component";
 export { PluginProvider, PluginRuntimeContext } from "./context";
 export type {
   PluginDefinition,

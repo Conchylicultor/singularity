@@ -10,8 +10,10 @@ import {
 import {
   UNSAFE_unsealSlotComponent,
   type SealContributions,
+  type SealedMeta,
 } from "@plugins/framework/plugins/web-sdk/core";
 import { ActiveData, type ActiveDataInlineContribution } from "../slots";
+import { ChipBoundary } from "./chip-boundary";
 
 // Always skip these element types (don't linkify inside anchors)
 const ALWAYS_SKIP = new Set(["a"]);
@@ -21,6 +23,8 @@ const SKIP_IN_PRE = new Set(["pre", "code"]);
 type PatternContrib = {
   pattern: RegExp;
   Component: ActiveDataInlineContribution["component"];
+  /** The contribution itself, carried through so a crash can name its plugin. */
+  contribution: SealedMeta;
 };
 
 type Match = {
@@ -29,6 +33,7 @@ type Match = {
   text: string;
   patternSource: string;
   Component: PatternContrib["Component"];
+  contribution: SealedMeta;
 };
 
 // Dev-only loud guard for the leftmost-longest tie-break: when two inline
@@ -36,11 +41,17 @@ type Match = {
 // dropped. That is a registry-level conflict (two contributions competing for one
 // token), invisible at runtime because the winner renders normally. Never throws
 // — the rendered output is unchanged; this just names the loser.
-function warnOverlapSkip(winner: Match | null, dropped: Match, text: string): void {
+function warnOverlapSkip(
+  winner: Match | null,
+  dropped: Match,
+  text: string,
+): void {
   if (process.env.NODE_ENV === "production") return;
   console.error(
     `[active-data] inline pattern overlap: /${dropped.patternSource}/ matched "${dropped.text}" at ${dropped.start}-${dropped.end}, but that span is already taken by ${
-      winner ? `/${winner.patternSource}/ ("${winner.text}" at ${winner.start}-${winner.end})` : "an earlier match"
+      winner
+        ? `/${winner.patternSource}/ ("${winner.text}" at ${winner.start}-${winner.end})`
+        : "an earlier match"
     }. The later match is DROPPED — it will never render. Text: ${JSON.stringify(text)}`,
   );
 }
@@ -49,7 +60,9 @@ function applyPatterns(text: string, contribs: PatternContrib[]): ReactNode {
   if (!text) return text;
   const matches: Match[] = [];
   for (const c of contribs) {
-    const flags = c.pattern.flags.includes("g") ? c.pattern.flags : `${c.pattern.flags}g`;
+    const flags = c.pattern.flags.includes("g")
+      ? c.pattern.flags
+      : `${c.pattern.flags}g`;
     const re = new RegExp(c.pattern.source, flags);
     let m: RegExpExecArray | null;
     while ((m = re.exec(text)) !== null) {
@@ -59,6 +72,7 @@ function applyPatterns(text: string, contribs: PatternContrib[]): ReactNode {
         text: m[0],
         patternSource: c.pattern.source,
         Component: c.Component,
+        contribution: c.contribution,
       });
       if (m[0].length === 0) re.lastIndex++;
     }
@@ -75,15 +89,25 @@ function applyPatterns(text: string, contribs: PatternContrib[]): ReactNode {
       continue;
     }
     if (m.start > cursor) {
-      out.push(<Fragment key={`t-${i}`}>{text.slice(cursor, m.start)}</Fragment>);
+      out.push(
+        <Fragment key={`t-${i}`}>{text.slice(cursor, m.start)}</Fragment>,
+      );
     }
     const C = m.Component;
-    out.push(<C key={`m-${i}`} content={m.text} attrs={{}} />);
+    // The chip is unsealed (below), so it arrives without the boundary
+    // `slot-render` would have applied — a throwing chip would otherwise take
+    // down the whole surrounding text with it. See ./chip-boundary.
+    out.push(
+      <ChipBoundary key={`m-${i}`} contribution={m.contribution} token={m.text}>
+        <C content={m.text} attrs={{}} />
+      </ChipBoundary>,
+    );
     cursor = m.end;
     lastAccepted = m;
     i++;
   }
-  if (cursor < text.length) out.push(<Fragment key={`t-end`}>{text.slice(cursor)}</Fragment>);
+  if (cursor < text.length)
+    out.push(<Fragment key={`t-end`}>{text.slice(cursor)}</Fragment>);
   return <>{out}</>;
 }
 
@@ -94,16 +118,25 @@ function applyPatterns(text: string, contribs: PatternContrib[]): ReactNode {
 // output is unchanged); just surfaces the mistake instead of swallowing it.
 function warnIfOpaqueRoot(node: ReactNode): void {
   if (process.env.NODE_ENV === "production") return;
-  if (isValidElement(node) && node.type !== Fragment && typeof node.type !== "string") {
+  if (
+    isValidElement(node) &&
+    node.type !== Fragment &&
+    typeof node.type !== "string"
+  ) {
     console.error(
       "[active-data] useActiveDataLinkify was seeded with a custom-component root; walkers leave custom components opaque, so nothing inside is linkified. Seed with a raw string via <InlineText> instead of hand-composing walkers.",
     );
   }
 }
 
-function walk(node: ReactNode, contribs: PatternContrib[], inPre = false): ReactNode {
+function walk(
+  node: ReactNode,
+  contribs: PatternContrib[],
+  inPre = false,
+): ReactNode {
   if (node == null || typeof node === "boolean") return node;
-  if (typeof node === "string") return inPre ? node : applyPatterns(node, contribs);
+  if (typeof node === "string")
+    return inPre ? node : applyPatterns(node, contribs);
   if (typeof node === "number") return node;
   if (Array.isArray(node)) {
     return Children.map(node, (child, i) => (
@@ -123,7 +156,11 @@ function walk(node: ReactNode, contribs: PatternContrib[], inPre = false): React
     if (SKIP_IN_PRE.has(el.type) && (inPre || el.type === "pre")) return el;
     const inner = el.props.children;
     if (inner === undefined) return el;
-    return cloneElement(el, undefined, walk(inner, contribs, el.type === "pre"));
+    return cloneElement(
+      el,
+      undefined,
+      walk(inner, contribs, el.type === "pre"),
+    );
   }
   return node;
 }
@@ -144,7 +181,11 @@ export function useActiveDataLinkify(): (children: ReactNode) => ReactNode {
             c.display === "inline",
         )
         // UNSAFE: spliced into foreign markdown ReactNode tree.
-        .map((c) => ({ pattern: c.pattern, Component: UNSAFE_unsealSlotComponent(c.component) })),
+        .map((c) => ({
+          pattern: c.pattern,
+          Component: UNSAFE_unsealSlotComponent(c.component),
+          contribution: c,
+        })),
     [contributions],
   );
   if (contribs.length === 0) return (c: ReactNode) => c;

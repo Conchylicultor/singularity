@@ -76,12 +76,19 @@ presence and read params — without reaching into `_internal` or importing
 `usePaneMatch()`. Each entry is `{ instanceId, params, fullParams }`; pass
 `instanceId` to `pane.close(instanceId)` to close the specific instance found.
 
-**Outside every surface there is no route to read.** Global chrome (the action
-bar at `Core.Root`, `Apps.TabBarActions`) is not inside any
-`PaneSurfaceProvider`, so these hooks throw there rather than returning a
-plausible-looking `null` — the same policy as `usePaneStore()`. `null` stays a
-legitimate *in-surface* answer ("this pane is not in the route"). Global chrome
-navigates with `navigate()` from `@plugins/apps-core/plugins/tabs/web`.
+**Outside every surface there is no route to READ.** Global chrome (the action
+bar at `Core.Root`, `Apps.TabBarActions`, and every popover hanging off it) is
+not inside any `PaneSurfaceProvider`, so these hooks throw there rather than
+returning a plausible-looking `null` — the same policy as `usePaneStore()`.
+`null` stays a legitimate *in-surface* answer ("this pane is not in the route").
+To react to the focused tab's route from global chrome, use `useTabs()` /
+`navigate()` from `@plugins/apps-core/plugins/tabs/web`.
+
+**Opening one from there is fine, though** — see `useOpenPane` below. Reading
+and navigating are not the same requirement, and conflating them was a trap: a
+control reusable enough to appear both inside a pane and in a popover (a config
+gear, an active-data chip) is not written twice, so it crashed on arrival in the
+popover.
 
 ## Non-URL state: `options` and `hint`
 
@@ -179,6 +186,15 @@ Modes:
   `side: "left"` inserts before the caller (skipped if already an ancestor).
 - `"swap"` — replace the caller's slot in-place (same pane type,
   different params), truncating children.
+
+**It is legal everywhere**, unlike the route reads above. Opening a pane is an
+imperative op — the hook returns a callback and reads nothing during render — so
+it takes the surface's store when there is one and the **focused tab's** store
+otherwise, resolved when the click happens rather than when the component
+rendered (global chrome outlives the tab it was rendered beside). With no caller
+pane in the route there is nothing to be relative to, so every mode behaves as
+`"root"` does: the target opens with its default ancestors, exactly like
+clicking the same entry in a sidebar.
 
 ## Chrome
 

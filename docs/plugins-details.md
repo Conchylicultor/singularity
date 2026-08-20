@@ -18,6 +18,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `primitives/css/inline.Inline`
       - `primitives/css/pin.Pin`
       - `primitives/css/ui-kit.cn`
+      - `primitives/error-boundary.PluginErrorBoundary`
       - `primitives/hover-reveal.hoverRevealGroup`
       - `primitives/hover-reveal.hoverRevealTarget`
       - `primitives/inline-text.InlineTextWalker`
@@ -15360,6 +15361,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `PluginLoadReport`
           - `SealContributions`
           - `SealedComponent`
+          - `SealedMeta`
           - `Slot`
         - Exports (values):
           - `Core`
@@ -24685,6 +24687,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `PluginErrorBoundary`
       - Cross-plugin:
         - Imported by:
+          - `active-data`
           - `apps/workflows/editor`
           - `apps/workflows/executions`
           - `framework/web-core`

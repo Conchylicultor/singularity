@@ -80,6 +80,21 @@ on **every** surface — compose editor + assistant markdown + user-text — wit
 per-tag Lexical wiring. (This is how the element-picker `<ui-context>` chip is
 defined; it owns no Lexical node of its own.)
 
+### An unsealed chip has no boundary, so it is given one back
+
+Every other slot component reaches the screen through `slot-render`, whose
+middleware wraps it in `PluginErrorBoundary`. An inline contribution cannot: it
+is spliced into a foreign ReactNode tree, so it goes through
+`UNSAFE_unsealSlotComponent` and arrives naked — and nothing says so, because
+the chip renders fine right up until one throws.
+
+Both inline render paths therefore wrap the ELEMENT in `<ChipBoundary>`
+(`internal/chip-boundary.tsx`): the editor decorator and the display-surface
+linkify. Never the component type — a wrapper minted per render remounts the
+chip on every keypress. Without it, a chip that throws in the editor is caught
+by Lexical's own boundary, whose stock fallback blanks the entire content region
+into a red "An error was thrown." box, names no plugin, and files no report.
+
 ## Persisting widget state — `useActiveDataBinding`
 
 Block widgets often have follow-up state — a task was created, a conversation
@@ -131,6 +146,7 @@ Behavior:
     - `primitives/css/inline.Inline`
     - `primitives/css/pin.Pin`
     - `primitives/css/ui-kit.cn`
+    - `primitives/error-boundary.PluginErrorBoundary`
     - `primitives/hover-reveal.hoverRevealGroup`
     - `primitives/hover-reveal.hoverRevealTarget`
     - `primitives/inline-text.InlineTextWalker`

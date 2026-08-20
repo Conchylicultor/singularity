@@ -1093,9 +1093,12 @@ export { createPaneStore, defaultStore };
 // still unmounted, so the FIRST app rendered freezes into it forever, and those
 // dead URLs carry the boot app's prefix regardless of which app you are in.
 //
-// Global chrome must use the cross-app `navigate()` from apps-core/tabs; making
-// this `null` turns that mistake into a loud throw at first render instead of a
-// click that silently does nothing.
+// Making this `null` turns that mistake into a loud throw at first render
+// instead of a click that silently does nothing.
+//
+// This is the REACTIVE read — "re-render me when the route changes" — and that
+// genuinely needs a surface, so it stays a throw. Merely OPENING a pane does
+// not: `useOpenPane` takes `useStoreOrLive()` and works in global chrome too.
 // ---------------------------------------------------------------------------
 
 export const PaneStoreContext = createContext<PaneStore | null>(null);
@@ -1106,9 +1109,11 @@ export function usePaneStore(): PaneStore {
     throw new Error(
       "usePaneStore(): no <PaneSurfaceProvider> in the tree. This component " +
         "renders outside every pane surface (global chrome such as the action " +
-        "bar), so it has no pane store to navigate. Use the cross-app " +
-        "navigate() from @plugins/apps-core/plugins/tabs/web instead of " +
-        "useOpenPane()/pane.useToggle().",
+        "bar), so it has no route to READ. Opening a pane from here is fine — " +
+        "useOpenPane() targets the focused tab. It is the reactive reads " +
+        "(useRoute/pane.useToggle/pane.useClose) that need a surface; to react " +
+        "to the focused tab's route from global chrome, use the cross-app " +
+        "navigate()/useTabs() from @plugins/apps-core/plugins/tabs/web.",
     );
   }
   return store;
@@ -1130,6 +1135,21 @@ export function usePaneStore(): PaneStore {
 function useStoreOrLive(): PaneStore {
   // eslint-disable-next-line install-sink/no-render-phase-peek -- deliberately a sample, not a subscription (see above): the sink is re-pointed by TabsProvider's one-shot wiring DURING its own render, so subscribing here would notify an already-mounted subscriber mid-render. The callers do a global imperative op and re-render for their own reasons; anything that must re-render on route changes belongs inside a surface.
   return useContext(PaneStoreContext) ?? liveStoreSink.peek();
+}
+
+/**
+ * The same resolution as {@link useStoreOrLive}, deferred to CALL time.
+ *
+ * For an op that fires from a handler rather than during render, "which tab is
+ * focused" must be answered when the user clicks, not when the component
+ * rendered — global chrome (a popover hanging off the action bar) stays mounted
+ * across focus switches, so a store sampled at render would navigate the tab
+ * the user has already left. Inside a surface the context store wins and this
+ * is identical to reading it directly.
+ */
+function useStoreResolver(): () => PaneStore {
+  const store = useContext(PaneStoreContext);
+  return useCallback(() => store ?? liveStoreSink.peek(), [store]);
 }
 
 // ---------------------------------------------------------------------------
@@ -2334,8 +2354,25 @@ export function openPane<
 }
 
 // ---------------------------------------------------------------------------
-// useOpenPane — caller-aware pane navigation hook. Operates on the *context*
-// store (the surface it is rendered in).
+// useOpenPane — caller-aware pane navigation hook. Operates on the surface it
+// is rendered in, falling back to the focused tab when there is no surface.
+//
+// Opening a pane is a NON-REACTIVE IMPERATIVE OP: the hook returns a callback
+// and reads nothing from the route during render. That is exactly the shape
+// {@link useStoreOrLive} exists for, so this hook is legal everywhere —
+// including global chrome (the action bar and every popover it opens), which
+// has no `PaneSurfaceProvider` of its own and targets the focused tab's store.
+//
+// It used to take the reactive `usePaneStore()` and therefore THROW in global
+// chrome. That was a trap rather than a guard: a component is not written twice
+// (once for a pane, once for a popover), so any control reusable enough to
+// appear in both — a config gear, an active-data chip — crashed the moment
+// someone dropped it into the Improve popover, at render, with the failure
+// surfacing as whatever fallback happened to be nearest (for a Lexical editor,
+// a nameless "An error was thrown." box). Two consumers had already hand-rolled
+// their own `navigate()` workaround around it. Anything that must RE-RENDER on
+// route changes still has to be inside a surface — that read is `usePaneStore`
+// / `useRoute`, and those still throw.
 // ---------------------------------------------------------------------------
 
 /**
@@ -2365,7 +2402,7 @@ export interface OpenPaneFn {
 }
 
 export function useOpenPane(): OpenPaneFn {
-  const store = usePaneStore();
+  const resolveStore = useStoreResolver();
   const callerInstanceId = useContext(PaneInstanceContext);
 
   return useCallback(
@@ -2379,6 +2416,7 @@ export function useOpenPane(): OpenPaneFn {
         hint?: PaneHintBag;
       },
     ) => {
+      const store = resolveStore();
       const targetInternal = target._internal;
       const options = opts.options ?? {};
       const hint = opts.hint ?? {};
@@ -2451,6 +2489,6 @@ export function useOpenPane(): OpenPaneFn {
       ];
       store.setRoute(newRoute, replace);
     },
-    [store, callerInstanceId],
+    [resolveStore, callerInstanceId],
   ) as OpenPaneFn;
 }

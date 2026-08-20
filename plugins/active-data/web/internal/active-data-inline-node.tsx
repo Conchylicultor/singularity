@@ -12,8 +12,12 @@ import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
-import { hoverRevealGroup, hoverRevealTarget } from "@plugins/primitives/plugins/hover-reveal/web";
+import {
+  hoverRevealGroup,
+  hoverRevealTarget,
+} from "@plugins/primitives/plugins/hover-reveal/web";
 import { ActiveData, type ActiveDataInlineContribution } from "../slots";
+import { ChipBoundary } from "./chip-boundary";
 
 type SerializedActiveDataInlineNode = {
   type: "active-data-inline";
@@ -43,7 +47,9 @@ export class ActiveDataInlineNode extends DecoratorNode<ReactNode> {
     this.__text = text;
   }
 
-  static importJSON(json: SerializedActiveDataInlineNode): ActiveDataInlineNode {
+  static importJSON(
+    json: SerializedActiveDataInlineNode,
+  ): ActiveDataInlineNode {
     return new ActiveDataInlineNode(json.text);
   }
 
@@ -92,7 +98,13 @@ export class ActiveDataInlineNode extends DecoratorNode<ReactNode> {
 // it for free, with zero per-contributor wiring. Read surfaces render the
 // contribution component directly (via linkify/segments), never through this
 // node, so they never get the × (mirrors paste-images' ImageNode).
-function ActiveDataInlineChip({ text, nodeKey }: { text: string; nodeKey: NodeKey }) {
+function ActiveDataInlineChip({
+  text,
+  nodeKey,
+}: {
+  text: string;
+  nodeKey: NodeKey;
+}) {
   const [editor] = useLexicalComposerContext();
   // Treat the chip as one atomic token: when a selection spans it, Lexical marks
   // the whole decorator selected — we paint a ring on the entire chip (and
@@ -110,8 +122,19 @@ function ActiveDataInlineChip({ text, nodeKey }: { text: string; nodeKey: NodeKe
     ),
   );
   if (!match) return <>{text}</>;
-  // UNSAFE: unseal the slot component to render it outside the slot pipeline
-  const chip = createElement(UNSAFE_unsealSlotComponent(match.component), { content: text, attrs: {} });
+  // UNSAFE: unseal the slot component to render it outside the slot pipeline.
+  // Unsealing drops the boundary `slot-render` would have applied, so the
+  // element is wrapped back up in <ChipBoundary> — otherwise one throwing chip
+  // is caught by Lexical's own boundary, which blanks the whole content region
+  // into a nameless "An error was thrown." box.
+  const chip = (
+    <ChipBoundary contribution={match} token={text}>
+      {createElement(UNSAFE_unsealSlotComponent(match.component), {
+        content: text,
+        attrs: {},
+      })}
+    </ChipBoundary>
+  );
 
   if (!editor.isEditable()) return chip;
 
@@ -139,7 +162,10 @@ function ActiveDataInlineChip({ text, nodeKey }: { text: string; nodeKey: NodeKe
               if (node) (node as LexicalNode).remove();
             });
           }}
-          className={cn(hoverRevealTarget, "bg-background/90 border-border text-foreground size-4 rounded-full border")}
+          className={cn(
+            hoverRevealTarget,
+            "bg-background/90 border-border text-foreground size-4 rounded-full border",
+          )}
           aria-label="Remove"
         >
           <Center className="size-full">
@@ -155,7 +181,9 @@ function stripGlobal(flags: string): string {
   return flags.replace("g", "");
 }
 
-export function $createActiveDataInlineNode(text: string): ActiveDataInlineNode {
+export function $createActiveDataInlineNode(
+  text: string,
+): ActiveDataInlineNode {
   return new ActiveDataInlineNode(text);
 }
 

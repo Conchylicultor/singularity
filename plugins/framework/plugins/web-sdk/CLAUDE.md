@@ -286,6 +286,7 @@ An umbrella is a grouping shell that nests related sub-plugins under `plugins/`.
     - `PluginLoadReport`
     - `SealContributions`
     - `SealedComponent`
+    - `SealedMeta`
     - `Slot`
   - Exports (values):
     - `Core`

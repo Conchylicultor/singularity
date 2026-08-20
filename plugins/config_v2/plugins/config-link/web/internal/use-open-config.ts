@@ -11,13 +11,16 @@ import { configDetailRoute } from "@plugins/config_v2/plugins/settings/web";
 // (and no extra registry) is needed — pass the same descriptor the surface
 // already reads with useConfig().
 //
-// This deliberately uses the cross-app `navigate()` rather than the
-// surface-bound `useOpenPane()`: the config gear is baked into reusable picker
-// chrome (ConfigSelectContent / ConfigMenuContent / ConfigGearButton) that can
-// render OUTSIDE every pane surface — e.g. a preprompt picker inside the Improve
-// popover, which mounts in the global action bar. There `useOpenPane()` throws
-// (no PaneSurfaceProvider). The config chain roots in whichever app is focused
-// (its panes are globally registered), mirroring the theme-customizer button.
+// This uses the cross-app `navigate()` rather than `useOpenPane()`: the config
+// gear is baked into reusable picker chrome (ConfigSelectContent /
+// ConfigMenuContent / ConfigGearButton) that can render OUTSIDE every pane
+// surface — e.g. a preprompt picker inside the Improve popover, which mounts in
+// the global action bar. `useOpenPane()` handles that case too now (it targets
+// the focused tab), so this is no longer a workaround; it stays because the
+// destination is built from a URL the registry already knows, and going through
+// `navigate()` keeps the "not registered" failure right here at the lookup. The
+// config chain roots in whichever app is focused (its panes are globally
+// registered), mirroring the theme-customizer button.
 export function useOpenConfig() {
   const registrations = useConfigRegistrations();
   const activeApp = useActiveApp();

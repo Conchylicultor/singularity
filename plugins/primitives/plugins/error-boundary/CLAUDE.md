@@ -70,6 +70,7 @@ barrel.
     - `PluginErrorBoundary`
 - Cross-plugin:
   - Imported by:
+    - `active-data`
     - `apps/workflows/editor`
     - `apps/workflows/executions`
     - `framework/web-core`
