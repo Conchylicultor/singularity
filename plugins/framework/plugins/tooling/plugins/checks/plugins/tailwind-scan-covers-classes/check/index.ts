@@ -15,7 +15,10 @@ type CheckResult = { ok: true } | { ok: false; message: string; hint?: string };
 type Check = { id: string; description: string; run(): Promise<CheckResult> };
 
 async function git(args: string[], cwd?: string): Promise<string> {
-  const result = await spawnCaptured(["git", ...args], { cwd, timeoutMs: GIT_TIMEOUT_MS });
+  const result = await spawnCaptured(["git", ...args], {
+    cwd,
+    timeoutMs: GIT_TIMEOUT_MS,
+  });
   return result.stdout;
 }
 

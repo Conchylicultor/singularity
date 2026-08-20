@@ -7,7 +7,8 @@ import { REEXEC_ENV, reexecAfterInstall } from "./reexec";
 
 const fixtures: string[] = [];
 afterEach(() => {
-  for (const dir of fixtures.splice(0)) rmSync(dir, { recursive: true, force: true });
+  for (const dir of fixtures.splice(0))
+    rmSync(dir, { recursive: true, force: true });
 });
 
 function write(path: string, body: string): void {
@@ -17,7 +18,8 @@ function write(path: string, body: string): void {
 
 /** Records what the child WOULD have been, so the argv/env hand-off is assertable. */
 function recordingSpawn(exitCode = 0) {
-  const calls: { argv: string[]; env: Record<string, string | undefined> }[] = [];
+  const calls: { argv: string[]; env: Record<string, string | undefined> }[] =
+    [];
   return {
     calls,
     spawn: (argv: string[], env: Record<string, string | undefined>) => {
@@ -38,7 +40,12 @@ test("re-execs the same entry and args, and marks the child as generation 1", as
 
   expect(outcome).toEqual({ reexeced: true, exitCode: 0 });
   expect(calls).toHaveLength(1);
-  expect(calls[0]!.argv).toEqual(["/repo/bin/index.ts", "push", "-m", "msg with spaces"]);
+  expect(calls[0]!.argv).toEqual([
+    "/repo/bin/index.ts",
+    "push",
+    "-m",
+    "msg with spaces",
+  ]);
   // The child must still see the invoking environment — the push flow hands its
   // host CPU grant down through env, and `build` reads its detached marker.
   expect(calls[0]!.env.PATH).toBe("/usr/bin");
@@ -47,7 +54,11 @@ test("re-execs the same entry and args, and marks the child as generation 1", as
 
 test("propagates the child's exit code so the wrapper's status is the command's", async () => {
   const { spawn } = recordingSpawn(17);
-  const outcome = await reexecAfterInstall("/repo/bin/index.ts", { args: ["check"], env: {}, spawn });
+  const outcome = await reexecAfterInstall("/repo/bin/index.ts", {
+    args: ["check"],
+    env: {},
+    spawn,
+  });
   expect(outcome).toEqual({ reexeced: true, exitCode: 17 });
 });
 
@@ -112,7 +123,10 @@ test("a bootstrap that installs can run a command needing the installed package"
     join(root, "staged", "fixture-pkg", "package.json"),
     JSON.stringify({ name: "fixture-pkg", version: "1.0.0", main: "index.js" }),
   );
-  write(join(root, "staged", "fixture-pkg", "index.js"), "module.exports = { ok: true };\n");
+  write(
+    join(root, "staged", "fixture-pkg", "index.js"),
+    "module.exports = { ok: true };\n",
+  );
 
   // Stands in for ensure-deps: installs from a subprocess, reports whether it did.
   write(
@@ -156,14 +170,17 @@ test("a bootstrap that installs can run a command needing the installed package"
   // under test.
   const env = { ...process.env };
   delete env[REEXEC_ENV];
-  const result = await spawnCaptured([process.execPath, join(bin, "index.ts"), "some-command"], {
-    cwd: join(root, "pkg"),
-    env,
-    // The child is the CLI bootstrap re-exec'ing itself over a fixture package —
-    // no install, no build. A bound is here because a hung child would hang the
-    // whole test runner silently instead of failing this one case.
-    timeoutMs: 60_000,
-  });
+  const result = await spawnCaptured(
+    [process.execPath, join(bin, "index.ts"), "some-command"],
+    {
+      cwd: join(root, "pkg"),
+      env,
+      // The child is the CLI bootstrap re-exec'ing itself over a fixture package —
+      // no install, no build. A bound is here because a hung child would hang the
+      // whole test runner silently instead of failing this one case.
+      timeoutMs: 60_000,
+    },
+  );
 
   expect(result.stderr).not.toContain("Cannot find package");
   expect(result.exitCode).toBe(0);

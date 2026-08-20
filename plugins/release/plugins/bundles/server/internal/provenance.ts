@@ -87,7 +87,15 @@ export async function compareToHead(
   }
 
   const known = await spawnCaptured(
-    [GIT, "--no-optional-locks", "-C", cwd, "cat-file", "-e", `${sha}^{commit}`],
+    [
+      GIT,
+      "--no-optional-locks",
+      "-C",
+      cwd,
+      "cat-file",
+      "-e",
+      `${sha}^{commit}`,
+    ],
     { timeoutMs: GIT_TIMEOUT_MS },
   );
   if (known.exitCode !== 0) {
@@ -101,7 +109,16 @@ export async function compareToHead(
   if (head === sha) return { kind: "current" };
 
   const isAncestor = await spawnCaptured(
-    [GIT, "--no-optional-locks", "-C", cwd, "merge-base", "--is-ancestor", sha, "HEAD"],
+    [
+      GIT,
+      "--no-optional-locks",
+      "-C",
+      cwd,
+      "merge-base",
+      "--is-ancestor",
+      sha,
+      "HEAD",
+    ],
     { timeoutMs: GIT_TIMEOUT_MS },
   );
   if (isAncestor.exitCode !== 0) return { kind: "diverged", sha };

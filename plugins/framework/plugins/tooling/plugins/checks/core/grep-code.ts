@@ -1,6 +1,13 @@
 import { join } from "path";
-import { findImports, lineAt, maskSource } from "@plugins/plugin-meta/plugins/parse-utils/core";
-import { getWorktreeRoot, spawnCaptured } from "@plugins/infra/plugins/spawn/core";
+import {
+  findImports,
+  lineAt,
+  maskSource,
+} from "@plugins/plugin-meta/plugins/parse-utils/core";
+import {
+  getWorktreeRoot,
+  spawnCaptured,
+} from "@plugins/infra/plugins/spawn/core";
 import { currentScanTree, currentScanView } from "./scan-context";
 
 // Both spawns below SCAN — `git grep` walks the tree, `git cat-file --batch`
@@ -45,11 +52,18 @@ export async function grepCode(opts: GrepCodeOptions): Promise<CodeMatch[]> {
   const pathspecs = opts.pathspecs ?? ["*.ts", "*.tsx"];
   const maskStrings = opts.maskStrings ?? true;
 
-  const candidates = await readCandidates(opts.root, opts.grepArg, opts.fixed ?? false, pathspecs);
+  const candidates = await readCandidates(
+    opts.root,
+    opts.grepArg,
+    opts.fixed ?? false,
+    pathspecs,
+  );
 
   // Ensure the global flag so the line scan iterates all matches; build a fresh
   // matcher per file so lastIndex never leaks across files.
-  const flags = opts.pattern.flags.includes("g") ? opts.pattern.flags : opts.pattern.flags + "g";
+  const flags = opts.pattern.flags.includes("g")
+    ? opts.pattern.flags
+    : opts.pattern.flags + "g";
 
   const matches: CodeMatch[] = [];
   for (const { rel, src } of candidates) {
@@ -60,7 +74,11 @@ export async function grepCode(opts: GrepCodeOptions): Promise<CodeMatch[]> {
     for (let l = 0; l < maskedLines.length; l++) {
       re.lastIndex = 0;
       if (re.test(maskedLines[l]!)) {
-        matches.push({ path: rel, line: l + 1, text: (origLines[l] ?? "").replace(/\s+$/, "") });
+        matches.push({
+          path: rel,
+          line: l + 1,
+          text: (origLines[l] ?? "").replace(/\s+$/, ""),
+        });
       }
     }
   }
@@ -100,10 +118,17 @@ interface GrepImportsOptions {
  * literal (a test fixture, a docs snippet, a codegen template) can never match.
  * String-safe by construction: no `maskStrings` knob is needed.
  */
-export async function grepImports(opts: GrepImportsOptions): Promise<ImportMatch[]> {
+export async function grepImports(
+  opts: GrepImportsOptions,
+): Promise<ImportMatch[]> {
   const pathspecs = opts.pathspecs ?? ["*.ts", "*.tsx"];
 
-  const candidates = await readCandidates(opts.root, opts.grepArg, opts.fixed ?? false, pathspecs);
+  const candidates = await readCandidates(
+    opts.root,
+    opts.grepArg,
+    opts.fixed ?? false,
+    pathspecs,
+  );
 
   const matches: ImportMatch[] = [];
   for (const { rel, src } of candidates) {
@@ -148,7 +173,12 @@ export async function listCandidateSources(
   opts: ListCandidateSourcesOptions,
 ): Promise<CandidateSource[]> {
   const root = opts.root ?? (await getWorktreeRoot());
-  return readCandidates(root, opts.grepArg, opts.fixed ?? false, opts.pathspecs ?? ["*.ts", "*.tsx"]);
+  return readCandidates(
+    root,
+    opts.grepArg,
+    opts.fixed ?? false,
+    opts.pathspecs ?? ["*.ts", "*.tsx"],
+  );
 }
 
 /**
@@ -187,8 +217,10 @@ async function readCandidates(
   const out: Array<{ rel: string; src: string }> = [];
   for (const rel of candidates) {
     const src = blobs
-      ? blobs.get(rel) ?? null
-      : await Bun.file(join(root, rel)).text().catch(() => null);
+      ? (blobs.get(rel) ?? null)
+      : await Bun.file(join(root, rel))
+          .text()
+          .catch(() => null);
     if (src == null) continue;
     // Record a per-candidate CONTENT fact (its blobSha, taken from the snapshot —
     // no extra read; the BATCH `readTreeBlobs` above already loaded the bytes).
@@ -249,7 +281,11 @@ export async function gitGrepList(
 // `git cat-file --batch` (one spawn, not one per file). The batch protocol
 // frames each object as `<sha> <type> <size>\n<size bytes>\n`, or
 // `<spec> missing\n`; outputs come back in request order.
-async function readTreeBlobs(root: string, tree: string, paths: string[]): Promise<Map<string, string>> {
+async function readTreeBlobs(
+  root: string,
+  tree: string,
+  paths: string[],
+): Promise<Map<string, string>> {
   const requests = paths.map((p) => `${tree}:${p}`).join("\n") + "\n";
   // Whole-buffer stdin + after-exit stdoutBytes: the parser below already walks
   // a fully-buffered Uint8Array, so the batch framing is unchanged by the move

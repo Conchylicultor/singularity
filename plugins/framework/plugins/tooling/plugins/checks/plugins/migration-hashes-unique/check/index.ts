@@ -1,6 +1,9 @@
 import { readdirSync, readFileSync } from "fs";
 import { join, resolve } from "path";
-import { getWorktreeRoot, spawnCaptured } from "@plugins/infra/plugins/spawn/core";
+import {
+  getWorktreeRoot,
+  spawnCaptured,
+} from "@plugins/infra/plugins/spawn/core";
 
 // Wedge-breaker for a metadata-only git read: far above any real duration,
 // because starvation under a saturated check run is what these suffer, not
@@ -40,24 +43,41 @@ const MIGRATIONS_SUBDIR = "plugins/database/plugins/migrations/data";
 export type MigrationFile = { name: string; content: string; tracked: boolean };
 export type MigrationGroup = { hash: string; files: MigrationFile[] };
 export type CollisionKind = "byte-identical" | "differing-branch-local";
-export type FlaggedCollision = { hash: string; files: string[]; kind: CollisionKind };
+export type FlaggedCollision = {
+  hash: string;
+  files: string[];
+  kind: CollisionKind;
+};
 
-export function classifyCollisions(groups: MigrationGroup[]): FlaggedCollision[] {
+export function classifyCollisions(
+  groups: MigrationGroup[],
+): FlaggedCollision[] {
   const flagged: FlaggedCollision[] = [];
   for (const { hash, files } of groups) {
     if (files.length <= 1) continue;
     const allIdentical = files.every((f) => f.content === files[0]!.content);
     if (allIdentical) {
-      flagged.push({ hash, files: files.map((f) => f.name), kind: "byte-identical" });
+      flagged.push({
+        hash,
+        files: files.map((f) => f.name),
+        kind: "byte-identical",
+      });
     } else if (files.some((f) => !f.tracked)) {
-      flagged.push({ hash, files: files.map((f) => f.name), kind: "differing-branch-local" });
+      flagged.push({
+        hash,
+        files: files.map((f) => f.name),
+        kind: "differing-branch-local",
+      });
     }
     // else: all tracked, differing content -> exempt (frozen true collision).
   }
   return flagged;
 }
 
-async function git(root: string, args: string[]): Promise<{ code: number; out: string }> {
+async function git(
+  root: string,
+  args: string[],
+): Promise<{ code: number; out: string }> {
   const result = await spawnCaptured(["git", ...args], {
     cwd: root,
     timeoutMs: GIT_TIMEOUT_MS,
@@ -75,9 +95,19 @@ async function trackedBasenames(root: string): Promise<Set<string>> {
   for (const ref of ["origin/main", "main"]) {
     if ((await git(root, ["rev-parse", "--verify", ref])).code !== 0) continue;
     const { out } = await git(root, [
-      "ls-tree", "-r", "--name-only", ref, "--", MIGRATIONS_SUBDIR,
+      "ls-tree",
+      "-r",
+      "--name-only",
+      ref,
+      "--",
+      MIGRATIONS_SUBDIR,
     ]);
-    return new Set(out.split("\n").filter(Boolean).map((p) => p.split("/").pop()!));
+    return new Set(
+      out
+        .split("\n")
+        .filter(Boolean)
+        .map((p) => p.split("/").pop()!),
+    );
   }
   return new Set();
 }
@@ -111,20 +141,25 @@ const check: Check = {
       namesByHash.set(m[3]!, list);
     }
 
-    const groups: MigrationGroup[] = [...namesByHash.entries()].map(([hash, names]) => ({
-      hash,
-      files: names.map((name) => ({
-        name,
-        content: names.length > 1 ? readFileSync(join(dir, name), "utf8") : "",
-        tracked: tracked.has(name),
-      })),
-    }));
+    const groups: MigrationGroup[] = [...namesByHash.entries()].map(
+      ([hash, names]) => ({
+        hash,
+        files: names.map((name) => ({
+          name,
+          content:
+            names.length > 1 ? readFileSync(join(dir, name), "utf8") : "",
+          tracked: tracked.has(name),
+        })),
+      }),
+    );
 
     const flagged = classifyCollisions(groups);
     if (flagged.length === 0) return { ok: true };
 
     const identical = flagged.filter((c) => c.kind === "byte-identical");
-    const branchLocal = flagged.filter((c) => c.kind === "differing-branch-local");
+    const branchLocal = flagged.filter(
+      (c) => c.kind === "differing-branch-local",
+    );
 
     const messageParts: string[] = [];
     const hintParts: string[] = [];

@@ -71,12 +71,24 @@ export async function handleImageContent(
 
   if (ref) {
     const absTarget = resolve(absRoot, path);
-    if (path.startsWith("/") || path.startsWith("~") || !isPathInside(absRoot, absTarget))
+    if (
+      path.startsWith("/") ||
+      path.startsWith("~") ||
+      !isPathInside(absRoot, absTarget)
+    )
       return new Response("Invalid path", { status: 400 });
-    if (!ALLOWED_REFS.has(ref)) return new Response("Invalid ref", { status: 400 });
+    if (!ALLOWED_REFS.has(ref))
+      return new Response("Invalid ref", { status: 400 });
     const resolvedRef = await resolveRef(wtPath, ref);
     const result = await spawnCaptured(
-      [GIT, "--no-optional-locks", "-C", absRoot, "show", `${resolvedRef}:${path}`],
+      [
+        GIT,
+        "--no-optional-locks",
+        "-C",
+        absRoot,
+        "show",
+        `${resolvedRef}:${path}`,
+      ],
       { timeoutMs: GIT_TIMEOUT_MS },
     );
     if (result.exitCode !== 0)
@@ -90,13 +102,15 @@ export async function handleImageContent(
     if (!expanded.startsWith("/") && !isPathInside(absRoot, absTarget))
       return new Response("Invalid path", { status: 400 });
     const file = Bun.file(absTarget);
-    if (!(await file.exists())) return new Response("File not found", { status: 404 });
+    if (!(await file.exists()))
+      return new Response("File not found", { status: 404 });
     if (file.size > MAX_BYTES)
       return new Response("File too large", { status: 413 });
     bytes = new Uint8Array(await file.arrayBuffer());
   }
 
-  if (bytes.length > MAX_BYTES) return new Response("File too large", { status: 413 });
+  if (bytes.length > MAX_BYTES)
+    return new Response("File too large", { status: 413 });
 
   return new Response(bytes, {
     headers: { "Content-Type": mime, "Cache-Control": "no-cache" },

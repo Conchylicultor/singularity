@@ -1,6 +1,9 @@
 import { basename, resolve } from "path";
 import { schemaGlobFiles } from "@plugins/database/plugins/migrations/core";
-import { getWorktreeRoot, spawnCaptured } from "@plugins/infra/plugins/spawn/core";
+import {
+  getWorktreeRoot,
+  spawnCaptured,
+} from "@plugins/infra/plugins/spawn/core";
 import { MIGRATIONS_PLUGIN_DIR } from "../../core/internal/schema-glob-patterns";
 
 // Inlined minimal Check shape (mirrors the sibling migration checks) to avoid a
@@ -35,7 +38,11 @@ const schemaFilesLoadableCheck: Check = {
       ],
       {
         cwd: resolve(root, MIGRATIONS_PLUGIN_DIR),
-        env: { ...process.env, SINGULARITY_WORKTREE: basename(root), NO_COLOR: "1" },
+        env: {
+          ...process.env,
+          SINGULARITY_WORKTREE: basename(root),
+          NO_COLOR: "1",
+        },
         // The probe require()s every schema-glob file in one pass — seconds of
         // module loading, no I/O that can block indefinitely. Three minutes is
         // there for the case a schema file's module scope does something that

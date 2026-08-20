@@ -1,9 +1,6 @@
 import { ReportKind } from "@plugins/reports/server";
 import type { ReportRow } from "@plugins/reports/server";
-import {
-  JobDeadlinePayloadSchema,
-  type JobDeadlinePayload,
-} from "../../core";
+import { JobDeadlinePayloadSchema, type JobDeadlinePayload } from "../../core";
 import { formatDurationMs } from "./format-duration";
 
 // Re-alert the bell at most once per 10 minutes per job. An overrunning job is

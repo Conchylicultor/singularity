@@ -2,7 +2,10 @@ import { join } from "path";
 import { buildPluginTree } from "@plugins/plugin-meta/plugins/plugin-tree/core";
 import { grepCode } from "@plugins/framework/plugins/tooling/plugins/checks/core";
 import { parse as parseJsonc } from "jsonc-parser";
-import { getWorktreeRoot, spawnCaptured } from "@plugins/infra/plugins/spawn/core";
+import {
+  getWorktreeRoot,
+  spawnCaptured,
+} from "@plugins/infra/plugins/spawn/core";
 
 // Wedge-breaker for a metadata-only git read: far above any real duration,
 // because starvation under a saturated check run is what these suffer, not
@@ -88,7 +91,9 @@ const check: Check = {
     "plugin path/id string literals (resolveFrom, lint/check allowlists, reorder overrides) resolve to a real plugin",
   async run(): Promise<CheckResult> {
     const root = await getWorktreeRoot();
-    const tree = await buildPluginTree(join(root, "plugins"), { skipBarrelImport: true });
+    const tree = await buildPluginTree(join(root, "plugins"), {
+      skipBarrelImport: true,
+    });
     const pathSet = new Set(tree.byPath.keys());
     const idSet = new Set([...tree.byDir.values()].map((n) => n.id as string));
     const violations: Violation[] = [];
@@ -111,7 +116,11 @@ const check: Check = {
         if (underPlugins == null) continue;
         const prefix = pluginDirPrefix(underPlugins);
         if (!pathSet.has(prefix)) {
-          violations.push({ where: `${m.path}:${m.line}`, literal: value, detail: `plugin path "${prefix}" does not resolve` });
+          violations.push({
+            where: `${m.path}:${m.line}`,
+            literal: value,
+            detail: `plugin path "${prefix}" does not resolve`,
+          });
         }
       }
     }
@@ -119,7 +128,9 @@ const check: Check = {
     // --- Surface C: reorder override `pluginId:id` entryKeys -----------------
     for (const rel of await gitLsFiles(root, "config")) {
       if (!rel.endsWith(".jsonc")) continue;
-      const text = await Bun.file(join(root, rel)).text().catch(() => null);
+      const text = await Bun.file(join(root, rel))
+        .text()
+        .catch(() => null);
       if (text == null) continue;
       const keys: string[] = [];
       collectItemStrings(parseJsonc(text), keys);
@@ -127,14 +138,21 @@ const check: Check = {
         if (!ENTRY_KEY_RE.test(key)) continue;
         const pluginId = key.slice(0, key.indexOf(":"));
         if (!idSet.has(pluginId)) {
-          violations.push({ where: rel, literal: key, detail: `plugin id "${pluginId}" does not resolve` });
+          violations.push({
+            where: rel,
+            literal: key,
+            detail: `plugin id "${pluginId}" does not resolve`,
+          });
         }
       }
     }
 
     if (violations.length === 0) return { ok: true };
-    const shown = violations.slice(0, 50).map((v) => `  ${v.where} — "${v.literal}" (${v.detail})`);
-    const more = violations.length > 50 ? `\n  … +${violations.length - 50} more` : "";
+    const shown = violations
+      .slice(0, 50)
+      .map((v) => `  ${v.where} — "${v.literal}" (${v.detail})`);
+    const more =
+      violations.length > 50 ? `\n  … +${violations.length - 50} more` : "";
     return {
       ok: false,
       message: `${violations.length} unresolved plugin reference(s):\n${shown.join("\n")}${more}`,

@@ -128,7 +128,10 @@ test("mergeStderr interleaves 2>&1 into stdout; stderr is empty", async () => {
 test("cwd is honored", async () => {
   const dir = mkdtempSync(join(tmpdir(), "sg-spawn-cwd-"));
   try {
-    const result = await spawnCaptured(["sh", "-c", "pwd"], { ...BOUND, cwd: dir });
+    const result = await spawnCaptured(["sh", "-c", "pwd"], {
+      ...BOUND,
+      cwd: dir,
+    });
     expect(result.exitCode).toBe(0);
     expect(realpathSync(result.stdout.trim())).toBe(realpathSync(dir));
   } finally {

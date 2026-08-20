@@ -65,7 +65,10 @@ export async function withHostGrant<T>(
   opts: { lane: Lane; max: number; hooks?: GrantHooks },
   fn: (grant: Grant) => Promise<T>,
 ): Promise<T> {
-  const share = await cpuPool.acquireShare(opts.max, { ...opts.hooks, lane: opts.lane });
+  const share = await cpuPool.acquireShare(opts.max, {
+    ...opts.hooks,
+    lane: opts.lane,
+  });
   try {
     return await fn(grantOfUnits(share.slots, opts.lane));
   } finally {
@@ -86,6 +89,7 @@ export function inheritedGrant(): Grant | undefined {
   if (raw === undefined) return undefined;
   const units = Number(raw);
   if (!Number.isInteger(units) || units < 1) return undefined;
-  const lane: Lane = process.env[HOST_LANE_ENV] === "interactive" ? "interactive" : "background";
+  const lane: Lane =
+    process.env[HOST_LANE_ENV] === "interactive" ? "interactive" : "background";
   return grantOfUnits(units, lane);
 }

@@ -21,7 +21,10 @@ export function installProcessHooks(): void {
     // flushed best-effort by flushBufferedReports below (next tick).
     // eslint-disable-next-line promise-safety/no-bare-catch, detached-work-safety/no-untracked-detached-work -- observability flush: drains buffered reports on unhandledRejection; must stay profiler-invisible
     void flushBufferedReports().catch((err) => {
-      console.error("[reports] flushBufferedReports failed in unhandledRejection handler", err);
+      console.error(
+        "[reports] flushBufferedReports failed in unhandledRejection handler",
+        err,
+      );
     });
   });
 }
@@ -42,9 +45,12 @@ export async function flushBufferedReports(): Promise<void> {
         kind: c.kind ?? "crash",
         source: c.source,
         message: c.message,
-        data: c.data ?? { errorType: c.errorType ?? null, stack: c.stack ?? null },
+        data: c.data ?? {
+          errorType: c.errorType ?? null,
+          stack: c.stack ?? null,
+        },
       });
-    // eslint-disable-next-line promise-safety/no-bare-catch
+      // eslint-disable-next-line promise-safety/no-bare-catch
     } catch (err) {
       console.error("[reports] failed to flush buffered report", err);
     }

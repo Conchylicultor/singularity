@@ -31,7 +31,15 @@ export async function resolveRef(
 ): Promise<string> {
   if (ref !== "main") return ref;
   const result = await spawnCaptured(
-    [GIT, "--no-optional-locks", "-C", worktreePath, "merge-base", "main", "HEAD"],
+    [
+      GIT,
+      "--no-optional-locks",
+      "-C",
+      worktreePath,
+      "merge-base",
+      "main",
+      "HEAD",
+    ],
     { timeoutMs: GIT_TIMEOUT_MS },
   );
   return result.exitCode === 0 ? result.stdout.trim() : ref;

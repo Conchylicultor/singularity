@@ -2,7 +2,10 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { matchBracket } from "@plugins/plugin-meta/plugins/parse-utils/core";
 import { collectTokenGroupVars } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
-import { getWorktreeRoot, spawnCaptured } from "@plugins/infra/plugins/spawn/core";
+import {
+  getWorktreeRoot,
+  spawnCaptured,
+} from "@plugins/infra/plugins/spawn/core";
 
 // Wedge-breaker for a metadata-only git read: far above any real duration,
 // because starvation under a saturated check run is what these suffer, not
@@ -104,7 +107,8 @@ const check: Check = {
       const code = maskThemeBlocks(stripComments(raw));
       for (const mm of code.matchAll(/(--[\w-]+)\s*:/g)) {
         const name = mm[1];
-        if (name && tokenGroupVars.has(name)) overlaps.push({ name, file: rel });
+        if (name && tokenGroupVars.has(name))
+          overlaps.push({ name, file: rel });
       }
     }
 
@@ -118,9 +122,7 @@ const check: Check = {
       parts.push(`Token-group var declared by multiple groups:\n${lines}`);
     }
     if (overlaps.length) {
-      const lines = overlaps
-        .map((o) => `  ${o.name} (${o.file})`)
-        .join("\n");
+      const lines = overlaps.map((o) => `  ${o.name} (${o.file})`).join("\n");
       parts.push(
         `Token-group var re-declared in static CSS (outside @theme):\n${lines}`,
       );

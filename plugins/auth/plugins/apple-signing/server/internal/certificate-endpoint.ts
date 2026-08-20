@@ -43,10 +43,13 @@ async function pkcs12ToCertPem(
 
 /** Read the certificate subject line via `openssl x509 -noout -subject`. */
 async function certSubject(certPem: string): Promise<string | null> {
-  const result = await spawnCaptured(["openssl", "x509", "-noout", "-subject"], {
-    stdin: new TextEncoder().encode(certPem),
-    timeoutMs: OPENSSL_TIMEOUT_MS,
-  });
+  const result = await spawnCaptured(
+    ["openssl", "x509", "-noout", "-subject"],
+    {
+      stdin: new TextEncoder().encode(certPem),
+      timeoutMs: OPENSSL_TIMEOUT_MS,
+    },
+  );
   if (result.exitCode !== 0) return null;
   return result.stdout.trim();
 }
@@ -69,7 +72,8 @@ async function deriveSigningIdentity(
 ): Promise<{ opened: boolean; signingIdentity: string | null }> {
   // Try modern (LibreSSL / OpenSSL default) first, then legacy (OpenSSL 3).
   let certPem = await pkcs12ToCertPem(p12Path, password, false);
-  if (certPem === null) certPem = await pkcs12ToCertPem(p12Path, password, true);
+  if (certPem === null)
+    certPem = await pkcs12ToCertPem(p12Path, password, true);
   if (certPem === null) return { opened: false, signingIdentity: null };
 
   const subject = await certSubject(certPem);

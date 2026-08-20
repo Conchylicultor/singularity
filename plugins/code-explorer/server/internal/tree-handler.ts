@@ -20,7 +20,16 @@ export const handleTree = implement(getCodeTree, async ({ params }) => {
   if (!wtPath) throw new HttpError(404, "Not found");
 
   const result = await spawnCaptured(
-    [GIT, "--no-optional-locks", "-C", wtPath, "ls-files", "--cached", "--others", "--exclude-standard"],
+    [
+      GIT,
+      "--no-optional-locks",
+      "-C",
+      wtPath,
+      "ls-files",
+      "--cached",
+      "--others",
+      "--exclude-standard",
+    ],
     { timeoutMs: GIT_TIMEOUT_MS },
   );
   if (result.exitCode !== 0) {

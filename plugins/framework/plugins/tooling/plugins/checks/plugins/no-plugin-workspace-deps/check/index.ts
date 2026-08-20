@@ -1,4 +1,7 @@
-import { getWorktreeRoot, spawnCaptured } from "@plugins/infra/plugins/spawn/core";
+import {
+  getWorktreeRoot,
+  spawnCaptured,
+} from "@plugins/infra/plugins/spawn/core";
 
 // Wedge-breaker for a metadata-only git read: far above any real duration,
 // because starvation under a saturated check run is what these suffer, not
@@ -29,12 +32,19 @@ const check: Check = {
 
     const offenders: Offender[] = [];
     for (const file of fileList) {
-      let json: { dependencies?: Record<string, string>; devDependencies?: Record<string, string> };
+      let json: {
+        dependencies?: Record<string, string>;
+        devDependencies?: Record<string, string>;
+      };
       try {
         const text = await Bun.file(`${root}/${file}`).text();
         json = JSON.parse(text);
       } catch (err) {
-        if (!(err instanceof SyntaxError) && (err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
+        if (
+          !(err instanceof SyntaxError) &&
+          (err as NodeJS.ErrnoException).code !== "ENOENT"
+        )
+          throw err;
         continue;
       }
       for (const section of ["dependencies", "devDependencies"] as const) {
@@ -54,8 +64,7 @@ const check: Check = {
     return {
       ok: false,
       message: `workspace:* dep declared in ${offenders.length} plugin package.json(s):\n    ${lines.join("\n    ")}`,
-      hint:
-        "Remove the workspace dep. Plugins import each other via the `@plugins/*` tsconfig path alias — no package.json wiring needed. Adding a workspace dep also forces every umbrella to be listed in the root `workspaces` glob, which is brittle.",
+      hint: "Remove the workspace dep. Plugins import each other via the `@plugins/*` tsconfig path alias — no package.json wiring needed. Adding a workspace dep also forces every umbrella to be listed in the root `workspaces` glob, which is brittle.",
     };
   },
 };

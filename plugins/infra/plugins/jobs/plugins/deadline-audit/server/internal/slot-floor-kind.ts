@@ -132,7 +132,9 @@ function renderFloor(row: ReportRow, d: JobSlotFloorPayload): string {
   lines.push("");
   lines.push("**Holding the slots:**");
   if (d.holders.length === 0) {
-    lines.push("- (none recorded — the slots were released between the trip and the write)");
+    lines.push(
+      "- (none recorded — the slots were released between the trip and the write)",
+    );
   } else {
     for (const h of d.holders) {
       lines.push(

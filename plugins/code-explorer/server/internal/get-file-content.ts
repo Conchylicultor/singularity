@@ -57,7 +57,8 @@ export async function getFileContentAtRef(
   // Raw bytes, not the utf8 decode: the size gate and the binary sniff below
   // are both statements about the file's bytes.
   const bytes = result.stdoutBytes;
-  if (bytes.length > MAX_BYTES) return { kind: "too-large", size: bytes.length };
+  if (bytes.length > MAX_BYTES)
+    return { kind: "too-large", size: bytes.length };
   if (looksBinary(bytes)) return { kind: "binary" };
   return { kind: "ok", content: new TextDecoder().decode(bytes) };
 }
@@ -70,8 +71,11 @@ export async function getFileContent(
 
   const expanded = expandTilde(relPath);
   const absRoot = resolve(worktreePath);
-  const absTarget = expanded.startsWith("/") ? resolve(expanded) : resolve(absRoot, expanded);
-  if (!expanded.startsWith("/") && !isPathInside(absRoot, absTarget)) return { kind: "invalid-path" };
+  const absTarget = expanded.startsWith("/")
+    ? resolve(expanded)
+    : resolve(absRoot, expanded);
+  if (!expanded.startsWith("/") && !isPathInside(absRoot, absTarget))
+    return { kind: "invalid-path" };
 
   const file = Bun.file(absTarget);
   if (!(await file.exists())) return { kind: "not-found" };

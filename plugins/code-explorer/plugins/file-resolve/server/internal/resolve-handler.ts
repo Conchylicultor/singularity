@@ -36,62 +36,76 @@ function isSuffixMatch(query: string[], file: string[]): boolean {
   return true;
 }
 
-export const handleResolve = implement(resolveFile, async ({ params, query }) => {
-  const { worktree } = params;
-  if (!worktree) throw new HttpError(400, "Missing worktree");
+export const handleResolve = implement(
+  resolveFile,
+  async ({ params, query }) => {
+    const { worktree } = params;
+    if (!worktree) throw new HttpError(400, "Missing worktree");
 
-  const rawPath = query.path;
-  if (!rawPath || rawPath.includes("\0"))
-    return { kind: "not-found" as const };
+    const rawPath = query.path;
+    if (!rawPath || rawPath.includes("\0"))
+      return { kind: "not-found" as const };
 
-  const wtPath = await resolveWorktreePath(worktree);
-  if (!wtPath) throw new HttpError(404, "Not found");
+    const wtPath = await resolveWorktreePath(worktree);
+    if (!wtPath) throw new HttpError(404, "Not found");
 
-  const cleaned = expandTilde(rawPath.replace(/^\.\//, ""));
-  if (!cleaned) return { kind: "not-found" as const };
+    const cleaned = expandTilde(rawPath.replace(/^\.\//, ""));
+    if (!cleaned) return { kind: "not-found" as const };
 
-  const absTarget = cleaned.startsWith("/") ? resolve(cleaned) : resolve(wtPath, cleaned);
-  if (await Bun.file(absTarget).exists()) {
-    return { kind: "exact" as const };
-  }
-
-  // ~-rooted and absolute paths are not in the git tree; skip ls-files
-  if (cleaned.startsWith("/")) return { kind: "not-found" as const };
-
-  const result = await spawnCaptured(
-    [GIT, "--no-optional-locks", "-C", wtPath, "ls-files", "--cached", "--others", "--exclude-standard"],
-    { timeoutMs: GIT_TIMEOUT_MS },
-  );
-  if (result.exitCode !== 0) return { kind: "not-found" as const };
-  const out = result.stdout;
-
-  const querySeg = cleaned.split("/").filter((s) => s !== "...");
-  const matches: string[] = [];
-
-  for (const line of out.split("\n")) {
-    if (!line) continue;
-    const fileSeg = line.split("/");
-    if (isSubsequence(querySeg, fileSeg)) {
-      matches.push(line);
+    const absTarget = cleaned.startsWith("/")
+      ? resolve(cleaned)
+      : resolve(wtPath, cleaned);
+    if (await Bun.file(absTarget).exists()) {
+      return { kind: "exact" as const };
     }
-  }
 
-  if (matches.length === 0) return { kind: "not-found" as const };
+    // ~-rooted and absolute paths are not in the git tree; skip ls-files
+    if (cleaned.startsWith("/")) return { kind: "not-found" as const };
 
-  const suffix: string[] = [];
-  const rest: string[] = [];
-  for (const m of matches) {
-    if (isSuffixMatch(querySeg, m.split("/"))) suffix.push(m);
-    else rest.push(m);
-  }
+    const result = await spawnCaptured(
+      [
+        GIT,
+        "--no-optional-locks",
+        "-C",
+        wtPath,
+        "ls-files",
+        "--cached",
+        "--others",
+        "--exclude-standard",
+      ],
+      { timeoutMs: GIT_TIMEOUT_MS },
+    );
+    if (result.exitCode !== 0) return { kind: "not-found" as const };
+    const out = result.stdout;
 
-  if (suffix.length === 1) {
-    return { kind: "resolved" as const, matches: suffix };
-  }
+    const querySeg = cleaned.split("/").filter((s) => s !== "...");
+    const matches: string[] = [];
 
-  const sorted = [
-    ...suffix.sort((a, b) => a.length - b.length),
-    ...rest.sort((a, b) => a.length - b.length),
-  ];
-  return { kind: "resolved" as const, matches: sorted };
-});
+    for (const line of out.split("\n")) {
+      if (!line) continue;
+      const fileSeg = line.split("/");
+      if (isSubsequence(querySeg, fileSeg)) {
+        matches.push(line);
+      }
+    }
+
+    if (matches.length === 0) return { kind: "not-found" as const };
+
+    const suffix: string[] = [];
+    const rest: string[] = [];
+    for (const m of matches) {
+      if (isSuffixMatch(querySeg, m.split("/"))) suffix.push(m);
+      else rest.push(m);
+    }
+
+    if (suffix.length === 1) {
+      return { kind: "resolved" as const, matches: suffix };
+    }
+
+    const sorted = [
+      ...suffix.sort((a, b) => a.length - b.length),
+      ...rest.sort((a, b) => a.length - b.length),
+    ];
+    return { kind: "resolved" as const, matches: sorted };
+  },
+);

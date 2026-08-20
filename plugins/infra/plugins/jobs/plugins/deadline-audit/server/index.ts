@@ -1,18 +1,12 @@
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
-import {
-  deadlineExceededKind,
-  jobZombieKind,
-} from "./internal/deadline-kinds";
+import { deadlineExceededKind, jobZombieKind } from "./internal/deadline-kinds";
 import { slotFloorKind } from "./internal/slot-floor-kind";
 import {
   registerDeadlineReports,
   unregisterDeadlineReports,
 } from "./internal/register";
 
-export {
-  deadlineExceededKind,
-  jobZombieKind,
-} from "./internal/deadline-kinds";
+export { deadlineExceededKind, jobZombieKind } from "./internal/deadline-kinds";
 export { slotFloorKind } from "./internal/slot-floor-kind";
 
 export default {

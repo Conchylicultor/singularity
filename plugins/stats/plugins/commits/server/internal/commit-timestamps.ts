@@ -24,9 +24,14 @@ async function parseGitLog(args: string[]): Promise<CommitInfo[]> {
   const root = await ensureMainWorktreeRoot();
   const result = await spawnCaptured(
     [
-      GIT, "-C", root, "log",
+      GIT,
+      "-C",
+      root,
+      "log",
       "--format=__C__%H\x1f%cI\x1f%(trailers:key=Singularity-Push,valueonly)\x1f%(trailers:key=Singularity-Conversation,valueonly)",
-      "--numstat", "--reverse", ...args,
+      "--numstat",
+      "--reverse",
+      ...args,
     ],
     { timeoutMs: GIT_LOG_TIMEOUT_MS },
   );
@@ -46,7 +51,15 @@ async function parseGitLog(args: string[]): Promise<CommitInfo[]> {
     const restLines = rest.split("\n");
     const conversationId = (restLines[0] ?? "").trim() || null;
 
-    const current: CommitInfo = { sha, iso, pushId, conversationId, added: 0, removed: 0, byExt: {} };
+    const current: CommitInfo = {
+      sha,
+      iso,
+      pushId,
+      conversationId,
+      added: 0,
+      removed: 0,
+      byExt: {},
+    };
     for (const line of restLines.slice(1)) {
       if (!line.trim()) continue;
       const parts = line.split("\t");
@@ -57,7 +70,8 @@ async function parseGitLog(args: string[]): Promise<CommitInfo[]> {
         current.removed += del;
         const filepath = parts[2]!;
         const dotIdx = filepath.lastIndexOf(".");
-        const ext = dotIdx >= 0 ? filepath.slice(dotIdx).toLowerCase() : "(none)";
+        const ext =
+          dotIdx >= 0 ? filepath.slice(dotIdx).toLowerCase() : "(none)";
         const e = current.byExt[ext] ?? { added: 0, removed: 0 };
         e.added += ins;
         e.removed += del;
@@ -70,7 +84,10 @@ async function parseGitLog(args: string[]): Promise<CommitInfo[]> {
 }
 
 let cache: { expires: number; commits: CommitInfo[] } | null = null;
-const filteredCache = new Map<string, { expires: number; commits: CommitInfo[] }>();
+const filteredCache = new Map<
+  string,
+  { expires: number; commits: CommitInfo[] }
+>();
 
 export async function getCommits(): Promise<CommitInfo[]> {
   if (cache && cache.expires > Date.now()) {
@@ -81,7 +98,9 @@ export async function getCommits(): Promise<CommitInfo[]> {
   return commits;
 }
 
-export async function getCommitsExcludingPaths(excludedPaths: string[]): Promise<CommitInfo[]> {
+export async function getCommitsExcludingPaths(
+  excludedPaths: string[],
+): Promise<CommitInfo[]> {
   const key = [...excludedPaths].sort().join("|");
   const cached = filteredCache.get(key);
   if (cached && cached.expires > Date.now()) {

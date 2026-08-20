@@ -2,7 +2,10 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { matchBracket } from "@plugins/plugin-meta/plugins/parse-utils/core";
 import { collectTokenGroupVars } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
-import { getWorktreeRoot, spawnCaptured } from "@plugins/infra/plugins/spawn/core";
+import {
+  getWorktreeRoot,
+  spawnCaptured,
+} from "@plugins/infra/plugins/spawn/core";
 
 // Wedge-breaker for a metadata-only git read: far above any real duration,
 // because starvation under a saturated check run is what these suffer, not
@@ -141,7 +144,10 @@ function bareUtility(cls: string): string {
  * separately and comprehensively by INHERITED_PROPS, so this list only needs
  * the utility forms in actual use.
  */
-function isThemedInheritedUtility(cls: string, themedVars: Set<string>): boolean {
+function isThemedInheritedUtility(
+  cls: string,
+  themedVars: Set<string>,
+): boolean {
   const u = bareUtility(cls);
   if (/^font-(sans|serif|mono)$/.test(u)) return true;
   if (u.startsWith("text-")) {
@@ -193,7 +199,11 @@ const check: Check = {
           for (const vm of value.matchAll(/var\(\s*(--[\w-]+)/g)) {
             const name = vm[1];
             if (name && themedVars.has(name)) {
-              offenders.push({ file: rel, selector, decl: `${prop}: …${name}…` });
+              offenders.push({
+                file: rel,
+                selector,
+                decl: `${prop}: …${name}…`,
+              });
             }
           }
         }

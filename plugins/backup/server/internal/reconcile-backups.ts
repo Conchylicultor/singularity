@@ -93,5 +93,7 @@ export async function reconcileBackups(): Promise<void> {
         },
       ],
     })
-    .where(and(isNull(_backupRuns.finishedAt), lt(_backupRuns.startedAt, cutoff)));
+    .where(
+      and(isNull(_backupRuns.finishedAt), lt(_backupRuns.startedAt, cutoff)),
+    );
 }

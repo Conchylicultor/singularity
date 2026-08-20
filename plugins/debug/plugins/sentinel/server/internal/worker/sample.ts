@@ -81,7 +81,8 @@ async function countBuilds(log: Logger): Promise<number | null> {
     const result = await spawnCaptured(["ps", "-axo", "command="], {
       timeoutMs: PS_TIMEOUT_MS,
     });
-    if (result.timedOut) throw new Error(`ps did not finish within ${PS_TIMEOUT_MS} ms`);
+    if (result.timedOut)
+      throw new Error(`ps did not finish within ${PS_TIMEOUT_MS} ms`);
     if (result.exitCode !== 0) throw new Error(`ps exited ${result.exitCode}`);
     return countBuildProcesses(result.stdout);
     // eslint-disable-next-line promise-safety/no-absorbed-failure -- null IS the discriminated "scan unreadable this tick" state: inFlightBuilds is nullable in the sample schema and the failure is logged to the sentinel channel; a ps hiccup must not lose the tick's pg/host vitals

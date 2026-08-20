@@ -45,10 +45,13 @@ function memoized(
  */
 export function getWorktreeRoot(cwd?: string): Promise<string> {
   return memoized(worktreeRootMemo, cwd, async (base) => {
-    const result = await spawnExpectOk(["git", "rev-parse", "--show-toplevel"], {
-      cwd: base,
-      timeoutMs: GIT_ROOT_TIMEOUT_MS,
-    });
+    const result = await spawnExpectOk(
+      ["git", "rev-parse", "--show-toplevel"],
+      {
+        cwd: base,
+        timeoutMs: GIT_ROOT_TIMEOUT_MS,
+      },
+    );
     return result.stdout.trim();
   });
 }
@@ -60,10 +63,13 @@ export function getWorktreeRoot(cwd?: string): Promise<string> {
  */
 export function getMainRepoRoot(cwd?: string): Promise<string> {
   return memoized(mainRepoRootMemo, cwd, async (base) => {
-    const result = await spawnExpectOk(["git", "rev-parse", "--git-common-dir"], {
-      cwd: base,
-      timeoutMs: GIT_ROOT_TIMEOUT_MS,
-    });
+    const result = await spawnExpectOk(
+      ["git", "rev-parse", "--git-common-dir"],
+      {
+        cwd: base,
+        timeoutMs: GIT_ROOT_TIMEOUT_MS,
+      },
+    );
     // In a worktree this is absolute; in main it may be ".git" (cwd-relative).
     return dirname(resolve(base, result.stdout.trim()));
   });

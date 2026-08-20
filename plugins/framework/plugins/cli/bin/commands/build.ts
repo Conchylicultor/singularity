@@ -211,9 +211,12 @@ async function getCurrentBranch(): Promise<string> {
 // checkout carrying main's registry — so check on every build and reset to the
 // tracked value.
 async function ensureHooksPath(): Promise<void> {
-  const read = await spawnCaptured(["git", "config", "--get", "core.hooksPath"], {
-    timeoutMs: GIT_TIMEOUT_MS,
-  });
+  const read = await spawnCaptured(
+    ["git", "config", "--get", "core.hooksPath"],
+    {
+      timeoutMs: GIT_TIMEOUT_MS,
+    },
+  );
   const current = read.stdout.trim();
   if (current === ".githooks") return;
   const write = await spawnCaptured(

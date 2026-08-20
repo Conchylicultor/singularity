@@ -39,7 +39,9 @@ async function readVmStat(): Promise<VmStat | null> {
   // Bounded well under the sampler's own cadence: a `vm_stat` that has not
   // answered within five seconds is not going to produce a reading worth this
   // tick, and letting it run would let successive ticks pile up children.
-  const result = await spawnCaptured(["vm_stat"], { timeoutMs: VM_STAT_TIMEOUT_MS });
+  const result = await spawnCaptured(["vm_stat"], {
+    timeoutMs: VM_STAT_TIMEOUT_MS,
+  });
   return parseVmStat(result.stdout);
 }
 
@@ -65,11 +67,18 @@ async function tick(): Promise<void> {
     if (prev) {
       swapIn = Math.max(0, (swapins - prev.swapins) / elapsedSec);
       swapOut = Math.max(0, (swapouts - prev.swapouts) / elapsedSec);
-      compressionsPerSec = Math.max(0, (compressions - prev.compressions) / elapsedSec);
-      decompressionsPerSec = Math.max(0, (decompressions - prev.decompressions) / elapsedSec);
+      compressionsPerSec = Math.max(
+        0,
+        (compressions - prev.compressions) / elapsedSec,
+      );
+      decompressionsPerSec = Math.max(
+        0,
+        (decompressions - prev.decompressions) / elapsedSec,
+      );
     }
     prev = { swapins, swapouts, compressions, decompressions };
-    compressorMb = ((vm.map["Pages occupied by compressor"] ?? 0) * vm.pageSize) / 1_048_576;
+    compressorMb =
+      ((vm.map["Pages occupied by compressor"] ?? 0) * vm.pageSize) / 1_048_576;
   }
   const total = totalmem();
   const free = freemem();

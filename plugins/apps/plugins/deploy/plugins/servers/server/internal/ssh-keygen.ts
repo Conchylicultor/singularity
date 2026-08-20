@@ -1,7 +1,10 @@
 import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { spawnCaptured, spawnExpectOk } from "@plugins/infra/plugins/spawn/core";
+import {
+  spawnCaptured,
+  spawnExpectOk,
+} from "@plugins/infra/plugins/spawn/core";
 import { InvalidSshKeyError } from "./ssh-key-error";
 import { parseSshPublicKey } from "./ssh-public-key";
 
@@ -90,9 +93,12 @@ export async function derivePublicKey(
     // Belt and braces: spawnCaptured gives the child `stdin: "ignore"` when no
     // stdin is passed, so even a prompt hits EOF — this call structurally
     // cannot hang the request.
-    const result = await spawnCaptured(["ssh-keygen", "-y", "-P", "", "-f", keyPath], {
-      timeoutMs: SSH_KEYGEN_TIMEOUT_MS,
-    });
+    const result = await spawnCaptured(
+      ["ssh-keygen", "-y", "-P", "", "-f", keyPath],
+      {
+        timeoutMs: SSH_KEYGEN_TIMEOUT_MS,
+      },
+    );
     if (result.exitCode !== 0) {
       throw classifyKeygenFailure(result.stderr);
     }

@@ -3,7 +3,10 @@ import {
   discoverCollectedDirs,
   type DiscoveredCollectedDir,
 } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
-import { getWorktreeRoot, spawnCaptured } from "@plugins/infra/plugins/spawn/core";
+import {
+  getWorktreeRoot,
+  spawnCaptured,
+} from "@plugins/infra/plugins/spawn/core";
 
 // Wedge-breaker for a metadata-only git read: far above any real duration,
 // because starvation under a saturated check run is what these suffer, not
@@ -21,10 +24,12 @@ async function listTsconfigs(root: string): Promise<string[]> {
   });
   const out = result.stdout.trim();
   if (!out) return [];
-  return out
-    .split("\n")
-    // Sidequests are independent projects with their own tsconfigs.
-    .filter((p) => p && !p.startsWith("sidequests/"));
+  return (
+    out
+      .split("\n")
+      // Sidequests are independent projects with their own tsconfigs.
+      .filter((p) => p && !p.startsWith("sidequests/"))
+  );
 }
 
 // Literal (single-file) `include` entries — `readConfigFile` parses JSONC but
@@ -71,7 +76,9 @@ const check: Check = {
       const re = new RegExp(`(^|/)${escapeRegExp(dir)}(/|$)`);
       if (includes.some((inc) => re.test(inc))) continue;
       const declarer = relativeOwner(root, def);
-      offenders.push(`  ${dir}/  (declared in ${declarer}) → add glob **/plugins/*/${dir}`);
+      offenders.push(
+        `  ${dir}/  (declared in ${declarer}) → add glob **/plugins/*/${dir}`,
+      );
     }
 
     if (offenders.length === 0) return { ok: true };
@@ -85,7 +92,9 @@ const check: Check = {
 };
 
 function relativeOwner(root: string, def: DiscoveredCollectedDir): string {
-  return def.ownerDir.startsWith(root) ? def.ownerDir.slice(root.length + 1) : def.ownerDir;
+  return def.ownerDir.startsWith(root)
+    ? def.ownerDir.slice(root.length + 1)
+    : def.ownerDir;
 }
 
 export default check;

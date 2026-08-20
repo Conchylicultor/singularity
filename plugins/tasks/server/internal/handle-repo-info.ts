@@ -15,7 +15,9 @@ function parseGithubBase(remote: string): string | null {
   const trimmed = remote.trim();
   const ssh = trimmed.match(/^git@github\.com:([^/]+)\/(.+?)(?:\.git)?$/);
   if (ssh) return `https://github.com/${ssh[1]}/${ssh[2]}`;
-  const https = trimmed.match(/^https?:\/\/github\.com\/([^/]+)\/(.+?)(?:\.git)?$/);
+  const https = trimmed.match(
+    /^https?:\/\/github\.com\/([^/]+)\/(.+?)(?:\.git)?$/,
+  );
   if (https) return `https://github.com/${https[1]}/${https[2]}`;
   return null;
 }

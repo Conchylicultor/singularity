@@ -1,5 +1,8 @@
 import ts from "typescript";
-import { getWorktreeRoot, spawnCaptured } from "@plugins/infra/plugins/spawn/core";
+import {
+  getWorktreeRoot,
+  spawnCaptured,
+} from "@plugins/infra/plugins/spawn/core";
 
 // Wedge-breaker for a metadata-only git read, not latency policing. Generous
 // because what these actually suffer under a saturated `./singularity check` is
@@ -24,10 +27,12 @@ async function listTsconfigs(root: string): Promise<string[]> {
   });
   const out = result.stdout.trim();
   if (!out) return [];
-  return out
-    .split("\n")
-    // Sidequests are independent projects with their own tsconfigs.
-    .filter((p) => p && !p.startsWith("sidequests/"));
+  return (
+    out
+      .split("\n")
+      // Sidequests are independent projects with their own tsconfigs.
+      .filter((p) => p && !p.startsWith("sidequests/"))
+  );
 }
 
 // Raw (single-file) `paths` keys — `readConfigFile` parses JSONC but does NOT

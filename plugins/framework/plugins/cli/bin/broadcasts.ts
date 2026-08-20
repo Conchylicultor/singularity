@@ -24,7 +24,11 @@ async function gitOutput(args: string[]): Promise<string | null> {
     });
     return result.exitCode === 0 ? result.stdout.trim() : null;
   } catch (err) {
-    if ((err as NodeJS.ErrnoException).code !== "ENOENT" && (err as NodeJS.ErrnoException).code !== "EACCES") throw err;
+    if (
+      (err as NodeJS.ErrnoException).code !== "ENOENT" &&
+      (err as NodeJS.ErrnoException).code !== "EACCES"
+    )
+      throw err;
     return null;
   }
 }
@@ -40,7 +44,11 @@ async function isAncestor(
     );
     return result.exitCode === 0;
   } catch (err) {
-    if ((err as NodeJS.ErrnoException).code !== "ENOENT" && (err as NodeJS.ErrnoException).code !== "EACCES") throw err;
+    if (
+      (err as NodeJS.ErrnoException).code !== "ENOENT" &&
+      (err as NodeJS.ErrnoException).code !== "EACCES"
+    )
+      throw err;
     return false;
   }
 }
@@ -62,11 +70,16 @@ function printBroadcast(entry: Broadcast): void {
   }
 }
 
-export async function checkBroadcasts(command: BroadcastCommand): Promise<void> {
+export async function checkBroadcasts(
+  command: BroadcastCommand,
+): Promise<void> {
   const branch = await gitOutput(["rev-parse", "--abbrev-ref", "HEAD"]);
   if (!branch || branch === "main") return;
 
-  const raw = await gitOutput(["show", "origin/main:plugins/framework/plugins/cli/broadcasts.json"]);
+  const raw = await gitOutput([
+    "show",
+    "origin/main:plugins/framework/plugins/cli/broadcasts.json",
+  ]);
   if (!raw) return;
 
   let entries: Broadcast[];

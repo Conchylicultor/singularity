@@ -12332,6 +12332,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `config_v2.getConfig`
           - `infra/endpoints.implement`
           - `infra/jobs.ceilingMsFor`
+          - `infra/jobs.deadlineMsFor`
           - `infra/jobs.HOLD_CLASSES`
           - `infra/jobs.HOLD_SPECS`
           - `infra/jobs.HoldClass`
@@ -12357,6 +12358,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses:
           - `config_v2.defineConfig`
           - `fields/bool/config.boolField`
+          - `fields/float/config.floatField`
           - `fields/int/config.intField`
           - `infra/endpoints.defineEndpoint`
           - `infra/jobs.HoldClassSchema`
@@ -13797,6 +13799,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/sonata/library`
               - `apps/sonata/voicing`
               - `debug/live-state-churn/monitor`
+              - `debug/queue-health`
               - `debug/sentinel`
               - `debug/slow-ops`
               - `debug/trace/engine`
@@ -14722,6 +14725,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `ServerContribution`
           - `ServerContributionToken`
           - `ServerErrorReport`
+          - `ServerFatalReport`
           - `ServerPluginDefinition`
           - `ServerResourceOptions`
           - `Span`
@@ -14749,10 +14753,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `recomputeResource`
           - `recordMemoryCheckpoint`
           - `reportServerError`
+          - `reportServerFatalSync`
           - `Resource`
           - `scopedResourceIdentities`
           - `serverCollectedDir`
           - `setErrorReporter`
+          - `setFatalReporter`
           - `setFeedExemptTables`
           - `setLiveStateSnapshotHooks`
           - `setProfilerHooks`
@@ -16537,10 +16543,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `DurableHooks`
           - `EnqueueOpts`
           - `EnqueueTx`
+          - `ForfeitedSlot`
           - `HoldClass`
           - `HoldClassSpec`
           - `JobCtx`
+          - `JobDeadlineEvent`
           - `JobFactory`
+          - `JobSlotFloorReport`
           - `QueueBacklogStat`
           - `QueueClassBacklogStat`
           - `RegisteredJob`
@@ -16553,9 +16562,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `ALL_JOB_TASKS`
           - `ceilingMsFor`
           - `deadJobsResource`
+          - `deadlineMsFor`
           - `DEFAULT_MAX_ATTEMPTS`
           - `defineJob`
           - `getAllRegisteredJobNames`
+          - `getForfeitedSlots`
           - `getJobHold`
           - `getJobSlowThresholdMs`
           - `HOLD_CLASSES`
@@ -16563,7 +16574,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `HoldClassSchema`
           - `holdForTask`
           - `installQueueSchema`
+          - `isJobDeadlineExceededError`
           - `isSuspendSignal`
+          - `JOB_SLOT_FLOOR_KIND`
+          - `JobDeadlineExceededError`
+          - `jobDeadlineSink`
           - `jobsListResource`
           - `LEGACY_JOB_TASK`
           - `NonRetryableError`
@@ -16580,6 +16595,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `UNSAFE_getRegisteredJob`
           - `UNSAFE_installDurableHooks`
           - `UNSAFE_sweepStuckLocks`
+          - `usableSlots`
         - Register:
           - `defineJob('jobs.resume')`
           - `defineJob('jobs.dead-gc')`
@@ -16611,6 +16627,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `DeadJobRowSchema`
           - `DeadJobsPayloadSchema`
           - `deadJobsResource`
+          - `deadlineMsFor`
           - `HOLD_CLASSES`
           - `HOLD_SPECS`
           - `HoldClassSchema`
@@ -16670,6 +16687,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `infra/attachments`
           - `infra/events`
           - `infra/events-test`
+          - `infra/jobs/deadline-audit`
           - `infra/retention`
           - `page/attachment-block`
           - `page/inline-date`
@@ -16678,6 +16696,32 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `stats/cost`
           - `tasks/auto-start`
           - `tasks/task-title`
+      - Plugins:
+        - **`deadline-audit`** — Job deadline audit: registers a handler on the jobs plugin's deadline seam and turns each announcement into a report — job-deadline-exceeded (warning) when a run passes its hold class's wall-clock deadline and has ctx.signal aborted, job-zombie (error) when it is still holding its slot a grace period later, and job-slot-floor (error) when the written-off slots add up to a runner that can no longer do its job.
+          - Server:
+            - Contributes:
+              - `report-kind` "job-deadline-exceeded"
+              - `report-kind` "job-zombie"
+              - `report-kind` "job-slot-floor"
+            - Uses:
+              - `infra/jobs.JOB_SLOT_FLOOR_KIND`
+              - `infra/jobs.JobDeadlineEvent`
+              - `infra/jobs.jobDeadlineSink`
+              - `infra/jobs.JobSlotFloorReport`
+              - `reports.recordReport`
+              - `reports.ReportKind`
+            - Exports (values):
+              - `deadlineExceededKind`
+              - `jobZombieKind`
+              - `slotFloorKind`
+          - Core:
+            - Uses: `infra/jobs.HoldClassSchema`
+            - Exports (types):
+              - `JobDeadlinePayload`
+              - `JobSlotFloorPayload`
+            - Exports (values):
+              - `JobDeadlinePayloadSchema`
+              - `JobSlotFloorPayloadSchema`
     - **`launcher`**
       - Server:
         - Uses:
@@ -17200,6 +17244,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Core:
         - Uses: `packages/spawn-priority.backgroundArgv`
         - Exports (types):
+          - `SpawnBaseOptions`
           - `SpawnBound`
           - `SpawnedChild`
           - `SpawnOptions`
@@ -27759,6 +27804,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `debug/trace/engine`
       - `debug/worktree-cleanup`
       - `infra/boot-snapshot`
+      - `infra/jobs/deadline-audit`
       - `infra/worktree/removal-audit`
       - `reports/adaptive-bar`
       - `reports/caret-flight`

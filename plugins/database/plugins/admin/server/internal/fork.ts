@@ -119,7 +119,10 @@ export async function forkDatabase(
     let dumpExit: number;
     let restoreExit: number;
     try {
-      [dumpExit, restoreExit] = await Promise.all([dump.exited, restore.exited]);
+      [dumpExit, restoreExit] = await Promise.all([
+        dump.exited,
+        restore.exited,
+      ]);
     } finally {
       signal?.removeEventListener("abort", onAbort);
     }

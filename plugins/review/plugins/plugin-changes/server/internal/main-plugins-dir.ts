@@ -16,7 +16,8 @@ export async function getMainRoot(): Promise<string> {
     [GIT, "--no-optional-locks", "rev-parse", "--git-common-dir"],
     { cwd: REPO_ROOT, timeoutMs: GIT_TIMEOUT_MS },
   );
-  if (result.exitCode !== 0) throw new Error("Failed to resolve git common dir");
+  if (result.exitCode !== 0)
+    throw new Error("Failed to resolve git common dir");
 
   const absGitDir = resolve(REPO_ROOT, result.stdout.trim());
   cachedMainRoot = dirname(absGitDir);

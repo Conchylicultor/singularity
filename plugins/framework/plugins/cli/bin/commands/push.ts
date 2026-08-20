@@ -73,7 +73,11 @@ async function runAllowFail(
   cwd?: string,
   env?: Record<string, string | undefined>,
 ): Promise<{ stdout: string; exitCode: number }> {
-  const result = await spawnCaptured(cmd, { cwd, env, timeoutMs: GIT_TIMEOUT_MS });
+  const result = await spawnCaptured(cmd, {
+    cwd,
+    env,
+    timeoutMs: GIT_TIMEOUT_MS,
+  });
   if (result.stderr) process.stderr.write(result.stderr);
   return { stdout: result.stdout.trim(), exitCode: result.exitCode };
 }

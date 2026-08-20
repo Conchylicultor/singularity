@@ -37,7 +37,11 @@ async function detectPhase(
   if (!base) return "research";
 
   // Committed + staged + unstaged changes vs merge-base in one pass
-  const changed = await gitRun(["diff", "--name-only", base], worktreePath, signal);
+  const changed = await gitRun(
+    ["diff", "--name-only", base],
+    worktreePath,
+    signal,
+  );
   // New untracked files
   const untracked = await gitRun(
     ["ls-files", "--others", "--exclude-standard"],

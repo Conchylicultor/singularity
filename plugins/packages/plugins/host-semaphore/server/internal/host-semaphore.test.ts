@@ -812,7 +812,10 @@ test("concurrent first-acquire on a fresh pool never crashes on the size-guard r
 // this handler" into a flock every other process on the box gets back.
 describe("cancellation (AcquireHooks.signal)", () => {
   test("an already-aborted signal throws before any wait or spawn", async () => {
-    const sem = createHostSemaphore({ slots: uniqueSlots("abort-pre"), size: 1 });
+    const sem = createHostSemaphore({
+      slots: uniqueSlots("abort-pre"),
+      size: 1,
+    });
     const reason = new Error("already over budget");
 
     const origSpawn = Bun.spawn;

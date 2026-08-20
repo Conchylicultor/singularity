@@ -1,7 +1,10 @@
 import { defineHostPool } from "@plugins/infra/plugins/host-admission/server";
 import { RESERVED_POOLS } from "@plugins/infra/plugins/host-admission/core";
 import { createSemaphore } from "@plugins/packages/plugins/semaphore/core";
-import { chargeWait, registerGateGauge } from "@plugins/infra/plugins/runtime-profiler/core";
+import {
+  chargeWait,
+  registerGateGauge,
+} from "@plugins/infra/plugins/runtime-profiler/core";
 import { AsyncLocalStorage } from "node:async_hooks";
 
 // Host-wide slot count + CPU cost are declared ONCE in host-admission/core's
