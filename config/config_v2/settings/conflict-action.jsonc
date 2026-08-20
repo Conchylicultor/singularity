@@ -1,0 +1,9 @@
+// @hash ccff2d2a79eb
+// Horizontal action row inside a config conflict banner, read left to right.
+// The one contributed action ("Ask an agent") sits at the head of the row,
+// ahead of the banner's own decisive resolutions (Merge / Accept / Keep).
+{
+  "items": [
+    "config_v2.settings.conflict-agent:conflict-agent"
+  ]
+}

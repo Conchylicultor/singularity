@@ -40,3 +40,19 @@ export const PROTOTYPES_DIR_DISPLAY = "~/.singularity/apps/prototypes";
  * No trailing slash, same convention as above.
  */
 export const SECRETS_DIR_DISPLAY = "~/.singularity/state/secrets";
+
+/**
+ * Where the user layer of the three-layer config model lives, as prose — the
+ * prose twin of `config_v2`'s `configDir` data dir (`state/config`). One
+ * `<worktree>/` subtree per namespace beneath it, each holding the propagated
+ * `<name>.origin.jsonc` files and the user's own `<name>.jsonc` overrides.
+ *
+ * Used by the config conflict prompt, which tells an agent where the user's
+ * overrides sit and — the load-bearing half — that the subtree is forked per
+ * worktree, so edits the agent makes inside its own worktree are not the user's.
+ * A browser-side prompt cannot reach `configDir.path` (node-only), which is
+ * exactly what this plugin exists for.
+ *
+ * No trailing slash, same convention as above.
+ */
+export const USER_CONFIG_DIR_DISPLAY = "~/.singularity/state/config";

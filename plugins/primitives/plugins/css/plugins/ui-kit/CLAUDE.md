@@ -494,6 +494,7 @@ guard: `confirmDialog` (`imperative-dialog/plugins/confirm`); native
     - `code-explorer/commit-detail`
     - `config_v2/config-link`
     - `config_v2/settings`
+    - `config_v2/settings/conflict-agent`
     - `conversations/agents`
     - `conversations/conversation-ui/item`
     - `conversations/conversation-view/branch`

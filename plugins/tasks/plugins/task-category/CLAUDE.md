@@ -78,6 +78,7 @@ Consumers read only the generic aggregate:
     - `TaskCategoryDefSchema`
 - Cross-plugin:
   - Imported by:
+    - `config_v2/settings/conflict-agent`
     - `conversations`
     - `conversations/agents`
     - `improve`

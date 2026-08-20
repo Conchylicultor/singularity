@@ -42,12 +42,35 @@ import {
   getConfigRawFile,
 } from "../../core";
 import { configDetailPane } from "../internal/panes";
+import { buildConflictContext } from "../internal/conflict-context";
 import { useConflict } from "../internal/use-conflicts";
 import { useTiers } from "../internal/use-tiers";
+import { ConfigDetailSlots } from "../slots";
+import type { ConfigConflictContext } from "../slots";
 import { ConfigFieldRow } from "./config-field-row";
 import { ConflictDiff } from "./conflict-diff";
 import { InvalidDiff } from "./invalid-diff";
 import { ScopeTabs } from "./scope-tabs";
+
+// The two banners' button tints, written once. Every action inside a banner —
+// this file's own resolutions and the contributed ones alike — reads its tint
+// from here, so a contributed button can't drift out of its banner's palette.
+const WARNING_ACTION_CLASS = cn("bg-warning/20 hover:bg-warning/30");
+const DESTRUCTIVE_ACTION_CLASS = cn(
+  "bg-destructive/20 hover:bg-destructive/30",
+);
+
+// The contributed half of a conflict banner's action row — rendered leftmost, as
+// the "get help with this" affordance ahead of the decisive resolutions. A
+// component (rather than the render-prop inline at both call sites) so the two
+// banners share one spelling and neither needs a non-null assertion.
+function ConflictActions({ conflict }: { conflict: ConfigConflictContext }) {
+  return (
+    <ConfigDetailSlots.ConflictAction.Render>
+      {(item) => <item.component conflict={conflict} />}
+    </ConfigDetailSlots.ConflictAction.Render>
+  );
+}
 
 // Walks a structured zod issue path (["items", 6]) into the stored document to
 // recover the offending value, so the invalid banner can show exactly what's
@@ -257,6 +280,37 @@ function ConfigDetailBody({
     conflictEntry?.kind === "hash" ? conflictEntry.trueConflictKeys : undefined;
   const canMerge = trueConflictKeys !== undefined;
 
+  // The conflict as data, for the contributed banner actions. Built here (not in
+  // each contribution) so an action describes exactly what the user is looking
+  // at — same `valueFor` the field rows bind to, same issue-path spelling the
+  // banner prints. `null` whenever there is no conflict, so the two banners can
+  // pass it through non-null.
+  const conflictContext = useMemo(
+    () =>
+      conflictEntry
+        ? buildConflictContext({
+            storePath: registration.storePath,
+            name: registration.pluginName,
+            scopeId,
+            conflict: conflictEntry,
+            fields: registration.descriptor.fields,
+            valueFor,
+            actionClassName:
+              conflictEntry.kind === "invalid"
+                ? DESTRUCTIVE_ACTION_CLASS
+                : WARNING_ACTION_CLASS,
+          })
+        : null,
+    [
+      conflictEntry,
+      registration.storePath,
+      registration.pluginName,
+      registration.descriptor.fields,
+      scopeId,
+      valueFor,
+    ],
+  );
+
   const handleResetAll = useCallback(() => {
     resetOverride({ body: { storePath: registration.storePath, scopeId } });
     setConfirmReset(false);
@@ -346,31 +400,34 @@ function ConfigDetailBody({
                       <Fill as="span">
                         Stored config is invalid for the current schema
                       </Fill>
-                      <Stack direction="row" gap="xs" className={rigidClass()}>
-                        <Button
-                          variant="ghost"
-                          onClick={() => setShowDiff((v) => !v)}
-                          className="bg-destructive/20 hover:bg-destructive/30"
-                        >
-                          <MdDifference className="size-3.5" />
-                          {showDiff ? "Hide diff" : "View diff"}
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          onClick={() => setShowRaw(true)}
-                          className="bg-destructive/20 hover:bg-destructive/30"
-                        >
-                          View raw
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          loading={resetOverrideM.isPending}
-                          onClick={handleAcceptAll}
-                          className="bg-destructive/20 hover:bg-destructive/30"
-                        >
-                          Reset to defaults
-                        </Button>
-                      </Stack>
+                    </Stack>
+                    <Stack direction="row" gap="xs" wrap justify="end">
+                      {conflictContext && (
+                        <ConflictActions conflict={conflictContext} />
+                      )}
+                      <Button
+                        variant="ghost"
+                        onClick={() => setShowDiff((v) => !v)}
+                        className={DESTRUCTIVE_ACTION_CLASS}
+                      >
+                        <MdDifference className="size-3.5" />
+                        {showDiff ? "Hide diff" : "View diff"}
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        onClick={() => setShowRaw(true)}
+                        className={DESTRUCTIVE_ACTION_CLASS}
+                      >
+                        View raw
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        loading={resetOverrideM.isPending}
+                        onClick={handleAcceptAll}
+                        className={DESTRUCTIVE_ACTION_CLASS}
+                      >
+                        Reset to defaults
+                      </Button>
                     </Stack>
                     {conflictEntry.issues &&
                       conflictEntry.issues.length > 0 && (
@@ -435,10 +492,7 @@ function ConfigDetailBody({
                     variant="ghost"
                     loading={acknowledgeM.isPending}
                     onClick={handleDismiss}
-                    className={cn(
-                      "bg-warning/20 hover:bg-warning/30",
-                      rigidClass(),
-                    )}
+                    className={cn(WARNING_ACTION_CLASS, rigidClass())}
                   >
                     Dismiss
                   </Button>
@@ -452,20 +506,25 @@ function ConfigDetailBody({
                   // eslint-disable-next-line spacing/no-adhoc-spacing -- mb separates the hash-conflict banner from the fields below (no named margin utility)
                   className="mb-2 rounded-md border border-warning/30 bg-warning/10 px-md py-sm text-warning"
                 >
-                  <Stack direction="row" gap="sm" align="center">
-                    <MdWarning className={cn("size-4", rigidClass())} />
-                    <Fill as="span">
-                      {canMerge && trueConflictKeys!.length > 0
-                        ? `Upstream defaults changed — ${trueConflictKeys!.length} field${trueConflictKeys!.length === 1 ? "" : "s"} need${trueConflictKeys!.length === 1 ? "s" : ""} your attention`
-                        : canMerge
-                          ? "Upstream defaults changed — ready to merge cleanly"
-                          : "Upstream defaults changed"}
-                    </Fill>
-                    <Stack direction="row" gap="xs" className={rigidClass()}>
+                  <Stack gap="xs">
+                    <Stack direction="row" gap="sm" align="center">
+                      <MdWarning className={cn("size-4", rigidClass())} />
+                      <Fill as="span">
+                        {canMerge && trueConflictKeys!.length > 0
+                          ? `Upstream defaults changed — ${trueConflictKeys!.length} field${trueConflictKeys!.length === 1 ? "" : "s"} need${trueConflictKeys!.length === 1 ? "s" : ""} your attention`
+                          : canMerge
+                            ? "Upstream defaults changed — ready to merge cleanly"
+                            : "Upstream defaults changed"}
+                      </Fill>
+                    </Stack>
+                    <Stack direction="row" gap="xs" wrap justify="end">
+                      {conflictContext && (
+                        <ConflictActions conflict={conflictContext} />
+                      )}
                       <Button
                         variant="ghost"
                         onClick={() => setShowDiff((v) => !v)}
-                        className="bg-warning/20 hover:bg-warning/30"
+                        className={WARNING_ACTION_CLASS}
                       >
                         <MdDifference className="size-3.5" />
                         {showDiff ? "Hide diff" : "View diff"}
@@ -475,7 +534,7 @@ function ConfigDetailBody({
                           variant="ghost"
                           loading={mergeM.isPending}
                           onClick={handleMerge}
-                          className="bg-warning/20 hover:bg-warning/30"
+                          className={WARNING_ACTION_CLASS}
                         >
                           <MdMerge className="size-3.5" />
                           Merge
@@ -485,7 +544,7 @@ function ConfigDetailBody({
                         variant="ghost"
                         loading={resetOverrideM.isPending}
                         onClick={handleAcceptAll}
-                        className="bg-warning/20 hover:bg-warning/30"
+                        className={WARNING_ACTION_CLASS}
                       >
                         Accept all new defaults
                       </Button>
@@ -493,7 +552,7 @@ function ConfigDetailBody({
                         variant="ghost"
                         loading={acknowledgeM.isPending}
                         onClick={handleDismiss}
-                        className="bg-warning/20 hover:bg-warning/30"
+                        className={WARNING_ACTION_CLASS}
                       >
                         Keep my values
                       </Button>

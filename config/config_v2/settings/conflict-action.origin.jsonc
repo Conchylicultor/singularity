@@ -1,0 +1,11 @@
+// @hash ccff2d2a79eb
+{
+  // Item: "<key>" (terse; <key> is "<pluginId>:<id>")
+  // Hide: { "item": "<key>", "hidden": true }
+  // Spacer (gap): { "type": "spacer", "id": "<unique-id>" }
+  // Group: { "type": "header", "label": "<title>", "collapsed": false, "items": [ "<key>", … ] }
+  // Overflow (⋯ menu): { "type": "overflow", "id": "<unique-id>", "items": [ "<key>", … ] }
+  "items": [
+    "config_v2.settings.conflict-agent:conflict-agent"
+  ]
+}

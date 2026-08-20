@@ -138,6 +138,7 @@ export const reorderableSlots: ReorderableSlot[] = [
   { slotId: "code-explorer.global-file-tree.actions", pluginId: "code-explorer", configName: "global-file-tree.actions" },
   { slotId: "config_v2.settings.config-v2-detail.actions", pluginId: "config_v2.settings", configName: "config-v2-detail.actions" },
   { slotId: "config_v2.settings.config-v2-nav.actions", pluginId: "config_v2.settings", configName: "config-v2-nav.actions" },
+  { slotId: "config_v2.settings.conflict-action", pluginId: "config_v2.settings", configName: "conflict-action" },
   { slotId: "conversations.agents.agent-actions", pluginId: "conversations.agents", configName: "agent-actions" },
   { slotId: "conversations.agents.agent-detail.actions", pluginId: "conversations.agents", configName: "agent-detail.actions" },
   { slotId: "conversations.agents.agent-side.actions", pluginId: "conversations.agents", configName: "agent-side.actions" },
