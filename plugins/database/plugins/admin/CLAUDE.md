@@ -71,6 +71,7 @@ Two things that look wrong but are load-bearing:
     - `build/serve-composition`
     - `database/change-feed`
     - `database/db-test-fixture`
+    - `database/db-test-fixture/worktree-db`
     - `database/fork`
     - `database/live-state-snapshot`
     - `database/query`

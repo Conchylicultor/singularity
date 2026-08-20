@@ -216,6 +216,7 @@ Edit `plugins/{name}/server/internal/tables.ts` → run `./singularity build`. T
     - `conversations/session-chain`
     - `conversations/summary`
     - `database/change-feed`
+    - `database/db-test-fixture/worktree-db`
     - `database/live-state-snapshot`
     - `debug/boot-profile`
     - `debug/profiling/boot-bench`

@@ -11,6 +11,7 @@ import {
   type HoldClass,
 } from "../../core/hold";
 import { DEFAULT_MAX_ATTEMPTS } from "./constants";
+import { withQueueSchemaAssert } from "./queue-schema";
 import type { WaitForOptions } from "./step-ctx";
 import { getWorkerUtils } from "./worker";
 
@@ -569,8 +570,24 @@ export function defineJob<
       event: opts?._event,
     };
     // Both branches below insert the SAME row through two different transports,
-    // so both derive their graphile columns from one spec. Deriving them twice
+    // so both derive their graphile COLUMNS from one spec. Deriving them twice
     // is how the shared-tx path would quietly lose the queue name.
+    //
+    // What the two transports do NOT share is their PRECONDITION, and reading
+    // the sentence above as "these branches can't disagree" is how that went
+    // unnoticed for as long as it did. The no-`tx` branch reaches
+    // `getWorkerUtils()`, whose `makeWorkerUtils` installs the queue schema as a
+    // side effect, so it heals a database that has none. The `tx` branch writes
+    // on the CALLER's own connection — it never touches a graphile helper and
+    // has no business running 25 migrations inside somebody else's open
+    // transaction — so it can only assert. It does, below, and loudly: on a
+    // freshly-forked worktree database whose backend has never booted (the
+    // schema is excluded from the fork by design — see `queue-schema.ts`), this
+    // path used to surface as a bare `3F000` from inside `pg` that named
+    // nothing in this repo, and was mis-diagnosed as a test-fixture gap.
+    // Installation belongs to whoever provisions or boots the database: the
+    // plugin's `onReadyBlocking` for a backend, `installQueueSchema()` for a
+    // throwaway test database.
     const graphileOpts: GraphileInsertOpts = {
       jobKey: graphileJobKey,
       runAt: opts?.runAt,
@@ -587,36 +604,38 @@ export function defineJob<
       // one line to fix.
       // biome-ignore lint/suspicious/noExplicitAny: drizzle's session.client is private in d.ts but stable at runtime.
       const client = (opts.tx as any)._.session.client as PoolClient;
-      const result = await client.query<{ id: string }>(
-        `SELECT (graphile_worker.add_job(
-           identifier   := $1,
-           payload      := $2::json,
-           run_at       := $3,
-           max_attempts := $4,
-           job_key      := $5,
-           queue_name   := $6,
-           priority     := $7
-         )).id::text AS id`,
-        [
-          // The hold class's task, from the same spec the `addJob` path uses —
-          // never a constant. A row inserted here on the legacy task would be
-          // fetchable only by the wide runner, silently forfeiting the
-          // reservation for every job enqueued inside a transaction.
-          insertion.task,
-          JSON.stringify(payload),
-          insertion.spec.runAt ?? null,
-          insertion.spec.maxAttempts ?? null,
-          insertion.spec.jobKey ?? null,
-          // NULL ⇒ unnamed queue, which is what graphile's own default is and
-          // what every non-`serial` job gets. `add_job` takes queue_name as a
-          // named argument (sql/000016.sql:8), so passing NULL explicitly is
-          // identical to omitting it.
-          insertion.spec.queueName ?? null,
-          // `priority` is likewise a named argument of `add_job`
-          // (sql/000018.sql:4, `priority integer DEFAULT NULL`), coalesced to 0
-          // when NULL. Always present here, since it is derived from the class.
-          insertion.spec.priority ?? null,
-        ],
+      const result = await withQueueSchemaAssert(() =>
+        client.query<{ id: string }>(
+          `SELECT (graphile_worker.add_job(
+             identifier   := $1,
+             payload      := $2::json,
+             run_at       := $3,
+             max_attempts := $4,
+             job_key      := $5,
+             queue_name   := $6,
+             priority     := $7
+           )).id::text AS id`,
+          [
+            // The hold class's task, from the same spec the `addJob` path uses —
+            // never a constant. A row inserted here on the legacy task would be
+            // fetchable only by the wide runner, silently forfeiting the
+            // reservation for every job enqueued inside a transaction.
+            insertion.task,
+            JSON.stringify(payload),
+            insertion.spec.runAt ?? null,
+            insertion.spec.maxAttempts ?? null,
+            insertion.spec.jobKey ?? null,
+            // NULL ⇒ unnamed queue, which is what graphile's own default is and
+            // what every non-`serial` job gets. `add_job` takes queue_name as a
+            // named argument (sql/000016.sql:8), so passing NULL explicitly is
+            // identical to omitting it.
+            insertion.spec.queueName ?? null,
+            // `priority` is likewise a named argument of `add_job`
+            // (sql/000018.sql:4, `priority integer DEFAULT NULL`), coalesced to 0
+            // when NULL. Always present here, since it is derived from the class.
+            insertion.spec.priority ?? null,
+          ],
+        ),
       );
       const id = result.rows[0]?.id;
       if (!id) throw new Error("[jobs] graphile_worker.add_job returned no id");

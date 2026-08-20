@@ -213,7 +213,10 @@ Design, measurements, prior art and the risks to watch:
     - `infra/endpoints.HttpError`
     - `infra/endpoints.implement`
     - `primitives/log-channels.Log`
-  - DB schema: `plugins/infra/plugins/jobs/server/internal/tables.ts`
+  - DB schema:
+    - `plugins/infra/plugins/jobs/server/internal/queue-schema.test.ts`
+    - `plugins/infra/plugins/jobs/server/internal/queue-schema.ts`
+    - `plugins/infra/plugins/jobs/server/internal/tables.ts`
   - Exports (types):
     - `BacklogJobStat`
     - `DeadJobStat`
@@ -246,6 +249,7 @@ Design, measurements, prior art and the risks to watch:
     - `HOLD_SPECS`
     - `HoldClassSchema`
     - `holdForTask`
+    - `installQueueSchema`
     - `isSuspendSignal`
     - `jobsListResource`
     - `LEGACY_JOB_TASK`
@@ -255,6 +259,7 @@ Design, measurements, prior art and the risks to watch:
     - `queryDeadJobStats`
     - `queryQueueBacklog`
     - `queryRunningJobs`
+    - `QueueSchemaMissingError`
     - `reachableSlots`
     - `RUNNERS`
     - `taskFor`
@@ -334,6 +339,7 @@ Design, measurements, prior art and the risks to watch:
     - `conversations/conversations-view/queue`
     - `conversations/hibernation`
     - `conversations/transcript-retention`
+    - `database/db-test-fixture/worktree-db`
     - `database/fork`
     - `database/live-state-snapshot`
     - `database/zero/cache-service`

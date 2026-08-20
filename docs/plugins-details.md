@@ -10964,6 +10964,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `conversations/session-chain`
       - `conversations/summary`
       - `database/change-feed`
+      - `database/db-test-fixture/worktree-db`
       - `database/live-state-snapshot`
       - `debug/boot-profile`
       - `debug/profiling/boot-bench`
@@ -11051,6 +11052,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `build/serve-composition`
           - `database/change-feed`
           - `database/db-test-fixture`
+          - `database/db-test-fixture/worktree-db`
           - `database/fork`
           - `database/live-state-snapshot`
           - `database/query`
@@ -11103,6 +11105,15 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `CreateTestDbOptions`
           - `TestDb`
         - Exports (values): `createTestDb`
+      - Plugins:
+        - **`worktree-db`** — Rolled-back-transaction harness for suites that must drive the REAL worktree DB (derived views included) rather than a throwaway: one scenario per transaction, always rolled back, with the excluded-from-fork queue schema installed once per process first.
+          - Server:
+            - Uses:
+              - `database.db`
+              - `database/admin.connectionString`
+              - `infra/jobs.installQueueSchema`
+            - Exports (types): `DbExecutor`
+            - Exports (values): `worktreeDbScenario`
     - **`derived-tables`** — Rebuilds trigger-maintained materialized rollup tables from source on every boot. A rollup is derived state (declared via the DerivedTable contribution), kept current incrementally by STATEMENT triggers — a hand-rolled IVM for aggregates too expensive to recompute live yet not expressible as a plain view.
       - Server:
         - Uses: `primitives/log-channels.defineLogSink`
@@ -16515,7 +16526,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `infra/endpoints.HttpError`
           - `infra/endpoints.implement`
           - `primitives/log-channels.Log`
-        - DB schema: `plugins/infra/plugins/jobs/server/internal/tables.ts`
+        - DB schema:
+          - `plugins/infra/plugins/jobs/server/internal/queue-schema.test.ts`
+          - `plugins/infra/plugins/jobs/server/internal/queue-schema.ts`
+          - `plugins/infra/plugins/jobs/server/internal/tables.ts`
         - Exports (types):
           - `BacklogJobStat`
           - `DeadJobStat`
@@ -16548,6 +16562,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `HOLD_SPECS`
           - `HoldClassSchema`
           - `holdForTask`
+          - `installQueueSchema`
           - `isSuspendSignal`
           - `jobsListResource`
           - `LEGACY_JOB_TASK`
@@ -16557,6 +16572,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `queryDeadJobStats`
           - `queryQueueBacklog`
           - `queryRunningJobs`
+          - `QueueSchemaMissingError`
           - `reachableSlots`
           - `RUNNERS`
           - `taskFor`
@@ -16636,6 +16652,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conversations/conversations-view/queue`
           - `conversations/hibernation`
           - `conversations/transcript-retention`
+          - `database/db-test-fixture/worktree-db`
           - `database/fork`
           - `database/live-state-snapshot`
           - `database/zero/cache-service`

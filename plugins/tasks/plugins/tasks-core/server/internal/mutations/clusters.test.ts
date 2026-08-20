@@ -14,17 +14,32 @@
  *
  *  - **`describe("union points")`** drives the callers (`addTaskDependency`,
  *    `createTask`, `updateTask`) against the REAL worktree DB inside a
- *    transaction we roll back. Those read the `tasks_v` view for their status
- *    snapshot, and only the real boot builds the derived-view layer — a
- *    migrations-only throwaway cannot reproduce it (same constraint
- *    `deps-tree-move.test.ts` documents). Each takes an `exec`, so the whole
- *    scenario joins our transaction and nothing lands in the worktree DB.
+ *    transaction that is rolled back (`worktreeDbScenario`). Those read the
+ *    `tasks_v` view for their status snapshot, and only the real boot builds the
+ *    derived-view layer — a migrations-only throwaway cannot reproduce it (same
+ *    constraint `deps-tree-move.test.ts` documents). Each takes an `exec`, so
+ *    the whole scenario joins that transaction and nothing lands in the
+ *    worktree DB.
  *
- * Run: `bun test plugins/tasks/plugins/tasks-core/server/internal/mutations/clusters.test.ts`
- * (requires the running embedded cluster — `./singularity build` first).
+ * Run: `./singularity test plugins/tasks/plugins/tasks-core`.
+ *
+ * Both halves need the running embedded cluster. The `union points` half
+ * additionally needs THIS worktree's database as a real boot leaves it, because
+ * the derived VIEW layer it reads is rebuilt from source on every boot and is
+ * not part of the migration chain — so `./singularity build` first. What is no
+ * longer part of that requirement is the queue schema: `worktreeDbScenario`
+ * installs `graphile_worker` itself before the first scenario opens, so the
+ * status-change emits these mutations enqueue no longer depend on a prior boot.
  */
 
-import { describe, test, expect, beforeAll, afterAll, beforeEach } from "bun:test";
+import {
+  describe,
+  test,
+  expect,
+  beforeAll,
+  afterAll,
+  beforeEach,
+} from "bun:test";
 import { inArray, sql } from "drizzle-orm";
 import { Pool } from "pg";
 import { drizzle, type NodePgDatabase } from "drizzle-orm/node-postgres";
@@ -32,8 +47,8 @@ import {
   createTestDb,
   type TestDb,
 } from "@plugins/database/plugins/db-test-fixture/server";
+import { worktreeDbScenario } from "@plugins/database/plugins/db-test-fixture/plugins/worktree-db/server";
 import { runMigrations } from "@plugins/database/plugins/migrations/server";
-import { db } from "@plugins/database/server";
 import { _tasks } from "../tables";
 import type { DbExecutor } from "../status-batch";
 import {
@@ -76,7 +91,10 @@ async function readRawLabels(
 }
 
 /** The effective label per id (`cluster_id ?? id`) — what readers actually see. */
-async function readLabels(exec: Exec, ids: string[]): Promise<Map<string, string>> {
+async function readLabels(
+  exec: Exec,
+  ids: string[],
+): Promise<Map<string, string>> {
   const raw = await readRawLabels(exec, ids);
   return new Map(ids.map((id) => [id, raw.get(id) ?? id]));
 }
@@ -179,9 +197,18 @@ describe("unionTaskClusters", () => {
     // indistinguishable — this is what lets the incremental union and a batch
     // backfill agree by construction.
     const orders: [string, string][][] = [
-      [[A, B], [B, C]],
-      [[B, C], [A, B]],
-      [[A, C], [A, B]],
+      [
+        [A, B],
+        [B, C],
+      ],
+      [
+        [B, C],
+        [A, B],
+      ],
+      [
+        [A, C],
+        [A, B],
+      ],
     ];
     for (const order of orders) {
       await t.db.execute(sql`UPDATE tasks SET cluster_id = NULL`);
@@ -265,7 +292,6 @@ describe("unionTaskClusters", () => {
 
     expect(await expectOneCluster(t.db, [A, B, C])).toBe(A);
   });
-
 });
 
 /** A promise plus its resolver — the explicit hand-off between two racers. */
@@ -286,37 +312,18 @@ const raceWindow = () =>
 describe("union points", () => {
   const P = "clup-"; // id prefix — isolates our reads from real tasks in the DB
 
-  class Rollback extends Error {}
-  type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
-
-  // CONSTRAINT on the rejection tests below: they call a throwing mutation
-  // inside the open transaction and then keep reading from that same `tx`. That
-  // is only sound because every rejection asserted here is a JS-level `throw`
-  // (a `SELECT` returned no rows, or the cycle/self/descendant guard tripped) —
-  // no statement raises a Postgres error. A real PG error would put the
-  // transaction in the aborted state and every subsequent statement would fail
-  // with "current transaction is aborted". Do not add a case whose failure mode
-  // is a constraint violation or a bad cast without opening a savepoint.
-
-  /** Run one scenario in a rolled-back transaction; nothing is ever committed. */
-  async function scenario<T>(body: (tx: Tx) => Promise<T>): Promise<T> {
-    let out: T | undefined;
-    try {
-      await db.transaction(async (tx) => {
-        out = await body(tx);
-        throw new Rollback();
-      });
-    } catch (err) {
-      if (!(err instanceof Rollback)) throw err;
-    }
-    return out!;
-  }
+  // Every scenario below satisfies `worktreeDbScenario`'s standing constraint
+  // (no statement may raise a Postgres error, or the transaction aborts and the
+  // reads after it fail): the rejection tests call a throwing mutation inside
+  // the open transaction and then keep reading from that same `tx`, which is
+  // sound only because every rejection asserted here is a JS-level `throw` — a
+  // `SELECT` returned no rows, or the cycle/self/descendant guard tripped.
 
   test("MONOTONE: removing the dependency edge does not un-union its endpoints", async () => {
     // The core invariant, and the whole reason the label is persisted state
     // rather than a walk over live edges.
     const [a, b] = [P + "m0", P + "m1"];
-    const labels = await scenario(async (tx) => {
+    const labels = await worktreeDbScenario(async (tx) => {
       await seedTasks(tx, [a, b]);
       await addTaskDependency(b, a, tx); // b depends on a
       await removeTaskDependency(b, a, tx);
@@ -333,7 +340,7 @@ describe("union points", () => {
 
   test("addTaskDependency unions a whole chain into one cluster", async () => {
     const [a, b, c] = [P + "c0", P + "c1", P + "c2"];
-    const labels = await scenario(async (tx) => {
+    const labels = await worktreeDbScenario(async (tx) => {
       await seedTasks(tx, [a, b, c]);
       await addTaskDependency(b, a, tx);
       await addTaskDependency(c, b, tx);
@@ -345,7 +352,7 @@ describe("union points", () => {
 
   test("createTask under a folder inherits the folder's label", async () => {
     const folderId = P + "f0";
-    const labels = await scenario(async (tx) => {
+    const labels = await worktreeDbScenario(async (tx) => {
       await seedTasks(tx, [folderId]);
       const child = await createTask({ folderId, title: "child" }, tx);
       return readLabels(tx, [folderId, child.id]);
@@ -355,7 +362,7 @@ describe("union points", () => {
   });
 
   test("createTask with no folder starts as its own singleton (cluster_id NULL)", async () => {
-    const raw = await scenario(async (tx) => {
+    const raw = await worktreeDbScenario(async (tx) => {
       const solo = await createTask({ title: "solo" }, tx);
       return readRawLabels(tx, [solo.id]);
     });
@@ -367,7 +374,7 @@ describe("union points", () => {
     // `updateTask`'s folderId branch. Filing IS a membership edge, so the two
     // must end up in one cluster even though no dependency edge exists.
     const [folder, moved] = [P + "u0", P + "u1"];
-    const labels = await scenario(async (tx) => {
+    const labels = await worktreeDbScenario(async (tx) => {
       await seedTasks(tx, [folder, moved]);
       await updateTask(moved, { folderId: folder }, tx);
       return readLabels(tx, [folder, moved]);
@@ -381,7 +388,7 @@ describe("union points", () => {
     // own body: a union that ran BEFORE the guard would be committed along with
     // everything else. Only the union sitting after both guards makes it true.
     const solo = P + "u2";
-    const raw = await scenario(async (tx) => {
+    const raw = await worktreeDbScenario(async (tx) => {
       await seedTasks(tx, [solo]);
       const err = await rejection(updateTask(solo, { folderId: solo }, tx));
       expect(err.message).toMatch(/into itself/i);
@@ -396,7 +403,7 @@ describe("union points", () => {
     // would invert the hierarchy. The raw folder seed deliberately bypasses
     // `updateTask`, so both start unlabelled and a stray union would show.
     const [parent, child] = [P + "u3", P + "u4"];
-    const raw = await scenario(async (tx) => {
+    const raw = await worktreeDbScenario(async (tx) => {
       await seedTasks(tx, [parent, child]);
       await tx.execute(
         sql`UPDATE tasks SET folder_id = ${parent} WHERE id = ${child}`,
@@ -413,7 +420,7 @@ describe("union points", () => {
     // Two independent clusters must not fuse just because someone asked for an
     // impossible edge: the union may not run ahead of the validation.
     const [a, ghost] = [P + "r0", P + "missing"];
-    const raw = await scenario(async (tx) => {
+    const raw = await worktreeDbScenario(async (tx) => {
       await seedTasks(tx, [a]);
       const err = await rejection(addTaskDependency(a, ghost, tx));
       expect(err.message).toMatch(/not found/i);
@@ -429,7 +436,7 @@ describe("union points", () => {
     // hence already unioned — so no cycle rejection can ever fuse two distinct
     // clusters. What this pins is that the rejection path does not RE-label.
     const [a, b] = [P + "y0", P + "y1"];
-    const { before, after } = await scenario(async (tx) => {
+    const { before, after } = await worktreeDbScenario(async (tx) => {
       await seedTasks(tx, [a, b]);
       await addTaskDependency(b, a, tx);
       const before = await readRawLabels(tx, [a, b]);
