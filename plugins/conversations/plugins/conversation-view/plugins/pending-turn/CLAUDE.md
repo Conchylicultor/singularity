@@ -48,6 +48,16 @@ delivered message. Nothing but the transcript resolves a record. Failures are
 **manual retry only** — the paste race can strand text in the CLI input box, so
 re-send must be deliberate.
 
+That same symmetry is why `createdAt` — the instant the send was dispatched,
+and the record's only notion of time — is set once and never moved, including
+across Retry. It carries two jobs at once: it is the TTL origin, and it is the
+transcript watermark described below. Keeping it fixed across Retry is more
+than simpler: it is the ground-truth rule above applied to the record's own
+history. If the original send landed and only its verification failed, the
+original send's own row is what should retire the record, so Retry must leave
+that row inside the record's matching window; re-stamping it forward on Retry
+could only hide a delivered turn behind a duplicate.
+
 Never-revert is **enforced, not merely documented**: `toUnconfirmed` in
 `internal/reconcile.ts` is the single transition into `unconfirmed`, and it
 returns a transcript-resolved (`queued`/`sent`) record untouched. Every path
@@ -72,14 +82,29 @@ and an impure, untested sweep, so it was unreachable by any test.
 
 Matching: normalized-text identity (image `@<path>` tokens stripped mirroring
 the transcript parser, whitespace collapsed) against the server's
-`resolvedText`, gated by a per-record `baselineUserText` (pre-existing identical
-rows never match) and a per-pass consumed-index set (two identical in-flight
+`resolvedText`, gated by the **send watermark**: a record binds only rows the
+session log wrote at or after the instant its own send was dispatched
+(`createdAt`, minus a 1s clock-skew allowance). The gate applies to both the
+user-text arm and the queue-op enqueue arm — the enqueue arm previously had no
+gate at all — plus a per-pass consumed-index set (two identical in-flight
 messages bind distinct events; user-text → `sent` outranks queue-op enqueue →
 `queued`). The `jsonl-viewer` pane owns the events array and drives
 `reconcilePendingTurns` on every change; deadlines are absolute one-shot
 `setTimeout`s (owner tab arms them; any tab's reconcile can adopt an orphaned
 record). The TTL sweep (7d) never drops a non-terminal record silently — it
 routes through `unconfirmed` (report) first.
+
+The rule the watermark replaced stamped a baseline on the record's *first*
+pass — one past the highest row present at that instant — so only a row from
+that turn's own send could ever match, but only as long as the first pass ran
+before that row landed. When a hidden tab, a throttled render, or a batched
+commit deferred the first pass past the turn's own arrival, the row it
+stamped past **was the delivery**: the record went `unconfirmed` while the
+agent was already answering, the card told the user the message may not have
+arrived, and Retry delivered the same text a second time. The invariant the
+watermark restores: **the candidate rule is a property of the record and the
+row, never of when the pane happened to reconcile** — `(record, transcript)`
+must answer the same way no matter how many passes ran before it.
 
 **`sweep ∘ match` must be a fixed point**, and `reconcile.test.ts` asserts it
 across every state × transcript pair. The pane calls the pipeline from a render
@@ -89,8 +114,13 @@ unbounded *synchronous* update loop, not a cosmetic flip-flop. Two rules keep it
 convergent, both enforced in `reconcile.ts` rather than left to call sites: the
 never-revert chokepoint above, and `changed` **derived from record identity**
 (via `outcome()`) instead of hand-set — a pass cannot claim a change it did not
-make, so a commit is never a no-op. Adding a transition here means adding it to
-the fixed-point matrix.
+make, so a commit is never a no-op. Adding a transition here means adding it
+to the fixed-point matrix, and adding an eligibility rule means adding a
+transcript column — the matrix went from 30 to 36 cases the day the send
+watermark arrived, the new column being a row delivered *before* the send. With
+the stamping write gone, the matcher writes nothing but state transitions, so
+a pass that matches nothing is now genuinely inert; it used to force a commit
++ notify on every fresh record's first pass purely to record its baseline.
 
 `PendingTurnCard` renders by state (replace, never duplicate): dimmed echo card
 for `sending`/`posted`, destructive/warning card with Retry + Copy-to-draft for

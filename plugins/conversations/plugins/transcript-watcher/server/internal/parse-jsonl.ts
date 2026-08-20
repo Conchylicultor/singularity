@@ -23,11 +23,23 @@ const IMAGE_MIME: Record<string, string> = {
   tiff: "image/tiff",
 };
 
-type Segment = { kind: "text"; value: string } | { kind: "image"; mime: string; data: string };
+type Segment =
+  | { kind: "text"; value: string }
+  | { kind: "image"; mime: string; data: string };
 
-const KNOWN_NOTIFICATION_KEYS = new Set(["task-id", "tool-use-id", "status", "summary", "output-file"]);
+const KNOWN_NOTIFICATION_KEYS = new Set([
+  "task-id",
+  "tool-use-id",
+  "status",
+  "summary",
+  "output-file",
+]);
 
-function extractTaskNotifications(text: string, at: string, out: JsonlEvent[]): string {
+function extractTaskNotifications(
+  text: string,
+  at: string,
+  out: JsonlEvent[],
+): string {
   const re = /<task-notification>([\s\S]*?)<\/task-notification>/g;
   const blocks: string[] = [];
   let m: RegExpExecArray | null;
@@ -85,7 +97,11 @@ function extractTaskNotifications(text: string, at: string, out: JsonlEvent[]): 
   return stripped.trim();
 }
 
-async function pushTextWithImages(text: string, at: string, out: JsonlEvent[]): Promise<void> {
+async function pushTextWithImages(
+  text: string,
+  at: string,
+  out: JsonlEvent[],
+): Promise<void> {
   // Local regex instance — the g flag stores match state in lastIndex, so a
   // shared module-level regex gets corrupted when concurrent async calls
   // (from the file watcher) interleave at await points.
@@ -110,7 +126,11 @@ async function pushTextWithImages(text: string, at: string, out: JsonlEvent[]): 
       const f = Bun.file(path);
       if (await f.exists()) {
         const data = Buffer.from(await f.arrayBuffer()).toString("base64");
-        segments.push({ kind: "image", mime: IMAGE_MIME[ext] ?? "image/png", data });
+        segments.push({
+          kind: "image",
+          mime: IMAGE_MIME[ext] ?? "image/png",
+          data,
+        });
         hasImages = true;
       } else {
         segments.push({ kind: "text", value: m[0] });
@@ -162,7 +182,8 @@ interface RawBlock {
 function extractUsage(raw: unknown): TokenUsage | undefined {
   if (!raw || typeof raw !== "object") return undefined;
   const u = raw as Record<string, unknown>;
-  const num = (v: unknown) => (typeof v === "number" && Number.isFinite(v) ? v : 0);
+  const num = (v: unknown) =>
+    typeof v === "number" && Number.isFinite(v) ? v : 0;
   const usage: TokenUsage = {
     input: num(u.input_tokens),
     output: num(u.output_tokens),
@@ -306,7 +327,10 @@ async function buildEvents(
   // decode any harness relay envelopes, extract teammate-message blocks (each
   // emitted as its own event), strip the relay scaffolding, then route the rest
   // through task-notification extraction + image-aware push.
-  const processUserText = async (rawText: string, ts: string): Promise<void> => {
+  const processUserText = async (
+    rawText: string,
+    ts: string,
+  ): Promise<void> => {
     let body = rawText;
     if (!seenPreprompt) {
       const { preprompt, rest } = extractPreprompt(body);
@@ -350,7 +374,8 @@ async function buildEvents(
       // activeLineUuids keeps. An attachment is an annotation of its parent
       // node, so keep it when its parent IS live. The parent-on-spine guard
       // still drops attachments belonging to abandoned rewind branches.
-      const parentUuid = typeof obj.parentUuid === "string" ? obj.parentUuid : null;
+      const parentUuid =
+        typeof obj.parentUuid === "string" ? obj.parentUuid : null;
       const rescuable =
         obj.type === "attachment" &&
         parentUuid !== null &&
@@ -359,7 +384,11 @@ async function buildEvents(
       rescuedAttachmentUuids.add(uuid);
     }
     const ts = typeof obj.timestamp === "string" ? obj.timestamp : null;
-    if (!ts) continue;
+    // `JsonlEvent.at` must be a parseable instant for every consumer — a
+    // string that fails Date.parse (NaN) would make comparisons against it
+    // silently false rather than loudly wrong, so drop the line here instead
+    // of downstream.
+    if (!ts || Number.isNaN(Date.parse(ts))) continue;
 
     const type = obj.type;
     const msg = obj.message as
@@ -380,10 +409,7 @@ async function buildEvents(
         if (linked) {
           const text = extractText(msg.content);
           if (text) {
-            linked.injectedContext = [
-              ...(linked.injectedContext ?? []),
-              text,
-            ];
+            linked.injectedContext = [...(linked.injectedContext ?? []), text];
           }
           continue;
         }
@@ -428,7 +454,7 @@ async function buildEvents(
             } else {
               pendingResults.push({ toolUseId, result });
             }
-          // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard; JSON array may contain null/undefined elements
+            // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard; JSON array may contain null/undefined elements
           } else if (block?.type === "text" && typeof block.text === "string") {
             await processUserText(block.text, ts);
           } else if (
@@ -458,9 +484,12 @@ async function buildEvents(
       const lineUsage = extractUsage((msg as { usage?: unknown }).usage);
       const shouldAttributeUsage =
         !!lineUsage && !!msgId && !usageAttributedMsgIds.has(msgId);
-      let usageAnchor: (JsonlEvent & ({ kind: "assistant-text" } | { kind: "tool-call" })) | null = null;
+      let usageAnchor:
+        | (JsonlEvent & ({ kind: "assistant-text" } | { kind: "tool-call" }))
+        | null = null;
       const setUsageOnce = (
-        event: JsonlEvent & ({ kind: "assistant-text" } | { kind: "tool-call" }),
+        event: JsonlEvent &
+          ({ kind: "assistant-text" } | { kind: "tool-call" }),
       ) => {
         // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard; values may change by the time setUsageOnce is called
         if (!shouldAttributeUsage || !lineUsage || !msgId) return;
@@ -481,7 +510,7 @@ async function buildEvents(
             messageId: msgId,
             thinking: block.thinking,
           });
-        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard; JSON array may contain null/undefined elements
+          // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard; JSON array may contain null/undefined elements
         } else if (block?.type === "text" && typeof block.text === "string") {
           if (msgId) {
             const existing = assistantTextByMsgId.get(msgId);
@@ -502,7 +531,7 @@ async function buildEvents(
           if (msgId) assistantTextByMsgId.set(msgId, event);
           setUsageOnce(event);
           events.push(event);
-        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard; JSON array may contain null/undefined elements
+          // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard; JSON array may contain null/undefined elements
         } else if (block?.type === "tool_use") {
           const toolUseId = typeof block.id === "string" ? block.id : "";
           const event: ToolCallEvent = {
@@ -534,7 +563,7 @@ async function buildEvents(
         typeof obj.content === "string"
           ? (obj.content as string)
           : typeof (obj as { text?: unknown }).text === "string"
-            ? ((obj as { text: string }).text)
+            ? (obj as { text: string }).text
             : extractText((obj as { message?: unknown }).message);
       if (text) events.push({ kind: "system", at: ts, subtype, text });
       continue;
@@ -543,7 +572,7 @@ async function buildEvents(
     if (type === "summary") {
       const text =
         typeof (obj as { summary?: unknown }).summary === "string"
-          ? ((obj as { summary: string }).summary)
+          ? (obj as { summary: string }).summary
           : "";
       if (text) events.push({ kind: "summary", at: ts, text });
       continue;

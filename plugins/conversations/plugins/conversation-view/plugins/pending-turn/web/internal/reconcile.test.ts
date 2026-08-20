@@ -1,12 +1,27 @@
 import { describe, expect, test } from "bun:test";
 import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-watcher/core";
 import {
+  CLOCK_SKEW_ALLOWANCE_MS,
   matchPendingTurns,
   normalizeForMatch,
   sweepPendingTurns,
   type SweepContext,
 } from "./reconcile";
 import type { PendingTurnRecord, PendingTurnState } from "./store";
+
+// ONE clock for every fixture. Eligibility compares a record's `createdAt`
+// against the transcript row's own `at`, so a fake millisecond record clock
+// beside a real ISO row clock would put the two ~1.79e12 ms apart and make the
+// gate trivially true — passing tests that assert nothing. Every instant below
+// is derived from the single send instant.
+const SENT_AT = Date.parse("2026-07-22T00:00:00.000Z");
+const at = (offsetMs: number): string =>
+  new Date(SENT_AT + offsetMs).toISOString();
+
+/** A row the send's own turn produced. */
+const AFTER = at(5_000);
+/** A pre-existing identical row, from an earlier message in the same session. */
+const BEFORE = at(-10 * 60_000);
 
 function rec(over: Partial<PendingTurnRecord> = {}): PendingTurnRecord {
   return {
@@ -15,20 +30,19 @@ function rec(over: Partial<PendingTurnRecord> = {}): PendingTurnRecord {
     text: "hello world",
     resolvedText: null,
     state: "posted",
-    baselineUserText: 0,
-    createdAt: 0,
+    createdAt: SENT_AT,
     ...over,
   };
 }
 
-function userText(text: string): JsonlEvent {
-  return { kind: "user-text", at: "2026-07-22T00:00:00Z", text };
+function userText(text: string, instant: string = AFTER): JsonlEvent {
+  return { kind: "user-text", at: instant, text };
 }
 
-function enqueue(content: string): JsonlEvent {
+function enqueue(content: string, instant: string = AFTER): JsonlEvent {
   return {
     kind: "queue-operation",
-    at: "2026-07-22T00:00:00Z",
+    at: instant,
     operation: "enqueue",
     content,
   };
@@ -45,7 +59,9 @@ describe("normalizeForMatch", () => {
   });
 
   test("leaves non-image @paths untouched", () => {
-    expect(normalizeForMatch("see @/etc/hosts now")).toBe("see @/etc/hosts now");
+    expect(normalizeForMatch("see @/etc/hosts now")).toBe(
+      "see @/etc/hosts now",
+    );
   });
 });
 
@@ -60,33 +76,112 @@ describe("matchPendingTurns", () => {
     const { records, changed } = matchPendingTurns(
       [record],
       [userText("look  done")],
-      1000,
+      SENT_AT + 1_000,
     );
     expect(changed).toBe(true);
     expect(records[0]!.state).toBe("sent");
-    expect(records[0]!.matchedAt).toBe(1000);
+    expect(records[0]!.matchedAt).toBe(SENT_AT + 1_000);
   });
 
-  test("stamps baseline on first pass so a pre-existing identical row never matches", () => {
-    const events = [userText("hello world")];
-    const first = matchPendingTurns([rec({ baselineUserText: null })], events);
-    expect(first.changed).toBe(true);
-    expect(first.records[0]!.baselineUserText).toBe(1);
-    expect(first.records[0]!.state).toBe("posted");
-
-    const second = matchPendingTurns(first.records, events);
-    expect(second.changed).toBe(false);
-    expect(second.records[0]!.state).toBe("posted");
-  });
-
-  test("matches only events past the baseline", () => {
-    const events = [userText("hello world"), userText("hello world")];
-    const { records } = matchPendingTurns([rec({ baselineUserText: 1 })], events);
+  test("matches only rows written at or after the send", () => {
+    // The same text twice in the session: once long before this record existed,
+    // once as this record's own delivery. Only the second is a candidate.
+    const events = [userText("hello world", BEFORE), userText("hello world")];
+    const { records, changed } = matchPendingTurns([rec()], events);
+    expect(changed).toBe(true);
     expect(records[0]!.state).toBe("sent");
-    // Baseline 2 → both rows pre-existed → no match.
-    const none = matchPendingTurns([rec({ baselineUserText: 2 })], events);
-    expect(none.records[0]!.state).toBe("posted");
-    expect(none.changed).toBe(false);
+  });
+
+  test("a row predating the send never matches", () => {
+    const { records, changed } = matchPendingTurns(
+      [rec()],
+      [userText("hello world", BEFORE)],
+    );
+    expect(changed).toBe(false);
+    expect(records[0]!.state).toBe("posted");
+  });
+
+  test("an enqueue row predating the send never matches either", () => {
+    // Both arms are gated the same way — an identical prompt parked in the
+    // CLI's queue before this record existed cannot resolve it.
+    const stale = matchPendingTurns([rec()], [enqueue("hello world", BEFORE)]);
+    expect(stale.changed).toBe(false);
+    expect(stale.records[0]!.state).toBe("posted");
+
+    // Its own enqueue row does, so the gate is what made the difference.
+    const own = matchPendingTurns([rec()], [enqueue("hello world")]);
+    expect(own.records[0]!.state).toBe("queued");
+  });
+
+  test("a row inside the clock-skew allowance matches; one outside it does not", () => {
+    // The browser and the CLI read the same wall clock a moment apart, so a
+    // row may carry an instant a hair before the record's own.
+    const inside = matchPendingTurns(
+      [rec()],
+      [userText("hello world", at(-CLOCK_SKEW_ALLOWANCE_MS))],
+    );
+    expect(inside.records[0]!.state).toBe("sent");
+
+    const outside = matchPendingTurns(
+      [rec()],
+      [userText("hello world", at(-CLOCK_SKEW_ALLOWANCE_MS - 1))],
+    );
+    expect(outside.changed).toBe(false);
+    expect(outside.records[0]!.state).toBe("posted");
+  });
+
+  test("a pass that matches nothing returns the same array reference", () => {
+    // Eligibility is stateless, so a pass with nothing to do writes nothing —
+    // including on a record's very first pass, which used to force a commit
+    // (and a notify, and a re-reconcile) just to stamp its baseline.
+    const records = [rec()];
+    const empty = matchPendingTurns(records, []);
+    expect(empty.changed).toBe(false);
+    expect(empty.records).toBe(records);
+
+    const unrelated = matchPendingTurns(records, [userText("something else")]);
+    expect(unrelated.changed).toBe(false);
+    expect(unrelated.records).toBe(records);
+  });
+
+  test("two identical in-flight records bind distinct rows by their own send instants", () => {
+    const first = rec({ id: "a", createdAt: SENT_AT });
+    const second = rec({ id: "b", createdAt: SENT_AT + 60_000 });
+    const events = [
+      userText("hello world", at(5_000)),
+      userText("hello world", at(65_000)),
+    ];
+
+    const both = matchPendingTurns([first, second], events);
+    expect(both.records.map((r) => r.state)).toEqual(["sent", "sent"]);
+
+    // Only the earlier row exists: it belongs to the earlier record, and the
+    // younger one — whose send postdates it — stays in flight.
+    const onlyEarly = matchPendingTurns([first, second], [events[0]!]);
+    expect(onlyEarly.records.map((r) => r.state)).toEqual(["sent", "posted"]);
+  });
+
+  test("the incident: the answer does not depend on how many passes preceded it", () => {
+    // conv-1786969506-7e03: the record's FIRST pass already contained its own
+    // delivered row, because the pane's pass was deferred past the turn's
+    // arrival (hidden tab, batched render, a second tab committing last). The
+    // old per-record baseline was stamped in that same pass and past that very
+    // row, so the turn was declared unconfirmed and the user re-sent it.
+    const record = rec({ state: "posted" });
+    const transcript = [userText("something else"), userText("hello world")];
+
+    // (a) one pass over the whole transcript
+    const single = matchPendingTurns([record], transcript);
+    expect(single.records[0]!.state).toBe("sent");
+
+    // (b) the same record and the same final transcript, reached through
+    //     growing prefixes. Under the baseline, (a) failed and (b) passed —
+    //     that asymmetry WAS the bug.
+    let growing = [record];
+    for (const prefix of [[], transcript.slice(0, 1), transcript]) {
+      growing = matchPendingTurns(growing, prefix).records;
+    }
+    expect(growing[0]!.state).toBe("sent");
   });
 
   test("two identical in-flight messages consume distinct events", () => {
@@ -140,7 +235,10 @@ describe("matchPendingTurns", () => {
       failureKind: "http",
       errorMessage: "HTTP 500",
     });
-    const { records, changed } = matchPendingTurns([failed], [userText("hello world")]);
+    const { records, changed } = matchPendingTurns(
+      [failed],
+      [userText("hello world")],
+    );
     expect(changed).toBe(true);
     expect(records[0]!.state).toBe("sent");
   });
@@ -169,13 +267,23 @@ describe("matchPendingTurns", () => {
     // consumes the row it matches, the sibling stays in flight.
     const failed = rec({ id: "f", state: "failed-post" });
     const inFlight = rec({ id: "p" });
-    const { records } = matchPendingTurns([failed, inFlight], [userText("hello world")]);
+    const { records } = matchPendingTurns(
+      [failed, inFlight],
+      [userText("hello world")],
+    );
     expect(records.map((r) => r.state)).toEqual(["sent", "posted"]);
   });
 
   test("a failed record with no transcript row stays failed", () => {
-    const failed = rec({ id: "f", state: "failed-post", errorMessage: "HTTP 500" });
-    const { records, changed } = matchPendingTurns([failed], [userText("something else")]);
+    const failed = rec({
+      id: "f",
+      state: "failed-post",
+      errorMessage: "HTTP 500",
+    });
+    const { records, changed } = matchPendingTurns(
+      [failed],
+      [userText("something else")],
+    );
     expect(changed).toBe(false);
     expect(records[0]!.state).toBe("failed-post");
     expect(records[0]!.errorMessage).toBe("HTTP 500");
@@ -184,24 +292,38 @@ describe("matchPendingTurns", () => {
   test("an enqueue match retires the confirmation deadline", () => {
     // `queued` is transcript-confirmed: there is nothing left for the deadline
     // to catch, and an inherited (already elapsed) one would trip instantly.
-    const late = rec({ state: "posted", deadlineAt: 500 });
-    const { records } = matchPendingTurns([late], [enqueue("hello world")], 9_000);
+    const late = rec({ state: "posted", deadlineAt: SENT_AT + 500 });
+    const { records } = matchPendingTurns(
+      [late],
+      [enqueue("hello world")],
+      SENT_AT + 9_000,
+    );
     expect(records[0]!.state).toBe("queued");
     expect(records[0]!.deadlineAt).toBeUndefined();
   });
 });
 
-const CTX: SweepContext = { now: 10_000, tabId: "tab", liveInflight: new Set() };
+const CTX: SweepContext = {
+  now: SENT_AT + 10_000,
+  tabId: "tab",
+  liveInflight: new Set(),
+};
 
 describe("sweepPendingTurns", () => {
   test("drops reconciled records — the real user-text row is the feedback", () => {
-    const { records, changed } = sweepPendingTurns([rec({ state: "sent" })], CTX);
+    const { records, changed } = sweepPendingTurns(
+      [rec({ state: "sent" })],
+      CTX,
+    );
     expect(changed).toBe(true);
     expect(records).toHaveLength(0);
   });
 
   test("adopts an owner-tab send left mid-flight by a reload", () => {
-    const { records, reports } = sweepPendingTurns([rec({ state: "sending" })], CTX);
+    const { records, reports } = sweepPendingTurns(
+      [rec({ state: "sending" })],
+      CTX,
+    );
     expect(records[0]!.state).toBe("unconfirmed");
     expect(reports).toHaveLength(1);
   });
@@ -215,7 +337,10 @@ describe("sweepPendingTurns", () => {
   });
 
   test("an elapsed deadline on a posted record trips unconfirmed, once", () => {
-    const first = sweepPendingTurns([rec({ state: "posted", deadlineAt: 9_000 })], CTX);
+    const first = sweepPendingTurns(
+      [rec({ state: "posted", deadlineAt: SENT_AT + 9_000 })],
+      CTX,
+    );
     expect(first.records[0]!.state).toBe("unconfirmed");
     expect(first.reports).toHaveLength(1);
     // The deadline is spent, so a second pass is inert and files nothing more.
@@ -227,7 +352,7 @@ describe("sweepPendingTurns", () => {
   test("never revokes a transcript-resolved record, whatever the deadline says", () => {
     // A queued record is parked in the CLI's own prompt queue — the transcript
     // says so. No deadline may take that back.
-    const queued = rec({ state: "queued", deadlineAt: 1 });
+    const queued = rec({ state: "queued", deadlineAt: SENT_AT + 1 });
     const { records, changed, reports } = sweepPendingTurns([queued], CTX);
     expect(changed).toBe(false);
     expect(records[0]!.state).toBe("queued");
@@ -244,7 +369,10 @@ describe("the reconcile transition is a fixed point", () => {
   const pass = (records: PendingTurnRecord[], events: JsonlEvent[]) => {
     const matched = matchPendingTurns(records, events, CTX.now);
     const swept = sweepPendingTurns(matched.records, CTX);
-    return { records: swept.records, changed: matched.changed || swept.changed };
+    return {
+      records: swept.records,
+      changed: matched.changed || swept.changed,
+    };
   };
 
   const STATES: PendingTurnState[] = [
@@ -255,12 +383,19 @@ describe("the reconcile transition is a fixed point", () => {
     "failed-post",
     "unconfirmed",
   ];
+  // A new transition means a new row here — and a new ELIGIBILITY rule means a
+  // new column: "delivered before the send" is a transcript that holds a
+  // matching row the record may not bind to.
   const TRANSCRIPTS: [string, JsonlEvent[]][] = [
     ["empty", []],
     ["enqueued", [enqueue("hello world")]],
     ["delivered", [userText("hello world")]],
-    ["enqueued then delivered", [enqueue("hello world"), userText("hello world")]],
+    [
+      "enqueued then delivered",
+      [enqueue("hello world"), userText("hello world")],
+    ],
     ["unrelated", [userText("something else"), enqueue("something else")]],
+    ["delivered before the send", [userText("hello world", BEFORE)]],
   ];
 
   for (const state of STATES) {
@@ -269,7 +404,11 @@ describe("the reconcile transition is a fixed point", () => {
         // Worst case for the deadline paths: an elapsed deadline and a live
         // POST nowhere to be found — exactly the shape that used to ping-pong.
         const start = [
-          rec({ state, deadlineAt: 1, reported: state === "unconfirmed" }),
+          rec({
+            state,
+            deadlineAt: SENT_AT + 1,
+            reported: state === "unconfirmed",
+          }),
         ];
         const first = pass(start, events);
         const second = pass(first.records, events);
@@ -286,7 +425,7 @@ describe("the reconcile transition is a fixed point", () => {
     const stuck = rec({
       state: "unconfirmed",
       reported: true,
-      deadlineAt: 1,
+      deadlineAt: SENT_AT + 1,
       errorMessage: "Not confirmed",
     });
     const first = pass([stuck], [enqueue("hello world")]);

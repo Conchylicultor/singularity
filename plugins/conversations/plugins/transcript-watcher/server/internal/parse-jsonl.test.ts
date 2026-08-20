@@ -184,6 +184,17 @@ describe("readJsonlEvents — off-spine attachment rescue", () => {
   });
 });
 
+describe("readJsonlEvents — unparseable timestamp", () => {
+  test("a line whose timestamp is not a parseable date emits no event", async () => {
+    const path = await writeFixture([
+      userLine("root", null, "hello", "not-a-date"),
+    ]);
+
+    const events = await readJsonlEvents(path);
+    expect(events).toHaveLength(0);
+  });
+});
+
 // ---------------------------------------------------------------------------
 // Session chains: one conversation spread over several Claude session files.
 // ---------------------------------------------------------------------------
@@ -343,7 +354,10 @@ describe("readJsonlEventsFromChain", () => {
     ]);
 
     const events = await readJsonlEventsFromChain([a, b]);
-    expect(textsOf(events, "user-text")).toEqual(["hello", "fork kept talking"]);
+    expect(textsOf(events, "user-text")).toEqual([
+      "hello",
+      "fork kept talking",
+    ]);
   });
 
   test("uuid-less metadata lines from every file reach the event stream", async () => {
@@ -365,7 +379,10 @@ describe("readJsonlEventsFromChain", () => {
 
   test("a chain entry with no transcript on disk yet is skipped", async () => {
     const a = await writeFixture([userLine("u1", null, "hello", T1)]);
-    const missing = join(tmpdir(), `parse-jsonl-absent-${crypto.randomUUID()}.jsonl`);
+    const missing = join(
+      tmpdir(),
+      `parse-jsonl-absent-${crypto.randomUUID()}.jsonl`,
+    );
 
     const events = await readJsonlEventsFromChain([a, missing]);
     expect(textsOf(events, "user-text")).toEqual(["hello"]);

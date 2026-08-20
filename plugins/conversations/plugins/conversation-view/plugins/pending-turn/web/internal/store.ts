@@ -106,8 +106,16 @@ export interface PendingTurnRecord {
   state: PendingTurnState;
   failureKind?: "http" | "network" | "delivery";
   errorMessage?: string;
-  /** Count of user-text events at first reconcile — earlier rows never match. */
-  baselineUserText: number | null;
+  /**
+   * When the send was dispatched, and the record's whole notion of time. It has
+   * TWO jobs: it is the TTL origin, and it is the transcript watermark — only
+   * rows the session log wrote at or after this instant (within a sub-second
+   * skew allowance) can bind to this record, so a pre-existing identical
+   * message never resolves it. It is set once, in `sendConversationTurn`,
+   * before the delivery is dispatched, and is NEVER moved afterwards —
+   * including across Retry, where keeping it is what lets the original send's
+   * own row retire the record if it landed and we merely failed to see it.
+   */
   createdAt: number;
   postedAt?: number;
   deadlineAt?: number;
@@ -271,7 +279,10 @@ function onTimer(conversationId: string, recordId: string): void {
     applyTimers(conversationId, entry);
     return;
   }
-  const { record, report: shouldReport } = toUnconfirmed(rec, UNCONFIRMED_MESSAGE);
+  const { record, report: shouldReport } = toUnconfirmed(
+    rec,
+    UNCONFIRMED_MESSAGE,
+  );
   if (record === rec) return;
   if (shouldReport) fileUnconfirmedReport(conversationId, rec);
   updateRecord(conversationId, recordId, () => record);
@@ -389,7 +400,10 @@ export function sendConversationTurn<P>(
     payload: hasDelivery ? turn.payload : { text: turn.text },
     echo: turn.echo ?? true,
     state: "sending",
-    baselineUserText: null,
+    // The transcript watermark (see the field's doc): read synchronously here,
+    // BEFORE the delivery below is dispatched, so the record can never be
+    // younger than the row its own turn produces. Moving this line after the
+    // delivery would look harmless and would make a turn unmatchable.
     createdAt: Date.now(),
   };
   const next = [...entry.records, record];
@@ -413,10 +427,14 @@ export function sendConversationTurn<P>(
  * rather than a closure: this runs just as often after a reload, in a tab that
  * never saw the original send.
  */
-export function retryPendingTurn(conversationId: string, recordId: string): void {
+export function retryPendingTurn(
+  conversationId: string,
+  recordId: string,
+): void {
   const entry = getEntry(conversationId);
   const rec = entry.records.find((r) => r.id === recordId);
-  if (!rec || (rec.state !== "failed-post" && rec.state !== "unconfirmed")) return;
+  if (!rec || (rec.state !== "failed-post" && rec.state !== "unconfirmed"))
+    return;
   updateRecord(conversationId, recordId, (r) => ({
     ...r,
     state: "sending",
@@ -424,8 +442,11 @@ export function retryPendingTurn(conversationId: string, recordId: string): void
     resolvedText: null,
     failureKind: undefined,
     errorMessage: undefined,
-    // Re-stamped on next reconcile so only the retry's own delivery matches.
-    baselineUserText: null,
+    // `createdAt` is deliberately NOT re-stamped: the retry keeps the original
+    // send's watermark. If that send did land and only its verification failed,
+    // its own row is the truth the card owes the user and must stay matchable;
+    // if it never landed, no such row exists and the retry's own row matches
+    // anyway. Moving the watermark forward could only hide a delivered turn.
     postedAt: undefined,
     deadlineAt: undefined,
     matchedAt: undefined,
@@ -436,7 +457,10 @@ export function retryPendingTurn(conversationId: string, recordId: string): void
   void runDelivery(conversationId, rec);
 }
 
-export function dismissPendingTurn(conversationId: string, recordId: string): void {
+export function dismissPendingTurn(
+  conversationId: string,
+  recordId: string,
+): void {
   const entry = getEntry(conversationId);
   if (!entry.records.some((r) => r.id === recordId)) return;
   commit(
@@ -470,7 +494,8 @@ export function reconcilePendingTurns(
     liveInflight: inflightPosts,
   });
   for (const rec of swept.reports) fileUnconfirmedReport(conversationId, rec);
-  if (matched.changed || swept.changed) commit(conversationId, entry, swept.records);
+  if (matched.changed || swept.changed)
+    commit(conversationId, entry, swept.records);
   // Ensure timers are armed even when nothing changed (reload within deadline).
   else applyTimers(conversationId, entry);
 }

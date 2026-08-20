@@ -23,9 +23,35 @@ import type { PendingTurnRecord, PendingTurnState } from "./store";
 //   2. `toUnconfirmed` is the single never-revert chokepoint: a record the
 //      transcript has already resolved can never be taken back by a deadline,
 //      a reload, or the TTL sweep.
+//   3. Eligibility is STATELESS. The matcher writes nothing to a record except
+//      a state transition — which rows a record may bind is derived from its
+//      own `createdAt`, not remembered from an earlier pass — so
+//      `match(records, events)` cannot depend on how many passes preceded it.
+//      It used to: a per-record baseline stamped on the record's first pass
+//      made the same (record, transcript) pair answer differently depending on
+//      when the pane happened to run, and a first pass deferred past the turn's
+//      own arrival declared a delivered turn unconfirmed.
 
 export const CONFIRM_DEADLINE_MS = 90_000;
 export const RECORD_TTL_MS = 7 * 24 * 60 * 60 * 1000; // matches persistent-draft's default
+
+/**
+ * Sub-second allowance around the send watermark, for the two clocks involved:
+ * the browser stamping `createdAt` and the CLI writing the transcript line.
+ * It is a *skew allowance*, not a matching window — a turn's own row is always
+ * written after its record exists, so the only thing this absorbs is jitter
+ * around that instant.
+ *
+ * The size is decided by the asymmetry of the two failure directions. Too
+ * SMALL and a turn's own row falls outside the window: a false `unconfirmed`, a
+ * Retry taken on false information, and the same text delivered to the agent
+ * twice — the observed incident. Too LARGE and a *prior* identical row inside
+ * the window resolves the record: a silent false "delivered", which is worse,
+ * but which needs an identical text sent within the window. Short repeat-prone
+ * sends ("Go", "continue") are common, so the window must stay far below any
+ * plausible human re-send interval. 1 s satisfies both.
+ */
+export const CLOCK_SKEW_ALLOWANCE_MS = 1_000;
 
 export const UNCONFIRMED_MESSAGE =
   "Not confirmed — the agent may not have received this message. Check the terminal.";
@@ -112,15 +138,30 @@ function outcome(
   return { records: changed ? after : before, changed };
 }
 
+/** A transcript row a record could bind to: when it was written, and what it says. */
+interface Candidate {
+  atMs: number;
+  normalized: string;
+}
+
+/**
+ * The SINGLE definition of eligibility: a record binds only to rows the session
+ * log wrote at or after the instant its own send was dispatched. `createdAt` is
+ * that instant (see its doc in store.ts) and is never moved, so this is a
+ * property of the record — not of when the matcher first ran.
+ */
+function matchWindowStart(rec: PendingTurnRecord): number {
+  return rec.createdAt - CLOCK_SKEW_ALLOWANCE_MS;
+}
+
 /**
  * One reconcile pass of pending records against the transcript events.
  *
- * - Stamps `baselineUserText` (the count of `user-text` events) on records that
- *   have none yet — a pre-existing identical row can never match, because only
- *   events past the baseline are candidates.
- * - Matches every unresolved record against `user-text` events past its
- *   baseline (→ `sent`), falling back to `queue-operation` enqueue events whose
- *   content matches (→ `queued`). The user-text match takes precedence.
+ * - Matches every unresolved record against `user-text` events written at or
+ *   after its own send (→ `sent`), falling back to `queue-operation` enqueue
+ *   events whose content matches (→ `queued`). The user-text match takes
+ *   precedence. Both arms are gated the same way, so a row that predates the
+ *   send — an identical message the user sent earlier — can resolve neither.
  *   "Unresolved" includes the FAILED states (`failed-post` / `unconfirmed`):
  *   the transcript is ground truth in BOTH directions, so a turn the CLI took
  *   before the POST reported a failure is a delivered turn, and its failure
@@ -129,65 +170,80 @@ function outcome(
  *   guarantees two identical in-flight messages bind to DISTINCT events.
  *   Already-matched records (`sent` during its flash window, `queued`) re-consume
  *   their event each pass so a sibling can never rebind it.
+ *
+ * Records are stored oldest-first and `createdAt` is non-decreasing along the
+ * array, so the eligibility windows are nested in exactly the order the matcher
+ * walks them. Greedy earliest-first assignment over nested windows is a maximum
+ * matching: no younger record can strand an older one.
+ *
+ * The pass writes nothing but state transitions, so it is a pure function of
+ * `(records, events, now)` — running it against the same transcript from a
+ * different pass count gives the same answer.
  */
 export function matchPendingTurns(
   records: PendingTurnRecord[],
   events: JsonlEvent[],
   now: number = Date.now(),
 ): MatchOutcome {
-  const userTexts: { ordinal: number; normalized: string }[] = [];
-  const enqueues: { normalized: string }[] = [];
+  const userTexts: Candidate[] = [];
+  const enqueues: Candidate[] = [];
   for (const event of events) {
     if (event.kind === "user-text") {
       userTexts.push({
-        ordinal: userTexts.length,
+        atMs: Date.parse(event.at),
         normalized: normalizeForMatch(event.text),
       });
-    } else if (event.kind === "queue-operation" && event.operation === "enqueue" && event.content) {
-      enqueues.push({ normalized: normalizeForMatch(event.content) });
+    } else if (
+      event.kind === "queue-operation" &&
+      event.operation === "enqueue" &&
+      event.content
+    ) {
+      enqueues.push({
+        atMs: Date.parse(event.at),
+        normalized: normalizeForMatch(event.content),
+      });
     }
   }
 
   const consumedUser = new Set<number>();
   const consumedEnqueue = new Set<number>();
 
-  const takeUserText = (target: string, baseline: number): boolean => {
-    const hit = userTexts.find(
-      (u) => u.ordinal >= baseline && !consumedUser.has(u.ordinal) && u.normalized === target,
-    );
-    if (!hit) return false;
-    consumedUser.add(hit.ordinal);
-    return true;
-  };
-  const takeEnqueue = (target: string): boolean => {
-    const idx = enqueues.findIndex(
-      (q, i) => !consumedEnqueue.has(i) && q.normalized === target,
+  // The array index IS the row's ordinal and IS the consumed-set key — nothing
+  // to keep in sync, and the earliest eligible row is taken first.
+  const take = (
+    candidates: Candidate[],
+    consumed: Set<number>,
+    target: string,
+    since: number,
+  ): boolean => {
+    const idx = candidates.findIndex(
+      (c, i) => c.atMs >= since && !consumed.has(i) && c.normalized === target,
     );
     if (idx === -1) return false;
-    consumedEnqueue.add(idx);
+    consumed.add(idx);
     return true;
   };
+  const takeUserText = (target: string, since: number): boolean =>
+    take(userTexts, consumedUser, target, since);
+  const takeEnqueue = (target: string, since: number): boolean =>
+    take(enqueues, consumedEnqueue, target, since);
 
-  const next = records.map((r) => {
-    let rec = r;
-    if (rec.baselineUserText == null) {
-      rec = { ...rec, baselineUserText: userTexts.length };
-    }
+  const next = records.map((rec) => {
     const target = normalizeForMatch(rec.resolvedText ?? rec.text);
-    const baseline = rec.baselineUserText ?? 0;
+    const since = matchWindowStart(rec);
 
     if (rec.state === "sent") {
       // Re-consume its event during the flash window so an identical in-flight
       // sibling cannot bind the same row.
-      takeUserText(target, baseline);
+      takeUserText(target, since);
       return rec;
     }
     if (rec.state === "queued") {
-      if (takeUserText(target, baseline)) {
+      if (takeUserText(target, since)) {
         return { ...rec, state: "sent" as const, matchedAt: now };
       }
       // Still parked: re-consume its enqueue row for the same reason as above.
-      takeEnqueue(target);
+      takeEnqueue(target, since);
       return rec;
     }
     // Everything else — in-flight (`sending` / `posted`) and failed
@@ -197,10 +253,10 @@ export function matchPendingTurns(
     // landed and whose *verification* then failed (tmux submit-verify timing
     // out under load, a 500 raised after the paste, a torn connection) shows up
     // in the transcript regardless — and when it does, it was delivered.
-    if (takeUserText(target, baseline)) {
+    if (takeUserText(target, since)) {
       return { ...rec, state: "sent" as const, matchedAt: now };
     }
-    if (takeEnqueue(target)) {
+    if (takeEnqueue(target, since)) {
       // Parked in the CLI's prompt queue: the native queue-op row takes over
       // the display. Failure metadata is dropped with the failed state, and so
       // is the confirmation deadline — the transcript has confirmed this
@@ -250,7 +306,10 @@ export function sweepPendingTurns(
   const kept: PendingTurnRecord[] = [];
   const reports: PendingTurnRecord[] = [];
 
-  const retire = (rec: PendingTurnRecord, message: string): PendingTurnRecord => {
+  const retire = (
+    rec: PendingTurnRecord,
+    message: string,
+  ): PendingTurnRecord => {
     const { record, report } = toUnconfirmed(rec, message);
     if (report) reports.push(rec);
     return record;
@@ -271,7 +330,11 @@ export function sweepPendingTurns(
       // Owner-tab reload found the record mid-send with no live POST: the
       // outcome is unknown and auto-resend is forbidden — surface it.
       rec = retire(rec, INTERRUPTED_MESSAGE);
-    } else if (rec.state === "posted" && rec.deadlineAt != null && now >= rec.deadlineAt) {
+    } else if (
+      rec.state === "posted" &&
+      rec.deadlineAt != null &&
+      now >= rec.deadlineAt
+    ) {
       // Absolute deadline: any tab adopts an orphaned record here.
       rec = retire(rec, UNCONFIRMED_MESSAGE);
     }
