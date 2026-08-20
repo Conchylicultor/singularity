@@ -11,6 +11,8 @@ nothing, not React, not Lexical, not the floating-surface primitive.
 - `selectionRect()` → `DOMRect | null` — that range's bounding rect, gated on
   `hasBox`, or `null` when there is no selection or it carries no box.
 - `hasBox(rect)` → `boolean` — `rect.width !== 0 || rect.height !== 0`.
+- `selectionIsCollapsed()` → `boolean` — whether the user has nothing
+  highlighted right now (no selection, no range, or a collapsed one).
 
 ## The three-part guard is why this exists
 
@@ -49,6 +51,41 @@ Two reasons, and the second is the load-bearing one:
   `page/editor`'s `format-toolbar-plugin` holds both in one file and juggles the
   distinction line by line; a helper called `selectionRect` would read as either
   one.
+
+## `selectionIsCollapsed` — a clipboard handler cannot ask Lexical
+
+The section above says the model "can disagree with the DOM at any instant". For
+one consumer it cannot even find out, and a handler that guesses wrong ships a
+bug that looks like it lives somewhere else entirely.
+
+**During a `copy` or a `cut`, Lexical never looks at the document.**
+`$internalCreateRangeSelection` re-derives the model from the DOM only for an
+allow-listed event set — `selectionchange`, `beforeinput`, the composition
+events, a triple `click`, `drop` — and returns `lastSelection.clone()` for
+everything else. `copy` and `cut` are everything else. So a clipboard handler
+reads the model as it was last synced, and has no way to recover if that is out
+of date.
+
+**And it goes out of date under rapid input.** The model is synced on
+`selectionchange`, which the browser fires in a LATER task than the keystroke
+that moved the selection, so until it lands the model describes the caret as it
+was BEFORE the gesture. (The page editor's e2e harness already documents that
+lag, from the opposite side, in `e2e/support/caret.ts`.)
+
+The damaging shape is a gesture that goes from a caret to a full selection in
+**one step** — `Shift+Home`, `Shift+End`, `⌘A`, a drag, a triple-click — because
+then "stale" means COLLAPSED: the document plainly has a highlight while
+`isCollapsed()` says nothing is selected. Only the FIRST step of a gesture has
+that shape; from the second `Shift+Arrow` on the model is merely one character
+behind, so the check comes out right. That asymmetry is why the page editor's
+whole-line `⌘C` bug read as "only whole selections are wrong" — and why it read
+as a *paste* bug, though the paste was faithfully doing what the copy had put on
+the clipboard.
+
+The document's own selection has neither problem: it IS what the native copy is
+about to act on. When a handler needs both facts — "is the caret in MY editor"
+(model) and "did the user select something" (document) — it asks each of the
+right one and acts only when they agree.
 
 ## `hasBox` — a rect with no box is not an anchor
 
@@ -98,7 +135,7 @@ need no guard; `getRangeAt` is the one read that does.
 
 ## Plugin reference
 
-- Description: The one sanctioned home for the guarded document-selection read: selectionRange() states the three-part guard (no selection → rangeCount 0 → getRangeAt(0) throwing IndexSizeError) that four hand-rolled copies each remembered a different subset of, selectionRect() is that range's bounding rect, and hasBox(rect) is the one statement of 'a rect with no box is not an anchor'. Named for the DOM selection to keep it apart from Lexical's model $getSelection; owns the range read too, since a copy handler wants the range for its content, not its geometry.
+- Description: The one sanctioned home for the guarded document-selection read: selectionRange() states the three-part guard (no selection → rangeCount 0 → getRangeAt(0) throwing IndexSizeError) that four hand-rolled copies each remembered a different subset of, selectionRect() is that range's bounding rect, hasBox(rect) is the one statement of 'a rect with no box is not an anchor', and selectionIsCollapsed() answers 'does the user have anything highlighted right now' — the question Lexical's model gets wrong for a whole task after a one-step selection gesture. Named for the DOM selection to keep it apart from Lexical's model $getSelection; owns the range read too, since a copy handler wants the range for its content, not its geometry.
 - Cross-plugin:
   - Imported by:
     - `page/editor`
@@ -107,6 +144,7 @@ need no guard; `getRangeAt` is the one read that does.
 - Web:
   - Exports (values):
     - `hasBox`
+    - `selectionIsCollapsed`
     - `selectionRange`
     - `selectionRect`
 

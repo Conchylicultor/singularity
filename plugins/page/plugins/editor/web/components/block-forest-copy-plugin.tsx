@@ -7,6 +7,7 @@ import {
   CUT_COMMAND,
 } from "lexical";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
+import { selectionIsCollapsed } from "@plugins/primitives/plugins/dom-selection/web";
 import { useBlockEditor } from "../block-editor-context";
 import { Editor } from "../slots";
 import type { BlockTextPluginProps } from "../internal/block-text-extensions";
@@ -30,6 +31,18 @@ import { serializeForest } from "../serialize-blocks";
  * Only the collapsed case — where the native copy has nothing to copy and is a
  * silent no-op — is claimed. That single condition is the whole rule; there is no
  * modifier to learn and nothing to toggle.
+ *
+ * **"Nothing selected" is a fact about the DOCUMENT's selection**, and both
+ * halves have to agree before this claims the event — see
+ * {@link selectionIsCollapsed}. Lexical's model is synced from the DOM on
+ * `selectionchange`, one task LATER than the keystroke that moved it, so between
+ * a one-step selection gesture (Shift+Home, ⌘A, a drag, a triple-click) and the
+ * very next key the model still describes the pre-gesture caret — collapsed.
+ * Asking it alone made ⌘C right after Shift+Home copy the whole BLOCK (which
+ * then pasted as a new block below, instead of the selected text landing
+ * inline), and ⌘X delete it. Repeated Shift+Arrow hid it: after the first press
+ * the model is one step stale rather than collapsed, which is exactly why the
+ * defect read as "only whole-line selections are wrong".
  *
  * Registered at `COMMAND_PRIORITY_NORMAL`, above `@lexical/rich-text`'s own
  * copy/cut handlers (`COMMAND_PRIORITY_EDITOR`), the same rung
@@ -59,9 +72,15 @@ export function BlockForestCopyPlugin({ block, editor }: BlockTextPluginProps) {
     const writeBlock = (event: ClipboardEvent): boolean => {
       const selection = $getSelection();
       // A text range (or a node selection inside the block) belongs to the
-      // browser; only a collapsed caret means "the whole block".
+      // browser; only a collapsed caret means "the whole block". BOTH answers
+      // must say so: the model's is the caret's home (it is what tells us the
+      // caret is in THIS block at all), the document's is the one that is
+      // current (see the DOM-vs-model note above). Disagreement declines, which
+      // is the safe direction — the worst case is a bare-caret copy falling back
+      // to the native no-op, against a whole block copied or CUT unasked.
       if (!$isRangeSelection(selection) || !selection.isCollapsed())
         return false;
+      if (!selectionIsCollapsed()) return false;
       const clipboardData = event.clipboardData;
       if (clipboardData === null) return false;
       const forest = serializeForest(rowsRef.current, [block.id]);

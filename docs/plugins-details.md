@@ -18183,6 +18183,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/css/ui-kit.SURFACE_LEVELS`
           - `primitives/css/viewport-overlay.ViewportOverlay`
           - `primitives/dom-selection.hasBox`
+          - `primitives/dom-selection.selectionIsCollapsed`
           - `primitives/dom-selection.selectionRange`
           - `primitives/dom-selection.selectionRect`
           - `primitives/icon-button.IconButton`
@@ -24613,7 +24614,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conversations/conversation-view/jsonl-viewer/tool-call/page-tools/edit-page`
           - `review/code-review`
           - `review/plugin-changes/file-changes`
-    - **`dom-selection`** — The one sanctioned home for the guarded document-selection read: selectionRange() states the three-part guard (no selection → rangeCount 0 → getRangeAt(0) throwing IndexSizeError) that four hand-rolled copies each remembered a different subset of, selectionRect() is that range's bounding rect, and hasBox(rect) is the one statement of 'a rect with no box is not an anchor'. Named for the DOM selection to keep it apart from Lexical's model $getSelection; owns the range read too, since a copy handler wants the range for its content, not its geometry.
+    - **`dom-selection`** — The one sanctioned home for the guarded document-selection read: selectionRange() states the three-part guard (no selection → rangeCount 0 → getRangeAt(0) throwing IndexSizeError) that four hand-rolled copies each remembered a different subset of, selectionRect() is that range's bounding rect, hasBox(rect) is the one statement of 'a rect with no box is not an anchor', and selectionIsCollapsed() answers 'does the user have anything highlighted right now' — the question Lexical's model gets wrong for a whole task after a one-step selection gesture. Named for the DOM selection to keep it apart from Lexical's model $getSelection; owns the range read too, since a copy handler wants the range for its content, not its geometry.
       - Cross-plugin:
         - Imported by:
           - `page/editor`
@@ -24622,6 +24623,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Web:
         - Exports (values):
           - `hasBox`
+          - `selectionIsCollapsed`
           - `selectionRange`
           - `selectionRect`
     - **`edit-mode-signal`** — The page-global edit-mode signal — setEditMode / getEditMode / useEditMode — as a leaf primitive whose only import is react. Everything that reorder's edit mode restyles (a bar, a wrapping chip row) reads the signal without importing the reorder feature plugin.

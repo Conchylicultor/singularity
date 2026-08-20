@@ -45,6 +45,7 @@ import { FormatToolbarPlugin } from "./format-toolbar-plugin";
 import { FormatShortcutsPlugin } from "./format-shortcuts-plugin";
 import { BlockPastePlugin } from "./block-paste-plugin";
 import { BlockForestCopyPlugin } from "./block-forest-copy-plugin";
+import { BlockClipboardInsertPlugin } from "./block-clipboard-insert-plugin";
 import { BlockForestPastePlugin } from "./block-forest-paste-plugin";
 import {
   blockTextNodes,
@@ -430,6 +431,12 @@ export function BlockTextEditor({
       <BlockPastePlugin block={block} editor={editor} />
       <BlockForestPastePlugin block={block} editor={editor} />
       <BlockForestCopyPlugin block={block} editor={editor} />
+      {/* Registers on SELECTION_INSERT_CLIPBOARD_NODES_COMMAND, not PASTE_COMMAND
+          — nothing else in the app or in @lexical/* registers on it, so mount
+          order here is inert. The two paste plugins above short-circuit before
+          Lexical's own insert ever runs, so this only ever sees what they
+          declined. */}
+      <BlockClipboardInsertPlugin />
       {getBlockTextExtensions().map((ext) =>
         ext.Plugin ? (
           <ext.Plugin key={ext.id} block={block} editor={editor} />

@@ -1402,7 +1402,102 @@ handlers.
 `e2e/caret-clipboard-verify.ts` is the executable spec: the bare-caret copy
 against a sentinel clipboard (a stale value IS the pre-change symptom), the
 paste-duplicates-it pair, the subtree travelling with its parent, the text-range
-copy staying inline, and the cut.
+copy staying inline, the cut, and (phase F) the one-step gesture copied with
+**no settle** — there the timing IS the assertion, and a settle would silently
+re-test phase D.
+
+### "Nothing selected" is a question for the DOM, not for Lexical
+
+> A clipboard handler asks `selectionIsCollapsed()` (`primitives/dom-selection`)
+> and claims only when the model and the document AGREE that nothing is
+> selected. **Lexical's model cannot answer this during a copy**: its
+> `$internalCreateRangeSelection` re-derives from the DOM only for an
+> allow-listed event set — `selectionchange`, `beforeinput`, the composition
+> events, a triple `click`, `drop` — and hands back `lastSelection.clone()` for
+> everything else. `copy` and `cut` are everything else.
+
+So the model in a copy handler is whatever the last sync left, with no way to
+recover if that is out of date — and it goes out of date under rapid input,
+because `selectionchange` fires in a LATER task than the keystroke that moved
+the selection. That combination is the whole of the whole-line copy bug, and it
+is worth stating because the symptom points nowhere near the cause:
+
+- **The damaging shape is a selection made in one step** — `Shift+Home`,
+  `Shift+End`, `⌘A`, a drag, a triple-click — because only then does "stale"
+  mean COLLAPSED: the document plainly has a highlight while `isCollapsed()`
+  says nothing is selected. `⌘C` in that window read as "nothing selected", so
+  the plugin copied the whole BLOCK — and `BlockForestPastePlugin` then landed
+  it as a new block BELOW, which is what the user saw instead of their text
+  arriving inline. `⌘X` would have deleted the block.
+- **Only the FIRST step of a gesture has that shape.** From the second
+  `Shift+Arrow` on, the model is merely one character behind rather than
+  collapsed, so the decline is correct. That asymmetry is why the defect reads
+  as "only whole-line selections are wrong", and why it reads as a PASTE bug:
+  the paste was faithfully landing what the copy had put on the clipboard.
+- **Disagreement declines**, never claims. The worst case on that branch is a
+  bare-caret copy falling back to the native no-op; the worst case on the other
+  is a block copied — or cut — that the user never selected.
+
+## A block is ONE paragraph, and a paste cannot make it two
+
+A block is its own row, its own content doc, its own Lexical editor with a
+single-element root. Nothing in normal use can put a second paragraph in that
+root: Enter is a structural `split` op that mints a real sibling row and
+truncates this one, and Shift+Enter inserts a `LineBreakNode` INSIDE the
+paragraph. Every caret, split and merge rule in this plugin is written against
+the absence of that state. The one path that could produce it was a clipboard
+insert, and nothing guarded it.
+
+`BlockClipboardInsertPlugin` states the rule at
+`SELECTION_INSERT_CLIPBOARD_NODES_COMMAND`, Lexical's own seam for "what does
+this editor do with clipboard-generated nodes?".
+`$insertDataTransferForRichText` dispatches it for whichever MARKUP flavor it
+parsed (`application/x-lexical-editor`, `text/html`) and for every gesture that
+reaches that function — paste, drop, and the controlled text insertion behind an
+IME. Guarding there rather than at `PASTE_COMMAND` is what makes the rule hold
+across all of those instead of the ones we happened to list.
+
+- **It claims only a payload that actually carries block structure.**
+  `isBlockLevel` is `RangeSelection.insertNodes`' OWN predicate for taking its
+  paragraph-splitting branch, so the guard tests exactly what it guards against.
+  An all-inline payload — the overwhelmingly common case — declines, and the
+  ordinary paste keeps Lexical's behaviour untouched. Where it does claim, it
+  restates the one thing Lexical would have done afterwards: carrying the last
+  pasted run's marks onto the caret (`$updateSelectionOnInsert`, not exported),
+  so typing continues in the pasted format on BOTH arms.
+- **Block structure can reach here even though `decidePaste` already ran.** That
+  classifier reads `text/plain`; `text/html` is written by whatever app the user
+  copied from and need not agree with it. A single-line `text/plain` beside a
+  multi-paragraph `text/html` is ordinary output from real editors, and it is
+  the reachable case: measured against `lexical@0.44.0`, a lone `<p>hello</p>`
+  merges into the caret's paragraph on its own, but `<p>a</p><p>b</p>` leaves the
+  root with two.
+- **A boundary with content on both sides becomes a soft break.**
+  `$flattenToInline` unwraps each block element and emits a `LineBreakNode`
+  lazily, only once something follows — which is what a line boundary inside a
+  block already IS here. The lazy half is not a detail: a leading-edge-only rule
+  fuses `<p>a</p>tail` into `atail`, and leaves a stray trailing break (and with
+  it a trailing `"\n"` run, and the caret parked on a `<br>`) for the
+  `<p>a</p><p></p>` that real editors emit. Nothing is dropped and no row is
+  minted.
+- **Three outcomes, three arms** (`InlineClipboardContent`), because an empty
+  result and a refusal need different decisions and a bare array would let them
+  ride together. `empty` — block structure carrying no content — still has to
+  REPLACE what was selected, which `insertNodes([])` returns too early to do.
+  `not-inline` is a non-inline DECORATOR: it owns no children to unwrap, so
+  there is no inline form of it and dropping it would lose content — the plugin
+  declines and Lexical's own insert runs exactly as before. No block-text node
+  registers such a decorator today; the arm exists so adding one is a visible
+  behaviour rather than a silent delete.
+
+**What it does NOT cover**, stated so the gap is not mistaken for coverage: the
+plain-text arm of `$insertDataTransferForRichText` calls
+`selection.insertParagraph()` per newline and dispatches no command, so no
+listener can reach it. Nothing arrives there through a PASTE — `decidePaste`
+claims multi-line `text/plain` first — but DROP has no classifier in front of
+it at all, so **dropping multi-line text still splits the block's root**. That
+is a hole in drop's own wiring (it needs the `decidePaste` treatment paste has),
+not in this rule.
 
 ## Paste is an op (`{ kind: "paste", forest, afterId, parentId }`)
 
@@ -2367,6 +2462,7 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
     - `primitives/css/ui-kit.SURFACE_LEVELS`
     - `primitives/css/viewport-overlay.ViewportOverlay`
     - `primitives/dom-selection.hasBox`
+    - `primitives/dom-selection.selectionIsCollapsed`
     - `primitives/dom-selection.selectionRange`
     - `primitives/dom-selection.selectionRect`
     - `primitives/icon-button.IconButton`

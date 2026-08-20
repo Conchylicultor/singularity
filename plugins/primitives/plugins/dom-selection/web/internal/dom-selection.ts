@@ -79,3 +79,36 @@ export function selectionRect(): DOMRect | null {
   const rect = range.getBoundingClientRect();
   return hasBox(rect) ? rect : null;
 }
+
+/**
+ * Whether the user currently has **nothing highlighted** — no selection object,
+ * no range, or a collapsed one.
+ *
+ * This is the question a clipboard handler has to ask before it substitutes its
+ * own payload for the native copy, and asking Lexical's model `$getSelection()`
+ * instead cannot answer it. During a `copy` or `cut`, Lexical does not look at
+ * the document at all: `$internalCreateRangeSelection` re-derives the model from
+ * the DOM only for an allow-listed event set — `selectionchange`, `beforeinput`,
+ * the composition events, a triple `click`, `drop` — and returns
+ * `lastSelection.clone()` for everything else. `copy` and `cut` are everything
+ * else. So a clipboard handler reads the model as it was last synced, and has no
+ * way to recover if that is out of date.
+ *
+ * It goes out of date whenever a selection gesture's `selectionchange` has not
+ * been processed yet — the browser fires it in a LATER task than the keystroke,
+ * so under rapid input the model still describes the caret as it was BEFORE the
+ * gesture. The damaging shape is a gesture that goes from a caret to a full
+ * selection in ONE step (Shift+Home, Shift+End, ⌘A, a drag, a triple-click),
+ * because then "stale" means COLLAPSED: the document plainly has a highlight and
+ * a handler keying off `isCollapsed()` acts as if the user had selected nothing.
+ * Only the FIRST step of a gesture has that shape — from the second Shift+Arrow
+ * on, the model is merely one character behind rather than collapsed, which is
+ * why the defect this was written for read as a whole-selection-only one.
+ *
+ * The document's own selection has neither problem: it IS what the native copy
+ * is about to act on, which is exactly what the handler needs to know.
+ */
+export function selectionIsCollapsed(): boolean {
+  const range = selectionRange();
+  return range === null || range.collapsed;
+}

@@ -15,6 +15,12 @@
 //   E. block-selection paste anchors on the selection's document-order END, so an
 //      UPWARD-extended range is not split in half by its own copies
 //      (research/2026-07-16-page-paste-anchor-selection-end.md)
+//   F. a caret paste of FOREIGN markup whose text/html carries several blocks but
+//      whose text/plain is one line lands inside the block, never as a second
+//      paragraph in its root — the one-paragraph-per-block invariant, enforced by
+//      `BlockClipboardInsertPlugin`. `decidePaste` reads text/plain and declines
+//      such a payload, so before the guard it reached Lexical's own insert, which
+//      splits the paragraph. Real editors emit exactly this pair.
 //
 // Usage: bun plugins/page/plugins/editor/e2e/copy-paste-verify.ts [--base <url>]
 import {
@@ -32,7 +38,10 @@ const r = report();
 await withBrowser(async (h) => {
   const { context, page } = await h.session();
   await context.grantPermissions(["clipboard-read", "clipboard-write"]);
-  const { checkSelectionOwnsFocus, enterBlockSelection } = blockSelectionDriver(page, r);
+  const { checkSelectionOwnsFocus, enterBlockSelection } = blockSelectionDriver(
+    page,
+    r,
+  );
 
   await openBlankPage(page, base, { settleMs: 3000 });
 
@@ -43,7 +52,9 @@ await withBrowser(async (h) => {
   const blockTexts = (): Promise<string[]> =>
     page.evaluate(() =>
       [
-        ...document.querySelectorAll('[data-block-id] [contenteditable="true"]'),
+        ...document.querySelectorAll(
+          '[data-block-id] [contenteditable="true"]',
+        ),
       ].map((el) => (el.textContent ?? "").trim()),
     );
 
@@ -165,6 +176,51 @@ await withBrowser(async (h) => {
       "bravo",
     ],
   );
+
+  // ---- F: foreign multi-block HTML with one-line text/plain stays in the block --
+  // Synthesised rather than copied, because the pair (multi-block text/html +
+  // single-line text/plain) is what OTHER apps put on the clipboard — this
+  // editor's own copy never writes text/html at all.
+  // Phase E left block-selection mode on, whose floating SelectionBar sits over
+  // the rows — leave it before reaching for a caret.
+  await page.keyboard.press("Escape");
+  await page.waitForTimeout(300);
+  await block(0).click();
+  await page.keyboard.press("End");
+  await page.waitForTimeout(300);
+  const beforeF = await blockTexts();
+  await page.evaluate(() => {
+    const el = document.querySelector(
+      '[data-block-id] [contenteditable="true"]',
+    ) as HTMLElement | null;
+    if (!el) throw new Error("no editable block");
+    const dt = new DataTransfer();
+    dt.setData("text/plain", "onetwo");
+    dt.setData("text/html", "<p>one</p><p>two</p>");
+    el.dispatchEvent(
+      new ClipboardEvent("paste", {
+        clipboardData: dt,
+        bubbles: true,
+        cancelable: true,
+      }),
+    );
+  });
+  await page.waitForTimeout(2000);
+  const afterF = await blockTexts();
+  r.eq("F: the paste minted no block", afterF.length, beforeF.length);
+  // One block, both paragraphs' text, joined by the soft break a line boundary
+  // inside a block already is. `textContent` reads the `<br>` as nothing.
+  r.eq(
+    "F: both paragraphs landed in the caret's block",
+    afterF[0],
+    "alphaonetwo",
+  );
+  const rootParagraphs = await page.evaluate(
+    () =>
+      document.querySelector('[data-block-id] [contenteditable="true"]')
+        ?.childElementCount ?? -1,
+  );
+  r.eq("F: the block's root still holds ONE paragraph", rootParagraphs, 1);
 
   r.finish();
 });
