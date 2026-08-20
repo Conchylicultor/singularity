@@ -47,10 +47,17 @@ export interface JobCtx {
   workflowRunId: string;
   /**
    * Aborted when THIS dispatch has used up its execution budget — the wall-clock
-   * time one run of this handler may spend holding a worker slot. (The budget
-   * itself lands in a later phase; today nothing fires this signal, so it is a
-   * signal that stays unaborted for the handler's whole life. Threading it now is
-   * free and means the budget arrives without touching call sites.)
+   * time one run of this handler may spend holding a worker slot. The budget is
+   * the hold class's `deadlineMs` (`core/hold.ts`), so there is nothing extra to
+   * declare: the class a job already picks IS its deadline. The abort reason is
+   * a `JobDeadlineExceededError`.
+   *
+   * What happens at that instant, and what deliberately does not: the signal
+   * aborts and an overrun report is filed. The dispatch does NOT return, the
+   * advisory lock is NOT released, and the job row is NOT touched — so nothing
+   * can re-dispatch this row while the handler is still live. If the handler is
+   * still unsettled 30 s later it is reported again as a zombie. A handler that
+   * settles in time never sees any of this.
    *
    * **Thread it into anything that accepts one.** `fetch`, child processes, gate
    * and pool acquisition — anywhere the handler can wait. Aborting the signal is
@@ -293,10 +300,9 @@ interface BaseJobSpec<
    *   or upload?
    *
    * This is the only declaration of a job's duration class. It picks the
-   * reservation tier today and, when
-   * `research/2026-08-17-global-bounded-job-execution.md` Phase 2 lands, the
-   * deadline that aborts `ctx.signal`. There is deliberately no second field, so
-   * a lane and a budget cannot disagree.
+   * reservation tier AND the deadline that aborts `ctx.signal`
+   * (`deadlineMsFor`). There is deliberately no second field, so a lane and a
+   * budget cannot disagree.
    */
   hold: HoldClass;
   /**

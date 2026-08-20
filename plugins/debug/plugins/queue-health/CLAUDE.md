@@ -187,14 +187,16 @@ the two came from different snapshots. Reports fire only when a threshold trips:
   jobName and files one report per jobName over its class's threshold. **One
   report per distinct jobName** (fingerprint `queue-slot-hog:<jobName>`).
 
-  **The hold-vs-work tension, resolved deliberately.** A class's ceiling is
-  defined on WORK (`durationMs - waitMs`) because slot-hold is substantially not
-  a property of the job. But a locked graphile row carries only `locked_at`, so
-  HOLD is the only quantity this detector can see at all. It therefore stays on
-  hold, with **explicit headroom**: the threshold is
-  `ceilingMsFor(hold) × slotHogHoldFactor` (default ×3 → 30s / 6min / 90min).
-  Crossing three times the ceiling is not explicable by ordinary gate wait; and
-  when the excess IS wait rather than work, `queue-slot-blocked` says so exactly,
+  **Measured against the deadline, not the ceiling.** A class's `ceilingMs` is
+  defined on WORK; a locked graphile row carries only `locked_at`, so HOLD is all
+  this detector can see. So it compares against the one class number that is also
+  defined on hold — `deadlineMsFor(hold)`, the point at which a run is aborted —
+  at `slotHogDeadlineFraction` of it (default 0.5 → 30s / 5min / 30min). The
+  fraction is constrained strictly below 1, so **warn-before-kill is structural**:
+  this report always precedes `job-deadline-exceeded`, for every class, at every
+  settable config value.
+
+  When the excess IS wait rather than work, `queue-slot-blocked` says so exactly,
   by name of the gate. The two are complements — a genuinely blocked job trips
   both, and the second one carries the actionable half.
 
@@ -274,14 +276,15 @@ only evidence there was one.
 ## Thresholds (config_v2, mirroring slowOpConfig)
 
 `enabled = true`, `backlogDepthThreshold = 200`, `oldestOverdueMinutes = 10`,
-`slotHogHoldFactor = 3` (× the class's work ceiling),
+`slotHogDeadlineFraction = 0.5` (× the class's deadline),
 `slotBlockedWaitSeconds = 5`, `wedgeMinutes = 3` (also the floor of each class's
 starvation window). Read live each tick via `getConfig`, editable in
 Settings → Config. The 30s tick interval is **not** here — see above.
 
-`slotHogHoldFactor` replaced the old flat `runningJobMinutes`: a factor rather
-than a duration, so the alarm scales with what each job declared instead of
-restating a number the class table already owns.
+`slotHogDeadlineFraction` is a fraction rather than a duration, so the alarm
+scales with what each job declared instead of restating a number the class table
+owns. Its `(0,1)` bounds are what make warn-before-kill structural — do not widen
+them to include 1, which would put the warning on the same instant as the abort.
 
 ## Why per-backend and cheap
 

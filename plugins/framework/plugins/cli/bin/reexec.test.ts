@@ -159,6 +159,10 @@ test("a bootstrap that installs can run a command needing the installed package"
   const result = await spawnCaptured([process.execPath, join(bin, "index.ts"), "some-command"], {
     cwd: join(root, "pkg"),
     env,
+    // The child is the CLI bootstrap re-exec'ing itself over a fixture package —
+    // no install, no build. A bound is here because a hung child would hang the
+    // whole test runner silently instead of failing this one case.
+    timeoutMs: 60_000,
   });
 
   expect(result.stderr).not.toContain("Cannot find package");

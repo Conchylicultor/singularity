@@ -1,6 +1,15 @@
 import { resolve, sep } from "node:path";
 
 import { GIT, HOME_DIR } from "@plugins/infra/plugins/paths/server";
+import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
+
+// Every git read in this file serves an open HTTP request from the code
+// explorer: a local, metadata-or-blob read that finishes in milliseconds. The
+// request is the deadline, and thirty seconds is well past the point where an
+// answer still helps whoever is looking at the pane — so only a wedged child
+// reaches it, and it fails as a named error instead of holding the request open
+// forever.
+const GIT_TIMEOUT_MS = 30_000;
 const MAX_BYTES = 2 * 1024 * 1024;
 
 function expandTilde(path: string): string {
@@ -40,15 +49,14 @@ export async function getFileContentAtRef(
   const absTarget = resolve(absRoot, relPath);
   if (!isPathInside(absRoot, absTarget)) return { kind: "invalid-path" };
 
-  const proc = Bun.spawn([GIT, "--no-optional-locks", "-C", absRoot, "show", `${ref}:${relPath}`], {
-    stdout: "pipe",
-    stderr: "pipe",
-  });
-  const [bytes, code] = await Promise.all([
-    new Response(proc.stdout).arrayBuffer().then((b) => new Uint8Array(b)),
-    proc.exited,
-  ]);
-  if (code !== 0) return { kind: "not-found" };
+  const result = await spawnCaptured(
+    [GIT, "--no-optional-locks", "-C", absRoot, "show", `${ref}:${relPath}`],
+    { timeoutMs: GIT_TIMEOUT_MS },
+  );
+  if (result.exitCode !== 0) return { kind: "not-found" };
+  // Raw bytes, not the utf8 decode: the size gate and the binary sniff below
+  // are both statements about the file's bytes.
+  const bytes = result.stdoutBytes;
   if (bytes.length > MAX_BYTES) return { kind: "too-large", size: bytes.length };
   if (looksBinary(bytes)) return { kind: "binary" };
   return { kind: "ok", content: new TextDecoder().decode(bytes) };

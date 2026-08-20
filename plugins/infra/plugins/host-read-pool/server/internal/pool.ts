@@ -54,9 +54,37 @@ registerGateGauge("heavy-read-local", () => perWorktreeGate.stats());
 // caller composition.
 const holdingSlot = new AsyncLocalStorage<true>();
 
-export function withHeavyReadSlot<T>(fn: () => Promise<T>): Promise<T> {
+/**
+ * Admit `fn` to the two-tier heavy-read gate.
+ *
+ * `signal` is optional and ambient: pass a job handler's `ctx.signal` (or an
+ * enclosing request's) and an abort stops the caller waiting for a slot, throwing
+ * `signal.reason`. Threaded into BOTH tiers, but they cancel with different
+ * sharpness, and the difference is worth knowing rather than papering over:
+ *
+ *  - The HOST tier honours it properly (`AcquireHooks.signal`): a pending flock
+ *    acquire unwinds, and an abort while `fn` runs releases the host slot without
+ *    waiting for `fn` to settle. That is the tier that matters, because it is the
+ *    one holding a resource every other backend on the box shares.
+ *  - The LOCAL tier — `createSemaphore`, an in-process counter+queue — takes no
+ *    signal, by design (its consumers elsewhere are request-scoped leases, and the
+ *    one case that motivated adding one was deleted). So an abort that lands while
+ *    we are queued LOCALLY is not observed until the local gate grants; we then
+ *    throw at the top of the body below rather than going on to take a host slot
+ *    for a caller that has been written off. The exposure is bounded by the local
+ *    queue, which holds nothing host-wide.
+ */
+export function withHeavyReadSlot<T>(
+  fn: () => Promise<T>,
+  signal?: AbortSignal,
+): Promise<T> {
+  // Mirrors `spawnCaptured`: a caller already told to stop never enters a gate.
+  signal?.throwIfAborted();
   // Reentrant fast path: already holding in this async context ⇒ same logical
-  // job ⇒ run directly, acquire nothing, release nothing.
+  // job ⇒ run directly, acquire nothing, release nothing. The `throwIfAborted`
+  // above covers this path too — an abort must be observed even where there is no
+  // gate to wait on, so that a reentrant caller cannot be the one place a
+  // cancelled read still runs.
   if (holdingSlot.getStore()) return fn();
   // Two-tier gate: the local per-worktree semaphore wraps OUTSIDE the host-wide
   // flock gate. It bounds how many heavy ops *this* backend can have parked in
@@ -72,14 +100,22 @@ export function withHeavyReadSlot<T>(fn: () => Promise<T>): Promise<T> {
   // 3500 / git diff 532) instead of one opaque number. Context-less callers fall
   // back to a standalone span inside chargeWait.
   return perWorktreeGate.run(
-    () =>
+    () => {
+      // The local gate has granted. It could not observe an abort while we were
+      // queued on it (see the docblock), so this is the first place we can: stop
+      // here rather than take a host-wide slot on behalf of a caller that has
+      // already been given up on. The local slot is released by the `run` this
+      // throws out of.
+      signal?.throwIfAborted();
       // The callback runs only once the host slot is held. `defineHostPool`
       // auto-registers the true host-wide occupancy gauge, so there is no local
       // held-count to bracket here; we only mark this async context as holding a
       // slot so a reentrant acquire runs its body directly (the fast path above).
-      pool.run(() => holdingSlot.run(true, fn), {
+      return pool.run(() => holdingSlot.run(true, fn), {
+        signal,
         onAcquired: (waitMs) => chargeWait("heavy-read-acquire", waitMs),
-      }),
+      });
+    },
     (waitMs) => chargeWait("heavy-read-local", waitMs),
   );
 }

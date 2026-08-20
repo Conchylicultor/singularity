@@ -54,6 +54,13 @@ export type {
   DrizzlePromptResult,
 } from "./migrations-interactive";
 
+// Wedge-breaker for the local `git` metadata reads in this file — orders of
+// magnitude above what any of them take, so only a wedged child trips it. A CLI
+// process owns no deadline of its own, but that is a reason to bound these, not
+// to leave them open: nothing else would ever break such a wedge (the
+// fleet-level op-wedge watchdog was retired 2026-07-28).
+const GIT_TIMEOUT_MS = 60_000;
+
 /**
  * Parse a `--migration-answers <json>` argv value into the answer list
  * `generateMigration` consumes. Lives HERE, beside `MigrationAnswer` itself,
@@ -641,6 +648,7 @@ async function resolveRef(root: string): Promise<string | null> {
   for (const ref of ["origin/main", "main"]) {
     const result = await spawnCaptured(["git", "rev-parse", "--verify", ref], {
       cwd: root,
+      timeoutMs: GIT_TIMEOUT_MS,
     });
     if (result.exitCode === 0) return ref;
   }
@@ -667,7 +675,7 @@ export async function listTrackedMigrationBasenames(
       "--",
       "plugins/database/plugins/migrations/data",
     ],
-    { cwd: root },
+    { cwd: root, timeoutMs: GIT_TIMEOUT_MS },
   );
   return new Set(
     result.stdout

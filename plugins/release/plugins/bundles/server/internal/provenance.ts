@@ -6,6 +6,13 @@ import {
 import { DIRTY_WORKTREE_REASON } from "../../core";
 import type { Staleness } from "../../core";
 
+// Every git call in this file is a metadata read (`rev-parse`, `status`,
+// `cat-file -e`, `merge-base`, `rev-list --count`) taken while a user is
+// waiting: cutting a release, or opening a release's detail pane. The request is
+// the deadline these serve, so a minute is far past the point where returning
+// the answer still helps anyone, and only a wedge ever reaches it.
+const GIT_TIMEOUT_MS = 60_000;
+
 /** What source state a release was cut from. Both fields go into `RELEASE.json`. */
 export interface GitProvenance {
   /** `git rev-parse HEAD` at the instant the release started. */
@@ -19,13 +26,10 @@ export interface GitProvenance {
 }
 
 async function git(args: string[], cwd: string): Promise<string> {
-  const { stdout } = await spawnExpectOk([
-    GIT,
-    "--no-optional-locks",
-    "-C",
-    cwd,
-    ...args,
-  ]);
+  const { stdout } = await spawnExpectOk(
+    [GIT, "--no-optional-locks", "-C", cwd, ...args],
+    { timeoutMs: GIT_TIMEOUT_MS },
+  );
   return stdout;
 }
 
@@ -82,15 +86,10 @@ export async function compareToHead(
     };
   }
 
-  const known = await spawnCaptured([
-    GIT,
-    "--no-optional-locks",
-    "-C",
-    cwd,
-    "cat-file",
-    "-e",
-    `${sha}^{commit}`,
-  ]);
+  const known = await spawnCaptured(
+    [GIT, "--no-optional-locks", "-C", cwd, "cat-file", "-e", `${sha}^{commit}`],
+    { timeoutMs: GIT_TIMEOUT_MS },
+  );
   if (known.exitCode !== 0) {
     return {
       kind: "unknown",
@@ -101,16 +100,10 @@ export async function compareToHead(
   const head = (await git(["rev-parse", "HEAD"], cwd)).trim();
   if (head === sha) return { kind: "current" };
 
-  const isAncestor = await spawnCaptured([
-    GIT,
-    "--no-optional-locks",
-    "-C",
-    cwd,
-    "merge-base",
-    "--is-ancestor",
-    sha,
-    "HEAD",
-  ]);
+  const isAncestor = await spawnCaptured(
+    [GIT, "--no-optional-locks", "-C", cwd, "merge-base", "--is-ancestor", sha, "HEAD"],
+    { timeoutMs: GIT_TIMEOUT_MS },
+  );
   if (isAncestor.exitCode !== 0) return { kind: "diverged", sha };
 
   const count = (

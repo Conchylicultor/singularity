@@ -180,6 +180,14 @@ export async function runCheckSubprocess(
       cwd: root,
       env,
       mergeStderr: true,
+      // This child IS `./singularity check` — the full type-check/lint/codegen
+      // sweep. Its duration is the duration of the work, and nothing above it
+      // owns a shorter deadline: the human at the terminal is the deadline, and
+      // killing a check that was still making progress would only make the
+      // command unusable. Bounding the pieces (each check's own git/worker
+      // spawns) is where a real wedge is actually caught.
+      unbounded:
+        "this child is the whole `./singularity check` run; its duration is the work's, and the CLI invocation above it owns no shorter deadline",
     });
     exitCode = result.exitCode;
     maxRssBytes = result.resourceUsage.maxRssBytes;

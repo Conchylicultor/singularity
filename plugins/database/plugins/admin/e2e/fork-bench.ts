@@ -134,7 +134,15 @@ async function main(): Promise<void> {
         const started = performance.now();
         const result = await spawnCaptured(
           ["./singularity", "db", "fork", target],
-          { cwd: root },
+          {
+            // This harness exists to MEASURE how long a fork takes, on a box
+            // deliberately loaded to make it slow. Any ceiling here would be a
+            // cap on the measurement itself, turning the slowest and most
+            // interesting run into a killed one.
+            cwd: root,
+            unbounded:
+              "the duration of this child is the quantity being benchmarked; a ceiling would truncate the measurement",
+          },
         );
         const elapsed = performance.now() - started;
         if (result.exitCode !== 0) {

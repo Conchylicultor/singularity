@@ -6,6 +6,7 @@
 // imported from `web/`.
 
 export type {
+  SpawnBaseOptions,
   SpawnBound,
   SpawnOptions,
   SpawnResult,

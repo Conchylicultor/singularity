@@ -55,6 +55,11 @@ function grantOfUnits(units: number, lane: Lane): Grant {
  * pool has always honoured them (`AcquireHooks`); this only stops swallowing them.
  * `lane` is applied AFTER the spread: it is this function's own opt and must win,
  * so a hooks object can never redirect the acquire to the other lane's slot window.
+ *
+ * `opts.hooks.signal` rides the same spread and cancels a PENDING acquire (the
+ * call then throws `signal.reason`). It deliberately does not drop the share
+ * mid-`fn` the way `pool.run` does — see `GrantHooks.signal` for why a grant's
+ * inheritable tokens make that unsafe.
  */
 export async function withHostGrant<T>(
   opts: { lane: Lane; max: number; hooks?: GrantHooks },

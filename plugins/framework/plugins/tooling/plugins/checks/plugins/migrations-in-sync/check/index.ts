@@ -70,6 +70,14 @@ const check: Check = {
         {
           cwd: migrationsPluginDir,
           stdin: new Uint8Array(20).fill(0x0d),
+          // drizzle-kit generate is a schema read plus a diff — tens of seconds
+          // at worst on this repo. The bound is here because this is the one
+          // command in the check tree that is SHAPED to block on input: the 20
+          // buffered keystrokes above exist precisely because it prompts, and a
+          // prompt they don't answer is a child that waits forever. Five minutes
+          // is an order of magnitude above the real duration, so only that wedge
+          // trips it.
+          timeoutMs: 300_000,
           env: {
             ...process.env,
             ...libpqEnv(),

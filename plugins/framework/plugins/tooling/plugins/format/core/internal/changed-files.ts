@@ -13,8 +13,18 @@ import { join } from "path";
 import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
 import { COUPLED_FORMAT_SETS, isFormattable } from "./prettier";
 
+// Wedge-breaker for the metadata-only git reads below (`status`, `diff
+// --name-only`, `merge-base`) — orders of magnitude above what they take, so
+// only a genuinely wedged child trips it. Generous rather than tight because
+// what these suffer on a loaded box is starvation, not slowness; `infra/worktree`'s
+// bounds carry the measurements behind that choice.
+const GIT_TIMEOUT_MS = 60_000;
+
 async function git(root: string, args: string[]): Promise<string> {
-  const result = await spawnCaptured(["git", ...args], { cwd: root });
+  const result = await spawnCaptured(["git", ...args], {
+    cwd: root,
+    timeoutMs: GIT_TIMEOUT_MS,
+  });
   if (result.exitCode !== 0) {
     throw new Error(
       `git ${args.join(" ")} failed in ${root} (exit ${result.exitCode}): ${result.stderr.trim()}`,

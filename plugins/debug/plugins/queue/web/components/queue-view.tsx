@@ -260,6 +260,18 @@ function JobsTabInner({
                           no worker
                         </Badge>
                       )}
+                      {/* The other half of "running" going wrong, and the
+                          opposite one: a worker IS still there (so no `no
+                          worker` badge), it passed its hold class's deadline,
+                          ignored the abort, and the pool has stopped counting
+                          its slot. Nothing was taken from it — the row is
+                          untouched and its lock still held, which is what stops
+                          the sweeper reclaiming it. */}
+                      {r.forfeited === true && (
+                        <Badge colorClass="bg-destructive/10 text-destructive">
+                          forfeited
+                        </Badge>
+                      )}
                     </Inline>
                   </td>
                   <td className="px-md py-sm font-mono text-caption">

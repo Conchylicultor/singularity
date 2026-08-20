@@ -2,7 +2,16 @@ import { resolve } from "node:path";
 import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
 import { resolveWorktreePath } from "@plugins/code-explorer/server";
 import { GIT, HOME_DIR } from "@plugins/infra/plugins/paths/server";
+import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
 import { resolveFile } from "../../shared/endpoints";
+
+// Every git read in this file serves an open HTTP request from the code
+// explorer: a local, metadata-or-blob read that finishes in milliseconds. The
+// request is the deadline, and thirty seconds is well past the point where an
+// answer still helps whoever is looking at the pane — so only a wedged child
+// reaches it, and it fails as a named error instead of holding the request open
+// forever.
+const GIT_TIMEOUT_MS = 30_000;
 
 function expandTilde(path: string): string {
   if (path === "~") return HOME_DIR;
@@ -49,15 +58,12 @@ export const handleResolve = implement(resolveFile, async ({ params, query }) =>
   // ~-rooted and absolute paths are not in the git tree; skip ls-files
   if (cleaned.startsWith("/")) return { kind: "not-found" as const };
 
-  const proc = Bun.spawn(
+  const result = await spawnCaptured(
     [GIT, "--no-optional-locks", "-C", wtPath, "ls-files", "--cached", "--others", "--exclude-standard"],
-    { stdout: "pipe", stderr: "pipe" },
+    { timeoutMs: GIT_TIMEOUT_MS },
   );
-  const [out, code] = await Promise.all([
-    new Response(proc.stdout).text(),
-    proc.exited,
-  ]);
-  if (code !== 0) return { kind: "not-found" as const };
+  if (result.exitCode !== 0) return { kind: "not-found" as const };
+  const out = result.stdout;
 
   const querySeg = cleaned.split("/").filter((s) => s !== "...");
   const matches: string[] = [];

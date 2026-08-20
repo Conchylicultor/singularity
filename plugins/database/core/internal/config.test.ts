@@ -59,6 +59,10 @@ async function probe(env: Record<string, string>): Promise<Probe> {
   const result = await spawnCaptured([process.execPath, "run", file], {
     cwd: import.meta.dir,
     env,
+    // The probe is a three-line script: it reads config and prints JSON. A bound
+    // is here because a test that hangs takes the whole runner with it and
+    // reports nothing, which is strictly worse than a named failure.
+    timeoutMs: 30_000,
   });
   if (result.exitCode !== 0) {
     throw new Error(

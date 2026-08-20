@@ -35,13 +35,27 @@ import {
   namespaceFor,
 } from "@plugins/infra/plugins/namespace/core";
 
+// One bound for both capture helpers below, because every command they run is
+// LOCAL git: `rev-parse`, `worktree list`, `status`, and the rebase. Nothing
+// that talks to the network goes through them — `git fetch` / `git push` run
+// through `exec` (spawnPassthrough) so the user sees the transfer progress —
+// so no value here has to leave room for a slow remote.
+//
+// Five minutes is sized to the rebase, the longest of the four: it replays this
+// branch's commits and amends a trailer onto each. The others are metadata
+// reads that finish in milliseconds. Being one generous number rather than four
+// tuned ones is deliberate — the helpers exist so call sites don't think about
+// spawning, and every one of them is consumed by `process.exit(1)`, where a
+// false positive costs the user a re-run of a push that was working.
+const GIT_TIMEOUT_MS = 300_000;
+
 // Exits-by-default spawn: a non-zero exit prints the command + captured
 // stderr and exits(1) like `exec`, so a caller can never read a failed git
 // call's empty stdout as real data (e.g. a failed `git status` absorbed as a
 // "clean tree" and pushed over uncommitted changes). Returns trimmed stdout.
 // For the sites that genuinely branch on the exit code, use `runAllowFail`.
 async function run(cmd: string[], cwd?: string): Promise<string> {
-  const result = await spawnCaptured(cmd, { cwd });
+  const result = await spawnCaptured(cmd, { cwd, timeoutMs: GIT_TIMEOUT_MS });
   if (result.exitCode !== 0) {
     console.error(`Command failed (exit ${result.exitCode}): ${cmd.join(" ")}`);
     if (result.stderr.trim()) console.error(result.stderr.trim());
@@ -59,7 +73,7 @@ async function runAllowFail(
   cwd?: string,
   env?: Record<string, string | undefined>,
 ): Promise<{ stdout: string; exitCode: number }> {
-  const result = await spawnCaptured(cmd, { cwd, env });
+  const result = await spawnCaptured(cmd, { cwd, env, timeoutMs: GIT_TIMEOUT_MS });
   if (result.stderr) process.stderr.write(result.stderr);
   return { stdout: result.stdout.trim(), exitCode: result.exitCode };
 }

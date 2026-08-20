@@ -3,6 +3,13 @@ import { tmpdir } from "os";
 import { join } from "path";
 import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
 
+// Looser than the metadata-read bound used elsewhere in the check tree,
+// because `add -A` + `write-tree` below genuinely walk the whole working tree:
+// this is real work, and it is done on every build and every check run, on a
+// box that may be running several agent fleets at once. Three minutes is a
+// wedge-breaker for it, not a latency budget.
+const TREE_HASH_TIMEOUT_MS = 180_000;
+
 async function git(
   root: string,
   args: string[],
@@ -11,6 +18,7 @@ async function git(
   const result = await spawnCaptured(["git", ...args], {
     cwd: root,
     env: env ?? process.env,
+    timeoutMs: TREE_HASH_TIMEOUT_MS,
   });
   return { code: result.exitCode, stdout: result.stdout.trim() };
 }

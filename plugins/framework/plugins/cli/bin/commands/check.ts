@@ -52,12 +52,13 @@ async function getWorktreeIdentity(): Promise<{
   branch: string;
 }> {
   const root = await getWorktreeRoot();
-  const branchResult = await spawnCaptured([
-    "git",
-    "rev-parse",
-    "--abbrev-ref",
-    "HEAD",
-  ]);
+  const branchResult = await spawnCaptured(
+    ["git", "rev-parse", "--abbrev-ref", "HEAD"],
+    // Wedge-breaker for a metadata-only git read; the check subprocess this
+    // command goes on to launch is the genuinely long-running one, and it is
+    // the one marked `unbounded`.
+    { timeoutMs: 60_000 },
+  );
   const branch = branchResult.stdout.trim();
   if (branchResult.exitCode !== 0 || !branch) {
     console.error(

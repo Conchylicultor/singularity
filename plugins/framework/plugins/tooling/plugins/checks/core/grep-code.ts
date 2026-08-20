@@ -3,6 +3,13 @@ import { findImports, lineAt, maskSource } from "@plugins/plugin-meta/plugins/pa
 import { getWorktreeRoot, spawnCaptured } from "@plugins/infra/plugins/spawn/core";
 import { currentScanTree, currentScanView } from "./scan-context";
 
+// Both spawns below SCAN — `git grep` walks the tree, `git cat-file --batch`
+// streams back one blob per candidate — so unlike a `ls-files` metadata read
+// they do work proportional to the repo. Two minutes is still two orders of
+// magnitude above what either takes; it exists to break a wedge, not to police
+// a slow scan.
+const GIT_SCAN_TIMEOUT_MS = 120_000;
+
 export interface CodeMatch {
   /** File path relative to `root` (as reported by `git grep`). */
   path: string;
@@ -222,7 +229,10 @@ export async function gitGrepList(
   if (tree) args.push(tree);
   args.push("--", ...pathspecs);
 
-  const result = await spawnCaptured(args, { cwd: root });
+  const result = await spawnCaptured(args, {
+    cwd: root,
+    timeoutMs: GIT_SCAN_TIMEOUT_MS,
+  });
   const stdout = result.stdout.trim();
   // `git grep` exits 1 with no output when there are no matches — that's success.
   if (result.exitCode !== 0 && stdout === "") return [];
@@ -247,6 +257,7 @@ async function readTreeBlobs(root: string, tree: string, paths: string[]): Promi
   const result = await spawnCaptured(["git", "cat-file", "--batch"], {
     cwd: root,
     stdin: requests,
+    timeoutMs: GIT_SCAN_TIMEOUT_MS,
   });
   const buf = result.stdoutBytes;
 

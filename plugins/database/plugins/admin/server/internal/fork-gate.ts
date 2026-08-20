@@ -31,8 +31,20 @@ const { size: forkSize, cost } = RESERVED_POOLS["db-fork"];
 // with TRUE host-wide occupancy.
 const gate = defineHostPool({ id: "db-fork", size: forkSize, cost });
 
-export function withDbForkSlot<T>(fn: () => Promise<T>): Promise<T> {
+// `signal` is optional and ambient — the `database.fork` job passes its
+// `ctx.signal`. It cancels a pending acquire and, once held, releases the slot as
+// soon as the body is abandoned rather than when it finally settles.
+//
+// The second half is only honest because `forkDatabase` kills the dump/restore
+// children on the same abort: releasing a gate while the heavy work it bounds
+// keeps running would silently put that work outside the bound. Whoever passes a
+// signal here owes the same to whatever it spawns.
+export function withDbForkSlot<T>(
+  fn: () => Promise<T>,
+  signal?: AbortSignal,
+): Promise<T> {
   return gate.run(() => fn(), {
+    signal,
     onAcquired: (waitMs) => chargeWait("db-fork-acquire", waitMs),
   });
 }

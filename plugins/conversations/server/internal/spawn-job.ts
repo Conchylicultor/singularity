@@ -54,6 +54,7 @@ export const spawnConversationJob = defineJob({
       needsWorktreeSetup,
       create,
     },
+    ctx: { signal },
   }) => {
     try {
       // `setupWorktree` (git worktree add) MUST precede `runtime.create`: tmux's
@@ -66,10 +67,17 @@ export const spawnConversationJob = defineJob({
         // rather than inside `infra/worktree`, which must stay importable from
         // the CLI — `config_v2/server` throws at module eval without a worktree
         // identity.
+        //
+        // `signal` is this dispatch's deadline. It reaches the host-wide
+        // `worktree-mutate` gate and every git child underneath, so a checkout
+        // that overruns stops holding one of the box's three worktree slots
+        // instead of blocking checkouts on every other backend until the process
+        // restarts (the 2026-08-17 shape).
         await setupWorktree(
           attemptId,
           worktreePath,
           new Set(getConfig(compositionsConfig).manifests.map((m) => m.id)),
+          signal,
         );
       }
       await Runtime.get(runtimeId).create(conversationId, worktreePath, create);

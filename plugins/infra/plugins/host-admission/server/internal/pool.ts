@@ -76,9 +76,21 @@ export interface HostPool {
    */
   readonly slots: DataDir;
   readonly cost: PoolCost;
-  /** Run `fn` holding exactly one slot; release in a `finally`. */
+  /**
+   * Run `fn` holding exactly one slot; release in a `finally`.
+   *
+   * `hooks.signal` is threaded straight through to the primitive: it cancels a
+   * pending acquire, and an abort while `fn` is still running releases the slot
+   * immediately rather than at settle. See `AcquireHooks.signal` — a job handler
+   * should pass its `ctx.signal` here, because a caller parked in this acquire is
+   * holding a HOST-WIDE flock, so an abort that cannot reach it leaves every other
+   * backend on the box waiting on a handler nobody is waiting for any more.
+   */
   run<T>(fn: () => Promise<T>, hooks?: AcquireHooks): Promise<T>;
-  /** Acquire a whole share up front (`1 … min(max, size)` slots). */
+  /**
+   * Acquire a whole share up front (`1 … min(max, size)` slots). `hooks.signal`
+   * cancels the acquire only — the returned share's lifetime is the caller's.
+   */
   acquireShare(max: number, hooks?: AcquireHooks): Promise<HostShare>;
   /** Callers currently parked on the slow path (queue-depth gauge). */
   depth(): number;

@@ -3,8 +3,16 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
 import { setConfig } from "@plugins/config_v2/server";
+import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
 import { setAppleCertificateEndpoint } from "../../core/endpoints";
 import { appleSigningConfig } from "../../shared/config";
+
+// Both `openssl` calls below run inside the HTTP request that uploaded the
+// .p12: pure local crypto over a few kilobytes, sub-second, no network. Ten
+// seconds is the request's patience rather than the command's cost — past it
+// the user has an answer either way, and a wedged child would otherwise hold the
+// request open forever.
+const OPENSSL_TIMEOUT_MS = 10_000;
 
 /**
  * Extract the leaf-cert PEM from a `.p12`. macOS ships LibreSSL (rejects
@@ -26,28 +34,21 @@ async function pkcs12ToCertPem(
     "-clcerts",
   ];
   if (legacy) args.push("-legacy");
-  const proc = Bun.spawn(["openssl", ...args], {
-    stdin: "ignore",
-    stdout: "pipe",
-    stderr: "pipe",
+  const result = await spawnCaptured(["openssl", ...args], {
+    timeoutMs: OPENSSL_TIMEOUT_MS,
   });
-  const stdout = await new Response(proc.stdout).text();
-  await proc.exited;
-  if (proc.exitCode !== 0) return null;
-  return stdout;
+  if (result.exitCode !== 0) return null;
+  return result.stdout;
 }
 
 /** Read the certificate subject line via `openssl x509 -noout -subject`. */
 async function certSubject(certPem: string): Promise<string | null> {
-  const proc = Bun.spawn(["openssl", "x509", "-noout", "-subject"], {
+  const result = await spawnCaptured(["openssl", "x509", "-noout", "-subject"], {
     stdin: new TextEncoder().encode(certPem),
-    stdout: "pipe",
-    stderr: "pipe",
+    timeoutMs: OPENSSL_TIMEOUT_MS,
   });
-  const stdout = await new Response(proc.stdout).text();
-  await proc.exited;
-  if (proc.exitCode !== 0) return null;
-  return stdout.trim();
+  if (result.exitCode !== 0) return null;
+  return result.stdout.trim();
 }
 
 /**

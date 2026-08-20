@@ -1,6 +1,7 @@
 import {
   Resource,
   setErrorReporter,
+  setFatalReporter,
 } from "@plugins/framework/plugins/server-core/core";
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
 import { handleReport } from "./internal/handle-report";
@@ -16,6 +17,7 @@ import {
   flushBufferedReports,
   installProcessHooks,
 } from "./internal/process-hooks";
+import { appendFatalReportSync } from "./internal/buffer";
 import { submitReport, investigateReport } from "../shared/endpoints";
 
 export { _reports } from "./internal/tables";
@@ -81,6 +83,26 @@ export default {
         source: "server-caught",
         message: report.message,
         data: { errorType: report.errorType, stack: report.stack },
+      });
+    });
+    // The synchronous twin, for a backend on its way out of a deliberate exit.
+    // It cannot go through `recordReport` for the same reason the crash hooks
+    // cannot: that is a Postgres write, and the caller's next statement is
+    // `process.exit()`. So it takes the SAME durable path as a crash — one
+    // appended JSONL line, replayed by the `flushBufferedReports()` below on
+    // the next boot — and the only thing it adds is that the line names its own
+    // kind, so it comes back as itself instead of as an anonymous crash.
+    //
+    // The kind must be registered by some plugin in the composition for that
+    // replay to resolve. It is: `collectContributions()` runs over every plugin
+    // BEFORE any `onReady` (server-core `bin/index.ts`), so every ReportKind
+    // contribution is in the registry by the time this flush reads the file.
+    setFatalReporter((report) => {
+      appendFatalReportSync({
+        source: "server-fatal",
+        kind: report.kind,
+        message: report.message,
+        data: report.data ?? {},
       });
     });
     await flushBufferedReports();

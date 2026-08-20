@@ -1,8 +1,11 @@
 import { freemem, loadavg, totalmem } from "node:os";
 import { defineLogSink } from "@plugins/primitives/plugins/log-channels/server";
+import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
 import type { HostSample } from "../../shared/schema";
 import { parseVmStat, type VmStat } from "./vm-stat";
 import { detectWallJumpMs } from "./wall-jump";
+
+const VM_STAT_TIMEOUT_MS = 5_000;
 
 // Host-level sampler. Runs only on the main backend (the host is a shared
 // resource — one sampler suffices). Appends to the singularity worktree's
@@ -33,10 +36,11 @@ let prev: {
 // Mac); the sample then reports 0 for the swap fields.
 async function readVmStat(): Promise<VmStat | null> {
   if (process.platform !== "darwin") return null;
-  const proc = Bun.spawn(["vm_stat"], { stdout: "pipe" });
-  const text = await new Response(proc.stdout).text();
-  await proc.exited;
-  return parseVmStat(text);
+  // Bounded well under the sampler's own cadence: a `vm_stat` that has not
+  // answered within five seconds is not going to produce a reading worth this
+  // tick, and letting it run would let successive ticks pile up children.
+  const result = await spawnCaptured(["vm_stat"], { timeoutMs: VM_STAT_TIMEOUT_MS });
+  return parseVmStat(result.stdout);
 }
 
 async function tick(): Promise<void> {

@@ -2,8 +2,16 @@ import { readdir, rm, stat } from "node:fs/promises";
 import { join } from "node:path";
 import { and, isNull, lt } from "drizzle-orm";
 import { BACKUPS_DIR } from "@plugins/infra/plugins/paths/server";
+import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
 import { db } from "@plugins/database/server";
 import { _backupRuns } from "./tables";
+
+// `gzip -t` decompresses one archive to check its CRC — real work, roughly
+// proportional to the archive, but bounded by it. This runs on the boot path,
+// so a child that never returns would leave the backend stuck before it is
+// ready; five minutes is far past any healthy archive's decompression and only
+// a wedge reaches it.
+const GZIP_TEST_TIMEOUT_MS = 300_000;
 
 const TIMESTAMP_RE = /^\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}$/;
 
@@ -55,8 +63,10 @@ export async function reconcileBackups(): Promise<void> {
 
     if (hasArchive) {
       // An archive exists but leftovers linger — validate it before trusting it.
-      const proc = Bun.spawn(["gzip", "-t", archivePath], { stderr: "pipe" });
-      const valid = (await proc.exited) === 0;
+      const result = await spawnCaptured(["gzip", "-t", archivePath], {
+        timeoutMs: GZIP_TEST_TIMEOUT_MS,
+      });
+      const valid = result.exitCode === 0;
       if (valid) {
         // Good archive with defensive leftovers: drop staging + partial, keep it.
         await rm(stagingDir, { recursive: true, force: true });

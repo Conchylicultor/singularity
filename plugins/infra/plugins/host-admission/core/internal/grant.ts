@@ -45,6 +45,24 @@ export interface Grant {
  */
 export interface GrantHooks {
   /**
+   * Ambient cancellation for the ACQUIRE, mirroring `AcquireHooks.signal`. If it
+   * fires while the grant is still queued for host CPU slots, the acquire stops
+   * waiting and `withHostGrant` throws `signal.reason`; every `flock-wait` child
+   * and fd opened on the way is cleaned up first.
+   *
+   * Unlike the pool's own `run`, an abort mid-`fn` does NOT drop the share here,
+   * and that asymmetry is deliberate. A grant hands out `units` as TOKENS that
+   * outlive the acquire — a subprocess child inherits the count through
+   * `SINGULARITY_HOST_GRANT` and spends it without re-acquiring — so releasing the
+   * host slots while those tokens are still being spent would put work outside the
+   * bound rather than merely leaving it unattributed. A single-slot `run` has no
+   * such tokens, which is why it can afford the early release and this cannot.
+   *
+   * Lives on the hooks rather than beside `lane` for one reason: it does not
+   * change WHICH slots the acquire may take, only whether the acquire survives.
+   */
+  signal?: AbortSignal;
+  /**
    * The slow path was entered (every slot in the lane's window busy), BEFORE any
    * child is spawned. Never fires on the fast path. Lets a caller *open* a
    * "waiting for a slot" span, which `onAcquired` (fired once, at acquisition)

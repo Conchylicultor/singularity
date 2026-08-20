@@ -2990,6 +2990,10 @@
         "graphile-worker": "^0.16.6",
       },
     },
+    "plugins/infra/plugins/jobs/plugins/deadline-audit": {
+      "name": "@singularity/plugin-infra-jobs-deadline-audit",
+      "version": "0.0.1",
+    },
     "plugins/infra/plugins/launcher": {
       "name": "@singularity/plugin-infra-launcher",
     },
@@ -7031,6 +7035,8 @@
     "@singularity/plugin-infra-html-decode": ["@singularity/plugin-infra-html-decode@workspace:plugins/infra/plugins/html-decode"],
 
     "@singularity/plugin-infra-jobs": ["@singularity/plugin-infra-jobs@workspace:plugins/infra/plugins/jobs"],
+
+    "@singularity/plugin-infra-jobs-deadline-audit": ["@singularity/plugin-infra-jobs-deadline-audit@workspace:plugins/infra/plugins/jobs/plugins/deadline-audit"],
 
     "@singularity/plugin-infra-launcher": ["@singularity/plugin-infra-launcher@workspace:plugins/infra/plugins/launcher"],
 

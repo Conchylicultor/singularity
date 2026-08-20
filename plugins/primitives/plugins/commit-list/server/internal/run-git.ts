@@ -1,5 +1,15 @@
 import { stat } from "node:fs/promises";
 import { GIT } from "@plugins/infra/plugins/paths/server";
+import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
+
+// One bound for every git invocation routed through this file — which is the
+// point of the file, so a per-call number would just be a knob nobody could set
+// meaningfully. These are local reads (`log`, `rev-parse`, `merge-base`,
+// `diff`) over one worktree, served to an open request or a live resource
+// recompute, and a minute is well past the point where the answer still helps
+// anyone. It exists to break a wedge — including the specific one this repo has
+// seen twice, a git child hung against a checkout being mutated underneath it.
+const GIT_TIMEOUT_MS = 60_000;
 
 /**
  * Thrown by {@link runGit} when a git invocation exits non-zero. Carries the
@@ -100,16 +110,24 @@ export async function tryRunGit(
   args: string[],
   cwd: string,
 ): Promise<GitResult> {
-  const proc = Bun.spawn([GIT, "--no-optional-locks", "-C", cwd, ...args], {
-    stdout: "pipe",
-    stderr: "pipe",
-  });
-  const [stdout, stderr, exitCode] = await Promise.all([
-    new Response(proc.stdout).text(),
-    new Response(proc.stderr).text(),
-    proc.exited,
-  ]);
+  const result = await spawnCaptured(
+    [GIT, "--no-optional-locks", "-C", cwd, ...args],
+    { timeoutMs: GIT_TIMEOUT_MS },
+  );
+  const { exitCode, stdout, stderr } = result;
   if (exitCode === 0) return { ok: true, stdout };
+  // A KILLED child is not an answer, so it must not become one. Every caller of
+  // the probe variant reads `ok: false` as git's verdict — "no such ref", "no
+  // common ancestor", "they differ" — and a timeout reported that way would be
+  // the absorbed failure this file's two error types exist to prevent.
+  if (result.timedOut) {
+    throw new GitError({
+      args,
+      cwd,
+      exitCode,
+      stderr: `git did not finish within ${GIT_TIMEOUT_MS} ms and was killed`,
+    });
+  }
   if (await cwdIsGone(cwd)) {
     throw new WorktreeGoneError({ args, cwd, exitCode, stderr });
   }

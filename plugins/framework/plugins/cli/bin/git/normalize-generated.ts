@@ -8,6 +8,13 @@ import {
   readMergeMarkers,
 } from "../../core";
 
+// Wedge-breaker for the local `git` metadata reads in this file — orders of
+// magnitude above what any of them take, so only a wedged child trips it. A CLI
+// process owns no deadline of its own, but that is a reason to bound these, not
+// to leave them open: nothing else would ever break such a wedge (the
+// fleet-level op-wedge watchdog was retired 2026-07-28).
+const GIT_TIMEOUT_MS = 60_000;
+
 /**
  * Env flag that suppresses the `.githooks/post-rewrite` hook for a child git
  * process. Set by the two callers that own the normalize themselves:
@@ -27,7 +34,10 @@ async function exec(
 }
 
 async function isDirty(cwd: string): Promise<boolean> {
-  const result = await spawnCaptured(["git", "status", "--porcelain"], { cwd });
+  const result = await spawnCaptured(["git", "status", "--porcelain"], {
+    cwd,
+    timeoutMs: GIT_TIMEOUT_MS,
+  });
   if (result.exitCode !== 0) {
     console.error(`git status failed (exit ${result.exitCode})`);
     if (result.stderr.trim()) console.error(result.stderr.trim());

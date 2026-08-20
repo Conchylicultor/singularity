@@ -6,11 +6,13 @@
 /**
  * The BOUND half of `SpawnOptions` — the two ways a caller can promise that
  * this child cannot run forever. Named separately so a wrapper can take "just
- * the bound" as one parameter, and so the eventual step that makes a bound
- * MANDATORY is a change to this one type rather than to every option list.
+ * the bound" as one parameter, and so the step that made a bound MANDATORY was
+ * a change to this one type rather than to every option list.
  *
- * Both members are still optional today: an unbounded spawn remains legal and
- * is what most existing callers do.
+ * Both members are optional HERE, because `SpawnOptions` below is the union
+ * that makes at least one of them (or the explicit `unbounded` opt-out)
+ * unavoidable. This interface stays the plain "just the bound" bag so a wrapper
+ * that forwards a bound it was handed can keep taking it as one parameter.
  */
 export interface SpawnBound {
   /**
@@ -18,12 +20,11 @@ export interface SpawnBound {
    * `SIGTERM`, then `SIGKILL` after a short grace, and the result comes back
    * with `timedOut: true` — a RESULT, not a throw, so the caller classifies it.
    *
-   * One-shot deadline, not a polling loop, and deliberately opt-in: omitting it
-   * keeps the historical "no ceiling" behavior, because for a caller with no
-   * deadline of its own a silent local timeout would just absorb the hang.
-   * Nothing else bounds such a child — a hung one hangs until a human notices.
-   * Set it where the CALLER owns a deadline it must honor (an HTTP request that
-   * cannot hang on a wedged network peer; a reaper holding a host-wide flock).
+   * One-shot deadline, not a polling loop. This is the arm to reach for
+   * whenever the CALLER owns a deadline it must honor (an HTTP request that
+   * cannot hang on a wedged network peer; a reaper holding a host-wide flock),
+   * and the value should be sized to THAT work — see `SpawnOptions` for why
+   * picking one number for everything is the wrong shape.
    */
   timeoutMs?: number;
   /**
@@ -56,8 +57,12 @@ export interface SpawnBound {
   signal?: AbortSignal;
 }
 
-/** Options for the capture-shaped spawns (`spawnCaptured` / `spawnExpectOk`). */
-export interface SpawnOptions extends SpawnBound {
+/**
+ * The UNBOUNDED half of `SpawnOptions`: the everything-else options, which say
+ * nothing about how long the child may run. Split out so the bound can be
+ * intersected onto it as a union (see `SpawnOptions`).
+ */
+export interface SpawnBaseOptions {
   /** Working directory of the child. Defaults to the parent's cwd. */
   cwd?: string;
   /** FULL environment replacement — the same contract as `Bun.spawn`'s `env`. */
@@ -73,6 +78,61 @@ export interface SpawnOptions extends SpawnBound {
   /** Redirect stderr into the stdout fd (2>&1). `result.stderr` is then `""`. */
   mergeStderr?: boolean;
 }
+
+/**
+ * Options for the capture-shaped spawns (`spawnCaptured` / `spawnExpectOk`).
+ *
+ * **A BOUND IS MANDATORY, and the union is how.** Omitting one has no spelling:
+ * every call must say either how long this child may run (`timeoutMs`), whose
+ * cancellation it obeys (`signal`), or — in prose — why nothing bounds it
+ * (`unbounded`). There is nothing to remember and nothing to enforce elsewhere;
+ * `tsc` rejects the unbounded wait at the call site (rung 2 of the fix ladder).
+ *
+ * The gate for requiring this flipped. `spawn/CLAUDE.md` used to set the
+ * criterion as "the absence of an observed field wedge, diagnosed by hand", and
+ * a field wedge has now been observed TWICE — including the 2026-08-17 outage,
+ * where an unbounded `git worktree remove` held the host-wide `worktree-mutate`
+ * flock and stopped worktree checkouts on every backend on the box. Nothing else
+ * catches this: the fleet-level op-wedge watchdog was retired 2026-07-28 as an
+ * all-false-positive instrument, so an unbounded hung child hangs until a human
+ * notices.
+ *
+ * Pick the arm from what actually bounds the work — never a blanket number:
+ *
+ * - **`timeoutMs`** when the caller owns a deadline (an HTTP request, a job
+ *   handler, a reaper holding a host-wide slot). Size it to the command; the
+ *   named per-operation constants in `infra/worktree`'s `worktree.ts` are the
+ *   house style, and their calibration comment is worth reading before guessing
+ *   a number — these are WEDGE-BREAKERS, so far above p99, not latency police.
+ * - **`signal`** when the caller already holds one (a job handler's
+ *   `ctx.signal`), alone or together with `timeoutMs` — a class deadline and a
+ *   per-command ceiling are different facts and both can be true.
+ * - **`unbounded`** only where nothing shorter than the work bounds it. The
+ *   value is a SENTENCE saying why, not a flag: prose cannot be copy-pasted
+ *   without reading it, and `rg "unbounded:"` enumerates every one of them in a
+ *   form a reviewer can actually audit. It has NO runtime effect whatsoever —
+ *   it exists to be typed and to be grepped.
+ */
+export type SpawnOptions = SpawnBaseOptions &
+  (
+    | { timeoutMs: number; signal?: AbortSignal; unbounded?: never }
+    | { signal: AbortSignal; timeoutMs?: number; unbounded?: never }
+    | {
+        /**
+         * Why this child has no ceiling, in prose. Purely declarative — nothing
+         * reads it at runtime — so its whole value is that a reviewer and
+         * `rg "unbounded:"` can both find it.
+         *
+         * The honest case is the CLI: a `./singularity build` step runs for ten
+         * minutes because the build takes ten minutes, and there is no shorter
+         * deadline to borrow from. A server-side call site almost never belongs
+         * here — its request or its job has a deadline, and that is the bound.
+         */
+        unbounded: string;
+        timeoutMs?: never;
+        signal?: never;
+      }
+  );
 
 /** What a completed capture-shaped spawn returns. */
 export interface SpawnResult {

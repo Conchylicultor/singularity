@@ -69,8 +69,13 @@ export type QueueBacklogPayload = z.infer<typeof QueueBacklogPayloadSchema>;
 //
 // `hold` / `thresholdMs` are OPTIONAL so reports filed before hold classes
 // existed still parse. `thresholdMs` is carried rather than recomputed at render
-// time because it is `ceilingMs(hold) × slotHogHoldFactor` at the moment of the
-// trip — a later config edit must not silently rewrite what the report claimed.
+// time because it is `deadlineMsFor(hold) × slotHogDeadlineFraction` at the
+// moment of the trip — a later config edit must not silently rewrite what the
+// report claimed.
+//
+// That fraction is constrained strictly below 1, so this report always precedes
+// the deadline that aborts the run. A job that reached `job-deadline-exceeded`
+// therefore has one of these sitting beside it.
 export const QueueSlotHogPayloadSchema = z.object({
   jobName: z.string(),
   hold: HoldClassSchema.optional(),

@@ -110,10 +110,127 @@ type set the wait for everything behind it. `queue-wedged` exists because four
 long handlers took all four slots and everything behind them stopped, observed at
 40+ minutes.
 
-There is one declaration and no second field. It picks the reservation tier
-today; when `research/2026-08-17-global-bounded-job-execution.md` Phase 2 lands,
-the same class ceiling becomes the deadline that aborts `ctx.signal`. A lane and
-a budget cannot disagree if there is only one thing to declare.
+There is one declaration and no second field: `hold` picks both the reservation
+tier and the deadline that aborts `ctx.signal`. A lane and a budget cannot
+disagree if there is only one thing to declare.
+
+### The deadline is a SIBLING of the ceiling, not the same number
+
+| `hold` | `ceilingMs` (work) | slot-hog report | `deadlineMs` (hold) | zombie |
+|---|---|---|---|---|
+| `instant` | 10 s | 30 s | 60 s | 90 s |
+| `seconds` | 2 min | 5 min | 10 min | 10 min 30 s |
+| `minutes` | 30 min | 30 min | 60 min | 60 min 30 s |
+
+An earlier version of this section promised the ceiling would *become* the
+deadline. It must not. **`ceilingMs` bounds WORK (`durationMs − waitMs`); a
+deadline can only ever be measured on wall-clock HOLD**, because at the instant
+the timer fires nothing yet knows how the elapsed time split. Those quantities
+genuinely differ — that is what `queue-slot-blocked` exists to report — so
+aborting on hold at the work ceiling would kill conforming handlers for waiting
+on an admission gate entered after dispatch. The gap between the two numbers is
+the statement of how much gate wait we are willing to believe.
+
+`queue-slot-hog` reports at a fraction of the deadline (strictly below 1), so
+warn-before-kill holds for every class at every settable config value.
+
+### What the deadline does, instant by instant
+
+- **at `deadlineMs`** — `ctx.signal` aborts with a `JobDeadlineExceededError`,
+  and a `job-deadline-exceeded` report is filed. **Nothing else.** The dispatch
+  does not return, the advisory lock is not released, the row is not touched.
+- **shortly after** — a handler that threaded the signal into what it awaited
+  unwinds. Ordinary job failure from here: lock released, slot freed, reported,
+  retried. A run aborted on attempt ≥ 2 dead-letters instead of burning
+  `maxAttempts × deadline` of slot time.
+- **+30 s, still unsettled** — `job-zombie`. The slot is **forfeited**: written
+  off for the life of this process. The row is still untouched, and its lock is
+  still held by this live backend, so the sweeper provably will not reclaim it.
+
+### Forfeit is accounting, not recovery
+
+**Forfeiting a slot touches no row, releases no lock, and stops no handler.** It
+records one fact — this slot is gone until the process ends — so that
+`usableSlots(runner)` can be counted, the floor below can be checked, and Debug
+→ Queue can stop calling a written-off run *running* (it shows a `forfeited`
+badge beside `no worker`; the two are opposites — `no worker` means nobody is
+there, `forfeited` means somebody is and we stopped waiting).
+
+**This paragraph is the one that stops someone "fixing" forfeit into a
+reclaim.** The zombie still holds its advisory lock, and that is not an
+oversight — it is the whole mechanism. The lock is what tells the stuck-lock
+sweeper the row still has an owner. Release it (or clear `locked_at`) and the
+sweeper reclaims a row whose handler is still running, graphile re-dispatches
+it, and a possibly non-idempotent handler runs twice: exactly the corruption the
+age-based lease caused, ~25 stolen live jobs in 8 days. A running promise cannot
+be un-awaited. The abort was the only lever, and forfeit is what we do when it
+did not work.
+
+`disarm()` clears the entry, so a zombie that eventually settles un-forfeits
+itself and its slot comes back — the only way short of a restart that it does.
+
+### The floor, the crash and the latch
+
+Written-off slots accumulate, and at some point the pool can no longer do the
+work only it can do. That point is: **the runner serving the longest hold class
+has fewer than 2 usable slots.**
+
+Both halves are derived from the class table, never spelled — the runner is
+`RUNNERS`' single entry whose `serves` includes the last of `HOLD_CLASSES`
+(`forfeit.ts` throws at module eval if the ladder ever grows a second one,
+because the condition would then have to be about their combined capacity).
+
+Why *that* runner and why *2*: it is the only one that can serve `minutes`, so
+DB forks, conversation spawns, builds and backups have nowhere else to go — a
+shorter class inherits a longer class's idle slots, never the reverse. One
+usable slot means the next long job to arrive consumes that class's entire
+capacity. The old "one slot lets a long job block every monitor" argument no
+longer needs making separately: monitors are `instant`, and the narrowest runner
+already reserves slots only they can reach.
+
+On the trip, the backend writes its report **synchronously to disk** and calls
+`process.exit(1)`. Exiting is the point: Postgres drops every advisory lock
+during backend teardown, so the next boot's sweeper reclaims those rows — this
+time provably, their owner no longer exists — and the work re-runs.
+
+- **A narrower runner going fully forfeited is a report, not a crash.** Its work
+  still reaches the wider runners (the task lists are nested), so the pool is
+  degraded, not dead.
+- **Three floor exits within an hour suppress the fourth** — report, and stay
+  up. An automatic restart that fixes nothing is worse than an honest wedge. The
+  latch survives the exit as one small JSON file under `jobs/data-dirs`. Read
+  that file's comment before pattern-matching its timestamps onto the banned
+  lease: it governs **our own restart policy** and makes no claim about whether
+  any worker is alive.
+- **The respawn is lazy, not automatic.** The gateway does not restart an exited
+  backend (`gateway/worktree.go`'s `onBackendExit` just marks the worktree
+  idle); the next proxied request spawns a fresh one. So a worktree nobody is
+  looking at stays down until someone looks — acceptable, since its widest
+  runner was dead, but the floor crash is not a self-healing restart.
+
+The report is one kind, `job-slot-floor`, with a discriminated
+`action: "crashed" | "degraded"` — one condition, two honest arms. It reaches
+the next boot through `reportServerFatalSync`, the synchronous twin of
+`reportServerError`: `recordReport` is a Postgres write and the caller's next
+statement is the exit, so it takes the same durable path a crash does (one
+appended JSONL line, replayed on the next boot) and adds only that the line
+names its own kind.
+
+**There is no `Promise.race`, and there must never be one.** Racing would let the
+wrapper return while the handler still runs — releasing the lock, letting the
+sweeper reclaim the row, letting graphile re-dispatch a possibly non-idempotent
+handler alongside its own zombie. The timer aborts a signal; the slot frees only
+when the handler actually settles.
+
+**This is not the liveness inference banned at the top of this file.** That claim
+is third-person — "this row has been locked T, so its owner is dead, so I may
+re-dispatch it". A deadline is first-person: *I* have been running this handler
+for T and *I* am giving up on it. The process making the claim holds the lock, so
+it cannot steal from itself, and it moves no row.
+
+`jobs/plugins/deadline-audit/` owns the three report kinds; `jobs` announces on a
+`defineReportSink` seam rather than naming `reports` (which already imports
+`jobs`).
 
 ### The reservation is at FETCH, never after dispatch
 
@@ -178,8 +295,8 @@ serves. It reads as `minutes`, the most conservative tier.
 The enforcement ladder here stops at rung 2 and resumes at rung 4. `hold` is
 required, so a partial migration is not expressible (tsc); a job whose *work*
 exceeds its class ceiling files a report naming itself, every tick, until it is
-reclassified or fixed (loud runtime), and Phase 2 later turns that same number
-into an abort.
+reclassified or fixed (loud runtime), and a run that overruns the class's
+*deadline* is aborted outright.
 
 Rung 3 is empty on purpose. An earlier draft proposed a reviewed membership file
 listing which jobs may claim which class. Against a duration axis that file is a

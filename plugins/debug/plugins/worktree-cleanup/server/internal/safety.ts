@@ -82,9 +82,16 @@ export function classifyGitStatus(statusOut: string): GitHygiene {
 // input that used to parse as "clean, 0 unpushed", the maximally-reapable
 // answer. All three arms (throw, timeout, non-zero exit) funnel into
 // HYGIENE_UNKNOWN.
+//
+// `opts.signal` is optional and ambient (the reap job passes its `ctx.signal`).
+// It reaches both the heavy-read gate and the git child. Note the catch below:
+// an abort arrives as a THROW of `signal.reason`, which is precisely the shape
+// this function's conservative catch would otherwise absorb into
+// HYGIENE_UNKNOWN — turning "you were told to stop" into a hygiene verdict. So
+// the catch re-raises it before returning a default.
 export async function getGitHygiene(
   wtPath: string,
-  opts: { background?: boolean } = {},
+  opts: { background?: boolean; signal?: AbortSignal } = {},
 ): Promise<GitHygiene> {
   return runTracked("worktree-cleanup:hygiene", () =>
     withHeavyReadSlot(async () => {
@@ -99,15 +106,23 @@ export async function getGitHygiene(
             "--porcelain=v2",
             "--branch",
           ],
-          { timeoutMs: 30_000, background: opts.background },
+          {
+            timeoutMs: 30_000,
+            background: opts.background,
+            signal: opts.signal,
+          },
         );
         if (r.timedOut || r.exitCode !== 0) return HYGIENE_UNKNOWN;
         return classifyGitStatus(r.stdout);
         // eslint-disable-next-line promise-safety/no-bare-catch -- git spawn can fail for many reasons (binary missing, worktree deleted mid-flight, not a git repo); all map to the same conservative safe default (assume dirty = not safe to delete), so every error is correctly handled here
       } catch {
+        // An abort is NOT a hygiene answer. Every other failure here genuinely
+        // maps to the conservative default; being told to stop does not, and
+        // absorbing it would let the sweep keep probing after it was abandoned.
+        opts.signal?.throwIfAborted();
         return HYGIENE_UNKNOWN;
       }
-    }),
+    }, opts.signal),
   );
 }
 

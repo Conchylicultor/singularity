@@ -15,9 +15,11 @@ export default {
    *   production spawn code always lives outside tests, which the rule still
    *   guards. (Mirrors sink-safety's test exemption.)
    * - Plugin server trees: WAS one directory glob covering every plugin server
-   *   tree, now an explicit file list (see below). The glob made "31 files are
-   *   exempt because of where they live" invisible; the list says which files and
-   *   why, one line each, and shrinks by deletion as sites migrate.
+   *   tree, then an explicit file list of 31, now down to the 11 permanent ones
+   *   below. The glob made "31 files are exempt because of where they live"
+   *   invisible; the list says which files and why, one line each. It shrank by
+   *   deletion as sites migrated, and the migratable half is now gone — what is
+   *   left is only what temp-file capture structurally cannot do.
    * - `migrations-interactive.ts`: drizzle-kit's interactive create-vs-rename
    *   prompts must be parsed from live stdout while keystrokes are written back
    *   to stdin, which is impossible over after-exit temp files. Extracted into
@@ -62,30 +64,12 @@ export default {
       // `git archive | tar -x`: a pipe chain between two live children.
       "plugins/review/plugins/plugin-changes/server/internal/handle-plugin-changes.ts",
 
-      // --- TEMPORARY: plain capture sites with no streaming requirement. Each is
-      // a mechanical `spawnCaptured` conversion; they are listed rather than
-      // migrated only to keep this commit reviewable. Delete an entry as its file
-      // migrates — the list is the Stage-2 backlog, and it is done when it is empty.
-      "plugins/auth/plugins/apple-signing/server/internal/certificate-endpoint.ts", // openssl
-      "plugins/backup/server/internal/assemble-archive.ts", // tar -czf
-      "plugins/backup/server/internal/reconcile-backups.ts", // gzip -t
-      "plugins/code-explorer/plugins/file-resolve/server/internal/resolve-handler.ts", // git ls-files
-      "plugins/code-explorer/server/internal/get-file-content.ts", // git show
-      "plugins/code-explorer/server/internal/image-handler.ts", // git show (image bytes)
-      "plugins/code-explorer/server/internal/resolve-ref.ts", // git rev-parse
-      "plugins/code-explorer/server/internal/tree-handler.ts", // git ls-tree
-      "plugins/conversations/plugins/conversation-progress/server/internal/heuristic-job.ts", // git
-      "plugins/conversations/plugins/runtime-tmux/server/internal/process-tree.ts", // ps
-      "plugins/debug/plugins/health-monitor/server/internal/host-sampler.ts", // vm_stat
-      "plugins/debug/plugins/sentinel/server/internal/worker/sample.ts", // ps
-      "plugins/infra/plugins/git-watcher/server/internal/current-branch-ref.ts", // git symbolic-ref
-      "plugins/infra/plugins/git-watcher/server/internal/git-common-dir.ts", // git rev-parse
-      "plugins/plugin-meta/plugins/plugin-health/server/internal/staleness.ts", // git log
-      "plugins/primitives/plugins/commit-list/server/internal/run-git.ts", // git log
-      "plugins/review/plugins/plugin-changes/server/internal/main-plugins-dir.ts", // git
-      "plugins/stats/plugins/commits/server/internal/commit-timestamps.ts", // git log
-      "plugins/tasks/server/internal/handle-repo-info.ts", // git remote get-url
-      "plugins/tasks/server/internal/push-watcher.ts", // git
+      // The TEMPORARY Stage-2 backlog that used to sit here is EMPTY: all 20
+      // plain-capture sites moved onto `spawnCaptured` and each took a bound
+      // while it was being touched, which is what made `SpawnOptions`'s
+      // mandatory-bound union expressible. Nothing belongs below this line
+      // except a genuinely streaming or long-lived child, which goes in the
+      // permanent group above WITH its written justification.
     ],
   },
 };

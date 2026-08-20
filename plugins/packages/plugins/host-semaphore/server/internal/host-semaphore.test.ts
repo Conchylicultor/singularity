@@ -804,3 +804,233 @@ test("concurrent first-acquire on a fresh pool never crashes on the size-guard r
   expect(threw).toEqual([]); // no process crashed on the guard race
   expect(results.every((r) => r === "OK")).toBe(true); // every one acquired
 }, 30_000);
+
+// Cancellation (`AcquireHooks.signal`). Two independent effects, tested apart
+// because they answer different questions: whether a caller that is still WAITING
+// can be made to stop, and whether a caller that is already HOLDING can be made to
+// let go while its body runs on. The second is the one that turns "we gave up on
+// this handler" into a flock every other process on the box gets back.
+describe("cancellation (AcquireHooks.signal)", () => {
+  test("an already-aborted signal throws before any wait or spawn", async () => {
+    const sem = createHostSemaphore({ slots: uniqueSlots("abort-pre"), size: 1 });
+    const reason = new Error("already over budget");
+
+    const origSpawn = Bun.spawn;
+    let spawnCount = 0;
+    (Bun as unknown as { spawn: typeof Bun.spawn }).spawn = ((
+      ...args: unknown[]
+    ) => {
+      spawnCount++;
+      return (origSpawn as (...a: unknown[]) => unknown)(...args);
+    }) as typeof Bun.spawn;
+
+    try {
+      const err = await rejection(
+        sem.acquireShare(1, { signal: AbortSignal.abort(reason) }),
+      );
+      // `signal.reason` itself, unwrapped — the standard AbortSignal contract, so
+      // whoever aborted can attach context that surfaces at the wedge site.
+      expect(err).toBe(reason);
+      expect(spawnCount).toBe(0);
+    } finally {
+      (Bun as unknown as { spawn: typeof Bun.spawn }).spawn = origSpawn;
+    }
+
+    // And it took nothing: the pool is fully available to the next caller.
+    const share = await sem.acquireShare(1);
+    expect(share.slots).toBe(1);
+    await share.release();
+  });
+
+  test("a pending acquire aborts, throws signal.reason, and leaves no child alive", async () => {
+    const sem = createHostSemaphore({
+      slots: uniqueSlots("abort-pending"),
+      size: 2,
+    });
+    // Fill the pool so the next acquire is forced onto the slow path (turnstile +
+    // fan-out children) — the only place there is anything to cancel.
+    const holder = await sem.acquireShare(2);
+    expect(holder.slots).toBe(2);
+
+    const spawned: { exited: Promise<number> }[] = [];
+    const origSpawn = Bun.spawn;
+    (Bun as unknown as { spawn: typeof Bun.spawn }).spawn = ((
+      ...args: unknown[]
+    ) => {
+      const child = (origSpawn as (...a: unknown[]) => unknown)(...args) as {
+        exited: Promise<number>;
+      };
+      spawned.push(child);
+      return child;
+    }) as typeof Bun.spawn;
+
+    const ac = new AbortController();
+    const reason = new Error("deadline exceeded");
+    try {
+      const pending = sem.acquireShare(1, { signal: ac.signal });
+      await sleep(200); // reach the slow path and fan out
+      expect(sem.depth()).toBe(1);
+      expect(spawned.length).toBeGreaterThan(0);
+
+      ac.abort(reason);
+      expect(await rejection(pending)).toBe(reason);
+    } finally {
+      (Bun as unknown as { spawn: typeof Bun.spawn }).spawn = origSpawn;
+    }
+
+    expect(sem.depth()).toBe(0); // the queue-depth gauge is not left inflated
+
+    // Every child spawned for the cancelled acquire is reaped. A leaked
+    // `flock-wait` child would be worse than the wedge we are cancelling: it holds
+    // a slot the pool can no longer account for, for the life of the box.
+    for (const child of spawned) {
+      const outcome = await Promise.race([
+        child.exited,
+        sleep(2000).then(() => "TIMEOUT" as const),
+      ]);
+      expect(outcome).not.toBe("TIMEOUT");
+    }
+
+    // The pool itself is undamaged — every slot comes back.
+    await holder.release();
+    const after = await sem.acquireShare(2);
+    expect(after.slots).toBe(2);
+    await after.release();
+  });
+
+  test("cancelling the head waiter releases the turnstile, so another waiter still wakes", async () => {
+    const sem = createHostSemaphore({
+      slots: uniqueSlots("abort-turnstile"),
+      size: 1,
+    });
+    const holder = await sem.acquireShare(1);
+
+    const ac = new AbortController();
+    const first = sem.acquireShare(1, { signal: ac.signal });
+    await sleep(150); // head waiter: holds the turnstile, has fanned out
+    const second = sem.acquireShare(1);
+    await sleep(150); // queued behind the turnstile
+    expect(sem.depth()).toBe(2);
+
+    const reason = new Error("head gave up");
+    ac.abort(reason);
+    expect(await rejection(first)).toBe(reason);
+
+    // The cancelled head must not take the turnstile to the grave with it —
+    // otherwise one aborted waiter would strand every waiter behind it, which is
+    // the wedge this whole change exists to remove rather than relocate.
+    await holder.release();
+    const outcome = await Promise.race([
+      second,
+      sleep(3000).then(() => "TIMEOUT" as const),
+    ]);
+    expect(outcome).not.toBe("TIMEOUT");
+    await (outcome as HostShare).release();
+  });
+
+  test("a waiter queued on the TURNSTILE child aborts cleanly and reaps it", async () => {
+    // The other slow-path wait: not the fan-out, but the single `flock-wait` child
+    // a non-head waiter uses to queue for the turnstile. It unwinds through a
+    // different branch, so it gets its own test — the head-waiter test above never
+    // reaches it (the head takes the turnstile in-process, with no child at all).
+    const sem = createHostSemaphore({
+      slots: uniqueSlots("abort-turnstile-child"),
+      size: 1,
+    });
+    const holder = await sem.acquireShare(1);
+
+    const head = sem.acquireShare(1); // takes the turnstile, fans out
+    await sleep(150);
+
+    const spawned: { exited: Promise<number> }[] = [];
+    const origSpawn = Bun.spawn;
+    (Bun as unknown as { spawn: typeof Bun.spawn }).spawn = ((
+      ...args: unknown[]
+    ) => {
+      const child = (origSpawn as (...a: unknown[]) => unknown)(...args) as {
+        exited: Promise<number>;
+      };
+      spawned.push(child);
+      return child;
+    }) as typeof Bun.spawn;
+
+    const ac = new AbortController();
+    const reason = new Error("queued waiter gave up");
+    try {
+      const queued = sem.acquireShare(1, { signal: ac.signal });
+      await sleep(200); // parked on the turnstile child, behind the head
+      expect(spawned.length).toBe(1); // exactly one child: the turnstile waiter
+
+      ac.abort(reason);
+      expect(await rejection(queued)).toBe(reason);
+    } finally {
+      (Bun as unknown as { spawn: typeof Bun.spawn }).spawn = origSpawn;
+    }
+
+    for (const child of spawned) {
+      const outcome = await Promise.race([
+        child.exited,
+        sleep(2000).then(() => "TIMEOUT" as const),
+      ]);
+      expect(outcome).not.toBe("TIMEOUT");
+    }
+
+    // The head is untouched by its neighbour's cancellation.
+    await holder.release();
+    const share = await Promise.race([
+      head,
+      sleep(3000).then(() => "TIMEOUT" as const),
+    ]);
+    expect(share).not.toBe("TIMEOUT");
+    await (share as HostShare).release();
+  });
+
+  test("run hands the slot back when the signal aborts while fn is still running", async () => {
+    const slots = uniqueSlots("abort-midrun");
+    const slotsDir = slots.path;
+    const sem = createHostSemaphore({ slots, size: 1 });
+
+    const ac = new AbortController();
+    let settle!: () => void;
+    const bodyDone = new Promise<void>((r) => {
+      settle = r;
+    });
+    let bodyFinished = false;
+
+    // A body that deliberately IGNORES its signal — the wedged-handler case, which
+    // is the only one where any of this matters.
+    const running = sem.run(
+      async () => {
+        await bodyDone;
+        bodyFinished = true;
+        return "done";
+      },
+      { signal: ac.signal },
+    );
+
+    await sleep(50);
+    expect(isSlotHeld(slotsDir, 0)).toBe(true);
+
+    ac.abort(new Error("deadline exceeded"));
+    await sleep(50);
+
+    // The whole point: the host slot is back WHILE the body is still running.
+    expect(bodyFinished).toBe(false);
+    expect(isSlotHeld(slotsDir, 0)).toBe(false);
+
+    // ...and really usable again — a fresh acquire takes the fast path.
+    const other = await sem.acquireShare(1);
+    expect(other.slots).toBe(1);
+    await other.release();
+
+    // `run` does not cancel `fn` (it cannot un-await a promise), so a body that
+    // finishes anyway keeps its result; the `finally` release is then a no-op
+    // rather than a double-close.
+    settle();
+    expect(await running).toBe("done");
+
+    const again = await sem.acquireShare(1);
+    expect(again.slots).toBe(1);
+    await again.release();
+  });
+});

@@ -31,6 +31,7 @@ export const dataDirsEntries: CollectedEntry[] = [
   { pluginPath: "infra/plugins/attachments", id: "infra.attachments", loader: () => import("@plugins/infra/plugins/attachments/data-dirs"), dependsOn: [] },
   { pluginPath: "infra/plugins/duress/plugins/latch", id: "infra.duress.latch", loader: () => import("@plugins/infra/plugins/duress/plugins/latch/data-dirs"), dependsOn: [] },
   { pluginPath: "infra/plugins/host-admission", id: "infra.host-admission", loader: () => import("@plugins/infra/plugins/host-admission/data-dirs"), dependsOn: [] },
+  { pluginPath: "infra/plugins/jobs", id: "infra.jobs", loader: () => import("@plugins/infra/plugins/jobs/data-dirs"), dependsOn: [] },
   { pluginPath: "infra/plugins/launcher", id: "infra.launcher", loader: () => import("@plugins/infra/plugins/launcher/data-dirs"), dependsOn: [] },
   { pluginPath: "infra/plugins/secrets", id: "infra.secrets", loader: () => import("@plugins/infra/plugins/secrets/data-dirs"), dependsOn: [] },
   { pluginPath: "packages/plugins/signal-origin", id: "packages.signal-origin", loader: () => import("@plugins/packages/plugins/signal-origin/data-dirs"), dependsOn: [] },

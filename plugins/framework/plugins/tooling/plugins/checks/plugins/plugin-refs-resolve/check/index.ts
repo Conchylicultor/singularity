@@ -4,6 +4,12 @@ import { grepCode } from "@plugins/framework/plugins/tooling/plugins/checks/core
 import { parse as parseJsonc } from "jsonc-parser";
 import { getWorktreeRoot, spawnCaptured } from "@plugins/infra/plugins/spawn/core";
 
+// Wedge-breaker for a metadata-only git read: far above any real duration,
+// because starvation under a saturated check run is what these suffer, not
+// slowness. Same reasoning as `infra/worktree`'s bounds, which carry the
+// measurements.
+const GIT_TIMEOUT_MS = 60_000;
+
 type CheckResult = { ok: true } | { ok: false; message: string; hint?: string };
 type Check = { id: string; description: string; run(): Promise<CheckResult> };
 
@@ -14,7 +20,10 @@ interface Violation {
 }
 
 async function gitLsFiles(root: string, pathspec: string): Promise<string[]> {
-  const result = await spawnCaptured(["git", "ls-files", pathspec], { cwd: root });
+  const result = await spawnCaptured(["git", "ls-files", pathspec], {
+    cwd: root,
+    timeoutMs: GIT_TIMEOUT_MS,
+  });
   const out = result.stdout.trim();
   return out ? out.split("\n").filter((l) => l.length > 0) : [];
 }

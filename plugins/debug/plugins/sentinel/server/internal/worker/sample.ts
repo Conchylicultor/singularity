@@ -12,6 +12,7 @@ import {
   type HealthSample,
 } from "@plugins/debug/plugins/health-monitor/server";
 import { readChannelEntries } from "@plugins/primitives/plugins/log-channels/server";
+import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
 import type { ClusterSample } from "../../../core";
 import {
   counterDelta,
@@ -19,6 +20,8 @@ import {
   mapPgStatsRow,
 } from "../sample-math";
 import type { SentinelPg } from "./pg";
+
+const PS_TIMEOUT_MS = 5_000;
 
 // The impure per-tick gatherers, moved verbatim out of the old main-loop
 // sampler (sampler.ts) into the sentinel worker. Per-signal degradation is
@@ -71,11 +74,16 @@ async function countBuilds(log: Logger): Promise<number | null> {
   try {
     // One `ps` spawn per tick — the host-sampler's vm_stat-per-tick precedent.
     // captureProcessTree() is (pid, ppid) only; fleet counting needs commands.
-    const proc = Bun.spawn(["ps", "-axo", "command="], { stdout: "pipe" });
-    const text = await new Response(proc.stdout).text();
-    const exit = await proc.exited;
-    if (exit !== 0) throw new Error(`ps exited ${exit}`);
-    return countBuildProcesses(text);
+    // Bounded under the sentinel's tick cadence: a process-table read that has
+    // not answered in five seconds has already missed the tick it belongs to,
+    // and the `catch` below turns that into the nullable "scan unreadable this
+    // tick" arm rather than a pile-up of ps children.
+    const result = await spawnCaptured(["ps", "-axo", "command="], {
+      timeoutMs: PS_TIMEOUT_MS,
+    });
+    if (result.timedOut) throw new Error(`ps did not finish within ${PS_TIMEOUT_MS} ms`);
+    if (result.exitCode !== 0) throw new Error(`ps exited ${result.exitCode}`);
+    return countBuildProcesses(result.stdout);
     // eslint-disable-next-line promise-safety/no-absorbed-failure -- null IS the discriminated "scan unreadable this tick" state: inFlightBuilds is nullable in the sample schema and the failure is logged to the sentinel channel; a ps hiccup must not lose the tick's pg/host vitals
   } catch (err) {
     log(`build-process scan failed: ${String(err)}`);

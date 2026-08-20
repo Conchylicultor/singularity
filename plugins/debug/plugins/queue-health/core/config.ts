@@ -1,5 +1,6 @@
 import { defineConfig } from "@plugins/config_v2/core";
 import { boolField } from "@plugins/fields/plugins/bool/plugins/config/core";
+import { floatField } from "@plugins/fields/plugins/float/plugins/config/core";
 import { intField } from "@plugins/fields/plugins/int/plugins/config/core";
 
 // Tunable thresholds for the queue-health watchdog. The watchdog reads these
@@ -34,12 +35,36 @@ export const queueHealthConfig = defineConfig({
       description:
         "File a queue-backlog report when the oldest ready job has been overdue longer than this many minutes (a stall signal).",
     }),
-    slotHogHoldFactor: intField({
-      default: 3,
-      min: 1,
-      label: "Slot-hog hold factor (× the class ceiling)",
+    // A FRACTION OF THE DEADLINE, and the bounds are the point. `deadlineMsFor`
+    // is when a run of that class is aborted; reporting at a fraction strictly
+    // below 1 makes warn-before-kill true by construction for every class at
+    // every settable value, instead of a coincidence of two independently-chosen
+    // numbers that an operator could invert with one config edit.
+    //
+    // THE UPPER BOUND IS LOAD-BEARING, not taste. At exactly 1.0 the warning
+    // fires on the same instant as the abort, so a job would be killed and
+    // warned about simultaneously — which is the same as never being warned.
+    // Every value below it leaves real headroom between the two. Do not raise
+    // `max` to 1; if a wider range is ever wanted, the fix is an exclusive bound
+    // on `floatField`, not a `max` that lets the ordering collapse.
+    //
+    // 0.05 / 0.95 rather than an exclusive `(0, 1)` because `floatField`'s
+    // min/max compile to `z.number().min()/.max()`, which are INCLUSIVE — there
+    // is no exclusive spelling in the field type today. The lower bound is the
+    // mirror case: at 0 every dispatch trips on arrival.
+    //
+    // Replaces the old `slotHogHoldFactor` (an int × the class's WORK ceiling).
+    // That knob measured the wrong quantity — a multiple of a work ceiling used
+    // as a hold threshold — and at its default of 3 it put `minutes` at 90 min,
+    // i.e. AFTER the deadline: a job killed before it was ever warned about.
+    slotHogDeadlineFraction: floatField({
+      default: 0.5,
+      min: 0.05,
+      max: 0.95,
+      step: 0.05,
+      label: "Slot-hog threshold (fraction of the class deadline)",
       description:
-        "File a queue-slot-hog report when a job has held a worker slot (locked/running) for more than this many times its hold class's work ceiling — 10s for instant, 2min for seconds, 30min for minutes. One factor rather than one duration, so the alarm scales with what the job declared instead of restating a number the class already owns.",
+        "File a queue-slot-hog report when a job has held a worker slot (locked/running) for more than this fraction of its hold class's deadline — the wall-clock point at which a run of that class is aborted. A fraction rather than a duration, so the alarm scales with what the job declared; strictly below 1, so the warning always precedes the kill.",
     }),
     slotBlockedWaitSeconds: intField({
       default: 5,

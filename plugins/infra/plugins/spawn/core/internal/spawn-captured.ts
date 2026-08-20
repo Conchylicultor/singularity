@@ -80,18 +80,26 @@ function makeResult(
  * use `spawnExpectOk`. Temp files orphaned by a hard crash are reclaimed by
  * the OS tmpdir sweep (repo convention).
  *
- * `opts.timeoutMs`, when given, is a one-shot deadline (see `SpawnBound`):
- * SIGTERM on expiry, SIGKILL after `SIGKILL_GRACE_MS`, `timedOut: true` on the
- * result. Whatever the child wrote before the kill is still captured — the
- * temp files are read after exit either way.
+ * `opts` is REQUIRED and its type is a union, so every caller has to say what
+ * bounds this child — `timeoutMs`, `signal`, or the prose `unbounded` opt-out.
+ * See `SpawnOptions` for how to choose between the three.
+ *
+ * `opts.timeoutMs` is a one-shot deadline (see `SpawnBound`): SIGTERM on expiry,
+ * SIGKILL after `SIGKILL_GRACE_MS`, `timedOut: true` on the result. Whatever the
+ * child wrote before the kill is still captured — the temp files are read after
+ * exit either way.
  *
  * `opts.signal` runs the SAME escalation but THROWS `signal.reason` instead of
  * returning a result, so an abandoned caller cannot absorb the cancellation and
  * carry on (see `SpawnBound.signal` for why the two differ).
+ *
+ * `opts.unbounded` is read by NOTHING here. It is a type-level and grep-level
+ * artifact only, and this function behaves exactly as it did before bounds
+ * existed when that is the arm chosen.
  */
 export async function spawnCaptured(
   argv: string[],
-  opts: SpawnOptions = {},
+  opts: SpawnOptions,
 ): Promise<SpawnResult> {
   const signal = opts.signal;
   // Before any side effect — the tmpdir AND the child. A caller that has already
@@ -224,7 +232,7 @@ export async function spawnCaptured(
 /** `spawnCaptured` that THROWS a `SpawnFailedError` on any non-zero exit. */
 export async function spawnExpectOk(
   argv: string[],
-  opts: SpawnOptions = {},
+  opts: SpawnOptions,
 ): Promise<SpawnResult> {
   const result = await spawnCaptured(argv, opts);
   if (result.exitCode !== 0) {

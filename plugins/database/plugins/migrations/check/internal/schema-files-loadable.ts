@@ -36,6 +36,11 @@ const schemaFilesLoadableCheck: Check = {
       {
         cwd: resolve(root, MIGRATIONS_PLUGIN_DIR),
         env: { ...process.env, SINGULARITY_WORKTREE: basename(root), NO_COLOR: "1" },
+        // The probe require()s every schema-glob file in one pass — seconds of
+        // module loading, no I/O that can block indefinitely. Three minutes is
+        // there for the case a schema file's module scope does something that
+        // never returns, which is exactly the class of bug this check hunts.
+        timeoutMs: 180_000,
       },
     );
     const stdout = result.stdout;

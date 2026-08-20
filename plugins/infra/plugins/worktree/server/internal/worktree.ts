@@ -91,8 +91,11 @@ export class WorktreeGitTimeoutError extends Error {
 // The tightest bound in the file, because `removeWorktreeUnlogged` calls it from
 // INSIDE the mutate gate: a wedge here holds one of three host-wide slots while
 // doing nothing but reading metadata.
-async function worktreeListPaths(argv: string[]): Promise<string[]> {
-  const r = await spawnCaptured(argv, { timeoutMs: LIST_TIMEOUT_MS });
+async function worktreeListPaths(
+  argv: string[],
+  signal?: AbortSignal,
+): Promise<string[]> {
+  const r = await spawnCaptured(argv, { timeoutMs: LIST_TIMEOUT_MS, signal });
   if (r.timedOut) {
     throw new WorktreeGitTimeoutError({
       message:
@@ -116,14 +119,14 @@ async function worktreeListPaths(argv: string[]): Promise<string[]> {
 // The main worktree root (parent of all `.claude/worktrees/*`), not the
 // current worktree — `git rev-parse --show-toplevel` would return the latter
 // when the server runs inside a worktree.
-export async function ensureMainWorktreeRoot(): Promise<string> {
+export async function ensureMainWorktreeRoot(
+  signal?: AbortSignal,
+): Promise<string> {
   if (cachedRepoRoot) return cachedRepoRoot;
-  const [mainPath] = await worktreeListPaths([
-    GIT,
-    "worktree",
-    "list",
-    "--porcelain",
-  ]);
+  const [mainPath] = await worktreeListPaths(
+    [GIT, "worktree", "list", "--porcelain"],
+    signal,
+  );
   if (!mainPath) throw new Error("Could not determine main worktree root");
   cachedRepoRoot = mainPath;
   return cachedRepoRoot;
@@ -187,6 +190,7 @@ const WORKTREE_LOCK_REASON = "singularity agent worktree";
 async function ensureWorktreeLocked(
   repoRoot: string,
   wtPath: string,
+  signal?: AbortSignal,
 ): Promise<void> {
   const r = await spawnCaptured(
     [
@@ -199,7 +203,7 @@ async function ensureWorktreeLocked(
       "--reason",
       WORKTREE_LOCK_REASON,
     ],
-    { timeoutMs: LOCK_TIMEOUT_MS },
+    { timeoutMs: LOCK_TIMEOUT_MS, signal },
   );
   if (r.exitCode === 0 || r.stderr.includes("is already locked")) return;
   console.warn(
@@ -225,10 +229,11 @@ async function ensureWorktreeLocked(
 async function unlockWorktreeForRemoval(
   repoRoot: string,
   wtPath: string,
+  signal?: AbortSignal,
 ): Promise<void> {
   const r = await spawnCaptured(
     [GIT, "-C", repoRoot, "worktree", "unlock", wtPath],
-    { timeoutMs: LOCK_TIMEOUT_MS },
+    { timeoutMs: LOCK_TIMEOUT_MS, signal },
   );
   // "is not locked" is the desired end state, not a failure.
   if (r.exitCode === 0 || r.stderr.includes("is not locked")) return;
@@ -250,13 +255,20 @@ async function unlockWorktreeForRemoval(
  * from four commands, so importing it would break every `./singularity` command.
  * `infra/worktree` also has no business knowing what a composition is; the
  * caller, which runs in a backend, does.
+ *
+ * @param signal ambient cancellation, optional. A job handler passes its
+ * `ctx.signal`: it is forwarded to the host-wide `worktree-mutate` acquire AND to
+ * every git child below, so giving up on the handler actually frees the flock
+ * instead of merely recording that we gave up. Without it, an abandoned checkout
+ * keeps one of three host-wide slots for as long as git keeps running.
  */
 export async function setupWorktree(
   id: string,
   wtPath: string,
   compositionIds: ReadonlySet<string>,
+  signal?: AbortSignal,
 ): Promise<void> {
-  const repoRoot = await ensureMainWorktreeRoot();
+  const repoRoot = await ensureMainWorktreeRoot(signal);
   // Idempotent: an already-present worktree dir means the checkout already
   // landed, so a durable-job retry (or a caller reusing an existing worktree) is
   // a no-op. `worktreePathFor` derives the path purely from the id, so the dir's
@@ -267,7 +279,7 @@ export async function setupWorktree(
   // guaranteed means a checkout cannot stay unlocked just because it predates
   // this code or something released its lock.
   if (existsSync(wtPath)) {
-    await ensureWorktreeLocked(repoRoot, wtPath);
+    await ensureWorktreeLocked(repoRoot, wtPath, signal);
     return;
   }
 
@@ -300,7 +312,7 @@ export async function setupWorktree(
     // interactive backends.
     const r = await spawnCaptured(
       [GIT, "-C", repoRoot, "worktree", "add", "-b", branch, wtPath, "main"],
-      { background: true, timeoutMs: ADD_TIMEOUT_MS },
+      { background: true, timeoutMs: ADD_TIMEOUT_MS, signal },
     );
     if (r.timedOut) {
       // MANDATORY companion to the timeout, not defensive tidiness. This function
@@ -320,6 +332,11 @@ export async function setupWorktree(
       // to remove. `rm -rf` is idempotent and anything they recreate is an
       // unregistered leftover the reaper's next tick removes.
       await rm(wtPath, { recursive: true, force: true });
+      // Deliberately NOT signal-bound, unlike the `add` above. This is the cleanup
+      // that keeps a killed checkout from leaving a partial tree the next retry
+      // reads as finished, so it has to run even when the caller has already been
+      // abandoned — cancelling it would trade a released flock for a corrupt
+      // worktree. Its own timeout is what makes running it unconditionally safe.
       const pruned = await spawnCaptured(
         [GIT, "-C", repoRoot, "worktree", "prune"],
         {
@@ -357,8 +374,8 @@ export async function setupWorktree(
     // window between "the directory exists" and "the directory is protected" is
     // exactly the window an outside sweep can take it, so it is closed here
     // rather than after the gate is released.
-    await ensureWorktreeLocked(repoRoot, wtPath);
-  });
+    await ensureWorktreeLocked(repoRoot, wtPath, signal);
+  }, signal);
   // Trust the mise config so agents can run build commands without hitting
   // "config file is not trusted" errors. No-op if mise is not installed.
   //
@@ -369,13 +386,23 @@ export async function setupWorktree(
   try {
     await spawnCaptured(["mise", "trust", `${wtPath}/mise.toml`], {
       timeoutMs: MISE_TRUST_TIMEOUT_MS,
+      signal,
     });
     // eslint-disable-next-line promise-safety/no-bare-catch
   } catch {}
+  // The empty catch above is exactly the shape that would absorb an abort:
+  // `spawnCaptured` reports one by THROWING `signal.reason`, so without this line
+  // a caller told to stop would be told instead that the setup succeeded. Re-raise
+  // it outside the catch, which is only entitled to swallow "mise is absent or
+  // broken".
+  signal?.throwIfAborted();
 }
 
-export async function removeWorktree(wtPath: string): Promise<void> {
-  const repoRoot = await ensureMainWorktreeRoot();
+export async function removeWorktree(
+  wtPath: string,
+  signal?: AbortSignal,
+): Promise<void> {
+  const repoRoot = await ensureMainWorktreeRoot(signal);
   // Attribution, recorded BEFORE anything destructive runs and before we queue
   // on the mutate gate. Two reasons for the ordering: a removal that dies
   // mid-flight is still attributable, and the audit watcher can observe the
@@ -387,7 +414,7 @@ export async function removeWorktree(wtPath: string): Promise<void> {
   // rather than something to reconstruct from timestamps later.
   const removal = beginInAppRemoval(wtPath);
   try {
-    await removeWorktreeUnlogged(wtPath, repoRoot, removal);
+    await removeWorktreeUnlogged(wtPath, repoRoot, removal, signal);
   } catch (err) {
     finishInAppRemoval(removal, { ok: false, error: String(err) });
     throw err;
@@ -399,6 +426,7 @@ async function removeWorktreeUnlogged(
   wtPath: string,
   repoRoot: string,
   removal: InAppRemovalRecord,
+  signal?: AbortSignal,
 ): Promise<void> {
   // Gate the heavy full-tree `rm` host-wide (~1.2 s / 77 MB), the same disk offender
   // as `add` — one shared budget bounds add+remove contention across all callers.
@@ -413,14 +441,10 @@ async function removeWorktreeUnlogged(
     // add/remove mutates, so checking it outside would race a holder of the slot
     // and pick a strategy for a repo state that no longer holds.
     const registered = (
-      await worktreeListPaths([
-        GIT,
-        "-C",
-        repoRoot,
-        "worktree",
-        "list",
-        "--porcelain",
-      ])
+      await worktreeListPaths(
+        [GIT, "-C", repoRoot, "worktree", "list", "--porcelain"],
+        signal,
+      )
     ).includes(wtPath);
     if (!registered) {
       // Unregistered leftover: git will not touch it, so the dir itself is the
@@ -441,7 +465,11 @@ async function removeWorktreeUnlogged(
       // worked. It is logged rather than thrown on purpose: the destructive `rm`
       // above already succeeded, so failing the call here would report a completed
       // removal as a failure and, in the reaper, lose the work every retry redoes.
-      // A stale admin entry is harmless and the next prune clears it.
+      // A stale admin entry is harmless and the next prune clears it. For the
+      // same reason it is deliberately NOT signal-bound: it runs after a
+      // destructive `rm`, so it is the tail of an operation already committed to,
+      // and an abort here would leave the repo in the one state this call exists
+      // to clean up. Its own timeout bounds it instead.
       const pruned = await spawnCaptured(
         [GIT, "-C", repoRoot, "worktree", "prune"],
         {
@@ -462,7 +490,7 @@ async function removeWorktreeUnlogged(
     // Only on this branch: an unregistered leftover has no registration to hold
     // a lock, and `git worktree unlock` on one fails with "is not a working
     // tree" — a confusing warning for a state that cannot be locked.
-    await unlockWorktreeForRemoval(repoRoot, wtPath);
+    await unlockWorktreeForRemoval(repoRoot, wtPath, signal);
     setRemovalBranch(removal, "git-worktree-remove");
     // Demoted (`background: true` applies backgroundArgv/darwinbg): removal is
     // cleanup/reap work, never interactive.
@@ -474,7 +502,7 @@ async function removeWorktreeUnlogged(
     // that a wedged hourly reap frees the flock within its own tick.
     const r = await spawnCaptured(
       [GIT, "-C", repoRoot, "worktree", "remove", wtPath, "--force"],
-      { background: true, timeoutMs: REMOVE_TIMEOUT_MS },
+      { background: true, timeoutMs: REMOVE_TIMEOUT_MS, signal },
     );
     if (r.timedOut) {
       throw new WorktreeGitTimeoutError({
@@ -490,5 +518,5 @@ async function removeWorktreeUnlogged(
     if (r.exitCode !== 0) {
       throw new Error(`git worktree remove failed: ${r.stderr}`);
     }
-  });
+  }, signal);
 }

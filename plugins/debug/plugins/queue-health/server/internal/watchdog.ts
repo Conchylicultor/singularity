@@ -4,6 +4,7 @@ import {
   queryBacklogByJobName,
   queryRunningJobs,
   ceilingMsFor,
+  deadlineMsFor,
   reachableSlots,
   TOTAL_JOB_SLOTS,
   type HoldClass,
@@ -190,7 +191,7 @@ export async function queueHealthTickOnce(): Promise<void> {
     cfg.backlogDepthThreshold,
     cfg.oldestOverdueMinutes,
   );
-  await checkSlotHogs(running, cfg.slotHogHoldFactor);
+  await checkSlotHogs(running, cfg.slotHogDeadlineFraction);
 
   if (tick % SLOT_BLOCKED_EVERY_N_TICKS === 0)
     await checkSlotBlocked(cfg.slotBlockedWaitSeconds * 1000);
@@ -457,22 +458,28 @@ async function checkBacklog(
 // at all; the work/wait split lives in the in-memory profiler and is only final
 // once the run ends.
 //
-// So this detector stays on hold, with EXPLICIT HEADROOM: the threshold is the
-// class's work ceiling times `slotHogHoldFactor` (default 3). The headroom is
-// what makes the comparison honest — a conforming run may legitimately hold its
-// slot somewhat longer than it works, and crossing three times the ceiling is
-// not explicable by ordinary gate wait. When the excess IS wait rather than
-// work, `queue-slot-blocked` says so exactly, by name of the gate; the two
-// detectors are complements, not rivals, and a genuinely blocked job trips both
-// with the second one carrying the actionable half.
+// So this detector stays on hold, and it compares against the one number that
+// is ALSO defined on hold: the class's deadline (`deadlineMsFor`), the
+// wall-clock point at which a run of that class is aborted. The threshold is a
+// fraction of it (`slotHogDeadlineFraction`, default 0.5), constrained strictly
+// below 1 by its field definition — so warn-before-kill is true by construction
+// for every class at every settable value, rather than a coincidence of two
+// numbers chosen independently. Comparing a hold against a WORK ceiling was the
+// tension this replaced; the gap between the ceiling and the deadline is exactly
+// the gate wait a conforming handler is allowed.
 //
-// Per class rather than one flat duration, which is the point of the change: a
-// `minutes` job holding a slot for six minutes is doing exactly what it
-// declared, while an `instant` job holding one for six minutes has wedged a
-// reserved floor slot and is the ladder's new failure mode.
+// When the excess IS wait rather than work, `queue-slot-blocked` says so
+// exactly, by name of the gate; the two detectors are complements, not rivals,
+// and a genuinely blocked job trips both with the second one carrying the
+// actionable half.
+//
+// Per class rather than one flat duration, which is the point: a `minutes` job
+// holding a slot for six minutes is doing exactly what it declared, while an
+// `instant` job holding one for six minutes has wedged a reserved floor slot and
+// is the ladder's new failure mode.
 async function checkSlotHogs(
   running: RunningJobStat[],
-  slotHogHoldFactor: number,
+  slotHogDeadlineFraction: number,
 ): Promise<void> {
   // queryRunningJobs is ordered by lockedForMs DESC, so the first row seen for a
   // jobName is its longest-held slot. Its `hold` is the class used for the
@@ -503,7 +510,7 @@ async function checkSlotHogs(
   }
 
   for (const [jobName, agg] of longestPerJob) {
-    const thresholdMs = ceilingMsFor(agg.hold) * slotHogHoldFactor;
+    const thresholdMs = deadlineMsFor(agg.hold) * slotHogDeadlineFraction;
     if (agg.lockedForMs <= thresholdMs) continue;
     await recordReport({
       kind: "queue-slot-hog",

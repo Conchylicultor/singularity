@@ -41,6 +41,14 @@ import type { DataDir } from "@plugins/infra/plugins/paths/core";
 // fresh caller can still take a slot a queued waiter was about to win. The turnstile
 // buys serialized *wakeup*, not FIFO *fairness*.
 //
+// Cancellable: every wait above accepts an optional `AbortSignal` (see
+// `AcquireHooks.signal`). Both waits are waits on a CHILD's stdout, so cancellation
+// is uniformly "kill our own children and let the read finish as EOF" rather than a
+// race against the signal — nothing is ever abandoned mid-read. That matters beyond
+// tidiness: a caller blocked in here is holding a HOST-WIDE resource, so whether an
+// abandoned caller can be made to let go decides whether one wedged handler costs
+// one process or every process on the box.
+//
 // Reserved floor: with `backgroundLimit < size`, slot *capacity* is partitioned by
 // lane. `background` may only sweep/fan-out over `slot-0 … slot-(backgroundLimit-1)`;
 // `interactive` may use every slot but sweeps them HIGH-index-first, so the reserved
@@ -84,6 +92,20 @@ export interface HostShare {
   readonly slots: number;
   /** Idempotent. Closes local fds and reaps the winner child (if one was spawned). */
   release(): Promise<void>;
+  /**
+   * The SYNCHRONOUS half of `release()`: the instant this returns, every slot is
+   * back host-wide. Closing an fd drops its flock, and killing the winner child
+   * drops the flock it holds, because flock releases on process death — so the
+   * only thing `release()` still does afterwards is REAP the killed child, which
+   * is hygiene, not the bound.
+   *
+   * It exists for one caller shape: an `AbortSignal` listener, which cannot
+   * await. Handing the slots back from inside the abort event is what makes
+   * cancellation containment rather than bookkeeping — the flock is gone before
+   * the abandoned handler has even begun to unwind. Everything else should call
+   * `release()`, which is idempotent and does this first.
+   */
+  releaseSlots(): void;
 }
 
 /**
@@ -104,10 +126,11 @@ export interface HostShare {
 export type Lane = "interactive" | "background";
 
 /**
- * Per-acquire options: the reserved-floor `lane` plus two observability hooks. The
- * hooks are optional and neither gates behavior; they let callers make the gate
- * visible (profiler spans, log lines) without coupling this primitive to any of that.
- * `lane` DOES gate behavior — it selects the slot window and sweep order (see `Lane`).
+ * Per-acquire options: the reserved-floor `lane`, an optional `signal`, plus two
+ * observability hooks. The hooks are optional and neither gates behavior; they let
+ * callers make the gate visible (profiler spans, log lines) without coupling this
+ * primitive to any of that. `lane` and `signal` DO gate behavior — `lane` selects
+ * the slot window and sweep order (see `Lane`), and `signal` cancels (see below).
  */
 export interface AcquireHooks {
   /**
@@ -116,6 +139,44 @@ export interface AcquireHooks {
    * not which slots are reachable.
    */
   lane?: Lane;
+  /**
+   * Ambient cancellation for this acquire. Optional everywhere: omitting it is
+   * exactly today's behavior, so nothing that does not pass one changes.
+   *
+   * WHY THIS EXISTS. A worker that gives up on a wedged handler has exactly one
+   * lever — it aborts a signal; it cannot un-await a promise. So whether giving
+   * up releases anything depends entirely on whether what the handler is blocked
+   * on accepts a signal. `spawnCaptured` does, `fetch` does, and this acquire did
+   * not. On 2026-08-17 a handler sat inside a `worktree-mutate` acquire — a
+   * HOST-WIDE flock — and blocked worktree checkouts on every backend on the
+   * machine. Without cancellation here, "forfeiting" that handler's slot is
+   * bookkeeping; with it, the host resource actually comes back.
+   *
+   * Two effects, and they are different questions:
+   *
+   * 1. **A pending acquire stops waiting.** If the signal fires while we are
+   *    queued — for the turnstile, or fanned out over the lane's slots — the wait
+   *    unwinds and the call THROWS `signal.reason`. Every child we spawned is
+   *    killed and reaped and every fd we opened is closed on the way out; leaking
+   *    a `flock-wait` child or an fd here would be worse than the wedge, since
+   *    both hold slots the pool can no longer see. An acquire that has already
+   *    won its slots when the abort lands hands them straight back and throws
+   *    too, rather than returning a share to an owner that has stopped running.
+   *
+   * 2. **`run` stops HOLDING the slot mid-body** — see `HostSemaphore.run`.
+   *
+   * The failure is always a THROW of `signal.reason` (the standard `AbortSignal`
+   * contract, and the same shape `SpawnBound.signal` uses), never a result field
+   * and never a `slots: 0` share: a cancelled acquire that came back as a value
+   * is precisely the absorbable failure a caller would go on to treat as
+   * admission. `throwIfAborted()` runs before anything else, so a caller that was
+   * already told to stop never opens a new wait.
+   *
+   * One consequence for the hooks below: a CANCELLED acquire never fires
+   * `onAcquired`, even if `onWaitStart` already fired. A consumer that pairs the
+   * two must tolerate a wait that ends in a throw.
+   */
+  signal?: AbortSignal;
   /**
    * The slow path was entered (every slot in the lane's window busy), BEFORE any child
    * is spawned. Never fires on the fast path. Lets a caller *open* a "waiting for a
@@ -152,6 +213,22 @@ export interface HostSemaphore {
    * A thin wrapper over `acquireShare(1, hooks)`: acquire exactly one slot, hold it
    * across `fn`, release in a `finally`. That dedup keeps the fast/slow acquire,
    * `depth()` semantics, and crash-safety identical between the two entry points.
+   *
+   * With `hooks.signal`, an abort that lands while `fn` is STILL PENDING releases
+   * the slot immediately instead of waiting for `fn` to settle. Two halves of that
+   * are worth being precise about, because they are easy to read as one thing:
+   *
+   * - `run` does **not** cancel `fn`. It has no way to — you cannot un-await a
+   *   promise. `fn` owns its own cancellation and holds the same signal; all `run`
+   *   does is stop holding the HOST resource on its behalf, which is the half that
+   *   protects every other process on the box. A body that ignores its signal
+   *   keeps running, it just no longer occupies a slot while doing so — and if it
+   *   finishes anyway, `run` returns its value. It did the work; only `fn` is in
+   *   a position to decide that a post-abort result should be discarded, and it
+   *   holds the signal it needs to decide that.
+   * - Releasing early is safe because `HostShare.release()` is idempotent: the
+   *   `finally` still calls it when `fn` finally settles, and that call is then a
+   *   no-op for the slots and reaps the winner child.
    */
   run<T>(fn: () => Promise<T>, hooks?: AcquireHooks): Promise<T>;
 
@@ -175,6 +252,12 @@ export interface HostSemaphore {
    * 1 slot — it blocks or throws instead, so a caller never has to distinguish "got a
    * share" from "got nothing". The `lane` field of `hooks` selects the reserved-floor
    * window and sweep order (default `background`; see `Lane`).
+   *
+   * `hooks.signal` cancels the ACQUIRE only. Once a share is in your hands, its
+   * lifetime is yours: a signal cannot know when you are done with it, so nothing
+   * here releases it behind your back. That is the whole difference from `run`,
+   * which owns the share's lifetime and therefore can (and does) hand it back the
+   * moment its body is abandoned.
    */
   acquireShare(max: number, hooks?: AcquireHooks): Promise<HostShare>;
 
@@ -345,6 +428,20 @@ export function createHostSemaphore(opts: {
   //
   // Concurrent in-process callers share the in-flight run; the memo clears on settle so
   // the next acquire re-reads rather than trusting a stale outcome.
+  //
+  // DELIBERATELY NOT CANCELLABLE, and the reason is the memo. This run is SHARED:
+  // threading one caller's `AbortSignal` into it would abort it for every other
+  // caller that joined the same promise, and racing the signal against it instead
+  // would abandon a promise whose later failure then has no owner. Neither is a
+  // trade worth making here, because a caller parked in the reconcile is holding
+  // NOTHING host-wide — the probe fds are closed inside the synchronous section and
+  // the guard fd is closed before the guard child is spawned — so there is no host
+  // resource for a cancellation to hand back. Its only wait is for `.size.lock`,
+  // which is held across a handful of filesystem syscalls by a process doing a
+  // first touch or a resize, never across a slot wait, and which flock releases
+  // outright if that process dies. `acquireShare` therefore brackets it with
+  // `throwIfAborted()` on both sides: an abort that lands during the reconcile
+  // stops the call before it starts sweeping for a slot.
   function ensureSizeIdentity(): Promise<void> {
     const live = readSentinel();
     if (
@@ -498,7 +595,11 @@ export function createHostSemaphore(opts: {
   // *different* slot releases it by dying. Awaiting `exited` is mandatory — it reaps
   // the zombies AND guarantees their slots are back before the caller re-sweeps for
   // extras.
-  async function fanOut(order: number[]): Promise<WaitChild> {
+  async function fanOut(
+    order: number[],
+    signal: AbortSignal | undefined,
+  ): Promise<WaitChild> {
+    signal?.throwIfAborted();
     const children = order.map((i) => spawnWait(slotFile(i)));
 
     // Attach ALL readers BEFORE awaiting — a sequential read would deadlock on the
@@ -510,21 +611,49 @@ export function createHostSemaphore(opts: {
       awaitGranted(child.stdout, name).then(() => i),
     );
 
+    // Cancellation is expressed as KILLING OUR OWN CHILDREN, not as racing the
+    // signal against `Promise.any`. Racing would walk away from `size` pending
+    // stream reads whose later rejections have no owner — a floating rejection on
+    // the very path we are making safe. A dead child closes its stdout instead, so
+    // every reader completes on its own (as EOF), `Promise.any` settles, and the
+    // whole fan-out unwinds through the code below that already knows how to reap
+    // it. The AggregateError that results is then REPLACED by `signal.reason`: we
+    // killed them, so reporting a pool fault would be a lie.
+    const onAbort = (): void => {
+      for (const c of children) c.kill(9);
+    };
+    signal?.addEventListener("abort", onAbort, { once: true });
+
     let winnerIndex: number;
     try {
       winnerIndex = await Promise.any(readers);
     } catch (err) {
+      // Reap before reporting, on BOTH arms: a child killed by the abort is a
+      // zombie until awaited, and leaking one here would leave a process holding
+      // a slot the pool can no longer account for.
+      await Promise.all(children.map((c) => c.exited));
+      signal?.throwIfAborted();
       // Every fan-out child died before granting — loud, never a silent bound drop.
       throw new Error(
         `createHostSemaphore(${name}): all ${order.length} fan-out children exited before granting a slot`,
         { cause: err },
       );
+    } finally {
+      signal?.removeEventListener("abort", onAbort);
     }
 
     const winner = children[winnerIndex]!;
     const losers = children.filter((_, i) => i !== winnerIndex);
     for (const l of losers) l.kill(9);
     await Promise.all(losers.map((l) => l.exited));
+    // A grant that lands in the same turn as the abort: the winner is dead or dying
+    // (we killed it above), so the slot it "granted" is already back. Reap it and
+    // throw rather than hand the caller a share nothing is actually holding.
+    if (signal?.aborted) {
+      winner.kill(9);
+      await winner.exited;
+      signal.throwIfAborted();
+    }
     return winner;
   }
 
@@ -537,9 +666,18 @@ export function createHostSemaphore(opts: {
         `acquireShare: max must be a positive integer, got ${max}`,
       );
     }
+    const signal = hooks?.signal;
+    // First line, mirroring `spawnCaptured`: a caller that has already been told
+    // to stop never opens a new wait, and never takes a slot it would only have
+    // to hand straight back.
+    signal?.throwIfAborted();
     const lane: Lane = hooks?.lane ?? "background";
     const t0 = performance.now();
     await ensureSizeIdentity();
+    // The reconcile itself is deliberately not cancellable (see its docblock) —
+    // it holds nothing host-wide. Re-check on the way out so an abort that landed
+    // during it stops here, before we start sweeping for a slot.
+    signal?.throwIfAborted();
     // AFTER the reconcile, never before: it is what settles which slot set this
     // acquire is entitled to sweep, so a window derived ahead of it could aim at the
     // wrong indices for the whole call.
@@ -559,82 +697,124 @@ export function createHostSemaphore(opts: {
       // Slow path: every slot is busy (sweepKeep closed all fds it opened).
       hooks?.onWaitStart?.();
       waiting++;
+      // (a) Turnstile — only the head waiter fans out host-wide. Declared BEFORE
+      // it is taken, with its release closure alongside, so that a cancellation
+      // landing anywhere from the `openSync` onward unwinds through one `finally`
+      // that closes the fd and reaps the child. (It used to be declared between
+      // the acquire and the use, which left the child unreachable from a `finally`
+      // for exactly the window an abort could land in.)
+      const turnstile = turnstileFile();
+      let turnstileFd: number | undefined;
+      let turnstileChild: WaitChild | undefined;
+      let turnstileReleased = false;
+      const releaseTurnstile = async (): Promise<void> => {
+        if (turnstileReleased) return;
+        turnstileReleased = true;
+        if (turnstileFd !== undefined) closeSync(turnstileFd);
+        if (turnstileChild) {
+          // `kill()` is what actually ends the child; the stdin EOF is only the
+          // polite path for a LIVE one. Skipped once the signal has aborted,
+          // because there the child has usually already been SIGKILLed (see
+          // `awaitGrantedCancellable`) and the write would land on a broken pipe.
+          if (!signal?.aborted) {
+            // eslint-disable-next-line detached-work-safety/no-untracked-detached-work -- trivial fire-and-forget child-stdin close before kill(); no work to attribute
+            void turnstileChild.stdin.end();
+          }
+          turnstileChild.kill();
+          await turnstileChild.exited;
+        }
+      };
+
       try {
-        // (a) Turnstile — only the head waiter fans out host-wide. Take it
-        // non-blocking in-process; if contended, wait for it via a single child (a
-        // turnstile is one file, so an ordinary flock queue on it can't strand).
-        const turnstile = turnstileFile();
-        let turnstileFd: number | undefined = openSync(turnstile, "w");
-        let turnstileChild: WaitChild | undefined;
+        // Take it non-blocking in-process; if contended, wait for it via a single
+        // child (a turnstile is one file, so an ordinary flock queue on it can't
+        // strand).
+        turnstileFd = openSync(turnstile, "w");
         if (!flockTry(turnstileFd)) {
           closeSync(turnstileFd);
           turnstileFd = undefined;
           turnstileChild = spawnWait(turnstile);
-          await awaitGranted(turnstileChild.stdout, name);
+          await awaitGrantedCancellable(turnstileChild, name, signal);
         }
 
-        let turnstileReleased = false;
-        const releaseTurnstile = async (): Promise<void> => {
-          if (turnstileReleased) return;
-          turnstileReleased = true;
-          if (turnstileFd !== undefined) closeSync(turnstileFd);
-          if (turnstileChild) {
-            // eslint-disable-next-line detached-work-safety/no-untracked-detached-work -- trivial fire-and-forget child-stdin close before kill(); no work to attribute
-            void turnstileChild.stdin.end();
-            turnstileChild.kill();
-            await turnstileChild.exited;
-          }
-        };
-
-        try {
-          // (b) Re-sweep the lane window: a slot may have freed while we queued for
-          // the turnstile.
-          fds = sweepKeep(effectiveMax, order);
-          if (fds.length === 0) {
-            // (c) Fan out over the lane's window and take the first grant; (d) reap
-            // the losers so their slots are back.
-            winner = await fanOut(order);
-            // (d') Release the turnstile so the next waiter can fan out, BEFORE we
-            // (e) re-sweep for up to `effectiveMax - 1` EXTRA slots. The winner's own
-            // slot is held by the winner child, so it fails to lock here and is never
-            // double-counted.
-            await releaseTurnstile();
-            fds = sweepKeep(effectiveMax - 1, order);
-          }
-        } finally {
-          // Covers the (b)-success path and any throw from fanOut — never strand it.
+        // (b) Re-sweep the lane window: a slot may have freed while we queued for
+        // the turnstile.
+        fds = sweepKeep(effectiveMax, order);
+        if (fds.length === 0) {
+          // (c) Fan out over the lane's window and take the first grant; (d) reap
+          // the losers so their slots are back.
+          winner = await fanOut(order, signal);
+          // (d') Release the turnstile so the next waiter can fan out, BEFORE we
+          // (e) re-sweep for up to `effectiveMax - 1` EXTRA slots. The winner's own
+          // slot is held by the winner child, so it fails to lock here and is never
+          // double-counted.
           await releaseTurnstile();
+          fds = sweepKeep(effectiveMax - 1, order);
         }
       } finally {
+        // Decremented FIRST, synchronously: a throwing `releaseTurnstile` must
+        // never leave the queue-depth gauge permanently inflated.
         waiting--;
+        // Covers the (b)-success path, any throw from fanOut, and a cancellation
+        // anywhere in between — never strand the turnstile.
+        await releaseTurnstile();
       }
     }
 
-    hooks?.onAcquired?.(performance.now() - t0);
-
     let released = false;
-    const release = async (): Promise<void> => {
+    // The synchronous half: once this returns, every slot is back host-wide.
+    // Closing a kept fd releases its slot (flock auto-release), and killing the
+    // winner child releases the one it holds, because flock releases on process
+    // DEATH — the reap below is hygiene, not the bound. Split out so an abort
+    // listener, which cannot await, can still hand the slots back inside the
+    // abort event. See `HostShare.releaseSlots`.
+    const releaseSlots = (): void => {
       // Idempotent: a caller may release in a `finally` that also runs on a path
       // where it already released. Guard so the second call is a no-op.
       if (released) return;
       released = true;
-      // Closing every kept fd releases those slots (flock auto-release).
       for (const fd of fds) closeSync(fd);
       if (winner) {
         // Closing stdin gives the winner EOF → it exits → its fd closes → the flock
         // releases. Fire-and-forget the flush; correctness is guaranteed by kill() +
-        // awaiting exited, which reaps the child so we never leave a zombie.
-        // eslint-disable-next-line detached-work-safety/no-untracked-detached-work -- trivial fire-and-forget child-stdin close before kill(); no work to attribute
-        void winner.stdin.end();
+        // awaiting exited, which reaps the child so we never leave a zombie. Skipped
+        // once the signal has aborted, for the same reason as the turnstile child
+        // above: kill() alone is sufficient, and the write may hit a broken pipe.
+        if (!signal?.aborted) {
+          // eslint-disable-next-line detached-work-safety/no-untracked-detached-work -- trivial fire-and-forget child-stdin close before kill(); no work to attribute
+          void winner.stdin.end();
+        }
         winner.kill();
-        await winner.exited;
       }
     };
+    const release = async (): Promise<void> => {
+      releaseSlots();
+      // Reap the killed child. Awaiting a settled `exited` is a no-op, so calling
+      // `release()` again — or calling it after an abort listener already ran
+      // `releaseSlots()` — stays idempotent.
+      if (winner) await winner.exited;
+    };
+
+    if (signal?.aborted) {
+      // We hold the slots, but the caller was abandoned somewhere between the last
+      // wait and here. Hand them back and throw rather than return a share to an
+      // owner that has stopped running and will never release it. This is the same
+      // edge `SpawnBound.signal` documents — "an abort after a clean exit still
+      // throws, discarding a good result" — with the extra reason that here the
+      // discarded result is a host-wide resource.
+      //
+      // Before `onAcquired`, deliberately: a cancelled acquire must not report an
+      // acquisition it is about to undo.
+      await release();
+      signal.throwIfAborted();
+    }
+
+    hooks?.onAcquired?.(performance.now() - t0);
 
     // slots = (the winner child's one slot, if we took the slow path) + the fds we
     // hold directly. Always >= 1: on the fast path fds.length >= 1 (we only fall to
     // the slow path when it's 0); on the slow path the winner contributes the 1.
-    return { slots: (winner ? 1 : 0) + fds.length, release };
+    return { slots: (winner ? 1 : 0) + fds.length, release, releaseSlots };
   }
 
   return {
@@ -646,9 +826,31 @@ export function createHostSemaphore(opts: {
 
     async run<T>(fn: () => Promise<T>, hooks?: AcquireHooks): Promise<T> {
       const share = await acquireShare(1, hooks);
+      const signal = hooks?.signal;
+      // Effect 2 of `AcquireHooks.signal`: stop HOLDING the host slot the moment
+      // the body is abandoned, without waiting for it to settle. `releaseSlots` is
+      // synchronous precisely so it can run here — an event listener cannot await —
+      // and it is what turns "we gave up on this handler" into an actual flock
+      // release on every other backend's behalf, rather than an entry in a ledger.
+      //
+      // What this does NOT do is cancel `fn`. There is no way to un-await a
+      // promise; `fn` holds the same signal and owns its own cancellation. All we
+      // are doing is declining to occupy a host slot on behalf of work that has
+      // been written off. A body that ignores its signal keeps running — it just
+      // no longer costs the host a slot while it does.
+      //
+      // Safe because release is idempotent: the `finally` still runs when `fn`
+      // eventually settles, where it is a no-op for the slots and does the reap
+      // this listener could not await.
+      const onAbort = (): void => share.releaseSlots();
+      signal?.addEventListener("abort", onAbort, { once: true });
       try {
         return await fn();
       } finally {
+        // Removed unconditionally: without this, a long-lived signal (a job's
+        // `ctx.signal` outliving one gate acquire) would accumulate a listener per
+        // call for the life of the dispatch.
+        signal?.removeEventListener("abort", onAbort);
         await share.release();
       }
     },
@@ -662,6 +864,42 @@ export function createHostSemaphore(opts: {
  * would silently drop the gate's bound). In fan-out, a loser rejecting this way is
  * expected and absorbed by `Promise.any`.
  */
+/**
+ * `awaitGranted` for a `flock-wait` child WE own, made cancellable.
+ *
+ * Cancellation is expressed as SIGKILLing the child rather than as a
+ * `Promise.race` against the signal, for the same reason as in `fanOut`: racing
+ * abandons a pending `reader.read()` on a stream we then release the lock on, and
+ * its later rejection has no owner — a floating rejection on exactly the path we
+ * are making safe. Killing the child closes its stdout instead, so the read
+ * completes normally (as EOF) and the wait unwinds through its own `finally`.
+ *
+ * That EOF then LOOKS like this pool's loud "the child died before granting"
+ * failure, so both outcomes are re-checked against the signal and replaced by
+ * `signal.reason`: reporting a pool fault for a child we killed would be a lie,
+ * and returning success would claim a lock whose holder we just destroyed. The
+ * caller still reaps the child — every call site here does so in a `finally`.
+ */
+async function awaitGrantedCancellable(
+  child: WaitChild,
+  name: string,
+  signal: AbortSignal | undefined,
+): Promise<void> {
+  if (!signal) return awaitGranted(child.stdout, name);
+  signal.throwIfAborted();
+  const onAbort = (): void => child.kill(9);
+  signal.addEventListener("abort", onAbort, { once: true });
+  try {
+    await awaitGranted(child.stdout, name);
+  } catch (err) {
+    signal.throwIfAborted(); // our own kill caused this EOF — report the abort
+    throw err;
+  } finally {
+    signal.removeEventListener("abort", onAbort);
+  }
+  signal.throwIfAborted(); // granted in the same turn as the abort — do not keep it
+}
+
 async function awaitGranted(
   stream: ReadableStream<Uint8Array>,
   name: string,

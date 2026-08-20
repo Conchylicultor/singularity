@@ -61,11 +61,40 @@ export interface HoldClassSpec {
    * gate entered after dispatch can hold a slot for a minute to do 250 ms of work
    * — so conformance is read off work.
    *
-   * Today this is the slot-hog report threshold. When
-   * `research/2026-08-17-global-bounded-job-execution.md` Phase 2 lands, the same
-   * number becomes the execution deadline that aborts `ctx.signal`.
+   * This is what `debug/slow-ops` judges a job's conformance against, and the
+   * floor of `queue-class-starved`'s per-class window.
+   *
+   * **It is NOT the deadline** — see {@link HoldClassSpec.deadlineMs}. An earlier
+   * version of this comment promised that "the same number becomes the execution
+   * deadline"; the commit that wrote it also shipped the evidence against it, and
+   * the two are siblings rather than one number.
    */
   readonly ceilingMs: number;
+  /**
+   * The wall-clock HOLD at which one run of this class is given up on: the timer
+   * that aborts `ctx.signal` with a `JobDeadlineExceededError`.
+   *
+   * **Why this is a sibling of `ceilingMs` and not the same number.** `ceilingMs`
+   * bounds WORK, and work is the only quantity a class can honestly ceiling —
+   * but a deadline can only ever be measured on wall-clock hold, because at the
+   * moment the timer fires nothing knows yet how the elapsed time split between
+   * working and waiting. Those two quantities genuinely differ, and
+   * `queue-slot-blocked` was shipped precisely to report the gap: `jobs.dead-gc`
+   * was measured holding a worker slot for **77 seconds to do 254 ms of work**,
+   * all of the remainder blocked on `background-tx-acquire`, an admission gate it
+   * entered *after* graphile had already handed it the slot. Aborting on hold at
+   * the work ceiling would kill that conforming handler, and every handler like
+   * it, for someone else's congestion.
+   *
+   * So the gap between the two numbers is not slack — it is the statement of how
+   * much gate wait we are willing to believe before we stop believing the handler
+   * will ever return.
+   *
+   * `queue-slot-hog` reports at a FRACTION of this (`slotHogDeadlineFraction`,
+   * strictly below 1), which is what makes warn-before-kill structural rather
+   * than a coincidence of two independently-chosen numbers.
+   */
+  readonly deadlineMs: number;
 }
 
 export const HOLD_SPECS: Readonly<Record<HoldClass, HoldClassSpec>> = {
@@ -75,6 +104,7 @@ export const HOLD_SPECS: Readonly<Record<HoldClass, HoldClassSpec>> = {
     task: "jobs.run.instant",
     priority: 2,
     ceilingMs: 10_000,
+    deadlineMs: 60_000,
   },
   seconds: {
     hold: "seconds",
@@ -82,6 +112,7 @@ export const HOLD_SPECS: Readonly<Record<HoldClass, HoldClassSpec>> = {
     task: "jobs.run.seconds",
     priority: 1,
     ceilingMs: 120_000,
+    deadlineMs: 600_000,
   },
   minutes: {
     hold: "minutes",
@@ -89,6 +120,7 @@ export const HOLD_SPECS: Readonly<Record<HoldClass, HoldClassSpec>> = {
     task: "jobs.run.minutes",
     priority: 0,
     ceilingMs: 1_800_000,
+    deadlineMs: 3_600_000,
   },
 };
 
@@ -154,6 +186,13 @@ export function priorityFor(hold: HoldClass): number {
 /** The class's ceiling on WORK time — see {@link HoldClassSpec.ceilingMs}. */
 export function ceilingMsFor(hold: HoldClass): number {
   return HOLD_SPECS[hold].ceilingMs;
+}
+
+/** The class's wall-clock HOLD deadline — see {@link HoldClassSpec.deadlineMs}.
+ * The number the dispatch timer arms on, and the number every consumer that
+ * wants to say something about the deadline must read rather than restate. */
+export function deadlineMsFor(hold: HoldClass): number {
+  return HOLD_SPECS[hold].deadlineMs;
 }
 
 /** How many worker slots a row of this class can ever reach, summed over every

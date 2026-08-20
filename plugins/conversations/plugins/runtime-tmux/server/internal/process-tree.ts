@@ -1,4 +1,11 @@
 import { PS } from "@plugins/infra/plugins/paths/server";
+import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
+
+// One process-table read: a kernel query that returns in milliseconds even on a
+// saturated box. Five seconds matches the same `ps -axo` bound the worktree
+// removal audit's own snapshot uses, so the two readings of the process table
+// agree about when to give up.
+const PS_TIMEOUT_MS = 5_000;
 
 /** Enumerates every live process as a (pid, ppid) pair. */
 export type ProcessLister = () => Promise<Array<{ pid: number; ppid: number }>>;
@@ -17,25 +24,26 @@ export interface ProcessTree {
 }
 
 async function psLister(): Promise<Array<{ pid: number; ppid: number }>> {
-  const proc = Bun.spawn([PS, "-axo", "pid=,ppid="], {
-    stdout: "pipe",
-    stderr: "pipe",
+  const result = await spawnCaptured([PS, "-axo", "pid=,ppid="], {
+    timeoutMs: PS_TIMEOUT_MS,
   });
-  const [stdout, stderr] = await Promise.all([
-    new Response(proc.stdout).text(),
-    new Response(proc.stderr).text(),
-  ]);
-  const exit = await proc.exited;
   // An empty tree is indistinguishable from "this pid has no descendants", so a
   // failed snapshot must never degrade into one — it would silently re-introduce
-  // the pane_pid-only resolution this module exists to replace.
-  if (exit !== 0) {
+  // the pane_pid-only resolution this module exists to replace. A timeout is
+  // named separately from a nonzero exit for the same reason: the caller reading
+  // this message needs to know the snapshot was killed, not refused.
+  if (result.timedOut) {
     throw new Error(
-      `ps -axo pid=,ppid= failed (exit ${exit}): ${stderr.trim() || "<no stderr>"}`,
+      `ps -axo pid=,ppid= did not finish within ${PS_TIMEOUT_MS} ms and was killed`,
+    );
+  }
+  if (result.exitCode !== 0) {
+    throw new Error(
+      `ps -axo pid=,ppid= failed (exit ${result.exitCode}): ${result.stderr.trim() || "<no stderr>"}`,
     );
   }
   const rows: Array<{ pid: number; ppid: number }> = [];
-  for (const line of stdout.split("\n")) {
+  for (const line of result.stdout.split("\n")) {
     const [pidStr, ppidStr] = line.trim().split(/\s+/);
     if (!pidStr || !ppidStr) continue;
     const pid = Number(pidStr);

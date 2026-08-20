@@ -29,6 +29,12 @@ import {
   refExists,
 } from "./measure";
 
+// Wedge-breaker for this suite's fixture git commands. A test that hangs takes
+// the whole runner with it and reports nothing, so the bound is what turns that
+// into a named failure; thirty seconds is orders of magnitude above what any of
+// these throwaway-repo commands take.
+const GIT_TIMEOUT_MS = 30_000;
+
 // The machine's own git config must not reach these repos: a global
 // `core.hooksPath` (this repo installs one) or a signing key would change what
 // `git commit` produces.
@@ -39,7 +45,11 @@ const GIT_ENV = {
 };
 
 async function git(cwd: string, ...args: string[]): Promise<string> {
-  const res = await spawnExpectOk([GIT, ...args], { cwd, env: GIT_ENV });
+  const res = await spawnExpectOk([GIT, ...args], {
+    cwd,
+    env: GIT_ENV,
+    timeoutMs: GIT_TIMEOUT_MS,
+  });
   return res.stdout;
 }
 

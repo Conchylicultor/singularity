@@ -1,6 +1,7 @@
 import { mkdir, stat, rm, rename } from "node:fs/promises";
 import { join } from "node:path";
 import { BACKUPS_DIR } from "@plugins/infra/plugins/paths/server";
+import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
 import type {
   BackupArchive,
   BackupManifest,
@@ -18,6 +19,12 @@ function formatTimestamp(): string {
 
 export async function assembleArchive(
   trigger: "manual" | "periodic",
+  /**
+   * The backup job's own `ctx.signal`. `tar` below is the longest-running child
+   * in the backup and the one worth being able to abandon: when the job's hold
+   * class deadline fires, this is what has to notice.
+   */
+  signal: AbortSignal,
 ): Promise<BackupArchive> {
   const timestamp = formatTimestamp();
   const runDir = join(BACKUPS_DIR, timestamp);
@@ -57,12 +64,17 @@ export async function assembleArchive(
       JSON.stringify(manifest, null, 2),
     );
 
-    const proc = Bun.spawn(["tar", "-czf", partialPath, "-C", stagingDir, "."], {
-      stderr: "pipe",
-    });
-    if ((await proc.exited) !== 0) {
-      const stderr = await new Response(proc.stderr).text();
-      throw new Error(`tar failed: ${stderr}`);
+    // `signal` rather than a `timeoutMs`: how long this legitimately takes is
+    // the size of everything every backup source staged, which this file cannot
+    // know and a number here would only guess at. The job that owns the run owns
+    // the deadline, and aborting it kills the tar and leaves the `.partial`
+    // sidecar the `finally` below reclaims — never a truncated `archive.tar.gz`.
+    const result = await spawnCaptured(
+      ["tar", "-czf", partialPath, "-C", stagingDir, "."],
+      { signal },
+    );
+    if (result.exitCode !== 0) {
+      throw new Error(`tar failed: ${result.stderr}`);
     }
 
     const archiveStat = await stat(partialPath);

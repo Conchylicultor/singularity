@@ -51,6 +51,25 @@ queue-wait is charged as a `heavy-read-local` span sitting beside the host-wide
 separately attributable. See
 research/2026-06-19-global-incremental-git-loaders.md (Stage 1).
 
+**Cancellation.** `withHeavyReadSlot(fn, signal?)` takes an optional ambient
+`AbortSignal` — a job handler passes its `ctx.signal`. Both tiers honour it, but
+with different sharpness, and the difference is worth knowing rather than papering
+over:
+
+- The **host** tier honours it properly (`AcquireHooks.signal`): a pending flock
+  acquire unwinds with `signal.reason`, and an abort while `fn` runs releases the
+  host slot without waiting for `fn` to settle. That is the tier that matters —
+  it is the one holding a resource every backend on the box shares.
+- The **local** tier (`createSemaphore`) takes no signal, deliberately (its
+  consumers elsewhere are request-scoped leases). So an abort landing while we are
+  queued *locally* is not observed until the local gate grants; we then throw at
+  the top of the body rather than going on to take a host slot for a caller that
+  has been written off. The exposure is bounded by the local queue, which holds
+  nothing host-wide.
+
+The reentrant fast path checks the signal too, so a nested acquire cannot be the
+one place a cancelled read still runs.
+
 **Occupancy gauges.** Both tiers surface a `registerGateGauge` under their
 `chargeWait` layer names (`heavy-read-local`, `heavy-read-acquire`) so the flight
 recorder's gate snapshot joins occupancy to span waits. The local tier registers

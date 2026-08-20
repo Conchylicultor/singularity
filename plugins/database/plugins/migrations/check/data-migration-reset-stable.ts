@@ -6,6 +6,12 @@ import {
   spawnCaptured,
 } from "@plugins/infra/plugins/spawn/core";
 
+// Wedge-breaker for a metadata-only git read: far above any real duration,
+// because starvation under a saturated check run is what these suffer, not
+// slowness. Same reasoning as `infra/worktree`'s bounds, which carry the
+// measurements.
+const GIT_TIMEOUT_MS = 60_000;
+
 // Inlined minimal Check shape (mirrors the sibling migration-applies-clean and
 // orphaned-tables checks) to avoid a cross-plugin import of the framework Check
 // type from a check file.
@@ -107,7 +113,10 @@ async function git(
   root: string,
   args: string[],
 ): Promise<{ code: number; out: string }> {
-  const result = await spawnCaptured(["git", ...args], { cwd: root });
+  const result = await spawnCaptured(["git", ...args], {
+    cwd: root,
+    timeoutMs: GIT_TIMEOUT_MS,
+  });
   return { code: result.exitCode, out: result.stdout };
 }
 

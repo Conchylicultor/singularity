@@ -13,6 +13,7 @@ import {
 } from "../../core/resources";
 import type { HoldClass } from "../../core/hold";
 import { jobHoldExpr, jobLockHeldExpr, jobTaskScope } from "./introspection";
+import { isSlotForfeited } from "./forfeit";
 import { _deadJobs } from "./tables";
 
 interface GraphileJobRow {
@@ -84,6 +85,9 @@ export async function loadJobsList(limit = 500): Promise<JobsPayload> {
     lockedAt: r.locked_at,
     lockedBy: r.locked_by,
     alive: r.alive,
+    // Process state, not a column — same reasoning as `queryRunningJobs`. A row
+    // this backend never dispatched (or dispatched and finished) reads `false`.
+    forfeited: isSlotForfeited(r.id),
     queueName: r.queue_name,
     priority: r.priority,
     lastError: r.last_error,

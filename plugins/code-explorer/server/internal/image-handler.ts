@@ -1,7 +1,16 @@
 import { resolve, sep } from "node:path";
 import { GIT, HOME_DIR } from "@plugins/infra/plugins/paths/server";
+import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
 import { ALLOWED_REFS, resolveRef } from "./resolve-ref";
 import { resolveWorktreePath } from "./resolve-worktree-path";
+
+// Every git read in this file serves an open HTTP request from the code
+// explorer: a local, metadata-or-blob read that finishes in milliseconds. The
+// request is the deadline, and thirty seconds is well past the point where an
+// answer still helps whoever is looking at the pane — so only a wedged child
+// reaches it, and it fails as a named error instead of holding the request open
+// forever.
+const GIT_TIMEOUT_MS = 30_000;
 const MAX_BYTES = 20 * 1024 * 1024;
 
 const EXT_TO_MIME: Record<string, string> = {
@@ -66,16 +75,13 @@ export async function handleImageContent(
       return new Response("Invalid path", { status: 400 });
     if (!ALLOWED_REFS.has(ref)) return new Response("Invalid ref", { status: 400 });
     const resolvedRef = await resolveRef(wtPath, ref);
-    const proc = Bun.spawn(
+    const result = await spawnCaptured(
       [GIT, "--no-optional-locks", "-C", absRoot, "show", `${resolvedRef}:${path}`],
-      { stdout: "pipe", stderr: "pipe" },
+      { timeoutMs: GIT_TIMEOUT_MS },
     );
-    const [buf, code] = await Promise.all([
-      new Response(proc.stdout).arrayBuffer(),
-      proc.exited,
-    ]);
-    if (code !== 0) return new Response("File not found", { status: 404 });
-    bytes = new Uint8Array(buf);
+    if (result.exitCode !== 0)
+      return new Response("File not found", { status: 404 });
+    bytes = new Uint8Array(result.stdoutBytes);
   } else {
     const expanded = expandTilde(path);
     const absTarget = expanded.startsWith("/")

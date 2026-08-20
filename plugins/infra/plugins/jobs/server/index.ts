@@ -55,6 +55,24 @@ export {
 } from "./internal/step-ctx";
 export type { DurableHooks } from "./internal/step-ctx";
 export { NonRetryableError } from "./internal/non-retryable";
+export {
+  JobDeadlineExceededError,
+  isJobDeadlineExceededError,
+} from "./internal/deadline";
+export { jobDeadlineSink } from "./internal/deadline-seam";
+export type { JobDeadlineEvent } from "./internal/deadline-seam";
+// The floor's report kind + payload. Exported because the SPELLING must be
+// shared: this plugin writes the durable line (synchronously, on the way out of
+// a deliberate exit) and the `deadline-audit` sub-plugin registers the kind that
+// interprets it. Two hand-typed copies of a kind string would resolve to
+// nothing on the next boot's flush, and the failure would be a log line on a
+// backend that had already restarted.
+export {
+  JOB_SLOT_FLOOR_KIND,
+  getForfeitedSlots,
+  usableSlots,
+} from "./internal/forfeit";
+export type { ForfeitedSlot, JobSlotFloorReport } from "./internal/forfeit";
 export { abortDurableRun } from "./internal/abort-run";
 export { jobsListResource, deadJobsResource } from "./internal/resources";
 export {
@@ -81,6 +99,7 @@ export {
   taskFor,
   priorityFor,
   ceilingMsFor,
+  deadlineMsFor,
   reachableSlots,
   holdForTask,
 } from "../core/hold";

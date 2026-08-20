@@ -29,6 +29,18 @@ import {
 } from "./internal/spawn-captured";
 
 /**
+ * The bound every test here that is NOT about bounds uses. These children are
+ * `echo` / `cat` / a one-line node script, so ten seconds is unreachable except
+ * by the wedge the whole plugin exists to prevent — which makes it the right
+ * failure for this suite: a wedged child fails one named test instead of hanging
+ * the runner with nothing to read.
+ *
+ * Spread it (`{ ...BOUND, cwd }`) rather than restating a number per call, so
+ * the suite has one place to change if the box it runs on ever needs more.
+ */
+const BOUND = { timeoutMs: 10_000 } as const;
+
+/**
  * Await a promise that MUST reject, and hand back what it threw.
  *
  * Used instead of `await expect(p).rejects.…`: bun:test types that matcher as
@@ -47,7 +59,7 @@ async function rejection(promise: Promise<unknown>): Promise<unknown> {
 }
 
 test("GATE: numeric-fd stdio — echo roundtrip captures stdout", async () => {
-  const result = await spawnCaptured(["echo", "hello-fd"]);
+  const result = await spawnCaptured(["echo", "hello-fd"], BOUND);
   expect(result.exitCode).toBe(0);
   expect(result.signalCode).toBeNull();
   expect(result.stdout).toBe("hello-fd\n");
@@ -55,7 +67,10 @@ test("GATE: numeric-fd stdio — echo roundtrip captures stdout", async () => {
 });
 
 test("non-zero exit is a result, not an error", async () => {
-  const result = await spawnCaptured(["sh", "-c", "echo failing 1>&2; exit 3"]);
+  const result = await spawnCaptured(
+    ["sh", "-c", "echo failing 1>&2; exit 3"],
+    BOUND,
+  );
   expect(result.exitCode).toBe(3);
   expect(result.stderr).toBe("failing\n");
   expect(result.stdout).toBe("");
@@ -64,7 +79,7 @@ test("non-zero exit is a result, not an error", async () => {
 test("spawnExpectOk throws SpawnFailedError carrying the capture", async () => {
   expect.assertions(4);
   try {
-    await spawnExpectOk(["sh", "-c", "echo diagnostics 1>&2; exit 7"]);
+    await spawnExpectOk(["sh", "-c", "echo diagnostics 1>&2; exit 7"], BOUND);
   } catch (err) {
     if (!(err instanceof SpawnFailedError)) throw err;
     expect(err.exitCode).toBe(7);
@@ -77,27 +92,31 @@ test("spawnExpectOk throws SpawnFailedError carrying the capture", async () => {
 test("binary fidelity: stdoutBytes carries all 256 byte values untouched", async () => {
   const script =
     "process.stdout.write(Buffer.from(Array.from({ length: 256 }, (_, i) => i)));";
-  const result = await spawnCaptured([process.execPath, "-e", script]);
+  const result = await spawnCaptured([process.execPath, "-e", script], BOUND);
   expect(result.exitCode).toBe(0);
   expect(result.stdoutBytes.length).toBe(256);
   for (let i = 0; i < 256; i++) expect(result.stdoutBytes[i]).toBe(i);
 });
 
 test("stdin roundtrip: whole-buffer string in, cat out, EOF terminates", async () => {
-  const result = await spawnCaptured(["cat"], { stdin: "line-1\nline-2\n" });
+  const result = await spawnCaptured(["cat"], {
+    ...BOUND,
+    stdin: "line-1\nline-2\n",
+  });
   expect(result.exitCode).toBe(0);
   expect(result.stdout).toBe("line-1\nline-2\n");
 });
 
 test("stdin roundtrip: Uint8Array in", async () => {
   const bytes = new Uint8Array([0x61, 0x0a, 0x62]);
-  const result = await spawnCaptured(["cat"], { stdin: bytes });
+  const result = await spawnCaptured(["cat"], { ...BOUND, stdin: bytes });
   expect(result.exitCode).toBe(0);
   expect(result.stdoutBytes).toEqual(bytes);
 });
 
 test("mergeStderr interleaves 2>&1 into stdout; stderr is empty", async () => {
   const result = await spawnCaptured(["sh", "-c", "echo out; echo err 1>&2"], {
+    ...BOUND,
     mergeStderr: true,
   });
   expect(result.exitCode).toBe(0);
@@ -109,7 +128,7 @@ test("mergeStderr interleaves 2>&1 into stdout; stderr is empty", async () => {
 test("cwd is honored", async () => {
   const dir = mkdtempSync(join(tmpdir(), "sg-spawn-cwd-"));
   try {
-    const result = await spawnCaptured(["sh", "-c", "pwd"], { cwd: dir });
+    const result = await spawnCaptured(["sh", "-c", "pwd"], { ...BOUND, cwd: dir });
     expect(result.exitCode).toBe(0);
     expect(realpathSync(result.stdout.trim())).toBe(realpathSync(dir));
   } finally {
@@ -121,6 +140,7 @@ test("env is a full replacement, same contract as Bun.spawn", async () => {
   const result = await spawnCaptured(
     ["sh", "-c", 'printf %s "$SG_SPAWN_TEST"'],
     {
+      ...BOUND,
       env: { ...process.env, SG_SPAWN_TEST: "visible" },
     },
   );
@@ -128,14 +148,19 @@ test("env is a full replacement, same contract as Bun.spawn", async () => {
 });
 
 test("resourceUsage reports the child's peak RSS", async () => {
-  const result = await spawnCaptured(["echo", "rss"]);
+  const result = await spawnCaptured(["echo", "rss"], BOUND);
   expect(result.exitCode).toBe(0);
   // Bun reports rusage on darwin/linux; a positive byte count for any real child.
   expect(result.resourceUsage.maxRssBytes).toBeGreaterThan(0);
 });
 
 test("no timeoutMs: timedOut is false and nothing is killed", async () => {
-  const result = await spawnCaptured(["echo", "unbounded"]);
+  // The one place `unbounded` is the RIGHT arm rather than a fallback: this test
+  // exists to assert what the unbounded arm does, so writing it any other way
+  // would test something else.
+  const result = await spawnCaptured(["echo", "unbounded"], {
+    unbounded: "this test's subject is the no-deadline path itself",
+  });
   expect(result.timedOut).toBe(false);
   expect(result.signalCode).toBeNull();
 });
@@ -280,7 +305,10 @@ test("spawnExpectOk propagates the abort reason, not SpawnFailedError", async ()
 }, 15_000);
 
 test("background: true demotes without breaking the capture", async () => {
-  const result = await spawnCaptured(["echo", "demoted"], { background: true });
+  const result = await spawnCaptured(["echo", "demoted"], {
+    ...BOUND,
+    background: true,
+  });
   expect(result.exitCode).toBe(0);
   expect(result.stdout).toBe("demoted\n");
 });
@@ -290,7 +318,10 @@ test("wedge smoke: 200 fast-exiting noisy children complete (concurrency 20)", a
   const concurrency = 20;
   let next = 0;
   const runOne = async () => {
-    const result = await spawnCaptured(["sh", "-c", "echo out; echo err 1>&2"]);
+    const result = await spawnCaptured(
+      ["sh", "-c", "echo out; echo err 1>&2"],
+      BOUND,
+    );
     expect(result.exitCode).toBe(0);
     expect(result.stdout).toBe("out\n");
     expect(result.stderr).toBe("err\n");

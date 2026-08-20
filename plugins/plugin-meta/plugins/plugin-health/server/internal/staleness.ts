@@ -1,12 +1,18 @@
 import { GIT } from "@plugins/infra/plugins/paths/server";
 import { ensureMainWorktreeRoot } from "@plugins/infra/plugins/worktree/server";
+import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
+
+// Both reads walk history for one plugin path, on an open request for the
+// plugin-health pane. Real work, but seconds of it at most; a minute is the
+// point past which the pane has given up on an answer anyway.
+const GIT_TIMEOUT_MS = 60_000;
 
 export async function commitsSince(
   commitHash: string,
   pluginPath: string,
 ): Promise<number> {
   const cwd = await ensureMainWorktreeRoot();
-  const proc = Bun.spawn(
+  const result = await spawnCaptured(
     [
       GIT,
       "--no-optional-locks",
@@ -16,11 +22,9 @@ export async function commitsSince(
       "--",
       `plugins/${pluginPath}`,
     ],
-    { cwd, stdout: "pipe", stderr: "pipe" },
+    { cwd, timeoutMs: GIT_TIMEOUT_MS },
   );
-  await proc.exited;
-  const text = await new Response(proc.stdout).text();
-  return parseInt(text.trim(), 10) || 0;
+  return parseInt(result.stdout.trim(), 10) || 0;
 }
 
 export async function apiChangedSince(
@@ -28,7 +32,7 @@ export async function apiChangedSince(
   pluginPath: string,
 ): Promise<boolean> {
   const cwd = await ensureMainWorktreeRoot();
-  const proc = Bun.spawn(
+  const result = await spawnCaptured(
     [
       GIT,
       "--no-optional-locks",
@@ -41,9 +45,7 @@ export async function apiChangedSince(
       `plugins/${pluginPath}/server/index.ts`,
       `plugins/${pluginPath}/core/index.ts`,
     ],
-    { cwd, stdout: "pipe", stderr: "pipe" },
+    { cwd, timeoutMs: GIT_TIMEOUT_MS },
   );
-  await proc.exited;
-  const text = await new Response(proc.stdout).text();
-  return text.trim().length > 0;
+  return result.stdout.trim().length > 0;
 }

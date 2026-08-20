@@ -33,19 +33,20 @@ tmpdir sweep (repo convention).
 
 ## API (`@plugins/infra/plugins/spawn/core`)
 
-- **`spawnCaptured(argv, opts?) → Promise<SpawnResult>`** — capture-shaped
-  spawn. `opts`: `cwd`, `env` (FULL replacement, same contract as `Bun.spawn`),
-  `stdin` (whole `string | Uint8Array` buffer, EOF at the end), `background`
-  (argv := `backgroundArgv(argv)` from `spawn-priority/core`), `mergeStderr`
-  (2>&1; `result.stderr === ""`), plus the two bounds `timeoutMs` and `signal`
-  (see below). The result's `exitCode` **≠ 0 is a
+- **`spawnCaptured(argv, opts) → Promise<SpawnResult>`** — capture-shaped
+  spawn. `opts` is REQUIRED (see *A bound is mandatory* below): `cwd`, `env`
+  (FULL replacement, same contract as `Bun.spawn`), `stdin` (whole
+  `string | Uint8Array` buffer, EOF at the end), `background` (argv :=
+  `backgroundArgv(argv)` from `spawn-priority/core`), `mergeStderr` (2>&1;
+  `result.stderr === ""`), plus exactly one bound — `timeoutMs`, `signal`, or
+  the prose `unbounded`. The result's `exitCode` **≠ 0 is a
   legitimate result** — the caller branches. `stdout`/`stderr` are lazy cached
   utf8 decodes of `stdoutBytes`/`stderrBytes` (the raw bytes exist for
   byte-offset parsers like `git cat-file --batch` framing).
   `resourceUsage.maxRssBytes` is the child's true peak RSS, read after exit.
   `timedOut` is `true` iff OUR deadline fired and we killed the child (never
   inferred from `signalCode` — anyone can SIGTERM a child).
-- **`spawnExpectOk(argv, opts?)`** — the same, but THROWS `SpawnFailedError`
+- **`spawnExpectOk(argv, opts)`** — the same, but THROWS `SpawnFailedError`
   (carrying argv/exitCode/signalCode/stdout/stderr) on non-zero exit, so a
   failed command can never be read as empty success.
 - **`spawnPassthrough(argv, { cwd, env, background, stdin, onSpawn }?)`** —
@@ -77,14 +78,63 @@ timer. They differ in how the kill is reported, deliberately:
   exit-code check. Edges: an abort beats `timedOut` in either order, and an abort
   after a clean exit still throws, discarding a good result.
 
-Both are still optional. Set a bound wherever the caller owns a deadline, and
-**always where a host-wide lock/slot is held** — an unbounded child under the
-`worktree-mutate` flock stops worktree checkouts on every backend on the box (the
-2026-08-17 outage). Without one there is no other ceiling: the fleet-level
-watchdog was retired 2026-07-28 as an all-false-positive instrument
+## A bound is mandatory
+
+`SpawnOptions` is a union, so an unbounded wait has **no spelling**:
+
+```ts
+export type SpawnOptions = SpawnBaseOptions &
+  ( { timeoutMs: number; signal?: AbortSignal }
+  | { signal: AbortSignal; timeoutMs?: number }
+  | { unbounded: string } );
+```
+
+`opts` is required, and `tsc` rejects a call that names none of the three. This
+is rung 2 of the fix ladder rather than rung 5: there is no rule to remember and
+no lint to keep in sync, because the wrong thing cannot be written.
+
+**The gate for this flipped, and that is why it landed.** This doc used to set
+the criterion as *"the absence of an observed field wedge, diagnosed by hand"*.
+A field wedge has now been observed **twice** — including the 2026-08-17 outage,
+where an unbounded `git worktree remove` held the host-wide `worktree-mutate`
+flock and stopped worktree checkouts on every backend on the machine. Nothing
+else catches this: the fleet-level op-wedge watchdog was retired 2026-07-28 as an
+all-false-positive instrument
 (`research/2026-07-28-global-retire-op-wedge-watchdog.md`), so an unbounded hung
-child hangs until a human notices. `research/2026-08-17-global-reap-stale-cost-and-bounded-execution.md`
-plans making a bound required.
+child hangs until a human notices.
+
+Which arm to reach for — the choice is per call site, never one number applied
+everywhere:
+
+- **`timeoutMs`** when the caller owns a deadline: an HTTP request, a scheduled
+  sampler tick, a reaper holding a host-wide slot. Size it to the command.
+  `infra/worktree`'s `worktree.ts` is the house style — named per-operation
+  constants, with a calibration comment worth reading before inventing a number.
+  Its headline finding: these are **wedge-breakers, not latency police**. What
+  git actually suffers on a loaded box is starvation, which no p99 bounds, so
+  the values sit two or three orders of magnitude above p50 — a 10 s bound on
+  `git worktree list` still false-fired during a real `./singularity check`.
+- **`signal`** when the caller already holds one — a job handler's `ctx.signal`,
+  which the hold-class deadline aborts. Alone, or together with `timeoutMs`
+  when a per-command ceiling is a separate fact from the run's deadline.
+- **`unbounded: "<why>"`** only where nothing shorter than the work bounds it.
+
+### `unbounded` is prose on purpose
+
+The third arm carries a **sentence**, not a flag, and it has **no runtime effect
+at all** — nothing reads it. Two properties follow, both deliberate:
+
+- It cannot be copy-pasted without being rewritten, so it does not spread the
+  way a `bounded: false` would.
+- `rg "unbounded:"` enumerates every one of them, with its justification
+  attached, in a form a reviewer can audit in one pass.
+
+The honest cases are all in the CLI and its check runner, where the human at the
+terminal is the deadline and the child IS the work: the `./singularity check`
+subprocess, a cold type-check worker, a build step (`bun install` / vite / the
+server bundle), and the DB-fork benchmark whose whole purpose is to time an
+unbounded fork. A server-side call site almost never belongs here — its request
+or its job has a deadline, and that is the bound.
 
 ## Deliberate non-goals
 
@@ -101,23 +151,23 @@ meant to outlive the call — cannot use after-exit temp files. Those get a file
 entry in `lint/index.ts`'s `ignores` **with a written justification** (intended
 review pressure, mirroring git-grep-safety), never an inline disable.
 
-## Stage 2 — in progress
+## Stage 2 — done
 
-The blanket "every plugin server tree" glob is gone. `lint/index.ts` now lists
-the exempt server files individually, split into a permanent streaming/long-lived
-group and a **temporary backlog of 21 plain capture sites**, each a mechanical
-`spawnCaptured` conversion. Delete an entry as you migrate its file; Stage 2 is
-done when the backlog group is empty.
+The blanket "every plugin server tree" glob went first, replaced by an explicit
+31-file list in `lint/index.ts` split into a permanent streaming/long-lived group
+and a temporary backlog of plain capture sites. **That backlog is now empty**:
+all 20 migrated onto `spawnCaptured`, and each took a bound while it was being
+touched — which is what made the mandatory-bound union above expressible at all,
+since a union `tsc` enforces cannot be adopted halfway.
 
-The gate that held this back has flipped. `spawn/CLAUDE.md` used to set the
-criterion as "the absence of an observed field wedge, diagnosed by hand" — a
-field wedge has now been observed **twice**, including the 2026-08-17 outage,
-where an unbounded `git worktree remove` under the host-wide `worktree-mutate`
-flock blocked worktree checkouts fleet-wide.
+What remains in `ignores` is the permanent group alone: 11 files where after-exit
+temp-file capture is structurally impossible (a pipe chain, a live log stream, a
+supervised child that outlives the call). Anything added there needs a written
+justification beside it, and nothing else belongs.
 
-Note the migration is worth doing even ignoring timeouts: the pre-migration
-pattern (`{stdout: "pipe"}` then `await proc.exited` with stdout never read) is a
-plain >64KB pipe-buffer deadlock on top of the bun race.
+The migration was worth doing even ignoring bounds: the pre-migration pattern
+(`{stdout: "pipe"}` then `await proc.exited` with stdout never read) is a plain
+>64KB pipe-buffer deadlock on top of the bun race.
 
 ## Boundaries
 
@@ -134,6 +184,7 @@ presence only — **no re-exports**; import from `core/`.
 - Core:
   - Uses: `packages/spawn-priority.backgroundArgv`
   - Exports (types):
+    - `SpawnBaseOptions`
     - `SpawnBound`
     - `SpawnedChild`
     - `SpawnOptions`

@@ -37,6 +37,7 @@ import {
   UNSAFE_insertJobRow,
   type JobTaskPayload,
 } from "./registry";
+import { armDeadline } from "./deadline";
 import { isSuspendSignal, makeDurableCtx } from "./step-ctx";
 import { LOCK_HELD, withJobLock } from "./job-lock";
 import { isNonRetryableError } from "./non-retryable";
@@ -213,23 +214,38 @@ function buildCronItems(): ParsedCronItem[] {
   return items;
 }
 
-// The one handler behind every task identifier. Which graphile task a row sits
-// on decides WHICH SLOTS can fetch it — never which code runs it, which is
-// always this. `helpers` is graphile's real `JobHelpers` and must stay that way
-// — do NOT loosen it back to `any` for the two fields we read. It WAS `any`, and
-// that is exactly how a read of `helpers.workerId` (a field `JobHelpers` does not
-// have) survived three months as the literal string `"undefined"` instead of
-// being a tsc error, silently disabling the keepalive that was supposed to stop
-// jobs double-running.
-async function handleJobTask(
-  payload: unknown,
-  helpers: JobHelpers,
-): Promise<void> {
-  const p = payload as JobTaskPayload;
-  await dispatch(p, {
-    jobId: String(helpers.job.id),
-    attempt: Number(helpers.job.attempts),
-  });
+// The one handler body behind every task identifier, closed over the id of the
+// runner that will call it. Which graphile task a row sits on decides WHICH
+// SLOTS can fetch it — never which code runs it, which is always this.
+//
+// The closure is what makes `runnerId` knowable at all. graphile hands a task
+// function no identity of the runner invoking it, and nothing on the job row
+// records one either (the three runners share one job table), so a single shared
+// function physically cannot say which of the ladder's slots it is occupying.
+// Slot forfeit accounting is per-runner — "the `wide` runner can no longer do
+// its job" is a statement about one runner's slots — so this is load-bearing
+// rather than cosmetic.
+//
+// `helpers` is graphile's real `JobHelpers` and must stay that way — do NOT
+// loosen it back to `any` for the two fields we read. It WAS `any`, and that is
+// exactly how a read of `helpers.workerId` (a field `JobHelpers` does not have)
+// survived three months as the literal string `"undefined"` instead of being a
+// tsc error, silently disabling the keepalive that was supposed to stop jobs
+// double-running.
+function makeJobTaskHandler(
+  runnerId: string,
+): (payload: unknown, helpers: JobHelpers) => Promise<void> {
+  return async function handleJobTask(
+    payload: unknown,
+    helpers: JobHelpers,
+  ): Promise<void> {
+    const p = payload as JobTaskPayload;
+    await dispatch(p, {
+      jobId: String(helpers.job.id),
+      attempt: Number(helpers.job.attempts),
+      runnerId,
+    });
+  };
 }
 
 /**
@@ -257,6 +273,10 @@ export async function startWorkers(): Promise<Runner[]> {
   const pgPool = getRunnerPool();
   const started: Runner[] = [];
   for (const spec of RUNNERS) {
+    // One handler instance per runner, so every dispatch knows which runner's
+    // slot it is holding. Built once per runner, not once per task — every entry
+    // in this runner's list is served by the same slots.
+    const handleJobTask = makeJobTaskHandler(spec.id);
     const taskList: TaskList = {};
     for (const hold of spec.serves) taskList[taskFor(hold)] = handleJobTask;
     // The legacy `jobs.run` task stays registered in exactly one runner,
@@ -427,7 +447,7 @@ async function repointHoldTasks(): Promise<void> {
 // those conditions in their own handler.
 async function dispatch(
   payload: JobTaskPayload,
-  meta: { jobId: string; attempt: number },
+  meta: { jobId: string; attempt: number; runnerId: string },
 ): Promise<void> {
   const job = UNSAFE_getRegisteredJob(payload.jobName);
   if (!job) {
@@ -468,11 +488,15 @@ async function dispatch(
   // budget bounds execution, not workflow duration" true by construction rather
   // than by convention.
   //
-  // Nothing aborts it yet. The deadline that does, and the policy for a handler
-  // that does not unwind when it fires, are later phases of
-  // `research/2026-08-17-global-bounded-job-execution.md`; this step only makes
-  // the signal reachable from handlers so those phases land without call-site
-  // churn. Deliberately NOT graphile's `helpers.abortSignal` — see the doc on
+  // What aborts it: a timer armed below for this job's hold-class deadline
+  // (`deadlineMsFor`). At that instant the signal aborts with a
+  // `JobDeadlineExceededError` and the overrun is reported — and that is ALL
+  // that happens. The wrapper does not return, the advisory lock is not
+  // released, and the row is not touched, so a handler that ignores the signal
+  // can cost at most its own slot and can never be re-dispatched alongside
+  // itself. See deadline.ts for why there is no `Promise.race` anywhere.
+  //
+  // Deliberately NOT graphile's `helpers.abortSignal` — see the doc on
   // `JobCtx.signal`.
   const abort = new AbortController();
 
@@ -548,10 +572,25 @@ async function dispatch(
       });
     },
     async (): Promise<"completed" | "suspended"> => {
+      // Armed INSIDE the lock closure, deliberately: the clock must measure the
+      // handler's run, not the time spent acquiring the lock, and the lock must
+      // stay held for the handler's real lifetime including its overrun.
+      const disarm = armDeadline({
+        jobName: payload.jobName,
+        jobId: meta.jobId,
+        attempt: meta.attempt,
+        hold: job.hold,
+        runnerId: meta.runnerId,
+        abort,
+      });
       try {
         await recordEntrySpan("job", payload.jobName, () =>
           job.run({ input: payload.input, event: payload.event, ctx }),
         );
+        // A handler that SUCCEEDS after its signal was aborted keeps its
+        // success. It did the work; re-running it would be waste and, for a
+        // non-idempotent handler, harm. The overrun is not lost — the deadline
+        // timer already reported it, which is the signal we actually need.
         return "completed";
       } catch (err) {
         if (isSuspendSignal(err)) {
@@ -583,10 +622,25 @@ async function dispatch(
         // running against the connections reserved for human-blocking work. Widening
         // the span would corrupt the recorded job duration; declaring the lane is the
         // right tool. See research/2026-07-09-global-interactive-lane-origin-based-db-gating.md.
-        if (isNonRetryableError(err)) {
+        //
+        // A run aborted by its own deadline is treated the same way from the
+        // SECOND attempt on. The first failure could still be a slow moment —
+        // a congested gate, a host under load — and deserves its retry. A
+        // second run of the same stored input that also overran is a property
+        // of the handler, not of the day, and retrying it three more times
+        // spends `maxAttempts × deadline` of slot time to learn nothing. So it
+        // dead-letters here, loudly, through the same machinery.
+        if (
+          isNonRetryableError(err) ||
+          (abort.signal.aborted && meta.attempt >= 2)
+        ) {
           await runInBackgroundLane(() => markJobPermanentlyFailed(meta.jobId));
         }
         throw err;
+      } finally {
+        // Both timers cleared on every exit path — success, suspend, failure.
+        // A handler that settles in time therefore costs nothing but this.
+        disarm();
       }
     },
   );

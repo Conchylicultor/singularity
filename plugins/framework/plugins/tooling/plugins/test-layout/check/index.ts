@@ -21,6 +21,12 @@ import {
   isDomTestPath,
 } from "../core/test-layout";
 
+// Wedge-breaker for a metadata-only git read: far above any real duration,
+// because starvation under a saturated check run is what these suffer, not
+// slowness. Same reasoning as `infra/worktree`'s bounds, which carry the
+// measurements.
+const GIT_TIMEOUT_MS = 60_000;
+
 const BUNFIG = "bunfig.toml";
 const VITEST_CONFIG = "vitest.config.ts";
 
@@ -185,7 +191,7 @@ async function listTestFiles(root: string): Promise<string[]> {
 async function lsFiles(root: string, flags: string[]): Promise<string[]> {
   const result = await spawnCaptured(
     ["git", "ls-files", ...flags, "--", "*.test.ts", "*.test.tsx"],
-    { cwd: root },
+    { cwd: root, timeoutMs: GIT_TIMEOUT_MS },
   );
   // An empty list from a FAILED git call would silently pass every file rule —
   // the enumeration failing must be loud, not an absorbed "no offenders".

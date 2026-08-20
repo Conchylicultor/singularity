@@ -24,13 +24,19 @@ export const databaseForkJob = defineJob({
   // jobKey "database.fork:<target>" — replace-if-not-running per target.
   dedup: { key: (input) => input.target },
   maxAttempts: 5,
-  run: async ({ input: { source, target } }) => {
+  run: async ({ input: { source, target }, ctx: { signal } }) => {
     try {
       // Read the declared exclusion set here, inside a booted backend, where
       // server contributions have been collected. `forkExclusions()` throws
       // rather than returning an empty set, so a process that never booted can
       // never quietly fork everything.
-      await forkDatabase(source, target, forkExclusions());
+      //
+      // `signal` is this dispatch's deadline. Passing it is what makes giving up
+      // on this handler mean something: it cancels the host-wide `db-fork` acquire
+      // and kills the dump/restore pair, so an overrunning fork stops occupying one
+      // of the box's two fork slots instead of holding it until the process
+      // restarts.
+      await forkDatabase(source, target, forkExclusions(), signal);
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       await recordNotification({

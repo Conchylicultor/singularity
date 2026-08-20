@@ -1,6 +1,13 @@
 import ts from "typescript";
 import { getWorktreeRoot, spawnCaptured } from "@plugins/infra/plugins/spawn/core";
 
+// Wedge-breaker for a metadata-only git read, not latency policing. Generous
+// because what these actually suffer under a saturated `./singularity check` is
+// starvation rather than slowness, and starvation is not bounded by the p99 of
+// an idle box (the calibration note in `infra/worktree`'s `worktree.ts` has the
+// measurements). Only a genuinely wedged child trips it.
+const GIT_TIMEOUT_MS = 60_000;
+
 type CheckResult = { ok: true } | { ok: false; message: string; hint?: string };
 type Check = { id: string; description: string; run(): Promise<CheckResult> };
 
@@ -11,7 +18,10 @@ type Check = { id: string; description: string; run(): Promise<CheckResult> };
 const BASE = "tsconfig.base.json";
 
 async function listTsconfigs(root: string): Promise<string[]> {
-  const result = await spawnCaptured(["git", "ls-files", "*tsconfig*.json"], { cwd: root });
+  const result = await spawnCaptured(["git", "ls-files", "*tsconfig*.json"], {
+    cwd: root,
+    timeoutMs: GIT_TIMEOUT_MS,
+  });
   const out = result.stdout.trim();
   if (!out) return [];
   return out

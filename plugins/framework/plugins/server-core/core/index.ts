@@ -4,8 +4,13 @@ export {
   defineServerContribution,
 } from "./contributions";
 export type { ServerContribution, ServerContributionToken } from "./contributions";
-export { reportServerError, setErrorReporter } from "./error-reporter";
-export type { ServerErrorReport } from "./error-reporter";
+export {
+  reportServerError,
+  reportServerFatalSync,
+  setErrorReporter,
+  setFatalReporter,
+} from "./error-reporter";
+export type { ServerErrorReport, ServerFatalReport } from "./error-reporter";
 export { setProfilerHooks } from "./profiler-hooks";
 export type { ProfilerHooks, RuntimeProfileView, LoaderAggregateView } from "./profiler-hooks";
 export { physFootprintBytes, procMemory, type ProcMemory } from "./phys-footprint";

@@ -36,6 +36,18 @@ export const JobRowSchema = z.object({
   // where the question is meaningless. Never derive this from how long
   // `lockedAt` has been set — that inference is the bug this replaced.
   alive: z.boolean().nullable(),
+  /**
+   * Whether the backend has WRITTEN OFF the slot this run is holding: it passed
+   * its hold class's deadline, ignored the abort, and outlived the zombie
+   * grace. `alive && forfeited` is the wedge — the handler is still running and
+   * nobody is waiting for it any more.
+   *
+   * OPTIONAL for the same reason `hold` is, and it must stay that way: during a
+   * rolling restart a client can still hold a payload produced by a backend
+   * from before forfeit existed, and making this required would fail that parse
+   * and blank the Debug → Queue pane for the length of the deploy.
+   */
+  forfeited: z.boolean().optional(),
   queueName: z.string().nullable(),
   priority: z.number(),
   lastError: z.string().nullable(),

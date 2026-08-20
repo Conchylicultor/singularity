@@ -38,8 +38,23 @@ const gate = defineHostPool({ id: "worktree-mutate", size: mutateSize, cost });
 // to the enclosing profiler entry (job/http) so a saturated gate stays attributable
 // in get_runtime_profile / slow-ops, mirroring host-read-pool. Context-less callers
 // (graphile jobs) fall back to a standalone span inside chargeWait.
-export function withWorktreeMutateSlot<T>(fn: () => Promise<T>): Promise<T> {
+//
+// `signal` is optional and ambient — a job handler passes its `ctx.signal`. THIS IS
+// THE GATE WHERE CANCELLATION MATTERS MOST, and 2026-08-17 is the reason: a handler
+// stuck inside this acquire, or inside a `git worktree remove` while holding one of
+// its three slots, is not stalling itself — it is stalling worktree checkouts on
+// every backend on the machine. Aborting such a handler is meaningless unless the
+// abort reaches this wait, so `withWorktreeMutateSlot` forwards it to the pool: a
+// pending acquire unwinds with `signal.reason`, and an abort during `fn` hands the
+// host slot back immediately instead of when `fn` eventually settles (which, for a
+// wedged handler, may be never). `fn` still owns cancelling its own subprocesses —
+// pass the same signal to them; `spawnCaptured` accepts one.
+export function withWorktreeMutateSlot<T>(
+  fn: () => Promise<T>,
+  signal?: AbortSignal,
+): Promise<T> {
   return gate.run(() => fn(), {
+    signal,
     onAcquired: (waitMs) => chargeWait("worktree-mutate-acquire", waitMs),
   });
 }

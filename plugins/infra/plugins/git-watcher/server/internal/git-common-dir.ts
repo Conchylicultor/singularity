@@ -1,5 +1,11 @@
 import { GIT } from "@plugins/infra/plugins/paths/server";
 import { ensureMainWorktreeRoot } from "@plugins/infra/plugins/worktree/server";
+import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
+
+// A single `rev-parse` metadata read, taken once per process on the git
+// watcher's setup path — where a child that never returns would leave ref
+// watching silently never armed. Thirty seconds is only ever reached by a wedge.
+const GIT_TIMEOUT_MS = 30_000;
 
 let cached: string | null = null;
 
@@ -9,18 +15,16 @@ let cached: string | null = null;
 export async function gitCommonDir(): Promise<string> {
   if (cached) return cached;
   const cwd = await ensureMainWorktreeRoot();
-  const proc = Bun.spawn([GIT, "rev-parse", "--git-common-dir"], {
+  const result = await spawnCaptured([GIT, "rev-parse", "--git-common-dir"], {
     cwd,
-    stdout: "pipe",
-    stderr: "pipe",
+    timeoutMs: GIT_TIMEOUT_MS,
   });
-  const text = await new Response(proc.stdout).text();
-  const code = await proc.exited;
-  if (code !== 0) {
-    const err = await new Response(proc.stderr).text();
-    throw new Error(`git rev-parse --git-common-dir failed: ${err.trim()}`);
+  if (result.exitCode !== 0) {
+    throw new Error(
+      `git rev-parse --git-common-dir failed: ${result.stderr.trim()}`,
+    );
   }
-  const raw = text.trim();
+  const raw = result.stdout.trim();
   // `--git-common-dir` returns a path relative to cwd when the repo's .git
   // is co-located. Resolve against the worktree root so callers can pass it
   // straight to fs APIs.

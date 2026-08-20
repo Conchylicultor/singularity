@@ -236,6 +236,14 @@ async function execBuffered(
     cwd,
     env: env ? { ...process.env, ...env } : undefined,
     background,
+    // These are the build's own steps — `bun install`, the vite frontend build,
+    // the server bundle. A cold one runs for minutes by design, and on a box
+    // running several agent fleets (where `background` has demoted it to the
+    // E-cores on purpose) longer still, by an amount nothing here can predict.
+    // There is no shorter deadline to borrow from, and a wrongly-sized number
+    // would kill a healthy build.
+    unbounded:
+      "a build step (bun install / vite / server bundle) legitimately runs for minutes, demoted to background QoS, and the CLI run it belongs to owns no shorter deadline",
   });
   const lines: StepOutput["lines"] = [];
   for (const line of result.stdout.split("\n")) {

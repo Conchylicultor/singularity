@@ -69,8 +69,14 @@ export const worktreeReapJob = defineJob({
   // queue-health.
   serial: true,
   schedule: { cron: "0 * * * *" }, // hourly
-  async run() {
-    const scan = await collectReapable(Date.now());
+  async run({ ctx: { signal } }) {
+    // `signal` is this dispatch's deadline. Threading it is what makes giving up
+    // on this handler mean anything: `reapAttempt` reaches the host-wide
+    // `worktree-mutate` flock and `collectReapable`'s hygiene fan-out reaches the
+    // heavy-read gate, so an overrunning sweep stops holding host resources every
+    // other backend on the box shares, instead of holding them until this process
+    // restarts (the 2026-08-17 shape, from the inside).
+    const scan = await collectReapable(Date.now(), signal);
     const targets = scan.targets;
     const namespaceTargets = scan.namespaceTargets;
     let reaped = 0;
@@ -99,13 +105,29 @@ export const worktreeReapJob = defineJob({
     // `worktree-mutate` slot, i.e. the 2026-08-17 outage caught in the act. So
     // every contained failure also files a report, which reaches Debug → Reports
     // and the bell.
+    //
+    // It is also where this dispatch's abort is honoured, for the same reason it
+    // is where containment lives: both passes go through it, so neither can be
+    // left behind when one is edited.
     const contain = async (
       targetId: string,
       work: () => Promise<void>,
     ): Promise<void> => {
+      // Once this dispatch has been abandoned, stop taking new targets. Returning
+      // rather than throwing is deliberate, and matches the reasoning in the
+      // report catch below: a throw from inside a pMap worker rejects the shared
+      // Promise.all, and a second failure from another in-flight worker would
+      // then surface as an unhandled rejection instead of a job failure. The
+      // abort is re-raised once, after both passes, where nothing is in flight.
+      if (signal.aborted) return;
       try {
         await work();
       } catch (err) {
+        // Being told to stop is not a reap failure. Without this, the abort would
+        // be filed as a `worktree-reap-failed` report per remaining target —
+        // turning one cancellation into a burst of misattributed alerts about
+        // worktrees that were never actually broken.
+        if (signal.aborted) return;
         log.publish(`reap ${targetId} failed: ${String(err)}`, "stderr");
         // `timedOut` is read from the ERROR'S TYPE, never from its message: the
         // throw site knows for certain whether it killed a child, and a report
@@ -150,7 +172,7 @@ export const worktreeReapJob = defineJob({
     // (two-tier fairness, mirroring host-read-pool's per-worktree tier).
     await pMap(targets, 3, (t: ReapTarget) =>
       contain(t.id, async () => {
-        await reapAttempt(t.id, { worktreePath: t.worktreePath });
+        await reapAttempt(t.id, { worktreePath: t.worktreePath, signal });
         reaped++;
       }),
     );
@@ -172,6 +194,20 @@ export const worktreeReapJob = defineJob({
       `auto-reap: ${reaped}/${targets.length} reaped, ` +
         `${reclaimed}/${namespaceTargets.length} orphaned namespaces reclaimed`,
     );
+
+    // An abandoned dispatch outranks everything below. The sweep is incomplete by
+    // construction, and the worker needs `signal.reason` ITSELF — wrapping it, or
+    // reporting something else instead, would read as an ordinary job failure
+    // rather than as this run overrunning its budget. Parked reporting failures
+    // are logged here rather than lost, since the throw below will not run.
+    if (signal.aborted && reportFailures.length > 0) {
+      log.publish(
+        `auto-reap: ${reportFailures.length} failure report(s) could not be recorded ` +
+          `before the run was aborted: ${reportFailures.join("; ")}`,
+        "stderr",
+      );
+    }
+    signal.throwIfAborted();
 
     // The sweep itself is finished; now fail the job so a broken reporting path
     // is visible in queue-health rather than being the second silent failure in

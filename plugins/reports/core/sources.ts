@@ -21,6 +21,12 @@ export const SERVER_REPORT_SOURCES = [
   "server-duress-monitor",
   "server-stall-monitor",
   "server-cost-monitor",
+  // A report a backend filed synchronously on its way out of a DELIBERATE
+  // `process.exit()` — not a crash (nothing threw) and not a caught error
+  // (nobody is still running to catch it). Its own source because that
+  // distinction is the whole content of the report: the process decided its
+  // state was unrecoverable and said so before leaving.
+  "server-fatal",
 ] as const;
 export const CLIENT_REPORT_SOURCES = [
   "browser-error",

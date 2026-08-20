@@ -13,6 +13,12 @@ import {
   spawnCaptured,
 } from "@plugins/infra/plugins/spawn/core";
 
+// Wedge-breaker for a metadata-only git read: far above any real duration,
+// because starvation under a saturated check run is what these suffer, not
+// slowness. Same reasoning as `infra/worktree`'s bounds, which carry the
+// measurements.
+const GIT_TIMEOUT_MS = 60_000;
+
 // A scoped override (config/<hier>/@app/<id>/<name>.jsonc) is a base-anchored
 // delta: its // @hash and schema anchor to the BASE origin
 // (config/<hier>/<name>.origin.jsonc). No scoped origin is ever committed. Strip a
@@ -99,9 +105,7 @@ const check: Check = {
 
     const result = await spawnCaptured(
       ["git", "ls-files", "--others", "--cached", "--", "config/"],
-      {
-        cwd: root,
-      },
+      { cwd: root, timeoutMs: GIT_TIMEOUT_MS },
     );
     const allConfigFiles = result.stdout.trim().split("\n").filter(Boolean);
 

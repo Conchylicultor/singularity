@@ -1,5 +1,11 @@
 import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
 
+// Wedge-breaker for a metadata-only git read: far above any real duration,
+// because starvation under a saturated check run is what these suffer, not
+// slowness. Same reasoning as `infra/worktree`'s bounds, which carry the
+// measurements.
+const GIT_TIMEOUT_MS = 60_000;
+
 type CheckResult = { ok: true } | { ok: false; message: string; hint?: string };
 type Check = {
   id: string;
@@ -14,7 +20,7 @@ const STOP_MESSAGE =
 async function run(
   cmd: string[],
 ): Promise<{ stdout: string; exitCode: number }> {
-  const result = await spawnCaptured(cmd);
+  const result = await spawnCaptured(cmd, { timeoutMs: GIT_TIMEOUT_MS });
   return { stdout: result.stdout.trim(), exitCode: result.exitCode };
 }
 

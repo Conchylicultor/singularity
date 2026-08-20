@@ -1,4 +1,13 @@
 import { GIT } from "@plugins/infra/plugins/paths/server";
+import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
+
+// Every git read in this file serves an open HTTP request from the code
+// explorer: a local, metadata-or-blob read that finishes in milliseconds. The
+// request is the deadline, and thirty seconds is well past the point where an
+// answer still helps whoever is looking at the pane — so only a wedged child
+// reaches it, and it fails as a named error instead of holding the request open
+// forever.
+const GIT_TIMEOUT_MS = 30_000;
 
 const NAMED_REFS = new Set(["HEAD", "main"]);
 const SHA_RE = /^[0-9a-f]{7,40}$/;
@@ -21,13 +30,9 @@ export async function resolveRef(
   ref: string,
 ): Promise<string> {
   if (ref !== "main") return ref;
-  const proc = Bun.spawn(
+  const result = await spawnCaptured(
     [GIT, "--no-optional-locks", "-C", worktreePath, "merge-base", "main", "HEAD"],
-    { stdout: "pipe", stderr: "pipe" },
+    { timeoutMs: GIT_TIMEOUT_MS },
   );
-  const [out, code] = await Promise.all([
-    new Response(proc.stdout).text(),
-    proc.exited,
-  ]);
-  return code === 0 ? out.trim() : ref;
+  return result.exitCode === 0 ? result.stdout.trim() : ref;
 }

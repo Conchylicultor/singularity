@@ -52,7 +52,10 @@ const pushes = pgTable(
 // ── helpers ───────────────────────────────────────────────────────────────────
 
 async function git(args: string[], cwd?: string): Promise<string> {
-  const result = await spawnExpectOk([GIT, ...args], { cwd });
+  const result = await spawnExpectOk([GIT, ...args], {
+    cwd,
+    timeoutMs: GIT_TIMEOUT_MS,
+  });
   return result.stdout.trim();
 }
 
@@ -154,6 +157,11 @@ if (!worktree) {
 import { readFileSync } from "node:fs";
 import { GIT } from "@plugins/infra/plugins/paths/server";
 import { DATABASE_CONFIG_PATH } from "@plugins/database/core";
+
+// Wedge-breaker for this script's local git reads (`log`, `rev-parse`,
+// `worktree list`). One number for all of them: they are metadata reads that
+// finish in milliseconds, and a minute is only ever reached by a wedge.
+const GIT_TIMEOUT_MS = 60_000;
 
 const dbConfigPath = DATABASE_CONFIG_PATH;
 let host = "localhost",

@@ -39,6 +39,12 @@
 import { createHash } from "node:crypto";
 import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
 
+// Wedge-breaker for a metadata-only git read: far above any real duration,
+// because starvation under a saturated check run is what these suffer, not
+// slowness. Same reasoning as `infra/worktree`'s bounds, which carry the
+// measurements.
+const GIT_TIMEOUT_MS = 60_000;
+
 function sha256(s: string): string {
   return createHash("sha256").update(s).digest("hex");
 }
@@ -145,7 +151,10 @@ async function gitStdout(
   root: string,
   args: string[],
 ): Promise<{ code: number; bytes: Uint8Array }> {
-  const result = await spawnCaptured(["git", ...args], { cwd: root });
+  const result = await spawnCaptured(["git", ...args], {
+    cwd: root,
+    timeoutMs: GIT_TIMEOUT_MS,
+  });
   return { code: result.exitCode, bytes: result.stdoutBytes };
 }
 

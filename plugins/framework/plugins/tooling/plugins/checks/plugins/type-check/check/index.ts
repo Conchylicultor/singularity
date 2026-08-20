@@ -69,12 +69,13 @@ const WORKER = fileURLToPath(new URL("../shared/worker.ts", import.meta.url));
 // build.ts's `branch === "main"` slot exemption). The demotion itself is
 // spawnCaptured's `background` option (spawn-priority's backgroundArgv).
 async function workerBackground(): Promise<boolean> {
-  const result = await spawnCaptured([
-    "git",
-    "rev-parse",
-    "--abbrev-ref",
-    "HEAD",
-  ]);
+  const result = await spawnCaptured(
+    ["git", "rev-parse", "--abbrev-ref", "HEAD"],
+    // Wedge-breaker for a metadata-only git read, far above any real duration.
+    // The worker spawn below is the one that legitimately runs for minutes; this
+    // one only decides whether to demote it.
+    { timeoutMs: 60_000 },
+  );
   return result.stdout.trim() !== "main";
 }
 
@@ -175,6 +176,14 @@ async function runWorker(
   const result = await spawnCaptured([process.execPath, WORKER, jobPath], {
     cwd: root,
     background,
+    // A type-check worker builds a whole TypeScript program; on a cold target
+    // that is minutes of unavoidable CPU, and on a saturated box (N agent
+    // fleets, all demoted to background QoS) it is longer still by an amount
+    // nothing here can predict. There is no shorter deadline to borrow: the
+    // human running `./singularity check` IS the deadline, and killing a worker
+    // that was making progress would just make the check unusable.
+    unbounded:
+      "a cold type-check worker legitimately runs for minutes of TS program construction, and the CLI run it belongs to owns no shorter deadline",
   });
   if (result.exitCode !== 0) {
     throw new Error(

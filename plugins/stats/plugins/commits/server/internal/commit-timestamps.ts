@@ -1,6 +1,13 @@
 import { ensureMainWorktreeRoot } from "@plugins/infra/plugins/worktree/server";
 
 import { GIT } from "@plugins/infra/plugins/paths/server";
+import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
+
+// `git log --numstat` over the whole history is the heaviest read in this
+// plugin — real work, seconds of it, which is why the result is cached for
+// TTL_MS below. Two minutes is far above that and exists only to stop a wedged
+// child holding the stats pane's request open forever.
+const GIT_LOG_TIMEOUT_MS = 120_000;
 const TTL_MS = 30_000;
 
 export interface CommitInfo {
@@ -15,16 +22,15 @@ export interface CommitInfo {
 
 async function parseGitLog(args: string[]): Promise<CommitInfo[]> {
   const root = await ensureMainWorktreeRoot();
-  const proc = Bun.spawn(
+  const result = await spawnCaptured(
     [
       GIT, "-C", root, "log",
       "--format=__C__%H\x1f%cI\x1f%(trailers:key=Singularity-Push,valueonly)\x1f%(trailers:key=Singularity-Conversation,valueonly)",
       "--numstat", "--reverse", ...args,
     ],
-    { stdout: "pipe", stderr: "pipe" },
+    { timeoutMs: GIT_LOG_TIMEOUT_MS },
   );
-  const text = await new Response(proc.stdout).text();
-  await proc.exited;
+  const text = result.stdout;
 
   // Split on __C__ markers — each chunk is one commit's header + numstat.
   // Trailer values append newlines, so the \x1f-delimited header may span

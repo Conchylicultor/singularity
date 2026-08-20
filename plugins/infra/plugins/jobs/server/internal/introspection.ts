@@ -6,6 +6,7 @@ import {
   holdForTask,
   type HoldClass,
 } from "../../core/hold";
+import { isSlotForfeited } from "./forfeit";
 
 // THE single home for the graphile-internals coupling. Every read of the queue —
 // dead-job reaping (dead-job-gc.ts) and the read-only introspection API below —
@@ -297,6 +298,21 @@ export interface RunningJobStat {
   // its next tick) or dispatch is still inside the sub-second window between
   // graphile's `get_job` stamping `locked_at` and `withJobLock` taking the lock.
   alive: boolean;
+  /**
+   * Whether this run's slot has been WRITTEN OFF: it passed its class deadline,
+   * ignored the abort, and outlived the zombie grace, so the pool no longer
+   * counts the slot as available.
+   *
+   * `alive && forfeited` is the interesting combination and is not a
+   * contradiction: the handler is still running (that is what `alive` says) and
+   * we have stopped waiting for it (that is what this says). Nothing was taken
+   * from it — see `forfeit.ts`.
+   *
+   * Read from THIS process's memory, never from the DB. A forfeit is a fact
+   * about the backend holding the slot, so a row locked by a different backend
+   * reads `false` here, correctly: this process has written nothing off for it.
+   */
+  forfeited: boolean;
 }
 
 interface RunningJobStatRow {
@@ -325,6 +341,10 @@ export async function queryRunningJobs(): Promise<RunningJobStat[]> {
      WHERE ${jobTaskScope} AND j.locked_at IS NOT NULL
      ORDER BY locked_for_ms DESC
   `);
+  // Joined in post-processing rather than in SQL, deliberately: forfeit is
+  // PROCESS state (a module-level map in forfeit.ts), not a column — there is
+  // nothing in the database to join against, and writing one would be claiming
+  // durably something that is only true while this backend lives.
   return (result.rows as unknown as RunningJobStatRow[]).map((r) => ({
     jobName: r.job_name,
     hold: r.hold,
@@ -332,5 +352,6 @@ export async function queryRunningJobs(): Promise<RunningJobStat[]> {
     lockedForMs: Number(r.locked_for_ms),
     lockedBy: r.locked_by,
     alive: r.alive,
+    forfeited: isSlotForfeited(r.job_id),
   }));
 }

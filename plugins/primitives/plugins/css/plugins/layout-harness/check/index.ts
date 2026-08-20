@@ -222,7 +222,12 @@ const check: Check = {
         // sub-second), so a slow-but-healthy setup never trips the gate.
         const { stdout, stderr, exitCode } = await spawnCaptured(
           ["bun", "test", "--timeout", "120000", resolve(root, SUITE_REL)],
-          { cwd: root },
+          // Deliberately an order of magnitude above the suite's OWN 120 s
+          // per-hook/test budget set on the line above: that inner budget is the
+          // real bound on healthy-but-slow work, and this outer one exists only
+          // for the case the inner one cannot cover — a `bun test` process that
+          // is wedged rather than slow, and so never gets round to enforcing it.
+          { cwd: root, timeoutMs: 900_000 },
         );
 
         if (exitCode === 0) {

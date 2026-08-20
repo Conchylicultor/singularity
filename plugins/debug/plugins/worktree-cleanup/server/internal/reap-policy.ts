@@ -259,8 +259,15 @@ async function pMap<T, R>(
 // `readdir` answers that for every row at once, so the attempt loop is now
 // synchronous set lookups. `listAttempts()` stays — at ~2.7 ms it is the lookup
 // for policy (`retained`, `createdAt`, `taskId`), not the driver.
-export async function collectReapable(now: number): Promise<ReapScan> {
-  const root = await ensureMainWorktreeRoot();
+// `signal` is optional and ambient (the reap job passes its `ctx.signal`). Only
+// the git hygiene fan-out below takes it — that is the one part of the scan that
+// waits on a host-wide gate and spawns children. The DB/table/readdir reads are
+// short, hold nothing host-wide, and have no cancellation to accept.
+export async function collectReapable(
+  now: number,
+  signal?: AbortSignal,
+): Promise<ReapScan> {
+  const root = await ensureMainWorktreeRoot(signal);
   const [attempts, tasks, databases, dirIndex] = await Promise.all([
     listAttempts(),
     listTasks(),
@@ -355,7 +362,7 @@ export async function collectReapable(now: number): Promise<ReapScan> {
   // regulator — `getGitHygiene` takes a slot per probe, so a wider local cap
   // would only queue waiters, and a narrower one would leave slots idle.
   const hygiene = await pMap(needProbe, heavyReadSlotCount(), (attempt) =>
-    getGitHygiene(attempt.worktreePath, { background: true }),
+    getGitHygiene(attempt.worktreePath, { background: true, signal }),
   );
   needProbe.forEach((attempt, i) => {
     const ctx = probeCtx.get(attempt.id)!;

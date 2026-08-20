@@ -25,13 +25,13 @@ export const backupRunJob = defineJob({
     // startup (a change takes effect on the next restart).
     cron: () => getConfig(backupConfig).periodicCron.trim() || null,
   },
-  run: async ({ input }) => {
+  run: async ({ input, ctx: { signal } }) => {
     const runId = crypto.randomUUID();
     await db.insert(_backupRuns).values({ id: runId, trigger: input.trigger });
 
     let archive;
     try {
-      archive = await assembleArchive(input.trigger);
+      archive = await assembleArchive(input.trigger, signal);
     } catch (err) {
       await db
         .update(_backupRuns)

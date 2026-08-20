@@ -35,15 +35,24 @@ export async function dirExists(path: string): Promise<boolean> {
 //
 // `onStep` lets the streaming delete handlers surface per-step progress to the
 // UI without duplicating the sequence; the background job passes nothing.
+//
+// `opts.signal` is optional and ambient (the reap job passes its `ctx.signal`).
+// It is forwarded to `removeWorktree`, which is the only step here that queues on
+// a host-wide flock — and the step that, unbounded, stopped worktree checkouts on
+// every backend on the machine on 2026-08-17. The DB/config/registry steps that
+// follow are short and deliberately left alone: they are the tail of a removal
+// already committed to, and abandoning them halfway would leak a fork DB or a
+// gateway registration that nothing else reclaims.
 export async function reapAttempt(
   id: string,
   opts: {
     worktreePath?: string;
     onStep?: (step: ReapStep) => void;
+    signal?: AbortSignal;
   },
 ): Promise<void> {
   if (opts.worktreePath) {
-    const root = await ensureMainWorktreeRoot();
+    const root = await ensureMainWorktreeRoot(opts.signal);
     // Deliberately NOT gated on the directory still existing, which is what this
     // used to check. Agent checkouts are now `git worktree lock`ed against Claude
     // Code's sweep of `.claude/worktrees/`, and a lock outlives the directory: if
@@ -54,7 +63,7 @@ export async function reapAttempt(
     // removes a live registration, and falls through to prune when there is none.
     if (isCanonicalWorktreePath(opts.worktreePath, root)) {
       opts.onStep?.("worktree");
-      await removeWorktree(opts.worktreePath);
+      await removeWorktree(opts.worktreePath, opts.signal);
     }
   }
 

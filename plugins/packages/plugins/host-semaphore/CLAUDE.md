@@ -188,9 +188,71 @@ additional free slots up to `max` with a single non-blocking sweep, returning a
 `try { fn() } finally { share.release() }` — so both entry points share one acquire
 path and `depth()` / crash-safety are identical between them.
 
+## Cancellation — `hooks.signal`
+
+Every wait in this primitive accepts an optional `AbortSignal`. It is optional
+everywhere, so a caller that passes none gets byte-identical behaviour.
+
+**Why it exists.** A worker that gives up on a wedged handler has exactly one
+lever: it aborts a signal. It cannot un-await a promise. So whether giving up
+releases anything at all depends on whether what the handler is blocked on accepts
+a signal — and this acquire did not. On 2026-08-17 a handler sat inside a
+`worktree-mutate` acquire (a **host-wide** flock) and blocked worktree checkouts on
+every backend on the machine. Until the acquire took a signal, "forfeiting" that
+handler's slot was bookkeeping; with one, the host resource actually comes back.
+
+Two effects, which answer different questions:
+
+1. **A pending acquire stops waiting.** An abort while queued — for the turnstile,
+   or fanned out over the lane's slots — unwinds the wait and **throws
+   `signal.reason`** (unwrapped, the standard `AbortSignal` contract, the same
+   shape `SpawnBound.signal` uses). Every `flock-wait` child spawned and every fd
+   opened on the way is cleaned up first: a leaked child holds a slot the pool can
+   no longer see, which is worse than the wedge being cancelled. An acquire that
+   has already won its slots when the abort lands hands them straight back and
+   throws too, rather than returning a share to an owner that has stopped running.
+2. **`run` stops HOLDING the slot mid-body.** An abort while `fn` is still pending
+   releases the slot immediately instead of at settle. `run` does **not** cancel
+   `fn` — `fn` owns its own cancellation and holds the same signal — it only
+   declines to occupy a host slot on behalf of work that has been written off. A
+   body that ignores its signal keeps running; it just stops costing the host a
+   slot. Safe because `release()` is idempotent: the `finally` still runs and is
+   then a no-op for the slots plus the child reap. A body that finishes anyway
+   keeps its result.
+
+`acquireShare` gets effect 1 only. Once a share is in the caller's hands its
+lifetime is theirs — a signal cannot know when they are done with it — which is
+exactly the difference from `run`, which owns that lifetime.
+
+**How cancellation is expressed, and why it is not a `Promise.race`.** Both waits
+are reads of a child's stdout. Racing the signal against them would abandon a
+pending `reader.read()` whose later rejection has no owner — a floating rejection
+on the very path being made safe. So an abort instead **SIGKILLs our own
+children**: a dead child closes its stdout, the read completes normally as EOF, and
+the wait unwinds through the `finally` that already knows how to reap. The EOF then
+*looks* like this pool's loud "a child died before granting" failure, so both
+outcomes are re-checked against the signal and replaced by `signal.reason` — we
+killed them, so reporting a pool fault would be a lie.
+
+`HostShare.releaseSlots()` is the synchronous half of `release()` that makes effect
+2 possible: closing the fds and killing the winner hands every slot back the
+instant it returns (flock releases on process death), leaving only the reap for
+`release()`. It exists for abort listeners, which cannot await.
+
+**One deliberate gap.** The size-sentinel reconcile (`ensureSizeIdentity`) is NOT
+cancellable. It is a shared, memoized run — a signal threaded into it would abort
+it for co-waiters, and racing it would abandon a promise whose failure nobody would
+see. It also holds nothing host-wide (its probe fds are closed synchronously and
+its guard fd before the guard child is spawned), and its only wait is on
+`.size.lock`, held across a handful of syscalls by a process doing a first touch or
+a resize, never across a slot wait, and released by the kernel if that process
+dies. `acquireShare` brackets it with `throwIfAborted()` on both sides, so an abort
+landing during it stops the call before it starts sweeping for a slot.
+
 ## Hooks — observing the wait without coupling to a profiler
 
-`AcquireHooks` carries two optional callbacks, neither of which gates behavior:
+`AcquireHooks` carries two optional callbacks, neither of which gates behavior
+(`lane` and `signal` on the same object DO — see above):
 
 - `onWaitStart()` — fires when the slow path is entered (every slot busy), **before**
   any child is spawned; never on the fast path. Lets a caller *open* a "waiting for a
@@ -198,6 +260,9 @@ path and `depth()` / crash-safety are identical between them.
 - `onAcquired(waitMs)` — fires once, fast path or slow, at acquisition before the body
   runs, with the milliseconds waited (≈0 on the fast path). Replaces the old positional
   `onWait` and keeps identical semantics.
+
+A **cancelled** acquire never fires `onAcquired`, even where `onWaitStart` already
+fired. A consumer pairing the two must tolerate a wait that ends in a throw.
 
 Crash-safety holds on both paths: the held fd is closed in a `finally`, so a
 rejecting `fn` never leaks a slot, and parent death closes every fd (or EOFs the

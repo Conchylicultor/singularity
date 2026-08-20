@@ -5,6 +5,12 @@ import { spawnCaptured, spawnExpectOk } from "@plugins/infra/plugins/spawn/core"
 import { InvalidSshKeyError } from "./ssh-key-error";
 import { parseSshPublicKey } from "./ssh-public-key";
 
+// Both `ssh-keygen` calls run inside an HTTP request the user is waiting on,
+// and both are pure local CPU over a 32-byte key — sub-second, with no network
+// and (see the `-N ""` / `-P ""` note below) no prompt they can block on.
+// Thirty seconds is the request's patience, not the command's expected cost.
+const SSH_KEYGEN_TIMEOUT_MS = 30_000;
+
 /**
  * Generates an ed25519 keypair by shelling out to `ssh-keygen` (present on
  * macOS/Linux), so both halves are in canonical OpenSSH format — the private
@@ -24,17 +30,10 @@ export async function generateEd25519Keypair(
   const dir = await mkdtemp(join(tmpdir(), "sg-deploy-keygen-"));
   try {
     const keyPath = join(dir, "id_ed25519");
-    await spawnExpectOk([
-      "ssh-keygen",
-      "-t",
-      "ed25519",
-      "-f",
-      keyPath,
-      "-N",
-      "",
-      "-C",
-      comment,
-    ]);
+    await spawnExpectOk(
+      ["ssh-keygen", "-t", "ed25519", "-f", keyPath, "-N", "", "-C", comment],
+      { timeoutMs: SSH_KEYGEN_TIMEOUT_MS },
+    );
     const [privateKey, publicKey] = await Promise.all([
       readFile(keyPath, "utf8"),
       readFile(`${keyPath}.pub`, "utf8"),
@@ -91,7 +90,9 @@ export async function derivePublicKey(
     // Belt and braces: spawnCaptured gives the child `stdin: "ignore"` when no
     // stdin is passed, so even a prompt hits EOF — this call structurally
     // cannot hang the request.
-    const result = await spawnCaptured(["ssh-keygen", "-y", "-P", "", "-f", keyPath]);
+    const result = await spawnCaptured(["ssh-keygen", "-y", "-P", "", "-f", keyPath], {
+      timeoutMs: SSH_KEYGEN_TIMEOUT_MS,
+    });
     if (result.exitCode !== 0) {
       throw classifyKeygenFailure(result.stderr);
     }

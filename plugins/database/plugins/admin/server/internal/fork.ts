@@ -39,11 +39,19 @@ function assertSafeName(name: string): void {
 // silently produce a full ~1 GB fork that looks like it worked. A required
 // parameter forces every caller to name where its exclusion set came from; see
 // `forkExclusions()` in ./fork-exclusion, which fails loudly on the empty case.
+// `signal` is optional and ambient — the `database.fork` job passes its
+// `ctx.signal`. It cancels the host `db-fork` acquire, and once the slot is held
+// it SIGKILLs the dump/restore pair, whose non-zero exits then take the existing
+// failure path: the temp DB is dropped and the call throws. That ordering is the
+// point — the temp is reclaimed BEFORE the abort is reported, so cancelling a fork
+// never trades a released gate slot for a leaked `f_*__forking` database.
 export async function forkDatabase(
   source: string,
   target: string,
   exclusions: ForkExclusions,
+  signal?: AbortSignal,
 ): Promise<void> {
+  signal?.throwIfAborted();
   assertSafeName(source);
   assertSafeName(target);
   // Canonical name only exists on full completion → already done, no-op.
@@ -99,16 +107,33 @@ export async function forkDatabase(
       stdout: "pipe",
       stderr: "pipe",
     });
-    const [dumpExit, restoreExit] = await Promise.all([
-      dump.exited,
-      restore.exited,
-    ]);
+    // Cancellation, expressed as killing our own children rather than as a race
+    // against the signal: a dead child exits, `exited` resolves on its own, and the
+    // whole body unwinds through the failure path below that already knows how to
+    // drop the temp. Nothing is abandoned mid-await.
+    const onAbort = (): void => {
+      dump.kill(9);
+      restore.kill(9);
+    };
+    signal?.addEventListener("abort", onAbort, { once: true });
+    let dumpExit: number;
+    let restoreExit: number;
+    try {
+      [dumpExit, restoreExit] = await Promise.all([dump.exited, restore.exited]);
+    } finally {
+      signal?.removeEventListener("abort", onAbort);
+    }
     if (dumpExit !== 0 || restoreExit !== 0) {
       const err = await new Response(restore.stderr).text();
       await dropDatabase(temp);
+      // Reclaim first, report second. When WE killed them, the exit codes say
+      // nothing useful, so the abort is the truthful failure — and it must be a
+      // throw of `signal.reason`, not a fork-failed message a caller could retry
+      // its way around.
+      signal?.throwIfAborted();
       throw new Error(`forkDatabase(${source} → ${target}) failed: ${err}`);
     }
-  });
+  }, signal);
 
   // The Graphile Worker schema used to be copied by the dump and then dropped
   // from the temp here. `infra/jobs` now declares it via `ExcludeSchemaFromFork`,

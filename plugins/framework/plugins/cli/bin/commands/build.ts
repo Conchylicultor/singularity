@@ -107,6 +107,14 @@ import {
 import { createBuildRunRecorder } from "@plugins/build/plugins/run-ledger/server";
 import { BUILD_EXIT_SUPERSEDED } from "@plugins/build/plugins/build-status/core";
 
+// Wedge-breaker for the local `git` metadata reads in this file — orders of
+// magnitude above what any of them take. A CLI command owns no deadline of its
+// own (the human waiting is the deadline), so these could have been `unbounded`;
+// they are not, because a wedged `git` child here hangs the whole build with no
+// other ceiling anywhere — the fleet-level op-wedge watchdog was retired
+// 2026-07-28 — and one minute is long enough that only a wedge trips it.
+const GIT_TIMEOUT_MS = 60_000;
+
 // A namespace is one or two dot-joined labels, capped at 63 bytes — owned by the
 // namespace plugin and pinned to the gateway's own regex by
 // `namespace:grammar-in-sync`. It used to be the single-LABEL rule here, which
@@ -177,18 +185,17 @@ async function writeCentralRoutesManifest(root: string): Promise<void> {
 async function readHead(root: string): Promise<string | null> {
   const result = await spawnCaptured(["git", "rev-parse", "HEAD"], {
     cwd: root,
+    timeoutMs: GIT_TIMEOUT_MS,
   });
   if (result.exitCode !== 0) return null;
   return result.stdout.trim() || null;
 }
 
 async function getCurrentBranch(): Promise<string> {
-  const result = await spawnCaptured([
-    "git",
-    "rev-parse",
-    "--abbrev-ref",
-    "HEAD",
-  ]);
+  const result = await spawnCaptured(
+    ["git", "rev-parse", "--abbrev-ref", "HEAD"],
+    { timeoutMs: GIT_TIMEOUT_MS },
+  );
   if (result.exitCode !== 0) {
     console.error("Could not determine current branch");
     process.exit(1);
@@ -204,20 +211,15 @@ async function getCurrentBranch(): Promise<string> {
 // checkout carrying main's registry — so check on every build and reset to the
 // tracked value.
 async function ensureHooksPath(): Promise<void> {
-  const read = await spawnCaptured([
-    "git",
-    "config",
-    "--get",
-    "core.hooksPath",
-  ]);
+  const read = await spawnCaptured(["git", "config", "--get", "core.hooksPath"], {
+    timeoutMs: GIT_TIMEOUT_MS,
+  });
   const current = read.stdout.trim();
   if (current === ".githooks") return;
-  const write = await spawnCaptured([
-    "git",
-    "config",
-    "core.hooksPath",
-    ".githooks",
-  ]);
+  const write = await spawnCaptured(
+    ["git", "config", "core.hooksPath", ".githooks"],
+    { timeoutMs: GIT_TIMEOUT_MS },
+  );
   if (write.exitCode !== 0) {
     if (write.stderr.trim()) console.error(write.stderr.trim());
     console.error(
