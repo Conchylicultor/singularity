@@ -46,9 +46,10 @@ function ComponentVariantSection() {
 }
 
 /**
- * The quick-switch panel body: contributed quick sections (the community theme
- * picker) on top, every component variant picker below, and a footer that hands
- * off to the full customizer pane.
+ * The quick-switch panel body: contributed quick sections on top (the community
+ * theme picker, then the light/dark switch — this file names neither, and their
+ * order is reorder config's), every component variant picker below, and a footer
+ * that hands off to the full customizer pane.
  *
  * It is a CONTROL PANEL body and therefore paints nothing of its own — no
  * padding, no scroll region, no bordered footer band. The `ControlPanelPopover`

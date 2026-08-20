@@ -671,7 +671,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
       - Plugins:
         - **`quick-theme`** — Quick-switch theme popover on the global action bar: contributed quick sections (community themes), every component variant picker, and a hand-off to the full customizer pane — so a theme change never costs the user their current context.
         - **`theme-customizer`** — Extensible theme customization pane with global preset picker, search, and contributed sections.
-    - **`theme-toggle`** — Toolbar toggle for light/dark mode.
+    - **`theme-toggle`** — Light/dark switch inside the quick-theme popover.
     - **`tokens`** [12 sub-plugins] — Umbrella for CSS token group plugins. Contributes global theme presets.
     - **`tree-disclosure`** — Tree-row disclosure region (merged / dimmed-leaf / column). Contributes its variant-region host into Tree.Disclosure.
       - Plugins:

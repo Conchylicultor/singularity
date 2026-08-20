@@ -1,10 +1,14 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
-import { ActionBar } from "@plugins/shell/plugins/action-bar/web";
+import { QuickTheme } from "@plugins/ui/plugins/theme-engine/plugins/quick-theme/web";
 import { ThemeToggle } from "./components/theme-toggle";
 
 export default {
-  description: "Toolbar toggle for light/dark mode.",
+  description: "Light/dark switch inside the quick-theme popover.",
   contributions: [
-    ActionBar.Item({ id: "theme-light-dark", component: ThemeToggle }),
+    QuickTheme.Section({
+      id: "color-mode",
+      label: "Appearance",
+      component: ThemeToggle,
+    }),
   ],
 } satisfies PluginDefinition;

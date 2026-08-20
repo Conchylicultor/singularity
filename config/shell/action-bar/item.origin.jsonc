@@ -1,4 +1,4 @@
-// @hash cfd581d970d3
+// @hash 56d361792e84
 {
   // Item: "<key>" (terse; <key> is "<pluginId>:<id>")
   // Hide: { "item": "<key>", "hidden": true }
@@ -17,7 +17,6 @@
     "screenshot:screenshot",
     "screenshot.draw-on-app:draw-on-app",
     "shell.notifications:notifications",
-    "ui.theme-engine.quick-theme:quick-theme",
-    "ui.theme-toggle:theme-light-dark"
+    "ui.theme-engine.quick-theme:quick-theme"
   ]
 }

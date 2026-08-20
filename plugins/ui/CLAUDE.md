@@ -10,7 +10,7 @@
   - **`sidebar-framing`** — Per-app sidebar framing region (flush / floating / inset). Contributes its variant-region host into AppShell.Framing.
   - **`tab-bar`** — Themable tab bar: chip / underline / connected variants.
   - **`theme-engine`** — Central settings pane for switching visual variants of pluggable UI components.
-  - **`theme-toggle`** — Toolbar toggle for light/dark mode.
+  - **`theme-toggle`** — Light/dark switch inside the quick-theme popover.
   - **`tokens`** — Umbrella for CSS token group plugins. Contributes global theme presets.
   - **`tree-disclosure`** — Tree-row disclosure region (merged / dimmed-leaf / column). Contributes its variant-region host into Tree.Disclosure.
   - **`tweakcn`** — Imports tweakcn themes as dynamic presets across all token groups. Imports tweakcn themes and registers them as dynamic presets in all token groups.

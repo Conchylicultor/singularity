@@ -21384,6 +21384,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/data-view/custom-columns`
               - `primitives/data-view/view-core`
               - `ui/theme-engine/quick-theme`
+              - `ui/theme-toggle`
         - **`control-size`** — Control-size standard: the shared control-* height scale and its enforcing lint rule (no-adhoc-control).
         - **`fill`** — Flexible-cell layout primitive: <Fill axis> is the single grow+shrink cell of a Line/Row (min-w-0 flex-1). The one home for the slack-absorbing, truncation-enabling cell, so a stray flex-1 never strands the grow slot.
           - Web:
@@ -25005,7 +25006,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `tasks/task-events`
           - `tasks/task-list`
           - `ui/theme-engine/quick-theme`
-          - `ui/theme-toggle`
     - **`icon-picker`** — Searchable, categorized icon picker over the full Material Design set. Owns the SvgNode storage format, the icon registry, and server-side SVG resolution; avatar composes it. Searchable, categorized icon picker over the full Material Design set. Owns the SvgNode storage format, the icon registry, and server-side SVG resolution; avatar composes it.
       - Web:
         - Uses:
@@ -28289,7 +28289,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
   - Plugins:
     - **`action-bar`** — Shared cross-app action set. Defines the ActionBar.Item slot that plugins contribute their toolbar actions to; the global-action-bar plugin renders it.
       - Web:
-        - Slots: `ActionBar.Item` ← `apps-core.surface`, `apps.agent-manager.worktree-switcher`, `build`, `fullscreen`, `improve`, `improve.element-picker`, `infra.health`, `reorder.edit-mode`, `screenshot`, `screenshot.draw-on-app`, `shell.notifications`, `ui.theme-engine.quick-theme`, `ui.theme-toggle`
+        - Slots: `ActionBar.Item` ← `apps-core.surface`, `apps.agent-manager.worktree-switcher`, `build`, `fullscreen`, `improve`, `improve.element-picker`, `infra.health`, `reorder.edit-mode`, `screenshot`, `screenshot.draw-on-app`, `shell.notifications`, `ui.theme-engine.quick-theme`
         - Uses: `primitives/slot-render.defineRenderSlot`
         - Exports (values): `ActionBar`
       - Cross-plugin:
@@ -28307,7 +28307,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `shell/global-action-bar`
           - `shell/notifications`
           - `ui/theme-engine/quick-theme`
-          - `ui/theme-toggle`
     - **`global-action-bar`** — Global action bar rendering the shared ActionBar.Item set on every app, with two mutually-exclusive mount points keyed on the persisted pin: a floating top-right overlay (Core.Root) when unpinned — visible in every placement mode including solo — and a docked right-aligned strip in the tab bar (Apps.TabBarActions) when pinned. Shared cross-app action set: registers the action-bar config so the bar's enabled toggle persists.
       - Web:
         - Contributes:
@@ -30155,7 +30154,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Plugins:
         - **`quick-theme`** — Quick-switch theme popover on the global action bar: contributed quick sections (community themes), every component variant picker, and a hand-off to the full customizer pane — so a theme change never costs the user their current context.
           - Web:
-            - Slots: `QuickTheme.Section` ← `ui.tweakcn.community-browser`
+            - Slots: `QuickTheme.Section` ← `ui.theme-toggle`, `ui.tweakcn.community-browser`
             - Contributes: `ActionBar.Item` → `QuickThemeButton`
             - Uses:
               - `apps-core.useActiveApp`
@@ -30174,7 +30173,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Exports (types): `QuickThemeSectionContribution`
             - Exports (values): `QuickTheme`
           - Cross-plugin:
-            - Imported by: `ui/tweakcn/community-browser`
+            - Imported by:
+              - `ui/theme-toggle`
+              - `ui/tweakcn/community-browser`
         - **`theme-customizer`** — Extensible theme customization pane with global preset picker, search, and contributed sections.
           - Web:
             - Slots:
@@ -30231,14 +30232,14 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `ui/tokens/sidebar-palette`
               - `ui/tokens/type-scale`
               - `ui/tweakcn/community-browser`
-    - **`theme-toggle`** — Toolbar toggle for light/dark mode.
+    - **`theme-toggle`** — Light/dark switch inside the quick-theme popover.
       - Web:
-        - Contributes: `ActionBar.Item` → `ThemeToggle`
+        - Contributes: `QuickTheme.Section` "Appearance" → `ThemeToggle`
         - Uses:
-          - `primitives/icon-button.IconButton`
-          - `shell/action-bar.ActionBar`
+          - `primitives/css/control-panel.ControlPanel`
           - `ui/theme-engine.useResolvedColorMode`
           - `ui/theme-engine.useSetColorMode`
+          - `ui/theme-engine/quick-theme.QuickTheme`
     - **`tokens`** — Umbrella for CSS token group plugins. Contributes global theme presets.
       - Web:
         - Contributes:

@@ -1,13 +1,15 @@
-// @hash 73ad9f01fd25
+// @hash 06413f82cf43
 {
   // Vertical stack of sections inside the quick-theme popover, rendered above
   // the variant pickers. Top = first thing the user reaches for; the community
-  // theme picker is the whole point of the popover, so it leads.
+  // theme picker is the whole point of the popover, so it leads, and the
+  // light/dark switch sits right under it — one row, still above the fold.
   //
   // Hide: { "item": "<key>", "hidden": true }
   // Spacer (gap): { "type": "spacer", "id": "<unique-id>" }
   // Group: { "type": "header", "label": "<title>", "collapsed": false, "items": [ "<key>", … ] }
   "items": [
-    "ui.tweakcn.community-browser:community-themes"
+    "ui.tweakcn.community-browser:community-themes",
+    "ui.theme-toggle:color-mode"
   ]
 }

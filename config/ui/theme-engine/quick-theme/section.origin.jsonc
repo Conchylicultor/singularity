@@ -1,4 +1,4 @@
-// @hash 73ad9f01fd25
+// @hash 06413f82cf43
 {
   // Item: "<key>" (terse; <key> is "<pluginId>:<id>")
   // Hide: { "item": "<key>", "hidden": true }
@@ -6,6 +6,7 @@
   // Group: { "type": "header", "label": "<title>", "collapsed": false, "items": [ "<key>", … ] }
   // Overflow (⋯ menu): { "type": "overflow", "id": "<unique-id>", "items": [ "<key>", … ] }
   "items": [
+    "ui.theme-toggle:color-mode",
     "ui.tweakcn.community-browser:community-themes"
   ]
 }
