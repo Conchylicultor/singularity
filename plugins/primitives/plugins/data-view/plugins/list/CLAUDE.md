@@ -22,16 +22,43 @@ hover-revealed trailing actions, and leading icon slot all come for free:
 
 The row body maps the `FieldDef` schema (shared `pickPrimaryField` heuristic):
 
-- **primary field** → top label line (`Text variant="label"`, truncating).
+- **primary field** → the title (`Text variant="label"`, truncating).
 - fields with **`align: "end"`** → an always-visible trailing region inside the
-  row body, right of the label/subtitle block and **before** the hover actions
+  row body, right of the title/subtitle and **before** the hover actions
   (`field.cell(row) ?? String(field.value(row))`). This is where a status badge
   lands.
-- **remaining non-primary fields** → a muted subtitle line
-  (`Text variant="caption"`, truncating), joined with `·`.
+- **remaining non-primary fields** → the muted subtitle (`Text
+  variant="caption"`, truncating), joined with `·`.
 
-This is the list analog of the gallery's "title + stacked muted property rows":
-primary = label, others = subtitle, `align: "end"` floats to the trailing edge.
+### One line by default (`options.lines`)
+
+`lines: 1` (the default) puts the title and the subtitle **on the row's own
+line**:
+
+```
+[icon]  Title · subtitle · fields                      trailing   [actions]
+```
+
+`Row` composes `Line`, so the row body is already a `region-line` +
+`SingleLineProvider` context — the title and the subtitle are sibling truncating
+leaves in it (each `<Text>` ellipsizes without asking), an empty `<Fill>` absorbs
+the slack, and the trailing cell is a rigid leaf in its own track. The `·` join
+extends to the seam with the title, which on one line is just the run's first
+term.
+
+When the line is tight both leaves shrink at CSS's default factor, weighted by
+content width, so the longer one yields more — and the `·`-joined metadata run
+normally is the longer one. That is the intent (the title identifies the row),
+reached without a shrink-priority primitive invented for one call site.
+
+`lines: 2` restores the stacked shape — subtitle under title inside a `Stack`,
+which resets the single-line context so each `<Text>` asks for its own
+`truncate`, with the trailing cell pushed by `ml-auto`. Reach for it when the
+subtitle is **prose**, where the second line is genuinely a second thought,
+rather than a run of short values.
+
+Either way this is the list analog of the gallery's "title + muted properties":
+primary = title, others = subtitle, `align: "end"` floats to the trailing edge.
 
 **Which fields appear (and their order)** follows the view's per-instance
 `visibleFields` (`resolveBodyFields` over the schema; **default `null` = all
@@ -54,6 +81,11 @@ pinned/stacking group header for every flat view. The policy lives in the data-v
 parent, not here; see its CLAUDE.md ("Grouped sections: one pipeline, one chrome").
 
 ## Windowing + manual order
+
+`estimateSize` tracks both dimensions of the row's height — its `size` and its
+`lines` — because a single-line row is roughly a caption-line shorter than the
+stacked one; `VirtualRows` measures every mounted row anyway, so the estimate
+only has to keep the sizer (and therefore the scrollbar) honest.
 
 A section windows through `VirtualRows` once its entry count exceeds 100; below
 that it renders as a plain `.map` inside a `<Stack className="rail-follow py-sm">`
@@ -80,7 +112,10 @@ conditional hook.
 - `leading?(row)` — leading slot per row (icon / avatar / status-dot).
 - `renderRow?(row)` — full row-body override (escape hatch); still wrapped in
   the selectable `Row`.
-- `size?` — row density, `"sm" | "md"` (default `"md"`).
+- `lines?` — rows per item, `1 | 2` (default `1`, one line — see above).
+- `size?` — row density, `"sm" | "md"`. Default follows the SURFACE's
+  `DataViewProps.density`: `"sm"` when it declared itself compact, `"md"`
+  otherwise. Setting it here pins a density whatever the surface asked for.
 
 ## Exports
 
@@ -100,6 +135,7 @@ conditional hook.
     - `primitives/css/badge.Badge`
     - `primitives/css/center.Center`
     - `primitives/css/clip.clipClasses`
+    - `primitives/css/fill.Fill`
     - `primitives/css/pin.Pin`
     - `primitives/css/rigid.rigidClass`
     - `primitives/css/row.Row`

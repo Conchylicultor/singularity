@@ -72,7 +72,6 @@ stays target-blind on purpose — see its docblock.
     - `primitives/css/inline.Inline`
     - `primitives/css/pin.Pin`
     - `primitives/css/rigid.rigidClass`
-    - `primitives/css/row.Row`
     - `primitives/css/scroll.Scroll`
     - `primitives/css/spacing.Stack`
     - `primitives/css/spinner.Spinner`

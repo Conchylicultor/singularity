@@ -5,6 +5,7 @@ import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
 import { clipClasses } from "@plugins/primitives/plugins/css/plugins/clip/web";
+import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
@@ -138,6 +139,12 @@ export function ListView(props: DataViewRenderProps<unknown>): ReactNode {
   // `null` → identity, so the title/subtitle/trailing split is unchanged.
   const vis = resolveBodyFields(props.fields, props.state.visibleFields);
   const options = (props.options ?? {}) as ListViewOptions<unknown>;
+  // One line is the default shape (see `ListViewOptions.lines`); a surface whose
+  // subtitle is prose opts back into the stacked one.
+  const lines = options.lines ?? 1;
+  // Density is the SURFACE's declaration, not the view's: a compact surface gets
+  // the tighter row unless this view instance pinned a size of its own.
+  const rowSize = options.size ?? (props.density === "compact" ? "sm" : "md");
   // Documented cast boundary: itemActions arrives type-erased.
   const itemActions = props.itemActions as
     ItemActionsDescriptor<unknown> | undefined;
@@ -168,58 +175,147 @@ export function ListView(props: DataViewRenderProps<unknown>): ReactNode {
     (f) => f.id !== titleField?.id && f.align !== "end",
   );
 
+  // The trailing cell — `align: "end"` fields plus the aggregate `×N` badge —
+  // is identical in both row shapes, so it is written once. It is a rigid leaf:
+  // it renders what it renders and never gives width back to the title. Only
+  // its flush-right MECHANIC differs, which is why the class comes in from the
+  // caller: the single-line shape puts an empty `<Fill>` ahead of it, the
+  // stacked one keeps the `ml-auto` it has always used.
+  const hasTrailing = (aggregateCount?: number): boolean =>
+    trailingFields.length > 0 || (aggregateCount != null && aggregateCount > 1);
+  const renderTrailing = (
+    row: unknown,
+    aggregateCount: number | undefined,
+    className?: string,
+  ): ReactNode => (
+    <Stack
+      direction="row"
+      gap="xs"
+      align="center"
+      className={cn(className, rigidClass())}
+    >
+      {trailingFields.map((field) => (
+        <span key={field.id}>
+          <FieldCell
+            field={field}
+            row={row}
+            resolveCell={resolveCell}
+            resolveEditor={resolveEditor}
+            display="block"
+          />
+        </span>
+      ))}
+      {aggregateCount && aggregateCount > 1 ? (
+        <Badge variant="muted">{`×${aggregateCount}`}</Badge>
+      ) : null}
+    </Stack>
+  );
+
   // Single source of row markup — shared verbatim by the plain and virtualized
   // branches so the two render identically.
   const renderRow = (
     row: unknown,
     key: string,
     aggregateCount?: number,
-  ): ReactNode => (
-    <Row
-      key={key}
-      selected={key === props.selectedRowId}
-      size={options.size ?? "md"}
-      onClick={() => props.onRowActivate?.(row)}
-      icon={options.leading?.(row)}
-      actions={revealed?.({
-        row,
-        hasChildren: props.hasChildren?.(key) ?? false,
-      })}
-    >
-      {options.renderRow ? (
-        options.renderRow(row)
-      ) : (
-        <>
-          {/* Clipping already floors this flex item's automatic minimum size at
-              0, so the cell needs no min-w-0 of its own. */}
-          <Stack
-            gap="none"
-            className={clipClasses({ axis: "both", fill: false })}
-          >
+  ): ReactNode => {
+    const trailing = hasTrailing(aggregateCount);
+    return (
+      <Row
+        key={key}
+        selected={key === props.selectedRowId}
+        size={rowSize}
+        onClick={() => props.onRowActivate?.(row)}
+        icon={options.leading?.(row)}
+        actions={revealed?.({
+          row,
+          hasChildren: props.hasChildren?.(key) ?? false,
+        })}
+      >
+        {options.renderRow ? (
+          options.renderRow(row)
+        ) : lines === 2 ? (
+          // TWO LINES — the opt-in stacked shape, for a subtitle that is prose.
+          // `Stack` is a flow container, so it RESETS the row's single-line
+          // context: each `<Text>` must ask for its own `truncate`, exactly as
+          // it did when this was the only shape.
+          <>
+            {/* Clipping already floors this flex item's automatic minimum size at
+                0, so the cell needs no min-w-0 of its own. */}
+            <Stack
+              gap="none"
+              className={clipClasses({ axis: "both", fill: false })}
+            >
+              {titleField ? (
+                <Text
+                  as="div"
+                  variant="label"
+                  className="truncate text-foreground"
+                >
+                  <FieldCell
+                    field={titleField}
+                    row={row}
+                    resolveCell={resolveCell}
+                    resolveEditor={resolveEditor}
+                    display="block"
+                  />
+                </Text>
+              ) : null}
+              {subtitleFields.length > 0 ? (
+                <Text
+                  as="div"
+                  variant="caption"
+                  className="truncate text-muted-foreground"
+                >
+                  {subtitleFields.map((field, fi) => (
+                    <span key={field.id}>
+                      {fi > 0 ? " · " : null}
+                      <FieldCell
+                        field={field}
+                        row={row}
+                        resolveCell={resolveCell}
+                        resolveEditor={resolveEditor}
+                        display="inline"
+                      />
+                    </span>
+                  ))}
+                </Text>
+              ) : null}
+            </Stack>
+            {trailing ? renderTrailing(row, aggregateCount, "ml-auto") : null}
+          </>
+        ) : (
+          // ONE LINE (the default) — title and subtitle are sibling truncating
+          // leaves of the row itself. `Row` composes `Line`, so this is already
+          // a `region-line` + `SingleLineProvider` context: every `<Text>` here
+          // ellipsizes on one line without asking, and nothing wraps.
+          //
+          // What gives first: both leaves shrink (CSS's default factor of 1,
+          // weighted by content width), so the longer of the two yields more —
+          // and the subtitle, being the muted `·`-joined metadata run, is
+          // normally the longer one. That is the intent (the title identifies
+          // the row) without inventing a shrink-priority primitive for it.
+          <>
             {titleField ? (
-              <Text
-                as="div"
-                variant="label"
-                className="truncate text-foreground"
-              >
+              <Text variant="label" className="text-foreground">
+                {/* `display="inline"` here, not `"block"`: a block cell asks for
+                    `w-full`, which in a flex line means the whole row rather
+                    than the cell it means in the stacked shape. */}
                 <FieldCell
                   field={titleField}
                   row={row}
                   resolveCell={resolveCell}
                   resolveEditor={resolveEditor}
-                  display="block"
+                  display="inline"
                 />
               </Text>
             ) : null}
             {subtitleFields.length > 0 ? (
-              <Text
-                as="div"
-                variant="caption"
-                className="truncate text-muted-foreground"
-              >
+              <Text variant="caption" className="text-muted-foreground">
                 {subtitleFields.map((field, fi) => (
                   <span key={field.id}>
-                    {fi > 0 ? " · " : null}
+                    {/* The same `·` join, extended to the seam with the title:
+                        on one line the title is simply the run's first term. */}
+                    {fi > 0 || titleField != null ? " · " : null}
                     <FieldCell
                       field={field}
                       row={row}
@@ -231,35 +327,20 @@ export function ListView(props: DataViewRenderProps<unknown>): ReactNode {
                 ))}
               </Text>
             ) : null}
-          </Stack>
-          {trailingFields.length > 0 ||
-          (aggregateCount && aggregateCount > 1) ? (
-            <Stack
-              direction="row"
-              gap="xs"
-              align="center"
-              className={cn("ml-auto", rigidClass())}
-            >
-              {trailingFields.map((field) => (
-                <span key={field.id}>
-                  <FieldCell
-                    field={field}
-                    row={row}
-                    resolveCell={resolveCell}
-                    resolveEditor={resolveEditor}
-                    display="block"
-                  />
-                </span>
-              ))}
-              {aggregateCount && aggregateCount > 1 ? (
-                <Badge variant="muted">{`×${aggregateCount}`}</Badge>
-              ) : null}
-            </Stack>
-          ) : null}
-        </>
-      )}
-    </Row>
-  );
+            {trailing ? (
+              <>
+                {/* The slack lives in its own cell, so the trailing group sits
+                    flush right in a real track (the structural replacement for
+                    `ml-auto`) and the identity leaves keep their natural width. */}
+                <Fill />
+                {renderTrailing(row, aggregateCount)}
+              </>
+            ) : null}
+          </>
+        )}
+      </Row>
+    );
+  };
 
   // One entry's node, shared by both branches. In manual-order mode the row is
   // wrapped in its drag affordances — except when its rank is null, which marks
@@ -286,7 +367,13 @@ export function ListView(props: DataViewRenderProps<unknown>): ReactNode {
   // composes with windowing: `activeId` (from the RankReorderProvider render-prop)
   // pins the drag source so it stays mounted when it scrolls out of the window —
   // it renders at its true measured offset, so it is invisible and harmless.
-  const estimateSize = (options.size ?? "md") === "sm" ? 36 : 44;
+  // Both dimensions of the row's height: its text density, and whether the
+  // subtitle is a second line. `VirtualRows` measures every mounted row anyway,
+  // so this only has to be close enough that the scrollbar doesn't jump — but a
+  // single-line row is roughly a caption-line shorter than the stacked one it
+  // replaced, and keeping the old estimate would size the sizer ~35% long.
+  const estimateSize =
+    lines === 2 ? (rowSize === "sm" ? 36 : 44) : rowSize === "sm" ? 28 : 32;
   const renderEntries = (
     entries: DataViewRowEntry<unknown>[],
     activeId: string | null,

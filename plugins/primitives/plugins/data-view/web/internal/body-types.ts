@@ -1,6 +1,6 @@
 import type { ReactNode, Ref } from "react";
 import type { ResolvedViewInstance } from "@plugins/primitives/plugins/data-view/plugins/view-core/web";
-import type { DataViewId, DataViewProps } from "../../core";
+import type { DataViewDensity, DataViewId, DataViewProps } from "../../core";
 import type { DataViewContribution } from "../slots";
 import type { ReadyViewModel } from "./use-data-view-model";
 
@@ -18,6 +18,14 @@ export interface DataViewShellChrome {
   switcherCount: number;
   title?: ReactNode;
   actions?: ReactNode;
+  /**
+   * The surface's declared density (`DataViewProps.density`). It travels on the
+   * chrome rather than reaching the body twice because both hosts —
+   * `DataView` and `MergedDataView` — build their chrome through the one
+   * `DataViewShellFrame`, so there is a single place the value can be set and a
+   * single place the body reads it from. Absent ⇒ `"comfortable"`.
+   */
+  density?: DataViewDensity;
   /** The shell's toolbar-measurement ref. The body attaches it to the toolbar's
    *  `<Sticky>` so the shell can publish the measured height as
    *  `--dv-header-offset` on the shell root. */
@@ -27,11 +35,16 @@ export interface DataViewShellChrome {
 /**
  * Everything a data source supplies: the full `DataViewProps` surface minus the
  * per-surface keys the shell owns (`storageKey` / `title` / `actions` /
- * `defaultView` / `views`).
+ * `defaultView` / `views` / `density`).
+ *
+ * `density` is on that list for the same reason `title` is: it describes the
+ * SURFACE, not the data bundle, and the body reads it off `chrome`. Omitting it
+ * here means a source contributor cannot even spell a density the host would
+ * then silently ignore.
  */
 export type DataViewSourceBundle<TRow> = Omit<
   DataViewProps<TRow>,
-  "storageKey" | "title" | "actions" | "defaultView" | "views"
+  "storageKey" | "title" | "actions" | "defaultView" | "views" | "density"
 >;
 
 /** Props of the per-active-instance body (`DataViewBody`). */

@@ -326,6 +326,9 @@ function DataViewBodyInner<TRow>(props: DataViewBodyProps<TRow>): ReactNode {
             itemActions as DataViewRenderProps<unknown>["itemActions"],
           hasChildren,
           creators,
+          // The surface's own declaration, straight off the chrome (the ONE
+          // place both hosts set it) — the view child decides what to tighten.
+          density: chrome.density,
         };
 
         // The ONE context every toolbar control and settings contribution reads —
@@ -353,8 +356,9 @@ function DataViewBodyInner<TRow>(props: DataViewBodyProps<TRow>): ReactNode {
 
         return (
           <>
-            {/* The toolbar adapts to its own width: the wide inline row above
-                `COMPACT_BREAKPOINT`, the folded single-bar compact form below it
+            {/* The toolbar folds when the surface ASKS for it (`density`) or when
+                it is genuinely too narrow for the wide inline row
+                (`COMPACT_BREAKPOINT`) — the folded single-bar compact form
                 (search + every control inside one `MdTune` options popover,
                 single-view switcher hidden). The host hands it NO control — the
                 toolbar reads `DataViewSlots.Control` itself and each control's
@@ -370,6 +374,7 @@ function DataViewBodyInner<TRow>(props: DataViewBodyProps<TRow>): ReactNode {
                 switcherCount={chrome.switcherCount}
                 actions={chrome.actions}
                 creators={creators}
+                density={chrome.density}
               />
             </DataViewControlsProvider>
             {/* One density for every view type, so a row's controls and decorations

@@ -120,7 +120,6 @@ genuine transient-chrome list escapes with
     - `apps/studio/compositions`
     - `apps/studio/compositions/entry-points`
     - `apps/studio/graph`
-    - `build`
     - `code-explorer/file-resolve`
     - `config_v2/settings`
     - `conversations/agents`

@@ -457,6 +457,21 @@ export interface ManualOrderConfig<TRow> {
   ) => void | Promise<void>;
 }
 
+/**
+ * How much room the hosting surface gives the view. `"comfortable"` (the
+ * default) is the full inline toolbar and the roomier row rhythm; `"compact"`
+ * folds every toolbar control behind the one options trigger regardless of
+ * measured width, and tightens the rows.
+ *
+ * It is a per-surface declaration, not a measurement: a narrow surface already
+ * folds on its own (the toolbar measures itself), so density only removes the
+ * *need for room* — it never claims the surface has any. That is why the two
+ * combine with `||` rather than replacing one another: a compact surface that
+ * also happens to be narrow is still compact, and a comfortable surface that is
+ * genuinely too narrow still folds.
+ */
+export type DataViewDensity = "comfortable" | "compact";
+
 export interface DataViewRenderProps<TRow> {
   /** RAW rows. Each view applies the processing matching its own semantics
    * (gallery/table call `useFlatRows`; the tree feeds them straight to `TreeList`). */
@@ -528,6 +543,15 @@ export interface DataViewRenderProps<TRow> {
    * views only render their own surface-specific create UI.
    */
   creators?: CreateOption[];
+  /**
+   * The surface's declared density, threaded from `DataViewProps.density` so a
+   * view child can tighten itself. Absent ⇒ `"comfortable"`. Only the list child
+   * honours it today (its default row `size`); table and gallery ignore it,
+   * which is a deliberate no-op rather than an omission — their row shapes are
+   * already governed by `data-table`'s own density and the card grid's cell
+   * width, so there is nothing a compact surface would want them to drop.
+   */
+  density?: DataViewDensity;
 }
 
 /**
@@ -782,4 +806,12 @@ export interface DataViewProps<TRow> {
    * pass-through. Absent → the in-memory path over `rows` (unchanged default).
    */
   dataSource?: ServerDataSourceSpec<TRow>;
+  /**
+   * How much room this surface gives the view — see {@link DataViewDensity}.
+   * A small popover or a dense side panel declares `"compact"` and gets the
+   * folded chrome (one options trigger) plus tighter rows without having to be
+   * narrow enough for the toolbar's own measurement to catch it. Default
+   * `"comfortable"`.
+   */
+  density?: DataViewDensity;
 }

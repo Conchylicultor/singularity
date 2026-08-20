@@ -7,6 +7,7 @@ import {
   usePanelStack,
 } from "@plugins/primitives/plugins/css/plugins/control-panel/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
+import { hoverRevealTarget } from "@plugins/primitives/plugins/hover-reveal/web";
 import type { DataViewControl } from "../../slots";
 import { useDataViewControls } from "../controls/controls-context";
 import { DataViewControlPanel } from "./control-panel-host";
@@ -27,22 +28,68 @@ import { DataViewControlPanel } from "./control-panel-host";
  * is prop-less and reads `useDataViewControls()`. The wide layout puts it in a
  * popover, this one puts it in a stack entry, and there is nothing left for them
  * to diverge on.
+ *
+ * **The trigger is hover-revealed**, off the group the TOOLBAR ROW publishes —
+ * so a surface at rest shows only its data, and pointing at the bar brings the
+ * trigger back. The anchor is the bar and not the DataView root because the
+ * trigger belongs to the bar: keyed on the root, grazing any row on the way
+ * somewhere else flickered a control in the far top corner, unconnected to
+ * anything the user was doing. Note this is the ONE fold: it applies
+ * wherever the compact form appears, so the surfaces that already folded by
+ * measurement — the agent-manager conversations sidebar and every other narrow
+ * DataView — get the revealed trigger too. One fold, one behaviour; a
+ * declaration-only reveal would mean two visually different compact bars whose
+ * difference nothing in the UI explains.
  */
 export function CompactControls({
   controls,
   activeCount,
+  searching,
   search,
 }: {
   /** The applicable controls, in order — the same list the wide bar renders. */
   controls: DataViewControl[];
   /** Σ of each control's summary count, plus one for a non-empty query. */
   activeCount: number;
+  /** Whether the search query is non-empty — see `alwaysVisible`. */
+  searching: boolean;
   /** The search field, rendered full-width at the top of the first page. */
   search?: ReactNode;
 }): ReactNode {
   const [open, setOpen] = useState(false);
   if (controls.length === 0 && !search) return null;
   const active = activeCount > 0;
+  // The reveal is suspended in exactly two cases:
+  //
+  // - `searching` — there is a query in the search field. A query is an ad-hoc
+  //   gesture: it is typed, it narrows the list, and once the bar is folded away
+  //   it leaves no other trace on screen — so the list reads as the view's whole
+  //   contents when it is not. That is why the query lives in per-tab
+  //   `sessionStorage` in the first place — the DataView CLAUDE.md's "State
+  //   split" section calls it a gesture "that outlives its intent if it survives
+  //   a browser restart" — and this reveal rule is downstream of exactly that
+  //   split. The trigger is what the user follows back to the query they forgot
+  //   they typed.
+  // - `open` — its own panel is up. The panel is portaled, so the pointer leaves
+  //   the hover group the instant it moves into it; without this the trigger
+  //   would fade out from under the panel it opened.
+  //
+  // Note what is NOT here: filter, sort and group-by — nor `activeCount`, which
+  // counts them. Those are the *durable* half of the same split. They live on
+  // the view instance's config row: authored, persisted, git-promotable, part of
+  // what that named view IS. A view called "Failed builds" is not a list hiding
+  // things from you, it is that list, and it has nothing to confess — pinning
+  // its trigger open forever would be reporting its own definition back to it as
+  // if it were an accident. (The first attempt at this rule did pin on
+  // `activeCount`, and since surfaces author a default sort in config, the
+  // trigger never hid at all.) The badge still counts them, which is a different
+  // and correct statement: "N things configured" is worth reading once you have
+  // pointed at the surface.
+  const alwaysVisible = open || searching;
+  // Applied to whichever form the trigger takes: the `secondary` + badge form is
+  // hover-revealed too, since a badge reporting a config-authored filter or sort
+  // is precisely the at-rest state this hides.
+  const revealClass = alwaysVisible ? undefined : hoverRevealTarget;
 
   return (
     <ControlPanelPopover
@@ -59,14 +106,29 @@ export function CompactControls({
       // Idle it is an `IconButton`, which carries the tooltip — the popover has
       // no `tooltip` prop of its own, by design: the trigger owns it, and a
       // second source for the same string is how the two drift.
+      // The reveal class goes on the trigger ELEMENT, never on a wrapper:
+      // `ControlPanelPopover` hands this element to base-ui's `render` prop, so
+      // the element itself IS the popover's anchor — an extra `<span>` around it
+      // would become the anchor instead and position the panel against a box
+      // that is not the button.
       trigger={
         active ? (
-          <Button variant="secondary" aspect="text" aria-label="View options">
+          <Button
+            variant="secondary"
+            aspect="text"
+            aria-label="View options"
+            className={revealClass}
+          >
             <MdTune />
             <span className="tabular-nums">{activeCount}</span>
           </Button>
         ) : (
-          <IconButton icon={MdTune} label="View options" variant="ghost" />
+          <IconButton
+            icon={MdTune}
+            label="View options"
+            variant="ghost"
+            className={revealClass}
+          />
         )
       }
     >

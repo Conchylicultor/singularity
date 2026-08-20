@@ -105,6 +105,7 @@ export type {
   DataViewAggregateConfig,
   DataViewRenderProps,
   DataViewProps,
+  DataViewDensity,
   TableCellProps,
   CellEditorProps,
   FilterValueInputProps,

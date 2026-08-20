@@ -6,7 +6,8 @@ import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { SearchInput } from "@plugins/primitives/plugins/search/web";
 import { useElementSize } from "@plugins/primitives/plugins/element-size/web";
-import type { CreateOption } from "../../../core";
+import { hoverRevealGroup } from "@plugins/primitives/plugins/hover-reveal/web";
+import type { CreateOption, DataViewDensity } from "../../../core";
 import { DataViewSlots } from "../../slots";
 import { useDataViewControls } from "../controls/controls-context";
 import { CompactControls } from "./compact-controls";
@@ -20,6 +21,11 @@ import { CreatorsControl } from "../creators-control";
  * icon controls + view switcher) only ever renders when it genuinely fits —
  * narrow sidebars and split panes get the compact form automatically, with no
  * per-consumer flag.
+ *
+ * This is the *involuntary* half of the fold. The voluntary half is the
+ * surface's own `density` (see below): the two are OR-ed, because a surface that
+ * asked for compact chrome does not stop wanting it once it is wide, and a
+ * surface that never asked still cannot render the wide row in 200px.
  */
 const COMPACT_BREAKPOINT = 360;
 
@@ -45,13 +51,24 @@ export interface DataViewToolbarProps {
   switcher: ReactNode;
   /** Number of view instances — the switcher is hidden when compact unless >1. */
   switcherCount: number;
+  /**
+   * The surface's declared density. `"compact"` folds the toolbar whatever it
+   * measures; `"comfortable"` (the default) leaves the decision to the
+   * measurement alone.
+   */
+  density?: DataViewDensity;
 }
 
 /**
- * The DataView toolbar — a `<Sticky>` header that adapts to its own width. Wide:
- * the full inline row. Narrow: the folded compact form, which is always exactly
- * ONE bar. The toolbar measures itself ({@link useElementSize}); the breakpoint
- * switch happens before paint, so there is no wide→compact flash.
+ * The DataView toolbar — a `<Sticky>` header that adapts to the room it has AND
+ * to the room the surface says it is willing to give. Wide and comfortable: the
+ * full inline row. Compact — because the surface declared `density="compact"`,
+ * or because the toolbar measured itself below {@link COMPACT_BREAKPOINT} — the
+ * folded form, which is always exactly ONE bar. The measurement stays in place
+ * either way: density only removes the *need* for room, it never asserts there
+ * is any, so a compact-by-declaration surface and a compact-by-width one render
+ * the same bar. The measurement switch happens before paint, so there is no
+ * wide→compact flash.
  *
  * **It names no control.** It used to take `filterControl` / `sortControl` /
  * `fieldsControl` as three ReactNode props built by the host — the
@@ -69,9 +86,11 @@ export function DataViewToolbar({
   creators,
   switcher,
   switcherCount,
+  density,
 }: DataViewToolbarProps): ReactNode {
   const [measureRef, { width }] = useElementSize();
-  const compact = width > 0 && width < COMPACT_BREAKPOINT;
+  const compact =
+    density === "compact" || (width > 0 && width < COMPACT_BREAKPOINT);
   const ctx = useDataViewControls();
 
   // Applicability and ordering, once, for both layouts. `isApplicable` is pure
@@ -118,7 +137,25 @@ export function DataViewToolbar({
     // `nav` (not the default `raised`) so the toolbar out-stacks the grouped
     // views' own sticky group headers (`raised`): an outgoing group header slides
     // UNDER the toolbar instead of painting over it during the sticky hand-off.
-    <Sticky edge="top" mask layer="nav" ref={stickyRef}>
+    //
+    // `hoverRevealGroup` anchors the compact options trigger's reveal on the
+    // TOOLBAR BAND, not on the DataView root: the trigger belongs to the bar, so
+    // the bar is what you point at to get it back. Anchored on the root, grazing
+    // any row — while reading the list, or on the way somewhere else entirely —
+    // flickered a control in the far top corner, unconnected to anything the
+    // user was doing. It rides the `<Sticky>` rather than the bar `<div>` inside
+    // it (same box, one element out) purely so the bar's own `className` stays
+    // the single literal its `no-adhoc-layout` suppression is written against —
+    // a positional directive rebinds if a `cn()` call reflows underneath it.
+    // Pure CSS (`group-hover`), so hovering costs zero re-renders; the state
+    // hook would re-render every windowed row on each pointer enter/leave.
+    <Sticky
+      edge="top"
+      mask
+      layer="nav"
+      ref={stickyRef}
+      className={hoverRevealGroup}
+    >
       <div
         ref={measureRef}
         // toolbar row of variable-content controls; no named-slot primitive maps. The Sticky's `mask` paints `bg-chrome-mask` so rows don't show through the pinned bar (and it matches whatever surface the DataView is embedded in)
@@ -154,6 +191,7 @@ export function DataViewToolbar({
               search={searchInput}
               controls={controls}
               activeCount={activeCount}
+              searching={query.length > 0}
             />
           </>
         ) : (

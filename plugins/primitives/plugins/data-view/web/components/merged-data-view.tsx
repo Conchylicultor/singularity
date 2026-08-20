@@ -3,7 +3,7 @@ import type { Contribution } from "@plugins/framework/plugins/web-sdk/core";
 import { renderIsolated } from "@plugins/primitives/plugins/slot-render/web";
 import type { ViewSourceEntry } from "@plugins/primitives/plugins/data-view/plugins/view-core/core";
 import type { ResolvedViewInstance } from "@plugins/primitives/plugins/data-view/plugins/view-core/web";
-import type { DataViewId } from "../../core";
+import type { DataViewDensity, DataViewId } from "../../core";
 import { DataViewSlots, type DataViewContribution } from "../slots";
 import {
   useDataViewModel,
@@ -29,6 +29,10 @@ export interface MergedDataViewProps<THostProps> {
   title?: ReactNode;
   actions?: ReactNode;
   defaultView?: string;
+  /** The surface's density, forwarded to the shell exactly like `title` /
+   *  `actions`. It is a property of the surface, so it applies whichever source
+   *  the active view-instance binds to. */
+  density?: DataViewDensity;
 }
 
 /** One dev-warn per (storageKey, source) — the mismatch is static, so once. */
@@ -47,7 +51,15 @@ const warnedHierarchyMismatch = new Set<string>();
 export function MergedDataView<THostProps>(
   props: MergedDataViewProps<THostProps>,
 ): ReactNode {
-  const { storageKey, sources, hostProps, title, actions, defaultView } = props;
+  const {
+    storageKey,
+    sources,
+    hostProps,
+    title,
+    actions,
+    defaultView,
+    density,
+  } = props;
   const contributions = DataViewSlots.View.useContributions();
   const rawSourceContribs = sources.useContributions();
   // `useContributions` returns registration order; honor the contributions'
@@ -84,6 +96,7 @@ export function MergedDataView<THostProps>(
       contributions={contributions}
       title={title}
       actions={actions}
+      density={density}
     >
       {(activeInstance, chrome, readyModel) => {
         // Always found: a row whose `source` matches no contribution never

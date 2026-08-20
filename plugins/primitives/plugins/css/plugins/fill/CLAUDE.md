@@ -165,6 +165,7 @@ primitive exists to name.
     - `primitives/action-presentation`
     - `primitives/command-palette`
     - `primitives/commit-list`
+    - `primitives/data-view/list`
     - `primitives/date-picker`
     - `primitives/error-boundary`
     - `primitives/folder-picker`

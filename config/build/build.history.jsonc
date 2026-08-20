@@ -4,7 +4,14 @@
     {
       "id": "recent",
       "name": "Recent",
-      "view": { "type": "list", "sort": [{ "fieldId": "startedAt", "direction": "desc" }] }
+      // `status` is deliberately absent from the body: the list view renders it as
+      // the row's leading dot, so showing the chip too would say it twice. It stays
+      // a full filter / sort / search dimension — visibleFields is body-only.
+      "view": {
+        "type": "list",
+        "visibleFields": ["startedAt", "trigger", "duration"],
+        "sort": [{ "fieldId": "startedAt", "direction": "desc" }]
+      }
     },
     {
       "id": "table",

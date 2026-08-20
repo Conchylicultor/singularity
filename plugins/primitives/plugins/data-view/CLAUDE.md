@@ -581,7 +581,9 @@ falls back generically, omitting an operand it has no readable form for.
 Settings deliberately carries **no** summary: view settings are configuration, not
 a narrowing of what you see. A summary answers "what am I not seeing, and why";
 "Group by: Status" answers neither, and it would still count itself into the
-compact fold's badge as though something were hidden.
+compact fold's badge as though something were hidden. Sort sits between the two:
+it earns a summary, because its top level is worth reading from a closed
+trigger.
 
 ### Panel bodies
 
@@ -618,6 +620,132 @@ so a page must read its own state through hooks (`useDataViewControls()`,
 `useFilterEditor()`, its own config hook) rather than taking it as a prop. Handing
 data down through the closure looks fine and then silently computes the page's
 second edit against the tree as it was before its first.
+
+## Density: how much room the surface gives the view
+
+`DataViewProps.density` is `"comfortable"` (the default) or `"compact"`. It is a
+**declaration by the surface**, and it threads through exactly one path, so both
+hosts get it from one place:
+
+```
+DataViewProps.density  (and MergedDataViewProps.density)
+  → DataViewShellFrame prop
+    → DataViewShellChrome.density        (web/internal/body-types.ts)
+      → DataViewBody
+        ├→ DataViewToolbar               the fold rule, below
+        └→ DataViewRenderProps.density   the view child tightens itself
+```
+
+`DataViewSourceBundle` **omits** `density` alongside `title`/`actions`: it
+describes the surface, not the data, so a source contribution cannot spell a
+value the body would then ignore.
+
+Only the **list** child honours it today — `size = options.size ?? (density ===
+"compact" ? "sm" : "md")`. Table and gallery ignoring it is a deliberate no-op,
+not an omission: their row shapes are governed by `data-table`'s own density and
+the card grid's cell width, so there is nothing a compact surface would ask them
+to drop.
+
+### The fold rule
+
+```ts
+const compact = density === "compact" || (width > 0 && width < COMPACT_BREAKPOINT);
+```
+
+The two halves are OR-ed, never substituted. The **measurement** half is
+involuntary: below `COMPACT_BREAKPOINT` (360px) the wide inline row (search + the
+control triggers + the switcher) does not fit, and no declaration makes it fit.
+The **density** half is voluntary: a 672px popover has the room and still wants
+the light form. So density removes the *need* for room; it never asserts there is
+any. A compact surface that also happens to be narrow is still compact, and a
+comfortable surface that is genuinely too narrow still folds — the single reason
+a surface cannot end up wide *and* folded by accident.
+
+### The compact trigger is hover-revealed
+
+The **toolbar row** carries `hoverRevealGroup` and `CompactControls`' trigger
+carries `hoverRevealTarget` (`primitives/hover-reveal/web`) — the **CSS-group**
+half of the primitive, never `useHoverReveal()`. The state hook would re-render
+the whole DataView, every windowed row included, on each pointer enter/leave of
+the surface; the class pair is pure CSS and costs nothing.
+
+The group sits on the **bar**, not the DataView root. The root looks like the
+friendlier target (the compact bar is mostly empty) and is wrong: it makes every
+pass over the list a reveal, so grazing a row flickers a control in the far top
+corner, unrelated to what the user was doing. The trigger answers where it lives.
+
+Two conditions suspend the reveal:
+
+```ts
+const alwaysVisible = open || searching;
+```
+
+- `searching` — the search field holds a query.
+- `open` — its own panel is up. The panel is portaled, so the pointer leaves the
+  hover group the instant it moves into it; without this the trigger would fade
+  out from under the panel it opened.
+
+**Only the query pins it — filter, sort and group-by do not.** This is the
+durable/transient split from "State split" above, applied to visibility. Filter,
+sort and group-by are *durable narrowings*: they live on the view instance's
+config row, authored and persisted and git-promotable, and they are part of what
+that named view **is**. A view called "Failed builds" is not a list hiding things
+from you; it is that list, and it has nothing to confess. Pinning its trigger
+open forever reports the view's own definition back as though it were an
+accident.
+
+The query is the other half: an *ad-hoc gesture*, typed and forgotten, which is
+exactly why it lives in per-tab `sessionStorage` rather than the config row. Fold
+the bar away and it leaves no other trace on screen, so the narrowed list reads
+as the view's whole contents. The trigger is what the user follows back to it.
+
+Two earlier attempts got this wrong and are worth naming, because both look
+reasonable. The first pinned on `activeCount > 0`, which counts every control's
+summary — and since surfaces author a default sort in config (the Build popover's
+Recent view authors `startedAt ↓`), the trigger never hid at all. The second
+added a `hidesRows` flag to `DataViewControlSummary` so a control could declare
+it was withholding rows; the filter set it, the sort did not. That flag is now
+**gone**: once a filter stopped pinning the trigger, nothing set it, and a
+contract field with no implementer is speculative generality. The signal is the
+query the toolbar already holds, passed to `CompactControls` as `searching`.
+
+The badge is unaffected and still counts filter and sort — "N things configured"
+is a different and correct statement, and `activeCount` still picks the filled
+`secondary` button form over the ghost one. Only *visibility at rest* asks the
+narrower question.
+
+This is **one fold with one behaviour**: it applies wherever the compact form
+appears, including today's width-folded narrow surfaces — the conversations
+sidebar's options button is hover-revealed too. Two visually different compact
+bars whose difference nothing in the UI explains would be the alternative.
+
+**The bar stays in flow.** Compact is a thin strip holding the view tabs (shown
+only when there is more than one instance) with the hidden trigger at its end; it
+reserves its height even when it looks empty and never paints over row content.
+
+### Single-line list rows are the default
+
+`ListViewOptions.lines` is `1` (default) or `2`. At `1` the title and the subtitle
+are **sibling truncating leaves of the row's own line** — `Row` composes `Line`,
+so the `region-line` + `SingleLineProvider` contract is already there and each
+`<Text>` ellipsizes without asking — with an empty `<Fill>` absorbing the slack
+before the rigid trailing cell (`align: "end"` fields + the `×N` aggregate badge).
+The subtitle's `·` join simply extends to the seam with the title, which on one
+line is the run's first term. At `2` the subtitle stacks under the title in a
+`Stack`, which resets the single-line context, so each `<Text>` asks for its own
+`truncate` — the shape every list had before, unchanged for the surfaces whose
+subtitle is prose rather than chips.
+
+What gives first when the line is tight: both leaves shrink at CSS's default
+factor, weighted by content width, so the longer one yields more — and the
+subtitle, being the `·`-joined metadata run, normally is the longer one. That is
+the intent (the title identifies the row) without a shrink-priority primitive
+invented for one call site.
+
+**Blast radius is small**: every high-traffic list surface (the conversations
+sidebar, mail threads, the events list, deploy history) overrides the row body
+wholesale through `viewOptions.list.renderRow` and is untouched. What changes is
+the field-driven default.
 
 ## Per-item actions
 
@@ -1037,6 +1165,8 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
     - `primitives/data-view/view-core.useViewModel`
     - `primitives/data-view/view-core.useViewVariants`
     - `primitives/element-size.useElementSize`
+    - `primitives/hover-reveal.hoverRevealGroup`
+    - `primitives/hover-reveal.hoverRevealTarget`
     - `primitives/icon-button.IconButton`
     - `primitives/latest-ref.useLatestRef`
     - `primitives/loading.Loading`
@@ -1059,6 +1189,7 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
     - `DataViewControlContribution`
     - `DataViewControlsContextValue`
     - `DataViewControlSummary`
+    - `DataViewDensity`
     - `DataViewId`
     - `DataViewProps`
     - `DataViewRenderProps`
@@ -1234,6 +1365,7 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
     - `ColumnConfigProps`
     - `CreateOption`
     - `DataViewAggregateConfig`
+    - `DataViewDensity`
     - `DataViewId`
     - `DataViewProps`
     - `DataViewRenderProps`

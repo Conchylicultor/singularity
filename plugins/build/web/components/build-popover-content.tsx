@@ -29,7 +29,6 @@ import {
   JumpToBottomButton,
 } from "@plugins/primitives/plugins/auto-scroll/web";
 import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
-import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
@@ -41,9 +40,12 @@ import {
   DataView,
   defineDataView,
 } from "@plugins/primitives/plugins/data-view/web";
-import type { FieldDef } from "@plugins/primitives/plugins/data-view/web";
+import type {
+  FieldDef,
+  DataViewDensity,
+} from "@plugins/primitives/plugins/data-view/web";
 import { DeploymentChain } from "@plugins/build/plugins/deployment/web";
-import { buildHistoryResource, isMainCompositionBuild } from "../../shared";
+import { buildHistoryResource } from "../../shared";
 import { MAIN_COMPOSITION_ID } from "@plugins/infra/plugins/namespace/core";
 import type { BuildRun } from "../../shared";
 import type {
@@ -226,20 +228,35 @@ function BuildLogView({ variant }: { variant: "popover" | "pane" }) {
 const BUILD_HISTORY_VIEW = defineDataView("build.history");
 
 /**
- * Standing build pane history as a DataView — search / filter / sort / group-by
- * come free over the build-run schema. The `buildHistoryResource` is already a
- * server-windowed `orderBy startedAt desc LIMIT 50` read, so the view renders the
- * full resource slice (no extra client cap). Natural-height: the enclosing
- * `PaneChrome` body owns the single scroll.
+ * Build history as a DataView — search / filter / sort / group-by come free over
+ * the build-run schema. The `buildHistoryResource` is already a server-windowed
+ * `orderBy startedAt desc LIMIT 50` read, so the view renders the full resource
+ * slice (no extra client cap).
+ *
+ * **Both** build surfaces render this one component. The standing `/debug/build`
+ * pane takes it comfortable — the full inline toolbar. The toolbar popover takes
+ * it `density="compact"`, which folds search and every control behind a single
+ * hover-revealed options trigger. The popover used to hand-roll its own ten-row
+ * list instead, on the stated grounds that it had no room for that toolbar;
+ * compact chrome removes the grounds, and with them the duplicate. Both surfaces
+ * share the `build.history` storage key, so a filter or sort authored in one is
+ * already there when you open the other.
+ *
+ * Natural-height, like every DataView — the caller owns the single scroll. In the
+ * pane that is `PaneChrome`'s body; in the popover it is an explicit capped
+ * `<Scroll>` (see `BuildPopoverContentInner`).
  */
 function BuildHistoryDataView({
   runs,
   selectedRunId,
   onRunClick,
+  density,
 }: {
   runs: BuildRun[];
   selectedRunId?: string;
   onRunClick?: (runId: string) => void;
+  /** How much room this surface gives the view. Omitted = comfortable. */
+  density?: DataViewDensity;
 }) {
   // The filter's chips come from the rows, because the option set is genuinely
   // open: a composition id is whatever someone put in the manifest, and the
@@ -358,78 +375,19 @@ function BuildHistoryDataView({
       rowKey={(r) => r.id}
       views={["list", "table"]}
       defaultView="list"
+      density={density}
       storageKey={BUILD_HISTORY_VIEW}
       selectedRowId={selectedRunId}
       onRowActivate={onRunClick ? (r) => onRunClick(r.id) : undefined}
+      // The status leads the row as a dot rather than sitting inline as a chip:
+      // it is what you scan a build list for, and a colored dot carries it in the
+      // width of one glyph. The `status` field stays in the schema — filterable,
+      // sortable, and still a chip in the table view.
+      viewOptions={{
+        list: { leading: (r: BuildRun) => <BuildStatusDot run={r} /> },
+      }}
       emptyState={<>No builds yet</>}
     />
-  );
-}
-
-/**
- * Compact history excerpt for the toolbar popover: the 10 most recent runs as a
- * hand-rolled Row list. Deliberately NOT a DataView — the popover has no room
- * for the view toolbar; the standing pane (`BuildHistoryDataView`) is the real
- * data surface.
- */
-function BuildHistoryExcerpt({
-  runs,
-  selectedRunId,
-  onRunClick,
-}: {
-  runs: BuildRun[];
-  selectedRunId?: string;
-  onRunClick?: (runId: string) => void;
-}) {
-  const visible = runs.slice(0, 10);
-
-  return (
-    <div className="px-md py-sm">
-      <Text as="span" variant="label" className="text-muted-foreground">
-        History
-      </Text>
-      {visible.length === 0 && (
-        // eslint-disable-next-line spacing/no-adhoc-spacing -- vertical offset below the History label, non-flex parent
-        <Text as="p" variant="caption" className="mt-1 text-muted-foreground">
-          No builds yet
-        </Text>
-      )}
-      {/* eslint-disable-next-line spacing/no-adhoc-spacing -- list offset below the History label, sibling of label not in a shared flex parent */}
-      <Stack gap="2xs" className="mt-1">
-        {/* eslint-disable-next-line data-view/no-adhoc-row-list -- popover excerpt of the build pane DataView (compact chrome, no room for view toolbar) */}
-        {visible.map((run) => (
-          <Row
-            key={run.id}
-            onClick={onRunClick ? () => onRunClick(run.id) : undefined}
-            selected={selectedRunId === run.id}
-            size="sm"
-            icon={<BuildStatusDot run={run} />}
-            actionsAlwaysVisible
-            actions={
-              <span className="tabular-nums text-muted-foreground">
-                {run.finishedAt === null
-                  ? "running…"
-                  : formatDuration(run.startedAt, run.finishedAt)}
-              </span>
-            }
-            className={cn(onRunClick && "cursor-pointer")}
-          >
-            <span className="text-muted-foreground">
-              <RelativeTime date={run.startedAt} />
-            </span>
-            <Badge variant={run.trigger === "auto" ? "info" : "muted"}>
-              {run.trigger}
-            </Badge>
-            {!isMainCompositionBuild(run.targets) &&
-              run.targets.map((t) => (
-                <Badge key={t} variant="info">
-                  {t}
-                </Badge>
-              ))}
-          </Row>
-        ))}
-      </Stack>
-    </div>
   );
 }
 
@@ -488,11 +446,20 @@ function BuildPopoverContentInner({
       {variant === "popover" ? (
         <>
           <BuildLogView variant={variant} />
-          <BuildHistoryExcerpt
-            runs={runs}
-            selectedRunId={selectedRunId}
-            onRunClick={onRunClick}
-          />
+          {/* The popover has to supply the history scroll itself. A DataView is
+              always natural-height and never opens a scroller, and here there is
+              no `PaneChrome` above it to do so — the whole fifty-run slice would
+              otherwise push the panel to full viewport height. Capped just above
+              the log view's `h-48` so the two read as a pair rather than as a log
+              with a wall of history under it. */}
+          <Scroll axis="y" className="max-h-64">
+            <BuildHistoryDataView
+              density="compact"
+              runs={runs}
+              selectedRunId={selectedRunId}
+              onRunClick={onRunClick}
+            />
+          </Scroll>
         </>
       ) : (
         <BuildHistoryDataView

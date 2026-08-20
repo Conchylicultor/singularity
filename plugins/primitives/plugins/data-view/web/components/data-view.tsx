@@ -9,6 +9,7 @@ import { Loading } from "@plugins/primitives/plugins/loading/web";
 import {
   DATA_VIEW_HEADER_OFFSET_VAR,
   type CreateOption,
+  type DataViewDensity,
   type DataViewId,
   type DataViewProps,
 } from "../../core";
@@ -67,6 +68,7 @@ export function DataView<TRow>(props: DataViewProps<TRow>): ReactNode {
       title={props.title}
       actions={props.actions}
       creators={props.creators}
+      density={props.density}
     >
       {(activeInstance, chrome, readyModel) => (
         <DataViewBody<TRow>
@@ -98,6 +100,7 @@ export function DataViewShellFrame(props: {
   title?: ReactNode;
   actions?: ReactNode;
   creators?: CreateOption[];
+  density?: DataViewDensity;
   /** Renders the per-active-instance body. Receives the SETTLED model — the
    *  shell is the one place that narrowed the union, so a host never re-derives
    *  (or forgets) that narrowing at its own call site. */
@@ -114,6 +117,7 @@ export function DataViewShellFrame(props: {
     title,
     actions,
     creators,
+    density,
     children,
   } = props;
 
@@ -195,6 +199,7 @@ export function DataViewShellFrame(props: {
     switcherCount: instances.length,
     title,
     actions,
+    density,
     stickyRef: toolbarRef,
   };
 
@@ -205,6 +210,7 @@ export function DataViewShellFrame(props: {
     <Stack
       gap="none"
       ref={rootRef}
+      // The whole surface is the hover anchor for the compact fold's options
       // Publish the measured sticky-toolbar height so grouped views stack their
       // own sticky group headers directly below it (see DATA_VIEW_HEADER_OFFSET_VAR).
       style={
