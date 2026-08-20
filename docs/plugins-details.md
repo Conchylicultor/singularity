@@ -5732,7 +5732,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `ui/theme-engine`
       - `ui/theme-engine/quick-theme`
       - `ui/theme-engine/theme-customizer`
-      - `ui/theme-toggle`
       - `ui/variant-region`
   - Core:
     - Exports (types):
@@ -7586,7 +7585,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `ui/theme-engine`
       - `ui/theme-engine/quick-theme`
       - `ui/theme-engine/theme-customizer`
-      - `ui/theme-toggle`
       - `ui/tokens/categorical`
       - `ui/tokens/chart`
       - `ui/tokens/color-adjust`
@@ -15155,6 +15153,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `reorder/node-types`
               - `shell/toast`
               - `tasks/launch-options`
+              - `ui/theme-toggle`
         - **`format`** — The repo's byte-format authority: the prettier allowlist, the hardcoded options, and the merge-base changed-file set that build / format / format-clean all share.
           - Core:
             - Uses: `infra/spawn.spawnCaptured`
@@ -30054,6 +30053,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `config_v2.ConfigV2`
           - `config_v2.useConfig`
           - `config_v2.useScopeMembership`
+          - `config_v2.useSetConfig`
           - `fields/dynamic-enum/config.DynamicEnum`
           - `primitives/css/ui-kit.appThemeScope`
           - `primitives/css/ui-kit.themeScopeSelectors`
@@ -30062,6 +30062,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `ColorAdjustment`
           - `ColorMode`
           - `ColorTransformContribution`
+          - `ConfiguredColorMode`
           - `GlobalPresetContribution`
           - `PresetSourceContribution`
           - `TokenGroupContribution`
@@ -30077,6 +30078,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `transformValues`
           - `useColorMode`
           - `useResolvedColorMode`
+          - `useSetColorMode`
           - `useThemeScopeId`
           - `useTokenGroupPresetOptions`
           - `useTokenGroupPresets`
@@ -30105,6 +30107,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `ui/tab-bar/customizer`
           - `ui/theme-engine/quick-theme`
           - `ui/theme-engine/theme-customizer`
+          - `ui/theme-toggle`
           - `ui/tokens`
           - `ui/tokens/categorical`
           - `ui/tokens/chart`
@@ -30204,12 +30207,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Web:
         - Contributes: `ActionBar.Item` → `ThemeToggle`
         - Uses:
-          - `apps-core.useCurrentAppId`
-          - `config_v2.useConfig`
-          - `config_v2.useScopeMembership`
-          - `config_v2.useSetConfig`
           - `primitives/icon-button.IconButton`
           - `shell/action-bar.ActionBar`
+          - `ui/theme-engine.useResolvedColorMode`
+          - `ui/theme-engine.useSetColorMode`
     - **`tokens`** — Umbrella for CSS token group plugins. Contributes global theme presets.
       - Web:
         - Contributes:

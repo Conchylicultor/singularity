@@ -454,7 +454,6 @@ The memo key comes from **the filesystem, not an event** — deliberately. `refr
     - `ui/theme-engine`
     - `ui/theme-engine/quick-theme`
     - `ui/theme-engine/theme-customizer`
-    - `ui/theme-toggle`
     - `ui/tokens/categorical`
     - `ui/tokens/chart`
     - `ui/tokens/color-adjust`

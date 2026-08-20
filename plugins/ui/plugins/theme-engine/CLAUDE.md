@@ -24,6 +24,7 @@
     - `config_v2.ConfigV2`
     - `config_v2.useConfig`
     - `config_v2.useScopeMembership`
+    - `config_v2.useSetConfig`
     - `fields/dynamic-enum/config.DynamicEnum`
     - `primitives/css/ui-kit.appThemeScope`
     - `primitives/css/ui-kit.themeScopeSelectors`
@@ -32,6 +33,7 @@
     - `ColorAdjustment`
     - `ColorMode`
     - `ColorTransformContribution`
+    - `ConfiguredColorMode`
     - `GlobalPresetContribution`
     - `PresetSourceContribution`
     - `TokenGroupContribution`
@@ -47,6 +49,7 @@
     - `transformValues`
     - `useColorMode`
     - `useResolvedColorMode`
+    - `useSetColorMode`
     - `useThemeScopeId`
     - `useTokenGroupPresetOptions`
     - `useTokenGroupPresets`
@@ -75,6 +78,7 @@
     - `ui/tab-bar/customizer`
     - `ui/theme-engine/quick-theme`
     - `ui/theme-engine/theme-customizer`
+    - `ui/theme-toggle`
     - `ui/tokens`
     - `ui/tokens/categorical`
     - `ui/tokens/chart`

@@ -1,13 +1,13 @@
-import { useEffect, useState } from "react";
-import { useConfig } from "@plugins/config_v2/web";
+import { useCallback, useEffect, useState } from "react";
+import { useConfig, useSetConfig } from "@plugins/config_v2/web";
 import { themeEngineConfig } from "../core";
 
 export type ColorMode = "light" | "dark";
 /** The CONFIGURED setting, before `system` is collapsed against the OS. */
 export type ConfiguredColorMode = "light" | "dark" | "system";
 
-// THE config scope that owns light/dark — the whole reason these hooks take no
-// scope argument.
+// THE config scope that owns light/dark — the whole reason the hooks here take
+// no scope argument, writer included.
 //
 // Per-scope dark mode is DEFERRED: `<html>.dark` is one global class, and the
 // `color-scheme` property it drives is a document-level thing. So every reader of
@@ -15,12 +15,17 @@ export type ConfiguredColorMode = "light" | "dark" | "system";
 // on reload, and prop-themed third-party widgets (sonner, charts, editors) — must
 // resolve at the SAME scope, or they render different schemes on one screen.
 //
-// They did. Three call sites each picked their own scope: the class read global,
+// They did. Every call site picked its own scope: the class read global,
 // the pre-paint cache read the focused app's, and `useColorMode()` read the
 // current app's. With a global `dark` and an app-scoped `light` that shipped a
 // white first paint that flipped to dark once React mounted, and a light toaster
 // over a dark app. Naming the scope ONCE, here, is what makes that class of
 // disagreement unspellable: no caller can pass a different one.
+//
+// The WRITER is named here for the same reason. It used to live in theme-toggle,
+// which wrote the current app's scope whenever that app had its own theme while
+// every reader had already moved global — so the toggle flipped a value nothing
+// painted from, and the button sat on a dark page offering to switch to dark.
 //
 // When per-scope dark lands, this is the one place that changes.
 const COLOR_MODE_SCOPE_ID: string | undefined = undefined;
@@ -72,4 +77,18 @@ export function useResolvedColorMode(): ColorMode {
 // `<Sonner theme={useColorMode()} />`) instead of reading the class.
 export function useColorMode(): ColorMode {
   return useResolvedColorMode();
+}
+
+/**
+ * Sets the color mode of the scope that owns light/dark. The counterpart of
+ * {@link useConfiguredColorMode}, deliberately living beside it: a writer that
+ * named its own scope would flip a value the class applier never reads, which is
+ * exactly the bug this file exists to make unspellable.
+ */
+export function useSetColorMode(): (mode: ConfiguredColorMode) => void {
+  const set = useSetConfig(themeEngineConfig, { scopeId: COLOR_MODE_SCOPE_ID });
+  return useCallback(
+    (mode: ConfiguredColorMode) => set("colorMode", mode),
+    [set],
+  );
 }
