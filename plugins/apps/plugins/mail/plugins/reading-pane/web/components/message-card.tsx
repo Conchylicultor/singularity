@@ -1,9 +1,10 @@
 import { MdExpandLess } from "react-icons/md";
-import {
-  ControlSizeProvider,
-} from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { ControlSizeProvider } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Surface } from "@plugins/primitives/plugins/css/plugins/surface/web";
-import { Inset, Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import {
+  Inset,
+  Stack,
+} from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
@@ -26,7 +27,7 @@ export interface MessageCardProps {
 // (sender · snippet · date) and expands to the full header + body. The body is
 // only mounted (and hydrated) while expanded.
 export function MessageCard({ message, defaultOpen }: MessageCardProps) {
-  const { open, toggle, contentId, triggerProps } = useCollapsible({
+  const { open, toggle, contentId, triggerControlProps } = useCollapsible({
     defaultOpen,
   });
 
@@ -40,7 +41,10 @@ export function MessageCard({ message, defaultOpen }: MessageCardProps) {
         {open ? (
           <Stack gap="sm">
             <Inline gap="sm" align="start">
-              <Avatar fallbackGlyph={fromLabel} fallbackKey={message.from.email} />
+              <Avatar
+                fallbackGlyph={fromLabel}
+                fallbackKey={message.from.email}
+              />
               <Fill>
                 <Stack gap="none">
                   <Text variant="label">{fromLabel}</Text>
@@ -92,7 +96,7 @@ export function MessageCard({ message, defaultOpen }: MessageCardProps) {
               ) : null
             }
             title={message.snippet ?? fromLabel}
-            {...triggerProps}
+            {...triggerControlProps}
           >
             <Text variant="label">{fromLabel}</Text>
             <Text tone="muted">{message.snippet ?? ""}</Text>

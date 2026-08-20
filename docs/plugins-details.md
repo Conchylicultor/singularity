@@ -20614,6 +20614,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `CollapsibleCtx`
           - `CollapsibleProps`
           - `CollapsibleProviderProps`
+          - `CollapsibleTriggerControlProps`
           - `CollapsibleTriggerProps`
           - `ExpandAllButtonProps`
           - `UseCollapsibleOptions`
@@ -22016,6 +22017,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/row-actions.RowActions`
               - `primitives/row-actions.rowActionsAnchor`
             - Exports (types):
+              - `RowControlProps`
               - `RowFocus`
               - `RowHover`
               - `RowProps`

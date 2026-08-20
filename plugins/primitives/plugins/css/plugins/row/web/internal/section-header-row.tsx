@@ -37,7 +37,14 @@ export interface SectionHeaderRowProps {
   collapsible?: boolean;
   className?: string;
   children: React.ReactNode;
-  /** Permissive passthrough. */
+  /**
+   * Permissive passthrough, forwarded to `Row` — which routes it by
+   * DESTINATION, not by which path it happens to render: everything lands on
+   * the row box (the node `ref` gives you) except the control's own attributes
+   * (`onClick`, `href`, `role`, `tabIndex`, `aria-*`, …). The
+   * `aria-expanded`/`aria-controls` below ride that same rule, which is why they
+   * reach the disclosure control whether or not the header carries `actions`.
+   */
   [key: string]: unknown;
 }
 

@@ -17,7 +17,10 @@ export type {
   CollapsibleCtx,
 } from "./internal/collapsible";
 
-export { useCollapsible } from "./internal/use-collapsible";
+export {
+  useCollapsible,
+  type CollapsibleTriggerControlProps,
+} from "./internal/use-collapsible";
 export type {
   UseCollapsibleOptions,
   UseCollapsibleReturn,

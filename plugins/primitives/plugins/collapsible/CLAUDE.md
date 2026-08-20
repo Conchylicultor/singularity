@@ -24,6 +24,23 @@ Both take the same `UseCollapsibleOptions` (`open` / `defaultOpen` /
 element to put it on. `CollapsibleTrigger` / `CollapsibleContent` /
 `CollapsibleChevron` read the context and work identically under either.
 
+## `useCollapsible` hands out two trigger bags
+
+`useCollapsible()` is for building your **own** trigger, and which bag you spread
+depends on one question: **do you own the element?**
+
+- **`triggerProps`** — you render a raw `<button>` (or `as="button"`). It adds
+  `type="button"`, without which the trigger submits any surrounding form.
+- **`triggerControlProps`** — the host owns its element (`Row`, `Button`). Same
+  `aria-expanded` / `aria-controls` / `onClick`, no `type`: `Row` infers its
+  element from its props and stamps `type` itself, so handing it one is a type
+  error.
+
+`triggerProps` is built by spreading `triggerControlProps`, so the two can never
+disagree about what the trigger does. Before the split, the only bag carried
+`type` and a host that owned its element had to hand-pick the three fields it
+could accept — which is how `sidebar-pane-section` used to read them one by one.
+
 ## Plugin reference
 
 - Description: Accessible collapsible primitive with controlled/uncontrolled support and a built-in chevron indicator. Compound components for standard layouts; useCollapsible hook for custom triggers.
@@ -46,6 +63,7 @@ element to put it on. `CollapsibleTrigger` / `CollapsibleContent` /
     - `CollapsibleCtx`
     - `CollapsibleProps`
     - `CollapsibleProviderProps`
+    - `CollapsibleTriggerControlProps`
     - `CollapsibleTriggerProps`
     - `ExpandAllButtonProps`
     - `UseCollapsibleOptions`

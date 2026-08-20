@@ -30,7 +30,62 @@ function setRef(
   else if (ref) ref.current = el;
 }
 
-export interface RowProps {
+/**
+ * The attributes that describe the row's **control** — the `<button>`/`<a>` the
+ * row infers — as opposed to the row as a node. `Row` routes these onto whichever
+ * element it synthesized; everything else a caller spreads goes to the row BOX
+ * (see the passthrough note on {@link RowProps}).
+ *
+ * This array is the ONE list: the runtime split reads it, and `RowControlProps`
+ * is derived from it, so the type and the routing cannot drift into the classic
+ * "these two must agree" hazard. `aria-*` is handled by prefix instead — on both
+ * sides — so the aria family stays open with no list to maintain.
+ *
+ * Membership is decided by whose behaviour the attribute describes, and every
+ * entry has a reason to be on the control specifically:
+ * `onClick` because a `disabled` `<button>` must swallow it and Enter/Space only
+ * synthesize a click on the button; `href`/`target`/`rel`/`download` because they
+ * ARE the `<a>`; `role`/`tabIndex`/`autoFocus` and the keyboard/focus handlers
+ * because the control is the focusable node (on the split path the box is a plain
+ * `<div>` that cannot take focus at all).
+ */
+const CONTROL_KEYS = [
+  "onClick",
+  "onKeyDown",
+  "onKeyUp",
+  "onFocus",
+  "onBlur",
+  "autoFocus",
+  "href",
+  "target",
+  "rel",
+  "download",
+  "role",
+  "tabIndex",
+] as const;
+
+const CONTROL_KEY_SET: ReadonlySet<string> = new Set(CONTROL_KEYS);
+
+function isControlKey(key: string): boolean {
+  return key.startsWith("aria-") || CONTROL_KEY_SET.has(key);
+}
+
+/**
+ * Typed face of {@link CONTROL_KEYS}. Derived from the array rather than written
+ * beside it, so adding a key to one adds it to the other.
+ *
+ * `aria-current` is deliberately absent: `Row` derives it from `selected`, and a
+ * row that is "current" twice, from two sources, is a contradiction rather than a
+ * feature. (If one arrives anyway through an untyped spread, `Row`'s own value
+ * wins — it is written after the control bag.)
+ */
+export type RowControlProps = Pick<
+  React.AnchorHTMLAttributes<HTMLElement>,
+  (typeof CONTROL_KEYS)[number]
+> &
+  Omit<React.AriaAttributes, "aria-current">;
+
+export interface RowProps extends RowControlProps {
   /** Persistent selection → bg-accent; aria-current on buttons. */
   selected?: boolean;
   /** Text+gap density only; PADDING is always p-row. sm=text-xs gap-1.5, md=text-sm gap-2. Default "md". */
@@ -87,11 +142,37 @@ export interface RowProps {
   title?: string;
   children: React.ReactNode;
   /**
-   * Permissive passthrough for the rendered element (onClick, href, download,
-   * role, aria-*, …). The element is INFERRED from these — there is no `as`:
-   * `href` → `<a>`, otherwise `onClick`/`disabled` → `<button>`, otherwise a
-   * non-interactive `<div>`. So a clickable row + interactive `actions` can never
-   * emit invalid nested-interactive DOM.
+   * Inline styles for the ROW BOX, merged under `indent` (which wins — it is the
+   * row's own vocabulary for the same property). Declared rather than left to the
+   * passthrough because it used to be spread AFTER the indent, so a caller's
+   * `style` silently deleted a tree row's indentation.
+   */
+  style?: React.CSSProperties;
+  /**
+   * `Row` owns `type`, because it owns the element: it is `"button"` exactly when
+   * the row infers a `<button>`, and absent otherwise. Spelled `never` so setting
+   * it is a type error rather than a row that quietly became a submit button
+   * inside someone's form.
+   */
+  type?: never;
+  /**
+   * Permissive passthrough — and it lands on the **row box**, the same node `ref`
+   * gives you, on BOTH paths. `data-*` selector targets, `id`, `title`, mouse /
+   * pointer / drag handlers: whatever you spread addresses the row.
+   *
+   * The exception is {@link RowControlProps} — the closed, named set of
+   * attributes that describe the row's CONTROL (`onClick`, `href` and the link
+   * attributes, `role`, `tabIndex`, the keyboard/focus handlers, and any
+   * `aria-*`). `Row` routes those onto whichever node it synthesized.
+   *
+   * This is the same lesson as `focusRef` and `className`, in the shape the
+   * passthrough needs: the caller states MEANING, `Row` decides the node. It used
+   * to spread `rest` on "the rendered element", which is one node until the row
+   * is given `actions` and two afterwards — so a `data-*` attribute a caller used
+   * as a selector target moved from the row box to an inner button the day
+   * someone added an action, at a call site nobody edited, with no throw, no lint
+   * and no type error. Now nothing about a caller's attribute changes when the
+   * row splits.
    */
   [key: string]: unknown;
 }
@@ -109,17 +190,32 @@ export function Row({
   focusRef,
   disabled,
   className,
+  style,
   children,
   ...rest
 }: RowProps) {
+  // ONE pass splits the passthrough by DESTINATION, which is the whole contract:
+  // the control bag goes to whichever node `Row` synthesized, everything else to
+  // the row box — the node `ref` hands out — on BOTH paths. Nothing a caller
+  // spreads changes node the day the row grows an `actions` slot.
+  const controlProps: Record<string, unknown> = {};
+  const boxProps: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(rest)) {
+    (isControlKey(key) ? controlProps : boxProps)[key] = value;
+  }
+
   // The element is inferred, never authored: a row with `href` is a link, a row
   // with `onClick`/`disabled` is a button, anything else is a plain container.
   // This removes the `as` footgun — a clickable row can no longer be declared as
   // a `<button>` that then nests its `actions` buttons (invalid DOM). Inferred
   // FIRST because the focus handle below has to know whether this row renders a
   // control at all, and a hook cannot be moved past the conditional return.
-  const href = (rest as { href?: unknown }).href;
-  const onClick = (rest as { onClick?: unknown }).onClick;
+  //
+  // Read off `controlProps` rather than the raw passthrough: the two attributes
+  // that DECIDE the element are by definition the control's own, so the split
+  // that routes them is also the split that classifies them.
+  const href = controlProps.href;
+  const onClick = controlProps.onClick;
   const Tag: React.ElementType =
     href != null ? "a" : onClick != null || disabled != null ? "button" : "div";
   const isButton = Tag === "button";
@@ -224,7 +320,12 @@ export function Row({
     bordered && "border",
     className,
   );
-  const style = indent !== undefined ? { paddingLeft: indent } : undefined;
+  // `indent` wins over a caller's `paddingLeft`: it is the row's OWN vocabulary
+  // for that property (tree depth), so a `style` that could delete it would be a
+  // silently un-indented tree. Merged rather than replaced, because the realistic
+  // caller `style` is a dnd transform that has nothing to do with padding.
+  const rowStyle =
+    indent !== undefined ? { ...style, paddingLeft: indent } : style;
 
   // The trailing cluster is the `row-actions` primitive — the ONE implementation
   // of a row-action cluster, owning the reveal, the popup-hold, the click +
@@ -286,9 +387,15 @@ export function Row({
         as="div"
         ref={ref}
         className={cn(chromeClass, "isolate")}
-        style={style}
+        style={rowStyle}
+        {...boxProps}
       >
         <Tag
+          // The control bag is spread FIRST so every attribute below — the ones
+          // `Row` owns because it owns the element — wins over a caller's. It
+          // used to be `{...rest}` last, which let a passthrough quietly displace
+          // `type`, `disabled` or the `aria-current` that `selected` derives.
+          {...controlProps}
           ref={setControl}
           type={isButton ? "button" : undefined}
           disabled={isButton ? disabled : undefined}
@@ -304,7 +411,6 @@ export function Row({
             size === "sm" ? "gap-xs" : "gap-sm",
             "disabled:pointer-events-none disabled:opacity-50",
           )}
-          {...rest}
         >
           {icon}
           {children}
@@ -322,13 +428,19 @@ export function Row({
   return (
     <Line
       as={Tag}
+      // Box and control are the SAME element here, so both bags land together and
+      // the routing is a no-op — which is exactly the point: the destination rule
+      // is one rule, stated once, and this path is the degenerate case of it
+      // rather than a second contract. Both spread before the attributes `Row`
+      // owns, so a passthrough can never displace them.
+      {...boxProps}
+      {...controlProps}
       ref={setBoxAndControl}
       type={isButton ? "button" : undefined}
       disabled={isButton ? disabled : undefined}
       aria-current={isButton && selected ? true : undefined}
       className={chromeClass}
-      style={style}
-      {...rest}
+      style={rowStyle}
     >
       {icon}
       {children}

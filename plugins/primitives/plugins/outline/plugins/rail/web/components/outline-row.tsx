@@ -23,7 +23,12 @@ export interface OutlineRowProps {
  *
  * `data-outline-row` / `data-outline-id` (plus the `aria-current` `Row` stamps
  * from `selected`) are the SUPPORTED addressing contract for cross-plugin e2e
- * scripts — see the rail's CLAUDE.md.
+ * scripts — see the rail's CLAUDE.md. They land on the row BOX, which is the
+ * node this contract is about: the scroll-spy resolves an entry and then reads
+ * where it sits on screen. `Row` guarantees that placement on both of its paths,
+ * so giving these rows an action later cannot move the attributes onto an inner
+ * button — which it silently did before `Row` routed its passthrough by
+ * destination.
  */
 export function OutlineRow({ entry, active, onJump }: OutlineRowProps) {
   // Transition-only (no `revealOnMount`): the panel is clamped to zero height

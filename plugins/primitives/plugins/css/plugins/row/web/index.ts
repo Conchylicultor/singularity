@@ -3,6 +3,7 @@ import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 export {
   Row,
   type RowProps,
+  type RowControlProps,
   type RowFocus,
   type RowSize,
   type RowHover,

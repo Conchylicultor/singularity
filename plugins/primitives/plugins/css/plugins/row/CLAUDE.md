@@ -70,6 +70,50 @@ contract is `focus: () => void`, which is why this is not a declarative `focused
 prop) and THROWS on a row that renders no control at all — a loud caller bug
 instead of a silent no-op.
 
+## The passthrough goes where `ref` goes
+
+Everything you spread on a `Row` — `data-*`, `id`, `title`, `style`, mouse /
+pointer / drag handlers, anything else — lands on the **row box**, the same node
+`ref` hands out, on **both** paths. The exception is a closed, named set that
+describes the row's **control**: `onClick`, `href` / `target` / `rel` /
+`download`, `role`, `tabIndex`, `autoFocus`, the keyboard and focus handlers, and
+any `aria-*`. Those `Row` routes onto whichever node it synthesized.
+
+The caller states **meaning**; `Row` decides the node. That is the same move as
+`focusRef` (a capability, not a node) and `className` (the treatment, owned by
+the row) — this is the third face of one defect. `rest` used to be spread on "the
+rendered element", which is one node until the row is given `actions` and two
+afterwards. So a `data-*` attribute a caller used as a selector target moved from
+the row box to an inner button the day someone added an action — at a call site
+nobody edited, with no throw, no lint and no type error. Now nothing about a
+caller's attribute changes when the row splits.
+
+Both destinations are real, which is why this is not a matter of picking one
+node. `onClick` has to be on the control (a `disabled` `<button>` must swallow
+it, and Enter/Space only synthesize a click there); `aria-expanded` describes the
+disclosure control, which is what `SectionHeaderRow` depends on;
+`data-outline-row` addresses the row, because the outline rail resolves it and
+then measures **where it is on screen**.
+
+Two consequences worth knowing:
+
+- **The routing has one source.** `CONTROL_KEYS` is the runtime split list, and
+  `RowControlProps` is derived from it, so the type and the behaviour cannot
+  drift apart. `aria-*` is matched by prefix on both sides, so the aria family
+  stays open with no list to maintain.
+- **`Row`'s own attributes are no longer overridable.** The bags are spread
+  *before* `type`, `disabled`, `aria-current` and `className`, instead of `rest`
+  landing last and winning. `type` is `never` — the row infers its element, so
+  setting `type` is a type error rather than a row that quietly became a submit
+  button. `aria-current` comes from `selected` only. And `style` is merged under
+  `indent` (which wins on `padding-left`) instead of replacing it, which used to
+  un-indent a tree row silently.
+
+On the split path the box is **not** a click target — it is a plain `<div>`
+wrapping the control. Address the control the way a user does
+(`getByRole("button", { name })`), not by clicking a `data-testid` you put on the
+row.
+
 ## Row is not a data list
 
 `Row` is for *single* rows and transient chrome (menus, pickers, nav, tab
@@ -95,6 +139,7 @@ genuine transient-chrome list escapes with
     - `primitives/row-actions.RowActions`
     - `primitives/row-actions.rowActionsAnchor`
   - Exports (types):
+    - `RowControlProps`
     - `RowFocus`
     - `RowHover`
     - `RowProps`
