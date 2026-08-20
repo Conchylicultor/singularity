@@ -66,10 +66,16 @@ the M5 pilot itself. So the mutable-`where` half of the sweep is already complet
 
 ## Follow-ups filed
 
-- Point-migrate `tasks-auto-start` and `pages-starred` to `windowQueryResource`
-  `point:{by: parentId}` (bounded-working-set Phase 2; mirrors the
-  `conversation-category` pilot; no blockers — no in-code deferral ties them to
-  anything pending).
+- ~~Point-migrate `tasks-auto-start` and `pages-starred` to `windowQueryResource`
+  `point:{by: parentId}`~~ — **done 2026-08-19**
+  (`research/2026-08-19-global-bounded-per-parent-side-tables.md`).
+  `tasks-auto-start` landed as a point resource as classified. `pages-starred`
+  landed as a bounded **window** instead: its `StarredField` consumer must project
+  `starred` for every row the `pages-sidebar` DataView filters over, so a point
+  set would have to name every page id (O(pages) — it bounds nothing, it only
+  moves the working set into a params string). The bounded thing is the favorites
+  set, which is what the window bounds; the sibling `agent-origin` plugin was
+  already that shape in the same slot.
 - Parametrize `story-generated-units` by `{pageId, kind}` (the
   `mail-thread-messages` per-key shape) so its scan stops loading the whole
   app-wide units table client-side per open page.

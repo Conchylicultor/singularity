@@ -46,6 +46,7 @@ rule keeps the broken shape from coming back.
     - `apps/pages/history`
     - `apps/pages/page-outline`
     - `apps/pages/page-tree`
+    - `apps/pages/starred`
     - `apps/prototypes/present`
     - `apps/prototypes/thumbnails`
     - `apps/sonata/look`
@@ -95,6 +96,7 @@ rule keeps the broken shape from coming back.
     - `reorder`
     - `reorder/node-types`
     - `shell/toast`
+    - `tasks/auto-start`
     - `tasks/launch-options`
     - `ui/theme-toggle`
 

@@ -2473,7 +2473,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/pages/page-tree.PageTree`
               - `infra/endpoints.useEndpointMutation`
               - `primitives/icon-button.IconButton`
-              - `primitives/live-state.useResource`
+              - `primitives/live-state.useWindowResource`
             - Exports (types): `StarredPageRow`
             - Exports (values):
               - `StarredPageRowSchema`
@@ -2483,7 +2483,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Uses:
               - `infra/endpoints.implement`
               - `infra/entity-extensions.defineExtension`
-              - `infra/query-resource.queryResource`
+              - `infra/query-resource.windowQueryResource`
               - `page/editor._blocks`
             - DB schema: `plugins/apps/plugins/pages/plugins/starred/server/internal/tables.ts`
             - Entity extension of: `page/editor` (table `page_blocks_ext_starred`)
@@ -2491,7 +2491,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `pageBlocksStarred`
               - `setPageStarred`
               - `starredPagesServerResource`
-            - Resources: `pages-starred` (keyed)
             - Routes: `PUT /api/pages/:pageId/starred`
         - **`trash`** — Pages trash consumer: contributes a Trash entry into the Pages sidebar, opening a dialog that lists soft-deleted pages with restore and permanent-delete actions.
           - Web:
@@ -15103,6 +15102,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/pages/history`
               - `apps/pages/page-outline`
               - `apps/pages/page-tree`
+              - `apps/pages/starred`
               - `apps/prototypes/present`
               - `apps/prototypes/thumbnails`
               - `apps/sonata/look`
@@ -15152,6 +15152,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `reorder`
               - `reorder/node-types`
               - `shell/toast`
+              - `tasks/auto-start`
               - `tasks/launch-options`
               - `ui/theme-toggle`
         - **`format`** — The repo's byte-format authority: the prettier allowlist, the hardcoded options, and the merge-base changed-file set that build / format / format-clean all share.
@@ -28917,7 +28918,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Contributes: `Tasks.TaskActions` "queued-chip" → `QueuedChipAction`
         - Uses:
           - `primitives/css/badge.Badge`
-          - `primitives/live-state.useResource`
+          - `primitives/live-state.usePointResources`
           - `tasks.setAutoStart`
           - `tasks/task-list.Tasks`
         - Exports (types): `TaskAutoStartRow`
@@ -28934,7 +28935,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `infra/entity-extensions.defineExtension`
           - `infra/events.Trigger`
           - `infra/jobs.defineJob`
-          - `infra/query-resource.queryResource`
+          - `infra/query-resource.windowQueryResource`
           - `infra/warmup.defineWarmup`
           - `tasks/tasks-core._tasks`
           - `tasks/tasks-core.taskStatusChanged`
@@ -28949,7 +28950,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Register:
           - `defineJob('tasks.auto-start-cancel-on-drop')`
           - `defineWarmup('tasks.auto-start-dropped-sweep')`
-        - Resources: `tasks-auto-start` (keyed)
       - Cross-plugin:
         - Imported by:
           - `conversations`

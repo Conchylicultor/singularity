@@ -9,7 +9,7 @@
   - Contributes: `Tasks.TaskActions` "queued-chip" → `QueuedChipAction`
   - Uses:
     - `primitives/css/badge.Badge`
-    - `primitives/live-state.useResource`
+    - `primitives/live-state.usePointResources`
     - `tasks.setAutoStart`
     - `tasks/task-list.Tasks`
   - Exports (types): `TaskAutoStartRow`
@@ -26,7 +26,7 @@
     - `infra/entity-extensions.defineExtension`
     - `infra/events.Trigger`
     - `infra/jobs.defineJob`
-    - `infra/query-resource.queryResource`
+    - `infra/query-resource.windowQueryResource`
     - `infra/warmup.defineWarmup`
     - `tasks/tasks-core._tasks`
     - `tasks/tasks-core.taskStatusChanged`
@@ -41,7 +41,6 @@
   - Register:
     - `defineJob('tasks.auto-start-cancel-on-drop')`
     - `defineWarmup('tasks.auto-start-dropped-sweep')`
-  - Resources: `tasks-auto-start` (keyed)
 - Cross-plugin:
   - Imported by:
     - `conversations`
