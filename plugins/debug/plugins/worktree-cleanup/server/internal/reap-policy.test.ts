@@ -1,10 +1,14 @@
 import { describe, expect, test } from "bun:test";
+import { asNamespace } from "@plugins/infra/plugins/namespace/core";
+import type { OwnedNamespace } from "@plugins/infra/plugins/worktree/plugins/reclaim/server";
 import {
   AUTO_REAP_AGE_MS,
   classifyAttempt,
+  classifyOwnedNamespace,
   NEEDS_HYGIENE,
   type AttemptFacts,
   type ClassifyContext,
+  type ClassifyOwnedContext,
   type ClassifyResult,
   type ReapTarget,
 } from "./reap-policy";
@@ -225,5 +229,63 @@ describe("classifyAttempt is bit-identical to the pre-inversion logic", () => {
         expect(got).toEqual(referenceClassify(a, { ...c, hygiene }));
       }
     }
+  });
+});
+
+// The marker-owned namespace branch: a namespace is reclaimed when the CHECKOUT
+// that minted it disappears, and its provenance marker is the only thing that
+// says which checkout that was.
+function owned(marker: Partial<OwnedNamespace["marker"]> = {}): OwnedNamespace {
+  return {
+    ns: asNamespace("sonata.att-1-a"),
+    marker: {
+      composition: "sonata",
+      checkout: "att-1-a",
+      builtAt: new Date(NOW).toISOString(),
+      buildId: "build-1",
+      ...marker,
+    },
+  };
+}
+
+function ownedCtx(
+  over: Partial<ClassifyOwnedContext> = {},
+): ClassifyOwnedContext {
+  return { checkoutDirExists: false, retained: false, ...over };
+}
+
+describe("classifyOwnedNamespace — reclaimed when its OWNER disappears", () => {
+  test("a namespace whose checkout dir is gone is a target", () => {
+    expect(classifyOwnedNamespace(owned(), ownedCtx())).toEqual({
+      ns: asNamespace("sonata.att-1-a"),
+      checkout: "att-1-a",
+    });
+  });
+
+  test("a namespace whose checkout dir is still present is not a target", () => {
+    expect(
+      classifyOwnedNamespace(owned(), ownedCtx({ checkoutDirExists: true })),
+    ).toBeNull();
+  });
+
+  test("a retained checkout's namespaces are not targets", () => {
+    expect(
+      classifyOwnedNamespace(owned(), ownedCtx({ retained: true })),
+    ).toBeNull();
+  });
+
+  // `sonata` served from main holds real user content, and no checkout will ever
+  // disappear to authorize its removal.
+  test("checkout: null — owned by main — is NEVER a target", () => {
+    expect(
+      classifyOwnedNamespace(owned({ checkout: null }), ownedCtx()),
+    ).toBeNull();
+  });
+
+  // Unknown is not absent. Guessing an owner here drops a database.
+  test("checkout: undefined — a legacy marker — is NEVER a target", () => {
+    expect(
+      classifyOwnedNamespace(owned({ checkout: undefined }), ownedCtx()),
+    ).toBeNull();
   });
 });

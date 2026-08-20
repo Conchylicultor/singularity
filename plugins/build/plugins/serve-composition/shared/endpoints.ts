@@ -80,3 +80,110 @@ export const serveStatusEndpoint = defineEndpoint({
   // collapsing a burst onto one handler run is free.
   dedupe: true,
 });
+
+/**
+ * ONE namespace a composition currently occupies, described in the terms the
+ * delete confirmation has to name it in: the address that stops working and
+ * whether real data sits behind it.
+ *
+ * `host`/`url` are resolved SERVER-side beside the namespace they belong to, for
+ * the same reason `ServeStatusResponse` resolves them: a namespace is
+ * `<composition>.<checkout>` with both sentinels elided, and the browser cannot
+ * compose or decompose that pair.
+ */
+export const OwnedNamespaceSchema = z.object({
+  namespace: z.string().refine(isNamespace, "not a valid namespace"),
+  /** `<namespace>.localhost:9000` — the display form. */
+  host: z.string(),
+  /** `http://<namespace>.localhost:9000` — the full origin. */
+  url: z.string(),
+  /**
+   * Whether a Postgres database of that name exists RIGHT NOW. Read rather than
+   * assumed: a namespace whose database was already dropped (an earlier reclaim,
+   * a legacy registry-only entry) must not be announced as losing one.
+   */
+  hasDatabase: z.boolean(),
+  /**
+   * Which checkout composed this namespace, straight off its provenance marker.
+   * All three marker arms are rendered rather than collapsed — a marker written
+   * before the `checkout` field existed genuinely does not say, and reporting
+   * that as "main" would name the wrong checkout to the person confirming.
+   */
+  builtBy: z.discriminatedUnion("kind", [
+    z.object({ kind: z.literal("main") }),
+    z.object({ kind: z.literal("checkout"), checkout: z.string() }),
+    z.object({ kind: z.literal("unknown") }),
+  ]),
+});
+export type OwnedNamespaceInfo = z.infer<typeof OwnedNamespaceSchema>;
+
+/**
+ * What does this composition own? A marker scan over EVERY namespace on the
+ * host, deliberately not scoped to the answering backend's checkout: a
+ * composition served from main and from three worktrees occupies four
+ * namespaces, four databases and four config dirs, and deleting its manifest row
+ * strands all four. (`resetCompositionData` is the opposite — it acts on the one
+ * namespace this checkout serves — and that difference is the whole reason this
+ * is a separate endpoint rather than a flag on the status read.)
+ *
+ * All the data lives in the shared `~/.singularity/` tree, so one backend can
+ * answer for — and reclaim — namespaces composed by other checkouts.
+ */
+export const ownedNamespacesEndpoint = defineEndpoint({
+  route: "GET /api/build/serve/owned",
+  query: z.object({
+    composition: z
+      .string()
+      .refine((v) => NAMESPACE_LABEL_RE.test(v), "not a valid composition id"),
+  }),
+  response: z.object({ namespaces: z.array(OwnedNamespaceSchema) }),
+  // A readdir plus one marker read and one `pg_database` lookup per namespace;
+  // collapsing a burst (two Studio surfaces asking about the same row) is free.
+  dedupe: true,
+});
+
+/**
+ * What happened to ONE namespace in a reclaim — a discriminated outcome, never a
+ * tally. A count of successes cannot say WHICH namespace still holds a database,
+ * and "3 of 4" read as success is exactly how a stranded namespace becomes
+ * invisible.
+ *
+ * `refused` and `failed` are kept apart because they mean different things to
+ * whoever has to act: a refusal is a guard rejecting the target with nothing
+ * touched, a failure is a reclaim that broke partway and may have taken some of
+ * the namespace's artifacts with it.
+ */
+export const ReclaimOutcomeSchema = z.discriminatedUnion("kind", [
+  z.object({ kind: z.literal("reclaimed") }),
+  z.object({ kind: z.literal("refused"), reason: z.string() }),
+  z.object({ kind: z.literal("failed"), message: z.string() }),
+]);
+export type ReclaimOutcome = z.infer<typeof ReclaimOutcomeSchema>;
+
+export const ReclaimCompositionBodySchema = z.object({ id: z.string() });
+export type ReclaimCompositionBody = z.infer<
+  typeof ReclaimCompositionBodySchema
+>;
+
+/**
+ * Reclaim every namespace this composition owns: its database, config dir,
+ * gateway registry dir (spec + dist + marker) and the composing checkout's
+ * filtered registries, per namespace.
+ *
+ * One namespace's failure does not abort the rest — each is an independent set
+ * of artifacts, and one undroppable database must not strand the other three —
+ * so the response reports every namespace individually and the caller decides
+ * what a partial result means. It never means success.
+ */
+export const reclaimCompositionNamespaces = defineEndpoint({
+  route: "POST /api/build/serve/reclaim",
+  body: ReclaimCompositionBodySchema,
+  response: z.object({
+    results: z.array(
+      z.object({
+        namespace: z.string().refine(isNamespace, "not a valid namespace"),
+        outcome: ReclaimOutcomeSchema,
+      }),
+    ),
+  }),
+});

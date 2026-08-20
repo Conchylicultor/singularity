@@ -102,6 +102,7 @@ are no per-interaction round-trips.
   - Uses:
     - `apps/studio/explorer/membership.DIFF_LEGEND`
     - `apps/studio/shell.Studio`
+    - `build/serve-composition.useDeleteComposition`
     - `build/serve-composition.useServeComposition`
     - `plugin-meta/composition.setActiveComposition`
     - `plugin-meta/composition.setCompareComposition`

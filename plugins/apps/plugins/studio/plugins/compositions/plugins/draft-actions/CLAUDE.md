@@ -30,6 +30,7 @@ Closure) update as you type — before anything is saved.
     - `apps/studio/compositions.CompositionDetail`
     - `apps/studio/compositions.compositionDetailPane`
     - `apps/studio/compositions.compositionsPane`
+    - `build/serve-composition.useDeleteComposition`
     - `plugin-meta/composition.clearActive`
     - `plugin-meta/composition.updateActiveDraft`
     - `plugin-meta/composition.useActiveComposition`

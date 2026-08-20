@@ -26,15 +26,12 @@ import {
   bulkDeleteWorktrees,
   deleteWorktree,
   WorktreeEntrySchema,
+  type ReapStep,
   type WorktreeEntry,
 } from "../../shared/endpoints";
 
 type DeleteEvent =
-  | { step: "worktree" | "database" | "config" | "registry" }
-  | { ok: true }
-  | { ok: false; error: string };
-
-type DeletingStep = "worktree" | "database" | "config" | "registry";
+  { step: ReapStep } | { ok: true } | { ok: false; error: string };
 
 function relativeAge(iso: string): string {
   const ms = Date.now() - new Date(iso).getTime();
@@ -108,7 +105,7 @@ export function WorktreeCleanupPanel() {
   const [entries, setEntries] = useState<WorktreeEntry[] | null>(null);
   const [listError, setListError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [deletingSteps, setDeletingSteps] = useState<Map<string, DeletingStep>>(
+  const [deletingSteps, setDeletingSteps] = useState<Map<string, ReapStep>>(
     new Map(),
   );
   const [confirmDirtyId, setConfirmDirtyId] = useState<string | null>(null);
@@ -369,8 +366,13 @@ export function WorktreeCleanupPanel() {
   );
 }
 
-const STEP_LABEL: Record<DeletingStep, string> = {
+// One label per step of the reap, keyed on the shared `ReapStep` list — so a step
+// added on the server is a `tsc` error here until it is given something to say,
+// rather than streaming a name the panel silently has no label for.
+const STEP_LABEL: Record<ReapStep, string> = {
   worktree: "Removing…",
+  // The apps this checkout built and served, each with its own database.
+  namespaces: "Removing the apps it served…",
   database: "Dropping DB…",
   config: "Clearing config…",
   registry: "Deregistering…",
@@ -387,7 +389,7 @@ function EntryRow({
   onCancelConfirm,
 }: {
   entry: WorktreeEntry;
-  deletingStep: DeletingStep | null;
+  deletingStep: ReapStep | null;
   highlighted: boolean;
   error: string | null;
   confirmOpen: boolean;

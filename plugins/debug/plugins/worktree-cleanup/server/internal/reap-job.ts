@@ -3,7 +3,12 @@ import { defineJob } from "@plugins/infra/plugins/jobs/server";
 import { defineLogSink } from "@plugins/primitives/plugins/log-channels/server";
 import { recordReport } from "@plugins/reports/server";
 import { WorktreeGitTimeoutError } from "@plugins/infra/plugins/worktree/server";
-import { collectReapable, type ReapTarget } from "./reap-policy";
+import { reclaimNamespace } from "@plugins/infra/plugins/worktree/plugins/reclaim/server";
+import {
+  collectReapable,
+  type NamespaceReapTarget,
+  type ReapTarget,
+} from "./reap-policy";
 import { reapAttempt } from "./reap";
 
 const log = defineLogSink({
@@ -67,7 +72,9 @@ export const worktreeReapJob = defineJob({
   async run() {
     const scan = await collectReapable(Date.now());
     const targets = scan.targets;
+    const namespaceTargets = scan.namespaceTargets;
     let reaped = 0;
+    let reclaimed = 0;
 
     // The scan's own shape, logged every tick. `scanned` vs `candidates` shows
     // how much of the attempt table has nothing left to reclaim (the cost the
@@ -75,7 +82,7 @@ export const worktreeReapJob = defineJob({
     // fan-out. K is what decides whether a negative hygiene cache is worth any
     // state at all; if it stays single-digit, the answer is no.
     log.publish(
-      `auto-reap scan: scanned=${scan.scanned} candidates=${scan.candidates} hygieneProbes=${scan.hygieneProbes} targets=${targets.length}`,
+      `auto-reap scan: scanned=${scan.scanned} candidates=${scan.candidates} hygieneProbes=${scan.hygieneProbes} targets=${targets.length} namespaceTargets=${namespaceTargets.length}`,
     );
 
     // Failures of the REPORTING path, not of a reap. Collected rather than
@@ -83,26 +90,23 @@ export const worktreeReapJob = defineJob({
     // inner catch and the throw at the end of the handler.
     const reportFailures: string[] = [];
 
-    // Per-caller cap kept ≤ the host `worktree-mutate` gate size. The host gate
-    // (infra/worktree.withWorktreeMutateSlot) is now the HARD bound on concurrent
-    // full-tree `git worktree remove`s across every process; this local cap keeps
-    // the reap from flooding the shared flock queue with more waiters than the gate
-    // can grant, always leaving headroom for an interactive spawn's checkout
-    // (two-tier fairness, mirroring host-read-pool's per-worktree tier).
-    await pMap(targets, 3, async (t: ReapTarget) => {
+    // One containment, both passes. A failure here is CONTAINED — one corrupt
+    // fork or one undroppable database must not block the rest of the sweep, and
+    // the sweep is idempotent, so the next hourly run retries whatever this one
+    // could not reclaim — but containment must not mean silence. The log channel
+    // nobody tails was the entire alerting story for the single most important
+    // signal these bounds produce: a git child killed while holding a host-wide
+    // `worktree-mutate` slot, i.e. the 2026-08-17 outage caught in the act. So
+    // every contained failure also files a report, which reaches Debug → Reports
+    // and the bell.
+    const contain = async (
+      targetId: string,
+      work: () => Promise<void>,
+    ): Promise<void> => {
       try {
-        await reapAttempt(t.id, { worktreePath: t.worktreePath });
-        reaped++;
+        await work();
       } catch (err) {
-        log.publish(`reap ${t.id} failed: ${String(err)}`, "stderr");
-        // The containment above is correct — one corrupt fork must not block the
-        // sweep — but containment must not mean silence. The log channel nobody
-        // tails was the entire alerting story for the single most important
-        // signal these bounds produce: a git child killed while holding a
-        // host-wide `worktree-mutate` slot, i.e. the 2026-08-17 outage caught in
-        // the act. So every contained failure also files a report, which reaches
-        // Debug → Reports and the bell.
-        //
+        log.publish(`reap ${targetId} failed: ${String(err)}`, "stderr");
         // `timedOut` is read from the ERROR'S TYPE, never from its message: the
         // throw site knows for certain whether it killed a child, and a report
         // that fingerprints a wedge apart from an ordinary failure must not rest
@@ -112,9 +116,9 @@ export const worktreeReapJob = defineJob({
           await recordReport({
             kind: "worktree-reap-failed",
             source: "server-caught",
-            message: `reap ${t.id} failed: ${String(err)}`,
+            message: `reap ${targetId} failed: ${String(err)}`,
             data: {
-              targetId: t.id,
+              targetId,
               timedOut: wedge !== undefined,
               ...(wedge
                 ? { command: wedge.command, timeoutMs: wedge.timeoutMs }
@@ -136,9 +140,38 @@ export const worktreeReapJob = defineJob({
           reportFailures.push(String(reportErr));
         }
       }
-    });
+    };
 
-    log.publish(`auto-reap: ${reaped}/${targets.length} reaped`);
+    // Per-caller cap kept ≤ the host `worktree-mutate` gate size. The host gate
+    // (infra/worktree.withWorktreeMutateSlot) is now the HARD bound on concurrent
+    // full-tree `git worktree remove`s across every process; this local cap keeps
+    // the reap from flooding the shared flock queue with more waiters than the gate
+    // can grant, always leaving headroom for an interactive spawn's checkout
+    // (two-tier fairness, mirroring host-read-pool's per-worktree tier).
+    await pMap(targets, 3, (t: ReapTarget) =>
+      contain(t.id, async () => {
+        await reapAttempt(t.id, { worktreePath: t.worktreePath });
+        reaped++;
+      }),
+    );
+
+    // The marker-owned namespaces, reclaimed through `reclaimNamespace` and never
+    // through `reapAttempt`: these are not checkouts, there is no git worktree to
+    // remove, and `reapAttempt` would resolve one from the name. Run AFTER the
+    // checkout pass, which reclaims the namespaces of every checkout it reaps —
+    // the scan already excludes those, and this order keeps the two from racing
+    // over the same registry dir if it ever missed one.
+    await pMap(namespaceTargets, 3, (t: NamespaceReapTarget) =>
+      contain(t.ns, async () => {
+        await reclaimNamespace(t.ns);
+        reclaimed++;
+      }),
+    );
+
+    log.publish(
+      `auto-reap: ${reaped}/${targets.length} reaped, ` +
+        `${reclaimed}/${namespaceTargets.length} orphaned namespaces reclaimed`,
+    );
 
     // The sweep itself is finished; now fail the job so a broken reporting path
     // is visible in queue-health rather than being the second silent failure in

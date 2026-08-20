@@ -14,8 +14,11 @@ exports the pieces its hosts render:
   (`@plugins/build/core`), which runs `./singularity build --composition <id>` in
   THIS checkout — so the live URL is ready without waiting for anything else.
   `stop(id)` is flag-only (`setAutoBuild(id, false)`) and, since auto-serve was
-  deleted, that flag now stops nothing: reclaiming a served namespace is Phase 5.
+  deleted, that flag now stops nothing — deactivating is deliberately never a
+  reclaim trigger, and the namespace keeps serving its last dist.
 - `useServeStatus(compositionId)` — the liveness read (below).
+- `useDeleteComposition()` — `{ deleteComposition }`. Deleting a composition,
+  including everything it is serving (below).
 
 Hosts today: Studio's **Build & serve** section and Compositions list, and the
 deploy pane's **Test locally** section
@@ -128,9 +131,64 @@ throws `CompositionResetError` (nothing touched) if any fails:
   carry no per-composition dimension, and are not part of this reset. Documented,
   not worked around.
 
-Both endpoint contracts live in `shared/endpoints.ts` (imported by both this
+All four endpoint contracts live in `shared/endpoints.ts` (imported by both this
 plugin's own web and server); the tolerant gateway restart (404 = not running,
 gateway-down = fine) mirrors the CLI's, minus its `closeAdminPool()`.
+
+## Deleting a composition takes its namespaces with it
+
+A composition is not just a config row. Building it mints a namespace, and a
+namespace is a live address, a Postgres database, a config dir and a built
+frontend. Dropping the row on its own left every one of those on disk forever
+**and** made them invisible at the same moment, because every composition-aware
+surface is keyed off the row that just vanished.
+
+`useDeleteComposition()` is that whole concept, in one place, and both Studio
+delete buttons call it (the list row's and the draft editor's), so they cannot
+drift:
+
+1. `GET /api/build/serve/owned?composition=<id>` — what does it own? The button
+   pends while this is in flight; until the server answers we do not know whether
+   the delete is free or destroys a live database, and "owns nothing" is not a
+   thing to render before we know.
+2. If it owns nothing — no serve build ever ran — the row is removed with no
+   dialog. There would be nothing to warn about, and a scary prompt over an empty
+   list teaches people to click through the one that matters.
+3. Otherwise a `confirmDialog` names **every** namespace: its host, which
+   checkout built it, and whether a database goes with it. Not a count — a count
+   cannot tell you that one of the three is the one on main holding your content.
+4. On confirm, `POST /api/build/serve/reclaim` reclaims them and only then is the
+   row removed. `remove(id)` in `plugin-meta/composition` stays the pure
+   synchronous config edit its name promises.
+
+**Not scoped to this checkout**, unlike Reset. `sonata` served from main and
+`sonata.att-x` served from three worktrees are four namespaces, four databases
+and four config dirs, and deleting the composition strands all four. The
+inventory is a marker scan across every namespace on the host
+(`namespacesOwnedByComposition`), and one backend can reclaim namespaces composed
+by other checkouts because all of it lives in the shared `~/.singularity/` tree.
+
+**Per-namespace outcomes, never a tally.** Each namespace comes back as
+`reclaimed` / `refused` (a guard rejected it, nothing touched) / `failed` (it
+broke part-way). One failure does not abort the others — they are independent
+sets of artifacts — and if ANY is short of reclaimed the manifest row **stays**:
+it is the only remaining handle on a namespace that did not come back, and
+removing it is exactly how one becomes invisible. The dialog stays open with the
+reason on it, so retrying is one click.
+
+**Which of Reset's four guards carry over** (see
+`server/internal/reclaim-composition.ts`): `assertServableCompositionNamespace`
+and `hasCompositionMarker` do, both enforced inside `reclaimNamespace`.
+`namespaceCollision` does not — it answers "may this owner *claim* this name?"
+and is already enforced at both claim sites, so re-running it at reclaim time
+would mean refusing to give back a name a collision made unreachable.
+**"must be currently `autoBuild: true`" must not** — you delete a composition
+precisely when its serve intent is already off, so that guard would refuse
+exactly the namespaces most in need of reclaiming.
+
+Design:
+[`research/2026-08-20-global-composition-namespace-reclaim.md`](../../../../research/2026-08-20-global-composition-namespace-reclaim.md)
+(Trigger B).
 
 ## Pass the item's `id`; the SERVER says what namespace that is
 
@@ -153,9 +211,11 @@ code, that is the bug this section exists to prevent.
 
 ## Plugin reference
 
-- Description: Serve capability for a composition: the live-serve toggle panel, the enable→build hook (a `build --composition <id>` of THIS checkout), and the served-liveness read (the server-resolved namespace plus the composition.json marker, not the autoBuild intent). Consumed by Studio's Build & serve section and compositions list, and by the deploy pane's Test locally section. Serve-liveness read for a composition: WHERE this backend's checkout serves it (the server-resolved namespace + url) and whether anything is actually there (the composition.json marker), plus the reset-to-first-launch endpoint — wipes ONLY that namespace's DB + config back to what a serve build provisions on a fresh serve, then restarts its backend. Never touches the checkout's own app.
+- Description: Serve capability for a composition: the live-serve toggle panel, the enable→build hook (a `build --composition <id>` of THIS checkout), the served-liveness read (the server-resolved namespace plus the composition.json marker, not the autoBuild intent), and the delete flow — which asks what the composition owns across every checkout, names it in a confirm dialog, and reclaims it before the manifest row goes. Consumed by Studio's Build & serve section and compositions list, and by the deploy pane's Test locally section. Serve-liveness read for a composition: WHERE this backend's checkout serves it (the server-resolved namespace + url) and whether anything is actually there (the composition.json marker), plus the reset-to-first-launch endpoint — wipes ONLY that namespace's DB + config back to what a serve build provisions on a fresh serve, then restarts its backend. Never touches the checkout's own app. Also answers what a composition owns across EVERY checkout that has served it (the marker scan behind the delete confirmation) and reclaims that whole set, per-namespace outcomes reported individually.
 - Web:
   - Uses:
+    - `infra/endpoints.fetchEndpoint`
+    - `infra/endpoints.getEndpointErrorMessage`
     - `infra/endpoints.useEndpoint`
     - `infra/endpoints.useEndpointMutation`
     - `plugin-meta/composition.useManifestActions`
@@ -166,13 +226,17 @@ code, that is the bug this section exists to prevent.
     - `primitives/css/toggle-chip.ToggleChip`
     - `primitives/css/ui-kit.Button`
     - `primitives/imperative-dialog/confirm.confirmDialog`
+    - `primitives/latest-ref.useLatestRef`
     - `primitives/live-state.ResourceResult`
     - `primitives/live-state.useResource`
     - `primitives/relative-time.RelativeTime`
     - `shell/toast.showToast`
-  - Exports (types): `ServeStatus`
+  - Exports (types):
+    - `DeleteCompositionRequest`
+    - `ServeStatus`
   - Exports (values):
     - `ServeTargetPanel`
+    - `useDeleteComposition`
     - `useServeComposition`
     - `useServeStatus`
 - Server:
@@ -190,13 +254,20 @@ code, that is the bug this section exists to prevent.
     - `infra/worktree.namespaceCollision`
     - `infra/worktree.probeNamespace`
     - `infra/worktree.readCompositionMarker`
+    - `infra/worktree/reclaim.NamespaceReclaimError`
+    - `infra/worktree/reclaim.namespacesOwnedByComposition`
+    - `infra/worktree/reclaim.OwnedNamespace`
+    - `infra/worktree/reclaim.reclaimNamespace`
   - Routes:
     - `POST /api/build/serve/reset`
     - `GET /api/build/serve/status`
+    - `GET /api/build/serve/owned`
+    - `POST /api/build/serve/reclaim`
 - Cross-plugin:
   - Imported by:
     - `apps/deploy/local-serve`
     - `apps/studio/compositions`
+    - `apps/studio/compositions/draft-actions`
     - `apps/studio/compositions/release`
 
 <!-- AUTOGENERATED:END -->

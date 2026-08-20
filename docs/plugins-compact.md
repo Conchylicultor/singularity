@@ -374,6 +374,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`warmup`** — Declared heavy boot warm-up category: defineWarmup registers a deferred, throttled, scope-gated warm-up; drainWarmups drains them after onAllReady under a concurrency gate + heavy-read slot + macrotask yield.
     - **`worktree`**
       - Plugins:
+        - **`reclaim`** — Namespace reclaim: reclaimNamespace tears down one compose-serve namespace's four artifacts (database, config dir, gateway registry dir, and the composing checkout's filtered registries) behind provenance guards, and the marker-driven ownership queries answer what a checkout or a composition owns — so a reclaim trigger asks rather than enumerating.
         - **`removal-audit`** — Worktree checkout disappearance audit: a main-only watcher over <repo>/.claude/worktrees that diffs the top-level checkout set on every filesystem event and records each vanished checkout to the worktree-removal channel — attributed to an in-app removeWorktree call when one claims it, or filed as a worktree-removed-externally report (Debug → Reports + bell) with a process snapshot when none does.
 
 - **`integrations`** — Umbrella for third-party service integrations that consume an auth connection (Gmail, …).

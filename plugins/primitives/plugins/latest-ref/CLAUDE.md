@@ -37,6 +37,7 @@ stability-independent and is suppressed at the site with an inline disable.)
     - `apps/sonata/shell`
     - `apps/website/demos/app-gallery`
     - `apps/workflows/editor`
+    - `build/serve-composition`
     - `conversations/conversation-view/prompt-input`
     - `conversations/conversation-view/push-and-exit`
     - `debug/slow-ops`

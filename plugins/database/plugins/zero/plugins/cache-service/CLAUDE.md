@@ -28,6 +28,7 @@
   - Imported by:
     - `build/serve-composition`
     - `debug/worktree-cleanup`
+    - `infra/worktree/reclaim`
 - Shared:
   - Exports (values):
     - `ZERO_DIR`

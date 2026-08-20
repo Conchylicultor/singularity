@@ -63,7 +63,16 @@ export interface ManifestActions {
    */
   save(draft: CompositionManifest, editingId?: string): string;
   /**
-   * Remove the item with the given `id`.
+   * Remove the item with the given `id` — **the config edit and nothing else**.
+   *
+   * It does NOT reclaim what the composition is serving (its namespaces,
+   * databases, config dirs and dists). That deliberately lives one layer up, in
+   * `useDeleteComposition`
+   * (`@plugins/build/plugins/serve-composition/web`), which asks what the
+   * composition owns, confirms it, reclaims it, and then calls this. Surfaces
+   * that delete a composition go through that hook; this stays the pure,
+   * synchronous array edit its name promises, so no caller can trigger a data
+   * wipe by editing a list.
    *
    * **Throws for {@link MAIN_COMPOSITION_ID}.** Deleting main's row from the
    * user config layer takes the repo's own app out of the registry, and

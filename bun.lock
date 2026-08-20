@@ -3060,6 +3060,10 @@
     "plugins/infra/plugins/worktree": {
       "name": "@singularity/plugin-infra-worktree",
     },
+    "plugins/infra/plugins/worktree/plugins/reclaim": {
+      "name": "@singularity/plugin-infra-worktree-reclaim",
+      "version": "0.0.1",
+    },
     "plugins/infra/plugins/worktree/plugins/removal-audit": {
       "name": "@singularity/plugin-infra-worktree-removal-audit",
       "version": "0.0.1",
@@ -7051,6 +7055,8 @@
     "@singularity/plugin-infra-warmup": ["@singularity/plugin-infra-warmup@workspace:plugins/infra/plugins/warmup"],
 
     "@singularity/plugin-infra-worktree": ["@singularity/plugin-infra-worktree@workspace:plugins/infra/plugins/worktree"],
+
+    "@singularity/plugin-infra-worktree-reclaim": ["@singularity/plugin-infra-worktree-reclaim@workspace:plugins/infra/plugins/worktree/plugins/reclaim"],
 
     "@singularity/plugin-infra-worktree-removal-audit": ["@singularity/plugin-infra-worktree-removal-audit@workspace:plugins/infra/plugins/worktree/plugins/removal-audit"],
 

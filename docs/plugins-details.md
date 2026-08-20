@@ -4442,6 +4442,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Uses:
               - `apps/studio/explorer/membership.DIFF_LEGEND`
               - `apps/studio/shell.Studio`
+              - `build/serve-composition.useDeleteComposition`
               - `build/serve-composition.useServeComposition`
               - `plugin-meta/composition.setActiveComposition`
               - `plugin-meta/composition.setCompareComposition`
@@ -4528,6 +4529,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `apps/studio/compositions.CompositionDetail`
                   - `apps/studio/compositions.compositionDetailPane`
                   - `apps/studio/compositions.compositionsPane`
+                  - `build/serve-composition.useDeleteComposition`
                   - `plugin-meta/composition.clearActive`
                   - `plugin-meta/composition.updateActiveDraft`
                   - `plugin-meta/composition.useActiveComposition`
@@ -7157,9 +7159,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Imported by:
           - `build`
           - `build/build-commits`
-    - **`serve-composition`** — Serve capability for a composition: the live-serve toggle panel, the enable→build hook (a `build --composition <id>` of THIS checkout), and the served-liveness read (the server-resolved namespace plus the composition.json marker, not the autoBuild intent). Consumed by Studio's Build & serve section and compositions list, and by the deploy pane's Test locally section. Serve-liveness read for a composition: WHERE this backend's checkout serves it (the server-resolved namespace + url) and whether anything is actually there (the composition.json marker), plus the reset-to-first-launch endpoint — wipes ONLY that namespace's DB + config back to what a serve build provisions on a fresh serve, then restarts its backend. Never touches the checkout's own app.
+    - **`serve-composition`** — Serve capability for a composition: the live-serve toggle panel, the enable→build hook (a `build --composition <id>` of THIS checkout), the served-liveness read (the server-resolved namespace plus the composition.json marker, not the autoBuild intent), and the delete flow — which asks what the composition owns across every checkout, names it in a confirm dialog, and reclaims it before the manifest row goes. Consumed by Studio's Build & serve section and compositions list, and by the deploy pane's Test locally section. Serve-liveness read for a composition: WHERE this backend's checkout serves it (the server-resolved namespace + url) and whether anything is actually there (the composition.json marker), plus the reset-to-first-launch endpoint — wipes ONLY that namespace's DB + config back to what a serve build provisions on a fresh serve, then restarts its backend. Never touches the checkout's own app. Also answers what a composition owns across EVERY checkout that has served it (the marker scan behind the delete confirmation) and reclaims that whole set, per-namespace outcomes reported individually.
       - Web:
         - Uses:
+          - `infra/endpoints.fetchEndpoint`
+          - `infra/endpoints.getEndpointErrorMessage`
           - `infra/endpoints.useEndpoint`
           - `infra/endpoints.useEndpointMutation`
           - `plugin-meta/composition.useManifestActions`
@@ -7170,13 +7174,17 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/css/toggle-chip.ToggleChip`
           - `primitives/css/ui-kit.Button`
           - `primitives/imperative-dialog/confirm.confirmDialog`
+          - `primitives/latest-ref.useLatestRef`
           - `primitives/live-state.ResourceResult`
           - `primitives/live-state.useResource`
           - `primitives/relative-time.RelativeTime`
           - `shell/toast.showToast`
-        - Exports (types): `ServeStatus`
+        - Exports (types):
+          - `DeleteCompositionRequest`
+          - `ServeStatus`
         - Exports (values):
           - `ServeTargetPanel`
+          - `useDeleteComposition`
           - `useServeComposition`
           - `useServeStatus`
       - Server:
@@ -7194,13 +7202,20 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `infra/worktree.namespaceCollision`
           - `infra/worktree.probeNamespace`
           - `infra/worktree.readCompositionMarker`
+          - `infra/worktree/reclaim.NamespaceReclaimError`
+          - `infra/worktree/reclaim.namespacesOwnedByComposition`
+          - `infra/worktree/reclaim.OwnedNamespace`
+          - `infra/worktree/reclaim.reclaimNamespace`
         - Routes:
           - `POST /api/build/serve/reset`
           - `GET /api/build/serve/status`
+          - `GET /api/build/serve/owned`
+          - `POST /api/build/serve/reclaim`
       - Cross-plugin:
         - Imported by:
           - `apps/deploy/local-serve`
           - `apps/studio/compositions`
+          - `apps/studio/compositions/draft-actions`
           - `apps/studio/compositions/release`
     - **`server-build-id`** — Served-bundle pin leaf: reads the .build-commit (the tree the bundle was built from) and .build-graph (content identity of the served web graph) trailers out of the served dist, fresh on every call. A leaf so the deployment description and stale-tab detection read them without importing the heavy build barrel (which pulls git-watcher/worktree).
       - Server:
@@ -11042,6 +11057,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `infra/events-test`
           - `infra/jobs`
           - `infra/launcher`
+          - `infra/worktree/reclaim`
           - `reports`
           - `shell/notifications`
     - **`change-feed`** — L4 DB change-feed: STATEMENT-level Postgres triggers that pg_notify on every commit, plus a LISTEN consumer routing each change through the live-state recompute cascade — making missed invalidations structurally impossible and out-of-process writes visible.
@@ -11270,6 +11286,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Imported by:
               - `build/serve-composition`
               - `debug/worktree-cleanup`
+              - `infra/worktree/reclaim`
           - Shared:
             - Exports (values):
               - `ZERO_DIR`
@@ -13154,6 +13171,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `infra/worktree.removeWorktreeSpec`
           - `infra/worktree.WorktreeGitTimeoutError`
           - `infra/worktree.worktreePathFor`
+          - `infra/worktree/reclaim.listCompositionNamespaces`
+          - `infra/worktree/reclaim.namespacesOwnedByCheckout`
+          - `infra/worktree/reclaim.OwnedNamespace`
+          - `infra/worktree/reclaim.reclaimNamespace`
           - `primitives/log-channels.defineLogSink`
           - `reports.recordReport`
           - `reports.ReportKind`
@@ -16823,6 +16844,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `infra/launcher`
           - `infra/warmup`
           - `infra/worktree`
+          - `infra/worktree/reclaim`
           - `infra/worktree/removal-audit`
           - `plugin-meta/plugin-health`
           - `plugin-meta/plugin-tree`
@@ -17316,6 +17338,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `debug/worktree-cleanup`
           - `infra/git-watcher`
           - `infra/launcher`
+          - `infra/worktree/reclaim`
           - `infra/worktree/removal-audit`
           - `plugin-meta/plugin-health`
           - `stats/commits`
@@ -17329,6 +17352,30 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `attemptBranchRef`
           - `stripAttemptBranchPrefix`
       - Plugins:
+        - **`reclaim`** — Namespace reclaim: reclaimNamespace tears down one compose-serve namespace's four artifacts (database, config dir, gateway registry dir, and the composing checkout's filtered registries) behind provenance guards, and the marker-driven ownership queries answer what a checkout or a composition owns — so a reclaim trigger asks rather than enumerating.
+          - Server:
+            - Uses:
+              - `database/admin.databaseExists`
+              - `database/admin.dropDatabase`
+              - `database/zero/cache-service.dropZeroReplicationArtifacts`
+              - `infra/paths.worktreesDir`
+              - `infra/worktree.CompositionMarker`
+              - `infra/worktree.ensureMainWorktreeRoot`
+              - `infra/worktree.hasCompositionMarker`
+              - `infra/worktree.readCompositionMarker`
+              - `infra/worktree.removeWorktreeSpec`
+              - `infra/worktree.worktreePathFor`
+            - Exports (types): `OwnedNamespace`
+            - Exports (values):
+              - `listCompositionNamespaces`
+              - `NamespaceReclaimError`
+              - `namespacesOwnedByCheckout`
+              - `namespacesOwnedByComposition`
+              - `reclaimNamespace`
+          - Cross-plugin:
+            - Imported by:
+              - `build/serve-composition`
+              - `debug/worktree-cleanup`
         - **`removal-audit`** — Worktree checkout disappearance audit: a main-only watcher over <repo>/.claude/worktrees that diffs the top-level checkout set on every filesystem event and records each vanished checkout to the worktree-removal channel — attributed to an in-app removeWorktree call when one claims it, or filed as a worktree-removed-externally report (Debug → Reports + bell) with a process snapshot when none does.
           - Server:
             - Contributes: `report-kind` "worktree-removed-externally"
@@ -25109,6 +25156,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/sonata/shell`
           - `apps/website/demos/app-gallery`
           - `apps/workflows/editor`
+          - `build/serve-composition`
           - `conversations/conversation-view/prompt-input`
           - `conversations/conversation-view/push-and-exit`
           - `debug/slow-ops`

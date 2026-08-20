@@ -86,6 +86,7 @@ Two things that look wrong but are load-bearing:
     - `infra/events-test`
     - `infra/jobs`
     - `infra/launcher`
+    - `infra/worktree/reclaim`
     - `reports`
     - `shell/notifications`
 

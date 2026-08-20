@@ -6,11 +6,16 @@ import {
 } from "@plugins/tasks/plugins/tasks-core/server";
 import { listDatabases } from "@plugins/database/plugins/admin/server";
 import { heavyReadSlotCount } from "@plugins/infra/plugins/host-read-pool/server";
+import type { Namespace } from "@plugins/infra/plugins/namespace/core";
 import {
   ensureMainWorktreeRoot,
   isCanonicalWorktreePath,
   worktreePathFor,
 } from "@plugins/infra/plugins/worktree/server";
+import {
+  listCompositionNamespaces,
+  type OwnedNamespace,
+} from "@plugins/infra/plugins/worktree/plugins/reclaim/server";
 import { worktreesDir } from "@plugins/infra/plugins/paths/server";
 import { dirExists } from "./reap";
 import {
@@ -61,6 +66,12 @@ export interface ReapTarget {
 // residual git-probe count K measurable in the job log.
 export interface ReapScan {
   targets: ReapTarget[];
+  // Marker-owned namespaces whose owning checkout is gone — a SEPARATE list from
+  // `targets`, not a variant of one. A checkout id and a composition namespace
+  // are reclaimed by different functions (`reapAttempt` vs `reclaimNamespace`),
+  // and keeping them in one list would let a caller hand either to either. See
+  // the branch that fills this at the foot of collectReapable.
+  namespaceTargets: NamespaceReapTarget[];
   // Attempt rows examined (the whole `attempts` table).
   scanned: number;
   // Rows with anything left to reclaim — a dir, a fork DB, or a registry entry.
@@ -160,6 +171,61 @@ export function classifyAttempt(
     retained: false, // proven above — a retained attempt already returned null
   });
   return safe ? { id: attempt.id, worktreePath: attempt.worktreePath } : null;
+}
+
+// A namespace the sweep may reclaim, paired with the checkout whose
+// disappearance authorized it. The checkout name is carried for the log: every
+// target here exists BECAUSE some checkout is gone, and this is the only trace of
+// it left.
+export interface NamespaceReapTarget {
+  ns: Namespace;
+  checkout: string;
+}
+
+export interface ClassifyOwnedContext {
+  // Whether the owning checkout's dir is still on disk. MUST be a CONFIRMED
+  // absence — see the readdir invariant in collectReapable: the dir set may skip
+  // a stat when it FINDS the dir, but may never stand in for one when it does not.
+  checkoutDirExists: boolean;
+  // Whether the owning checkout's attempt is still retained — user intent, the
+  // same guard that outranks every branch of classifyAttempt.
+  retained: boolean;
+}
+
+// The per-namespace reap decision, as a PURE function — the marker-owned twin of
+// classifyAttempt, and deliberately NOT a branch of it. Its input is a namespace
+// carrying a provenance marker, not an attempt row, and its output is reclaimed
+// by `reclaimNamespace`, not by `reapAttempt`.
+//
+// One way to become a target, and two guards that outrank it:
+//   - RETAINED: the owning checkout's attempt is unfinished — never a target,
+//     matching classifyAttempt's first guard for the same reason. What the user
+//     has not finished with is not garbage, whatever else is true.
+//   - OWNER PRESENT: the checkout is still on disk, so its namespaces are live.
+//   - OWNER GONE: the checkout that minted this namespace is not on disk →
+//     reclaim it. Age-free, matching the orphan branch above: the owner is gone,
+//     the namespace cannot be rebuilt or meaningfully reached, and there is
+//     nothing for a grace period to protect.
+//
+// The marker's three arms are rendered here, never collapsed, and this is the
+// only place the rule lives:
+//   - `checkout: "<name>"` → owned by that checkout; the only arm reachable here.
+//   - `checkout: null` → owned by MAIN. `sonata` served from main holds real user
+//     content and no checkout will ever disappear to authorize its removal, so it
+//     is reclaimed only by deleting the composition, explicitly and confirmed.
+//   - `checkout: undefined` → a marker written before the field existed. The
+//     owner is UNKNOWN, and unknown is not absent: guessing here drops a database.
+export function classifyOwnedNamespace(
+  owned: OwnedNamespace,
+  ctx: ClassifyOwnedContext,
+): NamespaceReapTarget | null {
+  const { checkout } = owned.marker;
+  // `typeof === "string"` is what keeps the null and undefined arms out
+  // structurally rather than by a rule someone has to remember.
+  if (typeof checkout !== "string") return null;
+  if (ctx.retained) return null;
+  if (ctx.checkoutDirExists) return null;
+  return { ns: owned.ns, checkout };
 }
 
 // Run `fn` over `items` with at most `limit` concurrent executions.
@@ -351,8 +417,59 @@ export async function collectReapable(now: number): Promise<ReapScan> {
     }
   }
 
+  // MARKER-OWNED NAMESPACE ORPHANS — a SEPARATE UNIVERSE from every branch above,
+  // for checkouts that left without a reap (deleted externally, or reaped before
+  // this branch existed — there was a backlog of ~16 such databases on this
+  // machine when it landed).
+  //
+  // DO NOT WIDEN `WORKTREE_NAME_RE` TO ADMIT DOTTED NAMES. Every branch above
+  // reads a name matching that regex as a CHECKOUT id and resolves a git worktree
+  // path from it, so admitting `sonata` (owned by main — must NEVER be swept) or
+  // `sonata.att-X` there would route a composition namespace through checkout
+  // logic. This is a different enumeration answering a different question — the
+  // namespaces carrying a provenance marker, and whether their OWNER is gone —
+  // and its targets leave in their own list so nothing can hand one to
+  // `reapAttempt`. The two sets cannot collide either: `<comp>.<checkout>` and a
+  // bare composition id both fail WORKTREE_NAME_RE.
+  //
+  // Gated on canClassifyOrphans for the same reason the dir-orphan branch is: the
+  // `retained` input is read from the attempts table, which on a worktree backend
+  // is a fork taken at checkout time and cannot see any attempt created since.
+  const namespaceTargets: NamespaceReapTarget[] = [];
+  if (canClassifyOrphans()) {
+    const retainedCheckouts = new Set(
+      attempts.filter((a) => a.retained).map((a) => a.id),
+    );
+    for (const owned of await listCompositionNamespaces()) {
+      const { checkout } = owned.marker;
+      // Already covered: a checkout in `targets` reclaims everything it owns
+      // inside `reapAttempt`, so listing its namespaces here too would have the
+      // second pass find a namespace that no longer exists and file a failure
+      // report for work that succeeded. If that reap fails before reaching its
+      // namespaces step, the next hourly tick collects them — the sweep is
+      // idempotent, and the checkout is still a target.
+      if (typeof checkout === "string" && targets.has(checkout)) continue;
+      const decision = classifyOwnedNamespace(owned, {
+        // Honours the readdir invariant above verbatim: the set may SKIP the stat
+        // when it FINDS the dir, and an absence is confirmed with a real stat
+        // before it authorizes a target. The arms that name no checkout have no
+        // dir to look for, and `true` is the refusing value there — the fallback
+        // can only decline a target, never mint one.
+        checkoutDirExists:
+          typeof checkout === "string"
+            ? allNames.has(checkout) ||
+              (await dirExists(await worktreePathFor(checkout)))
+            : true,
+        retained:
+          typeof checkout === "string" && retainedCheckouts.has(checkout),
+      });
+      if (decision !== null) namespaceTargets.push(decision);
+    }
+  }
+
   return {
     targets: [...targets.values()],
+    namespaceTargets,
     scanned: attempts.length,
     candidates,
     hygieneProbes: needProbe.length,
