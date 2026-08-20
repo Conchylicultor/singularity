@@ -1,12 +1,15 @@
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
-import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
-import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import {
+  cn,
+  useControlSize,
+} from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import type React from "react";
 import type { CommitRow } from "../../core";
-import { CommitRail, COMMIT_ROW_HEIGHT } from "./commit-rail";
+import { CommitRail, commitRowHeight } from "./commit-rail";
 
 function formatRelative(iso: string): string {
   const t = new Date(iso).getTime();
@@ -21,6 +24,23 @@ function formatRelative(iso: string): string {
   const day = Math.round(hr / 24);
   if (day < 14) return `${day}d ago`;
   return new Date(iso).toLocaleDateString();
+}
+
+/**
+ * Who wrote it and exactly when — the two facts the row no longer spends width
+ * on, said on hover of the one leaf that is about time anyway.
+ *
+ * The author used to have its own column, hidden below the `sm:` VIEWPORT
+ * breakpoint — a window-width test deciding the layout of a 480px popover, so
+ * it never fired where it was needed. Rather than teach the row a second width
+ * axis, the column is gone: this is a single-user app (one instance per user),
+ * so a chain of a checkout's own commits carries the same name on every row,
+ * and the row's real content — the subject — is what that width was owed to.
+ */
+function whenTitle(commit: CommitRow): string {
+  const t = new Date(commit.authoredAt);
+  const when = Number.isNaN(t.getTime()) ? null : t.toLocaleString();
+  return when === null ? commit.authorName : `${commit.authorName} · ${when}`;
 }
 
 export function CommitRowItem({
@@ -40,7 +60,7 @@ export function CommitRowItem({
   /**
    * Free-form chips pinned to this commit — "who is sitting on this commit".
    * The general form of `pushed`, which is one such marker hard-coded; both are
-   * rendered, in their own track between the subject and the author.
+   * rendered, in their own track between the subject and the timestamp.
    *
    * The caller owns the grouping (a `<Inline gap="2xs" className={rigidClass()}>`
    * of `<Badge>`s is the usual shape), so a row can carry one marker or five
@@ -49,14 +69,19 @@ export function CommitRowItem({
   markers?: React.ReactNode;
   onClick?: (commit: CommitRow) => void;
 }) {
+  const height = commitRowHeight(useControlSize());
   return (
-    <Stack
+    // A commit row IS a single line: the rail, sha, chips and timestamp are
+    // rigid, and the subject is the one cell that gives. `Line` states that
+    // contract once (region-line + the SingleLine context), so the `<Text>`
+    // leaf below ellipsizes by ambient rule instead of a hand-applied class.
+    <Line
       as="li"
-      direction="row"
-      align="center"
-      gap="sm"
-      className={`border-b border-border/50 pl-sm pr-md${onClick ? " cursor-pointer hover:bg-accent/50" : ""}`}
-      style={{ height: COMMIT_ROW_HEIGHT }}
+      className={cn(
+        "gap-sm border-b border-border/50 pl-sm pr-md",
+        onClick && "cursor-pointer hover:bg-accent/50",
+      )}
+      style={{ height }}
       onClick={onClick ? () => onClick(commit) : undefined}
     >
       <CommitRail isFirst={isFirst} isLast={isLast} color={color} />
@@ -68,8 +93,12 @@ export function CommitRowItem({
       >
         {commit.shortSha}
       </Text>
-      <Fill as="span" className="truncate" title={commit.subject}>
-        {commit.subject}
+      {/* The row's content, and the only cell that yields — every other leaf is
+          rigid, so a row crowded with markers ellipsizes the subject rather
+          than squeezing it to nothing. A typed role, not bare inherited text,
+          so it steps down with the ambient density like its neighbours. */}
+      <Fill as="span">
+        <Text variant="body">{commit.subject}</Text>
       </Fill>
       {markers}
       {pushed && (
@@ -80,17 +109,11 @@ export function CommitRowItem({
       <Text
         as="span"
         variant="caption"
-        className="hidden truncate text-muted-foreground sm:inline"
-      >
-        {commit.authorName}
-      </Text>
-      <Text
-        as="span"
-        variant="caption"
         className={cn(rigidClass(), "text-muted-foreground tabular-nums")}
+        title={whenTitle(commit)}
       >
         {formatRelative(commit.authoredAt)}
       </Text>
-    </Stack>
+    </Line>
   );
 }

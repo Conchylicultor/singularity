@@ -1,5 +1,33 @@
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import {
+  useControlSize,
+  type ControlSize,
+} from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+
+/**
+ * How tall one commit row is, per ambient control density.
+ *
+ * The row's height cannot be a constant: the rail is an SVG, so it has to be
+ * told the number the row is laid out at, and the two are only guaranteed to
+ * agree if they read the SAME function. A dense readout (the Build popover's
+ * deployment chain, which declares `xs`) gets a shorter row; a full pane leaves
+ * the density alone and keeps the comfortable one.
+ */
+const ROW_HEIGHT: Record<ControlSize, number> = {
+  xs: 26,
+  sm: 30,
+  md: 36,
+  lg: 40,
+};
+
+/** The row height for a density — the one number the row and its rail share. */
+export function commitRowHeight(density: ControlSize): number {
+  return ROW_HEIGHT[density];
+}
+
+const RAIL_X = 14;
+const DOT_RADIUS = 5;
 
 interface Props {
   isFirst: boolean;
@@ -7,21 +35,20 @@ interface Props {
   color: string;
 }
 
-const ROW_HEIGHT = 36;
-const RAIL_X = 14;
-const DOT_RADIUS = 5;
-
 // Single-rail SVG. Top of rail extends above the first row to suggest the
 // branch continuing upward; bottom of the last row connects into the
 // merge-base marker below the list.
 export function CommitRail({ isFirst, isLast, color }: Props) {
-  const top = isFirst ? ROW_HEIGHT / 2 : 0;
-  const bottom = isLast ? ROW_HEIGHT / 2 : ROW_HEIGHT;
+  // Height from the ambient density, exactly as the row itself reads it — so
+  // the rail can never be drawn at a height the row is not laid out at.
+  const height = commitRowHeight(useControlSize());
+  const top = isFirst ? height / 2 : 0;
+  const bottom = isLast ? height / 2 : height;
   return (
     <svg
       width={28}
-      height={ROW_HEIGHT}
-      viewBox={`0 0 28 ${ROW_HEIGHT}`}
+      height={height}
+      viewBox={`0 0 28 ${height}`}
       aria-hidden="true"
     >
       <line
@@ -32,12 +59,7 @@ export function CommitRail({ isFirst, isLast, color }: Props) {
         stroke={color}
         strokeWidth={2}
       />
-      <circle
-        cx={RAIL_X}
-        cy={ROW_HEIGHT / 2}
-        r={DOT_RADIUS}
-        fill={color}
-      />
+      <circle cx={RAIL_X} cy={height / 2} r={DOT_RADIUS} fill={color} />
     </svg>
   );
 }
@@ -55,7 +77,7 @@ export function MergeBaseMarker({
   shortSha: string | null;
   hasPending: boolean;
 }) {
-  const ROW = ROW_HEIGHT;
+  const row = commitRowHeight(useControlSize());
   return (
     <Stack
       as="li"
@@ -64,37 +86,27 @@ export function MergeBaseMarker({
       gap="none"
       className="text-muted-foreground"
     >
-      <svg
-        width={28}
-        height={ROW}
-        viewBox={`0 0 28 ${ROW}`}
-        aria-hidden="true"
-      >
+      <svg width={28} height={row} viewBox={`0 0 28 ${row}`} aria-hidden="true">
         {hasPending && (
           <line
             x1={RAIL_X}
             y1={0}
             x2={RAIL_X}
-            y2={ROW / 2}
+            y2={row / 2}
             stroke={color}
             strokeWidth={2}
           />
         )}
         <line
           x1={RAIL_X}
-          y1={ROW / 2}
+          y1={row / 2}
           x2={RAIL_X}
-          y2={ROW}
+          y2={row}
           stroke={mainColor}
           strokeWidth={2}
           strokeDasharray="3 3"
         />
-        <circle
-          cx={RAIL_X}
-          cy={ROW / 2}
-          r={DOT_RADIUS - 1}
-          fill={mainColor}
-        />
+        <circle cx={RAIL_X} cy={row / 2} r={DOT_RADIUS - 1} fill={mainColor} />
       </svg>
       <Text as="span" variant="caption">
         {/* eslint-disable-next-line spacing/no-adhoc-spacing -- per-label offset from the rail svg; non-uniform with the svg sibling */}
@@ -105,5 +117,3 @@ export function MergeBaseMarker({
     </Stack>
   );
 }
-
-export const COMMIT_ROW_HEIGHT = ROW_HEIGHT;

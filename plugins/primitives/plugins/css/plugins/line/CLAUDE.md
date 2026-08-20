@@ -77,6 +77,7 @@ attribute type carries.
     - `plugin-meta/facets/routes/render-detail`
     - `primitives/bar`
     - `primitives/command-palette`
+    - `primitives/commit-list`
     - `primitives/css/row`
     - `primitives/date-picker`
     - `primitives/error-boundary`

@@ -59,9 +59,13 @@ export function isAtCommit(carrier: Carrier, commit: string): boolean {
  * different bytes" case needs both statements, so it gets both — a chip that
  * still sits on that commit's row, and a label that names the disagreement.
  *
- * `behind` is the distance the position already encodes, said out loud. The
- * position alone answers "how far behind" only if you count rows, and the chain
- * scrolls — so the number goes on the chip that is asking the question.
+ * The distance is NOT in the label. It is a fact about the ROW — every carrier
+ * sitting on a commit is exactly as far behind as that commit is — so printing
+ * it per chip said the same number up to three times on one line, and the three
+ * "· N behind" suffixes were what pushed the commit subject off the row
+ * entirely. It is already stated twice over: the section's verdict counts the
+ * commits to deploy, and the rail position IS the distance. What is left is the
+ * one place it is worth being exact — the hover, next to the full sha.
  */
 export function CarrierBadge({
   carrier,
@@ -75,25 +79,30 @@ export function CarrierBadge({
   behind: number;
 }) {
   const label = CARRIER_LABEL[carrier.id];
+  const at = carrier.commit.resolved
+    ? carrier.commit.value
+    : carrier.commit.reason;
+  const distance =
+    behind > 0
+      ? `${behind} ${behind === 1 ? "commit" : "commits"} behind HEAD`
+      : "at HEAD";
   if (otherBytes) {
     return (
       <Badge
         variant="warning"
         icon={<MdDifference />}
-        title={`${label} is at this commit, but running a different bundle than the one now served — the same tree can compose different bytes. Reload to pick up the served one.`}
+        title={`${label} is at this commit (${distance}), but running a different bundle than the one now served — the same tree can compose different bytes. Reload to pick up the served one.`}
       >
-        {label} · other bytes
+        {label}
       </Badge>
     );
   }
   return (
     <Badge
       variant={atTarget ? "success" : "muted"}
-      title={
-        carrier.commit.resolved ? carrier.commit.value : carrier.commit.reason
-      }
+      title={`${label} — ${distance} · ${at}`}
     >
-      {behind > 0 ? `${label} · ${behind} behind` : label}
+      {label}
     </Badge>
   );
 }

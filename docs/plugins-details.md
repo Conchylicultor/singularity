@@ -7120,6 +7120,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/css/scroll.Scroll`
           - `primitives/css/spacing.Stack`
           - `primitives/css/text.Text`
+          - `primitives/css/ui-kit.ControlSizeProvider`
           - `primitives/live-state.useResource`
           - `primitives/loading.Loading`
         - Exports (types): `DeploymentReading`
@@ -20859,14 +20860,17 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses:
           - `primitives/css/badge.Badge`
           - `primitives/css/fill.Fill`
+          - `primitives/css/line.Line`
           - `primitives/css/rigid.rigidClass`
           - `primitives/css/spacing.Stack`
           - `primitives/css/text.Text`
           - `primitives/css/ui-kit.cn`
+          - `primitives/css/ui-kit.ControlSize`
+          - `primitives/css/ui-kit.useControlSize`
         - Exports (types): `CommitRow`
         - Exports (values):
-          - `COMMIT_ROW_HEIGHT`
           - `CommitRail`
+          - `commitRowHeight`
           - `CommitRowItem`
           - `CommitRowSchema`
           - `MergeBaseMarker`
@@ -21827,6 +21831,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `plugin-meta/facets/routes/render-detail`
               - `primitives/bar`
               - `primitives/command-palette`
+              - `primitives/commit-list`
               - `primitives/css/row`
               - `primitives/date-picker`
               - `primitives/error-boundary`
@@ -23502,6 +23507,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `build/build-fix`
               - `build/build-info`
               - `build/build-logs`
+              - `build/deployment`
               - `build/serve-composition`
               - `code-explorer`
               - `code-explorer/commit-detail`

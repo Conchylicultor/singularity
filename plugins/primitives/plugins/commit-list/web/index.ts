@@ -1,6 +1,10 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 
-export { CommitRail, MergeBaseMarker, COMMIT_ROW_HEIGHT } from "./internal/commit-rail";
+export {
+  CommitRail,
+  MergeBaseMarker,
+  commitRowHeight,
+} from "./internal/commit-rail";
 export { CommitRowItem } from "./internal/commit-row-item";
 export { CommitRowSchema } from "../core";
 export type { CommitRow } from "../core";

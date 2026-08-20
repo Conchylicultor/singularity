@@ -234,6 +234,7 @@ convergence mechanisms all missing it) and the design.
     - `primitives/css/scroll.Scroll`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
+    - `primitives/css/ui-kit.ControlSizeProvider`
     - `primitives/live-state.useResource`
     - `primitives/loading.Loading`
   - Exports (types): `DeploymentReading`

@@ -9,14 +9,17 @@
   - Uses:
     - `primitives/css/badge.Badge`
     - `primitives/css/fill.Fill`
+    - `primitives/css/line.Line`
     - `primitives/css/rigid.rigidClass`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.cn`
+    - `primitives/css/ui-kit.ControlSize`
+    - `primitives/css/ui-kit.useControlSize`
   - Exports (types): `CommitRow`
   - Exports (values):
-    - `COMMIT_ROW_HEIGHT`
     - `CommitRail`
+    - `commitRowHeight`
     - `CommitRowItem`
     - `CommitRowSchema`
     - `MergeBaseMarker`

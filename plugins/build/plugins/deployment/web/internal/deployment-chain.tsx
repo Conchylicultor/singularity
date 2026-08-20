@@ -8,6 +8,7 @@ import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
+import { ControlSizeProvider } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import type React from "react";
 import {
   CHAIN_CAP,
@@ -385,6 +386,20 @@ function ChainArm({
  * the chain scrolls inside itself rather than growing the panel without bound.
  */
 export function DeploymentChain() {
+  return (
+    // A dense readout of evidence, not a content surface: one declared density
+    // for the whole section, and every leaf inside it — `Text` variants and the
+    // carrier chips alike — steps down one type rung together through the single
+    // density→text policy. Declared HERE rather than by each host, because a
+    // fact-per-line chain reads the same way in the Build popover and in the
+    // Build pane; and stated once, so no leaf can be left a rung behind.
+    <ControlSizeProvider size="xs">
+      <DeploymentChainBody />
+    </ControlSizeProvider>
+  );
+}
+
+function DeploymentChainBody() {
   const reading = useDeployment();
 
   if (reading.pending) {
