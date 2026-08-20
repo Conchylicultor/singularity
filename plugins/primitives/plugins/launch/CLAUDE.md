@@ -17,7 +17,7 @@ and the form defaults `openAfterLaunch` to `false`.
 
 ## Plugin reference
 
-- Description: Reusable split [model dropdown | launch] control for creating conversations.
+- Description: The standard launch-an-agent popover, and the split [model | launch] control under it.
 - Web:
   - Uses:
     - `conversations/conversation-view.conversationPane`

@@ -15,6 +15,6 @@ export {
 
 export default {
   description:
-    "Reusable split [model dropdown | launch] control for creating conversations.",
+    "The standard launch-an-agent popover, and the split [model | launch] control under it.",
   contributions: [],
 } satisfies PluginDefinition;
