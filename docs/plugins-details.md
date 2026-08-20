@@ -7083,6 +7083,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses:
           - `build/server-build-id.getServerCommit`
           - `build/server-build-id.getServerGraphHash`
+          - `infra/endpoints.implement`
           - `infra/git-read-cache.createSignedMemo`
           - `infra/git-watcher.refHeadResource`
           - `infra/paths.currentWorktreeName`
@@ -7099,10 +7100,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `readDeploymentState`
           - `serverPin`
         - Resources: `build.deployment` (push)
+        - Routes: `GET /api/build/chain-from`
       - Web:
         - Uses:
-          - `primitives/commit-list.COMMIT_ROW_HEIGHT`
-          - `primitives/commit-list.CommitRail`
+          - `infra/endpoints.useEndpoint`
           - `primitives/commit-list.CommitRowItem`
           - `primitives/css/badge.Badge`
           - `primitives/css/fill.Fill`
@@ -7131,6 +7132,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `BuildAttempt`
           - `Carrier`
           - `CarrierId`
+          - `Chain`
           - `ConvergenceKind`
           - `Deployment`
           - `DeploymentState`
@@ -7138,10 +7140,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `CARRIER_IDS`
           - `CarrierIdSchema`
           - `CarrierSchema`
+          - `CHAIN_CAP`
+          - `ChainSchema`
           - `convergenceOf`
           - `deploymentOf`
           - `deploymentResource`
           - `DeploymentStateSchema`
+          - `NO_CHAIN`
           - `sameCommit`
           - `wantsBuild`
       - Cross-plugin:
@@ -15883,6 +15888,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `build/build-logs`
           - `build/build-profiling`
           - `build/build-termination`
+          - `build/deployment`
           - `build/serve-composition`
           - `code-explorer`
           - `code-explorer/code-api`

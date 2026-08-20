@@ -58,15 +58,21 @@ export function isAtCommit(carrier: Carrier, commit: string): boolean {
  * whether the bytes there are the ones being served. The "same commit,
  * different bytes" case needs both statements, so it gets both — a chip that
  * still sits on that commit's row, and a label that names the disagreement.
+ *
+ * `behind` is the distance the position already encodes, said out loud. The
+ * position alone answers "how far behind" only if you count rows, and the chain
+ * scrolls — so the number goes on the chip that is asking the question.
  */
 export function CarrierBadge({
   carrier,
   atTarget,
   otherBytes,
+  behind,
 }: {
   carrier: Carrier;
   atTarget: boolean;
   otherBytes: boolean;
+  behind: number;
 }) {
   const label = CARRIER_LABEL[carrier.id];
   if (otherBytes) {
@@ -87,13 +93,14 @@ export function CarrierBadge({
         carrier.commit.resolved ? carrier.commit.value : carrier.commit.reason
       }
     >
-      {label}
+      {behind > 0 ? `${label} · ${behind} behind` : label}
     </Badge>
   );
 }
 
 /**
- * The chips for one commit row. Rigid and non-wrapping: in a popover-width bar
+ * The chips for one commit row, `behind` commits back from the target. Rigid and
+ * non-wrapping: in a popover-width bar
  * the identity chips keep their size and the commit subject beside them is what
  * truncates.
  *
@@ -104,6 +111,7 @@ export function carrierMarkers(
   carriers: Carrier[],
   target: string | null,
   served: string | null,
+  behind: number,
 ): React.ReactNode | undefined {
   if (carriers.length === 0) return undefined;
   return (
@@ -114,6 +122,7 @@ export function carrierMarkers(
           carrier={c}
           atTarget={target !== null && isAtCommit(c, target)}
           otherBytes={hasOtherBytes(c, served)}
+          behind={behind}
         />
       ))}
     </Inline>

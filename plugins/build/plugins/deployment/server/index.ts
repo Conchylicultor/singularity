@@ -1,7 +1,9 @@
 import { Resource } from "@plugins/framework/plugins/server-core/core";
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
 import { deploymentResource } from "./internal/deployment-resource";
+import { handleChainFrom } from "./internal/handle-chain-from";
 import { sealServerPin } from "./internal/server-pin";
+import { chainFromEndpoint } from "../shared/endpoints";
 
 export {
   readDeployment,
@@ -14,6 +16,9 @@ export default {
   description:
     "The deployment description: this checkout's HEAD (the target) plus a pin per deployable carrier — the backend process and the frontend bundle it serves — and the one derived verdict (converged / behind / diverged / unknown) both the Build button and the auto-build decision read. A leaf: it never imports build/server, so the reconciler that owns triggerBuild can import DOWN into it.",
   contributions: [Resource.Declare(deploymentResource)],
+  httpRoutes: {
+    [chainFromEndpoint.route]: handleChainFrom,
+  },
   onAllReady: async () => {
     // Seal the server pin here, not in `onReady`: this is the first point at
     // which every plugin's import is behind us, so re-sampling HEAD now answers

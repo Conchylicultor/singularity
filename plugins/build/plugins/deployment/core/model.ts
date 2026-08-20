@@ -68,6 +68,44 @@ export interface Deployment {
 export type ConvergenceKind = "converged" | "behind" | "diverged" | "unknown";
 
 /**
+ * How many commits a single walk may return.
+ *
+ * The chain between a carrier and the target is normally the drift of one
+ * working session — single digits. But nothing bounds it: a tab left open for a
+ * fortnight is hundreds of commits behind, and "how long has this been open" is
+ * not a bound. So the walk is capped, and the cap is stated here rather than at
+ * the call site, because the client renders the number it stopped at.
+ */
+export const CHAIN_CAP = 200;
+
+/**
+ * A walk between two commits, and whether it reached the far end.
+ *
+ * `truncated` is carried rather than inferred, because the two ways to end a
+ * capped walk look identical from the rows alone — a chain of exactly
+ * {@link CHAIN_CAP} commits that happens to end on the carrier's own commit, and
+ * one cut short with older commits still below it. A consumer that guessed would
+ * be right most of the time, which is the worst kind of wrong: a silently short
+ * chain reads as "this is how far behind you are".
+ *
+ * When `truncated`, the far end's own row is NOT included — the walk never
+ * reached it — so the carrier that asked for the chain has no row, and that is
+ * a fact the UI states rather than hides.
+ */
+export const ChainSchema = z.object({
+  commits: z.array(CommitRowSchema),
+  truncated: z.boolean(),
+});
+export type Chain = z.infer<typeof ChainSchema>;
+
+/**
+ * There was no commit to walk from at all — a fresh checkout with no dist, or a
+ * mixed boot on both carriers. Distinct from a walk that returned nothing,
+ * which cannot happen: a walk always includes at least the target's own row.
+ */
+export const NO_CHAIN: Chain = { commits: [], truncated: false };
+
+/**
  * The wire payload: one honest description of what is deployed, from which both
  * the Build button's chain and the auto-build decision are derived — so a wrong
  * badge and a missed rebuild are the same bug.
@@ -75,11 +113,18 @@ export type ConvergenceKind = "converged" | "behind" | "diverged" | "unknown";
  * A discriminated union rather than a bag of nullable fields, because the four
  * arms genuinely carry different evidence:
  *
- * - `converged` — every deployable carrier is at `target`. One commit row.
- * - `behind` — `commits` is the chain from the oldest deployable pin up to
- *   `target`, inclusive of that pin's own commit so a carrier badge has a row to
- *   sit on. Building this list is git work, which is why it is computed on the
- *   server and shipped rather than re-derived by every consumer.
+ * - `converged` — every deployable carrier is at `target`. The chain is the walk
+ *   from `target` to itself: exactly one row, for HEAD.
+ * - `behind` — the chain runs from the oldest deployable pin up to `target`,
+ *   inclusive of that pin's own commit so a carrier badge has a row to sit on.
+ *   Building this list is git work, which is why it is computed on the server
+ *   and shipped rather than re-derived by every consumer.
+ *
+ * Both answerable-and-on-the-line arms carry a `chain`, and that is deliberate:
+ * a converged deployment used to carry a bare `target` sha and no rows, which
+ * forced the client to hand-draw a row the normal renderer could not produce.
+ * Two ways to draw one row meant two copies of "which carrier goes where", and
+ * they drifted. One shape, one renderer.
  * - `diverged` — some carrier sits on a commit that is not an ancestor of
  *   `target` (a rebase or force-push under a running app). There is no line to
  *   draw, so no chain is carried.
@@ -94,12 +139,13 @@ export const DeploymentStateSchema = z.discriminatedUnion("kind", [
     kind: z.literal("converged"),
     target: z.string(),
     deployable: z.array(CarrierSchema),
+    chain: ChainSchema,
   }),
   z.object({
     kind: z.literal("behind"),
     target: z.string(),
     deployable: z.array(CarrierSchema),
-    commits: z.array(CommitRowSchema),
+    chain: ChainSchema,
   }),
   z.object({
     kind: z.literal("diverged"),

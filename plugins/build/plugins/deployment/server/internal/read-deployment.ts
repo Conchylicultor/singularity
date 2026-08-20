@@ -8,14 +8,8 @@ import {
   unresolved,
   type Resolvable,
 } from "@plugins/primitives/plugins/live-state/core";
-import {
-  LOG_FORMAT,
-  parseGitLog,
-  runGit,
-  tryRunGit,
-  WorktreeGoneError,
-} from "@plugins/primitives/plugins/commit-list/server";
-import type { CommitRow } from "@plugins/primitives/plugins/commit-list/core";
+import { tryRunGit } from "@plugins/primitives/plugins/commit-list/server";
+import { chainTo, isAncestor, readTarget } from "./git-chain";
 import {
   getServerCommit,
   getServerGraphHash,
@@ -23,65 +17,12 @@ import {
 import {
   convergenceOf,
   deploymentOf,
-  sameCommit,
+  NO_CHAIN,
   type Carrier,
   type Deployment,
   type DeploymentState,
 } from "../../core";
 import { serverPin } from "./server-pin";
-
-/**
- * This checkout's HEAD — the commit everything should converge ON.
- *
- * No namespace branching is needed: main's checkout is on `main` and a worktree
- * checkout is on its own branch, so `HEAD` of `REPO_ROOT` is the target in both.
- * (`computeTrackedRefs` in git-watcher already watches both refs, so the
- * resource's `dependsOn` fires either way.)
- *
- * A checkout that git cannot answer for is `unresolved`, not an error: a release
- * bundle's `REPO_ROOT` resolves into the compiled binary's virtual FS, where
- * there is no repository and the question is genuinely unanswerable.
- */
-async function readTarget(): Promise<Resolvable<string>> {
-  const result = await tryRunGit(["rev-parse", "HEAD"], REPO_ROOT).catch(
-    (err: unknown) => {
-      // The one determinate arm worth folding in here: no directory at all is
-      // the same answer as no repository. Anything else is a real fault.
-      if (err instanceof WorktreeGoneError) return null;
-      throw err;
-    },
-  );
-  if (result === null || !result.ok) return unresolved("no checkout");
-  const sha = result.stdout.trim();
-  return sha ? resolved(sha) : unresolved("no checkout");
-}
-
-/**
- * Is `commit` on the line leading to `target`? Answered by git, once, on the
- * server, and carried onto the carrier as a plain fact so `convergenceOf` /
- * `wantsBuild` stay pure.
- *
- * `merge-base --is-ancestor` is an exit-code-as-signal command — 0 yes, 1 no —
- * which is exactly the case `tryRunGit`'s docstring names. Any OTHER exit code
- * means git could not answer the question at all (typically 128: the commit is
- * not an object in this checkout, e.g. a dist built in a worktree whose branch
- * has since been pruned), and that is a determinate "cannot tell", never a
- * silent `false` that would read as divergence.
- */
-async function isAncestor(
-  commit: string,
-  target: string,
-): Promise<Resolvable<boolean>> {
-  // Free answer, and it saves a subprocess on the common converged path.
-  if (sameCommit(commit, target)) return resolved(true);
-  const result = await tryRunGit(
-    ["merge-base", "--is-ancestor", commit, target],
-    REPO_ROOT,
-  );
-  if (result.ok) return resolved(true);
-  if (result.exitCode === 1) return resolved(false);
-  return unresolved(`git cannot place ${commit.slice(0, 9)} in this checkout`);
-}
 
 /** Attach the ancestry fact to a carrier whose pin has just been read. */
 async function withAncestry(
@@ -164,35 +105,14 @@ async function oldestPin(shas: string[]): Promise<string | null> {
 }
 
 /**
- * The commit chain the Build button draws: every commit from the oldest
- * deployable pin up to `target`, newest first, INCLUSIVE of that pin's own
- * commit so a carrier badge has a row to sit on.
- *
- * Two logs rather than one range expression: `<base>..<target>` excludes `base`
- * itself, and the spellings that include it (`<base>^..`, `<base>~1..`) break on
- * a root commit. Two exact reads have no edge case.
- *
- * `runGit` (not `tryRunGit`): reaching here means both shas were already placed
- * in this checkout, so a failure now is a genuine fault and belongs in the
- * resource's error channel — a retry may succeed — rather than being absorbed
- * into an empty chain that would render as "nothing to deploy".
- */
-async function chainTo(base: string, target: string): Promise<CommitRow[]> {
-  const [ahead, baseRow] = await Promise.all([
-    runGit(["log", `--format=${LOG_FORMAT}`, `${base}..${target}`], REPO_ROOT),
-    runGit(["log", `--format=${LOG_FORMAT}`, "-1", base], REPO_ROOT),
-  ]);
-  return [...parseGitLog(ahead), ...parseGitLog(baseRow)];
-}
-
-/**
  * The wire payload: `readDeployment`'s facts, plus the one derived answer and
  * the evidence that answer's arm carries. The `kind` IS `convergenceOf`'s
  * verdict, so the badge a user sees and the decision the reconciler makes are
  * the same function of the same state.
  *
- * The expensive half — up to three `merge-base --is-ancestor` probes and two
- * `git log` walks. Always reached through the memo below, never called directly.
+ * The expensive half — up to three `merge-base --is-ancestor` probes and a
+ * `git log` walk capped at `CHAIN_CAP`. Always reached through the memo below,
+ * never called directly.
  */
 async function computeDeploymentState(): Promise<DeploymentState> {
   const deployment = await readCarriers();
@@ -210,7 +130,17 @@ async function computeDeploymentState(): Promise<DeploymentState> {
   }
 
   const target = deployment.target.value;
-  if (kind !== "behind") return { kind, target, deployable };
+  // No line to draw: a carrier is off the way to the target entirely, so there
+  // is no range whose walk would mean anything.
+  if (kind === "diverged") return { kind, target, deployable };
+
+  // Converged walks `target..target` — one row, for HEAD. It would be cheaper to
+  // send the bare sha and let the client draw a row for it, and that is exactly
+  // what used to happen: a second row renderer, a second copy of "which carrier
+  // sits where", and the two drifted. One `git log -1` per recompute buys one
+  // rendering path.
+  if (kind === "converged")
+    return { kind, target, deployable, chain: await chainTo(target, target) };
 
   const pins = deployable.flatMap((c) =>
     c.commit.resolved ? [c.commit.value] : [],
@@ -221,9 +151,9 @@ async function computeDeploymentState(): Promise<DeploymentState> {
     target,
     deployable,
     // No readable pin at all (a fresh checkout with no dist, or a mixed boot on
-    // both carriers) means there is no line to draw from — behind is still the
-    // right verdict, but the chain is genuinely empty rather than truncated.
-    commits: base === null ? [] : await chainTo(base, target),
+    // both carriers) means there is no commit to draw a line FROM — behind is
+    // still the right verdict, but there is no walk to make.
+    chain: base === null ? NO_CHAIN : await chainTo(base, target),
   };
 }
 

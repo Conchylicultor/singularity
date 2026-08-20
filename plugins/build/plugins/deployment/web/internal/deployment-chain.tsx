@@ -1,8 +1,5 @@
-import {
-  CommitRail,
-  CommitRowItem,
-  COMMIT_ROW_HEIGHT,
-} from "@plugins/primitives/plugins/commit-list/web";
+import { CommitRowItem } from "@plugins/primitives/plugins/commit-list/web";
+import type { CommitRow } from "@plugins/primitives/plugins/commit-list/core";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
@@ -12,7 +9,13 @@ import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import type React from "react";
-import { sameCommit, type Carrier } from "../../core";
+import {
+  CHAIN_CAP,
+  sameCommit,
+  type Carrier,
+  type Chain,
+  type DeploymentState,
+} from "../../core";
 import {
   CARRIER_LABEL,
   carrierMarkers,
@@ -20,6 +23,7 @@ import {
   isAtCommit,
   servedGraph,
 } from "./carrier-badge";
+import { useChainFrom, type ChainFromReading } from "./use-chain-from";
 import { useDeployment } from "./use-deployment";
 
 // Two bands, mirroring the conversation commits-graph: the stretch nothing has
@@ -42,14 +46,6 @@ const TONE_CLASS = {
   destructive: "text-destructive",
   muted: "text-muted-foreground",
 } as const;
-
-/**
- * Why a carrier can hold a commit that has no row: the chain runs from the
- * oldest DEPLOYABLE pin to the target, and the tab is not a deployable carrier,
- * so it can sit further back than either of them.
- */
-const OFF_CHAIN_TITLE =
-  "The chain above runs from the oldest deployed commit up to HEAD. This carrier's commit is not in it — normally an older one, because only a reload moves a tab forward.";
 
 /** The section shell: one label, one verdict, and whatever evidence the arm has. */
 function Section({
@@ -80,53 +76,28 @@ function Section({
 }
 
 /**
- * A commit row for a sha with no `CommitRow` behind it — the converged arm,
- * where the payload carries the target sha but no log walk (there is nothing to
- * walk: everything is on it). Rendered with the same rail and row height as the
- * chain so the two arms are one visual language.
- */
-function PinRow({
-  sha,
-  markers,
-}: {
-  sha: string;
-  markers: React.ReactNode | undefined;
-}) {
-  return (
-    <Line
-      as="li"
-      className="gap-sm border-b border-border/50 pl-sm pr-md"
-      style={{ height: COMMIT_ROW_HEIGHT }}
-    >
-      <CommitRail isFirst isLast color={DEPLOYED_COLOR} />
-      <Text
-        as="span"
-        variant="caption"
-        className="font-mono text-muted-foreground"
-        title={sha}
-      >
-        {short(sha)}
-      </Text>
-      <Fill as="span">
-        <Text as="span" variant="caption" tone="muted">
-          HEAD
-        </Text>
-      </Fill>
-      {markers}
-    </Line>
-  );
-}
-
-/**
  * The carriers that landed on no row at all, rendered explicitly BELOW the
  * chain rather than dropped.
  *
  * Dropping one would be the worst kind of quiet: a missing badge reads as "there
  * is no such carrier", and "this tab has no bundle" is never true of a tab you
- * are looking at. So each one still says its name, and then either its commit
- * (with the reason it has no row) or the reason it cannot name a commit at all.
+ * are looking at. So each one still says its name, and then the most specific
+ * true thing available about its commit.
+ *
+ * Reaching here at all means something stopped the chain from covering the
+ * carrier, so the sentence comes from whatever knows why — the extension's own
+ * failure reason, or the cap that cut the walk short — rather than a fixed line
+ * guessing at it.
  */
-function OffChain({ carriers }: { carriers: Carrier[] }) {
+function OffChain({
+  carriers,
+  reading,
+  truncated,
+}: {
+  carriers: Carrier[];
+  reading: ChainFromReading;
+  truncated: boolean;
+}) {
   if (carriers.length === 0) return null;
   return (
     <Stack gap="2xs" className="px-md py-sm">
@@ -143,14 +114,20 @@ function OffChain({ carriers }: { carriers: Carrier[] }) {
               >
                 {short(c.commit.value)}
               </Text>
-              <Text
-                as="span"
-                variant="caption"
-                tone="muted"
-                title={OFF_CHAIN_TITLE}
-              >
-                not among the commits above
-              </Text>
+              {reading.kind === "pending" ? (
+                // Not yet known is a state, never a claim: saying the commit is
+                // not on the chain while we are still asking is a sentence that
+                // reverses itself a moment later.
+                <Loading variant="text" label="placing this commit…" />
+              ) : (
+                <Text as="span" variant="caption" tone="muted">
+                  {reading.kind === "unplaceable" || reading.kind === "failed"
+                    ? reading.reason
+                    : truncated
+                      ? `more than ${CHAIN_CAP} commits behind`
+                      : "not among the commits above"}
+                </Text>
+              )}
             </>
           ) : (
             <Text
@@ -236,6 +213,165 @@ function PinList({
 }
 
 /**
+ * The row a carrier sits on, or -1. The narrowed sha is given a NAME rather than
+ * read inside the callback: `c.commit.resolved` narrows `c.commit` here, but the
+ * closure re-widens it to the union, so the discriminated union stays honest only
+ * if the value is pulled out first. That is the union doing its job, not an
+ * obstacle to cast around.
+ */
+function rowOf(rows: CommitRow[], c: Carrier): number {
+  if (!c.commit.resolved) return -1;
+  const sha = c.commit.value;
+  return rows.findIndex((r) => sameCommit(r.sha, sha));
+}
+
+/**
+ * The commit to extend the chain back to.
+ *
+ * There is at most one candidate, and that is structural rather than lucky: the
+ * server's chain runs from the oldest DEPLOYABLE pin up to the target, so a
+ * deployable carrier is always on it by construction, and the tab is the only
+ * other carrier there is. A carrier that cannot name a commit is skipped — there
+ * is nothing to walk from, and its own reason is already what gets rendered.
+ */
+function extensionBase(offChain: Carrier[]): string | null {
+  for (const c of offChain) if (c.commit.resolved) return c.commit.value;
+  return null;
+}
+
+/**
+ * The two answerable arms that draw a line: `converged` and `behind`.
+ *
+ * ONE rendering path. Both arms carry a `chain` — converged's is the single row
+ * for HEAD — so there is no second way to draw a row and no second copy of
+ * "which carrier goes where" to disagree with the first.
+ *
+ * Before drawing, the chain is extended back to whatever carrier it cannot
+ * reach, which the server genuinely cannot do for itself: only a browser knows
+ * which bundle it is running. The result is one chain with every carrier on its
+ * own row, so "how far behind" is read off the rail rather than asserted in a
+ * sentence.
+ *
+ * Own component, so the extension hook runs with a real carrier set and the
+ * pending arm above it does not have to invent one.
+ */
+function ChainArm({
+  state,
+  carriers,
+  served,
+}: {
+  state: Extract<DeploymentState, { kind: "converged" | "behind" }>;
+  carriers: Carrier[];
+  served: string | null;
+}) {
+  const reachesTarget = (c: Carrier) => isAtCommit(c, state.target);
+  const offServerChain = carriers.filter(
+    (c) => rowOf(state.chain.commits, c) < 0,
+  );
+  const reading = useChainFrom(extensionBase(offServerChain));
+
+  // The extension is a superset of the server's chain — it walks from further
+  // back to the same target — so it REPLACES rather than merges.
+  const chain: Chain = reading.kind === "chain" ? reading.chain : state.chain;
+  const rows = chain.commits;
+
+  // Each carrier lands on the row of the commit it is actually on. One that
+  // lands nowhere even after the extension is NOT dropped — `OffChain` renders
+  // it, with the reason it has no row.
+  const placed = new Map<number, Carrier[]>();
+  const elsewhere: Carrier[] = [];
+  for (const c of carriers) {
+    const idx = rowOf(rows, c);
+    if (idx < 0) elsewhere.push(c);
+    else placed.set(idx, [...(placed.get(idx) ?? []), c]);
+  }
+
+  // `behind` with no readable pin at all (a fresh checkout with no dist, or a
+  // mixed boot on both carriers): `behind` still holds, but there was no commit
+  // to draw a line from. Rendering the flat pins rather than an empty chain — an
+  // empty chain is the one thing this must never look like, "nothing to deploy".
+  if (rows.length === 0) {
+    return (
+      <Section summary="Nothing deployed yet" tone="primary">
+        <PinList carriers={carriers} target={state.target} served={served} />
+      </Section>
+    );
+  }
+
+  // The band boundary: the newest row a DEPLOYABLE carrier sits on. Everything
+  // above it is running nowhere; everything from it down is running in at least
+  // one of the two. A tab never moves this line — a tab is not something a
+  // build deploys.
+  const deployedIndices = state.deployable
+    .map((c) => rowOf(rows, c))
+    .filter((i) => i >= 0);
+  const firstDeployed =
+    deployedIndices.length > 0 ? Math.min(...deployedIndices) : -1;
+  const toDeploy = firstDeployed >= 0 ? firstDeployed : rows.length;
+
+  // A tab holding older bytes is the ordinary case on the converged arm — the
+  // deployable carriers converged and nobody reloaded — so the verdict names
+  // what is converged rather than claiming the whole app is. Asked of the
+  // CARRIERS, not of whether anything fell off the chain: now that the chain
+  // reaches back to the tab, a stale tab has a row like everything else, and a
+  // verdict keyed on "nothing is off-chain" would call that "Up to date".
+  const summary =
+    state.kind === "converged"
+      ? carriers.every(reachesTarget)
+        ? "Up to date"
+        : "Deployed"
+      : `${toDeploy} ${toDeploy === 1 ? "commit" : "commits"} to deploy`;
+  const tone = state.kind === "converged" ? "success" : "primary";
+
+  return (
+    <Section summary={summary} tone={tone}>
+      {/* The chain is bounded by how far a checkout drifts between builds, but
+          that is not a small number after a quiet week — so it scrolls in its
+          own box instead of turning the popover into a wall. */}
+      <Scroll axis="y" className="max-h-48">
+        <ol>
+          {rows.map((commit, idx) => (
+            <CommitRowItem
+              key={commit.sha}
+              commit={commit}
+              isFirst={idx === 0}
+              isLast={idx === rows.length - 1}
+              color={
+                firstDeployed >= 0 && idx >= firstDeployed
+                  ? DEPLOYED_COLOR
+                  : TO_DEPLOY_COLOR
+              }
+              markers={carrierMarkers(
+                placed.get(idx) ?? [],
+                state.target,
+                served,
+                // Rows run newest first, so a carrier's own row index IS the
+                // number of commits between it and HEAD.
+                idx,
+              )}
+            />
+          ))}
+        </ol>
+        {/* A capped walk must say so INSIDE the list. A chain that simply stops
+            reads as "this is all of it", which is the one thing it is not. */}
+        {chain.truncated && (
+          <Line className="gap-sm px-md py-sm">
+            <Text as="span" variant="caption" tone="muted">
+              …and older commits below — the chain stops at {CHAIN_CAP}.
+            </Text>
+          </Line>
+        )}
+      </Scroll>
+      <OffChain
+        carriers={elsewhere}
+        reading={reading}
+        truncated={chain.truncated}
+      />
+    </Section>
+  );
+}
+
+/**
  * What is deployed, as one chain of commits with a chip per carrier on the
  * commit it is actually on.
  *
@@ -291,104 +427,5 @@ export function DeploymentChain() {
     );
   }
 
-  if (state.kind === "converged") {
-    const here = carriers.filter((c) => isAtCommit(c, state.target));
-    const elsewhere = carriers.filter((c) => !isAtCommit(c, state.target));
-    // A tab holding older bytes is the ordinary case here — the deployable
-    // carriers converged and nobody reloaded — so the verdict names what is
-    // converged rather than claiming the whole app is.
-    const summary = elsewhere.length === 0 ? "Up to date" : "Deployed";
-    return (
-      <Section summary={summary} tone="success">
-        <ol>
-          <PinRow
-            sha={state.target}
-            markers={carrierMarkers(here, state.target, served)}
-          />
-        </ol>
-        <OffChain carriers={elsewhere} />
-      </Section>
-    );
-  }
-
-  // `behind`: the chain, one badge per carrier on ITS OWN commit's row.
-  const rows = state.commits;
-
-  // No readable pin at all (a fresh checkout with no dist, or a mixed boot on
-  // both carriers): `behind` still holds, but there is no line to draw from.
-  // Rendering the flat pins here rather than an empty chain — an empty chain is
-  // the one thing this must never look like, "nothing to deploy".
-  if (rows.length === 0) {
-    return (
-      <Section summary="Nothing deployed yet" tone="primary">
-        <PinList carriers={carriers} target={state.target} served={served} />
-      </Section>
-    );
-  }
-
-  // The narrowed sha is given a NAME rather than read inside the callback:
-  // `c.commit.resolved` narrows `c.commit` here, but the closure re-widens it to
-  // the union, so the discriminated union stays honest only if the value is
-  // pulled out first. That is the union doing its job, not an obstacle to cast
-  // around.
-  const rowOf = (c: Carrier): number => {
-    if (!c.commit.resolved) return -1;
-    const sha = c.commit.value;
-    return rows.findIndex((r) => sameCommit(r.sha, sha));
-  };
-
-  // Each carrier lands on the row of the commit it is actually on. A carrier
-  // that lands nowhere is NOT dropped — the chain starts at the oldest
-  // DEPLOYABLE pin, and the tab is not one, so it can sit further back than any
-  // row shown. `OffChain` below renders those explicitly.
-  const placed = new Map<number, Carrier[]>();
-  const elsewhere: Carrier[] = [];
-  for (const c of carriers) {
-    const idx = rowOf(c);
-    if (idx < 0) elsewhere.push(c);
-    else placed.set(idx, [...(placed.get(idx) ?? []), c]);
-  }
-
-  // The band boundary: the newest row a DEPLOYABLE carrier sits on. Everything
-  // above it is running nowhere; everything from it down is running in at least
-  // one of the two. A tab never moves this line — a tab is not something a
-  // build deploys.
-  const deployedIndices = state.deployable.map(rowOf).filter((i) => i >= 0);
-  const firstDeployed =
-    deployedIndices.length > 0 ? Math.min(...deployedIndices) : -1;
-  const toDeploy = firstDeployed >= 0 ? firstDeployed : rows.length;
-
-  return (
-    <Section
-      summary={`${toDeploy} ${toDeploy === 1 ? "commit" : "commits"} to deploy`}
-      tone="primary"
-    >
-      {/* The chain is bounded by how far a checkout drifts between builds, but
-          that is not a small number after a quiet week — so it scrolls in its
-          own box instead of turning the popover into a wall. */}
-      <Scroll axis="y" className="max-h-48">
-        <ol>
-          {rows.map((commit, idx) => (
-            <CommitRowItem
-              key={commit.sha}
-              commit={commit}
-              isFirst={idx === 0}
-              isLast={idx === rows.length - 1}
-              color={
-                firstDeployed >= 0 && idx >= firstDeployed
-                  ? DEPLOYED_COLOR
-                  : TO_DEPLOY_COLOR
-              }
-              markers={carrierMarkers(
-                placed.get(idx) ?? [],
-                state.target,
-                served,
-              )}
-            />
-          ))}
-        </ol>
-      </Scroll>
-      <OffChain carriers={elsewhere} />
-    </Section>
-  );
+  return <ChainArm state={state} carriers={carriers} served={served} />;
 }

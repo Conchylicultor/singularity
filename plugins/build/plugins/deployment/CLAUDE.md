@@ -108,6 +108,75 @@ membership-bounded rule for DB-backed collections — see
 `research/2026-07-18-global-bounded-working-set-resource-contract.md:225`, which
 names `mainAheadCount` (this resource's direct ancestor) as the precedent.
 
+## One chain, one renderer, one cap
+
+### Every answerable arm carries a chain
+
+`converged` and `behind` both carry a `Chain` — `{ commits, truncated }`.
+Converged's is the walk from `target` to itself: exactly one row, for HEAD.
+
+That costs one `git log -1` on the recompute, and it is worth it. Converged used
+to carry a bare sha and no rows, so the client hand-drew a row the normal
+renderer could not produce. Two ways to draw a row meant two copies of "which
+carrier goes where", and when one was changed the other drifted: every carrier
+rendered twice, once as a chip on the synthetic row and once below it as
+"not among the commits above". Do not reintroduce the bare-sha arm to save the
+walk.
+
+### The chain covers all three carriers, not just the two the server knows
+
+`deploymentResource` draws from the oldest DEPLOYABLE pin up to HEAD. That range
+is chosen on the server, which cannot know where a browser tab is — so a tab that
+has not reloaded since the last build sits BELOW the start of it and has no row
+to stand on. It used to render as a line under the chain saying its commit was
+not there, which is true and useless: the question a stale tab raises is *how far
+behind*, and that is exactly what a row position answers.
+
+`GET /api/build/chain-from?commit=<sha>` (`shared/endpoints.ts`) closes the gap.
+The client hands back the pin only it holds, the server walks `commit..HEAD`
+through the same `chainTo`, and the popover renders one chain with every carrier
+on its own row. `web/internal/use-chain-from.ts` is the read; `ChainArm` in
+`deployment-chain.tsx` composes. The extension REPLACES the server's chain rather
+than merging with it — it is a walk from further back to the same target, so it
+is a superset by construction.
+
+**At most one carrier can ever need it**, and structurally so: the server's chain
+starts at the oldest deployable pin, so a deployable carrier is always on it, and
+the tab is the only other carrier there is. `extensionBase` therefore takes the
+first off-chain pin without needing git to order anything.
+
+The endpoint is not memoized and not gated, for the same reason
+`computeDeploymentState` is not: one `merge-base` probe plus a capped log walk,
+run only when a human opens the Build popover on a tab that is actually stale.
+`dedupe: true` collapses a concurrent burst; `staleTime: Infinity` on the client
+means opening the popover five times does one walk.
+
+### The walk is capped at `CHAIN_CAP`
+
+Nothing bounds the range on its own. The deployable pins drift by a working
+session, but a tab left open for a fortnight asks for hundreds of commits, and
+nobody wants that walked, shipped and rendered to answer "how far behind am I".
+
+`chainTo` asks git for `CAP + 1` and keeps `CAP`. Asking for one more than it
+keeps is what makes the cap *detectable*: a full walk and one cut short are
+otherwise identical from the rows. A capped walk does not read the base's own row
+— it never got there — so the carrier that asked has no row, and both facts are
+stated on screen: a line inside the list saying older commits are below, and the
+carrier's own line saying it is more than `CAP` behind. A chain that simply
+stopped would read as "this is all of it".
+
+### Failure and not-yet are types, not values
+
+`ChainFrom` is `chain | unplaceable`, never a possibly-empty `commits` — an empty
+list would read as "this tab is at HEAD". A commit git cannot place (a dist built
+on a branch since pruned) and a checkout rebased under the tab both come back as
+`unplaceable` with the reason, and that reason is what the off-chain line shows.
+While the walk is in flight the line says it is placing the commit, rather than
+asserting the commit is not on a chain that is about to contain it.
+
+Each carrier chip also says its distance out loud (`This tab · 5 behind`), read
+straight off the row index — rows run newest-first, so the index IS the count.
+
 ## `sameCommit` is tolerance for the past, not the mechanism
 
 Both writers of `build_runs.commitHash` now store the FULL sha — the backend's
@@ -134,6 +203,7 @@ convergence mechanisms all missing it) and the design.
   - Uses:
     - `build/server-build-id.getServerCommit`
     - `build/server-build-id.getServerGraphHash`
+    - `infra/endpoints.implement`
     - `infra/git-read-cache.createSignedMemo`
     - `infra/git-watcher.refHeadResource`
     - `infra/paths.currentWorktreeName`
@@ -150,10 +220,10 @@ convergence mechanisms all missing it) and the design.
     - `readDeploymentState`
     - `serverPin`
   - Resources: `build.deployment` (push)
+  - Routes: `GET /api/build/chain-from`
 - Web:
   - Uses:
-    - `primitives/commit-list.COMMIT_ROW_HEIGHT`
-    - `primitives/commit-list.CommitRail`
+    - `infra/endpoints.useEndpoint`
     - `primitives/commit-list.CommitRowItem`
     - `primitives/css/badge.Badge`
     - `primitives/css/fill.Fill`
@@ -182,6 +252,7 @@ convergence mechanisms all missing it) and the design.
     - `BuildAttempt`
     - `Carrier`
     - `CarrierId`
+    - `Chain`
     - `ConvergenceKind`
     - `Deployment`
     - `DeploymentState`
@@ -189,10 +260,13 @@ convergence mechanisms all missing it) and the design.
     - `CARRIER_IDS`
     - `CarrierIdSchema`
     - `CarrierSchema`
+    - `CHAIN_CAP`
+    - `ChainSchema`
     - `convergenceOf`
     - `deploymentOf`
     - `deploymentResource`
     - `DeploymentStateSchema`
+    - `NO_CHAIN`
     - `sameCommit`
     - `wantsBuild`
 - Cross-plugin:
