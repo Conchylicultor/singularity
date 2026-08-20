@@ -60,6 +60,7 @@ and the form defaults `openAfterLaunch` to `false`.
     - `apps/agent-manager/welcome`
     - `apps/prototypes/gallery`
     - `build/build-fix`
+    - `config_v2/settings/conflict-agent`
     - `conversations/conversation-view/branch`
     - `conversations/conversation-view/fork-conversation`
     - `conversations/conversation-view/fork-session`

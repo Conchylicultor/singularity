@@ -104,7 +104,6 @@ silently destroy work in progress — hence a request type rather than an `initi
   - Uses: `config_v2.ConfigV2`
 - Cross-plugin:
   - Imported by:
-    - `config_v2/settings/conflict-agent`
     - `conversations/conversation-view`
     - `conversations/conversation-view/new-child-task`
     - `improve`

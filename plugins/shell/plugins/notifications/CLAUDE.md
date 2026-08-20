@@ -66,6 +66,7 @@
     - `build`
     - `build/build-fix`
     - `build/build-logs`
+    - `config_v2/settings/conflict-agent`
     - `conversations`
     - `conversations/conversation-category`
     - `conversations/conversation-view/branch`

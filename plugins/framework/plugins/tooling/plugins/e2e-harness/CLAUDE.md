@@ -51,6 +51,7 @@ rule keeps the broken shape from coming back.
     - `apps/prototypes/thumbnails`
     - `apps/sonata/look`
     - `code-explorer`
+    - `config_v2/settings/conflict-agent`
     - `conversations/conversation-category`
     - `conversations/conversation-view/jsonl-viewer`
     - `conversations/conversation-view/jsonl-viewer/investigate-event`

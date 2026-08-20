@@ -7781,18 +7781,14 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `config_v2/config-link`
           - `config_v2/settings/conflict-agent`
       - Plugins:
-        - **`conflict-agent`** — Ask-an-agent button inside the config detail's conflict banners: opens the standard task-draft popover pre-filled with a factual description of the conflict (which fields disagree, and how). Registers the "Config" task category the config-conflict draft popover files into.
+        - **`conflict-agent`** — Ask-an-agent button inside the config detail's conflict banners: opens the standard task-draft popover pre-filled with a factual description of the conflict (which fields disagree, and how).
           - Web:
             - Contributes: `ConfigDetailSlots.ConflictAction` → `ConflictAgentButton`
             - Uses:
               - `config_v2/settings.ConfigDetailSlots`
               - `primitives/css/ui-kit.Button`
-              - `tasks/task-draft-form.draftInsert`
-              - `tasks/task-draft-form.TaskDraftInsert`
-              - `tasks/task-draft-form.TaskDraftPopover`
-          - Server:
-            - Contributes: `taskCategory` "config"
-            - Uses: `tasks/task-category.TaskCategory`
+              - `primitives/launch.LaunchAgentPopover`
+              - `shell/notifications.toast`
 
 - **`conversations`** — Conversation domain: shared hooks and client-side API. Conversation domain: shared server code and types; view plugins live under `plugins/`.
   - Web:
@@ -15115,6 +15111,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/prototypes/thumbnails`
               - `apps/sonata/look`
               - `code-explorer`
+              - `config_v2/settings/conflict-agent`
               - `conversations/conversation-category`
               - `conversations/conversation-view/jsonl-viewer`
               - `conversations/conversation-view/jsonl-viewer/investigate-event`
@@ -25250,6 +25247,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/agent-manager/welcome`
           - `apps/prototypes/gallery`
           - `build/build-fix`
+          - `config_v2/settings/conflict-agent`
           - `conversations/conversation-view/branch`
           - `conversations/conversation-view/fork-conversation`
           - `conversations/conversation-view/fork-session`
@@ -28385,6 +28383,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `build`
           - `build/build-fix`
           - `build/build-logs`
+          - `config_v2/settings/conflict-agent`
           - `conversations`
           - `conversations/conversation-category`
           - `conversations/conversation-view/branch`
@@ -29081,7 +29080,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `TaskCategoryDefSchema`
       - Cross-plugin:
         - Imported by:
-          - `config_v2/settings/conflict-agent`
           - `conversations`
           - `conversations/agents`
           - `improve`
@@ -29284,7 +29282,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses: `config_v2.ConfigV2`
       - Cross-plugin:
         - Imported by:
-          - `config_v2/settings/conflict-agent`
           - `conversations/conversation-view`
           - `conversations/conversation-view/new-child-task`
           - `improve`

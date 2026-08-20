@@ -5,7 +5,7 @@ import type {
 } from "@plugins/config_v2/plugins/settings/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { USER_CONFIG_DIR_DISPLAY } from "@plugins/infra/plugins/paths/plugins/display/core";
-import { buildConflictPrompt } from "./build-prompt";
+import { buildConflictPrompt, describeConflict } from "./build-prompt";
 
 function field(over: Partial<ConfigConflictField> = {}): ConfigConflictField {
   return {
@@ -155,5 +155,51 @@ describe("value formatting", () => {
     );
 
     expect(prompt).toContain('- `gone` — mine: `(not set)`, upstream: `"new"`');
+  });
+});
+
+describe("the popover's summary line", () => {
+  test("counts the fields carrying a decision, not the ones that differ", () => {
+    expect(
+      describeConflict(
+        ctx({
+          fields: [
+            field({ key: "mode", status: "conflict" }),
+            field({ key: "cadence", status: "upstream-changed" }),
+            field({ key: "quiet", status: "unchanged" }),
+          ],
+        }),
+      ),
+    ).toBe(
+      "Upstream defaults for conversations/preprompts/config.jsonc moved — 1 field needs a decision.",
+    );
+  });
+
+  test("says so plainly when nothing needs a decision", () => {
+    expect(
+      describeConflict(
+        ctx({
+          fields: [field({ key: "cadence", status: "upstream-changed" })],
+        }),
+      ),
+    ).toBe(
+      "Upstream defaults for conversations/preprompts/config.jsonc moved under my overrides.",
+    );
+  });
+
+  test("counts the schema issues for an invalid document", () => {
+    expect(
+      describeConflict(
+        ctx({
+          kind: "invalid",
+          issues: [
+            { path: "items.6", message: "Expected string" },
+            { path: "(root)", message: "Unrecognized key" },
+          ],
+        }),
+      ),
+    ).toBe(
+      "conversations/preprompts/config.jsonc no longer validates against its schema (2 issues).",
+    );
   });
 });

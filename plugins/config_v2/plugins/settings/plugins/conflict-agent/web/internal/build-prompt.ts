@@ -105,3 +105,24 @@ function invalidBlocks(conflict: ConfigConflictContext): string[] {
     "Find the schema change that invalidated this document — the `defineConfig` descriptor behind it and its recent history (`git log`) — then either tell me how to migrate the stored document or fix the descriptor so the stored shape still parses. If a field's type changed with no migration behind it, fix that at the source rather than asking me to retype my values.",
   ];
 }
+
+/**
+ * The one-line summary the launch popover shows above the extra-context box:
+ * what the agent is about to be asked, in the user's terms. Deliberately says
+ * how many fields carry a DECISION rather than how many differ — the count the
+ * banner itself reports, so the popover cannot contradict the banner that
+ * opened it.
+ */
+export function describeConflict(conflict: ConfigConflictContext): string {
+  if (conflict.kind === "invalid") {
+    const n = conflict.issues?.length ?? 0;
+    return n > 0
+      ? `${conflict.storePath} no longer validates against its schema (${n} issue${n === 1 ? "" : "s"}).`
+      : `${conflict.storePath} no longer validates against its schema.`;
+  }
+  const decisions = conflict.fields.filter((f) => f.status === "conflict");
+  if (decisions.length > 0) {
+    return `Upstream defaults for ${conflict.storePath} moved — ${decisions.length} field${decisions.length === 1 ? "" : "s"} need${decisions.length === 1 ? "s" : ""} a decision.`;
+  }
+  return `Upstream defaults for ${conflict.storePath} moved under my overrides.`;
+}
