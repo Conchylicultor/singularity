@@ -1,6 +1,6 @@
 # keyboard
 
-## Three skins, two switches
+## Three skins, one switch
 
 The keys are percentage-positioned `<div>`s carrying `data-pitch` — that div is
 the hit target `usePlayableKeyboard` reads (glissando and multi-touch depend on
@@ -8,17 +8,24 @@ it) and the host for `renderKey` labels. What it is *painted* with comes from on
 of three skins:
 
 - **flat** / **realistic** — CSS chrome (solid fills, or gradients + box-shadow
-  bevels) on the div itself, chosen by this plugin's own `keyStyle` config.
+  bevels) on the div itself.
 - **drawn** — no chrome on the div at all. `sketch-skin.tsx` paints the keys as
   SVG paths in a `pointer-events-none` layer *underneath*, and the div goes
   transparent. A drawn key has bowed edges and uneven corners, and no box can
   have those.
 
-The third one is not a third `keyStyle`. It comes from Sonata's **look** and
-takes precedence: when `SONATA_LOOK_STYLES[look].keys.drawn` is true, `keyStyle`
-is not consulted. That is what makes "paper lane under glossy ivory keys"
-unreachable rather than merely discouraged — and because the look answers
-instead of overwriting, a persisted flat/realistic preference survives untouched.
+**This plugin holds no switch of its own.** All three skins are read straight off
+Sonata's look — `SONATA_LOOK_STYLES[look].keys.skin` — so the choice applies
+everywhere a keyboard renders (the full 88-key roll, the chord/key readout chips,
+the website vignette) from one control.
+
+It used to own a `keyStyle` config for the first two, with the look's drawn skin
+overriding it. But nothing could ever select drawn *and* a key style: the pair was
+one three-valued choice wearing two controls, and the second one sat inert in the
+View popover whenever the look drew its own keys. Folding it into the look leaves
+the unreachable combination with no spelling, rather than a rule that suppresses
+it. Every persisted `keyStyle` was `flat`, which is the default look, so nothing
+reset.
 
 ## The drawn skin
 
@@ -48,11 +55,9 @@ width, so that overdraw IS the pen pressure.
 
 ## Plugin reference
 
-- Description: Stateless piano keyboard: the single source of truth for laying out and drawing piano keys across a MIDI range, lighting given pitches (accent or per-key color) with optional per-key content. Composed by the full PianoKeyboard and the chord readout. Server registration of the keyboard style config (flat / realistic key rendering).
+- Description: Stateless piano keyboard: the single source of truth for laying out and drawing piano keys across a MIDI range, lighting given pitches (accent or per-key color) with optional per-key content. Composed by the full PianoKeyboard and the chord readout.
 - Web:
-  - Contributes: `ConfigV2.WebRegister` "config"
   - Uses:
-    - `config_v2.ConfigV2`
     - `config_v2.useConfig`
     - `primitives/css/clip.Clip`
     - `primitives/css/layer.Layer`
@@ -64,15 +69,10 @@ width, so that overdraw IS the pen pressure.
     - `KeyboardProps`
     - `KeyHighlight`
     - `KeyLane`
-    - `KeyStyle`
   - Exports (values):
     - `isBlackPitch`
     - `Keyboard`
-    - `keyboardStyleConfig`
     - `keyLayout`
-- Server:
-  - Contributes: `ConfigV2.Register` "config"
-  - Uses: `config_v2.ConfigV2`
 - Cross-plugin:
   - Imported by:
     - `apps/sonata/piano-keyboard`

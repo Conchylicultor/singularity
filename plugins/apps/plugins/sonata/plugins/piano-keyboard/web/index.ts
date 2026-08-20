@@ -1,7 +1,6 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { ConfigV2 } from "@plugins/config_v2/web";
 import { Sonata } from "@plugins/apps/plugins/sonata/plugins/shell/web";
-import { keyboardStyleConfig } from "@plugins/apps/plugins/sonata/plugins/primitives/plugins/keyboard/web";
 import { PianoKeyboard } from "./components/piano-keyboard";
 import { pianoKeyboardConfig } from "../shared/config";
 
@@ -15,22 +14,18 @@ export default {
       component: PianoKeyboard,
     }),
     ConfigV2.WebRegister({ descriptor: pianoKeyboardConfig }),
-    // Surface the keyboard's display prefs in the player's view-options chip.
-    // `key-style` belongs to the keyboard primitive (a leaf that can't import the
-    // shell), so this plugin — which already depends on both — surfaces it.
+    // Surface this plugin's own display prefs in the player's view-options chip.
     // Scoped to `piano-roll`: the keyboard is a PitchAxis that mounts on the
     // pitch-plane display (today only the piano roll), so these controls only
     // belong to that lens. Add further display ids here if the keyboard ever
     // mounts on another pitch-plane display.
+    //
+    // How the keys are DRAWN is not here: that is one of the three values of
+    // Sonata's look, contributed by the `look` plugin as a single row.
     Sonata.ViewOption({
       id: "key-labels",
       displays: ["piano-roll"],
       config: pianoKeyboardConfig,
-    }),
-    Sonata.ViewOption({
-      id: "key-style",
-      displays: ["piano-roll"],
-      config: keyboardStyleConfig,
     }),
   ],
 } satisfies PluginDefinition;

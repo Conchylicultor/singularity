@@ -1,8 +1,35 @@
 import type { SonataLook } from "./config";
 
 /**
+ * The keys of the ONE look that draws them itself: the hand-drawn skin's palette,
+ * handed to the SVG layer that paints the outlines (`sketch-skin.tsx`).
+ */
+export interface SonataDrawnKeys {
+  skin: "drawn";
+  ivory: string;
+  ebony: string;
+  ink: string;
+  shade: number;
+}
+
+/**
+ * Which skin a look wears on the 88 keys below the lane, and — for the one that
+ * draws them — the colours it draws them in.
+ *
+ * A union rather than a flag plus four colours, because two of the three skins
+ * have no palette to give: `flat` and `realistic` are CSS chrome the keyboard
+ * paints from the theme, and only `drawn` hands colours to an SVG layer. Under a
+ * flat record those four fields would have to be filled with unread values on
+ * every non-drawn look; here they simply have nowhere to be written, and the
+ * consumer that needs them ({@link SonataDrawnKeys}) is handed a type that
+ * guarantees they are present.
+ */
+export type SonataKeys =
+  { skin: "flat" } | { skin: "realistic" } | SonataDrawnKeys;
+
+/**
  * The palette of ONE look: every fixed constant the roll's four surfaces used to
- * hardcode, gathered where a second look can answer for them.
+ * hardcode, gathered where another look can answer for them.
  *
  * Plain data, deliberately — not a slot and not a component. The set of looks is
  * CLOSED (the picker enumerates it, the palette table is exhaustive), and what
@@ -60,25 +87,50 @@ export interface SonataLookStyle {
     face: "light-on-dark" | "ink-on-paper";
     barNumberExpr: string;
   };
-  /**
-   * The 88 keys below the lane. `drawn` is the switch: when it is false the
-   * keyboard renders its own chrome and consults its Flat/Realistic key-style
-   * config, and the four colours here are unread. When it is true the key-style
-   * config is not consulted at all and these are the drawn skin's palette —
-   * which is what makes "paper lane, glossy keys" unreachable rather than
-   * merely discouraged.
-   */
-  keys: {
-    drawn: boolean;
-    ivory: string;
-    ebony: string;
-    ink: string;
-    shade: number;
-  };
+  /** The 88 keys below the lane — which skin, and its palette if it draws. */
+  keys: SonataKeys;
 }
 
 /**
- * Every look's palette. `Record<SonataLook, …>` on purpose: a third look is a
+ * The Synthesia stage: every roll surface shared by the two digital looks.
+ *
+ * These are the literals that lived in `piano-roll.tsx` (ROLL_BG), `grid.ts`
+ * (the white rules and their three alphas) and `labels.ts` (the muted bar-number
+ * token) before the look existed, so both looks that spread it render the lane
+ * byte-for-byte what it always did.
+ *
+ * Extracted rather than written into each entry: `flat` and `realistic` differ
+ * ONLY in the key skin, and a stage written twice is a stage that can be tweaked
+ * once.
+ */
+const DIGITAL_ROLL: Omit<SonataLookStyle, "keys"> = {
+  laneBg: "#262626",
+  laneGrain: null,
+  pen: {
+    sketch: 0,
+    marginPx: 0,
+    wobble: 0,
+    grain: 0,
+    stroke: 0,
+    wash: 0,
+    hatch: 0,
+    paper: [0, 0, 0],
+  },
+  grid: {
+    colorExpr: "#ffffff",
+    barLineAlpha: 0.1,
+    octaveLineAlpha: 0.24,
+    pitchLineAlpha: 0.09,
+    octaveDash: null,
+  },
+  labels: {
+    face: "light-on-dark",
+    barNumberExpr: "var(--muted-foreground)",
+  },
+};
+
+/**
+ * Every look's palette. `Record<SonataLook, …>` on purpose: a fourth look is a
  * tsc error until it has answered for the lane, the grid, the pen, the text and
  * the keys — nobody inherits another look's constants by omission.
  *
@@ -86,42 +138,9 @@ export interface SonataLookStyle {
  * (`~/.singularity/apps/prototypes/sketch-roll`), not fresh guesses.
  */
 export const SONATA_LOOK_STYLES: Record<SonataLook, SonataLookStyle> = {
-  // The Synthesia stage, verbatim: these are the literals that lived in
-  // `piano-roll.tsx` (ROLL_BG), `grid.ts` (the white rules and their three
-  // alphas) and `labels.ts` (the muted bar-number token) before the look
-  // existed, so `digital` renders byte-for-byte what it always did.
-  digital: {
-    laneBg: "#262626",
-    laneGrain: null,
-    pen: {
-      sketch: 0,
-      marginPx: 0,
-      wobble: 0,
-      grain: 0,
-      stroke: 0,
-      wash: 0,
-      hatch: 0,
-      paper: [0, 0, 0],
-    },
-    grid: {
-      colorExpr: "#ffffff",
-      barLineAlpha: 0.1,
-      octaveLineAlpha: 0.24,
-      pitchLineAlpha: 0.09,
-      octaveDash: null,
-    },
-    labels: {
-      face: "light-on-dark",
-      barNumberExpr: "var(--muted-foreground)",
-    },
-    keys: {
-      drawn: false,
-      ivory: "#f8f5ea",
-      ebony: "#1d1b1a",
-      ink: "rgba(30,26,22,0.55)",
-      shade: 0,
-    },
-  },
+  flat: { ...DIGITAL_ROLL, keys: { skin: "flat" } },
+
+  realistic: { ...DIGITAL_ROLL, keys: { skin: "realistic" } },
 
   // Cream paper, graphite pencil, ink. The lane grain is the prototype's
   // fractal-noise tile at half strength: the prototype composited it with
@@ -159,7 +178,7 @@ export const SONATA_LOOK_STYLES: Record<SonataLook, SonataLookStyle> = {
       barNumberExpr: "#6a6058",
     },
     keys: {
-      drawn: true,
+      skin: "drawn",
       ivory: "#fbf8ee",
       ebony: "#1d1b1a",
       ink: "#2c2926",

@@ -11,11 +11,16 @@
  * A neutral leaf owns this because neither consumer can. If `piano-roll` owned
  * it, the keyboard primitive would have to import a display plugin — dragging
  * the roll into the chord readout chips and the website bundle. If the keyboard
- * owned it, its config's own scope (keys) would be a lie. A leaf gives a star
- * topology that cannot cycle.
+ * owned it, the roll would have to import the keyboard for its lane and grid.
+ * A leaf gives a star topology that cannot cycle.
  */
 
 export type { SonataLook } from "./config";
-export { SONATA_LOOKS, sonataLookConfig, asSonataLook } from "./config";
-export type { SonataLookStyle } from "./styles";
+export {
+  SONATA_LOOKS,
+  SONATA_DEFAULT_LOOK,
+  sonataLookConfig,
+  asSonataLook,
+} from "./config";
+export type { SonataLookStyle, SonataKeys, SonataDrawnKeys } from "./styles";
 export { SONATA_LOOK_STYLES } from "./styles";

@@ -57,7 +57,7 @@ import { PX_PER_SECOND, type NoteVisual } from "../../components/geometry";
 // only when the reflected layout declares them.
 //
 // The vertex stage also carries the SKETCH look's two preparations, both exact
-// no-ops under `digital` (where uMargin is 0): it hashes the note's own seed,
+// no-ops under the digital looks (where uMargin is 0): it hashes the note's own seed,
 // and it grows the quad by uMargin CSS px per side so the pen may write outside
 // the note box. Neither costs a byte of geometry — see the comments in-shader.
 //
@@ -377,7 +377,7 @@ fn vsMain(
   // MARGIN — grow the quad by uMargin CSS px per side so the pen may write
   // outside the note box. Guarded divisions: unguarded, a zero-height grace note
   // computes 0/0 and NaNs its quad out in BOTH looks. uMargin is 0 under the
-  // digital look, which makes every term here exactly zero.
+  // digital looks, which make every term here exactly zero.
   let outward = aLocal * 2.0 - 1.0;
   let position = aPosition + outward * (uMargin / max(uScale, vec2<f32>(1e-6)));
 
@@ -495,7 +495,7 @@ export interface NoteMeshHandle {
    * references to) is never rebuilt.
    *
    * `sketch` picks the branch; `marginPx` is how far outside its own box the pen
-   * may write, which the VERTEX stage turns into a bigger quad. Under `digital`
+   * may write, which the VERTEX stage turns into a bigger quad. Under the digital looks
    * both are 0 and the rest of the pen is never read.
    */
   setLook(pen: SonataLookStyle["pen"]): void;

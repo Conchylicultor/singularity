@@ -164,7 +164,7 @@ function PianoRollInner({ score, tempoScale }: PianoRollProps) {
 
   // How the roll is DRAWN — one switch behind the lane ground, the grid ink, the
   // note pen and the key skin. Deliberately theme-independent: the roll is a
-  // fixed stage (Synthesia-dark under `digital`, cream paper under `sketch`) in
+  // fixed stage (Synthesia-dark under the digital looks, cream paper under `sketch`) in
   // every theme, so the opaque note colors read the same light or dark. A look
   // is not a theme; it only picks WHICH fixed palette the surfaces are pinned to.
   const look = asSonataLook(useConfig(sonataLookConfig).look);

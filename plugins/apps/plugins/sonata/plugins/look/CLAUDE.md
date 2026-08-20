@@ -1,9 +1,17 @@
 # look
 
-How the Sonata roll is **drawn**. One switch (`sonataLookConfig`, `digital` /
-`sketch`) and one closed palette table (`SONATA_LOOK_STYLES`) that the lane, the
-grid, the note shader and the 88 keys all read — instead of each hardcoding one
-set of constants.
+How the Sonata roll is **drawn**, and the app's single appearance choice. One
+switch (`sonataLookConfig` — `flat` / `realistic` / `sketch`) and one closed
+palette table (`SONATA_LOOK_STYLES`) that the lane, the grid, the note shader and
+the 88 keys all read — instead of each hardcoding one set of constants.
+
+**One axis, because there was only ever one.** The keys used to carry their own
+`flat`/`realistic` config in the keyboard primitive, alongside a `digital`/`sketch`
+look here. But the drawn look never consulted it — paper lane under glossy ivory
+keys is not a combination worth reaching — so three of the four pairs were
+reachable and the user was asked to reason about two axes to make one choice. The
+key style is now one of the look's three values. The unwanted pair has no spelling
+rather than a row that sits in the View popover doing nothing.
 
 **A look is not a theme.** The roll stays theme-independent: it reads the same in
 light and dark, so the opaque note colours land where the eye expects. A look
@@ -14,22 +22,25 @@ module constants.
 
 **A look is not a component**, so not a `ui/variant-region` (that slot's payload
 must be a `ComponentType`; the roll is a Pixi canvas). What travels here is data
-— colours, pen numbers, a key-skin flag — over a closed set, so per the root
+— colours, pen numbers, a key skin — over a closed set, so per the root
 `CLAUDE.md` rule it is plain data in `core/`, not a slot.
-
-**One switch drives all four surfaces on purpose.** Paper lane under glossy ivory
-keys is unreachable rather than discouraged: under `sketch` the keyboard's own
-Flat/Realistic config stops being read (it keeps its store path, so no persisted
-preference resets).
 
 **A neutral leaf owns it** because neither consumer can: `piano-roll` owning it
 would make the keyboard primitive import a display plugin (dragging the roll into
-the readout chips and the website vignette), and the keyboard owning it would
-make its keys-scoped config a lie.
+the readout chips and the website vignette), and the keyboard owning it would make
+the roll import the keyboard for its own lane and grid.
 
-`Record<SonataLook, SonataLookStyle>` is the enforcement — a third look is a tsc
-error until it answers for every surface. `enumField` types as `string`, so
-consumers narrow through `asSonataLook()` rather than casting.
+Two types carry the enforcement. `Record<SonataLook, SonataLookStyle>` means a
+fourth look is a tsc error until it answers for every surface. And `keys` is a
+union, not a flag plus four colours: only the arm that draws has a palette, so the
+SVG layer is handed a `SonataDrawnKeys` that cannot be missing its colours, and
+the two CSS skins have nowhere to write dead values. `flat` and `realistic` differ
+only in that arm, so they spread one shared `DIGITAL_ROLL` stage — a stage written
+twice is a stage that can be tweaked once. `enumField` types as `string`, so
+consumers narrow through `asSonataLook()` rather than casting, and
+`SONATA_DEFAULT_LOOK` is the one spelling of the look a fresh install renders in
+(the config's default AND the ink the grid and labels hold before the first
+`setLook()`).
 
 `sketch`'s numbers are the settled defaults of the prototype at
 `~/.singularity/apps/prototypes/sketch-roll`.
@@ -38,7 +49,7 @@ consumers narrow through `asSonataLook()` rather than casting.
 
 ## Plugin reference
 
-- Description: Web registration of the Sonata look config (digital / sketch) plus its View-popover switch. The palette itself is plain data in core/. Server registration of the Sonata look config (digital / sketch).
+- Description: Web registration of the Sonata look config (flat / realistic / sketch) plus its View-popover switch — the app's single appearance choice. The palette itself is plain data in core/. Server registration of the Sonata look config (flat / realistic / sketch).
 - Web:
   - Contributes:
     - `ConfigV2.WebRegister` "config"
@@ -54,10 +65,13 @@ consumers narrow through `asSonataLook()` rather than casting.
     - `config_v2.defineConfig`
     - `fields/enum/config.enumField`
   - Exports (types):
+    - `SonataDrawnKeys`
+    - `SonataKeys`
     - `SonataLook`
     - `SonataLookStyle`
   - Exports (values):
     - `asSonataLook`
+    - `SONATA_DEFAULT_LOOK`
     - `SONATA_LOOK_STYLES`
     - `SONATA_LOOKS`
     - `sonataLookConfig`

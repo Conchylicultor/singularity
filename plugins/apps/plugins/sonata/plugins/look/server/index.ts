@@ -7,6 +7,6 @@ import { sonataLookConfig } from "../core/config";
 // web (WebRegister) and server (Register).
 export default {
   description:
-    "Server registration of the Sonata look config (digital / sketch).",
+    "Server registration of the Sonata look config (flat / realistic / sketch).",
   contributions: [ConfigV2.Register({ descriptor: sonataLookConfig })],
 } satisfies ServerPluginDefinition;

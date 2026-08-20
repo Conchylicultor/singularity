@@ -19,7 +19,7 @@
  *
  * Color: both layers draw WHITE geometry and carry a tint + per-layer alpha
  * taken from the active LOOK (`SonataLookStyle["grid"]`), never from the theme.
- * The lane is a fixed stage — Synthesia-dark under `digital`, cream paper under
+ * The lane is a fixed stage — Synthesia-dark under the digital looks, cream paper under
  * `sketch` — in every theme, so the grid is theme-independent by design and not
  * the `var(--border)` token (which would vanish on the dark lane under a dark
  * theme). A look is NOT a theme: it swaps which fixed palette this handle is
@@ -29,7 +29,10 @@
  */
 import { Graphics } from "pixi.js";
 import type { SonataLookStyle } from "@plugins/apps/plugins/sonata/plugins/look/core";
-import { SONATA_LOOK_STYLES } from "@plugins/apps/plugins/sonata/plugins/look/core";
+import {
+  SONATA_DEFAULT_LOOK,
+  SONATA_LOOK_STYLES,
+} from "@plugins/apps/plugins/sonata/plugins/look/core";
 import { PX_PER_SECOND } from "../../components/geometry";
 
 /** One bar marker, in authored seconds (built by the host from `bars(score)`). */
@@ -82,9 +85,10 @@ export function createGrid(): GridHandle {
   const pitchLines = new Graphics();
 
   // The active look's grid ink. Seeded with the default look so a grid drawn
-  // before the first `setLook` is the digital one — the same constants this
+  // before the first `setLook` is the default one — the same constants this
   // module used to hold literally.
-  let ink: SonataLookStyle["grid"] = SONATA_LOOK_STYLES.digital.grid;
+  let ink: SonataLookStyle["grid"] =
+    SONATA_LOOK_STYLES[SONATA_DEFAULT_LOOK].grid;
   barLines.alpha = ink.barLineAlpha;
 
   let lines: readonly PitchLine[] = [];

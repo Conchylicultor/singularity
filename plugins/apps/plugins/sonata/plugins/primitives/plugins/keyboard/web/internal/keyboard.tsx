@@ -6,9 +6,9 @@ import { useConfig } from "@plugins/config_v2/web";
 import {
   asSonataLook,
   SONATA_LOOK_STYLES,
+  type SonataKeys,
   sonataLookConfig,
 } from "@plugins/apps/plugins/sonata/plugins/look/core";
-import { keyboardStyleConfig, type KeyStyle } from "../../shared/config";
 import { litKeyColor, mix } from "./key-color";
 import { BLACK_KEY_HEIGHT_PCT, type KeyLane, keyLayout } from "./key-layout";
 import { SketchKeys } from "./sketch-skin";
@@ -28,22 +28,23 @@ import {
  * className-only `no-hardcoded-colors` check (the sanctioned escape hatch for
  * physical-object colors).
  *
- * THREE skins, applied to EVERY keyboard render (full roll + readout chips).
- * Two of them are the `keyStyle` config's own variants:
+ * THREE skins, applied to EVERY keyboard render (full roll + readout chips),
+ * and all three come from ONE switch — Sonata's look:
  *  - `realistic` — skeuomorphic ivory/ebony: gradients + box-shadow bevels, a
  *    pressed-key depression, and a lit key tinted (translucent) over the ivory.
  *  - `flat` — Synthesia-style: solid fills, no gloss/gradients, strong dark
  *    white-key borders, and a lit key painted in the note's ACTUAL color (the
  *    same color it fell in — no translucent tint washing it out).
+ *  - `drawn` — the sketch look's hand-drawn keys, an SVG layer
+ *    (`sketch-skin.tsx`); here it only means the key divs go transparent and the
+ *    felt strip stands down.
  *
- * The third, `drawn`, comes from a DIFFERENT switch — Sonata's look — and takes
- * precedence: when the look's palette says its keys are drawn, `keyStyle` is not
- * consulted at all. That is what makes "paper lane under glossy ivory keys"
- * unreachable rather than merely discouraged, and it is why the skin is a local
- * union (`KeySkin`) rather than a third member of `KeyStyle`: the config keeps
- * its two options and its store path, so no persisted preference resets. The
- * drawn skin itself is an SVG layer (`sketch-skin.tsx`); here it only means the
- * key divs go transparent and the felt strip stands down.
+ * There is no second axis to reconcile. The keys used to have their own
+ * flat/realistic config alongside the look, but the drawn look never consulted
+ * it — paper lane under glossy ivory keys is not a combination worth reaching —
+ * so the pair was really one three-valued choice wearing two controls. The skin
+ * is now read straight off the look's palette, which is why the unwanted
+ * combination has no spelling rather than a rule that suppresses it.
  *
  * Realism (realistic variant) is pure CSS — gradients + box-shadows only,
  * expressed in percentages and 1–2px values so the same chrome scales from an
@@ -79,15 +80,15 @@ const FELT_REALISTIC: CSSProperties = {
   boxShadow: "0 1px 1px rgba(0, 0, 0, 0.25)",
 };
 const FELT_FLAT: CSSProperties = { height: "2px", background: "#7a1f2b" };
-const feltStyle = (style: KeyStyle): CSSProperties =>
+const feltStyle = (style: Exclude<KeySkin, "drawn">): CSSProperties =>
   style === "flat" ? FELT_FLAT : FELT_REALISTIC;
 
 /**
- * Which skin draws the keys. The two `KeyStyle` variants plus `drawn`, which the
- * look imposes over them — one union so every per-key style function has to
- * answer for all three, and `tsc` says so if a new one appears.
+ * Which skin draws the keys — the look's own three-member choice, aliased here
+ * so every per-key style function has to answer for all of them and `tsc` says
+ * so if a fourth look introduces a new one.
  */
-type KeySkin = KeyStyle | "drawn";
+type KeySkin = SonataKeys["skin"];
 
 /**
  * Under the drawn skin the key div holds no chrome at all: `sketch-skin.tsx`
@@ -300,13 +301,12 @@ export function Keyboard({
   interaction,
   className,
 }: KeyboardProps) {
-  const { keyStyle } = useConfig(keyboardStyleConfig);
   const { look } = useConfig(sonataLookConfig);
-  // The look wins. When its palette draws the keys, `keyStyle` never reaches the
-  // render — the mismatched combination is not validated away, it has nowhere to
-  // be expressed.
+  // One read, one skin. `keys` stays in hand (rather than just `keys.skin`) so
+  // the drawn arm's palette is reached by narrowing the union below, never by
+  // asserting that a look which draws must have brought colours with it.
   const keys = SONATA_LOOK_STYLES[asSonataLook(look)].keys;
-  const style: KeySkin = keys.drawn ? "drawn" : (keyStyle as KeyStyle);
+  const style: KeySkin = keys.skin;
   const lanes = useMemo(() => keyLayout(low, high), [low, high]);
   // Pointer handlers when playable; `{}` (no listeners) otherwise.
   const playProps = usePlayableKeyboard(interaction);
@@ -394,7 +394,7 @@ export function Keyboard({
           group so each one sits directly beneath its own divs, and
           pointer-events-none throughout so `data-pitch` hit-testing is
           untouched. Absent entirely under flat / realistic. */}
-      {style === "drawn" && (
+      {keys.skin === "drawn" && (
         <SketchKeys
           lanes={whites}
           group="white"
@@ -412,7 +412,7 @@ export function Keyboard({
       {style !== "drawn" && (
         <Pin to="top" stretch decorative aria-hidden style={feltStyle(style)} />
       )}
-      {style === "drawn" && (
+      {keys.skin === "drawn" && (
         <SketchKeys
           lanes={blacks}
           group="black"

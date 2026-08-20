@@ -1,5 +1,5 @@
 import { Fragment, useId, useMemo } from "react";
-import type { SonataLookStyle } from "@plugins/apps/plugins/sonata/plugins/look/core";
+import type { SonataDrawnKeys } from "@plugins/apps/plugins/sonata/plugins/look/core";
 import { Layer } from "@plugins/primitives/plugins/css/plugins/layer/web";
 import { useElementSize } from "@plugins/primitives/plugins/element-size/web";
 import { BLACK_KEY_HEIGHT_PCT, type KeyLane } from "./key-layout";
@@ -192,8 +192,9 @@ export interface SketchKeysProps {
    */
   lanes: readonly KeyLane[];
   group: KeyGroup;
-  /** The active look's key palette (`SONATA_LOOK_STYLES[look].keys`). */
-  palette: SonataLookStyle["keys"];
+  /** The drawn look's key palette (`SONATA_LOOK_STYLES[look].keys`, narrowed to
+   *  its drawn arm by the caller — this layer only ever mounts under it). */
+  palette: SonataDrawnKeys;
   /** Pitch → lit colour, in the raw form `Keyboard` normalises to (an empty
    *  string means the theme accent — see {@link litKeyColor}). */
   litColors: ReadonlyMap<number, string>;

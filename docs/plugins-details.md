@@ -3033,7 +3033,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/sonata/rich/rhythm-controls` (table `sonata_songs_ext_rhythm`)
               - `apps/sonata/transpose` (table `sonata_songs_ext_transpose`)
               - `apps/sonata/sources/ultimate-guitar` (table `sonata_songs_ext_ultimate_guitar`)
-        - **`look`** — Web registration of the Sonata look config (digital / sketch) plus its View-popover switch. The palette itself is plain data in core/. Server registration of the Sonata look config (digital / sketch).
+        - **`look`** — Web registration of the Sonata look config (flat / realistic / sketch) plus its View-popover switch — the app's single appearance choice. The palette itself is plain data in core/. Server registration of the Sonata look config (flat / realistic / sketch).
           - Web:
             - Contributes:
               - `ConfigV2.WebRegister` "config"
@@ -3049,10 +3049,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `config_v2.defineConfig`
               - `fields/enum/config.enumField`
             - Exports (types):
+              - `SonataDrawnKeys`
+              - `SonataKeys`
               - `SonataLook`
               - `SonataLookStyle`
             - Exports (values):
               - `asSonataLook`
+              - `SONATA_DEFAULT_LOOK`
               - `SONATA_LOOK_STYLES`
               - `SONATA_LOOKS`
               - `sonataLookConfig`
@@ -3105,11 +3108,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `Sonata.PitchAxis` "piano-keyboard" → `PianoKeyboard`
               - `ConfigV2.WebRegister` "config"
               - `Sonata.ViewOption` "key-labels"
-              - `Sonata.ViewOption` "key-style"
             - Uses:
               - `apps/sonata/audio/live-play.useLivePlay`
               - `apps/sonata/primitives/keyboard.Keyboard`
-              - `apps/sonata/primitives/keyboard.keyboardStyleConfig`
               - `apps/sonata/shell.Sonata`
               - `apps/sonata/shell.useCursorSelector`
               - `apps/sonata/shell.useSonata`
@@ -3299,11 +3300,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                 - Imported by:
                   - `apps/sonata/piano-roll`
                   - `apps/sonata/transport-bar`
-            - **`keyboard`** — Stateless piano keyboard: the single source of truth for laying out and drawing piano keys across a MIDI range, lighting given pitches (accent or per-key color) with optional per-key content. Composed by the full PianoKeyboard and the chord readout. Server registration of the keyboard style config (flat / realistic key rendering).
+            - **`keyboard`** — Stateless piano keyboard: the single source of truth for laying out and drawing piano keys across a MIDI range, lighting given pitches (accent or per-key color) with optional per-key content. Composed by the full PianoKeyboard and the chord readout.
               - Web:
-                - Contributes: `ConfigV2.WebRegister` "config"
                 - Uses:
-                  - `config_v2.ConfigV2`
                   - `config_v2.useConfig`
                   - `primitives/css/clip.Clip`
                   - `primitives/css/layer.Layer`
@@ -3315,15 +3314,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `KeyboardProps`
                   - `KeyHighlight`
                   - `KeyLane`
-                  - `KeyStyle`
                 - Exports (values):
                   - `isBlackPitch`
                   - `Keyboard`
-                  - `keyboardStyleConfig`
                   - `keyLayout`
-              - Server:
-                - Contributes: `ConfigV2.Register` "config"
-                - Uses: `config_v2.ConfigV2`
               - Cross-plugin:
                 - Imported by:
                   - `apps/sonata/piano-keyboard`
@@ -7360,7 +7354,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
 
 - **`config_v2`** — Reactive useConfig hook for reading typed JSONC config in the browser. Typed JSONC config handles for server plugins.
   - Web:
-    - Slots: `ConfigV2.WebRegister` ← `apps-core.app-rail-framing`, `apps-core.surface.floating`, `apps-core.surface.floating.wallpaper`, `apps.sonata.audio.metronome`, `apps.sonata.look`, `apps.sonata.notation`, `apps.sonata.piano-keyboard`, `apps.sonata.piano-roll`, `apps.sonata.piano-roll.fx-comets`, `apps.sonata.piano-roll.fx-core`, `apps.sonata.piano-roll.fx-ripples`, `apps.sonata.piano-roll.fx-shatter`, `apps.sonata.primitives.keyboard`, `apps.sonata.rich.chord-label`, `apps.sonata.sources.midi.folders`, `apps.sonata.voicing`, `auth.apple-signing`, `auth.google`, `auth.notion`, `backup`, `backup.sources.attachments`, `backup.sources.claude-settings`, `backup.sources.config`, `backup.sources.cost-history`, `backup.sources.databases`, `backup.sources.project-memory`, `backup.sources.prototypes`, `backup.sources.secrets`, `backup.sources.singularity-platform`, `backup.sources.transcripts`, `backup.targets.google-drive`, `backup.targets.local`, `build`, `conversations`, `conversations.conversation-category`, `conversations.conversation-view.launch-prompts`, `conversations.conversation-view.prompt-templates`, `conversations.conversation-view.push-and-exit`, `conversations.conversation-view.turn-summary`, `conversations.hibernation`, `conversations.model-provider`, `conversations.preprompts`, `debug.boot-budget`, `debug.boot-monitor`, `debug.boot-watchdog`, `debug.live-state-churn.monitor`, `debug.op-rate`, `debug.paging-probe`, `debug.queue-health`, `debug.read-set-shrink`, `debug.sentinel`, `debug.session-divergence`, `debug.slow-ops`, `debug.stall-monitor`, `debug.trace.engine`, `infra.duress`, `integrations.gmail`, `plugin-meta.composition`, `primitives.data-view`, `reorder`, `review.code-review`, `shell.global-action-bar`, `stats.commits`, `stats.cost`, `tasks.task-draft-form`, `ui.segmented-progress-bar`, `ui.sidebar-framing`, `ui.tab-bar`, `ui.theme-engine`, `ui.tokens.categorical`, `ui.tokens.chart`, `ui.tokens.color-adjust`, `ui.tokens.color-palette`, `ui.tokens.density`, `ui.tokens.font-family`, `ui.tokens.rich-text-palette`, `ui.tokens.shadow`, `ui.tokens.shape`, `ui.tokens.sidebar-palette`, `ui.tokens.type-scale`, `ui.tree-disclosure`
+    - Slots: `ConfigV2.WebRegister` ← `apps-core.app-rail-framing`, `apps-core.surface.floating`, `apps-core.surface.floating.wallpaper`, `apps.sonata.audio.metronome`, `apps.sonata.look`, `apps.sonata.notation`, `apps.sonata.piano-keyboard`, `apps.sonata.piano-roll`, `apps.sonata.piano-roll.fx-comets`, `apps.sonata.piano-roll.fx-core`, `apps.sonata.piano-roll.fx-ripples`, `apps.sonata.piano-roll.fx-shatter`, `apps.sonata.rich.chord-label`, `apps.sonata.sources.midi.folders`, `apps.sonata.voicing`, `auth.apple-signing`, `auth.google`, `auth.notion`, `backup`, `backup.sources.attachments`, `backup.sources.claude-settings`, `backup.sources.config`, `backup.sources.cost-history`, `backup.sources.databases`, `backup.sources.project-memory`, `backup.sources.prototypes`, `backup.sources.secrets`, `backup.sources.singularity-platform`, `backup.sources.transcripts`, `backup.targets.google-drive`, `backup.targets.local`, `build`, `conversations`, `conversations.conversation-category`, `conversations.conversation-view.launch-prompts`, `conversations.conversation-view.prompt-templates`, `conversations.conversation-view.push-and-exit`, `conversations.conversation-view.turn-summary`, `conversations.hibernation`, `conversations.model-provider`, `conversations.preprompts`, `debug.boot-budget`, `debug.boot-monitor`, `debug.boot-watchdog`, `debug.live-state-churn.monitor`, `debug.op-rate`, `debug.paging-probe`, `debug.queue-health`, `debug.read-set-shrink`, `debug.sentinel`, `debug.session-divergence`, `debug.slow-ops`, `debug.stall-monitor`, `debug.trace.engine`, `infra.duress`, `integrations.gmail`, `plugin-meta.composition`, `primitives.data-view`, `reorder`, `review.code-review`, `shell.global-action-bar`, `stats.commits`, `stats.cost`, `tasks.task-draft-form`, `ui.segmented-progress-bar`, `ui.sidebar-framing`, `ui.tab-bar`, `ui.theme-engine`, `ui.tokens.categorical`, `ui.tokens.chart`, `ui.tokens.color-adjust`, `ui.tokens.color-palette`, `ui.tokens.density`, `ui.tokens.font-family`, `ui.tokens.rich-text-palette`, `ui.tokens.shadow`, `ui.tokens.shape`, `ui.tokens.sidebar-palette`, `ui.tokens.type-scale`, `ui.tree-disclosure`
     - Contributes: `Core.Boot`
     - Uses:
       - `infra/endpoints.fetchEndpoint`

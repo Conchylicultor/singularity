@@ -36,7 +36,10 @@
  */
 import { BitmapFont, BitmapText, Container } from "pixi.js";
 import type { SonataLookStyle } from "@plugins/apps/plugins/sonata/plugins/look/core";
-import { SONATA_LOOK_STYLES } from "@plugins/apps/plugins/sonata/plugins/look/core";
+import {
+  SONATA_DEFAULT_LOOK,
+  SONATA_LOOK_STYLES,
+} from "@plugins/apps/plugins/sonata/plugins/look/core";
 import { PX_PER_SECOND, type NoteVisual } from "../../components/geometry";
 import type { BarMarker } from "./grid";
 
@@ -269,9 +272,10 @@ export function createLabelLayer(): LabelLayerHandle {
   let lastBars: readonly BarMarker[] = [];
   let dirty = true; // forces the next update() to re-place everything
   // The active look's text ink. Seeded with the default look, so labels drawn
-  // before the first `setLook` are the digital ones — the same face and token
+  // before the first `setLook` are the default ones — the same face and token
   // this module used to name literally.
-  let ink: SonataLookStyle["labels"] = SONATA_LOOK_STYLES.digital.labels;
+  let ink: SonataLookStyle["labels"] =
+    SONATA_LOOK_STYLES[SONATA_DEFAULT_LOOK].labels;
 
   // Pool: live labels keyed by entry index, plus a free list.
   const active = new Map<number, PooledLabel>();

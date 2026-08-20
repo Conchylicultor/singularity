@@ -228,16 +228,23 @@ export const Sonata = {
   }),
 
   // VIEW OPTIONS — per-lens display prefs surfaced as quick controls inside a
-  // player HUD chip (note names, key labels, key style, …). Each contributor
+  // player HUD chip (the look, note names, key labels, …). Each contributor
   // hands a config_v2 descriptor (optionally a `fields` subset); the host chip
   // renders those fields generically via FieldRenderer. Collection-consumer
   // clean — the host reads the slot and never names a contributor. Lives here
-  // (not piano-roll) so leaf contributors like the keyboard primitive's config
-  // can be surfaced without the display ⇄ primitive import cycle.
+  // (not piano-roll) so leaf contributors' configs can be surfaced without the
+  // display ⇄ primitive import cycle.
+  //
+  // A row here is a choice the user makes, so an option that would be inert
+  // under another option's value does not belong in the slot as a second row —
+  // it belongs folded INTO that option's values. There is deliberately no
+  // "hide me when …" predicate: the look absorbed the keyboard's flat/realistic
+  // switch for exactly this reason (see `look/core/config.ts`), leaving nothing
+  // that needs one.
   //
   // `displays` scopes an option to its owning lens(es): the View popover shows
   // ONLY the active `Sonata.Display`'s options plus globals, so a lens never
-  // surfaces controls that do nothing for it (e.g. key-style inside Notation).
+  // surfaces controls that do nothing for it (e.g. the look inside Notation).
   // It is a list of display ids (matching a `Sonata.Display` `id`) or the
   // literal `"global"` for options that apply to every lens. REQUIRED — forcing
   // each option to declare its scope makes "leaks into every lens" impossible by

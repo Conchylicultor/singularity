@@ -8,7 +8,7 @@
  * the roll:
  *
  *   ./singularity build
- *   bun plugins/apps/plugins/sonata/plugins/look/e2e/look-verify.ts --out /tmp/digital
+ *   bun plugins/apps/plugins/sonata/plugins/look/e2e/look-verify.ts --out /tmp/flat
  *   # switch Look → Sketch in the app
  *   bun plugins/apps/plugins/sonata/plugins/look/e2e/look-verify.ts --out /tmp/sketch
  *
