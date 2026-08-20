@@ -6822,7 +6822,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `primitives/css/inline.Inline`
       - `primitives/css/pin.Pin`
       - `primitives/css/rigid.rigidClass`
-      - `primitives/css/row.Row`
       - `primitives/css/scroll.Scroll`
       - `primitives/css/spacing.Stack`
       - `primitives/css/spinner.Spinner`
@@ -21392,6 +21391,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/action-presentation`
               - `primitives/command-palette`
               - `primitives/commit-list`
+              - `primitives/data-view/list`
               - `primitives/date-picker`
               - `primitives/error-boundary`
               - `primitives/folder-picker`
@@ -22044,7 +22044,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/studio/compositions`
               - `apps/studio/compositions/entry-points`
               - `apps/studio/graph`
-              - `build`
               - `code-explorer/file-resolve`
               - `config_v2/settings`
               - `conversations/agents`
@@ -23817,6 +23816,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/data-view/view-core.useViewModel`
           - `primitives/data-view/view-core.useViewVariants`
           - `primitives/element-size.useElementSize`
+          - `primitives/hover-reveal.hoverRevealGroup`
+          - `primitives/hover-reveal.hoverRevealTarget`
           - `primitives/icon-button.IconButton`
           - `primitives/latest-ref.useLatestRef`
           - `primitives/loading.Loading`
@@ -23839,6 +23840,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `DataViewControlContribution`
           - `DataViewControlsContextValue`
           - `DataViewControlSummary`
+          - `DataViewDensity`
           - `DataViewId`
           - `DataViewProps`
           - `DataViewRenderProps`
@@ -24014,6 +24016,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `ColumnConfigProps`
           - `CreateOption`
           - `DataViewAggregateConfig`
+          - `DataViewDensity`
           - `DataViewId`
           - `DataViewProps`
           - `DataViewRenderProps`
@@ -24170,6 +24173,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/badge.Badge`
               - `primitives/css/center.Center`
               - `primitives/css/clip.clipClasses`
+              - `primitives/css/fill.Fill`
               - `primitives/css/pin.Pin`
               - `primitives/css/rigid.rigidClass`
               - `primitives/css/row.Row`
@@ -24805,6 +24809,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `page/image`
           - `page/place`
           - `page/video`
+          - `primitives/data-view`
           - `primitives/data-view/view-core`
           - `primitives/text-editor/paste-images`
           - `tasks/task-description`
