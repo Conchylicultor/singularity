@@ -6,6 +6,7 @@ import {
   isMain,
 } from "@plugins/infra/plugins/paths/server";
 import { _buildRuns } from "@plugins/build/plugins/run-ledger/server";
+import { MAIN_COMPOSITION_ID } from "@plugins/infra/plugins/namespace/core";
 import { wantsBuild } from "@plugins/build/plugins/deployment/core";
 import type { BuildAttempt } from "@plugins/build/plugins/deployment/core";
 import { readDeployment } from "@plugins/build/plugins/deployment/server";
@@ -32,7 +33,13 @@ export async function lastClosedAttempt(): Promise<BuildAttempt | null> {
     .where(
       and(
         eq(_buildRuns.namespace, currentWorktreeName()),
-        eq(_buildRuns.target, "main"),
+        // A PLAIN build of this checkout's own app — the SQL twin of
+        // `isMainCompositionBuild`, which is `targets.length === 1 &&
+        // targets[0] === MAIN_COMPOSITION_ID`. A run that also published someone
+        // else's namespace is not the attempt this reconciler answers for, and a
+        // `--composition sonata` build says nothing about whether main is
+        // current.
+        eq(_buildRuns.targets, [MAIN_COMPOSITION_ID]),
         isNotNull(_buildRuns.finishedAt),
       ),
     )
