@@ -15,16 +15,14 @@ import {
 } from "@plugins/primitives/plugins/latest-ref/web";
 import { useScopedUndoRedo } from "@plugins/primitives/plugins/undo-redo/web";
 import { Rank } from "@plugins/primitives/plugins/rank/core";
-import {
-  resolveDropParent,
-  selectionRoots,
-} from "@plugins/primitives/plugins/tree/core";
+import { resolveDropParent } from "@plugins/primitives/plugins/tree/core";
 import {
   prevVisibleLine,
   nextVisibleLine,
   runsOfNode,
   runsLength,
   applyBlockOp,
+  blockSelectionRoots,
   childrenOf,
   diffBlocks,
   inDocumentOrder,
@@ -1267,13 +1265,14 @@ export function BlockEditorProviderInner({
       if (ids.length === 0) return;
       const before = rowsRef.current;
       // Document-ordered for determinism and to match every other
-      // selection-driven op (the folds, `pasteAnchorId`) — `selectionRoots`
+      // selection-driven op (the folds, `pasteAnchorId`) — `blockSelectionRoots`
       // preserves input-ARRAY order, which is nobody's order. Not load-bearing
       // for agreement: the array travels on the op, so both sides fold it
       // identically.
+      const nodes = toNodes(before);
       const roots = inDocumentOrder(
-        toNodes(before),
-        selectionRoots(before, new Set(ids)),
+        nodes,
+        blockSelectionRoots(nodes, new Set(ids), isAnchorNode),
       );
       if (roots.length === 0) return;
       // One `serializeForest` call PER root, not one zipped call: a filtered
@@ -1287,7 +1286,7 @@ export function BlockEditorProviderInner({
         })),
       });
     },
-    [dispatchOp],
+    [dispatchOp, isAnchorNode],
   );
 
   // Indent / outdent a SET of blocks (the selection roots). The single-block Tab

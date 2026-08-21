@@ -1305,6 +1305,51 @@ ONLY because it focuses with `preventScroll: true` (`internal/use-block-selectio
 else focus fights the scroll every frame; and `rowAtPointer`'s nearest-row fallback is
 what keeps the range extending while the pointer sits below the last block.
 
+### Selecting every line a container owns IS selecting the container
+
+> A container anchor renders no line of its own, so a selection covering every
+> line it owns is a selection of the container.
+
+Not a convenience — the only way a pointer can say *"this card"*. An anchor's row
+is zero height while its children are visible, it carries no rail and no
+Shift+click target, and `rowAtPointer`'s height guard skips it outright. So a
+drag, a Shift+click and a click-and-extend all reach every line *inside* a
+callout or a `/todo` and never the box around them. Left unresolved, "select the
+card, copy, paste" pasted the contents with the frame stripped off, and the same
+hole let a drag carry the children out of a frame the user thought they were
+moving. (`⌘A` was the one gesture that worked, because it selects `orderedIds`
+whole — anchors included.)
+
+`withContainersSelected` (`core/block-ops.ts`) closes the selection over it, and
+**`blockSelectionRoots` is THE roots resolver for this surface** — copy, cut,
+duplicate, drag, move, indent/outdent and the paste anchor all resolve through
+it, so a covered container travels as the container in *all* of them rather than
+in whichever ones remembered. `isAnchor` is a REQUIRED parameter: there is no
+anchor-blind spelling of "the selection's roots" here, which is exactly what the
+defect was. The generic `primitives/tree.selectionRoots` has no other consumer in
+the repo and is now reached only through this wrapper.
+
+- **Coverage is measured against `visibleChildRule`** — the lines on screen, not
+  the stored children. A COLLAPSED container is therefore promoted by its one
+  borrowed line, which is what the fold means: that line is everything it shows.
+- **Post-order, so nesting resolves in one pass.** A card whose only content is
+  another card promotes the inner one first, which is then what covers the outer.
+- **A childless anchor is never promoted.** It has a real one-line box of its own
+  (the surface's childless fallback) and is selected by pointing at it.
+- **Monotone — it only ever ADDS.** An anchor the range already carries (a range
+  crossing it from outside, `⌘A`) stays selected whether or not its children are;
+  the roots then subsume them, which is ordinary subtree semantics.
+- **The highlight reads the same closed set** (`resolveSelectionBands`, and each
+  row's `isSelected`), so a covered card paints over its whole frame span — the
+  band and the clipboard cannot disagree about what is selected. The multi-select
+  range itself stays exactly what the pointer drew: the closure is derived per
+  render, never stored, so extending a range is still index arithmetic over
+  `orderedIds`.
+
+`⌘C` on a bare CARET is deliberately outside this rule — it copies the line you
+are standing in, container or not. See *With nothing selected, the caret's block
+IS the selection*.
+
 ## The gutter `+` and `/` are one unified menu
 
 Both open the **same** caret-anchored block menu (`components/block-menu-plugin.tsx`,
@@ -1526,7 +1571,8 @@ handlers.
   rail's menu resolves to `RailSeat.owner` instead (a callout's borrowed line
   acts on the callout); the keyboard acts on the line you are standing in. The
   split is deliberate — copying a whole container is what selecting it as a
-  block is for.
+  block is for, and *selecting every line it owns* is how you do that (see
+  *Selecting every line a container owns IS selecting the container*).
 - **`serializeForest` reads the ROW, not the live `Y.Doc`**, so a copy fired
   inside the ~1s `data.text` projection window carries the pre-keystroke text.
   Inherited from duplicate, which has the same bound; `e2e/caret-clipboard-verify.ts`
@@ -2915,6 +2961,7 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
     - `BlockPageSchema`
     - `BlockPatchSchema`
     - `BlockSchema`
+    - `blockSelectionRoots`
     - `blocksResource`
     - `canIndent`
     - `canOutdent`
@@ -2997,6 +3044,7 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
     - `UpdateBlockBodySchema`
     - `visibleChildrenOf`
     - `visibleChildRule`
+    - `withContainersSelected`
     - `withMintedIds`
     - `withRuns`
     - `xmlTextContentLength`

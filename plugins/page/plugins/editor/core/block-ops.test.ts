@@ -23,6 +23,8 @@ import {
   childrenOf,
   pasteAnchorId,
   planBulkMove,
+  blockSelectionRoots,
+  withContainersSelected,
   prevVisibleLine,
   nextVisibleLine,
   visibleChildrenOf,
@@ -79,6 +81,8 @@ function mk(
 
 /** A few stable, ascending rank keys for readable fixtures. */
 const a = Rank.between(null, null).toJSON(); // first key
+/** "No type is a container" — the pre-container behavior, for forests with none. */
+const NO_ANCHOR: IsAnchor = () => false;
 function after(prev: string): string {
   return Rank.between(Rank.from(prev), null).toJSON();
 }
@@ -1235,19 +1239,28 @@ describe("canIndent / canOutdent", () => {
 
 describe("pasteAnchorId", () => {
   test("a downward-extended run anchors on its bottom block", () => {
-    expect(pasteAnchorId(fourSiblings(), new Set(["A", "B"]), "B")).toBe("B");
+    expect(
+      pasteAnchorId(fourSiblings(), new Set(["A", "B"]), "B", NO_ANCHOR),
+    ).toBe("B");
   });
 
   test("an upward-extended run anchors on its bottom block too, never the head", () => {
     // Shift+ArrowUp from B leaves the range's head on A — the TOP of the run.
     // Anchoring there drops the copies between A and B, splitting the selection.
-    expect(pasteAnchorId(fourSiblings(), new Set(["B", "A"]), "A")).toBe("B");
+    expect(
+      pasteAnchorId(fourSiblings(), new Set(["B", "A"]), "A", NO_ANCHOR),
+    ).toBe("B");
   });
 
   test("array order is irrelevant — the anchor comes from document order", () => {
     // `selectionRoots` preserves the row array's order, which is not the forest's.
     expect(
-      pasteAnchorId(fourSiblings().reverse(), new Set(["A", "B"]), null),
+      pasteAnchorId(
+        fourSiblings().reverse(),
+        new Set(["A", "B"]),
+        null,
+        NO_ANCHOR,
+      ),
     ).toBe("B");
   });
 
@@ -1255,13 +1268,15 @@ describe("pasteAnchorId", () => {
     // An insert after A lands after A's whole subtree; after A1 it would land
     // inside it.
     const blocks = [...fourSiblings(), mk("A1", "A", a)];
-    expect(pasteAnchorId(blocks, new Set(["A", "A1"]), null)).toBe("A");
+    expect(pasteAnchorId(blocks, new Set(["A", "A1"]), null, NO_ANCHOR)).toBe(
+      "A",
+    );
   });
 
   test("no selection → the caret's own block, else null", () => {
     const blocks = fourSiblings();
-    expect(pasteAnchorId(blocks, new Set(), "C")).toBe("C");
-    expect(pasteAnchorId(blocks, new Set(), null)).toBe(null);
+    expect(pasteAnchorId(blocks, new Set(), "C", NO_ANCHOR)).toBe("C");
+    expect(pasteAnchorId(blocks, new Set(), null, NO_ANCHOR)).toBe(null);
   });
 });
 
@@ -2597,6 +2612,130 @@ describe("anchors — the empty-anchor prune", () => {
     // Non-vacuous: the ordinary empty anchor in the same forest WAS pruned, by
     // the same pass, on an op that named neither of them.
     expect(out.find((b) => b.id === "A")).toBeUndefined();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// The container closure — "selecting every line a card owns IS selecting it"
+// ---------------------------------------------------------------------------
+
+/**
+ * A container ANCHOR renders no line of its own, so a pointer can reach every
+ * line inside it and never the box: its row is zero height, carries no rail, and
+ * the surface's `rowAtPointer` skips it by a height guard. `withContainersSelected`
+ * is what closes that hole — without it, "select the card, copy, paste" pasted the
+ * contents with the frame stripped off.
+ */
+describe("anchors — the container closure", () => {
+  /** `[ANCHOR C [c1, c2]], T` — a two-line card followed by a plain block. */
+  function card(opts: { expanded?: boolean } = {}): BlockNode[] {
+    const r1 = a;
+    const r2 = after(r1);
+    return [
+      { ...anchorNode("C", null, r1), expanded: opts.expanded ?? true },
+      mk("c1", "C", a),
+      mk("c2", "C", after(a)),
+      mk("T", null, r2),
+    ];
+  }
+
+  test("every visible line selected promotes the container", () => {
+    const blocks = card();
+    const out = withContainersSelected(
+      blocks,
+      new Set(["c1", "c2"]),
+      isAnchorFn,
+    );
+    expect(out.has("C")).toBe(true);
+    // And the roots collapse onto it: the children travel as its subtree.
+    expect(
+      blockSelectionRoots(blocks, new Set(["c1", "c2"]), isAnchorFn),
+    ).toEqual(["C"]);
+  });
+
+  test("a partly covered container is left alone", () => {
+    const blocks = card();
+    expect(
+      withContainersSelected(blocks, new Set(["c1"]), isAnchorFn).has("C"),
+    ).toBe(false);
+    expect(blockSelectionRoots(blocks, new Set(["c1"]), isAnchorFn)).toEqual([
+      "c1",
+    ]);
+  });
+
+  test("a COLLAPSED container is promoted by its one borrowed line", () => {
+    // Collapsed, so `c2` is not on screen at all: `c1` alone is everything the
+    // card shows, and selecting it is selecting the card.
+    const blocks = card({ expanded: false });
+    expect(
+      withContainersSelected(blocks, new Set(["c1"]), isAnchorFn).has("C"),
+    ).toBe(true);
+  });
+
+  test("nesting resolves in one pass, outermost included", () => {
+    const r1 = a;
+    const r2 = after(r1);
+    const blocks: BlockNode[] = [
+      anchorNode("OUT", null, r1),
+      anchorNode("IN", "OUT", a),
+      mk("k", "IN", a),
+      mk("T", null, r2),
+    ];
+    const out = withContainersSelected(blocks, new Set(["k"]), isAnchorFn);
+    expect(out.has("IN")).toBe(true);
+    expect(out.has("OUT")).toBe(true);
+    expect(blockSelectionRoots(blocks, new Set(["k"]), isAnchorFn)).toEqual([
+      "OUT",
+    ]);
+  });
+
+  test("a CHILDLESS anchor is never promoted — it has a row of its own", () => {
+    const blocks: BlockNode[] = [
+      anchorNode("C", null, a),
+      mk("T", null, after(a)),
+    ];
+    expect(
+      withContainersSelected(blocks, new Set(["T"]), isAnchorFn).has("C"),
+    ).toBe(false);
+  });
+
+  test("only ADDS: an anchor the range already carries stays selected", () => {
+    const blocks = card();
+    const out = withContainersSelected(
+      blocks,
+      new Set(["C", "c1"]),
+      isAnchorFn,
+    );
+    expect(out.has("C")).toBe(true);
+    expect([...out].sort()).toEqual(["C", "c1"]);
+  });
+
+  test("no anchor types ⇒ byte-identical to plain selection roots", () => {
+    const blocks = card();
+    for (const sel of [["c1"], ["c1", "c2"], ["c1", "c2", "T"], ["C", "c1"]]) {
+      const ids = new Set(sel);
+      expect(blockSelectionRoots(blocks, ids, NO_ANCHOR)).toEqual(
+        selectionRoots(blocks, ids),
+      );
+    }
+  });
+
+  test("the paste anchor lands AFTER a fully-selected card, not inside it", () => {
+    const blocks = card();
+    expect(pasteAnchorId(blocks, new Set(["c1", "c2"]), null, isAnchorFn)).toBe(
+      "C",
+    );
+    // Without the closure it would anchor on the card's last CHILD, i.e. inside.
+    expect(pasteAnchorId(blocks, new Set(["c1", "c2"]), null, NO_ANCHOR)).toBe(
+      "c2",
+    );
+  });
+
+  test("does not mutate the input forest", () => {
+    const blocks = card();
+    const before = JSON.stringify(blocks);
+    withContainersSelected(blocks, new Set(["c1", "c2"]), isAnchorFn);
+    expect(JSON.stringify(blocks)).toBe(before);
   });
 });
 

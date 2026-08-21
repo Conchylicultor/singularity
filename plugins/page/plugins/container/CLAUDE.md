@@ -191,6 +191,24 @@ registers the same component as `sections` and as `BlockFrameMeta.menu`. That is
 the user's spec, not an oversight: the rail is where one looks for a block's
 actions, the glyph is where one looks for the glyph.
 
+## Selecting a container: cover its lines
+
+Same shape as the rail: an anchor renders no line, so there is nothing for a
+pointer to click. A drag, a Shift+click and a click-and-extend all reach the
+lines INSIDE the box and never the box itself, and the editor's `rowAtPointer`
+skips the zero-height row by an explicit height guard. So the selection rule
+states the only thing a pointer can mean:
+
+> A selection covering every line a container owns IS a selection of the
+> container.
+
+`page/editor`'s `withContainersSelected` closes over it and `blockSelectionRoots`
+is the one resolver every bulk gesture goes through, so copy, cut, duplicate and
+drag all carry the box. Coverage is measured against the visible lines, so a
+COLLAPSED container is selected by its one borrowed line. See *Selecting every
+line a container owns IS selecting the container* in
+[`page/editor`](../editor/CLAUDE.md) — a container plugin writes nothing for it.
+
 ## What stays with each container
 
 Everything with a per-instance payload behind it: the callout's colour swatches,

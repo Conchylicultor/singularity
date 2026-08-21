@@ -21,3 +21,8 @@ export type {
 } from "./support/blank-page";
 export { typeLines } from "./support/type-lines";
 export type { TypedLine, TypeLinesOptions } from "./support/type-lines";
+export {
+  blockSelectionDriver,
+  highlightedLines,
+} from "./support/block-selection";
+export type { BlockSelectionDriver } from "./support/block-selection";

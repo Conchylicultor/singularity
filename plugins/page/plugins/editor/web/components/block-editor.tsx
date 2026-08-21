@@ -32,7 +32,6 @@ import { Rank } from "@plugins/primitives/plugins/rank/core";
 import {
   buildTree,
   isDescendant,
-  selectionRoots,
   subtreeIds,
   type DropZone,
 } from "@plugins/primitives/plugins/tree/core";
@@ -53,6 +52,8 @@ import {
   canIndent,
   canOutdent,
   pasteAnchorId,
+  blockSelectionRoots,
+  withContainersSelected,
   textOf,
   planForestInsert,
   withMintedIds,
@@ -62,6 +63,7 @@ import {
   plainOf,
   runsOfNode,
   type Block,
+  type BlockNode,
   type SerializedBlock,
 } from "../../core";
 import { fromNodes, toNodes } from "../internal/optimistic-block-ops";
@@ -454,21 +456,37 @@ function SelectionLayer({
   const handleMap = useBlockHandles();
   const handles = useMemo(() => [...handleMap.values()], [handleMap]);
 
+  const nodes = useMemo(() => toNodes(rows), [rows]);
+  // The same registry-derived set `BlockEditorInner` flattens with — read again
+  // here rather than threaded down, so this layer's structural answers and the
+  // rows it paints over cannot come from two different anchor sets.
+  const anchorTypes = useAnchorTypes();
+  const isAnchorNode = useCallback(
+    (node: BlockNode) => anchorTypes.has(node.type),
+    [anchorTypes],
+  );
+
+  // THE selection this surface acts on and paints: the range the user built,
+  // closed over every container it fully covers (`withContainersSelected`). A
+  // container owns no line of its own, so covering all of its lines is the only
+  // way to point at the box — see the core rule for why nothing else can.
+  //
+  // Derived, never stored: the multi-select range stays exactly what the pointer
+  // drew, so extending it is still plain index arithmetic over `orderedIds`.
+  const selection = useMemo(
+    () => withContainersSelected(nodes, selectedIds, isAnchorNode),
+    [nodes, selectedIds, isAnchorNode],
+  );
+
   // The minimal subtree roots of the selection: bulk structural ops act on these,
   // descendants follow implicitly. Recomputed on every selection/row change so the
   // selection bar's affordances reflect what the reducer would actually do.
   const roots = useMemo(
-    () => selectionRoots(rows, selectedIds),
-    [rows, selectedIds],
+    () => blockSelectionRoots(nodes, selectedIds, isAnchorNode),
+    [nodes, selectedIds, isAnchorNode],
   );
-  const indentable = useMemo(
-    () => canIndent(toNodes(rows), roots),
-    [rows, roots],
-  );
-  const outdentable = useMemo(
-    () => canOutdent(toNodes(rows), roots),
-    [rows, roots],
-  );
+  const indentable = useMemo(() => canIndent(nodes, roots), [nodes, roots]);
+  const outdentable = useMemo(() => canOutdent(nodes, roots), [nodes, roots]);
 
   // `contentRef` is the centered block-content wrapper the marquee overlay is
   // positioned within. The full-width interaction surface it sits inside — the
@@ -485,14 +503,23 @@ function SelectionLayer({
   );
 
   // Keep the live selection reachable from imperative DOM event handlers
-  // (clipboard) without re-subscribing them on every selection change.
-  const selectedRef = useLatestRef(selectedIds);
+  // (clipboard) without re-subscribing them on every selection change. The
+  // CLOSED selection, so a clipboard write and the painted highlight are reading
+  // the same thing.
+  const selectedRef = useLatestRef(selection);
+  // Same reason, for the anchor predicate the roots resolver needs: the imperative
+  // handlers below must not re-subscribe every time the block registry churns.
+  const isAnchorNodeRef = useLatestRef(isAnchorNode);
   const rowsRef = useLatestRef(rows);
 
   // Nudge the whole selection up/down by one slot among its siblings.
   const moveSelection = useCallback(
     (dir: "up" | "down") => {
-      const roots = selectionRoots(rowsRef.current, selectedRef.current);
+      const roots = blockSelectionRoots(
+        toNodes(rowsRef.current),
+        selectedRef.current,
+        isAnchorNodeRef.current,
+      );
       if (roots.length === 0) return;
       const moving = new Set(
         roots.flatMap((r) => subtreeIds(rowsRef.current, r)),
@@ -528,7 +555,7 @@ function SelectionLayer({
       }
       bulkMove({ ids: roots, parentId: first.parentId, afterId });
     },
-    [bulkMove, rowsRef, selectedRef],
+    [bulkMove, rowsRef, selectedRef, isAnchorNodeRef],
   );
 
   // ---- Block-selection mode (range state, container focus + keyboard) -------
@@ -617,7 +644,11 @@ function SelectionLayer({
   // outside the container and its event never reaches `onCopy` below.
   const writeClipboard = useCallback(
     (e: { clipboardData: DataTransfer | null; preventDefault: () => void }) => {
-      const roots = selectionRoots(rowsRef.current, selectedRef.current);
+      const roots = blockSelectionRoots(
+        toNodes(rowsRef.current),
+        selectedRef.current,
+        isAnchorNodeRef.current,
+      );
       if (roots.length === 0) return false;
       const clipboardData = e.clipboardData;
       if (clipboardData === null) return false;
@@ -721,6 +752,7 @@ function SelectionLayer({
           toNodes(rowsRef.current),
           selectedRef.current,
           focusedBlockId,
+          isAnchorNodeRef.current,
         );
 
       if (decision.kind === "file") {
@@ -1123,8 +1155,8 @@ function SelectionLayer({
   const onDragStart = (event: DragStartEvent) => {
     const id = (event.active.data.current?.id as string | undefined) ?? null;
     setActiveId(id);
-    if (id && selectedIds.has(id)) {
-      const roots = selectionRoots(rows, selectedIds);
+    if (id && selection.has(id)) {
+      const roots = blockSelectionRoots(nodes, selectedIds, isAnchorNode);
       const subtree = new Set(roots.flatMap((r) => subtreeIds(rows, r)));
       setBulkDragState({ roots, subtree });
     } else {
@@ -1400,8 +1432,8 @@ function SelectionLayer({
   // one box per row — see `internal/selection-bands.ts` for why that is the
   // shape, and `components/selection-bands.tsx` for the look.
   const selectionBands = useMemo(
-    () => resolveSelectionBands(flat, frameSpans, selectedIds),
-    [flat, frameSpans, selectedIds],
+    () => resolveSelectionBands(flat, frameSpans, selection),
+    [flat, frameSpans, selection],
   );
 
   return (
@@ -1447,7 +1479,7 @@ function SelectionLayer({
               <Button
                 variant="ghost"
                 className="text-foreground hover:text-foreground/80"
-                onClick={() => bulkDuplicate([...selectedIds])}
+                onClick={() => bulkDuplicate([...selection])}
               >
                 Duplicate
               </Button>
@@ -1455,7 +1487,7 @@ function SelectionLayer({
                 type="button"
                 className="text-destructive hover:text-destructive/80"
                 onClick={() => {
-                  bulkDelete([...selectedIds]);
+                  bulkDelete([...selection]);
                   clearSelection();
                 }}
               >
@@ -1578,7 +1610,7 @@ function SelectionLayer({
                     hasVisibleChildren={f.firstVisibleChildType !== null}
                     ordinal={f.ordinal}
                     seat={railSeats[i]!}
-                    isSelected={selectedIds.has(f.block.id)}
+                    isSelected={selection.has(f.block.id)}
                     isDragging={
                       activeId === f.block.id ||
                       (bulkDrag?.subtree.has(f.block.id) ?? false)

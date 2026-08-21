@@ -18724,6 +18724,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `BlockPageSchema`
           - `BlockPatchSchema`
           - `BlockSchema`
+          - `blockSelectionRoots`
           - `blocksResource`
           - `canIndent`
           - `canOutdent`
@@ -18806,6 +18807,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `UpdateBlockBodySchema`
           - `visibleChildrenOf`
           - `visibleChildRule`
+          - `withContainersSelected`
           - `withMintedIds`
           - `withRuns`
           - `xmlTextContentLength`

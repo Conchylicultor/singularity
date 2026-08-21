@@ -720,6 +720,100 @@ export function inDocumentOrder(
 }
 
 /**
+ * A block selection with every FULLY-COVERED container ANCHOR added to it.
+ *
+ * > A container renders no line of its own, so a selection covering every line
+ * > it owns IS a selection of the container.
+ *
+ * That is not a convenience — it is the ONLY way a pointer can say "this card".
+ * An anchor's row is zero height while its children are visible, it carries no
+ * rail and no shift-click target, and `rowAtPointer`'s height guard skips it
+ * outright: a drag, a shift-click and a click-and-extend can therefore reach
+ * every line INSIDE a callout or a `/todo` and never the box around them. Left
+ * unresolved, "select the card, copy, paste" pasted its contents with the box
+ * stripped off, and the same hole made a drag carry the children out of a frame
+ * the user thought they were moving.
+ *
+ * Coverage is measured against `visibleChildRule` — the lines actually on
+ * screen, not the stored children — so a COLLAPSED container is promoted by its
+ * one borrowed line. Selecting that line is selecting everything the container
+ * shows, which is exactly what the fold means.
+ *
+ * The walk is post-order, so nesting resolves in one pass: a card whose only
+ * content is another card promotes the inner one first, which is then what
+ * covers the outer. A childless anchor is never promoted — it has a real
+ * one-line box of its own (the surface's childless fallback) and is selected by
+ * pointing at it, like any other row.
+ *
+ * Monotone by construction: it only ever ADDS ids. An anchor the range already
+ * carries (a range crossing it from outside, `⌘A`) stays selected whether or not
+ * its children are — the roots below then subsume them, which is ordinary
+ * subtree semantics and not this rule's business.
+ */
+export function withContainersSelected(
+  blocks: BlockNode[],
+  selectedIds: ReadonlySet<string>,
+  isAnchor: IsAnchor,
+): ReadonlySet<string> {
+  const kids = new Map<string | null, BlockNode[]>();
+  for (const b of blocks) {
+    const list = kids.get(b.parentId);
+    if (list) list.push(b);
+    else kids.set(b.parentId, [b]);
+  }
+  for (const list of kids.values())
+    list.sort((a, b) => Rank.compare(Rank.from(a.rank), Rank.from(b.rank)));
+
+  const out = new Set(selectedIds);
+  const walk = (node: BlockNode, sealed: boolean): void => {
+    const children = kids.get(node.id) ?? [];
+    const anchored = isAnchor(node);
+    const { show, sealedBelow } = visibleChildRule({
+      isAnchor: anchored,
+      expanded: node.expanded,
+      sealed,
+      hasChildren: children.length > 0,
+    });
+    const visible =
+      show === "all" ? children : show === "first" ? children.slice(0, 1) : [];
+    for (const child of visible) walk(child, sealedBelow);
+    // Post-order: `out` already carries whatever the children promoted.
+    if (anchored && visible.length > 0 && visible.every((c) => out.has(c.id)))
+      out.add(node.id);
+  };
+
+  // Forest roots: nodes whose parent is outside this array (the page row is not
+  // part of a page's content forest) or absent entirely — `documentOrder`'s rule.
+  const present = new Set(blocks.map((b) => b.id));
+  for (const b of blocks) {
+    if (b.parentId === null || !present.has(b.parentId)) walk(b, false);
+  }
+  return out;
+}
+
+/**
+ * THE selection roots of a block selection: `selectionRoots` over the
+ * container-closed selection (`withContainersSelected`).
+ *
+ * Every bulk gesture the block list drives — copy, cut, duplicate, drag, move,
+ * indent/outdent, the paste anchor — resolves its targets through here, so a
+ * fully-covered container travels as the container in ALL of them rather than in
+ * whichever ones remembered to close over anchors. `isAnchor` is REQUIRED: there
+ * is no anchor-blind spelling of "the selection's roots" for this surface, which
+ * is what the defect it fixes was.
+ */
+export function blockSelectionRoots(
+  blocks: BlockNode[],
+  selectedIds: ReadonlySet<string>,
+  isAnchor: IsAnchor,
+): string[] {
+  return selectionRoots(
+    blocks,
+    withContainersSelected(blocks, selectedIds, isAnchor),
+  );
+}
+
+/**
  * Where a paste lands while a block selection is active: as a sibling AFTER the
  * last selected subtree root in DOCUMENT order, falling back to the caret's own
  * block when nothing is selected.
@@ -735,13 +829,17 @@ export function inDocumentOrder(
  * copies land as its siblings, nested where it is nested. That is "after the end
  * of the selection" read literally, and matches how the selection's other bulk
  * ops treat roots.
+ *
+ * Roots in `blockSelectionRoots`' sense, so a paste under a fully-selected
+ * container lands AFTER the card rather than inside it, after its last child.
  */
 export function pasteAnchorId(
   blocks: BlockNode[],
   selectedIds: ReadonlySet<string>,
   focusedBlockId: string | null,
+  isAnchor: IsAnchor,
 ): string | null {
-  const roots = selectionRoots(blocks, selectedIds);
+  const roots = blockSelectionRoots(blocks, selectedIds, isAnchor);
   return lastOf(inDocumentOrder(blocks, roots)) ?? focusedBlockId ?? null;
 }
 

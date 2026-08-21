@@ -49,6 +49,8 @@ export {
   toNodes,
   opBlockIds,
   pasteAnchorId,
+  blockSelectionRoots,
+  withContainersSelected,
   prevVisibleLine,
   nextVisibleLine,
   visibleChildRule,
