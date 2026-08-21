@@ -15,6 +15,7 @@ import {
   BLOCK_LIST_ARIA,
   type BlockSelectionActions,
 } from "../internal/use-block-selection";
+import type { VisibleBlock } from "../internal/selection-closure";
 
 // The announcement channel is a module-level writer into a page-global live
 // region, so the way to observe it from a hook test is to own the module — the
@@ -30,6 +31,29 @@ afterEach(cleanup);
 beforeEach(() => announced.mockClear());
 
 const IDS = ["b1", "b2", "b3", "b4"] as const;
+
+/**
+ * The default harness list: four blocks, all at the top level. Depth is what
+ * decides whether a range takes further rows with it, so a FLAT list is what
+ * isolates the focus/keyboard rules below from the descendant closure — the
+ * nested list has its own describe block at the end.
+ */
+const FLAT: VisibleBlock[] = IDS.map((id) => ({ id, depth: 0 }));
+
+/**
+ * The reported shape: `b1` with two children, then a top-level `b4`.
+ *
+ *   b1
+ *     b2
+ *     b3
+ *   b4
+ */
+const NESTED: VisibleBlock[] = [
+  { id: "b1", depth: 0 },
+  { id: "b2", depth: 1 },
+  { id: "b3", depth: 1 },
+  { id: "b4", depth: 0 },
+];
 
 /** What the harness's blocks are called when the selection speaks their name. */
 const describeBlock = (id: string) => `Text: ${id} body`;
@@ -79,15 +103,24 @@ function FakeBlockEditor({ id }: { id: string }) {
 }
 
 /** The real `useBlockSelection`, wired to the real `MultiSelectProvider`. */
-function Surface({ actions }: { actions: BlockSelectionActions }) {
+function Surface({
+  actions,
+  visible,
+}: {
+  actions: BlockSelectionActions;
+  visible: VisibleBlock[];
+}) {
   const { selectedIds, selectedCount } = useMultiSelect();
-  // The editor derives these from the block forest; a flat harness has no tree,
-  // so every selected block is its own root.
+  // The editor derives the roots from the block forest, which this harness does
+  // not have — so it names every selected block. Only the indent/outdent
+  // assertions read them, and those run on the flat list, where every selected
+  // block IS its own root. `selected` below therefore doubles as a readout of
+  // the whole selection, which is what the closure tests assert on.
   const roots = useMemo(() => [...selectedIds], [selectedIds]);
 
   const { containerRef, control, clearSelection, onKeyDown, onFocusCapture } =
     useBlockSelection({
-      orderedIds: IDS,
+      visible,
       roots,
       focusedBlockId: null,
       describeBlock,
@@ -114,8 +147,8 @@ function Surface({ actions }: { actions: BlockSelectionActions }) {
         onFocusCapture={onFocusCapture}
       >
         <SelectionControlProvider value={control}>
-          {IDS.map((id) => (
-            <FakeBlockEditor key={id} id={id} />
+          {visible.map((v) => (
+            <FakeBlockEditor key={v.id} id={v.id} />
           ))}
         </SelectionControlProvider>
       </div>
@@ -123,7 +156,7 @@ function Surface({ actions }: { actions: BlockSelectionActions }) {
   );
 }
 
-function setup() {
+function setup(visible: VisibleBlock[] = FLAT) {
   const actions: BlockSelectionActions = {
     indent: vi.fn(),
     outdent: vi.fn(),
@@ -133,8 +166,8 @@ function setup() {
     moveSelection: vi.fn(),
   };
   const view = render(
-    <MultiSelectProvider orderedIds={IDS}>
-      <Surface actions={actions} />
+    <MultiSelectProvider orderedIds={visible.map((v) => v.id)}>
+      <Surface actions={actions} visible={visible} />
     </MultiSelectProvider>,
   );
   const el = (id: string) => view.getByTestId(id);
@@ -166,8 +199,8 @@ function setup() {
  * gives the same discrimination without depending on React's flush timing;
  * `e2e/block-selection-verify.ts` covers the single-dispatch symptom for real.
  */
-function inSelectionMode(id: string) {
-  const t = setup();
+function inSelectionMode(id: string, visible: VisibleBlock[] = FLAT) {
+  const t = setup(visible);
   t.block(id).focus();
   fireEvent.keyDown(t.block(id), { key: "Escape" });
   return t;
@@ -388,5 +421,78 @@ describe("the block list is a document, not a listbox", () => {
     fireEvent.click(t.clear);
     fireEvent.click(t.clear);
     expect(spoken()).toEqual(["Selection cleared"]);
+  });
+});
+
+/**
+ * A block's children go where it goes — every structural op acts on the
+ * selection's subtree roots, and a root carries its subtree — so a range that
+ * names a parent names its children too. The bug this closes: selecting `b1`
+ * and `b2` and pressing Backspace deleted `b3` as well, which the selection
+ * never showed.
+ */
+describe("a selected block brings its children with it", () => {
+  it("selecting a parent selects its whole subtree", () => {
+    const t = inSelectionMode("b1", NESTED);
+
+    expect(t.selected()).toBe("b1,b2,b3");
+    expect(t.count()).toBe(3);
+  });
+
+  it("what Backspace deletes is what the selection showed", () => {
+    const t = inSelectionMode("b1", NESTED);
+
+    fireEvent.keyDown(t.container, { key: "Backspace" });
+
+    expect(t.actions.remove).toHaveBeenCalledWith(["b1", "b2", "b3"]);
+  });
+
+  it("extending onto a child leaves the rest of the subtree in", () => {
+    const t = inSelectionMode("b1", NESTED);
+
+    // Shrinking below the subtree is not available, and should not be: `b1` is
+    // selected, so `b3` is selected.
+    fireEvent.keyDown(t.container, { key: "ArrowUp", shiftKey: true });
+
+    expect(t.selected()).toBe("b1,b2,b3");
+  });
+
+  it("a child alone does not select its parent or its siblings", () => {
+    const t = inSelectionMode("b2", NESTED);
+
+    expect(t.selected()).toBe("b2");
+  });
+
+  it("Shift+ArrowDown extends past the children, not back into them", () => {
+    const t = inSelectionMode("b1", NESTED);
+
+    fireEvent.keyDown(t.container, { key: "ArrowDown", shiftKey: true });
+
+    expect(t.selected()).toBe("b1,b2,b3,b4");
+  });
+
+  it("ArrowDown steps off the end of the subtree", () => {
+    const t = inSelectionMode("b1", NESTED);
+
+    fireEvent.keyDown(t.container, { key: "ArrowDown" });
+
+    expect(t.selected()).toBe("b4");
+  });
+
+  it("Enter returns the caret to the block the user was on", () => {
+    const t = inSelectionMode("b1", NESTED);
+
+    fireEvent.keyDown(t.container, { key: "Enter" });
+
+    // The parent, not the last child the closure swept in.
+    expect(t.actions.focusBlock).toHaveBeenCalledWith("b1");
+  });
+
+  it("names the block the user aimed at, and counts what is selected", () => {
+    inSelectionMode("b1", NESTED);
+
+    expect(spoken()).toEqual([
+      "Text: b1 body, block 1 of 4, 3 blocks selected",
+    ]);
   });
 });

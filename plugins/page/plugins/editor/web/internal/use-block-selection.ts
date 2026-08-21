@@ -4,6 +4,7 @@ import { useEventCallback } from "@plugins/primitives/plugins/latest-ref/web";
 import { announce } from "@plugins/primitives/plugins/announce/web";
 import type { SelectionControl } from "../selection-control";
 import { releaseCaret } from "./caret-authority";
+import { rangeWithDescendants, type VisibleBlock } from "./selection-closure";
 
 /**
  * The block list container's ARIA identity, spread onto the element that carries
@@ -43,8 +44,13 @@ export interface BlockSelectionActions {
 }
 
 export interface BlockSelectionOptions {
-  /** Every rendered block id, in document (flattened) order. */
-  orderedIds: readonly string[];
+  /**
+   * Every rendered block, in document (flattened) order, with the depth it is
+   * drawn at. The order is what a range spans; the depth is what tells a range
+   * which further rows are children of what it already covers — see
+   * `rangeWithDescendants`.
+   */
+  visible: readonly VisibleBlock[];
   /** The selection's minimal subtree roots — what the structural ops act on. */
   roots: string[];
   /** The block whose text editor currently holds the caret, if any. */
@@ -123,7 +129,7 @@ export interface BlockSelection {
  * now?" — and a `copy` event's target follows the DOM selection, not focus.
  */
 export function useBlockSelection({
-  orderedIds,
+  visible,
   roots,
   focusedBlockId,
   describeBlock,
@@ -132,9 +138,20 @@ export function useBlockSelection({
   const { selectedIds, isActive, setRange, clearAll, selectAll } =
     useMultiSelect();
 
+  const orderedIds = useMemo(() => visible.map((v) => v.id), [visible]);
+
   const containerRef = useRef<HTMLDivElement>(null);
   const anchorRef = useRef<string | null>(null);
   const headRef = useRef<string | null>(null);
+  /**
+   * The block the user last AIMED at — the head as they asked for it, before the
+   * descendant closure pushed the range's bottom end past it. Kept apart from
+   * `headRef` (the real end of the real selection) because one question wants
+   * it: Enter puts the caret back where the user was, and pressing Escape on a
+   * parent of two then Enter must return to the parent, not drop into its last
+   * child.
+   */
+  const aimedRef = useRef<string | null>(null);
 
   const focusContainer = useCallback(() => {
     const container = containerRef.current;
@@ -167,25 +184,44 @@ export function useBlockSelection({
   // re-mints) leaves this function's identity — and therefore `control`'s, and
   // therefore every `BlockRow`'s memoized props — untouched.
   const applyRange = useEventCallback((anchor: string, head: string) => {
+    // THE closure site. Every range change in the editor arrives here — Escape
+    // in a block, a click, Shift+Arrow, a marquee drag — so closing the range
+    // over its descendants once, here, is what makes a parent-without-its-
+    // children selection unspellable downstream: the reducer, the highlight
+    // bands, each row's `isSelected` and the ops all read the one closed range,
+    // and none of them has to remember to re-derive it. See
+    // `rangeWithDescendants` for why the result is still a range.
+    const closed = rangeWithDescendants(visible, { anchor, head });
+
     // Only a real range CHANGE is spoken. A marquee drag re-applies the same
     // range once per pointermove and once per animation frame while the pointer
     // sits parked at a scrolling edge; the reducer already bails on that, and
-    // announcing it would be the same sentence dozens of times a second.
-    const changed = anchorRef.current !== anchor || headRef.current !== head;
-    anchorRef.current = anchor;
-    headRef.current = head;
-    setRange(anchor, head);
+    // announcing it would be the same sentence dozens of times a second. The
+    // CLOSED ends are what is compared, because they are what was applied — two
+    // different raw ranges that close to the same selection are not a change.
+    const changed =
+      anchorRef.current !== closed.anchor || headRef.current !== closed.head;
+    anchorRef.current = closed.anchor;
+    headRef.current = closed.head;
+    aimedRef.current = head;
+    setRange(closed.anchor, closed.head);
     if (!changed) return;
 
     // The same arithmetic `SET_RANGE` does: the selection IS the inclusive index
     // span between the two ends. An id the ordered list does not carry is the
     // reducer's own no-op case, so there is nothing true to say about it —
     // better silent than a wrong count.
-    const anchorIdx = orderedIds.indexOf(anchor);
-    const headIdx = orderedIds.indexOf(head);
+    const anchorIdx = orderedIds.indexOf(closed.anchor);
+    const headIdx = orderedIds.indexOf(closed.head);
     if (anchorIdx === -1 || headIdx === -1) return;
     const count = Math.abs(anchorIdx - headIdx) + 1;
-    const position = `block ${headIdx + 1} of ${orderedIds.length}`;
+    // Named and placed by the block the user AIMED at, sized by what is actually
+    // selected: "Text: xxx, block 1 of 4, 3 blocks selected" is what pressing
+    // Escape on a parent of two does. Naming the closure's own bottom end
+    // instead would announce a block the user never moved onto.
+    const aimedIdx = orderedIds.indexOf(head);
+    if (aimedIdx === -1) return;
+    const position = `block ${aimedIdx + 1} of ${orderedIds.length}`;
     const extent = count > 1 ? `, ${count} blocks selected` : ", selected";
     announce(`${describeBlock(head)}, ${position}${extent}`);
   });
@@ -198,6 +234,7 @@ export function useBlockSelection({
     const hadSelection = anchorRef.current !== null;
     anchorRef.current = null;
     headRef.current = null;
+    aimedRef.current = null;
     clearAll();
     if (hadSelection) announce("Selection cleared");
   });
@@ -210,6 +247,27 @@ export function useBlockSelection({
       return orderedIds[next] ?? null;
     },
   );
+
+  /**
+   * The block a plain arrow leaves the selection FROM: its last block going
+   * down, its first going up. Not the head, which is only one of the two ends —
+   * and after the descendant closure the head of a range drawn upward sits at
+   * its top, so stepping down from it would walk back INTO the selection
+   * instead of out of it. (Shift+Arrow still moves the head: that is what
+   * extending means.)
+   */
+  const edge = useEventCallback((dir: "up" | "down"): string | null => {
+    const anchor = anchorRef.current;
+    const head = headRef.current;
+    if (anchor === null) return head;
+    if (head === null) return anchor;
+    const anchorIdx = orderedIds.indexOf(anchor);
+    const headIdx = orderedIds.indexOf(head);
+    if (anchorIdx === -1 || headIdx === -1) return head;
+    const lower = anchorIdx > headIdx ? anchor : head;
+    const upper = anchorIdx < headIdx ? anchor : head;
+    return dir === "down" ? lower : upper;
+  });
 
   const enterSelectionMode = useEventCallback(
     (blockId: string, extend?: "up" | "down") => {
@@ -265,6 +323,9 @@ export function useBlockSelection({
       selectAll();
       anchorRef.current = orderedIds[0] ?? null;
       headRef.current = orderedIds[orderedIds.length - 1] ?? null;
+      // Select-all has no block the user aimed at, so Enter falls back to the
+      // range's end — the same block it has always put the caret in.
+      aimedRef.current = null;
       // The third range-change site (see the funnel note above). Naming one block
       // here would be misleading — select-all has no head the user aimed at.
       announce(`All ${orderedIds.length} blocks selected`);
@@ -294,16 +355,20 @@ export function useBlockSelection({
     }
     if (e.key === "Enter") {
       e.preventDefault();
-      const head = headRef.current;
+      const target = aimedRef.current ?? headRef.current;
       clearSelection();
-      if (head) actions.focusBlock(head);
+      if (target) actions.focusBlock(target);
       return;
     }
     if (e.key === "ArrowDown" || e.key === "ArrowUp") {
       const dir = e.key === "ArrowDown" ? "down" : "up";
-      const head = headRef.current ?? anchorRef.current;
-      if (!head) return;
-      const next = neighbor(head, dir);
+      // Extending moves the head; moving leaves from the range's edge. Both are
+      // one `neighbor` step — off a different block.
+      const from = e.shiftKey
+        ? (headRef.current ?? anchorRef.current)
+        : edge(dir);
+      if (!from) return;
+      const next = neighbor(from, dir);
       if (!next) {
         e.preventDefault();
         return;
@@ -312,7 +377,7 @@ export function useBlockSelection({
       if (e.altKey && e.shiftKey) {
         actions.moveSelection(dir);
       } else if (e.shiftKey) {
-        applyRange(anchorRef.current ?? head, next);
+        applyRange(anchorRef.current ?? from, next);
       } else {
         applyRange(next, next);
       }

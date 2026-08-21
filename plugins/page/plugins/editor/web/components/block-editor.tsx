@@ -476,7 +476,13 @@ function SelectionLayer({
   // owned by `useBlockSelection` below, as `containerRef`.
   const contentRef = useRef<HTMLDivElement>(null);
 
-  const orderedIds = useMemo(() => flat.map((f) => f.block.id), [flat]);
+  // The block list as the range machinery reads it: order (what a range spans)
+  // plus depth (what tells a range which rows below it are children of what it
+  // already covers, so a selected parent takes its subtree with it).
+  const visible = useMemo(
+    () => flat.map((f) => ({ id: f.block.id, depth: f.depth })),
+    [flat],
+  );
 
   // Keep the live selection reachable from imperative DOM event handlers
   // (clipboard) without re-subscribing them on every selection change.
@@ -582,7 +588,7 @@ function SelectionLayer({
     onKeyDown,
     onFocusCapture,
   } = useBlockSelection({
-    orderedIds,
+    visible,
     roots,
     focusedBlockId,
     describeBlock,

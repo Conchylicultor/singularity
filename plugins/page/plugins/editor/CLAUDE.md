@@ -1127,6 +1127,53 @@ in the block-type presentation API, not on this surface.
 `quote` / `callout` container is no `blockquote`. Same section states why, and
 why the answer is `aria-owns` rather than another role.
 
+## A selected block always carries its children
+
+> The selection is **closed under descendants**: a range that names a block names
+> every block nested under it. `rangeWithDescendants`
+> (`internal/selection-closure.ts`), applied in `applyRange`.
+
+Every structural op acts on the selection's subtree ROOTS — `bulkDelete`,
+`bulkDuplicate`, the clipboard's `serializeForest`, `indentBlocks`, the bulk drag
+— and a root carries its subtree. So a selection that showed a parent WITHOUT its
+children was showing the user something other than what the next keystroke would
+do: selecting a parent and its first child and pressing Backspace deleted the
+second child too, which was never highlighted.
+
+The closure goes in `applyRange` because that is the ONE funnel every range change
+passes through — Escape inside a block, a click, Shift+Arrow, the marquee drag,
+the pointer landings in `block-editor.tsx`. Closing it there is what makes the
+open range unspellable downstream: the reducer stores the closed range, so the
+highlight bands, each row's `isSelected`, the spoken count and the ops all read
+the same thing and none of them re-derives it. Don't add a second closure at a
+consumer — if one is ever needed, the funnel moved.
+
+Three consequences worth knowing before touching the range machinery:
+
+- **The result is still one contiguous `[anchor, head]` range.** In a depth-first
+  flatten a block's descendants are the rows directly after it while the depth
+  stays greater, so the closure only ever pushes the range's BOTTOM end further
+  down. It never splits the range and never reaches above it — selecting a child
+  does not select its parent, because acting on the child leaves the parent where
+  it is.
+- **An upward range grows at its ANCHOR**, that being its bottom end. This is the
+  one place the anchor moves under the user, and it is honest: the anchor is an
+  end of the selection, and the selection now ends lower.
+- **Shrinking a range below a subtree is not available.** Shift+ArrowUp off a
+  selected parent re-closes to the same selection, so nothing moves. Correct, not
+  stuck: the parent is selected, so its children are.
+
+Depth, not `parentId`, is what the closure reads, and it comes from the visible
+flatten (`visible`, mapped off `flat`): what a selection may cover is what the
+user can SEE. A collapsed container's hidden children are not rows at all — they
+still travel with their root, because the op acts on the subtree — and its
+borrowed line is one.
+
+The arrow keys follow from the closure: **Shift+Arrow moves the head (extending),
+a plain Arrow leaves from the range's EDGE** — its last block going down, its
+first going up (`edge()`). Stepping from the head instead would walk a plain
+ArrowDown back into a range drawn upward, and back into a parent's children.
+
 ## Block-selection mode: the container handles only keys it originated
 
 Block selection lives on `internal/use-block-selection.ts` (range state + the
