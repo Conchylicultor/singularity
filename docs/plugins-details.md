@@ -15167,6 +15167,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `page/annotations/todo/task-link`
               - `page/callout`
               - `page/container`
+              - `page/divider`
               - `page/editor`
               - `page/editor-collab`
               - `page/image`
@@ -18155,6 +18156,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `page/editor.BLOCK_INSET`
           - `page/editor.BlockRendererProps`
           - `page/editor.Editor`
+          - `page/editor.useVoidCaret`
           - `primitives/copy-to-clipboard.CopyButton`
           - `primitives/css/clip.Clip`
           - `primitives/css/clip.clipClasses`
@@ -18227,12 +18229,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Web:
         - Contributes: `Editor.Block` "divider" → `DividerBlock`
         - Uses:
-          - `page/editor.BLOCK_INSET`
           - `page/editor.BlockRendererProps`
           - `page/editor.Editor`
-          - `page/editor.useBlockEditor`
-          - `primitives/css/spacing.Inset`
-          - `primitives/css/ui-kit.cn`
+          - `page/editor.VoidCaretBox`
         - Exports (values):
           - `DIVIDER_TYPE`
           - `dividerBlock`
@@ -18346,6 +18345,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `PageOption`
           - `PageOptionsResult`
           - `TextBlockLayoutProps`
+          - `VoidCaret`
+          - `VoidCaretBoxProps`
+          - `VoidCaretOptions`
         - Exports (values):
           - `BLOCK_INDENT`
           - `BLOCK_INSET`
@@ -18377,6 +18379,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `useGroupedInsertableBlocks`
           - `useInsertableBlocks`
           - `usePageOptions`
+          - `useVoidCaret`
+          - `VoidCaretBox`
       - Server:
         - Contributes:
           - `resource.declare` "pages"
@@ -19108,7 +19112,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Uses:
               - `page/editor.BlockRendererProps`
               - `page/editor.Editor`
-              - `page/editor.useBlockEditor`
+              - `page/editor.useVoidCaret`
               - `page/math/render.KatexMath`
               - `primitives/css/center.Center`
               - `primitives/css/clip.Clip`
@@ -19482,7 +19486,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `page/editor.BlockRendererProps`
           - `page/editor.Editor`
           - `page/editor.PageIcon`
-          - `page/editor.useBlockEditor`
+          - `page/editor.useVoidCaret`
           - `page/page-reference.usePageNavigation`
           - `page/page-reference.usePageReferenceActions`
           - `primitives/css/center.Center`
@@ -22652,7 +22656,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `page/bookmark`
               - `page/callout`
               - `page/code-block`
-              - `page/divider`
               - `page/editor`
               - `page/embed`
               - `page/file`
@@ -23645,7 +23648,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `page/callout`
               - `page/code-block`
               - `page/container`
-              - `page/divider`
               - `page/editor`
               - `page/embed`
               - `page/file`

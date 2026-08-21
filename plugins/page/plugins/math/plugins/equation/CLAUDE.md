@@ -10,7 +10,7 @@
   - Uses:
     - `page/editor.BlockRendererProps`
     - `page/editor.Editor`
-    - `page/editor.useBlockEditor`
+    - `page/editor.useVoidCaret`
     - `page/math/render.KatexMath`
     - `primitives/css/center.Center`
     - `primitives/css/clip.Clip`

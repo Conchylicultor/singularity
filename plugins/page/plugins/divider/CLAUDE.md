@@ -8,12 +8,9 @@
 - Web:
   - Contributes: `Editor.Block` "divider" → `DividerBlock`
   - Uses:
-    - `page/editor.BLOCK_INSET`
     - `page/editor.BlockRendererProps`
     - `page/editor.Editor`
-    - `page/editor.useBlockEditor`
-    - `primitives/css/spacing.Inset`
-    - `primitives/css/ui-kit.cn`
+    - `page/editor.VoidCaretBox`
   - Exports (values):
     - `DIVIDER_TYPE`
     - `dividerBlock`

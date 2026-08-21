@@ -44,6 +44,12 @@ export { BlockTextRenderer } from "./components/block-text-renderer";
 export { TextBlockLayout } from "./components/text-block-layout";
 export type { TextBlockLayoutProps } from "./components/text-block-layout";
 export { useBlockEditor } from "./block-editor-context";
+export { useVoidCaret, VoidCaretBox } from "./components/void-caret";
+export type {
+  VoidCaret,
+  VoidCaretOptions,
+  VoidCaretBoxProps,
+} from "./components/void-caret";
 export {
   useInsertableBlocks,
   useGroupedInsertableBlocks,

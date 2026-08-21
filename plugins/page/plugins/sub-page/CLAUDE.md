@@ -11,7 +11,7 @@
     - `page/editor.BlockRendererProps`
     - `page/editor.Editor`
     - `page/editor.PageIcon`
-    - `page/editor.useBlockEditor`
+    - `page/editor.useVoidCaret`
     - `page/page-reference.usePageNavigation`
     - `page/page-reference.usePageReferenceActions`
     - `primitives/css/center.Center`

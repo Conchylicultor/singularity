@@ -1,11 +1,11 @@
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { useEffect, useRef } from "react";
+import { useRef } from "react";
 import { useEditableField } from "@plugins/primitives/plugins/editable-field/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Clip } from "@plugins/primitives/plugins/css/plugins/clip/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import {
-  useBlockEditor,
+  useVoidCaret,
   type BlockRendererProps,
 } from "@plugins/page/plugins/editor/web";
 import { textBlock } from "@plugins/page/plugins/text/core";
@@ -16,16 +16,21 @@ import { equationBlock } from "../../core";
 const SOURCE_METRICS = "p-md font-mono text-xs leading-5";
 
 /**
- * A block-level LaTeX equation. Like code-block, it owns its own textarea (outside
- * Lexical) and opts into the editor's focus system via a focus handle, so insertion
- * / `$$` conversion / arrow-key navigation can land on it.
+ * A block-level LaTeX equation. Like code-block, it owns its own textarea
+ * (outside Lexical) and opts into the editor's focus system through the shared
+ * `useVoidCaret`, so insertion / `$$` conversion / arrow-key navigation can land
+ * on it. It draws no "the caret is here" cue: the textarea has a real blinking
+ * caret, which says it better than any tint could.
  *
  * Display (not focused, non-empty): a centered KaTeX render, clickable to edit.
  * Empty + not focused: a muted placeholder. Editing (focused or empty): a panel
  * with a live KaTeX preview above a monospace textarea for the LaTeX source.
  */
-export function EquationBlock({ block, isFocused, editor }: BlockRendererProps) {
-  const { registerFocusHandle } = useBlockEditor();
+export function EquationBlock({
+  block,
+  isFocused,
+  editor,
+}: BlockRendererProps) {
   const parsed = equationBlock.parse(block.data);
 
   const field = useEditableField({
@@ -36,19 +41,16 @@ export function EquationBlock({ block, isFocused, editor }: BlockRendererProps) 
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  // Register a focus handle so convertTo / insertAfter / focusUp/Down can land here.
-  useEffect(
-    () =>
-      registerFocusHandle(block.id, { focus: () => textareaRef.current?.focus() }),
-    [block.id, registerFocusHandle],
-  );
-
-  // Pull the caret into the textarea when the editor considers this block focused
-  // (e.g. right after a `$$` conversion keeps focusedBlockId on this id).
-  useEffect(() => {
-    const ta = textareaRef.current;
-    if (isFocused && ta && document.activeElement !== ta) ta.focus();
-  }, [isFocused]);
+  // Register the focus handle (so convertTo / insertAfter / focusUp/Down can land
+  // here) and pull the caret into the textarea when the editor says this block is
+  // focused — e.g. right after a `$$` conversion keeps focusedBlockId on this id.
+  // The textarea IS the focus capability this void block hands the editor.
+  const voidCaret = useVoidCaret({
+    blockId: block.id,
+    isFocused,
+    editor,
+    focus: () => textareaRef.current?.focus(),
+  });
 
   // Editing whenever focused, or whenever empty (nothing to render yet).
   const editing = isFocused || expression === "";
@@ -61,7 +63,11 @@ export function EquationBlock({ block, isFocused, editor }: BlockRendererProps) 
       editor.remove();
       return;
     }
-    if (e.key === "ArrowUp" && ta.selectionStart === 0 && ta.selectionEnd === 0) {
+    if (
+      e.key === "ArrowUp" &&
+      ta.selectionStart === 0 &&
+      ta.selectionEnd === 0
+    ) {
       e.preventDefault();
       editor.navigate("up");
       return;
@@ -123,7 +129,7 @@ export function EquationBlock({ block, isFocused, editor }: BlockRendererProps) 
           onChange={(e) => field.onChange(e.target.value)}
           onFocus={() => {
             field.onFocus();
-            editor.onFocus();
+            voidCaret.onFocus();
           }}
           onBlur={field.onBlur}
           onKeyDown={onKeyDown}

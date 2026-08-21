@@ -517,6 +517,92 @@ Three rules keep this from leaking:
   waits on the other side is the executor's business, which is why "Backspace goes
   back to the title" needed no new intent, op, or resolver branch.
 
+## A void block has no caret to see (`VoidCaretBox`)
+
+A **void** block owns no editable text — a divider, a sub-page row, the source of
+an equation or a code block. Two things follow, and for a long time each void
+block re-derived both for itself.
+
+**It has to opt into the caret model by hand.** `navigate()` walks the registered
+focus handles, so a block that registers none is *skipped entirely* by arrow keys
+while a click can still focus it — the caret jumps over a block the user can
+plainly see. (This was live: `code-block` pulled DOM focus on `isFocused` but
+registered no handle, so the two halves disagreed.)
+
+**And there is no blinking caret to look at**, so the block itself has to say
+where the caret is.
+
+Both live in `web/components/void-caret.tsx` now, split along the one line that
+actually matters — *is there already something on screen showing the caret?*
+
+- **`useVoidCaret({ blockId, isFocused, editor, focus })`** is the plumbing: it
+  registers the focus handle, pulls DOM focus when the editor's model points
+  here, and hands back the `onFocus` reporter to spread onto whichever element
+  takes focus. It takes a `focus` **capability, never a node**, which is exactly
+  what lets one hook serve a `<textarea>`, a `Row`'s synthesized inner control,
+  and a plain box without knowing about any of them.
+- **`<VoidCaretBox>`** is the cue, for the blocks that have no caret-bearing
+  control of their own. It mints the focusable box and is **the one place the
+  cue is written**.
+
+So the three arms, and each has exactly one spelling:
+
+| block | what shows the caret |
+| --- | --- |
+| text-bearing | the real blinking caret — the editor draws nothing |
+| void owning a text control (`code-block`, `equation`) | the textarea's own caret; the block owes only `useVoidCaret` |
+| void with an inert body (`divider`) | `<VoidCaretBox>` |
+| void delegating to a control with its own "current" vocabulary (`sub-page`) | `Row`'s `selected`, plus `useVoidCaret` for the plumbing |
+
+### The cue is two conditions that LAYER, not one replacing the other
+
+`VoidCaretBox` writes:
+
+```tsx
+className={cn("focus-ring cursor-default rounded-md", isFocused && "bg-accent")}
+```
+
+- `focus-ring` answers *"does this element have DOM keyboard focus?"*. It is the
+  app's canonical indicator, and it is the same utility that suppresses the
+  browser's own outline — so the replacement is drawn on **exactly the condition
+  the original was suppressed for**.
+- `bg-accent` answers *"is the editor's caret on this block?"*. It is the tint
+  `Row.selected` paints, which is why `sub-page` (a `Row`) and `divider` (a box)
+  now say the same thing the same way; `sub-page` passes `hover="accent"` for
+  precisely that reason.
+
+That separation is a fix, not a style choice. The divider used to write
+`outline-none` unconditionally and then draw `ring-primary/30 ring-1` on
+`isFocused` — a *different* condition. A box that had genuinely taken keyboard
+focus while the editor's model disagreed therefore showed **nothing at all**: the
+browser's indicator was off and the replacement never fired.
+
+`page-editor/no-model-focus-ring` (in this plugin's `lint/`) is the rung that
+keeps it fixed: a focus/ring/outline class inside a class expression gated on
+`isFocused` is an error, wherever it is written. `isFocused` is the editor's idea
+of where the caret is, not the browser's `:focus-visible`; an indicator painted
+from it drifts. The rule has no path exemption — `VoidCaretBox` writes the focus
+utility *unconditionally* and puts only the tint under the gate, so the
+definition site does not trip. If it ever did, that would be the signal.
+
+### ↑/↓ belong to the box, everything else to the block
+
+`VoidCaretBox` gives the caller's `onKeyDown` first refusal, then handles
+ArrowUp/ArrowDown itself unless the event was `preventDefault()`ed. "The caret can
+always leave a void block" is the *editor's* invariant — a block that swallowed
+the arrows would strand the user — and an invariant belongs to whoever owns it,
+not to four blocks that each have to remember it.
+
+What Backspace means here, and what Enter seeds, is the block's own meaning and
+stays with the block: the divider's Enter inserts a text block, which the editor
+deliberately cannot do for it (naming `textBlock` would close an editor↔text
+cycle — see *A block id has one mint*).
+
+A void handle registers `focus` only. It omits `replayInput`, and
+`internal/caret-authority.ts`'s `landFlight` keys its void arm on exactly that
+absence — so a landing on a void block resolves with no `onLanded` plumbing on
+the block's side.
+
 ## Caret geometry is stated in LINE BOXES (`internal/caret-geometry.ts`)
 
 "Is the caret on the first / last **visual** line" (which decides whether an arrow
@@ -2529,6 +2615,9 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
     - `PageOption`
     - `PageOptionsResult`
     - `TextBlockLayoutProps`
+    - `VoidCaret`
+    - `VoidCaretBoxProps`
+    - `VoidCaretOptions`
   - Exports (values):
     - `BLOCK_INDENT`
     - `BLOCK_INSET`
@@ -2560,6 +2649,8 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
     - `useGroupedInsertableBlocks`
     - `useInsertableBlocks`
     - `usePageOptions`
+    - `useVoidCaret`
+    - `VoidCaretBox`
 - Server:
   - Contributes:
     - `resource.declare` "pages"

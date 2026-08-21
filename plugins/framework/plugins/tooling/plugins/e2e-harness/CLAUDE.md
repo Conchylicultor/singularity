@@ -71,6 +71,7 @@ rule keeps the broken shape from coming back.
     - `page/annotations/todo/task-link`
     - `page/callout`
     - `page/container`
+    - `page/divider`
     - `page/editor`
     - `page/editor-collab`
     - `page/image`

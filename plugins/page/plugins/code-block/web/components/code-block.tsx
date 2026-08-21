@@ -11,7 +11,7 @@ import {
   hoverRevealTarget,
 } from "@plugins/primitives/plugins/hover-reveal/web";
 import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { MdAutoAwesome } from "react-icons/md";
 import {
   resolveLang,
@@ -35,6 +35,7 @@ import { fillClasses } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 import {
   BLOCK_INSET,
+  useVoidCaret,
   type BlockRendererProps,
 } from "@plugins/page/plugins/editor/web";
 import { codeBlock } from "../../core";
@@ -93,12 +94,20 @@ export function CodeBlock({ block, isFocused, editor }: BlockRendererProps) {
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  // When the editor focus model points at this block (insertion, ``` conversion,
-  // arrow-key navigation), pull the caret into the textarea.
-  useEffect(() => {
-    const ta = textareaRef.current;
-    if (isFocused && ta && document.activeElement !== ta) ta.focus();
-  }, [isFocused]);
+  // A code block is a *void* block as far as the editor is concerned: its text
+  // lives in a plain <textarea>, not in Lexical, so the block has to hand the
+  // editor a focus capability of its own. It used to pull DOM focus on
+  // `isFocused` but register NO handle, and the two are not the same
+  // obligation — `navigate()` walks the registered handles, so arrowing past a
+  // code block SKIPPED it entirely while a click could still focus it, leaving
+  // the editor's focus model and the browser's disagreeing. `useVoidCaret` does
+  // both halves, which is the fix.
+  const voidCaret = useVoidCaret({
+    blockId: block.id,
+    isFocused,
+    editor,
+    focus: () => textareaRef.current?.focus(),
+  });
 
   function onKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
     const ta = e.currentTarget;
@@ -254,7 +263,7 @@ export function CodeBlock({ block, isFocused, editor }: BlockRendererProps) {
           onChange={(e) => field.onChange(e.target.value)}
           onFocus={() => {
             field.onFocus();
-            editor.onFocus();
+            voidCaret.onFocus();
           }}
           onBlur={field.onBlur}
           onKeyDown={onKeyDown}

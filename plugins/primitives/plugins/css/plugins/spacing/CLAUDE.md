@@ -310,7 +310,6 @@ per-site via `// eslint-disable-next-line spacing/no-adhoc-spacing -- reason`.
     - `page/bookmark`
     - `page/callout`
     - `page/code-block`
-    - `page/divider`
     - `page/editor`
     - `page/embed`
     - `page/file`

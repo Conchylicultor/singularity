@@ -585,7 +585,6 @@ guard: `confirmDialog` (`imperative-dialog/plugins/confirm`); native
     - `page/callout`
     - `page/code-block`
     - `page/container`
-    - `page/divider`
     - `page/editor`
     - `page/embed`
     - `page/file`

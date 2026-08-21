@@ -11,6 +11,7 @@
     - `page/editor.BLOCK_INSET`
     - `page/editor.BlockRendererProps`
     - `page/editor.Editor`
+    - `page/editor.useVoidCaret`
     - `primitives/copy-to-clipboard.CopyButton`
     - `primitives/css/clip.Clip`
     - `primitives/css/clip.clipClasses`
