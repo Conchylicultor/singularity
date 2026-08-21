@@ -8,23 +8,23 @@
 // most dangerous failure mode). Fatal wins on any overlap; anything unrecognized
 // is fatal (ambiguous → fatal).
 
-// The oracle reports a real geometry violation by `throw new Error(r.detail)`,
-// and every `detail` string starts with its invariant kind at line start (see
-// core/oracle.ts). This is the closed set of `GeometryInvariant` kinds MINUS
-// `falsification` (which the suite reports via its own "falsification did not
-// bite:" throw, matched separately below). If a kind is added to core/oracle.ts,
-// add it here too — the unit test guards this list against drift.
-export const ORACLE_INVARIANT_KINDS = [
-  "noOverlap",
-  "noClip",
-  "leftPack",
-  "rigidIntegrity",
-  "pinnedRight",
-  "neverTruncatesWhenRoomy",
-  "truncationOnsetOrder",
-  "truncatesTogether",
-  "railAlignment",
-] as const;
+import { FATAL_MARKERS } from "../core/failure-markers";
+
+// The suite stamps every REAL failure with a marker minted in
+// `core/failure-markers.ts` — an oracle violation, a falsification that did not
+// bite, a crashed fixture. Both ends read those constants, so recognizing a real
+// regression needs no list of invariant kinds here and a NEW `GeometryInvariant`
+// kind needs no edit to this file at all.
+//
+// Matched as a plain SUBSTRING, deliberately. The previous signature anchored the
+// invariant's kind name to line start (`^noOverlap:`), which never matched real
+// output: bun:test prints a thrown error as `error: noOverlap: …`. A genuine
+// violation sharing a transcript with a genuine bun timeout therefore classified
+// `inconclusive` — waved through as a flake. The anchor could not just be dropped
+// either, because bun also prints the failing test's NAME (`(fail) badge/long >
+// noOverlap`), so a bare kind name cannot tell a violation from a timeout on a
+// test named after one. A marker appears only when the suite really threw, so it
+// needs no anchor and survives bun's prefix, indentation and wrapping.
 
 // Fatal signatures — a REAL regression. Checked FIRST and win over any timeout
 // wording elsewhere in the same transcript.
@@ -32,21 +32,16 @@ const FATAL_SIGNATURES: RegExp[] = [
   // The two `expect()`-based tests: the non-empty-catalog assertion and the
   // falsification's closing `expect(r.ok).toBe(false)`.
   /\bAssertionError\b/,
-  // The falsification guard: the mutated construct failed to violate its invariant.
-  /falsification did not bite:/,
-  // An uncaught exception escaped to the top of the measurer page — a fixture
-  // (or the harness) CRASHED. This must be fatal and it must be checked here,
-  // above the environmental pass, for a specific reason: a crashing fixture very
-  // often ALSO times out (a React update-depth loop burns the settle budget, a
-  // torn-down tree never settles), so the transcript carries timeout wording as
-  // well. Classified environmental, that run would be waved through as a flake
-  // AND re-tried forever, which is how the Layout Lab stayed broken. Emitted by
-  // `web/internal/layout-geometry.test.ts`; the two strings are one contract.
-  /fixture page error:/,
-  // Any oracle invariant violation — `new Error(r.detail)`, `detail` prefixed
-  // with the invariant kind at line start.
-  new RegExp(`^(${ORACLE_INVARIANT_KINDS.join("|")}):`, "m"),
 ];
+
+// A crashed fixture very often ALSO times out (a React update-depth loop burns
+// the settle budget, a torn-down tree never settles), so its transcript carries
+// timeout wording as well — which is why the markers are checked ABOVE the
+// environmental pass. Classified environmental, such a run would be waved through
+// as a flake AND re-tried forever, which is how the Layout Lab stayed broken.
+function hasFatalMarker(fullOutput: string): boolean {
+  return FATAL_MARKERS.some((marker) => fullOutput.includes(marker));
+}
 
 // Environmental signatures — an inconclusive flake, consulted only when NO fatal
 // signature matched.
@@ -66,6 +61,7 @@ const ENVIRONMENTAL_SIGNATURES: RegExp[] = [
 
 export function classifyFailure(fullOutput: string): "inconclusive" | "fatal" {
   // Fatal wins on any overlap — checked first and unconditionally.
+  if (hasFatalMarker(fullOutput)) return "fatal";
   if (FATAL_SIGNATURES.some((re) => re.test(fullOutput))) return "fatal";
   if (ENVIRONMENTAL_SIGNATURES.some((re) => re.test(fullOutput)))
     return "inconclusive";

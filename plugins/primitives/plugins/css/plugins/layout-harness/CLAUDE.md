@@ -195,14 +195,35 @@ through the generic `loadFixtures()`:
    - **environmental-timeout classification.** If the suite still fails, its full
      stdout+stderr is run through `check/classify.ts`'s `classifyFailure`: a pure
      timeout (bun hook/test timeout or a Playwright launch/goto/wait timeout, with
-     no oracle-invariant or `AssertionError`/`falsification` signature present) is
-     returned as a non-fatal `inconclusive` result — the build deploys anyway and,
-     because no pass marker is written, re-verifies the geometry next build. A real
-     regression (any oracle-invariant kind, `AssertionError`, `falsification did
-     not bite:`, `fixture page error:`, or anything unrecognized) stays fatal
-     (fatal wins on any overlap; ambiguous → fatal). `fixture page error:` is
-     fatal specifically because a crashing fixture usually times out as well, so
-     the two signatures co-occur and the crash must win.
+     no failure marker and no `AssertionError` present) is returned as a non-fatal
+     `inconclusive` result — the build deploys anyway and, because no pass marker
+     is written, re-verifies the geometry next build. A real regression stays fatal
+     (fatal wins on any overlap; ambiguous → fatal).
+
+     What makes a failure real is a **marker**, not a guess at wording. The suite
+     throws through the three minting helpers in
+     [`core/failure-markers.ts`](core/failure-markers.ts) —
+     `geometryViolationError`, `falsificationDidNotBiteError`, `fixturePageError` —
+     and `classifyFailure` matches those same three constants as plain substrings.
+     Both ends read one constant, so there is nothing to keep in step and **a new
+     `GeometryInvariant` kind needs no classifier edit at all.**
+
+     It used to match the invariant's own kind name anchored to line start, from a
+     hand-written list. Both halves were wrong. The list drifted (its drift test
+     compared it against a *second* hand-written list, so the two went stale
+     together and still agreed), and the anchor never matched real output at all —
+     bun:test prints a thrown error as `error: noOverlap: …`, so a genuine
+     violation sharing a transcript with a genuine bun timeout classified
+     `inconclusive` and was waved through. The anchor could not just be dropped
+     either: bun also prints the failing test's NAME (`(fail) badge/long >
+     noOverlap`), so a bare kind name cannot tell a violation from a timeout on a
+     test named after one. A kind list cannot be made sound here; a marker needs no
+     anchor, because it appears only when the suite really threw.
+
+     The page-error marker is checked above the environmental pass for a specific
+     reason: a crashing fixture usually times out as well, so the two co-occur and
+     the crash must win — classified environmental it would be non-fatal AND
+     uncached, i.e. silently retried forever.
 3. **the live Layout Lab gallery** (`web/index.ts` → Debug sidebar) — renders the
    catalog in-app (the human-eyeball complement; no measurement). Each (fixture,
    width) card is wrapped in `PluginErrorBoundary`, so a fixture that throws
@@ -313,10 +334,10 @@ Pure, DOM-free functions — one per `GeometryInvariant` kind (`noOverlap`,
 `evaluateInvariant`. The last two are the two halves of the shrink hierarchy and
 neither can express the other: `truncationOnsetOrder` asserts STRICT priority
 (one cell gives up characters first), `truncatesTogether` asserts the row shares
-its deficit (at every width, all listed slots truncate or none does). A
-new kind MUST also be listed in `check/classify.ts`'s `ORACLE_INVARIANT_KINDS`,
-or a real regression is misclassified as an environmental timeout and passes
-non-fatally. The math is ported
+its deficit (at every width, all listed slots truncate or none does). A new kind
+needs NO edit outside this file and `types.ts`: the suite stamps every violation
+with one shared marker (`core/failure-markers.ts`), so `check/classify.ts` never
+enumerates the kinds. The math is ported
 exactly from the bespoke `frame/web/internal/frame-geometry.test.ts`, the oracle
 being generalized. `rigidIntegrity` is measured-stable (max−min slot width ≤ ε),
 not a magic px constant. `falsification` is NOT evaluated by the oracle — the
@@ -386,7 +407,14 @@ server-core tsconfig where `check`/`facet` live. The
     - `checkTruncatesTogether`
     - `checkTruncationOnsetOrder`
     - `evaluateInvariant`
+    - `FALSIFICATION_NOT_BITING_MARKER`
+    - `falsificationDidNotBiteError`
+    - `FATAL_MARKERS`
+    - `FIXTURE_PAGE_ERROR_MARKER`
+    - `fixturePageError`
     - `fixturesCollectedDir`
+    - `GEOMETRY_VIOLATION_MARKER`
+    - `geometryViolationError`
     - `HOST_MARKER_ATTR`
     - `isLayoutFixture`
     - `isRegionFixture`

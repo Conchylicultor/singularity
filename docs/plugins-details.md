@@ -21774,7 +21774,14 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `checkTruncatesTogether`
               - `checkTruncationOnsetOrder`
               - `evaluateInvariant`
+              - `FALSIFICATION_NOT_BITING_MARKER`
+              - `falsificationDidNotBiteError`
+              - `FATAL_MARKERS`
+              - `FIXTURE_PAGE_ERROR_MARKER`
+              - `fixturePageError`
               - `fixturesCollectedDir`
+              - `GEOMETRY_VIOLATION_MARKER`
+              - `geometryViolationError`
               - `HOST_MARKER_ATTR`
               - `isLayoutFixture`
               - `isRegionFixture`

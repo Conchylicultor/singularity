@@ -2,6 +2,9 @@ import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { rm } from "node:fs/promises";
 import {
   evaluateInvariant,
+  falsificationDidNotBiteError,
+  fixturePageError,
+  geometryViolationError,
   loadFixtures,
   type LayoutFixture,
   type MeasuredFixture,
@@ -93,15 +96,15 @@ async function sweep(
 /**
  * Turn a drained batch of page errors into the one loud failure.
  *
- * The literal `fixture page error:` prefix is a contract with
- * `check/classify.ts`: it is a FATAL signature there, so a crashed fixture can
- * never be filed as an environmental timeout and cached past. Keep the two in
- * step if the wording changes.
+ * The marker `fixturePageError` stamps is a contract with `check/classify.ts`:
+ * it is a FATAL signature there, so a crashed fixture can never be filed as an
+ * environmental timeout and cached past. There is nothing to keep in step — both
+ * ends read the one constant in `core/failure-markers.ts`.
  */
 function throwOnPageErrors(errors: string[], where: string): void {
   if (errors.length === 0) return;
-  throw new Error(
-    `fixture page error: ${String(errors.length)} uncaught error(s) escaped to the top of the measurer page ${where}. A fixture that throws is not laying anything out, so every box measured around it is meaningless:\n\n${errors.join("\n\n--- next page error ---\n\n")}`,
+  throw fixturePageError(
+    `${String(errors.length)} uncaught error(s) escaped to the top of the measurer page ${where}. A fixture that throws is not laying anything out, so every box measured around it is meaningless:\n\n${errors.join("\n\n--- next page error ---\n\n")}`,
   );
 }
 
@@ -165,8 +168,8 @@ for (const fixture of collected) {
           // so the inner invariant MUST fail. If it passes, the harness is NOT
           // biting — a real failure to investigate, never to paper over.
           if (r.ok) {
-            throw new Error(
-              `falsification did not bite: applying ${JSON.stringify(inv.mutate)} to "${fixture.id}" left invariant ${inv.expectViolated.kind} satisfied — the mutated construct should have violated it`,
+            throw falsificationDidNotBiteError(
+              `applying ${JSON.stringify(inv.mutate)} to "${fixture.id}" left invariant ${inv.expectViolated.kind} satisfied — the mutated construct should have violated it`,
             );
           }
           expect(r.ok).toBe(false);
@@ -176,7 +179,7 @@ for (const fixture of collected) {
 
       test(inv.kind, () => {
         const r = evaluateInvariant(inv, measuredByWidth);
-        if (!r.ok) throw new Error(r.detail);
+        if (!r.ok) throw geometryViolationError(r.detail);
         expect(r.ok).toBe(true);
       });
     }
