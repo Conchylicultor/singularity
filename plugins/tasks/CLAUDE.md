@@ -11,10 +11,12 @@
     - `primitives/live-state.useResource`
   - Exports (types):
     - `AutoStartModel`
+    - `DependentCountResult`
     - `TaskPatch`
   - Exports (values):
     - `patchTask`
     - `setAutoStart`
+    - `useActiveDependentCount`
     - `useTask`
 - Server:
   - Uses:
@@ -119,6 +121,8 @@
 - Cross-plugin:
   - Imported by:
     - `conversations/conversation-view/dependencies`
+    - `conversations/conversation-view/dependent-count`
+    - `conversations/conversation-view/drop-dependents`
     - `conversations/conversation-view/tasks-panel`
     - `tasks/auto-start`
     - `tasks/auto-start/launch-option`

@@ -63,7 +63,6 @@
     - `conversations/conversation-view/code/file-pane`
     - `conversations/conversation-view/commits-graph`
     - `conversations/conversation-view/dependencies`
-    - `conversations/conversation-view/dependent-count`
     - `conversations/conversation-view/exit-menu`
     - `conversations/conversation-view/fork-conversation`
     - `conversations/conversation-view/fork-session`
@@ -111,7 +110,7 @@
   - **`code`** — Meta plugin hosting code-related contributions for a conversation (edited files, viewer, etc.). Tracks edited files in the conversation's worktree via the live-state primitive.
   - **`commits-graph`** — Toolbar chip showing commits ahead/behind main; opens a side pane with the chain of commits between merge-base and HEAD. Toolbar chip showing commits ahead/behind main; opens a side pane with the chain of commits between merge-base and HEAD.
   - **`dependencies`** — Unified prompt-bar button showing blocked-by and blocking dependency counts with per-direction edit popovers.
-  - **`dependent-count`** — Shows the count of tasks transitively blocked by the current conversation's task.
+  - **`dependent-count`** — Per-row "N blocked" chip on a conversation item: how many tasks are transitively blocked by that conversation's task. The conversation toolbar shows the same count inside its Tasks button instead of as a chip of its own.
   - **`drop-and-exit`** — Exit-menu entry that marks the top task as dropped and closes the conversation.
   - **`drop-dependents`** — Exit-menu entry that drops the task and all its transitive dependents, then closes the conversation.
   - **`exit`** — Exit-menu entry that closes the conversation without changing any task state.

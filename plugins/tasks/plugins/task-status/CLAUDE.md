@@ -25,6 +25,7 @@ Single source of truth for `TaskStatus` display metadata. All plugins that rende
   - Imported by:
     - `active-data/task-link`
     - `conversations/conversation-view/jsonl-viewer/tool-call/add-task`
+    - `conversations/conversation-view/tasks-panel`
     - `page/annotations/todo`
     - `page/annotations/todo/task-link`
     - `tasks/task-deps-tree`

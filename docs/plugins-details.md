@@ -7990,7 +7990,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `conversations/conversation-view/code/docs-button`
       - `conversations/conversation-view/commits-graph`
       - `conversations/conversation-view/dependencies`
-      - `conversations/conversation-view/dependent-count`
       - `conversations/conversation-view/drop-and-exit`
       - `conversations/conversation-view/drop-dependents`
       - `conversations/conversation-view/exit`
@@ -8579,7 +8578,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conversations/conversation-view/code/file-pane`
           - `conversations/conversation-view/commits-graph`
           - `conversations/conversation-view/dependencies`
-          - `conversations/conversation-view/dependent-count`
           - `conversations/conversation-view/exit-menu`
           - `conversations/conversation-view/fork-conversation`
           - `conversations/conversation-view/fork-session`
@@ -8623,7 +8621,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Plugins:
         - **`action-bar`** — Hosts the Conversation.ActionBar slot — action buttons rendered in the JSONL viewer header.
           - Web:
-            - Slots: `Conversation.ActionBar` ← `apps.agent-manager.pages-nav`, `code-explorer`, `conversations.conversation-view.code.docs-button`, `conversations.conversation-view.commits-graph`, `conversations.conversation-view.dependent-count`, `conversations.conversation-view.jsonl-viewer.event-counter`, `conversations.conversation-view.open-app`, `conversations.conversation-view.push-profiling`, `conversations.conversation-view.tasks-panel`, `conversations.conversation-view.terminal-pane`, `conversations.conversation-view.vscode`, `review`, `tasks.attempt-view`
+            - Slots: `Conversation.ActionBar` ← `apps.agent-manager.pages-nav`, `code-explorer`, `conversations.conversation-view.code.docs-button`, `conversations.conversation-view.commits-graph`, `conversations.conversation-view.jsonl-viewer.event-counter`, `conversations.conversation-view.open-app`, `conversations.conversation-view.push-profiling`, `conversations.conversation-view.tasks-panel`, `conversations.conversation-view.terminal-pane`, `conversations.conversation-view.vscode`, `review`, `tasks.attempt-view`
             - Uses:
               - `primitives/css/spacing.Stack`
               - `primitives/slot-render.defineRenderSlot`
@@ -8637,7 +8635,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `conversations/conversation-view`
               - `conversations/conversation-view/code/docs-button`
               - `conversations/conversation-view/commits-graph`
-              - `conversations/conversation-view/dependent-count`
               - `conversations/conversation-view/jsonl-viewer/event-counter`
               - `conversations/conversation-view/open-app`
               - `conversations/conversation-view/push-profiling`
@@ -8913,18 +8910,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/tooltip.WithTooltip`
               - `shell/notifications.toast`
               - `tasks.useTask`
-        - **`dependent-count`** — Shows the count of tasks transitively blocked by the current conversation's task.
+        - **`dependent-count`** — Per-row "N blocked" chip on a conversation item: how many tasks are transitively blocked by that conversation's task. The conversation toolbar shows the same count inside its Tasks button instead of as a chip of its own.
           - Web:
-            - Contributes:
-              - `Conversation.ActionBar` → `DependentCountChip`
-              - `Item.Chips` → `DependentCountItemChip`
+            - Contributes: `Item.Chips` → `DependentCountItemChip`
             - Uses:
-              - `conversations.useConversationById`
               - `conversations/conversation-ui/item.Item`
-              - `conversations/conversation-view.conversationPane`
-              - `conversations/conversation-view/action-bar.Conversation`
               - `primitives/css/badge.Badge`
-              - `primitives/live-state.useResource`
+              - `tasks.useActiveDependentCount`
         - **`drop-and-exit`** — Exit-menu entry that marks the top task as dropped and closes the conversation.
           - Web:
             - Contributes: `ExitMenu.Item` "drop-and-exit" → `DropAndExitItem`
@@ -8961,8 +8953,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `conversations/conversation-view/exit-menu.ExitMenu`
               - `infra/endpoints.useEndpointMutation`
               - `primitives/css/ui-kit.DropdownMenuItem`
-              - `primitives/live-state.useResource`
               - `shell/notifications.toast`
+              - `tasks.useActiveDependentCount`
           - Server:
             - Uses:
               - `conversations.deleteConversation`
@@ -10273,9 +10265,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `conversations/conversation-view.conversationPane`
               - `conversations/conversation-view/action-bar.Conversation`
               - `primitives/css/status-dot.StatusDot`
+              - `primitives/css/text.Text`
               - `primitives/css/ui-kit.Button`
+              - `tasks.useActiveDependentCount`
               - `tasks.useTask`
               - `tasks/task-detail.taskDetailPane`
+              - `tasks/task-status.STATUS_META`
         - **`terminal-pane`** — Toolbar button that opens a right pane attaching to the conversation's tmux session.
           - Web:
             - Slots: `conv-terminal.actions`
@@ -23329,6 +23324,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `conversations/conversation-view/op-status`
               - `conversations/conversation-view/pending-turn`
               - `conversations/conversation-view/push-profiling`
+              - `conversations/conversation-view/tasks-panel`
               - `conversations/conversation-view/turn-summary`
               - `conversations/recover`
               - `conversations/summary`
@@ -25780,9 +25776,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conversations/conversation-view/code/docs-button`
           - `conversations/conversation-view/commits-graph`
           - `conversations/conversation-view/dependencies`
-          - `conversations/conversation-view/dependent-count`
           - `conversations/conversation-view/drop-and-exit`
-          - `conversations/conversation-view/drop-dependents`
           - `conversations/conversation-view/jsonl-viewer`
           - `conversations/conversation-view/jsonl-viewer/event-counter`
           - `conversations/conversation-view/jsonl-viewer/outline`
@@ -29051,10 +29045,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `primitives/live-state.useResource`
     - Exports (types):
       - `AutoStartModel`
+      - `DependentCountResult`
       - `TaskPatch`
     - Exports (values):
       - `patchTask`
       - `setAutoStart`
+      - `useActiveDependentCount`
       - `useTask`
   - Server:
     - Uses:
@@ -29159,6 +29155,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
   - Cross-plugin:
     - Imported by:
       - `conversations/conversation-view/dependencies`
+      - `conversations/conversation-view/dependent-count`
+      - `conversations/conversation-view/drop-dependents`
       - `conversations/conversation-view/tasks-panel`
       - `tasks/auto-start`
       - `tasks/auto-start/launch-option`
@@ -29863,6 +29861,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Imported by:
           - `active-data/task-link`
           - `conversations/conversation-view/jsonl-viewer/tool-call/add-task`
+          - `conversations/conversation-view/tasks-panel`
           - `page/annotations/todo`
           - `page/annotations/todo/task-link`
           - `tasks/task-deps-tree`

@@ -12,8 +12,8 @@
     - `conversations/conversation-view/exit-menu.ExitMenu`
     - `infra/endpoints.useEndpointMutation`
     - `primitives/css/ui-kit.DropdownMenuItem`
-    - `primitives/live-state.useResource`
     - `shell/notifications.toast`
+    - `tasks.useActiveDependentCount`
 - Server:
   - Uses:
     - `conversations.deleteConversation`

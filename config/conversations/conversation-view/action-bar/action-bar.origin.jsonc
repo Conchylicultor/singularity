@@ -1,4 +1,4 @@
-// @hash d76a7d5343e1
+// @hash 4d1d6b6f79f2
 {
   // Item: "<key>" (terse; <key> is "<pluginId>:<id>")
   // Hide: { "item": "<key>", "hidden": true }
@@ -10,7 +10,6 @@
     "code-explorer:explorer",
     "conversations.conversation-view.code.docs-button:docs",
     "conversations.conversation-view.commits-graph:commits-graph",
-    "conversations.conversation-view.dependent-count:dependent-count",
     "conversations.conversation-view.jsonl-viewer.event-counter:event-counter",
     "conversations.conversation-view.open-app:open-app",
     "conversations.conversation-view.push-profiling:push-profiling",

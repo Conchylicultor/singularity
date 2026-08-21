@@ -1,8 +1,7 @@
-// @hash d76a7d5343e1
+// @hash 4d1d6b6f79f2
 {
   "items": [
     "tasks.attempt-view:attempt-switch",
-    "conversations.conversation-view.dependent-count:dependent-count",
     { "type": "spacer", "id": "spacer-1" },
     "conversations.conversation-view.tasks-panel:tasks",
     "conversations.conversation-view.terminal-pane:terminal",

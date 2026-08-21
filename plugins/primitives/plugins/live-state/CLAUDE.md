@@ -733,9 +733,7 @@ This narrows re-renders, not the WS subscription: N callers of the same
     - `conversations/conversation-view/code/docs-button`
     - `conversations/conversation-view/commits-graph`
     - `conversations/conversation-view/dependencies`
-    - `conversations/conversation-view/dependent-count`
     - `conversations/conversation-view/drop-and-exit`
-    - `conversations/conversation-view/drop-dependents`
     - `conversations/conversation-view/jsonl-viewer`
     - `conversations/conversation-view/jsonl-viewer/event-counter`
     - `conversations/conversation-view/jsonl-viewer/outline`
