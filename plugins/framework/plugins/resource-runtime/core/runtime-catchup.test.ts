@@ -89,6 +89,99 @@ describe("over-replay idempotence", () => {
   });
 });
 
+describe("over-replay idempotence — a seeded scopedMembership entry", () => {
+  // The L2 boot seed (`seedPersistedSnapshot`) restores a persisted alias's in-memory
+  // diff base BEFORE catch-up, so the missed-changes replay is scoped, not a FULL
+  // O(collection) rebuild. This pins that at the runtime seam: a seeded entry replays
+  // a straddling I/U/D sequence (catch-up runs with NO subscriber), stays on the
+  // scoped/membership path throughout, and the reconstructed value converges to
+  // server truth — over-replay included. Contrast the "degrade to FULL with no
+  // snapshot" case in runtime-scoped-membership.test.ts, which does NOT seed and so
+  // FULL-recomputes its first change.
+  test("seed a base, replay U/I/D + an over-replay: value converges to truth, no FULL rebuild", async () => {
+    const truth = new Map<string, number>([
+      ["a", 1],
+      ["b", 1],
+      ["c", 1],
+    ]);
+    const order = () => [...truth.keys()].sort();
+    const members = () => order().map((id) => ({ id, n: truth.get(id)! }));
+    const log: string[] = [];
+    const persisted: unknown[] = [];
+    const h = createHarness({
+      readSet: () => ["row_table"],
+      shouldPersist: (k) => k === "rows",
+      captureWatermark: async () => "xmin",
+      persistSnapshot: async (_k, _pk, value) => {
+        persisted.push(value);
+      },
+    });
+    h.runtime.defineResource(
+      { key: "rows", schema: rowsSchema, keyed: { keyOf } },
+      {
+        identityTable: "row_table",
+        scopedMembership: { orderOf: async () => order() },
+        loader: (_p, c) => {
+          if (c === undefined) {
+            log.push("FULL");
+            return members();
+          }
+          log.push("scoped");
+          return c.affectedIds
+            .filter((id) => truth.has(id))
+            .map((id) => ({ id, n: truth.get(id)! }));
+        },
+      },
+    );
+    const feed = (op: "I" | "U" | "D", ids: string[]) =>
+      h.runtime.applyDbChange({
+        table: "row_table",
+        op,
+        ids,
+        origin: "row_table",
+        identityBase: "row_table",
+      });
+
+    // Cold-boot seed: restore the diff base from the durable L2 value, exactly as
+    // live-state-snapshot's onReady does BEFORE catch-up. No subscriber — catch-up
+    // runs before any client subscribes.
+    h.runtime.seedPersistedSnapshot("rows", "{}", members()); // base [a,b,c]
+
+    // Catch-up replays a straddling I/U/D sequence (truth mutated to match each row).
+    truth.set("a", 2);
+    feed("U", ["a"]); // in-window update → scoped refill of just "a"
+    await tick();
+    truth.set("d", 5);
+    feed("I", ["d"]); // insert → scoped refill of "d" + one orderOf
+    await tick();
+    truth.delete("b");
+    feed("D", ["b"]); // delete → ZERO loaders (order from the snapshot)
+    await tick();
+    feed("U", ["a"]); // over-replay of an already-reflected change (empty diff)
+    await tick();
+
+    // The seed did its job: every replay stayed on the scoped/membership path — never
+    // one FULL O(collection) rebuild. U + I + the over-replay U each refill one id;
+    // the D runs no loader at all.
+    expect(log).toEqual(["scoped", "scoped", "scoped"]);
+    // The reconstructed materialized value converged to server truth, and the
+    // over-replay is idempotent (the last persist equals it byte-for-byte).
+    const truthValue = [
+      { id: "a", n: 2 },
+      { id: "c", n: 1 },
+      { id: "d", n: 5 },
+    ];
+    expect(persisted.at(-1)).toEqual(truthValue);
+
+    // A client subscribing now (post-catch-up) converges to the same server truth.
+    await h.subscribe("rows");
+    const cv = makeClientView(keyOf);
+    cv.applyAll(h.frames);
+    expect(cv.value).toEqual(truthValue);
+    expect(cv.driftResubs).toBe(0);
+  });
+});
+
 describe("recomputeResource", () => {
   test("routes one FULL feed notify to subscribers (exactly one push)", async () => {
     const h = createHarness();

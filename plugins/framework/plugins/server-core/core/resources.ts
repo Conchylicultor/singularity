@@ -39,22 +39,32 @@ import { reportServerError, type ServerErrorReport } from "./error-reporter";
 // aliases are permitted in barrels; keeps the ~42 consumers untouched).
 export type ResourceParams = RtParams;
 export type ResourceMode = RtMode;
-export type Resource<T, P extends ResourceParams = ResourceParams> = RtResource<T, P>;
-export type ExternalResource<T, P extends ResourceParams = ResourceParams> = RtExternalResource<
+export type Resource<T, P extends ResourceParams = ResourceParams> = RtResource<
   T,
   P
 >;
-export type ResourceDefinition<T, P extends ResourceParams = ResourceParams> = RtDef<T, P>;
+export type ExternalResource<
+  T,
+  P extends ResourceParams = ResourceParams,
+> = RtExternalResource<T, P>;
+export type ResourceDefinition<
+  T,
+  P extends ResourceParams = ResourceParams,
+> = RtDef<T, P>;
 // Two-arg `defineResource(contract, serverOpts)` surface: `contract` is the
 // browser-safe shared descriptor (key/schema/keyed), `serverOpts` the DB half.
 // Lets a keyed resource declare its keyed-ness in ONE place — the client
 // descriptor — instead of restating `mode`/`keyOf` on the server and drifting.
-export type ResourceContract<T, P extends ResourceParams = ResourceParams> = RtContract<T, P>;
-export type ServerResourceOptions<T, P extends ResourceParams = ResourceParams> = RtServerOpts<
+export type ResourceContract<
   T,
-  P
->;
-export type DependsOnEntry<P extends ResourceParams = ResourceParams> = RtDep<P>;
+  P extends ResourceParams = ResourceParams,
+> = RtContract<T, P>;
+export type ServerResourceOptions<
+  T,
+  P extends ResourceParams = ResourceParams,
+> = RtServerOpts<T, P>;
+export type DependsOnEntry<P extends ResourceParams = ResourceParams> =
+  RtDep<P>;
 // The shared L4 change-feed contract (see resource-runtime/core). The DB
 // change-feed plugin consumes `applyDbChange` (below); this type is the producer
 // surface a future work-admission scheduler reconciles against.
@@ -202,7 +212,8 @@ const runtime = createResourceRuntime({
   wrapFlush: (fn) => recordEntrySpan("flush", "flushNotifies", fn),
   // Delivery latency as a `push` leaf under the active `flush` entry: enqueue→send
   // time per resource (first-notify staleness window). Attributes to the resource.
-  onDelivered: (key, latencyMs) => recordSpan("push", `deliver:${key}`, latencyMs),
+  onDelivered: (key, latencyMs) =>
+    recordSpan("push", `deliver:${key}`, latencyMs),
   // Read-admission gate queue-wait, charged to the enclosing `sub` entry (mirrors
   // the DB background query gate's `background-acquire`), so a saturated read cap is visible in
   // get_runtime_profile as a `read-admit` wait rather than hidden queue time.
@@ -217,7 +228,10 @@ const runtime = createResourceRuntime({
     const profile = getRuntimeProfile();
     const agg = profile.aggregates.loader.find((a) => a.label === key);
     if (!agg) return undefined;
-    const windowMin = Math.max((performance.now() - profile.sinceMs) / 60_000, 1 / 60_000);
+    const windowMin = Math.max(
+      (performance.now() - profile.sinceMs) / 60_000,
+      1 / 60_000,
+    );
     return {
       count: agg.count,
       ratePerMin: agg.count / windowMin,
@@ -252,15 +266,25 @@ const runtime = createResourceRuntime({
       // Unreachable: the runtime only calls this when shouldPersist returned true,
       // which requires the hooks to be installed. Fail loudly if that invariant
       // is ever violated rather than persisting a value with no watermark.
-      throw new Error("captureWatermark called before live-state-snapshot hooks installed");
+      throw new Error(
+        "captureWatermark called before live-state-snapshot hooks installed",
+      );
     }
     return liveStateSnapshotHooks.captureWatermark();
   },
   persistSnapshot: (key, paramsKey, value, watermark, tablesRead) => {
     if (!liveStateSnapshotHooks) {
-      throw new Error("persistSnapshot called before live-state-snapshot hooks installed");
+      throw new Error(
+        "persistSnapshot called before live-state-snapshot hooks installed",
+      );
     }
-    return liveStateSnapshotHooks.persistSnapshot(key, paramsKey, value, watermark, tablesRead);
+    return liveStateSnapshotHooks.persistSnapshot(
+      key,
+      paramsKey,
+      value,
+      watermark,
+      tablesRead,
+    );
   },
   reportError: (ctx, err) => reportServerError(errorReport(ctx, err)),
   // Fan each push outcome out to every registered observer (no-op detector et al).
@@ -310,4 +334,9 @@ export const {
   // deletes leftover persisted rows for these (they are never persisted going
   // forward, so any snapshot row is stale from a pre-migration boot).
   boundedMembershipKeys,
+  // Unbounded-window (scopedMembership alias) keys — the live-state-snapshot boot
+  // seed picks these to reconstruct the in-memory diff base from their L2 value.
+  unboundedWindowKeys,
+  // L2 boot seed: restore a persisted alias's in-memory diff base before catch-up.
+  seedPersistedSnapshot,
 } = runtime;

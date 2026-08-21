@@ -20,16 +20,21 @@ type ChangelogRow = {
 // Replay one changelog row through the EXACT same cascade the live listener uses
 // (change-feed's exported `routeChange`). Catch-up ≡ "replay the missed changelog
 // rows as if they had just arrived over NOTIFY" — reusing `routeChange` makes that
-// true by construction and prevents drift. DELETE and null-ids rows degrade to
-// FULL: a delete/membership change cannot be a scoped recompute (a scoped path
-// never asserts membership), so the scoped ids are dropped before routing. See
-// research/2026-06-22-global-live-state-l2-persisted-materialization.md §3.5.
-function replayChange(row: ChangelogRow, route: (change: DbChange) => void): void {
-  const ids = row.op === "D" ? null : row.ids;
+// true by construction and prevents drift, and THAT INVARIANT requires preserving
+// `row.ids` for every op (the live listener never strips them). A genuinely id-less
+// bulk statement still arrives with `row.ids === null` → FULL; a non-membership
+// keyed entry routes `I`/`D` to FULL regardless of ids (`applyDbChange`); only a
+// membership entry gains the cheap scoped exit it already gets on the live path (a
+// `D`-with-ids removes the deleted set from the snapshot with ZERO loader queries).
+// See research/2026-06-22-global-live-state-l2-persisted-materialization.md §3.5.
+function replayChange(
+  row: ChangelogRow,
+  route: (change: DbChange) => void,
+): void {
   // `xid: null` — catch-up replays run at boot, before any client subscribes, so
   // ack attribution has no consumer here; a missing ack is safe by design (the
   // client's resub snapshot watermark backstops any op the downtime absorbed).
-  route({ table: row.t, op: row.op, ids, xid: null });
+  route({ table: row.t, op: row.op, ids: row.ids, xid: null });
 }
 
 // Bounded cold-boot catch-up: replay only the changelog rows committed at or after
@@ -104,7 +109,9 @@ export async function runCatchUp(
   );
 
   if (rows.rows.length === 0) {
-    log.publish("[live-state-snapshot] catch-up: no changelog rows since floor — already current");
+    log.publish(
+      "[live-state-snapshot] catch-up: no changelog rows since floor — already current",
+    );
     return;
   }
 

@@ -1,4 +1,11 @@
-import { describe, test, expect, beforeAll, afterAll, beforeEach } from "bun:test";
+import {
+  describe,
+  test,
+  expect,
+  beforeAll,
+  afterAll,
+  beforeEach,
+} from "bun:test";
 import { sql } from "drizzle-orm";
 import {
   LIVE_STATE_CHANGELOG_TABLE,
@@ -15,11 +22,13 @@ import { persistSnapshot } from "./persist";
 import { runCatchUp } from "./catch-up";
 
 // Real-DB invariant suite for the cold-boot catch-up driver: the xid-vs-floor
-// arithmetic, the `xid >= floor` + `ORDER BY seq` replay predicate, the DELETE /
-// null-ids FULL degrade, and the missing-history backstop. A recording `route`
-// spy is injected so we observe EXACTLY which changes replay (order, op, ids),
-// without standing up the full server-core cascade. Runs the real SQL against a
-// throwaway database on the running cluster (see the db-test-fixture primitive).
+// arithmetic, the `xid >= floor` + `ORDER BY seq` replay predicate, the id-preserving
+// replay (every op keeps `row.ids`, so a membership `D` stays scoped exactly as on
+// the live path; only a genuinely null-ids row degrades to FULL), and the
+// missing-history backstop. A recording `route` spy is injected so we observe
+// EXACTLY which changes replay (order, op, ids), without standing up the full
+// server-core cascade. Runs the real SQL against a throwaway database on the running
+// cluster (see the db-test-fixture primitive).
 
 let t: TestDb;
 
@@ -40,7 +49,9 @@ beforeEach(async () => {
 
 // Seed a snapshot row so `min(position)` yields the catch-up floor.
 async function seedFloor(position: string): Promise<void> {
-  await persistSnapshot(t.db, `floor-${position}`, "{}", {}, position, ["seed"]);
+  await persistSnapshot(t.db, `floor-${position}`, "{}", {}, position, [
+    "seed",
+  ]);
 }
 
 interface ChangelogSeed {
@@ -88,22 +99,28 @@ describe("runCatchUp", () => {
     // Straddle the floor. min(xid)=100 < floor so NOT the backstop path.
     await insertChangelog({ seq: 1, xid: "100", t: "ta", op: "U", ids: ["1"] }); // excluded (< floor)
     await insertChangelog({ seq: 2, xid: "200", t: "tb", op: "I", ids: ["2"] }); // included (== floor)
-    await insertChangelog({ seq: 3, xid: "300", t: "tc", op: "D", ids: ["3"] }); // included, DELETE → ids null
-    await insertChangelog({ seq: 4, xid: "400", t: "td", op: "U", ids: null }); // included, null-ids
+    await insertChangelog({ seq: 3, xid: "300", t: "tc", op: "D", ids: ["3"] }); // included, DELETE → ids PRESERVED
+    await insertChangelog({ seq: 4, xid: "400", t: "td", op: "U", ids: null }); // included, genuinely null-ids
 
     const { routed, route } = recorder();
     await runCatchUp(t.db, route);
 
     expect(routed).toEqual([
       { table: "tb", op: "I", ids: ["2"], xid: null },
-      { table: "tc", op: "D", ids: null, xid: null }, // DELETE forced FULL (ids null)
-      { table: "td", op: "U", ids: null, xid: null },
+      { table: "tc", op: "D", ids: ["3"], xid: null }, // DELETE ids preserved (replay ≡ live path; a membership entry stays scoped)
+      { table: "td", op: "U", ids: null, xid: null }, // genuinely null-ids stays FULL
     ]);
   });
 
   test("boundary: xid == floor replayed, xid == floor-1 not", async () => {
     await seedFloor("200");
-    await insertChangelog({ seq: 1, xid: "199", t: "below", op: "U", ids: null });
+    await insertChangelog({
+      seq: 1,
+      xid: "199",
+      t: "below",
+      op: "U",
+      ids: null,
+    });
     await insertChangelog({ seq: 2, xid: "200", t: "at", op: "U", ids: null });
 
     const { routed, route } = recorder();

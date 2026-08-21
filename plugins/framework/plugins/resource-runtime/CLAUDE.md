@@ -139,6 +139,17 @@ translate); inserts/updates cascade scoped (backfilled tail ids do NOT join the
 cascade set — they did not change in the DB, they only entered this window's
 view).
 
+At **boot**, the L2 layer restores each persisted alias's in-memory diff base from
+its durable value BEFORE catch-up: `live-state-snapshot`'s `onReady` reads the L2
+row and calls the runtime's `seedPersistedSnapshot(key, "{}", value)` (which seeds
+`entry.snapshots` + order sigs via the same `snapshotOf` primitive the FULL rebuild
+uses). So the first post-boot change — and every downtime change catch-up replays —
+is a scoped refill, not the FULL O(collection) rebuild it used to pay because the
+diff base started empty. The seed is a no-op once a snapshot exists (a sub-ack that
+arrived first is never clobbered), and it targets only unbounded-window aliases
+(`unboundedWindowKeys`), the only shape whose durable value is byte-sufficient to
+reconstruct the base.
+
 ## Keyed snapshot representation (`SnapEntry` / `SnapEncoder`)
 
 A keyed entry's per-pk snapshot stores one `SnapEntry` per row — the row's

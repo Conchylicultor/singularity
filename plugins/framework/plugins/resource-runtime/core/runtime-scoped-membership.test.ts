@@ -28,7 +28,12 @@
 
 import { test, expect, describe } from "bun:test";
 import { z } from "zod";
-import { createHarness, tick, makeClientView, type RecordedFrame } from "./test-support";
+import {
+  createHarness,
+  tick,
+  makeClientView,
+  type RecordedFrame,
+} from "./test-support";
 
 const rowsSchema = z.array(z.object({ id: z.string(), n: z.number() }));
 const keyOf = (r: unknown) => (r as { id: string }).id;
@@ -49,7 +54,10 @@ function makeTable() {
 // each load was scoped ("FULL" | sorted affected ids) and counting `orderOf` runs.
 // `log` (optional) receives ordered "wm"/"load:*"/"persist" markers for the
 // persist-ordering assertions. `runtimeOpts` folds in shouldPersist/persist hooks.
-function membershipHarness(runtimeOpts: Parameters<typeof createHarness>[0] = {}, log?: string[]) {
+function membershipHarness(
+  runtimeOpts: Parameters<typeof createHarness>[0] = {},
+  log?: string[],
+) {
   const { table, members, orderIds } = makeTable();
   const loaderCalls: string[] = [];
   let orderOfCalls = 0;
@@ -79,12 +87,21 @@ function membershipHarness(runtimeOpts: Parameters<typeof createHarness>[0] = {}
     },
   );
   const feed = (op: "I" | "U" | "D", ids: string[] | null) =>
-    h.runtime.applyDbChange({ table: "row_table", op, ids, origin: "row_table", identityBase: "row_table" });
+    h.runtime.applyDbChange({
+      table: "row_table",
+      op,
+      ids,
+      origin: "row_table",
+      identityBase: "row_table",
+    });
   const insert = (id: string, n: number, where = true) => {
     table.set(id, { n, where });
     feed("I", [id]);
   };
-  const update = (id: string, mut: (c: { n: number; where: boolean }) => void) => {
+  const update = (
+    id: string,
+    mut: (c: { n: number; where: boolean }) => void,
+  ) => {
     mut(table.get(id)!);
     feed("U", [id]);
   };
@@ -92,7 +109,17 @@ function membershipHarness(runtimeOpts: Parameters<typeof createHarness>[0] = {}
     table.delete(id);
     feed("D", [id]);
   };
-  return { h, table, members, loaderCalls, orderOf: () => orderOfCalls, feed, insert, update, del };
+  return {
+    h,
+    table,
+    members,
+    loaderCalls,
+    orderOf: () => orderOfCalls,
+    feed,
+    insert,
+    update,
+    del,
+  };
 }
 
 const deltas = (h: ReturnType<typeof createHarness>) =>
@@ -120,7 +147,10 @@ describe("scopedMembership — DELETE (5a: zero-loader membership shrink)", () =
 
     const cv = makeClientView(keyOf);
     cv.applyAll(m.h.frames);
-    expect(cv.value).toEqual([{ id: "a", n: 1 }, { id: "c", n: 1 }]);
+    expect(cv.value).toEqual([
+      { id: "a", n: 1 },
+      { id: "c", n: 1 },
+    ]);
     expect(cv.driftResubs).toBe(0);
   });
 });
@@ -146,7 +176,11 @@ describe("scopedMembership — INSERT (5b: scoped refill + one orderOf)", () => 
 
     const cv = makeClientView(keyOf);
     cv.applyAll(m.h.frames);
-    expect(cv.value).toEqual([{ id: "a", n: 1 }, { id: "b", n: 7 }, { id: "c", n: 1 }]);
+    expect(cv.value).toEqual([
+      { id: "a", n: 1 },
+      { id: "b", n: 7 },
+      { id: "c", n: 1 },
+    ]);
     expect(cv.driftResubs).toBe(0);
   });
 });
@@ -178,7 +212,11 @@ describe("scopedMembership — coalescing", () => {
 
     const cv = makeClientView(keyOf);
     cv.applyAll(m.h.frames);
-    expect(cv.value).toEqual([{ id: "a", n: 9 }, { id: "b", n: 1 }, { id: "d", n: 4 }]);
+    expect(cv.value).toEqual([
+      { id: "a", n: 9 },
+      { id: "b", n: 1 },
+      { id: "d", n: 4 },
+    ]);
     expect(cv.driftResubs).toBe(0);
   });
 
@@ -201,7 +239,10 @@ describe("scopedMembership — coalescing", () => {
 
     const cv = makeClientView(keyOf);
     cv.applyAll(m.h.frames);
-    expect(cv.value).toEqual([{ id: "a", n: 1 }, { id: "c", n: 1 }]);
+    expect(cv.value).toEqual([
+      { id: "a", n: 1 },
+      { id: "c", n: 1 },
+    ]);
     expect(cv.driftResubs).toBe(0);
   });
 });
@@ -266,7 +307,10 @@ describe("scopedMembership — L2 persisted reconstruct-and-persist", () => {
     expect(persistArgs).toHaveLength(1);
     expect(persistArgs[0]!.wm).toBe("xmin-42");
     // The reconstructed value is byte-identical to a FULL recompute of the members.
-    expect(persistArgs[0]!.value).toEqual([{ id: "a", n: 5 }, { id: "b", n: 1 }]);
+    expect(persistArgs[0]!.value).toEqual([
+      { id: "a", n: 5 },
+      { id: "b", n: 1 },
+    ]);
   });
 });
 
@@ -298,6 +342,69 @@ describe("scopedMembership — degrade to FULL with no snapshot, then resume inc
     });
     await tick();
     expect(log).toEqual(["load:scoped"]);
+  });
+});
+
+describe("scopedMembership — L2 boot seed skips the first-change FULL", () => {
+  test("after seedPersistedSnapshot, the FIRST change resumes scoped (no FULL rebuild)", async () => {
+    const log: string[] = [];
+    const m = membershipHarness(
+      {
+        shouldPersist: (k) => k === "rows",
+        captureWatermark: async () => "xmin-1",
+        persistSnapshot: async () => {},
+      },
+      log,
+    );
+    m.table.set("a", { n: 1, where: true });
+    m.table.set("b", { n: 1, where: true });
+    // No subscribe (cold boot, no live snapshot) — BUT the L2 boot seed restores
+    // the in-memory diff base from the durable value, exactly as onReady does before
+    // catch-up. This is the ONLY difference from the "degrade to FULL" test above,
+    // which does not seed and therefore FULL-recomputes its first change.
+    m.h.runtime.seedPersistedSnapshot("rows", "{}", [
+      { id: "a", n: 1 },
+      { id: "b", n: 1 },
+    ]);
+
+    // The very first scoped change now finds the seeded snapshot → incremental.
+    m.update("a", (cell) => {
+      cell.n = 2;
+    });
+    await tick();
+    expect(log).toEqual(["load:scoped"]); // NOT ["load:FULL"] — the seed did its job
+  });
+
+  test("seedPersistedSnapshot never clobbers an existing (fresher) snapshot", async () => {
+    const log: string[] = [];
+    const m = membershipHarness(
+      {
+        shouldPersist: (k) => k === "rows",
+        captureWatermark: async () => "xmin-1",
+        persistSnapshot: async () => {},
+      },
+      log,
+    );
+    m.table.set("a", { n: 1, where: true });
+    m.table.set("b", { n: 1, where: true });
+    await m.h.subscribe("rows"); // seeds a live snapshot [a,b]
+    log.length = 0;
+
+    // A late seed with a STALE value must be a no-op (snapshot already present), so
+    // the next change still diffs against the fresh base and stays scoped/correct.
+    m.h.runtime.seedPersistedSnapshot("rows", "{}", [{ id: "a", n: 999 }]);
+    m.update("a", (cell) => {
+      cell.n = 5;
+    });
+    await tick();
+    expect(log).toEqual(["load:scoped"]);
+    const cv = makeClientView(keyOf);
+    cv.applyAll(m.h.frames);
+    expect(cv.value).toEqual([
+      { id: "a", n: 5 },
+      { id: "b", n: 1 },
+    ]);
+    expect(cv.driftResubs).toBe(0);
   });
 });
 
@@ -351,7 +458,9 @@ describe("scopedMembership — downstream cascade", () => {
   // value to translate); an INSERT cascades scoped.
   function cascadeHarness() {
     const up = makeTable();
-    const h = createHarness({ readSet: (k) => (k === "up" ? ["up_t"] : ["down_t"]) });
+    const h = createHarness({
+      readSet: (k) => (k === "up" ? ["up_t"] : ["down_t"]),
+    });
     const upResource = h.runtime.defineResource(
       { key: "up", schema: rowsSchema, keyed: { keyOf } },
       {
@@ -360,7 +469,9 @@ describe("scopedMembership — downstream cascade", () => {
         loader: (_p, c) =>
           c === undefined
             ? up.members()
-            : c.affectedIds.filter((id) => up.table.get(id)?.where).map((id) => ({ id, n: up.table.get(id)!.n })),
+            : c.affectedIds
+                .filter((id) => up.table.get(id)?.where)
+                .map((id) => ({ id, n: up.table.get(id)!.n })),
       },
     );
     const downLoads: string[] = [];
@@ -376,7 +487,13 @@ describe("scopedMembership — downstream cascade", () => {
       },
     );
     const feedUp = (op: "I" | "U" | "D", ids: string[] | null) =>
-      h.runtime.applyDbChange({ table: "up_t", op, ids, origin: "up_t", identityBase: "up_t" });
+      h.runtime.applyDbChange({
+        table: "up_t",
+        op,
+        ids,
+        origin: "up_t",
+        identityBase: "up_t",
+      });
     return { h, up, downLoads, feedUp };
   }
 
@@ -429,7 +546,13 @@ describe("default-off — a keyed resource without scopedMembership is byte-iden
     loaderCalls.length = 0;
 
     const feed = (op: "I" | "U" | "D", ids: string[]) =>
-      h.runtime.applyDbChange({ table: "row_table", op, ids, origin: "row_table", identityBase: "row_table" });
+      h.runtime.applyDbChange({
+        table: "row_table",
+        op,
+        ids,
+        origin: "row_table",
+        identityBase: "row_table",
+      });
 
     table.set("x", { n: 1, where: true });
     feed("I", ["x"]);

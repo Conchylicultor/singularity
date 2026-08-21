@@ -14974,6 +14974,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `reportServerFatalSync`
           - `Resource`
           - `scopedResourceIdentities`
+          - `seedPersistedSnapshot`
           - `serverCollectedDir`
           - `setErrorReporter`
           - `setFatalReporter`
@@ -14982,6 +14983,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `setProfilerHooks`
           - `setRelationResolver`
           - `triggerResourcePush`
+          - `unboundedWindowKeys`
           - `withNotifyBatch`
     - **`slot-declaration`** — The slot self-description + declaration contract: SlotMeta (what kind of slot, and whether it is reorderable), the created-at-construction slot set, and the one normalisation of a plugin's `slots: [...]` declaration. A leaf — it imports no React — so the build-time collectors can read the contract without pulling the web runtime.
       - Cross-plugin:

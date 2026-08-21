@@ -1,10 +1,18 @@
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
-import { recomputeResource } from "@plugins/framework/plugins/server-core/core";
+import {
+  recomputeResource,
+  seedPersistedSnapshot,
+  unboundedWindowKeys,
+} from "@plugins/framework/plugins/server-core/core";
 import { db } from "@plugins/database/server";
 import { ExcludeFromFork } from "@plugins/database/plugins/admin/server";
 import { LIVE_STATE_SNAPSHOT_TABLE } from "@plugins/database/plugins/derived-views/core";
 import { initSnapshotSubsystem } from "./internal/boot-init";
-import { readPersistedReadSets, bootCriticalKeys } from "./internal/persist";
+import {
+  readPersistedReadSets,
+  readPersistedSnapshots,
+  bootCriticalKeys,
+} from "./internal/persist";
 import { runCatchUp } from "./internal/catch-up";
 import { liveStateChangelogPruneJob } from "./internal/prune";
 
@@ -87,8 +95,24 @@ export default {
     // steady-state deploy `needsInit` is empty → no forced recomputes. Boot-
     // critical keys are read GENERICALLY from `Resource.Declare` (never by name).
     const usable = await readPersistedReadSets(db);
+    const aliasKeys = new Set(unboundedWindowKeys());
+    const seedKeys: string[] = [];
     for (const key of bootCriticalKeys()) {
-      if (!usable.get(key)?.length) recomputeResource(key);
+      if (!usable.get(key)?.length) {
+        recomputeResource(key);
+        continue;
+      }
+      if (aliasKeys.has(key)) seedKeys.push(key);
+    }
+
+    // Restore each persisted alias's in-memory diff base from its durable L2 value
+    // BEFORE catch-up, so the first post-boot change (and every downtime change the
+    // catch-up replays) is a scoped refill instead of a FULL O(collection) rebuild.
+    // All L2 rows are param-less ("{}"); jsonb comes back already parsed.
+    if (seedKeys.length > 0) {
+      const values = await readPersistedSnapshots(db, seedKeys);
+      for (const [key, value] of values)
+        seedPersistedSnapshot(key, "{}", value);
     }
 
     // ORDERING INVARIANT (gap-free boot): `runCatchUp()` MUST run AFTER the

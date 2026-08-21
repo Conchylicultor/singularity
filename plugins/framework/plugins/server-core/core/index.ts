@@ -46,6 +46,8 @@ export {
   recomputeResource,
   scopedResourceIdentities,
   boundedMembershipKeys,
+  unboundedWindowKeys,
+  seedPersistedSnapshot,
   setRelationResolver,
   setFeedExemptTables,
   setLiveStateSnapshotHooks,

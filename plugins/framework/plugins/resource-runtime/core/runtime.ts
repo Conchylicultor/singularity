@@ -1158,6 +1158,29 @@ export interface ResourceRuntime {
    * be served via the L2 boot fast path).
    */
   boundedMembershipKeys: () => string[];
+  /**
+   * Every registered UNBOUNDED-window (`scopedMembership` alias) key — the only
+   * membership shape L2-persisted and reconstructed from its per-pk snapshot bytes.
+   * Symmetric to `boundedMembershipKeys` (which is the complementary bounded set):
+   * read straight off the registry's normalized membership record, never a
+   * resource-name list. `live-state-snapshot`'s boot seed consumes it to pick the
+   * keys whose durable L2 value should reconstruct the in-memory diff base.
+   */
+  unboundedWindowKeys: () => string[];
+  /**
+   * Seed the in-memory diff base (`entry.snapshots` + order sigs) of a persisted
+   * unbounded-window alias from its durable L2 value at boot, BEFORE catch-up, so
+   * the first post-boot change is a scoped refill instead of a FULL O(collection)
+   * rebuild. No-op unless the key is a registered unbounded-window alias with NO
+   * snapshot yet for `paramsKey` — so it never clobbers a fresher sub-ack seed and
+   * a wrong/unknown key is harmless. Mirrors the FULL rebuild's seeding via the same
+   * `snapshotOf` primitive (byte-identical `retainSnapEncoder` entries).
+   */
+  seedPersistedSnapshot: (
+    key: string,
+    paramsKey: string,
+    value: unknown,
+  ) => void;
 }
 
 const HEARTBEAT_MS = 20_000;
@@ -4647,6 +4670,34 @@ export function createResourceRuntime(
     return out;
   }
 
+  // Every registered unbounded-window (`scopedMembership` alias) key — the only
+  // membership shape L2-persisted and reconstructed from its snapshot bytes.
+  // Symmetric to boundedMembershipKeys; consumed by live-state-snapshot's boot seed.
+  function unboundedWindowKeys(): string[] {
+    const out: string[] = [];
+    for (const entry of registry.values()) {
+      if (isUnboundedWindow(entry)) out.push(entry.key);
+    }
+    return out;
+  }
+
+  // Seed the in-memory diff base for a persisted unbounded-window alias from its
+  // durable L2 value at boot, so the first post-boot change is scoped (not a FULL
+  // rebuild). No-op unless the entry is a registered unbounded-window alias with NO
+  // snapshot yet for `paramsKey` (never clobber a fresher sub-ack seed). Mirrors the
+  // FULL rebuild's seeding (snapshot + order sigs) via the same snapshotOf primitive.
+  function seedPersistedSnapshot(
+    key: string,
+    paramsKey: string,
+    value: unknown,
+  ): void {
+    const entry = registry.get(key);
+    if (!entry || !isUnboundedWindow(entry)) return;
+    if (entry.snapshots?.get(paramsKey) !== undefined) return;
+    (entry.snapshots ??= new Map()).set(paramsKey, snapshotOf(entry, value));
+    reseedOrderSigs(entry, paramsKey, value);
+  }
+
   return {
     defineResource,
     defineExternalResource,
@@ -4661,6 +4712,8 @@ export function createResourceRuntime(
     notifyStatsFor,
     scopedResourceIdentities,
     boundedMembershipKeys,
+    unboundedWindowKeys,
+    seedPersistedSnapshot,
     readGateStats: () => readLoadGate.stats(),
   };
 }
