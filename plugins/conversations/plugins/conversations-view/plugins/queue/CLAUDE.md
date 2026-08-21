@@ -49,6 +49,7 @@
     - `defineJob('queue.seed-rank')`
     - `defineJob('queue.task-status-rerank')`
     - `defineJob('queue.sweep-gone-ranks')`
+  - Resources: `queue-ranks` (keyed, point)
   - Routes:
     - `POST /api/conversations-queue/reorder`
     - `POST /api/conversations-queue/promote`

@@ -8,7 +8,10 @@ import {
   SectionCount,
   type PluginNode,
 } from "@plugins/plugin-meta/plugins/plugin-view/web";
-import type { ResourceFacetData } from "@plugins/plugin-meta/plugins/facets/plugins/resources/core";
+import {
+  resourceModeLabel,
+  type ResourceFacetData,
+} from "@plugins/plugin-meta/plugins/facets/plugins/resources/core";
 
 // Renders the resources facet's own data. Read `node.facets[id]` directly (as
 // every render host does) rather than importing the build-time `facets/core`
@@ -20,6 +23,7 @@ type Runtime = "server" | "central";
 
 interface ResourceRow {
   key: string;
+  /** Mode plus bounded membership, as one label (`resourceModeLabel`). */
   mode: string;
   runtime: Runtime;
 }
@@ -30,8 +34,16 @@ function resourceRows(node: PluginNode): ResourceRow[] | null {
     ResourceFacetData | undefined;
   if (!data) return null;
   const rows: ResourceRow[] = [
-    ...data.server.map((r) => ({ ...r, runtime: "server" as const })),
-    ...data.central.map((r) => ({ ...r, runtime: "central" as const })),
+    ...data.server.map((r) => ({
+      key: r.key,
+      mode: resourceModeLabel(r),
+      runtime: "server" as const,
+    })),
+    ...data.central.map((r) => ({
+      key: r.key,
+      mode: resourceModeLabel(r),
+      runtime: "central" as const,
+    })),
   ];
   return rows.length > 0 ? rows : null;
 }

@@ -53,6 +53,7 @@
     - `recordNotification`
     - `setMutedByMetadata`
   - Register: `defineJob('notifications.ttl-cleanup')`
+  - Resources: `notifications` (keyed, window)
   - Routes:
     - `POST /api/notifications`
     - `POST /api/notifications/dismiss-all`

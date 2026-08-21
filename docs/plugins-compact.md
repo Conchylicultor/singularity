@@ -315,6 +315,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
             - **`watcher-safety`** — watcher-safety lint rule: no-direct-parcel-watcher
         - **`provision`** — Install-time provisioning registry + runner: discovers each plugin's provision/index.ts and runs it during postinstall.
         - **`react-compiler`** — Enables the React Compiler (Babel) across the frontend via a vite/ build contribution; presence of this folder is the on/off switch.
+        - **`resource-vocabulary`** — The closed set of ways a plugin declares a live-state resource, as data every build-time resource scanner reads. Its key set is DERIVED from the barrels' own module types, so a factory that exists but is unlisted is a type error.
         - **`test-layout`** — The canonical bun:test ⇄ vitest split as data (core), enforced as the test-layout:runner-split check.
         - **`web-artifacts`** — Per-plugin web build artifacts: content-addressed vite lib-mode builds composed via an import map
     - **`web-core`**

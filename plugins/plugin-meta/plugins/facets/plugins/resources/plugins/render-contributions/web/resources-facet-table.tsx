@@ -5,12 +5,16 @@ import {
 } from "@plugins/plugin-meta/plugins/contributions-table/web";
 import type { ColumnDef } from "@plugins/primitives/plugins/data-table/web";
 import type { PluginNode } from "@plugins/plugin-meta/plugins/plugin-view/core";
-import type { ResourceFacetData } from "@plugins/plugin-meta/plugins/facets/plugins/resources/core";
+import {
+  resourceModeLabel,
+  type ResourceFacetData,
+} from "@plugins/plugin-meta/plugins/facets/plugins/resources/core";
 import { MdStorage } from "react-icons/md";
 
 type ResourceRow = {
   plugin: PluginNode;
   key: string;
+  /** Mode plus bounded membership, as one label (`resourceModeLabel`). */
   mode: string;
   runtime: "server" | "central";
 };
@@ -54,10 +58,20 @@ function rows(entries: FacetTableEntry[]): ResourceRow[] {
   for (const entry of entries) {
     const data = entry.data as ResourceFacetData;
     for (const r of data.server) {
-      result.push({ plugin: entry.node, key: r.key, mode: r.mode, runtime: "server" });
+      result.push({
+        plugin: entry.node,
+        key: r.key,
+        mode: resourceModeLabel(r),
+        runtime: "server",
+      });
     }
     for (const r of data.central) {
-      result.push({ plugin: entry.node, key: r.key, mode: r.mode, runtime: "central" });
+      result.push({
+        plugin: entry.node,
+        key: r.key,
+        mode: resourceModeLabel(r),
+        runtime: "central",
+      });
     }
   }
   return result;

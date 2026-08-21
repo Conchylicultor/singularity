@@ -190,6 +190,7 @@ Design: [`research/2026-08-03-apps-events-event-tracking-app.md`](../../../../..
   - Resources:
     - `events.revision` (push)
     - `events.runs-revision` (push)
+    - `events.sources` (keyed, window)
   - Routes:
     - `GET /api/events/sources`
     - `POST /api/events/sources`

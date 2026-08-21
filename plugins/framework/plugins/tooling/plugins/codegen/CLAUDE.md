@@ -29,6 +29,7 @@
     - `framework/slot-declaration.getCreatedSlots`
     - `framework/tooling/format.formatIfFormattable`
     - `framework/tooling/format.SourceBytes`
+    - `framework/tooling/resource-vocabulary.resourceDescriptorFactories`
     - `infra/namespace.MAIN_COMPOSITION_ID`
     - `plugin-meta/barrel-import.AUTO_STUB_CSS`
     - `plugin-meta/barrel-import.AUTO_STUB_PACKAGES`

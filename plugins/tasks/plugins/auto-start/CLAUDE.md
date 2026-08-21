@@ -41,6 +41,7 @@
   - Register:
     - `defineJob('tasks.auto-start-cancel-on-drop')`
     - `defineWarmup('tasks.auto-start-dropped-sweep')`
+  - Resources: `tasks-auto-start` (keyed, point)
 - Cross-plugin:
   - Imported by:
     - `conversations`

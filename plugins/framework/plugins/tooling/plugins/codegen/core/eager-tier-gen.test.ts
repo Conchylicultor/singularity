@@ -1,23 +1,31 @@
 /**
- * Unit tests for the PURE core of the eager-tier generator (`computeEagerTier`)
- * and the structural predicate (`isAppContent`), driven by synthetic inputs — no
- * filesystem. Covers: the structural rule, watched-slot pins, bootCritical pins,
+ * Unit tests for the PURE core of the eager-tier generator (`computeEagerTier`),
+ * the structural predicate (`isAppContent`), and the per-file boot-critical key
+ * scan (`bootCriticalKeysIn`), driven by synthetic inputs — no filesystem. Covers: the structural rule, watched-slot pins, bootCritical pins,
  * the reachability throw, the dependsOn closure pulling a dep of an eager shell
  * out of deferral, and deterministic sorted output. Run with `bun test`.
  */
 
 import { test, expect, describe } from "bun:test";
-import { computeEagerTier, isAppContent } from "./eager-tier-gen";
+import {
+  bootCriticalKeysIn,
+  computeEagerTier,
+  isAppContent,
+} from "./eager-tier-gen";
 
 describe("isAppContent", () => {
   test("app content = apps/plugins/<app>/plugins/<child> with child !== shell", () => {
     expect(isAppContent("apps/plugins/sonata/plugins/notation")).toBe(true);
-    expect(isAppContent("apps/plugins/sonata/plugins/notation/plugins/x")).toBe(true);
+    expect(isAppContent("apps/plugins/sonata/plugins/notation/plugins/x")).toBe(
+      true,
+    );
   });
 
   test("shell subtree is NOT app content", () => {
     expect(isAppContent("apps/plugins/sonata/plugins/shell")).toBe(false);
-    expect(isAppContent("apps/plugins/sonata/plugins/shell/plugins/x")).toBe(false);
+    expect(isAppContent("apps/plugins/sonata/plugins/shell/plugins/x")).toBe(
+      false,
+    );
   });
 
   test("app umbrella and non-apps plugins are NOT app content", () => {
@@ -53,7 +61,10 @@ describe("computeEagerTier", () => {
       deps: noDeps,
       bootCriticalOwners: [],
       watchedSlotHits: [
-        { path: "apps/plugins/agent-manager/plugins/worktree-switcher", slot: "ActionBar.Item" },
+        {
+          path: "apps/plugins/agent-manager/plugins/worktree-switcher",
+          slot: "ActionBar.Item",
+        },
       ],
     });
     expect(deferred).toEqual([]);
@@ -71,7 +82,9 @@ describe("computeEagerTier", () => {
       // (only app-content pins are listed). Use an app-content owner to see a pin.
       webEntryPaths: ["apps/plugins/mail/plugins/sync"],
       deps: noDeps,
-      bootCriticalOwners: [{ path: "apps/plugins/mail/plugins/sync", keys: ["mailSync"] }],
+      bootCriticalOwners: [
+        { path: "apps/plugins/mail/plugins/sync", keys: ["mailSync"] },
+      ],
       watchedSlotHits: [],
     });
     expect(deferred).toEqual([]);
@@ -88,7 +101,9 @@ describe("computeEagerTier", () => {
       computeEagerTier({
         webEntryPaths: ["conversations"],
         deps: noDeps,
-        bootCriticalOwners: [{ path: "tasks/plugins/tasks-core", keys: ["tasks", "attempts"] }],
+        bootCriticalOwners: [
+          { path: "tasks/plugins/tasks-core", keys: ["tasks", "attempts"] },
+        ],
         watchedSlotHits: [],
       }),
     ).toThrow(/tasks\/plugins\/tasks-core/);
@@ -103,7 +118,10 @@ describe("computeEagerTier", () => {
       ],
       // shell imports voicing (forward edge shell → voicing).
       deps: new Map([
-        ["apps/plugins/sonata/plugins/shell", ["apps/plugins/sonata/plugins/voicing"]],
+        [
+          "apps/plugins/sonata/plugins/shell",
+          ["apps/plugins/sonata/plugins/voicing"],
+        ],
       ]),
       bootCriticalOwners: [],
       watchedSlotHits: [],
@@ -126,12 +144,66 @@ describe("computeEagerTier", () => {
       ],
       deps: noDeps,
       bootCriticalOwners: [{ path: "apps/plugins/a/plugins/x", keys: ["k"] }],
-      watchedSlotHits: [{ path: "apps/plugins/a/plugins/y", slot: "Core.Root" }],
+      watchedSlotHits: [
+        { path: "apps/plugins/a/plugins/y", slot: "Core.Root" },
+      ],
     });
     expect(deferred).toEqual(["apps/plugins/z/plugins/b"]);
     expect(appContentPins).toEqual([
-      { path: "apps/plugins/a/plugins/x", reason: "boot-critical descriptor (k)" },
-      { path: "apps/plugins/a/plugins/y", reason: "watched boot slot Core.Root" },
+      {
+        path: "apps/plugins/a/plugins/x",
+        reason: "boot-critical descriptor (k)",
+      },
+      {
+        path: "apps/plugins/a/plugins/y",
+        reason: "watched boot slot Core.Root",
+      },
     ]);
+  });
+});
+
+describe("bootCriticalKeysIn", () => {
+  test("reads a bootCritical key from every descriptor factory, bounded ones included", () => {
+    // `windowQueryResourceDescriptor` is the case this scanner was blind to: it
+    // kept its own four-name list and the bounded factories were never added, so
+    // a boot-critical resource under `apps/plugins/**` silently stayed deferred.
+    const src = `
+      export const tasksResource = keyedResourceDescriptor<T[]>(
+        "tasks", S, [], k, { bootCritical: true },
+      );
+      export const notificationsResource = windowQueryResourceDescriptor<N>(
+        "notifications", S, "id", { defaultLimit: 200, bootCritical: true },
+      );
+      export const quietResource = resourceDescriptor<Q>("quiet", S, null);
+    `;
+    expect(bootCriticalKeysIn(src, "a.ts")).toEqual(["tasks", "notifications"]);
+  });
+
+  test("a factory's own declaration is not a bootCritical call", () => {
+    // `opts: { defaultLimit: number; bootCritical?: true }` is a type position —
+    // `bootCritical?:` is not the `bootCritical: true` field the scan reads.
+    const src = `
+      export function windowResourceDescriptor<El>(
+        key: string, elementSchema: ZodParser<El>, keyOf: (row: unknown) => string,
+        opts: { defaultLimit: number; bootCritical?: true },
+      ): WindowResourceDescriptor<El> { return d; }
+    `;
+    expect(bootCriticalKeysIn(src, "window.ts")).toEqual([]);
+  });
+
+  test("throws on a bootCritical declaration whose key is not a literal", () => {
+    const src = `export const r = resourceDescriptor(RESOURCE_KEY, S, null, { bootCritical: true });`;
+    expect(() => bootCriticalKeysIn(src, "r.ts")).toThrow(
+      /r\.ts:1: resourceDescriptor/,
+    );
+    expect(() => bootCriticalKeysIn(src, "r.ts")).toThrow(/RESOURCE_KEY/);
+  });
+
+  test("ignores a factory call written inside a string or comment", () => {
+    const src = `
+      // export const x = resourceDescriptor("commented", S, null, { bootCritical: true });
+      const label = "resourceDescriptor(\\"fake\\", S, null, { bootCritical: true })";
+    `;
+    expect(bootCriticalKeysIn(src, "s.ts")).toEqual([]);
   });
 });

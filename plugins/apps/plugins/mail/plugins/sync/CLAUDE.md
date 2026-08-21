@@ -224,6 +224,7 @@ the total request/byte volume versus the old full-mailbox, full-body crawl.
     - `defineJob('mail.delta')`
     - `defineJob('mail.sync-tick')`
     - `defineJob('mail.attachment-scan')`
+  - Resources: `mail-sync-state` (push)
   - Routes:
     - `POST /api/mail/sync`
     - `POST /api/mail/hydrate`

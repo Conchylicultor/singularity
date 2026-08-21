@@ -151,6 +151,7 @@ a catch-all say so in the category's hint: *"if unsure, pick Other"*.
     - `getItemMap`
     - `getItemOrder`
   - Register: `defineJob('conversation-category.classify')`
+  - Resources: `conversation-categories` (keyed, point)
   - Routes:
     - `POST /api/conversation-category/:conversationId/classify`
     - `POST /api/conversation-category/:conversationId`

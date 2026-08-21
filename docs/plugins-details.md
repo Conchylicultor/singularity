@@ -1242,6 +1242,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Resources:
               - `events.revision` (push)
               - `events.runs-revision` (push)
+              - `events.sources` (keyed, window)
             - Routes:
               - `GET /api/events/sources`
               - `POST /api/events/sources`
@@ -2123,6 +2124,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `defineJob('mail.delta')`
               - `defineJob('mail.sync-tick')`
               - `defineJob('mail.attachment-scan')`
+            - Resources: `mail-sync-state` (push)
             - Routes:
               - `POST /api/mail/sync`
               - `POST /api/mail/hydrate`
@@ -2257,6 +2259,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `agentPagesServerResource`
               - `pageBlocksOrigin`
             - Register: `defineJob('retention.page_blocks_ext_origin')`
+            - Resources: `pages-origin` (keyed, window)
         - **`content-search`** — Pages full-text search consumer: contributes the Search button into the Pages sidebar, opening the reusable quick-find dialog scoped to the pages source. Pages full-text search consumer: indexes pages into the search engine, reindexing on blocksChanged and seeding existing pages via a one-shot boot backfill.
           - Web:
             - Contributes: `Pages.Sidebar` "Search" → `PagesSearch`
@@ -2494,6 +2497,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `pageBlocksStarred`
               - `setPageStarred`
               - `starredPagesServerResource`
+            - Resources: `pages-starred` (keyed, window)
             - Routes: `PUT /api/pages/:pageId/starred`
         - **`trash`** — Pages trash consumer: contributes a Trash entry into the Pages sidebar, opening a dialog that lists soft-deleted pages with restore and permanent-delete actions.
           - Web:
@@ -8348,6 +8352,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `getItemMap`
           - `getItemOrder`
         - Register: `defineJob('conversation-category.classify')`
+        - Resources: `conversation-categories` (keyed, point)
         - Routes:
           - `POST /api/conversation-category/:conversationId/classify`
           - `POST /api/conversation-category/:conversationId`
@@ -8414,6 +8419,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `recordConversationPreprompt`
           - `recordPrepromptJob`
         - Register: `defineJob('conversation-preprompt.record')`
+        - Resources: `conversation-preprompts` (keyed, point)
       - Shared:
         - Exports (types):
           - `ConversationPreprompt`
@@ -8460,6 +8466,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Register:
           - `defineJob('conversation-progress.classify')`
           - `defineJob('conversation-progress.mark-pushed')`
+        - Resources: `conversation-progress` (keyed, point)
     - **`conversation-ui`** — Umbrella for visual primitives that render a Conversation. Sub-plugins ship the actual components (item rows/chips, future cards/mentions/etc.).
       - Plugins:
         - **`item`** — Visual primitive for rendering a Conversation as a row or inline chip. Used by every surface that lists conversations.
@@ -10022,6 +10029,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Exports (values):
               - `conversationNotes`
               - `conversationNotesResource`
+            - Resources: `conversation-notes` (keyed, point)
             - Routes:
               - `PUT /api/conversation-notes/:conversationId`
               - `DELETE /api/conversation-notes/:conversationId`
@@ -10485,6 +10493,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `defineJob('queue.seed-rank')`
               - `defineJob('queue.task-status-rerank')`
               - `defineJob('queue.sweep-gone-ranks')`
+            - Resources: `queue-ranks` (keyed, point)
             - Routes:
               - `POST /api/conversations-queue/reorder`
               - `POST /api/conversations-queue/promote`
@@ -14960,6 +14969,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `framework/slot-declaration.getCreatedSlots`
               - `framework/tooling/format.formatIfFormattable`
               - `framework/tooling/format.SourceBytes`
+              - `framework/tooling/resource-vocabulary.resourceDescriptorFactories`
               - `infra/namespace.MAIN_COMPOSITION_ID`
               - `plugin-meta/barrel-import.AUTO_STUB_CSS`
               - `plugin-meta/barrel-import.AUTO_STUB_PACKAGES`
@@ -15287,6 +15297,26 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `provisionCollectedDir`
               - `provisionEntries`
         - **`react-compiler`** — Enables the React Compiler (Babel) across the frontend via a vite/ build contribution; presence of this folder is the on/off switch.
+        - **`resource-vocabulary`** — The closed set of ways a plugin declares a live-state resource, as data every build-time resource scanner reads. Its key set is DERIVED from the barrels' own module types, so a factory that exists but is unlisted is a type error.
+          - Cross-plugin:
+            - Imported by: `framework/tooling/codegen`
+          - Core:
+            - Exports (types):
+              - `DescriptorFactory`
+              - `DescriptorFactoryName`
+              - `DescriptorShapeIsWidening`
+              - `RegisterMarker`
+              - `RegisterMarkerName`
+              - `ResourceMembership`
+            - Exports (values):
+              - `isResourceVocabularyOwner`
+              - `LIVE_STATE_CORE`
+              - `QUERY_RESOURCE_CORE`
+              - `QUERY_RESOURCE_SERVER`
+              - `resourceDescriptorFactories`
+              - `resourceRegisterMarkers`
+              - `resourceVocabularyOwnerPaths`
+              - `SERVER_CORE`
         - **`test-layout`** — The canonical bun:test ⇄ vitest split as data (core), enforced as the test-layout:runner-split check.
           - Core:
             - Uses: `plugin-meta/parse-utils.maskSource`
@@ -19964,6 +19994,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `ResourceDef`
               - `ResourceFacetData`
             - Exports (values):
+              - `resourceModeLabel`
               - `resourcesFacetDef`
               - `resourcesToComparable`
           - Plugins:
@@ -27373,6 +27404,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `_usageStats`
           - `usageStatsResource`
         - Register: `defineJob('retention.usage_stats')`
+        - Resources: `usage-stats` (keyed, point)
         - Routes: `POST /api/usage-rank/record`
       - Web:
         - Uses:
@@ -28465,6 +28497,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `recordNotification`
           - `setMutedByMetadata`
         - Register: `defineJob('notifications.ttl-cleanup')`
+        - Resources: `notifications` (keyed, window)
         - Routes:
           - `POST /api/notifications`
           - `POST /api/notifications/dismiss-all`
@@ -29057,6 +29090,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Register:
           - `defineJob('tasks.auto-start-cancel-on-drop')`
           - `defineWarmup('tasks.auto-start-dropped-sweep')`
+        - Resources: `tasks-auto-start` (keyed, point)
       - Cross-plugin:
         - Imported by:
           - `conversations`

@@ -72,6 +72,7 @@ never the reverse) and the feature fully opt-in and removable.
     - `recordConversationPreprompt`
     - `recordPrepromptJob`
   - Register: `defineJob('conversation-preprompt.record')`
+  - Resources: `conversation-preprompts` (keyed, point)
 - Shared:
   - Exports (types):
     - `ConversationPreprompt`

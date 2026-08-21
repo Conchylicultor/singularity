@@ -3,10 +3,16 @@ import { writeGenerated } from "./write-generated";
 import {
   findImports,
   findMarkerCalls,
+  lineAt,
+  markerCallSpans,
+  maskSource,
   parseBoolField,
+  parseStaticCallId,
   readIfExists,
+  unresolvableCallIdMessage,
   walkFiles,
 } from "@plugins/plugin-meta/plugins/parse-utils/core";
+import { resourceDescriptorFactories } from "@plugins/framework/plugins/tooling/plugins/resource-vocabulary/core";
 import {
   buildRegistryGenContext,
   collectEntriesWithDeps,
@@ -205,17 +211,23 @@ const WATCHED_SLOTS: { marker: string; head: string }[] = [
   { marker: "ActionBar.Item", head: "ActionBar" },
 ];
 
-// The descriptor factories carrying `bootCritical: true` in a trailing options
-// object: the three live-state factories plus the query-resource compiler's
-// wrapper (which forwards its opts to `keyedResourceDescriptor` at runtime, but
-// is a distinct identifier this textual scan must know about — `\bresourceDescriptor`
-// does not match inside `queryResourceDescriptor`).
-const DESCRIPTOR_FACTORIES = [
-  "resourceDescriptor",
-  "keyedResourceDescriptor",
-  "centralResourceDescriptor",
-  "queryResourceDescriptor",
-];
+// The descriptor factories that can carry `bootCritical: true` in a trailing
+// options object come from the shared vocabulary
+// (`tooling/resource-vocabulary/core`), whose key set `tsc` derives from the
+// live-state and query-resource barrels themselves.
+//
+// This file used to keep its own four-name list, and the docs facet kept a
+// different three-name one. Neither knew the five bounded-membership factories,
+// so a `windowQueryResourceDescriptor(…, { bootCritical: true })` under
+// `apps/plugins/**` was invisible here: the plugin stayed deferred, its
+// descriptor was not registered before the boot snapshot hydrated, and the
+// surface painted the pending state it was designed never to show. Every miss
+// looked exactly like a plugin declaring nothing.
+//
+// Each name must still be a DISTINCT identifier for the textual scan
+// (`\bresourceDescriptor` does not match inside `queryResourceDescriptor`),
+// which is what `findMarkerCalls` guarantees.
+const DESCRIPTOR_FACTORIES = Object.keys(resourceDescriptorFactories);
 
 /** Every identifier imported from any `@plugins/` specifier in `src`. */
 function pluginImportedIdents(src: string): Set<string> {
@@ -230,12 +242,6 @@ function pluginImportedIdents(src: string): Set<string> {
     for (const w of imp.clause.match(/[A-Za-z_$][\w$]*/g) ?? []) idents.add(w);
   }
   return idents;
-}
-
-/** The first positional string-literal argument of a call's argsText, if any. */
-function firstStringArg(argsText: string): string | undefined {
-  const m = /^\s*(["'`])((?:[^\\]|\\.)*?)\1/.exec(argsText);
-  return m?.[2];
 }
 
 function filesUnder(pluginDir: string, subs: string[]): string[] {
@@ -259,19 +265,62 @@ function scanWatchedSlot(pluginDir: string): string | null {
   return null;
 }
 
+/**
+ * Every `bootCritical: true` descriptor key in ONE source file, in source order.
+ *
+ * The file is FULL-masked (so a factory written inside a comment, string or
+ * template literal is never matched) and each key is read back from the ORIGINAL
+ * by offset. THROWS — naming `displayPath`, the line and the offending
+ * expression — on a boot-critical declaration whose key is not a static string
+ * literal. The key used to fall back to `"(unknown)"`, which pins the plugin
+ * eager (right) but names it in the manifest as a key that matches nothing
+ * (wrong, and silent). A boot-critical resource is one whose absence before
+ * first paint is a visible loading flash, so the one thing this scan must not do
+ * is guess.
+ *
+ * The plugins that OWN the factories need no exemption here (unlike the docs
+ * facet's index, which reads EVERY declaration): a wrapper forwards its caller's
+ * opts rather than writing a `bootCritical: true` literal, so no call inside
+ * `live-state` / `query-resource` reaches the key read at all.
+ */
+export function bootCriticalKeysIn(src: string, displayPath: string): string[] {
+  const keys: string[] = [];
+  let masked: string | null = null;
+  for (const factory of DESCRIPTOR_FACTORIES) {
+    if (!src.includes(factory)) continue; // cheap fast-path
+    masked ??= maskSource(src);
+    for (const span of markerCallSpans(masked, factory)) {
+      const argsText = src.slice(span.open + 1, span.close);
+      if (!parseBoolField(argsText, "bootCritical")) continue;
+      const id = parseStaticCallId(src, span);
+      if (id.kind !== "value") {
+        throw new Error(
+          unresolvableCallIdMessage({
+            marker: factory,
+            file: displayPath,
+            line: lineAt(src, span.identifier),
+            expr: id.kind === "dynamic" ? id.expr : "",
+            hint:
+              "A `bootCritical: true` descriptor pins its plugin into the eager " +
+              "load tier, and this manifest is built from source text — so the key " +
+              "must be a literal at the declaration site. Inline the literal " +
+              "instead of hoisting or interpolating it.",
+          }),
+        );
+      }
+      keys.push(id.value);
+    }
+  }
+  return keys;
+}
+
 /** Descriptor keys of every `bootCritical: true` declaration in a plugin's files. */
 function scanBootCriticalKeys(pluginDir: string): string[] {
   const keys: string[] = [];
   for (const f of filesUnder(pluginDir, ["core", "shared", "web"])) {
     const src = readIfExists(f);
     if (src == null) continue;
-    for (const factory of DESCRIPTOR_FACTORIES) {
-      if (!src.includes(factory)) continue; // cheap fast-path
-      for (const call of findMarkerCalls(src, factory)) {
-        if (!parseBoolField(call.argsText, "bootCritical")) continue;
-        keys.push(firstStringArg(call.argsText) ?? "(unknown)");
-      }
-    }
+    keys.push(...bootCriticalKeysIn(src, f));
   }
   return keys;
 }

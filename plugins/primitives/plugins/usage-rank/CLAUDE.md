@@ -68,6 +68,7 @@ the ranked things are config entries with no parent row to cascade from.
     - `_usageStats`
     - `usageStatsResource`
   - Register: `defineJob('retention.usage_stats')`
+  - Resources: `usage-stats` (keyed, point)
   - Routes: `POST /api/usage-rank/record`
 - Web:
   - Uses:

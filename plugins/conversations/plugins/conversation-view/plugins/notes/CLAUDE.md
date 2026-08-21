@@ -29,6 +29,7 @@
   - Exports (values):
     - `conversationNotes`
     - `conversationNotesResource`
+  - Resources: `conversation-notes` (keyed, point)
   - Routes:
     - `PUT /api/conversation-notes/:conversationId`
     - `DELETE /api/conversation-notes/:conversationId`
