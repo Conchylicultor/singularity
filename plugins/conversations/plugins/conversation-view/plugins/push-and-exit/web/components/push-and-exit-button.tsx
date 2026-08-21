@@ -83,8 +83,10 @@ function endpointErrorText(err: unknown): string {
   return getEndpointErrorMessage(err);
 }
 
-const PRIMARY =
-  "gap-1.5 bg-primary hover:bg-primary/90 text-primary-foreground";
+// Colour only. The icon/label gap is Button's own (`gap-1.5` at its default
+// size), so these overrides used to restate it — invisibly, because a class
+// string reached through an identifier was outside every no-adhoc-* rule.
+const PRIMARY = "bg-primary hover:bg-primary/90 text-primary-foreground";
 
 const ICONS: Record<Mode, IconType> = {
   restore: MdReplay,
@@ -102,8 +104,8 @@ const BUTTON_CLASS: Record<Mode, string> = {
   restore: PRIMARY,
   send: PRIMARY,
   queue: PRIMARY,
-  go: "gap-1.5 bg-success hover:bg-success/90 text-success-foreground",
-  stop: "gap-1.5 bg-destructive text-destructive-foreground hover:bg-destructive/90",
+  go: "bg-success hover:bg-success/90 text-success-foreground",
+  stop: "bg-destructive text-destructive-foreground hover:bg-destructive/90",
   "push-and-exit": PRIMARY,
   exit: PRIMARY,
   // Degraded, never destructive: the exit decision is unknown, but closing is

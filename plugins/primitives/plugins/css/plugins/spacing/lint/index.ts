@@ -20,7 +20,11 @@ import noAdhocSpacing from "./no-adhoc-spacing";
  */
 export default {
   name: "spacing",
-  rules: {
+  rules: {},
+  // Class rules are FACTORIES: they read class tokens, so they take the one
+  // shared walk from `buildLintConfig` instead of hand-copying it. See
+  // @plugins/framework/plugins/tooling/plugins/lint/core/class-token-walk.ts.
+  classRules: {
     "no-adhoc-spacing": noAdhocSpacing,
   },
   ignores: {

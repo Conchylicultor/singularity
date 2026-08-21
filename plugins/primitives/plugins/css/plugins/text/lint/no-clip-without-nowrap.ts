@@ -1,4 +1,5 @@
-import { ESLintUtils, type TSESTree } from "@typescript-eslint/utils";
+import { ESLintUtils } from "@typescript-eslint/utils";
+import type { LintToolkit } from "@plugins/framework/plugins/tooling/plugins/lint/core";
 
 const createRule = ESLintUtils.RuleCreator(
   (name) => `https://github.com/anthropics/singularity/lint/${name}`,
@@ -68,102 +69,64 @@ const WRAP_OK = new Set([
   "items-stretch",
 ]);
 
-/**
- * Recursively collect class tokens from a `className` attribute value subtree.
- * We harvest only string `Literal` `.value`s and `TemplateElement.value.raw`s —
- * never identifiers from dynamic expressions — and split each on whitespace into
- * the shared token Set. The walk is structural (visit every child node) so it is
- * robust to however the class string is assembled (bare string, template literal,
- * `cn(...)`/`clsx(...)`, ternaries, and arbitrary nesting).
- */
-function collectTokens(node: TSESTree.Node | null | undefined, out: Set<string>): void {
-  if (!node) return;
-  if (node.type === "Literal") {
-    if (typeof node.value === "string") {
-      for (const t of node.value.split(/\s+/)) if (t) out.add(t);
-    }
-    return;
-  }
-  if (node.type === "TemplateElement") {
-    for (const t of node.value.raw.split(/\s+/)) if (t) out.add(t);
-    return;
-  }
-  for (const key of Object.keys(node)) {
-    if (key === "parent") continue;
-    const value = (node as unknown as Record<string, unknown>)[key];
-    if (Array.isArray(value)) {
-      for (const child of value) {
-        if (child && typeof child === "object" && "type" in child) {
-          collectTokens(child as TSESTree.Node, out);
-        }
-      }
-    } else if (value && typeof value === "object" && "type" in value) {
-      collectTokens(value as TSESTree.Node, out);
-    }
-  }
-}
-
-/**
- * Strip Tailwind variant prefixes (`hover:`, `md:`, `dark:`, …) so the utility
- * underneath is tested on its own (e.g. `md:overflow-hidden` -> `overflow-hidden`).
- */
-function baseClass(token: string): string {
-  const idx = token.lastIndexOf(":");
-  return idx === -1 ? token : token.slice(idx + 1);
-}
-
-export default createRule({
-  name: "no-clip-without-nowrap",
-  meta: {
-    type: "problem",
-    docs: {
-      description:
-        "Disallow a horizontal flex row with overflow-hidden but no whitespace-nowrap/truncate — overflow-hidden clips already-wrapped text, it does not prevent the wrap. Add whitespace-nowrap (single-line chrome) or flex-col/flex-wrap (intended multi-line).",
-    },
-    schema: [],
-    messages: {
-      clipWithoutNowrap:
-        "Single-line trap: this flex row has `overflow-hidden` but no `whitespace-nowrap` " +
-        "(nor `truncate`). `overflow-hidden` clips text that has ALREADY wrapped — it does not " +
-        "stop the wrap, so the row silently grows a second line. Add `whitespace-nowrap` so " +
-        "children never wrap (let a `truncate` / `<Text>`-in-a-line-container leaf ellipsize). If " +
-        "multi-line is intended, use `flex-col`/`flex-wrap`, or " +
-        "`// eslint-disable-next-line text/no-clip-without-nowrap -- <reason>`.",
-    },
-  },
-  defaultOptions: [],
-  create(context) {
-    return {
-      JSXAttribute(node) {
-        // Only `className` attributes.
-        if (node.name.type !== "JSXIdentifier" || node.name.name !== "className") return;
-
-        // Host-tag gate: fire only on intrinsic elements (lowercase tag). A
-        // capitalized component (`<Stack>`, `<Card>`) owns its own internals.
-        const tag = node.parent.name;
-        if (tag.type !== "JSXIdentifier") return;
-        const first = tag.name[0];
-        if (!first || first !== first.toLowerCase()) return;
-
-        // Aggregate every (variant-stripped) class token into one Set.
-        const tokens = new Set<string>();
-        const raw = new Set<string>();
-        collectTokens(node.value, raw);
-        for (const t of raw) tokens.add(baseClass(t));
-
-        let hasFlex = false;
-        let hasClip = false;
-        let safe = false;
-        for (const t of tokens) {
-          if (FLEX_DISPLAY.has(t)) hasFlex = true;
-          if (CLIP.has(t)) hasClip = true;
-          if (NOWRAP.has(t) || WRAP_OK.has(t)) safe = true;
-        }
-
-        if (hasFlex && hasClip && !safe) {
-          context.report({ node, messageId: "clipWithoutNowrap" });
-        }
+export default function buildRule({ collectTokens, baseClass }: LintToolkit) {
+  return createRule({
+    name: "no-clip-without-nowrap",
+    meta: {
+      type: "problem",
+      docs: {
+        description:
+          "Disallow a horizontal flex row with overflow-hidden but no whitespace-nowrap/truncate — overflow-hidden clips already-wrapped text, it does not prevent the wrap. Add whitespace-nowrap (single-line chrome) or flex-col/flex-wrap (intended multi-line).",
       },
-    };
-  },
-});
+      schema: [],
+      messages: {
+        clipWithoutNowrap:
+          "Single-line trap: this flex row has `overflow-hidden` but no `whitespace-nowrap` " +
+          "(nor `truncate`). `overflow-hidden` clips text that has ALREADY wrapped — it does not " +
+          "stop the wrap, so the row silently grows a second line. Add `whitespace-nowrap` so " +
+          "children never wrap (let a `truncate` / `<Text>`-in-a-line-container leaf ellipsize). If " +
+          "multi-line is intended, use `flex-col`/`flex-wrap`, or " +
+          "`// eslint-disable-next-line text/no-clip-without-nowrap -- <reason>`.",
+      },
+    },
+    defaultOptions: [],
+    create(context) {
+      return {
+        JSXAttribute(node) {
+          // Only `className` attributes.
+          if (
+            node.name.type !== "JSXIdentifier" ||
+            node.name.name !== "className"
+          )
+            return;
+
+          // Host-tag gate: fire only on intrinsic elements (lowercase tag). A
+          // capitalized component (`<Stack>`, `<Card>`) owns its own internals.
+          const tag = node.parent.name;
+          if (tag.type !== "JSXIdentifier") return;
+          const first = tag.name[0];
+          if (!first || first !== first.toLowerCase()) return;
+
+          // Aggregate every (variant-stripped) class token into one Set.
+          const tokens = new Set<string>();
+          const raw = new Set<string>();
+          collectTokens(context.sourceCode, node.value, raw);
+          for (const t of raw) tokens.add(baseClass(t));
+
+          let hasFlex = false;
+          let hasClip = false;
+          let safe = false;
+          for (const t of tokens) {
+            if (FLEX_DISPLAY.has(t)) hasFlex = true;
+            if (CLIP.has(t)) hasClip = true;
+            if (NOWRAP.has(t) || WRAP_OK.has(t)) safe = true;
+          }
+
+          if (hasFlex && hasClip && !safe) {
+            context.report({ node, messageId: "clipWithoutNowrap" });
+          }
+        },
+      };
+    },
+  });
+}

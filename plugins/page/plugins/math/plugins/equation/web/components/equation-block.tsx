@@ -11,9 +11,10 @@ import {
 import { textBlock } from "@plugins/page/plugins/text/core";
 import { KatexMath } from "@plugins/page/plugins/math/plugins/render/web";
 import { equationBlock } from "../../core";
+import { textVariantClass } from "@plugins/primitives/plugins/css/plugins/text/web";
 
 // Shared mono metric for the LaTeX-source textarea.
-const SOURCE_METRICS = "p-md font-mono text-xs leading-5";
+const SOURCE_METRICS = cn("p-md", textVariantClass("code"));
 
 /**
  * A block-level LaTeX equation. Like code-block, it owns its own textarea

@@ -17,10 +17,14 @@ const ONE_EMPTY_LINE = "calc(var(--space-xs) * 2 + var(--doc-lh-body))";
 
 // The anchor decoration's own column. The `absolute` is deliberate and has no
 // primitive: the column is positioned via JS coords (style left/width at the use
-// site), and `.block-anchor` owns the borrowed-first-line vertical seat. Keep it
-// hoisted rather than inlined into the JSX — inline it becomes a `className`
-// literal that `layout/no-adhoc-layout` reports, and the only escape there is a
-// positional directive inside a JSX attribute, which a format pass can displace.
+// site), and `.block-anchor` owns the borrowed-first-line vertical seat.
+//
+// This used to be hoisted in order to HIDE from `layout/no-adhoc-layout` — the
+// note said so, because the only escape was a positional directive inside a JSX
+// attribute that a format pass could displace. Both halves of that are gone: the
+// `lint-directives-stable` check now refuses to write a file whose directives
+// formatting would displace, and the shared class-token walk follows a same-file
+// const, so hoisting hides nothing. The exemption is written at the use site.
 const ANCHOR_COLUMN = "block-anchor absolute z-raised";
 
 // The selection marker: a selected block SAYS "Selected." to a screen reader,
@@ -176,6 +180,7 @@ export function BlockRow({
             rows' rail no longer occupies (they seat theirs at the frame's edge).
             `z-raised` puts it above the frame it decorates. */}
         <div
+          // eslint-disable-next-line layout/no-adhoc-layout -- the anchor column is positioned from JS coords (style left/width below), so no layout primitive can express it; see ANCHOR_COLUMN
           className={cn(ANCHOR_COLUMN, isDragging && "opacity-40")}
           style={{ left: contentLeft, width: BLOCK_INDENT }}
         >

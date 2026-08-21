@@ -1,4 +1,7 @@
-import { cn, ControlSizeProvider } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import {
+  cn,
+  ControlSizeProvider,
+} from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useMemo, type ReactElement } from "react";
 import { toast } from "@plugins/shell/plugins/notifications/web";
 import { CopyButton } from "@plugins/primitives/plugins/copy-to-clipboard/web";
@@ -16,9 +19,10 @@ import {
   releaseRunResource,
   type ReleaseLogLine,
 } from "@plugins/release/core";
+import { textVariantClass } from "@plugins/primitives/plugins/css/plugins/text/web";
 
 // Mono log body: intentional fixed code size + line-height (not on the typography scale).
-const monoLogClass = "font-mono text-xs leading-5";
+const monoLogClass = textVariantClass("code");
 
 export function ReleaseLogSection({ runId }: { runId: string }): ReactElement {
   const result = useResource(releaseRunResource, { id: runId });
@@ -75,8 +79,13 @@ function PersistedLogs({ runId }: { runId: string }): ReactElement {
           />
         </ControlSizeProvider>
       </Line>
-      <Scroll axis="y" className={`min-h-48 max-h-96 rounded-md border bg-muted/30 px-md py-sm ${monoLogClass}`}>
-        {lines.length === 0 && <span className="text-muted-foreground">No release logs</span>}
+      <Scroll
+        axis="y"
+        className={`min-h-48 max-h-96 rounded-md border bg-muted/30 px-md py-sm ${monoLogClass}`}
+      >
+        {lines.length === 0 && (
+          <span className="text-muted-foreground">No release logs</span>
+        )}
         {lines.map((line, i) => (
           <div
             key={i}

@@ -34,9 +34,10 @@ import type {
   ServerMessage,
   LogEntryWire,
 } from "@plugins/primitives/plugins/log-channels/core";
+import { textVariantClass } from "@plugins/primitives/plugins/css/plugins/text/web";
 
 // Mono build-log body: intentional fixed code size + line-height (not on the typography scale).
-const monoLogClass = "font-mono text-xs leading-5";
+const monoLogClass = textVariantClass("code");
 
 export function BuildLogSection({ runId }: { runId: string }): ReactElement {
   const { data } = useEndpoint(getBuildRunLogs, { id: runId });

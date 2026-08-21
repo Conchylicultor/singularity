@@ -40,6 +40,7 @@ import {
 } from "@plugins/page/plugins/editor/web";
 import { codeBlock } from "../../core";
 import { detectLanguage } from "../detect-language";
+import { textVariantClass } from "@plugins/primitives/plugins/css/plugins/text/web";
 
 // Tri-state language model, all stored in the single optional `language` field:
 //   undefined  → AUTO: detect the language from the content and highlight it
@@ -55,12 +56,15 @@ const PLAIN = "text";
 // or the visible caret drifts away from the colored glyphs. `whitespace-pre-wrap`
 // + `break-words` make long lines wrap identically in both layers, so the block
 // grows vertically and we never need to sync horizontal scroll.
-const METRICS =
-  "p-md font-mono text-xs leading-5 whitespace-pre-wrap break-words [tab-size:2]";
+const METRICS = cn(
+  "p-md",
+  textVariantClass("code"),
+  "whitespace-pre-wrap break-words [tab-size:2]",
+);
 // Same contract, projected onto the <pre> shiki injects.
-// eslint-disable-next-line text/no-adhoc-typography, spacing/no-adhoc-spacing -- pinned mono code-editor metric: the shiki <pre> must match METRICS size/line-height exactly so the transparent textarea overlays the highlighted glyphs; [&>pre]:m-0 resets the shiki <pre> UA margin (layout reset, not rhythm)
+// eslint-disable-next-line spacing/no-adhoc-spacing -- [&>pre]:m-0 resets the shiki <pre> UA margin (layout reset, not rhythm). The metrics themselves are now the `code` role, so the textarea overlay and the <pre> track ONE definition instead of two hand-matched copies.
 const SHIKI_PRE = cn(
-  "[&>pre]:m-0 [&>pre]:p-md [&>pre]:font-mono [&>pre]:text-xs [&>pre]:leading-5",
+  "[&>pre]:m-0 [&>pre]:p-md [&>pre]:text-code",
   "[&>pre]:whitespace-pre-wrap [&>pre]:break-words [&>pre]:[tab-size:2]",
 );
 

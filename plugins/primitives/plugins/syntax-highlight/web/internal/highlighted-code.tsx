@@ -24,10 +24,13 @@ export function HighlightedCode({
     : null;
   const { html } = useHighlightedHtml(code, resolved, { dark, cacheKey });
 
-  // `[&>pre]:m-0` resets shiki's injected <pre> default margin — there is no
-  // named margin utility for a reset-to-zero.
+  // Every class here is projected onto the <pre> SHIKI injects, through
+  // dangerouslySetInnerHTML — we never hold that element, so there is nothing to
+  // wrap in <Scroll>/<Card> and no component form available. `[&>pre]:m-0`
+  // resets its UA margin (there is no named utility for a reset-to-zero), and
+  // the metrics are the `code` role rather than a hand-spelled size+leading.
   const wrapper =
-    "[&>pre]:m-0 [&>pre]:overflow-auto [&>pre]:rounded [&>pre]:bg-muted [&>pre]:p-md [&>pre]:font-mono [&>pre]:text-xs [&>pre]:leading-5";
+    "[&>pre]:m-0 [&>pre]:overflow-auto [&>pre]:rounded [&>pre]:bg-muted [&>pre]:p-md [&>pre]:text-code";
 
   if (!resolved || html === null) {
     return (
@@ -47,7 +50,7 @@ export function HighlightedCode({
   return (
     <ContentScope>
       <div
-        // eslint-disable-next-line spacing/no-adhoc-spacing -- my-2 sets code-block vertical rhythm against surrounding content; one-off, no parent flex to own it
+        // eslint-disable-next-line spacing/no-adhoc-spacing, layout/no-adhoc-layout, radius/no-adhoc-radius -- my-2 sets code-block vertical rhythm (one-off, no parent flex to own it); every `[&>pre]:` class in `wrapper` styles shiki's injected <pre>, which this component never holds, so no primitive can wrap it
         className={`my-2 ${wrapper} ${className ?? ""}`}
         dangerouslySetInnerHTML={{ __html: html }}
       />

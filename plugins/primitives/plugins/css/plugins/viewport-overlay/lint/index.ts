@@ -31,8 +31,13 @@ import noPortalToggle from "./no-portal-toggle";
 export default {
   name: "viewport-overlay",
   rules: {
-    "no-adhoc-viewport-overlay": noAdhocViewportOverlay,
     "no-portal-toggle": noPortalToggle,
+  },
+  // Class rules are FACTORIES: they read class tokens, so they take the one
+  // shared walk from `buildLintConfig` instead of hand-copying it. See
+  // @plugins/framework/plugins/tooling/plugins/lint/core/class-token-walk.ts.
+  classRules: {
+    "no-adhoc-viewport-overlay": noAdhocViewportOverlay,
   },
   ignores: {
     "no-adhoc-viewport-overlay": [

@@ -12,11 +12,12 @@ import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { KatexMath } from "@plugins/page/plugins/math/plugins/render/web";
+import { textVariantClass } from "@plugins/primitives/plugins/css/plugins/text/web";
 
 // Bare-string mono metric for the LaTeX-source field. Kept as a standalone const
 // (not inlined into a cn(...) class context) so the typography rule treats it as
 // the sanctioned out-of-scope mono/code metric rather than an ad-hoc size.
-const MONO_FIELD = "font-mono text-xs leading-5";
+const MONO_FIELD = textVariantClass("code");
 
 type SerializedInlineMathNode = {
   type: "inline-math";
@@ -87,7 +88,9 @@ export class InlineMathNode extends DecoratorNode<ReactNode> {
   }
 
   decorate(): ReactNode {
-    return <InlineMathView nodeKey={this.__key} expression={this.__expression} />;
+    return (
+      <InlineMathView nodeKey={this.__key} expression={this.__expression} />
+    );
   }
 }
 

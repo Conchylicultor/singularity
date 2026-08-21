@@ -15,6 +15,7 @@
     - `primitives/css/center.Center`
     - `primitives/css/clip.Clip`
     - `primitives/css/text.Text`
+    - `primitives/css/text.textVariantClass`
     - `primitives/css/ui-kit.cn`
     - `primitives/editable-field.useEditableField`
   - Exports (values):

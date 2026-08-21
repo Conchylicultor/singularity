@@ -1,4 +1,5 @@
-import { ESLintUtils, type TSESTree } from "@typescript-eslint/utils";
+import { ESLintUtils } from "@typescript-eslint/utils";
+import type { LintToolkit } from "@plugins/framework/plugins/tooling/plugins/lint/core";
 
 const createRule = ESLintUtils.RuleCreator(
   (name) => `https://github.com/anthropics/singularity/lint/${name}`,
@@ -88,103 +89,58 @@ function isFocusToken(token: string): boolean {
   return FOCUS_BASE.some((re) => re.test(utility));
 }
 
-/**
- * Recursively collect class tokens from a `className` attribute value subtree.
- * We harvest only string `Literal` `.value`s and `TemplateElement.value.raw`s —
- * never identifiers from dynamic expressions (e.g. a `STATE_STYLES[x]` member
- * access), so map-driven classes are correctly ignored as opaque. Each harvested
- * string is split on whitespace into the shared token Set.
- *
- * Handles the shapes a `className` realistically takes: a bare string literal, a
- * `JSXExpressionContainer` wrapping a template literal, a `cn(...)`/`clsx(...)`
- * call, ternaries/logical expressions, and arbitrary nesting thereof. The walk
- * is structural (visit every child node) rather than shape-specific, so it is
- * robust to however the class string is assembled.
- */
-function collectTokens(
-  node: TSESTree.Node | null | undefined,
-  out: Set<string>,
-): void {
-  if (!node) return;
-  if (node.type === "Literal") {
-    if (typeof node.value === "string") {
-      for (const t of node.value.split(/\s+/)) if (t) out.add(t);
-    }
-    return;
-  }
-  if (node.type === "TemplateElement") {
-    for (const t of node.value.raw.split(/\s+/)) if (t) out.add(t);
-    return;
-  }
-  // Generic structural recursion: walk every child node/array of nodes. This
-  // covers JSXExpressionContainer, TemplateLiteral, CallExpression (cn/clsx),
-  // ConditionalExpression, LogicalExpression, ArrayExpression, etc. without
-  // enumerating each shape.
-  for (const key of Object.keys(node)) {
-    if (key === "parent") continue;
-    const value = (node as unknown as Record<string, unknown>)[key];
-    if (Array.isArray(value)) {
-      for (const child of value) {
-        if (child && typeof child === "object" && "type" in child) {
-          collectTokens(child as TSESTree.Node, out);
-        }
-      }
-    } else if (value && typeof value === "object" && "type" in value) {
-      collectTokens(value as TSESTree.Node, out);
-    }
-  }
-}
-
 // The two components exported from `primitives/css/row`. Both split the same way.
 const ROW_TAGS = new Set(["Row", "SectionHeaderRow"]);
 
-export default createRule({
-  name: "no-row-focus-class",
-  meta: {
-    type: "problem",
-    docs: {
-      description:
-        "Disallow focus/ring classes (outline-*, ring-*, focus-ring-*, focus:/focus-visible:/focus-within: variants) on <Row>/<SectionHeaderRow> — Row owns its focus indicator, and such a class lands on the box that stops being the focused node once the row splits.",
-    },
-    schema: [],
-    messages: {
-      rowFocusClass:
-        "Focus/ring class on a `Row` — `className` lands on the row BOX, but a `Row` with `actions` " +
-        "splits and moves focus to an inner `<button>`/`<a>`, so this styling is either dead or drawn " +
-        "on top of the control's own indicator. `Row` already paints the app's focus ring on both " +
-        'paths. Delete the focus styling; if what you meant was "this is the current row", use ' +
-        "`selected`. Last resort: // eslint-disable-next-line row/no-row-focus-class -- <reason>.",
-    },
-  },
-  defaultOptions: [],
-  create(context) {
-    return {
-      JSXAttribute(node) {
-        // Only `className` attributes.
-        if (
-          node.name.type !== "JSXIdentifier" ||
-          node.name.name !== "className"
-        )
-          return;
-
-        // Only `<Row>` / `<SectionHeaderRow>`. A JSXAttribute's parent is always
-        // the JSXOpeningElement; the primitive's own internals render lowercase
-        // host tags, so this never polices Row's implementation.
-        const tag = node.parent.name;
-        if (tag.type !== "JSXIdentifier" || !ROW_TAGS.has(tag.name)) return;
-
-        // Aggregate every class token of this attribute into one Set.
-        const tokens = new Set<string>();
-        collectTokens(node.value, tokens);
-
-        for (const t of tokens) {
-          if (isFocusToken(t)) {
-            // No auto-fix — report once on the whole attribute.
-            context.report({ node, messageId: "rowFocusClass" });
-            return;
-          }
-        }
+export default function buildRule({ collectTokens }: LintToolkit) {
+  return createRule({
+    name: "no-row-focus-class",
+    meta: {
+      type: "problem",
+      docs: {
+        description:
+          "Disallow focus/ring classes (outline-*, ring-*, focus-ring-*, focus:/focus-visible:/focus-within: variants) on <Row>/<SectionHeaderRow> — Row owns its focus indicator, and such a class lands on the box that stops being the focused node once the row splits.",
       },
-    };
-  },
-});
+      schema: [],
+      messages: {
+        rowFocusClass:
+          "Focus/ring class on a `Row` — `className` lands on the row BOX, but a `Row` with `actions` " +
+          "splits and moves focus to an inner `<button>`/`<a>`, so this styling is either dead or drawn " +
+          "on top of the control's own indicator. `Row` already paints the app's focus ring on both " +
+          'paths. Delete the focus styling; if what you meant was "this is the current row", use ' +
+          "`selected`. Last resort: // eslint-disable-next-line row/no-row-focus-class -- <reason>.",
+      },
+    },
+    defaultOptions: [],
+    create(context) {
+      return {
+        JSXAttribute(node) {
+          // Only `className` attributes.
+          if (
+            node.name.type !== "JSXIdentifier" ||
+            node.name.name !== "className"
+          )
+            return;
+
+          // Only `<Row>` / `<SectionHeaderRow>`. A JSXAttribute's parent is always
+          // the JSXOpeningElement; the primitive's own internals render lowercase
+          // host tags, so this never polices Row's implementation.
+          const tag = node.parent.name;
+          if (tag.type !== "JSXIdentifier" || !ROW_TAGS.has(tag.name)) return;
+
+          // Aggregate every class token of this attribute into one Set.
+          const tokens = new Set<string>();
+          collectTokens(context.sourceCode, node.value, tokens);
+
+          for (const t of tokens) {
+            if (isFocusToken(t)) {
+              // No auto-fix — report once on the whole attribute.
+              context.report({ node, messageId: "rowFocusClass" });
+              return;
+            }
+          }
+        },
+      };
+    },
+  });
+}

@@ -69,6 +69,12 @@ itself be the box — take the class string instead of the component:
 component; don't ⇒ the helper. Neither supersedes the other, and a raw `<div>` +
 `eslint-disable` is not the third answer.
 
+**Hoisting the class string out of the JSX is not an escape.** From a class-name
+context the shared walk follows same-file aliases, so `const X = "absolute …"`
+and `MAP[key]` are read exactly like an inline literal. Take a named per-site
+disable instead — it says *why*, and `lint-directives-stable` keeps it bound to
+the code it annotates through any format pass.
+
 The rule's error message carries this same list (hardcoded — lint rules
 dual-load under jiti, which cannot resolve `@plugins/*`). The
 `css:message-names-primitives` check (`css/check/`) derives the layout-mechanic

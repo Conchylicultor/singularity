@@ -1,4 +1,5 @@
 import { ESLintUtils, type TSESTree } from "@typescript-eslint/utils";
+import type { LintToolkit } from "@plugins/framework/plugins/tooling/plugins/lint/core";
 
 const createRule = ESLintUtils.RuleCreator(
   (name) => `https://github.com/anthropics/singularity/lint/${name}`,
@@ -55,11 +56,6 @@ const FIX_REM: Record<string, string> = {
   "0.75": "text-xs",
 };
 
-/** JSX attribute names whose value is a class-name string. */
-const CLASS_ATTRS = new Set(["className", "class"]);
-/** Class-builder calls whose string arguments are class-name strings. */
-const CLASS_BUILDERS = new Set(["cn", "clsx", "twMerge"]);
-
 /**
  * Recursively collect the string-bearing nodes (`Literal` / `TemplateElement`)
  * reachable from a class-name value subtree, into `out`. Mirrors the
@@ -98,105 +94,125 @@ function collectClassNodes(
   }
 }
 
-export default createRule({
-  name: "no-arbitrary-font-size",
-  meta: {
-    type: "problem",
-    fixable: "code",
-    docs: {
-      description:
-        "Disallow arbitrary text-[Npx] font sizes — use the named typography scale.",
-    },
-    schema: [],
-    messages: {
-      arbitraryFontSize:
-        "text-[Npx] / text-[Nrem] arbitrary font sizes are banned — use " +
-        "text-3xs (10px), text-2xs (11px), or text-xs (12px). Add a token in " +
-        "plugins/ui/plugins/tokens/plugins/type-scale/shared/group.ts for a new step.",
-    },
-  },
-  defaultOptions: [],
-  create(context) {
-    const sourceCode = context.sourceCode;
-
-    /**
-     * Report (and optionally fix) every banned class inside a node whose raw
-     * source text occupies [rawStart, rawEnd). `text` is the string *value* the
-     * class lives in; `rawStart` is the absolute offset where that value's raw
-     * text begins in the source (i.e. just after the opening quote / backtick),
-     * so a match at index `i` in `text` maps to `rawStart + i` in the file. We
-     * fix by replacing only the matched token's exact range — never the whole
-     * literal — so quotes, surrounding classes, and other matches are
-     * untouched. Multiple matches in one literal each get their own report/fix.
-     */
-    function check(node: TSESTree.Node, text: string, rawStart: number) {
-      for (const m of text.matchAll(BANNED)) {
-        const token = m[1]!; // the matched arbitrary-value class
-        const px = m[2]; // the px digits (e.g. 10) when the px branch matched
-        const rem = m[3]; // the rem number (e.g. 0.8) when the rem branch matched
-        // m.index points at the (?:^|\s) anchor; the token starts after any
-        // leading whitespace the anchor consumed.
-        const tokenStart = m.index + m[0].length - token.length;
-        const absStart = rawStart + tokenStart;
-        const absEnd = absStart + token.length;
-
-        // Exactly one of px / rem is set per match. On-scale values in either map
-        // auto-fix; off-scale values report only (replacement === undefined).
-        const replacement =
-          px !== undefined ? FIX_PX[px] : rem !== undefined ? FIX_REM[rem] : undefined;
-        context.report({
-          node,
-          messageId: "arbitraryFontSize",
-          loc: {
-            start: sourceCode.getLocFromIndex(absStart),
-            end: sourceCode.getLocFromIndex(absEnd),
-          },
-          fix: replacement
-            ? (fixer) => fixer.replaceTextRange([absStart, absEnd], replacement)
-            : null,
-        });
-      }
-    }
-
-    /**
-     * Run `check()` on a string-bearing node harvested from a class-name
-     * context, preserving the exact source-offset math the fixer relies on.
-     */
-    function checkClassNode(node: TSESTree.Node) {
-      if (node.type === "Literal") {
-        if (typeof node.value !== "string") return;
-        // A string literal's raw text is `"…"` / `'…'`; the value starts one
-        // char in (after the opening quote). Escapes would desync value vs raw
-        // offsets, but Tailwind class strings contain none, and a misaligned
-        // fix would simply not apply cleanly — never corrupt unrelated source.
-        check(node, node.value, node.range[0] + 1);
-      } else if (node.type === "TemplateElement") {
-        // Template chunks expose `.raw` with its exact source; the raw text of a
-        // TemplateElement starts one char after the element's range start
-        // (after the opening `` ` `` or `}`).
-        check(node, node.value.raw, node.range[0] + 1);
-      }
-    }
-
-    return {
-      // className / class attribute values — `className="…"`,
-      // `className={`…`}`, `className={cn(…)}`, etc.
-      JSXAttribute(node) {
-        if (node.name.type !== "JSXIdentifier" || !CLASS_ATTRS.has(node.name.name)) return;
-        const nodes: TSESTree.Node[] = [];
-        collectClassNodes(node.value, nodes);
-        for (const n of nodes) checkClassNode(n);
+// Takes only the class-name ANCHORS from the toolkit, not the token walk: this
+// rule reports the offending class NODE (for its autofix), so it collects nodes
+// rather than strings — see `collectClassNodes` above.
+export default function buildRule({
+  CLASS_ATTRS,
+  CLASS_BUILDERS,
+}: LintToolkit) {
+  return createRule({
+    name: "no-arbitrary-font-size",
+    meta: {
+      type: "problem",
+      fixable: "code",
+      docs: {
+        description:
+          "Disallow arbitrary text-[Npx] font sizes — use the named typography scale.",
       },
-      // Class-builder calls — `cn(...)`, `clsx(...)`, … — wherever they appear
-      // (a `const cls = cn("text-[12px]")` assigned outside JSX still counts).
-      CallExpression(node) {
-        if (node.callee.type !== "Identifier" || !CLASS_BUILDERS.has(node.callee.name)) {
-          return;
+      schema: [],
+      messages: {
+        arbitraryFontSize:
+          "text-[Npx] / text-[Nrem] arbitrary font sizes are banned — use " +
+          "text-3xs (10px), text-2xs (11px), or text-xs (12px). Add a token in " +
+          "plugins/ui/plugins/tokens/plugins/type-scale/shared/group.ts for a new step.",
+      },
+    },
+    defaultOptions: [],
+    create(context) {
+      const sourceCode = context.sourceCode;
+
+      /**
+       * Report (and optionally fix) every banned class inside a node whose raw
+       * source text occupies [rawStart, rawEnd). `text` is the string *value* the
+       * class lives in; `rawStart` is the absolute offset where that value's raw
+       * text begins in the source (i.e. just after the opening quote / backtick),
+       * so a match at index `i` in `text` maps to `rawStart + i` in the file. We
+       * fix by replacing only the matched token's exact range — never the whole
+       * literal — so quotes, surrounding classes, and other matches are
+       * untouched. Multiple matches in one literal each get their own report/fix.
+       */
+      function check(node: TSESTree.Node, text: string, rawStart: number) {
+        for (const m of text.matchAll(BANNED)) {
+          const token = m[1]!; // the matched arbitrary-value class
+          const px = m[2]; // the px digits (e.g. 10) when the px branch matched
+          const rem = m[3]; // the rem number (e.g. 0.8) when the rem branch matched
+          // m.index points at the (?:^|\s) anchor; the token starts after any
+          // leading whitespace the anchor consumed.
+          const tokenStart = m.index + m[0].length - token.length;
+          const absStart = rawStart + tokenStart;
+          const absEnd = absStart + token.length;
+
+          // Exactly one of px / rem is set per match. On-scale values in either map
+          // auto-fix; off-scale values report only (replacement === undefined).
+          const replacement =
+            px !== undefined
+              ? FIX_PX[px]
+              : rem !== undefined
+                ? FIX_REM[rem]
+                : undefined;
+          context.report({
+            node,
+            messageId: "arbitraryFontSize",
+            loc: {
+              start: sourceCode.getLocFromIndex(absStart),
+              end: sourceCode.getLocFromIndex(absEnd),
+            },
+            fix: replacement
+              ? (fixer) =>
+                  fixer.replaceTextRange([absStart, absEnd], replacement)
+              : null,
+          });
         }
-        const nodes: TSESTree.Node[] = [];
-        for (const arg of node.arguments) collectClassNodes(arg, nodes);
-        for (const n of nodes) checkClassNode(n);
-      },
-    };
-  },
-});
+      }
+
+      /**
+       * Run `check()` on a string-bearing node harvested from a class-name
+       * context, preserving the exact source-offset math the fixer relies on.
+       */
+      function checkClassNode(node: TSESTree.Node) {
+        if (node.type === "Literal") {
+          if (typeof node.value !== "string") return;
+          // A string literal's raw text is `"…"` / `'…'`; the value starts one
+          // char in (after the opening quote). Escapes would desync value vs raw
+          // offsets, but Tailwind class strings contain none, and a misaligned
+          // fix would simply not apply cleanly — never corrupt unrelated source.
+          check(node, node.value, node.range[0] + 1);
+        } else if (node.type === "TemplateElement") {
+          // Template chunks expose `.raw` with its exact source; the raw text of a
+          // TemplateElement starts one char after the element's range start
+          // (after the opening `` ` `` or `}`).
+          check(node, node.value.raw, node.range[0] + 1);
+        }
+      }
+
+      return {
+        // className / class attribute values — `className="…"`,
+        // `className={`…`}`, `className={cn(…)}`, etc.
+        JSXAttribute(node) {
+          if (
+            node.name.type !== "JSXIdentifier" ||
+            !CLASS_ATTRS.test(node.name.name)
+          )
+            return;
+          const nodes: TSESTree.Node[] = [];
+          collectClassNodes(node.value, nodes);
+          for (const n of nodes) checkClassNode(n);
+        },
+        // Class-builder calls — `cn(...)`, `clsx(...)`, … — wherever they appear
+        // (a `const cls = cn("text-[12px]")` assigned outside JSX still counts).
+        CallExpression(node) {
+          if (
+            node.callee.type !== "Identifier" ||
+            !CLASS_BUILDERS.has(node.callee.name)
+          ) {
+            return;
+          }
+          const nodes: TSESTree.Node[] = [];
+          for (const arg of node.arguments) collectClassNodes(arg, nodes);
+          for (const n of nodes) checkClassNode(n);
+        },
+      };
+    },
+  });
+}

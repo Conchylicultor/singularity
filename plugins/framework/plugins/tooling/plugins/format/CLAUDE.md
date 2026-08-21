@@ -108,12 +108,11 @@ own diff before landing.
 ## Coupled sets
 
 `COUPLED_FORMAT_SETS` expresses "touching one of these drags in all of them".
-The one member today is the six `no-adhoc-*` class lint rules that
-[`class-token-walk-in-sync`](../checks/plugins/class-token-walk-in-sync/CLAUDE.md)
-asserts carry a byte-identical copy of the shared class-token walk. All six are
-currently non-conformant with prettier, so a branch touching one would format
-only that one and break the byte-identity the check defends. Membership must
-track that check's `EXPECTED` list.
+**Empty today** — its one member (six lint rules a check held byte-identical)
+now shares one injected walk, so there are no copies to hold together.
+
+Add a set whenever a check byte-compares files: formatting one alone would break
+it, and the failure reads as mystifying on a branch that only ran a formatter.
 
 ## Writing is guarded twice
 

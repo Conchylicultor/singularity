@@ -13,7 +13,13 @@
 
 import { RuleTester } from "eslint";
 import tsParser from "@typescript-eslint/parser";
-import rule from "./no-adhoc-typography";
+// The rule is a FACTORY taking the shared class-token walk (rule files cannot
+// import it — they dual-load under jiti). Tests run under Bun, where the
+// `@plugins/*` alias resolves, so they construct it with the real toolkit.
+import { lintToolkit } from "@plugins/framework/plugins/tooling/plugins/lint/core";
+import buildRule from "./no-adhoc-typography";
+
+const rule = buildRule(lintToolkit);
 
 const ruleTester = new RuleTester({
   languageOptions: {
@@ -57,15 +63,6 @@ ruleTester.run(
           }
         `,
       },
-      // Maps-only: a bare string `const` alias is NOT followed. (Shared mono/code
-      // metrics live in such consts and are out of scope.) Locks in that
-      // string-const aliases are intentionally not chased.
-      {
-        code: `
-          const cls = "text-sm";
-          const C = () => <div className={cls} />;
-        `,
-      },
       // Maps-only: a map reached only through an INTERMEDIATE LOCAL is out of
       // range by design. `sz` resolves to a `SIZE[s]` member-access init (not an
       // object/array literal), so the walk stops — documents the limitation.
@@ -80,6 +77,21 @@ ruleTester.run(
       },
     ],
     invalid: [
+      // A bare string `const` alias IS followed. It used to be deliberately
+      // skipped, because the consts that shape carried in practice were shared
+      // mono/code metrics with no role to move to. There is one now (`code`), and
+      // skipping the shape had a cost the exemption didn't pay for: hoisting a
+      // class string into a const was a way OUT of every class rule, and at least
+      // one site was hoisted for exactly that reason, saying so in a comment.
+      // One error, not two: the identifier is reached only via the JSXAttribute
+      // handler — there is no cn() call here for the CallExpression handler.
+      {
+        code: `
+          const cls = "text-sm";
+          const C = () => <div className={cls} />;
+        `,
+        errors: [{ messageId: "adhocTypography" }],
+      },
       // Tone object-MAP const indexed into cn() in JSX. `TONE` resolves to an
       // object literal, so both values (`text-xs`, `text-sm`) are harvested via
       // the dynamic index `TONE[t]`. The cn call is visited TWICE — once by the

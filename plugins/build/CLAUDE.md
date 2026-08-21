@@ -112,6 +112,7 @@ see its docblock.
     - `primitives/css/spacing.Stack`
     - `primitives/css/spinner.Spinner`
     - `primitives/css/text.Text`
+    - `primitives/css/text.textVariantClass`
     - `primitives/css/ui-kit.Button`
     - `primitives/css/ui-kit.cn`
     - `primitives/css/ui-kit.ControlSizeProvider`

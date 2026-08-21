@@ -13,8 +13,8 @@ import noGrouplessDropdownMenuLabel from "./no-groupless-dropdown-menu-label";
  * `class-field-must-be-branded` is the residual plug on the `ClassName` brand:
  * the brand relocates class literals into `cn()` only for fields that declare it,
  * so this rule requires a field NAMED for classes to be TYPED for them. It reads
- * annotation shapes and tokenizes nothing, so it is deliberately not a
- * `class-token-walk-in-sync` participant.
+ * annotation shapes and tokenizes nothing, so it takes no class-token walk and
+ * stays an ordinary `rules` entry rather than a `classRules` factory.
  */
 export default {
   name: "ui-kit",

@@ -66,10 +66,11 @@ function parseStatusZ(out: string): string[] {
 /**
  * Expand each coupled set that the changed set touches to ALL of its members.
  *
- * A member that no longer exists on disk is dropped: the set's membership is
- * owned by `class-token-walk-in-sync`, which fails loudly on exactly that
- * drift — formatting must not ENOENT-crash the build ahead of the check that
- * can actually explain it.
+ * A member that no longer exists on disk is dropped: a coupled set names files
+ * the check that needs them held together also names, and that check fails
+ * loudly on exactly that drift — formatting must not ENOENT-crash the build
+ * ahead of the check that can actually explain it. (`COUPLED_FORMAT_SETS` is
+ * empty today; see its doc-comment.)
  */
 function expandCoupledSets(root: string, files: Set<string>): void {
   for (const set of COUPLED_FORMAT_SETS) {

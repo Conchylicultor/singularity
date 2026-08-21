@@ -2,6 +2,7 @@ import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 
 export {
   Text,
+  textVariantClass,
   type TextProps,
   type TextVariant,
   type TextTone,

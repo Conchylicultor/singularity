@@ -29,6 +29,7 @@ import reactHooks from "eslint-plugin-react-hooks";
 import type { Program } from "typescript";
 import { lintEntries } from "./lint.generated";
 import { NON_APP_FILE_GLOBS } from "./non-app-globs";
+import { lintToolkit, type LintToolkit } from "./class-token-walk";
 
 interface PluginContribution {
   /** Relative path under plugins/, e.g. "welcome" or "conversations/plugins/conversation-view". */
@@ -45,6 +46,46 @@ interface PluginContribution {
    * to an app-architecture deviation, which is meaningless in a test driver.
    */
   enforceEverywhere?: string[];
+}
+
+/** The raw shape a plugin's `lint/index.ts` default-exports. */
+interface RawContribution {
+  name?: string;
+  rules?: Record<string, unknown>;
+  /**
+   * Class rules, declared as FACTORIES rather than rule modules. A rule file
+   * that reads class tokens cannot import the shared walk (it is dual-loaded
+   * under jiti, which can't resolve `@plugins/*`), so it default-exports
+   * `(toolkit) => rule` and receives the one walk from here. Kept a separate key
+   * from `rules` so a factory is never confused with ESLint's legacy
+   * function-shaped rule module — the distinction is declared, not sniffed.
+   * See `./class-token-walk.ts`.
+   */
+  classRules?: Record<string, unknown>;
+  ignores?: Record<string, string[]>;
+  enforceEverywhere?: string[];
+}
+
+/**
+ * Construct a plugin's class rules by handing each factory the shared toolkit.
+ * A non-function under `classRules` is the one mistake this shape allows, and
+ * it fails loudly rather than registering something ESLint would ignore.
+ */
+function buildClassRules(
+  pluginPath: string,
+  classRules: Record<string, unknown>,
+  toolkit: LintToolkit,
+): { rules: Record<string, unknown> } | { error: string } {
+  const built: Record<string, unknown> = {};
+  for (const [id, factory] of Object.entries(classRules)) {
+    if (typeof factory !== "function") {
+      return {
+        error: `${pluginPath}/lint — classRules["${id}"] must be a factory (toolkit) => rule, got ${typeof factory}`,
+      };
+    }
+    built[id] = (factory as (t: LintToolkit) => unknown)(toolkit);
+  }
+  return { rules: built };
 }
 
 /**
@@ -73,26 +114,29 @@ async function loadContributions(root: string): Promise<PluginContribution[]> {
       );
       continue;
     }
-    const def = (
-      r.value as {
-        default?: {
-          name?: string;
-          rules?: Record<string, unknown>;
-          ignores?: Record<string, string[]>;
-          enforceEverywhere?: string[];
-        };
-      }
-    ).default;
+    const def = (r.value as { default?: RawContribution }).default;
     if (!def?.name || !def.rules) {
       failures.push(
         `${e.pluginPath}/lint — default export missing { name, rules }`,
       );
       continue;
     }
+    // Class-rule factories are constructed with the shared token walk, then
+    // merged into the plugin's rule set — from here on they are ordinary rules.
+    const built = buildClassRules(
+      e.pluginPath,
+      def.classRules ?? {},
+      lintToolkit,
+    );
+    if ("error" in built) {
+      failures.push(built.error);
+      continue;
+    }
+    const rules = { ...def.rules, ...built.rules };
     // A typo'd rule id in enforceEverywhere would silently leave the rule off in
     // tests — exactly the failure this mechanism exists to prevent. Fail loudly.
     const unknown = (def.enforceEverywhere ?? []).filter(
-      (id) => !(id in def.rules!),
+      (id) => !(id in rules),
     );
     if (unknown.length > 0) {
       failures.push(
@@ -103,7 +147,7 @@ async function loadContributions(root: string): Promise<PluginContribution[]> {
     contributions.push({
       relPath: e.pluginPath,
       name: def.name,
-      rules: def.rules,
+      rules,
       ignores: def.ignores,
       enforceEverywhere: def.enforceEverywhere,
     });

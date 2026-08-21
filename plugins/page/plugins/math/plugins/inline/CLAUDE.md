@@ -16,6 +16,7 @@
     - `primitives/css/center.Center`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
+    - `primitives/css/text.textVariantClass`
     - `primitives/css/ui-kit.cn`
     - `primitives/popover.InlinePopover`
     - `primitives/text-editor/caret-trigger.CaretTriggerMenu`

@@ -23,7 +23,11 @@ import noClipWithoutNowrap from "./no-clip-without-nowrap";
  */
 export default {
   name: "text",
-  rules: {
+  rules: {},
+  // Class rules are FACTORIES: they read class tokens, so they take the one
+  // shared walk from `buildLintConfig` instead of hand-copying it. See
+  // @plugins/framework/plugins/tooling/plugins/lint/core/class-token-walk.ts.
+  classRules: {
     "no-adhoc-typography": noAdhocTypography,
     "no-clip-without-nowrap": noClipWithoutNowrap,
   },

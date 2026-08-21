@@ -20,10 +20,11 @@ import {
   wsUrl,
 } from "@plugins/primitives/plugins/networking/web";
 import type { ClientMessage, LogEntryWire, ServerMessage } from "../../core";
+import { textVariantClass } from "@plugins/primitives/plugins/css/plugins/text/web";
 
 // Mono log body: intentional fixed code size + line-height (not on the
 // typography scale). One spelling for every consumer of this primitive.
-const MONO_LOG_CLASS = "font-mono text-xs leading-5";
+const MONO_LOG_CLASS = textVariantClass("code");
 
 /** The app's own log socket. */
 const LOGS_WS_PATH = "/ws/logs";

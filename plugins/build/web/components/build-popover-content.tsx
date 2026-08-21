@@ -53,12 +53,13 @@ import type {
   ServerMessage,
   LogEntryWire,
 } from "@plugins/primitives/plugins/log-channels/core";
+import { textVariantClass } from "@plugins/primitives/plugins/css/plugins/text/web";
 
 const LOGS_WS_PATH = "/ws/logs";
 
 // Mono build-log viewer: intentional fixed code size + line-height (not on the typography scale).
 // Overflow is owned by the `<Scroll axis="y">` wrapper, not baked in here.
-const logViewerClass = "bg-muted/30 px-md py-sm font-mono text-xs leading-5";
+const logViewerClass = cn("bg-muted/30 px-md py-sm", textVariantClass("code"));
 
 function formatDuration(start: Date, end: Date | null): string {
   const ms = (end ?? new Date()).getTime() - start.getTime();

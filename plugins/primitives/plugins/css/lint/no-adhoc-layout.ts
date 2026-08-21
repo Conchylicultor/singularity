@@ -1,4 +1,5 @@
 import { ESLintUtils, type TSESTree } from "@typescript-eslint/utils";
+import type { LintToolkit } from "@plugins/framework/plugins/tooling/plugins/lint/core";
 
 const createRule = ESLintUtils.RuleCreator(
   (name) => `https://github.com/anthropics/singularity/lint/${name}`,
@@ -64,8 +65,11 @@ const createRule = ESLintUtils.RuleCreator(
  *
  * Class strings are inspected only in a class-name context — a `className`/
  * `class`/`*ClassName` attribute value or a `cn(...)`/`clsx(...)`/`twMerge(...)`
- * argument — via the same `collectTokens` walk the sibling `no-adhoc-*` rules
- * use, so a doc-string that merely mentions `flex` is never flagged.
+ * argument — so a doc-string that merely mentions `flex` is never flagged. From
+ * such a context the walk follows same-file aliases, so a class string parked in
+ * a `const` or a style map is reached too; it is the ONE walk every class rule
+ * is handed (`tooling/plugins/lint/core/class-token-walk.ts`), not a copy that
+ * can drift behind its siblings — which is what this rule's own copy had done.
  */
 
 // Position keywords. `relative`/`static` are NOT banned — they merely establish
@@ -113,19 +117,6 @@ const LAYOUT_PATTERNS = [
 ];
 
 /**
- * JSX attribute names whose value is a class-name string. `className`/`class`
- * are React's and HTML's own; the `*ClassName` suffix is the pass-through
- * convention (`panelClassName`, `itemClassName`, `wrapperClassName`,
- * `trackClassName`) a component uses to forward classes to an inner element.
- * Those forwarded strings style a real element exactly like `className` does,
- * but were invisible to every class rule purely because of the attribute's
- * spelling.
- */
-const CLASS_ATTRS = /^(?:class|className)$|ClassName$/;
-/** Class-builder calls whose string arguments are class-name strings. */
-const CLASS_BUILDERS = new Set(["cn", "clsx", "twMerge"]);
-
-/**
  * Read a static string from a `style` ObjectExpression property's KEY, so both
  * `position` (Identifier) and `"position"` (string Literal) keys are matched.
  * Returns null for computed/dynamic keys (which we can't statically resolve).
@@ -138,168 +129,127 @@ function staticPropKey(prop: TSESTree.Property): string | null {
   return null;
 }
 
-/**
- * Recursively collect class tokens from a class-name value subtree into `out`.
- * Harvests only string `Literal` `.value`s and `TemplateElement.value.raw`s —
- * never identifiers from dynamic expressions — splitting each on whitespace.
- * Structural (visit every child node) so it is robust to however the class
- * string is assembled (bare literal, template, `cn(...)`, ternaries, nesting).
- */
-function collectTokens(
-  node: TSESTree.Node | null | undefined,
-  out: Set<string>,
-): void {
-  if (!node) return;
-  if (node.type === "Literal") {
-    if (typeof node.value === "string") {
-      for (const t of node.value.split(/\s+/)) if (t) out.add(t);
-    }
-    return;
-  }
-  if (node.type === "TemplateElement") {
-    for (const t of node.value.raw.split(/\s+/)) if (t) out.add(t);
-    return;
-  }
-  for (const key of Object.keys(node)) {
-    if (key === "parent") continue;
-    const value = (node as unknown as Record<string, unknown>)[key];
-    if (Array.isArray(value)) {
-      for (const child of value) {
-        if (child && typeof child === "object" && "type" in child) {
-          collectTokens(child as TSESTree.Node, out);
-        }
-      }
-    } else if (value && typeof value === "object" && "type" in value) {
-      collectTokens(value as TSESTree.Node, out);
-    }
-  }
-}
-
-/**
- * Strip Tailwind variant prefixes (`hover:`, `md:`, …) AND a leading `-`
- * (negative insets like `-inset-1`) so the geometric utility underneath is
- * tested on its own. Variants are colon-delimited; the utility is the LAST
- * `:`-segment.
- */
-function baseClass(token: string): string {
-  const idx = token.lastIndexOf(":");
-  const bare = idx === -1 ? token : token.slice(idx + 1);
-  return bare.startsWith("-") ? bare.slice(1) : bare;
-}
-
-export default createRule({
-  name: "no-adhoc-layout",
-  meta: {
-    type: "problem",
-    docs: {
-      description:
-        "Disallow raw Tailwind layout utilities (flex/grid/positioning/alignment/overflow). Compose layout through the css layout primitives — <Line>/<Row>/<Stack>/<Cluster>/<Inline>, <Column>, <Fill>/<Rigid>/<Text>, <Grid>/<Center>, <Scroll>/<Clip>, <Overlay>/<Layer>/<Pin>/<Sticky>, <Inset> — or, when the element cannot be wrapped, their class-string helpers.",
+export default function buildRule({
+  collectTokens,
+  baseClass,
+  CLASS_ATTRS,
+  CLASS_BUILDERS,
+}: LintToolkit) {
+  return createRule({
+    name: "no-adhoc-layout",
+    meta: {
+      type: "problem",
+      docs: {
+        description:
+          "Disallow raw Tailwind layout utilities (flex/grid/positioning/alignment/overflow). Compose layout through the css layout primitives — <Line>/<Row>/<Stack>/<Cluster>/<Inline>, <Column>, <Fill>/<Rigid>/<Text>, <Grid>/<Center>, <Scroll>/<Clip>, <Overlay>/<Layer>/<Pin>/<Sticky>, <Inset> — or, when the element cannot be wrapped, their class-string helpers.",
+      },
+      schema: [],
+      messages: {
+        // The indexed list is HARDCODED, not derived from a registry: lint rules
+        // dual-load under jiti, which cannot resolve `@plugins/*`. The
+        // `css:message-names-primitives` check (plugins/primitives/plugins/css/check)
+        // reads the css/plugins/* DIRECTORY LISTING and fails if a layout-mechanic
+        // primitive is missing from this text, so the list cannot silently rot.
+        adhocLayout:
+          "Raw layout class `{{token}}` is banned — write the role, not the mechanics.\n" +
+          "Pick the primitive that owns the mechanic (all under @plugins/primitives/plugins/css/plugins/<name>/web):\n" +
+          '  rows / flow       <Line> single-line strip · <Row> interactive row · <Stack direction="row"> · <Cluster> wrapping chips · <Inline> chips mid-sentence\n' +
+          "  columns / panes   <Column header body footer> — rigid | flexible | rigid, scrolling body\n" +
+          "  space-sharing     two questions — does it TAKE slack, does it GIVE below its own content:\n" +
+          "                    <Fill> both (min-w-0 flex-1) · <Rigid> neither (shrink-0) · yieldClass(axis) gives only (min-w-0) · growClass() takes only (flex-1) · <Text> in a line container — THE truncation leaf\n" +
+          "  grids / centring  <Grid minCellWidth> · <Center axis>\n" +
+          "  overflow          <Scroll axis fill> scrolls · <Clip axis> clips, no scroll\n" +
+          "  positioning       <Overlay> in-flow full-bleed layers · <Layer> ONE standalone absolute inset-0 child · <Pin to> point-anchored child · <Sticky edge> · ViewportOverlay for true fixed inset-0\n" +
+          "  padding / gap     <Inset pad> · <Stack gap>  (css/plugins/spacing/web)\n" +
+          "When you cannot wrap the element (a third-party `className` prop, a Lexical `ContentEditable`, a raw <img>/<svg>/<button> leaf that must ITSELF be the box), " +
+          "take the class string instead: fillClasses(axis), rigidClass(), yieldClass(axis) [css/plugins/yield], growClass() [css/plugins/grow], layerClasses({layer,decorative}), insetClass(step).\n" +
+          "yield/grow ship NO component on purpose — they annotate a box you already have (a Stack/Line/Text), so there is nothing to wrap.\n" +
+          "A genuine one-off escapes per-site with `// eslint-disable-next-line layout/no-adhoc-layout -- <reason>`.",
+        adhocStylePosition:
+          'Inline `position: "{{value}}"` is banned — anchor a cursor menu via CursorAnchoredMenu ' +
+          "(@plugins/primitives/plugins/cursor-menu/web), collapse an overflowing bar via AdaptiveBar " +
+          "(@plugins/primitives/plugins/adaptive-bar/web), or compose fixed/absolute through " +
+          "<Overlay>/<Pin>/ViewportOverlay. Genuine one-off: " +
+          "`// eslint-disable-next-line layout/no-adhoc-layout -- <reason>`.",
+      },
     },
-    schema: [],
-    messages: {
-      // The indexed list is HARDCODED, not derived from a registry: lint rules
-      // dual-load under jiti, which cannot resolve `@plugins/*`. The
-      // `css:message-names-primitives` check (plugins/primitives/plugins/css/check)
-      // reads the css/plugins/* DIRECTORY LISTING and fails if a layout-mechanic
-      // primitive is missing from this text, so the list cannot silently rot.
-      adhocLayout:
-        "Raw layout class `{{token}}` is banned — write the role, not the mechanics.\n" +
-        "Pick the primitive that owns the mechanic (all under @plugins/primitives/plugins/css/plugins/<name>/web):\n" +
-        '  rows / flow       <Line> single-line strip · <Row> interactive row · <Stack direction="row"> · <Cluster> wrapping chips · <Inline> chips mid-sentence\n' +
-        "  columns / panes   <Column header body footer> — rigid | flexible | rigid, scrolling body\n" +
-        "  space-sharing     two questions — does it TAKE slack, does it GIVE below its own content:\n" +
-        "                    <Fill> both (min-w-0 flex-1) · <Rigid> neither (shrink-0) · yieldClass(axis) gives only (min-w-0) · growClass() takes only (flex-1) · <Text> in a line container — THE truncation leaf\n" +
-        "  grids / centring  <Grid minCellWidth> · <Center axis>\n" +
-        "  overflow          <Scroll axis fill> scrolls · <Clip axis> clips, no scroll\n" +
-        "  positioning       <Overlay> in-flow full-bleed layers · <Layer> ONE standalone absolute inset-0 child · <Pin to> point-anchored child · <Sticky edge> · ViewportOverlay for true fixed inset-0\n" +
-        "  padding / gap     <Inset pad> · <Stack gap>  (css/plugins/spacing/web)\n" +
-        "When you cannot wrap the element (a third-party `className` prop, a Lexical `ContentEditable`, a raw <img>/<svg>/<button> leaf that must ITSELF be the box), " +
-        "take the class string instead: fillClasses(axis), rigidClass(), yieldClass(axis) [css/plugins/yield], growClass() [css/plugins/grow], layerClasses({layer,decorative}), insetClass(step).\n" +
-        "yield/grow ship NO component on purpose — they annotate a box you already have (a Stack/Line/Text), so there is nothing to wrap.\n" +
-        "A genuine one-off escapes per-site with `// eslint-disable-next-line layout/no-adhoc-layout -- <reason>`.",
-      adhocStylePosition:
-        'Inline `position: "{{value}}"` is banned — anchor a cursor menu via CursorAnchoredMenu ' +
-        "(@plugins/primitives/plugins/cursor-menu/web), collapse an overflowing bar via AdaptiveBar " +
-        "(@plugins/primitives/plugins/adaptive-bar/web), or compose fixed/absolute through " +
-        "<Overlay>/<Pin>/ViewportOverlay. Genuine one-off: " +
-        "`// eslint-disable-next-line layout/no-adhoc-layout -- <reason>`.",
-    },
-  },
-  defaultOptions: [],
-  create(context) {
-    function checkTokens(node: TSESTree.Node, tokens: Set<string>) {
-      for (const token of tokens) {
-        const c = baseClass(token);
-        if (LAYOUT_PATTERNS.some((re) => re.test(c))) {
-          context.report({
-            node,
-            messageId: "adhocLayout",
-            data: { token: c },
-          });
+    defaultOptions: [],
+    create(context) {
+      function checkTokens(node: TSESTree.Node, tokens: Set<string>) {
+        for (const token of tokens) {
+          const c = baseClass(token);
+          if (LAYOUT_PATTERNS.some((re) => re.test(c))) {
+            context.report({
+              node,
+              messageId: "adhocLayout",
+              data: { token: c },
+            });
+          }
         }
       }
-    }
 
-    /**
-     * Scan an inline `style={{ … }}` object for a banned `position` literal.
-     *
-     * Why inline style is scanned at all: the class-token ban above only reads
-     * `className`/`cn()` strings, so the inline-`style` form
-     * (`style={{ position: "fixed" }}`) slipped through entirely. That is the
-     * exact unguarded path the desktop/window context-menu shift bug shipped on
-     * (a zero-size `position: fixed` anchor that resolved against a transformed
-     * ancestor instead of the viewport). We scope strictly to the `position`
-     * property's string value — `relative`/`static` stay benign via POSITION,
-     * and we deliberately ignore `top`/`left`/`inset`/etc. (legit offsets on a
-     * sanctioned fixed/absolute child), since `position` is the discriminating
-     * token. Dynamic values, spreads, and imperative `el.style.position` are not
-     * caught — the same literal-only limit as the class path.
-     */
-    function checkStyle(node: TSESTree.JSXAttribute) {
-      if (node.value?.type !== "JSXExpressionContainer") return;
-      const expr = node.value.expression;
-      if (expr.type !== "ObjectExpression") return;
-      for (const prop of expr.properties) {
-        if (prop.type !== "Property") continue;
-        if (staticPropKey(prop) !== "position") continue;
-        if (
-          prop.value.type !== "Literal" ||
-          typeof prop.value.value !== "string"
-        )
-          continue;
-        const value = prop.value.value;
-        if (POSITION.test(value)) {
-          context.report({
-            node: prop,
-            messageId: "adhocStylePosition",
-            data: { value },
-          });
+      /**
+       * Scan an inline `style={{ … }}` object for a banned `position` literal.
+       *
+       * Why inline style is scanned at all: the class-token ban above only reads
+       * `className`/`cn()` strings, so the inline-`style` form
+       * (`style={{ position: "fixed" }}`) slipped through entirely. That is the
+       * exact unguarded path the desktop/window context-menu shift bug shipped on
+       * (a zero-size `position: fixed` anchor that resolved against a transformed
+       * ancestor instead of the viewport). We scope strictly to the `position`
+       * property's string value — `relative`/`static` stay benign via POSITION,
+       * and we deliberately ignore `top`/`left`/`inset`/etc. (legit offsets on a
+       * sanctioned fixed/absolute child), since `position` is the discriminating
+       * token. Dynamic values, spreads, and imperative `el.style.position` are not
+       * caught — the same literal-only limit as the class path.
+       */
+      function checkStyle(node: TSESTree.JSXAttribute) {
+        if (node.value?.type !== "JSXExpressionContainer") return;
+        const expr = node.value.expression;
+        if (expr.type !== "ObjectExpression") return;
+        for (const prop of expr.properties) {
+          if (prop.type !== "Property") continue;
+          if (staticPropKey(prop) !== "position") continue;
+          if (
+            prop.value.type !== "Literal" ||
+            typeof prop.value.value !== "string"
+          )
+            continue;
+          const value = prop.value.value;
+          if (POSITION.test(value)) {
+            context.report({
+              node: prop,
+              messageId: "adhocStylePosition",
+              data: { value },
+            });
+          }
         }
       }
-    }
 
-    return {
-      JSXAttribute(node) {
-        if (node.name.type !== "JSXIdentifier") return;
-        if (CLASS_ATTRS.test(node.name.name)) {
+      return {
+        JSXAttribute(node) {
+          if (node.name.type !== "JSXIdentifier") return;
+          if (CLASS_ATTRS.test(node.name.name)) {
+            const tokens = new Set<string>();
+            collectTokens(context.sourceCode, node.value, tokens);
+            checkTokens(node, tokens);
+          } else if (node.name.name === "style") {
+            checkStyle(node);
+          }
+        },
+        CallExpression(node) {
+          if (
+            node.callee.type !== "Identifier" ||
+            !CLASS_BUILDERS.has(node.callee.name)
+          ) {
+            return;
+          }
           const tokens = new Set<string>();
-          collectTokens(node.value, tokens);
+          for (const arg of node.arguments)
+            collectTokens(context.sourceCode, arg, tokens);
           checkTokens(node, tokens);
-        } else if (node.name.name === "style") {
-          checkStyle(node);
-        }
-      },
-      CallExpression(node) {
-        if (
-          node.callee.type !== "Identifier" ||
-          !CLASS_BUILDERS.has(node.callee.name)
-        ) {
-          return;
-        }
-        const tokens = new Set<string>();
-        for (const arg of node.arguments) collectTokens(arg, tokens);
-        checkTokens(node, tokens);
-      },
-    };
-  },
-});
+        },
+      };
+    },
+  });
+}

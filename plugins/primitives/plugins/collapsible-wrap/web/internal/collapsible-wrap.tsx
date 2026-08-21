@@ -151,7 +151,7 @@ export function CollapsibleWrap({
         <Surface
           level="overlay"
           aria-hidden
-          // eslint-disable-next-line layout/no-adhoc-layout -- JS-measured backdrop positioned via computed inline top/left/right/height; no semantic-ramp anchor applies
+          // eslint-disable-next-line layout/no-adhoc-layout, z-layers/no-adhoc-zindex -- JS-measured backdrop positioned via computed inline top/left/right/height, so no semantic-ramp anchor applies; `-z-10` paints it BEHIND its own parent, and the z-layers scale (z-raised..z-max) is all positive by design — there is no negative rung to reach for
           className="pointer-events-none absolute -z-10"
           style={{
             top: -PANEL_PAD,

@@ -1184,6 +1184,14 @@
 @utility text-body       { font-size: var(--font-size-body);       line-height: var(--line-height-body);       font-weight: var(--font-weight-normal); }                            /* twmerge: extend font-size */
 @utility text-label      { font-size: var(--font-size-label);      line-height: var(--line-height-label);      font-weight: var(--font-weight-medium); }                            /* twmerge: extend font-size */
 @utility text-caption    { font-size: var(--font-size-caption);    line-height: var(--line-height-caption);    font-weight: var(--font-weight-normal); }                            /* twmerge: extend font-size */
+/* The code role: monospaced running text (log viewers, code blocks, math source
+ * fields). Caption size with the LOOSER label line-height — code wraps and is
+ * scanned line-by-line, so it needs more leading than prose at the same size.
+ * Owns the mono family too: "code" is the family + the metrics as one role, not
+ * a `font-mono` a caller remembers to add. The values are the exact rendering of
+ * the `font-mono text-xs leading-5` that eight files had each hoisted into their
+ * own const, which is what made them invisible to this rule in the first place. */
+@utility text-code       { font-family: var(--font-mono);           font-size: var(--font-size-caption);        line-height: var(--line-height-label);  font-weight: var(--font-weight-normal); } /* twmerge: extend font-size */
 
 /* Compact typography roles — the `xs` (compact) control density's one rung down.
  * Each is the SAME weight/tracking as its base role but the next size+line-height
@@ -1197,6 +1205,7 @@
 @utility text-body-compact       { font-size: var(--font-size-label);      line-height: var(--line-height-label);      font-weight: var(--font-weight-normal); }                            /* twmerge: extend font-size */
 @utility text-label-compact      { font-size: var(--font-size-caption);    line-height: var(--line-height-caption);    font-weight: var(--font-weight-medium); }                            /* twmerge: extend font-size */
 @utility text-caption-compact    { font-size: var(--font-size-2xs);        line-height: var(--line-height-2xs);        font-weight: var(--font-weight-normal); }                            /* twmerge: extend font-size */
+@utility text-code-compact       { font-family: var(--font-mono);           font-size: var(--font-size-2xs);            line-height: var(--line-height-caption); font-weight: var(--font-weight-normal); } /* twmerge: extend font-size */
 
 /* Em-based icon sizing — glyphs in text-embedded slots (Badge/Row/LinkChip/
  * ToggleChip/Breadcrumb leading+actions) track the slot's font-size instead of a

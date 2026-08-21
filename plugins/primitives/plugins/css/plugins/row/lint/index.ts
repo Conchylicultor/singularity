@@ -41,7 +41,11 @@ import noRowFocusClass from "./no-row-focus-class";
  */
 export default {
   name: "row",
-  rules: {
+  rules: {},
+  // Class rules are FACTORIES: they read class tokens, so they take the one
+  // shared walk from `buildLintConfig` instead of hand-copying it. See
+  // @plugins/framework/plugins/tooling/plugins/lint/core/class-token-walk.ts.
+  classRules: {
     "no-adhoc-row": noAdhocRow,
     "no-row-focus-class": noRowFocusClass,
   },

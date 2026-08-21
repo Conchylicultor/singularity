@@ -19,7 +19,11 @@ import noAdhocPaneToolbar from "./no-adhoc-pane-toolbar";
  */
 export default {
   name: "pane-toolbar",
-  rules: {
+  rules: {},
+  // Class rules are FACTORIES: they read class tokens, so they take the one
+  // shared walk from `buildLintConfig` instead of hand-copying it. See
+  // @plugins/framework/plugins/tooling/plugins/lint/core/class-token-walk.ts.
+  classRules: {
     "no-adhoc-pane-toolbar": noAdhocPaneToolbar,
   },
   ignores: {

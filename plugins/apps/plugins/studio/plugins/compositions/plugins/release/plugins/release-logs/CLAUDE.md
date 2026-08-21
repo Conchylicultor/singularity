@@ -16,6 +16,7 @@
     - `primitives/css/scroll.Scroll`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
+    - `primitives/css/text.textVariantClass`
     - `primitives/css/ui-kit.cn`
     - `primitives/css/ui-kit.ControlSizeProvider`
     - `primitives/live-state.useResource`

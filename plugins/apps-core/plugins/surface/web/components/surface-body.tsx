@@ -47,11 +47,15 @@ import { useTabPresence } from "../internal/use-tab-presence";
  *
  * It is a module const rather than an inline class literal for the same reason
  * `<ViewportOverlay>`'s own recipe is: this module is the OWNER of these
- * mechanics, and an owner is deliberately opaque to the `no-adhoc-*` rules that
- * redirect everyone else to it. Those rules harvest literals from class-name
- * attributes and `cn()` arguments; a plain object read through an identifier is
- * neither, so no per-site disable is needed here (`<Card>` / `<Surface>` /
- * `<ViewportOverlay>` all stay clear of their own lint the same way).
+ * mechanics, and an owner is exempt from the `no-adhoc-*` rules that redirect
+ * everyone else to it — but the exemption is now WRITTEN, at the one place this
+ * map is read. It used to be implicit: the rules harvested literals only from
+ * class-name attributes and `cn()` arguments, so a map read through an
+ * identifier was invisible to them and needed no disable. That blind spot is
+ * closed (the shared class-token walk follows same-file aliases), which is the
+ * right outcome — an owner should say it owns the mechanics rather than be
+ * silently unreachable, since nothing distinguished this map from one that had
+ * simply escaped.
  */
 const FRAME_CLASS: Record<PlacementFrame, string> = {
   pane: "absolute inset-0",
@@ -300,6 +304,7 @@ function TabContainer({
   // plus its paint. Empty registry (no mode plugins) is not a separate branch —
   // it is simply the `pane` frame with a fallback paint, so the app stays usable
   // and looks docked-like. The control renders nothing.
+  // eslint-disable-next-line layout/no-adhoc-layout, viewport-overlay/no-adhoc-viewport-overlay -- FRAME_CLASS is the frame recipe ITSELF: this host is what the layout/viewport primitives redirect a placement to, so it owns the positioning mechanics (see FRAME_CLASS above)
   const containerClassName = cn(
     FRAME_CLASS[def?.frame ?? "pane"],
     def ? def.paintClassName : FALLBACK_PAINT,

@@ -11,7 +11,11 @@ import noAdhocSlotIconSize from "./no-adhoc-slot-icon-size";
  */
 export default {
   name: "icon-auto",
-  rules: {
+  rules: {},
+  // Class rules are FACTORIES: they read class tokens, so they take the one
+  // shared walk from `buildLintConfig` instead of hand-copying it. See
+  // @plugins/framework/plugins/tooling/plugins/lint/core/class-token-walk.ts.
+  classRules: {
     "no-adhoc-slot-icon-size": noAdhocSlotIconSize,
   },
   ignores: {

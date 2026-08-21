@@ -1,4 +1,5 @@
 import { ESLintUtils, type TSESTree } from "@typescript-eslint/utils";
+import type { LintToolkit } from "@plugins/framework/plugins/tooling/plugins/lint/core";
 
 const createRule = ESLintUtils.RuleCreator(
   (name) => `https://github.com/anthropics/singularity/lint/${name}`,
@@ -57,9 +58,9 @@ const createRule = ESLintUtils.RuleCreator(
  * different component, and stopping there would report every grouped menu in
  * the repo.
  *
- * It deliberately does NOT carry the shared `class-token-walk` block the
- * `no-adhoc-*` class rules share (and `class-token-walk-in-sync` keeps
- * byte-identical). Signal C needs one element's own class expression, not a
+ * It takes the shared class-token walk from the injected toolkit like every
+ * other class rule, but uses only its `CLASS_ATTRS`: signal C needs one
+ * element's own class expression, not a
  * whole-file alias resolution, so it reads a deliberately simpler set of tokens:
  * string literals and template chunks inside the element's `className`. A class
  * string routed through a `const` or a lookup map is out of scope here on
@@ -145,9 +146,6 @@ function isComponentBoundary(node: TSESTree.Node): boolean {
   );
 }
 
-/** JSX attribute names whose value is a class-name string. */
-const CLASS_ATTRS = new Set(["className", "class"]);
-
 /** A 1px rule drawn by hand. */
 const HAIRLINE_HEIGHT = /^h-px$/;
 const BORDER_FILL = /^bg-border/;
@@ -225,91 +223,95 @@ function classTokens(node: TSESTree.Node, out: string[]): void {
   }
 }
 
-export default createRule({
-  name: "no-adhoc-panel-body",
-  meta: {
-    type: "problem",
-    docs: {
-      description:
-        "Disallow hand-rolled control-panel sectioning — a borrowed DropdownMenuSeparator, a Separator inside a floating panel surface, or a hand-drawn h-px hairline. The ControlPanel container draws the rules between its own children.",
-    },
-    schema: [],
-    messages: {
-      separatorOutsideMenu:
-        "`DropdownMenuSeparator` is a dropdown-menu part, but this one has no `DropdownMenu*Content` ancestor in the same component — so it is sectioning something by hand. If this is a data-control panel body, build it from `ControlPanel` / `ControlPanel.Section` (@plugins/primitives/plugins/css/plugins/control-panel/web): the container draws the hairline BETWEEN its direct children, so a conditionally-empty section leaves no orphan rule and every panel keeps the same rhythm.",
-      separatorInPanel:
-        "A `<Separator>` inside a floating panel surface is a divider placed by hand. Build the panel body from `ControlPanel` / `ControlPanel.Section` (@plugins/primitives/plugins/css/plugins/control-panel/web) and drop the separator — the container separates its own direct children, so sections cannot go out of rhythm with each other.",
-      handRolledHairline:
-        "This is a hairline drawn out of raw utilities (`h-px` + a `bg-border` fill). Inside a control panel, delete it and let `ControlPanel` separate its children; elsewhere, use the `<Separator>` primitive from @plugins/primitives/plugins/css/plugins/ui-kit/web so one divider recipe answers for the whole app.",
-      panelInGenericSurface:
-        'A `<ControlPanel>` body must be hosted by `ControlPanelPopover`, but the nearest surface around this one is `{{host}}` — a generic floating surface that contributes its own padding role. The panel body owns the content inset and draws its hairlines full-bleed through it, so a host that also pads draws the same panel at a different inset than every other panel in the app. Open it with `ControlPanelPopover` (@plugins/primitives/plugins/css/plugins/control-panel/web), which sets `padding="none"` and maps `size` to a width role. A `DialogContent` host is legal — a bare panel inside a dialog inherits the dialog\'s width on purpose.',
-    },
-  },
-  defaultOptions: [],
-  create(context) {
-    return {
-      JSXOpeningElement(node: TSESTree.JSXOpeningElement) {
-        if (node.name.type === "JSXIdentifier") {
-          const name = node.name.name;
-
-          // (A) A menu's own divider, used where there is no menu. The
-          // "file contains no `DropdownMenu*Content` at all" case is the
-          // strictly weaker half of this same question, so the ancestor walk
-          // answers both: no reachable menu surface ⇒ report.
-          if (name === "DropdownMenuSeparator") {
-            if (ancestorMatching(node, isMenuSurface) === null) {
-              context.report({ node, messageId: "separatorOutsideMenu" });
-            }
-          }
-
-          // (B) The generic divider, inside a floating panel. Catches the
-          // "switch to `<Separator/>` to dodge signal A" move — the panel is
-          // still sectioning itself by hand.
-          if (name === "Separator") {
-            if (ancestorMatching(node, (n) => PANEL_SURFACES.has(n)) !== null) {
-              context.report({ node, messageId: "separatorInPanel" });
-            }
-          }
-
-          // (D) The panel body, hosted by the wrong surface. Same ancestor walk,
-          // but stopping at the NEAREST host of any kind and then classifying
-          // it — so a `ControlPanelPopover` further up cannot vouch for an
-          // `InlinePopover` opened inside it. No host at all in this component
-          // is not reported: a body factored into its own component is the
-          // normal shape, and the host is then someone else's line.
-          if (name === "ControlPanel") {
-            const host = ancestorMatching(node, isPanelHost);
-            if (host !== null && !LEGAL_PANEL_HOSTS.has(host)) {
-              context.report({
-                node,
-                messageId: "panelInGenericSurface",
-                data: { host },
-              });
-            }
-          }
-        }
-
-        // (C) The divider, hand-drawn. One element's own class expression must
-        // carry BOTH halves of the recipe — a bare `h-px` (a spacer) or a bare
-        // `bg-border` (a border colour) is not a hairline on its own.
-        for (const attr of node.attributes) {
-          if (attr.type !== "JSXAttribute") continue;
-          if (
-            attr.name.type !== "JSXIdentifier" ||
-            !CLASS_ATTRS.has(attr.name.name) ||
-            attr.value == null
-          ) {
-            continue;
-          }
-          const tokens: string[] = [];
-          classTokens(attr.value, tokens);
-          const hasHeight = tokens.some((t) => HAIRLINE_HEIGHT.test(t));
-          const hasFill = tokens.some((t) => BORDER_FILL.test(t));
-          if (hasHeight && hasFill) {
-            context.report({ node: attr, messageId: "handRolledHairline" });
-          }
-        }
+export default function buildRule({ CLASS_ATTRS }: LintToolkit) {
+  return createRule({
+    name: "no-adhoc-panel-body",
+    meta: {
+      type: "problem",
+      docs: {
+        description:
+          "Disallow hand-rolled control-panel sectioning — a borrowed DropdownMenuSeparator, a Separator inside a floating panel surface, or a hand-drawn h-px hairline. The ControlPanel container draws the rules between its own children.",
       },
-    };
-  },
-});
+      schema: [],
+      messages: {
+        separatorOutsideMenu:
+          "`DropdownMenuSeparator` is a dropdown-menu part, but this one has no `DropdownMenu*Content` ancestor in the same component — so it is sectioning something by hand. If this is a data-control panel body, build it from `ControlPanel` / `ControlPanel.Section` (@plugins/primitives/plugins/css/plugins/control-panel/web): the container draws the hairline BETWEEN its direct children, so a conditionally-empty section leaves no orphan rule and every panel keeps the same rhythm.",
+        separatorInPanel:
+          "A `<Separator>` inside a floating panel surface is a divider placed by hand. Build the panel body from `ControlPanel` / `ControlPanel.Section` (@plugins/primitives/plugins/css/plugins/control-panel/web) and drop the separator — the container separates its own direct children, so sections cannot go out of rhythm with each other.",
+        handRolledHairline:
+          "This is a hairline drawn out of raw utilities (`h-px` + a `bg-border` fill). Inside a control panel, delete it and let `ControlPanel` separate its children; elsewhere, use the `<Separator>` primitive from @plugins/primitives/plugins/css/plugins/ui-kit/web so one divider recipe answers for the whole app.",
+        panelInGenericSurface:
+          'A `<ControlPanel>` body must be hosted by `ControlPanelPopover`, but the nearest surface around this one is `{{host}}` — a generic floating surface that contributes its own padding role. The panel body owns the content inset and draws its hairlines full-bleed through it, so a host that also pads draws the same panel at a different inset than every other panel in the app. Open it with `ControlPanelPopover` (@plugins/primitives/plugins/css/plugins/control-panel/web), which sets `padding="none"` and maps `size` to a width role. A `DialogContent` host is legal — a bare panel inside a dialog inherits the dialog\'s width on purpose.',
+      },
+    },
+    defaultOptions: [],
+    create(context) {
+      return {
+        JSXOpeningElement(node: TSESTree.JSXOpeningElement) {
+          if (node.name.type === "JSXIdentifier") {
+            const name = node.name.name;
+
+            // (A) A menu's own divider, used where there is no menu. The
+            // "file contains no `DropdownMenu*Content` at all" case is the
+            // strictly weaker half of this same question, so the ancestor walk
+            // answers both: no reachable menu surface ⇒ report.
+            if (name === "DropdownMenuSeparator") {
+              if (ancestorMatching(node, isMenuSurface) === null) {
+                context.report({ node, messageId: "separatorOutsideMenu" });
+              }
+            }
+
+            // (B) The generic divider, inside a floating panel. Catches the
+            // "switch to `<Separator/>` to dodge signal A" move — the panel is
+            // still sectioning itself by hand.
+            if (name === "Separator") {
+              if (
+                ancestorMatching(node, (n) => PANEL_SURFACES.has(n)) !== null
+              ) {
+                context.report({ node, messageId: "separatorInPanel" });
+              }
+            }
+
+            // (D) The panel body, hosted by the wrong surface. Same ancestor walk,
+            // but stopping at the NEAREST host of any kind and then classifying
+            // it — so a `ControlPanelPopover` further up cannot vouch for an
+            // `InlinePopover` opened inside it. No host at all in this component
+            // is not reported: a body factored into its own component is the
+            // normal shape, and the host is then someone else's line.
+            if (name === "ControlPanel") {
+              const host = ancestorMatching(node, isPanelHost);
+              if (host !== null && !LEGAL_PANEL_HOSTS.has(host)) {
+                context.report({
+                  node,
+                  messageId: "panelInGenericSurface",
+                  data: { host },
+                });
+              }
+            }
+          }
+
+          // (C) The divider, hand-drawn. One element's own class expression must
+          // carry BOTH halves of the recipe — a bare `h-px` (a spacer) or a bare
+          // `bg-border` (a border colour) is not a hairline on its own.
+          for (const attr of node.attributes) {
+            if (attr.type !== "JSXAttribute") continue;
+            if (
+              attr.name.type !== "JSXIdentifier" ||
+              !CLASS_ATTRS.test(attr.name.name) ||
+              attr.value == null
+            ) {
+              continue;
+            }
+            const tokens: string[] = [];
+            classTokens(attr.value, tokens);
+            const hasHeight = tokens.some((t) => HAIRLINE_HEIGHT.test(t));
+            const hasFill = tokens.some((t) => BORDER_FILL.test(t));
+            if (hasHeight && hasFill) {
+              context.report({ node: attr, messageId: "handRolledHairline" });
+            }
+          }
+        },
+      };
+    },
+  });
+}

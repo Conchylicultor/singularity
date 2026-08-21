@@ -102,6 +102,7 @@ export function ViewportOverlay({
   return createPortal(
     <div
       {...forwarded}
+      // eslint-disable-next-line viewport-overlay/no-adhoc-viewport-overlay -- OVERLAY_ROOT is THE viewport-fill recipe this rule redirects everyone else to; the primitive owns it
       className={cn(OVERLAY_ROOT, zLayerClass(layer), className)}
       {...rest}
       // After the passthrough, like the class recipe above it — but the caller's

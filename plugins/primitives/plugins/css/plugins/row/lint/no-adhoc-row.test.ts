@@ -17,7 +17,13 @@
 
 import { RuleTester } from "eslint";
 import tsParser from "@typescript-eslint/parser";
-import rule from "./no-adhoc-row";
+// The rule is a FACTORY taking the shared class-token walk (rule files cannot
+// import it — they dual-load under jiti). Tests run under Bun, where the
+// `@plugins/*` alias resolves, so they construct it with the real toolkit.
+import { lintToolkit } from "@plugins/framework/plugins/tooling/plugins/lint/core";
+import buildRule from "./no-adhoc-row";
+
+const rule = buildRule(lintToolkit);
 
 const ruleTester = new RuleTester({
   languageOptions: {

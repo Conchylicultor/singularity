@@ -171,7 +171,7 @@ entries it was raised to abandon. To undo `v2`, go to `v3`.
 - Sub-plugins:
   - **`app-css-utilities-in-sync`**
   - **`barrel-stubs-in-sync`**
-  - **`class-token-walk-in-sync`**
+  - **`class-token-walk-single-source`**
   - **`collected-dir-tsconfig-coverage`**
   - **`composition-closure`**
   - **`config-origins-in-sync`**

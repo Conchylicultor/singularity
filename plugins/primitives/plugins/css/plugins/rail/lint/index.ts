@@ -12,7 +12,11 @@ import noPanelBleed from "./no-panel-bleed";
  */
 export default {
   name: "rail",
-  rules: {
+  rules: {},
+  // Class rules are FACTORIES: they read class tokens, so they take the one
+  // shared walk from `buildLintConfig` instead of hand-copying it. See
+  // @plugins/framework/plugins/tooling/plugins/lint/core/class-token-walk.ts.
+  classRules: {
     "no-panel-bleed": noPanelBleed,
   },
 };

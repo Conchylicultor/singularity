@@ -21,8 +21,8 @@ const createRule = ESLintUtils.RuleCreator(
  * rule a zero false-positive rate.
  *
  * Purely syntactic: it reads the annotation's SHAPE and resolves no types, so it
- * carries no copy of the shared class-token walk and is not a participant in
- * `class-token-walk-in-sync`.
+ * needs no class-token walk — it is an ordinary rule module, not one of the
+ * toolkit-taking `classRules` factories.
  */
 const CLASS_FIELD_NAME = /^[a-z][A-Za-z0-9]*(?:ClassName|ClassNames|Classes)$/;
 

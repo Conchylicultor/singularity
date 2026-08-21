@@ -21,6 +21,7 @@
     - `primitives/css/rigid.rigidClass`
     - `primitives/css/spacing.Inset`
     - `primitives/css/spacing.Stack`
+    - `primitives/css/text.textVariantClass`
     - `primitives/css/ui-kit.cn`
     - `primitives/css/ui-kit.Select`
     - `primitives/css/ui-kit.SelectContent`

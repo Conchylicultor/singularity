@@ -1,8 +1,5 @@
-import {
-  ESLintUtils,
-  type TSESLint,
-  type TSESTree,
-} from "@typescript-eslint/utils";
+import { ESLintUtils } from "@typescript-eslint/utils";
+import type { LintToolkit } from "@plugins/framework/plugins/tooling/plugins/lint/core";
 
 const createRule = ESLintUtils.RuleCreator(
   (name) => `https://github.com/anthropics/singularity/lint/${name}`,
@@ -54,193 +51,96 @@ const PR = /^pr-/;
 // Rounded corner: `rounded`, `rounded-md`, `rounded-full`, ….
 const ROUNDED = /^rounded(-|$)/;
 
-// >>> shared:class-token-walk — keep byte-identical across the no-adhoc-* class rules (enforced by the class-token-walk-in-sync check) >>>
-/**
- * Recursively harvest class-name tokens from a class-value subtree into `out`.
- *
- * Directly contained strings are harvested wherever they sit: bare `Literal`
- * `.value`s and `TemplateElement.value.raw`s (split on whitespace), inside
- * `cn(...)`/`clsx(...)` calls, ternaries, `clsx({ "text-x": cond })` object
- * keys, and arbitrary nesting — the walk is structural, not shape-specific.
- *
- * It ALSO follows same-file aliases, but ONLY when an `Identifier` reached from
- * a class context resolves to an object/array-literal MAP indexed directly in
- * that context (e.g. `cn(TONE[tone])`, `styles.title`). The map's initializer is
- * then harvested too — this is what catches a banned class parked in a style/tone
- * map. A standalone string/template `const` (shared mono/code metrics are out of
- * scope) and a styling-function result (`cva(...)`) are deliberately NOT followed,
- * and a map reached only through an intermediate local is out of range by design.
- * Resolution is same-file only (an imported or parameter binding has no in-file
- * initializer to read) and cycle-guarded via `seen`. Because the walk only ever
- * starts from a real class-name context, an unrelated doc-string that merely
- * mentions `text-sm` is never inspected.
- */
-function collectTokens(
-  sourceCode: TSESLint.SourceCode,
-  node: TSESTree.Node | null | undefined,
-  out: Set<string>,
-  seen: Set<unknown> = new Set(),
-): void {
-  if (!node) return;
-  if (node.type === "Literal") {
-    if (typeof node.value === "string") {
-      for (const t of node.value.split(/\s+/)) if (t) out.add(t);
-    }
-    return;
-  }
-  if (node.type === "TemplateElement") {
-    for (const t of node.value.raw.split(/\s+/)) if (t) out.add(t);
-    return;
-  }
-  if (node.type === "Identifier") {
-    let scope: TSESLint.Scope.Scope | null = sourceCode.getScope(node);
-    let variable: TSESLint.Scope.Variable | undefined;
-    while (scope && !variable) {
-      variable = scope.variables.find((v) => v.name === node.name);
-      scope = scope.upper;
-    }
-    if (variable && !seen.has(variable)) {
-      seen.add(variable);
-      for (const def of variable.defs) {
-        // Maps-only: follow a same-file alias ONLY into an object/array-literal
-        // map — the documented "style map drives classes" pattern, indexed
-        // directly in a class context (e.g. `cn(TONE[tone])`). A standalone
-        // string/template const (shared mono-code metrics — code/mono is out of
-        // scope) or a styling-function result (`cva(...)`) is deliberately NOT
-        // followed, and a map reached only through an intermediate local is out
-        // of range by design.
-        const init = def.type === "Variable" ? def.node.init : null;
-        if (
-          init &&
-          (init.type === "ObjectExpression" || init.type === "ArrayExpression")
-        ) {
-          collectTokens(sourceCode, init, out, seen);
-        }
-      }
-    }
-    return;
-  }
-  for (const key of Object.keys(node)) {
-    if (key === "parent") continue;
-    const value = (node as unknown as Record<string, unknown>)[key];
-    if (Array.isArray(value)) {
-      for (const child of value) {
-        if (child && typeof child === "object" && "type" in child) {
-          collectTokens(sourceCode, child as TSESTree.Node, out, seen);
-        }
-      }
-    } else if (value && typeof value === "object" && "type" in value) {
-      collectTokens(sourceCode, value as TSESTree.Node, out, seen);
-    }
-  }
-}
-// <<< shared:class-token-walk <<<
-
-/**
- * Strip Tailwind variant prefixes (`hover:`, `focus:`, `md:`, `dark:`, …) so the
- * geometric class underneath is tested on its own. Variants are colon-delimited
- * and the utility itself is the LAST `:`-segment (e.g. `hover:rounded-full` ->
- * `rounded-full`, `md:px-2` -> `px-2`). This mirrors how `badge/no-adhoc-chip`
- * reasons about prefixed tokens.
- */
-function baseClass(token: string): string {
-  const idx = token.lastIndexOf(":");
-  return idx === -1 ? token : token.slice(idx + 1);
-}
-
 const HOST_TAGS = new Set(["button", "a"]);
 
-/**
- * JSX attribute names whose value is a class-name string. `className`/`class`
- * are React's and HTML's own; the `*ClassName` suffix is the pass-through
- * convention (`panelClassName`, `itemClassName`, `wrapperClassName`,
- * `trackClassName`) a component uses to forward classes to an inner element.
- * Those forwarded strings style a real element exactly like `className` does,
- * but were invisible to every class rule purely because of the attribute's
- * spelling.
- */
-const CLASS_ATTRS = /^(?:class|className)$|ClassName$/;
-
-export default createRule({
-  name: "no-adhoc-control",
-  meta: {
-    type: "problem",
-    docs: {
-      description:
-        "Disallow divergent/hand-rolled controls: importing buttonVariants, or a raw button/a styled with fixed height + horizontal padding + rounded. Size controls through <Button>/<IconButton>/<ButtonGroup> and the shared control-* scale, set once per region.",
+export default function buildRule({
+  collectTokens,
+  baseClass,
+  CLASS_ATTRS,
+}: LintToolkit) {
+  return createRule({
+    name: "no-adhoc-control",
+    meta: {
+      type: "problem",
+      docs: {
+        description:
+          "Disallow divergent/hand-rolled controls: importing buttonVariants, or a raw button/a styled with fixed height + horizontal padding + rounded. Size controls through <Button>/<IconButton>/<ButtonGroup> and the shared control-* scale, set once per region.",
+      },
+      schema: [],
+      messages: {
+        noButtonVariants:
+          "Do not import `buttonVariants`. Style through the <Button> primitive (or <ButtonGroup> for split/segmented controls); applying buttonVariants to a non-button element is the divergence escape hatch this rule prevents.",
+        adhocControl:
+          "Hand-rolled button detected (fixed height + horizontal padding + rounded). Use <Button>/<IconButton> for actions, or <ButtonGroup> for split/segmented controls, so size comes from the shared control-size scale.",
+      },
     },
-    schema: [],
-    messages: {
-      noButtonVariants:
-        "Do not import `buttonVariants`. Style through the <Button> primitive (or <ButtonGroup> for split/segmented controls); applying buttonVariants to a non-button element is the divergence escape hatch this rule prevents.",
-      adhocControl:
-        "Hand-rolled button detected (fixed height + horizontal padding + rounded). Use <Button>/<IconButton> for actions, or <ButtonGroup> for split/segmented controls, so size comes from the shared control-size scale.",
-    },
-  },
-  defaultOptions: [],
-  create(context) {
-    return {
-      // Check A — ban `buttonVariants` imports from the button primitive.
-      ImportDeclaration(node) {
-        const source = node.source.value;
-        if (typeof source !== "string") return;
-        // Match the canonical `@/components/ui/button` and any specifier that
-        // resolves to the same module (e.g. a relative `../components/ui/button`).
-        if (
-          source !== "@/components/ui/button" &&
-          !source.endsWith("/components/ui/button")
-        ) {
-          return;
-        }
-        for (const spec of node.specifiers) {
+    defaultOptions: [],
+    create(context) {
+      return {
+        // Check A — ban `buttonVariants` imports from the button primitive.
+        ImportDeclaration(node) {
+          const source = node.source.value;
+          if (typeof source !== "string") return;
+          // Match the canonical `@/components/ui/button` and any specifier that
+          // resolves to the same module (e.g. a relative `../components/ui/button`).
           if (
-            spec.type === "ImportSpecifier" &&
-            spec.imported.type === "Identifier" &&
-            spec.imported.name === "buttonVariants"
+            source !== "@/components/ui/button" &&
+            !source.endsWith("/components/ui/button")
           ) {
-            context.report({ node: spec, messageId: "noButtonVariants" });
+            return;
           }
-        }
-      },
+          for (const spec of node.specifiers) {
+            if (
+              spec.type === "ImportSpecifier" &&
+              spec.imported.type === "Identifier" &&
+              spec.imported.name === "buttonVariants"
+            ) {
+              context.report({ node: spec, messageId: "noButtonVariants" });
+            }
+          }
+        },
 
-      // Check B — inspect a class-name attribute on a raw <button>/<a>.
-      JSXAttribute(node) {
-        // Only class-name attributes (`className`/`class`, or a `*ClassName`
-        // pass-through prop).
-        if (
-          node.name.type !== "JSXIdentifier" ||
-          !CLASS_ATTRS.test(node.name.name)
-        )
-          return;
+        // Check B — inspect a class-name attribute on a raw <button>/<a>.
+        JSXAttribute(node) {
+          // Only class-name attributes (`className`/`class`, or a `*ClassName`
+          // pass-through prop).
+          if (
+            node.name.type !== "JSXIdentifier" ||
+            !CLASS_ATTRS.test(node.name.name)
+          )
+            return;
 
-        // A JSXAttribute's parent is always the JSXOpeningElement.
-        const tag = node.parent.name;
-        if (tag.type !== "JSXIdentifier") return;
+          // A JSXAttribute's parent is always the JSXOpeningElement.
+          const tag = node.parent.name;
+          if (tag.type !== "JSXIdentifier") return;
 
-        // Check B — ban hand-rolled buttons (raw <button>/<a> styled like a
-        // control). Require an intrinsic host tag in {button, a}.
-        if (!HOST_TAGS.has(tag.name)) return;
+          // Check B — ban hand-rolled buttons (raw <button>/<a> styled like a
+          // control). Require an intrinsic host tag in {button, a}.
+          if (!HOST_TAGS.has(tag.name)) return;
 
-        // Aggregate every class token of this attribute into one Set, stripping
-        // variant prefixes so `hover:rounded-full` etc. count as their base.
-        const tokens = new Set<string>();
-        collectTokens(context.sourceCode, node.value, tokens);
+          // Aggregate every class token of this attribute into one Set, stripping
+          // variant prefixes so `hover:rounded-full` etc. count as their base.
+          const tokens = new Set<string>();
+          collectTokens(context.sourceCode, node.value, tokens);
 
-        const hasHeight = [...tokens].some((t) => {
-          const c = baseClass(t);
-          return FIXED_HEIGHT.test(c) || FIXED_SIZE.test(c);
-        });
-        const hasPadX = [...tokens].some((t) => {
-          const c = baseClass(t);
-          return PX.test(c) || PL.test(c) || PR.test(c);
-        });
-        const hasRounded = [...tokens].some((t) => ROUNDED.test(baseClass(t)));
+          const hasHeight = [...tokens].some((t) => {
+            const c = baseClass(t);
+            return FIXED_HEIGHT.test(c) || FIXED_SIZE.test(c);
+          });
+          const hasPadX = [...tokens].some((t) => {
+            const c = baseClass(t);
+            return PX.test(c) || PL.test(c) || PR.test(c);
+          });
+          const hasRounded = [...tokens].some((t) =>
+            ROUNDED.test(baseClass(t)),
+          );
 
-        // Fingerprint: flag only when ALL THREE co-occur.
-        if (!hasHeight || !hasPadX || !hasRounded) return;
+          // Fingerprint: flag only when ALL THREE co-occur.
+          if (!hasHeight || !hasPadX || !hasRounded) return;
 
-        context.report({ node, messageId: "adhocControl" });
-      },
-    };
-  },
-});
+          context.report({ node, messageId: "adhocControl" });
+        },
+      };
+    },
+  });
+}

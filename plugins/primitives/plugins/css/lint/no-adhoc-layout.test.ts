@@ -14,7 +14,13 @@
 
 import { RuleTester } from "eslint";
 import tsParser from "@typescript-eslint/parser";
-import rule from "./no-adhoc-layout";
+// The rule is a FACTORY taking the shared class-token walk (rule files cannot
+// import it — they dual-load under jiti). Tests run under Bun, where the
+// `@plugins/*` alias resolves, so they construct it with the real toolkit.
+import { lintToolkit } from "@plugins/framework/plugins/tooling/plugins/lint/core";
+import buildRule from "./no-adhoc-layout";
+
+const rule = buildRule(lintToolkit);
 
 const ruleTester = new RuleTester({
   languageOptions: {
@@ -42,7 +48,9 @@ ruleTester.run(
       { code: `const el = <div className="relative" />;` },
       { code: `const el = <div className="static" />;` },
       // Sizing is not a layout mechanic — only the `min-w-0` footgun is banned.
-      { code: `const el = <div className="w-full h-screen size-4 min-w-fit max-w-prose" />;` },
+      {
+        code: `const el = <div className="w-full h-screen size-4 min-w-fit max-w-prose" />;`,
+      },
       // Non-flow display values are untouched.
       { code: `const el = <div className="block hidden inline" />;` },
       // `placeholder-*` must not be caught by the `place-*` alignment matcher.
@@ -66,14 +74,57 @@ ruleTester.run(
       { code: `const el = <div className="block" />;` },
     ],
     invalid: [
+      // ── Alias reach. This rule carried an older, weaker copy of the shared
+      // class-token walk that resolved no identifiers, so BOTH shapes below were
+      // invisible to it while its six siblings caught the first one. It now takes
+      // the one injected walk, so neither hides a layout class any more.
+      //
+      // A string const hoisted out of the JSX. Not hypothetical: a page-editor
+      // site hoisted `absolute` into a const to get out of this rule's reach and
+      // documented that as the reason.
+      {
+        code: `
+          const ANCHOR = "block-anchor absolute";
+          const el = <div className={ANCHOR} />;
+        `,
+        errors: [{ messageId: "adhocLayout" }],
+      },
+      // A style MAP indexed in a class context — how the surface host parks its
+      // frame recipe. Visited twice (JSXAttribute + CallExpression), and `pane`
+      // contributes two banned tokens, so 3 tokens x 2 visits = 6.
+      {
+        code: `
+          const FRAME = { pane: "absolute inset-0", win: "overflow-hidden" };
+          function C({ f }: { f: keyof typeof FRAME }) {
+            return <div className={cn(FRAME[f])} />;
+          }
+        `,
+        errors: [
+          { messageId: "adhocLayout" },
+          { messageId: "adhocLayout" },
+          { messageId: "adhocLayout" },
+          { messageId: "adhocLayout" },
+          { messageId: "adhocLayout" },
+          { messageId: "adhocLayout" },
+        ],
+      },
       // Flow / display.
-      { code: `const el = <div className="flex" />;`, errors: [{ messageId: "adhocLayout" }] },
+      {
+        code: `const el = <div className="flex" />;`,
+        errors: [{ messageId: "adhocLayout" }],
+      },
       {
         code: `const el = <div className="flex flex-col" />;`,
         errors: [{ messageId: "adhocLayout" }, { messageId: "adhocLayout" }],
       },
-      { code: `const el = <div className="flex-1" />;`, errors: [{ messageId: "adhocLayout" }] },
-      { code: `const el = <div className="grid" />;`, errors: [{ messageId: "adhocLayout" }] },
+      {
+        code: `const el = <div className="flex-1" />;`,
+        errors: [{ messageId: "adhocLayout" }],
+      },
+      {
+        code: `const el = <div className="grid" />;`,
+        errors: [{ messageId: "adhocLayout" }],
+      },
       {
         code: `const el = <div className="grid-cols-3" />;`,
         errors: [{ messageId: "adhocLayout" }],
@@ -82,11 +133,23 @@ ruleTester.run(
         code: `const el = <div className="col-span-2" />;`,
         errors: [{ messageId: "adhocLayout" }],
       },
-      { code: `const el = <div className="basis-1/2" />;`, errors: [{ messageId: "adhocLayout" }] },
+      {
+        code: `const el = <div className="basis-1/2" />;`,
+        errors: [{ messageId: "adhocLayout" }],
+      },
       // Space-sharing.
-      { code: `const el = <div className="shrink-0" />;`, errors: [{ messageId: "adhocLayout" }] },
-      { code: `const el = <div className="grow" />;`, errors: [{ messageId: "adhocLayout" }] },
-      { code: `const el = <div className="min-w-0" />;`, errors: [{ messageId: "adhocLayout" }] },
+      {
+        code: `const el = <div className="shrink-0" />;`,
+        errors: [{ messageId: "adhocLayout" }],
+      },
+      {
+        code: `const el = <div className="grow" />;`,
+        errors: [{ messageId: "adhocLayout" }],
+      },
+      {
+        code: `const el = <div className="min-w-0" />;`,
+        errors: [{ messageId: "adhocLayout" }],
+      },
       // Alignment / distribution.
       {
         code: `const el = <div className="items-center" />;`,
@@ -100,11 +163,23 @@ ruleTester.run(
         code: `const el = <div className="place-items-center" />;`,
         errors: [{ messageId: "adhocLayout" }],
       },
-      { code: `const el = <div className="self-end" />;`, errors: [{ messageId: "adhocLayout" }] },
+      {
+        code: `const el = <div className="self-end" />;`,
+        errors: [{ messageId: "adhocLayout" }],
+      },
       // Positioning.
-      { code: `const el = <div className="absolute" />;`, errors: [{ messageId: "adhocLayout" }] },
-      { code: `const el = <div className="fixed" />;`, errors: [{ messageId: "adhocLayout" }] },
-      { code: `const el = <div className="inset-0" />;`, errors: [{ messageId: "adhocLayout" }] },
+      {
+        code: `const el = <div className="absolute" />;`,
+        errors: [{ messageId: "adhocLayout" }],
+      },
+      {
+        code: `const el = <div className="fixed" />;`,
+        errors: [{ messageId: "adhocLayout" }],
+      },
+      {
+        code: `const el = <div className="inset-0" />;`,
+        errors: [{ messageId: "adhocLayout" }],
+      },
       {
         code: `const el = <div className="-inset-x-2" />;`,
         errors: [{ messageId: "adhocLayout" }],

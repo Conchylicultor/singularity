@@ -71,28 +71,20 @@ export function isFormattable(file: string): boolean {
 /**
  * Files that must be formatted as a SET: touching one drags in all of them.
  *
- * The one member today is the six `no-adhoc-*` class lint rules, which
- * `class-token-walk-in-sync` asserts carry a BYTE-IDENTICAL copy of the shared
- * class-token walk (it can't be imported — lint rules dual-load under jiti,
- * which can't resolve `@plugins/*`). All six are currently non-conformant with
- * prettier, so a branch that touches one would format only that one and break
- * the byte-identity the check exists to defend.
+ * Currently EMPTY, and that is the healthy state. Its one member was the six
+ * `no-adhoc-*` class lint rules, which the former `class-token-walk-in-sync`
+ * check asserted carried a byte-identical copy of the shared class-token walk:
+ * formatting one of the six alone would have broken the byte-identity that check
+ * defended, so they had to move together.
  *
- * Keep in sync with the `EXPECTED` list in
- * `plugins/framework/plugins/tooling/plugins/checks/plugins/class-token-walk-in-sync/check/index.ts`
- * — that check is the authority on membership and fails loudly when the sets
- * disagree.
+ * There is now one walk, injected
+ * (`tooling/plugins/lint/core/class-token-walk.ts`), so there are no copies to
+ * hold identical and nothing couples those files any more. The mechanism stays
+ * because the hazard is real for any future byte-compared set — a coupling that
+ * exists but is not declared here shows up as a mystifying in-sync failure on a
+ * branch that only ran a formatter.
  */
-export const COUPLED_FORMAT_SETS: readonly (readonly string[])[] = [
-  [
-    "plugins/primitives/plugins/css/plugins/text/lint/no-adhoc-typography.ts",
-    "plugins/primitives/plugins/css/plugins/radius/lint/no-adhoc-radius.ts",
-    "plugins/primitives/plugins/css/plugins/z-layers/lint/no-adhoc-zindex.ts",
-    "plugins/primitives/plugins/css/plugins/control-size/lint/no-adhoc-control.ts",
-    "plugins/primitives/plugins/css/plugins/control-size/lint/no-adhoc-density.ts",
-    "plugins/primitives/plugins/css/plugins/icon-auto/lint/no-adhoc-slot-icon-size.ts",
-  ],
-];
+export const COUPLED_FORMAT_SETS: readonly (readonly string[])[] = [];
 
 /**
  * The formatting options, HARDCODED rather than resolved.

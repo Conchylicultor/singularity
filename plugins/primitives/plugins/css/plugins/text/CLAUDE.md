@@ -22,10 +22,21 @@ runtime vars. Picking a typography preset re-themes every variant together.
 | `label`      | 0.8125rem | 1.25rem     | 500    | 0        | `text-sm font-medium`     |
 | `caption`    | 0.75rem   | 1rem        | 400    | 0        | `text-xs`                 |
 | `eyebrow`    | 0.75rem   | 1rem        | 400    | wide     | `text-xs uppercase …`     |
+| `code`       | 0.75rem   | 1.25rem     | 400    | 0        | `font-mono text-xs leading-5` |
 
 `tone` layers a foreground color (`default | muted | primary | destructive`);
 `as` swaps the host element (default `span`). `cn(variant, tone, className)` —
 caller `className` wins last, so layout margins/truncation compose on top.
+
+`code` is monospaced running text (log viewers, code blocks, math source). It
+owns the mono **family** as well as the metrics, so "code" is one decision — do
+not pair it with `font-mono`. Its line-height is the looser `label` rung, not
+`caption`'s: code wraps and is scanned line-by-line.
+
+`textVariantClass(variant)` returns a variant's classes as a string, for the
+elements `<Text>` cannot be — a shiki `<pre>`, a `dangerouslySetInnerHTML` div, a
+Lexical input. Same own-it-⇒-component rule as the layout helpers. It reads no
+ambient `ControlSize`, so a helper-styled box does not compact.
 
 `eyebrow` is the overline / section-label role. Unlike the others it is **not** a
 single `text-eyebrow` utility — it reuses `text-caption` and adds the small-caps
@@ -140,6 +151,7 @@ fixed raw size escapes per-site via
   - Exports (values):
     - `SectionLabel`
     - `Text`
+    - `textVariantClass`
 - Cross-plugin:
   - Imported by:
     - `active-data/commit-link`
@@ -375,6 +387,7 @@ fixed raw size escapes per-site via
     - `page/annotations/agent-notes/authorship`
     - `page/annotations/todo/task-link`
     - `page/bookmark`
+    - `page/code-block`
     - `page/editor`
     - `page/embed`
     - `page/file`

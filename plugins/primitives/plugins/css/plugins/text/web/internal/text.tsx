@@ -19,7 +19,8 @@ export type TextVariant =
   | "body"
   | "label"
   | "caption"
-  | "eyebrow";
+  | "eyebrow"
+  | "code";
 
 /** Foreground tone applied on top of the variant. `default` inherits the surface. */
 export type TextTone = "default" | "muted" | "primary" | "destructive";
@@ -38,6 +39,9 @@ const VARIANT_CLASS: Record<TextVariant, string> = {
   // line. Tone stays orthogonal — pair with `tone="muted"` for the classic
   // section label (see the SectionLabel helper).
   eyebrow: "text-caption uppercase tracking-wide whitespace-nowrap",
+  // Monospaced running text — log lines, code blocks, math source. The role owns
+  // the mono FAMILY as well as the metrics, so "code" is one decision.
+  code: "text-code",
 };
 
 /**
@@ -55,6 +59,7 @@ const COMPACT_VARIANT_CLASS: Record<TextVariant, string> = {
   label: "text-label-compact",
   caption: "text-caption-compact",
   eyebrow: "text-caption-compact uppercase tracking-wide whitespace-nowrap",
+  code: "text-code-compact",
 };
 
 const TONE_CLASS: Record<TextTone, string> = {
@@ -135,7 +140,8 @@ export function Text({
   // explicit `title` always wins; outside a single-line context we add none (a
   // wrapping paragraph shouldn't carry a giant title).
   const resolvedTitle =
-    title ?? (singleLine && typeof children === "string" ? children : undefined);
+    title ??
+    (singleLine && typeof children === "string" ? children : undefined);
 
   // Composition order variant → tone → single-line leaf → caller className:
   // caller wins last so layout overrides (margins, width caps) compose on top.
@@ -149,7 +155,12 @@ export function Text({
       <As
         dir="rtl"
         title={resolvedTitle}
-        className={cn(typography, singleLineLeafClass(), "text-left", className)}
+        className={cn(
+          typography,
+          singleLineLeafClass(),
+          "text-left",
+          className,
+        )}
         {...rest}
       >
         <span dir="ltr" style={{ unicodeBidi: "embed" }}>
@@ -168,4 +179,21 @@ export function Text({
       {children}
     </As>
   );
+}
+
+/**
+ * The typography role as a CLASS STRING, for the elements `<Text>` cannot be.
+ *
+ * The same own-it-⇒-component / don't-⇒-the-helper split the layout primitives
+ * draw: a `<pre>` shiki writes into, a div with `dangerouslySetInnerHTML`, a
+ * Lexical input — those must THEMSELVES carry the metrics, so there is nothing
+ * to wrap. Reach for `<Text variant>` whenever you own the element.
+ *
+ * Returns the base rung. Unlike `<Text>` this reads no ambient `ControlSize`
+ * (it is a plain function, not a hook), so a helper-styled box does not compact
+ * with its surroundings — which is what these code surfaces already did when
+ * they spelled their metrics by hand.
+ */
+export function textVariantClass(variant: TextVariant): string {
+  return VARIANT_CLASS[variant];
 }

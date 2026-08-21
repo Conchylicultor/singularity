@@ -142,7 +142,12 @@ export function FloatingAction({
           // pointer- or Tab-reachable. The stable wrapper underneath still
           // receives the pointer-enter that opens it.
           inert={!open}
-          // eslint-disable-next-line text/no-clip-without-nowrap -- generic morph panel: overflow-hidden clips the width/height transition, not text; single-line-ness is the consumer's call, not this primitive's
+          // `overflow-hidden` here clips the width/height transition, not text.
+          // `no-clip-without-nowrap` used to need a disable and no longer does:
+          // the panel's direction/align come from FLOW_CLASS / ALIGN_CLASS, and
+          // now that the shared walk follows those maps the rule reads the
+          // `flex-col` / `items-*` in them and correctly stops calling this a
+          // single-line text row.
           className={cn(
             "flex overflow-hidden rounded-md",
             FLOW_CLASS[direction][triggerAt],

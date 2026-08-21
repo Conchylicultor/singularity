@@ -1,4 +1,5 @@
 import { ESLintUtils, type TSESTree } from "@typescript-eslint/utils";
+import type { LintToolkit } from "@plugins/framework/plugins/tooling/plugins/lint/core";
 
 const createRule = ESLintUtils.RuleCreator(
   (name) => `https://github.com/anthropics/singularity/lint/${name}`,
@@ -69,9 +70,6 @@ function isPanelSurface(name: string): boolean {
   return PANEL_SURFACES.has(name) || PANEL_CONTENT.test(name);
 }
 
-/** JSX attribute names whose value is a class-name string. */
-const CLASS_ATTRS = new Set(["className", "class"]);
-
 /** The one token that cancels a rail. */
 const BLEED_TOKEN = "rail-bleed";
 
@@ -126,47 +124,49 @@ function classTokens(node: TSESTree.Node, out: string[]): void {
   }
 }
 
-export default createRule({
-  name: "no-panel-bleed",
-  meta: {
-    type: "problem",
-    docs: {
-      description:
-        "Disallow `rail-bleed` on a floating panel surface. A panel IS the rail region, so bleeding it strips its own padding role and leaves every descendant reading a zero rail.",
-    },
-    schema: [],
-    messages: {
-      panelBleed:
-        "`rail-bleed` on `{{surface}}` cancels the panel's OWN rail. A panel is the region: its `padding` role is a `rail-<step>`, and `rail-bleed` shares that tailwind-merge group — so this strips the panel's inset AND leaves it with negative margins and `width: calc(100% + 0px)` against a rail that is now zero. Every descendant that follows or bleeds the rail then reads `0px` too. Bleed a BAND inside the panel instead — the header strip, the hairline, the row whose fill must reach the panel edge — and leave the panel its region.",
-    },
-  },
-  defaultOptions: [],
-  create(context) {
-    return {
-      JSXOpeningElement(node: TSESTree.JSXOpeningElement) {
-        if (node.name.type !== "JSXIdentifier") return;
-        const surface = node.name.name;
-        if (!isPanelSurface(surface)) return;
-        for (const attr of node.attributes) {
-          if (attr.type !== "JSXAttribute") continue;
-          if (
-            attr.name.type !== "JSXIdentifier" ||
-            !CLASS_ATTRS.has(attr.name.name) ||
-            attr.value == null
-          ) {
-            continue;
-          }
-          const tokens: string[] = [];
-          classTokens(attr.value, tokens);
-          if (tokens.includes(BLEED_TOKEN)) {
-            context.report({
-              node: attr,
-              messageId: "panelBleed",
-              data: { surface },
-            });
-          }
-        }
+export default function buildRule({ CLASS_ATTRS }: LintToolkit) {
+  return createRule({
+    name: "no-panel-bleed",
+    meta: {
+      type: "problem",
+      docs: {
+        description:
+          "Disallow `rail-bleed` on a floating panel surface. A panel IS the rail region, so bleeding it strips its own padding role and leaves every descendant reading a zero rail.",
       },
-    };
-  },
-});
+      schema: [],
+      messages: {
+        panelBleed:
+          "`rail-bleed` on `{{surface}}` cancels the panel's OWN rail. A panel is the region: its `padding` role is a `rail-<step>`, and `rail-bleed` shares that tailwind-merge group — so this strips the panel's inset AND leaves it with negative margins and `width: calc(100% + 0px)` against a rail that is now zero. Every descendant that follows or bleeds the rail then reads `0px` too. Bleed a BAND inside the panel instead — the header strip, the hairline, the row whose fill must reach the panel edge — and leave the panel its region.",
+      },
+    },
+    defaultOptions: [],
+    create(context) {
+      return {
+        JSXOpeningElement(node: TSESTree.JSXOpeningElement) {
+          if (node.name.type !== "JSXIdentifier") return;
+          const surface = node.name.name;
+          if (!isPanelSurface(surface)) return;
+          for (const attr of node.attributes) {
+            if (attr.type !== "JSXAttribute") continue;
+            if (
+              attr.name.type !== "JSXIdentifier" ||
+              !CLASS_ATTRS.test(attr.name.name) ||
+              attr.value == null
+            ) {
+              continue;
+            }
+            const tokens: string[] = [];
+            classTokens(attr.value, tokens);
+            if (tokens.includes(BLEED_TOKEN)) {
+              context.report({
+                node: attr,
+                messageId: "panelBleed",
+                data: { surface },
+              });
+            }
+          }
+        },
+      };
+    },
+  });
+}
