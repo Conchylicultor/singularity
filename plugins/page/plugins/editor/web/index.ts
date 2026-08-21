@@ -64,6 +64,11 @@ export {
   colorCssValue,
 } from "./internal/block-text-extensions";
 export { registerBlockPasteHandler } from "./internal/block-paste-handlers";
+// The one read of a transfer's text, exported so a contributed block-text
+// plugin classifying its own paste/drop uses the same `text/plain` →
+// `text/uri-list` fallback Lexical's own insert does (url-paste's bare-URL
+// gate would otherwise miss a link dragged out of another tab).
+export { readTransferText } from "./internal/transfer";
 export type { BlockPasteHandler } from "./internal/block-paste-handlers";
 export { OPEN_LINK_POPOVER_COMMAND } from "./internal/link-command";
 export { isValidLinkUrl, normalizeLinkUrl } from "./internal/link-url";

@@ -83,13 +83,18 @@ import {
 import { BlockRow } from "./block-row";
 import { SelectionBands } from "./selection-bands";
 import { BLOCK_GUTTER, blockContentLeft } from "../internal/page-column";
-import { FileDropOverlay } from "./file-drop-overlay";
+import { ExternalDropOverlay } from "./external-drop-overlay";
 import {
   resolveBlockPasteHandler,
   resolvePastedBlock,
   type BlockPasteHandler,
 } from "../internal/block-paste-handlers";
-import { BLOCKS_MIME } from "../internal/clipboard";
+import {
+  BLOCKS_MIME,
+  decideTransfer,
+  readTransferText,
+} from "../internal/transfer";
+import { dragKindFromTypes, type ClaimedKind } from "../internal/drag-kind";
 import { writeForestToClipboard } from "../internal/clipboard-write";
 import { blockTextProtectedSpans } from "../internal/block-text-extensions";
 
@@ -138,6 +143,24 @@ function rowAtPointer(y: number): DropTarget | null {
     }
   }
   return nearest;
+}
+
+/**
+ * Did this event land inside a block's own EDITING HOST (its `contenteditable`),
+ * as opposed to the page's chrome — the gutter rail, the whitespace beside the
+ * measure, the empty area below the last block?
+ *
+ * Two gestures ask the same question for the same reason, so they ask it once:
+ * a pointer press decides whether the BROWSER owns the text selection it is
+ * starting, and a drop decides whether there is an inline insertion point a
+ * single line could land in (`decideTransfer`'s `inline`). Both are "is there a
+ * caret here that is not ours to place?".
+ */
+function isInsideEditingHost(target: EventTarget | null): boolean {
+  return (
+    target instanceof Element &&
+    target.closest('[contenteditable="true"]') !== null
+  );
 }
 
 /**
@@ -666,57 +689,70 @@ function SelectionLayer({
   const onPaste = useCallback(
     (e: React.ClipboardEvent) => {
       if (document.activeElement !== containerRef.current) return;
-      // A pasted file (image/video/audio/…) becomes an attachment block, inserted
-      // after the current selection — resolved through the generic registry so
-      // this consumer never names a specific block type. Skipped entirely in the
-      // in-memory (non-persisting) mode: there is no server to store the blob.
+      // A pasted file (image/video/audio/…) is resolved through the generic
+      // registry, so this consumer never names a specific block type. Skipped
+      // entirely in the in-memory (non-persisting) mode: there is no server to
+      // store the blob, so a file must never reach an upload.
       const picked = allowAttachments
         ? resolvePastedBlock(e.clipboardData)
         : null;
-      if (picked) {
-        e.preventDefault();
-        const { file, handler } = picked;
-        const afterId = pasteAnchorId(
+      // ONE classification for both doors — this paste and `onExternalDrop`
+      // below (`internal/transfer.ts`). `inline: false`: block-selection mode
+      // deliberately holds no caret, so there is no insertion point a single
+      // line could land in and every text payload becomes blocks.
+      const decision = decideTransfer({
+        isFile: picked !== null,
+        blocksJson: e.clipboardData.getData(BLOCKS_MIME),
+        text: readTransferText(e.clipboardData),
+        inline: false,
+      });
+      // Unreachable with `inline: false` — and it is what narrows the union, so
+      // the arms below can read `decision.json` / `decision.text`.
+      if (decision.kind === "inline") return;
+
+      const afterId = () =>
+        pasteAnchorId(
           toNodes(rowsRef.current),
           selectedRef.current,
           focusedBlockId,
         );
+
+      if (decision.kind === "file") {
+        e.preventDefault();
+        // `isFile` above IS `picked !== null`, so this arm holds that same pick.
+        const { file, handler } = picked!;
+        const anchor = afterId();
         void (async () => {
           const data = await handler.build(file);
           paste({
             blocks: [
               { type: handler.type, data, expanded: false, children: [] },
             ],
-            afterId,
+            afterId: anchor,
           });
         })();
         return;
       }
-      const json = e.clipboardData.getData(BLOCKS_MIME);
+
       let forest: SerializedBlock[];
-      if (json) {
+      if (decision.kind === "forest") {
         try {
-          forest = JSON.parse(json) as SerializedBlock[];
+          forest = JSON.parse(decision.json) as SerializedBlock[];
         } catch (err) {
           if (!(err instanceof SyntaxError)) throw err;
           return;
         }
       } else {
-        const text = e.clipboardData.getData("text/plain");
-        if (!text.trim()) return;
-        forest = parseMarkdownToForest(text, {
+        forest = parseMarkdownToForest(decision.text, {
           handles,
           protectedSpans: blockTextProtectedSpans(),
         });
       }
+      // Empty/unparseable forest (an empty or whitespace-only payload) → let the
+      // native paste run; never swallow the event for nothing.
       if (!Array.isArray(forest) || forest.length === 0) return;
       e.preventDefault();
-      const afterId = pasteAnchorId(
-        toNodes(rowsRef.current),
-        selectedRef.current,
-        focusedBlockId,
-      );
-      paste({ blocks: forest, afterId });
+      paste({ blocks: forest, afterId: afterId() });
     },
     [handles, paste, focusedBlockId, containerRef, allowAttachments],
   );
@@ -945,7 +981,7 @@ function SelectionLayer({
       if (!content) return;
 
       const row = el.closest("[data-block-id]");
-      const inText = el.closest('[contenteditable="true"]') !== null;
+      const inText = isInsideEditingHost(el);
       // A row's gutter rail is its own padding, so a hit on the row element ITSELF
       // is the rail (background); only a hit on a descendant is block content.
       const onBackground = !inText && !(row && row !== el);
@@ -1034,11 +1070,16 @@ function SelectionLayer({
   );
   const [activeId, setActiveId] = useState<string | null>(null);
   const [dropTarget, setDropTarget] = useState<DropTarget | null>(null);
-  // External (OS) file-drag state, kept separate from the dnd-kit block-reorder
-  // drag above: native HTML drag events never overlap dnd-kit's pointer-based
-  // reorder, so the two can't be active at once.
-  const [fileDropTarget, setFileDropTarget] = useState<DropTarget | null>(null);
-  const [fileDragging, setFileDragging] = useState(false);
+  // External (OS / cross-app) drag state, kept separate from the dnd-kit
+  // block-reorder drag above: native HTML drag events never overlap dnd-kit's
+  // pointer-based reorder, so the two can't be active at once. `externalDragging`
+  // holds WHAT is being dragged rather than a bare boolean, so the scrim can say
+  // what it will do with it.
+  const [externalDropTarget, setExternalDropTarget] =
+    useState<DropTarget | null>(null);
+  const [externalDragging, setExternalDragging] = useState<ClaimedKind | null>(
+    null,
+  );
   // Resolved selection roots + their subtree when dragging a multi-selection.
   // The ref is the synchronous source of truth for the in-flight pointer
   // handlers (`currentTarget` reads it within the same dnd-kit event, before any
@@ -1143,7 +1184,7 @@ function SelectionLayer({
   // sibling (same parent), or at the parent's start when it's the first child —
   // mirroring the bulk-reorder before/after computation. A null target (empty
   // page / no rows) lands at the page's top level.
-  const fileDropPosition = useCallback(
+  const externalDropPosition = useCallback(
     (
       target: DropTarget | null,
     ): { afterId: string | null; parentId: string | null } => {
@@ -1165,74 +1206,160 @@ function SelectionLayer({
     [],
   );
 
-  const onFileDragOver = useCallback(
+  const onExternalDragOver = useCallback(
     (e: React.DragEvent) => {
+      // A dragover's DataTransfer is in PROTECTED mode (types readable,
+      // `getData()` empty), so this decision comes from the types alone — see
+      // `internal/drag-kind.ts` for what that costs.
+      const kind = dragKindFromTypes(e.dataTransfer.types);
+      if (kind === "none") return;
       // No blob storage in the in-memory (non-persisting) mode, so a dropped file
       // must never reach an upload: refuse the drag entirely.
-      if (!allowAttachments) return;
-      // Only react to an OS file drag — internal text/element drags carry no Files.
-      if (!e.dataTransfer.types.includes("Files")) return;
+      if (kind === "files" && !allowAttachments) return;
+      // A single line of TEXT belongs at the caret, and only the native drop can
+      // put it there — so a text drag over a block's editing host is left to the
+      // browser. We cannot yet tell single- from multi-line (protected mode),
+      // but the contenteditable makes the drop fire regardless, and
+      // `onExternalDrop` claims it then if it turns out to carry newlines.
+      if (kind === "text" && isInsideEditingHost(e.target)) {
+        // Declining also means dropping our own affordance: this is the one
+        // branch that can flip mid-drag (the pointer crossing from the page's
+        // whitespace into a block's text), so the scrim and the insertion line
+        // would otherwise linger over territory we no longer claim.
+        setExternalDragging(null);
+        setExternalDropTarget(null);
+        return;
+      }
       e.preventDefault(); // required so the drop event fires
       e.dataTransfer.dropEffect = "copy";
-      setFileDragging(true);
+      setExternalDragging(kind);
       const next = rowAtPointer(e.clientY);
-      setFileDropTarget((prev) =>
+      setExternalDropTarget((prev) =>
         prev?.id === next?.id && prev?.zone === next?.zone ? prev : next,
       );
     },
     [allowAttachments],
   );
 
-  const onFileDragLeave = useCallback(
+  const onExternalDragLeave = useCallback(
     (e: React.DragEvent) => {
       // dragleave fires when crossing into a child too; only clear when the pointer
       // has actually left the container's subtree.
       if (containerRef.current?.contains(e.relatedTarget as Node | null))
         return;
-      setFileDragging(false);
-      setFileDropTarget(null);
+      setExternalDragging(null);
+      setExternalDropTarget(null);
     },
     [containerRef],
   );
 
-  const onFileDrop = useCallback(
+  /**
+   * The container owns the pointer DROP, as the blocks own the caret PASTE.
+   *
+   * A drop has a pointer position, and where a pointer position lands is
+   * container knowledge (`rowAtPointer`, `externalDropPosition`, the per-row
+   * insertion line, the full-surface scrim) — so there is no per-block
+   * `DROP_COMMAND` handler for the forest/markdown cases, which would
+   * double-handle with this one.
+   *
+   * Claiming the drop is also the ONLY way to stop what the browser would do
+   * next: an unprevented drop fires `beforeinput` with `inputType:
+   * "insertFromDrop"`, which Lexical turns into a controlled text insertion
+   * whose plain-text arm calls `selection.insertParagraph()` per newline and
+   * dispatches NO command — leaving the block's root holding several paragraphs,
+   * the one state every caret/split/merge rule here is written against.
+   * `preventDefault` on the drop cancels that default action outright.
+   */
+  const onExternalDrop = useCallback(
     (e: React.DragEvent) => {
-      // In-memory mode has no server to store a blob — never begin an upload.
-      if (!allowAttachments) return;
-      if (!e.dataTransfer.types.includes("Files")) return;
+      const dt = e.dataTransfer;
+      const kind = dragKindFromTypes(dt.types);
+      if (kind === "none") return;
+      // Read everything off the event SYNCHRONOUSLY — the FileList and the
+      // pointer position are both cleared once this handler returns, before the
+      // async uploads below run.
+      //
+      // A drop makes ONE block per dropped file (unlike the paste, which takes
+      // the single best clipboard item), so the resolved picks are also the
+      // `isFile` predicate below: the classifier and the handler read the same
+      // list, and there is no branch where one says "file" and the other has
+      // nothing to do. In-memory mode has no server to store a blob, so it
+      // resolves none and a dropped file never reaches an upload.
+      const picks = allowAttachments
+        ? Array.from(dt.files)
+            .map((file) => ({
+              file,
+              handler: resolveBlockPasteHandler(file.type),
+            }))
+            .filter(
+              (p): p is { file: File; handler: BlockPasteHandler } =>
+                p.handler !== null,
+            )
+        : [];
+      // The SAME classification the container paste runs, differing only in
+      // where the insertion point comes from: a caret for a paste, the drop's
+      // own target for this.
+      const decision = decideTransfer({
+        isFile: picks.length > 0,
+        blocksJson: dt.getData(BLOCKS_MIME),
+        text: readTransferText(dt),
+        inline: isInsideEditingHost(e.target),
+      });
+      const pos = externalDropPosition(rowAtPointer(e.clientY));
+      setExternalDragging(null);
+      setExternalDropTarget(null);
+
+      // A single line landing inside a block's text: the native caret drop owns
+      // it, exactly as the native caret paste owns its equivalent.
+      if (decision.kind === "inline") return;
+
+      if (decision.kind === "file") {
+        e.preventDefault();
+        // Each file becomes its matching attachment block via the generic
+        // registry, so image/video/audio/file participate with no per-type code
+        // here.
+        void (async () => {
+          const blocks = await Promise.all(
+            picks.map(async ({ file, handler }) => ({
+              type: handler.type,
+              data: await handler.build(file),
+              expanded: false,
+              children: [],
+            })),
+          );
+          paste({ blocks, ...pos });
+        })();
+        return;
+      }
+
+      let forest: SerializedBlock[];
+      if (decision.kind === "forest") {
+        try {
+          forest = JSON.parse(decision.json) as SerializedBlock[];
+        } catch (err) {
+          // Mirror the paste handlers' tolerance: a malformed payload is not our
+          // drop — leave the browser's default alone.
+          if (!(err instanceof SyntaxError)) throw err;
+          return;
+        }
+      } else {
+        forest = parseMarkdownToForest(decision.text, {
+          handles,
+          protectedSpans: blockTextProtectedSpans(),
+        });
+      }
+      // Empty/unparseable forest (a whitespace-only payload) → never swallow the
+      // event for nothing.
+      if (!Array.isArray(forest) || forest.length === 0) return;
       e.preventDefault();
-      // Read the FileList + pointer position synchronously — both are cleared once
-      // this handler returns, before the async uploads below run.
-      const picks = Array.from(e.dataTransfer.files)
-        .map((file) => ({ file, handler: resolveBlockPasteHandler(file.type) }))
-        .filter(
-          (p): p is { file: File; handler: BlockPasteHandler } =>
-            p.handler !== null,
-        );
-      const pos = fileDropPosition(rowAtPointer(e.clientY));
-      setFileDragging(false);
-      setFileDropTarget(null);
-      if (picks.length === 0) return;
-      // Each file becomes its matching attachment block via the generic registry,
-      // so image/video/audio/file participate with no per-type code here.
-      void (async () => {
-        const blocks = await Promise.all(
-          picks.map(async ({ file, handler }) => ({
-            type: handler.type,
-            data: await handler.build(file),
-            expanded: false,
-            children: [],
-          })),
-        );
-        paste({ blocks, ...pos });
-      })();
+      paste({ blocks: forest, ...pos });
     },
-    [fileDropPosition, paste, allowAttachments],
+    [externalDropPosition, paste, handles, allowAttachments],
   );
 
   // The reorder drag and the file drag are mutually exclusive, so one indicator
   // source feeds the per-row insertion line.
-  const activeDropTarget = dropTarget ?? fileDropTarget;
+  const activeDropTarget = dropTarget ?? externalDropTarget;
 
   const selectedCount = selectedIds.size;
 
@@ -1369,14 +1496,14 @@ function SelectionLayer({
             onCut={onCut}
             onPaste={onPaste}
             onPointerDown={onPointerDown}
-            onDragOver={onFileDragOver}
-            onDragLeave={onFileDragLeave}
-            onDrop={onFileDrop}
+            onDragOver={onExternalDragOver}
+            onDragLeave={onExternalDragLeave}
+            onDrop={onExternalDrop}
             onFocusCapture={onFocusCapture}
-            // Full-surface file-drop scrim painted above the blocks (a
+            // Full-surface drop scrim painted above the blocks (a
             // pointer-events-none `above` layer, so it never eats the drag
             // events). The per-row insertion line below still pinpoints the drop.
-            above={<FileDropOverlay active={fileDragging} />}
+            above={<ExternalDropOverlay kind={externalDragging} />}
             className={cn(
               "min-h-40 w-full cursor-text pb-sm pt-md outline-none",
               // A text drag that crossed a block boundary is a BLOCK range now.

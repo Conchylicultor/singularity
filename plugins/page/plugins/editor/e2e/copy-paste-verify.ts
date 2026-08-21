@@ -18,7 +18,7 @@
 //   F. a caret paste of FOREIGN markup whose text/html carries several blocks but
 //      whose text/plain is one line lands inside the block, never as a second
 //      paragraph in its root — the one-paragraph-per-block invariant, enforced by
-//      `BlockClipboardInsertPlugin`. `decidePaste` reads text/plain and declines
+//      `BlockClipboardInsertPlugin`. `decideTransfer` reads text/plain and declines
 //      such a payload, so before the guard it reached Lexical's own insert, which
 //      splits the paragraph. Real editors emit exactly this pair.
 //

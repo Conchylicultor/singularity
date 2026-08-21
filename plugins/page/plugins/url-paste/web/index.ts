@@ -3,6 +3,6 @@ import "./internal/register";
 
 export default {
   description:
-    "Paste a URL into an empty text block to turn it into a bookmark or embed.",
+    "Paste or drop a URL into an empty text block to turn it into a bookmark or embed.",
   contributions: [],
 } satisfies PluginDefinition;

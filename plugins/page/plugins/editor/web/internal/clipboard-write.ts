@@ -4,11 +4,11 @@ import {
   type IdentifiedBlock,
 } from "../../core";
 import { blockTextProtectedSpans } from "./block-text-extensions";
-import { BLOCKS_MIME } from "./clipboard";
+import { BLOCKS_MIME } from "./transfer";
 
 /**
  * THE encoding of a copied block forest onto the clipboard — the exact inverse
- * of `decidePaste`'s `forest` arm (`./clipboard.ts`), which is why it lives
+ * of `decideTransfer`'s `forest` arm (`./transfer.ts`), which is why it lives
  * beside it rather than inside either caller.
  *
  * Two flavors, always both:

@@ -715,8 +715,8 @@ that exists but isn't painted); a position that does not exist. Design:
   What actually rejects a real seam: (a) a caret-addressable character is a real
   character in the browser's text layer, so find-in-page stops matching across
   it, spellcheck and double-click word selection segment on it, and single-line
-  `Cmd+C` is *deliberately* handed to the browser (`internal/clipboard.ts`,
-  `decidePaste`'s `{kind:"default"}` arm) so it reaches the system clipboard with
+  `Cmd+C` is *deliberately* handed to the browser (`internal/transfer.ts`,
+  `decideTransfer`'s `{kind:"inline"}` arm) so it reaches the system clipboard with
   no code of ours in the path; and (b) it is a character in the plain-text offset
   basis, which reaches a SERVER consumer —
   `page/markdown-apply/server/internal/runs-splice.ts` splices a block's `Y.Doc`
@@ -1467,9 +1467,9 @@ handlers.
   `BLOCKS_MIME` for the structural round-trip plus a `text/plain` markdown
   fallback — so the container copy and the caret copy produce byte-identical
   payloads by construction rather than by two implementations agreeing. It is
-  the inverse of `decidePaste`'s `forest` arm and lives beside it, but NOT in
-  `internal/clipboard.ts`: that module stays loadable with no Lexical in the
-  path, which is what lets `clipboard.test.ts` unit-test the decision.
+  the inverse of `decideTransfer`'s `forest` arm and lives beside it, but NOT in
+  `internal/transfer.ts`: that module stays loadable with no Lexical in the
+  path, which is what lets `transfer.test.ts` unit-test the decision.
 - **A cut deletes only on the branch that copied.** `CUT_COMMAND` runs the same
   writer and calls `editor.remove()` — the rail menu's own Delete op, so the
   caret lands where a delete always lands and the cut is one undo entry — but
@@ -1551,7 +1551,7 @@ across all of those instead of the ones we happened to list.
   restates the one thing Lexical would have done afterwards: carrying the last
   pasted run's marks onto the caret (`$updateSelectionOnInsert`, not exported),
   so typing continues in the pasted format on BOTH arms.
-- **Block structure can reach here even though `decidePaste` already ran.** That
+- **Block structure can reach here even though `decideTransfer` already ran.** That
   classifier reads `text/plain`; `text/html` is written by whatever app the user
   copied from and need not agree with it. A single-line `text/plain` beside a
   multi-paragraph `text/html` is ordinary output from real editors, and it is
@@ -1576,14 +1576,99 @@ across all of those instead of the ones we happened to list.
   registers such a decorator today; the arm exists so adding one is a visible
   behaviour rather than a silent delete.
 
-**What it does NOT cover**, stated so the gap is not mistaken for coverage: the
-plain-text arm of `$insertDataTransferForRichText` calls
-`selection.insertParagraph()` per newline and dispatches no command, so no
-listener can reach it. Nothing arrives there through a PASTE — `decidePaste`
-claims multi-line `text/plain` first — but DROP has no classifier in front of
-it at all, so **dropping multi-line text still splits the block's root**. That
-is a hole in drop's own wiring (it needs the `decidePaste` treatment paste has),
-not in this rule.
+**The plain-text arm is closed by the OTHER half, not by this rule.**
+`$insertDataTransferForRichText`'s third arm calls `selection.insertParagraph()`
+per newline and dispatches no command, so no listener — this one included — can
+reach it. It is unreachable *with a newline in it* instead: every gesture that
+carries text into the page is classified before it can get there. So the
+invariant stands on two legs, and both are needed to see the case is closed
+rather than merely moved:
+
+- the MARKUP arms (`application/x-lexical-editor`, `text/html`) are guarded
+  here, at `SELECTION_INSERT_CLIPBOARD_NODES_COMMAND`, whatever the gesture;
+- the PLAIN-TEXT arm is classified away before the gesture reaches it —
+  `decideTransfer` sends multi-line text to `paste` as a block forest on a caret
+  paste (`BlockForestPastePlugin`), on a block-selection paste and on a DROP
+  (the container, below).
+
+## The transfer door (one classifier, two gestures)
+
+> A `DataTransfer` entering the page is classified ONCE, by shape, and lands as
+> BLOCKS unless it is a single line AND there is an inline insertion point that
+> can absorb it. Paste and drop run the same classifier; the only difference
+> between them is where the insertion point comes from.
+
+`internal/transfer.ts` is that classifier (`decideTransfer` → `file` / `forest` /
+`markdown` / `inline`), and it stays Lexical-free so `transfer.test.ts` can
+unit-test the decision. `readTransferText` is its one text read — `text/plain`,
+else `text/uri-list`, byte-for-byte the fallback
+`$insertDataTransferForRichText` uses (`@lexical/clipboard@0.44.0
+LexicalClipboard.dev.mjs:121`), because a transfer describing a link ONLY as
+`text/uri-list` is otherwise invisible to the classifier and lands in the arm
+below it anyway.
+
+**Ownership splits by what the gesture knows.** A block owns the caret PASTE; the
+block-editor CONTAINER owns the pointer DROP, because a drop has a pointer
+position and where a pointer position lands is container knowledge (`rowAtPointer`,
+`externalDropPosition`, the per-row insertion line, the full-surface scrim).
+There is deliberately **no per-block `DROP_COMMAND` handler** for the
+forest/markdown cases — it would double-handle with the container's.
+
+- **The container is a valid door because React's root-delegated listener runs
+  during the native `drop`'s BUBBLE dispatch, i.e. before the default action.**
+  `preventDefault()` there cancels that default action, and with it the
+  `beforeinput` / `inputType: "insertFromDrop"` the browser would otherwise fire
+  — which is the whole of the plain-text-arm fix, since that beforeinput is how
+  the unreachable arm was being reached. The file drop has relied on this
+  ordering in production since long before the text one did.
+- **The dragover decision is TYPES-ONLY, and that costs something.** During a
+  drag the `DataTransfer` is in protected mode: `types` is readable,
+  `getData()` returns `""`. So `dragKindFromTypes` (`internal/drag-kind.ts`)
+  answers only `files` / `forest` / `text` / `none` — it **cannot** tell a
+  single line from a multi-line one. The consequence is visible: a TEXT drag
+  over a block's own text shows no scrim and no insertion line, because we do
+  not yet know whether it will land inline or as blocks. We decline the dragover
+  there and let the contenteditable make the drop fire anyway; `onExternalDrop`
+  reads the bytes and claims it only if it turns out to carry newlines.
+- **A Lexical-marked drag is never claimed.** `application/x-lexical-drag`
+  (`$writeDragSourceToDataTransfer` on `DRAGSTART`) means the editor is MOVING
+  its own nodes, with Lexical's own source-removal semantics — cut-and-paste, not
+  copy. It is refused ahead of every other type it carries, since it rides along
+  with the selection's own `text/plain`.
+- **`inline` is a question the caller answers**, and it is the only difference
+  between the two gestures: `true` for a caret-in-block paste and for a drop
+  whose target sits inside a block's editing host (`isInsideEditingHost`, shared
+  with the pointer-press gesture), `false` for the block-selection container
+  paste (which deliberately holds no caret) and for a drop over the page's
+  non-editable area. An `inline` drop is left entirely to the browser — no
+  `preventDefault` — so a single line still lands at the drop caret exactly as
+  it always did.
+- **A dropped URL gets the paste's treatment, and CONSUMES the gesture.**
+  `page/url-paste` registers `DROP_COMMAND` beside its `PASTE_COMMAND` on the
+  same gate, so dragging a link into an empty text block offers Bookmark / Embed
+  / Plain link. Because the container's drop door sits ABOVE it, that arm also
+  calls `stopPropagation()`, and the reason is not defensive tidiness: a
+  `text/uri-list` is CRLF-terminated (RFC 2483), so the payload a link drag most
+  often carries is *literally* multi-line, classifies as `markdown` up at the
+  container, and a single dropped URL would open the menu AND mint a block. Only
+  DROP needs this — a caret paste never reaches the container's `onPaste`, which
+  gates on the CONTAINER holding focus.
+  - Note what is NOT done about that CRLF, and why: `decideTransfer` reads the
+    RAW text, trailing terminator and all, because the arm it declines INTO
+    reads the same raw text — a classifier that trimmed first would call a
+    CRLF-terminated URL "one line", hand it to the native insert, and that
+    insert would split the root on the very terminator we trimmed. So a
+    `uri-list`-only transfer dropped into ordinary text becomes its own block.
+    That is the safe reading, and the common case never reaches it: a real link
+    drag also carries a terminator-free `text/plain`, which `readTransferText`
+    prefers.
+  - Its one bound is focus — a drop need not have focused the editor, so it
+    calls `lexical.focus()`, which is a no-op on a root with no children (a
+    block whose content doc has not hydrated yet).
+
+Spec: `e2e/drop-verify.ts` and `page/url-paste`'s `e2e/url-drop-verify.ts`
+(manual), plus `transfer.test.ts` / `drag-kind.test.ts` for the two pure
+decisions.
 
 ## Paste is an op (`{ kind: "paste", forest, afterId, parentId }`)
 
@@ -2639,6 +2724,7 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
     - `PageContentColumn`
     - `PageIcon`
     - `PageOptionsList`
+    - `readTransferText`
     - `registerBlockPasteHandler`
     - `registerBlockTextExtension`
     - `TextBlockLayout`

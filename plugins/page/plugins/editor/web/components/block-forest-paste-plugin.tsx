@@ -9,7 +9,11 @@ import {
   type BlockTextPluginProps,
 } from "../internal/block-text-extensions";
 import { resolvePastedBlock } from "../internal/block-paste-handlers";
-import { BLOCKS_MIME, decidePaste } from "../internal/clipboard";
+import {
+  BLOCKS_MIME,
+  decideTransfer,
+  readTransferText,
+} from "../internal/transfer";
 
 /**
  * Invisible Lexical plugin that makes a caret-in-block paste honor the block
@@ -17,13 +21,15 @@ import { BLOCKS_MIME, decidePaste } from "../internal/clipboard";
  * (`block-editor.tsx`). Without it, Lexical's default RichText paste dumps a
  * copied forest's `text/plain` fallback into ONE block's Y.Doc, breaking
  * one-paragraph-per-block. On `PASTE_COMMAND` it resolves the clipboard shape via
- * `decidePaste`:
+ * `decideTransfer` — the same classifier the container's paste and DROP doors
+ * run — with `inline: true`, because a caret IS an insertion point a single line
+ * can land in:
  *  - a pasted FILE → `return false` (BlockPastePlugin owns it; the early bail
  *    makes registration order irrelevant);
  *  - a `BLOCKS_MIME` forest → `preventDefault`, parse it, and `paste` the blocks
  *    after this block;
- *  - multi-line `text/plain` → `preventDefault` and `paste` the markdown parsed
- *    into a forest;
+ *  - multi-line text → `preventDefault` and `paste` the markdown parsed into a
+ *    forest;
  *  - single-line text → `return false` (native inline paste is left untouched).
  *
  * Registered at `COMMAND_PRIORITY_NORMAL` (like BlockPastePlugin) so multi-line /
@@ -35,7 +41,10 @@ export function BlockForestPastePlugin({ block }: BlockTextPluginProps) {
   const [lexical] = useLexicalComposerContext();
   const { paste } = useBlockEditor();
   const contributions = Editor.Block.useContributions();
-  const handles = useMemo(() => contributions.map((c) => c.block), [contributions]);
+  const handles = useMemo(
+    () => contributions.map((c) => c.block),
+    [contributions],
+  );
 
   useEffect(() => {
     return lexical.registerCommand<ClipboardEvent>(
@@ -43,12 +52,14 @@ export function BlockForestPastePlugin({ block }: BlockTextPluginProps) {
       (event) => {
         const clipboard = event.clipboardData;
         if (!clipboard) return false;
-        const decision = decidePaste({
+        const decision = decideTransfer({
           isFile: resolvePastedBlock(clipboard) !== null,
           blocksJson: clipboard.getData(BLOCKS_MIME),
-          plainText: clipboard.getData("text/plain"),
+          text: readTransferText(clipboard),
+          inline: true,
         });
-        if (decision.kind === "defer" || decision.kind === "default") return false;
+        if (decision.kind === "file" || decision.kind === "inline")
+          return false;
 
         let forest: SerializedBlock[];
         if (decision.kind === "forest") {

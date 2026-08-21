@@ -27,19 +27,22 @@ import {
  * behind an IME/autofill. Guarding there rather than at `PASTE_COMMAND` is what
  * makes the rule hold across all of those instead of the ones we listed.
  *
- * It does NOT cover that function's third arm, the plain-text fallback, which
+ * It does not cover that function's third arm, the plain-text fallback, which
  * calls `selection.insertParagraph()` per newline and dispatches no command at
- * all. Nothing reaches that arm through a PASTE today — `decidePaste` claims
- * multi-line `text/plain` first — but a DROP has no such classifier in front of
- * it, so dropping multi-line text still splits the root. That is a hole in
- * drop's own wiring rather than in this rule, and it is filed separately.
+ * all — nothing here can reach it. That arm is closed the other way, by making
+ * it unreachable WITH A NEWLINE IN IT: `decideTransfer` (`internal/transfer.ts`)
+ * classifies every transfer entering the page before the gesture gets there, and
+ * sends multi-line text to `paste` as a block forest — on a caret paste, on a
+ * block-selection paste, and (since the container claims the drop before its
+ * default action can fire `beforeinput`/`insertFromDrop`) on a DROP. Two halves,
+ * one invariant: markup arms guarded here, plain-text arm classified away.
  *
  * It claims the insert ONLY when the payload actually carries block structure —
  * `isBlockLevel` is `RangeSelection.insertNodes`' OWN predicate for taking its
  * paragraph-splitting branch. An all-inline payload (the overwhelmingly common
  * case) declines, so the ordinary paste keeps Lexical's exact behaviour.
  *
- * Why block structure can reach a per-block paste at all: `decidePaste`
+ * Why block structure can reach a per-block paste at all: `decideTransfer`
  * classifies from `text/plain`; `text/html` is written by whatever app the user
  * copied from and need not agree with it. A single-line `text/plain` beside a
  * multi-paragraph `text/html` is ordinary output from real editors. Before this,

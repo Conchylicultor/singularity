@@ -18369,6 +18369,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `PageContentColumn`
           - `PageIcon`
           - `PageOptionsList`
+          - `readTransferText`
           - `registerBlockPasteHandler`
           - `registerBlockTextExtension`
           - `TextBlockLayout`
@@ -19553,10 +19554,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `infra/endpoints.fetchEndpoint`
           - `page/editor.Editor`
           - `primitives/css/row.Row`
-    - **`url-paste`** — Paste a URL into an empty text block to turn it into a bookmark or embed.
+    - **`url-paste`** — Paste or drop a URL into an empty text block to turn it into a bookmark or embed.
       - Web:
         - Uses:
           - `page/editor.BlockTextPluginProps`
+          - `page/editor.readTransferText`
           - `page/editor.registerBlockTextExtension`
           - `primitives/css/row.Row`
           - `primitives/text-editor/caret-trigger.CaretTriggerMenu`

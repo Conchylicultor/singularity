@@ -4,10 +4,11 @@
 
 ## Plugin reference
 
-- Description: Paste a URL into an empty text block to turn it into a bookmark or embed.
+- Description: Paste or drop a URL into an empty text block to turn it into a bookmark or embed.
 - Web:
   - Uses:
     - `page/editor.BlockTextPluginProps`
+    - `page/editor.readTransferText`
     - `page/editor.registerBlockTextExtension`
     - `primitives/css/row.Row`
     - `primitives/text-editor/caret-trigger.CaretTriggerMenu`

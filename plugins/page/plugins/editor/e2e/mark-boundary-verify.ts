@@ -1075,7 +1075,7 @@ await withBrowser(async (h) => {
   // correctly answers null. Announcement is the only mechanism that reaches
   // across a decorator.
   //
-  // THE FIXTURE IS A PASTE, not typing. `decidePaste` sends MULTI-LINE
+  // THE FIXTURE IS A PASTE, not typing. `decideTransfer` sends MULTI-LINE
   // `text/plain` through `parseMarkdownToForest` (so `[[<pageId>]]` is a
   // protected span that becomes a real chip node, and `` `code` `` becomes a
   // marked run); a SINGLE-line paste falls through to the native inline paste and
