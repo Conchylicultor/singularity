@@ -44,13 +44,13 @@ Commit `18126884a` fixed it. Copy both halves — neither is optional:
   ([`codegen/core/enriched-tree.ts`](../codegen/core/enriched-tree.ts)) runs the
   declaration pass itself, memoized per root. It used to live in one caller's
   pipeline ordering, where it held for that pipeline and nowhere else.
-- **Make the early read throw.** `slotDeclarationPasses()` in
-  [`slot-declaration/core/declaration.ts`](../../../slot-declaration/core/declaration.ts)
-  counts completed passes, and the contributions facet refuses to extract while
-  it is zero. A **count**, not `owners.size > 0`, so a pass over plugins that
-  declare no slots is not mistaken for a pass that never ran. Without the throw,
-  reading too early returns a smaller answer that looks correct — which is how
-  this shipped.
+- **Leave the early read no spelling.** The contributions facet is handed the
+  imported barrels and the naming the declaration pass over them settled as ONE
+  value (`ExtractContext.imported`), so a reader cannot hold the barrels without
+  the pass that names their slots. This began as a runtime count the facet
+  refused to extract while zero; pairing the two turned the assert into a type.
+  Without either, reading too early returns a smaller answer that looks correct
+  — which is how this shipped.
 
 `cacheSignature()` follows the same reasoning: a signature keys a verdict, it
 cannot make one reproducible. If the verdict depends on something outside the

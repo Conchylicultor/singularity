@@ -15,11 +15,11 @@ export default createFacet<DocMetaRegistration[]>({
   def: registrationsFacetDef,
 
   extract(ctx: ExtractContext): DocMetaRegistration[] {
-    const { importedModules } = ctx;
-    if (!importedModules || importedModules.length === 0) return [];
+    const modules = ctx.imported?.modules;
+    if (!modules || modules.length === 0) return [];
 
     const registrations: DocMetaRegistration[] = [];
-    for (const { mod, runtime } of importedModules) {
+    for (const { mod, runtime } of modules) {
       if (runtime !== "server" && runtime !== "central") continue;
       let def: Record<string, unknown> | undefined;
       try {
@@ -30,7 +30,11 @@ export default createFacet<DocMetaRegistration[]>({
       }
       if (!def) continue;
       const rawRegister = def.register as
-        | Array<{ _kind?: string; _factory?: string; _doc?: { label?: string; detail?: string } }>
+        | Array<{
+            _kind?: string;
+            _factory?: string;
+            _doc?: { label?: string; detail?: string };
+          }>
         | undefined;
       if (!rawRegister) continue;
       for (const r of rawRegister) {
@@ -53,7 +57,11 @@ export default createFacet<DocMetaRegistration[]>({
     for (const runtime of ["server", "central"] as const) {
       const regs = data.filter((r) => r.runtime === runtime);
       if (regs.length === 0) continue;
-      facts.push({ folder: runtime, key: "Register", values: regs.map(formatRegistration) });
+      facts.push({
+        folder: runtime,
+        key: "Register",
+        values: regs.map(formatRegistration),
+      });
     }
     return facts;
   },

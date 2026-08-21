@@ -5,6 +5,7 @@ import {
   declaredSlotSources,
   isSlot,
   seg,
+  slotIdFor,
 } from "@plugins/framework/plugins/slot-declaration/core";
 import type { SlotHandle } from "@plugins/framework/plugins/slot-declaration/core";
 import {
@@ -61,7 +62,7 @@ function parseSlotCalls(
 
     // DERIVED, not read: the id is the declaring plugin plus the declaration
     // key, and the key is what the member is called.
-    const slotId = `${pluginId}.${seg(memberName)}`;
+    const slotId = slotIdFor(pluginId, seg(memberName));
     out.push({ memberName, slotId, groupName, kind, contributors: [] });
   }
   return out;
@@ -114,7 +115,7 @@ function parseSlotsFromSource(dir: string, pluginId: string): SlotDef[] {
         "defineSlot",
         (memberName, groupName): SlotDef => ({
           memberName,
-          slotId: `${pluginId}.${seg(memberName)}`,
+          slotId: slotIdFor(pluginId, seg(memberName)),
           groupName,
           kind: "slot",
           contributors: [],
@@ -125,7 +126,7 @@ function parseSlotsFromSource(dir: string, pluginId: string): SlotDef[] {
         "defineDispatchSlot",
         (memberName, groupName): SlotDef => ({
           memberName,
-          slotId: `${pluginId}.${seg(memberName)}`,
+          slotId: slotIdFor(pluginId, seg(memberName)),
           groupName,
           kind: "dispatch",
           contributors: [],
@@ -223,7 +224,7 @@ function collectDeclaredSlots(
     if (!sources) continue;
     const names = namesFromBarrelExports(mod);
     for (const { slot, key } of collectSlots(dir, sources)) {
-      const slotId = `${pluginId}.${key}`;
+      const slotId = slotIdFor(pluginId, key);
       if (seen.has(slotId)) continue;
       seen.add(slotId);
       // A slot nothing exports (a pane's `Actions`) has no `Group.Member`
@@ -258,8 +259,9 @@ export default createFacet<SlotDef[]>({
     //    built from a template/identifier expression rather than a string
     //    a slot with no NAME in source (one minted inside a factory, such as a
     //    pane's `Actions`) — those the barrel-import path sees instead.
-    if (ctx.importedModules && ctx.importedModules.length > 0) {
-      return collectDeclaredSlots(ctx.dir, ctx.pluginId, ctx.importedModules);
+    const modules = ctx.imported?.modules;
+    if (modules && modules.length > 0) {
+      return collectDeclaredSlots(ctx.dir, ctx.pluginId, modules);
     }
     return parseSlotsFromSource(ctx.dir, ctx.pluginId);
   },

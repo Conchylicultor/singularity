@@ -14787,12 +14787,15 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `SlotDeclarationListener`
           - `SlotDeclaringPlugin`
           - `SlotHandle`
+          - `SlotLookup`
           - `SlotMeta`
+          - `SlotNaming`
+          - `SlotNamingEntry`
           - `SlotRecord`
+          - `SlotScope`
           - `SlotSource`
         - Exports (values):
           - `collectSlots`
-          - `declaredSlotId`
           - `declaredSlotSources`
           - `declarePluginSlots`
           - `findUndeclaredSlots`
@@ -14800,7 +14803,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `isSlot`
           - `recordCreatedSlot`
           - `seg`
-          - `slotDeclarationPasses`
+          - `slotIdFor`
           - `subscribeSlotsDeclared`
     - **`tooling`** — Umbrella for build-time tooling: boundary checker, lint rules, checks, guards, codegen
       - Core:
@@ -14962,11 +14965,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `framework/plugin-id.asPluginId`
               - `framework/plugin-id.PluginId`
               - `framework/plugin-id.UNDOCUMENTED_RUNTIME_FOLDERS`
-              - `framework/slot-declaration.declaredSlotId`
               - `framework/slot-declaration.declaredSlotSources`
               - `framework/slot-declaration.declarePluginSlots`
               - `framework/slot-declaration.findUndeclaredSlots`
-              - `framework/slot-declaration.getCreatedSlots`
               - `framework/tooling/format.formatIfFormattable`
               - `framework/tooling/format.SourceBytes`
               - `framework/tooling/resource-vocabulary.resourceDescriptorFactories`
@@ -15408,6 +15409,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `framework/plugin-loader.topoSortPlugins`
           - `framework/slot-declaration.declarePluginSlots`
           - `framework/slot-declaration.recordCreatedSlot`
+          - `framework/slot-declaration.slotIdFor`
           - `framework/tooling/collected-dir.defineCollectedDir`
         - Exports (types):
           - `Contribution`
@@ -17728,6 +17730,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `framework/resource-runtime`
           - `framework/tooling/web-artifacts`
           - `infra/endpoints`
+          - `plugin-meta/barrel-import`
       - Core:
         - Exports (types): `Semaphore`
         - Exports (values): `createSemaphore`
@@ -19584,11 +19587,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
 - **`plugin-meta`** — Plugins about the plugin system itself — browsing, inspecting, and publishing.
   - Plugins:
     - **`barrel-import`** — Bun runtime stubs for importing web/server barrels outside the browser (docgen, introspection).
-      - Cross-plugin:
-        - Imported by:
-          - `framework/tooling/codegen`
-          - `plugin-meta/plugin-tree`
       - Core:
+        - Uses: `packages/semaphore.createSemaphore`
         - Exports (types): `AutoStubEntry`
         - Exports (values):
           - `AUTO_STUB_CSS`
@@ -19597,6 +19597,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `importBarrel`
           - `registerBarrelStubs`
           - `setPreBarrelImportGuard`
+      - Cross-plugin:
+        - Imported by:
+          - `framework/tooling/codegen`
+          - `plugin-meta/plugin-tree`
     - **`closure`**
       - Core:
         - Uses:

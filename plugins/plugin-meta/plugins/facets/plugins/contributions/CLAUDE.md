@@ -5,8 +5,14 @@ Extracts runtime slot contributions from each plugin's barrel imports. Reads
 practice only web barrels carry contributions).
 
 Unlike static-analysis facets (commands, slots, resources), this facet needs the barrel-imported
-modules — it reads the `importedModules` field of `ExtractContext`, which is populated by
-`buildPluginTree()` when `skipBarrelImport` is not set.
+modules — it reads the `imported` field of `ExtractContext`, which is populated by
+`buildPluginTree()` when `skipBarrelImport` is not set. That field carries the modules and the
+`SlotNaming` of the declaration pass over those same modules as ONE value, and the pairing is the
+point: a plugin's `contributions` array is not always a literal (reorder's is filled by a
+`subscribeSlotsDeclared` callback), and reading barrels without a pass answers with a smaller set
+indistinguishable from a correct one — which is how a `docs/plugins-details.md` missing reorder's
+whole `Contributes:` block once shipped. Slot ids come from `naming.idOf(c._slot)`, never from the
+process-global stamps, so this facet's answer cannot depend on what else ran beside it.
 
 `extract()` collects `{ slotId, componentName, doc }` without display names.
 `relate()` fills in `slotDisplayName` by reading from the slots facet —

@@ -274,6 +274,7 @@ An umbrella is a grouping shell that nests related sub-plugins under `plugins/`.
     - `framework/plugin-loader.topoSortPlugins`
     - `framework/slot-declaration.declarePluginSlots`
     - `framework/slot-declaration.recordCreatedSlot`
+    - `framework/slot-declaration.slotIdFor`
     - `framework/tooling/collected-dir.defineCollectedDir`
   - Exports (types):
     - `Contribution`

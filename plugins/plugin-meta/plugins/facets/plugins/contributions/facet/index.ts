@@ -1,5 +1,4 @@
 import type { SlotHandle } from "@plugins/framework/plugins/slot-declaration/core";
-import { declaredSlotId } from "@plugins/framework/plugins/slot-declaration/core";
 import { join } from "path";
 import type {
   PluginTree,
@@ -15,7 +14,6 @@ import {
   type SlotDef,
   slotsFacetDef,
 } from "@plugins/plugin-meta/plugins/facets/plugins/slots/core";
-import { slotDeclarationPasses } from "@plugins/framework/plugins/slot-declaration/core";
 import {
   readIfExists,
   stripTypes,
@@ -83,32 +81,25 @@ export default createFacet<ContributionsFacetData>({
 
     // Runtime contributions from barrel imports (existing logic)
     const runtimeContributions: DocMetaContribution[] = [];
-    const { importedModules } = ctx;
-    if (importedModules && importedModules.length > 0) {
-      // A plugin's `contributions` array is not always a literal in its barrel.
-      // `reorder`'s starts empty and is filled by a `subscribeSlotsDeclared`
-      // callback — one config directive per reorderable slot — so it holds 0
-      // entries until a slot-declaration pass has run in THIS process, and ~240
-      // after. Reading the array before that pass therefore answers with a
-      // smaller set that is indistinguishable from a correct one: that is how a
-      // `docs/plugins-details.md` missing reorder's whole `Contributes:` block
-      // got committed, and how it made `main` un-pushable four commits later.
-      // Refuse the early read instead of quietly under-reporting.
-      //
-      // The `skipBarrelImport` path passes no modules, so it never reaches here,
-      // and facets never run in the browser.
-      if (slotDeclarationPasses() === 0) {
-        throw new Error(
-          "[facet.contributions] Plugin barrels are imported, but no slot-declaration pass " +
-            "has run in this process. Any plugin whose `contributions` are derived from the " +
-            "declaration — reorder mints one config directive per reorderable slot — would " +
-            "read as EMPTY, and the result would look like a correct, slightly smaller answer. " +
-            "Build the tree with `buildEnrichedTree()` from " +
-            "`@plugins/framework/plugins/tooling/plugins/codegen/core`, which runs the pass " +
-            "first, instead of calling `buildPluginTree(..., { facets: true })` directly.",
-        );
-      }
-      for (const { mod } of importedModules) {
+    // Barrels and the naming of the pass over them arrive together, and that
+    // pairing is load-bearing here more than anywhere else. A plugin's
+    // `contributions` array is not always a literal in its barrel: `reorder`'s
+    // starts empty and is filled by a `subscribeSlotsDeclared` callback — one
+    // config directive per reorderable slot — so it holds 0 entries until a
+    // declaration pass has run, and ~240 after. Reading the barrels without one
+    // answers with a smaller set indistinguishable from a correct one: that is
+    // how a `docs/plugins-details.md` missing reorder's whole `Contributes:`
+    // block got committed, and how it made `main` un-pushable four commits
+    // later. A runtime assert (`slotDeclarationPasses() === 0`) used to stand
+    // here and refuse the early read; `ExtractContext.imported` now makes that
+    // state unspellable, so the assert has nothing left to catch.
+    //
+    // The `skipBarrelImport` path passes no modules, so this block is skipped,
+    // and facets never run in the browser.
+    const imported = ctx.imported;
+    if (imported && imported.modules.length > 0) {
+      const { naming } = imported;
+      for (const { mod } of imported.modules) {
         let def: Record<string, unknown> | undefined;
         try {
           def = mod.default as Record<string, unknown> | undefined;
@@ -137,11 +128,19 @@ export default createFacet<ContributionsFacetData>({
         if (!rawContributions) continue;
 
         for (const c of rawContributions) {
-          // Resolved ONCE: a contribution to an undeclared slot (a disabled
-          // plugin's) has no id, and that absence is the discriminator.
-          const slotId = declaredSlotId(c._slot);
-          if (slotId !== undefined) {
-            // web slot contribution (existing behavior)
+          // WHICH RUNTIME a contribution belongs to is decided here, by which
+          // marker it carries — `_slot` (a web contribution, targeting a slot)
+          // or a `_kind` symbol (a server registration). It used to be decided
+          // by whether the slot could be NAMED, which quietly conflated "this is
+          // not a web contribution" with "nobody has named this slot yet".
+          if (c._slot) {
+            const lookup = naming.idOf(c._slot);
+            // Out of scope is a real answer, not a failure to report: this
+            // extraction's pass covers the whole checkout, so a slot it did not
+            // name is one no plugin declares anywhere — an orphan, which the
+            // build-time orphan guard owns and reports on its own terms. Skip it
+            // here rather than inventing a name for it.
+            if (lookup.kind !== "named") continue;
             const comp = c.component;
             const componentName =
               typeof comp === "function" && comp.name
@@ -149,7 +148,7 @@ export default createFacet<ContributionsFacetData>({
                 : undefined;
             runtimeContributions.push({
               kind: "slot",
-              slotId,
+              slotId: lookup.id,
               // slotDisplayName + pluginId filled in by relate()
               componentName,
               doc: c._doc ?? {},

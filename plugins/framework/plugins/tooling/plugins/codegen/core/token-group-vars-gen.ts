@@ -1,5 +1,4 @@
 import type { SlotHandle } from "@plugins/framework/plugins/slot-declaration/core";
-import { declaredSlotId } from "@plugins/framework/plugins/slot-declaration/core";
 import { existsSync } from "fs";
 import { join, relative } from "path";
 import { writeGenerated } from "./write-generated";
@@ -88,9 +87,15 @@ async function collectTokenGroupVarsUncached(
   registerBarrelStubs(root);
   // Imports web barrels below, so it must also declare their slots: a
   // contribution names its slot by object, and that slot's id comes from
-  // whichever plugin declares it. Without this every id is `undefined` and the
-  // token-group set reads as empty — a smaller, wrong answer that looks right.
-  await declareSlotsFromBarrels(root);
+  // whichever plugin declares it. Without this the token-group set reads as
+  // empty — a smaller, wrong answer that looks right.
+  const naming = await declareSlotsFromBarrels(root, "registry");
+  // Resolved ONCE, here, rather than compared as a string inside the loop: a
+  // stale id then fails at this named line instead of matching nothing and
+  // emitting an empty manifest (which is how `css-vars-supplied` once reported
+  // real CSS variables as having no supplier). A generator SHOULD abort, so
+  // this is `slotNamed`, not the probe form a check owes.
+  const tokenGroupSlot = naming.slotNamed(TOKEN_GROUP_SLOT_ID);
 
   const byGroup: Record<string, string[]> = {};
   for (const node of tree.byDir.values()) {
@@ -114,7 +119,7 @@ async function collectTokenGroupVarsUncached(
     const contributions = def?.contributions;
     if (!contributions) continue;
     for (const c of contributions) {
-      if (declaredSlotId(c._slot) !== TOKEN_GROUP_SLOT_ID) continue;
+      if (c._slot !== tokenGroupSlot) continue;
       const id = c.id;
       const descriptor = c.descriptor as
         { vars?: Record<string, string> } | undefined;

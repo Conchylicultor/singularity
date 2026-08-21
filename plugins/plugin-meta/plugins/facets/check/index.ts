@@ -1,14 +1,8 @@
 import type { SlotHandle } from "@plugins/framework/plugins/slot-declaration/core";
-import { declaredSlotId } from "@plugins/framework/plugins/slot-declaration/core";
 import { existsSync } from "fs";
 import { join, relative } from "path";
 import { buildPluginTree } from "@plugins/plugin-meta/plugins/plugin-tree/core";
-import {
-  declarePluginSlots,
-  declaredSlotSources,
-  type SlotRecord,
-} from "@plugins/framework/plugins/slot-declaration/core";
-import type { PluginId } from "@plugins/framework/plugins/plugin-id/core";
+import { declareSlotsFromBarrels } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
 import { loadFacets } from "@plugins/plugin-meta/plugins/facets/core";
 import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
 import {
@@ -62,22 +56,45 @@ const check: Check = {
     // This check imports web barrels ITSELF (the tree above is structure-only),
     // so it must also declare their slots: a contribution names its slot by
     // object, and that slot's id comes from whichever plugin declares it.
-    // Without a pass, every id is `undefined` and every surface reads as missing.
+    // Without a pass there is nothing to compare a contribution's slot against.
     //
-    // The pass is INCLUSIVE of disabled plugins, which is why it is done here
-    // rather than through `declareSlotsFromBarrels` (that one models the live
-    // REGISTRY, so it skips them). This check asks a question about SOURCE —
+    // `"source"`, not `"registry"`: this check asks a question about SOURCE —
     // "does every facet have a renderer contributed" — and a disabled plugin's
-    // renderer slot is still a real declaration in the tree. Skipping it would
-    // report every facet as missing a diff renderer.
-    const declaring: { id: PluginId; slots: SlotRecord }[] = [];
-    for (const node of tree.byDir.values()) {
-      const barrel = join(node.dir, "web", "index.ts");
-      if (!existsSync(barrel)) continue;
-      const slots = declaredSlotSources(await importBarrel(barrel));
-      if (slots) declaring.push({ id: node.id, slots });
+    // renderer is still a real declaration in the tree. One of the surfaces
+    // below, `review.plugin-changes.diff-renderer`, is owned by the disabled
+    // `review/plugins/plugin-changes`, so under registry scope it would not be
+    // declared at all and every facet would read as missing its diff renderer.
+    const naming = await declareSlotsFromBarrels(root, "source");
+
+    // Resolved ONCE, here, and compared by object identity in the loop below.
+    // A slot id is derived from its declaring plugin, so moving that plugin
+    // renames every slot it owns — and an id spelled inside the loop would then
+    // simply match nothing, which reads as "no facet contributes a renderer"
+    // rather than as the stale literal it is. Resolved up front, the same
+    // mistake is one named failure naming the id and the scope.
+    //
+    // `findSlot`, never `slotNamed`: the check runner awaits every check under
+    // `Promise.all` and rethrows, so a throw here would kill every other check's
+    // reporting. A miss is this check's own `{ ok: false }`.
+    const surfaces: {
+      slot: SlotHandle;
+      def: (typeof RENDER_SURFACES)[number];
+    }[] = [];
+    for (const def of RENDER_SURFACES) {
+      const slot = naming.findSlot(def.slotId);
+      if (!slot) {
+        return {
+          ok: false,
+          message:
+            `No slot is declared under the id "${def.slotId}" (the ${def.surface} render surface) ` +
+            `in the "source" declaration pass — every plugin this checkout declares, disabled ones ` +
+            `included. Either the id here is stale (a slot's id is \`<pluginId>.<slots key>\`, so ` +
+            `moving or renaming the declaring plugin renames it) or the plugin that declared it no ` +
+            `longer does.`,
+        };
+      }
+      surfaces.push({ slot, def });
     }
-    declarePluginSlots(declaring);
 
     const covered = new Map(
       RENDER_SURFACES.map((s) => [s.slotId, new Set<string>()]),
@@ -106,9 +123,7 @@ const check: Check = {
       const contributions = def?.contributions;
       if (!contributions) continue;
       for (const c of contributions) {
-        const surface = RENDER_SURFACES.find(
-          (s) => s.slotId === declaredSlotId(c._slot),
-        );
+        const surface = surfaces.find((s) => s.slot === c._slot)?.def;
         if (!surface) continue;
         const fid = c[surface.facetKey];
         if (typeof fid !== "string") continue;

@@ -114,6 +114,28 @@ export function seg(key: string): string {
     .toLowerCase();
 }
 
+/**
+ * A slot's id, from its two halves. The ONE place `` `${pluginId}.${keyPath}` ``
+ * is spelled.
+ *
+ * A slot has no id of its own — it is the declaring plugin's id plus the key
+ * that plugin declared it under — so the composition is a fact about the naming
+ * scheme, not a string each reader happens to build. It was built in six places
+ * (the `slot.id` getter, {@link declarePluginSlots}, and four sites in the slots
+ * facet), and the facet's copies are the ones that matter: they run under
+ * `skipBarrelImport`, where there is no declaration to read the id back off, so
+ * they must derive the SAME id the pass would settle. Six spellings of a
+ * scheme is six chances for one to drift and produce a plausible id that names
+ * nothing.
+ *
+ * `keyPath` is already an id-segment path ("sidebar", "canvas.actions") — the
+ * form {@link collectSlots} settles and {@link seg} produces. This does not
+ * re-`seg` it, because a dotted path's separators are not part of a segment.
+ */
+export function slotIdFor(pluginId: string, keyPath: string): string {
+  return `${pluginId}.${keyPath}`;
+}
+
 const SEGMENT_RE = /^[a-z0-9]+(-[a-z0-9]+)*$/;
 
 /**
@@ -163,27 +185,6 @@ export function isSlot(v: unknown): v is SlotHandle {
     typeof s.meta === "object" &&
     s.meta !== null
   );
-}
-
-/**
- * A slot's id IF it has one — `undefined` while undeclared, where reading
- * `slot.id` would throw.
- *
- * For readers that legitimately meet undeclared slots: a build-time walk over
- * every barrel sees DISABLED plugins too, and the declaration pass deliberately
- * skips those (a plugin the browser never loads owns nothing). Their slots have
- * no name, and "no name" is an answer such a walker can act on — so it gets a
- * value to test rather than an exception to catch.
- */
-export function declaredSlotId(
-  slot: SlotHandle | undefined,
-): string | undefined {
-  // Takes `undefined` because the question its callers ask is "does this
-  // contribution name a slot, and if so which" — a SERVER contribution carries
-  // `_kind` and no `_slot` at all, so absent and undeclared are one answer here.
-  return slot?._pluginId === undefined || slot._key === undefined
-    ? undefined
-    : `${slot._pluginId}.${slot._key}`;
 }
 
 /**
@@ -337,7 +338,156 @@ export interface SlotDeclaringPlugin {
 }
 
 /**
- * Notified at the end of every declaration pass with the complete owners map.
+ * Which plugin set a declaration pass modelled — carried BY the answers that
+ * pass gives, so "not declared" can say what it is not declared *in*.
+ *
+ *  - `"registry"` — the plugin set the browser actually loads. A DISABLED
+ *    plugin is absent from it, so its slots are legitimately unnamed under this
+ *    scope: that is an answer, not a failure.
+ *  - `"source"` — everything the checkout declares, disabled plugins included.
+ *    What a reader describing the SOURCE (the facets, the docs) needs.
+ *
+ * Declared HERE, in the leaf, rather than beside the scoped barrel pass that
+ * takes it as an argument: {@link SlotLookup} has to name a scope, and this
+ * module may not import codegen — nor anything else (see the file header, and
+ * this plugin's CLAUDE.md). The scoped entry point imports the type from here
+ * instead, which is the direction the dependency already runs.
+ */
+export type SlotScope = "registry" | "source";
+
+/** One declaration a pass settled: the slot, its id, and the two parts of it. */
+export interface SlotNamingEntry {
+  slot: SlotHandle;
+  id: string;
+  pluginId: PluginId;
+  key: string;
+}
+
+/**
+ * What a slot is called, as a STATE rather than a nullable string.
+ *
+ * There used to be a free `declaredSlotId(slot?): string | undefined` here, and
+ * that `undefined` carried three different meanings: "this contribution targets
+ * no slot",
+ * "no declaration pass ran, I cannot answer", and "declared by nobody in this
+ * scope". Only the last is a real answer, and it is the only one left here — the
+ * first belongs at the call site, beside the `if (c._slot)` branch it is really
+ * about, and the second is not reachable, because `idOf` is a method on a naming
+ * and only a pass mints one.
+ *
+ * A union rather than `string | undefined` is what makes the surviving state
+ * UNABSORBABLE: `id` exists only on the `named` arm, so a consumer cannot reach
+ * it without discriminating, and there is no `undefined` left to `!==` against —
+ * the comparison that silently matches nothing and reads downstream as "this
+ * plugin contributes nothing" instead of as the tooling failure it is.
+ */
+export type SlotLookup =
+  | { kind: "named"; id: string; pluginId: PluginId; key: string }
+  | { kind: "out-of-scope"; scope: SlotScope };
+
+/**
+ * The witness a declaration pass returns: the naming it settled, and the only
+ * thing that can say what a slot is called.
+ *
+ * WHY IT HOLDS ITS OWN MAPS rather than reading the `_pluginId` / `_key` stamps
+ * back off the slot objects. The stamps are process-global, monotonic and never
+ * cleared, so reading them answers "the union of every pass that has run so far
+ * in this process", not "what THIS pass declared". Checks run concurrently under
+ * `Promise.all` (`checks/core/runner.ts`), so which passes have landed when a
+ * given check reads is a matter of interleaving; and a `"tree"` check's verdict
+ * is CACHED and trusted by a later `push` from a different process, so it must
+ * be a function of the tree and of nothing else that ran beside it
+ * (`tooling/core/types.ts` states that rule verbatim, with this very bug class
+ * as its worked example). A naming built from the stamps would quietly make one
+ * check's answer depend on another's timing. Do not "simplify" these maps away.
+ *
+ * The stamps stay — the browser's `slot.id` getter derives from them, and the
+ * orphan guard asks whether a slot was ever declared at all. They are simply no
+ * longer how a SCOPED reader gets its answer.
+ */
+export interface SlotNaming {
+  /**
+   * The slot this pass declared under `id`. THROWS on an id this pass did not
+   * settle, naming both the id and the scope.
+   *
+   * For a GENERATOR, which should abort: resolve once outside a loop and compare
+   * `c._slot === theSlot` inside it, so no id string survives in the loop to
+   * drift and a stale one fails at a single named line instead of matching
+   * nothing. A CHECK must use {@link SlotNaming.findSlot} instead — the runner
+   * awaits every check under `Promise.all` and rethrows, so one throw inside a
+   * check kills every other check's reporting.
+   */
+  slotNamed(id: string): SlotHandle;
+  /** Probe form, for a caller that must turn absence into its own failure value. */
+  findSlot(id: string): SlotHandle | undefined;
+  /**
+   * Note the parameter: `SlotHandle`, never `SlotHandle | undefined`. "This
+   * contribution targets no slot" is the caller's own branch, not an arm of this
+   * answer.
+   */
+  idOf(slot: SlotHandle): SlotLookup;
+  /** Every declaration this pass settled, in declaration order. */
+  declarations(): readonly SlotNamingEntry[];
+  /** Preserved, so existing owners-map consumers are untouched. */
+  owners: ReadonlyMap<string, PluginId>;
+}
+
+/** The scope as a message fragment, so a failure says what it is scoped to. */
+function describeScope(scope: SlotScope): string {
+  return scope === "registry"
+    ? `"registry" scope — the plugin set the browser loads, which excludes disabled plugins`
+    : `"source" scope — every plugin the checkout declares`;
+}
+
+/**
+ * Freeze one pass's maps into the witness it returns. A frozen closure, not a
+ * class: `core/` here is functional, and there is no state to mutate afterwards
+ * — that is the property the whole design rests on.
+ */
+function makeNaming(
+  entries: readonly SlotNamingEntry[],
+  owners: ReadonlyMap<string, PluginId>,
+  scope: SlotScope,
+): SlotNaming {
+  const byId = new Map(entries.map((e) => [e.id, e]));
+  const bySlot = new Map(entries.map((e) => [e.slot, e]));
+  return Object.freeze({
+    owners,
+    declarations: () => entries,
+    findSlot: (id: string): SlotHandle | undefined => byId.get(id)?.slot,
+    slotNamed: (id: string): SlotHandle => {
+      const entry = byId.get(id);
+      if (entry === undefined) {
+        throw new Error(
+          `[slots] no slot is declared under the id "${id}" in this declaration ` +
+            `pass (${describeScope(scope)}). Either the id is stale — an id derives ` +
+            `from the declaring plugin's id plus its \`slots\` key, so moving a ` +
+            `plugin renames every slot it owns — or its declaring plugin is outside ` +
+            `this scope.`,
+        );
+      }
+      return entry.slot;
+    },
+    idOf: (slot: SlotHandle): SlotLookup => {
+      // A FACADE is looked through, exactly as `collectSlots` looks through one
+      // when it declares it: the facade fronts the target, delegates its `id`
+      // getter to the target, and the target is the object this pass recorded.
+      const entry = bySlot.get(slot._slot ?? slot);
+      return entry === undefined
+        ? { kind: "out-of-scope", scope }
+        : {
+            kind: "named",
+            id: entry.id,
+            pluginId: entry.pluginId,
+            key: entry.key,
+          };
+    },
+  });
+}
+
+/**
+ * Notified at the end of every declaration pass with that pass's naming (whose
+ * `.owners` is the map subscribers have always read).
  *
  * The seam exists because a slot's OWNER is not known at construction — a slot
  * object is minted when its module evaluates, and which plugin owns it is only
@@ -350,43 +500,34 @@ export interface SlotDeclaringPlugin {
  * batch runs a fresh declaration pass over the grown plugin set, so a derived
  * registry catches up instead of being frozen at the first module's eval.
  */
-export type SlotDeclarationListener = (
-  owners: ReadonlyMap<string, PluginId>,
-) => void;
+export type SlotDeclarationListener = (naming: SlotNaming) => void;
 
 const declarationListeners = new Set<SlotDeclarationListener>();
-let lastOwners: ReadonlyMap<string, PluginId> = new Map();
-
-// How many declaration passes have COMPLETED in this runtime. A count, not
-// `lastOwners.size > 0`: a pass over a plugin set that legitimately declares no
-// slots must not be indistinguishable from a pass that never ran.
-let passes = 0;
-
-/**
- * How many declaration passes have completed in this runtime.
- *
- * Not a general-purpose statistic — it is the EVIDENCE a consumer of plugins'
- * `contributions` needs, because a contributions array is not always a literal:
- * one derived from the declaration (reorder's per-slot config directives, filled
- * by `subscribeSlotsDeclared`) is empty until a pass has run. A reader that
- * imports barrels without running one therefore gets a silently smaller answer
- * that is indistinguishable from a correct one. Zero here means "you are reading
- * too early", and that is the only question this number exists to answer.
- */
-export function slotDeclarationPasses(): number {
-  return passes;
-}
+// The naming of the pass that ran LAST, replayed to late subscribers. Before the
+// first pass it is an empty one rather than `undefined`, so a subscriber never
+// has to branch on "has a pass run".
+//
+// There used to be a `slotDeclarationPasses()` counter beside this, so that a
+// reader of plugins' `contributions` could refuse to answer before the first
+// pass — a contributions array derived from the declaration (reorder's per-slot
+// config directives, filled by `subscribeSlotsDeclared`) is empty until then,
+// and reading it early gives a smaller answer indistinguishable from a correct
+// one. That was a runtime assert standing in for a missing type. The one reader
+// that needed it (the contributions facet) is now handed its modules and the
+// naming of the pass over them as ONE value, so "barrels without a pass" has no
+// spelling on that path and there is nothing left to count.
+let lastNaming: SlotNaming = makeNaming([], new Map(), "registry");
 
 /**
  * Subscribe to declaration passes. The listener is invoked immediately with the
- * latest owners map (empty before the first pass), so a subscriber that
+ * latest naming (an empty one before the first pass), so a subscriber that
  * registers late is never one pass behind.
  */
 export function subscribeSlotsDeclared(
   listener: SlotDeclarationListener,
 ): () => void {
   declarationListeners.add(listener);
-  listener(lastOwners);
+  listener(lastNaming);
   return () => {
     declarationListeners.delete(listener);
   };
@@ -404,11 +545,28 @@ export function subscribeSlotsDeclared(
  *
  * Idempotent: re-running over a superset of plugins (the browser appends each
  * deferred batch) re-derives the same map and re-writes the same stamps.
+ *
+ * Returns the {@link SlotNaming} this pass settled — the witness that OWNS the
+ * answers, so no reader has to hope a pass ran, and no reader's answer depends
+ * on which other pass ran beside it.
+ *
+ * `scope` is REQUIRED, and deliberately has no default. It is what an
+ * `out-of-scope` answer names, and the two scopes model different plugin sets —
+ * a default would let a source-scoped reader (the facets, the docs, anything
+ * describing the checkout) silently receive the registry's smaller answer, which
+ * is the shape of failure this whole witness exists to remove. Every pass site
+ * states which question it is asking: `PluginProvider` and the codegen barrel
+ * guard's registry pass say `"registry"`, the enriched tree says `"source"`.
  */
 export function declarePluginSlots(
   plugins: readonly SlotDeclaringPlugin[],
-): Map<string, PluginId> {
+  scope: SlotScope,
+): SlotNaming {
   const owners = new Map<string, PluginId>();
+  // THIS pass's declarations, in declaration order. Accumulated here rather than
+  // recovered afterwards from the stamps written below — see {@link SlotNaming}
+  // for why that distinction is the whole point.
+  const entries: SlotNamingEntry[] = [];
   // Which slot OBJECT claimed each id in THIS pass. Keying on the object rather
   // than on the owner id is what catches a same-plugin collision: two slots of
   // one plugin landing on one id used to pass silently, and downstream they
@@ -422,7 +580,7 @@ export function declarePluginSlots(
       // Composed here rather than read off `slot.id`: the getter derives the id
       // FROM the stamps this loop is about to write, so asking the slot for its
       // own name before naming it is exactly the read that throws.
-      const id = `${plugin.id}.${key}`;
+      const id = slotIdFor(plugin.id, key);
       const existing = owners.get(id);
       if (existing !== undefined && existing !== plugin.id) {
         throw new Error(
@@ -439,19 +597,27 @@ export function declarePluginSlots(
             `list — give them distinct keys in that plugin's \`slots\` record.`,
         );
       }
+      // First settlement of this id in this pass. A plugin can legitimately
+      // reach here twice — the facet tree declares per imported MODULE, so a
+      // plugin's web and server barrels both push a record — and the two guards
+      // above have already proved it is the same slot and the same owner, so the
+      // first entry stands rather than being duplicated.
+      if (prior === undefined) {
+        entries.push({ slot, id, pluginId: plugin.id, key });
+      }
       claimant.set(id, slot);
       owners.set(id, plugin.id);
       slot._pluginId = plugin.id;
       slot._key = key;
     }
   }
-  lastOwners = owners;
-  // Counted before the listeners run, so a subscriber that re-derives state here
-  // (and anything it calls) already sees the pass it is being notified about. A
-  // pass that threw above never gets counted — it did not settle any ownership.
-  passes++;
-  for (const listener of declarationListeners) listener(owners);
-  return owners;
+  const naming = makeNaming(entries, owners, scope);
+  // Published before the listeners run, so a subscriber that re-derives state
+  // here (and anything it calls) already sees the pass it is being notified
+  // about. A pass that threw above never publishes — it settled no ownership.
+  lastNaming = naming;
+  for (const listener of declarationListeners) listener(naming);
+  return naming;
 }
 
 /**

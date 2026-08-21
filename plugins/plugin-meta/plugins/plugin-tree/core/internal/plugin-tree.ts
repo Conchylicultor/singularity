@@ -428,7 +428,13 @@ export async function buildPluginTree(
     // declared slots. Disabled plugins are included deliberately — their barrels
     // were imported too, and a facet describes source, not the live registry
     // (the runtime sets filter on `disabled` separately).
-    declarePluginSlots(
+    //
+    // `"source"` is the scope this pass models, and it is what the paragraph
+    // above says in one word: every plugin the checkout declares, disabled ones
+    // included. An `out-of-scope` answer from this naming therefore means the
+    // slot is declared by nobody anywhere, not merely by nobody the browser
+    // loads.
+    const naming = declarePluginSlots(
       [...byDir.values()].flatMap((node) => {
         const mods = importedModules.get(node.dir) ?? [];
         return mods.flatMap((m) => {
@@ -436,6 +442,7 @@ export async function buildPluginTree(
           return slots ? [{ id: node.id, slots }] : [];
         });
       }),
+      "source",
     );
     let extracted = 0;
     for (const node of byDir.values()) {
@@ -445,7 +452,10 @@ export async function buildPluginTree(
           const data = facet.extract({
             dir: node.dir,
             pluginId: node.id,
-            importedModules: nodeModules,
+            // The modules and the naming travel as ONE value: a facet cannot be
+            // handed barrels without the pass that names the slots their
+            // contributions point at. See `ExtractContext.imported`.
+            imported: { modules: nodeModules, naming },
             fs: fsSnapshot,
           });
           setFacet(node, facet.def, data);

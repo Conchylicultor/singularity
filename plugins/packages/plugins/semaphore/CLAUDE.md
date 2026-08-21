@@ -42,6 +42,7 @@ query never wait.) See
     - `framework/resource-runtime`
     - `framework/tooling/web-artifacts`
     - `infra/endpoints`
+    - `plugin-meta/barrel-import`
 - Core:
   - Exports (types): `Semaphore`
   - Exports (values): `createSemaphore`

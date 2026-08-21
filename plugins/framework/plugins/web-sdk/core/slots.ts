@@ -1,6 +1,9 @@
 import { useContext, useMemo } from "react";
 import { PluginRuntimeContext } from "./context";
-import { recordCreatedSlot } from "@plugins/framework/plugins/slot-declaration/core";
+import {
+  recordCreatedSlot,
+  slotIdFor,
+} from "@plugins/framework/plugins/slot-declaration/core";
 import type { Contribution } from "./types";
 import type { ComponentType } from "react";
 import type { SealContributions } from "./sealed-component";
@@ -46,7 +49,7 @@ export function defineSlot<P>(opts?: {
             "does not exist at module eval — read it at render or build time.",
         );
       }
-      return `${slot._pluginId}.${slot._key}`;
+      return slotIdFor(slot._pluginId, slot._key);
     },
   });
   recordCreatedSlot(slot);

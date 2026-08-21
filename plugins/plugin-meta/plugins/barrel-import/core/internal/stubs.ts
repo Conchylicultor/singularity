@@ -1,3 +1,4 @@
+import { createSemaphore } from "@plugins/packages/plugins/semaphore/core";
 import { registerAutoStubs } from "./auto-stubs.generated";
 
 let registered = false;
@@ -270,24 +271,64 @@ export function setPreBarrelImportGuard(fn: () => void | Promise<void>): void {
 }
 
 /**
+ * ONE barrel import at a time, process-wide. Not a performance gate — a
+ * correctness one, and the reason it lives HERE rather than at any one caller.
+ *
+ * A plugin barrel's module graph is cyclic in places (barrels import barrels).
+ * ESM answers a dynamic `import()` for a module whose evaluation is ALREADY IN
+ * FLIGHT with its partially-evaluated namespace, immediately — that is the
+ * defined behaviour for a cycle, not a bug. So a second import loop reading
+ * `mod.default` off such a namespace hits the binding before its initializer has
+ * run: `ReferenceError: Cannot access 'default' before initialization`. The
+ * module it named was mid-evaluation inside SOMEONE ELSE's import.
+ *
+ * That needs two loops overlapping, and this process has them: the check runner
+ * awaits every selected check under `Promise.all`
+ * (`tooling/plugins/checks/core/runner.ts`), and ~7 call sites run a barrel
+ * import loop of their own — the two scoped declaration passes, the docs tree,
+ * `token-group-vars`, `config-origin`, `registrations-paired`, the page checks.
+ * Any two of them selected together is the hazard; `./singularity check
+ * reorderable-slots-in-sync facets:render-complete` is one live pair.
+ *
+ * DO NOT REMOVE AS REDUNDANT. Before the declaration pass was scoped per
+ * `(scope, root)`, a single memo per root meant concurrent callers joined ONE
+ * in-flight promise, which serialized the imports by accident. Nothing states
+ * that now, and nothing ever stated it for the loops outside that memo — those
+ * have always been able to overlap, so a caller-level fix would leave the same
+ * defect reachable from the next pair of checks anyone selects together.
+ *
+ * The wait is nearly free: whoever queues second finds every module already in
+ * the ESM cache and returns from a resolved promise.
+ */
+const barrelImportLane = createSemaphore(1);
+
+/**
  * Dynamically import a barrel file. Throws on failure so missing stubs
  * surface as build errors rather than silently omitting plugin metadata.
  * Requires `registerBarrelStubs()` to have been called first.
  */
-export async function importBarrel(
+export function importBarrel(
   barrelPath: string,
 ): Promise<Record<string, unknown>> {
-  // Fire-once freeze-point guard: capture and clear FIRST (even if it throws),
-  // so a single barrel import triggers it exactly once and never re-arms.
-  if (preBarrelImportGuard) {
-    const guard = preBarrelImportGuard;
-    preBarrelImportGuard = null;
-    await guard();
-  }
-  try {
-    return (await import(barrelPath)) as Record<string, unknown>;
-  } catch (e) {
-    const msg = e instanceof Error ? e.message : String(e);
-    throw new Error(`[barrel-import] Failed to import ${barrelPath}: ${msg}`);
-  }
+  return barrelImportLane.run(async () => {
+    // Inside the lane, so the guard finishes before ANY barrel is imported —
+    // including one a concurrent caller asked for while the guard was still
+    // awaiting. It cannot deadlock on the lane it holds: every pre-barrel
+    // manifest renderer is barrel-free by definition (that IS the membership
+    // rule, enforced by `pre-barrel-manifests-complete`).
+    //
+    // Fire-once: capture and clear FIRST (even if it throws), so a single
+    // barrel import triggers it exactly once and never re-arms.
+    if (preBarrelImportGuard) {
+      const guard = preBarrelImportGuard;
+      preBarrelImportGuard = null;
+      await guard();
+    }
+    try {
+      return (await import(barrelPath)) as Record<string, unknown>;
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      throw new Error(`[barrel-import] Failed to import ${barrelPath}: ${msg}`);
+    }
+  });
 }

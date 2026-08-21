@@ -7,10 +7,6 @@ import {
   type OriginAnnotationsProvider,
 } from "./config-origin-gen";
 import { getFacet } from "@plugins/plugin-meta/plugins/facets/core";
-import {
-  getCreatedSlots,
-  declaredSlotId,
-} from "@plugins/framework/plugins/slot-declaration/core";
 import { asPath, asPluginId } from "@plugins/framework/plugins/plugin-id/core";
 import { declareSlotsFromBarrels } from "./slot-declaration-guard";
 import { contributionsFacetDef } from "@plugins/plugin-meta/plugins/facets/plugins/contributions/core";
@@ -90,37 +86,38 @@ interface ReorderableSlotsData {
  * manifest is written between the web and the server import phases, so the
  * server barrels that read it (the server cannot see web slots) are imported
  * after it lands, while no web barrel reads it at all. Deterministic all the
- * same — the result is sorted by slotId and deduped.
+ * same — one entry per declared id, sorted by slotId.
  */
 async function collectReorderableSlotSet(
   root: string,
 ): Promise<ReorderableSlotEntry[]> {
   // The one declaration pass — shared with the orphan guard, which has already
   // proved every created slot is in it.
-  const owners = await declareSlotsFromBarrels(root);
+  const naming = await declareSlotsFromBarrels(root, "registry");
 
-  const entries: ReorderableSlotEntry[] = [];
-  const seen = new Set<string>();
   // Exactly the derivation the web runtime runs (`syncReorderDescriptors`):
-  // every created slot whose own `meta.reorderable` is true, attributed to the
-  // plugin that DECLARED it. There is no second filter here — a disabled plugin
-  // is already absent from the declaration pass (it is absent from the registry),
-  // which is what makes the server's manifest and the web's registrations one
-  // derivation of one set rather than two filters that can drift apart.
-  for (const slot of getCreatedSlots()) {
-    if (!slot.meta.reorderable) continue;
-    // Ask whether it HAS a name before asking what the name is: a disabled
-    // plugin's slots are never declared, and an undeclared slot's `id` throws
-    // rather than inventing one. `owners` is that same pass's map, so the two
-    // agree by construction.
-    const slotId = declaredSlotId(slot);
-    if (slotId === undefined || seen.has(slotId)) continue;
-    const pluginId = owners.get(slotId);
-    if (pluginId === undefined || slot._key === undefined) continue;
-    seen.add(slotId);
-    entries.push({ slotId, pluginId, configName: slot._key });
-  }
-  return entries.sort((a, b) => a.slotId.localeCompare(b.slotId));
+  // every DECLARED slot whose own `meta.reorderable` is true, attributed to the
+  // plugin that declared it — id, owner and config basename all read off the one
+  // entry, so they cannot disagree.
+  //
+  // Walked off THIS pass's declarations, never off the global created-set. The
+  // `_pluginId`/`_key` stamps are process-global and monotonic, so a filter
+  // reading them answers "declared by any pass that has run in this process so
+  // far" — and a source-scoped pass (the enriched tree) runs in the very same
+  // check/build process and stamps DISABLED plugins' slots too. The disabled
+  // filter is therefore not "a disabled plugin's slots are never declared"; it
+  // is that this set IS this registry pass's own declarations, which no other
+  // pass can widen. That is also what makes the manifest a function of the tree
+  // alone, as a cached `"tree"` check verdict must be.
+  return naming
+    .declarations()
+    .filter((entry) => entry.slot.meta.reorderable)
+    .map((entry) => ({
+      slotId: entry.id,
+      pluginId: entry.pluginId,
+      configName: entry.key,
+    }))
+    .sort((a, b) => a.slotId.localeCompare(b.slotId));
 }
 
 /**

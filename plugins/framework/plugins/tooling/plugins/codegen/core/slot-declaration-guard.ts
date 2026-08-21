@@ -12,10 +12,12 @@ import {
 import type {
   SlotDeclaringPlugin,
   SlotHandle,
+  SlotNaming,
+  SlotScope,
 } from "@plugins/framework/plugins/slot-declaration/core";
+import type { PluginId } from "@plugins/framework/plugins/plugin-id/core";
 import { getFacet } from "@plugins/plugin-meta/plugins/facets/core";
 import { slotsFacetDef } from "@plugins/plugin-meta/plugins/facets/plugins/slots/core";
-import type { PluginId } from "@plugins/framework/plugins/plugin-id/core";
 import { computeDisabledIds } from "./disabled-ids";
 import { buildBarrelFreeTree } from "./barrel-free-tree";
 
@@ -26,56 +28,83 @@ import { buildBarrelFreeTree } from "./barrel-free-tree";
  * disagree about who owns a slot (or throw differently on a slot two plugins
  * claim).
  *
- * IT MODELS THE REGISTRY, NOT THE FILESYSTEM. A DISABLED plugin is omitted from
- * `web.generated.ts`, so the browser never loads it, never creates its slots and
- * never registers a config descriptor for them. This pass therefore skips it
- * too. Getting that wrong is not cosmetic: the server's descriptors come from
- * the reorderable-slots manifest, which is this same set, so declaring a plugin
- * the browser will not load makes the two runtimes register different descriptor
- * sets — `config-v2:registrations-paired` fails, and the extra descriptor would
- * own a config file nothing on the web side can read.
+ * `scope` picks WHICH plugin set is modelled, and the two are not
+ * interchangeable — a caller states the question it is asking:
  *
- * The orphan guard consequently does not cover a disabled plugin's slots. That
- * is the honest scope: a plugin that ships nothing owes nothing. Re-enabling it
- * puts its slots back in the created-set and the guard names any it forgot.
+ * `"registry"` — THE REGISTRY, NOT THE FILESYSTEM. A DISABLED plugin is omitted
+ * from `web.generated.ts`, so the browser never loads it, never creates its
+ * slots and never registers a config descriptor for them. This pass therefore
+ * skips it too. Getting that wrong is not cosmetic: the server's descriptors
+ * come from the reorderable-slots manifest, which is this same set, so declaring
+ * a plugin the browser will not load makes the two runtimes register different
+ * descriptor sets — `config-v2:registrations-paired` fails, and the extra
+ * descriptor would own a config file nothing on the web side can read. Skipping
+ * the IMPORT (not merely the declaration) is what keeps that true: an imported
+ * barrel whose plugin this pass does not declare would put its slots in the
+ * created-set with no owner, which the orphan guard would then read as a slot
+ * nobody declares.
  *
- * This is also the phase boundary the codegen ordering rests on: after it, every
- * web slot exists and every owner is stamped, and NO server barrel has been
- * imported yet. Both the orphan guard and the reorderable-slots manifest read
- * the result.
+ * `"source"` — EVERYTHING THE CHECKOUT DECLARES, disabled plugins included.
+ * Here importing those barrels IS the point: a reader describing SOURCE asks
+ * what the tree declares, not what the browser loads. `facets:render-complete`
+ * checks the surface `review.plugin-changes.diff-renderer`, owned by the
+ * disabled `review/plugins/plugin-changes` — under registry scope it would read
+ * every facet as missing its diff renderer. The created-set hazard above does
+ * not follow here, because this scope DECLARES every barrel it imports: an
+ * imported plugin's slots get an owner, so they never enter `created \ declared`
+ * ownerless. What the orphan guard sees is a separate matter, settled at
+ * {@link assertSlotsDeclared}.
  *
- * Memoized per root: the barrel imports are ESM-cache hits on a second call, but
- * the declaration pass must run exactly once per process, not once per consumer.
+ * The registry pass is also the phase boundary the codegen ordering rests on:
+ * after it, every web slot the browser will load exists and every owner is
+ * stamped, and NO server barrel has been imported yet. Both the orphan guard and
+ * the reorderable-slots manifest read that pass's result.
+ *
+ * Memoized per (scope, root) — NOT per root. The barrel imports are ESM-cache
+ * hits on a second call, but each scope's declaration pass must run exactly once
+ * per process, and the two scopes settle different sets: sharing one memo would
+ * hand whichever caller arrived second the other's answer, silently.
+ *
+ * The two scopes therefore run as two independent passes, and the check runner
+ * awaits every check under `Promise.all` — so both loops below can be in flight
+ * at once. What makes that safe is `importBarrel` itself, which admits one
+ * import at a time process-wide: overlapping loops would otherwise read a
+ * `default` binding off a module the other loop is still evaluating. The memo
+ * per root that preceded this one serialized them by accident; the lane states
+ * it, for these two passes and for the five other loops in this process.
  */
-const declaredByRoot = new Map<
-  string,
-  Promise<ReadonlyMap<string, PluginId>>
->();
+const declaredByScopeAndRoot = new Map<string, Promise<SlotNaming>>();
 
 export function declareSlotsFromBarrels(
   root: string,
-): Promise<ReadonlyMap<string, PluginId>> {
-  let cached = declaredByRoot.get(root);
+  scope: SlotScope,
+): Promise<SlotNaming> {
+  const key = `${scope}\0${root}`;
+  let cached = declaredByScopeAndRoot.get(key);
   if (!cached) {
-    cached = runDeclarationPass(root);
-    declaredByRoot.set(root, cached);
+    cached = runDeclarationPass(root, scope);
+    declaredByScopeAndRoot.set(key, cached);
   }
   return cached;
 }
 
 async function runDeclarationPass(
   root: string,
-): Promise<ReadonlyMap<string, PluginId>> {
+  scope: SlotScope,
+): Promise<SlotNaming> {
   const tree = await buildBarrelFreeTree(root);
-  const disabled = computeDisabledIds(tree);
+  // Empty under `"source"`: the filter below is the registry's, and a disabled
+  // plugin's barrel is exactly what a source-scoped reader came for.
+  const disabled =
+    scope === "registry" ? computeDisabledIds(tree) : new Set<PluginId>();
   registerBarrelStubs(root);
 
   const declaring: SlotDeclaringPlugin[] = [];
   for (const node of tree.byDir.values()) {
-    // Not in the registry ⇒ not loaded ⇒ its slots do not exist. Skipping the
-    // IMPORT (not just the declaration) is what keeps that true: an imported
-    // barrel would put its slots in the created-set with no owner, which the
-    // orphan guard would then read as a slot nobody declared.
+    // Registry scope only — see the two arms on `declareSlotsFromBarrels`: not
+    // in the registry ⇒ not loaded ⇒ its slots do not exist, and skipping the
+    // IMPORT (not just the declaration) is what keeps the created-set free of
+    // ownerless slots the orphan guard would misread.
     if (disabled.has(node.id)) continue;
     const barrelPath = join(node.dir, "web", "index.ts");
     if (!existsSync(barrelPath)) continue;
@@ -96,8 +125,11 @@ async function runDeclarationPass(
     if (sources) declaring.push({ id: seedNode.id, slots: sources });
   }
 
-  // Throws on a slot two plugins claim; stamps the owner onto each slot object.
-  return declarePluginSlots(declaring);
+  // Throws on a slot two plugins claim; stamps the owner onto each slot object,
+  // and returns the naming THIS pass settled (see `SlotNaming`: its answers are
+  // its own, not a read of the process-global stamps). The scope travels with
+  // the naming, so an `out-of-scope` answer can say what it is not in scope of.
+  return declarePluginSlots(declaring, scope);
 }
 
 /**
@@ -121,11 +153,21 @@ async function runDeclarationPass(
  * descriptor that never registers — which `pruneOrphanedConfigFiles` would read
  * as an orphaned config file and DELETE. Failing here, before any config origin
  * is generated, is what keeps a declaration mistake from costing authored files.
+ *
+ * WHY `"registry"`, AND WHY THAT IS NOT AN OMISSION TO "COMPLETE". The guard is
+ * registry-scoped ON PURPOSE: a disabled plugin ships nothing and owes nothing,
+ * so its slots are outside what this guard is asking about. Switching it to
+ * `"source"` would look like widening the net and would instead import every
+ * disabled barrel ahead of the freeze point this phase boundary defines, and
+ * demand declarations from plugins that register no descriptors — which is the
+ * `config-v2:registrations-paired` divergence the registry scope exists to
+ * prevent. Re-enabling a plugin puts its slots back in the created-set and the
+ * guard names any it forgot; that is the whole coverage story.
  */
 export async function assertSlotsDeclared(root: string): Promise<void> {
-  // Runs (and memoizes) the one declaration pass; the stamps it writes are
+  // Runs (and memoizes) the registry declaration pass; the stamps it writes are
   // what the guard reads back off each created slot.
-  await declareSlotsFromBarrels(root);
+  await declareSlotsFromBarrels(root, "registry");
   const orphans = findUndeclaredSlots();
   if (orphans.length === 0) return;
   throw new Error(await renderOrphanReport(root, orphans));

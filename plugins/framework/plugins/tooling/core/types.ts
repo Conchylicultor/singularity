@@ -89,15 +89,14 @@ export interface Check {
    *     itself, memoized per root, so every caller gets it. It used to live in one
    *     caller's pipeline ordering, where it held for that pipeline and nowhere
    *     else.
-   *   - MAKE THE EARLY READ THROW. `slotDeclarationPasses()`
-   *     (`plugins/framework/plugins/slot-declaration/core/declaration.ts`) — a
-   *     COUNT, not `owners.size > 0`, so a pass that legitimately declares no
-   *     slots is not misread as a pass that never ran — is checked by the
-   *     contributions facet
-   *     (`plugins/plugin-meta/plugins/facets/plugins/contributions/facet/index.ts`),
-   *     which refuses to extract while it is zero. Without the throw the mistake
-   *     yields a smaller answer indistinguishable from a correct one, which is
-   *     exactly how it shipped.
+   *   - LEAVE THE EARLY READ NO SPELLING. The contributions facet
+   *     (`plugins/plugin-meta/plugins/facets/plugins/contributions/facet/index.ts`)
+   *     is handed the imported barrels and the naming the declaration pass over
+   *     them settled as ONE value (`ExtractContext.imported`), so "barrels
+   *     without a pass" cannot be constructed. This started as a runtime count
+   *     the facet refused to extract while zero; pairing the two moved it from
+   *     an assert to a type. Without either, the mistake yields a smaller answer
+   *     indistinguishable from a correct one, which is exactly how it shipped.
    *
    * Consumers select BY THIS PROPERTY, NEVER by check id: `push` asks for
    * `--scope tree`, not for "everything except web-artifacts:map-in-sync".

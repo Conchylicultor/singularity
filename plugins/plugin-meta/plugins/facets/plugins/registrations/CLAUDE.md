@@ -4,7 +4,7 @@ Extracts runtime registration metadata (MCP tools, jobs, trigger-events) from ea
 server and central barrel imports by reading `def.register[]`.
 
 Unlike static-analysis facets (commands, slots, resources), this facet needs the barrel-imported
-modules — it reads the `importedModules` field of `ExtractContext`, which is populated by
+modules — it reads the `imported` field of `ExtractContext`, which is populated by
 `buildPluginTree()` when `skipBarrelImport` is not set.
 
 No `relate()` — registrations have no cross-plugin relationships.

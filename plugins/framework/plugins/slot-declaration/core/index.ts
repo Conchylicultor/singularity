@@ -6,13 +6,16 @@ export {
   declaredSlotSources,
   declarePluginSlots,
   subscribeSlotsDeclared,
-  slotDeclarationPasses,
   findUndeclaredSlots,
   seg,
-  declaredSlotId,
+  slotIdFor,
 } from "./declaration";
 export type {
   SlotMeta,
+  SlotScope,
+  SlotNaming,
+  SlotNamingEntry,
+  SlotLookup,
   SlotHandle,
   SlotSource,
   SlotRecord,

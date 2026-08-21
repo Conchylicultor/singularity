@@ -1,8 +1,10 @@
 import type { SlotHandle } from "@plugins/framework/plugins/slot-declaration/core";
-import { declaredSlotId } from "@plugins/framework/plugins/slot-declaration/core";
 import { existsSync } from "fs";
 import { join } from "path";
-import { buildEnrichedTree } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
+import {
+  buildEnrichedTree,
+  declareSlotsFromBarrels,
+} from "@plugins/framework/plugins/tooling/plugins/codegen/core";
 import { getFacet } from "@plugins/plugin-meta/plugins/facets/core";
 import { contributionsFacetDef } from "@plugins/plugin-meta/plugins/facets/plugins/contributions/core";
 import {
@@ -34,6 +36,55 @@ const WEB_BLOCK_FRAME_SLOT = "page.editor.block-frame"; // Editor.BlockFrame (we
 // absence means barrel import saw no BlockData contributions at all, i.e. the
 // server scan silently degraded. Used as a health canary, not a hardcoded rule.
 const CANARY_SERVER_TYPE = "page";
+
+/**
+ * The two web block SLOT OBJECTS, resolved once per call from the declaration
+ * pass that named them, so every loop below compares by IDENTITY instead of
+ * against an id string.
+ *
+ * Identity is the point, not ergonomics. These loops used to read `c._slotId` —
+ * a field that stopped existing when contributions moved to `_slot: SlotHandle`
+ * — so the predicate was always true, `handles` was always empty, and two checks
+ * verified nothing for as long as it took to notice. There is no field name and
+ * no id string left in the loop to go stale: a wrong id fails HERE, at one named
+ * line, and a wrong field is a type error.
+ *
+ * `"registry"` scope, and it costs nothing: every caller has already awaited
+ * `buildEnrichedTree`, which awaits this very memoized pass. It is the DECLARING
+ * plugin — the editor — that must be in scope, never the candidate plugin whose
+ * barrel is read: a contribution carries the same slot OBJECT whether or not its
+ * own plugin is disabled, so identity still catches a disabled block type.
+ *
+ * A miss returns `{ ok: false }` and never throws: the runner awaits every check
+ * under `Promise.all` and rethrows, so one throw in here would kill every other
+ * check's reporting.
+ */
+async function resolveBlockSlots(
+  root: string,
+): Promise<
+  | { ok: true; block: SlotHandle; frame: SlotHandle }
+  | { ok: false; message: string }
+> {
+  const naming = await declareSlotsFromBarrels(root, "registry");
+  const block = naming.findSlot(WEB_BLOCK_SLOT);
+  const frame = naming.findSlot(WEB_BLOCK_FRAME_SLOT);
+  const missing = [
+    block === undefined ? WEB_BLOCK_SLOT : null,
+    frame === undefined ? WEB_BLOCK_FRAME_SLOT : null,
+  ].filter((id): id is string => id !== null);
+  if (block === undefined || frame === undefined) {
+    return {
+      ok: false,
+      message:
+        `No slot is declared under ${missing.map((id) => `"${id}"`).join(" / ")} in the ` +
+        "registry-scoped declaration pass, so no block contribution could be recognized and " +
+        "nothing was verified. An id derives from its declaring plugin's id plus its `slots` " +
+        "key, so moving or renaming the editor renames it. This is a check/tooling failure, " +
+        "not a clean pass.",
+    };
+  }
+  return { ok: true, block, frame };
+}
 
 // Server `Editor.BlockData` contributions are now read off the SAME contributions
 // facet as the web `Editor.Block` half (see the loop below). The facet's runtime
@@ -168,6 +219,9 @@ const anchorHasDecoration: Check = {
     const tree = await buildEnrichedTree(root);
     registerBarrelStubs(root);
 
+    const slots = await resolveBlockSlots(root);
+    if (!slots.ok) return slots;
+
     // Only plugins that actually contribute a block renderer can declare a
     // handle, so the candidate set comes from the contributions facet rather
     // than a directory sweep — a block type living outside `plugins/page` is
@@ -216,14 +270,14 @@ const anchorHasDecoration: Check = {
           anchor?: unknown;
           block?: { type?: unknown; anchor?: unknown };
         };
-        if (declaredSlotId(c._slot) === WEB_BLOCK_SLOT) {
+        if (c._slot === slots.block) {
           const type = c.block?.type;
           if (typeof type === "string" && c.block?.anchor === true) {
             const list = anchorTypes.get(type) ?? [];
             list.push(tree.byDir.get(dir)?.id ?? dir);
             anchorTypes.set(type, list);
           }
-        } else if (declaredSlotId(c._slot) === WEB_BLOCK_FRAME_SLOT) {
+        } else if (c._slot === slots.frame) {
           if (typeof c.match === "string" && c.anchor) decorated.add(c.match);
         }
       }
@@ -280,6 +334,9 @@ const markdownTagNamesUnique: Check = {
     const tree = await buildEnrichedTree(root);
     registerBarrelStubs(root);
 
+    const slots = await resolveBlockSlots(root);
+    if (!slots.ok) return slots;
+
     const candidateDirs = new Set<string>();
     for (const [dir, node] of tree.byDir) {
       const facet = getFacet(node, contributionsFacetDef);
@@ -309,7 +366,7 @@ const markdownTagNamesUnique: Check = {
       if (!Array.isArray(def?.contributions)) continue;
       for (const raw of def.contributions) {
         const c = raw as { _slot?: SlotHandle; block?: BlockHandle<unknown> };
-        if (declaredSlotId(c._slot) !== WEB_BLOCK_SLOT || !c.block) continue;
+        if (c._slot !== slots.block || !c.block) continue;
         const name = markdownParseTagName(c.block);
         if (name === null) continue;
         const list = claimants.get(name) ?? [];
@@ -367,17 +424,23 @@ const markdownTagNamesUnique: Check = {
  * empty-set failure mode. Barrel modules are Bun-cached, so the repeat imports
  * across checks cost nothing.
  *
- * Returns a `degraded` message instead of an empty list when the facet yielded
- * nothing: a check that verified NOTHING must fail loudly rather than pass
- * vacuously, and each caller words that failure in its own terms.
+ * Fails (`{ ok: false }`) rather than returning an empty list — whether the block
+ * slot could not be resolved, the facet yielded no candidate dirs, or those dirs
+ * yielded no handles: a check that verified NOTHING must fail loudly rather than
+ * pass vacuously. Each caller words the failure in its own terms and appends
+ * `reason`, so the three degradations stay distinguishable instead of collapsing
+ * into one message that names only the likeliest of them.
  */
 async function collectBlockHandles(): Promise<
   | { ok: true; handles: { pluginId: string; handle: BlockHandle<unknown> }[] }
-  | { ok: false }
+  | { ok: false; reason: string }
 > {
   const root = await getWorktreeRoot();
   const tree = await buildEnrichedTree(root);
   registerBarrelStubs(root);
+
+  const slots = await resolveBlockSlots(root);
+  if (!slots.ok) return { ok: false, reason: slots.message };
 
   const candidateDirs = new Set<string>();
   for (const [dir, node] of tree.byDir) {
@@ -390,7 +453,14 @@ async function collectBlockHandles(): Promise<
       }
     }
   }
-  if (candidateDirs.size === 0) return { ok: false };
+  if (candidateDirs.size === 0) {
+    return {
+      ok: false,
+      reason:
+        "no plugin in the enriched tree contributes `Editor.Block` — the barrel-imported " +
+        "contributions facet is empty.",
+    };
+  }
 
   const handles: { pluginId: string; handle: BlockHandle<unknown> }[] = [];
   for (const dir of candidateDirs) {
@@ -398,13 +468,26 @@ async function collectBlockHandles(): Promise<
     const def = mod.default as { contributions?: unknown } | undefined;
     if (!Array.isArray(def?.contributions)) continue;
     for (const raw of def.contributions) {
-      const c = raw as { _slotId?: string; block?: BlockHandle<unknown> };
-      if (c._slotId !== WEB_BLOCK_SLOT || !c.block) continue;
+      const c = raw as { _slot?: SlotHandle; block?: BlockHandle<unknown> };
+      if (c._slot !== slots.block || !c.block) continue;
       handles.push({
         pluginId: tree.byDir.get(dir)?.id ?? dir,
         handle: c.block,
       });
     }
+  }
+  // An empty handle set is the SAME degradation as an empty candidate set, one
+  // level down: the dirs were found but no contribution off them was recognized
+  // as an `Editor.Block`, so the callers below would iterate nothing and report
+  // a clean pass having verified nothing. (That is exactly what a stale field
+  // read on the contribution did — silently, for as long as it took to notice.)
+  if (handles.length === 0) {
+    return {
+      ok: false,
+      reason:
+        `${candidateDirs.size} candidate dir(s) were found, but no contribution off them was ` +
+        "recognized as an `Editor.Block`.",
+    };
   }
   return { ok: true, handles };
 }
@@ -434,9 +517,8 @@ const splitTargetsAreTextBearing: Check = {
       return {
         ok: false,
         message:
-          "No web `Editor.Block` contributions found in the enriched plugin tree — the " +
-          "barrel-imported contributions facet is empty, so split targets could not be " +
-          "verified. This is a check/tooling failure, not a clean pass.",
+          "No block handles could be read, so split targets were NOT verified — " +
+          `${collected.reason} This is a check/tooling failure, not a clean pass.`,
       };
     }
 
@@ -500,9 +582,8 @@ const blockPrefixesUnique: Check = {
       return {
         ok: false,
         message:
-          "No web `Editor.Block` contributions found in the enriched plugin tree — the " +
-          "barrel-imported contributions facet is empty, so prefix uniqueness could not be " +
-          "verified. This is a check/tooling failure, not a clean pass.",
+          "No block handles could be read, so prefix uniqueness was NOT verified — " +
+          `${collected.reason} This is a check/tooling failure, not a clean pass.`,
       };
     }
 

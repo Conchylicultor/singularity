@@ -29,8 +29,8 @@ import {
  */
 export const reorderConfigContributions: Contribution[] = [];
 
-subscribeSlotsDeclared((owners) => {
-  syncReorderDescriptors(owners);
+subscribeSlotsDeclared((naming) => {
+  syncReorderDescriptors(naming.owners);
   reorderConfigContributions.length = 0;
   for (const entry of reorderDescriptorEntries) {
     reorderConfigContributions.push(

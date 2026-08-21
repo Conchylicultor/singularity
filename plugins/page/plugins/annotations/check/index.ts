@@ -1,8 +1,10 @@
 import type { SlotHandle } from "@plugins/framework/plugins/slot-declaration/core";
-import { declaredSlotId } from "@plugins/framework/plugins/slot-declaration/core";
 import { existsSync } from "fs";
 import { dirname, join, relative, sep } from "path";
-import { buildEnrichedTree } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
+import {
+  buildEnrichedTree,
+  declareSlotsFromBarrels,
+} from "@plugins/framework/plugins/tooling/plugins/codegen/core";
 import { getFacet } from "@plugins/plugin-meta/plugins/facets/core";
 import { contributionsFacetDef } from "@plugins/plugin-meta/plugins/facets/plugins/contributions/core";
 import {
@@ -73,6 +75,32 @@ const audienceDeclared: Check = {
     const tree = await buildEnrichedTree(root);
     registerBarrelStubs(root);
 
+    // The block slot resolved ONCE, then compared by IDENTITY in the loop below,
+    // so no id string survives into the loop to drift and match nothing.
+    //
+    // `"registry"` scope, and it is free: `buildEnrichedTree` above already
+    // awaited this very (memoized) pass. It is the DECLARING plugin — the
+    // editor — that has to be in scope, never the candidate: a candidate's
+    // contribution carries the same `blockSlot` OBJECT whether or not its own
+    // plugin is disabled, so identity still catches a disabled annotation.
+    //
+    // `findSlot`, never `slotNamed`: the runner awaits every check under
+    // `Promise.all` and rethrows, so a throw here would kill every other check's
+    // reporting. A miss is this check's own failure value.
+    const naming = await declareSlotsFromBarrels(root, "registry");
+    const blockSlot = naming.findSlot(WEB_BLOCK_SLOT);
+    if (blockSlot === undefined) {
+      return {
+        ok: false,
+        message:
+          `No slot is declared under "${WEB_BLOCK_SLOT}" in the registry-scoped ` +
+          `declaration pass, so no block type could be read and the audience ` +
+          `invariant was NOT verified. An id derives from its declaring plugin's ` +
+          `id plus its \`slots\` key, so moving the editor renames it. This is a ` +
+          `check/tooling failure, not a clean pass.`,
+      };
+    }
+
     // Candidates: plugins inside this umbrella that contribute a block renderer.
     // A descendant at ANY depth counts — a future annotation may be an umbrella
     // of its own (the plan already nests one under `agent-notes`), and a nested
@@ -114,7 +142,7 @@ const audienceDeclared: Check = {
       if (!Array.isArray(def?.contributions)) continue;
       for (const raw of def.contributions) {
         const c = raw as { _slot?: SlotHandle; block?: BlockHandle<unknown> };
-        if (declaredSlotId(c._slot) !== WEB_BLOCK_SLOT || !c.block) continue;
+        if (c._slot !== blockSlot || !c.block) continue;
         if (c.block.audience === undefined) {
           unmarked.push(`${tree.byDir.get(dir)?.id ?? dir} (${c.block.type})`);
         }

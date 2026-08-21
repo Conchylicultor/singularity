@@ -1,5 +1,4 @@
 import type { SlotHandle } from "@plugins/framework/plugins/slot-declaration/core";
-import { declaredSlotId } from "@plugins/framework/plugins/slot-declaration/core";
 import { existsSync } from "fs";
 import { join, relative } from "path";
 import { buildPluginTree } from "@plugins/plugin-meta/plugins/plugin-tree/core";
@@ -31,6 +30,8 @@ function storePathFor(
   return `${asPath(asPluginId(override ?? fallbackId))}/${descriptorName}.jsonc`;
 }
 
+const WEB_REGISTER_SLOT_ID = "config_v2.web-register";
+
 type BarrelContribution = Record<string, unknown> & {
   _slot?: SlotHandle;
   _kind?: symbol;
@@ -57,7 +58,29 @@ const check: Check = {
     // this is the build-time twin of that pass, over the same registry the
     // browser would load. Without it this check compares a real server set
     // against an empty web set and reports every reorder descriptor as unpaired.
-    await declareSlotsFromBarrels(root);
+    const naming = await declareSlotsFromBarrels(root, "registry");
+
+    // Resolved ONCE, here, then compared by IDENTITY in the loop below. The id
+    // is derived — the plugin directory is `config_v2` (underscore) and the slot
+    // is declared under the key `WebRegister`, so it is `config_v2.web-register`,
+    // NOT the hand-authored `config-v2.web-register` this check used to spell.
+    // A stale id now fails at this one named line instead of matching nothing
+    // and reporting every server registration as unpaired.
+    //
+    // `findSlot`, never `slotNamed`: the runner awaits every check under
+    // `Promise.all` and rethrows, so a throw here would kill every OTHER check's
+    // reporting. A miss is this check's own failure value.
+    const webRegisterSlot = naming.findSlot(WEB_REGISTER_SLOT_ID);
+    if (webRegisterSlot === undefined) {
+      return {
+        ok: false,
+        message:
+          `No slot is declared under "${WEB_REGISTER_SLOT_ID}" in the registry-scoped ` +
+          `declaration pass, so this check can pair nothing. Either the slot moved ` +
+          `(an id derives from its declaring plugin's id plus its \`slots\` key) or ` +
+          `config_v2's web barrel failed to declare it.`,
+      };
+    }
 
     const webPaths = new Set<string>();
     const serverPaths = new Set<string>();
@@ -89,10 +112,7 @@ const check: Check = {
         const def = mod.default as
           { contributions?: BarrelContribution[] } | undefined;
         for (const c of def?.contributions ?? []) {
-          // Derived: the plugin directory is `config_v2` (underscore) and the slot is
-          // declared under the key `WebRegister`, so the id is `config_v2.web-register`
-          // — NOT the old hand-authored `config-v2.web-register`.
-          if (declaredSlotId(c._slot) !== "config_v2.web-register") continue;
+          if (c._slot !== webRegisterSlot) continue;
           const name = c.descriptor?.name;
           if (typeof name !== "string") continue;
           if (ownerDisabled(c.pluginId, fallbackId)) continue;

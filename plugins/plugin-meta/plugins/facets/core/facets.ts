@@ -1,3 +1,4 @@
+import type { SlotNaming } from "@plugins/framework/plugins/slot-declaration/core";
 import type { FsSnapshot } from "@plugins/plugin-meta/plugins/parse-utils/core";
 
 export interface FacetDef<T> {
@@ -16,12 +17,30 @@ export interface ExtractContext {
    * either way, so the facet derives it rather than depending on a stamp.
    */
   pluginId: string;
-  // Barrel-imported modules for this plugin (populated by buildPluginTree when skipBarrelImport is not set).
-  // Undefined for facets that only need static file access.
-  importedModules?: {
-    mod: Record<string, unknown>;
-    runtime: "web" | "server" | "central";
-  }[];
+  /**
+   * The barrels imported for this plugin, PAIRED with the naming the declaration
+   * pass over those same barrels settled. Populated by `buildPluginTree` unless
+   * `skipBarrelImport` is set; absent for facets that only need static files.
+   *
+   * ONE FIELD, NOT TWO, and that is the whole point — do not flatten it back into
+   * `modules?` beside `naming?`. Importing a barrel is what brings a plugin's
+   * `contributions` into existence; running a declaration pass is what gives the
+   * slots those contributions target their names. A reader holding the first
+   * without the second gets an answer that is smaller than the truth and shaped
+   * exactly like a correct one: every id reads as absent, so a whole plugin's
+   * contributions silently vanish. That is not hypothetical — it is how a
+   * `docs/plugins-details.md` missing reorder's entire `Contributes:` block got
+   * committed, and how it made `main` un-pushable four commits later. A runtime
+   * assert used to catch it here; pairing the two makes the state unspellable
+   * instead, so there is nothing left to assert.
+   */
+  imported?: {
+    modules: {
+      mod: Record<string, unknown>;
+      runtime: "web" | "server" | "central";
+    }[];
+    naming: SlotNaming;
+  };
   // Build-scoped, read-once in-memory FS snapshot in effect for this extraction.
   // When present, the parse-utils `readIfExists` / `walkFiles` helpers read from
   // it instead of disk (wired ambiently by buildPluginTree's extract loop), so

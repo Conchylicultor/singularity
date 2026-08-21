@@ -67,7 +67,10 @@ export function PluginProvider({
     // NOT a completeness check: web plugins load in tiers, so mid-boot both the
     // created and the declared sets are partial. `created \ declared` is gated
     // at build time, in the codegen process, which imports every barrel.
-    declarePluginSlots(ordered);
+    // `"registry"`: `ordered` IS the registry — the plugin set this browser
+    // loaded — so a slot this pass does not name is one no loaded plugin
+    // declares, not one some disabled plugin owns off-screen.
+    declarePluginSlots(ordered, "registry");
     const contributions = ordered.flatMap((p) =>
       (p.contributions ?? []).map((c) => ({
         ...c,
