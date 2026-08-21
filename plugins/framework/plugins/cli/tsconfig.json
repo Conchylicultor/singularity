@@ -3,5 +3,10 @@
   "compilerOptions": {
     "types": ["@types/bun"]
   },
-  "include": ["bin", "../../../../plugins/packages/plugins/*/shared"]
+  "include": [
+    "bin",
+    "core",
+    "../../../../plugins/**/cli",
+    "../../../../plugins/packages/plugins/*/shared"
+  ]
 }

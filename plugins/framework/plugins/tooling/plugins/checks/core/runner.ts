@@ -160,7 +160,7 @@ export async function runChecks(
         "has already imported every plugin barrel and run the slot-declaration pass " +
         "— that contamination is how commit fa7e865e0 shipped a generated doc only a " +
         "build could reproduce (fixed at the source in 18126884a). Spawn the check " +
-        "pass instead: `runCheckSubprocess(...)` from cli/bin/check-subprocess.ts.",
+        "pass instead: `runCheckSubprocess(...)` from cli/plugins/op-runtime/cli/check-subprocess.ts.",
     );
   }
 

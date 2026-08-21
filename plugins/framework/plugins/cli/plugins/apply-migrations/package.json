@@ -1,0 +1,9 @@
+{
+  "name": "@singularity/plugin-framework-cli-apply-migrations",
+  "private": true,
+  "version": "0.0.1",
+  "description": "`./singularity apply-migrations` — apply pending SQL migrations to the DB named by SINGULARITY_WORKTREE. The fresh-clone bootstrap's way to seed the base 'singularity' DB before the first build; the server applies them itself on boot.",
+  "dependencies": {
+    "pg": "^8.13.0"
+  }
+}

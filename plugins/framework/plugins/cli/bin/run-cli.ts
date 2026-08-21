@@ -1,5 +1,5 @@
 import type { Command } from "commander";
-import { recordCliCrash } from "./cli-crash";
+import { recordCliCrash } from "@plugins/framework/plugins/cli/plugins/op-runtime/cli";
 
 /**
  * Process-boundary harness for the CLI. Commander's async actions reject

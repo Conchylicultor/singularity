@@ -9,7 +9,7 @@ state by the **filename `sha8` hash** — it never reads drizzle snapshots, nor
 the runner's identity drifts from what it executes.
 
 `meta/_journal.json` is derived from those filenames and regenerated
-unconditionally by `generateMigration` (`framework/cli/bin/migrations.ts`) — so
+unconditionally by `generateMigration` (`framework/cli/plugins/migrations/cli/migrations.ts`) — so
 `./singularity build` is the fix for any journal/`.sql` mismatch. It stays
 tracked in git for a non-obvious reason: it is the merge sentinel that triggers
 post-rebase migration normalization. See `framework/cli/CLAUDE.md` before
@@ -34,7 +34,7 @@ touching it.
   - drizzle bases the next schema migration on the last *schema* snapshot, which is
     correct since the backfill has zero schema delta.
   - You **hand-edit** the generated empty SQL to add the backfill. It is re-hashed
-    on every build (`rehashBranchLocalDataMigrations` in `cli/bin/migrations.ts`)
+    on every build (`rehashBranchLocalDataMigrations` in `cli/plugins/migrations/cli/migrations.ts`)
     so the filename hash always tracks the content — editing it re-applies once per
     DB (with a loud drift warning for the old hash), never a silent skip.
   - It is enforced **DML-only** by the `data-migration-dml-only` check, so it cannot
@@ -47,7 +47,7 @@ touching it.
 > `origin/main`.** It may be ordered *before* a branch-local schema migration; it
 > can never be ordered *after* one.
 
-`resetBranchLocalMigrations` (`cli/bin/migrations.ts`) deletes **every**
+`resetBranchLocalMigrations` (`cli/plugins/migrations/cli/migrations.ts`) deletes **every**
 branch-local schema migration (snapshot-carrying, absent from `origin/main`) and
 re-emits one consolidated migration stamped at push time, while **preserving**
 data migrations at their original timestamps. The runner applies in timestamp
@@ -207,7 +207,7 @@ dir, and every sanctioned invocation uses it as the child's `cwd`:
   a drizzle-kit invocation).
 - `framework/tooling/.../checks/plugins/migrations-in-sync` — the check that proves
   the committed migrations match `schema.ts`.
-- `framework/cli/bin/migrations.ts` — the real `./singularity build` path.
+- `framework/cli/plugins/migrations/cli/migrations.ts` — the real `./singularity build` path.
 
 The cwd is **load-bearing, not incidental**. drizzle-kit resolves every relative path
 in `drizzle.config.ts` against its CWD rather than against the config file — both the

@@ -55,7 +55,7 @@ export interface ResetUnstablePair {
  * PURE core (exported for unit testing): find the branch-local data migrations
  * whose position is NOT preserved across a push-time migration reset.
  *
- * `resetBranchLocalMigrations` (cli/bin/migrations.ts) deletes every branch-local
+ * `resetBranchLocalMigrations` (cli/plugins/migrations/cli/migrations.ts) deletes every branch-local
  * SCHEMA migration and re-emits one consolidated migration stamped at push time,
  * while DATA migrations are explicitly preserved at their original timestamps.
  * The runner applies in filename-timestamp order, so after a reset every

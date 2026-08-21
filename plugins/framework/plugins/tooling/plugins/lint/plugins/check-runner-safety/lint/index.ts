@@ -20,7 +20,7 @@ export default {
    * `enforceEverywhere`, the same way `promise-safety` keeps its bug-catching
    * rules on in tests.
    *
-   * The sanctioned owner (`cli/bin/commands/check.ts`) is matched in-rule by
+   * The sanctioned owner (`cli/plugins/check/cli/run.ts`) is matched in-rule by
    * filename, so it needs no entry here either.
    *
    * This file's own RuleTester fixtures embed the banned specifier in JS

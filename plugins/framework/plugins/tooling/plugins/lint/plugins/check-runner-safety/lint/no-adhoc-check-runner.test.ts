@@ -26,10 +26,10 @@ const ruleTester = new RuleTester({
 });
 
 const CORE = "@plugins/framework/plugins/tooling/plugins/checks/core";
-const OWNER = "/repo/plugins/framework/plugins/cli/bin/commands/check.ts";
-const BUILD = "/repo/plugins/framework/plugins/cli/bin/commands/build.ts";
+const OWNER = "/repo/plugins/framework/plugins/cli/plugins/check/cli/run.ts";
+const BUILD = "/repo/plugins/framework/plugins/cli/plugins/build/cli/run.ts";
 const ARTIFACTS =
-  "/repo/plugins/framework/plugins/cli/bin/commands/internal/app-artifacts.ts";
+  "/repo/plugins/framework/plugins/cli/plugins/build/cli/internal/app-artifacts.ts";
 
 ruleTester.run(
   "no-adhoc-check-runner",

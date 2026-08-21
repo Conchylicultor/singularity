@@ -25,7 +25,7 @@ const ALLOWED_PATHS = [
   // Generates a Caddy site-block for a PUBLIC deploy, and documents the
   // gateway's `.localhost` fallthrough as the reason its hostnames route the way
   // they do. Prose about the rule, in another machine's config.
-  "plugins/framework/plugins/cli/bin/commands/internal/converge-script.ts",
+  "plugins/framework/plugins/cli/plugins/deploy/cli/internal/converge-script.ts",
 ];
 
 /**

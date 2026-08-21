@@ -30,7 +30,7 @@ export default {
     "no-raw-bun-spawn": [
       "**/*.test.ts",
       "**/*.test.tsx",
-      "plugins/framework/plugins/cli/bin/migrations-interactive.ts",
+      "plugins/framework/plugins/cli/plugins/migrations/cli/migrations-interactive.ts",
       "research/**",
 
       // --- PERMANENT: genuinely streaming or long-lived children. After-exit

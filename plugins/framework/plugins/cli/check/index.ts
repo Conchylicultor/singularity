@@ -9,6 +9,7 @@ import {
 } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
 import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
 import type { Check } from "@plugins/framework/plugins/tooling/core";
+import { isCliCommand, type CliCommand } from "../core";
 
 const BOOTSTRAP = "plugins/framework/plugins/cli/bin/index.ts";
 /**
@@ -450,4 +451,185 @@ const bootstrapPackageFreeCheck: Check = {
   },
 };
 
-export default [manifestFreezeCheck, bootstrapPackageFreeCheck];
+/**
+ * EVERY plugin's `cli/index.ts` is loaded on EVERY `./singularity` invocation,
+ * so its static import closure must stay data-weight: no npm package, no
+ * `web`/`server` barrel.
+ *
+ * WHY THIS IS THE LOAD-BEARING HALF OF THE WHOLE MECHANISM. Commander needs a
+ * command's name, flags and help text before it can parse argv, so there is no
+ * way to defer a DECLARATION — `./singularity build` pays for every other
+ * plugin's declaration, every time. The command's IMPLEMENTATION is the part
+ * that must not load, and the declaration defers it through
+ * `run: () => import("./run")`. Nothing in the language marks which half is
+ * which; a contributor who writes `import { thing } from "./run"` at the top of
+ * their declaration to reuse one constant has silently moved their whole command
+ * body — and its npm dependencies, and every plugin barrel it reaches — into the
+ * hot path of an unrelated command. That edit looks harmless and its cost is
+ * invisible, which is exactly the shape that needs a mechanical check rather
+ * than a documented convention.
+ *
+ * The `server` ban is the same rule stated where it bites hardest: a server
+ * barrel is the cheapest-looking way for a declaration to reach a real value (an
+ * option default like `REPO_ROOT`), and it is also the single heaviest thing in
+ * the repo to load — drizzle, pg, the DB pool, the job queue. Resolve such a
+ * default inside the action instead, where the import is already deferred.
+ *
+ * MEASURED WITH `stopAtDynamicImport`, which is the whole subtlety and the
+ * reason this can be a check at all: the declaration's own
+ * `run: () => import("./run")` is a literal specifier the bundler would happily
+ * follow, and following it would drag in precisely the implementation this check
+ * exists to keep out — reporting every correctly-written command as a failure.
+ * Cutting at every `import()` edge measures exactly what the CLI pays before it
+ * knows which command it is running.
+ *
+ * The subject list comes from `cli.generated.ts` rather than a filesystem walk,
+ * so it is the same set the CLI actually loads. A `cli/index.ts` with no default
+ * export is not registered, is not loaded, and is not measured — that is how a
+ * shared CLI-machinery barrel (`op-runtime/cli`) sits in the same runtime
+ * without being held to a declaration's weight.
+ */
+const declarationsLightCheck: Check = {
+  id: "cli:command-declarations-light",
+  description:
+    "every plugin's cli/index.ts must reach no npm package and no web/server barrel through its static imports — a command DECLARATION loads on every ./singularity invocation, only its implementation is deferred",
+  async run() {
+    const root = await getWorktreeRoot();
+    const { cliEntries } = await import("../core/cli.generated");
+
+    // An empty registry means the collected-dir scan found no command at all,
+    // which cannot be true in a tree that has a CLI — every framework command
+    // is a contribution. Comparing nothing would report a green derived from a
+    // broken read, so fail loudly instead.
+    if (cliEntries.length === 0) {
+      throw new Error(
+        "cli.generated.ts registers NO commands, so there is nothing to measure. That is a broken " +
+          "registry read (collected-dir marker moved or renamed?), not a CLI with no commands — " +
+          "refusing to report a pass derived from it.",
+      );
+    }
+
+    const offenders: string[] = [];
+    for (const entry of cliEntries) {
+      const rel = join("plugins", entry.pluginPath, "cli", "index.ts");
+      const { modules, external } = await importClosure(root, rel, {
+        stopAtDynamicImport: true,
+      });
+
+      const packages = [...external.keys()]
+        .filter((spec) => !resolvesWithoutNodeModules(spec))
+        .sort();
+      // A cross-plugin `@plugins/x/{web,server}` import resolves to that
+      // barrel's own file, so the barrels a declaration reaches — directly or
+      // transitively — are exactly the runtime barrels in its module set.
+      const barrels = [...modules]
+        .filter((m) => /(^|\/)(web|server)\/index\.tsx?$/.test(m))
+        .sort();
+
+      if (packages.length === 0 && barrels.length === 0) continue;
+      const reasons = [
+        ...packages.map((p) => `npm package ${p}`),
+        ...barrels.map((b) => `runtime barrel ${b}`),
+      ];
+      offenders.push(`${rel}\n        ${reasons.join("\n        ")}`);
+    }
+
+    if (offenders.length === 0) return { ok: true };
+
+    return {
+      ok: false,
+      message:
+        `${offenders.length} CLI command declaration(s) load more than data on every ` +
+        `./singularity invocation:\n    ` +
+        offenders.join("\n    "),
+      hint:
+        "Move the import into the module the declaration reaches through `run: () => import(...)`. " +
+        "That import is deferred until commander routes to this command; a static import at the top " +
+        "of cli/index.ts is paid by EVERY other command, including `build`. For an option default " +
+        "that needs a real value, drop the commander default and resolve it inside the action " +
+        "(`opts.x ?? THE_VALUE`), stating the default in the option's description.",
+    };
+  },
+};
+
+/**
+ * No two plugins may claim the same verb.
+ *
+ * The failure this prevents is silent, which is why it is worth a check rather
+ * than the runtime assertion in `bin/cli.ts` alone: commander keeps whichever
+ * command registered first, so the loser's verb is simply absent — its plugin
+ * looks installed, its folder is there, and `./singularity <verb>` runs someone
+ * else's code. `bin/cli.ts` does throw on this, but only for whoever runs the
+ * CLI next; catching it in `check` is what stops it reaching main.
+ *
+ * Loads the declarations for real (they are data by the check above, so this is
+ * cheap) rather than parsing names out of source: the name a plugin registers is
+ * whatever its module evaluates to, and a check that read the literal would
+ * disagree with the CLI the moment one is computed.
+ */
+const commandNamesUniqueCheck: Check = {
+  id: "cli:command-names-unique",
+  description:
+    "no two plugins may contribute the same ./singularity verb — commander keeps the first registration, so a collision silently deletes one plugin's command",
+  async run() {
+    const { cliEntries } = await import("../core/cli.generated");
+
+    // pluginPath -> the command names it claims, at each level of the tree.
+    const claims = new Map<string, string[]>();
+    for (const entry of cliEntries) {
+      const mod = (await entry.loader()) as { default?: unknown };
+      const exported = mod.default;
+      const commands = Array.isArray(exported)
+        ? exported
+        : exported === undefined
+          ? []
+          : [exported];
+      for (const c of commands) {
+        if (!isCliCommand(c)) {
+          return {
+            ok: false,
+            message: `${entry.pluginPath}/cli/index.ts default-exports something that is not a CLI command.`,
+            hint: "Declare it with defineCliCommand() from @plugins/framework/plugins/cli/core.",
+          };
+        }
+        for (const path of commandPaths(c)) {
+          const owners = claims.get(path) ?? [];
+          owners.push(entry.pluginPath);
+          claims.set(path, owners);
+        }
+      }
+    }
+
+    const collisions = [...claims]
+      .filter(([, owners]) => owners.length > 1)
+      .map(
+        ([path, owners]) => `${path}  (claimed by ${owners.sort().join(", ")})`,
+      )
+      .sort();
+    if (collisions.length === 0) return { ok: true };
+
+    return {
+      ok: false,
+      message:
+        `${collisions.length} ./singularity verb(s) are claimed by more than one plugin:\n    ` +
+        collisions.join("\n    "),
+      hint:
+        "A verb belongs to exactly one plugin. Rename one of them, or — if both are really the same " +
+        "operation — make one a subcommand of the other so the two plugins share a group.",
+    };
+  },
+};
+
+/** Every dotted verb path a command occupies, e.g. `deploy`, `deploy converge`. */
+function commandPaths(command: CliCommand, prefix = ""): string[] {
+  const path = prefix === "" ? command.name : `${prefix} ${command.name}`;
+  if (command.subcommands === undefined) return [path];
+  return [path, ...command.subcommands.flatMap((s) => commandPaths(s, path))];
+}
+
+export default [
+  manifestFreezeCheck,
+  bootstrapPackageFreeCheck,
+  declarationsLightCheck,
+  commandNamesUniqueCheck,
+];

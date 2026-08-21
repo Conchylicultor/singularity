@@ -205,7 +205,7 @@ async function runWorker(
 // samples alone. See research/2026-07-12-global-host-admission-memory-dimension.md.
 //
 // Units are DECIMAL (1 GB = 1e9 B, 1 MB = 1e6 B), the same convention as the
-// CLI's own footprint lines (cli/bin/commands/build.ts `maxRssLine`), because
+// CLI's own footprint lines (cli/plugins/build/cli/run.ts `maxRssLine`), because
 // PER_UNIT_BYTES is decimal. Labelling a 2**30 division "GB" would understate
 // the byte count by ~7% and silently corrupt the very constant these lines
 // calibrate. Kept as a private 5-line pure formatter rather than importing the

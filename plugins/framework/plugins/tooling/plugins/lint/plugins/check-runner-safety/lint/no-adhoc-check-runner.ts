@@ -20,11 +20,13 @@ const RUNNER_NAME = "runChecks";
 /**
  * The ONE sanctioned in-process caller — a FILE, not a directory.
  *
- * `build.ts` and `internal/app-artifacts.ts` are siblings of this file inside
- * `bin/commands/`, and they are exactly the callers this rule exists to keep out.
- * A directory-shaped owner would admit both.
+ * It is the `check` command's action body, and nothing else in that plugin: its
+ * own `cli/index.ts` declaration must stay data-only, and a directory-shaped
+ * owner would quietly admit any future file dropped beside it. `build` and
+ * `push` are the callers this rule exists to keep out, and they each spawn the
+ * pass instead.
  */
-const OWNER_FILE = "plugins/framework/plugins/cli/bin/commands/check.ts";
+const OWNER_FILE = "plugins/framework/plugins/cli/plugins/check/cli/run.ts";
 
 export default createRule({
   name: "no-adhoc-check-runner",
@@ -46,8 +48,9 @@ export default createRule({
         "four times and shipped through four pushes (fixed in 18126884a, but the " +
         "channel stays open for the next impure check). Spawn the check pass " +
         "instead, through the shared helper in " +
-        "plugins/framework/plugins/cli/bin/check-subprocess.ts, threading the host " +
-        "grant through grant.env(). Type-only imports are allowed, and " +
+        "plugins/framework/plugins/cli/plugins/op-runtime/cli/check-subprocess.ts, " +
+        "threading the host grant through grant.env(). Type-only imports are " +
+        "allowed, and " +
         "RunChecksOptions / listAllChecks / scopeOf on the same barrel are not " +
         "banned — only invoking the runner is.",
     },

@@ -60,6 +60,16 @@ export default {
       // POST to), and their entire output contract is the pass/fail transcript
       // the developer or agent reads on stdout. console is the sink.
       "**/e2e/**/*.{ts,tsx}",
+      // cli/ — plugin-contributed `./singularity <verb>` commands. This is the
+      // SAME case the `bin/` entry above already describes ("CLI commands print
+      // to the developer's terminal"); commands simply live in `cli/` now that a
+      // plugin can contribute one, rather than only in the framework CLI's
+      // `bin/`. A command's entire output contract is the transcript a developer
+      // or agent reads on stdout, and the structured logger is not merely the
+      // wrong sink but an unreachable one on the paths that matter most — the
+      // fresh-checkout bootstrap, an install, and a hermetic build all run with
+      // no backend to POST to.
+      "**/cli/**/*.{ts,tsx}",
     ],
   },
 };

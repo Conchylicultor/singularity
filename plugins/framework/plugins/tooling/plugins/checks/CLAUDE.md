@@ -59,7 +59,7 @@ to remove the dependency rather than key around it.
 
 ## `runChecks()` has exactly one in-process caller
 
-[`cli/bin/commands/check.ts`](../../../cli/bin/commands/check.ts), the `check`
+[`cli/plugins/check/cli/run.ts`](../../../cli/plugins/check/cli/run.ts), the `check`
 command's own action. `build` and `push` both reach it by spawning that command.
 
 A build process has already imported every plugin barrel, run the

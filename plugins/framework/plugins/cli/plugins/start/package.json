@@ -1,0 +1,6 @@
+{
+  "name": "@singularity/plugin-framework-cli-start",
+  "private": true,
+  "version": "0.0.1",
+  "description": "`./singularity start` — build and start the gateway daemon, then wait for it to actually serve before reporting success."
+}

@@ -13,7 +13,7 @@
  * `insertPush`, and `tasks-core` cannot import `attempt-work` (which imports
  * `tasks-core/server`).
  *
- * The WRITER half (`.githooks/prepare-commit-msg` and `cli/bin/commands/push.ts`)
+ * The WRITER half (`.githooks/prepare-commit-msg` and `cli/plugins/push/cli/run.ts`)
  * keeps its own literals; the pre-push `conversation-trailer` check is what binds
  * writers to readers — it FAILS a push whose commits lack the conversation
  * trailer, so a trailer-bearing commit on `main` is an enforced invariant rather

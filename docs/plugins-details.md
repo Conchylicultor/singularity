@@ -14634,14 +14634,227 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `notificationsWsHandler`
     - **`cli`**
       - Core:
-        - Exports (types): `MergeMarkerKind`
+        - Uses: `framework/tooling/collected-dir.defineCollectedDir`
+        - Exports (types):
+          - `CliAction`
+          - `CliArgumentSpec`
+          - `CliCommand`
+          - `CliCommandSpec`
+          - `CliOptionSpec`
+          - `MergeMarkerKind`
         - Exports (values):
           - `clearMergeMarkers`
+          - `defineCliCommand`
           - `findClaudeMdConflicts`
+          - `isCliCommand`
           - `MERGE_MARKER_KINDS`
           - `mergeMarkerDir`
           - `readMergeMarkers`
           - `resolveGitDir`
+      - Plugins:
+        - **`apply-migrations`** — `./singularity apply-migrations` — apply pending SQL migrations to the DB named by SINGULARITY_WORKTREE. The fresh-clone bootstrap's way to seed the base 'singularity' DB before the first build; the server applies them itself on boot.
+        - **`bootstrap`** — CLI bootstrap — the npm-free half that must run with node_modules absent: ensureDeps, the post-install re-exec, the orphan guard, the build lock.
+          - Cross-plugin:
+            - Imported by:
+              - `framework/cli/build`
+              - `framework/cli/push`
+          - Cli:
+            - Exports (types):
+              - `AcquireBuildLockOptions`
+              - `EnsureDepsOptions`
+              - `EnsureDepsResult`
+              - `InstallOutcome`
+              - `ReexecOptions`
+              - `ReexecOutcome`
+            - Exports (values):
+              - `acquireBuildLock`
+              - `adaptiveTimeoutMs`
+              - `disarmOrphanGuard`
+              - `ensureDeps`
+              - `installOrphanGuard`
+              - `ORPHAN_EXIT_CODE`
+              - `REEXEC_ENV`
+              - `reexecAfterInstall`
+        - **`build`** — `./singularity build` — the deploy command: codegen, migrations, web dist and backend restart for this checkout, or a composition's hermetic artifact set.
+          - Cli:
+            - Uses:
+              - `framework/cli/bootstrap.acquireBuildLock`
+              - `framework/cli/bootstrap.adaptiveTimeoutMs`
+              - `framework/cli/bootstrap.ensureDeps`
+              - `framework/cli/git-artifacts.registerMergeDrivers`
+              - `framework/cli/migrations.generateMigration`
+              - `framework/cli/migrations.MigrationAnswer`
+              - `framework/cli/migrations.parseMigrationAnswers`
+              - `framework/cli/op-runtime.buildProfilerStart`
+              - `framework/cli/op-runtime.BuildReceipt`
+              - `framework/cli/op-runtime.BuildReceiptStatus`
+              - `framework/cli/op-runtime.checkBroadcasts`
+              - `framework/cli/op-runtime.createValveDeps`
+              - `framework/cli/op-runtime.emitVerdict`
+              - `framework/cli/op-runtime.FatalSignal`
+              - `framework/cli/op-runtime.finishBuildProgress`
+              - `framework/cli/op-runtime.holdThroughValve`
+              - `framework/cli/op-runtime.installFatalSignalExit`
+              - `framework/cli/op-runtime.installVerdictGuard`
+              - `framework/cli/op-runtime.laneFor`
+              - `framework/cli/op-runtime.openBuildProgress`
+              - `framework/cli/op-runtime.printStepBlocks`
+              - `framework/cli/op-runtime.PROGRESS_FILE`
+              - `framework/cli/op-runtime.publishLane`
+              - `framework/cli/op-runtime.pushBuildSpan`
+              - `framework/cli/op-runtime.pushBuildStepLog`
+              - `framework/cli/op-runtime.readBuildProgress`
+              - `framework/cli/op-runtime.readCliCrash`
+              - `framework/cli/op-runtime.renderVerdict`
+              - `framework/cli/op-runtime.reportInterruptedPredecessor`
+              - `framework/cli/op-runtime.runCheckSubprocess`
+              - `framework/cli/op-runtime.shouldRequeue`
+              - `framework/cli/op-runtime.signalOriginTap`
+              - `framework/cli/op-runtime.SignalTermination`
+              - `framework/cli/op-runtime.ValveDeps`
+              - `framework/cli/op-runtime.valveGates`
+              - `framework/cli/op-runtime.Verdict`
+              - `framework/cli/op-runtime.writeBuildLogs`
+              - `framework/cli/op-runtime.writeBuildProfile`
+              - `framework/cli/op-runtime.writeBuildReceipt`
+        - **`check`** — `./singularity check` — run the repo validation checks (all, a named subset, or one scope). The only in-process caller of runChecks(): `build` and `push` each spawn it as a subprocess, so their `checks ✓` is one claim.
+          - Cli:
+            - Uses:
+              - `framework/cli/op-runtime.checkBroadcasts`
+              - `framework/cli/op-runtime.installFatalSignalExit`
+              - `framework/cli/op-runtime.publishLane`
+              - `framework/cli/op-runtime.reportInterruptedPredecessor`
+              - `framework/cli/op-runtime.signalOriginTap`
+        - **`db`** — `./singularity db` — worktree database operations; today just `db fork`, which gives a hand-made `git worktree add` checkout the DB fork it never got.
+        - **`deploy`** — `./singularity deploy converge|ship` — converge a host to serve a composition (run user, dirs, env, Caddy, systemd, firewall) and ship release bundles to it behind a health gate.
+        - **`format`** — `./singularity format` — prettier over the .ts/.tsx changed on this branch; the same pass `build` runs, without paying for a build.
+        - **`git-artifacts`** — Generated-artifact merge handling that runs inside a CLI command: re-deriving after a merge driver took the cheap side, and installing the drivers.
+          - Cross-plugin:
+            - Imported by:
+              - `framework/cli/build`
+              - `framework/cli/normalize-generated`
+              - `framework/cli/push`
+          - Cli:
+            - Exports (values):
+              - `normalizeGeneratedArtifacts`
+              - `registerMergeDrivers`
+              - `SKIP_POST_REWRITE_ENV`
+        - **`migrations`** — Drizzle migration generation for the CLI: the generate/rename/journal pipeline and the interactive drizzle-kit prompt driver.
+          - Cross-plugin:
+            - Imported by:
+              - `framework/cli/build`
+              - `framework/cli/regen-migrations`
+          - Cli:
+            - Exports (types):
+              - `DetectedPrompt`
+              - `DrizzlePromptResult`
+              - `GenerateMigrationResult`
+              - `JournalEntry`
+              - `KeyedAnswerEntry`
+              - `MigrationAnswer`
+              - `PromptOption`
+              - `RenameResult`
+            - Exports (values):
+              - `answersSidecarName`
+              - `generateMigration`
+              - `journalEntriesForSqlFiles`
+              - `listTrackedMigrationBasenames`
+              - `parseMigrationAnswers`
+              - `promptKey`
+              - `readBranchLocalAnswers`
+              - `regenerateJournal`
+              - `removeGeneratedFiles`
+              - `renameMigrations`
+              - `reorderViewStatements`
+              - `reorderViewStatementsInSql`
+              - `resolveAnswer`
+              - `resolveMainRef`
+              - `runDrizzleKitWithPrompts`
+              - `writeAnswersSidecar`
+        - **`normalize-generated`** — `./singularity normalize-generated` — re-derive the generated artifacts a merge driver auto-resolved during a merge or rebase and amend the head commit; the `post-rewrite` git hook's entry point.
+          - Cli:
+            - Uses: `framework/cli/git-artifacts.normalizeGeneratedArtifacts`
+        - **`op-runtime`** — Shared machinery of the op commands (build / check / push): broadcasts, deploy receipt, fatal-signal exits, lane, op profiler, progress log, admission valve, nested check, build output.
+          - Cross-plugin:
+            - Imported by:
+              - `framework/cli/build`
+              - `framework/cli/check`
+              - `framework/cli/push`
+          - Cli:
+            - Exports (types):
+              - `BuildLogs`
+              - `BuildProfile`
+              - `BuildProgressRecord`
+              - `BuildReceipt`
+              - `BuildReceiptStatus`
+              - `BuildRunProgress`
+              - `BuildSpan`
+              - `BuildStepLog`
+              - `CheckSubprocessOptions`
+              - `CheckSubprocessResult`
+              - `FatalSignal`
+              - `FatalSignalExitOptions`
+              - `HoldOutcome`
+              - `ResolvedReceipt`
+              - `SignalOriginTapOptions`
+              - `SignalTermination`
+              - `ValveDeps`
+              - `Verdict`
+            - Exports (values):
+              - `buildProfilerStart`
+              - `checkBroadcasts`
+              - `createValveDeps`
+              - `emitVerdict`
+              - `FATAL_SIGNAL_EXITS`
+              - `finishBuildProgress`
+              - `holdThroughValve`
+              - `installFatalSignalExit`
+              - `installVerdictGuard`
+              - `LANE_ENV`
+              - `laneFor`
+              - `MAX_VALVE_HOLD_MS`
+              - `openBuildProgress`
+              - `printStepBlocks`
+              - `PROGRESS_FILE`
+              - `publishLane`
+              - `pushBuildSpan`
+              - `pushBuildStepLog`
+              - `readBuildProgress`
+              - `readBuildReceipt`
+              - `readCliCrash`
+              - `recordCliCrash`
+              - `renderVerdict`
+              - `reportInterruptedPredecessor`
+              - `resolveBuildReceipt`
+              - `runCheckSubprocess`
+              - `shouldRequeue`
+              - `signalOriginTap`
+              - `valveGates`
+              - `writeBuildLogs`
+              - `writeBuildProfile`
+              - `writeBuildReceipt`
+        - **`push`** — `./singularity push` — the one path work reaches main: commit, rebase onto main, re-normalize generated artifacts, run the tree-scoped checks, fast-forward and push, all under the host-wide push mutex.
+          - Cli:
+            - Uses:
+              - `framework/cli/bootstrap.ensureDeps`
+              - `framework/cli/git-artifacts.normalizeGeneratedArtifacts`
+              - `framework/cli/git-artifacts.SKIP_POST_REWRITE_ENV`
+              - `framework/cli/op-runtime.checkBroadcasts`
+              - `framework/cli/op-runtime.installFatalSignalExit`
+              - `framework/cli/op-runtime.reportInterruptedPredecessor`
+              - `framework/cli/op-runtime.runCheckSubprocess`
+              - `framework/cli/op-runtime.signalOriginTap`
+        - **`regen-generated`** — `./singularity regen-generated` — the repo-tree half of build's codegen standalone (registries, barrels, plugin docs, manifests, config origins), for the post-rebase normalize step in `push`.
+        - **`regen-migrations`** — `./singularity regen-migrations` — discard branch-local migrations and re-generate them against the rebased schema, for the post-rebase normalize step in `push`; aborts on hand-edited SQL.
+          - Cli:
+            - Uses:
+              - `framework/cli/migrations.generateMigration`
+              - `framework/cli/migrations.listTrackedMigrationBasenames`
+              - `framework/cli/migrations.resolveMainRef`
+        - **`release`** — `./singularity release` — stage a composition into a portable, self-contained artifact (compiled binaries + vendored native PG/PgBouncer/gateway/parcel-watcher) and pack it as a single-file web binary or a Tauri desktop bundle.
+        - **`serve-app`** — `./singularity serve-app` — boot a packaged app's full runtime (gateway + embedded Postgres + app DB) under an isolated SINGULARITY_DIR. The one detachable command: it is meant to outlive the shell that launched it.
+        - **`start`** — `./singularity start` — build and start the gateway daemon, then wait for it to actually serve before reporting success.
+        - **`test`** — `./singularity test` — the ONLY way to run tests: both runners (bun:test for co-located logic suites, vitest for jsdom suites), with a summary naming both buckets so a green-but-partial result is impossible.
     - **`plugin-id`** — Canonical plugin identity: the branded PluginId type and its derived path encodings.
       - Cross-plugin:
         - Imported by:
@@ -15107,6 +15320,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Cross-plugin:
             - Imported by:
               - `framework/central-core`
+              - `framework/cli`
               - `framework/server-core`
               - `framework/tooling/checks`
               - `framework/tooling/provision`

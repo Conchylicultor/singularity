@@ -1,4 +1,7 @@
-import type { GrantHooks, Lane } from "@plugins/infra/plugins/host-admission/core";
+import type {
+  GrantHooks,
+  Lane,
+} from "@plugins/infra/plugins/host-admission/core";
 import type {
   OpenWait,
   OpKind,
@@ -73,7 +76,7 @@ export interface OpProfiler<K extends OpKind> {
   stepEnd(name: string): void;
   /**
    * Record a step whose duration and start instant are ALREADY known — the
-   * mirror of the build profiler's `pushBuildSpan` (`cli/bin/profiler.ts`), for
+   * mirror of the build profiler's `pushBuildSpan` (`cli/plugins/op-runtime/cli/profiler.ts`), for
    * a producer that reports a COMPLETED unit of work post-hoc rather than
    * bracketing it live. `checks/core`'s `onCheckDone(id, durationMs, wallStart)`
    * is exactly that shape: it fires after the check has finished, so routing it
@@ -181,7 +184,10 @@ export function createOpProfiler<K extends OpKind>(
     waits.push({
       kind: openWait.kind,
       startMs: openWait.startMs,
-      durationMs: Math.max(0, Date.now() - new Date(openWait.startedAt).getTime()),
+      durationMs: Math.max(
+        0,
+        Date.now() - new Date(openWait.startedAt).getTime(),
+      ),
     });
     openWait = null;
   };
@@ -274,7 +280,11 @@ export function createOpProfiler<K extends OpKind>(
     },
 
     recordStep: (name: string, durationMs: number, startedAtPerfMs: number) => {
-      steps.push({ name, startMs: stepOffsetPerf(startedAtPerfMs), durationMs });
+      steps.push({
+        name,
+        startMs: stepOffsetPerf(startedAtPerfMs),
+        durationMs,
+      });
     },
 
     complete: (o: OutcomeByKind[K]) => {

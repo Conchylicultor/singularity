@@ -4,7 +4,7 @@ Contributes the repo-wide `no-adhoc-check-runner` ESLint rule: importing
 `runChecks` as a **value** from
 `@plugins/framework/plugins/tooling/plugins/checks/core` is banned everywhere
 except the one sanctioned in-process caller,
-[`cli/bin/commands/check.ts`](../../../../cli/bin/commands/check.ts). Every other
+[`cli/plugins/check/cli/run.ts`](../../../../cli/plugins/check/cli/run.ts). Every other
 caller spawns that command instead.
 
 ## Why
@@ -32,7 +32,7 @@ unrelated branch. `18126884a` fixed that one check at its source — this rule
 closes the channel for the next impure one.
 
 The remedy the message names: spawn the check pass through the shared helper at
-[`cli/bin/check-subprocess.ts`](../../../../cli/bin/check-subprocess.ts),
+[`cli/plugins/op-runtime/cli/check-subprocess.ts`](../../../../cli/plugins/op-runtime/cli/check-subprocess.ts),
 threading the host grant through `grant.env()` so the child does not re-acquire
 host capacity.
 
@@ -46,10 +46,11 @@ imports (`import type`, and inline `type` specifiers) are allowed. A namespace
 import followed by `checks.runChecks(…)` is flagged, mirroring
 [`no-adhoc-profiler-seam`](../sink-safety/lint/no-adhoc-profiler-seam.ts).
 
-*Owner (in-rule, `OWNER_FILE`):* `plugins/framework/plugins/cli/bin/commands/check.ts`
-— a **file**, not a directory. `build.ts` and `internal/app-artifacts.ts` are its
-siblings inside `bin/commands/` and are exactly the callers this rule exists to
-keep out; a directory-shaped owner would admit both.
+*Owner (in-rule, `OWNER_FILE`):* `plugins/framework/plugins/cli/plugins/check/cli/run.ts`
+— a **file**, not a directory: the `check` command's action body and nothing else
+in that plugin, since its `cli/index.ts` declaration must stay data-only and a
+directory-shaped owner would admit any file dropped beside it. `build` and `push`
+are the callers this rule exists to keep out; both spawn the pass instead.
 
 ## No test exemption
 

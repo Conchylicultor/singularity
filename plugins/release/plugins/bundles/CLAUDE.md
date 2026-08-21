@@ -14,7 +14,7 @@ from two processes that share no runtime:
 - an HTTP handler in the Deploy app, which cannot `process.exit(1)`.
 
 Before this plugin the answer lived inline in
-`cli/bin/commands/deploy.ts` as a `resolveBundle` that called `refuse()` and
+`cli/plugins/deploy/cli/ship.ts` as a `resolveBundle` that called `refuse()` and
 exited. That shape is unusable from a handler, so a UI would have had to
 re-derive shippability — a second implementation, guaranteed to disagree.
 `resolveBundle` now returns a discriminated `BundleResolution`; the CLI does
@@ -25,7 +25,7 @@ same sentence.
 
 `@plugins/release/server` cannot be imported by a CLI process: its barrel
 eagerly pulls `@plugins/database/server`, which throws at module eval when
-`SINGULARITY_WORKTREE` is unset. That is why `cli/bin/commands/release.ts` used
+`SINGULARITY_WORKTREE` is unset. That is why `cli/plugins/release/cli/run.ts` used
 to carry a hand-copied `releaseOutDir` / `newReleaseRunId` under a "KEEP IN
 SYNC" comment.
 

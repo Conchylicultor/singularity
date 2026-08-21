@@ -1,6 +1,9 @@
-import { installOrphanGuard, isOpCommand, ORPHAN_EXIT_CODE } from "./orphan-guard";
-import { ensureDeps } from "./ensure-deps";
-import { reexecAfterInstall } from "./reexec";
+import {
+  ORPHAN_EXIT_CODE,
+  ensureDeps,
+  installOrphanGuard,
+  reexecAfterInstall,
+} from "@plugins/framework/plugins/cli/plugins/bootstrap/cli";
 
 /**
  * `./singularity`'s entrypoint — and deliberately NOT the CLI. Four ordered
@@ -52,17 +55,23 @@ import { reexecAfterInstall } from "./reexec";
  * `./reexec.ts`.
  */
 
-// A long-running op runs in THIS process, whose ppid is the invoking shell —
-// so it observes its own orphaning directly. Terminate when that shell dies, so
-// an orphaned op never holds a host lock (the push mutex worst case) forever.
+// The command runs in THIS process, whose ppid is the invoking shell — so it
+// observes its own orphaning directly. Terminate when that shell dies, so an
+// orphaned CLI never holds a host lock (the push mutex worst case) forever.
 //
 // FIRST, before the install: the guard must be armed for the whole lifetime of
-// this process, install included, or an orphaned op could sit on the install
-// lock — the one lock every other CLI invocation in this checkout queues behind.
-// `process.argv[2]` is still the subcommand (`bun bin/index.ts <cmd>`).
-if (isOpCommand(process.argv[2])) {
-  installOrphanGuard(() => process.exit(ORPHAN_EXIT_CODE));
-}
+// this process, install included, or an orphan could sit on the install lock —
+// the one lock every other CLI invocation in this checkout queues behind.
+//
+// UNCONDITIONAL, and this file reads no argv at all. It used to match
+// `process.argv[2]` against a hardcoded {build, check, push} set, which a CLI
+// whose commands are plugin contributions cannot keep: this line runs before the
+// install, so it cannot load the declarations that would answer the question.
+// Arming for everything removes the question instead of re-answering it from a
+// second copy. A command that is MEANT to outlive its shell declares
+// `detachable` and the mapper disarms it once argv is parsed — see
+// `./orphan-guard.ts`.
+installOrphanGuard(() => process.exit(ORPHAN_EXIT_CODE));
 
 // The one dependency chokepoint: freshness-gated (the common case is ~140 ms and
 // silent — see its docblock for the measured breakdown), serialized against

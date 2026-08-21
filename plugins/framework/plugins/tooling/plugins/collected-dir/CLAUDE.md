@@ -12,8 +12,17 @@ items: it optionally topo-sorts by `dependsOn`, runs every `loader()` via
 export) with `opts.isItem`, optionally de-dupes by `opts.dedupeKey`, and warns
 (never throws) on a rejected loader.
 
-Used by `loadFacets()` (`facets/core`, `ordered: true`) and `loadAllChecks()`
-(`checks/core`, `dedupeKey: c => c.id`).
+Used by `loadFacets()` (`facets/core`, `ordered: true`), `loadAllChecks()`
+(`checks/core`, `dedupeKey: c => c.id`) and the CLI's command registry
+(`framework/cli/bin/cli.ts`, `strict: true`).
+
+`strict: true` collects every rejected loader / invalid export and throws them as
+one error instead of warning. Pass it wherever **a missing item is
+indistinguishable from an item that does not exist** — a `cli/index.ts` that
+throws at load would make its verb silently absent, so `./singularity build`
+would report "unknown command" and a broken pipeline would read as a typo.
+Warn-and-continue stays the default: for facets and checks one bad contribution
+should cost a doc section, not the pass.
 
 ## Why this is its own leaf plugin
 
@@ -40,6 +49,7 @@ paths itself and uses throw-on-failure semantics.
 - Cross-plugin:
   - Imported by:
     - `framework/central-core`
+    - `framework/cli`
     - `framework/server-core`
     - `framework/tooling/checks`
     - `framework/tooling/provision`

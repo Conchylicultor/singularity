@@ -10,7 +10,7 @@
 //
 // Env-based on purpose, and MORE so now than when this was written: `build` no
 // longer runs checks in-process — it spawns the `check` command through
-// `cli/bin/check-subprocess.ts`. The env is therefore the PROPAGATION
+// `cli/plugins/op-runtime/cli/check-subprocess.ts`. The env is therefore the PROPAGATION
 // mechanism, not an in-process convenience: the child inherits the marker and
 // skips the same checks its parent would have, which is exactly what has to
 // keep happening. A standalone check and a push-spawned one inherit no build's

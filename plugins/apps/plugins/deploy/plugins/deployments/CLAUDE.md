@@ -144,7 +144,7 @@ that engine became awaitable at all — because the build must be recorded in
 
 A converge on an already-correct host must change nothing — re-running it is how
 you inspect or repair one. Two rules in the generated script
-(`cli/bin/commands/internal/converge-script.ts`) carry that; a new step has to
+(`cli/plugins/deploy/cli/internal/converge-script.ts`) carry that; a new step has to
 honour both:
 
 - **Every generated file lands through `put`**, which replaces the target only

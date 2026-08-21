@@ -54,7 +54,7 @@ echo "setup: installing bun deps (needed for the apply-migrations command import
 # The CLI's one dependency chokepoint, invoked directly: freshness-gated and
 # serialized against any concurrent CLI-mediated install, and runnable before
 # node_modules exists (node builtins + @plugins/* aliases only).
-bun plugins/framework/plugins/cli/bin/ensure-deps.ts
+bun plugins/framework/plugins/cli/plugins/bootstrap/cli/ensure-deps.ts
 
 echo "setup: applying migrations to 'singularity' DB..."
 # Invoke the CLI bin directly (not the ./singularity wrapper) purely for

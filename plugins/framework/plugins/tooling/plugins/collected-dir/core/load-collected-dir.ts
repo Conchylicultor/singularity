@@ -27,6 +27,27 @@ export interface LoadCollectedDirOptions<T> {
   dedupeKey?: (item: T) => string;
   /** Label used in warn-on-reject log lines, e.g. "facet" / "check". */
   label?: string;
+  /**
+   * Treat a rejected loader or an invalid default export as a FAILURE rather
+   * than something to warn about and skip. Every failure in the pass is
+   * collected and thrown as one error, so a broken tree reports all of its
+   * breakage instead of one item per run.
+   *
+   * Off by default, which is right for facets and checks: a facet that fails to
+   * load costs a doc section, and the registry is large enough that one bad
+   * contribution should not take the whole pass down.
+   *
+   * It is WRONG wherever a missing item is indistinguishable from an item that
+   * does not exist. `./singularity`'s command registry is the case that
+   * motivated the option: a `cli/index.ts` that throws at load would otherwise
+   * make its verb quietly absent, and `./singularity build` would report
+   * "unknown command" — a broken deploy pipeline reading as a typo. `lint/` and
+   * `provision/` each hand-rolled a fail-loud loader to escape this default;
+   * this option exists so the CLI does not become a third copy of that, and so
+   * the next fail-loud consumer has something to pass rather than something to
+   * rewrite.
+   */
+  strict?: boolean;
 }
 
 function topoSort(entries: CollectedEntry[]): CollectedEntry[] {
@@ -37,7 +58,9 @@ function topoSort(entries: CollectedEntry[]): CollectedEntry[] {
   function visit(path: string) {
     if (visited.has(path)) return;
     if (stack.has(path))
-      throw new Error(`Collected-dir dependency cycle: ${[...stack, path].join(" → ")}`);
+      throw new Error(
+        `Collected-dir dependency cycle: ${[...stack, path].join(" → ")}`,
+      );
     stack.add(path);
     const entry = byPath.get(path);
     if (entry) for (const dep of entry.dependsOn) visit(dep);
@@ -58,16 +81,44 @@ export async function loadCollectedDir<T>(
   const out: T[] = [];
   const seen = opts.dedupeKey ? new Set<string>() : null;
   const label = opts.label ?? "collected-dir";
+  // Only populated under `strict`; every failure is collected so one pass
+  // reports all of the breakage rather than the first item of it.
+  const failures: string[] = [];
   for (let i = 0; i < results.length; i++) {
     const r = results[i]!;
     if (r.status === "rejected") {
-      console.warn(`[${label}] failed: ${ordered[i]!.pluginPath}`, r.reason);
+      if (opts.strict === true) {
+        failures.push(
+          `${ordered[i]!.pluginPath} — loader threw: ${
+            r.reason instanceof Error ? r.reason.message : String(r.reason)
+          }`,
+        );
+      } else {
+        console.warn(`[${label}] failed: ${ordered[i]!.pluginPath}`, r.reason);
+      }
       continue;
     }
     const exported = (r.value as { default?: unknown }).default;
-    const items = Array.isArray(exported) ? exported : exported ? [exported] : [];
+    const items = Array.isArray(exported)
+      ? exported
+      : exported
+        ? [exported]
+        : [];
+    if (opts.strict === true && items.length === 0) {
+      failures.push(
+        `${ordered[i]!.pluginPath} — no default export (or it is empty)`,
+      );
+      continue;
+    }
     for (const item of items) {
-      if (!opts.isItem(item)) continue;
+      if (!opts.isItem(item)) {
+        if (opts.strict === true) {
+          failures.push(
+            `${ordered[i]!.pluginPath} — default export is not a valid ${label}`,
+          );
+        }
+        continue;
+      }
       if (seen && opts.dedupeKey) {
         const key = opts.dedupeKey(item);
         if (seen.has(key)) continue;
@@ -75,6 +126,12 @@ export async function loadCollectedDir<T>(
       }
       out.push(item);
     }
+  }
+  if (failures.length > 0) {
+    throw new Error(
+      `${failures.length} ${label} contribution(s) failed to load:\n    ` +
+        failures.join("\n    "),
+    );
   }
   return out;
 }

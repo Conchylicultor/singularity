@@ -11,7 +11,7 @@ parent `duress` plugin's CLAUDE.md for the full lifecycle and lease contract.
 This is a **leaf sub-plugin on purpose**: its module-eval depends only on
 `node:fs` and `infra/paths` — no config_v2, no DB, no `SINGULARITY_WORKTREE`
 identity — so processes outside a backend (the CLI's build admission valve,
-`plugins/framework/plugins/cli/bin/admission-valve.ts`) can import it safely.
+`plugins/framework/plugins/cli/plugins/op-runtime/cli/admission-valve.ts`) can import it safely.
 The parent `duress` barrel drags config_v2 (whose module-eval asserts a
 worktree identity) via the shed engine, which is exactly what the CLI cannot
 evaluate. Do not add config/DB/backend dependencies here — that would

@@ -65,6 +65,28 @@ export default defineBoundaries({
     // whole failure mode the registry exists to end. Importing a declaration
     // reads a path; it does not import the code under test.
     e2e: ["e2e", "core", "data-dirs"],
+    // cli/ — a plugin's `./singularity <verb>` contribution. A CLI command is a
+    // host process like a server, so it may reach `core`, its own `shared`,
+    // declared `data-dirs`, other plugins' `server` barrels, and other plugins'
+    // `cli` barrels. That last edge is the point: shared CLI machinery lives in
+    // a `cli/` barrel rather than being copied, exactly as `provision` shares one
+    // chromium installer and `tooling/e2e-harness` shares one Playwright harness.
+    // `runtimeNames` derives from these keys, so `@plugins/<p>/cli` becomes a
+    // legal cross-plugin barrel with no other edit.
+    //
+    // `web` is denied: a terminal verb that reached a browser barrel would drag
+    // React into the CLI process, and there is no such thing as a CLI rendering
+    // a component.
+    //
+    // THIS ROW DOES NOT CARRY THE EAGER-WEIGHT RULE, and must not be read as
+    // doing so. Every plugin's `cli/index.ts` is loaded on EVERY `./singularity`
+    // invocation (commander needs names and flags before it parses), while the
+    // command's implementation must not be. That constraint is a property of one
+    // file, not of the runtime, so it is enforced by
+    // `cli:command-declarations-light` — which measures each `cli/index.ts`'s
+    // STATIC closure only. An implementation sitting next to the declaration is
+    // free to reach `server`; the declaration reaching it is the error.
+    cli: ["cli", "core", "shared", "data-dirs", "server"],
   },
 
   runtimeExceptions: [

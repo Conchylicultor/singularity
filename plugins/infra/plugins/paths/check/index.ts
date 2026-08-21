@@ -708,7 +708,7 @@ const DATA_ROOT_ALLOWED_PATHS = [
   // the developer's own data root. The guard reads the env precisely because
   // the env is the thing being checked; the command's actual path use goes
   // through `dataRoot()`.
-  "plugins/framework/plugins/cli/bin/commands/serve-app.ts",
+  "plugins/framework/plugins/cli/plugins/serve-app/cli/run.ts",
 ];
 
 /**

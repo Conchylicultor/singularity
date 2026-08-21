@@ -1,55 +1,75 @@
 import { program } from "commander";
-import { registerApplyMigrations } from "./commands/apply-migrations";
-import { registerBuild } from "./commands/build";
-import { registerCheck } from "./commands/check";
-import { registerDb } from "./commands/db";
-import { registerDeploy } from "./commands/deploy";
-import { registerFormat } from "./commands/format";
-import { registerNormalizeGenerated } from "./commands/normalize-generated";
-import { registerPush } from "./commands/push";
-import { registerRegenGenerated } from "./commands/regen-generated";
-import { registerRegenMigrations } from "./commands/regen-migrations";
-import { registerRelease } from "./commands/release";
-import { registerServeApp } from "./commands/serve-app";
-import { registerStart } from "./commands/start";
-import { registerTest } from "./commands/test";
+import { loadCollectedDir } from "@plugins/framework/plugins/tooling/plugins/collected-dir/core";
+import { isCliCommand, type CliCommand } from "../core";
+import { cliEntries } from "../core/cli.generated";
+import { registerCommands } from "./register-commands";
 import { runCli } from "./run-cli";
 
 /**
- * The CLI proper: the commander program, one `register*` per command file, and
- * the parse. This IS what `./singularity <cmd>` runs — it was split out of
- * `./index.ts` unchanged, and is reached ONLY through that bootstrap's
- * `await import("./cli")`.
+ * The CLI proper: the commander program, the plugin-contributed command
+ * registry, and the parse. This IS what `./singularity <cmd>` runs, and it is
+ * reached ONLY through `./index.ts`'s `await import("./cli")`.
  *
- * Why the split exists: this file's very first line imports `commander`, an npm
- * package. A static import is hoisted above every statement in its module, so a
- * module that wants to run `bun install` BEFORE the CLI cannot also be the
- * module that imports the CLI's dependencies — the resolution would happen
- * first, against the `node_modules` we were about to fix. Reaching this file is
- * therefore the *act* of asserting "`node_modules` is known good": everything
- * that guarantees it happens in `./index.ts`, before the dynamic import that
- * loads this module. See that file's docblock for the whole contract.
+ * Why the split from `./index.ts` exists: this file's very first line imports
+ * `commander`, an npm package. A static import is hoisted above every statement
+ * in its module, so a module that wants to run `bun install` BEFORE the CLI
+ * cannot also be the module that imports the CLI's dependencies — the resolution
+ * would happen first, against the `node_modules` we were about to fix. Reaching
+ * this file is therefore the *act* of asserting "`node_modules` is known good".
+ * See that file's docblock for the whole contract.
  *
- * Nothing else here is special: `cli.ts` loads in exactly the pre-plugin-barrel
- * state `index.ts` used to, so the ESM-freeze constraints the command modules
- * carry (see ./commands/internal/app-artifacts.ts) are unchanged by the move.
+ * Commands are CONTRIBUTIONS, not a list here. A plugin drops a `cli/index.ts`
+ * default-exporting `defineCliCommand(…)` and `./singularity build` regenerates
+ * `../core/cli.generated.ts` from the filesystem; nothing in the framework CLI
+ * names it. Each entry's loader pulls one plugin's declaration — data only, by
+ * `cli:command-declarations-light` — and the command's IMPLEMENTATION stays
+ * behind the declaration's own lazy `import()` until commander routes to it. So
+ * `./singularity build` no longer pays to load every other command's body.
  */
 
 program.name("singularity").description("Singularity agent CLI");
 
-registerApplyMigrations(program);
-registerBuild(program);
-registerCheck(program);
-registerDb(program);
-registerDeploy(program);
-registerFormat(program);
-registerNormalizeGenerated(program);
-registerPush(program);
-registerRegenGenerated(program);
-registerRegenMigrations(program);
-registerRelease(program);
-registerServeApp(program);
-registerStart(program);
-registerTest(program);
+// `strict`: a declaration that throws at load must not read as "that command
+// does not exist" — `./singularity build` reporting "unknown command" would
+// look like a typo rather than a broken tree.
+const contributed = await loadCollectedDir<CliCommand>(cliEntries, {
+  isItem: isCliCommand,
+  label: "cli command",
+  strict: true,
+});
+
+assertUniqueNames(contributed);
+
+// Sorted by name so `--help` has a stable order that does not depend on where in
+// the plugin tree a command happens to live (the registry is ordered by import
+// path, which would reshuffle `--help` when a command moves).
+registerCommands(
+  program,
+  [...contributed].sort((a, b) => a.name.localeCompare(b.name)),
+);
 
 await runCli(program);
+
+/**
+ * Two plugins claiming one verb is a conflict with no correct resolution, and
+ * the silent outcome is the dangerous one: commander would keep whichever
+ * registered first and the other plugin's command would simply not be there.
+ *
+ * This is the BACKSTOP, not the enforcement. `cli:command-names-unique` is what
+ * a human sees, and it says strictly more: it reads the registry, so it can name
+ * the CLAIMING PLUGINS rather than just the verb, and it walks subcommand paths
+ * (`deploy converge`) which this cannot — by the time `loadCollectedDir` has
+ * returned, the items no longer carry which plugin they came from. What is left
+ * here is the case the check cannot cover: a tree that changed since the last
+ * `./singularity check`, where refusing to run beats running the wrong command.
+ */
+function assertUniqueNames(commands: readonly CliCommand[]): void {
+  const seen = new Map<string, number>();
+  for (const c of commands) seen.set(c.name, (seen.get(c.name) ?? 0) + 1);
+  const duplicated = [...seen].filter(([, n]) => n > 1).map(([name]) => name);
+  if (duplicated.length === 0) return;
+  throw new Error(
+    `${duplicated.length} CLI command name(s) are claimed by more than one plugin: ` +
+      `${duplicated.join(", ")}. A verb belongs to exactly one plugin — rename one of them.`,
+  );
+}

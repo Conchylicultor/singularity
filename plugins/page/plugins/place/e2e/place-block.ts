@@ -4,7 +4,7 @@
 //
 // It deliberately stops before searching. A search needs a Google Maps API key,
 // and the key lives on the CENTRAL runtime, which always runs main's code
-// (`cli/bin/commands/build.ts`: "agent worktrees never change central's running
+// (`cli/plugins/build/cli/run.ts`: "agent worktrees never change central's running
 // code"). So on a branch the provider is not registered centrally, and the
 // honest end of this script is the "not set up" affordance — not a result list.
 //

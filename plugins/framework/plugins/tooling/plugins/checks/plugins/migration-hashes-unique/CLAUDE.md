@@ -33,7 +33,7 @@ unit-tested in `check/index.test.ts`); the impure git/fs reads stay in `run()`.
 
 Historically every `--custom` (data/backfill) migration hashed to the empty
 drizzle placeholder body and so claimed the identical hash `b3cc75fa`.
-`renameMigrations` (`plugins/framework/plugins/cli/bin/migrations.ts`) now
+`renameMigrations` (`plugins/framework/plugins/cli/plugins/migrations/cli/migrations.ts`) now
 uniquifies the placeholder body with the migration's timestamp+slug before
 hashing, so fresh custom migrations get distinct hashes; this check guards
 against the collision class returning.

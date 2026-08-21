@@ -41,6 +41,7 @@ export const RUNTIME_FOLDERS = [
   "e2e",
   "provision",
   "data-dirs",
+  "cli",
 ] as const;
 export type RuntimeFolder = (typeof RUNTIME_FOLDERS)[number];
 
@@ -79,6 +80,13 @@ const RUNTIME_FOLDER_DOCUMENTED: Record<RuntimeFolder, boolean> = {
   // context on a second, drift-prone copy of a registry that is already
   // enumerable at runtime.
   "data-dirs": false,
+  // `cli` is the one non-web/server runtime that IS documented. Unlike `e2e` and
+  // `provision`, whose barrels only other e2e scripts / provisioning steps can
+  // reach, a `cli/` folder's headline fact is user-facing: this plugin owns
+  // `./singularity <verb>`. That is precisely what an agent needs to read out of
+  // the generated reference before adding a second verb for the same job, and it
+  // is not answerable from anywhere else — a command name is not a filename.
+  cli: true,
 };
 
 /** Runtime folders the generated plugin docs omit — the doc renderer's generic

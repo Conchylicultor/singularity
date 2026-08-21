@@ -9,7 +9,7 @@ let registered = false;
  * Exported because it is a LIE that outlives this process: anything spawned from
  * a barrel-importing process inherits it, and would then believe it is running
  * in a worktree by that name. The one consumer today is the check subprocess
- * helper (`cli/bin/check-subprocess.ts`), which scrubs the variable when — and
+ * helper (`cli/plugins/op-runtime/cli/check-subprocess.ts`), which scrubs the variable when — and
  * only when — it still holds this exact value; a real inherited worktree name
  * must survive. Spelled once here so the scrub and the stub can never disagree
  * about what the sentinel is.

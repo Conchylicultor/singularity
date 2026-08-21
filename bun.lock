@@ -2437,14 +2437,93 @@
         "singularity": "bin/index.ts",
       },
       "dependencies": {
-        "@resvg/resvg-js": "^2.6.2",
         "commander": "^13.1.0",
-        "pg": "^8.13.0",
       },
       "devDependencies": {
         "@types/bun": "latest",
         "typescript": "~6.0.3",
       },
+    },
+    "plugins/framework/plugins/cli/plugins/apply-migrations": {
+      "name": "@singularity/plugin-framework-cli-apply-migrations",
+      "version": "0.0.1",
+      "dependencies": {
+        "pg": "^8.13.0",
+      },
+    },
+    "plugins/framework/plugins/cli/plugins/bootstrap": {
+      "name": "@singularity/plugin-framework-cli-bootstrap",
+      "version": "0.0.1",
+    },
+    "plugins/framework/plugins/cli/plugins/build": {
+      "name": "@singularity/plugin-framework-cli-build",
+      "version": "0.0.1",
+      "dependencies": {
+        "pg": "^8.13.0",
+      },
+    },
+    "plugins/framework/plugins/cli/plugins/check": {
+      "name": "@singularity/plugin-framework-cli-check",
+      "version": "0.0.1",
+    },
+    "plugins/framework/plugins/cli/plugins/db": {
+      "name": "@singularity/plugin-framework-cli-db",
+      "version": "0.0.1",
+    },
+    "plugins/framework/plugins/cli/plugins/deploy": {
+      "name": "@singularity/plugin-framework-cli-deploy",
+      "version": "0.0.1",
+    },
+    "plugins/framework/plugins/cli/plugins/format": {
+      "name": "@singularity/plugin-framework-cli-format",
+      "version": "0.0.1",
+    },
+    "plugins/framework/plugins/cli/plugins/git-artifacts": {
+      "name": "@singularity/plugin-framework-cli-git-artifacts",
+      "version": "0.0.1",
+    },
+    "plugins/framework/plugins/cli/plugins/migrations": {
+      "name": "@singularity/plugin-framework-cli-migrations",
+      "version": "0.0.1",
+    },
+    "plugins/framework/plugins/cli/plugins/normalize-generated": {
+      "name": "@singularity/plugin-framework-cli-normalize-generated",
+      "version": "0.0.1",
+    },
+    "plugins/framework/plugins/cli/plugins/op-runtime": {
+      "name": "@singularity/plugin-framework-cli-op-runtime",
+      "version": "0.0.1",
+    },
+    "plugins/framework/plugins/cli/plugins/push": {
+      "name": "@singularity/plugin-framework-cli-push",
+      "version": "0.0.1",
+    },
+    "plugins/framework/plugins/cli/plugins/regen-generated": {
+      "name": "@singularity/plugin-framework-cli-regen-generated",
+      "version": "0.0.1",
+    },
+    "plugins/framework/plugins/cli/plugins/regen-migrations": {
+      "name": "@singularity/plugin-framework-cli-regen-migrations",
+      "version": "0.0.1",
+    },
+    "plugins/framework/plugins/cli/plugins/release": {
+      "name": "@singularity/plugin-framework-cli-release",
+      "version": "0.0.1",
+      "dependencies": {
+        "@resvg/resvg-js": "^2.6.2",
+      },
+    },
+    "plugins/framework/plugins/cli/plugins/serve-app": {
+      "name": "@singularity/plugin-framework-cli-serve-app",
+      "version": "0.0.1",
+    },
+    "plugins/framework/plugins/cli/plugins/start": {
+      "name": "@singularity/plugin-framework-cli-start",
+      "version": "0.0.1",
+    },
+    "plugins/framework/plugins/cli/plugins/test": {
+      "name": "@singularity/plugin-framework-cli-test",
+      "version": "0.0.1",
     },
     "plugins/framework/plugins/plugin-id": {
       "name": "@singularity/plugin-framework-plugin-id",
@@ -6788,6 +6867,42 @@
 
     "@singularity/plugin-framework-cli": ["@singularity/plugin-framework-cli@workspace:plugins/framework/plugins/cli"],
 
+    "@singularity/plugin-framework-cli-apply-migrations": ["@singularity/plugin-framework-cli-apply-migrations@workspace:plugins/framework/plugins/cli/plugins/apply-migrations"],
+
+    "@singularity/plugin-framework-cli-bootstrap": ["@singularity/plugin-framework-cli-bootstrap@workspace:plugins/framework/plugins/cli/plugins/bootstrap"],
+
+    "@singularity/plugin-framework-cli-build": ["@singularity/plugin-framework-cli-build@workspace:plugins/framework/plugins/cli/plugins/build"],
+
+    "@singularity/plugin-framework-cli-check": ["@singularity/plugin-framework-cli-check@workspace:plugins/framework/plugins/cli/plugins/check"],
+
+    "@singularity/plugin-framework-cli-db": ["@singularity/plugin-framework-cli-db@workspace:plugins/framework/plugins/cli/plugins/db"],
+
+    "@singularity/plugin-framework-cli-deploy": ["@singularity/plugin-framework-cli-deploy@workspace:plugins/framework/plugins/cli/plugins/deploy"],
+
+    "@singularity/plugin-framework-cli-format": ["@singularity/plugin-framework-cli-format@workspace:plugins/framework/plugins/cli/plugins/format"],
+
+    "@singularity/plugin-framework-cli-git-artifacts": ["@singularity/plugin-framework-cli-git-artifacts@workspace:plugins/framework/plugins/cli/plugins/git-artifacts"],
+
+    "@singularity/plugin-framework-cli-migrations": ["@singularity/plugin-framework-cli-migrations@workspace:plugins/framework/plugins/cli/plugins/migrations"],
+
+    "@singularity/plugin-framework-cli-normalize-generated": ["@singularity/plugin-framework-cli-normalize-generated@workspace:plugins/framework/plugins/cli/plugins/normalize-generated"],
+
+    "@singularity/plugin-framework-cli-op-runtime": ["@singularity/plugin-framework-cli-op-runtime@workspace:plugins/framework/plugins/cli/plugins/op-runtime"],
+
+    "@singularity/plugin-framework-cli-push": ["@singularity/plugin-framework-cli-push@workspace:plugins/framework/plugins/cli/plugins/push"],
+
+    "@singularity/plugin-framework-cli-regen-generated": ["@singularity/plugin-framework-cli-regen-generated@workspace:plugins/framework/plugins/cli/plugins/regen-generated"],
+
+    "@singularity/plugin-framework-cli-regen-migrations": ["@singularity/plugin-framework-cli-regen-migrations@workspace:plugins/framework/plugins/cli/plugins/regen-migrations"],
+
+    "@singularity/plugin-framework-cli-release": ["@singularity/plugin-framework-cli-release@workspace:plugins/framework/plugins/cli/plugins/release"],
+
+    "@singularity/plugin-framework-cli-serve-app": ["@singularity/plugin-framework-cli-serve-app@workspace:plugins/framework/plugins/cli/plugins/serve-app"],
+
+    "@singularity/plugin-framework-cli-start": ["@singularity/plugin-framework-cli-start@workspace:plugins/framework/plugins/cli/plugins/start"],
+
+    "@singularity/plugin-framework-cli-test": ["@singularity/plugin-framework-cli-test@workspace:plugins/framework/plugins/cli/plugins/test"],
+
     "@singularity/plugin-framework-plugin-id": ["@singularity/plugin-framework-plugin-id@workspace:plugins/framework/plugins/plugin-id"],
 
     "@singularity/plugin-framework-plugin-loader": ["@singularity/plugin-framework-plugin-loader@workspace:plugins/framework/plugins/plugin-loader"],
@@ -9768,6 +9883,8 @@
 
     "@rocicorp/zero/postgres": ["postgres@3.4.7", "", {}, "sha512-Jtc2612XINuBjIl/QTWsV5UvE8UHuNblcO3vVADSrKsrc6RqGX6lOW1cEo3CM2v0XG4Nat8nI+YM7/f26VxXLw=="],
 
+    "@singularity/plugin-framework-cli/@types/bun": ["@types/bun@1.4.0", "", { "dependencies": { "bun-types": "1.4.0" } }, "sha512-K+lZULY23vRgK/CfTjFIV+tyifaNdSMlPh9j+6mQ/cLfpOznLyAuzgV/JQysyECpkBQLVMSyvjlr2fBUSA9wFQ=="],
+
     "@tailwindcss/oxide-wasm32-wasi/@emnapi/core": ["@emnapi/core@1.9.2", "", { "dependencies": { "@emnapi/wasi-threads": "1.2.1", "tslib": "^2.4.0" }, "bundled": true }, "sha512-UC+ZhH3XtczQYfOlu3lNEkdW/p4dsJ1r/bP7H8+rhao3TTTMO1ATq/4DdIi23XuGoFY+Cz0JmCbdVl0hz9jZcA=="],
 
     "@tailwindcss/oxide-wasm32-wasi/@emnapi/runtime": ["@emnapi/runtime@1.9.2", "", { "dependencies": { "tslib": "^2.4.0" }, "bundled": true }, "sha512-3U4+MIWHImeyu1wnmVygh5WlgfYDtyf0k8AbLhMFxOipihf6nrWC4syIm/SwEeec0mNSafiiNnMJwbza/Is6Lw=="],
@@ -9981,6 +10098,8 @@
     "@modelcontextprotocol/sdk/ajv/json-schema-traverse": ["json-schema-traverse@1.0.0", "", {}, "sha512-NM8/P9n3XjXhIZn1lLhkFaACTOURQXjWhV4BA/RnOv8xvgqtqpAX9IO4mRQxSx1Rlo4tqzeqb0sOlruaOy3dug=="],
 
     "@opentelemetry/sdk-node/@opentelemetry/sdk-trace-node/@opentelemetry/context-async-hooks": ["@opentelemetry/context-async-hooks@2.0.1", "", { "peerDependencies": { "@opentelemetry/api": ">=1.0.0 <1.10.0" } }, "sha512-XuY23lSI3d4PEqKA+7SLtAgwqIfc6E/E9eAQWLN1vlpC53ybO3o6jW4BsXo1xvz9lYyyWItfQDDLzezER01mCw=="],
+
+    "@singularity/plugin-framework-cli/@types/bun/bun-types": ["bun-types@1.4.0", "", { "dependencies": { "@types/node": "*" } }, "sha512-iIKw23BspnQQYd3prITOBxeUsxBHnwzX6YJfGMuNOZzeNcMmVqzIIVGRm1l69ogaPQmb4wB6BN8mA5bE9YuC5Q=="],
 
     "@ts-morph/common/minimatch/brace-expansion": ["brace-expansion@5.0.5", "", { "dependencies": { "balanced-match": "^4.0.2" } }, "sha512-VZznLgtwhn+Mact9tfiwx64fA9erHH/MCXEUfB/0bX/6Fz6ny5EGTXYltMocqg4xFAQZtnO3DHWWXi8RiuN7cQ=="],
 

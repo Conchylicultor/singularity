@@ -2,7 +2,7 @@
 
 The generic Tauri (Rust) shell that turns a staged self-contained app bundle into
 a host-platform desktop app. Driven by `./singularity release --composition <name>
---target tauri` (see `plugins/framework/plugins/cli/bin/commands/release.ts`).
+--target tauri` (see `plugins/framework/plugins/cli/plugins/release/cli/run.ts`).
 
 It is **app-agnostic**: it reads the composition name + port from the bundled
 `RELEASE.json` at runtime, brings up the stack via the bundled `launch` binary,

@@ -1,11 +1,47 @@
 # cli
 
-The `./singularity` agent CLI. `bin/index.ts` is a three-step bootstrap;
-`bin/cli.ts` is the CLI proper and registers one command per file under
-`bin/commands/`. Everything shared between commands lives either beside them in
-`bin/` (profiler, build lock, lane, migrations, admission valve, ensure-deps) or,
-when it is an ordered *stage sequence* rather than a helper, in
-`bin/commands/internal/`.
+The `./singularity` agent CLI. `bin/index.ts` is the bootstrap; `bin/cli.ts` is
+the CLI proper.
+
+## Contributing a command
+
+A plugin ships `plugins/<name>/cli/index.ts` default-exporting
+`defineCliCommand(…)` (from `@plugins/framework/plugins/cli/core`), and
+`./singularity build` regenerates `core/cli.generated.ts` from the filesystem.
+Nothing here names it. `plugins/format/` is the reference shape.
+
+The declaration is **data only** — commander needs names and flags before it
+parses, so every plugin's `cli/index.ts` loads on every `./singularity`
+invocation, `build` included. The implementation sits behind the declaration's
+own `run: () => import("./run")` and loads only when that command runs.
+`cli:command-declarations-light` enforces the split (no npm package, no
+`web`/`server` barrel, measured with dynamic edges cut); breaking it silently
+taxes every other command. `bin/register-commands.ts` is the sole translation
+into commander calls, which is what keeps `commander` — a workspace-local dep —
+out of contributing plugins.
+
+A `cli/index.ts` with no default export is not a command; that is how shared CLI
+machinery lives in a `cli/` barrel other commands import.
+
+A command sub-plugin has no runtime barrel, so its generated doc line comes from
+its **`package.json` `description`** — set it, or the plugin lands in
+`docs/plugins-compact.md` (auto-loaded into every agent) with a blank line.
+
+**Every command is a sub-plugin; `bin/` holds no command at all.** It is now just
+the host: `index.ts` (bootstrap), `cli.ts` (the program), `register-commands.ts`
+(the one translation into commander) and `run-cli.ts` (the process-boundary
+harness). Four sub-plugins carry what more than one command needs, and a command
+reaches them through their `cli/` barrels:
+
+| sub-plugin | what it carries |
+|---|---|
+| `bootstrap` | `ensureDeps`, the post-install re-exec, the orphan guard, the build lock — **the npm-free closure**, loaded before `bun install` |
+| `op-runtime` | broadcasts, deploy receipt, fatal-signal exits, lane, op profiler, progress log, admission valve, nested check, build output |
+| `migrations` | drizzle generation and the interactive prompt driver |
+| `git-artifacts` | re-deriving generated artifacts after a merge driver, and installing the drivers |
+
+A command's own ordered *stage sequence* lives in its own `cli/internal/` —
+build's eight-file pipeline is build-private, and `converge-script` is deploy's.
 
 ## Commands
 
@@ -13,7 +49,7 @@ when it is an ordered *stage sequence* rather than a helper, in
 |---|---|
 | `build` | **Deploy this checkout into the live dev cluster** — its own app, or the compositions named by `--composition <name…>`, each at `http://<composition>.<checkout>.localhost:9000` — *or* — `--hermetic --composition <name…>` — **produce those compositions' artifact sets on a bare host from a fresh `git clone`.** The deploy posture is the inner loop: artifacts + Postgres readiness, the DB (the worktree fork for the checkout's own app, an empty one per composition), the `build_runs` ledger, gateway spec/restart/health probe; it needs a provisioned dev box. The hermetic posture is filtered registries + generated migration SQL + the web dist, as a function of (source tree, compositions) only — no cluster, no gateway, no ledger. |
 | `release` | Wraps `build --hermetic` and packs its output into a portable self-contained app (`--target web` / `tauri`). |
-| `check` | Run the repo validation checks. **The only in-process caller of `runChecks()`** — `build` and `push` both SPAWN this command via [`bin/check-subprocess.ts`](bin/check-subprocess.ts) (read its docblock), so their two `checks ✓` are one claim and the global cache stays honest. |
+| `check` | Run the repo validation checks. **The only in-process caller of `runChecks()`** — `build` and `push` both SPAWN this command via [`plugins/op-runtime/cli/check-subprocess.ts`](plugins/op-runtime/cli/check-subprocess.ts) (read its docblock), so their two `checks ✓` are one claim and the global cache stays honest. |
 | `test` | Run tests under the given paths (default: whole `plugins` tree) through **both** runners sequentially (`bun test`, then `vitest run`), then summarize both buckets — an empty one is stated, not implied, because either runner alone is green-but-partial. Paths only; no flag forwarding. |
 | `push` | Checks → merge the worktree branch back into main → push. |
 | `format` | Prettier over the `.ts`/`.tsx` changed on this branch — the same pass `build` runs, in seconds. It exists because `push` never builds, so a `format-clean` failure would otherwise cost a full build. |
@@ -22,21 +58,25 @@ when it is an ordered *stage sequence* rather than a helper, in
 | `apply-migrations` / `serve-app` | Runtime entrypoints a released bundle's launcher invokes. |
 | `db` / `start` | DB fork/list/drop admin, and the one-time gateway bring-up. |
 
-`build`, `check` and `push` are the **op commands** (`orphan-guard.ts`'s
-`OP_COMMANDS`): long-running and host-lock-holding, so they install the orphan
-guard, which exits the op once its invoking shell dies — an orphaned op must
-never sit on a host lock (the push mutex, worst case). That is now the *only*
-effect of membership. Nothing else is an op command.
+The **orphan guard** (`plugins/bootstrap/cli/orphan-guard.ts`) is armed by `bin/index.ts` for
+EVERY invocation, before the install: a CLI process exits once its invoking shell
+dies, so it can never sit on a host lock (the push mutex, worst case) or on the
+install lock. There is no op-command set and `bin/index.ts` reads no argv — a CLI
+whose commands are plugin contributions cannot keep such a list, because the
+bootstrap runs before the install that would let it load the declarations.
 
-Membership is keyed on `process.argv[2]` before any flag is parsed, so a
-**hermetic** build (`build --hermetic`) is inside an op command too and installs
-the orphan guard. That is the right behaviour and the only op machinery it gets:
-an orphaned hermetic build exits instead of sitting on `.build.lock`. Under
-`release` the guard is inert — the child's ppid is release's — so it fires only
-if release itself dies, which is exactly when dropping the lock is correct.
-Nothing else the deploy posture arms (progress file, op profiler, run recorder,
-worktree-op markers, exit hooks, verdict guard, deploy receipts) exists on that
-path; see `bin/commands/internal/hermetic-build.ts`.
+The opt-out is declared, not inferred: a command meant to outlive its shell sets
+`detachable: true` and the mapper disarms the guard as it starts. The spawner-set
+`SINGULARITY_BUILD_DETACHED` escape still covers the detached self-restart build,
+which is knowable pre-install because it is env.
+
+A **hermetic** build (`build --hermetic`) is therefore guarded like everything
+else — an orphaned one exits instead of sitting on `.build.lock`. Under `release`
+the guard is inert (the child's ppid is release's), so it fires only if release
+itself dies, which is exactly when dropping the lock is correct. Nothing else the
+deploy posture arms (progress file, op profiler, run recorder, worktree-op
+markers, exit hooks, verdict guard, deploy receipts) exists on that path; see
+`plugins/build/cli/internal/hermetic-build.ts`.
 
 Op commands used to additionally re-exec themselves under `bun --inspect` so the
 op-wedge watchdog could attach a profiler. Both the watchdog and the re-exec were
@@ -50,7 +90,7 @@ single process, not a wrapper/worker pair.
 `CLAUDE.md` autogen blocks, config origins, drizzle migrations) to a merge driver
 in `scripts/`. A driver does the CHEAP half — take the upstream side, drop a
 marker in `$GITDIR/singularity-merge-markers/` — because the file is a pure
-function of sources git just merged correctly. `bin/git/normalize-generated.ts`
+function of sources git just merged correctly. `plugins/git-artifacts/cli/normalize-generated.ts`
 is the other half: re-derive from the merged tree, amend, consume the marker.
 
 It is deliberately NOT push-owned. `.githooks/post-rewrite` runs it after any
@@ -84,7 +124,7 @@ running (and drizzle-kit silently recreates an empty one). It does NOT cover
 schema drift — main changing `schema.ts` without a migration is one-sided;
 `migrations-in-sync` is what fails there.
 
-## Dependencies: `bin/ensure-deps.ts` is the only install
+## Dependencies: `plugins/bootstrap/cli/ensure-deps.ts` is the only install
 
 `ensureDeps()` owns "this checkout's `node_modules` is correct for its inputs":
 freshness-gated on a `(mtimeMs,size)` signature stamped in
@@ -98,7 +138,7 @@ one skipping the lock races `clonefileat`, one skipping the stamp makes the next
 process reinstall from scratch.
 
 **A process that installs must not then resolve an npm package — it re-execs**
-(`bin/reexec.ts`, on `installed: true`). Bun's resolver caches directory listings
+(`plugins/bootstrap/cli/reexec.ts`, on `installed: true`). Bun's resolver caches directory listings
 from process start, so the process that runs `bun install` cannot see the
 `node_modules` it just created — every workspace-local one (`commander` under
 `plugins/framework/plugins/cli/`) was already cached absent. The dynamic
@@ -126,7 +166,7 @@ Lock order is one-way: **`.build.lock` → `.install.lock`**, never the reverse
 The install lock is not `.build.lock` itself on purpose — sharing them would make
 a `./singularity check` block for an entire concurrent build.
 
-## Locks: the kernel owns them (`bin/build-lock.ts`)
+## Locks: the kernel owns them (`plugins/bootstrap/cli/build-lock.ts`)
 
 Both locks are an exclusive `flock(2)` on a regular file, via
 `packages/flock`. The kernel drops the lock when the fd closes **or the holder
@@ -145,7 +185,7 @@ Two rules that look wrong and are not:
   holder stuck in?" is answered instead from `~/.singularity/logs/build-progress/build-progress.jsonl`,
   which records the actual span.
 
-## The deploy receipt (`bin/build-receipt.ts`)
+## The deploy receipt (`plugins/op-runtime/cli/build-receipt.ts`)
 
 `~/.singularity/worktrees/<wt>/build-status.json` — `running` once the build lock
 is granted, rewritten `ok` / `failed` / `superseded` in `finalizeBuild`. **One
@@ -172,7 +212,7 @@ the terminal rewrite, so an *escalating* kill (SIGTERM then SIGKILL: `timeout -k
 most supervisors) still records the SIGTERM on the `running` receipt the SIGKILL
 strands. Do not "simplify" that early stamp away.
 
-The signal→exit-code map is [`bin/fatal-signals.ts`](bin/fatal-signals.ts)
+The signal→exit-code map is [`plugins/op-runtime/cli/fatal-signals.ts`](plugins/op-runtime/cli/fatal-signals.ts)
 (`installFatalSignalExit`), shared by all three op commands. Its `afterInstall`
 seam is load-bearing: **Bun installs its `sigaction` lazily on the first
 `process.on(sig)` and does not chain**, so a native handler for these signals
@@ -196,7 +236,7 @@ deliberate: hermetic validates against the **code seed**
 (`compositionsConfig.fields.manifests.defaultValue`, `assertKnownCompositions`)
 because a release is a function of the source tree, while the deploy posture
 reads this checkout's **resolved layered config**
-(`bin/commands/internal/build-targets.ts`) because a composition created in
+(`plugins/build/cli/internal/build-targets.ts`) because a composition created in
 Studio lives only in a user layer and must still be servable. Both call sites say
 so.
 
@@ -215,9 +255,9 @@ per target:      marker → build+publish dist → DB → propagate config → s
 
 The loop does NOT live inside `build.ts`'s terminal funnel — that closure already
 holds eleven invocation-scoped values, and fanning out inside it is how the file
-reached 1900 lines. `bin/commands/internal/build-targets.ts` decides what a
+reached 1900 lines. `plugins/build/cli/internal/build-targets.ts` decides what a
 target IS (id → manifest row → namespace → collision guard);
-`bin/commands/internal/deploy-namespace.ts` deploys one, returning a
+`plugins/build/cli/internal/deploy-namespace.ts` deploys one, returning a
 discriminated result and never calling `process.exit`. `build.ts` keeps the
 funnel, the guard, the receipts, the recorder and the verdict.
 
@@ -263,7 +303,7 @@ so a live composition build makes the UI drop a main auto-build request in the
 same checkout. Correct: the per-checkout `.build.lock` serializes them anyway.
 
 The ordered pipeline both postures drive is
-[`bin/commands/internal/app-artifacts.ts`](bin/commands/internal/app-artifacts.ts)
+[`plugins/build/cli/internal/app-artifacts.ts`](plugins/build/cli/internal/app-artifacts.ts)
 — read its docblock before touching either posture. It owns the three stages
 (`prepareCompositionSources` → `generateAppSources` → `buildAndPublishWebDist`),
 `fastValidationJobs` and `acquireArtifactLock`, plus the
@@ -278,7 +318,7 @@ Two consequences worth knowing before editing:
   (`<dir>.composition.<id>.generated.ts`) and `plugins-active.ts` selects one
   only under a matching `composition` — the field the backend reads back off its
   own `~/.singularity/worktrees/<namespace>/spec.json`, the same file the gateway
-  read to spawn it (`bin/spec-composition.ts`; deliberately not an env var,
+  read to spawn it (`plugins/framework/plugins/server-core/bin/spec-composition.ts`; deliberately not an env var,
   because `build` does not rebuild the Go gateway and a dropped variable would
   boot the full app under a composition's namespace) — so a file on disk cannot
   reconfigure a backend that was not told to load it, and a missing one throws
@@ -345,7 +385,7 @@ hermetic: a bare release host has no gateway and no served legacy dist either.
 
 The red agent-worktree border is stamped into the staged `index.html` by
 `buildAndPublishWebDist`'s `experimental` flag
-([`bin/commands/internal/experimental-marker.ts`](bin/commands/internal/experimental-marker.ts)),
+([`plugins/build/cli/internal/experimental-marker.ts`](plugins/build/cli/internal/experimental-marker.ts)),
 never inferred in the browser: `<name>.localhost` is equally the grammar for
 worktree deploys, composition namespaces and release previews, so no client-side
 rule can tell them apart. Only `build` from a non-main CHECKOUT passes `true` —
@@ -359,13 +399,41 @@ ui-kit's `theme/app.css` (JS-sets / CSS-styles split, as with `.dark`).
 ## Plugin reference
 
 - Core:
-  - Exports (types): `MergeMarkerKind`
+  - Uses: `framework/tooling/collected-dir.defineCollectedDir`
+  - Exports (types):
+    - `CliAction`
+    - `CliArgumentSpec`
+    - `CliCommand`
+    - `CliCommandSpec`
+    - `CliOptionSpec`
+    - `MergeMarkerKind`
   - Exports (values):
     - `clearMergeMarkers`
+    - `defineCliCommand`
     - `findClaudeMdConflicts`
+    - `isCliCommand`
     - `MERGE_MARKER_KINDS`
     - `mergeMarkerDir`
     - `readMergeMarkers`
     - `resolveGitDir`
+- Sub-plugins:
+  - **`apply-migrations`** — `./singularity apply-migrations` — apply pending SQL migrations to the DB named by SINGULARITY_WORKTREE. The fresh-clone bootstrap's way to seed the base 'singularity' DB before the first build; the server applies them itself on boot.
+  - **`bootstrap`** — CLI bootstrap — the npm-free half that must run with node_modules absent: ensureDeps, the post-install re-exec, the orphan guard, the build lock.
+  - **`build`** — `./singularity build` — the deploy command: codegen, migrations, web dist and backend restart for this checkout, or a composition's hermetic artifact set.
+  - **`check`** — `./singularity check` — run the repo validation checks (all, a named subset, or one scope). The only in-process caller of runChecks(): `build` and `push` each spawn it as a subprocess, so their `checks ✓` is one claim.
+  - **`db`** — `./singularity db` — worktree database operations; today just `db fork`, which gives a hand-made `git worktree add` checkout the DB fork it never got.
+  - **`deploy`** — `./singularity deploy converge|ship` — converge a host to serve a composition (run user, dirs, env, Caddy, systemd, firewall) and ship release bundles to it behind a health gate.
+  - **`format`** — `./singularity format` — prettier over the .ts/.tsx changed on this branch; the same pass `build` runs, without paying for a build.
+  - **`git-artifacts`** — Generated-artifact merge handling that runs inside a CLI command: re-deriving after a merge driver took the cheap side, and installing the drivers.
+  - **`migrations`** — Drizzle migration generation for the CLI: the generate/rename/journal pipeline and the interactive drizzle-kit prompt driver.
+  - **`normalize-generated`** — `./singularity normalize-generated` — re-derive the generated artifacts a merge driver auto-resolved during a merge or rebase and amend the head commit; the `post-rewrite` git hook's entry point.
+  - **`op-runtime`** — Shared machinery of the op commands (build / check / push): broadcasts, deploy receipt, fatal-signal exits, lane, op profiler, progress log, admission valve, nested check, build output.
+  - **`push`** — `./singularity push` — the one path work reaches main: commit, rebase onto main, re-normalize generated artifacts, run the tree-scoped checks, fast-forward and push, all under the host-wide push mutex.
+  - **`regen-generated`** — `./singularity regen-generated` — the repo-tree half of build's codegen standalone (registries, barrels, plugin docs, manifests, config origins), for the post-rebase normalize step in `push`.
+  - **`regen-migrations`** — `./singularity regen-migrations` — discard branch-local migrations and re-generate them against the rebased schema, for the post-rebase normalize step in `push`; aborts on hand-edited SQL.
+  - **`release`** — `./singularity release` — stage a composition into a portable, self-contained artifact (compiled binaries + vendored native PG/PgBouncer/gateway/parcel-watcher) and pack it as a single-file web binary or a Tauri desktop bundle.
+  - **`serve-app`** — `./singularity serve-app` — boot a packaged app's full runtime (gateway + embedded Postgres + app DB) under an isolated SINGULARITY_DIR. The one detachable command: it is meant to outlive the shell that launched it.
+  - **`start`** — `./singularity start` — build and start the gateway daemon, then wait for it to actually serve before reporting success.
+  - **`test`** — `./singularity test` — the ONLY way to run tests: both runners (bun:test for co-located logic suites, vitest for jsdom suites), with a summary naming both buckets so a green-but-partial result is impossible.
 
 <!-- AUTOGENERATED:END -->

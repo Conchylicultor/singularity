@@ -29,7 +29,7 @@ export const SCHEMA_GLOBS = [
  *   1. `../../check/internal/schema-files-loadable.ts` — the require-probe's cwd.
  *   2. `framework/tooling/plugins/checks/plugins/migrations-in-sync` — spawns
  *      `drizzle-kit generate` from here.
- *   3. `framework/cli/bin/migrations.ts` — likewise, for the real build.
+ *   3. `framework/cli/plugins/migrations/cli/migrations.ts` — likewise, for the real build.
  *
  * The cwd is LOAD-BEARING, not incidental: drizzle-kit resolves every relative
  * path in `drizzle.config.ts` against it — the `schema:` globs (re-anchored with
