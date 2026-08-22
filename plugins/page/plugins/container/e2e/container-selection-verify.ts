@@ -83,11 +83,17 @@ async function editableIndexOf(page: Page, blockId: string): Promise<number> {
   const index = await page.evaluate(
     (id: string) =>
       [
-        ...document.querySelectorAll('[data-block-id] [contenteditable="true"]'),
-      ].findIndex((el) => el.closest("[data-block-id]")?.getAttribute("data-block-id") === id),
+        ...document.querySelectorAll(
+          '[data-block-id] [contenteditable="true"]',
+        ),
+      ].findIndex(
+        (el) =>
+          el.closest("[data-block-id]")?.getAttribute("data-block-id") === id,
+      ),
     blockId,
   );
-  if (index < 0) bail(`editable row for ${blockId}`, "no editable row with that id");
+  if (index < 0)
+    bail(`editable row for ${blockId}`, "no editable row with that id");
   return index;
 }
 

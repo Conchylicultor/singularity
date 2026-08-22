@@ -1346,7 +1346,15 @@ the repo and is now reached only through this wrapper.
   render, never stored, so extending a range is still index arithmetic over
   `orderedIds`.
 
-`⌘C` on a bare CARET is deliberately outside this rule — it copies the line you
+**Twin of *A selected block always carries its children*, and they close in
+opposite directions.** That one closes the RANGE downward — a selected parent
+pulls its descendants in, because an op on it acts on them. This one closes the
+selected SET upward — covered lines pull their container in, because the box is
+the thing they add up to. They compose without knowing about each other: the
+range closure runs first and only ever moves the range's bottom end, so what
+reaches here is still a plain set of ids to test coverage against.
+
+`⌘C` on a bare CARET is deliberately outside both rules — it copies the line you
 are standing in, container or not. See *With nothing selected, the caret's block
 IS the selection*.
 
