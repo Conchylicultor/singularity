@@ -22,6 +22,7 @@
   - Uses:
     - `infra/attachments.uploadAttachment`
     - `infra/attachments.UploadedAttachment`
+    - `page/editor.useBlockActivate`
     - `primitives/css/placeholder.Placeholder`
     - `primitives/css/spacing.Stack`
     - `primitives/css/ui-kit.cn`

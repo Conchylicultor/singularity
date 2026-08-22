@@ -24,7 +24,10 @@ import {
   hoverRevealGroup,
   hoverRevealTarget,
 } from "@plugins/primitives/plugins/hover-reveal/web";
-import type { BlockRendererProps } from "@plugins/page/plugins/editor/web";
+import {
+  useBlockActivate,
+  type BlockRendererProps,
+} from "@plugins/page/plugins/editor/web";
 import { bookmarkBlock, linkPreviewEndpoint } from "../../core";
 
 /**
@@ -41,9 +44,7 @@ export function BookmarkBlock({ block, editor }: BlockRendererProps) {
     bookmarkBlock.parse(block.data);
 
   if (!url) {
-    return (
-      <EmptyBookmarkBlock editor={editor} onArm={() => editor.onFocus()} />
-    );
+    return <EmptyBookmarkBlock editor={editor} />;
   }
 
   if (!fetched) {
@@ -65,12 +66,17 @@ export function BookmarkBlock({ block, editor }: BlockRendererProps) {
 
 function EmptyBookmarkBlock({
   editor,
-  onArm,
 }: {
   editor: BlockRendererProps["editor"];
-  onArm: () => void;
 }) {
   const [value, setValue] = useState("");
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  // An empty bookmark block is a PROMPT — it is asking for a link — so Enter on
+  // the block's caret host puts the caret in the URL field. Focus reported by
+  // the field itself bubbles to the host (React `onFocus` is `focusin`), so
+  // there is nothing to hand-report back to the editor.
+  useBlockActivate(() => inputRef.current?.focus());
 
   function submit() {
     const url = value.trim();
@@ -85,9 +91,9 @@ function EmptyBookmarkBlock({
       <Stack direction="row" gap="sm" align="center">
         <MdBookmark className="size-4 text-muted-foreground" />
         <Input
+          ref={inputRef}
           value={value}
           placeholder="Paste a link…"
-          onFocus={onArm}
           onChange={(e) => setValue(e.target.value)}
           onKeyDown={(e) => {
             if (e.key === "Enter") {

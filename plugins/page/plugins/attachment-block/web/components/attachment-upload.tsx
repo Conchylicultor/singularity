@@ -7,6 +7,7 @@ import {
 } from "@plugins/infra/plugins/attachments/web";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { useBlockActivate } from "@plugins/page/plugins/editor/web";
 
 // Turn an `accept` spec into a mime predicate: `"*"` → always; `"image/*"` →
 // prefix match; an exact mime → equality.
@@ -16,29 +17,51 @@ function matchesAccept(accept: string, mime: string): boolean {
   return mime === accept;
 }
 
-// Reusable empty-state upload funnel for attachment-owning page blocks. Owns
-// the click/drop/paste inputs, the uploading/error state, and validates the
-// file mime against `accept` before uploading via the attachments primitive.
-// The parent persists the result (e.g. via `editor.update`) from `onUploaded`.
+/**
+ * Reusable empty-state upload funnel for attachment-owning page blocks. Owns
+ * the click/drop/paste inputs, the uploading/error state, and validates the
+ * file mime against `accept` before uploading via the attachments primitive.
+ * The parent persists the result (e.g. via `editor.update`) from `onUploaded`.
+ *
+ * **It is not a focus target.** The block's caret host is: it is the focusable
+ * box, it reports focus to the editor, and it answers the keyboard. This
+ * dropzone used to be a second tab stop inside it (`role="button"`,
+ * `tabIndex={0}`, its own Enter/Space handler, an `onArm` that re-reported the
+ * focus already bubbling out of it) — one block the user had to Tab through
+ * twice, with two things claiming to be "where the caret is". Enter/Space are
+ * declared through {@link useBlockActivate} instead; a click still opens the
+ * picker directly.
+ */
 export function AttachmentUpload({
   accept,
   label,
   icon: Icon,
   isFocused,
-  onArm,
   onUploaded,
 }: {
   accept: string;
   label: string;
   icon: ComponentType<{ className?: string }>;
+  /**
+   * Does the editor's caret sit on this block? Kept as a prop although the host
+   * now owns focus: it arms the window `paste` listener below, which is
+   * BEHAVIOUR (Cmd+V into an empty media block fills it), not a cue.
+   */
   isFocused: boolean;
-  onArm: () => void;
   onUploaded: (res: UploadedAttachment) => void;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [dragOver, setDragOver] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Enter / Space on the block's caret host opens the file picker: an unfilled
+  // media block is a PROMPT, so the block's primary action is to fill it. This
+  // component is shared and also renders outside a caret host, where the hook is
+  // a documented no-op — a caller never has to know which surface it is on.
+  useBlockActivate(() => {
+    if (!uploading) inputRef.current?.click();
+  });
 
   // Funnel for all three inputs (picker / drop / paste). Validates the mime,
   // uploads via the attachments primitive, then hands the result to the parent.
@@ -103,18 +126,8 @@ export function AttachmentUpload({
         direction="row"
         align="center"
         gap="sm"
-        role="button"
-        tabIndex={0}
         onClick={() => {
-          onArm();
           if (!uploading) inputRef.current?.click();
-        }}
-        onFocus={onArm}
-        onKeyDown={(e) => {
-          if (e.key === "Enter" || e.key === " ") {
-            e.preventDefault();
-            if (!uploading) inputRef.current?.click();
-          }
         }}
         onDragOver={(e) => {
           e.preventDefault();

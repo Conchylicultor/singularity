@@ -9,7 +9,9 @@
   - Contributes: `Editor.Block` "bookmark" → `BookmarkBlock`
   - Uses:
     - `infra/endpoints.fetchEndpoint`
+    - `page/editor.BlockRendererProps`
     - `page/editor.Editor`
+    - `page/editor.useBlockActivate`
     - `primitives/css/card.Card`
     - `primitives/css/center.Center`
     - `primitives/css/clip.Clip`

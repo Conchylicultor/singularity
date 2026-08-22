@@ -7,6 +7,7 @@ import { useBlockEditor } from "../block-editor-context";
 import { useSelectionControl } from "../selection-control";
 import { Editor, useBlockAnchors } from "../slots";
 import { BlockRail } from "./block-rail";
+import { BlockCaretHost } from "./void-caret";
 import { BLOCK_INDENT, blockContentLeft } from "../internal/page-column";
 import { gutterFirstLineCenter, type RailSeat } from "../internal/rail-seat";
 import "./block-document-scale.css";
@@ -93,7 +94,18 @@ export function BlockRow({
   const selection = useSelectionControl();
 
   const contributions = Editor.Block.useContributions();
-  const handle = contributions.find((c) => c.block.type === block.type)?.block;
+  const registration = contributions.find((c) => c.block.type === block.type);
+  const handle = registration?.block;
+  // Who holds this row's caret. A type that declares `caret: "renderer"` owns
+  // one already (a textarea, a `Row`'s inner control); EVERY other row gets the
+  // editor's host, including a type with no registration at all — which is the
+  // `unknown` fallback, and is deliberately the fail-safe direction: a block the
+  // editor does not recognise is still reachable, still deletable, and still
+  // says where the caret is. (Text-bearing rows never reach here with a `caret`
+  // — the field is `never` on their arm — but they are excluded anyway by the
+  // `acceptsText` test, since their Lexical instance is the host.)
+  const editorHoldsCaret =
+    handle?.acceptsText !== true && registration?.caret !== "renderer";
   const anchors = useBlockAnchors();
   const Anchor = anchors.get(block.type);
 
@@ -219,12 +231,36 @@ export function BlockRow({
           }
         }}
       >
-        <Editor.Block.Dispatch
-          block={block}
-          isFocused={isFocused}
-          editor={api}
-          ordinal={ordinal}
-        />
+        {/* The caret host is a function of the block TYPE alone and must never
+            flip on state: it is an element-type change on an ANCESTOR of the
+            block's renderer, so flipping it would remount the block (and any
+            Lexical instance below it) mid-interaction — the same hazard
+            `excludeFromReorder` documents on the reorder middleware. */}
+        {editorHoldsCaret ? (
+          <BlockCaretHost
+            blockId={block.id}
+            isFocused={isFocused}
+            editor={api}
+            // A void block has no text of its own to be named by, so the
+            // insert-menu label is its accessible name. Every registered type
+            // declares one; only the `unknown` fallback falls through.
+            label={handle?.label ?? block.type}
+          >
+            <Editor.Block.Dispatch
+              block={block}
+              isFocused={isFocused}
+              editor={api}
+              ordinal={ordinal}
+            />
+          </BlockCaretHost>
+        ) : (
+          <Editor.Block.Dispatch
+            block={block}
+            isFocused={isFocused}
+            editor={api}
+            ordinal={ordinal}
+          />
+        )}
       </div>
       {dropZone && dropIndicator(dropZone)}
     </div>

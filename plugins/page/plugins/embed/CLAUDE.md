@@ -8,7 +8,9 @@
 - Web:
   - Contributes: `Editor.Block` "embed" → `EmbedBlock`
   - Uses:
+    - `page/editor.BlockRendererProps`
     - `page/editor.Editor`
+    - `page/editor.useBlockActivate`
     - `primitives/css/inline.Inline`
     - `primitives/css/overlay.Overlay`
     - `primitives/css/spacing.Stack`

@@ -44,12 +44,17 @@ export { BlockTextRenderer } from "./components/block-text-renderer";
 export { TextBlockLayout } from "./components/text-block-layout";
 export type { TextBlockLayoutProps } from "./components/text-block-layout";
 export { useBlockEditor } from "./block-editor-context";
-export { useVoidCaret, VoidCaretBox } from "./components/void-caret";
-export type {
-  VoidCaret,
-  VoidCaretOptions,
-  VoidCaretBoxProps,
+// `BlockCaretHost` is deliberately NOT exported: it is what the editor mounts
+// around a `caret: "editor"` block's row, and a block that could mount one for
+// itself could equally forget to — which is the whole class of bug the `caret`
+// registration field exists to close. A block declares where its caret lives; it
+// never builds the box.
+export {
+  useVoidCaret,
+  useCaretEscape,
+  useBlockActivate,
 } from "./components/void-caret";
+export type { VoidCaret, VoidCaretOptions } from "./components/void-caret";
 export {
   useInsertableBlocks,
   useGroupedInsertableBlocks,

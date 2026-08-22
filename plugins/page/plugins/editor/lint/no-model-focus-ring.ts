@@ -35,12 +35,14 @@ const createRule = ESLintUtils.RuleCreator(
  * The two fixes, per what the author actually meant:
  *   - "this element has keyboard focus" → the `focus-ring` utility family, which
  *     fires from `:focus-visible` and therefore cannot drift from the browser.
- *   - "the editor's caret is on this block" → `<VoidCaretBox>` from
- *     `@plugins/page/plugins/editor/web`, or `Row`'s `selected` when the block
- *     delegates to a `Row`. That is a different question from focus and it reads
- *     as a different cue, so the two may legally layer.
+ *   - "the editor's caret is on this block" → nothing at all, for a text-less
+ *     block: it registers `caret: "editor"` and `BlockRow` mounts the cue for
+ *     it. A block that must hold the caret itself (`caret: "renderer"`) uses
+ *     `Row`'s `selected`, which paints the same tint. That is a different
+ *     question from focus and it reads as a different cue, so the two may
+ *     legally layer.
  *
- * No auto-fix: deleting the styling versus reaching for `VoidCaretBox` is a
+ * No auto-fix: deleting the styling versus declaring `caret: "editor"` is a
  * per-site judgement.
  */
 
@@ -204,8 +206,9 @@ export default createRule({
         "where the caret is), not the browser's `:focus-visible`. The two come apart, and then the " +
         'element the user is actually focused on shows nothing. If you mean "this element has keyboard ' +
         'focus", use the `focus-ring` utility family (unconditionally — it fires from `:focus-visible`). ' +
-        'If you mean "the editor\'s caret is on this block", use `<VoidCaretBox>` from ' +
-        "`@plugins/page/plugins/editor/web`, or `Row`'s `selected` when the block delegates to a `Row`. " +
+        'If you mean "the editor\'s caret is on this block", register the block type with ' +
+        '`caret: "editor"` and delete this — `BlockRow` paints the cue for you; a block that must ' +
+        "hold the caret itself uses `Row`'s `selected`, which paints the same tint. " +
         "Last resort: // eslint-disable-next-line page-editor/no-model-focus-ring -- <reason>.",
     },
   },

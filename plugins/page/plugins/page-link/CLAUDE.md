@@ -12,6 +12,7 @@
     - `page/editor.Editor`
     - `page/editor.PageIcon`
     - `page/editor.PageOptionsList`
+    - `page/editor.useBlockActivate`
     - `page/editor.usePageOptions`
     - `page/page-reference.usePageNavigation`
     - `page/page-reference.usePageReferenceActions`

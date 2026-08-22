@@ -10,6 +10,12 @@ export default {
   description:
     "File block type: attach any file as a downloadable card; served via attachments.",
   contributions: [
-    Editor.Block({ id: fileBlock.type, match: fileBlock.type, block: fileBlock, component: FileBlock }),
+    Editor.Block({
+      id: fileBlock.type,
+      match: fileBlock.type,
+      block: fileBlock,
+      component: FileBlock,
+      caret: "editor",
+    }),
   ],
 } satisfies PluginDefinition;

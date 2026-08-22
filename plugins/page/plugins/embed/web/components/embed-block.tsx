@@ -1,32 +1,43 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { MdOpenInNew, MdSmartDisplay } from "react-icons/md";
-import { cn, Button, Input } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { hoverRevealGroup, hoverRevealTarget } from "@plugins/primitives/plugins/hover-reveal/web";
+import {
+  cn,
+  Button,
+  Input,
+} from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import {
+  hoverRevealGroup,
+  hoverRevealTarget,
+} from "@plugins/primitives/plugins/hover-reveal/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
 import { Overlay } from "@plugins/primitives/plugins/css/plugins/overlay/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
-import type { BlockRendererProps } from "@plugins/page/plugins/editor/web";
+import {
+  useBlockActivate,
+  type BlockRendererProps,
+} from "@plugins/page/plugins/editor/web";
 import { embedBlock, toEmbedUrl } from "../../core";
 
 export function EmbedBlock({ block, editor }: BlockRendererProps) {
   const { url } = embedBlock.parse(block.data);
 
   if (!url) {
-    return <EmptyEmbedBlock onArm={() => editor.onFocus()} onSubmit={(u) => editor.update({ url: u })} />;
+    return <EmptyEmbedBlock onSubmit={(u) => editor.update({ url: u })} />;
   }
 
   return <FilledEmbedBlock url={url} onReplace={() => editor.update({})} />;
 }
 
-function EmptyEmbedBlock({
-  onArm,
-  onSubmit,
-}: {
-  onArm: () => void;
-  onSubmit: (url: string) => void;
-}) {
+function EmptyEmbedBlock({ onSubmit }: { onSubmit: (url: string) => void }) {
   const [value, setValue] = useState("");
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  // An empty embed block is a PROMPT — it is asking for a URL — so Enter on the
+  // block's caret host puts the caret in the URL field. Focus reported by the
+  // field itself bubbles to the host (React `onFocus` is `focusin`), so there is
+  // nothing to hand-report back to the editor.
+  useBlockActivate(() => inputRef.current?.focus());
 
   function submit() {
     const trimmed = value.trim();
@@ -38,9 +49,13 @@ function EmptyEmbedBlock({
       <Stack
         gap="sm"
         className="rounded-md border border-dashed border-border px-md py-lg"
-        onFocus={onArm}
       >
-        <Stack direction="row" gap="xs" align="center" className="text-muted-foreground">
+        <Stack
+          direction="row"
+          gap="xs"
+          align="center"
+          className="text-muted-foreground"
+        >
           <MdSmartDisplay className="size-4" />
           <Text variant="caption" tone="muted">
             Paste a link to embed (YouTube, Vimeo, Spotify, …)
@@ -48,6 +63,7 @@ function EmptyEmbedBlock({
         </Stack>
         <Stack direction="row" gap="sm" align="center">
           <Input
+            ref={inputRef}
             value={value}
             placeholder="https://…"
             onChange={(e) => setValue(e.target.value)}
@@ -67,11 +83,23 @@ function EmptyEmbedBlock({
   );
 }
 
-function FilledEmbedBlock({ url, onReplace }: { url: string; onReplace: () => void }) {
+function FilledEmbedBlock({
+  url,
+  onReplace,
+}: {
+  url: string;
+  onReplace: () => void;
+}) {
   return (
     <div className="px-md py-xs">
       <div className={hoverRevealGroup}>
-        <Stack direction="row" gap="sm" align="center" justify="end" className="mb-xs">
+        <Stack
+          direction="row"
+          gap="sm"
+          align="center"
+          justify="end"
+          className="mb-xs"
+        >
           <a
             href={url}
             target="_blank"

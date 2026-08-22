@@ -17,6 +17,39 @@ import type {
 import { UnknownBlock } from "./components/unknown-block";
 import { BlockTextRenderer } from "./components/block-text-renderer";
 
+/**
+ * Where the caret lives for a text-less block type — one that owns no editable
+ * text, so nothing on screen blinks to say the caret is on it and no Lexical
+ * instance registers a focus handle for it.
+ *
+ * There is deliberately **no third value meaning "nowhere"**. That state used to
+ * exist as the absence of any declaration, and eight block types were in it:
+ * image, video, audio, file, embed, bookmark, place and page-link registered no
+ * focus handle at all, so `navigate()` — which walks the registered handles —
+ * skipped straight over them. A user arrowing down a page jumped from the
+ * paragraph above an image to the paragraph below it, while a click could still
+ * focus parts of the same block, leaving the browser and the editor disagreeing
+ * about where the user was. Nothing anywhere could say so, because forgetting
+ * looked exactly like a block that had nothing to declare.
+ */
+export type BlockCaretPlacement =
+  /**
+   * The EDITOR mounts the caret host around this block's row. The renderer
+   * writes no caret code at all: it is focusable, arrow-navigable, paints the
+   * caret cue, and answers Backspace and Enter, for free. This is the answer for
+   * every block whose content is an object the user looks at rather than types
+   * into — all the media types, and the fallback for a type the editor does not
+   * recognise.
+   */
+  | "editor"
+  /**
+   * The RENDERER registers its own handle through `useVoidCaret`, because it
+   * owns the thing that must hold the caret and the editor cannot know what that
+   * is: a `<textarea>` of source (code, equation), or a `Row`'s inner control,
+   * which `Row` re-synthesizes the moment the row grows actions (sub-page).
+   */
+  | "renderer";
+
 /** Block handle metadata carried alongside the dispatch fields (match, component). */
 export interface BlockMeta {
   block: BlockHandle<unknown>;
@@ -26,6 +59,12 @@ export interface BlockMeta {
    * see `BlockRegistration`.
    */
   chrome?: BlockChrome;
+  /**
+   * Where this text-less type's caret lives. Optional as STORED and required at
+   * the write site, the same shape `chrome` has — see `BlockRegistration`, which
+   * is where the requirement is expressed.
+   */
+  caret?: BlockCaretPlacement;
 }
 
 /**
@@ -55,6 +94,19 @@ interface BlockRegistrationBase {
  */
 type TextBearingHandle = BlockHandle<unknown> & { text(data: never): RichText };
 type TextLessHandle = BlockHandle<unknown> & { text?: undefined };
+/**
+ * A container ANCHOR, the one text-less shape that renders no LINE of its own —
+ * `BlockRow` returns before the dispatch for it, so it has no row for a caret to
+ * land on and its children hold the caret instead.
+ *
+ * The proof comes from `defineContainerBlock`, whose return type states
+ * `anchor: true` as a certainty. The handle's own field is `anchor?: true` (i.e.
+ * `true | undefined`), which no amount of setting it by hand can narrow — so
+ * this arm is inhabitable only by a type that went through the factory that
+ * makes it a container. That is deliberately the same trick `audience` uses to
+ * prove a block went through `defineAnnotationBlock`.
+ */
+type AnchorHandle = TextLessHandle & { anchor: true };
 
 /**
  * What a plugin writes at an `Editor.Block` call site — a union with exactly one
@@ -89,12 +141,31 @@ export type BlockRegistration =
       block: TextBearingHandle;
       chrome?: BlockChrome;
       component?: never;
+      caret?: never;
       excludeFromReorder?: never;
+    })
+  // A container anchor: no line, so no caret to place. Listed BEFORE the general
+  // text-less arm so a container matches it rather than being asked for a
+  // `caret` it could not honour.
+  | (BlockRegistrationBase & {
+      block: AnchorHandle;
+      component: ComponentType<BlockRendererProps>;
+      chrome?: never;
+      caret?: never;
+      excludeFromReorder?: boolean;
     })
   | (BlockRegistrationBase & {
       block: TextLessHandle;
       component: ComponentType<BlockRendererProps>;
       chrome?: never;
+      /**
+       * REQUIRED, and that is the whole point: a text-less block type has no
+       * editable text to hold the caret, so *something* has to, and there is no
+       * longer any way to leave the question unanswered. See
+       * {@link BlockCaretPlacement} for the two answers and for the eight block
+       * types that silently had neither.
+       */
+      caret: BlockCaretPlacement;
       excludeFromReorder?: boolean;
     });
 

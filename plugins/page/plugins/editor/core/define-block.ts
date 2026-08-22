@@ -328,7 +328,18 @@ type SemanticsFor<S extends AnyZodObject> = S extends TextBearingSchema
   ? BlockSemantics
   : { __semantics_requires_a_text_bearing_schema: never };
 
-export function defineBlock<S extends AnyZodObject>(opts: {
+export function defineBlock<
+  S extends AnyZodObject,
+  // Whether this type is a container ANCHOR, captured as a LITERAL rather than
+  // erased to the handle's own `anchor?: true`. The handle's optional field
+  // cannot tell "a container" from "anything at all", so `Editor.Block`'s
+  // registration union could not give containers their own arm — the arm where
+  // `caret` is unspellable because an anchor renders no line for a caret to land
+  // on. Inferred from the call site (`anchor: true` ⇒ `true`, omitted ⇒
+  // `undefined`), and `defineContainerBlock` — the only sanctioned way to make a
+  // container — passes the literal, so its return type states the fact.
+  A extends true | undefined = undefined,
+>(opts: {
   type: string;
   schema: S;
   label?: string;
@@ -351,10 +362,10 @@ export function defineBlock<S extends AnyZodObject>(opts: {
   dataOnSplit?(data: z.infer<S>): z.infer<S>;
   toggle?: { field: string; doneClassName?: ClassName };
   collapsible?: "always";
-  anchor?: true;
+  anchor?: A;
   wrapOnConvert?: true;
   splitChildWhenExpanded?: { childType: string };
-}): BlockHandle<z.infer<S>> & TextLens<S> {
+}): BlockHandle<z.infer<S>> & TextLens<S> & { anchor: A } {
   // Computed once at definition: text-bearing-ness is a fact of the schema.
   const acceptsText = "text" in opts.schema.shape;
   const handle: BlockHandle<z.infer<S>> = {
@@ -396,10 +407,14 @@ export function defineBlock<S extends AnyZodObject>(opts: {
     wrapOnConvert: opts.wrapOnConvert,
     splitChildWhenExpanded: opts.splitChildWhenExpanded,
   };
-  // The conditional `TextLens<S>` cannot be proved from the value: the runtime
-  // `text` presence tracks `acceptsText`, which mirrors the brand by construction
-  // (every text block composes `textBlockSchema`).
-  return handle as BlockHandle<z.infer<S>> & TextLens<S>;
+  // Neither intersection can be proved from the value, and each states a fact
+  // already established above. `TextLens<S>`: the runtime `text` presence tracks
+  // `acceptsText`, which mirrors the schema brand by construction (every text
+  // block composes `textBlockSchema`). `{ anchor: A }`: `handle.anchor` IS
+  // `opts.anchor`, copied one field at a time above, so it is exactly the `A`
+  // the call site passed — the widening to `true | undefined` happens only in
+  // `BlockHandle`'s own declaration, which has no `A` to name.
+  return handle as BlockHandle<z.infer<S>> & TextLens<S> & { anchor: A };
 }
 
 /**

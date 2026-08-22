@@ -14,6 +14,7 @@ export default {
       match: bookmarkBlock.type,
       block: bookmarkBlock,
       component: BookmarkBlock,
+      caret: "editor",
     }),
   ],
 } satisfies PluginDefinition;

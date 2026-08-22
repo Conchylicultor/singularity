@@ -133,6 +133,11 @@ function BlockTypeRow({
     <Row
       ref={revealRef}
       selected={active}
+      // The stable hook the caret e2e enumerates block types through, so an
+      // editor-owned spec can ask "is EVERY insertable type caret-reachable?"
+      // without importing (and therefore hard-naming) every contributor plugin
+      // — the same reason `selection-bands` carries `data-selection-band`.
+      data-block-type={block.type}
       icon={
         Icon ? <Icon className="text-muted-foreground size-4" /> : undefined
       }

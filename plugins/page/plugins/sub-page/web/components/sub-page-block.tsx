@@ -9,6 +9,7 @@ import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { pageData } from "@plugins/page/plugins/editor/core";
 import {
   PageIcon,
+  useCaretEscape,
   useVoidCaret,
   type BlockRendererProps,
 } from "@plugins/page/plugins/editor/web";
@@ -46,8 +47,10 @@ export function SubPageBlock({ block, isFocused, editor }: BlockRendererProps) {
   // The whole void-block caret plumbing — register the focus handle, pull DOM
   // focus when the editor says the caret is here, report focus back — is the
   // editor's, and it takes the row's focus *capability*, which is all this block
-  // has to give. Only the cue is not the hook's here: `Row` already paints it
-  // (see `selected` below), so this one does not reach for `VoidCaretBox`.
+  // has to give. This block declares `caret: "renderer"` for exactly that
+  // reason: the caret has to live on a control `Row` synthesizes and re-creates
+  // as the row grows actions, which the editor's own caret host could never hold
+  // on its behalf. The cue is `Row`'s too (see `selected` below).
   const { onFocus } = useVoidCaret({
     blockId: block.id,
     isFocused,
@@ -55,19 +58,15 @@ export function SubPageBlock({ block, isFocused, editor }: BlockRendererProps) {
     focus: () => focusRef.current?.focus(),
   });
 
-  // Arrows hand focus on to the neighbouring block, so the caret never strands
-  // here. Enter/Space fall through to the row's native button activation (open
-  // the page). Backspace is deliberately unhandled: removing a sub-page destroys
-  // its whole content partition, so it stays an explicit menu action.
-  function onKeyDown(e: React.KeyboardEvent) {
-    if (e.key === "ArrowUp") {
-      e.preventDefault();
-      editor.navigate("up");
-    } else if (e.key === "ArrowDown") {
-      e.preventDefault();
-      editor.navigate("down");
-    }
-  }
+  // "The caret can always leave a void block" is the EDITOR's invariant, not this
+  // block's promise, so it is spelled once — `useCaretEscape` — rather than
+  // hand-copied here. What stays local is what only a sub-page can decide:
+  // Enter/Space fall through to the row's native button activation (open the
+  // page), and Backspace is deliberately NOT handled, because deleting a
+  // sub-page destroys a whole content partition — every block under another
+  // `page_id` — which is far too much to hang off one keystroke. Removing one
+  // stays an explicit menu action.
+  const onKeyDown = useCaretEscape(editor);
 
   return (
     <Inset x="md" y="xs">
@@ -78,9 +77,9 @@ export function SubPageBlock({ block, isFocused, editor }: BlockRendererProps) {
         // focus indicator, drawn on the row box while the browser drew its own
         // on the inner control; `Row` now owns the focus ring, and this owns
         // "current". `hover="accent"` (the `Row` default) is not cosmetic: it is
-        // what makes `selected` resolve to `bg-accent`, the exact tint
-        // `VoidCaretBox` paints — so the two void arms, the row and the box, say
-        // "the caret is here" in one voice.
+        // what makes `selected` resolve to `bg-accent`, the exact tint the
+        // editor's own caret host paints — so the two void arms, the row and
+        // the host's box, say "the caret is here" in one voice.
         selected={isFocused}
         hover="accent"
         onClick={() => nav?.open(block.id)}

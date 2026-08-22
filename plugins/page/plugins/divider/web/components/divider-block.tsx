@@ -1,47 +1,26 @@
-import {
-  VoidCaretBox,
-  type BlockRendererProps,
-} from "@plugins/page/plugins/editor/web";
-import { textBlock } from "@plugins/page/plugins/text/core";
+import { BLOCK_INSET } from "@plugins/page/plugins/editor/web";
+import { Inset } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 
 /**
- * A divider is a *void* block: it has no editable content, so unlike code /
- * equation (which own a textarea to hold the caret) there is nothing here for
- * the browser to put a caret in — the block itself has to be the focusable
- * thing, or the caret strands here after a `---` conversion and arrow-key
- * navigation skips over it.
+ * A horizontal rule, and nothing else.
  *
- * All of that — registering the focus handle, pulling DOM focus when the editor
- * says the caret is here, reporting focus back, painting the "the caret is on
- * this block" cue, and letting ↑/↓ leave — is the editor's, via
- * `VoidCaretBox`. What stays here is the divider's own keyboard *meaning*:
- * Backspace/Delete removes it, and Enter drops a fresh text block below to keep
- * typing.
+ * The divider is the purest *void* block: no editable text, no control of its
+ * own, nothing for the browser to put a caret in. It declares `caret: "editor"`,
+ * so the editor wraps this renderer in its caret host — which is focusable,
+ * paints the "the caret is on this block" cue, lets ↑/↓ leave, and answers
+ * Backspace (delete the block) and Enter (a fresh paragraph below).
+ *
+ * So this file owns **no caret code at all**, and that is the point rather than
+ * a consequence of the block being simple: the Backspace and Enter it used to
+ * hand-write ARE the editor's meanings for every void block — one spelling here,
+ * a slightly different one in each of the others, and eight block types with
+ * none. Declaring where the caret lives is now the whole of a divider's
+ * participation in the caret model.
  */
-export function DividerBlock({ block, isFocused, editor }: BlockRendererProps) {
-  function onKeyDown(e: React.KeyboardEvent) {
-    if (e.key === "Backspace" || e.key === "Delete") {
-      e.preventDefault();
-      editor.navigate("up"); // land the caret on the block above…
-      editor.remove(); // …then delete this divider
-    } else if (e.key === "Enter") {
-      e.preventDefault();
-      // Continue typing on a new line below. The editor deliberately does not
-      // know the text block (avoids an editor↔text cycle), so — like
-      // create-page-with-seed — we, a consumer of both, construct the seed.
-      editor.insertAfter(textBlock.type, textBlock.schema.parse({ text: [] }));
-    }
-  }
-
+export function DividerBlock() {
   return (
-    <VoidCaretBox
-      blockId={block.id}
-      isFocused={isFocused}
-      editor={editor}
-      label="Divider"
-      onKeyDown={onKeyDown}
-    >
+    <Inset x={BLOCK_INSET} y="sm">
       <hr className="border-border border-t" />
-    </VoidCaretBox>
+    </Inset>
   );
 }

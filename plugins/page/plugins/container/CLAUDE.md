@@ -90,11 +90,22 @@ A runtime throw at module eval backs it up for a caller arriving through `any`
 text-bearing container. The type-level guard also fails CLOSED on `any` —
 `keyof any` includes `"text"`.
 
-The return type carries that fact past the boundary: `BlockHandle<z.infer<S>> &
-{ text?: undefined }`, not the bare handle `defineBlock` gives back. Downstream
-needs the proof — `Editor.Block`'s registration union admits a block naming its
-own `component` only on the text-less arm — so without it every container, void
-by construction, fails to register. Don't weaken it back to `BlockHandle<…>`.
+The return type carries both container facts past the boundary:
+`BlockHandle<z.infer<S>> & { text?: undefined; anchor: true }`, not the bare
+handle. Downstream needs each proof, and neither is decorative:
+
+- `text?: undefined` — `Editor.Block`'s registration union admits a block naming
+  its own `component` only on the text-less arm, so without it every container,
+  void by construction, fails to register.
+- `anchor: true` — that same union gives a CONTAINER its own arm, the one where
+  `caret` is unspellable because an anchor renders no line for a caret to land
+  on. The handle's own field is `anchor?: true`, i.e. `true | undefined`, which
+  cannot tell a container from anything at all; `defineBlock` captures the
+  literal in a type parameter so this factory — the only sanctioned way to make a
+  container — can state it. "You went through this factory" stops being a
+  convention a reader has to trust and becomes something a type can check.
+
+Don't weaken either back to a bare `BlockHandle<…>`.
 
 The declaration surface is also much smaller than `defineBlock`'s, and that is
 the other half of "inconsistent is unrepresentable": everything an anchor cannot

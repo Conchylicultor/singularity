@@ -94,7 +94,6 @@ export function PlaceBlock({ block, editor }: BlockRendererProps) {
           providers={providers}
           session={session}
           onPick={pick}
-          onFocus={() => editor.onFocus()}
         />
       </Inset>
     );
@@ -162,12 +161,10 @@ function EmptyPlaceBlock({
   providers,
   session,
   onPick,
-  onFocus,
 }: {
   providers: PlaceProviderContribution[];
   session: string;
   onPick: (providerId: string, suggestion: PlaceSuggestion) => void;
-  onFocus: () => void;
 }) {
   const [chosenId, setChosenId] = useState<string | undefined>(undefined);
 
@@ -199,7 +196,6 @@ function EmptyPlaceBlock({
           provider={provider}
           session={session}
           onPick={(suggestion) => onPick(provider.id, suggestion)}
-          onFocus={onFocus}
         />
       </Stack>
     </Card>
@@ -210,7 +206,6 @@ interface GateProps {
   provider: PlaceProviderContribution;
   session: string;
   onPick: (suggestion: PlaceSuggestion) => void;
-  onFocus: () => void;
 }
 
 /**

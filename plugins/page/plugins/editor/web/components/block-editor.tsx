@@ -111,6 +111,20 @@ const PREVIEW_CHARS = 80;
 type SiblingZone = Extract<DropZone, "before" | "after">;
 type DropTarget = { id: string; zone: SiblingZone };
 
+/**
+ * Is this element a void block's CARET HOST — the full-width focusable wrapper
+ * `BlockRow` mounts around a `caret: "editor"` block's renderer?
+ *
+ * Read off the DOM attribute rather than a React fact because the one question
+ * it answers is a hit-test one: "did this press land on the block's content, or
+ * on the empty strip beside it?" The host stands between the row and the
+ * content, so a press on that strip has the host as its target while a press on
+ * the content has one of its descendants.
+ */
+function isCaretHost(el: HTMLElement): boolean {
+  return el.dataset.caretHost !== undefined;
+}
+
 // Find the rendered block row under a vertical pointer position, plus whether the
 // pointer sits in its top (before) or bottom (after) half. Reads live DOM rects
 // rather than dnd-kit's cached droppable rects, which drift off-by-one as block
@@ -847,8 +861,15 @@ function SelectionLayer({
   // an empty page gets its first block. A click in the side margin beside a
   // block (or a gap between blocks) lands the caret in the nearest block at the
   // line edge closest to the click X — end for the right margin, start for the
-  // left; a block with no caret handle (image, etc.) is selected instead. Only a
-  // page with zero blocks falls through to clearing the selection.
+  // left. A row that can take no caret at all is SELECTED instead; today that is
+  // a container ANCHOR and nothing else. It used to be every media block too —
+  // they registered no handle, so a margin click selected an image rather than
+  // putting the caret on it. Now they do, so the click focuses them, and the
+  // edge is silently ignored (a void handle has no `focusBoundary`, so `focus()`
+  // is all there is to run): a void block is ONE position, with no start or end
+  // to distinguish. Selecting it is still one Escape away.
+  //
+  // Only a page with zero blocks falls through to clearing the selection.
   const onEmptyClick = useCallback(
     (x: number, y: number) => {
       const fallback = defaultTextHandle(handles);
@@ -1022,7 +1043,15 @@ function SelectionLayer({
       const inText = isInsideEditingHost(el);
       // A row's gutter rail is its own padding, so a hit on the row element ITSELF
       // is the rail (background); only a hit on a descendant is block content.
-      const onBackground = !inText && !(row && row !== el);
+      //
+      // A void block's CARET HOST counts as the row for this question. It is a
+      // full-width wrapper the editor mounts around the block's own renderer, so
+      // a press on the empty strip beside a 480px image lands on the host rather
+      // than on the row — and without this the whole margin of every media row
+      // would stop being background: no marquee could start there, and a click
+      // in it would do nothing. A press on the block's real CONTENT still hits a
+      // descendant of the host and is still content.
+      const onBackground = !inText && !(row && row !== el && !isCaretHost(el));
       // Block content that is neither background nor editable text — an image, a
       // page-link card, a checkbox — keeps its own pointer behavior.
       if (!onBackground && !inText) return;

@@ -1,11 +1,17 @@
-import { useEffect, useRef, type ReactNode } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useRef,
+  type ReactNode,
+} from "react";
 import { useEventCallback } from "@plugins/primitives/plugins/latest-ref/web";
-import { Inset } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import type { SpaceStep } from "@plugins/primitives/plugins/css/plugins/space-ramp/core";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useBlockEditor } from "../block-editor-context";
-import { BLOCK_INSET } from "../internal/page-column";
+import { useSelectionControl } from "../selection-control";
 import type { BlockEditorAPI } from "../types";
+import { useInsertParagraphBelow } from "./use-insert-block-below";
 
 /**
  * How a **void** block — one owning no editable text — takes part in the
@@ -13,25 +19,34 @@ import type { BlockEditorAPI } from "../types";
  *
  * A text-bearing block gets all of this for free: its Lexical editor IS the
  * focusable node, the browser paints a caret in it, and the shared text
- * renderer registers its focus handle. A void block (divider, sub-page,
- * equation source, code source) has none of that, so every one of them
- * re-derived the same three obligations — register a handle, pull DOM focus
- * when the editor's focus model points here, report focus back — and each got a
- * slightly different subset right. This module states them once.
+ * renderer registers its focus handle. A void block has none of that, and the
+ * eight media types proved what "each block does its own" costs — image, video,
+ * audio, file, embed, bookmark, place and page-link each registered nothing at
+ * all, so `navigate()` skipped them and the caret jumped over content the user
+ * could plainly see and click into.
  *
- * The split below is deliberate:
+ * So the split here is no longer "the plumbing, for whoever remembers to call
+ * it". It is:
  *
- * - {@link useVoidCaret} is the PLUMBING, and it takes a `focus` **capability**
- *   rather than a node. That is exactly what lets one hook serve a `<textarea>`
- *   (code, equation), a `Row`'s synthesized inner control (sub-page), and a
- *   plain box ({@link VoidCaretBox}) — three different things, none of which the
- *   hook has to know about. It only ever needs "make yourself the focused
- *   element", which every one of them can answer.
- * - {@link VoidCaretBox} is the CUE, for the subset of void blocks that hold the
- *   caret on a box of their own and therefore have nothing on screen saying the
- *   caret is here. A block whose focus lands in a real text control (code,
- *   equation) needs no cue — it has a blinking caret — and a block that
- *   delegates to `Row` gets the same tint from `Row`'s own `selected`.
+ * - {@link BlockCaretHost} — what the EDITOR mounts around a block's row when
+ *   the type registers `caret: "editor"`. The block writes no caret code at all:
+ *   focusability, arrow navigation, the caret cue, Backspace and Enter all come
+ *   from here. This is the answer for every block whose payload is an object the
+ *   user looks at rather than types into.
+ * - {@link useVoidCaret} — the plumbing, for the few types that must hold the
+ *   caret somewhere only they know about (`caret: "renderer"`: a `<textarea>` of
+ *   source, a `Row`'s synthesized inner control). It takes a focus
+ *   **capability** rather than a node, which is exactly what lets one hook serve
+ *   all of them without knowing about any of them.
+ * - {@link useCaretEscape} — the ↑/↓ escape on its own, for those same types.
+ *   "The caret can always leave a void block" is the EDITOR's invariant, so it
+ *   is spelled once here rather than re-derived by each block that needs it. It
+ *   is a separate export rather than a field on {@link useVoidCaret}'s result
+ *   because the textarea types must NOT take it — their arrows move through
+ *   their own source — and "don't spread that field" is a discipline, whereas
+ *   "don't call that hook" is a spelling.
+ * - {@link useBlockActivate} — how a render state tells the host what Enter
+ *   means on it.
  */
 
 /** What a void block hands the editor so the caret can land on it. */
@@ -73,13 +88,18 @@ export interface VoidCaret {
  * its void arm on exactly that absence, so a landing here resolves without any
  * `onLanded` plumbing on the block's side.)
  *
- * The pull-focus effect has **no "is it already focused?" guard**. Three of the
- * four call sites carried one (`document.activeElement !== ref.current`) and one
- * did not, which is the tell that it was never load-bearing: `.focus()` on the
- * already-focused element fires no focus event and moves no caret, so the guard
- * bought nothing. It is also unspellable here — this holds a capability, not a
- * node, and there is nothing to compare `activeElement` against. That is the
- * point, not a limitation.
+ * The pull-focus effect has **no "is it already the focused element?" guard**.
+ * Three of the four original call sites carried one
+ * (`document.activeElement !== ref.current`) and one did not, which is the tell
+ * that it was never load-bearing: `.focus()` on the already-focused element
+ * fires no focus event and moves no caret, so the guard bought nothing. It is
+ * also unspellable here — this holds a capability, not a node, and there is
+ * nothing to compare `activeElement` against.
+ *
+ * That is NOT the same question as the two guards {@link BlockCaretHost} adds
+ * for itself, and the difference is worth keeping straight: those are about
+ * focus being somewhere ELSE (inside the block, or nowhere at all), which only
+ * became askable once a caret host started wrapping interactive content.
  */
 export function useVoidCaret({
   blockId,
@@ -109,72 +129,19 @@ export function useVoidCaret({
 }
 
 /**
- * The box IS the focus-holding element, so it supplies the `focus` capability
- * itself — `Omit`ing it is what makes handing the box a second one unspellable.
+ * The ↑/↓ escape, for a `caret: "renderer"` block whose own focus target is not
+ * a text control (sub-page's `Row`).
+ *
+ * A block that swallowed the arrows would strand the user on a line they cannot
+ * leave, which makes "the caret can always leave a void block" the EDITOR's
+ * invariant rather than each block's promise — and an invariant belongs to
+ * whoever owns it. Everything else (what Backspace means here, what Enter seeds)
+ * is the block's own meaning and stays with the block.
  */
-export interface VoidCaretBoxProps extends Omit<VoidCaretOptions, "focus"> {
-  /** Accessible name for the box — it has no text of its own to be named by. */
-  label: string;
-  /** Horizontal padding. Defaults to the content-edge inset every block uses. */
-  x?: SpaceStep;
-  /** Vertical padding. */
-  y?: SpaceStep;
-  /**
-   * The block's own keyboard meaning, run FIRST. Anything it
-   * `preventDefault()`s is taken as handled and the box stays out of it.
-   */
-  onKeyDown?: (e: React.KeyboardEvent) => void;
-  children?: ReactNode;
-}
-
-/**
- * A focusable box that holds the caret for a void block, and **the one place the
- * "the caret is on this block" cue is written**.
- *
- * The two visual conditions are deliberately SEPARATE, and they layer:
- *
- * - `focus-ring` is the app's canonical indicator for "this element has DOM
- *   keyboard focus" — and it is the same utility that suppresses the browser's
- *   own outline, so the replacement is drawn on **exactly the condition the
- *   original was suppressed for**.
- * - `bg-accent` is "the editor's caret is on this block". It is the tint
- *   `Row.selected` paints, so a void block that delegates to `Row` (sub-page)
- *   and one that uses this box (divider) say the same thing the same way.
- *
- * That separation is the bug this closes. The divider used to write
- * `outline-none` unconditionally and then draw a ring on `isFocused` — a
- * *different* condition — so a box that had genuinely taken keyboard focus while
- * the editor's model disagreed showed **nothing at all**: the browser's
- * indicator was suppressed and the replacement never fired.
- *
- * **Keyboard.** The box handles ArrowUp/ArrowDown itself, after giving the
- * caller first refusal. "The caret can always leave a void block" is the
- * EDITOR's invariant — a block that swallowed the arrows would strand the user
- * — and an invariant belongs to whoever owns it, not to four blocks that each
- * have to remember it. Everything else (what Backspace means here, what Enter
- * seeds) is the block's own meaning and stays with the block.
- */
-export function VoidCaretBox({
-  blockId,
-  isFocused,
-  editor,
-  label,
-  x = BLOCK_INSET,
-  y = "sm",
-  onKeyDown,
-  children,
-}: VoidCaretBoxProps) {
-  const ref = useRef<HTMLDivElement>(null);
-  const { onFocus } = useVoidCaret({
-    blockId,
-    isFocused,
-    editor,
-    focus: () => ref.current?.focus(),
-  });
-
-  function handleKeyDown(e: React.KeyboardEvent) {
-    onKeyDown?.(e);
-    // The block's meaning wins; `defaultPrevented` is how it says "mine".
+export function useCaretEscape(
+  editor: BlockEditorAPI,
+): (e: React.KeyboardEvent) => void {
+  return useEventCallback((e: React.KeyboardEvent) => {
     if (e.defaultPrevented) return;
     if (e.key === "ArrowUp") {
       e.preventDefault();
@@ -183,24 +150,256 @@ export function VoidCaretBox({
       e.preventDefault();
       editor.navigate("down");
     }
+  });
+}
+
+/**
+ * Registering an activation returns the unregister; `null` registers nothing.
+ * The host supplies a stable one, so a block may call the hook unconditionally.
+ */
+type RegisterActivate = (activate: (() => void) | null) => () => void;
+
+const BlockActivateContext = createContext<RegisterActivate | null>(null);
+
+/**
+ * Declare what **Enter** (and Space) mean on this block, in this render state.
+ *
+ * An unfilled media block is a *prompt* — it is asking for a payload — so Enter
+ * should fill it: open the file picker, focus the URL box, open the page picker.
+ * A filled one is an *object*, so Enter starts a paragraph below it instead.
+ * That is a per-state fact, which is why it is registered from inside the
+ * component rather than declared on the registration next to `caret`: the answer
+ * depends on state a registration cannot see (the hidden `<input>`'s ref, which
+ * arm rendered), and a static declaration would have to lie about one of the
+ * arms.
+ *
+ * **Registering nothing is a legitimate state, not a failure.** `null` means
+ * "this block has no primary action", and Enter then falls through to the host's
+ * own meaning. Passing an inline arrow is fine — it is wrapped internally.
+ *
+ * Outside a {@link BlockCaretHost} — a `caret: "renderer"` block, or a component
+ * reused off the block surface entirely — this is a **no-op**. That is
+ * deliberate: `AttachmentUpload` is a shared component and its callers should
+ * not have to know which surface they are on.
+ */
+export function useBlockActivate(activate: (() => void) | null): void {
+  const register = useContext(BlockActivateContext);
+  const run = useEventCallback(() => activate?.());
+  // The IDENTITY of the registration must depend only on whether there is one,
+  // never on the closure — otherwise every render of the block re-registers.
+  const enabled = activate !== null;
+  useEffect(() => {
+    if (!register) return;
+    return register(enabled ? run : null);
+  }, [register, enabled, run]);
+}
+
+export interface BlockCaretHostProps {
+  /** The block's row id — the key the editor's focus handle registry is keyed by. */
+  blockId: string;
+  /** Does the editor's focus model currently point at this block? */
+  isFocused: boolean;
+  editor: BlockEditorAPI;
+  /** Accessible name for the host — it has no text of its own to be named by. */
+  label: string;
+  children?: ReactNode;
+}
+
+/**
+ * The focusable box that holds the caret for a `caret: "editor"` block, and
+ * **the one place the "the caret is on this block" cue is written**.
+ *
+ * Mounted by `BlockRow` around the block's dispatch, never by the block. It adds
+ * **no padding of its own**: it sits at the row's content-left edge `C`, which
+ * is where the page-column invariant puts a block DECORATION, and the caret cue
+ * is one. Every block keeps its own `<Inset x={BLOCK_INSET}>` for its content.
+ *
+ * ## The cue
+ *
+ * Two visual conditions, deliberately SEPARATE, and they layer:
+ *
+ * - `focus-ring` is the app's canonical indicator for "this element has DOM
+ *   keyboard focus" — and it is the same utility that suppresses the browser's
+ *   own outline, so the replacement is drawn on **exactly the condition the
+ *   original was suppressed for**.
+ * - `bg-accent` is "the editor's caret is on this block". It is the tint
+ *   `Row.selected` paints, so a void block that delegates to `Row` (sub-page)
+ *   and one that takes this host say the same thing the same way. It is also a
+ *   different hue from the block-SELECTION band (`bg-primary/15`), which is the
+ *   app's existing two-cue language rather than a coincidence.
+ *
+ * That separation is a bug this closes. The divider used to write `outline-none`
+ * unconditionally and then draw a ring on `isFocused` — a *different* condition
+ * — so a box that had genuinely taken keyboard focus while the editor's model
+ * disagreed showed **nothing at all**.
+ *
+ * ## Focus: three rules, three different questions
+ *
+ * `useVoidCaret` answers "the model moved, so move the DOM". Wrapping
+ * INTERACTIVE content — which a media block is full of — makes two more
+ * questions askable that a divider never had to answer:
+ *
+ * 1. **Focus is already inside me.** Clicking "Remove image" focuses the button,
+ *    which bubbles here, which makes this block the current one, which flips
+ *    `isFocused` — and the pull would then yank focus off the button the user
+ *    just clicked. So the focus capability declines when
+ *    `contains(document.activeElement)`. This is a CONTAINMENT question and is
+ *    load-bearing, unlike the identity guard `useVoidCaret` documents dropping.
+ *    It cannot see through a **portal**, and nothing here can: a popover
+ *    rendered to `document.body` is not a descendant. That is why a block whose
+ *    affordance is a popover opens it from its own {@link useBlockActivate}
+ *    rather than auto-opening on mount — an auto-open would race this.
+ * 2. **Focus went nowhere.** The block's own control can unmount under the
+ *    user's feet: "Remove image" clears the payload, so the button that was
+ *    focused disappears and DOM focus falls to `<body>`. `isFocused` never
+ *    changed, so rule 1's effect never re-runs, and the model says the caret is
+ *    on this block while the keyboard is nowhere — arrows dead until the user
+ *    clicks again. So focus is reclaimed on every commit, but ONLY from `null` /
+ *    `<body>`. Not "anywhere outside this row": that would steal from a portal,
+ *    which is rule 1's blind spot arriving by a different road.
+ *
+ * ## Keys: escapes are unconditional, meanings are the box's own
+ *
+ * The split matters, and getting it wrong strands the caret. A single origin
+ * guard (`e.target === e.currentTarget`, the discipline the block-selection
+ * container uses) would mean that once focus is on any inner control — the
+ * upload dropzone, a URL field, a link — ↑/↓ reach nothing at all and the user
+ * cannot leave the block by keyboard. So:
+ *
+ * - **↑/↓ and Escape run wherever they originated**, subject only to
+ *   `defaultPrevented`. That is the protocol: an inner control that genuinely
+ *   wants the arrows says so by preventing default, which is exactly what the
+ *   place block's result list already does while its suggestions are open.
+ * - **Backspace/Delete/Enter/Space are origin-guarded**, so typing in an inner
+ *   field is never swallowed by the block around it.
+ *
+ * Backspace deletes the whole block in one press, whatever its payload holds: a
+ * filled image is ONE object, not content to clear and then a block to delete.
+ * (Clearing the payload is what the block's own "Remove"/"Replace" button is
+ * for. Two affordances, two meanings, deliberately.) The caret lands above,
+ * which is where the user's line then is — Notion's model, and it makes a
+ * Backspace arriving from the block below read as one continuous motion.
+ */
+export function BlockCaretHost({
+  blockId,
+  isFocused,
+  editor,
+  label,
+  children,
+}: BlockCaretHostProps) {
+  const ref = useRef<HTMLDivElement>(null);
+  const activateRef = useRef<(() => void) | null>(null);
+  const insertParagraphBelow = useInsertParagraphBelow();
+  const selection = useSelectionControl();
+
+  // Stable for the lifetime of the host — `no-unstable-context-value`, and more
+  // to the point a fresh identity would re-run every consumer's effect.
+  const register = useCallback<RegisterActivate>((activate) => {
+    activateRef.current = activate;
+    return () => {
+      // Only clear what THIS registration installed: a state flip can mount the
+      // next arm's registration before the previous one's cleanup runs.
+      if (activateRef.current === activate) activateRef.current = null;
+    };
+  }, []);
+
+  const { onFocus } = useVoidCaret({
+    blockId,
+    isFocused,
+    editor,
+    // Rule 1 — see the docblock. The guard is CONTAINMENT, not identity.
+    focus: () => {
+      const el = ref.current;
+      if (!el || el.contains(document.activeElement)) return;
+      el.focus();
+    },
+  });
+
+  // Rule 2 — see the docblock. Deliberately no dependency array: the question is
+  // "where is focus right now", which nothing in this component's props can
+  // answer, and the check is one property read.
+  useEffect(() => {
+    if (!isFocused) return;
+    const active = document.activeElement;
+    if (active !== null && active !== document.body) return;
+    ref.current?.focus();
+  });
+
+  function handleKeyDown(e: React.KeyboardEvent) {
+    if (e.defaultPrevented) return;
+
+    // The escapes. Unconditional, so the caret can leave from anywhere inside.
+    if (e.key === "ArrowUp") {
+      e.preventDefault();
+      editor.navigate("up");
+      return;
+    }
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      editor.navigate("down");
+      return;
+    }
+    if (e.key === "Escape") {
+      // The one keyboard route from a void block into a multi-block selection.
+      // A text block reaches it through Lexical's own listener; this box has no
+      // Lexical, and its Backspace deletes rather than selects, so without this
+      // there is no way to select a media block from the keyboard at all.
+      if (!selection) return;
+      e.preventDefault();
+      selection.enterSelectionMode(blockId);
+      return;
+    }
+
+    // Everything below is the BOX's own meaning, so it must have originated on
+    // the box — never on an input, a link or a button inside it.
+    if (e.target !== e.currentTarget) return;
+
+    if (e.key === "Backspace" || e.key === "Delete") {
+      e.preventDefault();
+      editor.navigate("up"); // land the caret on the block above…
+      editor.remove(); // …then delete this one
+      return;
+    }
+    const activate = activateRef.current;
+    if (e.key === "Enter") {
+      e.preventDefault();
+      if (activate) activate();
+      // Nothing to fill in — keep typing on a fresh line below. The paragraph
+      // type comes from the registry's own `defaultText` flag, so the editor
+      // still names no block type.
+      else insertParagraphBelow(editor);
+      return;
+    }
+    if (e.key === " " && activate) {
+      // Space activates but never seeds a paragraph: on a filled media object it
+      // would be a surprise, and on the ones with native controls the browser
+      // has its own meaning for it.
+      e.preventDefault();
+      activate();
+    }
   }
 
   return (
-    <Inset
-      x={x}
-      y={y}
-      ref={ref}
-      tabIndex={0}
-      aria-label={label}
-      aria-current={isFocused ? true : undefined}
-      onKeyDown={handleKeyDown}
-      onFocus={onFocus}
-      className={cn(
-        "focus-ring cursor-default rounded-md",
-        isFocused && "bg-accent",
-      )}
-    >
-      {children}
-    </Inset>
+    <BlockActivateContext.Provider value={register}>
+      <div
+        ref={ref}
+        tabIndex={0}
+        // The row's own background handler treats a press that lands on the host
+        // ITSELF (its margin, not its content) as a press on the row background,
+        // so a marquee can still start from the empty strip beside a narrow
+        // image. See `block-editor.tsx`'s `onPointerDown`.
+        data-caret-host=""
+        aria-label={label}
+        aria-current={isFocused ? true : undefined}
+        onKeyDown={handleKeyDown}
+        onFocus={onFocus}
+        className={cn(
+          "focus-ring cursor-default rounded-md",
+          isFocused && "bg-accent",
+        )}
+      >
+        {children}
+      </div>
+    </BlockActivateContext.Provider>
   );
 }

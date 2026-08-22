@@ -4,7 +4,10 @@ import { attachmentUrl } from "@plugins/primitives/plugins/text-editor/plugins/p
 import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { hoverRevealGroup, hoverRevealTarget } from "@plugins/primitives/plugins/hover-reveal/web";
+import {
+  hoverRevealGroup,
+  hoverRevealTarget,
+} from "@plugins/primitives/plugins/hover-reveal/web";
 import type { BlockRendererProps } from "@plugins/page/plugins/editor/web";
 import { videoBlock } from "../../core";
 
@@ -18,9 +21,12 @@ export function VideoBlock({ block, isFocused, editor }: BlockRendererProps) {
         label="Add a video — click, drop, or paste"
         icon={MdMovie}
         isFocused={isFocused}
-        onArm={() => editor.onFocus()}
         onUploaded={(res) =>
-          editor.update({ attachmentId: res.id, filename: res.filename, mime: res.mime })
+          editor.update({
+            attachmentId: res.id,
+            filename: res.filename,
+            mime: res.mime,
+          })
         }
       />
     );
@@ -39,7 +45,10 @@ export function VideoBlock({ block, isFocused, editor }: BlockRendererProps) {
             type="button"
             aria-label="Replace video"
             onClick={() => editor.update({})}
-            className={cn(hoverRevealTarget, "size-6 rounded-full bg-black/50 text-white hover:bg-black/70")}
+            className={cn(
+              hoverRevealTarget,
+              "size-6 rounded-full bg-black/50 text-white hover:bg-black/70",
+            )}
           >
             <Center className="size-full">
               <MdSwapHoriz className="size-4" />

@@ -15,6 +15,7 @@
     - `page/editor.BLOCK_INSET`
     - `page/editor.BlockRendererProps`
     - `page/editor.Editor`
+    - `page/editor.useBlockActivate`
     - `primitives/css/badge.Badge`
     - `primitives/css/card.Card`
     - `primitives/css/center.Center`

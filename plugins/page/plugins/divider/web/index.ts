@@ -9,6 +9,12 @@ export default {
   description:
     "Divider block type: a thin horizontal rule marking a section break; insert via `/divider` or the `---` markdown shortcut.",
   contributions: [
-    Editor.Block({ id: dividerBlock.type, match: dividerBlock.type, block: dividerBlock, component: DividerBlock }),
+    Editor.Block({
+      id: dividerBlock.type,
+      match: dividerBlock.type,
+      block: dividerBlock,
+      component: DividerBlock,
+      caret: "editor",
+    }),
   ],
 } satisfies PluginDefinition;

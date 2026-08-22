@@ -18242,6 +18242,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses:
           - `infra/attachments.uploadAttachment`
           - `infra/attachments.UploadedAttachment`
+          - `page/editor.useBlockActivate`
           - `primitives/css/placeholder.Placeholder`
           - `primitives/css/spacing.Stack`
           - `primitives/css/ui-kit.cn`
@@ -18285,7 +18286,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Contributes: `Editor.Block` "bookmark" → `BookmarkBlock`
         - Uses:
           - `infra/endpoints.fetchEndpoint`
+          - `page/editor.BlockRendererProps`
           - `page/editor.Editor`
+          - `page/editor.useBlockActivate`
           - `primitives/css/card.Card`
           - `primitives/css/center.Center`
           - `primitives/css/clip.Clip`
@@ -18449,9 +18452,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Web:
         - Contributes: `Editor.Block` "divider" → `DividerBlock`
         - Uses:
-          - `page/editor.BlockRendererProps`
+          - `page/editor.BLOCK_INSET`
           - `page/editor.Editor`
-          - `page/editor.VoidCaretBox`
+          - `primitives/css/spacing.Inset`
         - Exports (values):
           - `DIVIDER_TYPE`
           - `dividerBlock`
@@ -18566,7 +18569,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `PageOptionsResult`
           - `TextBlockLayoutProps`
           - `VoidCaret`
-          - `VoidCaretBoxProps`
           - `VoidCaretOptions`
         - Exports (values):
           - `BLOCK_INDENT`
@@ -18593,15 +18595,16 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `registerBlockPasteHandler`
           - `registerBlockTextExtension`
           - `TextBlockLayout`
+          - `useBlockActivate`
           - `useBlockAnchors`
           - `useBlockEditor`
+          - `useCaretEscape`
           - `useFormatToolbar`
           - `useFramedBlockTypes`
           - `useGroupedInsertableBlocks`
           - `useInsertableBlocks`
           - `usePageOptions`
           - `useVoidCaret`
-          - `VoidCaretBox`
       - Server:
         - Contributes:
           - `resource.declare` "pages"
@@ -18933,7 +18936,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Web:
         - Contributes: `Editor.Block` "embed" → `EmbedBlock`
         - Uses:
+          - `page/editor.BlockRendererProps`
           - `page/editor.Editor`
+          - `page/editor.useBlockActivate`
           - `primitives/css/inline.Inline`
           - `primitives/css/overlay.Overlay`
           - `primitives/css/spacing.Stack`
@@ -19407,6 +19412,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `page/editor.Editor`
           - `page/editor.PageIcon`
           - `page/editor.PageOptionsList`
+          - `page/editor.useBlockActivate`
           - `page/editor.usePageOptions`
           - `page/page-reference.usePageNavigation`
           - `page/page-reference.usePageReferenceActions`
@@ -19471,6 +19477,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `page/editor.BLOCK_INSET`
           - `page/editor.BlockRendererProps`
           - `page/editor.Editor`
+          - `page/editor.useBlockActivate`
           - `primitives/css/badge.Badge`
           - `primitives/css/card.Card`
           - `primitives/css/center.Center`
@@ -19709,6 +19716,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `page/editor.BlockRendererProps`
           - `page/editor.Editor`
           - `page/editor.PageIcon`
+          - `page/editor.useCaretEscape`
           - `page/editor.useVoidCaret`
           - `page/page-reference.usePageNavigation`
           - `page/page-reference.usePageReferenceActions`
@@ -22880,6 +22888,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `page/bookmark`
               - `page/callout`
               - `page/code-block`
+              - `page/divider`
               - `page/editor`
               - `page/embed`
               - `page/file`

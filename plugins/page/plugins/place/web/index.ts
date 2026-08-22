@@ -18,6 +18,7 @@ export default {
       match: placeBlock.type,
       block: placeBlock,
       component: PlaceBlock,
+      caret: "editor",
     }),
   ],
   slots: Place,

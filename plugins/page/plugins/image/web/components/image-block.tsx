@@ -9,8 +9,14 @@ import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Inset } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { hoverRevealGroup, hoverRevealTarget } from "@plugins/primitives/plugins/hover-reveal/web";
-import { BLOCK_INSET, type BlockRendererProps } from "@plugins/page/plugins/editor/web";
+import {
+  hoverRevealGroup,
+  hoverRevealTarget,
+} from "@plugins/primitives/plugins/hover-reveal/web";
+import {
+  BLOCK_INSET,
+  type BlockRendererProps,
+} from "@plugins/page/plugins/editor/web";
 import { imageBlock } from "../../core";
 
 const MIN_W = 80;
@@ -26,8 +32,9 @@ export function ImageBlock({ block, isFocused, editor }: BlockRendererProps) {
         label="Add an image — click, drop, or paste"
         icon={MdImage}
         isFocused={isFocused}
-        onArm={() => editor.onFocus()}
-        onUploaded={(res) => editor.update({ attachmentId: res.id, width: DEFAULT_W })}
+        onUploaded={(res) =>
+          editor.update({ attachmentId: res.id, width: DEFAULT_W })
+        }
       />
     );
   }
@@ -103,7 +110,10 @@ function FilledImageBlock({
             type="button"
             aria-label="Remove image"
             onClick={() => editor.update({ alt })}
-            className={cn(hoverRevealTarget, "size-6 rounded-full bg-black/50 text-white hover:bg-black/70")}
+            className={cn(
+              hoverRevealTarget,
+              "size-6 rounded-full bg-black/50 text-white hover:bg-black/70",
+            )}
           >
             <Center className="size-full">
               <MdClose className="size-4" />
@@ -123,7 +133,11 @@ function FilledImageBlock({
         </Pin>
       </div>
       {lightbox ? (
-        <Lightbox attachmentId={attachmentId} alt={alt} onClose={() => setLightbox(false)} />
+        <Lightbox
+          attachmentId={attachmentId}
+          alt={alt}
+          onClose={() => setLightbox(false)}
+        />
       ) : null}
     </Inset>
   );

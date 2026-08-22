@@ -1,4 +1,4 @@
-import { useId, useState, type KeyboardEvent } from "react";
+import { useId, useRef, useState, type KeyboardEvent } from "react";
 import { MdPlace } from "react-icons/md";
 import {
   getEndpointErrorMessage,
@@ -18,6 +18,7 @@ import { Surface } from "@plugins/primitives/plugins/css/plugins/surface/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
+import { useBlockActivate } from "@plugins/page/plugins/editor/web";
 import { placeSearchEndpoint, type PlaceSuggestion } from "../../core";
 import { useDebouncedValue } from "../internal/use-debounced-value";
 import type { PlaceProviderContribution } from "../slots";
@@ -33,27 +34,29 @@ export interface PlaceSearchProps {
   /** The current search-round token, sent with every query of this round. */
   session: string;
   onPick: (suggestion: PlaceSuggestion) => void;
-  onFocus: () => void;
 }
 
 /**
  * The empty block's search box: type, wait for the debounce, then pick a result
  * with the mouse or with ArrowUp/ArrowDown + Enter.
  *
- * Focus follows the bookmark block: no `registerFocusHandle`, just
- * `editor.onFocus()` on the input. The block is reached by click or Tab, and
- * arrow-key document traversal skips it — the right behaviour for a card whose
- * own arrow keys move through a result list.
+ * The block's caret host owns focus and the ↑/↓ escape — this box reports
+ * nothing and registers nothing. It keeps its OWN arrows only while it has
+ * suggestions to move through, which it already signals the one way the protocol
+ * asks for: by calling `preventDefault()`. The host runs its escape on
+ * `defaultPrevented`, so "the caret can always leave a void block" and "the
+ * arrows walk this result list" are both true, with no coordination between
+ * them.
  */
-export function PlaceSearch({
-  provider,
-  session,
-  onPick,
-  onFocus,
-}: PlaceSearchProps) {
+export function PlaceSearch({ provider, session, onPick }: PlaceSearchProps) {
   const [query, setQuery] = useState("");
   const [active, setActive] = useState(0);
   const listId = useId();
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  // An empty place block is a PROMPT — it is asking which place — so Enter on
+  // the block's caret host puts the caret in the search box.
+  useBlockActivate(() => inputRef.current?.focus());
   const debounced = useDebouncedValue(query.trim(), SEARCH_DEBOUNCE_MS);
 
   const { data, error, isFetching } = useEndpoint(
@@ -96,6 +99,7 @@ export function PlaceSearch({
         <Icon className={cn(rigidClass(), "size-4 text-muted-foreground")} />
         <Fill>
           <Input
+            ref={inputRef}
             value={query}
             placeholder={`Search ${provider.label}…`}
             aria-label="Search for a place"
@@ -103,7 +107,6 @@ export function PlaceSearch({
             aria-activedescendant={
               hasResults ? `${listId}-${active}` : undefined
             }
-            onFocus={onFocus}
             onChange={(e) => {
               setQuery(e.target.value);
               setActive(0);

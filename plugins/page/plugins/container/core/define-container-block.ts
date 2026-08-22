@@ -36,9 +36,10 @@ import {
  * …>` stops being assignable to `Set<never>`) and rejects every schema,
  * including void ones.
  */
-export type RejectTextBearing<S extends AnyZodObject> = "text" extends keyof S["shape"]
-  ? { __void_container_schema_must_not_declare_text: never }
-  : unknown;
+export type RejectTextBearing<S extends AnyZodObject> =
+  "text" extends keyof S["shape"]
+    ? { __void_container_schema_must_not_declare_text: never }
+    : unknown;
 
 /**
  * The declaration surface of a void container. Deliberately much smaller than
@@ -146,10 +147,19 @@ export interface ContainerBlockOptions<S extends AnyZodObject> {
  * container would fail to register despite being void by construction. Stating
  * it here fixes that once, for every container, at the one place voidness is
  * decided.
+ *
+ * `anchor: true` is stated for the same reason and reads the same way: the
+ * handle's own field is `anchor?: true`, i.e. `true | undefined`, so a value
+ * that merely *happens* to carry it is indistinguishable from one that does not.
+ * Coming out of THIS function it is a certainty, and saying so is what lets
+ * `Editor.Block`'s registration union give a container its own arm — the arm on
+ * which `caret` is unspellable, because an anchor renders no line for a caret to
+ * land on. Anchorhood is already "you went through this factory"; this makes
+ * that provable to a type rather than only to a reader.
  */
 export function defineContainerBlock<S extends AnyZodObject>(
   opts: ContainerBlockOptions<S> & RejectTextBearing<S>,
-): BlockHandle<z.infer<S>> & { text?: undefined } {
+): BlockHandle<z.infer<S>> & { text?: undefined; anchor: true } {
   if ("text" in opts.schema.shape) {
     throw new Error(
       `defineContainerBlock("${opts.type}"): a container is a VOID block — its schema must not ` +

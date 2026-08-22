@@ -12,6 +12,7 @@ import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder
 import { pagesResource, pageData } from "@plugins/page/plugins/editor/core";
 import {
   usePageOptions,
+  useBlockActivate,
   PageOptionsList,
   PageIcon,
   type BlockRendererProps,
@@ -22,20 +23,53 @@ import {
 } from "@plugins/page/plugins/page-reference/web";
 import { pageLinkBlock } from "../../core";
 
-// A small page-picker popover: filterable list of pages fed by the live
-// pagesResource (via the shared usePageOptions/PageOptionsList). Selecting a page
-// invokes `onSelect(pageId)`. `autoOpen` opens it on mount so inserting the block
-// is a single step (no extra click to reveal the picker).
+/**
+ * The four states a page-link row can be in.
+ *
+ * A union rather than "the page, or undefined", because two of the four —
+ * *loading* and *no such page* — would otherwise both spell themselves
+ * `undefined`, and they mean opposite things to the reader: one is a promise
+ * that an answer is coming, the other is the answer. The resolved arm carries
+ * the page it resolved to, so the render cannot look it up a second time (nor
+ * assert it away with a `!`).
+ */
+type PageLinkState =
+  | { state: "unset"; data?: undefined }
+  | { state: "pending"; data?: undefined }
+  | { state: "missing"; data?: undefined }
+  | { state: "resolved"; data: ReturnType<typeof pageData> };
+
+function resolvedOrMissing(
+  row: Parameters<typeof pageData>[0] | undefined,
+): PageLinkState {
+  return row === undefined
+    ? { state: "missing" }
+    : { state: "resolved", data: pageData(row) };
+}
+
+/**
+ * A small page-picker popover: filterable list of pages fed by the live
+ * pagesResource (via the shared usePageOptions/PageOptionsList). Selecting a
+ * page invokes `onSelect(pageId)`.
+ *
+ * Its open-state is the BLOCK's, not this component's, so the block can open it
+ * from its caret activation (Enter). It used to open itself on mount instead
+ * (`autoOpen`), which races the caret host's pull-focus: the popover portals to
+ * `document.body`, so the host's "is focus already inside me?" guard —
+ * `contains(document.activeElement)` — cannot see through it, says no, and pulls
+ * focus back onto the host, leaving an open picker the keyboard cannot reach.
+ */
 function PagePicker({
   trigger,
   onSelect,
-  autoOpen,
+  open,
+  onOpenChange,
 }: {
   trigger: React.ReactElement;
   onSelect: (pageId: string) => void;
-  autoOpen?: boolean;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
 }) {
-  const [open, setOpen] = useState(autoOpen ?? false);
   const [query, setQuery] = useState("");
   const [activeIndex, setActiveIndex] = useState(0);
   const pageOptionsResult = usePageOptions(query);
@@ -44,7 +78,7 @@ function PagePicker({
     <InlinePopover
       trigger={trigger}
       open={open}
-      onOpenChange={setOpen}
+      onOpenChange={onOpenChange}
       width="lg"
       padding="sm"
     >
@@ -65,7 +99,7 @@ function PagePicker({
               onHoverIndex={setActiveIndex}
               onSelect={(id) => {
                 onSelect(id);
-                setOpen(false);
+                onOpenChange(false);
                 setQuery("");
               }}
             />
@@ -83,14 +117,40 @@ export function PageLinkBlock({ block, editor }: BlockRendererProps) {
   // not-found row name no page, so there is nothing for an action to open.
   const actions = usePageReferenceActions(pageId);
   const result = useResource(pagesResource);
+  const [pickerOpen, setPickerOpen] = useState(false);
 
-  // Freshly inserted (empty) block: render the picker affordance, opened.
+  // Which of the four arms below will render, as a UNION that CARRIES the
+  // resolved page rather than a flag the resolved arm then has to re-derive. A
+  // hook must run before any early return, so the state has to be computed up
+  // here; making it a union is what keeps "not known yet" its own answer instead
+  // of collapsing into "no such page" on the way.
+  const link: PageLinkState =
+    pageId === ""
+      ? { state: "unset" }
+      : result.pending
+        ? { state: "pending" }
+        : resolvedOrMissing(result.data.find((d) => d.id === pageId));
+
+  // Both arms that render a picker make "open it" the block's primary action, so
+  // inserting a page-link and pressing Enter picks a page — the single step
+  // `autoOpen` used to buy, without racing the caret host for focus. Neither the
+  // pending nor the resolved arm registers one: on a resolved link Enter means
+  // "start a paragraph below", which is the host's own answer, and while the
+  // page set is still loading there is nothing yet to pick from.
+  useBlockActivate(
+    link.state === "unset" || link.state === "missing"
+      ? () => setPickerOpen(true)
+      : null,
+  );
+
+  // Freshly inserted (empty) block: render the picker affordance.
   // Show it even while pending — it has its own internal loading state.
-  if (pageId === "") {
+  if (link.state === "unset") {
     return (
       <div className="px-md py-xs">
         <PagePicker
-          autoOpen
+          open={pickerOpen}
+          onOpenChange={setPickerOpen}
           onSelect={(id) => editor.update({ pageId: id })}
           trigger={
             <Row
@@ -106,17 +166,25 @@ export function PageLinkBlock({ block, editor }: BlockRendererProps) {
     );
   }
 
-  // Gate: render nothing (inline block) while the pages resource is loading.
-  if (result.pending) return null;
-
-  const target = result.data.find((d) => d.id === pageId);
-  const targetData = target ? pageData(target) : undefined;
+  // Which page this links to is not known yet — so say THAT, at the height a
+  // page-link row occupies. Rendering nothing was a claim ("no link here") that
+  // then reversed itself, and it left a zero-height focusable box the caret host
+  // sits in while `rowAtPointer`'s `r.height > 0` guard skips right over it.
+  if (link.state === "pending") {
+    return (
+      <div className="px-md py-xs">
+        <Loading variant="text" label="Loading page…" />
+      </div>
+    );
+  }
 
   // Target page was deleted: offer a muted not-found row that re-opens the picker.
-  if (!target) {
+  if (link.state === "missing") {
     return (
       <div className="px-md py-xs">
         <PagePicker
+          open={pickerOpen}
+          onOpenChange={setPickerOpen}
           onSelect={(id) => editor.update({ pageId: id })}
           trigger={
             <Row
@@ -132,7 +200,11 @@ export function PageLinkBlock({ block, editor }: BlockRendererProps) {
   }
 
   // Resolved link: a clickable row that opens the page through the host's
-  // declared navigation, with the contributed reference actions on hover.
+  // declared navigation, with the contributed reference actions on hover. The
+  // page's own data rides on the union arm, so there is no second lookup here
+  // and no `!` claiming a row the type system cannot see.
+  const { data: targetData } = link;
+
   return (
     <div className="px-md py-xs">
       <Row

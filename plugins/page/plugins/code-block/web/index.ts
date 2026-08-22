@@ -9,6 +9,12 @@ export default {
   description:
     "Code block type: editable with live syntax highlighting, language picker, and copy button.",
   contributions: [
-    Editor.Block({ id: codeBlock.type, match: codeBlock.type, block: codeBlock, component: CodeBlock }),
+    Editor.Block({
+      id: codeBlock.type,
+      match: codeBlock.type,
+      block: codeBlock,
+      component: CodeBlock,
+      caret: "renderer",
+    }),
   ],
 } satisfies PluginDefinition;

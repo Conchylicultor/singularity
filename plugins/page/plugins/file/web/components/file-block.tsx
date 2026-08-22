@@ -68,7 +68,6 @@ export function FileBlock({ block, isFocused, editor }: BlockRendererProps) {
         label="Add a file — click, drop, or paste"
         icon={MdAttachFile}
         isFocused={isFocused}
-        onArm={() => editor.onFocus()}
         onUploaded={(res) =>
           editor.update({
             attachmentId: res.id,
