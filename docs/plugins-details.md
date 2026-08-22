@@ -2389,6 +2389,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/text.Text`
               - `primitives/css/ui-kit.Button`
               - `primitives/css/ui-kit.cn`
+              - `primitives/css/yield.yieldClass`
               - `primitives/data-view.CreateOption`
               - `primitives/data-view.DataView`
               - `primitives/data-view.defineDataView`
@@ -2405,8 +2406,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/loading.Loading`
               - `primitives/pane.Pane`
               - `primitives/pane.PaneChrome`
+              - `primitives/pane.PaneIconAction`
+              - `primitives/pane.useCurrentPane`
               - `primitives/pane.useOpenPane`
               - `primitives/pane.usePaneStore`
+              - `primitives/pane.useSurfaceAppId`
               - `primitives/slot-render.defineRenderSlot`
               - `primitives/text-editor/paste-images.attachmentUrl`
               - `primitives/tree.useOptionalRowControls`
@@ -24068,6 +24072,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - **`yield`** — Yielding-cell layout primitive: yieldClass(axis) is the flex child that falls below its own content width (min-w-0) but never takes slack. The half of <Fill> that gives, without the half that grows.
           - Cross-plugin:
             - Imported by:
+              - `apps/pages/page-tree`
               - `apps/sonata/track-mixer`
               - `conversations/conversation-view/jsonl-viewer/collapsible-card`
               - `conversations/conversation-view/jsonl-viewer/tool-call/workflow`

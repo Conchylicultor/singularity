@@ -45,7 +45,12 @@ await withBrowser(async (h) => {
   await page.goto(`${BASE}/agents/c/${CONV}`);
   await page.waitForTimeout(waitMs);
   await dump("1-conversation");
-  console.log("toggle count:", await toggle.count(), "pressed:", await toggle.getAttribute("aria-pressed"));
+  console.log(
+    "toggle count:",
+    await toggle.count(),
+    "pressed:",
+    await toggle.getAttribute("aria-pressed"),
+  );
   await snap(page, OUT, "1-conversation");
 
   await toggle.click();
@@ -65,7 +70,9 @@ await withBrowser(async (h) => {
 
   // The page's own title bar leads with the way back: the same column returns
   // to the tree.
-  const back = page.locator('[data-pane-id="page-detail"] button[aria-label="Back to pages"]');
+  const back = page.locator(
+    '[data-pane-id="page-detail"] button[aria-label="Back to pages"]',
+  );
   console.log("back button count:", await back.count());
   await back.click();
   await page.waitForTimeout(1500);
@@ -75,6 +82,9 @@ await withBrowser(async (h) => {
   await toggle.click();
   await page.waitForTimeout(1500);
   await dump("5-tree-closed");
-  console.log("pressed after close:", await toggle.getAttribute("aria-pressed"));
+  console.log(
+    "pressed after close:",
+    await toggle.getAttribute("aria-pressed"),
+  );
   await snap(page, OUT, "5-tree-closed");
 });
