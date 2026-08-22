@@ -66,6 +66,7 @@ declared as its main axis. The disagreement is the design, not an oversight.
 - Description: Yielding-cell layout primitive: yieldClass(axis) is the flex child that falls below its own content width (min-w-0) but never takes slack. The half of <Fill> that gives, without the half that grows.
 - Cross-plugin:
   - Imported by:
+    - `apps/pages/page-tree`
     - `apps/sonata/track-mixer`
     - `conversations/conversation-view/jsonl-viewer/collapsible-card`
     - `conversations/conversation-view/jsonl-viewer/tool-call/workflow`

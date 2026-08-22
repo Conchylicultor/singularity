@@ -7,6 +7,7 @@ import {
   useOpenPane,
 } from "@plugins/primitives/plugins/pane/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { yieldClass } from "@plugins/primitives/plugins/css/plugins/yield/web";
 import { pagesResource, pageData } from "@plugins/page/plugins/editor/core";
 import {
   pageDetailRoute,
@@ -26,6 +27,7 @@ import {
 } from "@plugins/page/plugins/page-reference/web";
 import { PageHeader } from "./components/page-header";
 import { PageBreadcrumb } from "./components/page-breadcrumb";
+import { BackToTreeButton } from "./components/back-to-tree-button";
 import { PageCover } from "./components/page-cover";
 import { PageDetail } from "./slots";
 
@@ -134,7 +136,22 @@ function PageDetailBody(): ReactElement {
     // appears exactly once.
     <PaneChrome
       pane={pageDetailPane}
-      title={<PageBreadcrumb pageId={pageId} />}
+      title={
+        // The trail, with the way back to the tree ahead of it — leading, like
+        // a browser's back button, and only on the surfaces that have lost the
+        // tree (the button decides that itself, painting nothing otherwise).
+        <Stack
+          direction="row"
+          align="center"
+          gap="2xs"
+          // The row yields: the button keeps its width and the trail beside it
+          // is what shortens when the column is narrow.
+          className={yieldClass("x")}
+        >
+          <BackToTreeButton />
+          <PageBreadcrumb pageId={pageId} />
+        </Stack>
+      }
       actions={
         <PageDetail.HeaderActions.Render>
           {(s) => <s.component pageId={pageId} />}

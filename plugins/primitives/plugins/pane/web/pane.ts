@@ -2443,13 +2443,20 @@ export function useOpenPane(): OpenPaneFn {
       const ownParams = extractOwnParams(targetInternal, params);
       const replace = !targetInternal.chrome.history;
 
-      // swap: update the caller's slot in-place (same column), truncating
-      // children. Used when internal navigation within a pane wants to swap
-      // which entity is shown without growing the route (e.g. clicking a
-      // dependency chip switches the task detail to a different task).
-      if (opts.mode === "swap" && targetInternal.id === callerPaneId) {
+      // swap: the caller's slot BECOMES the target — same column, children
+      // truncated. Two shapes, one meaning ("navigate the column I am in"):
+      // the same pane showing a different entity (a dependency chip switching
+      // the task detail to another task), and a DIFFERENT pane taking the
+      // column over (the pages tree column becoming the page that was clicked).
+      // The second used to fall through to the right-push below — a mode that
+      // silently did something else whenever the target happened not to be the
+      // caller, which is exactly the kind of quiet mismatch a caller cannot see.
+      if (opts.mode === "swap") {
         const existing = currentRoute[callerIndex]!;
+        // Only a same-pane swap can be a no-op: a different pane in the column
+        // is a change however the params compare.
         const sameParams =
+          targetInternal.id === callerPaneId &&
           Object.keys(ownParams).length ===
             Object.keys(existing.params).length &&
           Object.keys(ownParams).every(

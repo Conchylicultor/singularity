@@ -3,7 +3,10 @@ import { MdAdd } from "react-icons/md";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
-import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
+import {
+  useCurrentPane,
+  useOpenPane,
+} from "@plugins/primitives/plugins/pane/web";
 import {
   DataView,
   defineDataView,
@@ -18,7 +21,7 @@ import {
 } from "@plugins/page/plugins/editor/core";
 import { pageLinksResource } from "@plugins/page/plugins/links/core";
 import { PageIcon } from "@plugins/page/plugins/editor/web";
-import { pageDetailPane } from "../panes";
+import { pageDetailPane, pagesTreePane } from "../panes";
 import { createPageWithSeed } from "../internal/create-page-with-seed";
 import { PageTree } from "../slots";
 
@@ -31,6 +34,18 @@ export function PagesSidebar() {
   const links = useResource(pageLinksResource);
   const openPane = useOpenPane();
   const selectedId = pageDetailPane.useRouteEntry()?.params.pageId;
+  // Where a page opens depends on WHICH host is showing this tree, and the tree
+  // can read that off its own position instead of being told:
+  //
+  //  - The Pages app's sidebar — persistent chrome that stays put whatever is
+  //    open — so the page opens as a column BESIDE it ("push").
+  //  - The `pagesTreePane` column, opened next to a conversation in another
+  //    app — a navigable surface, so activating a row navigates that column to
+  //    the page ("swap"), the way a file list moves its own column rather than
+  //    growing a third one. `PageBackToTreeAction` in the page's header puts
+  //    the tree back.
+  const inOwnColumn = useCurrentPane()?.id === pagesTreePane.id;
+  const openMode = inOwnColumn ? ("swap" as const) : ("push" as const);
 
   // target page id → the pages that link to it. Feeds the tree's alias edges,
   // so a page linked from another page shows up as a reference child of the
@@ -102,12 +117,17 @@ export function PagesSidebar() {
   const creators = useMemo<CreateOption[]>(() => {
     const createRootPage = async () => {
       const id = await createPageWithSeed({ parentId: null });
-      openPane(pageDetailPane, { pageId: id }, { mode: "push" });
+      openPane(pageDetailPane, { pageId: id }, { mode: openMode });
     };
     return [
-      { id: "new-page", label: "New page", icon: <MdAdd />, onSelect: createRootPage },
+      {
+        id: "new-page",
+        label: "New page",
+        icon: <MdAdd />,
+        onSelect: createRootPage,
+      },
     ];
-  }, [openPane]);
+  }, [openPane, openMode]);
 
   // The DataView's view switcher IS the sidebar chrome (no SidebarPaneSection).
   // This `Scroll` is the direct flex child of the app-shell sidebar `Stack`;
@@ -146,7 +166,7 @@ export function PagesSidebar() {
         creators={creators}
         selectedRowId={selectedId}
         onRowActivate={(b) =>
-          openPane(pageDetailPane, { pageId: b.id }, { mode: "push" })
+          openPane(pageDetailPane, { pageId: b.id }, { mode: openMode })
         }
         hierarchy={{
           // The page hierarchy is `pageId` (the denormalized nearest PAGE
