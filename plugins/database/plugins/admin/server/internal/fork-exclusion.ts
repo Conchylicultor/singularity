@@ -3,9 +3,8 @@ import type { PgTable } from "drizzle-orm/pg-core";
 import { defineServerContribution } from "@plugins/framework/plugins/server-core/core";
 
 // A plugin opts ITS OWN table's ROWS out of the worktree DB fork by adding
-// `ExcludeFromFork({ table, reason })` to its server `contributions`. The fork's
-// `pg_dump` gets a `--exclude-table-data` for it, so the table is created in the
-// forked DB with its full DDL but no rows.
+// `ExcludeFromFork({ table, reason })` to its server `contributions`. The table
+// is created in the forked DB with its full DDL but no rows.
 //
 // WHEN TO USE THIS — and the trade you are making. A worktree DB is forked from
 // main so an agent starts with the tasks, conversations and pages it needs to do
@@ -17,8 +16,8 @@ import { defineServerContribution } from "@plugins/framework/plugins/server-core
 //     model-call logs, notifications. These record what happened on the machine
 //     that produced them; an inherited row is at best noise in the fork's own
 //     debug pane and at worst a phantom (main's undismissed notifications
-//     appearing in a fresh worktree's bell). They are also, by volume, almost
-//     the entire fork — `traces` alone was 722 MB of a ~970 MB fork.
+//     appearing in a fresh worktree's bell). They are also, by volume, most of
+//     the fork — `traces` alone is 949 MB of a 2057 MB source database.
 //   - **Derived state rebuilt on boot.** The live-state snapshot + changelog are
 //     a cold-boot accelerator; `boot-init.ts` degrades to a full recompute when
 //     they are absent.
@@ -50,32 +49,46 @@ export const ExcludeFromFork = defineServerContribution<{
 
 // Schemas a plugin's runtime creates for ITSELF rather than declaring as drizzle
 // tables — a job queue's bookkeeping, a sync engine's replication state.
-// Inheriting those is not merely wasteful, it is wrong: they describe the
-// producing database, and the consuming service recreates them on first use.
+// Inheriting their CONTENTS is not merely wasteful, it is wrong: the rows
+// describe the producing database.
 //
-// `drop` picks which of two very different things happens, and choosing wrong
-// breaks the restore rather than degrading it — so it is required, not defaulted:
+// THE DECLARATION STATES WHAT SURVIVES, NOT WHAT GOES. The schema's DDL is
+// always kept and its rows are always dropped; `keep` names the few tables whose
+// rows come across anyway. There is deliberately no way to spell "remove the
+// schema itself":
 //
-//   - `"schema"` → `--exclude-schema`. The schema and everything in it. Correct
-//     when the service must recreate the schema from scratch (Graphile re-runs
-//     its own migrations, which would collide with inherited empty tables).
-//     ONLY safe when nothing OUTSIDE the schema references into it. Publications
-//     and event triggers are database-level objects that `pg_dump` still emits;
-//     each one naming a now-missing schema is a `pg_restore` error, and enough of
-//     them fail the whole fork. Zero is exactly that case — its
-//     `_zero_metadata_0` publication and `zero_ddl_*_0` event triggers live
-//     outside its schemas and point back in.
-//   - `"data"` → `--exclude-table-data=<schema>.*`. Every table's rows, DDL kept,
-//     so nothing outside can dangle. The safer default when in doubt.
+//   - Nothing can be left dangling. Publications and event triggers are
+//     database-level objects that `pg_dump` emits regardless, and each one
+//     naming a now-missing schema is a `pg_restore` error. Zero is exactly that
+//     case — its `_zero_metadata_0` publication and `zero_ddl_*_0` event
+//     triggers live outside its schemas and point back in — and removing the
+//     schemas broke the restore on seven statements.
+//   - Nothing is born incomplete. A schema that is deleted needs an owner to put
+//     it back, and "who recreates it" has no spelling in a contribution — it was
+//     prose in a `reason` string. `graphile_worker` is what that cost: a
+//     freshly-forked database could not accept a transactional job enqueue until
+//     a backend had booted against it.
 //
-// `schema` is a `pg_dump` pattern, so `zero*` matches every schema of that
-// family. Patterns are matched against the SOURCE database — a pattern matching
-// nothing is silently accepted by `pg_dump`, so keep them tight and verify.
-export const ExcludeSchemaFromFork = defineServerContribution<{
+// `keep` is what makes dropping the schema unnecessary. Graphile records its
+// migration watermark in `graphile_worker.migrations`, INSIDE the schema; empty
+// every table and graphile boots believing it is unmigrated and re-issues
+// `CREATE TABLE` against tables that already exist. Keeping that one table — and
+// only that one — gives a fork a schema graphile already considers installed,
+// with no inherited jobs and no inherited crontab watermarks.
+//
+// `keep: []` is required rather than optional: "nothing in this schema comes
+// across" is the decision being asked for, and an omitted field is not a
+// decision.
+//
+// `schema` is a glob (`zero*` matches the whole `zero`, `zero_0`, `zero_0/cdc`,
+// `zero_0/cvr` family). It is matched by US against the source catalog, never by
+// `pg_dump` — see ./fork-plan, which also refuses a schema no declaration
+// matches at all.
+export const ExcludeSchemaDataFromFork = defineServerContribution<{
   schema: string;
+  keep: readonly string[];
   reason: string;
-  drop: "schema" | "data";
-}>("fork-schema-exclusion", { docLabel: (c) => c.schema });
+}>("fork-schema-data-exclusion", { docLabel: (c) => c.schema });
 
 // A drizzle table object is preferred over a magic string so a rename is
 // refactor-safe and a typo is a tsc error; we derive the pg name here. A string
@@ -83,31 +96,53 @@ export const ExcludeSchemaFromFork = defineServerContribution<{
 // EXISTS` rather than by a migration (the live-state snapshot + changelog),
 // which have no table object to pass — the same reason `derived-tables`'
 // contribution takes a string.
+//
+// That tsc-checked spelling is also why the two contributions above stay two,
+// now that both only ever empty tables: `ExcludeFromFork` can take a table
+// OBJECT because the table is ours, and `ExcludeSchemaDataFromFork` cannot,
+// because a foreign runtime's schema has none. Merging them would mean giving up
+// the checked form for the twelve declarations that have it.
 function tableLabel(table: PgTable | string): string {
   return typeof table === "string" ? table : getTableName(table);
 }
 
-/** What `forkDatabase` must be told not to copy. */
-export interface ForkExclusions {
-  /** `pg_dump --exclude-table-data` patterns — table kept, rows dropped. */
-  readonly tableData: readonly string[];
-  /** `pg_dump --exclude-schema` patterns — schema dropped entirely. */
-  readonly schemas: readonly string[];
+/** One schema-level declaration, as pure data. */
+export interface ForkSchemaExclusion {
+  /** Glob matched against the SOURCE database's schema names. */
+  readonly schema: string;
+  /** Exact table names whose rows survive the fork. */
+  readonly keep: readonly string[];
 }
 
-// The declared exclusion set, as `pg_dump` patterns.
+/**
+ * What `forkDatabase` must be told not to copy — the DECLARED set, verbatim.
+ *
+ * Pure data on purpose. It crosses HTTP for the `./singularity db fork` path
+ * (`database/fork`'s `GET /api/db/fork-exclusions` → the `cli/db` plugin's
+ * `cli/fork.ts`),
+ * so nothing here may be a function. Turning it into `pg_dump` flags is a
+ * separate step that needs the source database — see ./fork-plan.
+ */
+export interface ForkExclusions {
+  /** Table names in the app schema (`public`) whose rows are dropped. */
+  readonly tables: readonly string[];
+  /** Foreign schemas whose rows are dropped, minus each one's `keep` list. */
+  readonly schemas: readonly ForkSchemaExclusion[];
+}
+
+// The declared exclusion set.
 //
 // THROWS on an empty set. `getContributions()` answers `[]` when
 // `collectContributions()` has not run, and that only happens in a process that
 // never booted the server (a CLI, a script). Silently returning "exclude
-// nothing" there would produce a full ~1 GB fork that looks like it worked —
+// nothing" there would produce a full ~2 GB fork that looks like it worked —
 // exactly the silent-empty-registry footgun the change-feed exclusion warns
 // about. The declarations in this repo guarantee a non-empty set in any booted
 // backend, so empty means "you are calling this from the wrong kind of process",
 // which is worth a loud failure.
 export function forkExclusions(): ForkExclusions {
   const tables = ExcludeFromFork.getContributions();
-  const schemas = ExcludeSchemaFromFork.getContributions();
+  const schemas = ExcludeSchemaDataFromFork.getContributions();
   if (tables.length === 0 && schemas.length === 0) {
     throw new Error(
       "forkExclusions(): no fork exclusions are registered. Server contributions " +
@@ -116,13 +151,7 @@ export function forkExclusions(): ForkExclusions {
     );
   }
   return {
-    tableData: [
-      // Every excluded table lives in `public`; a table elsewhere is covered by
-      // its schema's own `ExcludeSchemaFromFork` declaration instead.
-      ...tables.map((c) => `public.${tableLabel(c.table)}`),
-      // `<schema>.*` is a pg_dump pattern: every table in the matched schemas.
-      ...schemas.filter((c) => c.drop === "data").map((c) => `${c.schema}.*`),
-    ],
-    schemas: schemas.filter((c) => c.drop === "schema").map((c) => c.schema),
+    tables: tables.map((c) => tableLabel(c.table)),
+    schemas: schemas.map((c) => ({ schema: c.schema, keep: c.keep })),
   };
 }

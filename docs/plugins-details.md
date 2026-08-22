@@ -11031,19 +11031,25 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports (types):
           - `BackupInfo`
           - `ForkExclusions`
+          - `ForkOutcome`
+          - `ForkPlan`
+          - `ForkSchemaExclusion`
           - `TableStat`
+          - `UndeclaredSchema`
         - Exports (values):
           - `backupDatabase`
           - `closeAdminPool`
           - `connectionString`
           - `countActiveConnections`
           - `databaseExists`
+          - `describeUndeclaredSchema`
           - `dropDatabase`
           - `ensureDatabase`
           - `ExcludeFromFork`
-          - `ExcludeSchemaFromFork`
+          - `ExcludeSchemaDataFromFork`
           - `forkDatabase`
           - `forkExclusions`
+          - `ForkPlanError`
           - `forkTempPrefix`
           - `getAdminPool`
           - `inspectBackup`
@@ -11194,12 +11200,15 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Server:
         - Uses:
           - `database/admin.countActiveConnections`
+          - `database/admin.describeUndeclaredSchema`
           - `database/admin.dropDatabase`
           - `database/admin.forkDatabase`
           - `database/admin.forkExclusions`
+          - `database/admin.ForkPlanError`
           - `database/admin.listDatabases`
           - `infra/endpoints.implement`
           - `infra/jobs.defineJob`
+          - `infra/jobs.NonRetryableError`
           - `shell/notifications.recordNotification`
         - Exports (values): `databaseForkJob`
         - Register:
@@ -11293,9 +11302,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Plugins:
         - **`cache-service`** — zero-cache sidecar service: the supervised Node process that replicates the main Postgres DB into Zero's SQLite replica. Schema-agnostic.
           - Server:
-            - Contributes: `fork-schema-exclusion` "zero*"
+            - Contributes: `fork-schema-data-exclusion` "zero*"
             - Uses:
-              - `database/admin.ExcludeSchemaFromFork`
+              - `database/admin.ExcludeSchemaDataFromFork`
               - `database/admin.getAdminPool`
               - `database/admin.openShortLivedClient`
               - `infra/jobs.defineJob`
@@ -16769,11 +16778,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Contributes:
           - `resource.declare` "jobs-list"
           - `resource.declare` "dead-jobs"
-          - `fork-schema-exclusion` "graphile_worker"
+          - `fork-schema-data-exclusion` "graphile_worker"
         - Uses:
           - `database.db`
           - `database/admin.connectionString`
-          - `database/admin.ExcludeSchemaFromFork`
+          - `database/admin.ExcludeSchemaDataFromFork`
           - `infra/endpoints.HttpError`
           - `infra/endpoints.implement`
           - `primitives/log-channels.Log`

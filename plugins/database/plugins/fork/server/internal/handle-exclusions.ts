@@ -7,6 +7,9 @@ import { getForkExclusions } from "../../core/endpoints";
 // the contributions never got collected, which is worth surfacing rather than
 // answering with an empty set the caller would act on.
 export const handleGetForkExclusions = implement(getForkExclusions, () => {
-  const { tableData, schemas } = forkExclusions();
-  return { tableData: [...tableData], schemas: [...schemas] };
+  const { tables, schemas } = forkExclusions();
+  return {
+    tables: [...tables],
+    schemas: schemas.map((s) => ({ schema: s.schema, keep: [...s.keep] })),
+  };
 });

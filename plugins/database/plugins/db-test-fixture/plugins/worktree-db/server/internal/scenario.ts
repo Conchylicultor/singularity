@@ -31,16 +31,21 @@ let installed: Promise<void> | null = null;
  * Put the `graphile_worker` schema in this worktree's database before the first
  * scenario opens a transaction.
  *
- * WHY a test harness has to care about the job queue at all: jobs declares
- * `ExcludeSchemaFromFork({ schema: "graphile_worker", drop: "schema" })`, so a
- * freshly-forked worktree database is *born without* the queue schema — by
- * design, a worktree must not inherit main's pending jobs. The schema comes
- * back when the backend boots. A worktree where `./singularity test` runs
- * before `./singularity build` therefore has no queue schema at all, and any
- * mutation that emits a status change enqueues on the CALLER's transaction —
- * the `opts.tx` transport, which assumes the schema rather than installing it.
- * That is precisely how four tasks-core tests were failing, with a bare
- * Postgres `3F000` that names nothing in this repo.
+ * WHY a test harness has to care about the job queue at all: the `opts.tx`
+ * enqueue transport — the one every status-change emit takes — writes on the
+ * CALLER's connection and so ASSUMES the schema rather than installing it. A
+ * database that has never hosted a booted backend has none, and the failure is
+ * a bare Postgres `3F000` that names nothing in this repo. That is precisely
+ * how four tasks-core tests were failing.
+ *
+ * A worktree database no longer arrives in that state — the fork keeps
+ * graphile's migration watermark (`ExcludeSchemaDataFromFork({ schema:
+ * "graphile_worker", keep: ["migrations"] })` in jobs' server barrel), so it is
+ * born queue-capable. This gate stays because it is cheap (one connect, one
+ * SELECT) and because it is the harness's job to state its own precondition
+ * rather than inherit one from how the database happened to be provisioned —
+ * a hand-made database, a graphile version bump, or a future provisioning path
+ * all land here.
  *
  * A rejection is deliberately NOT cached: the usual cause is a cluster that is
  * not up yet, and a second run in the same process should get a real attempt

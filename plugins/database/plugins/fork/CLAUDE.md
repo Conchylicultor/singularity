@@ -30,12 +30,15 @@ retries. It skips any temp with active connections so an in-flight fork's
 - Server:
   - Uses:
     - `database/admin.countActiveConnections`
+    - `database/admin.describeUndeclaredSchema`
     - `database/admin.dropDatabase`
     - `database/admin.forkDatabase`
     - `database/admin.forkExclusions`
+    - `database/admin.ForkPlanError`
     - `database/admin.listDatabases`
     - `infra/endpoints.implement`
     - `infra/jobs.defineJob`
+    - `infra/jobs.NonRetryableError`
     - `shell/notifications.recordNotification`
   - Exports (values): `databaseForkJob`
   - Register:

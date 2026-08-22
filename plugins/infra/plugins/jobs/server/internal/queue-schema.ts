@@ -4,20 +4,25 @@ import { Pool } from "pg";
 // ── Who installs the queue schema, and who merely asserts it ─────────────────
 //
 // The queue schema is a property of the DATABASE, not of whoever happens to
-// enqueue first. A freshly-forked worktree database is born WITHOUT it: the
-// plugin's `ExcludeSchemaFromFork({ schema: "graphile_worker", drop: "schema" })`
-// (see `../index.ts`) deliberately drops it, because inheriting main's pending
-// rows and — worse — main's `known_crontabs.last_execution` watermarks would
-// silently skip the first run of every scheduled job in the new worktree.
+// enqueue first.
 //
-// Something has to put it back. That used to be a SIDE EFFECT of the first
-// `makeWorkerUtils()` call (`worker.ts`'s `getWorkerUtils`), which meant the
-// invariant held from "whenever the first non-transactional enqueue landed"
-// rather than from boot — and never at all for a process that only ever
-// enqueues inside somebody else's transaction, which writes on the caller's own
-// connection and reaches no graphile helper. This file is that installation,
-// made explicit and callable: the jobs plugin runs it at `onReadyBlocking`, and
-// a test that provisions a throwaway database calls it directly.
+// Installation used to be a SIDE EFFECT of the first `makeWorkerUtils()` call
+// (`worker.ts`'s `getWorkerUtils`), which meant the invariant held from
+// "whenever the first non-transactional enqueue landed" rather than from boot —
+// and never at all for a process that only ever enqueues inside somebody else's
+// transaction, which writes on the caller's own connection and reaches no
+// graphile helper. This file is that installation, made explicit and callable:
+// the jobs plugin runs it at `onReadyBlocking`, and a test that provisions a
+// throwaway database calls it directly.
+//
+// WHICH DATABASES ACTUALLY NEED IT. A worktree database does not: the fork
+// keeps graphile's migration watermark (`ExcludeSchemaDataFromFork({ schema:
+// "graphile_worker", keep: ["migrations"] })` in `../index.ts`) while emptying
+// the rows that describe main's queue, so a fork is born with a schema graphile
+// already considers installed and the call below is one connect and one
+// `SELECT`. What still needs it is a database that never had the schema at all
+// — main's very first boot, a `createTestDb` throwaway — and a graphile version
+// bump whose new migrations must be applied.
 //
 // Installation is owned by whoever provisions or boots the database. `enqueue`
 // only ASSERTS — see `registry.ts`'s tx transport. The tempting unification
@@ -70,7 +75,8 @@ export async function installQueueSchema(
 
 /**
  * Thrown when a job row is written on a connection whose database has no queue
- * schema. A named class rather than a message convention, so callers (and the
+ * schema — a database that has never hosted a booted backend and was not forked
+ * from one. A named class rather than a message convention, so callers (and the
  * regression suite) assert `instanceof` and the wording below stays free to
  * change.
  *
@@ -83,10 +89,10 @@ export class QueueSchemaMissingError extends Error {
   constructor(options?: { cause?: unknown }) {
     super(
       `[jobs] this transaction is on a database whose \`${QUEUE_SCHEMA}\` schema is not installed, ` +
-        `so the job row has nowhere to land. That schema is deliberately excluded from the worktree ` +
-        `DB fork (\`ExcludeSchemaFromFork\` in plugins/infra/plugins/jobs/server/index.ts) and is ` +
-        `(re)installed when a backend boots against that database. Run \`./singularity build\` for a ` +
-        `worktree, or call \`installQueueSchema(connectionString)\` for a throwaway test database.`,
+        `so the job row has nowhere to land. That schema is installed when a backend boots against ` +
+        `a database, and inherited by any database forked from one — so this is a database that has ` +
+        `had neither. Run \`./singularity build\` for a worktree, or call ` +
+        `\`installQueueSchema(connectionString)\` for a throwaway test database.`,
       options,
     );
     this.name = "QueueSchemaMissingError";

@@ -17,9 +17,14 @@ import { defineEndpoint } from "@plugins/infra/plugins/endpoints/core";
 // `shared/` is plugin-private (boundary rule R10).
 // Exported separately from the endpoint because the only consumer is the CLI,
 // which cannot use `fetchEndpoint` (web-only) and so parses the response itself.
+// Mirrors `ForkExclusions` in `database/admin`. Kept as pure DATA — names and
+// keep-lists, never flags and never a callback — because this is the one shape
+// that has to survive a JSON round trip. Turning it into `pg_dump` arguments
+// needs the source database's catalog and happens inside `forkDatabase`, on
+// whichever side is doing the fork.
 export const forkExclusionsSchema = z.object({
-  tableData: z.array(z.string()),
-  schemas: z.array(z.string()),
+  tables: z.array(z.string()),
+  schemas: z.array(z.object({ schema: z.string(), keep: z.array(z.string()) })),
 });
 
 export const getForkExclusions = defineEndpoint({

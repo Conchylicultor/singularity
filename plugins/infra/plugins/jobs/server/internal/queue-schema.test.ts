@@ -4,14 +4,20 @@
  * transactional enqueue, and `installQueueSchema` is the one call that fixes
  * that.**
  *
- * That gap is not hypothetical. A worktree database is forked WITHOUT the queue
- * schema on purpose (`ExcludeSchemaFromFork` in `../index.ts`), and until the
- * installer existed the only thing that put it back was a side effect of
- * `makeWorkerUtils` — reached from the non-transactional enqueue path and from
- * `startWorkers()`, and from nowhere else. So in a fresh worktree where
- * `./singularity test` ran before `./singularity build`, every `{ tx }` enqueue
- * failed with a bare Postgres `3F000` naming nothing in this repo — which four
- * tasks-core tests hit and a filed report mis-diagnosed as a fixture gap.
+ * That gap is not hypothetical. Until the installer existed the only thing that
+ * created the schema was a side effect of `makeWorkerUtils` — reached from the
+ * non-transactional enqueue path and from `startWorkers()`, and from nowhere
+ * else. So in a fresh worktree where `./singularity test` ran before
+ * `./singularity build`, every `{ tx }` enqueue failed with a bare Postgres
+ * `3F000` naming nothing in this repo — which four tasks-core tests hit and a
+ * filed report mis-diagnosed as a fixture gap.
+ *
+ * The second describe pins the OTHER half of that story: the shape a worktree
+ * database is now forked INTO. `ExcludeSchemaDataFromFork({ schema:
+ * "graphile_worker", keep: ["migrations"] })` in `../index.ts` keeps graphile's
+ * migration watermark and empties everything else, and the whole fork design
+ * rests on graphile accepting that as already-installed. That claim is
+ * graphile's behaviour, not the fork's, so it is checked here.
  *
  * Both arms run against a throwaway database (`db-test-fixture`), and the app's
  * migration chain is deliberately NOT run: the queue schema is graphile's own
@@ -120,5 +126,71 @@ describe("installQueueSchema", () => {
       job.enqueue({ marker: "again" }, { tx }),
     );
     expect(jobId).toMatch(/^\d+$/);
+  });
+});
+
+/**
+ * The shape a WORKTREE database is forked into, and the claim the fork design
+ * rests on: graphile's own `migrations` table carried over, every other table in
+ * its schema emptied.
+ *
+ * That is exactly what `ExcludeSchemaDataFromFork({ schema: "graphile_worker",
+ * keep: ["migrations"] })` produces — one `--exclude-table-data` per graphile
+ * table except that one — so the DDL and the migration watermark survive while
+ * main's pending jobs and `known_crontabs.last_execution` watermarks do not.
+ *
+ * Reproduced by truncating rather than by running a real fork, deliberately: the
+ * claim under test is graphile's ("a populated watermark over empty tables reads
+ * as installed"), and `pg_dump`'s ability to skip a table's data is not in
+ * doubt. It also keeps the suite on a throwaway database — no 2 GB copy of main,
+ * and no dependency on what main's database happens to hold.
+ */
+describe("a fork-shaped queue schema", () => {
+  test("is already installed, and accepts a transactional enqueue", async () => {
+    const forked = await createTestDb({ prefix: "queue_schema_forked" });
+    try {
+      // Stand in for main: a database a backend has booted against, holding a
+      // job row the fork must NOT inherit.
+      await installQueueSchema(forked.connectionString);
+      await forked.db.transaction((tx) =>
+        job.enqueue({ marker: "mains-pending-job" }, { tx }),
+      );
+
+      const emptied = await forked.db.execute<{ tablename: string }>(
+        sql`SELECT tablename FROM pg_tables
+             WHERE schemaname = 'graphile_worker' AND tablename <> 'migrations'`,
+      );
+      expect(emptied.rows.length).toBeGreaterThan(0);
+      for (const { tablename } of emptied.rows) {
+        await forked.db.execute(
+          sql.raw(`TRUNCATE graphile_worker."${tablename}" CASCADE`),
+        );
+      }
+
+      // The watermark is the whole point of the keep-list: without it graphile
+      // boots believing it is unmigrated and re-issues CREATE TABLE against
+      // tables that already exist.
+      const watermark = await forked.db.execute<{ n: string }>(
+        sql`SELECT count(*)::text AS n FROM graphile_worker.migrations`,
+      );
+      expect(Number(watermark.rows[0]?.n)).toBeGreaterThan(0);
+
+      // What a backend does on boot. On this database it must be a no-op rather
+      // than a re-migration — if it throws, the keep-list is wrong.
+      await installQueueSchema(forked.connectionString);
+
+      const { jobId } = await forked.db.transaction((tx) =>
+        job.enqueue({ marker: "the-forks-own-job" }, { tx }),
+      );
+      expect(jobId).toMatch(/^\d+$/);
+
+      // And the fork carries its OWN queue, not main's: that row is the only one.
+      const rows = await forked.db.execute<{ id: string }>(
+        sql`SELECT id::text AS id FROM graphile_worker.jobs`,
+      );
+      expect(rows.rows.map((r) => r.id)).toEqual([jobId]);
+    } finally {
+      await forked.drop();
+    }
   });
 });

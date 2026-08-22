@@ -10,9 +10,9 @@
 
 - Description: zero-cache sidecar service: the supervised Node process that replicates the main Postgres DB into Zero's SQLite replica. Schema-agnostic.
 - Server:
-  - Contributes: `fork-schema-exclusion` "zero*"
+  - Contributes: `fork-schema-data-exclusion` "zero*"
   - Uses:
-    - `database/admin.ExcludeSchemaFromFork`
+    - `database/admin.ExcludeSchemaDataFromFork`
     - `database/admin.getAdminPool`
     - `database/admin.openShortLivedClient`
     - `infra/jobs.defineJob`

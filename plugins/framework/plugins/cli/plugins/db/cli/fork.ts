@@ -1,6 +1,9 @@
 import { basename } from "node:path";
 import type { CliAction } from "@plugins/framework/plugins/cli/core";
-import { forkDatabase } from "@plugins/database/plugins/admin/server";
+import {
+  describeUndeclaredSchema,
+  forkDatabase,
+} from "@plugins/database/plugins/admin/server";
 import type { ForkExclusions } from "@plugins/database/plugins/admin/server";
 import {
   getForkExclusions,
@@ -14,7 +17,7 @@ import {
 } from "@plugins/infra/plugins/namespace/core";
 
 // What a fork must not copy is DECLARED by the plugins that own the tables
-// (`ExcludeFromFork` / `ExcludeSchemaFromFork`), and those declarations are
+// (`ExcludeFromFork` / `ExcludeSchemaDataFromFork`), and those declarations are
 // collected at server boot. A CLI process never boots the server, and it cannot
 // load the plugin registry to collect them either — that imports
 // `@plugins/database/server`, whose pool is built at module load and throws
@@ -33,7 +36,7 @@ import {
 //      fallback and not the first choice.
 //
 // If neither answers we FAIL rather than fork with an empty exclusion set: that
-// would silently produce a ~1 GB database full of main's traces and
+// would silently produce a ~2 GB database full of main's traces and
 // notifications and look like it worked.
 async function fetchForkExclusions(worktree: string): Promise<ForkExclusions> {
   const candidates = [asNamespace(worktree), MAIN_WORKTREE_NAME].filter(
@@ -58,7 +61,7 @@ async function fetchForkExclusions(worktree: string): Promise<ForkExclusions> {
     `Could not read the fork exclusion set from any running backend:\n  ${failures.join(
       "\n  ",
     )}\nStart Singularity and retry — forking without the exclusions would copy ` +
-      `every debug table (~1 GB of traces and notifications).`,
+      `every observability and mail table (~2 GB of traces, messages and notifications).`,
   );
 }
 
@@ -67,8 +70,24 @@ const run: CliAction<[string | undefined], object> = async (target) => {
   const name = target ?? worktree;
   const exclusions = await fetchForkExclusions(worktree);
   console.log(`Forking "singularity" → "${name}"...`);
-  await forkDatabase("singularity", name, exclusions);
-  console.log(`DB "${name}" ready.`);
+  const outcome = await forkDatabase("singularity", name, exclusions);
+  // A human is watching this terminal, so it is the right place to say what the
+  // fork found: declarations that matched nothing (benign) and schemas nobody
+  // claimed (their rows just got copied). Neither stops a fork — see `ForkPlan`
+  // — and in the app the same findings reach the bell instead.
+  if (outcome.kind === "forked") {
+    for (const line of outcome.plan.unmatched) {
+      console.warn(`  note: ${line}`);
+    }
+    for (const s of outcome.plan.undeclaredSchemas) {
+      console.warn(`  warning: ${describeUndeclaredSchema(s)}`);
+    }
+  }
+  console.log(
+    outcome.kind === "already-present"
+      ? `DB "${name}" already existed — nothing to do.`
+      : `DB "${name}" ready.`,
+  );
 };
 
 export default run;

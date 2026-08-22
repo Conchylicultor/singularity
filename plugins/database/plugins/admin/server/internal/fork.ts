@@ -3,7 +3,23 @@ import { getAdminPool, libpqSubprocessEnv } from "./pool";
 import { databaseExists, dropDatabase } from "./databases";
 import { withDbForkSlot } from "./fork-gate";
 import { forkTempName } from "./temp-name";
+import { describeUndeclaredSchema, resolveForkPlan } from "./fork-plan";
+import type { ForkPlan } from "./fork-plan";
 import type { ForkExclusions } from "./fork-exclusion";
+
+/**
+ * Did this call do the fork, or find it already done?
+ *
+ * A discriminated result rather than `void` for two reasons: the idempotent
+ * no-op is a real outcome a caller may want to say something about, and the
+ * plan's findings (schemas nobody claimed, declarations matching nothing) have
+ * to reach a surface a human looks at. `forkDatabase` logs them either way; the
+ * CLI prints them to the terminal it is running in, and `database/fork`'s job
+ * raises the bell.
+ */
+export type ForkOutcome =
+  | { readonly kind: "already-present" }
+  | { readonly kind: "forked"; readonly plan: ForkPlan };
 
 // Deliberately NOT the namespace grammar `databases.ts` uses, and deliberately
 // not shared with it. A fork's source and target are always MAIN-composition
@@ -36,7 +52,7 @@ function assertSafeName(name: string): void {
 // `exclusions` is REQUIRED rather than read from the contribution registry here.
 // `getContributions()` answers `[]` in any process that never booted the server,
 // so a registry read inside this function would make `./singularity db fork`
-// silently produce a full ~1 GB fork that looks like it worked. A required
+// silently produce a full ~2 GB fork that looks like it worked. A required
 // parameter forces every caller to name where its exclusion set came from; see
 // `forkExclusions()` in ./fork-exclusion, which fails loudly on the empty case.
 // `signal` is optional and ambient — the `database.fork` job passes its
@@ -50,12 +66,30 @@ export async function forkDatabase(
   target: string,
   exclusions: ForkExclusions,
   signal?: AbortSignal,
-): Promise<void> {
+): Promise<ForkOutcome> {
   signal?.throwIfAborted();
   assertSafeName(source);
   assertSafeName(target);
   // Canonical name only exists on full completion → already done, no-op.
-  if (await databaseExists(target)) return;
+  if (await databaseExists(target)) return { kind: "already-present" };
+  // Turn the DECLARED set into flags by matching it against the SOURCE
+  // database's own catalog (./fork-plan), which is also where the declarations
+  // get checked against what is actually there — a pattern claimed by two
+  // contributions, a `keep` naming no table, a schema nobody claimed at all.
+  //
+  // Before `CREATE DATABASE temp`, deliberately: the two states ./fork-plan
+  // refuses outright must leave no temp behind to sweep.
+  const plan = await resolveForkPlan(source, exclusions);
+  // Both of these are findings, not failures — see ForkPlan for why neither may
+  // stop a fork. They are logged here so EVERY path says them once, and handed
+  // back so the caller that has a human (the CLI) or a bell (the fork job) can
+  // put them where that human will actually see them.
+  for (const line of plan.unmatched) {
+    console.warn(`[db-fork] declared exclusion matches nothing: ${line}`);
+  }
+  for (const s of plan.undeclaredSchemas) {
+    console.warn(`[db-fork] ${describeUndeclaredSchema(s)}`);
+  }
   const temp = forkTempName(target);
   // No stale-temp reap: forkTempName is per-invocation unique, so there is never
   // a stale temp of *our own* name to drop. Orphan reclamation is solely the
@@ -75,11 +109,13 @@ export async function forkDatabase(
     PGOPTIONS: "-c max_parallel_maintenance_workers=0",
   };
   // What NOT to copy comes from the caller, assembled from the `ExcludeFromFork`
-  // / `ExcludeSchemaFromFork` contributions each owning plugin declares (see
-  // ./fork-exclusion). This file names no consumer table: `--exclude-table-data`
-  // keeps a table's DDL and drops its rows, `--exclude-schema` drops a schema
-  // outright. Between them they take the fork from ~970 MB of mostly
-  // observability data down to the ~35 MB a worktree actually reads.
+  // / `ExcludeSchemaDataFromFork` contributions each owning plugin declares (see
+  // ./fork-exclusion) and resolved against the source catalog above. This file
+  // names no consumer table. Every flag is `--exclude-table-data`: a table's DDL
+  // is always kept and its rows are always dropped, so nothing outside a schema
+  // can dangle and no service is handed a database missing a schema it expects.
+  // Between them they take the fork from 2057 MB of mostly observability and
+  // mail data down to the ~34 MB a worktree actually reads.
   //
   // Gate ONLY the heavy dump|restore pipeline host-wide (the step whose
   // server-side restore work spawn-priority cannot demote); the cheap admin-pool
@@ -91,8 +127,7 @@ export async function forkDatabase(
       backgroundArgv([
         "pg_dump",
         "-Fc",
-        ...exclusions.tableData.map((t) => `--exclude-table-data=${t}`),
-        ...exclusions.schemas.map((s) => `--exclude-schema=${s}`),
+        ...plan.excludeTableData.map((t) => `--exclude-table-data=${t}`),
         source,
       ]),
       {
@@ -139,9 +174,11 @@ export async function forkDatabase(
   }, signal);
 
   // The Graphile Worker schema used to be copied by the dump and then dropped
-  // from the temp here. `infra/jobs` now declares it via `ExcludeSchemaFromFork`,
-  // so it is excluded at DUMP time instead — the same end state (Graphile
-  // re-migrates idempotently on first worker start), without paying to copy it.
+  // from the temp here, and later excluded outright at dump time. Neither
+  // survives: `infra/jobs` now declares it with `keep: ["migrations"]`, so the
+  // fork inherits the schema's shape and graphile's migration watermark while
+  // its rows (pending jobs, crontab watermarks) stay behind. The forked
+  // database is born queue-capable instead of being repaired at first boot.
 
   // Atomic publish: rename the fully-populated temp to the canonical name as
   // the last step. ALTER DATABASE … RENAME requires no active connections to
@@ -165,8 +202,10 @@ export async function forkDatabase(
       (err as { code?: string }).code === "42P04"; // duplicate_database
     if (dup || (await databaseExists(target))) {
       await dropDatabase(temp); // drop our loser temp; target already published
-      return;
+      return { kind: "already-present" };
     }
     throw err;
   }
+
+  return { kind: "forked", plan };
 }

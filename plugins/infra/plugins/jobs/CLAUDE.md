@@ -322,11 +322,11 @@ Design, measurements, prior art and the risks to watch:
   - Contributes:
     - `resource.declare` "jobs-list"
     - `resource.declare` "dead-jobs"
-    - `fork-schema-exclusion` "graphile_worker"
+    - `fork-schema-data-exclusion` "graphile_worker"
   - Uses:
     - `database.db`
     - `database/admin.connectionString`
-    - `database/admin.ExcludeSchemaFromFork`
+    - `database/admin.ExcludeSchemaDataFromFork`
     - `infra/endpoints.HttpError`
     - `infra/endpoints.implement`
     - `primitives/log-channels.Log`

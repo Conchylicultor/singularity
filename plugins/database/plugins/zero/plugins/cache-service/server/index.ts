@@ -1,5 +1,5 @@
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
-import { ExcludeSchemaFromFork } from "@plugins/database/plugins/admin/server";
+import { ExcludeSchemaDataFromFork } from "@plugins/database/plugins/admin/server";
 import { zeroSlotSweepJob } from "./internal/slot-sweep-job";
 
 // Re-export the upstream DSN + replica-path constants so boot.ts / the start
@@ -44,9 +44,15 @@ export default {
     // seven statements and took the whole fork down with it. Keeping the DDL
     // costs kilobytes and dangles nothing; the ~125 MB is all in `zero_0/cdc`
     // rows, which this does skip.
-    ExcludeSchemaFromFork({
+    ExcludeSchemaDataFromFork({
       schema: "zero*",
-      drop: "data",
+      // Nothing carries over. Every row in the `zero`, `zero_0`, `zero_0/cdc`
+      // and `zero_0/cvr` family describes replication of the SOURCE database —
+      // change-log positions, CVR state, client watermarks — so a fork inherits
+      // the shape and starts its own replication from scratch. The DDL stays
+      // because the `_zero_metadata_0` publication and `zero_ddl_*_0` event
+      // triggers are database-level objects pointing back INTO these schemas.
+      keep: [],
       reason:
         "Replication state describing the source database; each worktree's zero-cache creates its own app-id-keyed schemas on first start.",
     }),

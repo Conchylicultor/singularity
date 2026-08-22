@@ -3,7 +3,7 @@ import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-c
 import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";
 import {
   connectionString,
-  ExcludeSchemaFromFork,
+  ExcludeSchemaDataFromFork,
 } from "@plugins/database/plugins/admin/server";
 import {
   handleCancelJob,
@@ -138,25 +138,42 @@ export default {
     // The fork used to copy this schema and then `DROP SCHEMA ... CASCADE` it
     // afterwards. Excluding it at dump time reaches the same end state without
     // the copy.
-    ExcludeSchemaFromFork({
+    ExcludeSchemaDataFromFork({
       schema: "graphile_worker",
-      // The whole schema, not just its rows: the installer re-runs graphile's
-      // own migrations from scratch, and inherited empty tables would collide
-      // with the CREATE TABLEs those migrations issue. Nothing outside the
-      // schema references into it, so removing it dangles nothing.
-      drop: "schema",
+      // `migrations` and nothing else. Graphile records its migration watermark
+      // in that table, INSIDE the schema it owns — so emptying it too would make
+      // graphile boot believing it is unmigrated and re-issue CREATE TABLE
+      // against tables the fork already has. Keeping just the watermark hands
+      // the fork a schema graphile already considers installed, while the rows
+      // that describe MAIN's queue — pending jobs, and the
+      // `known_crontabs.last_execution` watermarks that would otherwise skip the
+      // first run of every scheduled job — stay behind.
+      //
+      // This is why the fork no longer removes the schema. A forked database is
+      // born queue-capable: `enqueue(input, { tx })` works on it before any
+      // backend has booted against it.
+      keep: ["migrations"],
+      // Two consequences worth knowing before changing this. The fork inherits
+      // graphile's schema at MAIN's version, so a branch that DOWNGRADES
+      // graphile-worker now meets graphile's own breaking-migration guard at
+      // boot instead of quietly installing its older schema — loud, and the
+      // right answer, but it is a new way to brick a worktree. And the schema's
+      // sequences carry main's high-water marks, so a fork's first job id is
+      // large rather than 1; that is cosmetic and not worth "fixing".
       reason:
-        "Queue bookkeeping for the source database; inheriting main's crontab watermarks would skip the first run of every scheduled job. Reinstalled by the jobs plugin's onReadyBlocking when a backend boots against the forked database.",
+        "Queue bookkeeping for the source database; inheriting main's pending jobs and crontab watermarks would run main's work in a fresh worktree and skip the first run of every scheduled job. The migration watermark is kept so the fork's schema is already installed.",
     }),
   ],
-  // The queue schema is a property of the DATABASE, and this is where this
-  // backend's own database acquires it. `onReadyBlocking` completes across ALL
+  // The queue schema is a property of the DATABASE, and this is where a
+  // database that does not yet have one acquires it. Since the fork exclusion
+  // above keeps the migration watermark, a worktree database arrives already
+  // installed and this is one connect and one `SELECT`; what it still covers is
+  // a database that never had the schema at all (main's very first boot, a
+  // `createTestDb` throwaway) and a graphile version bump that adds migrations.
+  //
+  // `onReadyBlocking` rather than `onReady` because it completes across ALL
   // plugins before any plugin's `onReady` runs, so a plugin that tx-enqueues
-  // from its own `onReady` — on a brand-new worktree database born without the
-  // schema (see the fork exclusion above) — can no longer beat `startWorkers()`
-  // to the punch. Putting it in `onReady` instead would only re-run the same
-  // race with a shorter fuse. On an already-installed database this is one
-  // connect and one `SELECT`.
+  // from its own `onReady` can never observe a half-installed schema.
   onReadyBlocking: async () => {
     await installQueueSchema(connectionString());
   },

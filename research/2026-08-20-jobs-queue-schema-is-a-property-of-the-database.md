@@ -178,15 +178,22 @@ with `maskStrings: false`, so the token may not appear in any *string* outside
 
 ## Not doing now — follow-up
 
-**The fork should reinstall what it excludes.** `ExcludeSchemaFromFork({ drop:
-"schema" })` deletes a schema and leaves "who puts it back" to prose. The rung-2
-form is a discriminated union where `drop: "schema"` *requires* a
-`reinstall(connectionString)`, run by `forkDatabase` against the temp database
-before the atomic rename — so a forked worktree DB is never born incomplete.
-Deferred because `ForkExclusions` crosses HTTP for the `./singularity db fork`
-path (`fork/server/internal/handle-exclusions.ts` → `cli/bin/commands/db.ts`), a
-function cannot ride that wire, and resolving that needs its own design. Filed
-as a task. Item 2 above makes the window it would close a boot-length one.
+> **Superseded (2026-08-21).** This section proposed making `drop: "schema"` a
+> discriminated union whose schema arm *requires* a `reinstall(connectionString)`
+> callback, run by `forkDatabase` against the temp database before the atomic
+> rename. It was deferred because `ForkExclusions` crosses HTTP for the
+> `./singularity db fork` path and a function cannot ride that wire.
+>
+> The answer turned out to be that nothing needs reinstalling. The declaration
+> now states what to KEEP rather than what to drop: DDL is always kept, rows are
+> always dropped, and `graphile_worker` keeps `migrations` — so a fork inherits a
+> schema graphile already considers installed, and `drop: "schema"` has no
+> spelling at all. `ForkExclusions` also stays pure data, so the wire problem
+> that deferred this never has to be solved. See
+> [`2026-08-21-database-fork-exclusions-are-a-keep-list-checked-against-the-catalog.md`](./2026-08-21-database-fork-exclusions-are-a-keep-list-checked-against-the-catalog.md).
+>
+> Item 2 above (installing at `onReadyBlocking`) stands, and is now what covers a
+> database that never had the schema at all rather than what repairs every fork.
 
 ## Files
 
