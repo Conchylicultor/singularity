@@ -1,4 +1,8 @@
 import { ESLintUtils, type TSESTree } from "@typescript-eslint/utils";
+import type {
+  LintToolkit,
+  TokenNode,
+} from "@plugins/framework/plugins/tooling/plugins/lint/core";
 
 const createRule = ESLintUtils.RuleCreator(
   (name) => `https://github.com/anthropics/singularity/lint/${name}`,
@@ -143,55 +147,8 @@ function someChild(
   return false;
 }
 
-/** One class token found inside a guarded branch, plus the node that holds it. */
-interface FoundToken {
-  token: string;
-  node: TSESTree.Node;
-}
-
-/**
- * Recursively collect class tokens from a guarded branch. Only string `Literal`
- * `.value`s and template quasis are harvested — never identifiers from dynamic
- * expressions, so map-driven classes stay correctly opaque. The walk is
- * structural, so `cn(...)`, nested conditionals, arrays and template literals
- * all fall out without enumerating each shape.
- */
-function collectTokens(
-  node: TSESTree.Node | null | undefined,
-  out: FoundToken[],
-): void {
-  if (!node) return;
-  if (node.type === "Literal") {
-    if (typeof node.value === "string") {
-      for (const t of node.value.split(/\s+/))
-        if (t) out.push({ token: t, node });
-    }
-    return;
-  }
-  if (node.type === "TemplateLiteral") {
-    for (const quasi of node.quasis) {
-      for (const t of quasi.value.raw.split(/\s+/))
-        if (t) out.push({ token: t, node });
-    }
-    for (const expr of node.expressions) collectTokens(expr, out);
-    return;
-  }
-  for (const key of Object.keys(node)) {
-    if (key === "parent") continue;
-    const value = (node as unknown as Record<string, unknown>)[key];
-    if (Array.isArray(value)) {
-      for (const child of value) {
-        if (child && typeof child === "object" && "type" in child) {
-          collectTokens(child as TSESTree.Node, out);
-        }
-      }
-    } else if (value && typeof value === "object" && "type" in value) {
-      collectTokens(value as TSESTree.Node, out);
-    }
-  }
-}
-
-export default createRule({
+export default function buildRule({ collectTokenNodes }: LintToolkit) {
+  return createRule({
   name: "no-model-focus-ring",
   meta: {
     type: "problem",
@@ -219,8 +176,8 @@ export default createRule({
     const reported = new Set<string>();
 
     function reportBranch(branch: TSESTree.Node | null | undefined): void {
-      const found: FoundToken[] = [];
-      collectTokens(branch, found);
+      const found: TokenNode[] = [];
+      collectTokenNodes(context.sourceCode, branch, found);
       for (const { token, node } of found) {
         if (!isFocusToken(token)) continue;
         const key = `${node.range[0]}:${node.range[1]}:${token}`;
@@ -245,4 +202,5 @@ export default createRule({
       },
     };
   },
-});
+  });
+}

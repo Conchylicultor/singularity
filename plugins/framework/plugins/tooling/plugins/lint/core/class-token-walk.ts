@@ -134,6 +134,80 @@ export function collectTokens(
   }
 }
 
+
+/** A harvested token paired with the node it came from, for rules that report
+ *  the offending node (an autofix target, a specific branch) rather than a name. */
+export interface TokenNode {
+  token: string;
+  node: TSESTree.Node;
+}
+
+/**
+ * The node-yielding sibling of {@link collectTokens}: same traversal, same
+ * alias policy, but each token carries the node it was harvested from.
+ *
+ * Two rules need this — one autofixes the class it reports, one reports the
+ * guarded branch a class sits in — and before this existed they each hand-rolled
+ * it, which is how the string walk grew seventeen copies in the first place. A
+ * token reached through an alias is reported at the initializer it was found in,
+ * which is a real location in the same file.
+ */
+export function collectTokenNodes(
+  sourceCode: TSESLint.SourceCode,
+  node: TSESTree.Node | null | undefined,
+  out: TokenNode[],
+  seen: Set<unknown> = new Set(),
+): void {
+  if (!node) return;
+  if (node.type === "Literal") {
+    if (typeof node.value === "string") {
+      for (const t of node.value.split(/\s+/)) if (t) out.push({ token: t, node });
+    }
+    return;
+  }
+  if (node.type === "TemplateElement") {
+    for (const t of node.value.raw.split(/\s+/)) if (t) out.push({ token: t, node });
+    return;
+  }
+  if (node.type === "Identifier") {
+    let scope: TSESLint.Scope.Scope | null = sourceCode.getScope(node);
+    let variable: TSESLint.Scope.Variable | undefined;
+    while (scope && !variable) {
+      variable = scope.variables.find((v) => v.name === node.name);
+      scope = scope.upper;
+    }
+    if (variable && !seen.has(variable)) {
+      seen.add(variable);
+      for (const def of variable.defs) {
+        const init = def.type === "Variable" ? def.node.init : null;
+        if (
+          init &&
+          (init.type === "Literal" ||
+            init.type === "TemplateLiteral" ||
+            init.type === "ObjectExpression" ||
+            init.type === "ArrayExpression")
+        ) {
+          collectTokenNodes(sourceCode, init, out, seen);
+        }
+      }
+    }
+    return;
+  }
+  for (const key of Object.keys(node)) {
+    if (key === "parent") continue;
+    const value = (node as unknown as Record<string, unknown>)[key];
+    if (Array.isArray(value)) {
+      for (const child of value) {
+        if (child && typeof child === "object" && "type" in child) {
+          collectTokenNodes(sourceCode, child as TSESTree.Node, out, seen);
+        }
+      }
+    } else if (value && typeof value === "object" && "type" in value) {
+      collectTokenNodes(sourceCode, value as TSESTree.Node, out, seen);
+    }
+  }
+}
+
 /**
  * What a class rule is handed instead of hand-copying the walk. Rule files
  * import this TYPE (erased by jiti) and receive the values from
@@ -141,6 +215,7 @@ export function collectTokens(
  */
 export interface LintToolkit {
   collectTokens: typeof collectTokens;
+  collectTokenNodes: typeof collectTokenNodes;
   baseClass: typeof baseClass;
   CLASS_ATTRS: typeof CLASS_ATTRS;
   CLASS_BUILDERS: typeof CLASS_BUILDERS;
@@ -149,6 +224,7 @@ export interface LintToolkit {
 /** The single toolkit instance handed to every class-rule factory. */
 export const lintToolkit: LintToolkit = {
   collectTokens,
+  collectTokenNodes,
   baseClass,
   CLASS_ATTRS,
   CLASS_BUILDERS,

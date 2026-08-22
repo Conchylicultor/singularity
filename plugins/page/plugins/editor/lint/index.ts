@@ -35,6 +35,11 @@ export default {
     "no-adhoc-block-id": noAdhocBlockId,
     "no-adhoc-forest-write": noAdhocForestWrite,
     "no-adhoc-structural-write": noAdhocStructuralWrite,
+  },
+  // Class rules are FACTORIES: they read class tokens, so they take the one
+  // shared walk from `buildLintConfig` instead of hand-copying it. See
+  // @plugins/framework/plugins/tooling/plugins/lint/core/class-token-walk.ts.
+  classRules: {
     "no-model-focus-ring": noModelFocusRing,
   },
   ignores: {

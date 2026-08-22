@@ -85,11 +85,13 @@ see a class string parked in a `const` or a style map.
     - `ClassRuleFactory`
     - `LintToolkit`
     - `ParserTypeSource`
+    - `TokenNode`
   - Exports (values):
     - `baseClass`
     - `buildLintConfig`
     - `CLASS_ATTRS`
     - `CLASS_BUILDERS`
+    - `collectTokenNodes`
     - `collectTokens`
     - `findPluginDirs`
     - `lintCollectedDir`
