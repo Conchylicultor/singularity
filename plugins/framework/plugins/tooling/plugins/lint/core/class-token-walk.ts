@@ -134,7 +134,6 @@ export function collectTokens(
   }
 }
 
-
 /** A harvested token paired with the node it came from, for rules that report
  *  the offending node (an autofix target, a specific branch) rather than a name. */
 export interface TokenNode {
@@ -161,12 +160,14 @@ export function collectTokenNodes(
   if (!node) return;
   if (node.type === "Literal") {
     if (typeof node.value === "string") {
-      for (const t of node.value.split(/\s+/)) if (t) out.push({ token: t, node });
+      for (const t of node.value.split(/\s+/))
+        if (t) out.push({ token: t, node });
     }
     return;
   }
   if (node.type === "TemplateElement") {
-    for (const t of node.value.raw.split(/\s+/)) if (t) out.push({ token: t, node });
+    for (const t of node.value.raw.split(/\s+/))
+      if (t) out.push({ token: t, node });
     return;
   }
   if (node.type === "Identifier") {

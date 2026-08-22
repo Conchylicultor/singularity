@@ -149,58 +149,62 @@ function someChild(
 
 export default function buildRule({ collectTokenNodes }: LintToolkit) {
   return createRule({
-  name: "no-model-focus-ring",
-  meta: {
-    type: "problem",
-    docs: {
-      description:
-        "Disallow a focus/ring/outline class (outline-*, ring-*, focus-ring-*, focus:/focus-visible:/focus-within: variants) inside a class expression gated on `isFocused` — `isFocused` is a model fact, and an indicator painted from it desynchronizes from real DOM focus.",
+    name: "no-model-focus-ring",
+    meta: {
+      type: "problem",
+      docs: {
+        description:
+          "Disallow a focus/ring/outline class (outline-*, ring-*, focus-ring-*, focus:/focus-visible:/focus-within: variants) inside a class expression gated on `isFocused` — `isFocused` is a model fact, and an indicator painted from it desynchronizes from real DOM focus.",
+      },
+      schema: [],
+      messages: {
+        modelFocusRing:
+          "`{{token}}` is a focus indicator painted from `isFocused`, a MODEL fact (the editor's idea of " +
+          "where the caret is), not the browser's `:focus-visible`. The two come apart, and then the " +
+          'element the user is actually focused on shows nothing. If you mean "this element has keyboard ' +
+          'focus", use the `focus-ring` utility family (unconditionally — it fires from `:focus-visible`). ' +
+          'If you mean "the editor\'s caret is on this block", register the block type with ' +
+          '`caret: "editor"` and delete this — `BlockRow` paints the cue for you; a block that must ' +
+          "hold the caret itself uses `Row`'s `selected`, which paints the same tint. " +
+          "Last resort: // eslint-disable-next-line page-editor/no-model-focus-ring -- <reason>.",
+      },
     },
-    schema: [],
-    messages: {
-      modelFocusRing:
-        "`{{token}}` is a focus indicator painted from `isFocused`, a MODEL fact (the editor's idea of " +
-        "where the caret is), not the browser's `:focus-visible`. The two come apart, and then the " +
-        'element the user is actually focused on shows nothing. If you mean "this element has keyboard ' +
-        'focus", use the `focus-ring` utility family (unconditionally — it fires from `:focus-visible`). ' +
-        'If you mean "the editor\'s caret is on this block", register the block type with ' +
-        '`caret: "editor"` and delete this — `BlockRow` paints the cue for you; a block that must ' +
-        "hold the caret itself uses `Row`'s `selected`, which paints the same tint. " +
-        "Last resort: // eslint-disable-next-line page-editor/no-model-focus-ring -- <reason>.",
-    },
-  },
-  defaultOptions: [],
-  create(context) {
-    // A branch can be visited twice (an `isFocused ? … : …` nested inside an
-    // `isFocused && …`), so remember what has already been reported.
-    const reported = new Set<string>();
+    defaultOptions: [],
+    create(context) {
+      // A branch can be visited twice (an `isFocused ? … : …` nested inside an
+      // `isFocused && …`), so remember what has already been reported.
+      const reported = new Set<string>();
 
-    function reportBranch(branch: TSESTree.Node | null | undefined): void {
-      const found: TokenNode[] = [];
-      collectTokenNodes(context.sourceCode, branch, found);
-      for (const { token, node } of found) {
-        if (!isFocusToken(token)) continue;
-        const key = `${node.range[0]}:${node.range[1]}:${token}`;
-        if (reported.has(key)) continue;
-        reported.add(key);
-        context.report({ node, messageId: "modelFocusRing", data: { token } });
+      function reportBranch(branch: TSESTree.Node | null | undefined): void {
+        const found: TokenNode[] = [];
+        collectTokenNodes(context.sourceCode, branch, found);
+        for (const { token, node } of found) {
+          if (!isFocusToken(token)) continue;
+          const key = `${node.range[0]}:${node.range[1]}:${token}`;
+          if (reported.has(key)) continue;
+          reported.add(key);
+          context.report({
+            node,
+            messageId: "modelFocusRing",
+            data: { token },
+          });
+        }
       }
-    }
 
-    return {
-      // `isFocused && "ring-1"` — the right side renders only under the gate.
-      LogicalExpression(node) {
-        if (node.operator !== "&&") return;
-        if (!referencesModelFocus(node.left)) return;
-        reportBranch(node.right);
-      },
-      // `isFocused ? "ring-2" : "ring-0"` — BOTH arms are the gate's doing.
-      ConditionalExpression(node) {
-        if (!referencesModelFocus(node.test)) return;
-        reportBranch(node.consequent);
-        reportBranch(node.alternate);
-      },
-    };
-  },
+      return {
+        // `isFocused && "ring-1"` — the right side renders only under the gate.
+        LogicalExpression(node) {
+          if (node.operator !== "&&") return;
+          if (!referencesModelFocus(node.left)) return;
+          reportBranch(node.right);
+        },
+        // `isFocused ? "ring-2" : "ring-0"` — BOTH arms are the gate's doing.
+        ConditionalExpression(node) {
+          if (!referencesModelFocus(node.test)) return;
+          reportBranch(node.consequent);
+          reportBranch(node.alternate);
+        },
+      };
+    },
   });
 }

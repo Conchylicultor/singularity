@@ -4658,6 +4658,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                       - `primitives/css/scroll.Scroll`
                       - `primitives/css/spacing.Stack`
                       - `primitives/css/text.Text`
+                      - `primitives/css/text.textVariantClass`
                       - `primitives/css/ui-kit.cn`
                       - `primitives/css/ui-kit.ControlSizeProvider`
                       - `primitives/live-state.useResource`
@@ -6828,6 +6829,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `primitives/css/spacing.Stack`
       - `primitives/css/spinner.Spinner`
       - `primitives/css/text.Text`
+      - `primitives/css/text.textVariantClass`
       - `primitives/css/ui-kit.Button`
       - `primitives/css/ui-kit.cn`
       - `primitives/css/ui-kit.ControlSizeProvider`
@@ -6997,6 +6999,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/css/scroll.Scroll`
           - `primitives/css/spacing.Stack`
           - `primitives/css/text.Text`
+          - `primitives/css/text.textVariantClass`
           - `primitives/css/ui-kit.cn`
           - `primitives/css/ui-kit.ControlSizeProvider`
           - `primitives/icon-button.IconButton`
@@ -15122,7 +15125,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Plugins:
             - **`app-css-utilities-in-sync`**
             - **`barrel-stubs-in-sync`**
-            - **`class-token-walk-in-sync`**
+            - **`class-token-walk-single-source`**
             - **`collected-dir-tsconfig-coverage`**
             - **`composition-closure`**
             - **`config-origins-in-sync`**
@@ -15481,11 +15484,20 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Core:
             - Exports (types):
               - `BuildLintConfigOptions`
+              - `ClassRuleFactory`
+              - `LintToolkit`
               - `ParserTypeSource`
+              - `TokenNode`
             - Exports (values):
+              - `baseClass`
               - `buildLintConfig`
+              - `CLASS_ATTRS`
+              - `CLASS_BUILDERS`
+              - `collectTokenNodes`
+              - `collectTokens`
               - `findPluginDirs`
               - `lintCollectedDir`
+              - `lintToolkit`
           - Plugins:
             - **`aria-safety`** — aria-safety lint rule: no-orphan-composite-role
             - **`bun-safety`** — bun-safety lint rule: no-declare-identifier
@@ -18393,6 +18405,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/css/rigid.rigidClass`
           - `primitives/css/spacing.Inset`
           - `primitives/css/spacing.Stack`
+          - `primitives/css/text.textVariantClass`
           - `primitives/css/ui-kit.cn`
           - `primitives/css/ui-kit.Select`
           - `primitives/css/ui-kit.SelectContent`
@@ -19349,6 +19362,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/center.Center`
               - `primitives/css/clip.Clip`
               - `primitives/css/text.Text`
+              - `primitives/css/text.textVariantClass`
               - `primitives/css/ui-kit.cn`
               - `primitives/editable-field.useEditableField`
             - Exports (values):
@@ -19374,6 +19388,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/center.Center`
               - `primitives/css/spacing.Stack`
               - `primitives/css/text.Text`
+              - `primitives/css/text.textVariantClass`
               - `primitives/css/ui-kit.cn`
               - `primitives/popover.InlinePopover`
               - `primitives/text-editor/caret-trigger.CaretTriggerMenu`
@@ -23172,6 +23187,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Exports (values):
               - `SectionLabel`
               - `Text`
+              - `textVariantClass`
           - Cross-plugin:
             - Imported by:
               - `active-data/commit-link`
@@ -23407,6 +23423,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `page/annotations/agent-notes/authorship`
               - `page/annotations/todo/task-link`
               - `page/bookmark`
+              - `page/code-block`
               - `page/editor`
               - `page/embed`
               - `page/file`
@@ -26039,6 +26056,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/css/scroll.Scroll`
           - `primitives/css/spacing.Stack`
           - `primitives/css/text.Text`
+          - `primitives/css/text.textVariantClass`
           - `primitives/css/ui-kit.cn`
           - `primitives/css/ui-kit.ControlSizeProvider`
           - `primitives/networking.subscribeWsStatus`
