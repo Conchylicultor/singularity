@@ -8,5 +8,5 @@ export type {
 } from "./types";
 export { createBoundaryCheck } from "./check";
 export { boundaryRulesCheck } from "./boundary-rules-check";
-export { runtimeNames } from "./runtimes";
+export { runtimeNames, sharedImporters } from "./runtimes";
 export { compositionRoots } from "./composition-roots";

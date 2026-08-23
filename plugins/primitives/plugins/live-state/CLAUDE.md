@@ -660,6 +660,7 @@ This narrows re-renders, not the WS subscription: N callers of the same
     - `active-data`
     - `active-data/attempt`
     - `active-data/page-link`
+    - `active-data/prototype`
     - `active-data/task`
     - `active-data/task-link`
     - `apps/agent-manager/worktree-switcher`

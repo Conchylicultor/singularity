@@ -33,11 +33,43 @@ export function PrototypeDetail() {
   const { name } = prototypeDetailPane.useParams();
   return (
     <PrototypeDetailProvider name={name}>
-      <PaneChrome pane={prototypeDetailPane} title={name}>
+      <PaneChrome
+        pane={prototypeDetailPane}
+        title={<PrototypeTitle name={name} />}
+      >
         <PrototypeStage />
       </PaneChrome>
     </PrototypeDetailProvider>
   );
+}
+
+/**
+ * The pane's header name: the prototype's own `<title>`.
+ *
+ * NOT `name` — that is a minted id (`proto-1786877040-w2vi`), which says nothing
+ * to a person. It has to be looked up in the live list, so this is a node rather
+ * than a string, and each arm is rendered for what it actually is:
+ *
+ * - not loaded yet → the loading state. Painting the id here would be a
+ *   stand-in for something unknown, and it would then swap under the reader.
+ * - loaded, and there is no such folder → the id, monospaced. This is the one
+ *   place the raw id belongs: the prototype has no title because it does not
+ *   exist, and the address the URL asked for is the only true thing left to say
+ *   (the body says "Prototype not found." right below it).
+ * - the list itself failed → same, for the same reason: the title is genuinely
+ *   unavailable, and the pane must not lose its identity over it.
+ */
+function PrototypeTitle({ name }: { name: string }) {
+  const result = useResource(prototypesResource);
+  const unknown = <span className="font-mono">{name}</span>;
+  return matchResource(result, {
+    pending: () => <Loading variant="text" />,
+    error: () => unknown,
+    ready: (rows) => {
+      const meta = rows.find((p) => p.name === name);
+      return meta ? <>{meta.title}</> : unknown;
+    },
+  });
 }
 
 function PrototypeStage() {

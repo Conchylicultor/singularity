@@ -7,6 +7,7 @@ export {
   PROTOTYPE_ASSET_ROUTE,
   prototypeUrl,
   listPrototypes,
+  createPrototype,
 } from "./prototypes";
 export type { PrototypeMeta } from "./prototypes";
 export {
@@ -16,3 +17,9 @@ export {
   validatePrototypeFolder,
 } from "./validate";
 export type { PrototypeProblem, PrototypeFolder } from "./validate";
+export {
+  newPrototypeId,
+  isPrototypeId,
+  PROTOTYPE_ID_RE,
+  UNTITLED_PROTOTYPE,
+} from "./id";

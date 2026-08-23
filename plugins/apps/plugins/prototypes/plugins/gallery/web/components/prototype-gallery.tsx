@@ -15,12 +15,17 @@ import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Overlay } from "@plugins/primitives/plugins/css/plugins/overlay/web";
 import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
 import { LaunchAgentPopover } from "@plugins/primitives/plugins/launch/web";
+import {
+  fetchEndpoint,
+  getEndpointErrorMessage,
+} from "@plugins/infra/plugins/endpoints/web";
 import { toast } from "@plugins/shell/plugins/notifications/web";
 import { PROTOTYPES_DIR_DISPLAY } from "@plugins/infra/plugins/paths/plugins/display/core";
 import type { ThumbnailState } from "@plugins/apps/plugins/prototypes/plugins/thumbnails/core";
 import { conversationRoute } from "@plugins/conversations/core";
 import { agentManagerApp } from "@plugins/apps/plugins/agent-manager/plugins/shell/core";
 import {
+  createPrototype,
   prototypesResource,
   type PrototypeMeta,
 } from "@plugins/apps/plugins/prototypes/plugins/files/core";
@@ -32,7 +37,7 @@ import { prototypeDetailPane } from "../panes";
 
 const PROTOTYPES_VIEW = defineDataView("prototypes.gallery");
 
-/** Deterministic hue from the directory slug, for the cover swatch. */
+/** Deterministic hue from the prototype's id, for the cover swatch. */
 function hueFor(seed: string): number {
   let h = 0;
   for (let i = 0; i < seed.length; i++) h = (h * 31 + seed.charCodeAt(i)) % 360;
@@ -76,31 +81,69 @@ function CoverSwatch({ meta }: { meta: PrototypeMeta }) {
 // whether the result is an original design: start from the blank template, and
 // never open a sibling. The rest is a pointer to `prototypes/CLAUDE.md` — this
 // is a prompt, not the contract.
-const NEW_PROTOTYPE_TEXT = [
-  `Create a new throwaway UI prototype under \`${PROTOTYPES_DIR_DISPLAY}/<slug>/\`.`,
-  "",
-  "That directory is NOT in the repo, and that is deliberate: write the files",
-  "there directly, do not commit anything, and do not create anything under the",
-  "repo's `prototypes/`. Every worktree and main serve that one shared directory,",
-  "so the prototype is visible the moment you save it — no build, no push.",
-  "",
-  "Read `prototypes/CLAUDE.md` (in the repo) first — it is the full contract.",
-  "",
-  `Design from a blank page: copy \`${PROTOTYPES_DIR_DISPLAY}/_template/\` and go`,
-  "from there. Do NOT open any other prototype's folder, and do not read",
-  "`plugins/` — the app's own components and tokens are not a starting point here.",
-  "",
-  "Keep the folder self-contained and flat: one `index.html` plus whatever flat",
-  "files it needs, referenced relatively. It must render when you double-click it",
-  "straight off disk (`file://`), so write your JSX inline in `index.html` —",
-  "Babel fetches an external `src` over XHR, which the browser blocks on `file://`.",
-].join("\n");
+//
+// The folder is minted BEFORE this text is written, so the prompt names it
+// instead of asking for it: the agent is never asked to choose a name, and so
+// cannot choose one wrong. What it IS asked for is the `<title>`, which is the
+// prototype's only human name now that the folder is an opaque id.
+function newPrototypeText(id: string): string {
+  return [
+    `Design a new throwaway UI prototype in \`${PROTOTYPES_DIR_DISPLAY}/${id}/\`.`,
+    "",
+    "That folder ALREADY EXISTS and already holds the blank template — edit it in",
+    `place. Do not create a second folder, and do not rename this one: \`${id}\` is a`,
+    "minted id, not a name. The prototype's name is its `<title>`, which is what",
+    "the gallery card and the pane header show — write a real one as you go.",
+    "",
+    "That directory is NOT in the repo, and that is deliberate: write the files",
+    "there directly, do not commit anything, and do not create anything under the",
+    "repo's `prototypes/`. Every worktree and main serve that one shared directory,",
+    "so the prototype is visible the moment you save it — no build, no push.",
+    "",
+    "Read `prototypes/CLAUDE.md` (in the repo) first — it is the full contract.",
+    "",
+    "Design from a blank page. Do NOT open any other prototype's folder, and do",
+    "not read `plugins/` — the app's own components and tokens are not a starting",
+    "point here.",
+    "",
+    "Keep the folder self-contained and flat: one `index.html` plus whatever flat",
+    "files it needs, referenced relatively. It must render when you double-click it",
+    "straight off disk (`file://`), so write your JSX inline in `index.html` —",
+    "Babel fetches an external `src` over XHR, which the browser blocks on `file://`.",
+  ].join("\n");
+}
+
+/**
+ * Mint the folder the agent is about to be handed — before the conversation
+ * that will edit it exists.
+ *
+ * Ordering matters: `getRequest` is awaited before `createConversation` is
+ * called, so a failed mint rejects and the launch never happens. That is the
+ * point — an agent must never be handed a prompt naming a folder that is not
+ * there. The toast is what the user sees at the button; re-throwing is what
+ * aborts the launch (and reaches the crash collector, which files a report).
+ */
+async function mintPrototypeFolder(): Promise<string> {
+  try {
+    const { id } = await fetchEndpoint(createPrototype, {}, { body: {} });
+    return id;
+  } catch (err) {
+    toast({
+      type: "prototype",
+      title: "Could not create the prototype",
+      description: getEndpointErrorMessage(err),
+      variant: "error",
+    });
+    throw err;
+  }
+}
 
 /**
  * Gallery surface: a `DataView` gallery over the live prototype list. Each card
- * shows the prototype's `<title>` + blurb over a slug-tinted cover. Activating a
- * card opens the Focus/Compare detail pane. A "New prototype" button opens the
- * launch-agent popover that fires a background agent to scaffold a new mock.
+ * shows the prototype's `<title>` + blurb over an id-tinted cover. Activating a
+ * card opens the Focus/Compare detail pane. "New prototype" mints an empty
+ * prototype folder and opens the launch-agent popover on it, so the background
+ * agent it fires is handed a folder that already exists.
  */
 export function PrototypeGallery() {
   // Both subscriptions are taken HERE, side by side, and the cards wait for
@@ -118,7 +161,8 @@ export function PrototypeGallery() {
   const selectedName = prototypeDetailPane.useRouteEntry()?.params.name;
 
   // `title` is what the author named the prototype (its `<title>`), so it is the
-  // display field; `name` is the directory slug the URL and the row key use.
+  // display field; `name` is the minted id the URL and the row key use — opaque,
+  // so it is a searchable column and never the label.
   const fields: FieldDef<PrototypeMeta>[] = [
     {
       id: "title",
@@ -153,8 +197,9 @@ export function PrototypeGallery() {
           linkTo: conversationRoute.link(agentManagerApp, { convId: conv.id }),
         });
       }}
-      getRequest={(userText) => {
-        const parts = [NEW_PROTOTYPE_TEXT];
+      getRequest={async (userText) => {
+        const id = await mintPrototypeFolder();
+        const parts = [newPrototypeText(id)];
         if (userText.trim())
           parts.push(`Additional context: ${userText.trim()}`);
         return { prompt: parts.join("\n\n") };
@@ -180,12 +225,12 @@ export function PrototypeGallery() {
         openPane(prototypeDetailPane, { name: p.name }, { mode: "push" })
       }
       actions={newButton}
-      emptyState={`No prototypes yet. Add one under ${PROTOTYPES_DIR_DISPLAY}/<slug>/.`}
+      emptyState="No prototypes yet. New prototype mints one and launches an agent to design it."
       viewOptions={{
         gallery: {
           minCardWidth: 224,
           // The card's cover is the prototype as it actually renders. The
-          // slug-tinted swatch stays as what a prototype looks like before its
+          // id-tinted swatch stays as what a prototype looks like before its
           // picture exists (or when rendering it failed) — the thumbnail owns
           // the picture, this pane owns the stand-in.
           cover: (p: PrototypeMeta) => ({

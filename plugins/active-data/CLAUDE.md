@@ -134,7 +134,7 @@ Behavior:
 
 - Description: Meta plugin for inline interactive widgets agents render via XML-like tags in assistant text. Sub-plugins contribute inline (pattern) or block (tag) renderers; hosts use useActiveDataSegments() + useActiveDataLinkify(). Persistent state for inline interactive widgets — table + resource keyed by (conversationId, messageId, tag, occurrenceIndex).
 - Web:
-  - Slots: `ActiveData.Tag` ← `active-data.attempt`, `active-data.commit-link`, `active-data.conv`, `active-data.page-link`, `active-data.plugin-link`, `active-data.task`, `active-data.task-link`, `improve.element-picker`
+  - Slots: `ActiveData.Tag` ← `active-data.attempt`, `active-data.commit-link`, `active-data.conv`, `active-data.page-link`, `active-data.plugin-link`, `active-data.prototype`, `active-data.task`, `active-data.task-link`, `improve.element-picker`
   - Contributes:
     - `MarkdownEnhancerSlot`
     - `InlineTextWalkerSlot`
@@ -219,6 +219,7 @@ Behavior:
     - `active-data/conv`
     - `active-data/page-link`
     - `active-data/plugin-link`
+    - `active-data/prototype`
     - `active-data/task`
     - `active-data/task-link`
     - `conversations/conversation-view/jsonl-viewer/assistant-text`
@@ -229,6 +230,7 @@ Behavior:
   - **`conv`** — Renders raw `conv-<id>` strings inline as clickable chips that open the referenced conversation in the right side pane alongside the host conversation. Models emit the bare id, no tag wrapping needed.
   - **`page-link`** — Renders raw `block-<id>` strings inline as clickable chips that open the page displaying that block in the page-detail pane. Models emit the bare id, no tag wrapping needed.
   - **`plugin-link`** — Renders plugin IDs in backtick-wrapped inline code as clickable chips that open the plugin-view pane. Models emit the plugin's dotted id (e.g. `tasks`, `active-data.conv`) and the chip validates and resolves it at render time.
+  - **`prototype`** — Renders raw `proto-<id>` strings inline as clickable chips that open the mock in the prototype-detail pane. Models emit the bare id, no tag wrapping needed.
   - **`task`** — Renders <task>prompt</task> tags as editable cards with Create + Launch actions. Models suggest tasks inline; users tweak and act without leaving the transcript.
   - **`task-link`** — Renders raw `task-<id>` strings inline as clickable chips that open the task detail pane. Models emit the bare id, no tag wrapping needed.
 

@@ -1,11 +1,13 @@
 import { Resource } from "@plugins/framework/plugins/server-core/core";
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
 import {
+  createPrototype,
   listPrototypes,
   PROTOTYPE_ASSET_ROUTE,
   PROTOTYPE_FILE_ROUTE,
 } from "../core";
 import {
+  handleCreate,
   handleList,
   handlePrototypeAsset,
   handlePrototypeFile,
@@ -39,6 +41,7 @@ export default {
     "Serves raw prototype files from the host-global prototypes data dir (the `apps/prototypes` declaration — shared by every worktree and main, so a mock is visible without a build and without being committed), seeds the repo's _template/ into it, declares the list + version live-state resources, and watches the dir to auto-reload open iframes on edit.",
   httpRoutes: {
     [listPrototypes.route]: handleList,
+    [createPrototype.route]: handleCreate,
     [PROTOTYPE_FILE_ROUTE]: handlePrototypeFile,
     [PROTOTYPE_ASSET_ROUTE]: handlePrototypeAsset,
   },

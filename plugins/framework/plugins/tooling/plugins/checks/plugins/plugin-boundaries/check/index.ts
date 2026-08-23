@@ -2,8 +2,14 @@ import { existsSync, readdirSync, readFileSync, statSync } from "fs";
 import { dirname, join, relative, resolve, sep } from "path";
 import { buildPluginTree } from "@plugins/plugin-meta/plugins/plugin-tree/core";
 import { standardPluginDirs } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
-import { runtimeNames } from "@plugins/framework/plugins/tooling/plugins/boundaries/core";
-import { findImports, maskSource } from "@plugins/plugin-meta/plugins/parse-utils/core";
+import {
+  runtimeNames,
+  sharedImporters,
+} from "@plugins/framework/plugins/tooling/plugins/boundaries/core";
+import {
+  findImports,
+  maskSource,
+} from "@plugins/plugin-meta/plugins/parse-utils/core";
 import { currentScanView } from "@plugins/framework/plugins/tooling/plugins/checks/core";
 import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
 import { splitTopLevelStatements } from "./parse";
@@ -11,7 +17,12 @@ import { collectForeignReexports } from "./reexport-provenance";
 import { recordBoundaryReadSet } from "./read-set";
 
 type CheckResult = { ok: true } | { ok: false; message: string; hint?: string };
-type Check = { id: string; description: string; inputKeyed?: boolean; run(): Promise<CheckResult> };
+type Check = {
+  id: string;
+  description: string;
+  inputKeyed?: boolean;
+  run(): Promise<CheckResult>;
+};
 
 const SKIPPED_PLUGINS: ReadonlyArray<string> = [];
 
@@ -88,12 +99,14 @@ const check: Check = {
     if (!existsSync(pluginsRoot)) return { ok: true };
 
     const tree = await buildPluginTree(pluginsRoot, { skipBarrelImport: true });
-    const plugins: PluginDir[] = Array.from(tree.byDir.values()).map((node) => ({
-      relPath: node.path,
-      absPath: node.dir,
-      name: node.name,
-      compositionRoot: node.compositionRoot,
-    }));
+    const plugins: PluginDir[] = Array.from(tree.byDir.values()).map(
+      (node) => ({
+        relPath: node.path,
+        absPath: node.dir,
+        name: node.name,
+        compositionRoot: node.compositionRoot,
+      }),
+    );
     const pluginSet = new Set(plugins.map((p) => p.relPath));
     const skippedSet = new Set(SKIPPED_PLUGINS);
     const violations: Violation[] = [];
@@ -204,28 +217,35 @@ const check: Check = {
         }
       }
 
-      // R12: shared/ is only importable from web/, server/, central/ within the
-      // same plugin. Relative imports into shared/ from core/, lint/, check/ are
-      // forbidden. (Cross-plugin shared/ imports are caught by R10 via the alias
-      // form and by R8 via relative paths.)
+      // R12: shared/ is plugin-private, and only importable from the runtimes
+      // whose `boundary-config.runtimes` row lists `shared` — today web/,
+      // server/, central/ and cli/. That set is DERIVED (`sharedImporters`), not
+      // restated here: this rule used to carry its own literal copy, which
+      // stopped agreeing with the config the day `cli` was added to it.
+      // (Cross-plugin shared/ imports are caught by R10 via the alias form and
+      // by R8 via relative paths.)
       if (sourcePlugin) {
         const sourceRuntime = runtimeForPath(relFile, pluginSet);
-        if (
-          sourceRuntime &&
-          sourceRuntime !== "web" &&
-          sourceRuntime !== "server" &&
-          sourceRuntime !== "central" &&
-          sourceRuntime !== "shared"
-        ) {
+        if (sourceRuntime && !sharedImporters.has(sourceRuntime)) {
           const sharedPrefix = `plugins/${sourcePlugin}/shared`;
           for (const relImp of extractRelativeImports(src)) {
             const resolvedAbs = resolve(dirname(absFile), relImp);
-            const resolvedRel = relative(root, resolvedAbs).split(sep).join("/");
-            if (resolvedRel === sharedPrefix || resolvedRel.startsWith(sharedPrefix + "/")) {
+            const resolvedRel = relative(root, resolvedAbs)
+              .split(sep)
+              .join("/");
+            if (
+              resolvedRel === sharedPrefix ||
+              resolvedRel.startsWith(sharedPrefix + "/")
+            ) {
               violations.push({
                 rule: "shared-wrong-runtime",
                 file: relFile,
-                message: `\`${sourceRuntime}/\` cannot import from shared/ — only web/, server/, central/ may`,
+                message: `\`${sourceRuntime}/\` cannot import from shared/ — only ${[
+                  ...sharedImporters,
+                ]
+                  .sort()
+                  .map((r) => `${r}/`)
+                  .join(", ")} may`,
                 fix: `move the needed types/utils to \`core/\` if they must be shared with \`${sourceRuntime}/\``,
               });
             }
@@ -263,17 +283,16 @@ const check: Check = {
         if (sourcePlugin === resolved.pluginPath) {
           if (resolved.suffixHead === "shared") {
             const sourceRuntime = runtimeForPath(relFile, pluginSet);
-            if (
-              sourceRuntime &&
-              sourceRuntime !== "web" &&
-              sourceRuntime !== "server" &&
-              sourceRuntime !== "central" &&
-              sourceRuntime !== "shared"
-            ) {
+            if (sourceRuntime && !sharedImporters.has(sourceRuntime)) {
               violations.push({
                 rule: "shared-wrong-runtime",
                 file: relFile,
-                message: `\`${sourceRuntime}/\` cannot import from shared/ — only web/, server/, central/ may`,
+                message: `\`${sourceRuntime}/\` cannot import from shared/ — only ${[
+                  ...sharedImporters,
+                ]
+                  .sort()
+                  .map((r) => `${r}/`)
+                  .join(", ")} may`,
                 fix: `move the needed types/utils to \`core/\` if they must be shared with \`${sourceRuntime}/\``,
               });
             } else {
@@ -305,7 +324,8 @@ const check: Check = {
         // a JS barrel — a stylesheet is not an exported symbol — so the
         // barrel-grammar rule (R4) doesn't apply. The DAG edge is still tracked
         // below (R6), so a cyclic asset dependency is still caught.
-        const isAssetImport = imp.kind === "side-effect" && isAssetSpecifier(imp.path);
+        const isAssetImport =
+          imp.kind === "side-effect" && isAssetSpecifier(imp.path);
 
         // R4: grammar — the import must end at `<runtime>`, nothing deeper.
         if (
@@ -347,15 +367,28 @@ const check: Check = {
     // are never conflated (a cross-runtime path is not a real cycle).
     const edgeList = Array.from(edges).map((e) => {
       const parts = e.split("\0");
-      return { from: parts[0]!, to: parts[1]!, runtime: parts[2] as "web" | "server" | "central" | "shared" };
+      return {
+        from: parts[0]!,
+        to: parts[1]!,
+        runtime: parts[2] as "web" | "server" | "central" | "shared",
+      };
     });
     // Core/shared code is reachable from every runtime.
     const crossRuntime = (e: { runtime: string }) =>
       e.runtime === "core" || e.runtime === "shared";
-    const webEdges = edgeList.filter((e) => e.runtime === "web" || crossRuntime(e));
-    const serverEdges = edgeList.filter((e) => e.runtime === "server" || crossRuntime(e));
-    const centralEdges = edgeList.filter((e) => e.runtime === "central" || crossRuntime(e));
-    const cycle = detectCycle(webEdges) ?? detectCycle(serverEdges) ?? detectCycle(centralEdges);
+    const webEdges = edgeList.filter(
+      (e) => e.runtime === "web" || crossRuntime(e),
+    );
+    const serverEdges = edgeList.filter(
+      (e) => e.runtime === "server" || crossRuntime(e),
+    );
+    const centralEdges = edgeList.filter(
+      (e) => e.runtime === "central" || crossRuntime(e),
+    );
+    const cycle =
+      detectCycle(webEdges) ??
+      detectCycle(serverEdges) ??
+      detectCycle(centralEdges);
     if (cycle) {
       violations.push({
         rule: "cycle",
@@ -423,7 +456,12 @@ function walkSourceFiles(dir: string, out: string[]) {
   try {
     entries = readdirSync(dir, { withFileTypes: true });
   } catch (err) {
-    if ((err as NodeJS.ErrnoException).code !== "ENOENT" && (err as NodeJS.ErrnoException).code !== "EACCES" && (err as NodeJS.ErrnoException).code !== "ENOTDIR") throw err;
+    if (
+      (err as NodeJS.ErrnoException).code !== "ENOENT" &&
+      (err as NodeJS.ErrnoException).code !== "EACCES" &&
+      (err as NodeJS.ErrnoException).code !== "ENOTDIR"
+    )
+      throw err;
     return;
   }
   for (const e of entries) {
@@ -443,7 +481,12 @@ function safeRead(path: string): string | null {
     if (!statSync(path).isFile()) return null;
     return readFileSync(path, "utf-8");
   } catch (err) {
-    if ((err as NodeJS.ErrnoException).code !== "ENOENT" && (err as NodeJS.ErrnoException).code !== "EACCES" && (err as NodeJS.ErrnoException).code !== "ENOTDIR") throw err;
+    if (
+      (err as NodeJS.ErrnoException).code !== "ENOENT" &&
+      (err as NodeJS.ErrnoException).code !== "EACCES" &&
+      (err as NodeJS.ErrnoException).code !== "ENOTDIR"
+    )
+      throw err;
     return null;
   }
 }
@@ -460,7 +503,10 @@ function safeRead(path: string): string | null {
  * respectively).
  */
 function expectedPackageName(relPath: string): string {
-  const chain = relPath.split("/").filter((s) => s !== "plugins").join("-");
+  const chain = relPath
+    .split("/")
+    .filter((s) => s !== "plugins")
+    .join("-");
   return `@singularity/plugin-${chain}`;
 }
 
@@ -516,7 +562,10 @@ function checkUnknownDirs(
     allPlugins
       .filter((other) => {
         const prefix = `${p.relPath}/plugins/`;
-        return other.relPath.startsWith(prefix) && !other.relPath.slice(prefix.length).includes("/");
+        return (
+          other.relPath.startsWith(prefix) &&
+          !other.relPath.slice(prefix.length).includes("/")
+        );
       })
       .map((other) => other.name),
   );
@@ -525,7 +574,12 @@ function checkUnknownDirs(
   try {
     entries = readdirSync(p.absPath, { withFileTypes: true });
   } catch (err) {
-    if ((err as NodeJS.ErrnoException).code !== "ENOENT" && (err as NodeJS.ErrnoException).code !== "EACCES" && (err as NodeJS.ErrnoException).code !== "ENOTDIR") throw err;
+    if (
+      (err as NodeJS.ErrnoException).code !== "ENOENT" &&
+      (err as NodeJS.ErrnoException).code !== "EACCES" &&
+      (err as NodeJS.ErrnoException).code !== "ENOTDIR"
+    )
+      throw err;
     return;
   }
   for (const e of entries) {
@@ -551,12 +605,23 @@ function dirContainsTsFiles(dir: string): boolean {
   try {
     entries = readdirSync(dir, { withFileTypes: true });
   } catch (err) {
-    if ((err as NodeJS.ErrnoException).code !== "ENOENT" && (err as NodeJS.ErrnoException).code !== "EACCES" && (err as NodeJS.ErrnoException).code !== "ENOTDIR") throw err;
+    if (
+      (err as NodeJS.ErrnoException).code !== "ENOENT" &&
+      (err as NodeJS.ErrnoException).code !== "EACCES" &&
+      (err as NodeJS.ErrnoException).code !== "ENOTDIR"
+    )
+      throw err;
     return false;
   }
   for (const e of entries) {
-    if (e.isFile() && (e.name.endsWith(".ts") || e.name.endsWith(".tsx"))) return true;
-    if (e.isDirectory() && e.name !== "node_modules" && dirContainsTsFiles(join(dir, e.name))) return true;
+    if (e.isFile() && (e.name.endsWith(".ts") || e.name.endsWith(".tsx")))
+      return true;
+    if (
+      e.isDirectory() &&
+      e.name !== "node_modules" &&
+      dirContainsTsFiles(join(dir, e.name))
+    )
+      return true;
   }
   return false;
 }
@@ -581,7 +646,11 @@ function dirContainsTsFiles(dir: string): boolean {
  * top-level `await`, control flow) is a violation — it should live in a sibling file
  * (conventionally `shared/`).
  */
-function checkBarrelPurity(absPath: string, relPath: string, violations: Violation[]) {
+function checkBarrelPurity(
+  absPath: string,
+  relPath: string,
+  violations: Violation[],
+) {
   const raw = safeRead(absPath);
   if (!raw) return;
   const stmts = splitTopLevelStatements(raw);
@@ -600,7 +669,7 @@ function checkBarrelPurity(absPath: string, relPath: string, violations: Violati
         rule: "barrel-purity",
         file: `${relPath}:${line}`,
         message: `wildcard re-export in barrel: \`${head}${trimmed.length > head.length ? "…" : ""}\``,
-        fix: "docgen can't follow `export *` to enumerate the public surface — every exported name must be written in the barrel. Replace with named re-exports (`export { A, B, type C } from \"./shared/foo\"`) or namespace: `import * as Foo from \"./shared/foo\"; export { Foo };`.",
+        fix: 'docgen can\'t follow `export *` to enumerate the public surface — every exported name must be written in the barrel. Replace with named re-exports (`export { A, B, type C } from "./shared/foo"`) or namespace: `import * as Foo from "./shared/foo"; export { Foo };`.',
       });
       continue;
     }
@@ -628,7 +697,8 @@ function isAllowedBarrelStatement(s: string): boolean {
   if (s.startsWith("import ") || s.startsWith("import{")) return true;
   if (s.startsWith("export default")) return true;
   if (s.startsWith("type ") || s.startsWith("interface ")) return true;
-  if (s.startsWith("export type ") || s.startsWith("export interface ")) return true;
+  if (s.startsWith("export type ") || s.startsWith("export interface "))
+    return true;
   if (s.startsWith("export ")) {
     // Allowed: `export { ... }` (possibly with `from "..."`).
     // Disallowed: `export * from "..."` (docgen can't enumerate wildcard
@@ -730,7 +800,10 @@ function extractPluginImports(rawSrc: string): Imp[] {
     }
     const body = imp.clause.trim();
     if (!looksLikeImportOrReexport(imp.keyword, body)) continue;
-    results.push({ path: imp.specifier, kind: classifyKind(imp.keyword, body) });
+    results.push({
+      path: imp.specifier,
+      kind: classifyKind(imp.keyword, body),
+    });
   }
   return results;
 }
@@ -741,7 +814,17 @@ function extractPluginImports(rawSrc: string): Imp[] {
  * cannot be proxied through a plugin's barrel — they are referenced by their
  * real path. The barrel-grammar rule is therefore inapplicable to them.
  */
-const ASSET_EXTENSIONS = [".css", ".scss", ".sass", ".png", ".jpg", ".jpeg", ".svg", ".woff", ".woff2"];
+const ASSET_EXTENSIONS = [
+  ".css",
+  ".scss",
+  ".sass",
+  ".png",
+  ".jpg",
+  ".jpeg",
+  ".svg",
+  ".woff",
+  ".woff2",
+];
 function isAssetSpecifier(specifier: string): boolean {
   return ASSET_EXTENSIONS.some((ext) => specifier.endsWith(ext));
 }
@@ -753,7 +836,11 @@ function looksLikeImportOrReexport(keyword: string, body: string): boolean {
     if (/^\*\s+as\s+\w+$/.test(body)) return true;
     if (/^type\s+/.test(body)) {
       const rest = body.replace(/^type\s+/, "");
-      return /^\w+$/.test(rest) || /^\{[^}]*\}$/.test(rest) || /^\*\s+as\s+\w+$/.test(rest);
+      return (
+        /^\w+$/.test(rest) ||
+        /^\{[^}]*\}$/.test(rest) ||
+        /^\*\s+as\s+\w+$/.test(rest)
+      );
     }
     if (/^\w+$/.test(body)) return true;
     if (/^\{[\s\S]*\}$/.test(body)) return true;
@@ -793,7 +880,10 @@ interface ResolvedImport {
   tail: string;
 }
 
-function resolveImport(importPath: string, pluginSet: Set<string>): ResolvedImport | null {
+function resolveImport(
+  importPath: string,
+  pluginSet: Set<string>,
+): ResolvedImport | null {
   if (!importPath.startsWith("@plugins/")) return null;
   const rest = importPath.slice("@plugins/".length);
   const parts = rest.split("/");
@@ -828,7 +918,9 @@ function detectCycle(edges: { from: string; to: string }[]): string[] | null {
     if (!adj.has(from)) adj.set(from, new Set());
     adj.get(from)!.add(to);
   }
-  const WHITE = 0, GRAY = 1, BLACK = 2;
+  const WHITE = 0,
+    GRAY = 1,
+    BLACK = 2;
   const color = new Map<string, number>();
   const parent = new Map<string, string>();
   const nodes = new Set<string>();
@@ -870,7 +962,10 @@ function detectCycle(edges: { from: string; to: string }[]): string[] | null {
       if (col === WHITE) {
         color.set(nxt, GRAY);
         parent.set(nxt, top.node);
-        stack.push({ node: nxt, iter: (adj.get(nxt) ?? new Set<string>()).values() });
+        stack.push({
+          node: nxt,
+          iter: (adj.get(nxt) ?? new Set<string>()).values(),
+        });
       }
     }
   }

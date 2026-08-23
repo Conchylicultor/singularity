@@ -35,14 +35,19 @@ export function ViewModeSwitcher() {
 // The prompt every "Improve this prototype" agent starts from. It names exactly
 // one folder: an iterating agent has no more reason to read a sibling prototype
 // than a fresh one does, and this is the only instruction guaranteed to reach it.
+//
+// `name` is a minted id, not a name, so it is spelled as a PATH throughout —
+// "iterate on the `proto-1786877040-w2vi` prototype" reads like a title the
+// agent should live up to, when it is just an address. What the prototype is
+// called is its `<title>`, which the agent reads out of the file it opens.
 function improveText(name: string): string {
   return [
-    `Iterate on the \`${name}\` UI prototype.`,
+    `Iterate on the UI prototype in \`${PROTOTYPES_DIR_DISPLAY}/${name}/\`.`,
     "",
-    `Edit the files under \`${PROTOTYPES_DIR_DISPLAY}/${name}/\` — that folder and`,
-    "nothing else. That directory is not in the repo: edit in place and commit",
-    "nothing. Do not open any other prototype's folder. Saving reloads the open",
-    "iframe automatically.",
+    "Edit the files in that folder and nothing else. That directory is not in the",
+    "repo: edit in place and commit nothing. Do not rename the folder — its name",
+    "is a minted id, and the prototype's own name is its `<title>`. Do not open",
+    "any other prototype's folder. Saving reloads the open iframe automatically.",
     "",
     "Keep it self-contained: flat files referenced relatively, JSX inline, and it",
     "must still render when double-clicked straight off disk (`file://`).",
@@ -62,7 +67,7 @@ export function ImproveButton() {
         </Button>
       }
       title="Improve prototype"
-      description={`Launch an agent to iterate on the ${name} prototype.`}
+      description="Launch an agent to iterate on the open prototype."
       placeholder="What should change? (optional)"
       align="end"
       onLaunched={(conv) => {

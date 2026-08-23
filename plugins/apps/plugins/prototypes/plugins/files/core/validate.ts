@@ -3,6 +3,7 @@ import {
   decodeHtmlText,
   readHtmlAttr,
 } from "@plugins/infra/plugins/html-decode/core";
+import { isPrototypeId } from "./id";
 
 // The rules that make a folder a prototype, as one pure function.
 //
@@ -126,6 +127,23 @@ export async function validatePrototypeFolder(
 ): Promise<PrototypeProblem[]> {
   const problems: PrototypeProblem[] = [];
 
+  // A folder whose name is not a minted id. Skips `_`-prefixed directories:
+  // `_template` is a seed rather than a prototype, and the repo check runs this
+  // same function over it — an unguarded rule would fail every push.
+  //
+  // Deliberately a PROBLEM, not a refusal. Prototypes are user content, so a
+  // hand-made folder keeps being listed and served; what it loses is the ability
+  // to be referenced — nothing can write `ember` in a message and have it
+  // resolve. This is the loud-runtime rung, and it is what stops
+  // `cp -R _template <name>` from being silently fine again.
+  if (!folder.dirName.startsWith("_") && !isPrototypeId(folder.dirName)) {
+    problems.push({
+      path: "",
+      detail:
+        "the folder name is not a minted prototype id (proto-<epoch>-<4 chars>), so this prototype cannot be referenced by id from a conversation — create prototypes with `./singularity prototype new` instead of copying _template by hand",
+    });
+  }
+
   for (const sub of [...folder.subdirs].sort()) {
     problems.push({
       path: `${sub}/`,
@@ -157,7 +175,7 @@ export async function validatePrototypeFolder(
         problems.push({
           path: fileName,
           detail:
-            "no non-empty <title> — the gallery card would fall back to the directory name",
+            'no non-empty <title> — the gallery card, the pane header and every chip would read "Untitled prototype" instead of a name',
         });
       }
       if (await loadsExternalBabelScript(text)) {

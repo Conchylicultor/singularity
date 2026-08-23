@@ -27,6 +27,11 @@ export function ScaledIframe({
 }: {
   meta: PrototypeMeta;
   version: number;
+  /**
+   * The frame's accessible name. Defaults to the prototype's own `<title>` —
+   * never `meta.name`, which is a minted id and would read out as
+   * "proto-1786877040-w2vi" to a screen reader.
+   */
   title?: string;
   /** Allow a scale above 1, so the prototype fills a larger presentation area. */
   upscale?: boolean;
@@ -65,7 +70,7 @@ export function ScaledIframe({
         }}
       >
         <iframe
-          title={title ?? meta.name}
+          title={title ?? meta.title}
           src={src}
           // allow-same-origin keeps the frame on our own origin, so a prototype
           // that fetch()es one of its own flat files (a `data.json`, say) works

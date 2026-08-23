@@ -10,7 +10,8 @@ import { PrototypeProblemSchema } from "./validate";
  * expresses metadata.
  *
  * - `name` — the directory slug (injected by the server; what URLs address)
- * - `title` — `<title>`, the display name (falls back to `name`)
+ * - `title` — `<title>`, the display name (falls back to `UNTITLED_PROTOTYPE`,
+ *   never to `name`, which is an opaque id)
  * - `blurb` — `<meta name="description">` (defaults to `""`)
  * - `viewport` — `<meta name="prototype-viewport" content="1320x868">`
  *   (defaults to 1280x800)
@@ -96,3 +97,22 @@ export function prototypeUrl(name: string, opts: { v?: number } = {}): string {
     opts.v === undefined ? "" : `?v=${encodeURIComponent(String(opts.v))}`;
   return `${PROTOTYPES_API_BASE}/${encodeURIComponent(name)}/index.html${qs}`;
 }
+
+/**
+ * Mint a prototype: create a freshly id'd folder holding the blank template,
+ * and answer with its id.
+ *
+ * The gallery's New prototype flow calls this BEFORE it launches the agent, so
+ * the agent is handed a folder that already exists and is never asked to name
+ * anything — which is what stops it from naming it wrong. `title` is optional
+ * because at that moment nobody knows the name yet; the agent's first save is
+ * what fills the card in.
+ *
+ * A POST, so it does not share the list route's handler: the keys in
+ * `httpRoutes` carry the method.
+ */
+export const createPrototype = defineEndpoint({
+  route: "POST /api/prototypes",
+  body: z.object({ title: z.string().optional() }),
+  response: z.object({ id: z.string() }),
+});

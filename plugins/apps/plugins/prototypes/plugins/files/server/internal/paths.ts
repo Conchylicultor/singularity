@@ -1,21 +1,25 @@
 import { join, resolve, sep } from "node:path";
 import { REPO_ROOT } from "@plugins/infra/plugins/paths/server";
 import { prototypesDir } from "../../data-dirs";
+import { TEMPLATE_DIR_NAME } from "../../shared/template";
 
 /**
  * The `_template/` seed, in the repo.
  *
  * The one part of `prototypes/` that is still code: it is reviewed, versioned,
  * and every new prototype is copied from it. `seedTemplate()` copies it into
- * {@link prototypesDir} so an agent's whole gesture — copy the template, edit
- * the copy — happens inside the data dir. In a compiled release `REPO_ROOT`
- * points into the binary's virtual FS, so this path simply won't exist and
- * seeding is skipped.
+ * {@link prototypesDir} on boot so `mintPrototype()` copies a sibling folder
+ * inside the data dir rather than reaching back into a checkout. In a compiled
+ * release `REPO_ROOT` points into the binary's virtual FS, so this path simply
+ * won't exist and seeding is skipped — the mint's own `seededTemplateDir()`
+ * fallback resolves the checkout through git instead, for the CLI on a host
+ * whose backend has never booted.
  */
-export const TEMPLATE_SEED_DIR = join(REPO_ROOT, "prototypes", "_template");
-
-/** The template's name once seeded — skipped by the lister, like any `_` dir. */
-export const TEMPLATE_DIR_NAME = "_template";
+export const TEMPLATE_SEED_DIR = join(
+  REPO_ROOT,
+  "prototypes",
+  TEMPLATE_DIR_NAME,
+);
 
 // A prototype ships whatever it references, so the served set is not just code:
 // images and a font are part of "self-contained". No `.jsx` — JSX lives inline

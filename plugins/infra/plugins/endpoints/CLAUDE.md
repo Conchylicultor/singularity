@@ -228,6 +228,7 @@ const { mutateAsync } = useEndpointMutation(deleteTask, { meta: { suppressError:
     - `apps/pages/starred`
     - `apps/pages/trash`
     - `apps/prototypes/files`
+    - `apps/prototypes/gallery`
     - `apps/sonata/library`
     - `apps/sonata/playback-history`
     - `apps/sonata/rich/key-mode`

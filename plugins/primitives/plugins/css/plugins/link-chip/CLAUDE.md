@@ -16,6 +16,7 @@
     - `active-data/conv`
     - `active-data/page-link`
     - `active-data/plugin-link`
+    - `active-data/prototype`
     - `active-data/task`
     - `active-data/task-link`
     - `apps/deploy/composition`

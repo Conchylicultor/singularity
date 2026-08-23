@@ -17,6 +17,8 @@
 //   - apps/plugins/agent-manager/plugins/worktree-switcher: watched boot slot ActionBar.Item
 //   - apps/plugins/mail/plugins/sync/plugins/auto-resume: watched boot slot Core.Root
 //   - apps/plugins/pages/plugins/page-tree: dependency closure (imported by an eager plugin)
+//   - apps/plugins/prototypes/plugins/gallery: dependency closure (imported by an eager plugin)
+//   - apps/plugins/prototypes/plugins/thumbnails: dependency closure (imported by an eager plugin)
 //   - apps/plugins/sonata/plugins/voicing: dependency closure (imported by an eager plugin)
 //   - apps/plugins/story/plugins/marker: dependency closure (imported by an eager plugin)
 //   - apps/plugins/story/plugins/render: dependency closure (imported by an eager plugin)
@@ -74,9 +76,7 @@ export const DEFERRED_PLUGIN_PATHS: ReadonlySet<string> = new Set([
   "apps/plugins/pages/plugins/welcome",
   "apps/plugins/pages/plugins/welcome/plugins/quick-create",
   "apps/plugins/pages/plugins/welcome/plugins/recent-pages",
-  "apps/plugins/prototypes/plugins/gallery",
   "apps/plugins/prototypes/plugins/present",
-  "apps/plugins/prototypes/plugins/thumbnails",
   "apps/plugins/settings/plugins/accounts",
   "apps/plugins/settings/plugins/appearance",
   "apps/plugins/settings/plugins/config",

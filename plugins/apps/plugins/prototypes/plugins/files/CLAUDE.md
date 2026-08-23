@@ -26,6 +26,100 @@ committed. Authored prototypes are validated at read time by
 problems ride out on `PrototypeMeta.problems` to the gallery card. A throwaway
 mockup must never be able to fail somebody's code push.
 
+## The id, and the mint that hands it out
+
+A prototype's folder name IS its id, and it is minted rather than invented:
+`proto-<epochSeconds>-<4 base36 chars>`, the shape `newId()` already mints for
+attempts and conversations. `core/id.ts` is the ONE spelling of that format —
+`newPrototypeId()`, `PROTOTYPE_ID_RE` (the unanchored core shape) and
+`isPrototypeId()` — and `core/id.test.ts` pins the mint against both, so the
+chip that linkifies a bare id in assistant prose cannot silently stop matching
+when the mint changes. That is the `att-`/`block-` failure mode, where each chip
+re-types the shape three plugins away from the function that produces it.
+
+Why the folder name and why opaque: the filesystem is then the uniqueness
+authority (the mint is a `mkdir`), there is no dir↔id map in front of the routes,
+the watcher, the thumbnail cache or the backup source, and no wholesale rewrite
+of `index.html` can drop the id. Opaque because the folder is minted BEFORE the
+agent has designed anything — a slug chosen at that moment is a guess, and
+renaming later would change the id. Nothing is lost to a human: every surface
+displays `meta.title`, read out of `<title>`.
+
+`shared/mint.ts` — `mintPrototype({ title? })` → `{ id, dir }` — is the one way a
+prototype comes into existence. It copies the SEEDED `_template/` (not the
+repo's, so it works in a compiled release and inherits an edit the user made to
+the template) into a fresh id, then stamps `<title>` when a name was given. It
+lives in `shared/` because it touches `fs` (so not `core/`, which the browser
+imports) and because `./singularity prototype new` calls it with no backend
+running (so not `server/`) — the same split `shared/read-folder.ts` makes.
+
+`shared/template.ts` holds what the two writers into this directory share:
+`copyFolderOnce()` (temp-then-rename, never overwrites, treats a lost rename race
+as "somebody else got there first") and `seededTemplateDir()`, which seeds the
+template on demand for a CLI mint on a host whose backend has never booted. Boot's
+`seedTemplate()` and the mint both go through it, so the never-overwrite rule and
+the race handling exist once.
+
+Three consequences worth knowing:
+
+- `POST /api/prototypes` (`createPrototype`, body `{ title? }` → `{ id }`) is how
+  the gallery mints before it launches an agent, so the agent is handed a folder
+  that already exists and is never asked to name anything. It notifies nothing:
+  the mint writes into the watched tree, and the watcher is what re-broadcasts
+  the list.
+- A folder whose name is not a minted id gets a `problems[]` entry naming
+  `./singularity prototype new` as the fix. A *problem*, not a refusal —
+  prototypes are user content, so a hand-made folder keeps being listed and
+  served; what it loses is being referenceable by id.
+- That rule skips `_`-prefixed directories, because `check/index.ts` runs
+  `validatePrototypeFolder` over `_template` itself.
+
+Design: `research/2026-08-21-global-prototype-ids-and-mint.md`.
+
+## `./singularity prototype`
+
+Two verbs, contributed as a `cli/` collected dir — auto-discovered, so there is
+no registry edit and no codegen edit; `./singularity build` regenerates
+`cli.generated.ts` from the filesystem.
+
+- `prototype new [title]` — mint a folder and print its id, its path and its URL.
+- `prototype list` — id, title and URL for every prototype on disk, plus any
+  `problems[]` the folder carries.
+
+**Both work with no backend running, and that is the point of having them.** The
+prototypes tree is host-global and outside every checkout, so `new` calls
+`mintPrototype()` straight against the filesystem rather than
+`POST /api/prototypes`, and `list` calls `listPrototypeMetas()` rather than
+fetching `GET /api/prototypes`. Neither verb has an implementation of its own:
+the endpoint and the CLI share the mint, and the list endpoint, the
+`prototypes.list` resource and `prototype list` share the lister — so a terminal
+answer can never disagree with the gallery.
+
+That sharing is what moved the lister. `listPrototypeMetas()` now lives in
+`shared/list-metas.ts`; `server/internal/list.ts` re-exports it, so
+`handlers.ts`, `resources.ts` and the server barrel (which `thumbnails` reads it
+from) are untouched. Nothing in it was ever server-specific — it reads the data
+dir and parses HTML — and `shared/` is where this plugin already keeps the code
+a CLI process and the server both run (`read-folder.ts`, `mint.ts`,
+`template.ts`).
+
+`cli/index.ts` is the DECLARATION and is loaded on every single `./singularity`
+invocation, `build` included, because commander needs the names and flags before
+it parses argv. It therefore imports `defineCliCommand` and nothing else; both
+bodies sit behind `run: () => import("./new")` / `import("./list")`.
+`cli:command-declarations-light` fails the declaration if its static closure
+reaches an npm package or a `web`/`server` barrel.
+
+`cli/prototype-url.ts` builds
+`http://<namespace>.localhost:9000/prototypes/proto/<id>` from parts rather than
+by hand: the namespace is minted with `namespaceFor(MAIN_COMPOSITION_ID,
+checkoutRef(root))` off the CHECKOUT (a CLI process never sets
+`SINGULARITY_WORKTREE` for itself, so reading it would print main's URL from
+every worktree), `.localhost:9000` comes from `namespaceUrl`, and `/prototypes`
+from `prototypesApp.basePath`. The one literal is the detail pane's own
+`proto/:name` segment — it is declared in `gallery/web`, which a terminal verb
+must not import.
+
 ## The contract this serves
 
 A prototype is one folder holding a **self-contained `index.html`** plus
@@ -36,7 +130,8 @@ renders it. If it only works through this API, it isn't self-contained.
 
 Metadata is therefore read out of the HTML, not a sidecar file:
 
-- `<title>` → `title` (default: the directory name)
+- `<title>` → `title` (default: `UNTITLED_PROTOTYPE`, never the directory
+  name — that is an opaque id)
 - `<meta name="description">` → `blurb` (default: `""`)
 - `<meta name="prototype-viewport" content="WxH">` → `viewport` (default: 1280x800)
 
@@ -50,6 +145,8 @@ Design: `research/2026-08-15-global-prototypes-self-contained.md`.
 - `GET /api/prototypes` → `PrototypeMeta[]` (every `prototypes/<name>/index.html`,
   skipping `_`-prefixed and dot-dirs; the dir name is the `name`). JSON, so it
   goes through `implement()`.
+- `POST /api/prototypes` → `{ id }`, body `{ title? }`. Mints a folder from the
+  template. JSON, so it goes through `implement()` too.
 - `GET /api/prototypes/:name` → **302** to `…/:name/index.html`, carrying the
   query across. Only for hand-typed URLs; nothing in the app links here.
 - `GET /api/prototypes/:name/:file` → `prototypes/<name>/<file>` verbatim,
@@ -115,7 +212,8 @@ but its name is not a forbidden reference target. The check catches copied
 
 The `core` barrel exports the shared contracts the web consumes: `PrototypeMeta`,
 `prototypesResource` / `prototypesVersionResource` (descriptors), `prototypeUrl()`,
-and the `listPrototypes` endpoint.
+the `listPrototypes` / `createPrototype` endpoints, and the id format
+(`newPrototypeId`, `PROTOTYPE_ID_RE`, `isPrototypeId`).
 
 <!-- AUTOGENERATED:BEGIN — do not edit; regenerated by `./singularity build` -->
 
@@ -138,7 +236,9 @@ and the `listPrototypes` endpoint.
   - Resources:
     - `prototypes.list` (push)
     - `prototypes.version` (push)
-  - Routes: `GET /api/prototypes`
+  - Routes:
+    - `GET /api/prototypes`
+    - `POST /api/prototypes`
 - Core:
   - Uses:
     - `infra/endpoints.defineEndpoint`
@@ -150,17 +250,22 @@ and the `listPrototypes` endpoint.
     - `PrototypeMeta`
     - `PrototypeProblem`
   - Exports (values):
+    - `createPrototype`
+    - `isPrototypeId`
     - `isScannableFile`
     - `listPrototypes`
+    - `newPrototypeId`
     - `PROTOTYPE_ASSET_ROUTE`
     - `PROTOTYPE_ENTRY_FILE`
     - `PROTOTYPE_FILE_ROUTE`
+    - `PROTOTYPE_ID_RE`
     - `PrototypeMetaSchema`
     - `PrototypeProblemSchema`
     - `PROTOTYPES_API_BASE`
     - `prototypesResource`
     - `prototypesVersionResource`
     - `prototypeUrl`
+    - `UNTITLED_PROTOTYPE`
     - `validatePrototypeFolder`
 - Cross-plugin:
   - Imported by: `apps/prototypes/thumbnails`

@@ -6,7 +6,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
 
 - **`active-data`** — Meta plugin for inline interactive widgets agents render via XML-like tags in assistant text. Sub-plugins contribute inline (pattern) or block (tag) renderers; hosts use useActiveDataSegments() + useActiveDataLinkify(). Persistent state for inline interactive widgets — table + resource keyed by (conversationId, messageId, tag, occurrenceIndex).
   - Web:
-    - Slots: `ActiveData.Tag` ← `active-data.attempt`, `active-data.commit-link`, `active-data.conv`, `active-data.page-link`, `active-data.plugin-link`, `active-data.task`, `active-data.task-link`, `improve.element-picker`
+    - Slots: `ActiveData.Tag` ← `active-data.attempt`, `active-data.commit-link`, `active-data.conv`, `active-data.page-link`, `active-data.plugin-link`, `active-data.prototype`, `active-data.task`, `active-data.task-link`, `improve.element-picker`
     - Contributes:
       - `MarkdownEnhancerSlot`
       - `InlineTextWalkerSlot`
@@ -91,6 +91,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `active-data/conv`
       - `active-data/page-link`
       - `active-data/plugin-link`
+      - `active-data/prototype`
       - `active-data/task`
       - `active-data/task-link`
       - `conversations/conversation-view/jsonl-viewer/assistant-text`
@@ -180,6 +181,17 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/pane.Pane`
           - `primitives/pane.PaneChrome`
           - `primitives/pane.useOpenPane`
+    - **`prototype`** — Renders raw `proto-<id>` strings inline as clickable chips that open the mock in the prototype-detail pane. Models emit the bare id, no tag wrapping needed.
+      - Web:
+        - Contributes: `ActiveData.Tag` "(?<!\/)proto-\d+-[a-z0-9]{4}(?![/.])\b" → `PrototypeChip`
+        - Uses:
+          - `active-data.ActiveData`
+          - `apps/prototypes/gallery.prototypeDetailPane`
+          - `primitives/css/link-chip.LinkChip`
+          - `primitives/live-state.matchResource`
+          - `primitives/live-state.useResource`
+          - `primitives/pane.useOpenPane`
+        - Exports (values): `PrototypeChip`
     - **`task`** — Renders <task>prompt</task> tags as editable cards with Create + Launch actions. Models suggest tasks inline; users tweak and act without leaving the transcript.
       - Web:
         - Contributes: `ActiveData.Tag` "task" → `TaskCard`
@@ -2591,7 +2603,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Resources:
               - `prototypes.list` (push)
               - `prototypes.version` (push)
-            - Routes: `GET /api/prototypes`
+            - Routes:
+              - `GET /api/prototypes`
+              - `POST /api/prototypes`
           - Core:
             - Uses:
               - `infra/endpoints.defineEndpoint`
@@ -2603,17 +2617,22 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `PrototypeMeta`
               - `PrototypeProblem`
             - Exports (values):
+              - `createPrototype`
+              - `isPrototypeId`
               - `isScannableFile`
               - `listPrototypes`
+              - `newPrototypeId`
               - `PROTOTYPE_ASSET_ROUTE`
               - `PROTOTYPE_ENTRY_FILE`
               - `PROTOTYPE_FILE_ROUTE`
+              - `PROTOTYPE_ID_RE`
               - `PrototypeMetaSchema`
               - `PrototypeProblemSchema`
               - `PROTOTYPES_API_BASE`
               - `prototypesResource`
               - `prototypesVersionResource`
               - `prototypeUrl`
+              - `UNTITLED_PROTOTYPE`
               - `validatePrototypeFolder`
           - Cross-plugin:
             - Imported by: `apps/prototypes/thumbnails`
@@ -2630,6 +2649,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Uses:
               - `apps/prototypes/thumbnails.PrototypeThumbnail`
               - `apps/prototypes/thumbnails.usePrototypeThumbnails`
+              - `infra/endpoints.fetchEndpoint`
+              - `infra/endpoints.getEndpointErrorMessage`
               - `primitives/css/badge.Badge`
               - `primitives/css/column.Column`
               - `primitives/css/overlay.Overlay`
@@ -2661,7 +2682,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `ScaledIframe`
               - `usePrototypeDetail`
           - Cross-plugin:
-            - Imported by: `apps/prototypes/present`
+            - Imported by:
+              - `active-data/prototype`
+              - `apps/prototypes/present`
         - **`present`** — Present a prototype without the app around it, in four sizes: filling this app tab's surface (the tab bar stays, so the user can keep switching tabs), filling this browser tab, filling the screen (Fullscreen API), or opened as its own document in a new browser tab. Contributed into the detail pane's Actions.
           - Web:
             - Contributes: `prototypeDetailPane.Actions` → `PresentMenu`
@@ -15060,6 +15083,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `defineBoundaries`
               - `deny`
               - `runtimeNames`
+              - `sharedImporters`
               - `zone`
           - Structure:
             - Loose top-level files: `boundary-config.ts`
@@ -15363,6 +15387,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Cross-plugin:
             - Imported by:
               - `active-data/page-link`
+              - `active-data/prototype`
               - `apps-core/layout`
               - `apps-core/surface`
               - `apps-core/tabs`
@@ -16147,6 +16172,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/pages/starred`
           - `apps/pages/trash`
           - `apps/prototypes/files`
+          - `apps/prototypes/gallery`
           - `apps/sonata/library`
           - `apps/sonata/playback-history`
           - `apps/sonata/rich/key-mode`
@@ -22175,6 +22201,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `active-data/conv`
               - `active-data/page-link`
               - `active-data/plugin-link`
+              - `active-data/prototype`
               - `active-data/task`
               - `active-data/task-link`
               - `apps/deploy/composition`
@@ -25761,6 +25788,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `active-data`
           - `active-data/attempt`
           - `active-data/page-link`
+          - `active-data/prototype`
           - `active-data/task`
           - `active-data/task-link`
           - `apps/agent-manager/worktree-switcher`
@@ -26461,6 +26489,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `active-data/conv`
           - `active-data/page-link`
           - `active-data/plugin-link`
+          - `active-data/prototype`
           - `active-data/task`
           - `active-data/task-link`
           - `apps-core`
