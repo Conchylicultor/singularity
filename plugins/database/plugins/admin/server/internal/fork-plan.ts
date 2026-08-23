@@ -1,3 +1,4 @@
+import { queryRows } from "@plugins/database/plugins/sql-rows/core";
 import { z } from "zod";
 import { openShortLivedClient } from "./pool";
 import type { ForkExclusions } from "./fork-exclusion";
@@ -391,9 +392,13 @@ export function planForkExclusions(
  * remove, reintroduced one layer lower — and it survived a real fork, which is
  * how it was found.
  *
- * The `::text` casts below are the fix; this parse is what makes the fix
- * enforced rather than remembered. A boundary between untyped SQL and typed
- * code gets a parser, not a type assertion.
+ * The `::text` casts below are the fix; the parse is what makes the fix
+ * enforced rather than remembered — and it is no longer a habit local to this
+ * file. The read goes through `queryRows`, the one door every raw-SQL row read
+ * in the repo now takes, so this schema is checked by the same code that checks
+ * every other one, and a column that disagrees with it names itself and its pg
+ * type OID. A boundary between untyped SQL and typed code gets a parser, not a
+ * type assertion.
  */
 const CatalogRowSchema = z.object({
   name: z.string(),
@@ -421,7 +426,8 @@ export async function readSchemaCatalog(
   try {
     // Every `relname` is cast to `text`. `relname` is `name`, and `pg` cannot
     // decode `name[]` — see CatalogRowSchema for what that silently produced.
-    const { rows } = await pool.query(`
+    const rows = await queryRows(pool, {
+      sql: `
       WITH RECURSIVE
         -- Every (top-level partitioned root, descendant) pair, so a multi-level
         -- partition tree collapses onto the relation a declaration would name.
@@ -468,18 +474,17 @@ export async function readSchemaCatalog(
        WHERE n.nspname NOT LIKE 'pg\\_%'
          AND n.nspname <> 'information_schema'
        ORDER BY n.nspname
-    `);
+    `,
+      row: CatalogRowSchema,
+    });
     return {
-      schemas: rows.map((row) => {
-        const r = CatalogRowSchema.parse(row);
-        return {
-          name: r.name,
-          tables: r.tables,
-          partitions: r.partitions ?? {},
-          bytes: Number(r.bytes),
-          fromExtension: r.from_extension,
-        };
-      }),
+      schemas: rows.map((r) => ({
+        name: r.name,
+        tables: r.tables,
+        partitions: r.partitions ?? {},
+        bytes: Number(r.bytes),
+        fromExtension: r.from_extension,
+      })),
     };
   } finally {
     await pool.end();

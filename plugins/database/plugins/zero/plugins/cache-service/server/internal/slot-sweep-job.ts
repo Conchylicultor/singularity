@@ -2,6 +2,7 @@ import { rm } from "node:fs/promises";
 import { z } from "zod";
 import { defineJob } from "@plugins/infra/plugins/jobs/server";
 import { getAdminPool } from "@plugins/database/plugins/admin/server";
+import { queryRows } from "@plugins/database/plugins/sql-rows/core";
 import { worktreeReplicaFile } from "./slot-lifecycle";
 
 // Reclaims Zero logical replication slots whose zero-cache is gone. A live
@@ -26,15 +27,16 @@ export const zeroSlotSweepJob = defineJob({
   async run() {
     // pg_replication_slots is a cluster-global view; `database` is the fork the
     // slot replicates and `pg_drop_replication_slot` works from any connection.
-    const inactive = await getAdminPool().query<{
-      slot_name: string;
-      database: string;
-    }>(
-      `SELECT slot_name, database FROM pg_replication_slots
-        WHERE slot_name LIKE 'zero%' AND active = false`,
-    );
+    // Both columns are `name`, cast so they decode as the `text` the schema
+    // declares.
+    const inactive = await queryRows(getAdminPool(), {
+      sql: `SELECT slot_name::text AS slot_name, database::text AS database
+              FROM pg_replication_slots
+             WHERE slot_name LIKE 'zero%' AND active = false`,
+      row: z.object({ slot_name: z.string(), database: z.string() }),
+    });
 
-    for (const { slot_name, database } of inactive.rows) {
+    for (const { slot_name, database } of inactive) {
       try {
         await getAdminPool().query("SELECT pg_drop_replication_slot($1)", [
           slot_name,

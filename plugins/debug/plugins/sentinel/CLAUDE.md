@@ -21,12 +21,15 @@ latch owner** — no `setDuress/refreshDuress/clearDuress` call exists on main.
 - `worker/entry.ts` — the worker: `setInterval(cadenceMs)` tick, the pure
   detector, latch set/refresh/clear, duress-episode lines, max-episode-hold.
   Lean closure: the `duress/plugins/latch` leaf barrel, log-channels, the
-  embedded-pg constants, pure detector/gatherers. No config_v2 (thresholds
-  arrive as frames — a worker has no plugin runtime).
+  embedded-pg constants, sql-rows' `core` leaf, pure detector/gatherers. No
+  config_v2 (thresholds arrive as frames — a worker has no plugin runtime).
 - `worker/pg.ts` — ONE dedicated raw `pg` client on the embedded cluster's
   direct Unix socket (no drizzle pool, no PgBouncer): sharing main's pool
-  would re-couple the sentinel to the contention it measures. On error: null
-  pg fields, one in-tick reconnect attempt, a log frame.
+  would re-couple the sentinel to the contention it measures. The read goes
+  through `queryOne` + `PgStatsRowSchema`, so a column whose Postgres type
+  stops matching what the sampler assumes fails loudly rather than silently
+  reading as `NaN`. On error: null pg fields, one in-tick reconnect attempt,
+  a log frame.
 - `worker/sample.ts` — the impure gatherers (gateway fleet fetch, `ps` scan,
   health.jsonl p99 rollup, health-host.jsonl compressor tail). Per-signal
   degradation: every sub-read fails into null fields + a log line, never the

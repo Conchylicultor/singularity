@@ -1,5 +1,7 @@
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { sql as drizzleSql } from "drizzle-orm";
+import { z } from "zod";
+import { executeRows } from "@plugins/database/plugins/sql-rows/core";
 
 // Bridges the impedance mismatch between where changes ORIGINATE and where the
 // read-set OBSERVES them. Triggers fire on base tables (you cannot put a row
@@ -19,16 +21,26 @@ import { sql as drizzleSql } from "drizzle-orm";
 // view produces an edge here, so the closure below handles views-on-views).
 let directDependents: Map<string, Set<string>> = new Map();
 
+// `information_schema.view_table_usage` types its name columns as the
+// `sql_identifier` domain, which Postgres resolves to its base type on the wire —
+// a scalar `name` (OID 19), which pg decodes to a string. Measured, not assumed.
+const ViewUsageRowSchema = z.object({
+  view_name: z.string(),
+  table_name: z.string(),
+});
+
 export async function buildViewDeps(db: NodePgDatabase): Promise<void> {
-  const res = await db.execute<{ view_name: string; table_name: string }>(
-    drizzleSql.raw(
+  const rows = await executeRows(db, {
+    query: drizzleSql.raw(
       `SELECT view_name, table_name
        FROM information_schema.view_table_usage
        WHERE view_schema = 'public'`,
     ),
-  );
+    row: ViewUsageRowSchema,
+    label: "buildViewDeps",
+  });
   const map = new Map<string, Set<string>>();
-  for (const { view_name, table_name } of res.rows) {
+  for (const { view_name, table_name } of rows) {
     let set = map.get(table_name);
     if (!set) {
       set = new Set();

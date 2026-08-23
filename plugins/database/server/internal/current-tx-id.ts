@@ -1,11 +1,12 @@
+import { executeOne } from "@plugins/database/plugins/sql-rows/core";
 import { sql } from "drizzle-orm";
+import { z } from "zod";
 import { db } from "./client";
 
 // db-or-tx executor, same shape as RankExecutor
 // (plugins/primitives/plugins/rank/server/internal/helpers.ts).
 export type DbExecutor =
-  | typeof db
-  | Parameters<Parameters<typeof db.transaction>[0]>[0];
+  typeof db | Parameters<Parameters<typeof db.transaction>[0]>[0];
 
 // The current transaction's xid8 as decimal text — the causal ack token mutation
 // endpoints return so the optimistic-mutation primitive can compare it against
@@ -15,12 +16,12 @@ export type DbExecutor =
 // free; `pg_current_xact_id()` would otherwise assign a fresh xid to whatever
 // pool connection it lands on, tokenizing nothing.
 export async function currentTxId(exec: DbExecutor): Promise<string> {
-  const res = await exec.execute<{ xid: string }>(
-    sql.raw(`SELECT pg_current_xact_id()::text AS xid`),
-  );
-  const xid = res.rows[0]?.xid;
-  if (xid === undefined) {
-    throw new Error("currentTxId: pg_current_xact_id returned no row");
-  }
+  // A bare function call always returns exactly one row; `executeOne` throws if
+  // it somehow does not, so there is no absent-xid arm to absorb.
+  const { xid } = await executeOne(exec, {
+    query: sql.raw(`SELECT pg_current_xact_id()::text AS xid`),
+    row: z.object({ xid: z.string() }),
+    label: "currentTxId",
+  });
   return xid;
 }

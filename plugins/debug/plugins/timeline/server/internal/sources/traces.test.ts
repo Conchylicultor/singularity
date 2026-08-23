@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { mapTraceRows, tracesSource } from "./traces";
+import { mapTraceRows, tracesSource, type TraceRow } from "./traces";
 import type { DbSourceCtx } from "./context";
 
 const T0 = Date.parse("2026-07-10T09:00:00.000Z");
@@ -11,8 +11,9 @@ const ctx = (over?: Partial<DbSourceCtx>): DbSourceCtx => ({
   ...over,
 });
 
-// One raw row as pg would return it (snake_case, extracted JSON scalars).
-const row = (over: Record<string, unknown> = {}) => ({
+// One row as `RawTraceRowSchema` yields it at the read boundary (snake_case,
+// extracted JSON scalars).
+const row = (over: Partial<TraceRow> = {}): TraceRow => ({
   id: "trace-1",
   worktree: "wt-a",
   trigger_kind: "slow-span",
@@ -69,9 +70,9 @@ describe("mapTraceRows", () => {
   });
 
   test("throws on an unparseable wallTime instead of emitting garbage", () => {
-    expect(() => mapTraceRows([row({ wall_time: "not-a-date" })], ctx())).toThrow(
-      /unparseable snapshot wallTime/,
-    );
+    expect(() =>
+      mapTraceRows([row({ wall_time: "not-a-date" })], ctx()),
+    ).toThrow(/unparseable snapshot wallTime/);
   });
 });
 
@@ -80,7 +81,9 @@ describe("tracesSource.build", () => {
     const fork = tracesSource.build(ctx());
     expect(fork.text).toContain("AND worktree = $3");
     expect(fork.values).toEqual([T0, T0 + 60 * 60 * 1000, "wt-a"]);
-    const main = tracesSource.build(ctx({ dbName: "singularity", isMainDb: true }));
+    const main = tracesSource.build(
+      ctx({ dbName: "singularity", isMainDb: true }),
+    );
     expect(main.text).not.toContain("worktree =");
     expect(main.values).toEqual([T0, T0 + 60 * 60 * 1000]);
   });

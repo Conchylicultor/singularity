@@ -1,16 +1,24 @@
 import { z } from "zod";
 import type { TimelineEvent } from "../../../core";
 import { buildSeverity } from "../severity";
-import type { DbSource, DbSourceCtx, SqlQuery } from "./context";
+import {
+  defineDbSource,
+  type DbSource,
+  type DbSourceCtx,
+  type SqlQuery,
+} from "./context";
 
+// `exit_code` is int4 and both timestamps are timestamptz, so node-postgres
+// hands back a number and Dates directly.
 const RawBuildRowSchema = z.object({
   id: z.string(),
   trigger: z.string(),
   commit_hash: z.string().nullable(),
-  started_at: z.coerce.date(),
-  finished_at: z.coerce.date().nullable(),
-  exit_code: z.coerce.number().nullable(),
+  started_at: z.date(),
+  finished_at: z.date().nullable(),
+  exit_code: z.number().nullable(),
 });
+export type BuildRow = z.infer<typeof RawBuildRowSchema>;
 
 function buildBuildsQuery(ctx: DbSourceCtx): SqlQuery {
   // build_runs is fork-inherited like every table, and unlike traces/reports
@@ -29,15 +37,18 @@ function buildBuildsQuery(ctx: DbSourceCtx): SqlQuery {
   };
 }
 
-export function mapBuildRows(rows: unknown[], ctx: DbSourceCtx): TimelineEvent[] {
-  return rows.map((raw) => {
-    const row = RawBuildRowSchema.parse(raw);
+export function mapBuildRows(
+  rows: BuildRow[],
+  ctx: DbSourceCtx,
+): TimelineEvent[] {
+  return rows.map((row) => {
     // An in-flight build (finished_at IS NULL — including a crashed build the
     // reconciler hasn't stamped yet) renders as an open-ended bar to the
     // window's right edge.
     const inFlight = row.finished_at === null;
     const startMs = row.started_at.getTime();
-    const endMs = row.finished_at === null ? ctx.toMs : row.finished_at.getTime();
+    const endMs =
+      row.finished_at === null ? ctx.toMs : row.finished_at.getTime();
     return {
       id: `build:${row.id}`,
       source: "build" as const,
@@ -56,8 +67,9 @@ export function mapBuildRows(rows: unknown[], ctx: DbSourceCtx): TimelineEvent[]
   });
 }
 
-export const buildsSource: DbSource = {
+export const buildsSource: DbSource = defineDbSource({
   source: "build",
   build: buildBuildsQuery,
+  row: RawBuildRowSchema,
   map: mapBuildRows,
-};
+});

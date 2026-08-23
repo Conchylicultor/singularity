@@ -3,7 +3,12 @@ import { SlowOpSampleSchema } from "@plugins/debug/plugins/slow-ops/core";
 import type { TimelineEvent } from "../../../core";
 import { overlapsWindow } from "../window";
 import { slowOpSeverity } from "../severity";
-import type { DbSource, DbSourceCtx, SqlQuery } from "./context";
+import {
+  defineDbSource,
+  type DbSource,
+  type DbSourceCtx,
+  type SqlQuery,
+} from "./context";
 
 // Each slow_ops row is a deduped per-operation AGGREGATE; the timeline events
 // come from its recentSamples ring (each sample = one actual slow occurrence,
@@ -15,9 +20,13 @@ const RawSlowOpRowSchema = z.object({
   worktree: z.string(),
   operation_kind: z.string(),
   operation: z.string(),
-  threshold_ms: z.coerce.number(),
+  // float8 — a real number. `recent_samples` is jsonb, so its `atTime`s are
+  // ISO strings inside the blob: SlowOpSampleSchema's coercion is what turns
+  // them into Dates, and it genuinely fires.
+  threshold_ms: z.number(),
   recent_samples: z.array(SlowOpSampleSchema),
 });
+export type SlowOpRow = z.infer<typeof RawSlowOpRowSchema>;
 
 function buildSlowOpsQuery(ctx: DbSourceCtx): SqlQuery {
   // A sample's atTime never exceeds its row's last_seen_at, so rows with
@@ -35,10 +44,12 @@ function buildSlowOpsQuery(ctx: DbSourceCtx): SqlQuery {
   };
 }
 
-export function mapSlowOpRows(rows: unknown[], ctx: DbSourceCtx): TimelineEvent[] {
+export function mapSlowOpRows(
+  rows: SlowOpRow[],
+  ctx: DbSourceCtx,
+): TimelineEvent[] {
   const events: TimelineEvent[] = [];
-  for (const raw of rows) {
-    const row = RawSlowOpRowSchema.parse(raw);
+  for (const row of rows) {
     for (const sample of row.recent_samples) {
       const endMs = sample.atTime.getTime();
       const startMs = endMs - sample.durationMs;
@@ -65,8 +76,9 @@ export function mapSlowOpRows(rows: unknown[], ctx: DbSourceCtx): TimelineEvent[
   return events;
 }
 
-export const slowOpsSource: DbSource = {
+export const slowOpsSource: DbSource = defineDbSource({
   source: "slow-op",
   build: buildSlowOpsQuery,
+  row: RawSlowOpRowSchema,
   map: mapSlowOpRows,
-};
+});

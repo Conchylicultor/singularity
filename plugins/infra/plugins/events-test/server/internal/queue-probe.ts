@@ -1,5 +1,7 @@
 import { sql as drizzleSql } from "drizzle-orm";
+import { z } from "zod";
 import { db } from "@plugins/database/server";
+import { executeRows } from "@plugins/database/plugins/sql-rows/core";
 import { ALL_JOB_TASKS } from "@plugins/infra/plugins/jobs/server";
 
 // Raw reads of graphile's own tables, shared by the two queue-level endpoints.
@@ -42,20 +44,28 @@ export interface SerialJobRow {
   queueLocked: boolean;
 }
 
-interface SerialJobRowSql {
-  job_id: string;
-  label: string;
-  locked: boolean;
-  queue_id: string | null;
-  queue_name: string | null;
-  queue_locked: boolean;
-}
+const SerialJobRowSqlSchema = z.object({
+  job_id: z.string(),
+  // `->>` can yield NULL, but every row this harness enqueues carries a label —
+  // so `z.string()` is the assertion, and a missing one is now a loud failure
+  // rather than a `null` flowing into a `string`-typed field.
+  label: z.string(),
+  locked: z.boolean(),
+  // Both nullable through the LEFT JOIN: a row outside a `serial` lane has no
+  // `q` row (and `NULL IS NOT NULL` is still `false`, so `queue_locked` is not).
+  queue_id: z.string().nullable(),
+  queue_name: z.string().nullable(),
+  queue_locked: z.boolean(),
+});
 
 /** Every row this harness invocation enqueued, oldest first. Scoped by the
  * `run` field the test bakes into each payload, so two concurrent invocations
  * (or a leftover row from an earlier one) cannot be mistaken for each other. */
 export async function readSerialRows(run: string): Promise<SerialJobRow[]> {
-  const result = await db.execute(drizzleSql`
+  const rows = await executeRows(db, {
+    label: "queue-probe: serial rows",
+    row: SerialJobRowSqlSchema,
+    query: drizzleSql`
     SELECT j.id::text                    AS job_id,
            j.payload->'input'->>'label'  AS label,
            (j.locked_at IS NOT NULL)     AS locked,
@@ -70,8 +80,9 @@ export async function readSerialRows(run: string): Promise<SerialJobRow[]> {
            )
        AND j.payload->'input'->>'run' = ${run}
      ORDER BY j.id
-  `);
-  return (result.rows as unknown as SerialJobRowSql[]).map((r) => ({
+  `,
+  });
+  return rows.map((r) => ({
     jobId: r.job_id,
     label: r.label,
     locked: r.locked,
@@ -93,20 +104,24 @@ export interface QueueLockState {
 export async function readQueueLock(
   queueId: string,
 ): Promise<QueueLockState | null> {
-  const result = await db.execute(drizzleSql`
+  // Zero or one row — the queue may simply not exist — so `executeRows` and an
+  // explicit "not found", never `executeOne`.
+  const rows = await executeRows(db, {
+    label: "queue-probe: queue lock",
+    row: z.object({
+      queue_name: z.string(),
+      locked: z.boolean(),
+      locked_by: z.string().nullable(),
+    }),
+    query: drizzleSql`
     SELECT q.queue_name                AS queue_name,
            (q.locked_at IS NOT NULL)   AS locked,
            q.locked_by                 AS locked_by
       FROM graphile_worker._private_job_queues q
      WHERE q.id = ${queueId}::int
-  `);
-  const row = (
-    result.rows as unknown as {
-      queue_name: string;
-      locked: boolean;
-      locked_by: string | null;
-    }[]
-  )[0];
+  `,
+  });
+  const row = rows[0];
   if (!row) return null;
   return {
     queueName: row.queue_name,

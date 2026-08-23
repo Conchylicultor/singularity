@@ -5,19 +5,26 @@ import { Pool } from "pg";
 // throws at import time if SINGULARITY_WORKTREE is unset, which is the norm in a
 // tooling/check subprocess. The core barrel exposes the import-safe config→
 // connstring helpers by design.
-import { buildConnectionString, readDatabaseConfig } from "@plugins/database/core";
+import {
+  buildConnectionString,
+  readDatabaseConfig,
+} from "@plugins/database/core";
 // The imperative-public-table allowlist lives in the derived-views core leaf
 // (the shared sink) — see that module for why it is NOT in @plugins/database/core.
 import {
   IMPERATIVE_PUBLIC_TABLE_NAMES,
   MIGRATIONS_TABLE_NAME,
 } from "@plugins/database/plugins/derived-views/core";
+import { queryRows } from "@plugins/database/plugins/sql-rows/core";
 import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
+import { z } from "zod";
 
 // Inlined minimal Check shape (mirrors the sibling migration-applies-clean check)
 // to avoid a cross-plugin import of the framework Check type from a check file.
 type CheckResult = { ok: true } | { ok: false; message: string; hint?: string };
-type CheckContext = { log?: (line: string, stream: "stdout" | "stderr") => void };
+type CheckContext = {
+  log?: (line: string, stream: "stdout" | "stderr") => void;
+};
 type Check = {
   id: string;
   description: string;
@@ -41,7 +48,8 @@ const MIGRATION_RE = /^(\d{8})_(\d{6})_([0-9a-f]{8})__(.+)\.sql$/;
 // `tables` is missing/empty — an empty declared set would flag every live table
 // as orphaned, which is a snapshot-read error, not a clean pass.
 export function declaredTablesFromSnapshot(parsed: unknown): Set<string> {
-  const tables = (parsed as { tables?: Record<string, { name?: string }> }).tables;
+  const tables = (parsed as { tables?: Record<string, { name?: string }> })
+    .tables;
   if (!tables || typeof tables !== "object") {
     throw new Error("snapshot has no `tables` object");
   }
@@ -49,7 +57,9 @@ export function declaredTablesFromSnapshot(parsed: unknown): Set<string> {
     .map((t) => t.name)
     .filter((n): n is string => typeof n === "string" && n.length > 0);
   if (names.length === 0) {
-    throw new Error("snapshot `tables` is empty — refusing to treat every live table as orphaned");
+    throw new Error(
+      "snapshot `tables` is empty — refusing to treat every live table as orphaned",
+    );
   }
   return new Set(names);
 }
@@ -159,10 +169,11 @@ const check: Check = {
       // a caught-up DB and reports any real orphan then.
       let appliedHashes: Set<string>;
       try {
-        const ledger = await pool.query<{ hash: string }>(
-          `SELECT hash FROM ${MIGRATIONS_TABLE_NAME}`,
-        );
-        appliedHashes = new Set(ledger.rows.map((r) => r.hash));
+        const ledger = await queryRows(pool, {
+          sql: `SELECT hash FROM ${MIGRATIONS_TABLE_NAME}`,
+          row: z.object({ hash: z.string() }),
+        });
+        appliedHashes = new Set(ledger.map((r) => r.hash));
       } catch (e) {
         // No ledger table (42P01) = a DB that has never run the migration
         // runner: it is behind by the WHOLE chain, so there is nothing to
@@ -170,7 +181,10 @@ const check: Check = {
         if ((e as { code?: string }).code === "42P01") return { ok: true };
         throw e;
       }
-      const pending = pendingMigrationFiles(readdirSync(DATA_DIR), appliedHashes);
+      const pending = pendingMigrationFiles(
+        readdirSync(DATA_DIR),
+        appliedHashes,
+      );
       if (pending.length > 0) {
         ctx.log?.(
           `orphaned-db-tables: not asserting — worktree DB "${worktreeName}" is behind ` +
@@ -182,11 +196,18 @@ const check: Check = {
         return { ok: true };
       }
 
-      const res = await pool.query<{ relname: string }>(
-        `SELECT relname FROM pg_stat_user_tables WHERE schemaname = 'public' ORDER BY relname`,
+      const liveRows = await queryRows(pool, {
+        // `relname` is a `name`, cast so the column decodes as the `text` the
+        // schema declares.
+        sql: `SELECT relname::text AS relname FROM pg_stat_user_tables WHERE schemaname = 'public' ORDER BY relname`,
+        row: z.object({ relname: z.string() }),
+      });
+      const live = liveRows.map((r) => r.relname);
+      const orphans = computeOrphans(
+        live,
+        declared,
+        IMPERATIVE_PUBLIC_TABLE_NAMES,
       );
-      const live = res.rows.map((r) => r.relname);
-      const orphans = computeOrphans(live, declared, IMPERATIVE_PUBLIC_TABLE_NAMES);
       if (orphans.length === 0) return { ok: true };
       return {
         ok: false,

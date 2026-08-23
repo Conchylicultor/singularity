@@ -37,10 +37,11 @@ import type { MainToWorkerFrame, WorkerToMainFrame } from "./protocol";
 // mediated would be starved by the congestion it measures.
 //
 // Import closure is deliberately lean: the latch sub-plugin barrel (node:fs +
-// paths only), log-channels, the embedded-pg constants, and the pure detector
-// / gatherers. No config_v2 (thresholds arrive as frames — a worker has no
-// plugin runtime), no drizzle pool, no trace engine (main mirrors trips into
-// captureTrace off the critical path).
+// paths only), log-channels, the embedded-pg constants, sql-rows' `core` leaf
+// (zod + structural types, no pg/drizzle import of its own), and the pure
+// detector / gatherers. No config_v2 (thresholds arrive as frames — a worker
+// has no plugin runtime), no drizzle pool, no trace engine (main mirrors trips
+// into captureTrace off the critical path).
 
 declare var self: Worker;
 

@@ -1,14 +1,14 @@
 import { z } from "zod";
 import { defineEndpoint } from "@plugins/infra/plugins/endpoints/core";
 
-const OutgoingFkSchema = z.object({
+export const OutgoingFkSchema = z.object({
   constraint_name: z.string(),
   column_name: z.string(),
   foreign_table: z.string(),
   foreign_column: z.string(),
 });
 
-const IncomingFkSchema = z.object({
+export const IncomingFkSchema = z.object({
   constraint_name: z.string(),
   source_table: z.string(),
   source_column: z.string(),

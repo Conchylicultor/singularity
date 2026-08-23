@@ -6,6 +6,12 @@
 // script would pull the endpoints codec (BodyInit/FormData — DOM types) into the
 // no-DOM tools program; this seam avoids that by taking a plain query runner.
 
+import {
+  queryRows,
+  type SqlResult,
+} from "@plugins/database/plugins/sql-rows/core";
+import { z } from "zod";
+
 // Zero names its logical replication slots after its app id and its publications
 // `_<app-id>_metadata_0` / `_<app-id>_public_0`. Every worktree's app id nests
 // under the literal `zero` prefix (`zero_<worktree>` — see app-id.ts), and the
@@ -15,11 +21,15 @@ const ZERO_SLOT_LIKE = "zero%";
 const ZERO_PUBLICATION_LIKE = "\\_zero%";
 
 // A minimal query runner satisfied by both `pg.Client` and the admin pool's
-// short-lived client: `(text, params) => Promise<{ rows }>`.
-export type RunSql = (
-  text: string,
-  params?: unknown[],
-) => Promise<{ rows: Record<string, unknown>[] }>;
+// short-lived client: `(text, params) => Promise<SqlResult>`. The result shape
+// is sql-rows' structural one so the reads below can go through the parsed
+// doors — `pg`'s `QueryResult` satisfies it with no cast at either call site.
+export type RunSql = (text: string, params?: unknown[]) => Promise<SqlResult>;
+
+// `slot_name` and `pubname` are `name` columns; both queries cast them so the
+// value that arrives is the `text` these schemas declare.
+const SlotRowSchema = z.object({ slot_name: z.string() });
+const PublicationRowSchema = z.object({ pubname: z.string() });
 
 /**
  * Drop every Zero logical replication slot + publication on the fork DB `dbName`
@@ -39,13 +49,17 @@ export async function dropZeroSlotsAndPublications(
   dbName: string,
   run: RunSql,
 ): Promise<void> {
-  const slots = await run(
-    `SELECT slot_name FROM pg_replication_slots
+  // `run` is a function and the parsed-row doors take a client-shaped object;
+  // this is that object.
+  const queryable = { query: run };
+
+  const slots = await queryRows(queryable, {
+    sql: `SELECT slot_name::text AS slot_name FROM pg_replication_slots
       WHERE database = $1 AND slot_name LIKE $2`,
-    [dbName, ZERO_SLOT_LIKE],
-  );
-  for (const row of slots.rows) {
-    const slotName = row.slot_name as string;
+    params: [dbName, ZERO_SLOT_LIKE],
+    row: SlotRowSchema,
+  });
+  for (const { slot_name: slotName } of slots) {
     try {
       await run("SELECT pg_drop_replication_slot($1)", [slotName]);
     } catch (err) {
@@ -59,12 +73,12 @@ export async function dropZeroSlotsAndPublications(
     }
   }
 
-  const publications = await run(
-    `SELECT pubname FROM pg_publication WHERE pubname LIKE $1`,
-    [ZERO_PUBLICATION_LIKE],
-  );
-  for (const row of publications.rows) {
-    const pubname = row.pubname as string;
+  const publications = await queryRows(queryable, {
+    sql: `SELECT pubname::text AS pubname FROM pg_publication WHERE pubname LIKE $1`,
+    params: [ZERO_PUBLICATION_LIKE],
+    row: PublicationRowSchema,
+  });
+  for (const { pubname } of publications) {
     // Identifier can't be parameterized; pubname comes from pg_publication so it
     // is a real existing identifier — quote it defensively all the same.
     await run(`DROP PUBLICATION IF EXISTS "${pubname.replace(/"/g, '""')}"`);

@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { mapSlowOpRows, slowOpsSource } from "./slow-ops";
+import { mapSlowOpRows, slowOpsSource, type SlowOpRow } from "./slow-ops";
 import type { DbSourceCtx } from "./context";
 
 const T0 = Date.parse("2026-07-10T09:00:00.000Z");
@@ -11,7 +11,7 @@ const ctx: DbSourceCtx = {
 };
 
 const snapshot = {
-  atTime: new Date(T0 + 5 * 60 * 1000).toISOString(),
+  atTime: new Date(T0 + 5 * 60 * 1000),
   loadAvg1: 12,
   loadAvg5: 8,
   loadAvg15: 6,
@@ -22,18 +22,23 @@ const snapshot = {
 };
 
 const sample = (atMs: number, durationMs: number, traceId?: string) => ({
-  atTime: new Date(atMs).toISOString(),
+  atTime: new Date(atMs),
   durationMs,
   snapshot,
   ...(traceId ? { traceId } : {}),
 });
 
-const row = (samples: unknown[], over: Record<string, unknown> = {}) => ({
+// A row as `RawSlowOpRowSchema` yields it at the read boundary — the ring's
+// samples are already parsed, so their `atTime`s are Dates.
+const row = (
+  samples: SlowOpRow["recent_samples"],
+  over: Partial<SlowOpRow> = {},
+): SlowOpRow => ({
   id: "op-1",
   worktree: "wt-a",
   operation_kind: "http",
   operation: "GET /agents",
-  threshold_ms: "3000", // pg numerics can arrive as strings
+  threshold_ms: 3000,
   recent_samples: samples,
   ...over,
 });
@@ -63,8 +68,14 @@ describe("mapSlowOpRows", () => {
     const after = sample(T0 + 2 * 60 * 60 * 1000, 2000);
     // Straddles the left edge: ends 1s after fromMs, started 5s before.
     const straddling = sample(T0 + 1000, 6000);
-    const events = mapSlowOpRows([row([before, inside, after, straddling])], ctx);
-    expect(events.map((e) => e.endMs)).toEqual([T0 + 10 * 60 * 1000, T0 + 1000]);
+    const events = mapSlowOpRows(
+      [row([before, inside, after, straddling])],
+      ctx,
+    );
+    expect(events.map((e) => e.endMs)).toEqual([
+      T0 + 10 * 60 * 1000,
+      T0 + 1000,
+    ]);
   });
 
   test("event ids are unique per sample within a row", () => {
@@ -80,7 +91,11 @@ describe("slowOpsSource.build", () => {
     const fork = slowOpsSource.build(ctx);
     expect(fork.text).toContain("AND worktree = $2");
     expect(fork.values).toEqual([T0, "wt-a"]);
-    const main = slowOpsSource.build({ ...ctx, dbName: "singularity", isMainDb: true });
+    const main = slowOpsSource.build({
+      ...ctx,
+      dbName: "singularity",
+      isMainDb: true,
+    });
     expect(main.text).not.toContain("worktree =");
     expect(main.values).toEqual([T0]);
   });

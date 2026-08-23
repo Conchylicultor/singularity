@@ -10,7 +10,9 @@ import {
   type WorkerUtils,
 } from "graphile-worker";
 import { Pool } from "pg";
+import { z } from "zod";
 import { db } from "@plugins/database/server";
+import { executeRows } from "@plugins/database/plugins/sql-rows/core";
 import { Log } from "@plugins/primitives/plugins/log-channels/server";
 import { connectionString } from "@plugins/database/plugins/admin/server";
 import { isMain } from "@plugins/infra/plugins/paths/core";
@@ -408,9 +410,13 @@ async function repointHoldTasks(): Promise<void> {
       const priority = priorityFor(hold);
       // One statement per class. `t` supplies the task's integer id by join
       // rather than by a re-typed subquery, and the last predicate keeps the
-      // steady-state boot a no-op write. `RETURNING` + `rows.length` makes the
-      // moved count robust regardless of the driver's `rowCount` typing.
-      const result = await db.execute<{ id: string }>(sql`
+      // steady-state boot a no-op write. `RETURNING` + the returned row count
+      // makes the moved count robust regardless of the driver's `rowCount` typing.
+      const repointed = await executeRows(db, {
+        label: `repointHoldTasks: ${hold}`,
+        // `j.id` is `bigint`, which pg hands back as a string; `::text` says so.
+        row: z.object({ id: z.string() }),
+        query: sql`
         UPDATE graphile_worker._private_jobs j
            SET task_id = t.id, priority = ${priority}
           FROM graphile_worker._private_tasks t
@@ -419,9 +425,10 @@ async function repointHoldTasks(): Promise<void> {
            AND j.payload->>'jobName' IN (${sql.join(names, sql`, `)})
            AND (j.task_id <> t.id OR j.priority <> ${priority})
         RETURNING j.id::text AS id
-      `);
-      if (result.rows.length > 0) {
-        moved.push(`${result.rows.length} → ${hold}`);
+      `,
+      });
+      if (repointed.length > 0) {
+        moved.push(`${repointed.length} → ${hold}`);
       }
     }
 

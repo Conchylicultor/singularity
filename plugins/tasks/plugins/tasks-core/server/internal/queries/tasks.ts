@@ -1,10 +1,12 @@
 import { and, asc, eq, inArray, sql } from "drizzle-orm";
+import { z } from "zod";
 import {
   nextRankUnder,
   type RankExecutor,
 } from "@plugins/primitives/plugins/rank/server";
 import type { Rank } from "@plugins/primitives/plugins/rank/core";
 import { db } from "@plugins/database/server";
+import { executeRows } from "@plugins/database/plugins/sql-rows/core";
 import { _taskDependencies, _tasks } from "../tables";
 import { directDepIsBlocking, taskBlocking, tasks } from "../views";
 import type { Task, TaskStatus } from "../schema";
@@ -149,8 +151,9 @@ export async function listDependentClosure(
     seedIds.map((id) => sql`${id}`),
     sql`, `,
   );
-  const result = await exec.execute<{ id: string }>(
-    sql`WITH RECURSIVE closure(id) AS (
+  const rows = await executeRows(exec, {
+    label: "task dependent closure",
+    query: sql`WITH RECURSIVE closure(id) AS (
           SELECT unnest(ARRAY[${seeds}]::text[])
           UNION
           SELECT td.task_id
@@ -158,8 +161,9 @@ export async function listDependentClosure(
             JOIN closure c ON td.depends_on_task_id = c.id
         )
         SELECT id FROM closure`,
-  );
-  return result.rows.map((r) => r.id);
+    row: z.object({ id: z.string() }),
+  });
+  return rows.map((r) => r.id);
 }
 
 export interface TaskStatusRow {

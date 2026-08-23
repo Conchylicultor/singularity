@@ -7,7 +7,11 @@ import {
   runWithoutProfiling,
 } from "@plugins/infra/plugins/runtime-profiler/core";
 import { MAIN_WORKTREE_NAME } from "@plugins/infra/plugins/paths/server";
-import { TimelineQuerySchema, HOST_LANE, type TimelineFrame } from "../../shared/frames";
+import {
+  TimelineQuerySchema,
+  HOST_LANE,
+  type TimelineFrame,
+} from "../../shared/frames";
 import { DB_SOURCES } from "./sources/db-sources";
 import type { DbSourceCtx } from "./sources/context";
 import { loadBootEvents } from "./sources/boot";
@@ -35,15 +39,22 @@ type Emit = (frame: TimelineFrame) => void;
 // interactive lane (anti-amplification discipline).
 export function handleTimeline(req: Request): Response {
   const url = new URL(req.url);
-  const parsed = TimelineQuerySchema.safeParse(Object.fromEntries(url.searchParams));
+  const parsed = TimelineQuerySchema.safeParse(
+    Object.fromEntries(url.searchParams),
+  );
   if (!parsed.success || parsed.data.fromMs >= parsed.data.toMs) {
-    return new Response("fromMs and toMs are required (wall-clock epoch ms, fromMs < toMs)", {
-      status: 400,
-    });
+    return new Response(
+      "fromMs and toMs are required (wall-clock epoch ms, fromMs < toMs)",
+      {
+        status: 400,
+      },
+    );
   }
   const { fromMs, toMs } = parsed.data;
   return ndjsonResponse((emit) =>
-    runInBackgroundLane(() => runWithoutProfiling(() => produceTimeline(emit, fromMs, toMs))),
+    runInBackgroundLane(() =>
+      runWithoutProfiling(() => produceTimeline(emit, fromMs, toMs)),
+    ),
   );
 }
 
@@ -51,7 +62,11 @@ export function handleTimeline(req: Request): Response {
 // with an array-push emit (see internal/collect.ts) — one source of truth for
 // the fan-out, whether the frames stream to the web tab or collect into a
 // rendered text report.
-export async function produceTimeline(emit: Emit, fromMs: number, toMs: number): Promise<void> {
+export async function produceTimeline(
+  emit: Emit,
+  fromMs: number,
+  toMs: number,
+): Promise<void> {
   const dbNames = await listLiveForkDatabases(Date.now());
   const logWorktrees = listWorktreeLogDirs();
   // Planned chunk count: every (DB × DB-source) cell, one boot chunk per
@@ -61,7 +76,9 @@ export async function produceTimeline(emit: Emit, fromMs: number, toMs: number):
 
   const semaphore = createSemaphore(FANOUT_CONCURRENCY);
   const dbWork = Promise.all(
-    dbNames.map((dbName) => semaphore.run(() => emitDbChunks(emit, dbName, fromMs, toMs))),
+    dbNames.map((dbName) =>
+      semaphore.run(() => emitDbChunks(emit, dbName, fromMs, toMs)),
+    ),
   );
 
   try {
@@ -73,7 +90,9 @@ export async function produceTimeline(emit: Emit, fromMs: number, toMs: number):
       } catch (err) {
         // Loud-but-resilient, like the per-DB cells: one unreadable boot.jsonl
         // must not blank the whole timeline.
-        emit({ chunk: { source: "boot", worktree, ok: false, error: String(err) } });
+        emit({
+          chunk: { source: "boot", worktree, ok: false, error: String(err) },
+        });
       }
       const samples = readHealthLane(worktree, fromMs, toMs);
       if (samples.length) emit({ health: { worktree, samples } });
@@ -82,12 +101,22 @@ export async function produceTimeline(emit: Emit, fromMs: number, toMs: number):
     // main's log dir — the sentinel worker is the latch's sole writer).
     try {
       const events = loadDuressEpisodes(fromMs, toMs);
-      emit({ chunk: { source: "duress", worktree: HOST_LANE, ok: true, events } });
+      emit({
+        chunk: { source: "duress", worktree: HOST_LANE, ok: true, events },
+      });
     } catch (err) {
-      emit({ chunk: { source: "duress", worktree: HOST_LANE, ok: false, error: String(err) } });
+      emit({
+        chunk: {
+          source: "duress",
+          worktree: HOST_LANE,
+          ok: false,
+          error: String(err),
+        },
+      });
     }
     const hostSamples = readHostLane(fromMs, toMs);
-    if (hostSamples.length) emit({ health: { worktree: HOST_LANE, samples: hostSamples } });
+    if (hostSamples.length)
+      emit({ health: { worktree: HOST_LANE, samples: hostSamples } });
   } finally {
     // Always drain the DB fan-out, even if a disk scan threw — otherwise its
     // late chunks would race the closed stream as unhandled rejections.
@@ -116,7 +145,12 @@ async function emitDbChunks(
   fromMs: number,
   toMs: number,
 ): Promise<void> {
-  const ctx: DbSourceCtx = { dbName, isMainDb: dbName === MAIN_WORKTREE_NAME, fromMs, toMs };
+  const ctx: DbSourceCtx = {
+    dbName,
+    isMainDb: dbName === MAIN_WORKTREE_NAME,
+    fromMs,
+    toMs,
+  };
   const pool = openShortLivedClient(dbName);
   try {
     let client: Awaited<ReturnType<typeof openSession>>;
@@ -126,21 +160,35 @@ async function emitDbChunks(
       // The whole DB is unreachable (dropped fork, saturated cluster): one
       // error chunk per source keeps the client's progress accounting exact.
       for (const src of DB_SOURCES) {
-        emit({ chunk: { source: src.source, worktree: dbName, ok: false, error: String(err) } });
+        emit({
+          chunk: {
+            source: src.source,
+            worktree: dbName,
+            ok: false,
+            error: String(err),
+          },
+        });
       }
       return;
     }
     try {
       for (const src of DB_SOURCES) {
         try {
-          const q = src.build(ctx);
-          const res = await client.query(q.text, q.values);
-          const events = src.map(res.rows, ctx);
-          emit({ chunk: { source: src.source, worktree: dbName, ok: true, events } });
+          const events = await src.load(client, ctx);
+          emit({
+            chunk: { source: src.source, worktree: dbName, ok: true, events },
+          });
         } catch (err) {
           // Per-cell isolation (statement timeout, old-schema fork, malformed
           // row): surface the error in that cell, keep the rest of the DB.
-          emit({ chunk: { source: src.source, worktree: dbName, ok: false, error: String(err) } });
+          emit({
+            chunk: {
+              source: src.source,
+              worktree: dbName,
+              ok: false,
+              error: String(err),
+            },
+          });
         }
       }
     } finally {

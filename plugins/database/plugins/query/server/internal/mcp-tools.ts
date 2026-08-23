@@ -2,7 +2,14 @@ import { z } from "zod";
 import { basename } from "path";
 import { Mcp } from "@plugins/infra/plugins/mcp/server";
 import { getConversation } from "@plugins/tasks/plugins/tasks-core/server";
-import { openShortLivedClient, databaseExists } from "@plugins/database/plugins/admin/server";
+import {
+  openShortLivedClient,
+  databaseExists,
+} from "@plugins/database/plugins/admin/server";
+import {
+  queryResult,
+  type ParsedResult,
+} from "@plugins/database/plugins/sql-rows/core";
 
 const MAX_ROWS = 200;
 
@@ -46,14 +53,22 @@ Pass \`database\` to target a different worktree (e.g. "att-1778089188-7uvf" or 
       try {
         await client.query("BEGIN TRANSACTION READ ONLY");
         await client.query("SET LOCAL statement_timeout = '5000'");
-        let result;
+        // The SQL is written by the caller, so there is no fixed shape to
+        // declare: the honest schema asserts that each row is an object and
+        // nothing more. `queryResult` (rather than `queryRows`) because the
+        // tool reports `fields` — the column names nobody knew ahead of time —
+        // and `rowCount`.
+        let result: ParsedResult<Record<string, unknown>>;
         try {
-          result = await client.query(sql);
+          result = await queryResult(client, {
+            sql,
+            row: z.record(z.string(), z.unknown()),
+          });
         } finally {
           await client.query("ROLLBACK");
         }
         const rows = result.rows.slice(0, MAX_ROWS);
-        const columns = result.fields.map((f: { name: string }) => f.name);
+        const columns = result.fields.map((f) => f.name);
         return {
           content: [
             {

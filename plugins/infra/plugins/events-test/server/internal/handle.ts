@@ -1,4 +1,5 @@
 import { asc, sql } from "drizzle-orm";
+import { z } from "zod";
 import {
   deleteTrigger,
   deleteTriggersFor,
@@ -6,6 +7,7 @@ import {
 } from "@plugins/infra/plugins/events/server";
 import { retryUntil, fixed } from "@plugins/packages/plugins/retry/core";
 import { db } from "@plugins/database/server";
+import { executeOne } from "@plugins/database/plugins/sql-rows/core";
 import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
 import {
   subscribeEventsTest,
@@ -72,10 +74,13 @@ export async function handleWaitIdle(req: Request): Promise<Response> {
   const timeoutMs = Number(url.searchParams.get("timeoutMs") ?? 2000);
   return retryUntil(
     async () => {
-      const result = await db.execute<{ n: number }>(
-        sql`SELECT count(*)::int AS n FROM graphile_worker.jobs WHERE task_identifier IN (${jobTaskList}) AND attempts < max_attempts`,
-      );
-      const n = result.rows[0]?.n ?? 0;
+      // A bare aggregate: exactly one row, always — so `executeOne` rather than
+      // a `[0]` index with a fallback that would read "no row" as "idle".
+      const { n } = await executeOne(db, {
+        label: "events-test: wait-idle",
+        row: z.object({ n: z.number() }),
+        query: sql`SELECT count(*)::int AS n FROM graphile_worker.jobs WHERE task_identifier IN (${jobTaskList}) AND attempts < max_attempts`,
+      });
       return n === 0 ? Response.json({ idle: true }) : null;
     },
     {

@@ -6,11 +6,16 @@ import { Pool } from "pg";
 // throws at import time if SINGULARITY_WORKTREE is unset, which is the norm in a
 // tooling/check subprocess. The core barrel exposes exactly the config→connstring
 // helpers for non-backend consumers and is import-safe by design.
-import { buildConnectionString, readDatabaseConfig } from "@plugins/database/core";
+import {
+  buildConnectionString,
+  readDatabaseConfig,
+} from "@plugins/database/core";
 import { MIGRATIONS_TABLE_NAME } from "@plugins/database/plugins/derived-views/core";
 import { classifyMigrationSql } from "@plugins/database/plugins/migrations/core";
+import { queryRows } from "@plugins/database/plugins/sql-rows/core";
 import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
 import { ensureMainWorktreeRoot } from "@plugins/infra/plugins/worktree/server";
+import { z } from "zod";
 
 // Inlined minimal Check shape (mirrors the sibling checks in this folder, e.g.
 // migration-applies-clean) to avoid a cross-plugin import of the framework Check
@@ -94,7 +99,9 @@ const check: Check = {
     const candidates = missingOnBranch
       .map((file) => ({
         file,
-        cls: classifyMigrationSql(readFileSync(join(mainDataDir, file), "utf8")),
+        cls: classifyMigrationSql(
+          readFileSync(join(mainDataDir, file), "utf8"),
+        ),
       }))
       .filter((c) => c.cls.destructive);
     if (candidates.length === 0) return { ok: true };
@@ -124,10 +131,11 @@ const check: Check = {
       // no drift. Any other error propagates loudly.
       let appliedHashes: Set<string>;
       try {
-        const res = await pool.query<{ hash: string }>(
-          `SELECT hash FROM ${MIGRATIONS_TABLE_NAME}`,
-        );
-        appliedHashes = new Set(res.rows.map((r) => r.hash));
+        const rows = await queryRows(pool, {
+          sql: `SELECT hash FROM ${MIGRATIONS_TABLE_NAME}`,
+          row: z.object({ hash: z.string() }),
+        });
+        appliedHashes = new Set(rows.map((r) => r.hash));
       } catch (e) {
         const code = (e as { code?: string }).code;
         if (code === "3D000" || code === "42P01") return { ok: true };

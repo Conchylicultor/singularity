@@ -11324,6 +11324,25 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `infra/mcp.Mcp`
           - `tasks/tasks-core.getConversation`
         - Register: `mcpTool('query_db')`
+    - **`sql-rows`** — Parsed raw-SQL row reads: queryRows / executeRows parse every row against a ZodParser and throw a SqlRowError naming the column, the value and its Postgres type OID — closing the pool.query<T>() assertion hole.
+      - Core:
+        - Exports (types):
+          - `ParsedResult`
+          - `SqlExecutable`
+          - `SqlField`
+          - `SqlQueryable`
+          - `SqlResult`
+          - `SqlRowFailure`
+        - Exports (values):
+          - `executeOne`
+          - `executeResult`
+          - `executeRows`
+          - `formatSqlRowError`
+          - `parseRows`
+          - `queryOne`
+          - `queryResult`
+          - `queryRows`
+          - `SqlRowError`
     - **`zero`** — Umbrella for the Rocicorp Zero sync-engine infrastructure: shared constants (core), the zero-cache supervised service (cache-service), and the generic client provider + adapter (client). Domain-agnostic — no concrete schema.
       - Core:
         - Exports (values):

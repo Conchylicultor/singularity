@@ -1,5 +1,7 @@
 import { sql } from "drizzle-orm";
+import { z } from "zod";
 import { db } from "@plugins/database/server";
+import { executeRows } from "@plugins/database/plugins/sql-rows/core";
 import type { BlockReadExecutor } from "./page-id";
 
 // Root ids plus every descendant via parent_id — the exact set ON DELETE CASCADE
@@ -21,15 +23,19 @@ export async function collectBlockSubtrees(
     rootIds.map((id) => sql`${id}`),
     sql`, `,
   );
-  const result = await executor.execute<{ id: string }>(sql`
+  const rows = await executeRows(executor, {
+    label: "page_blocks subtree walk",
+    query: sql`
     WITH RECURSIVE subtree AS (
       SELECT id FROM page_blocks WHERE id IN (${roots})
       UNION
       SELECT b.id FROM page_blocks b JOIN subtree s ON b.parent_id = s.id
     )
     SELECT id FROM subtree
-  `);
-  return result.rows.map((r) => r.id);
+  `,
+    row: z.object({ id: z.string() }),
+  });
+  return rows.map((r) => r.id);
 }
 
 /** Single-root convenience wrapper over {@link collectBlockSubtrees}. */

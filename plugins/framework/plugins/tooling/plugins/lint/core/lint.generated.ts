@@ -20,6 +20,7 @@ export const lintEntries: CollectedEntry[] = [
   { pluginPath: "conversations/plugins/conversation-view/plugins/pending-turn", id: "conversations.conversation-view.pending-turn", loader: () => import("@plugins/conversations/plugins/conversation-view/plugins/pending-turn/lint"), dependsOn: [] },
   { pluginPath: "database", id: "database", loader: () => import("@plugins/database/lint"), dependsOn: [] },
   { pluginPath: "database/plugins/migrations", id: "database.migrations", loader: () => import("@plugins/database/plugins/migrations/lint"), dependsOn: [] },
+  { pluginPath: "database/plugins/sql-rows", id: "database.sql-rows", loader: () => import("@plugins/database/plugins/sql-rows/lint"), dependsOn: [] },
   { pluginPath: "framework/plugins/tooling/plugins/lint/plugins/aria-safety", id: "framework.tooling.lint.aria-safety", loader: () => import("@plugins/framework/plugins/tooling/plugins/lint/plugins/aria-safety/lint"), dependsOn: [] },
   { pluginPath: "framework/plugins/tooling/plugins/lint/plugins/bun-safety", id: "framework.tooling.lint.bun-safety", loader: () => import("@plugins/framework/plugins/tooling/plugins/lint/plugins/bun-safety/lint"), dependsOn: [] },
   { pluginPath: "framework/plugins/tooling/plugins/lint/plugins/button-safety", id: "framework.tooling.lint.button-safety", loader: () => import("@plugins/framework/plugins/tooling/plugins/lint/plugins/button-safety/lint"), dependsOn: [] },

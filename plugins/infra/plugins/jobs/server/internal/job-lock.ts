@@ -1,5 +1,7 @@
 import { Pool } from "pg";
+import { z } from "zod";
 import { connectionString } from "@plugins/database/plugins/admin/server";
+import { queryOne } from "@plugins/database/plugins/sql-rows/core";
 import { reportServerError } from "@plugins/framework/plugins/server-core/core";
 import { TOTAL_JOB_SLOTS } from "../../core/hold";
 
@@ -117,19 +119,15 @@ export async function withJobLock<T>(
   client.on("error", onClientError);
   let acquired = false;
   try {
-    const { rows } = await client.query<{ locked: boolean }>(
-      "SELECT pg_try_advisory_lock($1::bigint) AS locked",
-      [jobId],
-    );
-    const row = rows[0];
-    if (!row) {
-      // `pg_try_advisory_lock` always returns exactly one row. No row means we do
-      // not understand what we are talking to — fail loud rather than guess.
-      throw new Error(
-        `[jobs] pg_try_advisory_lock returned no row for job ${jobId}`,
-      );
-    }
-    if (!row.locked) return LOCK_HELD;
+    // `pg_try_advisory_lock` always returns exactly one row, so `queryOne` is
+    // the accurate door: no row means we do not understand what we are talking
+    // to, and it throws rather than letting the caller guess.
+    const { locked } = await queryOne(client, {
+      sql: "SELECT pg_try_advisory_lock($1::bigint) AS locked",
+      params: [jobId],
+      row: z.object({ locked: z.boolean() }),
+    });
+    if (!locked) return LOCK_HELD;
     acquired = true;
     return await fn();
   } catch (err) {
@@ -141,11 +139,12 @@ export async function withJobLock<T>(
     // reliably than a statement on a session we no longer trust.
     if (acquired && !destroyOnRelease) {
       try {
-        const { rows } = await client.query<{ unlocked: boolean }>(
-          "SELECT pg_advisory_unlock($1::bigint) AS unlocked",
-          [jobId],
-        );
-        if (!rows[0]?.unlocked) {
+        const { unlocked } = await queryOne(client, {
+          sql: "SELECT pg_advisory_unlock($1::bigint) AS unlocked",
+          params: [jobId],
+          row: z.object({ unlocked: z.boolean() }),
+        });
+        if (!unlocked) {
           // We held it a statement ago and Postgres says we do not. Report it and
           // fall through to destroying the connection, which releases it anyway.
           destroyOnRelease = true;

@@ -1,8 +1,11 @@
 import { sql } from "drizzle-orm";
+import { z } from "zod";
 import { db } from "@plugins/database/server";
+import { executeRows } from "@plugins/database/plugins/sql-rows/core";
 import {
   ALL_JOB_TASKS,
   HOLD_CLASSES,
+  HoldClassSchema,
   holdForTask,
   type HoldClass,
 } from "../../core/hold";
@@ -99,18 +102,21 @@ export interface DeadJobStat {
   sampleJobId: string | null;
 }
 
-interface DeadJobStatRow {
-  job_name: string;
-  dead_count: number;
-  attempts: number;
-  max_attempts: number;
-  last_error: string | null;
-  sample_job_id: string | null;
-}
+const DeadJobStatRowSchema = z.object({
+  job_name: z.string(),
+  dead_count: z.number(),
+  attempts: z.number(),
+  max_attempts: z.number(),
+  last_error: z.string().nullable(),
+  sample_job_id: z.string().nullable(),
+});
 
 // Read-only: terminally-dead jobs in the live queue, grouped by jobName.
 export async function queryDeadJobStats(): Promise<DeadJobStat[]> {
-  const result = await db.execute(sql`
+  const rows = await executeRows(db, {
+    label: "queryDeadJobStats",
+    row: DeadJobStatRowSchema,
+    query: sql`
     SELECT ${jobNameExpr}                                          AS job_name,
            count(*)::int                                           AS dead_count,
            max(j.attempts)::int                                    AS attempts,
@@ -120,8 +126,9 @@ export async function queryDeadJobStats(): Promise<DeadJobStat[]> {
       FROM ${queueJobsFrom}
      WHERE ${deadJobPredicate}
      GROUP BY 1
-  `);
-  return (result.rows as unknown as DeadJobStatRow[]).map((r) => ({
+  `,
+  });
+  return rows.map((r) => ({
     jobName: r.job_name,
     deadCount: r.dead_count,
     attempts: r.attempts,
@@ -169,13 +176,16 @@ export interface QueueBacklogStat {
   classes: QueueClassBacklogStat[];
 }
 
-interface QueueBacklogRow {
-  hold: HoldClass;
-  ready_count: number;
-  locked_count: number;
+const QueueBacklogRowSchema = z.object({
+  // A `CASE`-derived text column, checked against the real class list rather
+  // than asserted into it — a `jobHoldExpr` branch that ever fell through to
+  // something else used to mistype the row in silence.
+  hold: HoldClassSchema,
+  ready_count: z.number(),
+  locked_count: z.number(),
   // bigint comes back from pg as a string; coerced to number below.
-  oldest_overdue_ms: string;
-}
+  oldest_overdue_ms: z.string(),
+});
 
 // Read-only: queue depth/stall metrics. readyCount = overdue, unlocked,
 // retry-eligible; lockedCount = currently running; oldestOverdueMs = age of the
@@ -186,7 +196,10 @@ interface QueueBacklogRow {
 // disagree with them across two round-trips. `oldestOverdueMs` rolls up as a max
 // (the oldest of the per-class oldests IS the global oldest), the counts as sums.
 export async function queryQueueBacklog(): Promise<QueueBacklogStat> {
-  const result = await db.execute(sql`
+  const rows = await executeRows(db, {
+    label: "queryQueueBacklog",
+    row: QueueBacklogRowSchema,
+    query: sql`
     SELECT ${jobHoldExpr}                                          AS hold,
            count(*) FILTER (WHERE ${readyPredicate})::int           AS ready_count,
            count(*) FILTER (WHERE j.locked_at IS NOT NULL)::int     AS locked_count,
@@ -199,7 +212,8 @@ export async function queryQueueBacklog(): Promise<QueueBacklogStat> {
       FROM ${queueJobsFrom}
      WHERE ${jobTaskScope}
      GROUP BY 1
-  `);
+  `,
+  });
 
   const byHold = new Map<HoldClass, QueueClassBacklogStat>(
     HOLD_CLASSES.map((hold) => [
@@ -207,7 +221,7 @@ export async function queryQueueBacklog(): Promise<QueueBacklogStat> {
       { hold, readyCount: 0, lockedCount: 0, oldestOverdueMs: 0 },
     ]),
   );
-  for (const r of result.rows as unknown as QueueBacklogRow[]) {
+  for (const r of rows) {
     const entry = byHold.get(r.hold);
     if (!entry) continue;
     entry.readyCount = r.ready_count;
@@ -244,19 +258,22 @@ export interface BacklogJobStat {
   oldestOverdueMs: number;
 }
 
-interface BacklogJobStatRow {
-  job_name: string;
-  hold: HoldClass;
-  ready_count: number;
+const BacklogJobStatRowSchema = z.object({
+  job_name: z.string(),
+  hold: HoldClassSchema,
+  ready_count: z.number(),
   // bigint comes back from pg as a string; coerced to number below.
-  oldest_overdue_ms: string;
-}
+  oldest_overdue_ms: z.string(),
+});
 
 // Read-only: ready-queue depth per jobName, top-N by readyCount.
 export async function queryBacklogByJobName(
   limit = 5,
 ): Promise<BacklogJobStat[]> {
-  const result = await db.execute(sql`
+  const rows = await executeRows(db, {
+    label: "queryBacklogByJobName",
+    row: BacklogJobStatRowSchema,
+    query: sql`
     SELECT ${jobNameExpr}                                          AS job_name,
            ${jobHoldExpr}                                          AS hold,
            count(*)::int                                           AS ready_count,
@@ -269,8 +286,9 @@ export async function queryBacklogByJobName(
      GROUP BY 1, 2
      ORDER BY ready_count DESC
      LIMIT ${limit}
-  `);
-  return (result.rows as unknown as BacklogJobStatRow[]).map((r) => ({
+  `,
+  });
+  return rows.map((r) => ({
     jobName: r.job_name,
     hold: r.hold,
     readyCount: r.ready_count,
@@ -315,22 +333,25 @@ export interface RunningJobStat {
   forfeited: boolean;
 }
 
-interface RunningJobStatRow {
-  job_name: string;
-  hold: HoldClass;
-  job_id: string;
+const RunningJobStatRowSchema = z.object({
+  job_name: z.string(),
+  hold: HoldClassSchema,
+  job_id: z.string(),
   // bigint comes back from pg as a string; coerced to number below.
-  locked_for_ms: string;
-  locked_by: string | null;
-  alive: boolean;
-}
+  locked_for_ms: z.string(),
+  locked_by: z.string().nullable(),
+  alive: z.boolean(),
+});
 
 // Read-only: currently-locked (running) jobs, longest-held slot first.
 // `locked_at` still answers "for how long" (graphile stamps it exactly once, at
 // dispatch); `pg_locks` answers "is it alive". Those are two different questions
 // and this is the one place both are read together.
 export async function queryRunningJobs(): Promise<RunningJobStat[]> {
-  const result = await db.execute(sql`
+  const rows = await executeRows(db, {
+    label: "queryRunningJobs",
+    row: RunningJobStatRowSchema,
+    query: sql`
     SELECT ${jobNameExpr}                                              AS job_name,
            ${jobHoldExpr}                                              AS hold,
            j.id::text                                                  AS job_id,
@@ -340,12 +361,13 @@ export async function queryRunningJobs(): Promise<RunningJobStat[]> {
       FROM ${queueJobsFrom}
      WHERE ${jobTaskScope} AND j.locked_at IS NOT NULL
      ORDER BY locked_for_ms DESC
-  `);
+  `,
+  });
   // Joined in post-processing rather than in SQL, deliberately: forfeit is
   // PROCESS state (a module-level map in forfeit.ts), not a column — there is
   // nothing in the database to join against, and writing one would be claiming
   // durably something that is only true while this backend lives.
-  return (result.rows as unknown as RunningJobStatRow[]).map((r) => ({
+  return rows.map((r) => ({
     jobName: r.job_name,
     hold: r.hold,
     jobId: r.job_id,

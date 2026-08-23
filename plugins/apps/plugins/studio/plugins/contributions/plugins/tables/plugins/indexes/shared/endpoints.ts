@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { defineEndpoint } from "@plugins/infra/plugins/endpoints/core";
 
-const IndexSchema = z.object({
+export const IndexSchema = z.object({
   indexname: z.string(),
   indexdef: z.string(),
 });

@@ -5,6 +5,8 @@ import { sql as drizzleSql } from "drizzle-orm";
 import { defineLogSink } from "@plugins/primitives/plugins/log-channels/server";
 import { rebuildDerivedViews } from "@plugins/database/plugins/derived-views/server";
 import { MIGRATIONS_TABLE_NAME } from "@plugins/database/plugins/derived-views/core";
+import { executeRows } from "@plugins/database/plugins/sql-rows/core";
+import { z } from "zod";
 
 const log = defineLogSink({
   id: "migrations",
@@ -37,10 +39,12 @@ interface Migration {
 // research/2026-06-14-global-cold-load-instant-boot.md.
 let resolveMigrationsReady!: () => void;
 let rejectMigrationsReady!: (err: unknown) => void;
-export const migrationsReady: Promise<void> = new Promise<void>((resolve, reject) => {
-  resolveMigrationsReady = resolve;
-  rejectMigrationsReady = reject;
-});
+export const migrationsReady: Promise<void> = new Promise<void>(
+  (resolve, reject) => {
+    resolveMigrationsReady = resolve;
+    rejectMigrationsReady = reject;
+  },
+);
 
 // Ordered list of every migration file on disk (timestamp order — the order the
 // runner applies them). Shared by `runMigrations` and `dryRunPendingMigrations`.
@@ -70,10 +74,12 @@ async function getAppliedHashes(db: NodePgDatabase): Promise<Set<string>> {
       applied_at timestamptz NOT NULL DEFAULT now()
     )
   `);
-  const applied = await db.execute<{ hash: string }>(
-    drizzleSql`SELECT hash FROM ${drizzleSql.raw(MIGRATIONS_TABLE_NAME)}`,
-  );
-  return new Set(applied.rows.map((r) => r.hash));
+  const applied = await executeRows(db, {
+    query: drizzleSql`SELECT hash FROM ${drizzleSql.raw(MIGRATIONS_TABLE_NAME)}`,
+    row: z.object({ hash: z.string() }),
+    label: "migrations: read applied ledger",
+  });
+  return new Set(applied.map((r) => r.hash));
 }
 
 // PURE (exported for unit testing): given the ordered migration list and the
@@ -92,7 +98,10 @@ async function getAppliedHashes(db: NodePgDatabase): Promise<Set<string>> {
 export function planMigrations(
   migrations: Migration[],
   appliedHashes: ReadonlySet<string>,
-): { toApply: Migration[]; skippedDuplicates: { file: string; original: string }[] } {
+): {
+  toApply: Migration[];
+  skippedDuplicates: { file: string; original: string }[];
+} {
   const toApply: Migration[] = [];
   const skippedDuplicates: { file: string; original: string }[] = [];
   // hash → first file in THIS list that we plan to apply for that hash.
@@ -103,7 +112,10 @@ export function planMigrations(
       // A same-run sibling: an earlier file in this list already owns this hash.
       // Identical content; skipping the second is a no-op (and avoids a
       // duplicate-PK INSERT). Reported loudly by the caller.
-      skippedDuplicates.push({ file: m.file, original: firstFileForHash.get(m.hash)! });
+      skippedDuplicates.push({
+        file: m.file,
+        original: firstFileForHash.get(m.hash)!,
+      });
       continue;
     }
     if (appliedHashes.has(m.hash)) {
@@ -142,7 +154,10 @@ export async function runMigrations(db: NodePgDatabase): Promise<void> {
       }
     }
 
-    const { toApply, skippedDuplicates } = planMigrations(migrations, appliedHashes);
+    const { toApply, skippedDuplicates } = planMigrations(
+      migrations,
+      appliedHashes,
+    );
 
     // Loudly report every same-run duplicate-hash skip. Identical DDL, so this is
     // a no-op for the DB, but it must never be silent ("fail loudly" rule): a
@@ -197,7 +212,10 @@ export async function dryRunPendingMigrations(
   // are byte-identical, and applying both in this single transaction would
   // attempt a duplicate-PK INSERT and abort the dry-run. planMigrations drops
   // the same-run duplicate so the dry-run mirrors real boot behavior.
-  const pending = planMigrations(listMigrationFiles(MIGRATIONS_DIR), applied).toApply;
+  const pending = planMigrations(
+    listMigrationFiles(MIGRATIONS_DIR),
+    applied,
+  ).toApply;
   if (pending.length === 0) return { pending: 0 };
 
   try {

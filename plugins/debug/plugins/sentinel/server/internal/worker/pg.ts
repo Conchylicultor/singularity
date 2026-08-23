@@ -4,7 +4,8 @@ import {
   PG_SOCKET_DIR,
   PG_USER,
 } from "@plugins/database/plugins/embedded/server";
-import type { PgStatsRow } from "../sample-math";
+import { queryOne } from "@plugins/database/plugins/sql-rows/core";
+import { PgStatsRowSchema, type PgStatsRow } from "../sample-math";
 
 // ONE dedicated raw pg client on the embedded cluster's direct Unix socket —
 // no drizzle pool, no PgBouncer. Independence from main's pool is the point:
@@ -72,8 +73,10 @@ export function createSentinelPg(
 
   async function runQuery(): Promise<PgStatsRow> {
     client ??= await connect();
-    const result = await client.query(PG_STATS_SQL);
-    return result.rows[0] as PgStatsRow;
+    // Every column is a scalar subquery over a no-FROM SELECT, so the query
+    // returns exactly one row by construction; anything else is a broken read,
+    // not an empty one, and `queryOne` says so.
+    return await queryOne(client, { sql: PG_STATS_SQL, row: PgStatsRowSchema });
   }
 
   return {

@@ -1,7 +1,8 @@
 import { ndjsonResponse } from "@plugins/infra/plugins/ndjson-stream/server";
 import { openShortLivedClient } from "@plugins/database/plugins/admin/server";
 import { createSemaphore } from "@plugins/packages/plugins/semaphore/core";
-import { SlowOpSchema, type SlowOp } from "@plugins/debug/plugins/slow-ops/core";
+import { queryRows } from "@plugins/database/plugins/sql-rows/core";
+import { SlowOpSchema } from "@plugins/debug/plugins/slow-ops/core";
 import { type ClusterWorktree } from "../../shared/endpoints";
 import { listLiveForkDatabases } from "./live-fork-databases";
 
@@ -10,60 +11,30 @@ import { listLiveForkDatabases } from "./live-fork-databases";
 // (already-contended) cluster while still parallelising the merge.
 const FANOUT_CONCURRENCY = 6;
 
+// Aliased to the camelCase field names `SlowOpSchema` declares, so the schema
+// that defines a slow op on the wire is also the one that parses it off the
+// wire here — ONE definition, and the read is checked exactly as the live
+// resource's is. The types line up with no coercion: `count` is int4, the `_ms`
+// columns are float8, the three JSON columns are jsonb, and the timestamps are
+// timestamptz, so node-postgres already hands back numbers, decoded objects and
+// Dates. (The hand-rolled `RawRow` this replaced declared `number | string` for
+// the numeric columns and `Number()`-ed them; nothing ever arrived as a string.)
 const SELECT_SLOW_OPS = `
-  SELECT id, worktree, operation_kind, operation, count, total_ms, max_ms,
-         last_ms, threshold_ms, callers, waits, recent_samples, first_seen_at,
-         last_seen_at
+  SELECT id, worktree, operation_kind AS "operationKind", operation, count,
+         total_ms AS "totalMs", max_ms AS "maxMs", last_ms AS "lastMs",
+         threshold_ms AS "thresholdMs", callers, waits,
+         recent_samples AS "recentSamples", first_seen_at AS "firstSeenAt",
+         last_seen_at AS "lastSeenAt"
   FROM slow_ops
 `;
-
-// One raw row as Postgres returns it (snake_case; numeric columns may arrive as
-// strings from node-postgres, so SlowOpSchema's z.coerce handles the dates and
-// we Number() the rest before parsing).
-interface RawRow {
-  id: string;
-  worktree: string;
-  operation_kind: string;
-  operation: string;
-  count: number | string;
-  total_ms: number | string;
-  max_ms: number | string;
-  last_ms: number | string;
-  threshold_ms: number | string;
-  callers: unknown;
-  waits: unknown;
-  recent_samples: unknown;
-  first_seen_at: Date | string;
-  last_seen_at: Date | string;
-}
-
-function toSlowOp(row: RawRow): SlowOp {
-  // Parse through the shared schema so date coercion + jsonb shape validation
-  // are enforced exactly as the live resource does — a malformed row throws and
-  // is caught by the per-DB try/catch (surfaced as an error row).
-  return SlowOpSchema.parse({
-    id: row.id,
-    worktree: row.worktree,
-    operationKind: row.operation_kind,
-    operation: row.operation,
-    count: Number(row.count),
-    totalMs: Number(row.total_ms),
-    maxMs: Number(row.max_ms),
-    lastMs: Number(row.last_ms),
-    thresholdMs: Number(row.threshold_ms),
-    callers: row.callers,
-    waits: row.waits,
-    recentSamples: row.recent_samples,
-    firstSeenAt: row.first_seen_at,
-    lastSeenAt: row.last_seen_at,
-  });
-}
 
 async function fetchWorktree(name: string): Promise<ClusterWorktree> {
   const pool = openShortLivedClient(name);
   try {
-    const result = await pool.query<RawRow>(SELECT_SLOW_OPS);
-    const ops = result.rows.map(toSlowOp);
+    const ops = await queryRows(pool, {
+      sql: SELECT_SLOW_OPS,
+      row: SlowOpSchema,
+    });
     return { name, ok: true, ops };
   } catch (err) {
     // Loud-but-resilient: one stale or old-schema fork (e.g. missing the
@@ -90,7 +61,9 @@ export function handleSlowOpsCluster(): Response {
     const semaphore = createSemaphore(FANOUT_CONCURRENCY);
     await Promise.all(
       names.map((name) =>
-        semaphore.run(async () => emit({ worktree: await fetchWorktree(name) })),
+        semaphore.run(async () =>
+          emit({ worktree: await fetchWorktree(name) }),
+        ),
       ),
     );
     emit({ end: true });

@@ -1,6 +1,7 @@
 import { sql as drizzleSql } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@plugins/database/server";
+import { executeRows } from "@plugins/database/plugins/sql-rows/core";
 import { defineJob, LEGACY_JOB_TASK } from "@plugins/infra/plugins/jobs/server";
 import { fail } from "./queue-probe";
 
@@ -102,21 +103,25 @@ interface KeyedRow {
 }
 
 async function readKeyedRows(): Promise<KeyedRow[]> {
-  const result = await db.execute(drizzleSql`
+  const rows = await executeRows(db, {
+    label: "cron-dedup: keyed rows",
+    row: z.object({
+      // `j.id` is `bigint` and the epoch expression is cast to one; pg hands
+      // both back as strings.
+      id: z.string(),
+      run_at_ms: z.string(),
+      attempts: z.number(),
+    }),
+    query: drizzleSql`
     SELECT j.id::text                                  AS id,
            (extract(epoch FROM j.run_at) * 1000)::bigint AS run_at_ms,
            j.attempts::int                             AS attempts
       FROM graphile_worker._private_jobs j
      WHERE j.key = ${CRON_JOB_KEY}
      ORDER BY j.id
-  `);
-  return (
-    result.rows as unknown as {
-      id: string;
-      run_at_ms: string;
-      attempts: number;
-    }[]
-  ).map((r) => ({
+  `,
+  });
+  return rows.map((r) => ({
     id: r.id,
     runAtMs: Number(r.run_at_ms),
     attempts: r.attempts,

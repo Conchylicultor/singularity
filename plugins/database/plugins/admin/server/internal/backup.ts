@@ -1,4 +1,6 @@
 import { stat } from "node:fs/promises";
+import { queryRows } from "@plugins/database/plugins/sql-rows/core";
+import { z } from "zod";
 import { libpqSubprocessEnv, openShortLivedClient } from "./pool";
 
 export type TableStat = {
@@ -28,6 +30,17 @@ export async function backupDatabase(
   }
 }
 
+/**
+ * `n_live_tup` is `bigint`, and `pg` hands a `bigint` back as a STRING — a row
+ * count can exceed 2^53, so there is no number it could losslessly decode to.
+ * The schema says so; `readTableStats` converts it below, which is safe because
+ * the value only ever becomes a cosmetic manifest label.
+ */
+const TableStatRowSchema = z.object({
+  relname: z.string(),
+  n_live_tup: z.string(),
+});
+
 // Table + estimated-row stats read straight from the source DB catalog. This is
 // a cheap metadata query against pg_stat_user_tables — it never decompresses the
 // dump. `n_live_tup` is Postgres's own live-row estimate (kept current by
@@ -37,10 +50,14 @@ export async function backupDatabase(
 async function readTableStats(name: string): Promise<TableStat[]> {
   const pool = openShortLivedClient(name);
   try {
-    const result = await pool.query<{ relname: string; n_live_tup: string }>(
-      `SELECT relname, n_live_tup FROM pg_stat_user_tables ORDER BY relname`,
-    );
-    return result.rows.map((r) => ({
+    const rows = await queryRows(pool, {
+      // `relname` is a `name`, cast so the column decodes as the `text` the
+      // schema declares.
+      sql: `SELECT relname::text AS relname, n_live_tup
+              FROM pg_stat_user_tables ORDER BY relname`,
+      row: TableStatRowSchema,
+    });
+    return rows.map((r) => ({
       name: r.relname,
       rowCount: Number(r.n_live_tup),
     }));

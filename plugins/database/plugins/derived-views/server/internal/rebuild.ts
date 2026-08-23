@@ -8,7 +8,9 @@ import {
   DERIVED_VIEW_STATE_TABLE_NAME,
   type RegisteredView,
 } from "@plugins/database/plugins/derived-views/core";
+import { executeRows } from "@plugins/database/plugins/sql-rows/core";
 import { defineLogSink } from "@plugins/primitives/plugins/log-channels/server";
+import { z } from "zod";
 import { View } from "./contribution";
 
 const log = defineLogSink({
@@ -56,7 +58,10 @@ export async function rebuildDerivedViews(db: NodePgDatabase): Promise<void> {
 
   // Content signature of the whole view layer: each view's name + compiled DDL,
   // in dependency order. Identical signature ⇒ identical views ⇒ nothing to do.
-  const compiled = ordered.map((v) => ({ name: v.name, ddl: compileCreateView(v) }));
+  const compiled = ordered.map((v) => ({
+    name: v.name,
+    ddl: compileCreateView(v),
+  }));
   const signature = createHash("sha256")
     .update(compiled.map((c) => `${c.name}\n${c.ddl}`).join("\n--\n"))
     .digest("hex");
@@ -77,21 +82,29 @@ export async function rebuildDerivedViews(db: NodePgDatabase): Promise<void> {
       ),
     );
 
-    const priorRes = await tx.execute(
-      drizzleSql.raw(`SELECT signature FROM "public"."${DERIVED_VIEW_STATE_TABLE_NAME}" LIMIT 1`),
-    );
-    const prior = (priorRes.rows as unknown as { signature: string }[])[0]?.signature;
+    // No row on the very first boot of a database — a legitimately-empty
+    // result, which is why this reads rows rather than demanding exactly one.
+    const priorRows = await executeRows(tx, {
+      query: drizzleSql.raw(
+        `SELECT signature FROM "public"."${DERIVED_VIEW_STATE_TABLE_NAME}" LIMIT 1`,
+      ),
+      row: z.object({ signature: z.string() }),
+      label: "derived-views: read signature",
+    });
+    const prior = priorRows[0]?.signature;
 
     // Guard against a view dropped out-of-band: only trust the signature when
     // every declared view also physically exists.
-    const existingRes = await tx.execute(
-      drizzleSql.raw(
-        `SELECT table_name FROM information_schema.views WHERE table_schema = 'public'`,
+    const existingRows = await executeRows(tx, {
+      // `information_schema.views.table_name` is a domain over `name`; the
+      // cast keeps the column's decoded type the one the schema declares.
+      query: drizzleSql.raw(
+        `SELECT table_name::text AS table_name FROM information_schema.views WHERE table_schema = 'public'`,
       ),
-    );
-    const existing = new Set(
-      (existingRes.rows as unknown as { table_name: string }[]).map((r) => r.table_name),
-    );
+      row: z.object({ table_name: z.string() }),
+      label: "derived-views: list existing views",
+    });
+    const existing = new Set(existingRows.map((r) => r.table_name));
     const allPresent = ordered.every((v) => existing.has(v.name));
 
     if (prior === signature && allPresent) {
@@ -108,7 +121,9 @@ export async function rebuildDerivedViews(db: NodePgDatabase): Promise<void> {
     );
 
     for (const v of [...ordered].reverse()) {
-      await tx.execute(drizzleSql.raw(`DROP VIEW IF EXISTS "public"."${v.name}"`));
+      await tx.execute(
+        drizzleSql.raw(`DROP VIEW IF EXISTS "public"."${v.name}"`),
+      );
     }
     for (const v of compiled) {
       await tx.execute(drizzleSql.raw(v.ddl));

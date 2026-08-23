@@ -1,7 +1,9 @@
 import { sql } from "drizzle-orm";
+import { z } from "zod";
 import { isActiveStatus } from "../../core";
 import { listConversationsForInfra } from "@plugins/tasks/plugins/tasks-core/server";
 import { db, isTransientDbError } from "@plugins/database/server";
+import { executeRows } from "@plugins/database/plugins/sql-rows/core";
 import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";
 import { watchTranscript } from "@plugins/conversations/plugins/transcript-watcher/server";
 import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-watcher/core";
@@ -139,10 +141,12 @@ async function emitEndTurn(
 // A durable workflow is "waiting" on this conversation iff the events plugin
 // has at least one enabled trigger row keyed to it.
 async function hasPendingTrigger(conversationId: string): Promise<boolean> {
-  const result = await db.execute<{ id: string }>(
-    sql`SELECT id FROM ${_conversationTurnCompletedTriggers}
+  const rows = await executeRows(db, {
+    label: "conversation.turn-completed pending trigger",
+    query: sql`SELECT id FROM ${_conversationTurnCompletedTriggers}
         WHERE enabled = true AND conversation_id = ${conversationId}
         LIMIT 1`,
-  );
-  return result.rows.length > 0;
+    row: z.object({ id: z.string() }),
+  });
+  return rows.length > 0;
 }

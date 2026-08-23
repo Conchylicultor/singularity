@@ -201,6 +201,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`migrations`** — DDL lifecycle: migration runner and SQL files.
     - **`pgbouncer`** [load-bearing] — PgBouncer connection pooler for the embedded Postgres cluster. Provides path constants for connection routing.
     - **`query`** — MCP tool for agents to query worktree databases for debugging and inspection.
+    - **`sql-rows`** — Parsed raw-SQL row reads: queryRows / executeRows parse every row against a ZodParser and throw a SqlRowError naming the column, the value and its Postgres type OID — closing the pool.query<T>() assertion hole.
     - **`zero`** — Umbrella for the Rocicorp Zero sync-engine infrastructure: shared constants (core), the zero-cache supervised service (cache-service), and the generic client provider + adapter (client). Domain-agnostic — no concrete schema.
       - Plugins:
         - **`cache-service`** — zero-cache sidecar service: the supervised Node process that replicates the main Postgres DB into Zero's SQLite replica. Schema-agnostic.

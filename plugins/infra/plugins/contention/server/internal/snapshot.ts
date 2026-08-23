@@ -1,14 +1,21 @@
 import os from "node:os";
 import { sql } from "drizzle-orm";
+import { z } from "zod";
 import { db } from "@plugins/database/server";
+import { executeRows } from "@plugins/database/plugins/sql-rows/core";
 import {
   runInBackgroundLane,
   runWithoutProfiling,
 } from "@plugins/infra/plugins/runtime-profiler/core";
 import type { ContentionSnapshot } from "../../core";
 
-// pg returns count(*) as a bigint, which node-postgres surfaces as a string.
-type BackendCountRow = { datname: string; active: string; total: string };
+const BackendCountRowSchema = z.object({
+  // `pg_stat_activity.datname` is a scalar `name`, which pg decodes to a string.
+  datname: z.string(),
+  // pg returns count(*) as a bigint, which node-postgres surfaces as a string.
+  active: z.string(),
+  total: z.string(),
+});
 
 // On-demand memo: re-derive the snapshot at most once per second. During a
 // contention storm many slow ops fire at once; this collapses them onto one
@@ -45,15 +52,18 @@ export async function getContentionSnapshot(): Promise<ContentionSnapshot> {
   // research/2026-07-09-global-interactive-lane-origin-based-db-gating.md.
   const rows = await runInBackgroundLane(() =>
     runWithoutProfiling(async () => {
-      const result = await db.execute<BackendCountRow>(sql`
-        SELECT datname,
-               count(*) FILTER (WHERE state = 'active') AS active,
-               count(*) AS total
-        FROM pg_stat_activity
-        WHERE datname IS NOT NULL
-        GROUP BY datname
-      `);
-      return result.rows;
+      return await executeRows(db, {
+        label: "contention: pg_stat_activity backends",
+        row: BackendCountRowSchema,
+        query: sql`
+          SELECT datname,
+                 count(*) FILTER (WHERE state = 'active') AS active,
+                 count(*) AS total
+          FROM pg_stat_activity
+          WHERE datname IS NOT NULL
+          GROUP BY datname
+        `,
+      });
     }),
   );
 

@@ -1,5 +1,10 @@
 import { sql as drizzleSql } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
+import { z } from "zod";
+import {
+  executeOne,
+  executeRows,
+} from "@plugins/database/plugins/sql-rows/core";
 import { Resource } from "@plugins/framework/plugins/server-core/core";
 import { LIVE_STATE_SNAPSHOT_TABLE } from "@plugins/database/plugins/derived-views/core";
 import { removeReadSetTable } from "@plugins/infra/plugins/runtime-profiler/core";
@@ -28,6 +33,11 @@ export function shouldPersist(key: string): boolean {
   return bootCriticalKeys().has(key);
 }
 
+// The query's `::text` cast is what makes this a plain `text` column, so the
+// watermark stays a string end to end and never passes through a JS number near
+// 2^63 (see the comment on the function below).
+const WatermarkRowSchema = z.object({ xmin: z.string() });
+
 // The durable monotonic position: the xmin of the CURRENT snapshot, in the 64-bit
 // xid8 family (never the 32-bit txid_* forms — wraparound hole). Read-only, so it
 // does not force an xid assignment. Captured BEFORE the loader's first read by the
@@ -35,15 +45,25 @@ export function shouldPersist(key: string): boolean {
 // under-replay a write invisible to the loader's snapshot. Returned as text →
 // stored as numeric (no signed-bigint overflow near 2^63).
 export async function captureWatermark(db: NodePgDatabase): Promise<string> {
-  const res = await db.execute<{ xmin: string }>(
-    drizzleSql.raw(`SELECT pg_snapshot_xmin(pg_current_snapshot())::text AS xmin`),
-  );
-  const xmin = res.rows[0]?.xmin;
-  if (xmin === undefined) {
-    throw new Error("captureWatermark: pg_snapshot_xmin returned no row");
-  }
-  return xmin;
+  // A `SELECT` with no `FROM` returns exactly one row, so `executeOne` carries the
+  // "no row" throw this used to spell out by hand.
+  const row = await executeOne(db, {
+    query: drizzleSql.raw(
+      `SELECT pg_snapshot_xmin(pg_current_snapshot())::text AS xmin`,
+    ),
+    row: WatermarkRowSchema,
+    label: "captureWatermark",
+  });
+  return row.xmin;
 }
+
+// `tables_read` is a real `text[]` (see tables-ddl.ts), which pg DOES decode to a
+// JS `string[]` — unlike the `name[]` an uncast `array_agg` over a catalog column
+// produces. `old_tables` is the pre-upsert value, absent on a first INSERT.
+const ReadSetDiffRowSchema = z.object({
+  old_tables: z.array(z.string()).nullable(),
+  new_tables: z.array(z.string()),
+});
 
 // Persist the FULL value under (resource_key, params_key) with its watermark and
 // the per-resource read-set (the tables the loader read while computing `value`,
@@ -79,8 +99,8 @@ export async function persistSnapshot(
   // Comparing them detects a SHED (the new read-set drops a table the old one had)
   // with zero extra round-trip. On a first INSERT there is no prior row → `prev`
   // is empty → old_tables is NULL → treated as "no shed".
-  const res = await db.execute<{ old_tables: string[] | null; new_tables: string[] }>(
-    drizzleSql`
+  const rows = await executeRows(db, {
+    query: drizzleSql`
       WITH prev AS (
         SELECT tables_read AS old_tables
         FROM ${drizzleSql.raw(LIVE_STATE_SNAPSHOT_TABLE)}
@@ -105,7 +125,9 @@ export async function persistSnapshot(
         (SELECT old_tables FROM prev) AS old_tables,
         tables_read AS new_tables
     `,
-  );
+    row: ReadSetDiffRowSchema,
+    label: "persistSnapshot",
+  });
   // Read-set shrink detection: every persisted resource is boot-critical, so a
   // dropped dependency in its durable read-set is the ambiguous shed described in
   // research/2026-07-08-global-read-set-shrink-guard.md — safe if a code change
@@ -113,7 +135,7 @@ export async function persistSnapshot(
   // fire. Indistinguishable here, so we SURFACE it (debug/read-set-shrink monitor)
   // for human confirmation instead of changing behaviour. Emit is a pure in-memory
   // hand-off (no I/O, never throws on the persist path).
-  const row = res.rows[0];
+  const row = rows[0];
   if (row?.old_tables) {
     const newSet = new Set(row.new_tables);
     const dropped = row.old_tables.filter((t) => !newSet.has(t));
@@ -128,6 +150,11 @@ export async function persistSnapshot(
   }
 }
 
+const PersistedReadSetRowSchema = z.object({
+  resource_key: z.string(),
+  tables_read: z.array(z.string()),
+});
+
 // Read the persisted read-sets for the param-less ("{}") snapshots in ONE query,
 // for the boot seed. Returns resource_key → string[] (the pg driver returns a
 // text[] column as a JS string[]). A key with an empty `tables_read` is "no usable
@@ -136,16 +163,23 @@ export async function readPersistedReadSets(
   db: NodePgDatabase,
 ): Promise<Map<string, string[]>> {
   const out = new Map<string, string[]>();
-  const res = await db.execute<{ resource_key: string; tables_read: string[] }>(
-    drizzleSql`
+  const rows = await executeRows(db, {
+    query: drizzleSql`
       SELECT resource_key, tables_read
       FROM ${drizzleSql.raw(LIVE_STATE_SNAPSHOT_TABLE)}
       WHERE params_key = '{}'
     `,
-  );
-  for (const row of res.rows) out.set(row.resource_key, row.tables_read ?? []);
+    row: PersistedReadSetRowSchema,
+    label: "readPersistedReadSets",
+  });
+  // No `?? []` fallback: `tables_read` is `NOT NULL DEFAULT '{}'`, so an empty
+  // read-set already arrives as `[]` — which IS the "no usable read-set" signal.
+  for (const row of rows) out.set(row.resource_key, row.tables_read);
   return out;
 }
+
+// `RETURNING resource_key` — the three row-counting mutations below share it.
+const ResourceKeyRowSchema = z.object({ resource_key: z.string() });
 
 /**
  * Reconcile a single table out of the persisted read-set: remove `table` from
@@ -174,20 +208,29 @@ export async function reconcileReadSetTable(
     keepKeys.map((k) => drizzleSql`${k}`),
     drizzleSql`, `,
   )}]::text[]`;
-  const res = await db.execute<{ resource_key: string }>(
-    drizzleSql`
+  const changed = await executeRows(db, {
+    query: drizzleSql`
       UPDATE ${drizzleSql.raw(LIVE_STATE_SNAPSHOT_TABLE)}
         SET tables_read = array_remove(tables_read, ${table})
       WHERE resource_key <> ALL(${keepArray})
         AND ${table} = ANY(tables_read)
       RETURNING resource_key
     `,
-  );
+    row: ResourceKeyRowSchema,
+    label: "reconcileReadSetTable",
+  });
   // Mirror the removal into the live in-memory index so `_debug` is corrected
   // immediately (no restart wait). Returns the keys it changed — ignored here.
   removeReadSetTable(table, keepKeys);
-  return res.rows.length;
+  return changed.length;
 }
+
+// `value` is the loader's own output round-tripped through `jsonb` — genuinely
+// caller-shaped, so `z.unknown()` is the honest assertion and the only one.
+const PersistedSnapshotRowSchema = z.object({
+  resource_key: z.string(),
+  value: z.unknown(),
+});
 
 // Read the persisted param-less ("{}") values for the given resource keys in ONE
 // query, for the boot-snapshot hot path. Returns a key→value map; a key with no
@@ -204,15 +247,17 @@ export async function readPersistedSnapshots(
   // requires array on right side" → 500). Use the `IN` form so the expansion is
   // well-formed. The `keys.length === 0` early return above guarantees a
   // non-empty list.
-  const res = await db.execute<{ resource_key: string; value: unknown }>(
-    drizzleSql`
+  const rows = await executeRows(db, {
+    query: drizzleSql`
       SELECT resource_key, value
       FROM ${drizzleSql.raw(LIVE_STATE_SNAPSHOT_TABLE)}
       WHERE params_key = '{}'
         AND resource_key IN (${drizzleSql.join(keys, drizzleSql`, `)})
     `,
-  );
-  for (const row of res.rows) out.set(row.resource_key, row.value);
+    row: PersistedSnapshotRowSchema,
+    label: "readPersistedSnapshots",
+  });
+  for (const row of rows) out.set(row.resource_key, row.value);
   return out;
 }
 
@@ -239,14 +284,16 @@ export async function clearSnapshotsExceptKeys(
     keepKeys.map((k) => drizzleSql`${k}`),
     drizzleSql`, `,
   )}]::text[]`;
-  const res = await db.execute<{ resource_key: string }>(
-    drizzleSql`
+  const removed = await executeRows(db, {
+    query: drizzleSql`
       DELETE FROM ${drizzleSql.raw(LIVE_STATE_SNAPSHOT_TABLE)}
       WHERE resource_key <> ALL(${keepArray})
       RETURNING resource_key
     `,
-  );
-  return res.rows.length;
+    row: ResourceKeyRowSchema,
+    label: "clearSnapshotsExceptKeys",
+  });
+  return removed.length;
 }
 
 // Cold-boot benchmark hook: DELETE the param-less ("{}") persisted rows for the
@@ -261,13 +308,15 @@ export async function clearPersistedSnapshots(
   keys: string[],
 ): Promise<number> {
   if (keys.length === 0) return 0;
-  const res = await db.execute<{ resource_key: string }>(
-    drizzleSql`
+  const removed = await executeRows(db, {
+    query: drizzleSql`
       DELETE FROM ${drizzleSql.raw(LIVE_STATE_SNAPSHOT_TABLE)}
       WHERE params_key = '{}'
         AND resource_key IN (${drizzleSql.join(keys, drizzleSql`, `)})
       RETURNING resource_key
     `,
-  );
-  return res.rows.length;
+    row: ResourceKeyRowSchema,
+    label: "clearPersistedSnapshots",
+  });
+  return removed.length;
 }

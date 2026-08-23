@@ -1,6 +1,7 @@
 import { sql as drizzleSql } from "drizzle-orm";
 import { randomUUID } from "node:crypto";
 import { Client } from "pg";
+import { z } from "zod";
 import { connectionString } from "@plugins/database/plugins/admin/server";
 import {
   UNSAFE_sweepStuckLocks,
@@ -8,6 +9,7 @@ import {
 } from "@plugins/infra/plugins/jobs/server";
 import { retryUntil, fixed } from "@plugins/packages/plugins/retry/core";
 import { db } from "@plugins/database/server";
+import { executeRows } from "@plugins/database/plugins/sql-rows/core";
 import { logEntries, logPing, resetLog } from "./log-job";
 import { jobTaskList } from "./queue-probe";
 
@@ -79,7 +81,11 @@ export async function handleCrashRecovery(): Promise<Response> {
   await logPing.enqueue({ label }, { runAt: farFuture });
 
   // Find the row by payload — addJob doesn't return the private-table id.
-  const result = await db.execute<{ id: string }>(drizzleSql`
+  const rows = await executeRows(db, {
+    label: "crash-recovery: locate enqueued row",
+    // Uncast `_private_jobs.id` is `bigint`, which pg hands back as a string.
+    row: z.object({ id: z.string() }),
+    query: drizzleSql`
     SELECT id FROM graphile_worker._private_jobs
      WHERE task_id IN (
        SELECT id FROM graphile_worker._private_tasks
@@ -87,8 +93,9 @@ export async function handleCrashRecovery(): Promise<Response> {
      )
        AND payload->'input'->>'label' = ${label}
      LIMIT 1
-  `);
-  const row = result.rows[0];
+  `,
+  });
+  const row = rows[0];
   if (!row) {
     return Response.json(
       { ok: false, error: "enqueued row not found" },

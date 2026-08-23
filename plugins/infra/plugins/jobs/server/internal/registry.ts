@@ -2,7 +2,8 @@ import { randomUUID } from "node:crypto";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import type { TaskSpec } from "graphile-worker";
 import type { PoolClient } from "pg";
-import type { z } from "zod";
+import { z } from "zod";
+import { queryOne } from "@plugins/database/plugins/sql-rows/core";
 import type { Registration } from "@plugins/framework/plugins/server-core/core";
 import {
   ceilingMsFor,
@@ -610,9 +611,14 @@ export function defineJob<
       // one line to fix.
       // biome-ignore lint/suspicious/noExplicitAny: drizzle's session.client is private in d.ts but stable at runtime.
       const client = (opts.tx as any)._.session.client as PoolClient;
-      const result = await withQueueSchemaAssert(() =>
-        client.query<{ id: string }>(
-          `SELECT (graphile_worker.add_job(
+      // `add_job` returns exactly one row, always. `queryOne` states that, so a
+      // zero-row result is a loud failure rather than an `undefined` the next
+      // line has to remember to check.
+      const row = await withQueueSchemaAssert(() =>
+        queryOne(client, {
+          // The returned `id` is `bigint`; `::text` is why this is a string.
+          row: z.object({ id: z.string() }),
+          sql: `SELECT (graphile_worker.add_job(
              identifier   := $1,
              payload      := $2::json,
              run_at       := $3,
@@ -621,7 +627,7 @@ export function defineJob<
              queue_name   := $6,
              priority     := $7
            )).id::text AS id`,
-          [
+          params: [
             // The hold class's task, from the same spec the `addJob` path uses —
             // never a constant. A row inserted here on the legacy task would be
             // fetchable only by the wide runner, silently forfeiting the
@@ -641,11 +647,9 @@ export function defineJob<
             // when NULL. Always present here, since it is derived from the class.
             insertion.spec.priority ?? null,
           ],
-        ),
+        }),
       );
-      const id = result.rows[0]?.id;
-      if (!id) throw new Error("[jobs] graphile_worker.add_job returned no id");
-      return { jobId: id };
+      return { jobId: row.id };
     }
 
     return UNSAFE_insertJobRow(spec, payload, graphileOpts);

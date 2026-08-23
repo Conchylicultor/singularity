@@ -2,7 +2,12 @@ import { z } from "zod";
 import type { TimelineEvent } from "../../../core";
 import { overlapsWindow } from "../window";
 import { traceSeverity } from "../severity";
-import type { DbSource, DbSourceCtx, SqlQuery } from "./context";
+import {
+  defineDbSource,
+  type DbSource,
+  type DbSourceCtx,
+  type SqlQuery,
+} from "./context";
 
 // A trace is persisted after its async enrich, so created_at can trail the
 // snapshot's wallTime anchor by seconds-to-minutes — and under a saturated
@@ -14,19 +19,23 @@ import type { DbSource, DbSourceCtx, SqlQuery } from "./context";
 const ENRICH_SLACK_MS = 30 * 60 * 1000;
 
 // The JSON extractions pull only the three scalars the interval mapping needs
-// — never the (potentially tens-of-KB) snapshot blob itself.
+// — never the (potentially tens-of-KB) snapshot blob itself. `duration_ms` is
+// float8 and the two `->>` extractions are cast to double precision, so all
+// three really are numbers; `created_at` is timestamptz, which node-postgres
+// decodes to a Date. Nothing here needs coercing.
 const RawTraceRowSchema = z.object({
   id: z.string(),
   worktree: z.string(),
   trigger_kind: z.string(),
   trigger_label: z.string(),
-  duration_ms: z.coerce.number(),
-  created_at: z.coerce.date(),
+  duration_ms: z.number(),
+  created_at: z.date(),
   wall_time: z.string().nullable(),
-  at_ms: z.coerce.number().nullable(),
-  window_start_ms: z.coerce.number().nullable(),
+  at_ms: z.number().nullable(),
+  window_start_ms: z.number().nullable(),
   critical: z.boolean().nullable(),
 });
+export type TraceRow = z.infer<typeof RawTraceRowSchema>;
 
 function buildTracesQuery(ctx: DbSourceCtx): SqlQuery {
   // Fork DBs inherit main's rows at fork time; scoping to the fork's own
@@ -45,20 +54,29 @@ function buildTracesQuery(ctx: DbSourceCtx): SqlQuery {
         AND created_at <= to_timestamp(($2::double precision + ${ENRICH_SLACK_MS}) / 1000.0)
         ${worktreeFilter}
     `,
-    values: ctx.isMainDb ? [ctx.fromMs, ctx.toMs] : [ctx.fromMs, ctx.toMs, ctx.dbName],
+    values: ctx.isMainDb
+      ? [ctx.fromMs, ctx.toMs]
+      : [ctx.fromMs, ctx.toMs, ctx.dbName],
   };
 }
 
-export function mapTraceRows(rows: unknown[], ctx: DbSourceCtx): TimelineEvent[] {
+export function mapTraceRows(
+  rows: TraceRow[],
+  ctx: DbSourceCtx,
+): TimelineEvent[] {
   const events: TimelineEvent[] = [];
-  for (const raw of rows) {
-    const row = RawTraceRowSchema.parse(raw);
+  for (const row of rows) {
     // wallTime is the single profiler→wall join point (engine clock
     // discipline); the captured window span is a profiler-clock DURATION, so
     // it transfers to the wall clock as-is.
-    const endMs = row.wall_time !== null ? Date.parse(row.wall_time) : row.created_at.getTime();
+    const endMs =
+      row.wall_time !== null
+        ? Date.parse(row.wall_time)
+        : row.created_at.getTime();
     if (Number.isNaN(endMs)) {
-      throw new Error(`traces row ${row.id}: unparseable snapshot wallTime ${row.wall_time}`);
+      throw new Error(
+        `traces row ${row.id}: unparseable snapshot wallTime ${row.wall_time}`,
+      );
     }
     const windowSpanMs =
       row.at_ms !== null && row.window_start_ms !== null
@@ -86,8 +104,9 @@ export function mapTraceRows(rows: unknown[], ctx: DbSourceCtx): TimelineEvent[]
   return events;
 }
 
-export const tracesSource: DbSource = {
+export const tracesSource: DbSource = defineDbSource({
   source: "trace",
   build: buildTracesQuery,
+  row: RawTraceRowSchema,
   map: mapTraceRows,
-};
+});

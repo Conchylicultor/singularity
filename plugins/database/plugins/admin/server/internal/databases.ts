@@ -1,4 +1,6 @@
+import { queryOne, queryRows } from "@plugins/database/plugins/sql-rows/core";
 import { NAMESPACE_RE } from "@plugins/infra/plugins/namespace/core";
+import { z } from "zod";
 import { getAdminPool } from "./pool";
 
 /**
@@ -37,12 +39,15 @@ function assertSafeName(name: string): void {
 }
 
 export async function listDatabases(): Promise<string[]> {
-  const result = await getAdminPool().query<{ datname: string }>(
-    `SELECT datname FROM pg_database
+  const rows = await queryRows(getAdminPool(), {
+    // `datname` is a `name`, not `text`; the cast keeps the column's decoded
+    // type the one the schema below declares.
+    sql: `SELECT datname::text AS datname FROM pg_database
      WHERE datname NOT IN ('template0', 'template1', 'postgres')
      ORDER BY datname`,
-  );
-  return result.rows.map((r) => r.datname);
+    row: z.object({ datname: z.string() }),
+  });
+  return rows.map((r) => r.datname);
 }
 
 export async function databaseExists(name: string): Promise<boolean> {
@@ -85,9 +90,12 @@ export async function ensureDatabase(name: string): Promise<void> {
 // by the fork-temp sweep to avoid dropping a temp that an in-flight fork's
 // pg_restore still holds a connection to.
 export async function countActiveConnections(name: string): Promise<number> {
-  const result = await getAdminPool().query<{ n: number }>(
-    "SELECT count(*)::int AS n FROM pg_stat_activity WHERE datname = $1",
-    [name],
-  );
-  return result.rows[0]?.n ?? 0;
+  // A bare aggregate always returns exactly one row, so an absent row is a
+  // broken assumption rather than "no connections" — `queryOne` says so.
+  const { n } = await queryOne(getAdminPool(), {
+    sql: "SELECT count(*)::int AS n FROM pg_stat_activity WHERE datname = $1",
+    params: [name],
+    row: z.object({ n: z.number() }),
+  });
+  return n;
 }

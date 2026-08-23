@@ -1,16 +1,22 @@
 import { describe, expect, test } from "bun:test";
-import { countBuildProcesses, counterDelta, mapPgStatsRow } from "./sample-math";
+import {
+  countBuildProcesses,
+  counterDelta,
+  mapPgStatsRow,
+} from "./sample-math";
 
 describe("mapPgStatsRow", () => {
-  test("coerces pg numerics (strings) and defaults nulls", () => {
+  // The int8 counts and the numeric sum arrive as STRINGS from node-postgres;
+  // blk_read_time is a float8 and arrives as a number. See PgStatsRowSchema.
+  test("converts pg's string counts and defaults the nullable columns", () => {
     expect(
       mapPgStatsRow({
         locks_waiting: "3",
-        blk_read_time: "1234.5",
-        xact_commit: 42,
+        blk_read_time: 1234.5,
+        xact_commit: "42",
         wait_events: { IO: 4, LWLock: 1 },
         active_backends: "7",
-        total_backends: 31,
+        total_backends: "31",
       }),
     ).toEqual({
       locksWaiting: 3,
@@ -20,14 +26,16 @@ describe("mapPgStatsRow", () => {
       activeBackends: 7,
       totalBackends: 31,
     });
+    // Only the three genuinely-nullable columns can be null: a `sum` over no
+    // rows, and a `json_object_agg` with nothing to aggregate.
     expect(
       mapPgStatsRow({
-        locks_waiting: null,
+        locks_waiting: "0",
         blk_read_time: null,
         xact_commit: null,
         wait_events: null,
-        active_backends: null,
-        total_backends: null,
+        active_backends: "0",
+        total_backends: "0",
       }),
     ).toEqual({
       locksWaiting: 0,

@@ -1,6 +1,8 @@
 import { sql } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
+import { z } from "zod";
 import { db } from "@plugins/database/server";
+import { executeRows } from "@plugins/database/plugins/sql-rows/core";
 import { PAGE_BLOCK_TYPE } from "../../core/schemas";
 import { _blocks } from "./tables";
 
@@ -9,6 +11,15 @@ import { _blocks } from "./tables";
 // Comparing two such paths element-wise IS document order within a `pageId`
 // group — see the correctness note on `docOrderPaths`.
 type RankPath = string[];
+
+// `path` is built with an explicit `::text` on every element, so it is a plain
+// `text[]` (OID 1009) that pg decodes to a real array — not the raw `{a,b}`
+// literal an uncast `rank_text`/`name` array would arrive as. Measured against
+// the live cluster, and the reason the cast in the SQL is load-bearing.
+const DocOrderRowSchema = z.object({
+  page_row_id: z.string(),
+  path: z.array(z.string()),
+});
 
 /**
  * Rank path per live page row, keyed by page row id — the input the `pages`
@@ -55,7 +66,10 @@ export async function docOrderPaths(
   // the sidebar would silently stop updating. No error, no log. (`page-id.ts`'s
   // unquoted CTE is not a counter-precedent: it is a write path, which has no
   // read-set contract.)
-  const result = await executor.execute<{ page_row_id: string; path: string[] }>(sql`
+  const rows = await executeRows(executor, {
+    label: "page doc-order rank paths",
+    row: DocOrderRowSchema,
+    query: sql`
     WITH RECURSIVE up AS (
       SELECT b.id AS page_row_id, b.page_id, b.parent_id AS cursor,
              ARRAY[b.rank::text] AS path
@@ -76,9 +90,10 @@ export async function docOrderPaths(
         AND array_length(u.path, 1) < 64
     )
     SELECT page_row_id, path FROM up WHERE cursor IS NULL OR cursor = page_id
-  `);
+  `,
+  });
 
   const paths = new Map<string, RankPath>();
-  for (const row of result.rows) paths.set(row.page_row_id, row.path);
+  for (const row of rows) paths.set(row.page_row_id, row.path);
   return paths;
 }

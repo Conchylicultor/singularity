@@ -1,5 +1,7 @@
 import { sql } from "drizzle-orm";
+import { z } from "zod";
 import { db } from "@plugins/database/server";
+import { executeRows } from "@plugins/database/plugins/sql-rows/core";
 import { reportServerError } from "@plugins/framework/plugins/server-core/core";
 import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";
 import { jobLockHeldExpr, jobNameExpr } from "./introspection";
@@ -68,14 +70,14 @@ export function stopStuckLockSweeper(): void {
   }
 }
 
-interface ReclaimedRow {
-  id: string;
-  job_name: string;
-}
+const ReclaimedRowSchema = z.object({
+  id: z.string(),
+  job_name: z.string(),
+});
 
-interface ReclaimedQueueRow {
-  queue_name: string;
-}
+const ReclaimedQueueRowSchema = z.object({
+  queue_name: z.string(),
+});
 
 // Exported for the events-test crash-recovery endpoint, which forces a
 // sweep instead of waiting up to a minute for the next tick.
@@ -104,7 +106,10 @@ interface ReclaimedQueueRow {
 // wedge every job in the lane for four hours — a new outage, strictly worse than
 // the one `serial` was introduced to fix.
 export async function sweepOnce(): Promise<void> {
-  const result = await db.execute(sql`
+  const reclaimed = await executeRows(db, {
+    label: "stuck-lock-sweep: jobs",
+    row: ReclaimedRowSchema,
+    query: sql`
     UPDATE graphile_worker._private_jobs j
        SET locked_at = NULL,
            locked_by = NULL,
@@ -113,13 +118,14 @@ export async function sweepOnce(): Promise<void> {
        AND j.locked_at < now() - ${LOCK_ACQUIRE_GRACE}::interval
        AND NOT ${jobLockHeldExpr}
     RETURNING j.id::text AS id, ${jobNameExpr} AS job_name
-  `);
+  `,
+  });
 
   // Every reclaim is reported, never merely counted. A reclaim means a worker
   // died holding this row — real information about the health of this backend —
   // and a SILENT reclaim is precisely the failure mode that let the age-based
   // sweeper steal live jobs unnoticed for three months.
-  for (const row of result.rows as unknown as ReclaimedRow[]) {
+  for (const row of reclaimed) {
     const message = `[jobs] reclaimed ${row.job_name} (job ${row.id}) — locked with no live advisory lock holder; its worker died mid-run, re-queueing`;
     console.warn(message);
     reportServerError({ message, stack: null });
@@ -144,7 +150,10 @@ export async function sweepOnce(): Promise<void> {
   // column (`sql/000011.sql:40`: `(locked_at is null)`) and Postgres recomputes
   // it — writing to it is an error, and reading it as separate state would let
   // the two disagree.
-  const queueResult = await db.execute(sql`
+  const reclaimedQueues = await executeRows(db, {
+    label: "stuck-lock-sweep: queues",
+    row: ReclaimedQueueRowSchema,
+    query: sql`
     UPDATE graphile_worker._private_job_queues q
        SET locked_at = NULL,
            locked_by = NULL
@@ -158,13 +167,14 @@ export async function sweepOnce(): Promise<void> {
                 AND ${jobLockHeldExpr}
            )
     RETURNING q.queue_name AS queue_name
-  `);
+  `,
+  });
 
   // Reported for the same reason job reclaims are, and it is the stronger case:
   // a stuck queue lock is silent by construction (no row looks locked, no slot
   // looks held — the lane simply stops draining), so if this reclaim did not
   // announce itself there would be nothing at all to read afterwards.
-  for (const row of queueResult.rows as unknown as ReclaimedQueueRow[]) {
+  for (const row of reclaimedQueues) {
     const message = `[jobs] reclaimed serialization queue "${row.queue_name}" — locked with no live advisory lock holder on any of its jobs; the worker holding it died, unblocking the queue`;
     console.warn(message);
     reportServerError({ message, stack: null });

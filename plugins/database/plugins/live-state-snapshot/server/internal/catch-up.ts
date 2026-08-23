@@ -1,5 +1,10 @@
 import { sql as drizzleSql } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
+import { z } from "zod";
+import {
+  executeOne,
+  executeRows,
+} from "@plugins/database/plugins/sql-rows/core";
 import { routeChange } from "@plugins/database/plugins/change-feed/server";
 import type { DbChange } from "@plugins/database/plugins/change-feed/server";
 import {
@@ -8,14 +13,27 @@ import {
 } from "@plugins/database/plugins/derived-views/core";
 import { snapshotLog as log } from "./log-sink";
 
-// `db.execute<T>` constrains `T extends Record<string, unknown>`, so this carries
-// an index signature. The fields are the changelog columns the catch-up reads.
-type ChangelogRow = {
-  xid: string;
-  t: string;
-  op: "I" | "U" | "D";
-  ids: string[] | null;
-} & Record<string, unknown>;
+// The changelog columns the catch-up reads (see CHANGELOG_TABLE_DDL in
+// change-feed's triggers.ts). `xid` is a `numeric` — which pg hands back as a
+// STRING, and which this query casts to `text` anyway; the value is compared as a
+// BigInt below, never as a number. `op` is a `char(1)` whose only three writers
+// are the trigger function's I/U/D, so the enum is the check that was previously
+// a bare assertion. `ids` is the one genuinely nullable column: a bulk statement
+// with no single-column PK writes NULL, which the replay routes as FULL.
+const ChangelogRowSchema = z.object({
+  xid: z.string(),
+  t: z.string(),
+  op: z.enum(["I", "U", "D"]),
+  ids: z.array(z.string()).nullable(),
+});
+type ChangelogRow = z.infer<typeof ChangelogRowSchema>;
+
+// `min(...)` over an empty table is NULL, so both watermark reads are nullable.
+// Both are bare aggregates with no GROUP BY ⇒ exactly one row, hence `executeOne`.
+const MinPositionRowSchema = z.object({ min_position: z.string().nullable() });
+const MinXidRowSchema = z.object({ min_xid: z.string().nullable() });
+
+const ChangedTableRowSchema = z.object({ t: z.string() });
 
 // Replay one changelog row through the EXACT same cascade the live listener uses
 // (change-feed's exported `routeChange`). Catch-up ≡ "replay the missed changelog
@@ -63,12 +81,14 @@ export async function runCatchUp(
   db: NodePgDatabase,
   route: (change: DbChange) => void = routeChange,
 ): Promise<void> {
-  const floorRes = await db.execute<{ min_position: string | null }>(
-    drizzleSql.raw(
+  const floorRow = await executeOne(db, {
+    query: drizzleSql.raw(
       `SELECT min(position)::text AS min_position FROM ${LIVE_STATE_SNAPSHOT_TABLE}`,
     ),
-  );
-  const minPosition = floorRes.rows[0]?.min_position ?? null;
+    row: MinPositionRowSchema,
+    label: "runCatchUp/snapshot-floor",
+  });
+  const minPosition = floorRow.min_position;
   if (minPosition === null) {
     // No persisted snapshots yet (first-ever boot) — nothing to catch up. The
     // boot-snapshot endpoint falls back to from-scratch loads, which persist.
@@ -77,12 +97,14 @@ export async function runCatchUp(
 
   // Oldest retained changelog row. If our floor is older than it, history was
   // pruned out from under a stale snapshot → FULL backstop below.
-  const oldestRes = await db.execute<{ min_xid: string | null }>(
-    drizzleSql.raw(
+  const oldestRow = await executeOne(db, {
+    query: drizzleSql.raw(
       `SELECT min(xid)::text AS min_xid FROM ${LIVE_STATE_CHANGELOG_TABLE}`,
     ),
-  );
-  const oldestRetained = oldestRes.rows[0]?.min_xid ?? null;
+    row: MinXidRowSchema,
+    label: "runCatchUp/oldest-retained",
+  });
+  const oldestRetained = oldestRow.min_xid;
 
   // Compare as BigInt (xid8 stored as numeric; values are non-negative integers).
   const floor = BigInt(minPosition);
@@ -99,16 +121,18 @@ export async function runCatchUp(
     return;
   }
 
-  const rows = await db.execute<ChangelogRow>(
-    drizzleSql`
+  const rows = await executeRows(db, {
+    query: drizzleSql`
       SELECT xid::text AS xid, t, op, ids
       FROM ${drizzleSql.raw(LIVE_STATE_CHANGELOG_TABLE)}
       WHERE xid >= ${minPosition}::numeric
       ORDER BY seq
     `,
-  );
+    row: ChangelogRowSchema,
+    label: "runCatchUp/changelog-replay",
+  });
 
-  if (rows.rows.length === 0) {
+  if (rows.length === 0) {
     log.publish(
       "[live-state-snapshot] catch-up: no changelog rows since floor — already current",
     );
@@ -116,9 +140,9 @@ export async function runCatchUp(
   }
 
   log.publish(
-    `[live-state-snapshot] catch-up: replaying ${rows.rows.length} changelog row(s) since floor xid ${minPosition}`,
+    `[live-state-snapshot] catch-up: replaying ${rows.length} changelog row(s) since floor xid ${minPosition}`,
   );
-  for (const row of rows.rows) replayChange(row, route);
+  for (const row of rows) replayChange(row, route);
 }
 
 // FULL backstop: route a null-ids FULL change for every DISTINCT table seen in the
@@ -129,10 +153,14 @@ async function fullRecomputeChangedTables(
   db: NodePgDatabase,
   route: (change: DbChange) => void,
 ): Promise<void> {
-  const tablesRes = await db.execute<{ t: string }>(
-    drizzleSql.raw(`SELECT DISTINCT t FROM ${LIVE_STATE_CHANGELOG_TABLE}`),
-  );
-  for (const { t } of tablesRes.rows) {
+  const changed = await executeRows(db, {
+    query: drizzleSql.raw(
+      `SELECT DISTINCT t FROM ${LIVE_STATE_CHANGELOG_TABLE}`,
+    ),
+    row: ChangedTableRowSchema,
+    label: "fullRecomputeChangedTables",
+  });
+  for (const { t } of changed) {
     replayChange({ xid: "0", t, op: "U", ids: null }, route);
   }
 }

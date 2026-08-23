@@ -1,6 +1,11 @@
 import { createHash } from "node:crypto";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { sql as drizzleSql } from "drizzle-orm";
+import { z } from "zod";
+import {
+  executeOne,
+  executeRows,
+} from "@plugins/database/plugins/sql-rows/core";
 import {
   MIGRATIONS_TABLE_NAME,
   LIVE_STATE_CHANGELOG_TABLE,
@@ -190,6 +195,21 @@ function triggerName(table: string, op: "i" | "u" | "d"): string {
   return `live_state_${table}_${op}`;
 }
 
+// Every catalog column this file reads (`relname`, `attname`, `tgname`) is a
+// SCALAR `name` (OID 19), which pg does decode to a string — so these schemas say
+// `z.string()` and the SQL needs no cast. It is `name[]` (OID 1003, what an
+// uncast `array_agg` over one of these produces) that has no decoder and arrives
+// as a raw Postgres literal string; see the sql-rows plugin's CLAUDE.md.
+const TableNameRowSchema = z.object({ relname: z.string() });
+
+// One installed `live_state_*` trigger and the table it sits on. Shared by the
+// stale-trigger discovery and the up-to-date check, which read the same catalog
+// query.
+const LiveStateTriggerRowSchema = z.object({
+  tgname: z.string(),
+  relname: z.string(),
+});
+
 // Every public-schema user table minus the exclusion set (infra denylist ∪
 // derived-table rollups ∪ feature-contributed `ExcludeFromChangeFeed` tables).
 // The caller passes the set (built once via `buildDenylist()`) so the same
@@ -199,15 +219,17 @@ async function listPublicTables(
   db: NodePgDatabase,
   exclude: Set<string>,
 ): Promise<string[]> {
-  const res = await db.execute<{ relname: string }>(
-    drizzleSql.raw(
+  const rows = await executeRows(db, {
+    query: drizzleSql.raw(
       `SELECT relname FROM pg_stat_user_tables WHERE schemaname = 'public' ORDER BY relname`,
     ),
-  );
-  return res.rows
-    .map((r) => r.relname)
-    .filter((t) => !exclude.has(t));
+    row: TableNameRowSchema,
+    label: "listPublicTables",
+  });
+  return rows.map((r) => r.relname).filter((t) => !exclude.has(t));
 }
+
+const PkColumnRowSchema = z.object({ attname: z.string() });
 
 // The single-column primary key of a table, or "" for composite/no PK
 // (→ FULL-for-table). Exactly one row from this query ⇒ single-column PK.
@@ -215,16 +237,18 @@ async function singleColumnPk(
   db: NodePgDatabase,
   table: string,
 ): Promise<string> {
-  const res = await db.execute<{ attname: string }>(
-    drizzleSql.raw(
+  const rows = await executeRows(db, {
+    query: drizzleSql.raw(
       `SELECT a.attname
        FROM pg_index i
        JOIN pg_attribute a ON a.attrelid = i.indrelid AND a.attnum = ANY(i.indkey)
        WHERE i.indrelid = format('public.%I', ${quoteLiteral(table)})::regclass
          AND i.indisprimary`,
     ),
-  );
-  const row = res.rows.length === 1 ? res.rows[0] : undefined;
+    row: PkColumnRowSchema,
+    label: "singleColumnPk",
+  });
+  const row = rows.length === 1 ? rows[0] : undefined;
   return row ? row.attname : "";
 }
 
@@ -362,9 +386,10 @@ export async function rebuildTriggers(db: NodePgDatabase): Promise<void> {
   // ⇒ identical feed ⇒ nothing to do.
   const signature = createHash("sha256")
     .update(
-      [NOTIFY_FUNCTION_DDL, ...compiled.map((c) => `${c.table}\n${c.stmts.join("\n")}`)].join(
-        "\n--\n",
-      ),
+      [
+        NOTIFY_FUNCTION_DDL,
+        ...compiled.map((c) => `${c.table}\n${c.stmts.join("\n")}`),
+      ].join("\n--\n"),
     )
     .digest("hex");
 
@@ -407,8 +432,8 @@ export async function rebuildTriggers(db: NodePgDatabase): Promise<void> {
   // table is ever touched by two phase-2 transactions.
   const staleByTable = new Map<string, string[]>();
   if (exclude.size > 0) {
-    const existing = await db.execute<{ tgname: string; relname: string }>(
-      drizzleSql.raw(
+    const existing = await executeRows(db, {
+      query: drizzleSql.raw(
         `SELECT t.tgname, c.relname
          FROM pg_trigger t
          JOIN pg_class c ON c.oid = t.tgrelid
@@ -417,8 +442,10 @@ export async function rebuildTriggers(db: NodePgDatabase): Promise<void> {
            AND NOT t.tgisinternal
            AND t.tgname LIKE 'live_state_%'`,
       ),
-    );
-    for (const { tgname, relname } of existing.rows) {
+      row: LiveStateTriggerRowSchema,
+      label: "rebuildTriggers/stale-triggers",
+    });
+    for (const { tgname, relname } of existing) {
       if (!exclude.has(relname)) continue;
       const names = staleByTable.get(relname) ?? [];
       names.push(tgname);
@@ -474,14 +501,24 @@ export async function rebuildTriggers(db: NodePgDatabase): Promise<void> {
   coveredTables = triggers.map((t) => t.table);
 
   log.publish(
-    `[change-feed] installed live_state triggers on ${coveredTables.length} table(s)`
-      + (staleByTable.size > 0
+    `[change-feed] installed live_state triggers on ${coveredTables.length} table(s)` +
+      (staleByTable.size > 0
         ? ` (dropped stale triggers on ${staleByTable.size} now-excluded table(s))`
         : ""),
   );
 
   await warnOnCoverageGaps(db, exclude);
 }
+
+// `signature` is the `text NOT NULL` column of TRIGGER_STATE_DDL.
+const SignatureRowSchema = z.object({ signature: z.string() });
+
+// `to_regproc` / `to_regclass` return NULL when the object does not exist — which
+// is exactly what this query asks — so both columns are nullable text.
+const LayerObjectsRowSchema = z.object({
+  fn: z.string().nullable(),
+  changelog: z.string().nullable(),
+});
 
 // True iff the live trigger layer already IS the desired one, so the rebuild (and
 // its whole-database exclusive-lock window) can be skipped entirely.
@@ -501,28 +538,32 @@ async function triggerLayerUpToDate(
 ): Promise<boolean> {
   await db.execute(drizzleSql.raw(TRIGGER_STATE_DDL));
 
-  const priorRes = await db.execute<{ signature: string }>(
-    drizzleSql.raw(
+  const prior = await executeRows(db, {
+    query: drizzleSql.raw(
       `SELECT signature FROM "public"."${LIVE_STATE_TRIGGER_STATE_TABLE}" LIMIT 1`,
     ),
-  );
-  if (priorRes.rows[0]?.signature !== signature) return false;
+    row: SignatureRowSchema,
+    label: "triggerLayerUpToDate/signature",
+  });
+  if (prior[0]?.signature !== signature) return false;
 
   // The trigger function and the changelog table it INSERTs into must both still
   // exist — a trigger whose function vanished would fire and error on every write.
-  const objRes = await db.execute<{ fn: string | null; changelog: string | null }>(
-    drizzleSql.raw(
+  // A `SELECT` with no `FROM` returns exactly one row, so this is `executeOne`.
+  const objs = await executeOne(db, {
+    query: drizzleSql.raw(
       `SELECT to_regproc('public.live_state_notify')::text        AS fn,
               to_regclass('public.${LIVE_STATE_CHANGELOG_TABLE}')::text AS changelog`,
     ),
-  );
-  const objs = objRes.rows[0];
-  if (!objs?.fn || !objs.changelog) return false;
+    row: LayerObjectsRowSchema,
+    label: "triggerLayerUpToDate/objects",
+  });
+  if (!objs.fn || !objs.changelog) return false;
 
   // Every expected trigger is physically present, and no live_state_* trigger
   // lingers on a now-excluded table (the stale-drop case the rebuild handles).
-  const installedRes = await db.execute<{ tgname: string; relname: string }>(
-    drizzleSql.raw(
+  const installedRows = await executeRows(db, {
+    query: drizzleSql.raw(
       `SELECT t.tgname, c.relname
        FROM pg_trigger t
        JOIN pg_class c ON c.oid = t.tgrelid
@@ -531,14 +572,20 @@ async function triggerLayerUpToDate(
          AND NOT t.tgisinternal
          AND t.tgname LIKE 'live_state_%'`,
     ),
-  );
-  if (installedRes.rows.some((r) => exclude.has(r.relname))) return false;
+    row: LiveStateTriggerRowSchema,
+    label: "triggerLayerUpToDate/installed",
+  });
+  if (installedRows.some((r) => exclude.has(r.relname))) return false;
 
-  const installed = new Set(installedRes.rows.map((r) => r.tgname));
+  const installed = new Set(installedRows.map((r) => r.tgname));
   return compiled.every((c) =>
-    (["i", "u", "d"] as const).every((op) => installed.has(triggerName(c.table, op))),
+    (["i", "u", "d"] as const).every((op) =>
+      installed.has(triggerName(c.table, op)),
+    ),
   );
 }
+
+const TriggerNameRowSchema = z.object({ tgname: z.string() });
 
 // Boot-time coverage check (replaces a separate ./singularity check, which can't
 // reach a live DB). After installing triggers, query which public tables (minus
@@ -553,15 +600,17 @@ async function warnOnCoverageGaps(
   const tables = await listPublicTables(db, exclude);
   const gaps: string[] = [];
   for (const table of tables) {
-    const res = await db.execute<{ tgname: string }>(
-      drizzleSql.raw(
+    const rows = await executeRows(db, {
+      query: drizzleSql.raw(
         `SELECT tgname FROM pg_trigger
          WHERE tgrelid = format('public.%I', ${quoteLiteral(table)})::regclass
            AND NOT tgisinternal
            AND tgname LIKE 'live_state_%'`,
       ),
-    );
-    const names = new Set(res.rows.map((r) => r.tgname));
+      row: TriggerNameRowSchema,
+      label: "warnOnCoverageGaps",
+    });
+    const names = new Set(rows.map((r) => r.tgname));
     const expected = [
       triggerName(table, "i"),
       triggerName(table, "u"),

@@ -1,4 +1,10 @@
+import { z } from "zod";
 import { openShortLivedClient } from "@plugins/database/plugins/admin/server";
+import { queryRows } from "@plugins/database/plugins/sql-rows/core";
+
+// Both columns are `text`, and `tasks.title` is NOT NULL (see below) — so the
+// `if (row.title)` guard is about a BLANK title, not a missing one.
+const TitleRowSchema = z.object({ worktree: z.string(), title: z.string() });
 
 // Push/build bars are keyed by the bare worktree id (`att-x`). That id is, by a
 // hard invariant, the attempt id: agent worktrees live at
@@ -24,13 +30,14 @@ export async function resolveWorktreeTitles(
 
   const pool = openShortLivedClient("singularity");
   try {
-    const { rows } = await pool.query<{ worktree: string; title: string }>(
-      `SELECT a.id AS worktree, t.title AS title
-         FROM attempts a
-         JOIN tasks t ON t.id = a.task_id
-        WHERE a.id = ANY($1)`,
-      [ids],
-    );
+    const rows = await queryRows(pool, {
+      sql: `SELECT a.id AS worktree, t.title AS title
+              FROM attempts a
+              JOIN tasks t ON t.id = a.task_id
+             WHERE a.id = ANY($1)`,
+      params: [ids],
+      row: TitleRowSchema,
+    });
     for (const row of rows) {
       if (row.title) titles.set(row.worktree, row.title);
     }
