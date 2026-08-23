@@ -18,24 +18,28 @@ import {
   clearActive,
 } from "@plugins/plugin-meta/plugins/composition/web";
 import { useDeleteComposition } from "@plugins/build/plugins/serve-composition/web";
-import { MAIN_COMPOSITION_ID } from "@plugins/infra/plugins/namespace/core";
+import { isCommittedSourceComposition } from "@plugins/plugin-meta/plugins/composition/core";
 
 /**
  * Persistence actions for the active draft: an inline editable name plus Save /
  * Delete / Clear. The pane's `:id` is the composition being edited, so Save is
  * always an in-place update.
  *
- * Delete is available for every composition except the one the repo itself
- * builds — that entry must exist, so the button is simply absent there (the
- * config edit underneath throws on it). It removes the row AND what the composition is serving: the
+ * Delete is available for every composition except the two the repo itself owns
+ * as committed source — main's row and `base-exclusions`. Those entries must
+ * exist, so the button is simply absent there (the config edit underneath
+ * throws on them). It removes the row AND what the composition is serving: the
  * same `useDeleteComposition` the list row's Delete calls, so the two paths
  * cannot drift. The button pends while the server says what is at stake, then a
  * confirm dialog names every address and database that will go; only once they
  * are actually reclaimed does the draft clear and the pane close.
  *
- * Save stays available: editing main's entry points is legitimate, and a
- * narrowing edit is caught loudly by the registry-equivalence check on the next
- * build.
+ * Save is inert for those same two rows. What they contain decides what the app
+ * ships, and codegen emits the registries from the COMMITTED config — so a
+ * stored edit here would sit in the user layer looking like a change and never
+ * reach a generated file. Changing them is an edit to
+ * `plugins/plugin-meta/plugins/composition/core/config.ts` plus a build; the
+ * `save` call underneath throws if this button is ever reached.
  */
 export function DraftActions({ id }: { id: string }): ReactElement {
   const draft = useActiveComposition();
@@ -51,7 +55,11 @@ export function DraftActions({ id }: { id: string }): ReactElement {
   // delay means that gap never flashes.
   if (!draft) return <Loading variant="text" />;
 
-  const canSave = draft.name.trim().length > 0;
+  // The same predicate the `save` guard and the read-only entry-point surface
+  // read, so the disabled button and the throw beneath it cannot disagree about
+  // which rows they mean.
+  const committedSource = isCommittedSourceComposition(id);
+  const canSave = draft.name.trim().length > 0 && !committedSource;
   // The draft's name is what the person is looking at while they edit; an unsaved
   // rename is still how they think of this composition, so it is what the delete
   // dialog names.
@@ -78,17 +86,31 @@ export function DraftActions({ id }: { id: string }): ReactElement {
         onChange={(e) => updateActiveDraft({ name: e.target.value })}
         placeholder="Composition name"
         aria-label="Composition name"
+        // Same reason Save is inert: a name typed here could never be stored,
+        // and a field that accepts text it cannot keep is the control-that-
+        // cannot-succeed shape one level down from the button.
+        readOnly={committedSource}
+        title={
+          committedSource
+            ? "This composition is committed source — edit core/config.ts and rebuild."
+            : undefined
+        }
       />
       <Stack direction="row" align="center" gap="xs">
         <Button
           variant="default"
           disabled={!canSave}
+          title={
+            committedSource
+              ? "This composition is committed source — edit core/config.ts and rebuild."
+              : undefined
+          }
           onClick={() => save(draft, id)}
         >
           <MdSave />
           Save
         </Button>
-        {id !== MAIN_COMPOSITION_ID && (
+        {!committedSource && (
           <Button variant="ghost" onClick={onDelete}>
             <MdDeleteOutline />
             Delete

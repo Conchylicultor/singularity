@@ -14,7 +14,10 @@ import {
   manifestItemToManifest,
   type CompositionManifestItem,
 } from "./manifest-map";
-import { MAIN_COMPOSITION_ID } from "@plugins/infra/plugins/namespace/core";
+import {
+  BASE_EXCLUSIONS_ID,
+  MAIN_COMPOSITION_ID,
+} from "@plugins/infra/plugins/namespace/core";
 
 const seeds = compositionsConfig.defaults
   .manifests as CompositionManifestItem[];
@@ -209,4 +212,42 @@ test("the main app is seeded exactly once, as the root composition", () => {
   // the engine's `named` set — the set the negative pass refuses to trim — which
   // would permanently shield them from any future `!x.**`, for no gain.
   expect(main.extends).toEqual([]);
+});
+
+test("the base-exclusions row is seeded exactly once and holds only negatives", () => {
+  // Exactly one row, for the same reason main has exactly one: `flattenManifest`
+  // resolves it BY NAME, so a second row would silently shadow the first and a
+  // missing one would make every inherited exclusion vanish without a word.
+  const rows = seeds.filter((s) => s.id === BASE_EXCLUSIONS_ID);
+  expect(rows.length).toBe(1);
+  const base = rows[0]!;
+  expect(base.name).toBe(BASE_EXCLUSIONS_ID);
+
+  // NEGATIVES ONLY. Every composition inherits this row unconditionally, so a
+  // positive here would force a plugin INTO every bundle from a place nobody
+  // looks — that is `served-baseline`'s job, done through `extends` where the
+  // opting-in row shows it.
+  expect(base.entryPoints.length).toBeGreaterThan(0);
+  for (const p of base.entryPoints) expect(p.startsWith("!")).toBe(true);
+  expect(base.selectedContributors).toEqual([]);
+
+  // Not servable: the row resolves to an empty bundle, so there is nothing a
+  // serve build could put behind a `base-exclusions` namespace.
+  expect(base.serve).toBe("off");
+});
+
+test("the base-exclusions row carries the migrated plugin-changes exclusion", () => {
+  // The replacement for the `singularity.disabled: true` flag that used to live
+  // in plugins/review/plugins/plugin-changes/package.json. The cascade to the two
+  // sub-plugins and the nine render-diff adapters is the engine's job — asserted
+  // against a real plugin tree in closure.test.ts; here we pin the declaration.
+  const base = byName(BASE_EXCLUSIONS_ID);
+  expect(base.entryPoints).toContain("!review.plugin-changes.**");
+});
+
+test("main's entry points stay exactly `**` — the exclusion lives on the base row", () => {
+  // The negative deliberately does NOT go on main's row. Written there it would
+  // hold for main alone, and any other composition reaching the same plugins
+  // would ship what the repo decided it does not want.
+  expect(byName(MAIN_COMPOSITION_ID).entryPoints).toEqual(["**"]);
 });

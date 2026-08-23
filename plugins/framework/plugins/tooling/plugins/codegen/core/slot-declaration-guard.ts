@@ -15,10 +15,9 @@ import type {
   SlotNaming,
   SlotScope,
 } from "@plugins/framework/plugins/slot-declaration/core";
-import type { PluginId } from "@plugins/framework/plugins/plugin-id/core";
 import { getFacet } from "@plugins/plugin-meta/plugins/facets/core";
 import { slotsFacetDef } from "@plugins/plugin-meta/plugins/facets/plugins/slots/core";
-import { computeDisabledIds } from "./disabled-ids";
+import { mainBundle } from "./main-bundle";
 import { buildBarrelFreeTree } from "./barrel-free-tree";
 
 /**
@@ -31,25 +30,30 @@ import { buildBarrelFreeTree } from "./barrel-free-tree";
  * `scope` picks WHICH plugin set is modelled, and the two are not
  * interchangeable — a caller states the question it is asking:
  *
- * `"registry"` — THE REGISTRY, NOT THE FILESYSTEM. A DISABLED plugin is omitted
- * from `web.generated.ts`, so the browser never loads it, never creates its
- * slots and never registers a config descriptor for them. This pass therefore
- * skips it too. Getting that wrong is not cosmetic: the server's descriptors
- * come from the reorderable-slots manifest, which is this same set, so declaring
- * a plugin the browser will not load makes the two runtimes register different
- * descriptor sets — `config-v2:registrations-paired` fails, and the extra
- * descriptor would own a config file nothing on the web side can read. Skipping
- * the IMPORT (not merely the declaration) is what keeps that true: an imported
- * barrel whose plugin this pass does not declare would put its slots in the
- * created-set with no owner, which the orphan guard would then read as a slot
- * nobody declares.
+ * `"registry"` — THE REGISTRY, NOT THE FILESYSTEM. A plugin the app's composition
+ * does not bundle is omitted from `web.generated.ts`, so the browser never loads
+ * it, never creates its slots and never registers a config descriptor for them.
+ * This pass therefore skips it too. Getting that wrong is not cosmetic: the
+ * server's descriptors come from the reorderable-slots manifest, which is this
+ * same set, so declaring a plugin the browser will not load makes the two
+ * runtimes register different descriptor sets —
+ * `config-v2:registrations-paired` fails, and the extra descriptor would own a
+ * config file nothing on the web side can read. Skipping the IMPORT (not merely
+ * the declaration) is what keeps that true: an imported barrel whose plugin this
+ * pass does not declare would put its slots in the created-set with no owner,
+ * which the orphan guard would then read as a slot nobody declares.
  *
- * `"source"` — EVERYTHING THE CHECKOUT DECLARES, disabled plugins included.
+ * The orphan guard consequently does not cover an excluded plugin's slots. That
+ * is the honest scope: a plugin that ships nothing owes nothing. Bundling it
+ * again puts its slots back in the created-set and the guard names any it forgot.
+ *
+ * `"source"` — EVERYTHING THE CHECKOUT DECLARES, excluded plugins included.
  * Here importing those barrels IS the point: a reader describing SOURCE asks
  * what the tree declares, not what the browser loads. `facets:render-complete`
- * checks the surface `review.plugin-changes.diff-renderer`, owned by the
- * disabled `review/plugins/plugin-changes` — under registry scope it would read
- * every facet as missing its diff renderer. The created-set hazard above does
+ * checks the surface `review.plugin-changes.diff-renderer`, owned by
+ * `review/plugins/plugin-changes` — which the `base-exclusions` row negates out
+ * of every composition, so under registry scope it would read every facet as
+ * missing its diff renderer. The created-set hazard above does
  * not follow here, because this scope DECLARES every barrel it imports: an
  * imported plugin's slots get an owner, so they never enter `created \ declared`
  * ownerless. What the orphan guard sees is a separate matter, settled at
@@ -93,19 +97,25 @@ async function runDeclarationPass(
   scope: SlotScope,
 ): Promise<SlotNaming> {
   const tree = await buildBarrelFreeTree(root);
-  // Empty under `"source"`: the filter below is the registry's, and a disabled
+  // `null` under `"source"` — NO membership filter at all, because an excluded
   // plugin's barrel is exactly what a source-scoped reader came for.
-  const disabled =
-    scope === "registry" ? computeDisabledIds(tree) : new Set<PluginId>();
+  //
+  // `null` rather than an empty Set, and the difference is not stylistic: this
+  // used to hold the DISABLED ids, an EXCLUSION set whose empty value correctly
+  // meant "exclude nobody". A bundle is the opposite polarity — an INCLUSION set
+  // whose empty value would exclude EVERY plugin, silently declaring nothing
+  // under source scope. There is no empty value that means "no filter" here, so
+  // the absence of a filter is spelled as an absence.
+  const bundle = scope === "registry" ? mainBundle(tree, root) : null;
   registerBarrelStubs(root);
 
   const declaring: SlotDeclaringPlugin[] = [];
   for (const node of tree.byDir.values()) {
     // Registry scope only — see the two arms on `declareSlotsFromBarrels`: not
-    // in the registry ⇒ not loaded ⇒ its slots do not exist, and skipping the
-    // IMPORT (not just the declaration) is what keeps the created-set free of
-    // ownerless slots the orphan guard would misread.
-    if (disabled.has(node.id)) continue;
+    // in the composition ⇒ not in the registry ⇒ not loaded ⇒ its slots do not
+    // exist, and skipping the IMPORT (not just the declaration) is what keeps
+    // the created-set free of ownerless slots the orphan guard would misread.
+    if (bundle !== null && !bundle.has(node.id)) continue;
     const barrelPath = join(node.dir, "web", "index.ts");
     if (!existsSync(barrelPath)) continue;
     const mod = await importBarrel(barrelPath);

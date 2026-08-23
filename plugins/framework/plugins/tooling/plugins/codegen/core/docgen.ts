@@ -9,27 +9,25 @@ import {
   type Facet,
   type DocFact,
 } from "@plugins/plugin-meta/plugins/facets/core";
-import {
-  UNDOCUMENTED_RUNTIME_FOLDERS,
-  type PluginId,
-} from "@plugins/framework/plugins/plugin-id/core";
-import { computeDisabledIds } from "./disabled-ids";
+import { UNDOCUMENTED_RUNTIME_FOLDERS } from "@plugins/framework/plugins/plugin-id/core";
+import { mainComposition, type MainComposition } from "./main-bundle";
 import { writeGenerated } from "./write-generated";
 import { buildBarrelFreeTree } from "./barrel-free-tree";
 import { buildEnrichedTree } from "./enriched-tree";
 
 /**
- * Marker appended to a plugin's `name — description` line when it (or its
- * dependent closure) is disabled. Disabled plugins STAY in the docs (the code
- * still exists) but are annotated. Deterministic — never names the causing seed
- * (multiple seeds would make it ambiguous and churn the in-sync check):
- *  - seed (`node.disabled === true`): ` (disabled)`
- *  - cascade (in closure, not a seed): ` (disabled — cascade)`
+ * Marker appended to a plugin's `name — description` line when the app's own
+ * composition does not bundle it. Excluded plugins STAY in the docs (the code
+ * still exists) but are annotated. Deterministic — never names the negative that
+ * caused it (several could match, which would make the marker ambiguous and churn
+ * the in-sync check):
+ *  - named directly by a negative entry pattern: ` (excluded)`
+ *  - taken by the removal cascade (a descendant, or an importer that would break
+ *    without it): ` (excluded — cascade)`
  */
-function disabledMarker(p: PluginNode, disabled: Set<PluginId>): string {
-  if (p.disabled) return " (disabled)";
-  if (disabled.has(p.id)) return " (disabled — cascade)";
-  return "";
+function exclusionMarker(p: PluginNode, main: MainComposition): string {
+  if (main.bundle.has(p.id)) return "";
+  return main.negated.has(p.id) ? " (excluded)" : " (excluded — cascade)";
 }
 
 const BEGIN =
@@ -127,7 +125,7 @@ function renderPluginTreeMd(
   root: string,
   mode: RenderMode,
   facets: Facet[],
-  disabled: Set<PluginId>,
+  main: MainComposition,
 ): string[] {
   const headerIndent = "  ".repeat(depth);
   const bodyIndent = `${headerIndent}  `;
@@ -135,19 +133,19 @@ function renderPluginTreeMd(
   const desc = pluginDescription(p);
   const descStr = desc ? ` — ${desc}` : "";
   const lbMarker = mode === "compact" && p.loadBearing ? " [load-bearing]" : "";
-  const disMarker = disabledMarker(p, disabled);
+  const exMarker = exclusionMarker(p, main);
 
   if (mode === "compact" && p.collapsed && p.children.length > 0) {
     const total = countDescendants(p);
     const subLabel = total === 1 ? "1 sub-plugin" : `${total} sub-plugins`;
     lines.push(
-      `${headerIndent}- **\`${p.name}\`**${lbMarker} [${subLabel}]${disMarker}${descStr}`,
+      `${headerIndent}- **\`${p.name}\`**${lbMarker} [${subLabel}]${exMarker}${descStr}`,
     );
     return lines;
   }
 
   lines.push(
-    `${headerIndent}- **\`${p.name}\`**${lbMarker}${disMarker}${descStr}`,
+    `${headerIndent}- **\`${p.name}\`**${lbMarker}${exMarker}${descStr}`,
   );
 
   const includeBody = mode === "detail";
@@ -156,9 +154,7 @@ function renderPluginTreeMd(
   if (p.children.length > 0) {
     lines.push(`${bodyIndent}- Plugins:`);
     for (const c of p.children)
-      lines.push(
-        ...renderPluginTreeMd(c, depth + 2, root, mode, facets, disabled),
-      );
+      lines.push(...renderPluginTreeMd(c, depth + 2, root, mode, facets, main));
   }
 
   return lines;
@@ -178,14 +174,12 @@ function renderTreeBody(
   root: string,
   mode: RenderMode,
   facets: Facet[],
-  disabled: Set<PluginId>,
+  main: MainComposition,
 ): string {
   const lines: string[] = [];
   for (let i = 0; i < roots.length; i++) {
     if (i > 0) lines.push("");
-    lines.push(
-      ...renderPluginTreeMd(roots[i]!, 0, root, mode, facets, disabled),
-    );
+    lines.push(...renderPluginTreeMd(roots[i]!, 0, root, mode, facets, main));
   }
   return lines.join("\n") + "\n";
 }
@@ -214,7 +208,7 @@ function renderPluginClaudeAutogen(
   p: PluginNode,
   root: string,
   facets: Facet[],
-  disabled: Set<PluginId>,
+  main: MainComposition,
 ): string {
   const lines: string[] = [];
   lines.push("## Plugin reference");
@@ -222,27 +216,29 @@ function renderPluginClaudeAutogen(
   const desc = pluginDescription(p);
   if (desc) lines.push(`- Description: ${desc}`);
   if (p.loadBearing) lines.push("- Load-bearing: yes");
-  // Annotate disabled plugins (the code still exists, but it's omitted from the
-  // registries/bundle). Seed vs derived-cascade, deterministic — never names the
-  // causing seed (see `disabledMarker`).
-  if (p.disabled) lines.push("- Disabled: yes");
-  else if (disabled.has(p.id)) lines.push("- Disabled: cascade");
+  // Annotate plugins the app's composition leaves out (the code still exists,
+  // but it's omitted from the registries/bundle). Directly negated vs taken by
+  // the cascade, deterministic — never names the causing negative (see
+  // `exclusionMarker`).
+  if (!main.bundle.has(p.id)) {
+    lines.push(
+      main.negated.has(p.id) ? "- Excluded: yes" : "- Excluded: cascade",
+    );
+  }
   renderPluginFacts(p, facets, "", root, lines);
   if (p.children.length > 0) {
     if (p.collapsed) {
       lines.push("- Sub-plugins:");
       for (const c of p.children) {
-        lines.push(
-          ...renderPluginTreeMd(c, 1, root, "compact", facets, disabled),
-        );
+        lines.push(...renderPluginTreeMd(c, 1, root, "compact", facets, main));
       }
     } else {
       lines.push("- Sub-plugins:");
       for (const c of p.children) {
         const cdesc = pluginDescription(c);
         const cdescStr = cdesc ? ` — ${cdesc}` : "";
-        const cDisMarker = disabledMarker(c, disabled);
-        lines.push(`  - **\`${c.name}\`**${cDisMarker}${cdescStr}`);
+        const cExMarker = exclusionMarker(c, main);
+        lines.push(`  - **\`${c.name}\`**${cExMarker}${cdescStr}`);
       }
     }
   }
@@ -283,9 +279,9 @@ function renderPluginClaudeMd(
   existing: string | null,
   root: string,
   facets: Facet[],
-  disabled: Set<PluginId>,
+  main: MainComposition,
 ): string {
-  const autogen = renderPluginClaudeAutogen(p, root, facets, disabled);
+  const autogen = renderPluginClaudeAutogen(p, root, facets, main);
   const block = `${BEGIN}\n\n${autogen}\n${END}\n`;
 
   if (existing === null) {
@@ -326,7 +322,7 @@ export async function generatePluginDocs({
   root,
 }: GenerateDocsOptions): Promise<void> {
   const tree = await buildEnrichedTree(root);
-  const disabled = computeDisabledIds(tree);
+  const main = mainComposition(tree, root);
 
   // Markdown is not in the format allowlist, so the funnel hands these bytes
   // back untouched — they route through it anyway so there is exactly one write
@@ -347,13 +343,7 @@ export async function generatePluginDocs({
     const existing = readIfExists(file);
     await writeGenerated({
       file,
-      content: renderPluginClaudeMd(
-        info,
-        existing,
-        root,
-        tree.facets,
-        disabled,
-      ),
+      content: renderPluginClaudeMd(info, existing, root, tree.facets, main),
     });
   }
 
@@ -374,7 +364,7 @@ function renderCompactDocFromTree(tree: PluginTree, root: string): string {
     root,
     "compact",
     tree.facets,
-    computeDisabledIds(tree),
+    mainComposition(tree, root),
   );
   return `${COMPACT_HEADER}${BEGIN}\n\n${body}\n${END}\n`;
 }
@@ -385,7 +375,7 @@ function renderDetailsDocFromTree(tree: PluginTree, root: string): string {
     root,
     "detail",
     tree.facets,
-    computeDisabledIds(tree),
+    mainComposition(tree, root),
   );
   return `${DETAILS_HEADER}${BEGIN}\n\n${body}\n${END}\n`;
 }

@@ -65,9 +65,7 @@ export {
   fileConfigProxy,
   generateConfigOrigins,
   propagateConfigToUser,
-  readCompositionManifestsFromDisk,
   readEffectiveConfigFromDisk,
-  readGitLayerConfig,
   renderConfigOriginContent,
   loadConfigDescriptorsByOriginPath,
   resolveOriginAnnotations,
@@ -121,10 +119,19 @@ export {
   fieldsEagerManifestPath,
 } from "./fields-eager-gen";
 
-// The closed disabled-plugin id set (seeds + dependent-closure cascade), shared
-// by the codegen generators and the in-sync checks so both derive identical
-// filtered/annotated output from the committed `package.json` flags.
-export { computeDisabledIds } from "./disabled-ids";
+// The GIT-LAYER config read (committed origin + committed overrides, stale
+// origins ignored), and the one question every generator asks of it: which
+// plugins does the app's own composition bundle? Shared by codegen and the
+// in-sync checks so both derive identical filtered/annotated output from the
+// committed manifests.
+export { readGitLayerConfig } from "./git-layer-config";
+export {
+  mainBundle,
+  mainComposition,
+  readCompositionManifestsFromDisk,
+  resolveMainComposition,
+  type MainComposition,
+} from "./main-bundle";
 
 export {
   generateBarrelStubs,

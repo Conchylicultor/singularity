@@ -7,6 +7,7 @@ export {
   assertCompositionId,
   assertCompositionName,
   assertServableCompositionNamespace,
+  isCommittedSourceComposition,
   isServableCompositionId,
   RESERVED_COMPOSITION_NAMESPACES,
 } from "./namespace";

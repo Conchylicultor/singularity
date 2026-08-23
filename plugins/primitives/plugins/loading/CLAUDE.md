@@ -103,6 +103,7 @@ which is what the `no-adhoc-loading-text` lint rule enforces.
     - `apps/studio/contributions/tables/row-count`
     - `apps/studio/contributions/tables/sample-rows`
     - `apps/studio/explorer`
+    - `apps/studio/explorer/excluded`
     - `apps/studio/graph`
     - `apps/website/demos/app-gallery`
     - `apps/workflows/definitions`

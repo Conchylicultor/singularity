@@ -55,6 +55,26 @@ export type CheckoutRef =
  */
 export const MAIN_COMPOSITION_ID = "singularity";
 
+/**
+ * The id of the manifest row whose NEGATIVES every composition inherits.
+ *
+ * A composition says what it includes; this one row says what the repo has
+ * decided is not in any app. `flattenManifest` folds it into every manifest
+ * unconditionally — not via `extends`, which a new composition could forget —
+ * so an exclusion written once holds everywhere. A composition takes a plugin
+ * back by naming it explicitly, which the engine's protection rule already makes
+ * win over any negative.
+ *
+ * Lives here beside `MAIN_COMPOSITION_ID` for the same reason: the closure
+ * engine, the checks, the CLI and the browser all have to name this row, and a
+ * zero-import leaf is reachable from every one of those runtimes.
+ *
+ * Like main's row it is a legal composition id but never a servable namespace —
+ * its bundle is empty by construction, so `base-exclusions.localhost:9000` is a
+ * namespace nothing could be served at.
+ */
+export const BASE_EXCLUSIONS_ID = "base-exclusions";
+
 /** One DNS label: the charset that is also path-safe and Postgres-safe. */
 export const NAMESPACE_LABEL_RE = /^[a-z0-9][a-z0-9-]{0,62}$/;
 

@@ -36,10 +36,13 @@
     - `plugin-meta/barrel-import.registerBarrelStubs`
     - `plugin-meta/barrel-import.setPreBarrelImportGuard`
     - `plugin-meta/closure.classifyEdges`
-    - `plugin-meta/closure.disabledClosure`
+    - `plugin-meta/closure.EdgeGraph`
+    - `plugin-meta/closure.flattenManifest`
+    - `plugin-meta/closure.resolveComposition`
     - `plugin-meta/composition.assertCompositionName`
     - `plugin-meta/composition.CompositionManifestItem`
     - `plugin-meta/composition.compositionsConfig`
+    - `plugin-meta/composition.manifestItemToManifest`
     - `plugin-meta/facets.DocFact`
     - `plugin-meta/facets.Facet`
     - `plugin-meta/facets.getFacet`
@@ -66,6 +69,7 @@
     - `DiscoveredCollectedDir`
     - `EagerTierResult`
     - `GenerateDocsOptions`
+    - `MainComposition`
     - `OriginAnnotationsPreparer`
     - `OriginAnnotationsProvider`
     - `OriginDefaultsPreparer`
@@ -92,7 +96,6 @@
     - `collectTokenGroupVars`
     - `compositionRegistryFileName`
     - `compositionRegistryPath`
-    - `computeDisabledIds`
     - `computeEagerTier`
     - `customUtilitiesManifestPath`
     - `dataViewsManifestPath`
@@ -119,6 +122,8 @@
     - `listNamedCompositionRegistries`
     - `listReviewMarkedOverrides`
     - `loadConfigDescriptorsByOriginPath`
+    - `mainBundle`
+    - `mainComposition`
     - `parseCustomUtilities`
     - `parseNamedCompositionRegistryFileName`
     - `parseSpaceRamp`
@@ -148,6 +153,7 @@
     - `renderTokenGroupVarsManifest`
     - `reorderableSlotsManifestPath`
     - `resolveImportSpecifier`
+    - `resolveMainComposition`
     - `resolveOriginAnnotations`
     - `resolveOriginDefaults`
     - `seedAuthoredOverrides`

@@ -47,8 +47,9 @@ export interface EdgeGraph {
  * A named, conservative selection over the plugin space. `entryPoints` are the
  * explicitly-included plugins as {@link EntryPattern} globs: entrying a node means
  * *that node + its hard deps* — nothing more. Its whole subtree is opt-in via a
- * trailing `.**` (`apps.website.**`); a leading `!` trims only ids pulled in
- * implicitly by a `.**` glob, never an explicitly-named positive.
+ * trailing `.**` (`apps.website.**`); a leading `!` removes its matches AND
+ * everything that would break without them (descendants + transitive importers),
+ * never an id this composition names explicitly — naming it is the opt-out.
  * `selectedContributors` are the soft contributors a human/agent has explicitly
  * opted IN — reviewed options pulled into the bundle. Default `[]` ⇒ the bundle
  * is the pure hard closure of the entries; NOTHING soft is included by default.
@@ -94,6 +95,59 @@ export interface Composition {
   /** selectedContributors that are also entry/required → already locked in by hard
    *  edges, so the selection is a no-op worth surfacing. */
   redundantSelections: PluginId[];
+  /**
+   * The ids a negative entry pattern named DIRECTLY, after the opt-out
+   * subtraction and before the importer cascade — what this composition's author
+   * asserted must leave, not what leaving them cost.
+   *
+   * The distinction is the one a reader needs: a plugin in here was excluded on
+   * purpose, and a plugin outside the bundle but outside this set left because
+   * something in here took it (`removalClosure`). Docgen's `(excluded)` vs
+   * `(excluded — cascade)` is exactly that question, and it reads the answer off
+   * the same resolution that produced `bundle` — there is no second pattern
+   * parse anywhere.
+   *
+   * A `Set` rather than a sorted array because every consumer asks membership,
+   * the same reason `bundle` is one.
+   */
+  negatedTargets: Set<PluginId>;
+  /**
+   * Declared exclusions that did NOT take effect — **non-empty means the
+   * composition does not mean what its manifest says.**
+   *
+   * A negative removes its targets and their removal closure from the seed set,
+   * but an id this composition names explicitly is protected from that removal.
+   * A protected node that IMPORTS a negated target therefore survives and drags
+   * the target back in through the hard closure. Each entry names such a target
+   * plus the import chain that re-added it.
+   *
+   * `composition-closure` fails on a non-empty list, codegen throws on one, and
+   * Studio renders it. Required rather than optional so every consumer has to
+   * see it: an optional field is one nobody reads.
+   *
+   * Sorted by target. Empty is the healthy answer, and the common one.
+   */
+  unsatisfiedExclusions: UnsatisfiedExclusion[];
+}
+
+/**
+ * One declared exclusion that the resolved bundle contradicts: the excluded
+ * plugin, and why it is in the bundle anyway.
+ *
+ * `path` is NOT nullable, unlike `explainInclusion`'s return. That function
+ * answers about an arbitrary target, where "not bundled" is a legitimate `null`.
+ * Here the target is in the bundle by construction — the list is
+ * `negated ∩ bundle` — and `bundle` is the hard closure of the seeds, so a
+ * backward chain to some seed or selected contributor always exists. Making the
+ * field non-nullable is what stops the check message, codegen's throw and Studio
+ * from each inventing a fallback string for a case that cannot happen;
+ * `resolveComposition` throws instead if the engine ever contradicts itself.
+ */
+export interface UnsatisfiedExclusion {
+  /** The negated id that is nevertheless bundled. */
+  target: PluginId;
+  /** The shortest chain that re-added it — same shape `explainInclusion` returns. */
+  path: InclusionPath;
 }
 
 /** One hop in an inclusion explanation. */

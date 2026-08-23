@@ -44,13 +44,23 @@ function shortName(pattern: EntryPattern): string {
  * Secondary editor for the draft's entry points. Lists current entries with a
  * remove affordance and an add control (search over every known plugin id).
  * Each edit patches the draft via `updateActiveDraft`, re-resolving membership.
+ *
+ * With `editable={false}` the same list renders READ-ONLY — the chips keep their
+ * shape and lose their remove button, Add is inert with a title saying why, and
+ * a note names the file that does own the list. That is the two committed-source
+ * rows (main's and `base-exclusions`): what they contain is emitted into the
+ * registries by codegen, off the committed config, so a stored edit would look
+ * like a change and mean nothing. Rendered inert rather than absent, because
+ * reading those entry points is exactly why someone opens this row.
  */
 export function EntryEditor({
   draft,
   allIds,
+  editable,
 }: {
   draft: CompositionManifest;
   allIds: PluginId[];
+  editable: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -85,7 +95,15 @@ export function EntryEditor({
           align="end"
           width="xl"
           trigger={
-            <Button variant="outline">
+            <Button
+              variant="outline"
+              disabled={!editable}
+              title={
+                editable
+                  ? undefined
+                  : "This composition's entry points are committed source — edit core/config.ts and rebuild."
+              }
+            >
               <MdAdd />
               Add
             </Button>
@@ -135,19 +153,29 @@ export function EntryEditor({
               variant="primary"
               title={String(pattern)}
               icon={
-                <ControlSizeProvider size="sm">
-                  <IconButton
-                    icon={MdClose}
-                    label="Remove entry point"
-                    onClick={() => remove(pattern)}
-                  />
-                </ControlSizeProvider>
+                editable ? (
+                  <ControlSizeProvider size="sm">
+                    <IconButton
+                      icon={MdClose}
+                      label="Remove entry point"
+                      onClick={() => remove(pattern)}
+                    />
+                  </ControlSizeProvider>
+                ) : undefined
               }
             >
               <span className="font-mono">{shortName(pattern)}</span>
             </Badge>
           ))}
         </Cluster>
+      )}
+      {!editable && (
+        <Text as="p" variant="caption" tone="muted">
+          These entry points decide what the app ships, so they live in{" "}
+          <code>plugins/plugin-meta/plugins/composition/core/config.ts</code>{" "}
+          and change with a build. An edit stored here would never reach a
+          generated registry — codegen reads the committed config, not this one.
+        </Text>
       )}
     </Stack>
   );

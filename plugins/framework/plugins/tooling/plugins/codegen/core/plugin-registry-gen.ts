@@ -8,10 +8,14 @@ import {
 } from "@plugins/plugin-meta/plugins/parse-utils/core";
 import { buildBarrelFreeTree } from "./barrel-free-tree";
 import type { CollectedDirDef } from "@plugins/framework/plugins/tooling/plugins/collected-dir/core";
-import { asPluginId } from "@plugins/framework/plugins/plugin-id/core";
+import type { PluginId } from "@plugins/framework/plugins/plugin-id/core";
 import { assertCompositionName } from "@plugins/plugin-meta/plugins/composition/core";
 import { MAIN_COMPOSITION_ID } from "@plugins/infra/plugins/namespace/core";
-import { computeDisabledIds } from "./disabled-ids";
+import {
+  classifyEdges,
+  type EdgeGraph,
+} from "@plugins/plugin-meta/plugins/closure/core";
+import { resolveMainComposition } from "./main-bundle";
 import { writeGenerated } from "./write-generated";
 
 export interface DiscoveredCollectedDir extends CollectedDirDef {
@@ -160,34 +164,39 @@ function hasDefaultExport(file: string): boolean {
 
 // ── Registry-generation context ────────────────────────────────────
 //
-// The plugin tree and the disabled-id closure are pure functions of the
-// filesystem — IDENTICAL for every collected dir. Build them ONCE per generation
-// pass and thread the context through `renderCollectedDirRegistry`. This is what
-// keeps registry codegen O(tree) instead of O(tree × collectedDirs): there are
-// ~10 collected dirs (web, server, central, check, lint, facet, …), so a per-def
-// rebuild meant ~10 full 840-plugin tree walks (~12s, the dominant codegen cost).
-// Taking a prebuilt context — rather than a `root` the renderer rebuilds from —
-// makes that redundant build structurally impossible: the renderer literally
-// cannot trigger a tree walk.
+// The plugin tree, its edge graph and the app's own composition are pure
+// functions of committed source — IDENTICAL for every collected dir. Build them
+// ONCE per generation pass and thread the context through
+// `renderCollectedDirRegistry`. This is what keeps registry codegen O(tree)
+// instead of O(tree × collectedDirs): there are ~10 collected dirs (web, server,
+// central, check, lint, facet, …), so a per-def rebuild meant ~10 full
+// 840-plugin tree walks (~12s, the dominant codegen cost). Taking a prebuilt
+// context — rather than a `root` the renderer rebuilds from — makes that
+// redundant build structurally impossible: the renderer literally cannot trigger
+// a tree walk.
 export interface RegistryGenContext {
   root: string;
   tree: PluginTree;
-  // Closed disabled-id set computed from the SAME barrel-free tree the entries
-  // come from. Applied unconditionally by the renderer so the
-  // `plugins-registry-in-sync` check (which never passes `bundle`) re-derives
-  // the identical filtered output from the committed `package.json` flags.
-  disabled: Set<string>;
+  // The cross-plugin edge graph of exactly this `tree`, classified once. Held
+  // here so the composition resolution below, and the checks that take a ctx,
+  // never re-run `classifyEdges` over the same tree.
+  graph: EdgeGraph;
+  // What the app ships: the `singularity` composition's resolved closure. There
+  // is no unfiltered registry — every render says which composition it is for,
+  // and this is the answer for the committed `<dir>.generated.ts` files.
+  mainBundle: Set<PluginId>;
   // Per-`<dir>` filesystem scan (the collected entry list plus the raw
   // import-derived dependency graph), memoized for this context's lifetime.
   //
   // Why it is safe to cache HERE rather than anywhere else: a `RegistryGenContext`
-  // is a SNAPSHOT of the tree — `tree` and `disabled` are already source-derived
-  // facts frozen at `buildRegistryGenContext` time, and a caller that needs a
-  // post-write view of the filesystem must build a fresh ctx to see it. A
+  // is a SNAPSHOT of the tree — `tree`, `graph` and `mainBundle` are already
+  // source-derived facts frozen at `buildRegistryGenContext` time, and a caller
+  // that needs a post-write view of the filesystem must build a fresh ctx to see
+  // it. A
   // `<dir>` scan is a pure function of exactly the same inputs (`ctx.tree`,
-  // `ctx.root`, `dir`) and of nothing else — in particular NOT of the optional
-  // `bundle`, which only filters an already-scanned entry list — so hanging it
-  // off the ctx gives it precisely the lifetime it is valid for. Putting it in a
+  // `ctx.root`, `dir`) and of nothing else — in particular NOT of the `bundle`,
+  // which only filters an already-scanned entry list — so hanging it off the ctx
+  // gives it precisely the lifetime it is valid for. Putting it in a
   // module-level cache would instead outlive the snapshot and start answering
   // with a stale filesystem.
   //
@@ -197,16 +206,14 @@ export interface RegistryGenContext {
   // once. `regen-pipeline.ts` shares a ctx between the registry and eager-tier
   // generators (the eager tier re-scanned `web` a second time); the build's
   // stage 1 shares a ctx across every composition one invocation names
-  // (N compositions × 3 runtime dirs collapse to 3 scans); and the
-  // composition-equivalence check renders each
-  // collected dir twice, once unfiltered and once bundle-filtered. Behaviour is
-  // unchanged — the cache holds the raw pre-filter scan, so the disabled filter,
-  // the bundle filter and the dep pruning still run per call.
+  // (N compositions × 3 runtime dirs collapse to 3 scans). Behaviour is
+  // unchanged — the cache holds the raw pre-filter scan, so the bundle filter
+  // and the dep pruning still run per call.
   dirScans: Map<string, DirEntryScan>;
 }
 
 /** The bundle-independent half of `collectEntriesWithDeps`: what one `<dir>`
- *  scan of the tree found, before any disabled/bundle filtering. */
+ *  scan of the tree found, before any bundle filtering. */
 interface DirEntryScan {
   allEntries: CollectedRawEntry[];
   rawDeps: Map<string, string[]>;
@@ -216,10 +223,15 @@ export async function buildRegistryGenContext(
   root: string,
 ): Promise<RegistryGenContext> {
   const tree = await buildBarrelFreeTree(root);
+  const graph = classifyEdges(tree);
   return {
     root,
     tree,
-    disabled: computeDisabledIds(tree),
+    graph,
+    // Throws rather than degrading when main's row is missing or its declared
+    // exclusions did not take effect — see `resolveMainComposition`. A registry
+    // that contradicts the manifest is worth failing the build for.
+    mainBundle: resolveMainComposition(graph, root).bundle,
     dirScans: new Map(),
   };
 }
@@ -394,26 +406,24 @@ function buildDepsForDir(
 
 // ── Filtered entries + pruned deps ─────────────────────────────────
 //
-// The disabled-closure filter is UNCONDITIONAL (driven by the committed
-// `singularity.disabled` seeds), never the optional `bundle` — so the
-// `plugins-registry-in-sync` check, which re-renders without `bundle`, sees the
-// identical filtered output. Each surviving entry's `dependsOn` is pruned to the
-// surviving `pluginPath`s: the disabled filter can drop a dependency
-// unconditionally (not only under `bundle`), and a dangling dep on a non-emitted
-// plugin would break the loader's topo-sort. Shared by `renderCollectedDirRegistry`
-// (so its output is byte-identical) AND the eager-tier generator, which needs the
-// exact same filtered web entry set + pruned `dependsOn` graph.
+// There is exactly ONE filter, and it is REQUIRED: a registry is the registry of
+// some composition, so "render this registry without saying which composition it
+// is for" has no spelling. `generatePluginRegistry` passes `ctx.mainBundle` at
+// the call site where that question is asked; a composition build passes its own.
+// Each surviving entry's `dependsOn` is pruned to the surviving `pluginPath`s: a
+// dangling dep on a non-emitted plugin would break the loader's topo-sort (a hard
+// closure's deps already survive, so this is defensive). Shared by
+// `renderCollectedDirRegistry` (so its output is byte-identical) AND the
+// eager-tier generator, which needs the exact same filtered web entry set +
+// pruned `dependsOn` graph.
 export function collectEntriesWithDeps(
   ctx: RegistryGenContext,
   dir: string,
-  // See `renderCollectedDirRegistry`: restrict to a composition's bundle when set.
-  bundle?: Set<string>,
+  // The composition's bundle: the dot-form PluginId set of its hard closure.
+  bundle: Set<string>,
 ): { entries: CollectedRawEntry[]; deps: Map<string, string[]> } {
-  const { disabled } = ctx;
   const { allEntries, rawDeps } = scanDir(ctx, dir);
-  const entries = (
-    bundle ? allEntries.filter((e) => bundle.has(e.id)) : allEntries
-  ).filter((e) => !disabled.has(asPluginId(e.id)));
+  const entries = allEntries.filter((e) => bundle.has(e.id));
   const survivingPaths = new Set(entries.map((e) => e.pluginPath));
   const deps = new Map<string, string[]>();
   for (const e of entries) {
@@ -430,13 +440,12 @@ export function collectEntriesWithDeps(
 export function renderCollectedDirRegistry(opts: {
   ctx: RegistryGenContext;
   def: DiscoveredCollectedDir;
-  // When provided, restrict the registry to the plugins in this bundle (the
-  // dot-form PluginId set of a composition's hard closure). Each surviving
-  // entry's `dependsOn` is also pruned to surviving `pluginPath`s — defensive,
-  // since a hard closure's deps already survive. When undefined, the output is
-  // byte-identical to the unfiltered registry, so the `plugins-registry-in-sync`
-  // check (which never passes a bundle) is unaffected.
-  bundle?: Set<string>;
+  // REQUIRED: which composition this registry is for — the dot-form PluginId set
+  // of its hard closure. Pass `ctx.mainBundle` for the committed
+  // `<dir>.generated.ts` files. Required rather than optional because an
+  // unfiltered render would be a registry belonging to no composition, which is
+  // how the app's membership and the manifest's used to drift apart silently.
+  bundle: Set<string>;
 }): string {
   const { ctx, def, bundle } = opts;
   const { entries, deps } = collectEntriesWithDeps(ctx, def.dir, bundle);
@@ -486,7 +495,10 @@ export async function generatePluginRegistry(opts: {
   for (const def of defs) {
     await writeGenerated({
       file: collectedDirRegistryPath(def),
-      content: renderCollectedDirRegistry({ ctx, def }),
+      // The committed registries ARE the `singularity` composition's registries
+      // — `compositionRegistryFileName` says so, and this is where that is made
+      // true rather than merely asserted afterwards.
+      content: renderCollectedDirRegistry({ ctx, def, bundle: ctx.mainBundle }),
     });
   }
 }

@@ -31,13 +31,11 @@ const serializedEdgeGraphSchema: ZodParser<SerializedEdgeGraph> = z.object({
 export interface CompositionData {
   graph: SerializedEdgeGraph;
   allIds: PluginId[];
-  disabledIds: PluginId[];
 }
 
 export const compositionDataSchema: ZodParser<CompositionData> = z.object({
   graph: serializedEdgeGraphSchema,
   allIds: idList,
-  disabledIds: z.array(z.custom<PluginId>((v) => typeof v === "string")),
 });
 
 /**
@@ -47,6 +45,11 @@ export const compositionDataSchema: ZodParser<CompositionData> = z.object({
  * expensive tree build), so this is a read-only introspection endpoint, not a
  * live resource. Composition **manifests** are user data and live in the
  * `compositions` config_v2 config — read client-side, not on this endpoint.
+ *
+ * Membership answers are deliberately absent from the payload, including "which
+ * plugins are not in the app". They are a pure function of this graph plus those
+ * manifests, both of which the client holds, so a wire field would be a second
+ * spelling of the same answer that can drift from the one the engine computes.
  */
 export const getCompositionData = defineEndpoint({
   route: "GET /api/composition/data",

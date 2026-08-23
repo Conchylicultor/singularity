@@ -351,12 +351,16 @@ function renderManifest(result: EagerTierResult): string {
 
 /**
  * Scan the tree and build the pure-core inputs. `ctx` carries the barrel-free
- * tree + disabled closure so it can be shared with the registry generator.
+ * tree, its edge graph and the app's own bundle, so it can be shared with the
+ * registry generator.
  */
 function scanEagerTierInputs(
   ctx: RegistryGenContext,
 ): Parameters<typeof computeEagerTier>[0] {
-  const { entries, deps } = collectEntriesWithDeps(ctx, "web");
+  // The eager tier describes the registry the app SHIPS, so it reads exactly the
+  // entry set `generatePluginRegistry` emitted — the same bundle, not a second
+  // opinion about who is in it.
+  const { entries, deps } = collectEntriesWithDeps(ctx, "web", ctx.mainBundle);
   const webEntryPaths = entries.map((e) => e.pluginPath);
   const webSet = new Set(webEntryPaths);
 

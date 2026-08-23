@@ -15,11 +15,30 @@ unioned into the host, **transitively**. `flattenManifest(manifest, registry)`
 folds the chain into a single flat manifest (`extends: []`) before any
 resolution: it is diamond/cycle-safe (a `visited` set over names), dedupes, and
 ignores unknown references inertly — exactly mirroring how unknown plugin ids
-flow inertly through `expandEntrySeeds`. Purely additive: a pack can only add
-options, never replace or redirect, so composing stays a union/hard-closure with
-no precedence. **Every engine entry point (`resolveComposition`, the causality
-queries, the `composition-closure` check) operates on an already-flattened
-manifest** — callers flatten first; the core never re-walks `extends`.
+flow inertly through `expandEntrySeeds`. **Every engine entry point
+(`resolveComposition`, the causality queries, the `composition-closure` check)
+operates on an already-flattened manifest** — callers flatten first; the core
+never re-walks `extends`.
+
+### The `base-exclusions` row every composition inherits
+
+`flattenManifest` also folds in the registry row named `BASE_EXCLUSIONS_ID`
+(`"base-exclusions"`, from `@plugins/infra/plugins/namespace/core`) —
+**unconditionally, not via `extends`**, and skipped only when the manifest being
+flattened IS that row. That is the point: an exclusion the repo has decided on
+holds for compositions that do not exist yet, rather than for the rows whose
+author remembered to reference it. It is the property `singularity.disabled` in a
+`package.json` used to have, now spelled in the vocabulary that already decides
+membership.
+
+The row is an ordinary manifest entry — same grammar, same check, same Studio
+surface — carrying **only negatives** (`composition-closure` pins
+`selectedContributors: []` and every entry point starting with `!`; a positive
+there would be a way to force plugins INTO every composition invisibly). It is a
+legal composition id but never a servable namespace, exactly like main's.
+
+Resolution therefore stays additive with one asymmetry, stated below: negatives
+subtract, and a local positive always wins over a negative from anywhere.
 
 **Conservative opt-IN model — NOTHING soft is included by default.** The bundle
 is the hard closure of (entries ∪ explicitly selected contributors). Soft
@@ -40,6 +59,11 @@ tree (`node.facets[id]`, via `getFacet`). No `fs`, no `path`, no barrel imports.
 It runs identically at build time, at the existing `GET /api/plugin-view/tree`
 endpoint, and (future) client-side in Studio. `buildPluginTree(...,
 { skipBarrelImport: true })` populates everything the engine consumes.
+
+The one runtime import outside this plugin is `BASE_EXCLUSIONS_ID` from
+`@plugins/infra/plugins/namespace/core`, which is a zero-import leaf for exactly
+this reason — build-time tooling, the CLI, the server and the browser all have to
+name that row, so it lives where every runtime can reach it.
 
 ## Edge classification (`classifyEdges`)
 
@@ -72,7 +96,7 @@ barrel re-exports only the umbrella's own symbols).
 |---|---|
 | `apps.deploy` | that node only (+ its hard closure, as always). **No implicit subtree.** |
 | `apps.deploy.**` | node ∪ `subtree(node)` — opt into containment. |
-| `!apps.website.demos.**` | negative — subtracts from *this composition's* seed set. |
+| `!apps.website.demos.**` | negative — removes those ids **and their removal closure** (descendants + transitive importers) from the seed set, unless this composition names them. |
 | `**` | **every plugin in the graph.** The tree has no root node, so this is the only way to spell "everything". |
 | `!**` | parses, seeds nothing — refused by the `composition-closure` check (it would empty the bundle). |
 
@@ -81,30 +105,60 @@ barrel re-exports only the umbrella's own symbols).
 `parseEntryPattern` **never throws**: Studio renders it on user-typed strings, so
 `!**` parses inertly and is refused by the *check*, not by a crash.
 
-`expandEntrySeeds(entryPoints, graph)` returns `{ seeds, named }`: positives
-seed their matches and record their exact base in `named`; negatives
-`seeds.delete()` each match **unless it is in `named`** (an explicitly-named
-positive is never removed). Three invariants this upholds: (1) a negative can never
-sever a real dependency — it prunes containment *seeding*, not import edges, so a
-kept plugin's hard-import under a negated branch still ships via `hardClosure`
-(fail-loud); (2) additivity survives — negatives are applied *after*
-`flattenManifest`, and a positive from anywhere in the `extends` union shields its
-id, so union-of-compositions stays a pure union; (3) **root names nothing** — a
-positive `**` seeds every id but adds none to `named`. If it named everything, no
-negative could ever trim (every id would be protected) and `composition-closure`
-would reject `**` + `!x.**` as a dead negative. Root means "everything is in", not
-"everything is explicitly demanded". Consequences under `**`, all correct: no node
-classifies `entry`, every bundled node is `required`, `available` is empty, and any
-`selectedContributors` entry is redundant. Unknown bases pass inertly, as before.
+`expandEntrySeeds(manifest, graph)` returns `{ seeds, named, negated }`. It takes
+the whole **manifest**, not just its entry points, because the negative pass has
+to see `selectedContributors` too.
+
+Positives seed their matches and record their exact base in `named`. Then the
+negative pass, in three steps:
+
+1. **Targets** — the union of every negative pattern's matches. This is what the
+   author asserted must leave, and it is what comes back as `negated`.
+2. **The opt-out** — subtract `named ∪ selectedContributors`. A composition that
+   names X explicitly, as an entry positive *or* as a selected contributor, is
+   asking for X; that request suppresses the negative on X **entirely**, so
+   nothing cascades from it either. This is how a composition takes back a plugin
+   the inherited base row negates.
+3. **The cascade** — `removalClosure(targets, graph)`, then `seeds.delete(id)` for
+   every member that is not itself protected. Removing X necessarily removes X's
+   descendants and everything that transitively imports X; without this a
+   surviving importer would drag X straight back through `hardClosure` and the
+   negative would be silently inert.
+
+**The two rules differ, and the difference is the point.** Naming X suppresses the
+negative on X — the opt-out. Naming an *importer* of X does not: that is not a
+request for X, so the importer survives the cascade, re-adds X through
+`hardForward`, and the postcondition below fires. The ambiguity is made loud
+rather than guessed at in either direction.
+
+Invariants this upholds: (1) a negative can never sever a real dependency — it
+prunes *seeding*, not import edges, so a protected plugin's hard-import under a
+negated branch still ships (fail-loud, and now reported); (2) additivity survives
+— negatives are applied *after* `flattenManifest`, and a positive from anywhere in
+the flattened union shields its id, so union-of-compositions stays a pure union;
+(3) **root names nothing** — a positive `**` seeds every id but adds none to
+`named`. If it named everything, no negative could ever trim (every id would be
+protected) and `composition-closure` would reject `**` + `!x.**` as a dead
+negative. Root means "everything is in", not "everything is explicitly demanded".
+Consequences under `**`, all correct: no node classifies `entry`, every bundled
+node is `required`, `available` is empty, and any `selectedContributors` entry is
+redundant. Unknown bases pass inertly, as before.
+
+`removalClosure(seeds, graph)` — the reverse+subtree fixpoint (`subtree` ∪
+`hardReverse`) — is the general statement *given that these ids leave, what else
+must leave*, not any one mechanism's function. It is the mirror of `hardClosure`,
+which walks `hardForward` (what a plugin needs).
 
 ## Resolution (`resolveComposition`)
 
 Single pass, **no fixpoint loop, no auto-activation**:
 
 ```
-{ seeds, named } = expandEntrySeeds(entryPoints)     // patterns → seed set + named bases
-required         = hardClosure(seeds)                // entries alone — the locked set
-bundle           = hardClosure(seeds ∪ selectedContributors)
+{ seeds, named, negated } = expandEntrySeeds(manifest)   // patterns → seeds, named bases, negated targets
+required                  = hardClosure(seeds)           // entries alone — the locked set
+bundle                    = hardClosure(seeds ∪ selectedContributors)
+negatedTargets            = negated                       // what was asserted
+unsatisfiedExclusions     = negated ∩ bundle             // the postcondition
 ```
 
 Membership `entry` is the `named` set (the positive pattern bases); a `.**` base
@@ -134,12 +188,44 @@ members; sorted + deduped). These nodes carry membership `available`.
 `redundantSelections = selectedContributors ∩ (required ∪ entries)` — a selection
 already locked in by hard edges, so it's a no-op worth surfacing in review.
 
+### `negatedTargets` vs the cascade
+
+`Composition.negatedTargets` is the set a negative named DIRECTLY — after the
+opt-out subtraction, before the cascade. It is what the author asserted; the ids
+that left with it are what the assertion cost. That distinction is the one a
+reader needs, and it is why docgen can mark `(excluded)` against a deliberately
+excluded plugin and `(excluded — cascade)` against one that only left because
+something else did — reading both off the same resolution that produced `bundle`,
+with no second pattern parse anywhere.
+
+### `unsatisfiedExclusions` — the postcondition
+
+A **required** field on `Composition` (required, not optional: an optional field
+is one nobody reads). Each entry is `{ target, path }` — a negated id that is in
+the bundle anyway, plus the shortest import chain that re-added it, same shape
+`explainInclusion` returns. **Non-empty means the composition does not mean what
+its manifest says**, and the path is the repair instruction.
+
+It can only be non-empty via the asymmetry above: a protected node (an explicitly
+named positive or selected contributor) that imports a negated target survives the
+cascade and drags the target back. `composition-closure` fails on a non-empty
+list, codegen throws on one, and Studio renders it — so a negative that did not
+take effect is a value in the result rather than silence.
+
 ## Causality queries
 
 - `explainInclusion(graph, manifest, target)` → shortest "why bundled": BFS over
   `hardReverse` from `target` back to the seed frontier (expanded entries ∪
   selected contributors), entry-origin preferred. A selected-contributor origin
   prepends its soft edge. `null` if `target` is not bundled.
+
+  The BFS itself lives in `inclusion-path.ts` as `inclusionPathWithin(graph, ctx,
+  target)`, taking the ALREADY-RESOLVED parts (`bundle`, `membership`,
+  `entrySeeds`, `selectedContributors`). `explainInclusion` is the manifest-shaped
+  wrapper that resolves and delegates; `resolveComposition` calls the same leaf
+  directly for `unsatisfiedExclusions`. Without that split the two would import
+  each other — a module cycle, and an infinite recursion — or there would be two
+  copies of the BFS.
 - `impactOfPruning(graph, manifest, selection)` → `bundle(with) \ bundle(with
   `selection` deselected)`, sorted — the cost of DESELECTING an option. Empty for a
   hard-locked (`entry`/`required`) or unselected node — deselecting drops nothing.
@@ -167,8 +253,19 @@ hard closure of the entries alone), `shell` is `required`, the whole
 (`review`) pulls it in as `contributor` with a non-empty `impactOfSelecting`,
 selecting a `required` node surfaces in `redundantSelections`, plus total
 membership, an all-hard `explainInclusion` path, and `impactOfPruning(required)`
-empty. Run with
-`bun test plugins/plugin-meta/plugins/closure/core/closure.test.ts`.
+empty.
+
+The exclusion half is pinned there too: the cascade's DIRECTION (importers go, a
+dependency of the negated branch stays); the base row inherited with no `extends`
+(a composition seeding only `plugin-meta.facets.**` does not bundle
+`review.plugin-changes`); the opt-out in both spellings (entry positive, selected
+contributor) bundling it back with `unsatisfiedExclusions` empty; naming an
+*importer* NOT being an opt-out (a selected `render-diff` adapter yields a
+non-empty `unsatisfiedExclusions` carrying the import path); and the migration
+itself — real-tree `singularity` (`["**"]` + the inherited base row) bundling
+exactly every plugin minus the twelve `singularity.disabled` used to remove.
+
+Run with `./singularity test plugins/plugin-meta/plugins/closure`.
 
 <!-- AUTOGENERATED:BEGIN — do not edit; regenerated by `./singularity build` -->
 
@@ -178,6 +275,7 @@ empty. Run with
   - Uses:
     - `framework/plugin-id.asPluginId`
     - `framework/plugin-id.PluginId`
+    - `infra/namespace.BASE_EXCLUSIONS_ID`
     - `plugin-meta/facets.getFacet`
     - `plugin-meta/facets/contributions.contributionsFacetDef`
     - `plugin-meta/facets/cross-refs.crossRefsFacetDef`
@@ -194,10 +292,10 @@ empty. Run with
     - `MembershipState`
     - `ParsedPattern`
     - `SerializedEdgeGraph`
+    - `UnsatisfiedExclusion`
   - Exports (values):
     - `classifyEdges`
     - `deserializeEdgeGraph`
-    - `disabledClosure`
     - `expandEntrySeeds`
     - `explainInclusion`
     - `flattenManifest`
@@ -206,6 +304,7 @@ empty. Run with
     - `impactOfSelecting`
     - `matchEntryPattern`
     - `parseEntryPattern`
+    - `removalClosure`
     - `resolveComposition`
     - `serializeEdgeGraph`
 - Cross-plugin:

@@ -15,9 +15,10 @@ function tally(
 }
 
 // Structure fields are always present; `facets` is populated only on the faceted
-// build (empty `{}` on the structure-only tree). The disabled *cascade* is no
-// longer on the payload — the client derives it from the composition edge graph —
-// so only the plugin's own seed flag (`node.disabled`) ships, as `disabledSeed`.
+// build (empty `{}` on the structure-only tree). Whether a plugin is in the app
+// is NOT on the payload at all: it is a composition question, answered from the
+// edge graph plus the manifests the client already holds (`useAppExclusions`),
+// and there is no per-node flag left for it to disagree with.
 function toApiNode(node: TreePluginNode): PluginNode {
   return {
     path: node.path,
@@ -25,7 +26,6 @@ function toApiNode(node: TreePluginNode): PluginNode {
     id: node.id,
     description: node.description,
     loadBearing: node.loadBearing,
-    disabledSeed: node.disabled,
     collapsed: node.collapsed,
     runtimes: node.runtimes,
     children: node.children.map(toApiNode),

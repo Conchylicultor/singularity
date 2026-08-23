@@ -5,7 +5,7 @@
 ## Plugin reference
 
 - Description: API surface diff section for per-plugin review cards.
-- Disabled: cascade
+- Excluded: yes
 - Web:
   - Contributes: `PluginChangesSlots.Section` → `ApiChangesSection`
   - Uses:

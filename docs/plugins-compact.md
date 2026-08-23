@@ -113,7 +113,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
           - Plugins:
             - **`child-count`** — Recursive child count badge in the explorer plugin tree row.
             - **`collapsed`** — Collapsed badge in the explorer plugin tree row.
-            - **`disabled`** — Disabled badge in the explorer plugin tree row.
+            - **`excluded`** — Not-in-the-app badge in the explorer plugin tree row.
             - **`expand-collapse`** — Expand/collapse all descendants button in the explorer plugin tree row.
             - **`load-bearing`** — Load-bearing badge in the explorer plugin tree row.
             - **`membership`** — Tints each explorer tree row by its membership state in the active composition, with a pin-as-root affordance.
@@ -296,7 +296,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`tooling`** — Umbrella for build-time tooling: boundary checker, lint rules, checks, guards, codegen
       - Plugins:
         - **`boundaries`** — Boundary-rules checker: zone DSL, edge evaluator, and project boundary config
-        - **`checks`** [50 sub-plugins] — Check runner and built-in checks for ./singularity check
+        - **`checks`** [51 sub-plugins] — Check runner and built-in checks for ./singularity check
         - **`codegen`** — Plugin doc generation and registry codegen
         - **`collected-dir`** — Generic loader for build-time collected-dir registries (loadCollectedDir).
         - **`e2e-harness`** — Shared Playwright harness for the per-plugin e2e/ scripts: argv parsing, worktree-derived target URL, browser/session lifecycle, error capture, pass/fail reporting, screenshots. Also owns the chromium install-time provisioning and the two generic tools (screenshot, perf).
@@ -623,10 +623,10 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
 - **`review`** — Toolbar button that opens a side pane exposing agent modifications in a structured, extensible view.
   - Plugins:
     - **`code-review`** — File-by-file code review section for the review pane. File-by-file code review section for the review pane.
-    - **`plugin-changes`** (disabled) — Shows which plugins were added/modified and their public API diff. Computes structured diffs of plugin public APIs between the worktree and main.
+    - **`plugin-changes`** (excluded) — Shows which plugins were added/modified and their public API diff. Computes structured diffs of plugin public APIs between the worktree and main.
       - Plugins:
-        - **`api-changes`** (disabled — cascade) — API surface diff section for per-plugin review cards.
-        - **`file-changes`** (disabled — cascade) — File-level diff section for per-plugin review cards.
+        - **`api-changes`** (excluded) — API surface diff section for per-plugin review cards.
+        - **`file-changes`** (excluded) — File-level diff section for per-plugin review cards.
 
 - **`screenshot`** — Capture the current page and edit it (crop, draw) in a new tab. Bottom prompt form launches a conversation with the edited screenshot attached. Stores in-flight screenshots so a freshly opened tab can fetch them.
   - Plugins:

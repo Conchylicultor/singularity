@@ -7,71 +7,54 @@ import {
   collectEntriesWithDeps,
   buildRegistryGenContext,
   formatGenerated,
-  readCompositionManifestsFromDisk,
 } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
-import {
-  classifyEdges,
-  flattenManifest,
-  resolveComposition,
-} from "@plugins/plugin-meta/plugins/closure/core";
 import { MAIN_COMPOSITION_ID } from "@plugins/infra/plugins/namespace/core";
-import { manifestItemToManifest } from "@plugins/plugin-meta/plugins/composition/core";
 import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
 
 type CheckResult = { ok: true } | { ok: false; message: string; hint?: string };
 type Check = { id: string; description: string; run(): Promise<CheckResult> };
 
+// Every `id: "<plugin.id>"` a rendered registry carries. The generator emits
+// `id: ${JSON.stringify(e.id)}` one entry per line, and plugin ids contain no
+// quotes or backslashes, so reading them back is exact. The `id: string;` line of
+// the emitted `CollectedEntry` interface has no string literal after the colon
+// and therefore cannot match.
+function registryIds(content: string): Set<string> {
+  const out = new Set<string>();
+  for (const m of content.matchAll(/\bid: "([^"]+)"/g)) out.add(m[1]!);
+  return out;
+}
+
 const check: Check = {
   id: "plugins-registry-in-sync",
   description:
-    "All collected dir registries (web, server, central, check, lint, ...) match the current plugin source, and equal what the `singularity` composition's closure renders",
+    "All collected dir registries (web, server, central, check, lint, ...) are exactly what the `singularity` composition's closure renders from the current plugin source",
   async run() {
     const root = await getWorktreeRoot();
     const ctx = await buildRegistryGenContext(root);
     const defs = discoverCollectedDirs(root);
 
-    // ── The equivalence proof: main IS a composition ──────────────────────────
+    // ── Identity, not equivalence ────────────────────────────────────────────
     //
-    // `singularity` is an ordinary entry in the compositions manifest whose entry
-    // points are `["**"]` — every plugin. If that is true, then filtering a
-    // collected-dir registry down to its resolved closure must change NOTHING:
+    // `singularity` is an ordinary entry in the compositions manifest, and its
+    // resolved closure is HOW the committed registries are built:
+    // `generatePluginRegistry` renders each `<dir>.generated.ts` with
+    // `ctx.mainBundle` and nothing else. This check compares the committed bytes
+    // against exactly that one render — the generator's own inputs, taken from
+    // the same shared context, so there is nothing for the two to disagree about
+    // beyond "was `./singularity build` run and committed".
     //
-    //   render({ ctx, def, bundle: <singularity's closure> }) === render({ ctx, def })
-    //
-    // byte-for-byte. The renderer's only bundle-dependence is
-    // `allEntries.filter(e => bundle.has(e.id))` plus the dep pruning derived from
-    // it; the `singularity.disabled` filter is applied unconditionally on BOTH
-    // sides, so it cancels out and this compares closures, not disabled flags.
-    //
-    // That is what turns "main is a composition" from a statement in a design doc
-    // into an enforced fact — and it is why the assertion lives HERE, in the check
-    // that already owns "what the committed registries must equal", rather than in
-    // a new check of its own.
-    //
-    // Note what this does NOT do: `generatePluginRegistry` still renders the
-    // committed files with no bundle at all, so `<dir>.generated.ts` stays a pure
-    // function of the filesystem + `singularity.disabled`. This check PROVES the
-    // two coincide; it does not merge the paths.
-    const manifestItems = readCompositionManifestsFromDisk(root);
-    const mainItem = manifestItems.find((m) => m.id === MAIN_COMPOSITION_ID);
-    if (!mainItem) {
-      return {
-        ok: false,
-        message: `no "${MAIN_COMPOSITION_ID}" composition in the manifest registry`,
-        hint: `The main app is an ordinary composition entry — without it there is nothing to prove the committed registries against. Restore the "${MAIN_COMPOSITION_ID}" seed (entry points \`["**"]\`) in plugins/plugin-meta/plugins/composition/core/config.ts.`,
-      };
-    }
-    const graph = classifyEdges(ctx.tree);
-    // Typed as `Set<string>` — the renderer's `bundle` parameter, and the id
-    // membership test below, both work in the registry's plain-string id space.
-    const mainBundle: Set<string> = resolveComposition(
-      graph,
-      flattenManifest(
-        manifestItemToManifest(mainItem),
-        manifestItems.map(manifestItemToManifest),
-      ),
-    ).bundle;
-
+    // It used to assert something weaker, and now false: that filtering by main's
+    // closure changed NOTHING (`render(bundle: mainBundle) === render(no
+    // bundle)`). That was the right shape while `singularity.disabled` was the
+    // mechanism that removed plugins and the closure merely had to agree with it.
+    // Both halves of that are gone. The `base-exclusions` row carries a negative,
+    // so main's closure is deliberately not every plugin; and an unfiltered
+    // render has no spelling any more (`bundle` is a required parameter of
+    // `renderCollectedDirRegistry`), because a registry belonging to no
+    // composition is exactly how the app's membership and the manifest's used to
+    // drift apart silently. "Main is a composition" stopped being a property
+    // proved here and became the way main is built.
     for (const def of defs) {
       const file = collectedDirRegistryPath(def);
       const rel = relative(root, file);
@@ -82,43 +65,57 @@ const check: Check = {
           hint: "Run `./singularity build` to generate it.",
         };
       }
-      const full = renderCollectedDirRegistry({ ctx, def });
-      const expected = await formatGenerated({ file, content: full });
-      if (readFileSync(file, "utf8") !== expected) {
-        return {
-          ok: false,
-          message: `${rel} is out of sync with plugin source`,
-          hint: "Run `./singularity build` and commit the regenerated file.",
-        };
-      }
-
-      // The second render reuses this context's cached `<dir>` scan, so it is pure
-      // string building — no re-walk of the plugin trees. No prettier pass either:
-      // both sides come out of the same renderer, so they are compared exactly as
-      // rendered.
-      const filtered = renderCollectedDirRegistry({
-        ctx,
-        def,
-        bundle: mainBundle,
+      const expected = await formatGenerated({
+        file,
+        content: renderCollectedDirRegistry({
+          ctx,
+          def,
+          // The committed registries ARE the `singularity` composition's
+          // registries — the same argument `generatePluginRegistry` passes.
+          bundle: ctx.mainBundle,
+        }),
       });
-      if (filtered !== full) {
-        // Name the ids, not the diff. "These two files differ" is useless to
-        // whoever hits this: what they need is which plugins the committed
-        // registry carries that main's closure does not reach — that list IS the
-        // repair instruction (either the plugin is genuinely unreachable and its
-        // edges are missing, or the manifest entry stopped meaning "everything").
-        const missing = collectEntriesWithDeps(ctx, def.dir)
-          .entries.filter((e) => !mainBundle.has(e.id))
-          .map((e) => e.id)
-          .sort();
-        return {
-          ok: false,
-          message:
-            `${rel} contains ${missing.length} plugin(s) outside the "${MAIN_COMPOSITION_ID}" composition's closure: ` +
-            missing.join(", "),
-          hint: `The committed registries must equal what "${MAIN_COMPOSITION_ID}"'s closure renders — that equality is what makes the main app an ordinary composition rather than a special case. Either the composition's entry points no longer mean "every plugin" (they should be \`["**"]\` — check plugins/plugin-meta/plugins/composition/core/config.ts and any user-layer override), or a negative entry was added that trims these plugins out.`,
-        };
+      const actual = readFileSync(file, "utf8");
+      if (actual === expected) continue;
+
+      // Name the ids, not the diff. "These two files differ" is useless to
+      // whoever hits this: what they need is WHICH plugins the two sides disagree
+      // about, in both directions — that list IS the repair instruction. Carried
+      // but not rendered means the committed file ships a plugin main's closure
+      // no longer reaches (a negative now trims it, or its edges went missing);
+      // rendered but not carried means the closure reaches a plugin the committed
+      // file never got. Both usually mean the same thing — the build was not run
+      // — but which ids moved is what says whether that is the whole story.
+      const rendered = new Set(
+        collectEntriesWithDeps(ctx, def.dir, ctx.mainBundle).entries.map(
+          (e) => e.id,
+        ),
+      );
+      const carried = registryIds(actual);
+      const stale = [...carried].filter((id) => !rendered.has(id)).sort();
+      const missing = [...rendered].filter((id) => !carried.has(id)).sort();
+
+      const parts: string[] = [];
+      if (stale.length > 0) {
+        parts.push(
+          `${stale.length} plugin(s) the committed file carries that the "${MAIN_COMPOSITION_ID}" composition's closure does not reach: ${stale.join(", ")}`,
+        );
       }
+      if (missing.length > 0) {
+        parts.push(
+          `${missing.length} plugin(s) the closure reaches that the committed file is missing: ${missing.join(", ")}`,
+        );
+      }
+      const detail =
+        parts.length > 0
+          ? `:\n    ${parts.join("\n    ")}`
+          : " — the same plugins on both sides, so what differs is their order, their `dependsOn` edges, or the file's formatting.";
+
+      return {
+        ok: false,
+        message: `${rel} is out of sync with what the "${MAIN_COMPOSITION_ID}" composition renders${detail}`,
+        hint: `Run \`./singularity build\` and commit the regenerated file. If a listed plugin is one you did NOT expect to move: the committed registries are exactly "${MAIN_COMPOSITION_ID}"'s closure, so a plugin leaves them by being negated out of a manifest — check the \`base-exclusions\` row (whose negatives every composition inherits) and "${MAIN_COMPOSITION_ID}"'s own entry points \`["**"]\` in plugins/plugin-meta/plugins/composition/core/config.ts.`,
+      };
     }
     return { ok: true };
   },

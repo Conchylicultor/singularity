@@ -3,7 +3,10 @@ import { listField } from "@plugins/fields/plugins/list/plugins/config/core";
 import { textField } from "@plugins/fields/plugins/text/plugins/config/core";
 import { enumField } from "@plugins/fields/plugins/enum/plugins/config/core";
 import { stringListField } from "@plugins/fields/plugins/string-list/plugins/config/core";
-import { MAIN_COMPOSITION_ID } from "@plugins/infra/plugins/namespace/core";
+import {
+  BASE_EXCLUSIONS_ID,
+  MAIN_COMPOSITION_ID,
+} from "@plugins/infra/plugins/namespace/core";
 import { SERVE_MODE_OPTIONS } from "./serve-mode";
 
 // The composition manifest registry — plain editable data in config_v2 (no
@@ -111,6 +114,49 @@ export const compositionsConfig = defineConfig({
           name: MAIN_COMPOSITION_ID,
           category: "app" as const,
           entryPoints: ["**"],
+          selectedContributors: [] as string[],
+          extends: [] as string[],
+          excludes: [] as string[],
+          serve: "off",
+        },
+
+        // ── The global exclusions ───────────────────────────────────────────────
+        // The one row that says what is NOT in any app. Everything else in this
+        // registry says what it includes; this one subtracts, and every other row
+        // inherits it — `flattenManifest` folds this row into EVERY manifest
+        // unconditionally, NOT via `extends`. That difference is the whole point:
+        // an exclusion written once holds for compositions that do not exist yet,
+        // instead of holding only for the rows whose author remembered to
+        // reference it.
+        //
+        // NEGATIVES ONLY. `selectedContributors` stays empty and every entry point
+        // starts with `!` (`composition-closure` enforces both). A positive here
+        // would be a way to silently force a plugin INTO every composition, which
+        // is `served-baseline`'s job — done through `extends`, where it is visible
+        // on the row that opted in.
+        //
+        // A composition takes a plugin back by NAMING it — as an entry positive or
+        // a selected contributor — and the engine's protection rule makes that
+        // local positive win over the inherited negative. Naming an *importer* of
+        // an excluded plugin is not an opt-out: the importer survives, drags the
+        // plugin back through its hard closure, and `unsatisfiedExclusions` reports
+        // it rather than guessing which of the two the author meant.
+        //
+        // `!review.plugin-changes.**` is the migration of the
+        // `singularity.disabled: true` flag that used to live in
+        // `plugins/review/plugins/plugin-changes/package.json`. That plugin's
+        // review-pane summary subscribed to `pluginChangesResource`, firing the
+        // worktree-vs-main diff on every render. The negative resolves to the same
+        // twelve plugins the flag's closure did — the plugin, its two sub-plugins,
+        // and the nine `plugin-meta.facets.<f>.render-diff` adapters that import it
+        // — because a negative cascades to descendants and transitive importers
+        // exactly as the disabled closure did. One mechanism decides membership now,
+        // and it is this one.
+        {
+          id: BASE_EXCLUSIONS_ID,
+          name: BASE_EXCLUSIONS_ID,
+          category: "pack" as const,
+          entryPoints: ["!review.plugin-changes.**"],
           selectedContributors: [] as string[],
           extends: [] as string[],
           excludes: [] as string[],

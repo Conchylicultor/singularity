@@ -4813,7 +4813,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - **`explorer`** — Sidebar entry and filterable tree pane for browsing and inspecting the plugin tree.
           - Web:
             - Slots:
-              - `Explorer.TreeRowBadge` ← `apps.studio.explorer.child-count`, `apps.studio.explorer.collapsed`, `apps.studio.explorer.disabled`, `apps.studio.explorer.expand-collapse`, `apps.studio.explorer.load-bearing`, `apps.studio.explorer.membership`
+              - `Explorer.TreeRowBadge` ← `apps.studio.explorer.child-count`, `apps.studio.explorer.collapsed`, `apps.studio.explorer.excluded`, `apps.studio.explorer.expand-collapse`, `apps.studio.explorer.load-bearing`, `apps.studio.explorer.membership`
               - `Explorer.TreeRowAccent` ← `apps.studio.explorer.membership`
               - `explorerPane.Actions`
             - Contributes:
@@ -4850,7 +4850,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/studio/compositions/closure-tree`
               - `apps/studio/explorer/child-count`
               - `apps/studio/explorer/collapsed`
-              - `apps/studio/explorer/disabled`
+              - `apps/studio/explorer/excluded`
               - `apps/studio/explorer/expand-collapse`
               - `apps/studio/explorer/load-bearing`
               - `apps/studio/explorer/membership`
@@ -4863,13 +4863,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - Web:
                 - Contributes: `Explorer.TreeRowBadge` "collapsed" → `CollapsedBadge`
                 - Uses: `apps/studio/explorer.Explorer`
-            - **`disabled`** — Disabled badge in the explorer plugin tree row.
+            - **`excluded`** — Not-in-the-app badge in the explorer plugin tree row.
               - Web:
-                - Contributes: `Explorer.TreeRowBadge` "disabled" → `DisabledBadge`
+                - Contributes: `Explorer.TreeRowBadge` "excluded" → `ExcludedBadge`
                 - Uses:
                   - `apps/studio/explorer.Explorer`
-                  - `plugin-meta/composition.useDisabledClosure`
-                  - `plugin-meta/composition.useEnsureCompositionData`
+                  - `plugin-meta/composition.useAppExclusions`
+                  - `primitives/loading.Loading`
             - **`expand-collapse`** — Expand/collapse all descendants button in the explorer plugin tree row.
               - Web:
                 - Contributes: `Explorer.TreeRowBadge` "expand-collapse" → `ExpandCollapseButton`
@@ -15149,6 +15149,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - **`migration-metadata-consistent`**
             - **`migrations-in-sync`**
             - **`no-db-backed-notify`**
+            - **`no-disabled-flag`**
             - **`no-hand-built-link-to`**
             - **`no-hardcoded-colors`**
             - **`no-plugin-imports-in-core`**
@@ -15205,10 +15206,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `plugin-meta/barrel-import.registerBarrelStubs`
               - `plugin-meta/barrel-import.setPreBarrelImportGuard`
               - `plugin-meta/closure.classifyEdges`
-              - `plugin-meta/closure.disabledClosure`
+              - `plugin-meta/closure.EdgeGraph`
+              - `plugin-meta/closure.flattenManifest`
+              - `plugin-meta/closure.resolveComposition`
               - `plugin-meta/composition.assertCompositionName`
               - `plugin-meta/composition.CompositionManifestItem`
               - `plugin-meta/composition.compositionsConfig`
+              - `plugin-meta/composition.manifestItemToManifest`
               - `plugin-meta/facets.DocFact`
               - `plugin-meta/facets.Facet`
               - `plugin-meta/facets.getFacet`
@@ -15235,6 +15239,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `DiscoveredCollectedDir`
               - `EagerTierResult`
               - `GenerateDocsOptions`
+              - `MainComposition`
               - `OriginAnnotationsPreparer`
               - `OriginAnnotationsProvider`
               - `OriginDefaultsPreparer`
@@ -15261,7 +15266,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `collectTokenGroupVars`
               - `compositionRegistryFileName`
               - `compositionRegistryPath`
-              - `computeDisabledIds`
               - `computeEagerTier`
               - `customUtilitiesManifestPath`
               - `dataViewsManifestPath`
@@ -15288,6 +15292,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `listNamedCompositionRegistries`
               - `listReviewMarkedOverrides`
               - `loadConfigDescriptorsByOriginPath`
+              - `mainBundle`
+              - `mainComposition`
               - `parseCustomUtilities`
               - `parseNamedCompositionRegistryFileName`
               - `parseSpaceRamp`
@@ -15317,6 +15323,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `renderTokenGroupVarsManifest`
               - `reorderableSlotsManifestPath`
               - `resolveImportSpecifier`
+              - `resolveMainComposition`
               - `resolveOriginAnnotations`
               - `resolveOriginDefaults`
               - `seedAuthoredOverrides`
@@ -17066,6 +17073,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `framework/tooling/guards`
           - `framework/tooling/web-artifacts`
           - `infra/paths`
+          - `plugin-meta/closure`
           - `plugin-meta/composition`
       - Core:
         - Exports (types):
@@ -17073,6 +17081,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `Namespace`
         - Exports (values):
           - `asNamespace`
+          - `BASE_EXCLUSIONS_ID`
           - `GATEWAY_PORT`
           - `isNamespace`
           - `MAIN_COMPOSITION_ID`
@@ -19861,6 +19870,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses:
           - `framework/plugin-id.asPluginId`
           - `framework/plugin-id.PluginId`
+          - `infra/namespace.BASE_EXCLUSIONS_ID`
           - `plugin-meta/facets.getFacet`
           - `plugin-meta/facets/contributions.contributionsFacetDef`
           - `plugin-meta/facets/cross-refs.crossRefsFacetDef`
@@ -19877,10 +19887,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `MembershipState`
           - `ParsedPattern`
           - `SerializedEdgeGraph`
+          - `UnsatisfiedExclusion`
         - Exports (values):
           - `classifyEdges`
           - `deserializeEdgeGraph`
-          - `disabledClosure`
           - `expandEntrySeeds`
           - `explainInclusion`
           - `flattenManifest`
@@ -19889,6 +19899,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `impactOfSelecting`
           - `matchEntryPattern`
           - `parseEntryPattern`
+          - `removalClosure`
           - `resolveComposition`
           - `serializeEdgeGraph`
       - Cross-plugin:
@@ -19902,6 +19913,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `config_v2.useSetConfig`
           - `infra/endpoints.useEndpoint`
         - Exports (types):
+          - `AppExclusions`
           - `CompositionDataResult`
           - `DiffState`
           - `ImpactResult`
@@ -19914,10 +19926,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `updateActiveDraft`
           - `useActiveComposition`
           - `useActiveMembership`
+          - `useAppExclusions`
           - `useCompareComposition`
           - `useCompositionData`
           - `useDiffMap`
-          - `useDisabledClosure`
           - `useEnsureCompositionData`
           - `useGraph`
           - `useImpact`
@@ -19941,6 +19953,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `fields/string-list/config.stringListField`
           - `fields/text/config.textField`
           - `infra/endpoints.defineEndpoint`
+          - `infra/namespace.BASE_EXCLUSIONS_ID`
           - `infra/namespace.MAIN_COMPOSITION_ID`
           - `infra/namespace.NAMESPACE_LABEL_RE`
         - Exports (types):
@@ -19957,6 +19970,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `compositionDataSchema`
           - `compositionsConfig`
           - `getCompositionData`
+          - `isCommittedSourceComposition`
           - `isServableCompositionId`
           - `isServed`
           - `manifestItemToManifest`
@@ -19975,7 +19989,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/studio/compositions/entry-points`
           - `apps/studio/compositions/membership-summary`
           - `apps/studio/compositions/release`
-          - `apps/studio/explorer/disabled`
+          - `apps/studio/explorer/excluded`
           - `apps/studio/explorer/membership`
           - `apps/studio/graph`
           - `build/serve-composition`
@@ -20081,7 +20095,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `plugin-meta/plugin-view.SectionCount`
                   - `primitives/css/spacing.Stack`
                   - `primitives/css/text.Text`
-            - **`render-diff`** (disabled — cascade) — Diff renderer for the contributions facet (PR review).
+            - **`render-diff`** (excluded — cascade) — Diff renderer for the contributions facet (PR review).
               - Web:
                 - Contributes: `PluginChangesSlots.DiffRenderer` "Contributions"
                 - Uses: `review/plugin-changes.PluginChangesSlots`
@@ -20125,7 +20139,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `primitives/css/spacing.Stack`
                   - `primitives/css/text.Text`
                   - `primitives/css/ui-kit.cn`
-            - **`render-diff`** (disabled — cascade) — Diff renderer for the cross-refs facet (PR review).
+            - **`render-diff`** (excluded — cascade) — Diff renderer for the cross-refs facet (PR review).
               - Web:
                 - Contributes: `PluginChangesSlots.DiffRenderer` "Uses"
                 - Uses: `review/plugin-changes.PluginChangesSlots`
@@ -20164,7 +20178,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `primitives/css/spacing.Stack`
                   - `primitives/css/text.Text`
                   - `primitives/css/ui-kit.cn`
-            - **`render-diff`** (disabled — cascade) — Diff renderer for the db-schema facet (PR review).
+            - **`render-diff`** (excluded — cascade) — Diff renderer for the db-schema facet (PR review).
               - Web:
                 - Contributes: `PluginChangesSlots.DiffRenderer` "Tables"
                 - Uses: `review/plugin-changes.PluginChangesSlots`
@@ -20208,7 +20222,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `primitives/css/spacing.Stack`
                   - `primitives/css/text.Text`
                   - `primitives/css/ui-kit.cn`
-            - **`render-diff`** (disabled — cascade) — Diff renderer for the exports facet (PR review).
+            - **`render-diff`** (excluded — cascade) — Diff renderer for the exports facet (PR review).
               - Web:
                 - Contributes: `PluginChangesSlots.DiffRenderer` "Exports"
                 - Uses: `review/plugin-changes.PluginChangesSlots`
@@ -20242,7 +20256,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `primitives/css/spacing.Stack`
                   - `primitives/css/text.Text`
                   - `primitives/css/ui-kit.cn`
-            - **`render-diff`** (disabled — cascade) — Diff renderer for the registrations facet (PR review).
+            - **`render-diff`** (excluded — cascade) — Diff renderer for the registrations facet (PR review).
               - Web:
                 - Contributes: `PluginChangesSlots.DiffRenderer` "Registrations"
                 - Uses: `review/plugin-changes.PluginChangesSlots`
@@ -20278,7 +20292,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `primitives/css/spacing.Stack`
                   - `primitives/css/text.Text`
                   - `primitives/css/ui-kit.cn`
-            - **`render-diff`** (disabled — cascade) — Diff renderer for the resources facet (PR review).
+            - **`render-diff`** (excluded — cascade) — Diff renderer for the resources facet (PR review).
               - Web:
                 - Contributes: `PluginChangesSlots.DiffRenderer` "Resources"
                 - Uses: `review/plugin-changes.PluginChangesSlots`
@@ -20317,7 +20331,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `primitives/css/spacing.Stack`
                   - `primitives/css/text.Text`
                   - `primitives/css/ui-kit.cn`
-            - **`render-diff`** (disabled — cascade) — Diff renderer for the routes facet (PR review).
+            - **`render-diff`** (excluded — cascade) — Diff renderer for the routes facet (PR review).
               - Web:
                 - Contributes: `PluginChangesSlots.DiffRenderer` "Routes"
                 - Uses: `review/plugin-changes.PluginChangesSlots`
@@ -20353,7 +20367,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `primitives/css/cluster.Cluster`
                   - `primitives/css/spacing.Stack`
                   - `primitives/css/text.Text`
-            - **`render-diff`** (disabled — cascade) — Diff renderer for the slots facet (PR review).
+            - **`render-diff`** (excluded — cascade) — Diff renderer for the slots facet (PR review).
               - Web:
                 - Contributes: `PluginChangesSlots.DiffRenderer` "Slots"
                 - Uses: `review/plugin-changes.PluginChangesSlots`
@@ -20384,7 +20398,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `plugin-meta/plugin-view.PluginViewSlots`
                   - `primitives/css/badge.Badge`
                   - `primitives/css/spacing.Stack`
-            - **`render-diff`** (disabled — cascade) — Diff renderer for the structure facet (PR review).
+            - **`render-diff`** (excluded — cascade) — Diff renderer for the structure facet (PR review).
               - Web:
                 - Contributes: `PluginChangesSlots.DiffRenderer` "Structure"
                 - Uses: `review/plugin-changes.PluginChangesSlots`
@@ -25975,6 +25989,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/studio/contributions/tables/row-count`
           - `apps/studio/contributions/tables/sample-rows`
           - `apps/studio/explorer`
+          - `apps/studio/explorer/excluded`
           - `apps/studio/graph`
           - `apps/website/demos/app-gallery`
           - `apps/workflows/definitions`
@@ -28406,7 +28421,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses: `config_v2.ConfigV2`
       - Shared:
         - Exports (values): `reviewConfig`
-    - **`plugin-changes`** (disabled) — Shows which plugins were added/modified and their public API diff. Computes structured diffs of plugin public APIs between the worktree and main.
+    - **`plugin-changes`** (excluded) — Shows which plugins were added/modified and their public API diff. Computes structured diffs of plugin public APIs between the worktree and main.
       - Web:
         - Slots:
           - `PluginChangesSlots.Section` ← `review.plugin-changes.api-changes`, `review.plugin-changes.file-changes`
@@ -28479,7 +28494,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `review/plugin-changes/api-changes`
           - `review/plugin-changes/file-changes`
       - Plugins:
-        - **`api-changes`** (disabled — cascade) — API surface diff section for per-plugin review cards.
+        - **`api-changes`** (excluded) — API surface diff section for per-plugin review cards.
           - Web:
             - Contributes: `PluginChangesSlots.Section` → `ApiChangesSection`
             - Uses:
@@ -28492,7 +28507,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `review/plugin-changes.FacetDiff`
               - `review/plugin-changes.PluginChangesSlots`
               - `review/plugin-changes.usePluginFacetDiffs`
-        - **`file-changes`** (disabled — cascade) — File-level diff section for per-plugin review cards.
+        - **`file-changes`** (excluded) — File-level diff section for per-plugin review cards.
           - Web:
             - Contributes: `PluginChangesSlots.Section` → `FileChangesSection`
             - Uses:

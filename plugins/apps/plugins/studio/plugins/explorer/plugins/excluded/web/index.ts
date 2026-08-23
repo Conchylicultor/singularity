@@ -1,10 +1,10 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { Explorer } from "@plugins/apps/plugins/studio/plugins/explorer/web";
-import { DisabledBadge } from "./components/disabled-badge";
+import { ExcludedBadge } from "./components/excluded-badge";
 
 export default {
-  description: "Disabled badge in the explorer plugin tree row.",
+  description: "Not-in-the-app badge in the explorer plugin tree row.",
   contributions: [
-    Explorer.TreeRowBadge({ id: "disabled", component: DisabledBadge }),
+    Explorer.TreeRowBadge({ id: "excluded", component: ExcludedBadge }),
   ],
 } satisfies PluginDefinition;

@@ -16,10 +16,11 @@ import {
   type PluginTree,
 } from "@plugins/plugin-meta/plugins/plugin-tree/core";
 import { asPluginId } from "@plugins/framework/plugins/plugin-id/core";
+import { BASE_EXCLUSIONS_ID } from "@plugins/infra/plugins/namespace/core";
 import { classifyEdges } from "./classify-edges";
 import {
   resolveComposition,
-  disabledClosure,
+  removalClosure,
   expandEntrySeeds,
 } from "./resolve-composition";
 import { parseEntryPattern, matchEntryPattern } from "./entry-pattern";
@@ -42,6 +43,26 @@ const manifest: CompositionManifest = {
   entryPoints: [asPluginId("apps.agent-manager.**")],
   selectedContributors: [],
 };
+
+/**
+ * `expandEntrySeeds` takes a whole manifest (its negative pass reads
+ * `selectedContributors` too). These grammar tests only vary the patterns, so
+ * wrap the boilerplate once.
+ */
+function expand(
+  entryPoints: string[],
+  g: EdgeGraph,
+  selectedContributors: string[] = [],
+) {
+  return expandEntrySeeds(
+    {
+      name: "probe",
+      entryPoints,
+      selectedContributors: selectedContributors.map(asPluginId),
+    },
+    g,
+  );
+}
 
 let tree: PluginTree;
 let graph: EdgeGraph;
@@ -184,7 +205,7 @@ test("matchEntryPattern on root covers every node in the graph", () => {
 // and the composition-closure check would reject every negative under it as dead.
 // Root means "everything is in", not "everything is explicitly demanded".
 test("root seeds every id and NAMES NONE", () => {
-  const { seeds, named } = expandEntrySeeds([asPluginId("**")], graph);
+  const { seeds, named } = expand(["**"], graph);
   expect(seeds.size).toBe(tree.byDir.size);
   for (const n of tree.byDir.values()) expect(seeds.has(n.id)).toBe(true);
   expect(named.size).toBe(0);
@@ -207,26 +228,33 @@ test("resolveComposition under `**`: everything bundled + required, nothing avai
 });
 
 // Phase-7 forward guard: `**` plus branch negatives is how `singularity.disabled`
-// is eventually replaced, so a negative MUST still bite under a root positive.
+// was replaced, so a negative MUST still bite under a root positive.
 test("a negative trims its subtree even under a root positive", () => {
-  const { seeds } = expandEntrySeeds(
-    [asPluginId("**"), asPluginId("!apps.sonata.**")],
-    graph,
-  );
+  const { seeds, negated } = expand(["**", "!apps.sonata.**"], graph);
   const sonataIds = [...tree.byDir.values()]
     .map((n) => n.id)
     .filter((id) => id === SONATA || id.startsWith(`${SONATA}.`));
   expect(sonataIds.length).toBeGreaterThan(1); // umbrella + sub-plugins
   for (const id of sonataIds) expect(seeds.has(id)).toBe(false);
-  // Everything else is still seeded.
-  expect(seeds.size).toBe(tree.byDir.size - sonataIds.length);
   expect(seeds.has(AGENT_MANAGER)).toBe(true);
+
+  // `negated` is what the manifest ASSERTED must go — the pattern's matches,
+  // not the cascade.
+  expect([...negated].sort()).toEqual([...sonataIds].sort());
+
+  // The seed set is exactly everything minus the REMOVAL closure of those ids:
+  // sonata's own nodes plus whatever transitively imports them (the website
+  // demos embed the real Sonata keyboard, so the cascade reaches further than
+  // the branch itself — which is the behaviour that makes a negative honest).
+  const cascade = removalClosure(sonataIds.map(asPluginId), graph);
+  expect(seeds.size).toBe(tree.byDir.size - cascade.size);
+  for (const id of cascade) expect(seeds.has(id)).toBe(false);
 });
 
 // Documents the pathology `composition-closure` refuses: `!**` parses fine and
 // deletes every seed, leaving a composition that builds to nothing.
 test("a lone `!**` seeds nothing", () => {
-  const { seeds, named } = expandEntrySeeds([asPluginId("!**")], graph);
+  const { seeds, named } = expand(["!**"], graph);
   expect(seeds.size).toBe(0);
   expect(named.size).toBe(0);
 });
@@ -279,29 +307,70 @@ test("negation trims a .**-implicit id, but an explicit positive survives", () =
   });
 
   // `.**` then `!root.a` ⇒ a is trimmed (implicit only).
-  const trimmed = expandEntrySeeds(
-    [asPluginId("root.**"), asPluginId("!root.a")],
-    g,
-  );
+  const trimmed = expand(["root.**", "!root.a"], g);
   expect(trimmed.seeds.has(asPluginId("root.a"))).toBe(false);
   expect(trimmed.seeds.has(asPluginId("root.b"))).toBe(true);
   expect(trimmed.seeds.has(asPluginId("root"))).toBe(true);
 
   // Same negative, but `root.a` is ALSO named as an explicit positive ⇒ it survives.
-  const survives = expandEntrySeeds(
-    [asPluginId("root.**"), asPluginId("root.a"), asPluginId("!root.a")],
-    g,
-  );
+  const survives = expand(["root.**", "root.a", "!root.a"], g);
   expect(survives.seeds.has(asPluginId("root.a"))).toBe(true);
   expect(survives.named.has(asPluginId("root.a"))).toBe(true);
 });
 
-// (iv) Fail-loud: a negative drops a branch from SEEDING, but if a kept sibling
-// hard-imports an id under the negated branch, hardClosure re-adds it — it ships.
-test("negation cannot sever a hard import: a kept sibling's dep still ships", () => {
-  // root.**: children keep, drop, dep. `!root.drop.**` trims the drop branch from
-  // seeding — but root.keep hard-imports root.drop.inner, so it must still ship.
-  const g = syntheticGraph(
+// (iv) A negative takes its importers with it — that is what stops it from being
+// silently undone. `root.keep` imports an id under the negated branch, so it
+// leaves too, and nothing drags the branch back.
+test("a negative takes an unprotected importer with it", () => {
+  const comp = resolveComposition(importerGraph(), {
+    name: "cascades",
+    entryPoints: ["root.**", "!root.drop.**"],
+    selectedContributors: [],
+  });
+
+  expect(comp.bundle.has(asPluginId("root.drop"))).toBe(false);
+  expect(comp.bundle.has(asPluginId("root.drop.inner"))).toBe(false);
+  // The importer is not a sibling that survives — it breaks without what it
+  // imports, so it goes.
+  expect(comp.bundle.has(asPluginId("root.keep"))).toBe(false);
+  // The exclusion took effect, so there is nothing to report.
+  expect(comp.unsatisfiedExclusions).toEqual([]);
+});
+
+// (iv-b) FAIL-LOUD, in the one case the cascade cannot resolve: the importer is
+// explicitly NAMED, so it is protected from removal, survives, and re-adds the
+// negated id through `hardClosure`. Naming an importer is not a request for what
+// it imports — so the engine reports the contradiction instead of picking a side.
+test("a PROTECTED importer re-adds the negated id, and that is reported", () => {
+  const comp = resolveComposition(importerGraph(), {
+    name: "fail-loud",
+    entryPoints: ["root.**", "root.keep", "!root.drop.**"],
+    selectedContributors: [],
+  });
+
+  // `root.keep` is named ⇒ protected ⇒ survives, and its hard import comes back.
+  expect(comp.bundle.has(asPluginId("root.keep"))).toBe(true);
+  expect(comp.bundle.has(asPluginId("root.drop.inner"))).toBe(true);
+  // The branch node itself has no importer, so it does leave.
+  expect(comp.bundle.has(asPluginId("root.drop"))).toBe(false);
+
+  // The hole is named, with the chain that made it.
+  expect(comp.unsatisfiedExclusions).toHaveLength(1);
+  const [u] = comp.unsatisfiedExclusions;
+  expect(u!.target).toBe(asPluginId("root.drop.inner"));
+  expect(u!.path.origin).toBe(asPluginId("root.keep"));
+  expect(u!.path.steps).toEqual([
+    {
+      from: asPluginId("root.keep"),
+      to: asPluginId("root.drop.inner"),
+      kind: "hard",
+    },
+  ]);
+});
+
+/** root.** over children keep / drop, where keep hard-imports into the drop branch. */
+function importerGraph(): EdgeGraph {
+  return syntheticGraph(
     ["root", "root.keep", "root.drop", "root.drop.inner"],
     [["root.keep", "root.drop.inner"]], // keep imports an id under the negated branch
     {
@@ -309,18 +378,7 @@ test("negation cannot sever a hard import: a kept sibling's dep still ships", ()
       "root.drop": ["root.drop.inner"],
     },
   );
-  const comp = resolveComposition(g, {
-    name: "fail-loud",
-    entryPoints: [asPluginId("root.**"), asPluginId("!root.drop.**")],
-    selectedContributors: [],
-  });
-
-  // The negated branch node itself is dropped from the bundle...
-  expect(comp.bundle.has(asPluginId("root.drop"))).toBe(false);
-  // ...but the imported inner id is re-added via hardClosure of the kept sibling.
-  expect(comp.bundle.has(asPluginId("root.keep"))).toBe(true);
-  expect(comp.bundle.has(asPluginId("root.drop.inner"))).toBe(true);
-});
+}
 
 // (v) Real-tree `website`-shaped manifest: `.**` minus a branch negative excludes
 // every editor-toy id and keeps the rest of the website subtree.
@@ -502,11 +560,11 @@ test("flattenManifest ignores unknown extends references inertly", () => {
   ]);
 });
 
-// ── disabledClosure: reverse + subtree fixpoint (direction is load-bearing) ───
+// ── removalClosure: reverse + subtree fixpoint (direction is load-bearing) ────
 
 /**
  * Build a minimal synthetic EdgeGraph from explicit hard edges + a containment map.
- * Only the maps disabledClosure reads (`hardReverse`, `subtree`) are load-bearing;
+ * Only the maps removalClosure reads (`hardReverse`, `subtree`) are load-bearing;
  * the rest are seeded empty so the shape matches the real EdgeGraph by construction.
  */
 function syntheticGraph(
@@ -541,7 +599,7 @@ function syntheticGraph(
   };
 }
 
-test("disabledClosure: pulls in transitive importers + descendants, leaves dependencies and unrelated nodes untouched", () => {
+test("removalClosure: pulls in transitive importers + descendants, leaves dependencies and unrelated nodes untouched", () => {
   // Import edge A → B means "A imports B" (so A breaks if B is disabled).
   //   dep      → seed  (seed imports dep — dep is a DEPENDENCY, must NOT be disabled)
   //   importer → seed  (importer imports seed — must be disabled)
@@ -558,7 +616,7 @@ test("disabledClosure: pulls in transitive importers + descendants, leaves depen
     { seed: ["seed.child"] },
   );
 
-  const closure = disabledClosure([asPluginId("seed")], graph);
+  const closure = removalClosure([asPluginId("seed")], graph);
 
   // 1. Transitive importers + descendants are pulled in.
   expect(closure.has(asPluginId("seed"))).toBe(true);
@@ -577,4 +635,271 @@ test("disabledClosure: pulls in transitive importers + descendants, leaves depen
   expect([...closure].map(String).sort()).toEqual(
     ["far", "importer", "seed", "seed.child"].sort(),
   );
+});
+
+// ── Global exclusions: the base-exclusions row every composition inherits ──────
+
+/** The one negative the repo ships, and the twelve plugins it resolves to. */
+const PLUGIN_CHANGES = asPluginId("review.plugin-changes");
+const BASE_ROW: CompositionManifest = {
+  name: BASE_EXCLUSIONS_ID,
+  entryPoints: ["!review.plugin-changes.**"],
+  selectedContributors: [],
+  extends: [],
+};
+const RENDER_DIFF_FACETS = [
+  "contributions",
+  "cross-refs",
+  "db-schema",
+  "exports",
+  "registrations",
+  "resources",
+  "routes",
+  "slots",
+  "structure",
+];
+const EXPECTED_EXCLUDED = [
+  "review.plugin-changes",
+  "review.plugin-changes.api-changes",
+  "review.plugin-changes.file-changes",
+  ...RENDER_DIFF_FACETS.map((f) => `plugin-meta.facets.${f}.render-diff`),
+];
+
+// DIRECTION. A negative takes out what would BREAK without the removed plugin —
+// its descendants and its transitive importers — never what the removed plugin
+// itself depends on. Get this backwards and `!x` empties the app.
+test("a negative cascades to transitive importers; a dependency of the negated branch stays", () => {
+  //   root.seed        — negated
+  //   root.seed.child  — descendant of the negated branch ⇒ goes
+  //   root.importer    — imports root.seed                ⇒ goes
+  //   root.far         — imports root.importer            ⇒ goes (transitive)
+  //   root.dep         — root.seed imports IT             ⇒ STAYS (direction)
+  //   root.unrelated   — untouched
+  const g = syntheticGraph(
+    [
+      "root",
+      "root.seed",
+      "root.seed.child",
+      "root.dep",
+      "root.importer",
+      "root.far",
+      "root.unrelated",
+    ],
+    [
+      ["root.seed", "root.dep"],
+      ["root.importer", "root.seed"],
+      ["root.far", "root.importer"],
+    ],
+    {
+      root: [
+        "root.seed",
+        "root.seed.child",
+        "root.dep",
+        "root.importer",
+        "root.far",
+        "root.unrelated",
+      ],
+      "root.seed": ["root.seed.child"],
+    },
+  );
+  const comp = resolveComposition(g, {
+    name: "cascade",
+    entryPoints: ["root.**", "!root.seed.**"],
+    selectedContributors: [],
+  });
+
+  for (const gone of [
+    "root.seed",
+    "root.seed.child",
+    "root.importer",
+    "root.far",
+  ]) {
+    expect(comp.bundle.has(asPluginId(gone))).toBe(false);
+  }
+  // A DEPENDENCY of the negated branch is not implicated at all.
+  expect(comp.bundle.has(asPluginId("root.dep"))).toBe(true);
+  expect(comp.bundle.has(asPluginId("root.unrelated"))).toBe(true);
+  // The exclusion took effect, so there is nothing to report.
+  expect(comp.unsatisfiedExclusions).toEqual([]);
+});
+
+// THE INHERITANCE. The composition below does not mention `review.plugin-changes`
+// and does not `extends` anything — it only seeds the facets subtree, whose
+// `render-diff` adapters import the excluded plugin. It still must not bundle it:
+// `flattenManifest` folds the base row into EVERY manifest.
+test("the base-exclusions row is inherited with no `extends`", () => {
+  const facetsOnly: CompositionManifest = {
+    name: "facets-only",
+    entryPoints: ["plugin-meta.facets.**"],
+    selectedContributors: [],
+    extends: [],
+  };
+  const comp = resolveComposition(
+    graph,
+    flattenManifest(facetsOnly, [facetsOnly, BASE_ROW]),
+  );
+
+  expect(comp.bundle.has(PLUGIN_CHANGES)).toBe(false);
+  // …and so are the nine adapters that import it — the cascade, not the pattern.
+  for (const f of RENDER_DIFF_FACETS) {
+    expect(
+      comp.bundle.has(asPluginId(`plugin-meta.facets.${f}.render-diff`)),
+    ).toBe(false);
+  }
+  // The rest of the facets subtree still ships.
+  expect(comp.bundle.has(asPluginId("plugin-meta.facets"))).toBe(true);
+  expect(comp.bundle.has(asPluginId("plugin-meta.facets.contributions"))).toBe(
+    true,
+  );
+  expect(comp.unsatisfiedExclusions).toEqual([]);
+});
+
+// THE OPT-OUT, spelled as an entry positive. Naming the excluded plugin is a
+// request for it, and a request wins over the inherited negative — including the
+// cascade, which never runs.
+test("naming the excluded plugin as an entry positive opts back in", () => {
+  const optIn: CompositionManifest = {
+    name: "facets-plus-changes",
+    entryPoints: ["plugin-meta.facets.**", "review.plugin-changes"],
+    selectedContributors: [],
+    extends: [],
+  };
+  const comp = resolveComposition(
+    graph,
+    flattenManifest(optIn, [optIn, BASE_ROW]),
+  );
+
+  expect(comp.bundle.has(PLUGIN_CHANGES)).toBe(true);
+  expect(comp.membership.get(PLUGIN_CHANGES)).toBe("entry");
+  // The adapters come back too — nothing cascaded out.
+  for (const f of RENDER_DIFF_FACETS) {
+    expect(
+      comp.bundle.has(asPluginId(`plugin-meta.facets.${f}.render-diff`)),
+    ).toBe(true);
+  }
+  expect(comp.unsatisfiedExclusions).toEqual([]);
+});
+
+// THE SAME OPT-OUT, spelled as a selected contributor. Both spellings are ways of
+// naming the plugin, so both suppress the negative.
+test("naming the excluded plugin as a selected contributor opts back in", () => {
+  const optIn: CompositionManifest = {
+    name: "facets-plus-changes-soft",
+    entryPoints: ["plugin-meta.facets.**"],
+    selectedContributors: [PLUGIN_CHANGES],
+    extends: [],
+  };
+  const comp = resolveComposition(
+    graph,
+    flattenManifest(optIn, [optIn, BASE_ROW]),
+  );
+
+  expect(comp.bundle.has(PLUGIN_CHANGES)).toBe(true);
+  expect(comp.unsatisfiedExclusions).toEqual([]);
+});
+
+// NOT AN OPT-OUT. Selecting an IMPORTER of the excluded plugin is not a request
+// for the excluded plugin, so the negative stands — but the protected importer
+// survives the cascade and drags the plugin back through its hard closure. That
+// contradiction is reported, with the import chain, rather than silently resolved
+// in either direction.
+test("naming an importer is NOT an opt-out: the contradiction is reported with its path", () => {
+  const adapter = asPluginId("plugin-meta.facets.contributions.render-diff");
+  const viaImporter: CompositionManifest = {
+    name: "facets-selecting-an-adapter",
+    entryPoints: ["plugin-meta.facets.**"],
+    selectedContributors: [adapter],
+    extends: [],
+  };
+  const comp = resolveComposition(
+    graph,
+    flattenManifest(viaImporter, [viaImporter, BASE_ROW]),
+  );
+
+  // The importer survives, so the excluded plugin is back in the bundle…
+  expect(comp.bundle.has(adapter)).toBe(true);
+  expect(comp.bundle.has(PLUGIN_CHANGES)).toBe(true);
+
+  // …and that is exactly what `unsatisfiedExclusions` exists to say.
+  const targets = comp.unsatisfiedExclusions.map((u) => String(u.target));
+  expect(targets).toContain(String(PLUGIN_CHANGES));
+
+  const entry = comp.unsatisfiedExclusions.find(
+    (u) => u.target === PLUGIN_CHANGES,
+  )!;
+  // The path is the repair instruction: it lands on the excluded plugin, and the
+  // chain that put it there is contiguous.
+  expect(entry.path.target).toBe(PLUGIN_CHANGES);
+  const steps = entry.path.steps;
+  expect(steps.length).toBeGreaterThan(0);
+  expect(steps[steps.length - 1]!.to).toBe(PLUGIN_CHANGES);
+  for (let i = 1; i < steps.length; i++) {
+    expect(steps[i]!.from).toBe(steps[i - 1]!.to);
+  }
+});
+
+// THE MIGRATION ITSELF. `singularity` is `entryPoints: ["**"]` plus the inherited
+// base row, and that must bundle exactly every plugin minus the twelve the
+// `singularity.disabled` flag used to remove. This is what makes the swap provable:
+// the same twelve, from a declaration instead of a package.json key.
+test("real-tree `singularity`: everything except the twelve excluded plugins", () => {
+  const main: CompositionManifest = {
+    name: "singularity",
+    entryPoints: ["**"],
+    selectedContributors: [],
+    extends: [],
+  };
+  const comp = resolveComposition(
+    graph,
+    flattenManifest(main, [main, BASE_ROW]),
+  );
+
+  const allIds = [...tree.byDir.values()].map((n) => String(n.id));
+  for (const id of EXPECTED_EXCLUDED) expect(allIds).toContain(id);
+
+  const missing = allIds
+    .filter((id) => !comp.bundle.has(asPluginId(id)))
+    .sort();
+  expect(missing).toEqual([...EXPECTED_EXCLUDED].sort());
+  expect(comp.bundle.size).toBe(allIds.length - EXPECTED_EXCLUDED.length);
+  expect(comp.unsatisfiedExclusions).toEqual([]);
+});
+
+// The base row flattens against itself inertly — no infinite recursion, and it is
+// not made to inherit itself.
+test("flattenManifest does not fold the base row into itself", () => {
+  const flat = flattenManifest(BASE_ROW, [BASE_ROW]);
+  expect(flat.entryPoints).toEqual(["!review.plugin-changes.**"]);
+  expect(flat.extends).toEqual([]);
+});
+
+// `negatedTargets` is what the author ASSERTED must leave; the twelve absent ids
+// are what that assertion cost. Keeping them separate is what lets a reader tell
+// "excluded on purpose" from "excluded because something else was".
+test("negatedTargets carries the asserted targets, not the cascade", () => {
+  const main: CompositionManifest = {
+    name: "singularity",
+    entryPoints: ["**"],
+    selectedContributors: [],
+    extends: [],
+  };
+  const comp = resolveComposition(
+    graph,
+    flattenManifest(main, [main, BASE_ROW]),
+  );
+
+  // The pattern's own matches: the plugin and its two sub-plugins.
+  expect([...comp.negatedTargets].map(String).sort()).toEqual(
+    [
+      "review.plugin-changes",
+      "review.plugin-changes.api-changes",
+      "review.plugin-changes.file-changes",
+    ].sort(),
+  );
+  // The nine adapters left as CASCADE — out of the bundle, not asserted.
+  for (const f of RENDER_DIFF_FACETS) {
+    const adapter = asPluginId(`plugin-meta.facets.${f}.render-diff`);
+    expect(comp.bundle.has(adapter)).toBe(false);
+    expect(comp.negatedTargets.has(adapter)).toBe(false);
+  }
 });

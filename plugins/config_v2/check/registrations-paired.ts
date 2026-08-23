@@ -1,7 +1,6 @@
 import type { SlotHandle } from "@plugins/framework/plugins/slot-declaration/core";
 import { existsSync } from "fs";
 import { join, relative } from "path";
-import { buildPluginTree } from "@plugins/plugin-meta/plugins/plugin-tree/core";
 import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
 import { asPath, asPluginId } from "@plugins/framework/plugins/plugin-id/core";
 import {
@@ -9,7 +8,7 @@ import {
   importBarrel,
 } from "@plugins/plugin-meta/plugins/barrel-import/core";
 import {
-  computeDisabledIds,
+  buildRegistryGenContext,
   declareSlotsFromBarrels,
 } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
 
@@ -47,7 +46,12 @@ const check: Check = {
     const root = await getWorktreeRoot();
     const pluginsRoot = join(root, "plugins");
 
-    const tree = await buildPluginTree(pluginsRoot, { skipBarrelImport: true });
+    // The shared registry-gen context: its memoized barrel-free tree is the same
+    // node set this check walks, and its `mainBundle` is the app's membership —
+    // both already built by the other checks in the run, so taking them here
+    // costs nothing and cannot disagree with what codegen emitted.
+    const ctx = await buildRegistryGenContext(root);
+    const tree = ctx.tree;
     registerBarrelStubs(join(pluginsRoot, ".."));
 
     // Importing a web barrel is only HALF of loading the web runtime. A plugin
@@ -85,15 +89,18 @@ const check: Check = {
     const webPaths = new Set<string>();
     const serverPaths = new Set<string>();
 
-    // A DISABLED plugin registers on neither runtime: it is absent from the web
-    // registry the browser loads, and `discoverConfigs` skips it server-side. So
-    // it must be absent from BOTH sides here — and the test is the descriptor's
-    // OWNING plugin, not the barrel it was found in: reorder registers every
-    // slot's directive from its own node with an explicit `pluginId`, so a
-    // disabled plugin's directive arrives via an enabled barrel.
-    const disabled = computeDisabledIds(tree);
-    const ownerDisabled = (override: string | undefined, fallback: string) =>
-      disabled.has(asPluginId(override ?? fallback));
+    // A plugin the app's composition does NOT bundle registers on neither
+    // runtime: it is absent from the web registry the browser loads, and
+    // `discoverConfigs` skips it server-side. So it must be absent from BOTH
+    // sides here — and the test is the descriptor's OWNING plugin, not the barrel
+    // it was found in: reorder registers every slot's directive from its own node
+    // with an explicit `pluginId`, so an excluded plugin's directive arrives via a
+    // bundled barrel.
+    //
+    // Membership is `singularity`'s resolved closure — the one answer to "is this
+    // plugin in the app?", the same set every registry is filtered by.
+    const ownerExcluded = (override: string | undefined, fallback: string) =>
+      !ctx.mainBundle.has(asPluginId(override ?? fallback));
 
     for (const node of tree.byDir.values()) {
       const fallbackId = node.id;
@@ -115,7 +122,7 @@ const check: Check = {
           if (c._slot !== webRegisterSlot) continue;
           const name = c.descriptor?.name;
           if (typeof name !== "string") continue;
-          if (ownerDisabled(c.pluginId, fallbackId)) continue;
+          if (ownerExcluded(c.pluginId, fallbackId)) continue;
           webPaths.add(storePathFor(c.pluginId, fallbackId, name));
         }
       }
@@ -141,7 +148,7 @@ const check: Check = {
           if (c._kind?.description !== "ConfigV2.Register") continue;
           const name = c.descriptor?.name;
           if (typeof name !== "string") continue;
-          if (ownerDisabled(c.pluginId, fallbackId)) continue;
+          if (ownerExcluded(c.pluginId, fallbackId)) continue;
           serverPaths.add(storePathFor(c.pluginId, fallbackId, name));
         }
       }

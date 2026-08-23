@@ -4,8 +4,10 @@ import { defineItemActions } from "@plugins/primitives/plugins/data-view/web";
 import type { ItemActionProps } from "@plugins/primitives/plugins/data-view/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { useDeleteComposition } from "@plugins/build/plugins/serve-composition/web";
-import { MAIN_COMPOSITION_ID } from "@plugins/infra/plugins/namespace/core";
-import { type CompositionManifestItem } from "@plugins/plugin-meta/plugins/composition/core";
+import {
+  isCommittedSourceComposition,
+  type CompositionManifestItem,
+} from "@plugins/plugin-meta/plugins/composition/core";
 
 /** Per-consumer trailing-action slot for the Compositions list rows. */
 export const CompositionItemActions =
@@ -22,15 +24,17 @@ export const CompositionItemActions =
  * state — until the server answers, we do not know whether this delete is free or
  * destroys a live database.
  *
- * Main's row gets no button at all rather than a disabled one. A disabled control
- * says "not right now"; deleting the composition the repo itself builds is not a
- * thing that becomes available later, and `remove` throws on it.
+ * The two committed-source rows — main's and `base-exclusions` — get no button
+ * at all rather than a disabled one. A disabled control says "not right now";
+ * deleting the composition the repo itself builds, or the row carrying the
+ * exclusions every composition inherits, is not a thing that becomes available
+ * later, and `remove` throws on both.
  */
 export function DeleteAction({
   row,
 }: ItemActionProps<CompositionManifestItem>): ReactElement | null {
   const { deleteComposition } = useDeleteComposition();
-  if (row.id === MAIN_COMPOSITION_ID) return null;
+  if (isCommittedSourceComposition(row.id)) return null;
   return (
     <IconButton
       icon={MdDeleteOutline}

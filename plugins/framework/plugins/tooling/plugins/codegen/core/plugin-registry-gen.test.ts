@@ -12,6 +12,9 @@ import { test, expect, afterAll } from "bun:test";
 import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from "fs";
 import { tmpdir } from "os";
 import { join } from "path";
+import { asPluginId } from "@plugins/framework/plugins/plugin-id/core";
+import { classifyEdges } from "@plugins/plugin-meta/plugins/closure/core";
+import type { PluginNode } from "@plugins/plugin-meta/plugins/plugin-tree/core";
 import {
   collectedDirNamedCompositionRegistryPath,
   compositionRegistryFileName,
@@ -19,7 +22,9 @@ import {
   discoverCollectedDirs,
   listNamedCompositionRegistries,
   parseNamedCompositionRegistryFileName,
+  renderCollectedDirRegistry,
   type DiscoveredCollectedDir,
+  type RegistryGenContext,
 } from "./plugin-registry-gen";
 
 const root = mkdtempSync(join(tmpdir(), "collected-dir-test-"));
@@ -180,4 +185,125 @@ test("listNamedCompositionRegistries finds per-name files, skipping singletons",
   } finally {
     rmSync(namedRoot, { recursive: true, force: true });
   }
+});
+
+// ── The bundle filter is the WHOLE filter ──────────────────────────
+//
+// Since Phase 7 a registry is always the registry OF a composition: `bundle` is
+// required, and it is the only thing that decides who is emitted. These two tests
+// pin that property directly, on a synthetic tree, so it holds independently of
+// what any real manifest says:
+//
+//   • the full id set renders every entry, with the dependency graph intact —
+//     this is what the committed `<dir>.generated.ts` files are (rendered with
+//     `ctx.mainBundle`, which for `singularity` is every id it reaches);
+//   • dropping ONE id from the bundle drops exactly that entry, and prunes it out
+//     of any surviving entry's `dependsOn` — a dangling dep would break the
+//     loader's topo-sort.
+
+/** A `PluginNode` with only the fields the entry collector reads set meaningfully. */
+function fakeNode(pluginsRoot: string, path: string): PluginNode {
+  return {
+    dir: join(pluginsRoot, path),
+    path,
+    name: path.split("/").at(-1)!,
+    id: asPluginId(
+      path
+        .split("/")
+        .filter((s) => s !== "plugins")
+        .join("."),
+    ),
+    descriptions: {},
+    loadBearing: false,
+    collapsed: false,
+    compositionRoot: false,
+    runtimes: { web: true, server: false, central: false },
+    children: [],
+    facets: {},
+  };
+}
+
+/**
+ * A synthetic two-plugin tree: `beta/web` imports `alpha`'s web barrel, so the
+ * emitted `beta` entry carries `dependsOn: ["alpha"]`.
+ *
+ * The ctx is built by hand rather than through `buildRegistryGenContext` on
+ * purpose: what is under test is the renderer's bundle-dependence, and a
+ * hand-built ctx keeps `graph`/`mainBundle` (which the renderer never reads) out
+ * of the picture entirely.
+ */
+function bundleFixture(): {
+  ctx: RegistryGenContext;
+  def: DiscoveredCollectedDir;
+} {
+  const fixtureRoot = mkdtempSync(join(tmpdir(), "registry-bundle-test-"));
+  afterAll(() => rmSync(fixtureRoot, { recursive: true, force: true }));
+  const pluginsRoot = join(fixtureRoot, "plugins");
+  for (const [name, src] of [
+    ["alpha", "export default { name: 'alpha' };\n"],
+    [
+      "beta",
+      'import x from "@plugins/alpha/web";\nexport default { name: "beta", x };\n',
+    ],
+  ] as const) {
+    mkdirSync(join(pluginsRoot, name, "web"), { recursive: true });
+    writeFileSync(join(pluginsRoot, name, "web", "index.ts"), src);
+  }
+  const nodes = [fakeNode(pluginsRoot, "alpha"), fakeNode(pluginsRoot, "beta")];
+  const tree = {
+    pluginsRoot,
+    byDir: new Map(nodes.map((n) => [n.dir, n])),
+    byPath: new Map(nodes.map((n) => [n.path, n])),
+    roots: nodes,
+    facets: [],
+  };
+  const ctx: RegistryGenContext = {
+    root: fixtureRoot,
+    tree,
+    // Pure over `node.facets` (empty here) — the renderer never reads the graph;
+    // it is on the ctx so every consumer shares one classify pass.
+    graph: classifyEdges(tree),
+    mainBundle: new Set(nodes.map((n) => n.id)),
+    dirScans: new Map(),
+  };
+  return {
+    ctx,
+    def: { dir: "web", _brand: "CollectedDirDef", ownerDir: pluginsRoot },
+  };
+}
+
+test("a bundle carrying every id renders every entry, with its deps", () => {
+  const { ctx, def } = bundleFixture();
+  const rendered = renderCollectedDirRegistry({
+    ctx,
+    def,
+    bundle: ctx.mainBundle,
+  });
+
+  expect(rendered).toContain('id: "alpha"');
+  expect(rendered).toContain('id: "beta"');
+  expect(rendered).toContain('dependsOn: ["alpha"]');
+  // Exactly one emitted entry per plugin — no duplicates, nothing dropped.
+  expect(rendered.match(/^ {2}\{ pluginPath:/gm)).toHaveLength(2);
+});
+
+test("a bundle missing one id differs by exactly that entry, and prunes the dep on it", () => {
+  const { ctx, def } = bundleFixture();
+  const full = renderCollectedDirRegistry({ ctx, def, bundle: ctx.mainBundle });
+  const withoutAlpha = renderCollectedDirRegistry({
+    ctx,
+    def,
+    bundle: new Set([...ctx.mainBundle].filter((id) => id !== "alpha")),
+  });
+
+  expect(withoutAlpha).not.toContain('id: "alpha"');
+  expect(withoutAlpha).toContain('id: "beta"');
+  // `beta` survives, but its dependency on the absent `alpha` is pruned — a
+  // dangling `dependsOn` would break the loader's topo-sort.
+  expect(withoutAlpha).toContain("dependsOn: []");
+  // The difference is exactly one entry line, not a reshuffle.
+  const lines = (s: string) =>
+    s.split("\n").filter((l) => l.startsWith("  { pluginPath:"));
+  expect(lines(full)).toHaveLength(2);
+  expect(lines(withoutAlpha)).toHaveLength(1);
 });

@@ -1,7 +1,7 @@
 import { existsSync, readFileSync } from "fs";
 import {
   buildEnrichedTree,
-  computeDisabledIds,
+  mainComposition,
   pluginClaudeMdPath,
   pluginCompactDocPath,
   pluginDetailsDocPath,
@@ -66,20 +66,19 @@ const check: Check = {
       };
     }
 
+    // The SAME inputs `generatePluginDocs` renders each CLAUDE.md from: the
+    // enriched tree (memoized per root, so this is the very tree docgen used) and
+    // the `singularity` composition resolved off it. The AUTOGEN block annotates
+    // the plugins main's closure leaves out, so a check that computed membership
+    // any other way would disagree with the generator it exists to check.
     const tree = await buildEnrichedTree(root);
-    const disabled = computeDisabledIds(tree);
+    const main = mainComposition(tree, root);
     for (const info of tree.byDir.values()) {
       const file = pluginClaudeMdPath(info);
       const existing = existsSync(file) ? readFileSync(file, "utf8") : null;
       const expected = await formatGenerated({
         file,
-        content: renderPluginClaudeMd(
-          info,
-          existing,
-          root,
-          tree.facets,
-          disabled,
-        ),
+        content: renderPluginClaudeMd(info, existing, root, tree.facets, main),
       });
       if (existing !== expected) {
         return {

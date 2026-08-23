@@ -5,7 +5,7 @@
 ## Plugin reference
 
 - Description: File-level diff section for per-plugin review cards.
-- Disabled: cascade
+- Excluded: yes
 - Web:
   - Contributes: `PluginChangesSlots.Section` → `FileChangesSection`
   - Uses:

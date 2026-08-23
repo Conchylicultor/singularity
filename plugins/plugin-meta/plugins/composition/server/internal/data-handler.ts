@@ -1,6 +1,5 @@
 import {
   classifyEdges,
-  disabledClosure,
   serializeEdgeGraph,
 } from "@plugins/plugin-meta/plugins/closure/core";
 import { getFacetsTreeCached } from "@plugins/plugin-meta/plugins/plugin-tree/server";
@@ -11,7 +10,7 @@ import type { PluginTree } from "@plugins/plugin-meta/plugins/plugin-tree/core";
 
 // The expensive part is the facets tree build, which plugin-tree already caches
 // (watcher-invalidated, warmed post-boot on main). The derivations on top of it
-// are cheap (~10ms measured: classify 8ms + serialize 1ms + two id scans), so
+// are cheap (~10ms measured: classify 8ms + serialize 1ms + one id scan), so
 // they are memoized per tree IDENTITY: when plugin-tree's memo rebuilds, the new
 // tree object misses the WeakMap and the graph is re-derived. This replaces the
 // old process-lifetime module cache, which never invalidated — after any live
@@ -25,12 +24,11 @@ function deriveCompositionData(tree: PluginTree): CompositionData {
   const edgeGraph = classifyEdges(tree);
   const graph = serializeEdgeGraph(edgeGraph);
   const allIds = [...tree.byDir.values()].map((n) => n.id);
-  // The disabled cascade: package.json-seeded disabled plugins plus every plugin
-  // whose dependent-closure pulls one in. Derived from the same edge graph so the
-  // client renders the badge without shipping a per-node `disabled` field.
-  const seeds = [...tree.byDir.values()].filter((n) => n.disabled).map((n) => n.id);
-  const disabledIds = [...disabledClosure(seeds, edgeGraph)];
-  const data = { graph, allIds, disabledIds };
+  // Only the code-derived structure ships. Which plugins are OUT of the app is
+  // not a second field here: it is a pure function of this graph and the
+  // composition manifests, and the client already holds both — see
+  // `useAppExclusions` (web/internal/hooks.ts).
+  const data = { graph, allIds };
   derived.set(tree, data);
   return data;
 }

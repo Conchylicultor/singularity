@@ -195,6 +195,7 @@ entries it was raised to abandon. To undo `v2`, go to `v3`.
   - **`migration-metadata-consistent`**
   - **`migrations-in-sync`**
   - **`no-db-backed-notify`**
+  - **`no-disabled-flag`**
   - **`no-hand-built-link-to`**
   - **`no-hardcoded-colors`**
   - **`no-plugin-imports-in-core`**

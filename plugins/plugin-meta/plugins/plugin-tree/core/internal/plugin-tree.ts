@@ -45,9 +45,6 @@ export interface PluginNode {
   loadBearing: boolean;
   collapsed: boolean;
   compositionRoot: boolean;
-  /** Seed flag only: `singularity.disabled === true` in this plugin's
-   *  package.json. The dependent-closure cascade is derived, not stored here. */
-  disabled: boolean;
   runtimes: Record<Runtime, boolean>;
   children: PluginNode[];
   facets: Record<string, unknown>;
@@ -245,15 +242,13 @@ async function collectCoreFields(
     (webMeta?.collapsed ?? false) ||
     (serverMeta?.collapsed ?? false) ||
     (centralMeta?.collapsed ?? false);
-  // package.json collapsed, compositionRoot, and disabled markers.
+  // package.json collapsed and compositionRoot markers.
   let compositionRoot = false;
-  let disabled = false;
   if (pkgSrc) {
     try {
       const pkg = JSON.parse(pkgSrc);
       if (pkg.singularity?.collapsed === true) collapsed = true;
       if (pkg.singularity?.compositionRoot === true) compositionRoot = true;
-      if (pkg.singularity?.disabled === true) disabled = true;
       // eslint-disable-next-line promise-safety/no-bare-catch
     } catch {}
   }
@@ -279,7 +274,6 @@ async function collectCoreFields(
       loadBearing,
       collapsed,
       compositionRoot,
-      disabled,
       runtimes: {
         web: !!webIndex,
         server: !!serverIndex,
@@ -425,12 +419,13 @@ export async function buildPluginTree(
     //
     // Running the pass HERE, over exactly the modules just imported, is what
     // makes that impossible: any consumer holding an enriched tree holds
-    // declared slots. Disabled plugins are included deliberately — their barrels
-    // were imported too, and a facet describes source, not the live registry
-    // (the runtime sets filter on `disabled` separately).
+    // declared slots. Plugins the app's composition leaves out are included
+    // deliberately — their barrels were imported too, and a facet describes
+    // source, not the live registry (the runtime sets filter on composition
+    // membership separately).
     //
     // `"source"` is the scope this pass models, and it is what the paragraph
-    // above says in one word: every plugin the checkout declares, disabled ones
+    // above says in one word: every plugin the checkout declares, excluded ones
     // included. An `out-of-scope` answer from this naming therefore means the
     // slot is declared by nobody anywhere, not merely by nobody the browser
     // loads.

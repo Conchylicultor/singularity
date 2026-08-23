@@ -12,7 +12,7 @@ conformant and excluded from the comparable set.
 ## Plugin reference
 
 - Description: Diff renderer for the structure facet (PR review).
-- Disabled: cascade
+- Excluded: cascade
 - Web:
   - Contributes: `PluginChangesSlots.DiffRenderer` "Structure"
   - Uses: `review/plugin-changes.PluginChangesSlots`

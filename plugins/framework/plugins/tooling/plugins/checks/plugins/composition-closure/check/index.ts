@@ -3,16 +3,19 @@ import {
   readCompositionManifestsFromDisk,
 } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
 import {
-  classifyEdges,
   expandEntrySeeds,
   explainInclusion,
   flattenManifest,
   matchEntryPattern,
   parseEntryPattern,
+  removalClosure,
   resolveComposition,
 } from "@plugins/plugin-meta/plugins/closure/core";
 import type { CompositionManifest } from "@plugins/plugin-meta/plugins/closure/core";
-import { MAIN_COMPOSITION_ID } from "@plugins/infra/plugins/namespace/core";
+import {
+  BASE_EXCLUSIONS_ID,
+  MAIN_COMPOSITION_ID,
+} from "@plugins/infra/plugins/namespace/core";
 import {
   assertCompositionId,
   isServed,
@@ -33,18 +36,18 @@ const fail = (message: string, hint?: string): CheckResult => ({
 const check: Check = {
   id: "composition-closure",
   description:
-    "Every declared composition is valid: unique name, all entry/contributor ids resolve, each selected contributor is a genuine load-bearing soft option (no redundant selections), and every `excludes` bundle stays disjoint from the composition's hard closure (self-containment guard).",
+    "Every declared composition is valid: unique name, all entry/contributor ids resolve, the reserved `singularity` and `base-exclusions` rows are well-formed, every declared exclusion actually took effect, no negative is dead everywhere, each selected contributor is a genuine load-bearing soft option (no redundant selections), and every `excludes` bundle stays disjoint from the composition's hard closure (self-containment guard).",
   async run() {
     const root = await getWorktreeRoot();
-    // The barrel-free faceted tree, taken from the shared registry-gen context
-    // rather than built here. `buildRegistryGenContext` calls
-    // `buildBarrelFreeTree`, which memoizes exactly this
+    // The barrel-free faceted tree AND its classified edge graph, taken from the
+    // shared registry-gen context rather than built here. `buildRegistryGenContext`
+    // calls `buildBarrelFreeTree`, which memoizes exactly this
     // `buildPluginTree(<root>/plugins, { skipBarrelImport: true, facets: true })`
-    // per root — the same node AND facet set this check needs for `classifyEdges`.
-    // Going through the memo means one 840-plugin faceted walk is shared with
-    // every other check in the run instead of a private duplicate.
-    const tree = (await buildRegistryGenContext(root)).tree;
-    const graph = classifyEdges(tree);
+    // per root, and classifies its edges ONCE for every consumer that takes a ctx.
+    // Going through the memo means one 840-plugin faceted walk and one
+    // `classifyEdges` pass are shared with every other check in the run instead of
+    // a private duplicate of each.
+    const { tree, graph } = await buildRegistryGenContext(root);
     const allIds = new Set<PluginId>([...tree.byDir.values()].map((n) => n.id));
 
     // The committed git-layer `compositions` config, off disk — this check runs in
@@ -127,6 +130,62 @@ const check: Check = {
       );
     }
 
+    // 0e. The global exclusions row is present exactly once. `base-exclusions` is
+    //     an ordinary manifest entry with one extraordinary property:
+    //     `flattenManifest` folds it into EVERY composition unconditionally,
+    //     rather than each composition opting in via `extends`. So it is the row
+    //     that decides what is in no app at all. Delete it and every exclusion the
+    //     repo has decided on silently comes back; duplicate it and which copy is
+    //     folded in depends on registry order — same reason main's row (0c) is
+    //     pinned to exactly one.
+    const baseRows = items.filter((i) => i.id === BASE_EXCLUSIONS_ID);
+    if (baseRows.length !== 1) {
+      return fail(
+        `expected exactly one composition with id "${BASE_EXCLUSIONS_ID}", found ${baseRows.length}`,
+        `"${BASE_EXCLUSIONS_ID}" is the global exclusions row — the negatives every composition inherits, and the one mechanism by which a plugin leaves the app. It must exist exactly once. Restore it in plugins/plugin-meta/plugins/composition/core/config.ts.`,
+      );
+    }
+    const baseRow = baseRows[0]!;
+
+    // 0f. The base row is never served. Its bundle is empty by construction (it
+    //     holds negatives only, so it seeds nothing), and its id is reserved the
+    //     same way main's is — `assertCompositionId` admits it as a legal id but
+    //     never as a servable namespace, so a stored mode is inert. As with 0d,
+    //     this rule is about the committed seed telling the truth: any mode but
+    //     `off` would describe provisioning `base-exclusions.localhost:9000` for
+    //     an app containing nothing.
+    if (baseRow.serve !== "off") {
+      return fail(
+        `composition "${BASE_EXCLUSIONS_ID}" has \`serve: "${baseRow.serve}"\``,
+        `"${BASE_EXCLUSIONS_ID}" carries only negatives, so its own bundle is empty — there is nothing to serve, and its id is not a servable namespace. Set it back to \`"off"\`.`,
+      );
+    }
+
+    // 0g. The base row may only EXCLUDE. Every entry point is a negative and
+    //     `selectedContributors` is empty.
+    //
+    //     This is the rule that keeps the row honest about its one asymmetry:
+    //     every other composition says what IT includes, and this one is folded
+    //     into everything. A positive here — an entry pattern without `!`, or a
+    //     selected contributor — would therefore force a plugin into EVERY
+    //     composition's bundle, forever, from a row whose whole documented
+    //     purpose is subtraction. Forcing plugins in is `served-baseline`'s job,
+    //     and it does it through `extends`, where the choice is visible on the row
+    //     that opted in. Here it would be invisible.
+    for (const entry of baseRow.entryPoints) {
+      if (parseEntryPattern(entry).negate) continue;
+      return fail(
+        `composition "${BASE_EXCLUSIONS_ID}" has a positive entry point "${entry}"`,
+        `"${BASE_EXCLUSIONS_ID}" is folded into every composition, so it may only EXCLUDE — every entry must be a negative (\`!<id>\` or \`!<id>.**\`). A positive here would silently force "${entry}" into every bundle in the repo; to force a plugin in, add it to the \`served-baseline\` pack and \`extends\` that from the compositions that want it.`,
+      );
+    }
+    if (baseRow.selectedContributors.length > 0) {
+      return fail(
+        `composition "${BASE_EXCLUSIONS_ID}" selects ${baseRow.selectedContributors.length} contributor(s): ${baseRow.selectedContributors.join(", ")}`,
+        `"${BASE_EXCLUSIONS_ID}" is folded into every composition, so a contributor selected here is selected everywhere — the same silent force-in a positive entry point would be. Keep \`selectedContributors\` empty; put shared opt-ins in the \`served-baseline\` pack, which compositions reference through \`extends\`.`,
+      );
+    }
+
     // 1. Unique names across all compositions (the config list does not de-dupe).
     const seenNames = new Set<string>();
     for (const m of manifests) {
@@ -139,6 +198,17 @@ const check: Check = {
       seenNames.add(m.name);
     }
     const allNames = seenNames;
+
+    // Did each negative entry pattern trim ANYTHING, anywhere? Keyed by the
+    // pattern text, accumulated across every composition, and judged only once
+    // every composition has been resolved (rule 3d, below the loop).
+    //
+    // It cannot be judged per composition any more. Since `base-exclusions` is
+    // folded into every manifest, its negatives are evaluated against lean
+    // bundles that never reached the excluded plugin in the first place — where
+    // trimming nothing is the CORRECT outcome, not a typo. A negative is dead
+    // only if it trims nothing in every composition in the repo.
+    const negativeTrimmedSomewhere = new Map<string, boolean>();
 
     for (const m of manifests) {
       // 2. Every id resolves to a real plugin. Entries are now PATTERNS (a
@@ -189,10 +259,13 @@ const check: Check = {
       const flat = flattenManifest(m, manifests);
 
       // 3b. Negative-pattern validity, evaluated on the FLATTENED manifest so a
-      //     negative from one composition is judged against the positives unioned
-      //     in from its whole `extends` chain (additivity). A negative may only
-      //     trim ids pulled in IMPLICITLY by some `.**` subtree glob; the two ways
-      //     it can be meaningless are rejected here.
+      //     negative from one composition (its `extends` chain, or the inherited
+      //     `base-exclusions` row) is judged against the positives unioned in
+      //     alongside it. A negative may only trim ids pulled in IMPLICITLY by
+      //     some `.**` subtree glob. The two spellings that cannot mean anything
+      //     — a negated root, and a negative on a locally named positive — are
+      //     refused right here; whether a negative trims anything is measured
+      //     here but judged in 3d, once every composition has had its say.
       const parsedEntries = flat.entryPoints.map(parseEntryPattern);
       const positiveSeeds = new Set<PluginId>();
       const namedBases = new Set<PluginId>();
@@ -205,6 +278,13 @@ const check: Check = {
         if (p.kind === "id") namedBases.add(p.base);
         for (const id of matchEntryPattern(p, graph)) positiveSeeds.add(id);
       }
+      // The engine's protected set, verbatim: an id this composition names as an
+      // entry positive or selects as a contributor is never trimmed, and naming
+      // it suppresses the negative on it entirely (`expandEntrySeeds`).
+      const protectedIds = new Set<PluginId>([
+        ...namedBases,
+        ...flat.selectedContributors,
+      ]);
       for (const p of parsedEntries) {
         if (!p.negate) continue;
         // (c) Negated root: `!**` matches every plugin, so it deletes the entire
@@ -227,21 +307,53 @@ const check: Check = {
             "A negative may only trim ids pulled in implicitly by a `.**` subtree glob — it can never cancel an id named as a positive entry (positives always win). Remove the negative, or remove the conflicting positive.",
           );
         }
-        // (a) Dead negative: trims nothing. Its match set, minus the protected
-        //     named positives, has no overlap with the positive seed set, so it
-        //     deletes no implicitly-seeded plugin — a typo or a stale leftover.
-        const trims = [...matchEntryPattern(p, graph)].filter(
-          (id) => !namedBases.has(id) && positiveSeeds.has(id),
+        // (a) What this negative actually trims, measured exactly as the engine
+        //     measures it — against the CASCADE, not the direct match. `!X`
+        //     removes X, X's descendants and everything that transitively imports
+        //     X (`removalClosure`), because a surviving importer would drag X
+        //     straight back through the hard closure. Counting only the direct
+        //     match would call a negative dead whose whole effect is the cascade
+        //     — and would also have called the pre-cascade engine's negatives
+        //     live when they trimmed a seed that an importer immediately re-added.
+        //
+        //     The verdict is deferred — see `negativeTrimmedSomewhere`.
+        const targets = [...matchEntryPattern(p, graph)].filter(
+          (id) => !protectedIds.has(id),
         );
-        if (trims.length === 0) {
-          return fail(
-            `composition "${m.name}" has a dead negative entry "${p.raw}" that trims no implicitly-seeded plugin`,
-            "A negative `!X` must remove at least one plugin pulled in implicitly by a `.**` subtree glob. This one matches nothing in the composition's seed set — remove it, or fix the id / add the `.**` positive it was meant to trim.",
-          );
-        }
+        const trims = [...removalClosure(targets, graph)].filter(
+          (id) => !protectedIds.has(id) && positiveSeeds.has(id),
+        );
+        negativeTrimmedSomewhere.set(
+          p.raw,
+          (negativeTrimmedSomewhere.get(p.raw) ?? false) || trims.length > 0,
+        );
       }
 
       const comp = resolveComposition(graph, flat);
+
+      // 3c. Every declared exclusion took effect. A negative removes its targets
+      //     and their removal closure from the SEED set, but an id this
+      //     composition names explicitly is protected from that removal — so a
+      //     protected plugin that IMPORTS an excluded one survives and drags the
+      //     excluded plugin back in through the hard closure. When that happens
+      //     the composition does not mean what its manifest says, and the engine
+      //     reports it as a value rather than resolving the ambiguity by guessing
+      //     which of the two the author wanted.
+      //
+      //     The import chain IS the repair instruction: either the importer named
+      //     in it should be excluded too, or the exclusion should be dropped.
+      if (comp.unsatisfiedExclusions.length > 0) {
+        const lines = comp.unsatisfiedExclusions.map(({ target, path }) => {
+          const trail = path.steps
+            .map((s) => `${s.from} →(${s.kind}) ${s.to}`)
+            .join("\n        ");
+          return `${target} — pulled back in from ${path.origin} (${path.originKind}):\n        ${trail}`;
+        });
+        return fail(
+          `composition "${m.name}" declares ${comp.unsatisfiedExclusions.length} exclusion(s) that did NOT take effect:\n    ${lines.join("\n    ")}`,
+          `Each plugin above is excluded (by this composition's own negative, or by the inherited "${BASE_EXCLUSIONS_ID}" row) yet is still in the bundle, because something this composition NAMES imports it — and naming an importer is not a request for what it imports. Either exclude the importer at the head of the chain too, or drop the exclusion. To keep the plugin deliberately, name it here (as an entry positive or a selected contributor): that suppresses the inherited negative outright, and nothing cascades.`,
+        );
+      }
 
       // 4. No selection already locked in by the entries' hard edges.
       if (comp.redundantSelections.length > 0) {
@@ -272,6 +384,28 @@ const check: Check = {
       }
     }
 
+    // 3d. Dead negative: a negative entry pattern that trims nothing in ANY
+    //     composition — a typo, or a leftover pointing at a plugin that no longer
+    //     exists under that id. Judged here, after every composition has been
+    //     resolved, because "trims nothing" is only evidence of a mistake when it
+    //     holds everywhere: the `base-exclusions` row's negatives are inherited by
+    //     lean compositions that never reached the excluded plugin, and trimming
+    //     nothing there is correct.
+    for (const [raw, trimmed] of negativeTrimmedSomewhere) {
+      if (trimmed) continue;
+      // Which row(s) actually wrote it — the file position to go and edit. A
+      // pattern reaches a composition either by being authored on its row or by
+      // being folded in (`extends`, or the base row), so the authoring rows are
+      // the ones whose own `entryPoints` carry the text.
+      const authors = items
+        .filter((i) => i.entryPoints.includes(raw))
+        .map((i) => i.name);
+      return fail(
+        `dead negative entry "${raw}" (declared by ${authors.length > 0 ? authors.map((n) => `"${n}"`).join(", ") : "no composition"}) trims no plugin in any composition`,
+        `A negative \`!X\` must remove at least one plugin that some composition pulls in implicitly — X itself, a descendant, or something that imports X. This one removes nothing anywhere, so it is a typo or a stale leftover: fix the id, add the \`.**\` positive it was meant to trim, or delete it (plugins/plugin-meta/plugins/composition/core/config.ts).`,
+      );
+    }
+
     // 6. `excludes` — the dual of `extends`: each named bundle's CONTAINMENT
     //    (its entries/contributors + their subtrees, NOT their hard deps) must be
     //    DISJOINT from this composition's resolved hard-closure bundle. This is
@@ -291,10 +425,18 @@ const check: Check = {
     // actually ships, never a blind subtree of every entry. Contributor side has
     // no grammar: selecting a contributor ships it + its whole subtree. Shared by
     // the `excludes` disjointness gate and the serve warning below.
+    //
+    // `expandEntrySeeds` takes the whole flattened MANIFEST, not just its entry
+    // points: its negative pass reads `selectedContributors` too, because a
+    // locally selected plugin is a positive and positives suppress negatives. A
+    // containment therefore also sees the inherited `base-exclusions` negatives
+    // and shrinks by the same cascade — which keeps it agreeing with the engine
+    // whose rule it mirrors, and errs permissive (a smaller declared territory)
+    // rather than refusing over a plugin the target bundle does not ship.
     const containmentOf = (target: CompositionManifest): Set<PluginId> => {
       const targetFlat = flattenManifest(target, manifests);
       const containment = new Set<PluginId>(
-        expandEntrySeeds(targetFlat.entryPoints, graph).seeds,
+        expandEntrySeeds(targetFlat, graph).seeds,
       );
       for (const id of targetFlat.selectedContributors) {
         containment.add(id);

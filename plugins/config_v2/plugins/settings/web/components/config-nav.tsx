@@ -19,7 +19,10 @@ import {
 import type { TreeViewOptions } from "@plugins/primitives/plugins/data-view/plugins/tree/web";
 import { configDetailPane } from "../internal/panes";
 import { pruneConfigTree } from "../internal/prune-config-tree";
-import { flattenConfigTree, type ConfigNavRow } from "../internal/flatten-config-tree";
+import {
+  flattenConfigTree,
+  type ConfigNavRow,
+} from "../internal/flatten-config-tree";
 import { ConfigRowBadge } from "./config-row-badge";
 
 const CONFIG_NAV_VIEW = defineDataView("config_v2.settings.nav");
@@ -86,7 +89,6 @@ export function ConfigNav() {
           name: reg.pluginName,
           id: reg.pluginId,
           loadBearing: false,
-          disabledSeed: false,
           collapsed: false,
           runtimes: { web: true, server: false, central: false },
           children: [],

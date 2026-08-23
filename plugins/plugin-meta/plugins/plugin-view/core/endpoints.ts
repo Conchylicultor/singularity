@@ -15,7 +15,6 @@ const pluginNodeSchema: ZodParser<PluginNode> = z.lazy(() =>
     id: z.custom<PluginId>((v) => typeof v === "string"),
     description: z.string().optional(),
     loadBearing: z.boolean(),
-    disabledSeed: z.boolean(),
     collapsed: z.boolean(),
     runtimes: z.object({
       web: z.boolean(),

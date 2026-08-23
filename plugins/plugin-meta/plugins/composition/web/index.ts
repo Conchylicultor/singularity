@@ -5,11 +5,15 @@ import { compositionsConfig } from "@plugins/plugin-meta/plugins/composition/cor
 export {
   useCompositionData,
   useEnsureCompositionData,
-  useDisabledClosure,
+  useAppExclusions,
   useInclusion,
   useImpact,
 } from "./internal/hooks";
-export type { CompositionDataResult, ImpactResult } from "./internal/hooks";
+export type {
+  AppExclusions,
+  CompositionDataResult,
+  ImpactResult,
+} from "./internal/hooks";
 export {
   useManifestItems,
   useManifestItemByName,

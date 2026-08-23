@@ -946,8 +946,8 @@
       "name": "@singularity/plugin-apps-studio-explorer-collapsed",
       "version": "0.0.1",
     },
-    "plugins/apps/plugins/studio/plugins/explorer/plugins/disabled": {
-      "name": "@singularity/plugin-apps-studio-explorer-disabled",
+    "plugins/apps/plugins/studio/plugins/explorer/plugins/excluded": {
+      "name": "@singularity/plugin-apps-studio-explorer-excluded",
       "version": "0.0.1",
     },
     "plugins/apps/plugins/studio/plugins/explorer/plugins/expand-collapse": {
@@ -2666,6 +2666,10 @@
     },
     "plugins/framework/plugins/tooling/plugins/checks/plugins/no-db-backed-notify": {
       "name": "@singularity/plugin-framework-tooling-checks-no-db-backed-notify",
+      "version": "0.0.1",
+    },
+    "plugins/framework/plugins/tooling/plugins/checks/plugins/no-disabled-flag": {
+      "name": "@singularity/plugin-framework-tooling-checks-no-disabled-flag",
       "version": "0.0.1",
     },
     "plugins/framework/plugins/tooling/plugins/checks/plugins/no-hand-built-link-to": {
@@ -6135,7 +6139,7 @@
 
     "@singularity/plugin-apps-studio-explorer-collapsed": ["@singularity/plugin-apps-studio-explorer-collapsed@workspace:plugins/apps/plugins/studio/plugins/explorer/plugins/collapsed"],
 
-    "@singularity/plugin-apps-studio-explorer-disabled": ["@singularity/plugin-apps-studio-explorer-disabled@workspace:plugins/apps/plugins/studio/plugins/explorer/plugins/disabled"],
+    "@singularity/plugin-apps-studio-explorer-excluded": ["@singularity/plugin-apps-studio-explorer-excluded@workspace:plugins/apps/plugins/studio/plugins/explorer/plugins/excluded"],
 
     "@singularity/plugin-apps-studio-explorer-expand-collapse": ["@singularity/plugin-apps-studio-explorer-expand-collapse@workspace:plugins/apps/plugins/studio/plugins/explorer/plugins/expand-collapse"],
 
@@ -6970,6 +6974,8 @@
     "@singularity/plugin-framework-tooling-checks-migrations-in-sync": ["@singularity/plugin-framework-tooling-checks-migrations-in-sync@workspace:plugins/framework/plugins/tooling/plugins/checks/plugins/migrations-in-sync"],
 
     "@singularity/plugin-framework-tooling-checks-no-db-backed-notify": ["@singularity/plugin-framework-tooling-checks-no-db-backed-notify@workspace:plugins/framework/plugins/tooling/plugins/checks/plugins/no-db-backed-notify"],
+
+    "@singularity/plugin-framework-tooling-checks-no-disabled-flag": ["@singularity/plugin-framework-tooling-checks-no-disabled-flag@workspace:plugins/framework/plugins/tooling/plugins/checks/plugins/no-disabled-flag"],
 
     "@singularity/plugin-framework-tooling-checks-no-hand-built-link-to": ["@singularity/plugin-framework-tooling-checks-no-hand-built-link-to@workspace:plugins/framework/plugins/tooling/plugins/checks/plugins/no-hand-built-link-to"],
 

@@ -10,7 +10,7 @@ import { getFacet } from "@plugins/plugin-meta/plugins/facets/core";
 import { asPath, asPluginId } from "@plugins/framework/plugins/plugin-id/core";
 import { declareSlotsFromBarrels } from "./slot-declaration-guard";
 import { contributionsFacetDef } from "@plugins/plugin-meta/plugins/facets/plugins/contributions/core";
-import { computeDisabledIds } from "./disabled-ids";
+import { mainBundle } from "./main-bundle";
 import type { ConfigDescriptor } from "@plugins/config_v2/core";
 import { REORDER_NODE_LEGEND } from "@plugins/fields/plugins/reorder-tree/core";
 
@@ -104,11 +104,11 @@ async function collectReorderableSlotSet(
   // `_pluginId`/`_key` stamps are process-global and monotonic, so a filter
   // reading them answers "declared by any pass that has run in this process so
   // far" — and a source-scoped pass (the enriched tree) runs in the very same
-  // check/build process and stamps DISABLED plugins' slots too. The disabled
-  // filter is therefore not "a disabled plugin's slots are never declared"; it
-  // is that this set IS this registry pass's own declarations, which no other
-  // pass can widen. That is also what makes the manifest a function of the tree
-  // alone, as a cached `"tree"` check verdict must be.
+  // check/build process and stamps the slots of plugins the app's composition
+  // EXCLUDES too. So the rule is not "an excluded plugin's slots are never
+  // declared"; it is that this set IS this registry pass's own declarations,
+  // which no other pass can widen. That is also what makes the manifest a
+  // function of the tree alone, as a cached `"tree"` check verdict must be.
   return naming
     .declarations()
     .filter((entry) => entry.slot.meta.reorderable)
@@ -133,11 +133,12 @@ async function collectReorderableSlots(
   root: string,
 ): Promise<ReorderableSlotsData> {
   const tree = await buildEnrichedTree(root);
-  // Drop catalog entries contributed by disabled plugins: their barrels never
-  // load, so listing them in an enabled slot's materialized default would point
-  // the origin hash at contributions that don't register. (The slot SET itself
-  // is already disabled-filtered inside `collectReorderableSlotSet`.)
-  const disabled = computeDisabledIds(tree);
+  // Drop catalog entries contributed by plugins the app's composition does not
+  // bundle: their barrels never load, so listing them in a bundled slot's
+  // materialized default would point the origin hash at contributions that don't
+  // register. (The slot SET itself is already membership-filtered inside
+  // `collectReorderableSlotSet`.)
+  const bundle = mainBundle(tree, root);
 
   // (1) The reorderable-slot set — the declarations (barrels already primed).
   const slots = await collectReorderableSlotSet(root);
@@ -157,7 +158,7 @@ async function collectReorderableSlots(
   // (2) Catalog: every runtime contribution targeting a reorderable slot.
   const catalog = new Map<string, CatalogItem[]>();
   for (const node of tree.byDir.values()) {
-    if (disabled.has(node.id)) continue;
+    if (!bundle.has(node.id)) continue;
     const data = getFacet(node, contributionsFacetDef);
     if (!data) continue;
     for (const c of data.runtime) {

@@ -2,7 +2,7 @@ export { classifyEdges } from "./classify-edges";
 export {
   resolveComposition,
   hardClosure,
-  disabledClosure,
+  removalClosure,
   expandEntrySeeds,
 } from "./resolve-composition";
 export { parseEntryPattern, matchEntryPattern } from "./entry-pattern";
@@ -21,4 +21,5 @@ export type {
   Composition,
   InclusionStep,
   InclusionPath,
+  UnsatisfiedExclusion,
 } from "./types";

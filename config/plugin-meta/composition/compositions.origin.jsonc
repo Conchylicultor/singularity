@@ -1,4 +1,4 @@
-// @hash a25e6e76928a
+// @hash b300647d5b82
 {
   "manifests": [
     {
@@ -7,6 +7,18 @@
       "category": "app",
       "entryPoints": [
         "**"
+      ],
+      "selectedContributors": [],
+      "extends": [],
+      "excludes": [],
+      "serve": "off"
+    },
+    {
+      "id": "base-exclusions",
+      "name": "base-exclusions",
+      "category": "pack",
+      "entryPoints": [
+        "!review.plugin-changes.**"
       ],
       "selectedContributors": [],
       "extends": [],

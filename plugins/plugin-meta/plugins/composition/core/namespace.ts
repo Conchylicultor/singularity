@@ -19,22 +19,28 @@
 // re-exported under a composition-flavoured alias either — a second name for one
 // rule is how the third copy got written last time.
 import {
+  BASE_EXCLUSIONS_ID,
   MAIN_COMPOSITION_ID,
   NAMESPACE_LABEL_RE,
 } from "@plugins/infra/plugins/namespace/core";
 
 /**
  * Namespaces a composition can never claim: the central runtime, the main app
- * namespace, and the main git branch. Enforced by the build's target resolver,
- * the serve-composition reset guard and the `composition-closure` check.
+ * namespace, the main git branch, and the base-exclusions row.
  *
  * `MAIN_COMPOSITION_ID` is in here and stays in here. Main IS a composition —
  * `assertCompositionId` accepts it — but its namespace belongs to the
  * checkout's own build, so a serve build may never provision it.
+ *
+ * `BASE_EXCLUSIONS_ID` is here for the same shape of reason. It IS a
+ * composition — it is an ordinary manifest row, checked and rendered like every
+ * other — but it holds only negatives, so its bundle is empty and there is
+ * nothing a serve build could put behind that namespace.
  */
 export const RESERVED_COMPOSITION_NAMESPACES: ReadonlySet<string> = new Set([
   "central",
   MAIN_COMPOSITION_ID,
+  BASE_EXCLUSIONS_ID,
   "main",
 ]);
 
@@ -74,11 +80,12 @@ export function assertServableCompositionNamespace(name: string): void {
  * A legal composition id — the split between "named" and "served", in one
  * function.
  *
- * Every composition must have a valid name. Every composition EXCEPT main's must
- * additionally own a servable namespace, because a serve build will provision
- * one for it. Main's composition is the sole exception: it is built by
+ * Every composition must have a valid name. Every composition EXCEPT the two
+ * reserved rows must additionally own a servable namespace, because a serve
+ * build will provision one for it. The exceptions are main's row — built by
  * `./singularity build` into the checkout's own namespace, never served as a
- * composition, so it may carry a reserved id.
+ * composition — and the `base-exclusions` row, which holds only negatives and
+ * therefore resolves to an empty bundle. Both may carry a reserved id.
  *
  * Use this wherever an id is being validated as a manifest entry. Use
  * `assertServableCompositionNamespace` only where a namespace is about to be
@@ -86,6 +93,30 @@ export function assertServableCompositionNamespace(name: string): void {
  */
 export function assertCompositionId(id: string): void {
   assertCompositionName(id);
-  if (id === MAIN_COMPOSITION_ID) return;
+  if (id === MAIN_COMPOSITION_ID || id === BASE_EXCLUSIONS_ID) return;
   assertServableCompositionNamespace(id);
+}
+
+/**
+ * Non-throwing "is this row's content committed source?" — true for main's row
+ * and the `base-exclusions` row, false for every other composition.
+ *
+ * These two decide what the repo's own app CONTAINS, and that answer is read
+ * from the git config layer: codegen resolves main's closure, with the base
+ * row's negatives folded in, off the committed config to emit the registries
+ * and the docs. A user-layer edit to either row can therefore never move a
+ * generated file — it would be a stored change that means nothing. So the
+ * runtime write is refused (`useManifestActions().save` throws) and the
+ * surfaces render those rows' entry points read-only.
+ *
+ * The predicate form exists for the same reason `isServableCompositionId`'s
+ * does: a render path needs to disable a control rather than crash on it, and
+ * the control and the guard beneath it must be reading ONE rule.
+ *
+ * Deliberately a different question from servability, even though both answer
+ * "yes" for exactly these two ids today. Servability is about a namespace a
+ * build would provision; this is about which config layer owns the row.
+ */
+export function isCommittedSourceComposition(id: string): boolean {
+  return id === MAIN_COMPOSITION_ID || id === BASE_EXCLUSIONS_ID;
 }

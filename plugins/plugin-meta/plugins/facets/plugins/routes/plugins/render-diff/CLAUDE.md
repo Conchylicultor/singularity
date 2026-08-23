@@ -12,7 +12,7 @@ plugins' route usage, not authored here.
 ## Plugin reference
 
 - Description: Diff renderer for the routes facet (PR review).
-- Disabled: cascade
+- Excluded: cascade
 - Web:
   - Contributes: `PluginChangesSlots.DiffRenderer` "Routes"
   - Uses: `review/plugin-changes.PluginChangesSlots`

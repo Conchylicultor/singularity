@@ -1,17 +1,18 @@
 import type { PluginTree } from "@plugins/plugin-meta/plugins/plugin-tree/core";
 import type { PluginId } from "@plugins/framework/plugins/plugin-id/core";
 import { classifyEdges } from "./classify-edges";
+import { inclusionPathWithin } from "./inclusion-path";
 import {
   allNodeIds,
   matchEntryPattern,
   parseEntryPattern,
-  type EntryPattern,
 } from "./entry-pattern";
 import type {
   Composition,
   CompositionManifest,
   EdgeGraph,
   MembershipState,
+  UnsatisfiedExclusion,
 } from "./types";
 
 /**
@@ -37,15 +38,23 @@ export function hardClosure(
 }
 
 /**
- * Transitive disabled closure of a seed set over the REVERSE + subtree directions.
- * Disabling a plugin must also disable everything that would break without it:
- * its DESCENDANTS (`subtree` — a child makes no sense without its parent) and its
- * transitive IMPORTERS (`hardReverse` — they crash at module-eval when the imported
- * barrel is gone). This is the mirror of {@link hardClosure}, which walks
- * `hardForward` (what a plugin needs); here we walk the opposite direction (who
- * needs this plugin). The visited-set makes it cycle- and self-edge-safe.
+ * Given that these ids LEAVE the app, what else must leave with them.
+ *
+ * Not a mechanism's function — a statement about the graph. Removing a plugin
+ * necessarily removes everything that would break without it: its DESCENDANTS
+ * (`subtree` — a child makes no sense without its parent) and its transitive
+ * IMPORTERS (`hardReverse` — they crash at module-eval when the imported barrel
+ * is gone). This is the mirror of {@link hardClosure}, which walks `hardForward`
+ * (what a plugin needs); here we walk the opposite direction (who needs this
+ * plugin). The visited-set makes it cycle- and self-edge-safe.
+ *
+ * Used by the negative pass in {@link expandEntrySeeds}: writing `!X` on a
+ * manifest means X leaves, and this is what that costs. Without the cascade a
+ * negative would be silently undone — the seed set would lose X while X's
+ * importers stayed seeded and dragged it straight back through
+ * {@link hardClosure}.
  */
-export function disabledClosure(
+export function removalClosure(
   seeds: Iterable<PluginId>,
   graph: EdgeGraph,
 ): Set<PluginId> {
@@ -63,11 +72,15 @@ export function disabledClosure(
 }
 
 /**
- * Expand declared entry patterns into the actual seed set under the glob grammar
- * (see {@link parseEntryPattern}). "Entry a node" means *that node alone* — its
- * hard dependencies are added later by {@link hardClosure}, never seeded here.
- * A whole subtree is opt-in via a trailing `.**`; the whole graph via a bare `**`;
- * a leading `!` trims ids.
+ * Expand a flattened manifest's entry patterns into the actual seed set under the
+ * glob grammar (see {@link parseEntryPattern}). "Entry a node" means *that node
+ * alone* — its hard dependencies are added later by {@link hardClosure}, never
+ * seeded here. A whole subtree is opt-in via a trailing `.**`; the whole graph via
+ * a bare `**`; a leading `!` removes ids.
+ *
+ * Takes the whole MANIFEST rather than just its entry points because the negative
+ * pass has to see `selectedContributors` too — an explicitly selected plugin is a
+ * local positive, and positives suppress negatives.
  *
  * Two passes:
  *  1. Positives (`!negate`): the exact `base` of every positive ID pattern goes
@@ -75,22 +88,18 @@ export function disabledClosure(
  *     `redundantSelections`); every id the pattern matches (`base` ∪ its `.**`
  *     subtree, or every node for a root `**`) goes into `seeds`. A root `**`
  *     contributes NOTHING to `named` — see the comment at the loop.
- *  2. Negatives: each matched id is `delete`d from `seeds` — UNLESS it is a `named`
- *     positive, which is protected. A negative may therefore only trim ids pulled
- *     in *implicitly* by some `.**` glob; it can never remove an explicitly-named
- *     positive. This keeps resolution a pure additive union (a positive from
- *     anywhere in a flattened `extends` chain wins over a negative from anywhere).
+ *  2. Negatives: see below — the targets, the opt-out, then the cascade.
  *
  * Unknown bases (no `subtree` entry) pass through inertly — the base itself is
- * still seeded/trimmed, it just contributes no descendants.
+ * still seeded/removed, it just contributes no descendants.
  */
 export function expandEntrySeeds(
-  entryPoints: Iterable<EntryPattern>,
+  manifest: CompositionManifest,
   graph: EdgeGraph,
-): { seeds: Set<PluginId>; named: Set<PluginId> } {
+): { seeds: Set<PluginId>; named: Set<PluginId>; negated: Set<PluginId> } {
   const seeds = new Set<PluginId>();
   const named = new Set<PluginId>();
-  const parsed = [...entryPoints].map(parseEntryPattern);
+  const parsed = [...manifest.entryPoints].map(parseEntryPattern);
   for (const p of parsed) {
     if (p.negate) continue;
     // A root `**` seeds every id and NAMES NONE. `named` is the protected set the
@@ -102,14 +111,44 @@ export function expandEntrySeeds(
     if (p.kind === "id") named.add(p.base);
     for (const id of matchEntryPattern(p, graph)) seeds.add(id);
   }
+
+  // ── The negative pass ──────────────────────────────────────────────────────
+  // The TARGETS are what the author asserted must leave: every id every negative
+  // pattern matches.
+  const selected = new Set<PluginId>(manifest.selectedContributors);
+  const negated = new Set<PluginId>();
   for (const p of parsed) {
     if (!p.negate) continue;
-    for (const t of matchEntryPattern(p, graph)) {
-      if (named.has(t)) continue; // protected — never trim an explicit positive
-      seeds.delete(t);
-    }
+    for (const t of matchEntryPattern(p, graph)) negated.add(t);
   }
-  return { seeds, named };
+  // THE OPT-OUT. A composition that names X explicitly — as an entry positive or
+  // as a selected contributor — is asking for X, and that request wins: the
+  // negative on X is suppressed ENTIRELY, so nothing cascades from it either.
+  // This is how a composition takes back a plugin the inherited base-exclusions
+  // row negates, and it is what keeps resolution a pure additive union (a
+  // positive from anywhere in a flattened `extends` chain shields its id).
+  for (const id of [...negated]) {
+    if (named.has(id) || selected.has(id)) negated.delete(id);
+  }
+
+  // THE CASCADE. Removing X also removes X's descendants and everything that
+  // transitively imports X (see {@link removalClosure}) — otherwise a surviving
+  // importer would drag X straight back through `hardClosure` and the negative
+  // would be silently inert.
+  //
+  // Note how the two rules differ, and that the difference is the point:
+  //  - naming X suppresses the negative on X (above) — that is the opt-out;
+  //  - naming an IMPORTER of X does not. Asking for an importer is not asking
+  //    for X, so the importer survives this loop, drags X back in through
+  //    `hardForward`, and `resolveComposition`'s `unsatisfiedExclusions`
+  //    postcondition fires naming the exact import chain. The ambiguity is made
+  //    LOUD rather than guessed at in either direction.
+  for (const id of removalClosure(negated, graph)) {
+    if (named.has(id) || selected.has(id)) continue; // protected — may leave a hole
+    seeds.delete(id);
+  }
+
+  return { seeds, named, negated };
 }
 
 export function resolveComposition(
@@ -128,16 +167,19 @@ export function resolveComposition(
 
   // Entry seeds under the glob grammar: each positive pattern seeds its exact base
   // (hard deps flow in via hardClosure below), plus its whole subtree when written
-  // `.**`; negatives trim `.**`-implicit ids (never a named positive). `named` is
-  // the set of exact positive bases — it drives `entry` membership and
-  // `redundantSelections`, so a `.**` base is `entry` while its implicit descendants
-  // are `required`. A root `**` names nothing, so under it NO node classifies
-  // `entry` and every bundled node is `required` — correct: "everything" demands
-  // no particular plugin.
-  const { seeds: entrySeeds, named } = expandEntrySeeds(
-    manifest.entryPoints,
-    graph,
-  );
+  // `.**`; negatives remove their targets AND everything that would break without
+  // them (descendants + transitive importers), except ids this composition names
+  // explicitly. `named` is the set of exact positive bases — it drives `entry`
+  // membership and `redundantSelections`, so a `.**` base is `entry` while its
+  // implicit descendants are `required`. A root `**` names nothing, so under it NO
+  // node classifies `entry` and every bundled node is `required` — correct:
+  // "everything" demands no particular plugin. `negated` is what the author
+  // asserted must leave, kept for the postcondition at the end of this function.
+  const {
+    seeds: entrySeeds,
+    named,
+    negated,
+  } = expandEntrySeeds(manifest, graph);
 
   // `required` = hard closure of the entry seeds ALONE — the locked set, unchanged.
   const required = hardClosure(entrySeeds, graph);
@@ -187,7 +229,55 @@ export function resolveComposition(
     (x) => required.has(x) || entrySet.has(x),
   );
 
-  return { bundle, membership, available, redundantSelections };
+  // THE POSTCONDITION. A declared exclusion that did not take effect is a VALUE
+  // in the result, never silence. The negative pass removes its targets and their
+  // cascade from the SEED set, but a protected node (an explicitly named positive
+  // or selected contributor that imports a target) survives that removal and
+  // re-adds the target through `hardForward`. When that happens the composition
+  // does not mean what its manifest says, so the target is reported along with
+  // the exact import chain that put it back — which is also the repair
+  // instruction. `composition-closure` fails on a non-empty list, codegen throws
+  // on one, and Studio renders it.
+  const unsatisfiedExclusions: UnsatisfiedExclusion[] = [...negated]
+    .filter((t) => bundle.has(t))
+    .sort()
+    .map((t) => {
+      const path = inclusionPathWithin(
+        graph,
+        {
+          bundle,
+          membership,
+          entrySeeds,
+          selectedContributors: manifest.selectedContributors,
+        },
+        t,
+      );
+      if (!path) {
+        // Unreachable, and loud if it ever stops being. `t` is in `bundle`, and
+        // `bundle` is `hardClosure(entrySeeds ∪ selectedContributors)` — so a
+        // backward chain from `t` to one of those seeds must exist and the BFS
+        // must find it. Reaching here means the graph and the closure disagree,
+        // which is an engine bug, not a manifest the author can fix. Throwing
+        // beats handing every consumer a `null` they can only render as a
+        // shrug.
+        throw new Error(
+          `closure: "${t}" is in composition "${manifest.name}"'s bundle but no ` +
+            `inclusion path back to the seed frontier could be built. The bundle is ` +
+            `the hard closure of the seeds, so this should be impossible — the edge ` +
+            `graph and the resolved bundle disagree.`,
+        );
+      }
+      return { target: t, path };
+    });
+
+  return {
+    bundle,
+    membership,
+    available,
+    redundantSelections,
+    negatedTargets: negated,
+    unsatisfiedExclusions,
+  };
 }
 
 function isTree(x: EdgeGraph | PluginTree): x is PluginTree {

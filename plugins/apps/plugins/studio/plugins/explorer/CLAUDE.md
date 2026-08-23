@@ -22,7 +22,7 @@ never re-ran, so plugins arriving after first mount stayed collapsed.
 - Description: Sidebar entry and filterable tree pane for browsing and inspecting the plugin tree.
 - Web:
   - Slots:
-    - `Explorer.TreeRowBadge` ← `apps.studio.explorer.child-count`, `apps.studio.explorer.collapsed`, `apps.studio.explorer.disabled`, `apps.studio.explorer.expand-collapse`, `apps.studio.explorer.load-bearing`, `apps.studio.explorer.membership`
+    - `Explorer.TreeRowBadge` ← `apps.studio.explorer.child-count`, `apps.studio.explorer.collapsed`, `apps.studio.explorer.excluded`, `apps.studio.explorer.expand-collapse`, `apps.studio.explorer.load-bearing`, `apps.studio.explorer.membership`
     - `Explorer.TreeRowAccent` ← `apps.studio.explorer.membership`
     - `explorerPane.Actions`
   - Contributes:
@@ -59,14 +59,14 @@ never re-ran, so plugins arriving after first mount stayed collapsed.
     - `apps/studio/compositions/closure-tree`
     - `apps/studio/explorer/child-count`
     - `apps/studio/explorer/collapsed`
-    - `apps/studio/explorer/disabled`
+    - `apps/studio/explorer/excluded`
     - `apps/studio/explorer/expand-collapse`
     - `apps/studio/explorer/load-bearing`
     - `apps/studio/explorer/membership`
 - Sub-plugins:
   - **`child-count`** — Recursive child count badge in the explorer plugin tree row.
   - **`collapsed`** — Collapsed badge in the explorer plugin tree row.
-  - **`disabled`** — Disabled badge in the explorer plugin tree row.
+  - **`excluded`** — Not-in-the-app badge in the explorer plugin tree row.
   - **`expand-collapse`** — Expand/collapse all descendants button in the explorer plugin tree row.
   - **`load-bearing`** — Load-bearing badge in the explorer plugin tree row.
   - **`membership`** — Tints each explorer tree row by its membership state in the active composition, with a pin-as-root affordance.

@@ -1,9 +1,9 @@
 import { useCallback } from "react";
 import { useConfig, useSetConfig } from "@plugins/config_v2/web";
 import type { CompositionManifest } from "@plugins/plugin-meta/plugins/closure/core";
-import { MAIN_COMPOSITION_ID } from "@plugins/infra/plugins/namespace/core";
 import {
   compositionsConfig,
+  isCommittedSourceComposition,
   isServableCompositionId,
   type CompositionManifestItem,
 } from "@plugins/plugin-meta/plugins/composition/core";
@@ -52,14 +52,20 @@ export interface ManifestActions {
    * minted one when appending. The Studio list pane's "New" creates the row and
    * then navigates to `comp/:id`, so it needs the id the append just minted.
    *
-   * Editing the MAIN composition's entry points is legitimate and stays
-   * allowed — that entry is what "main is a composition" means, and narrowing
-   * it is a real thing an author may want to try. The feedback loop for it is
-   * the `plugins-registry-in-sync` check, which proves main's closure renders
-   * the committed registries byte-for-byte and names the ids an edit dropped:
-   * a narrowing edit fails the next build loudly, which is the point. Refusing
-   * the edit here would only keep the experiment away from the one thing that
-   * can judge it.
+   * **Throws for the two committed-source rows** (main's and
+   * `base-exclusions`, per {@link isCommittedSourceComposition}).
+   * Those two rows decide what the repo's own app contains, and that decision
+   * is read from the GIT layer: codegen resolves main's closure — with the base
+   * row's negatives folded in — off the committed config to emit the
+   * registries and the docs. A user-layer edit to either row therefore cannot
+   * move a committed registry or a committed doc; it would sit in the config
+   * looking like a change and mean nothing, while this app kept rendering
+   * exclusions the built app does not have. Changing what ships is an edit to
+   * `plugins/plugin-meta/plugins/composition/core/config.ts` plus a build.
+   *
+   * Same shape as `remove` and `setServeMode`: the surfaces render those two
+   * rows' entry points read-only, and this is the loud boundary beneath them,
+   * never the user-facing refusal.
    */
   save(draft: CompositionManifest, editingId?: string): string;
   /**
@@ -74,14 +80,17 @@ export interface ManifestActions {
    * synchronous array edit its name promises, so no caller can trigger a data
    * wipe by editing a list.
    *
-   * **Throws for {@link MAIN_COMPOSITION_ID}.** Deleting main's row from the
-   * user config layer takes the repo's own app out of the registry, and
-   * `composition-closure` fails when the manifest does not carry exactly one
-   * main entry — so the write leaves a repo that no longer checks, with no
-   * runtime path back to the committed default. The affordance is removed from
-   * main's row rather than left to fail, so this throw is the loud boundary
-   * beneath that, not the user-facing refusal: a silent no-op would leave a
-   * Delete button that looks like it worked and did nothing.
+   * **Throws for the two committed-source rows** (main's and
+   * `base-exclusions`, per {@link isCommittedSourceComposition}). Deleting
+   * either from the user config layer takes something the repo depends on out
+   * of the registry — main's row is the app this repo builds, and the base row
+   * carries the exclusions every composition inherits — and
+   * `composition-closure` fails when the manifest does not carry exactly one of
+   * each. So the write leaves a repo that no longer checks, with no runtime
+   * path back to the committed default. The affordance is removed from both
+   * rows rather than left to fail, so this throw is the loud boundary beneath
+   * that, not the user-facing refusal: a silent no-op would leave a Delete
+   * button that looks like it worked and did nothing.
    */
   remove(id: string): void;
   /**
@@ -106,6 +115,18 @@ export function useManifestActions(): ManifestActions {
 
   const save = useCallback(
     (draft: CompositionManifest, editingId?: string) => {
+      // Keyed on which config layer owns the row, not on servability: the
+      // reason these two cannot be written at runtime is "codegen reads the git
+      // layer, so a stored edit could never reach a registry" — and it is the
+      // same predicate the read-only entry-point surfaces read.
+      if (editingId !== undefined && isCommittedSourceComposition(editingId)) {
+        throw new Error(
+          `Cannot edit the "${editingId}" composition at runtime — it decides what the app ships, ` +
+            `and codegen reads the committed config, so a stored edit would be silently inert. ` +
+            `Edit plugins/plugin-meta/plugins/composition/core/config.ts and rebuild.`,
+        );
+      }
+
       const fields = {
         name: draft.name,
         // Stored as plain `string[]` (config_v2 string-list). `PluginId` is a
@@ -148,13 +169,14 @@ export function useManifestActions(): ManifestActions {
 
   const remove = useCallback(
     (id: string) => {
-      // Keyed on main's id, not on servability: the reason this one row cannot
-      // go is "the repo's own app must stay in the registry", which is a fact
-      // about main specifically.
-      if (id === MAIN_COMPOSITION_ID) {
+      // Keyed on which config layer owns the row, not on servability: the
+      // reason these two cannot go is "the manifest must carry exactly one of
+      // each, and only the committed config can put one back" — the same fact
+      // that makes `save` refuse them.
+      if (isCommittedSourceComposition(id)) {
         throw new Error(
-          `Cannot delete the "${MAIN_COMPOSITION_ID}" composition — it is the app this repo builds, ` +
-            `and the manifest must carry exactly one such entry.`,
+          `Cannot delete the "${id}" composition — the manifest must carry exactly one such entry, ` +
+            `and only plugins/plugin-meta/plugins/composition/core/config.ts can put it back.`,
         );
       }
       setConfig(

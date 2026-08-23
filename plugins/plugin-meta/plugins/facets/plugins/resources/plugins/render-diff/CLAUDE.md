@@ -11,7 +11,7 @@ and main.
 ## Plugin reference
 
 - Description: Diff renderer for the resources facet (PR review).
-- Disabled: cascade
+- Excluded: cascade
 - Web:
   - Contributes: `PluginChangesSlots.DiffRenderer` "Resources"
   - Uses: `review/plugin-changes.PluginChangesSlots`

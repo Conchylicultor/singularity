@@ -82,6 +82,7 @@ Design: `research/2026-08-18-global-namespace-identity.md`.
     - `framework/tooling/guards`
     - `framework/tooling/web-artifacts`
     - `infra/paths`
+    - `plugin-meta/closure`
     - `plugin-meta/composition`
 - Core:
   - Exports (types):
@@ -89,6 +90,7 @@ Design: `research/2026-08-18-global-namespace-identity.md`.
     - `Namespace`
   - Exports (values):
     - `asNamespace`
+    - `BASE_EXCLUSIONS_ID`
     - `GATEWAY_PORT`
     - `isNamespace`
     - `MAIN_COMPOSITION_ID`

@@ -102,7 +102,7 @@ function containmentOf(
 ): Set<PluginId> {
   const flat = flattenManifest(target, ctx.manifests);
   const containment = new Set<PluginId>(
-    expandEntrySeeds(flat.entryPoints, ctx.graph).seeds,
+    expandEntrySeeds(flat, ctx.graph).seeds,
   );
   for (const id of flat.selectedContributors) {
     containment.add(id);

@@ -56,13 +56,55 @@ default**: change it by editing the `core/config.ts` seeds and pushing.
 - `server/index.ts` registers the config (`ConfigV2.Register`); `web/index.ts`
   registers it on the client (`ConfigV2.WebRegister`).
 
+## `base-exclusions` — the one row that subtracts
+
+Every other row in this registry says what it INCLUDES. `base-exclusions` (id and
+name both `BASE_EXCLUSIONS_ID`, from `infra/namespace`) says what is **not in any
+app**, and every composition inherits it: `flattenManifest` folds this row into
+every manifest **unconditionally, not through `extends`**. An exclusion written
+once therefore holds for compositions that do not exist yet, instead of holding
+only for the rows whose author remembered to reference it — the property
+`singularity.disabled` in a `package.json` used to have.
+
+Three rules, all enforced by `composition-closure`:
+
+- **The row exists exactly once.** `flattenManifest` resolves it BY NAME, so a
+  second row would silently shadow the first and a missing one would make every
+  inherited exclusion vanish without a word — the same reason main's row is pinned
+  to exactly one.
+- **Negatives only** — every `entryPoints` entry starts with `!`, and
+  `selectedContributors` is `[]`. A positive here would be a way to force a plugin
+  INTO every composition from a place nobody looks; that is `served-baseline`'s
+  job, done through `extends`, where the row that opted in shows it.
+- **`serve: "off"`**, and the id is reserved. The row resolves to an empty bundle,
+  so there is nothing a serve build could put behind a `base-exclusions`
+  namespace. `assertCompositionId` accepts it exactly as it accepts main's id;
+  `assertServableCompositionNamespace` refuses both.
+
+**Opting back in** is the engine's existing protection rule: a composition that
+names the plugin — as an entry positive or a selected contributor — wins over the
+inherited negative, and nothing cascades. Naming an *importer* of the excluded
+plugin is NOT an opt-out: the importer survives, drags the plugin back through its
+hard closure, and `resolveComposition` reports it in `unsatisfiedExclusions` with
+the import chain rather than guessing which of the two the author meant.
+
+The seed carries one negative, `!review.plugin-changes.**` — the migration of the
+`singularity.disabled: true` flag that used to live in
+`plugins/review/plugins/plugin-changes/package.json`. It resolves to the same
+twelve plugins that flag's closure did (the plugin, its two sub-plugins, and the
+nine `plugin-meta.facets.<f>.render-diff` adapters that import it), because a
+negative cascades to descendants and transitive importers exactly as the disabled
+closure did. One mechanism decides membership now, and it is this one.
+
 ## Override is forbidden — by construction
 
 The manifest vocabulary is **additive only** (`entryPoints`,
 `selectedContributors`, and `extends` — which only unions in another
 composition's additive vocabulary). There is no field that replaces or redirects
 a plugin's file, so override is *inexpressible*; resolution is a pure union /
-hard-closure with no precedence rules. The `composition-closure` check
+hard-closure with the one asymmetry above — negatives subtract, and a local
+positive always wins over a negative from anywhere, so the union direction is
+never in doubt. The `composition-closure` check
 (`framework/tooling/checks`) adds validity (ids resolve, names unique, every
 selection is a genuine load-bearing soft option) by reading the committed
 git-layer config off disk — runtime-only (user-layer) manifests are never
@@ -112,9 +154,12 @@ Beyond the registry, this plugin ships the **Studio closure data**:
 
 - **`server/`** implements `GET /api/composition/data` (`core/endpoints.ts`):
   reads the cached facets tree from `plugin-tree` (watcher-invalidated, warmed
-  post-boot on main) and derives `{ graph: SerializedEdgeGraph, allIds,
-  disabledIds }` — code-derived structure only. The derivation (classify +
-  serialize + id scans, ~10ms) is memoized per tree identity (WeakMap), so it
+  post-boot on main) and derives `{ graph: SerializedEdgeGraph, allIds }` —
+  code-derived structure only, with **no membership field of any kind**. Which
+  plugins are in the app is a pure function of that graph plus the manifests,
+  and the client holds both, so shipping the answer would be a second spelling
+  free to drift from the engine's (see `useAppExclusions` below). The derivation
+  (classify + serialize + one id scan, ~10ms) is memoized per tree identity (WeakMap), so it
   re-runs exactly when plugin-tree's memo rebuilds — a live plugin change is
   picked up on the next request, never served stale. Manifests are **not** on
   this endpoint; they are user data read client-side from the `compositions`
@@ -130,6 +175,24 @@ Beyond the registry, this plugin ships the **Studio closure data**:
   item with a fresh `id` + `rank` via `crypto.randomUUID()` + `Rank.between`,
   mirroring the `list` field renderer). Consumers go through this API so they
   never touch `config_v2` directly (collection-consumer separation).
+
+  `save` and `remove` **throw** for the two committed-source rows —
+  `isCommittedSourceComposition(id)`, i.e. main's and `base-exclusions`. Codegen
+  resolves main's closure off the GIT layer to emit the registries and the docs,
+  so a user-layer edit to either row could never move a generated file: it would
+  be a stored change that means nothing. Every surface that offers those
+  controls reads the same predicate and renders them inert (Studio's entry-point
+  editor read-only with a pointer at `core/config.ts`, Save disabled, Delete
+  absent), so the throw is the loud boundary beneath them, never the
+  user-facing refusal.
+- **`web/`** answers "what does the app actually ship?" with `useAppExclusions()`
+  — it resolves the `singularity` composition IN THE BROWSER (`flattenManifest`
+  folds the base row's negatives in) and returns `{ kind: "pending" }` or
+  `{ kind: "ready", excluded, negatedTargets }`. `excluded` is every id outside
+  main's bundle; `negatedTargets` is the subset a manifest negated by name, which
+  is how the explorer badge tells *Not in the app* from *Not in the app
+  (cascade)*. Resolved once per (graph, config) pair — the badge asks from every
+  one of ~900 tree rows.
 - **`web/`** also exposes `useCompositionData()` (fetch + deserialize-once,
   sourcing `manifests` from `useManifestItems()` mapped through
   `manifestItemToManifest`, so engine consumers keep their `CompositionManifest[]`
@@ -160,8 +223,17 @@ taxonomy is populated (app / profile / subsystem / pack), each seed maps to a
 valid `CompositionManifest` via `manifestItemToManifest` (only packs may omit
 entry points), the `self-improvement` pack holds exactly the self-improvement
 set, and that the **flattened** agent-manager full-vs-lean `selectedContributors`
-difference (via `flattenManifest`) is exactly that pack. Run with
-`bun test plugins/plugin-meta/plugins/composition/core/config.test.ts`.
+difference (via `flattenManifest`) is exactly that pack. It also pins the
+`base-exclusions` row — present exactly once, negatives-only, empty
+`selectedContributors`, `serve: "off"`, carrying `!review.plugin-changes.**` —
+and that main's entry points are still exactly `["**"]`, since the exclusion
+deliberately does not live there.
+
+`core/namespace.test.ts` pins the split between "may be called this" and "may be
+served under this", including the two ids where the answers differ
+(`singularity`, `base-exclusions`).
+
+Run with `./singularity test plugins/plugin-meta/plugins/composition`.
 
 <!-- AUTOGENERATED:BEGIN — do not edit; regenerated by `./singularity build` -->
 
@@ -176,6 +248,7 @@ difference (via `flattenManifest`) is exactly that pack. Run with
     - `config_v2.useSetConfig`
     - `infra/endpoints.useEndpoint`
   - Exports (types):
+    - `AppExclusions`
     - `CompositionDataResult`
     - `DiffState`
     - `ImpactResult`
@@ -188,10 +261,10 @@ difference (via `flattenManifest`) is exactly that pack. Run with
     - `updateActiveDraft`
     - `useActiveComposition`
     - `useActiveMembership`
+    - `useAppExclusions`
     - `useCompareComposition`
     - `useCompositionData`
     - `useDiffMap`
-    - `useDisabledClosure`
     - `useEnsureCompositionData`
     - `useGraph`
     - `useImpact`
@@ -215,6 +288,7 @@ difference (via `flattenManifest`) is exactly that pack. Run with
     - `fields/string-list/config.stringListField`
     - `fields/text/config.textField`
     - `infra/endpoints.defineEndpoint`
+    - `infra/namespace.BASE_EXCLUSIONS_ID`
     - `infra/namespace.MAIN_COMPOSITION_ID`
     - `infra/namespace.NAMESPACE_LABEL_RE`
   - Exports (types):
@@ -231,6 +305,7 @@ difference (via `flattenManifest`) is exactly that pack. Run with
     - `compositionDataSchema`
     - `compositionsConfig`
     - `getCompositionData`
+    - `isCommittedSourceComposition`
     - `isServableCompositionId`
     - `isServed`
     - `manifestItemToManifest`
@@ -249,7 +324,7 @@ difference (via `flattenManifest`) is exactly that pack. Run with
     - `apps/studio/compositions/entry-points`
     - `apps/studio/compositions/membership-summary`
     - `apps/studio/compositions/release`
-    - `apps/studio/explorer/disabled`
+    - `apps/studio/explorer/excluded`
     - `apps/studio/explorer/membership`
     - `apps/studio/graph`
     - `build/serve-composition`
