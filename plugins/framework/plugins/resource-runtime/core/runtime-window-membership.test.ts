@@ -57,7 +57,10 @@ function makeTable() {
 // window rows (bounded by construction), scoped loader = the requested member
 // rows, windowIdsOf = the first `limit` member ids. Records loader scoping and
 // counts windowIdsOf runs.
-function windowHarness(limit: number, runtimeOpts: Parameters<typeof createHarness>[0] = {}) {
+function windowHarness(
+  limit: number,
+  runtimeOpts: Parameters<typeof createHarness>[0] = {},
+) {
   const { table, members } = makeTable();
   const loaderCalls: string[] = [];
   let windowIdsOfCalls = 0;
@@ -88,12 +91,21 @@ function windowHarness(limit: number, runtimeOpts: Parameters<typeof createHarne
     },
   );
   const feed = (op: "I" | "U" | "D", ids: string[] | null) =>
-    h.runtime.applyDbChange({ table: "row_table", op, ids, origin: "row_table", identityBase: "row_table" });
+    h.runtime.applyDbChange({
+      table: "row_table",
+      op,
+      ids,
+      origin: "row_table",
+      identityBase: "row_table",
+    });
   const insert = (id: string, n: number, where = true) => {
     table.set(id, { n, where });
     feed("I", [id]);
   };
-  const update = (id: string, mut: (c: { n: number; where: boolean }) => void) => {
+  const update = (
+    id: string,
+    mut: (c: { n: number; where: boolean }) => void,
+  ) => {
     mut(table.get(id)!);
     feed("U", [id]);
   };
@@ -101,7 +113,17 @@ function windowHarness(limit: number, runtimeOpts: Parameters<typeof createHarne
     table.delete(id);
     feed("D", [id]);
   };
-  return { h, table, members, loaderCalls, windowIdsOf: () => windowIdsOfCalls, feed, insert, update, del };
+  return {
+    h,
+    table,
+    members,
+    loaderCalls,
+    windowIdsOf: () => windowIdsOfCalls,
+    feed,
+    insert,
+    update,
+    del,
+  };
 }
 
 const deltas = (h: ReturnType<typeof createHarness>, key = "win") =>
@@ -128,7 +150,11 @@ describe("window membership — entrant", () => {
 
     const cv = makeClientView(keyOf);
     cv.applyAll(w.h.frames);
-    expect(cv.value).toEqual([{ id: "a", n: 1 }, { id: "b", n: 2 }, { id: "c", n: 3 }]);
+    expect(cv.value).toEqual([
+      { id: "a", n: 1 },
+      { id: "b", n: 2 },
+      { id: "c", n: 3 },
+    ]);
     expect(cv.driftResubs).toBe(0);
   });
 
@@ -175,7 +201,10 @@ describe("window membership — entrant", () => {
 
     const cv = makeClientView(keyOf);
     cv.applyAll(w.h.frames);
-    expect(cv.value).toEqual([{ id: "a", n: 1 }, { id: "b", n: 2 }]); // c gone
+    expect(cv.value).toEqual([
+      { id: "a", n: 1 },
+      { id: "b", n: 2 },
+    ]); // c gone
     expect(cv.driftResubs).toBe(0);
   });
 });
@@ -204,7 +233,10 @@ describe("window membership — leaver + tail backfill", () => {
 
     const cv = makeClientView(keyOf);
     cv.applyAll(w.h.frames);
-    expect(cv.value).toEqual([{ id: "a", n: 1 }, { id: "d", n: 4 }]);
+    expect(cv.value).toEqual([
+      { id: "a", n: 1 },
+      { id: "d", n: 4 },
+    ]);
     expect(cv.driftResubs).toBe(0);
   });
 
@@ -231,7 +263,10 @@ describe("window membership — leaver + tail backfill", () => {
 
     const cv = makeClientView(keyOf);
     cv.applyAll(w.h.frames);
-    expect(cv.value).toEqual([{ id: "a", n: 1 }, { id: "d", n: 4 }]);
+    expect(cv.value).toEqual([
+      { id: "a", n: 1 },
+      { id: "d", n: 4 },
+    ]);
   });
 
   test("a DELETE of an id OUTSIDE the snapshot is a total no-op (no query, no frame, no version bump)", async () => {
@@ -337,7 +372,13 @@ describe("window membership — persistence exclusion + eviction", () => {
       },
     );
     table.set("a", { n: 1, where: true });
-    h.runtime.applyDbChange({ table: "row_table", op: "U", ids: ["a"], origin: "row_table", identityBase: "row_table" });
+    h.runtime.applyDbChange({
+      table: "row_table",
+      op: "U",
+      ids: ["a"],
+      origin: "row_table",
+      identityBase: "row_table",
+    });
     await tick();
     expect(persists).toEqual(["rows"]);
   });
@@ -351,7 +392,10 @@ describe("window membership — evicted-snapshot self-heal is bounded", () => {
     w.table.set("d", { n: 4, where: true });
     await w.h.subscribe("win");
     const ack = w.h.frames.find((f) => f.kind === "sub-ack")!;
-    expect(ack.value).toEqual([{ id: "a", n: 1 }, { id: "b", n: 2 }]); // bounded sub-ack
+    expect(ack.value).toEqual([
+      { id: "a", n: 1 },
+      { id: "b", n: 2 },
+    ]); // bounded sub-ack
 
     await w.h.unsub("win"); // N→0 evicts the snapshot; the version survives
     await w.h.subscribe("win", {}, { version: 0, epoch: ack.epoch });
@@ -368,12 +412,18 @@ describe("window membership — evicted-snapshot self-heal is bounded", () => {
     // collection sweep. Ships a value-carrying update (never a delta on no base).
     expect(w.loaderCalls).toEqual(["FULL"]);
     const update = w.h.frames.find((f) => f.kind === "update")!;
-    expect(update.value).toEqual([{ id: "a", n: 0 }, { id: "b", n: 2 }]);
+    expect(update.value).toEqual([
+      { id: "a", n: 0 },
+      { id: "b", n: 2 },
+    ]);
     expect(w.h.frames.some((f) => f.kind === "delta")).toBe(false);
 
     const cv = makeClientView(keyOf);
     cv.applyAll(w.h.frames);
-    expect(cv.value).toEqual([{ id: "a", n: 0 }, { id: "b", n: 2 }]);
+    expect(cv.value).toEqual([
+      { id: "a", n: 0 },
+      { id: "b", n: 2 },
+    ]);
     expect(cv.driftResubs).toBe(0);
   });
 });
@@ -424,12 +474,28 @@ function sigHarness(limit: number) {
     },
   );
   const feed = (op: "I" | "U" | "D", ids: string[] | null) =>
-    h.runtime.applyDbChange({ table: "sig_table", op, ids, origin: "sig_table", identityBase: "sig_table" });
-  const update = (id: string, mut: (c: { n: number; note: string }) => void) => {
+    h.runtime.applyDbChange({
+      table: "sig_table",
+      op,
+      ids,
+      origin: "sig_table",
+      identityBase: "sig_table",
+    });
+  const update = (
+    id: string,
+    mut: (c: { n: number; note: string }) => void,
+  ) => {
     mut(table.get(id)!);
     feed("U", [id]);
   };
-  return { h, table, loaderCalls, windowIdsOf: () => windowIdsOfCalls, feed, update };
+  return {
+    h,
+    table,
+    loaderCalls,
+    windowIdsOf: () => windowIdsOfCalls,
+    feed,
+    update,
+  };
 }
 
 describe("window membership — order signature", () => {
@@ -576,8 +642,13 @@ describe("window membership — order signature", () => {
 function pointHarness(runtimeOpts: Parameters<typeof createHarness>[0] = {}) {
   const table = new Map<string, { n: number }>();
   const loaderCalls: string[] = [];
-  const idsOf = (p: Record<string, string>) => (p.ids ?? "").split(",").filter(Boolean);
-  const h = createHarness({ readSet: () => ["pt_table"], sockets: 2, ...runtimeOpts });
+  const idsOf = (p: Record<string, string>) =>
+    (p.ids ?? "").split(",").filter(Boolean);
+  const h = createHarness({
+    readSet: () => ["pt_table"],
+    sockets: 2,
+    ...runtimeOpts,
+  });
   h.runtime.defineResource(
     { key: "pt", schema: rowsSchema, keyed: { keyOf } },
     {
@@ -586,12 +657,20 @@ function pointHarness(runtimeOpts: Parameters<typeof createHarness>[0] = {}) {
       loader: (p, c) => {
         const ids = c ? [...c.affectedIds] : idsOf(p);
         loaderCalls.push((c ? "scoped:" : "FULL:") + [...ids].sort().join(","));
-        return ids.filter((id) => table.has(id)).map((id) => ({ id, n: table.get(id)!.n }));
+        return ids
+          .filter((id) => table.has(id))
+          .map((id) => ({ id, n: table.get(id)!.n }));
       },
     },
   );
   const feed = (op: "I" | "U" | "D", ids: string[] | null) =>
-    h.runtime.applyDbChange({ table: "pt_table", op, ids, origin: "pt_table", identityBase: "pt_table" });
+    h.runtime.applyDbChange({
+      table: "pt_table",
+      op,
+      ids,
+      origin: "pt_table",
+      identityBase: "pt_table",
+    });
   return { h, table, loaderCalls, feed };
 }
 
@@ -639,7 +718,10 @@ describe("point membership — routing by id intersection", () => {
     // Both clients converge to their own tuple's truth.
     const cv0 = makeClientView(keyOf);
     cv0.applyAll(p.h.framesFor(0));
-    expect(cv0.value).toEqual([{ id: "a", n: 9 }, { id: "b", n: 2 }]);
+    expect(cv0.value).toEqual([
+      { id: "a", n: 9 },
+      { id: "b", n: 2 },
+    ]);
     const cv1 = makeClientView(keyOf);
     cv1.applyAll(p.h.framesFor(1));
     expect(cv1.value).toEqual([]);
@@ -665,8 +747,78 @@ describe("point membership — routing by id intersection", () => {
 
     const cv = makeClientView(keyOf);
     cv.applyAll(p.h.frames);
-    expect(cv.value).toEqual([{ id: "a", n: 1 }, { id: "b", n: 7 }]);
+    expect(cv.value).toEqual([
+      { id: "a", n: 1 },
+      { id: "b", n: 7 },
+    ]);
     expect(cv.driftResubs).toBe(0);
+  });
+
+  // The one-row-per-tuple shape: ONE id per tuple, and a loader that ignores
+  // `ctx.affectedIds` outright because its read is already that one row (`where
+  // block_id = params.blockId`). What the affected ids buy such a resource is
+  // not a narrower query — it is not being asked at all. This pins the
+  // difference `membership` makes for that shape: without it the feed schedules
+  // a recompute on EVERY subscribed tuple, each of which re-reads its own row
+  // and diffs to empty. No frame goes out, which is exactly what hides the cost;
+  // the read IS the cost.
+  test("a write to one id never reaches another id's subscriber, even when the loader ignores ctx", async () => {
+    const table = new Map<string, { n: number }>();
+    const loaderCalls: string[] = [];
+    const idsOf = (p: Record<string, string>) => [p.id ?? ""];
+    const h = createHarness({ readSet: () => ["blk_table"], sockets: 2 });
+    h.runtime.defineResource(
+      { key: "blk", schema: rowsSchema, keyed: { keyOf } },
+      {
+        identityTable: "blk_table",
+        membership: { kind: "point", idsOf },
+        loader: (p: Record<string, string>) => {
+          loaderCalls.push(p.id ?? "");
+          const row = table.get(p.id ?? "");
+          return row ? [{ id: p.id ?? "", n: row.n }] : [];
+        },
+      },
+    );
+    const feed = (op: "I" | "U" | "D", ids: string[]) =>
+      h.runtime.applyDbChange({
+        table: "blk_table",
+        op,
+        ids,
+        origin: "blk_table",
+        identityBase: "blk_table",
+      });
+
+    table.set("a", { n: 1 });
+    table.set("b", { n: 2 });
+    await h.subscribe("blk", { id: "a" }, { socket: 0 });
+    await h.subscribe("blk", { id: "b" }, { socket: 1 });
+    loaderCalls.length = 0;
+
+    // A doc-update on `a`: `a`'s tuple refills, `b`'s is never asked.
+    table.set("a", { n: 9 });
+    feed("U", ["a"]);
+    await tick();
+    expect(loaderCalls).toEqual(["a"]);
+    let ds = deltas(h, "blk");
+    expect(ds).toHaveLength(1);
+    expect(ds[0]!.socket).toBe(0);
+    expect(ds[0]!.upserts).toEqual([["a", { id: "a", n: 9 }]]);
+
+    // The row goes away: `a`'s tuple ships the removal from the point set with
+    // no loader run at all, and `b`'s tuple still hears nothing.
+    loaderCalls.length = 0;
+    table.delete("a");
+    feed("D", ["a"]);
+    await tick();
+    expect(loaderCalls).toEqual([]);
+    ds = deltas(h, "blk");
+    expect(ds).toHaveLength(2);
+    expect(ds[1]!.socket).toBe(0);
+    expect(ds[1]!.deletes).toEqual(["a"]);
+    expect(ds[1]!.order).toEqual([]);
+
+    // Socket 1 (block `b`) received no push across either write.
+    expect(deltas(h, "blk").filter((f) => f.socket === 1)).toEqual([]);
   });
 
   test("a point entry is excluded from persistence even when shouldPersist says yes", async () => {

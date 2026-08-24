@@ -22,6 +22,15 @@
  *     persist and the transport does not flush. It does NOT gate the editing
  *     host (that would deadlock the caret authority), and the gate opens the
  *     moment teardown is decided, so an unmount always flushes.
+ *  5. **A skeleton never paints over text the user has already seen.**
+ *     `everRendered` is monotonic and owner-scoped precisely so it survives the
+ *     two things that reset a session — recovery (a NEW session) and a Lexical
+ *     remount — because those are exactly when the placeholder would otherwise
+ *     reappear over a line the user was reading.
+ *  6. **Recovery has two verbs, and using the wrong one is the reported bug.**
+ *     `rehydrate()` re-attaches the binding and empties the editor on the way;
+ *     `refetch()` re-reads the server into the live doc and moves nothing on
+ *     screen. A doc that is merely behind the server gets the second one.
  *
  * Run with `bun run test:dom plugins/page/plugins/editor`.
  */
@@ -35,7 +44,8 @@ vi.mock("@plugins/infra/plugins/endpoints/web", async (importOriginal) => {
   return { ...actual, fetchEndpoint: vi.fn() };
 });
 
-const wsStatusListeners: Array<(ev: { status: string; url: string }) => void> = [];
+const wsStatusListeners: Array<(ev: { status: string; url: string }) => void> =
+  [];
 vi.mock("@plugins/primitives/plugins/networking/web", () => ({
   subscribeWsStatus: (cb: (ev: { status: string; url: string }) => void) => {
     wsStatusListeners.push(cb);
@@ -46,7 +56,10 @@ vi.mock("@plugins/primitives/plugins/networking/web", () => ({
   },
 }));
 
-const resourceValue: { pending: boolean; data: { state: string }[] } = {
+// Re-ASSIGNED, never mutated in place: `useResource`'s identity is what the
+// subscription effect depends on, so delivering a value has to hand the hook a
+// new object — mutating this one's fields would leave the effect asleep.
+let resourceValue: { pending: boolean; data: { state: string }[] } = {
   pending: true,
   data: [],
 };
@@ -59,7 +72,10 @@ import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { runsToXmlText, xmlTextContentLength, type RichText } from "../../core";
 import type { BindingReplica } from "../internal/binding-replica";
 import { CollabSession } from "../internal/collab-session";
-import type { DocSourcedRuns, ProjectTextFn } from "../internal/doc-sourced-runs";
+import type {
+  DocSourcedRuns,
+  ProjectTextFn,
+} from "../internal/doc-sourced-runs";
 import { useCollabBlockDoc } from "../internal/use-collab-block-doc";
 
 const fetchEndpointMock = vi.mocked(fetchEndpoint);
@@ -68,7 +84,8 @@ const fetchEndpointMock = vi.mocked(fetchEndpoint);
 function docStateFor(runs: RichText): Uint8Array {
   const xml = runsToXmlText(runs);
   const doc = xml.doc;
-  if (!doc) throw new Error("docStateFor: seed XmlText is not attached to a doc");
+  if (!doc)
+    throw new Error("docStateFor: seed XmlText is not attached to a doc");
   return Y.encodeStateAsUpdate(doc);
 }
 
@@ -90,8 +107,7 @@ beforeEach(() => {
   vi.useFakeTimers();
   fetchEndpointMock.mockReset();
   fetchEndpointMock.mockResolvedValue({ state: EMPTY_DOC_STATE });
-  resourceValue.pending = true;
-  resourceValue.data = [];
+  resourceValue = { pending: true, data: [] };
 });
 
 afterEach(() => {
@@ -174,7 +190,9 @@ test("an answer that DOES carry content stays hydrating until a commit proves it
   const replica = session.replicaForBinding();
   replica.connect();
 
-  session.owner.provider.onServerState(toBase64(docStateFor([{ text: "hello" }])));
+  session.owner.provider.onServerState(
+    toBase64(docStateFor([{ text: "hello" }])),
+  );
   // Synced, but the replica now holds something: the binding has to prove it
   // rendered it, and the proof is the commit — not the sync.
   expect(session.state.kind).toBe("hydrating");
@@ -195,7 +213,9 @@ test("a verification mismatch yields stalled, and a late probe may not conclude 
   const id = blockId();
   const session = CollabSession.start(id, buildSeedState, true, true);
   const replica = session.replicaForBinding();
-  session.owner.provider.onServerState(toBase64(docStateFor([{ text: "hello" }])));
+  session.owner.provider.onServerState(
+    toBase64(docStateFor([{ text: "hello" }])),
+  );
   replica.connect();
   expect(session.state.kind).toBe("hydrating");
 
@@ -231,7 +251,9 @@ test("hydrating holds the transport flush, and ending it releases the bytes", as
   replica.connect();
   // Sync WITH content, so the session stays hydrating (no commit can arrive:
   // there is no real Lexical binding here).
-  session.owner.provider.onServerState(toBase64(docStateFor([{ text: "hello" }])));
+  session.owner.provider.onServerState(
+    toBase64(docStateFor([{ text: "hello" }])),
+  );
   expect(session.state.kind).toBe("hydrating");
 
   // A local edit while the gate is closed: queued, never posted.
@@ -271,7 +293,11 @@ test("hydrating suppresses the data.text projection, and opening the gate replay
   // server push) — the projection arms and its window expires while the gate is
   // still closed.
   act(() => {
-    Y.applyUpdate(replica.replicaDoc, docStateFor([{ text: "hello" }]), "binding");
+    Y.applyUpdate(
+      replica.replicaDoc,
+      docStateFor([{ text: "hello" }]),
+      "binding",
+    );
   });
   await act(async () => {
     await vi.advanceTimersByTimeAsync(1500);
@@ -280,13 +306,228 @@ test("hydrating suppresses the data.text projection, and opening the gate replay
 
   // Proving the binding renders what its replica holds opens the gate, and the
   // dropped window is replayed push-based — not on the next keystroke.
-  const shown = xmlTextContentLength(replica.replicaDoc.get("root", Y.XmlText) as Y.XmlText);
+  const shown = xmlTextContentLength(
+    replica.replicaDoc.get("root", Y.XmlText) as Y.XmlText,
+  );
   act(() => {
     result.current.verifyRendered(shown);
   });
   expect(result.current.hydration.kind).toBe("hydrated");
   expect(projectText).toHaveBeenCalledTimes(1);
-  expect(projectText.mock.calls[0]?.[1] as DocSourcedRuns).toEqual([{ text: "hello" }]);
+  expect(projectText.mock.calls[0]?.[1] as DocSourcedRuns).toEqual([
+    { text: "hello" },
+  ]);
+
+  unmount();
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(5);
+  });
+});
+
+// --- 5. "Was shown" — the monotonic latch (F4) --------------------------------
+//
+// `everRendered` answers a strictly weaker question than the hydration state:
+// not "does what is on screen agree with the doc right now", but "has this
+// block's text ever been on screen at all". It exists so a loading state is
+// never painted over something the user was reading — which is why it lives on
+// the OWNER and is never cleared. See `collab-session.ts`.
+
+test("a genuinely empty block never latches everRendered", () => {
+  const id = blockId();
+  const session = CollabSession.start(id, buildSeedState, true, true);
+  session.replicaForBinding().connect();
+  session.owner.provider.onServerState(EMPTY_DOC_STATE);
+
+  // Hydrated, and nothing was ever shown — so the placeholder's decision for
+  // this block still rests entirely on the row, as it must.
+  expect(session.state.kind).toBe("hydrated");
+  expect(session.everRendered).toBe(false);
+
+  // A commit rendering nothing is not "was shown" either.
+  session.verifyRendered(0);
+  expect(session.everRendered).toBe(false);
+
+  session.end();
+  vi.advanceTimersByTime(1);
+});
+
+test("the first commit carrying text latches it, and every later window inherits it", () => {
+  const id = blockId();
+  const session = CollabSession.start(id, buildSeedState, true, true);
+  const replica = session.replicaForBinding();
+  replica.connect();
+  session.owner.provider.onServerState(
+    toBase64(docStateFor([{ text: "hello" }])),
+  );
+  expect(session.everRendered).toBe(false);
+
+  const docLength = xmlTextContentLength(
+    replica.replicaDoc.get("root", Y.XmlText) as Y.XmlText,
+  );
+  session.verifyRendered(docLength);
+  expect(session.state.kind).toBe("hydrated");
+  expect(session.everRendered).toBe(true);
+
+  // THE transition the latch exists to survive: recovery mints a NEW session,
+  // whose own state walks back to `attaching`. The block's text was still on
+  // screen a moment ago, so the successor must not invite a skeleton over it.
+  const successor = session.restart();
+  expect(successor.state.kind).toBe("attaching");
+  expect(successor.everRendered).toBe(true);
+
+  // …and it stays true through the successor's whole unproven window.
+  successor.replicaForBinding().connect();
+  expect(successor.state.kind).toBe("hydrating");
+  expect(successor.everRendered).toBe(true);
+
+  vi.advanceTimersByTime(1);
+  successor.end();
+  vi.advanceTimersByTime(1);
+});
+
+test("even a probe that may not conclude agreement still latches what it saw", () => {
+  const id = blockId();
+  const session = CollabSession.start(id, buildSeedState, true, true);
+  const replica = session.replicaForBinding();
+  session.owner.provider.onServerState(
+    toBase64(docStateFor([{ text: "hello" }])),
+  );
+  replica.connect();
+
+  // The late mount-time probe: it may confirm, never conclude disagreement —
+  // but it DID observe a non-empty line, and that observation is the latch's
+  // whole subject.
+  session.verifyRendered(3, true);
+  expect(session.state.kind).toBe("hydrating");
+  expect(session.everRendered).toBe(true);
+
+  session.end();
+  vi.advanceTimersByTime(1);
+});
+
+test("the flip reaches the session's own state listeners", () => {
+  const id = blockId();
+  const session = CollabSession.start(id, buildSeedState, true, true);
+  session.replicaForBinding().connect();
+  session.owner.provider.onServerState(EMPTY_DOC_STATE);
+
+  const notified = vi.fn();
+  const unsubscribe = session.subscribeState(notified);
+  // The state cannot move (already `hydrated`), so anything this listener hears
+  // is the latch — which is exactly what a consumer's snapshot needs.
+  session.verifyRendered(4);
+  expect(session.everRendered).toBe(true);
+  expect(notified).toHaveBeenCalled();
+
+  unsubscribe();
+  session.end();
+  vi.advanceTimersByTime(1);
+});
+
+// --- 6. The two recovery verbs (F3) ------------------------------------------
+//
+// `rehydrate()` ends the session and mints a fresh EMPTY replica — the only
+// cure for a binding that missed its post-attach events, and pure damage for a
+// doc that is merely behind the server. `refetch()` is the other half on its
+// own: an authoritative re-read into the live doc, with the replica, the
+// session and everything on screen untouched.
+
+test("refetch() re-reads the server without dropping the session or re-attaching the binding", async () => {
+  const id = blockId();
+  const projectText = vi.fn();
+  const { result, rerender, unmount } = renderHook(() =>
+    useCollabBlockDoc(id, [], true, projectText as unknown as ProjectTextFn),
+  );
+
+  let replica!: BindingReplica;
+  act(() => {
+    replica = result.current.providerFactory(id, new Map()) as BindingReplica;
+    replica.connect();
+  });
+
+  // The honest witness, before anything answered: an empty doc here proves
+  // NOTHING, which is what keeps the starvation arm from firing on a healthy
+  // cold open (the 572 false positives).
+  expect(result.current.isSynced()).toBe(false);
+
+  act(() => {
+    resourceValue = {
+      pending: false,
+      data: [{ state: toBase64(docStateFor([{ text: "hello" }])) }],
+    };
+    rerender();
+  });
+  expect(result.current.isSynced()).toBe(true);
+
+  const shown = xmlTextContentLength(
+    replica.replicaDoc.get("root", Y.XmlText) as Y.XmlText,
+  );
+  act(() => {
+    result.current.verifyRendered(shown);
+  });
+  expect(result.current.hydration.kind).toBe("hydrated");
+  expect(result.current.everRendered).toBe(true);
+
+  const generationBefore = result.current.attachGeneration;
+  fetchEndpointMock.mockClear();
+  await act(async () => {
+    result.current.refetch();
+    await vi.advanceTimersByTimeAsync(5);
+  });
+
+  // A re-read was requested…
+  expect(fetchEndpointMock).toHaveBeenCalled();
+  // …and NOTHING on screen moved: same binding (no re-attach key bump), same
+  // replica, same proven session. This is the whole difference between a cure
+  // and the symptom the user reported.
+  expect(result.current.attachGeneration).toBe(generationBefore);
+  expect(replica.isDestroyed).toBe(false);
+  expect(result.current.hydration.kind).toBe("hydrated");
+
+  unmount();
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(5);
+  });
+});
+
+test("rehydrate() DOES re-attach — and the everRendered latch survives it", async () => {
+  const id = blockId();
+  const projectText = vi.fn();
+  const { result, rerender, unmount } = renderHook(() =>
+    useCollabBlockDoc(id, [], true, projectText as unknown as ProjectTextFn),
+  );
+
+  let replica!: BindingReplica;
+  act(() => {
+    replica = result.current.providerFactory(id, new Map()) as BindingReplica;
+    replica.connect();
+  });
+  act(() => {
+    resourceValue = {
+      pending: false,
+      data: [{ state: toBase64(docStateFor([{ text: "hello" }])) }],
+    };
+    rerender();
+  });
+  const shown = xmlTextContentLength(
+    replica.replicaDoc.get("root", Y.XmlText) as Y.XmlText,
+  );
+  act(() => {
+    result.current.verifyRendered(shown);
+  });
+  expect(result.current.everRendered).toBe(true);
+
+  act(() => {
+    result.current.rehydrate();
+  });
+
+  // The destructive verb, doing exactly what it says: a bumped key (Lexical
+  // re-attaches) over a brand-new session that has proven nothing yet.
+  expect(result.current.attachGeneration).toBe(1);
+  expect(result.current.hydration.kind).not.toBe("hydrated");
+  // F4: the block's text WAS on screen, so no skeleton may paint here — even
+  // though this session cannot prove anything about it.
+  expect(result.current.everRendered).toBe(true);
 
   unmount();
   await act(async () => {

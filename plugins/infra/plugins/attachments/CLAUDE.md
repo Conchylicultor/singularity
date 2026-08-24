@@ -17,11 +17,20 @@ export const _taskAttachmentsTable = taskAttachments.table;
 
 ```ts
 await taskAttachments.set(taskId, ids);   // mirror canonical source (replaces)
+await taskAttachments.setMany(entries);   // the same, for many owners at once
 await taskAttachments.add(taskId, ids);   // append-only union (race-free, atomic)
 const rows = await taskAttachments.list(taskId);  // joined Attachment[]
 ```
 
 `set` reconciles the link set to exactly match `ids` — used when the source of truth is replaceable (e.g. a markdown column). `add` is the atomic append-only union, used when the source grows monotonically (turns in a conversation). They lower to different SQL plans and are not parameter variants of each other.
+
+### Many owners: `setMany`, never a `set` loop
+
+`setMany([{ ownerId, ids }, …])` reconciles a whole document's owners at once (every block on a page); `set` is its one-entry case, so there is one implementation.
+
+What matters is that it is **silent when nothing changed**: the diff key is the `(ownerId, attachmentId)` pair — the link table's PK — diffed in memory from ONE indexed read, so an unchanged set issues zero write statements. A `set` loop is a transaction per owner, and an unchanged owner still pays a delete-nothing DELETE, which a STATEMENT-level change-feed trigger cannot tell apart from a real write. Same reason it is a diff and not delete-all-then-reinsert: that rewrites unchanged rows.
+
+`applyLinkDiff` (the transaction body) is db-parametrized so `define-link.test.ts` counts the statements each reconcile issues against a real Postgres.
 
 ## Protocol vs DSL
 

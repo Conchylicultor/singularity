@@ -15,7 +15,10 @@ import {
   useLatestRef,
 } from "@plugins/primitives/plugins/latest-ref/web";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
-import { editYDocState, yDocContent } from "@plugins/primitives/plugins/collab-doc/core";
+import {
+  editYDocState,
+  yDocContent,
+} from "@plugins/primitives/plugins/collab-doc/core";
 import {
   blockContentResource,
   blockDocInit,
@@ -167,7 +170,10 @@ function buildSeedStateFor(dataText: unknown): Uint8Array {
   const opts = blockTextRunsOptions();
   // Canonical fingerprint of the active extension set: sorted ids, so the
   // clientID keys on the set's identity independent of registration order.
-  const extIds = [...opts.extensions].map((e) => e.id).sort().join(",");
+  const extIds = [...opts.extensions]
+    .map((e) => e.id)
+    .sort()
+    .join(",");
   const xmlText = runsToXmlText(runs, {
     ...opts,
     clientID: seedClientID(JSON.stringify(runs), extIds),
@@ -212,14 +218,45 @@ export interface CollabBlockDoc {
    */
   subscribeDocUpdates: (cb: () => void) => () => void;
   /**
-   * Recover a block whose rendered text no longer agrees with its doc or with
-   * the server: END this block's content session and start a new one. A new
-   * session IS a fresh empty replica (the binding-behind-its-doc half) plus an
-   * authoritative re-read (the doc-behind-the-server half), so the caller never
-   * decides which side was short — see `collab-session.ts` and
-   * `collab-text-plugin`'s guard.
+   * Recover a block whose BINDING fell behind its doc: END this block's content
+   * session and start a new one. A new session is a fresh EMPTY replica, which
+   * is the only thing that fixes a binding that missed its post-attach
+   * `observeDeep` set — and is also why it is DESTRUCTIVE: the text genuinely
+   * leaves the DOM until the re-read lands. Use it for the defect it repairs
+   * (`blind-binding`, and the user-pressed `stalled` Retry) and
+   * {@link refetch} for everything else.
    */
   rehydrate: () => void;
+  /**
+   * Re-read the server's authoritative state into the canonical doc, WITHOUT
+   * touching the replica or the session — nothing on screen changes, and a
+   * false positive costs one idempotent doc-init instead of blanking the line.
+   * The right verb for "the doc is behind the server" (`starved-doc`): the
+   * binding is fine, so re-attaching it repairs nothing and destroys the text
+   * on the way.
+   */
+  refetch: () => void;
+  /**
+   * Has the transport's authoritative answer landed for this block? `false`
+   * means NO answer has arrived yet — so an empty doc proves nothing, and any
+   * "the server never sent it" verdict read against it would be a guess about a
+   * request still in flight.
+   */
+  isSynced: () => boolean;
+  /**
+   * Subscribe to the transport's `sync` announcement (the false→true edge, and
+   * its re-announcement on reconnect). The push-based clock for anything that
+   * must start counting from "the answer is in" rather than from mount.
+   */
+  subscribeSync: (cb: () => void) => () => void;
+  /**
+   * Has this block's text ever been on screen? Monotonic, owner-scoped, never
+   * cleared — it survives a `rehydrate()` and a Lexical remount, which is the
+   * whole point (see `collab-session.ts`). Consumers use it to refuse to paint
+   * a loading state over text the user has already read; it says nothing about
+   * whether that text is still current.
+   */
+  everRendered: boolean;
   /**
    * This binding's hydration state (stage 4) — where the session is between
    * "the replica exists" and "what the user sees provably equals what that
@@ -292,6 +329,27 @@ export interface CollabBlockDoc {
  * reverse/re-apply exactly that run, for recording onto the app's unified
  * undo stack. Pass a stable callback (`useEventCallback`).
  */
+/**
+ * What a consumer reads off the live session in ONE `useSyncExternalStore`
+ * snapshot: where the session is, and whether this block's text has ever been
+ * on screen. Two facts, one store — a second store over the same listener
+ * channel would tear (a snapshot pair sampled across a notify) for no benefit.
+ *
+ * Frozen and cached (see {@link CollabDocHold.hydrationState}): `getSnapshot`
+ * MUST return the same reference while nothing moved, or `useSyncExternalStore`
+ * loops.
+ */
+interface HydrationSnapshot {
+  readonly state: SessionState;
+  readonly everRendered: boolean;
+}
+
+/** The snapshot before any session exists (a render before any effect ran). */
+const ATTACHING_SNAPSHOT: HydrationSnapshot = Object.freeze({
+  state: ATTACHING_STATE,
+  everRendered: false,
+});
+
 /** A hook instance's {@link CollabSession} handle (both doc hooks). */
 interface CollabDocHold {
   /**
@@ -321,14 +379,19 @@ interface CollabDocHold {
   armProjection: () => void;
   /** Subscribe to canonical-doc updates (see {@link CollabBlockDoc.subscribeDocUpdates}). */
   subscribeDocUpdates: (cb: () => void) => () => void;
+  /** Has the transport's authoritative answer landed? (see {@link CollabBlockDoc.isSynced}) */
+  isSynced: () => boolean;
+  /** Subscribe to the transport's `sync` announcement (see {@link CollabBlockDoc.subscribeSync}). */
+  subscribeSync: (cb: () => void) => () => void;
   /**
-   * The live session's hydration state, or {@link ATTACHING_STATE} before one
-   * exists. A `useSyncExternalStore` pair whose subscription survives session
-   * churn: {@link CollabDocHold.ensure} / {@link CollabDocHold.restartSession}
-   * re-point ONE forwarding listener at the new session, so a consumer never
-   * re-subscribes and never misses a transition across a `rehydrate()`.
+   * The live session's hydration snapshot, or {@link ATTACHING_SNAPSHOT} before
+   * one exists. A `useSyncExternalStore` pair whose subscription survives
+   * session churn: {@link CollabDocHold.ensure} /
+   * {@link CollabDocHold.restartSession} re-point ONE forwarding listener at the
+   * new session, so a consumer never re-subscribes and never misses a
+   * transition across a `rehydrate()`.
    */
-  hydrationState: () => SessionState;
+  hydrationState: () => HydrationSnapshot;
   subscribeHydration: (cb: () => void) => () => void;
   /** {@link CollabSession.verifyRendered} against the live session, if any. */
   verifyRendered: (shownLength: number, promoteOnly?: boolean) => void;
@@ -392,41 +455,48 @@ function useCollabDocHold(
   const projectionDirtyRef = useRef(false);
   const projectionTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const flushProjection = useEventCallback((opts?: { final?: boolean }): void => {
-    if (projectionTimerRef.current !== null) {
-      clearTimeout(projectionTimerRef.current);
-      projectionTimerRef.current = null;
-    }
-    // Only fires when a doc update marked us dirty — a doc nothing ever wrote
-    // to (subscription pending) must NOT project its emptiness.
-    if (!projectionDirtyRef.current) return;
-    const session = sessionRef.current;
-    if (session && !session.isEnded && !session.writeAllowed && !opts?.final) {
-      // THE WRITE GATE (stage 4): this binding cannot yet prove that what the
-      // user sees is what the doc holds, so nothing derived from that doc is
-      // persisted. Stay DIRTY with no timer armed — `onSessionState` re-runs
-      // this the moment the gate opens, push-based. The `final` teardown flush
-      // is exempt: the session is going away, so deferring would drop the row's
-      // last text rather than delay it.
-      return;
-    }
-    projectionDirtyRef.current = false;
-    if (!session || session.isEnded) {
-      // Unreachable by construction: the ONLY thing that marks the projection
-      // dirty is the doc-update observer, which holds the session, and the
-      // teardown below flushes BEFORE ending it. Loud rather than silent — a
-      // dropped flush is a row that silently lags its doc forever.
-      throw new Error(
-        `useCollabBlockDoc: pending projection for "${blockId}" with no live content-doc session`,
-      );
-    }
-    const owner = session.owner;
-    const runs = projectableRunsOf(owner.doc);
-    const current = coalesce(runsOf(dataTextRef.current));
-    // Runs are canonical (coalesced, sorted marks), so JSON equality is exact.
-    if (JSON.stringify(runs) === JSON.stringify(current)) return;
-    projectTextRef.current(owner.blockId, runs);
-  });
+  const flushProjection = useEventCallback(
+    (opts?: { final?: boolean }): void => {
+      if (projectionTimerRef.current !== null) {
+        clearTimeout(projectionTimerRef.current);
+        projectionTimerRef.current = null;
+      }
+      // Only fires when a doc update marked us dirty — a doc nothing ever wrote
+      // to (subscription pending) must NOT project its emptiness.
+      if (!projectionDirtyRef.current) return;
+      const session = sessionRef.current;
+      if (
+        session &&
+        !session.isEnded &&
+        !session.writeAllowed &&
+        !opts?.final
+      ) {
+        // THE WRITE GATE (stage 4): this binding cannot yet prove that what the
+        // user sees is what the doc holds, so nothing derived from that doc is
+        // persisted. Stay DIRTY with no timer armed — `onSessionState` re-runs
+        // this the moment the gate opens, push-based. The `final` teardown flush
+        // is exempt: the session is going away, so deferring would drop the row's
+        // last text rather than delay it.
+        return;
+      }
+      projectionDirtyRef.current = false;
+      if (!session || session.isEnded) {
+        // Unreachable by construction: the ONLY thing that marks the projection
+        // dirty is the doc-update observer, which holds the session, and the
+        // teardown below flushes BEFORE ending it. Loud rather than silent — a
+        // dropped flush is a row that silently lags its doc forever.
+        throw new Error(
+          `useCollabBlockDoc: pending projection for "${blockId}" with no live content-doc session`,
+        );
+      }
+      const owner = session.owner;
+      const runs = projectableRunsOf(owner.doc);
+      const current = coalesce(runsOf(dataTextRef.current));
+      // Runs are canonical (coalesced, sorted marks), so JSON equality is exact.
+      if (JSON.stringify(runs) === JSON.stringify(current)) return;
+      projectTextRef.current(owner.blockId, runs);
+    },
+  );
 
   // Event-driven debounce: each doc update marks dirty and arms ONE trailing
   // timer (not reset per keystroke), so a continuous typing run projects at
@@ -434,7 +504,10 @@ function useCollabDocHold(
   const armProjection = useEventCallback((): void => {
     projectionDirtyRef.current = true;
     if (projectionTimerRef.current === null) {
-      projectionTimerRef.current = setTimeout(() => flushProjection(), PROJECT_DEBOUNCE_MS);
+      projectionTimerRef.current = setTimeout(
+        () => flushProjection(),
+        PROJECT_DEBOUNCE_MS,
+      );
     }
   });
 
@@ -457,28 +530,48 @@ function useCollabDocHold(
   });
 
   /** Re-point the forwarding subscription at `session` (a start or a restart). */
-  const bindSession = useEventCallback((session: CollabSession): CollabSession => {
-    sessionStateUnsubRef.current?.();
-    sessionStateUnsubRef.current = session.subscribeState(onSessionState);
-    onSessionState();
-    return session;
-  });
-
-  const hydrationState = useEventCallback(
-    (): SessionState => sessionRef.current?.state ?? ATTACHING_STATE,
+  const bindSession = useEventCallback(
+    (session: CollabSession): CollabSession => {
+      sessionStateUnsubRef.current?.();
+      sessionStateUnsubRef.current = session.subscribeState(onSessionState);
+      onSessionState();
+      return session;
+    },
   );
 
-  const subscribeHydration = useEventCallback((cb: () => void): (() => void) => {
-    hydrationListenersRef.current.add(cb);
-    return () => {
-      hydrationListenersRef.current.delete(cb);
-    };
+  // The snapshot cache. A NEW object per `getSnapshot()` call would loop
+  // `useSyncExternalStore`, so one is minted only when a field actually moved —
+  // the same identity-stability contract the provider's save state keeps.
+  const hydrationSnapshotRef = useRef<HydrationSnapshot>(ATTACHING_SNAPSHOT);
+
+  const hydrationState = useEventCallback((): HydrationSnapshot => {
+    const session = sessionRef.current;
+    const state = session?.state ?? ATTACHING_STATE;
+    const everRendered = session?.everRendered ?? false;
+    const cached = hydrationSnapshotRef.current;
+    if (cached.state === state && cached.everRendered === everRendered)
+      return cached;
+    const next = Object.freeze({ state, everRendered });
+    hydrationSnapshotRef.current = next;
+    return next;
   });
 
-  const verifyRendered = useEventCallback((shown: number, promoteOnly?: boolean): void => {
-    const session = sessionRef.current;
-    if (session && !session.isEnded) session.verifyRendered(shown, promoteOnly);
-  });
+  const subscribeHydration = useEventCallback(
+    (cb: () => void): (() => void) => {
+      hydrationListenersRef.current.add(cb);
+      return () => {
+        hydrationListenersRef.current.delete(cb);
+      };
+    },
+  );
+
+  const verifyRendered = useEventCallback(
+    (shown: number, promoteOnly?: boolean): void => {
+      const session = sessionRef.current;
+      if (session && !session.isEnded)
+        session.verifyRendered(shown, promoteOnly);
+    },
+  );
 
   // ONE session per hook instance, started lazily from whichever consumer runs
   // first (the providerFactory call or a subscription effect) — both run in
@@ -503,7 +596,12 @@ function useCollabDocHold(
     // never be handed out again: end it and start a fresh one. `end()` is
     // idempotent and no-ops on an already-ended session.
     current?.end();
-    const next = CollabSession.start(id, buildSeedState, rowConfirmedRef.current, serverSync);
+    const next = CollabSession.start(
+      id,
+      buildSeedState,
+      rowConfirmedRef.current,
+      serverSync,
+    );
     sessionRef.current = next;
     return bindSession(next);
   });
@@ -512,11 +610,23 @@ function useCollabDocHold(
     ensure(id).replicaForBinding(),
   );
 
-  const subscribeDocUpdates = useEventCallback((cb: () => void): (() => void) => {
-    const doc = ensure(blockId).owner.doc;
+  const subscribeDocUpdates = useEventCallback(
+    (cb: () => void): (() => void) => {
+      const doc = ensure(blockId).owner.doc;
+      const notify = (): void => cb();
+      doc.on("update", notify);
+      return () => doc.off("update", notify);
+    },
+  );
+
+  // Reads the OWNER's provider, which outlives every session over it — so a
+  // `rehydrate()` swapping the session underneath is invisible here, exactly as
+  // for `subscribeDocUpdates` above. (Its `isSynced` twin sits with `peek`.)
+  const subscribeSync = useEventCallback((cb: () => void): (() => void) => {
+    const provider = ensure(blockId).owner.provider;
     const notify = (): void => cb();
-    doc.on("update", notify);
-    return () => doc.off("update", notify);
+    provider.on("sync", notify);
+    return () => provider.off("sync", notify);
   });
 
   useEffect(() => {
@@ -550,6 +660,13 @@ function useCollabDocHold(
     return session && !session.isEnded ? session : null;
   });
 
+  // No session yet ⇒ not synced: nothing has been asked for, so nothing can
+  // have answered. The honest reading, and the one that keeps a starvation
+  // verdict from ever being drawn against a request that was never made.
+  const isSynced = useEventCallback(
+    (): boolean => peek()?.owner.provider.isSynced ?? false,
+  );
+
   const restartSession = useEventCallback((): boolean => {
     const session = peek();
     if (!session) return false;
@@ -564,6 +681,8 @@ function useCollabDocHold(
     ensureReplica,
     armProjection,
     subscribeDocUpdates,
+    isSynced,
+    subscribeSync,
     hydrationState,
     subscribeHydration,
     verifyRendered,
@@ -601,7 +720,10 @@ function useDocObservers(
   // Undo-capture observer (Stage 3b): surface each new coalesced local editing
   // run to the consumer so it can be recorded onto the unified undo stack.
   useEffect(
-    () => (onUndoableEdit ? ensure(blockId).owner.onUndoableEdit(onUndoableEdit) : undefined),
+    () =>
+      onUndoableEdit
+        ? ensure(blockId).owner.onUndoableEdit(onUndoableEdit)
+        : undefined,
     [blockId, onUndoableEdit, ensure],
   );
 }
@@ -611,20 +733,22 @@ function useProviderFactory(
   blockId: string,
   ensureReplica: (id: string) => BindingReplica,
 ): CollabProviderFactory {
-  return useEventCallback((id: string, yjsDocMap: Map<string, Doc>): Provider => {
-    if (id !== blockId) {
-      throw new Error(
-        `useCollabBlockDoc: providerFactory id "${id}" != block id "${blockId}"`,
-      );
-    }
-    // The binding gets the session's per-binding REPLICA, never the shared
-    // canonical doc: a binding must attach to an empty doc and hydrate from
-    // post-attach events (see `binding-replica.ts` and the module comment).
-    const replica = ensureReplica(blockId);
-    // CollaborationPlugin reads the doc back out of the map it hands us.
-    yjsDocMap.set(id, replica.replicaDoc);
-    return replica;
-  });
+  return useEventCallback(
+    (id: string, yjsDocMap: Map<string, Doc>): Provider => {
+      if (id !== blockId) {
+        throw new Error(
+          `useCollabBlockDoc: providerFactory id "${id}" != block id "${blockId}"`,
+        );
+      }
+      // The binding gets the session's per-binding REPLICA, never the shared
+      // canonical doc: a binding must attach to an empty doc and hydrate from
+      // post-attach events (see `binding-replica.ts` and the module comment).
+      const replica = ensureReplica(blockId);
+      // CollaborationPlugin reads the doc back out of the map it hands us.
+      yjsDocMap.set(id, replica.replicaDoc);
+      return replica;
+    },
+  );
 }
 
 /**
@@ -643,11 +767,13 @@ function useSaveState(
   { ensure, peek }: CollabDocHold,
 ): Pick<CollabBlockDoc, "saveState" | "retrySave"> {
   const subscribeSaveState = useCallback(
-    (onStoreChange: () => void) => ensure(blockId).owner.provider.onSaveState(onStoreChange),
+    (onStoreChange: () => void) =>
+      ensure(blockId).owner.provider.onSaveState(onStoreChange),
     [blockId, ensure],
   );
   const getSaveState = useCallback(
-    (): CollabSaveState => peek()?.owner.provider.getSaveState() ?? IDLE_SAVE_STATE,
+    (): CollabSaveState =>
+      peek()?.owner.provider.getSaveState() ?? IDLE_SAVE_STATE,
     [peek],
   );
   const saveState = useSyncExternalStore(subscribeSaveState, getSaveState);
@@ -664,7 +790,14 @@ function useSaveState(
  */
 function useRehydration(
   hold: CollabDocHold,
-): Pick<CollabBlockDoc, "attachGeneration" | "docContentLength" | "hasLocalEdits" | "rehydrate"> {
+): Pick<
+  CollabBlockDoc,
+  | "attachGeneration"
+  | "docContentLength"
+  | "hasLocalEdits"
+  | "rehydrate"
+  | "refetch"
+> {
   const [attachGeneration, setAttachGeneration] = useState(0);
   const { peek, restartSession } = hold;
 
@@ -687,19 +820,35 @@ function useRehydration(
     if (restartSession()) setAttachGeneration((g) => g + 1);
   });
 
-  return { attachGeneration, docContentLength, hasLocalEdits, rehydrate };
+  const refetch = useEventCallback((): void => {
+    // The other half of `rehydrate()`, on its own: the authoritative re-read,
+    // without the fresh empty replica. The doc-init round trip is idempotent
+    // (first-writer-wins) and lands as a Yjs MERGE into the live canonical doc,
+    // so the replica, the binding and everything on screen are untouched — the
+    // text does not blink out, and a false positive costs one request.
+    peek()?.owner.provider.rehydrateFromServer();
+  });
+
+  return {
+    attachGeneration,
+    docContentLength,
+    hasLocalEdits,
+    rehydrate,
+    refetch,
+  };
 }
 
 /**
  * OUT (observability), shared by both hooks: this binding's live hydration
- * state, for the placeholder and the stalled Retry. Subscribed through the
- * hold's ONE forwarding listener, so a `rehydrate()` that swaps the session
- * underneath is invisible here — nothing re-subscribes and no transition is
- * missed. `getSnapshot` is identity-stable (each state is a frozen object
- * replaced only on a real transition; `ATTACHING_STATE` covers "no session
- * yet"), so `useSyncExternalStore` cannot loop.
+ * snapshot — the session's state AND the block's `everRendered` latch — for the
+ * placeholder and the stalled Retry. Subscribed through the hold's ONE
+ * forwarding listener, so a `rehydrate()` that swaps the session underneath is
+ * invisible here: nothing re-subscribes and no transition is missed.
+ * `getSnapshot` is identity-stable (a frozen snapshot replaced only when a
+ * field actually moved; `ATTACHING_SNAPSHOT` covers "no session yet"), so
+ * `useSyncExternalStore` cannot loop.
  */
-function useHydrationState(hold: CollabDocHold): SessionState {
+function useHydrationState(hold: CollabDocHold): HydrationSnapshot {
   const { hydrationState, subscribeHydration } = hold;
   return useSyncExternalStore(subscribeHydration, hydrationState);
 }
@@ -711,7 +860,13 @@ export function useCollabBlockDoc(
   projectText: ProjectTextFn,
   onUndoableEdit?: (edit: CapturedBlockDocEdit) => void,
 ): CollabBlockDoc {
-  const hold = useCollabDocHold(blockId, dataText, rowConfirmed, true, projectText);
+  const hold = useCollabDocHold(
+    blockId,
+    dataText,
+    rowConfirmed,
+    true,
+    projectText,
+  );
   const { ensure, armProjection, subscribeDocUpdates } = hold;
   useDocObservers(blockId, ensure, armProjection, onUndoableEdit);
 
@@ -732,7 +887,9 @@ export function useCollabBlockDoc(
     // While loading we can't tell "absent" (→ seed) from "not arrived yet",
     // so nothing is delivered until the subscription settles.
     if (contentRes.pending) return;
-    ensure(blockId).owner.provider.onServerState(contentRes.data[0]?.state ?? null);
+    ensure(blockId).owner.provider.onServerState(
+      contentRes.data[0]?.state ?? null,
+    );
     // `contentRes` identity recomputes only on pending/data/error (structural
     // sharing in useResource), so this fires once per actual server change.
   }, [blockId, contentRes, ensure]);
@@ -746,7 +903,10 @@ export function useCollabBlockDoc(
     saveState,
     retrySave,
     subscribeDocUpdates,
-    hydration,
+    isSynced: hold.isSynced,
+    subscribeSync: hold.subscribeSync,
+    hydration: hydration.state,
+    everRendered: hydration.everRendered,
     verifyRendered: hold.verifyRendered,
     ...rehydration,
   };
@@ -788,7 +948,12 @@ export function useLocalCollabBlockDoc(
     saveState,
     retrySave,
     subscribeDocUpdates,
-    hydration,
+    // Permanently synced (the seed IS the answer, and it lands in connect()),
+    // so the consumer's starvation arm is inert here rather than special-cased.
+    isSynced: hold.isSynced,
+    subscribeSync: hold.subscribeSync,
+    hydration: hydration.state,
+    everRendered: hydration.everRendered,
     verifyRendered: hold.verifyRendered,
     ...rehydration,
   };

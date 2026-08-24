@@ -2378,10 +2378,12 @@ user's bytes hostage — it gets a Retry) and is released the moment `end()` is
 called, so an unmount always flushes; a held queue is DEFERRED, never dropped.
 
 **Placeholder:** `runsLength(runsOf(block.data.text))` — row non-empty + not
-`hydrated` ⇒ skeleton at roughly that length (`HydrationPlaceholder`;
-`primitives/loading`'s ~120 ms delay means a prompt doc unmounts it before it
-paints); row empty ⇒ **nothing**, or most of a fresh page becomes a loading
-screen; `stalled` ⇒ a Retry, right-aligned so it never covers the live line.
+`hydrated` + **never rendered here** ⇒ skeleton at roughly that length
+(`HydrationPlaceholder`; `primitives/loading`'s ~120 ms delay means a prompt doc
+unmounts it before it paints); row empty ⇒ **nothing**, or most of a fresh page
+becomes a loading screen; `stalled` ⇒ a Retry, right-aligned so it never covers
+the live line. The "never rendered here" rung is `BlockDocOwner.everRendered` —
+see *The hydration guard* below.
 
 Until stage 5 (the diff-shaped `doc-init` pull) hydration is still the delivered
 push, so the detector below stays the net for a push that never arrives.
@@ -2609,20 +2611,44 @@ is safe on the server, restored by a reload. `collab-text-plugin`'s guard is wha
 makes that state observable and self-correcting:
 
 - **`shown === 0 && doc > 0`** (armed by `CollabBlockDoc.subscribeDocUpdates`,
-  read after a settle window) — the binding never hydrated. **`doc === 0 && row >
-  0 && never edited here`** (from the row, after its own window, since a starved
-  doc receives no doc updates to trigger on) — the doc is behind the server. Both
-  compare against **zero**, which is what keeps them basis-free: the doc-side and
-  editor-side length walks agree with each other but with no character count (see
-  `$xmlBasisContentLength`).
-- Recovery is one verb, `CollabBlockDoc.rehydrate()`: **end this block's content
-  session and start a new one.** A new session IS a fresh EMPTY replica (the
-  binding-behind-its-doc half) plus an authoritative re-read (the idempotent
-  `doc-init` — the provider's ONLY read-side recovery, everything else there is
-  write-side), so the guard never has to decide which side was short. The caller's
-  only other job is bumping `attachGeneration` onto the `CollaborationPlugin`
-  `key`: Lexical builds its binding once per mount behind a ref, so a changed key
-  is the only thing that re-attaches one.
+  read after a settle window) — the binding never hydrated. **`synced && doc === 0
+  && row > 0 && never edited here`** (from the row, after its own window, since a
+  starved doc receives no doc updates to trigger on) — the doc is behind the
+  server. Both compare against **zero**, which is what keeps them basis-free: the
+  doc-side and editor-side length walks agree with each other but with no
+  character count (see `$xmlBasisContentLength`).
+- **`isSynced` is what makes the second arm an observation rather than a bet.**
+  Its claim is "the push never arrived", and only the transport can say that: while
+  `!provider.isSynced` no authoritative answer has landed yet, so an empty doc
+  proves nothing at all. Without the gate the arm was really timing the network —
+  it waited 5 s from MOUNT while `sub:page-block-doc` reaches 907 s under load, so
+  healthy cold opens tripped it constantly (572 reports, incl. 68 in 4 s). The
+  window now opens on the sync EDGE and runs ~2 s, which is a grace for the apply
+  and its commit, not a guess at latency.
+- **Recovery has two verbs, and picking by defect is the whole point.**
+  `CollabBlockDoc.rehydrate()` ends this block's content session and starts a new
+  one; a new session IS a fresh EMPTY replica, which is the ONLY thing that fixes a
+  binding that missed its post-attach `observeDeep` set — and is why it is
+  destructive: the text genuinely leaves the DOM until the re-read lands. Its other
+  job is bumping `attachGeneration` onto the `CollaborationPlugin` `key`, since
+  Lexical builds its binding once per mount behind a ref. `CollabBlockDoc.refetch()`
+  is the other half alone — `provider.rehydrateFromServer()`, an idempotent
+  `doc-init` re-read merged into the live canonical doc, replica and session
+  untouched, nothing on screen moving. So: `blind-binding` → `rehydrate()`,
+  `starved-doc` → `refetch()`, the user-pressed `stalled` Retry → `rehydrate()`.
+  A residual false positive then costs one request instead of blanking a line.
+- **A skeleton never paints over text the user has already seen.**
+  `BlockDocOwner.everRendered` is a monotonic latch set from
+  `CollabSession.verifyRendered(shownLength > 0)` and never cleared — it states
+  what the user WAS SHOWN, not what any session can currently prove. It lives on
+  the OWNER because both things that would reset it are what it must survive:
+  recovery mints a new session, and moving a block in or out of a container frame
+  remounts its Lexical instance. It reaches the consumer folded into the existing
+  hydration snapshot (one frozen `{state, everRendered}`, replaced only on a real
+  transition — a second store would tear), and it gates the placeholder and
+  nothing else: `hydrated` → nothing; `stalled` → Retry (above the latch: it is
+  right-aligned, covers nothing, and a partially rendering binding still owes the
+  user a way out); `everRendered` → nothing; empty row → nothing; else skeleton.
 - **It is a DETECTOR, not a write gate.** It no longer stands in front of the
   projection: the projection reads the doc, so it cannot persist a blind
   binding's emptiness. What is left is a real, recoverable RENDER defect —

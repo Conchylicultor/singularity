@@ -16,7 +16,14 @@ Originated as Plan B (`research/2026-07-07-page-per-block-crdt-plan-b.md`).
 - `blockContentResource` (`page-block-doc`, keyed, params `{ blockId }`) — a
   0-or-1-element array of `{ blockId, state: base64, updatedAt }`. Param-scoped
   to ONE block so only mounted editors subscribe (lazy content loading);
-  `identityTable: "page_block_docs"` scopes recompute to the changed row.
+  `identityTable: "page_block_docs"` marks this table's changes as this
+  resource's own. It declares NO `membership`, so within the resource every
+  `doc-update` still wakes every subscribed block: each re-runs its own `where
+  block_id = ?` and diffs to empty. They get no frame, which makes it look free —
+  the read is the cost, and typing flushes an update every ~300 ms. This fan-out
+  is a known open problem with its own task; declaring point membership was tried
+  and reverted (cross-context delivery regression), so the scoping is being
+  redesigned rather than re-applied.
   Hand-written loader (not `queryResource`): base64 must be encoded in JS —
   Postgres `encode(…, 'base64')` folds lines at 76 chars, which would corrupt
   large states — and `stateToBase64` is the single shared encoder with the

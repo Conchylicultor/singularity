@@ -58,11 +58,26 @@ status flip would have to remember to write two places. `useTodoTaskState` does
 the join; the card's glyph then follows its task through every transition with
 nothing stored on the card.
 
-Point membership, so only a MOUNTED card pays and a FULL load is one
-primary-key seek. **No `ctx.affectedIds` branch, and here that is a choice**: this
-table's key is a single column, so unlike `agent-notes-authors` a scoped refill
-*is* available — it would just be the same one-row seek with an `inArray` that can
-only confirm or exclude the one row. There is no work to save.
+`identityTable: "page_blocks_ext_todo_task"` says *this table's changes are
+mine* — a dispatch on one card never recomputes an unrelated RESOURCE. There is
+no `membership`, so within this resource a dispatch on any card still wakes every
+subscribed card: each runs its own primary-key seek and diffs to empty. It is
+easy to look at one of those seeks — a one-row lookup that a scoped refill could
+not make any narrower — and conclude there is nothing to save. That reasoning
+answers the wrong question. The seek is cheap; there is one per open card per
+write, and how many that is belongs to the page, not to this resource. Bounding
+it needs a `membership` declaration; one was tried on this table and reverted
+(cross-context delivery regression), and the scoping is being redesigned under
+its own task.
+
+The row key must be `blockId`, not `taskId` — see the descriptor's own comment in
+`shared/schemas.ts`. The change-feed hands the runtime `parent_id` values, and it
+looks them up in the per-tuple snapshot to work out what entered and what left,
+so a row keyed on anything else makes the two id spaces disjoint and a cascade
+delete ships no removal.
+
+The loader still ignores `ctx.affectedIds`, and there it really is free: the read
+is already one row by `params.blockId`.
 
 ## What the markdown provider emits
 

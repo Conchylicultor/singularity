@@ -9,13 +9,21 @@ import { AttachmentBlock } from "./collectors";
 // mirror the attachment ids declared by the base convention
 // (`collectBlockAttachmentIds` — `data.attachmentId` and/or `data.attachmentIds`)
 // unioned with any contributed collectors (e.g. a page's nested cover image),
-// and clear the rest. `set()` is an idempotent insert-new/delete-removed
+// and clear the rest. `setMany()` is an idempotent insert-new/delete-removed
 // reconcile, so this is safe to retry.
 //
 // The scan covers the page's content blocks (`page_id = pageId`) AND the page
 // block itself (`id = pageId`): a page block carries its own attachments (its
 // cover) but its `page_id` points at the parent (null for root pages), so the
 // `id = pageId` arm is what links a page's own cover.
+//
+// The collect loop is in-memory and per-block; the WRITE is one call for the
+// whole page (the `reindexPage` shape: one read, an in-memory set-diff, then at
+// most one batched INSERT and one batched DELETE). A per-block `set()` loop was
+// a transaction per block, and a block whose attachment set was unchanged —
+// which is every block on every ~1 s text-projection settle — still paid for a
+// delete-nothing DELETE inside it. Reconciling the page in one call makes that
+// same settle one indexed SELECT and zero writes.
 export async function reconcilePageAttachments(pageId: string): Promise<void> {
   const collectors = AttachmentBlock.Collector.getContributions();
   const blocks = await db
@@ -27,9 +35,11 @@ export async function reconcilePageAttachments(pageId: string): Promise<void> {
         isNull(_blocks.deletedAt),
       ),
     );
-  for (const block of blocks) {
+  const entries = blocks.map((block) => {
     const ids = new Set(collectBlockAttachmentIds(block.data));
-    for (const c of collectors) for (const id of c.collect(block.data)) ids.add(id);
-    await blockAttachments.set(block.id, [...ids]);
-  }
+    for (const c of collectors)
+      for (const id of c.collect(block.data)) ids.add(id);
+    return { ownerId: block.id, ids: [...ids] };
+  });
+  await blockAttachments.setMany(entries);
 }

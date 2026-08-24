@@ -13,7 +13,12 @@ import {
   useLatestRef,
 } from "@plugins/primitives/plugins/latest-ref/web";
 import { useReportSync } from "@plugins/primitives/plugins/sync-status/web";
-import { runsLength, runsOf, type Block, type BlockTextVariant } from "../../core";
+import {
+  runsLength,
+  runsOf,
+  type Block,
+  type BlockTextVariant,
+} from "../../core";
 import { useBlockEditor } from "../block-editor-context";
 import {
   $xmlBasisContentLength,
@@ -42,14 +47,20 @@ import { HydrationPlaceholder } from "./hydration-placeholder";
 const BLIND_BINDING_SETTLE_MS = 1000;
 
 /**
- * How long a block's doc may stay empty while its ROW says otherwise before
- * that counts as starvation rather than "the subscription has not arrived yet".
- * A block's editor mounts before its `page-block-doc` subscription settles, so
- * "empty right now" is the normal opening state and proves nothing; the window
- * is what turns it into evidence. One shot, re-armed only when the row changes
- * — not a poll.
+ * How long after the transport SYNCED a block's doc may stay empty while its
+ * ROW says otherwise before that counts as starvation.
+ *
+ * The window used to start at mount and run 5 s, which made it a bet on how
+ * fast the subscription would be — and it lost that bet constantly (measured
+ * `sub:page-block-doc` latency reaches 907 s under load, so healthy cold opens
+ * tripped it: 572 reported false positives, including 68 in 4 s). The clock now
+ * starts at the thing that was actually slow. Once `isSynced` is true the
+ * authoritative answer HAS arrived, so what is left is a short grace for the
+ * apply and its commit to settle — not a guess at network latency. One shot per
+ * piece of evidence, re-armed on the sync edge and on a row change; never a
+ * poll.
  */
-const STARVATION_SETTLE_MS = 5000;
+const STARVATION_SETTLE_MS = 2000;
 
 /**
  * Recover a block whose rendered text no longer agrees with its content doc or
@@ -60,17 +71,36 @@ const STARVATION_SETTLE_MS = 5000;
  *   that moved), settled and then compared against what THIS editor renders;
  * - **starved doc** — driven by the ROW, the other independent witness of the
  *   block's content: a `data.text` push carrying text while this client's doc
- *   is empty and nothing here ever typed into it means the `page-block-doc`
- *   push that should have hydrated the doc never arrived. Row-driven precisely
- *   because a starved doc receives no doc updates at all, so the doc-side
- *   trigger can never fire for it.
+ *   is empty, the transport has ALREADY ANSWERED, and nothing here ever typed
+ *   into it. Row-driven precisely because a starved doc receives no doc updates
+ *   at all, so the doc-side trigger can never fire for it.
  *
- * `hasLocalEdits` is what keeps the second trigger honest: a doc the user just
- * emptied legitimately trails its own ~1s row projection.
+ * Two things keep the second trigger honest, and each closes a whole class of
+ * false positive:
  *
- * The guard is now purely a DETECTOR: it no longer stands in front of the
- * projection write, because the projection reads the doc rather than this
- * editor and so can no longer persist a blind binding's emptiness (R1 of
+ * - **`isSynced`** — the transport's own witness that an authoritative answer
+ *   landed. Before it, an empty doc proves NOTHING: the push is simply still on
+ *   its way, and "still coming" is indistinguishable from "never arriving"
+ *   except by asking the transport. Calling slow "broken" is what made this arm
+ *   fire on healthy cold opens.
+ * - **`hasLocalEdits`** — a doc the user just emptied legitimately trails its
+ *   own ~1 s row projection.
+ *
+ * **The repair differs per arm, and that is the point.** `rehydrate()` ends the
+ * session and mints a fresh EMPTY replica, so the text genuinely leaves the DOM
+ * until the re-read lands. That is the ONLY cure for a binding that missed its
+ * post-attach `observeDeep` set (`blind-binding`) — and pure damage for a doc
+ * that is merely behind the server, whose binding is working perfectly. So:
+ *
+ * - `blind-binding` → `rehydrate()` (re-attach: the defect is the binding);
+ * - `starved-doc` → `refetch()` (re-read into the live doc, nothing on screen
+ *   moves — see {@link CollabBlockDoc.refetch});
+ * - the user-pressed `stalled` Retry → `rehydrate()` (they asked for the big
+ *   hammer, and `stalled` IS a binding defect).
+ *
+ * The guard is purely a DETECTOR: it does not stand in front of the projection
+ * write, because the projection reads the doc rather than this editor and so
+ * can no longer persist a blind binding's emptiness (R1 of
  * `research/2026-08-03-page-block-content-session-one-owner.md`). What is left
  * is a real, recoverable RENDER defect — reported and healed in place, retired
  * in the stage that makes hydration a proven request/response.
@@ -78,19 +108,34 @@ const STARVATION_SETTLE_MS = 5000;
 function useHydrationGuard(block: Block, doc: CollabBlockDoc): void {
   const [editor] = useLexicalComposerContext();
   const blockRef = useLatestRef(block);
-  const { docContentLength, hasLocalEdits, rehydrate, subscribeDocUpdates } = doc;
+  const {
+    docContentLength,
+    hasLocalEdits,
+    isSynced,
+    refetch,
+    rehydrate,
+    subscribeDocUpdates,
+    subscribeSync,
+  } = doc;
 
-  const recover = useEventCallback((reason: CollabHydrationReason, shownLength: number) => {
-    const b = blockRef.current;
-    collabHydrationReportSink.emit({
-      reason,
-      blockId: b.id,
-      shownLength,
-      docLength: docContentLength(),
-      rowLength: runsLength(runsOf((b.data as Record<string, unknown> | null)?.text)),
-    });
-    rehydrate();
-  });
+  const recover = useEventCallback(
+    (reason: CollabHydrationReason, shownLength: number) => {
+      const b = blockRef.current;
+      collabHydrationReportSink.emit({
+        reason,
+        blockId: b.id,
+        shownLength,
+        docLength: docContentLength(),
+        rowLength: runsLength(
+          runsOf((b.data as Record<string, unknown> | null)?.text),
+        ),
+      });
+      // One verb per defect (see the doc comment above). Never the destructive
+      // one for a binding that is working.
+      if (reason === "starved-doc") refetch();
+      else rehydrate();
+    },
+  );
 
   // Blind binding: the doc holds content this editor renders NOTHING of.
   // `@lexical/yjs` ingests a doc solely through the `observeDeep` events fired
@@ -126,18 +171,40 @@ function useHydrationGuard(block: Block, doc: CollabBlockDoc): void {
   );
   useEffect(() => {
     if (rowLength === 0) return;
-    if (hasLocalEdits()) return;
-    if (docContentLength() > 0) return;
-    // Re-verify after the settle window rather than acting on the opening
-    // state (see STARVATION_SETTLE_MS). Cleared on unmount and re-armed only
-    // when the row's length changes, which is what bounds the recovery to one
-    // attempt per new piece of evidence instead of a retry loop.
-    const timer = setTimeout(() => {
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    // The window opens on the SYNC edge, never on mount: until the transport
+    // says it answered, an empty doc is a request in flight and there is
+    // nothing to time. Armed once — a re-announced sync (a reconnect) while a
+    // window is already open must not restart the clock.
+    const arm = (): void => {
+      if (timer !== null) return;
+      if (!isSynced()) return;
       if (hasLocalEdits() || docContentLength() > 0) return;
-      recover("starved-doc", 0);
-    }, STARVATION_SETTLE_MS);
-    return () => clearTimeout(timer);
-  }, [rowLength, docContentLength, hasLocalEdits, recover]);
+      timer = setTimeout(() => {
+        timer = null;
+        // Re-read all three witnesses at fire time: the settle window exists
+        // precisely because any of them can resolve inside it.
+        if (!isSynced() || hasLocalEdits() || docContentLength() > 0) return;
+        recover("starved-doc", 0);
+      }, STARVATION_SETTLE_MS);
+    };
+    const unsubscribe = subscribeSync(arm);
+    // Already synced when this row's evidence appeared — no edge is coming.
+    arm();
+    return () => {
+      if (timer !== null) clearTimeout(timer);
+      unsubscribe();
+    };
+    // Re-armed only when the row's length changes (a new piece of evidence) or
+    // the transport re-syncs — never on a timer, and never a retry loop.
+  }, [
+    rowLength,
+    docContentLength,
+    hasLocalEdits,
+    isSynced,
+    subscribeSync,
+    recover,
+  ]);
 }
 
 /**
@@ -347,7 +414,10 @@ interface CollabTextPluginProps {
  * `LiveStateYjsProvider` (subscription + doc-init/doc-update); the in-memory
  * (`persist={false}`) path binds a purely local `Y.Doc` that never networks.
  */
-export function CollabTextPlugin({ block, textVariant }: CollabTextPluginProps) {
+export function CollabTextPlugin({
+  block,
+  textVariant,
+}: CollabTextPluginProps) {
   const { serverSync } = useBlockEditor();
   return serverSync ? (
     <ServerCollabTextPlugin block={block} textVariant={textVariant} />

@@ -20,18 +20,29 @@ export type TodoTaskLink = z.infer<typeof TodoTaskLinkSchema>;
 // ARRAY rather than a nullable object because that is what a keyed live resource
 // merges: deltas arrive per row, and "no row" is the empty array.
 //
-// Keyed with `{ blockId }` params — POINT membership, so the working set is
-// bounded by construction: only a MOUNTED card subscribes, and a FULL load is
-// one primary-key seek. It never grows with the collection, so this is not the
-// legacy unbounded `queryResource` collection shape (see the bounded-working-set
-// contract in the root CLAUDE.md); `agent-notes-authors` is the precedent it
-// copies.
+// Keyed with `{ blockId }` params, so each VALUE is bounded by construction:
+// only a MOUNTED card subscribes, and a FULL load is one primary-key seek. It
+// never grows with the collection, so this is not the legacy unbounded
+// `queryResource` collection shape (see the bounded-working-set contract in the
+// root CLAUDE.md); `agent-notes-authors` is the precedent it copies.
+//
+// What is NOT bounded is the routing: the server resource declares no
+// `membership`, so a write wakes every subscribed card, not just the one it
+// named (see `server/internal/resource.ts`). Each of those wake-ups is one seek,
+// and the page decides how many there are.
 //
 // NOT bootCritical: the card mounts route-scoped with its page, so it hydrates
 // post-mount via its sub-ack — the same call `prompt-block-tasks` makes.
 //
-// Rows key on `taskId`, which is unique within one block by the table's own
-// primary key (there is at most one row).
+// **Rows key on `blockId`, and that has to match the table's primary key.** The
+// live-state runtime reconciles a scoped push by that key: the change-feed hands
+// it the ids the write touched — which are `parent_id` values, the table's PK —
+// and it looks them up in the per-tuple snapshot to decide what entered and what
+// left. Keying rows on `taskId` instead made those two id spaces different, so a
+// DELETE named an id the snapshot had never heard of and shipped no removal at
+// all: the card would go on showing a link whose row was gone. `blockId` is
+// equally unique here (the PK gives one row per card) and is the only spelling
+// under which the runtime's bookkeeping means anything.
 export const todoTaskResource = keyedResourceDescriptor<
   TodoTaskLink[],
   { blockId: string }
@@ -39,5 +50,5 @@ export const todoTaskResource = keyedResourceDescriptor<
   "todo-block-task",
   z.array(TodoTaskLinkSchema),
   [],
-  (row) => (row as TodoTaskLink).taskId,
+  (row) => (row as TodoTaskLink).blockId,
 );

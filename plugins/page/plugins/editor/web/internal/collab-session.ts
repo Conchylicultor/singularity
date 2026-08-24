@@ -3,7 +3,10 @@ import type { Provider } from "@lexical/yjs";
 import { yDocContent } from "@plugins/primitives/plugins/collab-doc/core";
 import { xmlTextContentLength } from "../../core";
 import { BindingReplica, CanonicalConnection } from "./binding-replica";
-import { LiveStateYjsProvider, type CollabSaveState } from "./live-state-yjs-provider";
+import {
+  LiveStateYjsProvider,
+  type CollabSaveState,
+} from "./live-state-yjs-provider";
 import { LocalYjsProvider } from "./local-yjs-provider";
 
 /**
@@ -168,6 +171,30 @@ import { LocalYjsProvider } from "./local-yjs-provider";
  * user's bytes hostage; it gets a visible Retry instead), and it is released
  * unconditionally the moment the session is told to END, so an unmount always
  * flushes.
+ *
+ * ## What the user WAS SHOWN — {@link BlockDocOwner.everRendered}
+ *
+ * The hydration state is per session and about AGREEMENT NOW. A second,
+ * strictly weaker fact matters to whoever paints a placeholder: has this
+ * block's text ever actually been on screen? A skeleton is honest over a line
+ * that never showed anything, and a lie over one the user was reading a moment
+ * ago — so it must never paint there, no matter what the current session can
+ * prove.
+ *
+ * That fact is MONOTONIC and lives on the OWNER, deliberately, because both
+ * things that reset a session are exactly what it has to survive:
+ *
+ * - recovery mints a NEW session ({@link CollabSession.restart}), whose state
+ *   walks back to `attaching`;
+ * - moving a block into or out of a container frame remounts its Lexical
+ *   instance, so a component-level ref would be reset by a DOM reparent.
+ *
+ * It is set from {@link CollabSession.verifyRendered} — every commit that
+ * reports a non-zero rendered length, including the `promoteOnly` probe and the
+ * commits that arrive after the state is settled — and it is NEVER cleared. It
+ * is not an agreement claim and must not be read as one: "was shown" says
+ * nothing about whether what is shown is still current, which is why it gates
+ * only the skeleton and nothing on the write path.
  */
 
 /** Why a session could not prove its binding renders what its replica holds. */
@@ -207,7 +234,9 @@ export type SessionState =
  * any effect ran) needs a stable `getSnapshot()` identity or
  * `useSyncExternalStore` loops.
  */
-export const ATTACHING_STATE: SessionState = Object.freeze({ kind: "attaching" as const });
+export const ATTACHING_STATE: SessionState = Object.freeze({
+  kind: "attaching" as const,
+});
 
 /**
  * One reversible content-doc edit, shaped like the app's `HistoryEntry`
@@ -317,11 +346,16 @@ export class BlockDocOwner {
    */
   readonly serverSync: boolean;
 
-  private readonly undoCaptureListeners = new Set<(edit: CapturedBlockDocEdit) => void>();
+  private readonly undoCaptureListeners = new Set<
+    (edit: CapturedBlockDocEdit) => void
+  >();
   /** How many {@link CollabSession}s hold this owner. Never touched by id. */
   private sessions = 0;
   /** Raised ONLY for the duration of {@link captureEdit} (see the class doc). */
   private capturing = false;
+  /** Monotonic "this block's text has been on screen" — see the module comment. */
+  private rendered = false;
+  private readonly renderedListeners = new Set<() => void>();
 
   constructor(
     blockId: string,
@@ -340,7 +374,12 @@ export class BlockDocOwner {
     // server provider's pre-seed discriminator never depends on the later
     // `markBlockRowConfirmed` parent effect having run (irrelevant for local).
     this.provider = serverSync
-      ? new LiveStateYjsProvider(this.doc, blockId, buildSeedState, rowConfirmed)
+      ? new LiveStateYjsProvider(
+          this.doc,
+          blockId,
+          buildSeedState,
+          rowConfirmed,
+        )
       : new LocalYjsProvider(this.doc, buildSeedState);
     this.replicaConnection = new CanonicalConnection(this.provider);
     this.um = new UndoManager(yDocContent(this.doc), {
@@ -357,7 +396,11 @@ export class BlockDocOwner {
     // so even the first-ever local edit is tracked.
     this.doc.on("beforeTransaction", (tr) => {
       const origin: unknown = tr.origin;
-      if (origin != null && origin !== this.provider && !(origin instanceof UndoManager)) {
+      if (
+        origin != null &&
+        origin !== this.provider &&
+        !(origin instanceof UndoManager)
+      ) {
         this.um.addTrackedOrigin(origin);
       }
     });
@@ -380,6 +423,42 @@ export class BlockDocOwner {
   /** Is this still the registry's live owner for its block? */
   get isLive(): boolean {
     return registry.get(this.blockId) === this;
+  }
+
+  // --- "Was shown" (see the module comment) ----------------------------------
+
+  /**
+   * Has ANY binding of this block ever rendered a non-empty line? Monotonic and
+   * never cleared: it states what the user WAS SHOWN, not what any session can
+   * currently prove. Read only by the placeholder — it is not an agreement
+   * witness and gates nothing on the write path.
+   */
+  get everRendered(): boolean {
+    return this.rendered;
+  }
+
+  /**
+   * Latch {@link everRendered}. Called from
+   * {@link CollabSession.verifyRendered} for every commit reporting a non-zero
+   * rendered length. Notifies only on the false→true flip — the monotonic edge
+   * is the only transition there is.
+   */
+  noteRendered(): void {
+    if (this.rendered) return;
+    this.rendered = true;
+    for (const cb of [...this.renderedListeners]) cb();
+  }
+
+  /**
+   * Subscribe to that one flip. Every session over this owner registers one, so
+   * a second mounted binding's first commit re-renders THIS binding's
+   * placeholder too — the fact is the block's, not the binding's.
+   */
+  onEverRendered(cb: () => void): () => void {
+    this.renderedListeners.add(cb);
+    return () => {
+      this.renderedListeners.delete(cb);
+    };
   }
 
   /**
@@ -559,11 +638,17 @@ export class CollabSession {
   private flushHeld = false;
   /** Unsubscribe from the transport's `sync` announcement while hydrating. */
   private syncUnsubscribe: (() => void) | null = null;
+  /** Unsubscribe from the owner's `everRendered` flip. */
+  private renderedUnsubscribe: (() => void) | null = null;
 
   private constructor(owner: BlockDocOwner, locallyAuthoritative: boolean) {
     this.owner = owner;
     this.locallyAuthoritative = locallyAuthoritative;
     owner.addSession();
+    // `everRendered` is one of the two facts a consumer reads off this session
+    // (see {@link everRendered}), so its flip travels the SAME listener channel
+    // as a state transition — one subscription for the consumer, one snapshot.
+    this.renderedUnsubscribe = owner.onEverRendered(() => this.notifyState());
   }
 
   /**
@@ -583,7 +668,12 @@ export class CollabSession {
   ): CollabSession {
     let owner = registry.get(blockId);
     if (!owner) {
-      owner = new BlockDocOwner(blockId, buildSeedState, rowConfirmed, serverSync);
+      owner = new BlockDocOwner(
+        blockId,
+        buildSeedState,
+        rowConfirmed,
+        serverSync,
+      );
       registry.set(blockId, owner);
     }
     return new CollabSession(owner, !serverSync || !rowConfirmed);
@@ -603,6 +693,15 @@ export class CollabSession {
   /** Where this session is between "replica exists" and "proven on screen". */
   get state(): SessionState {
     return this.hydration;
+  }
+
+  /**
+   * Has this block's text ever been on screen? The owner's monotonic latch —
+   * so it survives THIS session (recovery mints a new one) and any remount.
+   * See the module comment; it gates the skeleton and nothing else.
+   */
+  get everRendered(): boolean {
+    return this.owner.everRendered;
   }
 
   /**
@@ -641,6 +740,11 @@ export class CollabSession {
       this.syncUnsubscribe = null;
     }
     this.syncFlushHold();
+    this.notifyState();
+  }
+
+  /** Publish "something a consumer reads off this session moved" (see the ctor). */
+  private notifyState(): void {
     for (const cb of [...this.stateListeners]) cb();
   }
 
@@ -706,6 +810,12 @@ export class CollabSession {
    * legitimately looks like a mismatch.
    */
   verifyRendered(shownLength: number, promoteOnly = false): void {
+    // FIRST, and outside every guard below: a commit that rendered something is
+    // the user having SEEN something, whatever this session goes on to conclude
+    // about agreement — including the late `promoteOnly` probe, a commit
+    // arriving after the state settled, and a session already spent. Monotonic,
+    // owner-scoped, never cleared (see the module comment).
+    if (shownLength > 0) this.owner.noteRendered();
     if (this.ended || this.hydration.kind !== "hydrating") return;
     const docLength = this.replicaContentLength();
     if (shownLength === docLength) {
@@ -777,7 +887,8 @@ export class CollabSession {
    * `disconnect()` — never onto a second timer. Idempotent.
    */
   end(): void {
-    if (this.ended || this.retention !== null || this.awaitingDisconnect) return;
+    if (this.ended || this.retention !== null || this.awaitingDisconnect)
+      return;
     // Teardown is DECIDED here, and the write gate opens with the decision, not
     // with its completion: the consumer's final projection flush and the
     // transport's eager disconnect flush both run inside the retention window,
@@ -842,6 +953,8 @@ export class CollabSession {
     this.replica = null;
     this.syncUnsubscribe?.();
     this.syncUnsubscribe = null;
+    this.renderedUnsubscribe?.();
+    this.renderedUnsubscribe = null;
     this.syncFlushHold(); // a spent session holds nothing
     this.stateListeners.clear();
     // Replica FIRST: its disconnect releases the refcounted transport
