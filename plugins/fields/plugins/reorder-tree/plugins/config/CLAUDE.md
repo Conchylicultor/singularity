@@ -6,12 +6,10 @@
 
 - Description: Reorder-tree field type: config-render capability (read-only tree list for config-v2.fields.renderer) plus the reorderTreeField factory.
 - Web:
-  - Contributes: `Fields.Renderer` "reorder-tree" → `ReorderTreeRenderer`
+  - Contributes: `Fields.Renderer` "reorder-tree" → `Rendered`
   - Uses:
-    - `config_v2/fields.FieldHeader`
-    - `config_v2/fields.FieldRendererComponent`
+    - `config_v2/fields.defineFieldShape`
     - `config_v2/fields.Fields`
-    - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
     - `reorder/editor.ReorderEditor`
     - `reorder/editor.ReorderEntry`

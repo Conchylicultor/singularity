@@ -71,7 +71,6 @@ export const urlSourceConfigFields = {
       label: FETCH_MODE_LABEL[value],
     })),
     default: "auto",
-    display: "radio",
   }),
   hint: nullable(
     textField({

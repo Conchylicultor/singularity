@@ -105,6 +105,8 @@ icon+count button it stands in for — carries a per-site
     - `build/build-logs`
     - `code-explorer`
     - `config_v2/config-link`
+    - `config_v2/fields`
+    - `config_v2/settings`
     - `conversations/agents`
     - `conversations/conversation-view/jsonl-viewer/outline`
     - `conversations/conversation-view/jsonl-viewer/tool-call/agent`

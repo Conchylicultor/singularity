@@ -103,6 +103,13 @@ export function ControlPanel({
 export interface ControlPanelSectionProps {
   /** Small-caps label on the panel's own content rail — the icon rail. */
   label?: React.ReactNode;
+  /**
+   * A muted line under the eyebrow, INSIDE the band. It is prose about the
+   * band, not a row — so it reserves no track, takes no row height, and
+   * invariant #2 never sees it. It lands on the panel's rail beside the label
+   * above it by doing nothing at all.
+   */
+  description?: React.ReactNode;
   className?: string;
   children: React.ReactNode;
 }
@@ -128,6 +135,7 @@ export interface ControlPanelSectionProps {
  */
 export function ControlPanelSection({
   label,
+  description,
   className,
   children,
 }: ControlPanelSectionProps) {
@@ -137,6 +145,11 @@ export function ControlPanelSection({
         <SectionLabel className="flex control-min-xs items-center">
           {label}
         </SectionLabel>
+      ) : null}
+      {description != null ? (
+        <Text as="div" variant="caption" tone="muted" className="pb-2xs">
+          {description}
+        </Text>
       ) : null}
       {children}
     </div>

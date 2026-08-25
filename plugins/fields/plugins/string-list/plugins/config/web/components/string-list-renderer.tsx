@@ -1,190 +1,110 @@
-import {
-  Button,
-  Input,
-  cn,
-  SURFACE_LEVELS,
-} from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { useCallback, useState } from "react";
-import { MdAdd, MdDragIndicator, MdClose } from "react-icons/md";
-import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { fillClasses } from "@plugins/primitives/plugins/css/plugins/fill/web";
-import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
-import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
-import {
-  SortableList,
-  SortableItem,
-} from "@plugins/primitives/plugins/sortable-list/web";
-import type { FieldRendererComponent } from "@plugins/config_v2/plugins/fields/web";
+import { defineFieldShape } from "@plugins/config_v2/plugins/fields/web";
 import { stringListFieldType } from "@plugins/fields/plugins/string-list/core";
+import { Input } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { useState } from "react";
 
-const StringListRenderer: FieldRendererComponent<string[]> = ({
-  field,
-  value,
-  onChange,
-}) => {
-  // `SortableList`/`SortableItem` key rows by a stable string id, but the stored
-  // value is a bare `string[]` whose entries can duplicate and mutate freely —
-  // so a string can't be its own id. We keep a parallel id array, positionally
-  // aligned to `value`, and reconcile it whenever `value`'s length changes
-  // underneath us (external edit, reset). Reorder/remove move the id alongside
-  // its string, so a row keeps identity across a typing session even as its text
-  // changes.
-  const [ids, setIds] = useState<string[]>(() =>
-    Array.from({ length: value.length }, () => crypto.randomUUID()),
-  );
-  if (ids.length !== value.length) {
-    const next = ids.slice(0, value.length);
-    while (next.length < value.length) next.push(crypto.randomUUID());
-    setIds(next);
-  }
+/**
+ * A list of scalars: one `list` whose items are `value` shapes. It stopped being
+ * its own layout — the sortable card, the drag handle, the remove button and the
+ * "Add item" button all left, because a list of records and a list of strings
+ * are now the same arm.
+ */
+const StringListRenderer = defineFieldShape({
+  type: stringListFieldType,
+  useShape: ({ field, value, onChange }) => {
+    // The stored value is a bare `string[]` whose entries can duplicate and
+    // mutate freely, so a string cannot be its own id. We keep a parallel id
+    // array, positionally aligned to `value`, and reconcile it whenever
+    // `value`'s length changes underneath us (external edit, reset). A row then
+    // keeps its identity across a typing session even as its text changes.
+    const [ids, setIds] = useState<string[]>(() =>
+      Array.from({ length: value.length }, () => crypto.randomUUID()),
+    );
+    if (ids.length !== value.length) {
+      const next = ids.slice(0, value.length);
+      while (next.length < value.length) next.push(crypto.randomUUID());
+      setIds(next);
+    }
 
-  const handleMove = useCallback(
-    (activeId: string, overId: string) => {
-      const from = ids.indexOf(activeId);
-      const to = ids.indexOf(overId);
-      if (from < 0 || to < 0 || from === to) return;
+    const indexOf = (id: string) => ids.indexOf(id);
 
-      const nextIds = [...ids];
-      const [movedId] = nextIds.splice(from, 1);
-      nextIds.splice(to, 0, movedId!);
-
-      const nextValue = [...value];
-      const [movedVal] = nextValue.splice(from, 1);
-      nextValue.splice(to, 0, movedVal!);
-
-      setIds(nextIds);
-      onChange(nextValue);
-    },
-    [ids, value, onChange],
-  );
-
-  const handleItemChange = useCallback(
-    (index: number, next: string) => {
-      if (value[index] === next) return;
-      onChange(value.map((v, i) => (i === index ? next : v)));
-    },
-    [value, onChange],
-  );
-
-  const handleRemove = useCallback(
-    (index: number) => {
-      setIds(ids.filter((_, i) => i !== index));
-      onChange(value.filter((_, i) => i !== index));
-    },
-    [ids, value, onChange],
-  );
-
-  const handleAdd = useCallback(() => {
-    setIds([...ids, crypto.randomUUID()]);
-    onChange([...value, ""]);
-  }, [ids, value, onChange]);
-
-  return (
-    <Stack gap="sm" className="py-md">
-      {field.meta.label ? (
-        <Text as="label" variant="label">
-          {field.meta.label}
-        </Text>
-      ) : null}
-      {field.meta.description ? (
-        <Text as="p" variant="caption" className="text-muted-foreground">
-          {field.meta.description}
-        </Text>
-      ) : null}
-
-      <SortableList items={ids} onMove={handleMove}>
-        <Stack gap="xs">
-          {value.map((entry, index) => (
-            <StringRow
-              key={ids[index]}
-              id={ids[index]!}
+    return {
+      kind: "list",
+      addLabel: "Add item",
+      items: value.map((entry, index) => ({
+        id: ids[index] ?? String(index),
+        shape: {
+          kind: "value",
+          fit: "field",
+          control: (
+            <StringItemInput
               value={entry}
               placeholder={field.meta.placeholder}
-              onChange={(next) => handleItemChange(index, next)}
-              onRemove={() => handleRemove(index)}
+              onCommit={(next) => {
+                if (value[index] === next) return;
+                onChange(value.map((v, i) => (i === index ? next : v)));
+              }}
             />
-          ))}
-        </Stack>
-      </SortableList>
+          ),
+        },
+      })),
+      onAdd: () => {
+        setIds([...ids, crypto.randomUUID()]);
+        onChange([...value, ""]);
+      },
+      onRemove: (id) => {
+        const index = indexOf(id);
+        if (index < 0) return;
+        setIds(ids.filter((_, i) => i !== index));
+        onChange(value.filter((_, i) => i !== index));
+      },
+      onMove: (activeId, overId) => {
+        const from = indexOf(activeId);
+        const to = indexOf(overId);
+        if (from < 0 || to < 0 || from === to) return;
+        const nextIds = [...ids];
+        const [movedId] = nextIds.splice(from, 1);
+        nextIds.splice(to, 0, movedId!);
+        const nextValue = [...value];
+        const [movedVal] = nextValue.splice(from, 1);
+        nextValue.splice(to, 0, movedVal!);
+        setIds(nextIds);
+        onChange(nextValue);
+      },
+    };
+  },
+});
 
-      <Stack align="start" gap="none">
-        <Button variant="ghost" onClick={handleAdd}>
-          <MdAdd className="size-3.5" />
-          Add item
-        </Button>
-      </Stack>
-    </Stack>
-  );
-};
-StringListRenderer.type = stringListFieldType;
-
-function StringRow({
-  id,
+/**
+ * One row's input, as a COMPONENT because the edit buffer is per row and a
+ * shape hook has no per-item hook to spend. Typing updates `local`; the flush is
+ * on blur, so a controlled re-render mid-keystroke cannot fight the cursor.
+ * While unfocused the row mirrors the external value (a reorder, an external
+ * edit).
+ */
+function StringItemInput({
   value,
   placeholder,
-  onChange,
-  onRemove,
+  onCommit,
 }: {
-  id: string;
   value: string;
   placeholder?: string;
-  onChange: (next: string) => void;
-  onRemove: () => void;
+  onCommit: (next: string) => void;
 }) {
-  // Local edit buffer: typing updates `local`; we flush to `onChange` on blur so
-  // a controlled re-render mid-keystroke can't fight the cursor. While unfocused
-  // the row mirrors the external value (reorder, external edit). `focused` is
-  // state (not a ref) so the render-phase value→local sync below reads it without
-  // touching a ref during render.
   const [local, setLocal] = useState(value);
   const [focused, setFocused] = useState(false);
   if (!focused && local !== value) setLocal(value);
-
   return (
-    <SortableItem
-      id={id}
-      handle
-      className={({ isDragging }) =>
-        cn(SURFACE_LEVELS.raised, "p-sm", isDragging && "opacity-40")
-      }
-    >
-      {(state) => (
-        // SortableItem owns its own `<div>` and exposes only a `className`, so
-        // the row layout lives one level in, on a box this component owns.
-        <Stack direction="row" gap="sm" align="center">
-          <div
-            {...state.handleProps}
-            className={cn(
-              rigidClass(),
-              "cursor-grab text-muted-foreground hover:text-foreground active:cursor-grabbing",
-            )}
-          >
-            <MdDragIndicator className="size-4" />
-          </div>
-          <Input
-            value={local}
-            placeholder={placeholder}
-            onFocus={() => setFocused(true)}
-            onChange={(e) => setLocal(e.target.value)}
-            onBlur={() => {
-              setFocused(false);
-              onChange(local);
-            }}
-            className={fillClasses("x")}
-          />
-          <button
-            type="button"
-            onClick={onRemove}
-            className={cn(
-              rigidClass(),
-              "rounded-sm p-2xs text-muted-foreground hover:text-destructive",
-            )}
-          >
-            <MdClose className="size-3.5" />
-          </button>
-        </Stack>
-      )}
-    </SortableItem>
+    <Input
+      value={local}
+      placeholder={placeholder}
+      onFocus={() => setFocused(true)}
+      onChange={(e) => setLocal(e.target.value)}
+      onBlur={() => {
+        setFocused(false);
+        onCommit(local);
+      }}
+    />
   );
 }
 

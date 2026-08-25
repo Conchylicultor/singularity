@@ -31,6 +31,7 @@ import type {
   ConfigV2Tiers,
   ConfigV2Values,
 } from "@plugins/config_v2/core";
+import { ControlPanelPane } from "@plugins/primitives/plugins/css/plugins/control-panel/web";
 import { HighlightedCode } from "@plugins/primitives/plugins/syntax-highlight/web";
 import { showToast } from "@plugins/shell/plugins/toast/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
@@ -47,7 +48,7 @@ import { useConflict } from "../internal/use-conflicts";
 import { useTiers } from "../internal/use-tiers";
 import { ConfigDetailSlots } from "../slots";
 import type { ConfigConflictContext } from "../slots";
-import { ConfigFieldRow } from "./config-field-row";
+import { ConfigField } from "./config-field";
 import { ConflictDiff } from "./conflict-diff";
 import { InvalidDiff } from "./invalid-diff";
 import { ScopeTabs } from "./scope-tabs";
@@ -564,22 +565,31 @@ function ConfigDetailBody({
                 )}
               </>
             ))}
-          {Object.entries(registration.descriptor.fields).map(
-            ([key, field]) => (
-              <ConfigFieldRow
-                key={key}
-                fieldKey={key}
-                field={field}
-                value={valueFor(key)}
-                defaultValue={defaults[key]}
-                storePath={registration.storePath}
-                scopeId={scopeId}
-                originValue={conflictEntry?.originValues[key]}
-                trueConflictKeys={trueConflictKeys}
-                tier={tiers[key]}
-              />
-            ),
-          )}
+          {/* The fields — and ONLY the fields — are the panel body. Everything
+              above is pane chrome and stays outside it: the scope tabs, the
+              three conflict banners, the Reset all / Stop customizing / Raw file
+              toolbar, and the raw + diff views. The panel publishes the rail,
+              the row height and the hairlines between bands; it owns neither the
+              scroll (PaneChrome's is already the scroller) nor the width (the
+              pane's own role). */}
+          <ControlPanelPane>
+            {Object.entries(registration.descriptor.fields).map(
+              ([key, field]) => (
+                <ConfigField
+                  key={key}
+                  fieldKey={key}
+                  field={field}
+                  value={valueFor(key)}
+                  defaultValue={defaults[key]}
+                  storePath={registration.storePath}
+                  scopeId={scopeId}
+                  originValue={conflictEntry?.originValues[key]}
+                  trueConflictKeys={trueConflictKeys}
+                  tier={tiers[key]}
+                />
+              ),
+            )}
+          </ControlPanelPane>
         </>
       )}
     </>

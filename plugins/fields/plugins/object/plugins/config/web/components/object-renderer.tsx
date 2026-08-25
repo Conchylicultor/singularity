@@ -1,83 +1,27 @@
-import { useCallback } from "react";
-import {
-  Collapsible,
-  CollapsibleTrigger,
-  CollapsibleContent,
-  CollapsibleChevron,
-} from "@plugins/primitives/plugins/collapsible/web";
-import {
-  FieldRenderer,
-  type FieldRendererComponent,
-} from "@plugins/config_v2/plugins/fields/web";
-import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
-import type { FieldDef } from "@plugins/fields/core";
+import { defineFieldShape } from "@plugins/config_v2/plugins/fields/web";
 import { objectFieldType } from "@plugins/fields/plugins/object/core";
 import type { ObjectFieldDef } from "../../core";
 
-const ObjectRenderer: FieldRendererComponent<Record<string, unknown>> = ({
-  field,
-  value,
-  onChange,
-}) => {
-  const { subFields } = field as unknown as ObjectFieldDef;
-
-  return (
-    <Collapsible defaultOpen className="py-xs">
-      <CollapsibleTrigger className="gap-sm py-sm">
-        <CollapsibleChevron className="size-4 text-muted-foreground" />
-        <Stack gap="2xs" className="text-left">
-          {field.meta.label ? (
-            <Text variant="label">{field.meta.label}</Text>
-          ) : null}
-          {field.meta.description ? (
-            <Text variant="caption" className="text-muted-foreground">
-              {field.meta.description}
-            </Text>
-          ) : null}
-        </Stack>
-      </CollapsibleTrigger>
-      {/* eslint-disable-next-line spacing/no-adhoc-spacing -- one-off margin offsets positioning the nested sub-field indent guide */}
-      <CollapsibleContent className="ml-2 mt-1 border-l border-border pl-lg">
-        <Stack gap="none">
-          {Object.entries(subFields).map(([key, subField]) => (
-            <SubFieldSlot
-              key={key}
-              fieldKey={key}
-              field={subField}
-              value={(value as Record<string, unknown>)[key]}
-              parentValue={value as Record<string, unknown>}
-              onChange={onChange}
-            />
-          ))}
-        </Stack>
-      </CollapsibleContent>
-    </Collapsible>
-  );
-};
-ObjectRenderer.type = objectFieldType;
-
-function SubFieldSlot({
-  fieldKey,
-  field,
-  value,
-  parentValue,
-  onChange,
-}: {
-  fieldKey: string;
-  field: FieldDef;
-  value: unknown;
-  parentValue: Record<string, unknown>;
-  onChange: (updated: Record<string, unknown>) => void;
-}) {
-  const handleChange = useCallback(
-    (newValue: unknown) => {
-      onChange({ ...parentValue, [fieldKey]: newValue });
-    },
-    [fieldKey, parentValue, onChange],
-  );
-
-  return <FieldRenderer field={field} value={value} onChange={handleChange} />;
-}
+/**
+ * A field that IS other fields. Both the recursion and the layout are gone from
+ * this file: the `group` arm hands the sub-record back to the dispatch, and how
+ * a group presents — a drill row that pushes, or an indented labelled band — is
+ * the HOST's answer, not this field's. The hand-rolled `ml-2 mt-1 border-l
+ * border-border pl-lg` indent it used to draw is now the panel's own nested rail
+ * region.
+ *
+ * This is also the answer to "how do I section my settings page": an
+ * `objectField({ label: "Appearance", subFields })` IS a named section, and under
+ * a pane host it renders as one.
+ */
+const ObjectRenderer = defineFieldShape({
+  type: objectFieldType,
+  useShape: ({ field, value, onChange }) => ({
+    kind: "group",
+    fields: (field as unknown as ObjectFieldDef).subFields,
+    values: value,
+    onChangeField: (key, next) => onChange({ ...value, [key]: next }),
+  }),
+});
 
 export { ObjectRenderer };

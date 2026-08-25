@@ -44,6 +44,7 @@
     - `page/formatting/underline`
     - `primitives/action-presentation`
     - `primitives/command-palette`
+    - `primitives/css/control-panel`
     - `primitives/icon-button`
     - `primitives/launch`
     - `primitives/pane`

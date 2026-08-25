@@ -32,7 +32,6 @@ export const notationConfig = defineConfig({
         { value: "perTrack", label: "Per track" },
       ],
       default: "auto",
-      display: "radio",
     }),
     separateVoices: boolField({
       label: "Separate voices",
@@ -42,7 +41,8 @@ export const notationConfig = defineConfig({
     }),
     showChordSymbols: boolField({
       label: "Chord symbols",
-      description: "Print chord symbols above the staff when the score has them.",
+      description:
+        "Print chord symbols above the staff when the score has them.",
       default: true,
     }),
     splitPitch: intField({

@@ -146,8 +146,6 @@ primitive exists to name.
     - `debug/trace/spans`
     - `debug/trace/stall`
     - `debug/worktree-cleanup`
-    - `fields/list/config`
-    - `fields/string-list/config`
     - `improve/element-picker`
     - `infra/events-test`
     - `page/annotations/agent-notes/authorship`

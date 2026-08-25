@@ -27,19 +27,11 @@ absent → a read-only display of the current `type`. `FieldRenderer` /
 
 - Description: Variant field type: config-render capability (type-dispatched renderer for config-v2.fields.renderer) plus the variantField factory.
 - Web:
-  - Contributes: `Fields.Renderer` "variant" → `VariantRenderer`
+  - Contributes: `Fields.Renderer` "variant" → `Rendered`
   - Uses:
-    - `config_v2/fields.FieldHeader`
-    - `config_v2/fields.FieldRenderer`
-    - `config_v2/fields.FieldRendererComponent`
+    - `config_v2/fields.defineFieldShape`
     - `config_v2/fields.Fields`
-    - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
-    - `primitives/css/ui-kit.Select`
-    - `primitives/css/ui-kit.SelectContent`
-    - `primitives/css/ui-kit.SelectItem`
-    - `primitives/css/ui-kit.SelectTrigger`
-    - `primitives/css/ui-kit.SelectValue`
 - Core:
   - Uses:
     - `fields.FieldDef`

@@ -723,7 +723,7 @@
  * READ density tokens, and a custom property that reads a themed var freezes its
  * computed value wherever it is declared.
  *
- * Five utilities, and between them they hold the five panel invariants:
+ * Seven utilities, and between them they hold the five panel invariants:
  *
  *   - `cp-panel` — THE REGION OWNER: the panel's chrome pad PLUS the content
  *     inset every non-row child lands on — the ICON RAIL, so a section label, a
@@ -775,6 +775,15 @@
  *     …and `cp-rule` derives its gutter track the same way, from the same
  *     per-panel `data-cp-handle` scan, so a builder with no reorderable rules
  *     starts its prefix cell on the panel's own content inset.
+ *   - `cp-setting` — the VALUE row's grid: label | value | status | actions,
+ *     with the two LEADING tracks stated as PADDING rather than tracks (a
+ *     `Setting` has no handle and no icon, so those cells could only ever be
+ *     spacers) and the three trailing ones derived per panel exactly as
+ *     `cp-row`'s leading pair is. Its label cell lands on the same computed x as
+ *     `cp-row`'s, which is invariant #1 across the two grids.
+ *   - `cp-group` — the NESTED region an inline group opens: it re-declares the
+ *     rail one step deeper and pays it, so a nested row and nested loose content
+ *     keep one x inside the group the same way they do inside the panel.
  *
  * There is no `cp-rail-icon` utility and no `--cp-rail-text` token, and the two
  * absences are one fact. Loose content lands on the ICON rail by doing nothing,
@@ -961,7 +970,12 @@
   margin-inline: var(--cp-bleed-start) var(--cp-bleed-end);
   width: calc(100% - var(--cp-bleed-start) - var(--cp-bleed-end));
   min-height: var(--cp-row-h);
-  padding-inline: var(--cp-row-pad-x);
+  /* The LEADING half is region-relative (`--cp-row-pad-start`, which is the
+     row's own pad everywhere except inside an inline `cp-group`, where that
+     group redeclares it). Identical everywhere in the app today; what it buys
+     is that a row nested one region deeper lands its leading cell on the
+     NESTED region's rail without this grid ever naming the group. */
+  padding-inline: var(--cp-row-pad-start) var(--cp-row-pad-x);
   border-radius: var(--radius-md);
   text-align: left;
 
@@ -1020,7 +1034,8 @@
   margin-inline: var(--cp-bleed-start) var(--cp-bleed-end);
   width: calc(100% - var(--cp-bleed-start) - var(--cp-bleed-end));
   min-height: var(--cp-rule-h);
-  padding-inline: var(--cp-row-pad-x);
+  /* Region-relative leading pad, exactly as `cp-row` — see it there. */
+  padding-inline: var(--cp-row-pad-start) var(--cp-row-pad-x);
   border-radius: var(--radius-md);
   /* A builder with no operator (sort) is a DIFFERENT GRID, not the same grid
      with one cell spanning two tracks. Spanning was the obvious move and it is
@@ -1065,6 +1080,182 @@
   }
   .cp-panel:not(:has([data-cp-handle])) & > [data-cp-cell="gutter"] {
     display: none;
+  }
+}
+
+@utility cp-setting {
+  /* twmerge: standalone -- Composite value-row grid (display + tracks + gap + min-height + the two-sided inline padding + radius); not a single-property utility another class should selectively override. */
+  /* THE VALUE ROW — "Label ………… [ control ]", the shape the vocabulary had no
+     way to say. A sibling of `cp-row`, not a mode of it: the row's BOX is a
+     plain `<div>` (`ControlPanel.Setting` has no `onSelect` and no `href`), so
+     the cells may legally hold controls, and the two grids differ on exactly one
+     honest axis — who is the click target.
+
+     THE LEADING TRACKS ARE PADDING HERE, NOT TRACKS, and that is the one thing
+     to understand about this utility. `Setting` has no `handle` and no `icon` in
+     its type, so its gutter and icon cells could only ever be empty spacers —
+     and a spacer is padding. Stating them as padding collapses what would
+     otherwise be a 4x multiplier over the trailing cases (32 templates) into ONE
+     extra declaration, because `--cp-rail-icon` already carries the gutter case:
+     the panel redeclares it when nothing hangs a drag handle, so the two
+     handle-shapes come for free and only the icon shape needs a rule.
+     The arithmetic is `cp-row`'s label x written out: the leading CELL sits at
+     `--cp-rail-icon` (row pad + gutter + gap, or just the row pad), and the
+     LABEL one icon column and one gap further on. Four panel shapes, two
+     declarations, and the fixture `control-panel/setting-rail` measures the pair
+     against a real `cp-row` rather than trusting this comment.
+
+     Everything else is `cp-row` verbatim, deliberately: the same two written-out
+     cancellation terms (never `rail-bleed` — see the reasons at `cp-row`), the
+     same width payback, the same `--cp-row-h`, the same radius. A Setting and a
+     Row in one panel are the same box with different contents. */
+  display: grid;
+  grid-template-columns:
+    minmax(0, 1fr)
+    auto
+    minmax(var(--cp-status-col), auto)
+    minmax(var(--cp-actions-col), auto);
+  column-gap: var(--cp-icon-gap);
+  align-items: center;
+  --cp-bleed-start: calc(min(var(--cp-panel-pad), var(--rail-start, 0px)) - var(--rail-start, 0px));
+  --cp-bleed-end: calc(min(var(--cp-panel-pad), var(--rail-end, 0px)) - var(--rail-end, 0px));
+  margin-inline: var(--cp-bleed-start) var(--cp-bleed-end);
+  width: calc(100% - var(--cp-bleed-start) - var(--cp-bleed-end));
+  min-height: var(--cp-row-h);
+  border-radius: var(--radius-md);
+  text-align: left;
+  /* The positioning context the `mark` stripe hangs in. It paints in the chrome
+     gutter the cancellation above already creates — the `--cp-panel-pad` strip
+     between the panel's inner edge and the row's box, which nothing else paints
+     in — so a mark costs no track, moves no rail, and lands identically on a
+     Setting, a Block header and a Group header. */
+  position: relative;
+  --cp-setting-lead: calc(
+    var(--cp-rail-icon) + var(--cp-row-pad-start) - var(--cp-row-pad-x) +
+      var(--cp-icon-col) + var(--cp-icon-gap)
+  );
+  padding-inline: var(--cp-setting-lead) var(--cp-row-pad-x);
+  .cp-panel:not(:has([data-cp-icon])) & {
+    --cp-setting-lead: calc(
+      var(--cp-rail-icon) + var(--cp-row-pad-start) - var(--cp-row-pad-x)
+    );
+  }
+
+  /* THE THREE TRAILING TRACKS, derived per panel by the same `:has()` scan the
+     two leading ones use — `data-cp-value` (a `fit="field"` control),
+     `data-cp-status`, `data-cp-actions`. Each case is its own template rather
+     than a zeroed width, for the reason spelled out at `cp-row`: a `0px` track
+     keeps the column gap that follows it, and here that gap would come out of
+     the LABEL in every row of the panel — the fx-toggle defect, restated at the
+     other end of the row. The cell that lost its track is `display: none`d or it
+     auto-places into the track that took its place.
+     Occupancy is DECLARED — the cell stamps `data-cp-value` because the row was
+     GIVEN a control, never because the rendered node measured non-zero, the same
+     reason `data-cp-icon` is not `leading != null`: a control that draws nothing
+     in one state yet still owns its column would re-flow the whole panel the
+     first time it drew something. `fit` then says how wide that control is
+     (above); it is required, so neither answer is a default.
+     Specificity orders these for free: one `:not(:has())` is (0,2,0), two is
+     (0,3,0), three is (0,4,0), so the narrower case always wins. */
+  .cp-panel:not(:has([data-cp-value])) & {
+    grid-template-columns:
+      minmax(0, 1fr)
+      minmax(var(--cp-status-col), auto)
+      minmax(var(--cp-actions-col), auto);
+  }
+  .cp-panel:not(:has([data-cp-status])) & {
+    grid-template-columns:
+      minmax(0, 1fr) auto minmax(var(--cp-actions-col), auto);
+  }
+  .cp-panel:not(:has([data-cp-actions])) & {
+    grid-template-columns:
+      minmax(0, 1fr) auto minmax(var(--cp-status-col), auto);
+  }
+  .cp-panel:not(:has([data-cp-value])):not(:has([data-cp-status])) & {
+    grid-template-columns: minmax(0, 1fr) minmax(var(--cp-actions-col), auto);
+  }
+  .cp-panel:not(:has([data-cp-value])):not(:has([data-cp-actions])) & {
+    grid-template-columns: minmax(0, 1fr) minmax(var(--cp-status-col), auto);
+  }
+  .cp-panel:not(:has([data-cp-status])):not(:has([data-cp-actions])) & {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+  .cp-panel:not(:has([data-cp-value])):not(:has([data-cp-status])):not(
+      :has([data-cp-actions])
+    )
+    & {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .cp-panel:not(:has([data-cp-value])) & > [data-cp-cell="value"],
+  .cp-panel:not(:has([data-cp-status])) & > [data-cp-cell="status"],
+  .cp-panel:not(:has([data-cp-actions])) & > [data-cp-cell="actions"] {
+    display: none;
+  }
+
+  /* What `fit` actually is. The cell is a one-column grid, so its child is
+     stretched to it: a `fit="field"` cell states the panel's field width and the
+     control fills it, an inline one is content-sized and the control fills that.
+     `max-width: 100%` so the narrowest panel role clips the control rather than
+     the row. */
+  & > [data-cp-cell="value"] {
+    display: grid;
+    align-items: center;
+    min-width: 0;
+  }
+  & > [data-cp-cell="value"][data-cp-fit="field"] {
+    width: var(--cp-value-col);
+    max-width: 100%;
+  }
+
+  /* The stripe. A STATE, never a `gutter?: ReactNode` slot — the slot reopens
+     "the author draws chrome", which is the whole thing this vocabulary
+     removes. */
+  &[data-cp-mark]::before {
+    content: "";
+    position: absolute;
+    inset-block: var(--cp-panel-pad);
+    inset-inline-start: calc(-1 * var(--cp-panel-pad));
+    width: 2px;
+    background: var(--primary);
+  }
+  &[data-cp-mark="warning"]::before {
+    background: var(--warning);
+  }
+}
+
+@utility cp-group {
+  /* twmerge: standalone -- Composite nested rail region (the deeper published rail + the inline padding that pays it + the region-relative row pad); no single-value built-in group to conflict with. */
+  /* AN INLINE GROUP IS A NESTED RAIL REGION, not a margin and not a border-left
+     with a `pl-lg` beside it. Nesting is shadowing: this box re-declares the
+     rail for its own subtree and pays it as its own padding, so everything
+     inside behaves exactly as it does at panel level, one step in.
+     The step is one `--cp-icon-col`. The rail it publishes is NOT that step: it
+     is `panel-pad + rail-icon + step`, because a nested `cp-row` bleeds back by
+     the chrome pad and then re-applies its own leading padding, and the only
+     inset at which nested loose content and a nested row's LEADING CELL land on
+     one x is the panel's own construction shifted by the step. Publish the bare
+     step instead and nested loose content lands 12px LEFT of a nested row's
+     leading cell at the Comfortable preset — invariant #1 broken inside the
+     group, which is exactly the kind of thing that reads as fine in a
+     screenshot. That number is measured, not derived: swapping this line for
+     `var(--cp-icon-col)` fails `control-panel/group-nested-rail` with
+     "group-row-icon (left=42.0) … after group-rail (right=30.0)".
+     `--cp-row-pad-start` is the other half of the same fact: the two row grids
+     re-apply THEIR OWN padding when they cancel a rail, so a deeper region has
+     to say how much that is. It is redeclared here rather than read by name in
+     `cp-row`, so neither grid names this utility.
+     `--rail-end` is deliberately left inherited. This region insets only its
+     start, and a nested row must still bleed by the PANEL's end rail or it would
+     stop short of where its ungrouped siblings end.
+     Publishing a different `--rail-start` is also what tells `useRailGuard` this
+     is its own region: the guard compares the declaration, and a child that
+     opened one answers to its own rail rather than to the panel's. */
+  &[data-inline] {
+    --rail-start: calc(
+      var(--cp-panel-pad) + var(--cp-rail-icon) + var(--cp-icon-col)
+    );
+    --cp-row-pad-start: calc(var(--cp-row-pad-x) + var(--cp-icon-col));
+    padding-inline-start: var(--rail-start);
   }
 }
 
@@ -1312,6 +1503,27 @@
        10px they needed more. */
     --cp-prefix-col: 4rem;
     --cp-remove-col: 1.5rem;
+    /* The SETTING row's trailing widths — column widths again, so literals for
+       the same reason the three above are.
+       `--cp-value-col` is NOT a track: it is the width a `fit="field"` control
+       is given inside its cell, and that distinction is the whole of what `fit`
+       means. Each row is its OWN grid, so an `auto` value TRACK would be as wide
+       as that row's own control — which is exactly right for `fit="inline"` (a
+       swatch, an avatar, a stepper sizes to itself) and useless for a field, so
+       the field states its width instead and every dropdown and input in the
+       panel comes out the same size. The two floors after it are `minmax(…,
+       auto)`, exactly like the builder's remove track, and carry the same caveat
+       `cp-rule` records: keep a panel's `status` and `actions` uniform, or the
+       value column steps between rows. */
+    --cp-value-col: 8rem;
+    --cp-status-col: 1.5rem;
+    --cp-actions-col: 1.5rem;
+    /* The row's LEADING inline padding, stated region-relatively so a row can be
+       re-used one region deeper. At panel level it is the row's own pad; inside
+       an inline `cp-group` that group redeclares it, and both grids follow —
+       which is what keeps a nested row's leading cell on the NESTED region's
+       rail without either grid naming the group. */
+    --cp-row-pad-start: var(--cp-row-pad-x);
     --cp-row-h: var(--control-height-md);
     --cp-rule-h: var(--control-height-lg);
     /* THE rail, measured from the panel's padding box: the LEFT EDGE OF THE ICON

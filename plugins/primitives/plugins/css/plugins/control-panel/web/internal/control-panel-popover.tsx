@@ -8,6 +8,7 @@ import type React from "react";
 import type { ComponentProps } from "react";
 
 import { ControlPanel } from "./control-panel";
+import { ControlPanelHostProvider, type ControlPanelHost } from "./host";
 import { ControlPanelStack } from "./panel-stack";
 
 /** The only width dial in the vocabulary. */
@@ -68,6 +69,11 @@ export interface ControlPanelPopoverProps extends Positioning {
  * The children are wrapped in a `ControlPanel.Stack`, so `usePanelStack()` works
  * inside ANY panel opened this way. A sub-panel is then a push, never a popover
  * opened from inside a popover.
+ *
+ * …which is also the host policy it publishes: a `Group` here PUSHES, and a
+ * description here is a `hint`. A popover passes field subsets precisely because
+ * it wants short labels rather than prose, so a paragraph in one is already the
+ * wrong surface for the paragraph.
  */
 export function ControlPanelPopover({
   trigger,
@@ -91,9 +97,17 @@ export function ControlPanelPopover({
         padding="none"
       >
         <ControlPanel aria-label={label}>
-          <ControlPanelStack root={children} />
+          <ControlPanelHostProvider host={POPOVER_HOST}>
+            <ControlPanelStack root={children} />
+          </ControlPanelHostProvider>
         </ControlPanel>
       </PopoverContent>
     </Popover>
   );
 }
+
+const POPOVER_HOST: ControlPanelHost = {
+  nesting: "push",
+  inlineDepth: 0,
+  descriptions: "hint",
+};

@@ -23,16 +23,19 @@ The **secret** type's config capability, spanning all four runtimes:
 
 - Description: Secret field type: config-render capability (password input for config-v2.fields.renderer) plus the secretField factory. Secret field type: encrypted storage with set/not-set metadata. Central-side secret config reader for auth providers.
 - Web:
-  - Contributes: `Fields.Renderer` "secret" → `SecretRenderer`
+  - Contributes: `Fields.Renderer` "secret" → `Rendered`
   - Uses:
     - `config_v2/fields.ConfigFieldContext`
+    - `config_v2/fields.defineFieldShape`
     - `config_v2/fields.Fields`
+    - `config_v2/fields.useLocalValue`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.Button`
     - `primitives/css/ui-kit.ControlSizeProvider`
     - `primitives/css/ui-kit.Input`
     - `primitives/live-state.useResource`
+    - `primitives/loading.Loading`
 - Server:
   - Contributes: `resource.declare` "config-v2.secret-meta"
   - Uses:

@@ -17,16 +17,13 @@ core; `FieldHeader` comes from the slot owner
 
 - Description: Avatar field type: config-render capability (icon + color picker for config-v2.fields.renderer) plus the avatarField factory.
 - Web:
-  - Contributes: `Fields.Renderer` "avatar" → `AvatarRenderer`
+  - Contributes: `Fields.Renderer` "avatar" → `Rendered`
   - Uses:
-    - `config_v2/fields.FieldHeader`
-    - `config_v2/fields.FieldRendererComponent`
+    - `config_v2/fields.defineFieldShape`
     - `config_v2/fields.Fields`
     - `primitives/avatar.Avatar`
     - `primitives/avatar.AvatarPicker`
-    - `primitives/avatar.AvatarSpec`
     - `primitives/css/center.Center`
-    - `primitives/css/spacing.Stack`
 - Core:
   - Uses:
     - `fields.FieldDef`

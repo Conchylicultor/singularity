@@ -1,82 +1,27 @@
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import type { FieldRendererComponent } from "@plugins/config_v2/plugins/fields/web";
-import type { EnumFieldDef } from "../../core";
+import { defineFieldShape } from "@plugins/config_v2/plugins/fields/web";
 import { enumFieldType } from "@plugins/fields/plugins/enum/core";
-import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
-import { RadioGroup } from "@plugins/primitives/plugins/css/plugins/radio-group/web";
+import type { EnumFieldDef } from "../../core";
 
-const EnumRenderer: FieldRendererComponent<string> = ({
-  field,
-  value,
-  onChange,
-}) => {
-  const { options, display } = field as EnumFieldDef;
-  const useRadio =
-    display === "radio" || (display !== "dropdown" && options.length <= 3);
-
-  return (
-    <Stack gap="xs" className="py-md">
-      <Stack gap="2xs">
-        {field.meta.label ? (
-          <Text as="label" variant="label">
-            {field.meta.label}
-          </Text>
-        ) : null}
-        {field.meta.description ? (
-          <Text as="p" variant="caption" tone="muted">
-            {field.meta.description}
-          </Text>
-        ) : null}
-      </Stack>
-      {useRadio ? (
-        <RadioGroup options={options} value={value} onChange={onChange} />
-      ) : (
-        <DropdownSelect options={options} value={value} onChange={onChange} />
-      )}
-    </Stack>
-  );
-};
-EnumRenderer.type = enumFieldType;
-
-function DropdownSelect({
-  options,
-  value,
-  onChange,
-}: {
-  options: readonly EnumFieldDef["options"][number][];
-  value: string;
-  onChange: (value: string) => void;
-}) {
-  const items = Object.fromEntries(
-    options.map((opt) => [opt.value, opt.label]),
-  );
-  return (
-    <Select
-      items={items}
-      value={value}
-      onValueChange={(v) => {
-        if (v !== null) onChange(v);
-      }}
-    >
-      <SelectTrigger className="w-full">
-        <SelectValue />
-      </SelectTrigger>
-      <SelectContent>
-        {options.map((opt) => (
-          <SelectItem key={opt.value} value={opt.value}>
-            {opt.label}
-          </SelectItem>
-        ))}
-      </SelectContent>
-    </Select>
-  );
-}
+/**
+ * A closed option set, as data. Whether that becomes a band of radio rows or a
+ * picker is not this file's business — it is the panel's, decided once against
+ * one threshold. The `options.length <= 3` heuristic (and the `display` override
+ * beside it) used to live here, and the same heuristic lived again in
+ * `dynamic-enum`; two copies of one presentation rule inside two field types is
+ * exactly what this contract deletes.
+ *
+ * `EnumOption` is `{ value, label }` and `ChoiceOption` is `{ value, label,
+ * icon?, hint? }`, so the option list is handed over as it stands.
+ */
+const EnumRenderer = defineFieldShape({
+  type: enumFieldType,
+  useShape: ({ field, value, onChange }) => ({
+    kind: "choice",
+    select: "one",
+    options: (field as EnumFieldDef).options,
+    value: [value],
+    onSelect: onChange,
+  }),
+});
 
 export { EnumRenderer };

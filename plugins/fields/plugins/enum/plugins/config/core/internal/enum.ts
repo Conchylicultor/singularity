@@ -12,7 +12,6 @@ export interface EnumOption {
 export interface EnumFieldDef extends FieldDef<string> {
   readonly type: typeof enumFieldType;
   readonly options: readonly EnumOption[];
-  readonly display?: "radio" | "dropdown";
 }
 
 function normalizeOption(input: EnumOptionInput): EnumOption {
@@ -25,7 +24,10 @@ export function enumField(
   opts: FieldMeta & {
     options: EnumOptionInput[];
     default?: string;
-    display?: "radio" | "dropdown";
+    // No `display`. WHICH control a closed choice gets — rows in the panel's own
+    // radio language, or a picker — is the panel's decision, made once against
+    // one threshold. A field that could spell it would spell it wrong in
+    // whichever surface it was not written for.
   },
 ): EnumFieldDef {
   if (opts.options.length === 0) {
@@ -46,6 +48,5 @@ export function enumField(
       typeHint: `Allowed values: ${options.map((o) => JSON.stringify(o.value)).join(", ")}`,
     },
     options,
-    display: opts.display,
   });
 }

@@ -1,36 +1,26 @@
-import {
-  FieldHeader,
-  type FieldRendererComponent,
-} from "@plugins/config_v2/plugins/fields/web";
-import { ColorPickerPopover } from "@plugins/primitives/plugins/css/plugins/color-picker/web";
-import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { defineFieldShape } from "@plugins/config_v2/plugins/fields/web";
 import { colorFieldType } from "@plugins/fields/plugins/color/core";
+import { ColorPickerPopover } from "@plugins/primitives/plugins/css/plugins/color-picker/web";
 import type { ColorFieldDef } from "../../core";
 
-const ColorRenderer: FieldRendererComponent<string> = ({
-  field,
-  value,
-  onChange,
-}) => {
-  const { swatches, showAlpha } = field as ColorFieldDef;
-  return (
-    <Stack
-      direction="row"
-      gap="lg"
-      align="start"
-      justify="between"
-      className="py-md"
-    >
-      <FieldHeader field={field} />
-      <ColorPickerPopover
-        value={value}
-        onChange={onChange}
-        swatches={swatches as string[] | undefined}
-        showAlpha={showAlpha}
-      />
-    </Stack>
-  );
-};
-ColorRenderer.type = colorFieldType;
+/** A swatch sizes to itself, so it takes the row's value cell `inline`. */
+const ColorRenderer = defineFieldShape({
+  type: colorFieldType,
+  useShape: ({ field, value, onChange }) => {
+    const { swatches, showAlpha } = field as ColorFieldDef;
+    return {
+      kind: "value",
+      fit: "inline",
+      control: (
+        <ColorPickerPopover
+          value={value}
+          onChange={onChange}
+          swatches={swatches as string[] | undefined}
+          showAlpha={showAlpha}
+        />
+      ),
+    };
+  },
+});
 
 export { ColorRenderer };

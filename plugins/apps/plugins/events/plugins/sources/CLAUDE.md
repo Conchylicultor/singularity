@@ -159,6 +159,7 @@ Design: [`research/2026-08-03-apps-events-event-tracking-app.md`](../../../../..
     - `infra/endpoints.getEndpointErrorMessage`
     - `primitives/app-shell.sidebarNavItem`
     - `primitives/css/badge.Badge`
+    - `primitives/css/control-panel.ControlPanelPane`
     - `primitives/css/fill.Fill`
     - `primitives/css/line.Line`
     - `primitives/css/placeholder.Placeholder`

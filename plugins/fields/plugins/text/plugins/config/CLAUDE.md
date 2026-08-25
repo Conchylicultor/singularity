@@ -15,13 +15,11 @@ Shared `FieldHeader` / `useLocalValue` come from the slot owner
 
 - Description: Text field type: config-render capability (single-line input for config-v2.fields.renderer) plus the textField factory.
 - Web:
-  - Contributes: `Fields.Renderer` "text" → `TextRenderer`
+  - Contributes: `Fields.Renderer` "text" → `Rendered`
   - Uses:
-    - `config_v2/fields.FieldHeader`
-    - `config_v2/fields.FieldRendererComponent`
+    - `config_v2/fields.defineFieldShape`
     - `config_v2/fields.Fields`
     - `config_v2/fields.useLocalValue`
-    - `primitives/css/spacing.Stack`
     - `primitives/css/ui-kit.Input`
 - Core:
   - Uses:

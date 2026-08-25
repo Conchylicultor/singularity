@@ -1,4 +1,7 @@
-import { ControlPanel } from "@plugins/primitives/plugins/css/plugins/control-panel/web";
+import {
+  ControlPanel,
+  ControlPanelPane,
+} from "@plugins/primitives/plugins/css/plugins/control-panel/web";
 import type { HarnessFixture } from "@plugins/primitives/plugins/css/plugins/layout-harness/core";
 import {
   Button,
@@ -102,9 +105,22 @@ const MENU_ROLE_WIDTH = 262;
 const PICKER_ROLE_WIDTH = 320;
 /** The `builder` width role, in px. */
 const BUILDER_ROLE_WIDTH = 524;
+/**
+ * The config settings PANE, in px (`configDetailPane`'s `Pane.define({ width })`).
+ * A pane's width is a role too — the surface's, decided by the pane system and
+ * unmoved by its content — and it is the fourth one panels actually open at, so
+ * every geometry claim about the settings pane was untested until it was swept
+ * here.
+ */
+const CONFIG_PANE_WIDTH = 500;
 
-/** Every width role a `ControlPanelPopover` can open at — the whole real range. */
-const WIDTHS = [MENU_ROLE_WIDTH, PICKER_ROLE_WIDTH, BUILDER_ROLE_WIDTH];
+/** Every width role a control panel opens at — the whole real range. */
+const WIDTHS = [
+  MENU_ROLE_WIDTH,
+  PICKER_ROLE_WIDTH,
+  CONFIG_PANE_WIDTH,
+  BUILDER_ROLE_WIDTH,
+];
 
 export const controlPanelFixtures: HarnessFixture[] = [
   // ── Invariant #1, gated by children the fixture cannot choose ─────
@@ -144,6 +160,290 @@ export const controlPanelFixtures: HarnessFixture[] = [
         <ControlPanel.Section label="Group by">{children}</ControlPanel.Section>
       </ControlPanel>
     ),
+  },
+
+  // ── The SECOND region, and why the kit is a kit ───────────────────
+  //
+  // `ControlPanelPane` opens a region too — the SAME one, which is the whole
+  // claim: a pane and a popover align pixel for pixel because both publish the
+  // rail from one `cp-panel`, not because two surfaces were tuned to look alike.
+  // A region fixture cannot scope its own children, so the same `REGION_CHILDREN`
+  // kit re-gates both hosts and a member added there re-gates both with no edit
+  // here.
+  //
+  // It is not redundant with `control-panel/region` above: the pane wraps its
+  // children in a `ControlPanel.Stack` and a host-policy provider, and a wrapper
+  // that quietly became a layout box (a second `cp-body`, a stray inset) would
+  // move every child in it while the popover path stayed green.
+  {
+    kind: "region",
+    id: "control-panel/pane-region",
+    primitive: "control-panel",
+    widths: WIDTHS,
+    render: (children) => (
+      <ControlPanelPane label="Pane region">
+        <ControlPanel.Section label="Group by">{children}</ControlPanel.Section>
+      </ControlPanelPane>
+    ),
+  },
+
+  // ── Invariant #1 across the TWO row grids, plus the value rail ────
+  //
+  // `cp-setting` states its leading tracks as PADDING where `cp-row` states them
+  // as grid TRACKS — two genuinely different mechanisms that have to arrive at
+  // one number, which is exactly the pair that can drift. Nothing about the
+  // arithmetic is visible on screen until a label is one column out.
+  //
+  // So: a panel mixing all four field members, with the text rail published by
+  // the ROW (a zero-width probe first in its label cell) and every other label
+  // measured against it. A panel with an icon column, deliberately — that is the
+  // shape where the two rails separate and where a dropped or doubled
+  // `--cp-icon-col` term shows up.
+  //
+  // The second half is the value rail: `fit="field"` states the control's width
+  // rather than the track's, so two field settings in one panel must put their
+  // controls at the same x AND keep them the same width as the panel widens —
+  // the two facts that together mean "every dropdown and input in the panel is
+  // the same box". `fit="inline"` sits in the same run and is NOT held to it: it
+  // sizes to its own content by contract.
+  {
+    id: "control-panel/setting-rail",
+    primitive: "control-panel",
+    dims: { contentLen: "short", withMeta: true, state: "idle" },
+    widths: WIDTHS,
+    render: () => (
+      <ControlPanel aria-label="Setting rail">
+        <ControlPanel.Section
+          label={<span data-geo="eyebrow">Appearance</span>}
+        >
+          <RailMarker id="rail-icon" />
+          <ControlPanel.Row
+            icon={
+              <Fills id="row-icon-cell">
+                <MdVisibility />
+              </Fills>
+            }
+          >
+            {/* The text rail has no token to name it — it is an interior column
+                of the ROW grid — so the row publishes it and the setting grid is
+                measured against a number the other mechanism computed. */}
+            <RowRail id="rail-text" />
+            <Fills id="row-label">Visibility</Fills>
+          </ControlPanel.Row>
+          <ControlPanel.Setting
+            label={<Fills id="field-a-label">Theme</Fills>}
+            fit="field"
+            control={
+              <Fills id="field-a-value">
+                {/* Zero-width, first in the cell, so its edges ARE the value
+                    rail — the same trick `RowRail` plays for the text rail. */}
+                <RowRail id="rail-value" />
+                <ControlPanel.Field label="Tangerine" />
+              </Fills>
+            }
+          />
+          <ControlPanel.Setting
+            label={<Fills id="field-b-label">Density</Fills>}
+            fit="field"
+            control={
+              <Fills id="field-b-value">
+                <ControlPanel.Field label="Comfortable" />
+              </Fills>
+            }
+          />
+          <ControlPanel.Setting
+            label={<Fills id="inline-label">Accent</Fills>}
+            fit="inline"
+            control={<Button variant="outline">Pick</Button>}
+          />
+          <ControlPanel.Block label={<Fills id="block-label">Notes</Fills>}>
+            <Fills id="block-child">
+              <Input defaultValue="…" aria-label="Notes" />
+            </Fills>
+          </ControlPanel.Block>
+        </ControlPanel.Section>
+      </ControlPanel>
+    ),
+    invariants: [
+      // Every LABEL on the text rail, whichever grid drew it.
+      { kind: "leftPack", after: "rail-text", slot: "row-label", gap: 0 },
+      { kind: "leftPack", after: "rail-text", slot: "field-a-label", gap: 0 },
+      { kind: "leftPack", after: "rail-text", slot: "field-b-label", gap: 0 },
+      { kind: "leftPack", after: "rail-text", slot: "inline-label", gap: 0 },
+      { kind: "leftPack", after: "rail-text", slot: "block-label", gap: 0 },
+      // …and everything that is NOT a label on the panel's own rail: the
+      // eyebrow (a different rung — see `block-label-rail`), the row's leading
+      // cell, and a Block's control, which lands there by doing nothing.
+      { kind: "leftPack", after: "rail-icon", slot: "eyebrow", gap: 0 },
+      { kind: "leftPack", after: "rail-icon", slot: "row-icon-cell", gap: 0 },
+      { kind: "leftPack", after: "rail-icon", slot: "block-child", gap: 0 },
+      // The value rail: the second field control starts where the first does…
+      { kind: "leftPack", after: "rail-value", slot: "field-b-value", gap: 0 },
+      // …and neither is sized by the panel it happens to be in.
+      { kind: "rigidIntegrity", slot: "field-a-value" },
+      { kind: "rigidIntegrity", slot: "field-b-value" },
+      // NO `noOverlap` — and it is not an omission. The oracle walks the slots
+      // pairwise in DOM ORDER and asserts `cur.right <= next.left`, which is a
+      // statement about the adjacent CELLS OF ONE ROW. This fixture is neither
+      // shape: a rail marker is a zero-width probe sitting ON a rail, so it is
+      // inside the box of every slot that starts there, and the labels it
+      // compares live on five different rows, where two boxes may share every x
+      // without ever meeting. `rail-alignment`, `mixed-content` and
+      // `derived-tracks` leave it off for the same reason; `rule-grid` and
+      // `long-label` carry it because their slots really are one row's cells.
+      { kind: "noClip" },
+    ],
+  },
+
+  // ── §1.3: a Block label is a FIELD label, not an eyebrow ──────────
+  //
+  // Two rungs, two rails, and in most panels they coincide — which is precisely
+  // why this needs a gate rather than a paragraph. A `Section` label is an
+  // eyebrow and keeps the panel's content edge; a `Block` label names one field,
+  // the same rung as a `Setting` label and a `Row` label, so it is drawn in a row
+  // label cell and lands on the TEXT rail. In a panel with no icon column those
+  // are the same x and any regression is invisible; here the panel HAS one, so
+  // the two are an icon column apart and a Block label that quietly drifted onto
+  // the eyebrow's rail fails.
+  {
+    id: "control-panel/block-label-rail",
+    primitive: "control-panel",
+    dims: { contentLen: "short", withMeta: true, state: "idle" },
+    widths: WIDTHS,
+    render: () => (
+      <ControlPanel aria-label="Block label rail">
+        <ControlPanel.Section label={<span data-geo="eyebrow">Content</span>}>
+          <RailMarker id="rail-icon" />
+          <ControlPanel.Row
+            icon={
+              <Fills id="row-icon-cell">
+                <MdVisibility />
+              </Fills>
+            }
+          >
+            <RowRail id="rail-text" />
+            <Fills id="row-label">Visibility</Fills>
+          </ControlPanel.Row>
+          <ControlPanel.Block
+            label={<Fills id="block-label">Description</Fills>}
+            description="Shown under the title."
+          >
+            <Fills id="block-child">
+              <Input defaultValue="…" aria-label="Description" />
+            </Fills>
+          </ControlPanel.Block>
+        </ControlPanel.Section>
+      </ControlPanel>
+    ),
+    invariants: [
+      // The field-label rung.
+      { kind: "leftPack", after: "rail-text", slot: "block-label", gap: 0 },
+      { kind: "leftPack", after: "rail-text", slot: "row-label", gap: 0 },
+      // The eyebrow rung, and the control the block names — both on the panel's
+      // own content edge, an icon column back from the labels above.
+      { kind: "leftPack", after: "rail-icon", slot: "eyebrow", gap: 0 },
+      { kind: "leftPack", after: "rail-icon", slot: "row-icon-cell", gap: 0 },
+      { kind: "leftPack", after: "rail-icon", slot: "block-child", gap: 0 },
+      // NO `noOverlap` — see `setting-rail`. The whole point here is that
+      // `eyebrow` and `block-label` sit on two rails an icon column apart, and
+      // both are text runs long enough to span the other's x: a check that
+      // compares boxes pairwise along one axis, with no notion of which row they
+      // are on, reports that as a collision every time.
+      { kind: "noClip" },
+    ],
+  },
+
+  // ── The nested region an inline Group opens ───────────────────────
+  //
+  // Nesting is shadowing: the group re-declares the rail for its own subtree and
+  // pays it, so everything inside behaves exactly as it does at panel level, one
+  // step in. The property that can drift is the same one the panel has, one
+  // region down — a nested row CANCELS the group's rail and re-applies its own
+  // leading padding, while nested loose content INHERITS it by doing nothing, and
+  // the two have to meet.
+  //
+  // That is not automatic: the row's re-applied padding is region-relative
+  // (`--cp-row-pad-start`, which the group redeclares), and getting the group's
+  // published rail and that padding out of step misaligns the two by a few pixels
+  // — small enough to read as fine in a screenshot and wrong in exactly the way
+  // invariant #1 exists to catch.
+  //
+  // Rendered in a `ControlPanelPane`, because the pane is the host whose policy
+  // inlines a group at all; a popover pushes and there is no nested region to
+  // measure.
+  {
+    id: "control-panel/group-nested-rail",
+    primitive: "control-panel",
+    dims: { contentLen: "short", withMeta: true, state: "idle" },
+    widths: WIDTHS,
+    render: () => (
+      <ControlPanelPane label="Group nested rail">
+        <ControlPanel.Section label="Sources">
+          <RailMarker id="panel-rail" />
+          <ControlPanel.Row
+            icon={
+              <Fills id="outer-row-icon">
+                <MdVisibility />
+              </Fills>
+            }
+          >
+            Outer
+          </ControlPanel.Row>
+          <ControlPanel.Group label="Schedule">
+            {/* Loose content, inside the group, carrying no class at all — the
+                nested half of "you inherit alignment by doing nothing". */}
+            <RailMarker id="group-rail" />
+            <ControlPanel.Row
+              icon={
+                <Fills id="group-row-icon">
+                  <MdSort />
+                </Fills>
+              }
+            >
+              <RowRail id="group-rail-text" />
+              <Fills id="group-row-label">Cadence</Fills>
+            </ControlPanel.Row>
+            <ControlPanel.Setting
+              label={<Fills id="group-setting-label">Every</Fills>}
+              fit="field"
+              control={
+                <Fills id="group-setting-value">
+                  <ControlPanel.Field label="15 minutes" />
+                </Fills>
+              }
+            />
+          </ControlPanel.Group>
+        </ControlPanel.Section>
+      </ControlPanelPane>
+    ),
+    invariants: [
+      // The panel's own region, unchanged by the group inside it.
+      { kind: "leftPack", after: "panel-rail", slot: "outer-row-icon", gap: 0 },
+      // The nested region: loose content and the nested row's LEADING cell on
+      // one x — two mechanisms again, the group's padding versus the row's
+      // cancel-and-reapply.
+      { kind: "leftPack", after: "group-rail", slot: "group-row-icon", gap: 0 },
+      // …and the nested text rail holds across the two row grids, exactly as it
+      // does at panel level.
+      {
+        kind: "leftPack",
+        after: "group-rail-text",
+        slot: "group-row-label",
+        gap: 0,
+      },
+      {
+        kind: "leftPack",
+        after: "group-rail-text",
+        slot: "group-setting-label",
+        gap: 0,
+      },
+      // NO `noOverlap` — see `setting-rail`. Sharpest here: the two slots it
+      // would compare, `group-row-label` and `group-setting-label`, are the
+      // labels of two DIFFERENT ROWS, both starting on the nested text rail and
+      // both running to the row's trailing edge. Overlapping horizontally is
+      // exactly what this fixture asserts they do.
+      { kind: "noClip" },
+    ],
   },
 
   // ── Invariant #1: one rail ────────────────────────────────────────

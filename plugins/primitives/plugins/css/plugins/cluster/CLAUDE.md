@@ -55,6 +55,7 @@ defined in exactly one place. The distinct export buys two things:
     - `apps/studio/graph`
     - `apps/website/demos/plugin-pyramid`
     - `apps/website/demos/sample-app`
+    - `config_v2/fields`
     - `conversations/conversation-view/jsonl-viewer/tool-call/page-tools`
     - `conversations/conversation-view/jsonl-viewer/tool-call/workflow`
     - `conversations/conversation-view/prompt-templates`
@@ -69,7 +70,6 @@ defined in exactly one place. The distinct export buys two things:
     - `debug/trace/boot`
     - `debug/trace/contention`
     - `debug/trace/gates`
-    - `fields/tags/config`
     - `fields/tags/inline`
     - `page/place`
     - `page/prompt/block`

@@ -34,6 +34,8 @@ export const CUSTOM_UTILITY_REGISTRY = [
   { classes: ["cp-band"], standalone: true, reason: "Composite band marker (positioning context + the full-bleed ::before hairline); no single-value built-in group to conflict with." },
   { classes: ["cp-row"], standalone: true, reason: "Composite row grid (display + tracks + gap + min-height + inline padding + radius); not a single-property utility another class should selectively override." },
   { classes: ["cp-rule"], standalone: true, reason: "Composite builder grid (display + 6 tracks + gap + min-height + inline padding + radius + the data-span collapse); not a single-property utility another class should selectively override." },
+  { classes: ["cp-setting"], standalone: true, reason: "Composite value-row grid (display + tracks + gap + min-height + the two-sided inline padding + radius); not a single-property utility another class should selectively override." },
+  { classes: ["cp-group"], standalone: true, reason: "Composite nested rail region (the deeper published rail + the inline padding that pays it + the region-relative row pad); no single-value built-in group to conflict with." },
   { classes: ["gap-none", "gap-2xs", "gap-xs", "gap-sm", "gap-md", "gap-lg", "gap-xl", "gap-2xl"], extend: "gap" },
   { classes: ["gap-x-none", "gap-x-2xs", "gap-x-xs", "gap-x-sm", "gap-x-md", "gap-x-lg", "gap-x-xl", "gap-x-2xl"], extend: "gap-x" },
   { classes: ["gap-y-none", "gap-y-2xs", "gap-y-xs", "gap-y-sm", "gap-y-md", "gap-y-lg", "gap-y-xl", "gap-y-2xl"], extend: "gap-y" },

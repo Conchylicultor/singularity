@@ -1,9 +1,15 @@
 # control-panel
 
 The vocabulary for a **data-control panel** — the body of a Filter popover, a
-Sort popover, a view-settings menu, a per-field editor. One compound namespace
-(`ControlPanel` plus `.Section` / `.Row` / `.RuleList` / `.RuleRow` / `.Field` /
-`.Footer` / `.Empty` / `.Stack`) and one surface (`ControlPanelPopover`).
+Sort popover, a view-settings menu, a settings pane, a per-field editor. One
+compound namespace (`ControlPanel` plus `.Section` / `.Row` / `.Setting` /
+`.Block` / `.Group` / `.RuleList` / `.RuleRow` / `.Field` / `.Footer` / `.Empty`
+/ `.Stack`) and two surfaces (`ControlPanelPopover`, `ControlPanelPane`).
+
+Read the members as a set: **four ways to be one field** — `Row` (the row *is*
+the control), `Setting` (the row *holds* the control), `Block` (the control is
+wider than a row), `Group` (the field is other fields) — plus the builder pair,
+plus the boxes and bands.
 
 ## The five invariants
 
@@ -203,6 +209,91 @@ Three things about the mechanism are one edit from being wrong:
   (three-cell and `[data-span="field"]`), because a panel-scoped selector
   out-specifies the bare `&[data-span="field"]`.
 
+## The four field members, and what each of them is not
+
+`Setting` is a **sibling of `RuleRow`**, not a fourth `select` arm and not a
+promoted `Field`. `select` is the *selection-language* axis and invariant #3 says
+there are three; a dropdown is not a fourth way to say "on", it is a control
+inside a cell. And `Row`'s host is inferred from `onSelect`/`href`, so a `Row`
+holding a dropdown would be a `<button>` inside a `<button>` — a `select="value"`
+arm would type that as correct. `RuleRow` already established the construction a
+value row needs: a non-interactive `<div>` box whose *cells* are interactive,
+with `row-actions` composed at `pin={null}` in a reserved track. The two row
+families then differ on exactly one honest axis — who is the click target —
+enforced by disjoint prop sets.
+
+**`Setting` has no `icon`, deliberately.** The leading-track `:has()` scan is per
+*panel*, so one field carrying a type icon would indent **every label in that
+panel**. A config field is contributed into panels its host does not own, so the
+trigger would live in another plugin's descriptor: the quick-theme footer-glyph
+failure documented under invariant #4, with a longer fuse. Excluded at the type
+level, the same way `icon` is already excluded from the check/radio arm.
+
+**`fit` is required, and it sizes the CONTROL, not the track.** Each row is its
+own grid, so an `auto` value track is as wide as that row's own control — right
+for `fit="inline"` (a swatch, an avatar, a stepper sizes to itself) and useless
+for a field. So `fit="field"` gives the control `--cp-value-col`, and every
+dropdown and input in the panel comes out the same box. Whether the value track
+*exists* is derived per panel from `data-cp-value`, exactly as `data-cp-icon` and
+`data-cp-handle` already work — declared from the prop, never sniffed from the
+rendered node.
+
+**A `Block` label is drawn in a row's label cell — on the TEXT rail, not the
+panel's content edge.** Invariant #1 says every *label* starts at one x, and a
+Block label is a field label, the same rung as a Setting label and a Row label. A
+`Section` label is an *eyebrow*, a different rung, and keeps the panel's content
+edge. In a panel with no icon track the two coincide, which is exactly why this
+is gated by the `block-label-rail` fixture rather than by this paragraph. `Block`
+is also **not** a `Section`: it carries no `cp-band`, so a run of blocks is one
+visual group with no hairline between them — same reason `RuleList` and `Empty`
+are not bands.
+
+`Group` has **no `mode`**: how it presents is the host's answer, read from
+`useControlPanelHost()`. Its `actions` / `mark` / `note` are honoured **only
+under `inline`**, where the header is the same plain `<div>` a `Setting` is built
+from. Under `push` the group is a drill row — a `<button>` — where an action
+would be a nested interactive and a stripe would paint on a different box, so the
+group **throws** rather than dropping them: a silently swallowed reset button is
+a bug nobody finds, and the same policy `useControlPanelHost()` itself takes. A
+host that pushes is a host that adorns nothing, so in practice this fires only
+for a call site that has mixed the two up.
+
+## The host owns the presentation, and throws when absent
+
+```ts
+interface ControlPanelHost {
+  nesting: "push" | "inline";
+  inlineDepth: number;
+  descriptions: "band" | "hint";
+}
+```
+
+`ControlPanelPopover` publishes `{ push, 0, hint }` — a popover passes field
+subsets precisely because it wants short labels rather than prose, and
+`usePanelStack().push` replacing the whole body is right there. `ControlPanelPane`
+publishes `{ inline, 1, band }` **and still wraps its children in a
+`ControlPanel.Stack`**, so depth ≥ 2 falls back to a push rather than collapsing
+into nothing.
+
+`useControlPanelHost()` throws when there is no host, the same policy as
+`usePanelStack()` and for the same reason: a `Group` cannot render correctly in a
+host that has not said whether to push or to inline, and a silent default shows
+up as a dead click at depth 2.
+
+**An inline group is a nested rail region** (`cp-group`), never a margin and
+never a `border-l` + `pl-lg`. Nesting is shadowing: the group re-declares the
+rail one step deeper and pays it as its own padding, so a nested row's bleed
+reaches the group's edge and everything inside behaves as it does at panel level,
+one step in. The published rail is *not* the bare step — it is
+`panel-pad + rail-icon + step`, because a nested `cp-row` bleeds back by the
+chrome pad and then re-applies **its own** leading padding. That padding is
+`--cp-row-pad-start`, which the group redeclares: the two row grids read a
+region-relative number rather than naming the group. Publish the bare step
+instead and nested loose content lands 12px left of a nested row's leading cell
+(Comfortable) — invariant #1 broken *inside* the group, which reads as fine in a
+screenshot. Gated by `group-nested-rail`, which was falsified against exactly
+that mutation.
+
 ## `ControlPanel.Row` is its own grid, not a composed `Row`
 
 `css/row`'s `Row` is a `<Line>`-based **flex** row whose `icon` is a leading flex
@@ -279,13 +370,29 @@ to the density ramp, so panels tighten under the Compact preset. Row height bind
 to `--control-height-md` so a panel row lines up with every Button, Input and
 ToggleChip in the app, extending the rail past the panel's own edge.
 
-Five utilities carry them: `cp-panel` (the region owner, and the box the two
+Seven utilities carry them: `cp-panel` (the region owner, and the box the two
 leading tracks are derived on), `cp-body` + `cp-band` (the separator — one
 mechanism, above), `cp-row` (gutter | icon | label | trailing, the first two
-derived) and `cp-rule` (six tracks, with `[data-span="field"]` collapsing the
+derived), `cp-rule` (six tracks, with `[data-span="field"]` collapsing the
 operator track for a builder that has none and the gutter derived the same way
-as a row's). There is no `cp-rail-icon` utility: the panel's own rail IS the icon
-rail, so content reaches it by doing nothing.
+as a row's), `cp-setting` (label | value | status | actions, the last three
+derived) and `cp-group` (the nested region). There is no `cp-rail-icon` utility:
+the panel's own rail IS the icon rail, so content reaches it by doing nothing.
+
+**`cp-setting` states its two leading tracks as PADDING, not as tracks**, and
+that is the one thing to know about it. A `Setting` has no `handle` and no `icon`
+in its type, so those cells could only ever be empty spacers — and a spacer is
+padding. Saying so collapses what would otherwise be a 4× multiplier over the
+three trailing cases (32 templates) into ONE extra declaration, because
+`--cp-rail-icon` already carries the gutter case. The arithmetic is `cp-row`'s
+label x written out: the leading *cell* sits at `--cp-rail-icon`, and the label
+one icon column and one gap further on. Four panel shapes, two declarations, and
+`setting-rail` measures the pair against a real `cp-row` rather than trusting
+this paragraph.
+
+The three trailing tracks are floors (`minmax(<token>, auto)`) with the same
+caveat `cp-rule` records for its own trailing track: **keep a panel's `status`
+and `actions` uniform, or the value column steps between rows.**
 
 ## `ControlPanelPopover` has no `width`, `padding` or `contentClassName`
 
@@ -320,7 +427,9 @@ hosting the panel.
 ## Enforcement
 
 `fixtures/` contributes the geometry fixtures to the layout-harness catalog,
-swept at every width role (262 / 320 / 524) and measured in a real browser by
+swept at every width role (262 / 320 / 500 / 524 — the three popover roles plus
+the config settings PANE, whose geometry was untested until it was added) and
+measured in a real browser by
 `./singularity check layout-geometry`: `rail-alignment` (invariant #1, across a
 mixed row set — the panel's own inset against the row grid's leading cell, and
 every row's label against a rail one of them computed), `mixed-content` (the same
@@ -331,8 +440,15 @@ nothing paints in), `row-height`, `rule-grid` (both shapes), and `long-label` �
 whose falsification re-renders the historical `absolute right-2` +
 reserved-padding construct and asserts the overlap check genuinely fails on it.
 
-Plus `region` — a **`RegionFixture`**, which says only "`ControlPanel` opens a
-region" and lets the harness fill it from `REGION_CHILDREN` (bare input, bare
+Plus `setting-rail` (the two row grids' labels on one text rail, and the value
+rail across a panel mixing `Row`, `Setting fit="field"`, `Setting fit="inline"`
+and `Block` — the pair that can actually drift), `block-label-rail` (the
+eyebrow-vs-field-label decision above, gated in a panel with an icon column so
+the two rails are genuinely apart) and `group-nested-rail` (a nested group's
+republished rail against its children).
+
+Plus `region` and `pane-region` — two **`RegionFixture`s**, which say only
+"`ControlPanel` / `ControlPanelPane` opens a region" and lets the harness fill it from `REGION_CHILDREN` (bare input, bare
 button, bare prose, a `display: contents` contribution, a `rail-follow` band, a
 `rail-bleed` row). This file used to ask authors to "render something other than
 a `Row`", because rows were the one child kind the gate ever drew and three
@@ -373,7 +489,7 @@ The primitive needs **no** new lint exemptions: it inherits the
 
 ## Plugin reference
 
-- Description: The control-panel vocabulary: ControlPanel plus its closed set of members (Section, Row, RuleList, RuleRow, Field, Footer, Empty, Stack) and the ControlPanelPopover surface. The container draws the hairlines, the row is a grid so every label starts at one x, selection has one language per meaning, and width is a role rather than a measurement.
+- Description: The control-panel vocabulary: ControlPanel plus its closed set of members (Section, Row, Setting, Block, Group, RuleList, RuleRow, Field, Footer, Empty, Stack) and its two surfaces, ControlPanelPopover and ControlPanelPane. The container draws the hairlines, the row is a grid so every label starts at one x, selection has one language per meaning, and width is a role rather than a measurement.
 - Web:
   - Uses:
     - `primitives/css/rail.useRailGuard`
@@ -390,10 +506,17 @@ The primitive needs **no** new lint exemptions: it inherits the
     - `primitives/icon-button.IconButton`
     - `primitives/row-actions.RowActions`
     - `primitives/row-actions.rowActionsAnchor`
+    - `primitives/tooltip.WithTooltip`
   - Exports (types):
+    - `ControlPanelBlockProps`
     - `ControlPanelEmptyProps`
     - `ControlPanelFieldProps`
+    - `ControlPanelFit`
     - `ControlPanelFooterProps`
+    - `ControlPanelGroupProps`
+    - `ControlPanelHost`
+    - `ControlPanelMark`
+    - `ControlPanelPaneProps`
     - `ControlPanelPopoverProps`
     - `ControlPanelProps`
     - `ControlPanelRowProps`
@@ -402,20 +525,27 @@ The primitive needs **no** new lint exemptions: it inherits the
     - `ControlPanelRuleListProps`
     - `ControlPanelRuleRowProps`
     - `ControlPanelSectionProps`
+    - `ControlPanelSettingProps`
     - `ControlPanelSize`
     - `ControlPanelStackProps`
     - `PanelStackApi`
     - `PanelStackEntry`
   - Exports (values):
     - `ControlPanel`
+    - `ControlPanelPane`
     - `ControlPanelPopover`
+    - `useControlPanelHost`
     - `usePanelStack`
 - Cross-plugin:
   - Imported by:
+    - `apps/events/sources`
+    - `apps/events/sources/source-detail/settings`
     - `apps/pages/page-tree`
     - `apps/sonata/audio/metronome`
     - `apps/sonata/piano-roll`
     - `apps/sonata/view-options`
+    - `config_v2/fields`
+    - `config_v2/settings`
     - `conversations/conversation-category`
     - `fields/date/filter`
     - `page/callout`

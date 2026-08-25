@@ -1,5 +1,35 @@
 # settings
 
+## The fields are a control panel; everything else is pane chrome
+
+`config-detail.tsx` wraps ONLY the field list in `ControlPanelPane`. The scope
+tabs, the three conflict banners, the Reset all / Stop customizing / Raw file
+toolbar and the raw + diff views stay outside it — they are chrome about the
+descriptor, not settings in it, and a banner rendered as a panel member would
+open the panel's tracks for every row in the pane.
+
+## The stripe, the badge, the reset and the conflict line are PROPS, not a wrapper
+
+`ConfigField` draws no row. It computes the four things only this surface knows —
+is the value modified, which tier it came from, can it be reset, does upstream
+disagree — and hands them down as `ConfigFieldAdornments`
+(`mark` / `status` / `actions` / `note`), which `FieldShapeView` puts on the
+`ControlPanel` member the field itself renders. So the stripe paints in the row's
+own chrome gutter, the tier badge and the reset sit in the row's reserved
+trailing tracks, and the "Upstream: …" line hangs on the panel's rail — instead
+of beside a row that had already bled out to the panel's edge.
+
+They travel as a **context**, never as props on `FieldShape`: the same
+`boolField` renders in a sonata popover, an events source form and this pane, and
+only this one has tiers or a reset. A field that could name a badge is a field
+that draws chrome again.
+
+The object is supplied even when every entry is `undefined`. Its PRESENCE is what
+tells the vocabulary that this surface adorns its fields — and a member that can
+hold a hover-revealed action is a different member from one that cannot (a
+`ControlPanel.Row` is its own click target). Derive presence from the entries
+instead and a toggle would change control the first time it was edited.
+
 ## The conflict banners are extensible
 
 A conflicted descriptor renders one of two banners (upstream defaults moved, or
@@ -40,6 +70,8 @@ contributor that hands a conflict to an agent.
     - `apps-core.Apps`
     - `apps-core/app-icon.AppIconView`
     - `config_v2.useConfigRegistrations`
+    - `config_v2/fields.ConfigFieldAdornments`
+    - `config_v2/fields.ConfigFieldAdornmentsProvider`
     - `config_v2/fields.ConfigFieldContext`
     - `config_v2/fields.FieldRenderer`
     - `infra/endpoints.useEndpoint`
@@ -47,14 +79,13 @@ contributor that hands a conflict to an agent.
     - `primitives/css/badge.Badge`
     - `primitives/css/center.Center`
     - `primitives/css/clip.Clip`
+    - `primitives/css/control-panel.ControlPanelPane`
     - `primitives/css/fill.Fill`
     - `primitives/css/pin.Pin`
     - `primitives/css/placeholder.Placeholder`
-    - `primitives/css/rigid.Rigid`
     - `primitives/css/rigid.rigidClass`
     - `primitives/css/row.Row`
     - `primitives/css/scroll.Scroll`
-    - `primitives/css/spacing.Inset`
     - `primitives/css/spacing.Stack`
     - `primitives/css/status-dot.StatusDot`
     - `primitives/css/text.Text`
@@ -69,8 +100,7 @@ contributor that hands a conflict to an agent.
     - `primitives/data-view.FieldDef`
     - `primitives/data-view.HierarchyConfig`
     - `primitives/diff-view.TextDiff`
-    - `primitives/hover-reveal.hoverRevealGroup`
-    - `primitives/hover-reveal.hoverRevealTarget`
+    - `primitives/icon-button.IconButton`
     - `primitives/live-state.useCombinedResources`
     - `primitives/live-state.useResource`
     - `primitives/loading.Loading`

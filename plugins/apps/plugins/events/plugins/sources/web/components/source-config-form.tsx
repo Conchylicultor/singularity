@@ -1,7 +1,7 @@
 import type { ReactElement } from "react";
 import { FieldRenderer } from "@plugins/config_v2/plugins/fields/web";
 import type { FieldsRecord } from "@plugins/fields/core";
-import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { ControlPanelPane } from "@plugins/primitives/plugins/css/plugins/control-panel/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 
 export interface SourceConfigFormProps {
@@ -30,6 +30,12 @@ export interface SourceConfigFormProps {
  * Each renderer owns its own commit granularity (the text renderer commits on
  * blur, not per keystroke), so `onChange` fires at field-edit frequency and is
  * safe to wire straight to an autosave PATCH.
+ *
+ * The form IS a control panel, so it is one: `ControlPanelPane` publishes the
+ * panel body (and with it the rail, the row height and the hairlines between
+ * bands), the panel stack a nested group needs, and the host policy every field
+ * reads — inline the first level of nesting, and keep descriptions visible on
+ * the band rather than behind a hover.
  */
 export function SourceConfigForm({
   fields,
@@ -48,7 +54,7 @@ export function SourceConfigForm({
   }
 
   return (
-    <Stack gap="none">
+    <ControlPanelPane>
       {entries.map(([key, field]) => (
         <FieldRenderer
           key={key}
@@ -57,6 +63,6 @@ export function SourceConfigForm({
           onChange={(value) => onChange(key, value)}
         />
       ))}
-    </Stack>
+    </ControlPanelPane>
   );
 }

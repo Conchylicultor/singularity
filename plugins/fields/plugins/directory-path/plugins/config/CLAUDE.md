@@ -18,12 +18,10 @@ from the slot owner (`@plugins/config_v2/plugins/fields/web`).
 
 - Description: Directory-path field type: config-render capability (folder picker for config-v2.fields.renderer) plus the dirPathField factory.
 - Web:
-  - Contributes: `Fields.Renderer` "directory-path" → `DirPathRenderer`
+  - Contributes: `Fields.Renderer` "directory-path" → `Rendered`
   - Uses:
-    - `config_v2/fields.FieldHeader`
-    - `config_v2/fields.FieldRendererComponent`
+    - `config_v2/fields.defineFieldShape`
     - `config_v2/fields.Fields`
-    - `primitives/css/spacing.Stack`
     - `primitives/folder-picker.FolderPickerPopover`
 - Core:
   - Uses:

@@ -1,8 +1,9 @@
 import { useMemo } from "react";
-import {
-  FieldHeader,
-  type FieldRendererComponent,
-} from "@plugins/config_v2/plugins/fields/web";
+import type {
+  FieldShape,
+  FieldShapeProps,
+} from "@plugins/config_v2/plugins/fields/core";
+import { defineFieldShape } from "@plugins/config_v2/plugins/fields/web";
 import {
   reorderTreeFieldType,
   type ReorderTree,
@@ -12,7 +13,6 @@ import {
   SortableReorderItem,
   type ReorderEntry,
 } from "@plugins/reorder/plugins/editor/web";
-import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { useReorderNodeTypes } from "@plugins/reorder/plugins/node-types/web";
 import {
@@ -43,11 +43,14 @@ function ItemChip({ id }: { id: string }) {
   );
 }
 
-const ReorderTreeRenderer: FieldRendererComponent<ReorderTree> = ({
-  field,
+/**
+ * A drag editor is far wider than a row, so the shape is a `block`: the panel
+ * draws the label, and the editor lands on the panel's rail by doing nothing.
+ */
+function useReorderTreeShape({
   value,
   onChange,
-}) => {
+}: FieldShapeProps<ReorderTree>): FieldShape {
   const nodeTypes = useReorderNodeTypes();
 
   const { entries, hiddenItems } = useMemo(() => {
@@ -125,9 +128,9 @@ const ReorderTreeRenderer: FieldRendererComponent<ReorderTree> = ({
     [nodeTypes, value, onChange],
   );
 
-  return (
-    <Stack gap="xs" className="py-md">
-      <FieldHeader field={field} />
+  return {
+    kind: "block",
+    control: (
       <ReorderEditor
         entries={entries}
         hiddenItems={hiddenItems}
@@ -139,10 +142,13 @@ const ReorderTreeRenderer: FieldRendererComponent<ReorderTree> = ({
         editMode
         orientation="vertical"
       />
-    </Stack>
-  );
-};
+    ),
+  };
+}
 
-ReorderTreeRenderer.type = reorderTreeFieldType;
+const ReorderTreeRenderer = defineFieldShape({
+  type: reorderTreeFieldType,
+  useShape: useReorderTreeShape,
+});
 
 export { ReorderTreeRenderer };

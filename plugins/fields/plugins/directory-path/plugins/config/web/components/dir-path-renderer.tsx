@@ -1,26 +1,21 @@
-import {
-  FieldHeader,
-  type FieldRendererComponent,
-} from "@plugins/config_v2/plugins/fields/web";
-import { FolderPickerPopover } from "@plugins/primitives/plugins/folder-picker/web";
-import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { defineFieldShape } from "@plugins/config_v2/plugins/fields/web";
 import { directoryPathFieldType } from "@plugins/fields/plugins/directory-path/core";
+import { FolderPickerPopover } from "@plugins/primitives/plugins/folder-picker/web";
 
-const DirPathRenderer: FieldRendererComponent<string> = ({
-  field,
-  value,
-  onChange,
-}) => (
-  <Stack gap="xs" className="py-md">
-    <FieldHeader field={field} />
-    <FolderPickerPopover
-      key={value}
-      value={value}
-      onChange={onChange}
-      placeholder={field.meta.placeholder}
-    />
-  </Stack>
-);
-DirPathRenderer.type = directoryPathFieldType;
+const DirPathRenderer = defineFieldShape({
+  type: directoryPathFieldType,
+  useShape: ({ field, value, onChange }) => ({
+    kind: "value",
+    fit: "field",
+    control: (
+      <FolderPickerPopover
+        key={value}
+        value={value}
+        onChange={onChange}
+        placeholder={field.meta.placeholder}
+      />
+    ),
+  }),
+});
 
 export { DirPathRenderer };

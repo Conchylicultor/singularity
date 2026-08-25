@@ -142,6 +142,7 @@ which is what the `no-adhoc-loading-text` lint rule enforces.
     - `debug/trace/pane`
     - `debug/worktree-cleanup`
     - `debug/zero-test`
+    - `fields/secret/config`
     - `history/dialog`
     - `layouts/route-fallback`
     - `page/bookmark`

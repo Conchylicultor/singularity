@@ -33,19 +33,10 @@ external keys** (the DataView `views` list is the example — its ids key
 
 - Description: List field type: config-render capability (sortable drag-and-drop list for config-v2.fields.renderer) plus the listField factory.
 - Web:
-  - Contributes: `Fields.Renderer` "list" → `ListRenderer`
+  - Contributes: `Fields.Renderer` "list" → `Rendered`
   - Uses:
-    - `config_v2/fields.FieldRenderer`
+    - `config_v2/fields.defineFieldShape`
     - `config_v2/fields.Fields`
-    - `primitives/css/fill.Fill`
-    - `primitives/css/rigid.rigidClass`
-    - `primitives/css/spacing.Stack`
-    - `primitives/css/text.Text`
-    - `primitives/css/ui-kit.Button`
-    - `primitives/css/ui-kit.cn`
-    - `primitives/css/ui-kit.SURFACE_LEVELS`
-    - `primitives/sortable-list.SortableItem`
-    - `primitives/sortable-list.SortableList`
 - Core:
   - Uses:
     - `fields.FieldDef`

@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { FieldRenderer } from "@plugins/config_v2/plugins/fields/web";
 import { textField } from "@plugins/fields/plugins/text/plugins/config/core";
 import { getEndpointErrorMessage } from "@plugins/infra/plugins/endpoints/web";
+import { ControlPanelPane } from "@plugins/primitives/plugins/css/plugins/control-panel/web";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
@@ -76,19 +77,26 @@ export function SourceSettingsSection({
 
   return (
     <Stack gap="md">
-      <FieldRenderer
-        field={nameField}
-        value={lookup.source.name}
-        onChange={(value) => {
-          // The dispatch slot is value-erased (`FieldRendererProps<unknown>`),
-          // but the renderer answering a `text` field emits its own `T` — a
-          // string. The cast restates that, it does not assume it.
-          update.mutate({
-            params: { id: sourceId },
-            body: { name: value as string },
-          });
-        }}
-      />
+      {/* Its own panel, beside the type's. A field renderer reads the host's
+          presentation policy (push vs inline, description as prose vs tooltip),
+          so it needs a panel around it — and `SourceConfigForm` below opens its
+          own, which a second one here must not nest inside. Two panels stacked
+          render as one form: same rail, same row height, same hairlines. */}
+      <ControlPanelPane>
+        <FieldRenderer
+          field={nameField}
+          value={lookup.source.name}
+          onChange={(value) => {
+            // The dispatch slot is value-erased (`FieldRendererProps<unknown>`),
+            // but the renderer answering a `text` field emits its own `T` — a
+            // string. The cast restates that, it does not assume it.
+            update.mutate({
+              params: { id: sourceId },
+              body: { name: value as string },
+            });
+          }}
+        />
+      </ControlPanelPane>
       <SourceTypeConfig sourceId={sourceId} type={lookup.source.type} />
       {update.error && (
         <Text as="p" variant="caption" tone="destructive">

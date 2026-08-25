@@ -8,8 +8,6 @@
 - Cross-plugin:
   - Imported by:
     - `apps-core/tab-bar`
-    - `fields/list/config`
-    - `fields/string-list/config`
     - `layouts/miller`
     - `primitives/collapsible-wrap`
     - `primitives/data-view`

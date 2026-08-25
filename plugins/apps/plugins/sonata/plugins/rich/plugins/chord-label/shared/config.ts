@@ -24,7 +24,6 @@ export const chordLabelConfig = defineConfig({
         { value: "both", label: "Both — C (I)" },
       ],
       default: "symbol",
-      display: "radio",
     }),
   },
 });

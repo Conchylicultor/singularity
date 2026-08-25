@@ -26,9 +26,21 @@ export {
 } from "./internal/control-panel-row";
 export { type ControlPanelRuleRowProps } from "./internal/rule-row";
 export { type ControlPanelFieldProps } from "./internal/field-control";
+export { type ControlPanelSettingProps } from "./internal/setting";
+export { type ControlPanelBlockProps } from "./internal/block";
+export { type ControlPanelGroupProps } from "./internal/group";
+export {
+  type ControlPanelFit,
+  type ControlPanelMark,
+} from "./internal/setting-row";
+export { useControlPanelHost, type ControlPanelHost } from "./internal/host";
+export {
+  ControlPanelPane,
+  type ControlPanelPaneProps,
+} from "./internal/control-panel-pane";
 
 export default {
   description:
-    "The control-panel vocabulary: ControlPanel plus its closed set of members (Section, Row, RuleList, RuleRow, Field, Footer, Empty, Stack) and the ControlPanelPopover surface. The container draws the hairlines, the row is a grid so every label starts at one x, selection has one language per meaning, and width is a role rather than a measurement.",
+    "The control-panel vocabulary: ControlPanel plus its closed set of members (Section, Row, Setting, Block, Group, RuleList, RuleRow, Field, Footer, Empty, Stack) and its two surfaces, ControlPanelPopover and ControlPanelPane. The container draws the hairlines, the row is a grid so every label starts at one x, selection has one language per meaning, and width is a role rather than a measurement.",
   contributions: [],
 } satisfies PluginDefinition;

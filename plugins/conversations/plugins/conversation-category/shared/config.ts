@@ -21,7 +21,6 @@ export const conversationCategoryConfig = defineConfig({
       label: "Avatar category",
       description:
         "Which category paints the avatar on sidebar conversation rows. Only one category can, so two categories never fight over the same disc. The commits-by-category charts in Stats break down by every category, independently of this choice.",
-      display: "dropdown",
     }),
     categories: listField({
       label: "Categories",

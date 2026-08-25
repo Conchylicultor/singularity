@@ -4,11 +4,11 @@ import { dynamicEnumFieldType } from "@plugins/fields/plugins/dynamic-enum/core"
 
 export interface DynamicEnumFieldDef extends FieldDef<string> {
   readonly type: typeof dynamicEnumFieldType;
-  readonly display?: "radio" | "dropdown";
 }
 
 export function dynamicEnumField(
-  opts?: FieldMeta & { default?: string; display?: "radio" | "dropdown" },
+  // No `display`: presentation is the panel's, never the field's.
+  opts?: FieldMeta & { default?: string },
 ): DynamicEnumFieldDef {
   return Object.freeze({
     type: dynamicEnumFieldType,
@@ -19,6 +19,5 @@ export function dynamicEnumField(
       description: opts?.description,
       placeholder: opts?.placeholder,
     },
-    display: opts?.display,
   });
 }

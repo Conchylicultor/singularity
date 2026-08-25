@@ -2,14 +2,23 @@ import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { CheckboxIndicator } from "@plugins/primitives/plugins/css/plugins/selection-indicator/web";
 import { SwitchIndicator } from "@plugins/primitives/plugins/css/plugins/switch/web";
 import type React from "react";
-import { useCallback } from "react";
+import { useCallback, useId } from "react";
 import { MdCheck, MdDragIndicator } from "react-icons/md";
+
+import { HintedLabelCell } from "./hint";
 
 /** The three selection languages, one per meaning. There is no fourth. */
 export type ControlPanelRowSelect = "check" | "radio" | "switch";
 export type ControlPanelRowTone = "default" | "danger";
 
 interface ControlPanelRowCommon {
+  /**
+   * Explanatory prose as a TOOLTIP, wired by `aria-describedby` — never a
+   * second line. A second line is the one change that breaks invariant #2 in
+   * every panel at once; a muted pseudo-row breaks invariant #1's meaning (a row
+   * that is not a control still opening the rails). See `HintedLabelCell`.
+   */
+  hint?: string;
   /** Shows the drag handle in the gutter track (revealed on row hover/focus). */
   handle?: boolean;
   /** dnd-kit listeners/attributes (and an activator `ref`) for that handle. */
@@ -111,6 +120,7 @@ const HANDLE_REVEAL =
  */
 export function ControlPanelRow({
   icon,
+  hint,
   select,
   checked,
   handle,
@@ -125,6 +135,7 @@ export function ControlPanelRow({
   ref,
   children,
 }: ControlPanelRowProps) {
+  const hintId = useId();
   const isLink = href != null;
   const isButton = !isLink && (onSelect != null || disabled != null);
   const interactive = isLink || isButton;
@@ -201,6 +212,11 @@ export function ControlPanelRow({
     ? { role: SELECT_ROLE[select], "aria-checked": checked ?? false }
     : undefined;
 
+  // The description hangs off the HOST, so assistive tech reads the row's name
+  // and then its hint. The node it points at is a zero-box `sr-only` sibling
+  // inside the label cell, which is why the hint opens no track.
+  const described = hint ? { "aria-describedby": hintId } : undefined;
+
   // Each cell names itself (`data-cp-cell`), and the two LEADING cells also
   // declare whether they are OCCUPIED (`data-cp-handle` / `data-cp-icon`). The
   // occupancy marks are what `cp-panel` scans with `:has()` to decide whether
@@ -235,9 +251,9 @@ export function ControlPanelRow({
       >
         {leading}
       </span>
-      <span data-cp-cell="label" className="truncate">
+      <HintedLabelCell hint={hint} descriptionId={hintId}>
         {children}
-      </span>
+      </HintedLabelCell>
       <span
         data-cp-cell="trailing"
         className="flex items-center gap-2xs text-caption text-muted-foreground"
@@ -262,6 +278,7 @@ export function ControlPanelRow({
         onClick={onSelect}
         className={rowClass}
         {...selection}
+        {...described}
       >
         {cells}
       </a>
@@ -276,13 +293,14 @@ export function ControlPanelRow({
         onClick={onSelect}
         className={rowClass}
         {...selection}
+        {...described}
       >
         {cells}
       </button>
     );
   }
   return (
-    <div ref={hostRef} className={rowClass}>
+    <div ref={hostRef} className={rowClass} {...described}>
       {cells}
     </div>
   );

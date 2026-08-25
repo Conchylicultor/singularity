@@ -20,17 +20,10 @@ via `FieldRenderer` — nested `objectField` instances recurse automatically.
 
 - Description: Object field type: config-render capability (collapsible sub-field renderer for config-v2.fields.renderer) plus the objectField factory.
 - Web:
-  - Contributes: `Fields.Renderer` "object" → `ObjectRenderer`
+  - Contributes: `Fields.Renderer` "object" → `Rendered`
   - Uses:
-    - `config_v2/fields.FieldRenderer`
-    - `config_v2/fields.FieldRendererComponent`
+    - `config_v2/fields.defineFieldShape`
     - `config_v2/fields.Fields`
-    - `primitives/collapsible.Collapsible`
-    - `primitives/collapsible.CollapsibleChevron`
-    - `primitives/collapsible.CollapsibleContent`
-    - `primitives/collapsible.CollapsibleTrigger`
-    - `primitives/css/spacing.Stack`
-    - `primitives/css/text.Text`
 - Core:
   - Uses:
     - `fields.FieldDef`

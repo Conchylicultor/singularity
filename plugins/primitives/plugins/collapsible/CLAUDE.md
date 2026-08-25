@@ -84,7 +84,6 @@ could accept — which is how `sidebar-pane-section` used to read them one by on
     - `conversations/conversation-view/jsonl-viewer/tool-call/workflow`
     - `conversations/conversation-view/turn-summary`
     - `debug/claude-cli-calls`
-    - `fields/object/config`
     - `plugin-meta/facets/exports/render-detail`
     - `plugin-meta/plugin-view`
     - `plugin-meta/plugin-view/dependencies`

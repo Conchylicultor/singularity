@@ -44,7 +44,6 @@ remove button — the user is editing that row. The reveal ends when focus leave
     - `apps/prototypes/present`
     - `apps/sonata/progress/loop`
     - `apps/sonata/progress/sections`
-    - `config_v2/settings`
     - `layouts/miller`
     - `page/audio`
     - `page/bookmark`

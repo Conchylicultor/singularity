@@ -1,35 +1,34 @@
-import {
-  FieldHeader,
-  type FieldRendererComponent,
-} from "@plugins/config_v2/plugins/fields/web";
+import { defineFieldShape } from "@plugins/config_v2/plugins/fields/web";
+import { jsonFieldType } from "@plugins/fields/plugins/json/core";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
-import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Surface } from "@plugins/primitives/plugins/css/plugins/surface/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
-import { jsonFieldType } from "@plugins/fields/plugins/json/core";
 
 /**
- * Read-only renderer for a `jsonField`. The value is app-written (e.g. the
- * data-view saved-view state), not hand-edited, so the settings surface only
- * shows the formatted JSON in a recessed, scrollable, monospace box. The
- * standard reset affordance lives outside the renderer (provided by the
- * settings detail pane).
+ * Read-only. A `jsonField`'s value is app-written (e.g. the data-view saved-view
+ * state), not hand-edited, so the control is the formatted JSON in a recessed,
+ * scrollable, monospace box — wider than a row, hence a `block`. The reset
+ * affordance is the host's, not this field's.
  */
-const JsonRenderer: FieldRendererComponent<unknown> = ({ field, value }) => (
-  <Stack gap="xs" className="py-md">
-    <FieldHeader field={field} />
-    <Surface
-      level="sunken"
-      className="rounded-lg border border-border p-sm"
-    >
-      <Scroll axis="both" className="max-h-64">
-        <Text as="pre" variant="caption" tone="muted" className="font-mono whitespace-pre">
-          {JSON.stringify(value, null, 2)}
-        </Text>
-      </Scroll>
-    </Surface>
-  </Stack>
-);
-JsonRenderer.type = jsonFieldType;
+const JsonRenderer = defineFieldShape({
+  type: jsonFieldType,
+  useShape: ({ value }) => ({
+    kind: "block",
+    control: (
+      <Surface level="sunken" className="rounded-lg border border-border p-sm">
+        <Scroll axis="both" className="max-h-64">
+          <Text
+            as="pre"
+            variant="caption"
+            tone="muted"
+            className="font-mono whitespace-pre"
+          >
+            {JSON.stringify(value, null, 2)}
+          </Text>
+        </Scroll>
+      </Surface>
+    ),
+  }),
+});
 
 export { JsonRenderer };

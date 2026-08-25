@@ -1439,6 +1439,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `infra/endpoints.getEndpointErrorMessage`
               - `primitives/app-shell.sidebarNavItem`
               - `primitives/css/badge.Badge`
+              - `primitives/css/control-panel.ControlPanelPane`
               - `primitives/css/fill.Fill`
               - `primitives/css/line.Line`
               - `primitives/css/placeholder.Placeholder`
@@ -1702,6 +1703,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                       - `apps/events/sources.useEventSourceType`
                       - `config_v2/fields.FieldRenderer`
                       - `infra/endpoints.getEndpointErrorMessage`
+                      - `primitives/css/control-panel.ControlPanelPane`
                       - `primitives/css/placeholder.Placeholder`
                       - `primitives/css/spacing.Stack`
                       - `primitives/css/text.Text`
@@ -4179,7 +4181,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `config_v2.useConfig`
               - `config_v2.useSetConfig`
               - `config_v2/fields.FieldRenderer`
-              - `primitives/css/control-panel.ControlPanel`
               - `primitives/css/control-panel.ControlPanelPopover`
               - `primitives/css/toggle-chip.ToggleChip`
               - `primitives/css/ui-kit.cn`
@@ -7680,16 +7681,23 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Web:
         - Slots: `Fields.Renderer` ← `fields.avatar.config`, `fields.bool.config`, `fields.color.config`, `fields.directory-path.config`, `fields.dynamic-enum.config`, `fields.enum.config`, `fields.float.config`, `fields.int.config`, `fields.json.config`, `fields.list.config`, `fields.multiline-text.config`, `fields.object.config`, `fields.reorder-tree.config`, `fields.secret.config`, `fields.string-list.config`, `fields.tags.config`, `fields.text.config`, `fields.variant.config`
         - Uses:
+          - `primitives/css/cluster.Cluster`
+          - `primitives/css/control-panel.ControlPanel`
+          - `primitives/css/control-panel.ControlPanelPopover`
+          - `primitives/css/control-panel.useControlPanelHost`
+          - `primitives/css/control-panel.usePanelStack`
           - `primitives/css/placeholder.Placeholder`
-          - `primitives/css/spacing.Stack`
-          - `primitives/css/text.Text`
+          - `primitives/css/switch.Switch`
+          - `primitives/css/toggle-chip.ToggleChip`
+          - `primitives/icon-button.IconButton`
           - `primitives/slot-render.defineDispatchSlot`
         - Exports (types):
-          - `FieldRendererComponent`
+          - `ConfigFieldAdornments`
           - `FieldRendererProps`
         - Exports (values):
+          - `ConfigFieldAdornmentsProvider`
           - `ConfigFieldContext`
-          - `FieldHeader`
+          - `defineFieldShape`
           - `FieldRenderer`
           - `Fields`
           - `useLocalValue`
@@ -7718,6 +7726,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `fields/text/config`
           - `fields/variant/config`
           - `primitives/data-view/view-core`
+      - Core:
+        - Exports (types):
+          - `ChoiceOption`
+          - `FieldShape`
+          - `FieldShapeProps`
+          - `FieldShapeRenderer`
     - **`settings`** — Settings UI for config_v2: two-pane nav + detail surface for viewing and editing typed config fields. Surfaced inside the Settings app. HTTP endpoints for setting and resetting config_v2 field values.
       - Web:
         - Slots:
@@ -7731,6 +7745,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps-core.Apps`
           - `apps-core/app-icon.AppIconView`
           - `config_v2.useConfigRegistrations`
+          - `config_v2/fields.ConfigFieldAdornments`
+          - `config_v2/fields.ConfigFieldAdornmentsProvider`
           - `config_v2/fields.ConfigFieldContext`
           - `config_v2/fields.FieldRenderer`
           - `infra/endpoints.useEndpoint`
@@ -7738,14 +7754,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/css/badge.Badge`
           - `primitives/css/center.Center`
           - `primitives/css/clip.Clip`
+          - `primitives/css/control-panel.ControlPanelPane`
           - `primitives/css/fill.Fill`
           - `primitives/css/pin.Pin`
           - `primitives/css/placeholder.Placeholder`
-          - `primitives/css/rigid.Rigid`
           - `primitives/css/rigid.rigidClass`
           - `primitives/css/row.Row`
           - `primitives/css/scroll.Scroll`
-          - `primitives/css/spacing.Inset`
           - `primitives/css/spacing.Stack`
           - `primitives/css/status-dot.StatusDot`
           - `primitives/css/text.Text`
@@ -7760,8 +7775,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/data-view.FieldDef`
           - `primitives/data-view.HierarchyConfig`
           - `primitives/diff-view.TextDiff`
-          - `primitives/hover-reveal.hoverRevealGroup`
-          - `primitives/hover-reveal.hoverRevealTarget`
+          - `primitives/icon-button.IconButton`
           - `primitives/live-state.useCombinedResources`
           - `primitives/live-state.useResource`
           - `primitives/loading.Loading`
@@ -13440,16 +13454,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Plugins:
         - **`config`** — Avatar field type: config-render capability (icon + color picker for config-v2.fields.renderer) plus the avatarField factory.
           - Web:
-            - Contributes: `Fields.Renderer` "avatar" → `AvatarRenderer`
+            - Contributes: `Fields.Renderer` "avatar" → `Rendered`
             - Uses:
-              - `config_v2/fields.FieldHeader`
-              - `config_v2/fields.FieldRendererComponent`
+              - `config_v2/fields.defineFieldShape`
               - `config_v2/fields.Fields`
               - `primitives/avatar.Avatar`
               - `primitives/avatar.AvatarPicker`
-              - `primitives/avatar.AvatarSpec`
               - `primitives/css/center.Center`
-              - `primitives/css/spacing.Stack`
           - Core:
             - Uses:
               - `fields.FieldDef`
@@ -13477,12 +13488,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Plugins:
         - **`config`** — Boolean field type: config-render capability (checkbox for config-v2.fields.renderer) plus the boolField factory.
           - Web:
-            - Contributes: `Fields.Renderer` "bool" → `BoolRenderer`
+            - Contributes: `Fields.Renderer` "bool" → `Rendered`
             - Uses:
-              - `config_v2/fields.FieldHeader`
-              - `config_v2/fields.FieldRendererComponent`
+              - `config_v2/fields.defineFieldShape`
               - `config_v2/fields.Fields`
-              - `primitives/css/spacing.Stack`
           - Core:
             - Uses:
               - `fields.FieldDef`
@@ -13565,13 +13574,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Plugins:
         - **`config`** — Color field type: config-render capability (hex/oklch popover picker for config-v2.fields.renderer) plus the colorField factory.
           - Web:
-            - Contributes: `Fields.Renderer` "color" → `ColorRenderer`
+            - Contributes: `Fields.Renderer` "color" → `Rendered`
             - Uses:
-              - `config_v2/fields.FieldHeader`
-              - `config_v2/fields.FieldRendererComponent`
+              - `config_v2/fields.defineFieldShape`
               - `config_v2/fields.Fields`
               - `primitives/css/color-picker.ColorPickerPopover`
-              - `primitives/css/spacing.Stack`
           - Core:
             - Uses:
               - `fields.FieldDef`
@@ -13699,12 +13706,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Plugins:
         - **`config`** — Directory-path field type: config-render capability (folder picker for config-v2.fields.renderer) plus the dirPathField factory.
           - Web:
-            - Contributes: `Fields.Renderer` "directory-path" → `DirPathRenderer`
+            - Contributes: `Fields.Renderer` "directory-path" → `Rendered`
             - Uses:
-              - `config_v2/fields.FieldHeader`
-              - `config_v2/fields.FieldRendererComponent`
+              - `config_v2/fields.defineFieldShape`
               - `config_v2/fields.Fields`
-              - `primitives/css/spacing.Stack`
               - `primitives/folder-picker.FolderPickerPopover`
           - Core:
             - Uses:
@@ -13731,12 +13736,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - **`config`** — Dynamic enum field type: config-render capability (options resolved at render time from slot contributions, for config-v2.fields.renderer) plus the dynamicEnumField factory.
           - Web:
             - Slots: `DynamicEnum.Options` ← `apps-core.app-rail-framing`, `conversations.conversation-category`, `ui.segmented-progress-bar`, `ui.sidebar-framing`, `ui.tab-bar`, `ui.theme-engine`, `ui.tokens.categorical`, `ui.tokens.chart`, `ui.tokens.color-adjust`, `ui.tokens.color-palette`, `ui.tokens.density`, `ui.tokens.font-family`, `ui.tokens.shadow`, `ui.tokens.shape`, `ui.tokens.sidebar-palette`, `ui.tokens.type-scale`, `ui.tree-disclosure`
-            - Contributes: `Fields.Renderer` "dynamic-enum" → `DynamicEnumRenderer`
+            - Contributes: `Fields.Renderer` "dynamic-enum" → `Rendered`
             - Uses:
+              - `config_v2/fields.defineFieldShape`
               - `config_v2/fields.Fields`
-              - `primitives/css/radio-group.RadioGroup`
-              - `primitives/css/spacing.Stack`
-              - `primitives/css/text.Text`
+              - `primitives/css/ui-kit.Input`
               - `primitives/css/ui-kit.Select`
               - `primitives/css/ui-kit.SelectContent`
               - `primitives/css/ui-kit.SelectItem`
@@ -13796,17 +13800,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/icon-button.IconButton`
         - **`config`** — Enum field type: config-render capability. Contributes the radio/dropdown renderer to the config-v2.fields.renderer slot.
           - Web:
-            - Contributes: `Fields.Renderer` "enum" → `EnumRenderer`
+            - Contributes: `Fields.Renderer` "enum" → `Rendered`
             - Uses:
+              - `config_v2/fields.defineFieldShape`
               - `config_v2/fields.Fields`
-              - `primitives/css/radio-group.RadioGroup`
-              - `primitives/css/spacing.Stack`
-              - `primitives/css/text.Text`
-              - `primitives/css/ui-kit.Select`
-              - `primitives/css/ui-kit.SelectContent`
-              - `primitives/css/ui-kit.SelectItem`
-              - `primitives/css/ui-kit.SelectTrigger`
-              - `primitives/css/ui-kit.SelectValue`
           - Core:
             - Uses:
               - `fields.FieldDef`
@@ -13869,13 +13866,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Plugins:
         - **`config`** — Float field type: config-render capability (number stepper for config-v2.fields.renderer) plus the floatField factory.
           - Web:
-            - Contributes: `Fields.Renderer` "float" → `FloatRenderer`
+            - Contributes: `Fields.Renderer` "float" → `Rendered`
             - Uses:
-              - `config_v2/fields.FieldHeader`
-              - `config_v2/fields.FieldRendererComponent`
+              - `config_v2/fields.defineFieldShape`
               - `config_v2/fields.Fields`
               - `config_v2/fields.useLocalValue`
-              - `primitives/css/spacing.Stack`
               - `primitives/css/ui-kit.Input`
           - Core:
             - Uses:
@@ -13933,13 +13928,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Plugins:
         - **`config`** — Integer field type: config-render capability (number stepper for config-v2.fields.renderer) plus the intField factory.
           - Web:
-            - Contributes: `Fields.Renderer` "int" → `IntRenderer`
+            - Contributes: `Fields.Renderer` "int" → `Rendered`
             - Uses:
-              - `config_v2/fields.FieldHeader`
-              - `config_v2/fields.FieldRendererComponent`
+              - `config_v2/fields.defineFieldShape`
               - `config_v2/fields.Fields`
               - `config_v2/fields.useLocalValue`
-              - `primitives/css/spacing.Stack`
               - `primitives/css/ui-kit.Input`
           - Core:
             - Uses:
@@ -13992,13 +13985,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Plugins:
         - **`config`** — JSON field type: config-render capability (read-only formatted JSON for config-v2.fields.renderer) plus the jsonField factory.
           - Web:
-            - Contributes: `Fields.Renderer` "json" → `JsonRenderer`
+            - Contributes: `Fields.Renderer` "json" → `Rendered`
             - Uses:
-              - `config_v2/fields.FieldHeader`
-              - `config_v2/fields.FieldRendererComponent`
+              - `config_v2/fields.defineFieldShape`
               - `config_v2/fields.Fields`
               - `primitives/css/scroll.Scroll`
-              - `primitives/css/spacing.Stack`
               - `primitives/css/surface.Surface`
               - `primitives/css/text.Text`
           - Core:
@@ -14043,19 +14034,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Plugins:
         - **`config`** — List field type: config-render capability (sortable drag-and-drop list for config-v2.fields.renderer) plus the listField factory.
           - Web:
-            - Contributes: `Fields.Renderer` "list" → `ListRenderer`
+            - Contributes: `Fields.Renderer` "list" → `Rendered`
             - Uses:
-              - `config_v2/fields.FieldRenderer`
+              - `config_v2/fields.defineFieldShape`
               - `config_v2/fields.Fields`
-              - `primitives/css/fill.Fill`
-              - `primitives/css/rigid.rigidClass`
-              - `primitives/css/spacing.Stack`
-              - `primitives/css/text.Text`
-              - `primitives/css/ui-kit.Button`
-              - `primitives/css/ui-kit.cn`
-              - `primitives/css/ui-kit.SURFACE_LEVELS`
-              - `primitives/sortable-list.SortableItem`
-              - `primitives/sortable-list.SortableList`
           - Core:
             - Uses:
               - `fields.FieldDef`
@@ -14091,13 +14073,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Plugins:
         - **`config`** — Long-text field type: config-render capability (textarea for config-v2.fields.renderer) plus the multilineTextField factory.
           - Web:
-            - Contributes: `Fields.Renderer` "multiline-text" → `MultilineTextRenderer`
+            - Contributes: `Fields.Renderer` "multiline-text" → `Rendered`
             - Uses:
-              - `config_v2/fields.FieldHeader`
-              - `config_v2/fields.FieldRendererComponent`
+              - `config_v2/fields.defineFieldShape`
               - `config_v2/fields.Fields`
               - `config_v2/fields.useLocalValue`
-              - `primitives/css/spacing.Stack`
           - Core:
             - Uses:
               - `fields.FieldDef`
@@ -14171,17 +14151,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Plugins:
         - **`config`** — Object field type: config-render capability (collapsible sub-field renderer for config-v2.fields.renderer) plus the objectField factory.
           - Web:
-            - Contributes: `Fields.Renderer` "object" → `ObjectRenderer`
+            - Contributes: `Fields.Renderer` "object" → `Rendered`
             - Uses:
-              - `config_v2/fields.FieldRenderer`
-              - `config_v2/fields.FieldRendererComponent`
+              - `config_v2/fields.defineFieldShape`
               - `config_v2/fields.Fields`
-              - `primitives/collapsible.Collapsible`
-              - `primitives/collapsible.CollapsibleChevron`
-              - `primitives/collapsible.CollapsibleContent`
-              - `primitives/collapsible.CollapsibleTrigger`
-              - `primitives/css/spacing.Stack`
-              - `primitives/css/text.Text`
           - Core:
             - Uses:
               - `fields.FieldDef`
@@ -14253,12 +14226,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Plugins:
         - **`config`** — Reorder-tree field type: config-render capability (read-only tree list for config-v2.fields.renderer) plus the reorderTreeField factory.
           - Web:
-            - Contributes: `Fields.Renderer` "reorder-tree" → `ReorderTreeRenderer`
+            - Contributes: `Fields.Renderer` "reorder-tree" → `Rendered`
             - Uses:
-              - `config_v2/fields.FieldHeader`
-              - `config_v2/fields.FieldRendererComponent`
+              - `config_v2/fields.defineFieldShape`
               - `config_v2/fields.Fields`
-              - `primitives/css/spacing.Stack`
               - `primitives/css/text.Text`
               - `reorder/editor.ReorderEditor`
               - `reorder/editor.ReorderEntry`
@@ -14294,16 +14265,19 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Plugins:
         - **`config`** — Secret field type: config-render capability (password input for config-v2.fields.renderer) plus the secretField factory. Secret field type: encrypted storage with set/not-set metadata. Central-side secret config reader for auth providers.
           - Web:
-            - Contributes: `Fields.Renderer` "secret" → `SecretRenderer`
+            - Contributes: `Fields.Renderer` "secret" → `Rendered`
             - Uses:
               - `config_v2/fields.ConfigFieldContext`
+              - `config_v2/fields.defineFieldShape`
               - `config_v2/fields.Fields`
+              - `config_v2/fields.useLocalValue`
               - `primitives/css/spacing.Stack`
               - `primitives/css/text.Text`
               - `primitives/css/ui-kit.Button`
               - `primitives/css/ui-kit.ControlSizeProvider`
               - `primitives/css/ui-kit.Input`
               - `primitives/live-state.useResource`
+              - `primitives/loading.Loading`
           - Server:
             - Contributes: `resource.declare` "config-v2.secret-meta"
             - Uses:
@@ -14416,19 +14390,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Plugins:
         - **`config`** — String-list field type: config-render capability (drag-and-drop string list for config-v2.fields.renderer) plus the stringListField factory.
           - Web:
-            - Contributes: `Fields.Renderer` "string-list" → `StringListRenderer`
+            - Contributes: `Fields.Renderer` "string-list" → `Rendered`
             - Uses:
+              - `config_v2/fields.defineFieldShape`
               - `config_v2/fields.Fields`
-              - `primitives/css/fill.fillClasses`
-              - `primitives/css/rigid.rigidClass`
-              - `primitives/css/spacing.Stack`
-              - `primitives/css/text.Text`
-              - `primitives/css/ui-kit.Button`
-              - `primitives/css/ui-kit.cn`
               - `primitives/css/ui-kit.Input`
-              - `primitives/css/ui-kit.SURFACE_LEVELS`
-              - `primitives/sortable-list.SortableItem`
-              - `primitives/sortable-list.SortableList`
           - Core:
             - Uses:
               - `fields.FieldDef`
@@ -14455,14 +14421,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Plugins:
         - **`config`** — Tags field type: config-render capability. Contributes the multi-select chip renderer to the config-v2.fields.renderer slot.
           - Web:
-            - Contributes: `Fields.Renderer` "tags" → `TagsRenderer`
+            - Contributes: `Fields.Renderer` "tags" → `Rendered`
             - Uses:
-              - `config_v2/fields.FieldHeader`
-              - `config_v2/fields.FieldRendererComponent`
+              - `config_v2/fields.defineFieldShape`
               - `config_v2/fields.Fields`
-              - `primitives/css/cluster.Cluster`
-              - `primitives/css/spacing.Stack`
-              - `primitives/css/toggle-chip.ToggleChip`
           - Core:
             - Uses:
               - `fields.FieldDef`
@@ -14534,13 +14496,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Plugins:
         - **`config`** — Text field type: config-render capability (single-line input for config-v2.fields.renderer) plus the textField factory.
           - Web:
-            - Contributes: `Fields.Renderer` "text" → `TextRenderer`
+            - Contributes: `Fields.Renderer` "text" → `Rendered`
             - Uses:
-              - `config_v2/fields.FieldHeader`
-              - `config_v2/fields.FieldRendererComponent`
+              - `config_v2/fields.defineFieldShape`
               - `config_v2/fields.Fields`
               - `config_v2/fields.useLocalValue`
-              - `primitives/css/spacing.Stack`
               - `primitives/css/ui-kit.Input`
           - Core:
             - Uses:
@@ -14656,19 +14616,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Plugins:
         - **`config`** — Variant field type: config-render capability (type-dispatched renderer for config-v2.fields.renderer) plus the variantField factory.
           - Web:
-            - Contributes: `Fields.Renderer` "variant" → `VariantRenderer`
+            - Contributes: `Fields.Renderer` "variant" → `Rendered`
             - Uses:
-              - `config_v2/fields.FieldHeader`
-              - `config_v2/fields.FieldRenderer`
-              - `config_v2/fields.FieldRendererComponent`
+              - `config_v2/fields.defineFieldShape`
               - `config_v2/fields.Fields`
-              - `primitives/css/spacing.Stack`
               - `primitives/css/text.Text`
-              - `primitives/css/ui-kit.Select`
-              - `primitives/css/ui-kit.SelectContent`
-              - `primitives/css/ui-kit.SelectItem`
-              - `primitives/css/ui-kit.SelectTrigger`
-              - `primitives/css/ui-kit.SelectValue`
           - Core:
             - Uses:
               - `fields.FieldDef`
@@ -15452,7 +15404,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/prototypes/present`
               - `apps/prototypes/thumbnails`
               - `apps/sonata/look`
+              - `apps/sonata/view-options`
               - `code-explorer`
+              - `config_v2/settings`
               - `config_v2/settings/conflict-agent`
               - `conversations/conversation-category`
               - `conversations/conversation-view/jsonl-viewer`
@@ -21181,7 +21135,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conversations/conversation-view/jsonl-viewer/tool-call/workflow`
           - `conversations/conversation-view/turn-summary`
           - `debug/claude-cli-calls`
-          - `fields/object/config`
           - `plugin-meta/facets/exports/render-detail`
           - `plugin-meta/plugin-view`
           - `plugin-meta/plugin-view/dependencies`
@@ -21692,6 +21645,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/studio/graph`
               - `apps/website/demos/plugin-pyramid`
               - `apps/website/demos/sample-app`
+              - `config_v2/fields`
               - `conversations/conversation-view/jsonl-viewer/tool-call/page-tools`
               - `conversations/conversation-view/jsonl-viewer/tool-call/workflow`
               - `conversations/conversation-view/prompt-templates`
@@ -21706,7 +21660,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `debug/trace/boot`
               - `debug/trace/contention`
               - `debug/trace/gates`
-              - `fields/tags/config`
               - `fields/tags/inline`
               - `page/place`
               - `page/prompt/block`
@@ -21784,7 +21737,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/outline/rail`
               - `primitives/pane`
               - `primitives/tabbed-view`
-        - **`control-panel`** — The control-panel vocabulary: ControlPanel plus its closed set of members (Section, Row, RuleList, RuleRow, Field, Footer, Empty, Stack) and the ControlPanelPopover surface. The container draws the hairlines, the row is a grid so every label starts at one x, selection has one language per meaning, and width is a role rather than a measurement.
+        - **`control-panel`** — The control-panel vocabulary: ControlPanel plus its closed set of members (Section, Row, Setting, Block, Group, RuleList, RuleRow, Field, Footer, Empty, Stack) and its two surfaces, ControlPanelPopover and ControlPanelPane. The container draws the hairlines, the row is a grid so every label starts at one x, selection has one language per meaning, and width is a role rather than a measurement.
           - Web:
             - Uses:
               - `primitives/css/rail.useRailGuard`
@@ -21801,10 +21754,17 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/icon-button.IconButton`
               - `primitives/row-actions.RowActions`
               - `primitives/row-actions.rowActionsAnchor`
+              - `primitives/tooltip.WithTooltip`
             - Exports (types):
+              - `ControlPanelBlockProps`
               - `ControlPanelEmptyProps`
               - `ControlPanelFieldProps`
+              - `ControlPanelFit`
               - `ControlPanelFooterProps`
+              - `ControlPanelGroupProps`
+              - `ControlPanelHost`
+              - `ControlPanelMark`
+              - `ControlPanelPaneProps`
               - `ControlPanelPopoverProps`
               - `ControlPanelProps`
               - `ControlPanelRowProps`
@@ -21813,20 +21773,27 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `ControlPanelRuleListProps`
               - `ControlPanelRuleRowProps`
               - `ControlPanelSectionProps`
+              - `ControlPanelSettingProps`
               - `ControlPanelSize`
               - `ControlPanelStackProps`
               - `PanelStackApi`
               - `PanelStackEntry`
             - Exports (values):
               - `ControlPanel`
+              - `ControlPanelPane`
               - `ControlPanelPopover`
+              - `useControlPanelHost`
               - `usePanelStack`
           - Cross-plugin:
             - Imported by:
+              - `apps/events/sources`
+              - `apps/events/sources/source-detail/settings`
               - `apps/pages/page-tree`
               - `apps/sonata/audio/metronome`
               - `apps/sonata/piano-roll`
               - `apps/sonata/view-options`
+              - `config_v2/fields`
+              - `config_v2/settings`
               - `conversations/conversation-category`
               - `fields/date/filter`
               - `page/callout`
@@ -21918,8 +21885,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `debug/trace/spans`
               - `debug/trace/stall`
               - `debug/worktree-cleanup`
-              - `fields/list/config`
-              - `fields/string-list/config`
               - `improve/element-picker`
               - `infra/events-test`
               - `page/annotations/agent-notes/authorship`
@@ -22461,10 +22426,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `RadioGroupProps`
               - `RadioOption`
             - Exports (values): `RadioGroup`
-          - Cross-plugin:
-            - Imported by:
-              - `fields/dynamic-enum/config`
-              - `fields/enum/config`
         - **`radius`** — Corner-radius standard: the token-driven rounded-* scale and its enforcing lint rule (no-adhoc-radius).
         - **`rail`** — Web half of the rail contract: useRailGuard, the dev-only structural guard a region owner attaches to its own box. It measures every child's content edge against the rail the region published and names whoever applied an inset on top of it — the double-inset that looks reasonable at every call site and is only visible as content indented twice.
           - Core:
@@ -22531,8 +22492,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `debug/memory`
               - `debug/profiling`
               - `debug/worktree-cleanup`
-              - `fields/list/config`
-              - `fields/string-list/config`
               - `improve/element-picker`
               - `page/bookmark`
               - `page/code-block`
@@ -22888,7 +22847,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `code-explorer/commit-detail`
               - `code-explorer/file-resolve`
               - `config_v2/config-link`
-              - `config_v2/fields`
               - `config_v2/settings`
               - `conversations/agents`
               - `conversations/conversation-category`
@@ -22967,32 +22925,15 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `debug/trace/stall`
               - `debug/worktree-cleanup`
               - `debug/zero-test`
-              - `fields/avatar/config`
-              - `fields/bool/config`
               - `fields/bool/filter`
-              - `fields/color/config`
               - `fields/color/table`
               - `fields/date/filter`
-              - `fields/directory-path/config`
-              - `fields/dynamic-enum/config`
               - `fields/enum/column-config`
-              - `fields/enum/config`
               - `fields/enum/inline`
-              - `fields/float/config`
-              - `fields/int/config`
-              - `fields/json/config`
-              - `fields/list/config`
-              - `fields/multiline-text/config`
               - `fields/number/filter`
-              - `fields/object/config`
-              - `fields/reorder-tree/config`
               - `fields/secret/config`
-              - `fields/string-list/config`
-              - `fields/tags/config`
               - `fields/tags/inline`
               - `fields/tags/table`
-              - `fields/text/config`
-              - `fields/variant/config`
               - `history/dialog`
               - `improve/element-picker`
               - `infra/events-test`
@@ -23267,6 +23208,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Cross-plugin:
             - Imported by:
               - `apps/events/sources`
+              - `config_v2/fields`
               - `primitives/css/control-panel`
         - **`text`** — Semantic typography primitive: <Text variant tone as> picks a frozen size/line-height/weight role from the typography token group (incl. the eyebrow/section-label role). The single sanctioned home for text hierarchy; raw text-size/leading-* is banned by no-adhoc-typography.
           - Web:
@@ -23407,7 +23349,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `code-explorer/commit-detail`
               - `code-explorer/file-resolve`
               - `config_v2/config-link`
-              - `config_v2/fields`
               - `config_v2/settings`
               - `conversations/agents`
               - `conversations/all-conversations`
@@ -23500,16 +23441,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `debug/zero-test`
               - `fields/color/table`
               - `fields/date/filter`
-              - `fields/dynamic-enum/config`
               - `fields/enum/column-config`
-              - `fields/enum/config`
               - `fields/json/config`
-              - `fields/list/config`
               - `fields/number/filter`
-              - `fields/object/config`
               - `fields/reorder-tree/config`
               - `fields/secret/config`
-              - `fields/string-list/config`
               - `fields/variant/config`
               - `framework/web-core`
               - `history/dialog`
@@ -23664,13 +23600,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/workflows/steps/set-value`
               - `apps/workflows/steps/template`
               - `build/serve-composition`
+              - `config_v2/fields`
               - `config_v2/settings`
               - `conversations/conversation-view/code/file-pane`
               - `debug/broadcasts`
               - `debug/queue`
               - `debug/timeline`
               - `fields/enum/inline`
-              - `fields/tags/config`
               - `fields/tags/inline`
               - `page/inline-date`
               - `page/place`
@@ -23972,17 +23908,14 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `fields/date/filter`
               - `fields/dynamic-enum/config`
               - `fields/enum/column-config`
-              - `fields/enum/config`
               - `fields/float/config`
               - `fields/int/config`
-              - `fields/list/config`
               - `fields/number/inline`
               - `fields/secret/config`
               - `fields/string-list/config`
               - `fields/tags/inline`
               - `fields/text/config`
               - `fields/text/inline`
-              - `fields/variant/config`
               - `framework/web-core`
               - `history/dialog`
               - `improve`
@@ -25361,7 +25294,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/prototypes/present`
           - `apps/sonata/progress/loop`
           - `apps/sonata/progress/sections`
-          - `config_v2/settings`
           - `layouts/miller`
           - `page/audio`
           - `page/bookmark`
@@ -25438,6 +25370,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `build/build-logs`
           - `code-explorer`
           - `config_v2/config-link`
+          - `config_v2/fields`
+          - `config_v2/settings`
           - `conversations/agents`
           - `conversations/conversation-view/jsonl-viewer/outline`
           - `conversations/conversation-view/jsonl-viewer/tool-call/agent`
@@ -26123,6 +26057,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `debug/trace/pane`
           - `debug/worktree-cleanup`
           - `debug/zero-test`
+          - `fields/secret/config`
           - `history/dialog`
           - `layouts/route-fallback`
           - `page/bookmark`
@@ -27365,8 +27300,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Cross-plugin:
         - Imported by:
           - `apps-core/tab-bar`
-          - `fields/list/config`
-          - `fields/string-list/config`
           - `layouts/miller`
           - `primitives/collapsible-wrap`
           - `primitives/data-view`
@@ -27672,6 +27605,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `page/formatting/underline`
           - `primitives/action-presentation`
           - `primitives/command-palette`
+          - `primitives/css/control-panel`
           - `primitives/icon-button`
           - `primitives/launch`
           - `primitives/pane`

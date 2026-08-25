@@ -37,14 +37,10 @@ property of the thing being filtered. Say it in the field's `description`.
 
 - Description: Tags field type: config-render capability. Contributes the multi-select chip renderer to the config-v2.fields.renderer slot.
 - Web:
-  - Contributes: `Fields.Renderer` "tags" → `TagsRenderer`
+  - Contributes: `Fields.Renderer` "tags" → `Rendered`
   - Uses:
-    - `config_v2/fields.FieldHeader`
-    - `config_v2/fields.FieldRendererComponent`
+    - `config_v2/fields.defineFieldShape`
     - `config_v2/fields.Fields`
-    - `primitives/css/cluster.Cluster`
-    - `primitives/css/spacing.Stack`
-    - `primitives/css/toggle-chip.ToggleChip`
 - Core:
   - Uses:
     - `fields.FieldDef`

@@ -10,9 +10,13 @@
  * read, so any plugin surfacing a new display option auto-appears here with zero
  * edits.
  *
- * Each contribution is one BAND of the control panel, so the hairline between
- * two contributions is drawn by the panel rather than by this file — and a
- * contribution that renders nothing leaves no orphan rule behind it.
+ * EVERY CONTRIBUTED FIELD IS A MEMBER OF THE ONE PANEL, and this file draws no
+ * band around any of them. A field renderer now declares its shape and the
+ * shared shape view maps that onto the vocabulary — so the view already decides
+ * which fields are a band, which are a bare row, and where a description goes. A
+ * `Section` per contribution on top of that banded a choice field twice: the
+ * view makes a choice its own band (its rows ARE its options), and a wrapper
+ * band around it drew a second hairline around the first.
  *
  * Each contribution is its own component (`ViewOptionGroup`) so the per-config
  * `useConfig`/`useSetConfig` hooks stay stable per component — the contribution
@@ -26,10 +30,7 @@ import { useState } from "react";
 import { MdTune } from "react-icons/md";
 import { useConfig, useSetConfig } from "@plugins/config_v2/web";
 import { FieldRenderer } from "@plugins/config_v2/plugins/fields/web";
-import {
-  ControlPanel,
-  ControlPanelPopover,
-} from "@plugins/primitives/plugins/css/plugins/control-panel/web";
+import { ControlPanelPopover } from "@plugins/primitives/plugins/css/plugins/control-panel/web";
 import { ToggleChip } from "@plugins/primitives/plugins/css/plugins/toggle-chip/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import {
@@ -105,13 +106,18 @@ export function ViewOptionsToggle() {
   );
 }
 
+/**
+ * One contribution's fields, as members of the panel around them — a fragment,
+ * never a wrapper, so the panel lays each field out and separates it exactly as
+ * if this component were not here.
+ */
 function ViewOptionGroup({ option }: { option: ViewOptionItem }) {
   const values = useConfig(option.config) as Record<string, unknown>;
   const setConfig = useSetConfig(option.config);
   const keys = option.fields ?? Object.keys(option.config.fields);
 
   return (
-    <ControlPanel.Section>
+    <>
       {keys.map((key) => {
         const field = option.config.fields[key];
         if (!field) return null;
@@ -124,6 +130,6 @@ function ViewOptionGroup({ option }: { option: ViewOptionItem }) {
           />
         );
       })}
-    </ControlPanel.Section>
+    </>
   );
 }

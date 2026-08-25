@@ -7,6 +7,20 @@ display lens — piano roll, notation, and songsheet — instead of being mounte
 one display. Collection-consumer clean: it never names a contributor; any plugin
 adding a `Sonata.ViewOption` auto-appears here. Web-only (no server runtime).
 
+## This file draws no band
+
+Every contributed field is a member of the ONE panel. A field renderer declares
+its shape and `FieldShapeView` maps that onto the vocabulary, so the view already
+decides which fields are a band, which are a bare row, and where a description
+goes. Wrapping each contribution in a `ControlPanel.Section` on top of that banded
+a choice field twice — a choice IS a band, because its rows are its options — and
+put a hairline where the panel had not asked for one.
+
+The falsifying sibling is the FX popover in the same HUD
+(`piano-roll/web/components/fx-toggle.tsx`), which has always been real
+vocabulary. `e2e/view-vs-fx.ts` opens both and measures the pair: one panel width,
+one rail, one row height, and no UA-drawn checkbox or radio in either.
+
 ## Per-lens scoping
 
 Each `Sonata.ViewOption` declares `displays` — the lens id(s) it belongs to, or
@@ -31,7 +45,6 @@ into every lens — the scoping is enforced at the type level, not by this filte
     - `config_v2.useConfig`
     - `config_v2.useSetConfig`
     - `config_v2/fields.FieldRenderer`
-    - `primitives/css/control-panel.ControlPanel`
     - `primitives/css/control-panel.ControlPanelPopover`
     - `primitives/css/toggle-chip.ToggleChip`
     - `primitives/css/ui-kit.cn`

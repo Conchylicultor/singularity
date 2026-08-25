@@ -61,13 +61,13 @@ anonymous index signature. See
     - `apps/workflows/steps/set-value`
     - `apps/workflows/steps/template`
     - `build/serve-composition`
+    - `config_v2/fields`
     - `config_v2/settings`
     - `conversations/conversation-view/code/file-pane`
     - `debug/broadcasts`
     - `debug/queue`
     - `debug/timeline`
     - `fields/enum/inline`
-    - `fields/tags/config`
     - `fields/tags/inline`
     - `page/inline-date`
     - `page/place`
