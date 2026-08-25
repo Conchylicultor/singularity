@@ -6,7 +6,7 @@
 
 - Description: Backup orchestrator UI: run backups, view history, configure targets. Backup orchestrator: assembles archives from registered backup sources, dispatches to registered storage targets.
 - Web:
-  - Slots: `backupPane.Actions`
+  - Slots: `backupPane.Actions` ← `primitives.pane`
   - Contributes:
     - `ConfigV2.WebRegister` "config"
     - `Pane.Register` "backup"

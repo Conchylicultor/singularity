@@ -1,0 +1,29 @@
+// @hash 590757ec6fad
+// The shared site header — ONE row worn by all five website panes, read left to
+// right: the wordmark is the brand and stays at the leading edge, then the
+// pane's own title item (these panes set no title, so it paints nothing and
+// simply holds the slack).
+//
+// After the spacer, the site nav in NARRATIVE order — the three pillar pages
+// tell the story in sequence (the apps you get → the agents that build them →
+// the platform underneath) — and then the Download call-to-action last, i.e.
+// rightmost, which is where a marketing header puts its one CTA.
+//
+// Node forms:
+// Item: "<key>" (terse; <key> is "<pluginId>:<id>")
+// Hide: { "item": "<key>", "hidden": true }
+// Spacer (gap): { "type": "spacer", "id": "<unique-id>" }
+// Group: { "type": "header", "label": "<title>", "collapsed": false, "items": [ "<key>", … ] }
+// Overflow (⋯ menu): { "type": "overflow", "id": "<unique-id>", "items": [ "<key>", … ] }
+// At most one spacer per slot.
+{
+  "items": [
+    "apps.website.shell:wordmark",
+    "primitives.pane:title",
+    { "type": "spacer", "id": "spacer-1" },
+    "apps.website.pillars.apps:apps",
+    "apps.website.pillars.agents:agents",
+    "apps.website.pillars.platform:platform",
+    "apps.website.downloads:download"
+  ]
+}

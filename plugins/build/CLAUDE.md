@@ -83,8 +83,8 @@ see its docblock.
 - Web:
   - Slots:
     - `BuildDetailSlots.Section` ← `build.build-commits`, `build.build-fix`, `build.build-info`, `build.build-logs`, `build.build-profiling`
-    - `buildPane.Actions`
-    - `buildDetailPane.Actions`
+    - `buildPane.Actions` ← `primitives.pane`
+    - `buildDetailPane.Actions` ← `primitives.pane`
   - Contributes:
     - `ActionBar.Item` → `BuildButton`
     - `Pane.Register` "build"

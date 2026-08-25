@@ -1,12 +1,23 @@
-import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from "react";
-import { useStories, markStory } from "@plugins/apps/plugins/story/plugins/marker/web";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useMemo,
+  useState,
+  type ReactNode,
+} from "react";
+import {
+  useStories,
+  markStory,
+} from "@plugins/apps/plugins/story/plugins/marker/web";
 
 /**
  * Shared editor state for the story detail surface. Lifted out of `StoryEditor`
- * so the toolbar elements (back button, title, view switcher) can be zero-prop
- * render-slot contributions to {@link StoryToolbar} while the editor body still
- * reads the same `view`/`split` state. Mirrors Sonata's `useSonata()` context,
- * which backs its player-toolbar contributions the same way.
+ * so the header controls (back button, view switcher) can be zero-prop
+ * contributions to the pane's own header slot (`storyDetailPane.Actions`) while
+ * the editor body still reads the same `view`/`split` state. Mirrors Sonata's
+ * `useSonata()` context, which backs its player-header contributions the same
+ * way.
  *
  * Owns all view state: `view` (the active switcher segment — `"author"` or a
  * renderer id) and `split` (whether to show the renderer preview beside the
@@ -28,7 +39,8 @@ const StoryEditorContext = createContext<StoryEditorContextValue | null>(null);
 
 export function useStoryEditor(): StoryEditorContextValue {
   const ctx = useContext(StoryEditorContext);
-  if (!ctx) throw new Error("useStoryEditor must be used within a StoryEditorProvider");
+  if (!ctx)
+    throw new Error("useStoryEditor must be used within a StoryEditorProvider");
   return ctx;
 }
 
@@ -46,7 +58,8 @@ export function StoryEditorProvider({
   const storiesRes = useStories();
   const defaultRendererId = storiesRes.pending
     ? null
-    : (storiesRes.data.find((m) => m.pageId === pageId)?.defaultRendererId ?? null);
+    : (storiesRes.data.find((m) => m.pageId === pageId)?.defaultRendererId ??
+      null);
 
   const [view, setViewState] = useState<string>("author");
   const [split, setSplit] = useState(false);

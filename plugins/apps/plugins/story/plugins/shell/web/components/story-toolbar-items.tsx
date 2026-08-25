@@ -2,16 +2,18 @@ import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { MdChevronLeft } from "react-icons/md";
 import { usePaneStore } from "@plugins/primitives/plugins/pane/web";
 import { useStoryEditor } from "../context";
-import { StoryHeader } from "./story-header";
 import { StoryViewSwitcher } from "./story-view-switcher";
 
 /**
- * The story editor toolbar contributions. Each is a self-contained, zero-prop
+ * The story editor's header contributions. Each is a self-contained, zero-prop
  * component that reads the shared editor state from `useStoryEditor()` — so they
- * drop straight into the render-slot host (no hand-rolled bar). Registered in
- * the shell barrel; rendered by `PaneChrome` as the editor pane's header (the
- * pane sets `chrome: { header: StoryToolbar }`). Mirrors Sonata's
- * `player-toolbar-items.tsx`.
+ * drop straight into the pane's own header slot (`storyDetailPane.Actions`), no
+ * hand-rolled bar. Registered in the shell barrel; rendered by `PaneChrome` as
+ * the editor pane's header. Mirrors Sonata's `player-toolbar-items.tsx`.
+ *
+ * The story title is NOT here: it is the pane's own title node (see
+ * `story-editor.tsx`), because a pane already contributes one `title` item into
+ * its header.
  */
 
 /** ← Stories — clears the route back to the story gallery index pane. */
@@ -25,16 +27,15 @@ export function BackToStories() {
   );
 }
 
-/** Editable story title. */
-export function StoryTitleItem() {
-  const { pageId } = useStoryEditor();
-  return <StoryHeader pageId={pageId} />;
-}
-
 /** Author/renderer segment switcher + split-preview toggle. */
 export function ViewSwitcherItem() {
   const { view, setView, split, toggleSplit } = useStoryEditor();
   return (
-    <StoryViewSwitcher view={view} onView={setView} split={split} onToggleSplit={toggleSplit} />
+    <StoryViewSwitcher
+      view={view}
+      onView={setView}
+      split={split}
+      onToggleSplit={toggleSplit}
+    />
   );
 }

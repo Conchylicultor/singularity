@@ -6,7 +6,7 @@
 
 - Description: Inspect and debug the jobs queue, events emission log, and active triggers.
 - Web:
-  - Slots: `queuePane.Actions`
+  - Slots: `queuePane.Actions` ← `primitives.pane`
   - Contributes:
     - `Pane.Register` "queue"
     - `DebugApp.Sidebar` "Queue" → `component`

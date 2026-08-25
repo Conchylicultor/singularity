@@ -24,7 +24,7 @@ an empty titled card); a count goes in `summary`, via the shared `SectionCount`.
 - Web:
   - Slots:
     - `PluginViewSlots.Section` ← `plugin-meta.facets.contributions.render-detail`, `plugin-meta.facets.cross-refs.render-detail`, `plugin-meta.facets.db-schema.render-detail`, `plugin-meta.facets.exports.render-detail`, `plugin-meta.facets.registrations.render-detail`, `plugin-meta.facets.resources.render-detail`, `plugin-meta.facets.routes.render-detail`, `plugin-meta.facets.slots.render-detail`, `plugin-meta.facets.structure.render-detail`, `plugin-meta.plugin-health`, `plugin-meta.plugin-view.dependencies`, `plugin-meta.plugin-view.file-tree`, `plugin-meta.plugin-view.inclusion`, `plugin-meta.plugin-view.runtimes`, `plugin-meta.plugin-view.source-path`, `plugin-meta.plugin-view.sub-plugins`
-    - `pluginViewPane.Actions`
+    - `pluginViewPane.Actions` ← `primitives.pane`
   - Contributes: `Pane.Register` "plugin-view"
   - Uses:
     - `infra/endpoints.useEndpoint`

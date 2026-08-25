@@ -672,7 +672,6 @@ guard: `confirmDialog` (`imperative-dialog/plugins/confirm`); native
     - `primitives/multi-select`
     - `primitives/outline/rail`
     - `primitives/pane`
-    - `primitives/pane-toolbar`
     - `primitives/popover`
     - `primitives/prompt-editor`
     - `primitives/prompt-editor/voice-input`

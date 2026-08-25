@@ -15,6 +15,7 @@ import {
   type ItemFormChannel,
 } from "@plugins/primitives/plugins/action-presentation/web";
 import { usePortalForwardedAttrs } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 import { PopupOpenScope } from "@plugins/primitives/plugins/popup-open/web";
 import {
   BarFormsContext,
@@ -41,7 +42,7 @@ export interface AdaptiveBarItemProps {
  *
  * - **no bar above** — transparent. A primitive that only works in one place is
  *   a primitive nobody composes, and a host that wraps its actions in
- *   `AdaptiveBar.Item` unconditionally (`PaneActionsSlot` does) must render the
+ *   `AdaptiveBar.Item` unconditionally (a pane header does) must render the
  *   same thing outside a bar.
  * - **edit mode** — transparent, for the reason in {@link BarRegistry.editMode}.
  * - **otherwise** — the portalled host below.
@@ -90,7 +91,28 @@ function PortaledBarItem({
   id: string;
   children: ReactNode;
 }): ReactElement {
-  const [container] = useState(() => document.createElement("div"));
+  const [container] = useState(() => {
+    const el = document.createElement("div");
+    // **An occupant's width is its own** — the axiom the whole width ledger
+    // rests on (`core/width-cache.ts`), and the container is where it has to be
+    // declared. An ordinary flex item is squeezed whenever its row is over-full,
+    // which is exactly the state a pass measures in, and the squeezed number is
+    // then stored as `exact` while `measureRowOverflow` goes blind.
+    //
+    // Not on the row as `[&>*]:shrink-0`, which is where it used to live: a
+    // parent selector reaches DIRECT children, and this container is docked at
+    // its own anchor — through `.Render` that is two or three `display: contents`
+    // wrappers below the row. Still a flex item of the row, no longer a child of
+    // it. On the node itself the declaration travels with it.
+    //
+    // It travels into the panel's column too, where `flex-shrink` is about
+    // height rather than width. That is harmless and, if anything, right: the
+    // panel is content-height, so there is no deficit for a shrink to take, and
+    // a parked row that could be squashed vertically is not something anyone
+    // wants either.
+    el.className = rigidClass();
+    return el;
+  });
   const forwarded = usePortalForwardedAttrs();
   const forms = useContext(BarFormsContext);
   const form = forms.get(id) ?? "full";

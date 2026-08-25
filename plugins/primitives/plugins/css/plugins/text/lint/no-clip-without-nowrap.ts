@@ -13,7 +13,7 @@ const createRule = ESLintUtils.RuleCreator(
  * but isn't: `overflow-hidden` clips text that has ALREADY wrapped to a second line —
  * it does not stop the wrap. So a toolbar / header / chip row silently grows a second
  * line and the clip hides the overflow, not the wrap. This is exactly the bug the
- * region primitives (pane-toolbar, app-shell toolbar, PaneChrome) each had.
+ * region primitives (app-shell toolbar, PaneChrome) each had.
  *
  * The fix is `whitespace-nowrap` on the row so children never wrap in the first place
  * (truncation then stays the job of the flexible leaf — a `<Text>` inside a line

@@ -42,7 +42,7 @@ export default {
 ```
 
 An entry is **a slot, or an object whose own values are slots** — a slot group,
-a `definePaneToolbar()` result, a pane (its `Actions` slot). Entries are read
+a pane (its `Actions` slot). Entries are read
 **one level deep**; a slot nested deeper is listed on its own.
 
 This is not bookkeeping. It is what makes a slot **discoverable** (the docs and

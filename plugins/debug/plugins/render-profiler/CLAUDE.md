@@ -92,7 +92,7 @@ React-internals coupling (fiber `flags` / `memoizedState` / `dependencies` /
 
 - Description: On-demand React fiber-commit profiler: when started, attributes each commit to its initiating component and the offending hook (incl. useSyncExternalStore), surfaced as the Debug → Render Profiler pane and the window.__reactRenderProfiler API.
 - Web:
-  - Slots: `renderProfilerPane.Actions`
+  - Slots: `renderProfilerPane.Actions` ← `primitives.pane`
   - Contributes:
     - `Pane.Register` "render-profiler"
     - `DebugApp.Sidebar` "Render Profiler" → `component`

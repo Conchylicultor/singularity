@@ -4,7 +4,6 @@ import { pagesResource } from "@plugins/page/plugins/editor/core";
 import { storyApp } from "../core";
 import { StoryGallery } from "./components/story-gallery";
 import { StoryEditor } from "./components/story-editor";
-import { StoryToolbar } from "./toolbar";
 
 /**
  * The gallery index pane — Story's landing surface at bare `/story`.
@@ -31,14 +30,13 @@ function StoryGalleryBody() {
  * The editor pane at `/story/s/:pageId` — a real URL that survives reload and
  * back/forward. Opened with `mode:"root"` so each open replaces the route with a
  * single full-surface pane. `resolve` gates the pane on the page existing on
- * direct navigation / reload. The toolbar reads the title from `pagesResource`,
- * which is its only owner — the pane carries no optimistic copy.
+ * direct navigation / reload. The header title reads from `pagesResource`, which
+ * is its only owner — the pane carries no optimistic copy.
  */
 export const storyDetailPane = Pane.define({
   id: "story-detail",
   app: storyApp,
   segment: "s/:pageId",
-  chrome: { header: StoryToolbar },
   resolve: useStoryDetailResolve,
   component: StoryEditor,
 });

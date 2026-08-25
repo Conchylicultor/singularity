@@ -158,7 +158,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports (values): `PageLinkChip`
     - **`plugin-link`** — Renders plugin IDs in backtick-wrapped inline code as clickable chips that open the plugin-view pane. Models emit the plugin's dotted id (e.g. `tasks`, `active-data.conv`) and the chip validates and resolves it at render time.
       - Web:
-        - Slots: `plugin-conv-side.actions`
+        - Slots: `plugin-conv-side.actions` ← `primitives.pane`
         - Contributes:
           - `ActiveData.Tag` "plugin-link"
           - `Pane.Register` "plugin-conv-side"
@@ -261,7 +261,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Exports (values): `agentManagerApp`
         - **`welcome`** — Landing pane (agent-manager index) shown at `/agents`.
           - Web:
-            - Slots: `welcomePane.Actions`
+            - Slots: `welcomePane.Actions` ← `primitives.pane`
             - Contributes: `Pane.Register` "welcome"
             - Uses:
               - `conversations.useConversations`
@@ -622,7 +622,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `DeploymentDetail.Section` ← `apps.deploy.composition`, `apps.deploy.deploy-history`, `apps.deploy.deployments`, `apps.deploy.local-serve`, `apps.deploy.remote-deploy`
               - `Deployments.Fields` ← `apps.deploy.remote-deploy`
               - `DeploymentItemActions` ← `apps.deploy.deployments`, `apps.deploy.local-serve`
-              - `deploymentDetailPane.Actions`
+              - `deploymentDetailPane.Actions` ← `primitives.pane`
             - Contributes:
               - `ServerDetail.Section` "Deployments" → `DeploymentsSection`
               - `Pane.Register` "deploy-deployment-detail"
@@ -922,8 +922,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `ServerDetail.Section` ← `apps.deploy.deployments`, `apps.deploy.health`, `apps.deploy.servers`, `apps.deploy.ssh-setup`
               - `Servers.Fields` ← `apps.deploy.health`
               - `item-actions` ← `apps.deploy.servers`
-              - `serversRootPane.Actions`
-              - `serverDetailPane.Actions`
+              - `serversRootPane.Actions` ← `primitives.pane`
+              - `serverDetailPane.Actions` ← `primitives.pane`
             - Contributes:
               - `Pane.Register` "deploy-servers"
               - `Pane.Register` "deploy-server-detail"
@@ -1118,7 +1118,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Web:
             - Slots:
               - `EventList.Fields` ← `apps.events.sources.source-field`
-              - `eventListPane.Actions`
+              - `eventListPane.Actions` ← `primitives.pane`
             - Contributes:
               - `Pane.Register` "event-list"
               - `Events.Sidebar` "Events" → `component`
@@ -1388,7 +1388,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Web:
             - Slots:
               - `Events.Sidebar` ← `apps.events.event-list`, `apps.events.sources`
-              - `events-root.actions`
+              - `events-root.actions` ← `primitives.pane`
             - Contributes:
               - `Apps.App` "Events" → `EventsLayout`
               - `Pane.Register` "events-root"
@@ -1417,8 +1417,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Slots:
               - `EventSourceDetail.Section` ← `apps.events.sources.source-detail.runs`, `apps.events.sources.source-detail.schedule`, `apps.events.sources.source-detail.settings`, `apps.events.sources.source-detail.status`
               - `EventSourceActions` ← `apps.events.sources`
-              - `eventSourcesPane.Actions` ← `apps.events.sources.refresh-all`
-              - `eventSourceDetailPane.Actions`
+              - `eventSourcesPane.Actions` ← `apps.events.sources.refresh-all`, `primitives.pane`
+              - `eventSourceDetailPane.Actions` ← `primitives.pane`
             - Contributes:
               - `Pane.Register` "event-sources"
               - `Pane.Register` "event-source-detail"
@@ -1538,7 +1538,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `manualSourceConfigFields`
             - **`refresh-all`** — Refresh-all action in the Events sources pane toolbar: one request that enqueues a run for every ENABLED source, with the enqueued / already-running / skipped tally rendered arm by arm as a toast. Contributed into the pane's Actions, so the sources pane knows nothing about it.
               - Web:
-                - Contributes: `eventSourcesPane.Actions` → `RefreshAllAction`
+                - Contributes: `eventSourcesPane.Actions` "refresh-all" → `RefreshAllAction`
                 - Uses:
                   - `apps/events/events-core.useRefreshAllEventSources`
                   - `apps/events/sources.eventSourcesPane`
@@ -1583,7 +1583,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                     - Slots:
                       - `RunActions`
                       - `EventSourceRunDetail.Section` ← `apps.events.sources.source-detail.runs.caveats`, `apps.events.sources.source-detail.runs.extracted-events`, `apps.events.sources.source-detail.runs.model-call`
-                      - `eventSourceRunPane.Actions`
+                      - `eventSourceRunPane.Actions` ← `primitives.pane`
                     - Contributes:
                       - `EventSourceDetail.Section` "Runs" → `SourceRunsSection`
                       - `Pane.Register` "event-source-run"
@@ -1981,7 +1981,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Exports (values): `MailHtml`
         - **`reading-pane`** — Mail reading pane: the threadPane Miller column showing a thread's messages oldest→newest, each a collapsible card (newest expanded) with sender header, hydrated HTML/text body (privacy-safe images, inline cid: resolution), and attachment chips. Reading pane server: the live per-thread message-envelope resource (threadMessagesResource), scoped to mail_messages so a reply/flag/hydration in the open thread pushes automatically.
           - Web:
-            - Slots: `threadPane.Actions`
+            - Slots: `threadPane.Actions` ← `primitives.pane`
             - Contributes: `Pane.Register` "mail-thread"
             - Uses:
               - `apps/mail/attachments.AttachmentChip`
@@ -2037,8 +2037,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - **`search`** — Mail on-demand search: a Search sidebar entry opening a query surface over GET /api/mail/search (Gmail relevance order, reaching mail older than the sync window), plus a lazily-hydrated reader pane for a selected message.
           - Web:
             - Slots:
-              - `mail-search.actions`
-              - `mail-message.actions`
+              - `mail-search.actions` ← `primitives.pane`
+              - `mail-message.actions` ← `primitives.pane`
             - Contributes:
               - `Mail.Sidebar` "Search" → `MailSearchSidebar`
               - `Pane.Register` "mail-search"
@@ -2076,7 +2076,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `Mail.Sidebar` ← `apps.mail.search`
               - `Mail.Banner` ← `apps.mail.sync-status`
               - `Mail.RailBadge` ← `apps.mail.sync-status`
-              - `mail-root.actions`
+              - `mail-root.actions` ← `primitives.pane`
             - Contributes:
               - `Apps.App` "Mail" → `MailLayout`
               - `Pane.Register` "mail-root"
@@ -2184,7 +2184,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/live-state.useResource`
         - **`threads`** — The Mail app's one mail surface (/mail/threads): a single DataView over mail_threads whose TABS are the mailboxes — each an authored view instance whose scope is an ordinary, user-editable filter travelling the standard server-delegated keyset query path. Threads DataView server: the keyset thread query (POST /api/mail/threads/query) over mail_threads — the active tab's whole FilterGroup (mailbox scope included) compiles through the standard compileWhere path — plus the scalar revision-tick live resource that keeps the loaded window fresh.
           - Web:
-            - Slots: `mailThreadsPane.Actions`
+            - Slots: `mailThreadsPane.Actions` ← `primitives.pane`
             - Contributes: `Pane.Register` "mail-threads"
             - Uses:
               - `apps/mail/reading-pane.threadPane`
@@ -2363,8 +2363,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `PageDetail.Overlay` ← `apps.pages.page-outline`
               - `PageTree.RowActions` ← `apps.pages.page-tree`, `apps.pages.starred`, `apps.story.pages-integration`
               - `PageTree.Fields` ← `apps.pages.agent-origin`, `apps.pages.starred`
-              - `pageDetailPane.Actions`
-              - `pagesTreePane.Actions`
+              - `pageDetailPane.Actions` ← `primitives.pane`
+              - `pagesTreePane.Actions` ← `primitives.pane`
             - Contributes:
               - `Pane.Register` "page-detail"
               - `Pane.Register` "pages-tree"
@@ -2540,7 +2540,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Web:
             - Slots:
               - `PagesWelcome.Section` ← `apps.pages.welcome.quick-create`, `apps.pages.welcome.recent-pages`
-              - `pages-root.actions`
+              - `pages-root.actions` ← `primitives.pane`
             - Contributes: `Pane.Register` "pages-root"
             - Uses:
               - `primitives/css/spacing.Inset`
@@ -2639,13 +2639,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - **`gallery`** — Prototypes gallery list pane and the Focus/Compare detail pane (scaled live iframes), with an Improve this prototype affordance.
           - Web:
             - Slots:
-              - `prototypesGalleryPane.Actions`
-              - `prototypeDetailPane.Actions` ← `apps.prototypes.gallery`, `apps.prototypes.present`
+              - `prototypesGalleryPane.Actions` ← `primitives.pane`
+              - `prototypeDetailPane.Actions` ← `apps.prototypes.gallery`, `apps.prototypes.present`, `primitives.pane`
             - Contributes:
               - `Pane.Register` "prototypes-gallery"
               - `Pane.Register` "prototypes-detail"
-              - `prototypeDetailPane.Actions` → `ViewModeSwitcher`
-              - `prototypeDetailPane.Actions` → `ImproveButton`
+              - `prototypeDetailPane.Actions` "view-mode" → `ViewModeSwitcher`
+              - `prototypeDetailPane.Actions` "improve" → `ImproveButton`
             - Uses:
               - `apps/prototypes/thumbnails.PrototypeThumbnail`
               - `apps/prototypes/thumbnails.usePrototypeThumbnails`
@@ -2687,7 +2687,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/prototypes/present`
         - **`present`** — Present a prototype without the app around it, in four sizes: filling this app tab's surface (the tab bar stays, so the user can keep switching tabs), filling this browser tab, filling the screen (Fullscreen API), or opened as its own document in a new browser tab. Contributed into the detail pane's Actions.
           - Web:
-            - Contributes: `prototypeDetailPane.Actions` → `PresentMenu`
+            - Contributes: `prototypeDetailPane.Actions` "present" → `PresentMenu`
             - Uses:
               - `apps-core/tabs.useSurfaceFocused`
               - `apps/prototypes/gallery.prototypeDetailPane`
@@ -2781,7 +2781,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `ui/theme-engine/theme-customizer.themeCustomizerPane`
         - **`config`** — Config settings surface: the config nav as the Settings app's default pane, its sidebar entry, and the rail-icon conflict dot.
           - Web:
-            - Slots: `settings-config-index.actions`
+            - Slots: `settings-config-index.actions` ← `primitives.pane`
             - Contributes:
               - `Pane.Register` "settings-config-index"
               - `Settings.Sidebar` "Config" → `ConfigSidebarButton`
@@ -2818,17 +2818,17 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Plugins:
         - **`audio`** — Audio playback umbrella for Sonata: engine + instruments.
           - Plugins:
-            - **`engine`** — Sonata audio engine: schedules the Score's notes against the Web Audio clock on play, routing each note to its track's resolved instrument, with master volume in the top toolbar.
+            - **`engine`** — Sonata audio engine: schedules the Score's notes against the Web Audio clock on play, routing each note to its track's resolved instrument, with master volume in the player pane's header.
               - Web:
                 - Contributes:
                   - `Sonata.SurfaceProvider` → `AudioProvider`
                   - `Sonata.Effect` "audio-engine" → `AudioEngine`
-                  - `SonataToolbar.End` "volume" → `VolumeControl`
+                  - `sonataPlayerPane.Actions` "volume" → `VolumeControl`
                 - Uses:
                   - `apps/sonata/audio/instruments.InstrumentVoices`
                   - `apps/sonata/audio/instruments.SonataAudio`
+                  - `apps/sonata/library.sonataPlayerPane`
                   - `apps/sonata/shell.Sonata`
-                  - `apps/sonata/shell.SonataToolbar`
                   - `apps/sonata/shell.useCursorApi`
                   - `apps/sonata/shell.useSonata`
                   - `apps/sonata/track-mixer.useMutedTrackIds`
@@ -2885,7 +2885,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - Web:
                 - Contributes:
                   - `Sonata.Effect` "metronome" → `MetronomeEngine`
-                  - `SonataToolbar.End` "metronome" → `MetronomeButton`
+                  - `sonataPlayerPane.Actions` "metronome" → `MetronomeButton`
                   - `Sonata.Hud` "count-in" → `CountInOverlay`
                   - `ConfigV2.WebRegister` "sonata.metronome"
                 - Uses:
@@ -2893,8 +2893,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `apps/sonata/audio/engine.ScheduleHandle`
                   - `apps/sonata/audio/engine.startScheduling`
                   - `apps/sonata/audio/engine.useAudioGraph`
+                  - `apps/sonata/library.sonataPlayerPane`
                   - `apps/sonata/shell.Sonata`
-                  - `apps/sonata/shell.SonataToolbar`
                   - `apps/sonata/shell.useCursorApi`
                   - `apps/sonata/shell.useSonata`
                   - `config_v2.ConfigV2`
@@ -2941,13 +2941,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `Library.Source` ← `apps.sonata.sources.chord-grid`, `apps.sonata.sources.midi`, `apps.sonata.sources.ultimate-guitar`
               - `Library.SongActions` ← `apps.sonata.library`
               - `Library.Fields` ← `apps.sonata.playback-history`, `apps.sonata.sources.midi`, `apps.sonata.sources.midi.folders`
-              - `sonata-library.actions`
-              - `sonata-player.actions`
+              - `sonataLibraryPane.Actions` ← `primitives.pane`
+              - `sonataPlayerPane.Actions` ← `apps.sonata.audio.engine`, `apps.sonata.audio.metronome`, `apps.sonata.library`, `apps.sonata.pedal.indicator`, `apps.sonata.piano-roll`, `apps.sonata.progress.loop`, `apps.sonata.transport-bar`, `apps.sonata.transpose`, `primitives.pane`
             - Contributes:
               - `Sonata.Home` "library" → `SongLibrary`
-              - `SonataToolbar.Start` "back" → `BackToLibrary`
-              - `SonataToolbar.Start` "title" → `SongTitle`
-              - `SonataToolbar.Start` "display-picker" → `DisplayPicker`
+              - `sonataPlayerPane.Actions` "back" → `BackToLibrary`
+              - `sonataPlayerPane.Actions` "display-picker" → `DisplayPicker`
               - `Library.SongActions` "play" → `PlaySongAction`
               - `Library.SongActions` "delete" → `DeleteSongAction`
               - `Pane.Register` "sonata-library"
@@ -2955,12 +2954,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Uses:
               - `apps/sonata/shell.Sonata`
               - `apps/sonata/shell.SonataSectionItem`
-              - `apps/sonata/shell.SonataToolbar`
               - `apps/sonata/shell.TEMPO_MATH_FLOOR`
               - `apps/sonata/shell.useSonata`
               - `infra/endpoints.useEndpointMutation`
-              - `primitives/action-presentation.useActionForm`
-              - `primitives/adaptive-bar.AdaptiveBar`
               - `primitives/css/card.Card`
               - `primitives/css/center.Center`
               - `primitives/css/clip.Clip`
@@ -2968,7 +2964,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/fill.Fill`
               - `primitives/css/grid.Grid`
               - `primitives/css/line.Line`
-              - `primitives/css/rigid.rigidClass`
               - `primitives/css/scroll.Scroll`
               - `primitives/css/spacing.Inset`
               - `primitives/css/spacing.Stack`
@@ -3004,6 +2999,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Exports (values):
               - `Library`
               - `openSongImperative`
+              - `sonataLibraryPane`
+              - `sonataPlayerPane`
               - `useCurrentSong`
               - `useOpenSong`
           - Server:
@@ -3049,7 +3046,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `updateSong`
           - Cross-plugin:
             - Imported by:
+              - `apps/sonata/audio/engine`
+              - `apps/sonata/audio/metronome`
+              - `apps/sonata/pedal/indicator`
+              - `apps/sonata/piano-roll`
               - `apps/sonata/playback-history`
+              - `apps/sonata/progress/loop`
               - `apps/sonata/rich/key-mode`
               - `apps/sonata/rich/rhythm-controls`
               - `apps/sonata/sources/chord-grid`
@@ -3057,6 +3059,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/sonata/sources/midi/folders`
               - `apps/sonata/sources/ultimate-guitar`
               - `apps/sonata/track-mixer`
+              - `apps/sonata/transport-bar`
               - `apps/sonata/transpose`
             - Extended by:
               - `apps/sonata/sources/chord-grid` (table `sonata_songs_ext_chord_grid`)
@@ -3123,9 +3126,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Plugins:
             - **`indicator`** — Sonata toolbar sustain-pedal indicator: a cross-lens 'Ped.' chip that glows while the pedal is engaged during playback.
               - Web:
-                - Contributes: `SonataToolbar.End` "pedal-indicator" → `PedalIndicator`
+                - Contributes: `sonataPlayerPane.Actions` "pedal-indicator" → `PedalIndicator`
                 - Uses:
-                  - `apps/sonata/shell.SonataToolbar`
+                  - `apps/sonata/library.sonataPlayerPane`
                   - `apps/sonata/shell.useCursorSelector`
                   - `apps/sonata/shell.useSonata`
                   - `primitives/css/toggle-chip.ToggleChip`
@@ -3161,17 +3164,17 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Slots: `PianoRollFx` ← `apps.sonata.piano-roll.fx-comets`, `apps.sonata.piano-roll.fx-core`, `apps.sonata.piano-roll.fx-ripples`, `apps.sonata.piano-roll.fx-shatter`
             - Contributes:
               - `Sonata.Display` "Piano Roll" → `LazyBoundary`
-              - `SonataToolbar.End` "spread" → `SpreadWheel`
+              - `sonataPlayerPane.Actions` "spread" → `SpreadWheel`
               - `ConfigV2.WebRegister` "config"
               - `Sonata.ViewOption` "piano-roll"
             - Uses:
+              - `apps/sonata/library.sonataPlayerPane`
               - `apps/sonata/primitives/inertial-drag.useInertialDrag`
               - `apps/sonata/primitives/jog-wheel.JogWheel`
               - `apps/sonata/primitives/keyboard.isBlackPitch`
               - `apps/sonata/primitives/keyboard.keyLayout`
               - `apps/sonata/shell.LaneInsetsProvider`
               - `apps/sonata/shell.Sonata`
-              - `apps/sonata/shell.SonataToolbar`
               - `apps/sonata/shell.useCursorApi`
               - `apps/sonata/shell.useSonata`
               - `apps/sonata/track-mixer.blackKeyColor`
@@ -3397,13 +3400,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `SonataProgress.Marker` "loop" → `LoopRegion`
                   - `Sonata.TransportOverlay` "loop" → `LoopRollRegion`
                   - `Sonata.TransportEdge` "loop" → `LoopRollEdge`
-                  - `SonataToolbar.End` "loop-toggle" → `LoopToggle`
+                  - `sonataPlayerPane.Actions` "loop-toggle" → `LoopToggle`
                   - `Sonata.Effect` "loop-shortcuts" → `LoopShortcuts`
                 - Uses:
+                  - `apps/sonata/library.sonataPlayerPane`
                   - `apps/sonata/progress/scrubber.railBandClass`
                   - `apps/sonata/progress/scrubber.SonataProgress`
                   - `apps/sonata/shell.Sonata`
-                  - `apps/sonata/shell.SonataToolbar`
                   - `apps/sonata/shell.useCursorApi`
                   - `apps/sonata/shell.useCursorSelector`
                   - `apps/sonata/shell.useLaneInsets`
@@ -3718,8 +3721,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `Sonata.Hud` ← `apps.sonata.audio.metronome`, `apps.sonata.rich.key-chip`, `apps.sonata.view-options`
               - `Sonata.ViewOption` ← `apps.sonata.look`, `apps.sonata.notation`, `apps.sonata.piano-keyboard`, `apps.sonata.piano-roll`, `apps.sonata.rich.chord-label`
               - `Sonata.Section` ← `apps.sonata.rich.chord-progression`, `apps.sonata.rich.chord-readout`, `apps.sonata.rich.circle-of-fifths`, `apps.sonata.rich.key-readout`, `apps.sonata.rich.rhythm-controls`, `apps.sonata.rich.voicing-controls`, `apps.sonata.sources.chord-grid`, `apps.sonata.sources.ultimate-guitar`, `apps.sonata.track-mixer`
-              - `SonataToolbar.Start` ← `apps.sonata.library`
-              - `SonataToolbar.End` ← `apps.sonata.audio.engine`, `apps.sonata.audio.metronome`, `apps.sonata.pedal.indicator`, `apps.sonata.piano-roll`, `apps.sonata.progress.loop`, `apps.sonata.transport-bar`, `apps.sonata.transpose`
             - Contributes: `Apps.App` "Sonata" → `SonataLayout`
             - Uses:
               - `apps-core.Apps`
@@ -3731,7 +3732,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/detail-sections.defineDetailSections`
               - `primitives/detail-sections.DetailSection`
               - `primitives/latest-ref.useLatestRef`
-              - `primitives/pane-toolbar.definePaneToolbar`
               - `primitives/scoped-store.defineScopedStore`
               - `primitives/scoped-store.ScopedStore`
               - `primitives/slot-render.defineDispatchSlot`
@@ -3757,7 +3757,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `Sonata`
               - `SonataProvider`
               - `SonataSectionItem`
-              - `SonataToolbar`
               - `TEMPO_MATH_FLOOR`
               - `TransposeStoreProvider`
               - `useCursorApi`
@@ -4123,13 +4122,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/sonata/notation`
               - `apps/sonata/piano-keyboard`
               - `apps/sonata/piano-roll`
-        - **`transport-bar`** — Sonata toolbar transport: play/pause button and a Synthesia-style speed stepper ([− xx% +]) with live BPM. Contributes to the Sonata toolbar's End zone.
+        - **`transport-bar`** — Sonata toolbar transport: play/pause button and a Synthesia-style speed stepper ([− xx% +]) with live BPM. Contributes to the Sonata player pane's header.
           - Web:
-            - Contributes: `SonataToolbar.End` "playback" → `PlaybackControls`
+            - Contributes: `sonataPlayerPane.Actions` "playback" → `PlaybackControls`
             - Uses:
+              - `apps/sonata/library.sonataPlayerPane`
               - `apps/sonata/primitives/inertial-drag.useInertialDrag`
               - `apps/sonata/primitives/jog-wheel.JogWheel`
-              - `apps/sonata/shell.SonataToolbar`
               - `apps/sonata/shell.useCursorSelector`
               - `apps/sonata/shell.useSonata`
               - `primitives/css/center.Center`
@@ -4141,11 +4140,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Web:
             - Contributes:
               - `Sonata.Effect` "transpose-sync" → `TransposeObserver`
-              - `SonataToolbar.End` "transpose" → `TransposeControl`
+              - `sonataPlayerPane.Actions` "transpose" → `TransposeControl`
             - Uses:
+              - `apps/sonata/library.sonataPlayerPane`
               - `apps/sonata/primitives/toolbar-control.ToolbarControl`
               - `apps/sonata/shell.Sonata`
-              - `apps/sonata/shell.SonataToolbar`
               - `apps/sonata/shell.useSetTransposeSemitones`
               - `apps/sonata/shell.useSonata`
               - `apps/sonata/shell.useTransposeSemitones`
@@ -4392,15 +4391,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - **`shell`** — App shell for Story Builder. Registers the /story app entry and the gallery + editor panes (browse story-marked pages, author a story, switch between Author and renderer lenses).
           - Web:
             - Slots:
-              - `StoryToolbar.Start` ← `apps.story.shell`
-              - `StoryToolbar.End` ← `apps.story.shell`
-              - `story-gallery.actions`
-              - `story-detail.actions`
+              - `story-gallery.actions` ← `primitives.pane`
+              - `story-detail.actions` ← `apps.story.shell`, `primitives.pane`
             - Contributes:
               - `Apps.App` "Story" → `StoryLayout`
-              - `StoryToolbar.Start` "back" → `BackToStories`
-              - `StoryToolbar.Start` "title" → `StoryTitleItem`
-              - `StoryToolbar.End` "view-switcher" → `ViewSwitcherItem`
+              - `story-detail.actions` "back" → `BackToStories`
+              - `story-detail.actions` "view-switcher" → `ViewSwitcherItem`
               - `Pane.Register` "story-gallery"
               - `Pane.Register` "story-detail"
             - Uses:
@@ -4431,13 +4427,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/live-state.useCombinedResources`
               - `primitives/live-state.useResource`
               - `primitives/loading.Loading`
-              - `primitives/pane-toolbar.definePaneToolbar`
               - `primitives/pane.Pane`
               - `primitives/pane.PaneChrome`
               - `primitives/pane.useOpenPane`
               - `primitives/pane.usePaneStore`
               - `primitives/relative-time.formatRelativeTime`
-            - Exports (values): `StoryToolbar`
           - Core:
             - Uses: `primitives/pane.defineApp`
             - Exports (values): `storyApp`
@@ -4463,9 +4457,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Slots:
               - `CompositionDetail.Section` ← `apps.studio.compositions.closure-tree`, `apps.studio.compositions.contributors`, `apps.studio.compositions.draft-actions`, `apps.studio.compositions.entry-points`, `apps.studio.compositions.membership-summary`, `apps.studio.compositions.release`
               - `item-actions` ← `apps.studio.compositions`
-              - `compositionsPane.Actions`
-              - `compositionDetailPane.Actions`
-              - `comparePane.Actions`
+              - `compositionsPane.Actions` ← `primitives.pane`
+              - `compositionDetailPane.Actions` ← `primitives.pane`
+              - `comparePane.Actions` ← `primitives.pane`
             - Contributes:
               - `Pane.Register` "compositions"
               - `Pane.Register` "composition-detail"
@@ -4607,7 +4601,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - Web:
                 - Slots:
                   - `ReleaseDetail.Section` ← `apps.studio.compositions.release.release-artifact`, `apps.studio.compositions.release.release-info`, `apps.studio.compositions.release.release-logs`
-                  - `release-detail.actions`
+                  - `release-detail.actions` ← `primitives.pane`
                 - Contributes:
                   - `Pane.Register` "release-detail"
                   - `CompositionDetail.Section` "Build & serve" → `ReleaseSection`
@@ -4689,7 +4683,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                       - `shell/notifications.toast`
         - **`contributions`** — Central view of all plugin contributions aggregated by type.
           - Web:
-            - Slots: `contributions.actions`
+            - Slots: `contributions.actions` ← `primitives.pane`
             - Contributes:
               - `Pane.Register` "contributions"
               - `Studio.Sidebar` "Contributions" → `component`
@@ -4719,7 +4713,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - Web:
                 - Slots:
                   - `TableDetail.Section` ← `apps.studio.contributions.tables.columns`, `apps.studio.contributions.tables.foreign-keys`, `apps.studio.contributions.tables.indexes`, `apps.studio.contributions.tables.row-count`, `apps.studio.contributions.tables.sample-rows`
-                  - `tableDetailPane.Actions`
+                  - `tableDetailPane.Actions` ← `primitives.pane`
                 - Contributes:
                   - `Pane.Register` "table-detail"
                   - `Contributions.RowClick` "db-schema"
@@ -4838,7 +4832,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Slots:
               - `Explorer.TreeRowBadge` ← `apps.studio.explorer.child-count`, `apps.studio.explorer.collapsed`, `apps.studio.explorer.excluded`, `apps.studio.explorer.expand-collapse`, `apps.studio.explorer.load-bearing`, `apps.studio.explorer.membership`
               - `Explorer.TreeRowAccent` ← `apps.studio.explorer.membership`
-              - `explorerPane.Actions`
+              - `explorerPane.Actions` ← `primitives.pane`
             - Contributes:
               - `Pane.Register` "explorer"
               - `Studio.Sidebar` "Plugin" → `component`
@@ -4933,7 +4927,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                 - Imported by: `apps/studio/compositions`
         - **`graph`** — Studio Plugin Graph pane: focused closure subgraph (deps + dependents) around a plugin, tinted by the active composition's membership, with depth / direction controls and click-to-recenter.
           - Web:
-            - Slots: `graphCanvasPane.Actions`
+            - Slots: `graphCanvasPane.Actions` ← `primitives.pane`
             - Contributes:
               - `Pane.Register` "graph"
               - `Studio.Sidebar` "Plugin Graph" → `component`
@@ -5122,14 +5116,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `ui/theme-engine.useTokenGroupPresets`
         - **`downloads`** — Downloads page for the equin website: the /website/download pane (per-platform download cards, current-platform highlight) plus the primary Download CTA in the shared site header.
           - Web:
-            - Slots: `downloadsPane.Actions`
             - Contributes:
               - `Pane.Register` "website-downloads"
-              - `WebsiteToolbar.End` "download" → `DownloadNavItem`
+              - `WebsiteHeader` "download" → `DownloadNavItem`
             - Uses:
+              - `apps/website/shell.WebsiteHeader`
               - `apps/website/shell.WebsiteNavLink`
               - `apps/website/shell.WebsitePage`
-              - `apps/website/shell.WebsiteToolbar`
               - `primitives/css/badge.Badge`
               - `primitives/css/card.Card`
               - `primitives/css/grid.Grid`
@@ -5199,21 +5192,19 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Plugins:
             - **`agents`** — Agents pillar page of the equin website: the /website/agents pane telling the agent-manager story (nested tasks, isolated worktrees, the race), its Agents nav link, and the WebsiteAgents.Section slot demo plugins contribute into.
               - Web:
-                - Slots:
-                  - `WebsiteAgents.Section` ← `apps.website.demos.agent-run`, `apps.website.pillars.agents`
-                  - `agentsPane.Actions`
+                - Slots: `WebsiteAgents.Section` ← `apps.website.demos.agent-run`, `apps.website.pillars.agents`
                 - Contributes:
                   - `Pane.Register` "website-agents"
-                  - `WebsiteToolbar.End` "agents" → `AgentsNavItem`
+                  - `WebsiteHeader` "agents" → `AgentsNavItem`
                   - `WebsiteAgents.Section` "Hero" → `AgentsHero`
                   - `WebsiteAgents.Section` "How it works" → `AgentsHowItWorks`
                   - `WebsiteAgents.Section` "Closing links" → `AgentsClosing`
                 - Uses:
                   - `apps/website/downloads.downloadsPane`
                   - `apps/website/pillars/apps.appsPane`
+                  - `apps/website/shell.WebsiteHeader`
                   - `apps/website/shell.WebsiteNavLink`
                   - `apps/website/shell.WebsitePage`
-                  - `apps/website/shell.WebsiteToolbar`
                   - `primitives/css/card.Card`
                   - `primitives/css/grid.Grid`
                   - `primitives/css/spacing.Inset`
@@ -5234,21 +5225,19 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `apps/website/landing/pillars`
             - **`apps`** — Apps pillar page of the equin website: the /website/apps pane showcasing the real apps (Pages, Mail, Sonata, Workflows), its Apps nav link, and the WebsiteApps.Section slot demo plugins contribute into.
               - Web:
-                - Slots:
-                  - `WebsiteApps.Section` ← `apps.website.demos.app-gallery`, `apps.website.demos.editor-toy`, `apps.website.pillars.apps`
-                  - `appsPane.Actions`
+                - Slots: `WebsiteApps.Section` ← `apps.website.demos.app-gallery`, `apps.website.demos.editor-toy`, `apps.website.pillars.apps`
                 - Contributes:
                   - `Pane.Register` "website-apps"
-                  - `WebsiteToolbar.End` "apps" → `AppsNavItem`
+                  - `WebsiteHeader` "apps" → `AppsNavItem`
                   - `WebsiteApps.Section` "Hero" → `AppsHero`
                   - `WebsiteApps.Section` "App showcase" → `AppsShowcase`
                   - `WebsiteApps.Section` "Closing links" → `AppsClosing`
                 - Uses:
                   - `apps/website/downloads.downloadsPane`
                   - `apps/website/shell.landingPane`
+                  - `apps/website/shell.WebsiteHeader`
                   - `apps/website/shell.WebsiteNavLink`
                   - `apps/website/shell.WebsitePage`
-                  - `apps/website/shell.WebsiteToolbar`
                   - `primitives/css/card.Card`
                   - `primitives/css/grid.Grid`
                   - `primitives/css/spacing.Inset`
@@ -5272,21 +5261,19 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `apps/website/pillars/agents`
             - **`platform`** — Platform pillar page of the equin website: the /website/platform pane telling the developer-facing behind-the-scenes story (slots, boundaries, the plugins → apps → releases pyramid), its Platform nav link, and the WebsitePlatform.Section slot demo plugins contribute into.
               - Web:
-                - Slots:
-                  - `WebsitePlatform.Section` ← `apps.website.demos.plugin-pyramid`, `apps.website.demos.theme-toy`, `apps.website.pillars.platform`
-                  - `platformPane.Actions`
+                - Slots: `WebsitePlatform.Section` ← `apps.website.demos.plugin-pyramid`, `apps.website.demos.theme-toy`, `apps.website.pillars.platform`
                 - Contributes:
                   - `Pane.Register` "website-platform"
-                  - `WebsiteToolbar.End` "platform" → `PlatformNavItem`
+                  - `WebsiteHeader` "platform" → `PlatformNavItem`
                   - `WebsitePlatform.Section` "Hero" → `PlatformHero`
                   - `WebsitePlatform.Section` "Architecture" → `PlatformArchitecture`
                   - `WebsitePlatform.Section` "Closing links" → `PlatformClosing`
                 - Uses:
                   - `apps/website/downloads.downloadsPane`
                   - `apps/website/shell.landingPane`
+                  - `apps/website/shell.WebsiteHeader`
                   - `apps/website/shell.WebsiteNavLink`
                   - `apps/website/shell.WebsitePage`
-                  - `apps/website/shell.WebsiteToolbar`
                   - `primitives/css/card.Card`
                   - `primitives/css/grid.Grid`
                   - `primitives/css/spacing.Inset`
@@ -5307,16 +5294,14 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `apps/website/demos/release-switcher`
                   - `apps/website/demos/theme-toy`
                   - `apps/website/landing/pillars`
-        - **`shell`** — App shell for the Website (equin public site). Registers the /website app entry and the landing pane, owns the shared site toolbar (wordmark + nav zones) every site pane opts into, and defines the Website.Section landing slot.
+        - **`shell`** — App shell for the Website (equin public site). Registers the /website app entry and the landing pane, owns the shared site header (wordmark + nav) every site pane wears, and defines the Website.Section landing slot.
           - Web:
             - Slots:
               - `Website.Section` ← `apps.website.demos.release-switcher`, `apps.website.landing.cta`, `apps.website.landing.hero`, `apps.website.landing.pillars`
-              - `WebsiteToolbar.Start` ← `apps.website.shell`
-              - `WebsiteToolbar.End` ← `apps.website.downloads`, `apps.website.pillars.agents`, `apps.website.pillars.apps`, `apps.website.pillars.platform`
-              - `landingPane.Actions`
+              - `WebsiteHeader` ← `apps.website.downloads`, `apps.website.pillars.agents`, `apps.website.pillars.apps`, `apps.website.pillars.platform`, `apps.website.shell`, `primitives.pane`
             - Contributes:
               - `Apps.App` "equin" → `WebsiteLayout`
-              - `WebsiteToolbar.Start` "wordmark" → `WebsiteWordmark`
+              - `WebsiteHeader` "wordmark" → `WebsiteWordmark`
               - `Pane.Register` "website-landing"
             - Uses:
               - `apps-core.Apps`
@@ -5327,7 +5312,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/spacing.Stack`
               - `primitives/css/text.Text`
               - `primitives/css/ui-kit.Button`
-              - `primitives/pane-toolbar.definePaneToolbar`
+              - `primitives/pane.definePaneHeaderSlot`
               - `primitives/pane.Pane`
               - `primitives/pane.PaneChrome`
               - `primitives/pane.useOpenPane`
@@ -5335,9 +5320,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Exports (values):
               - `landingPane`
               - `Website`
+              - `WebsiteHeader`
               - `WebsiteNavLink`
               - `WebsitePage`
-              - `WebsiteToolbar`
           - Core:
             - Uses: `primitives/pane.defineApp`
             - Exports (values): `websiteApp`
@@ -5358,8 +5343,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Web:
             - Slots:
               - `WorkflowsDetail.Section` ← `apps.workflows.executions`
-              - `definitionsRootPane.Actions`
-              - `definitionDetailPane.Actions`
+              - `definitionsRootPane.Actions` ← `primitives.pane`
+              - `definitionDetailPane.Actions` ← `primitives.pane`
             - Contributes:
               - `WorkflowsApp.Sidebar` "Workflows" → `WorkflowsSidebar`
               - `Pane.Register` "workflows-definitions"
@@ -5547,7 +5532,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/workflows/steps/user-input`
         - **`executions`** — Executions section (run list + Run button) for the Workflows detail pane, plus the execution-detail pane rendering the per-step trace.
           - Web:
-            - Slots: `workflows-execution-detail.actions`
+            - Slots: `workflows-execution-detail.actions` ← `primitives.pane`
             - Contributes:
               - `WorkflowsDetail.Section` "Executions" → `ExecutionsSection`
               - `Pane.Register` "workflows-execution-detail"
@@ -6290,7 +6275,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Slots:
       - `Auth.Provider` ← `auth.apple-signing.setup-wizard`, `auth.google`, `auth.google-maps.setup-wizard`, `auth.notion`
       - `Auth.ScopeRequirement` ← `backup.targets.google-drive`, `integrations.gmail`
-      - `accountsPane.Actions`
+      - `accountsPane.Actions` ← `primitives.pane`
     - Uses:
       - `config_v2/settings.configNavPane`
       - `infra/endpoints.EndpointError`
@@ -6458,7 +6443,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Plugins:
         - **`setup-wizard`** — Apple code-signing UI: the Accounts 'Apple Developer' provider row plus the guided certificate + App Store Connect API key setup wizard pane.
           - Web:
-            - Slots: `appleSetupPane.Actions`
+            - Slots: `appleSetupPane.Actions` ← `primitives.pane`
             - Contributes:
               - `Pane.Register` "apple-setup"
               - `Auth.Provider` "Apple Developer"
@@ -6507,7 +6492,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Plugins:
         - **`setup-wizard`** — Interactive setup wizard for Google OAuth credentials. Replaces the Settings redirect with a guided step-by-step pane.
           - Web:
-            - Slots: `googleSetupPane.Actions`
+            - Slots: `googleSetupPane.Actions` ← `primitives.pane`
             - Contributes: `Pane.Register` "google-setup"
             - Uses:
               - `auth.accountsPane`
@@ -6540,7 +6525,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Plugins:
         - **`setup-wizard`** — Guided setup pane for the Google Maps Platform API key: project → Places API → billing → key → paste. Also contributes the Accounts provider row.
           - Web:
-            - Slots: `googleMapsSetupPane.Actions`
+            - Slots: `googleMapsSetupPane.Actions` ← `primitives.pane`
             - Contributes:
               - `Pane.Register` "google-maps-setup"
               - `Auth.Provider` "Google Maps Platform"
@@ -6584,7 +6569,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
 
 - **`backup`** — Backup orchestrator UI: run backups, view history, configure targets. Backup orchestrator: assembles archives from registered backup sources, dispatches to registered storage targets.
   - Web:
-    - Slots: `backupPane.Actions`
+    - Slots: `backupPane.Actions` ← `primitives.pane`
     - Contributes:
       - `ConfigV2.WebRegister` "config"
       - `Pane.Register` "backup"
@@ -6823,8 +6808,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
   - Web:
     - Slots:
       - `BuildDetailSlots.Section` ← `build.build-commits`, `build.build-fix`, `build.build-info`, `build.build-logs`, `build.build-profiling`
-      - `buildPane.Actions`
-      - `buildDetailPane.Actions`
+      - `buildPane.Actions` ← `primitives.pane`
+      - `buildDetailPane.Actions` ← `primitives.pane`
     - Contributes:
       - `ActionBar.Item` → `BuildButton`
       - `Pane.Register` "build"
@@ -7281,8 +7266,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
 - **`code-explorer`** — Worktree-scoped file browser: sidebar entry opens the main worktree; conversation toolbar opens the agent's worktree. Worktree-scoped file browser and viewer: tree listing plus raw/diff/image content by attempt id or the reserved `main` sentinel.
   - Web:
     - Slots:
-      - `global-file-tree.actions`
-      - `conv-file-tree.actions`
+      - `global-file-tree.actions` ← `primitives.pane`
+      - `conv-file-tree.actions` ← `primitives.pane`
     - Contributes:
       - `Pane.Register` "global-file-tree"
       - `Pane.Register` "conv-file-tree"
@@ -7355,7 +7340,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `getPushFiles`
     - **`commit-detail`** — The one commit-diff pane, parameterized by worktree (commit/:worktree/:sha) rather than derived from an ancestor conversation, so any surface that can name a (worktree, sha) pair opens it. Also exposes useCommitInfo, the four-armed loading / found / not-found / error commit-metadata lookup.
       - Web:
-        - Slots: `commitDetailPane.Actions`
+        - Slots: `commitDetailPane.Actions` ← `primitives.pane`
         - Contributes: `Pane.Register` "commit-detail"
         - Uses:
           - `infra/endpoints.EndpointError`
@@ -7732,8 +7717,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`settings`** — Settings UI for config_v2: two-pane nav + detail surface for viewing and editing typed config fields. Surfaced inside the Settings app. HTTP endpoints for setting and resetting config_v2 field values.
       - Web:
         - Slots:
-          - `configNavPane.Actions`
-          - `configDetailPane.Actions`
+          - `configNavPane.Actions` ← `primitives.pane`
+          - `configDetailPane.Actions` ← `primitives.pane`
           - `ConfigDetailSlots.ConflictAction` ← `config_v2.settings.conflict-agent`
         - Contributes:
           - `Pane.Register` "config-v2-nav"
@@ -8070,16 +8055,16 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `Agents.View`
           - `Agents.AgentActions` ← `conversations.agents`
           - `Agents.SystemAgent`
-          - `agentsRootPane.Actions`
-          - `agentDetailPane.Actions`
-          - `systemAgentDetailPane.Actions`
-          - `agentSidePane.Actions` ← `conversations.agents`
+          - `agentsRootPane.Actions` ← `primitives.pane`
+          - `agentDetailPane.Actions` ← `primitives.pane`
+          - `systemAgentDetailPane.Actions` ← `primitives.pane`
+          - `agentSidePane.Actions` ← `conversations.agents`, `primitives.pane`
         - Contributes:
           - `Pane.Register` "agents-root"
           - `Pane.Register` "agent-detail"
           - `Pane.Register` "agent-system-detail"
           - `Pane.Register` "agent-side"
-          - `agentSidePane.Actions` → `ExpandAgentButton`
+          - `agentSidePane.Actions` "expand-agent" → `ExpandAgentButton`
           - `Shell.Sidebar` "Agents" → `component`
           - `Item.Avatar` → `AgentAvatarRow`
           - `Conversation.Header` → `AgentAvatarTitlePrefix`
@@ -8244,7 +8229,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `UpdateAgentBodySchema`
     - **`all-conversations`** — All-conversations app pane: a server-delegated DataView (filter/sort/search/keyset over every conversation) reachable from the agent-manager sidebar. Global conversations query handler (filter/sort/search/keyset over conversations_v) + the scalar revision-tick live resource that keeps the All-conversations DataView window fresh.
       - Web:
-        - Slots: `allConversationsPane.Actions`
+        - Slots: `allConversationsPane.Actions` ← `primitives.pane`
         - Contributes:
           - `Pane.Register` "all-conversations"
           - `Shell.Sidebar` "Conversation" → `component`
@@ -8555,7 +8540,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `Conversation.PromptBar` ← `conversations.conversation-view.branch`, `conversations.conversation-view.dependencies`, `conversations.conversation-view.fork-conversation`, `conversations.conversation-view.launch-prompts`, `conversations.conversation-view.notes`
           - `Conversation.PromptInput` ← `conversations.conversation-view.prompt-input`
           - `Conversation.AbovePromptInput` ← `conversations.conversation-view.notes`, `conversations.conversation-view.op-status`, `conversations.conversation-view.turn-summary`
-          - `conversationPane.Actions`
+          - `conversationPane.Actions` ← `primitives.pane`
         - Contributes:
           - `Pane.Register` "conversation"
           - `Conversation.Header` → `ConversationTitle`
@@ -8753,7 +8738,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Plugins:
             - **`docs-button`** — Toolbar button that opens a sidebar listing edited markdown design docs in the conversation worktree.
               - Web:
-                - Slots: `conv-docs.actions`
+                - Slots: `conv-docs.actions` ← `primitives.pane`
                 - Contributes:
                   - `Pane.Register` "conv-docs"
                   - `Conversation.ActionBar` → `DocsButton`
@@ -8783,7 +8768,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - Web:
                 - Slots:
                   - `FilePane.Renderer` ← `conversations.conversation-view.code.file-pane.diff`, `conversations.conversation-view.code.file-pane.image`, `conversations.conversation-view.code.file-pane.markdown`, `conversations.conversation-view.code.file-pane.raw`
-                  - `filePeekPane.Actions`
+                  - `filePeekPane.Actions` ← `primitives.pane`
                 - Contributes: `Pane.Register` "file-peek"
                 - Uses:
                   - `code-explorer/file-resolve.FileDisambiguation`
@@ -8873,7 +8858,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                       - `primitives/syntax-highlight.useHighlightedHtml`
         - **`commits-graph`** — Toolbar chip showing commits ahead/behind main; opens a side pane with the chain of commits between merge-base and HEAD. Toolbar chip showing commits ahead/behind main; opens a side pane with the chain of commits between merge-base and HEAD.
           - Web:
-            - Slots: `conv-commits-graph.actions`
+            - Slots: `conv-commits-graph.actions` ← `primitives.pane`
             - Contributes:
               - `Pane.Register` "conv-commits-graph"
               - `Conversation.ActionBar` → `CommitsChip`
@@ -9625,7 +9610,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                       - `tasks/task-status.StatusIcon`
                 - **`agent`** — Renders Agent tool calls with subagent type, model badge, prompt (markdown), and report (markdown).
                   - Web:
-                    - Slots: `agent-report.actions`
+                    - Slots: `agent-report.actions` ← `primitives.pane`
                     - Contributes:
                       - `JsonlViewerTool.Renderer` "Agent" → `AgentToolView`
                       - `Pane.Register` "agent-report"
@@ -9847,7 +9832,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                       - `primitives/live-state.useResource`
                 - **`workflow`** — Renders Workflow tool calls as a swimlane DAG of agent nodes (recovered by trace-executing the script), with per-node prompts in a side pane, a collapsible script, and the launched run/task ids.
                   - Web:
-                    - Slots: `workflow-node.actions`
+                    - Slots: `workflow-node.actions` ← `primitives.pane`
                     - Contributes:
                       - `JsonlViewerTool.Renderer` "Workflow" → `WorkflowToolView`
                       - `Pane.Register` "workflow-node"
@@ -10243,7 +10228,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - **`push-counter`**
         - **`push-profiling`** — Toolbar button showing the build/push/check op Gantt scoped to the conversation's worktree.
           - Web:
-            - Slots: `conv-push-profiling.actions`
+            - Slots: `conv-push-profiling.actions` ← `primitives.pane`
             - Contributes:
               - `Pane.Register` "conv-push-profiling"
               - `Conversation.ActionBar` → `PushProfilingButton`
@@ -10303,7 +10288,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `tasks/task-status.STATUS_META`
         - **`terminal-pane`** — Toolbar button that opens a right pane attaching to the conversation's tmux session.
           - Web:
-            - Slots: `conv-terminal.actions`
+            - Slots: `conv-terminal.actions` ← `primitives.pane`
             - Contributes:
               - `Pane.Register` "conv-terminal"
               - `Conversation.ActionBar` → `TerminalButton`
@@ -10719,7 +10704,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports (values): `prepromptsConfig`
     - **`recover`** — Sidebar entry + pane listing recently-closed conversations with restore buttons. Batch-restore recently-closed conversations that were killed by a crash.
       - Web:
-        - Slots: `recoveryPane.Actions`
+        - Slots: `recoveryPane.Actions` ← `primitives.pane`
         - Contributes:
           - `Pane.Register` "conversations-recover"
           - `DebugApp.Sidebar` "Recovery" → `component`
@@ -10800,7 +10785,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `debug/session-divergence`
     - **`summary`** — Toolbar button that opens a side pane with the Summarise action and the latest structured Sonnet summary (phase, flags, next action). On-demand structured summaries of conversations: phase, flags, next action. Curated by Sonnet via MCP. Append-only history.
       - Web:
-        - Slots: `conv-summary.actions`
+        - Slots: `conv-summary.actions` ← `primitives.pane`
         - Contributes: `Pane.Register` "conv-summary"
         - Uses:
           - `conversations/conversation-view.conversationPane`
@@ -11457,9 +11442,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`boot-profile`** — Browser boot profiler Gantt debug page: the request → first-paint timeline plus per-resource wait/work split, with shareable permalinks and a browsable list of saved snapshots. Persists captured browser boot traces under a unique id (POST), serves one snapshot (GET) and a metadata-only list (GET) for the permalink + browse panes, and sweeps snapshots older than 30 days via a scheduled job.
       - Web:
         - Slots:
-          - `debug-boot-profile.actions`
-          - `debug-boot-profile-detail.actions`
-          - `debug-boot-profiles-list.actions`
+          - `debug-boot-profile.actions` ← `primitives.pane`
+          - `debug-boot-profile-detail.actions` ← `primitives.pane`
+          - `debug-boot-profiles-list.actions` ← `primitives.pane`
         - Contributes:
           - `Pane.Register` "debug-boot-profile"
           - `Pane.Register` "debug-boot-profile-detail"
@@ -11577,7 +11562,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `BootWedgePayloadSchema`
     - **`broadcasts`** — View and edit cli/broadcasts.json broadcast messages for stale worktrees. View and edit cli/broadcasts.json from the UI.
       - Web:
-        - Slots: `broadcastsPane.Actions`
+        - Slots: `broadcastsPane.Actions` ← `primitives.pane`
         - Contributes:
           - `Pane.Register` "debug-broadcasts"
           - `DebugApp.Sidebar` "Broadcasts" → `component`
@@ -11624,7 +11609,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `sentinel`
     - **`claude-cli-calls`** — Debug pane listing every single-shot `claude --print` call (Haiku/Sonnet/Opus) with prompt, output, source, and duration.
       - Web:
-        - Slots: `claudeCliCallsPane.Actions`
+        - Slots: `claudeCliCallsPane.Actions` ← `primitives.pane`
         - Contributes:
           - `Pane.Register` "claude-cli-calls"
           - `DebugApp.Sidebar` "Claude CLI Calls" → `component`
@@ -11655,7 +11640,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports (values): `claudeCliCallsPane`
     - **`config-orphans`** — Read-only audit of orphaned user-layer config files whose defineConfig descriptor is no longer live. Read-only audit of orphaned user-layer config files whose defineConfig descriptor is no longer live.
       - Web:
-        - Slots: `configOrphansPane.Actions`
+        - Slots: `configOrphansPane.Actions` ← `primitives.pane`
         - Contributes:
           - `Pane.Register` "config-orphans"
           - `DebugApp.Sidebar` "Config Orphans" → `component`
@@ -11695,7 +11680,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports (values): `DuressShedPayloadSchema`
     - **`health-monitor`** — Health monitor debug pane: per-backend event-loop lag, phys_footprint/heap, and GC pressure over time, plus host load/memory/swap. Continuous per-backend health sampler: event-loop lag, GC/heap pressure, and phys_footprint appended to per-worktree JSONL (read from disk even when a backend is wedged), plus main-only host metrics. Surfaced as the Debug → Health pane.
       - Web:
-        - Slots: `healthMonitorPane.Actions`
+        - Slots: `healthMonitorPane.Actions` ← `primitives.pane`
         - Contributes:
           - `Pane.Register` "debug-health-monitor"
           - `DebugApp.Sidebar` "Health" → `component`
@@ -11764,7 +11749,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `HostSampleSchema`
     - **`heap-snapshot`** — Heap inspector debug pane: a cheap bun:jsc object-type breakdown plus an on-demand full V8 .heapsnapshot dump to disk for offline Chrome DevTools / VS Code analysis. On-demand heap inspector: a cheap bun:jsc heapStats() object-type breakdown (GET) plus a heavy full V8 .heapsnapshot dump to disk for offline Chrome DevTools / VS Code analysis (POST). Surfaced as the Debug → Heap pane.
       - Web:
-        - Slots: `heapSnapshotPane.Actions`
+        - Slots: `heapSnapshotPane.Actions` ← `primitives.pane`
         - Contributes:
           - `Pane.Register` "debug-heap-snapshot"
           - `DebugApp.Sidebar` "Heap" → `component`
@@ -11798,7 +11783,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Plugins:
         - **`emit`** — Synthetic no-op live-state push emitter: drives N pushes/sec for a chosen resource so churn-driven render/DOM bugs reproduce deterministically, surfaced as the Debug → Live-State Emit pane and the window.__liveStateEmit API. Synthetic no-op live-state push emitter: drives N triggerResourcePush calls/sec for a chosen resource on a bounded setInterval (hard auto-stop cap), so churn-driven render/DOM bugs reproduce deterministically. Surfaced as the Debug → Live-State Emit pane. The /api/resources/_debug route powering the resource dropdown is served by the kernel, not here.
           - Web:
-            - Slots: `liveStateEmitPane.Actions`
+            - Slots: `liveStateEmitPane.Actions` ← `primitives.pane`
             - Contributes:
               - `Pane.Register` "debug-live-state-emit"
               - `DebugApp.Sidebar` "Live-State Emit" → `component`
@@ -11878,7 +11863,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `LiveStateNoopPayloadSchema`
     - **`live-state-health`** — Live health inspector for the client live-state pipeline (sockets, leader election, per-resource subscriptions), opened from the Debug sidebar.
       - Web:
-        - Slots: `liveStateHealthPane.Actions`
+        - Slots: `liveStateHealthPane.Actions` ← `primitives.pane`
         - Contributes:
           - `Pane.Register` "live-state-health"
           - `DebugApp.Sidebar` "Live State" → `component`
@@ -11910,8 +11895,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`logs`** — System logs pane, opened from the Debug sidebar.
       - Web:
         - Slots:
-          - `logsPane.Actions`
-          - `logChannelPane.Actions`
+          - `logsPane.Actions` ← `primitives.pane`
+          - `logChannelPane.Actions` ← `primitives.pane`
         - Contributes:
           - `Pane.Register` "logs"
           - `Pane.Register` "logs-channel"
@@ -11937,7 +11922,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `logsPane`
     - **`memory`** — Browse Claude Code auto-memory files for the current project. Browse Claude Code auto-memory files for the current project.
       - Web:
-        - Slots: `memoryPane.Actions`
+        - Slots: `memoryPane.Actions` ← `primitives.pane`
         - Contributes:
           - `Pane.Register` "debug-memory"
           - `DebugApp.Sidebar` "Memory" → `component`
@@ -12045,7 +12030,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Web:
         - Slots:
           - `Profiling.Section` ← `debug.profiling.boot`, `debug.profiling.build`, `debug.profiling.ops`, `debug.profiling.runtime`, `debug.profiling.stats`
-          - `profilingPane.Actions`
+          - `profilingPane.Actions` ← `primitives.pane`
         - Contributes:
           - `Pane.Register` "debug-profiling"
           - `DebugApp.Sidebar` "Profiling" → `component`
@@ -12144,7 +12129,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Routes: `POST /api/debug/boot-bench/run`
         - **`build`** — Build step profiling for the Gantt debug pane. Build step profiling data endpoint.
           - Web:
-            - Slots: `buildProfileDetailPane.Actions`
+            - Slots: `buildProfileDetailPane.Actions` ← `primitives.pane`
             - Contributes:
               - `Profiling.Section` → `BuildSection`
               - `Pane.Register` "debug-profiling-build-detail"
@@ -12210,7 +12195,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `sumWaits`
         - **`ops`** — Op contention profiling for the Gantt debug pane: the ops/op-detail endpoints and the Profiling section hosting the unified build/push/check Gantt. Op contention profiling data endpoint (build / push / check).
           - Web:
-            - Slots: `opDetailPane.Actions`
+            - Slots: `opDetailPane.Actions` ← `primitives.pane`
             - Contributes:
               - `Profiling.Section` → `OpSection`
               - `Pane.Register` "debug-profiling-op-detail"
@@ -12333,7 +12318,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Exports (values): `getStatsProfiling`
     - **`queue`** — Inspect and debug the jobs queue, events emission log, and active triggers.
       - Web:
-        - Slots: `queuePane.Actions`
+        - Slots: `queuePane.Actions` ← `primitives.pane`
         - Contributes:
           - `Pane.Register` "queue"
           - `DebugApp.Sidebar` "Queue" → `component`
@@ -12445,7 +12430,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `QueueWedgedPayloadSchema`
     - **`read-set`** — Read-set capture debug pane: the automatic loader→table dependency index plus a diff against the hand-drawn dependsOn graph.
       - Web:
-        - Slots: `readSetPane.Actions`
+        - Slots: `readSetPane.Actions` ← `primitives.pane`
         - Contributes:
           - `Pane.Register` "debug-read-set"
           - `DebugApp.Sidebar` "Read-set" → `component`
@@ -12498,7 +12483,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `ReadSetShrinkPayloadSchema`
     - **`render-profiler`** — On-demand React fiber-commit profiler: when started, attributes each commit to its initiating component and the offending hook (incl. useSyncExternalStore), surfaced as the Debug → Render Profiler pane and the window.__reactRenderProfiler API.
       - Web:
-        - Slots: `renderProfilerPane.Actions`
+        - Slots: `renderProfilerPane.Actions` ← `primitives.pane`
         - Contributes:
           - `Pane.Register` "render-profiler"
           - `DebugApp.Sidebar` "Render Profiler" → `component`
@@ -12538,8 +12523,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`reports`** — Debug pane listing all recorded reports (including low-signal/noise crashes) with kind, source, count, noise flag, and linked task.
       - Web:
         - Slots:
-          - `reportsPane.Actions`
-          - `reportDetailPane.Actions`
+          - `reportsPane.Actions` ← `primitives.pane`
+          - `reportDetailPane.Actions` ← `primitives.pane`
         - Contributes:
           - `Pane.Register` "reports"
           - `Pane.Register` "report-detail"
@@ -13106,8 +13091,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Web:
             - Slots:
               - `SlowEvents.View` ← `debug.slow-ops.cluster`, `debug.slow-ops.pane`, `debug.timeline`, `debug.trace.pane`
-              - `slowEventsPane.Actions`
-              - `traceDetailPane.Actions`
+              - `slowEventsPane.Actions` ← `primitives.pane`
+              - `traceDetailPane.Actions` ← `primitives.pane`
             - Contributes:
               - `Pane.Register` "traces"
               - `Pane.Register` "trace-detail"
@@ -13207,7 +13192,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `StallStackSchema`
     - **`worktree-cleanup`** — Audit and remove stale git worktrees and their Postgres DB forks. Audit and remove stale git worktrees and their Postgres DB forks.
       - Web:
-        - Slots: `worktreeCleanupPane.Actions`
+        - Slots: `worktreeCleanupPane.Actions` ← `primitives.pane`
         - Contributes:
           - `Pane.Register` "worktree-cleanup"
           - `DebugApp.Sidebar` "Worktree Cleanup" → `component`
@@ -13280,7 +13265,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `listWorktrees`
     - **`zero-test`** — Temporary verification harness: a Debug → Zero Test pane that renders the pilot tasks slice live through the Zero client adapter. Deleted once a real migration begins.
       - Web:
-        - Slots: `zeroTestPane.Actions`
+        - Slots: `zeroTestPane.Actions` ← `primitives.pane`
         - Contributes:
           - `Pane.Register` "zero-test"
           - `DebugApp.Sidebar` "Zero Test" → `component`
@@ -16558,7 +16543,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `tasks/tasks-core`
     - **`events-test`** — Dummy UI for exercising the events plugin end-to-end. Dummy plugin exercising the events and jobs APIs end-to-end.
       - Web:
-        - Slots: `eventsTestPane.Actions`
+        - Slots: `eventsTestPane.Actions` ← `primitives.pane`
         - Contributes:
           - `Pane.Register` "events-test"
           - `DebugApp.Sidebar` "Events Test" → `component`
@@ -20591,7 +20576,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Web:
         - Slots:
           - `PluginViewSlots.Section` ← `plugin-meta.facets.contributions.render-detail`, `plugin-meta.facets.cross-refs.render-detail`, `plugin-meta.facets.db-schema.render-detail`, `plugin-meta.facets.exports.render-detail`, `plugin-meta.facets.registrations.render-detail`, `plugin-meta.facets.resources.render-detail`, `plugin-meta.facets.routes.render-detail`, `plugin-meta.facets.slots.render-detail`, `plugin-meta.facets.structure.render-detail`, `plugin-meta.plugin-health`, `plugin-meta.plugin-view.dependencies`, `plugin-meta.plugin-view.file-tree`, `plugin-meta.plugin-view.inclusion`, `plugin-meta.plugin-view.runtimes`, `plugin-meta.plugin-view.source-path`, `plugin-meta.plugin-view.sub-plugins`
-          - `pluginViewPane.Actions`
+          - `pluginViewPane.Actions` ← `primitives.pane`
         - Contributes: `Pane.Register` "plugin-view"
         - Uses:
           - `infra/endpoints.useEndpoint`
@@ -20767,7 +20752,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Cross-plugin:
         - Imported by:
           - `apps-core/tab-bar`
-          - `apps/sonata/library`
           - `primitives/adaptive-bar`
           - `primitives/icon-button`
     - **`adaptive-bar`** — Overflow as relocation, not transformation: a bar that asks each widget for a smaller form of itself and moves the rest — as themselves, ONE live instance each, never rendered twice — into an always-mounted panel. Each occupant owns one stable portal container the bar re-parents imperatively, so a relocated slider is still the same slider mid-drag; measurement reads the real nodes, and every policy (which forms exist, how eagerly to yield) comes from the widget through action-presentation rather than from the host.
@@ -20775,17 +20759,21 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses:
           - `primitives/action-presentation.ActionFormProvider`
           - `primitives/action-presentation.ItemFormChannel`
+          - `primitives/css/fill.fillClasses`
           - `primitives/css/grow-relay.useRequestGrow`
+          - `primitives/css/rigid.rigidClass`
           - `primitives/css/spacing.Stack`
           - `primitives/css/ui-kit.cn`
           - `primitives/css/ui-kit.OverlayPanel`
           - `primitives/css/ui-kit.SingleLineProvider`
           - `primitives/css/ui-kit.usePortalForwardedAttrs`
           - `primitives/css/viewport-overlay.ViewportOverlay`
+          - `primitives/css/yield.yieldClass`
           - `primitives/edit-mode-signal.useEditMode`
           - `primitives/element-size.useResizeObserver`
           - `primitives/icon-button.IconButton`
           - `primitives/popup-open.PopupOpenScope`
+          - `primitives/slot-render.SlotItemLayout`
           - `primitives/ui-context.collectLineage`
         - Exports (types):
           - `AdaptiveBarAlign`
@@ -20795,6 +20783,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `AdaptiveBarItemProps`
           - `AdaptiveBarOverflow`
           - `AdaptiveBarProps`
+          - `AdaptiveBarYieldProps`
           - `IsRendered`
           - `MeasureWidth`
         - Exports (values):
@@ -20803,10 +20792,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `AdaptiveBarItem`
           - `AdaptiveBarMeasure`
           - `adaptiveBarReportSink`
+          - `AdaptiveBarYield`
       - Cross-plugin:
         - Imported by:
           - `apps-core/tab-bar`
-          - `apps/sonata/library`
           - `conversations/conversation-view/prompt-templates`
           - `primitives/pane`
           - `reorder/node-types/overflow`
@@ -21897,6 +21886,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `plugin-meta/facets/resources/render-detail`
               - `plugin-meta/facets/routes/render-detail`
               - `primitives/action-presentation`
+              - `primitives/adaptive-bar`
               - `primitives/command-palette`
               - `primitives/commit-list`
               - `primitives/data-view/list`
@@ -21908,7 +21898,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/launch`
               - `primitives/log-channels`
               - `primitives/outline/rail`
-              - `primitives/pane`
               - `primitives/prompt-editor`
               - `primitives/setup-steps`
               - `review/code-review`
@@ -22075,7 +22064,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/tree`
         - **`layout-harness`** — Live Layout Lab gallery: renders the layout-primitive fixture catalog across its width sweep, opened from the Debug sidebar.
           - Web:
-            - Slots: `layoutLabPane.Actions`
+            - Slots: `layoutLabPane.Actions` ← `primitives.pane`
             - Contributes:
               - `Pane.Register` "layout-lab"
               - `DebugApp.Sidebar` "Layout Lab" → `component`
@@ -22462,7 +22451,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/agent-manager/welcome`
               - `apps/browser/shell`
               - `apps/pages/welcome/recent-pages`
-              - `apps/sonata/library`
               - `apps/sonata/sources/midi`
               - `apps/sonata/track-mixer`
               - `apps/story/shell`
@@ -22506,6 +22494,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `plugin-meta/facets/registrations/render-detail`
               - `plugin-meta/facets/resources/render-detail`
               - `plugin-meta/facets/routes/render-detail`
+              - `primitives/adaptive-bar`
               - `primitives/breadcrumb`
               - `primitives/command-palette`
               - `primitives/commit-list`
@@ -24050,7 +24039,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/multi-select`
               - `primitives/outline/rail`
               - `primitives/pane`
-              - `primitives/pane-toolbar`
               - `primitives/popover`
               - `primitives/prompt-editor`
               - `primitives/prompt-editor/voice-input`
@@ -24157,10 +24145,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `debug/slow-ops/cluster`
               - `debug/slow-ops/pane`
               - `history/dialog`
+              - `primitives/adaptive-bar`
               - `primitives/app-shell`
               - `primitives/breadcrumb`
               - `primitives/css/fill`
-              - `primitives/pane`
               - `primitives/prompt-editor`
               - `primitives/text-editor`
               - `search/quick-find`
@@ -26394,12 +26382,111 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`pane`** — Unified pane primitive: Pane.define and chrome components.
       - Web:
         - Slots: `Pane.Register` ← `active-data.plugin-link`, `apps.agent-manager.welcome`, `apps.deploy.deployments`, `apps.deploy.servers`, `apps.events.event-list`, `apps.events.shell`, `apps.events.sources`, `apps.events.sources.source-detail.runs`, `apps.mail.reading-pane`, `apps.mail.search`, `apps.mail.shell`, `apps.mail.threads`, `apps.pages.page-tree`, `apps.pages.welcome`, `apps.prototypes.gallery`, `apps.settings.accounts`, `apps.settings.config`, `apps.sonata.library`, `apps.story.shell`, `apps.studio.compositions`, `apps.studio.compositions.release`, `apps.studio.contributions`, `apps.studio.contributions.tables`, `apps.studio.explorer`, `apps.studio.graph`, `apps.website.downloads`, `apps.website.pillars.agents`, `apps.website.pillars.apps`, `apps.website.pillars.platform`, `apps.website.shell`, `apps.workflows.definitions`, `apps.workflows.executions`, `auth.apple-signing.setup-wizard`, `auth.google-maps.setup-wizard`, `auth.google.setup-wizard`, `backup`, `build`, `code-explorer`, `code-explorer.commit-detail`, `config_v2.settings`, `conversations.agents`, `conversations.all-conversations`, `conversations.conversation-view`, `conversations.conversation-view.code.docs-button`, `conversations.conversation-view.code.file-pane`, `conversations.conversation-view.commits-graph`, `conversations.conversation-view.jsonl-viewer.tool-call.agent`, `conversations.conversation-view.jsonl-viewer.tool-call.workflow`, `conversations.conversation-view.push-profiling`, `conversations.conversation-view.terminal-pane`, `conversations.recover`, `conversations.summary`, `debug.boot-profile`, `debug.broadcasts`, `debug.claude-cli-calls`, `debug.config-orphans`, `debug.health-monitor`, `debug.heap-snapshot`, `debug.live-state-churn.emit`, `debug.live-state-health`, `debug.logs`, `debug.memory`, `debug.profiling`, `debug.profiling.build`, `debug.profiling.ops`, `debug.queue`, `debug.read-set`, `debug.render-profiler`, `debug.reports`, `debug.trace.pane`, `debug.worktree-cleanup`, `debug.zero-test`, `infra.events-test`, `plugin-meta.plugin-view`, `primitives.css.layout-harness`, `review`, `screenshot`, `stats`, `tasks.attempt-view`, `tasks.task-detail`, `ui.theme-engine.theme-customizer`
+        - Contributes:
+          - `plugin-conv-side.actions` "title" → `PaneTitleItem`
+          - `welcomePane.Actions` "title" → `PaneTitleItem`
+          - `deploymentDetailPane.Actions` "title" → `PaneTitleItem`
+          - `serversRootPane.Actions` "title" → `PaneTitleItem`
+          - `serverDetailPane.Actions` "title" → `PaneTitleItem`
+          - `eventListPane.Actions` "title" → `PaneTitleItem`
+          - `events-root.actions` "title" → `PaneTitleItem`
+          - `eventSourcesPane.Actions` "title" → `PaneTitleItem`
+          - `eventSourceDetailPane.Actions` "title" → `PaneTitleItem`
+          - `eventSourceRunPane.Actions` "title" → `PaneTitleItem`
+          - `threadPane.Actions` "title" → `PaneTitleItem`
+          - `mail-search.actions` "title" → `PaneTitleItem`
+          - `mail-message.actions` "title" → `PaneTitleItem`
+          - `mail-root.actions` "title" → `PaneTitleItem`
+          - `mailThreadsPane.Actions` "title" → `PaneTitleItem`
+          - `pageDetailPane.Actions` "title" → `PaneTitleItem`
+          - `pagesTreePane.Actions` "title" → `PaneTitleItem`
+          - `pages-root.actions` "title" → `PaneTitleItem`
+          - `prototypesGalleryPane.Actions` "title" → `PaneTitleItem`
+          - `prototypeDetailPane.Actions` "title" → `PaneTitleItem`
+          - `settings-config-index.actions` "title" → `PaneTitleItem`
+          - `sonataLibraryPane.Actions` "title" → `PaneTitleItem`
+          - `sonataPlayerPane.Actions` "title" → `PaneTitleItem`
+          - `story-gallery.actions` "title" → `PaneTitleItem`
+          - `story-detail.actions` "title" → `PaneTitleItem`
+          - `compositionsPane.Actions` "title" → `PaneTitleItem`
+          - `compositionDetailPane.Actions` "title" → `PaneTitleItem`
+          - `comparePane.Actions` "title" → `PaneTitleItem`
+          - `release-detail.actions` "title" → `PaneTitleItem`
+          - `contributions.actions` "title" → `PaneTitleItem`
+          - `tableDetailPane.Actions` "title" → `PaneTitleItem`
+          - `explorerPane.Actions` "title" → `PaneTitleItem`
+          - `graphCanvasPane.Actions` "title" → `PaneTitleItem`
+          - `WebsiteHeader` "title" → `PaneTitleItem`
+          - `definitionsRootPane.Actions` "title" → `PaneTitleItem`
+          - `definitionDetailPane.Actions` "title" → `PaneTitleItem`
+          - `workflows-execution-detail.actions` "title" → `PaneTitleItem`
+          - `accountsPane.Actions` "title" → `PaneTitleItem`
+          - `appleSetupPane.Actions` "title" → `PaneTitleItem`
+          - `googleMapsSetupPane.Actions` "title" → `PaneTitleItem`
+          - `googleSetupPane.Actions` "title" → `PaneTitleItem`
+          - `backupPane.Actions` "title" → `PaneTitleItem`
+          - `buildPane.Actions` "title" → `PaneTitleItem`
+          - `buildDetailPane.Actions` "title" → `PaneTitleItem`
+          - `global-file-tree.actions` "title" → `PaneTitleItem`
+          - `conv-file-tree.actions` "title" → `PaneTitleItem`
+          - `commitDetailPane.Actions` "title" → `PaneTitleItem`
+          - `configNavPane.Actions` "title" → `PaneTitleItem`
+          - `configDetailPane.Actions` "title" → `PaneTitleItem`
+          - `agentsRootPane.Actions` "title" → `PaneTitleItem`
+          - `agentDetailPane.Actions` "title" → `PaneTitleItem`
+          - `systemAgentDetailPane.Actions` "title" → `PaneTitleItem`
+          - `agentSidePane.Actions` "title" → `PaneTitleItem`
+          - `allConversationsPane.Actions` "title" → `PaneTitleItem`
+          - `conversationPane.Actions` "title" → `PaneTitleItem`
+          - `conv-docs.actions` "title" → `PaneTitleItem`
+          - `filePeekPane.Actions` "title" → `PaneTitleItem`
+          - `conv-commits-graph.actions` "title" → `PaneTitleItem`
+          - `agent-report.actions` "title" → `PaneTitleItem`
+          - `workflow-node.actions` "title" → `PaneTitleItem`
+          - `conv-push-profiling.actions` "title" → `PaneTitleItem`
+          - `conv-terminal.actions` "title" → `PaneTitleItem`
+          - `recoveryPane.Actions` "title" → `PaneTitleItem`
+          - `conv-summary.actions` "title" → `PaneTitleItem`
+          - `debug-boot-profile.actions` "title" → `PaneTitleItem`
+          - `debug-boot-profile-detail.actions` "title" → `PaneTitleItem`
+          - `debug-boot-profiles-list.actions` "title" → `PaneTitleItem`
+          - `broadcastsPane.Actions` "title" → `PaneTitleItem`
+          - `claudeCliCallsPane.Actions` "title" → `PaneTitleItem`
+          - `configOrphansPane.Actions` "title" → `PaneTitleItem`
+          - `healthMonitorPane.Actions` "title" → `PaneTitleItem`
+          - `heapSnapshotPane.Actions` "title" → `PaneTitleItem`
+          - `liveStateEmitPane.Actions` "title" → `PaneTitleItem`
+          - `liveStateHealthPane.Actions` "title" → `PaneTitleItem`
+          - `logsPane.Actions` "title" → `PaneTitleItem`
+          - `logChannelPane.Actions` "title" → `PaneTitleItem`
+          - `memoryPane.Actions` "title" → `PaneTitleItem`
+          - `profilingPane.Actions` "title" → `PaneTitleItem`
+          - `buildProfileDetailPane.Actions` "title" → `PaneTitleItem`
+          - `opDetailPane.Actions` "title" → `PaneTitleItem`
+          - `queuePane.Actions` "title" → `PaneTitleItem`
+          - `readSetPane.Actions` "title" → `PaneTitleItem`
+          - `renderProfilerPane.Actions` "title" → `PaneTitleItem`
+          - `reportsPane.Actions` "title" → `PaneTitleItem`
+          - `reportDetailPane.Actions` "title" → `PaneTitleItem`
+          - `slowEventsPane.Actions` "title" → `PaneTitleItem`
+          - `traceDetailPane.Actions` "title" → `PaneTitleItem`
+          - `worktreeCleanupPane.Actions` "title" → `PaneTitleItem`
+          - `zeroTestPane.Actions` "title" → `PaneTitleItem`
+          - `eventsTestPane.Actions` "title" → `PaneTitleItem`
+          - `pluginViewPane.Actions` "title" → `PaneTitleItem`
+          - `layoutLabPane.Actions` "title" → `PaneTitleItem`
+          - `convReviewPane.Actions` "title" → `PaneTitleItem`
+          - `screenshotPane.Actions` "title" → `PaneTitleItem`
+          - `statsPane.Actions` "title" → `PaneTitleItem`
+          - `attemptPane.Actions` "title" → `PaneTitleItem`
+          - `tasksRootPane.Actions` "title" → `PaneTitleItem`
+          - `taskDetailPane.Actions` "title" → `PaneTitleItem`
+          - `themeCustomizerPane.Actions` "title" → `PaneTitleItem`
         - Uses:
           - `primitives/adaptive-bar.AdaptiveBar`
           - `primitives/bar.Bar`
           - `primitives/css/center.Center`
           - `primitives/css/column.Column`
-          - `primitives/css/fill.Fill`
           - `primitives/css/placeholder.Placeholder`
           - `primitives/css/scroll.Scroll`
           - `primitives/css/scroll.ScrollProps`
@@ -26407,9 +26494,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/css/text.Text`
           - `primitives/css/ui-kit.Button`
           - `primitives/css/ui-kit.cn`
-          - `primitives/css/ui-kit.ControlSize`
           - `primitives/css/ui-kit.SingleLineProvider`
-          - `primitives/css/yield.yieldClass`
           - `primitives/icon-button.IconButton`
           - `primitives/install-sink.defineInstallSink`
           - `primitives/latest-ref.useLatestRef`
@@ -26417,7 +26502,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/loading.Loading`
           - `primitives/select-scope.ContentScope`
           - `primitives/slot-render.defineRenderSlot`
-          - `primitives/slot-render.renderIsolated`
           - `primitives/slot-render.RenderSlot`
           - `primitives/surface-id.SurfaceIdContext`
           - `primitives/tooltip.WithTooltip`
@@ -26430,9 +26514,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `LocationChange`
           - `MatchEntry`
           - `OpenPaneFn`
-          - `PaneActionContribution`
           - `PaneChromeConfig`
-          - `PaneHeaderZones`
+          - `PaneHeaderAction`
+          - `PaneHeaderComponent`
+          - `PaneHeaderItem`
+          - `PaneHeaderSlot`
+          - `PaneHeaderSlotOptions`
           - `PaneHistoryState`
           - `PaneInternal`
           - `PaneMatch`
@@ -26444,7 +26531,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `PaneSlot`
           - `PaneStore`
           - `PaneToggleOpts`
-          - `PaneToolbarItem`
           - `ParsedRoute`
           - `PromoteAction`
           - `ResolveHook`
@@ -26460,11 +26546,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `currentRoutePath`
           - `defaultHistoryAdapter`
           - `defaultStore`
+          - `definePaneHeaderSlot`
           - `openPane`
           - `Pane`
-          - `PaneActionsSlot`
           - `PaneBasePathContext`
           - `PaneChrome`
+          - `PaneHeaderCell`
           - `PaneIconAction`
           - `PaneInstanceContext`
           - `PaneLayoutContext`
@@ -26486,7 +26573,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `setLiveStore`
           - `stripBasePath`
           - `SurfaceChromeContext`
-          - `ToolbarItem`
           - `type`
           - `useCurrentPane`
           - `useIndexMatch`
@@ -26642,7 +26728,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/app-shell`
           - `primitives/css/layout-harness`
           - `primitives/launch`
-          - `primitives/pane-toolbar`
           - `reports`
           - `review`
           - `screenshot`
@@ -26668,22 +26753,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `fillSegment`
           - `normalizeRoutePath`
           - `normalizeSegmentPattern`
-    - **`pane-toolbar`** — Factory for a pane's custom header: reorderable start/end render-slot zones wired into PaneChrome via chrome.header. Use instead of hand-rolling a header bar.
-      - Web:
-        - Uses:
-          - `primitives/css/ui-kit.ControlSize`
-          - `primitives/pane.PaneToolbarItem`
-          - `primitives/slot-render.defineRenderSlot`
-          - `primitives/slot-render.RenderSlot`
-        - Exports (types):
-          - `PaneToolbar`
-          - `PaneToolbarOptions`
-        - Exports (values): `definePaneToolbar`
-      - Cross-plugin:
-        - Imported by:
-          - `apps/sonata/shell`
-          - `apps/story/shell`
-          - `apps/website/shell`
     - **`passthrough`** — The open-passthrough contract: a primitive that accepts props it does not name promises they land on ONE node, and `ref` is that node's name. Owns the Passthrough props marker, the splitPassthrough router for the rare second destination, and the two lint rules that keep the promise true.
       - Core:
         - Exports (types): `Passthrough`
@@ -27209,12 +27278,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `improve/element-picker`
           - `page/editor`
           - `page/page-reference`
+          - `primitives/adaptive-bar`
           - `primitives/app-shell`
           - `primitives/data-view`
           - `primitives/detail-sections`
           - `primitives/error-boundary`
           - `primitives/pane`
-          - `primitives/pane-toolbar`
           - `primitives/prompt-editor`
           - `primitives/tabbed-view`
           - `primitives/text-editor`
@@ -27947,7 +28016,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
 
 - **`reorder`** — Generic reorder primitive: every defineRenderSlot is unconditionally reorderable; use defineMountSlot for headless slots. DnD is automatic via middleware. Generic reorder primitive: per-slot config_v2 directives for contribution order/visibility.
   - Web:
-    - Contributes: `ConfigV2.WebRegister` ×216: "above-prompt-input", "accounts.actions", "action", "action-bar", "actions", "actions", "actions", "agent-actions", "agent-detail.actions", "agent-report.actions", "agent-side.actions", "agent-system-detail.actions", "agents-root.actions", "all-conversations.actions", "app", "apple-setup.actions", "attempt.actions", "backup.actions", "banner", "block", "build-detail.actions", "build.actions", "chart", "chips", "claude-cli-calls.actions", "commit-detail.actions", "composition-compare.actions", "composition-detail.actions", "compositions.actions", "config-orphans.actions", "config-v2-detail.actions", "config-v2-nav.actions", "conflict-action", "contributions.actions", "conv-commits-graph.actions", "conv-docs.actions", "conv-file-tree.actions", "conv-push-profiling.actions", "conv-review.actions", "conv-summary.actions", "conv-terminal.actions", "conversation.actions", "conversations-recover.actions", "debug-boot-profile-detail.actions", "debug-boot-profile.actions", "debug-boot-profiles-list.actions", "debug-broadcasts.actions", "debug-health-monitor.actions", "debug-heap-snapshot.actions", "debug-live-state-emit.actions", "debug-memory.actions", "debug-profiling-build-detail.actions", "debug-profiling-op-detail.actions", "debug-profiling.actions", "debug-read-set.actions", "deploy-deployment-detail.actions", "deploy-server-detail.actions", "deploy-servers.actions", "end", "end", "end", "event-list.actions", "event-source-detail.actions", "event-source-run.actions", "event-sources.actions", "events-root.actions", "events-test.actions", "explorer.actions", "field-extension", "fields", "fields", "fields", "fields", "fields", "fields", "file-peek.actions", "floating-action", "format-action", "global-file-tree.actions", "google-maps-setup.actions", "google-setup.actions", "graph.actions", "header", "header-actions", "history-actions", "home", "hud", "item", "item", "item", "item", "item-actions", "item-actions", "item-actions", "item-actions", "item-actions", "layout-lab.actions", "list", "list-actions", "list-actions", "live-state-health.actions", "logs-channel.actions", "logs.actions", "mail-message.actions", "mail-root.actions", "mail-search.actions", "mail-thread.actions", "mail-threads.actions", "nav-controls", "omnibox", "option", "overlay", "overlay", "page-detail.actions", "pages-root.actions", "pages-tree.actions", "pending-prompt-action", "plugin", "plugin-conv-side.actions", "plugin-view.actions", "prompt-bar", "prompt-input", "prototypes-detail.actions", "prototypes-gallery.actions", "queue-actions", "queue.actions", "rail-badge", "rail-badge", "release-detail.actions", "render-profiler.actions", "report-detail.actions", "reports.actions", "row-actions", "row-order", "screenshot.actions", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "settings-config-index.actions", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sonata-library.actions", "sonata-player.actions", "song-actions", "sources", "sources", "start", "start", "start", "start-page", "stats.actions", "story-detail.actions", "story-gallery.actions", "sub-bar", "system-agent", "tab-bar-actions", "tab-strip", "table-detail.actions", "task-actions", "task-detail.actions", "tasks-root.actions", "theme-customizer.actions", "toolbar", "toolbar", "toolbar", "toolbar", "toolbar", "trace-detail.actions", "traces.actions", "transport", "tree-row-accent", "tree-row-badge", "turn-into", "variant-group", "view", "viewport", "website-agents.actions", "website-apps.actions", "website-downloads.actions", "website-landing.actions", "website-platform.actions", "welcome.actions", "workflow-node.actions", "workflows-definition-detail.actions", "workflows-definitions.actions", "workflows-execution-detail.actions", "worktree-cleanup.actions", "zero-test.actions"
+    - Contributes: `ConfigV2.WebRegister` ×206: "above-prompt-input", "accounts.actions", "action", "action-bar", "actions", "actions", "actions", "agent-actions", "agent-detail.actions", "agent-report.actions", "agent-side.actions", "agent-system-detail.actions", "agents-root.actions", "all-conversations.actions", "app", "apple-setup.actions", "attempt.actions", "backup.actions", "banner", "block", "build-detail.actions", "build.actions", "chart", "chips", "claude-cli-calls.actions", "commit-detail.actions", "composition-compare.actions", "composition-detail.actions", "compositions.actions", "config-orphans.actions", "config-v2-detail.actions", "config-v2-nav.actions", "conflict-action", "contributions.actions", "conv-commits-graph.actions", "conv-docs.actions", "conv-file-tree.actions", "conv-push-profiling.actions", "conv-review.actions", "conv-summary.actions", "conv-terminal.actions", "conversation.actions", "conversations-recover.actions", "debug-boot-profile-detail.actions", "debug-boot-profile.actions", "debug-boot-profiles-list.actions", "debug-broadcasts.actions", "debug-health-monitor.actions", "debug-heap-snapshot.actions", "debug-live-state-emit.actions", "debug-memory.actions", "debug-profiling-build-detail.actions", "debug-profiling-op-detail.actions", "debug-profiling.actions", "debug-read-set.actions", "deploy-deployment-detail.actions", "deploy-server-detail.actions", "deploy-servers.actions", "event-list.actions", "event-source-detail.actions", "event-source-run.actions", "event-sources.actions", "events-root.actions", "events-test.actions", "explorer.actions", "field-extension", "fields", "fields", "fields", "fields", "fields", "fields", "file-peek.actions", "floating-action", "format-action", "global-file-tree.actions", "google-maps-setup.actions", "google-setup.actions", "graph.actions", "header", "header", "header-actions", "history-actions", "home", "hud", "item", "item", "item", "item", "item-actions", "item-actions", "item-actions", "item-actions", "item-actions", "layout-lab.actions", "list", "list-actions", "list-actions", "live-state-health.actions", "logs-channel.actions", "logs.actions", "mail-message.actions", "mail-root.actions", "mail-search.actions", "mail-thread.actions", "mail-threads.actions", "nav-controls", "omnibox", "option", "overlay", "overlay", "page-detail.actions", "pages-root.actions", "pages-tree.actions", "pending-prompt-action", "plugin", "plugin-conv-side.actions", "plugin-view.actions", "prompt-bar", "prompt-input", "prototypes-detail.actions", "prototypes-gallery.actions", "queue-actions", "queue.actions", "rail-badge", "rail-badge", "release-detail.actions", "render-profiler.actions", "report-detail.actions", "reports.actions", "row-actions", "row-order", "screenshot.actions", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "settings-config-index.actions", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sonata-library.actions", "sonata-player.actions", "song-actions", "sources", "sources", "start-page", "stats.actions", "story-detail.actions", "story-gallery.actions", "sub-bar", "system-agent", "tab-bar-actions", "tab-strip", "table-detail.actions", "task-actions", "task-detail.actions", "tasks-root.actions", "theme-customizer.actions", "toolbar", "toolbar", "toolbar", "toolbar", "toolbar", "trace-detail.actions", "traces.actions", "transport", "tree-row-accent", "tree-row-badge", "turn-into", "variant-group", "view", "viewport", "welcome.actions", "workflow-node.actions", "workflows-definition-detail.actions", "workflows-definitions.actions", "workflows-execution-detail.actions", "worktree-cleanup.actions", "zero-test.actions"
     - Uses:
       - `config_v2.ConfigV2`
       - `config_v2.useConfig`
@@ -27976,7 +28045,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `ReorderLayoutContext`
       - `useReorderedEntries`
   - Server:
-    - Contributes: `ConfigV2.Register` ×215: "above-prompt-input", "accounts.actions", "action", "action-bar", "actions", "actions", "actions", "agent-actions", "agent-detail.actions", "agent-report.actions", "agent-side.actions", "agent-system-detail.actions", "agents-root.actions", "all-conversations.actions", "app", "apple-setup.actions", "attempt.actions", "backup.actions", "banner", "block", "build-detail.actions", "build.actions", "chart", "chips", "claude-cli-calls.actions", "commit-detail.actions", "composition-compare.actions", "composition-detail.actions", "compositions.actions", "config-orphans.actions", "config-v2-detail.actions", "config-v2-nav.actions", "conflict-action", "contributions.actions", "conv-commits-graph.actions", "conv-docs.actions", "conv-file-tree.actions", "conv-push-profiling.actions", "conv-review.actions", "conv-summary.actions", "conv-terminal.actions", "conversation.actions", "conversations-recover.actions", "debug-boot-profile-detail.actions", "debug-boot-profile.actions", "debug-boot-profiles-list.actions", "debug-broadcasts.actions", "debug-health-monitor.actions", "debug-heap-snapshot.actions", "debug-live-state-emit.actions", "debug-memory.actions", "debug-profiling-build-detail.actions", "debug-profiling-op-detail.actions", "debug-profiling.actions", "debug-read-set.actions", "deploy-deployment-detail.actions", "deploy-server-detail.actions", "deploy-servers.actions", "end", "end", "end", "event-list.actions", "event-source-detail.actions", "event-source-run.actions", "event-sources.actions", "events-root.actions", "events-test.actions", "explorer.actions", "field-extension", "fields", "fields", "fields", "fields", "fields", "fields", "file-peek.actions", "floating-action", "format-action", "global-file-tree.actions", "google-maps-setup.actions", "google-setup.actions", "graph.actions", "header", "header-actions", "history-actions", "home", "hud", "item", "item", "item", "item", "item-actions", "item-actions", "item-actions", "item-actions", "item-actions", "layout-lab.actions", "list", "list-actions", "list-actions", "live-state-health.actions", "logs-channel.actions", "logs.actions", "mail-message.actions", "mail-root.actions", "mail-search.actions", "mail-thread.actions", "mail-threads.actions", "nav-controls", "omnibox", "option", "overlay", "overlay", "page-detail.actions", "pages-root.actions", "pages-tree.actions", "pending-prompt-action", "plugin", "plugin-conv-side.actions", "plugin-view.actions", "prompt-bar", "prompt-input", "prototypes-detail.actions", "prototypes-gallery.actions", "queue-actions", "queue.actions", "rail-badge", "rail-badge", "release-detail.actions", "render-profiler.actions", "report-detail.actions", "reports.actions", "row-actions", "row-order", "screenshot.actions", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "settings-config-index.actions", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sonata-library.actions", "sonata-player.actions", "song-actions", "sources", "sources", "start", "start", "start", "start-page", "stats.actions", "story-detail.actions", "story-gallery.actions", "sub-bar", "system-agent", "tab-bar-actions", "tab-strip", "table-detail.actions", "task-actions", "task-detail.actions", "tasks-root.actions", "theme-customizer.actions", "toolbar", "toolbar", "toolbar", "toolbar", "toolbar", "trace-detail.actions", "traces.actions", "transport", "tree-row-accent", "tree-row-badge", "turn-into", "variant-group", "view", "viewport", "website-agents.actions", "website-apps.actions", "website-downloads.actions", "website-landing.actions", "website-platform.actions", "welcome.actions", "workflow-node.actions", "workflows-definition-detail.actions", "workflows-definitions.actions", "workflows-execution-detail.actions", "worktree-cleanup.actions", "zero-test.actions"
+    - Contributes: `ConfigV2.Register` ×205: "above-prompt-input", "accounts.actions", "action", "action-bar", "actions", "actions", "actions", "agent-actions", "agent-detail.actions", "agent-report.actions", "agent-side.actions", "agent-system-detail.actions", "agents-root.actions", "all-conversations.actions", "app", "apple-setup.actions", "attempt.actions", "backup.actions", "banner", "block", "build-detail.actions", "build.actions", "chart", "chips", "claude-cli-calls.actions", "commit-detail.actions", "composition-compare.actions", "composition-detail.actions", "compositions.actions", "config-orphans.actions", "config-v2-detail.actions", "config-v2-nav.actions", "conflict-action", "contributions.actions", "conv-commits-graph.actions", "conv-docs.actions", "conv-file-tree.actions", "conv-push-profiling.actions", "conv-review.actions", "conv-summary.actions", "conv-terminal.actions", "conversation.actions", "conversations-recover.actions", "debug-boot-profile-detail.actions", "debug-boot-profile.actions", "debug-boot-profiles-list.actions", "debug-broadcasts.actions", "debug-health-monitor.actions", "debug-heap-snapshot.actions", "debug-live-state-emit.actions", "debug-memory.actions", "debug-profiling-build-detail.actions", "debug-profiling-op-detail.actions", "debug-profiling.actions", "debug-read-set.actions", "deploy-deployment-detail.actions", "deploy-server-detail.actions", "deploy-servers.actions", "event-list.actions", "event-source-detail.actions", "event-source-run.actions", "event-sources.actions", "events-root.actions", "events-test.actions", "explorer.actions", "field-extension", "fields", "fields", "fields", "fields", "fields", "fields", "file-peek.actions", "floating-action", "format-action", "global-file-tree.actions", "google-maps-setup.actions", "google-setup.actions", "graph.actions", "header", "header", "header-actions", "history-actions", "home", "hud", "item", "item", "item", "item", "item-actions", "item-actions", "item-actions", "item-actions", "item-actions", "layout-lab.actions", "list", "list-actions", "list-actions", "live-state-health.actions", "logs-channel.actions", "logs.actions", "mail-message.actions", "mail-root.actions", "mail-search.actions", "mail-thread.actions", "mail-threads.actions", "nav-controls", "omnibox", "option", "overlay", "overlay", "page-detail.actions", "pages-root.actions", "pages-tree.actions", "pending-prompt-action", "plugin", "plugin-conv-side.actions", "plugin-view.actions", "prompt-bar", "prompt-input", "prototypes-detail.actions", "prototypes-gallery.actions", "queue-actions", "queue.actions", "rail-badge", "rail-badge", "release-detail.actions", "render-profiler.actions", "report-detail.actions", "reports.actions", "row-actions", "row-order", "screenshot.actions", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "settings-config-index.actions", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sonata-library.actions", "sonata-player.actions", "song-actions", "sources", "sources", "start-page", "stats.actions", "story-detail.actions", "story-gallery.actions", "sub-bar", "system-agent", "tab-bar-actions", "tab-strip", "table-detail.actions", "task-actions", "task-detail.actions", "tasks-root.actions", "theme-customizer.actions", "toolbar", "toolbar", "toolbar", "toolbar", "toolbar", "trace-detail.actions", "traces.actions", "transport", "tree-row-accent", "tree-row-badge", "turn-into", "variant-group", "view", "viewport", "welcome.actions", "workflow-node.actions", "workflows-definition-detail.actions", "workflows-definitions.actions", "workflows-execution-detail.actions", "worktree-cleanup.actions", "zero-test.actions"
     - Uses: `config_v2.ConfigV2`
     - Exports (values):
       - `reorderableSlots`
@@ -28191,7 +28260,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `stats/cost`
       - `tasks/reports-investigation`
   - Plugins:
-    - **`adaptive-bar`** — Adaptive-bar collector: drains the adaptive-bar primitive's adaptiveBarReportSink into a deduped report whenever a bar's layout contract is violated (it was given no slack, its fit disagrees with the layout engine, its placement never converged, it refused to relocate an iframe, or one of its widgets declared a form it does not render), plus the Debug → Reports summary view. Adaptive-bar report kind: validates the adaptive-bar primitive's layout-contract fault payloads (no-slack = the bar was given no room to give, row-overflow = on a converged pass the fit blessed the row as fitting and the occupants still stick out of the bar's own content box, no-convergence = the placement never settled, iframe-relocation = a frame the browser cannot move without reloading, empty-rung = a widget declared a smaller form and rendered nothing as it), fingerprints by fault + origin (the innermost UI-context node above the bar's root, falling back to the label that several unrelated bars share) + overflow mode + the offending occupant's id, excluding the per-occurrence lineage path, round evidence and message so one broken bar = one row, and renders a per-fault task — what the bar did instead, the consumer-side fix, and for no-convergence the recorded rounds naming which occupant resized itself. Re-arms periodically (6h) since a broken host re-produces the fault on every mount.
+    - **`adaptive-bar`** — Adaptive-bar collector: drains the adaptive-bar primitive's adaptiveBarReportSink into a deduped report whenever a bar's layout contract is violated (it was given no slack, it was written inside another bar, its fit disagrees with the layout engine, its placement never converged, it refused to relocate an iframe, or one of its widgets declared a form it does not render), plus the Debug → Reports summary view. Adaptive-bar report kind: validates the adaptive-bar primitive's layout-contract fault payloads (no-slack = the bar was given no room to give, nested-bar = a measuring bar was written inside another bar's occupant so both claim the same row's slack, row-overflow = on a converged pass the fit blessed the row as fitting and the occupants still stick out of the bar's own content box, no-convergence = the placement never settled, iframe-relocation = a frame the browser cannot move without reloading, empty-rung = a widget declared a smaller form and rendered nothing as it), fingerprints by fault + origin (the innermost UI-context node above the bar's root, falling back to the label that several unrelated bars share) + overflow mode + the offending occupant's id, excluding the per-occurrence lineage path, round evidence and message so one broken bar = one row, and renders a per-fault task — what the bar did instead, the consumer-side fix, and for no-convergence the recorded rounds naming which occupant resized itself. Re-arms periodically (6h) since a broken host re-produces the fault on every mount.
       - Web:
         - Contributes:
           - `Core.Root` → `AdaptiveBarCollector`
@@ -28403,7 +28472,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
   - Web:
     - Slots:
       - `ReviewSlots.Section` ← `review.code-review`, `review.plugin-changes`
-      - `convReviewPane.Actions`
+      - `convReviewPane.Actions` ← `primitives.pane`
     - Contributes:
       - `Pane.Register` "conv-review"
       - `Conversation.ActionBar` → `ReviewButton`
@@ -28576,7 +28645,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
 
 - **`screenshot`** — Capture the current page and edit it (crop, draw) in a new tab. Bottom prompt form launches a conversation with the edited screenshot attached. Stores in-flight screenshots so a freshly opened tab can fetch them.
   - Web:
-    - Slots: `screenshotPane.Actions`
+    - Slots: `screenshotPane.Actions` ← `primitives.pane`
     - Contributes:
       - `Pane.Register` "screenshot"
       - `ActionBar.Item` → `ScreenshotButton`
@@ -28907,7 +28976,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
   - Web:
     - Slots:
       - `Stats.Chart` ← `stats.commits`, `stats.cost`, `stats.pushes`, `stats.tasks`
-      - `statsPane.Actions`
+      - `statsPane.Actions` ← `primitives.pane`
     - Contributes:
       - `Pane.Register` "stats"
       - `Shell.Sidebar` "Stats" → `component`
@@ -29293,7 +29362,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `tasks/task-events`
     - **`attempt-view`** — Main pane at /a/:id showing an attempt's conversations on the left and the selected conversation on the right. Adds a toolbar button to the conversation view to switch into it.
       - Web:
-        - Slots: `attemptPane.Actions`
+        - Slots: `attemptPane.Actions` ← `primitives.pane`
         - Contributes:
           - `Pane.Register` "attempt"
           - `Conversation.ActionBar` → `AttemptSwitchButton`
@@ -29642,8 +29711,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Web:
         - Slots:
           - `TaskDetailSlots.Section` ← `apps.pages.prompt-origin`, `tasks.task-attachments`, `tasks.task-dependencies`, `tasks.task-deps-tree`, `tasks.task-description`, `tasks.task-events`, `tasks.task-graph`, `tasks.task-header`
-          - `tasksRootPane.Actions`
-          - `taskDetailPane.Actions`
+          - `tasksRootPane.Actions` ← `primitives.pane`
+          - `taskDetailPane.Actions` ← `primitives.pane`
         - Contributes:
           - `Pane.Register` "tasks-root"
           - `Pane.Register` "task-detail"
@@ -30621,7 +30690,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Web:
             - Slots:
               - `ThemeCustomizer.Section` ← `ui.tokens.categorical`, `ui.tokens.chart`, `ui.tokens.color-adjust`, `ui.tokens.color-palette`, `ui.tokens.density`, `ui.tokens.font-family`, `ui.tokens.shadow`, `ui.tokens.shape`, `ui.tokens.sidebar-palette`, `ui.tokens.type-scale`, `ui.tweakcn.community-browser`
-              - `themeCustomizerPane.Actions`
+              - `themeCustomizerPane.Actions` ← `primitives.pane`
             - Contributes: `Pane.Register` "theme-customizer"
             - Uses:
               - `apps-core.useCurrentAppId`

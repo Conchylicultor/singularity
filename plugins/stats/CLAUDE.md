@@ -8,7 +8,7 @@
 - Web:
   - Slots:
     - `Stats.Chart` ← `stats.commits`, `stats.cost`, `stats.pushes`, `stats.tasks`
-    - `statsPane.Actions`
+    - `statsPane.Actions` ← `primitives.pane`
   - Contributes:
     - `Pane.Register` "stats"
     - `Shell.Sidebar` "Stats" → `component`

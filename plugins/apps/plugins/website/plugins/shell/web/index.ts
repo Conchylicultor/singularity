@@ -6,25 +6,28 @@ import { mdAppIcon } from "@plugins/apps-core/plugins/app-icon/web";
 import { websiteApp } from "../core";
 import { WebsiteLayout } from "./components/website-layout";
 import { WebsiteWordmark } from "./components/website-wordmark";
-import { WebsiteToolbar, Website } from "./slots";
+import { WebsiteHeader, Website } from "./slots";
 import { landingPane } from "./panes";
 
-export { Website, WebsiteToolbar } from "./slots";
+export { Website, WebsiteHeader } from "./slots";
 export { WebsiteNavLink } from "./components/website-nav-link";
 export { WebsitePage } from "./components/website-page";
 export { landingPane } from "./panes";
 
 export default {
   description:
-    "App shell for the Website (equin public site). Registers the /website app entry and the landing pane, owns the shared site toolbar (wordmark + nav zones) every site pane opts into, and defines the Website.Section landing slot.",
+    "App shell for the Website (equin public site). Registers the /website app entry and the landing pane, owns the shared site header (wordmark + nav) every site pane wears, and defines the Website.Section landing slot.",
   contributions: [
     Apps.App({
       app: websiteApp,
       icon: mdAppIcon(MdPublic),
       component: WebsiteLayout,
     }),
-    WebsiteToolbar.Start({ id: "wordmark", component: WebsiteWordmark }),
+    WebsiteHeader({ id: "wordmark", component: WebsiteWordmark }),
     Pane.Register({ pane: landingPane }),
   ],
-  slots: { ...Website, ...WebsiteToolbar, "website-landing": landingPane },
+  // `header` declares the SHARED site header, and it is declared here only —
+  // the landing pane borrows it too, so listing the pane as well would name one
+  // slot twice.
+  slots: { ...Website, header: WebsiteHeader },
 } satisfies PluginDefinition;

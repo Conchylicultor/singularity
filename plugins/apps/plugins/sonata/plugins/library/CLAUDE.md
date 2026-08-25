@@ -11,10 +11,17 @@ them without a `shell → library` import that would cycle with the existing
 - `sonataLibraryPane` — index pane at bare `/sonata` (`appIndex: true`,
   standard chrome titled "Library"). Renders the gallery via
   `Sonata.Home` inside `PaneChrome`.
-- `sonataPlayerPane` — player pane at `/sonata/song/:songId`
-  (`chrome: { header: SonataToolbar }` — the `SonataToolbar` Start/End zones ARE
-  the pane header, rendered by `PaneChrome`; the full-width Transport progress
-  strip lives at the body top, above the display).
+- `sonataPlayerPane` — player pane at `/sonata/song/:songId`. Its own header
+  slot (`sonataPlayerPane.Actions`) IS the whole player bar — ← Library, the
+  display picker, transport, volume, the jog wheel, and the song title as the
+  pane's title item — rendered by `PaneChrome` as one overflow-collapsing row;
+  the full-width Transport progress strip lives at the body top, above the
+  display. **This plugin's barrel is where every other Sonata plugin reaches
+  that header**: it exports `sonataPlayerPane`, and a control is contributed as
+  `sonataPlayerPane.Actions({ id, component })`. Which side of the row an item
+  lands on is the slot's reorder config
+  (`config/apps/sonata/library/sonata-player.actions.jsonc`), not a field on the
+  contribution.
   Carries the optimistic title in `input`; its `resolve` hook
   (`useSonataPlayerResolve`) hydrates every `Library.Source`'s raw for the song
   (so direct nav / reload restores it) and gates on the song existing. The
@@ -86,8 +93,9 @@ state, and the `useAvailable` gate. Sonata-specific on top of it:
 open song's title reads it through `useCurrentSong()` (the canonical row for
 `currentSongId`, straight from `songsResource`, preserving the `pending`
 discriminant), and the title is *edited* in exactly one place — the inline
-`SongTitle` field in the player toolbar (`SonataToolbar.Start` "title",
-`web/components/song-title-field.tsx`), which patches `PATCH /api/sonata/songs/:id`
+`SongTitle` field, which is the player pane's TITLE node
+(`<PaneChrome title={<SongTitle/>}>`, `web/components/song-title-field.tsx`) and
+patches `PATCH /api/sonata/songs/:id`
 via `updateSong`. Mirroring the `PageHeader` pattern, `matchResource` gates the
 mount so `useEditableField` only ever seeds from a settled title, and an
 empty/whitespace-only draft is never persisted (re-mounting re-seeds from the
@@ -104,13 +112,12 @@ the title — a chord-grid save endpoint physically cannot carry one.
     - `Library.Source` ← `apps.sonata.sources.chord-grid`, `apps.sonata.sources.midi`, `apps.sonata.sources.ultimate-guitar`
     - `Library.SongActions` ← `apps.sonata.library`
     - `Library.Fields` ← `apps.sonata.playback-history`, `apps.sonata.sources.midi`, `apps.sonata.sources.midi.folders`
-    - `sonata-library.actions`
-    - `sonata-player.actions`
+    - `sonataLibraryPane.Actions` ← `primitives.pane`
+    - `sonataPlayerPane.Actions` ← `apps.sonata.audio.engine`, `apps.sonata.audio.metronome`, `apps.sonata.library`, `apps.sonata.pedal.indicator`, `apps.sonata.piano-roll`, `apps.sonata.progress.loop`, `apps.sonata.transport-bar`, `apps.sonata.transpose`, `primitives.pane`
   - Contributes:
     - `Sonata.Home` "library" → `SongLibrary`
-    - `SonataToolbar.Start` "back" → `BackToLibrary`
-    - `SonataToolbar.Start` "title" → `SongTitle`
-    - `SonataToolbar.Start` "display-picker" → `DisplayPicker`
+    - `sonataPlayerPane.Actions` "back" → `BackToLibrary`
+    - `sonataPlayerPane.Actions` "display-picker" → `DisplayPicker`
     - `Library.SongActions` "play" → `PlaySongAction`
     - `Library.SongActions` "delete" → `DeleteSongAction`
     - `Pane.Register` "sonata-library"
@@ -118,12 +125,9 @@ the title — a chord-grid save endpoint physically cannot carry one.
   - Uses:
     - `apps/sonata/shell.Sonata`
     - `apps/sonata/shell.SonataSectionItem`
-    - `apps/sonata/shell.SonataToolbar`
     - `apps/sonata/shell.TEMPO_MATH_FLOOR`
     - `apps/sonata/shell.useSonata`
     - `infra/endpoints.useEndpointMutation`
-    - `primitives/action-presentation.useActionForm`
-    - `primitives/adaptive-bar.AdaptiveBar`
     - `primitives/css/card.Card`
     - `primitives/css/center.Center`
     - `primitives/css/clip.Clip`
@@ -131,7 +135,6 @@ the title — a chord-grid save endpoint physically cannot carry one.
     - `primitives/css/fill.Fill`
     - `primitives/css/grid.Grid`
     - `primitives/css/line.Line`
-    - `primitives/css/rigid.rigidClass`
     - `primitives/css/scroll.Scroll`
     - `primitives/css/spacing.Inset`
     - `primitives/css/spacing.Stack`
@@ -167,6 +170,8 @@ the title — a chord-grid save endpoint physically cannot carry one.
   - Exports (values):
     - `Library`
     - `openSongImperative`
+    - `sonataLibraryPane`
+    - `sonataPlayerPane`
     - `useCurrentSong`
     - `useOpenSong`
 - Server:
@@ -212,7 +217,12 @@ the title — a chord-grid save endpoint physically cannot carry one.
     - `updateSong`
 - Cross-plugin:
   - Imported by:
+    - `apps/sonata/audio/engine`
+    - `apps/sonata/audio/metronome`
+    - `apps/sonata/pedal/indicator`
+    - `apps/sonata/piano-roll`
     - `apps/sonata/playback-history`
+    - `apps/sonata/progress/loop`
     - `apps/sonata/rich/key-mode`
     - `apps/sonata/rich/rhythm-controls`
     - `apps/sonata/sources/chord-grid`
@@ -220,6 +230,7 @@ the title — a chord-grid save endpoint physically cannot carry one.
     - `apps/sonata/sources/midi/folders`
     - `apps/sonata/sources/ultimate-guitar`
     - `apps/sonata/track-mixer`
+    - `apps/sonata/transport-bar`
     - `apps/sonata/transpose`
   - Extended by:
     - `apps/sonata/sources/chord-grid` (table `sonata_songs_ext_chord_grid`)

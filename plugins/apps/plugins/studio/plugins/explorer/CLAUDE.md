@@ -24,7 +24,7 @@ never re-ran, so plugins arriving after first mount stayed collapsed.
   - Slots:
     - `Explorer.TreeRowBadge` ← `apps.studio.explorer.child-count`, `apps.studio.explorer.collapsed`, `apps.studio.explorer.excluded`, `apps.studio.explorer.expand-collapse`, `apps.studio.explorer.load-bearing`, `apps.studio.explorer.membership`
     - `Explorer.TreeRowAccent` ← `apps.studio.explorer.membership`
-    - `explorerPane.Actions`
+    - `explorerPane.Actions` ← `primitives.pane`
   - Contributes:
     - `Pane.Register` "explorer"
     - `Studio.Sidebar` "Plugin" → `component`

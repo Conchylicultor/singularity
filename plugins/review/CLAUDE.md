@@ -27,7 +27,7 @@ contributions: [
 - Web:
   - Slots:
     - `ReviewSlots.Section` ← `review.code-review`, `review.plugin-changes`
-    - `convReviewPane.Actions`
+    - `convReviewPane.Actions` ← `primitives.pane`
   - Contributes:
     - `Pane.Register` "conv-review"
     - `Conversation.ActionBar` → `ReviewButton`

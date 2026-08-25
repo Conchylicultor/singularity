@@ -8,8 +8,8 @@
 - Web:
   - Slots:
     - `WorkflowsDetail.Section` ← `apps.workflows.executions`
-    - `definitionsRootPane.Actions`
-    - `definitionDetailPane.Actions`
+    - `definitionsRootPane.Actions` ← `primitives.pane`
+    - `definitionDetailPane.Actions` ← `primitives.pane`
   - Contributes:
     - `WorkflowsApp.Sidebar` "Workflows" → `WorkflowsSidebar`
     - `Pane.Register` "workflows-definitions"

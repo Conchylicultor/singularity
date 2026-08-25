@@ -1,5 +1,6 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
-import { Sonata, SonataToolbar } from "@plugins/apps/plugins/sonata/plugins/shell/web";
+import { Sonata } from "@plugins/apps/plugins/sonata/plugins/shell/web";
+import { sonataPlayerPane } from "@plugins/apps/plugins/sonata/plugins/library/web";
 import { AudioEngine } from "./components/audio-engine";
 import { AudioProvider } from "./components/audio-provider";
 import { VolumeControl } from "./components/volume-control";
@@ -14,7 +15,7 @@ export type { LoopWindowBeats, ScheduleHandle } from "./scheduler";
 
 export default {
   description:
-    "Sonata audio engine: schedules the Score's notes against the Web Audio clock on play, routing each note to its track's resolved instrument, with master volume in the top toolbar.",
+    "Sonata audio engine: schedules the Score's notes against the Web Audio clock on play, routing each note to its track's resolved instrument, with master volume in the player pane's header.",
   contributions: [
     // Per-surface audio store, folded above the whole Sonata subtree so the
     // engine effect and the volume control (different slot branches) share one
@@ -23,7 +24,8 @@ export default {
     // The Web Audio graph lives in a headless, always-mounted effect so the
     // AudioContext survives the player's section column being collapsed.
     Sonata.Effect({ id: "audio-engine", component: AudioEngine }),
-    // The master-volume slider, pinned into the top toolbar; owns no audio.
-    SonataToolbar.End({ id: "volume", component: VolumeControl }),
+    // The master-volume slider, pinned into the player pane's header; owns no
+    // audio.
+    sonataPlayerPane.Actions({ id: "volume", component: VolumeControl }),
   ],
 } satisfies PluginDefinition;

@@ -77,7 +77,7 @@ function FilePeekPaneBody() {
       <PaneChrome
         pane={filePeekPane}
         title={<FilepathBreadcrumb path={filePath} />}
-        hideRightActions
+        titleOnly
       >
         <Text
           as="div"
@@ -95,7 +95,7 @@ function FilePeekPaneBody() {
       <PaneChrome
         pane={filePeekPane}
         title={<FilepathBreadcrumb path={filePath} />}
-        hideRightActions
+        titleOnly
       >
         <FileDisambiguation
           query={filePath}
@@ -125,7 +125,7 @@ function FilePeekPaneBody() {
   );
 
   return (
-    <PaneChrome pane={filePeekPane} title={title} hideRightActions>
+    <PaneChrome pane={filePeekPane} title={title} titleOnly>
       <FileContent
         worktree={worktree}
         path={effectivePath}

@@ -6,7 +6,7 @@
 
 - Description: Central view of all plugin contributions aggregated by type.
 - Web:
-  - Slots: `contributions.actions`
+  - Slots: `contributions.actions` ← `primitives.pane`
   - Contributes:
     - `Pane.Register` "contributions"
     - `Studio.Sidebar` "Contributions" → `component`

@@ -6,7 +6,7 @@
 
 - Description: Toolbar button that opens a side pane with the Summarise action and the latest structured Sonnet summary (phase, flags, next action). On-demand structured summaries of conversations: phase, flags, next action. Curated by Sonnet via MCP. Append-only history.
 - Web:
-  - Slots: `conv-summary.actions`
+  - Slots: `conv-summary.actions` ← `primitives.pane`
   - Contributes: `Pane.Register` "conv-summary"
   - Uses:
     - `conversations/conversation-view.conversationPane`

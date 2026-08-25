@@ -118,7 +118,7 @@ part of the query key.
 - Web:
   - Slots:
     - `EventList.Fields` ← `apps.events.sources.source-field`
-    - `eventListPane.Actions`
+    - `eventListPane.Actions` ← `primitives.pane`
   - Contributes:
     - `Pane.Register` "event-list"
     - `Events.Sidebar` "Events" → `component`

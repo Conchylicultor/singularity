@@ -142,7 +142,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
             - **`agents`** — Agents pillar page of the equin website: the /website/agents pane telling the agent-manager story (nested tasks, isolated worktrees, the race), its Agents nav link, and the WebsiteAgents.Section slot demo plugins contribute into.
             - **`apps`** — Apps pillar page of the equin website: the /website/apps pane showcasing the real apps (Pages, Mail, Sonata, Workflows), its Apps nav link, and the WebsiteApps.Section slot demo plugins contribute into.
             - **`platform`** — Platform pillar page of the equin website: the /website/platform pane telling the developer-facing behind-the-scenes story (slots, boundaries, the plugins → apps → releases pyramid), its Platform nav link, and the WebsitePlatform.Section slot demo plugins contribute into.
-        - **`shell`** — App shell for the Website (equin public site). Registers the /website app entry and the landing pane, owns the shared site toolbar (wordmark + nav zones) every site pane opts into, and defines the Website.Section landing slot.
+        - **`shell`** — App shell for the Website (equin public site). Registers the /website app entry and the landing pane, owns the shared site header (wordmark + nav) every site pane wears, and defines the Website.Section landing slot.
     - **`workflows`** [13 sub-plugins] — Workflows app.
 
 - **`apps-core`** [load-bearing] — App switcher rail. Wraps per-app shells; plugins contribute via Apps.App.
@@ -564,7 +564,6 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`overlay-boundary`** — React-only leaf error boundary for transient overlay content (popover/dialog/dropdown/select/tooltip/floating): OverlayBoundary catches a crash inside overlay content and renders a fallback injected via registerOverlayFallback, so the crash stays contained to the overlay instead of taking down the launching chrome. Sits below ui-kit so it can be wrapped around every *Content without closing the ui-kit → error-boundary cycle.
     - **`overscroll-hint`** — Wasted-scroll hint: a single invisible global controller (mounted via Core.Root) that plays a small native-feeling rubber-band bounce on a surface when a wheel/trackpad/touch gesture scrolls nothing (not scrollable, or already at the edge). Detects 'wasted' gestures by checking whether a real scroll event fired within one animation frame of the gesture.
     - **`pane`** [load-bearing] — Unified pane primitive: Pane.define and chrome components.
-    - **`pane-toolbar`** — Factory for a pane's custom header: reorderable start/end render-slot zones wired into PaneChrome via chrome.header. Use instead of hand-rolling a header bar.
     - **`passthrough`** — The open-passthrough contract: a primitive that accepts props it does not name promises they land on ONE node, and `ref` is that node's name. Owns the Passthrough props marker, the splitPassthrough router for the rare second destination, and the two lint rules that keep the promise true.
     - **`perfs`** — Umbrella for client-side performance primitives.
       - Plugins:

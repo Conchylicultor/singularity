@@ -1,26 +1,17 @@
 import { linkGestureProps } from "@plugins/primitives/plugins/link-gesture/web";
-import {
-  cn,
-  SingleLineProvider,
-} from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Bar } from "@plugins/primitives/plugins/bar/web";
-import { useContext, type ReactNode } from "react";
+import { useContext, useMemo, type ReactNode } from "react";
 import { AdaptiveBar } from "@plugins/primitives/plugins/adaptive-bar/web";
 import { MdClose, MdOpenInFull } from "react-icons/md";
-import { renderIsolated } from "@plugins/primitives/plugins/slot-render/web";
-import type { Contribution } from "@plugins/framework/plugins/web-sdk/core";
 import { ContentScope } from "@plugins/primitives/plugins/select-scope/web";
 import { Column } from "@plugins/primitives/plugins/css/plugins/column/web";
-import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
-import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
-import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { PaneScroll } from "./pane-scroll";
 import { PaneIconAction } from "./pane-icon-action";
-import { ToolbarItem, type PaneHeaderZones } from "./pane-header-item";
+import { PaneHeaderCell, type PaneHeaderItem } from "./pane-header-item";
+import { PaneTitleContext, type PaneTitleValue } from "./pane-title";
 import { usePaneMatch, type PaneMatch, type AnyPane } from "../pane";
 import { PaneLayoutContext } from "../maximize-context";
 import { SurfaceChromeContext } from "../surface-chrome-context";
-import { yieldClass } from "@plugins/primitives/plugins/css/plugins/yield/web";
 
 interface PaneChromeProps {
   pane: AnyPane;
@@ -28,36 +19,53 @@ interface PaneChromeProps {
    * Header title. When omitted, falls back to the pane's `chrome.title`
    * config (string or `(params) => string`). Pass a node when the title
    * needs loaded data (e.g. a task name) or custom layout.
+   *
+   * Either way the title is PUBLISHED, not painted here: the pane's own
+   * `title` header contribution reads the resolved value off
+   * {@link PaneTitleContext} and renders it, so it is one item of the header's
+   * one slot — orderable and hideable like every other.
    */
   title?: ReactNode;
   /**
-   * Per-instance right-side actions, rendered after slot-based
-   * `position="right"` Actions contributions and before expand/close. Use
-   * for stateful, host-coupled controls (e.g. file-pane tabs) that don't
-   * fit the contribution model.
+   * Per-instance header control, joining the contributed items as one more bar
+   * occupant under the id `pane-extra`. Use for stateful, host-coupled controls
+   * (e.g. file-pane tabs) that don't fit the contribution model.
+   *
+   * Named `extra` and not `actions` because it is ONE header control, not the
+   * hover-revealed trailing cluster that `row-actions/no-raw-actions-slot`
+   * guards — that rule's vocabulary and a pane header's are two different
+   * things. A cluster owns a reveal, a popup-hold, a pointerdown guard and a
+   * pinned box, and must render through `RowActions`; this owns none of them.
+   * It is a bar occupant, measured and relocated behind the `⋯` like every
+   * contributed item beside it.
    */
-  actions?: ReactNode;
+  extra?: ReactNode;
   /**
-   * When true, suppresses the right-side action bar (slot-based
-   * `position="right"` contributions). A `Fill` is still rendered so
-   * expand/close stay pinned to the far right. Use when the host renders
-   * right-side actions elsewhere (e.g. inside the content area).
+   * Render ONLY the header's yielding cell — the pane title — and suppress
+   * every contributed action occupant. For a host that renders those actions
+   * itself somewhere else (inside its content area), while still wanting the
+   * standard title + expand + close chrome.
+   *
+   * The rule, stated once: an item with `cell` set survives, an ordinary
+   * occupant does not. `pane-extra` is an ordinary occupant and goes with them.
    */
-  hideRightActions?: boolean;
+  titleOnly?: boolean;
   /**
    * When true, the header band uses `overflow-visible` instead of the default
-   * `overflow-hidden`, letting a title-area child (e.g. `CollapsibleWrap`)
-   * spill its expanded rows DOWN over the content below without being clipped
-   * by the fixed-height band. Opt in only for panes whose header can reveal
-   * overflow; the band stays `h-10` so row 1 and the rest of the chrome are
-   * unaffected. Default false (clip — today's behavior for every other pane).
+   * `overflow-hidden`, letting the title (e.g. a `CollapsibleWrap`) spill its
+   * expanded rows DOWN over the content below without being clipped by the
+   * fixed-height band. Opt in only for panes whose header can reveal overflow;
+   * the band stays `h-10` so row 1 and the rest of the chrome are unaffected.
+   * Default false (clip — today's behavior for every other pane).
    *
-   * This opens BOTH clip boundaries PaneChrome owns between the band and the
-   * title node: the `Bar`'s overflow AND the node-title `<Text>` wrapper (which
-   * would otherwise auto-apply the single-line `truncate` recipe — i.e.
+   * It opens every clip boundary between the band and the title node, and there
+   * are three: the `Bar`'s own overflow, the header `AdaptiveBar`'s (the title
+   * is an occupant of it), and the node-title `<Text>` wrapper, which would
+   * otherwise auto-apply the single-line `truncate` recipe — i.e.
    * `overflow:hidden` — because it sits in the Bar's single-line context, and
-   * re-clip the very spill this flag enables). The node then owns its own
-   * overflow; single-line leaves inside it still truncate via their own class.
+   * re-clip the very spill this flag enables (see `PaneTitleItem`). The node
+   * then owns its own overflow; single-line leaves inside it still truncate via
+   * their own class.
    */
   headerSpill?: boolean;
   /**
@@ -76,21 +84,23 @@ interface PaneChromeProps {
 }
 
 /**
- * Standard pane header: title, optional `position="left"` actions, optional
- * `position="right"` actions, an optional expand button, and a × close button
- * on the far right. The close button is shown by default for panes with a
- * parent (opt out via `chrome: { close: false }`). A pane that wants a rich
- * custom header (transport / view-switcher / volume) opts into
- * `chrome: { header }` (a `definePaneToolbar` Start/End zone pair); PaneChrome
- * then renders those zones in this same bar instead of the title/Actions, with
- * NO overflow-collapse. The body wrapper and single scroll are unchanged either
- * way.
+ * The standard pane header: ONE overflow-collapsing bar rendering the pane's
+ * one header slot, then an optional expand button and a × close button. The
+ * close button is shown by default for panes with a parent (opt out via
+ * `chrome: { close: false }`).
+ *
+ * There is no second kind of header. The title is a contribution of the same
+ * slot (rendered in the bar's yielding cell), so a rich header — transport,
+ * view-switcher, volume — is the ordinary case with more items in it, and it
+ * collapses into the `⋯` like anything else. What separates a leading group
+ * from a trailing one is a `spacer` node in the slot's reorder config, not a
+ * field on the contribution.
  */
 export function PaneChrome({
   pane,
   title,
-  actions,
-  hideRightActions,
+  extra,
+  titleOnly,
   headerSpill,
   overlay,
   children,
@@ -104,6 +114,10 @@ export function PaneChrome({
   const doClose = pane.useClose();
   const promote = pane.usePromote();
   const resolvedTitle = title ?? fallbackTitle;
+  const titleValue = useMemo<PaneTitleValue>(
+    () => ({ title: resolvedTitle, spill: headerSpill === true }),
+    [resolvedTitle, headerSpill],
+  );
   // Surface-edge chrome: only when this pane header IS the surface's top chrome.
   // The first top-row header hosts the leading control (sidebar toggle); the
   // last reserves the floating-action-bar safe area on its right.
@@ -127,62 +141,30 @@ export function PaneChrome({
           {...layoutCtx?.dragHandleProps}
         >
           {showLeading && leadingControl}
-          {chrome.header ? (
-            <CustomHeader header={chrome.header} />
-          ) : (
-            <>
-              {resolvedTitle != null &&
-                resolvedTitle !== "" &&
-                (typeof resolvedTitle === "string" ? (
-                  // String pane title: yields inside Bar's flex row so a long
-                  // title ellipsizes rather than crushing its siblings.
-                  <Text
-                    as="span"
-                    variant="label"
-                    className={cn(yieldClass("x"), "truncate")}
-                  >
-                    {resolvedTitle}
-                  </Text>
-                ) : headerSpill ? (
-                  // Node title in a spill-enabled header (e.g. a `CollapsibleWrap`).
-                  // The Bar's `overflow-visible` (headerSpill) is not enough on its
-                  // own: `NodeTitle`'s `<Text>` sits in the Bar's single-line context,
-                  // so it would auto-apply the `truncate` recipe (`overflow:hidden`)
-                  // and re-clip the very spill headerSpill opened. Reset the
-                  // single-line context so the wrapper stops clipping — the node owns
-                  // its own overflow, and any single-line leaf inside it (chips,
-                  // `ConversationTitle`) still truncates via its own container/class.
-                  <SingleLineProvider value={false}>
-                    <NodeTitle>{resolvedTitle}</NodeTitle>
-                  </SingleLineProvider>
-                ) : (
-                  // Node titles get the SAME `label` typography baseline as string
-                  // titles, so a title node inherits the canonical pane-title size
-                  // instead of drifting to the ambient body size. The size is
-                  // enforced by the container (CSS inheritance), so title nodes need
-                  // not — and should not — set their own size; per-segment weight/
-                  // color (e.g. breadcrumb) still applies on top.
-                  <NodeTitle>{resolvedTitle}</NodeTitle>
-                ))}
-              <PaneActionsSlot pane={pane} position="left" />
-              {hideRightActions ? (
-                <Fill />
-              ) : (
-                // The bar IS the row's grow cell (`min-w-0 flex-1`), which is
-                // why there is no `Fill` beside it: a second claimant on the
-                // same slack breaks the one contract the primitive has. Which is
-                // also why `align` is the bar's own prop — nothing outside it
-                // can place occupants within slack it has taken entirely.
-                <AdaptiveBar gap="xs" label="More actions" align="end">
-                  <PaneActionsSlot
-                    pane={pane}
-                    position="right"
-                    extra={actions}
-                  />
-                </AdaptiveBar>
+          {/* The bar IS the row's grow cell (`min-w-0 flex-1`), which is why
+              there is no `Fill` beside it: a second claimant on the same slack
+              breaks the one contract the primitive has. Which is also why
+              `align` is the bar's own prop — nothing outside it can place
+              occupants within slack it has taken entirely. With no `spacer`
+              node in the slot's config, `"end"` packs the occupants right; the
+              title's yielding cell holds the leftover in front of them, so a
+              header with a title reads exactly as it always has and a header
+              without one costs nothing. */}
+          <AdaptiveBar
+            gap="xs"
+            label="More actions"
+            align="end"
+            spill={headerSpill}
+          >
+            <PaneTitleContext.Provider value={titleValue}>
+              <pane.Actions.Render>
+                {(item) => renderHeaderItem(item, titleOnly)}
+              </pane.Actions.Render>
+              {extra != null && !titleOnly && (
+                <AdaptiveBar.Item id="pane-extra">{extra}</AdaptiveBar.Item>
               )}
-            </>
-          )}
+            </PaneTitleContext.Provider>
+          </AdaptiveBar>
           {chrome.promote && promote && (
             <PaneIconAction
               label={
@@ -224,47 +206,31 @@ export function PaneChrome({
 }
 
 /**
- * Custom-header content: the pane's reorderable `Start`/`End` zones rendered
- * inside the standard `<Bar tier="pane">` (same `ml-auto` End-cluster layout the
- * retired `definePaneToolbar.Host` used). NO overflow-collapse — rich End
- * widgets (transport / volume / jog-wheel) never fold behind a "⋯" popover.
- * `promote`/`close` still render after this in `PaneChrome`.
- */
-function CustomHeader({ header }: { header: PaneHeaderZones }) {
-  const { Start, End } = header;
-  return (
-    <>
-      <Start.Render>{(item) => <ToolbarItem {...item} />}</Start.Render>
-      <Stack direction="row" align="center" gap="sm" className="ml-auto">
-        <End.Render>{(item) => <ToolbarItem {...item} />}</End.Render>
-      </Stack>
-    </>
-  );
-}
-
-/**
- * A non-string pane title (a breadcrumb, a chip row, a `CollapsibleWrap`).
+ * One header contribution as a bar child — the ONE place `cell` is read.
  *
- * It gets the SAME `label` typography baseline as a string title, so a title
- * node inherits the canonical pane-title size instead of drifting to the ambient
- * body size. The size is enforced by this container (CSS inheritance), so title
- * nodes need not — and should not — set their own; per-segment weight/color (e.g.
- * a breadcrumb's) still composes on top.
- *
- * One component for both header branches — the spill branch differs only by the
- * `SingleLineProvider` around it, so the markup itself has one home.
+ * An ordinary item is an occupant: measured, laddered, and relocated behind the
+ * `⋯` when the row runs out of room. A `cell: "yield"` item is the row's give
+ * instead — excluded from the fit ledger, `min-w-0` so its text ellipsizes, and
+ * `grow` so it holds the row's leftover in front of the trailing occupants.
+ * That is the pane title's shape, and stating it as a public field rather than
+ * as "the title" is what keeps the title an item like any other.
  */
-function NodeTitle({ children }: { children: ReactNode }) {
+function renderHeaderItem(
+  item: PaneHeaderItem & { id: string },
+  titleOnly?: boolean,
+): ReactNode {
+  if (item.cell === "yield") {
+    return (
+      <AdaptiveBar.Yield grow>
+        <PaneHeaderCell {...item} />
+      </AdaptiveBar.Yield>
+    );
+  }
+  if (titleOnly) return null;
   return (
-    // `Line` is nearly this — `flex items-center` — but composing it here inverts
-    // the display class: `Text` passes its own single-line leaf recipe
-    // (`inline-block …`) down as `className`, which `cn` then resolves as the
-    // WINNER over `Line`'s `flex`, so the row silently stops being a row. Hence a
-    // raw class, kept on one prettier-stable line so the directive cannot drift.
-    // eslint-disable-next-line layout/no-adhoc-layout -- node title needs a flex row for breadcrumb-style multi-segment compositions; see above for why Line cannot supply it
-    <Text as="div" variant="label" className="flex min-w-0 items-center">
-      {children}
-    </Text>
+    <AdaptiveBar.Item id={item.id}>
+      <PaneHeaderCell {...item} />
+    </AdaptiveBar.Item>
   );
 }
 
@@ -275,58 +241,4 @@ function chromeTitle(pane: AnyPane, match: PaneMatch | null): ReactNode {
   const entry = match?.panes.find((e) => e.pane === pane._internal);
   if (!entry) return null;
   return chrome.title(entry.fullParams);
-}
-
-/**
- * A pane's `Actions` contributions for one side.
- *
- * Each contribution is wrapped in an `AdaptiveBar.Item` UNCONDITIONALLY — the
- * item is transparent when there is no bar above it, so `position="left"`
- * (which renders straight into the pane `Bar`) gets exactly what it always got,
- * and `position="right"` becomes an occupant of the header's `AdaptiveBar`
- * without this component having to know which side it is on.
- *
- * The right side renders a bare fragment rather than a wrapper element, and
- * that is structural, not cosmetic: the bar docks each occupant's container
- * immediately before that occupant's own anchor, as a direct child of the bar
- * root. An anchor nested inside a wrapper would have no such placement. The
- * `gap` comes from the bar itself.
- */
-export function PaneActionsSlot({
-  pane,
-  position = "right",
-  extra,
-}: {
-  pane: AnyPane;
-  position?: "left" | "right";
-  /**
-   * The host's own per-instance control, joining the contributed ones as one
-   * more bar occupant under the id `pane-extra`. Named `extra` rather than
-   * `actions` because it is one header control, not the hover-revealed trailing
-   * cluster `row-actions/no-raw-actions-slot` guards — that rule's vocabulary
-   * and a pane header's are two different things.
-   */
-  extra?: ReactNode;
-}) {
-  const contributions = pane.Actions.useContributions().filter(
-    (a) => (a.position ?? "right") === position,
-  );
-  if (contributions.length === 0 && extra == null) return null;
-  const items = contributions.map((a) => (
-    <AdaptiveBar.Item key={a.id} id={a.id}>
-      {renderIsolated(pane.Actions, a as unknown as Contribution)}
-    </AdaptiveBar.Item>
-  ));
-  if (extra != null) {
-    items.push(
-      <AdaptiveBar.Item key="pane-extra" id="pane-extra">
-        {extra}
-      </AdaptiveBar.Item>,
-    );
-  }
-  if (position === "right") return <>{items}</>;
-  return (
-    // eslint-disable-next-line layout/no-adhoc-layout -- horizontal chip row of action contributions inside Bar; Frame needs named slots but this is a dynamic list
-    <div className="flex items-center gap-xs">{items}</div>
-  );
 }

@@ -22,7 +22,8 @@ function formatOffset(semitones: number): string {
 }
 
 /**
- * The transpose control pinned into the Sonata top toolbar (`SonataToolbar.End`),
+ * The transpose control pinned into the Sonata player pane's header
+ * (`sonataPlayerPane.Actions`),
  * beside the speed wheel: a compact `[ ⇅ − ±N st + ]` semitone stepper. Like
  * `transport-bar`'s controls it owns no score state — it reads the per-surface
  * transpose store + the open song from `useSonata`, writes the store optimistically
@@ -63,7 +64,9 @@ export function TransposeControl() {
       <button
         type="button"
         disabled={semitones === 0}
-        aria-label={semitones === 0 ? "Transpose (no shift)" : "Reset transpose"}
+        aria-label={
+          semitones === 0 ? "Transpose (no shift)" : "Reset transpose"
+        }
         title={semitones === 0 ? undefined : "Reset to original key"}
         onClick={() => setTranspose(0)}
         className="min-w-[3rem] border-x border-border px-xs text-center enabled:cursor-pointer disabled:cursor-default"

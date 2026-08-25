@@ -27,10 +27,10 @@ const createRule = ESLintUtils.RuleCreator(
  * A sidebar header also wears a chrome height but lacks BOTH `border-b` and the
  * centered marker (it is `justify-center`, borderless), so it is excluded.
  *
- * Layered with `pane-toolbar/no-adhoc-pane-toolbar`: that rule additionally
- * requires a *toolbar* (vs a plain Bar) to route through a render-slot host
- * (`definePaneToolbar` / `AppShellLayout`'s `toolbarSlot`) so its items are
- * contributions. This rule is the lower, structural layer: use `Bar` for any
+ * Layered with `pane/no-adhoc-pane-toolbar`: that rule additionally requires a
+ * *toolbar* (vs a plain Bar) to route through a render-slot host — the pane's
+ * own header slot (`pane.Actions`) or `AppShellLayout`'s `toolbarSlot` — so its
+ * items are contributions. This rule is the lower, structural layer: use `Bar` for any
  * chrome strip. The sanctioned `Bar` definition keeps its tier classes behind a
  * const map (not literal class-name tokens), so it never self-trips; it is also
  * path-exempted in the lint barrel for good measure.
@@ -81,7 +81,8 @@ export default function buildRule({
           "Hand-rolled chrome bar (chrome height + `border-b` + centered) — route through the `Bar` " +
           'primitive from @plugins/primitives/plugins/bar/web: `tier="chrome"` for an app/pane ' +
           'toolbar band, `tier="pane"` for a pane header. A toolbar additionally routes through ' +
-          "`definePaneToolbar` / `AppShellLayout`'s `toolbarSlot` so its items are contributions. " +
+          "the pane's own header slot (`pane.Actions`) / `AppShellLayout`'s `toolbarSlot` so its " +
+          "items are contributions. " +
           "If genuinely bespoke, `// eslint-disable-next-line bar/no-adhoc-bar -- <reason>`.",
       },
     },

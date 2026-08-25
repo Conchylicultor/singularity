@@ -6,21 +6,19 @@
 
 - Description: Apps pillar page of the equin website: the /website/apps pane showcasing the real apps (Pages, Mail, Sonata, Workflows), its Apps nav link, and the WebsiteApps.Section slot demo plugins contribute into.
 - Web:
-  - Slots:
-    - `WebsiteApps.Section` ← `apps.website.demos.app-gallery`, `apps.website.demos.editor-toy`, `apps.website.pillars.apps`
-    - `appsPane.Actions`
+  - Slots: `WebsiteApps.Section` ← `apps.website.demos.app-gallery`, `apps.website.demos.editor-toy`, `apps.website.pillars.apps`
   - Contributes:
     - `Pane.Register` "website-apps"
-    - `WebsiteToolbar.End` "apps" → `AppsNavItem`
+    - `WebsiteHeader` "apps" → `AppsNavItem`
     - `WebsiteApps.Section` "Hero" → `AppsHero`
     - `WebsiteApps.Section` "App showcase" → `AppsShowcase`
     - `WebsiteApps.Section` "Closing links" → `AppsClosing`
   - Uses:
     - `apps/website/downloads.downloadsPane`
     - `apps/website/shell.landingPane`
+    - `apps/website/shell.WebsiteHeader`
     - `apps/website/shell.WebsiteNavLink`
     - `apps/website/shell.WebsitePage`
-    - `apps/website/shell.WebsiteToolbar`
     - `primitives/css/card.Card`
     - `primitives/css/grid.Grid`
     - `primitives/css/spacing.Inset`

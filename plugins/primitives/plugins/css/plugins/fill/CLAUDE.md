@@ -162,6 +162,7 @@ primitive exists to name.
     - `plugin-meta/facets/resources/render-detail`
     - `plugin-meta/facets/routes/render-detail`
     - `primitives/action-presentation`
+    - `primitives/adaptive-bar`
     - `primitives/command-palette`
     - `primitives/commit-list`
     - `primitives/data-view/list`
@@ -173,7 +174,6 @@ primitive exists to name.
     - `primitives/launch`
     - `primitives/log-channels`
     - `primitives/outline/rail`
-    - `primitives/pane`
     - `primitives/prompt-editor`
     - `primitives/setup-steps`
     - `review/code-review`

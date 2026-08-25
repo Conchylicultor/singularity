@@ -1,6 +1,6 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { Pane } from "@plugins/primitives/plugins/pane/web";
-import { WebsiteToolbar } from "@plugins/apps/plugins/website/plugins/shell/web";
+import { WebsiteHeader } from "@plugins/apps/plugins/website/plugins/shell/web";
 import { agentsPane } from "./panes";
 import { WebsiteAgents } from "./slots";
 import { AgentsNavItem } from "./components/agents-nav-item";
@@ -15,8 +15,11 @@ export default {
   description:
     "Agents pillar page of the equin website: the /website/agents pane telling the agent-manager story (nested tasks, isolated worktrees, the race), its Agents nav link, and the WebsiteAgents.Section slot demo plugins contribute into.",
   contributions: [
+    // This pane BORROWS the shared site header (`actions: WebsiteHeader`), so it
+    // mints no slot of its own and is deliberately absent from `slots:` — the
+    // header is declared once, by `apps.website.shell`.
     Pane.Register({ pane: agentsPane }),
-    WebsiteToolbar.End({ id: "agents", component: AgentsNavItem }),
+    WebsiteHeader({ id: "agents", component: AgentsNavItem }),
     WebsiteAgents.Section({ id: "hero", label: "Hero", component: AgentsHero }),
     WebsiteAgents.Section({
       id: "how-it-works",
@@ -29,5 +32,5 @@ export default {
       component: AgentsClosing,
     }),
   ],
-  slots: { ...WebsiteAgents, "website-agents": agentsPane },
+  slots: { ...WebsiteAgents },
 } satisfies PluginDefinition;

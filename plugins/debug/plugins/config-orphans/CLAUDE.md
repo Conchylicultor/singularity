@@ -6,7 +6,7 @@
 
 - Description: Read-only audit of orphaned user-layer config files whose defineConfig descriptor is no longer live. Read-only audit of orphaned user-layer config files whose defineConfig descriptor is no longer live.
 - Web:
-  - Slots: `configOrphansPane.Actions`
+  - Slots: `configOrphansPane.Actions` ← `primitives.pane`
   - Contributes:
     - `Pane.Register` "config-orphans"
     - `DebugApp.Sidebar` "Config Orphans" → `component`

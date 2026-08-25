@@ -48,7 +48,7 @@ it armed) — reporting it here as well would double-report one failure.
 
 - Description: Refresh-all action in the Events sources pane toolbar: one request that enqueues a run for every ENABLED source, with the enqueued / already-running / skipped tally rendered arm by arm as a toast. Contributed into the pane's Actions, so the sources pane knows nothing about it.
 - Web:
-  - Contributes: `eventSourcesPane.Actions` → `RefreshAllAction`
+  - Contributes: `eventSourcesPane.Actions` "refresh-all" → `RefreshAllAction`
   - Uses:
     - `apps/events/events-core.useRefreshAllEventSources`
     - `apps/events/sources.eventSourcesPane`

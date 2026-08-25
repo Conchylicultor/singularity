@@ -30,8 +30,8 @@ contributor that hands a conflict to an agent.
 - Description: Settings UI for config_v2: two-pane nav + detail surface for viewing and editing typed config fields. Surfaced inside the Settings app. HTTP endpoints for setting and resetting config_v2 field values.
 - Web:
   - Slots:
-    - `configNavPane.Actions`
-    - `configDetailPane.Actions`
+    - `configNavPane.Actions` ← `primitives.pane`
+    - `configDetailPane.Actions` ← `primitives.pane`
     - `ConfigDetailSlots.ConflictAction` ← `config_v2.settings.conflict-agent`
   - Contributes:
     - `Pane.Register` "config-v2-nav"

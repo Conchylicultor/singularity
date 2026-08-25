@@ -4,13 +4,13 @@
 
 ## Plugin reference
 
-- Description: Sonata toolbar transport: play/pause button and a Synthesia-style speed stepper ([− xx% +]) with live BPM. Contributes to the Sonata toolbar's End zone.
+- Description: Sonata toolbar transport: play/pause button and a Synthesia-style speed stepper ([− xx% +]) with live BPM. Contributes to the Sonata player pane's header.
 - Web:
-  - Contributes: `SonataToolbar.End` "playback" → `PlaybackControls`
+  - Contributes: `sonataPlayerPane.Actions` "playback" → `PlaybackControls`
   - Uses:
+    - `apps/sonata/library.sonataPlayerPane`
     - `apps/sonata/primitives/inertial-drag.useInertialDrag`
     - `apps/sonata/primitives/jog-wheel.JogWheel`
-    - `apps/sonata/shell.SonataToolbar`
     - `apps/sonata/shell.useCursorSelector`
     - `apps/sonata/shell.useSonata`
     - `primitives/css/center.Center`

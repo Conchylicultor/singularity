@@ -13,6 +13,10 @@ export {
   type AdaptiveBarItemProps,
 } from "./internal/bar-item";
 export {
+  AdaptiveBarYield,
+  type AdaptiveBarYieldProps,
+} from "./internal/bar-yield";
+export {
   adaptiveBarReportSink,
   type AdaptiveBarFault,
   type AdaptiveBarFaultKind,

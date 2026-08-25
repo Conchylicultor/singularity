@@ -18,8 +18,26 @@ import { createContext, useContext, type ReactNode } from "react";
  * position (the cell is a component, not a bare element), so it applies to
  * contributions whose elements were created upstream and only mounted inside
  * the relocated surface.
+ *
+ * The three values answer one question — *what box is this contribution laid
+ * out in* — and the third answers it with "not one of mine":
+ *
+ * - `"row"` — a horizontal flex line. Each contribution gets the `min-w-0` cell,
+ *   so the shrink-chain reaches its text leaf.
+ * - `"column"` — a vertical block or column. No cell; the contribution spans its
+ *   host as it stands.
+ * - `"host-owned"` — **the host draws each item's box itself.** Then the slot
+ *   drawing a second one is not merely useless, it is a competing flex item
+ *   beside the host's own: an `AdaptiveBar` mints one stable container per
+ *   occupant and re-parents it to place it, so ITS container is the box, and a
+ *   slot cell around the contribution would swallow the container and make the
+ *   bar's gap, measurement and docking describe the cell instead of the row.
+ *   The slot falls back to its layout-neutral `display: contents` box, which is
+ *   what `renderIsolated` (the escape hatch such hosts used to reach for) has
+ *   always produced. Nothing here is about `adaptive-bar`: any host that owns
+ *   its items' boxes says the same thing.
  */
-export type SlotItemOrientation = "row" | "column";
+export type SlotItemOrientation = "row" | "column" | "host-owned";
 
 const SlotItemLayoutContext = createContext<SlotItemOrientation | null>(null);
 

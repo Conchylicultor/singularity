@@ -152,7 +152,7 @@ function PageDetailBody(): ReactElement {
           <PageBreadcrumb pageId={pageId} />
         </Stack>
       }
-      actions={
+      extra={
         <PageDetail.HeaderActions.Render>
           {(s) => <s.component pageId={pageId} />}
         </PageDetail.HeaderActions.Render>

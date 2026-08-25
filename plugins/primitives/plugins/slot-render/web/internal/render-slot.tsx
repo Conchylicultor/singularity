@@ -48,6 +48,13 @@ import { useSlotItemLayout } from "./item-layout";
  *    that reason: the override has to be read where the contribution renders,
  *    not where its element was created.
  *
+ *    `"host-owned"` is the declaration that says the host draws each item's box
+ *    itself (an `AdaptiveBar` mints one stable container per occupant and moves
+ *    it), so a cell here would be a SECOND, competing flex item beside it. It
+ *    lands on the same `display:contents` branch as `"column"` — which is what
+ *    `renderIsolated` produces, and is exactly why such hosts used to reach for
+ *    it instead of `.Render`.
+ *
  *    The GROW half of the same chain is not declared — it is **asked for**. A
  *    cell is rigid by default, which is right for the buttons and chips a chrome
  *    row is usually made of and wrong for the one contribution meant to expand

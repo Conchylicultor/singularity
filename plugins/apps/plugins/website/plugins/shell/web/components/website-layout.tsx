@@ -5,7 +5,7 @@ import { FullPane } from "@plugins/layouts/plugins/full-pane/web";
  * full-pane renderer paints the active site pane — landing at `/website`,
  * pillars / downloads at their own segments — filling the whole surface. The
  * persistent site header is NOT a layout concern: it is the shared
- * `WebsiteToolbar` pane header every website pane opts into, so navigation
+ * `WebsiteHeader` pane-header slot every website pane borrows, so navigation
  * chrome and pane chrome are one bar.
  */
 export function WebsiteLayout() {

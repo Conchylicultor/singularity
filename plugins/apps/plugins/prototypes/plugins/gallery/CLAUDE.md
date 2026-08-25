@@ -91,13 +91,13 @@ honest — the prototype does exist — and it self-corrects.
 - Description: Prototypes gallery list pane and the Focus/Compare detail pane (scaled live iframes), with an Improve this prototype affordance.
 - Web:
   - Slots:
-    - `prototypesGalleryPane.Actions`
-    - `prototypeDetailPane.Actions` ← `apps.prototypes.gallery`, `apps.prototypes.present`
+    - `prototypesGalleryPane.Actions` ← `primitives.pane`
+    - `prototypeDetailPane.Actions` ← `apps.prototypes.gallery`, `apps.prototypes.present`, `primitives.pane`
   - Contributes:
     - `Pane.Register` "prototypes-gallery"
     - `Pane.Register` "prototypes-detail"
-    - `prototypeDetailPane.Actions` → `ViewModeSwitcher`
-    - `prototypeDetailPane.Actions` → `ImproveButton`
+    - `prototypeDetailPane.Actions` "view-mode" → `ViewModeSwitcher`
+    - `prototypeDetailPane.Actions` "improve" → `ImproveButton`
   - Uses:
     - `apps/prototypes/thumbnails.PrototypeThumbnail`
     - `apps/prototypes/thumbnails.usePrototypeThumbnails`

@@ -12,10 +12,11 @@ const createRule = ESLintUtils.RuleCreator(
  * `<div className="… border-b … pr-floating-bar">` header with the back button /
  * title / actions written inline. That bar is then invisible to the slot system:
  * not extensible, not error-isolated, not reorderable — exactly the drift this
- * rule prevents. The sanctioned home is the `definePaneToolbar` factory
- * (`@plugins/primitives/plugins/pane-toolbar/web`), which exposes reorderable
- * `Start`/`End` slot zones; wire them in via `chrome: { header: Toolbar }` on the
- * `Pane.define`, and `PaneChrome` renders them as the standard pane header.
+ * rule prevents. The sanctioned home is the pane's own header slot — every pane
+ * has one, minted by `Pane.define` (or borrowed from another pane via
+ * `Pane.define({ actions })`), and `PaneChrome` renders it as the standard pane
+ * header: reorderable, error-isolated, and collapsing into a `⋯` when the row
+ * runs out of room. Contribute to it instead of writing a bar.
  * App-level toolbars route through `AppShellLayout`'s `toolbarSlot`.
  *
  * Detection signature: a class-name carrying BOTH `border-b` and
@@ -66,16 +67,16 @@ export default function buildRule({
       type: "problem",
       docs: {
         description:
-          "Disallow hand-rolled toolbar bars (a `border-b` + `pr-floating-bar` header). Route a pane toolbar through the definePaneToolbar host or AppShellLayout's toolbarSlot.",
+          "Disallow hand-rolled toolbar bars (a `border-b` + `pr-floating-bar` header). Route a pane toolbar through the pane's own header slot or AppShellLayout's toolbarSlot.",
       },
       schema: [],
       messages: {
         adhocToolbarBar:
           "Hand-rolled toolbar bar (`border-b` + `pr-floating-bar`) is banned — a toolbar must " +
           "route through a render-slot host so its items are contributions (extensible, " +
-          "error-isolated, reorderable). Use `definePaneToolbar` from " +
-          "@plugins/primitives/plugins/pane-toolbar/web and wire it into the pane via " +
-          "`chrome: { header: Toolbar }` (PaneChrome renders the zones as the pane header), or " +
+          "error-isolated, reorderable). Contribute to the pane's own header slot " +
+          "(`myPane.Actions({ id, component })`, or a shared one borrowed via " +
+          "`Pane.define({ actions })`) — `PaneChrome` renders it as the pane header — or " +
           "`AppShellLayout`'s `toolbarSlot` for an app-level bar — never a hand-written header.",
       },
     },

@@ -47,7 +47,7 @@ top-level and untouched by this; only the Studio UI lives here.
 - Web:
   - Slots:
     - `ReleaseDetail.Section` ← `apps.studio.compositions.release.release-artifact`, `apps.studio.compositions.release.release-info`, `apps.studio.compositions.release.release-logs`
-    - `release-detail.actions`
+    - `release-detail.actions` ← `primitives.pane`
   - Contributes:
     - `Pane.Register` "release-detail"
     - `CompositionDetail.Section` "Build & serve" → `ReleaseSection`

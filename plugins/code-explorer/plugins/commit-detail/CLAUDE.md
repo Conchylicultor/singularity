@@ -24,7 +24,7 @@ re-breaks every conversation-less surface.
 
 - Description: The one commit-diff pane, parameterized by worktree (commit/:worktree/:sha) rather than derived from an ancestor conversation, so any surface that can name a (worktree, sha) pair opens it. Also exposes useCommitInfo, the four-armed loading / found / not-found / error commit-metadata lookup.
 - Web:
-  - Slots: `commitDetailPane.Actions`
+  - Slots: `commitDetailPane.Actions` ← `primitives.pane`
   - Contributes: `Pane.Register` "commit-detail"
   - Uses:
     - `infra/endpoints.EndpointError`

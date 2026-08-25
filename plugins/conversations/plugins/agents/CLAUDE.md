@@ -24,16 +24,16 @@ drag-reparent behavior. Do not reintroduce it; see
     - `Agents.View`
     - `Agents.AgentActions` ← `conversations.agents`
     - `Agents.SystemAgent`
-    - `agentsRootPane.Actions`
-    - `agentDetailPane.Actions`
-    - `systemAgentDetailPane.Actions`
-    - `agentSidePane.Actions` ← `conversations.agents`
+    - `agentsRootPane.Actions` ← `primitives.pane`
+    - `agentDetailPane.Actions` ← `primitives.pane`
+    - `systemAgentDetailPane.Actions` ← `primitives.pane`
+    - `agentSidePane.Actions` ← `conversations.agents`, `primitives.pane`
   - Contributes:
     - `Pane.Register` "agents-root"
     - `Pane.Register` "agent-detail"
     - `Pane.Register` "agent-system-detail"
     - `Pane.Register` "agent-side"
-    - `agentSidePane.Actions` → `ExpandAgentButton`
+    - `agentSidePane.Actions` "expand-agent" → `ExpandAgentButton`
     - `Shell.Sidebar` "Agents" → `component`
     - `Item.Avatar` → `AgentAvatarRow`
     - `Conversation.Header` → `AgentAvatarTitlePrefix`

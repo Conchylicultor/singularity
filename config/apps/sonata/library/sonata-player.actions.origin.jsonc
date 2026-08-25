@@ -1,4 +1,20 @@
-// @hash dfc9a7e375eb
+// @hash be126a7f61c3
 {
-  "items": []
+  // Item: "<key>" (terse; <key> is "<pluginId>:<id>")
+  // Hide: { "item": "<key>", "hidden": true }
+  // Spacer (gap): { "type": "spacer", "id": "<unique-id>" }
+  // Group: { "type": "header", "label": "<title>", "collapsed": false, "items": [ "<key>", … ] }
+  // Overflow (⋯ menu): { "type": "overflow", "id": "<unique-id>", "items": [ "<key>", … ] }
+  "items": [
+    "apps.sonata.audio.engine:volume",
+    "apps.sonata.audio.metronome:metronome",
+    "apps.sonata.library:back",
+    "apps.sonata.library:display-picker",
+    "apps.sonata.pedal.indicator:pedal-indicator",
+    "apps.sonata.piano-roll:spread",
+    "apps.sonata.progress.loop:loop-toggle",
+    "apps.sonata.transport-bar:playback",
+    "apps.sonata.transpose:transpose",
+    "primitives.pane:title"
+  ]
 }

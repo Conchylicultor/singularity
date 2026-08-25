@@ -6,7 +6,7 @@
 
 - Description: Synthetic no-op live-state push emitter: drives N pushes/sec for a chosen resource so churn-driven render/DOM bugs reproduce deterministically, surfaced as the Debug → Live-State Emit pane and the window.__liveStateEmit API. Synthetic no-op live-state push emitter: drives N triggerResourcePush calls/sec for a chosen resource on a bounded setInterval (hard auto-stop cap), so churn-driven render/DOM bugs reproduce deterministically. Surfaced as the Debug → Live-State Emit pane. The /api/resources/_debug route powering the resource dropdown is served by the kernel, not here.
 - Web:
-  - Slots: `liveStateEmitPane.Actions`
+  - Slots: `liveStateEmitPane.Actions` ← `primitives.pane`
   - Contributes:
     - `Pane.Register` "debug-live-state-emit"
     - `DebugApp.Sidebar` "Live-State Emit" → `component`

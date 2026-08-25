@@ -6,7 +6,7 @@
 
 - Description: Guided setup pane for the Google Maps Platform API key: project → Places API → billing → key → paste. Also contributes the Accounts provider row.
 - Web:
-  - Slots: `googleMapsSetupPane.Actions`
+  - Slots: `googleMapsSetupPane.Actions` ← `primitives.pane`
   - Contributes:
     - `Pane.Register` "google-maps-setup"
     - `Auth.Provider` "Google Maps Platform"

@@ -1,7 +1,0 @@
-// @hash ee6a8ac364df
-{
-  // The wordmark is the only Start-zone entry: brand left, nav right.
-  "items": [
-    "apps.website.shell:wordmark"
-  ]
-}

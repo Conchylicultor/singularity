@@ -10,7 +10,7 @@
     - `Conversation.PromptBar` ← `conversations.conversation-view.branch`, `conversations.conversation-view.dependencies`, `conversations.conversation-view.fork-conversation`, `conversations.conversation-view.launch-prompts`, `conversations.conversation-view.notes`
     - `Conversation.PromptInput` ← `conversations.conversation-view.prompt-input`
     - `Conversation.AbovePromptInput` ← `conversations.conversation-view.notes`, `conversations.conversation-view.op-status`, `conversations.conversation-view.turn-summary`
-    - `conversationPane.Actions`
+    - `conversationPane.Actions` ← `primitives.pane`
   - Contributes:
     - `Pane.Register` "conversation"
     - `Conversation.Header` → `ConversationTitle`

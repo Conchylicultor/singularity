@@ -21,9 +21,13 @@ import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 
 /**
- * Editable story title in the editor top bar. Mirrors the pages `PageHeader` but
- * title-only — the pages icon-button is a Pages-internal component we don't
- * import, so the icon is rendered read-only via `PageIcon`.
+ * Editable story title — the story editor pane's TITLE node
+ * (`<PaneChrome title={…}>`), not a header contribution. Mirrors the pages
+ * `PageHeader` but title-only: the pages icon-button is a Pages-internal
+ * component we don't import, so the icon is rendered read-only via `PageIcon`.
+ *
+ * It sets no typography size of its own — `PaneChrome` wraps every title node in
+ * the canonical pane-title baseline and the size is inherited from there.
  */
 export function StoryHeader({ pageId }: { pageId: string }) {
   const result = useResource(pagesResource);
@@ -71,13 +75,11 @@ function StoryHeaderInner({
         onFocus={title.onFocus}
         onBlur={title.onBlur}
         placeholder="Untitled"
-        // `text-subheading` is the sanctioned typographic scale (the same utility
-        // `<Text variant="subheading">` emits); it carries its own weight, so no
-        // raw `font-semibold` / banned `text-lg` is needed on this <input>.
-        className={cn(
-          fillClasses("x"),
-          "truncate bg-transparent text-subheading outline-none",
-        )}
+        // No type scale here: this <input> is inside the pane's title node, whose
+        // container owns the pane-title size and weight (see pane/CLAUDE.md,
+        // "Title typography is container-owned"). Tailwind's preflight makes a
+        // form control inherit both, so the field matches every other pane title.
+        className={cn(fillClasses("x"), "truncate bg-transparent outline-none")}
       />
     </Stack>
   );

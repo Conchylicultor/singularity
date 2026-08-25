@@ -75,8 +75,8 @@ route each render rather than remembered from how the page was opened.
     - `PageDetail.Overlay` ← `apps.pages.page-outline`
     - `PageTree.RowActions` ← `apps.pages.page-tree`, `apps.pages.starred`, `apps.story.pages-integration`
     - `PageTree.Fields` ← `apps.pages.agent-origin`, `apps.pages.starred`
-    - `pageDetailPane.Actions`
-    - `pagesTreePane.Actions`
+    - `pageDetailPane.Actions` ← `primitives.pane`
+    - `pagesTreePane.Actions` ← `primitives.pane`
   - Contributes:
     - `Pane.Register` "page-detail"
     - `Pane.Register` "pages-tree"

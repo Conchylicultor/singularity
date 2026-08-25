@@ -6,7 +6,7 @@
 
 - Description: Interactive setup wizard for Google OAuth credentials. Replaces the Settings redirect with a guided step-by-step pane.
 - Web:
-  - Slots: `googleSetupPane.Actions`
+  - Slots: `googleSetupPane.Actions` ← `primitives.pane`
   - Contributes: `Pane.Register` "google-setup"
   - Uses:
     - `auth.accountsPane`

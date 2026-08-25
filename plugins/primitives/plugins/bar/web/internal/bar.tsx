@@ -14,7 +14,7 @@ export interface BarProps extends HTMLAttributes<HTMLElement> {
    * - `"chrome"` (default): the app/pane **toolbar** tier — a `<header>` at
    *   `h-chrome-bar`, `pl-chrome`, masked with `bg-chrome-mask` (the surface it
    *   sits on, page canvas by default). Reserves the floating-bar safe area by
-   *   default (`endSafeArea`). Used by the app-shell toolbar and pane-toolbar host.
+   *   default (`endSafeArea`). Used by the app-shell toolbar and pane headers.
    * - `"pane"`: the **pane-header** tier — a `<div>` at the shorter `h-chrome-pane`
    *   with symmetric `px-chrome` and `min-w-0` (truncation-safe). Used by PaneChrome.
    */
@@ -55,7 +55,7 @@ const TIER_ELEMENT: Record<BarTier, ElementType> = {
 
 /**
  * The single-line chrome-strip primitive — the horizontal toolbar/header band
- * shared by the app-shell toolbar, the pane-toolbar host, and pane headers.
+ * shared by the app-shell toolbar and pane headers.
  *
  * Bar owns ONLY the strip chrome (the flex row, the single-line invariant via
  * `region-line`, the bottom border, the tier height + inset, and clipping). It

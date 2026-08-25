@@ -9,7 +9,6 @@ import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import {
   Sonata,
-  SonataToolbar,
   TEMPO_MATH_FLOOR,
   useSonata,
 } from "@plugins/apps/plugins/sonata/plugins/shell/web";
@@ -21,6 +20,7 @@ import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { songsResource } from "../core";
 import { Library } from "./slots";
 import { SonataLibrarySurface } from "./components/library-surface";
+import { SongTitle } from "./components/song-title-field";
 import { SectionPane } from "./components/section-pane";
 
 // Panes are declared first so their types are known before the component bodies
@@ -54,7 +54,7 @@ function SonataLibraryBody(): ReactElement {
  * with a single full-surface pane (a fresh instance, hence a remount). The
  * optimistic `title` rides in `hint` purely as a DISPLAY value for `useTitle`
  * (the browser-tab / tab-strip label before `songsResource` settles) — it is
- * NOT a data source: the toolbar title and every consumer read the canonical
+ * NOT a data source: the header title and every consumer read the canonical
  * row from `songsResource`. `resolve` hydrates every source for the song on
  * direct navigation / reload (see {@link useSonataPlayerResolve}).
  */
@@ -62,7 +62,6 @@ export const sonataPlayerPane = Pane.define({
   id: "sonata-player",
   app: sonataApp,
   segment: "song/:songId",
-  chrome: { header: SonataToolbar },
   // Display-only optimistic label for `useTitle` (tab/document title) before the
   // songs resource settles. Structurally unwritable: `Hint.pick` hands it back
   // only alongside the canonical value, and it is never persisted. The title is
@@ -141,11 +140,13 @@ function useSonataPlayerResolve({ songId }: { songId: string }) {
 }
 
 /**
- * The player surface. `SonataToolbar` (← Library + title + display picker on the
- * left, transport/volume/jog wheel on the right) is the pane header via
- * `chrome: { header: SonataToolbar }`; the surface body is the `Sonata.Transport`
- * strip (body top), the active display (`Sonata.Display.Dispatch`), and the
- * collapsible `SectionPane`.
+ * The player surface. The pane's OWN header carries the whole player bar: the
+ * song title is the pane title (an inline-editable node, since it needs the
+ * loaded row), and ← Library, the display picker, transport, volume and the jog
+ * wheel are contributions to `sonataPlayerPane.Actions` — which side of the row
+ * each lands on is the slot's reorder config. The surface body is the
+ * `Sonata.Transport` strip (body top), the active display
+ * (`Sonata.Display.Dispatch`), and the collapsible `SectionPane`.
  */
 function SonataPlayerSurface(): ReactElement {
   const { songId } = sonataPlayerPane.useParams();
@@ -171,14 +172,11 @@ function SonataPlayerSurface(): ReactElement {
   }, [songId]);
 
   return (
-    // The toolbar (Start: ← Library, title, display picker; End: transport,
-    // volume, jog wheel — contributed by transport-bar / engine / piano-roll) IS
-    // the pane header: `PaneChrome` renders `SonataToolbar`'s zones via
-    // `chrome: { header: SonataToolbar }` on `sonataPlayerPane`. The full-width
-    // Transport progress strip moves OUT of the header INTO the body top (the
+    // The player bar IS the pane header — one slot, title included. The
+    // full-width Transport progress strip stays OUT of it, in the body top (the
     // first child below), and the display + Section panels fill the rest. The
     // body is a single `h-full` column under the chrome's inert `PaneScroll`.
-    <PaneChrome pane={sonataPlayerPane}>
+    <PaneChrome pane={sonataPlayerPane} title={<SongTitle />}>
       <Column
         fill
         scrollBody={false}

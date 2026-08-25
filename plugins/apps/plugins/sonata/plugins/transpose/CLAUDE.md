@@ -24,8 +24,8 @@ semitones (±12), surfaced as a compact toolbar stepper and remembered per song.
   `key-mode-store`); this plugin's headless `TransposeObserver` (a `Sonata.Effect`)
   reads the open song's persisted offset (gated on the resource resolving) and
   writes it into that store. Dependency arrow stays feature → shell.
-- **Toolbar control, not a side panel.** `TransposeControl` (a `SonataToolbar.End`
-  contribution) is a compact `[ ⇅ − ±N st + ]` stepper next to the speed wheel. On
+- **Header control, not a side panel.** `TransposeControl` (a
+  `sonataPlayerPane.Actions` contribution) is a compact `[ ⇅ − ±N st + ]` stepper next to the speed wheel. On
   step it sets the shell store optimistically (instant re-render) and calls
   `saveTranspose` to persist; the observer re-affirms on the next push. Clicking
   the readout resets to 0 (the quick "back to original key" affordance).
@@ -38,11 +38,11 @@ semitones (±12), surfaced as a compact toolbar stepper and remembered per song.
 - Web:
   - Contributes:
     - `Sonata.Effect` "transpose-sync" → `TransposeObserver`
-    - `SonataToolbar.End` "transpose" → `TransposeControl`
+    - `sonataPlayerPane.Actions` "transpose" → `TransposeControl`
   - Uses:
+    - `apps/sonata/library.sonataPlayerPane`
     - `apps/sonata/primitives/toolbar-control.ToolbarControl`
     - `apps/sonata/shell.Sonata`
-    - `apps/sonata/shell.SonataToolbar`
     - `apps/sonata/shell.useSetTransposeSemitones`
     - `apps/sonata/shell.useSonata`
     - `apps/sonata/shell.useTransposeSemitones`

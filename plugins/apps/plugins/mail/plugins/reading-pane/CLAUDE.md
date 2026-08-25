@@ -56,7 +56,7 @@ parses MIME or HTML itself.
 
 - Description: Mail reading pane: the threadPane Miller column showing a thread's messages oldest→newest, each a collapsible card (newest expanded) with sender header, hydrated HTML/text body (privacy-safe images, inline cid: resolution), and attachment chips. Reading pane server: the live per-thread message-envelope resource (threadMessagesResource), scoped to mail_messages so a reply/flag/hydration in the open thread pushes automatically.
 - Web:
-  - Slots: `threadPane.Actions`
+  - Slots: `threadPane.Actions` ← `primitives.pane`
   - Contributes: `Pane.Register` "mail-thread"
   - Uses:
     - `apps/mail/attachments.AttachmentChip`

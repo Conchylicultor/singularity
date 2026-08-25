@@ -506,6 +506,151 @@ describe("AdaptiveBar.Collapsed — the authored bucket", () => {
   });
 });
 
+describe("docking through a display:contents wrapper chain", () => {
+  /**
+   * What sits between a bar and a contribution rendered through `.Render`:
+   * `slot-render`'s `ContributionBox` and reorder's `SortableItem` + content
+   * wrapper. Outside edit mode all of them are `display: contents`, which
+   * removes a box from LAYOUT but not from the DOM TREE — so the anchor is two
+   * or three levels below the bar root while its container is still, correctly,
+   * a flex item of the row.
+   *
+   * An inline `style` rather than a class because jsdom applies no stylesheet:
+   * this way `getComputedStyle` reports `contents` for real, which is what the
+   * production chain looks like to anything that asks.
+   */
+  function ContentsChain({ children }: { children: ReactNode }): ReactElement {
+    return (
+      <div style={{ display: "contents" }}>
+        <div style={{ display: "contents" }}>{children}</div>
+      </div>
+    );
+  }
+
+  function WrappedProbes(): ReactElement {
+    return (
+      <Bar>
+        {(["alpha", "beta", "gamma"] as const).map((id) => (
+          <ContentsChain key={id}>
+            <AdaptiveBar.Item id={id}>
+              <Probe id={id} />
+            </AdaptiveBar.Item>
+          </ContentsChain>
+        ))}
+      </Bar>
+    );
+  }
+
+  function anchorOf(id: string): HTMLElement {
+    const el = document.querySelector<HTMLElement>(
+      `[data-adaptive-bar-anchor="${id}"]`,
+    );
+    if (el === null) throw new Error(`no anchor for bar item "${id}"`);
+    return el;
+  }
+
+  function barRoot(): HTMLElement {
+    const trigger = document.querySelector("[data-adaptive-bar-trigger]");
+    const root = trigger?.parentElement ?? null;
+    if (root === null) throw new Error("bar root not found");
+    return root;
+  }
+
+  /**
+   * How many occupant containers were re-parented while `run` ran.
+   *
+   * Counted at the DOM, not inferred: "a node already in the right place is
+   * never touched" is the property every preserved focus, transition and scroll
+   * offset hangs off, and it is exactly the property a docking rule that
+   * compares against the wrong parent loses — silently, since the row still
+   * looks right afterwards.
+   *
+   * `moveBefore` is absent from jsdom, so `relocateNode` takes the
+   * `insertBefore` path and this sees every move. React never inserts these
+   * containers itself: they are portal TARGETS, minted outside its tree.
+   */
+  function countDockMoves(run: () => void): number {
+    const original = Node.prototype.insertBefore;
+    let moves = 0;
+    function counting<T extends Node>(
+      this: Node,
+      node: T,
+      ref: Node | null,
+    ): T {
+      if (
+        node instanceof HTMLElement &&
+        node.hasAttribute("data-adaptive-bar-item")
+      ) {
+        moves += 1;
+      }
+      return original.call(this, node, ref) as T;
+    }
+    Node.prototype.insertBefore = counting;
+    try {
+      run();
+    } finally {
+      Node.prototype.insertBefore = original;
+    }
+    return moves;
+  }
+
+  it("docks each occupant at its own anchor, wherever the host put it", () => {
+    render(<WrappedProbes />);
+
+    for (const id of ["alpha", "beta", "gamma"]) {
+      const container = containerOf(id);
+      const anchor = anchorOf(id);
+      // The invariant, stated at the DOM: immediately before its own anchor, in
+      // the anchor's own parent — the innermost `contents` wrapper here, and NOT
+      // the bar root, which is where docking used to insert unconditionally.
+      expect(container.nextSibling).toBe(anchor);
+      expect(container.parentElement).toBe(anchor.parentElement);
+      expect(container.parentElement).not.toBe(barRoot());
+    }
+  });
+
+  it("lays the occupants out in the host's own order", () => {
+    render(<WrappedProbes />);
+    const root = barRoot();
+    const inOrder = [
+      ...root.querySelectorAll<HTMLElement>("[data-adaptive-bar-item]"),
+    ].map((el) => el.getAttribute("data-adaptive-bar-item"));
+    // Document order across the whole subtree, which is what the row renders as
+    // — the wrappers generate no boxes, so the containers are the row's flex
+    // items in exactly this sequence.
+    expect(inOrder).toEqual(["alpha", "beta", "gamma"]);
+  });
+
+  it("plans zero moves when nothing about the order changed", () => {
+    const { rerender } = render(<WrappedProbes />);
+    // A fresh `measure` arrow per render re-runs the whole measure-and-decide
+    // pass (the ResizeObserver's job in a browser), so this is a real pass over
+    // a row that simply has not changed.
+    const moves = countDockMoves(() => {
+      rerender(<WrappedProbes />);
+    });
+    expect(moves).toBe(0);
+  });
+
+  it("still relocates into the panel, and back, through the chain", () => {
+    const { rerender } = render(<WrappedProbes />);
+    const gammaInstance = instanceOf("gamma");
+    expect(isInline("gamma")).toBe(true);
+
+    available = 140;
+    rerender(<WrappedProbes />);
+    expect(isInline("gamma")).toBe(false);
+
+    available = 1000;
+    rerender(<WrappedProbes />);
+    expect(isInline("gamma")).toBe(true);
+    // Back at its anchor, not appended to the end of the row.
+    expect(containerOf("gamma").nextSibling).toBe(anchorOf("gamma"));
+    expect(mounts["gamma"]).toBe(1);
+    expect(instanceOf("gamma")).toBe(gammaInstance);
+  });
+});
+
 describe("absence", () => {
   it("treats a contribution that rendered nothing as absent, not as width zero", () => {
     function Empty(): ReactElement | null {

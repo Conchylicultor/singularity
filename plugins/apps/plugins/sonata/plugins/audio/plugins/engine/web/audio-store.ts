@@ -7,7 +7,7 @@ import { defineScopedStore } from "@plugins/primitives/plugins/scoped-store/web"
  *
  * The Web Audio graph lives in the headless, always-mounted `AudioEngine`
  * (a `Sonata.Effect`) so no piece of mountable UI can tear the `AudioContext`
- * down. The `VolumeControl` (a `SonataToolbar.End` widget) is therefore decoupled
+ * down. The `VolumeControl` (a player-header widget) is therefore decoupled
  * from the graph: the slider *writes* `volume` here and the engine reads it to
  * drive master gain; the engine *writes* `status` / `loadError` here. Either
  * component can mount, unmount, or remount independently.

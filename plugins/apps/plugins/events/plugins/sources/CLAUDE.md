@@ -105,8 +105,8 @@ Design: [`research/2026-08-03-apps-events-event-tracking-app.md`](../../../../..
   - Slots:
     - `EventSourceDetail.Section` ← `apps.events.sources.source-detail.runs`, `apps.events.sources.source-detail.schedule`, `apps.events.sources.source-detail.settings`, `apps.events.sources.source-detail.status`
     - `EventSourceActions` ← `apps.events.sources`
-    - `eventSourcesPane.Actions` ← `apps.events.sources.refresh-all`
-    - `eventSourceDetailPane.Actions`
+    - `eventSourcesPane.Actions` ← `apps.events.sources.refresh-all`, `primitives.pane`
+    - `eventSourceDetailPane.Actions` ← `primitives.pane`
   - Contributes:
     - `Pane.Register` "event-sources"
     - `Pane.Register` "event-source-detail"

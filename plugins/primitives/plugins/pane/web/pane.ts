@@ -9,10 +9,6 @@ import {
   type ReactNode,
 } from "react";
 import { getDeferredLoadState } from "@plugins/framework/plugins/web-sdk/core";
-import {
-  defineRenderSlot,
-  type RenderSlot,
-} from "@plugins/primitives/plugins/slot-render/web";
 import type { PluginId } from "@plugins/framework/plugins/plugin-id/core";
 import { SurfaceIdContext } from "@plugins/primitives/plugins/surface-id/web";
 import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
@@ -33,12 +29,9 @@ import {
   type SerializedSlot,
 } from "./history-sink";
 import { appNavSink, navigateApp } from "./app-nav-sink";
-import type { PaneHeaderZones } from "./components/pane-header-item";
+import { definePaneHeaderSlot, type PaneHeaderSlot } from "./header-slot";
 
-export type {
-  PaneHeaderZones,
-  PaneToolbarItem,
-} from "./components/pane-header-item";
+export type { PaneHeaderItem } from "./components/pane-header-item";
 
 export type { InferParams } from "../core";
 
@@ -208,16 +201,6 @@ export function type<T>(): TypeMarker<T> {
 
 export interface PaneChromeConfig<Params> {
   title?: string | ((params: Params) => string);
-  /**
-   * Opt into a custom header. When set, `PaneChrome` renders these reorderable
-   * `Start`/`End` render-slot zones INSIDE its standard `<Bar tier="pane">`
-   * instead of the default `title` + Actions — with NO overflow-collapse, so
-   * rich widgets (transport / volume / jog-wheel) never fold into a "⋯"
-   * popover. Build the zones with `definePaneToolbar` (pane-toolbar). The
-   * promote/close buttons still render after the End zone. When omitted,
-   * `PaneChrome` keeps the default header layout.
-   */
-  header?: PaneHeaderZones;
   history?: boolean;
   /**
    * Show a close button (leftmost) that calls `pane.close()`. Defaults to
@@ -244,29 +227,10 @@ export interface PaneChromeConfig<Params> {
 
 interface NormalizedChrome {
   title?: string | ((params: Record<string, string>) => string);
-  header?: PaneHeaderZones;
   history: boolean;
   close: boolean;
   promote: boolean;
   keepMountedWhenCollapsed: boolean;
-}
-
-/**
- * One contribution to a pane's `Actions` slot.
- *
- * `id` is REQUIRED and must be stable for the contribution's whole life: the
- * right-side actions render inside an `AdaptiveBar`, whose width ledger and DOM
- * move plan are both keyed on it. An id that churns per render throws every
- * measurement away each frame; a duplicate id makes "which node is this" — and
- * therefore "where does it go" — unanswerable. The array index this slot used to
- * be rendered by was neither stable nor unique across a re-order.
- */
-export interface PaneActionContribution {
-  /** Short kebab-case, describing the action ("improve", "view-mode"). */
-  id: string;
-  component: ComponentType;
-  /** `"right"` (default) joins the overflow-collapsing bar; `"left"` sits after the title. */
-  position?: "left" | "right";
 }
 
 export interface PaneInternal {
@@ -306,7 +270,12 @@ export interface PaneInternal {
   chrome: NormalizedChrome;
   /** Default column width in pixels. Read by layout renderers (e.g. Miller). */
   width?: number;
-  actionsSlot: RenderSlot<PaneActionContribution>;
+  /**
+   * This pane's header: the ONE slot its whole header row is rendered from,
+   * title included. Auto-minted by `Pane.define` unless the pane borrows
+   * another's (`Pane.define({ actions })`).
+   */
+  actionsSlot: PaneHeaderSlot;
   resolve?: ResolveHook<Record<string, string>> | false;
   /**
    * Self-contained title resolver for tab labels and the browser document
@@ -1607,7 +1576,7 @@ export interface PaneObject<
    * resolve the app-relative path from. Delegates to {@link RouteDef.link}.
    */
   link?: (app: AppRef, params: FullParams) => string;
-  Actions: RenderSlot<PaneActionContribution>;
+  Actions: PaneHeaderSlot;
   /** Internal. Consumers should not rely on this. */
   _internal: PaneInternal;
 }
@@ -1881,7 +1850,6 @@ function normalizeChrome<Params>(
 ): NormalizedChrome {
   return {
     title: chrome?.title as NormalizedChrome["title"],
-    header: chrome?.header,
     history: chrome?.history ?? true,
     close: chrome?.close ?? true,
     promote: chrome?.promote ?? true,
@@ -1916,6 +1884,15 @@ type DefineArgs<
   /** The app this pane belongs to (its official home). See {@link PaneInternal.app}. */
   app: AppRef;
   component: ComponentType;
+  /**
+   * BORROW another pane's header instead of minting one of this pane's own:
+   * `pane.Actions` then IS that slot, so several panes wear one header from one
+   * contribution list and one config directive (the website's five pages share
+   * one nav). Build it with `definePaneHeaderSlot()`, declare it once in the
+   * owning plugin's `slots:` record, and leave every borrowing pane out of that
+   * record — one slot has exactly one name.
+   */
+  actions?: PaneHeaderSlot;
   /**
    * Literal DEFAULTS for this pane's opener-supplied UI options. Read via
    * `useOptions()`, which merges the opener's partial over these — so the value
@@ -1990,6 +1967,8 @@ type RouteDefineArgs<
   /** The app this pane belongs to (its official home). See {@link PaneInternal.app}. */
   app: AppRef;
   component: ComponentType;
+  /** Borrow another pane's header slot instead of minting one. See {@link DefineArgs.actions}. */
+  actions?: PaneHeaderSlot;
   /** Literal defaults for the pane's opener-supplied UI options. See {@link DefineArgs.options}. */
   options?: Options;
   /** Typed shape of the pane's optimistic {@link Hint}. See {@link DefineArgs.hint}. */
@@ -2072,12 +2051,18 @@ function define(
     );
   }
 
-  // A real render slot: a pane's actions are a visible list whose order the user
+  // A real render slot: a pane's header is a visible list whose order the user
   // should own, exactly like any other. (It was a plain `defineSlot` while slot
   // discovery was a source-text scan that could not read a templated id; slots
   // now declare themselves at runtime, so the id no longer has to be spellable
   // in source.)
-  const actionsSlot = defineRenderSlot<PaneActionContribution>();
+  //
+  // `actions` BORROWS another pane's header instead of minting one: the slot is
+  // then declared once, by the plugin that owns it, and every borrowing pane
+  // shares its contributions and its one config directive. A borrowing pane is
+  // simply absent from its plugin's `slots:` record — declaring it there would
+  // name one slot twice, which the declaration pass rejects.
+  const actionsSlot = args.actions ?? definePaneHeaderSlot();
 
   const resolve =
     "resolve" in args ? (args.resolve as PaneInternal["resolve"]) : undefined;

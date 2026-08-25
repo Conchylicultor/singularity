@@ -6,7 +6,7 @@
 
 - Description: Dummy UI for exercising the events plugin end-to-end. Dummy plugin exercising the events and jobs APIs end-to-end.
 - Web:
-  - Slots: `eventsTestPane.Actions`
+  - Slots: `eventsTestPane.Actions` ← `primitives.pane`
   - Contributes:
     - `Pane.Register` "events-test"
     - `DebugApp.Sidebar` "Events Test" → `component`

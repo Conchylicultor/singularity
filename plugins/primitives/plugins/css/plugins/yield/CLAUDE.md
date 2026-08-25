@@ -74,10 +74,10 @@ declared as its main axis. The disagreement is the design, not an oversight.
     - `debug/slow-ops/cluster`
     - `debug/slow-ops/pane`
     - `history/dialog`
+    - `primitives/adaptive-bar`
     - `primitives/app-shell`
     - `primitives/breadcrumb`
     - `primitives/css/fill`
-    - `primitives/pane`
     - `primitives/prompt-editor`
     - `primitives/text-editor`
     - `search/quick-find`

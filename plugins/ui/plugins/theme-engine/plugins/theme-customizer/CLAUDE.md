@@ -8,7 +8,7 @@
 - Web:
   - Slots:
     - `ThemeCustomizer.Section` ← `ui.tokens.categorical`, `ui.tokens.chart`, `ui.tokens.color-adjust`, `ui.tokens.color-palette`, `ui.tokens.density`, `ui.tokens.font-family`, `ui.tokens.shadow`, `ui.tokens.shape`, `ui.tokens.sidebar-palette`, `ui.tokens.type-scale`, `ui.tweakcn.community-browser`
-    - `themeCustomizerPane.Actions`
+    - `themeCustomizerPane.Actions` ← `primitives.pane`
   - Contributes: `Pane.Register` "theme-customizer"
   - Uses:
     - `apps-core.useCurrentAppId`

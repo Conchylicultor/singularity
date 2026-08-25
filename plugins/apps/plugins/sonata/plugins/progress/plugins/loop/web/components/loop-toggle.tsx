@@ -8,7 +8,7 @@ import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { toggleLoop } from "../loop-actions";
 
 /**
- * Toolbar Loop toggle (`SonataToolbar.End`). One click toggles the A–B practice
+ * The player header's Loop toggle (`sonataPlayerPane.Actions`). One click toggles the A–B practice
  * loop: with a region set it flips `enabled` (active = filled `default` variant);
  * with none it creates the default region at the playhead and seeks to its start
  * (see `toggleLoop`). Disabled until a song is loaded.

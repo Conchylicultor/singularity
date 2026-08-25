@@ -23,8 +23,8 @@ worktrees, which is deliberate: repo paths coincide.
 - Description: Worktree-scoped file browser: sidebar entry opens the main worktree; conversation toolbar opens the agent's worktree. Worktree-scoped file browser and viewer: tree listing plus raw/diff/image content by attempt id or the reserved `main` sentinel.
 - Web:
   - Slots:
-    - `global-file-tree.actions`
-    - `conv-file-tree.actions`
+    - `global-file-tree.actions` ← `primitives.pane`
+    - `conv-file-tree.actions` ← `primitives.pane`
   - Contributes:
     - `Pane.Register` "global-file-tree"
     - `Pane.Register` "conv-file-tree"

@@ -226,7 +226,7 @@ any consumer — the `Servers.Fields` ← `health.StatusField` precedent.
     - `DeploymentDetail.Section` ← `apps.deploy.composition`, `apps.deploy.deploy-history`, `apps.deploy.deployments`, `apps.deploy.local-serve`, `apps.deploy.remote-deploy`
     - `Deployments.Fields` ← `apps.deploy.remote-deploy`
     - `DeploymentItemActions` ← `apps.deploy.deployments`, `apps.deploy.local-serve`
-    - `deploymentDetailPane.Actions`
+    - `deploymentDetailPane.Actions` ← `primitives.pane`
   - Contributes:
     - `ServerDetail.Section` "Deployments" → `DeploymentsSection`
     - `Pane.Register` "deploy-deployment-detail"

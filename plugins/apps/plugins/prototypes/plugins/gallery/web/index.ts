@@ -20,7 +20,6 @@ export default {
     prototypeDetailPane.Actions({
       id: "view-mode",
       component: ViewModeSwitcher,
-      position: "left",
     }),
     prototypeDetailPane.Actions({ id: "improve", component: ImproveButton }),
   ],

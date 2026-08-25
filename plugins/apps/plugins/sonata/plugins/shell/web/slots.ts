@@ -6,7 +6,6 @@ import {
   defineRenderSlot,
   defineWrapperSlot,
 } from "@plugins/primitives/plugins/slot-render/web";
-import { definePaneToolbar } from "@plugins/primitives/plugins/pane-toolbar/web";
 import {
   defineDetailSections,
   type DetailSection,
@@ -269,18 +268,3 @@ export const Sonata = {
   // and their per-section collapsed state (keyed `sonata.section.<id>.open`).
   Section: sonataSections.Section,
 };
-
-/**
- * The player's top toolbar, defined via the PaneToolbar primitive — the
- * sanctioned render-slot header for a pane. `.Start` (left: ← Library, title,
- * display picker) and `.End` (right: transport, volume, jog wheel) are both
- * **reorderable** render-slot zones; `sonataPlayerPane` wires it in via
- * `chrome: { header: SonataToolbar }`, so `PaneChrome` renders the zones as the
- * standard pane header (no overflow-collapse — rich widgets never fold into a
- * "⋯" popover). Hand-rolling a toolbar `<div>` is banned by the
- * `no-adhoc-pane-toolbar` lint rule. Nesting depth no longer matters: the
- * build's slot facet does a full-depth runtime walk over the barrel exports, so
- * `.Start`/`.End` are discovered as reorderable whether this lives top-level or
- * nested under a group.
- */
-export const SonataToolbar = definePaneToolbar();

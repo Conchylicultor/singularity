@@ -1,4 +1,4 @@
-// @hash bc402e1fd087
+// @hash 1e879662063a
 {
   // Item: "<key>" (terse; <key> is "<pluginId>:<id>")
   // Hide: { "item": "<key>", "hidden": true }
@@ -8,6 +8,7 @@
   "items": [
     "apps.prototypes.gallery:view-mode",
     "apps.prototypes.gallery:improve",
-    "apps.prototypes.present:present"
+    "apps.prototypes.present:present",
+    "primitives.pane:title"
   ]
 }

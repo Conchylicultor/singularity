@@ -74,6 +74,33 @@ export interface BarRegistry {
    * So the item watches its own container's child list and says so.
    */
   contentChanged(id: string): void;
+  /**
+   * Claim this bar's ONE yielding child, and throw if it is already taken.
+   *
+   * A yielding child is the row's give: it is excluded from the fit ledger and
+   * is the only occupant allowed below its own content width, so it absorbs
+   * whatever the measured occupants leave. Two of them share that leftover
+   * arbitrarily — each ends up narrower than the row could have given it, both
+   * ellipsize, and which one loses depends on their content rather than on
+   * anything the author wrote. There is no honest answer, so there is no second
+   * one: this throws rather than picking.
+   *
+   * The claim carries the cell's element because the claim IS the registration:
+   * the bar holds back a floor for this cell out of the fit's budget
+   * (`yieldFloorPx`), and that number is read off the element — its font size,
+   * and whether it is rendering anything at all.
+   */
+  claimYield(cell: HTMLElement): () => void;
+  /**
+   * The yielding cell started or stopped rendering anything.
+   *
+   * An empty cell reserves no floor — there is no title to keep legible — so
+   * this is the edge that changes the budget, and the same signal an occupant
+   * sends through {@link BarRegistry.contentChanged} for the same reason: a
+   * `display: none` element reports no resize when content appears inside it,
+   * and the row's own width does not move when a title arrives.
+   */
+  yieldContentChanged(): void;
 }
 
 /** `null` — no bar above — is a legitimate state: `AdaptiveBar.Item` is then transparent. */

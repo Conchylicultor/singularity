@@ -8,7 +8,7 @@
 - Web:
   - Slots:
     - `FilePane.Renderer` ← `conversations.conversation-view.code.file-pane.diff`, `conversations.conversation-view.code.file-pane.image`, `conversations.conversation-view.code.file-pane.markdown`, `conversations.conversation-view.code.file-pane.raw`
-    - `filePeekPane.Actions`
+    - `filePeekPane.Actions` ← `primitives.pane`
   - Contributes: `Pane.Register` "file-peek"
   - Uses:
     - `code-explorer/file-resolve.FileDisambiguation`

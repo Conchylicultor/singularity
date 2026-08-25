@@ -46,6 +46,14 @@ from that. Five of them, discriminated by `fault` in the payload:
   it holds is clipped to invisibility — and it decides again as soon as the row
   has room. The remedy for the second is on the bar's *siblings*, not its
   ancestors.
+- **`nested-bar`** — a **measuring** bar was written inside another bar's
+  occupant, so both claim the same row's slack: the inner one takes it and the
+  outer one is left measuring its own content. Read from the tree at mount, not
+  from a width. It is its own kind because the *visible* damage is filed against
+  the wrong bar — the outer one reports `no-slack` about a host that is fine —
+  and the fix is always to delete the inner bar and let the outer `⋯` collapse
+  its occupants. An `AdaptiveBar.Collapsed` nested in a bar is legitimate and
+  never files this: it measures nothing and takes no slack.
 - **`row-overflow`** — on a **converged** pass (rendered *is* what the fit
   decided) the fit blessed the row as fitting, and the union of the occupants'
   own boxes still sticks out of the bar's own content box on one side or the
@@ -198,7 +206,7 @@ sighting.
 
 ## Plugin reference
 
-- Description: Adaptive-bar collector: drains the adaptive-bar primitive's adaptiveBarReportSink into a deduped report whenever a bar's layout contract is violated (it was given no slack, its fit disagrees with the layout engine, its placement never converged, it refused to relocate an iframe, or one of its widgets declared a form it does not render), plus the Debug → Reports summary view. Adaptive-bar report kind: validates the adaptive-bar primitive's layout-contract fault payloads (no-slack = the bar was given no room to give, row-overflow = on a converged pass the fit blessed the row as fitting and the occupants still stick out of the bar's own content box, no-convergence = the placement never settled, iframe-relocation = a frame the browser cannot move without reloading, empty-rung = a widget declared a smaller form and rendered nothing as it), fingerprints by fault + origin (the innermost UI-context node above the bar's root, falling back to the label that several unrelated bars share) + overflow mode + the offending occupant's id, excluding the per-occurrence lineage path, round evidence and message so one broken bar = one row, and renders a per-fault task — what the bar did instead, the consumer-side fix, and for no-convergence the recorded rounds naming which occupant resized itself. Re-arms periodically (6h) since a broken host re-produces the fault on every mount.
+- Description: Adaptive-bar collector: drains the adaptive-bar primitive's adaptiveBarReportSink into a deduped report whenever a bar's layout contract is violated (it was given no slack, it was written inside another bar, its fit disagrees with the layout engine, its placement never converged, it refused to relocate an iframe, or one of its widgets declared a form it does not render), plus the Debug → Reports summary view. Adaptive-bar report kind: validates the adaptive-bar primitive's layout-contract fault payloads (no-slack = the bar was given no room to give, nested-bar = a measuring bar was written inside another bar's occupant so both claim the same row's slack, row-overflow = on a converged pass the fit blessed the row as fitting and the occupants still stick out of the bar's own content box, no-convergence = the placement never settled, iframe-relocation = a frame the browser cannot move without reloading, empty-rung = a widget declared a smaller form and rendered nothing as it), fingerprints by fault + origin (the innermost UI-context node above the bar's root, falling back to the label that several unrelated bars share) + overflow mode + the offending occupant's id, excluding the per-occurrence lineage path, round evidence and message so one broken bar = one row, and renders a per-fault task — what the bar did instead, the consumer-side fix, and for no-convergence the recorded rounds naming which occupant resized itself. Re-arms periodically (6h) since a broken host re-produces the fault on every mount.
 - Web:
   - Contributes:
     - `Core.Root` → `AdaptiveBarCollector`

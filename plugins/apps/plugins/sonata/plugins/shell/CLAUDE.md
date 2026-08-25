@@ -45,8 +45,6 @@ explicit (`currentSongId != null`) rather than an implicit empty-bus.
     - `Sonata.Hud` ← `apps.sonata.audio.metronome`, `apps.sonata.rich.key-chip`, `apps.sonata.view-options`
     - `Sonata.ViewOption` ← `apps.sonata.look`, `apps.sonata.notation`, `apps.sonata.piano-keyboard`, `apps.sonata.piano-roll`, `apps.sonata.rich.chord-label`
     - `Sonata.Section` ← `apps.sonata.rich.chord-progression`, `apps.sonata.rich.chord-readout`, `apps.sonata.rich.circle-of-fifths`, `apps.sonata.rich.key-readout`, `apps.sonata.rich.rhythm-controls`, `apps.sonata.rich.voicing-controls`, `apps.sonata.sources.chord-grid`, `apps.sonata.sources.ultimate-guitar`, `apps.sonata.track-mixer`
-    - `SonataToolbar.Start` ← `apps.sonata.library`
-    - `SonataToolbar.End` ← `apps.sonata.audio.engine`, `apps.sonata.audio.metronome`, `apps.sonata.pedal.indicator`, `apps.sonata.piano-roll`, `apps.sonata.progress.loop`, `apps.sonata.transport-bar`, `apps.sonata.transpose`
   - Contributes: `Apps.App` "Sonata" → `SonataLayout`
   - Uses:
     - `apps-core.Apps`
@@ -58,7 +56,6 @@ explicit (`currentSongId != null`) rather than an implicit empty-bus.
     - `primitives/detail-sections.defineDetailSections`
     - `primitives/detail-sections.DetailSection`
     - `primitives/latest-ref.useLatestRef`
-    - `primitives/pane-toolbar.definePaneToolbar`
     - `primitives/scoped-store.defineScopedStore`
     - `primitives/scoped-store.ScopedStore`
     - `primitives/slot-render.defineDispatchSlot`
@@ -84,7 +81,6 @@ explicit (`currentSongId != null`) rather than an implicit empty-bus.
     - `Sonata`
     - `SonataProvider`
     - `SonataSectionItem`
-    - `SonataToolbar`
     - `TEMPO_MATH_FLOOR`
     - `TransposeStoreProvider`
     - `useCursorApi`

@@ -6,7 +6,7 @@
 
 - Description: Toolbar button that opens a sidebar listing edited markdown design docs in the conversation worktree.
 - Web:
-  - Slots: `conv-docs.actions`
+  - Slots: `conv-docs.actions` ← `primitives.pane`
   - Contributes:
     - `Pane.Register` "conv-docs"
     - `Conversation.ActionBar` → `DocsButton`

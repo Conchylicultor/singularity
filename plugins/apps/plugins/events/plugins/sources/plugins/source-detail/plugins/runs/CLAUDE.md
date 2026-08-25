@@ -42,7 +42,7 @@ region is the `model-call` sub-plugin's section and **`runs` names no LLM**.
   - Slots:
     - `RunActions`
     - `EventSourceRunDetail.Section` ← `apps.events.sources.source-detail.runs.caveats`, `apps.events.sources.source-detail.runs.extracted-events`, `apps.events.sources.source-detail.runs.model-call`
-    - `eventSourceRunPane.Actions`
+    - `eventSourceRunPane.Actions` ← `primitives.pane`
   - Contributes:
     - `EventSourceDetail.Section` "Runs" → `SourceRunsSection`
     - `Pane.Register` "event-source-run"

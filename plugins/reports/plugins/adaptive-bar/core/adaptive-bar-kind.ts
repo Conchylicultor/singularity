@@ -72,6 +72,10 @@ export const AdaptiveBarPayloadSchema = z.object({
   // can never catch it); the bar then stops deciding for good, putting every
   // occupant back at its widest form and leaving whatever does not fit for
   // CSS to clip;
+  // `nested-bar` = a MEASURING bar was written inside another bar's occupant,
+  // so both claim the same row's slack and neither one's width means anything
+  // (an `AdaptiveBar.Collapsed` nested in a bar is legitimate and never files
+  // this — it is one `shrink-0` `⋯` that measures nothing);
   // `row-overflow` = on a converged pass the fit blessed the row as fitting,
   // and the union of the occupants' boxes still sticks out of the bar's own
   // content box on one side or the other, so the widths the fit decided from
@@ -96,6 +100,7 @@ export const AdaptiveBarPayloadSchema = z.object({
   // is a type error at the seam rather than a 400 at ingest.
   fault: z.enum([
     "no-slack",
+    "nested-bar",
     "row-overflow",
     "no-convergence",
     "iframe-relocation",

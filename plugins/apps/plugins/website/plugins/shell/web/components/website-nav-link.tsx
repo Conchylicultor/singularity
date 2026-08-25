@@ -3,7 +3,7 @@ import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 
 /**
  * Standard-look nav link for the shared site header. Section plugins wrap it
- * in their `WebsiteToolbar.End` contributions so every nav entry matches:
+ * in their `WebsiteHeader` contributions so every nav entry matches:
  * ghost for regular links, `primary` for the one call-to-action (Download).
  */
 export function WebsiteNavLink({

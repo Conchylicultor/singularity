@@ -1,4 +1,4 @@
-// @hash 5ac86c5d0e35
+// @hash 5f2723af2af7
 {
   // Item: "<key>" (terse; <key> is "<pluginId>:<id>")
   // Hide: { "item": "<key>", "hidden": true }
@@ -6,6 +6,7 @@
   // Group: { "type": "header", "label": "<title>", "collapsed": false, "items": [ "<key>", … ] }
   // Overflow (⋯ menu): { "type": "overflow", "id": "<unique-id>", "items": [ "<key>", … ] }
   "items": [
-    "apps.events.sources.refresh-all:refresh-all"
+    "apps.events.sources.refresh-all:refresh-all",
+    "primitives.pane:title"
   ]
 }

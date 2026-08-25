@@ -6,7 +6,7 @@
 
 - Description: Apple code-signing UI: the Accounts 'Apple Developer' provider row plus the guided certificate + App Store Connect API key setup wizard pane.
 - Web:
-  - Slots: `appleSetupPane.Actions`
+  - Slots: `appleSetupPane.Actions` ← `primitives.pane`
   - Contributes:
     - `Pane.Register` "apple-setup"
     - `Auth.Provider` "Apple Developer"

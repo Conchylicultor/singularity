@@ -6,7 +6,7 @@
 
 - Description: Renders Workflow tool calls as a swimlane DAG of agent nodes (recovered by trace-executing the script), with per-node prompts in a side pane, a collapsible script, and the launched run/task ids.
 - Web:
-  - Slots: `workflow-node.actions`
+  - Slots: `workflow-node.actions` ← `primitives.pane`
   - Contributes:
     - `JsonlViewerTool.Renderer` "Workflow" → `WorkflowToolView`
     - `Pane.Register` "workflow-node"

@@ -1,4 +1,5 @@
 import { Pane as PaneSlots } from "./slots";
+import { paneHeaderContributions } from "./header-slot";
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 
 export {
@@ -46,7 +47,6 @@ export type {
   PaneMatch,
   MatchEntry,
   PaneChromeConfig,
-  PaneActionContribution,
   PaneToggleOpts,
   TypeMarker,
   InferParams,
@@ -61,8 +61,7 @@ export type {
   OpenPaneFn,
   ResolveHook,
   PaneStore,
-  PaneHeaderZones,
-  PaneToolbarItem,
+  PaneHeaderItem,
 } from "./pane";
 export { setHistoryAdapter, defaultHistoryAdapter } from "./history-sink";
 export { appNavSink, type AppNavigator } from "./app-nav-sink";
@@ -72,8 +71,17 @@ export type {
   PaneHistoryState,
   SerializedSlot,
 } from "./history-sink";
-export { PaneChrome, PaneActionsSlot } from "./components/pane-chrome";
-export { ToolbarItem } from "./components/pane-header-item";
+export { PaneChrome } from "./components/pane-chrome";
+export { PaneHeaderCell } from "./components/pane-header-item";
+export type {
+  PaneHeaderAction,
+  PaneHeaderComponent,
+} from "./components/pane-header-item";
+export {
+  definePaneHeaderSlot,
+  type PaneHeaderSlot,
+  type PaneHeaderSlotOptions,
+} from "./header-slot";
 export { PaneScroll, type PaneScrollProps } from "./components/pane-scroll";
 export { PaneIconAction } from "./components/pane-icon-action";
 export { PaneResolveGuard } from "./components/pane-resolve-guard";
@@ -85,6 +93,8 @@ export type { SurfaceChrome } from "./surface-chrome-context";
 export default {
   description: "Unified pane primitive: Pane.define and chrome components.",
   loadBearing: true,
-  contributions: [],
+  // The `title` item of every pane header — see `header-slot.ts` for why this is
+  // a live array rewritten by each declaration pass rather than a literal.
+  contributions: paneHeaderContributions,
   slots: PaneSlots,
 } satisfies PluginDefinition;

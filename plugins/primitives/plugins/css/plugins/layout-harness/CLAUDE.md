@@ -359,7 +359,7 @@ server-core tsconfig where `check`/`facet` live. The
 
 - Description: Live Layout Lab gallery: renders the layout-primitive fixture catalog across its width sweep, opened from the Debug sidebar.
 - Web:
-  - Slots: `layoutLabPane.Actions`
+  - Slots: `layoutLabPane.Actions` ← `primitives.pane`
   - Contributes:
     - `Pane.Register` "layout-lab"
     - `DebugApp.Sidebar` "Layout Lab" → `component`

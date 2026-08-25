@@ -14,8 +14,9 @@ never touches playback:
   mounted **once** inside `SonataProvider` (in `SonataLayout`) and therefore
   always mounted while the Sonata app is open. Owns the `AudioContext`, master
   gain, voice managers, the `registerClock` registration, and all scheduling.
-- **`VolumeControl`** (`SonataToolbar.End`, `components/volume-control.tsx`) —
-  the master-volume slider pinned into the Sonata top toolbar. Owns **no** audio.
+- **`VolumeControl`** (`sonataPlayerPane.Actions`, `components/volume-control.tsx`)
+  — the master-volume slider pinned into the Sonata player pane's header. Owns
+  **no** audio.
 
 They communicate through a **per-surface** `audio-store` (`audio-store.ts`, built
 on the `scoped-store` primitive): the control writes `volume`, the engine reads
@@ -59,17 +60,17 @@ mid-session updates the live-state map, loads the new timbre, and re-schedules.
 
 ## Plugin reference
 
-- Description: Sonata audio engine: schedules the Score's notes against the Web Audio clock on play, routing each note to its track's resolved instrument, with master volume in the top toolbar.
+- Description: Sonata audio engine: schedules the Score's notes against the Web Audio clock on play, routing each note to its track's resolved instrument, with master volume in the player pane's header.
 - Web:
   - Contributes:
     - `Sonata.SurfaceProvider` → `AudioProvider`
     - `Sonata.Effect` "audio-engine" → `AudioEngine`
-    - `SonataToolbar.End` "volume" → `VolumeControl`
+    - `sonataPlayerPane.Actions` "volume" → `VolumeControl`
   - Uses:
     - `apps/sonata/audio/instruments.InstrumentVoices`
     - `apps/sonata/audio/instruments.SonataAudio`
+    - `apps/sonata/library.sonataPlayerPane`
     - `apps/sonata/shell.Sonata`
-    - `apps/sonata/shell.SonataToolbar`
     - `apps/sonata/shell.useCursorApi`
     - `apps/sonata/shell.useSonata`
     - `apps/sonata/track-mixer.useMutedTrackIds`

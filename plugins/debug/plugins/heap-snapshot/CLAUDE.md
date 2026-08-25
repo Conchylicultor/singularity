@@ -6,7 +6,7 @@
 
 - Description: Heap inspector debug pane: a cheap bun:jsc object-type breakdown plus an on-demand full V8 .heapsnapshot dump to disk for offline Chrome DevTools / VS Code analysis. On-demand heap inspector: a cheap bun:jsc heapStats() object-type breakdown (GET) plus a heavy full V8 .heapsnapshot dump to disk for offline Chrome DevTools / VS Code analysis (POST). Surfaced as the Debug → Heap pane.
 - Web:
-  - Slots: `heapSnapshotPane.Actions`
+  - Slots: `heapSnapshotPane.Actions` ← `primitives.pane`
   - Contributes:
     - `Pane.Register` "debug-heap-snapshot"
     - `DebugApp.Sidebar` "Heap" → `component`

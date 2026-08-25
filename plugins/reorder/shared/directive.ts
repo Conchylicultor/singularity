@@ -66,20 +66,25 @@ export function reorderDirectiveDescriptor(
         ...REORDER_NODE_LEGEND,
         "At most one spacer per slot.",
       ],
-      // A slot with no contributions has no arrangement to make: `items: []` is
-      // an ordering directive that orders nothing, so seeding it would ask a
-      // human to rubber-stamp a no-op — and a hundred of those bury the slots
-      // where a real decision is pending. Nothing is lost by waiting: the
-      // descriptor stays registered either way (so an already-authored file is
-      // never pruned or ignored when a slot's contributions drop back to zero),
-      // and the first build after the slot gains a contribution seeds it, which
-      // is the first moment there is anything to arrange.
+      // A slot with FEWER THAN TWO contributions has no arrangement to make:
+      // one item can only be ordered one way, and zero items order nothing at
+      // all. Seeding either would ask a human to rubber-stamp a no-op — and a
+      // hundred of those bury the slots where a real decision is pending.
+      // That "hundred" is not hypothetical: every pane header carries the
+      // pane's own `title` item, so a `> 0` test asks for ~95 rubber stamps the
+      // moment a single-item header exists anywhere.
+      //
+      // Nothing is lost by waiting: the descriptor stays registered either way
+      // (so an already-authored file is never pruned or ignored when a slot's
+      // contributions drop back below two), and the first build after the slot
+      // gains a SECOND contribution seeds it, which is the first moment there
+      // is anything to arrange.
       //
       // Reads the ORIGIN's materialized catalog, not `items`' field default —
       // that default is always `[]`; the live catalog is injected at build time
       // (`reorderable-slots-gen.ts`).
       seedWhen: (defaults) =>
-        Array.isArray(defaults.items) && defaults.items.length > 0,
+        Array.isArray(defaults.items) && defaults.items.length > 1,
     },
     fields: {
       items: reorderTreeField({ label: "Items" }),

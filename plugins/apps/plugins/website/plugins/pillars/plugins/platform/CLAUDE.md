@@ -6,21 +6,19 @@
 
 - Description: Platform pillar page of the equin website: the /website/platform pane telling the developer-facing behind-the-scenes story (slots, boundaries, the plugins → apps → releases pyramid), its Platform nav link, and the WebsitePlatform.Section slot demo plugins contribute into.
 - Web:
-  - Slots:
-    - `WebsitePlatform.Section` ← `apps.website.demos.plugin-pyramid`, `apps.website.demos.theme-toy`, `apps.website.pillars.platform`
-    - `platformPane.Actions`
+  - Slots: `WebsitePlatform.Section` ← `apps.website.demos.plugin-pyramid`, `apps.website.demos.theme-toy`, `apps.website.pillars.platform`
   - Contributes:
     - `Pane.Register` "website-platform"
-    - `WebsiteToolbar.End` "platform" → `PlatformNavItem`
+    - `WebsiteHeader` "platform" → `PlatformNavItem`
     - `WebsitePlatform.Section` "Hero" → `PlatformHero`
     - `WebsitePlatform.Section` "Architecture" → `PlatformArchitecture`
     - `WebsitePlatform.Section` "Closing links" → `PlatformClosing`
   - Uses:
     - `apps/website/downloads.downloadsPane`
     - `apps/website/shell.landingPane`
+    - `apps/website/shell.WebsiteHeader`
     - `apps/website/shell.WebsiteNavLink`
     - `apps/website/shell.WebsitePage`
-    - `apps/website/shell.WebsiteToolbar`
     - `primitives/css/card.Card`
     - `primitives/css/grid.Grid`
     - `primitives/css/spacing.Inset`

@@ -25,7 +25,7 @@ Design: [`research/2026-08-03-apps-events-event-tracking-app.md`](../../../../..
 - Web:
   - Slots:
     - `Events.Sidebar` ← `apps.events.event-list`, `apps.events.sources`
-    - `events-root.actions`
+    - `events-root.actions` ← `primitives.pane`
   - Contributes:
     - `Apps.App` "Events" → `EventsLayout`
     - `Pane.Register` "events-root"

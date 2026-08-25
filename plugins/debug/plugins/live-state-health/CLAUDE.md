@@ -19,7 +19,7 @@ instrumentation of its own.
 
 - Description: Live health inspector for the client live-state pipeline (sockets, leader election, per-resource subscriptions), opened from the Debug sidebar.
 - Web:
-  - Slots: `liveStateHealthPane.Actions`
+  - Slots: `liveStateHealthPane.Actions` ← `primitives.pane`
   - Contributes:
     - `Pane.Register` "live-state-health"
     - `DebugApp.Sidebar` "Live State" → `component`

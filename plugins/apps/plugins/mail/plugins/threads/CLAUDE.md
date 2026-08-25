@@ -72,7 +72,7 @@ landing repoint is the route STRING `/mail/threads`.
 
 - Description: The Mail app's one mail surface (/mail/threads): a single DataView over mail_threads whose TABS are the mailboxes — each an authored view instance whose scope is an ordinary, user-editable filter travelling the standard server-delegated keyset query path. Threads DataView server: the keyset thread query (POST /api/mail/threads/query) over mail_threads — the active tab's whole FilterGroup (mailbox scope included) compiles through the standard compileWhere path — plus the scalar revision-tick live resource that keeps the loaded window fresh.
 - Web:
-  - Slots: `mailThreadsPane.Actions`
+  - Slots: `mailThreadsPane.Actions` ← `primitives.pane`
   - Contributes: `Pane.Register` "mail-threads"
   - Uses:
     - `apps/mail/reading-pane.threadPane`

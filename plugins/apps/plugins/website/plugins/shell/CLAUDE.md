@@ -4,16 +4,14 @@
 
 ## Plugin reference
 
-- Description: App shell for the Website (equin public site). Registers the /website app entry and the landing pane, owns the shared site toolbar (wordmark + nav zones) every site pane opts into, and defines the Website.Section landing slot.
+- Description: App shell for the Website (equin public site). Registers the /website app entry and the landing pane, owns the shared site header (wordmark + nav) every site pane wears, and defines the Website.Section landing slot.
 - Web:
   - Slots:
     - `Website.Section` ← `apps.website.demos.release-switcher`, `apps.website.landing.cta`, `apps.website.landing.hero`, `apps.website.landing.pillars`
-    - `WebsiteToolbar.Start` ← `apps.website.shell`
-    - `WebsiteToolbar.End` ← `apps.website.downloads`, `apps.website.pillars.agents`, `apps.website.pillars.apps`, `apps.website.pillars.platform`
-    - `landingPane.Actions`
+    - `WebsiteHeader` ← `apps.website.downloads`, `apps.website.pillars.agents`, `apps.website.pillars.apps`, `apps.website.pillars.platform`, `apps.website.shell`, `primitives.pane`
   - Contributes:
     - `Apps.App` "equin" → `WebsiteLayout`
-    - `WebsiteToolbar.Start` "wordmark" → `WebsiteWordmark`
+    - `WebsiteHeader` "wordmark" → `WebsiteWordmark`
     - `Pane.Register` "website-landing"
   - Uses:
     - `apps-core.Apps`
@@ -24,7 +22,7 @@
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.Button`
-    - `primitives/pane-toolbar.definePaneToolbar`
+    - `primitives/pane.definePaneHeaderSlot`
     - `primitives/pane.Pane`
     - `primitives/pane.PaneChrome`
     - `primitives/pane.useOpenPane`
@@ -32,9 +30,9 @@
   - Exports (values):
     - `landingPane`
     - `Website`
+    - `WebsiteHeader`
     - `WebsiteNavLink`
     - `WebsitePage`
-    - `WebsiteToolbar`
 - Core:
   - Uses: `primitives/pane.defineApp`
   - Exports (values): `websiteApp`

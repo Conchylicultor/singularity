@@ -4,9 +4,9 @@ import { MdPiano } from "react-icons/md";
 import { mdAppIcon } from "@plugins/apps-core/plugins/app-icon/web";
 import { sonataApp } from "../core";
 import { SonataLayout } from "./components/sonata-layout";
-import { Sonata, SonataToolbar } from "./slots";
+import { Sonata } from "./slots";
 
-export { Sonata, SonataToolbar, SonataSectionItem } from "./slots";
+export { Sonata, SonataSectionItem } from "./slots";
 export type { SonataSection } from "./slots";
 export {
   useSonata,
@@ -59,5 +59,5 @@ export default {
       component: SonataLayout,
     }),
   ],
-  slots: { ...Sonata, ...SonataToolbar },
+  slots: { ...Sonata },
 } satisfies PluginDefinition;

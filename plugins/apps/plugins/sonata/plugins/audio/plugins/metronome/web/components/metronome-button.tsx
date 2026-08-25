@@ -30,7 +30,7 @@ const SUBDIVISION_OPTIONS = [
 ] as const;
 
 /**
- * The metronome toolbar control (`SonataToolbar.End`): a single button that opens
+ * The metronome header control (`sonataPlayerPane.Actions`): a single button that opens
  * the metronome control panel. The button itself reflects the click-track state
  * (filled = on, like the Loop toggle) at a glance; opening it reveals a master
  * on/off switch at the top plus the count-in length, click volume, and downbeat-

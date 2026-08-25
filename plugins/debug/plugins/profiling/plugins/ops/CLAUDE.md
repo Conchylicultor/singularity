@@ -49,7 +49,7 @@ every worktree backend from writing it concurrently.
 
 - Description: Op contention profiling for the Gantt debug pane: the ops/op-detail endpoints and the Profiling section hosting the unified build/push/check Gantt. Op contention profiling data endpoint (build / push / check).
 - Web:
-  - Slots: `opDetailPane.Actions`
+  - Slots: `opDetailPane.Actions` ← `primitives.pane`
   - Contributes:
     - `Profiling.Section` → `OpSection`
     - `Pane.Register` "debug-profiling-op-detail"

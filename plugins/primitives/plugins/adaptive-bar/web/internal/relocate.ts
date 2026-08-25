@@ -125,6 +125,25 @@ export function relocateNode(
 }
 
 /**
+ * Is this container docked at its own anchor right now?
+ *
+ * **The one statement of "in the row"**, and it names the anchor rather than the
+ * bar root on purpose. The root was an assumption — that the anchor is a direct
+ * child of it — and the assumption is false for every host that renders its
+ * items through a slot: between the bar and a contribution sit `slot-render`'s
+ * box and reorder's two wrappers, all three `display: contents` outside edit
+ * mode. `display: contents` removes a box from LAYOUT but not from the DOM
+ * TREE, so the anchor is two or three levels down while its container is still,
+ * correctly, a flex item of the bar root.
+ *
+ * `nextSibling === anchor` already implies the two share a parent, so this is
+ * the whole invariant and there is nothing else to compare.
+ */
+export function isDockedInline(container: Element, anchor: Element): boolean {
+  return container.nextSibling === anchor;
+}
+
+/**
  * Place a still-in-the-row container immediately before its own anchor.
  *
  * The anchor is the zero-size marker React renders at the item's natural
@@ -134,16 +153,24 @@ export function relocateNode(
  * diff, and the guard below is the property that matters: **a node already in
  * the right place is never touched**, so a resize that moves one widget leaves
  * the other six — their focus, their transitions, their scroll offsets — alone.
+ *
+ * **The anchor's own parent decides where the container goes** — see
+ * {@link isDockedInline}. Docking into the bar root instead would throw the
+ * moment a host put anything at all between itself and its items, which is what
+ * `.Render` does for every one of them.
  */
-export function dockInline(
-  root: Element,
-  container: Element,
-  anchor: Element,
-): boolean {
-  if (container.parentNode === root && container.nextSibling === anchor) {
-    return false;
+export function dockInline(container: Element, anchor: Element): boolean {
+  if (isDockedInline(container, anchor)) return false;
+  const parent = anchor.parentElement;
+  if (parent === null) {
+    // Never reached from the bar, which finds its anchors by querying its own
+    // subtree — so an anchor with no parent means a caller invented one, and a
+    // silent skip would leave the occupant wherever it happened to be.
+    throw new Error(
+      "adaptive-bar: cannot dock an occupant against an anchor that has no parent",
+    );
   }
-  relocateNode(root, container, anchor);
+  relocateNode(parent, container, anchor);
   return true;
 }
 

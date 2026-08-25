@@ -2,14 +2,14 @@ import { Pane, PaneChrome } from "@plugins/primitives/plugins/pane/web";
 import { websiteApp } from "@plugins/apps/plugins/website/plugins/shell/core";
 import {
   WebsitePage,
-  WebsiteToolbar,
+  WebsiteHeader,
 } from "@plugins/apps/plugins/website/plugins/shell/web";
 import { WebsiteAgents } from "./slots";
 
 /**
  * The Agents pillar pane at `/website/agent-manager` — the story of the
- * builder: the agent manager that grows the workspace. Opts into the shared
- * site header (`WebsiteToolbar`) like every website pane, and renders every
+ * builder: the agent manager that grows the workspace. Wears the shared site
+ * header (`actions: WebsiteHeader`) like every website pane, and renders every
  * `WebsiteAgents.Section` contribution top-to-bottom inside `WebsitePage` so
  * the site footer renders exactly once.
  *
@@ -21,7 +21,7 @@ export const agentsPane = Pane.define({
   id: "website-agents",
   app: websiteApp,
   segment: "agent-manager",
-  chrome: { header: WebsiteToolbar },
+  actions: WebsiteHeader,
   component: AgentsBody,
 });
 

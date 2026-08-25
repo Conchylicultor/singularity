@@ -200,13 +200,15 @@ clicking the same entry in a sidebar.
 
 **Every pane wraps its body in `<PaneChrome pane={…}>`** — there is no opt-out:
 `PaneChrome` ALWAYS renders a header `Bar` plus exactly one body scroll
-(`PaneScroll`), so a pane can never strand its own scrolling. The standard
-header is: title, left Actions, right Actions, promote, × close. Promote and
-close only show when `depth > 0`.
+(`PaneScroll`), so a pane can never strand its own scrolling. The header is one
+overflow-collapsing bar rendering the pane's ONE header slot (`pane.Actions`),
+then promote and × close — which only show when `depth > 0`.
 
-A pane that needs a **rich custom header** (transport / view-switcher / volume)
-opts into `chrome.header` (see **Custom header** below) — the header content
-changes, but the bar height, the body wrapper, and the single scroll do not.
+There is no second kind of header. A pane that needs a **rich** one (transport /
+view-switcher / volume) is the ordinary case with more items in it: the title is
+a contribution of the same slot, so a rich header collapses into the `⋯` like
+any other, and what separates a leading group from a trailing one is a `spacer`
+node in the slot's reorder config rather than a field on the contribution.
 
 Title resolution: the `title` prop wins; otherwise PaneChrome falls back to the
 pane's `chrome.title` config (`string | (params) => string`). Use the prop when
@@ -275,12 +277,19 @@ goes in `<PaneChrome overlay={…}>`, which renders it as a sibling of the singl
 your own `relative` host instead: that host spans the header too, so a
 corner-pinned overlay lands on the header's own right-hand actions.
 
-### Actions
+### The header slot (`Actions`)
 
 Each pane auto-creates an `Actions` slot other plugins contribute to
-(`taskDetailPane.Actions({ id, component, position })`). `position` defaults to
-`"right"` (the growing part of the header, with the rest of the toolbar);
-`"left"` sits immediately after the title — for status chips or context badges.
+(`taskDetailPane.Actions({ id, component })`). It is the WHOLE header row, title
+included — one `defineRenderSlot<PaneHeaderItem>`, one reorder directive, one
+`⋯`.
+
+A `PaneHeaderItem` carries exactly one renderable form — a `component`, or an
+`onClick` with a `label`/`icon` — so an item that would render nothing is
+unconstructable. There is no `position`: order, hiding and grouping are the
+slot's reorder config, like every other render slot. Author a leading/trailing
+split with a `{"type":"spacer"}` node between the two groups; with no spacer the
+occupants pack against the trailing edge, which is what a pane header wants.
 
 **`id` is required and must be stable for the contribution's whole life** —
 short kebab-case naming the action (`"improve"`, `"view-mode"`). It keys the
@@ -293,18 +302,43 @@ button ref. (Base UI Popover triggers don't take `asChild` — use
 `<PopoverTrigger className={buttonVariants({variant:"ghost",size:"icon"})}>`
 directly when the trigger needs to be a popover.)
 
+#### The title is a contribution
+
+`pane` itself contributes one `title` item into every header
+(`primitives.pane:title`), so **nobody re-contributes a title** and authoring is
+unchanged: `chrome.title` or `<PaneChrome title={…}>`. The pane resolves it and
+publishes it on a context; the item reads it and renders `null` when there is
+none. The item is minted per declared header slot on each slot-declaration pass
+(`web/header-slot.ts`) — a slot is only NAMED by that pass, and `Pane.define`
+runs at each pane plugin's module scope, so there is no earlier moment at which
+the set of headers is knowable.
+
+It renders in the bar's **yielding cell** (`cell: "yield"`): excluded from the
+fit ledger, `min-w-0` so it ellipsizes instead of pushing the actions out of the
+row, and holding the row's leftover so the occupants stay packed right. `cell`
+is a public, generic field — at most one per header, and the bar throws on a
+second — so a plugin can put something else there; the title is not a special
+case.
+
+The tab/document title is a different thing and is untouched: `usePaneTitle` /
+`titleOwner` read `useTitle`/`chrome.title`, never the slot.
+
 #### When the header runs out of room
 
-The right-side actions are the `AdaptiveBar` occupants of the header row: each is
-asked for a smaller form of itself, and whatever still does not fit is **moved** —
-the same live element, never a second copy — into a panel behind a `⋯`.
-`PaneChrome`'s `actions` prop is one more occupant, id `pane-extra`.
+The header items are the `AdaptiveBar` occupants of the row: each is asked for a
+smaller form of itself, and whatever still does not fit is **moved** — the same
+live element, never a second copy — into a panel behind a `⋯`. `PaneChrome`'s
+`extra` prop is one more occupant, id `pane-extra` — named `extra` and not
+`actions` because it is one header control, not the hover-revealed trailing
+cluster `row-actions/no-raw-actions-slot` guards. The yielding cell (the
+title) is never measured, demoted or relocated.
 
-`PaneActionsSlot` wraps every contribution in an `AdaptiveBar.Item`
-unconditionally; the item is transparent with no bar above it, so `"left"` is
-unaffected. The bar's own limits apply to what you contribute — no
-`position: sticky` inside an action, and an action holding an `<iframe>` refuses
-to relocate. `chrome.header` (below) is a different header and collapses nothing.
+The bar's own limits apply to what you contribute — no `position: sticky` inside
+an item, and an item holding an `<iframe>` refuses to relocate.
+
+`<PaneChrome titleOnly>` renders the yielding cell and suppresses every ordinary
+occupant, for a host that paints its own actions inside its content area
+instead.
 
 ### Hiding the close / promote buttons
 
@@ -313,36 +347,38 @@ to relocate. `chrome.header` (below) is a different header and collapses nothing
 - `chrome: { promote: false }` — for compact side-panels with their own expand
   action (e.g. a button that opens the full detail pane as root).
 
-### Custom header (`chrome.header`)
+### A header shared by several panes (`Pane.define({ actions })`)
 
-A pane with a rich toolbar (a back button + title on the left, transport
-/ view-switcher / volume widgets on the right) opts into a custom header
-instead of the default `title + Actions`. Build the header with
-`definePaneToolbar` (from
-`@plugins/primitives/plugins/pane-toolbar/web`), which exposes two
-**reorderable** render-slot zones (`Start` / `End`), and wire it in via
-`chrome: { header }`:
+Several panes can wear ONE header — the website's five pages share one nav — by
+borrowing the slot instead of each minting its own:
 
 ```ts
-// once, at module scope (so the slots register at import):
-export const MyToolbar = definePaneToolbar("myapp.toolbar");
+// once, in the plugin that OWNS the header:
+export const WebsiteHeader = definePaneHeaderSlot();          // pane/web
+// …and declare it there, exactly once, under a key of its own:
+slots: { ...Website, header: WebsiteHeader }
 
-// other plugins contribute items to either zone:
-MyToolbar.Start({ id: "back", component: BackButton });
-MyToolbar.End({ id: "volume", component: VolumeControl });
+// other plugins contribute to it like any slot:
+WebsiteHeader({ id: "download", component: DownloadNavItem });
 
-export const myPane = Pane.define({ …, chrome: { header: MyToolbar } });
-
-// the body renders directly under <PaneChrome pane={myPane}> — NO header in it.
+// every borrowing pane names it; `pane.Actions` then IS that slot:
+export const downloadsPane = Pane.define({ …, actions: WebsiteHeader });
 ```
 
-`PaneChrome` renders the `Start`/`End` zones INSIDE its standard
-`<Bar tier="pane">` (same height as every other pane header), in place
-of the default `title` / Actions, then the promote/close buttons. There
-is **no overflow-collapse** for a custom header: rich End widgets
-(transport, volume slider, jog wheel) never fold into a "⋯" popover.
+One slot, one contribution list, one config directive
+(`config/apps/website/shell/header.jsonc`). NO borrowing pane is listed in a
+`slots:` record — not even the owner's own pane, whose `Actions` is this same
+object: the shared slot is declared once, under the `header` key, and reaching
+it a second time through a pane is what the declaration pass rejects ("one slot
+is declared under two keys").
+
+`definePaneHeaderSlot()` owns the `docLabel` and the optional `controlSize`
+override for the header (the pane `Bar` already supplies the `sm` baseline).
+`Pane.define` mints through the same factory, so a borrowed header and an
+auto-minted one are the same kind of slot.
+
 Hand-rolling a `border-b` header bar inside a pane body is banned by the
-`no-adhoc-pane-toolbar` lint rule — route it through `chrome.header`.
+`no-adhoc-pane-toolbar` lint rule — contribute to the pane's header instead.
 
 ## Router
 
@@ -544,12 +580,111 @@ See "Open questions" in the design doc.
 - Load-bearing: yes
 - Web:
   - Slots: `Pane.Register` ← `active-data.plugin-link`, `apps.agent-manager.welcome`, `apps.deploy.deployments`, `apps.deploy.servers`, `apps.events.event-list`, `apps.events.shell`, `apps.events.sources`, `apps.events.sources.source-detail.runs`, `apps.mail.reading-pane`, `apps.mail.search`, `apps.mail.shell`, `apps.mail.threads`, `apps.pages.page-tree`, `apps.pages.welcome`, `apps.prototypes.gallery`, `apps.settings.accounts`, `apps.settings.config`, `apps.sonata.library`, `apps.story.shell`, `apps.studio.compositions`, `apps.studio.compositions.release`, `apps.studio.contributions`, `apps.studio.contributions.tables`, `apps.studio.explorer`, `apps.studio.graph`, `apps.website.downloads`, `apps.website.pillars.agents`, `apps.website.pillars.apps`, `apps.website.pillars.platform`, `apps.website.shell`, `apps.workflows.definitions`, `apps.workflows.executions`, `auth.apple-signing.setup-wizard`, `auth.google-maps.setup-wizard`, `auth.google.setup-wizard`, `backup`, `build`, `code-explorer`, `code-explorer.commit-detail`, `config_v2.settings`, `conversations.agents`, `conversations.all-conversations`, `conversations.conversation-view`, `conversations.conversation-view.code.docs-button`, `conversations.conversation-view.code.file-pane`, `conversations.conversation-view.commits-graph`, `conversations.conversation-view.jsonl-viewer.tool-call.agent`, `conversations.conversation-view.jsonl-viewer.tool-call.workflow`, `conversations.conversation-view.push-profiling`, `conversations.conversation-view.terminal-pane`, `conversations.recover`, `conversations.summary`, `debug.boot-profile`, `debug.broadcasts`, `debug.claude-cli-calls`, `debug.config-orphans`, `debug.health-monitor`, `debug.heap-snapshot`, `debug.live-state-churn.emit`, `debug.live-state-health`, `debug.logs`, `debug.memory`, `debug.profiling`, `debug.profiling.build`, `debug.profiling.ops`, `debug.queue`, `debug.read-set`, `debug.render-profiler`, `debug.reports`, `debug.trace.pane`, `debug.worktree-cleanup`, `debug.zero-test`, `infra.events-test`, `plugin-meta.plugin-view`, `primitives.css.layout-harness`, `review`, `screenshot`, `stats`, `tasks.attempt-view`, `tasks.task-detail`, `ui.theme-engine.theme-customizer`
+  - Contributes:
+    - `plugin-conv-side.actions` "title" → `PaneTitleItem`
+    - `welcomePane.Actions` "title" → `PaneTitleItem`
+    - `deploymentDetailPane.Actions` "title" → `PaneTitleItem`
+    - `serversRootPane.Actions` "title" → `PaneTitleItem`
+    - `serverDetailPane.Actions` "title" → `PaneTitleItem`
+    - `eventListPane.Actions` "title" → `PaneTitleItem`
+    - `events-root.actions` "title" → `PaneTitleItem`
+    - `eventSourcesPane.Actions` "title" → `PaneTitleItem`
+    - `eventSourceDetailPane.Actions` "title" → `PaneTitleItem`
+    - `eventSourceRunPane.Actions` "title" → `PaneTitleItem`
+    - `threadPane.Actions` "title" → `PaneTitleItem`
+    - `mail-search.actions` "title" → `PaneTitleItem`
+    - `mail-message.actions` "title" → `PaneTitleItem`
+    - `mail-root.actions` "title" → `PaneTitleItem`
+    - `mailThreadsPane.Actions` "title" → `PaneTitleItem`
+    - `pageDetailPane.Actions` "title" → `PaneTitleItem`
+    - `pagesTreePane.Actions` "title" → `PaneTitleItem`
+    - `pages-root.actions` "title" → `PaneTitleItem`
+    - `prototypesGalleryPane.Actions` "title" → `PaneTitleItem`
+    - `prototypeDetailPane.Actions` "title" → `PaneTitleItem`
+    - `settings-config-index.actions` "title" → `PaneTitleItem`
+    - `sonataLibraryPane.Actions` "title" → `PaneTitleItem`
+    - `sonataPlayerPane.Actions` "title" → `PaneTitleItem`
+    - `story-gallery.actions` "title" → `PaneTitleItem`
+    - `story-detail.actions` "title" → `PaneTitleItem`
+    - `compositionsPane.Actions` "title" → `PaneTitleItem`
+    - `compositionDetailPane.Actions` "title" → `PaneTitleItem`
+    - `comparePane.Actions` "title" → `PaneTitleItem`
+    - `release-detail.actions` "title" → `PaneTitleItem`
+    - `contributions.actions` "title" → `PaneTitleItem`
+    - `tableDetailPane.Actions` "title" → `PaneTitleItem`
+    - `explorerPane.Actions` "title" → `PaneTitleItem`
+    - `graphCanvasPane.Actions` "title" → `PaneTitleItem`
+    - `WebsiteHeader` "title" → `PaneTitleItem`
+    - `definitionsRootPane.Actions` "title" → `PaneTitleItem`
+    - `definitionDetailPane.Actions` "title" → `PaneTitleItem`
+    - `workflows-execution-detail.actions` "title" → `PaneTitleItem`
+    - `accountsPane.Actions` "title" → `PaneTitleItem`
+    - `appleSetupPane.Actions` "title" → `PaneTitleItem`
+    - `googleMapsSetupPane.Actions` "title" → `PaneTitleItem`
+    - `googleSetupPane.Actions` "title" → `PaneTitleItem`
+    - `backupPane.Actions` "title" → `PaneTitleItem`
+    - `buildPane.Actions` "title" → `PaneTitleItem`
+    - `buildDetailPane.Actions` "title" → `PaneTitleItem`
+    - `global-file-tree.actions` "title" → `PaneTitleItem`
+    - `conv-file-tree.actions` "title" → `PaneTitleItem`
+    - `commitDetailPane.Actions` "title" → `PaneTitleItem`
+    - `configNavPane.Actions` "title" → `PaneTitleItem`
+    - `configDetailPane.Actions` "title" → `PaneTitleItem`
+    - `agentsRootPane.Actions` "title" → `PaneTitleItem`
+    - `agentDetailPane.Actions` "title" → `PaneTitleItem`
+    - `systemAgentDetailPane.Actions` "title" → `PaneTitleItem`
+    - `agentSidePane.Actions` "title" → `PaneTitleItem`
+    - `allConversationsPane.Actions` "title" → `PaneTitleItem`
+    - `conversationPane.Actions` "title" → `PaneTitleItem`
+    - `conv-docs.actions` "title" → `PaneTitleItem`
+    - `filePeekPane.Actions` "title" → `PaneTitleItem`
+    - `conv-commits-graph.actions` "title" → `PaneTitleItem`
+    - `agent-report.actions` "title" → `PaneTitleItem`
+    - `workflow-node.actions` "title" → `PaneTitleItem`
+    - `conv-push-profiling.actions` "title" → `PaneTitleItem`
+    - `conv-terminal.actions` "title" → `PaneTitleItem`
+    - `recoveryPane.Actions` "title" → `PaneTitleItem`
+    - `conv-summary.actions` "title" → `PaneTitleItem`
+    - `debug-boot-profile.actions` "title" → `PaneTitleItem`
+    - `debug-boot-profile-detail.actions` "title" → `PaneTitleItem`
+    - `debug-boot-profiles-list.actions` "title" → `PaneTitleItem`
+    - `broadcastsPane.Actions` "title" → `PaneTitleItem`
+    - `claudeCliCallsPane.Actions` "title" → `PaneTitleItem`
+    - `configOrphansPane.Actions` "title" → `PaneTitleItem`
+    - `healthMonitorPane.Actions` "title" → `PaneTitleItem`
+    - `heapSnapshotPane.Actions` "title" → `PaneTitleItem`
+    - `liveStateEmitPane.Actions` "title" → `PaneTitleItem`
+    - `liveStateHealthPane.Actions` "title" → `PaneTitleItem`
+    - `logsPane.Actions` "title" → `PaneTitleItem`
+    - `logChannelPane.Actions` "title" → `PaneTitleItem`
+    - `memoryPane.Actions` "title" → `PaneTitleItem`
+    - `profilingPane.Actions` "title" → `PaneTitleItem`
+    - `buildProfileDetailPane.Actions` "title" → `PaneTitleItem`
+    - `opDetailPane.Actions` "title" → `PaneTitleItem`
+    - `queuePane.Actions` "title" → `PaneTitleItem`
+    - `readSetPane.Actions` "title" → `PaneTitleItem`
+    - `renderProfilerPane.Actions` "title" → `PaneTitleItem`
+    - `reportsPane.Actions` "title" → `PaneTitleItem`
+    - `reportDetailPane.Actions` "title" → `PaneTitleItem`
+    - `slowEventsPane.Actions` "title" → `PaneTitleItem`
+    - `traceDetailPane.Actions` "title" → `PaneTitleItem`
+    - `worktreeCleanupPane.Actions` "title" → `PaneTitleItem`
+    - `zeroTestPane.Actions` "title" → `PaneTitleItem`
+    - `eventsTestPane.Actions` "title" → `PaneTitleItem`
+    - `pluginViewPane.Actions` "title" → `PaneTitleItem`
+    - `layoutLabPane.Actions` "title" → `PaneTitleItem`
+    - `convReviewPane.Actions` "title" → `PaneTitleItem`
+    - `screenshotPane.Actions` "title" → `PaneTitleItem`
+    - `statsPane.Actions` "title" → `PaneTitleItem`
+    - `attemptPane.Actions` "title" → `PaneTitleItem`
+    - `tasksRootPane.Actions` "title" → `PaneTitleItem`
+    - `taskDetailPane.Actions` "title" → `PaneTitleItem`
+    - `themeCustomizerPane.Actions` "title" → `PaneTitleItem`
   - Uses:
     - `primitives/adaptive-bar.AdaptiveBar`
     - `primitives/bar.Bar`
     - `primitives/css/center.Center`
     - `primitives/css/column.Column`
-    - `primitives/css/fill.Fill`
     - `primitives/css/placeholder.Placeholder`
     - `primitives/css/scroll.Scroll`
     - `primitives/css/scroll.ScrollProps`
@@ -557,9 +692,7 @@ See "Open questions" in the design doc.
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.Button`
     - `primitives/css/ui-kit.cn`
-    - `primitives/css/ui-kit.ControlSize`
     - `primitives/css/ui-kit.SingleLineProvider`
-    - `primitives/css/yield.yieldClass`
     - `primitives/icon-button.IconButton`
     - `primitives/install-sink.defineInstallSink`
     - `primitives/latest-ref.useLatestRef`
@@ -567,7 +700,6 @@ See "Open questions" in the design doc.
     - `primitives/loading.Loading`
     - `primitives/select-scope.ContentScope`
     - `primitives/slot-render.defineRenderSlot`
-    - `primitives/slot-render.renderIsolated`
     - `primitives/slot-render.RenderSlot`
     - `primitives/surface-id.SurfaceIdContext`
     - `primitives/tooltip.WithTooltip`
@@ -580,9 +712,12 @@ See "Open questions" in the design doc.
     - `LocationChange`
     - `MatchEntry`
     - `OpenPaneFn`
-    - `PaneActionContribution`
     - `PaneChromeConfig`
-    - `PaneHeaderZones`
+    - `PaneHeaderAction`
+    - `PaneHeaderComponent`
+    - `PaneHeaderItem`
+    - `PaneHeaderSlot`
+    - `PaneHeaderSlotOptions`
     - `PaneHistoryState`
     - `PaneInternal`
     - `PaneMatch`
@@ -594,7 +729,6 @@ See "Open questions" in the design doc.
     - `PaneSlot`
     - `PaneStore`
     - `PaneToggleOpts`
-    - `PaneToolbarItem`
     - `ParsedRoute`
     - `PromoteAction`
     - `ResolveHook`
@@ -610,11 +744,12 @@ See "Open questions" in the design doc.
     - `currentRoutePath`
     - `defaultHistoryAdapter`
     - `defaultStore`
+    - `definePaneHeaderSlot`
     - `openPane`
     - `Pane`
-    - `PaneActionsSlot`
     - `PaneBasePathContext`
     - `PaneChrome`
+    - `PaneHeaderCell`
     - `PaneIconAction`
     - `PaneInstanceContext`
     - `PaneLayoutContext`
@@ -636,7 +771,6 @@ See "Open questions" in the design doc.
     - `setLiveStore`
     - `stripBasePath`
     - `SurfaceChromeContext`
-    - `ToolbarItem`
     - `type`
     - `useCurrentPane`
     - `useIndexMatch`
@@ -792,7 +926,6 @@ See "Open questions" in the design doc.
     - `primitives/app-shell`
     - `primitives/css/layout-harness`
     - `primitives/launch`
-    - `primitives/pane-toolbar`
     - `reports`
     - `review`
     - `screenshot`

@@ -6,7 +6,7 @@
 
 - Description: Landing pane (agent-manager index) shown at `/agents`.
 - Web:
-  - Slots: `welcomePane.Actions`
+  - Slots: `welcomePane.Actions` ← `primitives.pane`
   - Contributes: `Pane.Register` "welcome"
   - Uses:
     - `conversations.useConversations`

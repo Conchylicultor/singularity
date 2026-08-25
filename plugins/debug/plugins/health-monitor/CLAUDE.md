@@ -102,7 +102,7 @@ measured overhead on a real worktree workload is still an open task.
 
 - Description: Health monitor debug pane: per-backend event-loop lag, phys_footprint/heap, and GC pressure over time, plus host load/memory/swap. Continuous per-backend health sampler: event-loop lag, GC/heap pressure, and phys_footprint appended to per-worktree JSONL (read from disk even when a backend is wedged), plus main-only host metrics. Surfaced as the Debug → Health pane.
 - Web:
-  - Slots: `healthMonitorPane.Actions`
+  - Slots: `healthMonitorPane.Actions` ← `primitives.pane`
   - Contributes:
     - `Pane.Register` "debug-health-monitor"
     - `DebugApp.Sidebar` "Health" → `component`

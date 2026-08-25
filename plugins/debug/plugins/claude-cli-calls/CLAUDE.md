@@ -6,7 +6,7 @@
 
 - Description: Debug pane listing every single-shot `claude --print` call (Haiku/Sonnet/Opus) with prompt, output, source, and duration.
 - Web:
-  - Slots: `claudeCliCallsPane.Actions`
+  - Slots: `claudeCliCallsPane.Actions` ← `primitives.pane`
   - Contributes:
     - `Pane.Register` "claude-cli-calls"
     - `DebugApp.Sidebar` "Claude CLI Calls" → `component`

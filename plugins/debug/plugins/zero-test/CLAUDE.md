@@ -12,7 +12,7 @@
 
 - Description: Temporary verification harness: a Debug → Zero Test pane that renders the pilot tasks slice live through the Zero client adapter. Deleted once a real migration begins.
 - Web:
-  - Slots: `zeroTestPane.Actions`
+  - Slots: `zeroTestPane.Actions` ← `primitives.pane`
   - Contributes:
     - `Pane.Register` "zero-test"
     - `DebugApp.Sidebar` "Zero Test" → `component`

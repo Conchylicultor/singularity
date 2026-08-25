@@ -64,8 +64,7 @@ export interface SlotHandle {
 /**
  * What a plugin may put under a key in its `slots` record: a slot itself, or an
  * object whose own enumerable values include slots — a slot group
- * (`export const Studio = {…}`), a `definePaneToolbar()` result, a pane (whose
- * `Actions` slot is an own value).
+ * (`export const Studio = {…}`), a pane (whose `Actions` slot is an own value).
  *
  * Normalised exactly ONE shallow level. That shortcut is safe precisely because
  * anything nested deeper is not silently lost: it stays in `created \ declared`

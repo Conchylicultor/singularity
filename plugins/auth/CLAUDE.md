@@ -84,7 +84,7 @@ See the Phase 3 plan in [research/2026-04-28-global-phase-3-auth-to-central.md](
   - Slots:
     - `Auth.Provider` ← `auth.apple-signing.setup-wizard`, `auth.google`, `auth.google-maps.setup-wizard`, `auth.notion`
     - `Auth.ScopeRequirement` ← `backup.targets.google-drive`, `integrations.gmail`
-    - `accountsPane.Actions`
+    - `accountsPane.Actions` ← `primitives.pane`
   - Uses:
     - `config_v2/settings.configNavPane`
     - `infra/endpoints.EndpointError`

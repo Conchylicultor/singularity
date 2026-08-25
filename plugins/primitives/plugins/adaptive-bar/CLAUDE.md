@@ -27,10 +27,104 @@ way to answer "where in it" from outside, and reaching in with a raw `justify-*`
 would fight the mechanics the bar owns. A trailing action cluster (a pane header)
 wants `"end"`.
 
+`spill` stops the bar clipping (`overflow-visible`), for a row holding something
+that legitimately paints outside the strip — a pane header whose title is a
+`CollapsibleWrap` expanding downward over the content below. The fit is
+untouched: the clip was never the mechanism, only the backstop for a row with no
+room left, and an over-full row already reports its own fault. A prop rather than
+a caller `className` for the same reason as `align` — the overflow is one of the
+mechanics the bar owns.
+
 `<AdaptiveBar.Collapsed label>` is the same machinery with the width taken out:
 every occupant relocates, unconditionally, for a slot whose layout config already
 says "these live behind a `⋯`". `overflow` is `"panel"` (default) | `"scroll"`
 (nothing leaves; the row scrolls) | `"clip"`.
+
+A slot rendered inside a bar composes through `.Render`, wrapped in whatever the
+host likes: the bar declares `<SlotItemLayout orientation="host-owned">` around
+its children so `slot-render` draws no cell of its own (the bar's container IS
+each item's box), and it docks against the anchor's parent so the wrapper chain
+between them is invisible.
+
+## `<AdaptiveBar.Yield>` — the row's give
+
+At most **one** child per bar that is excluded from the fit ledger: never
+measured, never demoted, never relocated, and `min-w-0`
+([`yieldClass`](../css/plugins/yield/CLAUDE.md)) instead of rigid. It absorbs
+whatever the occupants leave and its inner `<Text>` ellipsizes, which is what a
+pane title wants — a rigid title pushes the actions out of the row instead.
+
+It is invisible to the math by construction, not by a flag: it never registers,
+and the bar reads registered containers' rects.
+
+`grow` makes it a `Fill` — it gives AND takes the row's leftover — which is what
+a LEADING yielding child needs in an `align="end"` row: with no growing cell the
+free space collects in front of everything, so a title would be packed against
+the actions on the far edge instead of sitting at the row's start. Growing puts
+the slack between the two, and a cell holding no content still holds the slack,
+so a title-less header keeps its actions exactly where a titled one does. The
+fit is untouched either way — `flex: 1 1 0%` contributes no width of its own,
+and `min-w-0` surrenders the grow first.
+
+Two of them would split the leftover between themselves and both ellipsize,
+decided by their content rather than by the author — so a second one **throws**.
+The reorder `spacer` node is the same family with the other half of `Fill`
+([`grow`](../css/plugins/grow/CLAUDE.md)): it takes slack instead of giving it,
+and needs nothing from this primitive.
+
+### It gives down to a floor — **8em of its own font size**
+
+A cell that can always give is a cell that pays for everyone. The occupants are
+rigid, so flex takes the whole deficit out of the one child that can shrink;
+while it can still give, the row does not overflow, `assign` sees a total that
+fits, and **nothing is ever demoted or relocated**. That is not a corner case, it
+is what a busy header does: the Sonata player's title rendered as "Une" at
+1400px and was gone entirely at 900px while all ten of its widgets sat inline.
+
+So the cell **reserves a floor out of the fit's budget** — the search is handed
+`row content box − insetPx − yieldFloor` — and pressure past that floor is
+therefore the row overflowing, paid for the ordinary way, by an occupant
+relocating into the `⋯`. Above the floor nothing changes: the cell still absorbs
+every pixel the occupants leave, so a roomy header is laid out exactly as it was
+before the floor existed.
+
+The floor is `8em` **of the cell's own computed font size**, not a pixel
+constant, because what it protects is legibility — a count of characters — and
+characters scale with the typography and density presets, which change at
+runtime. A px constant would mean sixteen characters under one preset and ten
+under another: the `MORE_BTN_W = 32` mistake in a different costume, and the same
+reason `readRowMetrics` reads the row's gap off the rendered element. `ch` is the
+more literal unit for "characters", but reading one costs an inserted element and
+a reflow per pass, while `em` is in the computed style already and differs by a
+constant factor this number is chosen in anyway. At the pane header's 14px, 8em
+is ~112px — roughly 16 characters of a proportional UI sans, which is where a
+truncated title still tells two panes apart. It is one number in the primitive
+and not a prop: what makes a title legible is a property of text, not of the
+surface hosting it.
+
+Two edges, both pinned in `web/__tests__/row-inset.test.tsx`:
+
+- **An empty cell reserves nothing.** A title-less header must land its actions
+  exactly where it always did, so the floor is held back only while the cell
+  renders something — judged by the same rule an occupant's container is judged
+  by (`childElementCount === 0`), plus text. A title that arrives late says so
+  through its own `MutationObserver`, for the reason an occupant has one: the
+  row's width does not move when a title loads.
+- **A row narrower than the floor** clamps the budget at 0 rather than going
+  negative. A negative budget is not a narrower row, and `available <= 0` is the
+  branch for "this is not a width" — which a merely-cramped row must never be
+  sent down, since it latches. At 0 the fit seats nobody: every evictable
+  occupant relocates, the `⋯` stays, and the cell keeps whatever the trigger
+  leaves, below its floor, because there is nothing left to take it from.
+  Narrowing further changes nothing, so there is nothing to oscillate.
+
+The budget and the row's own width are kept as two numbers (`budget` and
+`available` in `reconcile`) and must stay that way: the host-facing guards
+(`no-slack`, the zero-width recovery, the grow-cell premise) ask whether the HOST
+gave this bar a width, and they must not see a width the bar subtracted from
+itself. Everything the search touches — the premise round, H2's barred rungs, the
+best-so-far, the floor and surrender watermarks — is in the budget's currency, so
+those comparisons stay in one currency across passes.
 
 ## The one rule for consumers
 
@@ -54,6 +148,14 @@ says "these live behind a `⋯`". `overflow` is `"panel"` (default) | `"scroll"`
 > how many boxes relayed the ask: `0` says nothing above the bar can give it
 > room, `n` says everything visible relayed and the offender is a `<div>` to
 > recompose onto `Fill`.
+
+The last clause is the one that used to be only prose, and it is checked now:
+a bar reads the registry of the bar above it, so a **measuring** bar mounted
+inside another bar's occupant files `nested-bar` and stops deciding. An
+`<AdaptiveBar.Collapsed>` nested in a bar is legitimate and never fires it — it
+is one `shrink-0` `⋯` that measures nothing and asks for no slack, which is how
+`reorder`'s `overflow` node type renders an authored bucket inside a pane
+header.
 
 This is a contract, not a styling preference. The bar declares itself
 `min-w-0 flex-1`, so `barRoot.getBoundingClientRect().width` **is** the width it
@@ -85,7 +187,7 @@ So the throw exists under vitest and nowhere else — in the deployed app, in th
 Layout Lab and in the geometry gate a fault is silent: `reportFault` plus
 whichever layout the remedy commits.
 
-The five faults:
+The six faults:
 
 - **no-slack** — it hides everything the row is holding, re-reads the row, and
   puts it back. A bar that was *given* its width measures the same either way;
@@ -160,6 +262,27 @@ The five faults:
   holds — and bounded by `MAX_SLACK_PROBES`, because the probe is a forced
   reflow and a narrowing drag produces one every frame. A report can therefore
   arrive long after mount and name a host that broke later.
+- **nested-bar** — a MEASURING bar was written inside another bar's occupant.
+  Read from the tree rather than from a width: the inner bar sees the outer
+  bar's registry through `BarRegistryContext`, at mount, before anything is
+  measured. Two measuring bars in one row are two claimants on the same slack —
+  each is `min-w-0 flex-1` and each asks the chain above it to grow — so the
+  inner one takes all of it and the OUTER one is left measuring its own content.
+  That is why the fault exists as its own kind: what the outer bar files is
+  `no-slack`, a true sentence about a host that is fine, and the row's yielding
+  cell (a pane title) crushes to its first word while the inner bar sits at full
+  width. The remedy is `no-slack`'s — the ceiling, latched — because a bar
+  inside another bar's occupant is inside a `shrink-0` container, so every width
+  it reads is its own content's.
+
+  `AdaptiveBar.Collapsed` is excluded, and the exclusion is not a carve-out: it
+  measures nothing and takes no slack, so it is not a claimant. Both directions
+  are pinned in `web/__tests__/nested-bar.test.tsx`. The bar also declines to
+  measure at all while nested (`reconcile` returns beside its `degraded` check),
+  because a state update made in an earlier layout effect of the same commit is
+  invisible to that pass — without it the inner bar spends one pass filing
+  `no-slack` about the container it is in, one commit before the fault that
+  names what is really wrong.
 - **row-overflow** — the fit says everything fits and the rendered row still
   overflows the box the bar was given. Measured as the union of the occupants'
   own boxes against the bar's own content box (`measureRowOverflow` +
@@ -357,6 +480,24 @@ width, and (the half that is easy to miss) no gap. The same trick carries
 absence: an occupant that rendered nothing is `hidden`, so it costs no gap
 either, and it is never eligible for the panel.
 
+**The anchor's own parent is what decides placement** — not the bar root. A
+container is docked immediately before its anchor, *wherever the anchor sits*,
+and "still in the row" is asked as "is this container immediately before its own
+anchor" (`isDockedInline`) rather than "is it a child of the root". The root was
+an assumption, and it is false for every host that renders items through a slot:
+between the bar and a contribution rendered by `.Render` sit `slot-render`'s box
+and reorder's `SortableItem` + content wrapper, all three `display: contents`
+outside edit mode. `display: contents` removes a box from LAYOUT but not from the
+DOM TREE, so the container is still a flex item of the row — gap and measurement
+unchanged — while the anchor is two or three levels down.
+
+That is also why **rigidity is declared by each rigid thing rather than by the
+row**. `[&>*]:shrink-0` on the root would stop reaching the containers through
+that chain, and a squeezable occupant is the proven blind-the-guard failure (see
+*An occupant's width is its own* below). So each minted container carries
+`rigidClass()` itself, and so does the `⋯` trigger. The reorder `spacer` needs
+nothing: `flex: 1 1 0%` with no content has no width for a shrink to take.
+
 `hidden` and the blank-rung ledger are two different facts and neither is
 derivable from the other, so do not try to collapse them: **`hidden` is a layout
 fact** — does this generate a box right now, which is what buys the no-gap
@@ -482,8 +623,8 @@ No DOM, no React, so it is exercisable without a layout engine.
 ### The six rules worth knowing before you touch this
 
 **An occupant's width is its own** — a property of the item and its rung, never
-of how many neighbours it has. That is what `exact` claims, and it is a fact
-about the row, discharged by **`BAR_ROOT`'s `[&>*]:shrink-0`**.
+of how many neighbours it has. That is what `exact` claims, and it is discharged
+by **`rigidClass()` on every minted container** (`bar-item.tsx`).
 
 A pass measures the placement React has ALREADY committed, so an over-full row
 is the normal mid-search state. Let the engine take the deficit out of the
@@ -502,10 +643,13 @@ labels) happen to be unsqueezable, and a widget whose content can reflow
 narrower — a wrapping sentence, a percentage-sized image — is not. The
 declaration is what makes it not depend on that accident.
 
-On the ROW, not on each occupant: the `⋯` trigger is a flex item of the same row
-whose width `measureTrigger` **caches**, so one squeezed reading under-reserves
-it forever; and an occupant's container also lives in the panel's column, where
-the same declaration would be about height.
+On each occupant, not on the row: a `[&>*]` selector reaches direct children
+only, and a container is docked at its anchor — through a slot's wrapper chain
+that is not a child of the root. The `⋯` trigger declares its own for the same
+reason it always needed one (`measureTrigger` **caches** its width, so a single
+squeezed reading under-reserves it forever). The container carries the
+declaration into the panel's column too, where `flex-shrink` is about height —
+harmless there, since the panel is content-height and has no deficit to take.
 
 Proven under a real engine by `adaptive-bar/squeezable-occupants` in
 `fixtures/`, whose occupants opt back into wrapping precisely so they CAN be
@@ -675,17 +819,21 @@ rendered.
   - Uses:
     - `primitives/action-presentation.ActionFormProvider`
     - `primitives/action-presentation.ItemFormChannel`
+    - `primitives/css/fill.fillClasses`
     - `primitives/css/grow-relay.useRequestGrow`
+    - `primitives/css/rigid.rigidClass`
     - `primitives/css/spacing.Stack`
     - `primitives/css/ui-kit.cn`
     - `primitives/css/ui-kit.OverlayPanel`
     - `primitives/css/ui-kit.SingleLineProvider`
     - `primitives/css/ui-kit.usePortalForwardedAttrs`
     - `primitives/css/viewport-overlay.ViewportOverlay`
+    - `primitives/css/yield.yieldClass`
     - `primitives/edit-mode-signal.useEditMode`
     - `primitives/element-size.useResizeObserver`
     - `primitives/icon-button.IconButton`
     - `primitives/popup-open.PopupOpenScope`
+    - `primitives/slot-render.SlotItemLayout`
     - `primitives/ui-context.collectLineage`
   - Exports (types):
     - `AdaptiveBarAlign`
@@ -695,6 +843,7 @@ rendered.
     - `AdaptiveBarItemProps`
     - `AdaptiveBarOverflow`
     - `AdaptiveBarProps`
+    - `AdaptiveBarYieldProps`
     - `IsRendered`
     - `MeasureWidth`
   - Exports (values):
@@ -703,10 +852,10 @@ rendered.
     - `AdaptiveBarItem`
     - `AdaptiveBarMeasure`
     - `adaptiveBarReportSink`
+    - `AdaptiveBarYield`
 - Cross-plugin:
   - Imported by:
     - `apps-core/tab-bar`
-    - `apps/sonata/library`
     - `conversations/conversation-view/prompt-templates`
     - `primitives/pane`
     - `reorder/node-types/overflow`

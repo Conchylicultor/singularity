@@ -1,0 +1,38 @@
+// @hash be126a7f61c3
+// The Sonata player's header, read left to right. It is one row now — the
+// leading group, a spacer, then the trailing cluster — so what used to be two
+// zones is an arrangement in this file.
+//
+// Leading: ← Library (the way out), then the song title, which is the pane's own
+// title item and the row's give — it holds the slack and ellipsizes rather than
+// pushing the controls out.
+//
+// Trailing, and each entry is named for its role: the display picker first
+// (WHICH lens you are looking at — a choice about the content, so it sits
+// nearest it), then volume, spread (zoom), loop, metronome, the pedal indicator
+// (a passive status chip that glows while the sustain pedal is engaged), the
+// transport, and transpose. Transport + transpose are the performance controls
+// and stay together beside the speed wheel.
+//
+// Node forms:
+// Item: "<key>" (terse; <key> is "<pluginId>:<id>")
+// Hide: { "item": "<key>", "hidden": true }
+// Spacer (gap): { "type": "spacer", "id": "<unique-id>" }
+// Group: { "type": "header", "label": "<title>", "collapsed": false, "items": [ "<key>", … ] }
+// Overflow (⋯ menu): { "type": "overflow", "id": "<unique-id>", "items": [ "<key>", … ] }
+// At most one spacer per slot.
+{
+  "items": [
+    "apps.sonata.library:back",
+    "primitives.pane:title",
+    { "type": "spacer", "id": "spacer-1" },
+    "apps.sonata.library:display-picker",
+    "apps.sonata.audio.engine:volume",
+    "apps.sonata.piano-roll:spread",
+    "apps.sonata.progress.loop:loop-toggle",
+    "apps.sonata.audio.metronome:metronome",
+    "apps.sonata.pedal.indicator:pedal-indicator",
+    "apps.sonata.transport-bar:playback",
+    "apps.sonata.transpose:transpose"
+  ]
+}

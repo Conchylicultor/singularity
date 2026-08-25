@@ -1,14 +1,18 @@
-// @hash bc402e1fd087
-// A horizontal pane action bar, read left to right. `view-mode` is contributed
-// with position: "left", so it sits just after the title regardless of its place
-// here; `present` and `improve` share the right cluster, and their order here is
-// the real decision.
+// @hash 1e879662063a
+// A horizontal pane header, read left to right. The pane's own title comes
+// first, then `view-mode` — Focus or Compare is a choice about the prototype
+// itself, so it leads, beside the title. (It used to sit there because it was
+// contributed with `position: "left"`; there is no such field any more, and its
+// place in this list is now the whole of the decision.)
 //
-// `present` goes first: it is what this pane is FOR — viewing the prototype
-// without the app around it — whereas `improve` is the app-wide feedback
-// affordance that appears on many surfaces. The specific action sits nearer the
-// content, the generic utility outboard of it. (The seeded order had these
-// reversed, purely because it followed contribution registration order.)
+// After the spacer, `present` and `improve` share the trailing cluster, and
+// their order there is the real decision. `present` goes first: it is what this
+// pane is FOR — viewing the prototype without the app around it — whereas
+// `improve` is the app-wide feedback affordance that appears on many surfaces.
+// The specific action sits nearer the content, the generic utility outboard of
+// it. (The seeded order had these reversed, purely because it followed
+// contribution registration order.)
+//
 // Node forms:
 // Item: "<key>" (terse; <key> is "<pluginId>:<id>")
 // Hide: { "item": "<key>", "hidden": true }
@@ -17,13 +21,10 @@
 // Overflow (⋯ menu): { "type": "overflow", "id": "<unique-id>", "items": [ "<key>", … ] }
 // At most one spacer per slot.
 {
-  // Item: "<key>" (terse; <key> is "<pluginId>:<id>")
-  // Hide: { "item": "<key>", "hidden": true }
-  // Spacer (gap): { "type": "spacer", "id": "<unique-id>" }
-  // Group: { "type": "header", "label": "<title>", "collapsed": false, "items": [ "<key>", … ] }
-  // Overflow (⋯ menu): { "type": "overflow", "id": "<unique-id>", "items": [ "<key>", … ] }
   "items": [
+    "primitives.pane:title",
     "apps.prototypes.gallery:view-mode",
+    { "type": "spacer", "id": "spacer-1" },
     "apps.prototypes.present:present",
     "apps.prototypes.gallery:improve"
   ]

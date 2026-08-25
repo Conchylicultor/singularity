@@ -25,8 +25,8 @@ contributing a section, never by wrapping the pane.
     - `ServerDetail.Section` ← `apps.deploy.deployments`, `apps.deploy.health`, `apps.deploy.servers`, `apps.deploy.ssh-setup`
     - `Servers.Fields` ← `apps.deploy.health`
     - `item-actions` ← `apps.deploy.servers`
-    - `serversRootPane.Actions`
-    - `serverDetailPane.Actions`
+    - `serversRootPane.Actions` ← `primitives.pane`
+    - `serverDetailPane.Actions` ← `primitives.pane`
   - Contributes:
     - `Pane.Register` "deploy-servers"
     - `Pane.Register` "deploy-server-detail"

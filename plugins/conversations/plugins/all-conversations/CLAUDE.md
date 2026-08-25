@@ -6,7 +6,7 @@
 
 - Description: All-conversations app pane: a server-delegated DataView (filter/sort/search/keyset over every conversation) reachable from the agent-manager sidebar. Global conversations query handler (filter/sort/search/keyset over conversations_v) + the scalar revision-tick live resource that keeps the All-conversations DataView window fresh.
 - Web:
-  - Slots: `allConversationsPane.Actions`
+  - Slots: `allConversationsPane.Actions` ← `primitives.pane`
   - Contributes:
     - `Pane.Register` "all-conversations"
     - `Shell.Sidebar` "Conversation" → `component`

@@ -1,4 +1,4 @@
-// @hash 7eb8639ef6a8
+// @hash 590757ec6fad
 {
   // Item: "<key>" (terse; <key> is "<pluginId>:<id>")
   // Hide: { "item": "<key>", "hidden": true }
@@ -6,6 +6,11 @@
   // Group: { "type": "header", "label": "<title>", "collapsed": false, "items": [ "<key>", … ] }
   // Overflow (⋯ menu): { "type": "overflow", "id": "<unique-id>", "items": [ "<key>", … ] }
   "items": [
-    "apps.story.shell:view-switcher"
+    "apps.website.downloads:download",
+    "apps.website.pillars.agents:agents",
+    "apps.website.pillars.apps:apps",
+    "apps.website.pillars.platform:platform",
+    "apps.website.shell:wordmark",
+    "primitives.pane:title"
   ]
 }

@@ -6,14 +6,13 @@
 
 - Description: Downloads page for the equin website: the /website/download pane (per-platform download cards, current-platform highlight) plus the primary Download CTA in the shared site header.
 - Web:
-  - Slots: `downloadsPane.Actions`
   - Contributes:
     - `Pane.Register` "website-downloads"
-    - `WebsiteToolbar.End` "download" → `DownloadNavItem`
+    - `WebsiteHeader` "download" → `DownloadNavItem`
   - Uses:
+    - `apps/website/shell.WebsiteHeader`
     - `apps/website/shell.WebsiteNavLink`
     - `apps/website/shell.WebsitePage`
-    - `apps/website/shell.WebsiteToolbar`
     - `primitives/css/badge.Badge`
     - `primitives/css/card.Card`
     - `primitives/css/grid.Grid`

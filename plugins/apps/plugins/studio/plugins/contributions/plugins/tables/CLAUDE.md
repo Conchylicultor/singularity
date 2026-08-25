@@ -8,7 +8,7 @@
 - Web:
   - Slots:
     - `TableDetail.Section` ← `apps.studio.contributions.tables.columns`, `apps.studio.contributions.tables.foreign-keys`, `apps.studio.contributions.tables.indexes`, `apps.studio.contributions.tables.row-count`, `apps.studio.contributions.tables.sample-rows`
-    - `tableDetailPane.Actions`
+    - `tableDetailPane.Actions` ← `primitives.pane`
   - Contributes:
     - `Pane.Register` "table-detail"
     - `Contributions.RowClick` "db-schema"

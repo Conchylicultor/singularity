@@ -69,7 +69,7 @@ export function ConversationView() {
       <PaneChrome
         pane={conversationPane}
         title={<HeaderView />}
-        hideRightActions
+        titleOnly
         headerSpill
       >
         <Clip fill as={Stack} className="h-full">

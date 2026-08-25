@@ -8,7 +8,7 @@
 - Web:
   - Slots:
     - `Profiling.Section` ← `debug.profiling.boot`, `debug.profiling.build`, `debug.profiling.ops`, `debug.profiling.runtime`, `debug.profiling.stats`
-    - `profilingPane.Actions`
+    - `profilingPane.Actions` ← `primitives.pane`
   - Contributes:
     - `Pane.Register` "debug-profiling"
     - `DebugApp.Sidebar` "Profiling" → `component`

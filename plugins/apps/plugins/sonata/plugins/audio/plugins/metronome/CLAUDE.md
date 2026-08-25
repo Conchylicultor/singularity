@@ -29,7 +29,7 @@ on/off, subdivision, count-in bars, click volume, accent downbeat) live in the
 - Web:
   - Contributes:
     - `Sonata.Effect` "metronome" → `MetronomeEngine`
-    - `SonataToolbar.End` "metronome" → `MetronomeButton`
+    - `sonataPlayerPane.Actions` "metronome" → `MetronomeButton`
     - `Sonata.Hud` "count-in" → `CountInOverlay`
     - `ConfigV2.WebRegister` "sonata.metronome"
   - Uses:
@@ -37,8 +37,8 @@ on/off, subdivision, count-in bars, click volume, accent downbeat) live in the
     - `apps/sonata/audio/engine.ScheduleHandle`
     - `apps/sonata/audio/engine.startScheduling`
     - `apps/sonata/audio/engine.useAudioGraph`
+    - `apps/sonata/library.sonataPlayerPane`
     - `apps/sonata/shell.Sonata`
-    - `apps/sonata/shell.SonataToolbar`
     - `apps/sonata/shell.useCursorApi`
     - `apps/sonata/shell.useSonata`
     - `config_v2.ConfigV2`

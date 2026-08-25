@@ -6,9 +6,9 @@
 
 - Description: Sonata toolbar sustain-pedal indicator: a cross-lens 'Ped.' chip that glows while the pedal is engaged during playback.
 - Web:
-  - Contributes: `SonataToolbar.End` "pedal-indicator" → `PedalIndicator`
+  - Contributes: `sonataPlayerPane.Actions` "pedal-indicator" → `PedalIndicator`
   - Uses:
-    - `apps/sonata/shell.SonataToolbar`
+    - `apps/sonata/library.sonataPlayerPane`
     - `apps/sonata/shell.useCursorSelector`
     - `apps/sonata/shell.useSonata`
     - `primitives/css/toggle-chip.ToggleChip`

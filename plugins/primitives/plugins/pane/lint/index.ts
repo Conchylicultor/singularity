@@ -1,4 +1,5 @@
 import noAdhocPaneTitle from "./no-adhoc-pane-title";
+import noAdhocPaneToolbar from "./no-adhoc-pane-toolbar";
 import noHintFabrication from "./no-hint-fabrication";
 import noRawLocationPath from "./no-raw-location-path";
 
@@ -6,7 +7,7 @@ import noRawLocationPath from "./no-raw-location-path";
  * Lint barrel for the pane rules. The root `eslint.config.ts` auto-discovers this
  * default export and registers each rule repo-wide as `error`.
  *
- * Both `ignores` allowlists are intentionally EMPTY (no central allowlist —
+ * Two of the `ignores` allowlists are intentionally EMPTY (no central allowlist —
  * mirrors `icon-auto/no-adhoc-slot-icon-size` and `control-size/no-adhoc-control`):
  *
  * - `no-adhoc-pane-title` is precise — it fires only on an inline `<Text variant>`
@@ -17,8 +18,9 @@ import noRawLocationPath from "./no-raw-location-path";
  *   override escapes per-site via
  *   `// eslint-disable-next-line pane/no-hint-fabrication -- reason`.
  *
- * `no-raw-location-path` carries the only non-empty list: the two files that
- * legitimately simulate or predate the browser reader.
+ * `no-adhoc-pane-toolbar` and `no-raw-location-path` carry the two non-empty
+ * lists: the files that legitimately WEAR the banned signature, and the two that
+ * simulate or predate the browser reader.
  */
 export default {
   name: "pane",
@@ -27,8 +29,21 @@ export default {
     "no-hint-fabrication": noHintFabrication,
     "no-raw-location-path": noRawLocationPath,
   },
+  // Class rules are FACTORIES: they read class tokens, so they take the one
+  // shared walk from `buildLintConfig` instead of hand-copying it. See
+  // @plugins/framework/plugins/tooling/plugins/lint/core/class-token-walk.ts.
+  classRules: {
+    "no-adhoc-pane-toolbar": noAdhocPaneToolbar,
+  },
   ignores: {
     "no-adhoc-pane-title": [],
+    "no-adhoc-pane-toolbar": [
+      // PERMANENT — the chrome-strip primitive IS the sanctioned home of the
+      // `border-b` + `pr-floating-bar` signature. Every toolbar host (this
+      // plugin's own header `Bar`, `AppShellLayout`) composes it rather than
+      // re-wearing the classes, so this is the one file carrying them.
+      "plugins/primitives/plugins/bar/web/internal/bar.tsx",
+    ],
     "no-hint-fabrication": [],
     "no-raw-location-path": [
       // PERMANENT — jsdom suites POINT `window.location` at a fixture URL and

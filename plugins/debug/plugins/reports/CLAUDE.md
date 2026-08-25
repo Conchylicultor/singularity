@@ -29,8 +29,8 @@ All reports are listed — noise is surfaced via the badge, never filtered out.
 - Description: Debug pane listing all recorded reports (including low-signal/noise crashes) with kind, source, count, noise flag, and linked task.
 - Web:
   - Slots:
-    - `reportsPane.Actions`
-    - `reportDetailPane.Actions`
+    - `reportsPane.Actions` ← `primitives.pane`
+    - `reportDetailPane.Actions` ← `primitives.pane`
   - Contributes:
     - `Pane.Register` "reports"
     - `Pane.Register` "report-detail"

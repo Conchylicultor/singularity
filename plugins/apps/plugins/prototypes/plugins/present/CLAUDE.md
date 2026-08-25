@@ -42,7 +42,7 @@ another way to view a prototype is a sibling plugin, not an edit here.
 
 - Description: Present a prototype without the app around it, in four sizes: filling this app tab's surface (the tab bar stays, so the user can keep switching tabs), filling this browser tab, filling the screen (Fullscreen API), or opened as its own document in a new browser tab. Contributed into the detail pane's Actions.
 - Web:
-  - Contributes: `prototypeDetailPane.Actions` → `PresentMenu`
+  - Contributes: `prototypeDetailPane.Actions` "present" → `PresentMenu`
   - Uses:
     - `apps-core/tabs.useSurfaceFocused`
     - `apps/prototypes/gallery.prototypeDetailPane`

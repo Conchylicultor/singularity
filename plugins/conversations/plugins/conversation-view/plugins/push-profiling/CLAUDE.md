@@ -6,7 +6,7 @@
 
 - Description: Toolbar button showing the build/push/check op Gantt scoped to the conversation's worktree.
 - Web:
-  - Slots: `conv-push-profiling.actions`
+  - Slots: `conv-push-profiling.actions` ← `primitives.pane`
   - Contributes:
     - `Pane.Register` "conv-push-profiling"
     - `Conversation.ActionBar` → `PushProfilingButton`

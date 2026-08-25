@@ -39,13 +39,13 @@ plain wrap; tempo changes follow the existing loop-aware `retime` path.
     - `SonataProgress.Marker` "loop" → `LoopRegion`
     - `Sonata.TransportOverlay` "loop" → `LoopRollRegion`
     - `Sonata.TransportEdge` "loop" → `LoopRollEdge`
-    - `SonataToolbar.End` "loop-toggle" → `LoopToggle`
+    - `sonataPlayerPane.Actions` "loop-toggle" → `LoopToggle`
     - `Sonata.Effect` "loop-shortcuts" → `LoopShortcuts`
   - Uses:
+    - `apps/sonata/library.sonataPlayerPane`
     - `apps/sonata/progress/scrubber.railBandClass`
     - `apps/sonata/progress/scrubber.SonataProgress`
     - `apps/sonata/shell.Sonata`
-    - `apps/sonata/shell.SonataToolbar`
     - `apps/sonata/shell.useCursorApi`
     - `apps/sonata/shell.useCursorSelector`
     - `apps/sonata/shell.useLaneInsets`

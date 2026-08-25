@@ -6,7 +6,7 @@
 
 - Description: View and edit cli/broadcasts.json broadcast messages for stale worktrees. View and edit cli/broadcasts.json from the UI.
 - Web:
-  - Slots: `broadcastsPane.Actions`
+  - Slots: `broadcastsPane.Actions` ← `primitives.pane`
   - Contributes:
     - `Pane.Register` "debug-broadcasts"
     - `DebugApp.Sidebar` "Broadcasts" → `component`

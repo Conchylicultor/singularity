@@ -1,4 +1,13 @@
-// @hash dfc9a7e375eb
+// @hash a27a4c80d9db
 {
-  "items": []
+  // Item: "<key>" (terse; <key> is "<pluginId>:<id>")
+  // Hide: { "item": "<key>", "hidden": true }
+  // Spacer (gap): { "type": "spacer", "id": "<unique-id>" }
+  // Group: { "type": "header", "label": "<title>", "collapsed": false, "items": [ "<key>", … ] }
+  // Overflow (⋯ menu): { "type": "overflow", "id": "<unique-id>", "items": [ "<key>", … ] }
+  "items": [
+    "apps.story.shell:back",
+    "apps.story.shell:view-switcher",
+    "primitives.pane:title"
+  ]
 }

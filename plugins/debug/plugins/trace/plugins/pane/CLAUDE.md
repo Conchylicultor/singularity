@@ -37,8 +37,8 @@ descriptor the strip renders without knowing what produced it. Header: the
 - Web:
   - Slots:
     - `SlowEvents.View` ← `debug.slow-ops.cluster`, `debug.slow-ops.pane`, `debug.timeline`, `debug.trace.pane`
-    - `slowEventsPane.Actions`
-    - `traceDetailPane.Actions`
+    - `slowEventsPane.Actions` ← `primitives.pane`
+    - `traceDetailPane.Actions` ← `primitives.pane`
   - Contributes:
     - `Pane.Register` "traces"
     - `Pane.Register` "trace-detail"

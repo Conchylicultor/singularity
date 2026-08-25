@@ -2,8 +2,6 @@ import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import type { ComponentType } from "react";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { AdaptiveBar } from "@plugins/primitives/plugins/adaptive-bar/web";
-import { useActionForm } from "@plugins/primitives/plugins/action-presentation/web";
 
 type PickerItem = {
   id: string;
@@ -12,17 +10,9 @@ type PickerItem = {
 };
 
 /**
- * One choice: a bordered toggle button, in the row or in the `⋯` panel.
- *
- * It declares NO smaller form, and that is the deliberate answer rather than an
- * omission. `compact` would be icon-only, and an item's icon is optional — half
- * the pickers would collapse to an empty box; `row` would mean hand-writing the
- * second appearance again, which is exactly the drift this replaces. With one
- * rung the button relocates as ITSELF, keeping its label, its loaded dot and its
- * pressed styling — so the panel needs no ✓ affordance to say which one is on.
- *
- * The active choice yields last, which is where `priorityIds` used to live: the
- * picker no longer tells the bar who matters, the chosen option says so itself.
+ * One choice: a bordered toggle button whose pressed styling and loaded dot say
+ * which display is on, wherever the row's own `⋯` panel happens to put the
+ * picker.
  */
 function PickerOption({
   item,
@@ -35,9 +25,6 @@ function PickerOption({
   loaded: boolean;
   onSelect: () => void;
 }) {
-  // Return discarded on purpose: with no `shrinksTo` the hook can only ever
-  // answer `"full"`, so this call is the declaration half and nothing else.
-  useActionForm({ yields: active ? "never" : "normal" });
   const Icon = item.icon;
   return (
     <button
@@ -67,10 +54,31 @@ function PickerOption({
 
 /**
  * A single-line picker rendered from a list of `{ id, label, icon? }` items.
- * Keeps as many choices inline as fit and relocates the rest behind a ⋯ panel
- * (never wrapping). Generic over the contribution shape — never names a specific
- * contributor (collection-consumer clean), and never names a privileged one
- * either: which choice leaves the row last is the choice's own declaration.
+ * Generic over the contribution shape — it never names a specific contributor
+ * (collection-consumer clean).
+ *
+ * **It owns no bar of its own, and that is the contract rather than a
+ * simplification.** This picker is written as one occupant of a row that
+ * already has an `AdaptiveBar` — the pane header — and *one adaptive bar per
+ * row* (`plugins/primitives/plugins/adaptive-bar/CLAUDE.md`) is what makes the
+ * host's width reading mean anything: a bar declares itself `min-w-0 flex-1`
+ * and asks the chain above it to grow, so a second one nested inside the first
+ * takes the row's whole slack and leaves the outer bar measuring its own
+ * content. The header then cannot fit anything — the pane title crushes to its
+ * first word while this picker sits at full width.
+ *
+ * So the options are a plain row, and the `⋯` that collapses them when the
+ * header runs out of room is the HEADER's. The whole picker travels there
+ * together, label and all, as one live instance — which is what a single-select
+ * control wants: split across two surfaces, "which one is on" would be a
+ * question the user has to open a panel to answer.
+ *
+ * No smaller form is declared (no `useActionForm`), and that is deliberate
+ * rather than an omission: `compact` would be icon-only and an item's icon is
+ * optional, so half the pickers would collapse to empty boxes; `row` would mean
+ * hand-writing the second appearance again. With one rung the picker relocates
+ * as ITSELF, keeping each option's label, loaded dot and pressed styling — so
+ * the panel needs no ✓ affordance to say which display is on.
  */
 export function Picker({
   items,
@@ -95,17 +103,16 @@ export function Picker({
   }
 
   return (
-    <AdaptiveBar gap="xs" label="More displays">
+    <Stack direction="row" align="center" gap="xs">
       {items.map((item) => (
-        <AdaptiveBar.Item key={item.id} id={item.id}>
-          <PickerOption
-            item={item}
-            active={item.id === activeId}
-            loaded={loadedIds?.includes(item.id) ?? false}
-            onSelect={() => onSelect(item.id)}
-          />
-        </AdaptiveBar.Item>
+        <PickerOption
+          key={item.id}
+          item={item}
+          active={item.id === activeId}
+          loaded={loadedIds?.includes(item.id) ?? false}
+          onSelect={() => onSelect(item.id)}
+        />
       ))}
-    </AdaptiveBar>
+    </Stack>
   );
 }

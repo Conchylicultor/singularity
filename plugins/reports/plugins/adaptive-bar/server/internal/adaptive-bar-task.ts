@@ -29,6 +29,7 @@ export function renderAdaptiveBarTask(row: ReportRow): {
 // payload union, so a fault kind added to the schema cannot ship without prose.
 const HEADLINES: Record<AdaptiveBarPayload["fault"], string> = {
   "no-slack": "adaptive bar was given no slack",
+  "nested-bar": "adaptive bar was written inside another adaptive bar",
   "row-overflow": "adaptive bar's fit disagrees with the layout engine",
   "no-convergence": "adaptive bar never converged",
   "iframe-relocation": "adaptive bar refused to relocate an iframe",
@@ -64,6 +65,12 @@ function whatHappened(data: AdaptiveBarPayload): string[] {
         `There is a second way in, and a report from it says so in its own message: a row that measures **0px while occupants are relocated out of it**. That reading has two possible causes and cannot be told apart by width alone — a host that shrink-wraps to the bar (the ratchet, at its end), or a row so **over-full** that the bar's \`flex: 1 1 0%\` cell has negative free space and no basis to absorb a share of it, resolving to 0px while perfectly healthy. So the bar re-admits every occupant and re-asks the probe, which can answer it; a report arrives only when the re-ask was tried a bounded number of times and never produced a judgeable width.`,
         `That false premise would otherwise poison everything downstream: a bar reading a shrink-to-content box's own width always "fits" whatever is docked in it, so it would never compact and never relocate no matter how crowded the row its host actually gives it is — the row would simply spill out of its parent, or, in a parent that clips, occupants would silently disappear with no report at all.`,
       ];
+    case "nested-bar":
+      return [
+        `The bar **"${name}" is written inside another adaptive bar's occupant**, and **one adaptive bar per row** is the primitive's contract (\`plugins/primitives/plugins/adaptive-bar/CLAUDE.md\`). It is not a style preference: a bar declares itself \`min-w-0 flex-1\` and asks the chain above it to grow, precisely so that \`barRoot.getBoundingClientRect().width\` **is** the room it was given. Two bars in one row are two claimants on the same slack — the inner one takes all of it, and the outer one is left measuring its own content.`,
+        `The visible damage is usually filed against the wrong bar. The outer bar's width now moves with its own content, so **it** reports \`no-slack\` and stops deciding, naming a host that is perfectly fine; meanwhile its yielding cell (a pane title, typically) gets nothing and crushes to its first word, and its \`⋯\` never collapses anything because everything "fits" a box that grows to hold it. This fault names the actual offender, at the moment it mounts, rather than leaving the reader to work backwards from the other bar's report.`,
+        `An \`AdaptiveBar.Collapsed\` nested inside a bar is **not** this and never files it: it is one \`shrink-0\` \`⋯\` sitting among the row's occupants, it measures nothing and asks for no slack — which is how \`reorder\`'s \`overflow\` node type renders an authored bucket inside a pane header. Only a MEASURING bar is a second claimant.`,
+      ];
     case "row-overflow":
       return [
         `The bar **"${name}" blessed a row that then did not fit**. On a converged pass — the placement stopped changing, so what is rendered *is* what the fit decided — the fit reported \`fits: true\`, and the union of the occupants' own rendered boxes still stuck out of the bar's own content box, on one side or the other. Those two statements cannot both be true, so one of the widths the fit decided from is not a width this row actually has.`,
@@ -95,15 +102,17 @@ function whatHappened(data: AdaptiveBarPayload): string[] {
 const stopsDeciding = `It then **stopped re-deciding at that width** — committing and stopping are one act, because a bar that keeps re-deriving through a fault recomputes the same answer, trips the same guard and commits again forever (a render loop, which is what took the Layout Lab pane down). A genuine resize re-arms it, since that is a premise it has not failed under, up to a small cap per mount — so a *transient* fault costs one cramped render rather than a toolbar parked until the pane is reopened. Eviction is part of the floor **only in \`panel\` mode**, where an evicted occupant is still reachable behind the \`⋯\`; under \`scroll\` and \`clip\` the floor keeps every occupant inline, because dropping them into the hidden parking dock would hide the whole bar. Items that mount or unmount afterwards are placed against the committed answer. The user sees a **usable, possibly cramped** bar — not a broken pane.`;
 
 // What the bar did with the row after the fault — the part that explains what a
-// user is looking at right now. Two of the five faults stop the bar deciding,
-// and they no longer do the same thing when they stop, so they no longer share a
-// paragraph: `row-overflow` has had its own arithmetic contradicted and can
+// user is looking at right now. Two of the six stop the bar deciding at a width
+// and re-arm on a resize, and they no longer do the same thing when they stop,
+// so they no longer share a paragraph: `row-overflow` has had its own arithmetic contradicted and can
 // vouch for nothing it computed, while `no-convergence` merely ran out of rounds
 // and usually produced perfectly good answers along the way.
 function whatTheBarDid(data: AdaptiveBarPayload): string {
   switch (data.fault) {
     case "no-slack":
       return `It **stopped deciding, for good**: every occupant went back into the row at its widest form, and whatever does not fit is left for CSS to clip. That is the **ceiling** rather than the floor \`row-overflow\` takes — an eviction is precisely what a bad width reading was already producing, so pulling more occupants out of the row is the one direction that cannot make a lying number more honest. Unlike \`row-overflow\` and \`no-convergence\`, there is no re-arm on resize: once the width reading has been shown untrustworthy, nothing about the row's own size can restore trust in it, so the bar keeps clipping for the rest of this mount.\n\n**Unless the message above says nothing was latched.** A bar whose row is merely over-full reports and commits nothing: it re-admitted every occupant, found the 0px was never its own doing, and goes back to deciding the moment the row has room. Nothing is stuck — but at 0px everything the bar holds is clipped to invisibility, which is why it is worth saying.`;
+    case "nested-bar":
+      return `The **inner** bar — this one — **stopped deciding, for good**: every occupant went back into the row at its widest form, and whatever does not fit is left for CSS to clip. That is the same **ceiling** \`no-slack\` takes, for the same reason: a bar inside another bar's occupant sits in a \`shrink-0\` container, so every width it reads is its own content's, and evicting on a lying number is exactly the damage. The **outer** bar is untouched by this and keeps whatever it decided — which, while the nesting lasts, is usually "everything fits", since its width grew to hold whatever the inner bar wanted.`;
     case "row-overflow":
       return `It committed the **floor layout**: every unpinned occupant at its narrowest rung, and — in \`panel\` mode only — everything that can leave the row moved into the overflow panel. The floor unconditionally, because the claim under suspicion here is precisely "the widest placement the fit blessed as fitting": the engine has just contradicted the fit's own numbers, so there is no placement of this search left to trust. ${stopsDeciding}`;
     case "no-convergence":
@@ -188,6 +197,12 @@ function howToFix(data: AdaptiveBarPayload): string[] {
         findTheBar,
         `Then satisfy the one rule for consumers (\`plugins/primitives/plugins/adaptive-bar/CLAUDE.md\`): **put the bar where there is slack to give** — as the growing cell of a single-line row (\`Line\` / \`Row\` / \`Bar\`), with **no \`Fill\` or other \`flex-1\` sibling** competing for the same slack, and **never inside a shrink-to-content parent** (\`inline-flex\`, \`w-fit\`, \`Cluster\`). One adaptive bar per row. In practice it is almost always one of three things: a \`Fill\` next to the bar that should be deleted (the bar *is* the fill), a \`Cluster\`/\`Inline\` wrapper around it that should be a \`Line\`, or a second bar in the same row.`,
         `If the message says the bar re-admitted its occupants and still could not get a judgeable width, check the bar's **siblings** as well as its ancestors: a row whose other cells over-fill it leaves the bar's \`flex: 1 1 0%\` cell nothing to resolve to, and the fix there is to make one of those siblings shrinkable (\`min-w-0\`, or a truncating leaf) rather than to move the bar.`,
+      ];
+    case "nested-bar":
+      return [
+        findTheBar,
+        `**Delete the inner bar.** Its occupants become ordinary children of the widget — a plain \`Stack\`/\`Line\` row — and the OUTER bar's \`⋯\` collapses them when the row runs out of room, which is the behaviour the inner bar was hand-rolling for a row that already had it. If the widget was relying on its own per-occupant ladders (\`useActionForm\` inside it), note that a group under ONE bar item shares one channel: declare the ladder once, for the widget as a whole, or promote the pieces to separate contributions of the outer bar so each gets its own.`,
+        `If the occupants genuinely belong behind a \`⋯\` of their own — an authored bucket rather than an overflow — that is \`<AdaptiveBar.Collapsed>\`, which is legitimate here and files nothing: it measures nothing and takes no slack. Reach for it only when the answer really is "these live behind a ⋯ whatever the width", never as a way to silence this fault.`,
       ];
     case "row-overflow":
       return [

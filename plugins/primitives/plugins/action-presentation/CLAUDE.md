@@ -123,7 +123,6 @@ second mount. `ActionPresenceScope` / `useReportActionPresence` went with it.
 - Cross-plugin:
   - Imported by:
     - `apps-core/tab-bar`
-    - `apps/sonata/library`
     - `primitives/adaptive-bar`
     - `primitives/icon-button`
 

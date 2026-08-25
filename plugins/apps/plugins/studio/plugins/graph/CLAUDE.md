@@ -6,7 +6,7 @@
 
 - Description: Studio Plugin Graph pane: focused closure subgraph (deps + dependents) around a plugin, tinted by the active composition's membership, with depth / direction controls and click-to-recenter.
 - Web:
-  - Slots: `graphCanvasPane.Actions`
+  - Slots: `graphCanvasPane.Actions` ← `primitives.pane`
   - Contributes:
     - `Pane.Register` "graph"
     - `Studio.Sidebar` "Plugin Graph" → `component`

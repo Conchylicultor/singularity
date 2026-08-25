@@ -6,21 +6,19 @@
 
 - Description: Agents pillar page of the equin website: the /website/agents pane telling the agent-manager story (nested tasks, isolated worktrees, the race), its Agents nav link, and the WebsiteAgents.Section slot demo plugins contribute into.
 - Web:
-  - Slots:
-    - `WebsiteAgents.Section` ← `apps.website.demos.agent-run`, `apps.website.pillars.agents`
-    - `agentsPane.Actions`
+  - Slots: `WebsiteAgents.Section` ← `apps.website.demos.agent-run`, `apps.website.pillars.agents`
   - Contributes:
     - `Pane.Register` "website-agents"
-    - `WebsiteToolbar.End` "agents" → `AgentsNavItem`
+    - `WebsiteHeader` "agents" → `AgentsNavItem`
     - `WebsiteAgents.Section` "Hero" → `AgentsHero`
     - `WebsiteAgents.Section` "How it works" → `AgentsHowItWorks`
     - `WebsiteAgents.Section` "Closing links" → `AgentsClosing`
   - Uses:
     - `apps/website/downloads.downloadsPane`
     - `apps/website/pillars/apps.appsPane`
+    - `apps/website/shell.WebsiteHeader`
     - `apps/website/shell.WebsiteNavLink`
     - `apps/website/shell.WebsitePage`
-    - `apps/website/shell.WebsiteToolbar`
     - `primitives/css/card.Card`
     - `primitives/css/grid.Grid`
     - `primitives/css/spacing.Inset`

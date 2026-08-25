@@ -105,6 +105,28 @@ shrink-wrapping flex item. Such a host wraps the relocated children in
 what was measured. Read at render position, so it applies to contributions whose
 elements were created upstream.
 
+### `"host-owned"` — the host draws each item's box itself
+
+The third value, and it is not an orientation: it answers *who* draws the box
+rather than *which way* the items run.
+
+Some hosts mint a box per item because placing the item **is** a DOM operation
+on that box. [`adaptive-bar`](../adaptive-bar/CLAUDE.md) mints one stable
+container per occupant and re-parents it to shrink or relocate the widget inside
+without React ever unmounting it. There the container **is** the item's box, and
+a slot cell around the contribution is not merely redundant — it is a second,
+competing flex item that swallows the container, so the bar's gap, measurement
+and docking all end up describing the cell instead of the row.
+
+So the bar declares `<SlotItemLayout orientation="host-owned">` around its
+children and the cell takes its `display: contents` branch — byte-for-byte what
+`renderIsolated` produces, which is precisely the escape hatch such hosts used to
+reach for instead of `.Render` (and with it they lost the reorder list
+middleware: ordering, hiding and spacers all silently ignored).
+
+Nothing about the value names `adaptive-bar`. Any host that owns its items'
+boxes says the same thing.
+
 ## The contribution box, and stamping it
 
 Every contribution rendered by any path gets at most ONE element the slot owns —
@@ -276,12 +298,12 @@ the outcome too, with no separate code path.
     - `improve/element-picker`
     - `page/editor`
     - `page/page-reference`
+    - `primitives/adaptive-bar`
     - `primitives/app-shell`
     - `primitives/data-view`
     - `primitives/detail-sections`
     - `primitives/error-boundary`
     - `primitives/pane`
-    - `primitives/pane-toolbar`
     - `primitives/prompt-editor`
     - `primitives/tabbed-view`
     - `primitives/text-editor`

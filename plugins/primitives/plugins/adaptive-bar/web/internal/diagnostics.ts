@@ -8,12 +8,31 @@ import type { AdaptiveBarOverflow } from "./adaptive-bar";
  * The ways an adaptive bar is *wrong*, as opposed to merely cramped.
  *
  * Running out of room is the normal case and is never a fault — it is what the
- * whole primitive is for. These five are the states where an assumption has been
+ * whole primitive is for. These six are the states where an assumption has been
  * violated, and living with them silently is how a layout bug becomes permanent.
  */
 export type AdaptiveBarFaultKind =
   /** The bar was not given slack: some ancestor is shrink-to-content, or a sibling took the grow slot. */
   | "no-slack"
+  /**
+   * A MEASURING bar was mounted inside another bar's occupant.
+   *
+   * "One adaptive bar per row" used to be prose, and prose is the weakest way to
+   * state a rule this cheap to check: a bar reads `BarRegistryContext` and
+   * a non-null one means a bar is already above it. Two measuring bars in one
+   * row cannot both be right — each declares itself `min-w-0 flex-1` and asks
+   * the chain above it to grow, so the inner one takes the row's whole slack and
+   * the outer one is left measuring its own content. The outer bar then reports
+   * `no-slack` and stops deciding, which is a true statement about a defect
+   * somewhere else entirely — this kind names the actual offender.
+   *
+   * `AdaptiveBar.Collapsed` nested in a bar is NOT this and must never fire it:
+   * it is one `shrink-0` `⋯` sitting among the row's occupants, it takes no
+   * slack, it measures nothing, and it is how `reorder`'s `overflow` node type
+   * renders an authored bucket inside a pane header — a legitimate composition
+   * that ships today. Only a bar that MEASURES is a second claimant.
+   */
+  | "nested-bar"
   /** The fit said "everything fits" and the rendered row still overflows the box the bar was given. */
   | "row-overflow"
   /** The round budget ran out and the answer was still changing. */
@@ -109,7 +128,8 @@ export function reportFault(fault: AdaptiveBarFault): void {
  * Report, then throw in dev.
  *
  * For the faults that mean the bar's own contract is broken — it was given no
- * slack, or its fit math disagrees with the layout engine. Those must not be
+ * slack, it was written inside another bar, or its fit math disagrees with the
+ * layout engine. Those must not be
  * lived with: in dev the throw is the fastest possible feedback, and in prod we
  * file the alert and take a cramped-but-usable layout instead, because taking
  * down a pane header over a layout disagreement is worse than a cramped row

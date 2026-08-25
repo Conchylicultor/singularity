@@ -7,7 +7,7 @@ import "./volume-control.css";
 
 /**
  * The master-volume control pinned into the Sonata top toolbar
- * (`SonataToolbar.End`): a mute toggle (level-reflecting icon) plus a compact
+ * (`sonataPlayerPane.Actions`): a mute toggle (level-reflecting icon) plus a compact
  * slider. Like `transport-bar`'s controls it owns no audio — it only
  * reads/writes the per-surface `audio-store` (provided via the
  * `Sonata.SurfaceProvider` wrapper slot), which the always-mounted `AudioEngine`

@@ -1,0 +1,21 @@
+// @hash a27a4c80d9db
+// The story editor's header, read left to right: ← Stories (the way out), then
+// the story title, which is the pane's own title item and the row's give.
+// After the spacer, the Author/renderer view switcher — the one control that
+// changes what the surface below shows, so it sits at the far edge on its own.
+//
+// Node forms:
+// Item: "<key>" (terse; <key> is "<pluginId>:<id>")
+// Hide: { "item": "<key>", "hidden": true }
+// Spacer (gap): { "type": "spacer", "id": "<unique-id>" }
+// Group: { "type": "header", "label": "<title>", "collapsed": false, "items": [ "<key>", … ] }
+// Overflow (⋯ menu): { "type": "overflow", "id": "<unique-id>", "items": [ "<key>", … ] }
+// At most one spacer per slot.
+{
+  "items": [
+    "apps.story.shell:back",
+    "primitives.pane:title",
+    { "type": "spacer", "id": "spacer-1" },
+    "apps.story.shell:view-switcher"
+  ]
+}

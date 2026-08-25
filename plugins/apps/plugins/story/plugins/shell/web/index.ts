@@ -5,15 +5,11 @@ import { MdAutoStories } from "react-icons/md";
 import { mdAppIcon } from "@plugins/apps-core/plugins/app-icon/web";
 import { storyApp } from "../core";
 import { StoryLayout } from "./components/story-layout";
-import { StoryToolbar } from "./toolbar";
 import {
   BackToStories,
-  StoryTitleItem,
   ViewSwitcherItem,
 } from "./components/story-toolbar-items";
 import { storyGalleryPane, storyDetailPane } from "./panes";
-
-export { StoryToolbar } from "./toolbar";
 
 export default {
   description:
@@ -24,15 +20,20 @@ export default {
       icon: mdAppIcon(MdAutoStories),
       component: StoryLayout,
     }),
-    // Editor toolbar zones: Start (← Stories, title) + End (view switcher).
-    StoryToolbar.Start({ id: "back", component: BackToStories }),
-    StoryToolbar.Start({ id: "title", component: StoryTitleItem }),
-    StoryToolbar.End({ id: "view-switcher", component: ViewSwitcherItem }),
+    // The editor pane's header: ← Stories and the view switcher. The story
+    // title is the pane's own title node (`story-editor.tsx`), not an item —
+    // the pane contributes exactly one `title` item into every header itself.
+    // Which side of the header each lands on is the slot's reorder config, not
+    // a field here.
+    storyDetailPane.Actions({ id: "back", component: BackToStories }),
+    storyDetailPane.Actions({
+      id: "view-switcher",
+      component: ViewSwitcherItem,
+    }),
     Pane.Register({ pane: storyGalleryPane }),
     Pane.Register({ pane: storyDetailPane }),
   ],
   slots: {
-    ...StoryToolbar,
     "story-gallery": storyGalleryPane,
     "story-detail": storyDetailPane,
   },

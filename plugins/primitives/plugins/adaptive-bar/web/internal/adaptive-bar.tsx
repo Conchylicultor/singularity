@@ -1,5 +1,6 @@
 import {
   useCallback,
+  useContext,
   useLayoutEffect,
   useMemo,
   useRef,
@@ -59,6 +60,8 @@ import {
 import { type SpaceStep } from "@plugins/primitives/plugins/css/plugins/space-ramp/core";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { useRequestGrow } from "@plugins/primitives/plugins/css/plugins/grow-relay/web";
+import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
+import { SlotItemLayout } from "@plugins/primitives/plugins/slot-render/web";
 import { useResizeObserver } from "@plugins/primitives/plugins/element-size/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { useEditMode } from "@plugins/primitives/plugins/edit-mode-signal/web";
@@ -88,8 +91,10 @@ import {
   dockGroup,
   dockInline,
   holdsIframe,
+  isDockedInline,
   supportsStatePreservingMove,
 } from "./relocate";
+import { AdaptiveBarYield, yieldFloorPx } from "./bar-yield";
 
 /** What happens to an occupant the row cannot fit. */
 export type AdaptiveBarOverflow =
@@ -103,13 +108,11 @@ export type AdaptiveBarOverflow =
 /** Which end of its own slack the row's occupants sit against. */
 export type AdaptiveBarAlign = "start" | "end";
 
-export interface AdaptiveBarProps {
+interface AdaptiveBarBaseProps {
   /** Gap between occupants, from the closed density ramp. Default `"xs"`. */
   gap?: SpaceStep;
   /** Accessible name of the `⋯` trigger and its panel. Default `"More"`. */
   label?: string;
-  /** Default `"panel"`. */
-  overflow?: AdaptiveBarOverflow;
   /**
    * Where the occupants sit inside the bar. Default `"start"`; `"end"` packs
    * them against the far edge — a trailing action cluster with the row's slack
@@ -120,9 +123,55 @@ export interface AdaptiveBarProps {
    * competing `Fill` sibling, so the bar has to answer it.
    */
   align?: AdaptiveBarAlign;
+  /**
+   * The occupants may paint OUTSIDE this bar's box, so the bar stops clipping
+   * (`overflow-visible` in place of {@link BAR_CLIP}). For a row holding
+   * something that legitimately reveals itself beyond the strip — a pane
+   * header whose title is a `CollapsibleWrap` expanding downward over the
+   * content below.
+   *
+   * It changes nothing about the fit: the clip was never the mechanism, only
+   * the backstop for a row with no room left, and an over-full row already
+   * reports its own fault. What it does change is what that backstop looks
+   * like — an over-full `spill` row paints past its edge instead of hiding the
+   * excess — which is the trade a host makes deliberately by passing this.
+   *
+   * A prop and not a `className`, for the same reason as {@link align}: the
+   * overflow is one of the mechanics this primitive owns, so reaching in with a
+   * raw `overflow-*` would fight it rather than ask it. Both axes go visible
+   * together because CSS gives no choice — `visible` on one axis with `hidden`
+   * on the other computes to `auto`, i.e. a scroll container, which is neither
+   * of the two things a caller could mean.
+   *
+   * Two of this primitive's own docs below assume the clip, and under `spill`
+   * they read differently: the `no-slack` ceiling ("everything inline, CSS
+   * clips") no longer has the clip to bound a row whose width it has stopped
+   * trusting, and the over-full 0px report's "every occupant AND the `⋯` are
+   * clipped to invisibility" becomes "painted outside the row" instead. Both
+   * are still reported; only what they look like changes.
+   */
+  spill?: boolean;
   children: ReactNode;
   className?: string;
 }
+
+/**
+ * `spill` and `overflow: "scroll"` are the SAME question answered twice — a row
+ * cannot both scroll its own excess and let that excess paint outside it
+ * (`BAR_SCROLL` is `overflow-x-auto`, and one axis being non-`visible` is
+ * exactly what makes the other compute to `auto`). So the two are not
+ * combinable rather than merely discouraged: a `scroll` bar has no `spill` to
+ * pass.
+ */
+export type AdaptiveBarProps = AdaptiveBarBaseProps &
+  (
+    | {
+        /** Default `"panel"`. */
+        overflow?: "panel" | "clip";
+        spill?: boolean;
+      }
+    | { overflow: "scroll"; spill?: never }
+  );
 
 /**
  * The bar DEFINES itself as the grow cell of its row, and that is a contract,
@@ -131,9 +180,13 @@ export interface AdaptiveBarProps {
  * forced recalculation per sibling. (The fit's budget is that minus the root's
  * own padding and border — `readRowMetrics`'s `insetPx` — because the occupants
  * are laid out in the content box and `measureRowOverflow` judges them against
- * that same box. Do not "simplify" the subtraction away: it is the difference
+ * that same box, and minus whatever a yielding child reserved as its floor
+ * (`yieldFloorPx`), which is room the occupants may not have. Do not "simplify"
+ * either subtraction away: the first is the difference
  * between a budget and a budget for room that does not exist, and a consumer
- * `className` carrying padding is all it takes. Pinned in
+ * `className` carrying padding is all it takes; the second is the difference
+ * between a row that relocates an occupant and one that eats its own title.
+ * Pinned in
  * `web/__tests__/row-inset.test.tsx`.) A primitive that took a content-sized container
  * would have to go looking for the width; this one is handed it by the layout
  * engine.
@@ -143,15 +196,15 @@ export interface AdaptiveBarProps {
  * `viewport-overlay`'s `OVERLAY_ROOT`, the primitive that OWNS these mechanics
  * does not have to disable the rule that keeps them out of feature code.
  *
- * `[&>*]:shrink-0` is the other half of that contract, and it is what makes the
- * width ledger's axiom true rather than merely assumed: **this row never takes
- * width from what it holds.** See `core/width-cache.ts`. An ordinary flex item
- * (`flex: 0 1 auto`) is squeezed whenever its row is over-full — which is
- * exactly the state a pass measures in, since it measures the placement React
- * has already committed. Two things then go wrong at once: the ledger stores a
- * placement-dependent number as `exact`, and `measureRowOverflow` goes blind,
- * because flex absorbs the whole deficit and the occupants sum to exactly the
- * content box.
+ * Rigidity — {@link rigidClass}, `shrink-0` — is the other half of that
+ * contract, and it is what makes the width ledger's axiom true rather than
+ * merely assumed: **this row never takes width from what it holds.** See
+ * `core/width-cache.ts`. An ordinary flex item (`flex: 0 1 auto`) is squeezed
+ * whenever its row is over-full — which is exactly the state a pass measures in,
+ * since it measures the placement React has already committed. Two things then
+ * go wrong at once: the ledger stores a placement-dependent number as `exact`,
+ * and `measureRowOverflow` goes blind, because flex absorbs the whole deficit
+ * and the occupants sum to exactly the content box.
  *
  * Whether an occupant can be squeezed at all is an accident of its content — a
  * container's floor is its own min-content, and under this row's
@@ -159,18 +212,33 @@ export interface AdaptiveBarProps {
  * why every occupant shipping today happens to be safe and a widget with
  * reflowable content would not be.
  *
- * Declared on the ROW rather than on each occupant, for three reasons. It
- * covers the `⋯` trigger — a flex item of this row whose width `measureTrigger`
- * CACHES, so a single squeezed reading would under-reserve it forever. It keeps
- * `flex-shrink` meaning one thing: an occupant's container also lives in the
- * panel dock's column, where the same declaration would be about height. And it
- * covers whatever this row holds next without anyone having to remember.
+ * **It is declared by each rigid thing, not by the row**, and that is not a
+ * preference: it used to be `[&>*]:shrink-0` here, and a parent selector reaches
+ * DIRECT children only. An occupant's container is docked at its own anchor, and
+ * the anchor is wherever the host put it — through `.Render` that is two or
+ * three `display: contents` wrappers down, still a flex item of this row and no
+ * longer a child of it. So the row-level selector silently stopped reaching the
+ * containers, and a squeezable occupant is the proven blind-the-guard failure
+ * (`fixtures/` → `adaptive-bar/squeezable-occupants`, 186px → 83px). The two
+ * things that ARE direct children and must stay rigid say so themselves: the `⋯`
+ * trigger (whose width `measureTrigger` caches, so one squeezed reading would
+ * under-reserve it forever) and, by construction, every minted container
+ * (`bar-item.tsx`).
+ *
+ * What the row therefore no longer declares for its non-occupant children is
+ * deliberate rather than lost: a reorder `spacer` is `flex: 1 1 0%`, so with a
+ * base size of 0 and no content there is nothing for a shrink to take, and
+ * {@link AdaptiveBarYield} wants the opposite of rigid — it is the one child
+ * allowed below its own content width, down to the floor it reserves out of the
+ * budget so that it is not the one child paying for all the others.
  */
-const BAR_ROOT = "min-w-0 flex-1 whitespace-nowrap [&>*]:shrink-0";
+const BAR_ROOT = "min-w-0 flex-1 whitespace-nowrap";
 /** `panel`/`clip`: what does not fit leaves the row, and the row never spills. */
 const BAR_CLIP = "overflow-hidden";
 /** `scroll`: nothing leaves the row; the row itself scrolls. */
 const BAR_SCROLL = "overflow-x-auto";
+/** `spill`: an occupant legitimately paints outside the row (see the prop). */
+const BAR_SPILL = "overflow-visible";
 /**
  * The collapsed bucket is the OPPOSITE of a grow cell: it is one `⋯` sitting
  * among the row's other occupants, so taking the slack would starve the very
@@ -198,20 +266,23 @@ const BAR_ALIGN_END = "justify-end";
  * themselves through `useActionForm`, because a bar's occupants come from
  * different plugins and it can name none of them.
  */
-export function AdaptiveBar({
-  gap = "xs",
-  label = "More",
-  overflow = "panel",
-  align = "start",
-  children,
-  className,
-}: AdaptiveBarProps): ReactElement {
+export function AdaptiveBar(props: AdaptiveBarProps): ReactElement {
+  const {
+    gap = "xs",
+    label = "More",
+    overflow = "panel",
+    align = "start",
+    spill = false,
+    children,
+    className,
+  } = props;
   return (
     <AdaptiveBarShell
       gap={gap}
       label={label}
       overflow={overflow}
       align={align}
+      spill={spill}
       className={className}
       collapsed={false}
     >
@@ -250,6 +321,7 @@ export function AdaptiveBarCollapsed({
       // The collapsed bucket is one `⋯` sitting among its row's other
       // occupants, so it holds no slack to align anything against.
       align="start"
+      spill={false}
       className={className}
       collapsed
     >
@@ -260,6 +332,7 @@ export function AdaptiveBarCollapsed({
 
 AdaptiveBar.Item = AdaptiveBarItem;
 AdaptiveBar.Collapsed = AdaptiveBarCollapsed;
+AdaptiveBar.Yield = AdaptiveBarYield;
 
 /**
  * Which half of the chain a width fault should send the reader to.
@@ -346,6 +419,13 @@ interface Episode {
    * what makes a transient fault cost the user their whole toolbar.
    */
   best: { placement: Placement; available: number } | null;
+  /*
+   * Every width an episode records — this one, and `promoted`'s `atWidth` — is
+   * the SEARCH's budget: the row's content box minus whatever the yielding cell
+   * reserved (`budget` in `reconcile`). Both are compared against a later pass's
+   * budget, so the currency is consistent; recording the row's own width instead
+   * would make the pair disagree exactly when a title appears or goes away.
+   */
   /**
    * Rungs the last committed pass promoted INTO, and the width it decided at —
    * H2's evidence.
@@ -359,7 +439,7 @@ interface Episode {
    * barred a rung at a width that had never rejected anything.
    *
    * It carries its own width for the same reason. Where the premise held, the
-   * recorded width and the current pass's `available` are the same number by
+   * recorded width and the current pass's budget are the same number by
    * construction; where a future early return is added they are not, and this is
    * the spelling in which the wrong one cannot be named.
    */
@@ -414,6 +494,7 @@ function AdaptiveBarShell({
   label,
   overflow,
   align,
+  spill,
   collapsed,
   className,
   children,
@@ -422,6 +503,7 @@ function AdaptiveBarShell({
   label: string;
   overflow: AdaptiveBarOverflow;
   align: AdaptiveBarAlign;
+  spill: boolean;
   collapsed: boolean;
   className?: string;
   children: ReactNode;
@@ -429,6 +511,23 @@ function AdaptiveBarShell({
   const { measure, isRendered } = useMeasureBundle();
   const layoutMeasured = useLayoutMeasured();
   const editMode = useEditMode();
+
+  /**
+   * Is there already a bar above this one?
+   *
+   * A structural fact, read where every other structural fact is read: the
+   * registry a bar publishes for its own occupants is the same context a bar
+   * nested inside one of them sees. `null` — the overwhelmingly common case —
+   * is a bar in an ordinary row.
+   *
+   * `collapsed` is the whole exclusion, and it is not a special case being
+   * carved out: `.Collapsed` is one `shrink-0` `⋯`, it never measures, and it
+   * never asks for the row's grow, so it is not a second claimant on anything.
+   * `reorder`'s `overflow` node type renders exactly that inside a pane header,
+   * which is a composition that ships today and must stay silent.
+   */
+  const parentBar = useContext(BarRegistryContext);
+  const nestedInBar = !collapsed && parentBar !== null;
 
   // The bar asks for its own room. Its whole premise is that
   // `root.getBoundingClientRect().width` is a width it was GIVEN, which holds
@@ -483,6 +582,22 @@ function AdaptiveBarShell({
   const entriesRef = useRef(new Map<string, BarItemEntry>());
   const [version, setVersion] = useState(0);
   const bump = useCallback(() => setVersion((v) => v + 1), []);
+
+  /**
+   * This bar's one yielding child, or `null` while it has none. The element IS
+   * the claim — a second `<AdaptiveBar.Yield>` is one arriving while this is
+   * already set — and it is what the floor is read off.
+   *
+   * A ref rather than state: nothing renders differently for it, and the one
+   * thing that reads it (the floor, per pass) runs in a layout effect.
+   */
+  const yieldCellRef = useRef<HTMLElement | null>(null);
+  /**
+   * Whether the last pass reserved a floor for that cell — i.e. whether it was
+   * rendering anything. What the content-changed signal compares against, so a
+   * cell re-rendering its own internals does not cost a fit pass.
+   */
+  const yieldReservedRef = useRef(false);
 
   /**
    * The declared ladders, mirrored into React state.
@@ -666,6 +781,31 @@ function AdaptiveBarShell({
         const absent = entry.container.childElementCount === 0;
         if (absent !== (entry.container.hidden === true)) bump();
       },
+      claimYield(cell) {
+        if (yieldCellRef.current !== null) {
+          throw new Error(
+            "adaptive-bar: a bar has at most one <AdaptiveBar.Yield>. It is the row's give — the one child excluded from the fit ledger and allowed below its own content width — so two of them would split the leftover between themselves and both ellipsize, decided by their content rather than by the author. Make the second one an <AdaptiveBar.Item>, which the fit can size and relocate.",
+          );
+        }
+        yieldCellRef.current = cell;
+        // The budget just lost this cell's floor, which is a smaller row for
+        // everyone else — so it is decided again rather than at the next resize.
+        bump();
+        return () => {
+          if (yieldCellRef.current !== cell) return;
+          yieldCellRef.current = null;
+          yieldReservedRef.current = false;
+          bump();
+        };
+      },
+      yieldContentChanged() {
+        const cell = yieldCellRef.current;
+        if (cell === null) return;
+        // `yieldReservedRef` is what the last pass decided from, so this
+        // compares the new truth against the committed one and stays quiet
+        // otherwise — the same discipline as `contentChanged` above.
+        if (yieldFloorPx(cell) > 0 !== yieldReservedRef.current) bump();
+      },
     }),
     [editMode, bump, putLadder],
   );
@@ -743,7 +883,10 @@ function AdaptiveBarShell({
       if (rung === null && !absent) {
         evicted.push(id);
       } else {
-        dockInline(root, entry.container, anchor);
+        // Against the ANCHOR's parent, not the bar root — see `dockInline`.
+        // Through a `display: contents` chain the container is still a flex item
+        // of this row, so gap and measurement are unchanged.
+        dockInline(entry.container, anchor);
       }
     }
     // ORDER IS LOAD-BEARING: the inline loop above ran first, and that is what
@@ -767,6 +910,14 @@ function AdaptiveBarShell({
     // left to decide. Returning here rather than skipping the whole pass keeps
     // a late-arriving occupant docked like the rest.
     if (degraded) return;
+
+    // A bar written inside another bar's occupant has the same nothing to
+    // decide, and it stops here rather than only in the effect that reports it:
+    // a `setDegraded` made in an earlier layout effect of THIS commit is not
+    // visible to this pass's closure, so without this the inner bar would spend
+    // one pass measuring a `shrink-0` container's width — and file `no-slack`
+    // about it, one commit before the fault that names what is really wrong.
+    if (nestedInBar) return;
 
     // The authored bucket has no width to consult — membership is the author's
     // decision, so there is nothing to measure and nothing to converge.
@@ -951,6 +1102,46 @@ function AdaptiveBarShell({
       return;
     }
 
+    // ── The yielding cell's floor ─────────────────────────────────────────
+    // The room the occupants may NOT have, so that the one child which can
+    // shrink is not the one that pays for all of them.
+    //
+    // The yielding cell is `min-w-0` among rigid neighbours, so flex takes the
+    // whole deficit out of it first — and while it can still give, the row does
+    // not overflow, `assign` sees a total that fits, and nothing is ever
+    // demoted or relocated. A pane title therefore went to "Une" and then to
+    // nothing while ten header widgets sat inline. Reserving its floor is the
+    // whole mechanism: the search is handed a smaller row, so pressure past the
+    // floor IS overflow and is paid for the ordinary way — by an occupant
+    // moving into the `⋯`.
+    //
+    // Above the floor nothing changes: the cell still absorbs every pixel the
+    // occupants leave, so a roomy header is laid out exactly as before. Zero
+    // when there is no yielding child, and zero when it renders nothing — an
+    // empty cell has no legibility to protect, and a title-less header must
+    // land its actions where it always did.
+    const yieldFloor = yieldFloorPx(yieldCellRef.current);
+    yieldReservedRef.current = yieldFloor > 0;
+    /**
+     * What the search is handed, as against `available`, which is what the ROW
+     * has. The two are the same number until a yielding cell reserves its
+     * floor, and they are kept apart because they answer different questions:
+     * `available` is a fact about the host (did it give this bar a width at
+     * all, does its width follow its own content), and the guards that ask
+     * those questions must not see a width the bar itself subtracted from.
+     *
+     * Never negative — the difference between "no room for the occupants" and
+     * "no width" is the whole `available <= 0` branch above, and manufacturing
+     * the second from the first would send a merely-narrow row through the
+     * zero-width recovery and, in the end, latch a fault on a healthy host.
+     * Clamped, a row narrower than the floor is an ordinary total overflow: the
+     * fit seats nobody, every evictable occupant relocates behind the `⋯`, and
+     * the cell keeps whatever the trigger leaves — below its floor, because
+     * there is nothing left to take it from. Stable, because the clamp holds
+     * the budget at 0 however much narrower the row gets.
+     */
+    const budget = Math.max(0, available - yieldFloor);
+
     // The bar's whole premise: `available` is handed to it and does not move
     // when it decides. Tested against the layout engine rather than inferred
     // from a style — `flex-grow: 1` is no promise of slack when an ancestor
@@ -967,8 +1158,8 @@ function AdaptiveBarShell({
     if (unverified && slackProbesRef.current < MAX_SLACK_PROBES) {
       const inline = order
         .filter(
-          ({ entry }) =>
-            entry.container.parentNode === root &&
+          ({ anchor, entry }) =>
+            isDockedInline(entry.container, anchor) &&
             entry.container.hidden !== true,
         )
         .map(({ entry }) => entry.container);
@@ -1007,9 +1198,16 @@ function AdaptiveBarShell({
     // engine rather than assumed. `MAX_SURRENDERS` is the backstop anyway.
     if (surrenderedRef.current) {
       const surrenderedAt = surrenderedAtRef.current;
+      // In the SEARCH's currency (`budget`), because that is what the surrender
+      // was stamped with and what it was about: a bar stops deciding because it
+      // could not fit the occupants in the room it had, and the room it had is
+      // the row minus the yielding cell's floor. The two currencies differ by a
+      // constant, so this is the same test at the same widths — except when the
+      // floor itself changes, and a title arriving genuinely IS a change in the
+      // room the search failed at.
       const resized =
         surrenderedAt === null ||
-        Math.abs(available - surrenderedAt) > HYSTERESIS_PX;
+        Math.abs(budget - surrenderedAt) > HYSTERESIS_PX;
       if (!resized || surrenderCountRef.current >= MAX_SURRENDERS) return;
       surrenderedRef.current = false;
       startEpisode(episodeRef.current);
@@ -1023,13 +1221,15 @@ function AdaptiveBarShell({
 
     /** Every occupant this pass could legitimately read — the round's premise. */
     const measured: RoundItem[] = [];
-    for (const { id, entry } of order) {
+    for (const { id, anchor, entry } of order) {
       const rung = rungOf(placement, id);
       if (rung === null) continue;
       // Only an INLINE node is measurable. A width read in the panel describes
       // the panel's layout, not the row's, and would poison every later fit —
       // `write` refuses it, and this is the caller half of that contract.
-      if (entry.container.parentNode !== root) continue;
+      // "Inline" is "docked at its own anchor", never "a child of the root":
+      // the anchor is as deep as the host put it.
+      if (!isDockedInline(entry.container, anchor)) continue;
 
       // ── The occupant rendered nothing, and this is where that is learned ──
       //
@@ -1145,7 +1345,12 @@ function AdaptiveBarShell({
     // other side — see HARD_ROUND_CEILING.
     const episode = episodeRef.current;
     const round: Round = {
-      available,
+      // The premise is what the SEARCH is handed, so the round records the
+      // budget rather than the row: a yielding cell that starts (or stops)
+      // reserving its floor moved the room this search is about, exactly as a
+      // resize does, and the rounds decided before it were about a row that no
+      // longer exists.
+      available: budget,
       // The ladder as DECLARED, never as currently offered. A cut ladder is
       // self-inflicted — the bar found the blank rung by putting the widget
       // there — and a premise is by definition what a decision reads that the
@@ -1188,11 +1393,7 @@ function AdaptiveBarShell({
     // known, instead of being left to be re-evaluated months later against a row
     // that has been re-laid-out and re-measured since. Not memory hygiene: the
     // ledger is bounded by items × rungs either way.
-    blockedRef.current = sweepBarred(
-      blockedRef.current,
-      available,
-      HYSTERESIS_PX,
-    );
+    blockedRef.current = sweepBarred(blockedRef.current, budget, HYSTERESIS_PX);
 
     // THE one place "is this an occupant at all" is decided, and the one place
     // the offered ladder is derived. Everything downstream — the fit, the
@@ -1226,7 +1427,7 @@ function AdaptiveBarShell({
     }
 
     const result = assign({
-      available,
+      available: budget,
       gap: gapPx,
       triggerPx,
       hysteresisPx: HYSTERESIS_PX,
@@ -1266,7 +1467,7 @@ function AdaptiveBarShell({
     // refuse a fit but never fabricate one, so a `fits` reached through
     // estimates is a weaker claim than the one this fallback needs to make.
     if (result.fits && !result.usedEstimate) {
-      episode.best = { placement: result.placement, available };
+      episode.best = { placement: result.placement, available: budget };
     }
 
     if (samePlacement(result.placement, placement)) {
@@ -1305,7 +1506,7 @@ function AdaptiveBarShell({
           // The floor, unconditionally: the fit's own numbers have just been
           // contradicted by the engine, so "the widest placement the fit blessed
           // as fitting" is exactly the claim under suspicion.
-          commitFloor(items, overflow, setPlacement, surrender, available);
+          commitFloor(items, overflow, setPlacement, surrender, budget);
           failLoudly({
             kind: "row-overflow",
             label,
@@ -1362,7 +1563,7 @@ function AdaptiveBarShell({
         overflow,
         setPlacement,
         surrender,
-        available,
+        budget,
       );
       failLoudly({
         kind: "no-convergence",
@@ -1383,7 +1584,7 @@ function AdaptiveBarShell({
       const to = result.placement.get(id);
       if (to === undefined || to === null) continue;
       if (from === null || to < from)
-        episode.promoted.set(id, { rung: to, atWidth: available });
+        episode.promoted.set(id, { rung: to, atWidth: budget });
     }
     setPlacement(result.placement);
   }, [
@@ -1401,6 +1602,7 @@ function AdaptiveBarShell({
     measure,
     isRendered,
     layoutMeasured,
+    nestedInBar,
     grow.granted,
     grow.relays,
   ]);
@@ -1454,6 +1656,41 @@ function AdaptiveBarShell({
     [bump],
   );
 
+  /**
+   * Said once per mount, and only once the root is attached so the fault can
+   * name WHERE the nested bar is written — `origin` is the innermost UI-context
+   * node above the bar's root, and it is the field the report is deduped on.
+   */
+  const nestedReportedRef = useRef(false);
+  // "One adaptive bar per row", enforced instead of written down.
+  //
+  // Not part of `reconcile`, and deliberately so: nesting is a fact about the
+  // TREE, not about a width, so it holds from the first commit and needs no
+  // measurement to establish. Routing it through the pass would also make it
+  // unreachable in exactly the shape it describes — a nested bar's grow ask is
+  // swallowed by the rigid container it sits in, so `reconcile` can return at
+  // `!grow.granted` and never reach a guard placed below it.
+  //
+  // The remedy is `no-slack`'s (the ceiling, latched) rather than the floor's,
+  // and for the same reason: a bar inside another bar's occupant is inside a
+  // `shrink-0` container, so every width it reads is its own content's. An
+  // eviction is precisely what a bad width reading was already producing.
+  // Committed BEFORE the throw, so the dev crash leaves behind the layout that
+  // hides nothing.
+  useLayoutEffect(() => {
+    if (!nestedInBar || root === null || nestedReportedRef.current) return;
+    nestedReportedRef.current = true;
+    setDegraded(true);
+    failLoudly({
+      kind: "nested-bar",
+      label,
+      overflow,
+      ...originOf(root),
+      message:
+        "this bar is rendered INSIDE another adaptive bar's occupant, and one adaptive bar per row is the primitive's contract. Both bars declare themselves min-w-0 flex-1 and ask the row above for its slack, so the inner one takes all of it and the outer one is left measuring its own content — which the outer bar then reports as no-slack, blaming a host that is fine. The inner bar has stopped deciding: every occupant back in the row, CSS clips. Delete it and render its occupants as ordinary children of the widget, so the OUTER bar's ⋯ collapses them; a bar per row is what makes either bar's width mean anything. (An AdaptiveBar.Collapsed nested in a bar is legitimate and never reaches this: it is one shrink-0 ⋯ that measures nothing.)",
+    });
+  }, [nestedInBar, root, label, overflow]);
+
   // Detect the one case a plain re-parent destroys outright, once per item, at
   // the moment we would otherwise move it.
   useLayoutEffect(() => {
@@ -1476,7 +1713,7 @@ function AdaptiveBarShell({
     ? cn(BAR_COLLAPSED_ROOT, className)
     : cn(
         BAR_ROOT,
-        overflow === "scroll" ? BAR_SCROLL : BAR_CLIP,
+        overflow === "scroll" ? BAR_SCROLL : spill ? BAR_SPILL : BAR_CLIP,
         align === "end" && BAR_ALIGN_END,
         className,
       );
@@ -1499,11 +1736,25 @@ function AdaptiveBarShell({
             className={rootClass}
             onPointerDownCapture={onPointerDownCapture}
           >
-            {children}
+            {/*
+              The bar mints one stable container per occupant and re-parents it
+              to place it, so THAT container is each item's box. A slot rendering
+              its contributions in here must not draw a second one — it would be
+              a competing flex item that swallowed the container, and the bar's
+              gap, measurement and docking would describe the cell instead of the
+              row. Declared here so `.Render` composes inside an `AdaptiveBar`
+              the way this primitive's own docstring has always shown it.
+            */}
+            <SlotItemLayout orientation="host-owned">{children}</SlotItemLayout>
             <span
               ref={setTrigger}
               data-adaptive-bar-trigger=""
               hidden={!showTrigger}
+              // The trigger is a flex item of this row whose width
+              // `measureTrigger` CACHES, so one squeezed reading would
+              // under-reserve it forever. It says so itself now that the row no
+              // longer declares rigidity for its children — see `BAR_ROOT`.
+              className={rigidClass()}
             >
               <IconButton
                 icon={MdMoreHoriz}
@@ -1842,7 +2093,7 @@ function px(value: string): number {
  */
 function measureRowOverflow(
   root: HTMLElement,
-  order: readonly { entry: BarItemEntry }[],
+  order: readonly { anchor: HTMLElement; entry: BarItemEntry }[],
   trigger: HTMLElement | null,
 ): number {
   const rect = root.getBoundingClientRect();
@@ -1854,20 +2105,26 @@ function measureRowOverflow(
 
   const spans: Span[] = [];
   const addIfLaidOut = (el: HTMLElement): void => {
-    // Two filters, both load-bearing. A container whose parent is not the root
-    // has been relocated into the body-portaled panel, so its rect describes the
-    // panel's layout and says nothing about this row. And an element generating
-    // NO boxes (`hidden`, which is how absence and the un-needed `⋯` are both
-    // spelled) reports a rect of all zeros — at the viewport origin, which would
-    // fabricate a full-width LEFT overflow on every bar. The layout harness
-    // documents the same trap for `display: none` slots.
-    if (el.parentNode !== root) return;
+    // Load-bearing: an element generating NO boxes (`hidden`, which is how
+    // absence and the un-needed `⋯` are both spelled) reports a rect of all
+    // zeros — at the viewport origin, which would fabricate a full-width LEFT
+    // overflow on every bar. The layout harness documents the same trap for
+    // `display: none` slots.
     if (el.getClientRects().length === 0) return;
     const r = el.getBoundingClientRect();
     spans.push({ left: r.left, right: r.right });
   };
-  for (const { entry } of order) addIfLaidOut(entry.container);
-  if (trigger !== null) addIfLaidOut(trigger);
+  // The other filter, and it is per-KIND because "still in the row" is asked
+  // differently of the two. An occupant is in the row when it is docked at its
+  // own anchor, however deep the host put that anchor; one that is not has been
+  // relocated into the body-portaled panel, so its rect describes the panel's
+  // layout and says nothing about this row. The `⋯` trigger is the bar's own
+  // element and IS a direct child, so for it the parent check is exact.
+  for (const { anchor, entry } of order) {
+    if (!isDockedInline(entry.container, anchor)) continue;
+    addIfLaidOut(entry.container);
+  }
+  if (trigger !== null && trigger.parentNode === root) addIfLaidOut(trigger);
 
   return overflowPx(box, spans);
 }
