@@ -128,10 +128,17 @@ await withBrowser(async (h) => {
     if (bands !== 1) continue;
 
     const off = await readBand(page);
-    r.eq(`${s.name}: edit mode OFF ⇒ no sortables in the header`, off.sortables, 0);
+    r.eq(
+      `${s.name}: edit mode OFF ⇒ no sortables in the header`,
+      off.sortables,
+      0,
+    );
 
     if (!(await setEditMode(page, true))) {
-      r.fail(`${s.name}: enter edit mode`, "pen button not found — probe vacuous");
+      r.fail(
+        `${s.name}: enter edit mode`,
+        "pen button not found — probe vacuous",
+      );
       continue;
     }
 
@@ -265,8 +272,14 @@ async function resolveSongUrl(page: Page): Promise<string> {
   for (let i = 0; i < count; i++) {
     try {
       await cards.nth(i).click({ timeout: 2000 });
-    } catch {
-      continue; // not a clickable card (covered, detached) — try the next
+    } catch (err) {
+      // A card that will not take a click — covered by another element, or
+      // detached mid-scan — is this probe's EXPECTED negative, and Playwright
+      // spells it as a timeout. Anything else (a crashed page, a bad selector)
+      // is a real failure that must not be swallowed by a loop whose only job
+      // is to find the first playable song.
+      if (!(err instanceof Error) || err.name !== "TimeoutError") throw err;
+      continue;
     }
     await page.waitForTimeout(1200);
     if (page.url().includes("/sonata/song/")) return page.url();
