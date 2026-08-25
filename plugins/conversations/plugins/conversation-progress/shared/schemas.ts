@@ -16,10 +16,18 @@ export const PHASE_LABELS: Record<ConversationPhase, string> = {
   pushed: "Pushed",
 };
 
+// The two enums the progress row is made of, each written once: these ARE the
+// decoders of the `phase` / `source` columns (see server/internal/tables.ts) and
+// the wire schema's own members, so the stored set and the pushed set cannot
+// drift apart.
+export const ProgressPhaseSchema = z.enum(PHASE_ORDER);
+// How the phase was decided: inferred from the transcript, or observed from a push.
+export const ProgressSourceSchema = z.enum(["heuristic", "push"]);
+
 export const ConversationProgressSchema = z.object({
   conversationId: z.string(),
-  phase: z.enum(PHASE_ORDER),
-  source: z.enum(["heuristic", "push"]),
+  phase: ProgressPhaseSchema,
+  source: ProgressSourceSchema,
   updatedAt: z.coerce.date(),
 });
 export type ConversationProgress = z.infer<typeof ConversationProgressSchema>;

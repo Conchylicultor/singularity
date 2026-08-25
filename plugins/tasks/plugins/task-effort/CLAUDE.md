@@ -20,6 +20,7 @@
     - `taskLaunchServer` "effort"
   - Uses:
     - `database.db`
+    - `database/sql-column.parsedText`
     - `infra/endpoints.implement`
     - `infra/entity-extensions.defineExtension`
     - `tasks/launch-options.TaskLaunchServer`

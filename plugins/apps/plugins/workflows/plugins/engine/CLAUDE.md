@@ -42,6 +42,7 @@ linear data pipeline: each step's input is the previous step's output
     - `resource.declare` "workflow-executions"
   - Uses:
     - `database.db`
+    - `database/sql-column.parsedText`
     - `infra/endpoints.HttpError`
     - `infra/endpoints.implement`
     - `infra/events.defineTriggerEvent`

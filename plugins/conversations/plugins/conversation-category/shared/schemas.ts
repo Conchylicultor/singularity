@@ -1,6 +1,11 @@
 import { z } from "zod";
 import { pointQueryResourceDescriptor } from "@plugins/infra/plugins/query-resource/core";
 
+// Who set the classification. Written once: this IS the `source` column's decoder
+// (see server/internal/tables.ts) and the wire schema's own member, so the stored
+// set and the pushed set cannot drift apart.
+export const CategorySourceSchema = z.enum(["haiku", "manual"]);
+
 export const ConversationCategorySchema = z.object({
   // `categoryRowId(conversationId, categoryId)` — see shared/row-id.ts.
   id: z.string(),
@@ -10,7 +15,7 @@ export const ConversationCategorySchema = z.object({
   // and survives config edits. Renaming an item in config orphans its rows — the
   // stale label keeps rendering, which beats losing the classification.
   item: z.string(),
-  source: z.enum(["haiku", "manual"]),
+  source: CategorySourceSchema,
   classifiedAt: z.coerce.date(),
 });
 export type ConversationCategory = z.infer<typeof ConversationCategorySchema>;

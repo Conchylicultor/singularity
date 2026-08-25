@@ -1,3 +1,4 @@
+import { z } from "zod";
 import {
   index,
   integer,
@@ -7,6 +8,7 @@ import {
   text,
   timestamp,
 } from "drizzle-orm/pg-core";
+import { parsedText } from "@plugins/database/plugins/sql-column/server";
 
 // Step log for durable workflows — memoizes side-effects performed via
 // `ctx.step(name, fn)` so replays (retries or resumes after a suspend) skip
@@ -30,6 +32,17 @@ export const _jobSteps = pgTable(
   (t) => [primaryKey({ columns: [t.workflowRunId, t.stepName] })],
 );
 
+// The wait lifecycle, written once: this schema IS the `status` column's decoder
+// and the source of its declared type, so the two cannot drift. Strict rather
+// than tolerant — the durable workflow engine is the only writer and has never
+// renamed a state, so an unknown value is a bug and should be loud.
+const JobWaitStatusSchema = z.enum([
+  "pending",
+  "resolved",
+  "timed_out",
+  "cancelled",
+]);
+
 // Wait log for durable workflows — tracks each `ctx.waitFor(event, ...)` call
 // site. `pending` until either the event fires (→ resolved) or the timeout
 // expires (→ timed_out). Payload from the event is stored so replay-after-
@@ -39,9 +52,7 @@ export const _jobWaits = pgTable(
   {
     workflowRunId: text("workflow_run_id").notNull(),
     waitName: text("wait_name").notNull(),
-    status: text("status")
-      .$type<"pending" | "resolved" | "timed_out" | "cancelled">()
-      .notNull(),
+    status: parsedText("status", JobWaitStatusSchema).notNull(),
     payloadJson: jsonb("payload_json").$type<Record<string, unknown> | null>(),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()

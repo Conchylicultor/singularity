@@ -5443,6 +5443,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `resource.declare` "workflow-executions"
             - Uses:
               - `database.db`
+              - `database/sql-column.parsedText`
               - `infra/endpoints.HttpError`
               - `infra/endpoints.implement`
               - `infra/events.defineTriggerEvent`
@@ -8349,6 +8350,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conversations.conversationTurnCompleted`
           - `conversations.readConversationTurns`
           - `database.db`
+          - `database/sql-column.parsedText`
           - `infra/claude-cli.ClaudeCliError`
           - `infra/claude-cli.runClaudePrint`
           - `infra/endpoints.HttpError`
@@ -8465,6 +8467,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses:
           - `conversations.conversationTurnCompleted`
           - `database.db`
+          - `database/sql-column.parsedText`
           - `infra/entity-extensions.defineExtension`
           - `infra/events.Trigger`
           - `infra/jobs.defineJob`
@@ -11313,6 +11316,23 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `infra/mcp.Mcp`
           - `tasks/tasks-core.getConversation`
         - Register: `mcpTool('query_db')`
+    - **`sql-column`** — Decoded columns: `parsedText` derives a text column's type from a zod schema that really decodes it — on every read and every write — so a column can no longer declare a string-literal union nothing verifies.
+      - Cross-plugin:
+        - Imported by:
+          - `apps/workflows/engine`
+          - `conversations/conversation-category`
+          - `conversations/conversation-progress`
+          - `infra/jobs`
+          - `tasks/auto-start`
+          - `tasks/task-effort`
+      - Server:
+        - Exports (types):
+          - `SqlColumnDirection`
+          - `SqlColumnFailure`
+        - Exports (values):
+          - `formatSqlColumnError`
+          - `parsedText`
+          - `SqlColumnError`
     - **`sql-projection`** — Mapped raw-SQL projections: `parsed` / `nullable` turn a schema or a column into the decoder drizzle's `.mapWith()` derives a projection's type from, so a `sql` expression selected as a value can no longer declare a type nothing produces.
       - Cross-plugin:
         - Imported by:
@@ -16859,6 +16879,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `database.db`
           - `database/admin.connectionString`
           - `database/admin.ExcludeSchemaDataFromFork`
+          - `database/sql-column.parsedText`
           - `infra/endpoints.HttpError`
           - `infra/endpoints.implement`
           - `primitives/log-channels.Log`
@@ -29507,6 +29528,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `trigger` "tasks.auto-start-cancel-on-drop"
         - Uses:
           - `database.db`
+          - `database/sql-column.parsedText`
           - `infra/entity-extensions.defineExtension`
           - `infra/events.Trigger`
           - `infra/jobs.defineJob`
@@ -29867,6 +29889,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `taskLaunchServer` "effort"
         - Uses:
           - `database.db`
+          - `database/sql-column.parsedText`
           - `infra/endpoints.implement`
           - `infra/entity-extensions.defineExtension`
           - `tasks/launch-options.TaskLaunchServer`

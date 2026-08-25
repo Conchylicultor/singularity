@@ -6,6 +6,8 @@ import {
   uniqueIndex,
 } from "drizzle-orm/pg-core";
 import { _conversations } from "@plugins/tasks/plugins/tasks-core/server";
+import { parsedText } from "@plugins/database/plugins/sql-column/server";
+import { CategorySourceSchema } from "../../shared/schemas";
 
 // One row per (conversation, category) assignment. NOT a 1:1 entity extension:
 // a conversation carries one row per configured category, and `defineExtension`
@@ -25,7 +27,7 @@ export const _conversationCategories = pgTable(
       .references(() => _conversations.id, { onDelete: "cascade" }),
     categoryId: text("category_id").notNull(),
     item: text("item").notNull(),
-    source: text("source", { enum: ["haiku", "manual"] }).notNull(),
+    source: parsedText("source", CategorySourceSchema).notNull(),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()
       .notNull(),

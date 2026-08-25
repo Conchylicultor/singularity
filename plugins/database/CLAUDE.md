@@ -9,18 +9,20 @@ Owns all database infrastructure for the Singularity server:
 
 ## Typed at the SQL boundary
 
-Two sibling guardrails, one class of bug: a type written by hand where nothing
-verifies it. They split by spelling, so there is never a question of which one
-owns a site.
+Three sibling guardrails, one class of bug: a type written by hand where nothing
+verifies it. They split by spelling — around the row, inside the row, and on the
+column — so there is never a question of which one owns a site.
 
 | you have | owner |
 |---|---|
 | a raw SQL **result** — `pool.query(…)`, `db.execute(sql\`…\`)` — whose rows you read | `plugins/database/plugins/sql-rows` — parse the rows (`queryRows` / `executeRows`) |
 | a raw SQL **expression selected as a value** — ``sql`…` `` in a `db.select()` or a `pgView` | `plugins/database/plugins/sql-projection` — give it a decoder (`.mapWith(…)`) |
+| a **column** narrower than `text` — a string-literal union in a `tables.ts` | `plugins/database/plugins/sql-column` — decode it (`parsedText(name, schema)`) |
 
-Both are enforced (`sql-rows/no-unparsed-sql-rows`,
-`sql-projection/no-asserted-sql-type`), and both plugins' `CLAUDE.md` carry the
-measured pg decoding facts — including the one that catches everybody once:
+All three are enforced (`sql-rows/no-unparsed-sql-rows`,
+`sql-projection/no-asserted-sql-type`, `sql-column/no-asserted-column-type`), and
+each plugin's `CLAUDE.md` carries the measured pg decoding facts — including the
+one that catches everybody once:
 **`timestamptz` has no single answer.** Through drizzle raw SQL it is a `string`;
 through a raw `pg` client it is a `Date`; through a drizzle column it is a `Date`.
 Nothing in the SQL shows which.
@@ -299,6 +301,7 @@ Edit `plugins/{name}/server/internal/tables.ts` → run `./singularity build`. T
   - **`migrations`** — DDL lifecycle: migration runner and SQL files.
   - **`pgbouncer`** — PgBouncer connection pooler for the embedded Postgres cluster. Provides path constants for connection routing.
   - **`query`** — MCP tool for agents to query worktree databases for debugging and inspection.
+  - **`sql-column`** — Decoded columns: `parsedText` derives a text column's type from a zod schema that really decodes it — on every read and every write — so a column can no longer declare a string-literal union nothing verifies.
   - **`sql-projection`** — Mapped raw-SQL projections: `parsed` / `nullable` turn a schema or a column into the decoder drizzle's `.mapWith()` derives a projection's type from, so a `sql` expression selected as a value can no longer declare a type nothing produces.
   - **`sql-rows`** — Parsed raw-SQL row reads: queryRows / executeRows parse every row against a ZodParser and throw a SqlRowError naming the column, the value and its Postgres type OID — closing the pool.query<T>() assertion hole.
   - **`zero`** — Umbrella for the Rocicorp Zero sync-engine infrastructure: shared constants (core), the zero-cache supervised service (cache-service), and the generic client provider + adapter (client). Domain-agnostic — no concrete schema.

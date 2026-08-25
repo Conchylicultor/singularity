@@ -2,7 +2,11 @@ import { and, eq, isNull } from "drizzle-orm";
 import type { AnyPgColumn } from "drizzle-orm/pg-core";
 import { db } from "@plugins/database/server";
 import { abortDurableRun } from "@plugins/infra/plugins/jobs/server";
-import type { DefinitionStep } from "../../core";
+import type {
+  DefinitionStep,
+  ExecutionStatus,
+  ExecutionStepStatus,
+} from "../../core";
 import {
   _workflowDefinitions,
   _workflowExecutions,
@@ -161,23 +165,28 @@ export async function cancelExecution(id: string) {
   // `_userInputSubmittedTriggers` is exported as the generic `PgTable` shape;
   // dynamic column access mirrors the events plugin's own trigger-row deletes.
   // biome-ignore lint/suspicious/noExplicitAny: dynamic column access on untyped PgTable
-  const executionIdCol = (_userInputSubmittedTriggers as any).executionId as AnyPgColumn;
+  const executionIdCol = (_userInputSubmittedTriggers as any)
+    .executionId as AnyPgColumn;
   await db.delete(_userInputSubmittedTriggers).where(eq(executionIdCol, id));
 
   return row;
 }
 
+// `status` is the column's own type, not `string`: the column decodes what it is
+// handed, so an out-of-set status would otherwise first surface as a runtime
+// throw from inside drizzle's encoder. A tsc error names the caller instead.
 export async function updateExecution(
   id: string,
   patch: {
-    status?: string;
+    status?: ExecutionStatus;
     currentStepId?: string | null;
     completedAt?: Date | null;
   },
 ) {
   const values: Record<string, unknown> = { updatedAt: new Date() };
   if (patch.status !== undefined) values.status = patch.status;
-  if (patch.currentStepId !== undefined) values.currentStepId = patch.currentStepId;
+  if (patch.currentStepId !== undefined)
+    values.currentStepId = patch.currentStepId;
   if (patch.completedAt !== undefined) values.completedAt = patch.completedAt;
 
   await db
@@ -189,7 +198,7 @@ export async function updateExecution(
 export async function updateExecutionStep(
   id: string,
   patch: {
-    status?: string;
+    status?: ExecutionStepStatus;
     input?: unknown;
     output?: unknown;
     error?: string | null;

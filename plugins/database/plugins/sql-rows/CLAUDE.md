@@ -143,6 +143,10 @@ parse is what caught it, naming the column, the value and `OID 1184` instead of
 letting a `Date` flow into code typed `string`. Which is the argument for the
 whole plugin, made against its own author.
 
+A **column** is the fourth row of that table and the one place the answer is
+free: it always decodes, because a drizzle column carries a real decoder. Keeping
+it that way when the column is narrower than its pg type is `sql-column`'s job.
+
 The same trap accounts for every lie the sibling
 [`sql-projection`](../sql-projection/CLAUDE.md) found one layer down: three
 ``sql<Date | null>`…` `` projections holding a `string`, because a raw projection

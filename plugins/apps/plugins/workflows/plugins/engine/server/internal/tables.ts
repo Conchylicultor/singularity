@@ -6,16 +6,25 @@ import {
   text,
   timestamp,
 } from "drizzle-orm/pg-core";
-import type { DefinitionStep, ExecutionStatus, ExecutionStepStatus } from "../../core";
+import { parsedText } from "@plugins/database/plugins/sql-column/server";
+import { ExecutionStatusSchema, ExecutionStepStatusSchema } from "../../core";
+import type { DefinitionStep } from "../../core";
 
 export const _workflowDefinitions = pgTable("workflow_definitions", {
   id: text("id").primaryKey(),
   name: text("name").notNull(),
   description: text("description"),
-  steps: jsonb("steps").$type<Record<string, DefinitionStep>>().notNull().default({}),
+  steps: jsonb("steps")
+    .$type<Record<string, DefinitionStep>>()
+    .notNull()
+    .default({}),
   entryStepId: text("entry_step_id"),
-  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
-  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .defaultNow()
+    .notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .defaultNow()
+    .notNull(),
 });
 
 export const _workflowExecutions = pgTable("workflow_executions", {
@@ -23,10 +32,16 @@ export const _workflowExecutions = pgTable("workflow_executions", {
   definitionId: text("definition_id")
     .notNull()
     .references(() => _workflowDefinitions.id, { onDelete: "cascade" }),
-  status: text("status").$type<ExecutionStatus>().notNull().default("pending"),
+  status: parsedText("status", ExecutionStatusSchema)
+    .notNull()
+    .default("pending"),
   currentStepId: text("current_step_id"),
-  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
-  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .defaultNow()
+    .notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .defaultNow()
+    .notNull(),
   completedAt: timestamp("completed_at", { withTimezone: true }),
 });
 
@@ -41,10 +56,18 @@ export const _workflowExecutionSteps = pgTable(
     executionOrder: integer("execution_order").notNull(),
     stepPluginId: text("step_plugin_id").notNull(),
     label: text("label").notNull(),
-    config: jsonb("config").$type<Record<string, unknown>>().notNull().default({}),
+    config: jsonb("config")
+      .$type<Record<string, unknown>>()
+      .notNull()
+      .default({}),
     next: text("next"),
-    nextStepMapping: jsonb("next_step_mapping").$type<Record<string, string> | null>(),
-    status: text("status").$type<ExecutionStepStatus>().notNull().default("pending"),
+    nextStepMapping: jsonb("next_step_mapping").$type<Record<
+      string,
+      string
+    > | null>(),
+    status: parsedText("status", ExecutionStepStatusSchema)
+      .notNull()
+      .default("pending"),
     input: jsonb("input"),
     output: jsonb("output"),
     error: text("error"),
