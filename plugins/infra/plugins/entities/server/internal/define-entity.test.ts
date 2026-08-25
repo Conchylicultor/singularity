@@ -8,9 +8,16 @@ import {
   timestamp,
   uuid,
 } from "drizzle-orm/pg-core";
-import { getTableConfig } from "drizzle-orm/pg-core";
+import { getTableConfig, PgCustomColumn } from "drizzle-orm/pg-core";
 import type { AnyPgColumn } from "drizzle-orm/pg-core";
+import { is } from "drizzle-orm";
 import { collectContributions } from "@plugins/framework/plugins/server-core/core";
+import {
+  parsedText,
+  SqlColumnError,
+} from "@plugins/database/plugins/sql-column/server";
+import type { StorageColumnFor } from "@plugins/fields/plugins/server-capabilities/server";
+import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
 import { defineFieldType } from "@plugins/fields/core";
 import type { FieldDef } from "@plugins/fields/core";
 import { Fields } from "@plugins/fields/plugins/server-capabilities/server";
@@ -20,7 +27,7 @@ import { defaultNow, defaultRandom } from "./types";
 // ── Throwaway field types + storage builders ───────────────────────────────
 // Local field types via fields/core keep this unit decoupled from concrete
 // field-type plugins (importing a sibling type would form a cross-plugin
-// cycle). Storage builders are registered exactly as fields-to-columns.test.ts.
+// cycle).
 const textType = defineFieldType<string>("__ent_text__");
 const uuidType = defineFieldType<string>("__ent_uuid__");
 const intType = defineFieldType<number>("__ent_int__");
@@ -28,6 +35,20 @@ const floatType = defineFieldType<number>("__ent_float__");
 const dateType = defineFieldType<Date>("__ent_date__");
 // A type with NO storage contribution — exercises the throw path.
 const noStorageType = defineFieldType<string>("__ent_no_storage__");
+// A type whose column is narrowed by the FIELD's own schema — the `decode` arm.
+// Mirrors the real `text` storage contribution's discrimination so these tests
+// exercise defineEntity's arm dispatch, not a stand-in for it.
+const decodedTextType = defineFieldType<string>("__ent_decoded_text__");
+const decodeText = <V extends string>(
+  n: string,
+  valueSchema: ZodParser<V>,
+): StorageColumnFor<V> =>
+  valueSchema instanceof z.ZodString
+    ? // Sound: `ZodString`'s output IS `string`, which is not assignable to any
+      // proper subtype of itself, so a `ZodParser<V>` for a narrower `V` can never
+      // be a `ZodString`. TS cannot narrow a type parameter from an `instanceof`.
+      (text(n) as unknown as StorageColumnFor<V>)
+    : parsedText(n, valueSchema);
 
 // json field type is generic over its payload T; build it per-payload below.
 function jsonType<T>() {
@@ -50,6 +71,7 @@ collectContributions([
         type: dateType,
         build: (n) => timestamp(n, { withTimezone: true }),
       }),
+      Fields.Storage({ type: decodedTextType, decode: decodeText }),
     ],
   },
 ]);
@@ -96,9 +118,9 @@ function buildSlowOps() {
       ),
       recentSamples: field(
         jsonType<SlowOpSample[]>(),
-        z.array(
-          z.object({ at: z.number(), load: z.number() }),
-        ) as z.ZodType<SlowOpSample[]>,
+        z.array(z.object({ at: z.number(), load: z.number() })) as z.ZodType<
+          SlowOpSample[]
+        >,
         [],
       ),
       firstSeenAt: field(dateType, z.date(), new Date(0)),
@@ -260,11 +282,10 @@ test("defineEntity throws (naming key + type) for a field whose type has no stor
 // ── Compile-time guard: z.infer<schema> ≡ table.$inferSelect ────────────────
 // The whole point of Stage C: the two derive from one FieldsRecord and must be
 // identical by construction. A drift is a tsc error on this line.
-type Equal<A, B> = (<T>() => T extends A ? 1 : 2) extends <T>() => T extends B
-  ? 1
-  : 2
-  ? true
-  : false;
+type Equal<A, B> =
+  (<T>() => T extends A ? 1 : 2) extends <T>() => T extends B ? 1 : 2
+    ? true
+    : false;
 type Expect<T extends true> = T;
 
 const slowOpsForType = buildSlowOps();
@@ -345,7 +366,10 @@ test("defineEntity throws when a serverOnly key is the primary key", () => {
   expect(() =>
     defineEntity(
       "ent_pk_server_only",
-      { id: field(uuidType, z.string(), ""), note: field(textType, z.string(), "") },
+      {
+        id: field(uuidType, z.string(), ""),
+        note: field(textType, z.string(), ""),
+      },
       { primaryKey: "id", serverOnly: ["id"] },
     ),
   ).toThrow(/primary-key column "id" cannot be serverOnly/);
@@ -551,7 +575,11 @@ test("enum-branded literal DB default does not collapse insert optionality", () 
 // `z.ZodType<string>` keeps the throwaway field type happy (runtime nullability
 // is read off the raw schema instance, exactly like a real nullable field).
 function nullableField(): FieldDef<string> {
-  return field(textType, z.string().nullable() as unknown as z.ZodType<string>, "");
+  return field(
+    textType,
+    z.string().nullable() as unknown as z.ZodType<string>,
+    "",
+  );
 }
 
 test("defineEntity emits FK constraints (cascade, set-null, self-ref, composite)", () => {
@@ -686,7 +714,10 @@ test("defineEntity defaults the FK action to NO ACTION when none is given", () =
   );
   const child = defineEntity(
     "fk_noaction_child",
-    { id: field(textType, z.string(), ""), parentId: field(textType, z.string(), "") },
+    {
+      id: field(textType, z.string(), ""),
+      parentId: field(textType, z.string(), ""),
+    },
     {
       primaryKey: "id",
       columns: { parentId: { references: { column: () => parent.table.id } } },
@@ -699,4 +730,123 @@ test("defineEntity defaults the FK action to NO ACTION when none is given", () =
   expect(fk.onDelete).toBe("no action");
   expect(fk.onUpdate).toBe("no action");
   expect(fk.reference().foreignColumns[0]!.name).toBe("id");
+});
+
+// ── The two storage arms ───────────────────────────────────────────────────
+// A field type either has a FIXED column (`build`) or one narrowed by the
+// field's own schema (`decode`), and defineEntity picks the arm. What the second
+// arm buys is that the union in the column's type is what really runs: an
+// out-of-set row throws where it is read, instead of being handed to typed code
+// as if it matched. See
+// `research/2026-08-25-global-decoded-entity-columns.md`.
+
+const KIND_VALUES = ["user", "agent", "system"] as const;
+
+test("a narrowed field's column really throws on an out-of-set read", () => {
+  const ent = defineEntity(
+    "ent_decoded",
+    {
+      id: field(textType, z.string(), ""),
+      kind: field(
+        decodedTextType as unknown as ReturnType<
+          typeof defineFieldType<(typeof KIND_VALUES)[number]>
+        >,
+        z.enum(KIND_VALUES),
+        "user",
+      ),
+    },
+    { primaryKey: "id" },
+  );
+
+  // In-set reads pass through untouched…
+  expect(ent.table.kind.mapFromDriverValue("agent")).toBe("agent");
+  // …and the DDL is still a plain `text`, which is what makes adopting the
+  // decoder generate no migration.
+  expect(ent.table.kind.getSQLType()).toBe("text");
+
+  let err: unknown;
+  try {
+    ent.table.kind.mapFromDriverValue("wizard");
+  } catch (e) {
+    err = e;
+  }
+  expect(err).toBeInstanceOf(SqlColumnError);
+  expect((err as SqlColumnError).label).toBe("ent_decoded.kind");
+});
+
+test("a plain-string field's column carries NO decoder", () => {
+  // The cost claim, as a test: decoding a column that is not narrowed costs the
+  // same as decoding one that is, for zero guarantee. A `z.string()` field must
+  // therefore keep a bare `text` column whose read is the identity.
+  const ent = defineEntity(
+    "ent_undecoded",
+    {
+      id: field(textType, z.string(), ""),
+      note: field(decodedTextType, z.string(), ""),
+    },
+    { primaryKey: "id" },
+  );
+
+  expect(is(ent.table.note, PgCustomColumn)).toBe(false);
+  expect(ent.table.note.mapFromDriverValue("anything at all")).toBe(
+    "anything at all",
+  );
+});
+
+test("a NULLABLE plain-string field still carries no decoder", () => {
+  // The case most likely to regress silently: if `splitNullability` stopped
+  // unwrapping, the storage arm would see a `ZodNullable` rather than a
+  // `ZodString`, take the decoding branch, and quietly put a parse on every
+  // nullable text column in the repo — 345 ns per value, verifying nothing.
+  const ent = defineEntity(
+    "ent_undecoded_nullable",
+    {
+      id: field(textType, z.string(), ""),
+      note: field(
+        decodedTextType as unknown as ReturnType<
+          typeof defineFieldType<string | null>
+        >,
+        z.string().nullable(),
+        null,
+      ),
+    },
+    { primaryKey: "id" },
+  );
+
+  expect(is(ent.table.note, PgCustomColumn)).toBe(false);
+  expect(ent.table.note.notNull).toBe(false);
+  expect(ent.table.note.mapFromDriverValue("anything at all")).toBe(
+    "anything at all",
+  );
+});
+
+test("a nullable narrowed field decodes its UNWRAPPED schema and stays nullable", () => {
+  // A decoder never sees `null` in either direction, so it must be handed the
+  // schema for the column's VALUES — never the `.nullable()` wrapper, which
+  // would make every real value fail one half of the round trip. Nullability
+  // stays drizzle's, derived from the same split.
+  const ent = defineEntity(
+    "ent_decoded_nullable",
+    {
+      id: field(textType, z.string(), ""),
+      kind: field(
+        decodedTextType as unknown as ReturnType<
+          typeof defineFieldType<(typeof KIND_VALUES)[number] | null>
+        >,
+        z.enum(KIND_VALUES).nullable(),
+        null,
+      ),
+    },
+    { primaryKey: "id" },
+  );
+
+  // The column is nullable (no `.notNull()`)…
+  expect(ent.table.kind.notNull).toBe(false);
+  // …and its decoder is the ENUM, not the nullable wrapper: an in-set value
+  // passes, an outsider throws. (drizzle guards `null` before the decoder ever
+  // runs, so the decoder is never asked about it.)
+  expect(ent.table.kind.mapFromDriverValue("system")).toBe("system");
+  expect(() => ent.table.kind.mapFromDriverValue("wizard")).toThrow(
+    SqlColumnError,
+  );
 });

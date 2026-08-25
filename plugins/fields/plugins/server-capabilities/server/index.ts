@@ -2,6 +2,7 @@ import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-c
 
 export { resolveFieldStorage } from "./internal/storage";
 export type {
+  StorageColumnFor,
   StorageColumnBuilder,
   FieldStorageContribution,
 } from "./internal/storage";
@@ -17,7 +18,6 @@ export type {
   ValueTextCast,
   FieldValueTextCastContribution,
 } from "./internal/value-cast";
-export { fieldsToColumns } from "./internal/fields-to-columns";
 
 export default {
   description:

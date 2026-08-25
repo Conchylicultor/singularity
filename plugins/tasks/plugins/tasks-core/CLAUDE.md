@@ -294,7 +294,7 @@ Full design: `research/2026-08-20-tasks-attempt-status-positive-evidence.md`.
     - `tasks` (keyed)
 - Core:
   - Uses:
-    - `conversations/model-provider.ConversationModelSchema`
+    - `conversations/model-provider.DEFAULT_MODEL`
     - `conversations/model-provider.StoredModelSchema`
     - `fields.fieldsToZodObject`
     - `fields.nullable`
@@ -302,6 +302,7 @@ Full design: `research/2026-08-20-tasks-attempt-status-positive-evidence.md`.
     - `fields/date/config.dateField`
     - `fields/rank/config.rankField`
     - `fields/text/config.enumTextField`
+    - `fields/text/config.parsedTextField`
     - `fields/text/config.textField`
     - `infra/query-resource.queryResourceDescriptor`
     - `primitives/live-state.keyedResourceDescriptor`

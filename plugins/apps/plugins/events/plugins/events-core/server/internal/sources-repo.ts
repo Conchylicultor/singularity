@@ -107,7 +107,13 @@ export async function updateSource(
   // (the type is immutable — see `UpdateEventSourceBodySchema`).
   const current = await requireSource(id);
 
-  const updates: Record<string, unknown> = { updatedAt: new Date() };
+  // Typed against the table's own insert row, not `Record<string, unknown>`:
+  // `refresh` is a DECODED column now, so its encoder runs on this `.set(...)`.
+  // A widened value would otherwise be a runtime throw from inside drizzle;
+  // here it is a tsc error at the assignment that wrote it.
+  const updates: Partial<(typeof _eventSources)["$inferInsert"]> = {
+    updatedAt: new Date(),
+  };
 
   // Resolved before the name, because an emptied name re-derives from the config
   // this write is landing, not the one it replaces.

@@ -1920,8 +1920,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `fields/int/config.intField`
               - `fields/json/config.jsonField`
               - `fields/text/config.enumTextField`
+              - `fields/text/config.parsedTextField`
               - `fields/text/config.textField`
               - `primitives/live-state.resourceDescriptor`
+              - `primitives/live-state.tolerantEnum`
             - Exports (types):
               - `MailAccount`
               - `MailAddress`
@@ -11336,6 +11338,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/workflows/engine`
           - `conversations/conversation-category`
           - `conversations/conversation-progress`
+          - `fields/text/storage`
           - `infra/jobs`
           - `tasks/auto-start`
           - `tasks/task-effort`
@@ -14342,10 +14345,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `FieldValueTextCastContribution`
           - `FilterSqlBuilder`
           - `StorageColumnBuilder`
+          - `StorageColumnFor`
           - `ValueTextCast`
         - Exports (values):
           - `Fields`
-          - `fieldsToColumns`
           - `resolveFieldFilterSql`
           - `resolveFieldStorage`
           - `resolveFieldValueTextCast`
@@ -14512,6 +14515,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Exports (types): `TextFieldDef`
             - Exports (values):
               - `enumTextField`
+              - `parsedTextField`
               - `textField`
           - Cross-plugin:
             - Imported by:
@@ -14551,10 +14555,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Uses:
               - `primitives/css/ui-kit.Input`
               - `primitives/data-view.DataViewSlots`
-        - **`storage`** — Text field type: DB storage capability — maps to a Postgres text column.
+        - **`storage`** — Text field type: DB storage capability — a Postgres text column, decoded by the field's own schema so a narrowed text column (enumTextField) is derived rather than asserted.
           - Server:
             - Contributes: `fields.storage` "text"
-            - Uses: `fields/server-capabilities.Fields`
+            - Uses:
+              - `database/sql-column.parsedText`
+              - `fields/server-capabilities.Fields`
           - Cross-plugin:
             - Imported by: `fields/server-capabilities-loader`
         - **`table`** — Text field type: data-view table cell (read-only text cell).
@@ -15999,7 +16005,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `useClaudeCliCalls`
       - Core:
         - Uses:
-          - `conversations/model-provider.ConversationModelSchema`
+          - `conversations/model-provider.DEFAULT_MODEL`
           - `conversations/model-provider.StoredModelSchema`
           - `fields.FieldsRecord`
           - `fields.fieldsToZodObject`
@@ -16007,7 +16013,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `fields/date/config.dateField`
           - `fields/int/config.intField`
           - `fields/json/config.jsonField`
-          - `fields/text/config.enumTextField`
+          - `fields/text/config.parsedTextField`
           - `fields/text/config.textField`
           - `fields/uuid/config.uuidField`
           - `infra/endpoints.defineEndpoint`
@@ -30238,7 +30244,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `tasks` (keyed)
       - Core:
         - Uses:
-          - `conversations/model-provider.ConversationModelSchema`
+          - `conversations/model-provider.DEFAULT_MODEL`
           - `conversations/model-provider.StoredModelSchema`
           - `fields.fieldsToZodObject`
           - `fields.nullable`
@@ -30246,6 +30252,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `fields/date/config.dateField`
           - `fields/rank/config.rankField`
           - `fields/text/config.enumTextField`
+          - `fields/text/config.parsedTextField`
           - `fields/text/config.textField`
           - `infra/query-resource.queryResourceDescriptor`
           - `primitives/live-state.keyedResourceDescriptor`

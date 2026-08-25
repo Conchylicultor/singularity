@@ -62,6 +62,27 @@ the caller. The error says which direction failed, because the fix differs — a
 that should have parsed. The encoder runs on INSERT `.values()`, UPDATE `.set()`,
 and every bound comparison param (`eq`, `inArray`, …).
 
+## What it costs
+
+Measured end to end on the worst read that exists — the whole `conversations`
+table (4 222 rows, 16 columns, 3 of them decoded) through real drizzle over the
+live socket, arms interleaved A/B ×25 to hold host load equal:
+
+```
+plain   median 84.8 ms   p10 52.4 ms
+decoded median 88.8 ms   p10 54.0 ms
+overhead  +1.6 ms (p10)  …  +4.0 ms (median)   =  3–5 %,  ~123 ns per decoded value
+```
+
+`conversations` is the only unbounded, still-growing table whose loader reads it
+whole; every other decoded read is bounded or keyset-paginated, so this is 3–5 %
+on the worst case and sub-millisecond everywhere else.
+
+The number that decides the *design*, though, is that decoding a column which is
+**not** narrowed costs the same as decoding one that is (345 ns vs 322 ns per
+value) for zero guarantee. That is why the text storage arm branches on the
+schema rather than decoding every text column.
+
 ## Adopting it generates no migration
 
 `getSQLType()` is `"text"`; drizzle-kit reads that into the snapshot with no
@@ -103,9 +124,12 @@ Scoped by the chain's **root**: it fires only on a literal `text(` / `varchar(` 
 
 - `jsonb(…).$type<T>()` — a materially weaker tier: pg really decodes JSON, so
   only the *shape* is asserted.
-- `defineEntity`'s generic `b.$type()` — its type comes from a field's own
-  `FieldDef`, so the fix belongs in the `fields.storage` capability handing back a
-  decoder, not in a per-column call.
+- ~~`defineEntity`'s generic `b.$type()`~~ — **done.** The fix was exactly where
+  this predicted: the `fields.storage` capability now hands back a decoder rather
+  than a bare builder, so every `enumTextField` column across the 30 entities is
+  decoded by its own field schema and `b.$type()` is gone. See
+  `research/2026-08-25-global-decoded-entity-columns.md` and
+  `plugins/fields/plugins/text/plugins/storage`.
 
 ## Considered and rejected: `pgEnum` / `CHECK`
 
@@ -127,6 +151,7 @@ Design: `research/2026-08-25-database-decoded-columns.md`.
     - `apps/workflows/engine`
     - `conversations/conversation-category`
     - `conversations/conversation-progress`
+    - `fields/text/storage`
     - `infra/jobs`
     - `tasks/auto-start`
     - `tasks/task-effort`

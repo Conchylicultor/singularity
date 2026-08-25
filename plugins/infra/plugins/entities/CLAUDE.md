@@ -52,13 +52,44 @@ type SlowOpRow = EntityRow<typeof slowOps>;   // = z.infer<typeof slowOps.schema
 
 ## How it derives the two artifacts from one field record
 
-- **Columns** — `resolveFieldStorage(field.type.id)` gives the BARE column
-  builder; the factory applies modifiers (`$type<T>()`, `.notNull()`,
-  `.primaryKey()`, `.default()`). It does NOT use `fieldsToColumns` (that
-  hardcodes camelCase column names + no modifiers). The DB column name is
+- **Columns** — `resolveFieldStorage(field.type.id)` gives the storage
+  CONTRIBUTION, and the factory picks its arm (see below) and applies the
+  modifiers (`.notNull()`, `.primaryKey()`, `.default()`). The DB column name is
   `meta.columns.<key>.name ?? snakeCase(key)` — a JS-prop-keyed `$inferSelect`
   is unaffected by snake_case (purely a DDL concern).
 - **Schema** — `fieldsToZodObject(fields)`, keyed by the same JS props.
+
+## The two storage arms — what is derived, what is asserted
+
+A field type either has a **fixed** column (`build`) or one **narrowed by the
+field's own schema** (`decode`), and `defineEntity` picks the arm:
+
+```ts
+storage.build ? storage.build(columnName) : storage.decode(columnName, value)
+```
+
+`value` is the field schema with its nullability peeled off (`splitNullability`),
+because a decoder never sees `null` in either direction — drizzle guards it on
+both — so handing it the `.nullable()` wrapper would make every real value fail
+one half of the round trip. One helper returns both answers so the column's
+declared nullability and its decoder cannot disagree.
+
+That distinction is what the `EntityColumns` cast below now mostly *re-states*
+rather than asserts:
+
+| columns | the cast |
+|---|---|
+| every `text` field — so every `enumTextField` union | **DERIVED**: the builder was already typed off the schema that really decodes the column |
+| `bool` / `int` / `float` / `date` / `uuid` / `rank` | **DERIVED**: the builder's type is pinned to its token's value type |
+| every `jsonb` column (`jsonField<T>`, `tags`) | **ASSERTED**: Postgres really decodes the JSON, so only the SHAPE was ever claimed, and `T` comes from the cast and from nothing that runs |
+
+The jsonb tier is a deliberate follow-up — measured at roughly a 2× multiplier on
+that column's decode cost for a weaker guarantee, so it needs its own design
+(`research/2026-08-25-global-decoded-entity-columns.md` §7).
+
+The `b.$type()` call this factory used to make is gone: it was a runtime no-op
+(`$type() { return this; }` in drizzle 0.36.4), and the type now comes from the
+builder.
 
 The precise select-type alignment is the one load-bearing cast:
 `builders as unknown as EntityColumns<F>` fed to `pgTable`, which lets drizzle's
@@ -70,9 +101,11 @@ INSERT model, not select), keeping the select type exact.
 
 ## Nullability & defaults — two distinct concepts
 
-- **Nullability** is derived from the RAW `field.schema`: a `ZodOptional` /
-  `ZodNullable` leaves the column nullable; anything else gets `.notNull()`.
-  Deriving it from the schema is what prevents wire/column nullability drift.
+- **Nullability** is derived from the RAW `field.schema` by `splitNullability`:
+  a `ZodOptional` / `ZodNullable` (nested to any depth) leaves the column
+  nullable; anything else gets `.notNull()`. Deriving it from the schema is what
+  prevents wire/column nullability drift — and the same call yields the value
+  schema a decoding storage arm is handed, so those two cannot drift either.
 - **DB defaults are OPT-IN per column** via `meta.columns.<key>.default` — they
   are a DISTINCT concept from a field's wire/backfill default
   (`field.defaultValue`). `defineEntity` never auto-applies `field.defaultValue`

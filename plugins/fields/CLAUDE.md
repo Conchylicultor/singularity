@@ -54,10 +54,15 @@ tokens, so anything that imports the barrels back would cycle.
   `fields.filter-sql` server-contribution registries (the `Fields.Storage` /
   `Fields.FilterSql` tokens) and the generic `resolveFieldStorage(typeId)` /
   `resolveFieldFilterSql(typeId, opId)` resolvers.
-- Each persisted type contributes its Drizzle column builder from a
-  `plugins/<type>/plugins/storage/` server sub-plugin
-  (`Fields.Storage({ type, build })`), so adding/removing a type updates the
-  matrix with zero consumer edits.
+- Each persisted type contributes its Drizzle column from a
+  `plugins/<type>/plugins/storage/` server sub-plugin, so adding/removing a type
+  updates the matrix with zero consumer edits. **Two arms, and which one a type
+  uses is a fact about the type:** `Fields.Storage({ type, build })` when the
+  column holds exactly what the type declares, `({ type, decode })` when it is
+  narrowed by the FIELD's own schema — in which case that schema is handed to the
+  builder and really runs, on every read and write, so the narrower type is
+  derived rather than asserted. `text` is the only decoding arm today
+  (`research/2026-08-25-global-decoded-entity-columns.md`).
 - **Resolution is exact-token — no `extends` fallback.** Every persisted type
   declares its own builder; `resolveFieldStorage` does a direct keyed lookup.
   (A future derived type wanting the same column re-declares a one-line builder

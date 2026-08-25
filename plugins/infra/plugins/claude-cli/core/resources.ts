@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { resourceDescriptor } from "@plugins/primitives/plugins/live-state/core";
 import {
-  ConversationModelSchema,
+  DEFAULT_MODEL,
   StoredModelSchema,
 } from "@plugins/conversations/plugins/model-provider/core";
 import {
@@ -12,7 +12,7 @@ import {
 import { uuidField } from "@plugins/fields/plugins/uuid/plugins/config/core";
 import {
   textField,
-  enumTextField,
+  parsedTextField,
 } from "@plugins/fields/plugins/text/plugins/config/core";
 import { intField } from "@plugins/fields/plugins/int/plugins/config/core";
 import { dateField } from "@plugins/fields/plugins/date/plugins/config/core";
@@ -23,16 +23,28 @@ import { jsonField } from "@plugins/fields/plugins/json/plugins/config/core";
 // both derive from this single field record, so a column ↔ schema drift is
 // unrepresentable. Keyed by JS prop name IN COLUMN ORDER.
 //
-// `model` is a `text` column branded with `ConversationModel` (the `$type`
-// brand is TS-only — the DDL stays plain text). The wire schema overrides it
-// with the tolerant `StoredModelSchema` below.
+// `model` is a plain `text` column in the DDL, decoded by the tolerant
+// `StoredModelSchema` — so the `ConversationModel` in its type is what really
+// runs on every read and write, and a legacy/coarse-tier id written before the
+// ids were versioned (e.g. `"opus"`) normalizes instead of being handed to
+// typed code as if it were a live model. That is the same guard the wire schema
+// used to carry alone, now one layer lower, where the server-side readers are.
+//
+// `DEFAULT_MODEL` is the wire/backfill default, where the tuple form silently
+// gave `"fable-5"` — the first entry of the enum, i.e. tuple order rather than
+// anyone's decision. Nothing observable changes: the column is notNull with no
+// DB default, so every row carries a model and the wire schema's `.default()`
+// never fires.
 export const claudeCliCallFields = {
   id: uuidField(),
   createdAt: dateField(),
-  model: enumTextField(ConversationModelSchema.options),
+  model: parsedTextField(StoredModelSchema, { default: DEFAULT_MODEL }),
   sourceName: textField(),
   sourceContext: nullable(
-    jsonField<Record<string, unknown>>({ schema: z.record(z.unknown()), default: {} }),
+    jsonField<Record<string, unknown>>({
+      schema: z.record(z.unknown()),
+      default: {},
+    }),
   ),
   prompt: textField(),
   system: nullable(textField()),
@@ -47,13 +59,13 @@ export const claudeCliCallFields = {
   correlationId: nullable(textField()),
 } satisfies FieldsRecord;
 
-export const ClaudeCliCallSchema = fieldsToZodObject(claudeCliCallFields).extend({
-  // Tolerant by construction (see StoredModelSchema): a legacy/coarse-tier or
-  // otherwise-unknown stored model normalizes to a concrete model instead of
-  // rejecting the row — which would blank the whole calls array on the WS push
-  // path. The DB column stays plain text (see `model` above).
-  model: StoredModelSchema,
-});
+// No `model` re-widening: the field's own schema IS `StoredModelSchema` now, so
+// `fieldsToZodObject` already derives the tolerant arm — a legacy/unknown stored
+// model normalizes to a concrete one instead of rejecting the row and blanking
+// the whole calls array on the WS push path. Overriding it here would restate
+// the same schema in a second place, which is the drift this derivation exists
+// to remove.
+export const ClaudeCliCallSchema = fieldsToZodObject(claudeCliCallFields);
 export type ClaudeCliCall = z.infer<typeof ClaudeCliCallSchema>;
 
 export const claudeCliCallsResource = resourceDescriptor<ClaudeCliCall[]>(

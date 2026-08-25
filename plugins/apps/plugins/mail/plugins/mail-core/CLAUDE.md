@@ -132,8 +132,10 @@ imports `@plugins/auth/*` directly — all Gmail auth flows through
     - `fields/int/config.intField`
     - `fields/json/config.jsonField`
     - `fields/text/config.enumTextField`
+    - `fields/text/config.parsedTextField`
     - `fields/text/config.textField`
     - `primitives/live-state.resourceDescriptor`
+    - `primitives/live-state.tolerantEnum`
   - Exports (types):
     - `MailAccount`
     - `MailAddress`

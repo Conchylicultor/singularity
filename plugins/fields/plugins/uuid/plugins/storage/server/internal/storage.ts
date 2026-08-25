@@ -1,3 +1,4 @@
-import { uuid, type PgColumnBuilderBase } from "drizzle-orm/pg-core";
+import { uuid } from "drizzle-orm/pg-core";
+import type { StorageColumnFor } from "@plugins/fields/plugins/server-capabilities/server";
 
-export const build = (name: string): PgColumnBuilderBase => uuid(name);
+export const build = (name: string): StorageColumnFor<string> => uuid(name);

@@ -18,6 +18,7 @@ column — so there is never a question of which one owns a site.
 | a raw SQL **result** — `pool.query(…)`, `db.execute(sql\`…\`)` — whose rows you read | `plugins/database/plugins/sql-rows` — parse the rows (`queryRows` / `executeRows`) |
 | a raw SQL **expression selected as a value** — ``sql`…` `` in a `db.select()` or a `pgView` | `plugins/database/plugins/sql-projection` — give it a decoder (`.mapWith(…)`) |
 | a **column** narrower than `text` — a string-literal union in a `tables.ts` | `plugins/database/plugins/sql-column` — decode it (`parsedText(name, schema)`) |
+| a column `defineEntity` derives from a **field record** | nothing to do — the field type's storage contribution decodes it (`fields/text/plugins/storage`). jsonb columns stay asserted; see `plugins/infra/plugins/entities/CLAUDE.md` |
 
 All three are enforced (`sql-rows/no-unparsed-sql-rows`,
 `sql-projection/no-asserted-sql-type`, `sql-column/no-asserted-column-type`), and

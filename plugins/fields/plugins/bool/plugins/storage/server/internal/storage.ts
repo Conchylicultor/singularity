@@ -1,3 +1,4 @@
-import { boolean, type PgColumnBuilderBase } from "drizzle-orm/pg-core";
+import { boolean } from "drizzle-orm/pg-core";
+import type { StorageColumnFor } from "@plugins/fields/plugins/server-capabilities/server";
 
-export const build = (name: string): PgColumnBuilderBase => boolean(name);
+export const build = (name: string): StorageColumnFor<boolean> => boolean(name);

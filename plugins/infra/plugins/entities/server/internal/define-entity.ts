@@ -21,12 +21,29 @@ function isMarker(def: ColumnDefault<unknown>): def is DbDefault<unknown> {
   return def !== null && typeof def === "object" && "kind" in def;
 }
 
-// A raw field schema is nullable (column stays nullable, no `.notNull()`) iff
-// it is a ZodOptional or ZodNullable. Derived from the RAW `field.schema`
-// (before `fieldsToZodObject` wraps it with `.default()`), so wire and column
-// nullability can never drift.
-function isNullableSchema(schema: z.ZodTypeAny): boolean {
-  return schema instanceof z.ZodOptional || schema instanceof z.ZodNullable;
+// Split a raw field schema into (is the column nullable, the schema for its
+// VALUES). ONE result because the two answers must agree: a decoding storage
+// arm is handed the value schema, and a column declared nullable while its
+// decoder still holds the `.nullable()` wrapper is exactly the drift this
+// exists to prevent — a decoder never sees `null` in either direction
+// (`sql-column/CLAUDE.md`), so handing it the wrapper would make every real
+// value fail one half of the round trip.
+//
+// Read from the RAW `field.schema` (before `fieldsToZodObject` wraps it with
+// `.default()`), so wire and column nullability can never drift either. The
+// unwrap loops because `.optional().nullable()` nests — the same set
+// `isNullableSchema` recognised, now peeled to the bottom.
+function splitNullability(schema: z.ZodTypeAny): {
+  nullable: boolean;
+  value: z.ZodTypeAny;
+} {
+  let value = schema;
+  let nullable = false;
+  while (value instanceof z.ZodOptional || value instanceof z.ZodNullable) {
+    nullable = true;
+    value = value.unwrap() as z.ZodTypeAny;
+  }
+  return { nullable, value };
 }
 
 // Apply an opt-in DB-column default. Bare value = `{ kind: "literal" }` sugar.
@@ -82,25 +99,34 @@ export function defineEntity<
   const builders: Record<string, unknown> = {};
 
   for (const [key, field] of Object.entries(fields)) {
-    const build = resolveFieldStorage(field.type.id);
-    if (!build) {
+    const storage = resolveFieldStorage(field.type.id);
+    if (!storage) {
       throw new Error(
         `defineEntity("${name}"): field "${key}" has type "${field.type.id}" ` +
           `with no fields.storage contribution — no DB column mapping. ` +
-          `Contribute Fields.Storage({ type, build }) for this type.`,
+          `Contribute Fields.Storage({ type, build }) — or ({ type, decode }) ` +
+          `for a type whose column is narrowed by the field's own schema — ` +
+          `for this type.`,
       );
     }
 
     const columnName = meta.columns?.[key]?.name ?? snakeCase(key);
+    const { nullable, value } = splitNullability(field.schema);
+    // The storage contribution picks its own arm: a fixed column holds exactly
+    // what the type declares, a decoding one is narrowed by THIS field's schema
+    // and so must be handed it (the value schema — never the `.nullable()`
+    // wrapper; see `splitNullability`).
+    //
     // One `as any` at the runtime/type boundary: `PgColumnBuilderBase` doesn't
     // surface the chain methods. The precise type rides in the cast below
     // (entity-extensions sets the `as unknown as` precedent).
-    let b = build(columnName) as any;
+    let b = (
+      storage.build
+        ? storage.build(columnName)
+        : storage.decode(columnName, value)
+    ) as any;
 
-    // Runtime no-op, but carries `$type<T>()` into the DDL (e.g. jsonb<T>).
-    b = b.$type();
-
-    if (!isNullableSchema(field.schema)) b = b.notNull();
+    if (!nullable) b = b.notNull();
     if (meta.primaryKey === key) b = b.primaryKey();
 
     const colMeta = meta.columns?.[key];
@@ -138,6 +164,18 @@ export function defineEntity<
   // `EntityColumns<F, …>` so `pgTable`'s own `BuildColumns` infers the exact
   // select type AND marks DB-defaulted columns optional on insert (the `D`
   // brand). `extraConfig` is `as any` because `t` was loosened above.
+  //
+  // What the cast DERIVES vs what it ASSERTS, per column:
+  //  - a column from a DECODING arm (today: every `text` field, so every
+  //    `enumTextField` union) already has exactly this type — its builder was
+  //    typed `StorageColumnFor<V>` off the schema that really decodes it, so the
+  //    cast only re-states what the builder produced.
+  //  - a column from a fixed `build` arm holding exactly its token's type
+  //    (bool / int / float / date / uuid / rank) is likewise re-stated.
+  //  - a `jsonb` column ASSERTS. Postgres really decodes the JSON, so only the
+  //    SHAPE was ever claimed, and `jsonField<T>`'s `T` comes from here and from
+  //    nothing that runs. That is the weaker tier and it is a follow-up:
+  //    `research/2026-08-25-global-decoded-entity-columns.md` §7.
   const table = pgTable(
     name,
     builders as unknown as EntityColumns<F, DefaultedKeys<F, M>>,
@@ -183,9 +221,10 @@ export function defineEntity<
   // The declared return type `ServerOnlyKeys<F, M>` is the contract consumers
   // see — at a concrete call site it resolves to the exact server-only keys, so
   // `entity.schema` / `entity.wireColumns` carry the precise omitted types.
-  return Object.freeze({ name, table, schema, wireColumns }) as unknown as Entity<
-    F,
-    DefaultedKeys<F, M>,
-    ServerOnlyKeys<F, M>
-  >;
+  return Object.freeze({
+    name,
+    table,
+    schema,
+    wireColumns,
+  }) as unknown as Entity<F, DefaultedKeys<F, M>, ServerOnlyKeys<F, M>>;
 }

@@ -7,7 +7,9 @@ import {
 import {
   textField,
   enumTextField,
+  parsedTextField,
 } from "@plugins/fields/plugins/text/plugins/config/core";
+import { tolerantEnum } from "@plugins/primitives/plugins/live-state/core";
 import { intField } from "@plugins/fields/plugins/int/plugins/config/core";
 import { boolField } from "@plugins/fields/plugins/bool/plugins/config/core";
 import { dateField } from "@plugins/fields/plugins/date/plugins/config/core";
@@ -64,11 +66,49 @@ export const mailSyncStateFields = {
   updatedAt: dateField(),
 } satisfies FieldsRecord;
 
+// Distinct unknown label types already surfaced this session, so a mailbox full
+// of a new Gmail type doesn't repeat the same line on every push.
+const reportedLabelTypes = new Set<string>();
+
+/**
+ * TOLERANT, unlike its `mail_outbox` / `mail_sync_state` siblings — whose sets
+ * are this engine's own and where an outsider really is a bug.
+ *
+ * A label's `type` comes from Gmail's REST response through an unchecked cast
+ * (`gmail-api/server/internal/request.ts` returns `(await res.json()) as T`), so
+ * nothing has ever validated it, and the sync writer already encodes the intent
+ * as `label.type ?? "user"`. The set has an upstream we do not control; a value
+ * we have not seen is Google adding one, not corruption. So it normalizes to
+ * `"user"` — the safe reading, since a label we cannot classify is one the user
+ * may manage — and says so once, instead of throwing on read.
+ *
+ * Putting it on the COLUMN is what makes that `?? "user"` reach every reader
+ * rather than only the one writer that spelled it.
+ */
+const MailLabelTypeSchema = tolerantEnum(
+  z.enum(MAIL_LABEL_TYPES),
+  () => "user" as const,
+  (raw) => {
+    const s = String(raw);
+    if (reportedLabelTypes.has(s)) return;
+    reportedLabelTypes.add(s);
+    console.error(
+      `[mail] unknown Gmail label type ${JSON.stringify(raw)} — treated as "user". ` +
+        `Gmail added a label type, or a row was written by incompatible code.`,
+    );
+  },
+);
+
 export const mailLabelFields = {
   id: textField(),
   accountId: textField(),
   name: textField(),
-  type: enumTextField(MAIL_LABEL_TYPES),
+  // `default` is the field's wire/backfill default and stays what it was (the
+  // first of MAIL_LABEL_TYPES). It is NOT the same thing as the schema's
+  // normalize target above: `"user"` is where an UNKNOWN Gmail value lands,
+  // `"system"` is what an ABSENT value backfills to. Collapsing the two would
+  // silently change which labels a missing key produces.
+  type: parsedTextField(MailLabelTypeSchema, { default: "system" }),
   color: nullable(textField()),
   textColor: nullable(textField()),
   parentId: nullable(textField()),

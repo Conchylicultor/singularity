@@ -115,7 +115,11 @@ export async function updateConversation(
   patch: UpdateConversationPatch,
 ): Promise<void> {
   const { taskId, status: prevStatus } = await conversationContext(id);
-  const dbPatch: Record<string, unknown> = {
+  // Typed against the table's own insert row, not `Record<string, unknown>`:
+  // `status` is a DECODED column now, so its encoder runs on this `.set(...)`.
+  // A widened value would otherwise be a runtime throw from inside drizzle;
+  // here it is a tsc error at the assignment that wrote it.
+  const dbPatch: Partial<(typeof _conversations)["$inferInsert"]> = {
     updatedAt: patch.updatedAt ?? new Date(),
   };
   if (patch.status !== undefined) dbPatch.status = patch.status;

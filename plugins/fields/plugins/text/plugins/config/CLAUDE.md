@@ -31,6 +31,7 @@ Shared `FieldHeader` / `useLocalValue` come from the slot owner
   - Exports (types): `TextFieldDef`
   - Exports (values):
     - `enumTextField`
+    - `parsedTextField`
     - `textField`
 - Cross-plugin:
   - Imported by:

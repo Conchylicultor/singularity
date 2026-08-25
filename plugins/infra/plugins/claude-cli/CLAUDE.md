@@ -104,7 +104,7 @@ collapsed header; callers supply their own chrome (card, indent, collapse).
     - `useClaudeCliCalls`
 - Core:
   - Uses:
-    - `conversations/model-provider.ConversationModelSchema`
+    - `conversations/model-provider.DEFAULT_MODEL`
     - `conversations/model-provider.StoredModelSchema`
     - `fields.FieldsRecord`
     - `fields.fieldsToZodObject`
@@ -112,7 +112,7 @@ collapsed header; callers supply their own chrome (card, indent, collapse).
     - `fields/date/config.dateField`
     - `fields/int/config.intField`
     - `fields/json/config.jsonField`
-    - `fields/text/config.enumTextField`
+    - `fields/text/config.parsedTextField`
     - `fields/text/config.textField`
     - `fields/uuid/config.uuidField`
     - `infra/endpoints.defineEndpoint`

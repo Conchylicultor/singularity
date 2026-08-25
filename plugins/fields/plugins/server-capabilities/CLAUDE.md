@@ -7,8 +7,52 @@ keep `drizzle-orm/pg-core` out of the browser bundle. This leaf owns:
 
 - the `Fields.Storage` + `Fields.FilterSql` server-contribution tokens,
 - `resolveFieldStorage(typeId)` / `resolveFieldFilterSql(typeId, opId)`,
-- the storage/filter-sql contribution + builder types,
-- `fieldsToColumns` (the `FieldsRecord → bare Drizzle columns` derivation).
+- the storage/filter-sql contribution + builder types.
+
+## The storage contract: two arms, two different promises
+
+A field type either has a **fixed** column, or its column is **narrowed by the
+field's own schema** — and in the second case that schema is what must run for
+the narrowing to be true.
+
+```ts
+export type StorageColumnFor<V> = PgColumnBuilderBase<
+  ColumnBuilderBaseConfig<ColumnDataType, string> & { data: V }
+>;
+
+export type FieldStorageContribution<B = unknown> = { type: FieldType<B> } & (
+  | { build: (name: string) => StorageColumnFor<B>; decode?: never }
+  | {
+      decode: <V extends B>(name: string, valueSchema: ZodParser<V>) => StorageColumnFor<V>;
+      build?: never;
+    }
+);
+```
+
+The signature it replaced — `(name: string) => PgColumnBuilderBase` — lost both
+halves: it never saw the schema, so it *could not* decode, and its return type
+said nothing, so a `date` token handing back a `boolean()` column typechecked.
+Now:
+
+1. *Inexpressible* — a `decode` arm cannot return a plain `text(name)`. Its
+   return type is `StorageColumnFor<V>` for a caller-chosen `V`, and the only
+   text builder producing one is `parsedText`, whose `V` is inferred from the
+   schema argument and from nowhere else.
+2. *Type error* — every builder's return type is pinned to its token's declared
+   value type.
+3. *Check/lint* — the escape hatch, `text(name).$type<V>()`, writes `text(`
+   literally, which is exactly the root `sql-column/no-asserted-column-type`
+   already scopes on. No new rule.
+
+Today `text` is the only decoding arm; `bool` / `int` / `float` / `date` /
+`uuid` / `rank` are fixed, and `json` / `tags` are `jsonb`, which honestly holds
+`unknown` (their narrower `T` is asserted by `defineEntity`'s cast — the weaker
+tier, and a follow-up). Design:
+`research/2026-08-25-global-decoded-entity-columns.md`.
+
+**`resolveFieldStorage(typeId)` returns the whole contribution**, not a builder,
+because the caller must pick an arm — and only the caller (`defineEntity`) holds
+the field schema the `decode` arm needs.
 
 ## Why a separate leaf (not `fields/server`)
 
@@ -84,10 +128,10 @@ call.
     - `FieldValueTextCastContribution`
     - `FilterSqlBuilder`
     - `StorageColumnBuilder`
+    - `StorageColumnFor`
     - `ValueTextCast`
   - Exports (values):
     - `Fields`
-    - `fieldsToColumns`
     - `resolveFieldFilterSql`
     - `resolveFieldStorage`
     - `resolveFieldValueTextCast`
