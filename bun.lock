@@ -1834,6 +1834,10 @@
       "name": "@singularity/plugin-database-query",
       "version": "0.0.1",
     },
+    "plugins/database/plugins/sql-projection": {
+      "name": "@singularity/plugin-database-sql-projection",
+      "version": "0.0.1",
+    },
     "plugins/database/plugins/sql-rows": {
       "name": "@singularity/plugin-database-sql-rows",
       "version": "0.0.1",
@@ -6580,6 +6584,8 @@
     "@singularity/plugin-database-pgbouncer": ["@singularity/plugin-database-pgbouncer@workspace:plugins/database/plugins/pgbouncer"],
 
     "@singularity/plugin-database-query": ["@singularity/plugin-database-query@workspace:plugins/database/plugins/query"],
+
+    "@singularity/plugin-database-sql-projection": ["@singularity/plugin-database-sql-projection@workspace:plugins/database/plugins/sql-projection"],
 
     "@singularity/plugin-database-sql-rows": ["@singularity/plugin-database-sql-rows@workspace:plugins/database/plugins/sql-rows"],
 

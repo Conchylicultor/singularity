@@ -43,6 +43,7 @@ import {
 import { runMigrations } from "@plugins/database/plugins/migrations/server";
 import { compileCreateView } from "@plugins/database/plugins/derived-views/core";
 import { attemptConvAggSpec, attemptPushAggSpec } from "./rollup-spec";
+import { eq } from "drizzle-orm";
 import { attempts, taskBlocking, tasks } from "./views";
 
 let t: TestDb;
@@ -544,5 +545,86 @@ describe("attempts_v status — I6, a claim only where a fact proves it", () => 
 
     expect((await taskStatus(closedTask)).status).toBe("attempted");
     expect((await taskStatus(doneTask)).status).toBe("done");
+  });
+});
+
+// ── the projections' decoders ────────────────────────────────────────────────
+
+describe("the view's computed columns decode to what they claim", () => {
+  // These read THROUGH the view objects (`db.select().from(tasks)`), which is
+  // the only path that exercises the decoders: a decoder lives on the JS `SQL`
+  // object, not in Postgres, so the raw `db.execute(sql`SELECT …`)` every other
+  // helper here uses bypasses it by construction.
+  //
+  // The columns below used to be `sql<Date | null>` / `sql<TaskStatus>` — types
+  // written by hand over drizzle's no-op decoder. `finished_at` in particular
+  // held a raw pg STRING for its whole life, because drizzle's pg driver returns
+  // timestamps unparsed and the `Date` mapping lives on the column type a raw
+  // projection does not have. Nothing typed could catch that; this can.
+
+  test("tasks_v.finished_at is a real Date, and status is one of the enum arms", async () => {
+    const taskId = await seedTask();
+    await seedPushedAndClosed(taskId);
+
+    const [row] = await t.db
+      .select({ status: tasks.status, finishedAt: tasks.finishedAt })
+      .from(tasks)
+      .where(eq(tasks.id, taskId));
+
+    expect(row?.status).toBe("done");
+    expect(row?.finishedAt).toBeInstanceOf(Date);
+  });
+
+  test("attempts_v.finished_at is a real Date, and the flags are real booleans", async () => {
+    const attemptId = await seedCell({ convStatus: "done", push: true });
+
+    const [row] = await t.db
+      .select({
+        status: attempts.status,
+        active: attempts.active,
+        retained: attempts.retained,
+        finishedAt: attempts.finishedAt,
+      })
+      .from(attempts)
+      .where(eq(attempts.id, attemptId));
+
+    expect(row?.status).toBe("completed");
+    expect(typeof row?.active).toBe("boolean");
+    expect(typeof row?.retained).toBe("boolean");
+    expect(row?.finishedAt).toBeInstanceOf(Date);
+  });
+
+  test("a task with no finish instant decodes to null, not to an Invalid Date", async () => {
+    // The decoder is never called for a NULL — drizzle short-circuits — so this
+    // pins the half a decoder structurally cannot police.
+    const taskId = await seedTask();
+
+    const [row] = await t.db
+      .select({ finishedAt: tasks.finishedAt })
+      .from(tasks)
+      .where(eq(tasks.id, taskId));
+
+    expect(row?.finishedAt).toBeNull();
+  });
+
+  test("tasks_v.dependencies is a real array, empty when there are no edges", async () => {
+    // `array_agg` is the shape that produced the sql-rows incident: over a
+    // column pg has no array decoder for, the WHOLE array arrives as one raw
+    // literal string. `parsed` is what turns that into a throw.
+    const depTask = await seedTask();
+    const taskId = await seedTask();
+    await seedDependency(taskId, depTask);
+
+    const [withDeps] = await t.db
+      .select({ dependencies: tasks.dependencies })
+      .from(tasks)
+      .where(eq(tasks.id, taskId));
+    expect(withDeps?.dependencies).toEqual([depTask]);
+
+    const [withNone] = await t.db
+      .select({ dependencies: tasks.dependencies })
+      .from(tasks)
+      .where(eq(tasks.id, depTask));
+    expect(withNone?.dependencies).toEqual([]);
   });
 });

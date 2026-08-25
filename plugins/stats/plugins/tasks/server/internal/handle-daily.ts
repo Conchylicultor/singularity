@@ -5,34 +5,37 @@ import { getTasksDaily } from "../../shared/endpoints";
 export const handleDaily = implement(getTasksDaily, async () => {
   const allTasks = await listTasks();
 
-  const toDate = (v: Date | string) => (v instanceof Date ? v : new Date(v));
   const fmtDay = (ms: number) => {
     const d = new Date(ms);
     const pad = (n: number) => String(n).padStart(2, "0");
     return `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())}`;
   };
 
-  const byDay = new Map<string, { date: string; added: number; completed: number; dropped: number }>();
+  const byDay = new Map<
+    string,
+    { date: string; added: number; completed: number; dropped: number }
+  >();
   const getOrCreate = (day: string) => {
-    if (!byDay.has(day)) byDay.set(day, { date: day, added: 0, completed: 0, dropped: 0 });
+    if (!byDay.has(day))
+      byDay.set(day, { date: day, added: 0, completed: 0, dropped: 0 });
     return byDay.get(day)!;
   };
 
   for (const r of allTasks) {
-    const createdDay = fmtDay(toDate(r.createdAt).getTime());
+    const createdDay = fmtDay(r.createdAt.getTime());
     getOrCreate(createdDay).added++;
 
     // Mirror exactly what handle-cumulative does: done reduces active via finishedAt,
     // dropped reduces active via droppedAt, held reduces active via heldAt.
     // Net must equal Δactive = added - completed - dropped so both charts stay consistent.
     if (r.status === "done" && r.finishedAt) {
-      const day = fmtDay(toDate(r.finishedAt).getTime());
+      const day = fmtDay(r.finishedAt.getTime());
       getOrCreate(day).completed++;
     } else if (r.status === "dropped" && r.droppedAt) {
-      const day = fmtDay(toDate(r.droppedAt).getTime());
+      const day = fmtDay(r.droppedAt.getTime());
       getOrCreate(day).dropped++;
     } else if (r.status === "held" && r.heldAt) {
-      const day = fmtDay(toDate(r.heldAt).getTime());
+      const day = fmtDay(r.heldAt.getTime());
       getOrCreate(day).dropped++;
     }
   }

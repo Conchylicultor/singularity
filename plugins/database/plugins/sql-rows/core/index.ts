@@ -6,7 +6,13 @@ export type {
   ParsedResult,
 } from "./internal/types";
 export type { SqlRowFailure } from "./internal/errors";
-export { SqlRowError, formatSqlRowError } from "./internal/errors";
+export {
+  SqlRowError,
+  formatSqlRowError,
+  runtimeTypeOf,
+  castHintFor,
+  renderSqlValue,
+} from "./internal/errors";
 export { parseRows } from "./internal/parse-rows";
 export {
   queryResult,

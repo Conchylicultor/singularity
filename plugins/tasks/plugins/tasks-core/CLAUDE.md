@@ -145,6 +145,8 @@ Full design: `research/2026-08-20-tasks-attempt-status-positive-evidence.md`.
     - `database.db`
     - `database/derived-tables.DerivedTable`
     - `database/derived-views.View`
+    - `database/sql-projection.nullable`
+    - `database/sql-projection.parsed`
     - `infra/attachments.Attachments`
     - `infra/entities.defaultNow`
     - `infra/entities.defineEntity`

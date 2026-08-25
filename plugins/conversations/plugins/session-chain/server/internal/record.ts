@@ -1,7 +1,9 @@
 import { randomUUID } from "node:crypto";
 import { asc, desc, eq, sql } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
+import { z } from "zod";
 import { db } from "@plugins/database/server";
+import { parsed } from "@plugins/database/plugins/sql-projection/server";
 import { _conversationSessions } from "./tables";
 
 /** One link of a conversation's session chain. */
@@ -106,9 +108,10 @@ export async function listSharedClaudeSessionIds(
   return await conn
     .select({
       claudeSessionId: _conversationSessions.claudeSessionId,
-      conversationIds: sql<
-        string[]
-      >`array_agg(DISTINCT ${_conversationSessions.conversationId} ORDER BY ${_conversationSessions.conversationId})`,
+      conversationIds:
+        sql`array_agg(DISTINCT ${_conversationSessions.conversationId} ORDER BY ${_conversationSessions.conversationId})`.mapWith(
+          parsed(z.array(z.string()), "sharedClaudeSessionIds.conversationIds"),
+        ),
     })
     .from(_conversationSessions)
     .groupBy(_conversationSessions.claudeSessionId)

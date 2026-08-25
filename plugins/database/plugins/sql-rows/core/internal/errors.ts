@@ -46,8 +46,14 @@ function truncate(text: string, max: number): string {
   return text.length <= max ? text : `${text.slice(0, max)}…`;
 }
 
-/** Render a value for the message, without ever throwing on a cyclic one. */
-function renderValue(value: unknown): string {
+/**
+ * Render a value for the message, without ever throwing on a cyclic one.
+ *
+ * Exported because `sql-projection` renders the same untrusted value in the same
+ * place — inside an error message that must never be replaced by a serializer
+ * stack.
+ */
+export function renderSqlValue(value: unknown): string {
   if (value === undefined) return "undefined";
   try {
     return truncate(JSON.stringify(value), VALUE_MAX);
@@ -71,15 +77,28 @@ const DECODER_SUSPECT_EXPECTED = new Set([
   "boolean",
 ]);
 
-function decoderHintApplies(f: SqlRowFailure): boolean {
-  return (
-    f.receivedType === "string" &&
-    DECODER_SUSPECT_EXPECTED.has(f.expected ?? "")
-  );
-}
-
 const CAST_ADVICE =
   "Cast the column (e.g. `::text[]`, `::int`, `::text`) or register a parser.";
+
+/**
+ * The "pg had no decoder for this type" hint, or `undefined` when the signature
+ * does not apply.
+ *
+ * Shared with `sql-projection`, which faces the identical question one layer
+ * down (a raw `sql<T>` projection whose decoder is a no-op). The signature is a
+ * measured fact about how `pg` decodes, so it is stated once.
+ */
+export function castHintFor(
+  expected: string | undefined,
+  receivedType: string,
+): string | undefined {
+  if (receivedType !== "string") return undefined;
+  if (!DECODER_SUSPECT_EXPECTED.has(expected ?? "")) return undefined;
+  return (
+    "the value arrived as a string — pg has no type parser registered for its " +
+    `Postgres type, so it is the raw Postgres literal. ${CAST_ADVICE}`
+  );
+}
 
 /**
  * Build the message. Pure, so the wording is unit-testable without constructing
@@ -98,9 +117,9 @@ export function formatSqlRowError(f: SqlRowFailure): string {
       : `  ${where}: expected ${f.expected}, received ${f.receivedType}`,
   );
 
-  lines.push(`  value: ${renderValue(f.received)}`);
+  lines.push(`  value: ${renderSqlValue(f.received)}`);
 
-  const hint = decoderHintApplies(f);
+  const hint = castHintFor(f.expected, f.receivedType) !== undefined;
   if (f.dataTypeID !== undefined) {
     lines.push(
       hint
@@ -108,9 +127,7 @@ export function formatSqlRowError(f: SqlRowFailure): string {
         : `  pg type: OID ${f.dataTypeID}`,
     );
   } else if (hint) {
-    lines.push(
-      `  hint: the column arrived as a string — pg has no type parser registered for its type, so it is the raw Postgres literal. ${CAST_ADVICE}`,
-    );
+    lines.push(`  hint: ${castHintFor(f.expected, f.receivedType)}`);
   }
 
   if (f.sql !== undefined) {

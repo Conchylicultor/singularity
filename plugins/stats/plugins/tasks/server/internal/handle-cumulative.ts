@@ -5,12 +5,23 @@ import { getTasksCumulative } from "../../shared/endpoints";
 export const handleCumulative = implement(getTasksCumulative, async () => {
   const allTasks = await listTasks();
 
-  const toDate = (v: Date | string) => (v instanceof Date ? v : new Date(v));
-  const events: { t: number; dTotal: number; dActive: number; dCompleted: number; dDropped: number }[] = [];
+  const events: {
+    t: number;
+    dTotal: number;
+    dActive: number;
+    dCompleted: number;
+    dDropped: number;
+  }[] = [];
 
   for (const r of allTasks) {
-    const created = toDate(r.createdAt).getTime();
-    events.push({ t: created, dTotal: 1, dActive: 1, dCompleted: 0, dDropped: 0 });
+    const created = r.createdAt.getTime();
+    events.push({
+      t: created,
+      dTotal: 1,
+      dActive: 1,
+      dCompleted: 0,
+      dDropped: 0,
+    });
 
     // The view's `finishedAt` is derived as `droppedAt` when dropped, or
     // `minCompletedPushAt` when done — so we can't use it to distinguish the two.
@@ -19,11 +30,29 @@ export const handleCumulative = implement(getTasksCumulative, async () => {
     // "held" tasks are grouped with "dropped" since they are no longer active
     // and haven't completed, keeping the invariant: active + completed + dropped = total.
     if (r.status === "done" && r.finishedAt) {
-      events.push({ t: toDate(r.finishedAt).getTime(), dTotal: 0, dActive: -1, dCompleted: 1, dDropped: 0 });
+      events.push({
+        t: r.finishedAt.getTime(),
+        dTotal: 0,
+        dActive: -1,
+        dCompleted: 1,
+        dDropped: 0,
+      });
     } else if (r.status === "dropped" && r.droppedAt) {
-      events.push({ t: toDate(r.droppedAt).getTime(), dTotal: 0, dActive: -1, dCompleted: 0, dDropped: 1 });
+      events.push({
+        t: r.droppedAt.getTime(),
+        dTotal: 0,
+        dActive: -1,
+        dCompleted: 0,
+        dDropped: 1,
+      });
     } else if (r.status === "held" && r.heldAt) {
-      events.push({ t: toDate(r.heldAt).getTime(), dTotal: 0, dActive: -1, dCompleted: 0, dDropped: 1 });
+      events.push({
+        t: r.heldAt.getTime(),
+        dTotal: 0,
+        dActive: -1,
+        dCompleted: 0,
+        dDropped: 1,
+      });
     }
   }
 
@@ -41,7 +70,16 @@ export const handleCumulative = implement(getTasksCumulative, async () => {
   let active = 0;
   let completed = 0;
   let dropped = 0;
-  const byKey = new Map<string, { date: string; total: number; active: number; completed: number; dropped: number }>();
+  const byKey = new Map<
+    string,
+    {
+      date: string;
+      total: number;
+      active: number;
+      completed: number;
+      dropped: number;
+    }
+  >();
   for (const e of events) {
     total += e.dTotal;
     active += e.dActive;

@@ -66,6 +66,7 @@ bun test plugins/conversations/plugins/session-chain/server/internal
 - Server:
   - Uses:
     - `database.db`
+    - `database/sql-projection.parsed`
     - `infra/entities.defaultNow`
     - `infra/entities.defineEntity`
   - DB schema: `plugins/conversations/plugins/session-chain/server/internal/tables.ts`

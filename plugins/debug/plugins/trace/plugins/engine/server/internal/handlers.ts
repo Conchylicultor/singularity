@@ -26,10 +26,10 @@ export const handleListTraces = implement(listTraces, async () => {
       // Two scalar json extractions off the (unselected) snapshot blob — the
       // wall-clock interval end + width, for read-side incident grouping. No
       // migration: every persisted snapshot carries these.
-      wallTime: sql<string>`${_traces.snapshot} ->> 'wallTime'`,
-      windowSpanMs: sql<number>`
+      wallTime: sql`${_traces.snapshot} ->> 'wallTime'`.mapWith(String),
+      windowSpanMs: sql`
         (${_traces.snapshot} ->> 'atMs')::float8
-        - (${_traces.snapshot} ->> 'windowStartMs')::float8`,
+        - (${_traces.snapshot} ->> 'windowStartMs')::float8`.mapWith(Number),
     })
     .from(_traces)
     .orderBy(desc(_traces.createdAt))

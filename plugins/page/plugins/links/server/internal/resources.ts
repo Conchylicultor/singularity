@@ -1,7 +1,12 @@
 import { asc, eq, sql } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@plugins/database/server";
+import {
+  nullable,
+  parsed,
+} from "@plugins/database/plugins/sql-projection/server";
 import { defineResource } from "@plugins/framework/plugins/server-core/core";
+import { SvgNodeSchema } from "@plugins/page/plugins/editor/core";
 import { _blocks } from "@plugins/page/plugins/editor/server";
 import { BacklinkRowSchema, PageLinkEdgeSchema } from "../../core/schemas";
 import {
@@ -14,12 +19,23 @@ import { _pageLinks } from "./tables";
 // `data->>'title'` / `data->'iconSvgNodes'`: the source page's title and icon
 // SVG tree live in the `type="page"` block's `data` JSON. `->` (not `->>`)
 // keeps the icon tree as JSON so it deserializes back to an array.
-const titleExpr = sql<string>`${_blocks.data} ->> 'title'`;
-const iconSvgNodesExpr = sql<unknown>`${_blocks.data} -> 'iconSvgNodes'`;
+//
+// Both carry the decoder their declared type comes from, so the projection is
+// `BacklinkRow` by construction rather than by a cast — `->` hands back whatever
+// JSON the block's `data` happens to hold, which is exactly the value worth
+// parsing rather than asserting. `orderBy` reuses the same expression object;
+// the decoder rides along and is simply never invoked there.
+const titleExpr = sql`${_blocks.data} ->> 'title'`.mapWith(String);
+const iconSvgNodesExpr = sql`${_blocks.data} -> 'iconSvgNodes'`.mapWith(
+  nullable(parsed(z.array(SvgNodeSchema), "backlinks.iconSvgNodes")),
+);
 
 // Push resource: lists the source pages that link TO `pageId`, ordered by
 // title. Notified by the reindexer for every affected target.
-export const backlinksResource = defineResource<BacklinkRow[], { pageId: string }>({
+export const backlinksResource = defineResource<
+  BacklinkRow[],
+  { pageId: string }
+>({
   key: backlinksDescriptor.key,
   mode: "push",
   schema: z.array(BacklinkRowSchema),
@@ -33,7 +49,7 @@ export const backlinksResource = defineResource<BacklinkRow[], { pageId: string 
       .from(_pageLinks)
       .innerJoin(_blocks, eq(_pageLinks.sourcePageId, _blocks.id))
       .where(eq(_pageLinks.targetPageId, pageId))
-      .orderBy(asc(titleExpr)) as unknown as Promise<BacklinkRow[]>,
+      .orderBy(asc(titleExpr)),
 });
 
 // Push resource: the full (source → target) edge list. Every write to

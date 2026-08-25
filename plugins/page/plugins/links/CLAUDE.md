@@ -15,6 +15,8 @@
     - `page.editor.block.onRestore`
   - Uses:
     - `database.db`
+    - `database/sql-projection.nullable`
+    - `database/sql-projection.parsed`
     - `infra/events.Trigger`
     - `infra/jobs.defineJob`
     - `page/editor._blocks`

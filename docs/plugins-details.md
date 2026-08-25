@@ -10768,6 +10768,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Server:
         - Uses:
           - `database.db`
+          - `database/sql-projection.parsed`
           - `infra/entities.defaultNow`
           - `infra/entities.defineEntity`
         - DB schema: `plugins/conversations/plugins/session-chain/server/internal/tables.ts`
@@ -11309,6 +11310,22 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `infra/mcp.Mcp`
           - `tasks/tasks-core.getConversation`
         - Register: `mcpTool('query_db')`
+    - **`sql-projection`** — Mapped raw-SQL projections: `parsed` / `nullable` turn a schema or a column into the decoder drizzle's `.mapWith()` derives a projection's type from, so a `sql` expression selected as a value can no longer declare a type nothing produces.
+      - Cross-plugin:
+        - Imported by:
+          - `conversations/session-chain`
+          - `page/links`
+          - `tasks/tasks-core`
+      - Server:
+        - Exports (types):
+          - `SqlDecoder`
+          - `SqlDecoderLike`
+          - `SqlProjectionFailure`
+        - Exports (values):
+          - `formatSqlProjectionError`
+          - `nullable`
+          - `parsed`
+          - `SqlProjectionError`
     - **`sql-rows`** — Parsed raw-SQL row reads: queryRows / executeRows parse every row against a ZodParser and throw a SqlRowError naming the column, the value and its Postgres type OID — closing the pool.query<T>() assertion hole.
       - Core:
         - Exports (types):
@@ -11319,6 +11336,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `SqlResult`
           - `SqlRowFailure`
         - Exports (values):
+          - `castHintFor`
           - `executeOne`
           - `executeResult`
           - `executeRows`
@@ -11327,6 +11345,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `queryOne`
           - `queryResult`
           - `queryRows`
+          - `renderSqlValue`
+          - `runtimeTypeOf`
           - `SqlRowError`
     - **`zero`** — Umbrella for the Rocicorp Zero sync-engine infrastructure: shared constants (core), the zero-cache supervised service (cache-service), and the generic client provider + adapter (client). Domain-agnostic — no concrete schema.
       - Core:
@@ -19269,6 +19289,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `page.editor.block.onRestore`
         - Uses:
           - `database.db`
+          - `database/sql-projection.nullable`
+          - `database/sql-projection.parsed`
           - `infra/events.Trigger`
           - `infra/jobs.defineJob`
           - `page/editor._blocks`
@@ -30094,6 +30116,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `database.db`
           - `database/derived-tables.DerivedTable`
           - `database/derived-views.View`
+          - `database/sql-projection.nullable`
+          - `database/sql-projection.parsed`
           - `infra/attachments.Attachments`
           - `infra/entities.defaultNow`
           - `infra/entities.defineEntity`

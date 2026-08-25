@@ -1,5 +1,11 @@
 import { eq, getTableColumns, sql, type SQL } from "drizzle-orm";
 import { boolean, pgView, text } from "drizzle-orm/pg-core";
+import { z } from "zod";
+import {
+  nullable,
+  parsed,
+} from "@plugins/database/plugins/sql-projection/server";
+import { AttemptStatusSchema, TaskStatusSchema } from "../../core";
 import {
   _attempts,
   _conversations,
@@ -76,14 +82,7 @@ export const attempts = pgView("attempts_v").as((qb) => {
       // landed-claiming arm is backed by the very rows `standingOf` ORs into
       // "landed", and no arm claims "nothing landed" at all. See
       // research/2026-08-20-tasks-attempt-status-positive-evidence.md.
-      status: sql<
-        | "pending"
-        | "in_progress"
-        | "pushed"
-        | "completed"
-        | "dormant"
-        | "closed"
-      >`
+      status: sql`
         CASE
           WHEN ${_attemptConvAgg.hasConv} IS NULL                              THEN 'pending'
           WHEN ${_attemptConvAgg.hasLiveConv} AND ${_attemptPushAgg.hasPush} IS NULL    THEN 'in_progress'
@@ -95,7 +94,9 @@ export const attempts = pgView("attempts_v").as((qb) => {
           -- Every conversation was explicitly closed: the session is over.
           ELSE                                                               'closed'
         END
-      `.as("status"),
+      `
+        .mapWith(parsed(AttemptStatusSchema, "attempts_v.status"))
+        .as("status"),
       // PROGRESS: "an agent is expected to be running on this attempt". Reads the
       // has_live_conv rollup (`status NOT IN ('gone','done')`), so a conversation
       // whose process vanished reads inactive — which is the right answer for the
@@ -106,9 +107,9 @@ export const attempts = pgView("attempts_v").as((qb) => {
       // conversation is dormant, not finished — `gone` is exactly the status
       // `resumeConversation` requires in order to resume. Use `retained` instead.
       active:
-        sql<boolean>`(${_attemptConvAgg.hasConv} IS NULL OR ${_attemptConvAgg.hasLiveConv})`.as(
-          "active",
-        ),
+        sql`(${_attemptConvAgg.hasConv} IS NULL OR ${_attemptConvAgg.hasLiveConv})`
+          .mapWith(Boolean)
+          .as("active"),
       // RETENTION: "the user has not finished with this attempt, so its worktree
       // and fork DB are still theirs". Reads the has_open_conv rollup
       // (`status <> 'done'`), matching `isActiveStatus()` and
@@ -125,9 +126,9 @@ export const attempts = pgView("attempts_v").as((qb) => {
       // reclaim resources, the poller wrote `gone`, and the worktrees became
       // collectable while the conversations were still resumable.
       retained:
-        sql<boolean>`(${_attemptConvAgg.hasConv} IS NULL OR ${_attemptConvAgg.hasOpenConv})`.as(
-          "retained",
-        ),
+        sql`(${_attemptConvAgg.hasConv} IS NULL OR ${_attemptConvAgg.hasOpenConv})`
+          .mapWith(Boolean)
+          .as("retained"),
       // EXACTLY the two statuses that are over carry a finish instant:
       // `completed` (first arm) and `closed` (second). Both qualifiers below exist
       // to hold that equivalence, and views.test.ts asserts it over the whole
@@ -140,7 +141,7 @@ export const attempts = pgView("attempts_v").as((qb) => {
       //  - `NOT has_open_conv` on the second keeps `dormant` out. A hibernated
       //    attempt is resumable, not finished, and stamping it would make every
       //    consumer reading this as "when did this end" wrong about a live one.
-      finishedAt: sql<Date | null>`
+      finishedAt: sql`
         CASE
           WHEN ${_attemptConvAgg.hasConv} AND ${_attemptPushAgg.hasPush}
             AND NOT COALESCE(${_attemptConvAgg.hasLiveConv}, false)                    THEN ${_attemptPushAgg.minPushAt}
@@ -148,7 +149,15 @@ export const attempts = pgView("attempts_v").as((qb) => {
             AND ${_attemptPushAgg.hasPush} IS NULL                                          THEN ${_attemptConvAgg.maxEndedAt}
           ELSE                                                                           NULL
         END
-      `.as("finished_at"),
+      `
+        // Both non-NULL arms are `timestamptz`, so one column's decoder covers
+        // the CASE. It has to be SOMEONE's: a raw projection carries drizzle's
+        // no-op decoder, and drizzle's pg driver hands timestamps back as their
+        // RAW STRING — the `Date` mapping lives on the column type. Declaring
+        // `Date | null` without one is how this column spent its life holding a
+        // string. See plugins/database/plugins/sql-projection/CLAUDE.md.
+        .mapWith(nullable(_attemptPushAgg.minPushAt))
+        .as("finished_at"),
     })
     .from(_attempts)
     .leftJoin(_attemptConvAgg, eq(_attemptConvAgg.attemptId, _attempts.id))
@@ -253,17 +262,18 @@ export const tasks = pgView("tasks_v").as((qb) => {
     qb
       .select({
         taskId: attempts.taskId,
-        hasAttempt: sql<boolean>`true`.as("has_attempt"),
-        hasCompleted:
-          sql<boolean>`bool_or(${attempts.status} = 'completed')`.as(
-            "has_completed",
-          ),
+        hasAttempt: sql`true`.mapWith(Boolean).as("has_attempt"),
+        hasCompleted: sql`bool_or(${attempts.status} = 'completed')`
+          .mapWith(Boolean)
+          .as("has_completed"),
         // Deliberately the PROGRESS notion (attempts_v.active), not `retained`:
         // this drives the in_progress / need_action / blocked badges, which must
         // report whether an agent is actually running — a task whose agent died
         // is not "in progress". `retained` is the retention notion and belongs
         // only to destructive consumers. See attempts_v above.
-        hasActive: sql<boolean>`bool_or(${attempts.active})`.as("has_active"),
+        hasActive: sql`bool_or(${attempts.active})`
+          .mapWith(Boolean)
+          .as("has_active"),
       })
       .from(attempts)
       .groupBy(attempts.taskId),
@@ -273,7 +283,7 @@ export const tasks = pgView("tasks_v").as((qb) => {
     qb
       .select({
         taskId: _attempts.taskId,
-        hasWaiting: sql<boolean>`true`.as("has_waiting"),
+        hasWaiting: sql`true`.mapWith(Boolean).as("has_waiting"),
       })
       .from(_conversations)
       .innerJoin(_attempts, eq(_attempts.id, _conversations.attemptId))
@@ -285,9 +295,9 @@ export const tasks = pgView("tasks_v").as((qb) => {
     qb
       .select({
         taskId: _attempts.taskId,
-        minCompletedPushAt: sql<Date | null>`min(${pushes.createdAt})`.as(
-          "min_completed_push_at",
-        ),
+        minCompletedPushAt: sql`min(${pushes.createdAt})`
+          .mapWith(nullable(pushes.createdAt))
+          .as("min_completed_push_at"),
       })
       .from(pushes)
       .innerJoin(_attempts, eq(_attempts.id, pushes.attemptId))
@@ -298,11 +308,10 @@ export const tasks = pgView("tasks_v").as((qb) => {
     qb
       .select({
         taskId: _taskDependencies.taskId,
-        dependencies: sql<
-          string[]
-        >`array_agg(${_taskDependencies.dependsOnTaskId} ORDER BY ${_taskDependencies.createdAt})`.as(
-          "dependencies",
-        ),
+        dependencies:
+          sql`array_agg(${_taskDependencies.dependsOnTaskId} ORDER BY ${_taskDependencies.createdAt})`
+            .mapWith(parsed(z.array(z.string()), "task_deps.dependencies"))
+            .as("dependencies"),
       })
       .from(_taskDependencies)
       .groupBy(_taskDependencies.taskId),
@@ -335,17 +344,7 @@ export const tasks = pgView("tasks_v").as((qb) => {
       // running reports the live truth (`in_progress`), not the intent. This is
       // not a hole in the hold-and-exit path: that handler closes the
       // conversation, so by the time the hold is observable the task is inactive.
-      status: sql<
-        | "new"
-        | "in_progress"
-        | "need_action"
-        | "attempted"
-        | "done"
-        | "held"
-        | "dropped"
-        | "blocked"
-        | "in_progress_blocked"
-      >`
+      status: sql`
         CASE
           WHEN ${_tasks.heldAt} IS NULL AND COALESCE(${attemptAgg.hasCompleted}, false)
                                                                             THEN 'done'
@@ -360,25 +359,35 @@ export const tasks = pgView("tasks_v").as((qb) => {
           WHEN COALESCE(${attemptAgg.hasAttempt}, false)                    THEN 'attempted'
           ELSE                                                                   'new'
         END
-      `.as("status"),
-      active: sql<boolean>`(
+      `
+        .mapWith(parsed(TaskStatusSchema, "tasks_v.status"))
+        .as("status"),
+      active: sql`(
         NOT COALESCE(${attemptAgg.hasCompleted}, false)
         AND COALESCE(${attemptAgg.hasActive}, false)
-      )`.as("active"),
+      )`
+        .mapWith(Boolean)
+        .as("active"),
       // Same held_at gate as the status CASE, so the two never contradict each
       // other: a task reported as `held` is not finished, and must not carry a
       // finished_at (the stats plugins read it as a completion timestamp).
-      finishedAt: sql<Date | null>`
+      finishedAt: sql`
         CASE
           WHEN ${_tasks.heldAt} IS NOT NULL                  THEN NULL
           WHEN COALESCE(${attemptAgg.hasCompleted}, false)   THEN ${completedPush.minCompletedPushAt}
           WHEN ${_tasks.droppedAt} IS NOT NULL               THEN ${_tasks.droppedAt}
           ELSE                                                    NULL
         END
-      `.as("finished_at"),
-      dependencies: sql<
-        string[]
-      >`COALESCE(${deps.dependencies}, ARRAY[]::text[])`.as("dependencies"),
+      `
+        // Same as attempts_v.finished_at above: every non-NULL arm here
+        // (`min_completed_push_at`, `dropped_at`) is a `timestamptz`, so one
+        // column's decoder is what turns the driver's raw string into the `Date`
+        // this column claims to be.
+        .mapWith(nullable(pushes.createdAt))
+        .as("finished_at"),
+      dependencies: sql`COALESCE(${deps.dependencies}, ARRAY[]::text[])`
+        .mapWith(parsed(z.array(z.string()), "tasks_v.dependencies"))
+        .as("dependencies"),
     })
     .from(_tasks)
     .leftJoin(attemptAgg, eq(attemptAgg.taskId, _tasks.id))
@@ -395,7 +404,9 @@ export const conversations = pgView("conversations_v").as((qb) =>
       ...getTableColumns(_conversations),
       worktreePath: _attempts.worktreePath,
       taskId: _attempts.taskId,
-      active: sql<boolean>`(${_conversations.status} <> 'done')`.as("active"),
+      active: sql`(${_conversations.status} <> 'done')`
+        .mapWith(Boolean)
+        .as("active"),
     })
     .from(_conversations)
     .innerJoin(_attempts, eq(_attempts.id, _conversations.attemptId)),

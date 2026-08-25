@@ -107,7 +107,10 @@ export async function upsertEvents(
         // The id comes back from the DB rather than from `input.id`, because on
         // the conflict path the surviving row is the EXISTING one — its id, not
         // the one this run minted for a row it did not insert.
-        .returning({ id: _events.id, inserted: sql<boolean>`(xmax = 0)` });
+        .returning({
+          id: _events.id,
+          inserted: sql`(xmax = 0)`.mapWith(Boolean),
+        });
 
       if (!row) {
         throw new Error(

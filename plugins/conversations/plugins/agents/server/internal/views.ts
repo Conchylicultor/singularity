@@ -13,7 +13,9 @@ export const agents = pgView("agents_v").as((qb) =>
   qb
     .select({
       ...getTableColumns(_agents),
-      isFolder: sql<boolean>`(${_agents.prompt} IS NULL)`.as("is_folder"),
+      isFolder: sql`(${_agents.prompt} IS NULL)`
+        .mapWith(Boolean)
+        .as("is_folder"),
     })
     .from(_agents),
 );

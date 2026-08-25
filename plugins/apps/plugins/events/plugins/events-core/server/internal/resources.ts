@@ -69,7 +69,10 @@ export const eventsRevisionServerResource = defineResource(
       // legitimate "nothing is active" it actually means.
       const [sources] = await db
         .select({
-          digest: sql<string>`coalesce(md5(string_agg(${_eventSources.id}, ',' order by ${_eventSources.id})), '')`,
+          digest:
+            sql`coalesce(md5(string_agg(${_eventSources.id}, ',' order by ${_eventSources.id})), '')`.mapWith(
+              String,
+            ),
         })
         .from(_eventSources)
         .where(eq(_eventSources.enabled, true));
