@@ -54,7 +54,10 @@ Four `defineEntity` tables, field records in `core/internal/fields.ts`:
   derives never/ok/empty/failed from the last two and is **never stored**: one
   fact, one derivation, nothing to drift. `empty` is its own arm on purpose — a
   successful extraction that found nothing is how a source goes silently broken,
-  and folding it into `ok` is what hides it.
+  and folding it into `ok` is what hides it. `sourceState(source)` sits beside
+  it and adds the two facts that outrank a past verdict — `disabled` >
+  `running` > the extraction status — so a surface asks one question and gets
+  one word.
 - `events` — one row per event *or series*: `date` (jsonb, `event-date`) states
   recurrence once, and `starts_at`/`ends_at`/`all_day`/`recurring`/
   `recurrence_label` are its projections, written only via `eventDateProjection`.
@@ -234,6 +237,7 @@ Design: [`research/2026-08-03-apps-events-event-tracking-app.md`](../../../../..
     - `RunEvent`
     - `RunEventAction`
     - `RunOutcome`
+    - `SourceState`
     - `SourceStatus`
     - `UpdateEventSourceBody`
   - Exports (values):
@@ -271,7 +275,9 @@ Design: [`research/2026-08-03-apps-events-event-tracking-app.md`](../../../../..
     - `RUN_EVENT_ACTIONS`
     - `RUN_OUTCOMES`
     - `RunEventSchema`
+    - `SOURCE_STATES`
     - `SOURCE_STATUSES`
+    - `sourceState`
     - `updateEventSource`
     - `UpdateEventSourceBodySchema`
 - Cross-plugin:

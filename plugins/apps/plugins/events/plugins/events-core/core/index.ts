@@ -14,6 +14,11 @@ export {
 } from "./internal/vocab";
 export { extractionStatus } from "./internal/extraction-status";
 export {
+  SOURCE_STATES,
+  type SourceState,
+  sourceState,
+} from "./internal/source-state";
+export {
   eventSourceFields,
   eventFields,
   eventSourceRunFields,

@@ -84,6 +84,7 @@ function DataViewBodyInner<TRow>(props: DataViewBodyProps<TRow>): ReactNode {
     rows,
     rowKey,
     searchAccessor,
+    rowTone,
     onRowActivate,
     selectedRowId,
     emptyState,
@@ -304,6 +305,7 @@ function DataViewBodyInner<TRow>(props: DataViewBodyProps<TRow>): ReactNode {
           options: mergedOptions,
           searchAccessor:
             searchAccessor as DataViewRenderProps<unknown>["searchAccessor"],
+          rowTone: rowTone as DataViewRenderProps<unknown>["rowTone"],
           hierarchy: hierarchy as DataViewRenderProps<unknown>["hierarchy"],
           // `manualOrderActive` already implies `cfg != null` (TS cannot see it
           // through the boolean), hence the assertion.

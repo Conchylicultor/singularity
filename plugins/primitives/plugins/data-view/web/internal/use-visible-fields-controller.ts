@@ -37,21 +37,32 @@ function arrayMove<T>(items: T[], from: number, to: number): T[] {
  * `items.filter(visible).map(id)` through `setVisibleFields` (the host binds that
  * to `setVisibleFields(activeViewId, …)` → `updateView({ visibleFields }, { merge: true })`).
  *
- * `null` (unconfigured) renders every field checked in schema order; the first
- * `toggle`/`move` materializes the explicit array. `showAll()` resets to `null`.
+ * `null` (unconfigured) renders the schema's own default body set checked (every
+ * field except those declaring `FieldDef.visible: false`) in schema order; the
+ * first `toggle`/`move` materializes the explicit array. `showAll()` resets to
+ * `null` — back to the schema default, NOT to "everything": a `visible: false`
+ * field returns to unchecked.
  */
 export function useVisibleFieldsController<TRow>(
   fields: FieldDef<TRow>[],
   visibleFields: string[] | null,
   setVisibleFields: (ids: string[] | null) => void,
 ): VisibleFieldsController<TRow> {
-  // The ordered display list. Unconfigured (`null`) → every field checked, schema
-  // order. Explicit array → the visible ids first (in stored order, dropping ids
+  // The ordered display list. Unconfigured (`null`) → the schema's own default
+  // body set checked (every field except those declaring `visible: false`), in
+  // schema order. Explicit array → the visible ids first (in stored order, dropping ids
   // the schema no longer carries), then the remaining (hidden) fields appended in
   // schema order — so a hidden field stays reachable in the Properties list.
   const items = useMemo<VisibleFieldItem<TRow>[]>(() => {
     if (visibleFields == null) {
-      return fields.map((field) => ({ field, visible: true }));
+      // Seeded from the schema's own default (`FieldDef.visible`), NOT from a
+      // hardcoded `true` — otherwise a `visible: false` field would render
+      // checked here while `resolveBodyFields` kept it out of the body, and the
+      // checkbox would silently do nothing on its first click.
+      return fields.map((field) => ({
+        field,
+        visible: field.visible !== false,
+      }));
     }
     const byId = new Map(fields.map((f) => [f.id, f]));
     const visibleSet = new Set(visibleFields);

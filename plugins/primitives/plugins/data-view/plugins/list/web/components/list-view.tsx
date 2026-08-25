@@ -14,7 +14,9 @@ import {
   GroupedSections,
   pickPrimaryField,
   resolveBodyFields,
+  rowToneClass,
   useDataViewSections,
+  useIsChipField,
   useItemActionZones,
   useResolveCell,
   useResolveCellEditor,
@@ -115,6 +117,10 @@ const VIRTUALIZE_THRESHOLD = 100;
  */
 export function ListView(props: DataViewRenderProps<unknown>): ReactNode {
   const resolveCell = useResolveCell();
+  // "Does this field render as a chip?", asked of the SAME registry `resolveCell`
+  // consults — so the subtitle's separators follow the field types' own
+  // declarations and this view names none of them.
+  const isChipField = useIsChipField();
   const resolveEditor = useResolveCellEditor();
   const resolveOperatorSet = useResolveOperatorSet();
   // Manual order arrives type-erased; present only when the host activated it.
@@ -175,6 +181,39 @@ export function ListView(props: DataViewRenderProps<unknown>): ReactNode {
     (f) => f.id !== titleField?.id && f.align !== "end",
   );
 
+  // Which terms of the row's run are chips. Resolved once per render (the schema
+  // is per-view, not per-row), so a long list pays one lookup per field.
+  const titleIsChip = titleField != null && isChipField(titleField);
+  const subtitleIsChip = subtitleFields.map((f) => isChipField(f));
+
+  /**
+   * The separator drawn BEFORE subtitle term `fi`.
+   *
+   * ` · ` is a punctuation mark between two pieces of text; it is not what
+   * separates two chips, which already carry their own boundary. So the middot
+   * is drawn only between two adjacent NON-chip terms, and a chip is separated
+   * by spacing alone — otherwise a row of three enum fields renders
+   * `name · [Web page] · [Daily] · [Failed]`, middots glued to pills.
+   *
+   * The run is inline content inside one truncating `<Text>` leaf (that is what
+   * lets the subtitle ellipsize as a single leaf of the row's line), so the
+   * spacing is a literal space in the flow, not a flex `gap` — a flex container
+   * here would make each chip its own leaf and take the truncation with it.
+   *
+   * `precededByTitle` covers the one-line seam: on one line the title is simply
+   * the run's first term, so the first subtitle term is separated from it by the
+   * same rule. Stacked, the title owns its own line and there is no seam.
+   */
+  const subtitleSeparator = (
+    fi: number,
+    precededByTitle: boolean,
+  ): ReactNode => {
+    const prevIsChip =
+      fi > 0 ? subtitleIsChip[fi - 1]! : precededByTitle ? titleIsChip : null;
+    if (prevIsChip == null) return null; // nothing before it — no separator
+    return prevIsChip || subtitleIsChip[fi] ? " " : " · ";
+  };
+
   // The trailing cell — `align: "end"` fields plus the aggregate `×N` badge —
   // is identical in both row shapes, so it is written once. It is a rigid leaf:
   // it renders what it renders and never gives width back to the title. Only
@@ -219,6 +258,10 @@ export function ListView(props: DataViewRenderProps<unknown>): ReactNode {
     aggregateCount?: number,
   ): ReactNode => {
     const trailing = hasTrailing(aggregateCount);
+    // Per-row emphasis: composed ON TOP of the title's own `text-foreground`, so
+    // a switched-off / archived / finished row reads inactive. The subtitle and
+    // the trailing cell are already muted, so the title is the whole difference.
+    const toneClass = rowToneClass(props.rowTone?.(row));
     return (
       <Row
         key={key}
@@ -249,7 +292,7 @@ export function ListView(props: DataViewRenderProps<unknown>): ReactNode {
                 <Text
                   as="div"
                   variant="label"
-                  className="truncate text-foreground"
+                  className={cn("truncate text-foreground", toneClass)}
                 >
                   <FieldCell
                     field={titleField}
@@ -268,7 +311,7 @@ export function ListView(props: DataViewRenderProps<unknown>): ReactNode {
                 >
                   {subtitleFields.map((field, fi) => (
                     <span key={field.id}>
-                      {fi > 0 ? " · " : null}
+                      {subtitleSeparator(fi, false)}
                       <FieldCell
                         field={field}
                         row={row}
@@ -296,7 +339,10 @@ export function ListView(props: DataViewRenderProps<unknown>): ReactNode {
           // the row) without inventing a shrink-priority primitive for it.
           <>
             {titleField ? (
-              <Text variant="label" className="text-foreground">
+              <Text
+                variant="label"
+                className={cn("text-foreground", toneClass)}
+              >
                 {/* `display="inline"` here, not `"block"`: a block cell asks for
                     `w-full`, which in a flex line means the whole row rather
                     than the cell it means in the stacked shape. */}
@@ -313,9 +359,9 @@ export function ListView(props: DataViewRenderProps<unknown>): ReactNode {
               <Text variant="caption" className="text-muted-foreground">
                 {subtitleFields.map((field, fi) => (
                   <span key={field.id}>
-                    {/* The same `·` join, extended to the seam with the title:
-                        on one line the title is simply the run's first term. */}
-                    {fi > 0 || titleField != null ? " · " : null}
+                    {/* The same join, extended to the seam with the title: on one
+                        line the title is simply the run's first term. */}
+                    {subtitleSeparator(fi, titleField != null)}
                     <FieldCell
                       field={field}
                       row={row}

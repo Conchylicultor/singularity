@@ -1298,6 +1298,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `RunEvent`
               - `RunEventAction`
               - `RunOutcome`
+              - `SourceState`
               - `SourceStatus`
               - `UpdateEventSourceBody`
             - Exports (values):
@@ -1335,7 +1336,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `RUN_EVENT_ACTIONS`
               - `RUN_OUTCOMES`
               - `RunEventSchema`
+              - `SOURCE_STATES`
               - `SOURCE_STATUSES`
+              - `sourceState`
               - `updateEventSource`
               - `UpdateEventSourceBodySchema`
           - Cross-plugin:
@@ -1460,7 +1463,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/pane.Pane`
               - `primitives/pane.PaneChrome`
               - `primitives/pane.useOpenPane`
-              - `primitives/relative-time.RelativeTime`
               - `primitives/tooltip.WithTooltip`
             - Exports (types):
               - `ConfigValues`
@@ -1486,6 +1488,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `RUN_OUTCOME_LABEL`
               - `RUN_OUTCOME_OPTIONS`
               - `RUN_OUTCOME_VARIANT`
+              - `SOURCE_STATE_OPTIONS`
               - `SOURCE_STATUS_LABEL`
               - `SOURCE_STATUS_OPTIONS`
               - `SOURCE_STATUS_VARIANT`
@@ -21430,6 +21433,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `tasks/auto-start`
               - `tasks/task-deps-tree`
               - `tasks/task-status`
+          - Core:
+            - Exports (types): `BadgeVariant`
         - **`bouncing-dots`** — Three-dot bouncing activity indicator for 'working'/'pending' states. Renders three animate-bounce dots with staggered delays; size sm (size-1) or md (size-1.5, default).
           - Web:
             - Uses:
@@ -24353,6 +24358,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/sortable-list.SortableItem`
           - `primitives/sortable-list.SortableList`
         - Exports (types):
+          - `CellContributionMeta`
           - `CellEditorProps`
           - `ColumnConfigDerive`
           - `ColumnConfigProps`
@@ -24379,6 +24385,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `FieldExtensionProps`
           - `FieldExtensions`
           - `FieldExtensionsDescriptor`
+          - `FieldOption`
           - `FieldValue`
           - `FilterConjunction`
           - `FilterController`
@@ -24402,6 +24409,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `ItemActionZone`
           - `ManualOrderConfig`
           - `MergedDataViewProps`
+          - `RowTone`
           - `SelectionConfig`
           - `ServerDataSourceResult`
           - `ServerDataSourceSpec`
@@ -24436,12 +24444,14 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `partitionIntoSections`
           - `pickPrimaryField`
           - `resolveBodyFields`
+          - `rowToneClass`
           - `useDataViewControls`
           - `useDataViewSections`
           - `useFieldIdentities`
           - `useFilterController`
           - `useFlatRows`
           - `useGroupByController`
+          - `useIsChipField`
           - `useItemActionZones`
           - `useResolveCell`
           - `useResolveCellEditor`
@@ -24547,6 +24557,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `FieldDef`
           - `FieldExtensionProps`
           - `FieldExtensionsDescriptor`
+          - `FieldOption`
           - `FieldValue`
           - `FilterConjunction`
           - `FilterFieldValue`
@@ -24562,6 +24573,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `ItemActionsDescriptor`
           - `ItemActionZone`
           - `ManualOrderConfig`
+          - `RowTone`
           - `SelectionConfig`
           - `ServerDataSourceSpec`
           - `ServerPage`
@@ -24670,6 +24682,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/data-view.ItemActionsDescriptor`
               - `primitives/data-view.pickPrimaryField`
               - `primitives/data-view.resolveBodyFields`
+              - `primitives/data-view.rowToneClass`
               - `primitives/data-view.useDataViewSections`
               - `primitives/data-view.useItemActionZones`
               - `primitives/data-view.useResolveCell`
@@ -24713,7 +24726,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/data-view.ManualOrderConfig`
               - `primitives/data-view.pickPrimaryField`
               - `primitives/data-view.resolveBodyFields`
+              - `primitives/data-view.rowToneClass`
               - `primitives/data-view.useDataViewSections`
+              - `primitives/data-view.useIsChipField`
               - `primitives/data-view.useItemActionZones`
               - `primitives/data-view.useResolveCell`
               - `primitives/data-view.useResolveCellEditor`
@@ -24809,6 +24824,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/data-view.partitionIntoSections`
               - `primitives/data-view.pickPrimaryField`
               - `primitives/data-view.resolveBodyFields`
+              - `primitives/data-view.RowTone`
+              - `primitives/data-view.rowToneClass`
               - `primitives/data-view.useItemActionZones`
               - `primitives/data-view.useResolveCell`
               - `primitives/data-view.useResolveCellEditor`
@@ -26982,7 +26999,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/deploy/health`
           - `apps/deploy/remote-deploy`
           - `apps/events/event-list`
-          - `apps/events/sources`
           - `apps/events/sources/source-detail/runs`
           - `apps/events/sources/source-detail/status`
           - `apps/mail/reading-pane`

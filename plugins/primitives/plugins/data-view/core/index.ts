@@ -18,6 +18,8 @@ export type {
   ColumnConfigProps,
   ColumnConfigDerive,
   FieldDef,
+  FieldOption,
+  RowTone,
   HierarchyConfig,
   SelectionConfig,
   CreateOption,

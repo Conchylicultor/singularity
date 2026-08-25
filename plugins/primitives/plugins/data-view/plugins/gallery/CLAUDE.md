@@ -11,6 +11,10 @@ the shared `FieldDef` schema.
   muted property rows. Wired to `onRowActivate`. The cover supports three kinds
   (see `cover` below) so an icon- or preview-covered card needs **no** custom
   component — just a schema plus a one-line cover accessor.
+- **Row tone**: `DataViewRenderProps.rowTone` tones the card **title** (the
+  property rows below it are already muted, so the title carries the whole
+  difference), through the shared `rowToneClass` — see the data-view CLAUDE.md
+  ("Row tone"). A custom body owns its own text and is not toned.
 - **Custom body** (`options.renderBody`): replaces the title + property rows and
   **nothing else**. There is exactly ONE `DataCard` construction site, so
   `media` / `leading` / `selected` / `onRowActivate` / both action zones / the
@@ -107,6 +111,7 @@ hand-roll a *button* inside the body. It just has no card to own.
     - `primitives/data-view.ItemActionsDescriptor`
     - `primitives/data-view.pickPrimaryField`
     - `primitives/data-view.resolveBodyFields`
+    - `primitives/data-view.rowToneClass`
     - `primitives/data-view.useDataViewSections`
     - `primitives/data-view.useItemActionZones`
     - `primitives/data-view.useResolveCell`

@@ -621,6 +621,104 @@ so a page must read its own state through hooks (`useDataViewControls()`,
 data down through the closure looks fine and then silently computes the page's
 second edit against the tree as it was before its first.
 
+## An option carries its own presentation
+
+`FieldDef.options` is `FieldOption[]` = `{ value, label, variant?, hint? }`
+(core barrel). One idea — **an option describes how it presents** — rather than a
+value→label map plus a parallel value→variant map that every render site has to
+join by hand (six such pairs were hand-written across Events, trace and timeline
+before this existed).
+
+- `variant` is a `BadgeVariant` (`primitives/css/badge/core`), applied by the
+  read chip; absent ⇒ `"muted"`.
+- `hint` is the chip's tooltip — why this value means what it means ("Empty" =
+  the run succeeded and found nothing).
+
+`BadgeVariant` lives in **`badge/core`** for exactly this reason: a data
+declaration in another plugin's `core` has to be able to spell it, and
+`core → web` is not a legal edge. The `VARIANT_CLASS` map stays in `badge/web`,
+which re-exports the type so no existing import site changed. Duplicating the
+union into `data-view/core` was the alternative and is rejected — one name per
+concept.
+
+**Deliberate no-ops.** The inline editors and the filter operand input draw
+`ToggleChip`s (`enum-editor`, `tags-editor`, `chip-select-filter-input`) and stay
+untinted: `BadgeVariant` is not `ToggleChip`'s vocabulary. Group-by section
+labels and the control summaries are text-only. Server-side filter SQL never
+reads `label`/`options`, so a tint never reaches the server. User-authored custom
+enum columns get **no colour picker** — muted is the right default for values
+with no semantics.
+
+### The Cell registry also says whether a type presents as a chip
+
+`DataViewSlots.Cell` contributions carry `chip?: boolean` alongside `component`
+(see `CellContributionMeta` in `web/cell-slot.ts`); `enum` and `tags` declare
+`chip: true`. `useIsChipField()` is `useResolveCell`'s sibling — both walk the
+same `extends` chain through one shared internal lookup, so "which contribution
+owns this field" cannot be answered two ways.
+
+It exists because ` · ` is punctuation between two pieces of **text**, and is not
+what separates two chips, which already carry their own boundary. The list's
+subtitle run therefore draws ` · ` **only between two adjacent non-chip terms**
+and parts a chip from its neighbour by spacing alone — otherwise a row of three
+enum fields renders `name · [Web page] · [Daily] · [Failed]`, middots glued to
+pills, which is worse than the two-line row a field-driven row replaces. The rule
+covers the title→first-subtitle-term seam too, since on one line the title is
+simply the run's first term.
+
+The list names **no** field type to do this: it asks the registry, per the
+collection-consumer rule. The flag is a claim about the field's **TYPE**, not
+about one renderer — a consumer's `FieldDef.cell` override on a chip-typed field
+is taken to render a chip too (which is how Events keeps its "source type no
+longer installed" fallback). An override that renders plain text for a chip-typed
+field loses its middots; cosmetic, and the price of not making every consumer
+re-declare what its type already said.
+
+## Row tone: a row can read as inactive
+
+`DataViewProps.rowTone` is `(row) => "default" | "muted"`. `"muted"` dims the
+row's own title, so a switched-off / archived / finished row reads inactive
+without spending a chip on saying so — the thing three plugins hand-rolled
+before it existed (`SourceRow` muting a disabled source, `ConversationItem`
+muting `gone`/`done`, `ThreadRow` bolding unread).
+
+**It threads like `searchAccessor`, not like `density`.** `density` is a
+declaration *about the surface*, so it takes the chrome path. `rowTone` is a
+**data accessor** closed over row identity, the same shape as `searchAccessor` /
+`onRowActivate` / `hierarchy`, so it flows straight through with no chrome hop:
+
+```
+DataViewProps.rowTone
+  → DataViewSourceBundle          (Omit<DataViewProps, …chrome keys> — free)
+    → DataViewBodyProps
+      → DataViewRenderProps.rowTone   the view child tones its own title
+```
+
+Concretely: `body-types.ts`, `data-view.tsx` and `merged-data-view.tsx` need no
+change at all, because the bundle is derived from `DataViewProps` and the hosts
+spread it. The only code is the type declarations, one destructure-and-forward in
+`DataViewBodyInner` beside `searchAccessor`, and the barrel exports.
+
+Views never re-spell what `"muted"` looks like: `rowToneClass(tone)` (web barrel)
+is the ONE rendering, returning a class only for the non-default tone so each
+view composes it on top of whatever colour its own title already carries.
+
+| View | Where |
+|---|---|
+| list | the title `<Text>`, in both the one-line and the stacked shape |
+| gallery | the card title `<Text>` |
+| tree | folded into `labelClass`, ahead of `options.labelClassName` so the consumer's own per-row class still wins |
+| table | **deliberate no-op** |
+
+The table is a no-op the way gallery/table are no-ops for `density` — stated, not
+forgotten. Its only per-row seam is `DataTableProps.useRowDecoration`, a single
+slot already held by manual-order drag decoration; merging two decorations onto
+one hook is its own change, not a side effect of this one.
+
+The tree's `labelClassName` / `rowAccent` stay as the escape hatch. `rowTone` is
+the semantic form to reach for first — a tone is a statement about the row, a
+class is a statement about pixels.
+
 ## Density: how much room the surface gives the view
 
 `DataViewProps.density` is `"comfortable"` (the default) or `"compact"`. It is a
@@ -973,13 +1071,48 @@ Which fields a view renders in its **body**, and in what order, is a per-view-in
 dimension — the visible-fields twin of `sort` / `filter`, stored in the **same `view`
 blob** as `visibleFields?: string[] | null`:
 
-- **`null` / absent (the default)** → **show all** schema fields, in schema order.
+- **`null` / absent (the default)** → the **schema's own default body set**: every
+  field in schema order except those declaring `FieldDef.visible: false` (below).
   Newly added fields (including a freshly added custom column) auto-appear with zero
   user action.
 - **explicit `string[]`** → exactly those field ids, in that order; everything else is
   hidden. Order is meaningful — it is the body order (table columns, gallery/list
   property rows, tree secondary chips). Like Notion, once a view is customized,
   later-added fields stay hidden until toggled on.
+
+### `FieldDef.visible` — a field can be a dimension without being printed
+
+`visible?: boolean` (default `true`) is the **schema's** half of the same
+question: `false` means the field feeds sort / filter / group-by / search only
+and is not in the default body set — the user can still switch it on from
+Properties. It is what a surface reaches for instead of authoring a narrow
+`visibleFields` array purely to omit one field.
+
+**Two places hardcoded "show everything", and both read it** — this is the part
+that is easy to half-do:
+
+- `web/internal/resolve-body-fields.ts` — the unconfigured branch now filters
+  `f.visible !== false`. Without this the flag does nothing at all.
+- `web/internal/use-visible-fields-controller.ts` — the unconfigured branch seeds
+  each item's checkbox from `field.visible !== false` rather than a literal
+  `true`. Without *this* the field renders **checked** in the Properties list
+  while the body leaves it out, and the first click on that checkbox visibly does
+  nothing.
+
+Sort / filter / search are unaffected by construction, not by care: every view
+runs `useDataViewSections` over the full `props.fields` and calls
+`resolveBodyFields` afterwards, on a separate value.
+
+**The one semantic to accept.** In a view whose config already holds an explicit
+`visibleFields` array, a `visible: false` field is indistinguishable from "a field
+the user never switched on" — the array simply does not mention it. That is the
+existing, intended Notion-parity behaviour, and it means `visible` is a
+**default, not an enforcement**. For the same reason "Show all fields" resets to
+`null`, i.e. back to the schema default — a `visible: false` field returns to
+unchecked rather than appearing.
+
+Custom columns need nothing: they are folded into `props.fields` before any view
+calls `resolveBodyFields`, and an absent `visible` reads as `true`.
 
 `visibleFields` governs **body rendering only**. Filter, sort, and search always
 operate on the **full** `FieldDef[]` schema — a hidden field stays filterable and
@@ -1180,6 +1313,7 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
     - `primitives/sortable-list.SortableItem`
     - `primitives/sortable-list.SortableList`
   - Exports (types):
+    - `CellContributionMeta`
     - `CellEditorProps`
     - `ColumnConfigDerive`
     - `ColumnConfigProps`
@@ -1206,6 +1340,7 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
     - `FieldExtensionProps`
     - `FieldExtensions`
     - `FieldExtensionsDescriptor`
+    - `FieldOption`
     - `FieldValue`
     - `FilterConjunction`
     - `FilterController`
@@ -1229,6 +1364,7 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
     - `ItemActionZone`
     - `ManualOrderConfig`
     - `MergedDataViewProps`
+    - `RowTone`
     - `SelectionConfig`
     - `ServerDataSourceResult`
     - `ServerDataSourceSpec`
@@ -1263,12 +1399,14 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
     - `partitionIntoSections`
     - `pickPrimaryField`
     - `resolveBodyFields`
+    - `rowToneClass`
     - `useDataViewControls`
     - `useDataViewSections`
     - `useFieldIdentities`
     - `useFilterController`
     - `useFlatRows`
     - `useGroupByController`
+    - `useIsChipField`
     - `useItemActionZones`
     - `useResolveCell`
     - `useResolveCellEditor`
@@ -1374,6 +1512,7 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
     - `FieldDef`
     - `FieldExtensionProps`
     - `FieldExtensionsDescriptor`
+    - `FieldOption`
     - `FieldValue`
     - `FilterConjunction`
     - `FilterFieldValue`
@@ -1389,6 +1528,7 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
     - `ItemActionsDescriptor`
     - `ItemActionZone`
     - `ManualOrderConfig`
+    - `RowTone`
     - `SelectionConfig`
     - `ServerDataSourceSpec`
     - `ServerPage`

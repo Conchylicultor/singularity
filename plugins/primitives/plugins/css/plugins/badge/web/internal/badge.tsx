@@ -4,11 +4,15 @@ import {
   textStepFor,
   type DensityControlled,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import type { BadgeVariant } from "../../core";
 import type { Passthrough } from "@plugins/primitives/plugins/passthrough/core";
 import type React from "react";
 
-export type BadgeVariant =
-  "muted" | "primary" | "warning" | "destructive" | "success" | "info";
+// Re-exported so every existing `import { BadgeVariant } from ".../badge/web"`
+// keeps working: the name lives in `core` (a data declaration in another
+// plugin's `core` has to be able to spell it), the classes live here.
+export type { BadgeVariant };
+
 /** Corner treatment. "rect" = status-label rounded rectangle; "pill" = filter/toggle pill. */
 export type BadgeShape = "rect" | "pill";
 

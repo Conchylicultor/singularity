@@ -39,7 +39,8 @@ export type {
 export { getDataViewDescriptor } from "./internal/descriptors";
 export { useDataViewControls } from "./components/controls/controls-context";
 export type { DataViewControlsContextValue } from "./components/controls/controls-context";
-export { useResolveCell } from "./cell-slot";
+export { useResolveCell, useIsChipField } from "./cell-slot";
+export type { CellContributionMeta } from "./cell-slot";
 export { useResolveCellEditor } from "./cell-editor-slot";
 export { useResolveOperatorSet } from "./filter-slot";
 export { useResolveValueCodec } from "./value-codec-slot";
@@ -74,6 +75,7 @@ export { useSortController } from "./internal/use-sort-controller";
 export type { SortController } from "./internal/use-sort-controller";
 export { pickPrimaryField } from "./internal/pick-primary-field";
 export { resolveBodyFields } from "./internal/resolve-body-fields";
+export { rowToneClass } from "./internal/row-tone";
 export { defineItemActions } from "./internal/define-item-actions";
 export type {
   ItemActions,
@@ -92,6 +94,8 @@ export type {
   ColumnConfigProps,
   ColumnConfigDerive,
   FieldDef,
+  FieldOption,
+  RowTone,
   HierarchyConfig,
   SelectionConfig,
   CreateOption,

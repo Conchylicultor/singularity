@@ -2,10 +2,23 @@ import type {
   ColumnConfigDerive,
   FieldDef,
 } from "@plugins/primitives/plugins/data-view/web";
+import type { BadgeVariant } from "@plugins/primitives/plugins/css/plugins/badge/core";
 
+/**
+ * One stored option of an enum custom column — the same shape the generic
+ * `FieldDef.options` publishes, so `deriveEnumFieldDef` can forward it whole.
+ *
+ * `variant`/`hint` are carried but NOT authored here: `EnumOptionsEditor` gives
+ * the user no colour picker, so a user-defined column's values stay muted —
+ * the right default for values with no semantics. They are in the type because
+ * the config blob is persisted unvalidated and round-trips opaquely, so a
+ * future author-time colour is a pure editor change.
+ */
 export interface EnumOption {
   value: string;
   label: string;
+  variant?: BadgeVariant;
+  hint?: string;
 }
 
 /**

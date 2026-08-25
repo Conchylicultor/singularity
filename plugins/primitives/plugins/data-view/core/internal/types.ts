@@ -1,6 +1,7 @@
 import type { SlotHandle } from "@plugins/framework/plugins/slot-declaration/core";
 import { type ComponentType, type ReactNode } from "react";
 import type { SealContributions } from "@plugins/framework/plugins/web-sdk/core";
+import type { BadgeVariant } from "@plugins/primitives/plugins/css/plugins/badge/core";
 import type { Rank } from "@plugins/primitives/plugins/rank/core";
 import type { ExpandChange } from "@plugins/primitives/plugins/tree/core";
 import type { DataViewId } from "./define-data-view";
@@ -226,6 +227,37 @@ export interface FieldExtensionsDescriptor<TRow> extends SlotHandle {
   }>[];
 }
 
+/**
+ * One member of a field's closed value set — and how that member PRESENTS.
+ *
+ * An option describes itself: the chip cell reads `variant`/`hint` straight off
+ * the option, so a surface no longer keeps a value→label map and a parallel
+ * value→variant map that a render site has to join by hand.
+ *
+ * Deliberate no-ops: the inline editors and the filter operand input draw
+ * `ToggleChip`s, whose vocabulary is not `BadgeVariant`, so they stay untinted;
+ * group-by section labels and the control summaries are text-only; server-side
+ * filter SQL never reads options at all, so a tint never reaches the server.
+ */
+export interface FieldOption {
+  value: string;
+  label: string;
+  /** Chip tint for the READ cell. Default `"muted"`. */
+  variant?: BadgeVariant;
+  /** Tooltip on the read chip — why this value means what it means. */
+  hint?: string;
+}
+
+/**
+ * Per-row emphasis. `"muted"` dims the row's own text, so a switched-off /
+ * archived / finished row reads inactive without spending a chip on saying so.
+ *
+ * Declared here rather than reusing `css/text`'s `TextTone`: that lives in a
+ * plugin with no `core` barrel, and only two of its four tones mean anything
+ * for a row.
+ */
+export type RowTone = "default" | "muted";
+
 export interface FieldDef<TRow> {
   id: string;
   label: string;
@@ -273,8 +305,10 @@ export interface FieldDef<TRow> {
   width?: string;
   /** Text alignment within the table column (header + cells). Default `"start"`. */
   align?: "start" | "end" | "center";
-  /** type:"enum" — enables Phase 3 chip/multiselect filtering. */
-  options?: { value: string; label: string }[];
+  /** type:"enum"/"tags" — the closed value set, and how each value PRESENTS.
+   *  Read by the chip cell, the inline editor, the filter input and the
+   *  group-by section label. See {@link FieldOption}. */
+  options?: FieldOption[];
   /** Opaque per-type config for custom columns; understood only by the field
    *  type's own code (e.g. enum options). Passed through untouched by the host. */
   config?: unknown;
@@ -282,6 +316,18 @@ export interface FieldDef<TRow> {
   cover?: boolean;
   /** The field rendered as the tree row label. Fallback heuristic: first text field, else fields[0]. */
   primary?: boolean;
+  /**
+   * Whether the field is in the DEFAULT body set (list subtitle, table column,
+   * gallery property row, tree secondary chip). Default `true`. `false` = the
+   * field feeds sort / filter / group-by / search only, and the user can still
+   * switch it on from the view settings' Properties list.
+   *
+   * It is a DEFAULT, not an enforcement: a view instance whose config already
+   * holds an explicit `visibleFields` array simply does not mention the field,
+   * which is indistinguishable from "the user never switched it on". See the
+   * plugin CLAUDE.md ("Per-view visible fields").
+   */
+  visible?: boolean;
 }
 
 /**
@@ -492,6 +538,10 @@ export interface DataViewRenderProps<TRow> {
   options: unknown;
   /** Custom search accessor; each view passes it into its own `useFlatRows`. */
   searchAccessor?: (row: TRow) => string;
+  /** Per-row emphasis, threaded from `DataViewProps.rowTone`. Absent ⇒ every
+   *  row is `"default"`. list / gallery / tree apply it to the row title; the
+   *  table deliberately ignores it (see `DataViewProps.rowTone`). */
+  rowTone?: (row: TRow) => RowTone;
   /** Present only when the data source is hierarchical (gates the tree view). */
   hierarchy?: HierarchyConfig<TRow>;
   /**
@@ -743,6 +793,17 @@ export interface DataViewProps<TRow> {
   title?: ReactNode;
   actions?: ReactNode;
   searchAccessor?: (row: TRow) => string;
+  /**
+   * Per-row emphasis — see {@link RowTone}. A data accessor closed over row
+   * identity (the `searchAccessor` shape), NOT a declaration about the surface
+   * like `density`, so it flows straight through to the view children.
+   *
+   * Honoured by list / gallery / tree on the row's own title. The TABLE is a
+   * deliberate no-op: its only per-row seam (`DataTableProps.useRowDecoration`)
+   * is already held by manual-order drag decoration, and merging two
+   * decorations is its own change.
+   */
+  rowTone?: (row: TRow) => RowTone;
   onRowActivate?: (row: TRow) => void;
   /** Currently-selected row id (tree highlight + auto-expand-to-selected). */
   selectedRowId?: string;

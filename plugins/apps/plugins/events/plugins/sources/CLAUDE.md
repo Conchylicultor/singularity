@@ -31,25 +31,60 @@ The one exception is deliberate and generic: an *unregistered* type (its plugin
 uninstalled) is rendered as an explicit "not installed" state rather than an
 empty form, in both the row and the Settings section.
 
-## The list: one chip, and a derived dimension
+## The list: the row IS the field schema
 
-`extraction` (never / ok / empty / failed, from `extractionStatus`) is a field
-with **no column behind it** — legal here only because this DataView is
-client-side over a bounded live window, so filter/sort/group-by need no server
-binding. It is the dimension that answers "which sources are silently returning
-nothing"; `status` cannot.
+There is **no row component**. The list draws itself from `FieldDef[]` — primary
+field as the title, `align:"end"` trailing, the rest as the subtitle run — so
+`sources-list.tsx` declares dimensions and the DataView primitive decides what a
+row looks like. (It did have a hand-written two-line row, `SourceRow`, until the
+primitive learned the three things that row was there for: an option's own tint
+and tooltip, per-row tone, and a field that is a dimension without being
+printed. Design:
+[`research/2026-08-25-global-data-view-field-driven-row-tint-tone-visibility.md`](../../../../../../research/2026-08-25-global-data-view-field-driven-row-tint-tone-visibility.md).)
 
-The row paints ONE chip, with a three-way precedence: `Disabled` > `Running` >
-the extraction status. `Disabled` wins because a switched-off source's
-extraction status describes a past the row no longer lives in — `Failed` on a
-source you turned off last month is asking for attention you already gave.
-Below it, `running` wins while a run is in flight. `idle` and `error` are never
-painted: `idle` is a constant on a healthy source, and `error` is subsumed (a
-terminal failure also writes a failed run; a transient one leaves `status: idle`
-while the extraction status still says `failed`). A disabled row also mutes its
-name, so it reads "off" before anything is read at all.
+Two of the seven fields are derived, with **no column behind them** — legal here
+only because this DataView is client-side over a bounded live window, so
+filter/sort/group-by run over the rows already in hand and need no server
+binding:
 
-For the same reason the `Needs attention` view (authored in
+- `extraction` (never / ok / empty / failed, from `extractionStatus`) — the
+  dimension that answers "which sources are silently returning nothing";
+  `status` cannot.
+- `state` (from `sourceState`) — the ONE word the row prints, with a three-way
+  precedence: `Disabled` > `Running` > the extraction status. `Disabled` wins
+  because a switched-off source's extraction status describes a past the row no
+  longer lives in — `Failed` on a source you turned off last month is asking for
+  attention you already gave. Below it, `running` wins while a run is in flight.
+  `idle` and `error` are never reachable: `idle` is a constant on a healthy
+  source, and `error` is subsumed (a terminal failure also writes a failed run;
+  a transient one leaves `status: idle` while the extraction status still says
+  `failed`).
+
+The three fields `state` is derived from — `status`, `extraction`, `enabled` —
+are declared `visible: false`. They stay full sort / filter / group-by
+dimensions (`Needs attention` filters on two of them) and the user can switch
+any of them back on from Properties; they are simply not printed, because
+printing them beside `state` is the same fact three times.
+
+Each state's word, tint and tooltip travel on its **option**
+(`SOURCE_STATE_OPTIONS` in `web/internal/format.ts`), not on a render site — the
+chip cell reads them off the option, so there is no label-map-plus-variant-map
+pair for anyone to join by hand. The maps stay exported for the surfaces outside
+a DataView that still paint a chip themselves (the source-detail Status section,
+the run rows).
+
+A disabled source's whole line is dimmed, via `rowTone` — so it reads "off"
+before a word is read, which is what lets the row spend its one verdict chip on
+the state rather than on saying "off" twice. The table view deliberately does
+not tone its rows.
+
+The `type` field carries the list's only per-field `cell`, for the one state an
+option list cannot hold: a source whose type plugin is not installed has no
+option, so the generic chip would print the bare id and the row would look like
+every other one. It still names no type — the id comes from the row.
+
+For the same reason `Disabled` outranks the extraction status, the `Needs
+attention` view (authored in
 `config/apps/events/sources/events.sources.jsonc`) ANDs `enabled is true` onto
 its unhealthy-extraction filter: you switched it off, so it is not a complaint.
 
@@ -58,10 +93,10 @@ The `enabled` action is a real `role="switch"` — the control shows its own sta
 (knob and filled track), where the pause/play glyph it replaced left the reader
 guessing whether the icon described the source or the click. That matters here
 because row actions only appear on hover, so a state the control can only state
-through its label is a state nobody sees at rest; the chip and the muted name
-carry it the rest of the time. Disabling also drops the source's events out of
-the events list — a query-time default in `event-list`, not a delete, so
-re-enabling restores them.
+through its label is a state nobody sees at rest; the `Disabled` chip and the
+dimmed line carry it the rest of the time. Disabling also drops the source's
+events out of the events list — a query-time default in `event-list`, not a
+delete, so re-enabling restores them.
 
 ## Source-type wiring (unchanged)
 
@@ -148,7 +183,6 @@ Design: [`research/2026-08-03-apps-events-event-tracking-app.md`](../../../../..
     - `primitives/pane.Pane`
     - `primitives/pane.PaneChrome`
     - `primitives/pane.useOpenPane`
-    - `primitives/relative-time.RelativeTime`
     - `primitives/tooltip.WithTooltip`
   - Exports (types):
     - `ConfigValues`
@@ -174,6 +208,7 @@ Design: [`research/2026-08-03-apps-events-event-tracking-app.md`](../../../../..
     - `RUN_OUTCOME_LABEL`
     - `RUN_OUTCOME_OPTIONS`
     - `RUN_OUTCOME_VARIANT`
+    - `SOURCE_STATE_OPTIONS`
     - `SOURCE_STATUS_LABEL`
     - `SOURCE_STATUS_OPTIONS`
     - `SOURCE_STATUS_VARIANT`

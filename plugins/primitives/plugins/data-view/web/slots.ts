@@ -236,7 +236,9 @@ export const DataViewSlots = {
   Control: defineSlot<DataViewControlContribution>({
     docLabel: (p) => p.label,
   }),
-  /** Per-type table cell. Contribute `{ match, component }`. */
+  /** Per-type table cell. Contribute `{ match, component }`, plus the optional
+   *  self-description `chip: true` when the cell renders a `Badge` rather than a
+   *  text run (see `CellContributionMeta`). */
   Cell,
   /** Per-type inline cell editor. Contribute `{ match, component }`. */
   CellEditor,

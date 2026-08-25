@@ -3,11 +3,13 @@ import {
   EXTRACTION_STATUSES,
   REFRESH_CADENCES,
   RUN_OUTCOMES,
+  SOURCE_STATES,
   SOURCE_STATUSES,
   type EventSourceRun,
   type ExtractionStatus,
   type RefreshCadence,
   type RunOutcome,
+  type SourceState,
   type SourceStatus,
 } from "@plugins/apps/plugins/events/plugins/events-core/core";
 
@@ -18,6 +20,12 @@ import {
 // Each map is keyed by the closed vocabulary's own union type, so adding a
 // cadence / status / outcome to `events-core` is a tsc error here rather than a
 // silently unlabelled chip.
+//
+// The `*_OPTIONS` arrays are what a DataView field hands to the chip cell, and
+// they carry the LABEL, the TINT and the TOOLTIP together: an option describes
+// how it presents, so no render site has to join a label map to a variant map by
+// hand. The maps stay exported where a surface outside a DataView still paints a
+// chip itself (the source-detail Status section, the run rows).
 
 const cap = (s: string): string => s.charAt(0).toUpperCase() + s.slice(1);
 
@@ -39,16 +47,17 @@ export const SOURCE_STATUS_LABEL: Record<SourceStatus, string> = {
   error: "Error",
 };
 
-export const SOURCE_STATUS_OPTIONS = SOURCE_STATUSES.map((s) => ({
-  value: s,
-  label: SOURCE_STATUS_LABEL[s],
-}));
-
 export const SOURCE_STATUS_VARIANT: Record<SourceStatus, BadgeVariant> = {
   idle: "muted",
   running: "info",
   error: "destructive",
 };
+
+export const SOURCE_STATUS_OPTIONS = SOURCE_STATUSES.map((s) => ({
+  value: s,
+  label: SOURCE_STATUS_LABEL[s],
+  variant: SOURCE_STATUS_VARIANT[s],
+}));
 
 /**
  * The derived "is this source working?" vocabulary (`extractionStatus`), as
@@ -62,11 +71,6 @@ export const EXTRACTION_STATUS_LABEL: Record<ExtractionStatus, string> = {
   empty: "Empty",
   failed: "Failed",
 };
-
-export const EXTRACTION_STATUS_OPTIONS = EXTRACTION_STATUSES.map((s) => ({
-  value: s,
-  label: EXTRACTION_STATUS_LABEL[s],
-}));
 
 /**
  * `empty` is `warning`, NOT `success` — the one colour decision in this file
@@ -104,6 +108,65 @@ export const EXTRACTION_STATUS_HINT: Record<ExtractionStatus, string> = {
   failed: "The last run failed, so this source's events may be out of date.",
 };
 
+export const EXTRACTION_STATUS_OPTIONS = EXTRACTION_STATUSES.map((s) => ({
+  value: s,
+  label: EXTRACTION_STATUS_LABEL[s],
+  variant: EXTRACTION_STATUS_VARIANT[s],
+  hint: EXTRACTION_STATUS_HINT[s],
+}));
+
+/**
+ * The `state` dimension — the ONE word a sources row says about a source, and
+ * the only one of these vocabularies whose display metadata is not also a map
+ * someone reads by hand: the chip cell reads the option.
+ *
+ * Nothing here is re-spelled. `running` borrows the source-status label and
+ * tint it has always had, and the four extraction arms are spread in verbatim,
+ * so a colour or a sentence still has exactly one definition. Only `disabled`
+ * is new, because only `disabled` is new.
+ *
+ * Each map is a `Record<SourceState, …>`, so a new state member (or a new
+ * extraction status that widens `SOURCE_STATES`) is a tsc error here.
+ */
+const SOURCE_STATE_LABEL: Record<SourceState, string> = {
+  disabled: "Disabled",
+  running: SOURCE_STATUS_LABEL.running,
+  ...EXTRACTION_STATUS_LABEL,
+};
+
+/**
+ * `disabled` is `muted`, sharing a tint with `Never run` on purpose. Every other
+ * variant is a coloured verdict about how the source is DOING —
+ * `success`/`warning`/`destructive`/`info` — and an off source is making no
+ * claim of that kind, so the honest paint is the quiet one. The accent
+ * (`primary`) was the alternative and is wrong for the opposite reason: it would
+ * make the loudest thing in a deliberately dimmed row the chip saying the row is
+ * off. Nothing is lost to the shared tint — the two chips say different words,
+ * and this one sits on a row that `rowTone` has muted with it.
+ */
+const SOURCE_STATE_VARIANT: Record<SourceState, BadgeVariant> = {
+  disabled: "muted",
+  running: SOURCE_STATUS_VARIANT.running,
+  ...EXTRACTION_STATUS_VARIANT,
+};
+
+/** Hovering the chip says what the word means — see `EXTRACTION_STATUS_HINT`. */
+const SOURCE_STATE_HINT: Record<SourceState, string> = {
+  // Says all of what disabling does, not just the scheduler half: the events
+  // dropping out of the list is the effect a user notices first and would
+  // otherwise read as data loss.
+  disabled: "Disabled — the scheduler skips it and its events are hidden",
+  running: "A refresh is in flight right now.",
+  ...EXTRACTION_STATUS_HINT,
+};
+
+export const SOURCE_STATE_OPTIONS = SOURCE_STATES.map((s) => ({
+  value: s,
+  label: SOURCE_STATE_LABEL[s],
+  variant: SOURCE_STATE_VARIANT[s],
+  hint: SOURCE_STATE_HINT[s],
+}));
+
 export const RUN_OUTCOME_LABEL: Record<RunOutcome, string> = {
   // Named for what it MEANS, not for the enum value: "Unchanged" alone reads as
   // "nothing happened / something is broken", which is exactly the question the
@@ -113,16 +176,17 @@ export const RUN_OUTCOME_LABEL: Record<RunOutcome, string> = {
   failed: "Failed",
 };
 
-export const RUN_OUTCOME_OPTIONS = RUN_OUTCOMES.map((o) => ({
-  value: o,
-  label: RUN_OUTCOME_LABEL[o],
-}));
-
 export const RUN_OUTCOME_VARIANT: Record<RunOutcome, BadgeVariant> = {
   unchanged: "muted",
   extracted: "success",
   failed: "destructive",
 };
+
+export const RUN_OUTCOME_OPTIONS = RUN_OUTCOMES.map((o) => ({
+  value: o,
+  label: RUN_OUTCOME_LABEL[o],
+  variant: RUN_OUTCOME_VARIANT[o],
+}));
 
 /** `null` when the run never recorded a duration (it is still in flight). */
 export function formatDuration(ms: number | null): string | null {

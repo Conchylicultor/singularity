@@ -8,6 +8,7 @@ import {
   partitionIntoSections,
   pickPrimaryField,
   resolveBodyFields,
+  rowToneClass,
   useItemActionZones,
   useResolveCell,
   useResolveCellEditor,
@@ -17,6 +18,7 @@ import {
   type HierarchyConfig,
   type ItemActionProps,
   type ItemActionsDescriptor,
+  type RowTone,
 } from "@plugins/primitives/plugins/data-view/web";
 import type { TreeNode } from "@plugins/primitives/plugins/tree/core";
 import {
@@ -61,6 +63,8 @@ function DefaultRow<TRow>(props: {
   primaryField: FieldDef<TRow> | undefined;
   secondaryFields: FieldDef<TRow>[];
   options: TreeViewOptions<TRow>;
+  /** Per-row emphasis, threaded from `DataViewRenderProps.rowTone`. */
+  rowTone: ((row: TRow) => RowTone) | undefined;
   /** The tree's single (hover-revealed) action arm — see `useItemActionZones`. */
   revealedActions: ((p: ItemActionProps<TRow>) => ReactNode) | null;
 }): ReactNode {
@@ -70,6 +74,7 @@ function DefaultRow<TRow>(props: {
     primaryField,
     secondaryFields,
     options,
+    rowTone,
     revealedActions,
   } = props;
   const resolveCell = useResolveCell();
@@ -81,7 +86,13 @@ function DefaultRow<TRow>(props: {
 
   const primaryValue = primaryField?.value?.(row);
   const primaryString = String(primaryValue ?? "");
-  const labelClass = options.labelClassName?.(row);
+  // Per-row emphasis composed with the consumer's own per-row label class, which
+  // stays the escape hatch and therefore wins: `rowTone` is the semantic form to
+  // reach for first, not a policy imposed over a hand-written one.
+  const labelClass = cn(
+    rowToneClass(rowTone?.(row)),
+    options.labelClassName?.(row),
+  );
 
   // The label's read-rendering, on the SAME precedence the shared `FieldCell`
   // documents and every other view applies: consumer `field.cell` override →
@@ -227,7 +238,7 @@ export function TreeView(props: DataViewRenderProps<unknown>): ReactNode {
   // flag. `setExpanded` is required on the render props, so the host always
   // supplies it; it is passed straight through to `TreeList` (and to the grouped
   // path's hoisted expand-all) with no adapter in between.
-  const { rows, rowKey, expanded, setExpanded } = props;
+  const { rows, rowKey, expanded, setExpanded, rowTone } = props;
 
   // Body fields follow the view's Properties (visible-fields) policy; sort/filter/
   // search keep using the full `fields`. `null` → identity (= `fields`), so the
@@ -347,11 +358,19 @@ export function TreeView(props: DataViewRenderProps<unknown>): ReactNode {
           primaryField={primaryField}
           secondaryFields={secondaryFields}
           options={options}
+          rowTone={rowTone}
           revealedActions={revealedActions}
         />
       );
     },
-    [hierarchy, options, primaryField, secondaryFields, revealedActions],
+    [
+      hierarchy,
+      options,
+      primaryField,
+      secondaryFields,
+      rowTone,
+      revealedActions,
+    ],
   );
 
   const primaryAccessor = useCallback(

@@ -1,6 +1,6 @@
 import { type ReactNode } from "react";
 import { MdAdd } from "react-icons/md";
-import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { Button, cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Grid } from "@plugins/primitives/plugins/css/plugins/grid/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
@@ -15,6 +15,7 @@ import {
   GroupedSections,
   pickPrimaryField,
   resolveBodyFields,
+  rowToneClass,
   useDataViewSections,
   useItemActionZones,
   useResolveCell,
@@ -207,6 +208,10 @@ export function GalleryView(props: DataViewRenderProps<unknown>): ReactNode {
       row,
       hasChildren: props.hasChildren?.(key) ?? false,
     };
+    // Per-row emphasis, composed on top of the card title's own foreground: the
+    // property rows below are already muted, so the title carries the whole
+    // difference between an active card and an inactive one.
+    const toneClass = rowToneClass(props.rowTone?.(row));
 
     // Aggregate representative → a persistent `×N` corner badge. Pinned top-left
     // so it never collides with the hover-revealed actions Pin (top-right).
@@ -244,7 +249,10 @@ export function GalleryView(props: DataViewRenderProps<unknown>): ReactNode {
               <Text
                 as="div"
                 variant="label"
-                className="truncate font-semibold text-foreground"
+                className={cn(
+                  "truncate font-semibold text-foreground",
+                  toneClass,
+                )}
               >
                 <FieldCell
                   field={titleField}

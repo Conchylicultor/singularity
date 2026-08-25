@@ -10,14 +10,21 @@ understanding the same private shape:
 
 - **`component`** — an options add/rename/remove editor rendered in the
   custom-column Fields settings when the author picks the Select type. It reads
-  and writes `config.options: { value, label }[]` opaquely through
-  `props.onChange`; the data-view host never inspects the blob (the invariant:
+  and writes `config.options` opaquely through `props.onChange`; the data-view host never inspects the blob (the invariant:
   only `fields/enum/…` understands enum config). Each option's `value` is minted
   stable and decoupled from its label, so renaming an option never re-keys
   (orphans) stored cells.
 - **`derive`** — the pure projection of that blob onto the **generic**
   `FieldDef.options`, applied by `custom-columns` when it mints the `FieldDef`.
   This is what keeps `field.options` the one contract every consumer reads.
+
+`EnumOption` is the generic `FieldOption` shape — `{ value, label, variant?,
+hint? }` — so `derive` forwards the stored object whole and a custom column's
+options round-trip with no per-key mapping. The editor authors only `value` and
+`label`: **there is no colour picker**, and user-defined columns stay muted on
+purpose, because a column whose values carry no semantics has no tint to earn.
+The two display keys exist in the type because the config blob is persisted
+unvalidated, so adding author-time colour later is a pure editor change.
 
 `internal/enum-config.ts` is the single place that narrows the blob; the editor
 and the projection share it. Publishing options through `derive` is what lets the

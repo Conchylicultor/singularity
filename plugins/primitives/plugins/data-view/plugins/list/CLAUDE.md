@@ -28,7 +28,31 @@ The row body maps the `FieldDef` schema (shared `pickPrimaryField` heuristic):
   (`field.cell(row) ?? String(field.value(row))`). This is where a status badge
   lands.
 - **remaining non-primary fields** → the muted subtitle (`Text
-  variant="caption"`, truncating), joined with `·`.
+  variant="caption"`, truncating), joined with `·` — but see "Chips are not
+  middot-ed" below: a term that renders as a chip is parted by spacing instead.
+- **row tone** — `DataViewRenderProps.rowTone` tones the **title** in both row
+  shapes, through the shared `rowToneClass`. The subtitle and the trailing cell
+  are already muted, so the title carries the whole difference between an active
+  row and an inactive one.
+
+### Chips are not middot-ed
+
+` · ` is punctuation between two pieces of text; two chips already carry their
+own boundary. So the run draws ` · ` **only between two adjacent non-chip
+terms**, and separates a chip from its neighbour by spacing alone. The title
+seam follows the same rule, since on one line the title is just the run's first
+term.
+
+Which terms are chips comes from `useIsChipField()` — the same Cell registry
+`resolveCell` consults, asked once per render (the schema is per-view, not
+per-row). **This view names no field type**; `enum` and `tags` declare
+`chip: true` on their own cell contributions. See the data-view CLAUDE.md
+("An option carries its own presentation").
+
+The spacing is a literal space **in the inline flow**, not a flex `gap`. The
+whole run is inline content inside one truncating `<Text>` leaf — that is what
+lets the subtitle ellipsize as a single leaf of the row's line — and a flex
+container here would make each chip its own leaf and take the truncation with it.
 
 ### One line by default (`options.lines`)
 
@@ -61,8 +85,9 @@ Either way this is the list analog of the gallery's "title + muted properties":
 primary = title, others = subtitle, `align: "end"` floats to the trailing edge.
 
 **Which fields appear (and their order)** follows the view's per-instance
-`visibleFields` (`resolveBodyFields` over the schema; **default `null` = all
-fields**, schema order) — the same Properties dimension every view honors. The
+`visibleFields` (`resolveBodyFields` over the schema; **default `null` = the
+schema's own default set** — every field in schema order except those declaring
+`FieldDef.visible: false`) — the same Properties dimension every view honors. The
 title/subtitle/trailing split is unchanged: the primary (picked via
 `pickPrimaryField` over the *visible* subset) is the label, `align: "end"` fields
 trail, and the remaining visible fields form the subtitle. Hiding or reordering
@@ -153,7 +178,9 @@ conditional hook.
     - `primitives/data-view.ManualOrderConfig`
     - `primitives/data-view.pickPrimaryField`
     - `primitives/data-view.resolveBodyFields`
+    - `primitives/data-view.rowToneClass`
     - `primitives/data-view.useDataViewSections`
+    - `primitives/data-view.useIsChipField`
     - `primitives/data-view.useItemActionZones`
     - `primitives/data-view.useResolveCell`
     - `primitives/data-view.useResolveCellEditor`
