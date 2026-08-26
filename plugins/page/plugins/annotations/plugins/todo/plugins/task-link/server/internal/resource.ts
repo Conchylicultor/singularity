@@ -10,25 +10,20 @@ const t = todoTask.table;
 // (two-arg form) so `keyOf` is declared once and the two runtimes cannot drift.
 //
 // `identityTable` says which table's changes are this resource's own — a
-// dispatch on one card never recomputes an unrelated RESOURCE. It does not say
-// which of them are THIS tuple's, so within this resource every write still
-// wakes every subscribed `{ blockId }` tuple: each runs its own primary-key
-// seek, finds the changed row is not theirs, and diffs to empty.
-//
-// It is tempting to look at one of those seeks — a one-row lookup a scoped
-// refill could not make any narrower — and conclude there is no work to save.
-// That answers the wrong question. The seek is cheap; there is one per open
-// card per write, and how many that is belongs to the page, not to this
-// resource. Bounding it needs the runtime to intersect ids BEFORE scheduling,
-// which is what a `membership` declaration is for. Declaring one here was tried
-// and reverted (it caused a cross-context delivery regression); the scoping is
-// being redesigned under its own task.
+// dispatch on one card never recomputes an unrelated RESOURCE. `rowIdentity`
+// says which of them are THIS tuple's: the params name exactly one row of the
+// table (`parent_id`, the PK, IS the blockId), so a dispatch on one card is
+// scheduled for that card's tuple alone instead of waking every mounted card to
+// run its own primary-key seek and diff to empty. The seek is cheap; there was
+// one per open card per write, and how many that is belongs to the page. Routing
+// only — the owning card's frames are unchanged.
 //
 // The loader ignores `ctx.affectedIds`, and there it genuinely is free: the read
 // is already scoped to one row by `params.blockId`, so a scoped refill and a
 // full one are the same query.
 export const todoTaskServerResource = defineResource(todoTaskResource, {
   identityTable: "page_blocks_ext_todo_task",
+  rowIdentity: ({ blockId }) => blockId,
   loader: ({ blockId }) =>
     db
       .select({ blockId: t.parentId, taskId: t.taskId, createdAt: t.createdAt })

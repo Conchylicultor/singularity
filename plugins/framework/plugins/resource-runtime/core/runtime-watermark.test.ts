@@ -23,7 +23,10 @@ const keyOf = (r: unknown) => (r as { id: string }).id;
 
 // A capture hook handing out strictly-increasing xid8-style decimal tokens, so
 // each flight's watermark is distinguishable in the frame log.
-function makeCapture(start = 100): { fn: () => Promise<string>; calls: () => number } {
+function makeCapture(start = 100): {
+  fn: () => Promise<string>;
+  calls: () => number;
+} {
   let next = start;
   let calls = 0;
   return {
@@ -75,7 +78,10 @@ describe("watermark — full frames carry it", () => {
 
   test("keyed: the FULL-recompute delta carries it; a SCOPED delta never does", async () => {
     const cap = makeCapture();
-    const h = createHarness({ readSet: () => ["row_table"], captureWatermark: cap.fn });
+    const h = createHarness({
+      readSet: () => ["row_table"],
+      captureWatermark: cap.fn,
+    });
     let truth = [
       { id: "a", n: 1 },
       { id: "b", n: 1 },
@@ -84,7 +90,9 @@ describe("watermark — full frames carry it", () => {
       { key: "rows", schema: rowsSchema, keyed: { keyOf } },
       {
         identityTable: "row_table",
-        loader: (_p, c) => (c ? truth.filter((r) => c.affectedIds.includes(r.id)) : truth),
+        fanOut: { reason: "one param-less tuple — nothing to narrow" },
+        loader: (_p, c) =>
+          c ? truth.filter((r) => c.affectedIds.includes(r.id)) : truth,
       },
     );
     await h.subscribe("rows"); // seeds snapshot; sub-ack carries a watermark
@@ -126,7 +134,10 @@ describe("watermark — full frames carry it", () => {
 
   test("M5 membership-scoped deltas (in-place flip AND entry-with-order) never carry one", async () => {
     const cap = makeCapture();
-    const h = createHarness({ readSet: () => ["m_table"], captureWatermark: cap.fn });
+    const h = createHarness({
+      readSet: () => ["m_table"],
+      captureWatermark: cap.fn,
+    });
     const table = new Map<string, number>();
     const rows = () => [...table.entries()].map(([id, n]) => ({ id, n }));
     h.runtime.defineResource(
@@ -177,13 +188,18 @@ describe("watermark — full frames carry it", () => {
     // a strictly narrower claim ("these transactions' rows were re-read") —
     // rides it fine.
     const cap = makeCapture();
-    const h = createHarness({ readSet: () => ["row_table"], captureWatermark: cap.fn });
+    const h = createHarness({
+      readSet: () => ["row_table"],
+      captureWatermark: cap.fn,
+    });
     let truth = [{ id: "a", n: 1 }];
     h.runtime.defineResource(
       { key: "rows", schema: rowsSchema, keyed: { keyOf } },
       {
         identityTable: "row_table",
-        loader: (_p, c) => (c ? truth.filter((r) => c.affectedIds.includes(r.id)) : truth),
+        fanOut: { reason: "one param-less tuple — nothing to narrow" },
+        loader: (_p, c) =>
+          c ? truth.filter((r) => c.affectedIds.includes(r.id)) : truth,
       },
     );
     await h.subscribe("rows");
@@ -253,7 +269,9 @@ describe("watermark — degrade + adoption", () => {
     expect(ack.value).toBe("val"); // the value still ships
     expect("watermark" in ack).toBe(false); // tokenless degrade
     expect(
-      reportError.mock.calls.some(([ctx]) => String(ctx).includes("watermark capture failed")),
+      reportError.mock.calls.some(([ctx]) =>
+        String(ctx).includes("watermark capture failed"),
+      ),
     ).toBe(true);
   });
 

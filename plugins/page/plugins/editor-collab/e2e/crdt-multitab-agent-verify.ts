@@ -19,6 +19,7 @@ import {
   capture,
   report,
   snap,
+  waitFor,
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 import {
@@ -34,6 +35,16 @@ const out = arg("out", "/tmp/crdt-multitab");
 
 const r = report();
 
+/** Every editable block's rendered text in one tab, in document order. */
+const readAll = (page: Page): Promise<string[]> =>
+  page.evaluate(() =>
+    [
+      ...document.querySelectorAll<HTMLElement>(
+        '[data-block-id] [contenteditable="true"]',
+      ),
+    ].map((el) => el.innerText),
+  );
+
 await withBrowser(async (h) => {
   const { context: ctx, page: tabA } = await h.session({ label: "A" });
 
@@ -43,11 +54,11 @@ await withBrowser(async (h) => {
     if (ws.url().includes("/ws/notifications")) wsOpened.push(`A:${ws.url()}`);
   });
 
-  const { pageUrl, block: blockA, blockId: block1Id } = await openBlankPage(
-    tabA,
-    base,
-    { settleMs: 3000 },
-  );
+  const {
+    pageUrl,
+    block: blockA,
+    blockId: block1Id,
+  } = await openBlankPage(tabA, base, { settleMs: 3000 });
 
   await tabA.keyboard.type("first block from tab A", { delay: 10 });
   // Second block for tab B to edit.
@@ -63,10 +74,30 @@ await withBrowser(async (h) => {
     if (ws.url().includes("/ws/notifications")) wsOpened.push(`B:${ws.url()}`);
   });
   await tabB.goto(pageUrl);
-  await tabB.waitForTimeout(4000);
+  // Was a fixed `waitForTimeout(4000)`. This one is worse than a bad read: tab B
+  // goes on to CLICK AND TYPE into block 2, so if it has not hydrated the edit
+  // lands in an empty editor and the failure surfaces further down as a
+  // convergence mismatch that reads like a merge bug. Wait for the document tab
+  // A authored to actually be on screen here.
+  const blocksB = editableBlocks(tabB);
+  const openedB = await waitFor(
+    async () => (await readAll(tabB)).map((t) => t.replace(/ /g, " ").trim()),
+    (texts) =>
+      JSON.stringify(texts) ===
+      JSON.stringify(["first block from tab A", "second block"]),
+  );
+  console.log(
+    "tab B opened:",
+    JSON.stringify(openedB.value),
+    `(after ${openedB.waitedMs}ms, ${openedB.attempts} reads)`,
+  );
+  r.ok(
+    "tab B rendered tab A's blocks before editing",
+    openedB.ok,
+    JSON.stringify(openedB.value),
+  );
 
   // Tab B edits the SECOND block (different-block concurrency).
-  const blocksB = editableBlocks(tabB);
   const blockB2 = blocksB.nth(1);
   await blockB2.click();
   await tabB.keyboard.press("End");
@@ -79,15 +110,6 @@ await withBrowser(async (h) => {
   await tabA.keyboard.press("End");
   await tabA.keyboard.type(" +A", { delay: 15 });
   await tabA.waitForTimeout(2000);
-
-  const readAll = (page: Page): Promise<string[]> =>
-    page.evaluate(() =>
-      [
-        ...document.querySelectorAll<HTMLElement>(
-          '[data-block-id] [contenteditable="true"]',
-        ),
-      ].map((el) => el.innerText),
-    );
 
   const textsA = (await readAll(tabA)).map((t) => t.replace(/ /g, " ").trim());
   const textsB = (await readAll(tabB)).map((t) => t.replace(/ /g, " ").trim());
@@ -117,8 +139,16 @@ await withBrowser(async (h) => {
   const sameA = await blockText(blockA);
   const sameB = await blockText(blocksB.first());
   const SAME = "[B]first block from tab A +A [A-end]";
-  r.ok("same-block edits merged in tab A", sameA === SAME, JSON.stringify(sameA));
-  r.ok("same-block edits merged in tab B", sameB === SAME, JSON.stringify(sameB));
+  r.ok(
+    "same-block edits merged in tab A",
+    sameA === SAME,
+    JSON.stringify(sameA),
+  );
+  r.ok(
+    "same-block edits merged in tab B",
+    sameB === SAME,
+    JSON.stringify(sameB),
+  );
 
   // One shared notifications socket for the whole context (leader-elected).
   r.ok(
@@ -164,8 +194,16 @@ await withBrowser(async (h) => {
   const FINAL = `${marker}${SAME} typed-during-agent-write`;
   const finalA = await blockText(blockA);
   const finalB = await blockText(blocksB.first());
-  r.ok("agent write + user typing merged (tab A)", finalA === FINAL, JSON.stringify(finalA));
-  r.ok("tab B converged on the merge", finalB === FINAL, JSON.stringify(finalB));
+  r.ok(
+    "agent write + user typing merged (tab A)",
+    finalA === FINAL,
+    JSON.stringify(finalA),
+  );
+  r.ok(
+    "tab B converged on the merge",
+    finalB === FINAL,
+    JSON.stringify(finalB),
+  );
 
   // Caret: still collapsed at the very end of the typed text (no jump despite
   // the remote prepend shifting every offset).

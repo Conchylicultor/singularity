@@ -59,22 +59,28 @@ the join; the card's glyph then follows its task through every transition with
 nothing stored on the card.
 
 `identityTable: "page_blocks_ext_todo_task"` says *this table's changes are
-mine* — a dispatch on one card never recomputes an unrelated RESOURCE. There is
-no `membership`, so within this resource a dispatch on any card still wakes every
-subscribed card: each runs its own primary-key seek and diffs to empty. It is
-easy to look at one of those seeks — a one-row lookup that a scoped refill could
-not make any narrower — and conclude there is nothing to save. That reasoning
-answers the wrong question. The seek is cheap; there is one per open card per
-write, and how many that is belongs to the page, not to this resource. Bounding
-it needs a `membership` declaration; one was tried on this table and reverted
-(cross-context delivery regression), and the scoping is being redesigned under
-its own task.
+mine* — a dispatch on one card never recomputes an unrelated RESOURCE.
+`rowIdentity: ({ blockId }) => blockId` says which of them are THIS tuple's: the
+params name exactly one row, and `defineExtension` makes `parent_id` the table's
+single-column PRIMARY KEY, so the blockId IS the id the change-feed emits. A
+dispatch is scheduled for the card it wrote and no other. Before that, every
+mounted card was woken on every write: each ran its own primary-key seek and
+diffed to empty. It is easy to look at one of those seeks — a one-row lookup that
+a scoped refill could not make any narrower — and conclude there was nothing to
+save. That reasoning answers the wrong question. The seek is cheap; there was one
+per open card per write, and how many that is belongs to the page, not to this
+resource. `rowIdentity` narrows WHO is woken and nothing else — the owning card's
+frames are unchanged, which is why it is not `membership` (that reroutes the
+drain). See `resource-runtime/CLAUDE.md` §"Own-row routing".
 
 The row key must be `blockId`, not `taskId` — see the descriptor's own comment in
 `shared/schemas.ts`. The change-feed hands the runtime `parent_id` values, and it
 looks them up in the per-tuple snapshot to work out what entered and what left,
 so a row keyed on anything else makes the two id spaces disjoint and a cascade
-delete ships no removal.
+delete ships no removal. `rowIdentity` now depends on that same agreement even
+more directly: what it returns is intersected against the ids the feed emitted,
+so it must be spelled in the feed's id space (the table's PK) or every delivery
+would be dropped.
 
 The loader still ignores `ctx.affectedIds`, and there it really is free: the read
 is already one row by `params.blockId`.

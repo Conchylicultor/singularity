@@ -15,7 +15,7 @@ import type { Edge, QueryDb, QueryResourceSpec, QueryStep } from "./spec";
 
 /** The compiled server half of a query-resource, ready for `defineResource`. */
 export interface CompiledQuery<Row, P extends ResourceParams> {
-  serverOpts: ServerResourceOptions<Row[], P> & ScopePolicy;
+  serverOpts: ServerResourceOptions<Row[], P> & ScopePolicy<P>;
   keyField: string;
   /** The base table the identity scopes to, or `null` under `recompute: full`. */
   identityTableName: string | null;
@@ -24,7 +24,8 @@ export interface CompiledQuery<Row, P extends ResourceParams> {
 /**
  * Turn a `QueryResourceSpec` into the two-arg `defineResource` server half:
  * the loader (full + Layer-2 scoped variants), the `ScopePolicy` (an
- * `identityTable` or the explicit `recompute` FULL opt-out), the compiled
+ * `identityTable` — plus which tuple owns a changed row, `scopedMembership` or
+ * `fanOut` — or the explicit `recompute` FULL opt-out), the compiled
  * `dependsOn` edges, and the derived client keyField. `mode` is never set —
  * keyed-ness comes solely from the contract, so the compiler only ever produces
  * keyed resources.
@@ -106,7 +107,9 @@ export function compileQuery<Row, P extends ResourceParams = ResourceParams>(
     ctx?: { affectedIds: readonly string[] },
   ): Promise<Row[]> => {
     const query =
-      ctx?.affectedIds && scoped ? buildScoped(params, ctx.affectedIds) : buildFull(params);
+      ctx?.affectedIds && scoped
+        ? buildScoped(params, ctx.affectedIds)
+        : buildFull(params);
     // The step is a `PromiseLike<unknown[]>`; the runtime awaits it and validates
     // the rows against the resource schema (mirrors the hand-written loaders).
     return query as unknown as Promise<Row[]>;
@@ -130,17 +133,37 @@ export function compileQuery<Row, P extends ResourceParams = ResourceParams>(
     compileEdge(edge, db),
   );
 
-  const scopePolicy: ScopePolicy = spec.recompute
+  // The scope policy, both halves. Under `identityTable` the second half is which
+  // subscribed tuple owns a changed row: `scopedMembership` answers it when
+  // declared (it IS a membership, so the runtime routes by it), and otherwise the
+  // answer is honestly `fanOut` — a plain `queryResource`'s params tuple selects
+  // a whole compiled query, not one identity row, so a changed id cannot be
+  // compared against it. (Deriving `rowIdentity` for the narrow case where the
+  // spec's `where` is exactly `eq(pk, params.X)` is a separate, larger idea.)
+  //
+  // Annotated, not cast: the `as` on `serverOpts` below launders the spreads and
+  // would hide a missing arm from `tsc` entirely, so the policy is built as its
+  // own CHECKED value first. Keep it that way — the `keyed-resource-scope` check
+  // cannot see through a cast either (the call site passes this identifier, not
+  // a literal), so this annotation is the only thing holding the arm here.
+  const scopePolicy: ScopePolicy<P> = spec.recompute
     ? { recompute: spec.recompute }
-    : { identityTable: tableName };
+    : spec.scopedMembership
+      ? { identityTable: tableName, scopedMembership: { orderOf } }
+      : {
+          identityTable: tableName,
+          fanOut: {
+            reason:
+              "the params tuple selects a whole compiled query (`where` over arbitrary columns), not one identity row, so a changed pk cannot be matched against it — the scoped refill still limits the READ to the changed ids",
+          },
+        };
 
   const serverOpts = {
     loader,
     ...(dependsOn ? { dependsOn } : {}),
     ...(spec.debounceMs != null ? { debounceMs: spec.debounceMs } : {}),
-    ...(spec.scopedMembership ? { scopedMembership: { orderOf } } : {}),
     ...scopePolicy,
-  } as ServerResourceOptions<Row[], P> & ScopePolicy;
+  } as ServerResourceOptions<Row[], P> & ScopePolicy<P>;
 
   return { serverOpts, keyField, identityTableName: scoped ? tableName : null };
 }

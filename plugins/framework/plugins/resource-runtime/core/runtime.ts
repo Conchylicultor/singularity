@@ -293,6 +293,37 @@ export interface ResourceDefinition<
    */
   membership?: KeyedMembership<P>;
   /**
+   * The params tuple names EXACTLY ONE row of `identityTable`; this returns that
+   * row's primary key. A ROUTING declaration and nothing else: it changes which
+   * subscribed tuples a change is SCHEDULED for, never what the owning tuple
+   * computes or receives. The owner falls through with its `affected` / `deleted`
+   * exactly as computed, so it stays on the legacy scoped/FULL drain and its
+   * frames are byte-identical to the no-`rowIdentity` behavior. What goes away is
+   * the other N-1 tuples, each of which re-ran its own one-row read, found the
+   * changed row was not its own, and diffed to empty. No frame ships from such a
+   * tuple — which is exactly what hides the cost: the read IS the cost.
+   *
+   * Deliberately NOT `membership: { kind: "point", idsOf: () => [theOneId] }`,
+   * which routes the same and then changes everything else. Declaring membership
+   * turns an INSERT/DELETE on the identity table from a FULL recompute into an
+   * incremental membership diff (`applyDbChange` below) and reroutes the drain
+   * (`drainEntry` branch 4); a membership delta must always assert the full
+   * `order`, a client-drift surface (`forceFullResub`) bought for nothing on a
+   * 0-or-1-row value that has neither membership nor order. It is also a
+   * persistence decision (`membershipBounded` excludes the entry from L2). The
+   * drain difference IS why both declarations exist.
+   *
+   * Requires `mode: "keyed"` + `identityTable`; mutually exclusive with
+   * `membership` and `scopedMembership`; incompatible with `bootCritical` (the L2
+   * boot init and `recomputeResource` schedule the `{}` tuple, for which
+   * `rowIdentity({})` is meaningless) — all enforced with a loud throw in
+   * `createResource`. It MUST be pure, total, synchronous and cheap: it runs per
+   * subscribed tuple on the feed-routing path. Nothing enforces that, so the call
+   * site fails OPEN (`ownRowChanged`). See
+   * research/2026-08-25-global-own-row-resource-scoping.md.
+   */
+  rowIdentity?: (params: P) => string;
+  /**
    * Fixed-window trailing debounce (ms) for this resource's flushes. When set
    * (and > 0), a `notify()` (or cascaded `mergePending`) into this entry does
    * NOT ride the immediate microtask flush; instead it arms a per-entry timer
@@ -382,16 +413,88 @@ export interface ResourceDefinition<
 }
 
 /**
- * A keyed resource's scope policy: it MUST either declare `identityTable` (its
- * change scopes to its own keys) or `recompute: { kind: "full", reason }` (an
- * explicit, documented FULL opt-out) — never both, never neither. This is the
- * mandatory-by-construction half of scoped-recompute coverage (the build-gating
- * check is the backstop). See
+ * A keyed resource's scope policy — the two questions the feed router asks,
+ * both answered at the declaration site or the resource does not compile.
+ *
+ * **Which RESOURCE does a change belong to?** Either `identityTable` (the change
+ * scopes to this resource's own keys) or `recompute: { kind: "full", reason }`
+ * (an explicit, documented FULL opt-out) — never both, never neither. See
  * research/2026-06-20-global-enforce-keyed-resource-scope-coverage.md.
+ *
+ * **And which subscribed TUPLE of it owns the changed row?** `identityTable`
+ * alone never answered that, so the router woke EVERY subscribed tuple, each of
+ * which re-ran its own read, found the row was not its own, and diffed to empty.
+ * No frame shipped from those tuples — which is exactly what hid the cost; the
+ * read IS the cost. So an `identityTable` arm must also carry exactly one of:
+ *
+ * - `rowIdentity` — the tuple names exactly ONE row, and this is its pk. Routing
+ *   only: the owner's frames are byte-identical (`ResourceDefinition.rowIdentity`).
+ * - `membership` — the tuple names a bounded window / point set, maintained
+ *   incrementally (`KeyedMembership`). Also reroutes the drain and INSERT/DELETE.
+ * - `scopedMembership` — the legacy unbounded-window alias of `membership`.
+ * - `fanOut: { reason }` — every subscribed tuple genuinely must be woken, and
+ *   here is why. Normalizes to NOTHING at runtime: it is a declaration
+ *   requirement only, byte-identical to omitting it, exactly as the
+ *   `recompute: { kind: "full", reason }` arm is. `reason` must be a real
+ *   sentence about THIS resource (a composite pk the change feed cannot emit ids
+ *   for; params that key a foreign column; a param-less single tuple) — a wrong
+ *   reason is worse than none, because the next reader will believe it.
+ *
+ * `fanOut` is deliberately a SIBLING of `membership`, never a `kind` inside
+ * `KeyedMembership`: a membership record is truthy at `drainEntry`'s membership
+ * branch and at `applyDbChange`'s INSERT/DELETE scoping decision, so a
+ * `kind: "fan-out"` member would reroute the drain — the exact behaviour change
+ * this arm exists to avoid. See
+ * research/2026-08-25-global-own-row-resource-scoping.md §3.
+ *
+ * `tsc` enforces this at every hand-written call site. The compilers in
+ * `@plugins/infra/plugins/query-resource/server` merge their opts behind an
+ * `as … & ScopePolicy` cast that `tsc` cannot see through, so each states its
+ * policy as an annotated `const scopePolicy: ScopePolicy<P>` FIRST — that
+ * annotation is the enforcement there. The `keyed-resource-scope` check is the
+ * text-level backstop for whatever still gets past both.
  */
-export type ScopePolicy =
-  | { identityTable: string; recompute?: never }
-  | { recompute: { kind: "full"; reason: string }; identityTable?: never };
+export type ScopePolicy<P extends ResourceParams = ResourceParams> =
+  | {
+      identityTable: string;
+      rowIdentity: (params: P) => string;
+      membership?: never;
+      scopedMembership?: never;
+      fanOut?: never;
+      recompute?: never;
+    }
+  | {
+      identityTable: string;
+      membership: KeyedMembership<P>;
+      rowIdentity?: never;
+      scopedMembership?: never;
+      fanOut?: never;
+      recompute?: never;
+    }
+  | {
+      identityTable: string;
+      scopedMembership: { orderOf: (params: P) => Promise<string[]> };
+      rowIdentity?: never;
+      membership?: never;
+      fanOut?: never;
+      recompute?: never;
+    }
+  | {
+      identityTable: string;
+      fanOut: { reason: string };
+      rowIdentity?: never;
+      membership?: never;
+      scopedMembership?: never;
+      recompute?: never;
+    }
+  | {
+      recompute: { kind: "full"; reason: string };
+      identityTable?: never;
+      rowIdentity?: never;
+      membership?: never;
+      scopedMembership?: never;
+      fanOut?: never;
+    };
 
 /**
  * The strict public input to the flat one-arg `defineResource` (the runtime
@@ -418,6 +521,7 @@ export type DefineResourceInput<
   | "recompute"
   | "scopedMembership"
   | "membership"
+  | "rowIdentity"
   | "bootCritical"
 > & {
   mode?: "push" | "invalidate";
@@ -477,7 +581,10 @@ export type KeyedResourceContract<
  * fields come from the contract. `mode` picks push vs invalidate for a non-keyed
  * contract (a keyed contract forces `"keyed"` from its own `keyOf`, so `mode`
  * excludes it). The keyed overload additionally intersects `ScopePolicy`, which
- * makes `identityTable` (or the explicit `recompute:` FULL opt-out) mandatory.
+ * makes `identityTable` (or the explicit `recompute:` FULL opt-out) mandatory —
+ * and, under `identityTable`, one of `rowIdentity` / `membership` /
+ * `scopedMembership` / `fanOut: { reason }`, so which subscribed tuple owns a
+ * changed row is answered too rather than defaulting to waking all of them.
  */
 export interface ServerResourceOptions<
   T,
@@ -500,6 +607,12 @@ export interface ServerResourceOptions<
    * `identityTable`); mutually exclusive with `scopedMembership`.
    */
   membership?: ResourceDefinition<T, P>["membership"];
+  /**
+   * Own-row routing declaration — see `ResourceDefinition.rowIdentity`. Only
+   * meaningful on the KEYED overload (its `ScopePolicy` supplies the required
+   * `identityTable`); mutually exclusive with `membership` / `scopedMembership`.
+   */
+  rowIdentity?: ResourceDefinition<T, P>["rowIdentity"];
   debounceMs?: number;
   onFirstSubscribe?: ResourceDefinition<T, P>["onFirstSubscribe"];
   onLastUnsubscribe?: ResourceDefinition<T, P>["onLastUnsubscribe"];
@@ -534,6 +647,7 @@ function contractToDefinition<T, P extends ResourceParams>(
     recompute: opts.recompute,
     scopedMembership: opts.scopedMembership,
     membership: opts.membership,
+    rowIdentity: opts.rowIdentity,
     debounceMs: opts.debounceMs,
     onFirstSubscribe: opts.onFirstSubscribe,
     onLastUnsubscribe: opts.onLastUnsubscribe,
@@ -710,6 +824,16 @@ interface RegistryEntry {
    * and research/2026-07-18-global-bounded-working-set-resource-contract.md.
    */
   membership?: MembershipRecord;
+  /**
+   * Own-row routing selector (declared via `rowIdentity`): this entry's params
+   * tuple names exactly ONE row of `identityTable`, and this returns that row's
+   * primary key. Read ONLY by `applyDbChange`, which drops a change whose known
+   * ids do not include it instead of scheduling a recompute the tuple would
+   * resolve to an empty diff. Nothing else in the runtime consults it — the
+   * owning tuple drains exactly as it does without one. Undefined → today's
+   * fan-out to every subscribed tuple (byte-identical).
+   */
+  rowIdentity?: (params: ResourceParams) => string;
   /**
    * Per-pk snapshot of id→SnapEntry for keyed entries. Allocated lazily only
    * when `mode === "keyed"`. Lets the diff ship only changed rows. Evicted
@@ -1017,7 +1141,7 @@ export interface ResourceRuntime {
     ): Resource<T, P>;
     <T, P extends ResourceParams = ResourceParams>(
       contract: KeyedResourceContract<T, P>,
-      opts: ServerResourceOptions<T, P> & ScopePolicy,
+      opts: ServerResourceOptions<T, P> & ScopePolicy<P>,
     ): Resource<T, P>;
     <T, P extends ResourceParams = ResourceParams>(
       contract: ResourceContract<T, P> & { keyed?: never },
@@ -1920,6 +2044,36 @@ export function createResourceRuntime(
         );
       }
     }
+    // `rowIdentity` is the OTHER answer to "which subscribed tuple owns this
+    // changed row?" (see `ResourceDefinition.rowIdentity`): a routing
+    // declaration, where membership is a diffing one. Same own-identity
+    // preconditions, plus two exclusions of its own — a membership entry already
+    // routes by id and would then ALSO be filtered here (two arbiters, one
+    // decision), and a `bootCritical` entry is recomputed at the `{}` tuple by
+    // the L2 boot init and `recomputeResource`, for which `rowIdentity({})` is
+    // meaningless. Fail loudly at registration.
+    if (def.rowIdentity) {
+      if (mode !== "keyed") {
+        throw new Error(
+          `defineResource: rowIdentity requires mode "keyed" for key "${def.key}"`,
+        );
+      }
+      if (!def.identityTable) {
+        throw new Error(
+          `defineResource: rowIdentity requires an identityTable (an own-identity scoped resource) for key "${def.key}"`,
+        );
+      }
+      if (membershipField) {
+        throw new Error(
+          `defineResource: rowIdentity and ${membershipField} are mutually exclusive for key "${def.key}" — rowIdentity narrows WHO is scheduled and leaves the drain untouched, ${membershipField} reroutes the drain`,
+        );
+      }
+      if (def.bootCritical) {
+        throw new Error(
+          `defineResource: rowIdentity is incompatible with bootCritical for key "${def.key}" — a persisted entry is recomputed at the {} tuple (L2 boot init / recomputeResource), for which rowIdentity({}) is meaningless`,
+        );
+      }
+    }
     // Normalize both public forms into the one internal record every consumer
     // branches on. The alias is the ONLY unbounded window (`bounded: false`) —
     // it keeps L2 persistence and the retain snapshot encoder; a declared
@@ -2007,6 +2161,8 @@ export function createResourceRuntime(
       identityTable: def.identityTable,
       recompute: def.recompute,
       membership,
+      rowIdentity: def.rowIdentity as
+        ((params: ResourceParams) => string) | undefined,
       snapshots: mode === "keyed" ? new Map() : undefined,
       versions: new Map(),
       pendingNotifies: new Map(),
@@ -2070,7 +2226,7 @@ export function createResourceRuntime(
   ): Resource<T, P>;
   function defineResource<T, P extends ResourceParams = ResourceParams>(
     contract: KeyedResourceContract<T, P>,
-    opts: ServerResourceOptions<T, P> & ScopePolicy,
+    opts: ServerResourceOptions<T, P> & ScopePolicy<P>,
   ): Resource<T, P>;
   function defineResource<T, P extends ResourceParams = ResourceParams>(
     contract: ResourceContract<T, P> & { keyed?: never },
@@ -2373,6 +2529,31 @@ export function createResourceRuntime(
     } catch (err) {
       reportLoaderError(`orderSignatureOf failed for ${entry.key}`, err);
       return undefined;
+    }
+  }
+
+  // Does this change touch the ONE row this params tuple names (`rowIdentity`)?
+  // The answer is the decision itself — a total function, no "unknown" id for the
+  // caller to interpret — so fail-OPEN is structural: on a throwing declaration
+  // `return true` IS "schedule the tuple", i.e. today's fan-out for that one
+  // delivery, and there is no sentinel a future caller could forget to map.
+  // The direction is the whole point: `applyDbChange` wraps its body in a
+  // swallowing catch, so a throw escaping here would abort the entire change —
+  // silently dropping EVERY delivery for it, across every resource, with no
+  // frame, no error frame and no counter. One needless delivery is the price;
+  // a silent drop is not payable. (Unlike `safeOrderSig` above, which must hand
+  // its caller an id to store, nothing here outlives the decision.)
+  function ownRowChanged(
+    entry: RegistryEntry,
+    rowIdentity: (params: ResourceParams) => string,
+    params: ResourceParams,
+    routeIds: Set<string>,
+  ): boolean {
+    try {
+      return routeIds.has(rowIdentity(params));
+    } catch (err) {
+      reportLoaderError(`rowIdentity failed for ${entry.key}`, err);
+      return true;
     }
   }
 
@@ -3223,7 +3404,16 @@ export function createResourceRuntime(
       // is forced to FULL (it cannot persist a scoped partial), so the scoped
       // bookkeeping below only applies to the non-persisted path.
       const scoped = affected !== null && !persisted;
-      if (affected !== null && affected.size === 0 && !persisted) continue;
+      if (affected !== null && affected.size === 0 && !persisted) {
+        // Nothing changed for this tuple — no version bump, no empty delta, no
+        // cascade. It is ALSO where a `rowIdentity` non-match lands its ACK-ONLY
+        // pending (the change named another tuple's row, but the writer still
+        // deserves its ack), so an opted-in `ackChannel` entry broadcasts the
+        // standalone ack frame here. Inert without that opt-in, so no existing
+        // resource moves.
+        broadcastAckOnly(entry, pendingEntry);
+        continue;
+      }
       const version = (entry.versions.get(pk) ?? 0) + 1;
       entry.versions.set(pk, version);
       const subs = subscribersFor(entry.key, pk);
@@ -4505,12 +4695,26 @@ export function createResourceRuntime(
         // scoped `affected` for a scopedMembership DELETE (see below).
         let affected: Set<string> | null;
         let deleted: Set<string> | undefined;
+        // The `rowIdentity` filter's condition, and it MUST be these two rather
+        // than `affected !== null`. `rowIdentity` has to filter op-`I`/`D`, where
+        // `affected` is deliberately `null` for a non-membership entry; and a
+        // `null` `affected` ALSO arises from the uncovered-dependency arm below,
+        // where `change.ids` live in a FOREIGN table's key space — intersecting
+        // an own-row id against those would silently drop every delivery. So the
+        // filter runs only when the ids are known (`routeIds !== null`) AND came
+        // in through the identity arm, in this entry's own key space.
+        let identityOrigin = false;
+        let routeIds: Set<string> | null = null;
         if (coveredOriginsFor(key).has(change.origin)) {
           if (change.origin === entry.identityTable) {
             // Identity-origin change: the identity view is the authoritative path.
             // Drop a duplicate arriving via a SECONDARY view so it can't FULL the
             // scoped identity delivery.
             if (change.identityBase !== entry.identityTable) continue;
+            // Past the secondary-view drop: `change.ids` are this entry's own
+            // row keys, so `rowIdentity` may route against them.
+            identityOrigin = true;
+            routeIds = hasIds ? new Set(change.ids!) : null;
             // UPDATE always scopes (today). For a membership entry (window /
             // point / the M5 alias) an INSERT scopes to the new ids and a
             // DELETE scopes to an EMPTY affected set carrying the op-D ids in
@@ -4544,19 +4748,58 @@ export function createResourceRuntime(
         const subscribed = subscribedParamsFor(key);
         const pointMembership =
           entry.membership?.kind === "point" ? entry.membership : undefined;
+        const rowIdentity = entry.rowIdentity;
         // Fan out to every subscribed params tuple. A param-less resource is
         // always covered (key = {}); a parametrized resource with no current
         // subscribers admits nothing (a fresh subscribe loads from scratch).
         // A POINT entry never fans out to the `{}` fallback tuple — its params
         // ARE the id set, so with no subscribers there is nothing to maintain.
-        const targets: ResourceParams[] = pointMembership
-          ? subscribed
-          : subscribed.length > 0
+        // A `rowIdentity` entry is excluded for the same reason: its params ARE
+        // one row id, so `{}` names no row and `rowIdentity({})` is meaningless.
+        const targets: ResourceParams[] =
+          pointMembership || rowIdentity
             ? subscribed
-            : [{}];
+            : subscribed.length > 0
+              ? subscribed
+              : [{}];
+        // Deliberately NO reverse `rowId → tuple` index. It would make this loop
+        // O(changed ids) instead of O(subscribed tuples), but the per-tuple work
+        // is one closure call and a Set lookup — what the filter below deletes is
+        // N-1 Postgres round trips, not N-1 closure calls. An index would be a
+        // second source of truth for subscription state, needing to stay in
+        // lockstep with sub / unsub / socket close / `sub-batch` replay. Revisit
+        // above ~10^4 subscribed tuples for one key, or if `applyDbChange` shows
+        // up in a CPU profile once the fan-out is gone.
         for (const params of targets) {
           let tupleAffected = affected;
           let tupleDeleted = deleted;
+          // Own-row routing: this tuple names exactly ONE row of the identity
+          // table, so a change whose ids are known and do not include that row
+          // cannot touch its value — it is not scheduled at all (no read, no
+          // version bump, no frame). The owning tuple falls through with
+          // `affected` / `deleted` UNCHANGED, which is what makes its frames
+          // byte-identical to the no-`rowIdentity` behavior: this narrows WHO is
+          // woken, never WHAT they receive.
+          if (
+            rowIdentity &&
+            identityOrigin &&
+            routeIds !== null &&
+            !ownRowChanged(entry, rowIdentity, params, routeIds)
+          ) {
+            // Another tuple's row — but an opted-in ackChannel entry still owes
+            // the writer its ack (an optimistic client subscribed to THIS tuple
+            // may hold a pending op whose write landed on another row). Schedule
+            // an ACK-ONLY pending: an empty scoped set carrying only sourceTx,
+            // which the drain resolves to a standalone ack frame (no version
+            // bump, no other frame, no cascade).
+            if (entry.ackChannel && change.xid !== undefined) {
+              scheduleNotify(entry, params, new Set<string>(), {
+                source: "feed",
+                sourceTx: change.xid,
+              });
+            }
+            continue;
+          }
           // Point routing: a scoped change reaches a subscribed tuple iff the
           // changed ids intersect that tuple's explicit id set (upsert), or a
           // D op hits one of its ids (delete). Empty intersection → the tuple

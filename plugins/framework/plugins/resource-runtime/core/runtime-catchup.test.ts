@@ -41,6 +41,7 @@ describe("over-replay idempotence", () => {
       { key: "rows", schema: rowsSchema, keyed: { keyOf } },
       {
         identityTable: "row_table",
+        fanOut: { reason: "one param-less tuple — nothing to narrow" },
         loader: (_p, c) =>
           c ? truth.filter((r) => c.affectedIds.includes(r.id)) : truth,
       },
@@ -257,6 +258,7 @@ describe("L2 persist-hook calling contract", () => {
       { key: "p", schema: rowsSchema, keyed: { keyOf } },
       {
         identityTable: "p_table",
+        fanOut: { reason: "one param-less tuple — nothing to narrow" },
         loader: (_p, c) => {
           log.push(c === undefined ? "load:FULL" : "load:scoped");
           return overrides.loader ? overrides.loader(c) : [{ id: "a", n: 1 }];
@@ -316,7 +318,11 @@ describe("L2 persist-hook calling contract", () => {
     });
     h.runtime.defineResource(
       { key: "p", schema: rowsSchema, keyed: { keyOf } },
-      { identityTable: "p_table", loader: () => [{ id: "a", n: 1 }] },
+      {
+        identityTable: "p_table",
+        fanOut: { reason: "one param-less tuple — nothing to narrow" },
+        loader: () => [{ id: "a", n: 1 }],
+      },
     );
     h.runtime.recomputeResource("p");
     await tick();

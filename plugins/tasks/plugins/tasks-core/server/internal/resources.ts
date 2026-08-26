@@ -158,6 +158,10 @@ export const pushesByAttemptResource = defineResource(
   pushesByAttemptDescriptor,
   {
     identityTable: "pushes",
+    fanOut: {
+      reason:
+        "the params key `attempt_id`, a FOREIGN column — the ids the change feed emits are `pushes.id`, so a changed id cannot be compared against a tuple's attemptId; the scoped refill (`WHERE attempt_id = X AND id IN affectedIds`) returns the row only for the owning attempt, so what fans out is the call count, not the payload",
+    },
     loader: async ({ attemptId }, ctx) =>
       ctx?.affectedIds
         ? db
@@ -184,6 +188,10 @@ export const attemptsResource = defineResource(attemptsDescriptor, {
   // cascade scoping is derived (`rel()` + `compileEdges`) — no hand-rolled
   // affectedMap closures that can drift from what the loader reads.
   identityTable: "attempts",
+  fanOut: {
+    reason:
+      "param-less: the whole collection is one tuple ({}), so there is no second tuple to narrow away — the scoped refill already limits the READ to the changed attempt ids",
+  },
   dependsOn: compileEdges([
     // Cascades off the active sub-resource ALONE. This is sufficient because the
     // active loader's read-set covers the whole `conversations` table, so the L4

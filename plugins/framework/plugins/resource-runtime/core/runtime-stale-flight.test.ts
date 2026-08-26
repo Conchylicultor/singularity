@@ -66,6 +66,7 @@ function staleFlightHarness(extra: Parameters<typeof createHarness>[0] = {}) {
     { key: "s", schema: rowsSchema, keyed: { keyOf } },
     {
       identityTable: "s_table",
+      fanOut: { reason: "one param-less tuple — nothing to narrow" },
       loader: (_p, c) =>
         c
           ? ctl.value.filter((r) => c.affectedIds.includes(r.id))
@@ -219,6 +220,7 @@ describe("stale-flight refusal — the 2026-08-08 revert", () => {
       { key: "s", schema: rowsSchema, keyed: { keyOf } },
       {
         identityTable: "s_table",
+        fanOut: { reason: "one param-less tuple — nothing to narrow" },
         loader: async (_p, c) => {
           if (c)
             return ctl.value.filter((row) => c.affectedIds.includes(row.id));
@@ -268,6 +270,7 @@ describe("stale-flight refusal — the 2026-08-08 revert", () => {
       { key: "s", schema: rowsSchema, keyed: { keyOf } },
       {
         identityTable: "s_table",
+        fanOut: { reason: "one param-less tuple — nothing to narrow" },
         loader: (_p, c) =>
           c
             ? ctl.value.filter((r) => c.affectedIds.includes(r.id))
@@ -382,7 +385,11 @@ describe("stale-flight refusal — the L2 persist floor", () => {
     });
     h.runtime.defineResource(
       { key: "s", schema: rowsSchema, keyed: { keyOf } },
-      { identityTable: "s_table", loader: () => ctl.loader() },
+      {
+        identityTable: "s_table",
+        fanOut: { reason: "one param-less tuple — nothing to narrow" },
+        loader: () => ctl.loader(),
+      },
     );
     await h.subscribe("s", {}, { socket: 0 });
     persistArgs.length = 0; // ignore the subscribe-time recompute, if any

@@ -47,6 +47,7 @@ function keyedHarness(o: { ackChannel?: true } = {}) {
     { key: "rows", schema: rowsSchema, keyed: { keyOf } },
     {
       identityTable: "row_table",
+      fanOut: { reason: "one param-less tuple — nothing to narrow" },
       ...(o.ackChannel ? { ackChannel: true as const } : {}),
       loader: (_p, c) =>
         c ? rows().filter((r) => c.affectedIds.includes(r.id)) : rows(),
@@ -428,7 +429,11 @@ describe("ackTx — stale-flight REFUSAL (co-production made exact)", () => {
     const h = createHarness({ readSet: () => ["c_table"], sockets: 2 });
     h.runtime.defineResource(
       { key: "c", schema: rowsSchema, keyed: { keyOf } },
-      { identityTable: "c_table", loader: ctl.loader },
+      {
+        identityTable: "c_table",
+        fanOut: { reason: "one param-less tuple — nothing to narrow" },
+        loader: ctl.loader,
+      },
     );
     await h.subscribe("c", {}, { socket: 0 }); // seeds the snapshot
 
@@ -481,6 +486,7 @@ describe("ackTx — failure and overflow", () => {
       { key: "f", schema: rowsSchema, keyed: { keyOf } },
       {
         identityTable: "f_table",
+        fanOut: { reason: "one param-less tuple — nothing to narrow" },
         ackChannel: true,
         loader: async () => {
           if (boom) throw new Error("loader boom");

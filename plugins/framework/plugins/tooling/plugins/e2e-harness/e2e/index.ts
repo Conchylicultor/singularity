@@ -11,6 +11,8 @@
 export { arg, numArg, flag, requireArg, usage } from "./args";
 export { baseUrl, pathUrl } from "./target";
 export { withBrowser, boot, DEFAULT_VIEWPORT } from "./browser";
+export { waitFor, ELEMENT_TIMEOUT_MS } from "./wait";
+export type { Settled } from "./wait";
 export type { Harness, Session, SessionOptions, BootOptions } from "./browser";
 export { capture } from "./capture";
 export type { Captured } from "./capture";

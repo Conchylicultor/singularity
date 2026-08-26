@@ -468,6 +468,7 @@ describe("compiled query-resource — rel() cascade edges end-to-end", () => {
     const bIds: (readonly string[] | undefined)[] = [];
     const B = h.runtime.defineResource(keyed("B"), {
       identityTable: "attempts_t",
+      fanOut: { reason: "one param-less tuple — nothing to narrow" },
       dependsOn: compileEdges(
         [rel(A, { via: convs, from: convs.id, to: convs.attemptId })],
         fakeDb(

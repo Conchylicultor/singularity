@@ -21,7 +21,12 @@
 
 import { test, expect, describe, mock } from "bun:test";
 import { z } from "zod";
-import { createHarness, controllable, tick, makeClientView } from "./test-support";
+import {
+  createHarness,
+  controllable,
+  tick,
+  makeClientView,
+} from "./test-support";
 
 const rowsSchema = z.array(z.object({ id: z.string(), n: z.number() }));
 const keyOf = (r: unknown) => (r as { id: string }).id;
@@ -144,7 +149,11 @@ describe("version short-circuit — same-boot epoch + matching version", () => {
 
     // Version+epoch match but a STALE etag → the full loader path (a sub-ack),
     // never the version short-circuit.
-    await h.subscribe("edited", {}, { version: 0, epoch: ack.epoch, etag: "stale" });
+    await h.subscribe(
+      "edited",
+      {},
+      { version: 0, epoch: ack.epoch, etag: "stale" },
+    );
     expect(loads).toBe(2);
     expect(h.frames.filter((f) => f.kind === "sub-ack")).toHaveLength(2);
     expect(h.frames.some((f) => f.kind === "up-to-date")).toBe(false);
@@ -164,8 +173,11 @@ describe("version short-circuit — same-boot epoch + matching version", () => {
       { key: "rows", schema: rowsSchema, keyed: { keyOf } },
       {
         identityTable: "row_table",
+        fanOut: { reason: "one param-less tuple — nothing to narrow" },
         loader: (_p, c) =>
-          c ? ctl.value.filter((row) => c.affectedIds.includes(row.id)) : ctl.loader(),
+          c
+            ? ctl.value.filter((row) => c.affectedIds.includes(row.id))
+            : ctl.loader(),
       },
     );
 
@@ -184,7 +196,10 @@ describe("version short-circuit — same-boot epoch + matching version", () => {
 
     // A subsequent scoped change finds no snapshot → the runtime reloads FULL
     // and ships a value-carrying update (never a delta onto a missing base).
-    ctl.setValue([{ id: "a", n: 2 }, { id: "b", n: 1 }]);
+    ctl.setValue([
+      { id: "a", n: 2 },
+      { id: "b", n: 1 },
+    ]);
     h.runtime.applyDbChange({
       table: "row_table",
       op: "U",
@@ -201,7 +216,10 @@ describe("version short-circuit — same-boot epoch + matching version", () => {
     // The client converges to server truth across the whole frame history.
     const cv = makeClientView(keyOf);
     cv.applyAll(h.frames);
-    expect(cv.value).toEqual([{ id: "a", n: 2 }, { id: "b", n: 1 }]);
+    expect(cv.value).toEqual([
+      { id: "a", n: 2 },
+      { id: "b", n: 1 },
+    ]);
     expect(cv.version).toBe(1);
     expect(cv.driftResubs).toBe(0);
   });
@@ -260,7 +278,11 @@ describe("version short-circuit — same-boot epoch + matching version", () => {
       { key: "r" },
     );
     expect(res.status).toBe(200);
-    const body = (await res.json()) as { value: unknown; version: number; epoch: string };
+    const body = (await res.json()) as {
+      value: unknown;
+      version: number;
+      epoch: string;
+    };
     expect(body.value).toBe("val");
     expect(body.epoch).toBe(ackEpoch);
     expect(loads).toBe(1);

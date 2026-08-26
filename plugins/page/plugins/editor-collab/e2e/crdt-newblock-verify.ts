@@ -20,6 +20,7 @@ import {
   baseUrl,
   report,
   snap,
+  waitFor,
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 import { openBlankPage, typeLines } from "@plugins/page/plugins/editor/e2e";
@@ -44,7 +45,9 @@ await withBrowser(async (h) => {
     }
   });
 
-  const { pageUrl, pageId } = await openBlankPage(pageA, base, { settleMs: 3000 });
+  const { pageUrl, pageId } = await openBlankPage(pageA, base, {
+    settleMs: 3000,
+  });
   console.log("page url:", pageUrl, "pageId:", pageId);
 
   // --- The race: rapid Enter-then-type chains ---------------------------------
@@ -55,7 +58,12 @@ await withBrowser(async (h) => {
   // job, gated by `@plugins/page/plugins/editor`'s `e2e/split-typing-verify.ts`;
   // what this script adds on top is that the doc-init seed survives the same
   // window.
-  const LINES = ["alpha one", "bravo two", "charlie three", "delta four"] as const;
+  const LINES = [
+    "alpha one",
+    "bravo two",
+    "charlie three",
+    "delta four",
+  ] as const;
   await typeLines(pageA, LINES);
   // Mid-text split: caret placed mid-word, then Enter and immediate typing in
   // the tail-seeded new block.
@@ -68,81 +76,136 @@ await withBrowser(async (h) => {
   }
   await typeLines(pageA, ["typed-immediately-"], { leadingEnter: true });
 
-  // Settle: flush debounce (300ms), projection debounce (1s), pushes.
-  await pageA.waitForTimeout(3500);
-  await snap(pageA, out, "a");
-
-  // DOM truth: every block id + its visible text, in order.
-  const domBlocks = await pageA.evaluate(() => {
-    return [...document.querySelectorAll("[data-block-id]")]
-      .map((el) => ({
-        id: el.getAttribute("data-block-id"),
-        text:
-          el.querySelector<HTMLElement>('[contenteditable="true"]')?.innerText ?? null,
-      }))
-      .filter((b): b is { id: string; text: string } => b.text !== null && b.id !== null);
-  });
-  console.log("DOM blocks:", JSON.stringify(domBlocks, null, 1));
+  // Was a fixed `waitForTimeout(3500)` covering the flush debounce (300ms), the
+  // projection debounce (1s) and the pushes — then ONE read of each. Measured
+  // against main, it is not enough: the last block typed had not rendered yet,
+  // so DOM reported five blocks instead of six and DOCS reported two rows
+  // "never created" that appeared moments later. Three condition waits now,
+  // asserting exactly what they asserted before.
+  interface DomBlock {
+    id: string;
+    text: string;
+  }
+  const readDom = (): Promise<DomBlock[]> =>
+    pageA.evaluate(() => {
+      return [...document.querySelectorAll("[data-block-id]")]
+        .map((el) => ({
+          id: el.getAttribute("data-block-id"),
+          text:
+            el.querySelector<HTMLElement>('[contenteditable="true"]')
+              ?.innerText ?? null,
+        }))
+        .filter(
+          (b): b is { id: string; text: string } =>
+            b.text !== null && b.id !== null,
+        );
+    });
 
   const EXPECTED = [...LINES, "split", "typed-immediately-Xtail"];
-  const domTexts = domBlocks.map((b) => b.text.replace(/ /g, " ").trim());
-  r.eq("DOM", domTexts, EXPECTED);
+  const domText = (b: DomBlock): string => b.text.replace(/ /g, " ").trim();
+  const dom = await waitFor(
+    readDom,
+    (blocks) =>
+      JSON.stringify(blocks.map(domText)) === JSON.stringify(EXPECTED),
+  );
+  const domBlocks = dom.value;
+  console.log("DOM blocks:", JSON.stringify(domBlocks, null, 1));
+  console.log(`DOM settled after ${dom.waitedMs}ms (${dom.attempts} reads)`);
+  await snap(pageA, out, "a");
+  r.eq("DOM", domBlocks.map(domText), EXPECTED);
 
   // Server truth 1: every block has a page_block_docs row whose decoded state
   // matches the DOM (proves the seed happened AND the buffered typing flushed).
-  let docsOk = true;
-  for (const b of domBlocks) {
-    // fetchBlockDoc (not fetchBlockDocText) — this assertion needs to tell
-    // "no row at all" apart from "row whose text is empty".
-    const stored = await fetchBlockDoc(base, b.id);
-    if (!stored) {
-      docsOk = false;
-      console.log(
-        `DOC MISSING for block ${b.id} ("${b.text}") — page_block_docs row never created`,
-      );
-      continue;
+  const checkDocs = async (): Promise<string[]> => {
+    const problems: string[] = [];
+    for (const b of domBlocks) {
+      // fetchBlockDoc (not fetchBlockDocText) — this assertion needs to tell
+      // "no row at all" apart from "row whose text is empty".
+      const stored = await fetchBlockDoc(base, b.id);
+      if (!stored) {
+        problems.push(
+          `DOC MISSING for block ${b.id} ("${b.text}") — page_block_docs row never created`,
+        );
+        continue;
+      }
+      const docText = blockDocText(stored.state);
+      const want = domText(b);
+      if (docText.trim() !== want) {
+        problems.push(
+          `DOC MISMATCH for block ${b.id}: doc="${docText}" dom="${want}"`,
+        );
+      }
     }
-    const docText = blockDocText(stored.state);
-    const want = b.text.replace(/ /g, " ").trim();
-    if (docText.trim() !== want) {
-      docsOk = false;
-      console.log(`DOC MISMATCH for block ${b.id}: doc="${docText}" dom="${want}"`);
-    }
-  }
-  r.ok("DOCS — every block has a converged page_block_docs row", docsOk);
+    return problems;
+  };
+  const docs = await waitFor(checkDocs, (problems) => problems.length === 0);
+  for (const problem of docs.value) console.log(problem);
+  r.ok(
+    "DOCS — every block has a converged page_block_docs row",
+    docs.value.length === 0,
+  );
 
   // Server truth 2: the data.text projection converged too.
-  const rows = (await (await fetch(`${base}/api/pages/${pageId}/blocks`)).json()) as {
-    id: string;
-    data?: { text?: { text?: string }[] };
-  }[];
-  const rowTextById = new Map(
-    rows.map((row) => [row.id, (row.data?.text ?? []).map((run) => run.text ?? "").join("")]),
-  );
-  let projOk = true;
-  for (const b of domBlocks) {
-    const want = b.text.replace(/ /g, " ").trim();
-    const got = (rowTextById.get(b.id) ?? "<row missing>").trim();
-    if (got !== want) {
-      projOk = false;
-      console.log(`PROJECTION MISMATCH for ${b.id}: data.text="${got}" dom="${want}"`);
+  const checkProjection = async (): Promise<string[]> => {
+    const rows = (await (
+      await fetch(`${base}/api/pages/${pageId}/blocks`)
+    ).json()) as {
+      id: string;
+      data?: { text?: { text?: string }[] };
+    }[];
+    const rowTextById = new Map(
+      rows.map((row) => [
+        row.id,
+        (row.data?.text ?? []).map((run) => run.text ?? "").join(""),
+      ]),
+    );
+    const problems: string[] = [];
+    for (const b of domBlocks) {
+      const want = domText(b);
+      const got = (rowTextById.get(b.id) ?? "<row missing>").trim();
+      if (got !== want) {
+        problems.push(
+          `PROJECTION MISMATCH for ${b.id}: data.text="${got}" dom="${want}"`,
+        );
+      }
     }
-  }
-  r.ok("PROJECTION — data.text agrees for every block", projOk);
+    return problems;
+  };
+  const projection = await waitFor(
+    checkProjection,
+    (problems) => problems.length === 0,
+  );
+  for (const problem of projection.value) console.log(problem);
+  r.ok(
+    "PROJECTION — data.text agrees for every block",
+    projection.value.length === 0,
+  );
 
   // Convergence: a second, fresh browser context.
   const { page: pageB } = await h.session({ label: "B" });
   await pageB.goto(pageUrl);
-  await pageB.waitForTimeout(5000);
-  const bTexts = (
-    await pageB.evaluate(() =>
-      [
-        ...document.querySelectorAll<HTMLElement>(
-          '[data-block-id] [contenteditable="true"]',
-        ),
-      ].map((el) => el.innerText),
-    )
-  ).map((t) => t.replace(/ /g, " ").trim());
+  // Was a fixed `waitForTimeout(5000)`. A second context measured 6.2-6.4s to
+  // render against main on an IDLE machine, so this read landed before the
+  // blocks had text and CONVERGENCE reported `["","","","","",""]` — the clock,
+  // not the app. The assertion below is unchanged; only WHEN it reads is.
+  const readB = async (): Promise<string[]> =>
+    (
+      await pageB.evaluate(() =>
+        [
+          ...document.querySelectorAll<HTMLElement>(
+            '[data-block-id] [contenteditable="true"]',
+          ),
+        ].map((el) => el.innerText),
+      )
+    ).map((t) => t.replace(/ /g, " ").trim());
+  const convergedB = await waitFor(
+    readB,
+    (texts) => JSON.stringify(texts) === JSON.stringify(EXPECTED),
+  );
+  const bTexts = convergedB.value;
+  console.log(
+    `context B converged after ${convergedB.waitedMs}ms (${convergedB.attempts} reads)`,
+  );
   await snap(pageB, out, "b");
   r.eq("CONVERGENCE", bTexts, EXPECTED);
 

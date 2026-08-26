@@ -53,6 +53,7 @@ function cascadeHarness() {
     { key: "down", schema: rowsSchema, keyed: { keyOf } },
     {
       identityTable: "down_t",
+      fanOut: { reason: "one param-less tuple — nothing to narrow" },
       dependsOn: [
         {
           resource: up,
@@ -68,7 +69,9 @@ function cascadeHarness() {
         },
       ],
       loader: (_p, c) => {
-        downLoads.push(c === undefined ? "FULL" : [...c.affectedIds].sort().join(","));
+        downLoads.push(
+          c === undefined ? "FULL" : [...c.affectedIds].sort().join(","),
+        );
         return [{ id: "d", n: 1 }];
       },
     },
@@ -79,7 +82,8 @@ function cascadeHarness() {
 
 describe("cascade edge-read attribution", () => {
   test("a scoped cascade runs its signature/affectedMap under a `cascade` origin entry keyed by the downstream", async () => {
-    const { h, cascadeOrigins, sigCalls, mapCalls, downLoads } = cascadeHarness();
+    const { h, cascadeOrigins, sigCalls, mapCalls, downLoads } =
+      cascadeHarness();
     await h.subscribe("up");
     await h.subscribe("down");
     sigCalls.length = 0;
@@ -88,7 +92,13 @@ describe("cascade edge-read attribution", () => {
 
     // A scoped change to up_t: `up` recomputes and cascades scoped to `down`. The
     // edge's signature + affectedMap run under one `cascade` entry labelled "down".
-    h.runtime.applyDbChange({ table: "up_t", op: "U", ids: ["u1"], origin: "up_t", identityBase: "up_t" });
+    h.runtime.applyDbChange({
+      table: "up_t",
+      op: "U",
+      ids: ["u1"],
+      origin: "up_t",
+      identityBase: "up_t",
+    });
     await tick();
 
     // Exactly one cascade entry, for the downstream key — the edge translation.
@@ -107,7 +117,11 @@ describe("cascade edge-read attribution", () => {
     // changed downstream) drops the claim with the cascade — vacuously
     // irrelevant, missing ack safe.
     const origins: Array<{ kind: string; key: string }> = [];
-    const wrapOrigin: ResourceRuntimeOptions["wrapOrigin"] = (kind, key, fn) => {
+    const wrapOrigin: ResourceRuntimeOptions["wrapOrigin"] = (
+      kind,
+      key,
+      fn,
+    ) => {
       origins.push({ kind, key });
       return fn();
     };
@@ -129,6 +143,7 @@ describe("cascade edge-read attribution", () => {
       { key: "down", schema: rowsSchema, keyed: { keyOf } },
       {
         identityTable: "down_t",
+        fanOut: { reason: "one param-less tuple — nothing to narrow" },
         dependsOn: [
           {
             resource: up,
@@ -154,7 +169,8 @@ describe("cascade edge-read attribution", () => {
 
     feed("42"); // fresh signature → cascades scoped; downstream delta carries the xid
     await tick();
-    const downDeltas = () => h.pushesFor("down").filter((f) => f.kind === "delta");
+    const downDeltas = () =>
+      h.pushesFor("down").filter((f) => f.kind === "delta");
     expect(downDeltas()).toHaveLength(1);
     expect((downDeltas()[0] as { ackTx?: string[] }).ackTx).toEqual(["42"]);
 
@@ -164,7 +180,8 @@ describe("cascade edge-read attribution", () => {
   });
 
   test("a FULL cascade opens NO cascade entry (it runs no edge query)", async () => {
-    const { h, cascadeOrigins, sigCalls, mapCalls, downLoads } = cascadeHarness();
+    const { h, cascadeOrigins, sigCalls, mapCalls, downLoads } =
+      cascadeHarness();
     await h.subscribe("up");
     await h.subscribe("down");
     sigCalls.length = 0;
@@ -173,7 +190,13 @@ describe("cascade edge-read attribution", () => {
 
     // An id-less (FULL) change to up_t: the cascade propagates everything without
     // consulting signature/affectedMap, so no `cascade` entry is opened.
-    h.runtime.applyDbChange({ table: "up_t", op: "I", ids: null, origin: "up_t", identityBase: "up_t" });
+    h.runtime.applyDbChange({
+      table: "up_t",
+      op: "I",
+      ids: null,
+      origin: "up_t",
+      identityBase: "up_t",
+    });
     await tick();
 
     expect(cascadeOrigins()).toEqual([]);

@@ -224,6 +224,7 @@ describe("applyDbChange — L4 DB change-feed routing", () => {
       {
         // Identity table = the resource's own table, so a row UPDATE scopes.
         identityTable: "row_table",
+        fanOut: { reason: "one param-less tuple — nothing to narrow" },
         loader: (_p, ctx) => {
           // Full load returns two rows; a scoped load returns only the affected row.
           if (ctx) return [{ id: "a", n: 2 }];
@@ -270,7 +271,10 @@ describe("applyDbChange — L4 DB change-feed routing", () => {
         // scope. `recompute` is the sanctioned explicit FULL opt-out; it is
         // declaration-only (the runtime branches on identityTable absence, not on
         // this field) and only makes the keyed resource type-legal without scope.
-        recompute: { kind: "full", reason: "test: FULL fallback when identityTable is absent" },
+        recompute: {
+          kind: "full",
+          reason: "test: FULL fallback when identityTable is absent",
+        },
         loader: (_p, ctx) => {
           if (subscribed) postSubLoads.push(ctx !== undefined);
           return ctx
@@ -322,10 +326,16 @@ describe("applyDbChange — L4 DB change-feed routing", () => {
       },
       {
         identityTable: "down_t",
+        fanOut: { reason: "one param-less tuple — nothing to narrow" },
         dependsOn: [{ resource: up, affectedMap: () => ["d1"] }],
         loader: (_p, ctx) => {
           if (subscribed) postSubLoads.push(ctx !== undefined);
-          return ctx ? [{ id: "d1", n: 2 }] : [{ id: "d1", n: 1 }, { id: "d2", n: 1 }];
+          return ctx
+            ? [{ id: "d1", n: 2 }]
+            : [
+                { id: "d1", n: 1 },
+                { id: "d2", n: 1 },
+              ];
         },
       },
     );
@@ -372,10 +382,16 @@ describe("applyDbChange — L4 DB change-feed routing", () => {
       },
       {
         identityTable: "down_t",
+        fanOut: { reason: "one param-less tuple — nothing to narrow" },
         dependsOn: [{ resource: up, affectedMap: () => ["d1"] }],
         loader: (_p, ctx) => {
           if (subscribed) postSubLoads.push(ctx !== undefined);
-          return ctx ? [{ id: "d1", n: 2 }] : [{ id: "d1", n: 1 }, { id: "d2", n: 1 }];
+          return ctx
+            ? [{ id: "d1", n: 2 }]
+            : [
+                { id: "d1", n: 1 },
+                { id: "d2", n: 1 },
+              ];
         },
       },
     );
@@ -434,8 +450,13 @@ describe("applyDbChange — L4 DB change-feed routing", () => {
       },
       {
         identityTable: "down_t",
+        fanOut: { reason: "one param-less tuple — nothing to narrow" },
         dependsOn: [
-          { resource: up, signature: () => new Map([["u1", sig]]), affectedMap: () => ["d1"] },
+          {
+            resource: up,
+            signature: () => new Map([["u1", sig]]),
+            affectedMap: () => ["d1"],
+          },
         ],
         loader: (_p, ctx) => {
           if (subscribed) postSubLoads.push(ctx !== undefined);
@@ -492,8 +513,13 @@ describe("applyDbChange — L4 DB change-feed routing", () => {
       },
       {
         identityTable: "down_t",
+        fanOut: { reason: "one param-less tuple — nothing to narrow" },
         dependsOn: [
-          { resource: up, signature: () => new Map([["u1", "stable"]]), affectedMap: () => ["d1"] },
+          {
+            resource: up,
+            signature: () => new Map([["u1", "stable"]]),
+            affectedMap: () => ["d1"],
+          },
         ],
         loader: (_p, ctx) => {
           if (subscribed) postSubLoads.push(ctx !== undefined);
@@ -632,6 +658,7 @@ describe("defineResource(contract, serverOpts) — keyed-ness derived from the d
     const h = feedHarness({ rows: ["row_table"] });
     h.runtime.defineResource(rowsContract, {
       identityTable: "row_table",
+      fanOut: { reason: "one param-less tuple — nothing to narrow" },
       loader: (_p, ctx) =>
         ctx
           ? [{ id: "a", n: 2 }]
@@ -697,7 +724,12 @@ describe("conditional revalidation (ETag / up-to-date / 304)", () => {
 
   test("no revalidate: sub-ack carries value and no etag (byte-identical)", async () => {
     const h = revalHarness();
-    h.runtime.defineExternalResource({ key: "plain", mode: "push", schema: z.number(), loader: async () => 7 });
+    h.runtime.defineExternalResource({
+      key: "plain",
+      mode: "push",
+      schema: z.number(),
+      loader: async () => 7,
+    });
     await h.sub("plain");
     const ack = h.frames.find((f) => f.kind === "sub-ack")!;
     expect(ack.value).toBe(7);
@@ -730,7 +762,10 @@ describe("conditional revalidation (ETag / up-to-date / 304)", () => {
       key: "r",
       mode: "push",
       schema: z.number(),
-      loader: async () => { loads++; return 1; },
+      loader: async () => {
+        loads++;
+        return 1;
+      },
       revalidate: async () => "sig-A",
     });
     // First subscribe (no etag) runs the loader and hands back the opaque token.
@@ -755,7 +790,10 @@ describe("conditional revalidation (ETag / up-to-date / 304)", () => {
       key: "r",
       mode: "push",
       schema: z.number(),
-      loader: async () => { loads++; return 2; },
+      loader: async () => {
+        loads++;
+        return 2;
+      },
       revalidate: async () => "sig-B",
     });
     await h.sub("r", {}, "stale-token"); // client holds an OLD (non-matching) token
@@ -789,7 +827,9 @@ describe("conditional revalidation (ETag / up-to-date / 304)", () => {
 
     // Conditional GET with the real token → 304, empty body — also no-store.
     const notModified = await h.runtime.handleResourceHttp(
-      new Request("http://x/api/resources/r", { headers: { "If-None-Match": token! } }),
+      new Request("http://x/api/resources/r", {
+        headers: { "If-None-Match": token! },
+      }),
       { key: "r" },
     );
     expect(notModified.status).toBe(304);
@@ -797,7 +837,9 @@ describe("conditional revalidation (ETag / up-to-date / 304)", () => {
 
     // A stale token → 200 with the value and the same fresh ETag — also no-store.
     const fresh = await h.runtime.handleResourceHttp(
-      new Request("http://x/api/resources/r", { headers: { "If-None-Match": "stale" } }),
+      new Request("http://x/api/resources/r", {
+        headers: { "If-None-Match": "stale" },
+      }),
       { key: "r" },
     );
     expect(fresh.status).toBe(200);
@@ -885,13 +927,17 @@ describe("sub-error frames — reason + params echo (Fix D)", () => {
     });
     await h.subscribe("r", { id: "z" });
 
-    const errs = h.frames.filter((f) => f.key === "r" && f.kind === "sub-error");
+    const errs = h.frames.filter(
+      (f) => f.key === "r" && f.kind === "sub-error",
+    );
     expect(errs).toHaveLength(1);
     expect(errs[0]!.reason).toBe("loader-failed");
     expect(errs[0]!.params).toEqual({ id: "z" });
     // The failure is still additively reported (never silently absorbed).
     expect(
-      reportError.mock.calls.some(([ctx]) => String(ctx).includes("loader failed for r")),
+      reportError.mock.calls.some(([ctx]) =>
+        String(ctx).includes("loader failed for r"),
+      ),
     ).toBe(true);
   });
 });

@@ -15,9 +15,14 @@ import {
   baseUrl,
   report,
   snap,
+  waitFor,
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
-import { blockText, caretState, openBlankPage } from "@plugins/page/plugins/editor/e2e";
+import {
+  blockText,
+  caretState,
+  openBlankPage,
+} from "@plugins/page/plugins/editor/e2e";
 import { fetchBlockDocText } from "./support/ydoc";
 
 const base = baseUrl();
@@ -30,14 +35,19 @@ const OFFLINE = " typed-while-OFFLINE and buffered locally";
 const FULL = PRE + OFFLINE;
 
 await withBrowser(async (h) => {
-  const { context: ctxA, page: pageA, captured } = await h.session({ label: "A" });
+  const {
+    context: ctxA,
+    page: pageA,
+    captured,
+  } = await h.session({ label: "A" });
   const pageErrors = captured.pageErrors;
 
   // A more specific signal than `captured` collects: the provider's own
   // per-episode "[collab]" warning is the observability assertion below.
   const warns: string[] = [];
   pageA.on("console", (m) => {
-    if (m.type() === "warning" && m.text().includes("[collab]")) warns.push(m.text());
+    if (m.type() === "warning" && m.text().includes("[collab]"))
+      warns.push(m.text());
   });
 
   const { pageUrl, block, blockId } = await openBlankPage(pageA, base, {
@@ -45,13 +55,33 @@ await withBrowser(async (h) => {
   });
 
   await pageA.keyboard.type(PRE, { delay: 15 });
-  await pageA.waitForTimeout(1500); // flush + echo settle
+  // Was a fixed `waitForTimeout(1500)`. Converting it STRENGTHENS the negative
+  // assertion below: proving the pre-offline text reached the server is what
+  // makes the later absence of the offline text a fact about the outage, rather
+  // than about nothing having flushed yet.
+  const preFlushed = await waitFor(
+    () => fetchBlockDocText(base, blockId),
+    (text) => text === PRE,
+  );
+  console.log(
+    `pre-offline text reached the server after ${preFlushed.waitedMs}ms (${preFlushed.attempts} reads)`,
+  );
+  r.ok(
+    "online: the pre-offline text reached the server doc",
+    preFlushed.ok,
+    JSON.stringify(preFlushed.value),
+  );
 
   // --- Go offline mid-edit ------------------------------------------------------
   await ctxA.setOffline(true);
   console.log("offline: ON");
   await pageA.keyboard.type(OFFLINE, { delay: 20 });
-  // Let at least one flush attempt fail (300ms debounce) and buffer.
+  // A FIXED wait, deliberately, and the one place in this suite where that is
+  // the correct instrument: the assertion it gates is a NEGATIVE — the server
+  // doc does NOT yet hold the offline text. You cannot wait on a condition for
+  // something not to happen; a poll would return on its first read and prove
+  // nothing. So: let at least one flush attempt fail (300ms debounce) and
+  // buffer, then look once.
   await pageA.waitForTimeout(2500);
 
   const offlineDom = await blockText(block);
@@ -114,7 +144,11 @@ await withBrowser(async (h) => {
     domAfter === FULL,
     JSON.stringify(domAfter),
   );
-  r.ok("offline warning surfaced (observability)", warns.length >= 1, `${warns.length} warn(s)`);
+  r.ok(
+    "offline warning surfaced (observability)",
+    warns.length >= 1,
+    `${warns.length} warn(s)`,
+  );
   r.ok(
     "no unhandled page errors during the outage",
     pageErrors.length === 0,
@@ -125,11 +159,25 @@ await withBrowser(async (h) => {
   // Second, fresh context converges.
   const { page: pageB } = await h.session({ label: "B" });
   await pageB.goto(pageUrl);
-  await pageB.waitForTimeout(5000);
-  const bText = await blockText(
-    pageB.locator(`[data-block-id="${blockId}"] [contenteditable="true"]`).first(),
+  // Was a fixed `waitForTimeout(5000)`. A second context measured 6.2-6.4s to
+  // render against main on an IDLE machine, so this read landed before the text
+  // arrived and "second context converges" failed with "" — the clock, not the
+  // app. The demand is unchanged; only WHEN it is read.
+  const blockB = pageB
+    .locator(`[data-block-id="${blockId}"] [contenteditable="true"]`)
+    .first();
+  const convergedB = await waitFor(
+    () => blockText(blockB),
+    (text) => text === FULL,
   );
-  r.ok("second context converges", bText === FULL, JSON.stringify(bText));
+  console.log(
+    `context B converged after ${convergedB.waitedMs}ms (${convergedB.attempts} reads)`,
+  );
+  r.ok(
+    "second context converges",
+    convergedB.ok,
+    JSON.stringify(convergedB.value),
+  );
 
   r.finish();
 });

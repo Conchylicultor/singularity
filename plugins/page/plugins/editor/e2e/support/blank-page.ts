@@ -42,9 +42,9 @@ export async function blockText(block: Locator): Promise<string> {
  */
 export function blockTexts(page: Page): Promise<string[]> {
   return page.evaluate(() =>
-    [...document.querySelectorAll('[data-block-id] [contenteditable="true"]')].map(
-      (el) => (el.textContent ?? "").trim(),
-    ),
+    [
+      ...document.querySelectorAll('[data-block-id] [contenteditable="true"]'),
+    ].map((el) => (el.textContent ?? "").trim()),
   );
 }
 
@@ -96,7 +96,11 @@ export async function openBlankPage(
   base: string,
   opts: OpenBlankPageOptions = {},
 ): Promise<BlankDoc> {
-  const timeout = opts.timeoutMs ?? 30_000;
+  // 60s, not 30s: this ONE budget covers three separate waits (the navigation,
+  // the landing tile, and the first editable block), and 30s timed out under
+  // real machine load while the app was working. A budget is a deadline for
+  // declaring failure, not a delay — a healthy open costs what it costs.
+  const timeout = opts.timeoutMs ?? 60_000;
 
   await page.goto(`${base}/pages`, { waitUntil: "domcontentloaded", timeout });
   const tile = page.getByText("Blank page", { exact: true }).first();

@@ -171,6 +171,7 @@ describe("H5 — notify races a fresh sub", () => {
       { key: "rows", schema: rowsSchema, keyed: { keyOf } },
       {
         identityTable: "row_table",
+        fanOut: { reason: "one param-less tuple — nothing to narrow" },
         // FULL and (later) scoped both read the same controllable value; the
         // scoped ctx narrows to the affected rows.
         loader: (_p, c) => {

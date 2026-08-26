@@ -26,10 +26,10 @@ export type TodoTaskLink = z.infer<typeof TodoTaskLinkSchema>;
 // `queryResource` collection shape (see the bounded-working-set contract in the
 // root CLAUDE.md); `agent-notes-authors` is the precedent it copies.
 //
-// What is NOT bounded is the routing: the server resource declares no
-// `membership`, so a write wakes every subscribed card, not just the one it
-// named (see `server/internal/resource.ts`). Each of those wake-ups is one seek,
-// and the page decides how many there are.
+// The routing is bounded too: the server resource declares `rowIdentity`, so a
+// write is scheduled for the one card whose row it named rather than waking
+// every mounted card to seek its own row and diff to empty (see
+// `server/internal/resource.ts`).
 //
 // NOT bootCritical: the card mounts route-scoped with its page, so it hydrates
 // post-mount via its sub-ack — the same call `prompt-block-tasks` makes.

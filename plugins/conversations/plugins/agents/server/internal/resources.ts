@@ -1,7 +1,10 @@
 import { asc, inArray } from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import { defineResource } from "@plugins/framework/plugins/server-core/core";
-import { compileEdges, rel } from "@plugins/infra/plugins/query-resource/server";
+import {
+  compileEdges,
+  rel,
+} from "@plugins/infra/plugins/query-resource/server";
 import {
   conversationCascadeSignatures,
   conversationsActiveResource,
@@ -24,7 +27,12 @@ import {
 export const agentsResource = defineResource(agentsDescriptor, {
   mode: "push",
   loader: async () =>
-    db.select().from(agents).orderBy(asc(agents.rank), asc(agents.createdAt)) as unknown as Promise<Agent[]>,
+    db
+      .select()
+      .from(agents)
+      .orderBy(asc(agents.rank), asc(agents.createdAt)) as unknown as Promise<
+      Agent[]
+    >,
 });
 
 export const agentLaunchesResource = defineResource(agentLaunchesDescriptor, {
@@ -32,6 +40,10 @@ export const agentLaunchesResource = defineResource(agentLaunchesDescriptor, {
   // scopes to that launch. Cross-table changes (a conversation's status, which
   // drives `latestConversationStatus`) arrive through the affectedMap edge below.
   identityTable: "agent_launches",
+  fanOut: {
+    reason:
+      "param-less: the whole launch list is one tuple ({}), so there is no second tuple to narrow away — the scoped refill already limits the READ to the changed launch ids",
+  },
   dependsOn: compileEdges([
     // Relies on conversationsActiveResource's loader reading the whole
     // `conversations` table, so the L4 feed delivers every conversation change
@@ -51,8 +63,16 @@ export const agentLaunchesResource = defineResource(agentLaunchesDescriptor, {
     rel(
       conversationsActiveResource,
       [
-        { via: conversationsView, from: conversationsView.id, to: conversationsView.taskId }, // conv → task
-        { via: _agent_launches, from: _agent_launches.taskId, to: _agent_launches.id }, // task → launch
+        {
+          via: conversationsView,
+          from: conversationsView.id,
+          to: conversationsView.taskId,
+        }, // conv → task
+        {
+          via: _agent_launches,
+          from: _agent_launches.taskId,
+          to: _agent_launches.id,
+        }, // task → launch
       ],
       { signature: conversationCascadeSignatures },
     ),
@@ -64,7 +84,10 @@ export const agentLaunchesResource = defineResource(agentLaunchesDescriptor, {
           .select()
           .from(_agent_launches)
           .where(inArray(_agent_launches.id, [...ids]))
-      : await db.select().from(_agent_launches).orderBy(asc(_agent_launches.createdAt));
+      : await db
+          .select()
+          .from(_agent_launches)
+          .orderBy(asc(_agent_launches.createdAt));
     // The per-task latest non-system conversation is pre-materialized in the
     // `task_latest_conversation` rollup (trigger-maintained + boot-reconciled),
     // so this is an indexed point-lookup join instead of re-deriving the whole

@@ -32,10 +32,12 @@
 //
 // Usage: bun plugins/page/plugins/editor/e2e/crdt-reopen-verify.ts [--base <url>] [--out /tmp/crdt-reopen]
 import {
+  ELEMENT_TIMEOUT_MS,
   arg,
   baseUrl,
   report,
   snap,
+  waitFor,
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 // This script lives inside the editor plugin, which declares `yjs` as a
@@ -68,8 +70,13 @@ interface BlockRow {
   data?: { text?: { text: string }[] };
 }
 
-async function fetchBlockText(pageId: string, blockId: string): Promise<string> {
-  const rows = (await (await fetch(`${base}/api/pages/${pageId}/blocks`)).json()) as BlockRow[];
+async function fetchBlockText(
+  pageId: string,
+  blockId: string,
+): Promise<string> {
+  const rows = (await (
+    await fetch(`${base}/api/pages/${pageId}/blocks`)
+  ).json()) as BlockRow[];
   const row = rows.find((r) => r.id === blockId);
   const runs = row?.data?.text ?? [];
   return runs.map((run) => run.text).join("");
@@ -120,13 +127,23 @@ await withBrowser(async (h) => {
 
   // Wait for the doc-update flush (300ms debounce) AND the data.text projection
   // (1s debounce) to land server-side before reloading.
-  let projected = "";
-  for (let i = 0; i < 20; i++) {
-    await page.waitForTimeout(500);
-    projected = await fetchBlockText(pageId, blockId);
-    if (projected === TYPED) break;
-  }
-  r.ok("projection wrote data.text before reload", projected === TYPED, JSON.stringify(projected));
+  // This loop WAS the repo's bounded-retry precedent, and `waitFor` is it
+  // generalized: same semantics (bounded, re-read, keep the last value for the
+  // failure message), minus the guaranteed 500ms before the first read, plus the
+  // waited/attempts numbers that make a slow pass distinguishable from a fast
+  // one. See the harness's wait.ts for why that distinction is load-bearing.
+  const projection = await waitFor(
+    () => fetchBlockText(pageId, blockId),
+    (text) => text === TYPED,
+  );
+  console.log(
+    `projection settled after ${projection.waitedMs}ms (${projection.attempts} reads)`,
+  );
+  r.ok(
+    "projection wrote data.text before reload",
+    projection.ok,
+    JSON.stringify(projection.value),
+  );
   await snap(page, out, "before-reload");
 
   // Close the writer context so the reopen is genuinely cold (no shared
@@ -142,27 +159,56 @@ await withBrowser(async (h) => {
     const blockAfter = freshPage
       .locator(`[data-block-id="${blockId}"] [contenteditable="true"]`)
       .first();
-    await blockAfter.waitFor({ state: "visible", timeout: 20000 });
-    // Let any (buggy) duplicated projection flush too, so data.text reflects
-    // what the reopened editor now holds.
-    await freshPage.waitForTimeout(3000);
-    const dom = await blockText(blockAfter);
+    await blockAfter.waitFor({
+      state: "visible",
+      timeout: ELEMENT_TIMEOUT_MS,
+    });
+    // Was a fixed `waitForTimeout(3000)`. A second context measured 6.2-9.7s to
+    // render text against main, so this read could land before the text arrived
+    // and report a duplication defect as an empty string. Waiting on the
+    // condition instead — and the assertion is still EQUALITY with the single
+    // copy, so the duplication this script exists to catch (`TYPEDTYPED`) never
+    // satisfies it and still fails on the full budget.
+    const rendered = await waitFor(
+      () => blockText(blockAfter),
+      (text) => text === TYPED,
+    );
+    const dom = rendered.value;
     await snap(freshPage, out, `after-reopen-${round}`);
-    console.log(`DOM after reopen ${round}:`, JSON.stringify(dom));
-    r.ok(`DOM shows the text exactly once after reopen ${round}`, dom === TYPED, JSON.stringify(dom));
-
-    const dataText = await fetchBlockText(pageId, blockId);
+    console.log(
+      `DOM after reopen ${round}:`,
+      JSON.stringify(dom),
+      `(after ${rendered.waitedMs}ms, ${rendered.attempts} reads)`,
+    );
     r.ok(
-      `data.text is the single copy after reopen ${round}`,
-      dataText === TYPED,
-      JSON.stringify(dataText),
+      `DOM shows the text exactly once after reopen ${round}`,
+      rendered.ok,
+      JSON.stringify(dom),
     );
 
-    const docText = await fetchDocText(blockId);
+    // Both server reads were one-shot too. The reopened editor may still be
+    // flushing — and that flush is exactly what a duplication bug corrupts — so
+    // a single read races it. The demands are unchanged (equality, and the
+    // occurrence count being exactly 1), so a doubled doc fails on the full
+    // budget rather than passing on a lucky early read.
+    const dataText = await waitFor(
+      () => fetchBlockText(pageId, blockId),
+      (text) => text === TYPED,
+    );
+    r.ok(
+      `data.text is the single copy after reopen ${round}`,
+      dataText.ok,
+      JSON.stringify(dataText.value),
+    );
+
+    const docText = await waitFor(
+      () => fetchDocText(blockId),
+      (text) => countOccurrences(text, TYPED) === 1,
+    );
     r.ok(
       `page_block_docs state decodes to a single copy after reopen ${round}`,
-      countOccurrences(docText, TYPED) === 1,
-      JSON.stringify(docText),
+      countOccurrences(docText.value, TYPED) === 1,
+      JSON.stringify(docText.value),
     );
     await freshCtx.close();
   }

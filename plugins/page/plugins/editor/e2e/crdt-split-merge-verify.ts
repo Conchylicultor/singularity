@@ -14,10 +14,12 @@
 //
 // Usage: bun plugins/page/plugins/editor/e2e/crdt-split-merge-verify.ts [--base <url>] [--out /tmp/sm]
 import {
+  ELEMENT_TIMEOUT_MS,
   arg,
   baseUrl,
   report,
   snap,
+  waitFor,
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 import { blockText, openBlankPage } from "./support/blank-page";
@@ -278,22 +280,32 @@ await withBrowser(async (h) => {
   // --- 4. Convergence in a second context --------------------------------------
   const { page: pageB } = await h.session({ label: "B" });
   await pageB.goto(pageUrl);
-  await pageB.waitForTimeout(5000);
   const headB = pageB
     .locator(`[data-block-id="${block1Id}"] [contenteditable="true"]`)
     .first();
-  await headB.waitFor({ state: "visible", timeout: 15000 });
-  const textB = await blockText(headB);
-  const countB = await pageB
-    .locator('[data-block-id]:has([contenteditable="true"])')
-    .count();
-  await snap(pageB, out, "4-context-b");
-  console.log("context B text:", JSON.stringify(textB));
-  r.ok(
-    "converge: context B matches",
-    textB === mergedText && countB === 1,
-    `count=${countB}`,
+  await headB.waitFor({ state: "visible", timeout: ELEMENT_TIMEOUT_MS });
+  // Was a fixed `waitForTimeout(5000)` before this read. A second context
+  // measured 6.7-11.2s to render text against main on an idle machine, so the
+  // read could land before the text arrived and this check would report a
+  // convergence failure that was the clock, not the app. Both demands are
+  // unchanged — the merged text AND exactly one block.
+  const converged = await waitFor(
+    async () => ({
+      text: await blockText(headB),
+      count: await pageB
+        .locator('[data-block-id]:has([contenteditable="true"])')
+        .count(),
+    }),
+    ({ text, count }) => text === mergedText && count === 1,
   );
+  const { text: textB, count: countB } = converged.value;
+  await snap(pageB, out, "4-context-b");
+  console.log(
+    "context B text:",
+    JSON.stringify(textB),
+    `(after ${converged.waitedMs}ms, ${converged.attempts} reads)`,
+  );
+  r.ok("converge: context B matches", converged.ok, `count=${countB}`);
 
   console.log("BLOCK1_ID:", block1Id);
   console.log("BLOCK2_ID:", tailBlockId);

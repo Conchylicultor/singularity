@@ -10,25 +10,32 @@ import { _pageBlocksAgentAuthors as t } from "./tables";
 //
 // `identityTable` scopes recompute to writes on this table, so a stamp on one
 // card never recomputes an unrelated resource. It does NOT deliver a per-row
-// scoped refill: the change-feed can only pass affected ids for a
-// SINGLE-column primary key, and this table's key is the composite
-// `(block_id, conversation_id)` — so a write arrives as FULL-for-table and every
-// subscribed card reloads. That is correct, and the right trade: a surrogate id
-// column would buy scoped delivery at the price of a meaningless key and a
-// separate unique index to make `ON CONFLICT` work, while the recompute it
-// avoids is one indexed single-block query over a handful of rows, on a table
-// written once per agent note. Hence no `ctx.affectedIds` branch — there is
-// never one to serve.
-export const agentNotesAuthorsServerResource = defineResource(agentNotesAuthorsResource, {
-  identityTable: "page_blocks_agent_authors",
-  loader: ({ blockId }) =>
-    db
-      .select({
-        blockId: t.blockId,
-        conversationId: t.conversationId,
-        createdAt: t.createdAt,
-      })
-      .from(t)
-      .where(eq(t.blockId, blockId))
-      .orderBy(asc(t.createdAt)),
-});
+// scoped refill, and `fanOut` is where that is stated: the change-feed can only
+// pass affected ids for a SINGLE-column primary key, and this table's key is the
+// composite `(block_id, conversation_id)` — so a write arrives with no ids at
+// all, there is nothing for a `rowIdentity` to intersect, and every subscribed
+// card reloads. That is correct, and the right trade: a surrogate id column
+// would buy scoped delivery at the price of a meaningless key and a separate
+// unique index to make `ON CONFLICT` work, while the recompute it avoids is one
+// indexed single-block query over a handful of rows, on a table written once per
+// agent note. Hence no `ctx.affectedIds` branch — there is never one to serve.
+export const agentNotesAuthorsServerResource = defineResource(
+  agentNotesAuthorsResource,
+  {
+    identityTable: "page_blocks_agent_authors",
+    fanOut: {
+      reason:
+        "the table's primary key is the composite (block_id, conversation_id), and the change feed emits affected ids only for a single-column pk — so a write arrives with ids: NULL and there is nothing to route on",
+    },
+    loader: ({ blockId }) =>
+      db
+        .select({
+          blockId: t.blockId,
+          conversationId: t.conversationId,
+          createdAt: t.createdAt,
+        })
+        .from(t)
+        .where(eq(t.blockId, blockId))
+        .orderBy(asc(t.createdAt)),
+  },
+);

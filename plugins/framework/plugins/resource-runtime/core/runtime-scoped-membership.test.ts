@@ -479,6 +479,7 @@ describe("scopedMembership — downstream cascade", () => {
       { key: "down", schema: rowsSchema, keyed: { keyOf } },
       {
         identityTable: "down_t",
+        fanOut: { reason: "one param-less tuple — nothing to narrow" },
         dependsOn: [{ resource: upResource, affectedMap: (ids) => [...ids] }],
         loader: (_p, c) => {
           downLoads.push(c === undefined ? "FULL" : "scoped");
@@ -528,6 +529,7 @@ describe("default-off — a keyed resource without scopedMembership is byte-iden
       { key: "rows", schema: rowsSchema, keyed: { keyOf } },
       {
         identityTable: "row_table", // scoped, but NOT scopedMembership
+        fanOut: { reason: "one param-less tuple — nothing to narrow" },
         loader: (_p, c) => {
           if (c === undefined) {
             loaderCalls.push("FULL");
@@ -588,6 +590,11 @@ describe("scopedMembership — registration guards", () => {
   test("throws when scopedMembership is set without an identityTable", () => {
     const h = createHarness();
     expect(() =>
+      // The four-arm `ScopePolicy` rejects this combination at compile time, which
+      // is the point: `@ts-expect-error` FAILS if it ever stops being rejected, so
+      // the directive pins the type's behaviour as a test. The runtime guard below
+      // is the backstop for a caller who casts past the type.
+      // @ts-expect-error — `recompute` and `scopedMembership` are different arms
       h.runtime.defineResource(
         { key: "bad2", schema: rowsSchema, keyed: { keyOf } },
         {

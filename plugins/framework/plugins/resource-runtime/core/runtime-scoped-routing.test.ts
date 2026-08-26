@@ -43,16 +43,34 @@ function scopeRecordingHarness() {
     { key: "rows", schema: rowsSchema, keyed: { keyOf } },
     {
       identityTable: "row_table",
+      fanOut: { reason: "one param-less tuple — nothing to narrow" },
       loader: (_p, c) => {
-        loads.push(c === undefined ? "FULL" : [...c.affectedIds].sort().join(","));
-        return [{ id: "a", n: 1 }, { id: "b", n: 1 }];
+        loads.push(
+          c === undefined ? "FULL" : [...c.affectedIds].sort().join(","),
+        );
+        return [
+          { id: "a", n: 1 },
+          { id: "b", n: 1 },
+        ];
       },
     },
   );
   const scoped = (ids: string[]) =>
-    h.runtime.applyDbChange({ table: "row_table", op: "U", ids, origin: "row_table", identityBase: "row_table" });
+    h.runtime.applyDbChange({
+      table: "row_table",
+      op: "U",
+      ids,
+      origin: "row_table",
+      identityBase: "row_table",
+    });
   const full = () =>
-    h.runtime.applyDbChange({ table: "row_table", op: "I", ids: null, origin: "row_table", identityBase: "row_table" });
+    h.runtime.applyDbChange({
+      table: "row_table",
+      op: "I",
+      ids: null,
+      origin: "row_table",
+      identityBase: "row_table",
+    });
   return { h, loads, scoped, full };
 }
 
@@ -105,7 +123,9 @@ describe("scoped-vs-FULL routing — same-flush coalescing", () => {
     // `continue`s: no version bump, no frame, no further cascade. This is distinct
     // from the upstream-signature relevance gate (which short-circuits the edge
     // BEFORE `affectedMap`); here `affectedMap` runs and returns `[]`.
-    const h = createHarness({ readSet: (k) => (k === "up" ? ["up_t"] : ["down_t"]) });
+    const h = createHarness({
+      readSet: (k) => (k === "up" ? ["up_t"] : ["down_t"]),
+    });
     const up = h.runtime.defineResource({
       key: "up",
       mode: "push",
@@ -119,6 +139,7 @@ describe("scoped-vs-FULL routing — same-flush coalescing", () => {
       { key: "down", schema: rowsSchema, keyed: { keyOf } },
       {
         identityTable: "down_t",
+        fanOut: { reason: "one param-less tuple — nothing to narrow" },
         dependsOn: [{ resource: up, affectedMap: () => [] }], // nothing downstream affected
         loader: (_p, c) => {
           downLoads.push(c === undefined ? "FULL" : "scoped");
@@ -132,7 +153,13 @@ describe("scoped-vs-FULL routing — same-flush coalescing", () => {
 
     // A scoped change to up_t: `up` recomputes and cascades to `down` with an empty
     // affected set → `down` is skipped.
-    h.runtime.applyDbChange({ table: "up_t", op: "U", ids: ["u1"], origin: "up_t", identityBase: "up_t" });
+    h.runtime.applyDbChange({
+      table: "up_t",
+      op: "U",
+      ids: ["u1"],
+      origin: "up_t",
+      identityBase: "up_t",
+    });
     await tick();
 
     expect(downLoads).toEqual([]); // loader never ran
@@ -144,7 +171,9 @@ describe("scoped-vs-FULL routing — same-flush coalescing", () => {
       new Request("http://x/api/resources/_debug"),
       { key: "_debug" },
     );
-    const body = (await debug.json()) as { resources: Array<{ key: string; versions: Record<string, number> }> };
+    const body = (await debug.json()) as {
+      resources: Array<{ key: string; versions: Record<string, number> }>;
+    };
     const downRow = body.resources.find((r) => r.key === "down")!;
     expect(downRow.versions).toEqual({}); // never bumped
 
@@ -152,7 +181,13 @@ describe("scoped-vs-FULL routing — same-flush coalescing", () => {
     // 1 — proving the empty-scoped no-op left the version untouched (else this
     // would be version 2).
     downValue = [{ id: "d", n: 2 }];
-    h.runtime.applyDbChange({ table: "up_t", op: "I", ids: null, origin: "up_t", identityBase: "up_t" });
+    h.runtime.applyDbChange({
+      table: "up_t",
+      op: "I",
+      ids: null,
+      origin: "up_t",
+      identityBase: "up_t",
+    });
     await tick();
 
     expect(downLoads).toEqual(["FULL"]);

@@ -844,6 +844,11 @@ describe("membership — registration guards", () => {
   test("membership and scopedMembership are mutually exclusive", () => {
     const h = createHarness();
     expect(() =>
+      // The four-arm `ScopePolicy` rejects this combination at compile time, which
+      // is the point: `@ts-expect-error` FAILS if it ever stops being rejected, so
+      // the directive pins the type's behaviour as a test. The runtime guard below
+      // is the backstop for a caller who casts past the type.
+      // @ts-expect-error — `scopedMembership` and `membership` are mutually exclusive arms
       h.runtime.defineResource(
         { key: "bad", schema: rowsSchema, keyed: { keyOf } },
         {
@@ -874,6 +879,11 @@ describe("membership — registration guards", () => {
   test("membership requires an identityTable", () => {
     const h = createHarness();
     expect(() =>
+      // The four-arm `ScopePolicy` rejects this combination at compile time, which
+      // is the point: `@ts-expect-error` FAILS if it ever stops being rejected, so
+      // the directive pins the type's behaviour as a test. The runtime guard below
+      // is the backstop for a caller who casts past the type.
+      // @ts-expect-error — `recompute` and `membership` are different arms
       h.runtime.defineResource(
         { key: "bad3", schema: rowsSchema, keyed: { keyOf } },
         {

@@ -8,8 +8,14 @@ import type {
   ScopePolicy,
   ServerResourceOptions,
 } from "@plugins/framework/plugins/resource-runtime/core";
-import { orderByClauses, type SortKey } from "@plugins/primitives/plugins/keyset/server";
-import type { PointParams, WindowParams } from "@plugins/primitives/plugins/live-state/core";
+import {
+  orderByClauses,
+  type SortKey,
+} from "@plugins/primitives/plugins/keyset/server";
+import type {
+  PointParams,
+  WindowParams,
+} from "@plugins/primitives/plugins/live-state/core";
 import type {
   PointQueryResourceContract,
   WindowQueryResourceContract,
@@ -17,7 +23,12 @@ import type {
 import type { CompiledQuery } from "./compile";
 import { resolveIdentity, wireFieldFor } from "./identity";
 import { compileEdge } from "./rel";
-import type { QueryDb, QueryStep, WindowOrderKey, WindowQueryResourceSpec } from "./spec";
+import type {
+  QueryDb,
+  QueryStep,
+  WindowOrderKey,
+  WindowQueryResourceSpec,
+} from "./spec";
 
 // The bounded-membership (window / point) compiler — the `queryResource`
 // sibling for the bounded working-set contract
@@ -43,10 +54,13 @@ import type { QueryDb, QueryStep, WindowOrderKey, WindowQueryResourceSpec } from
 // keyed + identityTable at registration.
 
 type AnyWindowContract<Row> =
-  | WindowQueryResourceContract<Row>
-  | PointQueryResourceContract<Row>;
+  WindowQueryResourceContract<Row> | PointQueryResourceContract<Row>;
 
-function guard(condition: unknown, key: string, message: string): asserts condition {
+function guard(
+  condition: unknown,
+  key: string,
+  message: string,
+): asserts condition {
   if (!condition) {
     throw new Error(`windowQueryResource("${key}"): ${message}`);
   }
@@ -120,7 +134,9 @@ export function compileWindowQuery<Row, P extends WindowParams | PointParams>(
       if (ids.length === 0) return [];
       const w = resolveWhere(params);
       const pred = inArray(pkColumn, [...ids]);
-      return from().where(w ? and(w, pred)! : pred) as unknown as Promise<Row[]>;
+      return from().where(w ? and(w, pred)! : pred) as unknown as Promise<
+        Row[]
+      >;
     };
 
     const membership: KeyedMembership<P> = {
@@ -128,14 +144,23 @@ export function compileWindowQuery<Row, P extends WindowParams | PointParams>(
       idsOf: (params) => codec.decode(params),
     };
 
-    const serverOpts = {
-      loader,
+    // Annotated, not cast: the `as` on `serverOpts` below launders the spreads
+    // and would hide a missing `ScopePolicy` arm, so the policy is built as its
+    // own CHECKED value first. `membership` is this compiler's answer to "which
+    // subscribed tuple owns a changed row" — the point set intersects the changed
+    // identity ids — so it needs no `fanOut`.
+    const scopePolicy: ScopePolicy<P> = {
       identityTable: tableName,
       membership,
+    };
+
+    const serverOpts = {
+      loader,
+      ...scopePolicy,
       ...(dependsOn ? { dependsOn } : {}),
       ...(spec.debounceMs != null ? { debounceMs: spec.debounceMs } : {}),
       ...(spec.ackChannel ? { ackChannel: true as const } : {}),
-    } as ServerResourceOptions<Row[], P> & ScopePolicy;
+    } as ServerResourceOptions<Row[], P> & ScopePolicy<P>;
     return { serverOpts, keyField, identityTableName: tableName };
   }
 
@@ -163,11 +188,8 @@ export function compileWindowQuery<Row, P extends WindowParams | PointParams>(
     `the descriptor's defaultLimit (${codec.defaultLimit}) exceeds window.maxLimit (${maxLimit}) — the default window would be silently truncated.`,
   );
 
-  const { tableName, rel, pkColumn, keyField, selectMap, columns } = resolveIdentity(
-    spec.from,
-    spec.identity,
-    spec.select,
-  );
+  const { tableName, rel, pkColumn, keyField, selectMap, columns } =
+    resolveIdentity(spec.from, spec.identity, spec.select);
 
   // Declared order keys + the pk tiebreaker (skipped when a key already targets
   // the pk column — same rule as keyset's `buildSortKeys`), rendered with
@@ -197,7 +219,10 @@ export function compileWindowQuery<Row, P extends WindowParams | PointParams>(
   });
   const orderSignatureOf = (row: unknown): string =>
     orderFields
-      .map((f) => JSON.stringify((row as Record<string, unknown>)[f]) ?? "undefined")
+      .map(
+        (f) =>
+          JSON.stringify((row as Record<string, unknown>)[f]) ?? "undefined",
+      )
       .join("\u0000");
   const keys: SortKey[] = declared.map((k) => ({
     fieldId: k.col.name,
@@ -206,14 +231,20 @@ export function compileWindowQuery<Row, P extends WindowParams | PointParams>(
     nullable: k.nullable ?? false,
   }));
   if (!keys.some((k) => k.col === pkColumn)) {
-    keys.push({ fieldId: pkColumn.name, col: pkColumn, dir: "asc", nullable: false });
+    keys.push({
+      fieldId: pkColumn.name,
+      col: pkColumn,
+      dir: "asc",
+      nullable: false,
+    });
   }
   const orderSql = orderByClauses(keys);
 
   // The subscription's decoded limit, clamped — ONE helper feeds the loader AND
   // `windowIdsOf`, so the value the clients see and the membership authority can
   // never disagree about the window size.
-  const limitOf = (params: P): number => Math.min(codec.decode(params).limit, maxLimit);
+  const limitOf = (params: P): number =>
+    Math.min(codec.decode(params).limit, maxLimit);
 
   const from = (): QueryStep =>
     (selectMap ? db.select(selectMap) : db.select()).from(rel);
@@ -240,9 +271,9 @@ export function compileWindowQuery<Row, P extends WindowParams | PointParams>(
     params: P,
     ctx?: { affectedIds: readonly string[] },
   ): Promise<Row[]> =>
-    (ctx ? buildScoped(params, ctx.affectedIds) : buildFull(params)) as unknown as Promise<
-      Row[]
-    >;
+    (ctx
+      ? buildScoped(params, ctx.affectedIds)
+      : buildFull(params)) as unknown as Promise<Row[]>;
 
   // The ids-only bounded ordered id list — the membership authority. Same
   // where/order/limit as the FULL loader, projecting ONLY the pk.
@@ -250,23 +281,30 @@ export function compileWindowQuery<Row, P extends WindowParams | PointParams>(
     let q: QueryStep = db.select({ [keyField]: pkColumn }).from(rel);
     const w = resolveWhere(params);
     if (w) q = q.where(w);
-    const rows = (await q.orderBy(...orderSql).limit(limitOf(params))) as Record<
-      string,
-      unknown
-    >[];
+    const rows = (await q
+      .orderBy(...orderSql)
+      .limit(limitOf(params))) as Record<string, unknown>[];
     return rows.map((r) => String(r[keyField]));
   };
 
-  const membership: KeyedMembership<P> = { kind: "window", windowIdsOf, orderSignatureOf };
+  const membership: KeyedMembership<P> = {
+    kind: "window",
+    windowIdsOf,
+    orderSignatureOf,
+  };
+
+  // Annotated, not cast — see the point branch above: the window membership IS
+  // the tuple-ownership answer, and building the policy as its own checked value
+  // is what keeps the `as` on `serverOpts` from hiding a missing arm.
+  const scopePolicy: ScopePolicy<P> = { identityTable: tableName, membership };
 
   const serverOpts = {
     loader,
-    identityTable: tableName,
-    membership,
+    ...scopePolicy,
     ...(dependsOn ? { dependsOn } : {}),
     ...(spec.debounceMs != null ? { debounceMs: spec.debounceMs } : {}),
     ...(spec.ackChannel ? { ackChannel: true as const } : {}),
-  } as ServerResourceOptions<Row[], P> & ScopePolicy;
+  } as ServerResourceOptions<Row[], P> & ScopePolicy<P>;
   return { serverOpts, keyField, identityTableName: tableName };
 }
 
@@ -286,7 +324,9 @@ export function windowQueryResource<Row>(
 ): Resource<Row[], PointParams>;
 export function windowQueryResource<Row>(
   descriptor: AnyWindowContract<Row>,
-  spec: WindowQueryResourceSpec<WindowParams> | WindowQueryResourceSpec<PointParams>,
+  spec:
+    | WindowQueryResourceSpec<WindowParams>
+    | WindowQueryResourceSpec<PointParams>,
 ): Resource<Row[], WindowParams> | Resource<Row[], PointParams> {
   const { serverOpts, keyField } = compileWindowQuery(
     descriptor,

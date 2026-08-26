@@ -19,10 +19,12 @@
 //
 // Usage: bun plugins/page/plugins/editor/e2e/crdt-undo-verify.ts [--base <url>] [--out /tmp/undo]
 import {
+  ELEMENT_TIMEOUT_MS,
   arg,
   baseUrl,
   report,
   snap,
+  waitFor,
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 import type { Locator } from "playwright";
@@ -81,7 +83,10 @@ await withBrowser(async (h) => {
     const box = await el.boundingBox();
     if (!box) throw new Error(`no bounding box for block ${id}`);
     await el.click({
-      position: { x: Math.max(2, box.width - 4), y: Math.min(14, box.height / 2) },
+      position: {
+        x: Math.max(2, box.width - 4),
+        y: Math.min(14, box.height / 2),
+      },
     });
     await pageA.waitForTimeout(250);
   }
@@ -122,7 +127,11 @@ await withBrowser(async (h) => {
   await clickEnd(idA);
   await pageA.keyboard.press("Enter"); // split at end → new empty block B
   await pageA.waitForTimeout(800);
-  r.ok("P2 split created block", (await blockCount()) === 2, `count=${await blockCount()}`);
+  r.ok(
+    "P2 split created block",
+    (await blockCount()) === 2,
+    `count=${await blockCount()}`,
+  );
   const idB = await pageA.evaluate<string | null, string>(
     (a) =>
       [...document.querySelectorAll("[data-block-id]")]
@@ -138,7 +147,11 @@ await withBrowser(async (h) => {
   await clickEnd(idA);
   await pageA.keyboard.type(" zulu", { delay: 20 });
   await pageA.waitForTimeout(1800);
-  r.ok("P2 typed in A", (await textOf(idA)) === "alpha beta zulu", await textOf(idA));
+  r.ok(
+    "P2 typed in A",
+    (await textOf(idA)) === "alpha beta zulu",
+    await textOf(idA),
+  );
 
   // Undo chain: exact reverse chronological order.
   await undo();
@@ -160,11 +173,22 @@ await withBrowser(async (h) => {
   // undone (B was deleted + recreated) is a DOCUMENTED consistent no-op — the
   // per-block undo manager died with the doc.
   await redo();
-  r.ok("P2 redo split (B back, empty)", (await blockCount()) === 2 && (await textOf(idB)) === "");
+  r.ok(
+    "P2 redo split (B back, empty)",
+    (await blockCount()) === 2 && (await textOf(idB)) === "",
+  );
   await redo();
-  r.ok("P2 redo B-typing = documented no-op", (await textOf(idB)) === "", await textOf(idB));
+  r.ok(
+    "P2 redo B-typing = documented no-op",
+    (await textOf(idB)) === "",
+    await textOf(idB),
+  );
   await redo();
-  r.ok("P2 redo A-zulu", (await textOf(idA)) === "alpha beta zulu", await textOf(idA));
+  r.ok(
+    "P2 redo A-zulu",
+    (await textOf(idA)) === "alpha beta zulu",
+    await textOf(idA),
+  );
   await snap(pageA, out, "2-interleave");
 
   // --- Phase 3: split undo/redo consistency ------------------------------------
@@ -192,7 +216,9 @@ await withBrowser(async (h) => {
   console.log("BLOCK_C:", idC);
   r.ok(
     "P3 split DOM",
-    (await textOf(idB)) === "bra" && idC !== null && (await textOf(idC)) === "vo",
+    (await textOf(idB)) === "bra" &&
+      idC !== null &&
+      (await textOf(idC)) === "vo",
   );
   await pageA.waitForTimeout(2500); // projection
   {
@@ -243,7 +269,10 @@ await withBrowser(async (h) => {
     );
   }
   await undo(800); // back to B="bravo", C gone — clean state for phase 4
-  r.ok("P3 second undo-split", (await blockCount()) === 2 && (await textOf(idB)) === "bravo");
+  r.ok(
+    "P3 second undo-split",
+    (await blockCount()) === 2 && (await textOf(idB)) === "bravo",
+  );
   await pageA.waitForTimeout(2500);
 
   // --- Phase 4: merge undo/redo consistency ------------------------------------
@@ -252,7 +281,8 @@ await withBrowser(async (h) => {
   await pageA.waitForTimeout(1200);
   r.ok(
     "P4 merge DOM",
-    (await blockCount()) === 1 && (await textOf(idA)) === "alpha beta zulubravo",
+    (await blockCount()) === 1 &&
+      (await textOf(idA)) === "alpha beta zulubravo",
     `count=${await blockCount()} A=${await textOf(idA)}`,
   );
   await pageA.waitForTimeout(2500);
@@ -290,7 +320,8 @@ await withBrowser(async (h) => {
   await redo(1000);
   r.ok(
     "P4 redo merge",
-    (await blockCount()) === 1 && (await textOf(idA)) === "alpha beta zulubravo",
+    (await blockCount()) === 1 &&
+      (await textOf(idA)) === "alpha beta zulubravo",
   );
   await undo(1000); // final resting state: A + B
   r.ok(
@@ -304,19 +335,33 @@ await withBrowser(async (h) => {
   // --- Phase 5: convergence in a second context --------------------------------
   const { page: pageB } = await h.session({ label: "B" });
   await pageB.goto(pageUrl);
-  await pageB.waitForTimeout(5000);
-  const aB = pageB.locator(`[data-block-id="${idA}"] [contenteditable="true"]`).first();
-  await aB.waitFor({ state: "visible", timeout: 15000 });
-  const textAB = norm(await aB.innerText());
-  const bB = pageB.locator(`[data-block-id="${idB}"] [contenteditable="true"]`).first();
-  const textBB = norm(await bB.innerText());
-  const countB = await pageB.locator('[data-block-id]:has([contenteditable="true"])').count();
-  await snap(pageB, out, "5-context-b");
-  r.ok(
-    "P5 convergence",
-    textAB === "alpha beta zulu" && textBB === "bravo" && countB === 2,
-    JSON.stringify({ a: textAB, b: textBB, n: countB }),
+  const aB = pageB
+    .locator(`[data-block-id="${idA}"] [contenteditable="true"]`)
+    .first();
+  await aB.waitFor({ state: "visible", timeout: ELEMENT_TIMEOUT_MS });
+  const bB = pageB
+    .locator(`[data-block-id="${idB}"] [contenteditable="true"]`)
+    .first();
+  // Was a fixed `waitForTimeout(5000)` before three separate reads. A second
+  // context measured 6.7-11.2s to render text against main, so the reads could
+  // land early and report a convergence failure that was the clock, not the app
+  // — the same pattern already fixed in crdt-offline / crdt-newblock /
+  // crdt-typing / crdt-split-merge. All three demands are unchanged.
+  const converged = await waitFor(
+    async () => ({
+      a: norm(await aB.innerText()),
+      b: norm(await bB.innerText()),
+      n: await pageB
+        .locator('[data-block-id]:has([contenteditable="true"])')
+        .count(),
+    }),
+    ({ a, b, n }) => a === "alpha beta zulu" && b === "bravo" && n === 2,
   );
+  await snap(pageB, out, "5-context-b");
+  console.log(
+    `context B converged after ${converged.waitedMs}ms (${converged.attempts} reads)`,
+  );
+  r.ok("P5 convergence", converged.ok, JSON.stringify(converged.value));
 
   console.log("BLOCK_A:", idA);
   console.log("BLOCK_B:", idB);

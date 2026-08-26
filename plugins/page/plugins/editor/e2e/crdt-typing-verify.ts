@@ -13,10 +13,12 @@
 //
 // Usage: bun plugins/page/plugins/editor/e2e/crdt-typing-verify.ts [--base <url>] [--out /tmp/crdt]
 import {
+  ELEMENT_TIMEOUT_MS,
   arg,
   baseUrl,
   report,
   snap,
+  waitFor,
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 import { blockText, caretState, openBlankPage } from "./support/blank-page";
@@ -55,7 +57,12 @@ await withBrowser(async (h) => {
     await pageA.keyboard.type(chunk, { delay: 8 }); // ~125 chars/s — fast typing
     await pageA.waitForTimeout(450); // let the debounced flush + live echo land mid-run
   }
-  // Let the final flush + echo settle.
+  // A FIXED settle, deliberately, and it must not become a condition wait.
+  // "Wait until the text is right" is wrong wherever the defect is a state the
+  // app passes THROUGH: the scramble this script exists to catch
+  // ("Generalization of Notion" -> "Generationlization of No") is transient, so
+  // a poll would wait it out and report the run green ON the bug. Settle once,
+  // read once, assert on that read.
   await pageA.waitForTimeout(1500);
 
   const gotA = await blockText(block);
@@ -68,10 +75,10 @@ await withBrowser(async (h) => {
   const textOk = gotA === TYPED;
   const caretOk = Boolean(
     caret.hasSelection &&
-      caret.collapsed &&
-      caret.insideBlock &&
-      caret.anchorOffset === caret.anchorTextLength &&
-      caret.anchorTextLength === TYPED.length,
+    caret.collapsed &&
+    caret.insideBlock &&
+    caret.anchorOffset === caret.anchorTextLength &&
+    caret.anchorTextLength === TYPED.length,
   );
   r.ok("TEXT — exact match", textOk, `observed ${JSON.stringify(gotA)}`);
   r.ok("CARET — collapsed at end of the typed text", caretOk);
@@ -79,18 +86,28 @@ await withBrowser(async (h) => {
   // --- Convergence: a second, fresh browser context (own socket, cold load) ----
   const { page: pageB } = await h.session({ label: "B" });
   await pageB.goto(pageUrl);
-  await pageB.waitForTimeout(5000);
   const blockB = pageB
     .locator(`[data-block-id="${blockId}"] [contenteditable="true"]`)
     .first();
-  await blockB.waitFor({ state: "visible", timeout: 15000 });
-  const gotB = await blockText(blockB);
+  await blockB.waitFor({ state: "visible", timeout: ELEMENT_TIMEOUT_MS });
+  // Was a fixed `waitForTimeout(5000)`. A second context measured 6.2-6.4s to
+  // render against main on an IDLE machine, so this read landed before the text
+  // arrived and the check below reported a convergence failure that was the
+  // clock, not the app. The demand is unchanged — only when it is read.
+  const converged = await waitFor(
+    () => blockText(blockB),
+    (text) => text === TYPED,
+  );
+  const gotB = converged.value;
   await snap(pageB, out, "context-b");
-  console.log("context B observed:", JSON.stringify(gotB));
-  const convergeOk = gotB === TYPED;
+  console.log(
+    "context B observed:",
+    JSON.stringify(gotB),
+    `(after ${converged.waitedMs}ms, ${converged.attempts} reads)`,
+  );
   r.ok(
     "CONVERGENCE — second context matches",
-    convergeOk,
+    converged.ok,
     `observed ${JSON.stringify(gotB)}`,
   );
 
@@ -99,16 +116,20 @@ await withBrowser(async (h) => {
   await block.click();
   await pageA.keyboard.press("End");
   await pageA.keyboard.type(" — appended after reload", { delay: 8 });
-  await pageA.waitForTimeout(1800);
-  const finalA = await blockText(block);
-  const finalB = await blockText(blockB);
   const FINAL = `${TYPED} — appended after reload`;
+  // Same defect as above, one arm later: this was a fixed `waitForTimeout(1800)`
+  // before reading BOTH contexts. Waiting on the condition instead.
+  const live = await waitFor(
+    async () => ({ a: await blockText(block), b: await blockText(blockB) }),
+    ({ a, b }) => a === FINAL && b === FINAL,
+  );
+  const finalA = live.value.a;
+  const finalB = live.value.b;
   console.log("final A :", JSON.stringify(finalA));
   console.log("final B :", JSON.stringify(finalB));
-  const liveOk = finalA === FINAL && finalB === FINAL;
   r.ok(
     "LIVE CROSS-CONTEXT — B received A's edit live",
-    liveOk,
+    live.ok,
     `A ${JSON.stringify(finalA)} / B ${JSON.stringify(finalB)}`,
   );
 
