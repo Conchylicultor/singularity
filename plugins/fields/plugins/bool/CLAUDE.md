@@ -30,6 +30,7 @@ data-view capabilities live in dedicated sub-plugins under `plugins/`:
 - Sub-plugins:
   - **`config`** — Boolean field type: config-render capability (checkbox for config-v2.fields.renderer) plus the boolField factory.
   - **`data-view-codec`** — Boolean field type: data-view custom-column value codec (native boolean ↔ canonical text).
+  - **`data-view-group`** — Boolean field type: data-view grouping strategy (Yes / No sections, false first).
   - **`filter`** — Boolean field type: data-view filter operator set (is checked/unchecked).
   - **`filter-sql`** — Boolean field type: server filter-sql capability — operator→SQL fragments mirroring the data-view bool filter predicates.
   - **`inline`** — Boolean field type: data-view inline cell editor (immediate-commit toggle).

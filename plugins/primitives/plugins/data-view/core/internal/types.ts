@@ -5,6 +5,7 @@ import type { BadgeVariant } from "@plugins/primitives/plugins/css/plugins/badge
 import type { Rank } from "@plugins/primitives/plugins/rank/core";
 import type { ExpandChange } from "@plugins/primitives/plugins/tree/core";
 import type { DataViewId } from "./define-data-view";
+import type { GroupByRule } from "./grouping";
 
 export type FieldValue = string | number | boolean | Date | null | undefined;
 
@@ -374,12 +375,13 @@ export interface ViewState {
    */
   visibleFields?: string[] | null;
   /**
-   * The field id rows are partitioned by (Notion's "Group by"), or absent =
-   * ungrouped. Persisted in the per-instance config row exactly like
-   * `sort`/`filter` (host-injected, merge-written). Legacy rows without the key
-   * are ungrouped.
+   * Which field rows are partitioned by (Notion's "Group by") AND how that
+   * field buckets, or absent = ungrouped. Persisted in the per-instance config
+   * row exactly like `sort`/`filter` (host-injected, merge-written). Legacy rows
+   * without the key are ungrouped; a legacy bare `groupBy: "<fieldId>"` string
+   * migrates on read to `{ fieldId, groupingId: "value" }` (see `readGroupBy`).
    */
-  groupBy?: string;
+  groupBy?: GroupByRule;
   /** Local expand state for hierarchical views lacking server-persisted expansion. */
   expanded?: Record<string, boolean>;
 }
@@ -393,8 +395,9 @@ export interface ViewState {
  * order, each collapsible with a header label + member count.
  */
 export interface DataViewSection<TRow> {
-  /** Group key (the stringified `field.value(row)`); `null` = the implicit
-   *  single section rendered headerless when no group-by is active. */
+  /** Group key — the `GroupBucket.key` the field type's grouping minted for the
+   *  row's value; `null` = the implicit single section rendered headerless when
+   *  no group-by is active. */
   key: string | null;
   /** Header label; absent for the implicit (`key === null`) section. */
   label?: ReactNode;
@@ -570,6 +573,22 @@ export interface DataViewRenderProps<TRow> {
    *  gesture lands in ONE localStorage write, so expand-all over a large tree
    *  costs one serialization rather than one per row. */
   setExpanded: (changes: readonly ExpandChange[]) => void;
+  /**
+   * Local midnight of the current day, as epoch ms — the `now` every grouping
+   * plans against. Quantized and re-armed at the day boundary by the host
+   * (`useGroupingClock`), never read from the clock inside a grouping: an
+   * implicit `Date.now()` would change the partition's memo key on every render,
+   * and would make the buckets untestable.
+   */
+  now: number;
+  /**
+   * Which end of `GroupBucket.order` the sections read from, derived by the host
+   * from the view's own sort direction on the grouped field ("asc" when it has
+   * none). The host computes it from `activeState.sort` rather than the view's
+   * `state.sort`, which a server-delegated source zeroes out — so a
+   * server-sorted grouped view still reads the right way round.
+   */
+  groupOrder: "asc" | "desc";
   /** Device-local set of collapsed group-by section keys (absence = expanded).
    *  Flat views render group headers and hide a section's members when collapsed. */
   collapsedSections?: ReadonlySet<string>;

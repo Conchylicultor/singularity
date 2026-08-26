@@ -34,6 +34,11 @@ export interface DataViewControlsContextValue {
   viewModel: ReadyViewModel;
   /** Whether the active view supports group-by (false → group-by control hides). */
   activeSupportsGroupBy: boolean;
+  /** `(typeId) => boolean` read of the `Grouping` slot — does this field type
+   *  declare how it buckets? The group-by setting's `isApplicable` is a pure
+   *  function and cannot read a slot itself, so the host resolves it once here.
+   *  Pass it to `isGroupableField(field, hasGrouping)`. */
+  hasGrouping: (typeId: string) => boolean;
   /** Whether the active view honors `ViewState.sort` (false → no Sort control). */
   activeSupportsSort: boolean;
   /** Whether the active view can render a flat rank-ordered, draggable body. */
@@ -67,6 +72,7 @@ export function DataViewControlsProvider({
   activeState,
   viewModel,
   activeSupportsGroupBy,
+  hasGrouping,
   activeSupportsSort,
   activeSupportsManualOrder,
   manualOrderOverridden,
@@ -81,6 +87,7 @@ export function DataViewControlsProvider({
       activeState,
       viewModel,
       activeSupportsGroupBy,
+      hasGrouping,
       activeSupportsSort,
       activeSupportsManualOrder,
       manualOrderOverridden,
@@ -94,6 +101,7 @@ export function DataViewControlsProvider({
       activeState,
       viewModel,
       activeSupportsGroupBy,
+      hasGrouping,
       activeSupportsSort,
       activeSupportsManualOrder,
       manualOrderOverridden,

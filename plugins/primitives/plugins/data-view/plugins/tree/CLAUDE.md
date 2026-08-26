@@ -209,6 +209,7 @@ CLAUDE.md ("Row tone").
     - `primitives/data-view.resolveBodyFields`
     - `primitives/data-view.RowTone`
     - `primitives/data-view.rowToneClass`
+    - `primitives/data-view.useGroupingRegistry`
     - `primitives/data-view.useItemActionZones`
     - `primitives/data-view.useResolveCell`
     - `primitives/data-view.useResolveCellEditor`

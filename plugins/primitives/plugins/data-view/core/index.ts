@@ -11,6 +11,16 @@ export {
 
 export { IDENTITY_CODEC } from "./internal/types";
 
+export { compareValues } from "./internal/grouping";
+
+export type {
+  FieldGrouping,
+  FieldGroupingSet,
+  GroupingPlanContext,
+  GroupBucket,
+  GroupByRule,
+} from "./internal/grouping";
+
 export type {
   FieldValue,
   FilterFieldValue,

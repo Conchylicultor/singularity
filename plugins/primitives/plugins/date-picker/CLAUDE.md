@@ -209,6 +209,7 @@ clock is pinned with `vi.setSystemTime` so "today" is deterministic.
     - `TimeField`
 - Cross-plugin:
   - Imported by:
+    - `fields/date/data-view-group`
     - `fields/date/filter`
     - `fields/date/inline`
     - `page/inline-date`

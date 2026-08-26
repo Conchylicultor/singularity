@@ -27,6 +27,13 @@ export {
   IDENTITY_CODEC,
 } from "../core";
 export type { DataViewId } from "../core";
+export type {
+  FieldGrouping,
+  FieldGroupingSet,
+  GroupingPlanContext,
+  GroupBucket,
+  GroupByRule,
+} from "../core";
 export { DataViewSlots } from "./slots";
 export type {
   DataViewContribution,
@@ -61,6 +68,14 @@ export {
   partitionIntoSections,
   isGroupableField,
 } from "./internal/use-data-view-sections";
+export type { PartitionOptions } from "./internal/use-data-view-sections";
+export { useResolveGroupings, useGroupingRegistry } from "./grouping-slot";
+export type { GroupingRegistry } from "./grouping-slot";
+export {
+  IDENTITY_GROUPING,
+  IDENTITY_GROUPING_SET,
+} from "./internal/identity-grouping";
+export { useGroupingClock } from "./internal/use-grouping-clock";
 export { GroupedSections } from "./internal/grouped-sections";
 export type { GroupedSectionsProps } from "./internal/grouped-sections";
 export { useGroupByController } from "./internal/use-group-by-controller";
@@ -156,7 +171,7 @@ export default {
       order: 1,
       isApplicable: (ctx) =>
         ctx.activeSupportsGroupBy &&
-        ctx.fields.some((f) => isGroupableField(f)),
+        ctx.fields.some((f) => isGroupableField(f, ctx.hasGrouping)),
       component: GroupByControl,
     }),
     // The three built-in toolbar controls. The toolbar names none of them: it

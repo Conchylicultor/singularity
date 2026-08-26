@@ -178,12 +178,12 @@ tokens, so anything that imports the barrels back would cycle.
     - `resolveTypeChain`
 - Sub-plugins:
   - **`avatar`** [1 sub-plugin] — Avatar field type: identity only. The config-render capability and the avatarField factory live in the plugins/config sub-plugin.
-  - **`bool`** [8 sub-plugins] — Boolean field type: identity only. The data-view cell (check/cross) and filter (yes/no) capabilities live in the plugins/{table,filter} sub-plugins.
+  - **`bool`** [9 sub-plugins] — Boolean field type: identity only. The data-view cell (check/cross) and filter (yes/no) capabilities live in the plugins/{table,filter} sub-plugins.
   - **`color`** [2 sub-plugins] — Color field type: identity only. The read-only swatch cell lives in the plugins/table sub-plugin; color has no filter (sparse).
-  - **`date`** [8 sub-plugins] — Date field type: identity only. The data-view cell (relative time) and filter (date range) capabilities live in the plugins/{table,filter} sub-plugins.
+  - **`date`** [9 sub-plugins] — Date field type: identity only. The data-view cell (relative time) and filter (date range) capabilities live in the plugins/{table,filter} sub-plugins.
   - **`directory-path`** [1 sub-plugin] — Directory-path field type: identity only. The config-render capability (a folder picker) and the dirPathField factory live in the plugins/config sub-plugin.
   - **`dynamic-enum`** [1 sub-plugin] — Dynamic enum (select) field type: identity only. Options are resolved at config-render time via the plugins/config sub-plugin's slot.
-  - **`enum`** [6 sub-plugins] — Enum (select) field type: identity only. The config-render, table (chip cell), and filter (multi-select) capabilities live in the plugins/{config,table,filter} sub-plugins.
+  - **`enum`** [7 sub-plugins] — Enum (select) field type: identity only. The config-render, table (chip cell), and filter (multi-select) capabilities live in the plugins/{config,table,filter} sub-plugins.
   - **`float`** [2 sub-plugins] — Float field type: identity only, extends number — reuses number's cell and filter via the extends chain.
   - **`image`** [1 sub-plugin] — Image field type: identity only. The read-only thumbnail cell lives in the plugins/table sub-plugin; image is a data-view-only media type with no filter (sparse).
   - **`int`** [2 sub-plugins] — Integer field type: identity only, extends number — reuses number's cell and filter via the extends chain.

@@ -18,6 +18,7 @@ import { Cell } from "./cell-slot";
 import { CellEditor } from "./cell-editor-slot";
 import { Filter } from "./filter-slot";
 import { ValueCodec } from "./value-codec-slot";
+import { Grouping } from "./grouping-slot";
 import { ColumnConfig } from "./column-config-slot";
 
 /**
@@ -246,6 +247,10 @@ export const DataViewSlots = {
   Filter,
   /** Per-type native↔text value codec for custom columns. Contribute `{ match, codec }`. */
   ValueCodec,
+  /** Per-type grouping strategies. Contribute `{ match, label, groupings }` —
+   *  the granularity band's label plus the ways this type buckets its values.
+   *  Declaring any also makes the type groupable by default (`isGroupableField`). */
+  Grouping,
   /** Per-type add-time custom-column config editor. Contribute `{ match, component }`. */
   ColumnConfig,
 };

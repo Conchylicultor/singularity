@@ -22,6 +22,8 @@ import {
   useSortController,
   type SortController,
 } from "../internal/use-sort-controller";
+import { useGroupingRegistry } from "../grouping-slot";
+import { useGroupingClock } from "../internal/use-grouping-clock";
 import { CollectFieldExtensions } from "../internal/field-extensions";
 import { CollectRowOrder } from "../internal/row-order";
 import type { DataViewBodyProps } from "../internal/body-types";
@@ -209,6 +211,28 @@ function DataViewBodyInner<TRow>(props: DataViewBodyProps<TRow>): ReactNode {
   const activeSupportsGroupBy =
     activeInstance.viewType.supportsGroupBy !== false;
 
+  // The grouping clock, read ONCE per surface: one quantized `now` (local
+  // midnight) shared by every view child, re-armed at the day boundary. Reading
+  // it per view would give two views of the same surface two different memo keys
+  // for the same day.
+  const now = useGroupingClock();
+  // Which end of a bucket's ordinal the sections read from: the direction of the
+  // view's own sort ON THE GROUPED FIELD, so "Upcoming" (startsAt asc) reads
+  // Today → Tomorrow → Later, and "All" (startsAt desc) reads newest first, with
+  // no second config axis.
+  //
+  // It reads `activeState.sort` and NOT `effectiveState.sort`, which a
+  // server-delegated source zeroes out (the SQL already sorted) — the views can
+  // therefore no longer see the direction themselves, which is exactly why this
+  // is computed here and threaded down.
+  const groupOrder: "asc" | "desc" =
+    activeState.sort.find((r) => r.fieldId === activeState.groupBy?.fieldId)
+      ?.direction ?? "asc";
+  // The `Grouping` registry read, likewise once per surface: the toolbar's
+  // group-by control asks "which fields can group?" through it (the settings
+  // contribution's `isApplicable` is a pure function and cannot read a slot).
+  const hasGrouping = useGroupingRegistry().has;
+
   // Whether a row-order contributor may own this view's order. Each clause is a
   // structural exclusion, not a preference:
   const rowOrderEnabled =
@@ -320,6 +344,8 @@ function DataViewBodyInner<TRow>(props: DataViewBodyProps<TRow>): ReactNode {
           expanded: activeState.expanded,
           setExpanded: (changes) =>
             viewModel.setExpanded(activeViewId, changes),
+          now,
+          groupOrder,
           collapsedSections: viewModel.collapsedSectionsFor(activeViewId),
           setSectionCollapsed: (key, collapsed) =>
             viewModel.setSectionCollapsed(activeViewId, key, collapsed),
@@ -349,6 +375,7 @@ function DataViewBodyInner<TRow>(props: DataViewBodyProps<TRow>): ReactNode {
           activeState,
           viewModel,
           activeSupportsGroupBy,
+          hasGrouping,
           activeSupportsSort,
           activeSupportsManualOrder,
           manualOrderOverridden,

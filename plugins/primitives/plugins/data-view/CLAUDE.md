@@ -80,7 +80,9 @@ marker is present. The marker tests *review* — mere presence is not enough (a
 A row is authored terse (`{ name, view }`); view-core's `normalizeRows` derives
 `id` on read and **array position is the canonical order** (no `rank` field) — see
 view-core's CLAUDE.md. The `view` blob is `{ type, sort?, filter?, …opts }`;
-`sort`/`filter` are host-injected keys read via `viewFor`/`updateView`. `sort` is a
+`sort`/`filter`/`groupBy` are host-injected keys read via `viewFor`/`updateView`.
+`groupBy` is a `GroupByRule` (`{ fieldId, groupingId }` — see "Grouping is a field-type
+contribution"), with the legacy bare `"<fieldId>"` string migrated on read. `sort` is a
 `SortRule[]` (ordered multi-level; each `{ fieldId, direction }`, priority = list
 order, `[]` = unsorted) and `filter` a `FilterGroup` tree. **Legacy single-`sort`
 is migrated on read** — a persisted `{ fieldId, direction }` object (the old
@@ -386,6 +388,115 @@ per-drop by the view (above), not by suspending the whole order.
 instead, so toggling a sort off and on does not tear down the contributor's live
 subscription — the host merely withholds the config while a sort is set.
 
+## Grouping is a field-type contribution
+
+**data-view names no field type.** How a field's values partition into sections
+is declared by the field's own TYPE, through `DataViewSlots.Grouping` — the
+sibling of `Cell` / `CellEditor` / `Filter` / `ValueCodec` / `ColumnConfig`, and
+the same shape: a plain `defineSlot` payload keyed by `match` (the type token),
+resolved per type honoring the `extends` chain.
+
+```ts
+DataViewSlots.Grouping({
+  match: "date",
+  label: "Group dates by",          // the granularity band's own section label
+  groupings: dateGroupings,          // Smart, Day, Week, Month, Year
+});
+```
+
+The primitive used to spell `type === "enum" || type === "bool"` in three
+places — `isGroupableField`, a `sectionLabel` with an enum-options lookup and a
+`bool → Yes/No` branch, and an "enum sections follow `field.options` order"
+block inside `partitionIntoSections`. A date field could not group at all
+(`String(aDate)` puts every row in its own section), and adding one would have
+meant a fourth branch. Now enum, bool and date each contribute their own
+groupings and the partition is pure mechanism.
+
+### The contract (`core/internal/grouping.ts`)
+
+```ts
+interface FieldGrouping {
+  id: string;                       // "smart" | "day" | "value" — persisted
+  label: string;                    // "Smart", "Day", "Value"
+  plan: (ctx: GroupingPlanContext) => (value: FieldValue) => GroupBucket | null;
+}
+interface GroupingPlanContext { now: number; values: readonly FieldValue[]; field: FieldDef<unknown> }
+interface GroupBucket { key: string; label: string; order: number }
+interface GroupByRule { fieldId: string; groupingId: string }
+```
+
+Three things about it are load-bearing:
+
+- **`plan` is two-phase.** A grouping that must see the whole set before it can
+  order its sections (enum by `options` index, the identity fallback by value
+  order, a future range-derived "Auto") does that work once per render, not once
+  per row.
+- **`now` is injected, never read.** A grouping calling `Date.now()` would be
+  untestable (the precedent is `relativeDayLabel(date, now)`) *and* incorrect
+  here: the partition runs inside a `useMemo`, so a live clock would change the
+  memo key every render. The host reads it once per surface via
+  `useGroupingClock()` — local midnight, quantized, re-armed by ONE `setTimeout`
+  at the next local midnight so a view left open overnight stops saying "Today".
+  That timer is not the banned polling: it fires at the instant the value
+  changes, which the calendar knows in advance, rather than waking to check.
+- **`order` is a plain ascending ordinal**, read from whichever end the view's
+  own sort on the grouped field points (`DataViewRenderProps.groupOrder`) — so
+  `startsAt asc` reads Today → Tomorrow → Later and `startsAt desc` reads newest
+  month first, out of one ordinal with no second config axis. The host derives
+  it from **`activeState.sort`**, not the view's `state.sort`, which a
+  server-delegated source zeroes out. The `None` bucket holds no position on the
+  ordinal, so it stays **last in both directions**.
+
+### There is exactly one "None", and a grouping cannot mint a second
+
+A bucketer returns `GroupBucket | null`. **`null` means "not a value I can
+bucket"** — a string in a date field that does not parse, an enum value of the
+wrong shape — and the row joins the SAME section as a null value: one "None",
+ordered last in both directions, owned by the partition.
+
+A grouping must never build its own catch-all, and the type is what stops it.
+The date grouping originally returned a `NO_DATE` bucket keyed `"none"` with
+`order: Number.POSITIVE_INFINITY`, which fails twice: a second section also
+labelled "None" appears beside the real one, and `Infinity - n` is `Infinity`, so
+the catch-all pins last ascending and **first descending** — it jumps to the top
+of the list the moment the view's sort flips. `null` has neither failure mode
+available.
+
+The ordinal is checked too: `order` must be **finite**, or the partition throws
+naming the grouping and the bucket (once per bucket, not per row). Infinity is
+only ever reached for as "put this at the end", which it does not do; that is
+what `null` is for.
+
+### Groupability is derived, not listed
+
+`isGroupableField(field, hasGrouping)` is `field.groupable ?? hasGrouping(type)`
+— a field is groupable because its type says how it buckets. `hasGrouping` comes
+from `useGroupingRegistry().has`; the host resolves it once and publishes it on
+the controls context, because a `Setting` contribution's `isApplicable` is a pure
+function and cannot read a slot. Any field can still opt out with
+`groupable: false`, or in with `groupable: true` — which then uses the fallback:
+
+**The identity grouping** (`web/internal/identity-grouping.ts`,
+`{ id: "value", label: "Value" }`) is what a type declaring no groupings falls
+back to: one section per distinct value, `String(value)` for both key and label,
+ordered by the value's index in the `compareValues`-sorted value list. It is also
+what the legacy persisted `groupBy: "<fieldId>"` string migrates to —
+`readGroupBy` coerces it to `{ fieldId, groupingId: "value" }`, which is exactly
+what that string always meant. Migration is **on read and never destructive**;
+the config row is re-serialized only when the user next edits group-by. No
+committed `.jsonc` needs touching.
+
+### The picker
+
+`GroupByControl` renders the field radio band, then — only when the active
+field's type offers more than one grouping — a **second `ControlPanel.Section`
+labelled from the contribution's own `label`**. Two bands rather than a
+`usePanelStack` push (the `add-sort-affordance.tsx` precedent): the choice is
+small and closed, and seeing granularity next to field is the point. Picking a
+field goes through `controller.setField`, which resolves the granularity itself
+(keeping the current one when the new type still offers it, else that type's
+first), so the persisted `groupingId` is never one the type does not have.
+
 ## Grouped sections: one pipeline, one chrome
 
 `useDataViewSections` computes the sections; **`<GroupedSections>`** (web barrel)
@@ -427,7 +538,9 @@ the grid and break column alignment — so it composes `StickyStack` directly in
 `data-table`, under the same policy and with `base` offset by its own sticky column
 header. The tree renders through the shared chrome too, with one `TreeList` per
 section: its ROOTS partition by the group-by field and every descendant follows
-its root's section (see the tree child's CLAUDE.md "Group-by").
+its root's section (see the tree child's CLAUDE.md "Group-by"). It is the one
+view that calls `partitionIntoSections` directly rather than through
+`useDataViewSections`, so it resolves the grouping registry itself.
 
 ## Aggregating sections (`aggregate`)
 
@@ -1249,6 +1362,7 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
     - `DataViewSlots.CellEditor` ← `fields.bool.inline`, `fields.date.inline`, `fields.enum.inline`, `fields.number.inline`, `fields.tags.inline`, `fields.text.inline`
     - `DataViewSlots.Filter` ← `fields.bool.filter`, `fields.date.filter`, `fields.enum.filter`, `fields.number.filter`, `fields.tags.filter`, `fields.text.filter`
     - `DataViewSlots.ValueCodec` ← `fields.bool.data-view-codec`, `fields.date.data-view-codec`, `fields.number.data-view-codec`
+    - `DataViewSlots.Grouping` ← `fields.bool.data-view-group`, `fields.date.data-view-group`, `fields.enum.data-view-group`
     - `DataViewSlots.ColumnConfig` ← `fields.enum.column-config`
   - Contributes:
     - `ConfigV2.WebRegister` ×40: "agent-launches", "agents-list", "all-conversations", "build.history", "code-explorer.file-tree", "config_v2.settings.nav", "conversations-sidebar", "debug.boot-profiles", "debug.config-orphans", "debug.profiling.runtime", "debug.reports", "debug.slow-ops.cluster-aggregate", "debug.slow-ops.cluster-timeline", "debug.slow-ops.local", "debug.trace.events", "deploy.deployment.history", "deploy.deployments", "deploy.servers", "events.list", "events.run-events", "events.source-runs", "events.sources", "home.apps", "mail-threads", "page.links.backlinks", "pages-sidebar", "plugin-view.file-tree", "prototypes.gallery", "sonata.library", "story.gallery", "studio.compositions", "studio.compositions.closure-tree", "studio.explorer.tree", "studio.release.history", "task-deps-tree", "tasks-list", "tweakcn.community-browser", "tweakcn.quick-theme", "workflows.definitions", "workflows.executions"
@@ -1340,6 +1454,8 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
     - `FieldExtensionProps`
     - `FieldExtensions`
     - `FieldExtensionsDescriptor`
+    - `FieldGrouping`
+    - `FieldGroupingSet`
     - `FieldOption`
     - `FieldValue`
     - `FilterConjunction`
@@ -1354,8 +1470,12 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
     - `FilterValueInputProps`
     - `GlobalRowOrderContribution`
     - `GlobalRowOrderProps`
+    - `GroupBucket`
     - `GroupByController`
+    - `GroupByRule`
     - `GroupedSectionsProps`
+    - `GroupingPlanContext`
+    - `GroupingRegistry`
     - `HierarchyConfig`
     - `ItemActionContribution`
     - `ItemActionProps`
@@ -1364,6 +1484,7 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
     - `ItemActionZone`
     - `ManualOrderConfig`
     - `MergedDataViewProps`
+    - `PartitionOptions`
     - `RowTone`
     - `SelectionConfig`
     - `ServerDataSourceResult`
@@ -1392,6 +1513,8 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
     - `getDataViewDescriptor`
     - `GroupedSections`
     - `IDENTITY_CODEC`
+    - `IDENTITY_GROUPING`
+    - `IDENTITY_GROUPING_SET`
     - `isFilterGroup`
     - `isGroupableField`
     - `makeSortComparator`
@@ -1406,12 +1529,15 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
     - `useFilterController`
     - `useFlatRows`
     - `useGroupByController`
+    - `useGroupingClock`
+    - `useGroupingRegistry`
     - `useIsChipField`
     - `useItemActionZones`
     - `useResolveCell`
     - `useResolveCellEditor`
     - `useResolveColumnConfig`
     - `useResolveColumnDerive`
+    - `useResolveGroupings`
     - `useResolveOperatorSet`
     - `useResolveValueCodec`
     - `useServerDataSource`
@@ -1460,15 +1586,18 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
     - `debug/slow-ops/pane`
     - `debug/trace/pane`
     - `fields/bool/data-view-codec`
+    - `fields/bool/data-view-group`
     - `fields/bool/filter`
     - `fields/bool/inline`
     - `fields/bool/table`
     - `fields/color/table`
     - `fields/date/data-view-codec`
+    - `fields/date/data-view-group`
     - `fields/date/filter`
     - `fields/date/inline`
     - `fields/date/table`
     - `fields/enum/column-config`
+    - `fields/enum/data-view-group`
     - `fields/enum/filter`
     - `fields/enum/inline`
     - `fields/enum/table`
@@ -1512,6 +1641,8 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
     - `FieldDef`
     - `FieldExtensionProps`
     - `FieldExtensionsDescriptor`
+    - `FieldGrouping`
+    - `FieldGroupingSet`
     - `FieldOption`
     - `FieldValue`
     - `FilterConjunction`
@@ -1523,6 +1654,9 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
     - `FilterPreset`
     - `FilterRule`
     - `FilterValueInputProps`
+    - `GroupBucket`
+    - `GroupByRule`
+    - `GroupingPlanContext`
     - `HierarchyConfig`
     - `ItemActionProps`
     - `ItemActionsDescriptor`
@@ -1538,6 +1672,7 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
     - `ValueCodec`
     - `ViewState`
   - Exports (values):
+    - `compareValues`
     - `DATA_VIEW_HEADER_OFFSET_VAR`
     - `defineDataView`
     - `FilterGroupSchema`

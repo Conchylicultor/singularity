@@ -2104,6 +2104,10 @@
       "name": "@singularity/plugin-fields-bool-data-view-codec",
       "version": "0.0.1",
     },
+    "plugins/fields/plugins/bool/plugins/data-view-group": {
+      "name": "@singularity/plugin-fields-bool-data-view-group",
+      "version": "0.0.1",
+    },
     "plugins/fields/plugins/bool/plugins/filter": {
       "name": "@singularity/plugin-fields-bool-filter",
       "version": "0.0.1",
@@ -2202,6 +2206,10 @@
     },
     "plugins/fields/plugins/enum/plugins/config": {
       "name": "@singularity/plugin-fields-enum-config",
+      "version": "0.0.1",
+    },
+    "plugins/fields/plugins/enum/plugins/data-view-group": {
+      "name": "@singularity/plugin-fields-enum-data-view-group",
       "version": "0.0.1",
     },
     "plugins/fields/plugins/enum/plugins/filter": {
@@ -6719,6 +6727,8 @@
 
     "@singularity/plugin-fields-bool-data-view-codec": ["@singularity/plugin-fields-bool-data-view-codec@workspace:plugins/fields/plugins/bool/plugins/data-view-codec"],
 
+    "@singularity/plugin-fields-bool-data-view-group": ["@singularity/plugin-fields-bool-data-view-group@workspace:plugins/fields/plugins/bool/plugins/data-view-group"],
+
     "@singularity/plugin-fields-bool-filter": ["@singularity/plugin-fields-bool-filter@workspace:plugins/fields/plugins/bool/plugins/filter"],
 
     "@singularity/plugin-fields-bool-filter-sql": ["@singularity/plugin-fields-bool-filter-sql@workspace:plugins/fields/plugins/bool/plugins/filter-sql"],
@@ -6768,6 +6778,8 @@
     "@singularity/plugin-fields-enum-column-config": ["@singularity/plugin-fields-enum-column-config@workspace:plugins/fields/plugins/enum/plugins/column-config"],
 
     "@singularity/plugin-fields-enum-config": ["@singularity/plugin-fields-enum-config@workspace:plugins/fields/plugins/enum/plugins/config"],
+
+    "@singularity/plugin-fields-enum-data-view-group": ["@singularity/plugin-fields-enum-data-view-group@workspace:plugins/fields/plugins/enum/plugins/data-view-group"],
 
     "@singularity/plugin-fields-enum-filter": ["@singularity/plugin-fields-enum-filter@workspace:plugins/fields/plugins/enum/plugins/filter"],
 

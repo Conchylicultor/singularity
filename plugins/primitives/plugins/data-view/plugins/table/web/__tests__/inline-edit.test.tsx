@@ -77,6 +77,10 @@ function renderProps(
     setSort: () => {},
     setFilter: () => {},
     setExpanded: () => {},
+    // Grouping inputs. These fixtures render UNGROUPED, so the clock is never
+    // consulted — a pinned zero states that rather than borrowing the real one.
+    now: 0,
+    groupOrder: "asc",
     options: undefined,
   };
 }

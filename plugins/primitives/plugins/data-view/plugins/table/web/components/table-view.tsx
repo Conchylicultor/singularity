@@ -84,7 +84,13 @@ export function TableView(props: DataViewRenderProps<unknown>): ReactNode {
     props.state,
     resolveOperatorSet,
     props.searchAccessor,
-    { rowKey: props.rowKey, manualRank: manualOrder?.getRank, aggregate },
+    {
+      rowKey: props.rowKey,
+      manualRank: manualOrder?.getRank,
+      aggregate,
+      now: props.now,
+      groupOrder: props.groupOrder,
+    },
   );
 
   // Which section each row sits in. DataTable's per-row decoration hook only

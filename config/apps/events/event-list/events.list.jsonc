@@ -11,6 +11,11 @@
       "name": "Upcoming",
       "view": {
         "type": "list",
+        // Sections relative to today, coarsening with distance — Today,
+        // Tomorrow, Later this week, Next week, … The forward half of the
+        // `smart` ladder is all that shows here, because the filter below
+        // already cuts everything before today.
+        "groupBy": { "fieldId": "startsAt", "groupingId": "smart" },
         "sort": [{ "fieldId": "startsAt", "direction": "asc" }],
         "filter": {
           "kind": "group",

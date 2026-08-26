@@ -34,6 +34,7 @@ sub-plugins under `plugins/`:
 - Sub-plugins:
   - **`config`** — Date field factory (dateField) for building field records.
   - **`data-view-codec`** — Date field type: data-view custom-column value codec (native Date ↔ canonical ISO text).
+  - **`data-view-group`** — Date field type: data-view grouping strategies (smart, day, week, month, year).
   - **`filter`** — Date field type: data-view filter operator set (is / before / after / between …).
   - **`filter-sql`** — Date field type: server filter-sql capability — day-granular operator→SQL fragments mirroring the data-view date filter predicates.
   - **`inline`** — Date field type: data-view inline cell editor (native date input editor).

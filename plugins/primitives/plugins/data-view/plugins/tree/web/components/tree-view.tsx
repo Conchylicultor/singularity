@@ -12,6 +12,7 @@ import {
   useItemActionZones,
   useResolveCell,
   useResolveCellEditor,
+  useGroupingRegistry,
   useResolveOperatorSet,
   type DataViewRenderProps,
   type FieldDef,
@@ -322,15 +323,32 @@ export function TreeView(props: DataViewRenderProps<unknown>): ReactNode {
   }, [visibleProjected, rowComparator]);
 
   // Group-by (Notion-style flat sections over the tree): the ROOTS partition
-  // into sections by the group-by field through the shared pure partition
-  // (enum-option section order + the "None" bucket for free), and every
+  // into sections by the group-by field through the shared pure partition (the
+  // field type's own bucket labels + ordinal, and the "None" bucket, for free),
+  // and every
   // descendant follows its root's section regardless of its own value. Computed
   // unconditionally (a cheap no-op when not grouped) so hook order stays
   // stable; `null` = ungrouped → the fast-path below renders exactly the
   // pre-group-by output.
-  const groupBy = props.state.groupBy;
+  const groupFieldId = props.state.groupBy?.fieldId;
+  const groupingId = props.state.groupBy?.groupingId;
+  // The rule is rebuilt from its two PRIMITIVE fields: `stateFor` mints a fresh
+  // `ViewState` per call, so depending on the object itself would re-partition
+  // the whole tree on every render.
+  const groupBy = useMemo(
+    () =>
+      groupFieldId && groupingId
+        ? { fieldId: groupFieldId, groupingId }
+        : undefined,
+    [groupFieldId, groupingId],
+  );
+  const resolveGrouping = useGroupingRegistry().resolve;
+  const now = props.now;
+  const groupOrder = props.groupOrder;
   const grouped = useMemo(() => {
-    const field = groupBy ? fields.find((f) => f.id === groupBy) : undefined;
+    const field = groupBy
+      ? fields.find((f) => f.id === groupBy.fieldId)
+      : undefined;
     // Unset / unresolvable / value-less group field → the ungrouped fast-path.
     if (!groupBy || !field?.value) return null;
     const sections = partitionIntoSections(
@@ -338,6 +356,7 @@ export function TreeView(props: DataViewRenderProps<unknown>): ReactNode {
       fieldsForProjected(fields),
       groupBy,
       (p) => p.id,
+      { resolveGrouping, now, order: groupOrder },
     );
     const buckets = bucketRowsByRootSection(sortedProjected, sections);
     return {
@@ -346,7 +365,7 @@ export function TreeView(props: DataViewRenderProps<unknown>): ReactNode {
       // strings here — the null-key single section only exists ungrouped).
       rowsBySectionKey: new Map(sections.map((s, i) => [s.key, buckets[i]!])),
     };
-  }, [sortedProjected, fields, groupBy]);
+  }, [sortedProjected, fields, groupBy, resolveGrouping, now, groupOrder]);
 
   const Row = useCallback(
     (rowProps: { node: TreeNode<Projected<unknown>>; depth: number }) => {

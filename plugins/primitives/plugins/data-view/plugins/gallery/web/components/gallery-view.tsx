@@ -134,7 +134,12 @@ export function GalleryView(props: DataViewRenderProps<unknown>): ReactNode {
     props.state,
     resolveOperatorSet,
     props.searchAccessor,
-    { rowKey: props.rowKey, aggregate },
+    {
+      rowKey: props.rowKey,
+      aggregate,
+      now: props.now,
+      groupOrder: props.groupOrder,
+    },
   );
   // Body fields follow the view's Properties (visible-fields) policy; sort/filter/
   // search above keep using the full `props.fields`. `null` → identity, so the

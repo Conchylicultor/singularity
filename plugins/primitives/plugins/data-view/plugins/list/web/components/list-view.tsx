@@ -138,7 +138,13 @@ export function ListView(props: DataViewRenderProps<unknown>): ReactNode {
     props.state,
     resolveOperatorSet,
     props.searchAccessor,
-    { rowKey: props.rowKey, manualRank: manualOrder?.getRank, aggregate },
+    {
+      rowKey: props.rowKey,
+      manualRank: manualOrder?.getRank,
+      aggregate,
+      now: props.now,
+      groupOrder: props.groupOrder,
+    },
   );
   // Body fields follow the view's Properties (visible-fields) policy; the section
   // pipeline above keeps using the full `props.fields` for sort/filter/search.

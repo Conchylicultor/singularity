@@ -7,11 +7,12 @@ import type {
   ViewSourceEntry,
 } from "@plugins/primitives/plugins/data-view/plugins/view-core/core";
 import type { ExpandChange } from "@plugins/primitives/plugins/tree/core";
-import type { FilterGroup, SortRule, ViewState } from "../../core";
+import type { FilterGroup, GroupByRule, SortRule, ViewState } from "../../core";
 import type { DataViewContribution } from "../slots";
 import { cyclePrimarySort } from "./sort-cycle";
 import { isFilterGroup } from "./filter-shape";
 import { dataViewDescriptors } from "./descriptors";
+import { IDENTITY_GROUPING } from "./identity-grouping";
 import { useViewEphemeral } from "./use-view-ephemeral";
 
 /** Instance actions for the editable view-switcher (every DataView has these). */
@@ -49,8 +50,8 @@ export interface ReadyViewModel {
   /** Replace the per-view visible-fields policy for THIS view (null = show-all). */
   setVisibleFields: (id: string, ids: string[] | null) => void;
   setFilter: (id: string, filter: FilterGroup | null) => void;
-  /** Set (or clear with `null`) THIS view's group-by field. */
-  setGroupBy: (id: string, fieldId: string | null) => void;
+  /** Set (or clear with `null`) THIS view's group-by rule (field + grouping). */
+  setGroupBy: (id: string, rule: GroupByRule | null) => void;
   setQuery: (id: string, q: string) => void;
   /** Apply a whole expand/collapse batch to THIS view (one localStorage write). */
   setExpanded: (id: string, changes: readonly ExpandChange[]) => void;
@@ -100,9 +101,37 @@ function readVisibleFields(view: VariantValue | undefined): string[] | null {
     ? (view.visibleFields as string[])
     : null;
 }
-function readGroupBy(view: VariantValue | undefined): string | undefined {
+/**
+ * Read the host-managed group-by choice off a row's raw variant value, coercing
+ * every persisted form into a `GroupByRule`. Migrate-on-read — NEVER destructive
+ * (the config is re-serialized to the object shape only when the user edits
+ * group-by):
+ *   - new object shape → as-is, defaulting a missing `groupingId` to the
+ *     built-in identity grouping (a hand-authored `{ "fieldId": "startsAt" }`
+ *     is a legitimate config, not a broken one);
+ *   - legacy bare `"<fieldId>"` string → `{ fieldId, groupingId: "value" }`,
+ *     which IS what that string always meant (one section per distinct value);
+ *   - null / absent / anything else → `undefined` (ungrouped).
+ */
+function readGroupBy(view: VariantValue | undefined): GroupByRule | undefined {
   const raw = view?.groupBy;
-  return typeof raw === "string" && raw.length > 0 ? raw : undefined;
+  if (typeof raw === "string") {
+    return raw.length > 0
+      ? { fieldId: raw, groupingId: IDENTITY_GROUPING.id }
+      : undefined;
+  }
+  if (raw && typeof raw === "object") {
+    const { fieldId, groupingId } = raw as Partial<GroupByRule>;
+    if (typeof fieldId !== "string" || fieldId.length === 0) return undefined;
+    return {
+      fieldId,
+      groupingId:
+        typeof groupingId === "string" && groupingId.length > 0
+          ? groupingId
+          : IDENTITY_GROUPING.id,
+    };
+  }
+  return undefined;
 }
 
 /**
@@ -208,10 +237,12 @@ export function useDataViewModel(
   );
 
   const setGroupBy = useCallback(
-    (id: string, fieldId: string | null) => {
+    (id: string, rule: GroupByRule | null) => {
+      // "Ungrouped" omits the key rather than persisting `groupBy: null`
+      // (mergeView drops undefined keys), exactly like an empty sort/filter.
       core.updateView(
         id,
-        { groupBy: fieldId ?? undefined } as unknown as VariantValue,
+        { groupBy: rule ?? undefined } as unknown as VariantValue,
         {
           merge: true,
         },
