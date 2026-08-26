@@ -1,4 +1,6 @@
-import { index, jsonb, pgTable, text, timestamp } from "drizzle-orm/pg-core";
+import { z } from "zod";
+import { index, pgTable, text, timestamp } from "drizzle-orm/pg-core";
+import { parsedJson } from "@plugins/database/plugins/sql-column/server";
 
 // Operation ledger: one row per trashed ROOT entity (a bulk delete of two
 // sub-pages = two independently-restorable entries). Domain-agnostic — the
@@ -18,7 +20,15 @@ export const _trashEntries = pgTable(
     deletedAt: timestamp("deleted_at", { withTimezone: true })
       .defaultNow()
       .notNull(),
-    meta: jsonb("meta").notNull().default({}),
+    // The opaque per-source payload. It read back as `unknown` while every
+    // server reader cast the whole row `as TrashEntry` to get at it — so the
+    // type it really has is `TrashEntrySchema.meta`'s, and now that is what
+    // decodes it. `z.record` keeps every key a source put there.
+    meta: parsedJson("meta", z.record(z.string(), z.unknown()))
+      .notNull()
+      .default({}),
   },
-  (t) => [index("trash_entries_source_deleted_idx").on(t.sourceId, t.deletedAt)],
+  (t) => [
+    index("trash_entries_source_deleted_idx").on(t.sourceId, t.deletedAt),
+  ],
 );

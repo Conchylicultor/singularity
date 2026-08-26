@@ -6,15 +6,46 @@ import { defineBlock } from "./define-block";
 import type { BlockMarkdown } from "./markdown";
 
 // A block `data` payload that has been validated against its block type's schema.
-// Type-only brand (no runtime shape) — mintable ONLY by `parseBlockData()` on the
-// server, its sole minting site. The `page_blocks.data` column is `$type<BlockData>`,
-// so a write that did not pass through `parseBlockData` fails to compile. Readers are
-// unaffected: `BlockData` is assignable to the `unknown` that `pageData()` /
-// `BlockSchema.data` accept.
+// Type-only brand (no runtime shape). The `page_blocks.data` column's type IS
+// `BlockData`, so a write that did not pass through `parseBlockData` fails to
+// compile. Readers are unaffected: `BlockData` is assignable to the `unknown`
+// that `pageData()` / `BlockSchema.data` accept.
 declare const blockDataBrand: unique symbol;
 export type BlockData = Record<string, unknown> & {
   readonly [blockDataBrand]: never;
 };
+
+/**
+ * Mint the {@link BlockData} brand. THE one cast, in one place, with two callers
+ * — one per direction across the storage boundary:
+ *
+ *  - `parseBlockData()` (server) mints it from a **strict parse against the
+ *    block type's own schema**, which is what "validated block data" means;
+ *  - {@link StoredBlockDataSchema} mints it on the way **out of the column**,
+ *    where the brand is re-established by provenance: the column's write type is
+ *    `BlockData`, so every row in it came through `parseBlockData` already.
+ *
+ * A decoder is handed one value and never its row, so it cannot reach the
+ * block's `type` and cannot re-run the per-type parse. What it can state is the
+ * half of `BlockData` that holds for every block type — the payload is a JSON
+ * object — and that half really runs.
+ */
+export function asBlockData(data: Record<string, unknown>): BlockData {
+  return data as BlockData;
+}
+
+/**
+ * The `page_blocks.data` column's decoder — see {@link asBlockData} for what it
+ * does and does not claim.
+ *
+ * `z.record` rather than a `z.object`: the per-type schemas are contributed by
+ * ~35 block-type plugins and a decoder cannot know which one applies, so an
+ * object schema here would strip every key it has not heard of — i.e. all of
+ * them. `z.record` keeps every key by construction.
+ */
+export const StoredBlockDataSchema: ZodParser<BlockData> = z
+  .record(z.string(), z.unknown())
+  .transform(asBlockData);
 
 // Recursive validator for the icon-picker SvgNode storage format. The `data`
 // jsonb column stores the tree natively (no JSON-string wrapping), so a page

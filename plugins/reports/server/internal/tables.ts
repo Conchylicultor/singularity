@@ -1,13 +1,14 @@
+import { z } from "zod";
 import {
   boolean,
   index,
   integer,
-  jsonb,
   pgTable,
   text,
   timestamp,
   uniqueIndex,
 } from "drizzle-orm/pg-core";
+import { parsedJson } from "@plugins/database/plugins/sql-column/server";
 
 // One row per (fingerprint, worktree). Upserts atomically dedupe repeats:
 // first report inserts + creates a task; repeats bump count and advance
@@ -33,7 +34,16 @@ export const _reports = pgTable(
     userAgent: text("user_agent"),
     // The kind's validated payload. Each ReportKindSpec.schema owns this shape;
     // the engine persists whatever the schema parses without inspecting it.
-    data: jsonb("data").$type<Record<string, unknown>>().notNull().default({}),
+    //
+    // The column's own decoder therefore states the ONE thing that is true of
+    // every kind — the payload is a JSON object — and nothing more. It cannot
+    // reach the row's `kind`, so the per-kind shape stays where it is checked
+    // today: `recordReport` parses the kind's schema before writing, and each
+    // kind's task builder re-parses it on read. `z.record` keeps every key, so
+    // the decoder normalizes nothing away from a kind it has never heard of.
+    data: parsedJson("data", z.record(z.string(), z.unknown()))
+      .notNull()
+      .default({}),
     count: integer("count").notNull().default(1),
     // Generic velocity state: set when this fingerprint fired faster than the
     // velocity window allows; while set, recordReport stops churning the task

@@ -2,7 +2,6 @@ import { desc, eq } from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import { defineResource } from "@plugins/framework/plugins/server-core/core";
 import { trashEntriesResource as descriptor } from "../../core/resources";
-import type { TrashEntry } from "../../core/schemas";
 import { _trashEntries } from "./tables";
 
 // One source's trash entries, newest-deleted first — scoped by `sourceId`
@@ -17,5 +16,5 @@ export const trashEntriesLiveResource = defineResource(descriptor, {
       .select()
       .from(_trashEntries)
       .where(eq(_trashEntries.sourceId, sourceId))
-      .orderBy(desc(_trashEntries.deletedAt)) as unknown as Promise<TrashEntry[]>,
+      .orderBy(desc(_trashEntries.deletedAt)),
 });

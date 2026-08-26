@@ -1,7 +1,8 @@
 /**
  * no-asserted-column-type
  *
- * `text("status").$type<"a" | "b">()` declares a type nothing produces. Unlike
+ * `text("status").$type<"a" | "b">()` and `jsonb("data").$type<T>()` declare a
+ * type nothing produces. Unlike
  * `.mapWith`, `$type` changes **no runtime behaviour at all** — it is purely a
  * type assertion — so a row holding anything else is handed to typed code as if
  * it matched, and every downstream `switch` falls through. It is the
@@ -34,16 +35,21 @@
  * reads `getSQLType()`, which is `"text"`), so adopting it generates no
  * migration.
  *
+ * The jsonb tier is the same hole wearing a disguise, and it is in scope now.
+ * `jsonb("x").$type<T>()` at least hands back a real JS value — Postgres
+ * genuinely decodes the JSON — so what goes unchecked is only the SHAPE, which
+ * reads as mostly fine. It is not, and the remedy differs in one way worth
+ * saying at the call site: `parsedJson`'s schema NORMALIZES (a `z.object`
+ * strips keys it does not declare, on read and on write), so an open bag wants
+ * a `z.record` and a closed shape wants a `z.object`. That choice is the whole
+ * of porting a site.
+ *
  * Scoped by the chain's ROOT: it fires only when the `$type` / config sits on a
- * literal `text(` / `varchar(` / `char(` call. That keeps two things out of
- * scope. `defineEntity`'s generic `b.$type()` is out for good — its type came
- * from a field's own `FieldDef` and its fix belonged in the `fields.storage`
- * capability, where it landed; the call no longer exists. `jsonb(…).$type<T>()`
- * is out for now, and NOT because the tier is weaker: `parsedJson` (this same
- * barrel) is its replacement and the rule should grow a `jsonb(` root. What
- * gates that is the ~16 hand-written call sites, several of which declare a TS
- * type with no zod schema in existence, over load-bearing tables — each needs
- * its own schema written and its own live-data survey run first.
+ * literal `text(` / `varchar(` / `char(` / `jsonb(` call. A bare `jsonb("x")`
+ * with no `$type` stays legal — it reads back `unknown`, which is what the
+ * column holds. `defineEntity`'s generic `b.$type()` is out for good: its type
+ * came from a field's own `FieldDef` and its fix belonged in the
+ * `fields.storage` capability, where it landed; the call no longer exists.
  *
  * NOT type-aware, matching the closest precedents (`no-asserted-sql-type`,
  * `no-unparsed-sql-rows`, `no-narrow-zodtype`) — and self-contained by necessity:
@@ -65,36 +71,48 @@ const createRule = ESLintUtils.RuleCreator(
  */
 const SQL_COLUMN_DIR = "plugins/database/plugins/sql-column/";
 
-/** The drizzle pg-core builders that produce a `text`-family column. */
-const TEXT_COLUMN_FACTORIES = new Set(["text", "varchar", "char"]);
+/**
+ * Which decoder a column builder's tier calls for. The two tiers differ only in
+ * their remedy, so the rule keys the message off this rather than off the
+ * builder name — a fourth text-family builder needs no second branch.
+ */
+type ColumnTier = "text" | "json";
+
+/** The drizzle pg-core builders whose narrowed type must come from a decoder. */
+const COLUMN_FACTORIES = new Map<string, ColumnTier>([
+  ["text", "text"],
+  ["varchar", "text"],
+  ["char", "text"],
+  ["jsonb", "json"],
+]);
 
 /**
- * ``text("x")`` — a bare call to one of the text-family builders. Deliberately
- * NOT a type predicate: narrowing `node` on the false branch would leave the
- * `$type` check reading `.callee` off `never`.
+ * ``text("x")`` / ``jsonb("x")`` — a bare call to one of those builders, and
+ * which tier it belongs to. `null` when it is not one, deliberately rather than
+ * a type predicate: narrowing `node` on the false branch would leave the `$type`
+ * check reading `.callee` off `never`.
  */
-function isTextColumnCall(node: TSESTree.Node): boolean {
-  return (
-    node.type === "CallExpression" &&
-    node.callee.type === "Identifier" &&
-    TEXT_COLUMN_FACTORIES.has(node.callee.name)
-  );
+function columnTierOf(node: TSESTree.Node): ColumnTier | null {
+  if (node.type !== "CallExpression") return null;
+  if (node.callee.type !== "Identifier") return null;
+  return COLUMN_FACTORIES.get(node.callee.name) ?? null;
 }
 
 /**
- * Is `expr` a text-column builder, possibly behind a chain of calls on it —
- * `text("x").notNull()`, `text("x").default("a")`? Only such a chain can carry
- * drizzle's `$type`, so this keeps the rule off every unrelated `.$type<T>()`
- * (notably `jsonb(…)`, which is deliberately out of scope).
+ * Is `expr` a column builder, possibly behind a chain of calls on it —
+ * `text("x").notNull()`, `jsonb("x").default({})`? Only such a chain can carry
+ * drizzle's `$type`, so this keeps the rule off every unrelated `.$type<T>()`.
+ * Answers with the ROOT's tier, which is what picks the remedy.
  */
-function rootsInTextColumn(expr: TSESTree.Node): boolean {
-  if (isTextColumnCall(expr)) return true;
+function rootColumnTier(expr: TSESTree.Node): ColumnTier | null {
+  const own = columnTierOf(expr);
+  if (own) return own;
   if (expr.type === "TSNonNullExpression" || expr.type === "TSAsExpression") {
-    return rootsInTextColumn(expr.expression);
+    return rootColumnTier(expr.expression);
   }
-  if (expr.type === "CallExpression") return rootsInTextColumn(expr.callee);
-  if (expr.type === "MemberExpression") return rootsInTextColumn(expr.object);
-  return false;
+  if (expr.type === "CallExpression") return rootColumnTier(expr.callee);
+  if (expr.type === "MemberExpression") return rootColumnTier(expr.object);
+  return null;
 }
 
 /**
@@ -143,7 +161,7 @@ function hasEnumConfig(node: TSESTree.CallExpression): boolean {
   );
 }
 
-const REMEDY =
+const TEXT_REMEDY =
   "Use `parsedText(name, schema)` from `@plugins/database/plugins/sql-column/server`: it builds the " +
   "same `text` column through drizzle's `customType`, with the schema as the real `fromDriver` / " +
   "`toDriver` decoder, and infers the column's type from that schema alone — so the type cannot be " +
@@ -154,13 +172,28 @@ const REMEDY =
   '"text" — so adopting it produces no migration. ' +
   "See research/2026-08-25-database-decoded-columns.md.";
 
+const JSON_REMEDY =
+  "Use `parsedJson(name, schema)` from `@plugins/database/plugins/sql-column/server`: it builds the " +
+  "same `jsonb` column through drizzle's `customType`, with the schema as the real `fromDriver` / " +
+  "`toDriver` decoder, and infers the column's type from that schema alone. One decision to make: it " +
+  "NORMALIZES as well as checks, because a `z.object` strips keys it does not declare, in both " +
+  "directions. So an open per-producer bag takes `z.record(z.string(), z.unknown())`, which verifies " +
+  "the value really is a non-null object — all `Record<string, unknown>` ever claimed — and keeps " +
+  "every key; a closed shape takes its `z.object`, which is what makes the declared type true rather " +
+  "than merely asserted. Cost is the SCHEMA's depth, not the payload's size: the largest jsonb value " +
+  "in this repo (avg 123 KB) decodes in 1.7 µs against its own shallow schema. The generated DDL is " +
+  'byte-identical to `jsonb(...)` — `getSQLType()` is "jsonb", and `.default()` is untouched — so ' +
+  "adopting it produces no migration. A column that really is arbitrary JSON keeps a bare `jsonb(x)` " +
+  "and its honest `unknown`. " +
+  "See research/2026-08-26-database-decoded-jsonb-hand-written-columns.md.";
+
 export default createRule({
   name: "no-asserted-column-type",
   meta: {
     type: "problem",
     docs: {
       description:
-        "a text column's narrowed type must come from a decoder — `parsedText(name, schema)`, never `$type<T>()` or an `enum` config",
+        "a column's narrowed type must come from a decoder — `parsedText` / `parsedJson`, never `$type<T>()` or an `enum` config",
     },
     schema: [],
     messages: {
@@ -172,7 +205,7 @@ export default createRule({
         "`switch` falls through. It has already cost this repo two `tolerantEnum` hedges at the live-state " +
         "resource boundary — which protected the browser and left two server-side readers throwing a " +
         "`TypeError` on a registry lookup. " +
-        REMEDY,
+        TEXT_REMEDY,
       enumColumnConfig:
         "This `{ enum: [...] }` config derives the column's type from a runtime list, which is better than " +
         "`$type<T>()` — the type cannot drift from an unrelated type — but drizzle emits no CHECK constraint " +
@@ -181,7 +214,15 @@ export default createRule({
         "It is also where the same literal list tends to get duplicated: both of this repo's call sites " +
         "spelled the set twice, once here and once in the plugin's own `shared/schemas.ts` wire schema, free " +
         "to drift apart. One `z.enum` feeding both is the fix in either direction. " +
-        REMEDY,
+        TEXT_REMEDY,
+      assertedJsonColumnType:
+        "This `.$type<…>()` on a jsonb column declares a SHAPE nothing produces. Postgres genuinely " +
+        "decodes the JSON, so the value really is a JS value — which is what makes this read as safer " +
+        "than the text tier and is exactly why it is not: `$type` changes NO runtime behaviour at all, " +
+        "so a row written by an older schema version, by hand, or by a worktree on different code is " +
+        "handed to typed code as a well-typed value of a shape it does not have, and nothing in either " +
+        "direction ever looks. " +
+        JSON_REMEDY,
     },
   },
   defaultOptions: [],
@@ -193,8 +234,11 @@ export default createRule({
 
     return {
       CallExpression(node: TSESTree.CallExpression) {
-        if (isTextColumnCall(node)) {
-          if (hasEnumConfig(node)) {
+        const ownTier = columnTierOf(node);
+        if (ownTier) {
+          // The `{ enum: [...] }` config is a text-family spelling; `jsonb` has
+          // no such argument, so there is nothing to report on a bare one.
+          if (ownTier === "text" && hasEnumConfig(node)) {
             context.report({ node, messageId: "enumColumnConfig" });
           }
           return;
@@ -203,8 +247,13 @@ export default createRule({
         const callee = node.callee;
         if (callee.type !== "MemberExpression") return;
         if (propertyName(callee) !== "$type") return;
-        if (!rootsInTextColumn(callee.object)) return;
-        context.report({ node, messageId: "assertedColumnType" });
+        const tier = rootColumnTier(callee.object);
+        if (!tier) return;
+        context.report({
+          node,
+          messageId:
+            tier === "json" ? "assertedJsonColumnType" : "assertedColumnType",
+        });
       },
     };
   },

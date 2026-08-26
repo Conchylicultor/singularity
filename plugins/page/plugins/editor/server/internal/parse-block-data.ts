@@ -1,16 +1,18 @@
 import { HttpError } from "@plugins/infra/plugins/endpoints/server";
 import type { BlockData } from "../../core";
-// Deep relative import on purpose: this file is in every `tables.ts` schema
+// Deep relative imports on purpose: this file is in every `tables.ts` schema
 // graph (via the server barrel), which drizzle-kit must load SYNCHRONOUSLY —
 // the core barrel would pull the async lexical/yjs bridges in with it.
+import { asBlockData } from "../../core/schemas";
 import { runsOf } from "../../core/rich-text";
 import { resolveBlockHandle } from "./block-registry";
 
 /**
  * Validate a block's `data` against its type's schema and mint the branded
- * {@link BlockData}. THE sole minting site: the `page_blocks.data` column is
- * `$type<BlockData>`, so every write funnels through here and skipping validation
- * is a compile error, not a convention.
+ * {@link BlockData}. THE sole WRITE-side minting site: the `page_blocks.data`
+ * column's type is `BlockData`, so every write funnels through here and skipping
+ * validation is a compile error, not a convention. (The read side re-establishes
+ * the brand by provenance, in the column's own decoder — see `asBlockData`.)
  *
  * Unknown keys are a LOUD 400, never stripped: silently canonicalizing the write
  * would hide the class of bug this boundary exists to catch (e.g. `text` injected
@@ -33,8 +35,14 @@ export function parseBlockData(type: string, data: unknown): BlockData {
   // PRESENT — a MISSING `text` on a text-bearing type must stay a loud 400, never
   // be materialized as `[]`.
   const normalized =
-    handle.acceptsText && source && typeof source === "object" && "text" in source
-      ? { ...(source as object), text: runsOf((source as { text?: unknown }).text) }
+    handle.acceptsText &&
+    source &&
+    typeof source === "object" &&
+    "text" in source
+      ? {
+          ...(source as object),
+          text: runsOf((source as { text?: unknown }).text),
+        }
       : source;
 
   const result = handle.schema.strict().safeParse(normalized);
@@ -42,9 +50,13 @@ export function parseBlockData(type: string, data: unknown): BlockData {
     const issues = result.error.issues
       .map((i) => `${i.path.join(".") || "(root)"}: ${i.message}`)
       .join("; ");
-    throw new HttpError(400, `Invalid data for block type "${type}": ${issues}`);
+    throw new HttpError(
+      400,
+      `Invalid data for block type "${type}": ${issues}`,
+    );
   }
-  // The ONLY cast: a strict parse against the type's own schema is exactly what
-  // "validated block data" means, so this is where the brand is minted.
-  return result.data as BlockData;
+  // A strict parse against the type's own schema is exactly what "validated
+  // block data" means, so this is what the brand is minted from. The cast itself
+  // lives in `asBlockData`, the one place it is spelled.
+  return asBlockData(result.data);
 }

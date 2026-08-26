@@ -102,6 +102,7 @@ already-effective onsets (`effectiveOnsets(pattern)`, rotation applied) and maps
   - Uses:
     - `apps/sonata/library._songs`
     - `database.db`
+    - `database/sql-column.parsedJson`
     - `infra/endpoints.implement`
     - `infra/entity-extensions.defineExtension`
   - DB schema: `plugins/apps/plugins/sonata/plugins/rich/plugins/rhythm-controls/server/internal/tables.ts`

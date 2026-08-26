@@ -27,9 +27,19 @@ export type RetentionJob = JobFactory<
   typeof RETENTION_EVENT
 >;
 
-export interface RetentionSpec {
+/**
+ * A retention policy, generic in the table it sweeps.
+ *
+ * `T` exists solely so `beforeDelete` receives the table's OWN row type. Erasing
+ * it to `Record<string, unknown>[]` made every teardown hook re-assert the row
+ * shape by hand — a cast that is exactly the class of claim this repo's column
+ * decoders exist to remove, and one the primitive was manufacturing rather than
+ * the consumer choosing. Inference does the work: `defineRetention({ table: _x,
+ * … })` binds `T` from the argument, so no call site names it.
+ */
+export interface RetentionSpec<T extends PgTable = PgTable> {
   /** The table to sweep. Its name (drizzle `getTableName`) derives the job id. */
-  table: PgTable;
+  table: T;
   /** Timestamp column compared against the cutoff. Defaults to `"createdAt"`. */
   column?: string;
   /** Rows older than this many days are deleted. */
@@ -54,7 +64,7 @@ export interface RetentionSpec {
    * callback nor the DELETE runs. Retention stays generic — the CALLER supplies
    * the callback; this plugin never imports a consumer registry.
    */
-  beforeDelete?: (rows: Record<string, unknown>[]) => Promise<void>;
+  beforeDelete?: (rows: T["$inferSelect"][]) => Promise<void>;
 }
 
 // Any drizzle executor the sweep can ride on (global handle, tx, or a test
@@ -72,14 +82,14 @@ export type RetentionExecutor =
  * next tick (the predicate is time-based, so the set can only grow, never lose
  * a row the callback already handled).
  */
-export async function sweepExpired(
+export async function sweepExpired<T extends PgTable>(
   dbx: RetentionExecutor,
   args: {
-    table: PgTable;
+    table: T;
     column: PgColumn;
     cutoff: Date;
     where?: SQL;
-    beforeDelete?: (rows: Record<string, unknown>[]) => Promise<void>;
+    beforeDelete?: (rows: T["$inferSelect"][]) => Promise<void>;
   },
 ): Promise<void> {
   const predicate = retentionPredicate(args.column, args.cutoff, args.where);
@@ -100,7 +110,9 @@ export async function sweepExpired(
  * is recorded only in the returned factory's `register()` (below), never here —
  * see the comment there.
  */
-export function defineRetention(spec: RetentionSpec): RetentionJob {
+export function defineRetention<T extends PgTable>(
+  spec: RetentionSpec<T>,
+): RetentionJob {
   const tableName = getTableName(spec.table);
   const columnKey = spec.column ?? DEFAULT_COLUMN;
   const column = (

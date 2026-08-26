@@ -1,5 +1,8 @@
 import { z } from "zod";
-import { defineEndpoint, dateString } from "@plugins/infra/plugins/endpoints/core";
+import {
+  defineEndpoint,
+  dateString,
+} from "@plugins/infra/plugins/endpoints/core";
 
 export const RunBackupResultSchema = z.object({
   ok: z.literal(true),
@@ -26,7 +29,14 @@ const BackupSourceReportSchema = z.object({
   sizeBytes: z.number(),
 });
 
-const BackupManifestSchema = z.object({
+/**
+ * The manifest as it is really stored — which is WIDER than `BackupManifest`,
+ * deliberately: v1 rows carry `version: 1` and a fixed `sources` object, and the
+ * TS interface has always declared only the v2 shape. This schema is what
+ * decodes the `backup_runs.manifest` column, so the column's type is derived
+ * from what the rows actually hold instead of from an interface they contradict.
+ */
+export const BackupManifestSchema = z.object({
   version: z.union([z.literal(1), z.literal(2)]),
   createdAt: z.string(),
   trigger: z.enum(["manual", "periodic"]),
@@ -39,7 +49,8 @@ const BackupManifestSchema = z.object({
   sizeBytes: z.number(),
 });
 
-const BackupTargetResultSchema = z.object({
+/** One target's outcome, and the decoder for `backup_runs.target_results`. */
+export const BackupTargetResultSchema = z.object({
   targetId: z.string(),
   ok: z.boolean(),
   detail: z.string().optional(),

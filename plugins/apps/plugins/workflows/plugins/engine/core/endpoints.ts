@@ -1,14 +1,21 @@
 import { z } from "zod";
 import { defineEndpoint } from "@plugins/infra/plugins/endpoints/core";
 import {
+  DefinitionStepSchema,
   WorkflowDefinitionSchema,
   WorkflowExecutionSchema,
 } from "./schemas";
 
+// A definition's step map, as a request body carries it. The same declaration
+// `WorkflowDefinitionSchema.steps` and the `workflow_definitions.steps` column
+// use — so a malformed step is a 400 at the boundary rather than a row that
+// only fails later, and the two handlers need no cast to reach the mutations.
+const StepMapSchema = z.record(z.string(), DefinitionStepSchema);
+
 export const CreateDefinitionBodySchema = z.object({
   name: z.string(),
   description: z.string().optional(),
-  steps: z.record(z.unknown()).optional(),
+  steps: StepMapSchema.optional(),
   entryStepId: z.string().optional(),
 });
 export type CreateDefinitionBody = z.infer<typeof CreateDefinitionBodySchema>;
@@ -16,7 +23,7 @@ export type CreateDefinitionBody = z.infer<typeof CreateDefinitionBodySchema>;
 export const UpdateDefinitionBodySchema = z.object({
   name: z.string().optional(),
   description: z.string().nullable().optional(),
-  steps: z.record(z.unknown()).optional(),
+  steps: StepMapSchema.optional(),
   entryStepId: z.string().nullable().optional(),
 });
 export type UpdateDefinitionBody = z.infer<typeof UpdateDefinitionBodySchema>;

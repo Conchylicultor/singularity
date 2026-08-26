@@ -8,6 +8,7 @@
 - Server:
   - Uses:
     - `database.db`
+    - `database/sql-column.parsedJson`
     - `infra/endpoints.implement`
   - DB schema: `plugins/search/plugins/engine/server/internal/tables.ts`
   - Exports (values):

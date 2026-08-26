@@ -2,15 +2,18 @@ import {
   type AnyPgColumn,
   boolean,
   index,
-  jsonb,
   pgTable,
   text,
   timestamp,
   uniqueIndex,
 } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
+import { parsedJson } from "@plugins/database/plugins/sql-column/server";
 import { rankText } from "@plugins/primitives/plugins/rank/core";
-import type { BlockData } from "../../core";
+// Deep relative import on purpose — see `parse-block-data.ts`: drizzle-kit loads
+// this file SYNCHRONOUSLY, and the core barrel would pull the lexical/yjs
+// bridges in with it.
+import { asBlockData, StoredBlockDataSchema } from "../../core/schemas";
 
 // One uniform tree of blocks. A "page" is just a block of `type="page"` whose
 // payload (`{ title, icon }`) lives in `data` like every other block type —
@@ -32,11 +35,19 @@ export const _blocks = pgTable(
       onDelete: "cascade",
     }),
     type: text("type").notNull(),
-    // Branded so every write must come from `parseBlockData()` (the sole `BlockData`
-    // minting site) — an unvalidated `data` is a compile error, not a convention.
-    // `$type<>` is type-only: it produces NO migration and no DDL change, and reads
-    // are unaffected (`BlockData` is assignable to the `unknown` readers accept).
-    data: jsonb("data").notNull().default({} as BlockData).$type<BlockData>(),
+    // Branded so every write must come from `parseBlockData()` (the sole write-side
+    // `BlockData` minting site) — an unvalidated `data` is a compile error, not a
+    // convention. Reads are unaffected (`BlockData` is assignable to the `unknown`
+    // readers accept).
+    //
+    // The decoder cannot re-run the per-type parse (it is handed one value, never
+    // its row, so it cannot reach `type`); it states the half that holds for every
+    // block type — the payload is a JSON object — and re-establishes the brand by
+    // provenance. `z.record`, so no block type's keys are stripped. The `jsonb` DDL
+    // is byte-identical, default included, so this generates no migration.
+    data: parsedJson("data", StoredBlockDataSchema)
+      .notNull()
+      .default(asBlockData({})),
     rank: rankText("rank").notNull(),
     expanded: boolean("expanded").notNull().default(true),
     // NULL = live. A soft delete (trash) sets `deletedAt` + `trashEntryId`
@@ -46,8 +57,12 @@ export const _blocks = pgTable(
     // flagged subtree to its `trash_entries` ledger row for exact-restore.
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
     trashEntryId: text("trash_entry_id"),
-    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
-    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
   },
   (t) => [
     index("page_blocks_page_parent_rank_idx").on(t.pageId, t.parentId, t.rank),

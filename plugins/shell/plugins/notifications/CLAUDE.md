@@ -40,6 +40,7 @@
     - `database.db`
     - `database/admin.ExcludeFromFork`
     - `database/live-state-snapshot.reconcileReadSetTable`
+    - `database/sql-column.parsedJson`
     - `infra/endpoints.HttpError`
     - `infra/endpoints.implement`
     - `infra/jobs.defineJob`

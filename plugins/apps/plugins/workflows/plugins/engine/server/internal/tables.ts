@@ -1,3 +1,4 @@
+import { z } from "zod";
 import {
   index,
   integer,
@@ -6,16 +7,25 @@ import {
   text,
   timestamp,
 } from "drizzle-orm/pg-core";
-import { parsedText } from "@plugins/database/plugins/sql-column/server";
-import { ExecutionStatusSchema, ExecutionStepStatusSchema } from "../../core";
-import type { DefinitionStep } from "../../core";
+import {
+  parsedJson,
+  parsedText,
+} from "@plugins/database/plugins/sql-column/server";
+import {
+  DefinitionStepSchema,
+  ExecutionStatusSchema,
+  ExecutionStepStatusSchema,
+} from "../../core";
 
 export const _workflowDefinitions = pgTable("workflow_definitions", {
   id: text("id").primaryKey(),
   name: text("name").notNull(),
   description: text("description"),
-  steps: jsonb("steps")
-    .$type<Record<string, DefinitionStep>>()
+  // The definition's steps, keyed by step id. `z.record` over the step ids (an
+  // open set) with each VALUE the closed `DefinitionStepSchema` — the same
+  // declaration `WorkflowDefinitionSchema.steps` uses, so the column and the
+  // wire contract read one schema and cannot drift.
+  steps: parsedJson("steps", z.record(z.string(), DefinitionStepSchema))
     .notNull()
     .default({}),
   entryStepId: text("entry_step_id"),
@@ -56,18 +66,25 @@ export const _workflowExecutionSteps = pgTable(
     executionOrder: integer("execution_order").notNull(),
     stepPluginId: text("step_plugin_id").notNull(),
     label: text("label").notNull(),
-    config: jsonb("config")
-      .$type<Record<string, unknown>>()
+    // The step's own config, whose shape belongs to its step-type plugin — one
+    // column across every step type, so `z.record` is the only honest schema
+    // and it keeps every key the plugin wrote.
+    config: parsedJson("config", z.record(z.string(), z.unknown()))
       .notNull()
       .default({}),
     next: text("next"),
-    nextStepMapping: jsonb("next_step_mapping").$type<Record<
-      string,
-      string
-    > | null>(),
+    // branch key → next step id. Nullable is drizzle's (no `.notNull()`), so the
+    // decoder is handed the inner schema and never sees a `null`.
+    nextStepMapping: parsedJson(
+      "next_step_mapping",
+      z.record(z.string(), z.string()),
+    ),
     status: parsedText("status", ExecutionStepStatusSchema)
       .notNull()
       .default("pending"),
+    // Whatever the previous step emitted, and whatever this one emitted — open
+    // by design (any step type's output can be the next one's input), so these
+    // declare `unknown` and mean it. Nothing for a decoder to verify.
     input: jsonb("input"),
     output: jsonb("output"),
     error: text("error"),

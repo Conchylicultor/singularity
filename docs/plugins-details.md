@@ -3650,6 +3650,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                 - Uses:
                   - `apps/sonata/library._songs`
                   - `database.db`
+                  - `database/sql-column.parsedJson`
                   - `infra/endpoints.implement`
                   - `infra/entity-extensions.defineExtension`
                 - DB schema: `plugins/apps/plugins/sonata/plugins/rich/plugins/rhythm-controls/server/internal/tables.ts`
@@ -5467,6 +5468,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `resource.declare` "workflow-executions"
             - Uses:
               - `database.db`
+              - `database/sql-column.parsedJson`
               - `database/sql-column.parsedText`
               - `infra/endpoints.HttpError`
               - `infra/endpoints.implement`
@@ -6629,6 +6631,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `config_v2.ConfigV2`
       - `config_v2.getConfig`
       - `database.db`
+      - `database/sql-column.parsedJson`
       - `infra/endpoints.implement`
       - `infra/jobs.defineJob`
       - `infra/paths.BACKUPS_DIR`
@@ -8461,6 +8464,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses:
           - `conversations.conversationCreated`
           - `conversations/preprompts.resolvePrepromptItem`
+          - `database/sql-column.parsedJson`
           - `infra/entity-extensions.defineExtension`
           - `infra/events.Trigger`
           - `infra/jobs.defineJob`
@@ -11361,15 +11365,25 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`sql-column`** — Decoded columns: `parsedText` / `parsedJson` derive a column's type from a zod schema that really decodes it — on every read and every write — so a column can no longer declare a string-literal union, or a jsonb shape, that nothing verifies.
       - Cross-plugin:
         - Imported by:
+          - `apps/sonata/rich/rhythm-controls`
           - `apps/workflows/engine`
+          - `backup`
           - `conversations/conversation-category`
+          - `conversations/conversation-preprompt`
           - `conversations/conversation-progress`
           - `fields/json/storage`
           - `fields/tags/storage`
           - `fields/text/storage`
+          - `infra/events`
           - `infra/jobs`
+          - `infra/trash`
+          - `page/editor`
+          - `reports`
+          - `search/engine`
+          - `shell/notifications`
           - `tasks/auto-start`
           - `tasks/task-effort`
+          - `ui/tweakcn`
       - Server:
         - Exports (types):
           - `SqlColumnDirection`
@@ -16536,6 +16550,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `resource.declare` "event-triggers"
         - Uses:
           - `database.db`
+          - `database/sql-column.parsedJson`
           - `infra/endpoints.HttpError`
           - `infra/endpoints.implement`
           - `infra/entities.defaultNow`
@@ -16929,6 +16944,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `database.db`
           - `database/admin.connectionString`
           - `database/admin.ExcludeSchemaDataFromFork`
+          - `database/sql-column.parsedJson`
           - `database/sql-column.parsedText`
           - `infra/endpoints.HttpError`
           - `infra/endpoints.implement`
@@ -17686,6 +17702,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Contributes: `resource.declare` "trash-entries"
         - Uses:
           - `database.db`
+          - `database/sql-column.parsedJson`
           - `infra/endpoints.HttpError`
           - `infra/endpoints.implement`
           - `infra/retention.defineRetention`
@@ -18767,6 +18784,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses:
           - `database.currentTxId`
           - `database.db`
+          - `database/sql-column.parsedJson`
           - `infra/endpoints.HttpError`
           - `infra/endpoints.implement`
           - `infra/events.defineTriggerEvent`
@@ -28343,6 +28361,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `database.db`
       - `database/admin.ExcludeFromFork`
       - `database/change-feed.ExcludeFromChangeFeed`
+      - `database/sql-column.parsedJson`
       - `infra/duress.createShedBuffer`
       - `infra/duress.ShedSummary`
       - `infra/endpoints.HttpError`
@@ -28902,6 +28921,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Server:
         - Uses:
           - `database.db`
+          - `database/sql-column.parsedJson`
           - `infra/endpoints.implement`
         - DB schema: `plugins/search/plugins/engine/server/internal/tables.ts`
         - Exports (values):
@@ -29049,6 +29069,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `database.db`
           - `database/admin.ExcludeFromFork`
           - `database/live-state-snapshot.reconcileReadSetTable`
+          - `database/sql-column.parsedJson`
           - `infra/endpoints.HttpError`
           - `infra/endpoints.implement`
           - `infra/jobs.defineJob`
@@ -31412,6 +31433,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Server:
         - Uses:
           - `database.db`
+          - `database/sql-column.parsedJson`
           - `infra/endpoints.HttpError`
           - `infra/endpoints.implement`
         - DB schema: `plugins/ui/plugins/tweakcn/server/internal/tables.ts`
@@ -31428,6 +31450,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `deleteTweakcnTheme`
           - `importTweakcnTheme`
           - `listTweakcnThemes`
+          - `TweakcnPresetsSchema`
           - `TweakcnThemeSchema`
       - Cross-plugin:
         - Imported by: `ui/tweakcn/community-browser`

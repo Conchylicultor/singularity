@@ -26,6 +26,7 @@
     - `database.db`
     - `database/admin.ExcludeFromFork`
     - `database/change-feed.ExcludeFromChangeFeed`
+    - `database/sql-column.parsedJson`
     - `infra/duress.createShedBuffer`
     - `infra/duress.ShedSummary`
     - `infra/endpoints.HttpError`

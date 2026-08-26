@@ -51,6 +51,7 @@ queue-health); only the wasted retry churn is removed.
     - `resource.declare` "event-triggers"
   - Uses:
     - `database.db`
+    - `database/sql-column.parsedJson`
     - `infra/endpoints.HttpError`
     - `infra/endpoints.implement`
     - `infra/entities.defaultNow`

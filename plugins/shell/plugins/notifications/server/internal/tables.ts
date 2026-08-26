@@ -1,13 +1,14 @@
+import { z } from "zod";
 import {
   boolean,
   index,
   integer,
-  jsonb,
   pgTable,
   text,
   timestamp,
   uniqueIndex,
 } from "drizzle-orm/pg-core";
+import { parsedJson } from "@plugins/database/plugins/sql-column/server";
 
 export const _notifications = pgTable(
   "notifications",
@@ -21,7 +22,13 @@ export const _notifications = pgTable(
     read: boolean("read").notNull().default(false),
     muted: boolean("muted").notNull().default(false),
     linkTo: text("link_to"),
-    metadata: jsonb("metadata").$type<Record<string, unknown>>(),
+    // A free-form bag every producer stamps its own keys into (the reports
+    // engine writes `reportId`, `source`, `fingerprint`, …; most callers write
+    // nothing). `z.record` is the honest schema for that: it verifies the value
+    // really IS a non-null object — which is all `Record<string, unknown>` ever
+    // claimed — and keeps every key, so no producer's keys are normalized away.
+    // Nullable, so the decoder never sees the `null` a metadata-less row holds.
+    metadata: parsedJson("metadata", z.record(z.string(), z.unknown())),
     dedupKey: text("dedup_key"),
     // Occurrences collapsed onto this row via dedupKey (1 on first insert,
     // bumped on every dedup hit). Lets a deduped/re-surfacing notification read

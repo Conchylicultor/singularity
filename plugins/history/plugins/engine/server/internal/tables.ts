@@ -1,4 +1,11 @@
-import { boolean, index, jsonb, pgTable, text, timestamp } from "drizzle-orm/pg-core";
+import {
+  boolean,
+  index,
+  jsonb,
+  pgTable,
+  text,
+  timestamp,
+} from "drizzle-orm/pg-core";
 
 // One row per stored version. 1:N (a versioning table — NOT a 1:1
 // entity-extension side-table). Domain-agnostic: the engine never knows what a
@@ -13,6 +20,10 @@ export const _entityVersions = pgTable(
     id: text("id").primaryKey(),
     sourceId: text("source_id").notNull(),
     entityId: text("entity_id").notNull(),
+    // Opaque per-source: the engine hands it back to that source's own
+    // `restore(entityId, snapshot: unknown)` and never looks inside. `unknown`
+    // is therefore the true type, and the column carries no decoder — narrowing
+    // it would have to happen per source, which is where the shape is known.
     snapshot: jsonb("snapshot").notNull(),
     label: text("label"),
     author: text("author"),

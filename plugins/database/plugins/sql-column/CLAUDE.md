@@ -181,37 +181,62 @@ call fails a test.
 
 ## The rule
 
-`sql-column/no-asserted-column-type` reports both spellings that narrow a text
+`sql-column/no-asserted-column-type` reports the three spellings that narrow a
 column without a decoder:
 
 ```ts
 text("x").$type<T>()          // the assertion
 text("x", { enum: [...] })    // the type derived from a runtime list
+jsonb("x").$type<T>()         // the same assertion, one tier over
 ```
 
-The second is *better* — the type comes from real data, so it cannot drift from an
-unrelated type — but drizzle emits no `CHECK` for it, so the value is still
-unverified.
+The `enum` config is *better* than `$type` — the type comes from real data, so it
+cannot drift from an unrelated type — but drizzle emits no `CHECK` for it, so the
+value is still unverified. It stays text-only; jsonb has no such argument.
 
 Scoped by the chain's **root**: it fires only on a literal `text(` / `varchar(` /
-`char(` call. Two things are left out, one still open:
+`char(` / `jsonb(` call. A bare `jsonb("x")` stays legal and untouched — it
+declares the `unknown` the column really holds, which is the honest answer for a
+per-source registry payload (`entity_versions.snapshot`,
+`active_data_bindings.payload`, `dead_jobs.input`, a workflow step's
+`input`/`output`). That is the same policy `fields/json/plugins/storage` applies
+to a `z.unknown()` field schema.
 
-- `jsonb(…).$type<T>()` — still outside the rule, but **no longer because the
-  tier is weaker**. `parsedJson` is now its replacement, and the rule should grow
-  a `jsonb(` root. What gates that is the ~16 hand-written call sites
-  (`reports.data`, `page_blocks.data`, `notifications.metadata`,
-  `job_steps.result_json`, `backup_runs.manifest`, the workflow-engine and
-  sonata-rhythm columns, …): several declare a TS type with no zod schema in
-  existence, over load-bearing tables, so each needs its own schema written and
-  its own live-data survey run first. The extension is gated on that migration,
-  not on the tier.
-- ~~`defineEntity`'s generic `b.$type()`~~ — **done**, and now for jsonb columns
-  too. The fix was exactly where this predicted: the `fields.storage` capability
-  hands back a decoder rather than a bare builder, so every `enumTextField`
-  column and every `jsonField<T>` column across the 30 entities is decoded by its
-  own field schema, and `b.$type()` is gone. See
+Both former exclusions are closed:
+
+- ~~`jsonb(…).$type<T>()`~~ — **done**. All ~25 hand-written call sites migrated
+  to `parsedJson` or dropped an assertion they never needed, gated on a live-data
+  survey across every worktree DB fork. See
+  `research/2026-08-26-database-decoded-jsonb-hand-written-columns.md`.
+- ~~`defineEntity`'s generic `b.$type()`~~ — **done**, and for jsonb columns too.
+  The fix was exactly where this predicted: the `fields.storage` capability hands
+  back a decoder rather than a bare builder, so every `enumTextField` column and
+  every `jsonField<T>` column across the 30 entities is decoded by its own field
+  schema, and `b.$type()` is gone. See
   `plugins/fields/plugins/text/plugins/storage` and
   `plugins/fields/plugins/json/plugins/storage`.
+
+### Picking the jsonb schema is the whole of porting a site
+
+`parsedJson` normalizes, so the one decision is how much of the payload the
+schema describes — and the answer follows from who writes the column, not from
+how strict you feel:
+
+| the column | schema | why |
+|---|---|---|
+| one open bag many producers stamp their own keys into (`reports.data`, `notifications.metadata`, every `*_triggers.job_with`) | `z.record(z.string(), z.unknown())` | verifies it really is a non-null object — all `Record<string, unknown>` ever claimed — and keeps every key |
+| a closed shape one writer builds (`backup_runs.target_results`, `sonata_songs_ext_rhythm.bass`) | its own `z.object`, the same one the wire schema uses | stripping is what makes the declared type true |
+| genuinely arbitrary JSON (a registry's per-source blob) | none — bare `jsonb(x)`, `unknown` | there is nothing to verify, so it costs nothing and claims nothing |
+
+Two of the sites taught something worth keeping. `backup_runs.manifest` declared
+`BackupManifest` (`version: 2`) while the plugin's own wire schema accepted v1
+rows *and said so in a comment* — the interface was a claim about rows already
+known to be false, so the column took the wire schema and its type is now derived
+from what the rows hold. And `page_blocks.data` is **branded**: a decoder is
+handed one value and never its row, so it cannot reach the block's `type` and
+cannot re-run the per-type parse. It states the half that holds for every block
+type — the payload is a JSON object — and re-establishes the brand by provenance,
+through the one `asBlockData` mint the write side also calls.
 
 ## Considered and rejected: `pgEnum` / `CHECK`
 
@@ -222,8 +247,10 @@ fork. It is also incompatible with the tolerant policy the evolving columns need
 Worth revisiting per column for a set that is genuinely frozen.
 
 Design: `research/2026-08-25-database-decoded-columns.md` (the column tier),
-`research/2026-08-25-global-decoded-entity-columns.md` (the entity tier), and
-`research/2026-08-26-global-decoded-jsonb-entity-columns.md` (the jsonb tier).
+`research/2026-08-25-global-decoded-entity-columns.md` (the entity tier),
+`research/2026-08-26-global-decoded-jsonb-entity-columns.md` (the jsonb tier) and
+`research/2026-08-26-database-decoded-jsonb-hand-written-columns.md` (the
+hand-written jsonb columns, where the rule closes).
 
 <!-- AUTOGENERATED:BEGIN — do not edit; regenerated by `./singularity build` -->
 
@@ -232,15 +259,25 @@ Design: `research/2026-08-25-database-decoded-columns.md` (the column tier),
 - Description: Decoded columns: `parsedText` / `parsedJson` derive a column's type from a zod schema that really decodes it — on every read and every write — so a column can no longer declare a string-literal union, or a jsonb shape, that nothing verifies.
 - Cross-plugin:
   - Imported by:
+    - `apps/sonata/rich/rhythm-controls`
     - `apps/workflows/engine`
+    - `backup`
     - `conversations/conversation-category`
+    - `conversations/conversation-preprompt`
     - `conversations/conversation-progress`
     - `fields/json/storage`
     - `fields/tags/storage`
     - `fields/text/storage`
+    - `infra/events`
     - `infra/jobs`
+    - `infra/trash`
+    - `page/editor`
+    - `reports`
+    - `search/engine`
+    - `shell/notifications`
     - `tasks/auto-start`
     - `tasks/task-effort`
+    - `ui/tweakcn`
 - Server:
   - Exports (types):
     - `SqlColumnDirection`

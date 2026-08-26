@@ -6,11 +6,19 @@ const PerGroupPresetSchema = z.object({
   dark: z.record(z.string(), z.string()),
 });
 
+/**
+ * One converted theme's per-token-group presets, keyed by group id. Declared
+ * once here because it is BOTH the wire shape below and the decoder for the
+ * `tweakcn_themes.presets` column — two declarations would be two things free
+ * to drift.
+ */
+export const TweakcnPresetsSchema = z.record(z.string(), PerGroupPresetSchema);
+
 export const TweakcnThemeSchema = z.object({
   id: z.string(),
   tweakcnId: z.string(),
   label: z.string(),
-  presets: z.record(z.string(), PerGroupPresetSchema),
+  presets: TweakcnPresetsSchema,
   createdAt: z.string(),
 });
 

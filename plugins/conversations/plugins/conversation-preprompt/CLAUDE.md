@@ -57,6 +57,7 @@ never the reverse) and the feature fully opt-in and removable.
   - Uses:
     - `conversations.conversationCreated`
     - `conversations/preprompts.resolvePrepromptItem`
+    - `database/sql-column.parsedJson`
     - `infra/entity-extensions.defineExtension`
     - `infra/events.Trigger`
     - `infra/jobs.defineJob`

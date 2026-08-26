@@ -8,7 +8,10 @@ import {
   text,
   timestamp,
 } from "drizzle-orm/pg-core";
-import { parsedText } from "@plugins/database/plugins/sql-column/server";
+import {
+  parsedJson,
+  parsedText,
+} from "@plugins/database/plugins/sql-column/server";
 
 // Step log for durable workflows — memoizes side-effects performed via
 // `ctx.step(name, fn)` so replays (retries or resumes after a suspend) skip
@@ -21,8 +24,11 @@ export const _jobSteps = pgTable(
     workflowRunId: text("workflow_run_id").notNull(),
     stepName: text("step_name").notNull(),
     // JSONB so a step that returns `undefined` distinguishes from "not run".
-    // `result` is wrapped `{ v: <result> }` so `null` round-trips cleanly.
-    resultJson: jsonb("result_json").$type<{ v: unknown } | null>(),
+    // `result` is wrapped `{ v: <result> }` so `null` round-trips cleanly — and
+    // the box is exactly what the decoder verifies. What is INSIDE it is a step
+    // handler's arbitrary return value, so `v` stays `z.unknown()`: the schema
+    // claims the wrapper and nothing else, which is all this column ever knew.
+    resultJson: parsedJson("result_json", z.object({ v: z.unknown() })),
     // Set when the step threw; replays re-throw the recorded message.
     errorMessage: text("error_message"),
     completedAt: timestamp("completed_at", { withTimezone: true })
@@ -53,7 +59,10 @@ export const _jobWaits = pgTable(
     workflowRunId: text("workflow_run_id").notNull(),
     waitName: text("wait_name").notNull(),
     status: parsedText("status", JobWaitStatusSchema).notNull(),
-    payloadJson: jsonb("payload_json").$type<Record<string, unknown> | null>(),
+    // Whatever event fired — `waitFor<T>` is generic per call site, so the only
+    // claim the column can make is the one `Record<string, unknown>` made and
+    // nothing checked: a non-null object. `z.record` keeps every key of it.
+    payloadJson: parsedJson("payload_json", z.record(z.string(), z.unknown())),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()
       .notNull(),
@@ -76,6 +85,9 @@ export const _deadJobs = pgTable(
     // Original graphile job id — PK makes the archive INSERT idempotent.
     id: text("id").primaryKey(),
     jobName: text("job_name").notNull(),
+    // The dead job's original enqueue input — one shape per job type, so this
+    // column declares `unknown` and means it. A decoder would have nothing to
+    // verify, and every reader already treats it as `unknown`.
     input: jsonb("input"),
     attempts: integer("attempts").notNull(),
     maxAttempts: integer("max_attempts").notNull(),

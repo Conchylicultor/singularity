@@ -22,6 +22,10 @@ export const _activeDataBindings = pgTable(
     messageId: text("message_id").notNull(),
     tag: text("tag").notNull(),
     occurrenceIndex: integer("occurrence_index").notNull(),
+    // One shape per widget `tag`, owned by that tag's own consumer — which
+    // safe-parses its own schema at the point of use. So this column declares
+    // `unknown` and means it: a decoder here would have nothing to verify, and
+    // a `z.record` would be a claim the registry never makes.
     payload: jsonb("payload").notNull(),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()

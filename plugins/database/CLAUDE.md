@@ -17,7 +17,7 @@ column — so there is never a question of which one owns a site.
 |---|---|
 | a raw SQL **result** — `pool.query(…)`, `db.execute(sql\`…\`)` — whose rows you read | `plugins/database/plugins/sql-rows` — parse the rows (`queryRows` / `executeRows`) |
 | a raw SQL **expression selected as a value** — ``sql`…` `` in a `db.select()` or a `pgView` | `plugins/database/plugins/sql-projection` — give it a decoder (`.mapWith(…)`) |
-| a **column** narrower than the Postgres type under it — a string-literal union, or a shape over `jsonb`, in a `tables.ts` | `plugins/database/plugins/sql-column` — decode it (`parsedText(name, schema)` / `parsedJson(name, schema)`) |
+| a **column** narrower than the Postgres type under it — a string-literal union, or a shape over `jsonb`, in a `tables.ts` | `plugins/database/plugins/sql-column` — decode it (`parsedText(name, schema)` / `parsedJson(name, schema)`). A `jsonb` column whose value really is arbitrary keeps a bare `jsonb(x)` and its honest `unknown` |
 | a column `defineEntity` derives from a **field record** | nothing to do — the field type's storage contribution decodes it, text and jsonb alike (`fields/{text,json,tags}/plugins/storage`); see `plugins/infra/plugins/entities/CLAUDE.md` |
 
 All three are enforced (`sql-rows/no-unparsed-sql-rows`,

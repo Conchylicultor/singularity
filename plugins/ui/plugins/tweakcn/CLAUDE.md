@@ -17,6 +17,7 @@
 - Server:
   - Uses:
     - `database.db`
+    - `database/sql-column.parsedJson`
     - `infra/endpoints.HttpError`
     - `infra/endpoints.implement`
   - DB schema: `plugins/ui/plugins/tweakcn/server/internal/tables.ts`
@@ -33,6 +34,7 @@
     - `deleteTweakcnTheme`
     - `importTweakcnTheme`
     - `listTweakcnThemes`
+    - `TweakcnPresetsSchema`
     - `TweakcnThemeSchema`
 - Cross-plugin:
   - Imported by: `ui/tweakcn/community-browser`

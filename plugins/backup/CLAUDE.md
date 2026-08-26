@@ -37,6 +37,7 @@
     - `config_v2.ConfigV2`
     - `config_v2.getConfig`
     - `database.db`
+    - `database/sql-column.parsedJson`
     - `infra/endpoints.implement`
     - `infra/jobs.defineJob`
     - `infra/paths.BACKUPS_DIR`

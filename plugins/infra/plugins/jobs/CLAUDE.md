@@ -327,6 +327,7 @@ Design, measurements, prior art and the risks to watch:
     - `database.db`
     - `database/admin.connectionString`
     - `database/admin.ExcludeSchemaDataFromFork`
+    - `database/sql-column.parsedJson`
     - `database/sql-column.parsedText`
     - `infra/endpoints.HttpError`
     - `infra/endpoints.implement`

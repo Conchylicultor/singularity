@@ -45,7 +45,7 @@ export async function consumeTrashEntry(
     .limit(1);
   if (!row) throw new HttpError(404, "Trash entry not found");
 
-  await action(source, row as TrashEntry);
+  await action(source, row);
 
   await dbx.delete(_trashEntries).where(eq(_trashEntries.id, row.id));
 

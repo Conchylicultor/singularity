@@ -1,12 +1,13 @@
+import { z } from "zod";
 import { sql } from "drizzle-orm";
 import {
   customType,
   index,
-  jsonb,
   pgTable,
   primaryKey,
   text,
 } from "drizzle-orm/pg-core";
+import { parsedJson } from "@plugins/database/plugins/sql-column/server";
 
 // Postgres `tsvector` column type. Single-word data type so drizzle-kit emits it
 // verbatim (the multi-word double-quoting bug that bit rank_text doesn't apply).
@@ -29,7 +30,12 @@ export const _searchDocuments = pgTable(
     title: text("title").notNull().default(""),
     body: text("body").notNull().default(""),
     route: text("route").notNull(),
-    metadata: jsonb("metadata").$type<Record<string, unknown>>().notNull().default({}),
+    // The opaque per-source bag the engine round-trips and never interprets, so
+    // its decoder claims exactly as little: `z.record` verifies the value is a
+    // non-null object and keeps every key a source put there.
+    metadata: parsedJson("metadata", z.record(z.string(), z.unknown()))
+      .notNull()
+      .default({}),
     tsv: tsvector("tsv").generatedAlwaysAs(
       (): ReturnType<typeof sql> =>
         sql`setweight(to_tsvector('english', coalesce(title,'')), 'A') || setweight(to_tsvector('english', coalesce(body,'')), 'B')`,

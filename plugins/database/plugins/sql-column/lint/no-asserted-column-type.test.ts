@@ -1,11 +1,13 @@
 /**
  * Tests for the `no-asserted-column-type` lint rule. Run with `bun test`.
  *
- * The invalid list is the two spellings that narrow a text column's type without
- * a decoder. The valid list is everything the rule must NOT touch — and most of
- * it is load-bearing scope, not politeness: `jsonb(…).$type<T>()` is a weaker
- * tier that stays deliberately open, and `defineEntity`'s generic `b.$type()`
- * gets its type from a field's own schema and needs a different fix entirely.
+ * The invalid list is the three spellings that narrow a column's type without a
+ * decoder: `$type` on a text-family root, an `{ enum: [...] }` config, and
+ * `$type` on a `jsonb` root. The valid list is everything the rule must NOT
+ * touch — and most of it is load-bearing scope, not politeness: a bare
+ * `jsonb("x")` declares the `unknown` the column really holds, and
+ * `defineEntity`'s generic `b.$type()` gets its type from a field's own schema
+ * and needed a different fix entirely.
  */
 
 import { RuleTester } from "eslint";
@@ -47,13 +49,10 @@ ruleTester.run(
       { code: 'const c = text("error_message");' },
       { code: 'const c = varchar("slug", { length: 64 }).notNull();' },
 
-      // --- jsonb is out of scope until its ~16 hand-written call sites have
-      // schemas of their own; `parsedJson` is the replacement waiting for them. ---
-      { code: 'const c = jsonb("data").$type<Record<string, unknown>>();' },
-      {
-        code: 'const c = jsonb("manifest").$type<BackupManifest>().notNull();',
-      },
-      { code: 'const c = jsonb("icon").$type<AvatarSpec | null>();' },
+      // --- The jsonb door, and the honest `unknown` that needs no door. ---
+      { code: 'const c = parsedJson("manifest", BackupManifestSchema);' },
+      { code: 'const c = jsonb("input");' },
+      { code: 'const c = jsonb("meta").notNull().default({});' },
 
       // --- `defineEntity`'s generic call: no type argument, non-literal root. ---
       { code: "b = b.$type();" },
@@ -65,6 +64,7 @@ ruleTester.run(
       // --- The owner directory documents the banned forms in order to name them. ---
       { code: 'const c = text("x").$type<"a" | "b">();', filename: OWNED },
       { code: 'const c = text("x", { enum: ["a", "b"] });', filename: OWNED },
+      { code: 'const c = jsonb("x").$type<Foo>();', filename: OWNED },
     ],
     invalid: [
       // --- The assertion, in every shape the five real sites take. ---

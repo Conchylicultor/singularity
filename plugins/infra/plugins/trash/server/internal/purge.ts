@@ -25,8 +25,7 @@ export const trashPurge = defineRetention({
   perWorktree: true,
   beforeDelete: async (rows) => {
     const bySource = new Map<string, TrashEntry[]>();
-    for (const row of rows) {
-      const entry = row as TrashEntry;
+    for (const entry of rows) {
       const group = bySource.get(entry.sourceId);
       if (group) group.push(entry);
       else bySource.set(entry.sourceId, [entry]);

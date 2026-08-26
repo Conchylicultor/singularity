@@ -100,6 +100,7 @@ bun test plugins/infra/plugins/trash
   - Contributes: `resource.declare` "trash-entries"
   - Uses:
     - `database.db`
+    - `database/sql-column.parsedJson`
     - `infra/endpoints.HttpError`
     - `infra/endpoints.implement`
     - `infra/retention.defineRetention`

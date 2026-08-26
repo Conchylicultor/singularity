@@ -1,9 +1,11 @@
 import { test, expect, describe } from "bun:test";
-import { PgDialect, pgTable, jsonb } from "drizzle-orm/pg-core";
+import { z } from "zod";
+import { PgDialect, pgTable } from "drizzle-orm/pg-core";
 import type { SQL } from "drizzle-orm";
+import { parsedJson } from "@plugins/database/plugins/sql-column/server";
 import { tagsFilterSql as ops } from "./tags-filter-sql";
 
-const t = pgTable("t", { c: jsonb("c").$type<string[]>() });
+const t = pgTable("t", { c: parsedJson("c", z.array(z.string())) });
 const col = t.c;
 const dialect = new PgDialect();
 

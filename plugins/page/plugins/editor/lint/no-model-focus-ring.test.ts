@@ -12,7 +12,10 @@
 
 import { RuleTester } from "eslint";
 import tsParser from "@typescript-eslint/parser";
-import rule from "./no-model-focus-ring";
+import { lintToolkit } from "@plugins/framework/plugins/tooling/plugins/lint/core";
+import buildRule from "./no-model-focus-ring";
+
+const rule = buildRule(lintToolkit);
 
 const ruleTester = new RuleTester({
   languageOptions: {

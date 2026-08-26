@@ -13,7 +13,6 @@ import {
   PgDialect,
   QueryBuilder,
   integer,
-  jsonb,
   pgTable,
   text,
 } from "drizzle-orm/pg-core";
@@ -21,6 +20,7 @@ import {
   pointQueryResourceDescriptor,
   windowQueryResourceDescriptor,
 } from "@plugins/infra/plugins/query-resource/core";
+import { parsedJson } from "@plugins/database/plugins/sql-column/server";
 import { compileWindowQuery, windowQueryResource } from "./compile-window";
 import type { QueryDb, SelectMap, WindowQueryResourceSpec } from "./spec";
 import type {
@@ -33,7 +33,7 @@ const rows = pgTable("rows", {
   parentId: text("parent_id"),
   n: integer("n").notNull(),
   dismissed: integer("dismissed").notNull(),
-  icon: jsonb("icon").$type<{ color: string } | null>(),
+  icon: parsedJson("icon", z.object({ color: z.string() })),
 });
 
 const rowSchema = z.object({ id: z.string(), n: z.number() });
