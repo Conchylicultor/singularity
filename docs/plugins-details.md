@@ -13532,6 +13532,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Web:
             - Contributes: `DataViewSlots.ValueCodec` "bool"
             - Uses: `primitives/data-view.DataViewSlots`
+        - **`data-view-group`** — Boolean field type: data-view grouping strategy (Yes / No sections, false first).
+          - Web:
+            - Contributes: `DataViewSlots.Grouping` "bool"
+            - Uses: `primitives/data-view.DataViewSlots`
+          - Core:
+            - Exports (values): `boolGroupings`
         - **`filter`** — Boolean field type: data-view filter operator set (is checked/unchecked).
           - Web:
             - Contributes: `DataViewSlots.Filter` "bool"
@@ -13643,6 +13649,23 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Web:
             - Contributes: `DataViewSlots.ValueCodec` "date"
             - Uses: `primitives/data-view.DataViewSlots`
+        - **`data-view-group`** — Date field type: data-view grouping strategies (smart, day, week, month, year).
+          - Web:
+            - Contributes: `DataViewSlots.Grouping` "date"
+            - Uses: `primitives/data-view.DataViewSlots`
+          - Core:
+            - Uses:
+              - `primitives/date-picker.addDays`
+              - `primitives/date-picker.addMonths`
+              - `primitives/date-picker.isSameDay`
+              - `primitives/date-picker.monthTitle`
+              - `primitives/date-picker.normalizeWeekStart`
+              - `primitives/date-picker.relativeDayLabel`
+              - `primitives/date-picker.startOfDay`
+              - `primitives/date-picker.startOfMonth`
+              - `primitives/date-picker.startOfWeek`
+              - `primitives/date-picker.toISODay`
+            - Exports (values): `dateGroupings`
         - **`filter`** — Date field type: data-view filter operator set (is / before / after / between …).
           - Web:
             - Contributes: `DataViewSlots.Filter` "date"
@@ -13828,6 +13851,18 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/sonata/look`
               - `plugin-meta/composition`
               - `ui/theme-engine`
+        - **`data-view-group`** — Enum field type: data-view grouping strategy (bucket by value, labelled and ordered by `field.options`).
+          - Web:
+            - Contributes: `DataViewSlots.Grouping` "enum"
+            - Uses: `primitives/data-view.DataViewSlots`
+          - Core:
+            - Uses:
+              - `primitives/data-view.compareValues`
+              - `primitives/data-view.FieldGrouping`
+              - `primitives/data-view.FieldValue`
+              - `primitives/data-view.GroupBucket`
+              - `primitives/data-view.GroupingPlanContext`
+            - Exports (values): `enumGroupings`
         - **`filter`** — Enum (select) field type: data-view filter operator set (is / is-any-of / is-empty …).
           - Web:
             - Contributes: `DataViewSlots.Filter` "enum"
@@ -24261,6 +24296,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `DataViewSlots.CellEditor` ← `fields.bool.inline`, `fields.date.inline`, `fields.enum.inline`, `fields.number.inline`, `fields.tags.inline`, `fields.text.inline`
           - `DataViewSlots.Filter` ← `fields.bool.filter`, `fields.date.filter`, `fields.enum.filter`, `fields.number.filter`, `fields.tags.filter`, `fields.text.filter`
           - `DataViewSlots.ValueCodec` ← `fields.bool.data-view-codec`, `fields.date.data-view-codec`, `fields.number.data-view-codec`
+          - `DataViewSlots.Grouping` ← `fields.bool.data-view-group`, `fields.date.data-view-group`, `fields.enum.data-view-group`
           - `DataViewSlots.ColumnConfig` ← `fields.enum.column-config`
         - Contributes:
           - `ConfigV2.WebRegister` ×40: "agent-launches", "agents-list", "all-conversations", "build.history", "code-explorer.file-tree", "config_v2.settings.nav", "conversations-sidebar", "debug.boot-profiles", "debug.config-orphans", "debug.profiling.runtime", "debug.reports", "debug.slow-ops.cluster-aggregate", "debug.slow-ops.cluster-timeline", "debug.slow-ops.local", "debug.trace.events", "deploy.deployment.history", "deploy.deployments", "deploy.servers", "events.list", "events.run-events", "events.source-runs", "events.sources", "home.apps", "mail-threads", "page.links.backlinks", "pages-sidebar", "plugin-view.file-tree", "prototypes.gallery", "sonata.library", "story.gallery", "studio.compositions", "studio.compositions.closure-tree", "studio.explorer.tree", "studio.release.history", "task-deps-tree", "tasks-list", "tweakcn.community-browser", "tweakcn.quick-theme", "workflows.definitions", "workflows.executions"
@@ -24352,6 +24388,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `FieldExtensionProps`
           - `FieldExtensions`
           - `FieldExtensionsDescriptor`
+          - `FieldGrouping`
+          - `FieldGroupingSet`
           - `FieldOption`
           - `FieldValue`
           - `FilterConjunction`
@@ -24366,8 +24404,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `FilterValueInputProps`
           - `GlobalRowOrderContribution`
           - `GlobalRowOrderProps`
+          - `GroupBucket`
           - `GroupByController`
+          - `GroupByRule`
           - `GroupedSectionsProps`
+          - `GroupingPlanContext`
+          - `GroupingRegistry`
           - `HierarchyConfig`
           - `ItemActionContribution`
           - `ItemActionProps`
@@ -24376,6 +24418,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `ItemActionZone`
           - `ManualOrderConfig`
           - `MergedDataViewProps`
+          - `PartitionOptions`
           - `RowTone`
           - `SelectionConfig`
           - `ServerDataSourceResult`
@@ -24404,6 +24447,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `getDataViewDescriptor`
           - `GroupedSections`
           - `IDENTITY_CODEC`
+          - `IDENTITY_GROUPING`
+          - `IDENTITY_GROUPING_SET`
           - `isFilterGroup`
           - `isGroupableField`
           - `makeSortComparator`
@@ -24418,12 +24463,15 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `useFilterController`
           - `useFlatRows`
           - `useGroupByController`
+          - `useGroupingClock`
+          - `useGroupingRegistry`
           - `useIsChipField`
           - `useItemActionZones`
           - `useResolveCell`
           - `useResolveCellEditor`
           - `useResolveColumnConfig`
           - `useResolveColumnDerive`
+          - `useResolveGroupings`
           - `useResolveOperatorSet`
           - `useResolveValueCodec`
           - `useServerDataSource`
@@ -24472,15 +24520,18 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `debug/slow-ops/pane`
           - `debug/trace/pane`
           - `fields/bool/data-view-codec`
+          - `fields/bool/data-view-group`
           - `fields/bool/filter`
           - `fields/bool/inline`
           - `fields/bool/table`
           - `fields/color/table`
           - `fields/date/data-view-codec`
+          - `fields/date/data-view-group`
           - `fields/date/filter`
           - `fields/date/inline`
           - `fields/date/table`
           - `fields/enum/column-config`
+          - `fields/enum/data-view-group`
           - `fields/enum/filter`
           - `fields/enum/inline`
           - `fields/enum/table`
@@ -24524,6 +24575,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `FieldDef`
           - `FieldExtensionProps`
           - `FieldExtensionsDescriptor`
+          - `FieldGrouping`
+          - `FieldGroupingSet`
           - `FieldOption`
           - `FieldValue`
           - `FilterConjunction`
@@ -24535,6 +24588,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `FilterPreset`
           - `FilterRule`
           - `FilterValueInputProps`
+          - `GroupBucket`
+          - `GroupByRule`
+          - `GroupingPlanContext`
           - `HierarchyConfig`
           - `ItemActionProps`
           - `ItemActionsDescriptor`
@@ -24550,6 +24606,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `ValueCodec`
           - `ViewState`
         - Exports (values):
+          - `compareValues`
           - `DATA_VIEW_HEADER_OFFSET_VAR`
           - `defineDataView`
           - `FilterGroupSchema`
@@ -24793,6 +24850,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/data-view.resolveBodyFields`
               - `primitives/data-view.RowTone`
               - `primitives/data-view.rowToneClass`
+              - `primitives/data-view.useGroupingRegistry`
               - `primitives/data-view.useItemActionZones`
               - `primitives/data-view.useResolveCell`
               - `primitives/data-view.useResolveCellEditor`
@@ -24935,6 +24993,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `TimeField`
       - Cross-plugin:
         - Imported by:
+          - `fields/date/data-view-group`
           - `fields/date/filter`
           - `fields/date/inline`
           - `page/inline-date`

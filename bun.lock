@@ -2156,6 +2156,10 @@
       "name": "@singularity/plugin-fields-date-data-view-codec",
       "version": "0.0.1",
     },
+    "plugins/fields/plugins/date/plugins/data-view-group": {
+      "name": "@singularity/plugin-fields-date-data-view-group",
+      "version": "0.0.1",
+    },
     "plugins/fields/plugins/date/plugins/filter": {
       "name": "@singularity/plugin-fields-date-filter",
       "version": "0.0.1",
@@ -6752,6 +6756,8 @@
     "@singularity/plugin-fields-date-config": ["@singularity/plugin-fields-date-config@workspace:plugins/fields/plugins/date/plugins/config"],
 
     "@singularity/plugin-fields-date-data-view-codec": ["@singularity/plugin-fields-date-data-view-codec@workspace:plugins/fields/plugins/date/plugins/data-view-codec"],
+
+    "@singularity/plugin-fields-date-data-view-group": ["@singularity/plugin-fields-date-data-view-group@workspace:plugins/fields/plugins/date/plugins/data-view-group"],
 
     "@singularity/plugin-fields-date-filter": ["@singularity/plugin-fields-date-filter@workspace:plugins/fields/plugins/date/plugins/filter"],
 
