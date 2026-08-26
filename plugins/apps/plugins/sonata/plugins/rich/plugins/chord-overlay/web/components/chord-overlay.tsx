@@ -1,3 +1,4 @@
+import { Placed } from "@plugins/primitives/plugins/css/plugins/coords/web";
 import { useMemo } from "react";
 import {
   effectiveKeyAt,
@@ -64,11 +65,14 @@ export function ChordOverlay({
         const data = a.data as ChordData;
         const y = beatToY(a.start);
         return (
-          <div
+          // Centered on a runtime-computed pixel Y from beatToY — a measured
+          // coordinate, not a ramp offset.
+          <Placed
             key={`${a.start}-${data.symbol}-${i}`}
-            // eslint-disable-next-line text/no-adhoc-typography, layout/no-adhoc-layout -- tight leading keeps this compact chord chip a single line (size via the text-2xs sub-scale); positioned at a runtime-computed pixel Y (style={{ top: beatToY(a.start) }}), so -translate-y-1/2 centers on that JS coordinate, not a ramp offset
-            className="absolute left-0 -translate-y-1/2 rounded-r-md border border-border/60 bg-background/90 px-xs py-2xs text-2xs font-semibold leading-none text-foreground shadow-sm backdrop-blur-sm"
-            style={{ top: y }}
+            x={{ start: 0 }}
+            y={{ center: y }}
+            // eslint-disable-next-line text/no-adhoc-typography -- leading-none keeps this compact chord chip on a single line
+            className="rounded-r-md border border-border/60 bg-background/90 px-xs py-2xs text-2xs font-semibold leading-none text-foreground shadow-sm backdrop-blur-sm"
             title={(() => {
               const name = data.spelledSymbol
                 ? `${data.symbol} (${data.spelledSymbol})`
@@ -79,7 +83,7 @@ export function ChordOverlay({
             })()}
           >
             {labels.get(a)}
-          </div>
+          </Placed>
         );
       })}
     </Pin>

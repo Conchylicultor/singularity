@@ -1,3 +1,10 @@
+import { Clip } from "@plugins/primitives/plugins/css/plugins/clip/web";
+import {
+  pct,
+  Placed,
+} from "@plugins/primitives/plugins/css/plugins/coords/web";
+import { growClass } from "@plugins/primitives/plugins/css/plugins/grow/web";
+import { minBarSize } from "./use-gantt-zoom";
 import { type ReactElement } from "react";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
@@ -35,7 +42,8 @@ export function WaitWorkRow({
   /** Color of the solid work segment (must be a literal Tailwind class). */
   workClass?: string;
 }): ReactElement {
-  const { toLeftPct, toWidthPct, totalMs } = useGanttContainerContext();
+  const { toLeftFraction, toWidthFraction, totalMs } =
+    useGanttContainerContext();
   const { hovered, setHovered } = useProfilingContext();
   const isHovered = hovered?.id === id;
 
@@ -59,33 +67,36 @@ export function WaitWorkRow({
       <div className="w-40 shrink-0 truncate font-mono text-2xs text-muted-foreground">
         {label}
       </div>
-      {/* eslint-disable-next-line layout/no-adhoc-layout -- flexible timeline track (flex-1) clipping the runtime-positioned wait/work segments (overflow-hidden) */}
-      <div className="relative h-5 flex-1 overflow-hidden rounded-md bg-muted/30">
-        <div
-          // eslint-disable-next-line layout/no-adhoc-layout -- wait segment positioned by runtime ms→% offsets (left/width inline style)
+      {/* The timeline track: the coordinate host for the two segments, clipping
+          what overflows it, and the cell that takes the row's slack. */}
+      <Clip className={cn("relative h-5 rounded-md bg-muted/30", growClass())}>
+        <Placed
+          x={{
+            start: pct(toLeftFraction(startMs, totalMs)),
+            size: pct(toWidthFraction(wait, totalMs)),
+            minSize: minBarSize(wait),
+          }}
+          y="fill"
           className={cn(
-            "absolute top-0 h-full rounded-md transition-opacity",
+            "rounded-md transition-opacity",
             waitClass,
             isHovered ? "opacity-100" : "opacity-70",
           )}
-          style={{
-            left: toLeftPct(startMs, totalMs),
-            width: toWidthPct(wait, totalMs),
-          }}
         />
-        <div
-          // eslint-disable-next-line layout/no-adhoc-layout -- work segment positioned by runtime ms→% offsets (left/width inline style)
+        <Placed
+          x={{
+            start: pct(toLeftFraction(workStartMs, totalMs)),
+            size: pct(toWidthFraction(work, totalMs)),
+            minSize: minBarSize(work),
+          }}
+          y="fill"
           className={cn(
-            "absolute top-0 h-full rounded-md transition-opacity",
+            "rounded-md transition-opacity",
             workClass,
             isHovered ? "opacity-100" : "opacity-70",
           )}
-          style={{
-            left: toLeftPct(workStartMs, totalMs),
-            width: toWidthPct(work, totalMs),
-          }}
         />
-      </div>
+      </Clip>
       {/* eslint-disable-next-line layout/no-adhoc-layout -- fixed 64px (w-16) duration column kept rigid (shrink-0) to align with the Gantt time axis (DURATION_WIDTH) */}
       <div className="w-16 shrink-0 text-right font-mono text-2xs tabular-nums text-muted-foreground">
         {formatDuration(durationMs)}

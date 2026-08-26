@@ -1,3 +1,4 @@
+import { Placed } from "@plugins/primitives/plugins/css/plugins/coords/web";
 import type { Projection } from "@plugins/apps/plugins/sonata/plugins/score/core";
 import {
   useLaneInsets,
@@ -35,17 +36,20 @@ export function LoopRollEdge({ projection }: { projection: Projection }) {
   return (
     <>
       {top.length > 0 ? (
-        // eslint-disable-next-line layout/no-adhoc-layout -- screen-anchored loop-edge chip cluster pinned to the lane top edge at a runtime topInset (HUD-reserved) px
-        <Stack gap="2xs" align="end" className="absolute right-0" style={{ top: topInset }}>
-          {top.map((letter) => (
-            <EdgeChip
-              key={letter}
-              letter={letter}
-              direction="up"
-              enabled={loop.enabled}
-            />
-          ))}
-        </Stack>
+        // Screen-anchored: the lane's top edge, offset by the runtime
+        // HUD-reserved inset.
+        <Placed x={{ end: 0 }} y={{ start: topInset }}>
+          <Stack gap="2xs" align="end">
+            {top.map((letter) => (
+              <EdgeChip
+                key={letter}
+                letter={letter}
+                direction="up"
+                enabled={loop.enabled}
+              />
+            ))}
+          </Stack>
+        </Placed>
       ) : null}
       {bottom.length > 0 ? (
         <Pin to="bottom-right" offset="none" decorative>

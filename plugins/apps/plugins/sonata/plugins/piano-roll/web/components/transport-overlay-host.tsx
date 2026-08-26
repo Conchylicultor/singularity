@@ -1,3 +1,4 @@
+import { Layer } from "@plugins/primitives/plugins/css/plugins/layer/web";
 import { renderIsolated } from "@plugins/primitives/plugins/slot-render/web";
 import type { Contribution } from "@plugins/framework/plugins/web-sdk/core";
 import { Sonata } from "@plugins/apps/plugins/sonata/plugins/shell/web";
@@ -19,8 +20,10 @@ export function TransportOverlayHost() {
   const projection = useProjection();
 
   return (
-    // eslint-disable-next-line layout/no-adhoc-layout -- full-bleed positioning context over the projection-anchored note grid; each child positions via runtime projection coordinates and scrolls with the content layer
-    <div className="pointer-events-none absolute inset-0">
+    // Full-bleed positioning context over the projection-anchored note grid;
+    // each child places itself by runtime projection coordinates and scrolls
+    // with the content layer.
+    <Layer decorative>
       {overlays
         .filter((o) => o.requires.every((r) => projection.capabilities.has(r)))
         .map((o) =>
@@ -30,6 +33,6 @@ export function TransportOverlayHost() {
             { projection },
           ),
         )}
-    </div>
+    </Layer>
   );
 }

@@ -3,7 +3,16 @@ import type { ReactElement, ReactNode } from "react";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
-import { useGanttContainerContext } from "@plugins/debug/plugins/profiling/web";
+import {
+  minBarSize,
+  useGanttContainerContext,
+} from "@plugins/debug/plugins/profiling/web";
+import {
+  pct,
+  Placed,
+} from "@plugins/primitives/plugins/css/plugins/coords/web";
+import { growClass } from "@plugins/primitives/plugins/css/plugins/grow/web";
+import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 import {
   IncidentBadge,
   incidentColorClass,
@@ -36,12 +45,15 @@ function GanttRow({
 }): ReactElement {
   return (
     <Stack direction="row" align="center" gap="sm" className={className}>
-      {/* eslint-disable-next-line layout/no-adhoc-layout -- fixed 160px (w-40) label column kept rigid (shrink-0) to align with the Gantt time axis (LABEL_WIDTH), mirroring MultiSpanLane */}
-      <div className="w-40 shrink-0 truncate">{label}</div>
-      {/* eslint-disable-next-line layout/no-adhoc-layout -- flexible timeline track (flex-1) hosting runtime-positioned children, mirroring MultiSpanLane */}
-      <div className={cn("relative flex-1", trackClassName)}>{track}</div>
-      {/* eslint-disable-next-line layout/no-adhoc-layout -- fixed 64px (w-16) duration-column spacer kept rigid (shrink-0) to align with the Gantt time axis (DURATION_WIDTH) */}
-      <div className="w-16 shrink-0" />
+      {/* Fixed 160px (w-40) label column, rigid so it stays aligned with the
+          Gantt time axis (LABEL_WIDTH), mirroring MultiSpanLane. */}
+      <div className={cn("w-40 truncate", rigidClass())}>{label}</div>
+      {/* The timeline track: the coordinate host for the row's placed children,
+          and the cell that takes the row's slack. */}
+      <div className={cn("relative", growClass(), trackClassName)}>{track}</div>
+      {/* Fixed 64px (w-16) duration-column spacer, rigid so it stays aligned
+          with the Gantt time axis (DURATION_WIDTH). */}
+      <div className={cn("w-16", rigidClass())} />
     </Stack>
   );
 }
@@ -57,32 +69,34 @@ export function WallclockAxis({
 }: {
   range: TimelineWindow;
 }): ReactElement {
-  const { toLeftPct, totalMs } = useGanttContainerContext();
+  const { toLeftFraction, totalMs } = useGanttContainerContext();
   const ticks = wallclockTicks(range);
   return (
     <GanttRow
       className="h-6 border-b"
       trackClassName={cn("h-full")}
       track={ticks.map((tick) => {
-        const pct = parseFloat(toLeftPct(tick.relMs, totalMs));
-        if (pct < 0 || pct > 100) return null;
+        // Under zoom a tick can fall outside the visible window. Culling is the
+        // caller's decision, which is why the fraction arrives unclamped.
+        const fraction = toLeftFraction(tick.relMs, totalMs);
+        if (fraction < 0 || fraction > 1) return null;
         return (
-          <div
-            key={tick.relMs}
-            // eslint-disable-next-line layout/no-adhoc-layout -- tick positioned by runtime % offset along the time axis (left inline style), mirroring TimeAxis
-            className="absolute top-0 flex h-full flex-col items-center"
-            style={{ left: `${pct}%` }}
-          >
-            <div className="h-1.5 w-px bg-border" />
-            <Text
-              as="span"
-              variant="caption"
-              tone="muted"
-              className="tabular-nums"
-            >
-              {tick.label}
-            </Text>
-          </div>
+          // `start`, not `center`: the tick BOX's left edge sits on the
+          // fraction and only its contents are centered inside it, exactly as
+          // TimeAxis places its own ticks.
+          <Placed key={tick.relMs} x={{ start: pct(fraction) }} y="fill">
+            <Stack direction="col" align="center" gap="none">
+              <div className="h-1.5 w-px bg-border" />
+              <Text
+                as="span"
+                variant="caption"
+                tone="muted"
+                className="tabular-nums"
+              >
+                {tick.label}
+              </Text>
+            </Stack>
+          </Placed>
         );
       })}
     />
@@ -114,7 +128,8 @@ export function HeatStrip({
   kind: HeatKind;
   cpuCount: number;
 }): ReactElement {
-  const { toLeftPct, toWidthPct, totalMs } = useGanttContainerContext();
+  const { toLeftFraction, toWidthFraction, totalMs } =
+    useGanttContainerContext();
   const segments = heatSegments(samples, range, kind, cpuCount);
   return (
     <GanttRow
@@ -126,19 +141,21 @@ export function HeatStrip({
       }
       trackClassName={cn("h-1.5 rounded-full bg-muted/30")}
       track={segments.map((seg, i) => (
-        <div
+        <Placed
           key={i}
           title={seg.title}
-          // eslint-disable-next-line layout/no-adhoc-layout -- heat segment positioned by runtime ms→% offsets (left/width inline style), mirroring MultiSpanLane's bars
-          className={cn(
-            "absolute top-0 h-full",
-            seg.kind === "dark" ? "text-muted-foreground/60" : seg.colorClass,
-          )}
-          style={{
-            left: toLeftPct(seg.startMs, totalMs),
-            width: toWidthPct(seg.endMs - seg.startMs, totalMs),
-            ...(seg.kind === "dark" ? { backgroundImage: DARK_HATCH } : {}),
+          x={{
+            start: pct(toLeftFraction(seg.startMs, totalMs)),
+            size: pct(toWidthFraction(seg.endMs - seg.startMs, totalMs)),
+            minSize: minBarSize(seg.endMs - seg.startMs),
           }}
+          y="fill"
+          className={
+            seg.kind === "dark" ? "text-muted-foreground/60" : seg.colorClass
+          }
+          style={
+            seg.kind === "dark" ? { backgroundImage: DARK_HATCH } : undefined
+          }
         />
       ))}
     />
@@ -168,7 +185,8 @@ export function IncidentBandLayer({
   bands: IncidentBand[];
   duress?: DuressBand[];
 }): ReactElement {
-  const { toLeftPct, toWidthPct, totalMs } = useGanttContainerContext();
+  const { toLeftFraction, toWidthFraction, totalMs } =
+    useGanttContainerContext();
   return (
     <GanttRow
       className="h-full"
@@ -176,29 +194,31 @@ export function IncidentBandLayer({
       track={
         <>
           {duress.map((band) => (
-            <div
+            <Placed
               key={band.id}
               title={duressBandTitle(band)}
-              // eslint-disable-next-line layout/no-adhoc-layout -- duress band positioned by runtime ms→% offsets (left/width inline style), mirroring the incident bands
-              className="absolute top-0 h-full bg-warning/15 border-x border-warning/40"
-              style={{
-                left: toLeftPct(band.startMs, totalMs),
-                width: toWidthPct(band.endMs - band.startMs, totalMs),
+              x={{
+                start: pct(toLeftFraction(band.startMs, totalMs)),
+                size: pct(toWidthFraction(band.endMs - band.startMs, totalMs)),
+                minSize: minBarSize(band.endMs - band.startMs),
               }}
+              y="fill"
+              className="bg-warning/15 border-x border-warning/40"
             />
           ))}
           {bands.map((band) => (
-            <div
+            <Placed
               key={band.incidentId}
-              // eslint-disable-next-line layout/no-adhoc-layout -- incident band positioned by runtime ms→% offsets (left/width inline style), mirroring MultiSpanLane's bars
+              x={{
+                start: pct(toLeftFraction(band.startMs, totalMs)),
+                size: pct(toWidthFraction(band.endMs - band.startMs, totalMs)),
+                minSize: minBarSize(band.endMs - band.startMs),
+              }}
+              y="fill"
               className={cn(
-                "absolute top-0 h-full rounded-md opacity-15",
+                "rounded-md opacity-15",
                 incidentColorClass(band.colorIndex),
               )}
-              style={{
-                left: toLeftPct(band.startMs, totalMs),
-                width: toWidthPct(band.endMs - band.startMs, totalMs),
-              }}
             />
           ))}
         </>
@@ -219,7 +239,7 @@ export function DuressBadgeRow({
   bands: DuressBand[];
   onSelect: (id: string) => void;
 }): ReactElement {
-  const { toLeftPct, totalMs } = useGanttContainerContext();
+  const { toLeftFraction, totalMs } = useGanttContainerContext();
   return (
     <GanttRow
       className="py-2xs"
@@ -230,11 +250,12 @@ export function DuressBadgeRow({
       }
       trackClassName={cn("h-5")}
       track={bands.map((band) => (
-        <div
+        // The badge sizes to its own content, so `y` anchors the top edge only —
+        // deliberately not `fill`, which would stretch the chip to the row.
+        <Placed
           key={band.id}
-          // eslint-disable-next-line layout/no-adhoc-layout -- badge pinned at the band's runtime % offset (left inline style)
-          className="absolute top-0"
-          style={{ left: toLeftPct(band.startMs, totalMs) }}
+          x={{ start: pct(toLeftFraction(band.startMs, totalMs)) }}
+          y={{ start: 0 }}
         >
           <Badge
             as="button"
@@ -245,7 +266,7 @@ export function DuressBadgeRow({
           >
             {band.label}
           </Badge>
-        </div>
+        </Placed>
       ))}
     />
   );
@@ -261,7 +282,7 @@ export function IncidentBadgeRow({
 }: {
   bands: IncidentBand[];
 }): ReactElement {
-  const { toLeftPct, totalMs } = useGanttContainerContext();
+  const { toLeftFraction, totalMs } = useGanttContainerContext();
   return (
     <GanttRow
       className="py-2xs"
@@ -272,14 +293,14 @@ export function IncidentBadgeRow({
       }
       trackClassName={cn("h-5")}
       track={bands.map((band) => (
-        <div
+        // Top edge only — the chip keeps its own height. See DuressBadgeRow.
+        <Placed
           key={band.incidentId}
-          // eslint-disable-next-line layout/no-adhoc-layout -- badge pinned at the band's runtime % offset (left inline style)
-          className="absolute top-0"
-          style={{ left: toLeftPct(band.startMs, totalMs) }}
+          x={{ start: pct(toLeftFraction(band.startMs, totalMs)) }}
+          y={{ start: 0 }}
         >
           <IncidentBadge info={band} windowSpanMs={band.endMs - band.startMs} />
-        </div>
+        </Placed>
       ))}
     />
   );

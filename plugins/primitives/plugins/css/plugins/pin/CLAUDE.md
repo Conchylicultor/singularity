@@ -15,12 +15,25 @@ banned); Pin only places itself within it.
 - **corners** (`top-left` … `bottom-right`) pin both adjacent edges.
 - **edge-centers** (`top`/`bottom`/`left`/`right`) pin that edge and center the
   perpendicular axis (`left-1/2 -translate-x-1/2`), or — with `stretch` — span it
-  full-length (`inset-y-0` / `inset-x-0`, e.g. a full-height side button strip).
+  full-length (e.g. a full-height side button strip), optionally inset from both
+  of its edges by `spanOffset` (a drop-indicator bar that stops short of the
+  row's corners).
 - **center** is the four-class translate centering trick; `offset` is ignored.
 
+`stretch` and `spanOffset` are **edge-center anchors only, as a type error**, not
+a silently-ignored prop: a corner pins both its adjacent edges and `center` pins
+neither, so neither has a perpendicular axis to say anything about. `PinProps` is
+generic over the anchor the caller wrote, and the two props resolve to `never`
+elsewhere. It is a *generic*, not a discriminated props union, because the union
+cannot accept a union-typed `to` — `<Pin to={anchor}>` with `anchor: PinAnchor`
+is a real call site (`row-actions`), and a naked type parameter distributes so it
+keeps working.
+
 `outset` negates the offset so the child overhangs (a badge poking out past the
-corner). The translate/`1/2` mechanics are pure Tailwind classes living inside
-this exempt primitive; the edge offset distances are inline styles reading the
+corner). It does **not** negate `spanOffset`: `outset` overhangs the edge you are
+*anchored* to, and the spanned axis has no anchor. The translate/`1/2` mechanics
+are pure Tailwind classes living inside this exempt primitive; **every distance —
+the anchored edges and the spanned axis alike — is an inline style** reading the
 density `--space-*` var (the semantic ramp has no inset utilities).
 
 ## `mask` — the scrim
@@ -34,7 +47,9 @@ any pin over live content** (a row's hover actions, a card's corner affordances)
 Under `mask`, insets collapse to `0` and `offset` becomes the child's padding (a
 scrim inset from its edge leaves a live sliver), and an edge-center anchor spans
 its perpendicular axis (implies `stretch`) so a row cluster covers the row's full
-height. Ramp distance is a constant, not a prop.
+height. `spanOffset` is forced to `0` too, and — unlike `offset` — is *not*
+re-expressed as padding: a gap along the spanned axis is exactly the live sliver
+the scrim exists to abolish. Ramp distance is a constant, not a prop.
 
 Color is `var(--scrim, var(--chrome-mask))`. A surface painting a transient tint
 (hovered/selected `<Row>`, interactive `<Card>`) republishes `--scrim` next to
@@ -57,7 +72,12 @@ offsets expressible on the semantic ramp.
 - **`outset`** — negate the offset (overhang). Default false.
 - **`layer`** — `InTreeLayer` stacking level (from `z-layers/web`). Default `raised`.
 - **`decorative`** — `pointer-events-none`. Default false.
-- **`stretch`** — span the perpendicular axis (edge-centers only). Default false.
+- **`stretch`** — span the perpendicular axis (edge-centers only — a type error
+  on a corner or `center`). Default false. Implied by `mask` and `spanOffset`.
+- **`spanOffset`** — `SpaceStep` inset on the spanned axis, from both its edges
+  (edge-centers only, same type error). Default `none`. **Implies `stretch`** —
+  an inset on an axis that is not spanned would be a silent no-op. Not negated by
+  `outset`; forced to `0` by `mask`.
 - **`mask`** — paint the scrim (above). Default false.
 - **`as`** — host element. Default `div`. **`className`** composes last; caller
   **`style`** overrides the anchor insets.
@@ -74,6 +94,7 @@ offsets expressible on the semantic ramp.
     - `primitives/css/z-layers.zLayerClass`
   - Exports (types):
     - `PinAnchor`
+    - `PinEdgeAnchor`
     - `PinProps`
   - Exports (values):
     - `Pin`

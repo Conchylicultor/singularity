@@ -34,6 +34,17 @@ you don't want to wrap.
 `insetClass` also exists so a step can be a **variable** — see space-ramp on why
 a call site passes the step and never builds the class.
 
+- **`selfClass(align)`** — where ONE child sits on the cross axis, keyed by the
+  same `StackAlign` union as `<Stack align>` and declared beside `ALIGN_CLASS`
+  in `stack.tsx`: the two are one decision seen from the container and from the
+  child. Flex only (a grid child's override is `justify-self-*`).
+
+  **No `<Self>` component, for a structural reason:** a wrapper would *become*
+  the flex item, so the alignment would land on the wrapper and the real child
+  would stretch inside it. `yield`/`grow` are class-only because there is nothing
+  to wrap; this one because wrapping **breaks** it. A site that cannot take a
+  `className` restructures — it does not gain a wrapper.
+
 ## Enforcement
 
 `lint/no-adhoc-spacing.ts` fails `./singularity check` on any class-name carrying
@@ -52,7 +63,7 @@ per-site via `// eslint-disable-next-line spacing/no-adhoc-spacing -- reason`.
 
 ## Plugin reference
 
-- Description: Layout spacing primitives: <Stack gap> (flex + gap) and <Inset pad> (padding) draw from the closed density spacing ramp declared in primitives/css/space-ramp, plus insetClass() — the same padding resolver as a class string, for consumers that only accept a className. The sanctioned home for layout rhythm; raw gap-/p-/m-/space- Tailwind is banned by no-adhoc-spacing.
+- Description: Layout spacing primitives: <Stack gap> (flex + gap) and <Inset pad> (padding) draw from the closed density spacing ramp declared in primitives/css/space-ramp, plus insetClass() — the same padding resolver as a class string, for consumers that only accept a className — and selfClass(align), one child's cross-axis override (the same StackAlign union as <Stack align>, seen from the child), which is class-only because a wrapper would become the flex item and take the alignment itself. The sanctioned home for layout rhythm; raw gap-/p-/m-/space- Tailwind is banned by no-adhoc-spacing.
 - Web:
   - Uses:
     - `primitives/css/ui-kit.cn`
@@ -67,6 +78,7 @@ per-site via `// eslint-disable-next-line spacing/no-adhoc-spacing -- reason`.
   - Exports (values):
     - `Inset`
     - `insetClass`
+    - `selfClass`
     - `Stack`
 - Cross-plugin:
   - Imported by:

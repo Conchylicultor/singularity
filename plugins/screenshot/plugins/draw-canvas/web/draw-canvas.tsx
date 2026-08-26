@@ -1,3 +1,4 @@
+import { Placed } from "@plugins/primitives/plugins/css/plugins/coords/web";
 import { useEffect, useRef, useState } from "react";
 
 export interface Stroke {
@@ -75,15 +76,15 @@ export function DrawCanvas({
   }
 
   return (
-    <canvas
+    // The canvas IS the placed box (and the capture surface), so `as` retargets
+    // the host rather than wrapping it.
+    <Placed
+      as="canvas"
       ref={canvasRef}
-      // eslint-disable-next-line layout/no-adhoc-layout -- canvas positioned by JS/pixel coordinates from the displayed DOMRect
-      className="absolute touch-none"
+      x={{ start: displayed.x, size: displayed.width }}
+      y={{ start: displayed.y, size: displayed.height }}
+      className="touch-none"
       style={{
-        left: displayed.x,
-        top: displayed.y,
-        width: displayed.width,
-        height: displayed.height,
         cursor: readOnly ? "default" : "crosshair",
         pointerEvents: readOnly ? "none" : "auto",
       }}
@@ -92,10 +93,7 @@ export function DrawCanvas({
         e.currentTarget.setPointerCapture(e.pointerId);
         setDrawing(true);
         const p = localPoint(e);
-        onStrokesChange((prev) => [
-          ...prev,
-          { color, width, points: [p] },
-        ]);
+        onStrokesChange((prev) => [...prev, { color, width, points: [p] }]);
       }}
       onPointerMove={(e) => {
         if (!drawing) return;

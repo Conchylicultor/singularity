@@ -2872,12 +2872,16 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
     - `primitives/css/control-panel.ControlPanel`
     - `primitives/css/control-panel.ControlPanelPopover`
     - `primitives/css/control-panel.ControlPanelPopoverProps`
+    - `primitives/css/coords.Placed`
+    - `primitives/css/coords.placedClasses`
+    - `primitives/css/coords.placedStyle`
     - `primitives/css/inline.Inline`
     - `primitives/css/overlay.Overlay`
     - `primitives/css/pin.Pin`
     - `primitives/css/row.Row`
     - `primitives/css/spacing.Inset`
     - `primitives/css/spacing.insetClass`
+    - `primitives/css/spacing.selfClass`
     - `primitives/css/spacing.Stack`
     - `primitives/css/surface.Surface`
     - `primitives/css/text.Text`

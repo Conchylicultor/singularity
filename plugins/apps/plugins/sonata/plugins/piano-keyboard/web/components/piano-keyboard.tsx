@@ -1,3 +1,5 @@
+import { layerClasses } from "@plugins/primitives/plugins/css/plugins/layer/web";
+import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useEffect, useMemo, useState } from "react";
 import {
   accidentalGlyph,
@@ -76,7 +78,9 @@ function keyLabel(
 ): string | null {
   const render = (s: { step: string; alter: number }): string => {
     const base = `${s.step}${accidentalGlyph(s.alter)}`;
-    return s.step === "C" && s.alter === 0 ? `${base}${octaveOf(k.pitch)}` : base;
+    return s.step === "C" && s.alter === 0
+      ? `${base}${octaveOf(k.pitch)}`
+      : base;
   };
 
   const dia = speller.diatonic(k.pitch);
@@ -103,7 +107,10 @@ export function PianoKeyboard({ projection }: { projection: Projection }) {
   const { score } = useSonata();
   const { labelScope } = useConfig(pianoKeyboardConfig);
 
-  const speller = useMemo(() => makeKeySpeller(effectiveKeyAt(score, 0)), [score]);
+  const speller = useMemo(
+    () => makeKeySpeller(effectiveKeyAt(score, 0)),
+    [score],
+  );
 
   // Per-track view-state, shared with the falling notes (color + hidden) and the
   // audio engine (muted). Memo-stable across frames, so reading it inside the
@@ -117,7 +124,10 @@ export function PianoKeyboard({ projection }: { projection: Projection }) {
   // polyphony), so the per-frame work no longer scales with the score size (a
   // dense 22-track score has thousands of notes but only a handful sounding at
   // once).
-  const noteIndex = useMemo(() => buildActiveNoteIndex(score.notes), [score.notes]);
+  const noteIndex = useMemo(
+    () => buildActiveNoteIndex(score.notes),
+    [score.notes],
+  );
 
   // Pitches sounding at the cursor → the color to light each with. A key lights
   // only for notes on a track that is neither hidden (gone from the roll) nor
@@ -205,8 +215,10 @@ export function PianoKeyboard({ projection }: { projection: Projection }) {
       // A lit black key shows the same darker accidental shade as the falling
       // note that lands on it — the exact `blackKeyColor` the piano-roll uses.
       accidentalColor={blackKeyColor}
-      // eslint-disable-next-line layout/no-adhoc-layout -- full-bleed fill of the pitch-axis gutter; the keyboard primitive lays its keys via runtime projection coordinates
-      className="absolute inset-0 rounded-none bg-muted/30"
+      // The keyboard primitive owns the element, so the layer arrives as the
+      // class helper: a full-bleed fill of the pitch-axis gutter, inside which
+      // the primitive lays its keys by runtime projection coordinates.
+      className={cn(layerClasses(), "rounded-none bg-muted/30")}
       renderKey={(k, lit) => {
         const text = keyLabel(k, speller, scope);
         if (!text) return null;

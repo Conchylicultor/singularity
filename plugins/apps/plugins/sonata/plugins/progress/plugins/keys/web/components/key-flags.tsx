@@ -1,9 +1,14 @@
+import { Layer } from "@plugins/primitives/plugins/css/plugins/layer/web";
 import { collectKeyEntries } from "@plugins/apps/plugins/sonata/plugins/score/core";
 import type {
   KeySignature,
   Score,
 } from "@plugins/apps/plugins/sonata/plugins/score/core";
-import { railBandClass } from "@plugins/apps/plugins/sonata/plugins/progress/plugins/scrubber/web";
+import { RAIL_BAND_Y } from "@plugins/apps/plugins/sonata/plugins/progress/plugins/scrubber/web";
+import {
+  pct,
+  Placed,
+} from "@plugins/primitives/plugins/css/plugins/coords/web";
 
 /**
  * Key-signature markers along the progression bar.
@@ -18,7 +23,7 @@ import { railBandClass } from "@plugins/apps/plugins/sonata/plugins/progress/plu
  * floating in the headroom just above the rail. A song that moves through three
  * keys reads as three change bars at a glance, each labelled with its key.
  *
- * The change bar sits on the rail (via `railBandClass`); the chip floats above
+ * The change bar sits on the rail (via `RAIL_BAND_Y`); the chip floats above
  * it, leaving the rail itself clean. The section bands own the bottom headroom,
  * so chip / bar / bands stack without fighting for the same pixels.
  */
@@ -43,31 +48,36 @@ export function KeyFlags({
   if (entries.length === 0) return null;
 
   return (
-    // eslint-disable-next-line layout/no-adhoc-layout -- decorative coordinate-driven marker layer hosting JS fraction-positioned key flags
-    <div className="pointer-events-none absolute inset-0">
-      {entries.map((e) => {
-        const startF = beatToFraction(e.beat);
-        return (
-          <div
-            key={`${e.beat}-${keyLabel(e.key)}`}
-            // eslint-disable-next-line layout/no-adhoc-layout -- JS fraction-positioned key flag (left from beatToFraction)
-            className="absolute inset-y-0"
-            style={{ left: `${startF * 100}%` }}
-            title={keyLabel(e.key)}
+    <Layer decorative>
+      {entries.map((e) => (
+        // The flag's own coordinate host, at the beat's fraction along the rail.
+        <Placed
+          key={`${e.beat}-${keyLabel(e.key)}`}
+          x={{ start: pct(beatToFraction(e.beat)) }}
+          y="fill"
+          title={keyLabel(e.key)}
+        >
+          {/* Strong vertical bar marking where this key takes hold — a
+              highlighted sibling of the muted bar ticks, taking the same shared
+              rail-band extent so the two align pixel-for-pixel. */}
+          <Placed
+            x={{ start: 0, size: 2 }}
+            y={RAIL_BAND_Y}
+            className="bg-foreground/60"
+          />
+          {/* Small neutral key chip — names the key without a colored band,
+              floating in the headroom just above the rail. */}
+          <Placed
+            as="span"
+            x={{ start: 4 }}
+            y={{ end: "50%" }}
+            // eslint-disable-next-line text/no-adhoc-typography, spacing/no-adhoc-spacing -- leading-none keeps the key chip slim enough to match the bands below; mb-2 lifts it into the headroom above the rail (no named margin step for that offset)
+            className="mb-2 whitespace-nowrap rounded-sm bg-muted px-xs text-3xs font-medium leading-none text-foreground/80"
           >
-            {/* Strong vertical bar marking where this key takes hold — a
-                highlighted sibling of the muted bar ticks, on the same shared
-                rail band so the two align pixel-for-pixel. */}
-            <div className={`${railBandClass} left-0 w-0.5 bg-foreground/60`} />
-            {/* Small neutral key chip — names the key without a colored band,
-                floating in the headroom just above the rail. */}
-            {/* eslint-disable-next-line text/no-adhoc-typography, spacing/no-adhoc-spacing, layout/no-adhoc-layout -- tight key chip: line-height must stay 1 so the marker stays slim, matching the bands below; mb-2 lifts the chip into the headroom above the rail (no named margin utility); bottom-1/2 floats it in the coordinate-driven flag headroom (not a clean Pin anchor) */}
-            <span className="absolute bottom-1/2 left-1 mb-2 whitespace-nowrap rounded-sm bg-muted px-xs text-3xs font-medium leading-none text-foreground/80">
-              {keyLabel(e.key)}
-            </span>
-          </div>
-        );
-      })}
-    </div>
+            {keyLabel(e.key)}
+          </Placed>
+        </Placed>
+      ))}
+    </Layer>
   );
 }

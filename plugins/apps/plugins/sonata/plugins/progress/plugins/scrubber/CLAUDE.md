@@ -13,12 +13,14 @@
     - `apps/sonata/shell.useCursorApi`
     - `apps/sonata/shell.useSonata`
     - `primitives/css/clip.Clip`
+    - `primitives/css/coords.Placed`
+    - `primitives/css/layer.Layer`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
     - `primitives/slot-render.renderIsolated`
   - Exports (values):
-    - `RAIL_THICKNESS`
-    - `railBandClass`
+    - `RAIL_BAND_Y`
+    - `RAIL_HEIGHT`
     - `SonataProgress`
 - Cross-plugin:
   - Imported by:

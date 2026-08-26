@@ -145,6 +145,7 @@ curl -s 'http://<wt>.localhost:9000/api/debug/timeline?fromMs=…&toMs=…'
   - Uses:
     - `debug/profiling.formatDuration`
     - `debug/profiling.GanttContainer`
+    - `debug/profiling.minBarSize`
     - `debug/profiling.MultiSpanLane`
     - `debug/profiling.useGanttContainerContext`
     - `debug/trace/pane.groupIncidents`
@@ -158,10 +159,14 @@ curl -s 'http://<wt>.localhost:9000/api/debug/timeline?fromMs=…&toMs=…'
     - `primitives/css/clip.Clip`
     - `primitives/css/cluster.Cluster`
     - `primitives/css/column.Column`
+    - `primitives/css/coords.pct`
+    - `primitives/css/coords.Placed`
     - `primitives/css/fill.Fill`
+    - `primitives/css/grow.growClass`
     - `primitives/css/line.Line`
     - `primitives/css/overlay.Overlay`
     - `primitives/css/placeholder.Placeholder`
+    - `primitives/css/rigid.rigidClass`
     - `primitives/css/scroll.Scroll`
     - `primitives/css/spacing.Inset`
     - `primitives/css/spacing.Stack`

@@ -1,3 +1,4 @@
+import { Placed } from "@plugins/primitives/plugins/css/plugins/coords/web";
 import {
   pedalSpans,
   scoreEndBeat,
@@ -58,11 +59,13 @@ export function PedalLane({ projection }: { projection: Projection }) {
         const top = beatToY(up);
         const height = Math.max(0, beatToY(down) - beatToY(up));
         return (
-          <div
+          // Pinned to the lane's left edge at the interval's content-space Y;
+          // scrolls with the content layer.
+          <Placed
             key={i}
-            // eslint-disable-next-line layout/no-adhoc-layout -- JS pixel-positioned pedal-down rail pinned to the lane's left edge (top/height from projection.beatToY); scrolls with the content layer
-            className="absolute left-0 w-2 rounded-full bg-primary/70 shadow-sm ring-1 ring-primary/30"
-            style={{ top, height }}
+            x={{ start: 0, size: 8 }}
+            y={{ start: top, size: height }}
+            className="rounded-full bg-primary/70 shadow-sm ring-1 ring-primary/30"
           />
         );
       })}

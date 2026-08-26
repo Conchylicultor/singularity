@@ -1,3 +1,4 @@
+import { Placed } from "@plugins/primitives/plugins/css/plugins/coords/web";
 import type { Projection } from "@plugins/apps/plugins/sonata/plugins/score/core";
 import { useSonata } from "@plugins/apps/plugins/sonata/plugins/shell/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
@@ -49,22 +50,24 @@ export function LoopRollRegion({ projection }: { projection: Projection }) {
           top/bottom edges are the B and A boundary lines (pixel-exact on the
           bounds, all in one element). Solid while looping; dashed while the loop
           is defined-but-disabled. */}
-      <div
-        // eslint-disable-next-line layout/no-adhoc-layout -- JS pixel-positioned loop band (top/height from projection.beatToY); the border edges are the side rails + A/B boundary lines; spans the full lane width and scrolls with the content layer
+      <Placed
+        x="fill"
+        y={{ start: top, size: height }}
         className={cn(
-          "absolute inset-x-0 border-2",
-          loop.enabled
-            ? "border-primary"
-            : "border-dashed border-primary/45",
+          "border-2",
+          loop.enabled ? "border-primary" : "border-dashed border-primary/45",
         )}
-        style={{ top, height }}
       />
       {/* B label tucked just below its top edge; A label just above its bottom
           edge — both stay inside the band, clear of the lane edges. Each shows
           only while its boundary is on-screen; once a boundary scrolls past the
           lookahead the edge chip (LoopRollEdge) stands in for the label. */}
-      {bOn ? <LoopLabel y={yB} label="B" enabled={loop.enabled} side="below" /> : null}
-      {aOn ? <LoopLabel y={yA} label="A" enabled={loop.enabled} side="above" /> : null}
+      {bOn ? (
+        <LoopLabel y={yB} label="B" enabled={loop.enabled} side="below" />
+      ) : null}
+      {aOn ? (
+        <LoopLabel y={yA} label="A" enabled={loop.enabled} side="above" />
+      ) : null}
     </>
   );
 }
@@ -86,16 +89,18 @@ function LoopLabel({
   side: "above" | "below";
 }) {
   return (
-    <div
-      // eslint-disable-next-line layout/no-adhoc-layout, text/no-adhoc-typography -- compact loop-edge chip pinned to the right edge at a runtime content-space Y (top from projection.beatToY); translate keeps it just inside the band; text-2xs sub-scale keeps the single letter tight
+    // Pinned to the right edge at a runtime content-space Y; the `shift` is what
+    // keeps an "above" chip just inside the band rather than straddling it.
+    <Placed
+      x={{ end: 0 }}
+      y={{ start: y, shift: side === "above" ? "-100%" : undefined }}
+      // eslint-disable-next-line text/no-adhoc-typography -- leading-none keeps the single-letter edge chip tight against the band
       className={cn(
-        "absolute right-0 rounded-l-sm px-xs py-2xs text-2xs font-bold leading-none text-primary-foreground shadow-sm",
-        side === "above" ? "-translate-y-full" : null,
+        "rounded-l-sm px-xs py-2xs text-2xs font-bold leading-none text-primary-foreground shadow-sm",
         enabled ? "bg-primary" : "bg-primary/55",
       )}
-      style={{ top: y }}
     >
       {label}
-    </div>
+    </Placed>
   );
 }

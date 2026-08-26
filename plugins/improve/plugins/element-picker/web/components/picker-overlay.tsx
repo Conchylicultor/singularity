@@ -1,3 +1,9 @@
+import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import {
+  Placed,
+  placedClasses,
+  placedStyle,
+} from "@plugins/primitives/plugins/css/plugins/coords/web";
 import { useEffect, useState } from "react";
 import { Inset } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
@@ -86,25 +92,25 @@ export function PickerOverlay({
     >
       {highlight && (
         <>
-          <div
-            // eslint-disable-next-line layout/no-adhoc-layout -- pixel coordinates from a live DOMRect (highlight box tracking the hovered element)
-            className="bg-primary/10 border-primary pointer-events-none absolute border-2"
-            style={{
-              left: highlight.rect.left,
-              top: highlight.rect.top,
-              width: highlight.rect.width,
-              height: highlight.rect.height,
-            }}
+          <Placed
+            decorative
+            x={{ start: highlight.rect.left, size: highlight.rect.width }}
+            y={{ start: highlight.rect.top, size: highlight.rect.height }}
+            className="bg-primary/10 border-primary border-2"
           />
+          {/* The label is an `Inset`, so the placement arrives as the class +
+              style helpers rather than a wrapper. */}
           <Inset
             x="2xs"
             y="none"
-            // eslint-disable-next-line layout/no-adhoc-layout -- pixel coordinates from a live DOMRect (label pinned to the hovered element)
-            className="bg-primary text-primary-foreground pointer-events-none absolute rounded-sm text-caption whitespace-nowrap"
-            style={{
-              left: highlight.rect.left,
-              top: Math.max(0, highlight.rect.top - 22),
-            }}
+            className={cn(
+              placedClasses({ decorative: true }),
+              "bg-primary text-primary-foreground rounded-sm text-caption whitespace-nowrap",
+            )}
+            style={placedStyle(
+              { start: highlight.rect.left },
+              { start: Math.max(0, highlight.rect.top - 22) },
+            )}
           >
             {highlight.pluginId ? `${highlight.pluginId} · ` : ""}
             {highlight.tag}

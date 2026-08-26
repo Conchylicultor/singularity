@@ -1,3 +1,4 @@
+import { Layer } from "@plugins/primitives/plugins/css/plugins/layer/web";
 /**
  * PianoRollCanvas — the React ↔ Pixi bridge. Owns the `Application` lifecycle
  * and forwards every prop change to the imperative {@link PianoRollScene}
@@ -261,7 +262,8 @@ export function PianoRollCanvas(props: PianoRollCanvasProps) {
   }, [scene]);
 
   return (
-    // eslint-disable-next-line layout/no-adhoc-layout -- pixi canvas host: full-bleed inert layer the appended <canvas> fills; the lane bg shows through (transparent canvas)
-    <div ref={hostRef} className="pointer-events-none absolute inset-0" />
+    // Pixi canvas host: the full-bleed inert layer the appended <canvas> fills.
+    // The lane bg shows through (the canvas is transparent).
+    <Layer ref={hostRef} decorative />
   );
 }

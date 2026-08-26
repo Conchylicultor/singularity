@@ -434,6 +434,7 @@ guard: `confirmDialog` (`imperative-dialog/plugins/confirm`); native
     - `apps/prototypes/gallery`
     - `apps/prototypes/present`
     - `apps/sonata/library`
+    - `apps/sonata/piano-keyboard`
     - `apps/sonata/piano-roll`
     - `apps/sonata/primitives/jog-wheel`
     - `apps/sonata/primitives/keyboard`
@@ -544,6 +545,7 @@ guard: `confirmDialog` (`imperative-dialog/plugins/confirm`); native
     - `debug/logs`
     - `debug/memory`
     - `debug/profiling`
+    - `debug/profiling/ops`
     - `debug/profiling/ops/op-gantt`
     - `debug/profiling/runtime`
     - `debug/queue`
@@ -622,6 +624,7 @@ guard: `confirmDialog` (`imperative-dialog/plugins/confirm`); native
     - `primitives/css/color-picker`
     - `primitives/css/column`
     - `primitives/css/control-panel`
+    - `primitives/css/coords`
     - `primitives/css/fill`
     - `primitives/css/grid`
     - `primitives/css/inline`
@@ -683,7 +686,6 @@ guard: `confirmDialog` (`imperative-dialog/plugins/confirm`); native
     - `primitives/tooltip`
     - `primitives/tree`
     - `primitives/ui-context`
-    - `primitives/virtual-rows`
     - `reorder`
     - `reorder/editor`
     - `reorder/node-types/header`

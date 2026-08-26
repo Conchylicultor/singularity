@@ -133,7 +133,7 @@ export function AppTabBar() {
           <AdaptiveBar
             overflow="scroll"
             gap="2xs"
-            // eslint-disable-next-line layout/no-adhoc-layout -- the folder variant's full-height pass-through; both halves are CROSS-axis and no primitive expresses either. AdaptiveBar's `align` is main-axis (where occupants sit in the slack), not cross-axis stretch, so it does not cover this; self-stretch is a per-child cross-axis override no container primitive owns.
+            // eslint-disable-next-line layout/no-adhoc-layout -- the folder variant's full-height pass-through, waiting on a cross-axis alignment prop on AdaptiveBar. `self-stretch` alone IS now expressible (spacing's selfClass("stretch")), but `items-stretch` is AdaptiveBar's OWN cross-axis alignment of its occupants — its `align` prop is main-axis (where they sit in the slack) and does not cover it. Draining half of this with selfClass would leave the other half here and foreclose the right fix, so both halves stay until AdaptiveBar grows the prop.
             className={fillHeight ? "items-stretch self-stretch" : undefined}
           >
             <SortableList

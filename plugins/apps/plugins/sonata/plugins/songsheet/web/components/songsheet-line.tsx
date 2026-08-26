@@ -1,3 +1,4 @@
+import { Placed } from "@plugins/primitives/plugins/css/plugins/coords/web";
 import { forwardRef } from "react";
 import type { LyricAnnotation } from "@plugins/apps/plugins/sonata/plugins/score/core";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
@@ -66,11 +67,13 @@ export const SongsheetLine = forwardRef<HTMLButtonElement, SongsheetLineProps>(
             {chords.length === 0
               ? " "
               : chords.map((c, i) => (
-                  <span
+                  // Pinned to its exact monospace column: `start` is a computed
+                  // `ch` offset (one column = one char), not a spacing token.
+                  <Placed
                     key={i}
-                    // eslint-disable-next-line layout/no-adhoc-layout -- chord pinned to its exact monospace column; `left` is a computed `ch` offset (one column = one char), not an ad-hoc spacing token
-                    className="absolute bottom-0"
-                    style={{ left: `${c.charOffset}ch` }}
+                    as="span"
+                    x={{ start: `${c.charOffset}ch` }}
+                    y={{ end: 0 }}
                   >
                     <Text
                       as="span"
@@ -85,7 +88,7 @@ export const SongsheetLine = forwardRef<HTMLButtonElement, SongsheetLineProps>(
                     >
                       {c.symbol}
                     </Text>
-                  </span>
+                  </Placed>
                 ))}
           </Text>
 

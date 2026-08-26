@@ -1,3 +1,9 @@
+import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import {
+  Placed,
+  placedClasses,
+  placedStyle,
+} from "@plugins/primitives/plugins/css/plugins/coords/web";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   $getSelection,
@@ -426,18 +432,17 @@ export function FormatToolbarPlugin() {
   if (presentation?.kind === "cue") {
     return (
       <ViewportOverlay layer="popover" className="pointer-events-none">
-        <div
+        {/* A JS-computed viewport coordinate inside the fixed-inset-0 overlay.
+            The `transform` stays the caller's: `Placed` writes `translate`, which
+            CSS applies FIRST, so the two compose. */}
+        <Placed
           ref={cueRef}
-          // eslint-disable-next-line layout/no-adhoc-layout -- floating cue placed at a JS-computed viewport coordinate (left/top/transform below), inside the fixed-inset-0 overlay; not a ramp-expressible anchor
-          className="absolute"
-          style={{
-            left: position.left,
-            top: position.top,
-            transform: placementTransform(position.placement),
-          }}
+          x={{ start: position.left }}
+          y={{ start: position.top }}
+          style={{ transform: placementTransform(position.placement) }}
         >
           <CaretFormatChip marks={presentation.marks} />
-        </div>
+        </Placed>
       </ViewportOverlay>
     );
   }
@@ -445,14 +450,15 @@ export function FormatToolbarPlugin() {
   return (
     <ViewportOverlay layer="popover" className="pointer-events-none">
       <FormatToolbarProvider value={value}>
+        {/* `Surface` owns this element, so the placement arrives as the class +
+            style helpers. The `transform` still lifts an "above" bar by its own
+            height: `Placed` writes `translate`, applied first, never `transform`. */}
         <Surface
           ref={barRef}
           level="overlay"
-          // eslint-disable-next-line layout/no-adhoc-layout -- floating bar placed at a JS-computed viewport coordinate (left/top/transform below), inside the fixed-inset-0 overlay; not a ramp-expressible anchor
-          className="pointer-events-auto absolute p-2xs"
+          className={cn(placedClasses(), "pointer-events-auto p-2xs")}
           style={{
-            left: position.left,
-            top: position.top,
+            ...placedStyle({ start: position.left }, { start: position.top }),
             // "above": anchor the bar's bottom edge at `top` by lifting it its
             // own height, so it always clears the selection without measuring.
             transform: placementTransform(position.placement),

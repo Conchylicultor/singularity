@@ -32,6 +32,7 @@
     - `primitives/css/rigid.rigidClass`
     - `primitives/css/row.Row`
     - `primitives/css/row.SectionHeaderRow`
+    - `primitives/css/spacing.selfClass`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.Button`

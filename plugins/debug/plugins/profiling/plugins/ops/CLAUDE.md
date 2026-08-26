@@ -74,9 +74,11 @@ every worktree backend from writing it concurrently.
     - `primitives/css/clip.Clip`
     - `primitives/css/cluster.Cluster`
     - `primitives/css/placeholder.Placeholder`
+    - `primitives/css/spacing.selfClass`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.SectionLabel`
     - `primitives/css/text.Text`
+    - `primitives/css/ui-kit.cn`
     - `primitives/pane.Pane`
     - `primitives/pane.PaneChrome`
     - `primitives/pane.useOpenPane`

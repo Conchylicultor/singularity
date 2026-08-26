@@ -12,6 +12,12 @@ import { MdClose } from "react-icons/md";
 import { SectionLabel } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
+import {
+  pct,
+  Placed,
+} from "@plugins/primitives/plugins/css/plugins/coords/web";
+import { growClass } from "@plugins/primitives/plugins/css/plugins/grow/web";
+import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useGanttZoom, type ZoomWindow } from "./use-gantt-zoom";
 import { DragSelection, type DragState } from "./drag-selection";
 
@@ -93,25 +99,22 @@ export function TimeAxis({
           </span>
         )}
       </div>
-      {/* eslint-disable-next-line layout/no-adhoc-layout -- flexible time-axis track (flex-1) holding runtime-positioned ticks */}
-      <div className="relative flex-1">
+      {/* The time-axis track: the coordinate host for the ticks, and the cell
+          that takes the row's slack. */}
+      <div className={cn("relative", growClass())}>
         {ticks.map((ms) => (
-          <div
+          <Placed
             key={ms}
-            // eslint-disable-next-line layout/no-adhoc-layout -- tick positioned by runtime % offset along the time axis (left inline style)
-            className="absolute top-0 flex h-full flex-col items-center"
-            style={{
-              left:
-                viewRange > 0
-                  ? `${((ms - viewStart) / viewRange) * 100}%`
-                  : "0%",
-            }}
+            x={{ start: pct(viewRange > 0 ? (ms - viewStart) / viewRange : 0) }}
+            y="fill"
           >
-            <div className="h-2 w-px bg-border" />
-            <span className="text-3xs tabular-nums text-muted-foreground">
-              {formatTickMs(ms)}
-            </span>
-          </div>
+            <Stack direction="col" align="center" gap="none">
+              <div className="h-2 w-px bg-border" />
+              <span className="text-3xs tabular-nums text-muted-foreground">
+                {formatTickMs(ms)}
+              </span>
+            </Stack>
+          </Placed>
         ))}
       </div>
       {/* eslint-disable-next-line layout/no-adhoc-layout -- fixed 64px (w-16) duration-column spacer kept rigid (shrink-0) to align with the Gantt rows (DURATION_WIDTH) */}
@@ -121,18 +124,20 @@ export function TimeAxis({
 }
 
 export interface GanttContainerContextValue {
-  toLeftPct: (ms: number, totalMs: number) => string;
-  toWidthPct: (durationMs: number, totalMs: number) => string;
+  /** Where `ms` sits along the visible window, as a [0,1] fraction. */
+  toLeftFraction: (ms: number, totalMs: number) => number;
+  /** How much of the visible window `durationMs` covers, as a [0,1] fraction. */
+  toWidthFraction: (durationMs: number, totalMs: number) => number;
   totalMs: number;
 }
 
-const GanttContainerContext =
-  createContext<GanttContainerContextValue | null>(null);
+const GanttContainerContext = createContext<GanttContainerContextValue | null>(
+  null,
+);
 
 export function useGanttContainerContext(): GanttContainerContextValue {
   const ctx = useContext(GanttContainerContext);
-  if (!ctx)
-    throw new Error("useGanttContainerContext requires GanttContainer");
+  if (!ctx) throw new Error("useGanttContainerContext requires GanttContainer");
   return ctx;
 }
 
@@ -225,18 +230,17 @@ export function GanttContainer({
 }): ReactElement {
   const zoom = useGanttZoom();
   const containerRef = useRef<HTMLDivElement>(null);
-  const { drag, handlePointerDown } = useGanttDrag(
-    containerRef,
-    (s, e) => zoom.zoomTo(s, e, totalMs),
+  const { drag, handlePointerDown } = useGanttDrag(containerRef, (s, e) =>
+    zoom.zoomTo(s, e, totalMs),
   );
 
   const ctx = useMemo(
     () => ({
-      toLeftPct: zoom.toLeftPct,
-      toWidthPct: zoom.toWidthPct,
+      toLeftFraction: zoom.toLeftFraction,
+      toWidthFraction: zoom.toWidthFraction,
       totalMs,
     }),
-    [zoom.toLeftPct, zoom.toWidthPct, totalMs],
+    [zoom.toLeftFraction, zoom.toWidthFraction, totalMs],
   );
 
   return (

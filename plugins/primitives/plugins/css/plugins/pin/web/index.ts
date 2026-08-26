@@ -1,6 +1,12 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 
-export { Pin, pinClasses, type PinProps, type PinAnchor } from "./internal/pin";
+export {
+  Pin,
+  pinClasses,
+  type PinProps,
+  type PinAnchor,
+  type PinEdgeAnchor,
+} from "./internal/pin";
 
 export default {
   description:

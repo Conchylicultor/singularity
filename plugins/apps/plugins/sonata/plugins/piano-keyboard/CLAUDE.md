@@ -22,6 +22,8 @@
     - `apps/sonata/track-mixer.useTrackColorMap`
     - `config_v2.ConfigV2`
     - `config_v2.useConfig`
+    - `primitives/css/layer.layerClasses`
+    - `primitives/css/ui-kit.cn`
 - Server:
   - Contributes: `ConfigV2.Register` "config"
   - Uses: `config_v2.ConfigV2`

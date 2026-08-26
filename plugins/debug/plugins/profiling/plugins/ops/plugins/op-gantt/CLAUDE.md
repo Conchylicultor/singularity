@@ -79,10 +79,13 @@ kind dispatch.
   - Uses:
     - `debug/profiling.formatDuration`
     - `debug/profiling.GanttContainer`
+    - `debug/profiling.minBarSize`
     - `debug/profiling.Span`
     - `debug/profiling.SpanDetail`
     - `debug/profiling.useGanttContainerContext`
     - `primitives/css/cluster.Cluster`
+    - `primitives/css/coords.pct`
+    - `primitives/css/coords.Placed`
     - `primitives/css/spacing.Stack`
     - `primitives/css/status-dot.StatusDot`
     - `primitives/css/sticky.Sticky`

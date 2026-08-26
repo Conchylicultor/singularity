@@ -11,7 +11,10 @@ import {
   FloatingActionFadeIn,
 } from "@plugins/primitives/plugins/floating-action/web";
 import { AdaptiveBar } from "@plugins/primitives/plugins/adaptive-bar/web";
-import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import {
+  Stack,
+  selfClass,
+} from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Cluster } from "@plugins/primitives/plugins/css/plugins/cluster/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { ConfigGearButton } from "@plugins/config_v2/plugins/config-link/web";
@@ -204,8 +207,9 @@ export function FloatingTemplateChips({
         >
           <FloatingActionFadeIn>
             <Stack gap="xs" align="start">
-              {/* eslint-disable-next-line layout/no-adhoc-layout -- per-child self-alignment (right-align the gear within the start-aligned column); no container primitive owns one child's cross-axis override */}
-              <div className="self-end">
+              {/* The wrapper stays: ConfigGearButton takes only descriptor/label,
+                  so this div is the flex item selfClass has to land on. */}
+              <div className={selfClass("end")}>
                 <ConfigGearButton
                   descriptor={promptTemplatesConfig}
                   label="Configure: Prompt templates"

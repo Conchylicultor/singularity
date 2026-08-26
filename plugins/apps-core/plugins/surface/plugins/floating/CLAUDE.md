@@ -130,6 +130,7 @@ last desktop creates a new one; moving before the first clamps).
     - `primitives/css/cluster.Cluster`
     - `primitives/css/layer.Layer`
     - `primitives/css/layer.layerClasses`
+    - `primitives/css/spacing.selfClass`
     - `primitives/css/spacing.Stack`
     - `primitives/css/surface.Surface`
     - `primitives/css/text.Text`

@@ -1,3 +1,4 @@
+import { Placed } from "@plugins/primitives/plugins/css/plugins/coords/web";
 import type React from "react";
 import { useCallback, useEffect, useMemo, useRef } from "react";
 import {
@@ -333,14 +334,13 @@ function NotationInner({ score }: NotationProps) {
               onClick={onClick}
             >
               {virtualItems.map((vi) => (
-                <div
+                // x is a plain inset (the row spans the sizer); only y is a
+                // `shift`, so the measured offset stays on the compositor.
+                <Placed
                   key={vi.key}
                   data-index={vi.index}
-                  // eslint-disable-next-line layout/no-adhoc-layout -- each windowed system row is absolutely positioned at its computed translateY (dynamic offset no Pin/Overlay primitive expresses)
-                  className="absolute left-0 right-0 top-0"
-                  style={{
-                    transform: `translateY(${vi.start - scrollMargin}px)`,
-                  }}
+                  x={{ start: 0, end: 0 }}
+                  y={{ start: 0, shift: vi.start - scrollMargin }}
                 >
                   <NotationSystem
                     plan={plan!}
@@ -349,12 +349,20 @@ function NotationInner({ score }: NotationProps) {
                     registryRef={registryRef}
                     onDrawn={reapplyRef}
                   />
-                </div>
+                </Placed>
               ))}
-              <div
+              {/* The playhead line: anchored at the sizer's top-left and moved
+                  imperatively (applyCursor writes `transform` + `height` per
+                  frame — `translate` and `transform` compose, and this box
+                  declares no shift anyway). A sizer sibling, so scrollMargin
+                  cancels exactly as it does for the rows. */}
+              <Placed
                 ref={playheadRef}
-                // eslint-disable-next-line layout/no-adhoc-layout -- playhead line positioned imperatively (transform/height written per frame by applyCursor); a sizer sibling, so scrollMargin cancels exactly as it does for the rows
-                className="pointer-events-none absolute left-0 top-0 z-raised w-0.5"
+                x={{ start: 0 }}
+                y={{ start: 0 }}
+                layer="raised"
+                decorative
+                className="w-0.5"
                 style={{
                   display: "none",
                   backgroundColor: PAPER.accent,

@@ -84,7 +84,13 @@ has the vocabulary for it.
 - Cross-plugin:
   - Imported by:
     - `apps-core/surface/floating`
+    - `apps/sonata/piano-keyboard`
+    - `apps/sonata/piano-roll`
     - `apps/sonata/primitives/keyboard`
+    - `apps/sonata/progress/bars`
+    - `apps/sonata/progress/keys`
+    - `apps/sonata/progress/loop`
+    - `apps/sonata/progress/scrubber`
     - `page/code-block`
     - `primitives/tree`
 

@@ -1,4 +1,4 @@
-import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { Button, cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useEffect, useRef, useState } from "react";
 import { MdAutoAwesome } from "react-icons/md";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
@@ -14,7 +14,10 @@ import {
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
-import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import {
+  Stack,
+  selfClass,
+} from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import {
   conversationSummariesResource,
   type ConversationSummary,
@@ -134,8 +137,7 @@ function SummaryPaneInner({
         variant="outline"
         onClick={onSummarize}
         loading={isPending}
-        // eslint-disable-next-line layout/no-adhoc-layout -- per-child cross-axis override: this one button must hug its content inside a Stack column whose other child (the summary card) must keep stretching, so the alignment cannot move to the container's `align`. Per-child `self-*` has no primitive — `selfClass()` is designed, not built.
-        className="gap-xs self-start text-caption"
+        className={cn("gap-xs", selfClass("start"), "text-caption")}
         aria-label={latest ? "Re-summarise" : "Summarise"}
       >
         <MdAutoAwesome className="size-3.5" />

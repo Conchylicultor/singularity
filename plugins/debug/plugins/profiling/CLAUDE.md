@@ -16,8 +16,12 @@
     - `apps/debug/shell.DebugApp`
     - `primitives/app-shell.sidebarNavItem`
     - `primitives/css/center.Center`
+    - `primitives/css/clip.Clip`
     - `primitives/css/column.Column`
+    - `primitives/css/coords.pct`
+    - `primitives/css/coords.Placed`
     - `primitives/css/fill.Fill`
+    - `primitives/css/grow.growClass`
     - `primitives/css/line.Line`
     - `primitives/css/rigid.rigidClass`
     - `primitives/css/spacing.Stack`
@@ -43,6 +47,8 @@
     - `GanttContainer`
     - `GanttSection`
     - `groupByPhase`
+    - `MIN_BAR_FRACTION`
+    - `minBarSize`
     - `MultiSpanLane`
     - `PhaseGroup`
     - `Profiling`

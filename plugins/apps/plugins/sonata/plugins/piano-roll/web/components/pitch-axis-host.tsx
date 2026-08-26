@@ -1,3 +1,4 @@
+import { Layer } from "@plugins/primitives/plugins/css/plugins/layer/web";
 import { renderIsolated } from "@plugins/primitives/plugins/slot-render/web";
 import type { Contribution } from "@plugins/framework/plugins/web-sdk/core";
 import { Sonata } from "@plugins/apps/plugins/sonata/plugins/shell/web";
@@ -16,8 +17,10 @@ export function PitchAxisHost({ projection }: { projection: Projection }) {
   const decorations = Sonata.PitchAxis.useContributions();
 
   return (
-    // eslint-disable-next-line layout/no-adhoc-layout -- full-bleed positioning context over the pitch-axis gutter; each decoration anchors via runtime projection coordinates (projection.keys / pitchToX)
-    <div className="absolute inset-0">
+    // Full-bleed positioning context over the pitch-axis gutter; each
+    // decoration anchors via runtime projection coordinates (projection.keys /
+    // pitchToX).
+    <Layer>
       {decorations
         .filter((d) => d.requires.every((r) => projection.capabilities.has(r)))
         .map((d) =>
@@ -25,6 +28,6 @@ export function PitchAxisHost({ projection }: { projection: Projection }) {
             projection,
           }),
         )}
-    </div>
+    </Layer>
   );
 }

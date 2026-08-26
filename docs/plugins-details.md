@@ -3117,6 +3117,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `config_v2.ConfigV2`
               - `config_v2.useConfig`
               - `primitives/css/center.Center`
+              - `primitives/css/coords.Placed`
               - `primitives/css/pin.Pin`
               - `primitives/css/placeholder.Placeholder`
               - `primitives/css/scroll.Scroll`
@@ -3145,6 +3146,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                 - Uses:
                   - `apps/sonata/shell.Sonata`
                   - `apps/sonata/shell.useSonata`
+                  - `primitives/css/coords.Placed`
         - **`piano-keyboard`** — Sonata PitchAxis: full 88-key piano keyboard rendered below the vertical roll. Requires the pitch-plane capability and draws every key from the display's published projection, so falling-note columns land exactly on their keys. Server registration of the piano-keyboard config (key-label scope).
           - Web:
             - Contributes:
@@ -3163,6 +3165,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/sonata/track-mixer.useTrackColorMap`
               - `config_v2.ConfigV2`
               - `config_v2.useConfig`
+              - `primitives/css/layer.layerClasses`
+              - `primitives/css/ui-kit.cn`
           - Server:
             - Contributes: `ConfigV2.Register` "config"
             - Uses: `config_v2.ConfigV2`
@@ -3194,6 +3198,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/clip.Clip`
               - `primitives/css/control-panel.ControlPanel`
               - `primitives/css/control-panel.ControlPanelPopover`
+              - `primitives/css/coords.Placed`
+              - `primitives/css/layer.Layer`
               - `primitives/css/pin.Pin`
               - `primitives/css/spacing.Stack`
               - `primitives/css/text.Text`
@@ -3393,14 +3399,20 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - Web:
                 - Contributes: `SonataProgress.Marker` "bars" → `BarTicks`
                 - Uses:
-                  - `apps/sonata/progress/scrubber.railBandClass`
+                  - `apps/sonata/progress/scrubber.RAIL_BAND_Y`
                   - `apps/sonata/progress/scrubber.SonataProgress`
+                  - `primitives/css/coords.pct`
+                  - `primitives/css/coords.Placed`
+                  - `primitives/css/layer.Layer`
             - **`keys`** — Sonata progress marker: key-signature change markers along the progression bar — a strong vertical bar at each key change captioned by a small neutral key chip (starting key + 'key' annotation changes).
               - Web:
                 - Contributes: `SonataProgress.Marker` "keys" → `KeyFlags`
                 - Uses:
-                  - `apps/sonata/progress/scrubber.railBandClass`
+                  - `apps/sonata/progress/scrubber.RAIL_BAND_Y`
                   - `apps/sonata/progress/scrubber.SonataProgress`
+                  - `primitives/css/coords.pct`
+                  - `primitives/css/coords.Placed`
+                  - `primitives/css/layer.Layer`
             - **`loop`** — Sonata A–B practice loop: a draggable loop region on the progression bar, a toolbar Loop toggle, and L/[/] shortcuts that cycle playback within [A, B].
               - Web:
                 - Contributes:
@@ -3411,14 +3423,17 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `Sonata.Effect` "loop-shortcuts" → `LoopShortcuts`
                 - Uses:
                   - `apps/sonata/library.sonataPlayerPane`
-                  - `apps/sonata/progress/scrubber.railBandClass`
+                  - `apps/sonata/progress/scrubber.RAIL_BAND_Y`
                   - `apps/sonata/progress/scrubber.SonataProgress`
                   - `apps/sonata/shell.Sonata`
                   - `apps/sonata/shell.useCursorApi`
                   - `apps/sonata/shell.useCursorSelector`
                   - `apps/sonata/shell.useLaneInsets`
                   - `apps/sonata/shell.useSonata`
+                  - `primitives/css/coords.pct`
+                  - `primitives/css/coords.Placed`
                   - `primitives/css/inline.Inline`
+                  - `primitives/css/layer.Layer`
                   - `primitives/css/pin.Pin`
                   - `primitives/css/spacing.Stack`
                   - `primitives/css/ui-kit.cn`
@@ -3436,12 +3451,14 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `apps/sonata/shell.useCursorApi`
                   - `apps/sonata/shell.useSonata`
                   - `primitives/css/clip.Clip`
+                  - `primitives/css/coords.Placed`
+                  - `primitives/css/layer.Layer`
                   - `primitives/css/spacing.Stack`
                   - `primitives/css/text.Text`
                   - `primitives/slot-render.renderIsolated`
                 - Exports (values):
-                  - `RAIL_THICKNESS`
-                  - `railBandClass`
+                  - `RAIL_BAND_Y`
+                  - `RAIL_HEIGHT`
                   - `SonataProgress`
               - Cross-plugin:
                 - Imported by:
@@ -3455,6 +3472,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                 - Uses:
                   - `apps/sonata/progress/scrubber.SonataProgress`
                   - `apps/sonata/shell.useSonata`
+                  - `primitives/css/coords.pct`
+                  - `primitives/css/coords.Placed`
                   - `primitives/css/text.Text`
                   - `primitives/css/ui-kit.cn`
                   - `primitives/css/ui-kit.ControlSizeProvider`
@@ -3510,6 +3529,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `apps/sonata/rich/chord-label.useChordDisplayMode`
                   - `apps/sonata/shell.Sonata`
                   - `apps/sonata/shell.useSonata`
+                  - `primitives/css/coords.Placed`
                   - `primitives/css/pin.Pin`
             - **`chord-progression`** — Sonata Section: a rhythm-aware chord-progression strip of chips, laid out bar-by-bar and sized by duration, highlighting the chord under the playhead and seeking on click.
               - Web:
@@ -3826,6 +3846,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/sonata/shell.useCursorSelector`
               - `apps/sonata/shell.useSonata`
               - `primitives/css/center.Center`
+              - `primitives/css/coords.Placed`
               - `primitives/css/pin.Pin`
               - `primitives/css/placeholder.Placeholder`
               - `primitives/css/scroll.Scroll`
@@ -5951,6 +5972,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/cluster.Cluster`
               - `primitives/css/layer.Layer`
               - `primitives/css/layer.layerClasses`
+              - `primitives/css/spacing.selfClass`
               - `primitives/css/spacing.Stack`
               - `primitives/css/surface.Surface`
               - `primitives/css/text.Text`
@@ -9874,6 +9896,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                       - `primitives/css/line.Line`
                       - `primitives/css/rigid.rigidClass`
                       - `primitives/css/scroll.Scroll`
+                      - `primitives/css/spacing.selfClass`
                       - `primitives/css/spacing.Stack`
                       - `primitives/css/text.Text`
                       - `primitives/css/ui-kit.cn`
@@ -10179,6 +10202,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/adaptive-bar.AdaptiveBar`
               - `primitives/css/cluster.Cluster`
               - `primitives/css/scroll.Scroll`
+              - `primitives/css/spacing.selfClass`
               - `primitives/css/spacing.Stack`
               - `primitives/css/ui-kit.Button`
               - `primitives/css/ui-kit.ButtonGroup`
@@ -10815,9 +10839,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `infra/endpoints.getEndpointErrorMessage`
           - `infra/endpoints.useEndpointMutation`
           - `primitives/css/badge.Badge`
+          - `primitives/css/spacing.selfClass`
           - `primitives/css/spacing.Stack`
           - `primitives/css/text.Text`
           - `primitives/css/ui-kit.Button`
+          - `primitives/css/ui-kit.cn`
           - `primitives/live-state.ResourceView`
           - `primitives/live-state.useResource`
           - `primitives/loading.Loading`
@@ -12101,8 +12127,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/debug/shell.DebugApp`
           - `primitives/app-shell.sidebarNavItem`
           - `primitives/css/center.Center`
+          - `primitives/css/clip.Clip`
           - `primitives/css/column.Column`
+          - `primitives/css/coords.pct`
+          - `primitives/css/coords.Placed`
           - `primitives/css/fill.Fill`
+          - `primitives/css/grow.growClass`
           - `primitives/css/line.Line`
           - `primitives/css/rigid.rigidClass`
           - `primitives/css/spacing.Stack`
@@ -12128,6 +12158,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `GanttContainer`
           - `GanttSection`
           - `groupByPhase`
+          - `MIN_BAR_FRACTION`
+          - `minBarSize`
           - `MultiSpanLane`
           - `PhaseGroup`
           - `Profiling`
@@ -12283,9 +12315,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/clip.Clip`
               - `primitives/css/cluster.Cluster`
               - `primitives/css/placeholder.Placeholder`
+              - `primitives/css/spacing.selfClass`
               - `primitives/css/spacing.Stack`
               - `primitives/css/text.SectionLabel`
               - `primitives/css/text.Text`
+              - `primitives/css/ui-kit.cn`
               - `primitives/pane.Pane`
               - `primitives/pane.PaneChrome`
               - `primitives/pane.useOpenPane`
@@ -12317,10 +12351,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                 - Uses:
                   - `debug/profiling.formatDuration`
                   - `debug/profiling.GanttContainer`
+                  - `debug/profiling.minBarSize`
                   - `debug/profiling.Span`
                   - `debug/profiling.SpanDetail`
                   - `debug/profiling.useGanttContainerContext`
                   - `primitives/css/cluster.Cluster`
+                  - `primitives/css/coords.pct`
+                  - `primitives/css/coords.Placed`
                   - `primitives/css/spacing.Stack`
                   - `primitives/css/status-dot.StatusDot`
                   - `primitives/css/sticky.Sticky`
@@ -12913,6 +12950,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses:
           - `debug/profiling.formatDuration`
           - `debug/profiling.GanttContainer`
+          - `debug/profiling.minBarSize`
           - `debug/profiling.MultiSpanLane`
           - `debug/profiling.useGanttContainerContext`
           - `debug/trace/pane.groupIncidents`
@@ -12926,10 +12964,14 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/css/clip.Clip`
           - `primitives/css/cluster.Cluster`
           - `primitives/css/column.Column`
+          - `primitives/css/coords.pct`
+          - `primitives/css/coords.Placed`
           - `primitives/css/fill.Fill`
+          - `primitives/css/grow.growClass`
           - `primitives/css/line.Line`
           - `primitives/css/overlay.Overlay`
           - `primitives/css/placeholder.Placeholder`
+          - `primitives/css/rigid.rigidClass`
           - `primitives/css/scroll.Scroll`
           - `primitives/css/spacing.Inset`
           - `primitives/css/spacing.Stack`
@@ -15878,6 +15920,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses:
           - `active-data.ActiveData`
           - `improve.insertIntoImproveDraft`
+          - `primitives/css/coords.Placed`
+          - `primitives/css/coords.placedClasses`
+          - `primitives/css/coords.placedStyle`
           - `primitives/css/fill.Fill`
           - `primitives/css/fill.fillClasses`
           - `primitives/css/inline.Inline`
@@ -16601,6 +16646,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/css/badge.Badge`
           - `primitives/css/fill.Fill`
           - `primitives/css/scroll.Scroll`
+          - `primitives/css/spacing.selfClass`
           - `primitives/css/spacing.Stack`
           - `primitives/css/surface.Surface`
           - `primitives/css/text.Text`
@@ -18590,12 +18636,16 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/css/control-panel.ControlPanel`
           - `primitives/css/control-panel.ControlPanelPopover`
           - `primitives/css/control-panel.ControlPanelPopoverProps`
+          - `primitives/css/coords.Placed`
+          - `primitives/css/coords.placedClasses`
+          - `primitives/css/coords.placedStyle`
           - `primitives/css/inline.Inline`
           - `primitives/css/overlay.Overlay`
           - `primitives/css/pin.Pin`
           - `primitives/css/row.Row`
           - `primitives/css/spacing.Inset`
           - `primitives/css/spacing.insetClass`
+          - `primitives/css/spacing.selfClass`
           - `primitives/css/spacing.Stack`
           - `primitives/css/surface.Surface`
           - `primitives/css/text.Text`
@@ -21650,6 +21700,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `conversations/conversation-view/jsonl-viewer/tool-call/bash`
               - `conversations/conversation-view/op-status`
               - `conversations/conversation-view/terminal-pane`
+              - `debug/profiling`
               - `debug/profiling/build`
               - `debug/profiling/ops`
               - `debug/queue`
@@ -21856,6 +21907,43 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `ui/theme-engine/quick-theme`
               - `ui/theme-toggle`
         - **`control-size`** — Control-size standard: the shared control-* height scale and its enforcing lint rule (no-adhoc-control).
+        - **`coords`** — Coordinate-space positioning primitive: <Placed x y> / placedStyle() places a box by runtime numbers on both axes, plus pct() for fractional coordinates.
+          - Web:
+            - Uses:
+              - `primitives/css/ui-kit.cn`
+              - `primitives/css/z-layers.InTreeLayer`
+              - `primitives/css/z-layers.zLayerClass`
+            - Exports (types):
+              - `Coord`
+              - `Extent`
+              - `PlacedOptions`
+              - `PlacedProps`
+            - Exports (values):
+              - `pct`
+              - `Placed`
+              - `placedClasses`
+              - `placedStyle`
+          - Cross-plugin:
+            - Imported by:
+              - `apps/sonata/notation`
+              - `apps/sonata/pedal/lane`
+              - `apps/sonata/piano-roll`
+              - `apps/sonata/progress/bars`
+              - `apps/sonata/progress/keys`
+              - `apps/sonata/progress/loop`
+              - `apps/sonata/progress/scrubber`
+              - `apps/sonata/progress/sections`
+              - `apps/sonata/rich/chord-overlay`
+              - `apps/sonata/songsheet`
+              - `debug/profiling`
+              - `debug/profiling/ops/op-gantt`
+              - `debug/timeline`
+              - `improve/element-picker`
+              - `page/editor`
+              - `primitives/graph-canvas`
+              - `primitives/virtual-rows`
+              - `screenshot`
+              - `screenshot/draw-canvas`
         - **`fill`** — Flexible-cell layout primitive: <Fill axis> is the single grow+shrink cell of a Line/Row (min-w-0 flex-1). The one home for the slack-absorbing, truncation-enabling cell, so a stray flex-1 never strands the grow slot.
           - Web:
             - Uses:
@@ -22009,6 +22097,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - **`grow`** — Growing-cell layout primitive: growClass() is the flex child that takes the row's slack (flex-1) while staying floored at its own content width. The half of <Fill> that grows, without the half that gives.
           - Cross-plugin:
             - Imported by:
+              - `debug/profiling`
+              - `debug/timeline`
               - `primitives/css/fill`
               - `primitives/data-view/view-core`
           - Web:
@@ -22122,7 +22212,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Cross-plugin:
             - Imported by:
               - `apps-core/surface/floating`
+              - `apps/sonata/piano-keyboard`
+              - `apps/sonata/piano-roll`
               - `apps/sonata/primitives/keyboard`
+              - `apps/sonata/progress/bars`
+              - `apps/sonata/progress/keys`
+              - `apps/sonata/progress/loop`
+              - `apps/sonata/progress/scrubber`
               - `page/code-block`
               - `primitives/tree`
         - **`layout-harness`** — Live Layout Lab gallery: renders the layout-primitive fixture catalog across its width sweep, opened from the Debug sidebar.
@@ -22323,6 +22419,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/z-layers.zLayerClass`
             - Exports (types):
               - `PinAnchor`
+              - `PinEdgeAnchor`
               - `PinProps`
             - Exports (values):
               - `Pin`
@@ -22541,6 +22638,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `debug/live-state-health`
               - `debug/memory`
               - `debug/profiling`
+              - `debug/timeline`
               - `debug/worktree-cleanup`
               - `improve/element-picker`
               - `page/bookmark`
@@ -22755,7 +22853,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `rampClass`
               - `SPACE_STEPS`
               - `spaceLength`
-        - **`spacing`** — Layout spacing primitives: <Stack gap> (flex + gap) and <Inset pad> (padding) draw from the closed density spacing ramp declared in primitives/css/space-ramp, plus insetClass() — the same padding resolver as a class string, for consumers that only accept a className. The sanctioned home for layout rhythm; raw gap-/p-/m-/space- Tailwind is banned by no-adhoc-spacing.
+        - **`spacing`** — Layout spacing primitives: <Stack gap> (flex + gap) and <Inset pad> (padding) draw from the closed density spacing ramp declared in primitives/css/space-ramp, plus insetClass() — the same padding resolver as a class string, for consumers that only accept a className — and selfClass(align), one child's cross-axis override (the same StackAlign union as <Stack align>, seen from the child), which is class-only because a wrapper would become the flex item and take the alignment itself. The sanctioned home for layout rhythm; raw gap-/p-/m-/space- Tailwind is banned by no-adhoc-spacing.
           - Web:
             - Uses:
               - `primitives/css/ui-kit.cn`
@@ -22770,6 +22868,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Exports (values):
               - `Inset`
               - `insetClass`
+              - `selfClass`
               - `Stack`
           - Cross-plugin:
             - Imported by:
@@ -23835,6 +23934,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/prototypes/gallery`
               - `apps/prototypes/present`
               - `apps/sonata/library`
+              - `apps/sonata/piano-keyboard`
               - `apps/sonata/piano-roll`
               - `apps/sonata/primitives/jog-wheel`
               - `apps/sonata/primitives/keyboard`
@@ -23945,6 +24045,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `debug/logs`
               - `debug/memory`
               - `debug/profiling`
+              - `debug/profiling/ops`
               - `debug/profiling/ops/op-gantt`
               - `debug/profiling/runtime`
               - `debug/queue`
@@ -24023,6 +24124,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/color-picker`
               - `primitives/css/column`
               - `primitives/css/control-panel`
+              - `primitives/css/coords`
               - `primitives/css/fill`
               - `primitives/css/grid`
               - `primitives/css/inline`
@@ -24084,7 +24186,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/tooltip`
               - `primitives/tree`
               - `primitives/ui-context`
-              - `primitives/virtual-rows`
               - `reorder`
               - `reorder/editor`
               - `reorder/node-types/header`
@@ -24192,6 +24293,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - **`z-layers`** — Semantic z-layer scale (z-base..z-max) and its enforcing lint rule (no-adhoc-zindex).
           - Cross-plugin:
             - Imported by:
+              - `primitives/css/coords`
               - `primitives/css/layer`
               - `primitives/css/overlay`
               - `primitives/css/pin`
@@ -25329,6 +25431,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`graph-canvas`** — Generic dagre+xyflow graph canvas primitive: a pan/zoom/fit viewer with HTML/Tailwind nodes and solid/dashed directed edges, behind a domain-agnostic node/edge API. Read-only by default, with opt-in editor affordances (hover connect handles + onConnect, node/edge action overlays, group-background layers, smoothstep edges).
       - Web:
         - Uses:
+          - `primitives/css/coords.Placed`
           - `primitives/css/fill.Fill`
           - `primitives/css/pin.Pin`
           - `primitives/css/rigid.Rigid`
@@ -27913,7 +28016,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Web:
         - Uses:
           - `primitives/auto-scroll.findScrollParent`
-          - `primitives/css/ui-kit.cn`
+          - `primitives/css/coords.Placed`
         - Exports (types):
           - `UseVirtualRowsOptions`
           - `UseVirtualRowsResult`
@@ -28721,6 +28824,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `infra/endpoints.fetchEndpoint`
       - `primitives/css/center.Center`
       - `primitives/css/clip.Clip`
+      - `primitives/css/coords.Placed`
       - `primitives/css/grid.Grid`
       - `primitives/css/spacing.Stack`
       - `primitives/css/text.Text`
@@ -28760,17 +28864,18 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `saveScreenshotFile`
   - Plugins:
     - **`draw-canvas`** — Reusable freehand draw canvas (color/width strokes). Used by the screenshot editor and draw-on-app.
-      - Cross-plugin:
-        - Imported by:
-          - `screenshot`
-          - `screenshot/draw-on-app`
       - Web:
+        - Uses: `primitives/css/coords.Placed`
         - Exports (types):
           - `DrawCanvasProps`
           - `Stroke`
         - Exports (values):
           - `applyStrokes`
           - `DrawCanvas`
+      - Cross-plugin:
+        - Imported by:
+          - `screenshot`
+          - `screenshot/draw-on-app`
     - **`draw-on-app`** — Toolbar button to draw freehand on the live app, capture as a screenshot with strokes baked in, and pre-attach to +improve.
       - Web:
         - Contributes: `ActionBar.Item` → `DrawOnAppButton`
@@ -31108,6 +31213,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/rigid.rigidClass`
               - `primitives/css/row.Row`
               - `primitives/css/row.SectionHeaderRow`
+              - `primitives/css/spacing.selfClass`
               - `primitives/css/spacing.Stack`
               - `primitives/css/text.Text`
               - `primitives/css/ui-kit.Button`

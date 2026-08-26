@@ -66,6 +66,7 @@ to neither tier.
 - Description: Semantic z-layer scale (z-base..z-max) and its enforcing lint rule (no-adhoc-zindex).
 - Cross-plugin:
   - Imported by:
+    - `primitives/css/coords`
     - `primitives/css/layer`
     - `primitives/css/overlay`
     - `primitives/css/pin`

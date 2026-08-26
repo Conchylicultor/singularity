@@ -346,6 +346,27 @@ function applyMutation(scope: HTMLElement, mutate: FixtureMutation): void {
       host.style.width = "max-content";
       break;
     }
+    case "unpositionHost": {
+      // Take the positioning context away from the box the fixture named as the
+      // host. Its absolutely-positioned children then resolve their offsets
+      // against the next positioned ancestor — the harness's own width wrapper,
+      // which is `position: relative` and larger than any well-formed coordinate
+      // host.
+      //
+      // Nothing else changes: the children keep every class and every inline
+      // coordinate they were rendered with. That is what makes a red result here
+      // mean "these numbers were measured against the wrong box" and nothing
+      // else — and it is the real fault's shape too, since the property that
+      // moved lives on an ancestor the children never mention.
+      const host = scope.querySelector<HTMLElement>(`[${HOST_MARKER_ATTR}]`);
+      if (!host) {
+        throw new Error(
+          `unpositionHost mutation: no [${HOST_MARKER_ATTR}] in the fixture subtree — the fixture must mark the box that establishes its primitive's positioning context, since only the fixture knows which box that is`,
+        );
+      }
+      host.style.position = "static";
+      break;
+    }
   }
 }
 

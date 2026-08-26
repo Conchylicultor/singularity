@@ -15,6 +15,7 @@
     - `infra/endpoints.fetchEndpoint`
     - `primitives/css/center.Center`
     - `primitives/css/clip.Clip`
+    - `primitives/css/coords.Placed`
     - `primitives/css/grid.Grid`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`

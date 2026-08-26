@@ -1,5 +1,6 @@
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useMemo, type ReactNode } from "react";
+import { selfClass } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { rowDataOf } from "../../core";
 import type { BlockRegionProps, BlockRendererProps } from "../types";
@@ -61,8 +62,11 @@ export function BlockTextRenderer({
         // Don't blur the editor before the onChange registers; the editable
         // field flushes on blur anyway, but this keeps the caret put.
         onMouseDown={(e) => e.preventDefault()}
-        // eslint-disable-next-line spacing/no-adhoc-spacing, layout/no-adhoc-layout -- mt-2 is a one-off vertical offset seating the checkbox glyph on the first text line (horizontal placement owned by the shared marker gutter); self-start is a per-child cross-axis align onto the gutter's top, not expressible via the parent
-        className="accent-primary mt-2 size-3.5 cursor-pointer self-start"
+        // eslint-disable-next-line spacing/no-adhoc-spacing -- mt-2 is a one-off vertical offset seating the checkbox glyph on the first text line (horizontal placement owned by the shared marker gutter)
+        className={cn(
+          "accent-primary mt-2 size-3.5 cursor-pointer",
+          selfClass("start"),
+        )}
       />
     );
   } else if (handle?.ordinalMarker) {

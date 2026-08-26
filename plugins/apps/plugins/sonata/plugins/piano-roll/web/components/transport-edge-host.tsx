@@ -1,3 +1,4 @@
+import { Layer } from "@plugins/primitives/plugins/css/plugins/layer/web";
 import { renderIsolated } from "@plugins/primitives/plugins/slot-render/web";
 import type { Contribution } from "@plugins/framework/plugins/web-sdk/core";
 import type { Projection } from "@plugins/apps/plugins/sonata/plugins/score/core";
@@ -21,8 +22,10 @@ export function TransportEdgeHost({ projection }: { projection: Projection }) {
   const overlays = Sonata.TransportEdge.useContributions();
 
   return (
-    // eslint-disable-next-line layout/no-adhoc-layout -- full-bleed positioning context over the note grid, OUTSIDE the scroll layer; each child clamps itself to a lane edge via the projection's viewport height (screen-anchored, not scroll-synced)
-    <div className="pointer-events-none absolute inset-0">
+    // Full-bleed positioning context over the note grid, OUTSIDE the scroll
+    // layer: each child clamps itself to a lane edge via the projection's
+    // viewport height (screen-anchored, not scroll-synced).
+    <Layer decorative>
       {overlays
         .filter((o) => o.requires.every((r) => projection.capabilities.has(r)))
         .map((o) =>
@@ -30,6 +33,6 @@ export function TransportEdgeHost({ projection }: { projection: Projection }) {
             projection,
           }),
         )}
-    </div>
+    </Layer>
   );
 }

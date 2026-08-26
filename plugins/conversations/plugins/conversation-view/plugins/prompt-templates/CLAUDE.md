@@ -20,6 +20,7 @@
     - `primitives/adaptive-bar.AdaptiveBar`
     - `primitives/css/cluster.Cluster`
     - `primitives/css/scroll.Scroll`
+    - `primitives/css/spacing.selfClass`
     - `primitives/css/spacing.Stack`
     - `primitives/css/ui-kit.Button`
     - `primitives/css/ui-kit.ButtonGroup`

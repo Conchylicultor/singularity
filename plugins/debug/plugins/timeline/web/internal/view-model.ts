@@ -66,8 +66,8 @@ function clamp(v: number, lo: number, hi: number): number {
 
 /**
  * One event → one window-relative SpanBar. Intervals straddling the window
- * edges are clipped; point events (startMs === endMs) rely on toWidthPct's
- * min-width floor to stay visible. In-flight builds pulse (fill=type,
+ * edges are clipped; point events (startMs === endMs) rely on MultiSpanLane's
+ * unconditional MIN_BAR_FRACTION floor to stay visible. In-flight builds pulse (fill=type,
  * treatment=state).
  */
 export function eventToBar(
@@ -126,7 +126,10 @@ export function buildGroups(
 
   for (const chunk of chunks) {
     if (!chunk.ok) {
-      ensure(chunk.worktree).errors.push({ source: chunk.source, error: chunk.error });
+      ensure(chunk.worktree).errors.push({
+        source: chunk.source,
+        error: chunk.error,
+      });
       continue;
     }
     // Guard against events fully outside the window (the server already
@@ -160,11 +163,13 @@ export function buildGroups(
   const sourceOrder = new Map(TIMELINE_SOURCES.map((s, i) => [s, i] as const));
   for (const group of byWorktree.values()) {
     group.lanes.sort(
-      (a, b) => (sourceOrder.get(a.source) ?? 0) - (sourceOrder.get(b.source) ?? 0),
+      (a, b) =>
+        (sourceOrder.get(a.source) ?? 0) - (sourceOrder.get(b.source) ?? 0),
     );
   }
   return [...byWorktree.values()].sort(
-    (a, b) => b.eventCount - a.eventCount || a.worktree.localeCompare(b.worktree),
+    (a, b) =>
+      b.eventCount - a.eventCount || a.worktree.localeCompare(b.worktree),
   );
 }
 

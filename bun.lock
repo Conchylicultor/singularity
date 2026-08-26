@@ -3890,6 +3890,10 @@
       "name": "@singularity/plugin-primitives-css-control-size",
       "version": "0.0.1",
     },
+    "plugins/primitives/plugins/css/plugins/coords": {
+      "name": "@singularity/plugin-primitives-css-coords",
+      "version": "0.0.1",
+    },
     "plugins/primitives/plugins/css/plugins/fill": {
       "name": "@singularity/plugin-primitives-css-fill",
       "version": "0.0.1",
@@ -7564,6 +7568,8 @@
     "@singularity/plugin-primitives-css-control-panel": ["@singularity/plugin-primitives-css-control-panel@workspace:plugins/primitives/plugins/css/plugins/control-panel"],
 
     "@singularity/plugin-primitives-css-control-size": ["@singularity/plugin-primitives-css-control-size@workspace:plugins/primitives/plugins/css/plugins/control-size"],
+
+    "@singularity/plugin-primitives-css-coords": ["@singularity/plugin-primitives-css-coords@workspace:plugins/primitives/plugins/css/plugins/coords"],
 
     "@singularity/plugin-primitives-css-fill": ["@singularity/plugin-primitives-css-fill@workspace:plugins/primitives/plugins/css/plugins/fill"],
 

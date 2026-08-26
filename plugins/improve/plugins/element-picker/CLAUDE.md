@@ -97,6 +97,9 @@ Two of its fields are stamped by **this** plugin's build transform
   - Uses:
     - `active-data.ActiveData`
     - `improve.insertIntoImproveDraft`
+    - `primitives/css/coords.Placed`
+    - `primitives/css/coords.placedClasses`
+    - `primitives/css/coords.placedStyle`
     - `primitives/css/fill.Fill`
     - `primitives/css/fill.fillClasses`
     - `primitives/css/inline.Inline`

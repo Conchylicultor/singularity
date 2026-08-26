@@ -83,14 +83,22 @@ function ManualOrderRow({
       {children}
       <Pin ref={beforeRef} to="top" stretch decorative className="h-[6px]">
         {isOverBefore && (
-          // eslint-disable-next-line layout/no-adhoc-layout -- DnD drop-indicator bar, inset on both x edges (Pin has no inset-both-edges anchor)
-          <div className="bg-primary absolute inset-x-1 top-0 h-[2px] rounded-full" />
+          <Pin
+            to="top"
+            spanOffset="xs"
+            decorative
+            className="bg-primary h-[2px] rounded-full"
+          />
         )}
       </Pin>
       <Pin ref={afterRef} to="bottom" stretch decorative className="h-[6px]">
         {isOverAfter && (
-          // eslint-disable-next-line layout/no-adhoc-layout -- DnD drop-indicator bar, inset on both x edges (Pin has no inset-both-edges anchor)
-          <div className="bg-primary absolute inset-x-1 bottom-0 h-[2px] rounded-full" />
+          <Pin
+            to="bottom"
+            spanOffset="xs"
+            decorative
+            className="bg-primary h-[2px] rounded-full"
+          />
         )}
       </Pin>
     </div>

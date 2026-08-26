@@ -8,7 +8,7 @@
 - Web:
   - Uses:
     - `primitives/auto-scroll.findScrollParent`
-    - `primitives/css/ui-kit.cn`
+    - `primitives/css/coords.Placed`
   - Exports (types):
     - `UseVirtualRowsOptions`
     - `UseVirtualRowsResult`

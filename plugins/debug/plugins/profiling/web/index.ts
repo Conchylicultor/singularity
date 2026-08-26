@@ -29,7 +29,11 @@ export {
   TimeAxis,
   formatDuration,
 } from "./components/gantt-container";
-export { useGanttZoom } from "./components/use-gantt-zoom";
+export {
+  useGanttZoom,
+  minBarSize,
+  MIN_BAR_FRACTION,
+} from "./components/use-gantt-zoom";
 export type { ZoomWindow } from "./components/use-gantt-zoom";
 export { DragSelection } from "./components/drag-selection";
 export type { DragState } from "./components/drag-selection";

@@ -1,3 +1,5 @@
+import { Placed } from "@plugins/primitives/plugins/css/plugins/coords/web";
+import { Layer } from "@plugins/primitives/plugins/css/plugins/layer/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Clip } from "@plugins/primitives/plugins/css/plugins/clip/web";
@@ -120,10 +122,10 @@ const HUD_EDGE_CLEARANCE = 16; // px
 const ScrollLayer = forwardRef<HTMLDivElement, { children: React.ReactNode }>(
   function ScrollLayer({ children }, ref) {
     return (
-      // eslint-disable-next-line layout/no-adhoc-layout -- imperatively transformed scroll layer: the parent's cursor subscription writes translateY per frame (see applyCursor); full-bleed positioning context for the projection-anchored overlays
-      <div ref={ref} className="absolute inset-0">
-        {children}
-      </div>
+      // Imperatively transformed scroll layer: the parent's cursor subscription
+      // writes translateY per frame (see applyCursor). Also the full-bleed
+      // positioning context for the projection-anchored overlays.
+      <Layer ref={ref}>{children}</Layer>
     );
   },
 );
@@ -575,10 +577,12 @@ function PianoRollInner({ score, tempoScale }: PianoRollProps) {
 
           {/* Playback now-line: where falling notes land on the keyboard. Screen-
               anchored, so it sits OUTSIDE the scroll layer (and above it). */}
-          <div
-            // eslint-disable-next-line layout/no-adhoc-layout -- now-line position is JS-computed from the measured lane size (top/width come from the ResizeObserver)
-            className="pointer-events-none absolute left-0 z-raised h-0.5 bg-primary"
-            style={{ top: lane.height, width: lane.width }}
+          <Placed
+            decorative
+            layer="raised"
+            x={{ start: 0, size: lane.width }}
+            y={{ start: lane.height, size: 2 }}
+            className="bg-primary"
           />
 
           {/* Screen-anchored transport-edge indicators (the off-screen A–B loop
@@ -614,8 +618,9 @@ function PianoRollInner({ score, tempoScale }: PianoRollProps) {
 
           {/* Empty-score affordance. */}
           {score.notes.length === 0 ? (
-            // eslint-disable-next-line layout/no-adhoc-layout -- full-bleed positioning context layered over the lane (sibling of the canvas/scroll layers); centers the empty-state message
-            <div className="pointer-events-none absolute inset-0">
+            // Full-bleed layer over the lane (sibling of the canvas/scroll
+            // layers), centering the empty-state message.
+            <Layer decorative>
               <Center className="h-full w-full">
                 <Text
                   as="span"
@@ -625,7 +630,7 @@ function PianoRollInner({ score, tempoScale }: PianoRollProps) {
                   No notes to display. Load a source to see the piano roll.
                 </Text>
               </Center>
-            </div>
+            </Layer>
           ) : null}
         </LaneInsetsProvider>
       </Clip>

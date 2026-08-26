@@ -10,6 +10,8 @@
   - Uses:
     - `apps/sonata/progress/scrubber.SonataProgress`
     - `apps/sonata/shell.useSonata`
+    - `primitives/css/coords.pct`
+    - `primitives/css/coords.Placed`
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.cn`
     - `primitives/css/ui-kit.ControlSizeProvider`

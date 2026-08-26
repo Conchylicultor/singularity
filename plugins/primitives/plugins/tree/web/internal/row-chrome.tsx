@@ -1,4 +1,10 @@
-import { cn, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import {
+  cn,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useCallback, type ReactNode } from "react";
 import { MdAdd, MdMoreHoriz } from "react-icons/md";
 import type { IconType } from "react-icons";
@@ -70,8 +76,11 @@ export function RowChrome<T extends TreeItem>(props: RowChromeProps<T>) {
     isOverBefore,
     isOverAfter,
   } = controls;
-  const { ref: dragRef, attributes: dragAttributes, listeners: dragListeners } =
-    dragSource;
+  const {
+    ref: dragRef,
+    attributes: dragAttributes,
+    listeners: dragListeners,
+  } = dragSource;
   const ctx = useTreeListContext<T>();
 
   const menuItems =
@@ -164,7 +173,8 @@ export function RowChrome<T extends TreeItem>(props: RowChromeProps<T>) {
               // row's hover/selected tints do: it is what the pinned action
               // cluster's mask paints, so it must be the colour actually on
               // screen while a drag hovers this row.
-              isOverChild && "bg-accent ring-primary/40 ring-1 [--scrim:var(--accent)]",
+              isOverChild &&
+                "bg-accent ring-primary/40 ring-1 [--scrim:var(--accent)]",
               className,
             )}
             actions={trailing}
@@ -193,14 +203,28 @@ export function RowChrome<T extends TreeItem>(props: RowChromeProps<T>) {
           )}
           <Pin ref={beforeRef} to="top" stretch decorative className="h-[6px]">
             {isOverBefore && (
-              // eslint-disable-next-line layout/no-adhoc-layout -- DnD drop-indicator bar, inset on both x edges (Pin has no inset-both-edges anchor)
-              <div className="bg-primary absolute inset-x-1 top-0 h-[2px] rounded-full" />
+              <Pin
+                to="top"
+                spanOffset="xs"
+                decorative
+                className="bg-primary h-[2px] rounded-full"
+              />
             )}
           </Pin>
-          <Pin ref={afterRef} to="bottom" stretch decorative className="h-[6px]">
+          <Pin
+            ref={afterRef}
+            to="bottom"
+            stretch
+            decorative
+            className="h-[6px]"
+          >
             {isOverAfter && (
-              // eslint-disable-next-line layout/no-adhoc-layout -- DnD drop-indicator bar, inset on both x edges (Pin has no inset-both-edges anchor)
-              <div className="bg-primary absolute inset-x-1 bottom-0 h-[2px] rounded-full" />
+              <Pin
+                to="bottom"
+                spanOffset="xs"
+                decorative
+                className="bg-primary h-[2px] rounded-full"
+              />
             )}
           </Pin>
         </div>

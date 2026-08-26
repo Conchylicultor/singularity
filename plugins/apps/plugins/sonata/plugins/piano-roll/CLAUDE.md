@@ -32,6 +32,8 @@
     - `primitives/css/clip.Clip`
     - `primitives/css/control-panel.ControlPanel`
     - `primitives/css/control-panel.ControlPanelPopover`
+    - `primitives/css/coords.Placed`
+    - `primitives/css/layer.Layer`
     - `primitives/css/pin.Pin`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`

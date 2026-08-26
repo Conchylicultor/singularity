@@ -4,6 +4,7 @@ import { appIconComponent } from "@plugins/apps-core/plugins/app-icon/web";
 import { useTabs, type Tab } from "@plugins/apps-core/plugins/tabs/web";
 import { TabIcon } from "@plugins/ui/plugins/tab-bar/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { selfClass } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Cluster } from "@plugins/primitives/plugins/css/plugins/cluster/web";
 import { ToggleChip } from "@plugins/primitives/plugins/css/plugins/toggle-chip/web";
 import { WithTooltip } from "@plugins/primitives/plugins/tooltip/web";
@@ -107,8 +108,11 @@ export function WindowDock({ tabIds }: { tabIds: string[] }) {
         {windows.length > 0 && (
           // A 1px hairline separating the pager from the chips. No layout
           // primitive models an in-row divider; the smallest acceptable construct.
-          // eslint-disable-next-line layout/no-adhoc-layout -- genuine one-off: in-row hairline divider between the pager and the window chips; no primitive models it
-          <div aria-hidden className="w-px self-stretch bg-border" />
+          // (`w-px`/`bg-border` are sizing and color — neither is banned.)
+          <div
+            aria-hidden
+            className={cn("w-px", selfClass("stretch"), "bg-border")}
+          />
         )}
         {windows.map((win) => {
           const tab = byTabId.get(win.activeTabId);

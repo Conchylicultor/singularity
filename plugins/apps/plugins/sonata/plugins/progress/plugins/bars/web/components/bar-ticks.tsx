@@ -1,6 +1,11 @@
+import { Layer } from "@plugins/primitives/plugins/css/plugins/layer/web";
 import { bars } from "@plugins/apps/plugins/sonata/plugins/score/core";
 import type { Score } from "@plugins/apps/plugins/sonata/plugins/score/core";
-import { railBandClass } from "@plugins/apps/plugins/sonata/plugins/progress/plugins/scrubber/web";
+import { RAIL_BAND_Y } from "@plugins/apps/plugins/sonata/plugins/progress/plugins/scrubber/web";
+import {
+  pct,
+  Placed,
+} from "@plugins/primitives/plugins/css/plugins/coords/web";
 
 /**
  * Bar/measure ticks marker. The progression bar is just a beat→fraction axis;
@@ -35,24 +40,18 @@ export function BarTicks({
   }
 
   return (
-    // eslint-disable-next-line layout/no-adhoc-layout -- decorative coordinate-driven marker layer hosting JS fraction-positioned ticks
-    <div className="pointer-events-none absolute inset-0">
-      {boundaries.map(({ index, startBeat }) => {
-        const left = `${beatToFraction(startBeat) * 100}%`;
-        return (
-          <div
-            key={index}
-            // eslint-disable-next-line layout/no-adhoc-layout -- JS fraction-positioned tick (left from beatToFraction)
-            className="absolute inset-y-0 -translate-x-1/2"
-            style={{ left }}
-          >
-            {/* Tick confined to the shared rail band, so it sits inside the bar
-                instead of overhanging it — and stays aligned with the key bars,
-                which compose the same band. */}
-            <div className={`${railBandClass} left-0 w-px bg-muted-foreground/40`} />
-          </div>
-        );
-      })}
-    </div>
+    <Layer decorative>
+      {boundaries.map(({ index, startBeat }) => (
+        // A 1px line centered on the boundary's fraction, confined to the shared
+        // rail band — so it sits inside the bar instead of overhanging it, and
+        // stays aligned with the key bars, which take the same extent.
+        <Placed
+          key={index}
+          x={{ center: pct(beatToFraction(startBeat)), size: 1 }}
+          y={RAIL_BAND_Y}
+          className="bg-muted-foreground/40"
+        />
+      ))}
+    </Layer>
   );
 }

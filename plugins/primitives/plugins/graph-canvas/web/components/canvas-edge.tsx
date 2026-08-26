@@ -1,3 +1,4 @@
+import { Placed } from "@plugins/primitives/plugins/css/plugins/coords/web";
 import type { ReactNode } from "react";
 import { useState } from "react";
 import {
@@ -33,9 +34,18 @@ export function CanvasEdge({
 }: EdgeProps<CanvasFlowEdge>) {
   const [hovered, setHovered] = useState(false);
 
-  const pathArgs = { sourceX, sourceY, sourcePosition, targetX, targetY, targetPosition };
+  const pathArgs = {
+    sourceX,
+    sourceY,
+    sourcePosition,
+    targetX,
+    targetY,
+    targetPosition,
+  };
   const [edgePath, labelX, labelY] =
-    data?.edgePath === "smoothstep" ? getSmoothStepPath(pathArgs) : getBezierPath(pathArgs);
+    data?.edgePath === "smoothstep"
+      ? getSmoothStepPath(pathArgs)
+      : getBezierPath(pathArgs);
 
   const actions = data?.actions;
   if (actions == null) {
@@ -43,27 +53,28 @@ export function CanvasEdge({
   }
 
   return (
-    <g onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}>
+    <g
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+    >
       {/* Wider invisible hit area for hover detection. */}
       <path d={edgePath} fill="none" stroke="transparent" strokeWidth={20} />
       <BaseEdge path={edgePath} style={style} markerEnd={markerEnd} />
       <EdgeLabelRenderer>
-        <Stack
-          direction="row"
-          gap="xs"
-          align="center"
-          // eslint-disable-next-line layout/no-adhoc-layout -- absolute mid-edge label at xyflow-computed (labelX, labelY) coordinates
-          className="nodrag nopan pointer-events-auto absolute"
-          style={{
-            transform: "translate(-50%, -50%)",
-            left: labelX,
-            top: labelY,
-            opacity: hovered ? 1 : 0,
-            transition: "opacity 150ms",
-          }}
+        {/* The placed box is the OUTER element, so xyflow's `nodrag`/`nopan`
+            markers and `pointer-events-auto` sit on what is actually under the
+            pointer — not on a Stack nested inside it. `center` on both axes is
+            the old `translate(-50%, -50%)`, as the `translate` property. */}
+        <Placed
+          x={{ center: labelX }}
+          y={{ center: labelY }}
+          className="nodrag nopan pointer-events-auto"
+          style={{ opacity: hovered ? 1 : 0, transition: "opacity 150ms" }}
         >
-          {actions}
-        </Stack>
+          <Stack direction="row" gap="xs" align="center">
+            {actions}
+          </Stack>
+        </Placed>
       </EdgeLabelRenderer>
     </g>
   );

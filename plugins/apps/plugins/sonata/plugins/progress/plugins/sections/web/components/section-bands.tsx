@@ -1,3 +1,7 @@
+import {
+  pct,
+  Placed,
+} from "@plugins/primitives/plugins/css/plugins/coords/web";
 import { MdRepeat } from "react-icons/md";
 import type {
   Score,
@@ -63,21 +67,21 @@ export function SectionBands({
     // The strip stays pointer-transparent so the rail seeks underneath; each
     // band re-enables pointer events (pointer-events-auto) only for its own box,
     // so hovering it reveals its loop button and a click still bubbles to seek.
-    // eslint-disable-next-line layout/no-adhoc-layout -- decorative coordinate-driven section-band strip hosting JS fraction-positioned bands
-    <div className="pointer-events-none absolute inset-x-0 bottom-0 h-1/2">
+    <Placed decorative x="fill" y={{ end: 0, size: "50%" }}>
       {sections.map((a, idx) => {
         const left = beatToFraction(a.start);
         const width = beatToFraction(a.end) - beatToFraction(a.start);
         return (
-          <div
+          <Placed
             key={`${a.start}-${a.end}-${a.data.name}-${idx}`}
-            // eslint-disable-next-line layout/no-adhoc-layout -- JS fraction-positioned band (left/width from beatToFraction); flex/items-center/overflow-hidden vertically center + clip the label inside the coordinate-driven box
+            x={{ start: pct(left), size: pct(width) }}
+            y="fill"
+            // eslint-disable-next-line layout/no-adhoc-layout -- flex/items-center vertically centers the label inside the coordinate-driven box; Line/Center would add a wrapper between the band and its own hover-reveal group
             className={cn(
-              "pointer-events-auto absolute inset-y-0 flex items-center overflow-hidden whitespace-nowrap rounded-sm px-xs",
+              "pointer-events-auto flex items-center overflow-hidden whitespace-nowrap rounded-sm px-xs",
               hoverRevealGroup,
               PALETTE[idx % PALETTE.length],
             )}
-            style={{ left: `${left * 100}%`, width: `${width * 100}%` }}
             title={a.data.name}
           >
             <SingleLineProvider value={true}>
@@ -89,12 +93,10 @@ export function SectionBands({
             {/* Hover-revealed quick-loop: set the shared A–B loop to this section
                 and seek to its start. stopPropagation keeps the click from also
                 seeking via the rail underneath. */}
-            <div
-              // eslint-disable-next-line layout/no-adhoc-layout -- loop button pinned to the band's right edge
-              className={cn(
-                "absolute right-0 top-1/2 -translate-y-1/2",
-                hoverRevealTarget,
-              )}
+            <Placed
+              x={{ end: 0 }}
+              y={{ center: "50%" }}
+              className={hoverRevealTarget}
             >
               <ControlSizeProvider size="xs">
                 <IconButton
@@ -107,10 +109,10 @@ export function SectionBands({
                   }}
                 />
               </ControlSizeProvider>
-            </div>
-          </div>
+            </Placed>
+          </Placed>
         );
       })}
-    </div>
+    </Placed>
   );
 }

@@ -21,6 +21,39 @@ const ALIGN_CLASS: Record<StackAlign, string> = {
   baseline: "items-baseline",
 };
 
+const SELF_CLASS: Record<StackAlign, string> = {
+  start: "self-start",
+  center: "self-center",
+  end: "self-end",
+  stretch: "self-stretch",
+  baseline: "self-baseline",
+};
+
+/**
+ * ONE child's cross-axis override, as a class string — the same decision as
+ * `<Stack align>` seen from the child instead of from the container, which is
+ * why the two maps live side by side here and are keyed by the same closed
+ * `StackAlign` union. A container's `align` states where ALL its children sit;
+ * this states where one of them sits instead, which is knowledge the child has
+ * and the container does not.
+ *
+ * **There is deliberately no `<Self>` component, and the reason is structural.**
+ * A wrapper element would BECOME the flex item, so the alignment would land on
+ * the wrapper while the real child stretched inside it — the helper is the only
+ * shape that works. (`yieldClass`/`growClass` are class-only because there is
+ * nothing to wrap; this one is class-only because wrapping *breaks* it.) So a
+ * site that cannot take a `className` restructures; it does not gain a wrapper.
+ *
+ * Flex only. A grid child's cross-axis override is `justify-self-*`, a
+ * different property, and nothing wants it.
+ *
+ * Both spellings are written out literally — Tailwind's scanner only sees
+ * verbatim class names, so `self-${align}` would compile to nothing.
+ */
+export function selfClass(align: StackAlign): string {
+  return SELF_CLASS[align];
+}
+
 const JUSTIFY_CLASS: Record<StackJustify, string> = {
   start: "justify-start",
   center: "justify-center",

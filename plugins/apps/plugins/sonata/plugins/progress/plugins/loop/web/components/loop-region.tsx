@@ -1,3 +1,4 @@
+import { Layer } from "@plugins/primitives/plugins/css/plugins/layer/web";
 import type { PointerEvent as ReactPointerEvent } from "react";
 import { useRef } from "react";
 import { MdClose } from "react-icons/md";
@@ -6,7 +7,11 @@ import {
   type Score,
 } from "@plugins/apps/plugins/sonata/plugins/score/core";
 import { useSonata } from "@plugins/apps/plugins/sonata/plugins/shell/web";
-import { railBandClass } from "@plugins/apps/plugins/sonata/plugins/progress/plugins/scrubber/web";
+import { RAIL_BAND_Y } from "@plugins/apps/plugins/sonata/plugins/progress/plugins/scrubber/web";
+import {
+  pct,
+  Placed,
+} from "@plugins/primitives/plugins/css/plugins/coords/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import {
   useHoverReveal,
@@ -81,43 +86,38 @@ export function LoopRegion({
 
   return (
     // Full-region root (pointer-transparent) so the guides can align to the rail
-    // band via railBandClass (top-1/2 = rail centre); the band + handles live in
+    // band via RAIL_BAND_Y (centred on the rail); the band + handles live in
     // a top-half lane below.
-    <div
-      ref={rootRef}
-      // eslint-disable-next-line layout/no-adhoc-layout -- coordinate-driven loop-region root spanning the full marker region so rail-aligned guides and the top-half band lane can be positioned by JS fractions
-      className="pointer-events-none absolute inset-0"
-    >
+    <Layer ref={rootRef} decorative>
       {/* Rail-aligned vertical guides at A and B, drawn through the rail band so
           they line up pixel-for-pixel with the bar ticks. */}
-      <div
-        className={cn(railBandClass, "w-px bg-primary/60")}
-        style={{ left: `${startF * 100}%` }}
+      <Placed
+        x={{ start: pct(startF), size: 1 }}
+        y={RAIL_BAND_Y}
+        className="bg-primary/60"
       />
-      <div
-        className={cn(railBandClass, "w-px bg-primary/60")}
-        style={{ left: `${endF * 100}%` }}
+      <Placed
+        x={{ start: pct(endF), size: 1 }}
+        y={RAIL_BAND_Y}
+        className="bg-primary/60"
       />
 
       {/* Top-half lane (mirrors the sections bottom-half) hosting the band +
           handles, so it never overlaps the rail seek track. */}
-      <div
-        // eslint-disable-next-line layout/no-adhoc-layout -- coordinate-driven top-half loop lane hosting the JS fraction-positioned band + handles
-        className="absolute inset-x-0 top-0 h-1/2"
-      >
+      <Placed x={{ start: 0, end: 0 }} y={{ start: 0, size: "50%" }}>
         {/* The loop band [A,B]. Interactive (hover reveals the clear button);
             stopPropagation keeps a click on the band from seeking. Faded +
             outline-only while disabled so the bounds stay visible during a
             play-through. */}
-        <div
+        <Placed
           {...groupProps}
           onPointerDown={(e) => e.stopPropagation()}
-          // eslint-disable-next-line layout/no-adhoc-layout -- JS fraction-positioned loop band (left/width from beatToFraction); inset-y-0 fills the lane height
+          x={{ start: pct(startF), size: pct(widthF) }}
+          y="fill"
           className={cn(
-            "pointer-events-auto absolute inset-y-0 rounded-sm ring-1 ring-primary/40",
+            "pointer-events-auto rounded-sm ring-1 ring-primary/40",
             loop.enabled ? "bg-primary/15" : "opacity-50",
           )}
-          style={{ left: `${startF * 100}%`, width: `${widthF * 100}%` }}
           title={loop.enabled ? "Loop A–B" : "Loop A–B (off)"}
         >
           {/* Hover-revealed clear button, pinned to the band's top-right. It must
@@ -125,10 +125,10 @@ export function LoopRegion({
               pointer-events-none) AND only while revealed — hoverRevealClass owns
               the opacity↔pointer-events coupling, we add the auto needed to punch
               through the inert ancestor only in the revealed branch. */}
-          <div
-            // eslint-disable-next-line layout/no-adhoc-layout -- clear button pinned to the band's top-right corner
+          <Placed
+            x={{ end: 0 }}
+            y={{ start: 0, shift: "-100%" }}
             className={cn(
-              "absolute right-0 top-0 -translate-y-full",
               hoverRevealClass(revealed),
               revealed && "pointer-events-auto",
             )}
@@ -141,38 +141,42 @@ export function LoopRegion({
                 onClick={() => setLoop(null)}
               />
             </ControlSizeProvider>
-          </div>
-        </div>
+          </Placed>
+        </Placed>
 
         {/* Edge handles. Each is a wide invisible hit area with a thin visible
             bar; pointer-capture keeps the drag tracking off the handle. */}
-        <div
+        <Placed
           onPointerDown={grabPointer}
           onPointerMove={startHandleDrag}
-          // eslint-disable-next-line layout/no-adhoc-layout -- JS fraction-positioned A handle (left from beatToFraction), centered on the edge
-          className="pointer-events-auto absolute inset-y-0 w-3 -translate-x-1/2 cursor-ew-resize"
-          style={{ left: `${startF * 100}%` }}
+          x={{ center: pct(startF), size: 12 }}
+          y="fill"
+          className="pointer-events-auto cursor-ew-resize"
           aria-label="Loop start"
         >
-          <div
-            // eslint-disable-next-line layout/no-adhoc-layout -- visible handle bar centered in its hit area
-            className="absolute inset-y-0 left-1/2 w-1 -translate-x-1/2 rounded-full bg-primary"
+          {/* The visible bar, centered in its hit area. */}
+          <Placed
+            x={{ center: "50%", size: 4 }}
+            y="fill"
+            className="rounded-full bg-primary"
           />
-        </div>
-        <div
+        </Placed>
+        <Placed
           onPointerDown={grabPointer}
           onPointerMove={endHandleDrag}
-          // eslint-disable-next-line layout/no-adhoc-layout -- JS fraction-positioned B handle (left from beatToFraction), centered on the edge
-          className="pointer-events-auto absolute inset-y-0 w-3 -translate-x-1/2 cursor-ew-resize"
-          style={{ left: `${endF * 100}%` }}
+          x={{ center: pct(endF), size: 12 }}
+          y="fill"
+          className="pointer-events-auto cursor-ew-resize"
           aria-label="Loop end"
         >
-          <div
-            // eslint-disable-next-line layout/no-adhoc-layout -- visible handle bar centered in its hit area
-            className="absolute inset-y-0 left-1/2 w-1 -translate-x-1/2 rounded-full bg-primary"
+          {/* The visible bar, centered in its hit area. */}
+          <Placed
+            x={{ center: "50%", size: 4 }}
+            y="fill"
+            className="rounded-full bg-primary"
           />
-        </div>
-      </div>
-    </div>
+        </Placed>
+      </Placed>
+    </Layer>
   );
 }

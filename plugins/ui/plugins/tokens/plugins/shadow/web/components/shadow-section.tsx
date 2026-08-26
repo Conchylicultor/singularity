@@ -14,7 +14,10 @@ import {
   SectionHeaderRow,
 } from "@plugins/primitives/plugins/css/plugins/row/web";
 import { Cluster } from "@plugins/primitives/plugins/css/plugins/cluster/web";
-import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import {
+  Stack,
+  selfClass,
+} from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import {
   Color,
@@ -316,8 +319,11 @@ export function ShadowSection() {
             {hasOverrides && (
               <Button
                 variant="ghost"
-                // eslint-disable-next-line spacing/no-adhoc-spacing, layout/no-adhoc-layout -- one-off top offset + self-start so this lone reset button keeps its natural width (left-aligned) in the column instead of stretching
-                className="self-start mt-1 border border-border text-muted-foreground"
+                // eslint-disable-next-line spacing/no-adhoc-spacing -- one-off top offset seating this lone reset button below the row list
+                className={cn(
+                  selfClass("start"),
+                  "mt-1 border border-border text-muted-foreground",
+                )}
                 onClick={() => setConfig("overrides", EMPTY_OVERRIDES)}
               >
                 Reset all

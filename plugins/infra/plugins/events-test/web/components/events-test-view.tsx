@@ -9,7 +9,10 @@ import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
-import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import {
+  Stack,
+  selfClass,
+} from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Surface } from "@plugins/primitives/plugins/css/plugins/surface/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { toast } from "@plugins/shell/plugins/notifications/web";
@@ -418,8 +421,7 @@ export function EventsTestView() {
             variant="secondary"
             onClick={onDirectEnqueue}
             loading={deBusy}
-            // eslint-disable-next-line layout/no-adhoc-layout -- per-child start alignment in the section's flex column
-            className="self-start"
+            className={selfClass("start")}
           >
             <MdSend className="size-4" />
             Enqueue job

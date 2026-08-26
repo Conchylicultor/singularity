@@ -204,6 +204,7 @@ instrument grouping — while `convert` itself stays pure.
     - `config_v2.ConfigV2`
     - `config_v2.useConfig`
     - `primitives/css/center.Center`
+    - `primitives/css/coords.Placed`
     - `primitives/css/pin.Pin`
     - `primitives/css/placeholder.Placeholder`
     - `primitives/css/scroll.Scroll`

@@ -21,10 +21,15 @@ import type {
 import {
   formatDuration,
   GanttContainer,
+  minBarSize,
   SpanDetail,
   useGanttContainerContext,
   type Span,
 } from "@plugins/debug/plugins/profiling/web";
+import {
+  pct,
+  Placed,
+} from "@plugins/primitives/plugins/css/plugins/coords/web";
 
 /**
  * One op on the Gantt — structurally the wire's `OpEntry`
@@ -383,7 +388,8 @@ function OpBar({
   setHovered: (span: Span | null) => void;
   onOpClick?: (op: OpEntry, worktree: string) => void;
 }): ReactElement {
-  const { toLeftPct, toWidthPct, totalMs } = useGanttContainerContext();
+  const { toLeftFraction, toWidthFraction, totalMs } =
+    useGanttContainerContext();
   const status = opStatus(op);
   const clickable = onOpClick !== undefined;
 
@@ -417,19 +423,19 @@ function OpBar({
       durationMs: 0,
     };
     return (
-      <div
-        // eslint-disable-next-line layout/no-adhoc-layout -- interrupted-op marker positioned by runtime ms→% offset (left/width inline style)
+      <Placed
+        x={{
+          start: pct(toLeftFraction(op.startMs, totalMs)),
+          size: INTERRUPTED_MARKER_PX,
+        }}
+        y="fill"
         className={cn(
-          "absolute top-0 h-full rounded-md transition-opacity",
+          "rounded-md transition-opacity",
           TYPE_FILL[op.kind],
           STATUS_TREATMENT[status],
           hovered?.id === markerSpan.id ? "opacity-100" : "opacity-70",
           clickable && "cursor-pointer",
         )}
-        style={{
-          left: toLeftPct(op.startMs, totalMs),
-          width: `${INTERRUPTED_MARKER_PX}px`,
-        }}
         onMouseEnter={() => setHovered(markerSpan)}
         onMouseLeave={() => setHovered(null)}
         {...interactions}
@@ -445,25 +451,26 @@ function OpBar({
     durationMs: op.totalMs,
   };
 
-  // Skip zero-length waits so toWidthPct's min-width floor never paints an
-  // empty segment as a misleading sliver.
+  // Zero-length waits would paint nothing (`minBarSize` declines to floor an
+  // empty span), so they are dropped rather than emitted as empty boxes.
   const waits = op.waits.filter((w) => w.durationMs > 0);
 
   return (
     <>
-      <div
-        // eslint-disable-next-line layout/no-adhoc-layout -- op bar positioned by runtime ms→% offsets (left/width inline style)
+      <Placed
+        x={{
+          start: pct(toLeftFraction(op.startMs, totalMs)),
+          size: pct(toWidthFraction(op.totalMs, totalMs)),
+          minSize: minBarSize(op.totalMs),
+        }}
+        y="fill"
         className={cn(
-          "absolute top-0 h-full rounded-md transition-opacity",
+          "rounded-md transition-opacity",
           TYPE_FILL[op.kind],
           STATUS_TREATMENT[status],
           hovered?.id === baseSpan.id ? "opacity-100" : "opacity-50",
           clickable && "cursor-pointer",
         )}
-        style={{
-          left: toLeftPct(op.startMs, totalMs),
-          width: toWidthPct(op.totalMs, totalMs),
-        }}
         onMouseEnter={() => setHovered(baseSpan)}
         onMouseLeave={() => setHovered(null)}
         {...interactions}
@@ -479,19 +486,20 @@ function OpBar({
           durationMs: wait.durationMs,
         };
         return (
-          <div
+          <Placed
             key={waitSpan.id}
-            // eslint-disable-next-line layout/no-adhoc-layout -- wait segment positioned by runtime ms→% offsets (left/width inline style)
+            x={{
+              start: pct(toLeftFraction(waitSpan.startMs, totalMs)),
+              size: pct(toWidthFraction(wait.durationMs, totalMs)),
+              minSize: minBarSize(wait.durationMs),
+            }}
+            y="fill"
             className={cn(
-              "absolute top-0 h-full rounded-sm transition-opacity",
+              "rounded-sm transition-opacity",
               WAIT_FILL[wait.kind],
               hovered?.id === waitSpan.id ? "opacity-100" : "opacity-90",
               clickable && "cursor-pointer",
             )}
-            style={{
-              left: toLeftPct(waitSpan.startMs, totalMs),
-              width: toWidthPct(wait.durationMs, totalMs),
-            }}
             onMouseEnter={() => setHovered(waitSpan)}
             onMouseLeave={() => setHovered(null)}
             {...interactions}

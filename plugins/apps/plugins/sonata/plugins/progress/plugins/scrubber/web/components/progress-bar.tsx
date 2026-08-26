@@ -1,3 +1,5 @@
+import { Placed } from "@plugins/primitives/plugins/css/plugins/coords/web";
+import { Layer } from "@plugins/primitives/plugins/css/plugins/layer/web";
 import type { PointerEvent as ReactPointerEvent } from "react";
 import { useCallback, useEffect, useMemo, useRef } from "react";
 import { renderIsolated } from "@plugins/primitives/plugins/slot-render/web";
@@ -14,7 +16,7 @@ import { Clip } from "@plugins/primitives/plugins/css/plugins/clip/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { SonataProgress } from "../slots";
-import { RAIL_THICKNESS } from "../rail-geometry";
+import { RAIL_HEIGHT } from "../rail-geometry";
 
 /**
  * Format elapsed seconds as `m:ss.s` (e.g. 95.4 → "1:35.4"). Rounds to tenths
@@ -205,14 +207,16 @@ export function ProgressBar() {
             mutations. It is the primitive rather than raw `overflow-hidden`
             because that removes the violation outright: no positional lint
             directive here for a later format pass to move off its target. */}
-        <Clip className={`relative ${RAIL_THICKNESS} rounded-full bg-muted`}>
+        <Clip
+          className="relative rounded-full bg-muted"
+          style={{ height: RAIL_HEIGHT }}
+        >
           {/* Filled portion up to the playhead. Driven by `transform: scaleX`
               from the cursor subscription (origin-left), so the playback
               advance composites on the GPU and emits no counted DOM mutation. */}
-          <div
+          <Layer
             ref={fillRef}
-            // eslint-disable-next-line layout/no-adhoc-layout -- JS-driven fill: scaleX from the cursor fraction, anchored to the rail's left edge
-            className="absolute inset-0 origin-left bg-primary"
+            className="origin-left bg-primary"
             style={{ transform: "scaleX(0)" }}
           />
         </Clip>
@@ -222,8 +226,7 @@ export function ProgressBar() {
             Painted above the rail so on-rail markers (bar ticks) are visible;
             pointer-transparent so clicks fall through to the seek track; each
             marker anchors itself horizontally via `beatToFraction`. */}
-        {/* eslint-disable-next-line layout/no-adhoc-layout -- decorative coordinate-driven marker layer hosting fraction-positioned contributed markers */}
-        <div className="pointer-events-none absolute inset-0">
+        <Layer decorative>
           {markers.map((m) =>
             renderIsolated(
               SonataProgress.Marker,
@@ -234,7 +237,7 @@ export function ProgressBar() {
               },
             ),
           )}
-        </div>
+        </Layer>
 
         {/* Playhead handle — foreground, above both rail and markers. A
             full-bleed layer driven by `transform: translateX(<fraction>%)` from
@@ -243,15 +246,20 @@ export function ProgressBar() {
             self-centered. transform keeps the advance off the React/DOM-mutation
             path. */}
         {ready ? (
-          <div
+          <Layer
             ref={handleRef}
-            // eslint-disable-next-line layout/no-adhoc-layout -- JS-driven playhead carrier: translateX from the cursor fraction across the full-width track
-            className="pointer-events-none absolute inset-0"
+            decorative
             style={{ transform: "translateX(0)" }}
           >
-            {/* eslint-disable-next-line layout/no-adhoc-layout -- playhead knob pinned at the carrier's left edge and self-centered; the carrier's translateX places it along the track */}
-            <div className="absolute left-0 top-1/2 size-3.5 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-background bg-primary shadow" />
-          </div>
+            {/* The knob sits at the carrier's left edge, self-centered on both
+                axes; the carrier's own translateX is what places it along the
+                track (`translate` and `transform` compose). */}
+            <Placed
+              x={{ start: 0, shift: "-50%" }}
+              y={{ center: "50%" }}
+              className="size-3.5 rounded-full border-2 border-background bg-primary shadow"
+            />
+          </Layer>
         ) : null}
       </div>
 

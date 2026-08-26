@@ -1,3 +1,11 @@
+import { Clip } from "@plugins/primitives/plugins/css/plugins/clip/web";
+import { growClass } from "@plugins/primitives/plugins/css/plugins/grow/web";
+import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
+import {
+  pct,
+  Placed,
+} from "@plugins/primitives/plugins/css/plugins/coords/web";
+import { MIN_BAR_FRACTION, minBarSize } from "./use-gantt-zoom";
 import { type ReactElement, type ReactNode } from "react";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
@@ -47,16 +55,23 @@ export function MultiSpanLane({
 }): ReactElement {
   return (
     <Stack direction="row" align="center" gap="sm" className="py-2xs">
-      {/* eslint-disable-next-line layout/no-adhoc-layout -- fixed 160px (w-40) label column kept rigid (shrink-0) to align with the Gantt time axis (LABEL_WIDTH) */}
-      <div className="w-40 shrink-0 truncate font-mono text-2xs text-muted-foreground">
+      {/* Fixed 160px (w-40) label column, rigid so it stays aligned with the
+          Gantt time axis (LABEL_WIDTH). */}
+      <div
+        className={cn(
+          "w-40 truncate font-mono text-2xs text-muted-foreground",
+          rigidClass(),
+        )}
+      >
         {label}
       </div>
-      {/* eslint-disable-next-line layout/no-adhoc-layout -- flexible timeline track (flex-1) clipping the runtime-positioned bars (overflow-hidden) */}
-      <div className="relative h-5 flex-1 overflow-hidden rounded-md bg-muted/30">
+      {/* The timeline track: the coordinate host for the bars, clipping what
+          overflows it, and the cell that takes the row's slack. */}
+      <Clip className={cn("relative h-5 rounded-md bg-muted/30", growClass())}>
         {bars.map((bar) => (
           <Bar key={bar.id} bar={bar} onBarClick={onBarClick} />
         ))}
-      </div>
+      </Clip>
       {/* eslint-disable-next-line layout/no-adhoc-layout -- fixed 64px (w-16) duration column kept rigid (shrink-0) to align with the Gantt time axis (DURATION_WIDTH) */}
       <div className="w-16 shrink-0 text-right font-mono text-2xs tabular-nums text-muted-foreground">
         {duration}
@@ -73,30 +88,35 @@ function Bar({
   bar: SpanBar;
   onBarClick?: (id: string) => void;
 }): ReactElement {
-  const { toLeftPct, toWidthPct, totalMs } = useGanttContainerContext();
+  const { toLeftFraction, toWidthFraction, totalMs } =
+    useGanttContainerContext();
   const clickable = onBarClick !== undefined;
   const treatment = bar.treatment === "pulse" ? "animate-pulse" : "";
 
-  // Skip zero-width overlays so the 0.3% min-width floor in toWidthPct never
-  // paints an empty overlay as a sliver.
+  // Zero-length overlays would paint nothing (`minBarSize` declines to floor an
+  // empty span), so they are dropped rather than emitted as empty boxes.
   const overlays = (bar.overlays ?? []).filter((o) => o.ms > 0);
 
   return (
     <>
       {/* The full-extent work bar. It is the click target; overlays are decorative
           and sit on top of it. */}
-      <div
-        // eslint-disable-next-line layout/no-adhoc-layout -- bar positioned by runtime ms→% offsets (left/width inline style)
+      <Placed
+        x={{
+          start: pct(toLeftFraction(bar.startMs, totalMs)),
+          size: pct(toWidthFraction(bar.durationMs, totalMs)),
+          // Floored UNCONDITIONALLY, unlike the wait/work rows: on this lane a
+          // zero-duration bar is a POINT EVENT (a report at its lastSeenAt),
+          // not an absent segment, so the floor is what makes it visible at all.
+          minSize: pct(MIN_BAR_FRACTION),
+        }}
+        y="fill"
         className={cn(
-          "absolute top-0 h-full rounded-md",
+          "rounded-md",
           bar.colorClass,
           treatment,
           clickable && "cursor-pointer",
         )}
-        style={{
-          left: toLeftPct(bar.startMs, totalMs),
-          width: toWidthPct(bar.durationMs, totalMs),
-        }}
         // Stop the pointerdown reaching GanttContainer's drag-zoom, which would
         // setPointerCapture and retarget the click off this bar (op-gantt precedent).
         onPointerDown={clickable ? (e) => e.stopPropagation() : undefined}
@@ -112,14 +132,16 @@ function Bar({
       {/* Overlays at their true bar-relative offsets. pointer-events-none so a
           click on an overlay still lands on the work bar beneath it. */}
       {overlays.map((o, i) => (
-        <div
+        <Placed
           key={`${bar.id}:o:${i}`}
-          // eslint-disable-next-line layout/no-adhoc-layout -- overlay positioned by runtime ms→% offsets (left/width inline style)
-          className={cn("pointer-events-none absolute top-0 h-full rounded-md", o.colorClass)}
-          style={{
-            left: toLeftPct(bar.startMs + o.startMs, totalMs),
-            width: toWidthPct(o.ms, totalMs),
+          decorative
+          x={{
+            start: pct(toLeftFraction(bar.startMs + o.startMs, totalMs)),
+            size: pct(toWidthFraction(o.ms, totalMs)),
+            minSize: minBarSize(o.ms),
           }}
+          y="fill"
+          className={cn("rounded-md", o.colorClass)}
         />
       ))}
     </>

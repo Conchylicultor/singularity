@@ -1,3 +1,4 @@
+import { Placed } from "@plugins/primitives/plugins/css/plugins/coords/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import type { SelectionBand } from "../internal/selection-bands";
 
@@ -35,14 +36,17 @@ export function SelectionBands({ bands }: { bands: readonly SelectionBand[] }) {
           className="pointer-events-none relative col-start-1"
           style={{ gridRow: `${band.start + 1} / ${band.end + 2}` }}
         >
-          <div
-            // eslint-disable-next-line layout/no-adhoc-layout -- a backdrop filling the row-span box, offset by the JS-computed decoration edge `C`; not a ramp-expressible anchor (same shape as page/container's ContainerBackdrop)
+          {/* The backdrop fills the row-span box, inset on the left by the
+              JS-computed decoration edge `C` (same shape as page/container's
+              ContainerBackdrop). */}
+          <Placed
+            x={{ start: band.left, end: 0 }}
+            y="fill"
             className={cn(
-              "bg-primary/15 absolute",
+              "bg-primary/15",
               band.roundTop && "rounded-t-md",
               band.roundBottom && "rounded-b-md",
             )}
-            style={{ left: band.left, right: 0, top: 0, bottom: 0 }}
           />
         </div>
       ))}

@@ -120,8 +120,14 @@ export type GeometryInvariant =
     };
 
 /**
- * The attribute a fixture puts on the box that HANDS ITS PRIMITIVE A WIDTH —
- * the element `shrinkWrapHost` turns into a shrink-to-content one.
+ * The attribute a fixture puts on the box that HOSTS its primitive — the one
+ * whose properties the primitive silently depends on. Two mutations take it
+ * away: `shrinkWrapHost` removes the width the host hands down,
+ * `unpositionHost` removes the positioning context it establishes.
+ *
+ * One marker for both because there is one relationship: only the fixture knows
+ * which box is the host, and a fixture that named two would be describing two
+ * primitives.
  *
  * It lives here, in core, and not beside `RAIL_MARKER_ATTR` in the harness's own
  * `region-children.tsx`, because the two markers are authored by opposite sides.
@@ -197,7 +203,25 @@ export type FixtureMutation =
   // SCHEDULE of a premise check as much as its existence — a primitive that asks
   // its host once at mount passes this mutation, and one that re-asks when the
   // room narrows does not.
-  | { kind: "shrinkWrapHost" };
+  | { kind: "shrinkWrapHost" }
+  // Set `position: static` on the fixture's {@link HOST_MARKER_ATTR} box: the
+  // host stops being the containing block its absolutely-positioned children are
+  // placed against.
+  //
+  // The falsification for every coordinate primitive. A placed box says
+  // `left: 70%`; what that resolves to is decided by an ancestor the box never
+  // names, and losing that ancestor is silent in a way no other layout fault is —
+  // there is no error, no overflow warning, and no class on the child changes.
+  // The offsets simply re-resolve against whatever positioned box is further up,
+  // so the children keep their relative arrangement and drift together into a
+  // bigger coordinate space. Nothing about the child's own declaration says which
+  // box it landed in, which is exactly why only a real layout engine can tell.
+  //
+  // For it to bite, the fixture's host must be genuinely SMALLER than (and
+  // inset within) the harness's own `position: relative` width wrapper — the
+  // next positioned ancestor. A host that fills the wrapper would re-resolve to
+  // the same numbers and the mutation would prove nothing.
+  | { kind: "unpositionHost" };
 
 // ── The fixture contribution ───────────────────────────────────────
 //

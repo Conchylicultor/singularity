@@ -1,3 +1,10 @@
+import { Clip } from "@plugins/primitives/plugins/css/plugins/clip/web";
+import {
+  pct,
+  Placed,
+} from "@plugins/primitives/plugins/css/plugins/coords/web";
+import { growClass } from "@plugins/primitives/plugins/css/plugins/grow/web";
+import { minBarSize } from "./use-gantt-zoom";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { createContext, useContext, type ReactElement } from "react";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
@@ -153,7 +160,8 @@ export function SpanRow({
   span: Span;
   color: string;
 }): ReactElement {
-  const { toLeftPct, toWidthPct, totalMs } = useGanttContainerContext();
+  const { toLeftFraction, toWidthFraction, totalMs } =
+    useGanttContainerContext();
   const { hovered, setHovered } = useProfilingContext();
   const isHovered = hovered?.id === span.id;
   return (
@@ -175,21 +183,23 @@ export function SpanRow({
       >
         {span.label}
       </div>
-      {/* eslint-disable-next-line layout/no-adhoc-layout -- flexible timeline track (flex-1) clipping the runtime-positioned bar (overflow-hidden) */}
-      <div className="relative h-5 flex-1 overflow-hidden rounded-md bg-muted/30">
-        <div
-          // eslint-disable-next-line layout/no-adhoc-layout -- bar positioned by runtime ms→% offsets (left/width inline style)
+      {/* The timeline track: the coordinate host for the bar, clipping what
+          overflows it, and the cell that takes the row's slack. */}
+      <Clip className={cn("relative h-5 rounded-md bg-muted/30", growClass())}>
+        <Placed
+          x={{
+            start: pct(toLeftFraction(span.startMs, totalMs)),
+            size: pct(toWidthFraction(span.durationMs, totalMs)),
+            minSize: minBarSize(span.durationMs),
+          }}
+          y="fill"
           className={cn(
-            "absolute top-0 h-full rounded-md transition-opacity",
+            "rounded-md transition-opacity",
             color,
             isHovered ? "opacity-100" : "opacity-70",
           )}
-          style={{
-            left: toLeftPct(span.startMs, totalMs),
-            width: toWidthPct(span.durationMs, totalMs),
-          }}
         />
-      </div>
+      </Clip>
       {/* Fixed 64px (w-16) duration column, rigid so it stays aligned with the
           Gantt time axis (DURATION_WIDTH). */}
       <div

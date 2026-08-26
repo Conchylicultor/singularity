@@ -1,3 +1,4 @@
+import { Placed } from "@plugins/primitives/plugins/css/plugins/coords/web";
 import { useRef, useState } from "react";
 
 export interface CropRect {
@@ -65,16 +66,14 @@ export function CropOverlay({ displayed, natural, onCommit }: Props) {
   })();
 
   return (
-    <div
+    // `Placed` IS the capture surface — never a wrapper around one. The pointer
+    // handlers below call `setPointerCapture` on `e.currentTarget`, so a wrapper
+    // would put the capture on a different element than the one being dragged.
+    <Placed
       ref={overlayRef}
-      // eslint-disable-next-line layout/no-adhoc-layout -- overlay positioned by JS/pixel coordinates from the displayed DOMRect
-      className="absolute cursor-crosshair touch-none select-none"
-      style={{
-        left: displayed.x,
-        top: displayed.y,
-        width: displayed.width,
-        height: displayed.height,
-      }}
+      x={{ start: displayed.x, size: displayed.width }}
+      y={{ start: displayed.y, size: displayed.height }}
+      className="cursor-crosshair touch-none select-none"
       onPointerDown={(e) => {
         e.currentTarget.setPointerCapture(e.pointerId);
         const p = localPoint(e);
@@ -96,55 +95,40 @@ export function CropOverlay({ displayed, natural, onCommit }: Props) {
       {displayedRect && (
         <>
           {/* 4-rect vignette: top, left, right, bottom relative to selection */}
-          <div
-            // eslint-disable-next-line layout/no-adhoc-layout -- vignette rect positioned by JS-computed pixel coordinates
-            className="pointer-events-none absolute bg-black/50"
-            style={{ left: 0, top: 0, right: 0, height: displayedRect.y }}
+          <Placed
+            decorative
+            x={{ start: 0, end: 0 }}
+            y={{ start: 0, size: displayedRect.y }}
+            className="bg-black/50"
           />
-          <div
-            // eslint-disable-next-line layout/no-adhoc-layout -- vignette rect positioned by JS-computed pixel coordinates
-            className="pointer-events-none absolute bg-black/50"
-            style={{
-              left: 0,
-              top: displayedRect.y,
-              width: displayedRect.x,
-              height: displayedRect.h,
-            }}
+          <Placed
+            decorative
+            x={{ start: 0, size: displayedRect.x }}
+            y={{ start: displayedRect.y, size: displayedRect.h }}
+            className="bg-black/50"
           />
-          <div
-            // eslint-disable-next-line layout/no-adhoc-layout -- vignette rect positioned by JS-computed pixel coordinates
-            className="pointer-events-none absolute bg-black/50"
-            style={{
-              left: displayedRect.x + displayedRect.w,
-              top: displayedRect.y,
-              right: 0,
-              height: displayedRect.h,
-            }}
+          <Placed
+            decorative
+            x={{ start: displayedRect.x + displayedRect.w, end: 0 }}
+            y={{ start: displayedRect.y, size: displayedRect.h }}
+            className="bg-black/50"
           />
-          <div
-            // eslint-disable-next-line layout/no-adhoc-layout -- vignette rect positioned by JS-computed pixel coordinates
-            className="pointer-events-none absolute bg-black/50"
-            style={{
-              left: 0,
-              top: displayedRect.y + displayedRect.h,
-              right: 0,
-              bottom: 0,
-            }}
+          <Placed
+            decorative
+            x={{ start: 0, end: 0 }}
+            y={{ start: displayedRect.y + displayedRect.h, end: 0 }}
+            className="bg-black/50"
           />
           {/* Selection border */}
-          <div
-            // eslint-disable-next-line layout/no-adhoc-layout -- selection border positioned by JS-computed pixel coordinates
-            className="pointer-events-none absolute border-2 border-white shadow-[0_0_0_1px_rgba(0,0,0,0.5)]"
-            style={{
-              left: displayedRect.x,
-              top: displayedRect.y,
-              width: displayedRect.w,
-              height: displayedRect.h,
-            }}
+          <Placed
+            decorative
+            x={{ start: displayedRect.x, size: displayedRect.w }}
+            y={{ start: displayedRect.y, size: displayedRect.h }}
+            className="border-2 border-white shadow-[0_0_0_1px_rgba(0,0,0,0.5)]"
           />
         </>
       )}
-    </div>
+    </Placed>
   );
 }
 

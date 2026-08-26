@@ -25,6 +25,15 @@ export type PinAnchor =
   | "center";
 
 /**
+ * The four edge-center anchors — the only ones with a *perpendicular axis* to
+ * say anything about. A corner pins both of its adjacent edges and `center`
+ * pins neither, so `stretch` / `spanOffset` have no meaning on either; the
+ * generic on {@link PinProps} makes them unspellable there rather than silently
+ * ignored.
+ */
+export type PinEdgeAnchor = "top" | "bottom" | "left" | "right";
+
+/**
  * A `SpaceStep` inset distance, negated for an `outset` (the badge that overhangs
  * its corner, `-top-1 -right-1`). The ramp declares no inset utilities, so — like
  * `sticky` — the distance is an inline style reading the density `--space-*` var.
@@ -115,18 +124,30 @@ function scrimDecor(to: PinAnchor, len: string): React.CSSProperties {
  * - **corners** pin both adjacent edges via inline-style insets (no class).
  * - **edge-centers** pin that edge (inline style) and, on the perpendicular axis,
  *   either center it (`left-1/2 -translate-x-1/2` — pure Tailwind classes) or, when
- *   `stretch`, span it full-length (`inset-x-0` / `inset-y-0`).
+ *   spanning it, pin BOTH of its edges via inline-style insets, `spanOffset` in
+ *   from each.
  * - **center** is the four-class translate centering trick; `offset` is ignored.
  *
- * The translate/`1/2` centering mechanics are pure Tailwind classes that live
- * inside this exempt primitive so callers never write them.
+ * Every distance is an inline style — the anchored edges via {@link edgeLength},
+ * the spanned axis via `spanOffset` — so the only classes left are `absolute`,
+ * the z-layer, `pointer-events-none`, the mask's flex centering, and the
+ * translate/`1/2` centering mechanics, which are pure Tailwind living inside this
+ * exempt primitive so callers never write them.
  *
- * `mask` layers the scrim on top (see {@link scrimDecor}) and changes two of the
+ * `spanOffset` **implies `stretch`**, exactly as `mask` does: an inset on an axis
+ * that is not spanned would be a silent no-op, and there is no other reading of
+ * asking for one. `outset` does **not** negate it — `outset` means "overhang the
+ * edge you are anchored to", and the spanned axis has no anchor.
+ *
+ * `mask` layers the scrim on top (see {@link scrimDecor}) and changes three of the
  * mechanics, because a scrim that does not reach the edges it hides against is
- * not a scrim: the anchor insets collapse to `0` (the offset becomes padding),
- * and an edge-center anchor spans its perpendicular axis — a hovered row's actions
- * must cover the row's whole height, not just the button cluster's box — with its
- * content centered on that axis exactly as the non-stretch anchor would place it.
+ * not a scrim: the anchor insets collapse to `0` (the offset becomes padding), an
+ * edge-center anchor spans its perpendicular axis — a hovered row's actions must
+ * cover the row's whole height, not just the button cluster's box — with its
+ * content centered on that axis exactly as the non-stretch anchor would place it,
+ * and the span itself is forced flush to `0`. The span offset is *not*
+ * re-expressed as padding the way `offset` is: a gap along the spanned axis is
+ * precisely the live sliver `mask` exists to abolish.
  */
 export function pinClasses(opts: {
   to: PinAnchor;
@@ -135,6 +156,7 @@ export function pinClasses(opts: {
   layer: InTreeLayer;
   decorative: boolean;
   stretch: boolean;
+  spanOffset: SpaceStep;
   mask: boolean;
 }): { className: string; style: React.CSSProperties } {
   const classes = ["absolute", zLayerClass(opts.layer)];
@@ -145,7 +167,11 @@ export function pinClasses(opts: {
   // the offset as padding; an unmasked one keeps the offset as the inset it has
   // always been.
   const len = opts.mask ? "0" : offsetLen;
-  const stretch = opts.stretch || opts.mask;
+  // The spanned axis is never `outset` — there is no anchor on it to overhang —
+  // and a masked pin spans flush, since a gap there is the sliver the scrim is
+  // for. Asking for a span inset at all IS asking to span.
+  const spanLen = opts.mask ? "0" : spaceLength(opts.spanOffset);
+  const stretch = opts.stretch || opts.mask || opts.spanOffset !== "none";
   if (opts.mask) classes.push("flex items-center justify-center");
 
   switch (opts.to) {
@@ -167,19 +193,31 @@ export function pinClasses(opts: {
       break;
     case "top":
       style.top = len;
-      classes.push(stretch ? "inset-x-0" : "left-1/2 -translate-x-1/2");
+      if (stretch) {
+        style.left = spanLen;
+        style.right = spanLen;
+      } else classes.push("left-1/2 -translate-x-1/2");
       break;
     case "bottom":
       style.bottom = len;
-      classes.push(stretch ? "inset-x-0" : "left-1/2 -translate-x-1/2");
+      if (stretch) {
+        style.left = spanLen;
+        style.right = spanLen;
+      } else classes.push("left-1/2 -translate-x-1/2");
       break;
     case "left":
       style.left = len;
-      classes.push(stretch ? "inset-y-0" : "top-1/2 -translate-y-1/2");
+      if (stretch) {
+        style.top = spanLen;
+        style.bottom = spanLen;
+      } else classes.push("top-1/2 -translate-y-1/2");
       break;
     case "right":
       style.right = len;
-      classes.push(stretch ? "inset-y-0" : "top-1/2 -translate-y-1/2");
+      if (stretch) {
+        style.top = spanLen;
+        style.bottom = spanLen;
+      } else classes.push("top-1/2 -translate-y-1/2");
       break;
     case "center":
       classes.push("top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2");
@@ -192,9 +230,22 @@ export function pinClasses(opts: {
   };
 }
 
-export interface PinProps extends React.HTMLAttributes<HTMLElement> {
+/**
+ * `T` is the anchor the caller actually wrote, so the two perpendicular-axis
+ * props can be typed *per anchor*: on a corner or `center` they resolve to
+ * `never` and are a compile error rather than a silently-ignored prop.
+ *
+ * It is a naked type parameter on purpose, so each conditional **distributes**
+ * over a union: `<Pin to={anchor}>` where `anchor: PinAnchor` yields
+ * `SpaceStep | never` = `SpaceStep`, and stays as usable as it is today. A
+ * discriminated props union would not — it cannot accept a union-typed
+ * discriminant at all.
+ */
+export interface PinProps<
+  T extends PinAnchor = PinAnchor,
+> extends React.HTMLAttributes<HTMLElement> {
   /** Where to anchor inside the `relative` parent. Required. */
-  to: PinAnchor;
+  to: T;
   /** Inset from the anchored edge(s), from the spacing ramp. Default `none`.
    *  Ignored for `to="center"`. */
   offset?: SpaceStep;
@@ -206,10 +257,24 @@ export interface PinProps extends React.HTMLAttributes<HTMLElement> {
   /** Make the child click-through (`pointer-events-none`) — a decorative overlay
    *  that must never eat clicks. Default false. */
   decorative?: boolean;
-  /** For an edge-center anchor, span the perpendicular axis full-length
-   *  (`inset-y-0` for left/right, `inset-x-0` for top/bottom) instead of centering
-   *  it. Default false. No effect on corners or center. Implied by `mask`. */
-  stretch?: boolean;
+  /** Span the perpendicular axis full-length (both its edges pinned at `0`)
+   *  instead of centering on it. Default false. Edge-center anchors only — a
+   *  corner or `center` has no perpendicular axis, so it is a type error there.
+   *  Implied by `mask` and by `spanOffset`. */
+  stretch?: T extends PinEdgeAnchor ? boolean : never;
+  /** Inset the spanned axis from both of its edges, from the spacing ramp — the
+   *  full-bleed drag indicator that stops short of the row's corners. Default
+   *  `none` (flush).
+   *
+   *  **Implies `stretch`**: an inset on an axis that is not spanned would be a
+   *  silent no-op, and there is no other reading of asking for one. `outset`
+   *  does NOT negate it — `outset` overhangs the edge you are *anchored* to, and
+   *  the spanned axis has no anchor. `mask` forces it back to `0`, since a gap
+   *  along the spanned axis is exactly the live sliver the scrim is there to
+   *  cover (and unlike `offset`, it is not re-expressed as padding).
+   *
+   *  Edge-center anchors only, for the same reason as `stretch`. */
+  spanOffset?: T extends PinEdgeAnchor ? SpaceStep : never;
   /**
    * Paint the scrim — an opaque backdrop in the covered surface's own color
    * (`--scrim`, falling back to the surface's `--chrome-mask`), dissolved along
@@ -250,13 +315,14 @@ export interface PinProps extends React.HTMLAttributes<HTMLElement> {
  *
  * Caller `className` composes last; caller `style` overrides the anchor insets.
  */
-export function Pin({
+export function Pin<T extends PinAnchor>({
   to,
   offset = "none",
   outset = false,
   layer = "raised",
   decorative = false,
-  stretch = false,
+  stretch,
+  spanOffset,
   mask = false,
   as: As = "div",
   ref,
@@ -264,14 +330,18 @@ export function Pin({
   style,
   children,
   ...rest
-}: PinProps) {
+}: PinProps<T>) {
   const pin = pinClasses({
     to,
     offset,
     outset,
     layer,
     decorative,
-    stretch,
+    // The two per-anchor props carry a deferred conditional type while `T` is
+    // unresolved, so their defaults are applied here rather than in the
+    // destructuring — `false` is not assignable to `T extends … ? boolean : never`.
+    stretch: Boolean(stretch),
+    spanOffset: spanOffset ?? "none",
     mask,
   });
   return (

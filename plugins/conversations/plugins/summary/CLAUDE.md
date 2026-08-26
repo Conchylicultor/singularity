@@ -13,9 +13,11 @@
     - `infra/endpoints.getEndpointErrorMessage`
     - `infra/endpoints.useEndpointMutation`
     - `primitives/css/badge.Badge`
+    - `primitives/css/spacing.selfClass`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.Button`
+    - `primitives/css/ui-kit.cn`
     - `primitives/live-state.ResourceView`
     - `primitives/live-state.useResource`
     - `primitives/loading.Loading`

@@ -5,7 +5,10 @@ import type { Group, TracedGraph, TracedNode } from "../internal/trace-types";
 import { WorkflowNodeCard, type NodeEmphasis } from "./workflow-node-card";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
-import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import {
+  Stack,
+  selfClass,
+} from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Grid } from "@plugins/primitives/plugins/css/plugins/grid/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
@@ -96,8 +99,13 @@ export function WorkflowGraph({
               align="stretch"
             >
               {i > 0 && (
-                // eslint-disable-next-line layout/no-adhoc-layout -- per-child cross-axis center + responsive show/hide of the inter-stage arrow
-                <span className="hidden self-center text-muted-foreground lg:block">
+                <span
+                  className={cn(
+                    "hidden",
+                    selfClass("center"),
+                    "text-muted-foreground lg:block",
+                  )}
+                >
                   →
                 </span>
               )}

@@ -21,7 +21,9 @@ const createRule = ESLintUtils.RuleCreator(
  *                      `flex-none`, `basis-*`, `grid`, `inline-grid`,
  *                      `grid-cols-*`, `grid-flow-*`, `col-span-*`, `row-span-*`
  *   - space-sharing:   `shrink-*`, `grow-*`, `min-w-0` (the truncation-leaf footgun)
- *   - alignment:       `items-*`, `justify-*`, `place-*`, `self-*`
+ *   - alignment:       `items-*`, `justify-*`, `place-*` (container-wide:
+ *                      `<Stack align justify>`) · `self-*` (ONE child's override:
+ *                      `selfClass(align)`, css/plugins/spacing)
  *   - positioning:     `absolute`, `fixed`, `sticky`, `inset-*`
  *   - clipping:        `overflow-*`
  *
@@ -41,8 +43,10 @@ const createRule = ESLintUtils.RuleCreator(
  *   - overflow:         `<Scroll>` (scrolls) · `<Clip>` (clips, no scroll)
  *   - positioning:      `<Overlay>` (in-flow full-bleed layers) · `<Layer>` (ONE
  *                       standalone `absolute inset-0` child) · `<Pin to>`
- *                       (point-anchored child) · `<Sticky edge>` ·
- *                       `ViewportOverlay` (true `fixed inset-0`)
+ *                       (point-anchored child, semantic-ramp offsets) ·
+ *                       `<Sticky edge>` · `ViewportOverlay` (true `fixed inset-0`)
+ *   - coordinates:      `<Placed x y>` — a box placed by RUNTIME numbers
+ *                       (css/plugins/coords). Pin's data-driven sibling.
  *   - padding / gap:    `<Inset pad>` / `<Stack gap>` (css/plugins/spacing/web)
  *
  * When the element cannot be WRAPPED (a third-party `className`-only prop, a
@@ -159,11 +163,12 @@ export default function buildRule({
           "                    <Fill> both (min-w-0 flex-1) · <Rigid> neither (shrink-0) · yieldClass(axis) gives only (min-w-0) · growClass() takes only (flex-1) · <Text> in a line container — THE truncation leaf\n" +
           "  grids / centring  <Grid minCellWidth> · <Center axis>\n" +
           "  overflow          <Scroll axis fill> scrolls · <Clip axis> clips, no scroll\n" +
-          "  positioning       <Overlay> in-flow full-bleed layers · <Layer> ONE standalone absolute inset-0 child · <Pin to> point-anchored child · <Sticky edge> · ViewportOverlay for true fixed inset-0\n" +
+          "  positioning       <Overlay> in-flow full-bleed layers · <Layer> ONE standalone absolute inset-0 child · <Pin to> point-anchored child, offsets on the semantic ramp · <Sticky edge> · ViewportOverlay for true fixed inset-0\n" +
+          "  coordinates       <Placed x y> — a box placed by RUNTIME numbers (%, px, a measured DOMRect): Gantt bars, windowed-row offsets, crop rects, editor decorations (css/plugins/coords). pct(fraction) writes the %. Its host is <Layer>, <Clip>, or any `relative` box — there is no separate plane primitive.\n" +
           "  padding / gap     <Inset pad> · <Stack gap>  (css/plugins/spacing/web)\n" +
           "When you cannot wrap the element (a third-party `className` prop, a Lexical `ContentEditable`, a raw <img>/<svg>/<button> leaf that must ITSELF be the box), " +
-          "take the class string instead: fillClasses(axis), rigidClass(), yieldClass(axis) [css/plugins/yield], growClass() [css/plugins/grow], layerClasses({layer,decorative}), insetClass(step).\n" +
-          "yield/grow ship NO component on purpose — they annotate a box you already have (a Stack/Line/Text), so there is nothing to wrap.\n" +
+          "take the class string instead: fillClasses(axis), rigidClass(), yieldClass(axis) [css/plugins/yield], growClass() [css/plugins/grow], layerClasses({layer,decorative}), placedStyle(x, y) [css/plugins/coords], insetClass(step), selfClass(align) [css/plugins/spacing].\n" +
+          "yield/grow/self ship NO component on purpose — yield/grow annotate a box you already have (a Stack/Line/Text), so there is nothing to wrap; selfClass is the opposite, a wrapper would BECOME the flex item and take the alignment itself.\n" +
           "A genuine one-off escapes per-site with `// eslint-disable-next-line layout/no-adhoc-layout -- <reason>`.",
         adhocStylePosition:
           'Inline `position: "{{value}}"` is banned — anchor a cursor menu via CursorAnchoredMenu ' +

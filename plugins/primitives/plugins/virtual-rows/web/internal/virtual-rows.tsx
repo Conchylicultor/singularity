@@ -1,3 +1,4 @@
+import { Placed } from "@plugins/primitives/plugins/css/plugins/coords/web";
 import type { ClassName } from "@plugins/primitives/plugins/css/plugins/ui-kit/core";
 import {
   type ReactNode,
@@ -16,7 +17,6 @@ import {
   type Virtualizer,
   type VirtualItem,
 } from "@tanstack/react-virtual";
-import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { findScrollParent } from "@plugins/primitives/plugins/auto-scroll/web";
 
 export interface VirtualRowsProps<T> {
@@ -197,16 +197,20 @@ export function VirtualRows<T>({
       style={{ height: totalSize }}
     >
       {virtualItems.map((vi) => (
-        <div
+        // Each windowed row spans the sizer's width and is composited down to
+        // its measured offset. The two axes are different mechanics on purpose:
+        // x is a plain inset, and only y is a `shift`, so the offset stays on
+        // the compositor while the row still stretches to the sizer.
+        <Placed
           key={vi.key}
           data-index={vi.index}
           ref={virtualizer.measureElement}
-          // eslint-disable-next-line layout/no-adhoc-layout -- each windowed row is absolutely positioned at its computed translateY (set via style below); dynamic offset positioning no Pin/Overlay primitive expresses
-          className={cn("absolute left-0 right-0 top-0", itemClassName)}
-          style={{ transform: `translateY(${vi.start - scrollMargin}px)` }}
+          x={{ start: 0, end: 0 }}
+          y={{ start: 0, shift: vi.start - scrollMargin }}
+          className={itemClassName}
         >
           {children(items[vi.index]!, vi.index)}
-        </div>
+        </Placed>
       ))}
     </div>
   );
