@@ -1,15 +1,20 @@
 # sql-column
 
-A column that narrows `text` to a set of values carries a **decoder**, so its
-declared type is derived from what really runs — on every read *and* every write.
+A column whose declared type is narrower than the Postgres type underneath it
+carries a **decoder**, so that type is derived from what really runs — on every
+read *and* every write. Two spellings, one per tier:
 
 ```ts
-import { parsedText } from "@plugins/database/plugins/sql-column/server";
+import { parsedText, parsedJson } from "@plugins/database/plugins/sql-column/server";
 
-status: parsedText("status", JobWaitStatusSchema).notNull(),
-//      ^? text column; select type = z.infer<typeof JobWaitStatusSchema>,
-//         and that schema is what decodes it
+status:  parsedText("status", JobWaitStatusSchema).notNull(),
+//       ^? text column;  select type = z.infer<typeof JobWaitStatusSchema>
+callers: parsedJson("callers", z.array(CallerBreakdownSchema)).notNull(),
+//       ^? jsonb column; select type = CallerBreakdown[]
 ```
+
+In both cases the schema in the call is what decodes the column. There is no
+second place to declare the type, so there is nothing for it to disagree with.
 
 ## Why this exists
 
@@ -24,6 +29,12 @@ not blank the whole pushed list. That guard sat on the *wire*, so it protected t
 browser and nothing else, while two server-side readers went straight to the raw
 column and did `MODEL_REGISTRY[id].cliFlag` on it. Moving the guard from the wire
 down to the column is what reaches them.
+
+The jsonb tier is the same hole wearing a disguise. `jsonb("x").$type<T>()` at
+least hands back a real JS value — Postgres genuinely decodes the JSON — so what
+went unchecked was only the *shape*, which reads as mostly fine. It is not: a row
+written by older code, by hand, or by a worktree on different code is handed to
+typed code as if it matched `T`, and nothing in either direction ever looks.
 
 ## Strict or tolerant — the author picks
 
@@ -62,6 +73,29 @@ the caller. The error says which direction failed, because the fix differs — a
 that should have parsed. The encoder runs on INSERT `.values()`, UPDATE `.set()`,
 and every bound comparison param (`eq`, `inArray`, …).
 
+## `parsedJson` — and why it normalizes
+
+`parsedJson` is `parsedText`'s sibling: same `this`-bound `table.column` label,
+same one-schema-both-directions claim, same nullability rule. Two things differ,
+both forced by jsonb.
+
+**It normalizes, it does not only check.** A `z.object` **strips keys it does not
+declare**, on read and on write alike — so a row carrying a key from an older
+schema comes back without it. That is the point rather than a side effect: it is
+what makes the declared type *true* instead of merely asserted. Where every key
+matters, the schema says so — `.passthrough()`, or a `z.record`, which keeps
+every key by construction.
+
+**There is no string-branch on read.** `pg` decodes jsonb itself
+(`pg-types.getTypeParser(3802)` is `JSON.parse`), so `fromDriver` receives a JS
+value and never a string. Drizzle's own `PgJsonb.mapFromDriverValue` re-parses a
+string and, when that fails, **returns the raw string** — an absorbed failure,
+and ambiguous besides, since a jsonb column may legitimately hold a JSON string.
+The driver value goes straight to the schema instead: a string where an object
+was declared is a loud failure naming the column. The write half is
+`JSON.stringify` of the *parsed* value, which is what drizzle's own
+`PgJsonb.mapToDriverValue` does.
+
 ## What it costs
 
 Measured end to end on the worst read that exists — the whole `conversations`
@@ -83,17 +117,56 @@ The number that decides the *design*, though, is that decoding a column which is
 value) for zero guarantee. That is why the text storage arm branches on the
 schema rather than decoding every text column.
 
+### The schema is the dial
+
+For jsonb the same question — should this be opt-in per field? — has the same
+answer, for a sharper reason: **a zod parse costs what the schema's depth costs,
+not what the payload's size costs.** So the dial already exists, and it is the
+schema. A second knob could only disagree with it.
+
+`traces.snapshot` is the largest jsonb value in the repo — 300 rows sampled: avg
+123 KB, max 536 KB, in a table of 1 064 MB over 6 752 rows. Its schema is eight
+scalars plus `events: z.record(z.unknown())`, because the engine deliberately
+never names a key. Decoding one ~96 KB snapshot:
+
+| decode | cost |
+|---|---|
+| `JSON.parse` — what pg already pays | 561 µs |
+| the real, shallow schema | **1.7 µs** |
+| a deep schema fully describing the same bytes, for contrast | 481 µs |
+
+A schema that declines to describe a payload declines to pay for it: 0.3 % of
+what pg already spends on the biggest blob in the repo. `z.unknown()` is 113 ns
+and does not even clone — which is why `fields/json/plugins/storage` gives a
+`z.unknown()` field a bare `jsonb` column and no decoder at all.
+
+End to end, on the real reads:
+
+| column set | per row | on its real read |
+|---|---|---|
+| `slow_ops.callers` + `waits` + `recentSamples` | 4.96 µs | +25 ms on the whole-table load (5 130 rows) |
+| `mail_messages` ×6 jsonb columns | 3.97 µs | +0.12 ms on a 30-message thread |
+| `traces.snapshot` | 1.7 µs | one row, on the detail pane only |
+
+`slowOpsResource` is the only measurable one, and it is measurable for a reason
+that predates the decoder: it is a legacy **unbounded** full-table push resource
+that already loads ~19 MB and already parses every byte of it against the same
+field schemas. It wants bounding, not a cheaper decoder. Everything else is
+sub-millisecond.
+
 ## Adopting it generates no migration
 
-`getSQLType()` is `"text"`; drizzle-kit reads that into the snapshot with no
-branch on the column class, and `"text"` is on its native-type whitelist, so it
-renders unquoted. Byte-identical DDL and snapshot to `text("x")`, defaults
-included (`.default()` stores the raw JS value and drizzle-kit reads it raw —
-`toDriver` is never applied to a default).
+`getSQLType()` is `"text"` / `"jsonb"`; drizzle-kit reads that into the snapshot
+with no branch on the column class, and both are on its native-type whitelist, so
+they render unquoted. Byte-identical DDL and snapshot to `text("x")` /
+`jsonb("x")`, defaults included (`.default()` stores the raw JS value and
+drizzle-kit reads it raw — `toDriver` is never applied to a default, and a jsonb
+default is keyed on the same lowered type name either way, so it still renders
+`'…'::jsonb`).
 
 Contrast the repo's other three `customType`s — `rank_text`, `bytea`, `tsvector` —
 whose type names are *not* whitelisted and therefore render double-quoted.
-`"text"` is the one that costs nothing.
+`"text"` and `"jsonb"` are the ones that cost nothing.
 
 ## The qualified column name in the error
 
@@ -102,8 +175,9 @@ so a non-arrow `fromDriver` receives the built column as `this`, and the error c
 say `job_waits.status` from inside drizzle's result mapping, where the stack says
 nothing useful. That is measured behaviour, not a documented contract, so it
 **degrades, never lies**: without the binding the message falls back to the bare
-declared name, and `parsed-text.test.ts` pins the qualified form through a real
-`pgTable` so a drizzle upgrade that detaches the call fails a test.
+declared name, and `parsed-text.test.ts` / `parsed-json.test.ts` each pin the
+qualified form through a real `pgTable` so a drizzle upgrade that detaches the
+call fails a test.
 
 ## The rule
 
@@ -120,16 +194,24 @@ unrelated type — but drizzle emits no `CHECK` for it, so the value is still
 unverified.
 
 Scoped by the chain's **root**: it fires only on a literal `text(` / `varchar(` /
-`char(` call. Two things are left out on purpose, both filed as follow-ups:
+`char(` call. Two things are left out, one still open:
 
-- `jsonb(…).$type<T>()` — a materially weaker tier: pg really decodes JSON, so
-  only the *shape* is asserted.
-- ~~`defineEntity`'s generic `b.$type()`~~ — **done.** The fix was exactly where
-  this predicted: the `fields.storage` capability now hands back a decoder rather
-  than a bare builder, so every `enumTextField` column across the 30 entities is
-  decoded by its own field schema and `b.$type()` is gone. See
-  `research/2026-08-25-global-decoded-entity-columns.md` and
-  `plugins/fields/plugins/text/plugins/storage`.
+- `jsonb(…).$type<T>()` — still outside the rule, but **no longer because the
+  tier is weaker**. `parsedJson` is now its replacement, and the rule should grow
+  a `jsonb(` root. What gates that is the ~16 hand-written call sites
+  (`reports.data`, `page_blocks.data`, `notifications.metadata`,
+  `job_steps.result_json`, `backup_runs.manifest`, the workflow-engine and
+  sonata-rhythm columns, …): several declare a TS type with no zod schema in
+  existence, over load-bearing tables, so each needs its own schema written and
+  its own live-data survey run first. The extension is gated on that migration,
+  not on the tier.
+- ~~`defineEntity`'s generic `b.$type()`~~ — **done**, and now for jsonb columns
+  too. The fix was exactly where this predicted: the `fields.storage` capability
+  hands back a decoder rather than a bare builder, so every `enumTextField`
+  column and every `jsonField<T>` column across the 30 entities is decoded by its
+  own field schema, and `b.$type()` is gone. See
+  `plugins/fields/plugins/text/plugins/storage` and
+  `plugins/fields/plugins/json/plugins/storage`.
 
 ## Considered and rejected: `pgEnum` / `CHECK`
 
@@ -139,18 +221,22 @@ live rows fails on any pre-existing out-of-set value across every worktree DB
 fork. It is also incompatible with the tolerant policy the evolving columns need.
 Worth revisiting per column for a set that is genuinely frozen.
 
-Design: `research/2026-08-25-database-decoded-columns.md`.
+Design: `research/2026-08-25-database-decoded-columns.md` (the column tier),
+`research/2026-08-25-global-decoded-entity-columns.md` (the entity tier), and
+`research/2026-08-26-global-decoded-jsonb-entity-columns.md` (the jsonb tier).
 
 <!-- AUTOGENERATED:BEGIN — do not edit; regenerated by `./singularity build` -->
 
 ## Plugin reference
 
-- Description: Decoded columns: `parsedText` derives a text column's type from a zod schema that really decodes it — on every read and every write — so a column can no longer declare a string-literal union nothing verifies.
+- Description: Decoded columns: `parsedText` / `parsedJson` derive a column's type from a zod schema that really decodes it — on every read and every write — so a column can no longer declare a string-literal union, or a jsonb shape, that nothing verifies.
 - Cross-plugin:
   - Imported by:
     - `apps/workflows/engine`
     - `conversations/conversation-category`
     - `conversations/conversation-progress`
+    - `fields/json/storage`
+    - `fields/tags/storage`
     - `fields/text/storage`
     - `infra/jobs`
     - `tasks/auto-start`
@@ -161,6 +247,7 @@ Design: `research/2026-08-25-database-decoded-columns.md`.
     - `SqlColumnFailure`
   - Exports (values):
     - `formatSqlColumnError`
+    - `parsedJson`
     - `parsedText`
     - `SqlColumnError`
 

@@ -13,6 +13,7 @@ import type { AnyPgColumn } from "drizzle-orm/pg-core";
 import { is } from "drizzle-orm";
 import { collectContributions } from "@plugins/framework/plugins/server-core/core";
 import {
+  parsedJson,
   parsedText,
   SqlColumnError,
 } from "@plugins/database/plugins/sql-column/server";
@@ -54,6 +55,19 @@ const decodeText = <V extends string>(
 function jsonType<T>() {
   return defineFieldType<T>("__ent_json__");
 }
+// The jsonb column is narrowed by the FIELD's own schema too. Mirrors the real
+// `json` storage contribution's discrimination, so these tests exercise
+// defineEntity's arm dispatch rather than a stand-in for it.
+const decodeJson = <V>(
+  n: string,
+  valueSchema: ZodParser<V>,
+): StorageColumnFor<V> =>
+  valueSchema instanceof z.ZodUnknown
+    ? // Sound for the same reason as the text branch: `ZodUnknown`'s output IS
+      // `unknown`, which no narrower `V` can be, so passing the `instanceof`
+      // proves `V` is `unknown`.
+      (jsonb(n) as unknown as StorageColumnFor<V>)
+    : parsedJson(n, valueSchema);
 
 collectContributions([
   {
@@ -63,10 +77,7 @@ collectContributions([
       Fields.Storage({ type: uuidType, build: (n) => uuid(n) }),
       Fields.Storage({ type: intType, build: (n) => integer(n) }),
       Fields.Storage({ type: floatType, build: (n) => doublePrecision(n) }),
-      Fields.Storage({
-        type: jsonType<unknown>(),
-        build: (n) => jsonb(n),
-      }),
+      Fields.Storage({ type: jsonType<unknown>(), decode: decodeJson }),
       Fields.Storage({
         type: dateType,
         build: (n) => timestamp(n, { withTimezone: true }),
@@ -849,4 +860,97 @@ test("a nullable narrowed field decodes its UNWRAPPED schema and stays nullable"
   expect(() => ent.table.kind.mapFromDriverValue("wizard")).toThrow(
     SqlColumnError,
   );
+});
+
+// ── The jsonb arm ──────────────────────────────────────────────────────────
+// The same two arms, one tier down. `jsonField<T>` used to get its `T` from the
+// `EntityColumns` cast and from nothing that ran — Postgres decodes the JSON, so
+// the value was real but its SHAPE was a claim about rows nobody checked. See
+// `research/2026-08-26-global-decoded-jsonb-entity-columns.md`.
+
+test("a narrowed jsonb field's column really throws on an out-of-shape read", () => {
+  const ent = defineEntity(
+    "ent_json_decoded",
+    {
+      id: field(textType, z.string(), ""),
+      callers: field(
+        jsonType<CallerBreakdown[]>(),
+        z.array(
+          z.object({ caller: z.string(), count: z.number() }),
+        ) as z.ZodType<CallerBreakdown[]>,
+        [],
+      ),
+    },
+    { primaryKey: "id" },
+  );
+
+  // In-shape reads pass through…
+  expect(
+    ent.table.callers.mapFromDriverValue([{ caller: "boot", count: 2 }]),
+  ).toEqual([{ caller: "boot", count: 2 }]);
+  // …and the DDL is still a plain `jsonb`, which is what makes adopting the
+  // decoder generate no migration.
+  expect(ent.table.callers.getSQLType()).toBe("jsonb");
+
+  let err: unknown;
+  try {
+    ent.table.callers.mapFromDriverValue([{ caller: "boot", count: "two" }]);
+  } catch (e) {
+    err = e;
+  }
+  expect(err).toBeInstanceOf(SqlColumnError);
+  expect((err as SqlColumnError).label).toBe("ent_json_decoded.callers");
+});
+
+test("a `z.unknown()` jsonField's column carries NO decoder", () => {
+  // The cost claim, as a test — and the design's central one: the schema is the
+  // dial. A field whose schema declares nothing keeps a bare `jsonb` column
+  // whose read is the identity, so it pays nothing.
+  const ent = defineEntity(
+    "ent_json_unknown",
+    {
+      id: field(textType, z.string(), ""),
+      blob: field(jsonType<unknown>(), z.unknown(), null),
+    },
+    { primaryKey: "id" },
+  );
+
+  expect(is(ent.table.blob, PgCustomColumn)).toBe(false);
+  expect(ent.table.blob.getSQLType()).toBe("jsonb");
+  expect(ent.table.blob.mapFromDriverValue({ any: ["shape"] })).toEqual({
+    any: ["shape"],
+  });
+});
+
+test("a nullable narrowed jsonb field decodes its UNWRAPPED schema and stays nullable", () => {
+  // Same rule as the text tier: a decoder never sees `null` in either
+  // direction, so it must be handed the schema for the column's VALUES — never
+  // the `.nullable()` wrapper, which would make every real value fail one half
+  // of the round trip.
+  const ent = defineEntity(
+    "ent_json_decoded_nullable",
+    {
+      id: field(textType, z.string(), ""),
+      lastCaller: field(
+        jsonType<CallerBreakdown | null>(),
+        z
+          .object({ caller: z.string(), count: z.number() })
+          .nullable() as z.ZodType<CallerBreakdown | null>,
+        null,
+      ),
+    },
+    { primaryKey: "id" },
+  );
+
+  // The column is nullable (no `.notNull()`)…
+  expect(ent.table.lastCaller.notNull).toBe(false);
+  // …and its decoder is the OBJECT schema, not the nullable wrapper: an
+  // in-shape value passes, a wrong one throws. (drizzle guards `null` before
+  // the decoder ever runs, so the decoder is never asked about it.)
+  expect(
+    ent.table.lastCaller.mapFromDriverValue({ caller: "boot", count: 1 }),
+  ).toEqual({ caller: "boot", count: 1 });
+  expect(() =>
+    ent.table.lastCaller.mapFromDriverValue({ caller: "boot" }),
+  ).toThrow(SqlColumnError);
 });

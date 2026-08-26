@@ -4,7 +4,7 @@
  * A column decoder runs deep inside drizzle — `mapResultRow` on the way out,
  * the `Param` encoder on the way in — far from the `tables.ts` that declared the
  * column, so the stack cannot say which column failed. The label can, and it is
- * read off the built column itself (see `parsed-text.ts`), so it names
+ * read off the built column itself (see `cross-boundary.ts`), so it names
  * `table.column` rather than a bare property name.
  *
  * The two directions get different advice because they mean different things. A

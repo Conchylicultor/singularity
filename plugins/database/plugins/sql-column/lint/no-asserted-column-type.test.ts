@@ -47,7 +47,8 @@ ruleTester.run(
       { code: 'const c = text("error_message");' },
       { code: 'const c = varchar("slug", { length: 64 }).notNull();' },
 
-      // --- jsonb is a weaker tier and is deliberately out of scope. ---
+      // --- jsonb is out of scope until its ~16 hand-written call sites have
+      // schemas of their own; `parsedJson` is the replacement waiting for them. ---
       { code: 'const c = jsonb("data").$type<Record<string, unknown>>();' },
       {
         code: 'const c = jsonb("manifest").$type<BackupManifest>().notNull();',

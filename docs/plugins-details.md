@@ -11332,12 +11332,14 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `infra/mcp.Mcp`
           - `tasks/tasks-core.getConversation`
         - Register: `mcpTool('query_db')`
-    - **`sql-column`** — Decoded columns: `parsedText` derives a text column's type from a zod schema that really decodes it — on every read and every write — so a column can no longer declare a string-literal union nothing verifies.
+    - **`sql-column`** — Decoded columns: `parsedText` / `parsedJson` derive a column's type from a zod schema that really decodes it — on every read and every write — so a column can no longer declare a string-literal union, or a jsonb shape, that nothing verifies.
       - Cross-plugin:
         - Imported by:
           - `apps/workflows/engine`
           - `conversations/conversation-category`
           - `conversations/conversation-progress`
+          - `fields/json/storage`
+          - `fields/tags/storage`
           - `fields/text/storage`
           - `infra/jobs`
           - `tasks/auto-start`
@@ -11348,6 +11350,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `SqlColumnFailure`
         - Exports (values):
           - `formatSqlColumnError`
+          - `parsedJson`
           - `parsedText`
           - `SqlColumnError`
     - **`sql-projection`** — Mapped raw-SQL projections: `parsed` / `nullable` turn a schema or a column into the decoder drizzle's `.mapWith()` derives a projection's type from, so a `sql` expression selected as a value can no longer declare a type nothing produces.
@@ -14012,10 +14015,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `debug/trace/engine`
               - `infra/claude-cli`
               - `infra/events`
-        - **`storage`** — JSON field type: DB storage capability — maps to a Postgres jsonb column.
+        - **`storage`** — JSON field type: DB storage capability — a Postgres jsonb column, decoded by the field's own schema so a jsonField<T>'s shape is derived rather than asserted.
           - Server:
             - Contributes: `fields.storage` "json"
-            - Uses: `fields/server-capabilities.Fields`
+            - Uses:
+              - `database/sql-column.parsedJson`
+              - `fields/server-capabilities.Fields`
           - Cross-plugin:
             - Imported by: `fields/server-capabilities-loader`
     - **`list`** — List field type: identity only. The config-render capability and the listField factory live in the plugins/config sub-plugin.
@@ -14465,10 +14470,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/ui-kit.Input`
               - `primitives/data-view.DataViewSlots`
               - `primitives/popover.InlinePopover`
-        - **`storage`** — Tags field type: DB storage capability — maps to a Postgres jsonb column.
+        - **`storage`** — Tags field type: DB storage capability — a Postgres jsonb column, decoded by the field's own schema so its string[] is derived rather than asserted.
           - Server:
             - Contributes: `fields.storage` "tags"
-            - Uses: `fields/server-capabilities.Fields`
+            - Uses:
+              - `database/sql-column.parsedJson`
+              - `fields/server-capabilities.Fields`
           - Cross-plugin:
             - Imported by: `fields/server-capabilities-loader`
         - **`table`** — Tags (multi-value) field type: data-view table cell (read-only tag chips).

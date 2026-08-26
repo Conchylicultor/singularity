@@ -61,8 +61,11 @@ tokens, so anything that imports the barrels back would cycle.
   column holds exactly what the type declares, `({ type, decode })` when it is
   narrowed by the FIELD's own schema — in which case that schema is handed to the
   builder and really runs, on every read and write, so the narrower type is
-  derived rather than asserted. `text` is the only decoding arm today
-  (`research/2026-08-25-global-decoded-entity-columns.md`).
+  derived rather than asserted. Three types decode — `text`, `json`, `tags` —
+  and no arm asserts
+  (`research/2026-08-25-global-decoded-entity-columns.md` for the text tier,
+  `research/2026-08-26-global-decoded-jsonb-entity-columns.md` for the jsonb
+  one).
 - **Resolution is exact-token — no `extends` fallback.** Every persisted type
   declares its own builder; `resolveFieldStorage` does a direct keyed lookup.
   (A future derived type wanting the same column re-declares a one-line builder

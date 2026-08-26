@@ -35,18 +35,23 @@
  * migration.
  *
  * Scoped by the chain's ROOT: it fires only when the `$type` / config sits on a
- * literal `text(` / `varchar(` / `char(` call. That is what keeps two things out
- * of scope on purpose — `jsonb(…).$type<T>()` (a weaker tier: pg really decodes
- * JSON, so only the shape is asserted) and `defineEntity`'s generic `b.$type()`
- * (whose type comes from a field's own `FieldDef`, and whose fix belongs in the
- * `fields.storage` capability).
+ * literal `text(` / `varchar(` / `char(` call. That keeps two things out of
+ * scope. `defineEntity`'s generic `b.$type()` is out for good — its type came
+ * from a field's own `FieldDef` and its fix belonged in the `fields.storage`
+ * capability, where it landed; the call no longer exists. `jsonb(…).$type<T>()`
+ * is out for now, and NOT because the tier is weaker: `parsedJson` (this same
+ * barrel) is its replacement and the rule should grow a `jsonb(` root. What
+ * gates that is the ~16 hand-written call sites, several of which declare a TS
+ * type with no zod schema in existence, over load-bearing tables — each needs
+ * its own schema written and its own live-data survey run first.
  *
  * NOT type-aware, matching the closest precedents (`no-asserted-sql-type`,
  * `no-unparsed-sql-rows`, `no-narrow-zodtype`) — and self-contained by necessity:
  * a contributed rule file is loaded by jiti, which cannot resolve the
  * `@plugins/*` alias, so the rule can name no type from the repo.
  *
- * See research/2026-08-25-database-decoded-columns.md.
+ * See research/2026-08-25-database-decoded-columns.md and
+ * research/2026-08-26-global-decoded-jsonb-entity-columns.md.
  */
 import { ESLintUtils, type TSESTree } from "@typescript-eslint/utils";
 

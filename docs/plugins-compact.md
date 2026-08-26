@@ -201,7 +201,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`migrations`** — DDL lifecycle: migration runner and SQL files.
     - **`pgbouncer`** [load-bearing] — PgBouncer connection pooler for the embedded Postgres cluster. Provides path constants for connection routing.
     - **`query`** — MCP tool for agents to query worktree databases for debugging and inspection.
-    - **`sql-column`** — Decoded columns: `parsedText` derives a text column's type from a zod schema that really decodes it — on every read and every write — so a column can no longer declare a string-literal union nothing verifies.
+    - **`sql-column`** — Decoded columns: `parsedText` / `parsedJson` derive a column's type from a zod schema that really decodes it — on every read and every write — so a column can no longer declare a string-literal union, or a jsonb shape, that nothing verifies.
     - **`sql-projection`** — Mapped raw-SQL projections: `parsed` / `nullable` turn a schema or a column into the decoder drizzle's `.mapWith()` derives a projection's type from, so a `sql` expression selected as a value can no longer declare a type nothing produces.
     - **`sql-rows`** — Parsed raw-SQL row reads: queryRows / executeRows parse every row against a ZodParser and throw a SqlRowError naming the column, the value and its Postgres type OID — closing the pool.query<T>() assertion hole.
     - **`zero`** — Umbrella for the Rocicorp Zero sync-engine infrastructure: shared constants (core), the zero-cache supervised service (cache-service), and the generic client provider + adapter (client). Domain-agnostic — no concrete schema.

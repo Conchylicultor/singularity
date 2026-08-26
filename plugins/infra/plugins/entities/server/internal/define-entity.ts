@@ -165,17 +165,19 @@ export function defineEntity<
   // select type AND marks DB-defaulted columns optional on insert (the `D`
   // brand). `extraConfig` is `as any` because `t` was loosened above.
   //
-  // What the cast DERIVES vs what it ASSERTS, per column:
-  //  - a column from a DECODING arm (today: every `text` field, so every
-  //    `enumTextField` union) already has exactly this type — its builder was
-  //    typed `StorageColumnFor<V>` off the schema that really decodes it, so the
-  //    cast only re-states what the builder produced.
+  // The cast now RE-STATES what the builders already produced, for every column
+  // in every entity — there is no arm left that asserts:
+  //  - a column from a DECODING arm (`text`, so every `enumTextField` union;
+  //    `json` / `tags`, so every `jsonField<T>` shape) already has exactly this
+  //    type — its builder was typed `StorageColumnFor<V>` off the schema that
+  //    really decodes it, on every read and every write.
   //  - a column from a fixed `build` arm holding exactly its token's type
   //    (bool / int / float / date / uuid / rank) is likewise re-stated.
-  //  - a `jsonb` column ASSERTS. Postgres really decodes the JSON, so only the
-  //    SHAPE was ever claimed, and `jsonField<T>`'s `T` comes from here and from
-  //    nothing that runs. That is the weaker tier and it is a follow-up:
-  //    `research/2026-08-25-global-decoded-entity-columns.md` §7.
+  //
+  // The jsonb tier closed in
+  // `research/2026-08-26-global-decoded-jsonb-entity-columns.md`: the cost of a
+  // zod parse tracks the SCHEMA's depth, not the payload's size, so the opt-in
+  // dial that tier seemed to need is the schema itself.
   const table = pgTable(
     name,
     builders as unknown as EntityColumns<F, DefaultedKeys<F, M>>,

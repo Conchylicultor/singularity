@@ -42,13 +42,28 @@ Now:
    value type.
 3. *Check/lint* — the escape hatch, `text(name).$type<V>()`, writes `text(`
    literally, which is exactly the root `sql-column/no-asserted-column-type`
-   already scopes on. No new rule.
+   already scopes on. No new rule. On the jsonb side `$type` is not even a
+   spelling: drizzle's `$Type<T, TType>` writes `_.$type` and never `_.data`,
+   which is what `StorageColumnFor` reads, so an author who wanted to assert
+   would have to write a bare cast — visible as one, and the only cast left in
+   these arms is `widestJsonColumn`'s, which carries its proof beside it.
 
-Today `text` is the only decoding arm; `bool` / `int` / `float` / `date` /
-`uuid` / `rank` are fixed, and `json` / `tags` are `jsonb`, which honestly holds
-`unknown` (their narrower `T` is asserted by `defineEntity`'s cast — the weaker
-tier, and a follow-up). Design:
-`research/2026-08-25-global-decoded-entity-columns.md`.
+Three types decode — `text`, `json`, `tags` — and `bool` / `int` / `float` /
+`date` / `uuid` / `rank` are fixed. **No arm asserts.** That is what makes
+`defineEntity`'s `EntityColumns` cast a pure re-statement for every column in
+every entity rather than the place a jsonb column's `T` came from.
+
+Each decoding arm branches on the schema the author actually wrote, so a schema
+that does not narrow the column gets no decoder and pays nothing: `text` on
+`ZodString`, `json` on `ZodUnknown`. `tags` has no such branch — its token
+declares `string[]`, which no `ZodUnknown` can produce, so every tags column
+decodes.
+
+Design: `research/2026-08-25-global-decoded-entity-columns.md` (the text tier)
+and `research/2026-08-26-global-decoded-jsonb-entity-columns.md` (the jsonb
+tier, where the cost question is settled: a zod parse costs what the SCHEMA's
+depth costs, not what the payload's size costs, so the per-field opt-in dial that
+tier seemed to need is the schema itself).
 
 **`resolveFieldStorage(typeId)` returns the whole contribution**, not a builder,
 because the caller must pick an arm — and only the caller (`defineEntity`) holds

@@ -28,7 +28,9 @@ export const slowOps = defineEntity(
     worktree:      textField(),
     operationKind: textField(),
     count:         intField(),
-    callers:       jsonField<CallerBreakdown[]>(),
+    // The schema is not decoration: it is what decodes the jsonb column, so
+    // `CallerBreakdown[]` is inferred from it rather than declared beside it.
+    callers:       jsonField({ schema: z.array(CallerBreakdownSchema), default: [] }),
     firstSeenAt:   dateField(),
   },
   {
@@ -59,7 +61,7 @@ type SlowOpRow = EntityRow<typeof slowOps>;   // = z.infer<typeof slowOps.schema
   is unaffected by snake_case (purely a DDL concern).
 - **Schema** — `fieldsToZodObject(fields)`, keyed by the same JS props.
 
-## The two storage arms — what is derived, what is asserted
+## The two storage arms — and why nothing is asserted
 
 A field type either has a **fixed** column (`build`) or one **narrowed by the
 field's own schema** (`decode`), and `defineEntity` picks the arm:
@@ -74,18 +76,25 @@ both — so handing it the `.nullable()` wrapper would make every real value fai
 one half of the round trip. One helper returns both answers so the column's
 declared nullability and its decoder cannot disagree.
 
-That distinction is what the `EntityColumns` cast below now mostly *re-states*
-rather than asserts:
+That distinction is what turns the `EntityColumns` cast below into a pure
+*re-statement*. **No column in any entity is asserted any more:**
 
 | columns | the cast |
 |---|---|
 | every `text` field — so every `enumTextField` union | **DERIVED**: the builder was already typed off the schema that really decodes the column |
+| every `jsonb` column — so every `jsonField<T>` and `tagsField` | **DERIVED**: same, one tier down; the field's schema decodes the shape on every read and every write, and normalizes it |
 | `bool` / `int` / `float` / `date` / `uuid` / `rank` | **DERIVED**: the builder's type is pinned to its token's value type |
-| every `jsonb` column (`jsonField<T>`, `tags`) | **ASSERTED**: Postgres really decodes the JSON, so only the SHAPE was ever claimed, and `T` comes from the cast and from nothing that runs |
 
-The jsonb tier is a deliberate follow-up — measured at roughly a 2× multiplier on
-that column's decode cost for a weaker guarantee, so it needs its own design
-(`research/2026-08-25-global-decoded-entity-columns.md` §7).
+The jsonb tier was deferred once, on a worry that a zod parse roughly doubles a
+jsonb column's decode cost for a weaker guarantee. Measuring the actual columns
+retired it: the cost tracks the **schema's** depth, not the payload's size, and
+the schemas on the big payloads are shallow because their authors already
+declined to describe them. The largest jsonb value in the repo (`traces.snapshot`,
+avg 123 KB) decodes in 1.7 µs against the 561 µs `JSON.parse` pg already pays. So
+the per-field opt-in dial that tier seemed to need already existed — it is the
+schema — and a `jsonField({ schema: z.unknown() })` still gets a bare `jsonb`
+column with no decoder at all
+(`research/2026-08-26-global-decoded-jsonb-entity-columns.md`).
 
 The `b.$type()` call this factory used to make is gone: it was a runtime no-op
 (`$type() { return this; }` in drizzle 0.36.4), and the type now comes from the

@@ -17,6 +17,13 @@ export function jsonField<T>(
   opts: FieldMeta & { schema: ZodParser<T>; default: T },
 ): JsonFieldDef<T> {
   return Object.freeze({
+    // The cast is TRUE, not a hope. The `json` token declares `unknown`, and
+    // this narrows it to `T` — which the token's storage contribution then makes
+    // real: it is handed `opts.schema` and builds a `parsedJson` column that
+    // decodes through it, on every read and every write. Before that
+    // contribution took the `decode` arm, this line was the whole basis of `T`
+    // on a jsonb column and nothing ran behind it
+    // (`research/2026-08-26-global-decoded-jsonb-entity-columns.md`).
     type: jsonFieldType as FieldType<T>,
     schema: opts.schema,
     defaultValue: opts.default,

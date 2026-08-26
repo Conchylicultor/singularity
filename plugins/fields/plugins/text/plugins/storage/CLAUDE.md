@@ -1,9 +1,10 @@
 # text / storage
 
-The **text** type's storage capability, and the repo's only **decoding** storage
-arm: it contributes `Fields.Storage({ type, decode })` rather than `{ build }`,
-so it is handed the FIELD's own schema and builds the column from it. Resolved by
-exact token through `resolveFieldStorage("text")`.
+The **text** type's storage capability, and the first of the repo's three
+**decoding** storage arms (`json` and `tags` are the others): it contributes
+`Fields.Storage({ type, decode })` rather than `{ build }`, so it is handed the
+FIELD's own schema and builds the column from it. Resolved by exact token through
+`resolveFieldStorage("text")`.
 
 That is what makes `enumTextField(...)` true rather than asserted. The field-record
 analogue of `text("x").$type<Union>()` used to be exactly as empty as the
