@@ -84,7 +84,8 @@ mirroring `defineFileSink`. Two owners claiming one directory is always a bug.
 `paths:no-undeclared-data-dirs` reads the REAL root and fails on any top-level
 entry that is neither declared nor grandfathered. Grandfathering is driven by
 one `LEGACY_LAYOUT` table (`core/internal/legacy-layout.ts`), shared by the
-check and by the one-off `bun plugins/infra/plugins/paths/scripts/migrate-data-layout.ts`
+check and by the one-off
+`./singularity run plugins/infra/plugins/paths/scripts/migrate-data-layout.ts`
 (dry-run by default; `--apply` moves bytes and leaves a compat symlink at the
 old path; `--drop-legacy` removes it once every worktree has rebuilt), so the
 to-do list and the migration plan can't drift. A legacy name passes only if

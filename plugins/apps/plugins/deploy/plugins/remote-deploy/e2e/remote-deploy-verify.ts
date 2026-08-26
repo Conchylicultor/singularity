@@ -3,7 +3,7 @@
  *
  * Manual only (nothing runs this automatically):
  *
- *   bun plugins/apps/plugins/deploy/plugins/remote-deploy/e2e/remote-deploy-verify.ts [--headed]
+ *   ./singularity run plugins/apps/plugins/deploy/plugins/remote-deploy/e2e/remote-deploy-verify.ts [--headed]
  *
  * It reads the first deployment out of the running app rather than seeding one:
  * a deployment names a real remote host, so creating one here would leave a
@@ -29,7 +29,10 @@ await withBrowser(async (h) => {
 
   const deployment = deployments[0];
   if (!deployment) {
-    r.fail("a deployment exists", "no deployment rows — add one in the Deploy app first");
+    r.fail(
+      "a deployment exists",
+      "no deployment rows — add one in the Deploy app first",
+    );
     r.finish();
     return;
   }
@@ -37,7 +40,10 @@ await withBrowser(async (h) => {
   // 1. The list row opens the pane, and the URL is the selection.
   await page.goto(pathUrl(`/deploy/server/${deployment.serverId}`));
   await page.waitForTimeout(3000);
-  await page.getByText(deployment.compositionId, { exact: true }).first().click();
+  await page
+    .getByText(deployment.compositionId, { exact: true })
+    .first()
+    .click();
   await page.waitForTimeout(1500);
   r.ok(
     "row push opens dep/:deploymentId",
@@ -47,21 +53,31 @@ await withBrowser(async (h) => {
 
   // 2. The three sections are present, in reading order.
   for (const label of ["Overview", "Deploy to server", "Output"]) {
-    r.ok(`${label} section renders`, await page.getByText(label, { exact: true }).first().isVisible());
+    r.ok(
+      `${label} section renders`,
+      await page.getByText(label, { exact: true }).first().isVisible(),
+    );
   }
 
   // 3. ONE primary action, not a pipeline. The four-step surface is gone, so
   //    neither of the retired step controls may still be reachable.
-  const deployButton = page.getByRole("button", { name: /^Deploy( .+)?$/ }).first();
+  const deployButton = page
+    .getByRole("button", { name: /^Deploy( .+)?$/ })
+    .first();
   r.ok("a single Deploy button renders", await deployButton.isVisible());
   for (const gone of ["Rehearse", "Ship without rehearsing"]) {
-    r.ok(`"${gone}" is gone`, (await page.getByRole("button", { name: gone }).count()) === 0);
+    r.ok(
+      `"${gone}" is gone`,
+      (await page.getByRole("button", { name: gone }).count()) === 0,
+    );
   }
 
   // 4. Either the app is reachable somewhere, or the pane says why it is not.
   r.ok(
     "the inspect links or the loopback-only sentence render",
-    (await page.getByText("Inspect the deployed app", { exact: true }).count()) > 0,
+    (await page
+      .getByText("Inspect the deployed app", { exact: true })
+      .count()) > 0,
   );
 
   // 5. The Output switcher carries both channels with their scope captions.

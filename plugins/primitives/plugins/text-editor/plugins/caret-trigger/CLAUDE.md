@@ -205,7 +205,7 @@ see:
 ```bash
 bun test plugins/primitives/plugins/text-editor/plugins/caret-trigger/web/internal
 bun run test:dom plugins/primitives/plugins/text-editor/plugins/caret-trigger
-bun plugins/primitives/plugins/text-editor/plugins/caret-trigger/e2e/caret-trigger-wedge.ts --origin http://<worktree>.localhost:9000
+./singularity run plugins/primitives/plugins/text-editor/plugins/caret-trigger/e2e/caret-trigger-wedge.ts --origin http://<worktree>.localhost:9000
 ```
 
 - **`web/internal/*.test.ts` (bun:test)** — the pure derivation: `scanTrigger`,

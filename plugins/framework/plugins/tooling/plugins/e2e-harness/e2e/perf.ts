@@ -5,7 +5,7 @@
 // waterfall, and web vitals after the page settles.
 //
 // Usage:
-//   bun plugins/framework/plugins/tooling/plugins/e2e-harness/e2e/perf.ts \
+//   ./singularity run plugins/framework/plugins/tooling/plugins/e2e-harness/e2e/perf.ts \
 //     [--url <url>] [--out <path>] [--wait-for-timeout <ms>] [--viewport-size "W,H"]
 //
 // --url defaults to this worktree's own deploy, so the bare command profiles the
@@ -70,7 +70,8 @@ const { perfData, consoleErrors } = await withBrowser(async (h) => {
     // supportedEntryTypes rather than try/catch around observe() — the
     // supported list is the API's own answer to "can I observe this?", so an
     // exception from observe() stays a real error we want to see.
-    const supported: readonly string[] = PerformanceObserver.supportedEntryTypes;
+    const supported: readonly string[] =
+      PerformanceObserver.supportedEntryTypes;
     const observe = (
       type: string,
       cb: (list: PerformanceObserverEntryList) => void,
@@ -115,19 +116,16 @@ const { perfData, consoleErrors } = await withBrowser(async (h) => {
 
   const data = await page.evaluate(() => {
     const nav = performance.getEntriesByType("navigation")[0] as
-      | PerformanceNavigationTiming
-      | undefined;
-    const resources = performance
-      .getEntriesByType("resource")
-      .map((entry) => {
-        const e = entry as PerformanceResourceTiming;
-        return {
-          name: e.name,
-          duration: Math.round(e.duration),
-          transferSize: e.transferSize,
-          initiatorType: e.initiatorType,
-        };
-      });
+      PerformanceNavigationTiming | undefined;
+    const resources = performance.getEntriesByType("resource").map((entry) => {
+      const e = entry as PerformanceResourceTiming;
+      return {
+        name: e.name,
+        duration: Math.round(e.duration),
+        transferSize: e.transferSize,
+        initiatorType: e.initiatorType,
+      };
+    });
     return {
       navigation: (nav ? nav.toJSON() : null) as NavigationTiming,
       resources,
@@ -178,7 +176,9 @@ console.log(`DOMContentLoaded: ${dcl} ms`);
 console.log(`load:             ${load} ms`);
 console.log(`LCP:              ${lcp} ms`);
 console.log(`CLS:              ${cls}`);
-console.log(`long tasks:       ${longTaskCount} tasks, ${longTaskTotal} ms total`);
+console.log(
+  `long tasks:       ${longTaskCount} tasks, ${longTaskTotal} ms total`,
+);
 
 if (consoleErrors.length > 0) {
   console.log(`\nconsole errors (${consoleErrors.length}):`);

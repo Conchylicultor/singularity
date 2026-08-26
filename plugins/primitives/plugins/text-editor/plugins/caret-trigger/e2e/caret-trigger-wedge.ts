@@ -14,7 +14,7 @@
 // must never type into a page a human owns.
 //
 // Usage:
-//   bun plugins/primitives/plugins/text-editor/plugins/caret-trigger/e2e/caret-trigger-wedge.ts [--base <url>]
+//   ./singularity run plugins/primitives/plugins/text-editor/plugins/caret-trigger/e2e/caret-trigger-wedge.ts [--base <url>]
 //
 // Exits non-zero on the first failed assertion, after dumping a screenshot.
 import {
@@ -68,7 +68,10 @@ await withBrowser(async (h) => {
   // every navigation. One boot, then client-side nav, keeps the run predictable.
   const SCRATCH_TITLE = "zz caret-trigger e2e";
 
-  await boot(page, `${ORIGIN}/pages`, { marker: "text=Pages", timeoutMs: 90_000 });
+  await boot(page, `${ORIGIN}/pages`, {
+    marker: "text=Pages",
+    timeoutMs: 90_000,
+  });
 
   const pageId = await page.evaluate(async (title: string): Promise<string> => {
     const create = async (body: unknown): Promise<string> => {
@@ -77,12 +80,17 @@ await withBrowser(async (h) => {
         headers: { "content-type": "application/json" },
         body: JSON.stringify(body),
       });
-      if (!res.ok) throw new Error(`create failed: ${res.status} ${await res.text()}`);
+      if (!res.ok)
+        throw new Error(`create failed: ${res.status} ${await res.text()}`);
       return ((await res.json()) as { id: string }).id;
     };
     // A page block's data is `{ title, icon }` — NOT `{ text }`. A malformed page
     // row blanks the entire Pages app, sidebar included.
-    const id = await create({ parentId: null, type: "page", data: { title, icon: null } });
+    const id = await create({
+      parentId: null,
+      type: "page",
+      data: { title, icon: null },
+    });
     // A page with no children renders no block editor — seed the one text block
     // every case types into. Deleting the page cascades it away.
     await create({ parentId: id, type: "text", data: { text: [] } });
@@ -116,7 +124,8 @@ await withBrowser(async (h) => {
       // editor focus — and `open` is focus-gated, so we must re-focus afterwards or
       // every subsequent assertion fails for the wrong reason.
       const text = await block.innerText();
-      for (let i = 0; i < text.length; i++) await page.keyboard.press("Backspace");
+      for (let i = 0; i < text.length; i++)
+        await page.keyboard.press("Backspace");
       await page.waitForTimeout(200);
 
       block = page.locator('[contenteditable="true"]').last();
@@ -125,11 +134,14 @@ await withBrowser(async (h) => {
       await page.waitForTimeout(200);
 
       const left = (await block.innerText()).trim();
-      if (left !== "") throw new Error(`block not empty after clear: ${JSON.stringify(left)}`);
+      if (left !== "")
+        throw new Error(`block not empty after clear: ${JSON.stringify(left)}`);
       const focused = await page.evaluate(
-        () => document.activeElement?.getAttribute("contenteditable") === "true",
+        () =>
+          document.activeElement?.getAttribute("contenteditable") === "true",
       );
-      if (!focused) throw new Error("editor lost focus after clearing the block");
+      if (!focused)
+        throw new Error("editor lost focus after clearing the block");
       return block;
     }
 
@@ -166,7 +178,8 @@ await withBrowser(async (h) => {
       //    Blur the editor directly — clicking the page chrome would risk
       //    navigating away rather than just moving focus.
       await page.evaluate(() => {
-        if (document.activeElement instanceof HTMLElement) document.activeElement.blur();
+        if (document.activeElement instanceof HTMLElement)
+          document.activeElement.blur();
       });
       await page.waitForTimeout(300);
       r.ok(`${id}: blur closes`, !(await visible(menuFor(id))));
@@ -174,7 +187,10 @@ await withBrowser(async (h) => {
       await page.locator('[contenteditable="true"]').last().click();
       await page.keyboard.press("End");
       await page.waitForTimeout(400);
-      r.ok(`${id}: refocus reopens (blur did not latch)`, await visible(menuFor(id)));
+      r.ok(
+        `${id}: refocus reopens (blur did not latch)`,
+        await visible(menuFor(id)),
+      );
     }
 
     // 6. Arbiter: `chrono` parses "friday" out of the `@` query, so `@` stays valid
@@ -186,12 +202,17 @@ await withBrowser(async (h) => {
     await page.waitForTimeout(600);
     const openMenus = await page
       .locator(MENU)
-      .evaluateAll((els) => els.map((e) => e.getAttribute("data-caret-trigger")));
+      .evaluateAll((els) =>
+        els.map((e) => e.getAttribute("data-caret-trigger")),
+      );
     r.ok(
       `exactly one menu open (saw ${JSON.stringify(openMenus)})`,
       openMenus.length === 1,
     );
-    r.ok("the rightmost trigger ([[) owns the caret", openMenus[0] === "page-link");
+    r.ok(
+      "the rightmost trigger ([[) owns the caret",
+      openMenus[0] === "page-link",
+    );
 
     // 7. `$$` passes navigate:false, so arrows must still move the caret through
     //    the LaTeX rather than being swallowed by the menu.
@@ -200,11 +221,18 @@ await withBrowser(async (h) => {
     await page.keyboard.type("x $$a+b", { delay: 40 });
     await page.waitForTimeout(400);
     r.ok("math menu open", await visible(menuFor("math")));
-    const before = await page.evaluate(() => window.getSelection()?.anchorOffset ?? -1);
+    const before = await page.evaluate(
+      () => window.getSelection()?.anchorOffset ?? -1,
+    );
     await page.keyboard.press("ArrowLeft");
     await page.waitForTimeout(200);
-    const after = await page.evaluate(() => window.getSelection()?.anchorOffset ?? -1);
-    r.ok(`ArrowLeft moves the caret (${before} → ${after})`, after === before - 1);
+    const after = await page.evaluate(
+      () => window.getSelection()?.anchorOffset ?? -1,
+    );
+    r.ok(
+      `ArrowLeft moves the caret (${before} → ${after})`,
+      after === before - 1,
+    );
 
     await snap(page, OUT, "final");
   } finally {

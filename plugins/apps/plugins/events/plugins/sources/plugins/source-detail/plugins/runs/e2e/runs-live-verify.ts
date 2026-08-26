@@ -11,7 +11,7 @@
  * Manual only, like every script under `e2e/`. Needs a deployed worktree and an
  * enabled source (its refresh really runs — expect a live fetch of the page):
  *
- *   bun plugins/apps/plugins/events/plugins/sources/plugins/source-detail/plugins/runs/e2e/runs-live-verify.ts --source <sourceId>
+ *   ./singularity run plugins/apps/plugins/events/plugins/sources/plugins/source-detail/plugins/runs/e2e/runs-live-verify.ts --source <sourceId>
  */
 import {
   arg,

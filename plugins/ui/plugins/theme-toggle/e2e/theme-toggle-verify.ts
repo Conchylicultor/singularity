@@ -13,7 +13,7 @@
 // change scheme at all.
 //
 // Usage:
-//   bun plugins/ui/plugins/theme-toggle/e2e/theme-toggle-verify.ts [--base http://<worktree>.localhost:9000]
+//   ./singularity run plugins/ui/plugins/theme-toggle/e2e/theme-toggle-verify.ts [--base http://<worktree>.localhost:9000]
 
 import {
   baseUrl,

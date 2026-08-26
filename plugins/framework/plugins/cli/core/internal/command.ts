@@ -18,13 +18,14 @@
  * 2. THE SHAPE IS CLOSED, NOT A COMMANDER PASSTHROUGH. Across all of the
  *    framework's own commands the entire commander surface in use is
  *    `command` / `description` / `argument` / `option` / `requiredOption` /
- *    `action`. Modelling exactly that — rather than exposing a
- *    `configure(cmd: Command)` escape hatch — is what lets `core/` stay free of
- *    commander, which in turn is what lets a contributing plugin declare a
- *    command at all: `commander` is a workspace-local dependency of the CLI
- *    plugin and would not even resolve from another workspace package. A
- *    contributor cannot reach for a commander feature the mapper does not model,
- *    because they cannot reach commander.
+ *    `action`, plus `enablePositionalOptions` / `passThroughOptions` behind
+ *    {@link CliLeafSpec.passthroughArgs}. Modelling exactly that — rather than
+ *    exposing a `configure(cmd: Command)` escape hatch — is what lets `core/`
+ *    stay free of commander, which in turn is what lets a contributing plugin
+ *    declare a command at all: `commander` is a workspace-local dependency of
+ *    the CLI plugin and would not even resolve from another workspace package.
+ *    A contributor cannot reach for a commander feature the mapper does not
+ *    model, because they cannot reach commander.
  *
  * `bin/register-commands.ts` is the sole translation of these types into
  * commander calls.
@@ -97,6 +98,27 @@ interface CliLeafSpec<A extends readonly unknown[], O> {
    * forgets to think about this gets guarded, not orphaned.
    */
   readonly detachable?: boolean;
+  /**
+   * Everything after the last declared positional argument belongs to the
+   * COMMAND'S OWN payload, not to `./singularity`.
+   *
+   * Commander's default is to claim any flag it recognizes and reject any it
+   * does not, which is right for every command whose arguments are its own and
+   * wrong for the one command that forwards them: `./singularity run
+   * script.ts --headed` would fail with `unknown option '--headed'`, and even
+   * `--help` would print the CLI's help instead of the script's.
+   *
+   * The mapper turns this into commander's `passThroughOptions()`, which stops
+   * option parsing at the first operand — so a forwarded flag is forwarded
+   * verbatim and no `--` separator is needed. A flag placed BEFORE the first
+   * operand is still parsed as this command's, and still rejected if unknown,
+   * which is what keeps the command's own declared options meaningful.
+   *
+   * Only declare it on a command that genuinely hands its tail to something
+   * else; on any other command it would turn a typo'd flag into a silently
+   * ignored positional.
+   */
+  readonly passthroughArgs?: boolean;
   readonly run: () => Promise<{ default: CliAction<A, O> }>;
   readonly subcommands?: never;
 }
@@ -110,6 +132,7 @@ interface CliGroupSpec {
   readonly arguments?: never;
   readonly options?: never;
   readonly detachable?: never;
+  readonly passthroughArgs?: never;
 }
 
 /**
@@ -135,6 +158,7 @@ export interface CliCommand {
   readonly options?: readonly CliOptionSpec[];
   readonly subcommands?: readonly CliCommand[];
   readonly detachable?: boolean;
+  readonly passthroughArgs?: boolean;
   readonly run?: () => Promise<{ default: ErasedCliAction }>;
 }
 

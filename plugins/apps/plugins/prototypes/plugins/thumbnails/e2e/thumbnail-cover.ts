@@ -4,7 +4,7 @@
 // A transcript tool, not a gate: it logs.
 //
 // Usage:
-//   bun plugins/apps/plugins/prototypes/plugins/thumbnails/e2e/thumbnail-cover.ts \
+//   ./singularity run plugins/apps/plugins/prototypes/plugins/thumbnails/e2e/thumbnail-cover.ts \
 //     [--base http://<worktree>.localhost:9000]
 
 import {

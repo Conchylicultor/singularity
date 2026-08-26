@@ -16,7 +16,7 @@
 // `page/editor/e2e/convert-in-place-verify.ts` is the real gate for that rule.
 //
 // Usage:
-//   bun plugins/page/plugins/place/e2e/place-block.ts [--base http://<worktree>.localhost:9000] [--headed]
+//   ./singularity run plugins/page/plugins/place/e2e/place-block.ts [--base http://<worktree>.localhost:9000] [--headed]
 
 import {
   baseUrl,

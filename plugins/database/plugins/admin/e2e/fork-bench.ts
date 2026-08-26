@@ -4,7 +4,7 @@
  *
  * Manual only; nothing runs this automatically.
  *
- *   bun plugins/database/plugins/admin/e2e/fork-bench.ts [--runs 3] [--source singularity]
+ *   ./singularity run plugins/database/plugins/admin/e2e/fork-bench.ts [--runs 3] [--source singularity]
  *
  * It drives `./singularity db fork <scratch>` as a subprocess rather than
  * importing `forkDatabase` directly, for two reasons. The `e2e` runtime may

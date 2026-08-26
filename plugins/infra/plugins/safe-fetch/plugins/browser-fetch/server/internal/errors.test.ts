@@ -43,7 +43,7 @@ describe("browserUnavailable", () => {
       new Error("Executable doesn't exist"),
     );
     expect(err.kind).toBe("browser-unavailable");
-    expect(err.message).toContain("bunx playwright install chromium");
+    expect(err.message).toContain("bun run playwright install chromium");
     expect(err.message).toContain("Executable doesn't exist");
   });
 });

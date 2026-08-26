@@ -157,7 +157,7 @@ Two kinds (`server/internal/cost-report-kinds.ts`), both `warning`:
 ## Verifying
 
 ```bash
-bun plugins/stats/plugins/cost/scripts/verify-vs-ccusage.ts
+./singularity run plugins/stats/plugins/cost/scripts/verify-vs-ccusage.ts
 ```
 
 The regression gate for any pricing change: ~2.5 min, prints ccusage's total, our

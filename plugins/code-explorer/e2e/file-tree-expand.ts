@@ -10,7 +10,7 @@
  *   3. it therefore survives a reload, where the old local Set reset to empty.
  *
  * Manual only. Run after `./singularity build`:
- *   bun plugins/code-explorer/e2e/file-tree-expand.ts [--headed]
+ *   ./singularity run plugins/code-explorer/e2e/file-tree-expand.ts [--headed]
  */
 import { errors, type Locator, type Page } from "playwright";
 import {

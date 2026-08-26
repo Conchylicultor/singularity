@@ -9,7 +9,7 @@
  * Chromium computes. A jsdom test can assert the class string; only a real
  * browser can say whether it matched.
  *
- *   bun plugins/primitives/plugins/row-actions/e2e/click-does-not-pin.ts --headed
+ *   ./singularity run plugins/primitives/plugins/row-actions/e2e/click-does-not-pin.ts --headed
  *
  * Parameterized so one script covers several row families. `--url` is a base, as
  * everywhere in the harness, and `--path` is the app path under it:
@@ -65,7 +65,9 @@ await withBrowser(async (h) => {
     : page.locator(ROW_SELECTOR);
   const row = rows.nth(ROW_INDEX);
   await row.waitFor({ state: "visible", timeout: 30_000 });
-  r.note(`row: ${JSON.stringify((await row.textContent())?.trim().slice(0, 40))}`);
+  r.note(
+    `row: ${JSON.stringify((await row.textContent())?.trim().slice(0, 40))}`,
+  );
 
   const viewport = page.viewportSize() ?? { width: 1400, height: 900 };
 
@@ -106,11 +108,15 @@ await withBrowser(async (h) => {
   // cluster: once revealed every ancestor reads opacity 1 and the walk finds
   // nothing to group by.
   const atRest = await probeButtons();
-  const clusterIdx = atRest.flatMap((b, i) => (!b.onSelf && b.opacity !== 1 ? [i] : []));
+  const clusterIdx = atRest.flatMap((b, i) =>
+    !b.onSelf && b.opacity !== 1 ? [i] : [],
+  );
   const labels = await row
     .locator("button")
     .evaluateAll((els) => els.map((e) => e.getAttribute("aria-label") ?? ""));
-  r.note(`cluster buttons: ${JSON.stringify(clusterIdx.map((i) => labels[i]))}`);
+  r.note(
+    `cluster buttons: ${JSON.stringify(clusterIdx.map((i) => labels[i]))}`,
+  );
   if (clusterIdx.length === 0) {
     r.fail(
       "the row has a hover-revealed action cluster",
@@ -122,7 +128,8 @@ await withBrowser(async (h) => {
 
   const clusterOpacity = async (): Promise<number> => {
     const b = (await probeButtons())[probeIdx];
-    if (!b) throw new Error(`cluster button #${probeIdx} vanished from the row`);
+    if (!b)
+      throw new Error(`cluster button #${probeIdx} vanished from the row`);
     return b.opacity;
   };
 
@@ -139,15 +146,27 @@ await withBrowser(async (h) => {
 
   const assertOpacity = async (name: string, want: number) => {
     const seen = await settledOpacity(want);
-    r.ok(name, Math.abs(seen - want) <= EPSILON, `cluster opacity ${seen}, want ${want}`);
+    r.ok(
+      name,
+      Math.abs(seen - want) <= EPSILON,
+      `cluster opacity ${seen}, want ${want}`,
+    );
   };
 
-  const focusInRow = () => row.evaluate((el) => el.contains(document.activeElement));
+  const focusInRow = () =>
+    row.evaluate((el) => el.contains(document.activeElement));
   const focusInCluster = () =>
-    row.locator("button").evaluateAll(
-      (els, idxs) => els.some((el, i) => (idxs as number[]).includes(i) && el.contains(document.activeElement)),
-      clusterIdx,
-    );
+    row
+      .locator("button")
+      .evaluateAll(
+        (els, idxs) =>
+          els.some(
+            (el, i) =>
+              (idxs as number[]).includes(i) &&
+              el.contains(document.activeElement),
+          ),
+        clusterIdx,
+      );
 
   /**
    * Park the pointer in the far corner and PROVE the row lost `:hover`. Every
@@ -158,7 +177,11 @@ await withBrowser(async (h) => {
     await page.mouse.move(viewport.width - 40, viewport.height - 40);
     await page.waitForTimeout(100);
     const hovered = await row.evaluate((el) => el.matches(":hover"));
-    r.ok(`row lost hover (${label})`, !hovered, "pointer parked but the row still matches :hover");
+    r.ok(
+      `row lost hover (${label})`,
+      !hovered,
+      "pointer parked but the row still matches :hover",
+    );
   };
 
   // --- 1. Hover reveals -------------------------------------------------------
@@ -168,7 +191,9 @@ await withBrowser(async (h) => {
   await assertOpacity("hover reveals the cluster", 1);
   await snap(page, OUT, "hovered");
   if (r.failures.length > 0) {
-    r.note("the cluster never reveals — the assertions below cannot mean anything");
+    r.note(
+      "the cluster never reveals — the assertions below cannot mean anything",
+    );
     r.finish();
   }
 
@@ -246,7 +271,10 @@ await withBrowser(async (h) => {
       "focus went elsewhere, so there is no mouse-focus left to pin the cluster",
     );
     await parkPointer("after menu close");
-    await assertOpacity("mouse-driven focus on an action does not pin the cluster", 0);
+    await assertOpacity(
+      "mouse-driven focus on an action does not pin the cluster",
+      0,
+    );
     await snap(page, OUT, "after-menu-close");
   }
 

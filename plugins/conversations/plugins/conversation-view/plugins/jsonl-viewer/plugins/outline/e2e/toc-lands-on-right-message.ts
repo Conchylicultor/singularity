@@ -10,7 +10,7 @@
  * asserting that *a* row was reached, both pass with that bug live. Entries now
  * carry the event's own key, so the test can compare identities directly.
  *
- *   bun plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/outline/e2e/toc-lands-on-right-message.ts --conv <id>
+ *   ./singularity run plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/outline/e2e/toc-lands-on-right-message.ts --conv <id>
  */
 import {
   arg,

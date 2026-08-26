@@ -4,11 +4,17 @@
  * then remove `shared/index.ts` barrel files that are no longer imported.
  *
  * Usage:
- *   bun plugins/framework/plugins/tooling/plugins/checks/core/scripts/fix-shared-to-relative.ts           # apply fixes
- *   bun plugins/framework/plugins/tooling/plugins/checks/core/scripts/fix-shared-to-relative.ts --dry-run # preview only
+ *   ./singularity run plugins/framework/plugins/tooling/plugins/checks/core/scripts/fix-shared-to-relative.ts           # apply fixes
+ *   ./singularity run plugins/framework/plugins/tooling/plugins/checks/core/scripts/fix-shared-to-relative.ts --dry-run # preview only
  */
 
-import { existsSync, readFileSync, readdirSync, unlinkSync, writeFileSync } from "fs";
+import {
+  existsSync,
+  readFileSync,
+  readdirSync,
+  unlinkSync,
+  writeFileSync,
+} from "fs";
 import { dirname, join, relative, sep } from "path";
 import { buildPluginTree } from "@plugins/plugin-meta/plugins/plugin-tree/core";
 import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
@@ -28,7 +34,10 @@ function walkTs(dir: string, out: string[]) {
     if (e.isDirectory()) {
       if (IGNORED_DIRS.has(e.name)) continue;
       walkTs(join(dir, e.name), out);
-    } else if (e.isFile() && (e.name.endsWith(".ts") || e.name.endsWith(".tsx"))) {
+    } else if (
+      e.isFile() &&
+      (e.name.endsWith(".ts") || e.name.endsWith(".tsx"))
+    ) {
       out.push(join(dir, e.name));
     }
   }
@@ -108,7 +117,9 @@ for (const absFile of files) {
 
   let newSrc = src;
   for (const { from, to } of replacements) {
-    newSrc = newSrc.replaceAll(`"${from}"`, `"${to}"`).replaceAll(`'${from}'`, `'${to}'`);
+    newSrc = newSrc
+      .replaceAll(`"${from}"`, `"${to}"`)
+      .replaceAll(`'${from}'`, `'${to}'`);
     console.log(`  ${relFile}: "${from}" → "${to}"`);
     totalFixes++;
   }
@@ -118,7 +129,9 @@ for (const absFile of files) {
 }
 
 const prefix = dryRun ? "[dry-run] " : "";
-console.log(`\n${prefix}${totalFixes} import(s) rewritten in ${totalFiles} file(s).`);
+console.log(
+  `\n${prefix}${totalFixes} import(s) rewritten in ${totalFiles} file(s).`,
+);
 
 // --- Phase 2: Remove unused shared/index.ts barrels ---
 
@@ -141,7 +154,9 @@ let removedBarrels = 0;
 for (const barrel of barrels) {
   const barrelDir = dirname(barrel);
   const barrelRel = relative(root, barrelDir).split(sep).join("/");
-  const pluginPath = barrelRel.replace(/^plugins\//, "").replace(/\/shared$/, "");
+  const pluginPath = barrelRel
+    .replace(/^plugins\//, "")
+    .replace(/\/shared$/, "");
 
   // Check if any file imports this barrel (either alias or relative resolving to shared/index)
   let isUsed = false;
@@ -156,16 +171,25 @@ for (const barrel of barrels) {
     }
     // Check alias barrel import: @plugins/<plugin>/shared" (not @plugins/<plugin>/shared/)
     const aliasBarrel = `@plugins/${pluginPath}/shared`;
-    const aliasBarrelPattern = new RegExp(`from\\s+["']${aliasBarrel.replace(/\//g, "\\/")}["']`);
+    const aliasBarrelPattern = new RegExp(
+      `from\\s+["']${aliasBarrel.replace(/\//g, "\\/")}["']`,
+    );
     if (aliasBarrelPattern.test(content)) {
       isUsed = true;
       break;
     }
     // Check relative barrel import: from "../shared" or from "../../shared" etc.
     // We look for imports ending with /shared" that resolve to this barrel's directory
-    const relFromSrc = relative(dirname(srcFile), barrelDir).split(sep).join("/");
-    const relPattern = relFromSrc.startsWith(".") ? relFromSrc : "./" + relFromSrc;
-    if (content.includes(`"${relPattern}"`) || content.includes(`'${relPattern}'`)) {
+    const relFromSrc = relative(dirname(srcFile), barrelDir)
+      .split(sep)
+      .join("/");
+    const relPattern = relFromSrc.startsWith(".")
+      ? relFromSrc
+      : "./" + relFromSrc;
+    if (
+      content.includes(`"${relPattern}"`) ||
+      content.includes(`'${relPattern}'`)
+    ) {
       isUsed = true;
       break;
     }
@@ -181,4 +205,6 @@ for (const barrel of barrels) {
   }
 }
 
-console.log(`${prefix}${removedBarrels} unused shared/index.ts barrel(s) removed.`);
+console.log(
+  `${prefix}${removedBarrels} unused shared/index.ts barrel(s) removed.`,
+);

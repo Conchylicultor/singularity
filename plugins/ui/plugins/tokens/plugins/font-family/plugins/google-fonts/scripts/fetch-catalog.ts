@@ -3,7 +3,7 @@
  * web/internal/google-fonts-catalog.json.
  *
  * Usage:
- *   bun plugins/ui/plugins/tokens/plugins/font-family/plugins/google-fonts/scripts/fetch-catalog.ts
+ *   ./singularity run plugins/ui/plugins/tokens/plugins/font-family/plugins/google-fonts/scripts/fetch-catalog.ts
  *
  * Why a committed snapshot: the loader has to answer "can Google actually serve
  * this family name?" for arbitrary names arriving from third-party themes. That
@@ -20,7 +20,10 @@ import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const OUTPUT_PATH = resolve(__dirname, "../web/internal/google-fonts-catalog.json");
+const OUTPUT_PATH = resolve(
+  __dirname,
+  "../web/internal/google-fonts-catalog.json",
+);
 
 const METADATA_URL = "https://fonts.google.com/metadata/fonts";
 
@@ -84,7 +87,9 @@ async function main(): Promise<void> {
   await Bun.write(OUTPUT_PATH, json);
 
   const sizeKb = (Buffer.byteLength(json) / 1024).toFixed(0);
-  console.log(`\nWrote ${OUTPUT_PATH}\n  Families: ${families.length}\n  Size: ${sizeKb} KB`);
+  console.log(
+    `\nWrote ${OUTPUT_PATH}\n  Families: ${families.length}\n  Size: ${sizeKb} KB`,
+  );
 }
 
 await main();

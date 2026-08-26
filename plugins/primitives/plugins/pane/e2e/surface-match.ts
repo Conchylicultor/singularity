@@ -13,7 +13,7 @@
 //     now get `setBasePath` + a registry sync from the surface.
 //
 // Usage:
-//   bun plugins/primitives/plugins/pane/e2e/surface-match.ts \
+//   ./singularity run plugins/primitives/plugins/pane/e2e/surface-match.ts \
 //     --page <pageId> --conv <conversationId> [--base http://<worktree>.localhost:9000]
 
 import type { Page } from "playwright";
@@ -158,7 +158,11 @@ await withBrowser(async (h) => {
     await page.waitForTimeout(waitMs);
     const crashes = await crashCount(page);
     const body = (await page.locator("body").innerText()).trim();
-    r.ok(`${app} boots`, crashes === 0 && body.length > 0, `crashes=${crashes}`);
+    r.ok(
+      `${app} boots`,
+      crashes === 0 && body.length > 0,
+      `crashes=${crashes}`,
+    );
     await snap(page, OUT, `4-${app}`);
   }
 

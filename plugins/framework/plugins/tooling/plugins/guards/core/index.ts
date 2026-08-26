@@ -10,6 +10,7 @@ export type {
   FileHint,
 } from "./types";
 export { defineGuard } from "./define-guard";
+export { MODULE_EXTENSION } from "./module-extension";
 export { parseShell } from "./parse-shell";
 export { parseArgv, redirectionTargets } from "./argv";
 export type { ParsedArgv, FileOperand, KnownCommand } from "./argv";

@@ -46,7 +46,7 @@ export function browserUnavailable(
     "browser-unavailable",
     url,
     `Could not start a browser to load ${url}. ` +
-      `Run \`bunx playwright install chromium\` to provision it. (${detail})`,
+      `Run \`bun run playwright install chromium\` to provision it. (${detail})`,
     { cause },
   );
 }

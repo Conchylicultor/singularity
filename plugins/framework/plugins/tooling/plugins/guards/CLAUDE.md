@@ -79,6 +79,7 @@ can blind or deafen all of them at once.
     - `defineGuard`
     - `detectPoll`
     - `GUARDS`
+    - `MODULE_EXTENSION`
     - `parseArgv`
     - `parseShell`
     - `redirectionTargets`

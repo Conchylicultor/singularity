@@ -6,8 +6,8 @@
 // the compact fold (the toolbar folds below 360px of container width), where the
 // controls become a panel stack rather than nested popovers.
 //
-//   bun plugins/primitives/plugins/data-view/e2e/control-panels.ts --out /tmp/cp
-//   bun plugins/primitives/plugins/data-view/e2e/control-panels.ts --headed
+//   ./singularity run plugins/primitives/plugins/data-view/e2e/control-panels.ts --out /tmp/cp
+//   ./singularity run plugins/primitives/plugins/data-view/e2e/control-panels.ts --headed
 import {
   withBrowser,
   snap,

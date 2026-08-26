@@ -48,7 +48,7 @@
         "eslint-plugin-react-hooks": "^7.1.1",
         "jiti": "^2.4.0",
         "jsdom": "^29.0.2",
-        "playwright": "^1.60.0",
+        "playwright": "^1.62.1",
         "prettier": "3.9.6",
         "typescript": "~6.0.3",
         "vitest": "^4.1.4",
@@ -524,7 +524,7 @@
       "name": "@singularity/plugin-apps-prototypes-thumbnails",
       "version": "0.0.1",
       "dependencies": {
-        "playwright": "^1.60.0",
+        "playwright": "^1.62.1",
       },
     },
     "plugins/apps/plugins/settings": {
@@ -2541,6 +2541,10 @@
         "@resvg/resvg-js": "^2.6.2",
       },
     },
+    "plugins/framework/plugins/cli/plugins/run": {
+      "name": "@singularity/plugin-framework-cli-run",
+      "version": "0.0.1",
+    },
     "plugins/framework/plugins/cli/plugins/serve-app": {
       "name": "@singularity/plugin-framework-cli-serve-app",
       "version": "0.0.1",
@@ -3154,7 +3158,7 @@
       "name": "@singularity/plugin-infra-safe-fetch-browser-fetch",
       "version": "0.0.1",
       "dependencies": {
-        "playwright": "^1.60.0",
+        "playwright": "^1.62.1",
       },
     },
     "plugins/infra/plugins/secrets": {
@@ -6939,6 +6943,8 @@
 
     "@singularity/plugin-framework-cli-release": ["@singularity/plugin-framework-cli-release@workspace:plugins/framework/plugins/cli/plugins/release"],
 
+    "@singularity/plugin-framework-cli-run": ["@singularity/plugin-framework-cli-run@workspace:plugins/framework/plugins/cli/plugins/run"],
+
     "@singularity/plugin-framework-cli-serve-app": ["@singularity/plugin-framework-cli-serve-app@workspace:plugins/framework/plugins/cli/plugins/serve-app"],
 
     "@singularity/plugin-framework-cli-start": ["@singularity/plugin-framework-cli-start@workspace:plugins/framework/plugins/cli/plugins/start"],
@@ -9305,9 +9311,9 @@
 
     "pkce-challenge": ["pkce-challenge@5.0.1", "", {}, "sha512-wQ0b/W4Fr01qtpHlqSqspcj3EhBvimsdh0KlHhH8HRZnMsEa0ea2fTULOXOS9ccQr3om+GcGRk4e+isrZWV8qQ=="],
 
-    "playwright": ["playwright@1.60.0", "", { "dependencies": { "playwright-core": "1.60.0" }, "optionalDependencies": { "fsevents": "2.3.2" }, "bin": { "playwright": "cli.js" } }, "sha512-hheHdokM8cdqCb0lcE3s+zT4t4W+vvjpGxsZlDnikarzx8tSzMebh3UiFtgqwFwnTnjYQcsyMF8ei2mCO/tpeA=="],
+    "playwright": ["playwright@1.62.1", "", { "dependencies": { "playwright-core": "1.62.1" }, "optionalDependencies": { "fsevents": "2.3.2" }, "bin": { "playwright": "cli.js" } }, "sha512-0M+L3LAD8/nm554LOla9Ayx0j0tmFZ0FBcoQ7F1VuVHpM/XpiC8RcDzBQB8W5+hA8L22THxELzeF+2WcUzvcLg=="],
 
-    "playwright-core": ["playwright-core@1.60.0", "", { "bin": { "playwright-core": "cli.js" } }, "sha512-9bW6zvX/m0lEbgTKJ6YppOKx8H3VOPBMOCFh2irXFOT4BbHgrx5hPjwJYLT40Lu+4qtD36qKc/Hn56StUW57IA=="],
+    "playwright-core": ["playwright-core@1.62.1", "", { "bin": { "playwright-core": "cli.js" } }, "sha512-wPYSwEBJY9GHraISXqyqtx0na0LpO3XEX7jNDhntbex7tzUS7kLnZsOlFruFJB4Hi/rhDMjXGqHewDZ68nYZVw=="],
 
     "possible-typed-array-names": ["possible-typed-array-names@1.1.0", "", {}, "sha512-/+5VFTchJDoVj3bhoqi6UeymcD00DAwb1nJwamzPvHEszJ4FpF6SNNbUbOS8yI56qHzdV8eK0qEfOSiodkTdxg=="],
 

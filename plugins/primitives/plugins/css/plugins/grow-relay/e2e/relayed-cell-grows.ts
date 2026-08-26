@@ -13,7 +13,7 @@
  *
  * Manual, like every `e2e/` script here:
  *
- *   bun plugins/primitives/plugins/css/plugins/grow-relay/e2e/relayed-cell-grows.ts \
+ *   ./singularity run plugins/primitives/plugins/css/plugins/grow-relay/e2e/relayed-cell-grows.ts \
  *     --conv <conversationId> [--headed]
  */
 import {

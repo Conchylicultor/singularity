@@ -2,10 +2,10 @@
 //
 // Use this when you need to *interact* with the app (click a button, inspect
 // state, capture before/after). For a single static snapshot, the simpler
-// `bunx playwright screenshot ...` CLI is fine.
+// `bun run playwright screenshot ...` CLI is fine.
 //
 // Usage:
-//   bun plugins/framework/plugins/tooling/plugins/e2e-harness/e2e/screenshot.ts \
+//   ./singularity run plugins/framework/plugins/tooling/plugins/e2e-harness/e2e/screenshot.ts \
 //     [--url <url>] [--click <aria-label>] [--out <path>] [--color-scheme dark|light]
 //
 // --url defaults to this worktree's own deploy, so the bare command screenshots
@@ -14,7 +14,7 @@
 // the user sees it. Pass `--color-scheme dark|light` to force one.
 //
 // Example:
-//   bun plugins/framework/plugins/tooling/plugins/e2e-harness/e2e/screenshot.ts \
+//   ./singularity run plugins/framework/plugins/tooling/plugins/e2e-harness/e2e/screenshot.ts \
 //     --url http://<worktree>.localhost:9000/agents/c/<id> \
 //     --click "Design docs" \
 //     --out /tmp/docs
@@ -39,7 +39,8 @@ const viewport = {
   width: viewportRaw[0] ?? 1400,
   height: viewportRaw[1] ?? 900,
 };
-const colorScheme = (arg("color-scheme") ?? detectOsColorScheme()) as ColorScheme;
+const colorScheme = (arg("color-scheme") ??
+  detectOsColorScheme()) as ColorScheme;
 
 console.log(`url:          ${url}`);
 console.log(`color-scheme: ${colorScheme}`);

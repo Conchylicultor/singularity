@@ -185,7 +185,7 @@ mount-then-crash), **zero** console/page errors, and no gateway↔backend 502/40
 request storm on `/api` `/ws` `/zero`. Exit 0 = PASS.
 
 ```bash
-bun plugins/release/e2e/release-boot-verify.ts --url http://localhost:<port>/ --settle 15000
+./singularity run plugins/release/e2e/release-boot-verify.ts --url http://localhost:<port>/ --settle 15000
 ```
 
 Always point it at the **bare default-namespace URL** (`http://localhost:<port>/`,
@@ -200,7 +200,7 @@ fine, so pick one that genuinely marks the surface.
 ```bash
 ./singularity release --composition <c> --target web --dev   # stages <out>/
 <out>/launch &                                                # self-roots data under <out>/data
-bun plugins/release/e2e/release-boot-verify.ts --url http://localhost:9100/ --settle 15000
+./singularity run plugins/release/e2e/release-boot-verify.ts --url http://localhost:9100/ --settle 15000
 ```
 
 **Tauri target** — build the `.app`, launch it, verify the served content **and**
@@ -209,7 +209,7 @@ the real window:
 ```bash
 ./singularity release --composition <c> --target tauri        # builds <out>/bundle/<Name>.app
 open "<out>/bundle/<Name>.app"                                 # brings up the embedded stack on RELEASE.json port
-bun plugins/release/e2e/release-boot-verify.ts --url http://localhost:9100/ --settle 15000
+./singularity run plugins/release/e2e/release-boot-verify.ts --url http://localhost:9100/ --settle 15000
 ```
 
 The harness covers the *served bytes* (identical to what the WKWebView loads,

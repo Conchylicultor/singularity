@@ -32,7 +32,7 @@
  * `POST /api/blocks/:id/move` contract itself.
  *
  * Manual only. Run after `./singularity build`:
- *   bun plugins/apps/plugins/pages/plugins/page-tree/e2e/grouped-reorder.ts [--headed]
+ *   ./singularity run plugins/apps/plugins/pages/plugins/page-tree/e2e/grouped-reorder.ts [--headed]
  */
 import type { Locator, Page } from "playwright";
 import {
@@ -81,7 +81,10 @@ await withBrowser(async (h) => {
     .getByText(/^(Mine|Agent)$/)
     .first()
     .isVisible();
-  r.ok("the sidebar renders a group-by section header (groupBy is live)", grouped);
+  r.ok(
+    "the sidebar renders a group-by section header (groupBy is live)",
+    grouped,
+  );
 
   const a = await dragAffordance(page, FIRST);
   const b = await dragAffordance(page, SECOND);

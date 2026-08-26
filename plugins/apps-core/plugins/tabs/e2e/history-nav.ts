@@ -2,7 +2,7 @@
 // tabs (research/2026-07-18-global-shell-history-snapshots.md).
 //
 // Usage:
-//   bun plugins/apps-core/plugins/tabs/e2e/history-nav.ts [--base http://<worktree>.localhost:9000] [--out /tmp/histnav]
+//   ./singularity run plugins/apps-core/plugins/tabs/e2e/history-nav.ts [--base http://<worktree>.localhost:9000] [--out /tmp/histnav]
 //
 // Scenarios (PASS/FAIL logged per assertion, exit 1 on any failure):
 //   A. /story → rail-click Settings → Back returns to /story; Forward → Settings.
@@ -80,7 +80,9 @@ const REGISTRY_PREFIX = "singularity.appInstances:";
  * touched). Named explicitly rather than "the first `app-tabs:` key", which now
  * matches an ARBITRARY generation.
  */
-function currentInstance(page: Page): Promise<{ tabId: string; gen: string } | null> {
+function currentInstance(
+  page: Page,
+): Promise<{ tabId: string; gen: string } | null> {
   return page.evaluate(
     ([tabIdKey, registryPrefix]) => {
       try {
@@ -160,7 +162,11 @@ await withBrowser(async (h) => {
 
     await page.goBack();
     await page.waitForTimeout(800);
-    r.ok("A: Back returns to /story", pathname(page) === "/story", pathname(page));
+    r.ok(
+      "A: Back returns to /story",
+      pathname(page) === "/story",
+      pathname(page),
+    );
     await snap(page, out, "A-back");
 
     await page.goForward();
@@ -190,7 +196,11 @@ await withBrowser(async (h) => {
 
     await page.goBack();
     await page.waitForTimeout(800);
-    r.ok("B: Back restores exact deep link", pathname(page) === deep, pathname(page));
+    r.ok(
+      "B: Back restores exact deep link",
+      pathname(page) === deep,
+      pathname(page),
+    );
     const state = await historyState(page);
     r.ok(
       "B: restored entry carries tabId+appId",
@@ -198,7 +208,9 @@ await withBrowser(async (h) => {
       JSON.stringify(state)?.slice(0, 120),
     );
     // Content/theme coherence: the Settings sidebar must be gone after Back.
-    const settingsLeftovers = await page.getByText("Appearance", { exact: true }).count();
+    const settingsLeftovers = await page
+      .getByText("Appearance", { exact: true })
+      .count();
     r.ok(
       "B: no Settings content leftover",
       settingsLeftovers === 0,
@@ -212,7 +224,9 @@ await withBrowser(async (h) => {
     const after = await persistedTabs(page);
     r.ok(
       "B: reload mints no phantom tab",
-      before !== null && after !== null && after.tabs.length === before.tabs.length,
+      before !== null &&
+        after !== null &&
+        after.tabs.length === before.tabs.length,
       `before=${before?.tabs.length} after=${after?.tabs.length}`,
     );
     r.ok("B: URL survives reload", pathname(page) === deep, pathname(page));
@@ -243,7 +257,11 @@ await withBrowser(async (h) => {
       t2?.focusedTabId === t0?.focusedTabId,
       `focused=${t2?.focusedTabId?.slice(0, 8)}`,
     );
-    r.ok("C: Back restores previous URL", pathname(page) === "/story", pathname(page));
+    r.ok(
+      "C: Back restores previous URL",
+      pathname(page) === "/story",
+      pathname(page),
+    );
     await page.close();
   }
 
@@ -257,7 +275,11 @@ await withBrowser(async (h) => {
     await settle(page);
     await page.goBack();
     await page.waitForTimeout(800);
-    r.ok("D: Back after reload returns to /story", pathname(page) === "/story", pathname(page));
+    r.ok(
+      "D: Back after reload returns to /story",
+      pathname(page) === "/story",
+      pathname(page),
+    );
     await page.close();
   }
 
@@ -325,7 +347,11 @@ await withBrowser(async (h) => {
     const geometry = freshInstance
       ? await hasWindowGeometry(page, freshInstance.gen)
       : true;
-    r.ok("E3: no window geometry for the new instance", geometry === false, `hasGeometry=${geometry}`);
+    r.ok(
+      "E3: no window geometry for the new instance",
+      geometry === false,
+      `hasGeometry=${geometry}`,
+    );
 
     // 4. A reload PRESERVES the instance — same generation, same tab set.
     await page.reload();
@@ -391,7 +417,8 @@ await withBrowser(async (h) => {
     );
     r.ok(
       "E7: instance ids differ from the browser-tab id",
-      !!preBookmarkInstance && preBookmarkInstance.gen !== preBookmarkInstance.tabId,
+      !!preBookmarkInstance &&
+        preBookmarkInstance.gen !== preBookmarkInstance.tabId,
       `${preBookmarkInstance?.gen.slice(0, 8)} vs tab ${preBookmarkInstance?.tabId.slice(0, 8)}`,
     );
     await page.close();

@@ -64,7 +64,7 @@ and never call one from this path. It was called from here once
 (`ensureChromium()`, then in `browser-fetch/core`), and a missing binary meant
 this backend downloading ~150 MB with the event loop blocked, ahead of every
 bound in `render.ts`. A binary missing at render time is an operator problem:
-fail `browser-unavailable`, naming `bunx playwright install chromium`.
+fail `browser-unavailable`, naming `bun run playwright install chromium`.
 
 ## Never cache a lie
 

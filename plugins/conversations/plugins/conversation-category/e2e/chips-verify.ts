@@ -8,7 +8,7 @@
  * through a live-state subscription. A unit test can assert the mapping; only
  * the deployed app can say it read the config the user actually has.
  *
- *   bun plugins/conversations/plugins/conversation-category/e2e/chips-verify.ts \
+ *   ./singularity run plugins/conversations/plugins/conversation-category/e2e/chips-verify.ts \
  *     --conv conv-1786112094-i6an [--expect-categories 2] [--headed]
  */
 import {

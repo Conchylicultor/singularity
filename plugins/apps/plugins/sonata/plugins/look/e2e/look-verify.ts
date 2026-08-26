@@ -8,9 +8,9 @@
  * the roll:
  *
  *   ./singularity build
- *   bun plugins/apps/plugins/sonata/plugins/look/e2e/look-verify.ts --out /tmp/flat
+ *   ./singularity run plugins/apps/plugins/sonata/plugins/look/e2e/look-verify.ts --out /tmp/flat
  *   # switch Look → Sketch in the app
- *   bun plugins/apps/plugins/sonata/plugins/look/e2e/look-verify.ts --out /tmp/sketch
+ *   ./singularity run plugins/apps/plugins/sonata/plugins/look/e2e/look-verify.ts --out /tmp/sketch
  *
  * `--song` takes a song id, NOT a library card to click: the cards' actions are
  * hover-revealed, so a click-through has to hover first and still races the

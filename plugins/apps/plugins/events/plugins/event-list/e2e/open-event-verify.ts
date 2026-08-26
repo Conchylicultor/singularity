@@ -2,7 +2,7 @@
  * End-to-end check that activating an event row opens its page.
  *
  * Manual only. Run after `./singularity build`:
- *   bun plugins/apps/plugins/events/plugins/event-list/e2e/open-event-verify.ts [--headed]
+ *   ./singularity run plugins/apps/plugins/events/plugins/event-list/e2e/open-event-verify.ts [--headed]
  *
  * The interesting arm is the FALLBACK: an extraction commonly yields no
  * per-event link, so the row must open the page the event was extracted from —
@@ -63,7 +63,11 @@ await withBrowser(async (h) => {
   const events = ((await eventsRes.json()) as { items: EventRow[] }).items;
 
   const sourcesRes = await page.request.get(pathUrl("/api/events/sources"));
-  r.ok("sources endpoint answered", sourcesRes.ok(), `HTTP ${sourcesRes.status()}`);
+  r.ok(
+    "sources endpoint answered",
+    sourcesRes.ok(),
+    `HTTP ${sourcesRes.status()}`,
+  );
   const sources = (await sourcesRes.json()) as SourceRow[];
   const sourceById = new Map(sources.map((s) => [s.id, s]));
 
@@ -108,8 +112,16 @@ await withBrowser(async (h) => {
     await popup.close();
   }
 
-  r.ok("no uncaught page errors", captured.pageErrors.length === 0, captured.pageErrors.join(" | "));
-  r.ok("no console errors", captured.consoleErrors.length === 0, captured.consoleErrors.join(" | "));
+  r.ok(
+    "no uncaught page errors",
+    captured.pageErrors.length === 0,
+    captured.pageErrors.join(" | "),
+  );
+  r.ok(
+    "no console errors",
+    captured.consoleErrors.length === 0,
+    captured.consoleErrors.join(" | "),
+  );
 });
 
 r.finish();

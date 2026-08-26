@@ -35,7 +35,7 @@
 // The script creates its own scratch page and deletes it on the way out.
 //
 // Usage:
-//   bun plugins/page/plugins/url-paste/e2e/url-drop-verify.ts [--base <url>] [--headed]
+//   ./singularity run plugins/page/plugins/url-paste/e2e/url-drop-verify.ts [--base <url>] [--headed]
 import type { Page } from "playwright";
 import {
   arg,

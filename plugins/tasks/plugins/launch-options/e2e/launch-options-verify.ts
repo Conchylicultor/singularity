@@ -11,7 +11,7 @@
  * always-mounted trigger instead of one behind the floating action bar's
  * hover-disclosure animation.
  *
- *   bun plugins/tasks/plugins/launch-options/e2e/launch-options-verify.ts \
+ *   ./singularity run plugins/tasks/plugins/launch-options/e2e/launch-options-verify.ts \
  *     --task <taskId> [--headed]
  */
 import {
@@ -48,11 +48,17 @@ await withBrowser(async (h) => {
   // --- task detail Prompt card ---
   // Only the detail is mounted here, so one control each.
   for (const label of CONTROLS) {
-    r.eq(`task detail renders "${label}"`, await page.getByLabel(label).count(), 1);
+    r.eq(
+      `task detail renders "${label}"`,
+      await page.getByLabel(label).count(),
+      1,
+    );
   }
 
   // --- task-draft popover ---
-  await page.getByRole("button", { name: "+ Prerequisite" }).click({ timeout: 15_000 });
+  await page
+    .getByRole("button", { name: "+ Prerequisite" })
+    .click({ timeout: 15_000 });
   // Wait on Submit, NOT on the editor placeholder: the editor is Lexical, whose
   // placeholder is an overlay element and not a `placeholder` attribute — so
   // `getByPlaceholder` never matches and would look like the popover never
@@ -66,7 +72,11 @@ await withBrowser(async (h) => {
   // the whole claim: one registry, both surfaces, nothing option-specific in
   // either host.
   for (const label of CONTROLS) {
-    r.eq(`draft popover adds "${label}"`, await page.getByLabel(label).count(), 2);
+    r.eq(
+      `draft popover adds "${label}"`,
+      await page.getByLabel(label).count(),
+      2,
+    );
   }
 });
 

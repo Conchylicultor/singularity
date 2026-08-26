@@ -7,7 +7,7 @@
 // (`[data-pane-id]`) at each step.
 //
 // Usage:
-//   bun plugins/apps/plugins/agent-manager/plugins/pages-nav/e2e/pages-tree-verify.ts \
+//   ./singularity run plugins/apps/plugins/agent-manager/plugins/pages-nav/e2e/pages-tree-verify.ts \
 //     --conv <conversationId> [--base http://<worktree>.localhost:9000] [--headed]
 
 import {

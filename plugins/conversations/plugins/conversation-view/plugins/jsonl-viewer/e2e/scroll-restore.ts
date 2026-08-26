@@ -15,7 +15,7 @@
  *    forever, which reads as a pass on the assertion that matters most — so the
  *    scroller is located by the transcript rows it contains, never by position.
  *
- *   bun plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/e2e/scroll-restore.ts --conv <id>
+ *   ./singularity run plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/e2e/scroll-restore.ts --conv <id>
  */
 import {
   arg,
@@ -96,7 +96,9 @@ await withBrowser(async (h) => {
     for (const k of doomed) localStorage.removeItem(k);
     return doomed.length;
   });
-  r.note(`cleared ${cleared} persisted scroll record(s) before the fresh-open check`);
+  r.note(
+    `cleared ${cleared} persisted scroll record(s) before the fresh-open check`,
+  );
   await page.reload({ waitUntil: "domcontentloaded" });
   await page.waitForSelector("[data-event-key]");
   await page.waitForTimeout(SETTLE_MS);

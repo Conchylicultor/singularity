@@ -69,7 +69,7 @@ async function loadPlaywright(
           url,
           `Loading the Playwright module took longer than ${Math.round(budgetMs)}ms, ` +
             `so no browser could be started for ${url}. ` +
-            `Run \`bunx playwright install chromium\` to provision it.`,
+            `Run \`bun run playwright install chromium\` to provision it.`,
         ),
     );
   } catch (err) {

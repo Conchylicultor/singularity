@@ -21,7 +21,7 @@
  * config write, not device-local state.
  *
  * Manual only — nothing runs this automatically.
- *   bun plugins/apps/plugins/mail/plugins/threads/e2e/mailbox-tabs-verify.ts [--headed]
+ *   ./singularity run plugins/apps/plugins/mail/plugins/threads/e2e/mailbox-tabs-verify.ts [--headed]
  */
 import { existsSync, rmSync } from "node:fs";
 import { basename } from "node:path";

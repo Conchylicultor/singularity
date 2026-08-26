@@ -15,7 +15,7 @@
  *   ORDER BY updated_at DESC LIMIT 10;
  *
  * Manual only. Run after `./singularity build`:
- *   bun plugins/apps/plugins/pages/plugins/page-tree/e2e/sidebar-expand-decoupled.ts [--headed]
+ *   ./singularity run plugins/apps/plugins/pages/plugins/page-tree/e2e/sidebar-expand-decoupled.ts [--headed]
  */
 import {
   boot,
@@ -54,8 +54,12 @@ await withBrowser(async (h) => {
 
   const raw = await page.evaluate((k) => localStorage.getItem(k), STORAGE_KEY);
   const map = raw
-    ? ((JSON.parse(raw) as Record<string, { expanded?: Record<string, boolean> }>)
-        .pages?.expanded ?? {})
+    ? ((
+        JSON.parse(raw) as Record<
+          string,
+          { expanded?: Record<string, boolean> }
+        >
+      ).pages?.expanded ?? {})
     : {};
   const entries = Object.entries(map);
 

@@ -10,7 +10,7 @@
 // seeded it with.
 //
 // Usage:
-//   bun plugins/active-data/plugins/page-link/e2e/page-link-verify.ts \
+//   ./singularity run plugins/active-data/plugins/page-link/e2e/page-link-verify.ts \
 //     --conv <conversationId> --page <block-…> [--block <block-…>] \
 //     [--base http://<worktree>.localhost:9000] [--headed]
 
@@ -62,8 +62,13 @@ await withBrowser(async (h) => {
     if (count === 0) return;
 
     const label = (await chip.innerText()).trim();
-    r.note(`${kind}: label="${label}" title="${await chip.getAttribute("title")}"`);
-    r.ok(`${kind}: chip is labelled, not the raw id`, label.length > 0 && label !== id);
+    r.note(
+      `${kind}: label="${label}" title="${await chip.getAttribute("title")}"`,
+    );
+    r.ok(
+      `${kind}: chip is labelled, not the raw id`,
+      label.length > 0 && label !== id,
+    );
 
     await chip.click();
     await page.waitForTimeout(2000);
@@ -76,9 +81,14 @@ await withBrowser(async (h) => {
     );
     const ids: string[] = await page
       .locator("[data-pane-id]")
-      .evaluateAll((els) => els.map((e) => e.getAttribute("data-pane-id") ?? "?"));
+      .evaluateAll((els) =>
+        els.map((e) => e.getAttribute("data-pane-id") ?? "?"),
+      );
     r.note(`${kind}: columns=${JSON.stringify(ids)}`);
-    r.ok(`${kind}: the conversation stayed open beside it`, ids.includes("conversation"));
+    r.ok(
+      `${kind}: the conversation stayed open beside it`,
+      ids.includes("conversation"),
+    );
 
     // Back to the bare conversation for the next case.
     await page.goto(`${BASE}/agents/c/${CONV}`);
@@ -91,7 +101,11 @@ await withBrowser(async (h) => {
     // the expected id is read from it rather than assumed.
     const res = await fetch(`${BASE}/api/blocks/${BLOCK_ID}/page`);
     const body = (await res.json()) as { found: boolean; pageId?: string };
-    r.ok(`content-block: endpoint resolved ${BLOCK_ID}`, body.found, JSON.stringify(body));
+    r.ok(
+      `content-block: endpoint resolved ${BLOCK_ID}`,
+      body.found,
+      JSON.stringify(body),
+    );
     if (body.pageId) await verify("content-block", BLOCK_ID, body.pageId);
   }
 });

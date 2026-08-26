@@ -9,10 +9,10 @@
 // be flowing.
 //
 // Usage:
-//   bun plugins/debug/plugins/live-state-churn/plugins/emit/e2e/live-state-churn.ts --key <resourceKey> [--url <url>] [--rate 10] [--seconds 8]
+//   ./singularity run plugins/debug/plugins/live-state-churn/plugins/emit/e2e/live-state-churn.ts --key <resourceKey> [--url <url>] [--rate 10] [--seconds 8]
 //
 // Example:
-//   bun plugins/debug/plugins/live-state-churn/plugins/emit/e2e/live-state-churn.ts \
+//   ./singularity run plugins/debug/plugins/live-state-churn/plugins/emit/e2e/live-state-churn.ts \
 //     --url http://<worktree>.localhost:9000/agents \
 //     --key tasks.list --rate 10 --seconds 8
 
@@ -97,7 +97,10 @@ const ok = await withBrowser(async (h) => {
   await page.waitForTimeout(3000);
 
   const hasApi = await page.evaluate(
-    ({ emitGlobal, profilerGlobal }: {
+    ({
+      emitGlobal,
+      profilerGlobal,
+    }: {
       emitGlobal: typeof LIVE_STATE_EMIT_GLOBAL;
       profilerGlobal: typeof RENDER_PROFILER_GLOBAL;
     }) =>
@@ -118,7 +121,12 @@ const ok = await withBrowser(async (h) => {
   // Give emission headroom over our own wait before its server-side auto-stop.
   const emitDurationMs = (seconds + 5) * 1000;
   const emitStatus: EmitStatus | undefined = await page.evaluate(
-    ({ g, key, rate, durationMs }: {
+    ({
+      g,
+      key,
+      rate,
+      durationMs,
+    }: {
       g: typeof LIVE_STATE_EMIT_GLOBAL;
       key: string;
       rate: number;

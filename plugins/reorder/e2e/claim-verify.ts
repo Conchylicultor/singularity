@@ -16,7 +16,7 @@
 // after the fix, proving nothing.
 //
 // Usage:
-//   bun plugins/reorder/e2e/claim-verify.ts [--base http://<worktree>.localhost:9000] [--headed]
+//   ./singularity run plugins/reorder/e2e/claim-verify.ts [--base http://<worktree>.localhost:9000] [--headed]
 
 import {
   pathUrl,
@@ -62,7 +62,10 @@ await withBrowser(async (h) => {
 
     const pen = page.getByRole("button", { name: "Reorder items" });
     if ((await pen.count()) === 0) {
-      r.fail(`${s.name}: edit mode`, "pen button not found — probe would be vacuous");
+      r.fail(
+        `${s.name}: edit mode`,
+        "pen button not found — probe would be vacuous",
+      );
       continue;
     }
     await pen.first().click();
@@ -74,7 +77,11 @@ await withBrowser(async (h) => {
 
     // Non-vacuity guard FIRST: it proves edit mode really engaged and the marker
     // exists on this page, so the `inside === 0` assertion below means something.
-    r.ok(`${s.name}: edit mode engaged`, total > 0, `no sortables anywhere (got ${total})`);
+    r.ok(
+      `${s.name}: edit mode engaged`,
+      total > 0,
+      `no sortables anywhere (got ${total})`,
+    );
     r.eq(`${s.name}: no sortable inside nested content`, inside, 0);
 
     await page.getByRole("button", { name: "Exit edit mode" }).first().click();

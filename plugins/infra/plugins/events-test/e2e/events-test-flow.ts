@@ -6,7 +6,7 @@
 // before it starts.
 //
 // Usage:
-//   bun plugins/infra/plugins/events-test/e2e/events-test-flow.ts [--base http://<worktree>.localhost:9000]
+//   ./singularity run plugins/infra/plugins/events-test/e2e/events-test-flow.ts [--base http://<worktree>.localhost:9000]
 
 import {
   pathUrl,
@@ -42,7 +42,10 @@ await withBrowser(async (h) => {
   await snap(page, OUT, "01-initial");
 
   // Fill Subscribe form — filtered subscription for userId=alice with oneShot
-  const subSection = page.locator("section").filter({ hasText: "Subscribe" }).first();
+  const subSection = page
+    .locator("section")
+    .filter({ hasText: "Subscribe" })
+    .first();
   await subSection.getByPlaceholder("empty = match any").fill("alice");
   await subSection.getByPlaceholder("required").fill("alice-oneshot");
   await subSection.getByRole("button", { name: /Subscribe/i }).click();
@@ -58,7 +61,10 @@ await withBrowser(async (h) => {
   await snap(page, OUT, "02-two-subscribed");
 
   // Emit for userId=alice → both triggers should fire; alice-oneshot deletes
-  const emitSection = page.locator("section").filter({ hasText: "Emit" }).first();
+  const emitSection = page
+    .locator("section")
+    .filter({ hasText: "Emit" })
+    .first();
   await emitSection.getByPlaceholder("required").fill("alice");
   await emitSection.getByPlaceholder(/defaults to/).fill("first ping");
   await emitSection.getByRole("button", { name: /Emit pinged/i }).click();

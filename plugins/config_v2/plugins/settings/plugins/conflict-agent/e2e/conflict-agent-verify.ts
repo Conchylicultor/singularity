@@ -6,7 +6,7 @@
 // Needs a config that is ACTUALLY in conflict in the target namespace (the
 // banner is the only place the button lives), so the path is a parameter:
 //
-//   bun plugins/config_v2/plugins/settings/plugins/conflict-agent/e2e/conflict-agent-verify.ts \
+//   ./singularity run plugins/config_v2/plugins/settings/plugins/conflict-agent/e2e/conflict-agent-verify.ts \
 //     --path apps/events/sources/events.sources.jsonc [--headed]
 //
 // Manual only — nothing runs this automatically.

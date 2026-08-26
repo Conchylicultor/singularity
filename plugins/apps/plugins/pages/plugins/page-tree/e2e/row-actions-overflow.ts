@@ -7,7 +7,7 @@
  * on the row beneath and navigates instead. The hover IS the flow under test, so
  * it has to be a script.
  *
- *   bun plugins/apps/plugins/pages/plugins/page-tree/e2e/row-actions-overflow.ts --headed
+ *   ./singularity run plugins/apps/plugins/pages/plugins/page-tree/e2e/row-actions-overflow.ts --headed
  */
 import {
   arg,
@@ -37,9 +37,11 @@ await withBrowser(async (h) => {
   await row.hover();
 
   const inlineButtons = row.locator("button[aria-label]");
-  const labels = (await inlineButtons.evaluateAll((els) =>
-    els.map((e) => e.getAttribute("aria-label") ?? ""),
-  )).filter(Boolean);
+  const labels = (
+    await inlineButtons.evaluateAll((els) =>
+      els.map((e) => e.getAttribute("aria-label") ?? ""),
+    )
+  ).filter(Boolean);
   r.note(`inline affordances on hover: ${JSON.stringify(labels)}`);
 
   // Exactly one "More" trigger — the whole point of unifying with `rowMenu`.
@@ -48,7 +50,11 @@ await withBrowser(async (h) => {
 
   // The bucketed actions must NOT be inline.
   for (const name of BUCKETED) {
-    r.ok(`"${name}" is not inline`, !labels.includes(name), `inline: ${labels.join(", ")}`);
+    r.ok(
+      `"${name}" is not inline`,
+      !labels.includes(name),
+      `inline: ${labels.join(", ")}`,
+    );
   }
   // Star stays inline (authored as the one high-frequency action).
   r.ok(
@@ -76,14 +82,24 @@ await withBrowser(async (h) => {
   await menu.waitFor({ state: "visible", timeout: 10_000 });
   await snap(page, OUT, "after");
 
-  const items = (await menu.getByRole("menuitem").allTextContents()).map((t) => t.trim());
+  const items = (await menu.getByRole("menuitem").allTextContents()).map((t) =>
+    t.trim(),
+  );
   r.note(`menu rows: ${JSON.stringify(items)}`);
 
   // Labelled rows, not a strip of icon buttons — the presentation switch.
   for (const name of BUCKETED) {
-    r.ok(`"${name}" is a labelled menu row`, items.some((t) => t.includes(name)), `got: ${items.join(" | ")}`);
+    r.ok(
+      `"${name}" is a labelled menu row`,
+      items.some((t) => t.includes(name)),
+      `got: ${items.join(" | ")}`,
+    );
   }
-  r.eq("menu holds exactly the bucketed actions", items.length, BUCKETED.length);
+  r.eq(
+    "menu holds exactly the bucketed actions",
+    items.length,
+    BUCKETED.length,
+  );
 
   // --- The open menu must not move when the pointer leaves the row -----------
   // The row's action cluster is the menu's ANCHOR, so anything that changes its
@@ -104,7 +120,11 @@ await withBrowser(async (h) => {
   await page.waitForTimeout(400);
   const atRest = await boxOf();
   r.eq("open menu does not move when the row loses hover", atRest, atOpen);
-  r.eq("⋯ anchor is where it was before its menu opened", await triggerX(), anchorClosed);
+  r.eq(
+    "⋯ anchor is where it was before its menu opened",
+    await triggerX(),
+    anchorClosed,
+  );
 
   // The typed popup-open signal is what keeps the cluster VISIBLE here — the row
   // lost hover, so without it the still-open menu would hang off an invisible
@@ -112,7 +132,11 @@ await withBrowser(async (h) => {
   // needs its own assertion. Read as the first non-1 opacity up the ancestor
   // chain, since the fade lives on the cluster, not the button.
   const effectiveOpacity = await more.evaluate((el) => {
-    for (let n: HTMLElement | null = el as HTMLElement; n; n = n.parentElement) {
+    for (
+      let n: HTMLElement | null = el as HTMLElement;
+      n;
+      n = n.parentElement
+    ) {
       const o = getComputedStyle(n).opacity;
       if (o !== "1") return Number(o);
     }
@@ -140,10 +164,16 @@ await withBrowser(async (h) => {
   const favMenu = page.getByRole("menu");
   await favMenu.waitFor({ state: "visible", timeout: 10_000 });
   await snap(page, OUT, "favorites");
-  const favItems = (await favMenu.getByRole("menuitem").allTextContents()).map((t) => t.trim());
+  const favItems = (await favMenu.getByRole("menuitem").allTextContents()).map(
+    (t) => t.trim(),
+  );
   r.note(`favorites menu rows: ${JSON.stringify(favItems)}`);
 
-  r.ok("bucket degrades — menu is not empty", favItems.length > 0, "an empty ⋯ menu is a dead affordance");
+  r.ok(
+    "bucket degrades — menu is not empty",
+    favItems.length > 0,
+    "an empty ⋯ menu is a dead affordance",
+  );
   r.ok(
     "Add page below is absent outside a tree",
     !favItems.some((t) => t.includes("Add page below")),
@@ -169,7 +199,10 @@ await withBrowser(async (h) => {
 
   await page.locator('[data-ui-owner^="TreeRowChrome"]').first().hover();
   await snap(page, OUT, "edit-mode");
-  r.ok("entered edit mode", await page.getByRole("button", { name: "Exit edit mode" }).count() > 0);
+  r.ok(
+    "entered edit mode",
+    (await page.getByRole("button", { name: "Exit edit mode" }).count()) > 0,
+  );
 
   // `failedRequests` is deliberately excluded: the log-emit beacon is aborted by
   // design on teardown, so it is noise here, not a defect.

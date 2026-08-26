@@ -12,7 +12,7 @@
  * committed layout (`config/page/editor/page.editor.block.jsonc`) is four
  * labelled groups.
  *
- *   bun plugins/reorder/plugins/node-types/e2e/container-members.ts --headed
+ *   ./singularity run plugins/reorder/plugins/node-types/e2e/container-members.ts --headed
  */
 import {
   arg,

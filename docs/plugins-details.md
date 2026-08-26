@@ -14933,6 +14933,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `framework/cli/migrations.listTrackedMigrationBasenames`
               - `framework/cli/migrations.resolveMainRef`
         - **`release`** — `./singularity release` — stage a composition into a portable, self-contained artifact (compiled binaries + vendored native PG/PgBouncer/gateway/parcel-watcher) and pack it as a single-file web binary or a Tauri desktop bundle.
+        - **`run`** — `./singularity run <script.ts> [args…]` — run a repo script against THIS worktree's own dependencies; the correct spelling of `bun <file>`, which silently resolves another checkout's installed tree.
         - **`serve-app`** — `./singularity serve-app` — boot a packaged app's full runtime (gateway + embedded Postgres + app DB) under an isolated SINGULARITY_DIR. The one detachable command: it is meant to outlive the shell that launched it.
         - **`start`** — `./singularity start` — build and start the gateway daemon, then wait for it to actually serve before reporting success.
         - **`test`** — `./singularity test` — the ONLY way to run tests: both runners (bun:test for co-located logic suites, vitest for jsdom suites), with a summary naming both buckets so a green-but-partial result is impossible.
@@ -15554,6 +15555,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `defineGuard`
               - `detectPoll`
               - `GUARDS`
+              - `MODULE_EXTENSION`
               - `parseArgv`
               - `parseShell`
               - `redirectionTargets`

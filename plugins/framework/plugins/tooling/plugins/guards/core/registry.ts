@@ -1,5 +1,6 @@
 import { agentModelGuard } from "./guards/agent-model";
 import { backgroundOpsGuard } from "./guards/background-ops";
+import { bunScriptGuard } from "./guards/bun-script";
 import { findGuard } from "./guards/find";
 import { gitDiffMainGuard } from "./guards/git-diff-main";
 import { gitPushGuard } from "./guards/git-push";
@@ -15,6 +16,7 @@ import type { Guard } from "./types";
 export const GUARDS: Guard<any>[] = [
   // Bash
   findGuard,
+  bunScriptGuard,
   rgReplaceGuard,
   gitDiffMainGuard,
   gitPushGuard,

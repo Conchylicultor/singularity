@@ -87,7 +87,7 @@ redirects need nothing; `MAP` binds a hostname regardless of scheme or path.
 | Bound | Default | On breach |
 | --- | --- | --- |
 | Playwright module load | shares the launch budget | `browser-unavailable` |
-| launch / chromium missing | 30 s | `browser-unavailable` (message names `bunx playwright install chromium`) |
+| launch / chromium missing | 30 s | `browser-unavailable` (message names `bun run playwright install chromium`) |
 | navigation | 20 s | `navigation-timeout` / `navigation-failed` |
 | settle (`networkidle`) | 3 s | **not a failure** — the ceiling is the expected path |
 | `waitForSelector` | `settleMs` | `selector-timeout` |
@@ -124,9 +124,10 @@ binary meant a backend blocking its **entire event loop** on a synchronous
 the queue-health watchdog, which is a `setInterval` on the loop it blocks.
 
 So a runtime that finds no binary FAILS — `browser-unavailable`, naming the one
-command that fixes it. `./singularity` runs `bun install` on every invocation,
-so a serving backend has already been through provisioning; a binary missing at
-that point is an operator problem, and parking a source over it would be a lie.
+command that fixes it. `bun install` re-runs whenever this checkout's declared
+dependencies change, so a serving backend has already been through provisioning;
+a binary missing at that point is an operator problem, and parking a source over
+it would be a lie.
 
 ## Concurrency
 
@@ -171,7 +172,7 @@ in the one guarantee it sells. The pure halves are unit-tested; the wiring is
 proven by hand:
 
 ```bash
-bun plugins/infra/plugins/safe-fetch/plugins/browser-fetch/scripts/verify.ts \
+./singularity run plugins/infra/plugins/safe-fetch/plugins/browser-fetch/scripts/verify.ts \
   https://shotgun.live/en/venues/paris-erasmus-life   # 200, ~340 KB (plain fetch: 429)
 ```
 

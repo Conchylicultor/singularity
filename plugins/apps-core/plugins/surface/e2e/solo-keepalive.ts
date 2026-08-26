@@ -4,7 +4,7 @@
 // (research/2026-08-17-global-portal-is-not-keep-alive.md).
 //
 // Usage:
-//   bun plugins/apps-core/plugins/surface/e2e/solo-keepalive.ts \
+//   ./singularity run plugins/apps-core/plugins/surface/e2e/solo-keepalive.ts \
 //     [--base http://<worktree>.localhost:9000] [--out /tmp/solo-keepalive] [--headed]
 //
 // Why a DOM expando and not a screenshot: the old bug (a placement toggle that

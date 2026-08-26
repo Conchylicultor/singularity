@@ -13,7 +13,7 @@
 //
 // Manual, self-contained — NOT wired into any check (tests are manual here):
 //
-//   bun plugins/primitives/plugins/pane/e2e/deep-link-restore.ts \
+//   ./singularity run plugins/primitives/plugins/pane/e2e/deep-link-restore.ts \
 //     --page-id block-1781024618461-ud10ib [--base <url>] [--wait <ms>]
 //
 // Exit 0 = all pass; exit 1 = a failing assertion (with a printed reason).
@@ -73,7 +73,8 @@ async function settle(page: Page, probe: () => boolean): Promise<void> {
   }
 }
 
-const editorPresent = (): boolean => !!document.querySelector('[contenteditable="true"]');
+const editorPresent = (): boolean =>
+  !!document.querySelector('[contenteditable="true"]');
 
 await withBrowser(async (h) => {
   const { page } = await h.session();

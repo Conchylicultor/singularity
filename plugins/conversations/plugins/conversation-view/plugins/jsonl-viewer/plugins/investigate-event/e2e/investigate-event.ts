@@ -13,7 +13,7 @@
  * Hover-reveal is opacity + pointer-events, not mount/unmount, so the buttons
  * are in the DOM without simulating hover.
  *
- *   bun plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/investigate-event/e2e/investigate-event.ts --conv <id>
+ *   ./singularity run plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/investigate-event/e2e/investigate-event.ts --conv <id>
  */
 import {
   arg,
@@ -27,9 +27,21 @@ const INVESTIGATE = '[aria-label="Launch agent to add a renderer"]';
 
 /** Tools with their own renderer plugin — their inner dispatch matches. */
 const HANDLED_TOOLS = [
-  "Bash", "Read", "Write", "Edit", "MultiEdit", "Agent", "Skill", "Workflow",
-  "AskUserQuestion", "TaskCreate", "TaskUpdate", "TaskGet", "TaskList",
-  "TaskOutput", "TaskStop",
+  "Bash",
+  "Read",
+  "Write",
+  "Edit",
+  "MultiEdit",
+  "Agent",
+  "Skill",
+  "Workflow",
+  "AskUserQuestion",
+  "TaskCreate",
+  "TaskUpdate",
+  "TaskGet",
+  "TaskList",
+  "TaskOutput",
+  "TaskStop",
 ];
 
 const convId = arg("conv") ?? "conv-1784824270-417z";

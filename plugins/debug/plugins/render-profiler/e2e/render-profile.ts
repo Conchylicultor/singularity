@@ -6,10 +6,10 @@
 // `render-profiler.jsonl` log channel by the engine on stop.
 //
 // Usage:
-//   bun plugins/debug/plugins/render-profiler/e2e/render-profile.ts [--url <url>] [--seconds 8] [--top 12]
+//   ./singularity run plugins/debug/plugins/render-profiler/e2e/render-profile.ts [--url <url>] [--seconds 8] [--top 12]
 //
 // Example:
-//   bun plugins/debug/plugins/render-profiler/e2e/render-profile.ts \
+//   ./singularity run plugins/debug/plugins/render-profiler/e2e/render-profile.ts \
 //     --url http://<worktree>.localhost:9000/agents/c/<id> \
 //     --seconds 8
 

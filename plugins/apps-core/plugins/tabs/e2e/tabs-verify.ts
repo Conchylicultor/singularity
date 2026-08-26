@@ -3,7 +3,7 @@
 // logs, it does not assert.
 //
 // Usage:
-//   bun plugins/apps-core/plugins/tabs/e2e/tabs-verify.ts [--base http://<worktree>.localhost:9000]
+//   ./singularity run plugins/apps-core/plugins/tabs/e2e/tabs-verify.ts [--base http://<worktree>.localhost:9000]
 
 import {
   baseUrl,
@@ -31,30 +31,32 @@ await withBrowser(async (h) => {
         active: e.getAttribute("aria-pressed"),
       })),
     );
-    console.log(`[${tag}] url=${page.url()} tabs=${labels.length} ${JSON.stringify(labels)}`);
+    console.log(
+      `[${tag}] url=${page.url()} tabs=${labels.length} ${JSON.stringify(labels)}`,
+    );
     return labels;
   }
 
   await page.goto(BASE);
   await page.waitForTimeout(3000);
-  await dump("1-initial");                 // expect 1 tab (home) from URL
+  await dump("1-initial"); // expect 1 tab (home) from URL
   await snap(page, OUT, "1-initial");
 
   // 2) Click + → new Home tab appears and focuses.
   await page.getByRole("button", { name: "New tab" }).click();
   await page.waitForTimeout(900);
-  await dump("2-after-+");                  // expect 2 home tabs, 2nd active
+  await dump("2-after-+"); // expect 2 home tabs, 2nd active
 
   // 3) Open Studio from the Home launcher (tab-aware) → a Studio tab.
   await page.getByRole("button", { name: "Studio" }).first().click();
   await page.waitForTimeout(1200);
-  await dump("3-open-studio");              // expect home,home,studio (studio active)
+  await dump("3-open-studio"); // expect home,home,studio (studio active)
   await snap(page, OUT, "3-studio");
 
   // Deepen the Studio tab's route within the app: open the Explorer pane.
   await page.getByText("Explorer", { exact: true }).first().click();
   await page.waitForTimeout(1000);
-  const tabAUrl = page.url();              // .../studio/explorer
+  const tabAUrl = page.url(); // .../studio/explorer
   console.log("TAB A (studio) deep URL:", tabAUrl);
   await snap(page, OUT, "4-studio-deep");
 
@@ -65,7 +67,7 @@ await withBrowser(async (h) => {
   console.log("URL while on Home tab:", page.url());
   await snap(page, OUT, "5-home-tab");
 
-  await tabs().nth(2).click();             // back to Studio tab
+  await tabs().nth(2).click(); // back to Studio tab
   await page.waitForTimeout(900);
   const backUrl = page.url();
   await dump("4b-back-to-studio");
@@ -81,8 +83,18 @@ await withBrowser(async (h) => {
   await page.waitForTimeout(3000);
   const after = await dump("5-after-reload");
   const afterApps = after.map((t) => t.app);
-  console.log("PERSIST: apps before:", JSON.stringify(before), "after:", JSON.stringify(afterApps));
-  console.log("PERSIST: focused URL after reload:", page.url(), "== tabA:", page.url() === tabAUrl);
+  console.log(
+    "PERSIST: apps before:",
+    JSON.stringify(before),
+    "after:",
+    JSON.stringify(afterApps),
+  );
+  console.log(
+    "PERSIST: focused URL after reload:",
+    page.url(),
+    "== tabA:",
+    page.url() === tabAUrl,
+  );
   await snap(page, OUT, "7-reload");
 
   // 6) Back/forward affects only the focused tab + URL reflects focused tab.

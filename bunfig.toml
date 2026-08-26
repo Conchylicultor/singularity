@@ -22,3 +22,16 @@ preload = ["./test/bun-preload.ts"]
 # The two literals are a pair. The `test-layout:runner-split` check fails if
 # either one goes missing, so this cannot be edited or deleted on its own.
 pathIgnorePatterns = ["**/web/__tests__/**"]
+
+# Bun's auto-install (the `--install=auto` default) fires when NO ancestor
+# directory has a `node_modules`, and resolves the bare specifier to registry
+# `latest` — it reads neither the package.json range (not even an exact version)
+# nor `bun.lock`. That is how a script came to run playwright 1.62.1 while the lock
+# said 1.60.0, demanding a chromium revision nothing had provisioned.
+#
+# NARROW ON PURPOSE: this does not stop resolution walking UP to another
+# checkout's node_modules — that is what `./singularity run` and the `bun-script`
+# guard are for. It only removes the registry-latest arm when nothing is found at
+# all, turning a silent wrong version into `Cannot find package 'x'`.
+[install]
+auto = "disable"

@@ -11,7 +11,7 @@
  *   restored — seeded into localStorage and reloaded, never clicked into
  *   end/middle — seeded, then clicked to place the caret
  *
- *   bun plugins/conversations/plugins/conversation-view/plugins/prompt-templates/e2e/insert-keeps-scroll.ts \
+ *   ./singularity run plugins/conversations/plugins/conversation-view/plugins/prompt-templates/e2e/insert-keeps-scroll.ts \
  *     --conv <id> [--caret typed|restored|end|middle] [--panel] [--headed]
  */
 import {

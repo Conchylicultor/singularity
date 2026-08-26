@@ -23,9 +23,9 @@
  * been migrated. Same shape as `server-core/scripts/backfill-pushes.ts`.
  *
  * Usage:
- *   bun plugins/infra/plugins/paths/scripts/migrate-data-layout.ts                # dry run
- *   bun plugins/infra/plugins/paths/scripts/migrate-data-layout.ts --apply        # pass 1
- *   bun plugins/infra/plugins/paths/scripts/migrate-data-layout.ts --drop-legacy  # pass 2
+ *   ./singularity run plugins/infra/plugins/paths/scripts/migrate-data-layout.ts                # dry run
+ *   ./singularity run plugins/infra/plugins/paths/scripts/migrate-data-layout.ts --apply        # pass 1
+ *   ./singularity run plugins/infra/plugins/paths/scripts/migrate-data-layout.ts --drop-legacy  # pass 2
  *
  * No flag prints BOTH passes' plans and touches nothing. Pass 2 deletes things,
  * so it gets a reviewable dry run too — and there is no `--dry-run

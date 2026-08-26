@@ -188,7 +188,7 @@ export async function renderThumbnail(
   } catch (err) {
     throw new ThumbnailRenderError(
       "browser-unavailable",
-      `could not launch chromium — run \`bunx playwright install chromium\` ` +
+      `could not launch chromium — run \`bun run playwright install chromium\` ` +
         `to provision it: ${String(err)}`,
       { cause: err },
     );

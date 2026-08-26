@@ -25,6 +25,7 @@ export const cliEntries: CollectedEntry[] = [
   { pluginPath: "framework/plugins/cli/plugins/regen-generated", id: "framework.cli.regen-generated", loader: () => import("@plugins/framework/plugins/cli/plugins/regen-generated/cli"), dependsOn: [] },
   { pluginPath: "framework/plugins/cli/plugins/regen-migrations", id: "framework.cli.regen-migrations", loader: () => import("@plugins/framework/plugins/cli/plugins/regen-migrations/cli"), dependsOn: [] },
   { pluginPath: "framework/plugins/cli/plugins/release", id: "framework.cli.release", loader: () => import("@plugins/framework/plugins/cli/plugins/release/cli"), dependsOn: [] },
+  { pluginPath: "framework/plugins/cli/plugins/run", id: "framework.cli.run", loader: () => import("@plugins/framework/plugins/cli/plugins/run/cli"), dependsOn: [] },
   { pluginPath: "framework/plugins/cli/plugins/serve-app", id: "framework.cli.serve-app", loader: () => import("@plugins/framework/plugins/cli/plugins/serve-app/cli"), dependsOn: [] },
   { pluginPath: "framework/plugins/cli/plugins/start", id: "framework.cli.start", loader: () => import("@plugins/framework/plugins/cli/plugins/start/cli"), dependsOn: [] },
   { pluginPath: "framework/plugins/cli/plugins/test", id: "framework.cli.test", loader: () => import("@plugins/framework/plugins/cli/plugins/test/cli"), dependsOn: [] },

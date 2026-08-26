@@ -2,7 +2,7 @@
  * End-to-end smoke of the Events Sources surface, against a deployed worktree.
  *
  * Manual only. Run after `./singularity build`:
- *   bun plugins/apps/plugins/events/plugins/sources/e2e/sources-verify.ts [--headed]
+ *   ./singularity run plugins/apps/plugins/events/plugins/sources/e2e/sources-verify.ts [--headed]
  *
  * Verifies the registry-driven promises this plugin is built on, not just that
  * pixels appeared:

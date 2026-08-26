@@ -3,7 +3,7 @@
 // back. Manual only — nothing runs this automatically.
 //
 // Usage:
-//   bun plugins/apps/plugins/prototypes/plugins/present/e2e/present-verify.ts \
+//   ./singularity run plugins/apps/plugins/prototypes/plugins/present/e2e/present-verify.ts \
 //     [--name <prototype>] [--out <prefix>] [--headed]
 
 import {

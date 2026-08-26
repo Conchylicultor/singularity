@@ -4,7 +4,7 @@
 // and says so, because silently redirecting it to the homepage destroys the one
 // clue to what went wrong.
 //
-//   bun plugins/apps-core/plugins/layout/e2e/unmatched-url.ts [--headed]
+//   ./singularity run plugins/apps-core/plugins/layout/e2e/unmatched-url.ts [--headed]
 //
 // Writes a screenshot per case to /tmp/unmatched-url-<case>.png.
 //
@@ -14,7 +14,11 @@
 // as a failure.
 
 import { errors as pwErrors } from "playwright";
-import { pathUrl, report, withBrowser } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
+import {
+  pathUrl,
+  report,
+  withBrowser,
+} from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 
 const LEGACY_TASK_LINK = "/tasks/t/task-1785587694879-3nr2k0";
 const DEEP_LINK = "/agents/tasks/t/does-not-exist-xyz";
@@ -41,7 +45,8 @@ const r = report("apps-layout unmatched URL");
 
 await withBrowser(async (h) => {
   const { page } = await h.session({ viewport: { width: 1280, height: 800 } });
-  const shot = (name: string) => page.screenshot({ path: `/tmp/unmatched-url-${name}.png` });
+  const shot = (name: string) =>
+    page.screenshot({ path: `/tmp/unmatched-url-${name}.png` });
   const pathname = () => new URL(page.url()).pathname;
 
   // ── A legacy link that lost its app prefix: no app owns `/tasks`, so this is
@@ -61,12 +66,17 @@ await withBrowser(async (h) => {
     await page.getByText(LEGACY_TASK_LINK, { exact: true }).isVisible(),
     "the path is the one actionable detail — it shows the missing /agents prefix",
   );
-  r.ok("legacy link offers a way out", await page.getByRole("button", { name: /^Go to / }).isVisible());
+  r.ok(
+    "legacy link offers a way out",
+    await page.getByRole("button", { name: /^Go to / }).isVisible(),
+  );
 
   // ── Bare root is the ONE path that may still be rewritten: nothing to destroy.
   await page.goto(pathUrl("/"));
   await settled(
-    page.waitForFunction(() => location.pathname !== "/", undefined, { timeout: SETTLE_MS }),
+    page.waitForFunction(() => location.pathname !== "/", undefined, {
+      timeout: SETTLE_MS,
+    }),
   );
   await shot("bare-root");
   r.ok(
@@ -79,12 +89,16 @@ await withBrowser(async (h) => {
   // by the pane's own resolve guard — it must stay in-place, not become this
   // surface, and must not redirect either.
   await page.goto(pathUrl(DEEP_LINK));
-  await settled(page.getByText("Not Found").first().waitFor({ timeout: SETTLE_MS }));
+  await settled(
+    page.getByText("Not Found").first().waitFor({ timeout: SETTLE_MS }),
+  );
   await shot("deep-link-bad-id");
   r.eq("unknown task id keeps its URL", pathname(), DEEP_LINK);
   r.ok(
     "unknown task id gets the pane's Not Found, not the no-app surface",
-    !(await page.getByText("No installed app handles this address").isVisible()),
+    !(await page
+      .getByText("No installed app handles this address")
+      .isVisible()),
   );
 });
 

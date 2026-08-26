@@ -14,7 +14,7 @@
 // must never type into a page a human owns.
 //
 // Usage:
-//   bun plugins/page/plugins/url-paste/e2e/url-paste-keyboard.ts [--base <url>]
+//   ./singularity run plugins/page/plugins/url-paste/e2e/url-paste-keyboard.ts [--base <url>]
 //
 // Exits non-zero on the first failed assertion, after dumping a screenshot.
 import {
@@ -51,7 +51,10 @@ await withBrowser(async (h) => {
 
   const SCRATCH_TITLE = "zz url-paste e2e";
 
-  await boot(page, `${ORIGIN}/pages`, { marker: "text=Pages", timeoutMs: 90_000 });
+  await boot(page, `${ORIGIN}/pages`, {
+    marker: "text=Pages",
+    timeoutMs: 90_000,
+  });
 
   const pageId = await page.evaluate(async (title: string): Promise<string> => {
     const create = async (body: unknown): Promise<string> => {
@@ -60,12 +63,17 @@ await withBrowser(async (h) => {
         headers: { "content-type": "application/json" },
         body: JSON.stringify(body),
       });
-      if (!res.ok) throw new Error(`create failed: ${res.status} ${await res.text()}`);
+      if (!res.ok)
+        throw new Error(`create failed: ${res.status} ${await res.text()}`);
       return ((await res.json()) as { id: string }).id;
     };
     // A page block's data is `{ title, icon }` — NOT `{ text }`. A malformed page
     // row blanks the entire Pages app, sidebar included.
-    const id = await create({ parentId: null, type: "page", data: { title, icon: null } });
+    const id = await create({
+      parentId: null,
+      type: "page",
+      data: { title, icon: null },
+    });
     // A page with no children renders no block editor — seed the one text block
     // every case pastes into. Deleting the page cascades it away.
     await create({ parentId: id, type: "text", data: { text: [] } });
@@ -106,7 +114,8 @@ await withBrowser(async (h) => {
       // at a time. Backspace past the start can delete + remount the block,
       // which drops editor focus — and `open` is focus-gated, so we re-focus.
       const text = await block.innerText();
-      for (let i = 0; i < text.length; i++) await page.keyboard.press("Backspace");
+      for (let i = 0; i < text.length; i++)
+        await page.keyboard.press("Backspace");
       await page.waitForTimeout(200);
 
       block = page.locator('[contenteditable="true"]').last();
@@ -118,7 +127,11 @@ await withBrowser(async (h) => {
         const dt = new DataTransfer();
         dt.setData("text/plain", url);
         el.dispatchEvent(
-          new ClipboardEvent("paste", { clipboardData: dt, bubbles: true, cancelable: true }),
+          new ClipboardEvent("paste", {
+            clipboardData: dt,
+            bubbles: true,
+            cancelable: true,
+          }),
         );
       }, URL);
       await page.waitForTimeout(500);
@@ -143,10 +156,14 @@ await withBrowser(async (h) => {
     const activeRow = async (): Promise<number> =>
       page
         .locator(ROWS)
-        .evaluateAll((els) => els.findIndex((e) => e.classList.contains("bg-accent")));
+        .evaluateAll((els) =>
+          els.findIndex((e) => e.classList.contains("bg-accent")),
+        );
 
     const blockText = async (): Promise<string> =>
-      (await page.locator('[contenteditable="true"]').last().innerText()).trim();
+      (
+        await page.locator('[contenteditable="true"]').last().innerText()
+      ).trim();
 
     // --- the menu opens, with row 0 pre-selected --------------------------------
     console.log("\n=== opens with a highlighted row");
@@ -154,7 +171,10 @@ await withBrowser(async (h) => {
     const opened = (await page.locator(MENU).count()) > 0;
     r.ok("paste opens the menu", opened);
     if (!opened) await snap(page, OUT, "no-menu");
-    r.ok("3 rows (bookmark / embed / plain link)", (await page.locator(ROWS).count()) === 3);
+    r.ok(
+      "3 rows (bookmark / embed / plain link)",
+      (await page.locator(ROWS).count()) === 3,
+    );
     // The hand-rolled menu had NO active row at all — this is the first thing a
     // keyboard model buys, before any key is pressed.
     r.ok("row 0 starts active", (await activeRow()) === 0);
@@ -193,7 +213,10 @@ await withBrowser(async (h) => {
     // convert the block to a different type and fetch).
     console.log("\n=== Enter commits the active row");
     await pasteUrl();
-    r.ok("menu reopened after a fresh paste", (await page.locator(MENU).count()) > 0);
+    r.ok(
+      "menu reopened after a fresh paste",
+      (await page.locator(MENU).count()) > 0,
+    );
     // A reopened menu must start at row 0 again — the previous section left the
     // highlight on row 2, and the forced producer's query is `""` on every open,
     // so nothing in the query-change path would reset it.
@@ -201,7 +224,10 @@ await withBrowser(async (h) => {
     await page.keyboard.press("ArrowUp"); // 0 → wraps to 2 (Plain link)
     await page.waitForTimeout(200);
     const beforeEnter = await activeRow();
-    r.ok(`ArrowUp selects 'Plain link' (saw ${beforeEnter})`, beforeEnter === 2);
+    r.ok(
+      `ArrowUp selects 'Plain link' (saw ${beforeEnter})`,
+      beforeEnter === 2,
+    );
 
     await page.keyboard.press("Enter");
     await page.waitForTimeout(600);
@@ -210,7 +236,10 @@ await withBrowser(async (h) => {
     // The old menu swallowed nothing: Enter reached Lexical and split the block,
     // leaving it empty. So "the URL is in the block" is precisely the assertion
     // that separates a committed menu from a fallen-through keypress.
-    r.ok(`Enter inserted the URL (block reads ${JSON.stringify(text)})`, text === URL);
+    r.ok(
+      `Enter inserted the URL (block reads ${JSON.stringify(text)})`,
+      text === URL,
+    );
     if (text !== URL) await snap(page, OUT, "enter-did-not-commit");
 
     await snap(page, OUT, "final");

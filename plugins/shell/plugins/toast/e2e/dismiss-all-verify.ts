@@ -15,7 +15,7 @@
 // is dismissed by id at the end, so the run leaves the worktree as it found it.
 //
 // Usage:
-//   bun plugins/shell/plugins/toast/e2e/dismiss-all-verify.ts [--headed] [--base http://<worktree>.localhost:9000]
+//   ./singularity run plugins/shell/plugins/toast/e2e/dismiss-all-verify.ts [--headed] [--base http://<worktree>.localhost:9000]
 
 import {
   boot,
@@ -189,12 +189,18 @@ await withBrowser(async (h) => {
   // Clean up exactly what we created — by id, never the bulk endpoint.
   await page.evaluate(async (ids) => {
     for (const id of ids) {
-      const res = await fetch(`/api/notifications/${id}/dismiss`, { method: "POST" });
+      const res = await fetch(`/api/notifications/${id}/dismiss`, {
+        method: "POST",
+      });
       if (!res.ok) throw new Error(`dismiss ${id} failed: ${res.status}`);
     }
   }, seededIds);
 
-  r.ok("no page errors", captured.pageErrors.length === 0, captured.pageErrors.join("; "));
+  r.ok(
+    "no page errors",
+    captured.pageErrors.length === 0,
+    captured.pageErrors.join("; "),
+  );
 
   /**
    * The contract, as one instantaneous check: the affordance is on screen
@@ -235,7 +241,10 @@ await withBrowser(async (h) => {
 
     const printed = /Dismiss all \((\d+)\)/.exec(label)?.[1];
     if (printed === undefined) {
-      r.fail(`${when}: label carries a count`, `unreadable: ${JSON.stringify(label)}`);
+      r.fail(
+        `${when}: label carries a count`,
+        `unreadable: ${JSON.stringify(label)}`,
+      );
       return;
     }
     r.eq(`${when}: the printed count is the stack`, Number(printed), mounted);
@@ -303,7 +312,10 @@ await withBrowser(async (h) => {
    * one `useEffect` pass; a sequential drip lets the Toaster re-settle between
    * them and can never reproduce it.
    */
-  async function seed(n: number, opts: { tight?: boolean } = {}): Promise<string[]> {
+  async function seed(
+    n: number,
+    opts: { tight?: boolean } = {},
+  ): Promise<string[]> {
     const offset = seededIds.length;
     const batch = Array.from({ length: n }, (_, i) => ({
       id: `e2e-toast-${Date.now()}-${offset + i}`,
@@ -312,7 +324,10 @@ await withBrowser(async (h) => {
     seededIds.push(...batch.map((entry) => entry.id));
     await page.evaluate(
       async ({ batch: entries, tight }) => {
-        const post = async (entry: { id: string; title: string }): Promise<void> => {
+        const post = async (entry: {
+          id: string;
+          title: string;
+        }): Promise<void> => {
           const res = await fetch("/api/notifications", {
             method: "POST",
             headers: { "content-type": "application/json" },

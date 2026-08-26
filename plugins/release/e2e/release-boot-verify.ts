@@ -19,14 +19,14 @@
 // port, so a defaulted base would silently verify the wrong server.
 //
 // Usage:
-//   bun plugins/release/e2e/release-boot-verify.ts --url <url> \
+//   ./singularity run plugins/release/e2e/release-boot-verify.ts --url <url> \
 //     [--expect-selector <css>] [--expect-text <substr>] \
 //     [--settle <ms>] [--wait <ms>] [--out <path>] [--color-scheme dark|light]
 //
 // Exit code 0 = PASS, 1 = FAIL (any hard check failed), 2 = bad usage.
 //
 // Example (faithful desktop repro against a staged web --dev bundle on :9123):
-//   bun plugins/release/e2e/release-boot-verify.ts \
+//   ./singularity run plugins/release/e2e/release-boot-verify.ts \
 //     --url http://localhost:9123/ \
 //     --expect-selector "[data-app-tab]" \
 //     --out /tmp/sonata-release
@@ -111,7 +111,11 @@ await withBrowser(async (h) => {
   });
   page.on("response", (res) => {
     if (res.status() >= 400) {
-      badResponses.push({ url: res.url(), bucket: bucket(res.url()), status: res.status() });
+      badResponses.push({
+        url: res.url(),
+        bucket: bucket(res.url()),
+        status: res.status(),
+      });
     }
   });
 
@@ -123,7 +127,9 @@ await withBrowser(async (h) => {
     await page.goto(url, { waitUntil: "domcontentloaded", timeout: 30000 });
   } catch (e) {
     navOk = false;
-    console.error(`✗ navigation failed: ${e instanceof Error ? e.message : String(e)}`);
+    console.error(
+      `✗ navigation failed: ${e instanceof Error ? e.message : String(e)}`,
+    );
   }
 
   // Initial settle, then keep watching through the settle window so a
@@ -137,7 +143,8 @@ await withBrowser(async (h) => {
   // app mounts dozens of nodes. We measure the live DOM under #root.
   const rootStats = await page.evaluate(() => {
     const root = document.getElementById("root");
-    if (!root) return { present: false, childCount: 0, descendantCount: 0, text: "" };
+    if (!root)
+      return { present: false, childCount: 0, descendantCount: 0, text: "" };
     return {
       present: true,
       childCount: root.childElementCount,
@@ -161,7 +168,9 @@ await withBrowser(async (h) => {
   if (remaining > 0) await page.waitForTimeout(remaining);
   // eslint-disable-next-line promise-safety/no-absorbed-failure -- 0 IS the verdict here: the point of this probe is "did the tree survive", and an evaluate that fails because the page died mid-settle is exactly the mount-then-crash the `< 10` check below reports as a failure. Throwing would abort the run before the report is printed.
   const survivedDescendants = await page
-    .evaluate(() => document.getElementById("root")?.querySelectorAll("*").length ?? 0)
+    .evaluate(
+      () => document.getElementById("root")?.querySelectorAll("*").length ?? 0,
+    )
     .catch(() => 0);
   // eslint-disable-next-line promise-safety/no-bare-catch -- a diagnostic screenshot is best-effort; failing to write it must not mask the boot verdict below
   await page.screenshot({ path: `${out}-settled.png` }).catch(() => {});
@@ -169,7 +178,8 @@ await withBrowser(async (h) => {
   // ── Verdict ──────────────────────────────────────────────────────────────────
   const failures: string[] = [];
   if (!navOk) failures.push("navigation to the URL failed");
-  if (!rootStats.present) failures.push("#root element is absent (SPA shell never loaded)");
+  if (!rootStats.present)
+    failures.push("#root element is absent (SPA shell never loaded)");
   // A genuinely-mounted app has many nodes; <10 is a black screen / bare loader.
   if (rootStats.present && rootStats.descendantCount < 10) {
     failures.push(
@@ -187,21 +197,26 @@ await withBrowser(async (h) => {
   if (expectText && !textFound) {
     failures.push(`expected text not found: ${JSON.stringify(expectText)}`);
   }
-  if (pageErrors.length) failures.push(`${pageErrors.length} uncaught page error(s)`);
-  if (consoleErrors.length) failures.push(`${consoleErrors.length} console error(s)`);
+  if (pageErrors.length)
+    failures.push(`${pageErrors.length} uncaught page error(s)`);
+  if (consoleErrors.length)
+    failures.push(`${consoleErrors.length} console error(s)`);
 
   // Storm detection: count backend failures per bucket (real dial failures, not
   // benign navigation aborts), plus any 5xx / repeated 4xx on /api or /ws.
   const stormCounts: Record<StormBucket, number> = { api: 0, ws: 0, zero: 0 };
   for (const f of requestFailures) {
-    if (isStormBucket(f.bucket) && f.reason !== "net::ERR_ABORTED") stormCounts[f.bucket]++;
+    if (isStormBucket(f.bucket) && f.reason !== "net::ERR_ABORTED")
+      stormCounts[f.bucket]++;
   }
   for (const res of badResponses) {
     if (isStormBucket(res.bucket)) stormCounts[res.bucket]++;
   }
   for (const [b, n] of Object.entries(stormCounts)) {
     if (n >= STORM_THRESHOLD) {
-      failures.push(`${n} failed ${b} request(s) — gateway↔backend storm on /${b}`);
+      failures.push(
+        `${n} failed ${b} request(s) — gateway↔backend storm on /${b}`,
+      );
     }
   }
 
@@ -213,8 +228,12 @@ await withBrowser(async (h) => {
     `#root nodes        : ${rootStats.descendantCount} (children=${rootStats.childCount}) → ${survivedDescendants} after settle`,
   );
   console.log(`#root text (head)  : ${JSON.stringify(rootStats.text)}`);
-  if (expectSelector) console.log(`selector "${expectSelector}": ${selectorFound ? "FOUND" : "MISSING"}`);
-  if (expectText) console.log(`text "${expectText}"   : ${textFound ? "FOUND" : "MISSING"}`);
+  if (expectSelector)
+    console.log(
+      `selector "${expectSelector}": ${selectorFound ? "FOUND" : "MISSING"}`,
+    );
+  if (expectText)
+    console.log(`text "${expectText}"   : ${textFound ? "FOUND" : "MISSING"}`);
   console.log(`console errors     : ${consoleErrors.length}`);
   for (const e of consoleErrors.slice(0, 10)) console.log(`   • ${e}`);
   console.log(`page errors        : ${pageErrors.length}`);
@@ -222,9 +241,11 @@ await withBrowser(async (h) => {
   console.log(
     `request failures   : ${requestFailures.length} (api=${requestFailures.filter((f) => f.bucket === "api").length} ws=${requestFailures.filter((f) => f.bucket === "ws").length})`,
   );
-  for (const f of requestFailures.slice(0, 10)) console.log(`   • [${f.bucket}] ${f.reason} ${f.url}`);
+  for (const f of requestFailures.slice(0, 10))
+    console.log(`   • [${f.bucket}] ${f.reason} ${f.url}`);
   console.log(`4xx/5xx responses  : ${badResponses.length}`);
-  for (const res of badResponses.slice(0, 10)) console.log(`   • [${res.bucket}] ${res.status} ${res.url}`);
+  for (const res of badResponses.slice(0, 10))
+    console.log(`   • [${res.bucket}] ${res.status} ${res.url}`);
   console.log(`screenshots        : ${out}-loaded.png, ${out}-settled.png`);
   console.log("─────────────────────────────────────");
 

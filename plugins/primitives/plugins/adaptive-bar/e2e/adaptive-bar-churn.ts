@@ -22,7 +22,7 @@
  * Manual only — nothing runs this automatically.
  *
  *   ./singularity build
- *   bun plugins/primitives/plugins/adaptive-bar/e2e/adaptive-bar-churn.ts [--path /agents] [--headed]
+ *   ./singularity run plugins/primitives/plugins/adaptive-bar/e2e/adaptive-bar-churn.ts [--path /agents] [--headed]
  */
 import {
   arg,

@@ -185,7 +185,7 @@ snapshots — run [`screenshot.ts`](plugins/framework/plugins/tooling/plugins/e2
 which prints the matched button's state and writes `-before.png` / `-after.png`:
 
 ```bash
-bun plugins/framework/plugins/tooling/plugins/e2e-harness/e2e/screenshot.ts \
+./singularity run plugins/framework/plugins/tooling/plugins/e2e-harness/e2e/screenshot.ts \
   --url http://<worktree>.localhost:9000/agents/c/<id> --click "Design docs" --out /tmp/docs
 ```
 
@@ -194,7 +194,7 @@ at `plugins/<path>/e2e/<name>.ts` — never `*.test.ts`, which the test runner
 would pick up. These are manual only; nothing runs them automatically.
 
 ```bash
-bun plugins/apps-core/plugins/tabs/e2e/tabs-verify.ts --headed  # watch it run
+./singularity run plugins/apps-core/plugins/tabs/e2e/tabs-verify.ts --headed  # watch it run
 ```
 
 - Shared helpers (argv, target, `withBrowser`, `report()`) come from
@@ -227,6 +227,7 @@ Independent projects that live in `sidequests/`, not directly related to Singula
 - Before writing or editing a prototype, read [`prototypes/CLAUDE.md`](prototypes/CLAUDE.md). Prototypes are **not** in the repo — they live in `~/.singularity/apps/prototypes/<name>/`, shared by every worktree, so a mock is live at `http://singularity.localhost:9000` with no build and nothing to commit. A prototype is one self-contained folder, and you design from the blank `_template/`: **never open another prototype's folder**, for any reason.
 - Always edit files in your worktree, not the main branch.
 - **Avoid `find` for file searches.** Unbounded `find` in this repo has crashed macOS (65k DIR FDs via the bfs shim). Use `rg --files -g '<glob>'` or `fd '<regex>'` instead. Only use `find` with `-maxdepth` or `-prune`.
+- **Run a script with `./singularity run <file>.ts`, never bare `bun <file>.ts`.** Bare `bun` finds its dependencies by walking UP the directory tree. So a worktree without its own `node_modules` runs against the main checkout's dependencies — or, when those are mid-install, against whatever npm published today. `./singularity run` installs this worktree's own dependencies from its own lock first, then runs the script. The `bun-script` PreToolUse guard blocks the bare form. Scripts the machine launches stay bare — install-time provisioning, the gateway's backend starts, the Claude Code guard hook — because they import no npm package.
 - **STOP on unexpected failures; never improvise around them.** If something fails in a way you don't fully understand, surface it and ask — do NOT route around it (e.g. falling back to curl after an MCP call fails). A loud failure is debuggable; a workaround built on a broken assumption is not.
 - **A rejected `AskUserQuestion` means stop immediately.** End the turn with NO text at all — no summary, no restated question, no proposed default. The rejection already means the user is about to answer; anything written is noise. Never guess a default or work around it.
 - **Subagents default to Sonnet.** When spawning any `Agent` call, always pass `model: "sonnet"` explicitly. Never omit the model and let it default to Opus. Only use Opus for load-bearing, complex implementation tasks — research, lookup, synthesis, and reporting are all Sonnet work.

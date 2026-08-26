@@ -14,10 +14,11 @@ import { disarmOrphanGuard } from "@plugins/framework/plugins/cli/plugins/bootst
  *
  * The commander surface used here is the whole surface the framework's own
  * commands ever used: `command`, `description`, `argument`, `option`,
- * `requiredOption`, `action`. If a command genuinely needs more, the declaration
- * gains a field and this function gains a line — a passthrough
- * (`configure(cmd)`) would hand commander back to contributors and re-open the
- * dependency this design closes.
+ * `requiredOption`, `action`, plus `enablePositionalOptions` /
+ * `passThroughOptions` for the one command that forwards its tail. If a command
+ * genuinely needs more, the declaration gains a field and this function gains a
+ * line — a passthrough (`configure(cmd)`) would hand commander back to
+ * contributors and re-open the dependency this design closes.
  */
 export function registerCommands(
   program: Command,
@@ -50,6 +51,19 @@ function attach(parent: Command, spec: CliCommand): void {
     } else {
       cmd.option(opt.flags, opt.description, opt.defaultValue);
     }
+  }
+
+  // Hand this command's tail to whatever it forwards to. `passThroughOptions`
+  // stops option parsing at the first operand, so a flag meant for the payload
+  // reaches it verbatim — `--help` included — with no `--` separator to
+  // remember. Commander requires the enclosing command to have positional
+  // options enabled, which is why the parent is configured from here rather
+  // than once in `bin/cli.ts`: the requirement belongs to the command that has
+  // it, not to the program, and the program declares no options for it to
+  // reorder.
+  if (spec.passthroughArgs === true) {
+    parent.enablePositionalOptions();
+    cmd.passThroughOptions();
   }
 
   const run = spec.run;

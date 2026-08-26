@@ -13,7 +13,7 @@
  *      session that typed it and silently present a subset as the whole list.
  *
  * Manual only. Run after `./singularity build`:
- *   bun plugins/primitives/plugins/data-view/e2e/search-query-scope.ts [--headed]
+ *   ./singularity run plugins/primitives/plugins/data-view/e2e/search-query-scope.ts [--headed]
  */
 import type { Page } from "playwright";
 import {
@@ -74,11 +74,15 @@ const r = report("data-view search-query scope");
 await withBrowser(async (h) => {
   const { page } = await h.session();
   await boot(page, pathUrl("/agents/tasks"), { settleMs: 1500 });
-  await page.getByRole("button", { name: "Recent", exact: true }).first().click();
+  await page
+    .getByRole("button", { name: "Recent", exact: true })
+    .first()
+    .click();
   await page.waitForTimeout(1500);
 
   const witness = await firstNonMatchingTitle(page);
-  if (witness === null) throw new Error("no non-matching row to use as witness");
+  if (witness === null)
+    throw new Error("no non-matching row to use as witness");
 
   const search = page.getByRole("textbox").first();
   await search.fill(QUERY);
