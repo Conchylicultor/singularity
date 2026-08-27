@@ -18,8 +18,9 @@ export const applyGroupJob = defineJob({
     .passthrough(),
   maxAttempts: 3,
   run: async ({ event }) => {
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
-    if (!event?.taskId || !event?.conversationId) return;
+    // `event` is narrowed by the first test: a truthy `event?.taskId` cannot
+    // come from an absent `event`, so the second read needs no optional chain.
+    if (!event?.taskId || !event.conversationId) return;
 
     const [pending] = await db
       .select()

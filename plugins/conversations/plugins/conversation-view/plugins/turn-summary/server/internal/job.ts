@@ -65,10 +65,10 @@ export const generateTurnSummaryJob = defineJob({
 
     const conversationId = event?.conversationId;
     if (!conversationId) return;
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
-    const assistantText = event?.text ?? "";
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
-    const messageId = event?.messageId ?? null;
+    // The guard above narrowed `event`: a truthy `conversationId` cannot come
+    // from an absent `event`, so neither read below needs an optional chain.
+    const assistantText = event.text ?? "";
+    const messageId = event.messageId ?? null;
     if (!messageId) {
       // Without a stable assistant message id we can't dedupe. Skip — the
       // next turn will retry and pick up a non-null id.
