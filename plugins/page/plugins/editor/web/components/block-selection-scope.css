@@ -1,0 +1,35 @@
+/*
+ * Where a native text selection may exist inside the block list.
+ *
+ * The rule, in one place:
+ *
+ *   > Inside the editable block list, a native text selection may exist ONLY
+ *   > inside a block's own editing surface — its Lexical host, or the native
+ *   > control a block brings of its own (the code block's <textarea>).
+ *
+ * Every block is a separate editing host, so a selection ANCHORED anywhere else
+ * — a row's gutter rail, the strip between the decoration edge and the text, a
+ * list marker's column, the whitespace beside the measure — is one the editor
+ * cannot represent. No browser clamps it (clamping is per editing host, and its
+ * anchor is in none), so it runs across the whole document; it paints over the
+ * block selection the same gesture is building; and copying it yields the rows'
+ * `sr-only` "Selected." markers rather than their text.
+ *
+ * Written as CSS rather than as Tailwind utilities on the surface because the
+ * exemption is a DESCENDANT rule — "this box, but not the editing surfaces
+ * inside it" — and that is a cascade statement, not a class on one element.
+ *
+ * The two classes are separate because they come apart for exactly one gesture:
+ * a text drag promoted to a block range keeps `-no-select` and DROPS
+ * `-editing-selectable`, so the browser cannot re-seat a range in the origin
+ * host on every frame of a drag whose meaning is now whole blocks.
+ */
+.block-list-no-select {
+  user-select: none;
+}
+
+.block-list-editing-selectable [contenteditable="true"],
+.block-list-editing-selectable textarea,
+.block-list-editing-selectable input {
+  user-select: text;
+}

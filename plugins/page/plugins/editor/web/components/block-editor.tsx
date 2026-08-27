@@ -99,6 +99,7 @@ import {
 import { dragKindFromTypes, type ClaimedKind } from "../internal/drag-kind";
 import { writeForestToClipboard } from "../internal/clipboard-write";
 import { blockTextProtectedSpans } from "../internal/block-text-extensions";
+import "./block-selection-scope.css";
 
 /**
  * How much of a block's text the spoken selection announcement quotes. Long
@@ -110,6 +111,21 @@ const PREVIEW_CHARS = 80;
 /** The editor drops *between* rows only — it has no tree `child` reparent zone. */
 type SiblingZone = Extract<DropZone, "before" | "after">;
 type DropTarget = { id: string; zone: SiblingZone };
+
+/**
+ * Is this element a row's own CHROME — one of the fixed text-block skeleton's
+ * pure-geometry boxes (`text-block-layout.tsx`'s padding box, box and line)?
+ *
+ * Same hit-test question, and same DOM-attribute answer, as `isCaretHost` below:
+ * those boxes carry no content of their own, so a press that lands on ONE of
+ * them (identity, never `closest` — a press on the text lands on a descendant)
+ * landed in the page's background, next to a block rather than on it. Without
+ * this the ~16px strip between a row's decoration edge and its text was a dead
+ * zone: no marquee could start there and a click in it did nothing.
+ */
+function isRowChrome(el: HTMLElement): boolean {
+  return el.dataset.blockChrome !== undefined;
+}
 
 /**
  * Is this element a void block's CARET HOST — the full-width focusable wrapper
@@ -1051,7 +1067,13 @@ function SelectionLayer({
       // would stop being background: no marquee could start there, and a click
       // in it would do nothing. A press on the block's real CONTENT still hits a
       // descendant of the host and is still content.
-      const onBackground = !inText && !(row && row !== el && !isCaretHost(el));
+      //
+      // A text row's own CHROME counts the same way, and for the same reason:
+      // the skeleton's padding boxes hold no content, so the strip between a
+      // row's decoration edge and its text (and a `/quote` or `/callout` box's
+      // own padding) is background too — see `isRowChrome`.
+      const onBackground =
+        !inText && !(row && row !== el && !isCaretHost(el) && !isRowChrome(el));
       // Block content that is neither background nor editable text — an image, a
       // page-link card, a checkbox — keeps its own pointer behavior.
       if (!onBackground && !inText) return;
@@ -1573,11 +1595,16 @@ function SelectionLayer({
             above={<ExternalDropOverlay kind={externalDragging} />}
             className={cn(
               "min-h-40 w-full cursor-text pb-sm pt-md outline-none",
+              // A native text selection may exist ONLY inside a block's own
+              // editing surface — nowhere else in this list. The rule and both
+              // classes live in `block-selection-scope.css`.
+              "block-list-no-select",
               // A text drag that crossed a block boundary is a BLOCK range now.
-              // The pointer is still down, so without this the browser keeps
-              // re-seating a text range in the origin host every frame and the two
-              // highlights fight. Lasts only for the rest of the gesture.
-              textDragPromoted && "select-none",
+              // The pointer is still down, so without the exemption dropping
+              // away the browser keeps re-seating a text range in the origin
+              // host every frame and the two highlights fight. Lasts only for
+              // the rest of the gesture.
+              !textDragPromoted && "block-list-editing-selectable",
             )}
           >
             {/* This wrapper owns the horizontal gutters: `contentClassName`

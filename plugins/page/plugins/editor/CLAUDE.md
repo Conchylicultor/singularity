@@ -1432,6 +1432,60 @@ ONLY because it focuses with `preventScroll: true` (`internal/use-block-selectio
 else focus fights the scroll every frame; and `rowAtPointer`'s nearest-row fallback is
 what keeps the range extending while the pointer sits below the last block.
 
+### A native selection lives in an editing surface, or nowhere
+
+> Inside the editable block list, a native text selection may exist ONLY inside a
+> block's own editing surface — its Lexical host, or the native control a block
+> brings of its own (the code block's `<textarea>`). The surface is
+> `user-select: none` and re-enables exactly those
+> (`components/block-selection-scope.css`).
+
+Every block is a separate editing host, so a selection ANCHORED anywhere else is
+one this editor cannot represent. Nothing clamps it — clamping is per editing
+host and its anchor is in none — so it runs across the whole document; it paints
+over the block selection the same gesture is building; and copying it yields the
+rows' `sr-only` "Selected." markers rather than their text.
+
+The bug it closes is the reported one: a drag starting in the left area
+highlighted the page from far above the gesture, *sometimes* — the hit-test
+answer depends on which box's padding the press lands in, so the same gesture
+leaked on one row and not the next.
+
+- **It is a property of the SURFACE, not a decision per gesture.** Cancelling
+  the press in `onPointerDown` was the obvious fix and is the wrong rung: it has
+  to be re-decided in every branch that classifies a press, and the branch that
+  starts NO gesture — a press on block content the editor deliberately leaves
+  alone — is the one that leaked the whole-document selection. A press cannot
+  start what nothing on the surface allows to start.
+- **The exemption drops for one gesture**, the text drag promoted to a block
+  range (`.block-list-editing-selectable` comes off): the pointer is still down,
+  so the browser re-seats a range in the origin host every frame. That is the
+  same suppression the old one-off `select-none` performed, restated as the
+  absence of an exemption.
+- **`read-only-view` is deliberately untouched.** It mounts no editing host, so a
+  selection spanning its blocks is ordinary document text the user may copy.
+
+### A row's pure geometry is background
+
+The other half of the same press. `TextBlockLayout`'s skeleton boxes — the
+padding box, the box, the line, the marker column — carry `data-block-chrome`,
+and `onPointerDown` reads a press on ONE of them (identity, never `closest`) as a
+background press, exactly as it already read a void block's `data-caret-host`.
+
+Without it the ~16px strip between a row's decoration edge and its text was a
+**dead zone**: the editor returned early (a row descendant that is neither text
+nor background), so no marquee could start there and a click in it did nothing —
+which is also what left that press to the browser, and therefore where the
+whole-document selection came from. A `/quote` or `/callout` box's own padding is
+the same case.
+
+The glyph inside the marker column is NOT chrome: a press on a bullet or a
+checkbox is still that content's own.
+
+Spec: `e2e/gutter-drag-selection-verify.ts`, which drags from four background
+x-positions in both directions and asserts no native selection survives. Its
+header carries the measured pre-fix baseline.
+
 ### Selecting every line a container owns IS selecting the container
 
 > A container anchor renders no line of its own, so a selection covering every

@@ -99,7 +99,13 @@ export function TextBlockLayout({
 
   return (
     // A — the padding box: decoration edge `C` → the block's own box.
-    <Inset {...(chrome?.padding ?? {})}>
+    //
+    // A, B and C carry `data-block-chrome`: they are pure geometry, so a press
+    // that lands on ONE of them landed beside the block rather than on it, and
+    // the editable surface reads it as a background press (marquee, click-to-
+    // edit). See `block-editor.tsx`'s `isRowChrome`. The read-only surface
+    // renders the same skeleton and simply nobody asks it the question.
+    <Inset data-block-chrome="" {...(chrome?.padding ?? {})}>
       {/* B — the box. A plain `div` with `cn(SURFACE_LEVELS[level], …)` rather
           than `<Surface level>`: the box renders unconditionally and the closed
           level set has no neutral member, so `<Surface>` could not be rendered
@@ -107,11 +113,13 @@ export function TextBlockLayout({
           names explicitly. Cost: no baked-in Ctrl+A select-scope, which the page
           editor's own selection model is better off without. */}
       <div
+        data-block-chrome=""
         className={cn(chrome?.surface && SURFACE_LEVELS[chrome.surface], box)}
       >
         <Region of={regions?.header} {...region} />
         {/* C — the line. */}
         <div
+          data-block-chrome=""
           // eslint-disable-next-line layout/no-adhoc-layout -- the fixed text-block skeleton (totality rule 1): this line/marker/leaf element chain is an ancestor of every LexicalComposer in the app, so it owns its raw flex mechanics rather than delegating them to a primitive whose internal element structure could change under it and remount every editor.
           className={cn(
             "relative flex gap-xs",
@@ -125,6 +133,10 @@ export function TextBlockLayout({
               disturbing the others. */}
           {marker != null ? (
             <div
+              // The COLUMN is geometry (the glyph inside it is not), so a press
+              // on the space around a bullet or a checkbox is a background press
+              // like the rest of the row's chrome above.
+              data-block-chrome=""
               // eslint-disable-next-line layout/no-adhoc-layout -- see the line's note: fixed-skeleton mechanics, deliberately raw.
               className="flex flex-none select-none justify-center"
               style={{ minWidth: MARKER_GUTTER }}
