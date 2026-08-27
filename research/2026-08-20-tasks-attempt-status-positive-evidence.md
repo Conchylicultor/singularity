@@ -266,16 +266,10 @@ Consumers confirmed **unaffected** (they compare against `'completed'` only):
 
 ## Follow-ups (not in this change)
 
-- **The reconcile watermark can lose a commit permanently.**
-  `reconcilePushLedger` bounds its walk at `max(pushes.created_at) - 24h`
-  (`push-ledger/reconcile.ts:57-62`), while `planLedgerRows` skips any commit whose
-  conversation or attempt is not in *this* database (`plan.ts:35-37`). Those two are safe
-  only if the skip is permanent. It is not: `adoptOrphanConversation` can make a
-  previously-unattributable commit attributable later, and by then the ledger's own
-  watermark has moved past it, so no future walk ever reaches it again. The skip is an
-  absorbed failure — "foreign, never mine" and "not yet mine" are the same return value.
-  The fix is a coverage frontier (the oldest *deferred* commit pins the watermark) rather
-  than an insertion frontier. Low likelihood in the main DB, permanent when it fires.
+- **RESOLVED (2026-08-27) — the reconcile watermark could lose a commit permanently.**
+  The walk is now bounded by a coverage frontier and the freshness memo is signed on the
+  attribution set as well as `main`'s tip:
+  `research/2026-08-27-tasks-push-ledger-coverage-frontier.md`.
 - **`--from-main` and hand-merged commits carry no conversation trailer**, so no layer of
   this trilogy can attribute them. Unchanged, and now the only remaining reason a landed
   attempt can read `closed`. The `conversation-trailer` pre-push check already makes this

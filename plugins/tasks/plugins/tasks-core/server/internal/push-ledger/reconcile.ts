@@ -13,13 +13,15 @@
  * neither a queue nor a durable job to be correct. See
  * `research/2026-08-18-global-push-ledger-git-projection.md`.
  *
- * This file is the DB-fed orchestration only. The git read (`read-main.ts`) and
- * the attribution rules (`plan.ts`) are DB-free so they can be tested directly.
+ * This file is the DB-fed orchestration only. The git read (`read-main.ts`), the
+ * attribution rules (`plan.ts`) and the walk bound (`walk-bound.ts`) are DB-free
+ * so they can be tested directly.
  */
 import { ensureMainWorktreeRoot } from "@plugins/infra/plugins/worktree/server";
 import { insertPush } from "../mutations/pushes";
-import { planLedgerRows } from "./plan";
+import { planLedger } from "./plan";
 import { readMainCommits } from "./read-main";
+import { ledgerWalkStart } from "./walk-bound";
 import {
   attemptIdsByConversation,
   existingAttemptIds,
@@ -27,39 +29,40 @@ import {
   newestPushCommittedAt,
 } from "./raw-reads";
 
-/**
- * How far back of its own high-water mark the walk starts. A commit landing while
- * a previous walk ran, and clock adjustment between the machine that committed
- * and the one reading, both fit inside a day; anything older is already recorded.
- */
-const WATERMARK_PAD_MS = 24 * 60 * 60 * 1000;
-
 export interface ReconcileResult {
   /** Trailer-bearing commits the walk considered. */
   scanned: number;
   /** Rows actually inserted. Zero is the steady state, not a failure. */
   inserted: number;
+  /** Commits the walk could not attribute. Non-zero is normal in a worktree fork; it is a state, not a failure. */
+  deferred: number;
 }
 
 /**
- * Re-derive the ledger from `main`, bounded by the ledger's own high-water mark.
+ * Re-derive the ledger from `main`, bounded by a COVERAGE frontier.
  *
- * The bound is what makes this cheap enough to sit on the correctness path rather
- * than in a deferred warm-up: a steady-state run walks the last day of commits
- * and inserts nothing. Only an empty ledger pays for the full history, once.
+ * Two bounds, and the earlier wins: the ledger's own high-water mark minus a day
+ * (what a backend that was down for a month must catch up on) and a fixed window
+ * back from now (in which a commit this database could not attribute yet is
+ * re-offered, because an adoption can make it attributable later). Bounding on
+ * insertions alone lost such a commit permanently — `./walk-bound.ts` carries the
+ * failure and the horizon policy. The bound is still what keeps this cheap enough
+ * to sit on the correctness path rather than in a deferred warm-up: a
+ * steady-state run walks a month of commits and inserts nothing, a constant as
+ * the repo grows. Only an empty ledger pays for the full history, once.
  *
- * Idempotent at three layers — the sha pre-filter in `planLedgerRows`,
- * `insertPush`'s `onConflictDoNothing`, and the `pushes_sha_unique` index under
- * it. Throws on any git or DB failure; the memo in `freshness.ts` is what turns a
- * throw into "retry on the next read" rather than a half-applied walk cached as
- * settled truth.
+ * Idempotent at three layers — the sha pre-filter in `planLedger`, `insertPush`'s
+ * `onConflictDoNothing`, and the `pushes_sha_unique` index under it. Throws on
+ * any git or DB failure; the memo in `freshness.ts` is what turns a throw into
+ * "retry on the next read" rather than a half-applied walk cached as settled
+ * truth.
  */
 export async function reconcilePushLedger(): Promise<ReconcileResult> {
   const mainRepoRoot = await ensureMainWorktreeRoot();
   const newest = await newestPushCommittedAt();
-  const since = newest ? new Date(newest.getTime() - WATERMARK_PAD_MS) : null;
+  const since = ledgerWalkStart(newest, new Date());
   const commits = await readMainCommits(mainRepoRoot, since);
-  if (commits.length === 0) return { scanned: 0, inserted: 0 };
+  if (commits.length === 0) return { scanned: 0, inserted: 0, deferred: 0 };
 
   const have = await existingPushShas(commits.map((c) => c.sha));
   const attemptByConversation = await attemptIdsByConversation([
@@ -69,7 +72,7 @@ export async function reconcilePushLedger(): Promise<ReconcileResult> {
     ...new Set(attemptByConversation.values()),
   ]);
 
-  const rows = planLedgerRows(commits, {
+  const { rows, deferred } = planLedger(commits, {
     have,
     attemptByConversation,
     liveAttempts,
@@ -79,5 +82,5 @@ export async function reconcilePushLedger(): Promise<ReconcileResult> {
   for (const row of rows) {
     if (await insertPush(row)) inserted += 1;
   }
-  return { scanned: commits.length, inserted };
+  return { scanned: commits.length, inserted, deferred: deferred.length };
 }

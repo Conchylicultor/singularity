@@ -1,11 +1,12 @@
 import { db } from "@plugins/database/server";
 import { DEFAULT_MODEL } from "@plugins/conversations/plugins/model-provider/core";
-import { _attempts, _conversations, _tasks } from "../tables";
+import { _attempts, _tasks } from "../tables";
 import { conversations } from "../views";
 import type { Conversation } from "../schema";
 import { eq } from "drizzle-orm";
 import { findNextRankInFolder } from "../queries/tasks";
 import { listActiveConversations } from "../queries/conversations";
+import { insertConversationRow } from "./conversations";
 import { updateTask } from "./tasks";
 import {
   ensureMainWorktreeRoot,
@@ -97,9 +98,9 @@ export async function adoptOrphanConversation(input: AdoptOrphanInput) {
     .limit(1);
 
   if (existing) {
-    const [row] = await db
-      .insert(_conversations)
-      .values({
+    const row = await insertConversationRow(
+      db,
+      {
         id: input.id,
         attemptId,
         runtime: input.runtimeId,
@@ -107,9 +108,9 @@ export async function adoptOrphanConversation(input: AdoptOrphanInput) {
         title: input.title ?? null,
         spawnedBy: "poller",
         model: DEFAULT_MODEL,
-      })
-      .onConflictDoNothing()
-      .returning();
+      },
+      { ignoreConflict: true },
+    );
     inserted = !!row;
   } else {
     await db.transaction(async (tx) => {
@@ -122,9 +123,9 @@ export async function adoptOrphanConversation(input: AdoptOrphanInput) {
       await tx
         .insert(_attempts)
         .values({ id: attemptId, taskId, worktreePath: input.worktreePath });
-      const [row] = await tx
-        .insert(_conversations)
-        .values({
+      const row = await insertConversationRow(
+        tx,
+        {
           id: input.id,
           attemptId,
           runtime: input.runtimeId,
@@ -132,9 +133,9 @@ export async function adoptOrphanConversation(input: AdoptOrphanInput) {
           title: input.title ?? null,
           spawnedBy: "poller",
           model: DEFAULT_MODEL,
-        })
-        .onConflictDoNothing()
-        .returning();
+        },
+        { ignoreConflict: true },
+      );
       inserted = !!row;
       if (inserted) createdTaskId = taskId;
     });

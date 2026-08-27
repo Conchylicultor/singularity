@@ -76,17 +76,38 @@ lazy `ensureFresh` for correctness — over git instead of the filesystem:
 
 - `read-main.ts` — the `git log` over `main`'s trailer-bearing commits. DB-free,
   so `read-main.test.ts` exercises it against throwaway repos.
+- `walk-bound.ts` — how far back a walk reaches, as pure policy: the earlier of
+  the ledger's high-water mark minus a day (catch-up) and 30 days ago (the window
+  in which a deferred commit is re-offered).
 - `plan.ts` — the pure attribution: which commits this database can attach to an
-  attempt and does not already hold, oldest first.
-- `reconcile.ts` — the DB-fed orchestration, bounded by the ledger's own
-  high-water mark (`max(pushes.created_at) - 24h`), so a steady-state run walks a
-  day of commits and inserts nothing.
+  attempt and does not already hold, oldest first, plus the ones it had to defer.
+- `reconcile.ts` — the DB-fed orchestration, bounded by a COVERAGE frontier
+  (`min(max(pushes.created_at) - 24h, now - 30d)`), so a steady-state run walks a
+  month of commits and inserts nothing.
+- `attribution.ts` — the in-process generation counter bumped by the one
+  conversation-insert funnel, so the freshness signature can see the ledger's
+  second input.
 - `freshness.ts` — `ensurePushLedgerFresh()`, one `createSignedMemo` signed on
-  `main`'s tip. A signature hit costs a string compare; a failed reconcile leaves
-  the signature unadvanced so the next call retries.
+  `main`'s tip AND the attribution generation. A signature hit costs a string
+  compare; a failed reconcile leaves the signature unadvanced so the next call
+  retries.
 - `raw-reads.ts` — the ungated reads the reconcile itself needs, kept in their own
   file so re-entering the gate from inside a reconcile has no spelling.
 - `reaction.ts` — the push half, a `defineRefReaction` on `refs/heads/main`.
+
+### A deferral is not a skip
+
+A commit whose conversation is absent here is *deferred*, not skipped: it may
+become attributable later, because `adoptOrphanConversation` can synthesise that
+conversation row. So the walk bound is a **coverage** frontier, not an insertion
+one — bounding on `max(pushes.created_at)` alone meant the ledger's own newest row
+moved past a deferred commit and no later walk ever reached it again, losing it
+permanently. Do not "optimise" the bound back to the watermark, and do not sign
+the freshness memo on `main`'s tip alone: this database's conversation set is the
+reconcile's second input, which is why the funnel in `mutations/conversations.ts`
+bumps `attribution.ts`. Stated policy, not an accident: a commit unattributable
+for more than 30 days is treated as foreign.
+Design: `research/2026-08-27-tasks-push-ledger-coverage-frontier.md`.
 
 ### Why it stopped being a job
 

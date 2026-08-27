@@ -5,6 +5,8 @@ import type { ConversationStatus } from "../../../core/conversation-status";
 import { _attempts, _conversations } from "../tables";
 import { conversations } from "../views";
 import { emitConversationStatusChange } from "../status-emit";
+import { noteAttributionChanged } from "../push-ledger/attribution";
+import type { DbExecutor } from "../status-batch";
 import { withTaskStatusChange } from "../status-scope";
 
 export interface InsertConversationInput {
@@ -57,13 +59,40 @@ async function taskIdForAttempt(attemptId: string): Promise<string | null> {
   return row?.taskId ?? null;
 }
 
+/**
+ * THE conversation-row insert.
+ *
+ * Every creation in this plugin goes through here because a new conversation row
+ * is not only a conversation: it changes what the push ledger can ATTRIBUTE, so
+ * the ledger's freshness signature has to learn about it
+ * (`push-ledger/attribution.ts`). A bump that has to be remembered at four call
+ * sites is a bump that gets forgotten at the fifth — and the failure it causes is
+ * silent, a commit left permanently deferred rather than an error anyone sees.
+ * One funnel is the only version of that rule nobody can skip.
+ *
+ * The bump fires only when a row actually came back, so a conflict that inserted
+ * nothing does not invalidate the memo over an attribution set that did not move.
+ */
+export async function insertConversationRow(
+  exec: DbExecutor,
+  values: (typeof _conversations)["$inferInsert"],
+  opts: { ignoreConflict?: boolean } = {},
+): Promise<(typeof _conversations)["$inferSelect"] | undefined> {
+  const insert = exec.insert(_conversations).values(values);
+  const [row] = await (
+    opts.ignoreConflict ? insert.onConflictDoNothing() : insert
+  ).returning();
+  if (row) noteAttributionChanged();
+  return row;
+}
+
 export async function insertConversation(input: InsertConversationInput) {
   const taskId = await taskIdForAttempt(input.attemptId);
   // An orphan conversation (its attempt/task already deleted during teardown)
   // seeds the scope with NOTHING: an empty seed set costs no query and emits
   // nothing, which is the honest reading of "no task's status can have moved".
   await withTaskStatusChange(taskId ?? [], db, async () => {
-    await db.insert(_conversations).values({
+    await insertConversationRow(db, {
       id: input.id,
       attemptId: input.attemptId,
       runtime: input.runtime,
@@ -91,9 +120,9 @@ export async function insertConversationOnConflictDoNothing(
   const row = await withTaskStatusChange(taskId ?? [], db, async () => {
     // A conflict inserts nothing, so the status is unchanged and the scope emits
     // nothing of its own accord — no `if (row)` guard needed here.
-    const [inserted] = await db
-      .insert(_conversations)
-      .values({
+    return insertConversationRow(
+      db,
+      {
         id: input.id,
         attemptId: input.attemptId,
         runtime: input.runtime,
@@ -102,10 +131,9 @@ export async function insertConversationOnConflictDoNothing(
         kind: input.kind ?? "user",
         status: input.status,
         title: input.title ?? null,
-      })
-      .onConflictDoNothing()
-      .returning();
-    return inserted;
+      },
+      { ignoreConflict: true },
+    );
   });
   return row ?? null;
 }

@@ -19,6 +19,7 @@ import { ensureMainWorktreeRoot } from "@plugins/infra/plugins/worktree/server";
 import { lastKnownMainSha } from "@plugins/infra/plugins/git-watcher/server";
 import { withHeavyReadSlot } from "@plugins/infra/plugins/host-read-pool/server";
 import { createSignedMemo } from "@plugins/infra/plugins/git-read-cache/server";
+import { attributionGeneration } from "./attribution";
 import { reconcilePushLedger, type ReconcileResult } from "./reconcile";
 
 // The ledger is one global projection of one ref, so the memo has one key. (The
@@ -40,6 +41,21 @@ async function mainTip(): Promise<string> {
   return (await runGit(["rev-parse", "refs/heads/main"], root)).trim();
 }
 
+/**
+ * The memo's fingerprint, over BOTH of the reconcile's inputs: `main`'s history
+ * and this database's attributable conversation set (see ./attribution.ts).
+ *
+ * A signature over the tip alone is not a fingerprint of the compute — it is a
+ * fingerprint of half of it, and the memo's contract is the whole. That half was
+ * what left an adoption's commit deferred: the conversation row that made it
+ * attributable arrived, the tip had not moved, so the memo answered from cache
+ * and the ledger stayed incomplete until some unrelated push advanced `main`.
+ */
+async function ledgerSignature(): Promise<string> {
+  const tip = await mainTip();
+  return `${tip}:${attributionGeneration()}`;
+}
+
 // A signature hit short-circuits before any heavy slot is acquired, concurrent
 // callers collapse onto one execution, and — the part that matters here — the
 // memo caches only on success. A reconcile that throws leaves the covered
@@ -47,7 +63,7 @@ async function mainTip(): Promise<string> {
 // half-applied walk as settled truth.
 const ledgerMemo = createSignedMemo<ReconcileResult>({
   name: "push-ledger",
-  signature: () => mainTip(),
+  signature: () => ledgerSignature(),
   compute: () => withHeavyReadSlot(() => reconcilePushLedger()),
 });
 
@@ -55,8 +71,9 @@ const ledgerMemo = createSignedMemo<ReconcileResult>({
  * Guarantee the ledger covers `main`'s current tip, then return what the last
  * re-derivation did.
  *
- * Free when `main` has not moved since the last one — which, with the ref
- * reaction running, is the overwhelmingly common case. Throws when git or the
+ * Free when neither `main` nor this database's conversation set has moved since
+ * the last one — which, with the ref reaction running, is the overwhelmingly
+ * common case. Throws when git or the
  * database is unreadable: a caller must never be handed a ledger that silently
  * failed to catch up.
  */
